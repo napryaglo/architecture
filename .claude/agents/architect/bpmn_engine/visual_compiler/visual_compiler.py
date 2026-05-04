@@ -63,7 +63,9 @@ POOL_TITLE_W      = 30      # left strip on each pool
 LANE_TITLE_W      = 24      # left strip on each lane (sits to the right of POOL_TITLE_W)
 LANE_PAD_X        = 20      # left/right pad inside the lane content area
 LANE_PAD_Y        = 20      # top/bottom pad inside lane content area
-NODE_HSPACING     = 60      # horizontal gap between adjacent ranks
+NODE_HSPACING     = 100     # horizontal gap between adjacent ranks — wide
+                            # enough that 3-4 staggered connector verticals
+                            # fit cleanly between rank columns
 NODE_VSPACING     = 30      # vertical gap between nodes at the same rank
 DIAGRAM_PAD       = 24      # canvas-edge gutter
 TASK_TEXT_PAD_X   = 8       # horizontal pad inside task box for text wrap
@@ -98,28 +100,77 @@ FS_EVENT   = 10      # event/gateway label (drawn outside the shape)
 
 # ── Layout algorithm ───────────────────────────────────────────────
 
+def _detect_back_edges(node_ids, edges) -> set[tuple[str, str]]:
+    """DFS-coloured back-edge detection on a directed graph. Returns the
+    set of (u, v) edges that close a cycle — found when DFS reaches a
+    successor that is currently on the recursion stack (GRAY). Used to
+    break cycles for layout ranking: BPMN does model loops (AF-style
+    re-entry into earlier steps), and the rank-relaxation BFS would
+    otherwise increment forever around the cycle. Back-edges are still
+    rendered as visual edges; they're just excluded from the rank
+    computation."""
+    GRAY, BLACK = 1, 2
+    state: dict[str, int] = {}
+    back: set[tuple[str, str]] = set()
+    adj: dict[str, list[str]] = defaultdict(list)
+    for u, v in edges:
+        adj[u].append(v)
+
+    # Iterative DFS — recursion-safe for processes with deep chains.
+    # Stack entries are (node, iterator-over-children).
+    for start in node_ids:
+        if start in state:
+            continue
+        stack: list = [(start, iter(adj.get(start, [])))]
+        state[start] = GRAY
+        while stack:
+            u, it = stack[-1]
+            nxt = next(it, None)
+            if nxt is None:
+                state[u] = BLACK
+                stack.pop()
+                continue
+            s = state.get(nxt)
+            if s == GRAY:
+                back.add((u, nxt))
+            elif s != BLACK:
+                state[nxt] = GRAY
+                stack.append((nxt, iter(adj.get(nxt, []))))
+    return back
+
+
 def topological_ranks(model: dict) -> dict[str, int]:
     """Longest-path rank from any start event. Used as the x-coordinate
     bucket for flow nodes — rank 0 sits leftmost, increasing rank
     further right. Sequence flows only (message flows don't impose
-    intra-pool ordering)."""
+    intra-pool ordering). Back-edges (cycle-closing edges, e.g. AF-style
+    loop-backs) are detected and excluded from rank propagation so the
+    BFS terminates; they still appear as connectors in the rendered
+    diagram, drawn as right-to-left edges by the layout pass."""
     nodes = model.get("flow-nodes") or {}
-    incoming, outgoing = defaultdict(list), defaultdict(list)
-    for fl in (model.get("flows") or []):
-        if fl.get("type", "sequence") != "sequence":
-            continue
-        outgoing[fl["from"]].append(fl["to"])
-        incoming[fl["to"]].append(fl["from"])
+    edges = [
+        (fl["from"], fl["to"])
+        for fl in (model.get("flows") or [])
+        if fl.get("type", "sequence") == "sequence"
+    ]
+    back_edges = _detect_back_edges(list(nodes.keys()), edges)
 
-    # Seed with every node that has no incoming sequence flow. A typical
-    # process has just one start event but the compiler accepts several
-    # (per-flow start), so this seed set may be larger.
+    incoming, outgoing = defaultdict(list), defaultdict(list)
+    for u, v in edges:
+        if (u, v) in back_edges:
+            continue
+        outgoing[u].append(v)
+        incoming[v].append(u)
+
+    # Seed with every node that has no incoming forward sequence flow.
+    # A typical process has just one start event but the compiler accepts
+    # several (per-flow start), so this seed set may be larger. Cycle
+    # entry nodes also become seeds once their back-edge is excluded.
     ranks = {nid: 0 for nid in nodes if not incoming.get(nid)}
 
-    # Relax via BFS — keep updating successors as long as a longer path
-    # to them is found. Bounded by node count squared for any reasonable
-    # process; cycles aren't expected (BPMN doesn't model them at this
-    # level).
+    # Relax via BFS over the cycle-broken DAG — keep updating successors
+    # as long as a longer path to them is found. Bounded by O(V * E) on
+    # the DAG; with no back-edges this terminates quickly.
     queue = deque(ranks.keys())
     while queue:
         cur = queue.popleft()
@@ -232,31 +283,77 @@ def _path_crosses_any(points, obstacles) -> bool:
     return False
 
 
+PARALLEL_MIN_GAP = 18    # vertical segments closer than this look noisy
+
+
 def _route_orthogonal_avoiding(sx, sy, tx, ty, src_rank, dst_rank,
-                               obstacles, slot_x_fn) -> list[list[float]]:
-    """Out-the-right → vertical bend → in-the-left routing that steps
-    around intermediate nodes. The default mid-x bend lands in whatever
-    column happens to be halfway between source and destination — when
-    that column is occupied (a node at an intermediate rank in the same
-    visual row), the connector pierces it. Fix: if the mid-x bend
-    crosses any node, walk the rank-gap centres between source and
-    destination instead. Destination-side gaps come first because the
-    long horizontal then runs at the source's y, which in stacked
-    layouts is the row that's least likely to host an obstacle (centre
-    rows tend to be busier than upper/lower rows)."""
+                               obstacles, slot_x_fn,
+                               placed_verticals=None) -> list[list[float]]:
+    """Out-the-right → vertical bend → in-the-left routing that:
+
+    - Steps around intermediate node bboxes (so the connector doesn't
+      pierce a node sitting between source and destination ranks).
+    - Avoids running parallel to a previously-placed connector vertical
+      within `PARALLEL_MIN_GAP` pixels at overlapping y-range — three
+      near-parallel verticals look like a single fuzzy line.
+
+    Tries the default mid-x first, then shifted candidates (±10, ±20,
+    ±30 within the source–target gap), then rank-gap centres. Picks the
+    first candidate that clears both node bboxes and parallel-vertical
+    collisions. If all clean-of-boxes candidates still collide with
+    placed verticals, returns the cleanest one — partial overlap beats
+    a route that pierces a box."""
+    if placed_verticals is None:
+        placed_verticals = []
+
     default_mid = (sx + tx) / 2
-    points = [[sx, sy], [default_mid, sy], [default_mid, ty], [tx, ty]]
-    if not _path_crosses_any(points, obstacles):
+    seg_y_lo, seg_y_hi = (min(sy, ty), max(sy, ty))
+
+    def parallel_collide(x: float) -> bool:
+        for vx, vy_lo, vy_hi in placed_verticals:
+            if abs(vx - x) < PARALLEL_MIN_GAP and \
+               min(seg_y_hi, vy_hi) > max(seg_y_lo, vy_lo):
+                return True
+        return False
+
+    # Build the candidate list: default mid first, then offsets within
+    # the available x-gap, then rank-gap centres as last resort.
+    gap_lo, gap_hi = (min(sx, tx), max(sx, tx))
+    candidates: list[float] = [default_mid]
+    for off in (10, -10, 20, -20, 30, -30):
+        x = default_mid + off
+        if gap_lo + 5 < x < gap_hi - 5:
+            candidates.append(x)
+    if src_rank is not None and dst_rank is not None:
+        lo, hi = sorted([src_rank, dst_rank])
+        for r in reversed(range(lo, hi)):
+            candidates.append(slot_x_fn(r) + TASK_W + NODE_HSPACING / 2)
+
+    fallback = None    # box-clean but parallel-conflicted candidate
+    for mid_x in candidates:
+        points = [[sx, sy], [mid_x, sy], [mid_x, ty], [tx, ty]]
+        if _path_crosses_any(points, obstacles):
+            continue
+        if parallel_collide(mid_x):
+            if fallback is None:
+                fallback = points
+            continue
         return points
-    if src_rank is None or dst_rank is None:
-        return points
-    lo, hi = sorted([src_rank, dst_rank])
-    for r in reversed(range(lo, hi)):
-        gap_x = slot_x_fn(r) + TASK_W + NODE_HSPACING / 2
-        candidate = [[sx, sy], [gap_x, sy], [gap_x, ty], [tx, ty]]
-        if not _path_crosses_any(candidate, obstacles):
-            return candidate
-    return points
+
+    if fallback is not None:
+        return fallback
+    return [[sx, sy], [default_mid, sy], [default_mid, ty], [tx, ty]]
+
+
+def _record_verticals(points: list, placed_verticals: list) -> None:
+    """Append every axis-aligned vertical segment in `points` to the
+    placed-verticals tracker as `(x, y_lo, y_hi)`. Subsequent connector
+    routes use this list to avoid running parallel-too-close."""
+    for i in range(len(points) - 1):
+        x1, y1 = points[i]
+        x2, y2 = points[i + 1]
+        if abs(x1 - x2) < 1e-6 and abs(y1 - y2) > 1e-6:
+            placed_verticals.append((x1, min(y1, y2), max(y1, y2)))
 
 
 def compute_layout(model: dict) -> dict:
@@ -367,6 +464,9 @@ def compute_layout(model: dict) -> dict:
     all_nodes = list(node_layout.values())
 
     flow_layout = []
+    # Tracks vertical segments of placed connectors so subsequent routes
+    # can avoid running parallel-too-close. Updated after each route.
+    placed_verticals: list[tuple[float, float, float]] = []
     for fl in (model.get("flows") or []):
         src = node_layout.get(fl.get("from"))
         dst = node_layout.get(fl.get("to"))
@@ -388,19 +488,44 @@ def compute_layout(model: dict) -> dict:
             tx, ty = edge_point(dst, src_cx, src_cy)
             points = [[sx, sy], [tx, ty]]
         else:
-            # Orthogonal: out the right of source, vertical bend, in to
-            # the left of target. The bend column is mid-x by default, but
-            # if that pierces a node sitting between the two ranks the
-            # router walks rank-gap centres until it finds a clean column.
-            sx = src["x"] + src["w"]
-            sy = src["y"] + src["h"] / 2
-            tx = dst["x"]
-            ty = dst["y"] + dst["h"] / 2
-            obstacles = [n for n in all_nodes
-                         if n.get("id") not in (src.get("id"), dst.get("id"))]
-            points = _route_orthogonal_avoiding(
-                sx, sy, tx, ty, src.get("rank"), dst.get("rank"),
-                obstacles, slot_x_fn)
+            src_rank = src.get("rank")
+            dst_rank = dst.get("rank")
+            is_back_edge = (src_rank is not None and dst_rank is not None
+                            and src_rank > dst_rank)
+            if is_back_edge:
+                # Back-edge (cycle / loop-back): the natural BPMN convention is
+                # to draw it as a U-shape going up over the row of forward
+                # nodes, not threading through them. Exit source from the TOP
+                # centre, run a horizontal channel above the topmost involved
+                # node's top edge, then re-enter target from its TOP centre.
+                # Channel y = min(src.top, dst.top) - BACK_EDGE_OFFSET so the
+                # connector clears every flow node it might cross.
+                BACK_EDGE_OFFSET = 14
+                sx = src["x"] + src["w"] / 2
+                sy = src["y"]
+                tx = dst["x"] + dst["w"] / 2
+                ty = dst["y"]
+                channel_y = min(sy, ty) - BACK_EDGE_OFFSET
+                points = [[sx, sy], [sx, channel_y],
+                          [tx, channel_y], [tx, ty]]
+            else:
+                # Forward edge: out the right of source, vertical bend, in to
+                # the left of target. The bend column is mid-x by default, but
+                # if that pierces a node sitting between the two ranks the
+                # router walks rank-gap centres until it finds a clean column.
+                sx = src["x"] + src["w"]
+                sy = src["y"] + src["h"] / 2
+                tx = dst["x"]
+                ty = dst["y"] + dst["h"] / 2
+                obstacles = [n for n in all_nodes
+                             if n.get("id") not in (src.get("id"), dst.get("id"))]
+                points = _route_orthogonal_avoiding(
+                    sx, sy, tx, ty, src_rank, dst_rank,
+                    obstacles, slot_x_fn, placed_verticals)
+        # Remember this connector's vertical runs so the next routes
+        # can stagger themselves out of parallel collisions.
+        if ftype != "message":
+            _record_verticals(points, placed_verticals)
         flow_layout.append({**fl, "points": points})
 
     canvas_w = content_w + DIAGRAM_PAD * 2
