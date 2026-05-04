@@ -1,0 +1,84 @@
+# ─────────────────────────────────────────────────────────────────
+# BPMN View — root element of a BPMN diagram
+# ─────────────────────────────────────────────────────────────────
+# A bpmn-view is the top-level VisualElement in a BPMN markup file.
+# It carries a `model:` reference pointing at the compiled BPMN
+# process YAML — analogous to architecture-view's `model:` field.
+# Children of a bpmn-view are pools (which contain lanes which
+# contain flow nodes); the view itself is the diagram canvas.
+#
+# Distinct from architecture-view because the children's vocabulary
+# differs and the layout conventions differ — pools want horizontal
+# stripes stacking vertically, not the canvas-style absolute
+# positioning the architecture root uses.
+# ─────────────────────────────────────────────────────────────────
+
+# ── Element type definition ──────────────────────────────────────
+extends: base
+properties:
+  title:    { type: string }
+  subtitle: { type: string }
+  model:    { type: ref,
+              description: "Path to the compiled BPMN process YAML — the process context." }
+  model-template: { type: identifier,
+                    description: "Name of a framework-registered data template that
+                                  generates this view's children from the bound `model`.
+                                  When set, child elements (pools, lanes, flow nodes,
+                                  flows) are NOT authored in the markup — the template's
+                                  generator builds them from the process. The typical
+                                  authoring mode for BPMN: e.g. `model-template:
+                                  auto-layout` defers everything to the registered
+                                  generator at bpmn_engine/visual_compiler/visual_compiler.py.
+                                  Mutually exclusive with hand-authored children." }
+  imports:  { type: object,
+              description: "Library references: visual-library, technology-library." }
+  background-color: { type: color,
+                      description: "Canvas background fill." }
+  # Coordinate space — same conventions as architecture-view (pixels per cell, etc.)
+  cell-size: { type: number, default: 20 }
+  cols:      { type: number,
+               description: "Canvas width in cells. Pixel width = cols × cell-size." }
+  rows:      { type: number,
+               description: "Canvas height in cells. Pixel height = rows × cell-size." }
+
+# ── Style ────────────────────────────────────────────────────────
+type: style
+target: bpmn-view
+
+setters:
+  background-color: "#FAFAF9"
+
+  template:
+    # Canvas background — fills the whole view area.
+    - border:
+        rect: { x: 0, y: 0, width: $self.width, height: $self.height }
+        fill: $self.background-color
+        stroke: "none"
+    # Optional title at top-left.
+    - text:
+        when: $self.title
+        content: $self.title
+        at: { x: 16, y: 24 }
+        font-family: "Segoe UI, Calibri, Arial, sans-serif"
+        font-size: 16
+        font-weight: bold
+        anchor: start
+        fill: "#22211E"
+    - text:
+        when: $self.subtitle
+        content: $self.subtitle
+        at: { x: 16, y: 44 }
+        font-family: "Segoe UI, Calibri, Arial, sans-serif"
+        font-size: 11
+        font-style: italic
+        anchor: start
+        fill: "#5F5C56"
+    # Children render here — pools stack vertically by convention.
+    # The body is a vertical stack-panel rather than a canvas because
+    # BPMN's natural layout is "pools top-to-bottom, lanes inside
+    # them, flow nodes left-to-right within each lane."
+    - stack-panel:
+        orientation: vertical
+        children:
+          - items-presenter:
+              layout: stack-panel-vertical

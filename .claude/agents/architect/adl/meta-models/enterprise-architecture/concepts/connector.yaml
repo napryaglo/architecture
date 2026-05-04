@@ -1,0 +1,166 @@
+# yaml-language-server: $schema=
+# ═════════════════════════════════════════════════════════════════
+# Concept: Connector
+# ═════════════════════════════════════════════════════════════════
+# A typed edge between two model elements (component, location,
+# block, or actor). Six recognised types — see
+# `enums/connector-type.yaml` for the full set and the rationale
+# behind the split into runtime-flow vs structural.
+#
+# Where connectors come from. The compiled model carries one unified
+# `connectors:` list with records from two authoring surfaces:
+#
+#   - Scenario steps (one record per step). The model compiler walks
+#     `scenarios[].sequences[].steps[]` and emits a connector for each,
+#     stamping `source: scenario-step` plus `scenario`, `sequence`,
+#     `step` metadata. A single drawn line in the .view that maps
+#     to multiple scenario steps becomes multiple records here, one
+#     per (scenario, sequence, step) tuple.
+#
+#   - The standalone `connectors:` block at the architecture level.
+#     Three authoring shapes (object, pair, natural-language); see
+#     the `authoring:` section below. Carries `source: connectors`.
+#
+# How drawn lines aggregate flow membership. The visual engine's
+# markup compiler builds an index `(from, to) → [flows]` from the
+# scenario-step records only. When it compiles a drawn connector
+# in a .view, it looks up the index by (src_id, dst_id) and attaches
+# every match as a `data-flows` JSON attribute on the rendered
+# group. So one physical line on the diagram can light up under
+# multiple sequences when the scenario filter is engaged.
+#
+# Why qualified `<location>:<id>` is forbidden. References live in
+# the global namespace — a bare component id is unambiguous. The
+# qualified form is rejected with an explicit error to keep the
+# model-side identity model simple.
+# ═════════════════════════════════════════════════════════════════
+
+kind: concept
+name: Connector
+slug: connector
+
+description: |
+  A typed edge between two model elements. Six types (three runtime,
+  three structural). Authored via scenario steps OR the standalone
+  `connectors:` block; the compiler emits a unified list. The visual
+  engine joins drawn lines to scenario-step records via a
+  (from, to) → [flows] index — a single line can carry multiple
+  flow memberships.
+
+# ── Properties ───────────────────────────────────────────────────
+properties:
+
+  - name: from
+    type: identifier
+    description: Source endpoint id (resolves in the global namespace).
+
+  - name: to
+    type: identifier
+    description: Target endpoint id (resolves in the global namespace).
+
+  - name: type
+    type:
+      enum: connector-type
+    description: |
+      One of the six connector types. Default for scenario steps
+      (when no `[<kind>]` annotation is present) is `calls`. Default
+      for pair-form `[a, b]` shorthand is also `calls`.
+
+  - name: source
+    type:
+      enum: connector-source
+    description: |
+      Where this connector entry came from. Set by the compiler in
+      the compiled output, NOT authored. Lets downstream tooling
+      (design-smell warning, flow-membership index) treat the two
+      surfaces differently.
+
+  # Scenario-step metadata — only set when source = scenario-step.
+  - name: scenario
+    type: identifier
+    cardinality: '0..1'
+    description: 'Set when `source = scenario-step`. Identifies the parent scenario.'
+
+  - name: sequence
+    type: slug
+    cardinality: '0..1'
+    description: |
+      Set when `source = scenario-step`. Identifies the sequence
+      within the scenario. Slug derived from the sequence's `Title`
+      via the canonical slugging algorithm.
+
+  - name: step
+    type: integer
+    cardinality: '0..1'
+    description: |
+      Set when `source = scenario-step`. 0-based index of this step
+      within its sequence. Unique per (scenario, sequence) tuple.
+
+  # Standalone-connector metadata.
+  - name: natural
+    type: string
+    cardinality: '0..1'
+    description: |
+      Original verb-phrase string when authored via natural-language
+      form. Preserved for traceability so a reader of the compiled
+      model can see what the author wrote, not just the parsed
+      `from`/`to`/`type`.
+
+# ── Invariants ───────────────────────────────────────────────────
+invariants:
+
+  - description: |
+      Both `from` and `to` resolve to known actors, blocks,
+      locations, or components in the model. The compiler reports
+      the field name (`src` / `dst` for steps, `from` / `to` for
+      standalone) plus the unresolved id when the check fails.
+
+  - description: |
+      Qualified `<location>:<id>` form is forbidden — references are
+      bare ids in the global namespace. Detected by the colon and
+      rejected with an explicit error.
+
+  - description: |
+      Scenario steps may carry only runtime-flow types
+      (`calls`, `event`, `consumes`). Structural types (`enabled-by`,
+      `hosted-by`, `available-through`) belong in the standalone
+      `connectors:` block. The compiler enforces this.
+
+# ── Authoring ────────────────────────────────────────────────────
+# The standalone connectors block has three forms — pick whichever
+# reads cleanest for each entry. The compiled output is identical
+# regardless of which form was used.
+authoring:
+
+  - form: object-form
+    description: |
+      Fully explicit. Required for non-default types or extra
+      metadata. The most "structured" of the three.
+    example: |
+      connectors:
+        - { from: business-agent, to: agent-orchestrator, type: enabled-by }
+        - { from: app-database,   to: power-platform,     type: hosted-by }
+
+  - form: pair-shorthand
+    description: 'Two-element list, shorthand for `type: calls`.'
+    example: |
+      connectors:
+        - [business-agent, agent-orchestrator]
+
+  - form: natural-language
+    description: |
+      Plain-string verb phrase. Subject + verb + object. Direction is
+      always `from = subject, to = object` regardless of voice
+      (active or passive). Original prose preserved as `natural:` on
+      the resolved record. Reads more naturally than object-form for
+      structural relationships.
+    example: |
+      connectors:
+        - business-agent is enabled by agent-orchestrator
+        - legacy-application is available through legacy-tool-bridge
+        - workflow-engine consumes app-database
+        - platform-api emits to command-bus
+
+references:
+  - modeling_engine/wiki/02-schema.md
+  - modeling_engine/wiki/06-decision-log.md

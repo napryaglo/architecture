@@ -1,0 +1,208 @@
+# ─────────────────────────────────────────────────────────────────
+# Visual Primitives — Default library
+# ─────────────────────────────────────────────────────────────────
+# Catalog of the base VisualElement type and the visual primitives
+# (rendering primitives + layout panels) available to ControlTemplates.
+#
+# Inheritance: every primitive extends `base`. A primitive entry lists
+# only the properties it adds on top of the base; redundant duplication
+# of base properties has been removed.
+# ─────────────────────────────────────────────────────────────────
+
+# ── Base VisualElement ───────────────────────────────────────────
+# Every visible thing in the engine inherits these properties.
+
+base:
+  description: |
+    Properties shared by every VisualElement (primitive or composite).
+  properties:
+    # Layout
+    x:        { type: number,  description: "Local X position relative to parent's content origin." }
+    y:        { type: number,  description: "Local Y position relative to parent's content origin." }
+    width:    { type: number }
+    height:   { type: number }
+    margin:   { type: edges,   description: "Outer space around the element. Record { top, right, bottom, left }." }
+    padding:  { type: edges,   description: "Inner space inside the element. Record { top, right, bottom, left }." }
+    h-align:  { type: enum,    values: [start, center, end, stretch] }
+    v-align:  { type: enum,    values: [start, center, end, stretch] }
+    # Visual
+    opacity:    { type: number, range: [0, 1] }
+    visibility: { type: enum,   values: [visible, hidden, collapsed] }
+    # Paint (SVG-native)
+    fill-color:   { type: color }
+    stroke-color: { type: color }
+    stroke-width: { type: number }
+
+# ── Rendering primitives ─────────────────────────────────────────
+# Leaves; emit SVG directly.
+
+rendering-primitives:
+
+  image:
+    extends: base
+    description: |
+      Raster or SVG image referenced by source path or data URI.
+    properties:
+      source: { type: string, description: "Path to icon resource or data URI." }
+    children: not-allowed
+
+  text:
+    extends: base
+    description: |
+      A run of text. The text's horizontal alignment within its bounds
+      uses the inherited `h-align` (start | center | end). Vertical
+      placement uses `v-align`. When `max-width` is set and the resolved
+      string exceeds it at the chosen font, the compiler greedy-wraps at
+      word boundaries and the renderer emits one `<tspan>` per line.
+      `rotation` rotates the text around its (x, y) anchor — used most
+      prominently for vertical pool/lane labels in BPMN diagrams.
+    properties:
+      content:      { type: string }
+      font-family:  { type: string, default: "Segoe UI, Calibri, Arial, sans-serif" }
+      font-size:    { type: number, default: 12 }
+      font-weight:  { type: enum, values: [normal, bold], default: normal }
+      font-style:   { type: enum, values: [normal, italic], default: normal }
+      max-width:    { type: number,
+                      description: "Pixel cap for the text bounding box. Triggers word-wrap when the string exceeds it; unset = no wrap." }
+      rotation:     { type: number,
+                      description: "Degrees, clockwise (SVG convention). Common values: -90 (label reads bottom-to-top — BPMN pool/lane title), 90 (top-to-bottom). Rotation centre is the text's (x, y) anchor; text-anchor and dominant-baseline still apply in the unrotated coordinate frame." }
+    children: not-allowed
+
+  border:
+    extends: base
+    description: |
+      A bordered, optionally rounded rectangle. WPF Border semantics —
+      carries exactly one Child element. Padding (from base) pushes the
+      child inward from the border edge; `fill-color`, `stroke-color`,
+      and `stroke-width` come from base.
+    properties:
+      corner-radius:    { type: number, default: 0 }
+      stroke-dasharray: { type: string, default: "" }
+    children: single
+
+# ── Layout panels ────────────────────────────────────────────────
+# Containers that position their children. Children may declare
+# attached properties — properties recognized only inside that panel.
+# Cross-axis alignment of children defers to each child's own h-align
+# / v-align (inherited from base) — panels don't introduce their own
+# alignment property.
+
+layout-panels:
+
+  stack-panel:
+    extends: base
+    description: |
+      Linear flow. Children are laid out top-to-bottom (vertical) or
+      left-to-right (horizontal). The main-axis dimension is the sum
+      of children plus inter-child margins; the cross-axis dimension
+      is the max child. Cross-axis position of each child is governed
+      by that child's own h-align / v-align.
+    properties:
+      orientation: { type: enum, values: [vertical, horizontal], default: vertical }
+    child-attached-properties: {}
+
+  dock-panel:
+    extends: base
+    description: |
+      Children dock to the panel's edges in declaration order. Each
+      child consumes its declared edge plus its main dimension; the
+      remaining inner area passes to the next child. The last child
+      fills the leftover space when last-child-fills is true.
+    properties:
+      last-child-fills: { type: bool, default: true }
+    child-attached-properties:
+      dock: { type: enum, values: [top, right, bottom, left], default: left }
+
+  uniform-grid:
+    extends: base
+    description: |
+      Equal-sized C×R grid. Cell size is max(child.width) ×
+      max(child.height) across all children — children declare their
+      intrinsic size via the base `width` / `height` properties. Every
+      cell is reserved whether occupied or not. Mirrors WPF
+      UniformGrid plus the spec's `grid=(C,R)` strategy.
+    properties:
+      rows: { type: number, description: "Row count." }
+      cols: { type: number, description: "Column count." }
+    child-attached-properties:
+      cell: { type: pair, description: "(col, row), 1-indexed." }
+
+  grid:
+    extends: base
+    description: |
+      WPF-style Grid with per-row and per-column sizing rules. Each
+      row/col carries one of three sizing modes:
+        - pixel:  fixed pixel value (e.g. 80)
+        - auto:   size to fit the largest child in that row/col
+        - star:   proportional share of remaining space
+                  ("*" = 1*, "2*" = double share, etc.)
+      Children declare their (row, col) cell and may span multiple
+      cells via row-span / col-span.
+    properties:
+      rows: { type: list-of-size-specs,
+              description: "Per-row sizing. Each entry: number (pixels) | 'auto' | 'N*'." }
+      cols: { type: list-of-size-specs,
+              description: "Per-column sizing. Same form as rows." }
+    child-attached-properties:
+      row:      { type: number, default: 0, description: "0-indexed row." }
+      col:      { type: number, default: 0, description: "0-indexed column." }
+      row-span: { type: number, default: 1 }
+      col-span: { type: number, default: 1 }
+
+  canvas:
+    extends: base
+    description: |
+      Absolute positioning surface. Children declare their position
+      via the base `x` / `y` properties (no attached properties). The
+      canvas does no layout — it places children at their declared
+      coordinates. Canvas declares its own width/height explicitly
+      (it does not shrink-wrap).
+    properties: {}
+    child-attached-properties: {}
+
+# ── Composition primitives ───────────────────────────────────────
+# Slot primitives used inside ControlTemplates. They don't render
+# anything themselves — they declare *where* element-instance content
+# (markup-author's children) gets placed when the ControlTemplate is
+# expanded. Mirror WPF's ItemsPresenter and ContentPresenter.
+
+composition-primitives:
+
+  items-presenter:
+    extends: base
+    description: |
+      Slot inside a ControlTemplate where the element instance's own
+      `children:` are injected at compose time. The `layout` property
+      determines how those children are arranged once injected — same
+      vocabulary as the layout panels above. If a composite element is
+      a *list* of children (the typical case for a location holding
+      components), this is the slot that hosts them.
+    properties:
+      layout: { type: enum,
+                values: [canvas, stack-panel-vertical, stack-panel-horizontal,
+                         dock-panel, uniform-grid, grid],
+                default: canvas,
+                description: "Layout strategy applied to the injected children." }
+    child-attached-properties: {}
+    children: injected-from-composition
+
+  content-presenter:
+    extends: base
+    description: |
+      Slot inside a ControlTemplate where a single piece of content
+      (typically a DataTemplate's expansion, matched to the element's
+      `category`) gets placed. Mirrors WPF ContentPresenter. Used by
+      `component.yaml` — the component template provides a content-
+      presenter that the matching DataTemplate fills in.
+    properties: {}
+    child-attached-properties: {}
+    children: injected-from-data-template
+
+# ── Open items ───────────────────────────────────────────────────
+# - Line / polyline primitives. Used today by connectors and the
+#   building-block divider; not in the initial primitive list above.
+#   To be settled.
+# - Path primitive (general SVG path). Probably out of scope until a
+#   need surfaces.
+# - Group / scope primitive. Pure organizational wrapper that doesn't
+#   render anything. Useful for applying margin/transform to a subtree.

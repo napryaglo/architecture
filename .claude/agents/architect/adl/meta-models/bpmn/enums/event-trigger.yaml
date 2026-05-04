@@ -1,0 +1,100 @@
+# yaml-language-server: $schema=
+# ═════════════════════════════════════════════════════════════════
+# Enum: Event Trigger (BPMN)
+# ═════════════════════════════════════════════════════════════════
+# What the event reacts to (when catching) or emits (when throwing).
+# Carried alongside `event-type` to fully classify an event:
+#
+#   start + message     = "process kicks off when message X arrives"
+#   intermediate+timer  = "wait until ⟨duration | date | cycle⟩"
+#   end + error         = "terminate this flow with an error outcome"
+#
+# This is BPMN 2.0's complete trigger set. Most processes use just
+# `none`, `message`, `timer`, `error`. The remaining (signal,
+# escalation, compensation, link, terminate, conditional) are kept
+# in the spec because dropping them would make some real flows
+# inexpressible — but if a smaller set is preferable for first cut,
+# the remaining triggers can be marked as deferred in the wiki.
+# ═════════════════════════════════════════════════════════════════
+
+kind: enum
+name: Event Trigger
+slug: event-trigger
+
+description: |
+  What a BPMN event reacts to (when catching) or emits (when
+  throwing). Authored alongside `event-type` to fully specify an
+  event. `none` is the default — a plain event with no specific
+  trigger semantics.
+
+values:
+
+  - id:    none
+    label: None
+    description: |
+      Plain event without a specific trigger. The default for
+      generic start / end events.
+
+  - id:    message
+    label: Message
+    description: |
+      Catching: waits for a message from a sender outside the pool.
+      Throwing: sends a message to a receiver outside the pool.
+
+  - id:    timer
+    label: Timer
+    description: |
+      Catching only. Fires after a duration, at a specific
+      date/time, or on a recurring cycle. Authored with a timer
+      expression (the spec doesn't formalise the expression
+      language; left to the runtime).
+
+  - id:    conditional
+    label: Conditional
+    description: |
+      Catching only. Fires when a boolean condition over process /
+      external data evaluates to true.
+
+  - id:    signal
+    label: Signal
+    description: |
+      Broadcast trigger. Throwing: emits to anyone listening.
+      Catching: fires when a matching signal is broadcast. Distinct
+      from message because signals have no specific recipient.
+
+  - id:    error
+    label: Error
+    description: |
+      Catching: catches a named error (typically inside a
+      subprocess). Throwing (end event): terminates the flow with an
+      error outcome that the enclosing scope can catch.
+
+  - id:    escalation
+    label: Escalation
+    description: |
+      Like error, but non-terminating — raises an escalation that an
+      enclosing handler can react to without aborting the flow.
+
+  - id:    compensation
+    label: Compensation
+    description: |
+      Triggers compensation handlers attached to previously-completed
+      activities. Used to model "undo" semantics for long-running
+      processes.
+
+  - id:    link
+    label: Link
+    description: |
+      Pair of throw/catch events that connect non-adjacent points in
+      the same flow without drawing a sequence flow. Visually a
+      "go-to" — useful for crossing-line avoidance in busy diagrams.
+
+  - id:    terminate
+    label: Terminate
+    description: |
+      End-event only. Stops the entire process instance immediately
+      — distinct from a regular end event which terminates only the
+      current flow path.
+
+references:
+  - https://www.omg.org/spec/BPMN/2.0/

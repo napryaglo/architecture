@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Architecture Viewer</title>
+  <link rel="stylesheet" href="viewer.css"/>
+  <script src="viewer.js" defer></script>
+</head>
+<body>
+
+<header id="topbar">
+  <div class="brand">
+    <span class="title" id="manifest-title">Architecture Viewer</span>
+    <span class="sep" aria-hidden="true">·</span>
+    <select id="model-picker" class="model-picker" aria-label="Active model"></select>
+    <span class="sep" aria-hidden="true">·</span>
+    <span class="view-name" id="current-view-label">—</span>
+  </div>
+
+  <div class="ctrl-group">
+    <button class="btn icon" id="zoom-out-btn" title="Zoom out (−)">&#x2212;</button>
+    <span id="zoom-label">100%</span>
+    <button class="btn icon" id="zoom-in-btn" title="Zoom in (+)">&#x2B;</button>
+    <button class="btn" id="zoom-reset-btn" title="Reset zoom (0 / double-click)">Reset</button>
+    <div class="vsep"></div>
+    <button class="btn icon" id="fs-btn" title="Fullscreen (F)">&#x26F6;</button>
+  </div>
+</header>
+
+<div id="main">
+  <nav id="sidebar" aria-label="Views">
+    <ul id="view-list"></ul>
+    <p id="empty-msg" class="empty hidden">No views in manifest.</p>
+  </nav>
+
+  <section id="stage" aria-label="View canvas">
+    <div id="sizer"></div>
+    <div id="zoom-toast">100%</div>
+    <p id="error-msg" class="error hidden"></p>
+  </section>
+
+  <aside id="rightbar" aria-label="Scenarios">
+    <h2 class="rightbar-heading">Scenarios</h2>
+    <ul id="scenario-list"></ul>
+    <p id="scenario-empty" class="empty hidden">No scenarios in this view.</p>
+  </aside>
+</div>
+
+</body>
+</html>

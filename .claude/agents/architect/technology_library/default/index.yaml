@@ -1,0 +1,77 @@
+# ─────────────────────────────────────────────────────────────────
+# Default Library — index
+# ─────────────────────────────────────────────────────────────────
+# Baseline meta-model categories shared across architectures. Imported
+# by architecture definition files via `imports: [default, ...]`.
+#
+# Library entries live under top-level `categories:` and/or
+# `technologies:` blocks. This library exposes only categories.
+#
+# Each category entry specifies a fallback icon used when a component
+# has no own icon and no `implemented-by` technology icon resolves.
+# Paths starting with `resources/` are library-relative; paths starting
+# with `technology_library/` or `ai_ea/` are project-root-relative.
+#
+# Catalogue mirrors adl/meta-model/concepts/component-category.md and
+# the human-readable enumeration in index.md. Entries are grouped by
+# fundamental role. Short pragmatic aliases (ai-chat, service, api, …)
+# coexist with their canonical catalogue keys and resolve to the same
+# vendor-neutral glyph.
+# ─────────────────────────────────────────────────────────────────
+
+categories:
+  # ── Application ────────────────────────────────────────────────
+  web-portal:                   { icon: resources/web-portal.svg }
+  mobile-app:                   { icon: resources/mobile-app.svg }
+  desktop-app:                  { icon: resources/desktop-app.svg }
+  conversational-interface:     { icon: resources/conversational-interface.svg }
+  legacy-application:           { icon: resources/legacy_application.svg }
+  embedded-widget:              { icon: resources/embedded-widget.svg }
+  reporting-surface:            { icon: resources/reporting-surface.svg }
+  ai-chat:                      { icon: resources/conversational-interface.svg }   # alias for conversational-interface
+
+  # ── Service ────────────────────────────────────────────────────
+  api-service:                  { icon: resources/api-service.svg }
+  workflow-engine:              { icon: resources/workflow-engine.svg }
+  orchestration-engine:         { icon: resources/orchestration-engine.svg }
+  integration-adapter:          { icon: resources/integration-adapter.svg }
+  event-processor:              { icon: resources/event-processor.svg }
+  notification-service:         { icon: resources/notification-service.svg }
+  ai-agent:                     { icon: resources/ai-agent.svg }
+  language-model:               { icon: resources/language-model.svg }
+  rag:                          { icon: resources/rag.svg }
+  scheduler:                    { icon: resources/scheduler.svg }
+  authorization-service:        { icon: resources/authorization-service.svg }
+  service:                      { icon: resources/api-service.svg }                # generic service alias
+  api:                          { icon: resources/api-service.svg }                # generic API alias
+  platform-api:                 { icon: resources/api-service.svg }                # unified platform-wide API surface
+  foundation-model:             { icon: resources/language-model.svg }             # alias for language-model
+
+  # ── Data Store ─────────────────────────────────────────────────
+  relational-store:             { icon: resources/relational-store.svg }
+  document-store:               { icon: resources/document-store.svg }
+  file-store:                   { icon: resources/file-store.svg }
+  event-log:                    { icon: resources/event-log.svg }
+  message-queue:                { icon: resources/message-queue.svg }
+  knowledge-source:             { icon: resources/knowledge-source.svg }
+  analytical-store:             { icon: resources/analytical-store.svg }
+  cache:                        { icon: resources/cache.svg }
+  database:                     { icon: resources/relational-store.svg }           # generic relational alias
+  data-store:                   { icon: resources/document-store.svg }             # broader bucket
+  messaging:                    { icon: resources/message-queue.svg }              # generic messaging alias
+
+  # ── Capability Surface ─────────────────────────────────────────
+  internal-api-gateway:         { icon: resources/internal-api-gateway.svg }
+  message-topic:                { icon: resources/message-topic.svg }
+  internal-mcp-server:          { icon: resources/mcp.svg }
+  mcp-server:                   { icon: resources/mcp.svg }                        # alias
+
+  # ── Public Surface ─────────────────────────────────────────────
+  public-api:                   { icon: resources/public-api.svg }
+  partner-integration-endpoint: { icon: resources/partner-integration-endpoint.svg }
+  public-mcp-server:            { icon: resources/public-mcp-server.svg }
+
+  # ── Federated Surface ──────────────────────────────────────────
+  enterprise-api-catalogue:     { icon: resources/enterprise-api-catalogue.svg }
+  federated-identity-provider:  { icon: resources/federated-identity-provider.svg }
+  semantic-index:               { icon: resources/semantic-index.svg }

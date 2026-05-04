@@ -1,0 +1,77 @@
+# ─────────────────────────────────────────────────────────────────
+# Task — atomic activity, rounded rectangle
+# ─────────────────────────────────────────────────────────────────
+# The workhorse element. Every BPMN diagram is mostly tasks. Visual:
+#
+#   ╭─────────────────╮
+#   │ ◧               │      ← task-type icon top-left (small SVG)
+#   │   Submit Order  │      ← label centred
+#   │                 │
+#   ╰─────────────────╯
+#
+# Standard BPMN sizing is roughly 100×80 with corners rounded at 10px.
+# The task-type icon is ~16px square in the top-left, padding 4–6px
+# from the corners. The label is centred horizontally and vertically.
+#
+# Task-type drives the icon. The template binds `$self.icon` from a
+# computed-by-type lookup (the markup compiler resolves the icon
+# path from `$self.type` against the resources/ catalog: a `user`
+# task gets `resources/task-user.svg`, a `service` task gets
+# `resources/task-service.svg`, etc.). The `none` type has no icon.
+# ─────────────────────────────────────────────────────────────────
+
+# ── Element type definition ──────────────────────────────────────
+extends: base
+properties:
+  label:    { type: string }
+  type:     { type: enum,
+              values: [none, user, service, manual, script, business-rule, send, receive],
+              default: none,
+              description: "Drives the small icon in the top-left corner." }
+  assignee: { type: string,
+              description: "Free-form assignee for `user` tasks. Not currently rendered." }
+  icon:     { type: ref,
+              description: "Resolved by the markup compiler from `type` against resources/. Authors don't write this." }
+
+# ── Style ────────────────────────────────────────────────────────
+type: style
+target: task
+
+setters:
+  stroke-color:  "#22211E"
+  stroke-width:  1
+  fill-color:    "#FFFFFF"
+  corner-radius: 10
+  margin:        4
+  # Default size — the auto-renderer overrides per-task if it wants
+  # variable widths to fit longer labels.
+  width:         110
+  height:        70
+
+  template:
+    - border:
+        rect:   { x: 0, y: 0, width: $self.width, height: $self.height }
+        rx:     $self.corner-radius
+        stroke: $self.stroke-color
+        stroke-width: $self.stroke-width
+        fill:   $self.fill-color
+        children:
+          # Task-type icon in the top-left. The `when:` skips it for
+          # `type: none` (the renderer-resolved `icon` is empty in
+          # that case, so the image element draws nothing useful).
+          - image:
+              when: $self.icon
+              src:  $self.icon
+              size: { w: 14, h: 14 }
+              at:   { x: 6, y: 6 }
+          # Centred label — wraps if it exceeds the cell width.
+          - text:
+              content: $self.label
+              at: { x: 0, y: 0 }
+              font-family: "Segoe UI, Calibri, Arial, sans-serif"
+              font-size: 11
+              anchor: middle
+              fill: "#22211E"
+              h-align: center
+              v-align: center
+              max-width: 90

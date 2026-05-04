@@ -1,0 +1,97 @@
+# ─────────────────────────────────────────────────────────────────
+# Architecture View — root element of a layout file
+# ─────────────────────────────────────────────────────────────────
+# An architecture-view is the top-level VisualElement in any layout
+# markup. It is the only element type that carries a `model:`
+# reference — pointing at an architecture YAML (e.g. ai_ea.arch.yaml).
+# That reference is the "architecture context" for everything inside:
+#
+#   - Components, locations, actors referenced inside the view resolve
+#     their non-visual properties (category, implemented-by, technology
+#     icon, label) from the model, so markup doesn't have to repeat
+#     them.
+#   - Connectors derived from scenario steps in the model can be auto-
+#     emitted (or validated against an authored connector list).
+#   - References to elements by id are validated against the model.
+#
+# The view's children are the visual elements that compose the
+# diagram: locations, actors, building-blocks, components, connectors.
+# Default child layout is a Canvas (absolute positioning by markup
+# coords), but other layout panels can be selected when authoring a
+# regular grid-style architecture.
+# ─────────────────────────────────────────────────────────────────
+
+# ── Element type definition ──────────────────────────────────────
+# The architecture-view defines the coordinate space for everything
+# inside it — both in pixels (sizes, padding, margin) and in cells
+# (positions). All descendants resolve their (col, row) coordinates
+# against this view's `cell-size`. The pixel canvas dimensions are
+# derived from `cols × cell-size` and `rows × cell-size` (or set
+# explicitly via base width/height).
+extends: base                 # see visual_primitives.yaml
+properties:
+  title:    { type: string }
+  subtitle: { type: string }
+  model:    { type: ref,
+              description: "Path to the model YAML — architecture context for everything inside." }
+  model-template: { type: identifier,
+                    description: "Name of a framework-registered data template that
+                                  generates this view's children from the bound `model`.
+                                  When set, child elements are NOT authored in the markup —
+                                  the template's generator function builds them from model
+                                  fields. Mutually exclusive with hand-authored children.
+                                  Architecture views typically don't use this (they are
+                                  fully populated by the author); BPMN views typically do
+                                  (e.g. `model-template: auto-layout`)." }
+  imports:  { type: object,
+              description: "Library references: visual-library, technology-library." }
+  background-color: { type: color,
+                      description: "Canvas background fill. Distinct from base fill-color." }
+  # Coordinate space
+  cell-size: { type: number, default: 20,
+               description: "Pixels per cell. Spec default is 20 (wiki/01-layout.md)." }
+  cols:      { type: number,
+               description: "Canvas width in cells. Pixel width = cols × cell-size." }
+  rows:      { type: number,
+               description: "Canvas height in cells. Pixel height = rows × cell-size." }
+
+# ── Style ────────────────────────────────────────────────────────
+type: style
+target: architecture-view
+
+setters:
+  background-color: "#FAFAF9"
+
+  template:
+    # Canvas background — fills the whole view area
+    - border:
+        rect: { x: 0, y: 0, width: $self.width, height: $self.height }
+        fill: $self.background-color
+        stroke: "none"
+    # Optional title at top-left
+    - text:
+        when: $self.title
+        content: $self.title
+        at: { x: 16, y: 24 }
+        font-family: "Segoe UI, Calibri, Arial, sans-serif"
+        font-size: 16
+        font-weight: bold
+        anchor: start
+        fill: "#22211E"
+    - text:
+        when: $self.subtitle
+        content: $self.subtitle
+        at: { x: 16, y: 44 }
+        font-family: "Segoe UI, Calibri, Arial, sans-serif"
+        font-size: 11
+        font-style: italic
+        anchor: start
+        fill: "#5F5C56"
+    # Children render here — Canvas layout (children carry their own x, y).
+    # Currently a stub: the markup_compiler doesn't yet load architecture-view
+    # styles (only location/building-block/component/actor/connector). When
+    # we wire it in, the content-presenter below will host the view's
+    # children just as it does for components.
+    - canvas:
+        children:
+          - content-presenter: {}

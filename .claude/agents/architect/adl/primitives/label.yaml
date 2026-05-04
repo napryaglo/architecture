@@ -1,0 +1,62 @@
+# yaml-language-server: $schema=
+# ═════════════════════════════════════════════════════════════════
+# Primitive: Label
+# ═════════════════════════════════════════════════════════════════
+# Display name for a model element. The ADL accepts two forms — a
+# single string or a YAML list of strings — because some renderers
+# want explicit multi-line labels (the architecture-view's component
+# template stacks list items as separate lines verbatim) while
+# others want a single line (the sequence-diagram participant box,
+# which has a small fixed-width column to fit into).
+#
+# Renderer convention:
+#
+#   - Architecture view (visual_engine): list-form labels render as
+#     one line per element via tspans. Single-string labels render
+#     as one line. The component template applies a max-width-driven
+#     greedy wrap when the single-string form overflows.
+#
+#   - Sequence diagrams (visual_engine/sequence_renderer): list-form
+#     labels are joined with a space and then re-wrapped via the same
+#     greedy algorithm, sizing the participant box uniformly across
+#     participants so all lifelines start at the same Y.
+#
+# A list-form label is therefore a *hint* to the architecture view
+# about how the author wants the label broken; downstream surfaces
+# may interpret it differently.
+# ═════════════════════════════════════════════════════════════════
+
+kind: primitive
+name: Label
+slug: label
+
+description: |
+  Display name shown on rendered diagrams. Two acceptable forms:
+  a single string, or a YAML list of strings rendered as multi-line
+  text. List form is a hint about line breaks; renderers may join
+  for surfaces where multi-line is awkward (e.g. sequence-diagram
+  participant boxes).
+
+base-type: union
+
+# Two-element union — either a plain string or a list of strings.
+# The validator checks the type of the value and routes accordingly.
+shape:
+  union:
+    - string
+    - list: string
+
+examples:
+  - value: 'Microsoft Teams'
+    note: Single-line form — preferred when the label fits comfortably.
+  - value: ['Microsoft Agent', 'Framework']
+    note: |
+      Two-line form. The architecture-view's component template renders
+      these as two separate visual lines verbatim. The sequence renderer
+      joins them with a space first ("Microsoft Agent Framework") then
+      applies word-wrap to fit the fixed-width participant box.
+
+references:
+  - modeling_engine/wiki/02-schema.md
+  - visual_libraries/Default/data-templates/_default.yaml
+  - visual_engine/sequence_renderer/render.py

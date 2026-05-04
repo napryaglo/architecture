@@ -1,0 +1,110 @@
+# yaml-language-server: $schema=
+# ═════════════════════════════════════════════════════════════════
+# Concept: Sequence Flow (BPMN)
+# ═════════════════════════════════════════════════════════════════
+# An edge between two flow nodes (task, event, gateway) WITHIN A
+# SINGLE POOL. Carries flow tokens — the abstract "control"
+# advancing through the process. The ordinary connector.
+#
+# Visual: solid arrow with a filled triangular tip. Conditional
+# flows (where the source is a fork gateway with a condition on this
+# branch) carry the condition expression as a label near the source.
+# Default flows from exclusive/inclusive gateways are drawn with a
+# slash mark at the source.
+#
+# Sequence flows MUST stay within a single pool. The validator
+# rejects sequence flows whose source and target sit in different
+# pools — that's a `message-flow` instead.
+#
+# Conditions. The `condition` field is free-form text. The BPMN spec
+# doesn't formalise the expression language; runtimes interpret it
+# (FEEL, JavaScript, MVEL — engine's choice). Authors write what
+# their target engine understands.
+# ═════════════════════════════════════════════════════════════════
+
+kind: concept
+name: Sequence Flow
+slug: sequence-flow
+
+description: |
+  An intra-pool edge between two flow nodes. Carries control tokens.
+  Solid arrow with filled tip. May carry a condition expression
+  when its source is a diverging gateway.
+
+# ── Properties ───────────────────────────────────────────────────
+properties:
+
+  - name: id
+    type: identifier
+    cardinality: '0..1'
+    description: |
+      Optional id. Most sequence flows don't need one; an id is
+      useful when an enclosing concept needs to reference the flow
+      (e.g. a gateway's `default:` field naming this flow).
+
+  - name: from
+    type: identifier
+    description: Source flow node id (task, event, or gateway).
+
+  - name: to
+    type: identifier
+    description: Target flow node id (task, event, or gateway).
+
+  - name: type
+    type:
+      enum: flow-type
+    default: sequence
+    description: |
+      `sequence` for ordinary intra-pool flows. The default; can be
+      omitted in authoring.
+
+  - name: condition
+    type: text
+    cardinality: '0..1'
+    description: |
+      Free-form expression text. Used when this flow exits a
+      diverging exclusive or inclusive gateway. The expression
+      language is engine-defined; the spec just preserves the text.
+
+  - name: label
+    type: string
+    cardinality: '0..1'
+    description: |
+      Display label, usually shown only when the flow carries
+      semantic weight (a condition, a default-flow indicator).
+      Plain "happy path" sequence flows are typically unlabelled.
+
+# ── Invariants ───────────────────────────────────────────────────
+invariants:
+
+  - description: |
+      Source and target both resolve to flow nodes (task / event /
+      gateway) declared in the process.
+
+  - description: |
+      Source and target sit in the SAME pool. A sequence flow
+      crossing a pool boundary is a modelling error — use a
+      `message-flow` instead.
+
+  - description: |
+      `from` cannot be an end event; `to` cannot be a start event.
+      End events are sinks; start events are sources only.
+
+# ── Authoring ────────────────────────────────────────────────────
+authoring:
+
+  - form: object-form
+    description: |
+      In a flat top-level `flows:` list. The object form makes the
+      type and any condition explicit.
+    example: |
+      flows:
+        - { from: receive-order,    to: validate-payment,    type: sequence }
+        - { from: validate-payment, to: payment-ok,          type: sequence }
+        - { from: payment-ok,       to: pack-items,
+            type: sequence, condition: "payment.status == 'approved'" }
+        - { from: payment-ok,       to: payment-failed-end,
+            type: sequence, condition: "default" }
+
+references:
+  - https://www.omg.org/spec/BPMN/2.0/

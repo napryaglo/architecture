@@ -1,0 +1,74 @@
+# ─────────────────────────────────────────────────────────────────
+# Data Object — page-shape with optional state annotation
+# ─────────────────────────────────────────────────────────────────
+# A small (~36×48) page shape — rectangle with a folded top-right
+# corner — labelled with the data object's name. An optional state
+# annotation sits in brackets on a second line below the label
+# (e.g. "[validated]").
+#
+# Connected to flow nodes by data associations (dotted lines, no
+# fill on the arrowhead) — those are visual primitives that the
+# auto-renderer adds, not declared in this template.
+#
+# Collection data objects (multiple instances) get a triple-bar
+# marker at the bottom centre of the page shape — added by a
+# trigger on `collection: true`.
+# ─────────────────────────────────────────────────────────────────
+
+# ── Element type definition ──────────────────────────────────────
+extends: base
+properties:
+  label:      { type: string }
+  state:      { type: string,
+                description: "Optional state annotation (e.g. \"validated\"). Rendered in brackets below the label." }
+  collection: { type: bool, default: false,
+                description: "When true, draws the triple-bar collection marker at the bottom of the shape." }
+
+# ── Style ────────────────────────────────────────────────────────
+type: style
+target: data-object
+
+setters:
+  stroke-color: "#8A8780"
+  stroke-width: 1
+  fill-color:   "#FFFFFF"
+  margin:       4
+  width:        40
+  height:       50
+  padding:      { bottom: 14 }   # for label below the shape
+
+  template:
+    # Page shape — rectangle with a folded corner. Currently an SVG
+    # asset; when visual primitives gain a path / polygon primitive
+    # the shape can be drawn natively.
+    - image:
+        src:  resources/data-object.svg
+        size: { w: 40, h: 50 }
+        at:   { x: 0, y: 0 }
+    # Label below the shape. State annotation appended in brackets
+    # on the same line if present (renderer concatenates).
+    - text:
+        content: $self.label
+        at: { x: 20, y: 54 }
+        font-family: "Segoe UI, Calibri, Arial, sans-serif"
+        font-size: 10
+        anchor: middle
+        fill: "#22211E"
+    - text:
+        when: $self.state
+        content: $self.state
+        at: { x: 20, y: 66 }
+        font-family: "Segoe UI, Calibri, Arial, sans-serif"
+        font-size: 9
+        font-style: italic
+        anchor: middle
+        fill: "#5F5C56"
+
+triggers:
+  - when: { collection: true }
+    setters:
+      # Collection-marker overlay would be drawn by the renderer
+      # based on this flag. Captured as a setter so the trigger
+      # mechanism is the documentation hook even if the renderer
+      # doesn't yet act on it.
+      collection-marker: visible

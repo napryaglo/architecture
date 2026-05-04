@@ -1,0 +1,215 @@
+# yaml-language-server: $schema=
+# ═════════════════════════════════════════════════════════════════
+# Concept: View
+# ═════════════════════════════════════════════════════════════════
+# A hand-drawn diagram of one specific model. Authored in the `.view`
+# DSL — a small TikZ-flavoured language with explicit anchor
+# placement, layout panels, and twelve connector operators. Each
+# view is bound to exactly one model.
+#
+# Identity. View ids are unique WITHIN A MODEL ONLY — two different
+# models may both have a view called `topology`. Project-wide
+# uniqueness comes via the generated `<model.id>/<view.id>` handle,
+# which is what the viewer's URL state encodes (`?view=enterprise/
+# topology`). The dom-id form `<model.id>__<view.id>` is the same
+# pair joined with double-underscore, used in DOM `id=""` attributes
+# where slash isn't legal.
+#
+# Tight coupling to its model. Three rules the toolchain enforces:
+#
+#   1. The view file lives under
+#      `<project>/models/<model.id>/views/<view.id>.view` by
+#      convention (overridable via explicit `view.source:`).
+#
+#   2. The view's `view $<id>` directive must match the bound model's
+#      `meta.id`. Mismatch is a build error from the orchestrator's
+#      `validate_view_bindings` step.
+#
+#   3. Element references inside the view (`$<id>` tokens) must
+#      resolve to ids in the bound model's namespace (actor, block,
+#      location, component). Today this is a soft check — the visual
+#      engine doesn't strictly validate cross-references — but it's
+#      on the roadmap.
+#
+# Two-pass compile chain:
+#   .view  →  view_compiler  →  .gen.markup
+#          →  markup_compiler --model <compiled.arch.yaml>  →  .gen_compiled.markup
+#          →  renderer  →  .svg
+#
+# The `--model` flag is what couples the visual side to the model: the
+# markup compiler builds the (from, to) → [flows] index from the
+# compiled architecture and stamps `data-flows` on every drawn
+# connector group. See `connector.yaml`.
+# ═════════════════════════════════════════════════════════════════
+
+kind: concept
+name: View
+slug: view
+
+description: |
+  A hand-drawn diagram of one specific model. Authored in the
+  `.view` DSL. Bound to a model via the `view $<arch-id>` directive;
+  the orchestrator validates that the id matches the model's
+  `meta.id`. View ids are unique within a model only — project-wide
+  addressing uses the `<model.id>/<view.id>` handle.
+
+# ── Properties ───────────────────────────────────────────────────
+# The first three properties are authored in the project descriptor
+# (`<project>.proj.yaml` under `models[].views[]`). The remaining
+# are inside the `.view` source itself.
+properties:
+
+  - name: id
+    type: identifier
+    description: |
+      View id. Unique **within its model only** — two different
+      models may both have a view called `topology`. Authored in
+      the descriptor.
+
+  - name: label
+    type: string
+    cardinality: '0..1'
+    description: |
+      Human-readable view label; surfaces in the viewer's sidebar.
+      Defaults to the id when missing.
+
+  - name: source
+    type: string
+    cardinality: '0..1'
+    description: |
+      Optional override path to the `.view` file. Defaults by
+      convention to `<project>/models/<model.id>/views/<view.id>.view`.
+      Use `source:` when the file genuinely lives elsewhere.
+      Mutually exclusive with `model-template:` — a view either has an
+      authored DSL source or is generated from a template, never both.
+
+  - name: model-template
+    type: identifier
+    cardinality: '0..1'
+    description: |
+      Name of a framework-registered data template that generates the
+      whole view from the bound model. Mutually exclusive with
+      `source:`. Architecture views typically DON'T set this — they
+      are hand-authored in the `.view` DSL because the layout intent
+      is aesthetic and per-architecture. The property is offered for
+      symmetry with the BPMN meta-model (where templates are the
+      common case) and to allow future architecture-side templates
+      (e.g. an auto-grouped topology view derived purely from
+      locations + blocks).
+
+  # Generated identifiers — written by the orchestrator into the
+  # viewer manifest, never authored.
+  - name: handle
+    type: string
+    description: |
+      Generated identifier `<model.id>/<view.id>`. The viewer's URL
+      uses this (`?view=enterprise/topology`). Authored only by the
+      orchestrator; not user-supplied.
+
+  - name: dom-id
+    type: string
+    description: |
+      Generated identifier `<model.id>__<view.id>`. Safe in DOM
+      `id=""` attributes and CSS selectors (no slash). Authored
+      only by the orchestrator.
+
+  # Inside the .view source itself.
+  - name: imports
+    type:
+      list:
+        object:
+          kind: { type: identifier }
+          path: { type: string }
+    cardinality: '*'
+    description: |
+      `import visual-library Default` and `import technology-library
+      microsoft` lines at the top of the source. Resolved relative
+      to the toolchain root (`visual_libraries/Default/`,
+      `technology_library/microsoft/`).
+
+  - name: view-decl
+    type:
+      object:
+        arch-id:     { type: identifier, required: true }
+        title:       { type: string }
+        view-type:   { type: identifier }
+        description: { type: text }
+        background:  { type: color }
+        padding:     { type: edges }
+    description: |
+      The opening `view $<arch-id> [...] { ... }` block. The arch-id
+      MUST match the model's `meta.id`. The bracketed attributes
+      configure the view's chrome — title, background colour, page
+      padding. The body that follows is the layout structure plus a
+      `connectors { ... }` block.
+
+# ── Invariants ───────────────────────────────────────────────────
+invariants:
+
+  - description: |
+      View ids unique within the parent model. Project-wide
+      uniqueness is achieved via the generated `<model.id>/<view.id>`
+      handle, not by requiring the underlying ids to be unique.
+
+  - description: |
+      The `.view`'s `view $<id>` directive equals its model's
+      `meta.id`. Mismatch is a build-time error reported by the
+      orchestrator's `validate_view_bindings` step.
+
+  - description: |
+      All `$<id>` element references inside the view body must
+      resolve to ids in the bound model (actors, blocks, locations,
+      components). Today this is not strictly validated — it's a
+      soft check at render time, surfacing as warnings or empty
+      highlights. Strict validation is a roadmap item.
+
+  - description: |
+      `source:` and `model-template:` are mutually exclusive. A view
+      is either hand-authored (source) or framework-generated
+      (template) — having both is ambiguous about which wins, so the
+      orchestrator rejects it. When neither is set, the orchestrator
+      falls back to the conventional source path.
+
+# ── Authoring ────────────────────────────────────────────────────
+authoring:
+
+  - form: descriptor-entry
+    description: 'How a view appears in the project descriptor.'
+    example: |
+      models:
+        - id: enterprise
+          views:
+            - id:    topology
+              label: System Topology
+              # source: defaults to models/enterprise/views/topology.view
+
+  - form: view-source
+    description: |
+      The DSL itself: imports at the top, `view $<arch-id> [attrs]
+      { body }` block. The body contains layout panels declaring
+      element placements and a final `connectors { ... }` block.
+    example: |
+      import visual-library     Default
+      import technology-library microsoft
+
+      view $enterprise [
+          title       = "AI Enterprise Architecture"
+          view-type   = topology
+          background  = "#FAFAF9"
+          padding     = 20
+      ]
+      {
+          vstack { ... }
+
+          connectors {
+              $business-user --> $chat-surface
+              $autonomous-agent |-> $agent-orchestrator
+              ...
+          }
+      }
+
+references:
+  - wiki/00-overview.md
+  - wiki/01-project-descriptor.md
+  - visual_engine/wiki/00-overview.md
+  - visual_engine/markup/view_compiler/view_compiler.py

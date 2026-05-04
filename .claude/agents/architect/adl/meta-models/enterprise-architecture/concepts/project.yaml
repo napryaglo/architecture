@@ -1,0 +1,125 @@
+# yaml-language-server: $schema=
+# ═════════════════════════════════════════════════════════════════
+# Concept: Project
+# ═════════════════════════════════════════════════════════════════
+# The top-level container in the toolchain. A project bundles one or
+# more architecture models with a shared authoring context (libraries,
+# build configuration, viewer manifest). It is the unit the orchestrator
+# (`toolchain/build.py`) operates on.
+#
+# Why introduce a project layer:
+#
+#   - Multiple models per project is the realistic case. An enterprise
+#     might have one model for the AI architecture, another for the
+#     data platform, a third for the modernisation target state. They
+#     share the same brand, the same library imports, the same viewer
+#     manifest — but their internals are independent.
+#
+#   - Build orchestration becomes generic. Without a project layer,
+#     each project carried its own `build.py` that knew where its model
+#     and views lived. With it, `toolchain/build.py` is the generic
+#     orchestrator and the project descriptor is its only input.
+#
+#   - The viewer's two-level navigation (model picker → views per
+#     model) needs the project layer to know which models exist.
+#
+# A project is declared by a single descriptor file:
+# `<project-dir>/<project-dir-name>.proj.yaml`. The descriptor is the
+# only file the orchestrator must read; everything else is referenced
+# from there.
+# ═════════════════════════════════════════════════════════════════
+
+kind: concept
+name: Project
+slug: project
+
+description: |
+  Top-level container for one or more architecture models with a
+  shared authoring context. The unit the toolchain orchestrator
+  operates on. Declared by a `<project-dir>/<project-dir-name>.proj.yaml`
+  descriptor file.
+
+# ── Properties ───────────────────────────────────────────────────
+# Authored fields that appear in the descriptor.
+properties:
+
+  - name: id
+    type: identifier
+    description: |
+      Stable kebab-case project id. Matches the project directory
+      name; the orchestrator uses the directory name to find the
+      descriptor file.
+
+  - name: title
+    type: string
+    cardinality: '0..1'
+    description: |
+      Human-readable title; surfaces in the viewer's brand line at
+      the top-left. Optional — when missing, the project id is shown.
+
+  - name: models
+    type:
+      list:
+        ref: model
+    cardinality: '1..*'
+    description: |
+      One or more architecture models authored under the project.
+      Order is preserved — the viewer's model picker uses descriptor
+      order. Within-project unique by id.
+
+  - name: build
+    type:
+      object:
+        output:
+          type: string
+          default: 'output'
+    cardinality: '0..1'
+    description: |
+      Build-orchestration knobs. `output:` overrides the default
+      `output/` directory name (project-relative). Future knobs (cache
+      directory, parallelism, …) land here.
+
+# ── Invariants ───────────────────────────────────────────────────
+# Each invariant maps to a check in the orchestrator's
+# `validate_descriptor` step.
+invariants:
+
+  - description: |
+      Model ids are unique within the project. Two models can't share
+      the same id — the orchestrator's per-model output partitioning
+      relies on uniqueness.
+    formal: '∀ m1, m2 ∈ project.models: m1 ≠ m2 ⇒ m1.id ≠ m2.id'
+
+  - description: |
+      Each declared model `source:` file exists on disk. The
+      orchestrator fails the build with a clear "model source not
+      found" error rather than running the model_compiler on a
+      missing file.
+
+# ── Authoring ────────────────────────────────────────────────────
+authoring:
+
+  - form: descriptor
+    description: |
+      A single YAML file at `<project-dir>/<project-dir-name>.proj.yaml`.
+      Path-relative resolution everywhere — `models[].source:` paths
+      are relative to the project dir.
+    example: |
+      id:    ai_ea
+      title: AI Enterprise
+
+      models:
+        - id:     enterprise
+          label:  Enterprise
+          source: models/enterprise/enterprise.arch.yaml
+          views:
+            - id: topology
+              label: System Topology
+
+      build:
+        output: output
+
+references:
+  - wiki/01-project-descriptor.md
+  - wiki/02-toolchain.md
+  - toolchain/build.py

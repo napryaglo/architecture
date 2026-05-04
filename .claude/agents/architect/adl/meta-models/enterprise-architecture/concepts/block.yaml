@@ -1,0 +1,100 @@
+# yaml-language-server: $schema=
+# ═════════════════════════════════════════════════════════════════
+# Concept: Block
+# ═════════════════════════════════════════════════════════════════
+# A logical grouping of components inside a single location. Blocks
+# carry a label and a location membership; their components inherit
+# the block's location implicitly (the block's `in:`). Visual
+# rendering treats a block as a bordered container with a title bar
+# at the top.
+#
+# Terminology note. Earlier wiki language used "building block" as
+# the canonical term. The ADL uses "block" today as the short form;
+# the broader concept of a building block (a category-level role
+# realised by one or more concrete blocks) lives in
+# `adl/meta-models/enterprise-architecture/wiki/concepts/building-block.md`. The two terms denote
+# different things — block = the concrete grouping in a model;
+# building block = the abstract role in the meta-model.
+#
+# Blocks let authors say "these N components form one logical
+# capability" without inventing artificial parent components or
+# reaching for nested locations. The view DSL renders a block as a
+# bordered region with the children laid out via the block's own
+# layout panel (canvas by default).
+# ═════════════════════════════════════════════════════════════════
+
+kind: concept
+name: Block
+slug: block
+
+description: |
+  A logical grouping of components inside a single location.
+  Components inside a block inherit the block's `in:` location.
+  Visual rendering treats a block as a bordered container with a
+  title bar at the top.
+
+# ── Properties ───────────────────────────────────────────────────
+properties:
+
+  - name: id
+    type: identifier
+    description: Globally unique within the model. Shares namespace with actors/components/locations.
+
+  - name: label
+    type: label
+
+  - name: in
+    type: identifier
+    description: |
+      Id of the containing location. Required — the orchestrator
+      rejects blocks whose `in:` doesn't resolve. This is what makes
+      blocks "anchored": every component inside the block is in this
+      location.
+
+  - name: components
+    type:
+      list:
+        ref: component
+    cardinality: '1..*'
+    description: |
+      Components inside this block. They share the block's location
+      implicitly (no `in:` field on each child). The compiler
+      validates each component against the block's location for
+      `available-in` checks.
+
+# ── Invariants ───────────────────────────────────────────────────
+invariants:
+
+  - description: |
+      Block ids share the global namespace; collisions with
+      components, actors, or locations are forbidden.
+
+  - description: '`in` must resolve to a declared location.'
+
+  - description: |
+      Block components share the block's location for `available-in`
+      validation. A technology that's not available-in the block's
+      location can't implement any component in the block.
+
+# ── Authoring ────────────────────────────────────────────────────
+authoring:
+
+  - form: list-form-components
+    description: |
+      The block carries `components:` as a list of component objects
+      (preferred form) — the YAML key on the outer map is the block
+      id; the block's components use list-form authoring.
+    example: |
+      blocks:
+        chat-surface:
+          label: Chat Surface
+          in: m365
+          components:
+          - id: teams-chat
+            label: Microsoft Teams
+            category: ai-chat
+            implemented-by: [microsoft-teams]
+
+references:
+  - adl/meta-models/enterprise-architecture/wiki/concepts/building-block.md
+  - modeling_engine/wiki/01-meta-model.md

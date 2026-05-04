@@ -1,0 +1,86 @@
+# yaml-language-server: $schema=
+# ═════════════════════════════════════════════════════════════════
+# Concept: Pool (BPMN)
+# ═════════════════════════════════════════════════════════════════
+# A pool represents a participant in a collaboration — typically an
+# organisation, a system, or a role. Visually a pool is a labelled
+# rectangle that contains lanes, which in turn contain flow nodes.
+#
+# Pool semantics matter for flow validation:
+#
+#   - Sequence flows STAY WITHIN a pool. Tokens don't cross pool
+#     boundaries via sequence — that would imply synchronous control
+#     transfer between participants, which BPMN explicitly disallows.
+#
+#   - Message flows CROSS pool boundaries. Asynchronous communication
+#     between participants is the only legitimate inter-pool edge.
+#
+# A "single-pool" process is the common simple case — one
+# participant's view of the work. Multi-pool diagrams are needed for
+# collaborations (B2B exchanges, customer-vendor interactions,
+# system-to-system protocols).
+#
+# A pool may be EMPTY (a "black box pool") to represent a
+# participant whose internal flow is hidden. Useful for collaboration
+# diagrams focused on the messages, not the internals. The current
+# spec doesn't model black-box pools as a distinct kind — an empty
+# pool is just a pool with one lane and no flow nodes.
+# ═════════════════════════════════════════════════════════════════
+
+kind: concept
+name: Pool
+slug: pool
+
+description: |
+  A participant in a BPMN collaboration — typically an organisation,
+  a system, or a role. Visual rectangle containing lanes; lanes
+  contain the flow nodes. Sequence flows stay inside a pool;
+  message flows cross between them.
+
+# ── Properties ───────────────────────────────────────────────────
+properties:
+
+  - name: id
+    type: identifier
+
+  - name: label
+    type: label
+    description: Display name shown on the pool's header bar.
+
+  - name: lanes
+    type:
+      list:
+        ref: lane
+    cardinality: '1..*'
+    description: |
+      One or more lanes partitioning the pool. A pool with no lane
+      structure is modelled with a single lane spanning the whole
+      pool (the lane carries the same label as the pool, or `self`
+      / `default`).
+
+# ── Invariants ───────────────────────────────────────────────────
+invariants:
+
+  - description: Pool ids are unique within the process.
+
+  - description: |
+      A pool has at least one lane. A pool with zero lanes is a
+      modelling error — flow nodes can't exist outside a lane.
+
+# ── Authoring ────────────────────────────────────────────────────
+authoring:
+
+  - form: dict-form
+    description: |
+      YAML key is the pool id. Lanes are the most common nested
+      content; a pool may also carry inline flow nodes via its lanes.
+    example: |
+      pools:
+        seller:
+          label: Seller
+          lanes:
+            sales:    { label: Sales }
+            shipping: { label: Shipping }
+
+references:
+  - https://www.omg.org/spec/BPMN/2.0/

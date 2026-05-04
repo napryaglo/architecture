@@ -1,0 +1,53 @@
+# yaml-language-server: $schema=
+# ═════════════════════════════════════════════════════════════════
+# Meta-model: BPMN
+# ═════════════════════════════════════════════════════════════════
+# Business Process Model and Notation. Models a business process as
+# a flow of activities (tasks, subprocesses) through swimlanes
+# (pools, lanes), connected by sequence flows and message flows,
+# branched at gateways (exclusive, parallel, inclusive).
+#
+# This is a pragmatic subset of BPMN 2.0 — the artifacts most
+# practitioners actually use. Notably absent (deliberate first cut):
+# choreography, conversations, artifacts beyond data objects, the
+# full event-trigger taxonomy. Add them when concrete need surfaces.
+#
+# Status: spec-only. No BPMN compiler exists yet; this directory
+# defines the vocabulary so the toolchain has something to validate
+# against once a `bpmn_compiler` lands.
+# ═════════════════════════════════════════════════════════════════
+
+kind: meta-model
+name: BPMN
+slug: bpmn
+description: |
+  Business Process Model and Notation v2 (pragmatic subset). Models
+  a process as a flow of activities through pools and lanes,
+  connected by sequence flows and gated by exclusive / parallel /
+  inclusive gateways. Cross-pool communication uses message flows.
+
+version: 1
+extension:      .bpmn.yaml
+view-extension: .view           # shared with enterprise-architecture; the
+                                # view DSL has the same outer shape
+                                # (`view $<id> [attrs] { body }`) for both
+                                # meta-models, dispatch is by the bound
+                                # model's meta-model rather than by file
+                                # extension
+
+root-concept: process
+
+top-level-concepts:
+  - process
+  - pool
+  - lane
+  - task
+  - event
+  - gateway
+  - sequence-flow
+  - message-flow
+  - data-object
+  - bpmn-view
+
+references:
+  - https://www.omg.org/spec/BPMN/2.0/        # original BPMN 2.0 spec (informative)

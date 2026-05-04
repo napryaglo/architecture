@@ -1,0 +1,141 @@
+# yaml-language-server: $schema=
+# ═════════════════════════════════════════════════════════════════
+# Concept: Technology
+# ═════════════════════════════════════════════════════════════════
+# A concrete tool, service, or product that can realise a component
+# (e.g. `azure-openai-gpt4o`, `microsoft-teams`, `dataverse`). The
+# intermediary layer between the type-level component (named for what
+# it does) and the runtime artifact (named for what it's built with).
+#
+# Two compatibility lists carry most of the validation weight:
+#
+#   - `available-in: [<location>...]`  — locations the technology can
+#     run in. The validator checks that a component's effective
+#     location is in this list. Catches "Power Platform component
+#     implemented by an Azure-only technology" without anyone needing
+#     to memorise the matrix.
+#
+#   - `applicable-to: [<category>...]` — categories the technology
+#     can fill. Non-exclusive — `ai-foundry-agent-svc` is
+#     `[ai-agent, orchestration-engine]` because it genuinely fits
+#     either role. Validator checks that a component's category is in
+#     the chosen technology's applicable-to.
+#
+# Where technologies live:
+#
+#   - Library entries: `technology_library/<name>/index.yaml` under
+#     `technologies:`. Versioned with the library; reusable across
+#     projects.
+#
+#   - Project-custom: inline at the architecture level under
+#     `custom-technologies:`. Used for entries that aren't reusable
+#     across architectures (custom services, project-specific glue).
+#     Override library entries on id collision — the architecture's
+#     own dictionary wins.
+#
+# The icon path follows the project-wide rule: paths starting with
+# `resources/` inside a library's index.yaml are library-relative;
+# anywhere else they're project-root-relative
+# (`technology_library/microsoft/resources/foo.svg`,
+# `ai_ea/resources/bar.svg`).
+# ═════════════════════════════════════════════════════════════════
+
+kind: concept
+name: Technology
+slug: technology
+
+description: |
+  A concrete tool, service, or product that can realise a component.
+  Carries two compatibility lists used by the validator —
+  `available-in` (allowed locations) and `applicable-to` (allowed
+  categories). Lives in libraries or as project-custom entries.
+
+# ── Properties ───────────────────────────────────────────────────
+properties:
+
+  - name: id
+    type: identifier
+    description: |
+      Stable kebab-case technology id. Globally unique across all
+      imported libraries plus project-custom; collisions resolve
+      project-custom-wins.
+
+  - name: label
+    type: string
+    description: |
+      Display name shown in the technology wiki and tooling.
+      Single-line — list-form labels are not used for technologies.
+
+  - name: icon
+    type: string
+    cardinality: '0..1'
+    description: |
+      Path to an SVG icon. Library-relative or project-root-relative
+      depending on context (see header comment). When missing, the
+      technology contributes no icon and the component falls back to
+      the category icon, then to a lettered placeholder.
+
+  - name: available-in
+    type:
+      list: identifier
+    cardinality: '*'
+    description: |
+      Location ids the technology can run in. Used to validate that a
+      component's effective location is one the technology supports.
+      An empty list means "no constraint" but in practice every
+      technology should declare at least one.
+
+  - name: applicable-to
+    type:
+      list:
+        enum: component-category
+    cardinality: '*'
+    description: |
+      Categories the technology can fill. Non-exclusive — a single
+      technology may fit multiple categories, with no notion of a
+      "primary" one. The validator just checks the chosen component
+      category is in the list.
+
+# ── Invariants ───────────────────────────────────────────────────
+invariants:
+
+  - description: |
+      `available-in` entries must resolve to declared locations in
+      the models that import this technology. Validation runs
+      per-model (not at library load time) since locations are
+      model-defined, not library-defined.
+
+  - description: |
+      `applicable-to` entries must resolve in the
+      `component-category` enum or an alias thereof. A technology
+      pointing at a non-existent category is a typo.
+
+# ── Authoring ────────────────────────────────────────────────────
+authoring:
+
+  - form: library-entry
+    description: 'Inside a `technology_library/<name>/index.yaml` under `technologies:`.'
+    example: |
+      technologies:
+        azure-openai-gpt4o:
+          label: Azure OpenAI (GPT-4o)
+          icon: resources/azure-openai.svg
+          available-in: [azure]
+          applicable-to: [language-model, foundation-model]
+
+  - form: project-custom
+    description: |
+      Inline in the architecture's `custom-technologies:` block —
+      used for project-specific entries (custom services, validators,
+      glue). Overrides library entries on id collision.
+    example: |
+      custom-technologies:
+        custom-validator-svc:
+          label: Request Validator
+          icon: ai_ea/resources/validator.svg
+          available-in: [azure]
+          applicable-to: [service]
+
+references:
+  - modeling_engine/wiki/03-libraries.md
+  - technology_library/microsoft/index.yaml

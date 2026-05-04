@@ -1,0 +1,106 @@
+# yaml-language-server: $schema=
+# ═════════════════════════════════════════════════════════════════
+# Concept: Sequence
+# ═════════════════════════════════════════════════════════════════
+# A single ordered flow inside a scenario — one entry point and one
+# step list that together deliver the scenario's outcome. A scenario
+# may carry several sequences when the same outcome is reachable
+# from different entry points; each sequence is its own ordered
+# flow, rendered independently as a sequence diagram.
+#
+# Identity. A sequence has no authored id — instead the toolchain
+# derives a slug from the `Title` field. The slugging algorithm is
+# canonical (see `primitives/slug.yaml` for the algorithm's
+# definition). Three pieces of code must agree on the algorithm —
+# the model_compiler that stamps slugs on connectors, the toolchain
+# that builds the manifest, and the sequence renderer. They all
+# import or duplicate the same regex; if it ever drifts the
+# manifest stops resolving.
+#
+# Authoring quirks. The fields use capitalised keys with spaces
+# (`Title`, `Entry Point`) — the user-facing convention chose this
+# because sequences read like prose section headings, not like
+# config keys. Lower-snake-case alternates (`title`, `entry-point`)
+# are accepted by the compiler for tools that prefer that form.
+# The wrapper `- sequence: { ... }` around each list entry is
+# optional but conventional — bare `- { Title, Entry Point, steps }`
+# parses identically.
+# ═════════════════════════════════════════════════════════════════
+
+kind: concept
+name: Sequence
+slug: sequence
+
+description: |
+  A single ordered flow inside a scenario — one entry point and one
+  step list that together deliver the scenario's outcome. The id
+  used by the toolchain is a slug derived from `Title`; agreement
+  on the slugging algorithm across compiler, manifest, and renderer
+  is essential.
+
+# ── Properties ───────────────────────────────────────────────────
+properties:
+
+  - name: Title
+    type: string
+    description: |
+      Human-readable sequence name. The slug derived from this
+      becomes the sequence's stable id (`slug(Title)`). Authored
+      with capitalised key — the lower-snake-case `title` is also
+      accepted but the compiled output normalises to `Title`.
+
+  - name: Entry Point
+    type: identifier
+    description: |
+      Bare id of the actor, component, or block that initiates this
+      sequence. Validated against the global namespace. Authored
+      with capitalised key plus space — `entry-point` and
+      `entryPoint` are also accepted.
+
+  - name: steps
+    type:
+      list:
+        ref: step
+    cardinality: '1..*'
+    description: |
+      Ordered list of step transitions. At least one step is
+      required — an empty `steps:` list is meaningless.
+
+# ── Invariants ───────────────────────────────────────────────────
+invariants:
+
+  - description: |
+      `Entry Point` resolves to a known actor, block, location, or
+      component. The compiler reports the unresolved id in the
+      error path.
+
+  - description: |
+      Slug derived from `Title` is unique within the parent scenario.
+      Collisions are auto-disambiguated with a numeric suffix
+      (`-2`, `-3`, …) by the compiler. Authors are encouraged to
+      pick distinct titles so the auto-numbering doesn't surface in
+      URLs.
+
+# ── Authoring ────────────────────────────────────────────────────
+authoring:
+
+  - form: wrapper-list-entry
+    description: |
+      A `sequences[]` entry uses a `sequence:` wrapper key for
+      visual grouping. The wrapper is optional — bare
+      `- { Title, Entry Point, steps }` also parses. Wrapped form
+      is recommended for readability when the sequence has many
+      steps.
+    example: |
+      sequences:
+        - sequence:
+            Title: User-Initiated Conversation with AI Agent
+            Entry Point: business-user
+            steps:
+            - business-user → chat-surface
+            - chat-surface → business-agent
+
+references:
+  - modeling_engine/wiki/02-schema.md
+  - modeling_engine/wiki/06-decision-log.md
+  - visual_engine/sequence_renderer/render.py

@@ -1,0 +1,124 @@
+# yaml-language-server: $schema=
+# ═════════════════════════════════════════════════════════════════
+# Concept: Gateway (BPMN)
+# ═════════════════════════════════════════════════════════════════
+# A routing point in the process — where a flow forks into multiple
+# paths or joins back into one. Visually a diamond with a marker
+# inside indicating the routing semantics (X for exclusive, + for
+# parallel, ○ for inclusive, etc. — see `enums/gateway-type.yaml`).
+#
+# A gateway is "diverging" when it has multiple outgoing flows
+# (forks) and "converging" when it has multiple incoming flows
+# (joins). The same gateway can be both, though the spec generally
+# discourages it for clarity. Whether a gateway is fork or join is
+# inferred from its incoming/outgoing degree, not authored.
+#
+# The interpretation depends on `gateway-type`:
+#
+#   exclusive (XOR)  — fork: pick one branch by condition; join:
+#                      pass through (no synchronisation needed since
+#                      only one branch ran).
+#   parallel (AND)   — fork: all branches fire; join: wait for all.
+#   inclusive (OR)   — fork: every true branch fires; join: wait
+#                      only for branches that fired (requires runtime
+#                      tracking — non-trivial).
+#   event-based      — fork only: the first downstream event wins.
+#                      Joining is via exclusive gateway.
+#
+# Gateway PAIRING is a strong convention but not enforced: a parallel
+# fork should pair with a parallel join; mismatched pairs (parallel
+# fork + exclusive join) leak tokens. The spec's strict-mode
+# validator catches these; lax mode just renders.
+# ═════════════════════════════════════════════════════════════════
+
+kind: concept
+name: Gateway
+slug: gateway
+
+description: |
+  A routing point. Forks one flow into many or joins many into one.
+  The `type` (exclusive / parallel / inclusive / event-based /
+  complex) determines how tokens are routed. Visual: diamond with
+  a type-specific marker.
+
+# ── Properties ───────────────────────────────────────────────────
+properties:
+
+  - name: id
+    type: identifier
+
+  - name: label
+    type: label
+    cardinality: '0..1'
+    description: |
+      Optional label, drawn near the gateway. For exclusive
+      gateways, the label often phrases the decision being made
+      ("Payment OK?"); for parallel/inclusive gateways the label is
+      typically omitted.
+
+  - name: type
+    type:
+      enum: gateway-type
+    description: |
+      Routing semantics. See `enums/gateway-type.yaml` for the full
+      set and what each marker means visually.
+
+  - name: default
+    type: identifier
+    cardinality: '0..1'
+    description: |
+      For exclusive and inclusive gateways: id of the outgoing
+      sequence flow to take when no other branch's condition is
+      true. The "default" flow is drawn with a slash mark at its
+      source.
+
+# ── Relationships ────────────────────────────────────────────────
+relationships:
+
+  - name: lives-in
+    target: lane
+    cardinality: '1'
+
+  - name: incoming
+    target: sequence-flow
+    cardinality: '*'
+
+  - name: outgoing
+    target: sequence-flow
+    cardinality: '*'
+
+# ── Invariants ───────────────────────────────────────────────────
+invariants:
+
+  - description: Gateway ids are unique within the process.
+
+  - description: |
+      A gateway has at least one incoming AND at least one outgoing
+      flow. Zero on either side is a dead-end.
+
+  - description: |
+      A `parallel` gateway's outgoing flows MUST NOT carry
+      conditions (a parallel fork fires every branch unconditionally;
+      conditions would be ignored and signal author confusion).
+
+  - description: |
+      An `exclusive` or `inclusive` gateway's outgoing flows SHOULD
+      carry conditions (or one designated `default`). A diverging
+      exclusive gateway with no conditions is technically legal but
+      always picks the first outgoing flow — almost always a bug.
+
+# ── Authoring ────────────────────────────────────────────────────
+authoring:
+
+  - form: dict-form
+    example: |
+      gateways:
+        payment-ok:
+          label: Payment OK?
+          type:  exclusive
+          default: payment-ko-flow      # taken when no other branch matches
+        parallel-pack-and-bill:
+          type:  parallel
+
+references:
+  - https://www.omg.org/spec/BPMN/2.0/

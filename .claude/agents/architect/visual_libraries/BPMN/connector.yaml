@@ -1,0 +1,74 @@
+# ─────────────────────────────────────────────────────────────────
+# Connector — sequence flow + message flow
+# ─────────────────────────────────────────────────────────────────
+# Two visually-distinct connector kinds in BPMN, both modelled as
+# the same `connector` element with style triggers per `flow-type`:
+#
+#   sequence flow — solid line, filled triangle arrowhead at target
+#   message flow  — dashed line, OPEN circle at source, OPEN
+#                   triangle at target
+#
+# A third kind, "association" (dotted line for data associations,
+# no arrowhead), isn't modelled as a connector because data
+# associations aren't yet a first-class concept in the BPMN
+# meta-model. When they land, add a third trigger here.
+#
+# The auto-renderer routes:
+#   - Sequence flows orthogonally within a pool, snapping to a
+#     left-to-right preferred direction.
+#   - Message flows along a more direct path between pools, with the
+#     entry and exit points on opposite pool edges.
+# Routing logic lives in the markup compiler, not this style file.
+# ─────────────────────────────────────────────────────────────────
+
+# ── Element type definition ──────────────────────────────────────
+extends: base
+properties:
+  flow-type:        { type: enum,
+                      values: [sequence, message],
+                      default: sequence }
+  from:             { type: ref, description: "Source endpoint id." }
+  to:               { type: ref, description: "Target endpoint id." }
+  condition:        { type: text, description: "Conditional expression for diverging gateway branches (sequence flows only)." }
+  label:            { type: string }
+  routing:          { type: enum,
+                      values: [straight, orthogonal-hv, orthogonal-vh, orthogonal-auto] }
+  arrow-end:        { type: enum, values: [none, source, target, both] }
+  arrow-size:       { type: number }
+  stroke-dasharray: { type: string }
+
+# ── Style ────────────────────────────────────────────────────────
+type: style
+target: connector
+
+setters:
+  stroke-color:    "#22211E"
+  stroke-width:    1.5
+  fill-color:      "none"
+  routing:         orthogonal-auto
+  arrow-end:       target
+  arrow-size:      6
+  stroke-dasharray: ""
+  # The connector-aware layout pass uses these to widen tight
+  # endpoints — same mechanic as the architecture connector.
+  min-width:       40
+  min-height:      30
+
+triggers:
+  # Sequence flow — the default. Solid stroke, filled triangle at target.
+  - when: { flow-type: sequence }
+    setters:
+      stroke-dasharray: ""
+      arrow-end:        target
+
+  # Message flow — dashed stroke; the source-side open circle is a
+  # marker the renderer adds when it sees flow-type: message (not
+  # expressible via the standard `arrow-end` enum, which only handles
+  # arrowheads). Visual rendering uses a small unfilled circle at
+  # the source endpoint plus an unfilled triangle at the target.
+  - when: { flow-type: message }
+    setters:
+      stroke-dasharray: "6,4"
+      arrow-end:        target
+      stroke-color:     "#5F5C56"
+      message-source-marker: visible    # renderer hook

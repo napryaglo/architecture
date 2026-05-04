@@ -1,0 +1,72 @@
+# yaml-language-server: $schema=
+# ═════════════════════════════════════════════════════════════════
+# Concept: Actor
+# ═════════════════════════════════════════════════════════════════
+# A party outside the component graph that initiates interactions
+# with the architecture. Three actor types today (internal, external,
+# external-ai) — see `enums/actor-type.yaml` for the full set.
+#
+# Actors are most commonly the Entry Point of a scenario sequence.
+# But not always — a sequence may also be initiated by a component
+# (when the flow is triggered by another sequence's terminal step,
+# by a scheduler, or by an inbound integration). The Entry Point
+# field accepts either; the validator just requires it to resolve
+# to something in the global namespace.
+#
+# Actors carry no other behaviour in the model today. Future
+# additions might include trust-level, jurisdiction, persona
+# attributes — left out deliberately because the renderers don't
+# yet need them.
+# ═════════════════════════════════════════════════════════════════
+
+kind: concept
+name: Actor
+slug: actor
+
+description: |
+  A party outside the component graph that initiates interactions
+  with the architecture. Most commonly the Entry Point of a scenario
+  sequence — though a sequence's Entry Point may also be a component.
+
+# ── Properties ───────────────────────────────────────────────────
+properties:
+
+  - name: id
+    type: identifier
+
+  - name: label
+    type: label
+    description: |
+      Display name. List form is rare for actors — they're usually
+      single-line names — but accepted on parity with components.
+
+  - name: type
+    type:
+      enum: actor-type
+    description: |
+      One of `internal`, `external`, `external-ai`. Drives visual
+      treatment (different icon set for external-ai).
+
+# ── Invariants ───────────────────────────────────────────────────
+invariants:
+
+  - description: |
+      Actor ids share the global namespace; collisions with
+      components, blocks, or locations are forbidden.
+
+# ── Authoring ────────────────────────────────────────────────────
+authoring:
+
+  - form: dict-form
+    example: |
+      actors:
+        business-user:
+          label: Business User
+          type: internal
+        external-ai-agent:
+          label: External AI Agent
+          type: external-ai
+
+references:
+  - adl/meta-models/enterprise-architecture/wiki/primitives/actor.md
+  - modeling_engine/wiki/02-schema.md

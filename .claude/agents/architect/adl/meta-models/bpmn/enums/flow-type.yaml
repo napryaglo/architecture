@@ -1,0 +1,51 @@
+# yaml-language-server: $schema=
+# ═════════════════════════════════════════════════════════════════
+# Enum: Flow Type (BPMN)
+# ═════════════════════════════════════════════════════════════════
+# The kind of flow edge. Two values; the distinction matters because
+# of WHERE the flow may cross:
+#
+#   sequence — Stays within a single pool. Carries flow tokens
+#              between activities, events, and gateways. The
+#              "regular" connector. Solid arrow.
+#
+#   message  — Crosses pool boundaries. Represents asynchronous
+#              communication between participants in different
+#              pools. Cannot stay within a pool (validator should
+#              reject sequence-flow-shaped intra-pool messages).
+#              Dashed arrow with an unfilled circle at source.
+#
+# A third style — *association* — is a non-flow annotation linking
+# data objects, comments, or compensation handlers to flow nodes.
+# Not modelled here; covered by an `annotation` concept if/when we
+# add one.
+# ═════════════════════════════════════════════════════════════════
+
+kind: enum
+name: Flow Type
+slug: flow-type
+
+description: |
+  The kind of BPMN flow edge — sequence flow (within a pool, carries
+  tokens) or message flow (between pools, asynchronous comm). The
+  pool-crossing rules differ; validators should enforce them.
+
+values:
+
+  - id:    sequence
+    label: Sequence Flow
+    description: |
+      Carries flow tokens between activities, events, and gateways
+      within a single pool. The default flow kind; what most edges
+      in a BPMN diagram are. Solid arrow.
+
+  - id:    message
+    label: Message Flow
+    description: |
+      Asynchronous message between participants in different pools.
+      MUST cross a pool boundary; intra-pool message flows are a
+      modelling error. Dashed arrow with an unfilled circle at
+      source.
+
+references:
+  - https://www.omg.org/spec/BPMN/2.0/

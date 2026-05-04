@@ -1,0 +1,108 @@
+# yaml-language-server: $schema=
+# ═════════════════════════════════════════════════════════════════
+# Concept: Location
+# ═════════════════════════════════════════════════════════════════
+# A region of the architecture where components run — a cloud
+# subscription, a SaaS tenant, a physical datacenter, or a logical
+# bucket of related estate.
+#
+# Locations form a forest. A location may declare a `parent` — that's
+# how `power-platform.parent: m365` and `m365.parent: azure` chain to
+# show that Power Platform sits inside M365 which sits inside Azure.
+# The chain is purely organisational today: technology availability
+# does NOT propagate from parent to child. A technology declared
+# `available-in: [m365]` is rejected when used in `power-platform`.
+# Whether to inherit `available-in` is captured as an open item in
+# `modeling_engine/wiki/04-validation-and-compiler.md` — strict
+# matching is the current rule because relaxing it would mask real
+# misclassifications.
+#
+# Locations are containment for components but NOT part of component
+# identity. A component's effective location is either:
+#   - its block's `in:` (when it sits inside a block), or
+#   - the YAML key it lives under in the architecture's
+#     `components:` block (when standalone).
+# References to a component everywhere use the bare component id —
+# no `<location>:<id>` qualified form.
+# ═════════════════════════════════════════════════════════════════
+
+kind: concept
+name: Location
+slug: location
+
+description: |
+  A region of the architecture where components run. May declare a
+  parent location for organisational nesting. Locations are
+  containment for components but not part of component identity —
+  references everywhere are bare component ids.
+
+# ── Properties ───────────────────────────────────────────────────
+properties:
+
+  - name: id
+    type: identifier
+    description: |
+      Stable kebab-case location id. Shares the global namespace
+      with actors, blocks, components — collisions across the four
+      kinds are forbidden.
+
+  - name: label
+    type: label
+    description: Display name shown on rendered diagrams.
+
+  - name: type
+    type:
+      enum: location-type
+    description: |
+      Classifies the location's character. Drives default visual
+      styling (cyan for cloud/paas, brand-green for cloud/saas,
+      warning-amber for physical, plum for logical-grouping). See
+      `enums/location-type.yaml` for the full set and per-value
+      tints.
+
+  - name: parent
+    type: identifier
+    cardinality: '0..1'
+    description: |
+      Optional parent location id. Used for organisational nesting in
+      visual layout (e.g. `power-platform.parent: m365`). Does NOT
+      currently propagate technology availability — strict
+      `available-in` matching only.
+
+# ── Invariants ───────────────────────────────────────────────────
+invariants:
+
+  - description: Location ids share the global namespace; collisions with components/actors/blocks are forbidden.
+
+  - description: |
+      `parent`, when set, must resolve to another declared location
+      in the same model. Cross-model references are not supported
+      (and would defeat the point of model independence).
+
+  - description: |
+      No location-parent cycles: starting from any location and
+      following `parent` must terminate. Cycles fail the build with
+      a clear error.
+
+# ── Authoring ────────────────────────────────────────────────────
+authoring:
+
+  - form: dict-form
+    description: 'YAML key is the id. The most common form for locations.'
+    example: |
+      locations:
+        azure:
+          label: Azure
+          type: cloud/paas
+        m365:
+          label: Microsoft 365
+          type: cloud/saas
+          parent: azure
+        power-platform:
+          label: Power Platform
+          type: cloud/saas
+          parent: m365
+
+references:
+  - adl/meta-models/enterprise-architecture/wiki/primitives/architecture-location.md
+  - modeling_engine/wiki/02-schema.md

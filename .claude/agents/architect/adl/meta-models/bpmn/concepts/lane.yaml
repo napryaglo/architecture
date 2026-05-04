@@ -1,0 +1,92 @@
+# yaml-language-server: $schema=
+# ═════════════════════════════════════════════════════════════════
+# Concept: Lane (BPMN)
+# ═════════════════════════════════════════════════════════════════
+# A lane is a sub-partition inside a pool — typically a role, a
+# department, or a sub-system within the participant the pool
+# represents. Lanes don't carry semantics of their own; they're an
+# organisational device for grouping flow nodes by who performs them.
+#
+# Visual: a labelled horizontal stripe inside a pool, narrower than
+# the pool. Flow nodes (tasks/events/gateways) sit in lanes; the
+# lane's label tells you who does that work.
+#
+# Validation hooks (light): a lane's flow nodes belong to it; a flow
+# node referenced from outside its declaring lane is a typo. Beyond
+# that, lanes don't constrain flow — sequence flows can cross lanes
+# freely within a pool.
+#
+# A "lane set" — multiple lanes nested inside a parent lane — is
+# valid BPMN but currently flattened in this spec. If sub-lanes
+# become necessary, lift `lane.lanes` to a list of `lane` refs.
+# ═════════════════════════════════════════════════════════════════
+
+kind: concept
+name: Lane
+slug: lane
+
+description: |
+  A sub-partition inside a pool — typically a role or department.
+  Organisational only; lanes don't constrain flow. Flow nodes
+  (tasks, events, gateways) live inside lanes.
+
+# ── Properties ───────────────────────────────────────────────────
+properties:
+
+  - name: id
+    type: identifier
+
+  - name: label
+    type: label
+
+  - name: flow-nodes
+    type:
+      list: identifier
+    cardinality: '*'
+    description: |
+      Ids of the tasks, events, and gateways that sit in this lane.
+      Each must resolve to a node defined elsewhere in the process.
+
+# ── Relationships ────────────────────────────────────────────────
+relationships:
+
+  - name: belongs-to
+    target: pool
+    cardinality: '1'
+    description: A lane is owned by exactly one pool.
+
+# ── Invariants ───────────────────────────────────────────────────
+invariants:
+
+  - description: Lane ids are unique within the parent pool.
+
+  - description: |
+      Every `flow-nodes[]` entry resolves to a task, event, or
+      gateway defined in the process. A node referenced from a lane
+      that doesn't exist is a build error.
+
+  - description: |
+      A flow node belongs to exactly one lane. Listing the same node
+      in multiple lanes is rejected.
+
+# ── Authoring ────────────────────────────────────────────────────
+authoring:
+
+  - form: dict-form
+    description: |
+      YAML key is the lane id. A lane carries its label and the ids
+      of the nodes it owns.
+    example: |
+      pools:
+        seller:
+          label: Seller
+          lanes:
+            sales:
+              label: Sales
+              flow-nodes: [receive-order, validate-payment]
+            shipping:
+              label: Shipping
+              flow-nodes: [pack-items, ship-package]
+
+references:
+  - https://www.omg.org/spec/BPMN/2.0/

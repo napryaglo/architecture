@@ -1,0 +1,58 @@
+# yaml-language-server: $schema=
+# ═════════════════════════════════════════════════════════════════
+# Primitive: Identifier
+# ═════════════════════════════════════════════════════════════════
+# The single most common primitive in the spec. Used for every
+# stable name a user authors and references — actor ids, component
+# ids, block ids, location ids, scenario ids, sequence slugs, model
+# ids, view ids.
+#
+# Two design choices encoded here:
+#
+#   1. "Bare ids in a global namespace." A reference is just `<id>`.
+#      The qualified `<location>:<id>` form is explicitly forbidden
+#      and the model_compiler rejects it with a clear error. This
+#      simplifies the markup-side identifier model significantly
+#      (one path expression, not two) and matches how blocks/actors
+#      always behaved.
+#
+#   2. "Globally unique" applies per scope. Component ids are
+#      globally unique within their model. View ids are unique
+#      within their model only (project-wide uniqueness comes via
+#      the generated `<model.id>/<view.id>` handle). Model ids are
+#      unique within their project. The scope is documented at the
+#      relevant concept; here we just pin the syntactic shape.
+#
+# The regex below mirrors `modeling_engine/Compiler/model_compiler.py`'s
+# slugify output — anything that round-trips through slugify lands
+# in this shape, so authors can read the regex as "the slug shape".
+# ═════════════════════════════════════════════════════════════════
+
+kind: primitive
+name: Identifier
+slug: identifier
+
+description: |
+  Stable kebab-case identifier used for everything the user references
+  by name. Lowercase letters, digits, and single hyphens between word
+  parts. References everywhere are bare ids — qualified forms are
+  forbidden by design.
+
+base-type: string
+
+# Anchors (^ and $) make this a full-string match, not a substring.
+# First character must be a letter (digit-only ids would collide
+# visually with step indices and integers).
+regex: '^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$'
+
+examples:
+  - value: business-agent
+    note: Authored component id.
+  - value: power-platform
+    note: Location id; same shape as a component id (one namespace).
+  - value: agentic-external-integration
+    note: Scenario id (also slug-shape — slugs and identifiers share regex).
+
+references:
+  - modeling_engine/Compiler/model_compiler.py
+  - modeling_engine/wiki/02-schema.md

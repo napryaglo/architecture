@@ -1,0 +1,188 @@
+# yaml-language-server: $schema=
+# ═════════════════════════════════════════════════════════════════
+# Concept: Component
+# ═════════════════════════════════════════════════════════════════
+# A first-class entity in the architecture — the unit that runs in a
+# location and participates in scenarios. Carries a globally unique
+# id, a display label, a category that names its archetypal role,
+# and one or more `implemented-by` technology bindings.
+#
+# Three design principles encoded here, all settled in the decision
+# log (`modeling_engine/wiki/06-decision-log.md`):
+#
+#   1. Purpose-first naming. A component is named for what it *does*,
+#      not what it's built with. Tech choices live in `implemented-by`
+#      and can change without renaming the component. So
+#      `business-agent` (purpose) implemented-by `[copilot-agent]`
+#      (technology), not the other way around.
+#
+#   2. Same-type components never collapse. Multiple components of
+#      the same category in one model is the normal case. Four
+#      `ai-chat` components in `ai_ea` (teams-chat, sharepoint-chat,
+#      m365-copilot-chat, dynamics-chat) — they remain distinct
+#      entities, disambiguated by purpose, communication channel, or
+#      technology in their ids.
+#
+#   3. Two component properties only — `category` and
+#      `implemented-by`. Properties answer "what is this thing?";
+#      relationships to other elements (`enabled-by`, `hosted-by`,
+#      `consumes`, `available-through`) are connector types, not
+#      properties. The model_compiler rejects inline `enabled-by` /
+#      `hosted-by` on a component with a hint to express it as a
+#      connector.
+#
+# Effective location. The component's location is implicit — either
+# its block's `in:` (when the component sits inside a block), or
+# the YAML key it lives under in the model's `components:` map (when
+# standalone). Either way, the location feeds into the
+# `available-in` validation for every implementing technology.
+# ═════════════════════════════════════════════════════════════════
+
+kind: concept
+name: Component
+slug: component
+
+description: |
+  A first-class entity in the architecture — the unit that runs in a
+  location and participates in scenarios. Carries a globally unique
+  id, a display label, a category, and one or more `implemented-by`
+  technology bindings. Naming is purpose-first; tech choice lives in
+  `implemented-by`.
+
+# ── Properties ───────────────────────────────────────────────────
+properties:
+
+  - name: id
+    type: identifier
+    description: |
+      Globally unique within the model. Required in list-form
+      authoring; the compiler autogenerates from
+      `slugify(label) + slugify(category)` with duplicate parts
+      removed when omitted. Required as the YAML key in dict-form
+      authoring. Two components with identical label AND identical
+      category would produce the same autogen id — author must pick
+      explicit ids in that case (the model has `business-agent` and
+      `service-agent` for two AI Agents in different locations,
+      both `category: ai-agent`).
+
+  - name: label
+    type: label
+    description: |
+      Display name on the diagram. List form represents a multi-line
+      label — used historically for components whose name didn't fit
+      cleanly on one line ("Microsoft Agent" + "Framework"). The
+      max-width-wrap on data templates handles single-string labels
+      that overflow; list form is mostly historical now.
+
+  - name: category
+    type:
+      enum: component-category
+    description: |
+      The type-level archetype this component instantiates. Must
+      resolve in the inlined component-category registry (after
+      library imports + project-level overrides). Aliases accepted —
+      `ai-chat` resolves to the same entry as
+      `conversational-interface`.
+
+  - name: implemented-by
+    type:
+      list: identifier
+    cardinality: '*'
+    description: |
+      Technology ids that realise this component. Each must resolve
+      to a technology in the inlined registry. Multi-valued — a
+      component may compose several technologies (e.g. an AI agent
+      that uses both an SDK and a hosting service). Order is not
+      semantically meaningful but is preserved in the compiled
+      output for traceability.
+
+# ── Relationships to other concepts ──────────────────────────────
+relationships:
+
+  - name: in
+    target: location
+    cardinality: '1'
+    description: |
+      Effective location. Implicit when the component is inside a
+      block (inherits the block's `in:`); explicit when the component
+      is standalone (the `components.<location>` grouping key). One
+      and only one — a component lives in one location.
+
+  - name: implements
+    target: component-category
+    cardinality: '1'
+
+  - name: realised-by
+    target: technology
+    cardinality: '*'
+
+# ── Invariants ───────────────────────────────────────────────────
+# These map directly to validation rules in
+# `modeling_engine/Compiler/model_compiler.py:validate`.
+invariants:
+
+  - description: Component ids are globally unique within the model.
+
+  - description: '`category` resolves to a known component-category (or alias).'
+
+  - description: Each `implemented-by` entry resolves to a known technology.
+
+  - description: |
+      Component's effective location must appear in every implementing
+      technology's `available-in` list. Catches "Power Platform
+      component implemented by an Azure-only technology" without
+      requiring the author to memorise the matrix.
+    formal: |
+      ∀ c ∈ components, ∀ t ∈ c.implemented-by:
+        c.in ∈ t.available-in
+
+  - description: |
+      Component's category must appear in every implementing
+      technology's `applicable-to` list. Catches "ai-agent component
+      implemented by a database technology" — the technology says
+      what categories it can fill, the component declares what it is,
+      they must agree.
+    formal: |
+      ∀ c ∈ components, ∀ t ∈ c.implemented-by:
+        c.category ∈ t.applicable-to
+
+  - description: |
+      Component dicts must NOT carry inline `enabled-by`, `hosted-by`,
+      `consumes`, or `available-through` fields — those are connector
+      types now and must be expressed in the `connectors:` block. The
+      compiler errors with a clear "express as a connector entry"
+      hint.
+
+# ── Authoring ────────────────────────────────────────────────────
+authoring:
+
+  - form: list-form
+    description: |
+      Primary form. Each entry is an object with explicit `id:` (or
+      autogenerated from label + category). Used by the architecture
+      source today.
+    example: |
+      components:
+        power-platform:
+          - id: business-agent
+            label: AI Agent
+            category: ai-agent
+            implemented-by: [copilot-agent]
+
+  - form: dict-form
+    description: |
+      Legacy/compact form. YAML key is the id, no autogeneration.
+      Still accepted by the compiler.
+    example: |
+      components:
+        power-platform:
+          business-agent:
+            label: AI Agent
+            category: ai-agent
+            implemented-by: [copilot-agent]
+
+references:
+  - adl/meta-models/enterprise-architecture/wiki/primitives/component.md
+  - adl/meta-models/enterprise-architecture/wiki/concepts/architecture-component.md
+  - modeling_engine/wiki/01-meta-model.md
+  - modeling_engine/wiki/02-schema.md

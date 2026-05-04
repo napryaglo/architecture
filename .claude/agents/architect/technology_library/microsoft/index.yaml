@@ -1,0 +1,200 @@
+# ─────────────────────────────────────────────────────────────────
+# Microsoft Technology Library — index
+# ─────────────────────────────────────────────────────────────────
+# Concrete technologies in the Microsoft cloud stack. Imported by
+# architecture definition files via `imports: [microsoft]`.
+#
+# Library entries live under top-level `categories:` and/or
+# `technologies:` blocks. This library exposes only technologies.
+# Each technology entry:
+#   - label:         display name for diagrams
+#   - icon:          path to icon asset (paths starting with
+#                    `resources/` are library-relative; paths starting
+#                    with `technology_library/` or `ai_ea/` are
+#                    project-root-relative)
+#   - available-in:  locations where the technology can run
+#   - applicable-to: categories this technology can plausibly fill in
+#                    a component's `category:` slot. Non-exclusive list.
+#   - wiki:          filename of the wiki page (purpose + trade-offs)
+#                    in this library folder
+#
+# Library dependencies:
+#   This library imports `default` so the meta-model categories used
+#   by Microsoft technologies are available transitively.
+# ─────────────────────────────────────────────────────────────────
+
+imports:
+  - default
+
+technologies:
+
+  # ── Microsoft 365 ──────────────────────────────────────────────
+  microsoft-graph:
+    label:         Microsoft Graph
+    icon:          resources/microsoft_graph.svg
+    available-in:  [m365]
+    applicable-to: [platform-api]
+    wiki:          microsoft-graph.md
+
+  microsoft-teams:
+    label:         Microsoft Teams
+    icon:          resources/teams.svg
+    available-in:  [m365]
+    applicable-to: [ai-chat]
+    wiki:          microsoft-teams.md
+
+  sharepoint-online:
+    label:         SharePoint Online
+    icon:          resources/sharepoint_online.svg
+    available-in:  [m365, azure]
+    applicable-to: [data-store]
+    wiki:          sharepoint-online.md
+
+  sharepoint-embedded:
+    label:         SharePoint Embedded
+    icon:          resources/sharepoint_online.svg
+    available-in:  [m365]
+    applicable-to: [ai-chat]
+    wiki:          sharepoint-embedded.md
+
+  m365-copilot:
+    label:         M365 Copilot
+    icon:          resources/copilot.svg
+    available-in:  [m365]
+    applicable-to: [ai-chat]
+    wiki:          m365-copilot.md
+
+  dynamics-365:
+    label:         Dynamics 365
+    icon:          resources/dynamics365.svg
+    available-in:  [m365]
+    applicable-to: [ai-chat, legacy-application]
+    wiki:          dynamics-365.md
+
+  # ── Power Platform ─────────────────────────────────────────────
+  copilot-studio:
+    label:         Copilot Studio
+    icon:          resources/copilotstudio.svg
+    available-in:  [power-platform]
+    applicable-to: [orchestration-engine]
+    wiki:          copilot-studio.md
+
+  copilot-agent:
+    label:         Copilot Agent
+    icon:          resources/agent.svg
+    available-in:  [power-platform]
+    applicable-to: [ai-agent]
+    wiki:          copilot-agent.md
+
+  power-automate:
+    label:         Power Automate
+    icon:          resources/power_automate.svg
+    available-in:  [power-platform]
+    applicable-to: [service]
+    wiki:          power-automate.md
+
+  power-bi:
+    label:         Power BI
+    icon:          resources/power_bi.svg
+    available-in:  [power-platform]
+    applicable-to: [service]
+    wiki:          power-bi.md
+
+  dataverse:
+    label:         Dataverse
+    icon:          resources/dataverse.svg
+    available-in:  [power-platform]
+    applicable-to: [database]
+    wiki:          dataverse.md
+
+  microsoft-work-iq:
+    label:         Microsoft Work IQ
+    icon:          resources/copilot.svg
+    available-in:  [power-platform]
+    applicable-to: [api]
+    wiki:          microsoft-work-iq.md
+
+  microsoft-autonomous-agent:
+    label:         Microsoft Autonomous Agent
+    icon:          resources/agent.svg
+    available-in:  [power-platform]
+    applicable-to: [ai-agent]
+    wiki:          microsoft-autonomous-agent.md
+
+  # ── Azure ──────────────────────────────────────────────────────
+  azure-ai-search:
+    label:         Azure AI Search
+    icon:          resources/ai_search.svg
+    available-in:  [azure]
+    applicable-to: [semantic-index]
+    wiki:          azure-ai-search.md
+
+  ai-foundry-agent-svc:
+    label:         AI Foundry Agent Service
+    icon:          resources/agent.svg
+    available-in:  [azure]
+    applicable-to: [ai-agent, orchestration-engine]
+    wiki:          ai-foundry-agent-svc.md
+
+  ai-foundry-multi-agent:
+    label:         AI Foundry Multi-Agent
+    icon:          resources/agent.svg
+    available-in:  [azure]
+    applicable-to: [ai-agent]
+    wiki:          ai-foundry-multi-agent.md
+
+  ai-foundry-iq:
+    label:         AI Foundry IQ
+    icon:          resources/agent.svg
+    available-in:  [azure]
+    applicable-to: [orchestration-engine]
+    wiki:          ai-foundry-iq.md
+
+  azure-openai-gpt4o:
+    label:         Azure OpenAI GPT-4o
+    icon:          resources/llm.svg
+    available-in:  [azure]
+    applicable-to: [foundation-model]
+    wiki:          azure-openai-gpt4o.md
+
+  azure-event-hub:
+    label:         Azure Event Hub
+    icon:          resources/azure_event_hub.svg
+    available-in:  [azure]
+    applicable-to: [messaging]
+    wiki:          azure-event-hub.md
+
+  azure-service-bus:
+    label:         Azure Service Bus
+    icon:          resources/azure_service_bus.svg
+    available-in:  [azure]
+    applicable-to: [messaging]
+    wiki:          azure-service-bus.md
+
+  azure-blob-storage:
+    label:         Azure Blob Storage
+    icon:          resources/azure_storage_blob.svg
+    available-in:  [azure]
+    applicable-to: [data-store]
+    wiki:          azure-blob-storage.md
+
+  azure-sql:
+    label:         Azure SQL
+    icon:          resources/sql.svg
+    available-in:  [azure]
+    applicable-to: [database]
+    wiki:          azure-sql.md
+
+  microsoft-fabric:
+    label:         Microsoft Fabric
+    icon:          resources/fabric.svg
+    available-in:  [azure]
+    applicable-to: [data-store, service]
+    wiki:          microsoft-fabric.md
+
+  onelake:
+    label:         OneLake
+    icon:          resources/onelake.svg
+    available-in:  [azure]
+    applicable-to: [data-store]
+    wiki:          onelake.md

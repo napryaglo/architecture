@@ -1,0 +1,356 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #0a0f1e;
+  color: #fff;
+  font-family: 'Segoe UI', Calibri, Arial, sans-serif;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* ── Top bar ─────────────────────────────────────────────────────── */
+#topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  height: 44px;
+  background: #001030;
+  border-bottom: 1px solid #1e3060;
+  flex-shrink: 0;
+  gap: 12px;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  overflow: hidden;
+}
+.brand .title     { font-size: 13px; opacity: 0.85; letter-spacing: 0.02em; white-space: nowrap; }
+.brand .sep       { opacity: 0.35; }
+.brand .view-name { font-size: 13px; opacity: 0.55; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Model picker — sits between project title and view label. Disabled when
+   the manifest carries only one model (no choice to offer). */
+.model-picker {
+  appearance: none;
+  background: rgba(255, 255, 255, 0.04);
+  color: #e0e8f4;
+  border: 1px solid #2a4080;
+  border-radius: 4px;
+  font: inherit;
+  font-size: 13px;
+  padding: 3px 24px 3px 10px;
+  cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, #6090c0 50%),
+                    linear-gradient(135deg, #6090c0 50%, transparent 50%);
+  background-position: calc(100% - 12px) center, calc(100% - 7px) center;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+.model-picker:hover    { background-color: rgba(64, 128, 192, 0.15); }
+.model-picker:focus    { outline: 1px solid #4080c0; outline-offset: 1px; }
+.model-picker:disabled { opacity: 0.35; cursor: default; }
+.model-picker option   { background: #001030; color: #e0e8f4; }
+
+.ctrl-group { display: flex; align-items: center; gap: 6px; }
+.vsep { width: 1px; height: 20px; background: #2a4080; margin: 0 4px; }
+
+.btn {
+  background: none;
+  border: 1px solid #2a4080;
+  color: #a0b4d0;
+  border-radius: 5px;
+  padding: 4px 11px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  font-family: inherit;
+  line-height: 1.4;
+}
+.btn:hover    { background: #1a3060; color: #fff; border-color: #4080c0; }
+.btn:disabled { opacity: 0.25; cursor: default; }
+.btn.icon     { padding: 4px 8px; font-size: 15px; }
+
+#zoom-label { font-size: 12px; opacity: 0.7; min-width: 38px; text-align: center;
+              font-variant-numeric: tabular-nums; }
+
+/* ── Main row (sidebar + stage) ──────────────────────────────────── */
+#main {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  min-height: 0;
+}
+
+#sidebar {
+  width: 220px;
+  background: #001030;
+  border-right: 1px solid #1e3060;
+  flex-shrink: 0;
+  overflow-y: auto;
+  padding: 10px 0;
+}
+#view-list { list-style: none; }
+.view-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-left: 3px solid transparent;
+  color: #a0b4d0;
+  padding: 8px 14px 8px 12px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.view-item:hover           { background: #0d1c40; color: #fff; }
+.view-item.active          { background: #0d1c40; color: #fff; border-left-color: #0078d4; }
+.view-item:focus-visible   { outline: 1px solid #4080c0; outline-offset: -2px; }
+
+.empty {
+  padding: 14px;
+  font-size: 12px;
+  opacity: 0.55;
+  text-align: center;
+}
+.hidden { display: none; }
+
+/* ── Stage ───────────────────────────────────────────────────────── */
+#stage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+#stage.panning  { cursor: grabbing; }
+#stage.pannable { cursor: grab; }
+
+#sizer {
+  position: relative;
+  transform-origin: center center;
+  /* No will-change here on purpose: layer-promoting #sizer would cache its
+     paint at natural size, and transform: scale() would stretch that bitmap
+     (blurry). Leaving it un-promoted lets the browser re-rasterize the
+     inline SVG's vectors on each zoom step. */
+  max-width: 100%;
+  max-height: 100%;
+}
+#sizer > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 3px;
+}
+
+#sizer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 3px;
+  box-shadow: 0 10px 60px rgba(0,0,0,0.7);
+  pointer-events: none;
+}
+
+/* ── Right rail (scenarios) ───────────────────────────────────── */
+#rightbar {
+  width: 240px;
+  background: #001030;
+  border-left: 1px solid #1e3060;
+  flex-shrink: 0;
+  overflow-y: auto;
+  padding: 14px 0;
+}
+.rightbar-heading {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #6090c0;
+  padding: 0 14px 10px;
+  margin: 0;
+}
+#scenario-list { list-style: none; }
+
+/* ── Scenario tree ──────────────────────────────────────────────
+   The right rail is a two-level tree: scenario header (label + twisty,
+   click-to-collapse) and its sequence-list children (one button per
+   sequence). Sequences are the selectable leaves. Scenario headers
+   themselves don't toggle filter state — only the leaves do. */
+.scenario-group         { list-style: none; }
+.scenario-group + .scenario-group { margin-top: 4px; }
+
+.scenario-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6090c0;
+  cursor: pointer;
+  user-select: none;
+}
+.scenario-header:hover           { color: #80b0e0; }
+.scenario-twisty {
+  display: inline-block;
+  width: 12px;
+  text-align: center;
+  font-size: 10px;
+  transition: transform 0.15s;
+}
+.scenario-group.collapsed .scenario-twisty { transform: rotate(-90deg); }
+.scenario-group.collapsed .sequence-list   { display: none; }
+.scenario-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.sequence-list { list-style: none; padding: 0; margin: 0; }
+
+/* Each sequence is a flex row: the filter button takes the bulk of the width,
+   the diagram-trigger button sits at the right. The row itself isn't
+   interactive — the buttons inside it are. */
+.sequence-row {
+  display: flex;
+  align-items: stretch;
+  position: relative;
+}
+.sequence-item {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-left: 3px solid transparent;
+  color: #a0b4d0;
+  padding: 7px 4px 7px 26px;       /* indent past twisty column */
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sequence-item:hover         { background: #0d1c40; color: #fff; }
+.sequence-item:focus-visible { outline: 1px solid #4080c0; outline-offset: -2px; }
+.sequence-item.active        {
+  background: #FF6B00;
+  color: #FFFFFF;
+  border-left-color: #FF6B00;
+  font-weight: 600;
+}
+.sequence-item.active:hover  { background: #FF8030; }
+
+/* Diagram-trigger button. Inline SVG icon, sized to the row height. Hover
+   reveals the affordance; otherwise the button stays subtle so it doesn't
+   compete with the filter label. */
+.sequence-diagram-btn {
+  flex: 0 0 auto;
+  background: none;
+  border: 0;
+  color: #6090c0;
+  padding: 0 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s, color 0.12s;
+}
+.sequence-diagram-btn:hover         { background: #1a3060; color: #fff; }
+.sequence-diagram-btn:focus-visible { outline: 1px solid #4080c0; outline-offset: -2px; }
+.sequence-diagram-btn svg           { display: block; }
+
+/* When the row is currently showing its diagram in the stage, paint the
+   filter button with a calmer accent than the press-state orange — same
+   shape (left border + tinted background) but neutral, so a row can be
+   simultaneously "showing diagram" and "filter pressed" without visual
+   collision. The diagram button itself goes solid to mark the active state. */
+.sequence-row.showing-diagram .sequence-item {
+  background: #1a3060;
+  color: #fff;
+  border-left-color: #4080c0;
+  font-weight: 600;
+}
+.sequence-row.showing-diagram .sequence-item:hover { background: #224080; }
+.sequence-row.showing-diagram .sequence-diagram-btn {
+  background: #4080c0;
+  color: #fff;
+}
+
+/* When any scenario is hovered, the viewer.js handler tags non-matching
+   connectors `.connector-dim` and matching ones `.connector-highlight`.
+   Components touched by highlighted connectors get `.component-glow`. */
+.connector-dim {
+  opacity: 0.18;
+  transition: opacity 0.15s;
+}
+/* Scoped to data-kind="component" so the filter NEVER paints onto a
+   building-block, actor, or location even if the class somehow lands there. */
+g[data-kind="component"].component-glow {
+  filter:
+    drop-shadow(0 0 4px rgba(255, 107, 0, 0.95))
+    drop-shadow(0 0 12px rgba(255, 107, 0, 0.55));
+  transition: filter 0.2s;
+}
+.connector-highlight line,
+.connector-highlight polyline {
+  stroke: #FF6B00;
+  stroke-width: 2.5;
+  transition: stroke 0.15s, stroke-width 0.15s;
+}
+.connector-highlight polygon {
+  fill: #FF6B00;
+  stroke: #FF6B00;
+  transition: fill 0.15s, stroke 0.15s;
+}
+
+/* Zoom toast */
+#zoom-toast {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,16,48,0.8);
+  border: 1px solid #2a4080;
+  border-radius: 20px;
+  padding: 4px 16px;
+  font-size: 13px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 30;
+}
+#zoom-toast.show { opacity: 1; }
+
+.error {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #401818;
+  border: 1px solid #803030;
+  color: #ffb0b0;
+  padding: 12px 18px;
+  border-radius: 4px;
+  font-size: 13px;
+  max-width: 70%;
+  text-align: center;
+}
+
+/* ── Fullscreen ──────────────────────────────────────────────────── */
+:fullscreen #topbar,
+:fullscreen #sidebar,
+:fullscreen #rightbar { display: none; }
+:fullscreen body { background: #000; }

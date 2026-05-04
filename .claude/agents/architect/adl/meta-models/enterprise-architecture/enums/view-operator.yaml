@@ -1,0 +1,97 @@
+# yaml-language-server: $schema=
+# ═════════════════════════════════════════════════════════════════
+# Enum: View Operator
+# ═════════════════════════════════════════════════════════════════
+# The connector operators in the `.view` DSL. Twelve total; each
+# operator combines a routing strategy with an arrowhead choice
+# in a single token, so authors don't have to repeat the same
+# `[arrow-end = …]` attribute on every connector.
+#
+# Decoding the tokens:
+#
+#   Routing               Arrow      Operator
+#   ────────────────────  ────────   ────────
+#   straight              none       --
+#   straight              target     -->
+#   straight              source     <--
+#   straight              both       <-->
+#   orthogonal-hv (─┐)    none       -|
+#   orthogonal-hv         target     -|>
+#   orthogonal-hv         source     <-|
+#   orthogonal-hv         both       <-|>
+#   orthogonal-vh (│─)    none       |-
+#   orthogonal-vh         target     |->
+#   orthogonal-vh         source     <|-
+#   orthogonal-vh         both       <|->
+#
+# The orthogonal forms exist because L-shaped connectors are
+# everywhere in architecture diagrams and authors needed a way to
+# say "horizontal first, then vertical" (HV) vs "vertical first,
+# then horizontal" (VH). The corner sits at the meeting of the
+# segments — the visual difference is which leg of the L touches
+# the source.
+#
+# An author can override either dimension via per-connector
+# attributes (`[routing = ...]`, `[arrow-end = ...]`); the operator
+# is shorthand, not a constraint. The model_compiler accepts the
+# attribute overrides and they win at compile time.
+# ═════════════════════════════════════════════════════════════════
+
+kind: enum
+name: View Operator
+slug: view-operator
+
+description: |
+  Connector operators in the `.view` DSL. Each operator combines a
+  routing strategy (straight / orthogonal-hv / orthogonal-vh) with
+  an arrowhead choice (none / target / source / both). Twelve total.
+
+values:
+
+  # ── Straight ───────────────────────────────────────────────────
+  - id:    '--'
+    label: Straight, no arrowheads
+    description: 'Plain undirected line.'
+  - id:    '-->'
+    label: Straight, arrow at target
+    description: 'Arrow on dst end. The most common operator.'
+  - id:    '<--'
+    label: Straight, arrow at source
+    description: 'Arrow on src end. Reads as "B → A" semantically — useful when authoring reads more naturally that way.'
+  - id:    '<-->'
+    label: Straight, bidirectional
+    description: 'Arrows on both ends.'
+
+  # ── Orthogonal HV (horizontal first, then vertical) ────────────
+  - id:    '-|'
+    label: Orthogonal HV (─┐), no arrowheads
+    description: |
+      L-shaped path: a horizontal segment from src, then a vertical
+      segment to dst. The corner sits at (dst.x, src.y).
+  - id:    '-|>'
+    label: Orthogonal HV, arrow at target
+    description: HV with the arrow at the dst end (after the vertical).
+  - id:    '<-|'
+    label: Orthogonal HV, arrow at source
+    description: HV with the arrow at the src end (before the horizontal).
+  - id:    '<-|>'
+    label: Orthogonal HV, bidirectional
+
+  # ── Orthogonal VH (vertical first, then horizontal) ────────────
+  - id:    '|-'
+    label: Orthogonal VH (│─), no arrowheads
+    description: |
+      L-shaped path: a vertical segment from src, then a horizontal
+      segment to dst. The corner sits at (src.x, dst.y).
+  - id:    '|->'
+    label: Orthogonal VH, arrow at target
+    description: VH with the arrow at the dst end (after the horizontal).
+  - id:    '<|-'
+    label: Orthogonal VH, arrow at source
+    description: VH with the arrow at the src end (before the vertical).
+  - id:    '<|->'
+    label: Orthogonal VH, bidirectional
+
+references:
+  - visual_engine/markup/view_compiler/view_compiler.py
+  - visual_engine/wiki/00-overview.md
