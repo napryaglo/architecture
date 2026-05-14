@@ -48,20 +48,25 @@ mural/
 ## Key Decisions
 
 ### Tailwind CSS v4
+
 Use Tailwind v4 with the `@tailwindcss/vite` plugin. This is the current
 recommended setup — no `tailwind.config.js` or PostCSS config required. Styles
 are pulled in via `@import "tailwindcss";` in `src/index.css`.
 
 ### React Router v7
+
 Use React Router v7 in `BrowserRouter` mode. `main.tsx` wraps `<App />` in
 `<BrowserRouter>`; `App.tsx` holds `<Routes>` with two routes:
+
 - `/` → `Home` page
 - `/about` → `About` page
 
 Both pages share a small nav with links to demonstrate client-side navigation.
 
 ### Vitest
+
 Configure Vitest inside `vite.config.ts` (shared config with Vite). Use:
+
 - `jsdom` environment
 - `@testing-library/react` + `@testing-library/jest-dom`
 - A `src/test/setup.ts` for jest-dom matchers
@@ -69,6 +74,7 @@ Configure Vitest inside `vite.config.ts` (shared config with Vite). Use:
 Ship one passing sample test for the `Button` component.
 
 ### ESLint + Prettier
+
 - ESLint flat config (`eslint.config.js`) with TypeScript and React rules
   (from the Vite template baseline, extended as needed).
 - Prettier with a `.prettierrc`.
@@ -76,9 +82,11 @@ Ship one passing sample test for the `Button` component.
   Prettier.
 
 ### Path Aliases
+
 Not included (not selected). Use plain relative imports.
 
 ### npm Scripts
+
 ```
 dev      → vite
 build    → tsc -b && vite build
@@ -91,6 +99,7 @@ format   → prettier --write .
 ## Sample Content
 
 A minimal demo page (`Home`) that:
+
 - Renders a heading and short text styled with Tailwind utility classes.
 - Uses the reusable `Button` component to prove component composition works.
 - Links to the `About` page to prove routing works.
@@ -105,4 +114,3 @@ The `About` page is a small second page confirming navigation.
 - `npm run test` runs and the sample test passes.
 - `npm run lint` passes with no errors.
 - `README.md` documents all scripts.
-```
