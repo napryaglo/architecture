@@ -1,0 +1,174 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="1500" viewBox="0 0 1280 1500" font-family="'Cascadia Code','Fira Code',Consolas,monospace">
+  <defs>
+    <style>
+      .bg     { fill: #1e1e2e; }
+      .panel  { fill: #282839; stroke: #45475a; stroke-width: 1; rx: 10; }
+      .title  { fill: #cba6f7; font-size: 20px; font-weight: 700; }
+      .badge  { fill: #313244; }
+      .code   { fill: #cdd6f4; font-size: 13.5px; white-space: pre; }
+      .cmt    { fill: #7f849c; font-size: 13.5px; font-style: italic; }
+      .h1     { fill: #89b4fa; font-size: 30px; font-weight: 700; }
+      .sub    { fill: #6c7086; font-size: 14px; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1280" height="1500"/>
+
+  <!-- Header -->
+  <text class="h1" x="40" y="56">TypeScript Cheat Sheet &#8212; OOP &amp; Collections</text>
+  <text class="sub" x="40" y="80">classes &#183; interfaces &#183; properties &#183; cycles &#183; expressions &#183; collections &#183; enums</text>
+  <line x1="40" y1="92" x2="1240" y2="92" stroke="#45475a" stroke-width="1"/>
+
+  <!-- ===================== CLASSES ===================== -->
+  <rect class="panel" x="20" y="110" width="600" height="394" rx="10"/>
+  <text class="title" x="42" y="142">Classes</text>
+  <line x1="42" y1="152" x2="598" y2="152" stroke="#45475a"/>
+  <text class="code" x="42" y="178">
+    <tspan x="42" dy="0"  class="cmt">// declaration with parameter properties</tspan>
+    <tspan x="42" dy="19">class Point {</tspan>
+    <tspan x="42" dy="19">  constructor(public x: number, public y: number) {}</tspan>
+    <tspan x="42" dy="19">  dist(): number { return Math.hypot(this.x, this.y); }</tspan>
+    <tspan x="42" dy="19">}</tspan>
+    <tspan x="42" dy="19" class="cmt">// inheritance: extends + super + override</tspan>
+    <tspan x="42" dy="19">class Point3D extends Point {</tspan>
+    <tspan x="42" dy="19">  constructor(x: number, y: number, public z = 0) {</tspan>
+    <tspan x="42" dy="19">    super(x, y);</tspan>
+    <tspan x="42" dy="19">  }</tspan>
+    <tspan x="42" dy="19">}</tspan>
+    <tspan x="42" dy="19" class="cmt">// abstract class + implements interface</tspan>
+    <tspan x="42" dy="19">abstract class Shape implements Drawable {</tspan>
+    <tspan x="42" dy="19">  abstract area(): number;</tspan>
+    <tspan x="42" dy="19">}</tspan>
+    <tspan x="42" dy="19" class="cmt">// generic class</tspan>
+    <tspan x="42" dy="19">class Box&lt;T&gt; { constructor(public value: T) {} }</tspan>
+  </text>
+
+  <!-- ===================== PROPERTIES & MEMBERS ===================== -->
+  <rect class="panel" x="20" y="524" width="600" height="356" rx="10"/>
+  <text class="title" x="42" y="556">Properties &amp; Members</text>
+  <line x1="42" y1="566" x2="598" y2="566" stroke="#45475a"/>
+  <text class="code" x="42" y="592">
+    <tspan x="42" dy="0">class Account {</tspan>
+    <tspan x="42" dy="19">  public owner: string;        <tspan class="cmt">// default visibility</tspan></tspan>
+    <tspan x="42" dy="19">  private balance = 0;         <tspan class="cmt">// class-only access</tspan></tspan>
+    <tspan x="42" dy="19">  protected pin!: number;      <tspan class="cmt">// ! definite assignment</tspan></tspan>
+    <tspan x="42" dy="19">  readonly id: string;         <tspan class="cmt">// assignable once</tspan></tspan>
+    <tspan x="42" dy="19">  static bankName = "TS Bank"; <tspan class="cmt">// lives on the class</tspan></tspan>
+    <tspan x="42" dy="19">  constructor(owner: string, id: string) {</tspan>
+    <tspan x="42" dy="19">    this.owner = owner;</tspan>
+    <tspan x="42" dy="19">    this.id = id;</tspan>
+    <tspan x="42" dy="19">  }</tspan>
+    <tspan x="42" dy="19">  get summary(): string { return this.owner; }  <tspan class="cmt">// getter</tspan></tspan>
+    <tspan x="42" dy="19">  set summary(v: string) { this.owner = v; }    <tspan class="cmt">// setter</tspan></tspan>
+    <tspan x="42" dy="19">}</tspan>
+    <tspan x="42" dy="19" class="cmt">// parameter property: declares + assigns in ctor</tspan>
+    <tspan x="42" dy="19">class Db { constructor(private readonly url: string) {} }</tspan>
+  </text>
+
+  <!-- ===================== EXPRESSIONS ===================== -->
+  <rect class="panel" x="20" y="900" width="600" height="375" rx="10"/>
+  <text class="title" x="42" y="932">Expressions</text>
+  <line x1="42" y1="942" x2="598" y2="942" stroke="#45475a"/>
+  <text class="code" x="42" y="968">
+    <tspan x="42" dy="0"  class="cmt">// ternary conditional</tspan>
+    <tspan x="42" dy="19">const sign = n &gt; 0 ? "pos" : "neg";</tspan>
+    <tspan x="42" dy="19" class="cmt">// optional chaining ?.  nullish coalescing ??</tspan>
+    <tspan x="42" dy="19">const v = a?.b?.c ?? "default";</tspan>
+    <tspan x="42" dy="19" class="cmt">// template literal</tspan>
+    <tspan x="42" dy="19">const msg = `Hello, ${name}!`;</tspan>
+    <tspan x="42" dy="19" class="cmt">// destructuring: object and array</tspan>
+    <tspan x="42" dy="19">const { x, y } = point;</tspan>
+    <tspan x="42" dy="19">const [head, ...rest] = list;</tspan>
+    <tspan x="42" dy="19" class="cmt">// spread into a new object</tspan>
+    <tspan x="42" dy="19">const merged = { ...a, ...b };</tspan>
+    <tspan x="42" dy="19" class="cmt">// type assertion and type guard</tspan>
+    <tspan x="42" dy="19">const el = x as HTMLElement;</tspan>
+    <tspan x="42" dy="19">if (typeof v === "string") { /* narrowed */ }</tspan>
+    <tspan x="42" dy="19" class="cmt">// logical &amp;&amp; ||  comparison === !==</tspan>
+    <tspan x="42" dy="19">const ok = isValid &amp;&amp; count !== 0;</tspan>
+  </text>
+
+  <!-- ===================== INTERFACES ===================== -->
+  <rect class="panel" x="640" y="110" width="620" height="318" rx="10"/>
+  <text class="title" x="662" y="142">Interfaces &amp; Types</text>
+  <line x1="662" y1="152" x2="1238" y2="152" stroke="#45475a"/>
+  <text class="code" x="662" y="178">
+    <tspan x="662" dy="0">interface User {</tspan>
+    <tspan x="662" dy="19">  readonly id: number;</tspan>
+    <tspan x="662" dy="19">  name: string;</tspan>
+    <tspan x="662" dy="19">  email?: string;            <tspan class="cmt">// optional member</tspan></tspan>
+    <tspan x="662" dy="19">  greet(): string;           <tspan class="cmt">// method signature</tspan></tspan>
+    <tspan x="662" dy="19">}</tspan>
+    <tspan x="662" dy="19" class="cmt">// extend one or more interfaces</tspan>
+    <tspan x="662" dy="19">interface Admin extends User { role: "admin"; }</tspan>
+    <tspan x="662" dy="19" class="cmt">// index signature: arbitrary keys</tspan>
+    <tspan x="662" dy="19">interface Dict { [key: string]: number; }</tspan>
+    <tspan x="662" dy="19" class="cmt">// type alias: union &amp; intersection</tspan>
+    <tspan x="662" dy="19">type Id = string | number;</tspan>
+    <tspan x="662" dy="19">type Staff = User &amp; { dept: string };</tspan>
+  </text>
+
+  <!-- ===================== ENUMS ===================== -->
+  <rect class="panel" x="640" y="448" width="620" height="299" rx="10"/>
+  <text class="title" x="662" y="480">Enums</text>
+  <line x1="662" y1="490" x2="1238" y2="490" stroke="#45475a"/>
+  <text class="code" x="662" y="516">
+    <tspan x="662" dy="0"  class="cmt">// numeric enum: auto-increments from 0</tspan>
+    <tspan x="662" dy="19">enum Dir { Up, Down, Left, Right }</tspan>
+    <tspan x="662" dy="19">const d: Dir = Dir.Up;            <tspan class="cmt">// d === 0</tspan></tspan>
+    <tspan x="662" dy="19" class="cmt">// string enum: explicit values</tspan>
+    <tspan x="662" dy="19">enum Status {</tspan>
+    <tspan x="662" dy="19">  Active = "ACTIVE",</tspan>
+    <tspan x="662" dy="19">  Closed = "CLOSED",</tspan>
+    <tspan x="662" dy="19">}</tspan>
+    <tspan x="662" dy="19" class="cmt">// const enum: inlined, no runtime object</tspan>
+    <tspan x="662" dy="19">const enum Size { S, M, L }</tspan>
+    <tspan x="662" dy="19" class="cmt">// reverse mapping (numeric enums only)</tspan>
+    <tspan x="662" dy="19">Dir[0] === "Up";</tspan>
+  </text>
+
+  <!-- ===================== LOOPS & CYCLES ===================== -->
+  <rect class="panel" x="640" y="767" width="620" height="318" rx="10"/>
+  <text class="title" x="662" y="799">Loops &amp; Cycles</text>
+  <line x1="662" y1="809" x2="1238" y2="809" stroke="#45475a"/>
+  <text class="code" x="662" y="835">
+    <tspan x="662" dy="0">for (let i = 0; i &lt; n; i++) { }     <tspan class="cmt">// classic</tspan></tspan>
+    <tspan x="662" dy="19">for (const x of [1, 2, 3]) { }      <tspan class="cmt">// values</tspan></tspan>
+    <tspan x="662" dy="19">for (const k in obj) { }            <tspan class="cmt">// keys</tspan></tspan>
+    <tspan x="662" dy="19">while (cond) { }                    <tspan class="cmt">// pre-check</tspan></tspan>
+    <tspan x="662" dy="19">do { /* ... */ } while (cond);       <tspan class="cmt">// post-check</tspan></tspan>
+    <tspan x="662" dy="19" class="cmt">// break stops the loop, continue skips one</tspan>
+    <tspan x="662" dy="19">for (const n of nums) {</tspan>
+    <tspan x="662" dy="19">  if (n &lt; 0) continue;</tspan>
+    <tspan x="662" dy="19">  if (n &gt; 99) break;</tspan>
+    <tspan x="662" dy="19">}</tspan>
+    <tspan x="662" dy="19" class="cmt">// array iteration helpers</tspan>
+    <tspan x="662" dy="19">arr.forEach((n) =&gt; console.log(n));</tspan>
+    <tspan x="662" dy="19">const doubled = arr.map((n) =&gt; n * 2);</tspan>
+  </text>
+
+  <!-- ===================== COLLECTIONS ===================== -->
+  <rect class="panel" x="640" y="1105" width="620" height="375" rx="10"/>
+  <text class="title" x="662" y="1137">Collections</text>
+  <line x1="662" y1="1147" x2="1238" y2="1147" stroke="#45475a"/>
+  <text class="code" x="662" y="1173">
+    <tspan x="662" dy="0"  class="cmt">// array: two equivalent notations</tspan>
+    <tspan x="662" dy="19">const xs: number[] = [1, 2, 3];</tspan>
+    <tspan x="662" dy="19">const ys: Array&lt;string&gt; = ["a", "b"];</tspan>
+    <tspan x="662" dy="19" class="cmt">// tuple: fixed length and types</tspan>
+    <tspan x="662" dy="19">const pair: [string, number] = ["x", 1];</tspan>
+    <tspan x="662" dy="19" class="cmt">// readonly array: no mutation</tspan>
+    <tspan x="662" dy="19">const ro: ReadonlyArray&lt;number&gt; = [1, 2];</tspan>
+    <tspan x="662" dy="19" class="cmt">// Map: any-typed keys, ordered</tspan>
+    <tspan x="662" dy="19">const m = new Map&lt;string, number&gt;();</tspan>
+    <tspan x="662" dy="19">m.set("a", 1); m.get("a"); m.has("a");</tspan>
+    <tspan x="662" dy="19" class="cmt">// Set: unique values only</tspan>
+    <tspan x="662" dy="19">const s = new Set&lt;number&gt;([1, 2, 2]); <tspan class="cmt">// {1,2}</tspan></tspan>
+    <tspan x="662" dy="19" class="cmt">// Record: object used as a dictionary</tspan>
+    <tspan x="662" dy="19">const ages: Record&lt;string, number&gt; = {};</tspan>
+    <tspan x="662" dy="19" class="cmt">// common methods</tspan>
+    <tspan x="662" dy="19">xs.push(4); xs.filter((n) =&gt; n &gt; 1);</tspan>
+  </text>
+
+  <text class="sub" x="40" y="1490">Generated cheat sheet &#183; open in a browser or import into Mural</text>
+</svg>

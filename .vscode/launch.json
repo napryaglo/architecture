@@ -1,0 +1,59 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Debug current TS file (tsx)",
+            "skipFiles": ["<node_internals>/**"],
+            "runtimeExecutable": "node",
+            "runtimeArgs": ["--import", "tsx"],
+            "args": ["${file}"],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "sourceMaps": true
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Debug model.test.ts",
+            "skipFiles": ["<node_internals>/**"],
+            "runtimeExecutable": "node",
+            "runtimeArgs": ["--import", "tsx", "--test"],
+            "args": ["${workspaceFolder}/src/runtime/model.test.ts"],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "sourceMaps": true
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Debug current test file (node:test via tsx)",
+            "skipFiles": ["<node_internals>/**"],
+            "runtimeExecutable": "node",
+            "runtimeArgs": ["--import", "tsx", "--test"],
+            "args": ["${file}"],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "sourceMaps": true
+        },
+        {
+            "type": "node-terminal",
+            "request": "launch",
+            "name": "Debug: npm test",
+            "command": "npm test",
+            "cwd": "${workspaceFolder}",
+            "skipFiles": ["<node_internals>/**"]
+        },
+        {
+            "type": "node",
+            "request": "attach",
+            "name": "Attach to running tsx (port 9229)",
+            "port": 9229,
+            "restart": true,
+            "skipFiles": ["<node_internals>/**"],
+            "sourceMaps": true,
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}
