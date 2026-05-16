@@ -2,7 +2,6 @@ import { EffectiveValueDescriptor, PropertyValueSource } from './effective-value
 import type { InternalPropertyChangeCallback, PropertyChangeCallback } from './effective-value.js';
 import { PropertyDescriptor } from './property-descriptor.js';
 import type { CoerceValue, PropertyMetadata } from './property-descriptor.js';
-import { affectsArrange, affectsMeasure, affectsRender, inherits } from './metadata.js';
 import type { MetaData } from './metadata.js';
 
 // Capability token returned by Model.RegisterReadOnlyProperty. The
@@ -14,14 +13,11 @@ export class PropertyKey
     constructor(public readonly descriptor: PropertyDescriptor) {}
 }
 
-// Root of the property/binding/tree system. A Model owns per-instance
-// value state (`property_values`), an optional parent link, and a virtual
-// OnPropertyChanged hook that fires for every effective-value change.
-// The hook consults the property's MetaData flags and forwards to
-// MarkMeasureDirty / MarkArrangeDirty / MarkRenderDirty so layout-aware
-// subclasses (Single, PanelBase, or any user subclass that overrides
-// those hooks) can react to changes from any source — direct sets,
-// binding pushes, ClearValue, and any future animated/coerced updates.
+// Root of the property/binding system. A Model owns per-instance value
+// state (`property_values`) and a virtual OnPropertyChanged hook that
+// fires for every effective-value change. The base hook is a no-op;
+// Visual (in visual.ts) overrides it to route layout/render invalidation
+// and property value inheritance through the visual tree.
 //
 // Property storage uses composite keys `${descriptor.RootOwner.name}.${name}`
 // uniformly. This lets any property registered on any class be set on
@@ -47,50 +43,12 @@ export class Model
     private static class_registry: Map<string, WeakRef<Function>> = new Map();
 
     // Per-instance value store keyed by composite `${RootOwner.name}.${name}`.
-    private property_values: Map<string, EffectiveValueDescriptor> = new Map();
-
-    private _parent: Model | undefined;
+    // Protected so Visual's inheritance helpers can walk parent state.
+    protected property_values: Map<string, EffectiveValueDescriptor> = new Map();
 
     constructor()
     {
 
-    }
-
-    // Read-only link to the containing Model. Protected so subclasses can
-    // navigate the tree; external code uses concrete subclasses' own
-    // getters (e.g. Single.child, PanelBase.children).
-    protected get parent(): Model | undefined
-    {
-        return this._parent;
-    }
-
-    protected SetParent(parent: Model | undefined): void
-    {
-        this._parent = parent;
-    }
-
-    protected Attach(child: Model): void
-    {
-        if (child === this)
-        {
-            throw new Error('A Model cannot be its own child.');
-        }
-        if (child._parent !== undefined)
-        {
-            throw new Error('Model already has a parent; remove it from its current parent first.');
-        }
-        child.SetParent(this);
-        child.refresh_inheritance_subtree();
-    }
-
-    protected Detach(child: Model): void
-    {
-        if (child._parent !== this)
-        {
-            throw new Error('Cannot detach a Model that is not a child of this.');
-        }
-        child.SetParent(undefined);
-        child.refresh_inheritance_subtree();
     }
 
     // ------------------------------------------------------------------
@@ -106,6 +64,14 @@ export class Model
             Model.property_bags.set(klass, bag);
         }
         return bag;
+    }
+
+    // Non-creating peek used by Visual.collect_inheritable_descriptors —
+    // iterating the prototype chain shouldn't allocate empty bags for
+    // ancestors that never registered anything.
+    protected static peek_property_bag(klass: Function): Map<string, PropertyDescriptor> | undefined
+    {
+        return Model.property_bags.get(klass);
     }
 
     // Composes the per-instance storage key for a given (owner, name).
@@ -409,8 +375,8 @@ export class Model
 
     // Returns the EVD for the given descriptor, creating it lazily at
     // Default source if no value has been set yet. Used by listener
-    // attach paths and by inheritance refresh.
-    private ensure_effective_value_for(descriptor: PropertyDescriptor): EffectiveValueDescriptor
+    // attach paths and by Visual's inheritance refresh.
+    protected ensure_effective_value_for(descriptor: PropertyDescriptor): EffectiveValueDescriptor
     {
         const key = Model.compose_key(descriptor.RootOwner, descriptor.Name);
         let evd = this.property_values.get(key);
@@ -434,174 +400,11 @@ export class Model
     }
 
     // Virtual hook fired after every effective-value change on this model
-    // (direct set, binding push, ClearValue, etc.). The default routes
-    // through the property's MetaData flags to MarkMeasureDirty /
-    // MarkArrangeDirty / MarkRenderDirty, and — when the property is
-    // marked Inherits — pushes the change down the tree.
-    protected OnPropertyChanged(descriptor: PropertyDescriptor, _old_value: any, _new_value: any): void
+    // (direct set, binding push, ClearValue, etc.). No-op at the Model
+    // layer; Visual overrides this to route invalidation and inheritance.
+    protected OnPropertyChanged(_descriptor: PropertyDescriptor, _old_value: any, _new_value: any): void
     {
-        const meta = descriptor.MetaData;
-        if (affectsMeasure(meta)) this.MarkMeasureDirty();
-        if (affectsArrange(meta)) this.MarkArrangeDirty();
-        if (affectsRender(meta))  this.MarkRenderDirty();
-        if (inherits(meta))       this.propagate_inheritance_for(descriptor);
-    }
-
-    protected MarkMeasureDirty(): void { /* override to push to layout queue */ }
-    protected MarkArrangeDirty(): void { /* override to push to layout queue */ }
-    protected MarkRenderDirty(): void  { /* override to push to render queue */ }
-
-    // ------------------------------------------------------------------
-    // Property value inheritance
-    // ------------------------------------------------------------------
-
-    private walk_inherited(key: string): any | undefined
-    {
-        let p = this._parent;
-        while (p !== undefined)
-        {
-            const evd = p.property_values.get(key);
-            if (evd !== undefined && evd.Source !== PropertyValueSource.Default)
-            {
-                return evd.value;
-            }
-            p = p._parent;
-        }
-        return undefined;
-    }
-
-    private refresh_inherited(descriptor: PropertyDescriptor): void
-    {
-        if (!inherits(descriptor.MetaData)) return;
-
-        const key = Model.compose_key(descriptor.RootOwner, descriptor.Name);
-        const evd = this.property_values.get(key);
-        if (evd !== undefined
-            && evd.Source !== PropertyValueSource.Default
-            && evd.Source !== PropertyValueSource.InheritedValue)
-        {
-            return;
-        }
-
-        const value = this.walk_inherited(key);
-        if (value !== undefined)
-        {
-            this.ensure_effective_value_for(descriptor).SetInheritedValue(value);
-        }
-        else if (evd !== undefined && evd.Source === PropertyValueSource.InheritedValue)
-        {
-            evd.ClearInherited();
-        }
-    }
-
-    protected refresh_inheritance_subtree(): void
-    {
-        for (const descriptor of Model.collect_inheritable_descriptors(this.constructor))
-        {
-            this.refresh_inherited(descriptor);
-        }
-        this.propagate_inheritance_to_children();
-    }
-
-    protected propagate_inheritance_to_children(): void { /* override in Single / PanelBase */ }
-
-    protected propagate_inheritance_for(_descriptor: PropertyDescriptor): void { /* override in Single / PanelBase */ }
-
-    private static collect_inheritable_descriptors(klass: Function): PropertyDescriptor[]
-    {
-        const seen = new Set<string>();
-        const result: PropertyDescriptor[] = [];
-        let current: Function | null = klass;
-        while (current !== null && current !== Function.prototype)
-        {
-            const bag = Model.property_bags.get(current);
-            if (bag !== undefined)
-            {
-                for (const [name, desc] of bag)
-                {
-                    if (!seen.has(name) && inherits(desc.MetaData))
-                    {
-                        seen.add(name);
-                        result.push(desc);
-                    }
-                }
-            }
-            current = Object.getPrototypeOf(current);
-        }
-        return result;
-    }
-}
-
-// A Model that owns at most one child. SetChild(undefined) clears the
-// slot. Replacing a non-undefined child first detaches the previous one.
-export class Single extends Model
-{
-    private _child: Model | undefined;
-
-    public get child(): Model | undefined
-    {
-        return this._child;
-    }
-
-    public SetChild(child: Model | undefined): void
-    {
-        if (child === this._child) return;
-
-        if (this._child !== undefined)
-        {
-            this.Detach(this._child);
-        }
-
-        this._child = child;
-
-        if (child !== undefined)
-        {
-            this.Attach(child);
-        }
-    }
-
-    protected override propagate_inheritance_to_children(): void
-    {
-        this._child?.['refresh_inheritance_subtree']();
-    }
-
-    protected override propagate_inheritance_for(descriptor: PropertyDescriptor): void
-    {
-        this._child?.['refresh_inherited'](descriptor);
-    }
-}
-
-// A Model that owns an ordered collection of children.
-export class PanelBase extends Model
-{
-    private _children: Model[] = [];
-
-    public get children(): ReadonlyArray<Model>
-    {
-        return this._children;
-    }
-
-    public AddChild(child: Model): void
-    {
-        this.Attach(child);
-        this._children.push(child);
-    }
-
-    public RemoveChild(child: Model): void
-    {
-        const index = this._children.indexOf(child);
-        if (index === -1) return;
-        this._children.splice(index, 1);
-        this.Detach(child);
-    }
-
-    protected override propagate_inheritance_to_children(): void
-    {
-        for (const c of this._children) c['refresh_inheritance_subtree']();
-    }
-
-    protected override propagate_inheritance_for(descriptor: PropertyDescriptor): void
-    {
-        for (const c of this._children) c['refresh_inherited'](descriptor);
+        // Pure storage layer — nothing to do. Visual override handles
+        // Mark*Dirty dispatch and inheritance propagation.
     }
 }

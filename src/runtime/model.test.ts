@@ -9,13 +9,22 @@ import {
     Binding,
     BindingMode,
     type ValueConverter,
+    APPROXIMATE_TEXT_MEASURER,
     PropertyValueSource,
     Model,
     PropertyKey,
+    Visual,
     Single,
-    PanelBase,
+    Panel,
+    HorizontalAlignment,
+    VerticalAlignment,
+    Size,
+    Rect,
+    Thickness,
     type CoerceValue,
     type PropertyChangeCallback,
+    type VisualHost,
+    type DrawingContext,
 } from './index.js';
 
 // Thin convenience wrapper that forwards a class object to
@@ -751,13 +760,13 @@ function listener_count(model: Model, property: string): number
     return props.get(key)?.changeListeners.length ?? 0;
 }
 
-// Test-side accessor for Model's protected `parent` getter. Production
+// Test-side accessor for Visual's protected `parent` getter. Production
 // API keeps the parent link encapsulated; tests assert tree structure
 // through this helper instead.
-function parent_of(model: Model | undefined): Model | undefined
+function parent_of(visual: Visual | undefined): Visual | undefined
 {
-    if (model === undefined) return undefined;
-    return (model as unknown as { parent: Model | undefined }).parent;
+    if (visual === undefined) return undefined;
+    return (visual as unknown as { parent: Visual | undefined }).parent;
 }
 
 // Pins backlog item 2.5: Binding/PropertyPath disposal. Listeners attached
@@ -1238,20 +1247,21 @@ describe('MetaData flag enum', () => {
     });
 });
 
-// Pins Visual's invalidation behavior. A subclass exposes counters so we
-// can assert which hooks fired for each kind of property change.
+// Pins Visual's invalidation behavior. A subclass overrides Invalidate*
+// to count fires per phase, so we can assert which Invalidate method
+// each kind of property change routes to.
 describe('Visual invalidation routing', () => {
-    class TestVisual extends Model
+    class TestVisual extends Visual
     {
         measure_fires = 0;
         arrange_fires = 0;
         render_fires = 0;
-        protected override MarkMeasureDirty(): void { this.measure_fires++; }
-        protected override MarkArrangeDirty(): void { this.arrange_fires++; }
-        protected override MarkRenderDirty(): void  { this.render_fires++; }
+        public override InvalidateMeasure(): void { this.measure_fires++; super.InvalidateMeasure(); }
+        public override InvalidateArrange(): void { this.arrange_fires++; super.InvalidateArrange(); }
+        public override InvalidateVisual(): void  { this.render_fires++;  super.InvalidateVisual();  }
     }
 
-    test('property with MetaData.Measure fires only MarkMeasureDirty', () => {
+    test('property with MetaData.Measure fires only InvalidateMeasure', () => {
         Model.RegisterProperty(TestVisual, 'measure_only', 0, MetaData.Measure);
         const v = new TestVisual();
         v.set_property_value('measure_only', 5);
@@ -1260,7 +1270,7 @@ describe('Visual invalidation routing', () => {
         assert.equal(v.render_fires, 0);
     });
 
-    test('property with MetaData.Render fires only MarkRenderDirty', () => {
+    test('property with MetaData.Render fires only InvalidateVisual', () => {
         Model.RegisterProperty(TestVisual, 'render_only', 0, MetaData.Render);
         const v = new TestVisual();
         v.set_property_value('render_only', 5);
@@ -1269,7 +1279,7 @@ describe('Visual invalidation routing', () => {
         assert.equal(v.render_fires, 1);
     });
 
-    test('property with combined Measure | Arrange | Render fires all three hooks', () => {
+    test('property with combined Measure | Arrange | Render fires all three Invalidate methods', () => {
         Model.RegisterProperty(
             TestVisual,
             'all_flags',
@@ -1283,7 +1293,7 @@ describe('Visual invalidation routing', () => {
         assert.equal(v.render_fires, 1);
     });
 
-    test('property with MetaData.None fires no hooks', () => {
+    test('property with MetaData.None fires no Invalidate methods', () => {
         Model.RegisterProperty(TestVisual, 'no_flags', 0, MetaData.None);
         const v = new TestVisual();
         v.set_property_value('no_flags', 5);
@@ -1292,7 +1302,7 @@ describe('Visual invalidation routing', () => {
         assert.equal(v.render_fires, 0);
     });
 
-    test('set_property_value still throws on unregistered property (no hooks fired)', () => {
+    test('set_property_value still throws on unregistered property (no Invalidate fired)', () => {
         const v = new TestVisual();
         assert.throws(() => v.set_property_value('missing', 1));
         assert.equal(v.measure_fires, 0);
@@ -1385,13 +1395,13 @@ describe('Visual invalidation routing', () => {
 
 describe('Visual (base) is a leaf', () => {
     test('new Visual has no parent', () => {
-        const v = new Model();
+        const v = new Visual();
         assert.equal(parent_of(v), undefined);
     });
 
     test('a Visual leaf can be attached to a Panel and reports it via Parent', () => {
-        const parent = new PanelBase();
-        const leaf = new Model();
+        const parent = new Panel();
+        const leaf = new Visual();
         parent.AddChild(leaf);
         assert.equal(parent_of(leaf), parent);
     });
@@ -1399,15 +1409,15 @@ describe('Visual (base) is a leaf', () => {
 
 describe('Panel tree construction (multi-child)', () => {
     test('a new Panel has no parent and no children', () => {
-        const p = new PanelBase();
+        const p = new Panel();
         assert.equal(parent_of(p), undefined);
         assert.deepEqual(p.children, []);
     });
 
     test('addChild sets the child Parent and appends to Children in order', () => {
-        const parent = new PanelBase();
-        const a = new Model();
-        const b = new Model();
+        const parent = new Panel();
+        const a = new Visual();
+        const b = new Visual();
         parent.AddChild(a);
         parent.AddChild(b);
         assert.equal(parent_of(a), parent);
@@ -1416,8 +1426,8 @@ describe('Panel tree construction (multi-child)', () => {
     });
 
     test('removeChild clears Parent and removes from Children', () => {
-        const parent = new PanelBase();
-        const child = new Model();
+        const parent = new Panel();
+        const child = new Visual();
         parent.AddChild(child);
         parent.RemoveChild(child);
         assert.equal(parent_of(child), undefined);
@@ -1425,30 +1435,30 @@ describe('Panel tree construction (multi-child)', () => {
     });
 
     test('throws when adding a Visual that already has a parent', () => {
-        const a = new PanelBase();
-        const b = new PanelBase();
-        const child = new Model();
+        const a = new Panel();
+        const b = new Panel();
+        const child = new Visual();
         a.AddChild(child);
         assert.throws(() => b.AddChild(child), /already has a parent/);
     });
 
     test('throws when adding self as a child', () => {
-        const p = new PanelBase();
+        const p = new Panel();
         assert.throws(() => p.AddChild(p), /own child/);
     });
 
     test('removeChild is a silent no-op when the visual is not actually a child', () => {
-        const parent = new PanelBase();
-        const stranger = new Model();
+        const parent = new Panel();
+        const stranger = new Visual();
         parent.RemoveChild(stranger);
         assert.deepEqual(parent.children, []);
         assert.equal(parent_of(stranger), undefined);
     });
 
     test('walks up a three-level Panel tree via Parent', () => {
-        const root = new PanelBase();
-        const middle = new PanelBase();
-        const leaf = new Model();
+        const root = new Panel();
+        const middle = new Panel();
+        const leaf = new Visual();
         root.AddChild(middle);
         middle.AddChild(leaf);
         assert.equal(parent_of(leaf), middle);
@@ -1457,9 +1467,9 @@ describe('Panel tree construction (multi-child)', () => {
     });
 
     test('detach-then-attach lets a Visual join a new parent cleanly', () => {
-        const a = new PanelBase();
-        const b = new PanelBase();
-        const child = new Model();
+        const a = new Panel();
+        const b = new Panel();
+        const child = new Visual();
         a.AddChild(child);
         a.RemoveChild(child);
         b.AddChild(child);
@@ -1469,10 +1479,10 @@ describe('Panel tree construction (multi-child)', () => {
     });
 
     test('removeChild preserves order of remaining children', () => {
-        const parent = new PanelBase();
-        const a = new Model();
-        const b = new Model();
-        const c = new Model();
+        const parent = new Panel();
+        const a = new Visual();
+        const b = new Visual();
+        const c = new Visual();
         parent.AddChild(a);
         parent.AddChild(b);
         parent.AddChild(c);
@@ -1490,7 +1500,7 @@ describe('Single tree construction (one-child slot)', () => {
 
     test('setChild attaches the child and exposes it via child', () => {
         const s = new Single();
-        const c = new Model();
+        const c = new Visual();
         s.SetChild(c);
         assert.equal(s.child, c);
         assert.equal(parent_of(c), s);
@@ -1498,7 +1508,7 @@ describe('Single tree construction (one-child slot)', () => {
 
     test('setChild(undefined) detaches the current child', () => {
         const s = new Single();
-        const c = new Model();
+        const c = new Visual();
         s.SetChild(c);
         s.SetChild(undefined);
         assert.equal(s.child, undefined);
@@ -1507,8 +1517,8 @@ describe('Single tree construction (one-child slot)', () => {
 
     test('setChild replaces the existing child, detaching the previous one', () => {
         const s = new Single();
-        const a = new Model();
-        const b = new Model();
+        const a = new Visual();
+        const b = new Visual();
         s.SetChild(a);
         s.SetChild(b);
         assert.equal(s.child, b);
@@ -1518,7 +1528,7 @@ describe('Single tree construction (one-child slot)', () => {
 
     test('setChild is a no-op when called with the same child', () => {
         const s = new Single();
-        const c = new Model();
+        const c = new Visual();
         s.SetChild(c);
         s.SetChild(c);
         assert.equal(s.child, c);
@@ -1526,8 +1536,8 @@ describe('Single tree construction (one-child slot)', () => {
     });
 
     test('setChild throws when the child already has a different parent', () => {
-        const owner = new PanelBase();
-        const child = new Model();
+        const owner = new Panel();
+        const child = new Visual();
         owner.AddChild(child);
 
         const s = new Single();
@@ -1540,9 +1550,9 @@ describe('Single tree construction (one-child slot)', () => {
     });
 
     test('Single nested inside Panel forms a mixed tree', () => {
-        const root = new PanelBase();
+        const root = new Panel();
         const wrapper = new Single();
-        const leaf = new Model();
+        const leaf = new Visual();
         root.AddChild(wrapper);
         wrapper.SetChild(leaf);
 
@@ -1566,7 +1576,7 @@ describe('Property value inheritance', () => {
     });
 
     test('a child reads its parent local value through inheritance after Attach', () => {
-        class Surface extends PanelBase {}
+        class Surface extends Panel {}
         Model.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
 
         const parent = new Surface();
@@ -1579,7 +1589,7 @@ describe('Property value inheritance', () => {
     });
 
     test('a detached Model with no parent falls back to descriptor default', () => {
-        class Surface extends PanelBase {}
+        class Surface extends Panel {}
         Model.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
         const orphan = new Surface();
         assert.equal(orphan.get_property_value('fontSize'), 10);
@@ -1587,7 +1597,7 @@ describe('Property value inheritance', () => {
     });
 
     test('a local override on the child shadows the inherited value', () => {
-        class Surface extends PanelBase {}
+        class Surface extends Panel {}
         Model.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
 
         const parent = new Surface();
@@ -1605,7 +1615,7 @@ describe('Property value inheritance', () => {
     });
 
     test('Detach clears the inherited cache; reattach picks up the new parent value', () => {
-        class Surface extends PanelBase {}
+        class Surface extends Panel {}
         Model.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
 
         const a = new Surface();
@@ -1626,7 +1636,7 @@ describe('Property value inheritance', () => {
     });
 
     test('ancestor mutation cascades down through a multi-level tree', () => {
-        class Surface extends PanelBase {}
+        class Surface extends Panel {}
         Model.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
 
         const root = new Surface();
@@ -1642,7 +1652,7 @@ describe('Property value inheritance', () => {
     });
 
     test('a local override boundary stops the cascade for the subtree beyond it', () => {
-        class Surface extends PanelBase {}
+        class Surface extends Panel {}
         Model.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
 
         const root = new Surface();
@@ -1662,7 +1672,7 @@ describe('Property value inheritance', () => {
     });
 
     test('a listener on the child fires when an ancestor changes the inherited value', () => {
-        class Surface extends PanelBase {}
+        class Surface extends Panel {}
         Model.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
 
         const root = new Surface();
@@ -1685,7 +1695,7 @@ describe('Property value inheritance', () => {
         class Source extends Model {}
         Model.RegisterProperty(Source, 'value', 0, MetaData.None);
 
-        class Surface extends PanelBase {}
+        class Surface extends Panel {}
         Model.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
 
         const source = new Source();
@@ -1706,7 +1716,7 @@ describe('Property value inheritance', () => {
     });
 
     test('ClearValue on an ancestor cascades descendants back to the default', () => {
-        class Surface extends PanelBase {}
+        class Surface extends Panel {}
         Model.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
 
         const root = new Surface();
@@ -1722,7 +1732,7 @@ describe('Property value inheritance', () => {
     });
 
     test('a non-inheritable property does not propagate at all', () => {
-        class Surface extends PanelBase {}
+        class Surface extends Panel {}
         Model.RegisterProperty(Surface, 'plain', 'default', MetaData.None);
 
         const root = new Surface();
@@ -1841,10 +1851,10 @@ describe('Cross-class / attached properties', () => {
         class TextBlock extends Model {}
         Model.RegisterProperty(TextBlock, 'fontSize', 12, MetaData.Inherits);
 
-        class Border extends PanelBase {}
+        class Border extends Panel {}
 
         const border = new Border();
-        const child = new Model();
+        const child = new Visual();
         border.AddChild(child);
 
         border.set_property_value(TextBlock, 'fontSize', 16);
@@ -1881,7 +1891,7 @@ describe('Cross-class / attached properties', () => {
     });
 
     test('RegisterAttachedProperty is a synonym for RegisterProperty', () => {
-        class Grid extends PanelBase {}
+        class Grid extends Panel {}
         Model.RegisterAttachedProperty(Grid, 'Row', 0, MetaData.Arrange);
 
         const button = new Model();
@@ -2599,5 +2609,865 @@ describe('Binding pipeline — StringFormat', () => {
         // one-way). The value reaches the source unchanged.
         b.set_value(123);
         assert.equal(src.get_property_value('count'), 123);
+    });
+});
+
+// Test-side helpers + stub host for the VisualHost back-pointer tests.
+// Visual's `target` getter and `SetTarget` mutator are both protected;
+// these reach in via bracket access — same pattern the production code
+// uses when one Visual subclass needs to drive another's tree-walk hooks.
+class TestHost implements VisualHost
+{
+    public measure_marked: Visual[] = [];
+    public arrange_marked: Visual[] = [];
+    public render_marked: Visual[] = [];
+    public OnMeasureInvalidated(v: Visual): void { this.measure_marked.push(v); }
+    public OnArrangeInvalidated(v: Visual): void { this.arrange_marked.push(v); }
+    public OnRenderInvalidated(v: Visual):  void { this.render_marked.push(v); }
+    // VisualHost gained a text measurement service — the tests don't
+    // exercise it, so we plug in the stateless default.
+    public readonly TextMeasurer = APPROXIMATE_TEXT_MEASURER;
+}
+
+function target_of(v: Visual): VisualHost | undefined
+{
+    return (v as unknown as { target: VisualHost | undefined }).target;
+}
+
+function set_target(v: Visual, host: VisualHost | undefined): void
+{
+    (v as unknown as { SetTarget(h: VisualHost | undefined): void }).SetTarget(host);
+}
+
+// Pins the design point in visual-engine-design.md §3 / connection
+// discussion: every Visual exposes an O(1) back-pointer to the
+// PresentationTarget (any VisualHost) that owns its root, propagated
+// through Attach/Detach and seeded by the root assignment. The Visual's
+// InvalidateMeasure / InvalidateArrange / InvalidateVisual methods use
+// it to route per-phase notifications into the host's dirty queues
+// without walking the parent chain.
+describe('VisualHost back-pointer (target) on Visual', () => {
+    test('a standalone Visual has no target', () => {
+        const v = new Visual();
+        assert.equal(target_of(v), undefined);
+    });
+
+    test('SetTarget on a leaf Visual sets and clears its target', () => {
+        const v = new Visual();
+        const host = new TestHost();
+        set_target(v, host);
+        assert.equal(target_of(v), host);
+        set_target(v, undefined);
+        assert.equal(target_of(v), undefined);
+    });
+
+    test('SetTarget on a Panel cascades to all children', () => {
+        const root = new Panel();
+        const a = new Visual();
+        const b = new Visual();
+        root.AddChild(a);
+        root.AddChild(b);
+
+        const host = new TestHost();
+        set_target(root, host);
+        assert.equal(target_of(root), host);
+        assert.equal(target_of(a),    host);
+        assert.equal(target_of(b),    host);
+    });
+
+    test('SetTarget on a Single cascades to its child and a deeper subtree', () => {
+        const root = new Single();
+        const mid  = new Panel();
+        const leaf = new Visual();
+        root.SetChild(mid);
+        mid.AddChild(leaf);
+
+        const host = new TestHost();
+        set_target(root, host);
+        assert.equal(target_of(root), host);
+        assert.equal(target_of(mid),  host);
+        assert.equal(target_of(leaf), host);
+    });
+
+    test('Attach on a mounted Panel propagates target to the new child', () => {
+        const root = new Panel();
+        const host = new TestHost();
+        set_target(root, host);
+
+        const fresh = new Visual();
+        assert.equal(target_of(fresh), undefined);
+
+        root.AddChild(fresh);
+        assert.equal(target_of(fresh), host);
+    });
+
+    test('Detach clears target on the detached subtree', () => {
+        const root = new Panel();
+        const mid  = new Panel();
+        const leaf = new Visual();
+        root.AddChild(mid);
+        mid.AddChild(leaf);
+
+        const host = new TestHost();
+        set_target(root, host);
+        assert.equal(target_of(leaf), host);
+
+        root.RemoveChild(mid);
+        assert.equal(target_of(mid),  undefined);
+        assert.equal(target_of(leaf), undefined);
+    });
+
+    test('moving a subtree from one host to another via detach+attach', () => {
+        const host1 = new TestHost();
+        const host2 = new TestHost();
+        const root1 = new Panel();
+        const root2 = new Panel();
+        set_target(root1, host1);
+        set_target(root2, host2);
+
+        const moving = new Single();
+        const leaf   = new Visual();
+        moving.SetChild(leaf);
+        root1.AddChild(moving);
+        assert.equal(target_of(moving), host1);
+        assert.equal(target_of(leaf),   host1);
+
+        root1.RemoveChild(moving);
+        root2.AddChild(moving);
+        assert.equal(target_of(moving), host2);
+        assert.equal(target_of(leaf),   host2);
+    });
+
+    test('SetTarget throws when reassigning to a different non-undefined host', () => {
+        const v = new Visual();
+        const host1 = new TestHost();
+        const host2 = new TestHost();
+        set_target(v, host1);
+        assert.throws(() => set_target(v, host2), /already attached to a host/);
+    });
+
+    test('SetTarget is idempotent — setting the same host twice does not throw', () => {
+        const v = new Visual();
+        const host = new TestHost();
+        set_target(v, host);
+        set_target(v, host); // no-op
+        assert.equal(target_of(v), host);
+    });
+
+    test('InvalidateVisual on an attached Visual routes to target.OnRenderInvalidated', () => {
+        class Renderer extends Visual
+        {
+            static {
+                Model.RegisterProperty(Renderer, 'flag', false, MetaData.Render);
+            }
+        }
+        const host = new TestHost();
+        const v = new Renderer();
+        set_target(v, host);
+
+        v.set_property_value('flag', true);
+        assert.deepEqual(host.render_marked, [v]);
+        assert.deepEqual(host.measure_marked, []);
+        assert.deepEqual(host.arrange_marked, []);
+    });
+
+    test('InvalidateVisual on a detached Visual is silent (no error)', () => {
+        class Renderer extends Visual
+        {
+            static {
+                Model.RegisterProperty(Renderer, 'flag', false, MetaData.Render);
+            }
+        }
+        const v = new Renderer();
+        // No target set — property change must not throw.
+        assert.doesNotThrow(() => v.set_property_value('flag', true));
+    });
+
+    test('a Render-flagged property on a deeply-nested Visual still routes to host', () => {
+        class Leaf extends Visual
+        {
+            static {
+                Model.RegisterProperty(Leaf, 'flag', false, MetaData.Render);
+            }
+        }
+
+        const host = new TestHost();
+        const root = new Panel();
+        const mid  = new Single();
+        const leaf = new Leaf();
+        root.AddChild(mid);
+        mid.SetChild(leaf);
+        set_target(root, host);
+
+        leaf.set_property_value('flag', true);
+        assert.deepEqual(host.render_marked, [leaf]);
+    });
+
+    test('a Measure+Arrange property routes to both host queues with the right Visual', () => {
+        class Box extends Visual
+        {
+            static {
+                Model.RegisterProperty(Box, 'size', 0, MetaData.Measure | MetaData.Arrange);
+            }
+        }
+        const host = new TestHost();
+        const v = new Box();
+        set_target(v, host);
+
+        v.set_property_value('size', 10);
+        assert.deepEqual(host.measure_marked, [v]);
+        assert.deepEqual(host.arrange_marked, [v]);
+        assert.deepEqual(host.render_marked,  []);
+    });
+});
+
+// Pins the public Measure / Arrange / Render lifecycle on Visual: the
+// caching, the cross-phase invalidation cascade, and the
+// MeasureOverride / ArrangeOverride / RenderOverride hooks subclasses
+// implement.
+describe('Visual layout lifecycle (Measure / Arrange / Render)', () => {
+    // Layout-aware test Visual: counts every override call and records
+    // the last availableSize / finalSize / dc seen. Configurable
+    // DesiredSize lets tests assert the cache reflects whatever
+    // MeasureOverride returned.
+    class LaidOutVisual extends Visual
+    {
+        public measure_calls = 0;
+        public arrange_calls = 0;
+        public render_calls  = 0;
+        public last_available: Size | undefined;
+        public last_final: Size | undefined;
+        public last_dc: DrawingContext | undefined;
+
+        constructor(private readonly fixed_desired: Size = new Size(100, 50)) { super(); }
+
+        protected override MeasureOverride(availableSize: Size): Size
+        {
+            this.measure_calls++;
+            this.last_available = availableSize;
+            return this.fixed_desired;
+        }
+
+        protected override ArrangeOverride(finalSize: Size): Size
+        {
+            this.arrange_calls++;
+            this.last_final = finalSize;
+            return finalSize;
+        }
+
+        protected override RenderOverride(dc: DrawingContext): void
+        {
+            this.render_calls++;
+            this.last_dc = dc;
+        }
+    }
+
+    // Empty DrawingContext stand-in — the runtime-side interface is a
+    // marker; visual-engine augments the method surface.
+    const noop_dc: DrawingContext = {} as DrawingContext;
+
+    test('initial state is invalid and zero-sized', () => {
+        const v = new LaidOutVisual();
+        assert.equal(v.IsMeasureValid, false);
+        assert.equal(v.IsArrangeValid, false);
+        assert.ok(v.DesiredSize.Equals(Size.Zero));
+        assert.ok(v.RenderSize.Equals(Size.Zero));
+        assert.ok(v.ArrangedRect.Equals(Rect.Zero));
+    });
+
+    test('Measure runs MeasureOverride, caches DesiredSize, marks measure valid', () => {
+        const v = new LaidOutVisual(new Size(200, 100));
+        v.Measure(new Size(500, 500));
+        assert.equal(v.measure_calls, 1);
+        assert.ok(v.last_available!.Equals(new Size(500, 500)));
+        assert.ok(v.DesiredSize.Equals(new Size(200, 100)));
+        assert.equal(v.IsMeasureValid, true);
+    });
+
+    test('Measure with the same availableSize is cached (no re-call)', () => {
+        const v = new LaidOutVisual();
+        v.Measure(new Size(500, 500));
+        v.Measure(new Size(500, 500));
+        v.Measure(new Size(500, 500));
+        assert.equal(v.measure_calls, 1);
+    });
+
+    test('Measure with a different availableSize re-runs MeasureOverride', () => {
+        const v = new LaidOutVisual();
+        v.Measure(new Size(500, 500));
+        v.Measure(new Size(600, 700));
+        assert.equal(v.measure_calls, 2);
+        assert.ok(v.last_available!.Equals(new Size(600, 700)));
+    });
+
+    test('Measure invalidates a previously-valid Arrange (new desired size needs new arrangement)', () => {
+        const v = new LaidOutVisual();
+        v.Measure(new Size(500, 500));
+        v.Arrange(new Rect(0, 0, 100, 100));
+        assert.equal(v.IsArrangeValid, true);
+
+        v.Measure(new Size(800, 800));
+        assert.equal(v.IsArrangeValid, false);
+    });
+
+    test('Arrange runs ArrangeOverride, caches RenderSize and ArrangedRect', () => {
+        const v = new LaidOutVisual();
+        v.Measure(new Size(500, 500));
+        const rect = new Rect(10, 20, 200, 100);
+        v.Arrange(rect);
+        assert.equal(v.arrange_calls, 1);
+        assert.ok(v.last_final!.Equals(new Size(200, 100)));
+        assert.ok(v.RenderSize.Equals(new Size(200, 100)));
+        assert.ok(v.ArrangedRect.Equals(rect));
+        assert.equal(v.IsArrangeValid, true);
+    });
+
+    test('Arrange with the same finalRect is cached (no re-call)', () => {
+        const v = new LaidOutVisual();
+        v.Measure(new Size(500, 500));
+        const rect = new Rect(0, 0, 100, 50);
+        v.Arrange(rect);
+        v.Arrange(rect);
+        v.Arrange(rect);
+        assert.equal(v.arrange_calls, 1);
+    });
+
+    test('Arrange forces a Measure if measure state is invalid', () => {
+        const v = new LaidOutVisual();
+        v.Arrange(new Rect(0, 0, 100, 100));
+        assert.equal(v.measure_calls, 1);
+        assert.equal(v.arrange_calls, 1);
+        assert.equal(v.IsMeasureValid, true);
+        assert.equal(v.IsArrangeValid, true);
+    });
+
+    test('Render runs RenderOverride and passes the DC through unchanged', () => {
+        const v = new LaidOutVisual();
+        v.Render(noop_dc);
+        assert.equal(v.render_calls, 1);
+        assert.equal(v.last_dc, noop_dc);
+    });
+
+    test('InvalidateMeasure clears both measure and arrange validity', () => {
+        const v = new LaidOutVisual();
+        v.Measure(new Size(500, 500));
+        v.Arrange(new Rect(0, 0, 100, 100));
+        assert.equal(v.IsMeasureValid, true);
+        assert.equal(v.IsArrangeValid, true);
+
+        v.InvalidateMeasure();
+        assert.equal(v.IsMeasureValid, false);
+        assert.equal(v.IsArrangeValid, false);
+    });
+
+    test('InvalidateArrange clears only arrange validity (measure stays cached)', () => {
+        const v = new LaidOutVisual();
+        v.Measure(new Size(500, 500));
+        v.Arrange(new Rect(0, 0, 100, 100));
+
+        v.InvalidateArrange();
+        assert.equal(v.IsMeasureValid, true);
+        assert.equal(v.IsArrangeValid, false);
+    });
+
+    test('InvalidateVisual does not affect measure/arrange validity (render has no cached state)', () => {
+        const v = new LaidOutVisual();
+        v.Measure(new Size(500, 500));
+        v.Arrange(new Rect(0, 0, 100, 100));
+
+        v.InvalidateVisual();
+        assert.equal(v.IsMeasureValid, true);
+        assert.equal(v.IsArrangeValid, true);
+    });
+
+    test('base Visual default MeasureOverride returns Size.Zero', () => {
+        const v = new Visual();
+        v.Measure(new Size(500, 500));
+        assert.ok(v.DesiredSize.Equals(Size.Zero));
+    });
+
+    test('base Visual default ArrangeOverride returns finalSize as RenderSize', () => {
+        const v = new Visual();
+        v.Measure(new Size(500, 500));
+        v.Arrange(new Rect(10, 10, 200, 100));
+        assert.ok(v.RenderSize.Equals(new Size(200, 100)));
+    });
+
+    test('parent MeasureOverride can call child.Measure and read child.DesiredSize', () => {
+        // A custom Panel that sums child widths and takes the max child
+        // height — the classic "horizontal stack" measure pattern.
+        class HorizontalStack extends Panel
+        {
+            protected override MeasureOverride(availableSize: Size): Size
+            {
+                let width = 0;
+                let height = 0;
+                for (const child of this.children)
+                {
+                    child.Measure(availableSize);
+                    width += child.DesiredSize.Width;
+                    height = Math.max(height, child.DesiredSize.Height);
+                }
+                return new Size(width, height);
+            }
+        }
+
+        const stack = new HorizontalStack();
+        const a = new LaidOutVisual(new Size(100, 50));
+        const b = new LaidOutVisual(new Size(200, 30));
+        const c = new LaidOutVisual(new Size(50,  80));
+        stack.AddChild(a);
+        stack.AddChild(b);
+        stack.AddChild(c);
+
+        stack.Measure(new Size(1000, 1000));
+        assert.ok(stack.DesiredSize.Equals(new Size(350, 80)));
+        assert.ok(a.DesiredSize.Equals(new Size(100, 50)));
+        assert.ok(b.DesiredSize.Equals(new Size(200, 30)));
+        assert.ok(c.DesiredSize.Equals(new Size(50,  80)));
+    });
+
+    test('a Measure-flagged property change invalidates measure (and arrange)', () => {
+        class Sized extends LaidOutVisual
+        {
+            static {
+                Model.RegisterProperty(Sized, 'shape', 0, MetaData.Measure);
+            }
+        }
+        const v = new Sized();
+        v.Measure(new Size(500, 500));
+        v.Arrange(new Rect(0, 0, 100, 100));
+        assert.equal(v.IsMeasureValid, true);
+        assert.equal(v.IsArrangeValid, true);
+
+        v.set_property_value('shape', 1);
+        assert.equal(v.IsMeasureValid, false);
+        assert.equal(v.IsArrangeValid, false);
+    });
+
+    test('a Render-flagged property change leaves measure and arrange valid', () => {
+        class Painted extends LaidOutVisual
+        {
+            static {
+                Model.RegisterProperty(Painted, 'color', 'red', MetaData.Render);
+            }
+        }
+        const v = new Painted();
+        v.Measure(new Size(500, 500));
+        v.Arrange(new Rect(0, 0, 100, 100));
+
+        v.set_property_value('color', 'blue');
+        assert.equal(v.IsMeasureValid, true);
+        assert.equal(v.IsArrangeValid, true);
+    });
+
+    // Width / Height — explicit size constraints. NaN sentinel means
+    // "size to content"; any number wins over MeasureOverride and clamps
+    // ArrangeOverride's finalSize.
+
+    test('default Width and Height are NaN ("size to content")', () => {
+        const v = new Visual();
+        assert.equal(Number.isNaN(v.Width),  true);
+        assert.equal(Number.isNaN(v.Height), true);
+    });
+
+    test('setting Width invalidates measure (MetaData.Measure on the property)', () => {
+        const v = new LaidOutVisual();
+        v.Measure(new Size(500, 500));
+        v.Arrange(new Rect(0, 0, 100, 100));
+        assert.equal(v.IsMeasureValid, true);
+        assert.equal(v.IsArrangeValid, true);
+
+        v.Width = 50;
+        assert.equal(v.IsMeasureValid, false);
+        assert.equal(v.IsArrangeValid, false);
+    });
+
+    test('Measure with explicit Width overrides whatever MeasureOverride returns', () => {
+        const v = new LaidOutVisual(new Size(80, 40));
+        v.Width = 200;
+        v.Measure(new Size(500, 500));
+        assert.equal(v.DesiredSize.Width,  200);
+        assert.equal(v.DesiredSize.Height, 40);
+    });
+
+    test('Measure with explicit Height overrides whatever MeasureOverride returns', () => {
+        const v = new LaidOutVisual(new Size(80, 40));
+        v.Height = 200;
+        v.Measure(new Size(500, 500));
+        assert.equal(v.DesiredSize.Width,  80);
+        assert.equal(v.DesiredSize.Height, 200);
+    });
+
+    test('explicit Width clamps the availableSize passed to MeasureOverride (when Width < available)', () => {
+        const v = new LaidOutVisual();
+        v.Width = 50;
+        v.Measure(new Size(500, 500));
+        // MeasureOverride should see (50, 500) as the constrained available.
+        assert.ok(v.last_available!.Equals(new Size(50, 500)));
+    });
+
+    test('explicit Width larger than available still passes the explicit Width to MeasureOverride (WPF MinMax semantics)', () => {
+        // With Width set, the per-axis [min, max] range collapses to
+        // [Width, Width]. The clamp(available, min, max) call forces the
+        // value back UP to Width when available is smaller. MeasureOverride
+        // then sees the asserted size — its children measure themselves
+        // against what the Visual will actually be, not what the parent
+        // happens to have offered. DesiredSize reflects the same.
+        const v = new LaidOutVisual();
+        v.Width = 1000;
+        v.Measure(new Size(500, 500));
+        assert.ok(v.last_available!.Equals(new Size(1000, 500)));
+        assert.equal(v.DesiredSize.Width, 1000);
+    });
+
+    test('explicit Width clamps the finalSize handed to ArrangeOverride (even if the parent gives more)', () => {
+        const v = new LaidOutVisual();
+        v.Width = 100;
+        v.Measure(new Size(500, 500));
+        v.Arrange(new Rect(0, 0, 300, 300));
+        assert.ok(v.last_final!.Equals(new Size(100, 300)));
+        // RenderSize follows ArrangeOverride's return (defaults to finalSize).
+        assert.ok(v.RenderSize.Equals(new Size(100, 300)));
+    });
+
+    test('Arrange centers a Stretch-aligned Visual with explicit Width / Height inside its parent slot', () => {
+        // Default HorizontalAlignment + VerticalAlignment = Stretch. With
+        // an explicit size that's smaller than the slot, Stretch falls
+        // back to Center (WPF semantics). ArrangedRect becomes the final
+        // aligned rect — slot origin + alignment offset, size = render
+        // size — not the raw parent slot.
+        const v = new LaidOutVisual();
+        v.Width  = 100;
+        v.Height = 80;
+        const slot = new Rect(10, 20, 300, 200);
+        v.Measure(new Size(500, 500));
+        v.Arrange(slot);
+        // offsetX = (300 - 100) / 2 = 100; offsetY = (200 - 80) / 2 = 60.
+        assert.ok(v.ArrangedRect.Equals(new Rect(10 + 100, 20 + 60, 100, 80)));
+        assert.ok(v.RenderSize.Equals(new Size(100, 80)));
+    });
+
+    test('clearing Width back to NaN re-enables MeasureOverride-driven sizing', () => {
+        const v = new LaidOutVisual(new Size(80, 40));
+        v.Width = 200;
+        v.Measure(new Size(500, 500));
+        assert.equal(v.DesiredSize.Width, 200);
+
+        v.Width = Number.NaN;
+        v.Measure(new Size(500, 500));
+        assert.equal(v.DesiredSize.Width, 80);
+    });
+
+    // MinWidth / MinHeight / MaxWidth / MaxHeight — range constraints
+    // resolved together with Width / Height into a single [min, max]
+    // per axis. Default range is [0, +Infinity] = no constraint.
+
+    test('MinWidth floors DesiredSize when MeasureOverride returns smaller', () => {
+        const v = new LaidOutVisual(new Size(20, 50));
+        v.MinWidth = 100;
+        v.Measure(new Size(500, 500));
+        assert.equal(v.DesiredSize.Width, 100);
+        assert.equal(v.DesiredSize.Height, 50);
+    });
+
+    test('MaxWidth caps DesiredSize when MeasureOverride returns larger', () => {
+        const v = new LaidOutVisual(new Size(500, 50));
+        v.MaxWidth = 200;
+        v.Measure(new Size(1000, 1000));
+        assert.equal(v.DesiredSize.Width, 200);
+        assert.equal(v.DesiredSize.Height, 50);
+    });
+
+    test('MinHeight + MaxHeight together define a vertical range', () => {
+        const v = new LaidOutVisual(new Size(10, 5));
+        v.MinHeight = 20;
+        v.MaxHeight = 100;
+        v.Measure(new Size(500, 500));
+        // MeasureOverride returned Height=5, floored by MinHeight=20.
+        assert.equal(v.DesiredSize.Height, 20);
+
+        const v2 = new LaidOutVisual(new Size(10, 500));
+        v2.MinHeight = 20;
+        v2.MaxHeight = 100;
+        v2.Measure(new Size(500, 500));
+        // MeasureOverride returned Height=500, capped by MaxHeight=100.
+        assert.equal(v2.DesiredSize.Height, 100);
+    });
+
+    test('explicit Width clamped by user MinWidth wins when Width < MinWidth', () => {
+        const v = new LaidOutVisual();
+        v.MinWidth = 100;
+        v.Width    = 50;  // conflicts — MinWidth wins
+        v.Measure(new Size(500, 500));
+        assert.equal(v.DesiredSize.Width, 100);
+    });
+
+    test('explicit Width clamped by user MaxWidth wins when Width > MaxWidth', () => {
+        const v = new LaidOutVisual();
+        v.MaxWidth = 100;
+        v.Width    = 500;
+        v.Measure(new Size(500, 500));
+        assert.equal(v.DesiredSize.Width, 100);
+    });
+
+    test('MeasureOverride availableSize is clamped to the resolved [min, max] range', () => {
+        const v = new LaidOutVisual();
+        v.MinWidth = 200;
+        v.MaxWidth = 400;
+        v.Measure(new Size(50, 50));
+        // available.Width = 50 floored to MinWidth = 200.
+        assert.ok(v.last_available!.Equals(new Size(200, 50)));
+    });
+
+    // HorizontalAlignment / VerticalAlignment — positioning within the
+    // parent slot when render area is smaller than slot. Defaults Stretch.
+
+    test('default HorizontalAlignment and VerticalAlignment are Stretch', () => {
+        const v = new Visual();
+        assert.equal(v.HorizontalAlignment, HorizontalAlignment.Stretch);
+        assert.equal(v.VerticalAlignment,   VerticalAlignment.Stretch);
+    });
+
+    test('Stretch without explicit size fills the slot — ArrangedRect equals the slot', () => {
+        const v = new LaidOutVisual(new Size(50, 40));
+        const slot = new Rect(10, 20, 300, 200);
+        v.Measure(new Size(500, 500));
+        v.Arrange(slot);
+        assert.ok(v.ArrangedRect.Equals(slot));
+        assert.ok(v.RenderSize.Equals(new Size(300, 200)));
+    });
+
+    test('Left alignment + explicit Width positions render area at slot.X', () => {
+        const v = new LaidOutVisual();
+        v.Width = 100;
+        v.HorizontalAlignment = HorizontalAlignment.Left;
+        v.VerticalAlignment   = VerticalAlignment.Stretch;
+        v.Measure(new Size(500, 500));
+        v.Arrange(new Rect(10, 20, 300, 200));
+        assert.equal(v.ArrangedRect.X,      10);
+        assert.equal(v.ArrangedRect.Width,  100);
+        // Vertical stretch — fills the slot.
+        assert.equal(v.ArrangedRect.Y,      20);
+        assert.equal(v.ArrangedRect.Height, 200);
+    });
+
+    test('Right alignment positions render area at slot.X + (slot.Width - render.Width)', () => {
+        const v = new LaidOutVisual();
+        v.Width = 100;
+        v.HorizontalAlignment = HorizontalAlignment.Right;
+        v.Measure(new Size(500, 500));
+        v.Arrange(new Rect(10, 20, 300, 200));
+        // offsetX = 300 - 100 = 200; ArrangedRect.X = 10 + 200 = 210.
+        assert.equal(v.ArrangedRect.X,     210);
+        assert.equal(v.ArrangedRect.Width, 100);
+    });
+
+    test('Center alignment splits the extra space evenly', () => {
+        const v = new LaidOutVisual();
+        v.Width = 100;
+        v.HorizontalAlignment = HorizontalAlignment.Center;
+        v.Measure(new Size(500, 500));
+        v.Arrange(new Rect(10, 20, 300, 200));
+        // offsetX = (300 - 100) / 2 = 100; ArrangedRect.X = 110.
+        assert.equal(v.ArrangedRect.X,     110);
+        assert.equal(v.ArrangedRect.Width, 100);
+    });
+
+    test('VerticalAlignment behaves symmetrically (Top / Center / Bottom)', () => {
+        const make = (align: VerticalAlignment): Rect => {
+            const v = new LaidOutVisual();
+            v.Height = 60;
+            v.VerticalAlignment = align;
+            v.Measure(new Size(500, 500));
+            v.Arrange(new Rect(0, 0, 200, 200));
+            return v.ArrangedRect;
+        };
+        // extra = 200 - 60 = 140
+        assert.equal(make(VerticalAlignment.Top).Y,    0);
+        assert.equal(make(VerticalAlignment.Center).Y, 70);
+        assert.equal(make(VerticalAlignment.Bottom).Y, 140);
+    });
+
+    test('Stretch + explicit Width = render at Width, centered (WPF Stretch fallback)', () => {
+        const v = new LaidOutVisual();
+        v.Width  = 100;
+        v.Height = 80;
+        // Both alignments default to Stretch.
+        v.Measure(new Size(500, 500));
+        v.Arrange(new Rect(0, 0, 300, 200));
+        // (300-100)/2 = 100; (200-80)/2 = 60
+        assert.ok(v.ArrangedRect.Equals(new Rect(100, 60, 100, 80)));
+    });
+
+    test('alignment change invalidates Arrange but not Measure', () => {
+        const v = new LaidOutVisual();
+        v.Width = 100;
+        v.Measure(new Size(500, 500));
+        v.Arrange(new Rect(0, 0, 200, 200));
+        assert.equal(v.IsMeasureValid, true);
+        assert.equal(v.IsArrangeValid, true);
+
+        v.HorizontalAlignment = HorizontalAlignment.Right;
+        // HorizontalAlignment is registered Arrange-only.
+        assert.equal(v.IsMeasureValid, true);
+        assert.equal(v.IsArrangeValid, false);
+    });
+
+    test('render area overflows slot — alignment offset is 0 (clipped at slot origin)', () => {
+        const v = new LaidOutVisual();
+        v.Width = 500; // larger than slot
+        v.HorizontalAlignment = HorizontalAlignment.Center;
+        v.Measure(new Size(1000, 1000));
+        v.Arrange(new Rect(10, 20, 100, 100));
+        // extra = 100 - 500 = -400; offset clamped to 0.
+        assert.equal(v.ArrangedRect.X,     10);
+        assert.equal(v.ArrangedRect.Width, 500);
+    });
+
+    // Margin — outer spacing around a Visual. Eats into availableSize
+    // at Measure time, inflates DesiredSize so the parent reserves the
+    // bounding box, and offsets the rendered area at Arrange time.
+
+    test('default Margin is Thickness.Zero', () => {
+        const v = new Visual();
+        assert.ok(v.Margin.IsZero);
+    });
+
+    test('setting Margin invalidates measure (and cascades to arrange)', () => {
+        const v = new LaidOutVisual();
+        v.Measure(new Size(500, 500));
+        v.Arrange(new Rect(0, 0, 100, 100));
+        assert.equal(v.IsMeasureValid, true);
+        assert.equal(v.IsArrangeValid, true);
+
+        v.Margin = new Thickness(5);
+        assert.equal(v.IsMeasureValid, false);
+        assert.equal(v.IsArrangeValid, false);
+    });
+
+    test('Margin subtracts from availableSize handed to MeasureOverride', () => {
+        const v = new LaidOutVisual(new Size(50, 30));
+        v.Margin = new Thickness(10, 20, 30, 40); // L T R B → H=40, V=60
+        v.Measure(new Size(500, 500));
+        // MeasureOverride sees available minus margin's horizontal/vertical sum.
+        assert.ok(v.last_available!.Equals(new Size(500 - 40, 500 - 60)));
+    });
+
+    test('Margin inflates DesiredSize so the parent reserves the bounding box', () => {
+        const v = new LaidOutVisual(new Size(50, 30));
+        v.Margin = new Thickness(10, 20, 30, 40);
+        v.Measure(new Size(500, 500));
+        // DesiredSize = MeasureOverride's result + margin H/V.
+        assert.equal(v.DesiredSize.Width,  50 + 40);
+        assert.equal(v.DesiredSize.Height, 30 + 60);
+    });
+
+    test('available smaller than margin clamps inner budget to 0 (no negative)', () => {
+        const v = new LaidOutVisual(new Size(0, 0));
+        v.Margin = new Thickness(1000);
+        v.Measure(new Size(50, 50));
+        assert.ok(v.last_available!.Equals(new Size(0, 0)));
+    });
+
+    test('Arrange + Stretch fills the slot minus the margin', () => {
+        const v = new LaidOutVisual(new Size(50, 30));
+        v.Margin = new Thickness(10);
+        v.Measure(new Size(500, 500));
+        v.Arrange(new Rect(0, 0, 300, 200));
+        // marginedRect = (10, 10, 280, 180). Stretch fills it.
+        assert.ok(v.ArrangedRect.Equals(new Rect(10, 10, 280, 180)));
+    });
+
+    test('Arrange + Stretch + explicit Width centers within the margined slot', () => {
+        const v = new LaidOutVisual();
+        v.Width  = 100;
+        v.Height = 80;
+        v.Margin = new Thickness(10);
+        v.Measure(new Size(500, 500));
+        v.Arrange(new Rect(0, 0, 300, 200));
+        // marginedRect = (10, 10, 280, 180); centered → (10+90, 10+50, 100, 80).
+        assert.ok(v.ArrangedRect.Equals(new Rect(100, 60, 100, 80)));
+    });
+
+    test('Arrange + Left + explicit Width hugs the inner-left (slot.X + margin.Left)', () => {
+        const v = new LaidOutVisual();
+        v.Width = 100;
+        v.HorizontalAlignment = HorizontalAlignment.Left;
+        v.Margin = new Thickness(15, 25, 35, 45);
+        v.Measure(new Size(500, 500));
+        v.Arrange(new Rect(0, 0, 300, 200));
+        // marginedRect.X = 0 + 15 = 15; Left → offset 0 → ArrangedRect.X = 15.
+        assert.equal(v.ArrangedRect.X,     15);
+        assert.equal(v.ArrangedRect.Width, 100);
+    });
+
+    test('Arrange + Right + explicit Width hugs the inner-right (slot.Right - margin.Right - Width)', () => {
+        const v = new LaidOutVisual();
+        v.Width = 100;
+        v.HorizontalAlignment = HorizontalAlignment.Right;
+        v.Margin = new Thickness(15, 0, 35, 0);
+        v.Measure(new Size(500, 500));
+        v.Arrange(new Rect(0, 0, 300, 200));
+        // marginedRect = (15, 0, 300-15-35, 200) = (15, 0, 250, 200).
+        // Right: offsetX = 250 - 100 = 150. ArrangedRect.X = 15 + 150 = 165.
+        assert.equal(v.ArrangedRect.X,     165);
+        assert.equal(v.ArrangedRect.Width, 100);
+    });
+
+    test('asymmetric Margin: Top vs Bottom offset only applies on the chosen side', () => {
+        const v = new LaidOutVisual();
+        v.Height = 50;
+        v.VerticalAlignment = VerticalAlignment.Top;
+        v.Margin = new Thickness(0, 20, 0, 40); // L T R B
+        v.Measure(new Size(500, 500));
+        v.Arrange(new Rect(0, 0, 300, 200));
+        // Top alignment → render lands at margin.Top from slot origin.
+        assert.equal(v.ArrangedRect.Y,      20);
+        assert.equal(v.ArrangedRect.Height, 50);
+    });
+
+    test('Margin combined with Border: a child Visual with Margin sits inside Border insets PLUS its margin', () => {
+        // Verifies the layered concerns compose correctly: Border uses
+        // BorderThickness + Padding for the child slot, then the child's
+        // Margin further insets the rendered area.
+        class FixedSize extends Visual {
+            constructor(private readonly box: Size) { super(); }
+            protected override MeasureOverride(_a: Size): Size { return this.box; }
+        }
+
+        const child = new FixedSize(new Size(40, 30));
+        child.Margin = new Thickness(5);
+
+        // Use a Single subclass that mimics Border's measure/arrange
+        // pattern without depending on Controls (keeps runtime tests
+        // self-contained).
+        class Wrap extends Single {
+            constructor(c: Visual) { super(); this.SetChild(c); }
+            protected override MeasureOverride(a: Size): Size {
+                if (this.child === undefined) return Size.Zero;
+                // Inset by a fixed 10 each side for this test.
+                this.child.Measure(new Size(
+                    Math.max(0, a.Width  - 20),
+                    Math.max(0, a.Height - 20),
+                ));
+                return new Size(this.child.DesiredSize.Width + 20, this.child.DesiredSize.Height + 20);
+            }
+            protected override ArrangeOverride(s: Size): Size {
+                if (this.child !== undefined) {
+                    this.child.Arrange(new Rect(10, 10, Math.max(0, s.Width - 20), Math.max(0, s.Height - 20)));
+                }
+                return s;
+            }
+        }
+
+        const wrap = new Wrap(child);
+        wrap.Measure(new Size(500, 500));
+        wrap.Arrange(new Rect(0, 0, 200, 200));
+
+        // Wrap arranges child to (10, 10, 180, 180). Child has Margin=5
+        // and default Stretch — marginedRect inside child = (15, 15, 170, 170).
+        // Stretch fills, so ArrangedRect = (15, 15, 170, 170).
+        assert.ok(child.ArrangedRect.Equals(new Rect(15, 15, 170, 170)));
     });
 });

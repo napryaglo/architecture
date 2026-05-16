@@ -23,4 +23,20 @@ export {
     type BindingOptions,
     type ValueConverter,
 } from './binding.js';
-export { Model, PropertyKey, Single, PanelBase } from './model.js';
+export { Model, PropertyKey } from './model.js';
+export {
+    Visual,
+    Single,
+    Panel,
+    HorizontalAlignment,
+    VerticalAlignment,
+    type VisualHost,
+} from './visual.js';
+export { Point, Size, Rect, Color, Matrix, Thickness } from './primitives.js';
+export { type DrawingContext } from './drawing-context.js';
+export {
+    ApproximateTextMeasurer,
+    APPROXIMATE_TEXT_MEASURER,
+    type TextMeasurer,
+    type TextMetrics,
+} from './text-measurer.js';

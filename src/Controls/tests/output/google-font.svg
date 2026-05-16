@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="200" viewBox="0 0 600 200">
+  <rect x="0" y="0" width="600" height="200" fill="rgb(15,23,42)" />
+  <rect x="1" y="1" width="598" height="198" fill="none" stroke="rgb(56,189,248)" stroke-width="2" />
+  <g transform="matrix(1,0,0,1,188.5986328125,78.220703125)">
+  <text x="0" y="34.875" font-family="Inter, sans-serif" font-size="36" font-weight="bold" fill="rgb(255,255,255)">Hello, Mural!</text>
+  </g>
+</svg>
