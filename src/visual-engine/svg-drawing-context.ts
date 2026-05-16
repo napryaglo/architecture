@@ -110,11 +110,11 @@ export class SvgDrawingContext implements DrawingContext
     }
 }
 
-// SVG accepts integers and decimals; we drop trailing .0 on integer-valued
-// numbers so the output stays readable.
+// JS's Number.toString omits the trailing ".0" on integers and emits a
+// minimal decimal otherwise — exactly what SVG attribute values want.
 function formatNumber(n: number): string
 {
-    return Number.isInteger(n) ? n.toString() : n.toString();
+    return n.toString();
 }
 
 function fillAttr(brush: Brush | undefined): string

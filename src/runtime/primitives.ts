@@ -226,9 +226,19 @@ export class Color
     public static readonly Blue: Color        = new Color(0, 0, 255);
 
     // Accepts #rgb, #rgba, #rrggbb, #rrggbbaa (case-insensitive, '#' optional).
+    // Rejects any non-hex character up front rather than letting parseInt
+    // silently return NaN for invalid input.
     public static FromHex(hex: string): Color
     {
         const s = hex.startsWith('#') ? hex.slice(1) : hex;
+        if (s.length !== 3 && s.length !== 4 && s.length !== 6 && s.length !== 8)
+        {
+            throw new Error(`Color.FromHex: malformed hex '${hex}' (expected #rgb / #rgba / #rrggbb / #rrggbbaa)`);
+        }
+        if (!/^[0-9a-fA-F]+$/.test(s))
+        {
+            throw new Error(`Color.FromHex: non-hex character in '${hex}'`);
+        }
         const expand = (c: string): number => parseInt(c + c, 16);
         if (s.length === 3 || s.length === 4)
         {
@@ -238,15 +248,11 @@ export class Color
             const a = s.length === 4 ? expand(s[3]!) : 255;
             return new Color(r, g, b, a);
         }
-        if (s.length === 6 || s.length === 8)
-        {
-            const r = parseInt(s.slice(0, 2), 16);
-            const g = parseInt(s.slice(2, 4), 16);
-            const b = parseInt(s.slice(4, 6), 16);
-            const a = s.length === 8 ? parseInt(s.slice(6, 8), 16) : 255;
-            return new Color(r, g, b, a);
-        }
-        throw new Error(`Color.FromHex: malformed hex '${hex}' (expected #rgb / #rgba / #rrggbb / #rrggbbaa)`);
+        const r = parseInt(s.slice(0, 2), 16);
+        const g = parseInt(s.slice(2, 4), 16);
+        const b = parseInt(s.slice(4, 6), 16);
+        const a = s.length === 8 ? parseInt(s.slice(6, 8), 16) : 255;
+        return new Color(r, g, b, a);
     }
 
     public WithAlpha(a: number): Color

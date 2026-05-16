@@ -55,7 +55,7 @@ export class DashStyle
 // Stroke spec consumed by DrawingContext draw calls. Pen is a Model so
 // its attributes (Brush, Thickness, DashStyle, …) bind / animate / inherit
 // like any other property — a binding that mutates Pen.Thickness fires
-// MarkRenderDirty on every Visual that holds this Pen through the
+// InvalidateVisual on every Visual that holds this Pen through the
 // existing property-change pipeline (caveat: the holding Visual still
 // needs to listen on its Pen's properties; see design §11).
 //

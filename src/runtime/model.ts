@@ -80,9 +80,15 @@ export class Model
         return `${owner.name}.${property}`;
     }
 
-    // Implicit-owner lookup: walks the target's class hierarchy looking
-    // for the first ancestor that registered `property`. Returns
-    // undefined if no ancestor has it.
+    // Walks the given class's prototype chain looking for the first
+    // ancestor that registered `property`. Returns undefined if no
+    // ancestor has it.
+    //
+    // Used in two modes: implicit owner (klass = this.constructor — walks
+    // the target's hierarchy), and explicit owner (klass = the caller-
+    // supplied owner — walks the owner's hierarchy so a subclass
+    // override of metadata wins). Same body for both; the call site
+    // chooses which class to walk.
     protected static find_descriptor(klass: Function, property: string): PropertyDescriptor | undefined
     {
         let current: Function | null = klass;
@@ -93,14 +99,6 @@ export class Model
             current = Object.getPrototypeOf(current);
         }
         return undefined;
-    }
-
-    // Explicit-owner lookup: walks the owner's class hierarchy (so a
-    // subclass override of metadata wins). Returns undefined if neither
-    // the owner nor any ancestor of it registered `property`.
-    protected static find_descriptor_on(owner: Function, property: string): PropertyDescriptor | undefined
-    {
-        return Model.find_descriptor(owner, property);
     }
 
     // Resolves a class-name string (e.g. 'Grid') to the registered class
@@ -239,7 +237,7 @@ export class Model
         // isn't registered we have nothing to remove anyway.
         const descriptor = (typeof arg1 === 'string')
             ? Model.find_descriptor(this.constructor, arg1)
-            : Model.find_descriptor_on(arg1, arg2);
+            : Model.find_descriptor(arg1, arg2);
         if (descriptor === undefined) return;
         const key = Model.compose_key(descriptor.RootOwner, descriptor.Name);
         const callback = (typeof arg1 === 'string') ? arg2 : arg3;
@@ -346,7 +344,7 @@ export class Model
 
     private resolve_descriptor_explicit(owner: Function, property: string): PropertyDescriptor
     {
-        const descriptor = Model.find_descriptor_on(owner, property);
+        const descriptor = Model.find_descriptor(owner, property);
         if (descriptor === undefined)
         {
             throw new Error(`Property '${property}' not found on owner '${owner.name}'`);
