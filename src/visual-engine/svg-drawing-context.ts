@@ -2,8 +2,8 @@ import type { Point, Rect } from '../runtime/index.js';
 import type { DrawingContext } from '../runtime/index.js';
 import { Brush, SolidColorBrush } from './brush.js';
 import type { Pen } from './pen.js';
-import type { Geometry } from './geometry.js';
-import type { Transform } from './transform.js';
+import { EllipseGeometry, LineGeometry, RectangleGeometry, type Geometry } from './geometry.js';
+import { Transform } from './transform.js';
 import { FontStyle, FontWeight, type FormattedText } from './formatted-text.js';
 
 // Minimal SVG implementation of DrawingContext. Translates draw calls
@@ -29,6 +29,13 @@ import { FontStyle, FontWeight, type FormattedText } from './formatted-text.js';
 export class SvgDrawingContext implements DrawingContext
 {
     private readonly output: string[] = [];
+    // <clipPath> elements collected separately so they emit at the
+    // top of the document inside a single <defs> block — SVG allows
+    // inline <defs> but render order through some viewers gets weird
+    // when a clip-path="url(#id)" reference appears before its
+    // definition. Collecting up front avoids the issue.
+    private readonly defs: string[] = [];
+    private clipCounter: number = 0;
 
     public DrawRectangle(brush: Brush | undefined, pen: Pen | undefined, rect: Rect): void
     {
@@ -43,9 +50,66 @@ export class SvgDrawingContext implements DrawingContext
         this.output.push(`<rect ${attrs.join(' ')} />`);
     }
 
-    public DrawGeometry(_brush: Brush | undefined, _pen: Pen | undefined, _geometry: Geometry): void
+    public DrawGeometry(brush: Brush | undefined, pen: Pen | undefined, geometry: Geometry): void
     {
-        throw new Error('SvgDrawingContext.DrawGeometry: not implemented yet (build-order: lands when a concrete Geometry-using Visual needs it).');
+        // Geometry.Transform lowers to a wrapping <g transform="…"> the
+        // same way DC.PushTransform does, then closes after the emit.
+        const tx = geometry.Transform;
+        const wrap = tx !== Transform.Identity;
+        if (wrap) this.PushTransform(tx);
+
+        if (geometry instanceof EllipseGeometry)
+        {
+            const attrs: string[] = [
+                `cx="${formatNumber(geometry.Center.X)}"`,
+                `cy="${formatNumber(geometry.Center.Y)}"`,
+                `rx="${formatNumber(geometry.RadiusX)}"`,
+                `ry="${formatNumber(geometry.RadiusY)}"`,
+                fillAttr(brush),
+                ...strokeAttrs(pen),
+            ];
+            this.output.push(`<ellipse ${attrs.join(' ')} />`);
+        }
+        else if (geometry instanceof LineGeometry)
+        {
+            // <line> takes only a stroke (no fill semantics in SVG —
+            // setting one is a no-op). Pen-less lines are a no-op too.
+            const attrs: string[] = [
+                `x1="${formatNumber(geometry.StartPoint.X)}"`,
+                `y1="${formatNumber(geometry.StartPoint.Y)}"`,
+                `x2="${formatNumber(geometry.EndPoint.X)}"`,
+                `y2="${formatNumber(geometry.EndPoint.Y)}"`,
+                ...strokeAttrs(pen),
+            ];
+            this.output.push(`<line ${attrs.join(' ')} />`);
+        }
+        else if (geometry instanceof RectangleGeometry)
+        {
+            // Reuse DrawRectangle for the basic case; rounded corners
+            // (RadiusX / RadiusY > 0) get rx / ry attributes added.
+            const r = geometry.Rect;
+            const attrs: string[] = [
+                `x="${formatNumber(r.X)}"`,
+                `y="${formatNumber(r.Y)}"`,
+                `width="${formatNumber(r.Width)}"`,
+                `height="${formatNumber(r.Height)}"`,
+            ];
+            if (geometry.RadiusX > 0) attrs.push(`rx="${formatNumber(geometry.RadiusX)}"`);
+            if (geometry.RadiusY > 0) attrs.push(`ry="${formatNumber(geometry.RadiusY)}"`);
+            attrs.push(fillAttr(brush));
+            attrs.push(...strokeAttrs(pen));
+            this.output.push(`<rect ${attrs.join(' ')} />`);
+        }
+        else
+        {
+            // PathGeometry, GeometryGroup — lower to <path d="…"> when a
+            // concrete user needs them. Throw loudly until then so a
+            // silent miss doesn't ship an empty SVG.
+            if (wrap) this.Pop();
+            throw new Error(`SvgDrawingContext.DrawGeometry: ${geometry.constructor.name} not implemented yet.`);
+        }
+
+        if (wrap) this.Pop();
     }
 
     public DrawText(text: FormattedText, origin: Point): void
@@ -87,6 +151,41 @@ export class SvgDrawingContext implements DrawingContext
         );
     }
 
+    // Wraps subsequent output in a <g clip-path="url(#…)"> whose
+    // referenced <clipPath> contains the geometry's shape. The
+    // <clipPath> element gets collected into the document's <defs>
+    // block, emitted at the top by ToSvg / ToFragment. Pop emits
+    // the closing </g> — same Pop as PushTransform since both stack
+    // frames are <g>-shaped.
+    //
+    // Supported clip shapes: RectangleGeometry and EllipseGeometry
+    // (the cases that round-trip cleanly to SVG shape elements
+    // inside <clipPath>). Lines / paths / groups throw — clip
+    // requires an enclosed region, which a line doesn't have.
+    public PushClip(geometry: Geometry): void
+    {
+        const id = `clip${this.clipCounter++}`;
+        let shape: string;
+        if (geometry instanceof RectangleGeometry)
+        {
+            const r = geometry.Rect;
+            shape = `<rect x="${formatNumber(r.X)}" y="${formatNumber(r.Y)}" width="${formatNumber(r.Width)}" height="${formatNumber(r.Height)}"`;
+            if (geometry.RadiusX > 0) shape += ` rx="${formatNumber(geometry.RadiusX)}"`;
+            if (geometry.RadiusY > 0) shape += ` ry="${formatNumber(geometry.RadiusY)}"`;
+            shape += ` />`;
+        }
+        else if (geometry instanceof EllipseGeometry)
+        {
+            shape = `<ellipse cx="${formatNumber(geometry.Center.X)}" cy="${formatNumber(geometry.Center.Y)}" rx="${formatNumber(geometry.RadiusX)}" ry="${formatNumber(geometry.RadiusY)}" />`;
+        }
+        else
+        {
+            throw new Error(`SvgDrawingContext.PushClip: ${geometry.constructor.name} not supported as a clip shape (expected RectangleGeometry or EllipseGeometry).`);
+        }
+        this.defs.push(`<clipPath id="${id}">${shape}</clipPath>`);
+        this.output.push(`<g clip-path="url(#${id})">`);
+    }
+
     public Pop(): void
     {
         this.output.push(`</g>`);
@@ -97,16 +196,19 @@ export class SvgDrawingContext implements DrawingContext
     // to append to the same buffer — call once at end of rendering.
     public ToSvg(width: number, height: number): string
     {
+        const defs = this.defs.length > 0 ? `  <defs>${this.defs.join('')}</defs>\n` : '';
         const inner = this.output.join('\n  ');
-        return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">\n  ${inner}\n</svg>\n`;
+        return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">\n${defs}  ${inner}\n</svg>\n`;
     }
 
     // Buffered SVG fragments without the <svg> wrapper. Useful when the
     // DC is rendering into an existing SVG slot rather than producing a
-    // standalone document.
+    // standalone document. Defs are prepended so consumers wrapping
+    // the fragment get the referenced clip paths.
     public ToFragment(): string
     {
-        return this.output.join('\n');
+        const defs = this.defs.length > 0 ? `<defs>${this.defs.join('')}</defs>\n` : '';
+        return defs + this.output.join('\n');
     }
 }
 

@@ -19,6 +19,22 @@ import type { Brush } from './brush.js';
 // CanvasRenderer, PdfRenderer, …) so the user constructs one object
 // instead of pairing two.
 //
+// Two sizing modes:
+//   * Fixed   — Width / Height are set to numbers. The target tells
+//               Content to Measure within those exact dimensions and
+//               Arranges at (0, 0, Width, Height). ActualWidth /
+//               ActualHeight mirror Width / Height after Render.
+//   * Auto    — Either or both of Width / Height are left as NaN (the
+//               default). The auto axis is measured with +Infinity so
+//               Content reports its natural DesiredSize; the target's
+//               surface for that axis becomes Content.DesiredSize and
+//               Arrange uses it. Width / Height stay NaN (user input is
+//               preserved), and ActualWidth / ActualHeight expose the
+//               resolved surface dimensions after Render.
+// Axes are independent — `target.Width = 800; target.Height = NaN`
+// pins width and lets height grow with content (e.g. a known-width
+// column whose height is determined by its contents).
+//
 // PresentationTarget is a Model (not a Visual) so its properties
 // participate in the binding/change-notification system — the subclass's
 // renderer subscribes to Width/Height to know when to re-measure and to
@@ -38,12 +54,17 @@ import type { Brush } from './brush.js';
 export abstract class PresentationTarget extends Model implements VisualHost
 {
     static {
-        Model.RegisterProperty(PresentationTarget, 'Width',       0,         MetaData.Measure);
-        Model.RegisterProperty(PresentationTarget, 'Height',      0,         MetaData.Measure);
-        Model.RegisterProperty(PresentationTarget, 'DeviceScale', 1,         MetaData.Measure);
-        Model.RegisterProperty(PresentationTarget, 'Content',     undefined, MetaData.Render);
-        Model.RegisterProperty(PresentationTarget, 'Background',  undefined, MetaData.Render);
+        // NaN = "auto" — the axis sizes to Content.DesiredSize at
+        // Render time. Any finite number = fixed mode for that axis.
+        Model.RegisterProperty(PresentationTarget, 'Width',       Number.NaN, MetaData.Measure);
+        Model.RegisterProperty(PresentationTarget, 'Height',      Number.NaN, MetaData.Measure);
+        Model.RegisterProperty(PresentationTarget, 'DeviceScale', 1,          MetaData.Measure);
+        Model.RegisterProperty(PresentationTarget, 'Content',     undefined,  MetaData.Render);
+        Model.RegisterProperty(PresentationTarget, 'Background',  undefined,  MetaData.Render);
     }
+
+    private _actualWidth:  number = 0;
+    private _actualHeight: number = 0;
 
     protected constructor(width?: number, height?: number, content?: Visual)
     {
@@ -53,11 +74,34 @@ export abstract class PresentationTarget extends Model implements VisualHost
         if (content !== undefined) this.Content = content;
     }
 
+    // User-set width. NaN (the default) means the width is resolved
+    // from Content.DesiredSize at Render time. A finite value pins
+    // the surface to exactly that width.
     public get Width(): number { return this.get_property_value('Width'); }
     public set Width(value: number) { this.set_property_value('Width', value); }
 
+    // User-set height. NaN (the default) means the height is resolved
+    // from Content.DesiredSize at Render time. A finite value pins
+    // the surface to exactly that height.
     public get Height(): number { return this.get_property_value('Height'); }
     public set Height(value: number) { this.set_property_value('Height', value); }
+
+    // Resolved surface dimensions in DIPs, updated by the concrete
+    // target's Render pass. In fixed mode these equal Width / Height;
+    // in auto mode they hold the Content.DesiredSize value chosen for
+    // that axis. Zero on a freshly-constructed target — only meaningful
+    // after at least one Render call.
+    public get ActualWidth(): number  { return this._actualWidth; }
+    public get ActualHeight(): number { return this._actualHeight; }
+
+    // Called by concrete subclasses' Render pass after auto-mode
+    // resolution. Separate from Width / Height so user inputs (NaN-as-
+    // auto) survive re-rendering with a different Content.
+    protected SetActualSize(width: number, height: number): void
+    {
+        this._actualWidth  = width;
+        this._actualHeight = height;
+    }
 
     public get DeviceScale(): number { return this.get_property_value('DeviceScale'); }
     public set DeviceScale(value: number) { this.set_property_value('DeviceScale', value); }

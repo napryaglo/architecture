@@ -12,10 +12,11 @@
     "start": "node dist/index.js",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test src/runtime/model.test.ts src/runtime/text-measurer.test.ts src/visual-engine/transform.test.ts src/visual-engine/headless-target.test.ts src/visual-engine/font-metrics-measurer.test.ts src/visual-engine/google-font-loader.test.ts src/Controls/border.test.ts src/Controls/text-block.test.ts",
+    "test": "tsx --test \"src/**/*.test.ts\"",
     "demo:border": "tsx src/Controls/tests/border-render.ts",
     "demo:text": "tsx src/Controls/tests/text-render.ts",
     "demo:gfont": "tsx src/Controls/tests/google-font-render.ts",
+    "ge": "tsx src/applications/ge/main.ts",
     "clean": "rimraf dist"
   },
   "engines": {

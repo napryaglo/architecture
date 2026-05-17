@@ -120,6 +120,7 @@ interface DrawingContext {
 
     // Stack frames — apply to every subsequent draw until Pop().
     PushTransform(transform: Transform): void;
+    PushClip(geometry: Geometry): void;
     Pop(): void;
 }
 ```
@@ -129,9 +130,19 @@ the DC is an `SvgDrawingContext`, future `CanvasDrawingContext`, or any
 other concrete implementation. Concrete DCs translate these calls into
 renderer-native artifacts.
 
-The surface is **deliberately small**. More primitives (DrawEllipse,
-DrawLine, DrawRoundedRectangle, PushClip, PushOpacity, DrawImage) get added
-when a concrete Visual needs them.
+`DrawGeometry` supports `RectangleGeometry`, `EllipseGeometry`, and
+`LineGeometry` in `SvgDrawingContext`; `PathGeometry` and
+`GeometryGroup` throw "not implemented yet" until a consumer needs
+them. `PushClip` supports `RectangleGeometry` and `EllipseGeometry`
+(line / path / group don't enclose a region and aren't valid clips).
+
+The renderer also automatically wraps each Visual with a clip frame
+when `Visual.Clip` is set — see [visual-tree.md §12](visual-tree.md#12-clip--render-time-clipping)
+for how that hook fits with `RenderOverride` and the children walk.
+
+The surface is still **deliberately small**. More primitives
+(DrawEllipse, DrawLine, DrawRoundedRectangle, PushOpacity, DrawImage,
+PushOpacityMask) get added when a concrete Visual needs them.
 
 ## 3. Brushes (fills)
 
@@ -385,21 +396,21 @@ This is exactly what `Border.RenderOverride` does.
 
 ### Push/Pop discipline
 
-`PushTransform` opens a frame; `Pop` closes the most recent open frame.
-Each push must be balanced by a pop. Imbalanced push/pop is a programmer
-error — the concrete DC may throw or silently leak the frame.
+`PushTransform` and `PushClip` open frames; `Pop` closes the most
+recent open frame. Each push must be balanced by a pop. Imbalanced
+push/pop is a programmer error — the concrete DC may throw or
+silently leak the frame.
 
 ```ts
 dc.PushTransform(new TranslateTransform(10, 0));
+dc.PushClip(new RectangleGeometry(new Rect(0, 0, 100, 100)));
 dc.DrawRectangle(brush, undefined, new Rect(0, 0, 10, 10));
-dc.PushTransform(new TranslateTransform(0, 10));
-dc.DrawRectangle(brush, undefined, new Rect(0, 0, 10, 10));
-dc.Pop();   // closes the inner translate
-dc.Pop();   // closes the outer translate
+dc.Pop();   // closes the clip
+dc.Pop();   // closes the translate
 ```
 
-Transforms compose in order — the inner translate sees the outer's offset
-already applied.
+Frames compose in order — the clip is in the translate's coordinate
+space; subsequent draws inside the clip are translated AND clipped.
 
 ## 8. Brush/Pen lifecycle and binding
 
@@ -430,8 +441,8 @@ question in [../../visual-engine-design.md](../../visual-engine-design.md).
 
 - `DrawEllipse`, `DrawLine`, `DrawRoundedRectangle`, `DrawImage` — call
   `DrawGeometry` with the appropriate geometry class instead.
-- `PushClip(geometry)`, `PushOpacity(opacity)` — defer until a concrete
-  Visual needs them.
+- `PushOpacity(opacity)`, `PushOpacityMask(brush)` — defer until a
+  concrete Visual needs them.
 - `ScaleTransform`, `RotateTransform`, `TransformGroup` — use
   `MatrixTransform` with composed matrices.
 - `CombinedGeometry` (boolean ops Union/Intersect/Xor/Exclude) — compute

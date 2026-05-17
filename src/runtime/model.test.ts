@@ -760,13 +760,17 @@ function listener_count(model: Model, property: string): number
     return props.get(key)?.changeListeners.length ?? 0;
 }
 
-// Test-side accessor for Visual's protected `parent` getter. Production
-// API keeps the parent link encapsulated; tests assert tree structure
-// through this helper instead.
+// Test-side accessor for Visual's protected `visualParent` getter.
+// Production API keeps the parent link encapsulated; tests assert
+// tree structure through this helper instead. Returns the visual
+// parent — for every Visual added via Attach (the default convenience
+// in Single.SetChild / Panel.AddChild), visualParent === logicalParent,
+// so the existing inheritance tests asserting "child reads parent's
+// value" stay valid against this getter.
 function parent_of(visual: Visual | undefined): Visual | undefined
 {
     if (visual === undefined) return undefined;
-    return (visual as unknown as { parent: Visual | undefined }).parent;
+    return (visual as unknown as { visualParent: Visual | undefined }).visualParent;
 }
 
 // Pins backlog item 2.5: Binding/PropertyPath disposal. Listeners attached
@@ -1411,7 +1415,7 @@ describe('Panel tree construction (multi-child)', () => {
     test('a new Panel has no parent and no children', () => {
         const p = new Panel();
         assert.equal(parent_of(p), undefined);
-        assert.deepEqual(p.children, []);
+        assert.deepEqual([...p.Children], []);
     });
 
     test('addChild sets the child Parent and appends to Children in order', () => {
@@ -1422,7 +1426,7 @@ describe('Panel tree construction (multi-child)', () => {
         parent.AddChild(b);
         assert.equal(parent_of(a), parent);
         assert.equal(parent_of(b), parent);
-        assert.deepEqual(parent.children, [a, b]);
+        assert.deepEqual([...parent.Children], [a, b]);
     });
 
     test('removeChild clears Parent and removes from Children', () => {
@@ -1431,7 +1435,7 @@ describe('Panel tree construction (multi-child)', () => {
         parent.AddChild(child);
         parent.RemoveChild(child);
         assert.equal(parent_of(child), undefined);
-        assert.deepEqual(parent.children, []);
+        assert.deepEqual([...parent.Children], []);
     });
 
     test('throws when adding a Visual that already has a parent', () => {
@@ -1439,7 +1443,7 @@ describe('Panel tree construction (multi-child)', () => {
         const b = new Panel();
         const child = new Visual();
         a.AddChild(child);
-        assert.throws(() => b.AddChild(child), /already has a parent/);
+        assert.throws(() => b.AddChild(child), /already has a (visual|logical) parent/);
     });
 
     test('throws when adding self as a child', () => {
@@ -1451,7 +1455,7 @@ describe('Panel tree construction (multi-child)', () => {
         const parent = new Panel();
         const stranger = new Visual();
         parent.RemoveChild(stranger);
-        assert.deepEqual(parent.children, []);
+        assert.deepEqual([...parent.Children], []);
         assert.equal(parent_of(stranger), undefined);
     });
 
@@ -1474,8 +1478,8 @@ describe('Panel tree construction (multi-child)', () => {
         a.RemoveChild(child);
         b.AddChild(child);
         assert.equal(parent_of(child), b);
-        assert.deepEqual(a.children, []);
-        assert.deepEqual(b.children, [child]);
+        assert.deepEqual([...a.Children], []);
+        assert.deepEqual([...b.Children], [child]);
     });
 
     test('removeChild preserves order of remaining children', () => {
@@ -1487,7 +1491,69 @@ describe('Panel tree construction (multi-child)', () => {
         parent.AddChild(b);
         parent.AddChild(c);
         parent.RemoveChild(b);
-        assert.deepEqual(parent.children, [a, c]);
+        assert.deepEqual([...parent.Children], [a, c]);
+    });
+
+    test('Children is an observable collection — subscribers see AddChild / RemoveChild / InsertChild mutations', () => {
+        const parent = new Panel();
+        const a = new Visual();
+        const b = new Visual();
+        const c = new Visual();
+        const events: string[] = [];
+        parent.Children.Subscribe(change => { events.push(change.kind); });
+
+        parent.AddChild(a);
+        parent.AddChild(b);
+        parent.InsertChild(1, c);   // [a, c, b]
+        parent.RemoveChild(c);      // [a, b]
+        assert.deepEqual(events, ['inserted', 'inserted', 'inserted', 'removed']);
+        assert.deepEqual([...parent.Children], [a, b]);
+    });
+
+    test('InsertChild places a Visual at the requested index and wires Attach', () => {
+        const parent = new Panel();
+        const a = new Visual();
+        const b = new Visual();
+        const c = new Visual();
+        parent.AddChild(a);
+        parent.AddChild(b);
+        parent.InsertChild(1, c);
+        assert.deepEqual([...parent.Children], [a, c, b]);
+        assert.equal(parent_of(c), parent);
+    });
+
+    test('AddVisualChild / InsertVisualChild / RemoveVisualChild mutate the same observable collection', () => {
+        // Visual-only attach: child gets visualParent = panel but NO
+        // logicalParent. The collection still reflects the child.
+        const panel = new Panel();
+        const a = new Visual();
+        panel.AddVisualChild(a);
+        assert.equal(panel.Children.Count, 1);
+        assert.equal(parent_of(a), panel);  // visualParent
+        // logicalParent stays undefined for visual-only attach (helper
+        // reads visualParent for tests; logical parent is what's gone).
+
+        panel.RemoveVisualChild(a);
+        assert.equal(panel.Children.Count, 0);
+        assert.equal(parent_of(a), undefined);
+    });
+
+    test('visualChildren / logicalChildren remain snapshot arrays (length, indexing) backed by the observable', () => {
+        const parent = new Panel();
+        const a = new Visual();
+        const b = new Visual();
+        parent.AddChild(a);
+        parent.AddChild(b);
+        const snap1 = parent.visualChildren;
+        assert.equal(snap1.length, 2);
+        assert.equal(snap1[0], a);
+        // Same snapshot returned on a second read without intervening mutation.
+        assert.equal(parent.visualChildren, snap1);
+        // After a mutation the snapshot is invalidated; new array.
+        parent.RemoveChild(a);
+        const snap2 = parent.visualChildren;
+        assert.notEqual(snap2, snap1);
+        assert.deepEqual([...snap2], [b]);
     });
 });
 
@@ -1541,7 +1607,7 @@ describe('Single tree construction (one-child slot)', () => {
         owner.AddChild(child);
 
         const s = new Single();
-        assert.throws(() => s.SetChild(child), /already has a parent/);
+        assert.throws(() => s.SetChild(child), /already has a (visual|logical) parent/);
     });
 
     test('setChild throws when assigning self as child', () => {
@@ -1558,7 +1624,7 @@ describe('Single tree construction (one-child slot)', () => {
 
         assert.equal(parent_of(leaf), wrapper);
         assert.equal(parent_of(parent_of(leaf)), root);
-        assert.deepEqual(root.children, [wrapper]);
+        assert.deepEqual([...root.Children], [wrapper]);
         assert.equal(wrapper.child, leaf);
     });
 });
@@ -3002,7 +3068,7 @@ describe('Visual layout lifecycle (Measure / Arrange / Render)', () => {
             {
                 let width = 0;
                 let height = 0;
-                for (const child of this.children)
+                for (const child of this.Children)
                 {
                     child.Measure(availableSize);
                     width += child.DesiredSize.Width;

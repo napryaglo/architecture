@@ -2,8 +2,9 @@
 
 Mural is a WPF-style retained-mode UI framework for TypeScript. It gives you a
 property/binding system, a visual tree with layout + render lifecycle, brushes
-and geometry, and a small control library — currently rendering through SVG,
-with hooks for Canvas / WebGL / file output later.
+and geometry, a control library with templating + styling + data-binding +
+virtualization, and rendering through SVG today (Canvas / WebGL / file output
+to follow).
 
 This folder is the user-facing documentation for everything in [src/](../).
 For the per-file code review (issues, improvements, design notes) see
@@ -15,21 +16,25 @@ For the per-file code review (issues, improvements, design notes) see
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
 │  Controls   (src/Controls/)                                             │
-│  Concrete user-facing widgets: Border, TextBlock                        │
+│  Border, TextBlock, Canvas, ContentControl + ContentPresenter,          │
+│  ItemsControl + ItemsPresenter + ItemContainerGenerator,                │
+│  VirtualizingStackPanel, ScrollViewer, ControlTemplate, DataTemplate    │
 │                                                                         │
 │       depends on ▼                                                      │
 ├────────────────────────────────────────────────────────────────────────┤
 │  visual-engine (src/visual-engine/)                                     │
 │  Brush / Pen / Geometry / Transform models, DrawingContext              │
-│  augmentation, SvgDrawingContext, PresentationTarget hierarchy,         │
+│  augmentation (DrawRectangle / DrawText / DrawGeometry / PushClip /     │
+│  PushTransform), SvgDrawingContext, PresentationTarget hierarchy,       │
 │  FontMetricsMeasurer, Google Fonts loader                                │
 │                                                                         │
 │       depends on ▼                                                      │
 ├────────────────────────────────────────────────────────────────────────┤
 │  runtime     (src/runtime/)                                             │
-│  Model, properties, bindings, Visual + tree (Single/Panel), layout      │
-│  lifecycle, geometric primitives (Point/Size/Rect/Color/Matrix/         │
-│  Thickness), TextMeasurer interface                                     │
+│  Model, properties, bindings + DynamicResource, Visual + tree with      │
+│  visual/logical split, layout lifecycle, geometric primitives, Style    │
+│  + Setter + PropertyTrigger, ResourceDictionary + NameScope,            │
+│  ObservableCollection, IScrollInfo, TextMeasurer interface              │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -42,24 +47,47 @@ PresentationFramework analogue (FrameworkElement-based controls).
 
 Start with whichever doc matches what you're trying to do.
 
+### Foundations
 - **[property-system.md](property-system.md)** — `Model`, `RegisterProperty`,
-  bindings, value priority, listeners, read-only properties, attached
+  bindings, value priority (`Coerced > Animated > Binding > Local > Trigger
+  > Style > Inherited > Default`), listeners, read-only properties, attached
   / cross-class properties.
-- **[visual-tree.md](visual-tree.md)** — `Visual`, `Single`, `Panel`,
-  attaching / detaching children, the host back-pointer.
+- **[visual-tree.md](visual-tree.md)** — `Visual`, `Single`, `Panel`, the
+  visual vs logical tree split, attaching / detaching children, the host
+  back-pointer, `TemplatedParent`, `Name` / `FindName`, `Clip`.
 - **[layout.md](layout.md)** — `Measure` / `Arrange` / `Render` lifecycle,
   `MeasureOverride` / `ArrangeOverride` / `RenderOverride`, `Width` / `Height`
   / `MinWidth` / `MaxWidth` / `HorizontalAlignment` / `VerticalAlignment` /
-  `Margin`, property inheritance.
-- **[drawing.md](drawing.md)** — `DrawingContext`, brushes
-  (`SolidColorBrush`, gradients, `ImageBrush`), `Pen`, `Geometry`,
+  `Margin`, property inheritance, invalidation cascade.
+- **[drawing.md](drawing.md)** — `DrawingContext` (`DrawRectangle` /
+  `DrawGeometry` / `DrawText` / `PushTransform` / `PushClip` / `Pop`),
+  brushes (`SolidColorBrush`, gradients, `ImageBrush`), `Pen`, `Geometry`,
   `Transform`, geometric primitives.
 - **[targets.md](targets.md)** — `PresentationTarget` hierarchy
   (`HtmlTarget` / `FileTarget` / `HeadlessTarget`), `SvgDrawingContext`.
 - **[text-measurement.md](text-measurement.md)** — `TextMeasurer` interface,
   `ApproximateTextMeasurer`, `FontMetricsMeasurer` (opentype.js),
   Google Fonts loader.
-- **[controls.md](controls.md)** — `Border` and `TextBlock` reference.
+
+### Application architecture
+- **[resources.md](resources.md)** — `ResourceDictionary`,
+  `Visual.Resources`, `TryFindResource` / `FindResource`,
+  `MergedDictionaries`, change notifications, `DynamicResource`.
+- **[styles.md](styles.md)** — `Style` + `Setter` + `BasedOn`,
+  `TargetType` validation, sealing, explicit vs implicit style,
+  `Setter.value` as `Binding` / `DynamicResource` via `SetterFactory`,
+  `PropertyTrigger`, `Style.Resources`.
+- **[templating.md](templating.md)** — `ControlTemplate`,
+  `ContentControl` + `ContentPresenter`, `TemplateBinding`,
+  `TemplatedParent`, per-template `NameScope` + `GetTemplateChild`,
+  template-internal inheritance.
+- **[items-and-scrolling.md](items-and-scrolling.md)** —
+  `ObservableCollection`, `DataTemplate`, `ItemsControl` +
+  `ItemsPresenter` + `ItemContainerGenerator`, `VirtualizingPanel` +
+  `VirtualizingStackPanel`, `IScrollInfo`, `ScrollViewer`.
+- **[controls.md](controls.md)** — concrete-control reference:
+  `Border`, `TextBlock`, `Canvas`, `ContentControl`, `ItemsControl`,
+  `ScrollViewer`, etc.
 
 ## Five-line tour
 
@@ -97,15 +125,16 @@ Three demos ship under [Controls/tests/](../Controls/tests/):
 npm run demo:border    # 100×100 blue/black border on a 300×300 surface
 npm run demo:text      # bold text inside a styled border (approximate metrics)
 npm run demo:gfont     # Inter from Google Fonts (real per-glyph metrics)
+npm run ge             # a small graph viz on a 1600×1200 canvas
 ```
 
-Each writes an SVG to `src/Controls/tests/output/`. Open in a browser
-to inspect the rendering.
+Each writes an SVG to `src/Controls/tests/output/` (or to the working
+directory for `ge`). Open in a browser to inspect the rendering.
 
 ## Running the tests
 
 ```bash
-npm test          # 307 tests across runtime, visual-engine, Controls
+npm test          # ~470 tests across runtime, visual-engine, Controls
 npm run typecheck # tsc --noEmit
 ```
 
@@ -128,12 +157,20 @@ npm run typecheck # tsc --noEmit
 ## What's stable vs. in-flight
 
 **Stable** — has tests, used by demos, unlikely to change shape:
-- Property/binding system (`runtime/`)
-- `Visual` + `Single` + `Panel` tree, layout lifecycle
+- Property/binding system (`runtime/`), including the full value-priority
+  ladder with Style/Trigger tiers and `Visual.Style` apply machinery
+- `Visual` + `Single` + `Panel` tree, visual/logical split, layout lifecycle
+  with invalidation cascade
 - Brush/Pen/Geometry/Transform models
-- `SvgDrawingContext`
+- `SvgDrawingContext` including `DrawGeometry` + `PushClip`
 - `HeadlessTarget` (the headless render pipeline)
-- `Border`, `TextBlock`
+- `Border`, `TextBlock`, `Canvas` (with `Left` / `Top` attached properties)
+- `ContentControl` + `ContentPresenter` + `ControlTemplate` + `TemplateBinding`,
+  per-template `NameScope`, implicit style lookup
+- `ItemsControl` + `ItemsPresenter` + `ItemContainerGenerator` +
+  `DataTemplate`, `ObservableCollection` with incremental change dispatch
+- `VirtualizingStackPanel` with `IScrollInfo`, `ScrollViewer`
+  (clip-and-translate and delegate modes)
 - `TextMeasurer` + `ApproximateTextMeasurer` + `FontMetricsMeasurer` + Google Fonts loader
 
 **In flight** — works enough for the demos but the renderer integration is pending:
@@ -143,5 +180,17 @@ npm run typecheck # tsc --noEmit
 **Not yet built** — referenced but deferred:
 - `SvgRenderer` (the dirty-tracking real-time renderer for `HtmlTarget`)
 - `CanvasRenderer`
-- Layout panels beyond `Single` / `Panel` (StackPanel, Grid, etc.)
-- Input event routing
+- Layout panels beyond `Canvas` / `Single` / abstract `Panel` (StackPanel,
+  Grid, WrapPanel, etc.)
+- Input event routing (no mouse / keyboard / wheel today; `ScrollViewer`
+  offsets are programmatic-only)
+- Animation system (no `EventTrigger`, no smooth-scroll, no Storyboard)
+- Concrete `ScrollBar` visual control
+- `DataTrigger` (a `PropertyTrigger`-equivalent driven by a `Binding`)
+- `MultiTrigger` (AND of multiple conditions)
+- Container recycling across items in virtualizing panels
+- Variable item heights in `VirtualizingStackPanel`
+- Horizontal-orientation virtualization
+- Walking visual descendants for `IScrollInfo` (ScrollViewer requires
+  Content to be the IScrollInfo provider directly)
+</content>

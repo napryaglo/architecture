@@ -1,17 +1,43 @@
 # Controls
 
-The user-facing widgets that ship today: `Border` (a single-child wrapper
-with background and stroke) and `TextBlock` (a leaf for text rendering).
-Both build on the layout / drawing primitives — this doc is the API
-reference + usage guide.
+The user-facing widgets — `Border`, `TextBlock`, layout panels
+(`Canvas`), content / item hosts (`ContentControl`, `ItemsControl`),
+scrolling (`ScrollViewer`, `VirtualizingStackPanel`), and the
+templating primitives that knit them together (`ControlTemplate`,
+`ContentPresenter`, `ItemsPresenter`, `DataTemplate`).
 
 **Implemented in:**
 - [Controls/border.ts](../Controls/border.ts) — `Border`
 - [Controls/text-block.ts](../Controls/text-block.ts) — `TextBlock`
+- [Controls/canvas.ts](../Controls/canvas.ts) — `Canvas` + `Left` /
+  `Top` attached properties
+- [Controls/content-control.ts](../Controls/content-control.ts) —
+  `ContentControl`
+- [Controls/content-presenter.ts](../Controls/content-presenter.ts) —
+  `ContentPresenter`
+- [Controls/control-template.ts](../Controls/control-template.ts) —
+  `ControlTemplate`, `TemplateBinding`
+- [Controls/data-template.ts](../Controls/data-template.ts) —
+  `DataTemplate`
+- [Controls/items-control.ts](../Controls/items-control.ts) —
+  `ItemsControl`
+- [Controls/items-presenter.ts](../Controls/items-presenter.ts) —
+  `ItemsPresenter`
+- [Controls/item-container-generator.ts](../Controls/item-container-generator.ts) —
+  `ItemContainerGenerator`
+- [Controls/virtualizing-panel.ts](../Controls/virtualizing-panel.ts) —
+  `VirtualizingPanel` (abstract)
+- [Controls/virtualizing-stack-panel.ts](../Controls/virtualizing-stack-panel.ts) —
+  `VirtualizingStackPanel`
+- [Controls/scroll-viewer.ts](../Controls/scroll-viewer.ts) —
+  `ScrollViewer`
 
 See [layout.md](layout.md) for the underlying `Visual` properties every
 control inherits (Width / Margin / alignment), [drawing.md](drawing.md) for
-the Brush / Pen / Color types these controls accept.
+the Brush / Pen / Color types these controls accept,
+[templating.md](templating.md) for the deep dive on `ContentControl` /
+`ControlTemplate`, [items-and-scrolling.md](items-and-scrolling.md) for
+`ItemsControl` and friends.
 
 ## `Border`
 
@@ -318,16 +344,102 @@ inspect.
 
 ---
 
-## What's coming
+## `Canvas`
+
+A `Panel` that places children at absolute (x, y) coordinates read from
+`Canvas.Left` / `Canvas.Top` attached properties. WPF-parity Canvas.
+Sizes itself to the union bounding box of all placed children — paired
+with `HeadlessTarget`'s auto-mode, the surface fits the contents.
+
+```ts
+import { Canvas } from '../Controls/index.js';
+
+const c = new Canvas();
+const child = new Border();
+Canvas.SetLeft(child, 20);
+Canvas.SetTop(child, 30);
+c.AddChild(child);
+```
+
+`Left` / `Top` are registered with `MetaData.None` — changing them on a
+child doesn't auto-invalidate; the Canvas re-reads on its next Arrange
+pass. With `HeadlessTarget`'s always-fresh measure/arrange this works
+for the static-experiment flow. Incremental layout (when SvgRenderer
+lands) will need the Canvas to subscribe to its children's Left/Top.
+
+Used by the `ge` graph viz framework — see
+[../applications/ge/scene.ts](../applications/ge/scene.ts).
+
+## `ContentControl`
+
+Templated single-content host. See the full story in
+[templating.md](templating.md). API summary:
+
+```ts
+const cc = new ContentControl();
+cc.Template = someControlTemplate;     // ControlTemplate with a ContentPresenter
+cc.Content  = anyVisual;               // logical child; visually slotted into the presenter
+cc.GetTemplateChild('PART_X');         // look up by name within the applied template
+```
+
+Re-templating preserves Content; setting Template = undefined detaches
+the template.
+
+## `ItemsControl`
+
+Data-driven collection display. See [items-and-scrolling.md](items-and-scrolling.md).
+API summary:
+
+```ts
+const ic = new ItemsControl();
+ic.ItemsPanel   = () => new Canvas();
+ic.ItemTemplate = new DataTemplate(d => new TextBlock(`${d}`));
+ic.Items        = ['a', 'b', 'c'];     // or an ObservableCollection
+ic.Template     = wrappingTemplate;    // optional ControlTemplate with an ItemsPresenter
+ic.Generator;                          // ItemContainerGenerator — item ↔ container mapping
+```
+
+Mutations on an ObservableCollection dispatch incrementally — adding
+one item splices in one container, not a full rebuild.
+
+## `ScrollViewer`
+
+A scrolling viewport. See [items-and-scrolling.md §9](items-and-scrolling.md#9-scrollviewer).
+Two modes (auto-detected):
+- **Delegate** — Content implements `IScrollInfo` (typically a
+  `VirtualizingStackPanel`). ScrollViewer drives the panel's
+  viewport.
+- **Clip-and-translate** — anything else. Measures with Infinity,
+  arranges at `(-offset)`, clips to viewport.
+
+```ts
+const sv = new ScrollViewer();
+sv.Content = someContent;
+sv.VerticalOffset = 200;        // programmatic only — no input events yet
+sv.ScrollToBottom();
+```
+
+## `VirtualizingStackPanel`
+
+Vertical stack with uniform item height that only realizes containers
+inside the Viewport. See [items-and-scrolling.md §7](items-and-scrolling.md#7-virtualization).
+
+Properties: `Viewport: Rect`, `ItemHeight: number`. Realizes via
+`owner.Generator.Realize`; recycles via `Recycle`. Implements
+`IScrollInfo` so a wrapping `ScrollViewer` delegates to it
+automatically.
+
+## What's still coming
 
 These are the natural next controls:
 
 - **`Rectangle`** / **`Ellipse`** — shape primitives that wrap a Geometry.
-- **`StackPanel`** — vertical or horizontal stack layout.
+- **`StackPanel`** — vertical or horizontal stack layout (non-virtualizing).
 - **`Grid`** — row/column layout with proportional sizing.
 - **`Image`** — wraps an `ImageBrush`.
 - **`Button`** — interactive (needs event routing first).
-- **`ScrollViewer`** — clipping + virtualized children.
+- **`ScrollBar`** — visual control bound to `ScrollViewer.HorizontalOffset` /
+  `VerticalOffset` / `ScrollableWidth` / `ScrollableHeight`.
 
 The framework primitives are in place — adding any of these is overriding
 `MeasureOverride` / `ArrangeOverride` / `RenderOverride` and registering

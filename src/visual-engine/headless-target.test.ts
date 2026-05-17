@@ -146,4 +146,82 @@ describe('HeadlessTarget.Render', () => {
         assert.ok(inner_idx >  outer_idx);
         assert.ok(leaf_idx  >  inner_idx);
     });
+
+    // -----------------------------------------------------------------
+    // Auto sizing — target dimensions resolved from Content.DesiredSize
+    // -----------------------------------------------------------------
+
+    test('auto on both axes: surface adopts Content.DesiredSize', () => {
+        const leaf = new PaintRect(new Size(40, 25), Color.Red);
+        const t = new HeadlessTarget(undefined, undefined, leaf);
+        const dc = new SvgDrawingContext();
+        t.Render(dc);
+        assert.equal(t.ActualWidth,  40);
+        assert.equal(t.ActualHeight, 25);
+        // Width / Height stay NaN — user input is preserved so a later
+        // Content swap re-resolves the size.
+        assert.ok(Number.isNaN(t.Width));
+        assert.ok(Number.isNaN(t.Height));
+        // Leaf renders at (0, 0) — no translate because Arrange placed
+        // it at the surface origin.
+        const out = dc.ToFragment();
+        assert.ok(out.includes('<rect x="0" y="0" width="40" height="25" fill="rgb(255,0,0)"'));
+    });
+
+    test('auto width only: height stays fixed, width grows to content', () => {
+        const leaf = new PaintRect(new Size(80, 12), Color.Red);
+        const t = new HeadlessTarget(undefined, 200, leaf);
+        const dc = new SvgDrawingContext();
+        t.Render(dc);
+        assert.equal(t.ActualWidth,  80);
+        assert.equal(t.ActualHeight, 200);
+    });
+
+    test('auto height only: width stays fixed, height grows to content', () => {
+        const leaf = new PaintRect(new Size(80, 12), Color.Red);
+        const t = new HeadlessTarget(300, undefined, leaf);
+        const dc = new SvgDrawingContext();
+        t.Render(dc);
+        assert.equal(t.ActualWidth,  300);
+        assert.equal(t.ActualHeight, 12);
+    });
+
+    test('auto with no content collapses to 0x0; Background draws nothing visible', () => {
+        const t = new HeadlessTarget();
+        t.Background = new SolidColorBrush(Color.White);
+        const dc = new SvgDrawingContext();
+        t.Render(dc);
+        assert.equal(t.ActualWidth,  0);
+        assert.equal(t.ActualHeight, 0);
+        // Background still emits a rect, but at 0x0 — semantics decided
+        // by the renderer, we just confirm the surface chose 0.
+        assert.ok(dc.ToFragment().includes('width="0"'));
+        assert.ok(dc.ToFragment().includes('height="0"'));
+    });
+
+    test('auto re-resolves on Content swap (Width stays NaN across renders)', () => {
+        const small = new PaintRect(new Size(10, 10), Color.Red);
+        const big   = new PaintRect(new Size(50, 80), Color.Blue);
+        const t = new HeadlessTarget(undefined, undefined, small);
+
+        t.Render(new SvgDrawingContext());
+        assert.equal(t.ActualWidth,  10);
+        assert.equal(t.ActualHeight, 10);
+
+        t.Content = big;
+        t.Render(new SvgDrawingContext());
+        // Second render must re-resolve from the new content, not reuse
+        // the first render's 10x10. Verifies that Width / Height aren't
+        // silently mutated to lock in the first resolved size.
+        assert.equal(t.ActualWidth,  50);
+        assert.equal(t.ActualHeight, 80);
+    });
+
+    test('fixed mode: ActualWidth / ActualHeight mirror Width / Height', () => {
+        const leaf = new PaintRect(new Size(10, 10), Color.Red);
+        const t = new HeadlessTarget(120, 60, leaf);
+        t.Render(new SvgDrawingContext());
+        assert.equal(t.ActualWidth,  120);
+        assert.equal(t.ActualHeight, 60);
+    });
 });

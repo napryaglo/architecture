@@ -43,8 +43,8 @@ File-by-file findings from a top-to-bottom review of the library source. Severit
 - **OK.** Layout pipeline is correct. `Measure` clamps via `MinMax` resolution; `Arrange` applies Margin → alignment → `ArrangeOverride`.
 - **DESIGN.** `ArrangedRect` is the final aligned rect (slot.X + alignment offset, renderSize), not the parent-given slot. Documented but subtle — hit-testing reads ArrangedRect for bounds, so the un-rendered margin/extra-slot area is invisible to hit testing. That's the WPF semantic too.
 - **DESIGN.** `walk_inherited` and `refresh_inherited` use bracket access `p['property_values']` to bypass TypeScript's private modifier across same-class instances. Same pattern in `Single` / `Panel` for `propagate_*` overrides. Consistent across the codebase but worth flagging for new contributors.
-- **OK.** `propagate_target_to_children` is a virtual no-op on `Visual` overridden by `Single` and `Panel`. Same pattern as `propagate_inheritance_to_children`.
-- **IMPROVE.** Three parallel `propagate_*` methods (inheritance_to_children, inheritance_for, target_to_children) on `Single` and `Panel`, each a one-liner walking children. A single `walk_children(visitor)` would let all three become one-liners on `Visual`, with `Single` / `Panel` defining `walk_children` once. Pre-existing tech debt; works fine.
+- **OK.** Tree wiring now splits along the visual / logical axes (see [visual-tree.md §2](visual-tree.md)): `propagate_target_to_visual_children` rides the visual tree, `propagate_inheritance_to_logical_children` / `propagate_inheritance_for_logical_children` ride the logical tree. Each is a virtual no-op on `Visual` overridden by `Single` and `Panel`. For non-templated containers both axes still walk the same `_child` / `_children`; the names mean the overrides are correctly wired when the trees later diverge under control templates.
+- **IMPROVE.** Three parallel `propagate_*` methods on `Single` and `Panel`, each a one-liner walking children. A single `walk_visual_children(visitor)` / `walk_logical_children(visitor)` pair would let all three become one-liners on `Visual`. Pre-existing tech debt; works fine.
 - **OK.** `static {}` initializer for property registration runs on first class reference (ES2022). Compatible with `target: ES2022` in tsconfig.
 - **DESIGN.** `Width === NaN` is the "size to content" sentinel, matching WPF. Setting `Width = Number.NaN` re-enables MeasureOverride-driven sizing — works because every comparison with NaN returns false, so `set_property_value` always fires the change notification.
 
@@ -137,7 +137,7 @@ File-by-file findings from a top-to-bottom review of the library source. Severit
 
 ### [visual-engine/targets/headless-target.ts](../visual-engine/targets/headless-target.ts)
 - **OK.** Full one-shot render pipeline: paint Background → Measure → Arrange → walk tree pushing translates.
-- **DESIGN.** `childrenOf` dispatches via `instanceof Single` / `instanceof Panel`. Adding a new Visual subtype with children (e.g., a future ItemsControl) requires touching this method. Pre-existing design tension; a `visitChildren(visitor)` virtual on Visual would centralize the dispatch.
+- **OK (fixed).** The previous `childrenOf` static that dispatched via `instanceof Single` / `instanceof Panel` is gone; the renderer now walks `visual.visualChildren`, the virtual getter every Visual subtype overrides. New container types (future ItemsControl, ContentPresenter under templating) plug in without touching the renderer.
 
 ---
 

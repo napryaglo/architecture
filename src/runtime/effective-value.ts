@@ -25,12 +25,20 @@ export type InternalPropertyChangeCallback = (
 
 // Where the effective value came from. Mirrors WPF's BaseValueSource.
 // Read via Model.GetValueSource(property).
+//
+// Priority order (highest to lowest):
+//   Coerced > Animated > Binding > Local > Trigger > Style > Inherited > Default
+// The enum values themselves don't encode priority — the EVD's `value`
+// getter and the various Set / Clear methods encode the priority via
+// their dispatch.
 export enum PropertyValueSource
 {
     AnimatedValue,
     LocalValue,
     Binding,
     CoercedValue,
+    TriggerValue,
+    StyleValue,
     InheritedValue,
     Default
 }
@@ -45,6 +53,13 @@ export class EffectiveValueDescriptor
     private binding_value: Binding | undefined;
     private animated_value: any;
     private coerced_value: any;
+    // Style + Trigger slots use parallel flags because `undefined` is
+    // a legitimate value (a style setter MAY want to set a property
+    // to undefined explicitly, distinct from "no style value cached").
+    private trigger_value: any;
+    private has_trigger_value: boolean = false;
+    private style_value: any;
+    private has_style_value: boolean = false;
     private inherited_value: any;
 
     private property_descriptor: PropertyDescriptor;
@@ -103,10 +118,11 @@ export class EffectiveValueDescriptor
     }
 
     // Resets every base-value slot, disposes any active binding, drops the
-    // source back to Default, and fires a change notification if the
-    // effective value differed. Listeners on this EVD are preserved.
-    // Note: doesn't touch the inherited cache — that's owned by the
-    // inheritance machinery on Model and refreshed via SetInheritedValue.
+    // source to the next-lower priority slot still set (style → inherited
+    // → default), and fires a change notification if the effective value
+    // differed. Listeners on this EVD are preserved. Note: doesn't touch
+    // the style or inherited caches — those are managed by the style
+    // machinery and the inheritance machinery respectively.
     ClearValue(): void
     {
         const old_effective_value = this.value;
@@ -119,7 +135,13 @@ export class EffectiveValueDescriptor
         this.local_value = undefined;
         this.animated_value = undefined;
         this.coerced_value = undefined;
-        this.source = PropertyValueSource.Default;
+        this.source = this.has_trigger_value
+            ? PropertyValueSource.TriggerValue
+            : this.has_style_value
+                ? PropertyValueSource.StyleValue
+                : this.inherited_value !== undefined
+                    ? PropertyValueSource.InheritedValue
+                    : PropertyValueSource.Default;
 
         const new_effective_value = this.value;
         if (old_effective_value !== new_effective_value)
@@ -130,10 +152,88 @@ export class EffectiveValueDescriptor
 
     // Caches the inherited value resolved from an ancestor. No-op when
     // an explicit higher-priority source already owns this slot — local
-    // overrides always shadow inheritance. Fires change notification
-    // when the effective value actually changes.
+    // overrides, triggers, and styles all shadow inheritance. Fires
+    // change notification when the effective value actually changes.
     SetInheritedValue(value: any): void
     {
+        if (this.source === PropertyValueSource.LocalValue
+            || this.source === PropertyValueSource.Binding
+            || this.source === PropertyValueSource.AnimatedValue
+            || this.source === PropertyValueSource.CoercedValue
+            || this.source === PropertyValueSource.TriggerValue
+            || this.source === PropertyValueSource.StyleValue)
+        {
+            return;
+        }
+        const old_effective_value = this.value;
+        this.inherited_value = value;
+        this.source = PropertyValueSource.InheritedValue;
+        const new_effective_value = this.value;
+        if (old_effective_value !== new_effective_value)
+        {
+            this.OnPropertyChange(old_effective_value, new_effective_value);
+        }
+    }
+
+    // Caches a Style-driven value for this property. Style sits below
+    // LocalValue / Binding / Animated / Coerced / Trigger in the
+    // priority stack — if one of those is active, the style value is
+    // stored but the current source stays unchanged (style takes over
+    // later if the higher-priority source is cleared). Fires change
+    // notification when the effective value actually changes.
+    SetStyleValue(value: any): void
+    {
+        const old_effective_value = this.value;
+        this.style_value = value;
+        this.has_style_value = true;
+        if (this.source === PropertyValueSource.LocalValue
+            || this.source === PropertyValueSource.Binding
+            || this.source === PropertyValueSource.AnimatedValue
+            || this.source === PropertyValueSource.CoercedValue
+            || this.source === PropertyValueSource.TriggerValue)
+        {
+            return;
+        }
+        this.source = PropertyValueSource.StyleValue;
+        const new_effective_value = this.value;
+        if (old_effective_value !== new_effective_value)
+        {
+            this.OnPropertyChange(old_effective_value, new_effective_value);
+        }
+    }
+
+    // Drops the style slot. If Style was the current source, falls
+    // through to InheritedValue (if cached) or Default. Higher-
+    // priority sources are unaffected.
+    ClearStyleValue(): void
+    {
+        if (!this.has_style_value) return;
+        const old_effective_value = this.value;
+        this.style_value = undefined;
+        this.has_style_value = false;
+        if (this.source === PropertyValueSource.StyleValue)
+        {
+            this.source = this.inherited_value !== undefined
+                ? PropertyValueSource.InheritedValue
+                : PropertyValueSource.Default;
+        }
+        const new_effective_value = this.value;
+        if (old_effective_value !== new_effective_value)
+        {
+            this.OnPropertyChange(old_effective_value, new_effective_value);
+        }
+    }
+
+    // Caches a Trigger-driven value for this property. Trigger sits
+    // above StyleValue / InheritedValue / Default but below
+    // LocalValue / Binding / Animated / Coerced. Same pattern as
+    // SetStyleValue otherwise — stash regardless, but only flip
+    // source if no higher-priority slot is active.
+    SetTriggerValue(value: any): void
+    {
+        const old_effective_value = this.value;
+        this.trigger_value = value;
+        this.has_trigger_value = true;
         if (this.source === PropertyValueSource.LocalValue
             || this.source === PropertyValueSource.Binding
             || this.source === PropertyValueSource.AnimatedValue
@@ -141,9 +241,31 @@ export class EffectiveValueDescriptor
         {
             return;
         }
+        this.source = PropertyValueSource.TriggerValue;
+        const new_effective_value = this.value;
+        if (old_effective_value !== new_effective_value)
+        {
+            this.OnPropertyChange(old_effective_value, new_effective_value);
+        }
+    }
+
+    // Drops the trigger slot. If Trigger was the current source,
+    // falls through to StyleValue (if cached), then InheritedValue,
+    // then Default. Higher-priority sources are unaffected.
+    ClearTriggerValue(): void
+    {
+        if (!this.has_trigger_value) return;
         const old_effective_value = this.value;
-        this.inherited_value = value;
-        this.source = PropertyValueSource.InheritedValue;
+        this.trigger_value = undefined;
+        this.has_trigger_value = false;
+        if (this.source === PropertyValueSource.TriggerValue)
+        {
+            this.source = this.has_style_value
+                ? PropertyValueSource.StyleValue
+                : this.inherited_value !== undefined
+                    ? PropertyValueSource.InheritedValue
+                    : PropertyValueSource.Default;
+        }
         const new_effective_value = this.value;
         if (old_effective_value !== new_effective_value)
         {
@@ -245,7 +367,7 @@ export class EffectiveValueDescriptor
 
     // The effective value: the highest-priority entry that is currently
     // set, mirroring WPF's EffectiveValueEntry resolution
-    // (CoercedValue > AnimatedValue > Binding > LocalValue).
+    // (Coerced > Animated > Binding > Local > Trigger > Style > Inherited > Default).
     get value(): any
     {
         switch (this.source)
@@ -258,6 +380,10 @@ export class EffectiveValueDescriptor
                 return this.binding_value!.get_value();
             case PropertyValueSource.LocalValue:
                 return this.local_value;
+            case PropertyValueSource.TriggerValue:
+                return this.trigger_value;
+            case PropertyValueSource.StyleValue:
+                return this.style_value;
             case PropertyValueSource.InheritedValue:
                 return this.inherited_value;
             default:

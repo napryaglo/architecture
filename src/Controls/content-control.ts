@@ -1,0 +1,226 @@
+import {
+    MetaData,
+    Model,
+    Rect,
+    Size,
+    Visual,
+    type DrawingContext,
+    type PropertyDescriptor,
+} from '../runtime/index.js';
+import { ControlTemplate, type TemplateInstance } from './control-template.js';
+
+// Base class for controls that present a single piece of consumer-
+// supplied content inside a ControlTemplate-defined visual structure.
+// Mirrors WPF's ContentControl — the underpinning of Button, Label,
+// ToolTip, Window, and friends.
+//
+// The two-tree split shows up here for the first time:
+//
+//   * Content     — consumer-supplied. Logical child of this control.
+//                   Visual parent ends up being the ContentPresenter
+//                   inside the template (when one exists).
+//   * Template    — applies a ControlTemplate that constructs the
+//                   visual structure (Border, decorations, layout
+//                   panels, …). The template's root becomes this
+//                   control's visual child; the template's
+//                   ContentPresenter receives the slotted Content.
+//
+// MeasureOverride / ArrangeOverride delegate to the template root —
+// the control itself has no intrinsic layout, the template defines it.
+// Render is a no-op; the template tree paints itself when the
+// renderer walks visualChildren.
+//
+// Without a Template, the control has no visual children — it renders
+// nothing, even if Content is set. This is the WPF behavior (a
+// ContentControl with no template is a logical-only container).
+export class ContentControl extends Visual
+{
+    static {
+        Model.RegisterProperty(ContentControl, 'Content',  undefined, MetaData.Measure);
+        Model.RegisterProperty(ContentControl, 'Template', undefined, MetaData.Measure);
+    }
+
+    // The current applied template instance (root + presenter). When
+    // Template changes, the old instance is torn down and a new one
+    // built. undefined when Template is undefined.
+    private _templateInstance: TemplateInstance | undefined;
+
+    public get Content(): Visual | undefined
+    {
+        return this.get_property_value('Content');
+    }
+
+    // Setter wires three things in order:
+    //   1. Visually unslot the OLD content from the presenter (if any).
+    //   2. Logically detach the OLD content from this control.
+    //   3. Logically attach the NEW content to this control.
+    //   4. Visually slot the NEW content into the presenter (if any).
+    // Order matters: detach-visual before detach-logical so the content's
+    // visual parent isn't left dangling at a presenter mid-swap.
+    public set Content(value: Visual | undefined)
+    {
+        const old = this.Content;
+        if (old === value) return;
+
+        const presenter = this._templateInstance?.contentPresenter;
+
+        if (old !== undefined && presenter !== undefined)
+        {
+            // Clear the presenter's visual slot for the outgoing content
+            // first; SetContent(undefined) handles the DetachVisual.
+            presenter.SetContent(undefined);
+        }
+        if (old !== undefined)
+        {
+            this.DetachLogical(old);
+        }
+
+        this.set_property_value('Content', value);
+
+        if (value !== undefined)
+        {
+            this.AttachLogical(value);
+        }
+        if (value !== undefined && presenter !== undefined)
+        {
+            presenter.SetContent(value);
+        }
+    }
+
+    public get Template(): ControlTemplate | undefined
+    {
+        return this.get_property_value('Template');
+    }
+
+    public set Template(value: ControlTemplate | undefined)
+    {
+        const old = this.Template;
+        if (old === value) return;
+        this.set_property_value('Template', value);
+        this.rebuildTemplate(value);
+    }
+
+    // Visual child = the template's root (when applied). Empty when
+    // Template is unset — no visual surface to render.
+    public override get visualChildren(): readonly Visual[]
+    {
+        return this._templateInstance !== undefined
+            ? [this._templateInstance.root]
+            : [];
+    }
+
+    // Logical child = the Content (when set). Empty otherwise. Stays
+    // valid regardless of Template state — re-templating swaps the
+    // visual tree without touching the logical tree.
+    public override get logicalChildren(): readonly Visual[]
+    {
+        const c = this.Content;
+        return c !== undefined ? [c] : [];
+    }
+
+    // Inheritance propagation: refresh the Content slot AND the
+    // template-internal subtree. The template root isn't a logical
+    // child of this control (its logicalParent stays undefined), but
+    // its walk_inherited falls through templatedParent → us, so it
+    // needs to know about value changes too. Pushing the refresh into
+    // its subtree triggers per-node refresh_inherited, which re-reads
+    // through the templatedParent fallback.
+    protected override propagate_inheritance_to_logical_children(): void
+    {
+        this.Content?.['refresh_inheritance_subtree']();
+        this._templateInstance?.root['refresh_inheritance_subtree']();
+    }
+
+    protected override propagate_inheritance_for_logical_children(descriptor: PropertyDescriptor): void
+    {
+        this.Content?.['refresh_inherited'](descriptor);
+        this._templateInstance?.root['refresh_inherited'](descriptor);
+        // refresh_inherited on the template root fires OnPropertyChanged
+        // when the value actually changed, which cascades through the
+        // root's own propagate hook into its logical descendants. No
+        // manual walk needed here.
+    }
+
+    // Target propagation rides the VISUAL tree, so it cascades through
+    // the template root (which is the control's visual child after
+    // Apply). Without this override, mounting a ContentControl whose
+    // Template was set BEFORE attach would leave the template subtree
+    // host-less. (The reverse order — mount first, then set Template —
+    // works through AttachVisual's per-call target seeding.)
+    protected override propagate_target_to_visual_children(): void
+    {
+        this._templateInstance?.root['SetTarget'](this['target']);
+    }
+
+    // Tear down the previous template (if any) and apply the new one.
+    // Re-slots the current Content into the new template's presenter
+    // so the logical Content survives a Template swap intact — that's
+    // the headline benefit of the two-tree split.
+    private rebuildTemplate(newTemplate: ControlTemplate | undefined): void
+    {
+        const carriedContent = this.Content;
+
+        if (this._templateInstance !== undefined)
+        {
+            const oldPresenter = this._templateInstance.contentPresenter;
+            if (oldPresenter !== undefined && carriedContent !== undefined)
+            {
+                // Unslot the carried content visually before tearing down
+                // the old template tree, otherwise DetachVisual on the
+                // template root would refuse to detach a node that has
+                // descendants with foreign visual parents.
+                oldPresenter.SetContent(undefined);
+            }
+            this.DetachVisual(this._templateInstance.root);
+            this._templateInstance = undefined;
+        }
+
+        if (newTemplate === undefined) return;
+
+        const instance = newTemplate.Apply(this);
+        this.AttachVisual(instance.root);
+        this._templateInstance = instance;
+        // Now that the template subtree has a TemplatedParent stamped
+        // (Apply did that) and a target (AttachVisual cascaded it),
+        // refresh inheritance so template internals pull values from
+        // this control via the walk_inherited templatedParent fallback.
+        // Without this, values set on the control BEFORE the template
+        // was applied wouldn't propagate into the template tree.
+        instance.root['refresh_inheritance_subtree']();
+
+        if (carriedContent !== undefined && instance.contentPresenter !== undefined)
+        {
+            instance.contentPresenter.SetContent(carriedContent);
+        }
+    }
+
+    // Looks up a Visual by Name within the applied template's
+    // NameScope — the WPF Control.GetTemplateChild equivalent.
+    // Returns undefined when no template is applied, or when the
+    // template doesn't contain a Visual with that Name. Consumers
+    // typically use this to grab a template part (e.g.,
+    // "PART_Background") and wire behavior to it after the template
+    // has been applied.
+    public GetTemplateChild(name: string): Visual | undefined
+    {
+        return this._templateInstance?.root.FindName(name);
+    }
+
+    protected override MeasureOverride(availableSize: Size): Size
+    {
+        if (this._templateInstance === undefined) return Size.Zero;
+        this._templateInstance.root.Measure(availableSize);
+        return this._templateInstance.root.DesiredSize;
+    }
+
+    protected override ArrangeOverride(finalSize: Size): Size
+    {
+        if (this._templateInstance === undefined) return Size.Zero;
+        this._templateInstance.root.Arrange(new Rect(0, 0, finalSize.Width, finalSize.Height));
+        return finalSize;
+    }
+
+    // No own paint — the template tree paints itself when the renderer
+    // walks visualChildren.
+    protected override RenderOverride(_dc: DrawingContext): void { }
+}

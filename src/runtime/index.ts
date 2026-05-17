@@ -32,6 +32,21 @@ export {
     VerticalAlignment,
     type VisualHost,
 } from './visual.js';
+export { NameScope } from './namescope.js';
+export {
+    ResourceDictionary,
+    type ResourceChangeListener,
+    type ResourceKey,
+} from './resource-dictionary.js';
+export { DynamicResource } from './dynamic-resource.js';
+export { Style, Setter, SetterFactory, PropertyTrigger } from './style.js';
+export { type IScrollInfo, isScrollInfo } from './scroll-info.js';
+export {
+    ObservableCollection,
+    type CollectionChange,
+    type CollectionChangeListener,
+    type IReadOnlyObservableCollection,
+} from './observable-collection.js';
 export { Point, Size, Rect, Color, Matrix, Thickness } from './primitives.js';
 export { type DrawingContext } from './drawing-context.js';
 export {

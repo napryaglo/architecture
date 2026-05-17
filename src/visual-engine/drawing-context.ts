@@ -47,6 +47,14 @@ declare module '../runtime/drawing-context.js'
 
         PushTransform(transform: Transform): void;
 
+        // Clips subsequent draw calls to the area covered by `geometry`
+        // until the matching Pop. Frames stack with PushTransform —
+        // a clip pushed inside a transform is in the transform's
+        // coordinate space. RectangleGeometry / EllipseGeometry are
+        // the supported shapes today; other geometries throw (clip
+        // shapes are a subset of paintable geometries).
+        PushClip(geometry: Geometry): void;
+
         Pop(): void;
     }
 }

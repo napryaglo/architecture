@@ -49,6 +49,7 @@ class CapturingContext implements DrawingContext
     DrawGeometry(): void { throw new Error('not used'); }
     DrawText(): void     { throw new Error('not used'); }
     PushTransform(): void { /* no-op for tests */ }
+    PushClip(): void      { /* no-op for tests */ }
     Pop(): void           { /* no-op for tests */ }
 }
 

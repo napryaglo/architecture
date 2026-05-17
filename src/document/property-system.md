@@ -98,13 +98,22 @@ Each Model property tracks where its current value came from — the
 The priority order (highest first):
 
 ```
-CoercedValue     — value forced by a coerce callback
+CoercedValue     — value forced by a coerce callback (placeholder)
 AnimatedValue    — placeholder, no animation engine yet
-Binding          — value from a Binding (see §5)
+Binding          — value from a Binding (see §5) OR a DynamicResource
 LocalValue       — explicitly set via set_property_value
+TriggerValue     — applied by an active PropertyTrigger (see styles.md)
+StyleValue       — applied by a Style's Setter (see styles.md)
 InheritedValue   — inherited from an ancestor's MetaData.Inherits property
 Default          — descriptor's default_value
 ```
+
+The Trigger / Style tiers (between Local and Inherited) come from the
+styling system. A locally-set value or an active Binding always
+shadows a styled value; styled values shadow inherited values;
+inherited shadows default. See [styles.md](styles.md) for how Styles
+push values into the StyleValue slot and how PropertyTriggers push
+into the TriggerValue slot.
 
 Read the current source with `GetValueSource`:
 

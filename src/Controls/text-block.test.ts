@@ -31,6 +31,7 @@ class CapturingContext implements DrawingContext
     DrawGeometry(): void { throw new Error('not used'); }
     DrawText(text: FormattedText, origin: Point): void { this.texts.push({ text, origin }); }
     PushTransform(): void { /* no-op */ }
+    PushClip(): void { /* no-op */ }
     Pop(): void { /* no-op */ }
 }
 

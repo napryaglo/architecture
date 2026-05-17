@@ -17,9 +17,9 @@ export interface FileTargetOptions
     dpi?: number;
 }
 
-// PresentationTarget for file output. The user constructs one with
-// fixed dimensions plus a format/path, mounts a Visual tree under
-// Content, then calls Save() to write the file.
+// PresentationTarget for file output. The user constructs one with a
+// format/path plus optional dimensions; omitted dimensions size to
+// Content.DesiredSize at Save time (auto mode, same as HeadlessTarget).
 //
 // Scaffold only — the actual writers (SVG serializer, PNG rasterizer,
 // PDF emitter) come once the renderer pipeline exists. The constructor
@@ -29,7 +29,7 @@ export class FileTarget extends PresentationTarget
 {
     public readonly options: FileTargetOptions;
 
-    constructor(width: number, height: number, options: FileTargetOptions, content?: Visual)
+    constructor(options: FileTargetOptions, content?: Visual, width?: number, height?: number)
     {
         super(width, height, content);
         this.options = options;

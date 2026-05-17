@@ -200,9 +200,22 @@ public InvalidateArrange(): void   // re-arrange only
 public InvalidateVisual(): void    // re-render only
 ```
 
-Each method clears the corresponding validity flag and notifies the host
-via the `VisualHost.OnXxxInvalidated` hook so the host can schedule a
-re-pass.
+Each method clears the corresponding validity flag, notifies the host
+via the `VisualHost.OnXxxInvalidated` hook, AND cascades UP the visual
+tree invalidating ancestors' caches too (dedup'd: the upward walk
+stops at the first already-invalid ancestor). Without that walk, a
+parent whose cache is still valid would short-circuit the next top-down
+Measure / Arrange pass and never reach this Visual through its
+`MeasureOverride` / `ArrangeOverride`. This matters specifically for
+property changes that mutate child state which the parent can't infer
+on its own — for example `VirtualizingStackPanel.Viewport`, where the
+panel needs a re-measure that the IC ancestor wouldn't otherwise
+trigger.
+
+The host notification fires regardless of cascade dedup (the host's
+queue handles its own dedup); the cascade itself stops at the first
+already-invalid ancestor so chains of property changes don't re-walk
+the whole tree.
 
 Property-to-invalidation routing:
 
