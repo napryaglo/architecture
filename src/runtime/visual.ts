@@ -1135,27 +1135,29 @@ export class Visual extends Model
         }
     }
 
+    // Re-resolves the inherited value for `descriptor` against the
+    // current logical-ancestor chain and updates this Visual's EVD
+    // cache. Runs unconditionally — even when a higher-priority source
+    // (LocalValue / Binding / Trigger / Style / …) is currently the
+    // active source — because the cached InheritedValue slot has to
+    // stay fresh for the eventual fall-through when that higher source
+    // clears. SetInheritedValue / ClearInherited internally suppress
+    // the source flip and change-notification when shadowed, so this
+    // method's `walk + push` is cheap when no descendant cascade is
+    // warranted.
     protected refresh_inherited(descriptor: PropertyDescriptor): void
     {
         if (!inherits(descriptor.MetaData)) return;
 
         const key = Model.compose_key(descriptor.RootOwner, descriptor.Name);
-        const evd = this['property_values'].get(key);
-        if (evd !== undefined
-            && evd.Source !== PropertyValueSource.Default
-            && evd.Source !== PropertyValueSource.InheritedValue)
-        {
-            return;
-        }
-
         const value = this.walk_inherited(key);
         if (value !== undefined)
         {
             this['ensure_effective_value_for'](descriptor).SetInheritedValue(value);
         }
-        else if (evd !== undefined && evd.Source === PropertyValueSource.InheritedValue)
+        else
         {
-            evd.ClearInherited();
+            this['property_values'].get(key)?.ClearInherited();
         }
     }
 

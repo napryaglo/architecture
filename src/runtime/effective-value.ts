@@ -53,14 +53,19 @@ export class EffectiveValueDescriptor
     private binding_value: Binding | undefined;
     private animated_value: any;
     private coerced_value: any;
-    // Style + Trigger slots use parallel flags because `undefined` is
-    // a legitimate value (a style setter MAY want to set a property
-    // to undefined explicitly, distinct from "no style value cached").
+    // Style / Trigger / Inherited slots use parallel flags because
+    // `undefined` is a legitimate value (a style setter MAY want to
+    // set a property to undefined explicitly, distinct from "no style
+    // value cached"; the inherited cache must distinguish "ancestor
+    // resolved to undefined" from "no ancestor value at all" for the
+    // fall-through chain in ClearStyleValue / ClearTriggerValue /
+    // ClearValue).
     private trigger_value: any;
     private has_trigger_value: boolean = false;
     private style_value: any;
     private has_style_value: boolean = false;
     private inherited_value: any;
+    private has_inherited_value: boolean = false;
 
     private property_descriptor: PropertyDescriptor;
     private changeListeners: Array<PropertyChangeCallback> = [];
@@ -139,7 +144,7 @@ export class EffectiveValueDescriptor
             ? PropertyValueSource.TriggerValue
             : this.has_style_value
                 ? PropertyValueSource.StyleValue
-                : this.inherited_value !== undefined
+                : this.has_inherited_value
                     ? PropertyValueSource.InheritedValue
                     : PropertyValueSource.Default;
 
@@ -150,23 +155,27 @@ export class EffectiveValueDescriptor
         }
     }
 
-    // Caches the inherited value resolved from an ancestor. No-op when
-    // an explicit higher-priority source already owns this slot — local
-    // overrides, triggers, and styles all shadow inheritance. Fires
-    // change notification when the effective value actually changes.
+    // Caches the inherited value resolved from an ancestor. ALWAYS
+    // updates the cached slot — even when a higher-priority source is
+    // currently active — so a later clear of that higher source falls
+    // through to a fresh inherited value rather than a stale one
+    // captured before the higher source was installed. The source flip
+    // and change-notification only fire when no higher-priority source
+    // is masking inheritance.
     SetInheritedValue(value: any): void
     {
-        if (this.source === PropertyValueSource.LocalValue
-            || this.source === PropertyValueSource.Binding
-            || this.source === PropertyValueSource.AnimatedValue
-            || this.source === PropertyValueSource.CoercedValue
-            || this.source === PropertyValueSource.TriggerValue
-            || this.source === PropertyValueSource.StyleValue)
+        const old_effective_value = this.value;
+        this.inherited_value = value;
+        this.has_inherited_value = true;
+
+        // Higher-priority source active: cache is updated but stays
+        // invisible until that source clears. No source flip, no
+        // notification.
+        if (this.source !== PropertyValueSource.InheritedValue
+            && this.source !== PropertyValueSource.Default)
         {
             return;
         }
-        const old_effective_value = this.value;
-        this.inherited_value = value;
         this.source = PropertyValueSource.InheritedValue;
         const new_effective_value = this.value;
         if (old_effective_value !== new_effective_value)
@@ -213,7 +222,7 @@ export class EffectiveValueDescriptor
         this.has_style_value = false;
         if (this.source === PropertyValueSource.StyleValue)
         {
-            this.source = this.inherited_value !== undefined
+            this.source = this.has_inherited_value
                 ? PropertyValueSource.InheritedValue
                 : PropertyValueSource.Default;
         }
@@ -262,7 +271,7 @@ export class EffectiveValueDescriptor
         {
             this.source = this.has_style_value
                 ? PropertyValueSource.StyleValue
-                : this.inherited_value !== undefined
+                : this.has_inherited_value
                     ? PropertyValueSource.InheritedValue
                     : PropertyValueSource.Default;
         }
@@ -273,14 +282,20 @@ export class EffectiveValueDescriptor
         }
     }
 
-    // Drops the inherited cache and reverts to Default. Used when the
-    // ancestor chain no longer provides a value (e.g. after Detach or
-    // when an ancestor's value was cleared).
+    // Drops the inherited cache. If InheritedValue was the current
+    // source, falls through to Default. ALWAYS clears the cached slot
+    // — even when a higher-priority source is masking inheritance —
+    // so a later clear of that higher source falls through to Default
+    // rather than to a stale inherited value the ancestor no longer
+    // provides. Used when the ancestor chain no longer carries a
+    // value (after Detach or when an ancestor's value was cleared).
     ClearInherited(): void
     {
-        if (this.source !== PropertyValueSource.InheritedValue) return;
+        if (!this.has_inherited_value) return;
         const old_effective_value = this.value;
         this.inherited_value = undefined;
+        this.has_inherited_value = false;
+        if (this.source !== PropertyValueSource.InheritedValue) return;
         this.source = PropertyValueSource.Default;
         const new_effective_value = this.value;
         if (old_effective_value !== new_effective_value)

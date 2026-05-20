@@ -1810,6 +1810,100 @@ describe('Property value inheritance', () => {
         assert.equal(child.get_property_value('plain'), 'default');
         assert.equal(child.GetValueSource('plain'), PropertyValueSource.Default);
     });
+
+    // Pins the staleness fix: when a higher-priority source masks
+    // inheritance, ancestor mutations still refresh the cached
+    // InheritedValue slot — they just don't fire notifications. When
+    // the higher source later clears, the EVD falls through to the
+    // CURRENT ancestor value rather than to the one captured before
+    // the higher source was installed.
+    test('inherited cache stays fresh while a local override shadows it', () => {
+        class Surface extends Panel {}
+        Model.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
+
+        const root = new Surface();
+        const child = new Surface();
+        root.AddChild(child);
+
+        root.set_property_value('fontSize', 16);
+        assert.equal(child.get_property_value('fontSize'), 16);
+
+        // Local override shadows inheritance.
+        child.set_property_value('fontSize', 99);
+        assert.equal(child.get_property_value('fontSize'), 99);
+        assert.equal(child.GetValueSource('fontSize'), PropertyValueSource.LocalValue);
+
+        // Mutate the ancestor while the override is active. The child's
+        // effective value stays 99 (the override still wins) but the
+        // cached InheritedValue slot must be updated under the hood.
+        root.set_property_value('fontSize', 24);
+        assert.equal(child.get_property_value('fontSize'), 99);
+
+        // Clearing the override must reveal the FRESH ancestor value (24),
+        // not the stale one (16) captured before the override was set.
+        child.ClearValue('fontSize');
+        assert.equal(child.get_property_value('fontSize'), 24);
+        assert.equal(child.GetValueSource('fontSize'), PropertyValueSource.InheritedValue);
+    });
+
+    // Same invariant from the other direction: when the ancestor's
+    // value goes away entirely while the child is shadowed, clearing
+    // the shadow must fall through to the default — not to the value
+    // that was inherited before the ancestor cleared.
+    test('inherited cache clears under shadow when ancestor stops providing a value', () => {
+        class Surface extends Panel {}
+        Model.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
+
+        const root = new Surface();
+        const child = new Surface();
+        root.AddChild(child);
+
+        root.set_property_value('fontSize', 16);
+        child.set_property_value('fontSize', 99);
+        assert.equal(child.get_property_value('fontSize'), 99);
+
+        // Ancestor stops providing a value while the override masks the
+        // cache. Without the fix, the child's cached InheritedValue
+        // would remain 16 and ClearValue would resurrect it.
+        root.ClearValue('fontSize');
+        assert.equal(child.get_property_value('fontSize'), 99);
+
+        child.ClearValue('fontSize');
+        assert.equal(child.get_property_value('fontSize'), 10);
+        assert.equal(child.GetValueSource('fontSize'), PropertyValueSource.Default);
+    });
+
+    // Cross-shadowing across two layers: only the directly-shadowed
+    // Visual needs its cache refreshed; descendants beyond the shadow
+    // boundary keep inheriting from the shadowing Visual until ITS
+    // shadow lifts, at which point the cascade reaches them through
+    // the normal change-notification path.
+    test('inherited cache refresh under shadow propagates correctly across multiple levels', () => {
+        class Surface extends Panel {}
+        Model.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
+
+        const root = new Surface();
+        const mid  = new Surface();
+        const leaf = new Surface();
+        root.AddChild(mid);
+        mid.AddChild(leaf);
+
+        root.set_property_value('fontSize', 16);
+        mid.set_property_value('fontSize', 99);
+        // Leaf inherits from mid (the closer ancestor with a value).
+        assert.equal(leaf.get_property_value('fontSize'), 99);
+
+        // Mutate root while mid shadows. Mid's cache updates silently;
+        // leaf's cache stays at 99 (still correct — mid still wins).
+        root.set_property_value('fontSize', 24);
+        assert.equal(leaf.get_property_value('fontSize'), 99);
+
+        // Clear mid's override — cascade reaches leaf, which picks up
+        // the fresh root value (24), not the stale 16.
+        mid.ClearValue('fontSize');
+        assert.equal(mid.get_property_value('fontSize'), 24);
+        assert.equal(leaf.get_property_value('fontSize'), 24);
+    });
 });
 
 // Pins backlog item 5.1: attached / cross-class property usage. Any
