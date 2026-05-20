@@ -175,8 +175,8 @@ export function BuildScene(
 
     for (const e of graph.edges)
     {
-        const a = positions.get(e.from);
-        const b = positions.get(e.to);
+        const a = positions.get(e.From);
+        const b = positions.get(e.To);
         if (a === undefined || b === undefined) continue;
         const left = Math.min(a.X, b.X);
         const top  = Math.min(a.Y, b.Y);
@@ -194,9 +194,9 @@ export function BuildScene(
     const fallbackToId = style.labelFallsBackToId ?? true;
     for (const n of graph.nodes)
     {
-        const c = positions.get(n.id);
+        const c = positions.get(n.Id);
         if (c === undefined) continue;
-        const label = n.label ?? (fallbackToId ? n.id : undefined);
+        const label = n.Label ?? (fallbackToId ? n.Id : undefined);
         const nv = new NodeVisual(label);
         if (style.nodeRadius          !== undefined) nv.Radius          = style.nodeRadius;
         if (style.nodeFillColor       !== undefined) nv.FillColor       = style.nodeFillColor;

@@ -14,3 +14,25 @@ export {
     BuildScene,
     type SceneStyle,
 } from './scene.js';
+export {
+    type Reorderer,
+    BarycenterReorderer,
+    MedianReorderer,
+} from './reorderer.js';
+export {
+    type LocalImprover,
+    TransposeImprover,
+    GreedySwitchImprover,
+    SiftingImprover,
+    IlpExactImprover,
+} from './improver.js';
+export {
+    type GraphTransform,
+    GraphPipeline,
+    FilterNodesTransform,
+    FilterEdgesTransform,
+    DedupEdgesTransform,
+    CollapseAntiparallelEdgesTransform,
+    DropIsolatedNodesTransform,
+    MapLabelsTransform,
+} from './pipeline.js';
