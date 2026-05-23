@@ -1,38 +1,22 @@
 // Barrel re-exports for the `ge` graph-visualization framework.
 // Consumers (currently main.ts; future experiment scripts) import
-// from here rather than the individual files.
+// from here rather than the individual files. Strategy implementations
+// live in stage-named subfolders; this barrel re-exports each
+// subfolder's index for one-stop consumption.
 export { Node, Edge, Graph } from './graph.js';
-export {
-    type Layout,
-    ManualLayout,
-    CircularLayout,
-    GridLayout,
-} from './layout.js';
 export {
     NodeVisual,
     EdgeVisual,
     BuildScene,
     type SceneStyle,
 } from './scene.js';
-export {
-    type Reorderer,
-    BarycenterReorderer,
-    MedianReorderer,
-} from './reorderer.js';
-export {
-    type LocalImprover,
-    TransposeImprover,
-    GreedySwitchImprover,
-    SiftingImprover,
-    IlpExactImprover,
-} from './improver.js';
-export {
-    type GraphTransform,
-    GraphPipeline,
-    FilterNodesTransform,
-    FilterEdgesTransform,
-    DedupEdgesTransform,
-    CollapseAntiparallelEdgesTransform,
-    DropIsolatedNodesTransform,
-    MapLabelsTransform,
-} from './pipeline.js';
+export * from './layer-assigner/index.js';        // Stage 2
+export * from './dummy-inserter/index.js';        // Stage 5
+export * from './position-computer/index.js';     // Stage 8
+export * from './crossing-counter/index.js';      // diagnostics
+export * from './layouts/index.js';
+export * from './graph-transforms/index.js';      // Stage 1
+export * from './layer-improver/index.js';        // Stage 3
+export * from './first-layer-orderer/index.js';   // Stage 4
+export * from './reorderer/index.js';             // Stage 6
+export * from './improver/index.js';              // Stage 7

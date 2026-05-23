@@ -1,0 +1,217 @@
+// ═════════════════════════════════════════════════════════════════
+// AI Enterprise Architecture — source
+// ═════════════════════════════════════════════════════════════════
+// Hand-authored against the enterprise-architecture meta-model
+// (adl/meta-models/enterprise-architecture/). The DSL pipeline reads
+// this file plus the imported libraries and emits rendered diagrams
+// into <project root>/output/.
+//
+// Conventions (see docs/meta-models/enterprise-architecture/):
+//   - Component IDs are globally unique. The location is just a
+//     containment attribute — not part of the id.
+//   - References everywhere are bare ids (`agent-orchestrator`, not
+//     `power-platform:agent-orchestrator`). Actors, blocks, locations,
+//     and components share one global namespace.
+//   - implemented-by is single-valued (one technology per component);
+//     enabled-by / hosted-by are list-valued.
+//   - Each technology declares two constraint lists used by validation:
+//       available-in  — locations the technology can run in
+//       applicable-to — categories the technology can fill
+//     A component's `in` must intersect its implementing technology's
+//     available-in; its `category` must be in the technology's
+//     applicable-to.
+// ═════════════════════════════════════════════════════════════════
+
+namespace pilot-project.models
+{
+    import default;
+    import microsoft;
+
+    model ai-enabled-composable-landscape : enterprise-architecture
+    {
+        title = "AI Enabled Foundation Architecture";
+
+        // ── Locations ────────────────────────────────────────────
+        // `type` is a `|`-composed combination of location-type flags
+        // (spec §6.5). `cloud | paas` means hosted in the cloud AND in
+        // the PaaS tier; the visual library can drive treatment off
+        // either flag via `type.has(cloud)` / `type.has(paas)`.
+        //
+        // Technology-specific locations (azure, m365, power-platform)
+        // are declared in technology_library/microsoft/ and pulled in
+        // transitively via the namespace `import libraries.microsoft`
+        // at the top of this file.
+        location saas-3p        { label = "3rd-Party SaaS"; type = logical-grouping; }
+        location on-premises    { label = "On-Premises";    type = physical | on-premises | logical-grouping; }
+
+        // ── Actors ───────────────────────────────────────────────
+        actor business-user     { label = "Business User";      type = internal; }
+        actor external-ai-agent { label = "External AI Agent";  type = external-ai; }
+
+        // ── Custom technologies ──────────────────────────────────
+        technology custom-validator-svc {
+            label         = "Request Validator";
+            icon          = "technology_library/default/resources/validator.svg";
+            available-in  = [@azure];
+            applicable-to = [api-service];
+        }
+        technology published-mcp-server {
+            label         = "Published MCP Server";
+            icon          = "technology_library/default/resources/mcp.svg";
+            available-in  = [@azure];
+            applicable-to = [internal-mcp-server];
+        }
+        technology legacy-mcp-server {
+            label         = "Legacy-app MCP Server";
+            icon          = "technology_library/default/resources/mcp.svg";
+            available-in  = [@azure];
+            applicable-to = [internal-mcp-server];
+        }
+        technology legacy-app {
+            label         = "Legacy Application";
+            icon          = "technology_library/default/resources/legacy_application.svg";
+            available-in  = [@on-premises];
+            applicable-to = [legacy-application];
+        }
+
+        // ── Blocks ───────────────────────────────────────────────
+        block chat-surface {
+            label = "Chat Surface";
+            in    = @m365;
+
+            component teams-chat        { label = "Microsoft Teams";    category = conversational-interface; implemented-by = @microsoft-teams; }
+            component sharepoint-chat   { label = "SharePoint Embedded"; category = conversational-interface; implemented-by = @sharepoint-embedded; }
+            component m365-copilot-chat { label = "M365 Copilot";        category = conversational-interface; implemented-by = @m365-copilot; }
+            component dynamics-chat     { label = "Dynamics 365";        category = conversational-interface; implemented-by = @dynamics-365; }
+        }
+
+        block command-bus {
+            label = "Command Bus";
+            in    = @azure;
+
+            component event-stream  { label = "Event Stream";  category = event-log;     implemented-by = @azure-event-hub; }
+            component message-queue { label = "Message Queue"; category = message-queue; implemented-by = @azure-service-bus; }
+        }
+
+        block microsoft-agent-framework {
+            label = ["Microsoft Agent", "Framework"];
+            in    = @azure;
+
+            component agent-runtime  { label = "Agent Runtime"; category = agent-runtime-service; implemented-by = @ai-foundry-agent-svc; }
+            component agent-context  { label = "Agent Context"; category = agent-runtime-service; implemented-by = @ai-foundry-iq; }
+        }
+
+        block ai-data-sources {
+            label = "AI Data Sources";
+            in    = @azure;
+
+            component document-store         { label = "Document Store";    category = document-store;   implemented-by = @sharepoint-online; }
+            component object-store           { label = "Object Store";      category = file-store;       implemented-by = @azure-blob-storage; }
+            component transactional-database { label = "Database";          category = relational-store; implemented-by = @azure-sql; }
+            component analytics-platform     { label = "Analytics Platform"; category = analytical-store; implemented-by = @microsoft-fabric; }
+            component data-lake              { label = "Data Lake";         category = file-store;       implemented-by = @onelake; }
+        }
+
+        // ── Standalone components ────────────────────────────────
+        component platform-api       { in = @m365;            label = "Platform API";       category = platform-api;        implemented-by = @microsoft-graph; }
+
+        component business-agent     { in = @power-platform;  label = "AI Agent";           category = ai-agent;             implemented-by = @copilot-agent; }
+        component agent-orchestrator { in = @power-platform;  label = "Agent Orchestrator"; category = agent-authoring-studio; implemented-by = @copilot-studio; }
+        component workflow-engine    { in = @power-platform;  label = "Workflow Engine";    category = workflow-engine;        implemented-by = @power-automate; }
+        component app-database       { in = @power-platform;  label = "Database";           category = relational-store;       implemented-by = @dataverse; }
+        component work-iq            { in = @power-platform;  label = "Work IQ";            category = api-service;            implemented-by = @microsoft-work-iq; }
+        component autonomous-agent   { in = @power-platform;  label = "Autonomous Agent";   category = ai-agent;               implemented-by = @microsoft-autonomous-agent; }
+        component analytics-surface  { in = @power-platform;  label = "Analytics Surface";  category = reporting-surface;      implemented-by = @power-bi; }
+
+        component service-agent          { in = @azure; label = "AI Agent";              category = ai-agent;          implemented-by = @ai-foundry-agent-svc; }
+        component knowledge-index        { in = @azure; label = "Knowledge Index";       category = semantic-index;    implemented-by = @azure-ai-search; }
+        component multi-agent-workflow   { in = @azure; label = "Multi-Agent Workflow";  category = ai-agent;          implemented-by = @ai-foundry-multi-agent; }
+        component language-model         { in = @azure; label = "Language Model";        category = language-model;       implemented-by = @azure-openai-gpt4o; }
+        component validator              { in = @azure; label = "Validator";             category = api-service;          implemented-by = @custom-validator-svc; }
+        component external-tool-surface  { in = @azure; label = "External Tool Surface"; category = internal-mcp-server;  implemented-by = @published-mcp-server; }
+        component legacy-tool-bridge     { in = @azure; label = "Legacy Tool Bridge";    category = internal-mcp-server;  implemented-by = @legacy-mcp-server; }
+
+        component legacy-application     { in = @on-premises; label = "Legacy Application"; category = legacy-application; implemented-by = @legacy-app; }
+
+        // ── Connectors ───────────────────────────────────────────
+        // Default connector type is `interaction`; alternative types
+        // (enabled-by, hosted-by, …) are explicit in the body.
+        connector @business-agent  -> @agent-orchestrator { type = enabled-by; }
+
+        connector @business-agent    -> @workflow-engine;
+        connector @agent-orchestrator -> @autonomous-agent;
+        connector @work-iq           -> @workflow-engine;
+        connector @workflow-engine   -> @agent-orchestrator;
+        connector @app-database      -> @workflow-engine;
+        connector @analytics-surface -> @ai-data-sources;
+
+        // ── Scenarios ────────────────────────────────────────────
+        scenario conversational {
+            label   = "Conversational";
+            outcome = "Grounded, permission-scoped response; no system state modified";
+
+            sequence "User-Initiated Conversation with AI Agent" {
+                entry-point = @business-user;
+
+                step @business-user      -> @chat-surface;
+                step @chat-surface       -> @business-agent;
+                step @business-agent     -> @agent-orchestrator;
+                step @agent-orchestrator -> @knowledge-index;
+                step @agent-orchestrator -> @language-model;
+                step @knowledge-index    -> @ai-data-sources;
+                step @legacy-tool-bridge -> @agent-orchestrator;
+                step @legacy-application -> @legacy-tool-bridge;
+            }
+        }
+
+        scenario autonomous-agent-execution {
+            label   = "Autonomous Agent Execution";
+            outcome = "Validated enterprise operation executed with explicit human approval";
+
+            sequence "Low Code Workflow with Autonomous Agent" {
+                entry-point = @work-iq;
+
+                step @work-iq            -> @workflow-engine;
+                step @workflow-engine    -> @agent-orchestrator;
+                step @agent-orchestrator -> @knowledge-index;
+                step @knowledge-index    -> @ai-data-sources;
+                step @agent-orchestrator -> @autonomous-agent;
+            }
+
+            sequence "Pro-code AI Agent Integration" {
+                entry-point = @platform-api;
+
+                step @platform-api              -> @command-bus;
+                step @command-bus               -> @validator;
+                step @validator                 -> @command-bus;
+                step @command-bus               -> @microsoft-agent-framework;
+                step @microsoft-agent-framework -> @knowledge-index;
+                step @microsoft-agent-framework -> @language-model;
+                step @microsoft-agent-framework -> @service-agent;
+            }
+        }
+
+        scenario agentic-external-integration {
+            label   = "Agentic Integration";
+            outcome = "Validated enterprise operation executed with explicit human approval";
+
+            sequence "External AI Agent Integration" {
+                entry-point = @external-ai-agent;
+
+                step @external-ai-agent         -> @external-tool-surface;
+                step @external-tool-surface     -> @command-bus;
+                step @command-bus               -> @validator;
+                step @validator                 -> @command-bus;
+                step @platform-api              -> @command-bus;
+                step @command-bus               -> @microsoft-agent-framework;
+                step @microsoft-agent-framework -> @knowledge-index;
+                step @microsoft-agent-framework -> @language-model;
+                step @microsoft-agent-framework -> @service-agent;
+                step @service-agent             -> @microsoft-agent-framework;
+                step @multi-agent-workflow      -> @microsoft-agent-framework;
+                step @service-agent             -> @business-agent;
+                step @microsoft-agent-framework -> @workflow-engine;
+            }
+        }
+    }
+}

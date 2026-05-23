@@ -9,6 +9,7 @@ import {
 } from '../../visual-engine/index.js';
 import { Canvas, TextBlock } from '../../Controls/index.js';
 import {
+    AdjacentLayerMoveImprover,
     BuildScene,
     CollapseAntiparallelEdgesTransform,
     DedupEdgesTransform,
@@ -16,11 +17,12 @@ import {
     Graph,
     GraphPipeline,
     IlpExactImprover,
+    LayoutPipeline,
     MedianReorderer,
+    OutDegreeFirstLayerOrderer,
     SiftingImprover,
     TransposeImprover,
 } from './index.js';
-import { CustomLayout } from './layout.js';
 
 // `ge` — graph visualization experiment harness. Builds a small
 // graph, runs it through a layout, composes a Visual tree, and writes
@@ -34,6 +36,10 @@ import { CustomLayout } from './layout.js';
 // rendered separately); edges come from the file's `connector` section
 // only (scenario `step`s are excluded).
 const g = new Graph();
+
+// Actors (pinned to L0 by the firstLayerNodes constraint below).
+g.AddNode('business-user',     'BU');
+g.AddNode('external-ai-agent', 'EAI');
 
 // Blocks (one node per block, children omitted).
 g.AddNode('chat-surface',              'CS');
@@ -62,13 +68,11 @@ g.AddNode('legacy-application',    'LA');
 // Edges — union of all scenario `step`s. The file's top-level
 // `connector` section is intentionally excluded (those are structural
 // "is enabled by / talks to" relations rather than runtime call flow).
-// Steps that originate from an actor (business-user, external-ai-agent)
-// are skipped because actors are not part of this node set. Duplicates
-// are added freely here — the GraphPipeline below collapses them via
-// DedupEdgesTransform.
+// Duplicates are added freely here — the GraphPipeline below collapses
+// them via DedupEdgesTransform.
 
 // scenario conversational / "User-Initiated Conversation with AI Agent"
-//   business-user -> chat-surface  (actor source, skipped)
+g.AddEdge('business-user',      'chat-surface');
 g.AddEdge('chat-surface',       'business-agent');
 g.AddEdge('business-agent',     'agent-orchestrator');
 g.AddEdge('agent-orchestrator', 'knowledge-index');
@@ -94,7 +98,7 @@ g.AddEdge('microsoft-agent-framework', 'language-model');
 g.AddEdge('microsoft-agent-framework', 'service-agent');
 
 // scenario agentic-external-integration / "External AI Agent Integration"
-//   external-ai-agent -> external-tool-surface  (actor source, skipped)
+g.AddEdge('external-ai-agent',         'external-tool-surface');
 g.AddEdge('external-tool-surface',     'command-bus');
 g.AddEdge('command-bus',               'validator');
 g.AddEdge('validator',                 'command-bus');
@@ -126,27 +130,32 @@ const finalGraph = pipeline.Apply(g);
 // crossings is kept for the actual render. Re-running the layout is
 // cheap for graphs this size.
 // Compare the four LocalImprover strategies, all running on top of
-// the same median reorderer. The ILP-exact improver is used for the
-// actual render because it solves the per-layer 2-layer subproblem
-// optimally, iterated until no layer's optimum reorder helps.
+// the same median reorderer, the same first-layer ordering strategy
+// (out-degree descending), and the same L0 pin (only actors at L0;
+// all other current sources pushed to L1). The ILP-exact improver
+// is used for the actual render.
+const firstLayer = new OutDegreeFirstLayerOrderer();
+const actorPin: ReadonlySet<string> = new Set(['business-user', 'external-ai-agent']);
+const layerMove = new AdjacentLayerMoveImprover();
+
 console.log('  --- median + transpose (comparison only) ---');
-const layoutTranspose = new CustomLayout(100, 110, 50,
-    new MedianReorderer(), new TransposeImprover());
+const layoutTranspose = new LayoutPipeline(
+    new MedianReorderer(), new TransposeImprover(), firstLayer, actorPin, layerMove);
 layoutTranspose.Apply(finalGraph);
 
 console.log('  --- median + greedy switch (comparison only) ---');
-const layoutGreedy = new CustomLayout(100, 110, 50,
-    new MedianReorderer(), new GreedySwitchImprover());
+const layoutGreedy = new LayoutPipeline(
+    new MedianReorderer(), new GreedySwitchImprover(), firstLayer, actorPin, layerMove);
 layoutGreedy.Apply(finalGraph);
 
 console.log('  --- median + sifting (comparison only) ---');
-const layoutSifting = new CustomLayout(100, 110, 50,
-    new MedianReorderer(), new SiftingImprover());
+const layoutSifting = new LayoutPipeline(
+    new MedianReorderer(), new SiftingImprover(), firstLayer, actorPin, layerMove);
 layoutSifting.Apply(finalGraph);
 
 console.log('  --- median + ILP exact (used for render) ---');
-const layout = new CustomLayout(100, 110, 50,
-    new MedianReorderer(), new IlpExactImprover());
+const layout = new LayoutPipeline(
+    new MedianReorderer(), new IlpExactImprover(), firstLayer, actorPin, layerMove);
 const positions = layout.Apply(finalGraph);
 
 console.log(`  improvers (geometric after): `
@@ -169,7 +178,7 @@ if (layout.LastCrossings !== undefined)
 {
     const c = layout.LastCrossings;
     const label = new TextBlock(
-        `median + ILP exact — `
+        `actors at L0 + layer-move + out-degree + median + ILP exact — `
         + `crossings (geometric): ${c.geometricBefore} → ${c.geometricAfter}    `
         + `(adjacent-only: ${c.adjacentBefore} → ${c.adjacentAfter})`,
     );

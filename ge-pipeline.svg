@@ -1,0 +1,196 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="1180" viewBox="0 0 980 1180">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,10 L10,5 z" fill="#444" />
+    </marker>
+    <style>
+      .title           { font: bold 22px system-ui, sans-serif; fill: #1a3a5c; }
+      .subtitle        { font: italic 13px system-ui, sans-serif; fill: #555; }
+      .stage-title     { font: bold 15px system-ui, sans-serif; fill: #1a3a5c; }
+      .stage-desc      { font: 12px system-ui, sans-serif; fill: #333; }
+      .stage-tag       { font: italic 11px system-ui, sans-serif; fill: #5478a8; }
+      .strategy        { font: 12px system-ui, sans-serif; fill: #333; }
+      .strategy-note   { font: 11px system-ui, sans-serif; fill: #666; }
+      .strategy-head   { font: bold 12px system-ui, sans-serif; fill: #2a3a4a; }
+      .fixed-head      { font: bold 12px system-ui, sans-serif; fill: #7a4a2a; }
+      .stage-box       { fill: #e8f0fa; stroke: #5478a8; stroke-width: 1.5; }
+      .stage-box-fixed { fill: #f4ece2; stroke: #b88860; stroke-width: 1.5; }
+      .strategy-box    { fill: #fbfaf3; stroke: #b8b8a8; stroke-width: 1; }
+      .arrow-line      { stroke: #444;  stroke-width: 2;  fill: none; }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="980" height="1180" fill="white" />
+
+  <text x="490" y="34" text-anchor="middle" class="title">ge Layout Pipeline — Stages and Strategies</text>
+  <text x="490" y="56" text-anchor="middle" class="subtitle">stages flow top→bottom; pluggable stages list their concrete implementations on the right</text>
+
+  <!-- ============================================================ -->
+  <!-- 1. Graph Transforms                                          -->
+  <!-- ============================================================ -->
+  <g transform="translate(30, 80)">
+    <rect class="stage-box" width="280" height="110" rx="6" />
+    <text x="14" y="24" class="stage-title">1. Graph Transforms</text>
+    <text x="14" y="46" class="stage-desc">pre-layout cleanup via GraphPipeline;</text>
+    <text x="14" y="62" class="stage-desc">each transform returns a new Graph.</text>
+    <text x="14" y="98" class="stage-tag">interface: IGraphTransform (graph-transforms/)</text>
+  </g>
+  <g transform="translate(350, 80)">
+    <rect class="strategy-box" width="600" height="110" rx="4" />
+    <text x="16" y="22" class="strategy-head">implementations:</text>
+    <text x="16" y="40" class="strategy">• DedupEdgesTransform <tspan class="strategy-note">— collapse exact duplicates</tspan></text>
+    <text x="16" y="56" class="strategy">• CollapseAntiparallelEdgesTransform <tspan class="strategy-note">— A→B / B→A → first only</tspan></text>
+    <text x="16" y="72" class="strategy">• FilterNodesTransform / FilterEdgesTransform <tspan class="strategy-note">— predicate-based</tspan></text>
+    <text x="16" y="88" class="strategy">• DropIsolatedNodesTransform <tspan class="strategy-note">— remove nodes with no edges</tspan></text>
+    <text x="16" y="104" class="strategy">• MapLabelsTransform <tspan class="strategy-note">— rewrite labels via callback</tspan></text>
+  </g>
+  <line class="arrow-line" x1="170" y1="190" x2="170" y2="216" marker-end="url(#arrow)" />
+
+  <!-- ============================================================ -->
+  <!-- 2. Layer Assignment                                          -->
+  <!-- ============================================================ -->
+  <g transform="translate(30, 220)">
+    <rect class="stage-box-fixed" width="280" height="110" rx="6" />
+    <text x="14" y="24" class="stage-title">2. Layer Assignment</text>
+    <text x="14" y="46" class="stage-desc">longest-path DFS depth from sources;</text>
+    <text x="14" y="62" class="stage-desc">throws on cycles.</text>
+    <text x="14" y="98" class="stage-tag">fixed: CustomLayout.ComputeLongestPathDepths</text>
+  </g>
+  <g transform="translate(350, 220)">
+    <rect class="strategy-box" width="600" height="110" rx="4" />
+    <text x="16" y="22" class="fixed-head">options (passed to CustomLayout constructor):</text>
+    <text x="16" y="42" class="strategy">• firstLayerNodes: ReadonlySet&lt;string&gt; <tspan class="strategy-note">— L0 pin</tspan></text>
+    <text x="16" y="58" class="strategy-note">    pinned nodes → depth 0; non-pinned sources → depth ≥ 1.</text>
+    <text x="16" y="80" class="strategy-note">(Strict: every edge u→v requires depth(v) &gt; depth(u).</text>
+    <text x="16" y="96" class="strategy-note"> Relaxation lives in stage 3, not here.)</text>
+  </g>
+  <line class="arrow-line" x1="170" y1="330" x2="170" y2="356" marker-end="url(#arrow)" />
+
+  <!-- ============================================================ -->
+  <!-- 3. Layer Improver (optional)                                 -->
+  <!-- ============================================================ -->
+  <g transform="translate(30, 360)">
+    <rect class="stage-box" width="280" height="110" rx="6" />
+    <text x="14" y="24" class="stage-title">3. Layer Improver (optional)</text>
+    <text x="14" y="46" class="stage-desc">try moving each node up/down one</text>
+    <text x="14" y="62" class="stage-desc">row; commit if logical crossings drop.</text>
+    <text x="14" y="98" class="stage-tag">interface: ILayerImprover (layer-improver/)</text>
+  </g>
+  <g transform="translate(350, 360)">
+    <rect class="strategy-box" width="600" height="110" rx="4" />
+    <text x="16" y="22" class="strategy-head">implementations:</text>
+    <text x="16" y="42" class="strategy">• AdjacentLayerMoveImprover <tspan class="strategy-note">— greedy single-step moves</tspan></text>
+    <text x="16" y="58" class="strategy-note">    cost = geometric crossings in LOGICAL (idx, depth) space</text>
+    <text x="16" y="74" class="strategy-note">    options: maxPasses, allowSameLayerNeighbors</text>
+    <text x="16" y="92" class="strategy-note">    (allowSameLayerNeighbors=true permits a node to share a</text>
+    <text x="16" y="106" class="strategy-note">    row with a pred/succ, turning that edge horizontal.)</text>
+  </g>
+  <line class="arrow-line" x1="170" y1="470" x2="170" y2="496" marker-end="url(#arrow)" />
+
+  <!-- ============================================================ -->
+  <!-- 4. First-Layer Ordering                                      -->
+  <!-- ============================================================ -->
+  <g transform="translate(30, 500)">
+    <rect class="stage-box" width="280" height="90" rx="6" />
+    <text x="14" y="24" class="stage-title">4. First-Layer Ordering</text>
+    <text x="14" y="46" class="stage-desc">permute L0 to seed the down-sweep.</text>
+    <text x="14" y="78" class="stage-tag">interface: IFirstLayerOrderer (first-layer-orderer/)</text>
+  </g>
+  <g transform="translate(350, 500)">
+    <rect class="strategy-box" width="600" height="90" rx="4" />
+    <text x="16" y="22" class="strategy-head">implementations:</text>
+    <text x="16" y="42" class="strategy">• IdentityFirstLayerOrderer <tspan class="strategy-note">— passthrough (graph.nodes order)</tspan></text>
+    <text x="16" y="60" class="strategy">• OutDegreeFirstLayerOrderer <tspan class="strategy-note">— sort by out-degree descending</tspan></text>
+    <text x="16" y="76" class="strategy-note">    (high-degree sources to the front, isolated to the back)</text>
+  </g>
+  <line class="arrow-line" x1="170" y1="590" x2="170" y2="616" marker-end="url(#arrow)" />
+
+  <!-- ============================================================ -->
+  <!-- 5. Dummy Insertion                                           -->
+  <!-- ============================================================ -->
+  <g transform="translate(30, 620)">
+    <rect class="stage-box-fixed" width="280" height="90" rx="6" />
+    <text x="14" y="24" class="stage-title">5. Dummy Insertion</text>
+    <text x="14" y="46" class="stage-desc">break multi-layer edges (span &gt; 1)</text>
+    <text x="14" y="62" class="stage-desc">into chains of unit-length segments.</text>
+    <text x="14" y="86" class="stage-tag">fixed: inline in CustomLayout.Apply</text>
+  </g>
+  <g transform="translate(350, 620)">
+    <rect class="strategy-box" width="600" height="90" rx="4" />
+    <text x="16" y="22" class="fixed-head">behavior:</text>
+    <text x="16" y="42" class="strategy-note">For each edge u→v with depth(v) − depth(u) = k &gt; 1,</text>
+    <text x="16" y="60" class="strategy-note">insert k−1 dummy nodes (one per intermediate layer)</text>
+    <text x="16" y="78" class="strategy-note">and replace the edge with a chain u → d₁ → … → dₖ₋₁ → v.</text>
+  </g>
+  <line class="arrow-line" x1="170" y1="710" x2="170" y2="736" marker-end="url(#arrow)" />
+
+  <!-- ============================================================ -->
+  <!-- 6. Within-Layer Reordering                                   -->
+  <!-- ============================================================ -->
+  <g transform="translate(30, 740)">
+    <rect class="stage-box" width="280" height="110" rx="6" />
+    <text x="14" y="24" class="stage-title">6. Within-Layer Reordering</text>
+    <text x="14" y="46" class="stage-desc">alternating down/up sweeps; each</text>
+    <text x="14" y="62" class="stage-desc">layer sorted by some neighbor</text>
+    <text x="14" y="78" class="stage-desc">aggregate; converges or caps.</text>
+    <text x="14" y="100" class="stage-tag">interface: IReorderer (reorderer/)</text>
+  </g>
+  <g transform="translate(350, 740)">
+    <rect class="strategy-box" width="600" height="110" rx="4" />
+    <text x="16" y="22" class="strategy-head">implementations:</text>
+    <text x="16" y="42" class="strategy">• BarycenterReorderer <tspan class="strategy-note">— mean of neighbour indices</tspan></text>
+    <text x="16" y="60" class="strategy">• MedianReorderer <tspan class="strategy-note">— Gansner et al. 1993 weighted median</tspan></text>
+    <text x="16" y="76" class="strategy-note">    odd k → middle index; even k≥4 → weighted toward</text>
+    <text x="16" y="92" class="strategy-note">    the denser side; 3-approximation worst case.</text>
+  </g>
+  <line class="arrow-line" x1="170" y1="850" x2="170" y2="876" marker-end="url(#arrow)" />
+
+  <!-- ============================================================ -->
+  <!-- 7. Local Improver (optional)                                 -->
+  <!-- ============================================================ -->
+  <g transform="translate(30, 880)">
+    <rect class="stage-box" width="280" height="130" rx="6" />
+    <text x="14" y="24" class="stage-title">7. Local Improver (optional)</text>
+    <text x="14" y="46" class="stage-desc">polish ordering by adjacent-swap or</text>
+    <text x="14" y="62" class="stage-desc">whole-position moves; refines what</text>
+    <text x="14" y="78" class="stage-desc">stage 6 produced.</text>
+    <text x="14" y="120" class="stage-tag">interface: ILocalImprover (improver/)</text>
+  </g>
+  <g transform="translate(350, 880)">
+    <rect class="strategy-box" width="600" height="130" rx="4" />
+    <text x="16" y="22" class="strategy-head">implementations:</text>
+    <text x="16" y="42" class="strategy">• TransposeImprover <tspan class="strategy-note">— Gansner 1993; iterated adjacent-swap</tspan></text>
+    <text x="16" y="60" class="strategy">• GreedySwitchImprover <tspan class="strategy-note">— Eades &amp; Kelly 1986; single bidirectional pass</tspan></text>
+    <text x="16" y="78" class="strategy">• SiftingImprover <tspan class="strategy-note">— Matuszewski et al. 1999; try every position</tspan></text>
+    <text x="16" y="96" class="strategy">• IlpExactImprover <tspan class="strategy-note">— Jünger &amp; Mutzel 1997 formulation,</tspan></text>
+    <text x="16" y="112" class="strategy-note">      solved by brute-force enumeration (|L|! per layer, ≤9)</text>
+  </g>
+  <line class="arrow-line" x1="170" y1="1010" x2="170" y2="1036" marker-end="url(#arrow)" />
+
+  <!-- ============================================================ -->
+  <!-- 8. Position Computation                                      -->
+  <!-- ============================================================ -->
+  <g transform="translate(30, 1040)">
+    <rect class="stage-box-fixed" width="280" height="100" rx="6" />
+    <text x="14" y="24" class="stage-title">8. Position Computation</text>
+    <text x="14" y="46" class="stage-desc">layers → (x, y); strip dummies;</text>
+    <text x="14" y="62" class="stage-desc">center each layer horizontally on</text>
+    <text x="14" y="78" class="stage-desc">a shared midline.</text>
+    <text x="14" y="96" class="stage-tag">fixed: LayersToPositions</text>
+  </g>
+  <g transform="translate(350, 1040)">
+    <rect class="strategy-box" width="600" height="100" rx="4" />
+    <text x="16" y="22" class="fixed-head">parameters (CustomLayout constructor):</text>
+    <text x="16" y="42" class="strategy">• layerSpacingY <tspan class="strategy-note">— vertical gap between rows (default 100)</tspan></text>
+    <text x="16" y="60" class="strategy">• nodeSpacingX <tspan class="strategy-note">— horizontal gap within a row (default 110)</tspan></text>
+    <text x="16" y="78" class="strategy">• padding <tspan class="strategy-note">— offset so all coords stay positive (default 50)</tspan></text>
+  </g>
+
+  <!-- Legend -->
+  <g transform="translate(30, 1150)">
+    <rect width="14" height="14" class="stage-box" />
+    <text x="22" y="11" class="stage-desc">pluggable stage (strategy interface)</text>
+    <rect x="240" width="14" height="14" class="stage-box-fixed" />
+    <text x="262" y="11" class="stage-desc">fixed stage (no strategy, parameters only)</text>
+  </g>
+</svg>

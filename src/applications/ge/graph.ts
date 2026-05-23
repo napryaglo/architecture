@@ -81,4 +81,96 @@ export class Graph
         this.edges.push(e);
         return e;
     }
+
+    // DFS-based cycle detection using the classic three-color scheme:
+    //   white (0) = not yet visited
+    //   gray  (1) = on the current recursion stack
+    //   black (2) = fully explored and recursion returned
+    // Encountering a gray neighbor means we found a back-edge — a
+    // cycle. Self-loops (edge from a node to itself) count as cycles.
+    public IsDirectedAcyclic(): boolean
+    {
+        const adj = new Map<string, string[]>();
+        for (const n of this.nodes) adj.set(n.Id, []);
+        for (const e of this.edges) adj.get(e.From)?.push(e.To);
+
+        const color = new Map<string, number>();
+        for (const n of this.nodes) color.set(n.Id, 0);
+
+        const visit = (u: string): boolean =>
+        {
+            color.set(u, 1);
+            for (const v of adj.get(u) ?? [])
+            {
+                const c = color.get(v) ?? 0;
+                if (c === 1) return false;
+                if (c === 0 && !visit(v)) return false;
+            }
+            color.set(u, 2);
+            return true;
+        };
+
+        for (const n of this.nodes)
+        {
+            if (color.get(n.Id) === 0 && !visit(n.Id)) return false;
+        }
+        return true;
+    }
+
+    // Returns every cycle DFS discovers via a back-edge. Each cycle is
+    // a list of node Ids in traversal order; the implicit closing edge
+    // goes from the last entry back to the first (so a cycle like
+    // a → b → a is reported as ["a", "b"], and a self-loop a → a as
+    // ["a"]).
+    //
+    // This is the "back-edge" enumeration: one cycle is reported for
+    // every back-edge found, which means n back-edges in the DFS tree
+    // produce n cycle entries. It is NOT a complete enumeration of all
+    // elementary (simple) cycles — graphs with multiple elementary
+    // cycles that share nodes may have some hidden by DFS ordering.
+    // For full enumeration use Johnson's algorithm; for diagnostics
+    // ("which edges close cycles so I can break them?") this is
+    // sufficient and runs in O(V + E).
+    public FindCycles(): string[][]
+    {
+        const adj = new Map<string, string[]>();
+        for (const n of this.nodes) adj.set(n.Id, []);
+        for (const e of this.edges) adj.get(e.From)?.push(e.To);
+
+        const color = new Map<string, number>();
+        for (const n of this.nodes) color.set(n.Id, 0);
+
+        const stack: string[] = [];
+        const stackIndex = new Map<string, number>();
+        const cycles: string[][] = [];
+
+        const visit = (u: string): void =>
+        {
+            color.set(u, 1);
+            stackIndex.set(u, stack.length);
+            stack.push(u);
+            for (const v of adj.get(u) ?? [])
+            {
+                const c = color.get(v) ?? 0;
+                if (c === 1)
+                {
+                    const start = stackIndex.get(v)!;
+                    cycles.push(stack.slice(start));
+                }
+                else if (c === 0)
+                {
+                    visit(v);
+                }
+            }
+            color.set(u, 2);
+            stack.pop();
+            stackIndex.delete(u);
+        };
+
+        for (const n of this.nodes)
+        {
+            if (color.get(n.Id) === 0) visit(n.Id);
+        }
+        return cycles;
+    }
 }

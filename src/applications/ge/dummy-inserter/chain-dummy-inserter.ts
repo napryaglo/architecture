@@ -1,0 +1,52 @@
+import { Edge } from '../graph.js';
+import type { IDummyInserter, DummyInsertionResult } from './dummy-inserter.js';
+
+// Sugiyama-style chain expansion. For each original edge u → v with
+// span k > 1, inserts k − 1 dummy nodes (one per intermediate layer)
+// and replaces the edge with a chain u → d₁ → … → dₖ₋₁ → v. Edges
+// with span 0 or 1 pass through unchanged.
+//
+// Dummies are named `__dummy_N__` (where N is a monotonically
+// increasing counter scoped to this call) so consumers can filter
+// them out via the `IsDummy` static helper or a prefix check.
+export class ChainDummyInserter implements IDummyInserter
+{
+    public static IsDummy(id: string): boolean
+    {
+        return id.startsWith('__dummy_');
+    }
+
+    public Insert(
+        layers: string[][],
+        edges:  Edge[],
+        depths: Map<string, number>,
+    ): DummyInsertionResult
+    {
+        const expandedLayers = layers.map(row => [...row]);
+        const expandedEdges: Edge[] = [];
+        let dummyCounter = 0;
+
+        for (const e of edges)
+        {
+            const dFrom = depths.get(e.From) ?? 0;
+            const dTo   = depths.get(e.To)   ?? 0;
+            const span  = dTo - dFrom;
+            if (span <= 1)
+            {
+                expandedEdges.push(e);
+                continue;
+            }
+            let prev = e.From;
+            for (let layer = dFrom + 1; layer < dTo; layer++)
+            {
+                const dummy = `__dummy_${dummyCounter++}__`;
+                expandedLayers[layer]!.push(dummy);
+                expandedEdges.push(new Edge(prev, dummy));
+                prev = dummy;
+            }
+            expandedEdges.push(new Edge(prev, e.To));
+        }
+
+        return { layers: expandedLayers, edges: expandedEdges };
+    }
+}
