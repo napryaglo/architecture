@@ -7,8 +7,18 @@ import type { IGeometricCrossingCounter } from './crossing-counter.js';
 // intersect. Edges sharing an endpoint are skipped (a meet at a node
 // is not a crossing). Includes multi-layer edges, so the count
 // matches what you see in the SVG.
+//
+// Also adds an EDGE-NODE OVERLAP penalty: if an edge segment passes
+// within `nodeRadius` pixels of a non-incident node's centre, that's
+// counted as one additional "crossing". An edge cutting through a
+// node's circle is visually indistinguishable from a true crossing
+// (and reads as a spurious connection — see analytics-surface sitting
+// in the middle of the legacy-application→legacy-tool-bridge edge),
+// so the metric treats it as one.
 export class GeometricCrossingCounter implements IGeometricCrossingCounter
 {
+    constructor(public readonly nodeRadius: number = 28) {}
+
     public Count(positions: Map<string, Point>, edges: Edge[]): number
     {
         type Seg = { x1: number; y1: number; x2: number; y2: number; from: string; to: string };
@@ -37,7 +47,47 @@ export class GeometricCrossingCounter implements IGeometricCrossingCounter
                 }
             }
         }
+
+        // Edge-node overlap penalty: for each edge segment, count how
+        // many non-incident nodes it cuts through (centre within
+        // `nodeRadius` of the segment).
+        for (const seg of segs)
+        {
+            for (const [id, p] of positions)
+            {
+                if (id === seg.from || id === seg.to) continue;
+                if (this.PointInSegmentRadius(p.X, p.Y, seg.x1, seg.y1, seg.x2, seg.y2, this.nodeRadius))
+                {
+                    count++;
+                }
+            }
+        }
         return count;
+    }
+
+    // Minimum distance from point (px, py) to the closed segment
+    // ((x1, y1), (x2, y2)). Returns true iff that distance ≤ radius.
+    // Standard projection: clamp the parameter t to [0, 1] so the
+    // distance is to the closest point on the segment (not the
+    // infinite line).
+    private PointInSegmentRadius(
+        px: number, py: number,
+        x1: number, y1: number, x2: number, y2: number,
+        radius: number,
+    ): boolean
+    {
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const lenSq = dx * dx + dy * dy;
+        if (lenSq === 0) return false;        // degenerate
+        let t = ((px - x1) * dx + (py - y1) * dy) / lenSq;
+        if (t < 0) t = 0;
+        else if (t > 1) t = 1;
+        const cx = x1 + t * dx;
+        const cy = y1 + t * dy;
+        const ddx = px - cx;
+        const ddy = py - cy;
+        return ddx * ddx + ddy * ddy <= radius * radius;
     }
 
     // Strict open-segment intersection via the orientation predicate.

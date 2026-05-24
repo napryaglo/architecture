@@ -4,10 +4,18 @@ import type { Edge } from '../graph.js';
 // (with dummies appended in their intermediate layers) plus the
 // expanded edge set (with each original multi-layer edge replaced
 // by a chain of unit-length edges through the dummies).
+//
+// `chains` maps each original edge to the full chain of node Ids
+// that represent it after expansion: `[u, d1, d2, ..., dk, v]`
+// where u/v are the real endpoints and d_i are the dummies in each
+// intermediate layer. For span-1 edges the chain is just `[u, v]`.
+// Downstream consumers (the edge router) use this to build
+// polylines that bend through the dummy positions.
 export interface DummyInsertionResult
 {
     layers: string[][];
     edges:  Edge[];
+    chains: Map<Edge, string[]>;
 }
 
 // Strategy interface for breaking multi-layer edges. Stage 5 in the

@@ -14,6 +14,9 @@ export * from './layer-assigner/index.js';        // Stage 2
 export * from './dummy-inserter/index.js';        // Stage 5
 export * from './position-computer/index.js';     // Stage 8
 export * from './crossing-counter/index.js';      // diagnostics
+export * from './vertical-aligner/index.js';      // Stage 9
+export * from './edge-router/index.js';           // Stage 10
+export * from './port-assigner/index.js';         // Stage 11
 export * from './layouts/index.js';
 export * from './graph-transforms/index.js';      // Stage 1
 export * from './layer-improver/index.js';        // Stage 3

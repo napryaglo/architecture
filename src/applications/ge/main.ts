@@ -13,6 +13,7 @@ import {
     BuildScene,
     CollapseAntiparallelEdgesTransform,
     DedupEdgesTransform,
+    DropIsolatedNodesTransform,
     GreedySwitchImprover,
     Graph,
     GraphPipeline,
@@ -118,7 +119,8 @@ g.AddEdge('microsoft-agent-framework', 'workflow-engine');
 // etc., without rewriting the graph construction above.
 const pipeline = new GraphPipeline()
     .Add(new DedupEdgesTransform())
-    .Add(new CollapseAntiparallelEdgesTransform());
+    .Add(new CollapseAntiparallelEdgesTransform())
+    .Add(new DropIsolatedNodesTransform());
 const finalGraph = pipeline.Apply(g);
 
 // Layered layout — y-position = longest-path depth from any source,
@@ -170,7 +172,7 @@ const scene = BuildScene(finalGraph, positions, {
     nodeRadius:    28,
     nodeFillColor: Color.FromHex('#E6F2FF'),
     edgeColor:     Color.FromHex('#666666'),
-});
+}, layout.LastRoutes);
 
 // Overlay the crossing-count metric in the top-left corner so the SVG
 // is self-contained: open the file and the numbers are right there.

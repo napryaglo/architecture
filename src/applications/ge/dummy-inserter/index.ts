@@ -5,3 +5,4 @@
 // visible to the reorderer's adjacent-layer sweep.
 export { type IDummyInserter, type DummyInsertionResult } from './dummy-inserter.js';
 export { ChainDummyInserter }                              from './chain-dummy-inserter.js';
+export { SparseDummyInserter }                             from './sparse-dummy-inserter.js';

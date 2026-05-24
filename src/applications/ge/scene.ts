@@ -17,7 +17,7 @@ import {
     SolidColorBrush,
 } from '../../visual-engine/index.js';
 import { Canvas } from '../../Controls/index.js';
-import type { Graph } from './graph.js';
+import type { Edge, Graph } from './graph.js';
 
 // One filled circle, optionally with a centered text label. Sized to
 // its bounding box (Radius * 2 each side); MeasureOverride pre-measures
@@ -96,42 +96,60 @@ export class NodeVisual extends Visual
     }
 }
 
-// Straight line between two points expressed in the EdgeVisual's own
-// local coordinate space (origin at the visual's top-left). Sized to
-// the axis-aligned bounding box of those two points.
+// Polyline between an arbitrary list of points in the EdgeVisual's
+// own local coordinate space (origin at the visual's top-left).
+// A 2-point polyline is a straight segment; longer polylines bend at
+// each interior waypoint. Sized to the axis-aligned bounding box of
+// all waypoints.
 //
 // Positioning in the parent is the Canvas's job — the scene builder
-// computes the top-left of the line's bounding box in canvas coords,
-// passes the line in local coords to this constructor, and stamps
-// Canvas.SetLeft / Canvas.SetTop on the resulting instance.
+// computes the top-left of the polyline's bounding box in canvas
+// coords, passes points in LOCAL coords to this constructor, and
+// stamps Canvas.SetLeft / Canvas.SetTop on the resulting instance.
 export class EdgeVisual extends Visual
 {
     public Color:     Color  = Color.FromHex('#888888');
     public Thickness: number = 1;
 
-    constructor(
-        public LocalStart: Point,
-        public LocalEnd:   Point,
-    )
+    public LocalPoints: Point[];
+
+    constructor(localPoints: Point[])
     {
         super();
+        if (localPoints.length < 2)
+        {
+            throw new Error('EdgeVisual needs at least two local points');
+        }
+        this.LocalPoints = localPoints;
     }
 
     protected override MeasureOverride(_availableSize: Size): Size
     {
-        return new Size(
-            Math.abs(this.LocalEnd.X - this.LocalStart.X),
-            Math.abs(this.LocalEnd.Y - this.LocalStart.Y),
-        );
+        let minX = this.LocalPoints[0]!.X;
+        let minY = this.LocalPoints[0]!.Y;
+        let maxX = minX;
+        let maxY = minY;
+        for (const p of this.LocalPoints)
+        {
+            if (p.X < minX) minX = p.X;
+            if (p.X > maxX) maxX = p.X;
+            if (p.Y < minY) minY = p.Y;
+            if (p.Y > maxY) maxY = p.Y;
+        }
+        return new Size(maxX - minX, maxY - minY);
     }
 
     protected override RenderOverride(dc: DrawingContext): void
     {
-        dc.DrawGeometry(
-            undefined,
-            new Pen(new SolidColorBrush(this.Color), this.Thickness),
-            new LineGeometry(this.LocalStart, this.LocalEnd),
-        );
+        const pen = new Pen(new SolidColorBrush(this.Color), this.Thickness);
+        for (let i = 0; i < this.LocalPoints.length - 1; i++)
+        {
+            dc.DrawGeometry(
+                undefined,
+                pen,
+                new LineGeometry(this.LocalPoints[i]!, this.LocalPoints[i + 1]!),
+            );
+        }
     }
 }
 
@@ -169,21 +187,41 @@ export function BuildScene(
     graph: Graph,
     positions: Map<string, Point>,
     style: SceneStyle = {},
+    routes?: Map<Edge, Point[]>,
 ): Canvas
 {
     const canvas = new Canvas();
 
     for (const e of graph.edges)
     {
-        const a = positions.get(e.From);
-        const b = positions.get(e.To);
-        if (a === undefined || b === undefined) continue;
-        const left = Math.min(a.X, b.X);
-        const top  = Math.min(a.Y, b.Y);
-        const ev = new EdgeVisual(
-            new Point(a.X - left, a.Y - top),
-            new Point(b.X - left, b.Y - top),
-        );
+        // Prefer a router-supplied polyline; fall back to a straight
+        // two-point segment using the edge's endpoint positions.
+        const route = routes?.get(e);
+        let waypoints: Point[];
+        if (route !== undefined && route.length >= 2)
+        {
+            waypoints = route;
+        }
+        else
+        {
+            const a = positions.get(e.From);
+            const b = positions.get(e.To);
+            if (a === undefined || b === undefined) continue;
+            waypoints = [a, b];
+        }
+
+        // Compute bounding-box top-left and translate waypoints into
+        // local (visual-relative) coords.
+        let left = waypoints[0]!.X;
+        let top  = waypoints[0]!.Y;
+        for (const p of waypoints)
+        {
+            if (p.X < left) left = p.X;
+            if (p.Y < top)  top  = p.Y;
+        }
+        const localPoints = waypoints.map(p => new Point(p.X - left, p.Y - top));
+
+        const ev = new EdgeVisual(localPoints);
         if (style.edgeColor     !== undefined) ev.Color     = style.edgeColor;
         if (style.edgeThickness !== undefined) ev.Thickness = style.edgeThickness;
         Canvas.SetLeft(ev, left);

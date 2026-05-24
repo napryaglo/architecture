@@ -24,6 +24,7 @@ export class ChainDummyInserter implements IDummyInserter
     {
         const expandedLayers = layers.map(row => [...row]);
         const expandedEdges: Edge[] = [];
+        const chains = new Map<Edge, string[]>();
         let dummyCounter = 0;
 
         for (const e of edges)
@@ -34,19 +35,24 @@ export class ChainDummyInserter implements IDummyInserter
             if (span <= 1)
             {
                 expandedEdges.push(e);
+                chains.set(e, [e.From, e.To]);
                 continue;
             }
+            const chain: string[] = [e.From];
             let prev = e.From;
             for (let layer = dFrom + 1; layer < dTo; layer++)
             {
                 const dummy = `__dummy_${dummyCounter++}__`;
                 expandedLayers[layer]!.push(dummy);
                 expandedEdges.push(new Edge(prev, dummy));
+                chain.push(dummy);
                 prev = dummy;
             }
             expandedEdges.push(new Edge(prev, e.To));
+            chain.push(e.To);
+            chains.set(e, chain);
         }
 
-        return { layers: expandedLayers, edges: expandedEdges };
+        return { layers: expandedLayers, edges: expandedEdges, chains };
     }
 }
