@@ -1,4 +1,5 @@
 import type { Edge } from '../graph.js';
+import type { AcademicReference } from '../pipeline-element.js';
 import type { IAdjacentCrossingCounter } from './crossing-counter.js';
 
 // Counts edge crossings between every pair of ADJACENT layers in the
@@ -13,6 +14,10 @@ import type { IAdjacentCrossingCounter } from './crossing-counter.js';
 // crossings in the rendered SVG, just not to this metric.
 export class AdjacentCrossingCounter implements IAdjacentCrossingCounter
 {
+    public readonly Name               = 'Adjacent Inversions';
+    public readonly AlgorithmName      = 'Pairwise inversion count across adjacent layers';
+    public readonly AcademicReferences: readonly AcademicReference[] = [];
+
     public Count(layers: string[][], edges: Edge[]): number
     {
         const layerOf = new Map<string, number>();

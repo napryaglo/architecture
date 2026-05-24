@@ -1,4 +1,5 @@
 import type { Edge } from '../graph.js';
+import type { AcademicReference } from '../pipeline-element.js';
 import type { IFirstLayerOrderer } from './first-layer-orderer.js';
 
 // No-op strategy. Returns the layer in the same order it received.
@@ -7,6 +8,10 @@ import type { IFirstLayerOrderer } from './first-layer-orderer.js';
 // argument so existing callers keep working unchanged.
 export class IdentityFirstLayerOrderer implements IFirstLayerOrderer
 {
+    public readonly Name               = 'Identity';
+    public readonly AlgorithmName      = 'Passthrough (insertion order)';
+    public readonly AcademicReferences: readonly AcademicReference[] = [];
+
     public Order(layer: string[], _edges: Edge[]): string[]
     {
         return [...layer];

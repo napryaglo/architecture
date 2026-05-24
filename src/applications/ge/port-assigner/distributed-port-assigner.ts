@@ -1,5 +1,6 @@
 import { Point } from '../../../runtime/index.js';
 import type { Edge } from '../graph.js';
+import type { AcademicReference } from '../pipeline-element.js';
 import type { EdgePorts, IPortAssigner } from './port-assigner.js';
 
 type Cardinal = 'east' | 'south' | 'west' | 'north';
@@ -27,6 +28,10 @@ const CARDINAL_ANGLE: Record<Cardinal, number> = {
 // connections.
 export class DistributedPortAssigner implements IPortAssigner
 {
+    public readonly Name               = 'Distributed';
+    public readonly AlgorithmName      = 'Fan out across the cardinal arc at fixed angular spacing';
+    public readonly AcademicReferences: readonly AcademicReference[] = [];
+
     constructor(
         // Node radius — used to project ports onto the circular
         // boundary. Match this to the scene's NodeVisual.Radius.

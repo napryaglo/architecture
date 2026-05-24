@@ -1,4 +1,5 @@
 import { Edge } from '../graph.js';
+import type { AcademicReference } from '../pipeline-element.js';
 import type { IDummyInserter, DummyInsertionResult } from './dummy-inserter.js';
 
 // Sparse normalization from Eiglsperger, Siebenhaller & Kaufmann
@@ -39,6 +40,17 @@ import type { IDummyInserter, DummyInsertionResult } from './dummy-inserter.js';
 //     edges get the "linear segments" look automatically.
 export class SparseDummyInserter implements IDummyInserter
 {
+    public readonly Name               = 'Sparse Normalization';
+    public readonly AlgorithmName      = 'Linear-segments dummy insertion (≤ 2 dummies per edge)';
+    public readonly AcademicReferences: readonly AcademicReference[] = [
+        {
+            authors: 'Eiglsperger, M., Siebenhaller, M., Kaufmann, M.',
+            year:    2005,
+            title:   "An efficient implementation of Sugiyama's algorithm for layered graph drawing",
+            venue:   'Journal of Graph Algorithms and Applications 9(3), 305–325',
+        },
+    ];
+
     public Insert(
         layers: string[][],
         edges:  Edge[],

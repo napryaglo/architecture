@@ -1,5 +1,6 @@
 import { Point } from '../../../runtime/index.js';
 import type { Edge } from '../graph.js';
+import type { AcademicReference } from '../pipeline-element.js';
 import type { EdgePorts } from '../port-assigner/index.js';
 import type { IEdgeRouter } from './edge-router.js';
 
@@ -23,6 +24,10 @@ import type { IEdgeRouter } from './edge-router.js';
 // of how the rest of the route bends.
 export class OrthogonalEdgeRouter implements IEdgeRouter
 {
+    public readonly Name               = 'Orthogonal';
+    public readonly AlgorithmName      = 'Per-segment vertical–horizontal–vertical staircase';
+    public readonly AcademicReferences: readonly AcademicReference[] = [];
+
     public Route(
         positions: Map<string, Point>,
         chains:    Map<Edge, string[]>,

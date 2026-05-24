@@ -1,4 +1,5 @@
 import { Edge, Graph } from '../graph.js';
+import type { AcademicReference } from '../pipeline-element.js';
 import type { IGraphTransform } from './graph-transform.js';
 
 // When both A→B and B→A exist, keeps whichever direction appears
@@ -12,6 +13,10 @@ import type { IGraphTransform } from './graph-transform.js';
 // which keeps this transform's "first wins" rule deterministic.
 export class CollapseAntiparallelEdgesTransform implements IGraphTransform
 {
+    public readonly Name               = 'Collapse Antiparallel Edges';
+    public readonly AlgorithmName      = 'Antiparallel edge collapse (first-wins)';
+    public readonly AcademicReferences: readonly AcademicReference[] = [];
+
     public Apply(graph: Graph): Graph
     {
         const present = new Set(graph.edges.map(e => `${e.From}->${e.To}`));

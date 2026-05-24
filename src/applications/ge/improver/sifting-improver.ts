@@ -1,4 +1,5 @@
 import type { Edge } from '../graph.js';
+import type { AcademicReference } from '../pipeline-element.js';
 import type { ILocalImprover } from './local-improver.js';
 
 // Sifting heuristic from Matuszewski, Schönfeld & Molitor 1999 ("Using
@@ -29,6 +30,17 @@ import type { ILocalImprover } from './local-improver.js';
 // this to O(|edges| log |layer|) if needed later.
 export class SiftingImprover implements ILocalImprover
 {
+    public readonly Name               = 'Sifting';
+    public readonly AlgorithmName      = 'Per-node best-position sifting';
+    public readonly AcademicReferences: readonly AcademicReference[] = [
+        {
+            authors: 'Matuszewski, C., Schönfeld, R., Molitor, P.',
+            year:    1999,
+            title:   'Using sifting for k-layer straightline crossing minimization',
+            venue:   'Graph Drawing ’99, LNCS 1731',
+        },
+    ];
+
     constructor(public readonly maxPasses: number = 1) {}
 
     public Improve(layers: string[][], edges: Edge[]): string[][]

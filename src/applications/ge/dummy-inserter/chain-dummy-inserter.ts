@@ -1,4 +1,5 @@
 import { Edge } from '../graph.js';
+import type { AcademicReference } from '../pipeline-element.js';
 import type { IDummyInserter, DummyInsertionResult } from './dummy-inserter.js';
 
 // Sugiyama-style chain expansion. For each original edge u → v with
@@ -11,6 +12,17 @@ import type { IDummyInserter, DummyInsertionResult } from './dummy-inserter.js';
 // them out via the `IsDummy` static helper or a prefix check.
 export class ChainDummyInserter implements IDummyInserter
 {
+    public readonly Name               = 'Chain Normalization';
+    public readonly AlgorithmName      = 'Classical k−1 dummy chain per multi-layer edge';
+    public readonly AcademicReferences: readonly AcademicReference[] = [
+        {
+            authors: 'Sugiyama, K., Tagawa, S., Toda, M.',
+            year:    1981,
+            title:   'Methods for visual understanding of hierarchical system structures',
+            venue:   'IEEE Transactions on Systems, Man, and Cybernetics 11(2)',
+        },
+    ];
+
     public static IsDummy(id: string): boolean
     {
         return id.startsWith('__dummy_');

@@ -1,4 +1,5 @@
 import type { Edge } from '../graph.js';
+import type { AcademicReference } from '../pipeline-element.js';
 import type { ILocalImprover } from './local-improver.js';
 
 // Greedy switching heuristic from Eades & Kelly 1986 ("Heuristics for
@@ -21,6 +22,17 @@ import type { ILocalImprover } from './local-improver.js';
 // substitute for Transpose when iteration is too expensive.
 export class GreedySwitchImprover implements ILocalImprover
 {
+    public readonly Name               = 'Greedy Switch';
+    public readonly AlgorithmName      = 'Single bidirectional adjacent-swap pass';
+    public readonly AcademicReferences: readonly AcademicReference[] = [
+        {
+            authors: 'Eades, P., Kelly, D.',
+            year:    1986,
+            title:   'Heuristics for reducing crossings in 2-layered networks',
+            venue:   'Ars Combinatoria 21A',
+        },
+    ];
+
     public Improve(layers: string[][], edges: Edge[]): string[][]
     {
         const preds = new Map<string, string[]>();

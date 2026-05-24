@@ -1,4 +1,5 @@
 import type { Edge } from '../graph.js';
+import type { AcademicReference } from '../pipeline-element.js';
 import type { IFirstLayerOrderer } from './first-layer-orderer.js';
 
 // Sort L0 by out-degree (number of outgoing edges), descending —
@@ -13,6 +14,10 @@ import type { IFirstLayerOrderer } from './first-layer-orderer.js';
 // sources room to align with their downstream chains.
 export class OutDegreeFirstLayerOrderer implements IFirstLayerOrderer
 {
+    public readonly Name               = 'Out-Degree Descending';
+    public readonly AlgorithmName      = 'Sort by outgoing-edge count, ties broken by original index';
+    public readonly AcademicReferences: readonly AcademicReference[] = [];
+
     public Order(layer: string[], edges: Edge[]): string[]
     {
         const outDegree = new Map<string, number>();

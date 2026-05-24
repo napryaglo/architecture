@@ -1,4 +1,5 @@
 import type { Graph } from '../graph.js';
+import type { AcademicReference } from '../pipeline-element.js';
 import type { ILayerImprover } from './layer-improver.js';
 
 // Iteratively probes depth moves: for each node v, sift through every
@@ -23,6 +24,17 @@ import type { ILayerImprover } from './layer-improver.js';
 // over multiple passes.
 export class AdjacentLayerMoveImprover implements ILayerImprover
 {
+    public readonly Name               = 'Adjacent-Layer Move';
+    public readonly AlgorithmName      = 'Sifting-range depth moves with real-edge crossing cost';
+    public readonly AcademicReferences: readonly AcademicReference[] = [
+        {
+            authors: 'Matuszewski, C., Schönfeld, R., Molitor, P.',
+            year:    1999,
+            title:   'Using sifting for k-layer straightline crossing minimization',
+            venue:   'Graph Drawing ’99, LNCS 1731',
+        },
+    ];
+
     constructor(
         public readonly maxPasses: number = 10,
         // Loose mode (true) lets a node share a row with a direct

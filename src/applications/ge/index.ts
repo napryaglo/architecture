@@ -23,3 +23,16 @@ export * from './layer-improver/index.js';        // Stage 3
 export * from './first-layer-orderer/index.js';   // Stage 4
 export * from './reorderer/index.js';             // Stage 6
 export * from './improver/index.js';              // Stage 7
+export {
+    type IPipelineElement,
+    type AcademicReference,
+} from './pipeline-element.js';
+export {
+    type PipelineConfiguration,
+    type PipelineElementRepository,
+    LoadConfigurationFile,
+    LoadElementRepository,
+    ValidateRepositoryAgainstClasses,
+    GetConfiguration,
+    BuildPipeline,
+} from './configuration-loader.js';

@@ -1,4 +1,5 @@
 import { Point } from '../../../runtime/index.js';
+import type { AcademicReference } from '../pipeline-element.js';
 import type { IPositionComputer } from './position-computer.js';
 
 // Maps a finished layer ordering to (x, y) positions. Each layer is
@@ -8,6 +9,10 @@ import type { IPositionComputer } from './position-computer.js';
 // machinery needs non-negative positions.
 export class CenteredGridPositionComputer implements IPositionComputer
 {
+    public readonly Name               = 'Centered Grid';
+    public readonly AlgorithmName      = 'Evenly-spaced per layer, centred on shared midline';
+    public readonly AcademicReferences: readonly AcademicReference[] = [];
+
     constructor(
         public readonly layerSpacingY: number = 100,
         public readonly nodeSpacingX:  number = 110,

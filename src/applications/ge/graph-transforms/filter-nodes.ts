@@ -1,4 +1,5 @@
 import { Graph, type Node } from '../graph.js';
+import type { AcademicReference } from '../pipeline-element.js';
 import type { IGraphTransform } from './graph-transform.js';
 
 // Keeps only nodes the predicate returns true for. Edges whose
@@ -7,6 +8,10 @@ import type { IGraphTransform } from './graph-transform.js';
 // that the graph is inconsistent.
 export class FilterNodesTransform implements IGraphTransform
 {
+    public readonly Name               = 'Filter Nodes';
+    public readonly AlgorithmName      = 'Predicate-based node filtering';
+    public readonly AcademicReferences: readonly AcademicReference[] = [];
+
     constructor(public readonly predicate: (node: Node) => boolean) {}
 
     public Apply(graph: Graph): Graph

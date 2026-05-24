@@ -1,4 +1,5 @@
 import type { Edge } from '../graph.js';
+import type { AcademicReference } from '../pipeline-element.js';
 import type { IReorderer } from './reorderer.js';
 
 // Sugiyama-style barycenter heuristic. Each sweep reorders one layer
@@ -20,6 +21,23 @@ import type { IReorderer } from './reorderer.js';
 // chains via dummy nodes before calling Reorder (the caller's job).
 export class BarycenterReorderer implements IReorderer
 {
+    public readonly Name               = 'Barycenter';
+    public readonly AlgorithmName      = 'Barycenter heuristic (Sugiyama)';
+    public readonly AcademicReferences: readonly AcademicReference[] = [
+        {
+            authors: 'Sugiyama, K., Tagawa, S., Toda, M.',
+            year:    1981,
+            title:   'Methods for visual understanding of hierarchical system structures',
+            venue:   'IEEE Transactions on Systems, Man, and Cybernetics 11(2)',
+        },
+        {
+            authors: 'Gansner, E. R., Koutsofios, E., North, S. C., Vo, K.-P.',
+            year:    1993,
+            title:   'A technique for drawing directed graphs',
+            venue:   'IEEE Transactions on Software Engineering 19(3)',
+        },
+    ];
+
     constructor(public readonly iterations: number = 12) {}
 
     public Reorder(layers: string[][], edges: Edge[]): string[][]

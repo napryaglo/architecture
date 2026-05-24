@@ -8,10 +8,12 @@ import {
     type TextMetrics,
 } from '../../runtime/index.js';
 import {
+    DashStyle,
     EllipseGeometry,
     FontStyle,
     FontWeight,
     FormattedText,
+    LineCap,
     LineGeometry,
     Pen,
     SolidColorBrush,
@@ -108,8 +110,10 @@ export class NodeVisual extends Visual
 // stamps Canvas.SetLeft / Canvas.SetTop on the resulting instance.
 export class EdgeVisual extends Visual
 {
-    public Color:     Color  = Color.FromHex('#888888');
-    public Thickness: number = 1;
+    public Color:     Color     = Color.FromHex('#888888');
+    public Thickness: number    = 1;
+    public DashStyle: DashStyle = DashStyle.Solid;
+    public LineCap:   LineCap   = LineCap.Flat;
 
     public LocalPoints: Point[];
 
@@ -142,6 +146,8 @@ export class EdgeVisual extends Visual
     protected override RenderOverride(dc: DrawingContext): void
     {
         const pen = new Pen(new SolidColorBrush(this.Color), this.Thickness);
+        pen.DashStyle = this.DashStyle;
+        pen.LineCap   = this.LineCap;
         for (let i = 0; i < this.LocalPoints.length - 1; i++)
         {
             dc.DrawGeometry(
@@ -171,6 +177,11 @@ export interface SceneStyle
     // when no label was set on the Node data. Set false to render
     // labelled circles only.
     labelFallsBackToId?:  boolean;
+    // When true, paints a grid underneath the scene: one dotted red
+    // line at each unique x (column) and y (row) found in the layout
+    // positions. Lines are 0.25px and use DashStyle.Dot so they read
+    // as a sub-pixel guide without competing with the edges.
+    drawGrid?:            boolean;
 }
 
 // Composes a Visual tree from a graph + positions. Edges go in first
@@ -191,6 +202,65 @@ export function BuildScene(
 ): Canvas
 {
     const canvas = new Canvas();
+
+    // Grid lines come FIRST so the rest of the scene paints on top.
+    // We span the lines across the full positions bounding box plus
+    // a node-radius margin so edge nodes still sit on the grid.
+    if (style.drawGrid === true && positions.size > 0)
+    {
+        const xs = new Set<number>();
+        const ys = new Set<number>();
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        for (const p of positions.values())
+        {
+            xs.add(p.X);
+            ys.add(p.Y);
+            if (p.X < minX) minX = p.X;
+            if (p.X > maxX) maxX = p.X;
+            if (p.Y < minY) minY = p.Y;
+            if (p.Y > maxY) maxY = p.Y;
+        }
+        const margin = style.nodeRadius ?? 24;
+        const left   = minX - margin;
+        const right  = maxX + margin;
+        const top    = minY - margin;
+        const bottom = maxY + margin;
+        const gridColor     = Color.FromHex('#FF0000');
+        const gridThickness = 0.25;
+        const lineWidth     = right  - left;
+        const lineHeight    = bottom - top;
+
+        // Vertical lines at each unique column x.
+        for (const x of xs)
+        {
+            const line = new EdgeVisual([
+                new Point(0, 0),
+                new Point(0, lineHeight),
+            ]);
+            line.Color     = gridColor;
+            line.Thickness = gridThickness;
+            line.DashStyle = DashStyle.Dot;
+            line.LineCap   = LineCap.Round;
+            Canvas.SetLeft(line, x);
+            Canvas.SetTop(line,  top);
+            canvas.AddChild(line);
+        }
+        // Horizontal lines at each unique layer y.
+        for (const y of ys)
+        {
+            const line = new EdgeVisual([
+                new Point(0, 0),
+                new Point(lineWidth, 0),
+            ]);
+            line.Color     = gridColor;
+            line.Thickness = gridThickness;
+            line.DashStyle = DashStyle.Dot;
+            line.LineCap   = LineCap.Round;
+            Canvas.SetLeft(line, left);
+            Canvas.SetTop(line,  y);
+            canvas.AddChild(line);
+        }
+    }
 
     for (const e of graph.edges)
     {

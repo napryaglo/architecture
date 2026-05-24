@@ -1,5 +1,6 @@
 import type { Point } from '../../../runtime/index.js';
 import type { Edge } from '../graph.js';
+import type { AcademicReference } from '../pipeline-element.js';
 import type { IGeometricCrossingCounter } from './crossing-counter.js';
 
 // Geometric crossing count — treats each edge as a line segment
@@ -17,6 +18,10 @@ import type { IGeometricCrossingCounter } from './crossing-counter.js';
 // so the metric treats it as one.
 export class GeometricCrossingCounter implements IGeometricCrossingCounter
 {
+    public readonly Name               = 'Geometric';
+    public readonly AlgorithmName      = 'Segment-segment intersection on real coordinates + edge-node overlap penalty';
+    public readonly AcademicReferences: readonly AcademicReference[] = [];
+
     constructor(public readonly nodeRadius: number = 28) {}
 
     public Count(positions: Map<string, Point>, edges: Edge[]): number

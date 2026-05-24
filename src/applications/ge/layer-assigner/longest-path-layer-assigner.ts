@@ -1,4 +1,5 @@
 import type { Graph } from '../graph.js';
+import type { AcademicReference } from '../pipeline-element.js';
 import type { ILayerAssigner } from './layer-assigner.js';
 
 // For each node v, returns the number of edges in the longest simple
@@ -17,6 +18,23 @@ import type { ILayerAssigner } from './layer-assigner.js';
 // returning a wrong-but-cheap answer.
 export class LongestPathLayerAssigner implements ILayerAssigner
 {
+    public readonly Name               = 'Longest Path';
+    public readonly AlgorithmName      = 'Longest-path layering (DFS, memoized)';
+    public readonly AcademicReferences: readonly AcademicReference[] = [
+        {
+            authors: 'Eades, P., Lin, X., Smyth, W. F.',
+            year:    1989,
+            title:   'A fast and effective heuristic for the feedback arc set problem',
+            venue:   'Information Processing Letters',
+        },
+        {
+            authors: 'Healy, P., Nikolov, N. S.',
+            year:    2013,
+            title:   'Hierarchical drawing algorithms',
+            venue:   'Handbook of Graph Drawing and Visualization (Tamassia, ed.), CRC Press',
+        },
+    ];
+
     public Assign(graph: Graph, firstLayerNodes?: ReadonlySet<string>): Map<string, number>
     {
         if (!graph.IsDirectedAcyclic())

@@ -1,0 +1,23 @@
+{
+  "comment": "Named LayoutPipeline + GraphPipeline configurations. Load via configuration-loader.ts. Schema: see PipelineConfiguration in configuration-loader.ts. Strategy values are CLASS NAMES — every name must be present in the pipeline-elements.yaml repo. Use null for an optional stage you want explicitly OFF; omit the field entirely to use the LayoutPipeline default.",
+
+  "configurations": [
+    {
+      "name": "default",
+      "description": "actors at L0 + layer-move + out-degree + median + ILP exact",
+      "transforms": [
+        "DedupEdgesTransform",
+        "CollapseAntiparallelEdgesTransform",
+        "DropIsolatedNodesTransform"
+      ],
+      "layout": {
+        "firstLayerNodes":   ["business-user", "external-ai-agent"],
+        "firstLayerOrderer": "OutDegreeFirstLayerOrderer",
+        "layerImprover":     "AdjacentLayerMoveImprover",
+        "reorderer":         "MedianReorderer",
+        "improver":          "IlpExactImprover",
+        "portAssigner":      "CardinalPortAssigner"
+      }
+    }
+  ]
+}

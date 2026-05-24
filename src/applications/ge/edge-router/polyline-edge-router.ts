@@ -1,5 +1,6 @@
 import type { Point } from '../../../runtime/index.js';
 import type { Edge } from '../graph.js';
+import type { AcademicReference } from '../pipeline-element.js';
 import type { EdgePorts } from '../port-assigner/index.js';
 import type { IEdgeRouter } from './edge-router.js';
 
@@ -19,6 +20,10 @@ import type { IEdgeRouter } from './edge-router.js';
 // correctly-wired pipeline), the edge is skipped silently.
 export class PolylineEdgeRouter implements IEdgeRouter
 {
+    public readonly Name               = 'Polyline';
+    public readonly AlgorithmName      = 'Follow chain through dummy waypoints as straight segments';
+    public readonly AcademicReferences: readonly AcademicReference[] = [];
+
     public Route(
         positions: Map<string, Point>,
         chains:    Map<Edge, string[]>,

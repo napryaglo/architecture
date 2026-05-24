@@ -1,4 +1,5 @@
 import type { Edge } from '../graph.js';
+import type { AcademicReference } from '../pipeline-element.js';
 import type { ILocalImprover } from './local-improver.js';
 
 // Transpose heuristic from Gansner et al. 1993 ("A Technique for
@@ -22,6 +23,17 @@ import type { ILocalImprover } from './local-improver.js';
 // algorithm converges in a handful of passes.
 export class TransposeImprover implements ILocalImprover
 {
+    public readonly Name               = 'Transpose';
+    public readonly AlgorithmName      = 'Iterated adjacent-pair swap (Gansner)';
+    public readonly AcademicReferences: readonly AcademicReference[] = [
+        {
+            authors: 'Gansner, E. R., Koutsofios, E., North, S. C., Vo, K.-P.',
+            year:    1993,
+            title:   'A technique for drawing directed graphs',
+            venue:   'IEEE Transactions on Software Engineering 19(3)',
+        },
+    ];
+
     constructor(public readonly maxPasses: number = 100) {}
 
     public Improve(layers: string[][], edges: Edge[]): string[][]

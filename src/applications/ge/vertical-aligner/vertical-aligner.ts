@@ -1,5 +1,6 @@
 import type { Point } from '../../../runtime/index.js';
 import type { Edge } from '../graph.js';
+import type { IPipelineElement } from '../pipeline-element.js';
 
 // Strategy interface for the VERTICAL ALIGNMENT stage — the final
 // post-processing pass that refines node x-coordinates to make
@@ -15,7 +16,7 @@ import type { Edge } from '../graph.js';
 //   * Within-layer left-to-right order of nodes must be preserved
 //     (no swapping); the strategy can shift x positions to align
 //     chains but must not produce overlapping or reordered nodes.
-export interface IVerticalAligner
+export interface IVerticalAligner extends IPipelineElement
 {
     Align(positions: Map<string, Point>, edges: Edge[]): Map<string, Point>;
 }

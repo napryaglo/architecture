@@ -1,0 +1,214 @@
+# Pipeline element repository — the authoritative catalogue of every
+# strategy implementation available in the `ge` layout pipeline.
+#
+# Structure:
+#   <stage>:
+#     <ClassName>:
+#       name:       <short display name>
+#       algorithm:  <name of the underlying algorithm>
+#       references:
+#         - authors: <comma-separated author list>
+#           year:    <publication year>
+#           title:   <paper / chapter / book title>
+#           venue:   <journal / conference / publisher (optional)>
+#
+# Every class registered here must (a) exist in code, (b) implement
+# IPipelineElement, and (c) carry matching Name / AlgorithmName /
+# AcademicReferences fields. The loader cross-checks at startup and
+# throws on drift — see configuration-loader.ts.
+#
+# Pipeline configurations (pipeline-configurations.json) reference
+# strategies by their class-name key here; only names listed below
+# are valid configuration values.
+
+graph-transforms:
+  DedupEdgesTransform:
+    name:      "Deduplicate Edges"
+    algorithm: "Set-based edge deduplication"
+    references: []
+  CollapseAntiparallelEdgesTransform:
+    name:      "Collapse Antiparallel Edges"
+    algorithm: "Antiparallel edge collapse (first-wins)"
+    references: []
+  FilterNodesTransform:
+    name:      "Filter Nodes"
+    algorithm: "Predicate-based node filtering"
+    references: []
+  FilterEdgesTransform:
+    name:      "Filter Edges"
+    algorithm: "Predicate-based edge filtering"
+    references: []
+  DropIsolatedNodesTransform:
+    name:      "Drop Isolated Nodes"
+    algorithm: "Degree-zero node removal"
+    references: []
+  MapLabelsTransform:
+    name:      "Map Labels"
+    algorithm: "Per-node label rewriting"
+    references: []
+
+layer-assigner:
+  LongestPathLayerAssigner:
+    name:      "Longest Path"
+    algorithm: "Longest-path layering (DFS, memoized)"
+    references:
+      - authors: "Eades, P., Lin, X., Smyth, W. F."
+        year:    1989
+        title:   "A fast and effective heuristic for the feedback arc set problem"
+        venue:   "Information Processing Letters"
+      - authors: "Healy, P., Nikolov, N. S."
+        year:    2013
+        title:   "Hierarchical drawing algorithms"
+        venue:   "Handbook of Graph Drawing and Visualization (Tamassia, ed.), CRC Press"
+
+layer-improver:
+  AdjacentLayerMoveImprover:
+    name:      "Adjacent-Layer Move"
+    algorithm: "Sifting-range depth moves with real-edge crossing cost"
+    references:
+      - authors: "Matuszewski, C., Schönfeld, R., Molitor, P."
+        year:    1999
+        title:   "Using sifting for k-layer straightline crossing minimization"
+        venue:   "Graph Drawing ’99, LNCS 1731"
+
+first-layer-orderer:
+  IdentityFirstLayerOrderer:
+    name:      "Identity"
+    algorithm: "Passthrough (insertion order)"
+    references: []
+  OutDegreeFirstLayerOrderer:
+    name:      "Out-Degree Descending"
+    algorithm: "Sort by outgoing-edge count, ties broken by original index"
+    references: []
+
+dummy-inserter:
+  ChainDummyInserter:
+    name:      "Chain Normalization"
+    algorithm: "Classical k−1 dummy chain per multi-layer edge"
+    references:
+      - authors: "Sugiyama, K., Tagawa, S., Toda, M."
+        year:    1981
+        title:   "Methods for visual understanding of hierarchical system structures"
+        venue:   "IEEE Transactions on Systems, Man, and Cybernetics 11(2)"
+  SparseDummyInserter:
+    name:      "Sparse Normalization"
+    algorithm: "Linear-segments dummy insertion (≤ 2 dummies per edge)"
+    references:
+      - authors: "Eiglsperger, M., Siebenhaller, M., Kaufmann, M."
+        year:    2005
+        title:   "An efficient implementation of Sugiyama's algorithm for layered graph drawing"
+        venue:   "Journal of Graph Algorithms and Applications 9(3), 305–325"
+
+reorderer:
+  BarycenterReorderer:
+    name:      "Barycenter"
+    algorithm: "Barycenter heuristic (Sugiyama)"
+    references:
+      - authors: "Sugiyama, K., Tagawa, S., Toda, M."
+        year:    1981
+        title:   "Methods for visual understanding of hierarchical system structures"
+        venue:   "IEEE Transactions on Systems, Man, and Cybernetics 11(2)"
+      - authors: "Gansner, E. R., Koutsofios, E., North, S. C., Vo, K.-P."
+        year:    1993
+        title:   "A technique for drawing directed graphs"
+        venue:   "IEEE Transactions on Software Engineering 19(3)"
+  MedianReorderer:
+    name:      "Median"
+    algorithm: "Weighted median heuristic (3-approximation)"
+    references:
+      - authors: "Eades, P., Wormald, N. C."
+        year:    1994
+        title:   "Edge crossings in drawings of bipartite graphs"
+        venue:   "Algorithmica 11(4)"
+      - authors: "Gansner, E. R., Koutsofios, E., North, S. C., Vo, K.-P."
+        year:    1993
+        title:   "A technique for drawing directed graphs"
+        venue:   "IEEE Transactions on Software Engineering 19(3)"
+
+improver:
+  TransposeImprover:
+    name:      "Transpose"
+    algorithm: "Iterated adjacent-pair swap (Gansner)"
+    references:
+      - authors: "Gansner, E. R., Koutsofios, E., North, S. C., Vo, K.-P."
+        year:    1993
+        title:   "A technique for drawing directed graphs"
+        venue:   "IEEE Transactions on Software Engineering 19(3)"
+  GreedySwitchImprover:
+    name:      "Greedy Switch"
+    algorithm: "Single bidirectional adjacent-swap pass"
+    references:
+      - authors: "Eades, P., Kelly, D."
+        year:    1986
+        title:   "Heuristics for reducing crossings in 2-layered networks"
+        venue:   "Ars Combinatoria 21A"
+  SiftingImprover:
+    name:      "Sifting"
+    algorithm: "Per-node best-position sifting"
+    references:
+      - authors: "Matuszewski, C., Schönfeld, R., Molitor, P."
+        year:    1999
+        title:   "Using sifting for k-layer straightline crossing minimization"
+        venue:   "Graph Drawing ’99, LNCS 1731"
+  IlpExactImprover:
+    name:      "ILP Exact"
+    algorithm: "Integer linear program formulation (brute-force enumeration)"
+    references:
+      - authors: "Jünger, M., Mutzel, P."
+        year:    1997
+        title:   "2-layer straightline crossing minimization: Performance of exact and heuristic algorithms"
+        venue:   "Journal of Graph Algorithms and Applications 1(1)"
+
+position-computer:
+  CenteredGridPositionComputer:
+    name:      "Centered Grid"
+    algorithm: "Evenly-spaced per layer, centred on shared midline"
+    references: []
+  BrandesKopfPositionComputer:
+    name:      "Brandes–Köpf"
+    algorithm: "Block-based horizontal coordinate assignment (4-pass balanced)"
+    references:
+      - authors: "Brandes, U., Köpf, B."
+        year:    2002
+        title:   "Fast and simple horizontal coordinate assignment"
+        venue:   "Graph Drawing 2001, LNCS 2265, 31–44"
+
+vertical-aligner:
+  BarycenterVerticalAligner:
+    name:      "Barycenter Pull"
+    algorithm: "Iterative neighbour-mean pull with clearance constraints"
+    references: []
+
+port-assigner:
+  CardinalPortAssigner:
+    name:      "Cardinal"
+    algorithm: "Stack at the closest of four cardinal boundary points"
+    references: []
+  DistributedPortAssigner:
+    name:      "Distributed"
+    algorithm: "Fan out across the cardinal arc at fixed angular spacing"
+    references: []
+
+edge-router:
+  PolylineEdgeRouter:
+    name:      "Polyline"
+    algorithm: "Follow chain through dummy waypoints as straight segments"
+    references: []
+  OrthogonalEdgeRouter:
+    name:      "Orthogonal"
+    algorithm: "Per-segment vertical–horizontal–vertical staircase"
+    references: []
+  StraightLineEdgeRouter:
+    name:      "Straight Line"
+    algorithm: "Direct 2-point connection between source and target ports"
+    references: []
+
+crossing-counter:
+  GeometricCrossingCounter:
+    name:      "Geometric"
+    algorithm: "Segment-segment intersection on real coordinates + edge-node overlap penalty"
+    references: []
+  AdjacentCrossingCounter:
+    name:      "Adjacent Inversions"
+    algorithm: "Pairwise inversion count across adjacent layers"
+    references: []

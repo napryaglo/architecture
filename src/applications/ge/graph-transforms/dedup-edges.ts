@@ -1,4 +1,5 @@
 import { Edge, Graph } from '../graph.js';
+import type { AcademicReference } from '../pipeline-element.js';
 import type { IGraphTransform } from './graph-transform.js';
 
 // Collapses parallel edges with the same (From, To). The first edge
@@ -6,6 +7,10 @@ import type { IGraphTransform } from './graph-transform.js';
 // (From, To) with (To, From) — edges are directed.
 export class DedupEdgesTransform implements IGraphTransform
 {
+    public readonly Name               = 'Deduplicate Edges';
+    public readonly AlgorithmName      = 'Set-based edge deduplication';
+    public readonly AcademicReferences: readonly AcademicReference[] = [];
+
     public Apply(graph: Graph): Graph
     {
         const seen = new Set<string>();

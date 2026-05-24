@@ -1,5 +1,6 @@
 import { Point } from '../../../runtime/index.js';
 import type { Edge } from '../graph.js';
+import type { AcademicReference } from '../pipeline-element.js';
 import type { IVerticalAligner } from './vertical-aligner.js';
 
 // Iterative barycenter-style vertical alignment. For each node v,
@@ -21,6 +22,10 @@ import type { IVerticalAligner } from './vertical-aligner.js';
 // Y coordinates stay fixed throughout — only x is adjusted.
 export class BarycenterVerticalAligner implements IVerticalAligner
 {
+    public readonly Name               = 'Barycenter Pull';
+    public readonly AlgorithmName      = 'Iterative neighbour-mean pull with clearance constraints';
+    public readonly AcademicReferences: readonly AcademicReference[] = [];
+
     constructor(
         public readonly iterations: number = 8,
         // Minimum centre-to-centre horizontal distance between two

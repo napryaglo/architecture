@@ -1,4 +1,5 @@
 import type { Edge } from '../graph.js';
+import type { AcademicReference } from '../pipeline-element.js';
 import type { ILocalImprover } from './local-improver.js';
 
 // Exact ILP-formulated improver for k-layer crossing minimization,
@@ -43,6 +44,17 @@ import type { ILocalImprover } from './local-improver.js';
 // heuristic and very often the true k-layer optimum.
 export class IlpExactImprover implements ILocalImprover
 {
+    public readonly Name               = 'ILP Exact';
+    public readonly AlgorithmName      = 'Integer linear program formulation (brute-force enumeration)';
+    public readonly AcademicReferences: readonly AcademicReference[] = [
+        {
+            authors: 'Jünger, M., Mutzel, P.',
+            year:    1997,
+            title:   '2-layer straightline crossing minimization: Performance of exact and heuristic algorithms',
+            venue:   'Journal of Graph Algorithms and Applications 1(1)',
+        },
+    ];
+
     constructor(
         public readonly maxPasses:    number = 8,
         public readonly maxLayerSize: number = 9,

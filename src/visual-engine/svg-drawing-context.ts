@@ -1,7 +1,7 @@
 import type { Point, Rect } from '../runtime/index.js';
 import type { DrawingContext } from '../runtime/index.js';
 import { Brush, SolidColorBrush } from './brush.js';
-import type { Pen } from './pen.js';
+import { DashStyle, LineCap, type Pen } from './pen.js';
 import { EllipseGeometry, LineGeometry, RectangleGeometry, type Geometry } from './geometry.js';
 import { Transform } from './transform.js';
 import { FontStyle, FontWeight, type FormattedText } from './formatted-text.js';
@@ -235,10 +235,30 @@ function strokeAttrs(pen: Pen | undefined): string[]
 {
     if (pen === undefined) return [];
     if (!(pen.Brush instanceof SolidColorBrush)) return [];
-    return [
+    const attrs = [
         `stroke="${pen.Brush.Color.ToCss()}"`,
         `stroke-width="${formatNumber(pen.Thickness)}"`,
     ];
+    // Pen.DashStyle.Dashes are multipliers of Thickness (WPF
+    // semantics). Multiply on the way out so SVG sees absolute
+    // user-space lengths.
+    const dash = pen.DashStyle;
+    if (!dash.Equals(DashStyle.Solid))
+    {
+        const dashes = dash.Dashes.map(d => formatNumber(d * pen.Thickness)).join(' ');
+        attrs.push(`stroke-dasharray="${dashes}"`);
+        if (dash.Offset !== 0)
+        {
+            attrs.push(`stroke-dashoffset="${formatNumber(dash.Offset * pen.Thickness)}"`);
+        }
+    }
+    // Only emit linecap when it's non-default; defaults to butt
+    // (Flat) which is the SVG default too.
+    if (pen.LineCap !== LineCap.Flat)
+    {
+        attrs.push(`stroke-linecap="${pen.LineCap}"`);
+    }
+    return attrs;
 }
 
 // Text foreground defaults to black when no brush is supplied — matches

@@ -1,4 +1,5 @@
 import { Graph, Node } from '../graph.js';
+import type { AcademicReference } from '../pipeline-element.js';
 import type { IGraphTransform } from './graph-transform.js';
 
 // Rewrites labels via the supplied function. Returning undefined
@@ -6,6 +7,10 @@ import type { IGraphTransform } from './graph-transform.js';
 // nodes are not modified.
 export class MapLabelsTransform implements IGraphTransform
 {
+    public readonly Name               = 'Map Labels';
+    public readonly AlgorithmName      = 'Per-node label rewriting';
+    public readonly AcademicReferences: readonly AcademicReference[] = [];
+
     constructor(public readonly fn: (node: Node) => string | undefined) {}
 
     public Apply(graph: Graph): Graph

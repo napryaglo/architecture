@@ -1,5 +1,6 @@
 import { writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { Color } from '../../runtime/index.js';
 import {
@@ -9,28 +10,20 @@ import {
 } from '../../visual-engine/index.js';
 import { Canvas, TextBlock } from '../../Controls/index.js';
 import {
-    AdjacentLayerMoveImprover,
+    BuildPipeline,
     BuildScene,
-    CollapseAntiparallelEdgesTransform,
-    DedupEdgesTransform,
-    DropIsolatedNodesTransform,
-    GreedySwitchImprover,
+    GetConfiguration,
     Graph,
-    GraphPipeline,
-    IlpExactImprover,
-    LayoutPipeline,
-    MedianReorderer,
-    OutDegreeFirstLayerOrderer,
-    SiftingImprover,
-    TransposeImprover,
+    LoadElementRepository,
+    ValidateRepositoryAgainstClasses,
 } from './index.js';
 
 // `ge` — graph visualization experiment harness. Builds a small
-// graph, runs it through a layout, composes a Visual tree, and writes
-// an SVG file. Tweak the graph topology, swap the layout, or pass
-// SceneStyle options to BuildScene to iterate on visualization ideas.
+// graph, runs it through a pipeline declared in
+// pipeline-configurations.json, composes a Visual tree, and writes
+// an SVG file.
 //
-// Run with: npm run ge   [or]   tsx src/applications/ge/main.ts [out.svg]
+// Run with: npm run ge   [or]   tsx src/applications/ge/main.ts [out.svg] [configName]
 
 // Graph extracted from ai-enabled-composable-landscape.architecture.model.
 // Each block is collapsed to a single node (its child components are not
@@ -38,7 +31,7 @@ import {
 // only (scenario `step`s are excluded).
 const g = new Graph();
 
-// Actors (pinned to L0 by the firstLayerNodes constraint below).
+// Actors (pinned to L0 by the firstLayerNodes constraint in the config).
 g.AddNode('business-user',     'BU');
 g.AddNode('external-ai-agent', 'EAI');
 
@@ -66,11 +59,8 @@ g.AddNode('external-tool-surface', 'ETS');
 g.AddNode('legacy-tool-bridge',    'LTB');
 g.AddNode('legacy-application',    'LA');
 
-// Edges — union of all scenario `step`s. The file's top-level
-// `connector` section is intentionally excluded (those are structural
-// "is enabled by / talks to" relations rather than runtime call flow).
-// Duplicates are added freely here — the GraphPipeline below collapses
-// them via DedupEdgesTransform.
+// Edges — union of all scenario `step`s. Duplicates are dropped by
+// the DedupEdgesTransform stage declared in the configuration.
 
 // scenario conversational / "User-Initiated Conversation with AI Agent"
 g.AddEdge('business-user',      'chat-surface');
@@ -113,58 +103,19 @@ g.AddEdge('multi-agent-workflow',      'microsoft-agent-framework');
 g.AddEdge('service-agent',             'business-agent');
 g.AddEdge('microsoft-agent-framework', 'workflow-engine');
 
-// Pipeline — chain of transforms, each producing a new graph from the
-// previous step's output. Add more stages (FilterNodesTransform,
-// MapLabelsTransform, …) to filter scenarios, swap labelling schemes,
-// etc., without rewriting the graph construction above.
-const pipeline = new GraphPipeline()
-    .Add(new DedupEdgesTransform())
-    .Add(new CollapseAntiparallelEdgesTransform())
-    .Add(new DropIsolatedNodesTransform());
-const finalGraph = pipeline.Apply(g);
+// ------------------------------------------------------------------
+// Pipeline assembly from a named configuration.
+// ------------------------------------------------------------------
+const here = dirname(fileURLToPath(import.meta.url));
+const repo = LoadElementRepository(resolve(here, 'pipeline-elements.yaml'));
+ValidateRepositoryAgainstClasses(repo);
 
-// Layered layout — y-position = longest-path depth from any source,
-// x-position evenly spread within each layer and centered. Sources
-// (no incoming scenario steps) sit at the top; sinks at the bottom.
-//
-// Run both reorderers on the same graph so we can directly compare
-// barycenter vs. median crossings. Whichever produces fewer geometric
-// crossings is kept for the actual render. Re-running the layout is
-// cheap for graphs this size.
-// Compare the four LocalImprover strategies, all running on top of
-// the same median reorderer, the same first-layer ordering strategy
-// (out-degree descending), and the same L0 pin (only actors at L0;
-// all other current sources pushed to L1). The ILP-exact improver
-// is used for the actual render.
-const firstLayer = new OutDegreeFirstLayerOrderer();
-const actorPin: ReadonlySet<string> = new Set(['business-user', 'external-ai-agent']);
-const layerMove = new AdjacentLayerMoveImprover();
+const configName = process.argv[3] ?? 'default';
+const config     = GetConfiguration(resolve(here, 'pipeline-configurations.json'), configName);
+const { graphPipeline, layoutPipeline } = BuildPipeline(config, repo);
 
-console.log('  --- median + transpose (comparison only) ---');
-const layoutTranspose = new LayoutPipeline(
-    new MedianReorderer(), new TransposeImprover(), firstLayer, actorPin, layerMove);
-layoutTranspose.Apply(finalGraph);
-
-console.log('  --- median + greedy switch (comparison only) ---');
-const layoutGreedy = new LayoutPipeline(
-    new MedianReorderer(), new GreedySwitchImprover(), firstLayer, actorPin, layerMove);
-layoutGreedy.Apply(finalGraph);
-
-console.log('  --- median + sifting (comparison only) ---');
-const layoutSifting = new LayoutPipeline(
-    new MedianReorderer(), new SiftingImprover(), firstLayer, actorPin, layerMove);
-layoutSifting.Apply(finalGraph);
-
-console.log('  --- median + ILP exact (used for render) ---');
-const layout = new LayoutPipeline(
-    new MedianReorderer(), new IlpExactImprover(), firstLayer, actorPin, layerMove);
-const positions = layout.Apply(finalGraph);
-
-console.log(`  improvers (geometric after): `
-    + `transpose=${layoutTranspose.LastCrossings!.geometricAfter}, `
-    + `greedy=${layoutGreedy.LastCrossings!.geometricAfter}, `
-    + `sifting=${layoutSifting.LastCrossings!.geometricAfter}, `
-    + `ilp=${layout.LastCrossings!.geometricAfter}`);
+const finalGraph = graphPipeline.Apply(g);
+const positions  = layoutPipeline.Apply(finalGraph);
 
 // Compose the Visual tree. SceneStyle overrides any of the per-node /
 // per-edge defaults; left empty here for the stock look.
@@ -172,15 +123,17 @@ const scene = BuildScene(finalGraph, positions, {
     nodeRadius:    28,
     nodeFillColor: Color.FromHex('#E6F2FF'),
     edgeColor:     Color.FromHex('#666666'),
-}, layout.LastRoutes);
+    drawGrid:      true,
+}, layoutPipeline.LastRoutes);
 
-// Overlay the crossing-count metric in the top-left corner so the SVG
-// is self-contained: open the file and the numbers are right there.
-if (layout.LastCrossings !== undefined)
+// Overlay the configuration name + crossing-count metric in the
+// top-left corner so the SVG is self-contained.
+if (layoutPipeline.LastCrossings !== undefined)
 {
-    const c = layout.LastCrossings;
+    const c = layoutPipeline.LastCrossings;
+    const description = config.description !== undefined ? ` — ${config.description}` : '';
     const label = new TextBlock(
-        `actors at L0 + layer-move + out-degree + median + ILP exact — `
+        `${config.name}${description}    `
         + `crossings (geometric): ${c.geometricBefore} → ${c.geometricAfter}    `
         + `(adjacent-only: ${c.adjacentBefore} → ${c.adjacentAfter})`,
     );
@@ -191,8 +144,6 @@ if (layout.LastCrossings !== undefined)
     scene.AddChild(label);
 }
 
-// Auto-mode target — the canvas sizes to the scene's bounding box.
-// Set Width / Height explicitly here to pin a fixed-size canvas instead.
 const target = new HeadlessTarget(undefined, undefined, scene);
 target.Background = new SolidColorBrush(Color.White);
 
@@ -205,5 +156,6 @@ const outPath = resolve(process.cwd(), process.argv[2] ?? 'ge.svg');
 writeFileSync(outPath, svg, 'utf8');
 
 console.log(`Wrote ${outPath} (${target.ActualWidth}x${target.ActualHeight})`);
-console.log(`  raw:   ${g.nodes.length} nodes, ${g.edges.length} edges`);
-console.log(`  final: ${finalGraph.nodes.length} nodes, ${finalGraph.edges.length} edges`);
+console.log(`  config: ${config.name}`);
+console.log(`  raw:    ${g.nodes.length} nodes, ${g.edges.length} edges`);
+console.log(`  final:  ${finalGraph.nodes.length} nodes, ${finalGraph.edges.length} edges`);

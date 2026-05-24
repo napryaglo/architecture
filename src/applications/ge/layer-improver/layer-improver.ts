@@ -1,4 +1,5 @@
 import type { Graph } from '../graph.js';
+import type { IPipelineElement } from '../pipeline-element.js';
 
 // Strategy interface for the layer-assignment refinement step. Runs
 // AFTER the column-ordering stages (Reorderer + LocalImprover), so
@@ -18,7 +19,7 @@ import type { Graph } from '../graph.js';
 //   * `firstLayerNodes`, when provided, is an L0-pin constraint
 //     that the strategy MUST respect: nodes in the set stay at
 //     depth 0; sources NOT in the set stay at depth ≥ 1.
-export interface ILayerImprover
+export interface ILayerImprover extends IPipelineElement
 {
     Improve(
         depths:           Map<string, number>,

@@ -1,4 +1,5 @@
 import type { Edge } from '../graph.js';
+import type { AcademicReference } from '../pipeline-element.js';
 import type { IReorderer } from './reorderer.js';
 
 // Median heuristic for crossing reduction (Gansner et al. 1993 — the
@@ -22,6 +23,23 @@ import type { IReorderer } from './reorderer.js';
 // better result is a common production strategy.
 export class MedianReorderer implements IReorderer
 {
+    public readonly Name               = 'Median';
+    public readonly AlgorithmName      = 'Weighted median heuristic (3-approximation)';
+    public readonly AcademicReferences: readonly AcademicReference[] = [
+        {
+            authors: 'Eades, P., Wormald, N. C.',
+            year:    1994,
+            title:   'Edge crossings in drawings of bipartite graphs',
+            venue:   'Algorithmica 11(4)',
+        },
+        {
+            authors: 'Gansner, E. R., Koutsofios, E., North, S. C., Vo, K.-P.',
+            year:    1993,
+            title:   'A technique for drawing directed graphs',
+            venue:   'IEEE Transactions on Software Engineering 19(3)',
+        },
+    ];
+
     constructor(public readonly iterations: number = 12) {}
 
     public Reorder(layers: string[][], edges: Edge[]): string[][]

@@ -2,7 +2,7 @@ import type { Point } from '../../../runtime/index.js';
 import type { Graph } from '../graph.js';
 import { LongestPathLayerAssigner, type ILayerAssigner } from '../layer-assigner/index.js';
 import { SparseDummyInserter, type IDummyInserter } from '../dummy-inserter/index.js';
-import { CenteredGridPositionComputer, type IPositionComputer } from '../position-computer/index.js';
+import { BrandesKopfPositionComputer, type IPositionComputer } from '../position-computer/index.js';
 import {
     AdjacentCrossingCounter,
     GeometricCrossingCounter,
@@ -13,8 +13,8 @@ import { BarycenterReorderer, type IReorderer } from '../reorderer/index.js';
 import type { ILocalImprover } from '../improver/index.js';
 import { IdentityFirstLayerOrderer, type IFirstLayerOrderer } from '../first-layer-orderer/index.js';
 import type { ILayerImprover } from '../layer-improver/index.js';
-import { BarycenterVerticalAligner, type IVerticalAligner } from '../vertical-aligner/index.js';
-import { OrthogonalEdgeRouter, type IEdgeRouter } from '../edge-router/index.js';
+import type { IVerticalAligner } from '../vertical-aligner/index.js';
+import { StraightLineEdgeRouter, type IEdgeRouter } from '../edge-router/index.js';
 import { DistributedPortAssigner, type IPortAssigner } from '../port-assigner/index.js';
 import type { Edge } from '../graph.js';
 import type { ILayout } from './layout.js';
@@ -66,7 +66,7 @@ export class LayoutPipeline implements ILayout
         public readonly layerImprover?:      ILayerImprover,
         public readonly layerAssigner:       ILayerAssigner          = new LongestPathLayerAssigner(),
         public readonly dummyInserter:       IDummyInserter          = new SparseDummyInserter(),
-        public readonly positionComputer:    IPositionComputer       = new CenteredGridPositionComputer(),
+        public readonly positionComputer:    IPositionComputer       = new BrandesKopfPositionComputer(),
         public readonly geometricCounter:    IGeometricCrossingCounter = new GeometricCrossingCounter(),
         public readonly adjacentCounter:     IAdjacentCrossingCounter  = new AdjacentCrossingCounter(),
         // Cap the outer fixpoint loop where layer-improver moves
@@ -77,11 +77,14 @@ export class LayoutPipeline implements ILayout
         // Stage 9 — final vertical-alignment pass. Refines node x
         // coordinates so connected chains render as clean vertical
         // lines. Pass undefined to skip alignment entirely.
-        public readonly verticalAligner: IVerticalAligner | undefined = new BarycenterVerticalAligner(),
+        // Default OFF when paired with BrandesKopfPositionComputer
+        // — BK already assigns chain-aligned columns, so an
+        // additional pull would just fight the compaction.
+        public readonly verticalAligner: IVerticalAligner | undefined = undefined,
         // Stage 10 — edge router. Produces a polyline per real edge
         // using dummy positions as bend waypoints. Pass undefined to
         // fall back to two-point straight segments at render time.
-        public readonly edgeRouter:      IEdgeRouter      | undefined = new OrthogonalEdgeRouter(),
+        public readonly edgeRouter:      IEdgeRouter      | undefined = new StraightLineEdgeRouter(),
         // Stage 11 — port assigner. Picks boundary connection points
         // on the source / target circles for each edge; the router
         // uses these in place of node centres as chain endpoints.
@@ -132,7 +135,7 @@ export class LayoutPipeline implements ILayout
         // Baseline crossings — recorded BEFORE the layer-improver
         // fixpoint loop runs, so LastCrossings shows what the layout
         // looked like with just the column-ordering stages.
-        const positionsBaseline = this.positionComputer.Compute(layersInit);
+        const positionsBaseline = this.positionComputer.Compute(layersInit, graph.edges);
         const crossingsGeoBefore = this.geometricCounter.Count(positionsBaseline, graph.edges);
         const crossingsAdjBefore = this.adjacentCounter.Count(expanded, expandedEdges);
 
@@ -159,7 +162,7 @@ export class LayoutPipeline implements ILayout
 
         // Stage 8 — position computation. Produces (x, y) for every
         // node in the expanded structure, real AND dummy.
-        let positionsAfterAll = this.positionComputer.Compute(ordered);
+        let positionsAfterAll = this.positionComputer.Compute(ordered, expandedEdges);
         const crossingsAdjAfter = this.adjacentCounter.Count(ordered, expandedEdges);
 
         // Stage 9 — vertical alignment. Operates on the FULL

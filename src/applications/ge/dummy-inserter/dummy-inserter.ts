@@ -1,4 +1,5 @@
 import type { Edge } from '../graph.js';
+import type { IPipelineElement } from '../pipeline-element.js';
 
 // Result of a dummy-insertion pass: the expanded layer structure
 // (with dummies appended in their intermediate layers) plus the
@@ -32,7 +33,7 @@ export interface DummyInsertionResult
 //     filter them out before rendering.
 //   * Edges that already span exactly one layer pass through
 //     unchanged (no dummies needed).
-export interface IDummyInserter
+export interface IDummyInserter extends IPipelineElement
 {
     Insert(
         layers: string[][],

@@ -1,5 +1,6 @@
 import { Point } from '../../../runtime/index.js';
 import type { Edge } from '../graph.js';
+import type { AcademicReference } from '../pipeline-element.js';
 import type { EdgePorts, IPortAssigner } from './port-assigner.js';
 
 // Cardinal-direction port assigner for circular nodes. For each
@@ -20,6 +21,10 @@ import type { EdgePorts, IPortAssigner } from './port-assigner.js';
 // across the relevant semicircle.
 export class CardinalPortAssigner implements IPortAssigner
 {
+    public readonly Name               = 'Cardinal';
+    public readonly AlgorithmName      = 'Stack at the closest of four cardinal boundary points';
+    public readonly AcademicReferences: readonly AcademicReference[] = [];
+
     constructor(public readonly nodeRadius: number = 28) {}
 
     public Assign(positions: Map<string, Point>, edges: Edge[]): Map<Edge, EdgePorts>

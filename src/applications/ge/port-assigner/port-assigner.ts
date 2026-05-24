@@ -1,5 +1,6 @@
 import type { Point } from '../../../runtime/index.js';
 import type { Edge } from '../graph.js';
+import type { IPipelineElement } from '../pipeline-element.js';
 
 // Per-edge connection points on the source and target node
 // boundaries. The router substitutes these for the chain's first
@@ -24,7 +25,7 @@ export interface EdgePorts
 //   * Returned map keys are the original (real-graph) edges.
 //   * Each port is a concrete (x, y) point that lies on the
 //     associated node's boundary.
-export interface IPortAssigner
+export interface IPortAssigner extends IPipelineElement
 {
     Assign(positions: Map<string, Point>, edges: Edge[]): Map<Edge, EdgePorts>;
 }

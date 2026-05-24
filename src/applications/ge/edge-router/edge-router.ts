@@ -1,6 +1,7 @@
 import type { Point } from '../../../runtime/index.js';
 import type { Edge } from '../graph.js';
 import type { EdgePorts } from '../port-assigner/index.js';
+import type { IPipelineElement } from '../pipeline-element.js';
 
 // Strategy interface for the EDGE ROUTING stage — the final
 // geometric step that turns each original edge into a polyline of
@@ -22,7 +23,7 @@ import type { EdgePorts } from '../port-assigner/index.js';
 //   * Returned map keys are the original (real-graph) edges.
 //     Values are polylines of 2 or more waypoints in render-coord
 //     space (same coord system as the input positions).
-export interface IEdgeRouter
+export interface IEdgeRouter extends IPipelineElement
 {
     Route(
         positions: Map<string, Point>,

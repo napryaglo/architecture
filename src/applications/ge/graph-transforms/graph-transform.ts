@@ -1,4 +1,5 @@
 import type { Graph } from '../graph.js';
+import type { IPipelineElement } from '../pipeline-element.js';
 
 // A IGraphTransform reads a Graph and returns a NEW Graph — it never
 // mutates the input. Pipelines compose transforms by feeding the
@@ -11,7 +12,7 @@ import type { Graph } from '../graph.js';
 // would be visible in both graphs (they're Models with their own
 // property state), which is why most transforms produce new instances
 // when they need to change content.
-export interface IGraphTransform
+export interface IGraphTransform extends IPipelineElement
 {
     Apply(graph: Graph): Graph;
 }

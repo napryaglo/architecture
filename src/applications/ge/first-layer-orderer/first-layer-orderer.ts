@@ -1,4 +1,5 @@
 import type { Edge } from '../graph.js';
+import type { IPipelineElement } from '../pipeline-element.js';
 
 // Strategy interface for the initial ordering of the FIRST layer (L0,
 // the sources — nodes with no incoming edges). This ordering seeds
@@ -14,7 +15,7 @@ import type { Edge } from '../graph.js';
 //     input (same set, possibly different order).
 //   * `edges` is the full edge list; the strategy can inspect it to
 //     compute degree, reach, or other topological metrics.
-export interface IFirstLayerOrderer
+export interface IFirstLayerOrderer extends IPipelineElement
 {
     Order(layer: string[], edges: Edge[]): string[];
 }

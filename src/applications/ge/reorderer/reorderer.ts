@@ -1,4 +1,5 @@
 import type { Edge } from '../graph.js';
+import type { IPipelineElement } from '../pipeline-element.js';
 
 // Strategy interface for layered-layout crossing reduction. A
 // IReorderer takes a layered structure (each layer is a list of node
@@ -13,7 +14,7 @@ import type { Edge } from '../graph.js';
 //   * Edges may include dummy-node endpoints (Sugiyama-style chain
 //     expansion); the reorderer treats them like any other node and
 //     trusts that real / dummy split is handled by the caller.
-export interface IReorderer
+export interface IReorderer extends IPipelineElement
 {
     Reorder(layers: string[][], edges: Edge[]): string[][];
 }
