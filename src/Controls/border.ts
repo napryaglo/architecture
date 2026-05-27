@@ -15,6 +15,11 @@ import { Brush, Pen } from '../visual-engine/index.js';
 // Modeled on WPF System.Windows.Controls.Border — the canonical "first
 // useful container" of a WPF-style framework.
 //
+// Margin (outer space) is NOT handled here — Visual's base Measure /
+// Arrange already subtract Margin from the slot and inflate the
+// reported DesiredSize, so any Border (like any other Visual) honours
+// `border.Margin = ...` automatically without code in this file.
+//
 // Layout:
 //   * MeasureOverride shrinks the child's available size by
 //     (BorderThickness + Padding) on each axis, measures the child,

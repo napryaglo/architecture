@@ -1,4 +1,5 @@
-import { APPROXIMATE_TEXT_MEASURER, MetaData, Model } from '../runtime/index.js';
+import { APPROXIMATE_TEXT_MEASURER, MetaData, Model, Size } from '../runtime/index.js';
+import { Rect } from '../runtime/index.js';
 import type { TextMeasurer, Visual, VisualHost } from '../runtime/index.js';
 import type { Brush } from './brush.js';
 
@@ -120,16 +121,135 @@ export abstract class PresentationTarget extends Model implements VisualHost
         value?.['SetTarget'](this);
     }
 
-    // VisualHost hooks — Visuals attached to this PresentationTarget
-    // call these when InvalidateMeasure / InvalidateArrange /
-    // InvalidateVisual fire (which itself happens automatically through
-    // OnPropertyChanged based on MetaData flags, or via explicit
-    // Invalidate* calls). Base no-ops; concrete subclasses override to
-    // push the Visual onto their renderer's per-phase dirty queue.
-    // Wired once SvgRenderer lands (build-order step 12.8).
-    public OnMeasureInvalidated(_visual: Visual): void { /* override in concrete subclasses */ }
-    public OnArrangeInvalidated(_visual: Visual): void { /* override in concrete subclasses */ }
-    public OnRenderInvalidated(_visual: Visual):  void { /* override in concrete subclasses */ }
+    // ------------------------------------------------------------------
+    // Invalidation queue + coalesced flush
+    // ------------------------------------------------------------------
+    //
+    // Visuals attached to this PresentationTarget call OnMeasureInvalidated /
+    // OnArrangeInvalidated / OnRenderInvalidated when their corresponding
+    // InvalidateMeasure / InvalidateArrange / InvalidateVisual fires (either
+    // automatically through OnPropertyChanged + MetaData flags, or via
+    // explicit Invalidate* calls).
+    //
+    // Each notification:
+    //   1. Records the Visual in the matching per-phase Set (deduped).
+    //   2. Schedules a single microtask Flush() if one isn't already pending.
+    //
+    // Flush() runs layout root-down (measure + arrange) on Content. Visual's
+    // own _isMeasureValid / _isArrangeValid caches make untouched subtrees
+    // O(1), so an "everything dirty" pass still costs only what genuinely
+    // changed.
+    //
+    // The render set persists across Flush() — Flush() resolves layout but
+    // doesn't paint (the base has no DrawingContext). A concrete subclass
+    // with a renderer drains renderDirty during its render pass. The
+    // built-in HeadlessTarget consumes it in Render(dc).
+
+    protected readonly measureDirty: Set<Visual> = new Set();
+    protected readonly arrangeDirty: Set<Visual> = new Set();
+    protected readonly renderDirty:  Set<Visual> = new Set();
+    private flushScheduled: boolean = false;
+
+    public OnMeasureInvalidated(visual: Visual): void
+    {
+        this.measureDirty.add(visual);
+        this.scheduleFlush();
+    }
+
+    public OnArrangeInvalidated(visual: Visual): void
+    {
+        this.arrangeDirty.add(visual);
+        this.scheduleFlush();
+    }
+
+    public OnRenderInvalidated(visual: Visual): void
+    {
+        this.renderDirty.add(visual);
+        this.scheduleFlush();
+    }
+
+    // True when measure or arrange has pending work. Cleared by Flush().
+    // Exposed for tests and for renderers that want to skip a frame when
+    // nothing has changed.
+    public get HasPendingLayout(): boolean
+    {
+        return this.measureDirty.size > 0 || this.arrangeDirty.size > 0;
+    }
+
+    // True when render-only invalidations are queued. Not cleared by
+    // Flush() — only a render pass consumes the render set. Exposed so
+    // concrete subclasses can ask "is there paint work?" without
+    // inspecting the Set directly.
+    public get HasPendingRender(): boolean
+    {
+        return this.renderDirty.size > 0;
+    }
+
+    // First invalidation per task queues a microtask that drains. Repeated
+    // invalidations within the same task share that one tick — that's the
+    // whole point of the dirty Sets: coalescing.
+    private scheduleFlush(): void
+    {
+        if (this.flushScheduled) return;
+        this.flushScheduled = true;
+        queueMicrotask(() =>
+        {
+            this.flushScheduled = false;
+            this.Flush();
+        });
+    }
+
+    // Resolves layout for the Content subtree:
+    //   1. Measure Content with the user-set Width / Height, swapping in
+    //      +Infinity on any auto axis so Content reports its natural
+    //      DesiredSize.
+    //   2. Publish the resolved surface size via SetActualSize.
+    //   3. Arrange Content at (0, 0, ActualWidth, ActualHeight).
+    //
+    // Callable explicitly (tests, sync code paths); also runs automatically
+    // on the microtask after any invalidation. Idempotent — Visual's
+    // _isMeasureValid / _isArrangeValid caches short-circuit if nothing
+    // actually changed since the last Flush.
+    //
+    // Render-set state is preserved — a concrete subclass's renderer is
+    // responsible for consuming it during paint.
+    public Flush(): void
+    {
+        const content = this.Content;
+        const autoW = Number.isNaN(this.Width);
+        const autoH = Number.isNaN(this.Height);
+
+        let surfaceW: number;
+        let surfaceH: number;
+
+        if (content !== undefined)
+        {
+            const availW = autoW ? Number.POSITIVE_INFINITY : this.Width;
+            const availH = autoH ? Number.POSITIVE_INFINITY : this.Height;
+            content.Measure(new Size(availW, availH));
+
+            surfaceW = autoW ? content.DesiredSize.Width  : this.Width;
+            surfaceH = autoH ? content.DesiredSize.Height : this.Height;
+        }
+        else
+        {
+            // No content: auto axes have nothing to measure → 0. Fixed
+            // axes keep their value (Background still paints over them
+            // when the subclass renders).
+            surfaceW = autoW ? 0 : this.Width;
+            surfaceH = autoH ? 0 : this.Height;
+        }
+
+        this.SetActualSize(surfaceW, surfaceH);
+
+        if (content !== undefined)
+        {
+            content.Arrange(new Rect(0, 0, surfaceW, surfaceH));
+        }
+
+        this.measureDirty.clear();
+        this.arrangeDirty.clear();
+    }
 
     // Text measurement service exposed via VisualHost. Default is the
     // stateless approximation (no real font metrics); concrete subclasses

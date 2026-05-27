@@ -1,6 +1,5 @@
 import {
     Rect,
-    Size,
     type DrawingContext,
     type Visual,
 } from '../../runtime/index.js';
@@ -30,19 +29,20 @@ export class HeadlessTarget extends PresentationTarget
     }
 
     // Drives one full layout + render pass into the given DC:
-    //   1. Measure Content with the user-set Width / Height, swapping in
-    //      +Infinity on any auto axis so Content reports its natural
-    //      DesiredSize.
-    //   2. Resolve the surface size — auto axes adopt the matching
-    //      Content.DesiredSize component; fixed axes keep their value.
-    //      Result is published via SetActualSize so callers can read
-    //      ActualWidth / ActualHeight after Render returns.
-    //   3. Paint Background (if set) over the resolved surface rect.
-    //   4. Arrange Content at (0, 0, ActualWidth, ActualHeight).
-    //   5. Walk Content's tree depth-first, calling Visual.Render(dc) on
+    //   1. Drain any pending layout invalidations via Flush() — this
+    //      performs the measure pass (Content with auto-axis +Infinity)
+    //      and the arrange pass, and publishes ActualWidth / ActualHeight
+    //      via SetActualSize. On a fresh target with no prior renders,
+    //      Visual's invalid caches drive a full pass; on a re-render
+    //      with no changes, every Visual short-circuits and Flush is
+    //      effectively free.
+    //   2. Paint Background (if set) over the resolved surface rect.
+    //   3. Walk Content's tree depth-first, calling Visual.Render(dc) on
     //      every node. Composition (parent → child) follows the visual
     //      tree's structural classes — Single contributes its `child`,
     //      Panel contributes its `children`.
+    //   4. Drain the render-dirty set — the renderer just painted, so
+    //      any visuals queued for repaint are now satisfied.
     //
     // Child positioning: each child's ArrangedRect.{X,Y} is its top-left
     // in the parent's coordinate space. Before recursing, the walk pushes
@@ -51,46 +51,23 @@ export class HeadlessTarget extends PresentationTarget
     // (0, 0) skip the push/pop entirely.
     public Render(dc: DrawingContext): void
     {
-        const content = this.Content;
-        const autoW = Number.isNaN(this.Width);
-        const autoH = Number.isNaN(this.Height);
+        this.Flush();
 
-        let surfaceW: number;
-        let surfaceH: number;
-
-        if (content !== undefined)
-        {
-            // +Infinity on an auto axis tells the child "no upper bound" —
-            // Visual.Measure clamps it through MinWidth/MaxWidth so
-            // unconstrained naturally collapses to MaxWidth (default
-            // +Infinity) and MeasureOverride returns a finite size based
-            // on content.
-            const availW = autoW ? Number.POSITIVE_INFINITY : this.Width;
-            const availH = autoH ? Number.POSITIVE_INFINITY : this.Height;
-            content.Measure(new Size(availW, availH));
-
-            surfaceW = autoW ? content.DesiredSize.Width  : this.Width;
-            surfaceH = autoH ? content.DesiredSize.Height : this.Height;
-        }
-        else
-        {
-            // No content: auto axes have nothing to measure → 0. Fixed
-            // axes keep their value (Background still gets painted).
-            surfaceW = autoW ? 0 : this.Width;
-            surfaceH = autoH ? 0 : this.Height;
-        }
-
-        this.SetActualSize(surfaceW, surfaceH);
+        const surfaceW = this.ActualWidth;
+        const surfaceH = this.ActualHeight;
 
         if (this.Background !== undefined)
         {
             dc.DrawRectangle(this.Background, undefined, new Rect(0, 0, surfaceW, surfaceH));
         }
 
-        if (content === undefined) return;
+        const content = this.Content;
+        if (content !== undefined)
+        {
+            this.renderTree(content, dc);
+        }
 
-        content.Arrange(new Rect(0, 0, surfaceW, surfaceH));
-        this.renderTree(content, dc);
+        this.renderDirty.clear();
     }
 
     private renderTree(visual: Visual, dc: DrawingContext): void

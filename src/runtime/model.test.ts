@@ -2772,6 +2772,131 @@ describe('Binding pipeline — StringFormat', () => {
     });
 });
 
+// Pins backlog item 3.8: default-mode inference.
+// A property registered with MetaData.BindsTwoWayByDefault flips an
+// install-time binding's mode to TwoWay when the binding was constructed
+// without an explicit mode (WPF parity with
+// FrameworkPropertyMetadataOptions.BindsTwoWayByDefault). Explicit modes
+// are preserved.
+describe('Binding default-mode inference (BindsTwoWayByDefault)', () => {
+    test('an unset mode flips to TwoWay when the target declares BindsTwoWayByDefault', () => {
+        class Source extends Model {}
+        class Target extends Model {}
+        Model.RegisterProperty(Source, 'v', 0, MetaData.None);
+        Model.RegisterProperty(Target, 'x', 0, MetaData.BindsTwoWayByDefault);
+
+        const src = new Source();
+        src.set_property_value('v', 7);
+        const tgt = new Target();
+
+        const b = new Binding(src, 'v'); // no explicit mode
+        tgt.set_property_value('x', b);
+
+        // The reader is wired up.
+        assert.equal(tgt.get_property_value('x'), 7);
+        // Mode was inferred at install time.
+        assert.equal(b.mode, BindingMode.TwoWay);
+        // Writeback through the target now flows to the source.
+        tgt.set_property_value('x', 99);
+        assert.equal(src.get_property_value('v'), 99);
+        assert.equal(tgt.GetValueSource('x'), PropertyValueSource.Binding);
+    });
+
+    test('an unset mode stays OneWay when the target does NOT declare BindsTwoWayByDefault', () => {
+        class Source extends Model {}
+        class Target extends Model {}
+        Model.RegisterProperty(Source, 'v', 0, MetaData.None);
+        Model.RegisterProperty(Target, 'x', 0, MetaData.None);
+
+        const src = new Source();
+        src.set_property_value('v', 7);
+        const tgt = new Target();
+
+        const b = new Binding(src, 'v');
+        tgt.set_property_value('x', b);
+
+        assert.equal(b.mode, BindingMode.OneWay);
+        // Target-side write replaces the OneWay binding as a local value
+        // (existing 3.4 / 3.9 behavior — regression guard).
+        tgt.set_property_value('x', 99);
+        assert.equal(src.get_property_value('v'), 7);
+        assert.equal(tgt.GetValueSource('x'), PropertyValueSource.LocalValue);
+    });
+
+    test('an explicit OneWay overrides BindsTwoWayByDefault — explicit mode always wins', () => {
+        class Source extends Model {}
+        class Target extends Model {}
+        Model.RegisterProperty(Source, 'v', 0, MetaData.None);
+        Model.RegisterProperty(Target, 'x', 0, MetaData.BindsTwoWayByDefault);
+
+        const src = new Source();
+        src.set_property_value('v', 7);
+        const tgt = new Target();
+
+        const b = new Binding(src, 'v', BindingMode.OneWay);
+        tgt.set_property_value('x', b);
+
+        assert.equal(b.mode, BindingMode.OneWay);
+        tgt.set_property_value('x', 99);
+        assert.equal(src.get_property_value('v'), 7);
+    });
+
+    test('an explicit TwoWay is preserved when the target does NOT declare BindsTwoWayByDefault', () => {
+        class Source extends Model {}
+        class Target extends Model {}
+        Model.RegisterProperty(Source, 'v', 0, MetaData.None);
+        Model.RegisterProperty(Target, 'x', 0, MetaData.None);
+
+        const src = new Source();
+        src.set_property_value('v', 7);
+        const tgt = new Target();
+
+        const b = new Binding(src, 'v', BindingMode.TwoWay);
+        tgt.set_property_value('x', b);
+
+        assert.equal(b.mode, BindingMode.TwoWay);
+        tgt.set_property_value('x', 99);
+        assert.equal(src.get_property_value('v'), 99);
+    });
+
+    test('mode is OneWay before install (only the install path consults the descriptor)', () => {
+        // The Binding constructor doesn't know its eventual target, so
+        // the inferred-default cannot apply at construction time. It
+        // must remain the constructor's fallback (OneWay) until install.
+        class Source extends Model {}
+        Model.RegisterProperty(Source, 'v', 0, MetaData.None);
+        const src = new Source();
+
+        const b = new Binding(src, 'v');
+        assert.equal(b.mode, BindingMode.OneWay);
+    });
+
+    test('BindsTwoWayByDefault composes with other MetaData flags', () => {
+        // Pin that the new flag occupies its own bit and doesn't collide
+        // with the existing Measure / Render / Inherits / Arrange ones.
+        class Source extends Model {}
+        class Target extends Model {}
+        Model.RegisterProperty(Source, 'v', 0, MetaData.None);
+        Model.RegisterProperty(
+            Target,
+            'x',
+            0,
+            MetaData.Render | MetaData.BindsTwoWayByDefault,
+        );
+
+        const src = new Source();
+        src.set_property_value('v', 7);
+        const tgt = new Target();
+
+        const b = new Binding(src, 'v');
+        tgt.set_property_value('x', b);
+
+        assert.equal(b.mode, BindingMode.TwoWay);
+        tgt.set_property_value('x', 99);
+        assert.equal(src.get_property_value('v'), 99);
+    });
+});
+
 // Test-side helpers + stub host for the VisualHost back-pointer tests.
 // Visual's `target` getter and `SetTarget` mutator are both protected;
 // these reach in via bracket access — same pattern the production code

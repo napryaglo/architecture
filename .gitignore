@@ -4,5 +4,5 @@ dist/
 .env
 .DS_Store
 
-# `ge` demo output — written to repo root by `npm run ge`.
-/ge.svg
+# Local verdaccio publish token (recreate locally; never commit).
+.npmrc

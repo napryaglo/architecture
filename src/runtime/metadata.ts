@@ -4,11 +4,12 @@
 // FrameworkPropertyMetadataOptions.
 export enum MetaData
 {
-    None     = 0,
-    Measure  = 1 << 0,
-    Arrange  = 1 << 1,
-    Render   = 1 << 2,
-    Inherits = 1 << 3,
+    None                 = 0,
+    Measure              = 1 << 0,
+    Arrange              = 1 << 1,
+    Render               = 1 << 2,
+    Inherits             = 1 << 3,
+    BindsTwoWayByDefault = 1 << 4,
 }
 
 export function affectsMeasure(meta: MetaData): boolean
@@ -29,4 +30,9 @@ export function affectsRender(meta: MetaData): boolean
 export function inherits(meta: MetaData): boolean
 {
     return (meta & MetaData.Inherits) !== 0;
+}
+
+export function bindsTwoWayByDefault(meta: MetaData): boolean
+{
+    return (meta & MetaData.BindsTwoWayByDefault) !== 0;
 }

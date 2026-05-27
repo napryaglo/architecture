@@ -352,6 +352,12 @@ export class EffectiveValueDescriptor
 
         if (val instanceof Binding)
         {
+            // Resolve default mode against the target property's metadata
+            // BEFORE any reads of binding.mode (push-callback handler below
+            // and any subsequent writeback). Bindings without an explicit
+            // mode pick up TwoWay when the target declares
+            // BindsTwoWayByDefault; explicit modes are preserved.
+            val.ResolveDefaultMode(this.property_descriptor);
             this.source = PropertyValueSource.Binding;
             this.binding_value = val;
             // Push-style propagation: when the path's resolved value

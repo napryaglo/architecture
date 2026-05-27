@@ -6,6 +6,7 @@ export {
     affectsArrange,
     affectsRender,
     inherits,
+    bindsTwoWayByDefault,
 } from './metadata.js';
 export {
     PropertyDescriptor,

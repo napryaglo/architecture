@@ -1,5 +1,7 @@
 import type { PropertyChangeCallback } from './effective-value.js';
+import { bindsTwoWayByDefault } from './metadata.js';
 import { Model } from './model.js';
+import type { PropertyDescriptor } from './property-descriptor.js';
 
 // Internal: one parsed segment of a property path. Tracks the Model the
 // segment is currently bound to so listeners can be detached on rebind.
@@ -378,7 +380,11 @@ export class Binding
 {
     private readonly source: any;
     private readonly path: PropertyPath;
-    readonly mode: BindingMode;
+    // Backing storage for `mode`. Not readonly because ResolveDefaultMode
+    // may flip an unset mode to TwoWay when the target property's metadata
+    // declares BindsTwoWayByDefault.
+    private resolvedMode: BindingMode;
+    private readonly modeExplicit: boolean;
 
     private readonly converter: ValueConverter | undefined;
     private readonly hasFallback: boolean;
@@ -389,13 +395,14 @@ export class Binding
     constructor(
         source: Model,
         path: string,
-        mode: BindingMode = BindingMode.OneWay,
+        mode?: BindingMode,
         opts?: BindingOptions,
     )
     {
         this.source = source;
         this.path = new PropertyPath(source, path);
-        this.mode = mode;
+        this.resolvedMode = mode ?? BindingMode.OneWay;
+        this.modeExplicit = mode !== undefined;
 
         // Compose converter + stringFormat into a single converter.
         if (opts?.stringFormat !== undefined)
@@ -419,6 +426,25 @@ export class Binding
         this.fallbackValue = opts?.fallbackValue;
         this.hasTargetNull = opts !== undefined && 'targetNullValue' in opts;
         this.targetNullValue = opts?.targetNullValue;
+    }
+
+    public get mode(): BindingMode
+    {
+        return this.resolvedMode;
+    }
+
+    // Called by EffectiveValueDescriptor at install time. If the binding
+    // was constructed without an explicit mode and the target property's
+    // metadata declares BindsTwoWayByDefault, the mode flips to TwoWay
+    // (WPF's FrameworkPropertyMetadataOptions.BindsTwoWayByDefault
+    // behavior). An explicitly-supplied mode is preserved.
+    ResolveDefaultMode(descriptor: PropertyDescriptor): void
+    {
+        if (this.modeExplicit) return;
+        if (bindsTwoWayByDefault(descriptor.MetaData))
+        {
+            this.resolvedMode = BindingMode.TwoWay;
+        }
     }
 
     // Source → target transformation: converter, then stringFormat

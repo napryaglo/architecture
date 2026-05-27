@@ -2,7 +2,7 @@
 
 Gaps in the property/binding system compared to WPF. Ordered from biggest functional gaps down to nice-to-haves.
 
-**Status:** 19 of the original 26 backlog items are done. The property/binding/inheritance system is functionally feature-complete for WPF parity. The remaining work splits between small correctness items (7.1) and bigger framework pieces (collection-change notification, layout/render pipeline, concrete controls). Test suite: 158 tests passing.
+**Status:** 21 of 25 backlog items are done (5.3 `Dispatcher` / thread affinity dropped — N/A for single-threaded JS). The property/binding/inheritance system is functionally feature-complete for WPF parity, and the layout/render pipeline skeleton (Visual lifecycle + PresentationTarget dirty queue + coalesced flush) is now in place. The remaining work splits between small correctness items (7.1) and bigger framework pieces (collection-change notification, concrete controls). Test suite: 497 tests passing.
 
 ## 1. Value resolution (`EffectiveValueDescriptor` / `Model`)
 
@@ -46,7 +46,7 @@ Gaps in the property/binding system compared to WPF. Ordered from biggest functi
 
 3.7. **No `RelativeSource` / `ElementName`.** Bindings always take a literal `source` object, no way to express "ancestor of type X" or "named element Y".
 
-3.8. **No default-mode inference.** WPF reads `FrameworkPropertyMetadata.BindsTwoWayByDefault`; here mode defaults to OneWay regardless of the target property's metadata.
+3.8. ~~**No default-mode inference.**~~ ✅ Done. `MetaData` gained a `BindsTwoWayByDefault` flag (with a matching `bindsTwoWayByDefault(meta)` predicate, exported from the barrel). `Binding`'s `mode` constructor argument is now optional and tracked as explicit-vs-default internally; on install, `EffectiveValueDescriptor.set value` calls `binding.ResolveDefaultMode(this.property_descriptor)` BEFORE any read of `binding.mode` (push-callback wiring, subsequent writeback). When the binding was constructed without an explicit mode and the target's metadata declares `BindsTwoWayByDefault`, the mode flips to `TwoWay`; explicit modes (including an explicit `OneWay`) always win — matches WPF's `FrameworkPropertyMetadataOptions.BindsTwoWayByDefault` precedence. Resolution happens at install time rather than in the constructor because the constructor doesn't know its eventual target. Pinned by 6 tests in the "Binding default-mode inference (BindsTwoWayByDefault)" suite.
 
 3.9. ~~**Binding.set_value is the only writeback path.**~~ ✅ Done as part of 3.4 — target-side `set_property_value` on a property holding a TwoWay/OneWayToSource binding now writes through to the source instead of replacing the binding.
 
@@ -66,9 +66,7 @@ Gaps in the property/binding system compared to WPF. Ordered from biggest functi
 
 5.2. **No `Freezable` / immutability.** Useful for shareable value-type-like Models (Brushes, Geometries).
 
-5.3. **No `Dispatcher` / thread affinity.** WPF DOs are thread-affine; here Models can be touched from anywhere.
-
-5.4. **No layout / render pipeline.** `Visual.MarkMeasureDirty` / `MarkArrangeDirty` / `MarkRenderDirty` are no-op stubs. `Visual`'s `OnPropertyChanged` override fires them on every effective-value change of a Visual's property, but nothing consumes those calls. A real layout pass (measure → arrange) and render queue need to be built. Tree primitives are in place: `Visual` carries the parent link via `Attach`/`Detach`; `Single` (one-child slot) and `Panel` (children collection) extend `Visual` with the structural API.
+5.4. ~~**No layout / render pipeline.**~~ ✅ Done (skeleton). Per-Visual lifecycle (`Measure` / `Arrange` / `Render` + `MeasureOverride` / `ArrangeOverride` / `RenderOverride`), invalidation (`InvalidateMeasure` / `InvalidateArrange` / `InvalidateVisual`) with parent-walk cascade, the `VisualHost` interface, and concrete `PresentationTarget` / `HeadlessTarget` / `SvgDrawingContext` are all in place. The remaining piece — the host-side dirty queue + coalesced flush — was added by 7.3: `PresentationTarget` carries three `Set<Visual>` dirty queues (measure / arrange / render), invalidations populate them and `queueMicrotask`-schedule a single coalesced `Flush()` per task, and `HeadlessTarget.Render(dc)` drains layout via `Flush()` then walks the tree and clears the render set. Future refinements (granular subtree re-render, partial repaint, `requestAnimationFrame` scheduling on a future `HtmlTarget`) layer on top without disturbing the skeleton.
 
 5.5. **No concrete control / panel primitives.** No `Border`, `Grid`, `StackPanel`, `Button`, `TextBlock`, etc. The framework currently has only the abstract building blocks (`Model`, `Visual`, `Single`, `Panel`) and the property/binding system. Probably the next major chunk of work once the layout/render pipeline (5.4) exists.
 
@@ -88,9 +86,9 @@ Most of the original priority list is done. What's left, ordered by impact-per-e
 
 7.2. **`INotifyCollectionChanged` integration.** (Closes 2.4.) Required for collection bindings (Items / ItemSource patterns). Arrays in paths (`managers[2]`) don't notify when elements are added/removed/replaced. Bigger lift — needs an `ObservableArray` or `Proxy`-based wrapper plus `PropertyPath` integration. ~80 lines + meaningful tests.
 
-7.3. **Layout / render pipeline (skeleton).** (Closes part of 5.4.) Even a no-op-but-traceable measure pass would let `MarkMeasureDirty` etc. become real. Probably the biggest unblock for moving the project forward — currently nothing visible can happen even though the property system is fully wired.
+7.3. ~~**Layout / render pipeline (skeleton).**~~ ✅ Done. `PresentationTarget` gained per-phase dirty `Set<Visual>` queues (`measureDirty` / `arrangeDirty` / `renderDirty`), populated by the now-real `OnMeasureInvalidated` / `OnArrangeInvalidated` / `OnRenderInvalidated` hooks. The first invalidation per task schedules a single `queueMicrotask` that drains via `Flush()`, so N property mutations in one task coalesce into one layout pass. `Flush()` runs measure + arrange root-down (Visual's own `_isMeasureValid` / `_isArrangeValid` caches make untouched subtrees O(1)), publishes the resolved surface size via `SetActualSize`, and clears the layout sets. The render set persists across `Flush()` — only an actual render pass drains it. `HeadlessTarget.Render(dc)` was rewritten to call `Flush()` first (factoring the measure/arrange computation out of its previous one-shot body), then paint background + walk the tree, then clear `renderDirty`. Public `HasPendingLayout` / `HasPendingRender` getters are exposed for tests and for renderers that want to skip frames. Pinned by 15 tests in `presentation-target.test.ts` covering queue population, dedupe, multi-flag fan-out, microtask coalescing, explicit-vs-auto flush, layout-only drain semantics, and the rewritten `Render(dc)` flow.
 
-7.4. **Concrete control / panel primitives.** (Closes 5.5.) Builds on 7.3 — once the layout pipeline runs, populate `Border`, `Grid`, `StackPanel`, `Button`, `TextBlock`, etc.
+7.4. **Concrete control / panel primitives.** (Closes 5.5.) Builds on 7.3 — populate `Border`, `Grid`, `StackPanel`, `Button`, `TextBlock`, etc.
 
 ### Smaller wins that have no dependencies
 
@@ -99,7 +97,6 @@ These each take an hour or two and round out the WPF parity:
 - **3.5 `ValidationRules`** — value rejection at the binding boundary.
 - **3.6 `MultiBinding`** — combine multiple source paths into one resolved value.
 - **3.7 `RelativeSource` / `ElementName`** — named-element registry + ancestor lookup.
-- **3.8 default-mode inference** — add `BindsTwoWayByDefault` to `PropertyMetadata`; `Binding` constructor consults the descriptor when mode isn't supplied.
 - **4.2 `ValidateValueCallback`** — boolean-returning hook in `PropertyMetadata`. Tiny.
 - **1.2 Animated value slot** — only meaningful once an animation engine exists.
 
@@ -119,6 +116,8 @@ These each take an hour or two and round out the WPF parity:
 - ~~`FallbackValue` / `TargetNullValue` (3.2)~~
 - ~~`StringFormat` (3.3)~~
 - ~~Target-side TwoWay writeback (3.4 / 3.9)~~
+- ~~Default-mode inference via `BindsTwoWayByDefault` (3.8)~~
+- ~~Layout / render pipeline skeleton — dirty queue + microtask flush (5.4 / 7.3)~~
 
 ## 8. Architectural notes (for orientation)
 
