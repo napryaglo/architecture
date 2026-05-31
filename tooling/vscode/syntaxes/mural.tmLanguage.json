@@ -1,0 +1,190 @@
+{
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "name": "mural",
+    "scopeName": "source.mural",
+    "fileTypes": ["mu"],
+    "patterns": [
+        { "include": "#comments" },
+        { "include": "#strings" },
+        { "include": "#inline-expression" },
+        { "include": "#keywords" },
+        { "include": "#scope-extensions" },
+        { "include": "#dynamic-resource" },
+        { "include": "#static-resource" },
+        { "include": "#template-binding" },
+        { "include": "#data-binding" },
+        { "include": "#hex-color" },
+        { "include": "#named-color-or-hole" },
+        { "include": "#numbers" },
+        { "include": "#attached-property" },
+        { "include": "#property-assign" },
+        { "include": "#element-call" },
+        { "include": "#identifier" },
+        { "include": "#punctuation" }
+    ],
+    "repository": {
+        "comments": {
+            "patterns": [
+                {
+                    "name": "comment.line.double-slash.mural",
+                    "match": "//.*$"
+                },
+                {
+                    "name": "comment.block.mural",
+                    "begin": "/\\*",
+                    "end": "\\*/"
+                }
+            ]
+        },
+        "strings": {
+            "name": "string.quoted.double.mural",
+            "begin": "\"",
+            "end": "\"",
+            "patterns": [
+                {
+                    "name": "constant.character.escape.mural",
+                    "match": "\\\\."
+                }
+            ]
+        },
+        "inline-expression": {
+            "name": "meta.embedded.expression.mural",
+            "begin": "\\{\\{",
+            "beginCaptures": {
+                "0": { "name": "punctuation.section.expression.begin.mural" }
+            },
+            "end": "\\}\\}",
+            "endCaptures": {
+                "0": { "name": "punctuation.section.expression.end.mural" }
+            },
+            "patterns": [
+                {
+                    "name": "string.quoted.double.mural",
+                    "begin": "\"",
+                    "end": "\"",
+                    "patterns": [
+                        { "name": "constant.character.escape.mural", "match": "\\\\." }
+                    ]
+                },
+                {
+                    "name": "string.quoted.single.mural",
+                    "begin": "'",
+                    "end": "'",
+                    "patterns": [
+                        { "name": "constant.character.escape.mural", "match": "\\\\." }
+                    ]
+                },
+                {
+                    "name": "variable.other.data-binding.mural",
+                    "match": "\\$[A-Za-z_][A-Za-z0-9_.]*"
+                },
+                {
+                    "name": "constant.numeric.mural",
+                    "match": "-?\\d+(\\.\\d+)?"
+                },
+                {
+                    "name": "support.class.builtin.mural",
+                    "match": "\\b(Math|String|Number|NaN|Infinity)\\b"
+                },
+                {
+                    "name": "constant.language.mural",
+                    "match": "\\b(true|false|null|undefined)\\b"
+                }
+            ]
+        },
+        "keywords": {
+            "patterns": [
+                {
+                    "name": "keyword.control.mural",
+                    "match": "\\b(style|template|datatemplate|def|resources|import|from|when)\\b"
+                },
+                {
+                    "name": "keyword.operator.logical.mural",
+                    "match": "\\b(not|and|or)\\b"
+                },
+                {
+                    "name": "storage.modifier.mural",
+                    "match": "\\b(targettype|datatype)\\b"
+                },
+                {
+                    "name": "support.class.application.mural",
+                    "match": "\\bApplication\\b"
+                }
+            ]
+        },
+        "scope-extensions": {
+            "name": "entity.other.attribute-name.scope.mural",
+            "match": "\\bx:[A-Za-z][A-Za-z0-9]*"
+        },
+        "dynamic-resource": {
+            "name": "variable.other.dynamic-resource.mural",
+            "match": "@@[A-Za-z_][A-Za-z0-9_:.-]*"
+        },
+        "static-resource": {
+            "name": "variable.other.static-resource.mural",
+            "match": "@[A-Za-z_][A-Za-z0-9_:.-]*"
+        },
+        "template-binding": {
+            "name": "variable.other.template-binding.mural",
+            "match": "\\$\\$[A-Za-z_][A-Za-z0-9_.]*"
+        },
+        "data-binding": {
+            "name": "variable.other.data-binding.mural",
+            "match": "\\$[A-Za-z_][A-Za-z0-9_.]*"
+        },
+        "hex-color": {
+            "name": "constant.other.color.hex.mural",
+            "match": "#[0-9a-fA-F]{3,8}(?![A-Za-z0-9_])"
+        },
+        "named-color-or-hole": {
+            "name": "constant.other.color.named.mural",
+            "match": "#[A-Za-z_][A-Za-z0-9_]*"
+        },
+        "numbers": {
+            "name": "constant.numeric.mural",
+            "match": "(?<![A-Za-z_])-?\\d+(\\.\\d+)?\\b"
+        },
+        "attached-property": {
+            "match": "\\b([A-Z][A-Za-z0-9]*)\\.([A-Z][A-Za-z0-9]*)\\b",
+            "captures": {
+                "1": { "name": "support.class.element.mural" },
+                "2": { "name": "variable.other.property.attached.mural" }
+            }
+        },
+        "property-assign": {
+            "match": "\\b([A-Z][A-Za-z0-9]*)\\s*(?==)",
+            "captures": {
+                "1": { "name": "variable.other.property.mural" }
+            }
+        },
+        "element-call": {
+            "match": "\\b([A-Z][A-Za-z0-9]*)\\s*(?=[\\[\\{])",
+            "captures": {
+                "1": { "name": "support.class.element.mural" }
+            }
+        },
+        "identifier": {
+            "patterns": [
+                {
+                    "name": "support.class.element.mural",
+                    "match": "\\b[A-Z][A-Za-z0-9]*\\b"
+                },
+                {
+                    "name": "variable.other.mural",
+                    "match": "\\b[a-z_][A-Za-z0-9_]*\\b"
+                }
+            ]
+        },
+        "punctuation": {
+            "patterns": [
+                { "name": "punctuation.section.body.begin.mural",  "match": "\\{" },
+                { "name": "punctuation.section.body.end.mural",    "match": "\\}" },
+                { "name": "punctuation.section.attrs.begin.mural", "match": "\\[" },
+                { "name": "punctuation.section.attrs.end.mural",   "match": "\\]" },
+                { "name": "punctuation.separator.comma.mural",     "match": "," },
+                { "name": "keyword.operator.assignment.mural",     "match": "=" },
+                { "name": "punctuation.separator.colon.mural",     "match": ":" }
+            ]
+        }
+    }
+}

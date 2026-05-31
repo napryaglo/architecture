@@ -1,0 +1,78 @@
+{
+  "name": "mural-vscode",
+  "displayName": "µ-mural language support",
+  "description": "Syntax highlighting and IntelliSense for the µ-mural markup language.",
+  "version": "0.1.0",
+  "publisher": "visualisation-sub",
+  "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url":  "https://github.com/napryaglo/mural.git",
+    "directory": "tooling/vscode"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "mural",
+        "aliases": [
+          "mural",
+          "µ-mural"
+        ],
+        "extensions": [
+          ".mu"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "mural",
+        "scopeName": "source.mural",
+        "path": "./syntaxes/mural.tmLanguage.json"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "mural",
+      "properties": {
+        "mural.maxDiagnostics": {
+          "type": "number",
+          "default": 100,
+          "description": "Maximum number of diagnostics reported per file."
+        },
+        "mural.trace.server": {
+          "type": "string",
+          "enum": ["off", "messages", "verbose"],
+          "default": "off",
+          "description": "Trace LSP messages between client and server."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc -p ./ --noEmit",
+    "bundle":    "node esbuild.config.mjs",
+    "build":     "npm run typecheck && npm run bundle",
+    "watch":     "node esbuild.config.mjs --watch",
+    "vscode:prepublish": "npm run build"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/vscode": "^1.85.0",
+    "@visualisation-sub/mural": "file:../..",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.7.0",
+    "vscode-languageclient": "^9.0.1",
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageserver-textdocument": "^1.0.11"
+  }
+}
