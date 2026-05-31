@@ -42,6 +42,7 @@ export {
 export { Application, type MountableTarget } from './application.js';
 export { DynamicResource } from './dynamic-resource.js';
 export { DataContextBinding } from './data-context-binding.js';
+export { MultiBinding } from './multi-binding.js';
 export { TemplateBinding } from './template-binding.js';
 export {
     Style,

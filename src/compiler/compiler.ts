@@ -7,10 +7,12 @@ import type {
     Document,
     ElementNode,
     IdentValue,
+    InlineExprValue,
     KeyValueResource,
     PropertySetter,
     ResourceForm,
     SlotAssign,
+    StringBody,
     StructuredBody,
     TriggerExpr,
     TriggerGroup,
@@ -18,6 +20,33 @@ import type {
     ValueNode,
     XAttr,
 } from './ast.js';
+import {
+    lowerInlineExpr,
+    lowerInlineExprWithPaths,
+    InlineExprError,
+} from './inline-expr.js';
+
+// Format a JS value as a literal expression string for emission. JSON
+// covers numbers, strings, booleans, null, arrays, and plain objects;
+// the special-cases below handle the few values JSON.stringify
+// mis-renders (or refuses to round-trip).
+function formatJsLiteral(value: unknown, span: SourceSpan): string
+{
+    if (value === undefined)               return 'undefined';
+    if (typeof value === 'number')
+    {
+        if (Number.isNaN(value))           return 'NaN';
+        if (value === Infinity)            return 'Infinity';
+        if (value === -Infinity)           return '-Infinity';
+    }
+    try { return JSON.stringify(value); }
+    catch
+    {
+        throw new EmitError(
+            `inline expression evaluated to a non-serialisable value of type ${typeof value}`,
+            span);
+    }
+}
 // Local shape — a flattened disjunct from `flattenOr()`. Reduces a
 // TriggerOr / TriggerTerm tree into a list of (property, value, negated)
 // records, each emitted as its own PropertyTrigger sharing the setter
@@ -624,11 +653,24 @@ export class Compiler
                     `${elem.name} cannot receive a text body`,
                     elem.body.span);
             }
-            const text = elem.body.chunks
-                .map(c => c.kind === 'text-chunk' ? c.text : '')
-                .join('');
-            this.line(
-                `${v}.set_property_value(${JSON.stringify(slot.name)}, ${JSON.stringify(text)});`);
+            // Text-only body emits a plain string literal; a body that
+            // mixes text with `{{ … }}` chunks falls through to the
+            // shared lowering so the converter sees both sides.
+            const hasInlineExpr = elem.body.chunks.some(c => c.kind === 'inline-expr');
+            if (!hasInlineExpr)
+            {
+                const text = elem.body.chunks
+                    .map(c => c.kind === 'text-chunk' ? c.text : '')
+                    .join('');
+                this.line(
+                    `${v}.set_property_value(${JSON.stringify(slot.name)}, ${JSON.stringify(text)});`);
+            }
+            else
+            {
+                const expr = this.compileMixedTextBody(elem.body, { targetExpr: v });
+                this.line(
+                    `${v}.set_property_value(${JSON.stringify(slot.name)}, ${expr});`);
+            }
         }
         return v;
     }
@@ -1059,7 +1101,7 @@ export class Compiler
             case 'macro-hole':
                 throw new EmitError('macros are not supported in v0', val.span);
             case 'inline-expr':
-                throw new EmitError('inline expressions are not supported in v0', val.span);
+                return this.compileInlineExpr(val, ctx);
             case 'flag':
                 throw new EmitError(
                     'flag value used outside an x:* attribute', val.span);
@@ -1127,6 +1169,101 @@ export class Compiler
         throw new EmitError(
             `tuple of ${exprs.length} values has no Thickness shape (1, 2, or 4 expected)`,
             tuple.span);
+    }
+
+    // `{{ … }}` lowering. Constant body folds to a literal; reactive
+    // body lowers to MultiBinding. In a Style setter context where the
+    // target instance isn't yet known, the reactive form wraps in a
+    // SetterFactory so each Style application gets its own per-target
+    // binding (same pattern as the binding / dynamic-resource cases).
+    private compileInlineExpr(val: InlineExprValue, ctx: ValueCtx): string
+    {
+        let result;
+        try { result = lowerInlineExpr(val.raw, val.span); }
+        catch (e)
+        {
+            if (e instanceof InlineExprError)
+            {
+                throw new EmitError(e.message, val.span);
+            }
+            throw e;
+        }
+        if (result.kind === 'constant')
+        {
+            return formatJsLiteral(result.value, val.span);
+        }
+        this.ensureImport('MultiBinding');
+        const paths = JSON.stringify(result.paths);
+        const params = result.paths.map((_, i) => `_p${i}`).join(', ');
+        const converter = `(${params}) => (${result.body})`;
+        if (ctx.targetExpr !== undefined)
+        {
+            return `MultiBinding(${ctx.targetExpr}, ${paths}, ${converter})`;
+        }
+        this.ensureImport('SetterFactory');
+        return `new SetterFactory((_t) => MultiBinding(_t, ${paths}, ${converter}))`;
+    }
+
+    // Lower a text-mode body that contains at least one `{{ … }}` chunk.
+    // All text chunks become string literals; constant-foldable
+    // expression chunks become their folded value coerced to a string;
+    // reactive expression chunks contribute their binding paths to a
+    // shared map, and the merged converter body interleaves text +
+    // expression results. Returns the emitter-ready value expression
+    // (a plain string literal when everything folds, otherwise a
+    // MultiBinding / SetterFactory call).
+    private compileMixedTextBody(body: StringBody, ctx: ValueCtx): string
+    {
+        const sharedPaths = new Map<string, string>();
+        const parts:        string[] = [];          // JS source fragments to concat
+        const constantParts: string[] = [];          // for the all-constant fast path
+        let allConstant = true;
+        for (const chunk of body.chunks)
+        {
+            if (chunk.kind === 'text-chunk')
+            {
+                parts.push(JSON.stringify(chunk.text));
+                constantParts.push(chunk.text);
+                continue;
+            }
+            let result;
+            try { result = lowerInlineExprWithPaths(chunk.raw, chunk.span, sharedPaths); }
+            catch (e)
+            {
+                if (e instanceof InlineExprError)
+                {
+                    throw new EmitError(e.message, chunk.span);
+                }
+                throw e;
+            }
+            if (result.kind === 'constant')
+            {
+                const str = result.value === undefined || result.value === null
+                    ? ''
+                    : String(result.value);
+                parts.push(JSON.stringify(str));
+                constantParts.push(str);
+                continue;
+            }
+            allConstant = false;
+            // Coerce to string at conversion time so number / boolean /
+            // null values join cleanly with the surrounding text.
+            parts.push(`String(${result.body})`);
+        }
+        if (allConstant)
+        {
+            return JSON.stringify(constantParts.join(''));
+        }
+        this.ensureImport('MultiBinding');
+        const paths = JSON.stringify([...sharedPaths.keys()]);
+        const params = [...sharedPaths.values()].join(', ');
+        const converter = `(${params}) => (${parts.join(' + ')})`;
+        if (ctx.targetExpr !== undefined)
+        {
+            return `MultiBinding(${ctx.targetExpr}, ${paths}, ${converter})`;
+        }
+        this.ensureImport('SetterFactory');
+        return `new SetterFactory((_t) => MultiBinding(_t, ${paths}, ${converter}))`;
     }
 
     // ── Helpers ────────────────────────────────────────────────────

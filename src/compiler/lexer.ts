@@ -53,6 +53,11 @@ export class Lexer
         const c2    = this.source[this.pos + 1];
 
         // ── Multi-char sigils ──
+        // `{{` opens an inline expression; the matching `}}` is consumed
+        // inside NextInlineExprBody, never as two separate tokens here.
+        // The recogniser is contiguous-only (no whitespace tolerance)
+        // so `Border { { … } }` still lexes as two LBrace.
+        if (c === '{' && c2 === '{') return this.consumeFixed(TokenKind.LDoubleBrace, 2, start);
         if (c === '$' && c2 === '$') return this.consumeFixed(TokenKind.DollarDollar, 2, start);
         if (c === '$' && c2 === '(') return this.consumeFixed(TokenKind.DollarParen,  2, start);
         if (c === ')' && c2 === '$') return this.consumeFixed(TokenKind.ParenDollar,  2, start);
@@ -105,15 +110,19 @@ export class Lexer
     }
 
     // Text mode. Called by the parser while inside a string-typed body.
-    // Emits a TextRun for each literal run between the cursor and the
-    // next `}` (or EOF), with backslash escapes resolved. Emits RBrace
-    // when the closing brace is reached without consuming it — the
-    // parser advances past it with NextToken() to continue structural
-    // mode.
+    // Returns:
+    //   * RBrace      — peek-only; the closing `}` of the text body.
+    //                   The parser leaves it for NextToken to consume.
+    //   * LDoubleBrace — consumed; signals an inline expression starts
+    //                   here. The parser follows up with NextInlineExprBody
+    //                   to capture the raw body up to the matching `}}`,
+    //                   then loops back into NextTextChunk for the tail.
+    //   * TextRun     — a literal run of body text with backslash escapes
+    //                   resolved. Stops at `}`, at `{{`, or at EOF.
     //
-    // Note: we don't yet recognise `$Path` / `@Key` / `#color` sigils
-    // mid-text. That's a spec-supported extension; deferred until the
-    // first consumer asks for it.
+    // `$Path` / `@Key` / `#color` interpolation mid-text is intentionally
+    // not recognised — text-mode literals stay literal. Reactive values
+    // belong inside `{{ … }}`.
     public NextTextChunk(): Token
     {
         if (this.pos >= this.length) return this.makeEofToken();
@@ -131,12 +140,17 @@ export class Lexer
                 span:  { start, end: start },
             };
         }
+        if (c === '{' && this.source[this.pos + 1] === '{')
+        {
+            return this.consumeFixed(TokenKind.LDoubleBrace, 2, start);
+        }
 
         let out = '';
         while (this.pos < this.length)
         {
             const ch = this.source[this.pos]!;
             if (ch === '}') break;
+            if (ch === '{' && this.source[this.pos + 1] === '{') break;
             if (ch === '\\')
             {
                 // Backslash escape — next char is taken literally.
@@ -153,6 +167,83 @@ export class Lexer
         }
         return {
             kind:  TokenKind.TextRun,
+            value: out,
+            span:  { start, end: this.location() },
+        };
+    }
+
+    // Inline-expression body capture. Called by the parser after
+    // consuming `{{` — scans forward to the matching `}}`, returns the
+    // raw text in between (delimiters excluded), and leaves the cursor
+    // PAST the closing `}}`.
+    //
+    // Brace nesting + quoted strings are tracked so an expression can
+    // contain object literals (`{a: 1}`) and string literals (`"hi }}"`)
+    // without the lexer prematurely closing. Only the `}}` at depth 0,
+    // outside any string, ends the body.
+    //
+    // Errors out at EOF with an unterminated-expression diagnostic; the
+    // returned token's span covers what we managed to scan.
+    public NextInlineExprBody(): Token
+    {
+        const start = this.location();
+        let depth = 0;
+        let out = '';
+        while (this.pos < this.length)
+        {
+            const ch  = this.source[this.pos]!;
+            const ch2 = this.source[this.pos + 1];
+
+            if (depth === 0 && ch === '}' && ch2 === '}')
+            {
+                this.advance(); this.advance();
+                return {
+                    kind:  TokenKind.InlineExprBody,
+                    value: out,
+                    span:  { start, end: this.location() },
+                };
+            }
+
+            if (ch === '"' || ch === "'")
+            {
+                out += ch;
+                const quote = ch;
+                this.advance();
+                while (this.pos < this.length && this.source[this.pos] !== quote)
+                {
+                    const sc = this.source[this.pos]!;
+                    if (sc === '\\')
+                    {
+                        out += sc;
+                        this.advance();
+                        if (this.pos < this.length)
+                        {
+                            out += this.source[this.pos]!;
+                            this.advance();
+                        }
+                    }
+                    else
+                    {
+                        out += sc;
+                        this.advance();
+                    }
+                }
+                if (this.pos < this.length)
+                {
+                    out += this.source[this.pos]!;   // closing quote
+                    this.advance();
+                }
+                continue;
+            }
+
+            if (ch === '{') depth++;
+            else if (ch === '}' && depth > 0) depth--;
+
+            out += ch;
+            this.advance();
+        }
+        return {
+            kind:  TokenKind.InlineExprBody,
             value: out,
             span:  { start, end: this.location() },
         };

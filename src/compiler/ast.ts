@@ -81,14 +81,19 @@ export interface XAttr
 export type BodyNode = StringBody | StructuredBody;
 
 // Text-mode body — only for string-typed slots (e.g. TextBlock.Text).
-// `chunks` holds either literal text or sigil-interpolated values; for
-// v0 only TextChunk appears.
+// `chunks` is a mixed sequence of literal text runs and inline-expression
+// holes (`{{ … }}`). When every chunk is text the compiler lowers to a
+// plain string; when an `InlineExprValue` chunk is present the slot
+// becomes a computed binding (constant-folded if the expression has no
+// reactive references, MultiBinding otherwise).
 export interface StringBody
 {
     kind:   'string-body';
-    chunks: TextChunk[];
+    chunks: StringBodyChunk[];
     span:   SourceSpan;
 }
+
+export type StringBodyChunk = TextChunk | InlineExprValue;
 
 export interface TextChunk
 {

@@ -13,6 +13,14 @@ export {
     type SourceSpan,
     KEYWORDS,
 } from './tokens.js';
+export {
+    DEFAULT_SYMBOLS,
+    ENUM_CLASSES,
+    TYPE_REF_META_ATTRS,
+    DEFAULT_SLOT_INFO,
+    type SymbolMap,
+    type SlotInfo,
+} from './symbol-table.js';
 export type {
     Attribute,
     AttrPath,
@@ -27,6 +35,7 @@ export type {
     FlagValue,
     IdentValue,
     ImportForm,
+    InlineExprValue,
     KeyValueResource,
     ListValue,
     MacroHoleValue,
@@ -42,6 +51,7 @@ export type {
     SlotAssign,
     StaticResourceValue,
     StringBody,
+    StringBodyChunk,
     StringValue,
     StructuredBody,
     TemplateBindingValue,

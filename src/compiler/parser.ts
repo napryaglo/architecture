@@ -17,6 +17,7 @@ import type {
     ElementNode,
     IdentValue,
     ImportForm,
+    InlineExprValue,
     KeyValueResource,
     ListValue,
     MacroHoleValue,
@@ -31,10 +32,10 @@ import type {
     SlotAssign,
     StaticResourceValue,
     StringBody,
+    StringBodyChunk,
     StringValue,
     StructuredBody,
     TemplateBindingValue,
-    TextChunk,
     TopForm,
     TriggerExpr,
     TriggerGroup,
@@ -412,7 +413,7 @@ export class Parser
                 this.buffer[0]!.span);
         }
         const start = this.lexer.Position();
-        const chunks: TextChunk[] = [];
+        const chunks: StringBodyChunk[] = [];
         for (;;)
         {
             const tk = this.lexer.NextTextChunk();
@@ -425,6 +426,22 @@ export class Parser
             if (tk.kind === TokenKind.EOF)
             {
                 throw new ParseError('unterminated text body', tk.span);
+            }
+            if (tk.kind === TokenKind.LDoubleBrace)
+            {
+                // Inline-expression hole inside text — capture the body
+                // up to `}}` and resume text-mode scanning afterwards.
+                const body = this.lexer.NextInlineExprBody();
+                if (body.kind === TokenKind.EOF)
+                {
+                    throw new ParseError('unterminated `{{ … }}` inline expression in text body', tk.span);
+                }
+                chunks.push({
+                    kind: 'inline-expr',
+                    raw:  body.value,
+                    span: this.span(tk.span.start, body.span.end),
+                });
+                continue;
             }
             chunks.push({ kind: 'text-chunk', text: tk.value });
         }
@@ -694,8 +711,9 @@ export class Parser
             case TokenKind.DollarDollar:  return this.parseTemplateBinding();
             case TokenKind.At:            return this.parseStaticResource();
             case TokenKind.AtAt:          return this.parseDynamicResource();
+            case TokenKind.LDoubleBrace:  return this.parseInlineExpr();
             case TokenKind.DollarParen:
-                throw new ParseError('inline expressions $(…)$ are not yet supported', tk.span);
+                throw new ParseError('inline expressions are spelled `{{ … }}` (the $( … )$ form is retired)', tk.span);
             default:
                 throw new ParseError(`expected value, got '${tk.value}'`, tk.span);
         }
@@ -842,6 +860,36 @@ export class Parser
             kind: 'dynamic-resource',
             key,
             span: this.span(at.span.start, this.lastEnd()),
+        };
+    }
+
+    // `{{ … }}` inline expression. The lexer handed back `{{` as
+    // LDoubleBrace; we delegate the body capture to NextInlineExprBody
+    // which scans to the matching `}}` and returns the raw text. The
+    // bind / emit pass decides whether to fold the body as a constant
+    // or lower it to a MultiBinding.
+    //
+    // Same lookahead-buffer constraint as parseStringBody: we mustn't
+    // have peeked past `{{` before calling into the body lexer, so
+    // assert the buffer is empty.
+    private parseInlineExpr(): InlineExprValue
+    {
+        const open = this.expect(TokenKind.LDoubleBrace);
+        if (this.buffer.length > 0)
+        {
+            throw new ParseError(
+                'internal: lookahead buffer non-empty entering inline expression',
+                this.buffer[0]!.span);
+        }
+        const body = this.lexer.NextInlineExprBody();
+        if (body.kind === TokenKind.EOF)
+        {
+            throw new ParseError('unterminated `{{ … }}` inline expression', open.span);
+        }
+        return {
+            kind: 'inline-expr',
+            raw:  body.value,
+            span: this.span(open.span.start, body.span.end),
         };
     }
 

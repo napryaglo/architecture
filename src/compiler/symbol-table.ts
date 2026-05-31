@@ -23,6 +23,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['BindingMode',         '@visualisation-sub/mural/runtime'],
     ['DynamicResource',     '@visualisation-sub/mural/runtime'],
     ['DataContextBinding',  '@visualisation-sub/mural/runtime'],
+    ['MultiBinding',        '@visualisation-sub/mural/runtime'],
     ['TemplateBinding',     '@visualisation-sub/mural/runtime'],
     ['MultiTrigger',        '@visualisation-sub/mural/runtime'],
     ['HorizontalAlignment', '@visualisation-sub/mural/runtime'],

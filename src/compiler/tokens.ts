@@ -18,6 +18,7 @@ export enum TokenKind
     RBracket    = 'RBracket',      // ]
     LBrace      = 'LBrace',        // {
     RBrace      = 'RBrace',        // }
+    LDoubleBrace = 'LDoubleBrace', // {{  — opens an inline expression
     LParen      = 'LParen',        // (
     RParen      = 'RParen',        // )
     LAngle      = 'LAngle',        // <
@@ -38,10 +39,15 @@ export enum TokenKind
 
     // ── Text mode ─────────────────────────────────────────────────
     // Emitted by the lexer when the parser has explicitly entered text
-    // mode (string-typed slot body). Sigil interpolation inside text
-    // bodies is a future extension; for now TextRun holds the entire
-    // run between `{` and `}` with backslash escapes resolved.
+    // mode (string-typed slot body). TextRun holds a literal segment;
+    // LDoubleBrace appears when a contiguous `{{` is encountered, at
+    // which point the parser switches to expression-body capture and
+    // resumes text mode after the matching `}}`.
     TextRun         = 'TextRun',
+    // Captured by NextInlineExprBody — the raw expression text between
+    // a `{{` and its matching `}}` (delimiters excluded). The compiler
+    // re-parses this body to fold constants or build a MultiBinding.
+    InlineExprBody  = 'InlineExprBody',
 
     EOF             = 'EOF',
 }

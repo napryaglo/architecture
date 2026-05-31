@@ -64,7 +64,7 @@ export class Canvas extends Panel
             child.Measure(unbounded);
             const left = Canvas.GetLeft(child);
             const top  = Canvas.GetTop(child);
-            maxRight  = Math.max(maxRight,  left + child.DesiredSize.Width);
+            maxRight  = Math.max(maxRight,  left + child.DesiredSize.Width);    
             maxBottom = Math.max(maxBottom, top  + child.DesiredSize.Height);
         }
         return new Size(maxRight, maxBottom);
