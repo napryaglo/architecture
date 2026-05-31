@@ -21,7 +21,18 @@
     "./Controls": {
       "types": "./dist/Controls/index.d.ts",
       "import": "./dist/Controls/index.js"
+    },
+    "./compiler": {
+      "types": "./dist/compiler/index.d.ts",
+      "import": "./dist/compiler/index.js"
+    },
+    "./tooling": {
+      "types": "./dist/tooling/index.d.ts",
+      "import": "./dist/tooling/index.js"
     }
+  },
+  "bin": {
+    "mural": "./dist/tooling/cli.js"
   },
   "files": [
     "dist",
@@ -38,6 +49,7 @@
     "demo:border": "tsx src/Controls/tests/border-render.ts",
     "demo:text": "tsx src/Controls/tests/text-render.ts",
     "demo:gfont": "tsx src/Controls/tests/google-font-render.ts",
+    "demo:html": "npm run build && echo Demo built. From repo root: 'npx http-server -p 8080' then open http://localhost:8080/demo/",
     "clean": "rimraf dist",
     "prepublishOnly": "npm run clean && npm run build"
   },

@@ -1,0 +1,58 @@
+// Compiler barrel. Public entry points are `compile` (source → JS
+// module string) and `instantiate` (source → live Application).
+// `Compiler` and lower-level pieces are exported for tooling / tests.
+
+export { compile, instantiate, EmitError, type CompileResult } from './compile.js';
+export { Compiler, type CompilerOptions, type CompilerOutput } from './compiler.js';
+export { Lexer } from './lexer.js';
+export { Parser, ParseError } from './parser.js';
+export {
+    TokenKind,
+    type Token,
+    type SourceLocation,
+    type SourceSpan,
+    KEYWORDS,
+} from './tokens.js';
+export type {
+    Attribute,
+    AttrPath,
+    BindingValue,
+    BodyItem,
+    BodyNode,
+    ColorValue,
+    Document,
+    DefForm,
+    DynamicResourceValue,
+    ElementNode,
+    FlagValue,
+    IdentValue,
+    ImportForm,
+    KeyValueResource,
+    ListValue,
+    MacroHoleValue,
+    MacroParam,
+    NamedAttr,
+    NumberValue,
+    PositionalAttr,
+    PropertySetter,
+    ResourceForm,
+    SetterItem,
+    SetterList,
+    SizeValue,
+    SlotAssign,
+    StaticResourceValue,
+    StringBody,
+    StringValue,
+    StructuredBody,
+    TemplateBindingValue,
+    TextChunk,
+    TopForm,
+    TriggerAnd,
+    TriggerExpr,
+    TriggerGroup,
+    TriggerOr,
+    TriggerTerm,
+    TupleValue,
+    ValueNode,
+    XAttr,
+} from './ast.js';

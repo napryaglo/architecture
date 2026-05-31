@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Mural — HTML demo</title>
+    <style>
+        html, body { margin: 0; background: #f8fafc; color: #0f172a;
+                     font-family: -apple-system, "Segoe UI", system-ui, sans-serif; }
+        header { padding: 16px 24px; background: #fff;
+                 border-bottom: 1px solid #e2e8f0; }
+        header h1 { margin: 0 0 4px; font-size: 18px; }
+        header p  { margin: 0; color: #475569; font-size: 13px; }
+        header code { background: #f1f5f9; padding: 1px 6px; border-radius: 4px;
+                      font-size: 12px; }
+        main { padding: 24px; }
+        #app  { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
+                padding: 20px; max-width: 460px; }
+        #app svg { display: block; }
+        #status { margin: 24px; color: #b91c1c; font-family: ui-monospace, monospace;
+                  font-size: 13px; white-space: pre-wrap; }
+    </style>
+
+    <!-- Bare-specifier resolution for the runtime. Served from the
+         repo root (e.g. `npx http-server -p 8080`). The compiled
+         `dashboard.mu.js` imports from the three package paths below;
+         the `opentype.js` entry is needed because the compiled
+         FontMetricsMeasurer imports it as a bare specifier — Node
+         resolves it via node_modules; the browser needs an explicit
+         map to the package's ESM bundle. -->
+    <script type="importmap">
+    {
+        "imports": {
+            "@visualisation-sub/mural/runtime":       "../dist/runtime/index.js",
+            "@visualisation-sub/mural/Controls":      "../dist/Controls/index.js",
+            "@visualisation-sub/mural/visual-engine": "../dist/visual-engine/index.js",
+            "opentype.js":                            "./opentype-shim.mjs"
+        }
+    }
+    </script>
+</head>
+<body>
+    <header>
+        <h1>Mural HTML demo</h1>
+        <p>
+            Source compiled ahead-of-time from
+            <code>dashboard.mu</code> to <code>dashboard.mu.js</code>
+            (via <code>npx mural compile</code>); rendered via
+            <code>HeadlessTarget + SvgDrawingContext</code> and
+            injected as inline SVG. Edit <code>dashboard.mu</code>,
+            re-run the compile script, then reload.
+        </p>
+    </header>
+    <main>
+        <div id="app"></div>
+    </main>
+    <pre id="status"></pre>
+
+    <script type="module">
+        import { app }      from './dashboard.mu.js';
+        import * as engine  from '@visualisation-sub/mural/visual-engine';
+
+        const status = document.getElementById('status');
+
+        try {
+            // Render — HtmlTarget would do this in-place once its
+            // renderer lands; for now HeadlessTarget + SvgDrawingContext
+            // produces the same pixels, just via an inline SVG string.
+            const W = 460, H = 320;
+            const target = new engine.HeadlessTarget(W, H, app.Root);
+            const dc = new engine.SvgDrawingContext();
+            target.Render(dc);
+            document.getElementById('app').innerHTML = dc.ToSvg(W, H);
+        } catch (e) {
+            status.textContent = 'Error: ' + (e?.message ?? String(e));
+            console.error(e);
+        }
+    </script>
+</body>
+</html>

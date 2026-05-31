@@ -70,6 +70,35 @@ export class PropertyTrigger
     ) {}
 }
 
+// One conjunct condition inside a MultiTrigger. Equivalent to a
+// PropertyTrigger's (owner, name, value) trio, but without setters —
+// setters live on the MultiTrigger itself and fire only when EVERY
+// condition currently holds.
+export interface TriggerCondition
+{
+    propertyOwner: Function;
+    propertyName: string;
+    value:        unknown;
+}
+
+// Multi-property AND-trigger. Counterpart to WPF's MultiTrigger.
+// Watches each condition's (owner, name) pair; when a watched value
+// changes the trigger re-evaluates. Setters apply ONLY when every
+// condition matches; deactivate as soon as any one stops matching.
+//
+// Authored markup never instantiates this directly — the compiler
+// emits MultiTrigger when a `when{ A and B }` clause is lowered (and
+// also when a `(A and B) or C` DNF-expansion produces a conjunct of
+// length > 1). Single-condition `when{}` clauses still lower to
+// PropertyTrigger for compactness; both kinds coexist in a Style.
+export class MultiTrigger
+{
+    constructor(
+        public readonly conditions: readonly TriggerCondition[],
+        public readonly setters:    readonly Setter[],
+    ) {}
+}
+
 // Style is a reusable bag of Setters (+ optional Triggers) applied
 // to a target Visual class. Counterpart to WPF's Style.
 //
@@ -110,7 +139,8 @@ export class Style
     public readonly TargetType: Function;
     public readonly Setters: readonly Setter[];
     public readonly BasedOn: Style | undefined;
-    public readonly Triggers: readonly PropertyTrigger[];
+    public readonly Triggers:      readonly PropertyTrigger[];
+    public readonly MultiTriggers: readonly MultiTrigger[];
 
     private _sealed: boolean = false;
     private _resources: ResourceDictionary | undefined;
@@ -120,12 +150,14 @@ export class Style
         setters: readonly Setter[] = [],
         basedOn?: Style,
         triggers: readonly PropertyTrigger[] = [],
+        multiTriggers: readonly MultiTrigger[] = [],
     )
     {
-        this.TargetType = targetType;
-        this.Setters = setters;
-        this.BasedOn = basedOn;
-        this.Triggers = triggers;
+        this.TargetType    = targetType;
+        this.Setters       = setters;
+        this.BasedOn       = basedOn;
+        this.Triggers      = triggers;
+        this.MultiTriggers = multiTriggers;
     }
 
     public get IsSealed(): boolean { return this._sealed; }
@@ -197,6 +229,18 @@ export class Style
         const list: PropertyTrigger[] = [];
         if (this.BasedOn !== undefined) list.push(...this.BasedOn.ResolveTriggers());
         list.push(...this.Triggers);
+        return list;
+    }
+
+    // Same resolution semantics as ResolveTriggers — BasedOn chain
+    // walked first, then this style's own list. Multi-triggers are a
+    // sibling concept to single-property triggers; they share the
+    // Trigger priority tier and last-applied-wins ordering.
+    public ResolveMultiTriggers(): MultiTrigger[]
+    {
+        const list: MultiTrigger[] = [];
+        if (this.BasedOn !== undefined) list.push(...this.BasedOn.ResolveMultiTriggers());
+        list.push(...this.MultiTriggers);
         return list;
     }
 }

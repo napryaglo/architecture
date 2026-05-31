@@ -6,7 +6,8 @@ import { Binding } from './binding.js';
 import { NameScope } from './namescope.js';
 import { ObservableCollection, type IReadOnlyObservableCollection } from './observable-collection.js';
 import { ResourceDictionary, type ResourceKey } from './resource-dictionary.js';
-import { Setter, SetterFactory, Style, PropertyTrigger } from './style.js';
+import { Application } from './application.js';
+import { Setter, SetterFactory, Style, PropertyTrigger, MultiTrigger } from './style.js';
 import { Rect, Size, Thickness } from './primitives.js';
 import type { DrawingContext } from './drawing-context.js';
 import type { TextMeasurer } from './text-measurer.js';
@@ -112,7 +113,16 @@ export class Visual extends Model
         // class — the host's DrawingContext.PushClip is what reads
         // it. MetaData.Render so changes re-render.
         Model.RegisterProperty(Visual, 'Clip',    undefined,      MetaData.Render);
+        // Ambient data root for bindings. Inherits down the logical
+        // tree so a binding written as `$Path` on a descendant
+        // resolves against the nearest ancestor's DataContext. No
+        // measure / arrange / render impact — pure data plumbing —
+        // hence the inherits-only flag.
+        Model.RegisterProperty(Visual, 'DataContext', undefined, MetaData.Inherits);
     }
+
+    public get DataContext(): unknown { return this.get_property_value('DataContext'); }
+    public set DataContext(value: unknown) { this.set_property_value('DataContext', value); }
 
     // Two parent pointers: visual (renderer / hit-testing / target
     // propagation) and logical (property inheritance / future named-
@@ -189,11 +199,11 @@ export class Visual extends Model
     // Currently-matched triggers. A trigger is added on its watched
     // property matching the trigger's value; removed when the value
     // diverges. Trigger setters are applied / cleared in lock-step.
-    private _activeTriggers: Set<PropertyTrigger> = new Set();
+    private _activeTriggers: Set<PropertyTrigger | MultiTrigger> = new Set();
 
     // Per-trigger unsubscribe callback, set at install_trigger,
     // invoked at uninstall_trigger. Keyed by the trigger instance.
-    private _triggerSubscriptions: Map<PropertyTrigger, () => void> = new Map();
+    private _triggerSubscriptions: Map<PropertyTrigger | MultiTrigger, () => void> = new Map();
 
     // Layout state cache. Updated by Measure / Arrange runs; read by the
     // renderer and by parents during their own MeasureOverride /
@@ -332,7 +342,12 @@ export class Visual extends Model
             }
             cursor = cursor._logicalParent ?? cursor._templatedParent;
         }
-        return undefined;
+        // Application-level fallback. The tree walk exhausts at the
+        // topmost mounted root; when a key isn't found there, consult
+        // the app's root resources. Matches WPF's FrameworkElement.
+        // FindResource behavior. Returns undefined when no Application
+        // is current — fine for unattached / test fixtures.
+        return Application.current?.Resources.Resolve(key);
     }
 
     // Explicit style for this Visual. When set, takes priority over any
@@ -396,6 +411,10 @@ export class Visual extends Model
         {
             this.install_trigger(trigger);
         }
+        for (const multi of style.ResolveMultiTriggers())
+        {
+            this.install_multi_trigger(multi);
+        }
     }
 
     private unapply_style(style: Style): void
@@ -403,6 +422,10 @@ export class Visual extends Model
         // Triggers first: they sit ABOVE style values in priority, so
         // taking them down before the style values keeps the value
         // resolution coherent at each EVD step. Then style setters.
+        for (const multi of style.ResolveMultiTriggers())
+        {
+            this.uninstall_trigger(multi);
+        }
         for (const trigger of style.ResolveTriggers())
         {
             this.uninstall_trigger(trigger);
@@ -491,11 +514,56 @@ export class Visual extends Model
         this.evaluate_trigger(trigger);
     }
 
-    private uninstall_trigger(trigger: PropertyTrigger): void
+    private uninstall_trigger(trigger: PropertyTrigger | MultiTrigger): void
     {
         this._triggerSubscriptions.get(trigger)?.();
         this._triggerSubscriptions.delete(trigger);
         if (this._activeTriggers.has(trigger))
+        {
+            for (const setter of trigger.setters)
+            {
+                this.unapply_setter(setter, 'trigger');
+            }
+            this._activeTriggers.delete(trigger);
+        }
+    }
+
+    // Multi-property AND-trigger install. Subscribes to every condition's
+    // (owner, name) pair so any change re-evaluates the conjunction.
+    // Activation is all-or-nothing: setters apply only when every
+    // watched value === its expected; they deactivate as soon as one
+    // stops matching.
+    private install_multi_trigger(trigger: MultiTrigger): void
+    {
+        const onChange = (): void => { this.evaluate_multi_trigger(trigger); };
+        const unsubs: Array<() => void> = [];
+        for (const cond of trigger.conditions)
+        {
+            this.AddPropertyChangedListener(cond.propertyOwner, cond.propertyName, onChange);
+            unsubs.push(() =>
+            {
+                this.RemovePropertyChangedListener(
+                    cond.propertyOwner, cond.propertyName, onChange);
+            });
+        }
+        this._triggerSubscriptions.set(trigger, () => { for (const u of unsubs) u(); });
+        this.evaluate_multi_trigger(trigger);
+    }
+
+    private evaluate_multi_trigger(trigger: MultiTrigger): void
+    {
+        const allMatch = trigger.conditions.every(cond =>
+            this.get_property_value(cond.propertyOwner, cond.propertyName) === cond.value);
+        const wasActive = this._activeTriggers.has(trigger);
+        if (allMatch && !wasActive)
+        {
+            for (const setter of trigger.setters)
+            {
+                this.apply_setter(setter, 'trigger');
+            }
+            this._activeTriggers.add(trigger);
+        }
+        else if (!allMatch && wasActive)
         {
             for (const setter of trigger.setters)
             {
@@ -565,6 +633,16 @@ export class Visual extends Model
                 );
             }
             cursor = cursor._logicalParent ?? cursor._templatedParent;
+        }
+        // Mirror the Application-level fallback in TryFindResource —
+        // theme / implicit-style changes on the app's root dict must
+        // trigger re-resolution here too.
+        const appRd = Application.current?.Resources;
+        if (appRd !== undefined)
+        {
+            this._implicitStyleSubscriptions.push(
+                appRd.Subscribe(() => this.resolve_implicit_style()),
+            );
         }
     }
 
@@ -1201,7 +1279,7 @@ export class Visual extends Model
 
 // A Visual that owns at most one child. SetChild(undefined) clears the
 // slot. Replacing a non-undefined child first detaches the previous one.
-export class Single extends Visual
+export abstract class Single extends Visual
 {
     private _child: Visual | undefined;
 

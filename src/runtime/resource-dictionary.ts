@@ -17,13 +17,20 @@
 // debugging tools) use it to know when to re-resolve.
 //
 // WPF parity is intentionally partial:
-//   * No XAML <ResourceDictionary> markup.
 //   * No MergedDictionaries.Source URI loading (consumers construct
-//     dictionaries imperatively).
-//   * No implicit-style lookup keyed by TargetType — Style support is
-//     a separate effort.
+//     dictionaries imperatively; the µ-mural compiler emits the
+//     AddMergedDictionary calls).
 //   * No keyed-sealing (WPF's lock-once-set behavior) — Set is
 //     re-assignable.
+//
+// Implicit-style lookup keyed by TargetType works through the same
+// `Map<string | Function, unknown>` storage — Function keys identify
+// the target control class; consumers walk to find one via
+// Visual.TryFindResource(this.constructor).
+//
+// `Root` is the µ-mural extension point for the `x:root` directive:
+// a single Visual pointer designating which child of this dictionary
+// is the application's main visual, exposed to Application.Mount.
 export type ResourceChangeListener = () => void;
 
 // String keys cover the usual `dict.Set('AccentBrush', …)` case;
@@ -33,9 +40,23 @@ export type ResourceChangeListener = () => void;
 // distinguishes them at lookup time.
 export type ResourceKey = string | Function;
 
+// Type-only import — keeps the runtime layering clean (no value import
+// from visual.ts into here). At emit time the import is erased; at
+// type-check time `Root: Visual | undefined` is properly typed.
+import type { Visual } from './visual.js';
+
 export class ResourceDictionary
 {
     private readonly entries: Map<ResourceKey, unknown> = new Map();
+
+    // The single child marked with `x:root` in markup, or undefined when
+    // none was registered. Read by Application.Mount; written by the
+    // RootExtension during the compiler's bind pass (or by callers
+    // building dictionaries imperatively). Setting a different non-
+    // undefined value over an existing one throws — the
+    // "at most one x:root per dictionary" rule has both static and
+    // runtime enforcement.
+    private _root: Visual | undefined;
 
     // Merged dictionaries in the order the caller added them. Lookup
     // walks this list back-to-front so the most recent wins.
@@ -96,6 +117,29 @@ export class ResourceDictionary
     public *Entries(): IterableIterator<[ResourceKey, unknown]>
     {
         yield* this.entries.entries();
+    }
+
+    // ------------------------------------------------------------------
+    // Root marker (x:root)
+    // ------------------------------------------------------------------
+
+    public get Root(): Visual | undefined
+    {
+        return this._root;
+    }
+
+    public set Root(value: Visual | undefined)
+    {
+        // Allow clearing (undefined) and idempotent re-assignment of the
+        // same instance. Reject a second distinct root — that's the
+        // duplicate-x:root case the compiler should have already caught.
+        if (value !== undefined && this._root !== undefined && this._root !== value)
+        {
+            throw new Error(
+                'ResourceDictionary: Root already set; only one x:root per dictionary.',
+            );
+        }
+        this._root = value;
     }
 
     // ------------------------------------------------------------------

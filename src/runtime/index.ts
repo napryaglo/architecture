@@ -39,8 +39,18 @@ export {
     type ResourceChangeListener,
     type ResourceKey,
 } from './resource-dictionary.js';
+export { Application, type MountableTarget } from './application.js';
 export { DynamicResource } from './dynamic-resource.js';
-export { Style, Setter, SetterFactory, PropertyTrigger } from './style.js';
+export { DataContextBinding } from './data-context-binding.js';
+export { TemplateBinding } from './template-binding.js';
+export {
+    Style,
+    Setter,
+    SetterFactory,
+    PropertyTrigger,
+    MultiTrigger,
+    type TriggerCondition,
+} from './style.js';
 export { type IScrollInfo, isScrollInfo } from './scroll-info.js';
 export {
     ObservableCollection,

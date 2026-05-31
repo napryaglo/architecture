@@ -1,0 +1,907 @@
+import { Lexer } from './lexer.js';
+import {
+    TokenKind,
+    type SourceLocation,
+    type SourceSpan,
+    type Token,
+} from './tokens.js';
+import type {
+    Attribute,
+    AttrPath,
+    BindingValue,
+    BodyItem,
+    ColorValue,
+    Document,
+    DefForm,
+    DynamicResourceValue,
+    ElementNode,
+    IdentValue,
+    ImportForm,
+    KeyValueResource,
+    ListValue,
+    MacroHoleValue,
+    MacroParam,
+    NamedAttr,
+    NumberValue,
+    PropertySetter,
+    ResourceForm,
+    SetterItem,
+    SetterList,
+    SizeValue,
+    SlotAssign,
+    StaticResourceValue,
+    StringBody,
+    StringValue,
+    StructuredBody,
+    TemplateBindingValue,
+    TextChunk,
+    TopForm,
+    TriggerExpr,
+    TriggerGroup,
+    TupleValue,
+    ValueNode,
+    XAttr,
+} from './ast.js';
+
+// Errors carry the source span so callers can render line:col diagnostics.
+export class ParseError extends Error
+{
+    public readonly span: SourceSpan;
+    constructor(message: string, span: SourceSpan)
+    {
+        super(`${message} (at ${span.start.line}:${span.start.column})`);
+        this.span = span;
+    }
+}
+
+const RESOURCE_KEYWORDS = new Set(['style', 'template', 'datatemplate']);
+
+export interface ParserOptions
+{
+    // Called by the parser when it sees `Name{` to decide whether the
+    // body should be parsed in text mode (string slot — Lexer.NextTextChunk)
+    // or structured mode (default — element list with SlotAssigns).
+    // Returning `true` switches the lexer into text mode for that body.
+    // Default: always `false` (structured).
+    isStringBody?: (controlName: string) => boolean;
+}
+
+// Recursive-descent parser. Two-token lookahead via a small ring buffer
+// — enough to disambiguate SlotAssign (`Ident Colon`) from Element
+// (`Ident LBracket|LBrace|<anything else>`).
+//
+// Scope: structural mode only. Text-mode bodies (TextBlock{Hello world})
+// require the parser to switch the lexer into text mode at the right
+// `{`; that hook lives in a future phase along with the control-default-
+// slot registry. For now, string content must be expressed as an
+// attribute (`TextBlock[Text="Hello"]`).
+export class Parser
+{
+    private readonly lexer: Lexer;
+    private readonly buffer: Token[] = [];
+    private readonly isStringBody: (name: string) => boolean;
+
+    constructor(source: string, options: ParserOptions = {})
+    {
+        this.lexer = new Lexer(source);
+        this.isStringBody = options.isStringBody ?? (() => false);
+    }
+
+    // ── Public entry ────────────────────────────────────────────────
+
+    public ParseDocument(): Document
+    {
+        const start = this.peek().span.start;
+        const forms: TopForm[] = [];
+        while (this.peek().kind !== TokenKind.EOF)
+        {
+            forms.push(this.parseTopForm());
+        }
+        const end = this.peek().span.end;
+        return { kind: 'document', forms, span: this.span(start, end) };
+    }
+
+    // ── Top-level dispatch ──────────────────────────────────────────
+
+    private parseTopForm(): TopForm
+    {
+        const tk = this.peek();
+        if (tk.kind === TokenKind.Ident)
+        {
+            switch (tk.value)
+            {
+                case 'import':       return this.parseImport();
+                case 'def':          return this.parseDefForm();
+                case 'style':
+                case 'template':
+                case 'datatemplate': return this.parseResourceForm();
+                default:             return this.parseElement();
+            }
+        }
+        throw new ParseError(`unexpected token '${tk.value}' at top level`, tk.span);
+    }
+
+    private parseImport(): ImportForm
+    {
+        const start = this.expectIdent('import').span.start;
+        const name  = this.expect(TokenKind.Ident).value;
+        let source: string | null = null;
+        if (this.peek().kind === TokenKind.Ident && this.peek().value === 'from')
+        {
+            this.consume();
+            source = this.expect(TokenKind.String).value;
+        }
+        const end = this.lastEnd();
+        return { kind: 'import', name, source, span: this.span(start, end) };
+    }
+
+    private parseDefForm(): DefForm
+    {
+        const start = this.expectIdent('def').span.start;
+        const name  = this.expect(TokenKind.Ident).value;
+        this.expect(TokenKind.LBracket);
+        const params = this.parseMacroParamList();
+        this.expect(TokenKind.RBracket);
+        this.expect(TokenKind.LBrace);
+        const body = this.parseElement();
+        this.expect(TokenKind.RBrace);
+        const end = this.lastEnd();
+        return { kind: 'def', name, params, body, span: this.span(start, end) };
+    }
+
+    private parseMacroParamList(): MacroParam[]
+    {
+        const out: MacroParam[] = [];
+        if (this.peek().kind === TokenKind.RBracket) return out;
+        for (;;)
+        {
+            out.push(this.parseMacroParam());
+            if (this.peek().kind === TokenKind.Comma) { this.consume(); continue; }
+            break;
+        }
+        return out;
+    }
+
+    private parseMacroParam(): MacroParam
+    {
+        const tk    = this.expect(TokenKind.HashBody);
+        const holeName   = tk.value;
+        const positional = /^[0-9]+$/.test(holeName);
+
+        let typeRef: string | null = null;
+        if (this.peek().kind === TokenKind.Colon)
+        {
+            this.consume();
+            typeRef = this.expect(TokenKind.Ident).value;
+        }
+        let defaultValue: ValueNode | null = null;
+        if (this.peek().kind === TokenKind.Equals)
+        {
+            this.consume();
+            defaultValue = this.parseValue();
+        }
+        const end = this.lastEnd();
+        return {
+            kind: 'macro-param',
+            holeName,
+            positional,
+            typeRef,
+            defaultValue,
+            span: this.span(tk.span.start, end),
+        };
+    }
+
+    // ── Resource forms ──────────────────────────────────────────────
+
+    private parseResourceForm(): ResourceForm
+    {
+        const head    = this.expect(TokenKind.Ident);
+        const keyword = head.value as 'style' | 'template' | 'datatemplate';
+        if (!RESOURCE_KEYWORDS.has(keyword))
+        {
+            throw new ParseError(`expected resource keyword, got '${keyword}'`, head.span);
+        }
+
+        this.expect(TokenKind.LBracket);
+        const attrs = this.parseAttrListBody();
+        this.expect(TokenKind.RBracket);
+
+        // Partition: meta-attrs vs x-attrs. Positional disallowed.
+        const metaAttrs: NamedAttr[] = [];
+        const xAttrs:    XAttr[]     = [];
+        for (const a of attrs)
+        {
+            if (a.kind === 'named-attr')      metaAttrs.push(a);
+            else if (a.kind === 'x-attr')     xAttrs.push(a);
+            else throw new ParseError(
+                'resource forms do not accept positional attributes', a.span);
+        }
+
+        this.expect(TokenKind.LBrace);
+        let body: SetterList | ElementNode;
+        if (keyword === 'style')
+        {
+            body = this.parseSetterList();
+        }
+        else
+        {
+            body = this.parseElement();
+        }
+        const rbrace = this.expect(TokenKind.RBrace);
+        return {
+            kind:    'resource-form',
+            keyword,
+            metaAttrs,
+            xAttrs,
+            body,
+            span:    this.span(head.span.start, rbrace.span.end),
+        };
+    }
+
+    // ── Setter list (inside a style body) ──────────────────────────
+
+    private parseSetterList(): SetterList
+    {
+        const start = this.peek().span.start;
+        const items: SetterItem[] = [];
+        while (this.peek().kind !== TokenKind.RBrace
+            && this.peek().kind !== TokenKind.EOF)
+        {
+            items.push(this.parseSetterItem());
+        }
+        const end = this.lastEnd();
+        return { kind: 'setter-list', items, span: this.span(start, end) };
+    }
+
+    private parseSetterItem(): SetterItem
+    {
+        const tk = this.peek();
+        if (tk.kind === TokenKind.Ident && tk.value === 'when')
+        {
+            return this.parseTriggerGroup();
+        }
+        return this.parsePropertySetter();
+    }
+
+    private parsePropertySetter(): PropertySetter
+    {
+        const path  = this.parseAttrPath();
+        this.expect(TokenKind.Equals);
+        const value = this.parseValue();
+        const end   = this.lastEnd();
+        return {
+            kind: 'property-setter',
+            path,
+            value,
+            span: this.span(path.span.start, end),
+        };
+    }
+
+    private parseTriggerGroup(): TriggerGroup
+    {
+        const start = this.expectIdent('when').span.start;
+        this.expect(TokenKind.LBrace);
+        const condition = this.parseTriggerExpr();
+        this.expect(TokenKind.RBrace);
+        this.expect(TokenKind.LBrace);
+        const setters = this.parseSetterList();
+        const closer  = this.expect(TokenKind.RBrace);
+        return {
+            kind: 'trigger-group',
+            condition,
+            setters,
+            span: this.span(start, closer.span.end),
+        };
+    }
+
+    private parseTriggerExpr(): TriggerExpr
+    {
+        return this.parseTriggerOr();
+    }
+
+    private parseTriggerOr(): TriggerExpr
+    {
+        let left = this.parseTriggerAnd();
+        while (this.peek().kind === TokenKind.Ident && this.peek().value === 'or')
+        {
+            this.consume();
+            const right = this.parseTriggerAnd();
+            left = { kind: 'trigger-or', left, right, span: this.span(left.span.start, right.span.end) };
+        }
+        return left;
+    }
+
+    private parseTriggerAnd(): TriggerExpr
+    {
+        let left = this.parseTriggerTerm();
+        while (this.peek().kind === TokenKind.Ident && this.peek().value === 'and')
+        {
+            this.consume();
+            const right = this.parseTriggerTerm();
+            left = { kind: 'trigger-and', left, right, span: this.span(left.span.start, right.span.end) };
+        }
+        return left;
+    }
+
+    private parseTriggerTerm(): TriggerExpr
+    {
+        const tk = this.peek();
+        if (tk.kind === TokenKind.LParen)
+        {
+            this.consume();
+            const expr = this.parseTriggerExpr();
+            this.expect(TokenKind.RParen);
+            return expr;
+        }
+        let negated = false;
+        if (tk.kind === TokenKind.Ident && tk.value === 'not')
+        {
+            this.consume();
+            negated = true;
+        }
+        const idTk = this.expect(TokenKind.Ident);
+        let value: ValueNode | null = null;
+        if (this.peek().kind === TokenKind.Equals)
+        {
+            this.consume();
+            value = this.parseValue();
+        }
+        const end = this.lastEnd();
+        return {
+            kind: 'trigger-term',
+            negated,
+            property: idTk.value,
+            value,
+            span: this.span(tk.span.start, end),
+        };
+    }
+
+    // ── Element / attributes ────────────────────────────────────────
+
+    private parseElement(): ElementNode
+    {
+        const head   = this.expect(TokenKind.Ident);
+        const attrs: Attribute[] = [];
+        if (this.peek().kind === TokenKind.LBracket)
+        {
+            this.consume();
+            attrs.push(...this.parseAttrListBody());
+            this.expect(TokenKind.RBracket);
+        }
+        let body: StructuredBody | StringBody | null = null;
+        if (this.peek().kind === TokenKind.LBrace)
+        {
+            this.consume();
+            if (this.isStringBody(head.value))
+            {
+                body = this.parseStringBody();
+            }
+            else
+            {
+                body = this.parseStructuredBody();
+            }
+            this.expect(TokenKind.RBrace);
+        }
+        const end = this.lastEnd();
+        return {
+            kind: 'element',
+            name: head.value,
+            attrs,
+            body,
+            span: this.span(head.span.start, end),
+        };
+    }
+
+    // Text-mode body. Entered right after `{`; the buffer MUST be
+    // empty here (peeking past LBrace would have lexed structural
+    // tokens past the text). Loop pulls TextRun chunks from the lexer
+    // until NextTextChunk reports an upcoming `}`. We deliberately
+    // DO NOT push the RBrace onto the buffer or advance past it —
+    // NextTextChunk peeks the close without consuming the source
+    // character, so the next structural call (expect(RBrace) in the
+    // caller) will see the same `}` and advance over it normally.
+    private parseStringBody(): StringBody
+    {
+        if (this.buffer.length > 0)
+        {
+            // Defensive: the surrounding parser shouldn't peek between
+            // consuming `{` and calling parseStringBody. If it did, we'd
+            // be re-lexing past where the structural tokens already are.
+            throw new ParseError(
+                'internal: lookahead buffer non-empty entering text mode',
+                this.buffer[0]!.span);
+        }
+        const start = this.lexer.Position();
+        const chunks: TextChunk[] = [];
+        for (;;)
+        {
+            const tk = this.lexer.NextTextChunk();
+            if (tk.kind === TokenKind.RBrace)
+            {
+                // Don't push, don't consume. The caller's expect(RBrace)
+                // will lex this character in structural mode.
+                break;
+            }
+            if (tk.kind === TokenKind.EOF)
+            {
+                throw new ParseError('unterminated text body', tk.span);
+            }
+            chunks.push({ kind: 'text-chunk', text: tk.value });
+        }
+        const end = this.lexer.Position();
+        return { kind: 'string-body', chunks, span: this.span(start, end) };
+    }
+
+    // Parses attributes between `[` and `]` — the brackets are consumed
+    // by the caller so this can be re-used by both Element and resource
+    // forms. Enforces "positional and named cannot mix" (spec decision 7).
+    private parseAttrListBody(): Attribute[]
+    {
+        const out: Attribute[] = [];
+        if (this.peek().kind === TokenKind.RBracket) return out;
+        let mode: 'named' | 'positional' | null = null;
+        for (;;)
+        {
+            const a = this.parseAttr();
+            const isPositional = a.kind === 'positional-attr';
+            const thisMode: 'named' | 'positional' = isPositional ? 'positional' : 'named';
+            if (mode === null) mode = thisMode;
+            else if (mode !== thisMode)
+            {
+                throw new ParseError(
+                    'cannot mix positional and named attributes in the same list',
+                    a.span,
+                );
+            }
+            out.push(a);
+            if (this.peek().kind === TokenKind.Comma) { this.consume(); continue; }
+            break;
+        }
+        return out;
+    }
+
+    private parseAttr(): Attribute
+    {
+        const tk = this.peek();
+
+        // x:foo  or  x:foo = value
+        if (tk.kind === TokenKind.ScopeExt)
+        {
+            this.consume();
+            let value: ValueNode | null = null;
+            if (this.peek().kind === TokenKind.Equals)
+            {
+                this.consume();
+                value = this.parseValue();
+            }
+            const end = this.lastEnd();
+            return {
+                kind: 'x-attr',
+                name: tk.value,
+                value,
+                span: this.span(tk.span.start, end),
+            };
+        }
+
+        // NamedAttr starts with Ident (path), PositionalAttr starts with
+        // any other value-token (sigils, literals, brackets). An Ident
+        // followed by anything other than `.` or `=` demotes to a
+        // positional IdentValue — covers `Name`-as-enum and the rare
+        // case of bare-name positional macro args.
+        if (tk.kind === TokenKind.Ident)
+        {
+            const first = this.expect(TokenKind.Ident);
+            // Two-segment path?
+            if (this.peek().kind === TokenKind.Dot)
+            {
+                this.consume();
+                const second = this.expect(TokenKind.Ident);
+                this.expect(TokenKind.Equals);
+                const value = this.parseValue();
+                const end   = this.lastEnd();
+                const path: AttrPath = {
+                    kind:  'attr-path',
+                    parts: [first.value, second.value],
+                    span:  this.span(first.span.start, second.span.end),
+                };
+                return {
+                    kind: 'named-attr',
+                    path,
+                    value,
+                    span: this.span(first.span.start, end),
+                };
+            }
+            if (this.peek().kind === TokenKind.Equals)
+            {
+                this.consume();
+                const value = this.parseValue();
+                const end   = this.lastEnd();
+                const path: AttrPath = {
+                    kind:  'attr-path',
+                    parts: [first.value],
+                    span:  first.span,
+                };
+                return {
+                    kind: 'named-attr',
+                    path,
+                    value,
+                    span: this.span(first.span.start, end),
+                };
+            }
+            // Positional ident value.
+            const ident: IdentValue = {
+                kind: 'ident',
+                name: first.value,
+                span: first.span,
+            };
+            return {
+                kind:  'positional-attr',
+                value: ident,
+                span:  first.span,
+            };
+        }
+
+        // Positional value (number, string, sigil, hash, paren, etc.).
+        const v = this.parseValue();
+        return { kind: 'positional-attr', value: v, span: v.span };
+    }
+
+    // Helper: one or two dotted idents. Used by PropertySetter (which
+    // is structurally a NamedAttr without the `[]` wrapper).
+    private parseAttrPath(): AttrPath
+    {
+        const first = this.expect(TokenKind.Ident);
+        if (this.peek().kind === TokenKind.Dot)
+        {
+            this.consume();
+            const second = this.expect(TokenKind.Ident);
+            return {
+                kind:  'attr-path',
+                parts: [first.value, second.value],
+                span:  this.span(first.span.start, second.span.end),
+            };
+        }
+        return {
+            kind:  'attr-path',
+            parts: [first.value],
+            span:  first.span,
+        };
+    }
+
+    // ── Structured body (element list + slot assigns + resources) ──
+
+    private parseStructuredBody(): StructuredBody
+    {
+        const start = this.peek().span.start;
+        const items: BodyItem[] = [];
+        while (this.peek().kind !== TokenKind.RBrace
+            && this.peek().kind !== TokenKind.EOF)
+        {
+            items.push(this.parseBodyItem());
+        }
+        const end = this.lastEnd();
+        return { kind: 'structured-body', items, span: this.span(start, end) };
+    }
+
+    private parseBodyItem(): BodyItem
+    {
+        const tk = this.peek();
+
+        // @key = value primitive resource entry
+        if (tk.kind === TokenKind.At) return this.parseKeyValueResource();
+
+        // Macro hole in body position — `#1`, `#bg`. Meaningful only
+        // inside a def body; the bind pass errors if it appears outside
+        // a macro expansion.
+        if (tk.kind === TokenKind.HashBody)
+        {
+            const v = this.consume();
+            return {
+                kind: 'macro-hole-body-item',
+                name: v.value,
+                span: v.span,
+            };
+        }
+
+        if (tk.kind === TokenKind.Ident)
+        {
+            switch (tk.value)
+            {
+                case 'style':
+                case 'template':
+                case 'datatemplate': return this.parseResourceForm();
+                case 'def':          return this.parseDefForm();
+                default:
+                    // SlotAssign vs Element disambiguation.
+                    if (this.peek(1).kind === TokenKind.Colon)
+                    {
+                        return this.parseSlotAssign();
+                    }
+                    return this.parseElement();
+            }
+        }
+
+        throw new ParseError(
+            `unexpected token '${tk.value}' in body`, tk.span);
+    }
+
+    private parseSlotAssign(): SlotAssign
+    {
+        const ident = this.expect(TokenKind.Ident);
+        this.expect(TokenKind.Colon);
+        let value: ValueNode | StructuredBody;
+        if (this.peek().kind === TokenKind.LBrace)
+        {
+            this.consume();
+            value = this.parseStructuredBody();
+            this.expect(TokenKind.RBrace);
+        }
+        else
+        {
+            value = this.parseValue();
+        }
+        const end = this.lastEnd();
+        return {
+            kind:  'slot-assign',
+            name:  ident.value,
+            value,
+            span:  this.span(ident.span.start, end),
+        };
+    }
+
+    private parseKeyValueResource(): KeyValueResource
+    {
+        const at   = this.expect(TokenKind.At);
+        const name = this.expect(TokenKind.Ident).value;
+        let key    = name;
+        if (this.peek().kind === TokenKind.Colon)
+        {
+            this.consume();
+            const tail = this.expect(TokenKind.Ident).value;
+            // The colon is a key-namespace separator, not a rename: the
+            // full string after `@` (including the colon) is the
+            // dictionary key, matching how `@theme:primary` resolves
+            // in value positions.
+            key = `${name}:${tail}`;
+        }
+        this.expect(TokenKind.Equals);
+        const value = this.parseValue();
+        const end   = this.lastEnd();
+        return {
+            kind: 'key-value-resource',
+            key,
+            name,
+            value,
+            span: this.span(at.span.start, end),
+        };
+    }
+
+    // ── Values ──────────────────────────────────────────────────────
+
+    private parseValue(): ValueNode
+    {
+        const tk = this.peek();
+        switch (tk.kind)
+        {
+            case TokenKind.Number:        return this.consumeAsNumber();
+            case TokenKind.String:        return this.consumeAsString();
+            case TokenKind.Ident:         return this.consumeAsIdent();
+            case TokenKind.HashBody:      return this.consumeAsHash();
+            case TokenKind.LParen:        return this.parseTuple();
+            case TokenKind.LAngle:        return this.parseSize();
+            case TokenKind.LBracket:      return this.parseList();
+            case TokenKind.Dollar:        return this.parseBindingPath();
+            case TokenKind.DollarDollar:  return this.parseTemplateBinding();
+            case TokenKind.At:            return this.parseStaticResource();
+            case TokenKind.AtAt:          return this.parseDynamicResource();
+            case TokenKind.DollarParen:
+                throw new ParseError('inline expressions $(…)$ are not yet supported', tk.span);
+            default:
+                throw new ParseError(`expected value, got '${tk.value}'`, tk.span);
+        }
+    }
+
+    private consumeAsNumber(): NumberValue
+    {
+        const tk = this.consume();
+        return { kind: 'number', raw: tk.value, span: tk.span };
+    }
+
+    private consumeAsString(): StringValue
+    {
+        const tk = this.consume();
+        return { kind: 'string', value: tk.value, span: tk.span };
+    }
+
+    private consumeAsIdent(): IdentValue
+    {
+        const tk = this.consume();
+        return { kind: 'ident', name: tk.value, span: tk.span };
+    }
+
+    // `#` body — interpreted by the bind pass into Color, NamedColor,
+    // or NamedMacroHole. Short digit-only bodies (1-2 chars) are
+    // positional macro holes (`#1`, `#2`). Anything 3+ chars that's
+    // valid hex shape is a hex colour (`#abc`, `#000000`, `#ff00ff00`).
+    // The bind pass distinguishes "named colour" vs "named macro hole"
+    // by surrounding context — inside a `def` body, named bodies are
+    // macro-hole references; outside, they're colour names.
+    private consumeAsHash(): ColorValue | MacroHoleValue
+    {
+        const tk = this.consume();
+        const v = tk.value;
+        if (v.length <= 2 && /^[0-9]+$/.test(v))
+        {
+            return { kind: 'macro-hole', name: v, span: tk.span };
+        }
+        return { kind: 'color', raw: v, span: tk.span };
+    }
+
+    private parseTuple(): TupleValue
+    {
+        const lp = this.expect(TokenKind.LParen);
+        const values: ValueNode[] = [];
+        if (this.peek().kind !== TokenKind.RParen)
+        {
+            for (;;)
+            {
+                values.push(this.parseValue());
+                if (this.peek().kind === TokenKind.Comma) { this.consume(); continue; }
+                break;
+            }
+        }
+        const rp = this.expect(TokenKind.RParen);
+        return { kind: 'tuple', values, span: this.span(lp.span.start, rp.span.end) };
+    }
+
+    private parseSize(): SizeValue
+    {
+        const la     = this.expect(TokenKind.LAngle);
+        const width  = this.parseValue();
+        this.expect(TokenKind.Comma);
+        const height = this.parseValue();
+        const ra     = this.expect(TokenKind.RAngle);
+        return { kind: 'size', width, height, span: this.span(la.span.start, ra.span.end) };
+    }
+
+    private parseList(): ListValue
+    {
+        const lb = this.expect(TokenKind.LBracket);
+        const values: ValueNode[] = [];
+        if (this.peek().kind !== TokenKind.RBracket)
+        {
+            for (;;)
+            {
+                values.push(this.parseValue());
+                if (this.peek().kind === TokenKind.Comma) { this.consume(); continue; }
+                break;
+            }
+        }
+        const rb = this.expect(TokenKind.RBracket);
+        return { kind: 'list', values, span: this.span(lb.span.start, rb.span.end) };
+    }
+
+    private parseBindingPath(): BindingValue
+    {
+        const dollar = this.expect(TokenKind.Dollar);
+        const path: string[] = [];
+        path.push(this.expect(TokenKind.Ident).value);
+        while (this.peek().kind === TokenKind.Dot)
+        {
+            this.consume();
+            path.push(this.expect(TokenKind.Ident).value);
+        }
+        return { kind: 'binding', path, span: this.span(dollar.span.start, this.lastEnd()) };
+    }
+
+    private parseTemplateBinding(): TemplateBindingValue
+    {
+        const dd = this.expect(TokenKind.DollarDollar);
+        const id = this.expect(TokenKind.Ident);
+        return {
+            kind: 'template-binding',
+            name: id.value,
+            span: this.span(dd.span.start, id.span.end),
+        };
+    }
+
+    private parseStaticResource(): StaticResourceValue
+    {
+        const at = this.expect(TokenKind.At);
+        const id = this.expect(TokenKind.Ident);
+        // Allow @ns:name forms? Spec §9.1 uses @theme:primary as a
+        // keyed-primitive resource — that lives at definition time
+        // (KeyValueResource). At lookup time, the key is a string with
+        // the colon in it. So parse the optional `:ident` here too.
+        let key = id.value;
+        if (this.peek().kind === TokenKind.Colon)
+        {
+            this.consume();
+            const tail = this.expect(TokenKind.Ident).value;
+            key = `${id.value}:${tail}`;
+        }
+        return {
+            kind: 'static-resource',
+            key,
+            span: this.span(at.span.start, this.lastEnd()),
+        };
+    }
+
+    private parseDynamicResource(): DynamicResourceValue
+    {
+        const at = this.expect(TokenKind.AtAt);
+        const id = this.expect(TokenKind.Ident);
+        let key = id.value;
+        if (this.peek().kind === TokenKind.Colon)
+        {
+            this.consume();
+            const tail = this.expect(TokenKind.Ident).value;
+            key = `${id.value}:${tail}`;
+        }
+        return {
+            kind: 'dynamic-resource',
+            key,
+            span: this.span(at.span.start, this.lastEnd()),
+        };
+    }
+
+    // ── Token plumbing ──────────────────────────────────────────────
+
+    private peek(offset = 0): Token
+    {
+        while (this.buffer.length <= offset)
+        {
+            this.buffer.push(this.lexer.NextToken());
+        }
+        return this.buffer[offset]!;
+    }
+
+    private consume(): Token
+    {
+        if (this.buffer.length === 0)
+        {
+            this.buffer.push(this.lexer.NextToken());
+        }
+        return this.buffer.shift()!;
+    }
+
+    private expect(kind: TokenKind): Token
+    {
+        const tk = this.peek();
+        if (tk.kind !== kind)
+        {
+            throw new ParseError(
+                `expected ${kind}, got ${tk.kind} '${tk.value}'`, tk.span);
+        }
+        return this.consume();
+    }
+
+    private expectIdent(text: string): Token
+    {
+        const tk = this.peek();
+        if (tk.kind !== TokenKind.Ident || tk.value !== text)
+        {
+            throw new ParseError(
+                `expected '${text}', got '${tk.value}'`, tk.span);
+        }
+        return this.consume();
+    }
+
+    private span(start: SourceLocation, end: SourceLocation): SourceSpan
+    {
+        return { start, end };
+    }
+
+    // The end position of the most-recently-consumed token, used to
+    // close out span ranges that started before the current peek.
+    private lastEnd(): SourceLocation
+    {
+        // After consume(), buffer.shift() returned a token but we no
+        // longer hold a reference. We approximate via the current
+        // lexer position — which is the start of the next token's
+        // lookahead and therefore strictly >= the end of whatever was
+        // last consumed. Good enough for diagnostics.
+        return this.lexer.Position();
+    }
+
+}
