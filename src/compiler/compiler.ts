@@ -422,19 +422,16 @@ export class Compiler
         {
             const expanded = this.expandMacro(elem, macro);
             // Forward x:* attrs from the invocation onto the expanded
-            // root so `card[x:key="X"]{ ... }` still keys the result.
-            const invocationX = elem.attrs.filter(a => a.kind === 'x-attr') as XAttr[];
-            const merged: ElementNode = invocationX.length === 0
+            // root so `card x:key="X" { ... }` still keys the result.
+            const merged: ElementNode = elem.xAttrs.length === 0
                 ? expanded
-                : { ...expanded, attrs: [...expanded.attrs, ...invocationX] };
+                : { ...expanded, xAttrs: [...expanded.xAttrs, ...elem.xAttrs] };
             this.compileResourceElement(rdVar, merged);
             return;
         }
 
-        const xKey  = this.findXAttr(
-            elem.attrs.filter(a => a.kind === 'x-attr') as XAttr[], 'key');
-        const xRoot = this.findXAttr(
-            elem.attrs.filter(a => a.kind === 'x-attr') as XAttr[], 'root');
+        const xKey  = this.findXAttr(elem.xAttrs, 'key');
+        const xRoot = this.findXAttr(elem.xAttrs, 'root');
         if (xKey === null && xRoot === null)
         {
             throw new EmitError(
@@ -764,10 +761,11 @@ export class Compiler
     private substElement(elem: ElementNode, subst: MacroSubst): ElementNode
     {
         return {
-            kind: 'element',
-            name: elem.name,
-            attrs: elem.attrs.map(a => this.substAttr(a, subst)),
-            body:  elem.body === null
+            kind:   'element',
+            name:   elem.name,
+            xAttrs: elem.xAttrs.map(x => this.substXAttr(x, subst)),
+            attrs:  elem.attrs .map(a => this.substAttr (a, subst)),
+            body:   elem.body === null
                 ? null
                 : (elem.body.kind === 'string-body'
                     ? elem.body
@@ -782,18 +780,19 @@ export class Compiler
 
     private substAttr(attr: Attribute, subst: MacroSubst): Attribute
     {
-        if (attr.kind === 'x-attr')
-        {
-            return {
-                ...attr,
-                value: attr.value === null ? null : this.substValue(attr.value, subst),
-            };
-        }
         if (attr.kind === 'positional-attr')
         {
             return { ...attr, value: this.substValue(attr.value, subst) };
         }
         return { ...attr, value: this.substValue(attr.value, subst) };
+    }
+
+    private substXAttr(attr: XAttr, subst: MacroSubst): XAttr
+    {
+        return {
+            ...attr,
+            value: attr.value === null ? null : this.substValue(attr.value, subst),
+        };
     }
 
     private substValue(val: ValueNode, subst: MacroSubst): ValueNode
@@ -904,17 +903,6 @@ export class Compiler
 
     private compileAttribute(targetVar: string, _parentClass: string, attr: Attribute): void
     {
-        if (attr.kind === 'x-attr')
-        {
-            // x:* attrs are scope-extension requests consumed by whoever
-            // advertises the extension (e.g., the surrounding
-            // ResourceDictionary consumes `x:key` and `x:root` via
-            // compileResourceElement BEFORE we get here). compileElement
-            // itself never owns them. v0 leaves unconsumed x:* attrs
-            // silently no-op; tightening to a "no advertiser for x:foo"
-            // static error lands with the proper scope-stack pass.
-            return;
-        }
         if (attr.kind === 'positional-attr')
         {
             throw new EmitError(

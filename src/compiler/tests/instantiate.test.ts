@@ -52,7 +52,7 @@ describe('instantiate — happy path', () => {
     test('Border marked x:root becomes Application.Root', () => {
         const app = buildApp(`
             Application{ resources: {
-                Border[x:root, Padding=(16)]{}
+                Border x:root[Padding=(16)]{}
             } }
         `);
         assert.ok(app.Root instanceof Border);
@@ -67,7 +67,7 @@ describe('instantiate — happy path', () => {
     test('Canvas with attached Canvas.Left / Canvas.Top placement', () => {
         const app = buildApp(`
             Application{ resources: {
-                Canvas[x:root]{
+                Canvas x:root{
                     Border[Canvas.Left=10, Canvas.Top=20]{}
                     Border[Canvas.Left=30, Canvas.Top=40]{}
                 }
@@ -85,7 +85,7 @@ describe('instantiate — happy path', () => {
     test('Border > Border parent-child via single-element slot', () => {
         const app = buildApp(`
             Application{ resources: {
-                Border[x:root]{
+                Border x:root{
                     Border[Padding=(4)]{}
                 }
             } }
@@ -100,8 +100,8 @@ describe('instantiate — happy path', () => {
         const app = buildApp(`
             Application{ resources: {
                 @primary = #4caf50
-                style[targettype=Border]{ Background = @primary }
-                Border[x:root]{}
+                style[targettype=Border]{ Background = @primary; }
+                Border x:root{}
             } }
         `);
         // The Style sits in Resources keyed by Border.
@@ -120,9 +120,9 @@ describe('instantiate — happy path', () => {
         const app = buildApp(`
             Application{ resources: {
                 style[targettype=Border]{
-                    Background = #ffffff
-                    when{ IsMouseOver }{
-                        Background = #eeeeee
+                    Background = #ffffff;
+                    when( IsMouseOver ){
+                        Background = #eeeeee;
                     }
                 }
             } }

@@ -233,15 +233,10 @@ function attributeContext(element: ElementNode): CompletionItem[]
 {
     const out: CompletionItem[] = [];
 
-    // x:key / x:root always legal inside [].
-    for (const ext of X_EXTENSIONS)
-    {
-        out.push({
-            label:  `x:${ext}`,
-            kind:   CompletionItemKind.Keyword,
-            detail: 'scope extension',
-        });
-    }
+    // Scope extensions (x:key, x:root, …) belong BEFORE the `[ … ]`
+    // block, not inside it — so they are intentionally omitted from
+    // this attribute-position list. They surface via the `x-extension`
+    // sigil path when the user types `x:` at the leading position.
 
     // For style/template/datatemplate the meta-attrs are different.
     if (element.name === 'style' || element.name === 'template')

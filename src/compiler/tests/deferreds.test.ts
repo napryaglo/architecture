@@ -25,8 +25,8 @@ describe('compile — compound triggers', () => {
         const js = emitted(`
             Application{ resources: {
                 style[targettype=Border]{
-                    Background = #ffffff
-                    when{ not IsEnabled }{ Background = #cccccc }
+                    Background = #ffffff;
+                    when( not IsEnabled ){ Background = #cccccc; }
                 }
             } }
         `);
@@ -40,8 +40,8 @@ describe('compile — compound triggers', () => {
         const js = emitted(`
             Application{ resources: {
                 style[targettype=Border]{
-                    Background = #ffffff
-                    when{ IsMouseOver or IsFocused }{ Background = #eeeeee }
+                    Background = #ffffff;
+                    when( IsMouseOver or IsFocused ){ Background = #eeeeee; }
                 }
             } }
         `);
@@ -60,7 +60,7 @@ describe('compile — compound triggers', () => {
         const js = emitted(`
             Application{ resources: {
                 style[targettype=Border]{
-                    when{ IsMouseOver and IsFocused }{ Background = #eee }
+                    when( IsMouseOver and IsFocused ){ Background = #eee; }
                 }
             } }
         `);
@@ -75,8 +75,8 @@ describe('compile — compound triggers', () => {
         const js = emitted(`
             Application{ resources: {
                 style[targettype=Border]{
-                    when{ (IsMouseOver or IsFocused) and IsEnabled }{
-                        Background = #eee
+                    when( (IsMouseOver or IsFocused) and IsEnabled ){
+                        Background = #eee;
                     }
                 }
             } }
@@ -92,7 +92,7 @@ describe('compile — compound triggers', () => {
             () => emitted(`
                 Application{ resources: {
                     style[targettype=Border]{
-                        when{ not Status = "active" }{ Background = #eee }
+                        when( not Status = "active" ){ Background = #eee; }
                     }
                 } }
             `),
@@ -105,7 +105,7 @@ describe('compile — text-mode bodies', () => {
     test('TextBlock{Hello mural} lexes as a single TextRun and sets Text', () => {
         const js = emitted(`
             Application{ resources: {
-                TextBlock[x:root]{Hello mural}
+                TextBlock x:root{Hello mural}
             } }
         `);
         assert.match(js, /\.set_property_value\("Text", "Hello mural"\);/);
@@ -115,14 +115,14 @@ describe('compile — text-mode bodies', () => {
         // Border body is element-typed; the parser stays in structural
         // mode. Empty body works fine.
         assert.doesNotThrow(() => emitted(`
-            Application{ resources: { Border[x:root]{} }}
+            Application{ resources: { Border x:root{} }}
         `));
     });
 
     test('Escapes inside text bodies pass through', () => {
         const js = emitted(`
             Application{ resources: {
-                TextBlock[x:root]{Hello \\{brace\\} world}
+                TextBlock x:root{Hello \\{brace\\} world}
             } }
         `);
         assert.match(js, /set_property_value\("Text", "Hello \{brace\} world"\)/);
@@ -130,10 +130,10 @@ describe('compile — text-mode bodies', () => {
 });
 
 describe('compile — control templates', () => {
-    test('template[x:key=…, targettype=…]{…} emits new ControlTemplate(factory)', () => {
+    test('template x:key=…[targettype=…]{…} emits new ControlTemplate(factory)', () => {
         const js = emitted(`
             Application{ resources: {
-                template[x:key="FancyBorder", targettype=Border]{
+                template x:key="FancyBorder"[targettype=Border]{
                     Border[Padding=(8)]{}
                 }
             } }
@@ -158,10 +158,10 @@ describe('compile — control templates', () => {
 });
 
 describe('compile — data templates', () => {
-    test('datatemplate[x:key=…, datatype=…]{…} emits new DataTemplate(factory)', () => {
+    test('datatemplate x:key=…[datatype=…]{…} emits new DataTemplate(factory)', () => {
         const js = emitted(`
             Application{ resources: {
-                datatemplate[x:key="PersonRow", datatype=Object]{
+                datatemplate x:key="PersonRow"[datatype=Object]{
                     TextBlock{row}
                 }
             } }
@@ -179,7 +179,7 @@ describe('compile — macros', () => {
             }
 
             Application{ resources: {
-                Border[x:root]{
+                Border x:root{
                     panel[#4caf50, (8)]
                 }
             } }
@@ -209,7 +209,7 @@ describe('compile — macros', () => {
             }
 
             Application{ resources: {
-                Border[x:root]{
+                Border x:root{
                     labeled[#0000ff]{
                         Border[Padding=(2)]{}
                     }
@@ -225,7 +225,7 @@ describe('compile — macros', () => {
         const js = emitted(`
             def card[#bg = #ffffff]{ Border[Background=#bg]{} }
             Application{ resources: {
-                Border[x:root]{ card[] }
+                Border x:root{ card[] }
             } }
         `);
         assert.match(
@@ -239,7 +239,7 @@ describe('compile — macros', () => {
             () => emitted(`
                 def card[#bg]{ Border[Background=#bg]{} }
                 Application{ resources: {
-                    Border[x:root]{ card[#0000ff, "stray"] }
+                    Border x:root{ card[#0000ff, "stray"] }
                 } }
             `),
             /too many positional/,
@@ -251,7 +251,7 @@ describe('compile — macros', () => {
             () => emitted(`
                 def card[#bg]{ Border[Background=#bg]{} }
                 Application{ resources: {
-                    Border[x:root]{ card[bg=#0000ff] }
+                    Border x:root{ card[bg=#0000ff] }
                 } }
             `),
             /named-argument/,
@@ -276,7 +276,7 @@ describe('instantiate — deferreds end-to-end', () => {
     test('TextBlock{Hello mural} sets Text via text mode', () => {
         const app = instantiate(`
             Application{ resources: {
-                TextBlock[x:root]{Hello mural}
+                TextBlock x:root{Hello mural}
             } }
         `, CTX) as Application;
         const tb = app.Root as TextBlock;
@@ -288,8 +288,8 @@ describe('instantiate — deferreds end-to-end', () => {
         const app = instantiate(`
             Application{ resources: {
                 style[targettype=Border]{
-                    Background = #ffffff
-                    when{ IsMouseOver or IsFocused }{ Background = #eeeeee }
+                    Background = #ffffff;
+                    when( IsMouseOver or IsFocused ){ Background = #eeeeee; }
                 }
             } }
         `, CTX) as Application;
@@ -302,7 +302,7 @@ describe('instantiate — deferreds end-to-end', () => {
     test('Control template — apply produces fresh subtree', () => {
         const app = instantiate(`
             Application{ resources: {
-                template[x:key="FancyBorder", targettype=Border]{
+                template x:key="FancyBorder"[targettype=Border]{
                     Border[Padding=(8)]{}
                 }
             } }
@@ -316,7 +316,7 @@ describe('instantiate — deferreds end-to-end', () => {
     test('Data template — apply with data returns a Visual', () => {
         const app = instantiate(`
             Application{ resources: {
-                datatemplate[x:key="Row", datatype=Object]{
+                datatemplate x:key="Row"[datatype=Object]{
                     TextBlock{row}
                 }
             } }
@@ -331,7 +331,7 @@ describe('instantiate — deferreds end-to-end', () => {
     test('$Path binding — emits DataContextBinding watching the DataContext path', () => {
         const app = instantiate(`
             Application{ resources: {
-                Border[x:root]{
+                Border x:root{
                     TextBlock[Text=$Name]
                 }
             } }
@@ -361,7 +361,7 @@ describe('instantiate — deferreds end-to-end', () => {
     test('$$Property — inside a ControlTemplate, binds to templated parent', () => {
         const app = instantiate(`
             Application{ resources: {
-                template[x:key="MyTmpl", targettype=Border]{
+                template x:key="MyTmpl"[targettype=Border]{
                     Border[Background=$$Background]{}
                 }
             } }
@@ -381,8 +381,8 @@ describe('instantiate — deferreds end-to-end', () => {
         const app = instantiate(`
             Application{ resources: {
                 style[targettype=Border]{
-                    Background = #ffffff
-                    when{ IsMouseOver and IsFocused }{ Background = #eeeeee }
+                    Background = #ffffff;
+                    when( IsMouseOver and IsFocused ){ Background = #eeeeee; }
                 }
             } }
         `, CTX) as Application;
@@ -400,7 +400,7 @@ describe('instantiate — deferreds end-to-end', () => {
         const app = instantiate(`
             def labeled[#bg]{ Border[Background=#bg, Padding=(8)]{} }
             Application{ resources: {
-                Border[x:root]{
+                Border x:root{
                     labeled[#0000ff]
                 }
             } }

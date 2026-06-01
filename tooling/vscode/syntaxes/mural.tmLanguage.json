@@ -182,6 +182,7 @@
                 { "name": "punctuation.section.attrs.begin.mural", "match": "\\[" },
                 { "name": "punctuation.section.attrs.end.mural",   "match": "\\]" },
                 { "name": "punctuation.separator.comma.mural",     "match": "," },
+                { "name": "punctuation.terminator.statement.mural", "match": ";" },
                 { "name": "keyword.operator.assignment.mural",     "match": "=" },
                 { "name": "punctuation.separator.colon.mural",     "match": ":" }
             ]

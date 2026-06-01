@@ -4,7 +4,7 @@ import { vitePluginMural } from '../vite-plugin.js';
 
 const TINY_APP = `
     Application{ resources: {
-        Border[x:root, Padding=(8)]{}
+        Border x:root[Padding=(8)]{}
     } }
 `;
 

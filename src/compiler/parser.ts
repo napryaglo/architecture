@@ -203,17 +203,20 @@ export class Parser
             throw new ParseError(`expected resource keyword, got '${keyword}'`, head.span);
         }
 
+        // Scope extensions (`x:key`, future `x:*`) lead — read before
+        // the `[ … ]` block, mirroring parseElement.
+        const xAttrs = this.parseLeadingXAttrs();
+
         this.expect(TokenKind.LBracket);
         const attrs = this.parseAttrListBody();
         this.expect(TokenKind.RBracket);
 
-        // Partition: meta-attrs vs x-attrs. Positional disallowed.
+        // Resource form meta-attrs are named only; positionals + leftover
+        // XAttrs are syntactic errors at this point.
         const metaAttrs: NamedAttr[] = [];
-        const xAttrs:    XAttr[]     = [];
         for (const a of attrs)
         {
-            if (a.kind === 'named-attr')      metaAttrs.push(a);
-            else if (a.kind === 'x-attr')     xAttrs.push(a);
+            if (a.kind === 'named-attr') metaAttrs.push(a);
             else throw new ParseError(
                 'resource forms do not accept positional attributes', a.span);
         }
@@ -264,11 +267,17 @@ export class Parser
         return this.parsePropertySetter();
     }
 
+    // Setter terminator: PropertySetters are required to end with `;`,
+    // TriggerGroups end naturally with `}` and tolerate an optional
+    // trailing `;` for consistency. The setter list driver consumes
+    // any trailing `;` after a trigger so neither shape forces a
+    // particular style on the author.
     private parsePropertySetter(): PropertySetter
     {
         const path  = this.parseAttrPath();
         this.expect(TokenKind.Equals);
         const value = this.parseValue();
+        this.expect(TokenKind.Semicolon);
         const end   = this.lastEnd();
         return {
             kind: 'property-setter',
@@ -281,12 +290,16 @@ export class Parser
     private parseTriggerGroup(): TriggerGroup
     {
         const start = this.expectIdent('when').span.start;
-        this.expect(TokenKind.LBrace);
+        // Condition in `(…)` — reads like an `if` predicate, separates
+        // the trigger condition from the setter block visually.
+        this.expect(TokenKind.LParen);
         const condition = this.parseTriggerExpr();
-        this.expect(TokenKind.RBrace);
+        this.expect(TokenKind.RParen);
         this.expect(TokenKind.LBrace);
         const setters = this.parseSetterList();
         const closer  = this.expect(TokenKind.RBrace);
+        // Optional trailing `;` after the trigger block.
+        if (this.peek().kind === TokenKind.Semicolon) this.consume();
         return {
             kind: 'trigger-group',
             condition,
@@ -362,6 +375,10 @@ export class Parser
     private parseElement(): ElementNode
     {
         const head   = this.expect(TokenKind.Ident);
+        // Scope extensions (`x:key="…"`, `x:root`, …) live between the
+        // element name and the `[ … ]` block. The bracket list is
+        // strictly property assignments after this change.
+        const xAttrs = this.parseLeadingXAttrs();
         const attrs: Attribute[] = [];
         if (this.peek().kind === TokenKind.LBracket)
         {
@@ -387,10 +404,38 @@ export class Parser
         return {
             kind: 'element',
             name: head.value,
+            xAttrs,
             attrs,
             body,
             span: this.span(head.span.start, end),
         };
+    }
+
+    // Read zero or more leading XAttrs (`x:foo` flag-style, or
+    // `x:foo = value`) appearing between a form keyword / element name
+    // and the optional `[ … ]` attribute block. Stops at the first
+    // non-ScopeExt token. Used by parseElement and parseResourceForm.
+    private parseLeadingXAttrs(): XAttr[]
+    {
+        const out: XAttr[] = [];
+        while (this.peek().kind === TokenKind.ScopeExt)
+        {
+            const tk = this.consume();
+            let value: ValueNode | null = null;
+            if (this.peek().kind === TokenKind.Equals)
+            {
+                this.consume();
+                value = this.parseValue();
+            }
+            const end = this.lastEnd();
+            out.push({
+                kind: 'x-attr',
+                name: tk.value,
+                value,
+                span: this.span(tk.span.start, end),
+            });
+        }
+        return out;
     }
 
     // Text-mode body. Entered right after `{`; the buffer MUST be
@@ -481,23 +526,14 @@ export class Parser
     {
         const tk = this.peek();
 
-        // x:foo  or  x:foo = value
+        // Scope extensions (`x:foo`) are not allowed inside `[ … ]` —
+        // they live before the bracket list, between the element name
+        // and the `[`. Reject with a clear migration hint.
         if (tk.kind === TokenKind.ScopeExt)
         {
-            this.consume();
-            let value: ValueNode | null = null;
-            if (this.peek().kind === TokenKind.Equals)
-            {
-                this.consume();
-                value = this.parseValue();
-            }
-            const end = this.lastEnd();
-            return {
-                kind: 'x-attr',
-                name: tk.value,
-                value,
-                span: this.span(tk.span.start, end),
-            };
+            throw new ParseError(
+                "scope extensions (x:" + tk.value + ") belong before the `[ … ]` block, not inside it",
+                tk.span);
         }
 
         // NamedAttr starts with Ident (path), PositionalAttr starts with

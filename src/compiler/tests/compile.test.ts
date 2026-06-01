@@ -25,7 +25,7 @@ describe('compile — application skeleton', () => {
             Application{
                 resources: {
                     @primary = #4caf50
-                    Border[x:root, Padding=(16)]{}
+                    Border x:root[Padding=(16)]{}
                 }
             }
         `);
@@ -79,7 +79,7 @@ describe('compile — resources slot', () => {
         const js = emitted(`
             Application{
                 resources: {
-                    Border[x:root]{}
+                    Border x:root{}
                 }
             }
         `);
@@ -92,7 +92,7 @@ describe('compile — Style emission', () => {
         const js = emitted(`
             Application{
                 resources: {
-                    style[targettype=Border]{ Padding = (12, 6) }
+                    style[targettype=Border]{ Padding = (12, 6); }
                 }
             }
         `);
@@ -110,7 +110,7 @@ describe('compile — Style emission', () => {
         const js = emitted(`
             Application{
                 resources: {
-                    style[x:key="DangerButton", targettype=Border]{ Background = #ff0000 }
+                    style x:key="DangerButton"[targettype=Border]{ Background = #ff0000; }
                 }
             }
         `);
@@ -122,9 +122,9 @@ describe('compile — Style emission', () => {
             Application{
                 resources: {
                     style[targettype=Border]{
-                        Background = #ffffff
-                        when{ IsMouseOver }{
-                            Background = #eeeeee
+                        Background = #ffffff;
+                        when( IsMouseOver ){
+                            Background = #eeeeee;
                         }
                     }
                 }
@@ -148,7 +148,7 @@ describe('compile — element construction and slots', () => {
         const js = emitted(`
             Application{
                 resources: {
-                    Border[x:root]{
+                    Border x:root{
                         Border[Padding=(4)]{}
                     }
                 }
@@ -163,7 +163,7 @@ describe('compile — element construction and slots', () => {
         const js = emitted(`
             Application{
                 resources: {
-                    Canvas[x:root]{
+                    Canvas x:root{
                         Border[Canvas.Left=10]{}
                         Border[Canvas.Left=20]{}
                     }
@@ -180,7 +180,7 @@ describe('compile — element construction and slots', () => {
         const js = emitted(`
             Application{
                 resources: {
-                    Canvas[x:root]{
+                    Canvas x:root{
                         Border[Canvas.Left=10, Canvas.Top=20]{}
                     }
                 }
@@ -201,7 +201,7 @@ describe('compile — value emission', () => {
     test('Thickness shape — 1, 2, 4 values', () => {
         const js = emitted(`
             Application{ resources: {
-                Border[x:root, Padding=(8), Margin=(4, 6), BorderThickness=(1, 2, 3, 4)]{}
+                Border x:root[Padding=(8), Margin=(4, 6), BorderThickness=(1, 2, 3, 4)]{}
             } }
         `);
         assert.match(js, /new Thickness\(8\)/);
@@ -212,9 +212,9 @@ describe('compile — value emission', () => {
     test('Size literal emits new Size(w, h)', () => {
         const js = emitted(`
             Application{ resources: {
-                Border[x:root, Width=100]{}
+                Border x:root[Width=100]{}
                 style[targettype=Border]{
-                    MinSize = <120, 40>
+                    MinSize = <120, 40>;
                 }
             } }
         `);
@@ -236,7 +236,7 @@ describe('compile — value emission', () => {
         const js = emitted(`
             Application{ resources: {
                 @theme = #4caf50
-                Border[x:root, Background=@@theme]{}
+                Border x:root[Background=@@theme]{}
             } }
         `);
         assert.match(
@@ -248,7 +248,7 @@ describe('compile — value emission', () => {
     test('@@key inside a Style setter wraps in a SetterFactory', () => {
         const js = emitted(`
             Application{ resources: {
-                style[targettype=Border]{ Background = @@theme }
+                style[targettype=Border]{ Background = @@theme; }
             } }
         `);
         assert.match(
@@ -261,7 +261,7 @@ describe('compile — value emission', () => {
         const js = emitted(`
             Application{ resources: {
                 @primary = #4caf50
-                Border[x:root, Background=@primary]{}
+                Border x:root[Background=@primary]{}
             } }
         `);
         assert.match(
@@ -273,7 +273,7 @@ describe('compile — value emission', () => {
     test('PascalIdent in enum context — HorizontalAlignment=Center', () => {
         const js = emitted(`
             Application{ resources: {
-                Border[x:root, HorizontalAlignment=Center]{}
+                Border x:root[HorizontalAlignment=Center]{}
             } }
         `);
         assert.match(
@@ -291,7 +291,7 @@ describe('compile — value emission', () => {
 describe('compile — deferred & errored features', () => {
     test('$Path binding emits DataContextBinding bound to the target var', () => {
         const js = emitted(`
-            Application{ resources: { Border[x:root, Background=$Name]{} } }
+            Application{ resources: { Border x:root[Background=$Name]{} } }
         `);
         assert.match(
             js,
@@ -308,14 +308,14 @@ describe('compile — deferred & errored features', () => {
 
     test('positional attrs outside macros are an error', () => {
         assert.throws(
-            () => emitted(`Application{ resources: { Border[x:root, "stray"]{} } }`),
+            () => emitted(`Application{ resources: { Border x:root["stray"]{} } }`),
             /positional/,
         );
     });
 
     test('Application body slot other than resources is rejected', () => {
         assert.throws(
-            () => emitted(`Application{ Border[x:root]{} }`),
+            () => emitted(`Application{ Border x:root{} }`),
             /only the 'resources:' slot/,
         );
     });
@@ -329,7 +329,7 @@ describe('compile — deferred & errored features', () => {
 
     test('unknown symbol surfaces a typed error', () => {
         assert.throws(
-            () => emitted(`Application{ resources: { NonexistentControl[x:root]{} } }`),
+            () => emitted(`Application{ resources: { NonexistentControl x:root{} } }`),
             EmitError,
         );
     });
@@ -345,7 +345,7 @@ describe('compile — result metadata', () => {
     });
 
     test('imports map exposes the modules and symbols', () => {
-        const r = compile(`Application{ resources: { Border[x:root]{} } }`);
+        const r = compile(`Application{ resources: { Border x:root{} } }`);
         assert.ok(r.imports.has('@visualisation-sub/mural/runtime'));
         assert.ok(r.imports.has('@visualisation-sub/mural/Controls'));
         assert.equal(r.imports.get('@visualisation-sub/mural/Controls')!.has('Border'), true);

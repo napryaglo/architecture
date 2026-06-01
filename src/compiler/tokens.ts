@@ -26,6 +26,7 @@ export enum TokenKind
     Comma       = 'Comma',         // ,
     Equals      = 'Equals',        // =
     Colon       = 'Colon',         // :
+    Semicolon   = 'Semicolon',     // ;  — property-setter terminator
     Dot         = 'Dot',           // .
 
     // ── Sigils ────────────────────────────────────────────────────

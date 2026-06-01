@@ -26,7 +26,7 @@ const CTX: Record<string, unknown> = { ...runtime, ...controls, ...engine };
 describe('parser — `{{ … }}` inline expressions', () => {
     test('value-position `{{ … }}` parses as inline-expr', () => {
         const doc = new Parser(
-            'Application{ resources: { Border[x:root, Width = {{ 1 + 2 }}]{} } }',
+            'Application{ resources: { Border x:root[Width = {{ 1 + 2 }}]{} } }',
         ).ParseDocument();
         // forms[0] = Application; its body is a StructuredBody whose
         // first item is a SlotAssign for `resources:`; that slot's
@@ -42,7 +42,7 @@ describe('parser — `{{ … }}` inline expressions', () => {
 
     test('text-mode body captures `{{ … }}` as inline-expr chunks', () => {
         const doc = new Parser(
-            'Application{ resources: { TextBlock[x:root]{Hi {{ $name }}!} } }',
+            'Application{ resources: { TextBlock x:root{Hi {{ $name }}!} } }',
             { isStringBody: (n) => n === 'TextBlock' },
         ).ParseDocument();
         const app         = doc.forms[0]! as any;
@@ -56,7 +56,7 @@ describe('parser — `{{ … }}` inline expressions', () => {
     test('retired `$( … )$` form errors with a migration hint', () => {
         assert.throws(
             () => new Parser(
-                'Application{ resources: { Border[x:root, Width = $( 1 )$]{} } }',
+                'Application{ resources: { Border x:root[Width = $( 1 )$]{} } }',
             ).ParseDocument(),
             (e) => e instanceof ParseError && /\{\{ … \}\}/.test(e.message),
         );
@@ -64,7 +64,7 @@ describe('parser — `{{ … }}` inline expressions', () => {
 
     test('unterminated inline expression is a parser error', () => {
         assert.throws(
-            () => new Parser('Application{ resources: { Border[x:root, Width = {{ 1 + 2 ]{} } }').ParseDocument(),
+            () => new Parser('Application{ resources: { Border x:root[Width = {{ 1 + 2]{} } }').ParseDocument(),
             ParseError,
         );
     });
@@ -135,7 +135,7 @@ describe('inline-expr — lowering', () => {
 describe('compile — inline expressions', () => {
     test('constant fold lands as a literal in `set_property_value`', () => {
         const js = compile(
-            'Application{ resources: { Border[x:root, Width = {{ 50 * 2 + 16 }}]{} } }',
+            'Application{ resources: { Border x:root[Width = {{ 50 * 2 + 16 }}]{} } }',
         ).js;
         assert.match(js, /set_property_value\("Width", 116\)/);
         // No MultiBinding import — purely a constant.
@@ -144,7 +144,7 @@ describe('compile — inline expressions', () => {
 
     test('reactive form emits MultiBinding with the matching path list', () => {
         const js = compile(
-            'Application{ resources: { Border[x:root, Width = {{ $a + $b * 2 }}]{} } }',
+            'Application{ resources: { Border x:root[Width = {{ $a + $b * 2 }}]{} } }',
         ).js;
         assert.match(js, /import \{[^}]*MultiBinding[^}]*\} from "@visualisation-sub\/mural\/runtime";/);
         assert.match(
@@ -155,7 +155,7 @@ describe('compile — inline expressions', () => {
 
     test('text body with `{{ $path }}` becomes a MultiBinding-backed Text', () => {
         const js = compile(
-            'Application{ resources: { TextBlock[x:root]{Hi {{ $name }}!} } }',
+            'Application{ resources: { TextBlock x:root{Hi {{ $name }}!} } }',
         ).js;
         assert.match(
             js,
@@ -165,7 +165,7 @@ describe('compile — inline expressions', () => {
 
     test('text body where every `{{ … }}` folds yields a plain string literal', () => {
         const js = compile(
-            'Application{ resources: { TextBlock[x:root]{The answer is {{ 6 * 7 }}} } }',
+            'Application{ resources: { TextBlock x:root{The answer is {{ 6 * 7 }}} } }',
         ).js;
         assert.match(js, /set_property_value\("Text", "The answer is 42"\)/);
         assert.doesNotMatch(js, /MultiBinding/);
@@ -174,7 +174,7 @@ describe('compile — inline expressions', () => {
     test('disallowed identifier surfaces as EmitError on the inline-expr span', () => {
         assert.throws(
             () => compile(
-                'Application{ resources: { Border[x:root, Width = {{ window.x }}]{} } }',
+                'Application{ resources: { Border x:root[Width = {{ window.x }}]{} } }',
             ),
             EmitError,
         );
@@ -183,7 +183,7 @@ describe('compile — inline expressions', () => {
     test('Style setter wraps reactive MultiBinding in a SetterFactory', () => {
         const js = compile(`
             Application{ resources: {
-                style[targettype=Border]{ Width = {{ $base * 2 }} }
+                style[targettype=Border]{ Width = {{ $base * 2 }}; }
             } }
         `).js;
         assert.match(
@@ -213,7 +213,7 @@ describe('inline expressions — end-to-end', () => {
 
         const app = instantiate(`
             Application{ resources: {
-                Border[x:root, Width = {{ $A + $B * 2 }}]{}
+                Border x:root[Width = {{ $A + $B * 2 }}]{}
             } }
         `, CTX) as Application;
         const border = app.Root as Border;
@@ -248,7 +248,7 @@ describe('inline expressions — end-to-end', () => {
 
         const app = instantiate(`
             Application{ resources: {
-                TextBlock[x:root]{Hi {{ $Name }}, you have {{ $Count }} messages}
+                TextBlock x:root{Hi {{ $Name }}, you have {{ $Count }} messages}
             } }
         `, CTX) as Application;
         const tb = app.Root as TextBlock;

@@ -33,14 +33,24 @@ export interface ImportForm
 
 export interface ElementNode
 {
-    kind:  'element';
-    name:  string;             // Border, TextBlock, Application, …
-    attrs: Attribute[];
-    body:  BodyNode | null;
-    span:  SourceSpan;
+    kind:   'element';
+    name:   string;            // Border, TextBlock, Application, …
+    /** Scope-extension attributes (`x:key="…"`, `x:root`, …) — written
+     *  BEFORE the `[ … ]` block, between the element name and the
+     *  attribute list. Kept in a dedicated field so the syntactic
+     *  split between extensions and properties is preserved in the
+     *  AST and downstream consumers don't have to filter `attrs` to
+     *  find them. */
+    xAttrs: XAttr[];
+    /** Named + positional property assignments from the `[ … ]` block.
+     *  XAttrs are NOT included here — the parser rejects `x:foo` in
+     *  bracket position. */
+    attrs:  Attribute[];
+    body:   BodyNode | null;
+    span:   SourceSpan;
 }
 
-export type Attribute = NamedAttr | PositionalAttr | XAttr;
+export type Attribute = NamedAttr | PositionalAttr;
 
 export interface NamedAttr
 {

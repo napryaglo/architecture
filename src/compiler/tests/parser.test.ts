@@ -92,18 +92,15 @@ describe('Parser — elements and attributes', () => {
     });
 
     test('x:foo flag form (no value)', () => {
-        const el = asElement(firstForm('Window[x:root, Title="Demo"]'));
-        const xattr = el.attrs[0]!;
+        const el = asElement(firstForm('Window x:root[Title="Demo"]'));
+        const xattr = el.xAttrs[0]!;
         assert.equal(xattr.kind, 'x-attr');
-        if (xattr.kind === 'x-attr')
-        {
-            assert.equal(xattr.name,  'root');
-            assert.equal(xattr.value, null);
-        }
+        assert.equal(xattr.name,  'root');
+        assert.equal(xattr.value, null);
     });
 
     test('x:foo with value', () => {
-        const f = firstForm('style[x:key="primary-button", targettype=Button]{}');
+        const f = firstForm('style x:key="primary-button"[targettype=Button]{}');
         assert.equal(f.kind, 'resource-form');
         if (f.kind !== 'resource-form') return;
         const x = f.xAttrs[0]!;
@@ -247,7 +244,7 @@ describe('Parser — values', () => {
 
 describe('Parser — resource forms', () => {
     test('style with implicit (keyless) target', () => {
-        const f = firstForm('style[targettype=Button]{ Background = #red }') as ResourceForm;
+        const f = firstForm('style[targettype=Button]{ Background = #red; }') as ResourceForm;
         assert.equal(f.kind,    'resource-form');
         assert.equal(f.keyword, 'style');
         const meta = f.metaAttrs[0]!;
@@ -260,9 +257,9 @@ describe('Parser — resource forms', () => {
     test('style with a trigger group', () => {
         const f = firstForm(`
             style[targettype=Button]{
-                Background = #green
-                when{ IsMouseOver and not IsPressed }{
-                    Background = #lightgreen
+                Background = #green;
+                when( IsMouseOver and not IsPressed ){
+                    Background = #lightgreen;
                 }
             }
         `) as ResourceForm;
@@ -277,7 +274,7 @@ describe('Parser — resource forms', () => {
 
     test('template with x:key and TargetType', () => {
         const f = firstForm(`
-            template[x:key="FancyButton", targettype=Button]{
+            template x:key="FancyButton"[targettype=Button]{
                 Border[Background=$$Background]{
                     ContentPresenter
                 }
@@ -346,11 +343,11 @@ describe('Parser — end-to-end on a worked Application', () => {
                 resources: {
                     @primary = #4caf50
                     style[targettype=Button]{
-                        Background = @primary
-                        Padding = (12, 6)
+                        Background = @primary;
+                        Padding = (12, 6);
                     }
 
-                    Window[x:root, Title="Demo"]{
+                    Window x:root[Title="Demo"]{
                         Border[Padding=(16)]{
                             TextBlock[Text="Hello mural"]
                         }
@@ -376,8 +373,8 @@ describe('Parser — end-to-end on a worked Application', () => {
 
         // Window has x:root.
         const win = inner.items[2] as ElementNode;
-        const xroot = win.attrs.find(a => a.kind === 'x-attr');
+        const xroot = win.xAttrs.find(a => a.name === 'root');
         assert.notEqual(xroot, undefined);
-        if (xroot && xroot.kind === 'x-attr') assert.equal(xroot.name, 'root');
+        assert.equal(xroot!.name, 'root');
     });
 });

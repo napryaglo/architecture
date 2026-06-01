@@ -163,8 +163,9 @@ function walk(node: unknown, out: DocAnalysis): void
         {
             const el = node as ElementNode;
             out.elements.push(el);
-            walk(el.attrs, out);
-            walk(el.body, out);
+            walk(el.xAttrs, out);
+            walk(el.attrs,  out);
+            walk(el.body,   out);
             return;
         }
 

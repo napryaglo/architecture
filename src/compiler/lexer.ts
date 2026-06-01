@@ -83,6 +83,7 @@ export class Lexer
             case ',': return this.consumeFixed(TokenKind.Comma,    1, start);
             case '=': return this.consumeFixed(TokenKind.Equals,   1, start);
             case ':': return this.consumeFixed(TokenKind.Colon,    1, start);
+            case ';': return this.consumeFixed(TokenKind.Semicolon, 1, start);
             case '.': return this.consumeFixed(TokenKind.Dot,      1, start);
             case '$': return this.consumeFixed(TokenKind.Dollar,   1, start);
             case '@': return this.consumeFixed(TokenKind.At,       1, start);
