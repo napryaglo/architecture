@@ -45,6 +45,27 @@ export { DataContextBinding } from './data-context-binding.js';
 export { MultiBinding } from './multi-binding.js';
 export { TemplateBinding } from './template-binding.js';
 export {
+    RoutedEventArgs,
+    PointerEventArgs,
+    WheelEventArgs,
+    PointerButton,
+    NoModifiers,
+    buildRoute,
+    dispatchPointer,
+    dispatchPointerDirect,
+    type RoutedEventKind,
+    type PointerEventInit,
+    type WheelEventInit,
+    type WheelDeltaMode,
+    type ModifierKeys,
+    type PointerEventHandlers,
+} from './routed-event.js';
+export { InputManager } from './input-manager.js';
+export {
+    RelayCommand,
+    type ICommand,
+} from './command.js';
+export {
     Style,
     Setter,
     SetterFactory,

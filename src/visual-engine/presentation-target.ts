@@ -104,6 +104,31 @@ export abstract class PresentationTarget extends Model implements VisualHost
         this._actualHeight = height;
     }
 
+    // ------------------------------------------------------------------
+    // Hit testing
+    // ------------------------------------------------------------------
+    //
+    // Translate a point in the target's content coordinate space (top-
+    // left = (0, 0)) to the Visual under that point, or `null` if the
+    // pointer is outside the rendered content. Concrete targets pick
+    // whichever implementation suits their backend:
+    //
+    //   * HtmlTarget (SVG backend) — leans on the browser's native DOM
+    //     hit test, recovering the Visual via a back-reference stamped
+    //     on each painted SVG element. Cheap, correct, and respects
+    //     CSS transforms on the host element.
+    //   * HtmlTarget (canvas backend, future) — walks the visual tree
+    //     spatially using each Visual's arranged bounds.
+    //   * HeadlessTarget — currently returns `null`; can grow a tree
+    //     walk if tests need pointer simulation off-DOM.
+    //
+    // Default implementation is `null` so any subclass that hasn't
+    // wired hit-testing still satisfies the contract (no events fire).
+    public HitTest(_hostX: number, _hostY: number): Visual | undefined
+    {
+        return undefined;
+    }
+
     public get DeviceScale(): number { return this.get_property_value('DeviceScale'); }
     public set DeviceScale(value: number) { this.set_property_value('DeviceScale', value); }
 
@@ -119,6 +144,16 @@ export abstract class PresentationTarget extends Model implements VisualHost
         old?.['SetTarget'](undefined);
         this.set_property_value('Content', value);
         value?.['SetTarget'](this);
+        // Kick the layout queue. The new Content's subtree may carry
+        // stale `_isMeasureValid = false` flags from property writes
+        // that happened before SetTarget wired the host back-pointer —
+        // those invalidations couldn't notify a host that didn't exist
+        // yet. Re-invalidating Measure on the root after SetTarget
+        // schedules a Flush; the renderer's initial-paint path handles
+        // the first paint without needing an explicit render-dirty
+        // entry (a Visual that isn't in the renderer's map yet always
+        // gets created + drawn).
+        value?.InvalidateMeasure();
     }
 
     // ------------------------------------------------------------------

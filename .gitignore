@@ -6,3 +6,6 @@ dist/
 
 # Local verdaccio publish token (recreate locally; never commit).
 .npmrc
+
+# Claude Code per-project IDE state.
+.claude/

@@ -1,0 +1,337 @@
+import type { Visual } from './visual.js';
+
+// Routed-event infrastructure.
+//
+// Mirrors the WPF model: an event raised at a target Visual walks the
+// visual tree twice — first as a "preview" tunnel from the root down
+// to the target, then as a bubble from the target back up to the root.
+// On each hop the dispatcher calls a `protected` virtual on the Visual
+// (`OnPreviewPointerDown`, `OnPointerDown`, …) and stops the walk once
+// any handler sets `args.Handled = true`.
+//
+// Distinct from the WPF API in a couple of ways:
+//
+//   * Virtuals are the only consumer surface in phase 1 (no
+//     `AddHandler` / per-instance event hookups). Controls override
+//     `OnPointerX` to implement input behaviour; consumers compose
+//     Controls rather than attaching delegate-style handlers in
+//     mural source. Per-instance handler registration arrives with
+//     phase 2's event-binding syntax.
+//
+//   * Args are concrete classes carrying everything the handler might
+//     need. No `RoutedEvent` registry / EventManager indirection —
+//     the virtual dispatch table on Visual is the registry.
+
+// Lookup keyed onto the dispatch direction. Pre-baked here so the
+// dispatcher and InputManager can compose tunnel + bubble without
+// duplicating string lists.
+export type RoutedEventKind =
+    | 'PointerEnter'
+    | 'PointerLeave'
+    | 'PointerMove'
+    | 'PointerDown'
+    | 'PointerUp'
+    | 'PointerWheel';
+
+// Base for everything dispatched through the tree walker.
+//
+// `Source` is where the event originated (the hit-tested leaf for
+// pointer events; the focused element for keyboard later); `Visual`
+// is the current Visual on the route during dispatch, swapped by the
+// walker on each hop. `Handled` short-circuits both passes.
+//
+// `Strategy` records which pass is currently in flight so handlers
+// can branch (rare, but matches WPF and is useful when the same On*
+// implementation services both Preview and main events).
+export class RoutedEventArgs
+{
+    public readonly Kind: RoutedEventKind;
+    /** The leaf Visual the dispatcher resolved as the event target. */
+    public readonly Source: Visual;
+    /** The Visual currently receiving the event during dispatch. The
+     *  walker rewrites this on each hop. */
+    public Visual: Visual;
+    /** Set to `true` by any handler to stop further dispatch on both
+     *  the tunnel and bubble passes for this event. */
+    public Handled: boolean = false;
+    /** Discriminates the in-flight pass for handlers that share a
+     *  single `On*` body across Preview and bubble. */
+    public Strategy: 'tunnel' | 'bubble' = 'bubble';
+
+    constructor(kind: RoutedEventKind, source: Visual)
+    {
+        this.Kind   = kind;
+        this.Source = source;
+        this.Visual = source;
+    }
+}
+
+// ── Pointer events ─────────────────────────────────────────────────
+
+// Mouse buttons follow the PointerEvent.button standard:
+//   0 = primary (left), 1 = middle (wheel), 2 = secondary (right),
+//   3 = X1 (back), 4 = X2 (forward).
+// `None` is used for events that don't carry a button (move without
+// drag, enter, leave).
+export enum PointerButton
+{
+    None     = -1,
+    Primary  = 0,
+    Middle   = 1,
+    Secondary = 2,
+    X1       = 3,
+    X2       = 4,
+}
+
+// Modifier mask matching the four standard keyboard modifiers; carried
+// on every PointerEventArgs so handlers don't need a separate Keyboard
+// query at handler time.
+export interface ModifierKeys
+{
+    Shift:   boolean;
+    Control: boolean;
+    Alt:     boolean;
+    Meta:    boolean;
+}
+
+export const NoModifiers: ModifierKeys = Object.freeze({
+    Shift: false, Control: false, Alt: false, Meta: false,
+});
+
+export interface PointerEventInit
+{
+    /** Position in the host's coordinate space — `(0,0)` at the top-
+     *  left of the PresentationTarget's content area. The dispatcher
+     *  does NOT translate this into per-Visual local coordinates;
+     *  handlers that need a Visual-relative position translate
+     *  themselves using their layout offsets. */
+    HostX:    number;
+    HostY:    number;
+    Button:   PointerButton;
+    /** Bitmask of currently-pressed buttons, mirroring
+     *  PointerEvent.buttons. Stable between Down and Up; useful for
+     *  drag detection. */
+    Buttons:  number;
+    Modifiers: ModifierKeys;
+    /** Browser PointerEvent.pointerId — distinguishes simultaneous
+     *  contacts in multi-touch. `0` for synthetic events. */
+    PointerId: number;
+    /** Browser PointerEvent.pressure (0..1). `0.5` for non-pressure
+     *  pointers, matching the spec default; `0` for synthetic. */
+    Pressure: number;
+    /** Discriminates input modalities. PointerEvent.pointerType. */
+    PointerType: 'mouse' | 'pen' | 'touch' | 'unknown';
+}
+
+// Concrete args type for the six pointer events. Carries everything a
+// handler typically needs without forcing the handler to reach back
+// into the device. Mutable `Handled` is on the base; everything else
+// is read-only.
+export class PointerEventArgs extends RoutedEventArgs
+{
+    public readonly HostX:       number;
+    public readonly HostY:       number;
+    public readonly Button:      PointerButton;
+    public readonly Buttons:     number;
+    public readonly Modifiers:   ModifierKeys;
+    public readonly PointerId:   number;
+    public readonly Pressure:    number;
+    public readonly PointerType: PointerEventInit['PointerType'];
+
+    constructor(kind: RoutedEventKind, source: Visual, init: PointerEventInit)
+    {
+        super(kind, source);
+        this.HostX       = init.HostX;
+        this.HostY       = init.HostY;
+        this.Button      = init.Button;
+        this.Buttons     = init.Buttons;
+        this.Modifiers   = init.Modifiers;
+        this.PointerId   = init.PointerId;
+        this.Pressure    = init.Pressure;
+        this.PointerType = init.PointerType;
+    }
+}
+
+// ── Wheel events ───────────────────────────────────────────────────
+
+// Granularity of wheel deltas, mirroring WheelEvent.deltaMode:
+//   * 'pixel' — DeltaX/Y are in CSS pixels (most modern mice / trackpads)
+//   * 'line'  — DeltaX/Y are in scroll lines (older mice on some OSes)
+//   * 'page'  — DeltaX/Y are in pages (rare; Page Up / Page Down emulators)
+// Handlers that need raw pixels apply a small multiplier based on this.
+export type WheelDeltaMode = 'pixel' | 'line' | 'page';
+
+export interface WheelEventInit extends PointerEventInit
+{
+    DeltaX:    number;
+    DeltaY:    number;
+    DeltaZ:    number;
+    DeltaMode: WheelDeltaMode;
+}
+
+// PointerWheel args. Extends PointerEventArgs so existing handler
+// surfaces accept it; the dispatcher tables route this through the
+// PointerWheel slot. Handlers that override OnPointerWheel see the
+// concrete WheelEventArgs and can read scroll deltas directly.
+export class WheelEventArgs extends PointerEventArgs
+{
+    public readonly DeltaX:    number;
+    public readonly DeltaY:    number;
+    public readonly DeltaZ:    number;
+    public readonly DeltaMode: WheelDeltaMode;
+
+    constructor(source: Visual, init: WheelEventInit)
+    {
+        super('PointerWheel', source, init);
+        this.DeltaX    = init.DeltaX;
+        this.DeltaY    = init.DeltaY;
+        this.DeltaZ    = init.DeltaZ;
+        this.DeltaMode = init.DeltaMode;
+    }
+}
+
+// ── Visual-side virtual surface ─────────────────────────────────────
+
+// Names of the virtual methods the dispatcher invokes. Kept in one
+// place so the dispatcher tables stay consistent with Visual's
+// protected surface. Subclasses override the methods they care about;
+// the default Visual implementations are no-ops.
+//
+// Note the asymmetry: Move / Down / Up / Wheel each have a tunnel
+// (OnPreview*) and a bubble (On*) virtual; Enter / Leave have only
+// the bubble virtual because direct events don't tunnel.
+export interface PointerEventHandlers
+{
+    OnPointerEnter       (args: PointerEventArgs): void;
+    OnPointerLeave       (args: PointerEventArgs): void;
+    OnPreviewPointerMove (args: PointerEventArgs): void;
+    OnPointerMove        (args: PointerEventArgs): void;
+    OnPreviewPointerDown (args: PointerEventArgs): void;
+    OnPointerDown        (args: PointerEventArgs): void;
+    OnPreviewPointerUp   (args: PointerEventArgs): void;
+    OnPointerUp          (args: PointerEventArgs): void;
+    OnPreviewPointerWheel(args: WheelEventArgs): void;
+    OnPointerWheel       (args: WheelEventArgs): void;
+}
+
+// Method-name tables consumed by the dispatcher. Indexed by event kind
+// so the walker can pick the right virtual without a switch per event.
+// `as const` so TS treats each tuple as the readonly literal pair —
+// the dispatcher's `target[name]` call is exhaustive against
+// PointerEventHandlers.
+//
+// PointerEnter / PointerLeave are NOT in these tables — they're
+// dispatched via `dispatchPointerDirect` (no Preview pair, no route
+// walk), matching WPF's MouseEnter / MouseLeave RoutingStrategy.Direct.
+// The remaining four events tunnel + bubble.
+type TunnelBubbleKind = Exclude<RoutedEventKind, 'PointerEnter' | 'PointerLeave'>;
+
+export const POINTER_PREVIEW_HANDLERS: Readonly<Record<TunnelBubbleKind, keyof PointerEventHandlers>> = {
+    PointerMove:  'OnPreviewPointerMove',
+    PointerDown:  'OnPreviewPointerDown',
+    PointerUp:    'OnPreviewPointerUp',
+    PointerWheel: 'OnPreviewPointerWheel',
+} as const;
+
+export const POINTER_BUBBLE_HANDLERS: Readonly<Record<TunnelBubbleKind, keyof PointerEventHandlers>> = {
+    PointerMove:  'OnPointerMove',
+    PointerDown:  'OnPointerDown',
+    PointerUp:    'OnPointerUp',
+    PointerWheel: 'OnPointerWheel',
+} as const;
+
+export const POINTER_DIRECT_HANDLERS: Readonly<Record<'PointerEnter' | 'PointerLeave', keyof PointerEventHandlers>> = {
+    PointerEnter: 'OnPointerEnter',
+    PointerLeave: 'OnPointerLeave',
+} as const;
+
+// ── Dispatcher ──────────────────────────────────────────────────────
+
+// Build the visual-tree route from a leaf Visual up to the root.
+// Index 0 is the leaf (Source); the last entry has no visual parent.
+// Used by the dispatcher in both directions: reversed for the tunnel
+// pass, in-order for the bubble pass.
+export function buildRoute(source: Visual): Visual[]
+{
+    const out: Visual[] = [source];
+    // The walker needs the visual parent chain. Visual exposes
+    // `visualParent` as `protected`, but the dispatcher lives outside
+    // the class. The runtime uses a public companion `GetVisualParent`
+    // (added in the Visual edit below) to keep the chain readable from
+    // anywhere without weakening the OO surface.
+    let cur: Visual | undefined = (source as VisualWithParentAccessor).GetVisualParent();
+    while (cur !== undefined)
+    {
+        out.push(cur);
+        cur = (cur as VisualWithParentAccessor).GetVisualParent();
+    }
+    return out;
+}
+
+// Local structural type so this file doesn't import the full Visual
+// class (which would cycle). The runtime adds `GetVisualParent` to
+// Visual; the dispatcher only relies on that one method.
+interface VisualWithParentAccessor
+{
+    GetVisualParent(): Visual | undefined;
+}
+
+// Tunnel-then-bubble dispatch for Move / Down / Up / Wheel. Tunnel
+// runs root → target calling `OnPreview*`; bubble runs target → root
+// calling the matching `On*`. `args.Handled = true` at any hop stops
+// the remainder of BOTH passes — a Preview handler can swallow an
+// event before the bubble handler ever sees it.
+//
+// The dispatcher rewrites `args.Visual` on each hop so handlers see
+// "self" without a separate parameter, and it sets `args.Strategy`
+// to `'tunnel'` / `'bubble'` so a shared handler body can branch.
+export function dispatchPointer(args: PointerEventArgs): void
+{
+    if (args.Kind === 'PointerEnter' || args.Kind === 'PointerLeave')
+    {
+        throw new Error(
+            'dispatchPointer: Enter / Leave are direct routed events — call dispatchPointerDirect instead');
+    }
+    const route       = buildRoute(args.Source);
+    const previewName = POINTER_PREVIEW_HANDLERS[args.Kind];
+    const bubbleName  = POINTER_BUBBLE_HANDLERS [args.Kind];
+
+    // Tunnel: root → target.
+    args.Strategy = 'tunnel';
+    for (let i = route.length - 1; i >= 0; i--)
+    {
+        const v = route[i]!;
+        args.Visual = v;
+        const handler = (v as unknown as PointerEventHandlers)[previewName] as (a: PointerEventArgs) => void;
+        handler.call(v, args);
+        if (args.Handled) return;
+    }
+
+    // Bubble: target → root.
+    args.Strategy = 'bubble';
+    for (const v of route)
+    {
+        args.Visual = v;
+        const handler = (v as unknown as PointerEventHandlers)[bubbleName] as (a: PointerEventArgs) => void;
+        handler.call(v, args);
+        if (args.Handled) return;
+    }
+}
+
+// Direct-strategy dispatch for Enter / Leave: fires on the source
+// only, no tunnel, no bubble. Matches WPF's MouseEnter / MouseLeave
+// RoutingStrategy.Direct — IsMouseOver propagation up the ancestor
+// chain is the InputManager's job, not the event walker's.
+export function dispatchPointerDirect(args: PointerEventArgs): void
+{
+    if (args.Kind !== 'PointerEnter' && args.Kind !== 'PointerLeave')
+    {
+        throw new Error(
+            'dispatchPointerDirect: only Enter / Leave are direct events; the rest go through dispatchPointer');
+    }
+    args.Strategy = 'bubble';   // single hop — "bubble" by convention
+    args.Visual   = args.Source;
+    const name    = POINTER_DIRECT_HANDLERS[args.Kind];
+    const handler = (args.Source as unknown as PointerEventHandlers)[name] as (a: PointerEventArgs) => void;
+    handler.call(args.Source, args);
+}

@@ -37,8 +37,13 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
 
     // ── Controls ────────────────────────────────────────────────────
     ['Border',                  '@visualisation-sub/mural/Controls'],
+    ['Button',                  '@visualisation-sub/mural/Controls'],
+    ['ClickMode',               '@visualisation-sub/mural/Controls'],
     ['TextBlock',               '@visualisation-sub/mural/Controls'],
     ['Canvas',                  '@visualisation-sub/mural/Controls'],
+    ['ComboBox',                '@visualisation-sub/mural/Controls'],
+    ['StackPanel',              '@visualisation-sub/mural/Controls'],
+    ['Orientation',             '@visualisation-sub/mural/Controls'],
     ['ContentControl',          '@visualisation-sub/mural/Controls'],
     ['ContentPresenter',        '@visualisation-sub/mural/Controls'],
     ['ControlTemplate',         '@visualisation-sub/mural/Controls'],
@@ -49,6 +54,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['ScrollViewer',            '@visualisation-sub/mural/Controls'],
     ['VirtualizingPanel',       '@visualisation-sub/mural/Controls'],
     ['VirtualizingStackPanel',  '@visualisation-sub/mural/Controls'],
+    ['TextWrapping',            '@visualisation-sub/mural/Controls'],
 
     // ── visual-engine ───────────────────────────────────────────────
     ['SolidColorBrush',     '@visualisation-sub/mural/visual-engine'],
@@ -87,6 +93,9 @@ export const ENUM_CLASSES: ReadonlySet<string> = new Set([
     'LineJoin',
     'FillRule',
     'SweepDirection',
+    'TextWrapping',
+    'ClickMode',
+    'Orientation',
 ]);
 
 // Meta-attr names whose RHS is a type reference (compiled as a bare
@@ -115,8 +124,10 @@ export interface SlotInfo
 // + 'Child' with an emit-time error if the body doesn't match.
 export const DEFAULT_SLOT_INFO: ReadonlyMap<string, SlotInfo> = new Map<string, SlotInfo>([
     ['Border',                  { name: 'Child',    kind: 'single' }],
+    ['Button',                  { name: 'Content',  kind: 'object' }],
     ['TextBlock',               { name: 'Text',     kind: 'string' }],
     ['Canvas',                  { name: 'Children', kind: 'list'   }],
+    ['StackPanel',              { name: 'Children', kind: 'list'   }],
     ['ContentControl',          { name: 'Content',  kind: 'object' }],
     ['ContentPresenter',        { name: 'Content',  kind: 'object' }],
     ['ItemsControl',            { name: 'Items',    kind: 'list'   }],

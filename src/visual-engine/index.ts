@@ -35,6 +35,11 @@ export {
 export { FormattedText, FontWeight, FontStyle } from './formatted-text.js';
 export { type DrawingContext } from './drawing-context.js';
 export { SvgDrawingContext } from './svg-drawing-context.js';
+export {
+    SvgDomDrawingContext,
+    type SvgDomDrawingContextOptions,
+} from './svg-dom-drawing-context.js';
+export { SvgRenderer, VISUAL_BACKREF, type SvgRendererOptions } from './svg-renderer.js';
 export { FontMetricsMeasurer } from './font-metrics-measurer.js';
 export {
     loadGoogleFont,

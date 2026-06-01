@@ -47,10 +47,15 @@ class TestLeaf extends Visual
 
 // PresentationTarget is abstract; HeadlessTarget is the cheapest concrete
 // subclass to use for queue-level tests. Tests that don't care about
-// paint never call Render(dc).
+// paint never call Render(dc). Setting Content schedules a measure
+// invalidation (the new subtree carries stale "needs measure" flags
+// from pre-attach property writes), so we drain via Flush() here so
+// each test starts from clean dirty Sets.
 function makeTarget(content?: Visual, w?: number, h?: number): HeadlessTarget
 {
-    return new HeadlessTarget(w, h, content);
+    const t = new HeadlessTarget(w, h, content);
+    t.Flush();
+    return t;
 }
 
 // Thin peek into the protected dirty Sets for test assertions.

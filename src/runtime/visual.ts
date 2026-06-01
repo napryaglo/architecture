@@ -11,6 +11,7 @@ import { Setter, SetterFactory, Style, PropertyTrigger, MultiTrigger } from './s
 import { Rect, Size, Thickness } from './primitives.js';
 import type { DrawingContext } from './drawing-context.js';
 import type { TextMeasurer } from './text-measurer.js';
+import type { PointerEventArgs, WheelEventArgs } from './routed-event.js';
 
 // Horizontal positioning of a Visual within its parent-given slot when
 // the rendered area is smaller than the slot. Stretch fills the slot
@@ -119,7 +120,20 @@ export class Visual extends Model
         // measure / arrange / render impact — pure data plumbing —
         // hence the inherits-only flag.
         Model.RegisterProperty(Visual, 'DataContext', undefined, MetaData.Inherits);
+        // Input state flags. Maintained by the InputManager, not by
+        // user code — handlers should treat both as read-only. Default
+        // `false` so triggers like `when{ IsMouseOver }{ … }` only
+        // engage once the pointer enters this Visual's hover route.
+        // MetaData.None: no measure/arrange/render implication; the
+        // visible effect comes from any Style triggers that watch them.
+        Model.RegisterProperty(Visual, 'IsMouseOver', false, MetaData.None);
+        Model.RegisterProperty(Visual, 'IsPressed',   false, MetaData.None);
     }
+
+    // Input state — read-only mirrors of the DPs. Both flags are set
+    // exclusively by the InputManager during pointer dispatch.
+    public get IsMouseOver(): boolean { return this.get_property_value('IsMouseOver') as boolean; }
+    public get IsPressed():   boolean { return this.get_property_value('IsPressed')   as boolean; }
 
     public get DataContext(): unknown { return this.get_property_value('DataContext'); }
     public set DataContext(value: unknown) { this.set_property_value('DataContext', value); }
@@ -225,6 +239,16 @@ export class Visual extends Model
     // AttachVisual / cleared by DetachVisual (and through the Attach /
     // Detach convenience methods that wire both trees at once).
     protected get visualParent(): Visual | undefined
+    {
+        return this._visualParent;
+    }
+
+    // Public accessor used by the routed-event dispatcher (lives
+    // outside the class hierarchy, so the protected getter is out of
+    // reach). Returns the same value as `visualParent` — no separate
+    // book-keeping. Don't call this from subclass code; use the
+    // protected getter instead.
+    public GetVisualParent(): Visual | undefined
     {
         return this._visualParent;
     }
@@ -1108,6 +1132,43 @@ export class Visual extends Model
     protected RenderOverride(_dc: DrawingContext): void { }
 
     // ------------------------------------------------------------------
+    // Input handlers
+    // ------------------------------------------------------------------
+    //
+    // Routed-event virtuals. The dispatcher (`dispatchPointer` in
+    // routed-event.ts) walks the visual tree twice per event — tunnel
+    // root → target calling `OnPreview*`, then bubble target → root
+    // calling `On*`. Subclasses override the pair they care about; the
+    // base no-op lets every Visual participate in the tree walk
+    // without forcing trivial overrides.
+    //
+    // Setting `args.Handled = true` from any handler stops the
+    // remainder of BOTH passes for that event. The dispatcher rewrites
+    // `args.Visual` before each call so a handler can branch on it,
+    // and sets `args.Strategy` to `'tunnel'` or `'bubble'` so a
+    // shared implementation can pick its side.
+    //
+    // These methods are intentionally not abstract: most Visuals don't
+    // care about pointer events, and forcing every subclass to opt
+    // into the dispatch interface would explode the override surface.
+    //
+    // Enter / Leave are direct routed events (WPF semantics) and have
+    // no Preview counterpart — they fire on the visual that gained /
+    // lost mouse-over only, never on ancestors. IsMouseOver propagation
+    // up the ancestor chain happens via the InputManager regardless.
+
+    protected OnPointerEnter       (_args: PointerEventArgs): void { }
+    protected OnPointerLeave       (_args: PointerEventArgs): void { }
+    protected OnPreviewPointerMove (_args: PointerEventArgs): void { }
+    protected OnPointerMove        (_args: PointerEventArgs): void { }
+    protected OnPreviewPointerDown (_args: PointerEventArgs): void { }
+    protected OnPointerDown        (_args: PointerEventArgs): void { }
+    protected OnPreviewPointerUp   (_args: PointerEventArgs): void { }
+    protected OnPointerUp          (_args: PointerEventArgs): void { }
+    protected OnPreviewPointerWheel(_args: WheelEventArgs): void { }
+    protected OnPointerWheel       (_args: WheelEventArgs): void { }
+
+    // ------------------------------------------------------------------
     // Invalidation API
     // ------------------------------------------------------------------
 
@@ -1178,6 +1239,13 @@ export class Visual extends Model
         if (affectsArrange(meta)) this.InvalidateArrange();
         if (affectsRender(meta))  this.InvalidateVisual();
         if (inherits(meta))       this.propagate_inheritance_for_logical_children(descriptor);
+        // The public Style setter calls refresh_active_style after
+        // writing — but anyone using set_property_value("Style", …)
+        // (the compiler-emitted code path, runtime-installed bindings)
+        // bypasses that. Detect the Style property here and re-run the
+        // resolver so the new Style's setters / triggers install no
+        // matter how the property is written.
+        if (descriptor.Name === 'Style') this.refresh_active_style();
     }
 
     // ------------------------------------------------------------------

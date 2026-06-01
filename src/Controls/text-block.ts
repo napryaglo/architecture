@@ -15,6 +15,17 @@ import { Brush, FontStyle, FontWeight, FormattedText } from '../visual-engine/in
 // resort. Lives at module scope so changing it is one place.
 const DEFAULT_FONT_FAMILY = 'system-ui, sans-serif';
 
+// Mirrors WPF's TextWrapping enum. NoWrap (default) keeps the historic
+// single-line behaviour — text overflows the host width when too long.
+// Wrap drives MeasureOverride to greedy-fit lines into availableSize.Width
+// and RenderOverride to emit one DrawText per line at line-spaced y
+// offsets.
+export enum TextWrapping
+{
+    NoWrap = 'NoWrap',
+    Wrap   = 'Wrap',
+}
+
 // Renders a single run of text. The simplest concrete Visual that's
 // actually visible — exercises MeasureOverride (text dimensions),
 // RenderOverride (dc.DrawText), property inheritance (font properties
@@ -35,18 +46,28 @@ const DEFAULT_FONT_FAMILY = 'system-ui, sans-serif';
 export class TextBlock extends Visual
 {
     static {
-        Model.RegisterProperty(TextBlock, 'Text',       '',                  MetaData.Measure);
-        Model.RegisterProperty(TextBlock, 'FontFamily', DEFAULT_FONT_FAMILY, MetaData.Measure | MetaData.Inherits);
-        Model.RegisterProperty(TextBlock, 'FontSize',   14,                  MetaData.Measure | MetaData.Inherits);
-        Model.RegisterProperty(TextBlock, 'FontWeight', FontWeight.Normal,   MetaData.Measure | MetaData.Inherits);
-        Model.RegisterProperty(TextBlock, 'FontStyle',  FontStyle.Normal,    MetaData.Measure | MetaData.Inherits);
-        Model.RegisterProperty(TextBlock, 'Foreground', undefined,           MetaData.Render  | MetaData.Inherits);
+        // Each of these changes the painted glyph stream, so both
+        // Measure (size changes with content / weight / size) AND
+        // Render (we must repaint to show the new pixels) are needed.
+        // The renderer's incremental update only re-emits primitives
+        // for render-dirty visuals — without the Render flag a bound
+        // Text update would re-layout but the on-screen text would
+        // stay stale until something else dirtied this visual.
+        Model.RegisterProperty(TextBlock, 'Text',       '',                  MetaData.Measure | MetaData.Render);
+        Model.RegisterProperty(TextBlock, 'FontFamily', DEFAULT_FONT_FAMILY, MetaData.Measure | MetaData.Render | MetaData.Inherits);
+        Model.RegisterProperty(TextBlock, 'FontSize',   14,                  MetaData.Measure | MetaData.Render | MetaData.Inherits);
+        Model.RegisterProperty(TextBlock, 'FontWeight', FontWeight.Normal,   MetaData.Measure | MetaData.Render | MetaData.Inherits);
+        Model.RegisterProperty(TextBlock, 'FontStyle',  FontStyle.Normal,    MetaData.Measure | MetaData.Render | MetaData.Inherits);
+        Model.RegisterProperty(TextBlock, 'Foreground',   undefined,           MetaData.Render  | MetaData.Inherits);
+        Model.RegisterProperty(TextBlock, 'TextWrapping', TextWrapping.NoWrap, MetaData.Measure | MetaData.Render);
     }
 
-    // Cached metrics from the most recent MeasureOverride. Reused by
-    // RenderOverride so we don't double-measure (and so SvgDrawingContext
-    // can use the real Ascent for baseline placement).
-    private _metrics: TextMetrics | undefined;
+    // Lines computed by MeasureOverride when TextWrapping = Wrap. Each
+    // entry holds the substring and the measurer-reported metrics for
+    // that line — RenderOverride emits one DrawText per line at a y
+    // offset of `i * Metrics.Height`. For NoWrap a single entry covers
+    // the whole text, falling through to the historic single-line path.
+    private _lines: Array<{ text: string; metrics: TextMetrics }> = [];
 
     constructor(text?: string)
     {
@@ -72,12 +93,15 @@ export class TextBlock extends Visual
     public get Foreground(): Brush | undefined { return this.get_property_value('Foreground'); }
     public set Foreground(value: Brush | undefined) { this.set_property_value('Foreground', value); }
 
-    protected override MeasureOverride(_availableSize: Size): Size
+    public get TextWrapping(): TextWrapping { return this.get_property_value('TextWrapping'); }
+    public set TextWrapping(value: TextWrapping) { this.set_property_value('TextWrapping', value); }
+
+    protected override MeasureOverride(availableSize: Size): Size
     {
         const text = this.Text;
         if (text === '')
         {
-            this._metrics = undefined;
+            this._lines = [];
             return Size.Zero;
         }
         // Defer to the host's TextMeasurer when there is one (so a
@@ -86,33 +110,114 @@ export class TextBlock extends Visual
         // ApproximateTextMeasurer when there's no host (unattached
         // Visual being measured in isolation, common in tests).
         const measurer = this.target?.TextMeasurer ?? APPROXIMATE_TEXT_MEASURER;
-        const metrics = measurer.Measure(
-            text,
-            this.FontFamily,
-            this.FontSize,
-            this.FontWeight,
-            this.FontStyle,
-        );
-        this._metrics = metrics;
-        return new Size(metrics.Width, metrics.Height);
+
+        // NoWrap (or unbounded available width — typical of being placed
+        // in a StackPanel etc.) preserves the historic single-line path.
+        if (this.TextWrapping !== TextWrapping.Wrap
+            || !Number.isFinite(availableSize.Width))
+        {
+            const metrics = measurer.Measure(
+                text, this.FontFamily, this.FontSize, this.FontWeight, this.FontStyle);
+            this._lines = [{ text, metrics }];
+            return new Size(metrics.Width, metrics.Height);
+        }
+
+        // Wrap: greedy word-wrap. Splits on whitespace, accumulates
+        // words into a line until adding the next one would exceed
+        // availableSize.Width, then commits the line and starts a new
+        // one. A single word wider than the limit goes on its own line
+        // (intentionally overflowing — partial-word breaking / hyphen
+        // splitting is out of scope for v0).
+        const lines: Array<{ text: string; metrics: TextMetrics }> = [];
+        const measureLine = (s: string): TextMetrics => measurer.Measure(
+            s, this.FontFamily, this.FontSize, this.FontWeight, this.FontStyle);
+        let current = '';
+        let currentMetrics: TextMetrics | undefined;
+        const flush = (): void => {
+            if (current === '') return;
+            lines.push({ text: current, metrics: currentMetrics ?? measureLine(current) });
+            current = '';
+            currentMetrics = undefined;
+        };
+
+        // Split on any whitespace run; the split values are the words.
+        // Trailing whitespace between words collapses to a single space
+        // in the rendered line (matches HTML text-rendering defaults).
+        const words = text.split(/\s+/).filter(w => w.length > 0);
+        for (const word of words)
+        {
+            const candidate = current === '' ? word : current + ' ' + word;
+            const candidateMetrics = measureLine(candidate);
+            if (candidateMetrics.Width <= availableSize.Width || current === '')
+            {
+                current = candidate;
+                currentMetrics = candidateMetrics;
+            }
+            else
+            {
+                flush();
+                current = word;
+                currentMetrics = measureLine(word);
+            }
+        }
+        flush();
+
+        this._lines = lines;
+        // Surface-side metric: max line width × stacked height. Per-line
+        // metrics live on each `_lines` entry; render uses the right
+        // ascent per line for baseline placement.
+        const maxW = lines.reduce((m, l) => Math.max(m, l.metrics.Width), 0);
+        const lineH = lines[0]!.metrics.Height;
+        const totalH = lineH * lines.length;
+        return new Size(maxW, totalH);
     }
 
     protected override RenderOverride(dc: DrawingContext): void
     {
-        const text = this.Text;
-        if (text === '') return;
-        const formatted = new FormattedText(
-            text,
-            this.FontFamily,
-            this.FontSize,
-            this.Foreground,
-            this.FontWeight,
-            this.FontStyle,
-            this._metrics,  // baseline for SVG comes from Metrics.Ascent
-        );
-        // Origin is this Visual's local (0, 0) — alignment + arranged
-        // offset are applied by Visual.Arrange + HeadlessTarget's tree
-        // walk, so RenderOverride just emits at the local origin.
-        dc.DrawText(formatted, Point.Zero);
+        // Fallback for callers that Render without a prior Measure
+        // (test harnesses, ad-hoc DC drives) — emit the raw Text as a
+        // single line with no metrics so FormattedText falls back to
+        // its built-in baseline approximation.
+        if (this._lines.length === 0)
+        {
+            const text = this.Text;
+            if (text === '') return;
+            const formatted = new FormattedText(
+                text,
+                this.FontFamily,
+                this.FontSize,
+                this.Foreground,
+                this.FontWeight,
+                this.FontStyle,
+                undefined,
+            );
+            dc.DrawText(formatted, Point.Zero);
+            return;
+        }
+
+        // One DrawText per line. Each line's y offset is `i * lineHeight`
+        // — single shared line height keeps the layout uniform even
+        // when per-line measurements vary slightly under approximate
+        // measurers. Per-line metrics still ride along on the
+        // FormattedText so SvgDrawingContext gets the right Ascent.
+        const lineH = this._lines[0]!.metrics.Height;
+        for (let i = 0; i < this._lines.length; i++)
+        {
+            const line = this._lines[i]!;
+            const formatted = new FormattedText(
+                line.text,
+                this.FontFamily,
+                this.FontSize,
+                this.Foreground,
+                this.FontWeight,
+                this.FontStyle,
+                line.metrics,
+            );
+            // Origin is this Visual's local (0, 0) for the first line —
+            // alignment + arranged offset are applied by Visual.Arrange
+            // + the renderer tree walk. Subsequent lines step down by
+            // one shared line height.
+            dc.DrawText(formatted, new Point(0, i * lineH));
+        }
     }
 }

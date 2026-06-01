@@ -17,7 +17,9 @@
   <rect x="0" y="0" width="420" height="160" fill="rgb(255,255,255)" />
   <rect x="0.5" y="0.5" width="419" height="159" fill="none" stroke="rgb(209,213,219)" stroke-width="1" />
   <g transform="matrix(1,0,0,1,21,21)">
-  <text x="0" y="11.9" font-family="system-ui, sans-serif" font-size="14" fill="rgb(31,41,55)">Compiled from .mu source. Runtime parser used here so you can edit and reload.</text>
+  <text x="0" y="11.9" font-family="system-ui, sans-serif" font-size="14" fill="rgb(31,41,55)">Hover over the cards above to see Style</text>
+  <text x="0" y="28.700000000000003" font-family="system-ui, sans-serif" font-size="14" fill="rgb(31,41,55)">triggers fire on IsMouseOver. Press and hold</text>
+  <text x="0" y="45.5" font-family="system-ui, sans-serif" font-size="14" fill="rgb(31,41,55)">to see the IsPressed trigger lock in.</text>
   </g>
   </g>
 </svg>

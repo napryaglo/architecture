@@ -1,8 +1,15 @@
 // Barrel re-exports for the control library. Consumers import from here
 // rather than the individual control files.
 export { Border } from './border.js';
-export { TextBlock } from './text-block.js';
+export {
+    Button,
+    ClickMode,
+    type ClickHandler,
+} from './button.js';
+export { TextBlock, TextWrapping } from './text-block.js';
 export { Canvas } from './canvas.js';
+export { ComboBox } from './combo-box.js';
+export { StackPanel, Orientation } from './stack-panel.js';
 export { ContentControl } from './content-control.js';
 export { ContentPresenter } from './content-presenter.js';
 export {
