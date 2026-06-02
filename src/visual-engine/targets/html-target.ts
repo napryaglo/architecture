@@ -217,7 +217,7 @@ export class HtmlTarget extends PresentationTarget
         // bigger refactor than the renderer wiring warrants.
         const renderDirty  = (this as unknown as { renderDirty: Set<Visual> }).renderDirty;
         const arrangeDirty = (this as unknown as { arrangeDirty: Set<Visual> }).arrangeDirty;
-        this.renderer.Render(this.Content, renderDirty, arrangeDirty);
+        this.renderer.Render(this.Content, this.OverlayRoot, renderDirty, arrangeDirty);
     }
 
     // Tear down DOM listeners and unmount the surface. Call before

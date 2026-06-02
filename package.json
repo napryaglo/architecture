@@ -8,27 +8,45 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": {
+        "development": "./src/index.ts",
+        "default":     "./dist/index.js"
+      }
     },
     "./runtime": {
       "types": "./dist/runtime/index.d.ts",
-      "import": "./dist/runtime/index.js"
+      "import": {
+        "development": "./src/runtime/index.ts",
+        "default":     "./dist/runtime/index.js"
+      }
     },
     "./visual-engine": {
       "types": "./dist/visual-engine/index.d.ts",
-      "import": "./dist/visual-engine/index.js"
+      "import": {
+        "development": "./src/visual-engine/index.ts",
+        "default":     "./dist/visual-engine/index.js"
+      }
     },
     "./Controls": {
       "types": "./dist/Controls/index.d.ts",
-      "import": "./dist/Controls/index.js"
+      "import": {
+        "development": "./src/Controls/index.ts",
+        "default":     "./dist/Controls/index.js"
+      }
     },
     "./compiler": {
       "types": "./dist/compiler/index.d.ts",
-      "import": "./dist/compiler/index.js"
+      "import": {
+        "development": "./src/compiler/index.ts",
+        "default":     "./dist/compiler/index.js"
+      }
     },
     "./tooling": {
       "types": "./dist/tooling/index.d.ts",
-      "import": "./dist/tooling/index.js"
+      "import": {
+        "development": "./src/tooling/index.ts",
+        "default":     "./dist/tooling/index.js"
+      }
     }
   },
   "bin": {
@@ -36,6 +54,7 @@
   },
   "files": [
     "dist",
+    "build",
     "README.md"
   ],
   "publishConfig": {
@@ -43,14 +62,16 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsc",
+    "build:templates": "tsx src/tooling/build-control-templates.ts",
+    "build": "npm run build:templates && tsc",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test \"src/**/*.test.ts\"",
+    "pretest": "npm run build:templates",
+    "test": "tsx --conditions=development --test \"src/**/*.test.ts\"",
     "demo:border": "tsx src/Controls/tests/border-render.ts",
     "demo:text": "tsx src/Controls/tests/text-render.ts",
     "demo:gfont": "tsx src/Controls/tests/google-font-render.ts",
     "demo:html": "npm run build && echo Demo built. From repo root: 'npx http-server -p 8080' then open http://localhost:8080/demo/",
-    "clean": "rimraf dist",
+    "clean": "rimraf dist build",
     "prepublishOnly": "npm run clean && npm run build"
   },
   "engines": {

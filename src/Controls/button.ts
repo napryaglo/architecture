@@ -1,19 +1,18 @@
 import {
-    Color,
+    Application,
     MetaData,
     Model,
-    Thickness,
     type ICommand,
     type PointerEventArgs,
     type PropertyDescriptor,
     type Visual,
 } from '../runtime/index.js';
-import { SolidColorBrush } from '../visual-engine/index.js';
-import { Border } from './border.js';
+import type { Border } from './border.js';
 import { ContentControl } from './content-control.js';
-import { ContentPresenter } from './content-presenter.js';
-import { ControlTemplate } from './control-template.js';
+import type { ControlTemplate } from './control-template.js';
 import { TextBlock } from './text-block.js';
+import { Theme } from './theme.js';
+import { create as createButtonResources } from '../../build/Controls/button.template.mu.js';
 
 // When the Click event fires. WPF parity: Release is the default
 // (visible press feedback, fire on PointerUp inside bounds), Press
@@ -32,68 +31,23 @@ export enum ClickMode
 // position without reaching back into the input device.
 export type ClickHandler = (args: PointerEventArgs) => void;
 
-// Material UI palette (Contained Button variant — the most common MUI
-// button look). Colours pulled from the Material Design 2 reference:
-//
-//   * Primary 700 (#1976d2) — rest background.
-//   * Primary 800 (#1565c0) — hover background. MUI itself overlays
-//     a translucent black on the rest colour; we ship the precomputed
-//     shade so the engine doesn't need alpha compositing wired up yet.
-//   * Primary 900 (#0d47a1) — active / pressed background.
-//   * White (#ffffff)       — text colour on contained buttons.
-//
-// Module-level instances so every Button reuses the same SolidColorBrush
-// objects instead of allocating per construction. Consumers who want a
-// different look replace the entire Template via the standard
-// ContentControl.Template DP.
-const MUI_PRIMARY_REST  = new SolidColorBrush(Color.FromHex('#1976d2'));
-const MUI_PRIMARY_HOVER = new SolidColorBrush(Color.FromHex('#1565c0'));
-const MUI_PRIMARY_PRESS = new SolidColorBrush(Color.FromHex('#0d47a1'));
-const MUI_TEXT_ON_PRIMARY = new SolidColorBrush(Color.FromHex('#ffffff'));
+// Key under which the bundled default ControlTemplate is registered —
+// matches the `x:key="DefaultButton"` literal inside button.template.mu.
+// Consumers override the look by setting their own template under the
+// same key on `Application.current.Resources` BEFORE constructing any
+// Button (WPF implicit-Style replacement semantics).
+const DEFAULT_BUTTON_KEY = 'DefaultButton';
 
-// Material UI Contained Button spec: 16px horizontal padding, 6px
-// vertical, 4px corner radius, no visible border, white text. State
-// transitions wired below.
-function createDefaultTemplate(): ControlTemplate
+function defaultButtonTemplate(): ControlTemplate
 {
-    return new ControlTemplate(templatedParent =>
+    const tpl = Application.ResolveDefaultResource<ControlTemplate>(DEFAULT_BUTTON_KEY);
+    if (tpl === undefined)
     {
-        const border = new Border();
-        border.Background      = MUI_PRIMARY_REST;
-        border.BorderThickness = Thickness.Zero;
-        border.CornerRadius    = 4;
-        border.Padding         = new Thickness(16, 6, 16, 6);
-        const presenter = new ContentPresenter();
-        border.SetChild(presenter);
-
-        // Text colour for any TextBlock the consumer slots in as Content.
-        // Cross-class write on templatedParent — Foreground propagates
-        // down the logical tree via inheritance and reaches the Content's
-        // TextBlock without the consumer needing to set it. A consumer
-        // attribute (`Button[Foreground=…]`) overrides because the
-        // compiler emits attribute writes after the template runs.
-        templatedParent.set_property_value(TextBlock, 'Foreground', MUI_TEXT_ON_PRIMARY);
-
-        // Hover / press feedback — recompute Background whenever the
-        // Button's IsMouseOver / IsPressed DPs change. Both flags are
-        // maintained on the Button itself by InputManager + Button's
-        // OnPointerDown / OnPointerUp / OnPointerEnter / OnPointerLeave
-        // overrides, so the listener sees the current truth without
-        // having to walk the visual tree.
-        //
-        // Press wins over hover (matches MUI). Disabled (CanExecute=false)
-        // styling lands here when IsEnabled is wired into Visual; for now
-        // the click-gate is silent rather than visibly disabled.
-        const refreshBackground = (): void => {
-            if (templatedParent.IsPressed)        border.Background = MUI_PRIMARY_PRESS;
-            else if (templatedParent.IsMouseOver) border.Background = MUI_PRIMARY_HOVER;
-            else                                   border.Background = MUI_PRIMARY_REST;
-        };
-        templatedParent.AddPropertyChangedListener('IsPressed',   refreshBackground);
-        templatedParent.AddPropertyChangedListener('IsMouseOver', refreshBackground);
-
-        return border;
-    });
+        throw new Error(
+            `Button: default template '${DEFAULT_BUTTON_KEY}' is not registered. ` +
+            `Did you import the Controls barrel before constructing the Button?`);
+    }
+    return tpl;
 }
 
 // Button: a clickable ContentControl. Equivalent to WPF's Button +
@@ -134,6 +88,11 @@ export class Button extends ContentControl
         Model.RegisterProperty(Button, 'Command',          undefined,         MetaData.None);
         Model.RegisterProperty(Button, 'CommandParameter', undefined,         MetaData.None);
         Model.RegisterProperty(Button, 'ClickMode',        ClickMode.Release, MetaData.None);
+        // Registers the compiled button.template.mu's ResourceDictionary
+        // with Application — every new Application then merges it into
+        // its own Resources, and `Application.ResolveDefaultResource`
+        // finds the bundled default template under DEFAULT_BUTTON_KEY.
+        Application.DefaultResourceFactories.push(createButtonResources);
     }
 
     private readonly _clickHandlers: ClickHandler[] = [];
@@ -156,8 +115,44 @@ export class Button extends ContentControl
     constructor(content?: Visual)
     {
         super();
-        this.Template = createDefaultTemplate();
+        this.Template = defaultButtonTemplate();
+        this.wireDefaultTemplateBehavior();
         if (content !== undefined) this.Content = content;
+    }
+
+    // Wire the IsPressed / IsMouseOver background swap and the inherited
+    // Foreground default. These live in TS rather than the template
+    // because:
+    //   * The background swap reads from the templated parent's input
+    //     flags and writes to a named template part. The template's job
+    //     is to declare the part (PART_Border); the behaviour layer
+    //     drives it from the Button's state.
+    //   * The Foreground inheritance is a cross-class write on the
+    //     templated parent itself (`Button[TextBlock.Foreground = …]`)
+    //     — it shapes how descendant TextBlocks paint, not the
+    //     template's own visual tree. Conceptually a property metadata
+    //     default rather than markup.
+    //
+    // Both are silent no-ops when a consumer replaces Template with one
+    // that omits PART_Border — the swap then has no effect, and the
+    // inherited Foreground default still applies. That matches the
+    // overridability story of WPF visual states / default property
+    // inheritance.
+    private wireDefaultTemplateBehavior(): void
+    {
+        // Cross-class inherited default — propagates down to any TextBlock
+        // descendant of the Content via the standard inheritance walk.
+        this.set_property_value(TextBlock, 'Foreground', Theme.primaryInk);
+
+        const part = this.GetTemplateChild('PART_Border') as Border | undefined;
+        if (part === undefined) return;
+        const refresh = (): void => {
+            if (this.IsPressed)        part.Background = Theme.primaryPress;
+            else if (this.IsMouseOver) part.Background = Theme.primaryHover;
+            else                       part.Background = Theme.primary;
+        };
+        this.AddPropertyChangedListener('IsPressed',   refresh);
+        this.AddPropertyChangedListener('IsMouseOver', refresh);
     }
 
     public get Command(): ICommand | undefined { return this.get_property_value('Command'); }

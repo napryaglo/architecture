@@ -9,9 +9,12 @@ import {
     Panel,
     Size,
     Rect,
+    Visual,
     type PointerEventInit,
 } from '../../runtime/index.js';
+import { HeadlessTarget } from '../../visual-engine/index.js';
 import { ComboBox } from '../combo-box.js';
+import { Border } from '../border.js';
 import { Orientation, StackPanel } from '../stack-panel.js';
 import { TextBlock } from '../text-block.js';
 
@@ -100,36 +103,68 @@ describe('ComboBox — selection model', () => {
     });
 });
 
+// Mount a combo box into a HeadlessTarget large enough to lay everything
+// out and flush so the combo's target is wired and arranged rectangles
+// are realistic before the assertions run.
+function mountInTarget(cb: ComboBox): HeadlessTarget {
+    const root = new Root();
+    root.AddChild(cb);
+    const target = new HeadlessTarget(400, 300);
+    target.Content = root;
+    target.Flush();
+    return target;
+}
+
+// Walk into the popup-host subtree to retrieve the item containers.
+// The host structure is:
+//   target.OverlayRoot
+//     └─ popupHost (Panel)
+//          ├─ scrim (Border)
+//          └─ popup (Border)
+//               └─ stack (StackPanel)
+//                    └─ item containers (ClickableBorder…)
+function popupItems(target: HeadlessTarget): readonly Visual[] {
+    const overlay = target.OverlayRoot!;
+    const popupHost = overlay.visualChildren[0]!;
+    const popup = popupHost.visualChildren[1] as Border;
+    const stack = popup.visualChildren[0] as StackPanel;
+    return stack.visualChildren;
+}
+
 describe('ComboBox — popup behaviour', () => {
     beforeEach(() => { Application.current = null; });
 
-    test('IsDropDownOpen toggles inclusion of the popup in the layout', () => {
+    test('Closed combo has only the selection box as a visual child', () => {
         const cb = new ComboBox();
         cb.Items = ['One', 'Two'];
+        // Pre-mount: selection box is in flow, nothing else.
+        assert.equal(cb.visualChildren.length, 1);
+    });
 
-        // Closed: the root stack has only the selection box.
-        const rootStack = cb.visualChildren[0] as StackPanel;
-        const initialCount = rootStack.visualChildren.length;
-        assert.equal(initialCount, 1);
+    test('Opening mounts the popup host on PresentationTarget.OverlayRoot', () => {
+        const cb = new ComboBox();
+        cb.Items = ['One', 'Two'];
+        const target = mountInTarget(cb);
+
+        // No overlay until the user opens it.
+        assert.equal(target.OverlayRoot, undefined);
 
         cb.IsDropDownOpen = true;
-        assert.equal(rootStack.visualChildren.length, 2,
-            'open should attach the popup');
+        target.Flush();
+        assert.notEqual(target.OverlayRoot, undefined, 'overlay layer should be live after open');
+        assert.equal(target.OverlayRoot!.visualChildren.length, 1, 'one host attached');
 
         cb.IsDropDownOpen = false;
-        assert.equal(rootStack.visualChildren.length, 1,
-            'close should detach the popup');
+        target.Flush();
+        assert.equal(target.OverlayRoot!.visualChildren.length, 0, 'host detached on close');
     });
 
     test('Clicking the selection box toggles IsDropDownOpen', () => {
-        const root = new Root();
         const cb = new ComboBox();
         cb.Items = ['One', 'Two'];
-        root.AddChild(cb);
+        mountInTarget(cb);
 
-        // The selection box is the first child of the root stack.
-        const rootStack = cb.visualChildren[0] as StackPanel;
-        const selectionBox = rootStack.visualChildren[0]!;
+        const selectionBox = cb.visualChildren[0]!;
 
         const im = new InputManager();
         im.InjectPointerDown(selectionBox, pointer());
@@ -142,17 +177,13 @@ describe('ComboBox — popup behaviour', () => {
     });
 
     test('Clicking an item commits selection and closes the dropdown', () => {
-        const root = new Root();
         const cb = new ComboBox();
         cb.Items = ['Apple', 'Pear', 'Plum'];
-        root.AddChild(cb);
+        const target = mountInTarget(cb);
         cb.IsDropDownOpen = true;
+        target.Flush();
 
-        // Drill down to the popup's StackPanel of item containers.
-        const rootStack = cb.visualChildren[0] as StackPanel;
-        const popup = rootStack.visualChildren[1]! as { visualChildren: readonly { visualChildren: readonly unknown[] }[] };
-        const popupStack = popup.visualChildren[0]! as StackPanel;
-        const items = popupStack.visualChildren;
+        const items = popupItems(target);
         assert.equal(items.length, 3);
 
         const im = new InputManager();
@@ -164,5 +195,20 @@ describe('ComboBox — popup behaviour', () => {
         assert.equal(cb.SelectedItem,  'Pear');
         assert.equal(cb.IsDropDownOpen, false,
             'committing a selection should close the dropdown');
+    });
+
+    test('Clicking the click-away scrim dismisses the dropdown', () => {
+        const cb = new ComboBox();
+        cb.Items = ['Apple', 'Pear'];
+        const target = mountInTarget(cb);
+        cb.IsDropDownOpen = true;
+        target.Flush();
+
+        // popupHost children: [scrim, popup]. Scrim absorbs outside clicks.
+        const scrim = target.OverlayRoot!.visualChildren[0]!.visualChildren[0]!;
+        const im = new InputManager();
+        im.InjectPointerDown(scrim, pointer());
+        im.InjectPointerUp  (scrim, pointer());
+        assert.equal(cb.IsDropDownOpen, false);
     });
 });

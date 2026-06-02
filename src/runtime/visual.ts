@@ -128,6 +128,12 @@ export class Visual extends Model
         // visible effect comes from any Style triggers that watch them.
         Model.RegisterProperty(Visual, 'IsMouseOver', false, MetaData.None);
         Model.RegisterProperty(Visual, 'IsPressed',   false, MetaData.None);
+        // Generic consumer-side handle, mirroring WPF's
+        // FrameworkElement.Tag. Common use: bind a domain object to a
+        // Visual so a click handler / selection listener can recover
+        // the consumer's data without an external WeakMap. Pure storage
+        // — never read by the framework itself — hence MetaData.None.
+        Model.RegisterProperty(Visual, 'Tag',         undefined, MetaData.None);
     }
 
     // Input state — read-only mirrors of the DPs. Both flags are set
@@ -137,6 +143,13 @@ export class Visual extends Model
 
     public get DataContext(): unknown { return this.get_property_value('DataContext'); }
     public set DataContext(value: unknown) { this.set_property_value('DataContext', value); }
+
+    // Generic consumer-side handle. The framework never reads Tag;
+    // consumers attach arbitrary data (a domain object, a routing key,
+    // an action delegate) so click / selection handlers can recover it
+    // without an out-of-band map. WPF parity.
+    public get Tag(): unknown { return this.get_property_value('Tag'); }
+    public set Tag(value: unknown) { this.set_property_value('Tag', value); }
 
     // Two parent pointers: visual (renderer / hit-testing / target
     // propagation) and logical (property inheritance / future named-
@@ -259,6 +272,16 @@ export class Visual extends Model
     // through Attach (i.e. every non-template-internal child today)
     // logicalParent === visualParent.
     protected get logicalParent(): Visual | undefined
+    {
+        return this._logicalParent;
+    }
+
+    // Public companion to the protected `logicalParent` getter. Used by
+    // controls that walk the logical ancestry to find an owning host —
+    // e.g. a TreeViewItem locating its containing TreeView for selection
+    // updates. Symmetric with GetVisualParent; subclass code should still
+    // use the protected getter.
+    public GetLogicalParent(): Visual | undefined
     {
         return this._logicalParent;
     }

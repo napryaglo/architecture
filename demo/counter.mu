@@ -22,48 +22,48 @@ Application{
         @hairline   = #e2e8f0
         @accent     = #1976d2
 
-        Canvas x:root {
-            Border[Canvas.Left=50, Canvas.Top=40,
-                   Width=360, Height=280,
-                   Background=@paper, BorderBrush=@hairline,
-                   BorderThickness=(1), CornerRadius=8]{
+        // Border root — stretches to whatever rectangle the host hands
+        // it (HtmlTarget directly, or a PageView slot inside the demo
+        // platform). The inner Canvas keeps the controls at their fixed
+        // (Canvas.Left / Canvas.Top) positions; the surface around them
+        // grows or shrinks with the host.
+        Border x:root [Background=@paper, BorderBrush=@hairline,
+                       BorderThickness=(1)]{
+            Canvas {
 
-                Canvas {
+                TextBlock[Canvas.Left=24, Canvas.Top=20,
+                          FontSize=14, Foreground=@hint,
+                          Text="Counter:"]
 
-                    TextBlock[Canvas.Left=24, Canvas.Top=20,
-                              FontSize=14, Foreground=@hint,
-                              Text="Counter:"]
+                TextBlock[Canvas.Left=24, Canvas.Top=40,
+                          FontSize=42, FontWeight=Bold,
+                          Foreground=@accent,
+                          Text={{ String($Count) }}]
 
-                    TextBlock[Canvas.Left=24, Canvas.Top=40,
-                              FontSize=42, FontWeight=Bold,
-                              Foreground=@accent,
-                              Text={{ String($Count) }}]
+                TextBlock[Canvas.Left=170, Canvas.Top=124,
+                          FontSize=12, Foreground=@hint,
+                          Text="Step:"]
 
-                    TextBlock[Canvas.Left=170, Canvas.Top=124,
-                              FontSize=12, Foreground=@hint,
-                              Text="Step:"]
+                ComboBox[Canvas.Left=170, Canvas.Top=140,
+                         Width=164,
+                         Items=$Steps,
+                         SelectedItem=$Step]
 
-                    ComboBox[Canvas.Left=170, Canvas.Top=140,
-                             Width=164,
-                             Items=$Steps,
-                             SelectedItem=$Step]
-
-                    Button[Canvas.Left=24, Canvas.Top=140, Width=80,
-                           Command=$Increment]{
-                        TextBlock[Text="+ Step"]
-                    }
-
-                    Button[Canvas.Left=24, Canvas.Top=190, Width=80,
-                           Command=$Reset]{
-                        TextBlock[Text="Reset"]
-                    }
-
-                    TextBlock[Canvas.Left=24, Canvas.Top=232,
-                              Width=312,
-                              FontSize=12, Foreground=@hint,
-                              TextWrapping=Wrap,
-                              Text="The ComboBox sets Step. Increment adds Step to Count and stops at 10. Reset always works."]
+                Button[Canvas.Left=24, Canvas.Top=140, Width=80,
+                       Command=$Increment]{
+                    TextBlock[Text="+ Step"]
                 }
+
+                Button[Canvas.Left=24, Canvas.Top=190, Width=80,
+                       Command=$Reset]{
+                    TextBlock[Text="Reset"]
+                }
+
+                TextBlock[Canvas.Left=24, Canvas.Top=232,
+                          Width=312,
+                          FontSize=12, Foreground=@hint,
+                          TextWrapping=Wrap,
+                          Text="The ComboBox sets Step. Increment adds Step to Count and stops at 10. Reset always works."]
             }
         }
     }

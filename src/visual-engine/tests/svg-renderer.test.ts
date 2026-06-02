@@ -48,7 +48,7 @@ describe('SvgRenderer — initial paint', () => {
         border.Measure(new Size(200, 80));
         border.Arrange(new Rect(0, 0, 200, 80));
 
-        renderer.Render(border, null, null);
+        renderer.Render(border, undefined, null, null);
 
         const outers = surface.querySelectorAll('g.mural-visual');
         // Border + TextBlock = 2 outer groups.
@@ -70,7 +70,7 @@ describe('SvgRenderer — initial paint', () => {
         border.Measure(new Size(50, 50));
         border.Arrange(new Rect(0, 0, 50, 50));
 
-        renderer.Render(border, null, null);
+        renderer.Render(border, undefined, null, null);
 
         const outers = [...surface.querySelectorAll('g.mural-visual')] as unknown as { [k: symbol]: Visual }[];
         const refs = outers.map(o => o[VISUAL_BACKREF]);
@@ -95,7 +95,7 @@ describe('SvgRenderer — initial paint', () => {
         canvas.Measure(new Size(200, 200));
         canvas.Arrange(new Rect(0, 0, 200, 200));
 
-        renderer.Render(canvas, null, null);
+        renderer.Render(canvas, undefined, null, null);
 
         // Find the tile's outer group via the back-ref so we don't
         // rely on DOM order.
@@ -117,14 +117,14 @@ describe('SvgRenderer — incremental updates', () => {
         border.Measure(new Size(100, 30));
         border.Arrange(new Rect(0, 0, 100, 30));
 
-        renderer.Render(border, null, null);
+        renderer.Render(border, undefined, null, null);
         const firstPass = surface.querySelector('g.mural-visual');
         assert.ok(firstPass);
 
         // Mark render-dirty: change Background, then re-render with
         // an explicit renderDirty Set including this visual.
         border.Background = new SolidColorBrush(Color.FromHex('#d32f2f'));
-        renderer.Render(border, new Set([border]), new Set());
+        renderer.Render(border, undefined, new Set([border]), new Set());
 
         const secondPass = surface.querySelector('g.mural-visual');
         // SAME DOM node — the renderer didn't recreate it; it cleared
@@ -150,7 +150,7 @@ describe('SvgRenderer — incremental updates', () => {
         canvas.AddChild(tile);
         canvas.Measure(new Size(400, 400));
         canvas.Arrange(new Rect(0, 0, 400, 400));
-        renderer.Render(canvas, null, null);
+        renderer.Render(canvas, undefined, null, null);
 
         // Capture the own group reference so we can verify it's the
         // SAME element after an arrange-only update (no clearing).
@@ -169,7 +169,7 @@ describe('SvgRenderer — incremental updates', () => {
         Canvas.SetTop (tile, 60);
         canvas.InvalidateArrange();
         canvas.Arrange(new Rect(0, 0, 400, 400));
-        renderer.Render(canvas, new Set(), new Set([tile]));
+        renderer.Render(canvas, undefined, new Set(), new Set([tile]));
 
         assert.equal(tileOuter.getAttribute('transform'), 'translate(50,60)');
         // Own group's first child is the SAME rect element (re-emit
@@ -188,7 +188,7 @@ describe('SvgRenderer — incremental updates', () => {
         canvas.AddChild(b);
         canvas.Measure(new Size(200, 200));
         canvas.Arrange(new Rect(0, 0, 200, 200));
-        renderer.Render(canvas, null, null);
+        renderer.Render(canvas, undefined, null, null);
 
         // Three outers: canvas, a, b.
         assert.equal(surface.querySelectorAll('g.mural-visual').length, 3);
@@ -196,7 +196,7 @@ describe('SvgRenderer — incremental updates', () => {
         canvas.RemoveChild(b);
         canvas.Measure(new Size(200, 200));
         canvas.Arrange(new Rect(0, 0, 200, 200));
-        renderer.Render(canvas, null, null);
+        renderer.Render(canvas, undefined, null, null);
 
         // Two outers remain: canvas + a. b's outer was reaped.
         assert.equal(surface.querySelectorAll('g.mural-visual').length, 2);
@@ -221,7 +221,7 @@ describe('SvgRenderer — back-ref → hit-test integration', () => {
         border.Height = 40;
         border.Measure(new Size(40, 40));
         border.Arrange(new Rect(0, 0, 40, 40));
-        renderer.Render(border, null, null);
+        renderer.Render(border, undefined, null, null);
 
         // Pick any painted primitive (the rect inside the own group)
         // and walk ancestors — same path HtmlTarget.HitTest takes.

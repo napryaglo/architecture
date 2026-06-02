@@ -42,6 +42,18 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['TextBlock',               '@visualisation-sub/mural/Controls'],
     ['Canvas',                  '@visualisation-sub/mural/Controls'],
     ['ComboBox',                '@visualisation-sub/mural/Controls'],
+    ['DockPanel',               '@visualisation-sub/mural/Controls'],
+    ['Dock',                    '@visualisation-sub/mural/Controls'],
+    ['Drawer',                  '@visualisation-sub/mural/Controls'],
+    ['DrawerVariant',           '@visualisation-sub/mural/Controls'],
+    ['TreeView',                '@visualisation-sub/mural/Controls'],
+    ['TreeViewItem',            '@visualisation-sub/mural/Controls'],
+    ['PageView',                '@visualisation-sub/mural/Controls'],
+
+    // Runtime types that the emitter may reference even when the
+    // consumer's source doesn't name them directly — added on demand
+    // by the emit pass.
+    ['NameScope',               '@visualisation-sub/mural/runtime'],
     ['StackPanel',              '@visualisation-sub/mural/Controls'],
     ['Orientation',             '@visualisation-sub/mural/Controls'],
     ['ContentControl',          '@visualisation-sub/mural/Controls'],
@@ -55,6 +67,25 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['VirtualizingPanel',       '@visualisation-sub/mural/Controls'],
     ['VirtualizingStackPanel',  '@visualisation-sub/mural/Controls'],
     ['TextWrapping',            '@visualisation-sub/mural/Controls'],
+
+    // ── Internal helper classes ────────────────────────────────────
+    // Layout / behaviour primitives owned by individual controls but
+    // exported from their files (and re-exported from the Controls
+    // barrel) so the controls' bundled `.template.mu` defaults can
+    // reference them by name. Registered here as well so the LSP /
+    // analyzer accepts them when an in-tree template is opened — the
+    // build-control-templates script overrides these entries with
+    // direct relative file paths at compile time.
+    ['ClickableBorder',         '@visualisation-sub/mural/Controls'],
+    ['ClickAwayScrim',          '@visualisation-sub/mural/Controls'],
+    ['SplitRow',                '@visualisation-sub/mural/Controls'],
+    ['ComboBoxPopupHost',       '@visualisation-sub/mural/Controls'],
+    ['ScrimSurface',            '@visualisation-sub/mural/Controls'],
+    ['TemporaryOverlayHost',    '@visualisation-sub/mural/Controls'],
+    ['ClickableRow',            '@visualisation-sub/mural/Controls'],
+    ['ChevronTarget',           '@visualisation-sub/mural/Controls'],
+    ['CollapsibleStack',        '@visualisation-sub/mural/Controls'],
+    ['ScrollBarLayout',         '@visualisation-sub/mural/Controls'],
 
     // ── visual-engine ───────────────────────────────────────────────
     ['SolidColorBrush',     '@visualisation-sub/mural/visual-engine'],
@@ -128,9 +159,26 @@ export const DEFAULT_SLOT_INFO: ReadonlyMap<string, SlotInfo> = new Map<string, 
     ['TextBlock',               { name: 'Text',     kind: 'string' }],
     ['Canvas',                  { name: 'Children', kind: 'list'   }],
     ['StackPanel',              { name: 'Children', kind: 'list'   }],
+    ['DockPanel',               { name: 'Children', kind: 'list'   }],
+    ['Drawer',                  { name: 'Content',  kind: 'object' }],
+    ['TreeView',                { name: 'Items',    kind: 'list'   }],
+    ['TreeViewItem',            { name: 'Items',    kind: 'list'   }],
+    ['PageView',                { name: 'Content',  kind: 'object' }],
     ['ContentControl',          { name: 'Content',  kind: 'object' }],
     ['ContentPresenter',        { name: 'Content',  kind: 'object' }],
     ['ItemsControl',            { name: 'Items',    kind: 'list'   }],
     ['VirtualizingStackPanel',  { name: 'Children', kind: 'list'   }],
     ['ScrollViewer',            { name: 'Content',  kind: 'object' }],
+
+    // Internal helper classes (see DEFAULT_SYMBOLS comment above).
+    ['ClickableBorder',         { name: 'Child',    kind: 'single' }],
+    ['ClickAwayScrim',          { name: 'Child',    kind: 'single' }],
+    ['SplitRow',                { name: 'Children', kind: 'list'   }],
+    ['ComboBoxPopupHost',       { name: 'Children', kind: 'list'   }],
+    ['ScrimSurface',            { name: 'Child',    kind: 'single' }],
+    ['TemporaryOverlayHost',    { name: 'Children', kind: 'list'   }],
+    ['ClickableRow',            { name: 'Child',    kind: 'single' }],
+    ['ChevronTarget',           { name: 'Child',    kind: 'single' }],
+    ['CollapsibleStack',        { name: 'Children', kind: 'list'   }],
+    ['ScrollBarLayout',         { name: 'Children', kind: 'list'   }],
 ]);

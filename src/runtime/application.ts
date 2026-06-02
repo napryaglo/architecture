@@ -39,11 +39,76 @@ export class Application
     // explicitly by tests that need isolation.
     public static current: Application | null = null;
 
+    // Each control's compiled `.template.mu` ships its defaults as a
+    // ResourceDictionary; the control's static initialiser appends a
+    // zero-arg factory to this list. Pushed lazily so static-init time
+    // (when controls finish loading) never executes the factory body —
+    // that defers the `ControlTemplate` / `Border` references inside the
+    // factory until module loading has fully resolved them. Application
+    // calls each factory exactly once via `getDefaultResources()`, then
+    // every subsequent Application reuses the same dictionary instances.
+    //
+    // runtime never imports the Controls layer; this list is the
+    // dependency-inverted seam (Controls push in, Application reads
+    // out) that keeps the Application class layer-pure while still
+    // picking up the built-in default ControlTemplates automatically.
+    public static DefaultResourceFactories: Array<() => ResourceDictionary> = [];
+
+    private static _defaultResources: ResourceDictionary[] | undefined;
+
     public readonly Resources: ResourceDictionary = new ResourceDictionary();
 
     constructor()
     {
         Application.current = this;
+        for (const dict of Application.getDefaultResources())
+        {
+            // Idempotent — the same dictionary instance MAY appear in
+            // multiple parents' merge chains (ResourceDictionary merges
+            // by reference), but adding the same dict twice to one
+            // parent would double-fire change notifications.
+            if (!this.Resources.MergedDictionaries.includes(dict))
+            {
+                this.Resources.AddMergedDictionary(dict);
+            }
+        }
+    }
+
+    // Lazily materialise each control's default ResourceDictionary by
+    // invoking its registered factory exactly once. The cache is a
+    // process-wide singleton — every Application instance shares the
+    // SAME default dictionaries so the underlying ControlTemplate
+    // instances are identical across applications.
+    private static getDefaultResources(): ResourceDictionary[]
+    {
+        if (this._defaultResources === undefined)
+        {
+            this._defaultResources = this.DefaultResourceFactories.map(f => f());
+        }
+        return this._defaultResources;
+    }
+
+    // Resolve a resource (typically a default ControlTemplate) by key.
+    // Walks `Application.current.Resources` first so a consumer who
+    // sets `app.Resources.Set('DefaultButton', myTemplate)` BEFORE
+    // constructing any Button overrides the bundled default — exactly
+    // the WPF implicit-Style replacement pattern. Falls back to the
+    // bundled default dictionaries directly so tests / unmounted
+    // controls without an Application still resolve.
+    public static ResolveDefaultResource<T = unknown>(key: string): T | undefined
+    {
+        const app = Application.current;
+        if (app !== null)
+        {
+            const v = app.Resources.Resolve(key);
+            if (v !== undefined) return v as T;
+        }
+        for (const dict of this.getDefaultResources())
+        {
+            const v = dict.Resolve(key);
+            if (v !== undefined) return v as T;
+        }
+        return undefined;
     }
 
     // The visual marked with `x:root` in the application's resources.

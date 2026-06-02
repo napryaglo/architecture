@@ -94,6 +94,14 @@ function registerNamedVisuals(visual: Visual, scope: NameScope): void
     }
     for (const child of visual.visualChildren)
     {
+        // Stop at a sub-template root — its own NameScope owns the
+        // descendants below it, and re-registering them in the outer
+        // scope would collide whenever two sister sub-templates use
+        // the same PART_ names. Without this gate, e.g. a TreeView
+        // default template containing a ScrollViewer (whose two inner
+        // ScrollBars each have their own PART_Track / PART_Thumb)
+        // would throw `name already registered` at Apply time.
+        if (child.nameScope !== undefined) continue;
         registerNamedVisuals(child, scope);
     }
 }

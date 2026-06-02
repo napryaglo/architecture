@@ -63,17 +63,27 @@ describe('ScrollViewer — clip-and-translate mode (plain content)', () => {
         assert.equal(content.ArrangedRect.Height,  800);
     });
 
-    test('Clip is set to the viewport rect in clip-and-translate mode', () => {
+    test('Clip is set on the Content visual (in its own local space) rather than the ScrollViewer outer', () => {
         const sv = new ScrollViewer();
-        sv.Content = new FixedRect(new Size(500, 500));
+        const content = new FixedRect(new Size(500, 500));
+        sv.Content = content;
         sv.Measure(new Size(100, 100));
         sv.Arrange(new Rect(0, 0, 100, 100));
-        const clip = sv.Clip as RectangleGeometry;
+        // ScrollViewer's outer is unclipped so the scrollbar children
+        // (which sit beyond the viewport on the cross axis) remain
+        // visible.
+        assert.equal(sv.Clip, undefined);
+        // Content's clip is sized to the inner viewport (100 - 10 DIP
+        // gutter on each axis = 90×90) and positioned at (offset.X,
+        // offset.Y) because the content's outer carries a -(offset)
+        // translate, leaving (offset, offset) as the local origin of
+        // the visible window.
+        const clip = content.Clip as RectangleGeometry;
         assert.ok(clip instanceof RectangleGeometry);
         assert.equal(clip.Rect.X,      0);
         assert.equal(clip.Rect.Y,      0);
-        assert.equal(clip.Rect.Width,  100);
-        assert.equal(clip.Rect.Height, 100);
+        assert.equal(clip.Rect.Width,  90);
+        assert.equal(clip.Rect.Height, 90);
     });
 
     test('out-of-range offsets clamp to ScrollableWidth/Height at Arrange time (raw value preserved)', () => {
@@ -83,8 +93,10 @@ describe('ScrollViewer — clip-and-translate mode (plain content)', () => {
         sv.VerticalOffset = 9999;     // way past scrollable
         sv.Measure(new Size(100, 100));
         sv.Arrange(new Rect(0, 0, 100, 100));
-        // ScrollableHeight = 200 - 100 = 100. Effective offset is 100.
-        assert.equal(content.ArrangedRect.Y, -100);
+        // Both axes overflow → both bars eat a 10 DIP gutter. Viewport
+        // is 90×90; ScrollableHeight = 200 - 90 = 110; effective offset
+        // clamps at 110 and the content shifts up by that much.
+        assert.equal(content.ArrangedRect.Y, -110);
         // Raw user-set value preserved on the property.
         assert.equal(sv.VerticalOffset, 9999);
     });
@@ -117,7 +129,12 @@ describe('ScrollViewer — clip-and-translate mode (plain content)', () => {
         const sv = new ScrollViewer();
         const content = new FixedRect(new Size(100, 100));
         sv.Content = content;
-        assert.deepEqual(sv.visualChildren,  [content]);
+        // Default-template surface: Content + vertical bar + horizontal
+        // bar. Identity-check Content's slot rather than deep-equaling
+        // the whole array — the scrollbars carry their own template
+        // sub-tree that would slow a deep compare to a crawl.
+        assert.equal(sv.visualChildren.length, 3);
+        assert.equal(sv.visualChildren[0], content);
         assert.deepEqual(sv.logicalChildren, [content]);
     });
 
@@ -127,7 +144,8 @@ describe('ScrollViewer — clip-and-translate mode (plain content)', () => {
         const b = new FixedRect(new Size(200, 200));
         sv.Content = a;
         sv.Content = b;
-        assert.deepEqual(sv.visualChildren, [b]);
+        // First slot in visualChildren is the live Content.
+        assert.equal(sv.visualChildren[0], b);
         // Detached `a` has no parent now.
         const aParent = (a as unknown as { visualParent: Visual | undefined }).visualParent;
         assert.equal(aParent, undefined);

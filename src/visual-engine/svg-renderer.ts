@@ -55,7 +55,24 @@ interface BackrefHost { [VISUAL_BACKREF]?: Visual; }
 interface VisualNodes
 {
     outer: SVGGElement;
+    // Invisible <rect> sized to the visual's ArrangedRect so the whole
+    // arranged area is a pointer-event target. Without it, the SVG
+    // default (visiblePainted) would miss any whitespace — wheel /
+    // hover over the gap between text glyphs in a TreeView row would
+    // silently fall through instead of dispatching to the row.
+    hit:   SVGRectElement;
     own:   SVGGElement;
+    // Last (X, Y, W, H) the renderer wrote into the outer's transform
+    // and the hit pad's dimensions. Used to detect arrange changes
+    // that happened during a layout cascade without an explicit
+    // InvalidateArrange — e.g., siblings of a collapsing visual shift
+    // Y, but the dirty-Set says nothing about them. Comparing per-walk
+    // is O(1) and far cheaper than reapplying both attributes for
+    // every visual on every render.
+    lastX: number;
+    lastY: number;
+    lastW: number;
+    lastH: number;
 }
 
 export interface SvgRendererOptions
@@ -70,7 +87,7 @@ export interface SvgRendererOptions
 // Visual class (which would cycle through runtime/visual-engine).
 interface RenderableVisual extends BackrefHost
 {
-    readonly ArrangedRect: { X: number; Y: number };
+    readonly ArrangedRect: { X: number; Y: number; Width: number; Height: number };
     readonly Clip:         unknown;
     readonly visualChildren: Iterable<RenderableVisual>;
     Render(dc: SvgDomDrawingContext): void;
@@ -119,14 +136,16 @@ export class SvgRenderer
         }
     }
 
-    // Render (or re-render) the given root Visual subtree into the
+    // Render (or re-render) the given root Visual subtrees into the
     // surface. Idempotent: calling Render again after no invalidations
     // does nothing observable; calling it after invalidations brings
     // the DOM up to date with the current visual tree.
     //
-    // `root` is the PresentationTarget's Content — passed explicitly
-    // so the renderer doesn't depend on the target type. The renderer
-    // walks every reachable visual and reconciles its DOM presence:
+    // `root` is the PresentationTarget's Content; `overlay` is its
+    // OverlayRoot (or undefined when nothing has called AttachOverlay
+    // yet). Both are passed explicitly so the renderer doesn't depend
+    // on the target type. The renderer walks every reachable visual
+    // and reconciles its DOM presence:
     //
     //   * Visit a known visual → maybe update transform / clip, maybe
     //     re-emit own primitives if render-dirty.
@@ -135,12 +154,17 @@ export class SvgRenderer
     //   * After walking everything reachable, any leftover entry in
     //     `nodes` is an orphan from a tree mutation → detach + drop.
     //
+    // Document order is `<defs>`, Content's outer `<g>`, then the
+    // overlay's outer `<g>` — overlay paints last (i.e., on top of
+    // Content) and `elementsFromPoint` returns its nodes first.
+    //
     // The renderer accepts the renderDirty / arrangeDirty Sets from
     // the PresentationTarget and drains them. Passing `null` for both
     // means "full re-render of the whole subtree" — used on the very
     // first paint when nothing is in the map yet.
     public Render(
         root:        Visual | undefined,
+        overlay:     Visual | undefined,
         renderDirty: Set<Visual> | null,
         arrangeDirty: Set<Visual> | null,
     ): void
@@ -151,6 +175,16 @@ export class SvgRenderer
         {
             this.walk(
                 root as unknown as RenderableVisual,
+                this.surface,
+                renderDirty as unknown as Set<RenderableVisual> | null,
+                arrangeDirty as unknown as Set<RenderableVisual> | null,
+                visited,
+            );
+        }
+        if (overlay !== undefined)
+        {
+            this.walk(
+                overlay as unknown as RenderableVisual,
                 this.surface,
                 renderDirty as unknown as Set<RenderableVisual> | null,
                 arrangeDirty as unknown as Set<RenderableVisual> | null,
@@ -190,36 +224,84 @@ export class SvgRenderer
 
         if (info === undefined)
         {
+            const hit = this.doc.createElementNS(SVG_NS, 'rect') as SVGRectElement;
+            // Invisible fill but `pointer-events: all` keeps the rect
+            // hit-testable. The pad sits BEHIND own + children so its
+            // hits register only when no painted descendant intercepts
+            // first (DOM document order — the hit pad is added before
+            // own + child outers).
+            hit.setAttribute('class', 'mural-hit');
+            hit.setAttribute('fill', 'none');
+            hit.setAttribute('pointer-events', 'all');
             info = {
                 outer: this.doc.createElementNS(SVG_NS, 'g') as SVGGElement,
+                hit,
                 own:   this.doc.createElementNS(SVG_NS, 'g') as SVGGElement,
+                // NaN sentinels guarantee the first applyTransform /
+                // applyHitPad fire for a brand-new node — NaN never
+                // equals anything (including itself).
+                lastX: Number.NaN,
+                lastY: Number.NaN,
+                lastW: Number.NaN,
+                lastH: Number.NaN,
             };
             info.outer.setAttribute('class', 'mural-visual');
             info.own  .setAttribute('class', 'mural-own');
             (info.outer as unknown as BackrefHost)[VISUAL_BACKREF] = visual as unknown as Visual;
+            // Order matters for hit-test priority. elementsFromPoint
+            // returns front-to-back (last sibling on top), so the hit
+            // pad goes FIRST and gets the lowest priority — descendants
+            // and own-group paint always win when they cover the point.
+            info.outer.appendChild(info.hit);
             info.outer.appendChild(info.own);
             this.nodes.set(visual, info);
             parentNode.appendChild(info.outer);
         }
 
-        // Transform — apply on first paint or when arrange-dirty.
-        // ArrangedRect changes are the only thing that move a visual
-        // within its parent's coord space, so re-reading on every
-        // pass where arrangeDirty mentions us is enough.
+        // Detect rect changes from the previous render so the cascade
+        // logic below can refresh transform, hit-pad, AND own primitives
+        // even when the dirty Sets miss them (an Arrange-cascade past
+        // siblings doesn't necessarily flag every affected visual).
+        const rect = visual.ArrangedRect;
+        const sizeChanged = info.lastW !== rect.Width || info.lastH !== rect.Height;
+        const moveChanged = info.lastX !== rect.X     || info.lastY !== rect.Y;
+
+        // Transform AND hit-pad geometry — apply on first paint, on an
+        // explicit dirty signal, or whenever the visual's ArrangedRect
+        // actually moved / resized. The direct rect comparison catches
+        // sibling shifts that happen during an Arrange cascade without
+        // an explicit InvalidateArrange (a CollapsibleStack collapsing
+        // repositions everything below it, but the dirty Sets don't
+        // track that).
         if (isNew || renderDirty === null || arrangeDirty === null
-            || arrangeDirty.has(visual))
+            || arrangeDirty.has(visual) || moveChanged || sizeChanged)
         {
             this.applyTransform(info.outer, visual);
+            this.applyHitPad(info.hit, visual);
+            info.lastX = rect.X;
+            info.lastY = rect.Y;
+            info.lastW = rect.Width;
+            info.lastH = rect.Height;
         }
-        // Clip — same trigger conditions.
+        // Clip — respond to BOTH arrange-dirty (rect-driven repositioning
+        // could expose a stale clip rect) AND render-dirty (the Clip DP
+        // itself was reassigned — MetaData.Render only populates
+        // renderDirty, so without this branch a runtime clip change
+        // would never reach the DOM).
         if (isNew || renderDirty === null || arrangeDirty === null
-            || arrangeDirty.has(visual))
+            || arrangeDirty.has(visual) || renderDirty.has(visual))
         {
             this.applyClip(info.outer, visual);
         }
 
-        // Own primitives — re-emit on first paint or when render-dirty.
-        if (isNew || renderDirty === null || renderDirty.has(visual))
+        // Own primitives — re-emit on first paint, when render-dirty,
+        // OR when the visual's SIZE changed. Size matters because
+        // RenderOverride emissions (rects, paths, etc.) typically use
+        // RenderSize / ArrangedRect, so a Border that grew from 0×0 to
+        // 10×500 has its own group stale until we re-emit. Position-
+        // only moves don't need this — the outer <g> translate handles
+        // them — so `moveChanged` alone is NOT a trigger.
+        if (isNew || renderDirty === null || renderDirty.has(visual) || sizeChanged)
         {
             this.repaintOwn(info.own, visual);
         }
@@ -246,6 +328,17 @@ export class SvgRenderer
                 `translate(${formatNumber(rect.X)},${formatNumber(rect.Y)})`,
             );
         }
+    }
+
+    // Resize the hit pad to mirror the visual's ArrangedRect so the
+    // whole area picks up pointer events even when no descendant
+    // paints there. A zero-area pad is set to size 0 (so collapsed /
+    // 0×0 visuals don't unexpectedly capture events from neighbours).
+    private applyHitPad(hit: SVGRectElement, visual: RenderableVisual): void
+    {
+        const rect = visual.ArrangedRect;
+        hit.setAttribute('width',  formatNumber(Math.max(0, rect.Width)));
+        hit.setAttribute('height', formatNumber(Math.max(0, rect.Height)));
     }
 
     // Clip handling: when Visual.Clip is set, emit a `<clipPath>` in

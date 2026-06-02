@@ -142,6 +142,13 @@ export class Compiler
     // macros shadow controls of the same name.
     private macros: Map<string, DefForm> = new Map();
     private varCounter = 0;
+    // Variable name of the element that owns the active NameScope —
+    // populated when an element carries `x:root` and consumed by every
+    // x:name'd descendant to emit a Register() call. NameScopes are
+    // emitter-time bookkeeping; the runtime side already supports
+    // multi-scope lookups (templates have their own), so this is
+    // intentionally limited to the single application-root scope.
+    private nameScopeOwnerVar: string | undefined;
     // Current indent prefix (multiples of 4 spaces) — incremented when
     // we open a nested scope (template factory body, future macro
     // expansions, etc.), decremented at close. Cosmetic for the emitted
@@ -178,8 +185,13 @@ export class Compiler
             }
         }
 
-        // Pass 2: locate the root element. Top-level resource forms
-        // are v0-deferred; imports are silently ignored.
+        // Pass 2: locate the single root element. Bare top-level
+        // resource forms (`template`, `style`, `datatemplate`) are
+        // rejected — author them inside an explicit
+        // `ResourceDictionary { … }` element so the dictionary wrapper
+        // is visible in the source (matches the WPF
+        // `<ResourceDictionary>` authoring pattern). imports are
+        // silently ignored.
         let root: ElementNode | undefined;
         for (const form of doc.forms)
         {
@@ -195,18 +207,36 @@ export class Compiler
             else if (form.kind === 'resource-form')
             {
                 throw new EmitError(
-                    'compile: top-level resource forms are not supported in v0',
+                    `compile: top-level '${form.keyword}' is not allowed — ` +
+                    `wrap it inside an explicit \`ResourceDictionary { … }\` element ` +
+                    `so the dictionary wrapper appears in the source.`,
                     form.span);
             }
             // import / def silently consumed.
         }
+
         if (root === undefined)
         {
             throw new EmitError(
                 'compile: source has no top-level element to emit', doc.span);
         }
 
+        // Three recognised top-level roots: Application (with a
+        // resources slot), ResourceDictionary (bare dictionary that
+        // emits a factory), or a plain Visual (fragment).
         const isApp = (root.name === 'Application');
+        const isRD  = (root.name === 'ResourceDictionary');
+        if (isRD)
+        {
+            const rdVar = this.compileResourceDictionaryRoot(root);
+            this.line(`return ${rdVar};`);
+            return {
+                body:          this.lines.join('\n'),
+                imports:       this.imports,
+                isApplication: false,
+                exportName:    'create',
+            };
+        }
         const rootVar = isApp
             ? this.compileApplication(root)
             : this.compileElement(root);
@@ -218,6 +248,42 @@ export class Compiler
             isApplication: isApp,
             exportName:    isApp ? 'app' : 'create',
         };
+    }
+
+    // ── ResourceDictionary root ─────────────────────────────────────
+    //
+    // `ResourceDictionary { template x:key="…"[targettype=…]{ … } … }`
+    // emits a `create()` factory returning a populated ResourceDictionary.
+    // Body items are the same shape the `resources:` slot of an
+    // Application accepts: keyed key-value resources (`@name = value`),
+    // resource forms (`template` / `style` / `datatemplate`), or x:key /
+    // x:root-marked element entries.
+    private compileResourceDictionaryRoot(elem: ElementNode): string
+    {
+        if (elem.attrs.length > 0)
+        {
+            throw new EmitError(
+                'ResourceDictionary: attributes are not supported at the root ' +
+                '(only a body block of resource entries)',
+                elem.span);
+        }
+        if (elem.xAttrs.length > 0)
+        {
+            throw new EmitError(
+                'ResourceDictionary: x:* attributes are not supported at the root',
+                elem.span);
+        }
+        if (elem.body === null || elem.body.kind !== 'structured-body')
+        {
+            throw new EmitError(
+                'ResourceDictionary: expected a `{ … }` body block of resource entries',
+                elem.span);
+        }
+        this.ensureImport('ResourceDictionary');
+        const rdVar = this.fresh('rd');
+        this.line(`const ${rdVar} = new ResourceDictionary();`);
+        this.compileResourcesBody(rdVar, elem.body);
+        return rdVar;
     }
 
     // ── Application root ────────────────────────────────────────────
@@ -631,6 +697,12 @@ export class Compiler
         this.ensureImport(elem.name);
         const v = this.fresh(this.varHint(elem.name));
         this.line(`const ${v} = new ${elem.name}();`);
+
+        // ── x:* meta attributes ────────────────────────────────────
+        // Handle these BEFORE the body compiles so the NameScope is
+        // already attached to the root by the time descendant elements
+        // attempt to register their x:name.
+        this.applyXAttrs(v, elem);
 
         for (const attr of elem.attrs)
         {
@@ -1099,19 +1171,25 @@ export class Compiler
     private compileIdentValue(val: IdentValue, ctx: ValueCtx): string
     {
         const name = val.name;
-        // 1. Property-name match against an enum class — emit ClassName.Member.
+        // 1. Boolean literals — `true` / `false` (case-sensitive). Emitted
+        //    as raw JS literals so the runtime receives an actual bool
+        //    rather than the truthy strings "true" / "false" (the latter
+        //    being a particularly painful footgun: it's truthy).
+        if (name === 'true')  return 'true';
+        if (name === 'false') return 'false';
+        // 2. Property-name match against an enum class — emit ClassName.Member.
         if (ctx.propertyName !== undefined && ENUM_CLASSES.has(ctx.propertyName))
         {
             this.ensureImport(ctx.propertyName);
             return `${ctx.propertyName}.${name}`;
         }
-        // 2. PascalCase ident known as a class — emit as a type reference.
+        // 3. PascalCase ident known as a class — emit as a type reference.
         if (this.startsUppercase(name) && this.symbols.has(name))
         {
             this.ensureImport(name);
             return name;
         }
-        // 3. Fallback — bare string literal. Lowercase enum-like values
+        // 4. Fallback — bare string literal. Lowercase enum-like values
         // (left, center) land here and the runtime's converters handle
         // them at property-set time.
         return JSON.stringify(name);
@@ -1274,6 +1352,59 @@ export class Compiler
                 m.span);
         }
         return m.value.name;
+    }
+
+    // Process the x:* attribute set on an element after construction:
+    //   * x:root  — install a fresh NameScope on the element so x:name
+    //                lookups from anywhere in the subtree resolve here.
+    //                Also pins this variable as the active scope owner
+    //                so descendants emit Register() calls against it.
+    //   * x:name  — set the Visual's `Name` field and register it in
+    //                the current scope owner's NameScope. Requires an
+    //                enclosing x:root somewhere up the lexical tree.
+    //
+    // The resource-element wiring (x:key registration in a
+    // ResourceDictionary, x:root assignment to `rd.Root`) is handled
+    // separately by compileResourceElement; this method covers the
+    // tree-walk-time concerns shared by every element.
+    private applyXAttrs(v: string, elem: ElementNode): void
+    {
+        const xRoot = this.findXAttr(elem.xAttrs, 'root');
+        if (xRoot !== null)
+        {
+            this.ensureImport('NameScope');
+            this.line(`${v}.SetNameScope(new NameScope());`);
+            this.nameScopeOwnerVar = v;
+        }
+
+        const xName = this.findXAttr(elem.xAttrs, 'name');
+        if (xName !== null)
+        {
+            if (xName.value === null || xName.value.kind !== 'string')
+            {
+                throw new EmitError(
+                    'x:name requires a string literal value', xName.span);
+            }
+            const nameLit = JSON.stringify(xName.value.value);
+            this.line(`${v}.Name = ${nameLit};`);
+            // Inside a template body, ControlTemplate.Apply walks the
+            // freshly-built subtree and registers every named visual in
+            // the template's NameScope — so the factory itself must NOT
+            // emit a Register() call (no enclosing x:root exists; the
+            // scope is created at Apply time, not at factory-emit time).
+            if (this.inTemplateBody) return;
+            if (this.nameScopeOwnerVar === undefined)
+            {
+                throw new EmitError(
+                    'x:name requires an enclosing x:root element to provide a NameScope',
+                    xName.span);
+            }
+            // The runtime exposes the per-instance NameScope through
+            // the `nameScope` getter (no setter); SetNameScope above
+            // guarantees it's non-undefined here.
+            this.line(
+                `${this.nameScopeOwnerVar}.nameScope.Register(${nameLit}, ${v});`);
+        }
     }
 
     private findXAttr(xAttrs: XAttr[], name: string): XAttr | null

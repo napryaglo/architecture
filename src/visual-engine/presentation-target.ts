@@ -2,6 +2,7 @@ import { APPROXIMATE_TEXT_MEASURER, MetaData, Model, Size } from '../runtime/ind
 import { Rect } from '../runtime/index.js';
 import type { TextMeasurer, Visual, VisualHost } from '../runtime/index.js';
 import type { Brush } from './brush.js';
+import { OverlayLayer } from './overlay-layer.js';
 
 // Abstract base for the scene-description-plus-host-bridge classes
 // (HtmlTarget, FileTarget, …). Follows the WPF
@@ -67,6 +68,12 @@ export abstract class PresentationTarget extends Model implements VisualHost
     private _actualWidth:  number = 0;
     private _actualHeight: number = 0;
 
+    // Top-layer container for popups, dropdowns, and Drawer-Temporary
+    // panes. Lazily materialised on the first AttachOverlay call to
+    // keep simple targets that never use overlays free of the extra
+    // Visual + render walk.
+    private _overlayRoot: OverlayLayer | undefined;
+
     protected constructor(width?: number, height?: number, content?: Visual)
     {
         super();
@@ -103,6 +110,57 @@ export abstract class PresentationTarget extends Model implements VisualHost
         this._actualWidth  = width;
         this._actualHeight = height;
     }
+
+    // ------------------------------------------------------------------
+    // Overlay layer
+    // ------------------------------------------------------------------
+    //
+    // Controls that need to paint above the main Content tree (Drawer's
+    // Temporary variant, ComboBox's open popup, dialogs, tooltips) call
+    // AttachOverlay / DetachOverlay. The overlay layer is rendered AFTER
+    // Content by the concrete subclass's renderer, which puts it on top
+    // visually and ahead of Content under elementsFromPoint hit-testing.
+    //
+    // OverlayRoot exposes the live container so the renderer can walk
+    // it; it stays `undefined` until something is attached so simple
+    // targets pay nothing for the feature.
+
+    public AttachOverlay(visual: Visual): void
+    {
+        if (this._overlayRoot === undefined)
+        {
+            this._overlayRoot = new OverlayLayer();
+            // Cascade the host back-pointer through the overlay layer
+            // so any invalidation inside it reaches our dirty queue.
+            // Bracket access bypasses TS protected-member check, mirror
+            // of the same call in the Content setter below.
+            this._overlayRoot['SetTarget'](this);
+        }
+        this._overlayRoot.AddChild(visual);
+        // Panel.AddChild does NOT auto-invalidate its own measure; the
+        // framework leaves that to the caller. Same gap ComboBox papers
+        // over (see comments in combo-box.ts). Without the explicit
+        // invalidation here the overlay keeps a stale cached size and
+        // the new child never gets laid out.
+        this._overlayRoot.InvalidateMeasure();
+        // Defensive: the freshly-attached child may carry stale
+        // _isMeasureValid = false from property writes that happened
+        // before AttachOverlay wired its host back-pointer (same
+        // pattern as the Content setter). Re-invalidating ensures
+        // those queued invalidations reach the host's dirty queue.
+        visual.InvalidateMeasure();
+    }
+
+    public DetachOverlay(visual: Visual): void
+    {
+        if (this._overlayRoot === undefined) return;
+        this._overlayRoot.RemoveChild(visual);
+        this._overlayRoot.InvalidateMeasure();
+    }
+
+    // Read-only handle for the renderer. `undefined` until the first
+    // AttachOverlay materialises the layer.
+    public get OverlayRoot(): Visual | undefined { return this._overlayRoot; }
 
     // ------------------------------------------------------------------
     // Hit testing
@@ -280,6 +338,15 @@ export abstract class PresentationTarget extends Model implements VisualHost
         if (content !== undefined)
         {
             content.Arrange(new Rect(0, 0, surfaceW, surfaceH));
+        }
+
+        // Overlay layer rides the same surface as Content. Measure and
+        // arrange at the resolved surface size so popups, drawers, and
+        // tooltips cover whatever Content is showing.
+        if (this._overlayRoot !== undefined)
+        {
+            this._overlayRoot.Measure(new Size(surfaceW, surfaceH));
+            this._overlayRoot.Arrange(new Rect(0, 0, surfaceW, surfaceH));
         }
 
         this.measureDirty.clear();

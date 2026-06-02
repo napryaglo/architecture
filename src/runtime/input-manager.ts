@@ -55,6 +55,18 @@ export class InputManager
     // pointerId shares a press target.
     private pressTargets: Map<number, Visual> = new Map();
 
+    // Per-pointer capture. While captured, Move / Up events route to
+    // the captured Visual regardless of what's actually under the
+    // pointer — the same contract as WPF's Mouse.Capture / the DOM's
+    // setPointerCapture. Used by drag-tracking controls (e.g. a
+    // ScrollBar thumb) so the drag survives a pointer that wanders
+    // outside the source visual.
+    //
+    // Hover state (IsMouseOver / Enter / Leave) is NOT redirected —
+    // hover follows the actual hit so visual feedback stays accurate
+    // even during a capture.
+    private pointerCaptures: Map<number, Visual> = new Map();
+
     // ── Public entry points ────────────────────────────────────────
 
     // Pointer moved to a new (or null) Visual at the given host
@@ -63,11 +75,15 @@ export class InputManager
     public InjectPointerMove(hit: Visual | null, init: PointerEventInit): void
     {
         this.updateHoverChain(hit, init);
-        if (hit === null) return;
 
-        // After the chain is stable, dispatch PointerMove at the leaf
-        // so the routed walker fires Preview*/On* on the full route.
-        dispatchPointer(new PointerEventArgs('PointerMove', hit, init));
+        // Capture overrides hit-test for dispatch — a thumb being
+        // dragged keeps receiving Move events even when the cursor
+        // crosses outside its bounds.
+        const captured = this.pointerCaptures.get(init.PointerId);
+        const dispatchTarget = captured ?? hit;
+        if (dispatchTarget === null || dispatchTarget === undefined) return;
+
+        dispatchPointer(new PointerEventArgs('PointerMove', dispatchTarget, init, this));
     }
 
     public InjectPointerLeave(init: PointerEventInit): void
@@ -84,7 +100,7 @@ export class InputManager
 
         this.pressTargets.set(init.PointerId, hit);
         setIsPressed(hit, true);
-        dispatchPointer(new PointerEventArgs('PointerDown', hit, init));
+        dispatchPointer(new PointerEventArgs('PointerDown', hit, init, this));
     }
 
     public InjectPointerUp(hit: Visual | null, init: PointerEventInit): void
@@ -96,15 +112,19 @@ export class InputManager
             this.pressTargets.delete(init.PointerId);
         }
 
-        // Dispatch Up at the visual under the pointer if we have one;
-        // otherwise at the press target so the originating control
-        // always sees the release. WPF's CaptureMouse story handles
-        // this case differently — we land it that way in phase 3.
-        const dispatchTarget = hit ?? pressTarget;
+        // Dispatch Up to the captured visual first (drag-end belongs to
+        // the dragger), then the hit, then the press target as a final
+        // fallback so a click outside the visual still notifies it.
+        const captured = this.pointerCaptures.get(init.PointerId);
+        const dispatchTarget = captured ?? hit ?? pressTarget;
         if (dispatchTarget !== undefined)
         {
-            dispatchPointer(new PointerEventArgs('PointerUp', dispatchTarget, init));
+            dispatchPointer(new PointerEventArgs('PointerUp', dispatchTarget, init, this));
         }
+
+        // Capture auto-releases on PointerUp — matches DOM
+        // pointercancel / pointerup behaviour for setPointerCapture.
+        if (captured !== undefined) this.pointerCaptures.delete(init.PointerId);
 
         if (hit !== null) this.updateHoverChain(hit, init);
     }
@@ -112,7 +132,28 @@ export class InputManager
     public InjectPointerWheel(hit: Visual | null, init: WheelEventInit): void
     {
         if (hit === null) return;
-        dispatchPointer(new WheelEventArgs(hit, init));
+        dispatchPointer(new WheelEventArgs(hit, init, this));
+    }
+
+    // ── Pointer capture ────────────────────────────────────────────
+
+    // Begin capturing every subsequent Move / Up for `pointerId` to
+    // `visual`. Capture stays until ReleasePointerCapture is called
+    // or until the matching PointerUp arrives (auto-release). Calling
+    // CapturePointer again with the same id swaps the captured visual.
+    public CapturePointer(visual: Visual, pointerId: number = 0): void
+    {
+        this.pointerCaptures.set(pointerId, visual);
+    }
+
+    public ReleasePointerCapture(pointerId: number = 0): void
+    {
+        this.pointerCaptures.delete(pointerId);
+    }
+
+    public GetCapturedVisual(pointerId: number = 0): Visual | undefined
+    {
+        return this.pointerCaptures.get(pointerId);
     }
 
     // ── Internals ──────────────────────────────────────────────────

@@ -35,9 +35,12 @@ describe('compile — application skeleton', () => {
             js,
             /import \{ Border \} from "@visualisation-sub\/mural\/Controls";/,
         );
+        // x:root materialises a NameScope on the root visual so x:name
+        // descendants resolve there; the emitter pulls NameScope into
+        // the runtime imports automatically.
         assert.match(
             js,
-            /import \{ Application, Color, Thickness \} from "@visualisation-sub\/mural\/runtime";/,
+            /import \{ Application, Color, NameScope, Thickness \} from "@visualisation-sub\/mural\/runtime";/,
         );
         assert.match(
             js,
@@ -84,6 +87,75 @@ describe('compile — resources slot', () => {
             }
         `);
         assert.match(js, /_rd1\.Root = _border2;/);
+    });
+
+    test('x:root attaches a fresh NameScope to the root visual', () => {
+        const js = emitted(`
+            Application{
+                resources: {
+                    Border x:root{}
+                }
+            }
+        `);
+        assert.match(js, /_border2\.SetNameScope\(new NameScope\(\)\);/);
+    });
+});
+
+describe('compile — x:name', () => {
+    test('x:name on a descendant sets Visual.Name and registers in the root NameScope', () => {
+        const js = emitted(`
+            Application{
+                resources: {
+                    Canvas x:root{
+                        Border x:name="bg"{}
+                    }
+                }
+            }
+        `);
+        // Root creates the scope, descendant sets Name + registers.
+        assert.match(js, /\.SetNameScope\(new NameScope\(\)\);/);
+        assert.match(js, /\.Name = "bg";/);
+        assert.match(js, /\.nameScope\.Register\("bg", _border\d+\);/);
+    });
+
+    test('x:name on the root itself registers the root in its own scope', () => {
+        const js = emitted(`
+            Application{
+                resources: {
+                    Canvas x:root x:name="root"{}
+                }
+            }
+        `);
+        // Same variable on both sides of the register call — the
+        // x:root element registers itself in its own NameScope.
+        assert.match(js, /(_canvas\d+)\.SetNameScope\(new NameScope\(\)\);/);
+        assert.match(js, /(_canvas\d+)\.nameScope\.Register\("root", \1\);/);
+    });
+
+    test('x:name without an enclosing x:root throws', () => {
+        // Non-Application markup with x:name on the root — no x:root,
+        // no NameScope owner — should fail with a clear EmitError.
+        assert.throws(
+            () => emitted(`Border x:name="foo"{}`),
+            (err: unknown) => err instanceof EmitError
+                && /x:name requires an enclosing x:root/.test((err as Error).message),
+        );
+    });
+
+    test('x:name with a non-string value throws', () => {
+        assert.throws(
+            () => emitted(`
+                Application{
+                    resources: {
+                        Canvas x:root{
+                            Border x:name=42{}
+                        }
+                    }
+                }
+            `),
+            (err: unknown) => err instanceof EmitError
+                && /x:name requires a string literal/.test((err as Error).message),
+        );
     });
 });
 

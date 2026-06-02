@@ -123,6 +123,16 @@ export interface PointerEventInit
     PointerType: 'mouse' | 'pen' | 'touch' | 'unknown';
 }
 
+// Minimal capture surface exposed on PointerEventArgs. The InputManager
+// implements both methods; passing it through as a structural type
+// avoids the routed-event module importing the manager (the manager
+// already imports this file).
+export interface PointerCaptureSink
+{
+    CapturePointer(visual: Visual, pointerId?: number): void;
+    ReleasePointerCapture(pointerId?: number): void;
+}
+
 // Concrete args type for the six pointer events. Carries everything a
 // handler typically needs without forcing the handler to reach back
 // into the device. Mutable `Handled` is on the base; everything else
@@ -138,7 +148,18 @@ export class PointerEventArgs extends RoutedEventArgs
     public readonly Pressure:    number;
     public readonly PointerType: PointerEventInit['PointerType'];
 
-    constructor(kind: RoutedEventKind, source: Visual, init: PointerEventInit)
+    // Optional capture hook. Populated by the InputManager when it
+    // dispatches an event; undefined for synthetic events constructed
+    // in tests that don't exercise capture. Handlers call CapturePointer
+    // / ReleasePointerCapture below rather than touching this directly.
+    private readonly _captureSink: PointerCaptureSink | undefined;
+
+    constructor(
+        kind: RoutedEventKind,
+        source: Visual,
+        init: PointerEventInit,
+        captureSink?: PointerCaptureSink,
+    )
     {
         super(kind, source);
         this.HostX       = init.HostX;
@@ -149,6 +170,21 @@ export class PointerEventArgs extends RoutedEventArgs
         this.PointerId   = init.PointerId;
         this.Pressure    = init.Pressure;
         this.PointerType = init.PointerType;
+        this._captureSink = captureSink;
+    }
+
+    // Capture every subsequent Move / Up for this pointer to `target`
+    // (defaults to the event's Source Visual — the natural pick for a
+    // thumb starting a drag). Capture auto-releases on the matching
+    // PointerUp; long-lived captures call ReleasePointerCapture earlier.
+    public CapturePointer(target?: Visual): void
+    {
+        this._captureSink?.CapturePointer(target ?? this.Source, this.PointerId);
+    }
+
+    public ReleasePointerCapture(): void
+    {
+        this._captureSink?.ReleasePointerCapture(this.PointerId);
     }
 }
 
@@ -180,9 +216,9 @@ export class WheelEventArgs extends PointerEventArgs
     public readonly DeltaZ:    number;
     public readonly DeltaMode: WheelDeltaMode;
 
-    constructor(source: Visual, init: WheelEventInit)
+    constructor(source: Visual, init: WheelEventInit, captureSink?: PointerCaptureSink)
     {
-        super('PointerWheel', source, init);
+        super('PointerWheel', source, init, captureSink);
         this.DeltaX    = init.DeltaX;
         this.DeltaY    = init.DeltaY;
         this.DeltaZ    = init.DeltaZ;

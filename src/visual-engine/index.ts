@@ -48,6 +48,7 @@ export {
     type LoadedGoogleFont,
 } from './google-font-loader.js';
 export { PresentationTarget } from './presentation-target.js';
+export { OverlayLayer } from './overlay-layer.js';
 export { HtmlTarget, type HtmlTargetOptions } from './targets/html-target.js';
 export { FileTarget, type FileTargetOptions, type FileTargetFormat } from './targets/file-target.js';
 export { HeadlessTarget } from './targets/headless-target.js';

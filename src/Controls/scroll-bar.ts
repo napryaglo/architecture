@@ -1,0 +1,413 @@
+import {
+    Application,
+    MetaData,
+    Model,
+    Panel,
+    Rect,
+    Size,
+    Visual,
+    type DrawingContext,
+    type PointerEventArgs,
+    type PropertyDescriptor,
+} from '../runtime/index.js';
+import type { Border } from './border.js';
+import { Orientation } from './stack-panel.js';
+import { Theme } from './theme.js';
+import type { ControlTemplate } from './control-template.js';
+import { create as createScrollBarResources } from '../../build/Controls/scroll-bar.template.mu.js';
+
+const KEY_SCROLLBAR = 'DefaultScrollBar';
+
+function resolveTemplate(key: string): ControlTemplate
+{
+    const tpl = Application.ResolveDefaultResource<ControlTemplate>(key);
+    if (tpl === undefined)
+    {
+        throw new Error(`ScrollBar: default template '${key}' is not registered.`);
+    }
+    return tpl;
+}
+
+// Default bar thickness on the cross axis. Matches the size browsers
+// reserve for native scrollbars in their "thin" variant.
+const SCROLLBAR_THICKNESS = 10;
+// Smallest practical thumb so a huge extent vs tiny viewport ratio
+// still leaves a thumb you can actually grab.
+const MIN_THUMB_LENGTH = 24;
+
+// Internal Panel that hosts the track + thumb visual children and
+// delegates their positioning back to the owning ScrollBar's metrics.
+// Used as the template root so the compiled `.mu` template can return
+// a single rooted subtree — the bar's actual layout logic still lives
+// on ScrollBar where the DP-driven metrics are.
+//
+// `host` is a writable property so the panel can be instantiated by
+// the template factory (which can't pass constructor args) and wired
+// by ScrollBar after Apply. Defensive Measure / Arrange degrade to
+// safe defaults when the back-reference is unset.
+//
+// Exported for the compiled-`.mu` ScrollBar template (not public API).
+export class ScrollBarLayout extends Panel
+{
+    public host: ScrollBar | undefined;
+
+    protected override MeasureOverride(availableSize: Size): Size
+    {
+        for (const c of this.visualChildren) c.Measure(availableSize);
+        return this.host?.MeasureScrollBarSlot(availableSize) ?? Size.Zero;
+    }
+
+    protected override ArrangeOverride(finalSize: Size): Size
+    {
+        // Direct visualChildren are track (0) then thumb (1) — the
+        // template asserts that order via the bodies' textual position.
+        const children = this.visualChildren;
+        const track = children[0];
+        const thumb = children[1];
+        if (track === undefined || thumb === undefined || this.host === undefined)
+        {
+            return finalSize;
+        }
+        this.host.ArrangeScrollBarParts(finalSize, track, thumb);
+        return finalSize;
+    }
+}
+
+// WPF-style range-control surface focused on scrollbar duty. Standalone
+// (no event wiring to a parent scroller — the consumer subscribes to
+// ValueChanged) so the same control serves both as ScrollViewer's
+// default-template scrollbar AND as a general-purpose range slider for
+// other contexts.
+//
+// DP semantics:
+//   Minimum / Maximum — range of the underlying scrollable value.
+//                       For a ScrollViewer this is (0, ScrollableHeight).
+//   Value             — the current position. Clamped during Arrange
+//                       so an off-range write is preserved literally
+//                       (so a binding source sees what it wrote) and
+//                       the painted thumb shows the clamped position.
+//   ViewportSize      — proportion of the visible window. Drives the
+//                       thumb's length: thumb / track = viewport / extent.
+//                       Zero (the default) collapses the thumb to its
+//                       minimum length — visible but uninformative.
+//   Orientation       — Vertical (right-edge scrollbar) or Horizontal
+//                       (bottom-edge scrollbar).
+//
+// Interaction:
+//   * Click the thumb and drag — captures the pointer so the drag
+//     survives leaving the bar's bounds.
+//   * Click the track above / below the thumb — page-jump by one
+//     ViewportSize step, the same as Page Up / Page Down on a native
+//     scrollbar.
+//
+// Value clamping at Arrange time, not setter time, so a consumer can
+// bind a VM property whose raw value drifts out of range without the
+// scrollbar "fixing" it back. The painted thumb position uses the
+// clamped value; reads on `.Value` return whatever was last written.
+export class ScrollBar extends Visual
+{
+    static {
+        Model.RegisterProperty(ScrollBar, 'Orientation',  Orientation.Vertical,
+            MetaData.Measure | MetaData.Arrange);
+        Model.RegisterProperty(ScrollBar, 'Minimum',      0, MetaData.Arrange);
+        Model.RegisterProperty(ScrollBar, 'Maximum',      1, MetaData.Arrange);
+        Model.RegisterProperty(ScrollBar, 'Value',        0, MetaData.Arrange);
+        Model.RegisterProperty(ScrollBar, 'ViewportSize', 0, MetaData.Arrange);
+        Application.DefaultResourceFactories.push(createScrollBarResources);
+    }
+
+    // ── Template parts ──────────────────────────────────────────────
+    private readonly _layout: ScrollBarLayout;
+    private readonly _track:  Border;
+    private readonly _thumb:  Border;
+
+    // Drag state. dragOriginPx is the pointer's primary-axis coordinate
+    // in HOST surface space at the moment the user grabbed the thumb;
+    // dragOriginValue is .Value at that moment. PointerMove computes
+    // the new value from a pure delta — no need for per-event
+    // local-coord conversion.
+    private _dragging = false;
+    private _dragOriginPx    = 0;
+    private _dragOriginValue = 0;
+
+    // ValueChanged subscribers. Plain Set so duplicate add is a no-op
+    // and remove is precise — same shape as the Closed listener API
+    // on Drawer.
+    private readonly _valueListeners: Set<(value: number) => void> = new Set();
+
+    constructor()
+    {
+        super();
+        // Markup-defined ScrollBarLayout panel with PART_Track behind
+        // PART_Thumb, resolved from DefaultScrollBar in the controls
+        // theme. The cosmetic palette (rest / track tints, corner
+        // radius, zero border) lives in the template; hover and
+        // pressed tints come from theme.ts because ScrollBar swaps
+        // them at runtime via state listeners.
+        const inst = resolveTemplate(KEY_SCROLLBAR).Apply(this);
+        this._layout = inst.root as ScrollBarLayout;
+        this._track  = inst.root.FindName('PART_Track') as Border;
+        this._thumb  = inst.root.FindName('PART_Thumb') as Border;
+        this._layout.host = this;
+        // Hover state — same listener shape Button uses for its tints.
+        this._thumb.AddPropertyChangedListener('IsMouseOver', () => this.refreshThumbBrush());
+
+        this.AttachVisual(this._layout);
+    }
+
+    public get Orientation(): Orientation { return this.get_property_value('Orientation'); }
+    public set Orientation(v: Orientation) { this.set_property_value('Orientation', v); }
+
+    public get Minimum(): number { return this.get_property_value('Minimum'); }
+    public set Minimum(v: number) { this.set_property_value('Minimum', v); }
+
+    public get Maximum(): number { return this.get_property_value('Maximum'); }
+    public set Maximum(v: number) { this.set_property_value('Maximum', v); }
+
+    public get Value(): number { return this.get_property_value('Value'); }
+    public set Value(v: number) { this.set_property_value('Value', v); }
+
+    public get ViewportSize(): number { return this.get_property_value('ViewportSize'); }
+    public set ViewportSize(v: number) { this.set_property_value('ViewportSize', v); }
+
+    // ── Public events ──────────────────────────────────────────────
+    public AddValueChangedListener(listener: (value: number) => void): void
+    {
+        this._valueListeners.add(listener);
+    }
+
+    public RemoveValueChangedListener(listener: (value: number) => void): void
+    {
+        this._valueListeners.delete(listener);
+    }
+
+    public override get visualChildren(): readonly Visual[]
+    {
+        return [this._layout];
+    }
+
+    // Read-only handles to the default-template parts. The parts now
+    // live one level deeper than they used to (under the layout panel
+    // that the compiled template introduces as the single template
+    // root); the getters keep the public access stable so callers
+    // don't index `visualChildren` manually.
+    public get Track(): Border { return this._track; }
+    public get Thumb(): Border { return this._thumb; }
+
+    protected override propagate_target_to_visual_children(): void
+    {
+        this._layout['SetTarget'](this['target']);
+    }
+
+    protected override OnPropertyChanged(
+        descriptor: PropertyDescriptor,
+        oldValue: unknown,
+        newValue: unknown,
+    ): void
+    {
+        super.OnPropertyChanged(descriptor, oldValue, newValue);
+        if (descriptor.Name === 'Value')
+        {
+            // Fire AFTER super so the value is committed before listeners
+            // observe it (matches how AddPropertyChangedListener on DPs
+            // observes values).
+            for (const l of this._valueListeners) l(newValue as number);
+        }
+    }
+
+    // ── Layout ──────────────────────────────────────────────────────
+    //
+    // DesiredSize is just the bar's cross-axis thickness; the long
+    // axis stretches into whatever the parent gives. The actual
+    // measure / arrange of track + thumb happens inside
+    // ScrollBarLayout (the template root), which calls back into
+    // MeasureScrollBarSlot / ArrangeScrollBarParts so the metrics
+    // logic stays here.
+    protected override MeasureOverride(availableSize: Size): Size
+    {
+        this._layout.Measure(availableSize);
+        return this._layout.DesiredSize;
+    }
+
+    protected override ArrangeOverride(finalSize: Size): Size
+    {
+        this._layout.Arrange(new Rect(0, 0, finalSize.Width, finalSize.Height));
+        return finalSize;
+    }
+
+    // Called by ScrollBarLayout.MeasureOverride — reports the desired
+    // cross-axis thickness (SCROLLBAR_THICKNESS) and the available
+    // long-axis size as the layout panel's DesiredSize.
+    public MeasureScrollBarSlot(availableSize: Size): Size
+    {
+        if (this.Orientation === Orientation.Vertical)
+        {
+            const h = Number.isFinite(availableSize.Height) ? availableSize.Height : 0;
+            return new Size(SCROLLBAR_THICKNESS, h);
+        }
+        const w = Number.isFinite(availableSize.Width) ? availableSize.Width : 0;
+        return new Size(w, SCROLLBAR_THICKNESS);
+    }
+
+    // Called by ScrollBarLayout.ArrangeOverride — positions the track
+    // edge-to-edge and the thumb at the metrics-derived offset and
+    // length along the primary axis.
+    public ArrangeScrollBarParts(finalSize: Size, track: Visual, thumb: Visual): void
+    {
+        track.Arrange(new Rect(0, 0, finalSize.Width, finalSize.Height));
+        const m = this.metricsFor(finalSize);
+        if (this.Orientation === Orientation.Vertical)
+        {
+            thumb.Arrange(new Rect(0, m.thumbOffset, finalSize.Width, m.thumbLength));
+        }
+        else
+        {
+            thumb.Arrange(new Rect(m.thumbOffset, 0, m.thumbLength, finalSize.Height));
+        }
+    }
+
+    protected override RenderOverride(_dc: DrawingContext): void { }
+
+    // ── Pointer behaviour ──────────────────────────────────────────
+    protected override OnPointerDown(args: PointerEventArgs): void
+    {
+        if (args.Source === this._thumb)
+        {
+            this._dragging = true;
+            this._dragOriginPx    = this.primary(args.HostX, args.HostY);
+            this._dragOriginValue = this.clampedValue();
+            // Capture the pointer so drag survives leaving the bar.
+            args.CapturePointer(this);
+            this.refreshThumbBrush();
+            args.Handled = true;
+            return;
+        }
+        if (args.Source === this._track)
+        {
+            // Page jump in whichever direction the click is from the
+            // thumb. Negative when above / left, positive when below /
+            // right; ViewportSize controls the jump magnitude.
+            const m = this.metricsFor(this.ArrangedRect.Size);
+            const localPx = this.primary(args.HostX, args.HostY) - this.primaryOrigin();
+            const direction = localPx < m.thumbOffset ? -1 : 1;
+            this.setClampedValue(this.clampedValue() + direction * Math.max(1, this.ViewportSize));
+            args.Handled = true;
+        }
+    }
+
+    protected override OnPointerMove(args: PointerEventArgs): void
+    {
+        if (!this._dragging) return;
+        const m = this.metricsFor(this.ArrangedRect.Size);
+        const travel = m.trackLength - m.thumbLength;
+        if (travel <= 0) return;
+        const range = Math.max(0, this.Maximum - this.Minimum);
+        if (range <= 0) return;
+
+        const deltaPx    = this.primary(args.HostX, args.HostY) - this._dragOriginPx;
+        const deltaValue = (deltaPx / travel) * range;
+        this.setClampedValue(this._dragOriginValue + deltaValue);
+        args.Handled = true;
+    }
+
+    protected override OnPointerUp(args: PointerEventArgs): void
+    {
+        if (!this._dragging) return;
+        this._dragging = false;
+        args.ReleasePointerCapture();
+        this.refreshThumbBrush();
+        args.Handled = true;
+    }
+
+    // ── Internals ──────────────────────────────────────────────────
+
+    // Geometry resolved on every Arrange (and on every pointer event
+    // — cheap enough to recompute). All distances are along the bar's
+    // primary axis: vertical = height, horizontal = width.
+    private metricsFor(size: Size): { trackLength: number; thumbLength: number; thumbOffset: number }
+    {
+        const trackLength = Math.max(0, this.Orientation === Orientation.Vertical
+            ? size.Height : size.Width);
+
+        // Track is hidden — collapse everything so a downstream Arrange
+        // doesn't paint into negative space (clamp with min > max
+        // returns min, which can put the thumb LONGER than the track
+        // — visually broken and confusing for hit-testing).
+        if (trackLength === 0)
+        {
+            return { trackLength: 0, thumbLength: 0, thumbOffset: 0 };
+        }
+
+        const range  = Math.max(0, this.Maximum - this.Minimum);
+        const visible = Math.max(0, this.ViewportSize);
+
+        // Floor the minimum thumb at trackLength so a tiny track still
+        // gets a thumb that FITS, never one that overhangs.
+        const minThumb = Math.min(MIN_THUMB_LENGTH, trackLength);
+
+        let thumbLength: number;
+        if (range <= 0 || visible >= range + visible)
+        {
+            // No scroll possible — thumb fills the track.
+            thumbLength = trackLength;
+        }
+        else
+        {
+            const ratio = visible / (range + visible);
+            thumbLength = clamp(trackLength * ratio, minThumb, trackLength);
+        }
+
+        const travel = trackLength - thumbLength;
+        const valuePos = range > 0
+            ? ((this.clampedValue() - this.Minimum) / range) * travel
+            : 0;
+        return { trackLength, thumbLength, thumbOffset: valuePos };
+    }
+
+    // Pick the primary-axis coord from a 2D pair, based on Orientation.
+    private primary(x: number, y: number): number
+    {
+        return this.Orientation === Orientation.Vertical ? y : x;
+    }
+
+    // Absolute primary-axis origin of this ScrollBar on the host surface.
+    // Walks the visual ancestor chain summing ArrangedRect, the same
+    // pattern ComboBox's overlay-position helper uses.
+    private primaryOrigin(): number
+    {
+        let v: Visual | undefined = this;
+        let p = 0;
+        while (v !== undefined)
+        {
+            p += this.Orientation === Orientation.Vertical
+                ? v.ArrangedRect.Y
+                : v.ArrangedRect.X;
+            v = v.GetVisualParent();
+        }
+        return p;
+    }
+
+    private clampedValue(): number
+    {
+        return clamp(this.Value, this.Minimum, this.Maximum);
+    }
+
+    private setClampedValue(v: number): void
+    {
+        const next = clamp(v, this.Minimum, this.Maximum);
+        if (next === this.Value) return;
+        this.Value = next;
+    }
+
+    private refreshThumbBrush(): void
+    {
+        this._thumb.Background = this._dragging          ? Theme.scrollThumbDrag
+                                : this._thumb.IsMouseOver ? Theme.scrollThumbHover
+                                : Theme.scrollThumb;
+    }
+}
+
+function clamp(value: number, min: number, max: number): number
+{
+    return Math.max(min, Math.min(max, value));
+}

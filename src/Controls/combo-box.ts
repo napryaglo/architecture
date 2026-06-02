@@ -1,5 +1,5 @@
 import {
-    Color,
+    Application,
     MetaData,
     Model,
     Panel,
@@ -11,31 +11,31 @@ import {
     type PointerEventArgs,
     type PropertyDescriptor,
 } from '../runtime/index.js';
-import { SolidColorBrush } from '../visual-engine/index.js';
+import { PresentationTarget } from '../visual-engine/index.js';
 import { Border } from './border.js';
-import { Orientation, StackPanel } from './stack-panel.js';
+import type { StackPanel } from './stack-panel.js';
 import { TextBlock } from './text-block.js';
+import { Theme } from './theme.js';
+import type { ControlTemplate } from './control-template.js';
+import { create as createComboBoxResources      } from '../../build/Controls/combo-box.template.mu.js';
+import { create as createComboBoxPopupResources } from '../../build/Controls/combo-box-popup.template.mu.js';
 
-// Material UI palette for the Outlined Select look — the default
-// MUI select variant. Distinct from the Contained Button palette
-// (Button uses primary blue) because selects sit alongside form
-// fields and need a more neutral resting state.
-const MUI_FIELD_BG           = new SolidColorBrush(Color.FromHex('#ffffff'));
-const MUI_FIELD_BORDER       = new SolidColorBrush(Color.FromHex('#c4c4c4'));
-const MUI_FIELD_BORDER_OPEN  = new SolidColorBrush(Color.FromHex('#1976d2'));
-const MUI_FIELD_TEXT        = new SolidColorBrush(Color.FromHex('#212121'));
-const MUI_PLACEHOLDER_TEXT  = new SolidColorBrush(Color.FromHex('#9e9e9e'));
-const MUI_POPUP_BG          = new SolidColorBrush(Color.FromHex('#ffffff'));
-const MUI_POPUP_BORDER      = new SolidColorBrush(Color.FromHex('#e0e0e0'));
-const MUI_ITEM_HOVER_BG     = new SolidColorBrush(Color.FromHex('#f5f5f5'));
-const MUI_ITEM_SELECTED_BG  = new SolidColorBrush(Color.FromHex('#e3f2fd'));
+// Resource-dictionary keys for the two ControlTemplates the ComboBox
+// loads from its `.template.mu` defaults — match the `x:key="…"`
+// literals in combo-box.template.mu / combo-box-popup.template.mu.
+const KEY_SELECTION = 'DefaultComboBoxSelection';
+const KEY_POPUP     = 'DefaultComboBoxPopup';
 
-// Render the chevron as text on the selection-box right edge. A path
-// glyph would be cleaner, but TextBlock with a unicode character
-// avoids reaching into Geometry. The white-down-pointing-triangle
-// (U+25BC) is visually consistent with MUI's chevron at default
-// sizes.
-const CHEVRON_GLYPH = '▾';
+function resolveTemplate(key: string): ControlTemplate
+{
+    const tpl = Application.ResolveDefaultResource<ControlTemplate>(key);
+    if (tpl === undefined)
+    {
+        throw new Error(
+            `ComboBox: default template '${key}' is not registered.`);
+    }
+    return tpl;
+}
 
 // 2-cell horizontal layout: the first child is left-aligned and the
 // second child is right-aligned; both are vertically centred within
@@ -46,10 +46,10 @@ const CHEVRON_GLYPH = '▾';
 // Mural's StackPanel can't do this — its second child would simply
 // follow the first along the stack axis. A WPF DockPanel /
 // Grid-with-`*` columns would, but mural's v1 control library has
-// neither. SplitRow is private to combo-box because it's exactly the
-// shape this one layout needs; if a second consumer turns up it can
-// be promoted to its own file.
-class SplitRow extends Panel
+// neither. SplitRow is exported so the ComboBox's compiled-`.mu`
+// template can name it; consumers outside ComboBox shouldn't depend
+// on it (rename / removal without notice).
+export class SplitRow extends Panel
 {
     protected override MeasureOverride(availableSize: Size): Size
     {
@@ -114,13 +114,13 @@ function displayString(item: unknown): string
     return String(item);
 }
 
-// Internal Border subclass that fires a click callback on PointerUp
-// when the press originated locally and the pointer is still inside —
-// the same release-mode semantics as Button. Used for both the
-// ComboBox's selection box and each item row. Inlined here because
-// the callback shape doesn't belong on the public Border surface and
-// the click semantics are private to ComboBox's internals.
-class ClickableBorder extends Border
+// Border subclass that fires a click callback on PointerUp when the
+// press originated locally and the pointer is still inside — the
+// same release-mode semantics as Button. Used for both the ComboBox's
+// selection box and each item row. Exported so the compiled-`.mu`
+// template can name it; not part of the public package surface (see
+// SplitRow comment).
+export class ClickableBorder extends Border
 {
     public onClick: (() => void) | undefined;
     private _pressOriginatedHere = false;
@@ -143,6 +143,122 @@ class ClickableBorder extends Border
     }
 }
 
+// Invisible outside-click absorber. Same press-here-release-here gate
+// as the Drawer scrim; fully transparent so the painted popup remains
+// visually unobscured. Both Down and Up are marked Handled so click-
+// outside-popup never reaches an underlying visual in the main tree.
+// Exported for the compiled-`.mu` template (not public API).
+export class ClickAwayScrim extends Border
+{
+    public onClick: (() => void) | undefined;
+    private _pressOriginatedHere = false;
+
+    protected override OnPointerDown(args: PointerEventArgs): void
+    {
+        this._pressOriginatedHere = true;
+        args.Handled = true;
+    }
+
+    protected override OnPointerUp(args: PointerEventArgs): void
+    {
+        const fire = this._pressOriginatedHere && this.IsMouseOver;
+        this._pressOriginatedHere = false;
+        args.Handled = true;
+        if (fire) this.onClick?.();
+    }
+
+    protected override OnPointerLeave(_args: PointerEventArgs): void
+    {
+        this._pressOriginatedHere = false;
+    }
+}
+
+// Sum a Visual's ArrangedRect chain up to the surface root. Returns the
+// visual's absolute position in target-surface coordinates. Walks
+// GetVisualParent until a parent without one (the root) is reached.
+function absoluteOrigin(v: Visual): { x: number; y: number }
+{
+    let x = 0;
+    let y = 0;
+    let cur: Visual | undefined = v;
+    while (cur !== undefined)
+    {
+        x += cur.ArrangedRect.X;
+        y += cur.ArrangedRect.Y;
+        cur = cur.GetVisualParent();
+    }
+    return { x, y };
+}
+
+// Overlay host for the ComboBox dropdown. Lives in the target's
+// OverlayLayer when the dropdown is open; arranged at the full surface
+// size by the layer. Internal layout positions the click-away scrim
+// edge-to-edge and the popup just below the originating selection box.
+//
+// Anchored at the selection-box absolute origin re-read on every arrange
+// so a layout shift (window resize, scroll) in the underlying tree
+// repositions the open dropdown automatically.
+//
+// Three external references — `selectionBox`, `popup`, `combo` — are
+// writable public fields rather than constructor args so the host can
+// be instantiated from `.mu` markup (which can't pass constructor args)
+// and wired by ComboBox after the popup template has been applied.
+// Arrange is defensive: if either visual reference is unset, it
+// degrades to a no-op rather than throwing — keeps a half-configured
+// instance from breaking the layout pass during construction.
+//
+// Exported for the compiled-`.mu` template (not public API).
+export class ComboBoxPopupHost extends Panel
+{
+    public combo:        ComboBox | undefined;
+    public selectionBox: Visual   | undefined;
+    public popup:        Visual   | undefined;
+
+    protected override MeasureOverride(availableSize: Size): Size
+    {
+        for (const c of this.visualChildren) c.Measure(availableSize);
+        const w = Number.isFinite(availableSize.Width)  ? availableSize.Width  : 0;
+        const h = Number.isFinite(availableSize.Height) ? availableSize.Height : 0;
+        return new Size(w, h);
+    }
+
+    protected override ArrangeOverride(finalSize: Size): Size
+    {
+        const children = this.visualChildren;
+        // Scrim covers the full overlay slot (assumed first child by
+        // template authoring convention — `PART_Scrim` before
+        // `PART_Popup` in the visual tree).
+        children[0]?.Arrange(new Rect(0, 0, finalSize.Width, finalSize.Height));
+
+        if (children.length < 2) return finalSize;
+        const popupV = this.popup ?? children[1];
+        const anchor = this.selectionBox;
+        if (popupV === undefined || anchor === undefined) return finalSize;
+
+        const origin = absoluteOrigin(anchor);
+        const sbRect = anchor.ArrangedRect;
+        const popupW = sbRect.Width;
+        const popupH = popupV.DesiredSize.Height;
+        // Below the selection box by default; clamp to the surface so
+        // the bottom of the popup doesn't sit outside the visible area.
+        let popupY = origin.y + sbRect.Height;
+        if (popupY + popupH > finalSize.Height)
+        {
+            popupY = Math.max(0, finalSize.Height - popupH);
+        }
+        let popupX = origin.x;
+        if (popupX + popupW > finalSize.Width)
+        {
+            popupX = Math.max(0, finalSize.Width - popupW);
+        }
+        popupV.Arrange(new Rect(popupX, popupY, popupW, popupH));
+        // Keep a reference around in case the combo wants to know
+        // where the popup lives now (e.g. for animation later).
+        void this.combo;
+        return finalSize;
+    }
+}
+
 // Material UI Outlined Select. Drops a selection box that, when
 // clicked, expands a popup containing the items. Clicking an item
 // commits SelectedItem / SelectedIndex and closes the dropdown.
@@ -162,23 +278,29 @@ class ClickableBorder extends Border
 //
 // Layout:
 //
-//   ┌─ StackPanel (vertical) ───────────────────────────────┐
-//   │ ┌─ ClickableBorder (selection box, fixed height) ──┐ │
-//   │ │  TextBlock(selected)            TextBlock(▾)     │ │
-//   │ └──────────────────────────────────────────────────┘ │
-//   │ ┌─ Border (popup, visible only when open) ─────────┐ │   ← shown / hidden
-//   │ │ ┌─ StackPanel (vertical) ──────────────────────┐ │ │
-//   │ │ │  ClickableBorder(item 0)                     │ │ │
-//   │ │ │  ClickableBorder(item 1)                     │ │ │
-//   │ │ │  …                                            │ │ │
-//   │ │ └──────────────────────────────────────────────┘ │ │
-//   │ └──────────────────────────────────────────────────┘ │
-//   └──────────────────────────────────────────────────────┘
+//   In-flow (always):
+//   ┌─ ClickableBorder (selection box, fixed height) ──┐
+//   │  TextBlock(selected)            TextBlock(▾)     │
+//   └──────────────────────────────────────────────────┘
 //
-// The popup is added / removed from the StackPanel based on
-// IsDropDownOpen so it contributes zero layout space when closed.
-// (Inline insertion is the simplest realisation pending a proper
-// popup layer with z-order overlay.)
+//   When IsDropDownOpen=true, additionally mounted on the host
+//   PresentationTarget.OverlayRoot:
+//
+//   ┌─ ComboBoxPopupHost (full overlay slot) ──────────────────┐
+//   │ ┌─ ClickAwayScrim (invisible, full slot) ────────────────┐
+//   │ ↘── click here dismisses the dropdown                    │
+//   │ ┌─ Border (popup, anchored below selection box) ───────┐ │
+//   │ │ ┌─ StackPanel (vertical) ──────────────────────────┐ │ │
+//   │ │ │  ClickableBorder(item 0)                         │ │ │
+//   │ │ │  ClickableBorder(item 1)                         │ │ │
+//   │ │ │  …                                                │ │ │
+//   │ │ └──────────────────────────────────────────────────┘ │ │
+//   │ └──────────────────────────────────────────────────────┘ │
+//   └─────────────────────────────────────────────────────────┘
+//
+// The popup lives on the OverlayLayer so it paints above ALL other
+// content, regardless of the originating selection box's depth in
+// the visual tree.
 export class ComboBox extends Visual
 {
     static {
@@ -187,69 +309,77 @@ export class ComboBox extends Visual
         Model.RegisterProperty(ComboBox, 'SelectedIndex',  -1,        MetaData.None);
         Model.RegisterProperty(ComboBox, 'IsDropDownOpen', false,     MetaData.Measure);
         Model.RegisterProperty(ComboBox, 'Placeholder',    'Select…', MetaData.Measure | MetaData.Render);
+        // Registers both compiled ResourceDictionaries with Application
+        // so DefaultComboBoxSelection / DefaultComboBoxPopup resolve via
+        // Application.ResolveDefaultResource during construction.
+        Application.DefaultResourceFactories.push(createComboBoxResources);
+        Application.DefaultResourceFactories.push(createComboBoxPopupResources);
     }
 
     // ── Template parts ─────────────────────────────────────────────
     private readonly _selectionBox:    ClickableBorder;
     private readonly _selectionText:   TextBlock;
-    private readonly _selectionChevron: TextBlock;
     private readonly _popup:           Border;
     private readonly _popupStack:      StackPanel;
-    private readonly _rootStack:       StackPanel;
+    private readonly _popupHost:       ComboBoxPopupHost;
+    private readonly _scrim:           ClickAwayScrim;
     private _itemContainers:        ClickableBorder[] = [];
     /** Guard for the SelectedIndex / SelectedItem cross-update — when
      *  one DP setter writes the other we must not loop. */
     private _suppressSelectionSync = false;
 
+    /** True iff `_popupHost` is currently a child of
+     *  PresentationTarget.OverlayRoot. Tracked so redundant IsOpen
+     *  writes don't double-attach. */
+    private _popupMounted = false;
+
+    /** The host this combo was last seen attached to, so we can detach
+     *  the popup from the OLD target if the combo is moved or removed
+     *  while open. */
+    private _lastKnownTarget: PresentationTarget | undefined;
+
     constructor()
     {
         super();
 
-        // Selection box: clickable Border holding a SplitRow that
-        // arranges the label on the left and the chevron on the right,
-        // both vertically centred. Height pinned to the Material
-        // Outlined Select default (40 DIPs).
-        this._selectionBox = new ClickableBorder();
-        this._selectionBox.Background      = MUI_FIELD_BG;
-        this._selectionBox.BorderBrush     = MUI_FIELD_BORDER;
-        this._selectionBox.BorderThickness = new Thickness(1);
-        this._selectionBox.CornerRadius    = 4;
-        this._selectionBox.Padding         = new Thickness(14, 8, 14, 8);
-        this._selectionBox.Height          = 40;
+        // ── In-flow selection-box subtree ──────────────────────────
+        // The compiled `combo-box.template.mu` registers the selection
+        // ControlTemplate (ClickableBorder PART_SelectionBox + label /
+        // chevron) under DefaultComboBoxSelection in the controls theme.
+        // All cosmetic defaults live in markup; this constructor only
+        // wires behaviour to the named parts.
+        const selectionTpl  = resolveTemplate(KEY_SELECTION);
+        const selectionInst = selectionTpl.Apply(this);
+        this._selectionBox    = selectionInst.root as ClickableBorder;
+        this._selectionText   = selectionInst.root.FindName('PART_SelectionText') as TextBlock;
         this._selectionBox.onClick = (): void => {
             this.IsDropDownOpen = !this.IsDropDownOpen;
         };
 
-        // SplitRow → [labelTextBlock, chevronTextBlock]. The label
-        // (first child) gets the left edge; the chevron (second child)
-        // gets the right edge.
-        const split = new SplitRow();
-        this._selectionText    = new TextBlock('');
-        this._selectionText.Foreground   = MUI_PLACEHOLDER_TEXT;
-        this._selectionChevron = new TextBlock(CHEVRON_GLYPH);
-        this._selectionChevron.Foreground = MUI_FIELD_TEXT;
-        split.AddChild(this._selectionText);
-        split.AddChild(this._selectionChevron);
-        this._selectionBox.SetChild(split);
+        // ── Overlay popup subtree ──────────────────────────────────
+        // `combo-box-popup.template.mu` registers the overlay
+        // ControlTemplate (ComboBoxPopupHost + Scrim + Popup +
+        // PopupStack) under DefaultComboBoxPopup. The host's anchor
+        // refs (combo, selectionBox, popup) can't appear in markup —
+        // they form a cycle through the selection subtree — so we
+        // patch them in here after both templates have been applied.
+        const popupTpl  = resolveTemplate(KEY_POPUP);
+        const popupInst = popupTpl.Apply(this);
+        this._popupHost  = popupInst.root as ComboBoxPopupHost;
+        this._scrim      = popupInst.root.FindName('PART_Scrim')      as ClickAwayScrim;
+        this._popup      = popupInst.root.FindName('PART_Popup')      as Border;
+        this._popupStack = popupInst.root.FindName('PART_PopupStack') as StackPanel;
+        this._popupHost.combo        = this;
+        this._popupHost.selectionBox = this._selectionBox;
+        this._popupHost.popup        = this._popup;
+        this._scrim.onClick = (): void =>
+        {
+            this.IsDropDownOpen = false;
+        };
 
-        this._popupStack = new StackPanel();
-        this._popupStack.Orientation = Orientation.Vertical;
-
-        this._popup = new Border();
-        this._popup.Background      = MUI_POPUP_BG;
-        this._popup.BorderBrush     = MUI_POPUP_BORDER;
-        this._popup.BorderThickness = new Thickness(1);
-        this._popup.CornerRadius    = 4;
-        this._popup.Padding         = new Thickness(0, 4, 0, 4);
-        this._popup.SetChild(this._popupStack);
-
-        this._rootStack = new StackPanel();
-        this._rootStack.Orientation = Orientation.Vertical;
-        this._rootStack.AddChild(this._selectionBox);
-        // Popup is only attached when IsDropDownOpen toggles to true —
-        // a closed combo contributes only the selection box to layout.
-
-        this.AttachVisual(this._rootStack);
+        // Selection box is the combo's only in-flow visual child; the
+        // popup host attaches to the target's OverlayLayer on open.
+        this.AttachVisual(this._selectionBox);
 
         this.refreshSelectionText();
     }
@@ -271,18 +401,33 @@ export class ComboBox extends Visual
 
     public override get visualChildren(): readonly Visual[]
     {
-        return [this._rootStack];
+        return [this._selectionBox];
     }
 
-    // Cascade the host target through to the template subtree. Visual's
-    // default no-op leaves `_rootStack` (and everything below it) with
-    // `_target = undefined`, which means `InvalidateMeasure` /
-    // `InvalidateVisual` calls inside the popup never reach the host's
-    // dirty queue. Same pattern ContentControl uses for its template
-    // root.
+    // Cascade host target through to the in-flow selection box AND
+    // detach any orphan popup from the previous target before its
+    // identity is overwritten. Combo is rarely re-parented in practice
+    // but the cleanup keeps stale overlay nodes from lingering on the
+    // old target when it does happen.
     protected override propagate_target_to_visual_children(): void
     {
-        this._rootStack['SetTarget'](this['target']);
+        const newTarget = this['target'] as PresentationTarget | undefined;
+        const oldTarget = this._lastKnownTarget;
+
+        if (oldTarget !== undefined && oldTarget !== newTarget && this._popupMounted)
+        {
+            oldTarget.DetachOverlay(this._popupHost);
+            this._popupMounted = false;
+        }
+        this._lastKnownTarget = newTarget;
+
+        this._selectionBox['SetTarget'](newTarget);
+
+        // Re-mount the popup on the new target if we want it open.
+        if (newTarget !== undefined && this.IsDropDownOpen)
+        {
+            this.mountPopup();
+        }
     }
 
     // No own paint; the template tree (selection box + popup) covers
@@ -291,13 +436,18 @@ export class ComboBox extends Visual
 
     protected override MeasureOverride(availableSize: Size): Size
     {
-        this._rootStack.Measure(availableSize);
-        return this._rootStack.DesiredSize;
+        this._selectionBox.Measure(availableSize);
+        return this._selectionBox.DesiredSize;
     }
 
     protected override ArrangeOverride(finalSize: Size): Size
     {
-        this._rootStack.Arrange(new Rect(0, 0, finalSize.Width, finalSize.Height));
+        this._selectionBox.Arrange(new Rect(0, 0, finalSize.Width, finalSize.Height));
+        // Selection box moved — repose the open popup if any.
+        if (this._popupMounted)
+        {
+            this._popupHost.InvalidateArrange();
+        }
         return finalSize;
     }
 
@@ -352,7 +502,7 @@ export class ComboBox extends Visual
             const item  = items[i];
             const index = i;
             const row   = new ClickableBorder();
-            row.Background       = MUI_POPUP_BG;
+            row.Background       = Theme.popupBg;
             row.BorderThickness  = Thickness.Zero;
             row.Padding          = new Thickness(16, 8, 16, 8);
             // Hover background swap — same listener pattern as Button.
@@ -360,7 +510,7 @@ export class ComboBox extends Visual
                 row.Background = this.itemBackgroundFor(index, row.IsMouseOver);
             });
             const label = new TextBlock(displayString(item));
-            label.Foreground = MUI_FIELD_TEXT;
+            label.Foreground = Theme.fieldText;
             row.SetChild(label);
             row.onClick = (): void => {
                 this.SelectedIndex   = index;
@@ -376,14 +526,16 @@ export class ComboBox extends Visual
         // popup keeps its stale `_isMeasureValid = true` and items
         // never get measured even after they're attached.
         this._popupStack.InvalidateMeasure();
-        this.InvalidateMeasure();
+        this._popup.InvalidateMeasure();
+        this._popupHost.InvalidateMeasure();
+        this._popupHost.InvalidateArrange();
     }
 
     private itemBackgroundFor(index: number, hover: boolean)
     {
-        if (index === this.SelectedIndex) return MUI_ITEM_SELECTED_BG;
-        if (hover)                        return MUI_ITEM_HOVER_BG;
-        return MUI_POPUP_BG;
+        if (index === this.SelectedIndex) return Theme.itemSelectedBg;
+        if (hover)                        return Theme.itemHoverBg;
+        return Theme.popupBg;
     }
 
     private refreshItemHighlights(): void
@@ -436,36 +588,48 @@ export class ComboBox extends Visual
         if (item === undefined || item === null)
         {
             this._selectionText.Text       = this.Placeholder;
-            this._selectionText.Foreground = MUI_PLACEHOLDER_TEXT;
+            this._selectionText.Foreground = Theme.placeholder;
         }
         else
         {
             this._selectionText.Text       = displayString(item);
-            this._selectionText.Foreground = MUI_FIELD_TEXT;
+            this._selectionText.Foreground = Theme.fieldText;
         }
     }
 
     private applyDropDownVisibility(open: boolean): void
     {
-        const popupAttached = this._popup.GetVisualParent() === this._rootStack;
-        if (open && !popupAttached)
+        if (open)
         {
-            this._rootStack.AddChild(this._popup);
-            // Refocus the selection-box border to the "open" colour so
-            // the user sees that the combo is active.
-            this._selectionBox.BorderBrush = MUI_FIELD_BORDER_OPEN;
+            this.mountPopup();
+            this._selectionBox.BorderBrush = Theme.fieldBorderOpen;
         }
-        else if (!open && popupAttached)
+        else
         {
-            this._rootStack.RemoveChild(this._popup);
-            this._selectionBox.BorderBrush = MUI_FIELD_BORDER;
+            this.unmountPopup();
+            this._selectionBox.BorderBrush = Theme.fieldBorder;
         }
-        // Adding / removing a child to a Panel doesn't trigger
-        // measure invalidation on its own — see the comment in
-        // rebuildItemContainers. Without this the StackPanel keeps
-        // the old cached size and the popup never gets measured.
-        this._rootStack.InvalidateMeasure();
-        this.InvalidateMeasure();
+    }
+
+    private mountPopup(): void
+    {
+        const pt = this['target'] as PresentationTarget | undefined;
+        if (pt === undefined) return;
+        if (this._popupMounted) return;
+        pt.AttachOverlay(this._popupHost);
+        this._popupMounted = true;
+        // Defensive — anchor needs a fresh arrange now that the host
+        // is mounted, and the popup may have stale measure cached.
+        this._popupHost.InvalidateMeasure();
+        this._popupHost.InvalidateArrange();
+    }
+
+    private unmountPopup(): void
+    {
+        const pt = this['target'] as PresentationTarget | undefined;
+        if (pt === undefined) return;
+        if (!this._popupMounted) return;
+        pt.DetachOverlay(this._popupHost);
+        this._popupMounted = false;
     }
 }
-

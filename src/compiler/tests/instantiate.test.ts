@@ -139,4 +139,47 @@ describe('instantiate — happy path', () => {
         const app = buildApp(`Application{ resources: {} }`);
         assert.equal(Application.current, app);
     });
+
+    test('x:name on a descendant is resolvable via FindName from the root', () => {
+        const app = buildApp(`
+            Application{
+                resources: {
+                    Canvas x:root{
+                        Border x:name="background"[Padding=(8)]{}
+                        Border x:name="overlay"[Padding=(4)]{}
+                    }
+                }
+            }
+        `);
+        const root = app.Root!;
+        const bg = root.FindName('background');
+        const overlay = root.FindName('overlay');
+        assert.ok(bg !== undefined,      'FindName("background") should resolve');
+        assert.ok(overlay !== undefined, 'FindName("overlay") should resolve');
+        assert.notEqual(bg, overlay,     'each x:name resolves to a distinct visual');
+        // Both Visuals carry their x:Name on the public field too.
+        assert.equal((bg as { Name?: string }).Name,      'background');
+        assert.equal((overlay as { Name?: string }).Name, 'overlay');
+    });
+
+    test('FindName from a deep descendant still walks up to the root NameScope', () => {
+        const app = buildApp(`
+            Application{
+                resources: {
+                    Canvas x:root{
+                        Border[Padding=(8)]{
+                            Border x:name="inner"[Padding=(2)]{}
+                        }
+                    }
+                }
+            }
+        `);
+        const root  = app.Root!;
+        const inner = root.FindName('inner');
+        assert.ok(inner !== undefined);
+        // FindName called from the inner visual itself walks logical
+        // ancestors and resolves in the root's scope.
+        const echoed = (inner as { FindName(n: string): unknown }).FindName('inner');
+        assert.equal(echoed, inner);
+    });
 });
