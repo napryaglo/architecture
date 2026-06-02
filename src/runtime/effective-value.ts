@@ -50,8 +50,10 @@ export enum PropertyValueSource
 export class EffectiveValueDescriptor
 {
     private local_value: any;
+    private has_local_value: boolean = false;
     private binding_value: Binding | undefined;
     private animated_value: any;
+    private has_animated_value: boolean = false;
     private coerced_value: any;
     // Style / Trigger / Inherited slots use parallel flags because
     // `undefined` is a legitimate value (a style setter MAY want to
@@ -60,6 +62,10 @@ export class EffectiveValueDescriptor
     // resolved to undefined" from "no ancestor value at all" for the
     // fall-through chain in ClearStyleValue / ClearTriggerValue /
     // ClearValue).
+    //
+    // Local + Animated also carry has_* flags. Local distinguishes
+    // "user explicitly wrote undefined" from "never set"; Animated lets
+    // ClearAnimatedValue know whether there was a slot to drop at all.
     private trigger_value: any;
     private has_trigger_value: boolean = false;
     private style_value: any;
@@ -138,7 +144,9 @@ export class EffectiveValueDescriptor
             this.binding_value = undefined;
         }
         this.local_value = undefined;
+        this.has_local_value = false;
         this.animated_value = undefined;
+        this.has_animated_value = false;
         this.coerced_value = undefined;
         this.source = this.has_trigger_value
             ? PropertyValueSource.TriggerValue
@@ -358,7 +366,6 @@ export class EffectiveValueDescriptor
             // mode pick up TwoWay when the target declares
             // BindsTwoWayByDefault; explicit modes are preserved.
             val.ResolveDefaultMode(this.property_descriptor);
-            this.source = PropertyValueSource.Binding;
             this.binding_value = val;
             // Push-style propagation: when the path's resolved value
             // changes, transform both old and new through the binding's
@@ -376,13 +383,95 @@ export class EffectiveValueDescriptor
                     this.OnPropertyChange(old_final, new_final);
                 }
             });
+            // Animation / Coercion stay on top — the binding cache
+            // updates so a later Stop / ClearAnimated falls through to
+            // the fresh binding, but the active source stays as it was.
+            if (this.source === PropertyValueSource.AnimatedValue
+             || this.source === PropertyValueSource.CoercedValue)
+            {
+                return;
+            }
+            this.source = PropertyValueSource.Binding;
             this.OnPropertyChange(old_effective_value, val.get_value());
         }
         else
         {
-            this.source = PropertyValueSource.LocalValue;
             this.local_value = val;
+            this.has_local_value = true;
+            // Local writes are NOT visible while an animation slot
+            // shadows them — same precedence WPF uses (Animated >
+            // Binding > Local). The local slot still updates so that
+            // ClearAnimatedValue / Storyboard.Stop drops back to the
+            // freshest user-written value, not a stale snapshot.
+            if (this.source === PropertyValueSource.AnimatedValue
+             || this.source === PropertyValueSource.CoercedValue)
+            {
+                return;
+            }
+            this.source = PropertyValueSource.LocalValue;
             this.OnPropertyChange(old_effective_value, this.local_value);
+        }
+    }
+
+    // ── Animated slot ──────────────────────────────────────────────────
+
+    // Pin a value on the Animated slot. Animation overrides Binding /
+    // Local / Trigger / Style / Inherited / Default (highest priority
+    // among the base-value sources — Coerced still wins). Used by
+    // Storyboard.AdvanceTo every clock tick; consumers normally drive
+    // it indirectly via Visual.BeginAnimation / Storyboard.Add. Calling
+    // it directly is a valid escape hatch but the slot is then nobody's
+    // responsibility to release.
+    SetAnimatedValue(value: any): void
+    {
+        const old_effective_value = this.value;
+        this.animated_value = value;
+        this.has_animated_value = true;
+        // Coerced stays on top — animations don't override the coercion
+        // pass (coercion is the final word on what's writable). The
+        // animation cache still updates so that ClearCoerced (when it
+        // lands) falls through to the animated value.
+        if (this.source === PropertyValueSource.CoercedValue) return;
+        this.source = PropertyValueSource.AnimatedValue;
+        const new_effective_value = this.value;
+        if (old_effective_value !== new_effective_value)
+        {
+            this.OnPropertyChange(old_effective_value, new_effective_value);
+        }
+    }
+
+    // Drop the Animated slot. If Animated was the current source, falls
+    // through to Binding / Local / Trigger / Style / Inherited / Default
+    // in priority order — whichever slot is still set wins. The
+    // underlying value is whatever was last written to those slots
+    // BEFORE / DURING the animation (the value setter keeps local +
+    // binding caches fresh under the animated mask), so the post-
+    // ClearAnimatedValue effective value matches what the user has
+    // most recently written.
+    ClearAnimatedValue(): void
+    {
+        if (!this.has_animated_value) return;
+        const old_effective_value = this.value;
+        this.animated_value = undefined;
+        this.has_animated_value = false;
+        if (this.source === PropertyValueSource.AnimatedValue)
+        {
+            this.source = this.binding_value !== undefined
+                ? PropertyValueSource.Binding
+                : this.has_local_value
+                    ? PropertyValueSource.LocalValue
+                    : this.has_trigger_value
+                        ? PropertyValueSource.TriggerValue
+                        : this.has_style_value
+                            ? PropertyValueSource.StyleValue
+                            : this.has_inherited_value
+                                ? PropertyValueSource.InheritedValue
+                                : PropertyValueSource.Default;
+        }
+        const new_effective_value = this.value;
+        if (old_effective_value !== new_effective_value)
+        {
+            this.OnPropertyChange(old_effective_value, new_effective_value);
         }
     }
 

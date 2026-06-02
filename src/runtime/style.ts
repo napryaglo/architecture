@@ -1,4 +1,5 @@
 import { ResourceDictionary, type ResourceKey } from './resource-dictionary.js';
+import type { EventTrigger, TriggerAction } from './trigger-actions.js';
 import type { Visual } from './visual.js';
 
 // Wrapper that defers Setter / Trigger value creation until the style
@@ -67,6 +68,17 @@ export class PropertyTrigger
         public readonly propertyName: string,
         public readonly value: unknown,
         public readonly setters: readonly Setter[],
+        // Actions invoked on the activation EDGE — i.e., the trigger
+        // transitions from non-matching to matching. NOT fired on
+        // initial style apply when the property already matches the
+        // trigger value (consumers wanting that pattern script it
+        // imperatively or use Loaded event triggers). One-shot per
+        // edge — no idempotence guards inside the runtime, so an
+        // action that mutates target state will see the same
+        // transitions the user sees.
+        public readonly enterActions: readonly TriggerAction[] = [],
+        // Symmetric — fires on the deactivation edge (matching → not).
+        public readonly exitActions:  readonly TriggerAction[] = [],
     ) {}
 }
 
@@ -96,6 +108,10 @@ export class MultiTrigger
     constructor(
         public readonly conditions: readonly TriggerCondition[],
         public readonly setters:    readonly Setter[],
+        // Same edge semantics as PropertyTrigger.enterActions — see
+        // there for full notes.
+        public readonly enterActions: readonly TriggerAction[] = [],
+        public readonly exitActions:  readonly TriggerAction[] = [],
     ) {}
 }
 
@@ -141,6 +157,7 @@ export class Style
     public readonly BasedOn: Style | undefined;
     public readonly Triggers:      readonly PropertyTrigger[];
     public readonly MultiTriggers: readonly MultiTrigger[];
+    public readonly EventTriggers: readonly EventTrigger[];
 
     private _sealed: boolean = false;
     private _resources: ResourceDictionary | undefined;
@@ -151,6 +168,7 @@ export class Style
         basedOn?: Style,
         triggers: readonly PropertyTrigger[] = [],
         multiTriggers: readonly MultiTrigger[] = [],
+        eventTriggers: readonly EventTrigger[] = [],
     )
     {
         this.TargetType    = targetType;
@@ -158,6 +176,7 @@ export class Style
         this.BasedOn       = basedOn;
         this.Triggers      = triggers;
         this.MultiTriggers = multiTriggers;
+        this.EventTriggers = eventTriggers;
     }
 
     public get IsSealed(): boolean { return this._sealed; }
@@ -241,6 +260,18 @@ export class Style
         const list: MultiTrigger[] = [];
         if (this.BasedOn !== undefined) list.push(...this.BasedOn.ResolveMultiTriggers());
         list.push(...this.MultiTriggers);
+        return list;
+    }
+
+    // EventTriggers don't compete for slot priority (they wire side-
+    // effecting actions, not values), so the resolution is a clean
+    // BasedOn-first list concat — base triggers fire before child
+    // triggers when both bind the same event.
+    public ResolveEventTriggers(): EventTrigger[]
+    {
+        const list: EventTrigger[] = [];
+        if (this.BasedOn !== undefined) list.push(...this.BasedOn.ResolveEventTriggers());
+        list.push(...this.EventTriggers);
         return list;
     }
 }

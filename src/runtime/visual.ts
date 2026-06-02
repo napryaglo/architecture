@@ -18,6 +18,20 @@ import type {
     TextInputEventArgs,
     FocusEventArgs,
 } from './routed-event.js';
+import { Storyboard } from './animation/storyboard.js';
+import type { AnimationTimeline } from './animation/timeline.js';
+import { EventTrigger } from './trigger-actions.js';
+
+// Routed event names that map to the per-instance _routedListeners
+// registry. These are the public NAMES authors use in `on Xxx { … }`
+// markup; the routed-event dispatcher fires them after each
+// bubble-phase virtual.
+const KNOWN_ROUTED_EVENTS = new Set([
+    'PointerDown', 'PointerUp', 'PointerMove', 'PointerWheel',
+    'PointerEnter', 'PointerLeave',
+    'KeyDown', 'KeyUp', 'TextInput',
+    'GotFocus', 'LostFocus',
+]);
 
 // Horizontal positioning of a Visual within its parent-given slot when
 // the rendered area is smaller than the slot. Stretch fills the slot
@@ -199,6 +213,21 @@ export class Visual extends Model
         this._target.SetFocus(undefined);
     }
 
+    /** Animate the given property to the timeline's To value. Implicit
+     *  Storyboard wrap — equivalent to `new Storyboard(); sb.Add(this,
+     *  propertyName, timeline); sb.Begin();`. Returns the underlying
+     *  Storyboard so the caller can Stop / AddCompletedListener / chain.
+     *
+     *  Convenience entry mirrors WPF's UIElement.BeginAnimation. Pass
+     *  the same propertyName you'd pass to set_property_value. */
+    public BeginAnimation(propertyName: string, timeline: AnimationTimeline): Storyboard
+    {
+        const sb = new Storyboard();
+        sb.Add(this, propertyName, timeline);
+        sb.Begin();
+        return sb;
+    }
+
     public get DataContext(): unknown { return this.get_property_value('DataContext'); }
     public set DataContext(value: unknown) { this.set_property_value('DataContext', value); }
 
@@ -289,6 +318,33 @@ export class Visual extends Model
     // Per-trigger unsubscribe callback, set at install_trigger,
     // invoked at uninstall_trigger. Keyed by the trigger instance.
     private _triggerSubscriptions: Map<PropertyTrigger | MultiTrigger, () => void> = new Map();
+
+    // Per-EventTrigger unsubscribe callback. Different map from
+    // _triggerSubscriptions because EventTriggers don't watch a
+    // property value — they hook a routed event source whose detach
+    // shape is event-specific (Button.RemoveClickHandler for Click,
+    // …). Separating the two also keeps the keying clean: an
+    // EventTrigger and a PropertyTrigger with the same instance
+    // identity wouldn't collide here.
+    private _eventTriggerSubscriptions: Map<EventTrigger, () => void> = new Map();
+
+    // Per-event-name instance listener registry. Used by the routed-
+    // event dispatcher to invoke per-Visual listeners alongside the
+    // virtual handlers (OnPointerDown, OnKeyDown, etc.). EventTriggers
+    // for PointerDown / PointerUp / KeyDown / etc. plug into this so
+    // each Visual instance gets its own action invocation when the
+    // event reaches it in the bubble phase. Lazy-allocated — most
+    // Visuals never register a routed listener so the empty Map allo
+    // stays cheap.
+    private _routedListeners: Map<string, Set<(args: unknown) => void>> | undefined;
+
+    // Loaded-listeners — fire exactly once when this Visual first
+    // attaches to a target. Adding a listener AFTER the Visual is
+    // already loaded fires it synchronously (matches the React
+    // useEffect mount-listener shape — a registered listener never
+    // misses the load event).
+    private _loadedListeners: Set<() => void> | undefined;
+    private _hasFiredLoaded: boolean = false;
 
     // Layout state cache. Updated by Measure / Arrange runs; read by the
     // renderer and by parents during their own MeasureOverride /
@@ -520,11 +576,27 @@ export class Visual extends Model
         {
             this.install_multi_trigger(multi);
         }
+        // EventTriggers sit outside the trigger-value tier — they fire
+        // imperative actions rather than installing property values, so
+        // their resolution happens AFTER property-trigger setup so the
+        // first action invocation observes the style's full value state.
+        for (const evt of style.ResolveEventTriggers())
+        {
+            this.install_event_trigger(evt);
+        }
     }
 
     private unapply_style(style: Style): void
     {
-        // Triggers first: they sit ABOVE style values in priority, so
+        // EventTriggers first — symmetric to install order. Detaching
+        // before the trigger-value teardown means a running action
+        // (e.g., a Storyboard that just started on its final frame)
+        // can't observe a torn-down property state mid-tick.
+        for (const evt of style.ResolveEventTriggers())
+        {
+            this.uninstall_event_trigger(evt);
+        }
+        // Triggers next: they sit ABOVE style values in priority, so
         // taking them down before the style values keeps the value
         // resolution coherent at each EVD step. Then style setters.
         for (const multi of style.ResolveMultiTriggers())
@@ -607,6 +679,171 @@ export class Visual extends Model
         }
     }
 
+    // Wire the EventTrigger's RoutedEvent to a dispatch that invokes
+    // every Action on each fire. Cleanly dispatches by event NAME so a
+    // .mu author can write `on Click { … }` without the runtime knowing
+    // which concrete Visual subclass is in play.
+    //
+    // Routing today:
+    //   * 'Click' — only Button (and subclasses) expose AddClickHandler.
+    //               If this Visual lacks it (an EventTrigger applied via
+    //               an over-broad TargetType, say), we no-op silently
+    //               rather than throw so a Style declared once and
+    //               applied to a heterogeneous set degrades gracefully.
+    //   * other  — not yet supported; logs to the host's console if
+    //               available so the author sees the misconfiguration
+    //               without breaking the page.
+    //
+    // Track the unsubscribe so unapply_style can detach cleanly when
+    // the Style is removed.
+    public AddEventTrigger(trigger: EventTrigger): void
+    {
+        this.install_event_trigger(trigger);
+    }
+
+    public RemoveEventTrigger(trigger: EventTrigger): void
+    {
+        this.uninstall_event_trigger(trigger);
+    }
+
+    private install_event_trigger(trigger: EventTrigger): void
+    {
+        const fire = (): void => {
+            for (const a of trigger.Actions) a.Invoke(this);
+        };
+        // Click via Button.AddClickHandler / RemoveClickHandler — duck-
+        // typed so we don't drag a Controls import into the runtime.
+        if (trigger.RoutedEvent === 'Click')
+        {
+            const self = this as unknown as {
+                AddClickHandler?:    (h: (args: unknown) => void) => void;
+                RemoveClickHandler?: (h: (args: unknown) => void) => void;
+            };
+            if (typeof self.AddClickHandler === 'function'
+             && typeof self.RemoveClickHandler === 'function')
+            {
+                const handler = (_args: unknown): void => fire();
+                self.AddClickHandler(handler);
+                this._eventTriggerSubscriptions.set(trigger, () => {
+                    self.RemoveClickHandler!(handler);
+                });
+            }
+            return;
+        }
+        // Loaded — fires once when this Visual first attaches to a
+        // target. If we're ALREADY loaded (Style applied after attach)
+        // fire synchronously so the listener still sees the load edge.
+        if (trigger.RoutedEvent === 'Loaded')
+        {
+            const handler = (): void => fire();
+            if (this._loadedListeners === undefined) this._loadedListeners = new Set();
+            this._loadedListeners.add(handler);
+            this._eventTriggerSubscriptions.set(trigger, () => {
+                this._loadedListeners?.delete(handler);
+            });
+            if (this._hasFiredLoaded) handler();
+            return;
+        }
+        // Generic routed events — PointerDown / PointerUp / PointerMove /
+        // PointerWheel / KeyDown / KeyUp / GotFocus / LostFocus.
+        // Plugs into the routed-event dispatch via the per-instance
+        // listener registry; the dispatcher calls FireRoutedListeners
+        // on each Visual after the bubble-phase virtual.
+        if (KNOWN_ROUTED_EVENTS.has(trigger.RoutedEvent))
+        {
+            const handler = (_args: unknown): void => fire();
+            this.AddRoutedEventListener(trigger.RoutedEvent, handler);
+            this._eventTriggerSubscriptions.set(trigger, () => {
+                this.RemoveRoutedEventListener(trigger.RoutedEvent, handler);
+            });
+            return;
+        }
+        // Unknown event name — log once and move on. The author gets
+        // a visible hint without their page crashing.
+        const console = (globalThis as { console?: { warn?: (m: string) => void } }).console;
+        console?.warn?.(`Visual.AddEventTrigger: routed event '${trigger.RoutedEvent}' is not yet supported.`);
+    }
+
+    // ── Per-instance routed listener registry ──────────────────────────
+    //
+    // Routed events that pass through dispatchPointer / dispatchKey /
+    // dispatchFocus invoke per-Visual virtuals (OnPointerDown, etc.) on
+    // each node along the route. They ALSO invoke FireRoutedListeners
+    // here so per-instance EventTriggers / consumer-attached listeners
+    // get the same hooks subclasses do — but without forcing subclass
+    // overrides to call `super` to keep listeners working.
+    public AddRoutedEventListener(eventName: string, listener: (args: unknown) => void): void
+    {
+        if (this._routedListeners === undefined) this._routedListeners = new Map();
+        let set = this._routedListeners.get(eventName);
+        if (set === undefined)
+        {
+            set = new Set();
+            this._routedListeners.set(eventName, set);
+        }
+        set.add(listener);
+    }
+
+    public RemoveRoutedEventListener(eventName: string, listener: (args: unknown) => void): void
+    {
+        this._routedListeners?.get(eventName)?.delete(listener);
+    }
+
+    // Called by the routed-event dispatcher's bubble loop. No-op when
+    // no listeners are registered (the common case — most Visuals
+    // never register).
+    public FireRoutedListeners(eventName: string, args: unknown): void
+    {
+        const set = this._routedListeners?.get(eventName);
+        if (set === undefined || set.size === 0) return;
+        for (const l of Array.from(set)) l(args);
+    }
+
+    public AddLoadedListener(listener: () => void): void
+    {
+        if (this._loadedListeners === undefined) this._loadedListeners = new Set();
+        this._loadedListeners.add(listener);
+        // Already loaded — fire synchronously so consumers attaching
+        // after mount still see the load edge.
+        if (this._hasFiredLoaded) listener();
+    }
+
+    public RemoveLoadedListener(listener: () => void): void
+    {
+        this._loadedListeners?.delete(listener);
+    }
+
+    // ── Named storyboard registry ──────────────────────────────────────
+    //
+    // BeginStoryboardAction with a Name stashes the freshly-built
+    // Storyboard here so later StopStoryboardAction /
+    // PauseStoryboardAction / ResumeStoryboardAction can find it. The
+    // map's `name` keys are SCOPED to this Visual — two Buttons that
+    // both run a "fade" storyboard each have their own independent
+    // copy, so a `StopStoryboard Name="fade"` on one Button doesn't
+    // stop the other's. Last-write-wins semantics: re-firing
+    // BeginStoryboard with the same Name silently replaces the prior
+    // Storyboard reference (its lifecycle is up to the consumer —
+    // typically still pinned at HoldEnd or already Stopped).
+    private _namedStoryboards: Map<string, Storyboard> | undefined;
+
+    public RegisterNamedStoryboard(name: string, sb: Storyboard): void
+    {
+        if (this._namedStoryboards === undefined) this._namedStoryboards = new Map();
+        this._namedStoryboards.set(name, sb);
+    }
+
+    public GetNamedStoryboard(name: string): Storyboard | undefined
+    {
+        return this._namedStoryboards?.get(name);
+    }
+
+    private uninstall_event_trigger(trigger: EventTrigger): void
+    {
+        this._eventTriggerSubscriptions.get(trigger)?.();
+        this._eventTriggerSubscriptions.delete(trigger);
+    }
+
     // Subscribe to the trigger's watched property and run an initial
     // evaluation so an already-matching trigger activates immediately.
     private install_trigger(trigger: PropertyTrigger): void
@@ -667,6 +904,10 @@ export class Visual extends Model
                 this.apply_setter(setter, 'trigger');
             }
             this._activeTriggers.add(trigger);
+            // Enter actions fire AFTER setters apply so any storyboard
+            // started by an action sees the post-trigger property state
+            // as its baseline.
+            for (const action of trigger.enterActions) action.Invoke(this);
         }
         else if (!allMatch && wasActive)
         {
@@ -675,6 +916,7 @@ export class Visual extends Model
                 this.unapply_setter(setter, 'trigger');
             }
             this._activeTriggers.delete(trigger);
+            for (const action of trigger.exitActions) action.Invoke(this);
         }
     }
 
@@ -694,6 +936,10 @@ export class Visual extends Model
                 this.apply_setter(setter, 'trigger');
             }
             this._activeTriggers.add(trigger);
+            // Enter actions fire AFTER setters apply so any storyboard
+            // started by an action sees the post-trigger property state
+            // as its baseline.
+            for (const action of trigger.enterActions) action.Invoke(this);
         }
         else if (!matched && wasActive)
         {
@@ -702,6 +948,7 @@ export class Visual extends Model
                 this.unapply_setter(setter, 'trigger');
             }
             this._activeTriggers.delete(trigger);
+            for (const action of trigger.exitActions) action.Invoke(this);
         }
     }
 
@@ -802,8 +1049,28 @@ export class Visual extends Model
         {
             throw new Error('Visual is already attached to a host; detach from the current host first.');
         }
+        const wasLoaded = this._target !== undefined;
         this._target = target;
         this.propagate_target_to_visual_children();
+        // Fire Loaded listeners on the undefined → defined transition.
+        // One-shot: subsequent re-attach (detach + attach) doesn't
+        // re-fire — Loaded matches WPF FrameworkElement.Loaded which
+        // is also fire-once-per-instance.
+        if (!wasLoaded && target !== undefined && !this._hasFiredLoaded)
+        {
+            this._hasFiredLoaded = true;
+            this.fire_loaded_listeners();
+        }
+    }
+
+    private fire_loaded_listeners(): void
+    {
+        if (this._loadedListeners === undefined) return;
+        // Snapshot — a listener that adds/removes another listener
+        // mid-fire (e.g., an EventTrigger that one-shot detaches
+        // itself) must not perturb iteration.
+        const snapshot = Array.from(this._loadedListeners);
+        for (const l of snapshot) l();
     }
 
     protected propagate_target_to_visual_children(): void { /* override in Single / Panel */ }

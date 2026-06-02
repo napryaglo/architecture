@@ -6,15 +6,21 @@ import {
     type Token,
 } from './tokens.js';
 import type {
+    AnimationDecl,
     Attribute,
     AttrPath,
+    BeginStoryboardNode,
     BindingValue,
+    PauseStoryboardNode,
+    ResumeStoryboardNode,
+    StopStoryboardNode,
     BodyItem,
     ColorValue,
     Document,
     DefForm,
     DynamicResourceValue,
     ElementNode,
+    EventTriggerGroup,
     IdentValue,
     ImportForm,
     InlineExprValue,
@@ -37,6 +43,7 @@ import type {
     StructuredBody,
     TemplateBindingValue,
     TopForm,
+    TriggerActionNode,
     TriggerExpr,
     TriggerGroup,
     TupleValue,
@@ -264,7 +271,166 @@ export class Parser
         {
             return this.parseTriggerGroup();
         }
+        if (tk.kind === TokenKind.Ident && tk.value === 'on')
+        {
+            return this.parseEventTriggerGroup();
+        }
         return this.parsePropertySetter();
+    }
+
+    // `on EventName { TriggerAction-list }` — declarative routed-event
+    // trigger. Currently EventName accepts any bare identifier; the
+    // runtime maps the string to a concrete subscription (Click maps to
+    // Button.AddClickHandler; other names get a runtime warning).
+    private parseEventTriggerGroup(): EventTriggerGroup
+    {
+        const start     = this.expectIdent('on').span.start;
+        const eventName = this.expect(TokenKind.Ident).value;
+        this.expect(TokenKind.LBrace);
+        const actions: TriggerActionNode[] = [];
+        while (this.peek().kind !== TokenKind.RBrace
+            && this.peek().kind !== TokenKind.EOF)
+        {
+            actions.push(this.parseTriggerAction());
+        }
+        const closer = this.expect(TokenKind.RBrace);
+        // Trailing `;` accepted for visual consistency with `when{}`.
+        if (this.peek().kind === TokenKind.Semicolon) this.consume();
+        return {
+            kind: 'event-trigger',
+            eventName,
+            actions,
+            span: this.span(start, closer.span.end),
+        };
+    }
+
+    private parseTriggerAction(): TriggerActionNode
+    {
+        const tk = this.peek();
+        if (tk.kind === TokenKind.Ident)
+        {
+            if (tk.value === 'BeginStoryboard')  return this.parseBeginStoryboard();
+            if (tk.value === 'StopStoryboard')   return this.parseStopStoryboard();
+            if (tk.value === 'PauseStoryboard')  return this.parsePauseStoryboard();
+            if (tk.value === 'ResumeStoryboard') return this.parseResumeStoryboard();
+        }
+        throw new ParseError(
+            `expected BeginStoryboard / StopStoryboard / PauseStoryboard / ResumeStoryboard inside event-trigger body; got '${tk.value}'`,
+            tk.span);
+    }
+
+    // `BeginStoryboard [Name="fade"] { Animation[…] Animation[…] }` — the
+    // `[Name=…]` attribute block is optional. Without it the storyboard
+    // is anonymous (no Stop/Pause/Resume target).
+    private parseBeginStoryboard(): BeginStoryboardNode
+    {
+        const start = this.expectIdent('BeginStoryboard').span.start;
+        const name  = this.parseOptionalNamedActionAttrs('BeginStoryboard');
+        this.expect(TokenKind.LBrace);
+        const animations: AnimationDecl[] = [];
+        while (this.peek().kind !== TokenKind.RBrace
+            && this.peek().kind !== TokenKind.EOF)
+        {
+            animations.push(this.parseAnimationDecl());
+        }
+        const closer = this.expect(TokenKind.RBrace);
+        return {
+            kind: 'begin-storyboard',
+            name,
+            animations,
+            span: this.span(start, closer.span.end),
+        };
+    }
+
+    private parseStopStoryboard(): StopStoryboardNode
+    {
+        const start = this.expectIdent('StopStoryboard').span.start;
+        const name  = this.parseRequiredNamedActionAttrs('StopStoryboard');
+        const end   = this.lastEnd();
+        return { kind: 'stop-storyboard', name, span: this.span(start, end) };
+    }
+
+    private parsePauseStoryboard(): PauseStoryboardNode
+    {
+        const start = this.expectIdent('PauseStoryboard').span.start;
+        const name  = this.parseRequiredNamedActionAttrs('PauseStoryboard');
+        const end   = this.lastEnd();
+        return { kind: 'pause-storyboard', name, span: this.span(start, end) };
+    }
+
+    private parseResumeStoryboard(): ResumeStoryboardNode
+    {
+        const start = this.expectIdent('ResumeStoryboard').span.start;
+        const name  = this.parseRequiredNamedActionAttrs('ResumeStoryboard');
+        const end   = this.lastEnd();
+        return { kind: 'resume-storyboard', name, span: this.span(start, end) };
+    }
+
+    // Common `[Name=...]` block parser shared between BeginStoryboard
+    // (optional) and Stop / Pause / ResumeStoryboard (required). The
+    // attribute list is restricted to a single `Name` named attr with a
+    // string or bare-ident value — anything else throws.
+    private parseOptionalNamedActionAttrs(actionKind: string): string | undefined
+    {
+        if (this.peek().kind !== TokenKind.LBracket) return undefined;
+        return this.parseRequiredNamedActionAttrs(actionKind);
+    }
+
+    private parseRequiredNamedActionAttrs(actionKind: string): string
+    {
+        const tk = this.peek();
+        if (tk.kind !== TokenKind.LBracket)
+        {
+            throw new ParseError(
+                `${actionKind} requires a [Name=...] attribute`,
+                tk.span);
+        }
+        const lbracket = this.expect(TokenKind.LBracket);
+        const attrs    = this.parseAttrListBody();
+        this.expect(TokenKind.RBracket);
+        if (attrs.length !== 1)
+        {
+            throw new ParseError(
+                `${actionKind} requires exactly one attribute [Name=...]`,
+                lbracket.span);
+        }
+        const attr = attrs[0]!;
+        if (attr.kind !== 'named-attr' || attr.path.parts.length !== 1
+            || attr.path.parts[0] !== 'Name')
+        {
+            throw new ParseError(
+                `${actionKind} only accepts the Name attribute`,
+                attr.span);
+        }
+        if (attr.value.kind !== 'string' && attr.value.kind !== 'ident')
+        {
+            throw new ParseError(
+                `${actionKind} Name must be a string or bare identifier`,
+                attr.value.span);
+        }
+        return attr.value.kind === 'string' ? attr.value.value : attr.value.name;
+    }
+
+    private parseAnimationDecl(): AnimationDecl
+    {
+        const head = this.expect(TokenKind.Ident);
+        // `[attr=value, …]` block — required so animations always carry
+        // at least a TargetProperty.
+        if (this.peek().kind !== TokenKind.LBracket)
+        {
+            throw new ParseError(
+                `animation '${head.value}' requires an attribute block — at minimum [TargetProperty=...]`,
+                head.span);
+        }
+        this.expect(TokenKind.LBracket);
+        const attrs = this.parseAttrListBody();
+        const closer = this.expect(TokenKind.RBracket);
+        return {
+            kind:      'animation-decl',
+            className: head.value,
+            attrs,
+            span:      this.span(head.span.start, closer.span.end),
+        };
     }
 
     // Setter terminator: PropertySetters are required to end with `;`,

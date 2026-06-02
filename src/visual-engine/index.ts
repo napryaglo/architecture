@@ -43,6 +43,11 @@ export { SvgRenderer, VISUAL_BACKREF, type SvgRendererOptions } from './svg-rend
 export { FontMetricsMeasurer } from './font-metrics-measurer.js';
 export { CanvasTextMeasurer } from './canvas-text-measurer.js';
 export { SvgTextMeasurer } from './svg-text-measurer.js';
+export { RafClock } from './raf-clock.js';
+export {
+    SolidColorBrushAnimation,
+    type SolidColorBrushAnimationProps,
+} from './solid-color-brush-animation.js';
 export {
     loadGoogleFont,
     loadGoogleFontInto,

@@ -284,6 +284,46 @@ export class Model
         return this.property_values.get(key)?.Source ?? PropertyValueSource.Default;
     }
 
+    // Pin a value on the Animated slot. Animation overrides Binding /
+    // Local / Trigger / Style / Inherited / Default (highest priority
+    // among base-value sources). Storyboard.AdvanceTo calls this every
+    // clock tick; consumers normally drive it via Visual.BeginAnimation
+    // rather than directly. Calling SetAnimatedValue from outside the
+    // animation engine works but the slot is then nobody's job to
+    // release — pair every direct call with a matching ClearAnimatedValue.
+    public SetAnimatedValue(property: string, value: any): void;
+    public SetAnimatedValue(owner: Function, property: string, value: any): void;
+    public SetAnimatedValue(arg1: any, arg2: any, arg3?: any): void
+    {
+        const descriptor = (typeof arg1 === 'string')
+            ? this.resolve_descriptor_implicit(arg1)
+            : this.resolve_descriptor_explicit(arg1, arg2);
+        const value = (typeof arg1 === 'string') ? arg2 : arg3;
+        const key = Model.compose_key(descriptor.RootOwner, descriptor.Name);
+        let evd = this.property_values.get(key);
+        if (evd === undefined)
+        {
+            evd = this.new_effective_value(descriptor);
+            this.property_values.set(key, evd);
+        }
+        evd.SetAnimatedValue(value);
+    }
+
+    // Drop the Animated slot. Effective value falls through to whichever
+    // lower-priority source is set (Binding > Local > Trigger > …). A
+    // ClearAnimatedValue on a property that never had an animation is a
+    // no-op.
+    public ClearAnimatedValue(property: string): void;
+    public ClearAnimatedValue(owner: Function, property: string): void;
+    public ClearAnimatedValue(arg1: any, arg2?: any): void
+    {
+        const descriptor = (typeof arg1 === 'string')
+            ? this.resolve_descriptor_implicit(arg1)
+            : this.resolve_descriptor_explicit(arg1, arg2);
+        const key = Model.compose_key(descriptor.RootOwner, descriptor.Name);
+        this.property_values.get(key)?.ClearAnimatedValue();
+    }
+
     public get_property_value(property: string): any;
     public get_property_value(owner: Function, property: string): any;
     public get_property_value(arg1: any, arg2?: any): any

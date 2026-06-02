@@ -1,5 +1,7 @@
 import type { Visual } from '../../runtime/index.js';
 import {
+    AnimationManager,
+    ManualClock,
     PointerButton,
     type KeyEventInit,
     type PointerEventInit,
@@ -9,6 +11,7 @@ import {
 } from '../../runtime/index.js';
 import { CanvasTextMeasurer } from '../canvas-text-measurer.js';
 import { PresentationTarget } from '../presentation-target.js';
+import { RafClock } from '../raf-clock.js';
 import { SvgRenderer, VISUAL_BACKREF } from '../svg-renderer.js';
 
 // VISUAL_BACKREF stamp lives in svg-renderer.ts; re-import here for
@@ -276,6 +279,19 @@ export class HtmlTarget extends PresentationTarget
         {
             // Canvas 2D unavailable. Stick with the approximate
             // measurer rather than failing construction.
+        }
+
+        // Animation engine ticks against AnimationManager.Instance.Clock.
+        // The default ManualClock is great for tests but goes nowhere on
+        // its own; a browser host expects rAF. Swap in a RafClock IFF the
+        // current clock is still the default ManualClock — never stomp a
+        // clock the consumer (or an earlier HtmlTarget in a multi-target
+        // app) has already installed. Two HtmlTargets in one app share
+        // the same RafClock instance and the same animation tick, which
+        // is what we want — multiple surfaces, one frame loop.
+        if (AnimationManager.Instance.Clock instanceof ManualClock)
+        {
+            AnimationManager.Instance.Clock = new RafClock();
         }
     }
 

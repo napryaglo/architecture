@@ -484,6 +484,8 @@ export function dispatchPointer(args: PointerEventArgs): void
         const handler = (v as unknown as PointerEventHandlers)[bubbleName] as (a: PointerEventArgs) => void;
         handler.call(v, args);
         if (args.Handled) return;
+        fireRoutedListeners(v, args.Kind, args);
+        if (args.Handled) return;
     }
 }
 
@@ -503,6 +505,23 @@ export function dispatchPointerDirect(args: PointerEventArgs): void
     const name    = POINTER_DIRECT_HANDLERS[args.Kind];
     const handler = (args.Source as unknown as PointerEventHandlers)[name] as (a: PointerEventArgs) => void;
     handler.call(args.Source, args);
+    fireRoutedListeners(args.Source, args.Kind, args);
+}
+
+// Fire per-Visual instance listeners for the bubble-phase event. The
+// dispatcher calls this on each node after invoking the virtual so
+// declarative EventTriggers (PointerDown / KeyDown / GotFocus / …)
+// fire alongside subclass-defined virtuals — without forcing those
+// subclasses to call `super.OnPointerDown` to keep listeners alive.
+// Duck-typed against the optional FireRoutedListeners method so this
+// module doesn't import Visual (and create a cycle).
+interface RoutedListenerHost
+{
+    FireRoutedListeners?(eventName: string, args: unknown): void;
+}
+function fireRoutedListeners(v: Visual, eventName: string, args: unknown): void
+{
+    (v as RoutedListenerHost).FireRoutedListeners?.(eventName, args);
 }
 
 // ── Keyboard dispatch ──────────────────────────────────────────────
@@ -535,6 +554,8 @@ export function dispatchKey(args: KeyEventArgs): void
         const handler = (v as unknown as KeyboardEventHandlers)[bubbleName] as (a: KeyEventArgs) => void;
         handler.call(v, args);
         if (args.Handled) return;
+        fireRoutedListeners(v, args.Kind, args);
+        if (args.Handled) return;
     }
 }
 
@@ -560,6 +581,8 @@ export function dispatchTextInput(args: TextInputEventArgs): void
         args.Visual = v;
         (v as unknown as KeyboardEventHandlers).OnTextInput.call(v, args);
         if (args.Handled) return;
+        fireRoutedListeners(v, 'TextInput', args);
+        if (args.Handled) return;
     }
 }
 
@@ -578,6 +601,8 @@ export function dispatchFocus(args: FocusEventArgs): void
         args.Visual = v;
         const handler = (v as unknown as FocusEventHandlers)[name] as (a: FocusEventArgs) => void;
         handler.call(v, args);
+        if (args.Handled) return;
+        fireRoutedListeners(v, args.Kind, args);
         if (args.Handled) return;
     }
 }

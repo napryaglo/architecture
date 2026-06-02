@@ -1,11 +1,17 @@
 import type {
+    AnimationDecl,
     Attribute,
     AttrPath,
+    BeginStoryboardNode,
     BodyItem,
+    PauseStoryboardNode,
+    ResumeStoryboardNode,
+    StopStoryboardNode,
     ColorValue,
     DefForm,
     Document,
     ElementNode,
+    EventTriggerGroup,
     IdentValue,
     InlineExprValue,
     KeyValueResource,
@@ -14,6 +20,7 @@ import type {
     SlotAssign,
     StringBody,
     StructuredBody,
+    TriggerActionNode,
     TriggerExpr,
     TriggerGroup,
     TupleValue,
@@ -537,11 +544,16 @@ export class Compiler
         const setterVars:       string[] = [];
         const triggerVars:      string[] = [];
         const multiTriggerVars: string[] = [];
+        const eventTriggerVars: string[] = [];
         for (const item of rf.body.items)
         {
             if (item.kind === 'property-setter')
             {
                 setterVars.push(this.compileSetter(tt, item));
+            }
+            else if (item.kind === 'event-trigger')
+            {
+                eventTriggerVars.push(this.compileEventTriggerGroup(tt, item));
             }
             else
             {
@@ -553,12 +565,213 @@ export class Compiler
         const settersArr       = `[${setterVars.join(', ')}]`;
         const triggersArr      = `[${triggerVars.join(', ')}]`;
         const multiTriggersArr = `[${multiTriggerVars.join(', ')}]`;
+        const eventTriggersArr = `[${eventTriggerVars.join(', ')}]`;
 
         const styleVar = this.fresh('style');
-        // Style(targetType, setters, basedOn, triggers, multiTriggers).
-        this.line(
-            `const ${styleVar} = new Style(${tt}, ${settersArr}, undefined, ${triggersArr}, ${multiTriggersArr});`);
+        // Style(targetType, setters, basedOn, triggers, multiTriggers, eventTriggers).
+        // The eventTriggers argument is omitted from the emit when empty
+        // so existing snapshot tests of the legacy 5-arg form keep
+        // matching.
+        if (eventTriggerVars.length === 0)
+        {
+            this.line(
+                `const ${styleVar} = new Style(${tt}, ${settersArr}, undefined, ${triggersArr}, ${multiTriggersArr});`);
+        }
+        else
+        {
+            this.line(
+                `const ${styleVar} = new Style(${tt}, ${settersArr}, undefined, ${triggersArr}, ${multiTriggersArr}, ${eventTriggersArr});`);
+        }
         return styleVar;
+    }
+
+    // ── EventTrigger emission ──────────────────────────────────────────
+    //
+    // Each `on Click { BeginStoryboard { Animation[...] } }` lowers to:
+    //
+    //   const _evt0 = new EventTrigger('Click', [
+    //       new BeginStoryboardAction((_target) => {
+    //           const _sb1 = new Storyboard();
+    //           _sb1.Add(_target, 'Width', new DoubleAnimation({...}));
+    //           return _sb1;
+    //       }),
+    //   ]);
+    //
+    // The Storyboard is built inside the BeginStoryboardAction's
+    // factory so each Visual carrying the style gets a fresh Storyboard
+    // instance per fire (a shared Storyboard would stomp itself when
+    // multiple Buttons clicked simultaneously).
+    private compileEventTriggerGroup(
+        _targetType: string, et: EventTriggerGroup,
+    ): string
+    {
+        this.ensureImport('EventTrigger');
+        this.ensureImport('BeginStoryboardAction');
+        this.ensureImport('Storyboard');
+
+        const actionVars: string[] = [];
+        for (const action of et.actions)
+        {
+            actionVars.push(this.compileTriggerAction(action));
+        }
+        const evtVar = this.fresh('evt');
+        const actionsArr = `[${actionVars.join(', ')}]`;
+        this.line(
+            `const ${evtVar} = new EventTrigger(${JSON.stringify(et.eventName)}, ${actionsArr});`);
+        return evtVar;
+    }
+
+    private compileTriggerAction(action: TriggerActionNode): string
+    {
+        switch (action.kind)
+        {
+            case 'begin-storyboard':  return this.compileBeginStoryboard(action);
+            case 'stop-storyboard':   return this.compileStopStoryboard(action);
+            case 'pause-storyboard':  return this.compilePauseStoryboard(action);
+            case 'resume-storyboard': return this.compileResumeStoryboard(action);
+        }
+    }
+
+    private compileStopStoryboard(node: StopStoryboardNode): string
+    {
+        this.ensureImport('StopStoryboardAction');
+        const v = this.fresh('act');
+        this.line(
+            `const ${v} = new StopStoryboardAction(${JSON.stringify(node.name)});`);
+        return v;
+    }
+
+    private compilePauseStoryboard(node: PauseStoryboardNode): string
+    {
+        this.ensureImport('PauseStoryboardAction');
+        const v = this.fresh('act');
+        this.line(
+            `const ${v} = new PauseStoryboardAction(${JSON.stringify(node.name)});`);
+        return v;
+    }
+
+    private compileResumeStoryboard(node: ResumeStoryboardNode): string
+    {
+        this.ensureImport('ResumeStoryboardAction');
+        const v = this.fresh('act');
+        this.line(
+            `const ${v} = new ResumeStoryboardAction(${JSON.stringify(node.name)});`);
+        return v;
+    }
+
+    private compileBeginStoryboard(node: BeginStoryboardNode): string
+    {
+        if (node.animations.length === 0)
+        {
+            throw new EmitError(
+                'BeginStoryboard requires at least one animation declaration', node.span);
+        }
+        // Ensure imports — covers both the EventTrigger path (which
+        // imports them separately at compileEventTriggerGroup) and the
+        // PropertyTrigger enter/exit path which calls in here directly.
+        this.ensureImport('BeginStoryboardAction');
+        this.ensureImport('Storyboard');
+        const sbVar     = this.fresh('sb');
+        const actionVar = this.fresh('act');
+        // The factory body opens with an arrow-function closure that
+        // closes over the firing Visual as `_target`. Indent bumps
+        // (cosmetic — the emitted JS is single-pass parsed by the JS
+        // engine regardless) so nested code reads as indented.
+        const nameArg = node.name !== undefined
+            ? `, ${JSON.stringify(node.name)}`
+            : '';
+        this.line(`const ${actionVar} = new BeginStoryboardAction((_target) => {`);
+        this.indent += 4;
+        this.line(`const ${sbVar} = new Storyboard();`);
+        for (const anim of node.animations)
+        {
+            this.emitAnimationAdd(sbVar, anim);
+        }
+        this.line(`return ${sbVar};`);
+        this.indent -= 4;
+        this.line(`}${nameArg});`);
+        return actionVar;
+    }
+
+    private emitAnimationAdd(sbVar: string, anim: AnimationDecl): void
+    {
+        this.ensureImport(anim.className);
+
+        // TargetProperty / TargetName are structural — extract them
+        // from the attr list so the animation constructor only sees
+        // its real props bag.
+        let targetProperty: string | undefined;
+        let targetName:     string | undefined;
+        const ctorAttrs: string[] = [];
+        for (const attr of anim.attrs)
+        {
+            if (attr.kind === 'positional-attr')
+            {
+                throw new EmitError(
+                    `animation '${anim.className}' does not accept positional attributes`,
+                    attr.span);
+            }
+            const path = attr.path;
+            if (path.parts.length !== 1)
+            {
+                throw new EmitError(
+                    `animation '${anim.className}' attribute paths must be simple identifiers`,
+                    attr.span);
+            }
+            const propName = path.parts[0]!;
+            if (propName === 'TargetProperty')
+            {
+                if (attr.value.kind !== 'string' && attr.value.kind !== 'ident')
+                {
+                    throw new EmitError(
+                        'TargetProperty must be a string or bare identifier',
+                        attr.value.span);
+                }
+                targetProperty = attr.value.kind === 'string'
+                    ? attr.value.value
+                    : attr.value.name;
+                continue;
+            }
+            if (propName === 'TargetName')
+            {
+                // TargetName redirects sb.Add to a NameScope-resolved
+                // sibling. Resolved at trigger-fire time via
+                // _target.FindName, which walks the visual ancestry to
+                // find a NameScope hosting the name.
+                if (attr.value.kind !== 'string' && attr.value.kind !== 'ident')
+                {
+                    throw new EmitError(
+                        'TargetName must be a string or bare identifier',
+                        attr.value.span);
+                }
+                targetName = attr.value.kind === 'string'
+                    ? attr.value.value
+                    : attr.value.name;
+                continue;
+            }
+            const valueExpr = this.compileValue(attr.value, { propertyName: propName });
+            ctorAttrs.push(`${propName}: ${valueExpr}`);
+        }
+        if (targetProperty === undefined)
+        {
+            throw new EmitError(
+                `animation '${anim.className}' requires TargetProperty=...`,
+                anim.span);
+        }
+
+        const ctorArgs = ctorAttrs.length > 0
+            ? `{ ${ctorAttrs.join(', ')} }`
+            : '';
+        // Resolved target expression: TargetName → FindName lookup with
+        // a `?? _target` fallback so a typo'd name silently animates
+        // the firing Visual rather than throwing. The runtime warning
+        // surface for this lives in the runtime — emitter stays purely
+        // structural.
+        const targetExpr = targetName !== undefined
+            ? `(_target.FindName(${JSON.stringify(targetName)}) ?? _target)`
+            : `_target`;
+        this.line(
+            `${sbVar}.Add(${targetExpr}, ${JSON.stringify(targetProperty)}, new ${anim.className}(${ctorArgs}));`);
     }
 
     private compileSetter(targetType: string, ps: PropertySetter): string
@@ -588,20 +801,69 @@ export class Compiler
         // conjuncts emit as MultiTrigger.
         const disjuncts = this.flattenToDNF(tg.condition);
 
-        // Setters built once, stashed in a local var so every Property/
-        // Multi trigger emitted here shares the same array instance.
-        const setterVars: string[] = [];
+        // Partition the body into property setters and `on enter` /
+        // `on exit` action groups. Other event names (e.g. `on Click`)
+        // are rejected inside a `when()` body — Click is a top-level
+        // routed event, not a property-trigger edge.
+        const setterVars:      string[] = [];
+        const enterActionVars: string[] = [];
+        const exitActionVars:  string[] = [];
         for (const item of tg.setters.items)
         {
-            if (item.kind !== 'property-setter')
+            if (item.kind === 'property-setter')
             {
-                throw new EmitError(
-                    'nested triggers are not supported', item.span);
+                setterVars.push(this.compileSetter(targetType, item));
+                continue;
             }
-            setterVars.push(this.compileSetter(targetType, item));
+            if (item.kind === 'event-trigger')
+            {
+                if (item.eventName === 'enter')
+                {
+                    for (const a of item.actions)
+                    {
+                        enterActionVars.push(this.compileTriggerAction(a));
+                    }
+                    continue;
+                }
+                if (item.eventName === 'exit')
+                {
+                    for (const a of item.actions)
+                    {
+                        exitActionVars.push(this.compileTriggerAction(a));
+                    }
+                    continue;
+                }
+                throw new EmitError(
+                    `inside when(): only 'enter' and 'exit' are valid 'on' names — got '${item.eventName}'`,
+                    item.span);
+            }
+            throw new EmitError(
+                'nested triggers are not supported', item.span);
         }
         const settersArrVar = this.fresh('sArr');
         this.line(`const ${settersArrVar} = [${setterVars.join(', ')}];`);
+
+        // Emit the enter/exit action arrays as locals so the (potentially
+        // multiple) PropertyTriggers / MultiTriggers in the DNF expansion
+        // can share the same array references.
+        let enterArrVar = '[]';
+        if (enterActionVars.length > 0)
+        {
+            enterArrVar = this.fresh('enter');
+            this.line(`const ${enterArrVar} = [${enterActionVars.join(', ')}];`);
+        }
+        let exitArrVar = '[]';
+        if (exitActionVars.length > 0)
+        {
+            exitArrVar = this.fresh('exit');
+            this.line(`const ${exitArrVar} = [${exitActionVars.join(', ')}];`);
+        }
+        // Argument tail — omitted when both action lists are empty so
+        // existing snapshot tests of the 4-arg PropertyTrigger form
+        // stay matching.
+        const triggerTail = (enterActionVars.length > 0 || exitActionVars.length > 0)
+            ? `, ${enterArrVar}, ${exitArrVar}`
+            : '';
 
         const propertyTriggers: string[] = [];
         const multiTriggers:    string[] = [];
@@ -615,7 +877,7 @@ export class Compiler
                 const valueExpr = this.evaluateTermValue(term);
                 const v = this.fresh('trigger');
                 this.line(
-                    `const ${v} = new PropertyTrigger(${targetType}, ${JSON.stringify(term.property)}, ${valueExpr}, ${settersArrVar});`);
+                    `const ${v} = new PropertyTrigger(${targetType}, ${JSON.stringify(term.property)}, ${valueExpr}, ${settersArrVar}${triggerTail});`);
                 propertyTriggers.push(v);
             }
             else
@@ -630,7 +892,7 @@ export class Compiler
                 }
                 const v = this.fresh('multiTrig');
                 this.line(
-                    `const ${v} = new MultiTrigger([${conditionExprs.join(', ')}], ${settersArrVar});`);
+                    `const ${v} = new MultiTrigger([${conditionExprs.join(', ')}], ${settersArrVar}${triggerTail});`);
                 multiTriggers.push(v);
             }
         }
@@ -1177,6 +1439,13 @@ export class Compiler
         //    being a particularly painful footgun: it's truthy).
         if (name === 'true')  return 'true';
         if (name === 'false') return 'false';
+        // 1b. Numeric literals authored as bare idents — Infinity and
+        //     NaN. Same string-vs-value footgun as boolean literals:
+        //     emitting JSON.stringify('Infinity') as a fallback would
+        //     poison numeric DPs (RepeatBehavior, Min/Max bounds, etc.).
+        if (name === 'Infinity')  return 'Infinity';
+        if (name === '-Infinity') return '-Infinity';
+        if (name === 'NaN')       return 'NaN';
         // 2. Property-name match against an enum class — emit ClassName.Member.
         if (ctx.propertyName !== undefined && ENUM_CLASSES.has(ctx.propertyName))
         {

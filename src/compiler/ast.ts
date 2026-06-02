@@ -180,7 +180,81 @@ export interface SetterList
     span:  SourceSpan;
 }
 
-export type SetterItem = PropertySetter | TriggerGroup;
+export type SetterItem = PropertySetter | TriggerGroup | EventTriggerGroup;
+
+// Routed-event trigger inside a style block. Lowered to runtime
+// EventTrigger + TriggerAction wiring at emit. Body is a sequence of
+// trigger-action declarations — currently `BeginStoryboard { … }` is
+// the only supported shape.
+//
+// Authoring shape:
+//   on Click { BeginStoryboard { DoubleAnimation[…] } }
+export interface EventTriggerGroup
+{
+    kind:      'event-trigger';
+    eventName: string;
+    actions:   TriggerActionNode[];
+    span:      SourceSpan;
+}
+
+// Discriminated union covering every trigger-action shape. BeginStoryboard
+// builds + starts a fresh Storyboard each fire (optionally registering
+// it under a Name); the Stop / Pause / Resume variants reference a
+// previously-named storyboard.
+export type TriggerActionNode =
+    | BeginStoryboardNode
+    | StopStoryboardNode
+    | PauseStoryboardNode
+    | ResumeStoryboardNode;
+
+// `BeginStoryboard [Name="fade"] { Animation[…] Animation[…] }` — bundles
+// the inner animations into a single runtime Storyboard. Each animation
+// declares its TargetProperty inline; the target Visual is implicit
+// (the firing Visual at trigger time). When `name` is set, the firing
+// Visual stores the Storyboard under that name so Stop / Pause /
+// ResumeStoryboard can reference it later.
+export interface BeginStoryboardNode
+{
+    kind:       'begin-storyboard';
+    name:       string | undefined;
+    animations: AnimationDecl[];
+    span:       SourceSpan;
+}
+
+// `StopStoryboard [Name="fade"]` — references a previously-named
+// BeginStoryboardAction on the firing Visual. No body.
+export interface StopStoryboardNode
+{
+    kind: 'stop-storyboard';
+    name: string;
+    span: SourceSpan;
+}
+
+export interface PauseStoryboardNode
+{
+    kind: 'pause-storyboard';
+    name: string;
+    span: SourceSpan;
+}
+
+export interface ResumeStoryboardNode
+{
+    kind: 'resume-storyboard';
+    name: string;
+    span: SourceSpan;
+}
+
+// `Ident [attr=value, …]` for animation timeline construction. The
+// attribute list is identical to ElementNode.attrs in shape; the emitter
+// special-cases TargetProperty (extracted as the Storyboard.Add propName,
+// NOT passed to the animation constructor).
+export interface AnimationDecl
+{
+    kind:      'animation-decl';
+    className: string;            // 'DoubleAnimation' / 'ColorAnimation' / …
+    attrs:     Attribute[];
+    span:      SourceSpan;
+}
 
 export interface PropertySetter
 {
