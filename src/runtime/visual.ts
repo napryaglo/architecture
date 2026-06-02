@@ -11,7 +11,13 @@ import { Setter, SetterFactory, Style, PropertyTrigger, MultiTrigger } from './s
 import { Rect, Size, Thickness } from './primitives.js';
 import type { DrawingContext } from './drawing-context.js';
 import type { TextMeasurer } from './text-measurer.js';
-import type { PointerEventArgs, WheelEventArgs } from './routed-event.js';
+import type {
+    PointerEventArgs,
+    WheelEventArgs,
+    KeyEventArgs,
+    TextInputEventArgs,
+    FocusEventArgs,
+} from './routed-event.js';
 
 // Horizontal positioning of a Visual within its parent-given slot when
 // the rendered area is smaller than the slot. Stretch fills the slot
@@ -52,6 +58,13 @@ export interface VisualHost
     // accurate (FontMetricsMeasurer with loaded fonts, a future
     // CanvasTextMeasurer in HtmlTarget, etc.).
     readonly TextMeasurer: TextMeasurer;
+
+    // Optional focus surface — populated on PresentationTarget by
+    // delegating to its InputManager. Visual.Focus() / Blur() use this
+    // back-channel; tests that mock VisualHost without focus support
+    // can omit the methods and Focus() degrades to a no-op.
+    SetFocus?(visual: Visual | undefined): void;
+    GetFocusedVisual?(): Visual | undefined;
 }
 
 // Tree-aware Model with WPF-style layout + render lifecycle.
@@ -128,6 +141,19 @@ export class Visual extends Model
         // visible effect comes from any Style triggers that watch them.
         Model.RegisterProperty(Visual, 'IsMouseOver', false, MetaData.None);
         Model.RegisterProperty(Visual, 'IsPressed',   false, MetaData.None);
+        // Focusable — opt-in for keyboard focus. Default false so a
+        // random Border / TextBlock / Panel never accidentally swallows
+        // keys; controls that handle keyboard input (TextBox, Button)
+        // set this to true. The InputManager refuses to focus a Visual
+        // whose Focusable is false.
+        Model.RegisterProperty(Visual, 'Focusable',  false, MetaData.None);
+        // IsFocused — true when this Visual is the InputManager's
+        // current focused target. Read-only from consumer code; setting
+        // it directly does NOT actually take focus (use Focus() for
+        // that). The flag is here so Style triggers can branch on it
+        // (`when{ IsFocused }{ BorderBrush = #1976d2 }`) and so tests
+        // can assert state without reaching into the InputManager.
+        Model.RegisterProperty(Visual, 'IsFocused',  false, MetaData.None);
         // Generic consumer-side handle, mirroring WPF's
         // FrameworkElement.Tag. Common use: bind a domain object to a
         // Visual so a click handler / selection listener can recover
@@ -140,6 +166,38 @@ export class Visual extends Model
     // exclusively by the InputManager during pointer dispatch.
     public get IsMouseOver(): boolean { return this.get_property_value('IsMouseOver') as boolean; }
     public get IsPressed():   boolean { return this.get_property_value('IsPressed')   as boolean; }
+    // True when the InputManager has this Visual as its current focused
+    // target. Read-only by convention; use Focus() / Blur() to change.
+    public get IsFocused():   boolean { return this.get_property_value('IsFocused')   as boolean; }
+
+    // Opt-in for keyboard focus. Controls that handle keyboard input
+    // (TextBox, Button) flip this on in their constructor; everything
+    // else stays unfocusable. Settable by consumers when they want to
+    // make a custom hit-target focusable (e.g. a custom widget hosting
+    // a keyboard handler).
+    public get Focusable(): boolean { return this.get_property_value('Focusable') as boolean; }
+    public set Focusable(v: boolean) { this.set_property_value('Focusable', v); }
+
+    // Take keyboard focus on this Visual. Delegates to the host's
+    // InputManager via the optional `SetFocus` method on VisualHost.
+    // No-op when the Visual is unattached, when Focusable is false, or
+    // when the host doesn't implement SetFocus (tests that mock
+    // VisualHost without the focus surface).
+    public Focus(): void
+    {
+        if (!this.Focusable) return;
+        this._target?.SetFocus?.(this);
+    }
+
+    // Clear focus from this Visual. No-op when this isn't the currently
+    // focused Visual — Blur() always asks for "no focus", which the
+    // InputManager applies only if we're actually the focused target.
+    public Blur(): void
+    {
+        if (this._target?.SetFocus === undefined) return;
+        if (this._target.GetFocusedVisual?.() !== this) return;
+        this._target.SetFocus(undefined);
+    }
 
     public get DataContext(): unknown { return this.get_property_value('DataContext'); }
     public set DataContext(value: unknown) { this.set_property_value('DataContext', value); }
@@ -1190,6 +1248,27 @@ export class Visual extends Model
     protected OnPointerUp          (_args: PointerEventArgs): void { }
     protected OnPreviewPointerWheel(_args: WheelEventArgs): void { }
     protected OnPointerWheel       (_args: WheelEventArgs): void { }
+
+    // Keyboard virtuals — dispatched by InputManager.InjectKeyDown /
+    // InjectKeyUp / InjectTextInput when this Visual is the currently
+    // focused target (or an ancestor of it for the tunnel / bubble
+    // passes). Same Preview / bubble pair pattern as the pointer
+    // virtuals; setting args.Handled = true short-circuits both passes.
+    // TextInput is a separate event so a handler can subscribe only to
+    // "textual" input without seeing every arrow / function key.
+    protected OnPreviewKeyDown   (_args: KeyEventArgs): void { }
+    protected OnKeyDown          (_args: KeyEventArgs): void { }
+    protected OnPreviewKeyUp     (_args: KeyEventArgs): void { }
+    protected OnKeyUp            (_args: KeyEventArgs): void { }
+    protected OnPreviewTextInput (_args: TextInputEventArgs): void { }
+    protected OnTextInput        (_args: TextInputEventArgs): void { }
+
+    // Focus virtuals — fired by InputManager.SetFocus on the Visual that
+    // lost focus and the Visual that gained it. Bubble only (no Preview);
+    // the IsFocused DP write happens BEFORE the dispatch so handlers see
+    // the post-change state.
+    protected OnGotFocus  (_args: FocusEventArgs): void { }
+    protected OnLostFocus (_args: FocusEventArgs): void { }
 
     // ------------------------------------------------------------------
     // Invalidation API

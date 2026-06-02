@@ -1,4 +1,4 @@
-import { APPROXIMATE_TEXT_MEASURER, MetaData, Model, Size } from '../runtime/index.js';
+import { APPROXIMATE_TEXT_MEASURER, InputManager, MetaData, Model, Size } from '../runtime/index.js';
 import { Rect } from '../runtime/index.js';
 import type { TextMeasurer, Visual, VisualHost } from '../runtime/index.js';
 import type { Brush } from './brush.js';
@@ -360,6 +360,26 @@ export abstract class PresentationTarget extends Model implements VisualHost
     // type on VisualHost is readonly, but this concrete field is
     // assignable — `target.TextMeasurer = new FontMetricsMeasurer()`.
     public TextMeasurer: TextMeasurer = APPROXIMATE_TEXT_MEASURER;
+
+    // Owned InputManager — single source of truth for pointer state
+    // (hover chain, IsMouseOver, IsPressed, pointer capture) AND
+    // keyboard focus (current focused Visual, IsFocused DP). Concrete
+    // hosts (HtmlTarget) wire their DOM event listeners through this
+    // instance; tests that drive input synthetically use it directly
+    // via `target.InputManager.Inject*`. Visual.Focus() / Blur() route
+    // through SetFocus / GetFocusedVisual below so the host satisfies
+    // VisualHost's optional focus surface.
+    public readonly InputManager: InputManager = new InputManager();
+
+    public SetFocus(visual: Visual | undefined): void
+    {
+        this.InputManager.SetFocus(visual);
+    }
+
+    public GetFocusedVisual(): Visual | undefined
+    {
+        return this.InputManager.GetFocusedVisual();
+    }
 
     // Convenience: load a font into whatever TextMeasurer is currently
     // installed. ApproximateTextMeasurer ignores the call; FontMetricsMeasurer

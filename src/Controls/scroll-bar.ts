@@ -14,7 +14,7 @@ import type { Border } from './border.js';
 import { Orientation } from './stack-panel.js';
 import { Theme } from './theme.js';
 import type { ControlTemplate } from './control-template.js';
-import { create as createScrollBarResources } from '../../build/Controls/scroll-bar.template.mu.js';
+import { ensureControlsTheme } from './default-resources.js';
 
 const KEY_SCROLLBAR = 'DefaultScrollBar';
 
@@ -113,7 +113,14 @@ export class ScrollBar extends Visual
         Model.RegisterProperty(ScrollBar, 'Maximum',      1, MetaData.Arrange);
         Model.RegisterProperty(ScrollBar, 'Value',        0, MetaData.Arrange);
         Model.RegisterProperty(ScrollBar, 'ViewportSize', 0, MetaData.Arrange);
-        Application.DefaultResourceFactories.push(createScrollBarResources);
+        // macOS / Slack-style auto-fade. When true, the track + thumb
+        // start invisible and only become opaque on activity (scroll
+        // value change, hover, drag). After ~1.5 s idle they fade back
+        // out. v1 implementation is a discrete show/hide — no smooth
+        // tween — but the appear-on-activity / hide-on-idle behavior
+        // matches what users expect from the platform convention.
+        Model.RegisterProperty(ScrollBar, 'IsAutoHide',   false, MetaData.None);
+        ensureControlsTheme();
     }
 
     // ── Template parts ──────────────────────────────────────────────
@@ -129,6 +136,15 @@ export class ScrollBar extends Visual
     private _dragging = false;
     private _dragOriginPx    = 0;
     private _dragOriginValue = 0;
+
+    // Auto-fade state. `_faded` is the visible truth: when true the
+    // track + thumb paint with `undefined` Background (transparent);
+    // when false they paint with the Theme brushes. `_idleTimer`
+    // schedules the transition back to `_faded = true` after a
+    // ~1500 ms gap with no activity.
+    private _faded = false;
+    private _idleTimer: ReturnType<typeof setTimeout> | undefined;
+    private static readonly AUTO_HIDE_IDLE_MS = 1500;
 
     // ValueChanged subscribers. Plain Set so duplicate add is a no-op
     // and remove is precise — same shape as the Closed listener API
@@ -150,9 +166,75 @@ export class ScrollBar extends Visual
         this._thumb  = inst.root.FindName('PART_Thumb') as Border;
         this._layout.host = this;
         // Hover state — same listener shape Button uses for its tints.
-        this._thumb.AddPropertyChangedListener('IsMouseOver', () => this.refreshThumbBrush());
+        // Hover ALSO pulses activity (auto-hide stays visible while
+        // the user's pointer hangs on the bar).
+        this._thumb.AddPropertyChangedListener('IsMouseOver', () => {
+            this.refreshThumbBrush();
+            if (this._thumb.IsMouseOver) this.pulseActivity();
+        });
+        // Auto-hide reaction to programmatic scroll. The Value DP
+        // already fires `_valueListeners`; we tap the same hook to keep
+        // the bar visible whenever its position is changing. Filter
+        // for actual value transitions — the EffectiveValueDescriptor
+        // fires OnPropertyChange unconditionally (including 0→0 stable
+        // writes from ScrollViewer.ArrangeOverride on every layout
+        // pass), and pulsing on those would re-show the bar every
+        // frame regardless of real activity.
+        this.AddPropertyChangedListener('Value', (_o, _n, oldV, newV) => {
+            if (oldV !== newV) this.pulseActivity();
+        });
 
         this.AttachVisual(this._layout);
+
+        // Lazy-evaluate the initial visibility state. When IsAutoHide
+        // is false (the default) we stay opaque forever. When true,
+        // start in the faded state and wait for activity.
+        if (this.IsAutoHide) this.fadeOut();
+        this.AddPropertyChangedListener('IsAutoHide', () => {
+            if (this.IsAutoHide) this.fadeOut();
+            else                 this.fadeIn();
+        });
+    }
+
+    // Auto-hide activity pulse. Restores the brushes immediately, then
+    // (re)starts the idle timer that will fade them back out after the
+    // gap. Called on Value change, hover, and pointer-down so any user
+    // interaction keeps the bar visible.
+    private pulseActivity(): void
+    {
+        if (!this.IsAutoHide) return;
+        this.fadeIn();
+        if (this._idleTimer !== undefined) clearTimeout(this._idleTimer);
+        const t = setTimeout(() => {
+            this._idleTimer = undefined;
+            // Hover keeps the bar visible even past the idle gap —
+            // re-pulse on the next tick when the pointer leaves.
+            if (this._thumb.IsMouseOver || this._dragging)
+            {
+                this.pulseActivity();
+                return;
+            }
+            this.fadeOut();
+        }, ScrollBar.AUTO_HIDE_IDLE_MS);
+        // Don't keep the Node test process alive for the 1.5 s tail.
+        (t as unknown as { unref?: () => void }).unref?.();
+        this._idleTimer = t;
+    }
+
+    private fadeIn(): void
+    {
+        if (!this._faded) return;
+        this._faded = false;
+        this.refreshThumbBrush();
+        this._track.Background = Theme.scrollTrack;
+    }
+
+    private fadeOut(): void
+    {
+        if (this._faded) return;
+        this._faded = true;
+        this._track.Background = undefined;
+        this._thumb.Background = undefined;
     }
 
     public get Orientation(): Orientation { return this.get_property_value('Orientation'); }
@@ -169,6 +251,9 @@ export class ScrollBar extends Visual
 
     public get ViewportSize(): number { return this.get_property_value('ViewportSize'); }
     public set ViewportSize(v: number) { this.set_property_value('ViewportSize', v); }
+
+    public get IsAutoHide(): boolean { return this.get_property_value('IsAutoHide'); }
+    public set IsAutoHide(v: boolean) { this.set_property_value('IsAutoHide', v); }
 
     // ── Public events ──────────────────────────────────────────────
     public AddValueChangedListener(listener: (value: number) => void): void
@@ -212,6 +297,20 @@ export class ScrollBar extends Visual
             // observe it (matches how AddPropertyChangedListener on DPs
             // observes values).
             for (const l of this._valueListeners) l(newValue as number);
+        }
+        // metricsFor() reads Minimum / Maximum / Value / ViewportSize +
+        // Orientation. When any of those change, the inner ScrollBarLayout
+        // panel needs to re-run its ArrangeOverride so ArrangeScrollBarParts
+        // recomputes the thumb's offset / length. Without this push the
+        // bar's own _isArrangeValid clears (its DP has MetaData.Arrange)
+        // but the layout panel's arrange stays cached against the same
+        // outer rect, the thumb stays at its old position, and dragging
+        // / wheel / programmatic offset changes "do nothing visible".
+        if (descriptor.Name === 'Value'       || descriptor.Name === 'Minimum'
+         || descriptor.Name === 'Maximum'     || descriptor.Name === 'ViewportSize'
+         || descriptor.Name === 'Orientation')
+        {
+            this._layout.InvalidateArrange();
         }
     }
 
@@ -271,6 +370,10 @@ export class ScrollBar extends Visual
     // ── Pointer behaviour ──────────────────────────────────────────
     protected override OnPointerDown(args: PointerEventArgs): void
     {
+        // Any pointer interaction pulses activity so the bar stays
+        // visible while the user is touching it (and for the idle
+        // window after).
+        this.pulseActivity();
         if (args.Source === this._thumb)
         {
             this._dragging = true;
@@ -401,6 +504,14 @@ export class ScrollBar extends Visual
 
     private refreshThumbBrush(): void
     {
+        // Faded auto-hide bars stay transparent until pulseActivity
+        // restores them — bail before touching Background so a hover-
+        // out -> hover-back race doesn't accidentally unhide the bar.
+        if (this._faded)
+        {
+            this._thumb.Background = undefined;
+            return;
+        }
         this._thumb.Background = this._dragging          ? Theme.scrollThumbDrag
                                 : this._thumb.IsMouseOver ? Theme.scrollThumbHover
                                 : Theme.scrollThumb;

@@ -16,8 +16,7 @@ import { Border } from './border.js';
 import { ContentPresenter } from './content-presenter.js';
 import { Dock } from './dock-panel.js';
 import type { ControlTemplate } from './control-template.js';
-import { create as createDrawerPaneResources    } from '../../build/Controls/drawer.template.mu.js';
-import { create as createDrawerOverlayResources } from '../../build/Controls/drawer-overlay.template.mu.js';
+import { ensureControlsTheme } from './default-resources.js';
 
 const KEY_PANE    = 'DefaultDrawerPane';
 const KEY_OVERLAY = 'DefaultDrawerOverlay';
@@ -181,8 +180,10 @@ export class Drawer extends Visual
         Model.RegisterProperty(Drawer, 'RailSize',   0,                        MetaData.Measure | MetaData.Arrange);
         Model.RegisterProperty(Drawer, 'ScrimBrush', DEFAULT_SCRIM,            MetaData.Render);
         Model.RegisterProperty(Drawer, 'Content',    undefined,                MetaData.Measure);
-        Application.DefaultResourceFactories.push(createDrawerPaneResources);
-        Application.DefaultResourceFactories.push(createDrawerOverlayResources);
+        // Registers the consolidated controls theme exactly once so
+        // DefaultDrawerPane / DefaultDrawerOverlay resolve via
+        // Application.ResolveDefaultResource during construction.
+        ensureControlsTheme();
     }
 
     // ── Template parts (always built; structurally wired lazily) ────

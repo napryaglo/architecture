@@ -17,8 +17,7 @@ import { StackPanel } from './stack-panel.js';
 import { TextBlock } from './text-block.js';
 import { Theme } from './theme.js';
 import type { ControlTemplate } from './control-template.js';
-import { create as createTreeViewResources     } from '../../build/Controls/tree-view.template.mu.js';
-import { create as createTreeViewItemResources } from '../../build/Controls/tree-view-item.template.mu.js';
+import { ensureControlsTheme } from './default-resources.js';
 
 const KEY_TREEVIEW      = 'DefaultTreeView';
 const KEY_TREEVIEW_ITEM = 'DefaultTreeViewItem';
@@ -186,7 +185,7 @@ export class TreeView extends Visual
 {
     static {
         Model.RegisterProperty(TreeView, 'Indent', 16, MetaData.Measure | MetaData.Arrange);
-        Application.DefaultResourceFactories.push(createTreeViewResources);
+        ensureControlsTheme();
     }
 
     private readonly _stack: StackPanel;
@@ -513,7 +512,7 @@ export class TreeViewItem extends Visual
         Model.RegisterProperty(TreeViewItem, 'Header',     '',    MetaData.Measure | MetaData.Render);
         Model.RegisterProperty(TreeViewItem, 'IsExpanded', false, MetaData.Measure | MetaData.Arrange);
         Model.RegisterProperty(TreeViewItem, 'IsSelected', false, MetaData.Render);
-        Application.DefaultResourceFactories.push(createTreeViewItemResources);
+        ensureControlsTheme();
     }
 
     // Template parts — all built in the constructor so the row is paint-

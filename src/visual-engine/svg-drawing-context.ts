@@ -129,6 +129,13 @@ export class SvgDrawingContext implements DrawingContext
             `y="${formatNumber(origin.Y + baselineOffset)}"`,
             `font-family="${escapeXmlAttr(text.FontFamily)}"`,
             `font-size="${formatNumber(text.FontSize)}"`,
+            // Keep whitespace as-is. Without `xml:space="preserve"` the
+            // SVG default whitespace handling strips trailing spaces and
+            // collapses internal runs to a single space — fatal for any
+            // editable text (TextBox) where typing space must visibly
+            // advance the caret. Cheap to set unconditionally so every
+            // mural-painted text honours the source string verbatim.
+            `xml:space="preserve"`,
         ];
         if (text.FontWeight !== FontWeight.Normal)
         {
@@ -140,6 +147,18 @@ export class SvgDrawingContext implements DrawingContext
         }
         attrs.push(fillAttrForText(text.Foreground));
 
+        // Deliberately NOT emitting textLength + lengthAdjust here. The
+        // earlier attempt to pin the SVG render width to the measurer's
+        // width forced the browser to stretch glyphs uniformly whenever
+        // the two disagreed by even a fraction of a pixel — visibly
+        // tracked-out text in browsers where Canvas.measureText and
+        // SVG text shaping use marginally different kerning tables.
+        // We rely instead on Visuals that overlay the painted text
+        // (TextBox caret) using a measurer that closely tracks the
+        // browser's own SVG renderer — CanvasTextMeasurer is the
+        // default in HtmlTarget. Any residual sub-pixel mismatch
+        // shows up as caret micro-drift rather than visible glyph
+        // distortion, which is the better trade-off.
         this.output.push(`<text ${attrs.join(' ')}>${escapeXmlText(text.Text)}</text>`);
     }
 

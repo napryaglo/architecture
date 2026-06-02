@@ -48,6 +48,12 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['DrawerVariant',           '@visualisation-sub/mural/Controls'],
     ['TreeView',                '@visualisation-sub/mural/Controls'],
     ['TreeViewItem',            '@visualisation-sub/mural/Controls'],
+    ['ListBox',                 '@visualisation-sub/mural/Controls'],
+    ['ListBoxItem',             '@visualisation-sub/mural/Controls'],
+    ['SelectionMode',           '@visualisation-sub/mural/Controls'],
+    ['TextBox',                 '@visualisation-sub/mural/Controls'],
+    ['SpinEdit',                '@visualisation-sub/mural/Controls'],
+    ['Slider',                  '@visualisation-sub/mural/Controls'],
     ['PageView',                '@visualisation-sub/mural/Controls'],
 
     // Runtime types that the emitter may reference even when the
@@ -86,6 +92,8 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['ChevronTarget',           '@visualisation-sub/mural/Controls'],
     ['CollapsibleStack',        '@visualisation-sub/mural/Controls'],
     ['ScrollBarLayout',         '@visualisation-sub/mural/Controls'],
+    ['SliderLayout',            '@visualisation-sub/mural/Controls'],
+    ['TextEditorSurface',       '@visualisation-sub/mural/Controls'],
 
     // ── visual-engine ───────────────────────────────────────────────
     ['SolidColorBrush',     '@visualisation-sub/mural/visual-engine'],
@@ -127,6 +135,7 @@ export const ENUM_CLASSES: ReadonlySet<string> = new Set([
     'TextWrapping',
     'ClickMode',
     'Orientation',
+    'SelectionMode',
 ]);
 
 // Meta-attr names whose RHS is a type reference (compiled as a bare
@@ -163,6 +172,9 @@ export const DEFAULT_SLOT_INFO: ReadonlyMap<string, SlotInfo> = new Map<string, 
     ['Drawer',                  { name: 'Content',  kind: 'object' }],
     ['TreeView',                { name: 'Items',    kind: 'list'   }],
     ['TreeViewItem',            { name: 'Items',    kind: 'list'   }],
+    ['ListBox',                 { name: 'Items',    kind: 'list'   }],
+    ['ListBoxItem',             { name: 'Content',  kind: 'object' }],
+    ['TextBox',                 { name: 'Text',     kind: 'string' }],
     ['PageView',                { name: 'Content',  kind: 'object' }],
     ['ContentControl',          { name: 'Content',  kind: 'object' }],
     ['ContentPresenter',        { name: 'Content',  kind: 'object' }],
@@ -181,4 +193,6 @@ export const DEFAULT_SLOT_INFO: ReadonlyMap<string, SlotInfo> = new Map<string, 
     ['ChevronTarget',           { name: 'Child',    kind: 'single' }],
     ['CollapsibleStack',        { name: 'Children', kind: 'list'   }],
     ['ScrollBarLayout',         { name: 'Children', kind: 'list'   }],
+    ['SliderLayout',            { name: 'Children', kind: 'list'   }],
+    ['TextEditorSurface',       { name: 'Children', kind: 'list'   }],
 ]);

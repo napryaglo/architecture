@@ -1,11 +1,19 @@
 import {
+    FocusEventArgs,
+    KeyEventArgs,
     PointerEventArgs,
+    TextInputEventArgs,
     WheelEventArgs,
+    type KeyEventInit,
     type PointerEventInit,
+    type TextInputEventInit,
     type WheelEventInit,
     buildRoute,
+    dispatchFocus,
+    dispatchKey,
     dispatchPointer,
     dispatchPointerDirect,
+    dispatchTextInput,
 } from './routed-event.js';
 import type { Visual } from './visual.js';
 
@@ -67,6 +75,13 @@ export class InputManager
     // even during a capture.
     private pointerCaptures: Map<number, Visual> = new Map();
 
+    // Currently-focused Visual — the keyboard event source. At most one
+    // per target. Set by SetFocus (from Visual.Focus() / args.SetFocus()
+    // / host-side click-to-focus) and cleared by SetFocus(undefined).
+    // Maintained in lock-step with the IsFocused DP on each Visual so
+    // Style triggers / read-back via tb.IsFocused stay coherent.
+    private focusedVisual: Visual | undefined;
+
     // ── Public entry points ────────────────────────────────────────
 
     // Pointer moved to a new (or null) Visual at the given host
@@ -83,7 +98,7 @@ export class InputManager
         const dispatchTarget = captured ?? hit;
         if (dispatchTarget === null || dispatchTarget === undefined) return;
 
-        dispatchPointer(new PointerEventArgs('PointerMove', dispatchTarget, init, this));
+        dispatchPointer(new PointerEventArgs('PointerMove', dispatchTarget, init, this, this));
     }
 
     public InjectPointerLeave(init: PointerEventInit): void
@@ -100,7 +115,7 @@ export class InputManager
 
         this.pressTargets.set(init.PointerId, hit);
         setIsPressed(hit, true);
-        dispatchPointer(new PointerEventArgs('PointerDown', hit, init, this));
+        dispatchPointer(new PointerEventArgs('PointerDown', hit, init, this, this));
     }
 
     public InjectPointerUp(hit: Visual | null, init: PointerEventInit): void
@@ -119,7 +134,7 @@ export class InputManager
         const dispatchTarget = captured ?? hit ?? pressTarget;
         if (dispatchTarget !== undefined)
         {
-            dispatchPointer(new PointerEventArgs('PointerUp', dispatchTarget, init, this));
+            dispatchPointer(new PointerEventArgs('PointerUp', dispatchTarget, init, this, this));
         }
 
         // Capture auto-releases on PointerUp — matches DOM
@@ -132,7 +147,7 @@ export class InputManager
     public InjectPointerWheel(hit: Visual | null, init: WheelEventInit): void
     {
         if (hit === null) return;
-        dispatchPointer(new WheelEventArgs(hit, init, this));
+        dispatchPointer(new WheelEventArgs(hit, init, this, this));
     }
 
     // ── Pointer capture ────────────────────────────────────────────
@@ -154,6 +169,87 @@ export class InputManager
     public GetCapturedVisual(pointerId: number = 0): Visual | undefined
     {
         return this.pointerCaptures.get(pointerId);
+    }
+
+    // ── Focus ──────────────────────────────────────────────────────
+
+    public GetFocusedVisual(): Visual | undefined
+    {
+        return this.focusedVisual;
+    }
+
+    // Move focus to `visual` (or clear focus when undefined). Refuses
+    // to focus a Visual whose `Focusable` is false — the call is a
+    // silent no-op in that case (matches WPF Keyboard.Focus on a non-
+    // focusable element). When the target is unchanged, nothing fires.
+    //
+    // Sequence on a real focus change:
+    //   1. Clear IsFocused on the old focused Visual (if any).
+    //   2. Dispatch LostFocus on the old Visual (bubble pass).
+    //   3. Set IsFocused on the new focused Visual.
+    //   4. Dispatch GotFocus on the new Visual (bubble pass).
+    // DP writes BEFORE dispatch so handlers see the post-change state.
+    public SetFocus(visual: Visual | undefined): void
+    {
+        if (visual === this.focusedVisual) return;
+        if (visual !== undefined && !isFocusable(visual)) return;
+
+        const old = this.focusedVisual;
+        this.focusedVisual = visual;
+
+        if (old !== undefined)
+        {
+            setIsFocused(old, false);
+            dispatchFocus(new FocusEventArgs('LostFocus', old));
+        }
+        if (visual !== undefined)
+        {
+            setIsFocused(visual, true);
+            dispatchFocus(new FocusEventArgs('GotFocus', visual));
+        }
+    }
+
+    // ── Keyboard ───────────────────────────────────────────────────
+
+    // Dispatch KeyDown to the currently-focused Visual (and its
+    // ancestors via tunnel + bubble). Returns true if any handler
+    // marked the event Handled — the host adapter (HtmlTarget) uses
+    // that to decide whether to preventDefault on the underlying DOM
+    // event (suppress page scroll on Space, autorepeat on arrows, etc).
+    // Returns false when nothing is focused, when focus is unattached
+    // to a target, or when no handler claimed the key.
+    public InjectKeyDown(init: KeyEventInit): boolean
+    {
+        const target = this.focusedVisual;
+        if (target === undefined) return false;
+        const args = new KeyEventArgs('KeyDown', target, init);
+        dispatchKey(args);
+        return args.Handled;
+    }
+
+    public InjectKeyUp(init: KeyEventInit): boolean
+    {
+        const target = this.focusedVisual;
+        if (target === undefined) return false;
+        const args = new KeyEventArgs('KeyUp', target, init);
+        dispatchKey(args);
+        return args.Handled;
+    }
+
+    // Dispatch TextInput to the currently-focused Visual. Separated
+    // from KeyDown so handlers can subscribe only to "textual" content
+    // (already composed by the IME / browser layer) without seeing
+    // every arrow / function key. HtmlTarget synthesises this from
+    // printable keydown events when no IME compose is in flight; the
+    // browser's beforeinput / compositionend events feed it on real
+    // text input.
+    public InjectTextInput(init: TextInputEventInit): boolean
+    {
+        const target = this.focusedVisual;
+        if (target === undefined) return false;
+        const args = new TextInputEventArgs(target, init);
+        dispatchTextInput(args);
+        return args.Handled;
     }
 
     // ── Internals ──────────────────────────────────────────────────
@@ -212,4 +308,19 @@ function setIsMouseOver(v: Visual, value: boolean): void
 function setIsPressed(v: Visual, value: boolean): void
 {
     (v as unknown as VisualWithDp).set_property_value('IsPressed', value);
+}
+
+function setIsFocused(v: Visual, value: boolean): void
+{
+    (v as unknown as VisualWithDp).set_property_value('IsFocused', value);
+}
+
+// Read the Focusable DP without importing Visual (would cycle through
+// to routed-event.ts via the type alias). Same duck-typed read pattern
+// as the setters above.
+interface VisualWithReadDp { get_property_value(name: string): unknown }
+
+function isFocusable(v: Visual): boolean
+{
+    return (v as unknown as VisualWithReadDp).get_property_value('Focusable') === true;
 }

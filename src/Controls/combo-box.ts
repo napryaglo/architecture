@@ -15,14 +15,13 @@ import { PresentationTarget } from '../visual-engine/index.js';
 import { Border } from './border.js';
 import type { StackPanel } from './stack-panel.js';
 import { TextBlock } from './text-block.js';
+import { ensureControlsTheme } from './default-resources.js';
 import { Theme } from './theme.js';
 import type { ControlTemplate } from './control-template.js';
-import { create as createComboBoxResources      } from '../../build/Controls/combo-box.template.mu.js';
-import { create as createComboBoxPopupResources } from '../../build/Controls/combo-box-popup.template.mu.js';
 
 // Resource-dictionary keys for the two ControlTemplates the ComboBox
-// loads from its `.template.mu` defaults — match the `x:key="…"`
-// literals in combo-box.template.mu / combo-box-popup.template.mu.
+// loads from the consolidated controls theme — match the `x:key="…"`
+// literals in controls.template.mu.
 const KEY_SELECTION = 'DefaultComboBoxSelection';
 const KEY_POPUP     = 'DefaultComboBoxPopup';
 
@@ -309,11 +308,10 @@ export class ComboBox extends Visual
         Model.RegisterProperty(ComboBox, 'SelectedIndex',  -1,        MetaData.None);
         Model.RegisterProperty(ComboBox, 'IsDropDownOpen', false,     MetaData.Measure);
         Model.RegisterProperty(ComboBox, 'Placeholder',    'Select…', MetaData.Measure | MetaData.Render);
-        // Registers both compiled ResourceDictionaries with Application
-        // so DefaultComboBoxSelection / DefaultComboBoxPopup resolve via
+        // Registers the consolidated controls theme exactly once so
+        // DefaultComboBoxSelection / DefaultComboBoxPopup resolve via
         // Application.ResolveDefaultResource during construction.
-        Application.DefaultResourceFactories.push(createComboBoxResources);
-        Application.DefaultResourceFactories.push(createComboBoxPopupResources);
+        ensureControlsTheme();
     }
 
     // ── Template parts ─────────────────────────────────────────────

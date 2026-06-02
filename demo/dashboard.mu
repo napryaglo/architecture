@@ -10,7 +10,8 @@
 //
 // Compiled ahead-of-time to demo/dashboard.mu.js by
 // `npx mural compile demo/dashboard.mu --out demo/dashboard.mu.js`;
-// demo/index.html imports the emitted module statically. Edit this
+// the platform shell (demo/platform/platform.html) imports the
+// emitted module via demo/platform/demos/dashboard.mjs. Edit this
 // file and re-run the compile command to refresh the demo.
 
 Application{

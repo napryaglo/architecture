@@ -1,8 +1,7 @@
 // drawer demo — Persistent left rail + Temporary right pane through
 // a single DockPanel. The platform factory builds a DrawerVM on first
 // activation and wires the Temporary drawer's Closed listener back
-// into the VM (scrim click → VM.OptionsOpen = false), the same shape
-// the standalone drawer.html uses.
+// into the VM (scrim click → VM.OptionsOpen = false).
 import { app } from '../../drawer.mu.js';
 import { MetaData, Model, RelayCommand } from '@visualisation-sub/mural/runtime';
 import { Drawer, DrawerVariant } from '@visualisation-sub/mural/Controls';

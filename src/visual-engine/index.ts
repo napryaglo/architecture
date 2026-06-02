@@ -41,6 +41,8 @@ export {
 } from './svg-dom-drawing-context.js';
 export { SvgRenderer, VISUAL_BACKREF, type SvgRendererOptions } from './svg-renderer.js';
 export { FontMetricsMeasurer } from './font-metrics-measurer.js';
+export { CanvasTextMeasurer } from './canvas-text-measurer.js';
+export { SvgTextMeasurer } from './svg-text-measurer.js';
 export {
     loadGoogleFont,
     loadGoogleFontInto,

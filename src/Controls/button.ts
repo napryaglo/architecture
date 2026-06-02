@@ -11,8 +11,8 @@ import type { Border } from './border.js';
 import { ContentControl } from './content-control.js';
 import type { ControlTemplate } from './control-template.js';
 import { TextBlock } from './text-block.js';
+import { ensureControlsTheme } from './default-resources.js';
 import { Theme } from './theme.js';
-import { create as createButtonResources } from '../../build/Controls/button.template.mu.js';
 
 // When the Click event fires. WPF parity: Release is the default
 // (visible press feedback, fire on PointerUp inside bounds), Press
@@ -88,11 +88,11 @@ export class Button extends ContentControl
         Model.RegisterProperty(Button, 'Command',          undefined,         MetaData.None);
         Model.RegisterProperty(Button, 'CommandParameter', undefined,         MetaData.None);
         Model.RegisterProperty(Button, 'ClickMode',        ClickMode.Release, MetaData.None);
-        // Registers the compiled button.template.mu's ResourceDictionary
-        // with Application — every new Application then merges it into
-        // its own Resources, and `Application.ResolveDefaultResource`
-        // finds the bundled default template under DEFAULT_BUTTON_KEY.
-        Application.DefaultResourceFactories.push(createButtonResources);
+        // Ensures the consolidated controls theme — which holds the
+        // DefaultButton ControlTemplate — is registered with Application
+        // exactly once. Resolution against DEFAULT_BUTTON_KEY then picks
+        // up the bundled template via Application.ResolveDefaultResource.
+        ensureControlsTheme();
     }
 
     private readonly _clickHandlers: ClickHandler[] = [];

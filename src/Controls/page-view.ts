@@ -16,7 +16,7 @@ import type { DockPanel } from './dock-panel.js';
 import { StackPanel } from './stack-panel.js';
 import { TextBlock } from './text-block.js';
 import type { ControlTemplate } from './control-template.js';
-import { create as createPageViewResources } from '../../build/Controls/page-view.template.mu.js';
+import { ensureControlsTheme } from './default-resources.js';
 
 const KEY_PAGEVIEW = 'DefaultPageView';
 
@@ -59,7 +59,7 @@ export class PageView extends Visual
         Model.RegisterProperty(PageView, 'Title',    '',        MetaData.Render);
         Model.RegisterProperty(PageView, 'Subtitle', '',        MetaData.Measure | MetaData.Render);
         Model.RegisterProperty(PageView, 'Content',  undefined, MetaData.Measure);
-        Application.DefaultResourceFactories.push(createPageViewResources);
+        ensureControlsTheme();
     }
 
     // Template parts — resolved from the compiled `page-view.template.mu`

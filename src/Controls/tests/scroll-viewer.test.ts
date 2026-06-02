@@ -150,6 +150,44 @@ describe('ScrollViewer — clip-and-translate mode (plain content)', () => {
         const aParent = (a as unknown as { visualParent: Visual | undefined }).visualParent;
         assert.equal(aParent, undefined);
     });
+
+    test('ScrollIntoView pans the offset so a rect smaller than the viewport becomes visible', () => {
+        const sv = new ScrollViewer();
+        sv.Content = new FixedRect(new Size(500, 500));
+        sv.Measure(new Size(100, 100));
+        sv.Arrange(new Rect(0, 0, 100, 100));
+
+        // Rect off the right edge of the viewport.
+        sv.ScrollIntoView(new Rect(200, 0, 10, 10));
+        assert.ok(sv.HorizontalOffset > 0, 'right-edge rect should pan horizontally');
+
+        // Rect off the bottom edge.
+        sv.ScrollIntoView(new Rect(0, 300, 10, 10));
+        assert.ok(sv.VerticalOffset > 0, 'bottom-edge rect should pan vertically');
+    });
+
+    test('ScrollIntoView does NOT oscillate when the rect is taller than the viewport', () => {
+        // Tight viewport (10 DIP tall) wrapping a content that's
+        // slightly taller (16 DIP), mirroring the SpinEdit case where
+        // the caret rect (one line height) overflows the inner
+        // TextBox's reduced content area. Without the rect-fits guard,
+        // the "show top" and "show bottom" branches alternate fire on
+        // every call, snapping the offset between 0 and the scrollable
+        // max.
+        const sv = new ScrollViewer();
+        sv.Content = new FixedRect(new Size(100, 16));
+        sv.Measure(new Size(100, 10));
+        sv.Arrange(new Rect(0, 0, 100, 10));
+
+        const tall = new Rect(0, 0, 5, 16);   // taller than viewport
+        sv.VerticalOffset = 0;
+        sv.ScrollIntoView(tall);
+        assert.equal(sv.VerticalOffset, 0,
+            'first ScrollIntoView should not push the offset down');
+        sv.ScrollIntoView(tall);
+        assert.equal(sv.VerticalOffset, 0,
+            'repeat ScrollIntoView should remain stable');
+    });
 });
 
 // Sets up a free-standing ItemsControl (no parent) plus a

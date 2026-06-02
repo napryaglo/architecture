@@ -1,12 +1,13 @@
 import type { Visual } from '../../runtime/index.js';
 import {
-    InputManager,
     PointerButton,
+    type KeyEventInit,
     type PointerEventInit,
     type WheelEventInit,
     type WheelDeltaMode,
     type ModifierKeys,
 } from '../../runtime/index.js';
+import { CanvasTextMeasurer } from '../canvas-text-measurer.js';
 import { PresentationTarget } from '../presentation-target.js';
 import { SvgRenderer, VISUAL_BACKREF } from '../svg-renderer.js';
 
@@ -64,6 +65,22 @@ function wheelDeltaMode(m: number): WheelDeltaMode
     return 'pixel';
 }
 
+// "Printable" = produces a single character ready to insert into the
+// document — excludes modifier keys ('Shift', 'Control', …), navigation
+// ('ArrowLeft', 'Home'), editing ('Backspace', 'Delete'), function keys
+// ('F1'), and anything else whose `key` string is longer than one
+// glyph. Also gates out Ctrl/Meta chords (Ctrl+C, ⌘+V) so the chord
+// reaches OnKeyDown as a single command instead of leaking through as
+// stray text input. Alt+letter combinations DO flow through (matches
+// macOS option-key special characters); a TextBox that wants to
+// suppress them can filter in OnTextInput.
+function isPrintableKey(e: KeyboardEvent): boolean
+{
+    if (e.ctrlKey || e.metaKey) return false;
+    if (e.key.length !== 1)     return false;
+    return true;
+}
+
 // HtmlTarget construction options. `backend` picks the rendering pipeline
 // inside the host element (SVG node tree for <=10k visible elements,
 // Canvas commands for everything else). `devicePixelRatio` lets tests
@@ -97,16 +114,18 @@ export class HtmlTarget extends PresentationTarget
     private readonly options: Required<Pick<HtmlTargetOptions, 'backend'>> & HtmlTargetOptions;
     private readonly renderer: SvgRenderer;
 
-    // Input plumbing. One InputManager per target — owns hover-chain
-    // diffing, IsMouseOver / IsPressed, and routes pointer events into
-    // the visual tree. The bound listeners below are stored so Dispose
-    // can detach them cleanly.
-    private readonly inputManager: InputManager = new InputManager();
+    // Input plumbing. The InputManager owning hover-chain diffing,
+    // IsMouseOver / IsPressed, pointer capture AND keyboard focus
+    // lives on the base PresentationTarget — accessed below as
+    // `this.InputManager`. The bound listeners below are stored so
+    // Dispose can detach them cleanly.
     private readonly onPointerMove:  (e: PointerEvent) => void;
     private readonly onPointerDown:  (e: PointerEvent) => void;
     private readonly onPointerUp:    (e: PointerEvent) => void;
     private readonly onPointerLeave: (e: PointerEvent) => void;
     private readonly onPointerWheel: (e: WheelEvent)   => void;
+    private readonly onKeyDown:      (e: KeyboardEvent) => void;
+    private readonly onKeyUp:        (e: KeyboardEvent) => void;
 
     constructor(host: Element, options: HtmlTargetOptions = {})
     {
@@ -180,6 +199,30 @@ export class HtmlTarget extends PresentationTarget
         });
         this.resize_observer.observe(this.host);
 
+        // Make the host element programmatically focusable so it can
+        // receive keyboard events. tabindex=0 also puts it in the
+        // natural Tab order so users can Tab into a mural surface from
+        // surrounding page chrome. Consumers that want different Tab
+        // semantics override the attribute on the host element AFTER
+        // construction — we only set it when the consumer hasn't.
+        //
+        // We deliberately do NOT set tabindex on the inner <svg>
+        // surface: leaving SVG and its children unfocusable means a
+        // click inside the surface won't compete with the host for the
+        // browser's "transfer focus on click" walk. Instead we call
+        // host.focus() explicitly on every pointer-down (see
+        // handlePointer) so DOM focus follows wherever the user
+        // clicked. Without that explicit focus call, keydown events
+        // would fire on document.body (the previously-focused element)
+        // and never reach our host-level listener.
+        if (!(host as HTMLElement).hasAttribute('tabindex'))
+        {
+            (host as HTMLElement).tabIndex = 0;
+        }
+        // Drop the dotted focus ring the browser draws by default —
+        // mural controls render their own focus visuals.
+        (host as HTMLElement).style.outline = 'none';
+
         // PointerEvents listeners on the host. Using the host (not the
         // surface) keeps the listener set stable across re-renders
         // that swap the surface — and it makes leave detection work
@@ -189,11 +232,15 @@ export class HtmlTarget extends PresentationTarget
         this.onPointerUp    = (e) => this.handlePointer('up',    e);
         this.onPointerLeave = (e) => this.handlePointer('leave', e);
         this.onPointerWheel = (e) => this.handleWheel(e);
+        this.onKeyDown      = (e) => this.handleKey('down', e);
+        this.onKeyUp        = (e) => this.handleKey('up',   e);
         this.host.addEventListener('pointermove',  this.onPointerMove  as EventListener);
         this.host.addEventListener('pointerdown',  this.onPointerDown  as EventListener);
         this.host.addEventListener('pointerup',    this.onPointerUp    as EventListener);
         this.host.addEventListener('pointerleave', this.onPointerLeave as EventListener);
         this.host.addEventListener('wheel',        this.onPointerWheel as EventListener);
+        this.host.addEventListener('keydown',      this.onKeyDown      as EventListener);
+        this.host.addEventListener('keyup',        this.onKeyUp        as EventListener);
 
         // SvgRenderer paints the visual tree into the SVG surface and
         // maintains DOM identity per visual across re-render passes.
@@ -202,6 +249,34 @@ export class HtmlTarget extends PresentationTarget
         this.renderer = new SvgRenderer(this.surface, {
             document: this.host.ownerDocument ?? document,
         });
+
+        // Swap the base-class default (ApproximateTextMeasurer) for the
+        // Canvas-backed measurer. Canvas 2D's measureText uses the same
+        // browser font engine the SVG renderer paints with, so widths
+        // line up closely with the painted glyphs while taking only a
+        // few microseconds per call — fast enough to re-measure the
+        // whole TextBox on every keystroke.
+        //
+        // SvgTextMeasurer (using `<text>.getSubStringLength`) gives
+        // pixel-exact widths because it IS the renderer, but each call
+        // forces a synchronous layout flush — for a multi-line TextBox
+        // that turns every keystroke into hundreds of layouts and a
+        // visibly stuttery editor. The export stays available for
+        // consumers who need exact accuracy and aren't doing live
+        // editing.
+        //
+        // Consumers wanting FontMetricsMeasurer (PDF / Node parity,
+        // off-screen rendering) overwrite TextMeasurer after
+        // construction and pair it with a LoadFont call.
+        try
+        {
+            this.TextMeasurer = new CanvasTextMeasurer(this.host.ownerDocument ?? document);
+        }
+        catch
+        {
+            // Canvas 2D unavailable. Stick with the approximate
+            // measurer rather than failing construction.
+        }
     }
 
     // Drive the renderer from the layout flush. Layout runs first
@@ -230,6 +305,8 @@ export class HtmlTarget extends PresentationTarget
         this.host.removeEventListener('pointerup',    this.onPointerUp    as EventListener);
         this.host.removeEventListener('pointerleave', this.onPointerLeave as EventListener);
         this.host.removeEventListener('wheel',        this.onPointerWheel as EventListener);
+        this.host.removeEventListener('keydown',      this.onKeyDown      as EventListener);
+        this.host.removeEventListener('keyup',        this.onKeyUp        as EventListener);
         this.renderer.Dispose();
         this.surface.remove();
     }
@@ -274,22 +351,73 @@ export class HtmlTarget extends PresentationTarget
         const init = pointerInit(e, hostX, hostY);
         if (phase === 'leave')
         {
-            this.inputManager.InjectPointerLeave(init);
+            this.InputManager.InjectPointerLeave(init);
             return;
         }
         const hit = this.HitTest(hostX, hostY);
         if (phase === 'down')
         {
-            if (hit !== undefined) this.inputManager.InjectPointerDown(hit, init);
+            // Transfer DOM focus to the host so subsequent keydown /
+            // keyup events fire on it (and reach our host-level
+            // listener through normal bubble). Clicking inside the SVG
+            // surface doesn't auto-focus the host — SVG descendants
+            // aren't focusable, so the browser leaves focus wherever
+            // it was (usually document.body), and keydowns would never
+            // reach this target without this explicit call. The
+            // `preventScroll` option keeps the page from jumping in
+            // case the host happens to be outside the viewport.
+            (this.host as HTMLElement).focus({ preventScroll: true });
+            if (hit !== undefined) this.InputManager.InjectPointerDown(hit, init);
             return;
         }
         if (phase === 'up')
         {
-            this.inputManager.InjectPointerUp(hit ?? null, init);
+            this.InputManager.InjectPointerUp(hit ?? null, init);
             return;
         }
         // move
-        this.inputManager.InjectPointerMove(hit ?? null, init);
+        this.InputManager.InjectPointerMove(hit ?? null, init);
+    }
+
+    // Keyboard dispatch. KeyDown / KeyUp route to the InputManager's
+    // focused Visual. For KeyDown, if the key is a printable character
+    // that isn't part of a Ctrl/Meta chord, we also synthesise a
+    // TextInput event right after — matches WPF's KeyDown → TextInput
+    // ordering and means a TextBox can subscribe just to OnTextInput
+    // for character insertion while leaving OnKeyDown for editing
+    // commands (arrows, Backspace, Delete, …).
+    //
+    // preventDefault is called when the focused Visual handled the
+    // event — that's how we suppress the browser's page-scroll on
+    // Space / arrow keys, tab navigation when AcceptsTab is true, and
+    // the like, without globally swallowing every key on a focused
+    // mural surface.
+    private handleKey(phase: 'down' | 'up', e: KeyboardEvent): void
+    {
+        const init: KeyEventInit = {
+            Key:       e.key,
+            Code:      e.code,
+            Modifiers: extractModifiers(e),
+            IsRepeat:  e.repeat,
+        };
+        let handled = phase === 'down'
+            ? this.InputManager.InjectKeyDown(init)
+            : this.InputManager.InjectKeyUp(init);
+
+        if (phase === 'down' && isPrintableKey(e))
+        {
+            // Synthesise the TextInput pass for normal typing. IME
+            // composition would normally route through compositionend /
+            // beforeinput on a contenteditable element; v1 mural surfaces
+            // aren't contenteditable, so dead keys / IME composes degrade
+            // to whatever `e.key` produces. That's good enough for ASCII
+            // typing today; a follow-up can layer a hidden contenteditable
+            // proxy for full IME support.
+            const tiHandled = this.InputManager.InjectTextInput({ Text: e.key });
+            handled = handled || tiHandled;
+        }
+
+        if (handled) e.preventDefault();
     }
 
     private handleWheel(e: WheelEvent): void
@@ -311,7 +439,7 @@ export class HtmlTarget extends PresentationTarget
             DeltaZ:    e.deltaZ,
             DeltaMode: wheelDeltaMode(e.deltaMode),
         };
-        this.inputManager.InjectPointerWheel(hit, init);
+        this.InputManager.InjectPointerWheel(hit, init);
     }
 
     // Convert client coordinates from a DOM event into the target's

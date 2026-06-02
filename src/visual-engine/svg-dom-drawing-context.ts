@@ -135,6 +135,16 @@ export class SvgDomDrawingContext implements DrawingContext
         t.setAttribute('y', formatNumber(origin.Y + baselineOffset));
         t.setAttribute('font-family', text.FontFamily);
         t.setAttribute('font-size',   formatNumber(text.FontSize));
+        // Preserve whitespace — see svg-drawing-context.ts for rationale.
+        // Without this, typing space into a TextBox would visually do
+        // nothing because trailing spaces are stripped by the default
+        // SVG whitespace handling. Namespaced setAttributeNS is required
+        // for the SVG engine to recognise the attribute; plain
+        // setAttribute would write a literal local-name with a colon
+        // in it. Also set the CSS white-space property as belt-and-
+        // suspenders for SVG2-compliant renderers.
+        t.setAttributeNS('http://www.w3.org/XML/1998/namespace', 'xml:space', 'preserve');
+        (t as unknown as { style: CSSStyleDeclaration }).style.whiteSpace = 'pre';
         if (text.FontWeight !== FontWeight.Normal)
         {
             t.setAttribute('font-weight', text.FontWeight);
@@ -144,6 +154,11 @@ export class SvgDomDrawingContext implements DrawingContext
             t.setAttribute('font-style', text.FontStyle);
         }
         applyTextFill(t, text.Foreground);
+        // No textLength / lengthAdjust here — see the matching block
+        // in svg-drawing-context.ts. Forcing the SVG render width to
+        // the measurer's width stretched glyphs visibly whenever the
+        // two engines disagreed by sub-pixels. CanvasTextMeasurer is
+        // accurate enough for caret math at natural widths.
         t.textContent = text.Text;
         this.current().appendChild(t);
     }

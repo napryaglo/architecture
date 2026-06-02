@@ -56,6 +56,22 @@ export class ScrollViewer extends Visual
         // mode's content translation), so flag both.
         Model.RegisterProperty(ScrollViewer, 'HorizontalOffset', 0,         MetaData.Measure | MetaData.Arrange);
         Model.RegisterProperty(ScrollViewer, 'VerticalOffset',   0,         MetaData.Measure | MetaData.Arrange);
+        // Per-axis scroll opt-out. When false, the matching axis is
+        // measured with the bounded available size instead of +Infinity,
+        // so a soft-wrapping child (TextBox in Wrap mode) sees a real
+        // width budget to wrap against. The matching scrollbar also
+        // stays hidden on a disabled axis even when extent > viewport
+        // (the bar would dangle uselessly). Defaults are true so the
+        // existing TreeView / ListBox templates behave as before.
+        Model.RegisterProperty(ScrollViewer, 'HorizontalScrollEnabled', true, MetaData.Measure | MetaData.Arrange);
+        Model.RegisterProperty(ScrollViewer, 'VerticalScrollEnabled',   true, MetaData.Measure | MetaData.Arrange);
+        // Forwarded to the inner ScrollBars' IsAutoHide DPs in the
+        // constructor + via the listener below. Lets a consumer set
+        // ScrollViewer.IsAutoHideScrollBars=true and get the macOS /
+        // Slack-style overlay behaviour without reaching for the bars.
+        // Default false to match the discoverable always-visible bar
+        // shape that TreeView / ListBox lean on.
+        Model.RegisterProperty(ScrollViewer, 'IsAutoHideScrollBars', false, MetaData.None);
     }
 
     // Set by MeasureOverride; read by the public getters and by
@@ -102,7 +118,22 @@ export class ScrollViewer extends Visual
         // the host target the same way the existing Content path does.
         this.AttachVisual(this._vScrollBar);
         this.AttachVisual(this._hScrollBar);
+
+        // Propagate IsAutoHideScrollBars down to both bars. Setting
+        // here covers the initial value; the listener catches runtime
+        // toggles so a consumer flipping the DP at any point still
+        // takes effect.
+        const applyAutoHide = (): void => {
+            const v = this.IsAutoHideScrollBars;
+            this._vScrollBar.IsAutoHide = v;
+            this._hScrollBar.IsAutoHide = v;
+        };
+        applyAutoHide();
+        this.AddPropertyChangedListener('IsAutoHideScrollBars', applyAutoHide);
     }
+
+    public get IsAutoHideScrollBars(): boolean { return this.get_property_value('IsAutoHideScrollBars'); }
+    public set IsAutoHideScrollBars(v: boolean) { this.set_property_value('IsAutoHideScrollBars', v); }
 
     public get Content(): Visual | undefined { return this.get_property_value('Content'); }
     public set Content(value: Visual | undefined)
@@ -119,6 +150,12 @@ export class ScrollViewer extends Visual
 
     public get VerticalOffset(): number { return this.get_property_value('VerticalOffset'); }
     public set VerticalOffset(value: number) { this.set_property_value('VerticalOffset', value); }
+
+    public get HorizontalScrollEnabled(): boolean { return this.get_property_value('HorizontalScrollEnabled'); }
+    public set HorizontalScrollEnabled(v: boolean) { this.set_property_value('HorizontalScrollEnabled', v); }
+
+    public get VerticalScrollEnabled(): boolean { return this.get_property_value('VerticalScrollEnabled'); }
+    public set VerticalScrollEnabled(v: boolean) { this.set_property_value('VerticalScrollEnabled', v); }
 
     public get ExtentWidth():    number { return this._extentWidth; }
     public get ExtentHeight():   number { return this._extentHeight; }
@@ -137,6 +174,66 @@ export class ScrollViewer extends Visual
     public ScrollToBottom(): void { this.VerticalOffset   = this.ScrollableHeight; }
     public ScrollToLeft():   void { this.HorizontalOffset = 0; }
     public ScrollToRight():  void { this.HorizontalOffset = this.ScrollableWidth; }
+
+    // Pan the viewport so `rect` (in CONTENT-LOCAL coordinates — the
+    // same space the Content visual's children are arranged in) is
+    // visible. If `rect` is already fully inside the current viewport,
+    // nothing changes. Otherwise the offset shifts by the minimum
+    // distance that brings the nearest non-visible edge into view,
+    // plus a small `padding` so the rect doesn't sit flush against
+    // the viewport edge.
+    //
+    // Used by TextBox to keep the caret rect on-screen after every
+    // typed character / arrow press. Independent on each axis: a rect
+    // outside vertically AND horizontally adjusts both offsets in one
+    // call.
+    public ScrollIntoView(rect: Rect, padding: number = 4): void
+    {
+        const left   = rect.X;
+        const right  = rect.X + rect.Width;
+        const top    = rect.Y;
+        const bottom = rect.Y + rect.Height;
+
+        const hOff = this.HorizontalOffset;
+        const vOff = this.VerticalOffset;
+        const vw   = this._viewportWidth;
+        const vh   = this._viewportHeight;
+
+        // When the rect is TALLER (or WIDER) than the viewport, the
+        // "show the top edge" and "show the bottom edge" branches both
+        // think they should fire — and they pull in opposite directions.
+        // Caller hits this any time the rect can't fit at all (e.g. a
+        // single-line TextBox whose chrome is shorter than the font's
+        // line height — caret rect is `lineHeight` tall, viewport is
+        // shorter, so caret-into-view oscillates the offset between 0
+        // and the scrollable max on every keystroke / value step).
+        //
+        // Resolution: skip the "scroll toward the far edge" branch when
+        // the rect doesn't fit. Showing the top / left edge is the
+        // conventional default for text and is what every editor does.
+        let newH = hOff;
+        if (left < hOff)
+        {
+            newH = Math.max(0, left - padding);
+        }
+        else if (right > hOff + vw && rect.Width <= vw)
+        {
+            newH = Math.min(this.ScrollableWidth,  right + padding - vw);
+        }
+
+        let newV = vOff;
+        if (top < vOff)
+        {
+            newV = Math.max(0, top - padding);
+        }
+        else if (bottom > vOff + vh && rect.Height <= vh)
+        {
+            newV = Math.min(this.ScrollableHeight, bottom + padding - vh);
+        }
+
+        if (newH !== hOff) this.HorizontalOffset = newH;
+        if (newV !== vOff) this.VerticalOffset   = newV;
+    }
 
     public override get visualChildren(): readonly Visual[]
     {
@@ -242,11 +339,16 @@ export class ScrollViewer extends Visual
         }
         else
         {
-            // Clip-and-translate mode — measure with no upper bound
-            // so content reports its natural extent. The Infinity
-            // values clamp through Min/Max in Visual.Measure to the
-            // child's own max constraints (typically +Infinity).
-            c.Measure(new Size(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY));
+            // Clip-and-translate mode — measure with no upper bound on
+            // axes that scroll, so content reports its natural extent.
+            // For axes a consumer has explicitly disabled (TextBox in
+            // Wrap mode opts out of horizontal scroll so the editor
+            // wraps to width), pass the BOUNDED viewport size on that
+            // axis instead — the child sees its real budget and shapes
+            // its own content to fit.
+            const measureW = this.HorizontalScrollEnabled ? Number.POSITIVE_INFINITY : availableSize.Width;
+            const measureH = this.VerticalScrollEnabled   ? Number.POSITIVE_INFINITY : availableSize.Height;
+            c.Measure(new Size(measureW, measureH));
             this._extentWidth  = c.DesiredSize.Width;
             this._extentHeight = c.DesiredSize.Height;
         }
@@ -271,11 +373,21 @@ export class ScrollViewer extends Visual
         // visible-axis check is just `extent > viewport_along_axis`.
         // Re-running it here (cheap) means a re-arrange with a new
         // finalSize honours the new viewport without waiting for the
-        // next measure.
-        const wantsV = this._extentHeight > finalSize.Height;
-        const wantsH = this._extentWidth  > finalSize.Width;
-        const vGutter = wantsV ? SCROLLBAR_GUTTER : 0;
-        const hGutter = wantsH ? SCROLLBAR_GUTTER : 0;
+        // next measure. Per-axis-disabled scroll also forces the bar
+        // off regardless of extent (consumer doesn't want that axis).
+        const wantsV = this.VerticalScrollEnabled   && this._extentHeight > finalSize.Height;
+        const wantsH = this.HorizontalScrollEnabled && this._extentWidth  > finalSize.Width;
+        // Auto-hide bars overlay the content (macOS / Slack pattern):
+        // no reserved gutter, the bar floats on top of the content's
+        // trailing edge. Without this branch a single-line TextBox sized
+        // to font height + padding would have its content clipped by the
+        // 10-DIP gutter even though the (invisible) bar reserved that
+        // space. Always-visible bars (TreeView, ListBox defaults)
+        // continue to reserve gutter so content + bar don't fight for
+        // pixels.
+        const overlay  = this.IsAutoHideScrollBars;
+        const vGutter = (wantsV && !overlay) ? SCROLLBAR_GUTTER : 0;
+        const hGutter = (wantsH && !overlay) ? SCROLLBAR_GUTTER : 0;
 
         // Adjust the available content slot once we know what each bar
         // is reserving.
@@ -337,11 +449,18 @@ export class ScrollViewer extends Visual
         this._suppressOffsetSync = false;
 
         // Position the bars: vertical on the right edge of the viewport,
-        // horizontal on the bottom. A hidden bar arranges to a zero-size
-        // rect so the renderer paints nothing and pointer events miss.
+        // horizontal on the bottom. In non-overlay mode the gutter has
+        // already been subtracted from contentW/contentH so the bar
+        // sits just past the content's trailing edge. In overlay mode
+        // (auto-hide), the bar OVERLAYS the trailing edge of the
+        // content — same screen position, just no gutter was reserved.
+        // A hidden bar arranges to a zero-size rect so the renderer
+        // paints nothing and pointer events miss.
+        const barWidth  = SCROLLBAR_GUTTER;
         if (wantsV)
         {
-            this._vScrollBar.Arrange(new Rect(contentW, 0, vGutter, contentH));
+            const vX = overlay ? contentW - barWidth : contentW;
+            this._vScrollBar.Arrange(new Rect(vX, 0, barWidth, contentH));
         }
         else
         {
@@ -349,7 +468,8 @@ export class ScrollViewer extends Visual
         }
         if (wantsH)
         {
-            this._hScrollBar.Arrange(new Rect(0, contentH, contentW, hGutter));
+            const hY = overlay ? contentH - barWidth : contentH;
+            this._hScrollBar.Arrange(new Rect(0, hY, contentW, barWidth));
         }
         else
         {

@@ -12,6 +12,14 @@ export { ComboBox } from './combo-box.js';
 export { DockPanel, Dock } from './dock-panel.js';
 export { Drawer, DrawerVariant } from './drawer.js';
 export { TreeView, TreeViewItem } from './tree-view.js';
+export { ListBox, ListBoxItem, SelectionMode } from './list-box.js';
+export {
+    TextBox,
+    TextEditorSurface,
+    type ClipboardSink,
+} from './text-box.js';
+export { SpinEdit } from './spin-edit.js';
+export { Slider, SliderLayout } from './slider.js';
 export { PageView } from './page-view.js';
 export { StackPanel, Orientation } from './stack-panel.js';
 export { ContentControl } from './content-control.js';
