@@ -1740,6 +1740,12 @@ export abstract class Single extends Visual
         {
             this.Attach(child);
         }
+
+        // Dynamic SetChild after the Single has already been measured
+        // must re-flow on the next layout pass — without this, a child
+        // swapped in post-layout would stay un-measured and arrange to
+        // (0,0,0×0). Symmetric with Panel's collection subscription.
+        this.InvalidateMeasure();
     }
 
     // The single child belongs to both trees — a non-templated Single
@@ -1800,9 +1806,17 @@ export class Panel extends Visual
         super();
         // Subscribe once at construction; the unsubscribe is never
         // called — the subscription's lifetime is tied to this Panel.
+        // Invalidates the visualChildren snapshot AND the panel's
+        // measure: a child added (or removed) after the panel has
+        // already been measured must re-flow on the next layout pass —
+        // without this, dynamically-appended children stay un-measured
+        // and arrange to (0,0,0×0). Panel-driven Attach / Detach
+        // doesn't itself invalidate measure, so the ObservableCollection
+        // subscription is the natural seam.
         this._children.Subscribe(() =>
         {
             this._childrenSnapshot = undefined;
+            this.InvalidateMeasure();
         });
     }
 

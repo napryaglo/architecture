@@ -13,7 +13,8 @@ import {
 } from '../runtime/index.js';
 import { PresentationTarget } from '../visual-engine/index.js';
 import { Border } from './border.js';
-import type { StackPanel } from './stack-panel.js';
+import { ItemsControl } from './items-control.js';
+import { StackPanel } from './stack-panel.js';
 import { TextBlock } from './text-block.js';
 import { ensureControlsTheme } from './default-resources.js';
 import { Theme } from './theme.js';
@@ -258,6 +259,79 @@ export class ComboBoxPopupHost extends Panel
     }
 }
 
+// Internal ItemsControl used as the ComboBox popup's row container.
+// Promotes the popup-rows from imperative `rebuildItemContainers` to
+// the full ItemsControl pipeline (Items / ItemTemplate / container
+// recycling, etc.). The owning ComboBox is wired in as a back-pointer
+// after popup-template apply so the per-row click handler can commit
+// SelectedIndex without a back-channel lookup.
+//
+// Exported for the compiled-`.mu` popup template; not public API.
+export class ComboBoxItemList extends ItemsControl
+{
+    static {
+        ensureControlsTheme();
+    }
+
+    // Set by ComboBox after the popup template has been applied — the
+    // PrepareContainerForItemOverride hook reads it to wire click
+    // handlers against the right ComboBox instance.
+    public combo: ComboBox | undefined;
+
+    constructor()
+    {
+        super();
+        this.ItemsPanel = (): StackPanel => new StackPanel();
+    }
+
+    public override GetContainerForItemOverride(item: unknown): Visual
+    {
+        const row = new ClickableBorder();
+        row.Background      = Theme.popupBg;
+        row.BorderThickness = Thickness.Zero;
+        row.Padding         = new Thickness(16, 8, 16, 8);
+        const label = new TextBlock(displayString(item));
+        label.Foreground = Theme.fieldText;
+        row.SetChild(label);
+        return row;
+    }
+
+    public override PrepareContainerForItemOverride(container: Visual, item: unknown, index: number): void
+    {
+        super.PrepareContainerForItemOverride(container, item, index);
+        const row = container as ClickableBorder;
+        // Closures capture index — combo items are rebuilt wholesale
+        // on every Items reassignment, so the closure's index stays in
+        // sync with the row's position in the realized list.
+        row.onClick = (): void =>
+        {
+            const c = this.combo;
+            if (c === undefined) return;
+            c.SelectedIndex    = index;
+            c.IsDropDownOpen   = false;
+        };
+        row.AddPropertyChangedListener('IsMouseOver', () =>
+        {
+            const c = this.combo;
+            row.Background = c !== undefined
+                ? c['itemBackgroundFor'](index, row.IsMouseOver)
+                : Theme.popupBg;
+        });
+    }
+
+    // Symmetric: wipe row.onClick on detach so a recycled / orphaned
+    // row doesn't hold the old ComboBox reference alive through the
+    // closure.
+    public override ClearContainerForItemOverride(container: Visual, item: unknown): void
+    {
+        super.ClearContainerForItemOverride(container, item);
+        if (container instanceof ClickableBorder)
+        {
+            container.onClick = undefined;
+        }
+    }
+}
+
 // Material UI Outlined Select. Drops a selection box that, when
 // clicked, expands a popup containing the items. Clicking an item
 // commits SelectedItem / SelectedIndex and closes the dropdown.
@@ -318,10 +392,9 @@ export class ComboBox extends Visual
     private readonly _selectionBox:    ClickableBorder;
     private readonly _selectionText:   TextBlock;
     private readonly _popup:           Border;
-    private readonly _popupStack:      StackPanel;
+    private readonly _popupList:       ComboBoxItemList;
     private readonly _popupHost:       ComboBoxPopupHost;
     private readonly _scrim:           ClickAwayScrim;
-    private _itemContainers:        ClickableBorder[] = [];
     /** Guard for the SelectedIndex / SelectedItem cross-update — when
      *  one DP setter writes the other we must not loop. */
     private _suppressSelectionSync = false;
@@ -364,12 +437,17 @@ export class ComboBox extends Visual
         const popupTpl  = resolveTemplate(KEY_POPUP);
         const popupInst = popupTpl.Apply(this);
         this._popupHost  = popupInst.root as ComboBoxPopupHost;
-        this._scrim      = popupInst.root.FindName('PART_Scrim')      as ClickAwayScrim;
-        this._popup      = popupInst.root.FindName('PART_Popup')      as Border;
-        this._popupStack = popupInst.root.FindName('PART_PopupStack') as StackPanel;
+        this._scrim      = popupInst.root.FindName('PART_Scrim')     as ClickAwayScrim;
+        this._popup      = popupInst.root.FindName('PART_Popup')     as Border;
+        this._popupList  = popupInst.root.FindName('PART_PopupList') as ComboBoxItemList;
         this._popupHost.combo        = this;
         this._popupHost.selectionBox = this._selectionBox;
         this._popupHost.popup        = this._popup;
+        // Wire the popup ItemsControl back to this combo so its
+        // PrepareContainerForItemOverride hook can commit selection
+        // through us (and so item rows can read SelectedIndex for the
+        // selected-highlight via itemBackgroundFor).
+        this._popupList.combo = this;
         this._scrim.onClick = (): void =>
         {
             this.IsDropDownOpen = false;
@@ -459,7 +537,10 @@ export class ComboBox extends Visual
         switch (descriptor.Name)
         {
             case 'Items':
-                this.rebuildItemContainers();
+                // Forward into the internal ItemsControl — that owns
+                // container materialization now. Setter handles both
+                // arrays and undefined.
+                this._popupList.Items = (newValue as readonly unknown[] | undefined) ?? [];
                 this.syncSelectionFromIndex();
                 this.refreshSelectionText();
                 break;
@@ -484,51 +565,9 @@ export class ComboBox extends Visual
 
     // ── Internal plumbing ───────────────────────────────────────────
 
-    private rebuildItemContainers(): void
-    {
-        // Snapshot before iteration — the loop mutates the stack's
-        // children via RemoveVisualChild.
-        for (const c of [...this._itemContainers])
-        {
-            this._popupStack.RemoveVisualChild(c);
-        }
-        this._itemContainers = [];
-
-        const items = this.Items ?? [];
-        for (let i = 0; i < items.length; i++)
-        {
-            const item  = items[i];
-            const index = i;
-            const row   = new ClickableBorder();
-            row.Background       = Theme.popupBg;
-            row.BorderThickness  = Thickness.Zero;
-            row.Padding          = new Thickness(16, 8, 16, 8);
-            // Hover background swap — same listener pattern as Button.
-            row.AddPropertyChangedListener('IsMouseOver', () => {
-                row.Background = this.itemBackgroundFor(index, row.IsMouseOver);
-            });
-            const label = new TextBlock(displayString(item));
-            label.Foreground = Theme.fieldText;
-            row.SetChild(label);
-            row.onClick = (): void => {
-                this.SelectedIndex   = index;
-                this.IsDropDownOpen = false;
-            };
-            this._popupStack.AddChild(row);
-            this._itemContainers.push(row);
-        }
-
-        // Panel.AddChild / RemoveVisualChild don't auto-invalidate the
-        // panel's measure (the framework relies on the caller to do
-        // it; see ItemsControl.handleItemsChange). Without these the
-        // popup keeps its stale `_isMeasureValid = true` and items
-        // never get measured even after they're attached.
-        this._popupStack.InvalidateMeasure();
-        this._popup.InvalidateMeasure();
-        this._popupHost.InvalidateMeasure();
-        this._popupHost.InvalidateArrange();
-    }
-
+    // Row background priority: selected > hover > default. Read by
+    // ComboBoxItemList's per-row IsMouseOver listener AND by
+    // refreshItemHighlights when SelectedIndex changes from elsewhere.
     private itemBackgroundFor(index: number, hover: boolean)
     {
         if (index === this.SelectedIndex) return Theme.itemSelectedBg;
@@ -538,10 +577,17 @@ export class ComboBox extends Visual
 
     private refreshItemHighlights(): void
     {
-        for (let i = 0; i < this._itemContainers.length; i++)
+        // ComboBoxItemList.logicalChildren is the realized container
+        // list in items order — one ClickableBorder per item. Walking
+        // it directly avoids holding a parallel _itemContainers array.
+        const containers = this._popupList.logicalChildren;
+        for (let i = 0; i < containers.length; i++)
         {
-            const c = this._itemContainers[i]!;
-            c.Background = this.itemBackgroundFor(i, c.IsMouseOver);
+            const c = containers[i];
+            if (c instanceof ClickableBorder)
+            {
+                c.Background = this.itemBackgroundFor(i, c.IsMouseOver);
+            }
         }
     }
 

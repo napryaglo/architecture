@@ -5,6 +5,7 @@ import {
     Panel,
     Rect,
     Size,
+    Style,
     Visual,
     type CollectionChange,
     type DrawingContext,
@@ -15,6 +16,19 @@ import type { DataTemplate } from './data-template.js';
 import { ItemContainerGenerator } from './item-container-generator.js';
 import { ItemsPresenter } from './items-presenter.js';
 import { VirtualizingPanel } from './virtualizing-panel.js';
+
+// Function form of WPF's DataTemplateSelector. Given a data item,
+// return the DataTemplate that should materialize its container, or
+// undefined to fall back to ItemTemplate. Called by the default
+// GetContainerForItemOverride.
+export type ItemTemplateSelector = (item: unknown) => DataTemplate | undefined;
+
+// CollectionView surface — Tier-3 ItemsSource wraps source data in a
+// CollectionView before exposing it as the projected items list. Kept
+// as a type alias here (the concrete class lives in collection-view.ts)
+// so the ItemsControl's ItemsSource setter has a typed hook without
+// importing the heavy implementation file at module-load time.
+import type { CollectionView } from './collection-view.js';
 
 // Factory that constructs a fresh Panel for an ItemsControl to host its
 // generated containers in. Same shape as ControlTemplate's factory —
@@ -52,10 +66,38 @@ export type ItemsPanelFactory = () => Panel;
 export class ItemsControl extends Visual
 {
     static {
-        Model.RegisterProperty(ItemsControl, 'Items',        undefined, MetaData.Measure);
-        Model.RegisterProperty(ItemsControl, 'ItemTemplate', undefined, MetaData.Measure);
-        Model.RegisterProperty(ItemsControl, 'ItemsPanel',   undefined, MetaData.Measure);
-        Model.RegisterProperty(ItemsControl, 'Template',     undefined, MetaData.Measure);
+        Model.RegisterProperty(ItemsControl, 'Items',               undefined, MetaData.Measure);
+        Model.RegisterProperty(ItemsControl, 'ItemsSource',         undefined, MetaData.Measure);
+        Model.RegisterProperty(ItemsControl, 'ItemTemplate',        undefined, MetaData.Measure);
+        Model.RegisterProperty(ItemsControl, 'ItemTemplateSelector',undefined, MetaData.Measure);
+        Model.RegisterProperty(ItemsControl, 'ItemContainerStyle',  undefined, MetaData.Measure);
+        Model.RegisterProperty(ItemsControl, 'ItemsPanel',          undefined, MetaData.Measure);
+        Model.RegisterProperty(ItemsControl, 'Template',            undefined, MetaData.Measure);
+        // AlternationCount = 0 → AlternationIndex unused (every
+        // container gets 0). >0 → AlternationIndex cycles 0..N-1
+        // across containers in items order. WPF parity.
+        Model.RegisterProperty(ItemsControl, 'AlternationCount',    0,         MetaData.None);
+        // HasItems is logically read-only but stored as a plain DP so
+        // it goes through the standard change-notification pipeline
+        // (PropertyTrigger / Binding can observe it). Only the
+        // ItemsControl writes — consumers read.
+        Model.RegisterProperty(ItemsControl, 'HasItems',            false,     MetaData.None);
+
+        // AlternationIndex attached on each generated container during
+        // PrepareContainerForItemOverride. Containers read via
+        // ItemsControl.GetAlternationIndex(container) — counterpart to
+        // Canvas.GetLeft / DockPanel.GetDock.
+        Model.RegisterAttachedProperty(ItemsControl, 'AlternationIndex', 0, MetaData.None);
+    }
+
+    public static SetAlternationIndex(v: Visual, value: number): void
+    {
+        v.set_property_value(ItemsControl, 'AlternationIndex', value);
+    }
+
+    public static GetAlternationIndex(v: Visual): number
+    {
+        return v.get_property_value(ItemsControl, 'AlternationIndex');
     }
 
     private _itemsPanel: Panel | undefined;
@@ -112,6 +154,18 @@ export class ItemsControl extends Visual
 
     public set Items(value: ObservableCollection<any> | readonly unknown[] | undefined)
     {
+        // WPF parity: assigning Items directly while ItemsSource is set
+        // is a programming error — Items is a read-only projection of
+        // ItemsSource in that mode. Throwing surfaces the mistake
+        // immediately rather than silently letting the next refresh
+        // overwrite the assignment.
+        if (this.ItemsSource !== undefined)
+        {
+            throw new Error(
+                "ItemsControl.Items cannot be set while ItemsSource is non-undefined. " +
+                "Clear ItemsSource first (or mutate the source) to drive items.",
+            );
+        }
         const old = this.Items;
         if (old === value) return;
 
@@ -132,6 +186,135 @@ export class ItemsControl extends Visual
         this.rebuildContainers();
     }
 
+    // ── Subclass override points ───────────────────────────────────
+    //
+    // The three methods below mirror WPF's ItemsControl protected
+    // virtuals — exposed as `public` here so VirtualizingPanel-side
+    // realization can route through them without back-channel access.
+    //
+    // Default behavior implements the data-driven path through
+    // ItemTemplateSelector → ItemTemplate. Subclasses override to
+    // wrap items in their own container shape (ListBox wraps in
+    // ListBoxItem; TreeView wraps in TreeViewItem; ComboBox wraps in
+    // ComboBoxItem). Custom subclasses also override
+    // PrepareContainerForItemOverride to attach behavior (selection,
+    // press, etc.) that the data template doesn't know about.
+
+    /**
+     * Build the container Visual for `item`. Default picks the
+     * DataTemplate via ItemTemplateSelector (then ItemTemplate) and
+     * applies it. Subclasses override to wrap in a control-specific
+     * container (e.g., ListBoxItem). Throws when no template resolves
+     * — surface the configuration gap early rather than letting the
+     * panel render nothing.
+     */
+    public GetContainerForItemOverride(item: unknown): Visual
+    {
+        const selector = this.ItemTemplateSelector;
+        const tmpl = selector?.(item) ?? this.ItemTemplate;
+        if (tmpl === undefined)
+        {
+            throw new Error(
+                'ItemsControl: no DataTemplate resolved for item — set ItemTemplate, ItemTemplateSelector, or override GetContainerForItemOverride.',
+            );
+        }
+        return tmpl.Apply(item);
+    }
+
+    /**
+     * Called right after a container is realized and attached to both
+     * trees. The default attaches ItemContainerStyle and stamps
+     * AlternationIndex. Subclasses chain via super.* and add their
+     * own wiring (data context, selection bindings, pointer
+     * handlers).
+     *
+     * `index` is the container's slot in the items collection — used
+     * to compute AlternationIndex and to bind position-aware sub-
+     * styling. The hook fires AFTER tree attach so any setter that
+     * needs the tree (Bindings, DynamicResources) sees a connected
+     * Visual.
+     */
+    public PrepareContainerForItemOverride(container: Visual, item: unknown, index: number): void
+    {
+        const style = this.ItemContainerStyle;
+        if (style !== undefined)
+        {
+            this.applyContainerStyle(container, style);
+        }
+        if (this.AlternationCount > 0)
+        {
+            ItemsControl.SetAlternationIndex(container, this.computeAlternationIndex(index));
+        }
+        // Surface the item on the container for subclasses that want
+        // to read it back without going through the generator's
+        // reverse map. Stored as a plain property bag entry, not a
+        // registered DP — subclasses that want trigger / binding
+        // visibility can register their own DP and copy it across.
+        (container as ContainerWithData)._itemsControlData = item;
+        void item; void index;
+    }
+
+    /**
+     * Symmetric counterpart to PrepareContainerForItemOverride —
+     * called BEFORE the container is detached. Default clears
+     * ItemContainerStyle. Subclasses chain via super.* and undo any
+     * setup they did in Prepare.
+     */
+    public ClearContainerForItemOverride(container: Visual, item: unknown): void
+    {
+        if (this.ItemContainerStyle !== undefined)
+        {
+            this.clearContainerStyle(container);
+        }
+        (container as ContainerWithData)._itemsControlData = undefined;
+        void item;
+    }
+
+    private computeAlternationIndex(slot: number): number
+    {
+        const n = this.AlternationCount;
+        return n > 0 ? slot % n : 0;
+    }
+
+    private applyContainerStyle(container: Visual, style: Style): void
+    {
+        // The container is a plain Visual; Visual.Style takes the
+        // current Style. Apply checks TargetType compatibility and
+        // throws on mismatch — caller's responsibility to match.
+        container.Style = style;
+    }
+
+    private clearContainerStyle(container: Visual): void
+    {
+        if (container.Style !== undefined)
+        {
+            container.Style = undefined;
+        }
+    }
+
+    private updateHasItems(): void
+    {
+        const items = this.Items;
+        let nonEmpty = false;
+        if (items !== undefined)
+        {
+            // Cheap fast path for ObservableCollection / arrays /
+            // CollectionView — anything with Count or .length avoids
+            // a full iteration just to check non-empty.
+            const c = (items as { Count?: number }).Count;
+            if (typeof c === 'number')           nonEmpty = c > 0;
+            else if (Array.isArray(items))       nonEmpty = items.length > 0;
+            else
+            {
+                for (const _ of items as Iterable<unknown>) { nonEmpty = true; break; }
+            }
+        }
+        if (this.HasItems !== nonEmpty)
+        {
+            this.set_property_value('HasItems', nonEmpty);
+        }
+    }
+
     public get ItemTemplate(): DataTemplate | undefined
     {
         return this.get_property_value('ItemTemplate');
@@ -144,6 +327,139 @@ export class ItemsControl extends Visual
         // Template change invalidates every cached container — Realize
         // would return stale instances built from the old template.
         // rebuildContainers will detach + clear the generator first.
+        this.rebuildContainers();
+    }
+
+    // Per-item template selector — queried before ItemTemplate by
+    // GetContainerForItemOverride. Lets a heterogeneous Items
+    // collection render different visuals per data type.
+    public get ItemTemplateSelector(): ItemTemplateSelector | undefined
+    {
+        return this.get_property_value('ItemTemplateSelector');
+    }
+
+    public set ItemTemplateSelector(value: ItemTemplateSelector | undefined)
+    {
+        if (this.ItemTemplateSelector === value) return;
+        this.set_property_value('ItemTemplateSelector', value);
+        // Selector change invalidates cached containers — each item
+        // may now resolve to a different DataTemplate.
+        this.rebuildContainers();
+    }
+
+    // Style applied to every generated container during
+    // PrepareContainerForItemOverride. TargetType must match the
+    // container Visual produced by ItemTemplate / GetContainer.
+    public get ItemContainerStyle(): Style | undefined
+    {
+        return this.get_property_value('ItemContainerStyle');
+    }
+
+    public set ItemContainerStyle(value: Style | undefined)
+    {
+        if (this.ItemContainerStyle === value) return;
+        this.set_property_value('ItemContainerStyle', value);
+        // Reapply the style to every already-realized container.
+        // PrepareContainerForItemOverride re-runs the style set; the
+        // old style (if any) is unapplied by Visual.Style's setter
+        // priority handoff.
+        for (let i = 0; i < this._containers.length; i++)
+        {
+            const c = this._containers[i]!;
+            if (value !== undefined)
+            {
+                this.applyContainerStyle(c, value);
+            }
+            else
+            {
+                this.clearContainerStyle(c);
+            }
+        }
+    }
+
+    public get AlternationCount(): number
+    {
+        return this.get_property_value('AlternationCount');
+    }
+
+    public set AlternationCount(value: number)
+    {
+        if (this.AlternationCount === value) return;
+        this.set_property_value('AlternationCount', value);
+        // Re-stamp AlternationIndex on every realized container so the
+        // new modulus takes effect immediately. New container index =
+        // old slot index % new AlternationCount (or 0 when count = 0).
+        for (let i = 0; i < this._containers.length; i++)
+        {
+            ItemsControl.SetAlternationIndex(this._containers[i]!, this.computeAlternationIndex(i));
+        }
+    }
+
+    public get HasItems(): boolean
+    {
+        return this.get_property_value('HasItems');
+    }
+
+    // ItemsSource is the data-binding hook. Set to ANY iterable (array,
+    // ObservableCollection, CollectionView) and the ItemsControl
+    // projects it through a CollectionView under the hood. When
+    // ItemsSource is set, direct mutation of Items is rejected (WPF
+    // parity: Items becomes a read-only view of ItemsSource).
+    public get ItemsSource(): unknown
+    {
+        return this.get_property_value('ItemsSource');
+    }
+
+    public set ItemsSource(value: unknown)
+    {
+        const old = this.get_property_value('ItemsSource');
+        if (old === value) return;
+        this.set_property_value('ItemsSource', value);
+        this.refreshItemsFromSource();
+    }
+
+    // Lazily-acquired CollectionView for the current ItemsSource. Held
+    // here so SortDescriptions / Filter survive ItemsSource swaps to
+    // the same identity (or revival), and so view-mutation subscribers
+    // see the same instance.
+    private _projectedView: CollectionView | undefined;
+
+    public get View(): CollectionView | undefined
+    {
+        return this._projectedView;
+    }
+
+    private refreshItemsFromSource(): void
+    {
+        // Tear down the old view subscription (if Items was wired up
+        // through one) — the Items setter detaches its own.
+        const src = this.ItemsSource;
+        if (src === undefined)
+        {
+            this._projectedView = undefined;
+            this.applyProjectedItems(undefined);
+            return;
+        }
+        // Lazy require to dodge the items-control / collection-view
+        // import cycle (CollectionView's CollectionChangeListener type
+        // doesn't reach the ItemsControl module at compile time).
+        const view = createCollectionView(src);
+        this._projectedView = view;
+        this.applyProjectedItems(view);
+    }
+
+    private applyProjectedItems(view: CollectionView | undefined): void
+    {
+        // Internal call that bypasses the "ItemsSource set → Items
+        // read-only" guard — refreshItemsFromSource is the only writer
+        // here and it owns the projection.
+        this._itemsSubscription?.();
+        this._itemsSubscription = undefined;
+        this.set_property_value('Items', view);
+        if (view !== undefined)
+        {
+            this._itemsSubscription = view.Subscribe(change => this.handleItemsChange(change));
+        }
         this.rebuildContainers();
     }
 
@@ -383,8 +699,8 @@ export class ItemsControl extends Visual
 
     // Tears down current containers and re-materializes from the
     // current Items + ItemTemplate. Called from Items / ItemTemplate /
-    // ItemsPanel setters as the bulk initial-load path. Per-mutation
-    // updates from an ObservableCollection go through
+    // ItemsPanel / ItemsSource setters as the bulk initial-load path.
+    // Per-mutation updates from an ObservableCollection go through
     // handleItemsChange instead, which only touches affected slots.
     private rebuildContainers(): void
     {
@@ -393,35 +709,63 @@ export class ItemsControl extends Visual
             // Snapshot first — DetachContainer mutates _containers.
             for (const c of [...this._containers])
             {
+                const item = this._generator.ItemFromContainer(c);
+                this.ClearContainerForItemOverride(c, item);
                 this._itemsPanel.RemoveVisualChild(c);
                 this.DetachContainer(c);
             }
         }
         // Wipe the generator's item ↔ container mappings so the next
         // Realize calls produce fresh containers (with whatever the
-        // current ItemTemplate is).
+        // current ItemTemplate / Selector / GetContainer is).
         this._generator.Clear();
 
         const items = this.Items;
-        const template = this.ItemTemplate;
-        if (items === undefined || template === undefined || this._itemsPanel === undefined) return;
+        // Resolution: an item only needs SOMETHING to produce a
+        // container. Per-item resolution lives in
+        // GetContainerForItemOverride; a subclass may have overridden
+        // it and need neither ItemTemplate nor ItemTemplateSelector.
+        // The rebuild bails only when the panel is missing or items
+        // collection is empty/undefined.
+        const haveResolver = this.ItemTemplate !== undefined
+                          || this.ItemTemplateSelector !== undefined
+                          || this.hasContainerOverride();
+        if (items === undefined || !haveResolver || this._itemsPanel === undefined)
+        {
+            this.updateHasItems();
+            return;
+        }
         // VirtualizingPanel owns its own realization; rebuildContainers
         // just clears state and bails. The panel will pick up the
         // new items on its next measure pass.
         if (this._itemsPanel instanceof VirtualizingPanel)
         {
             this._itemsPanel.InvalidateMeasure();
+            this.updateHasItems();
             return;
         }
 
-        const iter = items instanceof ObservableCollection ? items : items;
-        for (const item of iter)
+        let i = 0;
+        for (const item of items as Iterable<unknown>)
         {
             const container = this._generator.Realize(item);
             this._itemsPanel.AddVisualChild(container);
             this.AttachContainer(container);
+            this.PrepareContainerForItemOverride(container, item, i);
+            i++;
         }
+        this.updateHasItems();
         this.InvalidateMeasure();
+    }
+
+    // Subclass-override sniff: returns true when the consumer has
+    // overridden GetContainerForItemOverride. Used to allow rebuilds
+    // that don't have ItemTemplate set but DO have a custom container
+    // path. Compares against the prototype-installed default.
+    private hasContainerOverride(): boolean
+    {
+        const proto = Object.getPrototypeOf(this) as { GetContainerForItemOverride?: unknown };
+        return proto.GetContainerForItemOverride !== ItemsControl.prototype.GetContainerForItemOverride;
     }
 
     // Incremental update path for ObservableCollection mutations on
@@ -434,11 +778,24 @@ export class ItemsControl extends Visual
     // and for InsertVisualChild on the items panel.
     private handleItemsChange(change: CollectionChange<unknown>): void
     {
-        if (this._itemsPanel === undefined || this.ItemTemplate === undefined)
+        if (this._itemsPanel === undefined)
         {
-            // No panel or template — nothing to mirror. _containers
-            // stays empty; when ItemTemplate / ItemsPanel land, the
-            // setter triggers rebuildContainers which catches up.
+            // No panel — nothing to mirror. _containers stays empty;
+            // when ItemsPanel lands, the setter triggers
+            // rebuildContainers which catches up.
+            this.updateHasItems();
+            return;
+        }
+        // Insert / replace / restamp paths need a container resolver
+        // (ItemTemplate, Selector, or a subclass override). Removes
+        // and clears don't — they just unbind. Bailing only when
+        // we'd actually be unable to make progress.
+        const haveResolver = this.ItemTemplate !== undefined
+                          || this.ItemTemplateSelector !== undefined
+                          || this.hasContainerOverride();
+        if (!haveResolver && (change.kind === 'inserted' || change.kind === 'replaced'))
+        {
+            this.updateHasItems();
             return;
         }
         if (this._itemsPanel instanceof VirtualizingPanel)
@@ -449,6 +806,10 @@ export class ItemsControl extends Visual
             return;
         }
         const panel = this._itemsPanel;
+
+        // Whether this batch shifts indices for the AlternationIndex
+        // re-stamp. Inserts/removes/clears shift; replaced does not.
+        let restampFrom: number | undefined = undefined;
 
         switch (change.kind)
         {
@@ -465,7 +826,9 @@ export class ItemsControl extends Visual
                     const container = this._generator.Realize(item);
                     panel.InsertVisualChild(at, container);
                     this.InsertContainer(at, container);
+                    this.PrepareContainerForItemOverride(container, item, at);
                 }
+                restampFrom = change.index + change.items.length;
                 break;
             }
             case 'removed':
@@ -478,10 +841,13 @@ export class ItemsControl extends Visual
                 {
                     const container = this._containers[change.index];
                     if (container === undefined) continue;
+                    const item = this._generator.ItemFromContainer(container);
+                    this.ClearContainerForItemOverride(container, item);
                     panel.RemoveVisualChild(container);
                     this.DetachContainer(container);
                     this._generator.Recycle(container);
                 }
+                restampFrom = change.index;
                 break;
             }
             case 'replaced':
@@ -489,6 +855,8 @@ export class ItemsControl extends Visual
                 const old = this._containers[change.index];
                 if (old !== undefined)
                 {
+                    const oldItem = this._generator.ItemFromContainer(old);
+                    this.ClearContainerForItemOverride(old, oldItem);
                     panel.RemoveVisualChild(old);
                     this.DetachContainer(old);
                     this._generator.Recycle(old);
@@ -496,6 +864,7 @@ export class ItemsControl extends Visual
                 const fresh = this._generator.Realize(change.newItem);
                 panel.InsertVisualChild(change.index, fresh);
                 this.InsertContainer(change.index, fresh);
+                this.PrepareContainerForItemOverride(fresh, change.newItem, change.index);
                 break;
             }
             case 'cleared':
@@ -503,6 +872,8 @@ export class ItemsControl extends Visual
                 // Snapshot first — DetachContainer mutates _containers.
                 for (const c of [...this._containers])
                 {
+                    const item = this._generator.ItemFromContainer(c);
+                    this.ClearContainerForItemOverride(c, item);
                     panel.RemoveVisualChild(c);
                     this.DetachContainer(c);
                 }
@@ -510,6 +881,18 @@ export class ItemsControl extends Visual
                 break;
             }
         }
+        // Re-stamp alternation indices on every container at-or-after
+        // the disturbed slot. Skipped when AlternationCount = 0
+        // (nothing to rotate). Replaced doesn't shift indices, so
+        // restampFrom stays undefined for it.
+        if (restampFrom !== undefined && this.AlternationCount > 0)
+        {
+            for (let i = restampFrom; i < this._containers.length; i++)
+            {
+                ItemsControl.SetAlternationIndex(this._containers[i]!, this.computeAlternationIndex(i));
+            }
+        }
+        this.updateHasItems();
         this.InvalidateMeasure();
     }
 }
@@ -527,4 +910,58 @@ function findFirstItemsPresenter(visual: Visual): ItemsPresenter | undefined
         if (found !== undefined) return found;
     }
     return undefined;
+}
+
+// Structural type used by PrepareContainerForItemOverride to stash
+// the item on the container without registering a DP. Subclasses
+// that want trigger / binding visibility on the item can read the
+// item via Generator.ItemFromContainer instead.
+interface ContainerWithData
+{
+    _itemsControlData?: unknown;
+}
+
+// Lazy CollectionView factory — defers the import so module-load order
+// (items-control before collection-view) doesn't cycle. Wraps source
+// data in a fresh CollectionView; an already-wrapped CollectionView
+// passes through unchanged so view-state (sort / filter / current)
+// survives ItemsSource reassignment to the same view instance.
+//
+// The require() pattern avoids the cycle without forcing the typed
+// surface to lose precision — TypeScript sees CollectionView via the
+// top-of-file `import type`; at runtime we resolve through a tiny
+// indirection that's set on first use.
+let _collectionViewCtor: (new (source: unknown) => CollectionView) | undefined;
+
+function createCollectionView(src: unknown): CollectionView
+{
+    // CollectionView pass-through: instanceof check uses the cached
+    // ctor when one is available — pre-CV-load we can't instanceof
+    // it, so the first call always falls into the load path which
+    // populates _collectionViewCtor and lets later calls skip the
+    // round-trip.
+    if (_collectionViewCtor !== undefined && src instanceof _collectionViewCtor) return src as unknown as CollectionView;
+    if (_collectionViewCtor === undefined)
+    {
+        // Synchronous require would be ideal but ESM doesn't have one;
+        // resolve through a global the consumer wires (see
+        // ItemsControl.RegisterCollectionViewCtor below) so we don't
+        // bake the path here. If unset, fall back to a passthrough
+        // facade — the caller still gets iteration / Subscribe
+        // semantics enough for the non-Tier-3 cases.
+        throw new Error(
+            'ItemsControl.ItemsSource: CollectionView not registered. ' +
+            'Import @visualisation-sub/mural/Controls (the barrel) before assigning ItemsSource — ' +
+            'collection-view.ts registers itself with ItemsControl on load.',
+        );
+    }
+    return new _collectionViewCtor(src);
+}
+
+// Internal hook used by collection-view.ts to register its ctor
+// without creating a static circular import. Not part of the public
+// API; consumers don't call this.
+export function _registerCollectionViewCtor(ctor: new (source: unknown) => CollectionView): void
+{
+    _collectionViewCtor = ctor;
 }

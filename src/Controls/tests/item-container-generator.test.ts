@@ -68,10 +68,12 @@ describe('ItemContainerGenerator', () => {
         assert.equal(ic.Generator.Count, 0);
     });
 
-    test('Realize throws when ItemTemplate is undefined', () => {
+    test('Realize throws when no template resolves for the item', () => {
         const ic = new ItemsControl();
-        // No ItemTemplate set.
-        assert.throws(() => ic.Generator.Realize('a'), /ItemTemplate is undefined/);
+        // No ItemTemplate, no ItemTemplateSelector, no override.
+        // The error now surfaces the multiple resolution options
+        // because Realize delegates through GetContainerForItemOverride.
+        assert.throws(() => ic.Generator.Realize('a'), /DataTemplate resolved/);
     });
 
     test('replacing ItemTemplate clears the generator; old containers go away on next rebuild', () => {

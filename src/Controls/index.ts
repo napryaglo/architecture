@@ -8,6 +8,8 @@ export {
 } from './button.js';
 export { TextBlock, TextWrapping } from './text-block.js';
 export { Canvas } from './canvas.js';
+export { Ellipse } from './ellipse.js';
+export { Line } from './line.js';
 export { ComboBox } from './combo-box.js';
 export { DockPanel, Dock } from './dock-panel.js';
 export { Drawer, DrawerVariant } from './drawer.js';
@@ -30,8 +32,29 @@ export {
     type TemplateFactory,
     type TemplateInstance,
 } from './control-template.js';
-export { DataTemplate, type DataTemplateFactory } from './data-template.js';
-export { ItemsControl, type ItemsPanelFactory } from './items-control.js';
+export {
+    DataTemplate,
+    HierarchicalDataTemplate,
+    type DataTemplateFactory,
+    type HierarchicalChildSelector,
+} from './data-template.js';
+export {
+    ItemsControl,
+    type ItemsPanelFactory,
+    type ItemTemplateSelector,
+} from './items-control.js';
+// CollectionView is imported here for its module-load side effect —
+// it self-registers with ItemsControl so ItemsSource assignments
+// can construct a view. Explicit re-export gives consumers the
+// types they need to drive view-state (Filter, SortDescriptions, …).
+export {
+    CollectionView,
+    SortDescription,
+    GroupDescription,
+    type SortDirection,
+    type FilterPredicate,
+    type CurrentChangedListener,
+} from './collection-view.js';
 export { ItemContainerGenerator } from './item-container-generator.js';
 export { ItemsPresenter } from './items-presenter.js';
 export { VirtualizingPanel } from './virtualizing-panel.js';
@@ -50,6 +73,7 @@ export {
     ClickAwayScrim,
     SplitRow,
     ComboBoxPopupHost,
+    ComboBoxItemList,
 } from './combo-box.js';
 export {
     ScrimSurface,

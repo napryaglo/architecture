@@ -2,10 +2,8 @@ import {
     Application,
     MetaData,
     Model,
-    Rect,
-    Size,
+    ObservableCollection,
     Visual,
-    type DrawingContext,
     type ModifierKeys,
     type PointerEventArgs,
     type PropertyDescriptor,
@@ -14,8 +12,9 @@ import type { Brush } from '../visual-engine/index.js';
 import type { Border } from './border.js';
 import { ContentControl } from './content-control.js';
 import type { ControlTemplate } from './control-template.js';
+import { ItemsControl } from './items-control.js';
+import { Orientation, StackPanel } from './stack-panel.js';
 import { ScrollViewer } from './scroll-viewer.js';
-import { StackPanel } from './stack-panel.js';
 import { TextBlock } from './text-block.js';
 import { Theme } from './theme.js';
 import { ensureControlsTheme } from './default-resources.js';
@@ -33,8 +32,7 @@ function resolveTemplate(key: string): ControlTemplate
     return tpl;
 }
 
-// WPF's three-mode selector. Mirrors the WPF enum (no Single-by-default
-// "None" — the absence of selection is just an empty selection set).
+// WPF's three-mode selector. Mirrors the WPF enum.
 //   Single   — every click sets one item; Ctrl / Shift are ignored.
 //   Multiple — every plain click toggles a single item's membership; no
 //              modifiers required (touch-friendly).
@@ -51,8 +49,7 @@ export enum SelectionMode
 // objects with a conventional Label / Name / Text field prefer the named
 // property, everything else falls through to String(). Lets a consumer
 // pass a plain `Items=["Apples","Pears"]` array without authoring a
-// matching ItemTemplate, OR pass object items as long as they carry one
-// of the conventional display fields.
+// matching ItemTemplate.
 function displayString(item: unknown): string
 {
     if (item === undefined || item === null) return '';
@@ -67,59 +64,55 @@ function displayString(item: unknown): string
     return String(item);
 }
 
-// WPF-style flat-list selector. Two authoring paths:
+// WPF-style flat-list selector built on ItemsControl. Two authoring
+// paths converge on the same Items collection:
 //
 //   1. Composed markup — consumers nest ListBoxItems by hand. Each
-//      item's Content can be any Visual (label, icon + label, custom
-//      template). This is the primary path:
+//      item's Content can be any Visual. Compiler emits AddChild for
+//      each body element; ListBox routes those into Items so the row
+//      becomes a tracked container indistinguishable from a data-
+//      generated one:
 //
 //        ListBox {
 //            ListBoxItem { TextBlock[Text="Apples"]  }
 //            ListBoxItem { TextBlock[Text="Bananas"] }
 //        }
 //
-//   2. Items convenience — assign a `unknown[]` to the `Items` DP and
-//      the ListBox auto-generates one ListBoxItem per value. Each
-//      generated item's Tag carries the source value, so reading
-//      `SelectedItem` returns the data (not the container). Convenient
-//      for binding to a model collection:
+//   2. Data-driven — assign `Items = unknown[]` (or set ItemsSource
+//      to bind to a CollectionView). ListBox auto-wraps each value in
+//      a ListBoxItem via GetContainerForItemOverride; the wrapper's
+//      Tag carries the source value so SelectedItem returns the data,
+//      not the container:
 //
 //        ListBox [ Items = $fruits ]
 //
-// Both paths can coexist — auto-generated items are tracked separately
-// and only the auto-generated ones are torn down on the next Items
-// reset; any declarative children survive.
+// Behaviour change vs the pre-ItemsControl era: setting Items now
+// REPLACES the entire collection — including any declarative children.
+// WPF parity. Authors that want a mix should add the data items via
+// `lb.Items.Add(value)` instead of clearing-and-replacing.
 //
 // Selection semantics depend on SelectionMode (Single / Multiple /
 // Extended). Single is the default; Extended adds Ctrl / Shift modifier
-// handling identical to TreeView's. SelectedItem returns the Tag of the
-// first selected container when set (Items path), or the container
-// itself when Tag is undefined (declarative path) — mirroring WPF's
-// dual-mode SelectedItem.
-export class ListBox extends Visual
+// handling identical to TreeView's. SelectedItem returns the Tag of
+// the first selected container when Tag is set (Items-driven path) or
+// the container itself when Tag is undefined (declarative path) —
+// mirroring WPF's dual-mode SelectedItem.
+export class ListBox extends ItemsControl
 {
     static {
-        Model.RegisterProperty(ListBox, 'Items',          undefined,                MetaData.Measure);
-        Model.RegisterProperty(ListBox, 'SelectionMode',  SelectionMode.Single,     MetaData.None);
-        Model.RegisterProperty(ListBox, 'SelectedIndex',  -1,                       MetaData.None);
-        Model.RegisterProperty(ListBox, 'SelectedItem',   undefined,                MetaData.None);
+        Model.RegisterProperty(ListBox, 'SelectionMode',  SelectionMode.Single, MetaData.None);
+        Model.RegisterProperty(ListBox, 'SelectedIndex',  -1,                   MetaData.None);
+        Model.RegisterProperty(ListBox, 'SelectedItem',   undefined,            MetaData.None);
         ensureControlsTheme();
     }
 
-    // Markup-defined chrome (ScrollViewer wrapping a vertical StackPanel),
-    // resolved from DefaultListBox in the controls theme.
-    private readonly _scrollViewer: ScrollViewer;
-    private readonly _stack:        StackPanel;
-
-    // Flat list of every ListBoxItem child (declarative + auto-generated)
-    // in insertion order. Index space for SelectedIndex AND for Shift+click
-    // range selection.
-    private readonly _items: ListBoxItem[] = [];
-
-    // Auto-generated items get tracked separately so a subsequent Items
-    // write only tears down what we generated — declarative children
-    // survive across Items resets.
-    private readonly _autoGenerated: Set<ListBoxItem> = new Set();
+    // Backing for AddChild — when no caller-supplied Items collection
+    // is in place, declarative children land in this observable list,
+    // which we expose as the active Items value. A later
+    // `lb.Items = newArr` replaces it (and the declarative items it
+    // held) — WPF parity.
+    private readonly _declarativeItems: ObservableCollection<unknown>
+        = new ObservableCollection<unknown>();
 
     // Selection bookkeeping — same shape as TreeView, minus the
     // visible/expanded distinction (every ListBoxItem is always visible).
@@ -128,36 +121,30 @@ export class ListBox extends Visual
     private readonly _selectionListeners: Set<() => void> = new Set();
 
     // Guard for the SelectedIndex / SelectedItem cross-update — when one
-    // DP setter writes the other we must not loop. Same pattern as
-    // ComboBox.
+    // DP setter writes the other we must not loop.
     private _suppressSelectionSync = false;
+
+    // Cached after first template apply — the lookup walks the
+    // template instance once; subsequent reads return the cached ref.
+    private _scrollViewer: ScrollViewer | undefined;
 
     constructor()
     {
         super();
-        const inst = resolveTemplate(KEY_LISTBOX).Apply(this);
-        this._scrollViewer = inst.root as ScrollViewer;
-        this._stack        = inst.root.FindName('PART_Stack') as StackPanel;
-        this.AttachVisual(this._scrollViewer);
+        // Template + items panel are the two halves of an
+        // ItemsControl: Template owns the surrounding chrome
+        // (ScrollViewer + ItemsPresenter slot); ItemsPanel produces
+        // the panel that hosts containers (vertical StackPanel).
+        this.Template = resolveTemplate(KEY_LISTBOX);
+        this.ItemsPanel = () => new StackPanel();
+        // Establish the default Items source so declarative AddChild
+        // has somewhere to push into without the caller pre-setting
+        // Items.
+        this.Items = this._declarativeItems;
     }
 
-    public get Items(): readonly unknown[] | undefined
-    {
-        return this.get_property_value('Items');
-    }
-    public set Items(v: readonly unknown[] | undefined)
-    {
-        this.set_property_value('Items', v);
-    }
-
-    public get SelectionMode(): SelectionMode
-    {
-        return this.get_property_value('SelectionMode');
-    }
-    public set SelectionMode(v: SelectionMode)
-    {
-        this.set_property_value('SelectionMode', v);
-    }
+    public get SelectionMode(): SelectionMode { return this.get_property_value('SelectionMode'); }
+    public set SelectionMode(v: SelectionMode) { this.set_property_value('SelectionMode', v); }
 
     public get SelectedIndex(): number { return this.get_property_value('SelectedIndex'); }
     public set SelectedIndex(v: number) { this.set_property_value('SelectedIndex', v); }
@@ -165,45 +152,92 @@ export class ListBox extends Visual
     public get SelectedItem(): unknown { return this.get_property_value('SelectedItem'); }
     public set SelectedItem(v: unknown) { this.set_property_value('SelectedItem', v); }
 
-    // Compiler routes `ListBox { ListBoxItem … }` body items through
+    // Compiler routes `ListBox { ListBoxItem … }` body elements through
     // here (DEFAULT_SLOT_INFO maps ListBox to { name: 'Items', kind:
-    // 'list' }). Same two-tree split as TreeView: logical parent is
-    // this ListBox so DataContext / inheritance flow naturally; visual
-    // parent is the inner StackPanel so the row stack renders.
+    // 'list' }, which emits AddChild). Forwarding to Items keeps the
+    // declarative path on the SAME materialization pipeline as the
+    // data-driven path — IsItemItsOwnContainerOverride (the next
+    // method) recognises pre-built ListBoxItems and passes them
+    // through GetContainerForItemOverride without wrapping.
     public AddChild(child: Visual): void
     {
         if (!(child instanceof ListBoxItem))
         {
             throw new Error('ListBox only accepts ListBoxItem children');
         }
-        this.AttachLogical(child);
-        this._stack.AddVisualChild(child);
-        this._items.push(child);
-        this._stack.InvalidateMeasure();
-        this.InvalidateMeasure();
+        // Route through Items so the ItemsControl pipeline does the
+        // tree wiring + selection bookkeeping. If the caller swapped
+        // Items out from under us with their own observable, we
+        // append to THAT one; declarative items "join" the data list.
+        const items = this.Items;
+        if (items instanceof ObservableCollection)
+        {
+            items.Add(child);
+        }
+        else
+        {
+            // Items is a plain array (or undefined) — neither
+            // supports incremental append. Promote to our observable
+            // backing list (containing whatever was already there)
+            // so the new child lands cleanly.
+            this.promoteToObservable();
+            this._declarativeItems.Add(child);
+        }
     }
 
     public RemoveChild(child: Visual): void
     {
         if (!(child instanceof ListBoxItem)) return;
-        const idx = this._items.indexOf(child);
-        if (idx < 0) return;
+        const items = this.Items;
+        if (items instanceof ObservableCollection)
+        {
+            items.Remove(child);
+        }
+    }
 
-        // Drop the row's contribution to selection BEFORE breaking the
-        // logical chain — the SelectionChanged listeners may walk back
-        // into the tree to read state, so we want the post-detach
-        // selection set to already be consistent.
-        const wasSelected = this._selectedItems.delete(child);
-        if (wasSelected) child.SetIsSelectedInternal(false);
-        if (this._anchor === child) this._anchor = undefined;
-        this._autoGenerated.delete(child);
+    // Flips Items from a plain array (or undefined) to the
+    // declarative ObservableCollection, preserving content. Used when
+    // a consumer set Items to a fixed array and then declarative
+    // AddChild needs to append.
+    private promoteToObservable(): void
+    {
+        const current = this.Items;
+        this._declarativeItems.Clear();
+        if (Array.isArray(current))
+        {
+            for (const v of current) this._declarativeItems.Add(v);
+        }
+        // Bypass the "Items is read-only while ItemsSource is set" guard
+        // — ItemsSource is undefined here by definition (otherwise the
+        // declarative AddChild would have rejected earlier).
+        this.Items = this._declarativeItems;
+    }
 
-        this._stack.RemoveVisualChild(child);
-        this.DetachLogical(child);
-        this._items.splice(idx, 1);
-        this._stack.InvalidateMeasure();
-        this.InvalidateMeasure();
+    // ── ItemsControl override seams ────────────────────────────────
 
+    public override GetContainerForItemOverride(item: unknown): Visual
+    {
+        // Items added declaratively are already containers — pass them
+        // through. Data values get auto-wrapped with the source value
+        // on Tag so SelectedItem reads return the data, not the
+        // container.
+        if (item instanceof ListBoxItem) return item;
+        const li = new ListBoxItem();
+        li.Tag     = item;
+        li.Content = new TextBlock(displayString(item));
+        return li;
+    }
+
+    public override ClearContainerForItemOverride(container: Visual, item: unknown): void
+    {
+        super.ClearContainerForItemOverride(container, item);
+        if (!(container instanceof ListBoxItem)) return;
+        // Drop the row's contribution to selection BEFORE the base
+        // ItemsControl detaches it. Listeners observe the post-clean
+        // state.
+        const wasSelected = this._selectedItems.delete(container);
+        if (wasSelected) container.SetIsSelectedInternal(false);
+        if (this._anchor === container) this._anchor = undefined;
         if (wasSelected)
         {
             this.refreshExposedSelection();
@@ -211,18 +245,21 @@ export class ListBox extends Visual
         }
     }
 
-    public override get visualChildren(): readonly Visual[]  { return [this._scrollViewer]; }
-    public override get logicalChildren(): readonly Visual[] { return this._items; }
+    // Snapshot of all materialized ListBoxItem containers, in items
+    // order. Index space for SelectedIndex and Shift+click range
+    // selection.
+    public get ItemContainers(): readonly ListBoxItem[]
+    {
+        // logicalChildren on ItemsControl is the realized containers
+        // list. All entries are ListBoxItems by our override; the
+        // cast is safe.
+        return this.logicalChildren as readonly ListBoxItem[];
+    }
 
-    // Live read-only handle to the row containers — same role as
-    // TreeView.RootItems. Consumers iterate this to drive ad-hoc selection,
-    // scroll-into-view, or counts without paying for a defensive copy.
-    public get ItemContainers(): readonly ListBoxItem[] { return this._items; }
-
-    // Snapshot of the current multi-selection, in insertion order. Each
-    // entry is the container's Tag when present (Items-driven path) or
-    // the container itself when Tag is unset (declarative path) — same
-    // dual-mode rule as SelectedItem.
+    // Snapshot of the current multi-selection, in insertion order.
+    // Each entry is the container's Tag when present (Items-driven
+    // path) or the container itself when Tag is unset (declarative
+    // path).
     public get SelectedItems(): readonly unknown[]
     {
         const out: unknown[] = [];
@@ -233,10 +270,25 @@ export class ListBox extends Visual
         return out;
     }
 
-    // Read-only handle to the default-template ScrollViewer — same shape
-    // as TreeView.ScrollViewer. Consumers that want to drive scroll
-    // position (jump-to-selected, restore-on-load) can call into it.
-    public get ScrollViewer(): ScrollViewer { return this._scrollViewer; }
+    // Read-only handle to the default-template ScrollViewer. Resolved
+    // lazily on first access — the template subtree is available
+    // after the constructor's Template assignment.
+    public get ScrollViewer(): ScrollViewer
+    {
+        if (this._scrollViewer !== undefined) return this._scrollViewer;
+        const root = this.visualChildren[0];
+        if (root === undefined)
+        {
+            throw new Error('ListBox: template root not attached yet.');
+        }
+        const sv = root.FindName('PART_Scroll');
+        if (!(sv instanceof ScrollViewer))
+        {
+            throw new Error('ListBox: PART_Scroll missing from DefaultListBox template.');
+        }
+        this._scrollViewer = sv;
+        return sv;
+    }
 
     public AddSelectionChangedListener(listener: () => void): void
     {
@@ -258,9 +310,8 @@ export class ListBox extends Visual
     }
 
     // Entry point for row clicks — invoked by ListBoxItem.OnPointerUp
-    // when the press originated locally and the pointer is still inside.
-    // Modifier interpretation depends on SelectionMode; see the enum
-    // comment for the per-mode rules.
+    // when the press originated locally and the pointer is still
+    // inside. Modifier interpretation depends on SelectionMode.
     public HandleItemClick(item: ListBoxItem, modifiers: ModifierKeys): void
     {
         const mode = this.SelectionMode;
@@ -299,10 +350,10 @@ export class ListBox extends Visual
     private setSelected(items: readonly ListBoxItem[]): void
     {
         const next = new Set(items);
-        // Diff against the current set so IsSelected only flips on rows
-        // whose membership actually changed — saves a render-dirty on
-        // rows that stay selected (the common case for an overlapping
-        // Shift+click range).
+        // Diff against the current set so IsSelected only flips on
+        // rows whose membership actually changed — saves a render-
+        // dirty on rows that stay selected (the common case for an
+        // overlapping Shift+click range).
         for (const i of this._selectedItems)
         {
             if (!next.has(i)) i.SetIsSelectedInternal(false);
@@ -331,12 +382,13 @@ export class ListBox extends Visual
 
     private selectRange(from: ListBoxItem, to: ListBoxItem): void
     {
-        const fromIdx = this._items.indexOf(from);
-        const toIdx   = this._items.indexOf(to);
+        const containers = this.ItemContainers;
+        const fromIdx = containers.indexOf(from);
+        const toIdx   = containers.indexOf(to);
         if (fromIdx < 0 || toIdx < 0) return;
         const lo = Math.min(fromIdx, toIdx);
         const hi = Math.max(fromIdx, toIdx);
-        this.setSelected(this._items.slice(lo, hi + 1));
+        this.setSelected(containers.slice(lo, hi + 1));
     }
 
     private fireSelectionChanged(): void
@@ -344,10 +396,11 @@ export class ListBox extends Visual
         for (const l of this._selectionListeners) l();
     }
 
-    // Push the internal selection set's first member out to the public
-    // DPs. Read-only mirror — the DPs reflect the multi-selection
-    // model's "primary" item but never drive the model on their own
-    // (HandleItemClick / ClearSelection / direct DP writes do).
+    // Push the internal selection set's first member out to the
+    // public DPs. Read-only mirror — the DPs reflect the multi-
+    // selection model's "primary" item but never drive the model on
+    // their own (HandleItemClick / ClearSelection / direct DP writes
+    // do).
     private refreshExposedSelection(): void
     {
         const first: ListBoxItem | undefined =
@@ -360,7 +413,8 @@ export class ListBox extends Visual
         }
         else
         {
-            this.SelectedIndex = this._items.indexOf(first);
+            const containers = this.ItemContainers;
+            this.SelectedIndex = containers.indexOf(first);
             this.SelectedItem  = first.Tag !== undefined ? first.Tag : first;
         }
         this._suppressSelectionSync = false;
@@ -375,9 +429,6 @@ export class ListBox extends Visual
         super.OnPropertyChanged(descriptor, oldValue, newValue);
         switch (descriptor.Name)
         {
-            case 'Items':
-                this.rebuildAutoItems();
-                break;
             case 'SelectedIndex':
                 if (this._suppressSelectionSync) break;
                 this.applySelectedIndex(newValue as number);
@@ -389,47 +440,23 @@ export class ListBox extends Visual
         }
     }
 
-    // Tear down previously auto-generated items, then create a fresh
-    // ListBoxItem per value in the new Items array. Declarative children
-    // (those added by markup or AddChild) survive untouched — they aren't
-    // in _autoGenerated.
-    private rebuildAutoItems(): void
-    {
-        for (const item of [...this._autoGenerated])
-        {
-            this.RemoveChild(item);
-        }
-        this._autoGenerated.clear();
-
-        const arr = this.Items;
-        if (arr === undefined) return;
-
-        for (const value of arr)
-        {
-            const li = new ListBoxItem();
-            li.Tag     = value;
-            li.Content = new TextBlock(displayString(value));
-            this._autoGenerated.add(li);
-            this.AddChild(li);
-        }
-    }
-
     private applySelectedIndex(idx: number): void
     {
-        if (idx < 0 || idx >= this._items.length)
+        const containers = this.ItemContainers;
+        if (idx < 0 || idx >= containers.length)
         {
             this.setSelected([]);
             this._anchor = undefined;
         }
         else
         {
-            const item = this._items[idx]!;
+            const item = containers[idx]!;
             this.setSelected([item]);
             this._anchor = item;
         }
-        // Mirror back out — keep BOTH DPs consistent with the selection
-        // set. Includes normalising an out-of-range write (e.g.
-        // `SelectedIndex = 99` on a 3-row list) back to -1.
+        // Mirror back out — keep BOTH DPs consistent with the
+        // selection set. Includes normalising an out-of-range write
+        // back to -1.
         this._suppressSelectionSync = true;
         const first: ListBoxItem | undefined =
             this._selectedItems.values().next().value;
@@ -440,7 +467,8 @@ export class ListBox extends Visual
         }
         else
         {
-            this.SelectedIndex = this._items.indexOf(first);
+            const containers2 = this.ItemContainers;
+            this.SelectedIndex = containers2.indexOf(first);
             this.SelectedItem  = first.Tag !== undefined ? first.Tag : first;
         }
         this._suppressSelectionSync = false;
@@ -449,6 +477,7 @@ export class ListBox extends Visual
 
     private applySelectedItem(value: unknown): void
     {
+        const containers = this.ItemContainers;
         if (value === undefined)
         {
             this.setSelected([]);
@@ -456,9 +485,9 @@ export class ListBox extends Visual
         }
         else
         {
-            // Match Tag identity first (Items mode), then the container
-            // itself (declarative mode without a Tag).
-            const match = this._items.find(li => li.Tag === value || li === value);
+            // Match Tag identity first (Items mode), then the
+            // container itself (declarative mode without a Tag).
+            const match = containers.find(li => li.Tag === value || li === value);
             if (match !== undefined)
             {
                 this.setSelected([match]);
@@ -475,62 +504,33 @@ export class ListBox extends Visual
         this._suppressSelectionSync = true;
         const first: ListBoxItem | undefined =
             this._selectedItems.values().next().value;
-        this.SelectedIndex = first === undefined ? -1 : this._items.indexOf(first);
+        this.SelectedIndex = first === undefined
+            ? -1
+            : this.ItemContainers.indexOf(first);
         this._suppressSelectionSync = false;
         this.fireSelectionChanged();
     }
-
-    protected override propagate_target_to_visual_children(): void
-    {
-        this._scrollViewer['SetTarget'](this['target']);
-    }
-
-    protected override propagate_inheritance_to_logical_children(): void
-    {
-        for (const i of this._items) i['refresh_inheritance_subtree']();
-    }
-
-    protected override propagate_inheritance_for_logical_children(d: PropertyDescriptor): void
-    {
-        for (const i of this._items) i['refresh_inherited'](d);
-    }
-
-    protected override MeasureOverride(availableSize: Size): Size
-    {
-        this._scrollViewer.Measure(availableSize);
-        return this._scrollViewer.DesiredSize;
-    }
-
-    protected override ArrangeOverride(finalSize: Size): Size
-    {
-        this._scrollViewer.Arrange(new Rect(0, 0, finalSize.Width, finalSize.Height));
-        return finalSize;
-    }
-
-    protected override RenderOverride(_dc: DrawingContext): void { }
 }
 
 // One row in the list. Authored in markup, instantiated either by the
 // consumer (declarative `ListBox { ListBoxItem { … } }`) or by the
-// owning ListBox (Items convenience path — see ListBox.rebuildAutoItems).
+// owning ListBox (data-driven path — see ListBox.GetContainerForItemOverride).
 //
 // Public DPs:
 //   Content    — inherited from ContentControl. The slottable body
 //                rendered inside the row's template.
 //   IsSelected — true when this row participates in the ListBox's
 //                current selection. Read-mostly: written by the
-//                ListBox's HandleItemClick / setSelected; settable from
-//                consumer code to initialise a default selection.
-//   Tag        — opaque payload. The Items convenience path stores the
-//                source data value here; ListBox.SelectedItem reads it
-//                back so external bindings see the source data instead
-//                of the container.
+//                ListBox's HandleItemClick / setSelected; settable
+//                from consumer code to initialise a default selection.
+//   Tag        — opaque payload. The data-driven path stores the
+//                source value here; ListBox.SelectedItem reads it
+//                back so external bindings see the source data
+//                instead of the container.
 //
-// Click handling: press-here-release-here gate (same shape as
-// ClickableBorder in ComboBox and ClickableRow in TreeView); on release
-// the event walks logical parents to find the owning ListBox and routes
-// HandleItemClick with the originating PointerEventArgs.Modifiers so the
-// ListBox can branch on Ctrl / Shift for Extended-mode multi-select.
+// Click handling: press-here-release-here gate; on release the event
+// walks logical parents to find the owning ListBox and routes
+// HandleItemClick with the originating PointerEventArgs.Modifiers.
 export class ListBoxItem extends ContentControl
 {
     static {
@@ -554,16 +554,9 @@ export class ListBoxItem extends ContentControl
     public get IsSelected(): boolean { return this.get_property_value('IsSelected'); }
     public set IsSelected(v: boolean) { this.set_property_value('IsSelected', v); }
 
-    // Tag is inherited from Visual (every Visual has it as a no-op
-    // payload slot). The Items convenience path on ListBox writes the
-    // source data into Tag so SelectedItem reads can return the data
-    // instead of the container — see ListBox.rebuildAutoItems.
-
     // Setter exposed for ListBox's internal selection bookkeeping —
     // bypasses HandleItemClick so writing the DP doesn't loop back
-    // through the click pipeline. Consumers should set `IsSelected`
-    // directly via the public setter when they want to initialise
-    // selection from code.
+    // through the click pipeline.
     public SetIsSelectedInternal(v: boolean): void
     {
         this.set_property_value('IsSelected', v);
@@ -598,9 +591,7 @@ export class ListBoxItem extends ContentControl
         if (descriptor.Name === 'IsSelected') this.refreshBackground();
     }
 
-    // Walk the logical-parent chain for the owning ListBox. Returns
-    // undefined when this item hasn't been added to a ListBox yet
-    // (construction stage) or when it's been removed.
+    // Walk the logical-parent chain for the owning ListBox.
     private findListBox(): ListBox | undefined
     {
         let cur: Visual | undefined = this.GetLogicalParent();
@@ -614,7 +605,7 @@ export class ListBoxItem extends ContentControl
 
     // Background priority: selected wins over hover. Transparent
     // (undefined Background) is the default — the ListBox's host
-    // surface shows through, matching MUI's flat list style.
+    // surface shows through.
     private refreshBackground(): void
     {
         if (this._border === undefined) return;
@@ -625,3 +616,10 @@ export class ListBoxItem extends ContentControl
         this._border.Background = bg;
     }
 }
+
+// Silence "unused import" — Orientation is used implicitly: the
+// StackPanel ItemsPanel factory defaults to Vertical (registered
+// default), so we don't pass it explicitly. Keeping the import
+// makes the dependency relationship explicit in the import list
+// for grep / IDE jump-to-source.
+void Orientation;

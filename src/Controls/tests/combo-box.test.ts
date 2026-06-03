@@ -121,13 +121,18 @@ function mountInTarget(cb: ComboBox): HeadlessTarget {
 //     └─ popupHost (Panel)
 //          ├─ scrim (Border)
 //          └─ popup (Border)
-//               └─ stack (StackPanel)
-//                    └─ item containers (ClickableBorder…)
+//               └─ ComboBoxItemList (internal ItemsControl)
+//                    └─ items panel (StackPanel)
+//                         └─ item containers (ClickableBorder…)
 function popupItems(target: HeadlessTarget): readonly Visual[] {
     const overlay = target.OverlayRoot!;
     const popupHost = overlay.visualChildren[0]!;
     const popup = popupHost.visualChildren[1] as Border;
-    const stack = popup.visualChildren[0] as StackPanel;
+    // popup → ComboBoxItemList → items panel (StackPanel) → rows.
+    // The ItemsControl layer is the post-refactor change; previously
+    // the popup hosted a plain StackPanel directly.
+    const popupList   = popup.visualChildren[0]!;
+    const stack       = popupList.visualChildren[0] as StackPanel;
     return stack.visualChildren;
 }
 

@@ -2,16 +2,17 @@ import {
     Application,
     MetaData,
     Model,
+    ObservableCollection,
     Rect,
     Size,
     Visual,
-    type DrawingContext,
     type ModifierKeys,
     type PointerEventArgs,
     type PropertyDescriptor,
 } from '../runtime/index.js';
 import { RectangleGeometry, type Brush } from '../visual-engine/index.js';
 import { Border } from './border.js';
+import { ItemsControl } from './items-control.js';
 import { ScrollViewer } from './scroll-viewer.js';
 import { StackPanel } from './stack-panel.js';
 import { TextBlock } from './text-block.js';
@@ -97,11 +98,11 @@ export class ChevronTarget extends Border
 }
 
 // Vertical StackPanel that collapses to zero size when its host says
-// so — used as the children-rows container under each TreeViewItem.
-// Children stay attached (logical + visual) but are measured at
-// Size.Zero and arranged at (0,0,0,0) when collapsed, AND the panel
-// itself clips to a 0×0 rect so the children's internal sub-layouts
-// don't paint outside the (collapsed) parent's bounds.
+// so — used as the items panel under each TreeViewItem. Children
+// stay attached (logical + visual) but are measured at Size.Zero and
+// arranged at (0,0,0,0) when collapsed, AND the panel itself clips
+// to a 0×0 rect so the children's internal sub-layouts don't paint
+// outside the (collapsed) parent's bounds.
 //
 // The clip is what makes collapse visible: rows inside have fixed
 // Height (32 DIPs) and labels positioned by depth, so without a clip
@@ -109,7 +110,7 @@ export class ChevronTarget extends Border
 // into the rows below. clip-path on the panel's outer <g> cuts both
 // paint AND, via SVG's default `pointer-events: visiblePainted`,
 // hit-testing — so the collapsed glyphs aren't clickable either.
-// Exported for the compiled-`.mu` TreeViewItem template (not public API).
+// Exported so TreeViewItem.ItemsPanel can factory one.
 export class CollapsibleStack extends StackPanel
 {
     private _collapsed = false;
@@ -161,111 +162,126 @@ export class CollapsibleStack extends StackPanel
 
 // WPF-style hierarchical list with chevron expand/collapse and
 // multi-select via Ctrl (toggle) / Shift (extend from anchor) clicks.
-// Composed-markup primary: consumers nest TreeViewItems by hand:
+// Built on ItemsControl — Items hosts the root TreeViewItem rows;
+// each TreeViewItem is itself an ItemsControl for its sub-items.
+//
+// Composed markup stays the primary authoring path:
 //
 //   TreeView {
 //       TreeViewItem[Header="Root"] {
 //           TreeViewItem[Header="Branch"] {
-//               TreeViewItem[Header="Leaf"] { }
+//               TreeViewItem[Header="Leaf"]
 //           }
 //       }
 //   }
 //
-// Plain click on a row sets the selection to that one item AND moves
-// the selection anchor to it. Ctrl+click toggles membership AND moves
-// the anchor. Shift+click extends the selection from the anchor to the
-// clicked row (inclusive), traversing visible-items order — skips
-// collapsed subtrees, matching what users see on screen.
-//
-// SelectedItem is a convenience getter returning the first item in
-// SelectedItems (insertion order via Set semantics). A consumer that
-// only cares about single-select can ignore Ctrl/Shift and treat
-// SelectedItem like the WPF default.
-export class TreeView extends Visual
+// Compiler routes body items through AddChild → Items so declarative
+// children join the same materialization pipeline as data-driven
+// items (future: HierarchicalDataTemplate). Selection state lives
+// here on the root TreeView; clicks bubble up via findTree().
+export class TreeView extends ItemsControl
 {
     static {
         Model.RegisterProperty(TreeView, 'Indent', 16, MetaData.Measure | MetaData.Arrange);
         ensureControlsTheme();
     }
 
-    private readonly _stack: StackPanel;
-    // The scroll viewport wrapping `_stack`. Default-template part —
-    // every TreeView gets it so consumers don't have to compose a
-    // ScrollViewer themselves to make a tall tree usable. Wheel events
-    // bubble up to it from any row, so mouse-wheel + Shift-wheel scrolling
-    // work without extra wiring.
-    private readonly _scrollViewer: ScrollViewer;
-    private readonly _rootItems: TreeViewItem[] = [];
+    // Backing for AddChild — declarative children land here when no
+    // caller-supplied Items collection is in place. Same pattern as
+    // ListBox.
+    private readonly _declarativeItems: ObservableCollection<unknown>
+        = new ObservableCollection<unknown>();
+
     private readonly _selectedItems: Set<TreeViewItem> = new Set();
     private _anchor: TreeViewItem | undefined;
     private readonly _selectionListeners: Set<() => void> = new Set();
 
+    // Cached template-part reference. Resolved lazily on first access
+    // because the template subtree only exists after the constructor's
+    // Template assignment.
+    private _scrollViewer: ScrollViewer | undefined;
+
     constructor()
     {
         super();
-        // Markup-defined ScrollViewer wrapping a vertical StackPanel,
-        // resolved from DefaultTreeView in the controls theme. The
-        // ScrollViewer (PART_Scroll) is the visual child the TreeView
-        // attaches into its own subtree; the StackPanel (PART_Stack) is
-        // where AddChild appends each root row.
-        const inst = resolveTemplate(KEY_TREEVIEW).Apply(this);
-        this._scrollViewer = inst.root as ScrollViewer;
-        this._stack        = inst.root.FindName('PART_Stack') as StackPanel;
-        this.AttachVisual(this._scrollViewer);
+        this.Template = resolveTemplate(KEY_TREEVIEW);
+        this.ItemsPanel = () => new StackPanel();
+        this.Items = this._declarativeItems;
     }
 
     public get Indent(): number { return this.get_property_value('Indent'); }
     public set Indent(v: number) { this.set_property_value('Indent', v); }
 
-    // The compiler emits `parent.AddChild(child)` for every body element
-    // when the host's default slot is `list`. TreeView routes each call
-    // through the two-tree split so the new TreeViewItem's logical
-    // parent is `this` (DataContext + ancestor walks see the consumer-
-    // authored tree shape) while its visual parent is `_stack` (the
-    // renderer sees a flat vertical stack of root rows).
+    // ── ItemsControl override seams ────────────────────────────────
+
+    public override GetContainerForItemOverride(item: unknown): Visual
+    {
+        // Composed-markup items are TreeViewItem instances and pass
+        // through unchanged. Data-driven items (a future
+        // HierarchicalDataTemplate path) would wrap here.
+        if (item instanceof TreeViewItem) return item;
+        const tvi = new TreeViewItem();
+        tvi.Header = String(item ?? '');
+        return tvi;
+    }
+
+    public override ClearContainerForItemOverride(container: Visual, item: unknown): void
+    {
+        super.ClearContainerForItemOverride(container, item);
+        if (!(container instanceof TreeViewItem)) return;
+        // Drop everything under the detached subtree from selection.
+        this.PurgeSubtreeFromSelection(container);
+    }
+
+    // ── Declarative AddChild → Items routing ──────────────────────
+
     public AddChild(child: Visual): void
     {
         if (!(child instanceof TreeViewItem))
         {
             throw new Error('TreeView only accepts TreeViewItem children');
         }
-        this.AttachLogical(child);
-        this._stack.AddVisualChild(child);
-        this._rootItems.push(child);
-        this._stack.InvalidateMeasure();
-        this.InvalidateMeasure();
+        const items = this.Items;
+        if (items instanceof ObservableCollection)
+        {
+            items.Add(child);
+        }
+        else
+        {
+            this.promoteToObservable();
+            this._declarativeItems.Add(child);
+        }
     }
 
     public RemoveChild(child: Visual): void
     {
         if (!(child instanceof TreeViewItem)) return;
-        const idx = this._rootItems.indexOf(child);
-        if (idx < 0) return;
-        // Selection cleanup — drop any references the removed subtree
-        // contributes to the selection set so SelectedItem stays valid.
-        for (const item of TreeView.walkSubtree(child))
+        const items = this.Items;
+        if (items instanceof ObservableCollection)
         {
-            if (this._selectedItems.has(item))
-            {
-                this._selectedItems.delete(item);
-                item.SetIsSelectedInternal(false);
-            }
-            if (this._anchor === item) this._anchor = undefined;
+            items.Remove(child);
         }
-        this._stack.RemoveVisualChild(child);
-        this.DetachLogical(child);
-        this._rootItems.splice(idx, 1);
-        this._stack.InvalidateMeasure();
-        this.InvalidateMeasure();
     }
 
-    public override get visualChildren(): readonly Visual[]  { return [this._scrollViewer]; }
-    public override get logicalChildren(): readonly Visual[] { return this._rootItems; }
+    private promoteToObservable(): void
+    {
+        const current = this.Items;
+        this._declarativeItems.Clear();
+        if (Array.isArray(current))
+        {
+            for (const v of current) this._declarativeItems.Add(v);
+        }
+        this.Items = this._declarativeItems;
+    }
 
-    // The root items collected from the consumer markup. Exposed
-    // read-only so callers (and TreeViewItem's range walk) can
-    // iterate without mutating the internal array.
-    public get RootItems(): readonly TreeViewItem[] { return this._rootItems; }
+    // The root items — live read-only view of the realized
+    // TreeViewItem containers in items order. Mirrors WPF's
+    // TreeView.Items but cast for TreeViewItem-specific consumers
+    // (range-selection walks, indent depth queries).
+    public get RootItems(): readonly TreeViewItem[]
+    {
+        return this.logicalChildren as readonly TreeViewItem[];
+    }
 
     public get SelectedItem(): TreeViewItem | undefined
     {
@@ -288,8 +304,7 @@ export class TreeView extends Visual
         this._selectionListeners.delete(listener);
     }
 
-    // Programmatically clear selection — useful from consumer code
-    // that wants to drop selection on a "back" navigation or similar.
+    // Programmatically clear selection.
     public ClearSelection(): void
     {
         if (this._selectedItems.size === 0) return;
@@ -299,12 +314,12 @@ export class TreeView extends Visual
         this.fireSelectionChanged();
     }
 
-    // Internal: invoked from TreeViewItem.RemoveChild so a subtree
-    // being detached anywhere in the tree drops its selection
-    // contribution. Without this hook a deeply-nested RemoveChild
-    // would leave orphan TreeViewItems in `_selectedItems`, which
-    // would corrupt SelectedItem / SelectedItems reads after the
-    // detach. Fires SelectionChanged exactly once when at least one
+    // Invoked from TreeViewItem.RemoveChild AND from
+    // ClearContainerForItemOverride so a subtree being detached
+    // anywhere in the tree drops its selection contribution. Without
+    // this hook a deeply-nested detach would leave orphan
+    // TreeViewItems in `_selectedItems`, corrupting SelectedItem
+    // reads. Fires SelectionChanged exactly once if at least one
     // item was actually dropped.
     public PurgeSubtreeFromSelection(item: TreeViewItem): void
     {
@@ -322,13 +337,7 @@ export class TreeView extends Visual
         if (dropped) this.fireSelectionChanged();
     }
 
-    // Entry point for row clicks. Modifier-aware: Shift extends from
-    // the anchor in visible-items order; Ctrl toggles a single item;
-    // plain click clears the existing selection and sets one item.
-    //
-    // Anchor management: plain / Ctrl click MOVE the anchor to the
-    // clicked item; Shift-click LEAVES the anchor put so successive
-    // Shift+clicks pivot the range against the same origin.
+    // Entry point for row clicks.
     public HandleRowClick(item: TreeViewItem, modifiers: ModifierKeys): void
     {
         const shiftActive = modifiers.Shift && this._anchor !== undefined;
@@ -352,10 +361,6 @@ export class TreeView extends Visual
     private setSelected(items: readonly TreeViewItem[]): void
     {
         const next = new Set(items);
-        // Diff against the current set so IsSelected only changes on the
-        // items whose membership actually flipped — saves a render-dirty
-        // refresh on visible rows that stay selected (the dominant case
-        // for a Shift+click that overlaps the existing range).
         for (const i of this._selectedItems)
         {
             if (!next.has(i)) i.SetIsSelectedInternal(false);
@@ -393,9 +398,8 @@ export class TreeView extends Visual
         this.setSelected(visible.slice(lo, hi + 1));
     }
 
-    // Visible-items walk: depth-first in document order, skipping the
-    // subtree of any collapsed item — matches what the user sees on
-    // screen, which is what Shift+click range selection should follow.
+    // Visible-items walk: depth-first in document order, skipping
+    // the subtree of any collapsed item.
     private visibleItems(): TreeViewItem[]
     {
         const out: TreeViewItem[] = [];
@@ -407,13 +411,11 @@ export class TreeView extends Visual
                 for (const c of item.SubItems) walk(c);
             }
         };
-        for (const root of this._rootItems) walk(root);
+        for (const root of this.RootItems) walk(root);
         return out;
     }
 
-    // Depth-first walk including collapsed subtrees — used during
-    // RemoveChild so the selection set drops every reference under the
-    // detached subtree, not just the visible ones.
+    // Depth-first walk including collapsed subtrees.
     private static *walkSubtree(item: TreeViewItem): Generator<TreeViewItem>
     {
         yield item;
@@ -428,21 +430,6 @@ export class TreeView extends Visual
         for (const l of this._selectionListeners) l();
     }
 
-    protected override propagate_target_to_visual_children(): void
-    {
-        this._scrollViewer['SetTarget'](this['target']);
-    }
-
-    protected override propagate_inheritance_to_logical_children(): void
-    {
-        for (const i of this._rootItems) i['refresh_inheritance_subtree']();
-    }
-
-    protected override propagate_inheritance_for_logical_children(d: PropertyDescriptor): void
-    {
-        for (const i of this._rootItems) i['refresh_inherited'](d);
-    }
-
     protected override OnPropertyChanged(
         descriptor: PropertyDescriptor,
         oldValue: unknown,
@@ -455,7 +442,7 @@ export class TreeView extends Visual
             // Indent participates in every row's MeasureOverride; the
             // bare Measure flag on the DP only invalidates the TreeView,
             // not its descendants. Force the cascade ourselves.
-            for (const i of this._rootItems) TreeView.invalidateMeasureSubtree(i);
+            for (const i of this.RootItems) TreeView.invalidateMeasureSubtree(i);
         }
     }
 
@@ -465,48 +452,48 @@ export class TreeView extends Visual
         for (const c of item.SubItems) TreeView.invalidateMeasureSubtree(c);
     }
 
-    // Read-only handle to the default-template ScrollViewer. Consumers
-    // that want to drive the scroll position from code (jump-to-selected,
-    // restore-on-load) can read offsets / call ScrollToTop here.
-    public get ScrollViewer(): ScrollViewer { return this._scrollViewer; }
-
-    protected override MeasureOverride(availableSize: Size): Size
+    // Read-only handle to the default-template ScrollViewer.
+    public get ScrollViewer(): ScrollViewer
     {
-        this._scrollViewer.Measure(availableSize);
-        return this._scrollViewer.DesiredSize;
+        if (this._scrollViewer !== undefined) return this._scrollViewer;
+        const root = this.visualChildren[0];
+        if (root === undefined)
+        {
+            throw new Error('TreeView: template root not attached yet.');
+        }
+        const sv = root.FindName('PART_Scroll');
+        if (!(sv instanceof ScrollViewer))
+        {
+            throw new Error('TreeView: PART_Scroll missing from DefaultTreeView template.');
+        }
+        this._scrollViewer = sv;
+        return sv;
     }
-
-    protected override ArrangeOverride(finalSize: Size): Size
-    {
-        this._scrollViewer.Arrange(new Rect(0, 0, finalSize.Width, finalSize.Height));
-        return finalSize;
-    }
-
-    protected override RenderOverride(_dc: DrawingContext): void { }
 }
 
-// One row in the tree. Authored in markup, instantiated once per
-// position; nested TreeViewItems form the subtree.
+// One row in the tree. Built on ItemsControl — each TreeViewItem
+// hosts its own sub-rows in a CollapsibleStack items panel slotted
+// into the row's template via ItemsPresenter.
 //
 // Public DPs:
 //   Header     — string label rendered in the row's text cell.
-//   IsExpanded — true when children are visible. Toggled by clicking
+//   IsExpanded — true when sub-rows are visible. Toggled by clicking
 //                the chevron; also settable programmatically.
 //   IsSelected — true when this row participates in the TreeView's
 //                current selection. Read-mostly: written by the
 //                TreeView's click handler; settable by consumers for
 //                initialising a default selection.
+//   (Items, ItemTemplate, ItemContainerStyle, … inherited from
+//    ItemsControl).
 //
 // Internal visual structure (per item):
 //
-//   _outerStack (vertical)
-//     ├─ _row (ClickableRow — hover / selection background)
-//     │    └─ _rowInner (horizontal):
-//     │         ├─ _spacer  (width = depth × Indent)
-//     │         ├─ _chevron (fixed CHEVRON_WIDTH cell, ▸ / ▾ / blank)
-//     │         └─ _label   (Header text)
-//     └─ _childWrap (CollapsibleStack — sub-rows; size-zero when closed)
-export class TreeViewItem extends Visual
+//   templateRoot = StackPanel (vertical)
+//     ├─ ClickableRow (hover / selection background)
+//     │    └─ inner row: spacer + chevron + label
+//     └─ ItemsPresenter → CollapsibleStack (items panel)
+//          └─ child TreeViewItems
+export class TreeViewItem extends ItemsControl
 {
     static {
         Model.RegisterProperty(TreeViewItem, 'Header',     '',    MetaData.Measure | MetaData.Render);
@@ -515,47 +502,51 @@ export class TreeViewItem extends Visual
         ensureControlsTheme();
     }
 
-    // Template parts — all built in the constructor so the row is paint-
-    // ready before any layout pass even if it spends time unattached.
-    private readonly _outerStack:  StackPanel;
+    // Backing for AddChild — declarative children land here.
+    private readonly _declarativeItems: ObservableCollection<unknown>
+        = new ObservableCollection<unknown>();
+
+    // Captured by the ItemsPanel factory on first invocation. The
+    // IsExpanded handler reaches into it to drive collapse without
+    // depending on a named PART_ lookup.
+    private _childWrap: CollapsibleStack | undefined;
+
+    // Template parts — resolved in the constructor.
     private readonly _row:         ClickableRow;
     private readonly _spacer:      Border;
-    private readonly _chevron:     ChevronTarget;
     private readonly _chevronText: TextBlock;
     private readonly _label:       TextBlock;
-    private readonly _childWrap:   CollapsibleStack;
-
-    private readonly _children:    TreeViewItem[] = [];
 
     constructor()
     {
         super();
+        this.Template = resolveTemplate(KEY_TREEVIEW_ITEM);
 
-        // Markup-defined row + sub-stack resolved from
-        // DefaultTreeViewItem in the controls theme. All cosmetic
-        // constants (32-DIP row height, 20-DIP chevron cell, 8 H / 6 V
-        // row padding, ink/chevron text colours) live in the template;
-        // this constructor only resolves the named parts and wires
-        // behaviour to them.
-        const inst = resolveTemplate(KEY_TREEVIEW_ITEM).Apply(this);
-        this._outerStack  = inst.root.FindName('PART_OuterStack') as StackPanel;
-        this._row         = inst.root.FindName('PART_Row')         as ClickableRow;
-        this._spacer      = inst.root.FindName('PART_Spacer')      as Border;
-        this._chevron     = inst.root.FindName('PART_Chevron')     as ChevronTarget;
-        this._chevronText = inst.root.FindName('PART_ChevronText') as TextBlock;
-        this._label       = inst.root.FindName('PART_Label')       as TextBlock;
-        this._childWrap   = inst.root.FindName('PART_ChildWrap')   as CollapsibleStack;
+        const root = this.visualChildren[0]!;
+        this._row         = root.FindName('PART_Row')         as ClickableRow;
+        this._spacer      = root.FindName('PART_Spacer')      as Border;
+        const chevron     = root.FindName('PART_Chevron')     as ChevronTarget;
+        this._chevronText = root.FindName('PART_ChevronText') as TextBlock;
+        this._label       = root.FindName('PART_Label')       as TextBlock;
 
-        this._chevron.onClick = (): void => { this.IsExpanded = !this.IsExpanded; };
+        chevron.onClick = (): void => { this.IsExpanded = !this.IsExpanded; };
         this._row.onClick = (modifiers): void => {
             const tree = this.findTree();
             if (tree !== undefined) tree.HandleRowClick(this, modifiers);
         };
         this._row.AddPropertyChangedListener('IsMouseOver', () => this.refreshRowBackground());
 
-        this._childWrap.SetCollapsed(true);
-
-        this.AttachVisual(this._outerStack);
+        // Items panel = CollapsibleStack. The factory caches the
+        // single instance so IsExpanded toggles can flip its
+        // collapsed state directly. Initialised collapsed because
+        // IsExpanded defaults to false.
+        this.ItemsPanel = (): CollapsibleStack => {
+            const cs = new CollapsibleStack();
+            this._childWrap = cs;
+            cs.SetCollapsed(!this.IsExpanded);
+            return cs;
+        };
+        this.Items = this._declarativeItems;
 
         this.refreshChevron();
         this.refreshRowBackground();
@@ -570,62 +561,89 @@ export class TreeViewItem extends Visual
     public get IsSelected(): boolean { return this.get_property_value('IsSelected'); }
     public set IsSelected(v: boolean) { this.set_property_value('IsSelected', v); }
 
-    // Same two-tree split as TreeView's AddChild — logical parent is
-    // this TreeViewItem so DataContext flows naturally; visual parent
-    // is the child-wrap so the row stack renders the subtree.
+    // ── ItemsControl override seams ────────────────────────────────
+
+    public override GetContainerForItemOverride(item: unknown): Visual
+    {
+        if (item instanceof TreeViewItem) return item;
+        const tvi = new TreeViewItem();
+        tvi.Header = String(item ?? '');
+        return tvi;
+    }
+
+    public override ClearContainerForItemOverride(container: Visual, item: unknown): void
+    {
+        super.ClearContainerForItemOverride(container, item);
+        if (!(container instanceof TreeViewItem)) return;
+        // Drop the subtree's selection contribution through the
+        // owning TreeView (if any). findTree walks logical parents
+        // and works as long as ClearContainerForItemOverride runs
+        // BEFORE the base ItemsControl detaches the container.
+        this.findTree()?.PurgeSubtreeFromSelection(container);
+        this.refreshChevron();
+    }
+
+    public override PrepareContainerForItemOverride(container: Visual, item: unknown, index: number): void
+    {
+        super.PrepareContainerForItemOverride(container, item, index);
+        // Refresh after attach — the chevron's "leaf vs branch" state
+        // is a function of whether we have any sub-rows.
+        this.refreshChevron();
+    }
+
+    // Declarative AddChild → Items routing (same as TreeView).
     public AddChild(child: Visual): void
     {
         if (!(child instanceof TreeViewItem))
         {
             throw new Error('TreeViewItem only accepts TreeViewItem children');
         }
-        this.AttachLogical(child);
-        this._childWrap.AddVisualChild(child);
-        this._children.push(child);
-        this._childWrap.InvalidateMeasure();
-        this.refreshChevron();
-        this.InvalidateMeasure();
+        const items = this.Items;
+        if (items instanceof ObservableCollection)
+        {
+            items.Add(child);
+        }
+        else
+        {
+            this.promoteToObservable();
+            this._declarativeItems.Add(child);
+        }
     }
 
     public RemoveChild(child: Visual): void
     {
         if (!(child instanceof TreeViewItem)) return;
-        const idx = this._children.indexOf(child);
-        if (idx < 0) return;
-        // Drop the detached subtree's contribution to the owning
-        // TreeView's selection BEFORE breaking the logical chain —
-        // findTree walks logical parents, so doing this post-detach
-        // would return undefined and silently leak.
-        this.findTree()?.PurgeSubtreeFromSelection(child);
-        this._childWrap.RemoveVisualChild(child);
-        this.DetachLogical(child);
-        this._children.splice(idx, 1);
-        this._childWrap.InvalidateMeasure();
-        this.refreshChevron();
-        this.InvalidateMeasure();
+        const items = this.Items;
+        if (items instanceof ObservableCollection)
+        {
+            items.Remove(child);
+        }
     }
 
-    public override get visualChildren(): readonly Visual[]  { return [this._outerStack]; }
-    public override get logicalChildren(): readonly Visual[] { return this._children; }
+    private promoteToObservable(): void
+    {
+        const current = this.Items;
+        this._declarativeItems.Clear();
+        if (Array.isArray(current))
+        {
+            for (const v of current) this._declarativeItems.Add(v);
+        }
+        this.Items = this._declarativeItems;
+    }
 
-    // Live view of the nested items. Consumers of TreeView (selection
-    // walks, count badges) iterate this without paying the cost of a
-    // defensive copy.
-    public get SubItems(): readonly TreeViewItem[] { return this._children; }
+    // Live view of the nested items in document order.
+    public get SubItems(): readonly TreeViewItem[]
+    {
+        return this.logicalChildren as readonly TreeViewItem[];
+    }
 
-    // Setter exposed for TreeView's internal selection bookkeeping —
-    // bypasses HandleRowClick so writing the DP doesn't loop back
-    // through the click pipeline. Consumers should set `IsSelected`
-    // directly via the public setter when they want to initialise
-    // selection from code.
+    // Setter exposed for TreeView's internal selection bookkeeping.
     public SetIsSelectedInternal(v: boolean): void
     {
         this.set_property_value('IsSelected', v);
     }
 
     // Walk the logical-parent chain to find the owning TreeView.
-    // Returns undefined when this item hasn't been added to a tree
-    // yet (constructor stage) or when it's been removed.
     private findTree(): TreeView | undefined
     {
         let cur: Visual | undefined = this.GetLogicalParent();
@@ -638,8 +656,7 @@ export class TreeViewItem extends Visual
     }
 
     // Depth = number of TreeViewItem ancestors between this item and
-    // the owning TreeView. Indent is applied as depth × TreeView.Indent
-    // in MeasureOverride.
+    // the owning TreeView. Indent is applied as depth × TreeView.Indent.
     private findDepth(): number
     {
         let depth = 0;
@@ -650,22 +667,7 @@ export class TreeViewItem extends Visual
             if (cur instanceof TreeViewItem) depth++;
             cur = cur.GetLogicalParent();
         }
-        return depth;       // detached: walk hit the root without finding TreeView
-    }
-
-    protected override propagate_target_to_visual_children(): void
-    {
-        this._outerStack['SetTarget'](this['target']);
-    }
-
-    protected override propagate_inheritance_to_logical_children(): void
-    {
-        for (const c of this._children) c['refresh_inheritance_subtree']();
-    }
-
-    protected override propagate_inheritance_for_logical_children(d: PropertyDescriptor): void
-    {
-        for (const c of this._children) c['refresh_inherited'](d);
+        return depth;       // detached: walked to root without hitting a TreeView
     }
 
     protected override OnPropertyChanged(
@@ -679,9 +681,7 @@ export class TreeViewItem extends Visual
         {
             case 'IsExpanded':
                 this.refreshChevron();
-                // CollapsibleStack toggle is also driven here so
-                // child-row visibility flips on the same write.
-                this._childWrap.SetCollapsed(!(newValue as boolean));
+                this._childWrap?.SetCollapsed(!(newValue as boolean));
                 this.InvalidateMeasure();
                 break;
             case 'IsSelected':
@@ -695,28 +695,21 @@ export class TreeViewItem extends Visual
 
     protected override MeasureOverride(availableSize: Size): Size
     {
-        // Indent comes from the owning TreeView; default to 16 if this
-        // item is somehow being measured detached.
+        // Indent spacer width = depth × TreeView.Indent. Recomputed on
+        // every measure so re-parenting (e.g. moving a subtree)
+        // refreshes naturally.
         const tree   = this.findTree();
         const indent = tree?.Indent ?? 16;
         const depth  = this.findDepth();
         this._spacer.Width = depth * indent;
 
-        this._outerStack.Measure(availableSize);
-        return this._outerStack.DesiredSize;
+        // Delegate to ItemsControl.MeasureOverride which walks the
+        // template root (and from there into the row + ItemsPresenter).
+        return super.MeasureOverride(availableSize);
     }
-
-    protected override ArrangeOverride(finalSize: Size): Size
-    {
-        this._outerStack.Arrange(new Rect(0, 0, finalSize.Width, finalSize.Height));
-        return finalSize;
-    }
-
-    protected override RenderOverride(_dc: DrawingContext): void { }
 
     // Row background priority: selected wins over hover. Transparent
-    // (undefined Background) is the default — the TreeView's host
-    // surface shows through, which matches MUI's flat list style.
+    // (undefined Background) is the default.
     private refreshRowBackground(): void
     {
         let bg: Brush | undefined;
@@ -730,7 +723,8 @@ export class TreeViewItem extends Visual
     // leaf items pick the glyph from IsExpanded.
     private refreshChevron(): void
     {
-        if (this._children.length === 0)
+        const hasChildren = this.SubItems.length > 0;
+        if (!hasChildren)
         {
             this._chevronText.Text = '';
         }

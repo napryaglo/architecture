@@ -57,8 +57,11 @@ ResourceDictionary {
     // ── ComboBox (overlay popup host) ───────────────────────────────
     // Mounted on PresentationTarget.OverlayLayer when IsDropDownOpen
     // flips true. PART_PopupHost arranges PART_Popup just below the
-    // anchoring selection box; PART_Scrim absorbs outside clicks; the
-    // ComboBox refills PART_PopupStack on every Items change.
+    // anchoring selection box; PART_Scrim absorbs outside clicks;
+    // PART_PopupList is a ComboBoxItemList (internal ItemsControl
+    // subclass) that turns the ComboBox.Items array into one
+    // ClickableBorder row per item via its own GetContainerForItem /
+    // PrepareContainerForItem hooks.
     template x:key="DefaultComboBoxPopup"[targettype=ComboBox]{
         ComboBoxPopupHost x:name="PART_PopupHost"{
             ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
@@ -68,7 +71,7 @@ ResourceDictionary {
                     BorderThickness = (1),
                     CornerRadius    = 4,
                     Padding         = (0,4,0,4) ]{
-                StackPanel x:name="PART_PopupStack" [ Orientation = Vertical ]
+                ComboBoxItemList x:name="PART_PopupList"
             }
         }
     }
@@ -98,20 +101,21 @@ ResourceDictionary {
     }
 
     // ── TreeView (chrome) ───────────────────────────────────────────
-    // ScrollViewer wrapping a vertical StackPanel. Rows (each a
-    // TreeViewItem) are appended to PART_Stack as the consumer's
-    // markup binds them via TreeView.AddChild.
+    // ItemsControl-derived: a ScrollViewer hosting an ItemsPresenter
+    // where TreeView.ItemsPanel slots a vertical StackPanel containing
+    // the root TreeViewItem rows.
     template x:key="DefaultTreeView"[targettype=TreeView]{
         ScrollViewer x:name="PART_Scroll"{
-            StackPanel x:name="PART_Stack" [ Orientation = Vertical ]
+            ItemsPresenter
         }
     }
 
     // ── TreeViewItem (one row + sub-rows) ───────────────────────────
-    // Material dense-list row with chevron expand/collapse and an
-    // indent spacer (PART_Spacer.Width = depth × TreeView.Indent set
-    // from the TS MeasureOverride). PART_ChildWrap is a CollapsibleStack
-    // so collapsed subtrees clip to zero size.
+    // ItemsControl-derived: row chrome at the top (chevron + label +
+    // indent spacer); ItemsPresenter below where the TreeViewItem's
+    // ItemsPanel slots a CollapsibleStack containing the sub-rows.
+    // The CollapsibleStack is toggled by the IsExpanded DP so closed
+    // subtrees clip to zero size (and zero hit-area).
     template x:key="DefaultTreeViewItem"[targettype=TreeViewItem]{
         StackPanel x:name="PART_OuterStack" [ Orientation = Vertical ]{
             ClickableRow x:name="PART_Row"
@@ -135,17 +139,20 @@ ResourceDictionary {
                                 VerticalAlignment  = Center ]
                 }
             }
-            CollapsibleStack x:name="PART_ChildWrap" [ Orientation = Vertical ]
+            ItemsPresenter x:name="PART_ChildHost"
         }
     }
 
     // ── ListBox (chrome) ────────────────────────────────────────────
-    // Same shape as DefaultTreeView. ListBoxItems are appended to
-    // PART_Stack by both the declarative AddChild path and the Items
-    // convenience auto-generation.
+    // ItemsControl-derived: the items panel (a vertical StackPanel,
+    // built by ListBox.ItemsPanel) is slotted into the ItemsPresenter
+    // by the ItemsControl base. Containers come from
+    // GetContainerForItemOverride, which wraps each data item in a
+    // ListBoxItem (and passes already-ListBoxItem items through
+    // unchanged so declarative markup keeps working).
     template x:key="DefaultListBox"[targettype=ListBox]{
         ScrollViewer x:name="PART_Scroll"{
-            StackPanel x:name="PART_Stack" [ Orientation = Vertical ]
+            ItemsPresenter
         }
     }
 

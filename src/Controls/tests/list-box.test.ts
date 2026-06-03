@@ -10,7 +10,10 @@ import {
     type PointerEventInit,
 } from '../../runtime/index.js';
 import { HeadlessTarget } from '../../visual-engine/index.js';
+import { ItemsPresenter } from '../items-presenter.js';
 import { ListBox, ListBoxItem, SelectionMode } from '../list-box.js';
+import { ScrollViewer } from '../scroll-viewer.js';
+import { StackPanel } from '../stack-panel.js';
 import { TextBlock } from '../text-block.js';
 
 function pointer(mods: Partial<ModifierKeys> = {}): PointerEventInit
@@ -57,10 +60,17 @@ describe('ListBox — composed-markup tree shape', () => {
         assert.equal(lb.ItemContainers.length, 1);
         assert.equal(lb.ItemContainers[0], item);
 
-        // visual: ListBox's visual child is a ScrollViewer wrapping the
-        // row StackPanel; the row lives inside the stack.
-        const sv    = lb.visualChildren[0]!;
-        const stack = sv.visualChildren[0]!;
+        // visual: ItemsControl shape — ListBox → ScrollViewer →
+        // ItemsPresenter → items panel (StackPanel) → row containers.
+        // The extra ItemsPresenter layer is the slot the ItemsControl
+        // base wires the panel into; before the ItemsControl refactor
+        // the StackPanel was a direct ScrollViewer child.
+        const sv = lb.visualChildren[0]!;
+        assert.ok(sv instanceof ScrollViewer);
+        const presenter = sv.visualChildren[0]!;
+        assert.ok(presenter instanceof ItemsPresenter);
+        const stack = presenter.visualChildren[0]!;
+        assert.ok(stack instanceof StackPanel);
         assert.equal(stack.visualChildren.length, 1);
         assert.equal(stack.visualChildren[0], item);
     });
@@ -92,18 +102,26 @@ describe('ListBox — Items convenience path', () => {
         assert.equal(lb.ItemContainers[2]!.Tag, 'Cherries');
     });
 
-    test('resetting Items tears down auto-items but keeps declarative children', () => {
-        const lb       = new ListBox();
-        const sticky   = new ListBoxItem(new TextBlock('Sticky'));
-        lb.AddChild(sticky);                          // declarative
-        lb.Items = ['a', 'b'];                        // auto-generates 2
-        assert.equal(lb.ItemContainers.length, 3);    // sticky + 2 autos
-
-        lb.Items = ['x'];                             // resets autos
-        // Sticky declarative row survives; one new auto appended.
+    test('resetting Items replaces every container, declarative or not (WPF parity)', () => {
+        // Behaviour change since the ItemsControl refactor: there is
+        // now ONE items collection, not two. Setting Items = arr
+        // replaces the whole list — including any prior declarative
+        // children. Authors that want a mix should mutate the items
+        // collection incrementally (`lb.Items.Add(...)`) rather than
+        // re-assigning. WPF parity.
+        const lb     = new ListBox();
+        const sticky = new ListBoxItem(new TextBlock('Sticky'));
+        lb.AddChild(sticky);                          // joins Items
+        lb.Items = ['a', 'b'];                        // wipes + replaces
         assert.equal(lb.ItemContainers.length, 2);
-        assert.equal(lb.ItemContainers[0], sticky);
-        assert.equal(lb.ItemContainers[1]!.Tag, 'x');
+        assert.equal(lb.ItemContainers[0]!.Tag, 'a');
+        assert.equal(lb.ItemContainers[1]!.Tag, 'b');
+        // Sticky's old container is gone from the realized list.
+        assert.equal(lb.ItemContainers.includes(sticky), false);
+
+        lb.Items = ['x'];
+        assert.equal(lb.ItemContainers.length, 1);
+        assert.equal(lb.ItemContainers[0]!.Tag, 'x');
     });
 
     test('object items with a Label / Name / Text field display the named field', () => {

@@ -12,7 +12,10 @@ import {
     type ModifierKeys,
 } from '../../runtime/index.js';
 import { HeadlessTarget } from '../../visual-engine/index.js';
-import { TreeView, TreeViewItem } from '../tree-view.js';
+import { ItemsPresenter } from '../items-presenter.js';
+import { ScrollViewer } from '../scroll-viewer.js';
+import { StackPanel } from '../stack-panel.js';
+import { CollapsibleStack, TreeView, TreeViewItem } from '../tree-view.js';
 
 function pointer(mods: Partial<ModifierKeys> = {}): PointerEventInit
 {
@@ -85,10 +88,17 @@ describe('TreeView — composed-markup tree shape', () => {
         assert.equal(tree.logicalChildren[0], a);
         assert.equal(tree.RootItems.length, 1);
         assert.equal(tree.RootItems[0], a);
-        // Default-template structure: TreeView's visual child is a
-        // ScrollViewer wrapping the row StackPanel; the rows sit inside.
-        const sv    = tree.visualChildren[0]!;
-        const stack = sv.visualChildren[0]!;
+        // ItemsControl-shape visual tree: TreeView → ScrollViewer →
+        // ItemsPresenter → items panel (StackPanel) → root rows. The
+        // extra ItemsPresenter layer is the slot the ItemsControl
+        // base wires the panel into; the StackPanel is built by
+        // TreeView.ItemsPanel.
+        const sv = tree.visualChildren[0]!;
+        assert.ok(sv instanceof ScrollViewer);
+        const presenter = sv.visualChildren[0]!;
+        assert.ok(presenter instanceof ItemsPresenter);
+        const stack = presenter.visualChildren[0]!;
+        assert.ok(stack instanceof StackPanel);
         assert.equal(stack.visualChildren.length, 1);
         assert.equal(stack.visualChildren[0], a);
     });
@@ -100,12 +110,15 @@ describe('TreeView — composed-markup tree shape', () => {
 
         assert.deepEqual(parent.logicalChildren, [child]);
         assert.deepEqual(parent.SubItems, [child]);
-        // Child's visual parent is the CollapsibleStack inside parent —
-        // NOT parent itself. We don't need to know the exact wrapper
-        // class; just that the wrapper is the second child of parent's
-        // outer stack and that the child lives inside it.
+        // ItemsControl-shape visual tree: TreeViewItem's outer stack
+        // hosts the row first, then an ItemsPresenter slotting a
+        // CollapsibleStack (the items panel) whose children are the
+        // sub-rows.
         const outerStack = parent.visualChildren[0]!;
-        const childWrap  = outerStack.visualChildren[1]!;
+        const childHost  = outerStack.visualChildren[1]!;
+        assert.ok(childHost instanceof ItemsPresenter);
+        const childWrap  = childHost.visualChildren[0]!;
+        assert.ok(childWrap instanceof CollapsibleStack);
         assert.deepEqual(childWrap.visualChildren, [child]);
     });
 
