@@ -111,14 +111,14 @@ export class SliderLayout extends Panel
 //   which is what users expect on a vertical slider.
 export class Slider extends Visual
 {
+    public static readonly OrientationKey = Model.RegisterProperty<Orientation>(Slider, 'Orientation', Orientation.Horizontal, MetaData.Measure | MetaData.Arrange);
+    public static readonly MinimumKey     = Model.RegisterProperty<number>(     Slider, 'Minimum',     0,    MetaData.Arrange);
+    public static readonly MaximumKey     = Model.RegisterProperty<number>(     Slider, 'Maximum',     1,    MetaData.Arrange);
+    public static readonly ValueKey       = Model.RegisterProperty<number>(     Slider, 'Value',       0,    MetaData.Arrange);
+    public static readonly SmallChangeKey = Model.RegisterProperty<number>(     Slider, 'SmallChange', 0.01, MetaData.None);
+    public static readonly LargeChangeKey = Model.RegisterProperty<number>(     Slider, 'LargeChange', 0.1,  MetaData.None);
+
     static {
-        Model.RegisterProperty(Slider, 'Orientation', Orientation.Horizontal,
-            MetaData.Measure | MetaData.Arrange);
-        Model.RegisterProperty(Slider, 'Minimum',     0,    MetaData.Arrange);
-        Model.RegisterProperty(Slider, 'Maximum',     1,    MetaData.Arrange);
-        Model.RegisterProperty(Slider, 'Value',       0,    MetaData.Arrange);
-        Model.RegisterProperty(Slider, 'SmallChange', 0.01, MetaData.None);
-        Model.RegisterProperty(Slider, 'LargeChange', 0.1,  MetaData.None);
         ensureControlsTheme();
     }
 
@@ -159,26 +159,26 @@ export class Slider extends Visual
         // Hover / press visual swap on the thumb — same shape ScrollBar
         // uses for its own thumb. The colours come from Theme so the
         // template author and TS side agree on identity.
-        this._thumb.AddPropertyChangedListener('IsMouseOver', () => this.refreshThumbBrush());
+        this._thumb.AddPropertyChangedListener(Visual.IsMouseOverKey, () => this.refreshThumbBrush());
 
         this.AttachVisual(this._layout);
     }
 
     // ── Public DPs ─────────────────────────────────────────────────
 
-    public get Orientation(): Orientation { return this.get_property_value('Orientation'); }
-    public set Orientation(v: Orientation) { this.set_property_value('Orientation', v); }
+    public get Orientation(): Orientation { return this.get_property_value(Slider.OrientationKey); }
+    public set Orientation(v: Orientation) { this.set_property_value(Slider.OrientationKey, v); }
 
-    public get Minimum(): number { return this.get_property_value('Minimum'); }
-    public set Minimum(v: number) { this.set_property_value('Minimum', v); }
-    public get Maximum(): number { return this.get_property_value('Maximum'); }
-    public set Maximum(v: number) { this.set_property_value('Maximum', v); }
-    public get Value(): number { return this.get_property_value('Value'); }
-    public set Value(v: number) { this.set_property_value('Value', v); }
-    public get SmallChange(): number { return this.get_property_value('SmallChange'); }
-    public set SmallChange(v: number) { this.set_property_value('SmallChange', v); }
-    public get LargeChange(): number { return this.get_property_value('LargeChange'); }
-    public set LargeChange(v: number) { this.set_property_value('LargeChange', v); }
+    public get Minimum(): number { return this.get_property_value(Slider.MinimumKey); }
+    public set Minimum(v: number) { this.set_property_value(Slider.MinimumKey, v); }
+    public get Maximum(): number { return this.get_property_value(Slider.MaximumKey); }
+    public set Maximum(v: number) { this.set_property_value(Slider.MaximumKey, v); }
+    public get Value(): number { return this.get_property_value(Slider.ValueKey); }
+    public set Value(v: number) { this.set_property_value(Slider.ValueKey, v); }
+    public get SmallChange(): number { return this.get_property_value(Slider.SmallChangeKey); }
+    public set SmallChange(v: number) { this.set_property_value(Slider.SmallChangeKey, v); }
+    public get LargeChange(): number { return this.get_property_value(Slider.LargeChangeKey); }
+    public set LargeChange(v: number) { this.set_property_value(Slider.LargeChangeKey, v); }
 
     // ── Public events ──────────────────────────────────────────────
     public AddValueChangedListener(listener: (value: number) => void): void

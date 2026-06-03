@@ -106,20 +106,20 @@ export class ScrollBarLayout extends Panel
 // clamped value; reads on `.Value` return whatever was last written.
 export class ScrollBar extends Visual
 {
+    public static readonly OrientationKey  = Model.RegisterProperty<Orientation>(ScrollBar, 'Orientation',  Orientation.Vertical, MetaData.Measure | MetaData.Arrange);
+    public static readonly MinimumKey      = Model.RegisterProperty<number>(     ScrollBar, 'Minimum',      0, MetaData.Arrange);
+    public static readonly MaximumKey      = Model.RegisterProperty<number>(     ScrollBar, 'Maximum',      1, MetaData.Arrange);
+    public static readonly ValueKey        = Model.RegisterProperty<number>(     ScrollBar, 'Value',        0, MetaData.Arrange);
+    public static readonly ViewportSizeKey = Model.RegisterProperty<number>(     ScrollBar, 'ViewportSize', 0, MetaData.Arrange);
+    // macOS / Slack-style auto-fade. When true, the track + thumb start
+    // invisible and only become opaque on activity (scroll value change,
+    // hover, drag). After ~1.5 s idle they fade back out. v1
+    // implementation is a discrete show/hide — no smooth tween — but the
+    // appear-on-activity / hide-on-idle behavior matches what users
+    // expect from the platform convention.
+    public static readonly IsAutoHideKey   = Model.RegisterProperty<boolean>(    ScrollBar, 'IsAutoHide',   false, MetaData.None);
+
     static {
-        Model.RegisterProperty(ScrollBar, 'Orientation',  Orientation.Vertical,
-            MetaData.Measure | MetaData.Arrange);
-        Model.RegisterProperty(ScrollBar, 'Minimum',      0, MetaData.Arrange);
-        Model.RegisterProperty(ScrollBar, 'Maximum',      1, MetaData.Arrange);
-        Model.RegisterProperty(ScrollBar, 'Value',        0, MetaData.Arrange);
-        Model.RegisterProperty(ScrollBar, 'ViewportSize', 0, MetaData.Arrange);
-        // macOS / Slack-style auto-fade. When true, the track + thumb
-        // start invisible and only become opaque on activity (scroll
-        // value change, hover, drag). After ~1.5 s idle they fade back
-        // out. v1 implementation is a discrete show/hide — no smooth
-        // tween — but the appear-on-activity / hide-on-idle behavior
-        // matches what users expect from the platform convention.
-        Model.RegisterProperty(ScrollBar, 'IsAutoHide',   false, MetaData.None);
         ensureControlsTheme();
     }
 
@@ -168,7 +168,7 @@ export class ScrollBar extends Visual
         // Hover state — same listener shape Button uses for its tints.
         // Hover ALSO pulses activity (auto-hide stays visible while
         // the user's pointer hangs on the bar).
-        this._thumb.AddPropertyChangedListener('IsMouseOver', () => {
+        this._thumb.AddPropertyChangedListener(Visual.IsMouseOverKey, () => {
             this.refreshThumbBrush();
             if (this._thumb.IsMouseOver) this.pulseActivity();
         });
@@ -180,7 +180,7 @@ export class ScrollBar extends Visual
         // writes from ScrollViewer.ArrangeOverride on every layout
         // pass), and pulsing on those would re-show the bar every
         // frame regardless of real activity.
-        this.AddPropertyChangedListener('Value', (_o, _n, oldV, newV) => {
+        this.AddPropertyChangedListener(ScrollBar.ValueKey, (_o, _n, oldV, newV) => {
             if (oldV !== newV) this.pulseActivity();
         });
 
@@ -190,7 +190,7 @@ export class ScrollBar extends Visual
         // is false (the default) we stay opaque forever. When true,
         // start in the faded state and wait for activity.
         if (this.IsAutoHide) this.fadeOut();
-        this.AddPropertyChangedListener('IsAutoHide', () => {
+        this.AddPropertyChangedListener(ScrollBar.IsAutoHideKey, () => {
             if (this.IsAutoHide) this.fadeOut();
             else                 this.fadeIn();
         });
@@ -237,23 +237,23 @@ export class ScrollBar extends Visual
         this._thumb.Background = undefined;
     }
 
-    public get Orientation(): Orientation { return this.get_property_value('Orientation'); }
-    public set Orientation(v: Orientation) { this.set_property_value('Orientation', v); }
+    public get Orientation(): Orientation { return this.get_property_value(ScrollBar.OrientationKey); }
+    public set Orientation(v: Orientation) { this.set_property_value(ScrollBar.OrientationKey, v); }
 
-    public get Minimum(): number { return this.get_property_value('Minimum'); }
-    public set Minimum(v: number) { this.set_property_value('Minimum', v); }
+    public get Minimum(): number { return this.get_property_value(ScrollBar.MinimumKey); }
+    public set Minimum(v: number) { this.set_property_value(ScrollBar.MinimumKey, v); }
 
-    public get Maximum(): number { return this.get_property_value('Maximum'); }
-    public set Maximum(v: number) { this.set_property_value('Maximum', v); }
+    public get Maximum(): number { return this.get_property_value(ScrollBar.MaximumKey); }
+    public set Maximum(v: number) { this.set_property_value(ScrollBar.MaximumKey, v); }
 
-    public get Value(): number { return this.get_property_value('Value'); }
-    public set Value(v: number) { this.set_property_value('Value', v); }
+    public get Value(): number { return this.get_property_value(ScrollBar.ValueKey); }
+    public set Value(v: number) { this.set_property_value(ScrollBar.ValueKey, v); }
 
-    public get ViewportSize(): number { return this.get_property_value('ViewportSize'); }
-    public set ViewportSize(v: number) { this.set_property_value('ViewportSize', v); }
+    public get ViewportSize(): number { return this.get_property_value(ScrollBar.ViewportSizeKey); }
+    public set ViewportSize(v: number) { this.set_property_value(ScrollBar.ViewportSizeKey, v); }
 
-    public get IsAutoHide(): boolean { return this.get_property_value('IsAutoHide'); }
-    public set IsAutoHide(v: boolean) { this.set_property_value('IsAutoHide', v); }
+    public get IsAutoHide(): boolean { return this.get_property_value(ScrollBar.IsAutoHideKey); }
+    public set IsAutoHide(v: boolean) { this.set_property_value(ScrollBar.IsAutoHideKey, v); }
 
     // ── Public events ──────────────────────────────────────────────
     public AddValueChangedListener(listener: (value: number) => void): void

@@ -134,7 +134,7 @@ function findFirstContentPresenter(visual: Visual): ContentPresenter | undefined
 //
 //   new ControlTemplate(tp => {
 //       const border = new Border();
-//       border.set_property_value('Background',
+//       border.set_property_value(Border.BackgroundKey,
 //           TemplateBinding(tp, 'Background'));
 //       return border;
 //   });

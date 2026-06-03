@@ -23,21 +23,21 @@ export class DrawerVM extends Model
         Model.RegisterProperty(DrawerVM, 'CloseOptions', undefined, MetaData.None);
     }
 
-    get NavOpen()      { return this.get_property_value('NavOpen'); }
-    set NavOpen(v)     { this.set_property_value('NavOpen', v); }
-    get OptionsOpen()  { return this.get_property_value('OptionsOpen'); }
-    set OptionsOpen(v) { this.set_property_value('OptionsOpen', v); }
-    get ToggleNav()    { return this.get_property_value('ToggleNav'); }
-    get OpenOptions()  { return this.get_property_value('OpenOptions'); }
-    get CloseOptions() { return this.get_property_value('CloseOptions'); }
+    get NavOpen()      { return this._get_property_value_by_name('NavOpen'); }
+    set NavOpen(v)     { this._set_property_value_by_name('NavOpen', v); }
+    get OptionsOpen()  { return this._get_property_value_by_name('OptionsOpen'); }
+    set OptionsOpen(v) { this._set_property_value_by_name('OptionsOpen', v); }
+    get ToggleNav()    { return this._get_property_value_by_name('ToggleNav'); }
+    get OpenOptions()  { return this._get_property_value_by_name('OpenOptions'); }
+    get CloseOptions() { return this._get_property_value_by_name('CloseOptions'); }
 
     constructor() {
         super();
-        this.set_property_value('ToggleNav',
+        this._set_property_value_by_name('ToggleNav',
             new RelayCommand(() => { this.NavOpen = !this.NavOpen; }));
-        this.set_property_value('OpenOptions',
+        this._set_property_value_by_name('OpenOptions',
             new RelayCommand(() => { this.OptionsOpen = true; }));
-        this.set_property_value('CloseOptions',
+        this._set_property_value_by_name('CloseOptions',
             new RelayCommand(() => { this.OptionsOpen = false; }));
     }
 

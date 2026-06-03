@@ -168,18 +168,18 @@ export class TemporaryOverlayHost extends Panel
 // to hear it back).
 export class Drawer extends Visual
 {
+    public static readonly AnchorKey     = Model.RegisterProperty<Dock>(             Drawer, 'Anchor',     Dock.Left,                MetaData.Measure | MetaData.Arrange);
+    // Variant is registered MetaData.None: it's effectively structural,
+    // locked at first layout, so changing it later shouldn't trigger an
+    // invalidation cascade that doesn't go anywhere useful.
+    public static readonly VariantKey    = Model.RegisterProperty<DrawerVariant>(    Drawer, 'Variant',    DrawerVariant.Persistent, MetaData.None);
+    public static readonly IsOpenKey     = Model.RegisterProperty<boolean>(          Drawer, 'IsOpen',     false,                    MetaData.Measure | MetaData.Arrange);
+    public static readonly DrawerSizeKey = Model.RegisterProperty<number>(           Drawer, 'DrawerSize', 280,                      MetaData.Measure | MetaData.Arrange);
+    public static readonly RailSizeKey   = Model.RegisterProperty<number>(           Drawer, 'RailSize',   0,                        MetaData.Measure | MetaData.Arrange);
+    public static readonly ScrimBrushKey = Model.RegisterProperty<Brush | undefined>(Drawer, 'ScrimBrush', DEFAULT_SCRIM,            MetaData.Render);
+    public static readonly ContentKey    = Model.RegisterProperty<Visual | undefined>(Drawer, 'Content',   undefined,                MetaData.Measure);
+
     static {
-        Model.RegisterProperty(Drawer, 'Anchor',     Dock.Left,                MetaData.Measure | MetaData.Arrange);
-        // Variant is registered MetaData.None: it's effectively
-        // structural, locked at first layout, so changing it later
-        // shouldn't trigger an invalidation cascade that doesn't go
-        // anywhere useful.
-        Model.RegisterProperty(Drawer, 'Variant',    DrawerVariant.Persistent, MetaData.None);
-        Model.RegisterProperty(Drawer, 'IsOpen',     false,                    MetaData.Measure | MetaData.Arrange);
-        Model.RegisterProperty(Drawer, 'DrawerSize', 280,                      MetaData.Measure | MetaData.Arrange);
-        Model.RegisterProperty(Drawer, 'RailSize',   0,                        MetaData.Measure | MetaData.Arrange);
-        Model.RegisterProperty(Drawer, 'ScrimBrush', DEFAULT_SCRIM,            MetaData.Render);
-        Model.RegisterProperty(Drawer, 'Content',    undefined,                MetaData.Measure);
         // Registers the consolidated controls theme exactly once so
         // DefaultDrawerPane / DefaultDrawerOverlay resolve via
         // Application.ResolveDefaultResource during construction.
@@ -227,25 +227,25 @@ export class Drawer extends Visual
     }
 
     // ── DP accessors ────────────────────────────────────────────────
-    public get Anchor():     Dock { return this.get_property_value('Anchor'); }
-    public set Anchor(v:     Dock) { this.set_property_value('Anchor', v); }
+    public get Anchor():     Dock { return this.get_property_value(Drawer.AnchorKey); }
+    public set Anchor(v:     Dock) { this.set_property_value(Drawer.AnchorKey, v); }
 
-    public get Variant():    DrawerVariant { return this.get_property_value('Variant'); }
-    public set Variant(v:    DrawerVariant) { this.set_property_value('Variant', v); }
+    public get Variant():    DrawerVariant { return this.get_property_value(Drawer.VariantKey); }
+    public set Variant(v:    DrawerVariant) { this.set_property_value(Drawer.VariantKey, v); }
 
-    public get IsOpen():     boolean { return this.get_property_value('IsOpen'); }
-    public set IsOpen(v:     boolean) { this.set_property_value('IsOpen', v); }
+    public get IsOpen():     boolean { return this.get_property_value(Drawer.IsOpenKey); }
+    public set IsOpen(v:     boolean) { this.set_property_value(Drawer.IsOpenKey, v); }
 
-    public get DrawerSize(): number { return this.get_property_value('DrawerSize'); }
-    public set DrawerSize(v: number) { this.set_property_value('DrawerSize', v); }
+    public get DrawerSize(): number { return this.get_property_value(Drawer.DrawerSizeKey); }
+    public set DrawerSize(v: number) { this.set_property_value(Drawer.DrawerSizeKey, v); }
 
-    public get RailSize():   number { return this.get_property_value('RailSize'); }
-    public set RailSize(v:   number) { this.set_property_value('RailSize', v); }
+    public get RailSize():   number { return this.get_property_value(Drawer.RailSizeKey); }
+    public set RailSize(v:   number) { this.set_property_value(Drawer.RailSizeKey, v); }
 
-    public get ScrimBrush(): Brush | undefined { return this.get_property_value('ScrimBrush'); }
-    public set ScrimBrush(v: Brush | undefined) { this.set_property_value('ScrimBrush', v); }
+    public get ScrimBrush(): Brush | undefined { return this.get_property_value(Drawer.ScrimBrushKey); }
+    public set ScrimBrush(v: Brush | undefined) { this.set_property_value(Drawer.ScrimBrushKey, v); }
 
-    public get Content(): Visual | undefined { return this.get_property_value('Content'); }
+    public get Content(): Visual | undefined { return this.get_property_value(Drawer.ContentKey); }
     public set Content(value: Visual | undefined)
     {
         const old = this.Content;
@@ -261,7 +261,7 @@ export class Drawer extends Visual
             this.DetachLogical(old);
         }
 
-        this.set_property_value('Content', value);
+        this.set_property_value(Drawer.ContentKey, value);
 
         if (value !== undefined)
         {

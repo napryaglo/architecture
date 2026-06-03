@@ -28,13 +28,12 @@ export enum Orientation
 // than the layout slot.
 export class StackPanel extends Panel
 {
-    static {
-        Model.RegisterProperty(StackPanel, 'Orientation', Orientation.Vertical,
-            MetaData.Measure | MetaData.Arrange);
-    }
+    public static readonly OrientationKey = Model.RegisterProperty<Orientation>(
+        StackPanel, 'Orientation', Orientation.Vertical,
+        MetaData.Measure | MetaData.Arrange);
 
-    public get Orientation(): Orientation { return this.get_property_value('Orientation'); }
-    public set Orientation(v: Orientation) { this.set_property_value('Orientation', v); }
+    public get Orientation(): Orientation { return this.get_property_value(StackPanel.OrientationKey); }
+    public set Orientation(v: Orientation) { this.set_property_value(StackPanel.OrientationKey, v); }
 
     protected override MeasureOverride(availableSize: Size): Size
     {

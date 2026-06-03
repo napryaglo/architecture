@@ -35,7 +35,7 @@ class ItemLeaf extends Visual
     }
     constructor(public readonly source: unknown) { super(); }
 
-    public get Tint(): string { return this.get_property_value('Tint'); }
+    public get Tint(): string { return this._get_property_value_by_name('Tint'); }
 
     protected override MeasureOverride(_a: Size): Size { return new Size(10, 10); }
     protected override RenderOverride(_dc: DrawingContext): void { }
@@ -46,6 +46,25 @@ class ItemLeaf extends Visual
 // so it reports zero size; that's OK for the wiring assertions below.
 class TestPanel extends Panel { }
 
+// Test subclass: base ItemsControl wraps each item in a
+// ContentPresenter for WPF parity, but these tests are verifying the
+// "template Visual IS the container" semantic (inheritance to the
+// leaf, container == ItemTemplate output). Skipping the wrap here
+// keeps the assertions readable; the wrap behavior is exercised in
+// the dedicated WPF-parity tests.
+class TestIC extends ItemsControl
+{
+    public override GetContainerForItemOverride(item: unknown): Visual
+    {
+        const tmpl = this.ItemTemplateSelector?.(item) ?? this.ItemTemplate;
+        if (tmpl === undefined)
+        {
+            throw new Error('test fixture: no template');
+        }
+        return tmpl.Apply(item);
+    }
+}
+
 function makeTemplate(): DataTemplate
 {
     return new DataTemplate(data => new ItemLeaf(data));
@@ -53,7 +72,7 @@ function makeTemplate(): DataTemplate
 
 describe('ItemsControl', () => {
     test('renders no containers when Items / ItemTemplate / ItemsPanel are missing', () => {
-        const ic = new ItemsControl();
+        const ic = new TestIC();
         assert.equal(ic.visualChildren.length,  0);
         assert.equal(ic.logicalChildren.length, 0);
 
@@ -65,7 +84,7 @@ describe('ItemsControl', () => {
     });
 
     test('materializes a container per item once all three are set', () => {
-        const ic = new ItemsControl();
+        const ic = new TestIC();
         ic.ItemsPanel   = () => new TestPanel();
         ic.ItemTemplate = makeTemplate();
         ic.Items        = ['a', 'b', 'c'];
@@ -80,7 +99,7 @@ describe('ItemsControl', () => {
 
     test('container visual parent is the items panel; logical parent is the ItemsControl', () => {
         // The headline two-tree divergence for data-driven UI.
-        const ic = new ItemsControl();
+        const ic = new TestIC();
         const panel = new TestPanel();
         ic.ItemsPanel   = () => panel;
         ic.ItemTemplate = makeTemplate();
@@ -92,7 +111,7 @@ describe('ItemsControl', () => {
     });
 
     test('items panel is the only visual child of the ItemsControl', () => {
-        const ic = new ItemsControl();
+        const ic = new TestIC();
         const panel = new TestPanel();
         ic.ItemsPanel   = () => panel;
         ic.ItemTemplate = makeTemplate();
@@ -102,7 +121,7 @@ describe('ItemsControl', () => {
     });
 
     test('reassigning Items rebuilds containers', () => {
-        const ic = new ItemsControl();
+        const ic = new TestIC();
         ic.ItemsPanel   = () => new TestPanel();
         ic.ItemTemplate = makeTemplate();
         ic.Items        = ['a', 'b'];
@@ -120,7 +139,7 @@ describe('ItemsControl', () => {
     });
 
     test('replacing ItemTemplate rebuilds containers', () => {
-        const ic = new ItemsControl();
+        const ic = new TestIC();
         ic.ItemsPanel   = () => new TestPanel();
         ic.ItemTemplate = makeTemplate();
         ic.Items        = ['a', 'b'];
@@ -137,7 +156,7 @@ describe('ItemsControl', () => {
     });
 
     test('replacing ItemsPanel tears down containers and remounts under the new panel', () => {
-        const ic = new ItemsControl();
+        const ic = new TestIC();
         const panelA = new TestPanel();
         ic.ItemsPanel   = () => panelA;
         ic.ItemTemplate = makeTemplate();
@@ -161,7 +180,7 @@ describe('ItemsControl', () => {
 
     test('ObservableCollection: Add triggers a rebuild including the new item', () => {
         const items = new ObservableCollection<string>(['a']);
-        const ic = new ItemsControl();
+        const ic = new TestIC();
         ic.ItemsPanel   = () => new TestPanel();
         ic.ItemTemplate = makeTemplate();
         ic.Items        = items;
@@ -174,7 +193,7 @@ describe('ItemsControl', () => {
 
     test('ObservableCollection: Remove triggers a rebuild without the removed item', () => {
         const items = new ObservableCollection<string>(['a', 'b', 'c']);
-        const ic = new ItemsControl();
+        const ic = new TestIC();
         ic.ItemsPanel   = () => new TestPanel();
         ic.ItemTemplate = makeTemplate();
         ic.Items        = items;
@@ -194,7 +213,7 @@ describe('ItemsControl', () => {
         // freshly-made container. Distinguishes the incremental path
         // from the previous full-rebuild behavior.
         const items = new ObservableCollection<string>(['a', 'b']);
-        const ic = new ItemsControl();
+        const ic = new TestIC();
         ic.ItemsPanel   = () => new TestPanel();
         ic.ItemTemplate = makeTemplate();
         ic.Items        = items;
@@ -209,7 +228,7 @@ describe('ItemsControl', () => {
 
     test('ObservableCollection: Insert places the new container at the right index, preserving others', () => {
         const items = new ObservableCollection<string>(['a', 'c']);
-        const ic = new ItemsControl();
+        const ic = new TestIC();
         ic.ItemsPanel   = () => new TestPanel();
         ic.ItemTemplate = makeTemplate();
         ic.Items        = items;
@@ -225,7 +244,7 @@ describe('ItemsControl', () => {
 
     test('ObservableCollection: Remove keeps surrounding containers intact', () => {
         const items = new ObservableCollection<string>(['a', 'b', 'c']);
-        const ic = new ItemsControl();
+        const ic = new TestIC();
         ic.ItemsPanel   = () => new TestPanel();
         ic.ItemTemplate = makeTemplate();
         ic.Items        = items;
@@ -240,7 +259,7 @@ describe('ItemsControl', () => {
 
     test('ObservableCollection: SetAt replaces one container, leaves the rest', () => {
         const items = new ObservableCollection<string>(['a', 'b', 'c']);
-        const ic = new ItemsControl();
+        const ic = new TestIC();
         ic.ItemsPanel   = () => new TestPanel();
         ic.ItemTemplate = makeTemplate();
         ic.Items        = items;
@@ -258,7 +277,7 @@ describe('ItemsControl', () => {
 
     test('ObservableCollection: Clear empties the containers', () => {
         const items = new ObservableCollection<string>(['a', 'b']);
-        const ic = new ItemsControl();
+        const ic = new TestIC();
         ic.ItemsPanel   = () => new TestPanel();
         ic.ItemTemplate = makeTemplate();
         ic.Items        = items;
@@ -271,7 +290,7 @@ describe('ItemsControl', () => {
     test('reassigning Items unsubscribes from the previous ObservableCollection', () => {
         const itemsA = new ObservableCollection<string>(['a']);
         const itemsB = new ObservableCollection<string>(['b']);
-        const ic = new ItemsControl();
+        const ic = new TestIC();
         ic.ItemsPanel   = () => new TestPanel();
         ic.ItemTemplate = makeTemplate();
         ic.Items        = itemsA;
@@ -298,10 +317,10 @@ describe('ItemsControl', () => {
         // and confirm every container sees it.
         Model.RegisterProperty(ItemsControl, 'Tint', 'default', MetaData.Inherits);
 
-        const ic = new ItemsControl();
+        const ic = new TestIC();
         ic.ItemsPanel   = () => new TestPanel();
         ic.ItemTemplate = makeTemplate();
-        ic.set_property_value(ItemLeaf, 'Tint', 'mint');
+        ic._set_property_value_by_name(ItemLeaf, 'Tint', 'mint');
         ic.Items        = ['a', 'b', 'c'];
 
         for (const c of ic.logicalChildren)
@@ -310,7 +329,7 @@ describe('ItemsControl', () => {
         }
 
         // Changing the value after mount also propagates.
-        ic.set_property_value(ItemLeaf, 'Tint', 'rose');
+        ic._set_property_value_by_name(ItemLeaf, 'Tint', 'rose');
         for (const c of ic.logicalChildren)
         {
             assert.equal((c as ItemLeaf).Tint, 'rose');
@@ -320,7 +339,7 @@ describe('ItemsControl', () => {
     test('ItemsControl + Canvas as ItemsPanel works end-to-end', () => {
         // Sanity check: the abstract Panel works as ItemsPanel, and
         // so do real concrete subclasses like Canvas.
-        const ic = new ItemsControl();
+        const ic = new TestIC();
         ic.ItemsPanel   = () => new Canvas();
         ic.ItemTemplate = makeTemplate();
         ic.Items        = ['a', 'b', 'c'];

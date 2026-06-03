@@ -149,11 +149,11 @@ class PropertyPath
             const ownerName = segment.OwnerName;
             if (ownerName === undefined)
             {
-                return current.get_property_value(segment.PropertyName);
+                return current._get_property_value_by_name(segment.PropertyName);
             }
             const owner = Model.find_class(ownerName);
             if (owner === undefined) return undefined;
-            return current.get_property_value(owner, segment.PropertyName);
+            return current._get_property_value_by_name(owner, segment.PropertyName);
         }
         return current[segment.PropertyName];
     }
@@ -167,13 +167,13 @@ class PropertyPath
             const ownerName = segment.OwnerName;
             if (ownerName === undefined)
             {
-                parent.set_property_value(segment.PropertyName, value);
+                parent._set_property_value_by_name(segment.PropertyName, value);
             }
             else
             {
                 const owner = Model.find_class(ownerName);
                 if (owner === undefined) return;
-                parent.set_property_value(owner, segment.PropertyName, value);
+                parent._set_property_value_by_name(owner, segment.PropertyName, value);
             }
         }
         else
@@ -198,13 +198,13 @@ class PropertyPath
             const ownerName = segment.OwnerName;
             if (ownerName === undefined)
             {
-                current.AddPropertyChangedListener(segment.PropertyName, this.onChangedBound);
-                return current.get_property_value(segment.PropertyName);
+                current._add_property_changed_listener_by_name(segment.PropertyName, this.onChangedBound);
+                return current._get_property_value_by_name(segment.PropertyName);
             }
             const owner = Model.find_class(ownerName);
             if (owner === undefined) return undefined;
-            current.AddPropertyChangedListener(owner, segment.PropertyName, this.onChangedBound);
-            return current.get_property_value(owner, segment.PropertyName);
+            current._add_property_changed_listener_by_name(owner, segment.PropertyName, this.onChangedBound);
+            return current._get_property_value_by_name(owner, segment.PropertyName);
         }
         segment.Model = undefined;
         return current[segment.PropertyName];
@@ -218,14 +218,14 @@ class PropertyPath
         const ownerName = segment.OwnerName;
         if (ownerName === undefined)
         {
-            segment.Model.RemovePropertyChangedListener(segment.PropertyName, this.onChangedBound);
+            segment.Model._remove_property_changed_listener_by_name(segment.PropertyName, this.onChangedBound);
         }
         else
         {
             const owner = Model.find_class(ownerName);
             if (owner !== undefined)
             {
-                segment.Model.RemovePropertyChangedListener(owner, segment.PropertyName, this.onChangedBound);
+                segment.Model._remove_property_changed_listener_by_name(owner, segment.PropertyName, this.onChangedBound);
             }
         }
     }

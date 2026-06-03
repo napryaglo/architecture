@@ -110,87 +110,99 @@ export interface VisualHost
 // rendering, the visual tree, and property value inheritance.
 export class Visual extends Model
 {
-    static {
-        // NaN is the "not set" sentinel for explicit size constraints —
-        // matches WPF FrameworkElement.Width / .Height. Marked Measure
-        // so changing either invalidates the layout pass.
-        Model.RegisterProperty(Visual, 'Width',     Number.NaN,                MetaData.Measure);
-        Model.RegisterProperty(Visual, 'Height',    Number.NaN,                MetaData.Measure);
-        Model.RegisterProperty(Visual, 'MinWidth',  0,                         MetaData.Measure);
-        Model.RegisterProperty(Visual, 'MinHeight', 0,                         MetaData.Measure);
-        Model.RegisterProperty(Visual, 'MaxWidth',  Number.POSITIVE_INFINITY,  MetaData.Measure);
-        Model.RegisterProperty(Visual, 'MaxHeight', Number.POSITIVE_INFINITY,  MetaData.Measure);
-        Model.RegisterProperty(Visual, 'HorizontalAlignment', HorizontalAlignment.Stretch, MetaData.Arrange);
-        Model.RegisterProperty(Visual, 'VerticalAlignment',   VerticalAlignment.Stretch,   MetaData.Arrange);
-        // Outer spacing around this Visual. Eats into availableSize at
-        // Measure time, inflates DesiredSize so the parent reserves the
-        // space, and offsets the rendered area at Arrange time. Mirrors
-        // WPF FrameworkElement.Margin.
-        Model.RegisterProperty(Visual, 'Margin',  Thickness.Zero, MetaData.Measure);
-        // Style isn't inherited (each Visual carries its own); changing
-        // it can affect Measure/Arrange/Render via whichever setters
-        // it contains, but the Style property itself doesn't need a
-        // metadata flag — the underlying property changes from
-        // SetStyleValue fire their own invalidation per their own
-        // metadata. MetaData.None keeps OnPropertyChanged from doing
-        // redundant work.
-        Model.RegisterProperty(Visual, 'Style',   undefined,      MetaData.None);
-        // Optional clip geometry applied to this Visual and its
-        // visual subtree at render time. Typed as `unknown` here so
-        // the runtime doesn't depend on visual-engine's Geometry
-        // class — the host's DrawingContext.PushClip is what reads
-        // it. MetaData.Render so changes re-render.
-        Model.RegisterProperty(Visual, 'Clip',    undefined,      MetaData.Render);
-        // Ambient data root for bindings. Inherits down the logical
-        // tree so a binding written as `$Path` on a descendant
-        // resolves against the nearest ancestor's DataContext. No
-        // measure / arrange / render impact — pure data plumbing —
-        // hence the inherits-only flag.
-        Model.RegisterProperty(Visual, 'DataContext', undefined, MetaData.Inherits);
-        // Input state flags. Maintained by the InputManager, not by
-        // user code — handlers should treat both as read-only. Default
-        // `false` so triggers like `when{ IsMouseOver }{ … }` only
-        // engage once the pointer enters this Visual's hover route.
-        // MetaData.None: no measure/arrange/render implication; the
-        // visible effect comes from any Style triggers that watch them.
-        Model.RegisterProperty(Visual, 'IsMouseOver', false, MetaData.None);
-        Model.RegisterProperty(Visual, 'IsPressed',   false, MetaData.None);
-        // Focusable — opt-in for keyboard focus. Default false so a
-        // random Border / TextBlock / Panel never accidentally swallows
-        // keys; controls that handle keyboard input (TextBox, Button)
-        // set this to true. The InputManager refuses to focus a Visual
-        // whose Focusable is false.
-        Model.RegisterProperty(Visual, 'Focusable',  false, MetaData.None);
-        // IsFocused — true when this Visual is the InputManager's
-        // current focused target. Read-only from consumer code; setting
-        // it directly does NOT actually take focus (use Focus() for
-        // that). The flag is here so Style triggers can branch on it
-        // (`when{ IsFocused }{ BorderBrush = #1976d2 }`) and so tests
-        // can assert state without reaching into the InputManager.
-        Model.RegisterProperty(Visual, 'IsFocused',  false, MetaData.None);
-        // Generic consumer-side handle, mirroring WPF's
-        // FrameworkElement.Tag. Common use: bind a domain object to a
-        // Visual so a click handler / selection listener can recover
-        // the consumer's data without an external WeakMap. Pure storage
-        // — never read by the framework itself — hence MetaData.None.
-        Model.RegisterProperty(Visual, 'Tag',         undefined, MetaData.None);
-    }
+    // Typed-key DPs. Inline static initializers run in declaration order
+    // when the class is loaded, so by the time the first Visual is
+    // constructed every key exists and every descriptor is registered.
+    // The string names below are still the canonical binding-path
+    // identities (`Binding(t, 'Width')` resolves them); the typed keys
+    // are an opt-in faster, type-safe path for direct accessor code.
+
+    // NaN is the "not set" sentinel for explicit size constraints —
+    // matches WPF FrameworkElement.Width / .Height. Marked Measure so
+    // changing either invalidates the layout pass.
+    public static readonly WidthKey      = Model.RegisterProperty<number>(Visual, 'Width',     Number.NaN,               MetaData.Measure);
+    public static readonly HeightKey     = Model.RegisterProperty<number>(Visual, 'Height',    Number.NaN,               MetaData.Measure);
+    public static readonly MinWidthKey   = Model.RegisterProperty<number>(Visual, 'MinWidth',  0,                        MetaData.Measure);
+    public static readonly MinHeightKey  = Model.RegisterProperty<number>(Visual, 'MinHeight', 0,                        MetaData.Measure);
+    public static readonly MaxWidthKey   = Model.RegisterProperty<number>(Visual, 'MaxWidth',  Number.POSITIVE_INFINITY, MetaData.Measure);
+    public static readonly MaxHeightKey  = Model.RegisterProperty<number>(Visual, 'MaxHeight', Number.POSITIVE_INFINITY, MetaData.Measure);
+    public static readonly HorizontalAlignmentKey = Model.RegisterProperty<HorizontalAlignment>(Visual, 'HorizontalAlignment', HorizontalAlignment.Stretch, MetaData.Arrange);
+    public static readonly VerticalAlignmentKey   = Model.RegisterProperty<VerticalAlignment>(  Visual, 'VerticalAlignment',   VerticalAlignment.Stretch,   MetaData.Arrange);
+
+    // Outer spacing around this Visual. Eats into availableSize at
+    // Measure time, inflates DesiredSize so the parent reserves the
+    // space, and offsets the rendered area at Arrange time. Mirrors
+    // WPF FrameworkElement.Margin.
+    public static readonly MarginKey = Model.RegisterProperty<Thickness>(Visual, 'Margin', Thickness.Zero, MetaData.Measure);
+
+    // Style isn't inherited (each Visual carries its own); changing
+    // it can affect Measure/Arrange/Render via whichever setters
+    // it contains, but the Style property itself doesn't need a
+    // metadata flag — the underlying property changes from
+    // SetStyleValue fire their own invalidation per their own
+    // metadata. MetaData.None keeps OnPropertyChanged from doing
+    // redundant work.
+    public static readonly StyleKey = Model.RegisterProperty<Style | undefined>(Visual, 'Style', undefined, MetaData.None);
+
+    // Optional clip geometry applied to this Visual and its visual
+    // subtree at render time. Typed as `unknown` here so the runtime
+    // doesn't depend on visual-engine's Geometry class — the host's
+    // DrawingContext.PushClip is what reads it. MetaData.Render so
+    // changes re-render.
+    public static readonly ClipKey = Model.RegisterProperty<unknown>(Visual, 'Clip', undefined, MetaData.Render);
+
+    // Ambient data root for bindings. Inherits down the logical tree so
+    // a binding written as `$Path` on a descendant resolves against the
+    // nearest ancestor's DataContext. No measure / arrange / render
+    // impact — pure data plumbing — hence the inherits-only flag.
+    public static readonly DataContextKey = Model.RegisterProperty<unknown>(Visual, 'DataContext', undefined, MetaData.Inherits);
+
+    // Input state flags. Maintained by the InputManager, not by user
+    // code — handlers should treat both as read-only. Default `false` so
+    // triggers like `when{ IsMouseOver }{ … }` only engage once the
+    // pointer enters this Visual's hover route. MetaData.None: no
+    // measure/arrange/render implication; the visible effect comes from
+    // any Style triggers that watch them.
+    public static readonly IsMouseOverKey = Model.RegisterProperty<boolean>(Visual, 'IsMouseOver', false, MetaData.None);
+    public static readonly IsPressedKey   = Model.RegisterProperty<boolean>(Visual, 'IsPressed',   false, MetaData.None);
+
+    // Focusable — opt-in for keyboard focus. Default false so a random
+    // Border / TextBlock / Panel never accidentally swallows keys;
+    // controls that handle keyboard input (TextBox, Button) set this to
+    // true. The InputManager refuses to focus a Visual whose Focusable
+    // is false.
+    public static readonly FocusableKey = Model.RegisterProperty<boolean>(Visual, 'Focusable', false, MetaData.None);
+
+    // IsFocused — true when this Visual is the InputManager's current
+    // focused target. Read-only from consumer code; setting it directly
+    // does NOT actually take focus (use Focus() for that). The flag is
+    // here so Style triggers can branch on it
+    // (`when{ IsFocused }{ BorderBrush = #1976d2 }`) and so tests can
+    // assert state without reaching into the InputManager.
+    public static readonly IsFocusedKey = Model.RegisterProperty<boolean>(Visual, 'IsFocused', false, MetaData.None);
+
+    // Generic consumer-side handle, mirroring WPF's FrameworkElement.Tag.
+    // Common use: bind a domain object to a Visual so a click handler /
+    // selection listener can recover the consumer's data without an
+    // external WeakMap. Pure storage — never read by the framework
+    // itself — hence MetaData.None.
+    public static readonly TagKey = Model.RegisterProperty<unknown>(Visual, 'Tag', undefined, MetaData.None);
 
     // Input state — read-only mirrors of the DPs. Both flags are set
     // exclusively by the InputManager during pointer dispatch.
-    public get IsMouseOver(): boolean { return this.get_property_value('IsMouseOver') as boolean; }
-    public get IsPressed():   boolean { return this.get_property_value('IsPressed')   as boolean; }
+    public get IsMouseOver(): boolean { return this.get_property_value(Visual.IsMouseOverKey); }
+    public get IsPressed():   boolean { return this.get_property_value(Visual.IsPressedKey); }
     // True when the InputManager has this Visual as its current focused
     // target. Read-only by convention; use Focus() / Blur() to change.
-    public get IsFocused():   boolean { return this.get_property_value('IsFocused')   as boolean; }
+    public get IsFocused():   boolean { return this.get_property_value(Visual.IsFocusedKey); }
 
     // Opt-in for keyboard focus. Controls that handle keyboard input
     // (TextBox, Button) flip this on in their constructor; everything
     // else stays unfocusable. Settable by consumers when they want to
     // make a custom hit-target focusable (e.g. a custom widget hosting
     // a keyboard handler).
-    public get Focusable(): boolean { return this.get_property_value('Focusable') as boolean; }
-    public set Focusable(v: boolean) { this.set_property_value('Focusable', v); }
+    public get Focusable(): boolean { return this.get_property_value(Visual.FocusableKey); }
+    public set Focusable(v: boolean) { this.set_property_value(Visual.FocusableKey, v); }
 
     // Take keyboard focus on this Visual. Delegates to the host's
     // InputManager via the optional `SetFocus` method on VisualHost.
@@ -228,15 +240,15 @@ export class Visual extends Model
         return sb;
     }
 
-    public get DataContext(): unknown { return this.get_property_value('DataContext'); }
-    public set DataContext(value: unknown) { this.set_property_value('DataContext', value); }
+    public get DataContext(): unknown { return this.get_property_value(Visual.DataContextKey); }
+    public set DataContext(value: unknown) { this.set_property_value(Visual.DataContextKey, value); }
 
     // Generic consumer-side handle. The framework never reads Tag;
     // consumers attach arbitrary data (a domain object, a routing key,
     // an action delegate) so click / selection handlers can recover it
     // without an out-of-band map. WPF parity.
-    public get Tag(): unknown { return this.get_property_value('Tag'); }
-    public set Tag(value: unknown) { this.set_property_value('Tag', value); }
+    public get Tag(): unknown { return this.get_property_value(Visual.TagKey); }
+    public set Tag(value: unknown) { this.set_property_value(Visual.TagKey, value); }
 
     // Two parent pointers: visual (renderer / hit-testing / target
     // propagation) and logical (property inheritance / future named-
@@ -520,12 +532,12 @@ export class Visual extends Model
     // they sit below LocalValue / Binding / Animated / Coerced, so
     // an explicit set or binding always shadows the styled value, but
     // above InheritedValue / Default.
-    public get Style(): Style | undefined { return this.get_property_value('Style'); }
+    public get Style(): Style | undefined { return this.get_property_value(Visual.StyleKey); }
     public set Style(value: Style | undefined)
     {
         const old = this.Style;
         if (old === value) return;
-        this.set_property_value('Style', value);
+        this.set_property_value(Visual.StyleKey, value);
         this.refresh_active_style();
     }
 
@@ -849,9 +861,9 @@ export class Visual extends Model
     private install_trigger(trigger: PropertyTrigger): void
     {
         const onChange = (): void => { this.evaluate_trigger(trigger); };
-        this.AddPropertyChangedListener(trigger.propertyOwner, trigger.propertyName, onChange);
+        this._add_property_changed_listener_by_name(trigger.propertyOwner, trigger.propertyName, onChange);
         this._triggerSubscriptions.set(trigger, () => {
-            this.RemovePropertyChangedListener(trigger.propertyOwner, trigger.propertyName, onChange);
+            this._remove_property_changed_listener_by_name(trigger.propertyOwner, trigger.propertyName, onChange);
         });
         this.evaluate_trigger(trigger);
     }
@@ -881,10 +893,10 @@ export class Visual extends Model
         const unsubs: Array<() => void> = [];
         for (const cond of trigger.conditions)
         {
-            this.AddPropertyChangedListener(cond.propertyOwner, cond.propertyName, onChange);
+            this._add_property_changed_listener_by_name(cond.propertyOwner, cond.propertyName, onChange);
             unsubs.push(() =>
             {
-                this.RemovePropertyChangedListener(
+                this._remove_property_changed_listener_by_name(
                     cond.propertyOwner, cond.propertyName, onChange);
             });
         }
@@ -895,7 +907,7 @@ export class Visual extends Model
     private evaluate_multi_trigger(trigger: MultiTrigger): void
     {
         const allMatch = trigger.conditions.every(cond =>
-            this.get_property_value(cond.propertyOwner, cond.propertyName) === cond.value);
+            this._get_property_value_by_name(cond.propertyOwner, cond.propertyName) === cond.value);
         const wasActive = this._activeTriggers.has(trigger);
         if (allMatch && !wasActive)
         {
@@ -926,7 +938,7 @@ export class Visual extends Model
     // (WPF parity for PropertyTrigger).
     private evaluate_trigger(trigger: PropertyTrigger): void
     {
-        const current = this.get_property_value(trigger.propertyOwner, trigger.propertyName);
+        const current = this._get_property_value_by_name(trigger.propertyOwner, trigger.propertyName);
         const matched = current === trigger.value;
         const wasActive = this._activeTriggers.has(trigger);
         if (matched && !wasActive)
@@ -1217,40 +1229,40 @@ export class Visual extends Model
     // fixed-size element ("100×100 box") or a range ("at least 40 wide,
     // never wider than 200"). All four contribute to a single per-axis
     // [min, max] range resolved in Measure.
-    public get Width(): number { return this.get_property_value('Width'); }
-    public set Width(value: number) { this.set_property_value('Width', value); }
+    public get Width(): number { return this.get_property_value(Visual.WidthKey); }
+    public set Width(value: number) { this.set_property_value(Visual.WidthKey, value); }
 
-    public get Height(): number { return this.get_property_value('Height'); }
-    public set Height(value: number) { this.set_property_value('Height', value); }
+    public get Height(): number { return this.get_property_value(Visual.HeightKey); }
+    public set Height(value: number) { this.set_property_value(Visual.HeightKey, value); }
 
-    public get MinWidth(): number { return this.get_property_value('MinWidth'); }
-    public set MinWidth(value: number) { this.set_property_value('MinWidth', value); }
+    public get MinWidth(): number { return this.get_property_value(Visual.MinWidthKey); }
+    public set MinWidth(value: number) { this.set_property_value(Visual.MinWidthKey, value); }
 
-    public get MinHeight(): number { return this.get_property_value('MinHeight'); }
-    public set MinHeight(value: number) { this.set_property_value('MinHeight', value); }
+    public get MinHeight(): number { return this.get_property_value(Visual.MinHeightKey); }
+    public set MinHeight(value: number) { this.set_property_value(Visual.MinHeightKey, value); }
 
-    public get MaxWidth(): number { return this.get_property_value('MaxWidth'); }
-    public set MaxWidth(value: number) { this.set_property_value('MaxWidth', value); }
+    public get MaxWidth(): number { return this.get_property_value(Visual.MaxWidthKey); }
+    public set MaxWidth(value: number) { this.set_property_value(Visual.MaxWidthKey, value); }
 
-    public get MaxHeight(): number { return this.get_property_value('MaxHeight'); }
-    public set MaxHeight(value: number) { this.set_property_value('MaxHeight', value); }
+    public get MaxHeight(): number { return this.get_property_value(Visual.MaxHeightKey); }
+    public set MaxHeight(value: number) { this.set_property_value(Visual.MaxHeightKey, value); }
 
     // Positioning within the parent-given slot when the rendered area
     // is smaller than the slot. Defaults to Stretch (fill the slot when
     // no explicit Width / Height is set; with explicit size, Stretch
     // falls back to Center per WPF semantics).
-    public get HorizontalAlignment(): HorizontalAlignment { return this.get_property_value('HorizontalAlignment'); }
-    public set HorizontalAlignment(value: HorizontalAlignment) { this.set_property_value('HorizontalAlignment', value); }
+    public get HorizontalAlignment(): HorizontalAlignment { return this.get_property_value(Visual.HorizontalAlignmentKey); }
+    public set HorizontalAlignment(value: HorizontalAlignment) { this.set_property_value(Visual.HorizontalAlignmentKey, value); }
 
-    public get VerticalAlignment(): VerticalAlignment { return this.get_property_value('VerticalAlignment'); }
-    public set VerticalAlignment(value: VerticalAlignment) { this.set_property_value('VerticalAlignment', value); }
+    public get VerticalAlignment(): VerticalAlignment { return this.get_property_value(Visual.VerticalAlignmentKey); }
+    public set VerticalAlignment(value: VerticalAlignment) { this.set_property_value(Visual.VerticalAlignmentKey, value); }
 
     // Outer spacing — distance from this Visual's rendered area to the
     // edges of its parent-given slot. Differs from a Border's Padding
     // (which is inside the border, around the child): Margin lives
     // OUTSIDE the Visual itself and is consumed by the parent's layout.
-    public get Margin(): Thickness { return this.get_property_value('Margin'); }
-    public set Margin(value: Thickness) { this.set_property_value('Margin', value); }
+    public get Margin(): Thickness { return this.get_property_value(Visual.MarginKey); }
+    public set Margin(value: Thickness) { this.set_property_value(Visual.MarginKey, value); }
 
     // Optional clip applied at render time — a Geometry in this
     // Visual's local coordinate space. The renderer pushes this clip
@@ -1258,8 +1270,8 @@ export class Visual extends Model
     // after children. Typed as `unknown` so runtime stays decoupled
     // from visual-engine's Geometry class; whatever shape DC.PushClip
     // accepts works here.
-    public get Clip(): unknown | undefined { return this.get_property_value('Clip'); }
-    public set Clip(value: unknown | undefined) { this.set_property_value('Clip', value); }
+    public get Clip(): unknown | undefined { return this.get_property_value(Visual.ClipKey); }
+    public set Clip(value: unknown | undefined) { this.set_property_value(Visual.ClipKey, value); }
 
     public get DesiredSize(): Size  { return this._desiredSize; }
     public get RenderSize(): Size   { return this._renderSize; }

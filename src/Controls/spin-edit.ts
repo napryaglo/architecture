@@ -86,14 +86,15 @@ function resolveTemplate(key: string): ControlTemplate
 // outlines.
 export class SpinEdit extends Visual
 {
+    public static readonly ValueKey         = Model.RegisterProperty<number>( SpinEdit, 'Value',         0,                  MetaData.None);
+    public static readonly MinimumKey       = Model.RegisterProperty<number>( SpinEdit, 'Minimum',       -Number.MAX_VALUE,  MetaData.None);
+    public static readonly MaximumKey       = Model.RegisterProperty<number>( SpinEdit, 'Maximum',       Number.MAX_VALUE,   MetaData.None);
+    public static readonly SmallChangeKey   = Model.RegisterProperty<number>( SpinEdit, 'SmallChange',   1,                  MetaData.None);
+    public static readonly LargeChangeKey   = Model.RegisterProperty<number>( SpinEdit, 'LargeChange',   10,                 MetaData.None);
+    public static readonly DecimalPlacesKey = Model.RegisterProperty<number>( SpinEdit, 'DecimalPlaces', 0,                  MetaData.None);
+    public static readonly IsReadOnlyKey    = Model.RegisterProperty<boolean>(SpinEdit, 'IsReadOnly',    false,              MetaData.None);
+
     static {
-        Model.RegisterProperty(SpinEdit, 'Value',         0,                  MetaData.None);
-        Model.RegisterProperty(SpinEdit, 'Minimum',       -Number.MAX_VALUE,  MetaData.None);
-        Model.RegisterProperty(SpinEdit, 'Maximum',       Number.MAX_VALUE,   MetaData.None);
-        Model.RegisterProperty(SpinEdit, 'SmallChange',   1,                  MetaData.None);
-        Model.RegisterProperty(SpinEdit, 'LargeChange',   10,                 MetaData.None);
-        Model.RegisterProperty(SpinEdit, 'DecimalPlaces', 0,                  MetaData.None);
-        Model.RegisterProperty(SpinEdit, 'IsReadOnly',    false,              MetaData.None);
         ensureControlsTheme();
     }
 
@@ -169,8 +170,8 @@ export class SpinEdit extends Visual
             else if (this._textBox.IsMouseOver) this._border.BorderBrush = Theme.fieldText;
             else                                this._border.BorderBrush = Theme.fieldBorder;
         };
-        this._textBox.AddPropertyChangedListener('IsFocused',   refreshChrome);
-        this._textBox.AddPropertyChangedListener('IsMouseOver', refreshChrome);
+        this._textBox.AddPropertyChangedListener(Visual.IsFocusedKey,   refreshChrome);
+        this._textBox.AddPropertyChangedListener(Visual.IsMouseOverKey, refreshChrome);
         refreshChrome();
 
         // ── Text <-> Value plumbing ─────────────────────────────────
@@ -178,13 +179,13 @@ export class SpinEdit extends Visual
         this.syncTextFromValue();
         // Reformat the display on every Value change — button click,
         // arrow / Page key, programmatic write.
-        this.AddPropertyChangedListener('Value', () => {
+        this.AddPropertyChangedListener(SpinEdit.ValueKey, () => {
             this.syncTextFromValue();
         });
         // Blur commits whatever the user typed. The listener gets
         // (model, property, oldVal, newVal); we care only about
         // false→true transitions of IsFocused going OUT.
-        this._textBox.AddPropertyChangedListener('IsFocused',
+        this._textBox.AddPropertyChangedListener(Visual.IsFocusedKey,
             (_m, _p, _ov, nv) => {
                 if (nv === false) this.commitText();
             });
@@ -193,7 +194,7 @@ export class SpinEdit extends Visual
         // Match the inner TextBox so the display can't be typed into
         // either. Forwarded on every change (incl. the initial value).
         this._textBox.IsReadOnly = this.IsReadOnly;
-        this.AddPropertyChangedListener('IsReadOnly',
+        this.AddPropertyChangedListener(SpinEdit.IsReadOnlyKey,
             (_m, _p, _ov, nv) => {
                 this._textBox.IsReadOnly = nv as boolean;
             });
@@ -201,25 +202,25 @@ export class SpinEdit extends Visual
 
     // ── Public DPs ─────────────────────────────────────────────────
 
-    public get Value(): number { return this.get_property_value('Value'); }
+    public get Value(): number { return this.get_property_value(SpinEdit.ValueKey); }
     public set Value(v: number)
     {
         const clamped = this.clamp(v);
-        this.set_property_value('Value', clamped);
+        this.set_property_value(SpinEdit.ValueKey, clamped);
     }
 
-    public get Minimum(): number { return this.get_property_value('Minimum'); }
-    public set Minimum(v: number) { this.set_property_value('Minimum', v); }
-    public get Maximum(): number { return this.get_property_value('Maximum'); }
-    public set Maximum(v: number) { this.set_property_value('Maximum', v); }
-    public get SmallChange(): number { return this.get_property_value('SmallChange'); }
-    public set SmallChange(v: number) { this.set_property_value('SmallChange', v); }
-    public get LargeChange(): number { return this.get_property_value('LargeChange'); }
-    public set LargeChange(v: number) { this.set_property_value('LargeChange', v); }
-    public get DecimalPlaces(): number { return this.get_property_value('DecimalPlaces'); }
-    public set DecimalPlaces(v: number) { this.set_property_value('DecimalPlaces', v); }
-    public get IsReadOnly(): boolean { return this.get_property_value('IsReadOnly'); }
-    public set IsReadOnly(v: boolean) { this.set_property_value('IsReadOnly', v); }
+    public get Minimum(): number { return this.get_property_value(SpinEdit.MinimumKey); }
+    public set Minimum(v: number) { this.set_property_value(SpinEdit.MinimumKey, v); }
+    public get Maximum(): number { return this.get_property_value(SpinEdit.MaximumKey); }
+    public set Maximum(v: number) { this.set_property_value(SpinEdit.MaximumKey, v); }
+    public get SmallChange(): number { return this.get_property_value(SpinEdit.SmallChangeKey); }
+    public set SmallChange(v: number) { this.set_property_value(SpinEdit.SmallChangeKey, v); }
+    public get LargeChange(): number { return this.get_property_value(SpinEdit.LargeChangeKey); }
+    public set LargeChange(v: number) { this.set_property_value(SpinEdit.LargeChangeKey, v); }
+    public get DecimalPlaces(): number { return this.get_property_value(SpinEdit.DecimalPlacesKey); }
+    public set DecimalPlaces(v: number) { this.set_property_value(SpinEdit.DecimalPlacesKey, v); }
+    public get IsReadOnly(): boolean { return this.get_property_value(SpinEdit.IsReadOnlyKey); }
+    public set IsReadOnly(v: boolean) { this.set_property_value(SpinEdit.IsReadOnlyKey, v); }
 
     public override get visualChildren(): readonly Visual[] { return [this._border]; }
 

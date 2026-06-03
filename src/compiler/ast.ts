@@ -145,7 +145,14 @@ export interface SlotAssign
 {
     kind:  'slot-assign';
     name:  string;
-    value: ValueNode | StructuredBody;
+    // `Name: <plain value>`        — primitive / ident / @key / binding-expr
+    // `Name: { <body> }`           — structured (used for `resources: { … }`)
+    // `Name: <template> { … }`     — inline template (template / datatemplate
+    //                                / hierarchicaldatatemplate /
+    //                                itemspaneltemplate). The compiler emits
+    //                                an anonymous template construction at
+    //                                the assignment site.
+    value: ValueNode | StructuredBody | ResourceForm;
     span:  SourceSpan;
 }
 
@@ -161,12 +168,13 @@ export interface KeyValueResource
     span: SourceSpan;
 }
 
-// ── Resource forms (style, template, datatemplate, hierarchicaldatatemplate) ──
+// ── Resource forms (style, template, datatemplate, hierarchicaldatatemplate,
+//                    itemspaneltemplate) ───────────────────────────────────
 
 export interface ResourceForm
 {
     kind:      'resource-form';
-    keyword:   'style' | 'template' | 'datatemplate' | 'hierarchicaldatatemplate';
+    keyword:   'style' | 'template' | 'datatemplate' | 'hierarchicaldatatemplate' | 'itemspaneltemplate';
     metaAttrs: NamedAttr[];        // targettype, datatype, itemsselector, basedon, …
     xAttrs:    XAttr[];            // x:key, future x:* meta
     body:      SetterList | ElementNode;

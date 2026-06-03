@@ -399,6 +399,12 @@ export class Compiler
             this.registerResourceFormVar(rdVar, rf, tmplVar, /*allowImplicit*/ false);
             return;
         }
+        if (rf.keyword === 'itemspaneltemplate')
+        {
+            const tmplVar = this.compileItemsPanelTemplateForm(rf);
+            this.registerResourceFormVar(rdVar, rf, tmplVar, /*allowImplicit*/ false);
+            return;
+        }
         throw new EmitError(
             `unknown resource form '${rf.keyword}'`, rf.span);
     }
@@ -532,6 +538,52 @@ export class Compiler
         // iterable.
         this.line(
             `}, (data) => data?.${selector}, undefined, undefined, ${JSON.stringify(dataType)});`);
+        return tmplVar;
+    }
+
+    // Inline-template emission shared between the resource-form path
+    // (registered in a ResourceDictionary by x:key) and the inline
+    // slot-assign path (anonymous, assigned directly to a property).
+    // The two paths differ only in how the produced template var is
+    // consumed downstream; the construction itself is identical, so
+    // this helper just dispatches to the keyword-specific compiler
+    // method and returns the emitted variable name. Style is rejected
+    // here — styles only ever live as keyed dictionary entries.
+    private compileInlineTemplateValue(rf: ResourceForm): string
+    {
+        if (rf.keyword === 'template')                  return this.compileControlTemplateForm(rf);
+        if (rf.keyword === 'datatemplate')              return this.compileDataTemplateForm(rf);
+        if (rf.keyword === 'hierarchicaldatatemplate')  return this.compileHierarchicalDataTemplateForm(rf);
+        if (rf.keyword === 'itemspaneltemplate')        return this.compileItemsPanelTemplateForm(rf);
+        throw new EmitError(
+            `'${rf.keyword}' is not allowed inline as a slot-assign value (only template forms are)`,
+            rf.span);
+    }
+
+    // ── ItemsPanelTemplate ──────────────────────────────────────────
+    //
+    // `itemspaneltemplate x:key="…" { Panel … }` emits an
+    // ItemsPanelTemplate whose Apply() produces a fresh Panel each call.
+    // No required meta-attrs — the produced Visual just has to be a
+    // Panel-derived class (validated at runtime by the consumer, not at
+    // compile time, since the compiler doesn't track Visual subclass
+    // hierarchies). Used by ItemsControl.ItemsPanel as the markup-side
+    // analog of the JS `() => Panel` factory closure.
+    private compileItemsPanelTemplateForm(rf: ResourceForm): string
+    {
+        if (rf.body.kind !== 'element')
+        {
+            throw new EmitError(
+                'itemspaneltemplate body must be a single element', rf.span);
+        }
+        this.ensureImport('ItemsPanelTemplate');
+        const tmplVar = this.fresh('tmpl');
+        this.line(`const ${tmplVar} = new ItemsPanelTemplate(() => {`);
+        this.indent += 4;
+        const rootVar = this.compileElement(rf.body);
+        this.line(`return ${rootVar};`);
+        this.indent -= 4;
+        this.line(`});`);
         return tmplVar;
     }
 
@@ -1044,13 +1096,13 @@ export class Compiler
                     .map(c => c.kind === 'text-chunk' ? c.text : '')
                     .join('');
                 this.line(
-                    `${v}.set_property_value(${JSON.stringify(slot.name)}, ${JSON.stringify(text)});`);
+                    `${v}._set_property_value_by_name(${JSON.stringify(slot.name)}, ${JSON.stringify(text)});`);
             }
             else
             {
                 const expr = this.compileMixedTextBody(elem.body, { targetExpr: v });
                 this.line(
-                    `${v}.set_property_value(${JSON.stringify(slot.name)}, ${expr});`);
+                    `${v}._set_property_value_by_name(${JSON.stringify(slot.name)}, ${expr});`);
             }
         }
         return v;
@@ -1303,7 +1355,7 @@ export class Compiler
                 targetExpr:   targetVar,
             });
             this.line(
-                `${targetVar}.set_property_value(${ownerType}, ${JSON.stringify(propName)}, ${valueExpr});`);
+                `${targetVar}._set_property_value_by_name(${ownerType}, ${JSON.stringify(propName)}, ${valueExpr});`);
             return;
         }
         const propName = attr.path.parts[0]!;
@@ -1312,7 +1364,7 @@ export class Compiler
             targetExpr:   targetVar,
         });
         this.line(
-            `${targetVar}.set_property_value(${JSON.stringify(propName)}, ${valueExpr});`);
+            `${targetVar}._set_property_value_by_name(${JSON.stringify(propName)}, ${valueExpr});`);
     }
 
     private compileElementBody(parentVar: string, parentClass: string, body: StructuredBody): void
@@ -1325,6 +1377,20 @@ export class Compiler
                 if (item.name === 'resources')
                 {
                     this.compileResourcesSlot(`${parentVar}.Resources`, item);
+                    continue;
+                }
+                // Inline template at the value position — emit an
+                // anonymous template (no x:key) and assign the resulting
+                // var to the slot. Lets consumers write
+                //   ListBox { ItemsPanel: itemspaneltemplate { WrapPanel[…] } }
+                // without registering a keyed dictionary entry just to
+                // reference it once.
+                if (typeof item.value === 'object' && 'kind' in item.value
+                    && item.value.kind === 'resource-form')
+                {
+                    const tmplVar = this.compileInlineTemplateValue(item.value);
+                    this.line(
+                        `${parentVar}._set_property_value_by_name(${JSON.stringify(item.name)}, ${tmplVar});`);
                     continue;
                 }
                 // Non-resources slot — set as a regular property.
@@ -1340,7 +1406,7 @@ export class Compiler
                     targetExpr:   parentVar,
                 });
                 this.line(
-                    `${parentVar}.set_property_value(${JSON.stringify(item.name)}, ${expr});`);
+                    `${parentVar}._set_property_value_by_name(${JSON.stringify(item.name)}, ${expr});`);
                 continue;
             }
             if (item.kind === 'element')

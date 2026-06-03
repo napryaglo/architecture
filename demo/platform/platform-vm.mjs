@@ -38,19 +38,19 @@ export class DemoVM extends Model
 
     constructor(def) {
         super();
-        this.set_property_value('Id',       def.id);
-        this.set_property_value('Label',    def.title);
-        this.set_property_value('Title',    def.title);
-        this.set_property_value('Subtitle', def.subtitle ?? '');
+        this._set_property_value_by_name('Id',       def.id);
+        this._set_property_value_by_name('Label',    def.title);
+        this._set_property_value_by_name('Title',    def.title);
+        this._set_property_value_by_name('Subtitle', def.subtitle ?? '');
         // Carry the raw registry definition for instantiateDemo lookup —
         // the Visual is built lazily from this on first activation.
         this.Definition = def;
     }
 
-    get Id()       { return this.get_property_value('Id'); }
-    get Label()    { return this.get_property_value('Label'); }
-    get Title()    { return this.get_property_value('Title'); }
-    get Subtitle() { return this.get_property_value('Subtitle'); }
+    get Id()       { return this._get_property_value_by_name('Id'); }
+    get Label()    { return this._get_property_value_by_name('Label'); }
+    get Title()    { return this._get_property_value_by_name('Title'); }
+    get Subtitle() { return this._get_property_value_by_name('Subtitle'); }
 }
 
 export class GroupVM extends Model
@@ -61,14 +61,14 @@ export class GroupVM extends Model
 
     constructor(name) {
         super();
-        this.set_property_value('Label', name);
+        this._set_property_value_by_name('Label', name);
         // Mutable collection so demos can be added incrementally as the
         // registry is built. ObservableCollection so the TreeView's
         // ItemsControl pipeline picks up insertions reactively.
         this.Demos = new ObservableCollection();
     }
 
-    get Label() { return this.get_property_value('Label'); }
+    get Label() { return this._get_property_value_by_name('Label'); }
 }
 
 export class PlatformVM extends Model
@@ -101,7 +101,7 @@ export class PlatformVM extends Model
             }
             g.Demos.Add(new DemoVM(def));
         }
-        this.set_property_value('Groups', groups);
+        this._set_property_value_by_name('Groups', groups);
 
         // Auto-select the first demo so the platform never shows an
         // empty welcome state. This is just a regular DP write — the
@@ -110,15 +110,15 @@ export class PlatformVM extends Model
         // via the generator and selects it), and the OnPropertyChanged
         // hook below recomputes Title / Subtitle / Content for the
         // PageView bindings.
-        this.set_property_value('SelectedDemo', this.FirstDemo());
+        this._set_property_value_by_name('SelectedDemo', this.FirstDemo());
     }
 
-    get Groups()       { return this.get_property_value('Groups'); }
-    get SelectedDemo() { return this.get_property_value('SelectedDemo'); }
-    set SelectedDemo(v){ this.set_property_value('SelectedDemo', v); }
-    get Title()        { return this.get_property_value('Title'); }
-    get Subtitle()     { return this.get_property_value('Subtitle'); }
-    get Content()      { return this.get_property_value('Content'); }
+    get Groups()       { return this._get_property_value_by_name('Groups'); }
+    get SelectedDemo() { return this._get_property_value_by_name('SelectedDemo'); }
+    set SelectedDemo(v){ this._set_property_value_by_name('SelectedDemo', v); }
+    get Title()        { return this._get_property_value_by_name('Title'); }
+    get Subtitle()     { return this._get_property_value_by_name('Subtitle'); }
+    get Content()      { return this._get_property_value_by_name('Content'); }
 
     OnPropertyChanged(descriptor, oldValue, newValue) {
         super.OnPropertyChanged(descriptor, oldValue, newValue);
@@ -129,14 +129,14 @@ export class PlatformVM extends Model
             // values from a previous selection.
             const sel = newValue;
             if (sel instanceof DemoVM) {
-                this.set_property_value('Title',    sel.Title);
-                this.set_property_value('Subtitle', sel.Subtitle);
+                this._set_property_value_by_name('Title',    sel.Title);
+                this._set_property_value_by_name('Subtitle', sel.Subtitle);
                 const root = instantiateDemo(sel.Id);
-                this.set_property_value('Content', root);
+                this._set_property_value_by_name('Content', root);
             } else {
-                this.set_property_value('Title',    '');
-                this.set_property_value('Subtitle', '');
-                this.set_property_value('Content',  undefined);
+                this._set_property_value_by_name('Title',    '');
+                this._set_property_value_by_name('Subtitle', '');
+                this._set_property_value_by_name('Content',  undefined);
             }
         }
     }

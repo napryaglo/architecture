@@ -40,22 +40,39 @@ export {
 } from './data-template.js';
 export {
     ItemsControl,
-    type ItemsPanelFactory,
+    type GroupStyleSelector,
+    type ItemContainerStyleSelector,
     type ItemTemplateSelector,
 } from './items-control.js';
+export { AlternationConverter } from './alternation-converter.js';
+export {
+    ItemsPanelTemplate,
+    type ItemsPanelFactory,
+} from './items-panel-template.js';
 // CollectionView is imported here for its module-load side effect —
 // it self-registers with ItemsControl so ItemsSource assignments
 // can construct a view. Explicit re-export gives consumers the
 // types they need to drive view-state (Filter, SortDescriptions, …).
 export {
     CollectionView,
+    CollectionViewGroup,
     SortDescription,
     GroupDescription,
     type SortDirection,
     type FilterPredicate,
     type CurrentChangedListener,
 } from './collection-view.js';
-export { ItemContainerGenerator } from './item-container-generator.js';
+export { GroupItem } from './group-item.js';
+export { GroupStyle } from './group-style.js';
+export {
+    GenerationSession,
+    GeneratorDirection,
+    GeneratorPosition,
+    GeneratorStatus,
+    ItemContainerGenerator,
+    ItemsChangedAction,
+    type ItemsChangedArgs,
+} from './item-container-generator.js';
 export { ItemsPresenter } from './items-presenter.js';
 export { VirtualizingPanel } from './virtualizing-panel.js';
 export { VirtualizingStackPanel } from './virtualizing-stack-panel.js';

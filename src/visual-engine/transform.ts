@@ -33,10 +33,8 @@ class IdentityTransform extends Transform
 // invalidation through the existing property-change pipeline.
 export class TranslateTransform extends Transform
 {
-    static {
-        Model.RegisterProperty(TranslateTransform, 'X', 0, MetaData.Render);
-        Model.RegisterProperty(TranslateTransform, 'Y', 0, MetaData.Render);
-    }
+    public static readonly XKey = Model.RegisterProperty<number>(TranslateTransform, 'X', 0, MetaData.Render);
+    public static readonly YKey = Model.RegisterProperty<number>(TranslateTransform, 'Y', 0, MetaData.Render);
 
     constructor(x?: number, y?: number)
     {
@@ -45,11 +43,11 @@ export class TranslateTransform extends Transform
         if (y !== undefined) this.Y = y;
     }
 
-    public get X(): number { return this.get_property_value('X'); }
-    public set X(value: number) { this.set_property_value('X', value); }
+    public get X(): number { return this.get_property_value(TranslateTransform.XKey); }
+    public set X(value: number) { this.set_property_value(TranslateTransform.XKey, value); }
 
-    public get Y(): number { return this.get_property_value('Y'); }
-    public set Y(value: number) { this.set_property_value('Y', value); }
+    public get Y(): number { return this.get_property_value(TranslateTransform.YKey); }
+    public set Y(value: number) { this.set_property_value(TranslateTransform.YKey, value); }
 
     public override get Matrix(): Matrix { return Matrix.Translate(this.X, this.Y); }
 }
@@ -61,9 +59,8 @@ export class TranslateTransform extends Transform
 // the result.
 export class MatrixTransform extends Transform
 {
-    static {
-        Model.RegisterProperty(MatrixTransform, 'Matrix', Matrix.Identity, MetaData.Render);
-    }
+    public static readonly MatrixKey = Model.RegisterProperty<Matrix>(
+        MatrixTransform, 'Matrix', Matrix.Identity, MetaData.Render);
 
     constructor(matrix?: Matrix)
     {
@@ -71,6 +68,6 @@ export class MatrixTransform extends Transform
         if (matrix !== undefined) this.Matrix = matrix;
     }
 
-    public override get Matrix(): Matrix { return this.get_property_value('Matrix'); }
-    public set Matrix(value: Matrix) { this.set_property_value('Matrix', value); }
+    public override get Matrix(): Matrix { return this.get_property_value(MatrixTransform.MatrixKey); }
+    public set Matrix(value: Matrix) { this.set_property_value(MatrixTransform.MatrixKey, value); }
 }

@@ -15,20 +15,18 @@ import { Brush, EllipseGeometry, Pen } from '../visual-engine/index.js';
 // stroke sits inside the layout rect, matching Border's convention).
 export class Ellipse extends Visual
 {
-    static {
-        Model.RegisterProperty(Ellipse, 'Fill',            undefined, MetaData.Render);
-        Model.RegisterProperty(Ellipse, 'Stroke',          undefined, MetaData.Render);
-        Model.RegisterProperty(Ellipse, 'StrokeThickness', 0,         MetaData.Render);
-    }
+    public static readonly FillKey            = Model.RegisterProperty<Brush | undefined>(Ellipse, 'Fill',            undefined, MetaData.Render);
+    public static readonly StrokeKey          = Model.RegisterProperty<Brush | undefined>(Ellipse, 'Stroke',          undefined, MetaData.Render);
+    public static readonly StrokeThicknessKey = Model.RegisterProperty<number>(           Ellipse, 'StrokeThickness', 0,         MetaData.Render);
 
-    public get Fill(): Brush | undefined { return this.get_property_value('Fill'); }
-    public set Fill(value: Brush | undefined) { this.set_property_value('Fill', value); }
+    public get Fill(): Brush | undefined { return this.get_property_value(Ellipse.FillKey); }
+    public set Fill(value: Brush | undefined) { this.set_property_value(Ellipse.FillKey, value); }
 
-    public get Stroke(): Brush | undefined { return this.get_property_value('Stroke'); }
-    public set Stroke(value: Brush | undefined) { this.set_property_value('Stroke', value); }
+    public get Stroke(): Brush | undefined { return this.get_property_value(Ellipse.StrokeKey); }
+    public set Stroke(value: Brush | undefined) { this.set_property_value(Ellipse.StrokeKey, value); }
 
-    public get StrokeThickness(): number { return this.get_property_value('StrokeThickness'); }
-    public set StrokeThickness(value: number) { this.set_property_value('StrokeThickness', value); }
+    public get StrokeThickness(): number { return this.get_property_value(Ellipse.StrokeThicknessKey); }
+    public set StrokeThickness(value: number) { this.set_property_value(Ellipse.StrokeThicknessKey, value); }
 
     protected override MeasureOverride(_availableSize: Size): Size
     {

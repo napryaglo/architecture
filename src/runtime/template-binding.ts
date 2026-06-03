@@ -9,11 +9,11 @@ import type { Visual } from './visual.js';
 // slot that Binding's change-notification machinery rides on.
 class TemplatedParentWatcher extends Model
 {
-    static {
-        Model.RegisterProperty(TemplatedParentWatcher, 'Value', undefined, MetaData.None);
-    }
-    public get Value(): unknown { return this.get_property_value('Value'); }
-    public set Value(v: unknown) { this.set_property_value('Value', v); }
+    public static readonly ValueKey = Model.RegisterProperty<unknown>(
+        TemplatedParentWatcher, 'Value', undefined, MetaData.None);
+
+    public get Value(): unknown { return this.get_property_value(TemplatedParentWatcher.ValueKey); }
+    public set Value(v: unknown) { this.set_property_value(TemplatedParentWatcher.ValueKey, v); }
 }
 
 // Binding that reads a single property off the templated parent of a
@@ -45,16 +45,16 @@ class TemplateBindingImpl extends Binding
 
         this.callback = () =>
         {
-            this.watcher.Value = templatedParent.get_property_value(property);
+            this.watcher.Value = templatedParent._get_property_value_by_name(property);
         };
-        templatedParent.AddPropertyChangedListener(property, this.callback);
-        this.watcher.Value = templatedParent.get_property_value(property);
+        templatedParent._add_property_changed_listener_by_name(property, this.callback);
+        this.watcher.Value = templatedParent._get_property_value_by_name(property);
     }
 
     public override dispose(): void
     {
         super.dispose();
-        this.templatedParent.RemovePropertyChangedListener(this.property, this.callback);
+        this.templatedParent._remove_property_changed_listener_by_name(this.property, this.callback);
     }
 }
 
@@ -63,7 +63,7 @@ class TemplateBindingImpl extends Binding
 //
 // Usage from a ControlTemplate factory body:
 //   const border = new Border();
-//   border.set_property_value('Background',
+//   border.set_property_value(Border.BackgroundKey,
 //       TemplateBinding(templatedParent, 'Background'));
 export function TemplateBinding(templatedParent: Visual, property: string): Binding
 {

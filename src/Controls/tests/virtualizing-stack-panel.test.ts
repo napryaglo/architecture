@@ -11,13 +11,17 @@ import {
 import {
     DataTemplate,
     ItemsControl,
+    Orientation,
     VirtualizingStackPanel,
 } from '../index.js';
 
 class Leaf extends Visual
 {
     constructor(public readonly source: unknown) { super(); }
-    protected override MeasureOverride(_a: Size): Size { return new Size(10, 10); }
+    // Match the panel's ItemHeight (20) so the new variable-size
+    // cache lands on 20 per item — tests authored for the original
+    // uniform-height behavior continue to assert the same offsets.
+    protected override MeasureOverride(_a: Size): Size { return new Size(10, 20); }
     protected override RenderOverride(_dc: DrawingContext): void { }
 }
 
@@ -146,10 +150,12 @@ describe('VirtualizingStackPanel — realization based on Viewport', () => {
         ic.Measure(new Size(100, 100));
         assert.deepEqual(panel.RealizedIndices, [0, 1]);
         // The realized containers correspond to the new front items.
+        // Containers are per-item ContentPresenters wrapping the
+        // template's Leaf output — assert on the inner Visual.
         const c0 = ic.Generator.ContainerFromItem('X');
         const c1 = ic.Generator.ContainerFromItem('a');
-        assert.ok(c0 instanceof Leaf);
-        assert.ok(c1 instanceof Leaf);
+        assert.ok(c0?.visualChildren[0] instanceof Leaf);
+        assert.ok(c1?.visualChildren[0] instanceof Leaf);
     });
 
     test('removing all items via Clear recycles everything', () => {
@@ -182,5 +188,101 @@ describe('VirtualizingStackPanel — realization based on Viewport', () => {
         class TestPanel extends Panel { }
         ic.ItemsPanel = () => new TestPanel();
         assert.equal(ic.logicalChildren.length, 3);  // all items now
+    });
+});
+
+describe('VirtualizingStackPanel — variable item heights', () => {
+    // Custom container whose measured height varies by source index.
+    class VarLeaf extends Visual
+    {
+        constructor(public readonly source: unknown) { super(); }
+        protected override MeasureOverride(_a: Size): Size
+        {
+            // Map 'item-N' → height 10 + N*5: item-0=10, item-1=15, item-2=20, ...
+            const m = /item-(\d+)/.exec(String(this.source));
+            const n = m ? Number(m[1]) : 0;
+            return new Size(10, 10 + n * 5);
+        }
+        protected override RenderOverride(_dc: DrawingContext): void { }
+    }
+
+    test('measured size populates the cache; subsequent passes use it for viewport math', () => {
+        const items = Array.from({ length: 6 }, (_, i) => `item-${i}`);
+        const panel = new VirtualizingStackPanel();
+        panel.ItemHeight = 20;             // default estimate for un-measured items
+        panel.Viewport   = new Rect(0, 0, 100, 35);   // first pass uses estimate
+        const ic = new ItemsControl();
+        ic.ItemsPanel   = () => panel;
+        ic.ItemTemplate = new DataTemplate(d => new VarLeaf(d));
+        ic.Items        = items;
+
+        // First measure: cache empty, estimate 20/each, viewport [0..35] → items 0, 1.
+        ic.Measure(new Size(100, 200));
+        assert.deepEqual(panel.RealizedIndices, [0, 1]);
+        // After measure, cache has measured sizes: item-0=10, item-1=15.
+
+        // Force a re-measure (cache invalidation on the panel side).
+        panel.InvalidateMeasure();
+        // Cache populated for 0/1 (10, 15), estimate 20 for the rest.
+        // Viewport [0..35] now reaches further down:
+        //   item-0 [0..10), item-1 [10..25), item-2 [25..45), item-3 [45..65), …
+        // → items 0, 1, 2 intersect.
+        ic.Measure(new Size(100, 200));
+        assert.deepEqual(panel.RealizedIndices, [0, 1, 2]);
+    });
+
+    test('Arrange positions each realized container at its cumulative offset', () => {
+        const items = Array.from({ length: 4 }, (_, i) => `item-${i}`);
+        const panel = new VirtualizingStackPanel();
+        panel.ItemHeight = 30;
+        panel.Viewport   = new Rect(0, 0, 100, 200);  // big viewport — all realize
+        const ic = new ItemsControl();
+        ic.ItemsPanel   = () => panel;
+        ic.ItemTemplate = new DataTemplate(d => new VarLeaf(d));
+        ic.Items        = items;
+
+        ic.Measure(new Size(100, 200));
+        ic.Arrange(new Rect(0, 0, 100, 200));
+
+        // Sizes: item-0=10, item-1=15, item-2=20, item-3=25.
+        // Offsets: 0, 10, 25, 45.
+        const c0 = ic.Generator.ContainerFromItem('item-0')!;
+        const c1 = ic.Generator.ContainerFromItem('item-1')!;
+        const c2 = ic.Generator.ContainerFromItem('item-2')!;
+        const c3 = ic.Generator.ContainerFromItem('item-3')!;
+        assert.equal(c0.ArrangedRect.Y, 0);
+        assert.equal(c1.ArrangedRect.Y, 10);
+        assert.equal(c2.ArrangedRect.Y, 25);
+        assert.equal(c3.ArrangedRect.Y, 45);
+    });
+
+    test('Horizontal orientation arranges items along X', () => {
+        const items = ['a', 'b', 'c'];
+        const panel = new VirtualizingStackPanel();
+        panel.Orientation = Orientation.Horizontal;
+        panel.ItemWidth   = 30;
+        panel.Viewport    = new Rect(0, 0, 200, 40);
+        const ic = new ItemsControl();
+        ic.ItemsPanel   = () => panel;
+        ic.ItemTemplate = new DataTemplate(d => {
+            const v = new Leaf(d);
+            // Uniform width = 30, height = 10.
+            (v as unknown as { _w: number; _h: number })._w = 30;
+            (v as unknown as { _w: number; _h: number })._h = 10;
+            return v;
+        });
+        ic.Items = items;
+
+        ic.Measure(new Size(200, 40));
+        ic.Arrange(new Rect(0, 0, 200, 40));
+
+        const ca = ic.Generator.ContainerFromItem('a')!;
+        const cb = ic.Generator.ContainerFromItem('b')!;
+        const cc = ic.Generator.ContainerFromItem('c')!;
+        // Width = ItemWidth = 30 (Leaf measures to 10 wide; sizeCache uses that)
+        // — so offsets are 0, 10, 20.
+        assert.equal(ca.ArrangedRect.X, 0);
+        assert.equal(cb.ArrangedRect.X, 10);
+        assert.equal(cc.ArrangedRect.X, 20);
     });
 });

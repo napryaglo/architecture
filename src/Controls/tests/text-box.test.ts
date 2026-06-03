@@ -573,7 +573,7 @@ describe('TextBox — soft-wrap overflow handling', () => {
         // Flip to NoWrap — same content shouldn't break visually.
         // Import value via a separate top-level import would be cleaner;
         // use a direct DP write to avoid the import dance in the test.
-        tb.set_property_value('TextWrapping', 'NoWrap');
+        tb._set_property_value_by_name('TextWrapping', 'NoWrap');
         (tb as unknown as { target: { Flush: () => void } }).target.Flush();
 
         const flatCount = editorOf(tb).Lines.length;

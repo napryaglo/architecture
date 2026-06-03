@@ -260,11 +260,11 @@ describe('compile — element construction and slots', () => {
         `);
         assert.match(
             js,
-            /\.set_property_value\(Canvas, "Left", 10\);/,
+            /\._set_property_value_by_name\(Canvas, "Left", 10\);/,
         );
         assert.match(
             js,
-            /\.set_property_value\(Canvas, "Top", 20\);/,
+            /\._set_property_value_by_name\(Canvas, "Top", 20\);/,
         );
     });
 });
@@ -313,7 +313,7 @@ describe('compile — value emission', () => {
         `);
         assert.match(
             js,
-            /\.set_property_value\("Background", DynamicResource\(_border\d+, "theme"\)\);/,
+            /\._set_property_value_by_name\("Background", DynamicResource\(_border\d+, "theme"\)\);/,
         );
     });
 
@@ -350,7 +350,7 @@ describe('compile — value emission', () => {
         `);
         assert.match(
             js,
-            /\.set_property_value\("HorizontalAlignment", HorizontalAlignment\.Center\);/,
+            /\._set_property_value_by_name\("HorizontalAlignment", HorizontalAlignment\.Center\);/,
         );
         // The enum class also lands in the import header.
         assert.match(
@@ -367,7 +367,7 @@ describe('compile — deferred & errored features', () => {
         `);
         assert.match(
             js,
-            /\.set_property_value\("Background", DataContextBinding\(_border\d+, "Name"\)\);/,
+            /\._set_property_value_by_name\("Background", DataContextBinding\(_border\d+, "Name"\)\);/,
         );
     });
 

@@ -34,10 +34,17 @@ export class GroupDescription
     constructor(
         public readonly key: (item: unknown) => unknown,
         // Optional human-readable name surfaced on the
-        // CollectionViewGroup record when grouping lands fully.
+        // CollectionViewGroup record when grouping is active.
         public readonly name: string | undefined = undefined,
     ) {}
 }
+
+// CollectionViewGroup lives in its own file so ItemsControl can import
+// it without triggering CollectionView's module-init bridge to
+// ItemsControl. Re-exported here so external `from 'collection-view'`
+// imports keep working.
+export { CollectionViewGroup } from './collection-view-group.js';
+import { CollectionViewGroup } from './collection-view-group.js';
 
 // Listener signature for CurrentItem changes. Fires AFTER the
 // CurrentItem / CurrentPosition update, so handlers reading the
@@ -85,6 +92,22 @@ export class CollectionView implements IReadOnlyObservableCollection<unknown>
         = new ObservableCollection<SortDescription>();
     public readonly GroupDescriptions: ObservableCollection<GroupDescription>
         = new ObservableCollection<GroupDescription>();
+
+    // Populated when GroupDescriptions is non-empty; undefined when
+    // grouping is off. Re-created on every Refresh — consumers
+    // observing this should subscribe through ItemsControl.GroupStyle
+    // and/or refresh their view on CollectionChange.
+    private _groups: CollectionViewGroup[] | undefined;
+
+    public get Groups(): readonly CollectionViewGroup[] | undefined
+    {
+        return this._groups;
+    }
+
+    public get IsGrouping(): boolean
+    {
+        return this.GroupDescriptions.Count > 0;
+    }
 
     constructor(public readonly SourceCollection: unknown)
     {
@@ -149,9 +172,18 @@ export class CollectionView implements IReadOnlyObservableCollection<unknown>
         const sorted = this.SortDescriptions.Count === 0
             ? filtered
             : this.applySort(filtered);
+        // Group-aware projection: build CollectionViewGroup records
+        // off the sorted sequence when grouping is active. The flat
+        // `_projected` collection still holds items in group-major
+        // order (so non-GroupStyle ItemsControls still render the
+        // sorted+grouped sequence as one flat list); `_groups` is the
+        // structural view for GroupStyle-aware consumers.
         const projected = this.GroupDescriptions.Count === 0
             ? sorted
             : this.applyGroupingSort(sorted);
+        this._groups = this.GroupDescriptions.Count === 0
+            ? undefined
+            : this.buildGroups(sorted);
 
         // Replace the projected list. To minimize subscriber churn
         // we Clear → Add — a per-item diff would be tidier but a
@@ -221,6 +253,56 @@ export class CollectionView implements IReadOnlyObservableCollection<unknown>
             return 0;
         });
         return arr;
+    }
+
+    // Recursively build the CollectionViewGroup tree for the current
+    // sorted sequence. Walks the GroupDescriptions in order: at each
+    // level the items are bucketed by the corresponding key. Bottom-
+    // level groups (last GroupDescription) hold raw data records;
+    // intermediate-level groups hold nested CollectionViewGroups.
+    // Stable first-seen ordering at every level.
+    private buildGroups(
+        items: readonly unknown[],
+        level: number = 0,
+    ): CollectionViewGroup[]
+    {
+        const descs    = this.GroupDescriptions;
+        const desc     = descs.Get(level)!;
+        const isBottom = level === descs.Count - 1;
+
+        const byKey: Map<unknown, unknown[]> = new Map();
+        const order: unknown[] = [];
+        for (const item of items)
+        {
+            const k = desc.key(item);
+            let bucket = byKey.get(k);
+            if (bucket === undefined)
+            {
+                bucket = [];
+                byKey.set(k, bucket);
+                order.push(k);
+            }
+            bucket.push(item);
+        }
+        return order.map(k => {
+            const group = new CollectionViewGroup(k, level, isBottom);
+            if (isBottom)
+            {
+                for (const it of byKey.get(k)!) group.Items.Add(it);
+            }
+            else
+            {
+                // Recurse into the next GroupDescription — produced
+                // sub-groups land as the children of this group's
+                // Items collection, matching WPF's
+                // CollectionViewGroupInternal hierarchy shape.
+                for (const sub of this.buildGroups(byKey.get(k)!, level + 1))
+                {
+                    group.Items.Add(sub);
+                }
+            }
+            return group;
+        });
     }
 
     private applyGroupingSort(items: readonly unknown[]): unknown[]

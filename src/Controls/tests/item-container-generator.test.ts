@@ -21,6 +21,18 @@ function makeIC(items: readonly string[]): ItemsControl
     return ic;
 }
 
+// Each item-container is a ContentPresenter wrapping the template
+// output. `inner` peels that wrap so tests can assert against the
+// template's actual Visual (e.g. `inner(c) instanceof Leaf`). Falls
+// through when the container isn't a wrapper (subclass overrides
+// might return raw template output).
+function inner(container: Visual | undefined): Visual | undefined
+{
+    return container === undefined
+        ? undefined
+        : (container.visualChildren[0] ?? container);
+}
+
 describe('ItemContainerGenerator', () => {
     test('exposed via ItemsControl.Generator and populated after ItemsControl materializes', () => {
         const ic = makeIC(['a', 'b', 'c']);
@@ -34,7 +46,10 @@ describe('ItemContainerGenerator', () => {
     test('ContainerFromItem returns the same Visual that ItemsControl exposes as a logical child', () => {
         const ic = makeIC(['a', 'b']);
         const containerA = ic.Generator.ContainerFromItem('a');
-        assert.ok(containerA instanceof Leaf);
+        // Container is the per-item ContentPresenter wrapping the
+        // template output. The presenter is the logical child of the
+        // ItemsControl; the template's Leaf lives inside it.
+        assert.ok(inner(containerA) instanceof Leaf);
         assert.equal(containerA, ic.logicalChildren[0]);
     });
 
@@ -68,12 +83,18 @@ describe('ItemContainerGenerator', () => {
         assert.equal(ic.Generator.Count, 0);
     });
 
-    test('Realize throws when no template resolves for the item', () => {
+    test('Realize falls back to stringifying the item when no template resolves', () => {
         const ic = new ItemsControl();
         // No ItemTemplate, no ItemTemplateSelector, no override.
-        // The error now surfaces the multiple resolution options
-        // because Realize delegates through GetContainerForItemOverride.
-        assert.throws(() => ic.Generator.Realize('a'), /DataTemplate resolved/);
+        // GetContainerForItemOverride still builds a ContentPresenter
+        // — the presenter's primitive-fallback path renders the data
+        // as a TextBlock(String(item)). WPF parity with default
+        // ContentPresenter rendering.
+        const c = ic.Generator.Realize('hello');
+        const text = inner(c);
+        // TextBlock is the fallback; its constructor accepted "hello".
+        assert.ok(text !== undefined);
+        assert.equal((text as unknown as { Text?: string }).Text, 'hello');
     });
 
     test('replacing ItemTemplate clears the generator; old containers go away on next rebuild', () => {
@@ -82,7 +103,7 @@ describe('ItemContainerGenerator', () => {
         ic.ItemTemplate = new DataTemplate(data => new Leaf(`wrapped:${data}`));
         // After the new template, the generator should hold new containers.
         const newContainer = ic.Generator.ContainerFromItem('a');
-        assert.ok(newContainer instanceof Leaf);
+        assert.ok(inner(newContainer) instanceof Leaf);
         assert.notEqual(newContainer, oldContainer);
     });
 

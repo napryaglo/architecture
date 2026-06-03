@@ -56,10 +56,11 @@ const SUBTITLE_TEXT = new SolidColorBrush(Color.FromHex('#475569'));
 // Content to fill whatever rectangle its host arranged it into.
 export class PageView extends Visual
 {
+    public static readonly TitleKey    = Model.RegisterProperty<string>(                 PageView, 'Title',    '',        MetaData.Render);
+    public static readonly SubtitleKey = Model.RegisterProperty<string>(                 PageView, 'Subtitle', '',        MetaData.Measure | MetaData.Render);
+    public static readonly ContentKey  = Model.RegisterProperty<Visual | Model | undefined>(PageView, 'Content',  undefined, MetaData.Measure);
+
     static {
-        Model.RegisterProperty(PageView, 'Title',    '',        MetaData.Render);
-        Model.RegisterProperty(PageView, 'Subtitle', '',        MetaData.Measure | MetaData.Render);
-        Model.RegisterProperty(PageView, 'Content',  undefined, MetaData.Measure);
         ensureControlsTheme();
     }
 
@@ -98,11 +99,11 @@ export class PageView extends Visual
         this.AttachVisual(this._dock);
     }
 
-    public get Title():    string { return this.get_property_value('Title'); }
-    public set Title(v:    string) { this.set_property_value('Title', v); }
+    public get Title():    string { return this.get_property_value(PageView.TitleKey); }
+    public set Title(v:    string) { this.set_property_value(PageView.TitleKey, v); }
 
-    public get Subtitle(): string { return this.get_property_value('Subtitle'); }
-    public set Subtitle(v: string) { this.set_property_value('Subtitle', v); }
+    public get Subtitle(): string { return this.get_property_value(PageView.SubtitleKey); }
+    public set Subtitle(v: string) { this.set_property_value(PageView.SubtitleKey, v); }
 
     // Tracks the Visual actually inside the ContentPresenter. When
     // Content is itself a Visual, _resolvedContent === Content. When
@@ -110,14 +111,14 @@ export class PageView extends Visual
     // produced by applying the matching DataTemplate.
     private _resolvedContent: Visual | undefined;
 
-    public get Content(): Visual | Model | undefined { return this.get_property_value('Content'); }
+    public get Content(): Visual | Model | undefined { return this.get_property_value(PageView.ContentKey); }
     public set Content(value: Visual | Model | undefined)
     {
         // Side-effect (presenter swap + DataTemplate resolution) is
         // dispatched from OnPropertyChanged so that binding pushes
         // (which bypass JS setters via set_property_value) produce the
         // same behavior as direct assignment.
-        this.set_property_value('Content', value);
+        this.set_property_value(PageView.ContentKey, value);
     }
 
     private applyContent(oldValue: Visual | Model | undefined, newValue: Visual | Model | undefined): void

@@ -13,11 +13,11 @@ import type { Visual } from './visual.js';
 // private since DataContextBinding owns the lifecycle.
 class DataContextWatcher extends Model
 {
-    static {
-        Model.RegisterProperty(DataContextWatcher, 'Value', undefined, MetaData.None);
-    }
-    public get Value(): unknown { return this.get_property_value('Value'); }
-    public set Value(v: unknown) { this.set_property_value('Value', v); }
+    public static readonly ValueKey = Model.RegisterProperty<unknown>(
+        DataContextWatcher, 'Value', undefined, MetaData.None);
+
+    public get Value(): unknown { return this.get_property_value(DataContextWatcher.ValueKey); }
+    public set Value(v: unknown) { this.set_property_value(DataContextWatcher.ValueKey, v); }
 }
 
 // Binding that resolves a dotted path against the target Visual's
@@ -66,14 +66,14 @@ class DataContextBindingImpl extends Binding
         this.pathStr = path;
 
         this.dcCallback = () => this.refresh();
-        target.AddPropertyChangedListener('DataContext', this.dcCallback);
+        target._add_property_changed_listener_by_name('DataContext', this.dcCallback);
         this.refresh();
     }
 
     public override dispose(): void
     {
         super.dispose();
-        this.target.RemovePropertyChangedListener('DataContext', this.dcCallback);
+        this.target._remove_property_changed_listener_by_name('DataContext', this.dcCallback);
         this.unsubscribeSource();
     }
 
@@ -104,7 +104,7 @@ class DataContextBindingImpl extends Binding
             const seg = segments[i]!;
             if (cur instanceof Model)
             {
-                cur = cur.get_property_value(seg);
+                cur = cur._get_property_value_by_name(seg);
             }
             else if (cur !== null && typeof cur === 'object')
             {
@@ -119,7 +119,7 @@ class DataContextBindingImpl extends Binding
         const lastSeg = segments[segments.length - 1]!;
         if (cur instanceof Model)
         {
-            cur.set_property_value(lastSeg, value);
+            cur._set_property_value_by_name(lastSeg, value);
         }
         else if (cur !== null && typeof cur === 'object')
         {
@@ -132,7 +132,7 @@ class DataContextBindingImpl extends Binding
     {
         if (this.currentSource !== undefined && this.sourceCallback !== undefined)
         {
-            this.currentSource.RemovePropertyChangedListener(
+            this.currentSource._remove_property_changed_listener_by_name(
                 this.firstSegment(), this.sourceCallback);
         }
         this.currentSource  = undefined;
@@ -162,7 +162,7 @@ class DataContextBindingImpl extends Binding
         {
             this.currentSource  = dc;
             this.sourceCallback = () => { this.watcher.Value = this.walkPath(dc); };
-            dc.AddPropertyChangedListener(first, this.sourceCallback);
+            dc._add_property_changed_listener_by_name(first, this.sourceCallback);
         }
         this.watcher.Value = this.walkPath(dc);
     }
@@ -178,7 +178,7 @@ class DataContextBindingImpl extends Binding
             if (cur === undefined || cur === null) return undefined;
             if (cur instanceof Model)
             {
-                cur = cur.get_property_value(seg);
+                cur = cur._get_property_value_by_name(seg);
             }
             else if (typeof cur === 'object')
             {
@@ -197,7 +197,7 @@ class DataContextBindingImpl extends Binding
 // can emit both at value-position uses with the same imperative form.
 //
 // Usage:
-//   border.set_property_value('Background', DataContextBinding(border, 'AccentBrush'));
+//   border.set_property_value(Border.BackgroundKey, DataContextBinding(border, 'AccentBrush'));
 //
 // In Style setters where the target isn't yet known, wrap in a
 // SetterFactory so each application gets its own per-target binding:

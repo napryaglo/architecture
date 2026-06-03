@@ -25,33 +25,31 @@ import { MetaData, Model, Panel, Rect, Size, Visual } from '../runtime/index.js'
 // layout that produces negative positions should shift first.
 export class Canvas extends Panel
 {
-    static {
-        Model.RegisterAttachedProperty(Canvas, 'Left', 0, MetaData.None);
-        Model.RegisterAttachedProperty(Canvas, 'Top',  0, MetaData.None);
-    }
+    public static readonly LeftKey = Model.RegisterAttachedProperty<number>(Canvas, 'Left', 0, MetaData.None);
+    public static readonly TopKey  = Model.RegisterAttachedProperty<number>(Canvas, 'Top',  0, MetaData.None);
 
     // Static accessors mirror WPF's Canvas.SetLeft / Canvas.GetLeft.
-    // They route through Model's explicit-owner overloads, which look
-    // up the descriptor on Canvas and store under the composite key
-    // 'Canvas.Left' / 'Canvas.Top' on the target Visual.
+    // The typed keys carry the descriptor identity; the typed
+    // get/set_property_value overloads look up the composite key
+    // 'Canvas.Left' / 'Canvas.Top' on the target Visual under the hood.
     public static SetLeft(v: Visual, value: number): void
     {
-        v.set_property_value(Canvas, 'Left', value);
+        v.set_property_value(Canvas.LeftKey, value);
     }
 
     public static GetLeft(v: Visual): number
     {
-        return v.get_property_value(Canvas, 'Left');
+        return v.get_property_value(Canvas.LeftKey);
     }
 
     public static SetTop(v: Visual, value: number): void
     {
-        v.set_property_value(Canvas, 'Top', value);
+        v.set_property_value(Canvas.TopKey, value);
     }
 
     public static GetTop(v: Visual): number
     {
-        return v.get_property_value(Canvas, 'Top');
+        return v.get_property_value(Canvas.TopKey);
     }
 
     protected override MeasureOverride(_availableSize: Size): Size

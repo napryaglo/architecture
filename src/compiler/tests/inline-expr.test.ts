@@ -137,7 +137,7 @@ describe('compile — inline expressions', () => {
         const js = compile(
             'Application{ resources: { Border x:root[Width = {{ 50 * 2 + 16 }}]{} } }',
         ).js;
-        assert.match(js, /set_property_value\("Width", 116\)/);
+        assert.match(js, /_set_property_value_by_name\("Width", 116\)/);
         // No MultiBinding import — purely a constant.
         assert.doesNotMatch(js, /MultiBinding/);
     });
@@ -159,7 +159,7 @@ describe('compile — inline expressions', () => {
         ).js;
         assert.match(
             js,
-            /set_property_value\("Text", MultiBinding\(_textBlock\d+, \["name"\], \(_p0\) => \("Hi " \+ String\( ?_p0 ?\) \+ "!"\)\)\)/,
+            /_set_property_value_by_name\("Text", MultiBinding\(_textBlock\d+, \["name"\], \(_p0\) => \("Hi " \+ String\( ?_p0 ?\) \+ "!"\)\)\)/,
         );
     });
 
@@ -167,7 +167,7 @@ describe('compile — inline expressions', () => {
         const js = compile(
             'Application{ resources: { TextBlock x:root{The answer is {{ 6 * 7 }}} } }',
         ).js;
-        assert.match(js, /set_property_value\("Text", "The answer is 42"\)/);
+        assert.match(js, /_set_property_value_by_name\("Text", "The answer is 42"\)/);
         assert.doesNotMatch(js, /MultiBinding/);
     });
 
@@ -205,10 +205,10 @@ describe('inline expressions — end-to-end', () => {
                 Model.RegisterProperty(M, 'A', 0, MetaData.None);
                 Model.RegisterProperty(M, 'B', 0, MetaData.None);
             }
-            public get A(): number { return this.get_property_value('A') as number; }
-            public set A(v: number) { this.set_property_value('A', v); }
-            public get B(): number { return this.get_property_value('B') as number; }
-            public set B(v: number) { this.set_property_value('B', v); }
+            public get A(): number { return this._get_property_value_by_name('A') as number; }
+            public set A(v: number) { this._set_property_value_by_name('A', v); }
+            public get B(): number { return this._get_property_value_by_name('B') as number; }
+            public set B(v: number) { this._set_property_value_by_name('B', v); }
         }
 
         const app = instantiate(`
@@ -240,10 +240,10 @@ describe('inline expressions — end-to-end', () => {
                 Model.RegisterProperty(M, 'Name',  '', MetaData.None);
                 Model.RegisterProperty(M, 'Count', 0,  MetaData.None);
             }
-            public get Name():  string { return this.get_property_value('Name')  as string; }
-            public set Name(v:  string){ this.set_property_value('Name',  v); }
-            public get Count(): number { return this.get_property_value('Count') as number; }
-            public set Count(v: number){ this.set_property_value('Count', v); }
+            public get Name():  string { return this._get_property_value_by_name('Name')  as string; }
+            public set Name(v:  string){ this._set_property_value_by_name('Name',  v); }
+            public get Count(): number { return this._get_property_value_by_name('Count') as number; }
+            public set Count(v: number){ this._set_property_value_by_name('Count', v); }
         }
 
         const app = instantiate(`

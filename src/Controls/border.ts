@@ -39,18 +39,34 @@ import { Brush, Pen } from '../visual-engine/index.js';
 //     geometry (deferred).
 export class Border extends Single
 {
-    static {
-        Model.RegisterProperty(Border, 'Background',      undefined,
-            MetaData.Render);
-        Model.RegisterProperty(Border, 'BorderBrush',     undefined,
-            MetaData.Render);
-        Model.RegisterProperty(Border, 'BorderThickness', Thickness.Zero,
-            MetaData.Measure | MetaData.Arrange | MetaData.Render);
-        Model.RegisterProperty(Border, 'CornerRadius',    0,
-            MetaData.Render);
-        Model.RegisterProperty(Border, 'Padding',         Thickness.Zero,
-            MetaData.Measure | MetaData.Arrange);
-    }
+    // Typed-key DPs. The `T` on each key flows through the typed
+    // get/set_property_value overloads so the accessors below need no
+    // `as` casts and a typo on the key name is a compile error rather
+    // than a silent `undefined` at runtime. The string name is still the
+    // binding-path identity ('Background' etc.) — that's what the µ-mural
+    // parser / `Binding(t, 'Background')` resolves against.
+    //
+    // Inline static initializers run in declaration order at class-load
+    // time, so by the time the first Border instance is constructed every
+    // key is registered and slotted. Self-reference to `Border` as the
+    // owner class is fine — class declarations are hoisted, only their
+    // statics aren't filled in yet, and only the class identity matters
+    // to RegisterProperty.
+    public static readonly BackgroundKey = Model.RegisterProperty<Brush | undefined>(
+        Border, 'Background', undefined,
+        MetaData.Render);
+    public static readonly BorderBrushKey = Model.RegisterProperty<Brush | undefined>(
+        Border, 'BorderBrush', undefined,
+        MetaData.Render);
+    public static readonly BorderThicknessKey = Model.RegisterProperty<Thickness>(
+        Border, 'BorderThickness', Thickness.Zero,
+        MetaData.Measure | MetaData.Arrange | MetaData.Render);
+    public static readonly CornerRadiusKey = Model.RegisterProperty<number>(
+        Border, 'CornerRadius', 0,
+        MetaData.Render);
+    public static readonly PaddingKey = Model.RegisterProperty<Thickness>(
+        Border, 'Padding', Thickness.Zero,
+        MetaData.Measure | MetaData.Arrange);
 
     constructor(child?: Visual)
     {
@@ -58,20 +74,20 @@ export class Border extends Single
         if (child !== undefined) this.SetChild(child);
     }
 
-    public get Background(): Brush | undefined { return this.get_property_value('Background'); }
-    public set Background(value: Brush | undefined) { this.set_property_value('Background', value); }
+    public get Background(): Brush | undefined { return this.get_property_value(Border.BackgroundKey); }
+    public set Background(value: Brush | undefined) { this.set_property_value(Border.BackgroundKey, value); }
 
-    public get BorderBrush(): Brush | undefined { return this.get_property_value('BorderBrush'); }
-    public set BorderBrush(value: Brush | undefined) { this.set_property_value('BorderBrush', value); }
+    public get BorderBrush(): Brush | undefined { return this.get_property_value(Border.BorderBrushKey); }
+    public set BorderBrush(value: Brush | undefined) { this.set_property_value(Border.BorderBrushKey, value); }
 
-    public get BorderThickness(): Thickness { return this.get_property_value('BorderThickness'); }
-    public set BorderThickness(value: Thickness) { this.set_property_value('BorderThickness', value); }
+    public get BorderThickness(): Thickness { return this.get_property_value(Border.BorderThicknessKey); }
+    public set BorderThickness(value: Thickness) { this.set_property_value(Border.BorderThicknessKey, value); }
 
-    public get CornerRadius(): number { return this.get_property_value('CornerRadius'); }
-    public set CornerRadius(value: number) { this.set_property_value('CornerRadius', value); }
+    public get CornerRadius(): number { return this.get_property_value(Border.CornerRadiusKey); }
+    public set CornerRadius(value: number) { this.set_property_value(Border.CornerRadiusKey, value); }
 
-    public get Padding(): Thickness { return this.get_property_value('Padding'); }
-    public set Padding(value: Thickness) { this.set_property_value('Padding', value); }
+    public get Padding(): Thickness { return this.get_property_value(Border.PaddingKey); }
+    public set Padding(value: Thickness) { this.set_property_value(Border.PaddingKey, value); }
 
     protected override MeasureOverride(availableSize: Size): Size
     {

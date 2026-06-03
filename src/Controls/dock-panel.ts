@@ -35,25 +35,23 @@ export enum Dock
 // subscribe to Dock changes on its children. See [[mu-mural-scope-extensions-vs-attached-properties]].
 export class DockPanel extends Panel
 {
-    static {
-        Model.RegisterAttachedProperty(DockPanel, 'Dock', Dock.Left, MetaData.None);
-        Model.RegisterProperty(DockPanel, 'LastChildFill', true,
-            MetaData.Measure | MetaData.Arrange);
-    }
+    public static readonly DockKey          = Model.RegisterAttachedProperty<Dock>(DockPanel, 'Dock', Dock.Left, MetaData.None);
+    public static readonly LastChildFillKey = Model.RegisterProperty<boolean>(     DockPanel, 'LastChildFill', true,
+        MetaData.Measure | MetaData.Arrange);
 
     // Static accessors mirror WPF's DockPanel.SetDock / DockPanel.GetDock.
     public static SetDock(v: Visual, value: Dock): void
     {
-        v.set_property_value(DockPanel, 'Dock', value);
+        v.set_property_value(DockPanel.DockKey, value);
     }
 
     public static GetDock(v: Visual): Dock
     {
-        return v.get_property_value(DockPanel, 'Dock');
+        return v.get_property_value(DockPanel.DockKey);
     }
 
-    public get LastChildFill(): boolean  { return this.get_property_value('LastChildFill'); }
-    public set LastChildFill(v: boolean) { this.set_property_value('LastChildFill', v); }
+    public get LastChildFill(): boolean  { return this.get_property_value(DockPanel.LastChildFillKey); }
+    public set LastChildFill(v: boolean) { this.set_property_value(DockPanel.LastChildFillKey, v); }
 
     protected override MeasureOverride(availableSize: Size): Size
     {

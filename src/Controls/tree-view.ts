@@ -182,17 +182,20 @@ export class CollapsibleStack extends StackPanel
 // here on the root TreeView; clicks bubble up via findTree().
 export class TreeView extends ItemsControl
 {
+    public static readonly IndentKey = Model.RegisterProperty<number>(
+        TreeView, 'Indent', 16, MetaData.Measure | MetaData.Arrange);
+    // TwoWay by default — the standard binding pattern is a VM
+    // round-trip: user clicks a row → DP updates → push to VM;
+    // VM sets the property → DP updates → tree selects the matching
+    // container. Mirrors WPF's SelectedValue + selection-binding idiom,
+    // except we always carry the DATA item (via
+    // ItemContainerGenerator's reverse map) rather than a value pulled
+    // by SelectedValuePath.
+    public static readonly SelectedDataItemKey = Model.RegisterProperty<unknown>(
+        TreeView, 'SelectedDataItem', undefined,
+        MetaData.None | MetaData.BindsTwoWayByDefault);
+
     static {
-        Model.RegisterProperty(TreeView, 'Indent', 16, MetaData.Measure | MetaData.Arrange);
-        // TwoWay by default — the standard binding pattern is a VM
-        // round-trip: user clicks a row → DP updates → push to VM;
-        // VM sets the property → DP updates → tree selects the
-        // matching container. Mirrors WPF's SelectedValue + selection-
-        // binding idiom, except we always carry the DATA item (via
-        // ItemContainerGenerator's reverse map) rather than a value
-        // pulled by SelectedValuePath.
-        Model.RegisterProperty(TreeView, 'SelectedDataItem', undefined,
-            MetaData.None | MetaData.BindsTwoWayByDefault);
         ensureControlsTheme();
     }
 
@@ -226,22 +229,37 @@ export class TreeView extends ItemsControl
         this.Items = this._declarativeItems;
     }
 
-    public get Indent(): number { return this.get_property_value('Indent'); }
-    public set Indent(v: number) { this.set_property_value('Indent', v); }
+    public get Indent(): number { return this.get_property_value(TreeView.IndentKey); }
+    public set Indent(v: number) { this.set_property_value(TreeView.IndentKey, v); }
 
     // The currently-selected data item — the value the generator maps
     // FROM the selected container, OR the container itself when no
     // mapping exists (composed-markup mode where the consumer added
     // TreeViewItems directly). Bindable both ways: writing the DP
     // (from a VM or by other code) selects the matching row.
-    public get SelectedDataItem(): unknown { return this.get_property_value('SelectedDataItem'); }
-    public set SelectedDataItem(v: unknown) { this.set_property_value('SelectedDataItem', v); }
+    public get SelectedDataItem(): unknown { return this.get_property_value(TreeView.SelectedDataItemKey); }
+    public set SelectedDataItem(v: unknown) { this.set_property_value(TreeView.SelectedDataItemKey, v); }
 
     // ── ItemsControl override seams ────────────────────────────────
+
+    public override IsItemItsOwnContainerOverride(item: unknown): boolean
+    {
+        return item instanceof TreeViewItem;
+    }
 
     public override GetContainerForItemOverride(item: unknown): Visual
     {
         return wrapTreeItem(item, this.ItemTemplate);
+    }
+
+    public override RebindContainerForItemOverride(container: Visual, item: unknown): void
+    {
+        // Reused TreeViewItem — refresh Header from the new data.
+        // Items/ItemTemplate stay carried by HierarchicalDataTemplate
+        // logic in wrapTreeItem; on recycle the row's children stay,
+        // only the header label flips.
+        if (!(container instanceof TreeViewItem)) return;
+        container.Header = displayTreeHeader(item);
     }
 
     public override ClearContainerForItemOverride(container: Visual, item: unknown): void
@@ -471,7 +489,7 @@ export class TreeView extends ItemsControl
             : (dataOf(first) ?? first);
         if (this.SelectedDataItem === data) return;
         this._suppressSelectedDataSync = true;
-        this.set_property_value('SelectedDataItem', data);
+        this.set_property_value(TreeView.SelectedDataItemKey, data);
         this._suppressSelectedDataSync = false;
     }
 
@@ -574,10 +592,11 @@ export class TreeView extends ItemsControl
 //          └─ child TreeViewItems
 export class TreeViewItem extends ItemsControl
 {
+    public static readonly HeaderKey     = Model.RegisterProperty<string>( TreeViewItem, 'Header',     '',    MetaData.Measure | MetaData.Render);
+    public static readonly IsExpandedKey = Model.RegisterProperty<boolean>(TreeViewItem, 'IsExpanded', false, MetaData.Measure | MetaData.Arrange);
+    public static readonly IsSelectedKey = Model.RegisterProperty<boolean>(TreeViewItem, 'IsSelected', false, MetaData.Render);
+
     static {
-        Model.RegisterProperty(TreeViewItem, 'Header',     '',    MetaData.Measure | MetaData.Render);
-        Model.RegisterProperty(TreeViewItem, 'IsExpanded', false, MetaData.Measure | MetaData.Arrange);
-        Model.RegisterProperty(TreeViewItem, 'IsSelected', false, MetaData.Render);
         ensureControlsTheme();
     }
 
@@ -613,7 +632,7 @@ export class TreeViewItem extends ItemsControl
             const tree = this.findTree();
             if (tree !== undefined) tree.HandleRowClick(this, modifiers);
         };
-        this._row.AddPropertyChangedListener('IsMouseOver', () => this.refreshRowBackground());
+        this._row.AddPropertyChangedListener(Visual.IsMouseOverKey, () => this.refreshRowBackground());
 
         // Items panel = CollapsibleStack. The factory caches the
         // single instance so IsExpanded toggles can flip its
@@ -631,16 +650,21 @@ export class TreeViewItem extends ItemsControl
         this.refreshRowBackground();
     }
 
-    public get Header(): string { return this.get_property_value('Header'); }
-    public set Header(v: string) { this.set_property_value('Header', v); }
+    public get Header(): string { return this.get_property_value(TreeViewItem.HeaderKey); }
+    public set Header(v: string) { this.set_property_value(TreeViewItem.HeaderKey, v); }
 
-    public get IsExpanded(): boolean { return this.get_property_value('IsExpanded'); }
-    public set IsExpanded(v: boolean) { this.set_property_value('IsExpanded', v); }
+    public get IsExpanded(): boolean { return this.get_property_value(TreeViewItem.IsExpandedKey); }
+    public set IsExpanded(v: boolean) { this.set_property_value(TreeViewItem.IsExpandedKey, v); }
 
-    public get IsSelected(): boolean { return this.get_property_value('IsSelected'); }
-    public set IsSelected(v: boolean) { this.set_property_value('IsSelected', v); }
+    public get IsSelected(): boolean { return this.get_property_value(TreeViewItem.IsSelectedKey); }
+    public set IsSelected(v: boolean) { this.set_property_value(TreeViewItem.IsSelectedKey, v); }
 
     // ── ItemsControl override seams ────────────────────────────────
+
+    public override IsItemItsOwnContainerOverride(item: unknown): boolean
+    {
+        return item instanceof TreeViewItem;
+    }
 
     public override GetContainerForItemOverride(item: unknown): Visual
     {
@@ -716,7 +740,7 @@ export class TreeViewItem extends ItemsControl
     // Setter exposed for TreeView's internal selection bookkeeping.
     public SetIsSelectedInternal(v: boolean): void
     {
-        this.set_property_value('IsSelected', v);
+        this.set_property_value(TreeViewItem.IsSelectedKey, v);
     }
 
     // Walk the logical-parent chain to find the owning TreeView.

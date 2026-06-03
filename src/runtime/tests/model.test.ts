@@ -73,24 +73,24 @@ function buildScene()
     register(ViewModel,  'items',      0,    MetaData.Render);
 
     const desk = new Desk();
-    desk.set_property_value('label', 'desk-1');
-    desk.set_property_value('items', 12);
+    desk._set_property_value_by_name('label', 'desk-1');
+    desk._set_property_value_by_name('items', 12);
 
     const office = new Office();
-    office.set_property_value('number', 314);
-    office.set_property_value('desk', desk);
+    office._set_property_value_by_name('number', 314);
+    office._set_property_value_by_name('desk', desk);
 
     const manager = new Manager();
-    manager.set_property_value('name', 'Ada');
-    manager.set_property_value('office', office);
+    manager._set_property_value_by_name('name', 'Ada');
+    manager._set_property_value_by_name('office', office);
 
     const department = new Department();
-    department.set_property_value('code', 'ENG');
-    department.set_property_value('manager', manager);
+    department._set_property_value_by_name('code', 'ENG');
+    department._set_property_value_by_name('manager', manager);
 
     const company = new Company();
-    company.set_property_value('name', 'Mural');
-    company.set_property_value('department', department);
+    company._set_property_value_by_name('name', 'Mural');
+    company._set_property_value_by_name('department', department);
 
     return {
         Company, Department, Manager, Office, Desk, ViewModel,
@@ -102,54 +102,54 @@ describe('Binding — transitive paths across a graph of Models', () => {
     test('ViewModel.label bound through a 5-Model chain resolves transitively', () => {
         const { company, ViewModel } = buildScene();
         const view = new ViewModel();
-        view.set_property_value(
+        view._set_property_value_by_name(
             'label',
             new Binding(company, 'department.manager.office.desk.label'),
         );
-        assert.equal(view.get_property_value('label'), 'desk-1');
+        assert.equal(view._get_property_value_by_name('label'), 'desk-1');
     });
 
     test('severing an intermediate Model returns undefined on the next read', () => {
         const { company, manager, ViewModel } = buildScene();
         const view = new ViewModel();
-        view.set_property_value(
+        view._set_property_value_by_name(
             'label',
             new Binding(company, 'department.manager.office.desk.label'),
         );
-        manager.set_property_value('office', null);
-        assert.equal(view.get_property_value('label'), undefined);
+        manager._set_property_value_by_name('office', null);
+        assert.equal(view._get_property_value_by_name('label'), undefined);
     });
 
     test('mutating the leaf Model is observable via the ViewModel on the next read', () => {
         const { company, desk, ViewModel } = buildScene();
         const view = new ViewModel();
-        view.set_property_value(
+        view._set_property_value_by_name(
             'label',
             new Binding(company, 'department.manager.office.desk.label'),
         );
-        assert.equal(view.get_property_value('label'), 'desk-1');
-        desk.set_property_value('label', 'changed');
-        assert.equal(view.get_property_value('label'), 'changed');
+        assert.equal(view._get_property_value_by_name('label'), 'desk-1');
+        desk._set_property_value_by_name('label', 'changed');
+        assert.equal(view._get_property_value_by_name('label'), 'changed');
     });
 
     test('replacing a mid-chain Model subtree retargets resolution through the new branch', () => {
         const { company, department, Manager, Office, Desk, ViewModel } = buildScene();
         const view = new ViewModel();
-        view.set_property_value(
+        view._set_property_value_by_name(
             'label',
             new Binding(company, 'department.manager.office.desk.label'),
         );
-        assert.equal(view.get_property_value('label'), 'desk-1');
+        assert.equal(view._get_property_value_by_name('label'), 'desk-1');
 
         const newDesk = new Desk();
-        newDesk.set_property_value('label', 'desk-replaced');
+        newDesk._set_property_value_by_name('label', 'desk-replaced');
         const newOffice = new Office();
-        newOffice.set_property_value('desk', newDesk);
+        newOffice._set_property_value_by_name('desk', newDesk);
         const newManager = new Manager();
-        newManager.set_property_value('office', newOffice);
-        department.set_property_value('manager', newManager);
+        newManager._set_property_value_by_name('office', newOffice);
+        department._set_property_value_by_name('manager', newManager);
 
-        assert.equal(view.get_property_value('label'), 'desk-replaced');
+        assert.equal(view._get_property_value_by_name('label'), 'desk-replaced');
     });
 
     test('Binding.set_value (TwoWay) writes the leaf Model property through the chain', () => {
@@ -160,126 +160,126 @@ describe('Binding — transitive paths across a graph of Models', () => {
             'department.manager.office.desk.label',
             BindingMode.TwoWay,
         );
-        view.set_property_value('label', binding);
+        view._set_property_value_by_name('label', binding);
 
         assert.equal(binding.set_value('renamed'), true);
-        assert.equal(desk.get_property_value('label'), 'renamed');
-        assert.equal(view.get_property_value('label'), 'renamed');
+        assert.equal(desk._get_property_value_by_name('label'), 'renamed');
+        assert.equal(view._get_property_value_by_name('label'), 'renamed');
     });
 
     test('two ViewModels bound to the same chain both see leaf mutations', () => {
         const { company, desk, ViewModel } = buildScene();
         const viewA = new ViewModel();
         const viewB = new ViewModel();
-        viewA.set_property_value(
+        viewA._set_property_value_by_name(
             'label',
             new Binding(company, 'department.manager.office.desk.label'),
         );
-        viewB.set_property_value(
+        viewB._set_property_value_by_name(
             'label',
             new Binding(company, 'department.manager.office.desk.label'),
         );
-        assert.equal(viewA.get_property_value('label'), 'desk-1');
-        assert.equal(viewB.get_property_value('label'), 'desk-1');
+        assert.equal(viewA._get_property_value_by_name('label'), 'desk-1');
+        assert.equal(viewB._get_property_value_by_name('label'), 'desk-1');
 
-        desk.set_property_value('label', 'rotated');
-        assert.equal(viewA.get_property_value('label'), 'rotated');
-        assert.equal(viewB.get_property_value('label'), 'rotated');
+        desk._set_property_value_by_name('label', 'rotated');
+        assert.equal(viewA._get_property_value_by_name('label'), 'rotated');
+        assert.equal(viewB._get_property_value_by_name('label'), 'rotated');
     });
 
     test('two roots sharing a mid-chain Manager: both views reflect mutations to the shared subtree', () => {
         const { Company, Department, manager, company, desk, ViewModel } = buildScene();
 
         const dept2 = new Department();
-        dept2.set_property_value('manager', manager);
+        dept2._set_property_value_by_name('manager', manager);
         const co2 = new Company();
-        co2.set_property_value('department', dept2);
+        co2._set_property_value_by_name('department', dept2);
 
         const view1 = new ViewModel();
-        view1.set_property_value(
+        view1._set_property_value_by_name(
             'label',
             new Binding(company, 'department.manager.office.desk.label'),
         );
         const view2 = new ViewModel();
-        view2.set_property_value(
+        view2._set_property_value_by_name(
             'label',
             new Binding(co2, 'department.manager.office.desk.label'),
         );
 
-        assert.equal(view1.get_property_value('label'), 'desk-1');
-        assert.equal(view2.get_property_value('label'), 'desk-1');
+        assert.equal(view1._get_property_value_by_name('label'), 'desk-1');
+        assert.equal(view2._get_property_value_by_name('label'), 'desk-1');
 
-        desk.set_property_value('label', 'rotated');
-        assert.equal(view1.get_property_value('label'), 'rotated');
-        assert.equal(view2.get_property_value('label'), 'rotated');
+        desk._set_property_value_by_name('label', 'rotated');
+        assert.equal(view1._get_property_value_by_name('label'), 'rotated');
+        assert.equal(view2._get_property_value_by_name('label'), 'rotated');
     });
 
     test('rebinding a ViewModel.label to a different graph swaps the resolved value', () => {
         const { Company, Department, Manager, Office, Desk, ViewModel, company, desk } = buildScene();
-        desk.set_property_value('label', 'graph-one');
+        desk._set_property_value_by_name('label', 'graph-one');
 
         const desk2 = new Desk();
-        desk2.set_property_value('label', 'graph-two');
+        desk2._set_property_value_by_name('label', 'graph-two');
         const office2 = new Office();
-        office2.set_property_value('desk', desk2);
+        office2._set_property_value_by_name('desk', desk2);
         const manager2 = new Manager();
-        manager2.set_property_value('office', office2);
+        manager2._set_property_value_by_name('office', office2);
         const department2 = new Department();
-        department2.set_property_value('manager', manager2);
+        department2._set_property_value_by_name('manager', manager2);
         const company2 = new Company();
-        company2.set_property_value('department', department2);
+        company2._set_property_value_by_name('department', department2);
 
         const view = new ViewModel();
-        view.set_property_value(
+        view._set_property_value_by_name(
             'label',
             new Binding(company, 'department.manager.office.desk.label'),
         );
-        assert.equal(view.get_property_value('label'), 'graph-one');
+        assert.equal(view._get_property_value_by_name('label'), 'graph-one');
 
-        view.set_property_value(
+        view._set_property_value_by_name(
             'label',
             new Binding(company2, 'department.manager.office.desk.label'),
         );
-        assert.equal(view.get_property_value('label'), 'graph-two');
+        assert.equal(view._get_property_value_by_name('label'), 'graph-two');
     });
 
     test('indexed segments traverse an array of Manager Models', () => {
         const { Department, Manager, Office, Desk, ViewModel } = buildScene();
 
         const targetDesk = new Desk();
-        targetDesk.set_property_value('label', 'corner-desk');
+        targetDesk._set_property_value_by_name('label', 'corner-desk');
         const targetOffice = new Office();
-        targetOffice.set_property_value('desk', targetDesk);
+        targetOffice._set_property_value_by_name('desk', targetDesk);
         const targetManager = new Manager();
-        targetManager.set_property_value('office', targetOffice);
+        targetManager._set_property_value_by_name('office', targetOffice);
 
         const dept = new Department();
-        dept.set_property_value(
+        dept._set_property_value_by_name(
             'managers',
             [new Manager(), new Manager(), targetManager, new Manager()],
         );
 
         const view = new ViewModel();
-        view.set_property_value(
+        view._set_property_value_by_name(
             'label',
             new Binding(dept, 'managers[2].office.desk.label'),
         );
-        assert.equal(view.get_property_value('label'), 'corner-desk');
+        assert.equal(view._get_property_value_by_name('label'), 'corner-desk');
 
-        targetDesk.set_property_value('label', 'rotated');
-        assert.equal(view.get_property_value('label'), 'rotated');
+        targetDesk._set_property_value_by_name('label', 'rotated');
+        assert.equal(view._get_property_value_by_name('label'), 'rotated');
     });
 
     test('listener on ViewModel.label fires on Binding install with resolved value, then again on leaf mutation', () => {
         const { company, desk, ViewModel } = buildScene();
         const view = new ViewModel();
         const captures: Array<[unknown, unknown]> = [];
-        view.AddPropertyChangedListener(
+        view._add_property_changed_listener_by_name(
             'label',
             (_m, _p, old_value, new_value) => { captures.push([old_value, new_value]); },
         );
 
-        view.set_property_value(
+        view._set_property_value_by_name(
             'label',
             new Binding(company, 'department.manager.office.desk.label'),
         );
@@ -287,12 +287,12 @@ describe('Binding — transitive paths across a graph of Models', () => {
         assert.equal(captures[0]![0], '');
         assert.equal(captures[0]![1], 'desk-1');
 
-        desk.set_property_value('label', 'changed');
+        desk._set_property_value_by_name('label', 'changed');
         assert.equal(captures.length, 2);
         assert.equal(captures[1]![0], 'desk-1');
         assert.equal(captures[1]![1], 'changed');
 
-        assert.equal(view.get_property_value('label'), 'changed');
+        assert.equal(view._get_property_value_by_name('label'), 'changed');
     });
 });
 
@@ -301,14 +301,14 @@ describe('TwoWay Bindings across a graph of Models', () => {
         const { Department, Manager, Office, Desk } = buildScene();
 
         const targetDesk = new Desk();
-        targetDesk.set_property_value('label', 'corner-desk');
+        targetDesk._set_property_value_by_name('label', 'corner-desk');
         const targetOffice = new Office();
-        targetOffice.set_property_value('desk', targetDesk);
+        targetOffice._set_property_value_by_name('desk', targetDesk);
         const targetManager = new Manager();
-        targetManager.set_property_value('office', targetOffice);
+        targetManager._set_property_value_by_name('office', targetOffice);
 
         const dept = new Department();
-        dept.set_property_value(
+        dept._set_property_value_by_name(
             'managers',
             [new Manager(), new Manager(), targetManager, new Manager()],
         );
@@ -320,7 +320,7 @@ describe('TwoWay Bindings across a graph of Models', () => {
         );
         assert.equal(binding.get_value(), 'corner-desk');
         assert.equal(binding.set_value('corner-renamed'), true);
-        assert.equal(targetDesk.get_property_value('label'), 'corner-renamed');
+        assert.equal(targetDesk._get_property_value_by_name('label'), 'corner-renamed');
         assert.equal(binding.get_value(), 'corner-renamed');
     });
 
@@ -338,7 +338,7 @@ describe('TwoWay Bindings across a graph of Models', () => {
             fired++;
             captured = [m, p, o, n];
         };
-        desk.AddPropertyChangedListener('label', cb);
+        desk._add_property_changed_listener_by_name('label', cb);
 
         assert.equal(binding.set_value('renamed'), true);
         assert.equal(fired, 1);
@@ -374,16 +374,16 @@ describe('TwoWay Bindings across a graph of Models', () => {
         );
 
         const newDesk = new Desk();
-        newDesk.set_property_value('label', 'desk-replaced');
+        newDesk._set_property_value_by_name('label', 'desk-replaced');
         const newOffice = new Office();
-        newOffice.set_property_value('desk', newDesk);
+        newOffice._set_property_value_by_name('desk', newDesk);
         const newManager = new Manager();
-        newManager.set_property_value('office', newOffice);
-        department.set_property_value('manager', newManager);
+        newManager._set_property_value_by_name('office', newOffice);
+        department._set_property_value_by_name('manager', newManager);
 
         assert.equal(binding.set_value('written-after-swap'), true);
-        assert.equal(newDesk.get_property_value('label'), 'written-after-swap');
-        assert.equal(desk.get_property_value('label'), 'desk-1');
+        assert.equal(newDesk._get_property_value_by_name('label'), 'written-after-swap');
+        assert.equal(desk._get_property_value_by_name('label'), 'desk-1');
         assert.equal(binding.get_value(), 'written-after-swap');
     });
 
@@ -391,9 +391,9 @@ describe('TwoWay Bindings across a graph of Models', () => {
         const { Company, Department, manager, company } = buildScene();
 
         const dept2 = new Department();
-        dept2.set_property_value('manager', manager);
+        dept2._set_property_value_by_name('manager', manager);
         const co2 = new Company();
-        co2.set_property_value('department', dept2);
+        co2._set_property_value_by_name('department', dept2);
 
         const writer = new Binding(
             company,
@@ -418,9 +418,9 @@ describe('TwoWay Bindings across a graph of Models', () => {
             BindingMode.TwoWay,
         );
 
-        manager.set_property_value('office', null);
+        manager._set_property_value_by_name('office', null);
         assert.equal(binding.set_value('nope'), false);
-        assert.equal(desk.get_property_value('label'), 'desk-1');
+        assert.equal(desk._get_property_value_by_name('label'), 'desk-1');
     });
 
     test('writeback to a mid-chain Model property replaces the subtree at that node', () => {
@@ -428,21 +428,21 @@ describe('TwoWay Bindings across a graph of Models', () => {
         const swap = new Binding(company, 'department.manager', BindingMode.TwoWay);
 
         const newDesk = new Desk();
-        newDesk.set_property_value('label', 'new-leaf');
+        newDesk._set_property_value_by_name('label', 'new-leaf');
         const newOffice = new Office();
-        newOffice.set_property_value('desk', newDesk);
+        newOffice._set_property_value_by_name('desk', newDesk);
         const newManager = new Manager();
-        newManager.set_property_value('office', newOffice);
+        newManager._set_property_value_by_name('office', newOffice);
 
         assert.equal(swap.set_value(newManager), true);
 
         // A separately created deep binding now resolves through the swapped subtree.
         const view = new ViewModel();
-        view.set_property_value(
+        view._set_property_value_by_name(
             'label',
             new Binding(company, 'department.manager.office.desk.label'),
         );
-        assert.equal(view.get_property_value('label'), 'new-leaf');
+        assert.equal(view._get_property_value_by_name('label'), 'new-leaf');
     });
 
     test('writeback through a 7-Model chain with array branching at two levels', () => {
@@ -463,19 +463,19 @@ describe('TwoWay Bindings across a graph of Models', () => {
         register(Desk,       'label',      '',   MetaData.Render);
 
         const desk = new Desk();
-        desk.set_property_value('label', 'initial');
+        desk._set_property_value_by_name('label', 'initial');
         const office = new Office();
-        office.set_property_value('desk', desk);
+        office._set_property_value_by_name('desk', desk);
         const manager = new Manager();
-        manager.set_property_value('office', office);
+        manager._set_property_value_by_name('office', office);
         const department = new Department();
-        department.set_property_value('manager', manager);
+        department._set_property_value_by_name('manager', manager);
         const branch = new Branch();
-        branch.set_property_value('department', department);
+        branch._set_property_value_by_name('department', department);
         const region = new Region();
-        region.set_property_value('branches', [branch]);
+        region._set_property_value_by_name('branches', [branch]);
         const org = new Org();
-        org.set_property_value('regions', [new Region(), region]);
+        org._set_property_value_by_name('regions', [new Region(), region]);
 
         const binding = new Binding(
             org,
@@ -484,7 +484,7 @@ describe('TwoWay Bindings across a graph of Models', () => {
         );
         assert.equal(binding.get_value(), 'initial');
         assert.equal(binding.set_value('renamed'), true);
-        assert.equal(desk.get_property_value('label'), 'renamed');
+        assert.equal(desk._get_property_value_by_name('label'), 'renamed');
         assert.equal(binding.get_value(), 'renamed');
     });
 });
@@ -499,19 +499,19 @@ describe('Per-instance PropertyChanged listeners', () => {
         const { Desk } = buildScene();
         const a = new Desk();
         const b = new Desk();
-        a.set_property_value('label', 'a-initial');
-        b.set_property_value('label', 'b-initial');
+        a._set_property_value_by_name('label', 'a-initial');
+        b._set_property_value_by_name('label', 'b-initial');
 
         let aFires = 0;
         let bFires = 0;
-        a.AddPropertyChangedListener('label', () => { aFires++; });
-        b.AddPropertyChangedListener('label', () => { bFires++; });
+        a._add_property_changed_listener_by_name('label', () => { aFires++; });
+        b._add_property_changed_listener_by_name('label', () => { bFires++; });
 
-        a.set_property_value('label', 'a-changed');
+        a._set_property_value_by_name('label', 'a-changed');
         assert.equal(aFires, 1);
         assert.equal(bFires, 0);
 
-        b.set_property_value('label', 'b-changed');
+        b._set_property_value_by_name('label', 'b-changed');
         assert.equal(aFires, 1);
         assert.equal(bFires, 1);
     });
@@ -526,13 +526,13 @@ describe('Per-instance PropertyChanged listeners', () => {
         const aCb: PropertyChangeCallback = () => { aFires++; };
         const bCb: PropertyChangeCallback = () => { bFires++; };
 
-        a.AddPropertyChangedListener('label', aCb);
-        b.AddPropertyChangedListener('label', bCb);
+        a._add_property_changed_listener_by_name('label', aCb);
+        b._add_property_changed_listener_by_name('label', bCb);
 
-        a.RemovePropertyChangedListener('label', aCb);
+        a._remove_property_changed_listener_by_name('label', aCb);
 
-        a.set_property_value('label', 'a-changed');
-        b.set_property_value('label', 'b-changed');
+        a._set_property_value_by_name('label', 'a-changed');
+        b._set_property_value_by_name('label', 'b-changed');
 
         assert.equal(aFires, 0);
         assert.equal(bFires, 1);
@@ -545,9 +545,9 @@ describe('Per-instance PropertyChanged listeners', () => {
         const desk = new Desk();
 
         let captured: [Model, string, unknown, unknown] | null = null;
-        desk.AddPropertyChangedListener('label', (m, p, o, n) => { captured = [m, p, o, n]; });
+        desk._add_property_changed_listener_by_name('label', (m, p, o, n) => { captured = [m, p, o, n]; });
 
-        desk.set_property_value('label', 'first-set');
+        desk._set_property_value_by_name('label', 'first-set');
         assert.notEqual(captured, null);
         assert.equal(captured![0], desk);
         assert.equal(captured![1], 'label');
@@ -559,7 +559,7 @@ describe('Per-instance PropertyChanged listeners', () => {
         const { Desk } = buildScene();
         const desk = new Desk();
         assert.throws(
-            () => desk.AddPropertyChangedListener('nope', () => {}),
+            () => desk._add_property_changed_listener_by_name('nope', () => {}),
             /not found in model 'Desk'/,
         );
     });
@@ -568,11 +568,11 @@ describe('Per-instance PropertyChanged listeners', () => {
         const { Desk } = buildScene();
         const desk = new Desk();
         const order: number[] = [];
-        desk.AddPropertyChangedListener('label', () => { order.push(1); });
-        desk.AddPropertyChangedListener('label', () => { order.push(2); });
-        desk.AddPropertyChangedListener('label', () => { order.push(3); });
+        desk._add_property_changed_listener_by_name('label', () => { order.push(1); });
+        desk._add_property_changed_listener_by_name('label', () => { order.push(2); });
+        desk._add_property_changed_listener_by_name('label', () => { order.push(3); });
 
-        desk.set_property_value('label', 'fire');
+        desk._set_property_value_by_name('label', 'fire');
         assert.deepEqual(order, [1, 2, 3]);
     });
 });
@@ -585,12 +585,12 @@ describe('Push-style binding notification on bound consumers', () => {
         const { company, department, Manager, Office, Desk, ViewModel } = buildScene();
         const view = new ViewModel();
         const captures: Array<[unknown, unknown]> = [];
-        view.AddPropertyChangedListener(
+        view._add_property_changed_listener_by_name(
             'label',
             (_m, _p, o, n) => { captures.push([o, n]); },
         );
 
-        view.set_property_value(
+        view._set_property_value_by_name(
             'label',
             new Binding(company, 'department.manager.office.desk.label'),
         );
@@ -598,12 +598,12 @@ describe('Push-style binding notification on bound consumers', () => {
         assert.equal(captures.length, 1);
 
         const newDesk = new Desk();
-        newDesk.set_property_value('label', 'swapped-leaf');
+        newDesk._set_property_value_by_name('label', 'swapped-leaf');
         const newOffice = new Office();
-        newOffice.set_property_value('desk', newDesk);
+        newOffice._set_property_value_by_name('desk', newDesk);
         const newManager = new Manager();
-        newManager.set_property_value('office', newOffice);
-        department.set_property_value('manager', newManager);
+        newManager._set_property_value_by_name('office', newOffice);
+        department._set_property_value_by_name('manager', newManager);
 
         assert.equal(captures.length, 2);
         assert.equal(captures[1]![0], 'desk-1');
@@ -614,18 +614,18 @@ describe('Push-style binding notification on bound consumers', () => {
         const { company, manager, ViewModel } = buildScene();
         const view = new ViewModel();
         const captures: Array<[unknown, unknown]> = [];
-        view.AddPropertyChangedListener(
+        view._add_property_changed_listener_by_name(
             'label',
             (_m, _p, o, n) => { captures.push([o, n]); },
         );
 
-        view.set_property_value(
+        view._set_property_value_by_name(
             'label',
             new Binding(company, 'department.manager.office.desk.label'),
         );
         assert.equal(captures.length, 1);
 
-        manager.set_property_value('office', null);
+        manager._set_property_value_by_name('office', null);
         assert.equal(captures.length, 2);
         assert.equal(captures[1]![0], 'desk-1');
         assert.equal(captures[1]![1], undefined);
@@ -638,9 +638,9 @@ describe('Push-style binding notification on bound consumers', () => {
         const { company, department, Manager, Office, Desk, ViewModel } = buildScene();
         const view = new ViewModel();
         let fires = 0;
-        view.AddPropertyChangedListener('label', () => { fires++; });
+        view._add_property_changed_listener_by_name('label', () => { fires++; });
 
-        view.set_property_value(
+        view._set_property_value_by_name(
             'label',
             new Binding(company, 'department.manager.office.desk.label'),
         );
@@ -649,12 +649,12 @@ describe('Push-style binding notification on bound consumers', () => {
         // Build a new subtree whose leaf label is the SAME string as the
         // current resolved value ('desk-1').
         const newDesk = new Desk();
-        newDesk.set_property_value('label', 'desk-1');
+        newDesk._set_property_value_by_name('label', 'desk-1');
         const newOffice = new Office();
-        newOffice.set_property_value('desk', newDesk);
+        newOffice._set_property_value_by_name('desk', newDesk);
         const newManager = new Manager();
-        newManager.set_property_value('office', newOffice);
-        department.set_property_value('manager', newManager);
+        newManager._set_property_value_by_name('office', newOffice);
+        department._set_property_value_by_name('manager', newManager);
 
         assert.equal(fires, 1);
     });
@@ -665,21 +665,21 @@ describe('Push-style binding notification on bound consumers', () => {
         const viewB = new ViewModel();
         let aFires = 0;
         let bFires = 0;
-        viewA.AddPropertyChangedListener('label', () => { aFires++; });
-        viewB.AddPropertyChangedListener('label', () => { bFires++; });
+        viewA._add_property_changed_listener_by_name('label', () => { aFires++; });
+        viewB._add_property_changed_listener_by_name('label', () => { bFires++; });
 
-        viewA.set_property_value(
+        viewA._set_property_value_by_name(
             'label',
             new Binding(company, 'department.manager.office.desk.label'),
         );
-        viewB.set_property_value(
+        viewB._set_property_value_by_name(
             'label',
             new Binding(company, 'department.manager.office.desk.label'),
         );
         assert.equal(aFires, 1);
         assert.equal(bFires, 1);
 
-        desk.set_property_value('label', 'rotated');
+        desk._set_property_value_by_name('label', 'rotated');
         assert.equal(aFires, 2);
         assert.equal(bFires, 2);
     });
@@ -688,9 +688,9 @@ describe('Push-style binding notification on bound consumers', () => {
         const { company, desk, ViewModel } = buildScene();
         const view = new ViewModel();
         let fires = 0;
-        view.AddPropertyChangedListener('label', () => { fires++; });
+        view._add_property_changed_listener_by_name('label', () => { fires++; });
 
-        view.set_property_value(
+        view._set_property_value_by_name(
             'label',
             new Binding(company, 'department.manager.office.desk.label'),
         );
@@ -700,19 +700,19 @@ describe('Push-style binding notification on bound consumers', () => {
         // path listeners are still attached to chain Models (cleanup is
         // backlog item 2.5), but the EVD must have detached its
         // subscription so the old chain can no longer push to it.
-        view.set_property_value('label', 'local-override');
+        view._set_property_value_by_name('label', 'local-override');
         assert.equal(fires, 2);
 
-        desk.set_property_value('label', 'this-should-not-propagate');
+        desk._set_property_value_by_name('label', 'this-should-not-propagate');
         assert.equal(fires, 2);
-        assert.equal(view.get_property_value('label'), 'local-override');
+        assert.equal(view._get_property_value_by_name('label'), 'local-override');
     });
 
     test('writing through a TwoWay binding pushes the new value back to the consumer', () => {
         const { company, ViewModel } = buildScene();
         const view = new ViewModel();
         const captures: Array<[unknown, unknown]> = [];
-        view.AddPropertyChangedListener(
+        view._add_property_changed_listener_by_name(
             'label',
             (_m, _p, o, n) => { captures.push([o, n]); },
         );
@@ -722,7 +722,7 @@ describe('Push-style binding notification on bound consumers', () => {
             'department.manager.office.desk.label',
             BindingMode.TwoWay,
         );
-        view.set_property_value('label', binding);
+        view._set_property_value_by_name('label', binding);
         assert.equal(captures.length, 1);
 
         // TwoWay writeback updates the leaf, which propagates through
@@ -780,7 +780,7 @@ describe('Binding / PropertyPath disposal', () => {
     test('replacing a Binding with a local value removes the old chain listeners', () => {
         const { company, department, manager, office, desk, ViewModel } = buildScene();
         const view = new ViewModel();
-        view.set_property_value(
+        view._set_property_value_by_name(
             'label',
             new Binding(company, 'department.manager.office.desk.label'),
         );
@@ -792,7 +792,7 @@ describe('Binding / PropertyPath disposal', () => {
         assert.equal(listener_count(office, 'desk'), 1);
         assert.equal(listener_count(desk, 'label'), 1);
 
-        view.set_property_value('label', 'local-override');
+        view._set_property_value_by_name('label', 'local-override');
 
         // The replacement disposes the old binding; chain Models are clean.
         assert.equal(listener_count(company, 'department'), 0);
@@ -805,7 +805,7 @@ describe('Binding / PropertyPath disposal', () => {
     test('replacing a Binding with another Binding cleans up the old chain', () => {
         const { Company, Department, Manager, Office, Desk, company, desk, ViewModel } = buildScene();
         const view = new ViewModel();
-        view.set_property_value(
+        view._set_property_value_by_name(
             'label',
             new Binding(company, 'department.manager.office.desk.label'),
         );
@@ -814,15 +814,15 @@ describe('Binding / PropertyPath disposal', () => {
         // Build a second graph and point view.label at its leaf.
         const desk2 = new Desk();
         const office2 = new Office();
-        office2.set_property_value('desk', desk2);
+        office2._set_property_value_by_name('desk', desk2);
         const manager2 = new Manager();
-        manager2.set_property_value('office', office2);
+        manager2._set_property_value_by_name('office', office2);
         const department2 = new Department();
-        department2.set_property_value('manager', manager2);
+        department2._set_property_value_by_name('manager', manager2);
         const company2 = new Company();
-        company2.set_property_value('department', department2);
+        company2._set_property_value_by_name('department', department2);
 
-        view.set_property_value(
+        view._set_property_value_by_name(
             'label',
             new Binding(company2, 'department.manager.office.desk.label'),
         );
@@ -868,23 +868,23 @@ describe('Binding / PropertyPath disposal', () => {
         const { company, desk, ViewModel } = buildScene();
         const view = new ViewModel();
         let fires = 0;
-        view.AddPropertyChangedListener('label', () => { fires++; });
+        view._add_property_changed_listener_by_name('label', () => { fires++; });
 
         const binding = new Binding(
             company,
             'department.manager.office.desk.label',
         );
-        view.set_property_value('label', binding);
+        view._set_property_value_by_name('label', binding);
         // install fires once
         assert.equal(fires, 1);
 
         // Replace with a local value — disposes the binding.
-        view.set_property_value('label', 'local');
+        view._set_property_value_by_name('label', 'local');
         // replacement fires (oldResolved → local)
         assert.equal(fires, 2);
 
         // Mutating any chain Model must not fire view's listener.
-        desk.set_property_value('label', 'after-dispose');
+        desk._set_property_value_by_name('label', 'after-dispose');
         assert.equal(fires, 2);
     });
 
@@ -893,13 +893,13 @@ describe('Binding / PropertyPath disposal', () => {
 
         const desk2 = new Desk();
         const office2 = new Office();
-        office2.set_property_value('desk', desk2);
+        office2._set_property_value_by_name('desk', desk2);
         const manager2 = new Manager();
-        manager2.set_property_value('office', office2);
+        manager2._set_property_value_by_name('office', office2);
         const department2 = new Department();
-        department2.set_property_value('manager', manager2);
+        department2._set_property_value_by_name('manager', manager2);
         const company2 = new Company();
-        company2.set_property_value('department', department2);
+        company2._set_property_value_by_name('department', department2);
 
         const bindingA = new Binding(
             company,
@@ -931,58 +931,58 @@ describe('ClearValue and GetValueSource', () => {
     test('GetValueSource is Default before any set or listener add', () => {
         const { Desk } = buildScene();
         const desk = new Desk();
-        assert.equal(desk.GetValueSource('label'), PropertyValueSource.Default);
+        assert.equal(desk._get_value_source_by_name('label'), PropertyValueSource.Default);
     });
 
     test('GetValueSource becomes LocalValue after a plain set_property_value', () => {
         const { Desk } = buildScene();
         const desk = new Desk();
-        desk.set_property_value('label', 'set-locally');
-        assert.equal(desk.GetValueSource('label'), PropertyValueSource.LocalValue);
+        desk._set_property_value_by_name('label', 'set-locally');
+        assert.equal(desk._get_value_source_by_name('label'), PropertyValueSource.LocalValue);
     });
 
     test('GetValueSource becomes Binding after installing a Binding', () => {
         const { company, ViewModel } = buildScene();
         const view = new ViewModel();
-        view.set_property_value(
+        view._set_property_value_by_name(
             'label',
             new Binding(company, 'department.manager.office.desk.label'),
         );
-        assert.equal(view.GetValueSource('label'), PropertyValueSource.Binding);
+        assert.equal(view._get_value_source_by_name('label'), PropertyValueSource.Binding);
     });
 
     test('GetValueSource stays Default after AddPropertyChangedListener (no value set yet)', () => {
         const { Desk } = buildScene();
         const desk = new Desk();
-        desk.AddPropertyChangedListener('label', () => {});
+        desk._add_property_changed_listener_by_name('label', () => {});
         // Listener creates an EVD lazily at Default priority; the source
         // should still report Default until something is actually set.
-        assert.equal(desk.GetValueSource('label'), PropertyValueSource.Default);
+        assert.equal(desk._get_value_source_by_name('label'), PropertyValueSource.Default);
     });
 
     test('ClearValue resets a locally-set property back to its registered default', () => {
         const { Desk } = buildScene();
         const desk = new Desk();
-        desk.set_property_value('label', 'set-locally');
-        assert.equal(desk.get_property_value('label'), 'set-locally');
+        desk._set_property_value_by_name('label', 'set-locally');
+        assert.equal(desk._get_property_value_by_name('label'), 'set-locally');
 
-        desk.ClearValue('label');
-        assert.equal(desk.get_property_value('label'), '');   // default for 'label'
-        assert.equal(desk.GetValueSource('label'), PropertyValueSource.Default);
+        desk._clear_value_by_name('label');
+        assert.equal(desk._get_property_value_by_name('label'), '');   // default for 'label'
+        assert.equal(desk._get_value_source_by_name('label'), PropertyValueSource.Default);
     });
 
     test('ClearValue fires PropertyChanged with (oldEffective, defaultValue) when the value changed', () => {
         const { Desk } = buildScene();
         const desk = new Desk();
-        desk.set_property_value('items', 42);
+        desk._set_property_value_by_name('items', 42);
 
         const captures: Array<[unknown, unknown]> = [];
-        desk.AddPropertyChangedListener(
+        desk._add_property_changed_listener_by_name(
             'items',
             (_m, _p, o, n) => { captures.push([o, n]); },
         );
 
-        desk.ClearValue('items');
+        desk._clear_value_by_name('items');
         assert.equal(captures.length, 1);
         assert.equal(captures[0]![0], 42);
         assert.equal(captures[0]![1], 0);   // default for 'items'
@@ -992,45 +992,45 @@ describe('ClearValue and GetValueSource', () => {
         const { Desk } = buildScene();
         const desk = new Desk();
         let fires = 0;
-        desk.AddPropertyChangedListener('label', () => { fires++; });
+        desk._add_property_changed_listener_by_name('label', () => { fires++; });
 
-        desk.ClearValue('label');
+        desk._clear_value_by_name('label');
         assert.equal(fires, 0);
-        assert.equal(desk.get_property_value('label'), '');
+        assert.equal(desk._get_property_value_by_name('label'), '');
     });
 
     test('ClearValue on a bound property disposes the binding and detaches its chain listeners', () => {
         const { company, desk, ViewModel } = buildScene();
         const view = new ViewModel();
-        view.set_property_value(
+        view._set_property_value_by_name(
             'label',
             new Binding(company, 'department.manager.office.desk.label'),
         );
         assert.equal(listener_count(desk, 'label'), 1);
-        assert.equal(view.GetValueSource('label'), PropertyValueSource.Binding);
+        assert.equal(view._get_value_source_by_name('label'), PropertyValueSource.Binding);
 
-        view.ClearValue('label');
+        view._clear_value_by_name('label');
 
-        assert.equal(view.GetValueSource('label'), PropertyValueSource.Default);
-        assert.equal(view.get_property_value('label'), '');     // default
+        assert.equal(view._get_value_source_by_name('label'), PropertyValueSource.Default);
+        assert.equal(view._get_property_value_by_name('label'), '');     // default
         assert.equal(listener_count(desk, 'label'), 0);          // chain cleaned up
     });
 
     test('after ClearValue, a subsequent set_property_value installs as LocalValue again', () => {
         const { Desk } = buildScene();
         const desk = new Desk();
-        desk.set_property_value('label', 'first');
-        desk.ClearValue('label');
-        desk.set_property_value('label', 'second');
-        assert.equal(desk.get_property_value('label'), 'second');
-        assert.equal(desk.GetValueSource('label'), PropertyValueSource.LocalValue);
+        desk._set_property_value_by_name('label', 'first');
+        desk._clear_value_by_name('label');
+        desk._set_property_value_by_name('label', 'second');
+        assert.equal(desk._get_property_value_by_name('label'), 'second');
+        assert.equal(desk._get_value_source_by_name('label'), PropertyValueSource.LocalValue);
     });
 
     test('ClearValue throws on an unregistered property', () => {
         const { Desk } = buildScene();
         const desk = new Desk();
         assert.throws(
-            () => desk.ClearValue('nope'),
+            () => desk._clear_value_by_name('nope'),
             /not found in model 'Desk'/,
         );
     });
@@ -1039,7 +1039,7 @@ describe('ClearValue and GetValueSource', () => {
         const { Desk } = buildScene();
         const desk = new Desk();
         assert.throws(
-            () => desk.GetValueSource('nope'),
+            () => desk._get_value_source_by_name('nope'),
             /not found in model 'Desk'/,
         );
     });
@@ -1056,7 +1056,7 @@ describe('Property inheritance and metadata override', () => {
         Model.RegisterProperty(Furniture, 'label', 'base-default', MetaData.Render);
 
         const desk = new Desk();
-        assert.equal(desk.get_property_value('label'), 'base-default');
+        assert.equal(desk._get_property_value_by_name('label'), 'base-default');
     });
 
     test('a subclass instance can set an inherited property and read it back', () => {
@@ -1065,9 +1065,9 @@ describe('Property inheritance and metadata override', () => {
         Model.RegisterProperty(Furniture, 'label', '', MetaData.Render);
 
         const desk = new Desk();
-        desk.set_property_value('label', 'on-desk');
-        assert.equal(desk.get_property_value('label'), 'on-desk');
-        assert.equal(desk.GetValueSource('label'), PropertyValueSource.LocalValue);
+        desk._set_property_value_by_name('label', 'on-desk');
+        assert.equal(desk._get_property_value_by_name('label'), 'on-desk');
+        assert.equal(desk._get_value_source_by_name('label'), PropertyValueSource.LocalValue);
     });
 
     test('a subclass listener fires only for the subclass instance, not for base instances', () => {
@@ -1079,10 +1079,10 @@ describe('Property inheritance and metadata override', () => {
         const desk = new Desk();
         let deskFires = 0;
         let furnitureFires = 0;
-        desk.AddPropertyChangedListener('label', () => { deskFires++; });
-        furniture.AddPropertyChangedListener('label', () => { furnitureFires++; });
+        desk._add_property_changed_listener_by_name('label', () => { deskFires++; });
+        furniture._add_property_changed_listener_by_name('label', () => { furnitureFires++; });
 
-        desk.set_property_value('label', 'x');
+        desk._set_property_value_by_name('label', 'x');
         assert.equal(deskFires, 1);
         assert.equal(furnitureFires, 0);
     });
@@ -1093,8 +1093,8 @@ describe('Property inheritance and metadata override', () => {
         Model.RegisterProperty(Furniture, 'label', 'furniture-default', MetaData.Render);
         Model.OverrideMetadata(Desk, 'label', { default_value: 'desk-default' });
 
-        assert.equal(new Furniture().get_property_value('label'), 'furniture-default');
-        assert.equal(new Desk().get_property_value('label'), 'desk-default');
+        assert.equal(new Furniture()._get_property_value_by_name('label'), 'furniture-default');
+        assert.equal(new Desk()._get_property_value_by_name('label'), 'desk-default');
     });
 
     test('OverrideMetadata inherits unspecified fields from the parent descriptor', () => {
@@ -1107,11 +1107,11 @@ describe('Property inheritance and metadata override', () => {
         Model.OverrideMetadata(Desk, 'height', { default_value: 5 });
 
         const desk = new Desk();
-        assert.equal(desk.get_property_value('height'), 5);
+        assert.equal(desk._get_property_value_by_name('height'), 5);
 
         // Coerce inherited from Furniture — clamps to 10.
-        desk.set_property_value('height', 100);
-        assert.equal(desk.get_property_value('height'), 10);
+        desk._set_property_value_by_name('height', 100);
+        assert.equal(desk._get_property_value_by_name('height'), 10);
     });
 
     test('OverrideMetadata can replace just the coerce callback', () => {
@@ -1123,15 +1123,15 @@ describe('Property inheritance and metadata override', () => {
         Model.OverrideMetadata(Desk, 'height', { coerce_value: clamp_to_5 });
 
         // Desk's height uses the inherited default (1) but the override's coerce.
-        assert.equal(new Desk().get_property_value('height'), 1);
+        assert.equal(new Desk()._get_property_value_by_name('height'), 1);
         const desk = new Desk();
-        desk.set_property_value('height', 100);
-        assert.equal(desk.get_property_value('height'), 5);
+        desk._set_property_value_by_name('height', 100);
+        assert.equal(desk._get_property_value_by_name('height'), 5);
 
         // Furniture instances are unaffected by the override.
         const furniture = new Furniture();
-        furniture.set_property_value('height', 100);
-        assert.equal(furniture.get_property_value('height'), 100);
+        furniture._set_property_value_by_name('height', 100);
+        assert.equal(furniture._get_property_value_by_name('height'), 100);
     });
 
     test('OverrideMetadata throws when no ancestor has registered the property', () => {
@@ -1153,9 +1153,9 @@ describe('Property inheritance and metadata override', () => {
         // C overrides default only too; should NOT fall back to A because B is the nearer ancestor.
         Model.OverrideMetadata(C, 'x', { default_value: 3 });
 
-        assert.equal(new A().get_property_value('x'), 1);
-        assert.equal(new B().get_property_value('x'), 2);
-        assert.equal(new C().get_property_value('x'), 3);
+        assert.equal(new A()._get_property_value_by_name('x'), 1);
+        assert.equal(new B()._get_property_value_by_name('x'), 2);
+        assert.equal(new C()._get_property_value_by_name('x'), 3);
     });
 
     test('subclass binding works for an inherited property without re-registration', () => {
@@ -1166,14 +1166,14 @@ describe('Property inheritance and metadata override', () => {
         Model.RegisterProperty(View, 'label', '', MetaData.Render);
 
         const desk = new Desk();
-        desk.set_property_value('label', 'on-desk');
+        desk._set_property_value_by_name('label', 'on-desk');
 
         const view = new View();
-        view.set_property_value('label', new Binding(desk, 'label'));
-        assert.equal(view.get_property_value('label'), 'on-desk');
+        view._set_property_value_by_name('label', new Binding(desk, 'label'));
+        assert.equal(view._get_property_value_by_name('label'), 'on-desk');
 
-        desk.set_property_value('label', 'on-desk-2');
-        assert.equal(view.get_property_value('label'), 'on-desk-2');
+        desk._set_property_value_by_name('label', 'on-desk-2');
+        assert.equal(view._get_property_value_by_name('label'), 'on-desk-2');
     });
 
     test('OverrideMetadata that adds a default fires the subclass default through subsequent get_property_value', () => {
@@ -1184,8 +1184,8 @@ describe('Property inheritance and metadata override', () => {
 
         const desk = new Desk();
         // No set — descriptor walk finds Desk's overridden default.
-        assert.equal(desk.get_property_value('label'), 'desk');
-        assert.equal(desk.GetValueSource('label'), PropertyValueSource.Default);
+        assert.equal(desk._get_property_value_by_name('label'), 'desk');
+        assert.equal(desk._get_value_source_by_name('label'), PropertyValueSource.Default);
     });
 });
 
@@ -1268,7 +1268,7 @@ describe('Visual invalidation routing', () => {
     test('property with MetaData.Measure fires only InvalidateMeasure', () => {
         Model.RegisterProperty(TestVisual, 'measure_only', 0, MetaData.Measure);
         const v = new TestVisual();
-        v.set_property_value('measure_only', 5);
+        v._set_property_value_by_name('measure_only', 5);
         assert.equal(v.measure_fires, 1);
         assert.equal(v.arrange_fires, 0);
         assert.equal(v.render_fires, 0);
@@ -1277,7 +1277,7 @@ describe('Visual invalidation routing', () => {
     test('property with MetaData.Render fires only InvalidateVisual', () => {
         Model.RegisterProperty(TestVisual, 'render_only', 0, MetaData.Render);
         const v = new TestVisual();
-        v.set_property_value('render_only', 5);
+        v._set_property_value_by_name('render_only', 5);
         assert.equal(v.measure_fires, 0);
         assert.equal(v.arrange_fires, 0);
         assert.equal(v.render_fires, 1);
@@ -1291,7 +1291,7 @@ describe('Visual invalidation routing', () => {
             MetaData.Measure | MetaData.Arrange | MetaData.Render,
         );
         const v = new TestVisual();
-        v.set_property_value('all_flags', 5);
+        v._set_property_value_by_name('all_flags', 5);
         assert.equal(v.measure_fires, 1);
         assert.equal(v.arrange_fires, 1);
         assert.equal(v.render_fires, 1);
@@ -1300,7 +1300,7 @@ describe('Visual invalidation routing', () => {
     test('property with MetaData.None fires no Invalidate methods', () => {
         Model.RegisterProperty(TestVisual, 'no_flags', 0, MetaData.None);
         const v = new TestVisual();
-        v.set_property_value('no_flags', 5);
+        v._set_property_value_by_name('no_flags', 5);
         assert.equal(v.measure_fires, 0);
         assert.equal(v.arrange_fires, 0);
         assert.equal(v.render_fires, 0);
@@ -1308,7 +1308,7 @@ describe('Visual invalidation routing', () => {
 
     test('set_property_value still throws on unregistered property (no Invalidate fired)', () => {
         const v = new TestVisual();
-        assert.throws(() => v.set_property_value('missing', 1));
+        assert.throws(() => v._set_property_value_by_name('missing', 1));
         assert.equal(v.measure_fires, 0);
         assert.equal(v.arrange_fires, 0);
         assert.equal(v.render_fires, 0);
@@ -1318,10 +1318,10 @@ describe('Visual invalidation routing', () => {
         Model.RegisterProperty(TestVisual, 'count', 7, MetaData.Render);
         const v = new TestVisual();
         let listener_fires = 0;
-        v.AddPropertyChangedListener('count', () => { listener_fires++; });
-        assert.equal(v.get_property_value('count'), 7);
-        v.set_property_value('count', 42);
-        assert.equal(v.get_property_value('count'), 42);
+        v._add_property_changed_listener_by_name('count', () => { listener_fires++; });
+        assert.equal(v._get_property_value_by_name('count'), 7);
+        v._set_property_value_by_name('count', 42);
+        assert.equal(v._get_property_value_by_name('count'), 42);
         assert.equal(listener_fires, 1);
         assert.equal(v.render_fires, 1);
     });
@@ -1332,7 +1332,7 @@ describe('Visual invalidation routing', () => {
         Model.RegisterProperty(BaseVisual, 'thickness', 0, MetaData.Arrange);
 
         const derived = new DerivedVisual();
-        derived.set_property_value('thickness', 3);
+        derived._set_property_value_by_name('thickness', 3);
         assert.equal(derived.arrange_fires, 1);
         assert.equal(derived.measure_fires, 0);
         assert.equal(derived.render_fires, 0);
@@ -1349,13 +1349,13 @@ describe('Visual invalidation routing', () => {
         Model.RegisterProperty(TestVisual, 'bound_label', '', MetaData.Render);
 
         const source = new Source();
-        source.set_property_value('label', 'initial');
+        source._set_property_value_by_name('label', 'initial');
         const v = new TestVisual();
-        v.set_property_value('bound_label', new Binding(source, 'label'));
+        v._set_property_value_by_name('bound_label', new Binding(source, 'label'));
         // install fires render invalidation once
         assert.equal(v.render_fires, 1);
 
-        source.set_property_value('label', 'changed');
+        source._set_property_value_by_name('label', 'changed');
         // binding push must have fired render invalidation a second time
         assert.equal(v.render_fires, 2);
     });
@@ -1363,13 +1363,13 @@ describe('Visual invalidation routing', () => {
     test('ClearValue invalidates when the effective value differs from the default', () => {
         Model.RegisterProperty(TestVisual, 'cleared_prop', 'default', MetaData.Render);
         const v = new TestVisual();
-        v.set_property_value('cleared_prop', 'set');
+        v._set_property_value_by_name('cleared_prop', 'set');
         assert.equal(v.render_fires, 1);
 
-        v.ClearValue('cleared_prop');
+        v._clear_value_by_name('cleared_prop');
         // Effective value went from 'set' to 'default' — invalidation fires.
         assert.equal(v.render_fires, 2);
-        assert.equal(v.get_property_value('cleared_prop'), 'default');
+        assert.equal(v._get_property_value_by_name('cleared_prop'), 'default');
     });
 
     test('ClearValue does NOT invalidate when the property was never set', () => {
@@ -1377,7 +1377,7 @@ describe('Visual invalidation routing', () => {
         const v = new TestVisual();
         // EVD created lazily when ClearValue is called, but value never
         // changed (default → default), so EVD.OnPropertyChange does not fire.
-        v.ClearValue('never_set');
+        v._clear_value_by_name('never_set');
         assert.equal(v.render_fires, 0);
     });
 
@@ -1385,13 +1385,13 @@ describe('Visual invalidation routing', () => {
         Model.RegisterProperty(TestVisual, 'count', 0, MetaData.Render);
         const v = new TestVisual();
         let user_fires = 0;
-        v.AddPropertyChangedListener('count', () => { user_fires++; });
+        v._add_property_changed_listener_by_name('count', () => { user_fires++; });
 
         // listener_count counts only user-facing listeners, not the
         // internal callback the Model uses to route onPropertyChanged.
         assert.equal(listener_count(v, 'count'), 1);
 
-        v.set_property_value('count', 5);
+        v._set_property_value_by_name('count', 5);
         assert.equal(user_fires, 1);
         assert.equal(v.render_fires, 1);
     });
@@ -1646,20 +1646,20 @@ describe('Property value inheritance', () => {
         Model.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
 
         const parent = new Surface();
-        parent.set_property_value('fontSize', 20);
+        parent._set_property_value_by_name('fontSize', 20);
         const child = new Surface();
         parent.AddChild(child);
 
-        assert.equal(child.get_property_value('fontSize'), 20);
-        assert.equal(child.GetValueSource('fontSize'), PropertyValueSource.InheritedValue);
+        assert.equal(child._get_property_value_by_name('fontSize'), 20);
+        assert.equal(child._get_value_source_by_name('fontSize'), PropertyValueSource.InheritedValue);
     });
 
     test('a detached Model with no parent falls back to descriptor default', () => {
         class Surface extends Panel {}
         Model.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
         const orphan = new Surface();
-        assert.equal(orphan.get_property_value('fontSize'), 10);
-        assert.equal(orphan.GetValueSource('fontSize'), PropertyValueSource.Default);
+        assert.equal(orphan._get_property_value_by_name('fontSize'), 10);
+        assert.equal(orphan._get_value_source_by_name('fontSize'), PropertyValueSource.Default);
     });
 
     test('a local override on the child shadows the inherited value', () => {
@@ -1667,17 +1667,17 @@ describe('Property value inheritance', () => {
         Model.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
 
         const parent = new Surface();
-        parent.set_property_value('fontSize', 20);
+        parent._set_property_value_by_name('fontSize', 20);
         const child = new Surface();
         parent.AddChild(child);
 
-        child.set_property_value('fontSize', 99);
-        assert.equal(child.get_property_value('fontSize'), 99);
-        assert.equal(child.GetValueSource('fontSize'), PropertyValueSource.LocalValue);
+        child._set_property_value_by_name('fontSize', 99);
+        assert.equal(child._get_property_value_by_name('fontSize'), 99);
+        assert.equal(child._get_value_source_by_name('fontSize'), PropertyValueSource.LocalValue);
 
         // Changing the ancestor must NOT alter the overridden child.
-        parent.set_property_value('fontSize', 30);
-        assert.equal(child.get_property_value('fontSize'), 99);
+        parent._set_property_value_by_name('fontSize', 30);
+        assert.equal(child._get_property_value_by_name('fontSize'), 99);
     });
 
     test('Detach clears the inherited cache; reattach picks up the new parent value', () => {
@@ -1685,20 +1685,20 @@ describe('Property value inheritance', () => {
         Model.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
 
         const a = new Surface();
-        a.set_property_value('fontSize', 20);
+        a._set_property_value_by_name('fontSize', 20);
         const b = new Surface();
-        b.set_property_value('fontSize', 30);
+        b._set_property_value_by_name('fontSize', 30);
         const child = new Surface();
 
         a.AddChild(child);
-        assert.equal(child.get_property_value('fontSize'), 20);
+        assert.equal(child._get_property_value_by_name('fontSize'), 20);
 
         a.RemoveChild(child);
-        assert.equal(child.get_property_value('fontSize'), 10);
-        assert.equal(child.GetValueSource('fontSize'), PropertyValueSource.Default);
+        assert.equal(child._get_property_value_by_name('fontSize'), 10);
+        assert.equal(child._get_value_source_by_name('fontSize'), PropertyValueSource.Default);
 
         b.AddChild(child);
-        assert.equal(child.get_property_value('fontSize'), 30);
+        assert.equal(child._get_property_value_by_name('fontSize'), 30);
     });
 
     test('ancestor mutation cascades down through a multi-level tree', () => {
@@ -1711,10 +1711,10 @@ describe('Property value inheritance', () => {
         root.AddChild(mid);
         mid.AddChild(leaf);
 
-        root.set_property_value('fontSize', 16);
-        assert.equal(mid.get_property_value('fontSize'), 16);
-        assert.equal(leaf.get_property_value('fontSize'), 16);
-        assert.equal(leaf.GetValueSource('fontSize'), PropertyValueSource.InheritedValue);
+        root._set_property_value_by_name('fontSize', 16);
+        assert.equal(mid._get_property_value_by_name('fontSize'), 16);
+        assert.equal(leaf._get_property_value_by_name('fontSize'), 16);
+        assert.equal(leaf._get_value_source_by_name('fontSize'), PropertyValueSource.InheritedValue);
     });
 
     test('a local override boundary stops the cascade for the subtree beyond it', () => {
@@ -1728,13 +1728,13 @@ describe('Property value inheritance', () => {
         mid.AddChild(leaf);
 
         // Mid takes an explicit override; leaf inherits from mid.
-        mid.set_property_value('fontSize', 99);
-        assert.equal(leaf.get_property_value('fontSize'), 99);
+        mid._set_property_value_by_name('fontSize', 99);
+        assert.equal(leaf._get_property_value_by_name('fontSize'), 99);
 
         // Changing root must NOT reach leaf — mid's override blocks the cascade.
-        root.set_property_value('fontSize', 16);
-        assert.equal(mid.get_property_value('fontSize'), 99);
-        assert.equal(leaf.get_property_value('fontSize'), 99);
+        root._set_property_value_by_name('fontSize', 16);
+        assert.equal(mid._get_property_value_by_name('fontSize'), 99);
+        assert.equal(leaf._get_property_value_by_name('fontSize'), 99);
     });
 
     test('a listener on the child fires when an ancestor changes the inherited value', () => {
@@ -1746,12 +1746,12 @@ describe('Property value inheritance', () => {
         root.AddChild(child);
 
         const captures: Array<[unknown, unknown]> = [];
-        child.AddPropertyChangedListener(
+        child._add_property_changed_listener_by_name(
             'fontSize',
             (_m, _p, o, n) => { captures.push([o, n]); },
         );
 
-        root.set_property_value('fontSize', 16);
+        root._set_property_value_by_name('fontSize', 16);
         assert.equal(captures.length, 1);
         assert.equal(captures[0]![0], 10);   // was default
         assert.equal(captures[0]![1], 16);   // now inherited 16
@@ -1765,20 +1765,20 @@ describe('Property value inheritance', () => {
         Model.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
 
         const source = new Source();
-        source.set_property_value('value', 42);
+        source._set_property_value_by_name('value', 42);
 
         const root = new Surface();
-        root.set_property_value('fontSize', new Binding(source, 'value'));
+        root._set_property_value_by_name('fontSize', new Binding(source, 'value'));
         const child = new Surface();
         root.AddChild(child);
 
         // Child sees a number, not a Binding object.
-        assert.equal(child.get_property_value('fontSize'), 42);
-        assert.equal(child.GetValueSource('fontSize'), PropertyValueSource.InheritedValue);
+        assert.equal(child._get_property_value_by_name('fontSize'), 42);
+        assert.equal(child._get_value_source_by_name('fontSize'), PropertyValueSource.InheritedValue);
 
         // When the binding's source changes, the resolved value propagates.
-        source.set_property_value('value', 100);
-        assert.equal(child.get_property_value('fontSize'), 100);
+        source._set_property_value_by_name('value', 100);
+        assert.equal(child._get_property_value_by_name('fontSize'), 100);
     });
 
     test('ClearValue on an ancestor cascades descendants back to the default', () => {
@@ -1789,12 +1789,12 @@ describe('Property value inheritance', () => {
         const child = new Surface();
         root.AddChild(child);
 
-        root.set_property_value('fontSize', 16);
-        assert.equal(child.get_property_value('fontSize'), 16);
+        root._set_property_value_by_name('fontSize', 16);
+        assert.equal(child._get_property_value_by_name('fontSize'), 16);
 
-        root.ClearValue('fontSize');
-        assert.equal(child.get_property_value('fontSize'), 10);
-        assert.equal(child.GetValueSource('fontSize'), PropertyValueSource.Default);
+        root._clear_value_by_name('fontSize');
+        assert.equal(child._get_property_value_by_name('fontSize'), 10);
+        assert.equal(child._get_value_source_by_name('fontSize'), PropertyValueSource.Default);
     });
 
     test('a non-inheritable property does not propagate at all', () => {
@@ -1805,10 +1805,10 @@ describe('Property value inheritance', () => {
         const child = new Surface();
         root.AddChild(child);
 
-        root.set_property_value('plain', 'set-on-root');
+        root._set_property_value_by_name('plain', 'set-on-root');
         // Child still reads its own default, never the ancestor's value.
-        assert.equal(child.get_property_value('plain'), 'default');
-        assert.equal(child.GetValueSource('plain'), PropertyValueSource.Default);
+        assert.equal(child._get_property_value_by_name('plain'), 'default');
+        assert.equal(child._get_value_source_by_name('plain'), PropertyValueSource.Default);
     });
 
     // Pins the staleness fix: when a higher-priority source masks
@@ -1825,25 +1825,25 @@ describe('Property value inheritance', () => {
         const child = new Surface();
         root.AddChild(child);
 
-        root.set_property_value('fontSize', 16);
-        assert.equal(child.get_property_value('fontSize'), 16);
+        root._set_property_value_by_name('fontSize', 16);
+        assert.equal(child._get_property_value_by_name('fontSize'), 16);
 
         // Local override shadows inheritance.
-        child.set_property_value('fontSize', 99);
-        assert.equal(child.get_property_value('fontSize'), 99);
-        assert.equal(child.GetValueSource('fontSize'), PropertyValueSource.LocalValue);
+        child._set_property_value_by_name('fontSize', 99);
+        assert.equal(child._get_property_value_by_name('fontSize'), 99);
+        assert.equal(child._get_value_source_by_name('fontSize'), PropertyValueSource.LocalValue);
 
         // Mutate the ancestor while the override is active. The child's
         // effective value stays 99 (the override still wins) but the
         // cached InheritedValue slot must be updated under the hood.
-        root.set_property_value('fontSize', 24);
-        assert.equal(child.get_property_value('fontSize'), 99);
+        root._set_property_value_by_name('fontSize', 24);
+        assert.equal(child._get_property_value_by_name('fontSize'), 99);
 
         // Clearing the override must reveal the FRESH ancestor value (24),
         // not the stale one (16) captured before the override was set.
-        child.ClearValue('fontSize');
-        assert.equal(child.get_property_value('fontSize'), 24);
-        assert.equal(child.GetValueSource('fontSize'), PropertyValueSource.InheritedValue);
+        child._clear_value_by_name('fontSize');
+        assert.equal(child._get_property_value_by_name('fontSize'), 24);
+        assert.equal(child._get_value_source_by_name('fontSize'), PropertyValueSource.InheritedValue);
     });
 
     // Same invariant from the other direction: when the ancestor's
@@ -1858,19 +1858,19 @@ describe('Property value inheritance', () => {
         const child = new Surface();
         root.AddChild(child);
 
-        root.set_property_value('fontSize', 16);
-        child.set_property_value('fontSize', 99);
-        assert.equal(child.get_property_value('fontSize'), 99);
+        root._set_property_value_by_name('fontSize', 16);
+        child._set_property_value_by_name('fontSize', 99);
+        assert.equal(child._get_property_value_by_name('fontSize'), 99);
 
         // Ancestor stops providing a value while the override masks the
         // cache. Without the fix, the child's cached InheritedValue
         // would remain 16 and ClearValue would resurrect it.
-        root.ClearValue('fontSize');
-        assert.equal(child.get_property_value('fontSize'), 99);
+        root._clear_value_by_name('fontSize');
+        assert.equal(child._get_property_value_by_name('fontSize'), 99);
 
-        child.ClearValue('fontSize');
-        assert.equal(child.get_property_value('fontSize'), 10);
-        assert.equal(child.GetValueSource('fontSize'), PropertyValueSource.Default);
+        child._clear_value_by_name('fontSize');
+        assert.equal(child._get_property_value_by_name('fontSize'), 10);
+        assert.equal(child._get_value_source_by_name('fontSize'), PropertyValueSource.Default);
     });
 
     // Cross-shadowing across two layers: only the directly-shadowed
@@ -1888,21 +1888,21 @@ describe('Property value inheritance', () => {
         root.AddChild(mid);
         mid.AddChild(leaf);
 
-        root.set_property_value('fontSize', 16);
-        mid.set_property_value('fontSize', 99);
+        root._set_property_value_by_name('fontSize', 16);
+        mid._set_property_value_by_name('fontSize', 99);
         // Leaf inherits from mid (the closer ancestor with a value).
-        assert.equal(leaf.get_property_value('fontSize'), 99);
+        assert.equal(leaf._get_property_value_by_name('fontSize'), 99);
 
         // Mutate root while mid shadows. Mid's cache updates silently;
         // leaf's cache stays at 99 (still correct — mid still wins).
-        root.set_property_value('fontSize', 24);
-        assert.equal(leaf.get_property_value('fontSize'), 99);
+        root._set_property_value_by_name('fontSize', 24);
+        assert.equal(leaf._get_property_value_by_name('fontSize'), 99);
 
         // Clear mid's override — cascade reaches leaf, which picks up
         // the fresh root value (24), not the stale 16.
-        mid.ClearValue('fontSize');
-        assert.equal(mid.get_property_value('fontSize'), 24);
-        assert.equal(leaf.get_property_value('fontSize'), 24);
+        mid._clear_value_by_name('fontSize');
+        assert.equal(mid._get_property_value_by_name('fontSize'), 24);
+        assert.equal(leaf._get_property_value_by_name('fontSize'), 24);
     });
 });
 
@@ -1921,8 +1921,8 @@ describe('Cross-class / attached properties', () => {
         class Border extends Single {}
 
         const b = new Border();
-        b.set_property_value(TextBlock, 'fontSize', 14);
-        assert.equal(b.get_property_value(TextBlock, 'fontSize'), 14);
+        b._set_property_value_by_name(TextBlock, 'fontSize', 14);
+        assert.equal(b._get_property_value_by_name(TextBlock, 'fontSize'), 14);
     });
 
     test('implicit-owner accessor throws for a property the target class does not know', () => {
@@ -1932,7 +1932,7 @@ describe('Cross-class / attached properties', () => {
 
         const b = new Border();
         assert.throws(
-            () => b.set_property_value('fontSize', 14),
+            () => b._set_property_value_by_name('fontSize', 14),
             /not found in model 'Border'/,
         );
     });
@@ -1942,7 +1942,7 @@ describe('Cross-class / attached properties', () => {
         // fontSize not registered.
         const b = new Model();
         assert.throws(
-            () => b.set_property_value(TextBlock, 'fontSize', 14),
+            () => b._set_property_value_by_name(TextBlock, 'fontSize', 14),
             /not found on owner 'TextBlock'/,
         );
     });
@@ -1953,8 +1953,8 @@ describe('Cross-class / attached properties', () => {
         class Border extends Single {}
 
         const b = new Border();
-        assert.equal(b.get_property_value(TextBlock, 'fontSize'), 12);
-        assert.equal(b.GetValueSource(TextBlock, 'fontSize'), PropertyValueSource.Default);
+        assert.equal(b._get_property_value_by_name(TextBlock, 'fontSize'), 12);
+        assert.equal(b._get_value_source_by_name(TextBlock, 'fontSize'), PropertyValueSource.Default);
     });
 
     test('two different owners can register a same-named property without collision', () => {
@@ -1964,11 +1964,11 @@ describe('Cross-class / attached properties', () => {
         Model.RegisterProperty(Bar, 'value', 'bar-default', MetaData.None);
 
         const target = new Model();
-        target.set_property_value(Foo, 'value', 'set-via-foo');
-        target.set_property_value(Bar, 'value', 'set-via-bar');
+        target._set_property_value_by_name(Foo, 'value', 'set-via-foo');
+        target._set_property_value_by_name(Bar, 'value', 'set-via-bar');
 
-        assert.equal(target.get_property_value(Foo, 'value'), 'set-via-foo');
-        assert.equal(target.get_property_value(Bar, 'value'), 'set-via-bar');
+        assert.equal(target._get_property_value_by_name(Foo, 'value'), 'set-via-foo');
+        assert.equal(target._get_property_value_by_name(Bar, 'value'), 'set-via-bar');
     });
 
     test('listener registered with explicit-owner overload fires for that (owner, name) pair only', () => {
@@ -1980,14 +1980,14 @@ describe('Cross-class / attached properties', () => {
         const target = new Model();
         let fooFires = 0;
         let barFires = 0;
-        target.AddPropertyChangedListener(Foo, 'value', () => { fooFires++; });
-        target.AddPropertyChangedListener(Bar, 'value', () => { barFires++; });
+        target._add_property_changed_listener_by_name(Foo, 'value', () => { fooFires++; });
+        target._add_property_changed_listener_by_name(Bar, 'value', () => { barFires++; });
 
-        target.set_property_value(Foo, 'value', 1);
+        target._set_property_value_by_name(Foo, 'value', 1);
         assert.equal(fooFires, 1);
         assert.equal(barFires, 0);
 
-        target.set_property_value(Bar, 'value', 2);
+        target._set_property_value_by_name(Bar, 'value', 2);
         assert.equal(fooFires, 1);
         assert.equal(barFires, 1);
     });
@@ -1996,12 +1996,12 @@ describe('Cross-class / attached properties', () => {
         class TextBlock extends Model {}
         Model.RegisterProperty(TextBlock, 'fontSize', 12, MetaData.None);
         const b = new Model();
-        b.set_property_value(TextBlock, 'fontSize', 99);
-        assert.equal(b.get_property_value(TextBlock, 'fontSize'), 99);
+        b._set_property_value_by_name(TextBlock, 'fontSize', 99);
+        assert.equal(b._get_property_value_by_name(TextBlock, 'fontSize'), 99);
 
-        b.ClearValue(TextBlock, 'fontSize');
-        assert.equal(b.get_property_value(TextBlock, 'fontSize'), 12);
-        assert.equal(b.GetValueSource(TextBlock, 'fontSize'), PropertyValueSource.Default);
+        b._clear_value_by_name(TextBlock, 'fontSize');
+        assert.equal(b._get_property_value_by_name(TextBlock, 'fontSize'), 12);
+        assert.equal(b._get_value_source_by_name(TextBlock, 'fontSize'), PropertyValueSource.Default);
     });
 
     test('Inherits cascades a cross-class property through descendants set on the ancestor', () => {
@@ -2017,9 +2017,9 @@ describe('Cross-class / attached properties', () => {
         const child = new Visual();
         border.AddChild(child);
 
-        border.set_property_value(TextBlock, 'fontSize', 16);
-        assert.equal(child.get_property_value(TextBlock, 'fontSize'), 16);
-        assert.equal(child.GetValueSource(TextBlock, 'fontSize'), PropertyValueSource.InheritedValue);
+        border._set_property_value_by_name(TextBlock, 'fontSize', 16);
+        assert.equal(child._get_property_value_by_name(TextBlock, 'fontSize'), 16);
+        assert.equal(child._get_value_source_by_name(TextBlock, 'fontSize'), PropertyValueSource.InheritedValue);
     });
 
     test('Binding on a cross-class property pushes the resolved value to the consumer', () => {
@@ -2030,21 +2030,21 @@ describe('Cross-class / attached properties', () => {
         Model.RegisterProperty(TextBlock, 'fontSize', 12, MetaData.None);
 
         const source = new Source();
-        source.set_property_value('value', 18);
+        source._set_property_value_by_name('value', 18);
 
         const consumer = new Model();
         const captures: Array<[unknown, unknown]> = [];
-        consumer.AddPropertyChangedListener(
+        consumer._add_property_changed_listener_by_name(
             TextBlock,
             'fontSize',
             (_m, _p, o, n) => { captures.push([o, n]); },
         );
 
-        consumer.set_property_value(TextBlock, 'fontSize', new Binding(source, 'value'));
+        consumer._set_property_value_by_name(TextBlock, 'fontSize', new Binding(source, 'value'));
         assert.equal(captures.length, 1);
         assert.equal(captures[0]![1], 18);
 
-        source.set_property_value('value', 22);
+        source._set_property_value_by_name('value', 22);
         assert.equal(captures.length, 2);
         assert.equal(captures[1]![0], 18);
         assert.equal(captures[1]![1], 22);
@@ -2055,8 +2055,8 @@ describe('Cross-class / attached properties', () => {
         Model.RegisterAttachedProperty(Grid, 'Row', 0, MetaData.Arrange);
 
         const button = new Model();
-        button.set_property_value(Grid, 'Row', 3);
-        assert.equal(button.get_property_value(Grid, 'Row'), 3);
+        button._set_property_value_by_name(Grid, 'Row', 3);
+        assert.equal(button._get_property_value_by_name(Grid, 'Row'), 3);
     });
 
     test('registering a property whose name contains "." is rejected', () => {
@@ -2077,47 +2077,47 @@ describe('Target-side writeback through TwoWay / OneWayToSource bindings', () =>
     test('writing to a property holding a TwoWay binding updates the source', () => {
         const { company, desk, ViewModel } = buildScene();
         const view = new ViewModel();
-        view.set_property_value(
+        view._set_property_value_by_name(
             'label',
             new Binding(company, 'department.manager.office.desk.label', BindingMode.TwoWay),
         );
 
-        view.set_property_value('label', 'user-typed');
+        view._set_property_value_by_name('label', 'user-typed');
 
-        assert.equal(desk.get_property_value('label'), 'user-typed');
+        assert.equal(desk._get_property_value_by_name('label'), 'user-typed');
         // Binding stays installed — the source is the canonical reference.
-        assert.equal(view.GetValueSource('label'), PropertyValueSource.Binding);
+        assert.equal(view._get_value_source_by_name('label'), PropertyValueSource.Binding);
     });
 
     test('writing to a property holding a OneWayToSource binding updates the source', () => {
         const { company, desk, ViewModel } = buildScene();
         const view = new ViewModel();
-        view.set_property_value(
+        view._set_property_value_by_name(
             'label',
             new Binding(company, 'department.manager.office.desk.label', BindingMode.OneWayToSource),
         );
 
-        view.set_property_value('label', 'pushed');
+        view._set_property_value_by_name('label', 'pushed');
 
-        assert.equal(desk.get_property_value('label'), 'pushed');
-        assert.equal(view.GetValueSource('label'), PropertyValueSource.Binding);
+        assert.equal(desk._get_property_value_by_name('label'), 'pushed');
+        assert.equal(view._get_value_source_by_name('label'), PropertyValueSource.Binding);
     });
 
     test('consumer listener fires exactly once with the right (old, new) transition', () => {
         const { company, ViewModel } = buildScene();
         const view = new ViewModel();
-        view.set_property_value(
+        view._set_property_value_by_name(
             'label',
             new Binding(company, 'department.manager.office.desk.label', BindingMode.TwoWay),
         );
 
         const captures: Array<[unknown, unknown]> = [];
-        view.AddPropertyChangedListener(
+        view._add_property_changed_listener_by_name(
             'label',
             (_m, _p, o, n) => { captures.push([o, n]); },
         );
 
-        view.set_property_value('label', 'typed-by-user');
+        view._set_property_value_by_name('label', 'typed-by-user');
         assert.equal(captures.length, 1);
         assert.equal(captures[0]![0], 'desk-1');
         assert.equal(captures[0]![1], 'typed-by-user');
@@ -2126,64 +2126,64 @@ describe('Target-side writeback through TwoWay / OneWayToSource bindings', () =>
     test('source-side listener also fires for the writeback', () => {
         const { company, desk, ViewModel } = buildScene();
         const view = new ViewModel();
-        view.set_property_value(
+        view._set_property_value_by_name(
             'label',
             new Binding(company, 'department.manager.office.desk.label', BindingMode.TwoWay),
         );
 
         let sourceFires = 0;
-        desk.AddPropertyChangedListener('label', () => { sourceFires++; });
+        desk._add_property_changed_listener_by_name('label', () => { sourceFires++; });
 
-        view.set_property_value('label', 'typed-by-user');
+        view._set_property_value_by_name('label', 'typed-by-user');
         assert.equal(sourceFires, 1);
     });
 
     test('OneWay binding is still replaced by a target-side write (regression guard)', () => {
         const { company, ViewModel } = buildScene();
         const view = new ViewModel();
-        view.set_property_value(
+        view._set_property_value_by_name(
             'label',
             new Binding(company, 'department.manager.office.desk.label'), // default OneWay
         );
 
-        view.set_property_value('label', 'local-override');
-        assert.equal(view.get_property_value('label'), 'local-override');
-        assert.equal(view.GetValueSource('label'), PropertyValueSource.LocalValue);
+        view._set_property_value_by_name('label', 'local-override');
+        assert.equal(view._get_property_value_by_name('label'), 'local-override');
+        assert.equal(view._get_value_source_by_name('label'), PropertyValueSource.LocalValue);
     });
 
     test('TwoWay writeback through a deep chain reaches the leaf', () => {
         const { company, desk, ViewModel } = buildScene();
         const view = new ViewModel();
-        view.set_property_value(
+        view._set_property_value_by_name(
             'label',
             new Binding(company, 'department.manager.office.desk.label', BindingMode.TwoWay),
         );
 
-        view.set_property_value('label', 'deep-write');
-        assert.equal(desk.get_property_value('label'), 'deep-write');
-        assert.equal(view.get_property_value('label'), 'deep-write');
+        view._set_property_value_by_name('label', 'deep-write');
+        assert.equal(desk._get_property_value_by_name('label'), 'deep-write');
+        assert.equal(view._get_property_value_by_name('label'), 'deep-write');
         // Binding still installed.
-        assert.equal(view.GetValueSource('label'), PropertyValueSource.Binding);
+        assert.equal(view._get_value_source_by_name('label'), PropertyValueSource.Binding);
     });
 
     test('writeback failure (severed intermediate) falls back to local-replace', () => {
         // Sever the chain so binding.set_value will return false, then write.
         const { company, manager, desk, ViewModel } = buildScene();
         const view = new ViewModel();
-        view.set_property_value(
+        view._set_property_value_by_name(
             'label',
             new Binding(company, 'department.manager.office.desk.label', BindingMode.TwoWay),
         );
 
-        manager.set_property_value('office', null); // path is now unwritable
-        view.set_property_value('label', 'cannot-reach-desk');
+        manager._set_property_value_by_name('office', null); // path is now unwritable
+        view._set_property_value_by_name('label', 'cannot-reach-desk');
 
         // Source desk is untouched (writeback failed).
-        assert.equal(desk.get_property_value('label'), 'desk-1');
+        assert.equal(desk._get_property_value_by_name('label'), 'desk-1');
         // The binding got replaced as a local value so the user's write
         // isn't silently lost.
-        assert.equal(view.GetValueSource('label'), PropertyValueSource.LocalValue);
-        assert.equal(view.get_property_value('label'), 'cannot-reach-desk');
+        assert.equal(view._get_value_source_by_name('label'), PropertyValueSource.LocalValue);
+        assert.equal(view._get_property_value_by_name('label'), 'cannot-reach-desk');
     });
 
     test('installing a new Binding replaces the old one (regression guard)', () => {
@@ -2191,29 +2191,29 @@ describe('Target-side writeback through TwoWay / OneWayToSource bindings', () =>
         // IS a Binding — that branch should still install/replace.
         const { Company, Department, Manager, Office, Desk, company, ViewModel } = buildScene();
         const view = new ViewModel();
-        view.set_property_value(
+        view._set_property_value_by_name(
             'label',
             new Binding(company, 'department.manager.office.desk.label', BindingMode.TwoWay),
         );
 
         // Build a second graph and bind to its leaf.
         const desk2 = new Desk();
-        desk2.set_property_value('label', 'second-graph');
+        desk2._set_property_value_by_name('label', 'second-graph');
         const office2 = new Office();
-        office2.set_property_value('desk', desk2);
+        office2._set_property_value_by_name('desk', desk2);
         const manager2 = new Manager();
-        manager2.set_property_value('office', office2);
+        manager2._set_property_value_by_name('office', office2);
         const department2 = new Department();
-        department2.set_property_value('manager', manager2);
+        department2._set_property_value_by_name('manager', manager2);
         const company2 = new Company();
-        company2.set_property_value('department', department2);
+        company2._set_property_value_by_name('department', department2);
 
-        view.set_property_value(
+        view._set_property_value_by_name(
             'label',
             new Binding(company2, 'department.manager.office.desk.label', BindingMode.TwoWay),
         );
 
-        assert.equal(view.get_property_value('label'), 'second-graph');
+        assert.equal(view._get_property_value_by_name('label'), 'second-graph');
     });
 });
 
@@ -2229,7 +2229,7 @@ describe('PropertyPath attached-property syntax', () => {
         Model.RegisterProperty(Grid, 'Row', 0, MetaData.None);
 
         const button = new Model();
-        button.set_property_value(Grid, 'Row', 5);
+        button._set_property_value_by_name(Grid, 'Row', 5);
 
         const binding = new Binding(button, '(Grid.Row)');
         assert.equal(binding.get_value(), 5);
@@ -2244,9 +2244,9 @@ describe('PropertyPath attached-property syntax', () => {
         Model.RegisterProperty(Box, 'child', null, MetaData.None);
 
         const child = new Model();
-        child.set_property_value(Grid, 'Row', 7);
+        child._set_property_value_by_name(Grid, 'Row', 7);
         const root = new Box();
-        root.set_property_value('child', child);
+        root._set_property_value_by_name('child', child);
 
         const binding = new Binding(root, 'child.(Grid.Row)');
         assert.equal(binding.get_value(), 7);
@@ -2259,10 +2259,10 @@ describe('PropertyPath attached-property syntax', () => {
         Model.RegisterProperty(Inner, 'value', 0, MetaData.None);
 
         const inner = new Inner();
-        inner.set_property_value('value', 99);
+        inner._set_property_value_by_name('value', 99);
 
         const target = new Model();
-        target.set_property_value(Holder, 'Bag', inner);
+        target._set_property_value_by_name(Holder, 'Bag', inner);
 
         const binding = new Binding(target, '(Holder.Bag).value');
         assert.equal(binding.get_value(), 99);
@@ -2276,20 +2276,20 @@ describe('PropertyPath attached-property syntax', () => {
         Model.RegisterProperty(ViewModel, 'echoed', 0, MetaData.None);
 
         const button = new Model();
-        button.set_property_value(Grid, 'Row', 1);
+        button._set_property_value_by_name(Grid, 'Row', 1);
 
         const view = new ViewModel();
         const captures: Array<[unknown, unknown]> = [];
-        view.AddPropertyChangedListener(
+        view._add_property_changed_listener_by_name(
             'echoed',
             (_m, _p, o, n) => { captures.push([o, n]); },
         );
 
-        view.set_property_value('echoed', new Binding(button, '(Grid.Row)'));
+        view._set_property_value_by_name('echoed', new Binding(button, '(Grid.Row)'));
         assert.equal(captures.length, 1);
         assert.equal(captures[0]![1], 1);
 
-        button.set_property_value(Grid, 'Row', 9);
+        button._set_property_value_by_name(Grid, 'Row', 9);
         assert.equal(captures.length, 2);
         assert.equal(captures[1]![0], 1);
         assert.equal(captures[1]![1], 9);
@@ -2305,13 +2305,13 @@ describe('PropertyPath attached-property syntax', () => {
         const button = new Model();
 
         const view = new ViewModel();
-        view.set_property_value(
+        view._set_property_value_by_name(
             'editable',
             new Binding(button, '(Grid.Row)', BindingMode.TwoWay),
         );
 
-        view.set_property_value('editable', 11);
-        assert.equal(button.get_property_value(Grid, 'Row'), 11);
+        view._set_property_value_by_name('editable', 11);
+        assert.equal(button._get_property_value_by_name(Grid, 'Row'), 11);
     });
 
     test('unknown owner class in the path resolves to undefined', () => {
@@ -2336,7 +2336,7 @@ describe('PropertyPath attached-property syntax', () => {
         Model.RegisterProperty(Holder, 'List', null, MetaData.None);
 
         const target = new Model();
-        target.set_property_value(Holder, 'List', ['first', 'second', 'third']);
+        target._set_property_value_by_name(Holder, 'List', ['first', 'second', 'third']);
 
         const binding = new Binding(target, '(Holder.List)[1]');
         assert.equal(binding.get_value(), 'second');
@@ -2361,7 +2361,7 @@ describe('Read-only properties', () => {
         class Widget extends Model {}
         Model.RegisterReadOnlyProperty(Widget, 'actualWidth', 42, MetaData.None);
         const w = new Widget();
-        assert.equal(w.get_property_value('actualWidth'), 42);
+        assert.equal(w._get_property_value_by_name('actualWidth'), 42);
     });
 
     test('public set_property_value (implicit owner) throws on a read-only property', () => {
@@ -2369,7 +2369,7 @@ describe('Read-only properties', () => {
         Model.RegisterReadOnlyProperty(Widget, 'actualWidth', 0, MetaData.None);
         const w = new Widget();
         assert.throws(
-            () => w.set_property_value('actualWidth', 100),
+            () => w._set_property_value_by_name('actualWidth', 100),
             /is read-only/,
         );
     });
@@ -2379,7 +2379,7 @@ describe('Read-only properties', () => {
         Model.RegisterReadOnlyProperty(Widget, 'actualWidth', 0, MetaData.None);
         const w = new Model();
         assert.throws(
-            () => w.set_property_value(Widget, 'actualWidth', 100),
+            () => w._set_property_value_by_name(Widget, 'actualWidth', 100),
             /is read-only/,
         );
     });
@@ -2390,8 +2390,8 @@ describe('Read-only properties', () => {
         const w = new Widget();
 
         w.set_property_value_with_key(key, 250);
-        assert.equal(w.get_property_value('actualWidth'), 250);
-        assert.equal(w.GetValueSource('actualWidth'), PropertyValueSource.LocalValue);
+        assert.equal(w._get_property_value_by_name('actualWidth'), 250);
+        assert.equal(w._get_value_source_by_name('actualWidth'), PropertyValueSource.LocalValue);
     });
 
     test('public ClearValue throws on a read-only property; ClearValueWithKey works', () => {
@@ -2400,10 +2400,10 @@ describe('Read-only properties', () => {
         const w = new Widget();
         w.set_property_value_with_key(key, 250);
 
-        assert.throws(() => w.ClearValue('actualWidth'), /is read-only/);
+        assert.throws(() => w._clear_value_by_name('actualWidth'), /is read-only/);
         w.ClearValueWithKey(key);
-        assert.equal(w.get_property_value('actualWidth'), 0);
-        assert.equal(w.GetValueSource('actualWidth'), PropertyValueSource.Default);
+        assert.equal(w._get_property_value_by_name('actualWidth'), 0);
+        assert.equal(w._get_value_source_by_name('actualWidth'), PropertyValueSource.Default);
     });
 
     test('listeners fire when the property is written via the key', () => {
@@ -2411,7 +2411,7 @@ describe('Read-only properties', () => {
         const key = Model.RegisterReadOnlyProperty(Widget, 'actualWidth', 0, MetaData.None);
         const w = new Widget();
         const captures: Array<[unknown, unknown]> = [];
-        w.AddPropertyChangedListener(
+        w._add_property_changed_listener_by_name(
             'actualWidth',
             (_m, _p, o, n) => { captures.push([o, n]); },
         );
@@ -2431,13 +2431,13 @@ describe('Read-only properties', () => {
         class Consumer extends Model {}
         Model.RegisterProperty(Consumer, 'echoed', 0, MetaData.None);
         const consumer = new Consumer();
-        consumer.set_property_value('echoed', new Binding(widget, 'actualWidth'));
+        consumer._set_property_value_by_name('echoed', new Binding(widget, 'actualWidth'));
 
-        assert.equal(consumer.get_property_value('echoed'), 320);
+        assert.equal(consumer._get_property_value_by_name('echoed'), 320);
 
         // Source updates push through too.
         widget.set_property_value_with_key(key, 640);
-        assert.equal(consumer.get_property_value('echoed'), 640);
+        assert.equal(consumer._get_property_value_by_name('echoed'), 640);
     });
 
     test('installing a Binding on a read-only consumer property is blocked via public API', () => {
@@ -2450,7 +2450,7 @@ describe('Read-only properties', () => {
 
         const w = new Widget();
         assert.throws(
-            () => w.set_property_value('actualWidth', new Binding(src, 'value')),
+            () => w._set_property_value_by_name('actualWidth', new Binding(src, 'value')),
             /is read-only/,
         );
     });
@@ -2462,12 +2462,12 @@ describe('Read-only properties', () => {
         class Source extends Model {}
         Model.RegisterProperty(Source, 'value', 0, MetaData.None);
         const src = new Source();
-        src.set_property_value('value', 555);
+        src._set_property_value_by_name('value', 555);
 
         const w = new Widget();
         w.set_property_value_with_key(key, new Binding(src, 'value'));
-        assert.equal(w.get_property_value('actualWidth'), 555);
-        assert.equal(w.GetValueSource('actualWidth'), PropertyValueSource.Binding);
+        assert.equal(w._get_property_value_by_name('actualWidth'), 555);
+        assert.equal(w._get_value_source_by_name('actualWidth'), PropertyValueSource.Binding);
     });
 
     test('OverrideMetadata on a read-only property preserves the read-only flag', () => {
@@ -2477,9 +2477,9 @@ describe('Read-only properties', () => {
         Model.OverrideMetadata(Derived, 'computed', { default_value: 99 });
 
         const d = new Derived();
-        assert.equal(d.get_property_value('computed'), 99);  // override default applies
+        assert.equal(d._get_property_value_by_name('computed'), 99);  // override default applies
         assert.throws(
-            () => d.set_property_value('computed', 1),
+            () => d._set_property_value_by_name('computed', 1),
             /is read-only/,
         );
     });
@@ -2491,6 +2491,90 @@ describe('Read-only properties', () => {
             () => Model.RegisterReadOnlyProperty(Widget, 'computed', 0, MetaData.None),
             /already registered/,
         );
+    });
+});
+
+// Pins the typed-PropertyKey surface: RegisterProperty returns a
+// `PropertyKey<T>` whose phantom T flows through the typed overloads of
+// get_property_value / set_property_value, so DPs can be accessed
+// without `as T` casts. The string-keyed surface still works in parallel
+// (the binding layer is inherently string-keyed and stays that way).
+describe('Typed PropertyKey<T>', () => {
+    test('RegisterProperty returns a PropertyKey whose descriptor matches', () => {
+        class Widget extends Model {}
+        const key = Model.RegisterProperty<number>(Widget, 'width', 0, MetaData.None);
+        assert.ok(key instanceof PropertyKey);
+        assert.equal(key.descriptor.Name, 'width');
+        assert.equal(key.descriptor.IsReadOnly, false);
+    });
+
+    test('get_property_value(key) and set_property_value(key, v) round-trip', () => {
+        class Widget extends Model {}
+        const widthKey = Model.RegisterProperty<number>(Widget, 'width', 10, MetaData.None);
+        const w = new Widget();
+
+        // Default read via key.
+        assert.equal(w.get_property_value(widthKey), 10);
+
+        // Typed write + typed read.
+        w.set_property_value(widthKey, 42);
+        assert.equal(w.get_property_value(widthKey), 42);
+
+        // The string-keyed surface sees the same value — same DP, two access paths.
+        assert.equal(w._get_property_value_by_name('width'), 42);
+    });
+
+    test('RegisterProperty is idempotent — re-registering returns a key for the existing descriptor', () => {
+        class Widget extends Model {}
+        const a = Model.RegisterProperty<number>(Widget, 'width', 10, MetaData.None);
+        const b = Model.RegisterProperty<number>(Widget, 'width', 999, MetaData.None);
+        // Same underlying descriptor; default value of the first wins.
+        assert.equal(a.descriptor, b.descriptor);
+        const w = new Widget();
+        assert.equal(w.get_property_value(b), 10);
+    });
+
+    test('set_property_value(key, …) refuses to write a read-only DP', () => {
+        class Widget extends Model {}
+        const key = Model.RegisterReadOnlyProperty<number>(Widget, 'actualWidth', 0, MetaData.None);
+        const w = new Widget();
+        assert.throws(
+            () => w.set_property_value(key, 100),
+            /is read-only/,
+        );
+        // set_property_value_with_key remains the privileged escape hatch.
+        w.set_property_value_with_key(key, 100);
+        assert.equal(w.get_property_value(key), 100);
+    });
+
+    test('listeners attached by key fire on writes that go through any surface', () => {
+        class Widget extends Model {}
+        const widthKey = Model.RegisterProperty<number>(Widget, 'width', 0, MetaData.None);
+        const w = new Widget();
+        const captures: Array<[unknown, unknown]> = [];
+        w.AddPropertyChangedListener(widthKey, (_m, _p, o, n) => { captures.push([o, n]); });
+
+        w.set_property_value(widthKey, 7);            // typed write
+        w._set_property_value_by_name('width', 8);              // string-keyed write — same DP
+        assert.equal(captures.length, 2);
+        assert.deepEqual(captures[0], [0, 7]);
+        assert.deepEqual(captures[1], [7, 8]);
+    });
+
+    test('RemovePropertyChangedListener(key, cb) removes the listener', () => {
+        class Widget extends Model {}
+        const widthKey = Model.RegisterProperty<number>(Widget, 'width', 0, MetaData.None);
+        const w = new Widget();
+        const captures: Array<[unknown, unknown]> = [];
+        const cb: PropertyChangeCallback = (_m, _p, o, n) => { captures.push([o, n]); };
+        w.AddPropertyChangedListener(widthKey, cb);
+
+        w.set_property_value(widthKey, 1);
+        w.RemovePropertyChangedListener(widthKey, cb);
+        w.set_property_value(widthKey, 2);
+
+        assert.equal(captures.length, 1);
+        assert.deepEqual(captures[0], [0, 1]);
     });
 });
 
@@ -2511,7 +2595,7 @@ describe('Binding pipeline — FallbackValue / TargetNullValue', () => {
         class Source extends Model {}
         Model.RegisterProperty(Source, 'middleName', null, MetaData.None);
         const src = new Source();
-        src.set_property_value('middleName', null);
+        src._set_property_value_by_name('middleName', null);
 
         const b = new Binding(src, 'middleName', BindingMode.OneWay, {
             targetNullValue: '—',
@@ -2539,9 +2623,9 @@ describe('Binding pipeline — FallbackValue / TargetNullValue', () => {
         });
         // default is undefined → fallback wins
         assert.equal(b.get_value(), 'FALL');
-        src.set_property_value('value', null);
+        src._set_property_value_by_name('value', null);
         assert.equal(b.get_value(), 'NULL');
-        src.set_property_value('value', 'real');
+        src._set_property_value_by_name('value', 'real');
         assert.equal(b.get_value(), 'real');
     });
 
@@ -2552,20 +2636,20 @@ describe('Binding pipeline — FallbackValue / TargetNullValue', () => {
         Model.RegisterProperty(Inner, 'value', '', MetaData.None);
 
         const inner = new Inner();
-        inner.set_property_value('value', 'present');
+        inner._set_property_value_by_name('value', 'present');
         const holder = new Holder();
-        holder.set_property_value('inner', inner);
+        holder._set_property_value_by_name('inner', inner);
 
         class View extends Model {}
         Model.RegisterProperty(View, 'echoed', '', MetaData.None);
         const view = new View();
         const captures: Array<[unknown, unknown]> = [];
-        view.AddPropertyChangedListener(
+        view._add_property_changed_listener_by_name(
             'echoed',
             (_m, _p, o, n) => { captures.push([o, n]); },
         );
 
-        view.set_property_value(
+        view._set_property_value_by_name(
             'echoed',
             new Binding(holder, 'inner.value', BindingMode.OneWay, {
                 fallbackValue: 'GONE',
@@ -2574,7 +2658,7 @@ describe('Binding pipeline — FallbackValue / TargetNullValue', () => {
         assert.equal(captures.length, 1);
         assert.equal(captures[0]![1], 'present');
 
-        holder.set_property_value('inner', null);
+        holder._set_property_value_by_name('inner', null);
         assert.equal(captures.length, 2);
         assert.equal(captures[1]![0], 'present');
         assert.equal(captures[1]![1], 'GONE');
@@ -2601,7 +2685,7 @@ describe('Binding pipeline — ValueConverter', () => {
         class Source extends Model {}
         Model.RegisterProperty(Source, 'celsius', 0, MetaData.None);
         const src = new Source();
-        src.set_property_value('celsius', 100);
+        src._set_property_value_by_name('celsius', 100);
 
         const c2f: ValueConverter = {
             convert(v: any): any { return (v as number) * 9 / 5 + 32; },
@@ -2622,7 +2706,7 @@ describe('Binding pipeline — ValueConverter', () => {
         const b = new Binding(src, 'celsius', BindingMode.TwoWay, { converter: c2f });
 
         assert.equal(b.set_value(212), true);
-        assert.equal(src.get_property_value('celsius'), 100);
+        assert.equal(src._get_property_value_by_name('celsius'), 100);
     });
 
     test('TwoWay writeback with no convertBack passes value through unchanged', () => {
@@ -2637,14 +2721,14 @@ describe('Binding pipeline — ValueConverter', () => {
         const b = new Binding(src, 'value', BindingMode.TwoWay, { converter: oneWayConverter });
 
         b.set_value('raw');
-        assert.equal(src.get_property_value('value'), 'raw');
+        assert.equal(src._get_property_value_by_name('value'), 'raw');
     });
 
     test('converter runs before fallback in the pipeline', () => {
         class Source extends Model {}
         Model.RegisterProperty(Source, 'value', 0, MetaData.None);
         const src = new Source();
-        src.set_property_value('value', 5);
+        src._set_property_value_by_name('value', 5);
 
         // Converter that returns null for 0, doubles otherwise.
         const conv: ValueConverter = {
@@ -2657,7 +2741,7 @@ describe('Binding pipeline — ValueConverter', () => {
         assert.equal(b.get_value(), 10);
 
         // After Convert returns null, targetNullValue substitutes.
-        src.set_property_value('value', 0);
+        src._set_property_value_by_name('value', 0);
         assert.equal(b.get_value(), 'NULL');
     });
 
@@ -2665,7 +2749,7 @@ describe('Binding pipeline — ValueConverter', () => {
         class Source extends Model {}
         Model.RegisterProperty(Source, 'value', 0, MetaData.None);
         const src = new Source();
-        src.set_property_value('value', 1);
+        src._set_property_value_by_name('value', 1);
 
         // Converter that clamps everything to 0 or 1.
         const conv: ValueConverter = {
@@ -2675,9 +2759,9 @@ describe('Binding pipeline — ValueConverter', () => {
         Model.RegisterProperty(View, 'echoed', 0, MetaData.None);
         const view = new View();
         let fires = 0;
-        view.AddPropertyChangedListener('echoed', () => { fires++; });
+        view._add_property_changed_listener_by_name('echoed', () => { fires++; });
 
-        view.set_property_value(
+        view._set_property_value_by_name(
             'echoed',
             new Binding(src, 'value', BindingMode.OneWay, { converter: conv }),
         );
@@ -2685,11 +2769,11 @@ describe('Binding pipeline — ValueConverter', () => {
         assert.equal(fires, 1);
 
         // Pre-pipeline: 1 → 5. Post-pipeline: 1 → 1 (both clamped). No fire.
-        src.set_property_value('value', 5);
+        src._set_property_value_by_name('value', 5);
         assert.equal(fires, 1);
 
         // Pre-pipeline: 5 → 0. Post-pipeline: 1 → 0. Fires.
-        src.set_property_value('value', 0);
+        src._set_property_value_by_name('value', 0);
         assert.equal(fires, 2);
     });
 });
@@ -2700,7 +2784,7 @@ describe('Binding pipeline — StringFormat', () => {
         class Source extends Model {}
         Model.RegisterProperty(Source, 'count', 0, MetaData.None);
         const src = new Source();
-        src.set_property_value('count', 42);
+        src._set_property_value_by_name('count', 42);
 
         const b = new Binding(src, 'count', BindingMode.OneWay, {
             stringFormat: '$ {0}',
@@ -2712,7 +2796,7 @@ describe('Binding pipeline — StringFormat', () => {
         class Source extends Model {}
         Model.RegisterProperty(Source, 'name', '', MetaData.None);
         const src = new Source();
-        src.set_property_value('name', 'world');
+        src._set_property_value_by_name('name', 'world');
 
         const upper: ValueConverter = {
             convert(v: any): any { return String(v).toUpperCase(); },
@@ -2728,7 +2812,7 @@ describe('Binding pipeline — StringFormat', () => {
         class Source extends Model {}
         Model.RegisterProperty(Source, 'count', 0, MetaData.None);
         const src = new Source();
-        src.set_property_value('count', 42);
+        src._set_property_value_by_name('count', 42);
 
         const b = new Binding(src, 'count', BindingMode.OneWay, {
             stringFormat: 'no-placeholder',
@@ -2768,7 +2852,7 @@ describe('Binding pipeline — StringFormat', () => {
         // composed converter has no convertBack (StringFormat is
         // one-way). The value reaches the source unchanged.
         b.set_value(123);
-        assert.equal(src.get_property_value('count'), 123);
+        assert.equal(src._get_property_value_by_name('count'), 123);
     });
 });
 
@@ -2786,20 +2870,20 @@ describe('Binding default-mode inference (BindsTwoWayByDefault)', () => {
         Model.RegisterProperty(Target, 'x', 0, MetaData.BindsTwoWayByDefault);
 
         const src = new Source();
-        src.set_property_value('v', 7);
+        src._set_property_value_by_name('v', 7);
         const tgt = new Target();
 
         const b = new Binding(src, 'v'); // no explicit mode
-        tgt.set_property_value('x', b);
+        tgt._set_property_value_by_name('x', b);
 
         // The reader is wired up.
-        assert.equal(tgt.get_property_value('x'), 7);
+        assert.equal(tgt._get_property_value_by_name('x'), 7);
         // Mode was inferred at install time.
         assert.equal(b.mode, BindingMode.TwoWay);
         // Writeback through the target now flows to the source.
-        tgt.set_property_value('x', 99);
-        assert.equal(src.get_property_value('v'), 99);
-        assert.equal(tgt.GetValueSource('x'), PropertyValueSource.Binding);
+        tgt._set_property_value_by_name('x', 99);
+        assert.equal(src._get_property_value_by_name('v'), 99);
+        assert.equal(tgt._get_value_source_by_name('x'), PropertyValueSource.Binding);
     });
 
     test('an unset mode stays OneWay when the target does NOT declare BindsTwoWayByDefault', () => {
@@ -2809,18 +2893,18 @@ describe('Binding default-mode inference (BindsTwoWayByDefault)', () => {
         Model.RegisterProperty(Target, 'x', 0, MetaData.None);
 
         const src = new Source();
-        src.set_property_value('v', 7);
+        src._set_property_value_by_name('v', 7);
         const tgt = new Target();
 
         const b = new Binding(src, 'v');
-        tgt.set_property_value('x', b);
+        tgt._set_property_value_by_name('x', b);
 
         assert.equal(b.mode, BindingMode.OneWay);
         // Target-side write replaces the OneWay binding as a local value
         // (existing 3.4 / 3.9 behavior — regression guard).
-        tgt.set_property_value('x', 99);
-        assert.equal(src.get_property_value('v'), 7);
-        assert.equal(tgt.GetValueSource('x'), PropertyValueSource.LocalValue);
+        tgt._set_property_value_by_name('x', 99);
+        assert.equal(src._get_property_value_by_name('v'), 7);
+        assert.equal(tgt._get_value_source_by_name('x'), PropertyValueSource.LocalValue);
     });
 
     test('an explicit OneWay overrides BindsTwoWayByDefault — explicit mode always wins', () => {
@@ -2830,15 +2914,15 @@ describe('Binding default-mode inference (BindsTwoWayByDefault)', () => {
         Model.RegisterProperty(Target, 'x', 0, MetaData.BindsTwoWayByDefault);
 
         const src = new Source();
-        src.set_property_value('v', 7);
+        src._set_property_value_by_name('v', 7);
         const tgt = new Target();
 
         const b = new Binding(src, 'v', BindingMode.OneWay);
-        tgt.set_property_value('x', b);
+        tgt._set_property_value_by_name('x', b);
 
         assert.equal(b.mode, BindingMode.OneWay);
-        tgt.set_property_value('x', 99);
-        assert.equal(src.get_property_value('v'), 7);
+        tgt._set_property_value_by_name('x', 99);
+        assert.equal(src._get_property_value_by_name('v'), 7);
     });
 
     test('an explicit TwoWay is preserved when the target does NOT declare BindsTwoWayByDefault', () => {
@@ -2848,15 +2932,15 @@ describe('Binding default-mode inference (BindsTwoWayByDefault)', () => {
         Model.RegisterProperty(Target, 'x', 0, MetaData.None);
 
         const src = new Source();
-        src.set_property_value('v', 7);
+        src._set_property_value_by_name('v', 7);
         const tgt = new Target();
 
         const b = new Binding(src, 'v', BindingMode.TwoWay);
-        tgt.set_property_value('x', b);
+        tgt._set_property_value_by_name('x', b);
 
         assert.equal(b.mode, BindingMode.TwoWay);
-        tgt.set_property_value('x', 99);
-        assert.equal(src.get_property_value('v'), 99);
+        tgt._set_property_value_by_name('x', 99);
+        assert.equal(src._get_property_value_by_name('v'), 99);
     });
 
     test('mode is OneWay before install (only the install path consults the descriptor)', () => {
@@ -2885,15 +2969,15 @@ describe('Binding default-mode inference (BindsTwoWayByDefault)', () => {
         );
 
         const src = new Source();
-        src.set_property_value('v', 7);
+        src._set_property_value_by_name('v', 7);
         const tgt = new Target();
 
         const b = new Binding(src, 'v');
-        tgt.set_property_value('x', b);
+        tgt._set_property_value_by_name('x', b);
 
         assert.equal(b.mode, BindingMode.TwoWay);
-        tgt.set_property_value('x', 99);
-        assert.equal(src.get_property_value('v'), 99);
+        tgt._set_property_value_by_name('x', 99);
+        assert.equal(src._get_property_value_by_name('v'), 99);
     });
 });
 
@@ -3050,7 +3134,7 @@ describe('VisualHost back-pointer (target) on Visual', () => {
         const v = new Renderer();
         set_target(v, host);
 
-        v.set_property_value('flag', true);
+        v._set_property_value_by_name('flag', true);
         assert.deepEqual(host.render_marked, [v]);
         assert.deepEqual(host.measure_marked, []);
         assert.deepEqual(host.arrange_marked, []);
@@ -3065,7 +3149,7 @@ describe('VisualHost back-pointer (target) on Visual', () => {
         }
         const v = new Renderer();
         // No target set — property change must not throw.
-        assert.doesNotThrow(() => v.set_property_value('flag', true));
+        assert.doesNotThrow(() => v._set_property_value_by_name('flag', true));
     });
 
     test('a Render-flagged property on a deeply-nested Visual still routes to host', () => {
@@ -3084,7 +3168,7 @@ describe('VisualHost back-pointer (target) on Visual', () => {
         mid.SetChild(leaf);
         set_target(root, host);
 
-        leaf.set_property_value('flag', true);
+        leaf._set_property_value_by_name('flag', true);
         assert.deepEqual(host.render_marked, [leaf]);
     });
 
@@ -3099,7 +3183,7 @@ describe('VisualHost back-pointer (target) on Visual', () => {
         const v = new Box();
         set_target(v, host);
 
-        v.set_property_value('size', 10);
+        v._set_property_value_by_name('size', 10);
         assert.deepEqual(host.measure_marked, [v]);
         assert.deepEqual(host.arrange_marked, [v]);
         assert.deepEqual(host.render_marked,  []);
@@ -3325,7 +3409,7 @@ describe('Visual layout lifecycle (Measure / Arrange / Render)', () => {
         assert.equal(v.IsMeasureValid, true);
         assert.equal(v.IsArrangeValid, true);
 
-        v.set_property_value('shape', 1);
+        v._set_property_value_by_name('shape', 1);
         assert.equal(v.IsMeasureValid, false);
         assert.equal(v.IsArrangeValid, false);
     });
@@ -3341,7 +3425,7 @@ describe('Visual layout lifecycle (Measure / Arrange / Render)', () => {
         v.Measure(new Size(500, 500));
         v.Arrange(new Rect(0, 0, 100, 100));
 
-        v.set_property_value('color', 'blue');
+        v._set_property_value_by_name('color', 'blue');
         assert.equal(v.IsMeasureValid, true);
         assert.equal(v.IsArrangeValid, true);
     });

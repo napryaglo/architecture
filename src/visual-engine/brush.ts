@@ -78,16 +78,14 @@ export class ImageSource
 // skew a gradient without changing the brush's logical stops.
 export abstract class Brush extends Model
 {
-    static {
-        Model.RegisterProperty(Brush, 'Opacity',   1,                  MetaData.Render);
-        Model.RegisterProperty(Brush, 'Transform', Transform.Identity, MetaData.Render);
-    }
+    public static readonly OpacityKey   = Model.RegisterProperty<number>(   Brush, 'Opacity',   1,                  MetaData.Render);
+    public static readonly TransformKey = Model.RegisterProperty<Transform>(Brush, 'Transform', Transform.Identity, MetaData.Render);
 
-    public get Opacity(): number { return this.get_property_value('Opacity'); }
-    public set Opacity(value: number) { this.set_property_value('Opacity', value); }
+    public get Opacity(): number { return this.get_property_value(Brush.OpacityKey); }
+    public set Opacity(value: number) { this.set_property_value(Brush.OpacityKey, value); }
 
-    public get Transform(): Transform { return this.get_property_value('Transform'); }
-    public set Transform(value: Transform) { this.set_property_value('Transform', value); }
+    public get Transform(): Transform { return this.get_property_value(Brush.TransformKey); }
+    public set Transform(value: Transform) { this.set_property_value(Brush.TransformKey, value); }
 }
 
 // Single-color fill. The workhorse brush. Default Color is Transparent
@@ -96,9 +94,8 @@ export abstract class Brush extends Model
 // normal usage).
 export class SolidColorBrush extends Brush
 {
-    static {
-        Model.RegisterProperty(SolidColorBrush, 'Color', Color.Transparent, MetaData.Render);
-    }
+    public static readonly ColorKey = Model.RegisterProperty<Color>(
+        SolidColorBrush, 'Color', Color.Transparent, MetaData.Render);
 
     constructor(color?: Color)
     {
@@ -106,8 +103,8 @@ export class SolidColorBrush extends Brush
         if (color !== undefined) this.Color = color;
     }
 
-    public get Color(): Color { return this.get_property_value('Color'); }
-    public set Color(value: Color) { this.set_property_value('Color', value); }
+    public get Color(): Color { return this.get_property_value(SolidColorBrush.ColorKey); }
+    public set Color(value: Color) { this.set_property_value(SolidColorBrush.ColorKey, value); }
 }
 
 // Smooth color interpolation along a straight axis. StartPoint and
@@ -116,12 +113,14 @@ export class SolidColorBrush extends Brush
 // (Absolute / MappingMode='Absolute' is not yet supported.)
 export class LinearGradientBrush extends Brush
 {
-    static {
-        Model.RegisterProperty(LinearGradientBrush, 'GradientStops', [] as readonly GradientStop[],     MetaData.Render);
-        Model.RegisterProperty(LinearGradientBrush, 'StartPoint',    new Point(0, 0),                   MetaData.Render);
-        Model.RegisterProperty(LinearGradientBrush, 'EndPoint',      new Point(1, 1),                   MetaData.Render);
-        Model.RegisterProperty(LinearGradientBrush, 'SpreadMethod',  GradientSpreadMethod.Pad,          MetaData.Render);
-    }
+    public static readonly GradientStopsKey = Model.RegisterProperty<readonly GradientStop[]>(
+        LinearGradientBrush, 'GradientStops', [], MetaData.Render);
+    public static readonly StartPointKey = Model.RegisterProperty<Point>(
+        LinearGradientBrush, 'StartPoint', new Point(0, 0), MetaData.Render);
+    public static readonly EndPointKey = Model.RegisterProperty<Point>(
+        LinearGradientBrush, 'EndPoint', new Point(1, 1), MetaData.Render);
+    public static readonly SpreadMethodKey = Model.RegisterProperty<GradientSpreadMethod>(
+        LinearGradientBrush, 'SpreadMethod', GradientSpreadMethod.Pad, MetaData.Render);
 
     constructor(stops?: readonly GradientStop[])
     {
@@ -129,17 +128,17 @@ export class LinearGradientBrush extends Brush
         if (stops !== undefined) this.GradientStops = stops;
     }
 
-    public get GradientStops(): readonly GradientStop[] { return this.get_property_value('GradientStops'); }
-    public set GradientStops(value: readonly GradientStop[]) { this.set_property_value('GradientStops', value); }
+    public get GradientStops(): readonly GradientStop[] { return this.get_property_value(LinearGradientBrush.GradientStopsKey); }
+    public set GradientStops(value: readonly GradientStop[]) { this.set_property_value(LinearGradientBrush.GradientStopsKey, value); }
 
-    public get StartPoint(): Point { return this.get_property_value('StartPoint'); }
-    public set StartPoint(value: Point) { this.set_property_value('StartPoint', value); }
+    public get StartPoint(): Point { return this.get_property_value(LinearGradientBrush.StartPointKey); }
+    public set StartPoint(value: Point) { this.set_property_value(LinearGradientBrush.StartPointKey, value); }
 
-    public get EndPoint(): Point { return this.get_property_value('EndPoint'); }
-    public set EndPoint(value: Point) { this.set_property_value('EndPoint', value); }
+    public get EndPoint(): Point { return this.get_property_value(LinearGradientBrush.EndPointKey); }
+    public set EndPoint(value: Point) { this.set_property_value(LinearGradientBrush.EndPointKey, value); }
 
-    public get SpreadMethod(): GradientSpreadMethod { return this.get_property_value('SpreadMethod'); }
-    public set SpreadMethod(value: GradientSpreadMethod) { this.set_property_value('SpreadMethod', value); }
+    public get SpreadMethod(): GradientSpreadMethod { return this.get_property_value(LinearGradientBrush.SpreadMethodKey); }
+    public set SpreadMethod(value: GradientSpreadMethod) { this.set_property_value(LinearGradientBrush.SpreadMethodKey, value); }
 }
 
 // Smooth color interpolation outward from Center to the RadiusX/RadiusY
@@ -148,13 +147,16 @@ export class LinearGradientBrush extends Brush
 // renderers can default it to Center.
 export class RadialGradientBrush extends Brush
 {
-    static {
-        Model.RegisterProperty(RadialGradientBrush, 'GradientStops', [] as readonly GradientStop[],     MetaData.Render);
-        Model.RegisterProperty(RadialGradientBrush, 'Center',        new Point(0.5, 0.5),               MetaData.Render);
-        Model.RegisterProperty(RadialGradientBrush, 'RadiusX',       0.5,                               MetaData.Render);
-        Model.RegisterProperty(RadialGradientBrush, 'RadiusY',       0.5,                               MetaData.Render);
-        Model.RegisterProperty(RadialGradientBrush, 'SpreadMethod',  GradientSpreadMethod.Pad,          MetaData.Render);
-    }
+    public static readonly GradientStopsKey = Model.RegisterProperty<readonly GradientStop[]>(
+        RadialGradientBrush, 'GradientStops', [], MetaData.Render);
+    public static readonly CenterKey = Model.RegisterProperty<Point>(
+        RadialGradientBrush, 'Center', new Point(0.5, 0.5), MetaData.Render);
+    public static readonly RadiusXKey = Model.RegisterProperty<number>(
+        RadialGradientBrush, 'RadiusX', 0.5, MetaData.Render);
+    public static readonly RadiusYKey = Model.RegisterProperty<number>(
+        RadialGradientBrush, 'RadiusY', 0.5, MetaData.Render);
+    public static readonly SpreadMethodKey = Model.RegisterProperty<GradientSpreadMethod>(
+        RadialGradientBrush, 'SpreadMethod', GradientSpreadMethod.Pad, MetaData.Render);
 
     constructor(stops?: readonly GradientStop[])
     {
@@ -162,20 +164,20 @@ export class RadialGradientBrush extends Brush
         if (stops !== undefined) this.GradientStops = stops;
     }
 
-    public get GradientStops(): readonly GradientStop[] { return this.get_property_value('GradientStops'); }
-    public set GradientStops(value: readonly GradientStop[]) { this.set_property_value('GradientStops', value); }
+    public get GradientStops(): readonly GradientStop[] { return this.get_property_value(RadialGradientBrush.GradientStopsKey); }
+    public set GradientStops(value: readonly GradientStop[]) { this.set_property_value(RadialGradientBrush.GradientStopsKey, value); }
 
-    public get Center(): Point { return this.get_property_value('Center'); }
-    public set Center(value: Point) { this.set_property_value('Center', value); }
+    public get Center(): Point { return this.get_property_value(RadialGradientBrush.CenterKey); }
+    public set Center(value: Point) { this.set_property_value(RadialGradientBrush.CenterKey, value); }
 
-    public get RadiusX(): number { return this.get_property_value('RadiusX'); }
-    public set RadiusX(value: number) { this.set_property_value('RadiusX', value); }
+    public get RadiusX(): number { return this.get_property_value(RadialGradientBrush.RadiusXKey); }
+    public set RadiusX(value: number) { this.set_property_value(RadialGradientBrush.RadiusXKey, value); }
 
-    public get RadiusY(): number { return this.get_property_value('RadiusY'); }
-    public set RadiusY(value: number) { this.set_property_value('RadiusY', value); }
+    public get RadiusY(): number { return this.get_property_value(RadialGradientBrush.RadiusYKey); }
+    public set RadiusY(value: number) { this.set_property_value(RadialGradientBrush.RadiusYKey, value); }
 
-    public get SpreadMethod(): GradientSpreadMethod { return this.get_property_value('SpreadMethod'); }
-    public set SpreadMethod(value: GradientSpreadMethod) { this.set_property_value('SpreadMethod', value); }
+    public get SpreadMethod(): GradientSpreadMethod { return this.get_property_value(RadialGradientBrush.SpreadMethodKey); }
+    public set SpreadMethod(value: GradientSpreadMethod) { this.set_property_value(RadialGradientBrush.SpreadMethodKey, value); }
 }
 
 // Fills with a rastered image. ImageSource is the pixels (currently a
@@ -184,12 +186,14 @@ export class RadialGradientBrush extends Brush
 // the target rectangle — see WPF Stretch / AlignmentX docs, same semantics.
 export class ImageBrush extends Brush
 {
-    static {
-        Model.RegisterProperty(ImageBrush, 'ImageSource', undefined,         MetaData.Render);
-        Model.RegisterProperty(ImageBrush, 'Stretch',     Stretch.Uniform,   MetaData.Render);
-        Model.RegisterProperty(ImageBrush, 'AlignmentX',  AlignmentX.Center, MetaData.Render);
-        Model.RegisterProperty(ImageBrush, 'AlignmentY',  AlignmentY.Center, MetaData.Render);
-    }
+    public static readonly ImageSourceKey = Model.RegisterProperty<ImageSource | undefined>(
+        ImageBrush, 'ImageSource', undefined, MetaData.Render);
+    public static readonly StretchKey = Model.RegisterProperty<Stretch>(
+        ImageBrush, 'Stretch', Stretch.Uniform, MetaData.Render);
+    public static readonly AlignmentXKey = Model.RegisterProperty<AlignmentX>(
+        ImageBrush, 'AlignmentX', AlignmentX.Center, MetaData.Render);
+    public static readonly AlignmentYKey = Model.RegisterProperty<AlignmentY>(
+        ImageBrush, 'AlignmentY', AlignmentY.Center, MetaData.Render);
 
     constructor(source?: ImageSource)
     {
@@ -197,15 +201,15 @@ export class ImageBrush extends Brush
         if (source !== undefined) this.ImageSource = source;
     }
 
-    public get ImageSource(): ImageSource | undefined { return this.get_property_value('ImageSource'); }
-    public set ImageSource(value: ImageSource | undefined) { this.set_property_value('ImageSource', value); }
+    public get ImageSource(): ImageSource | undefined { return this.get_property_value(ImageBrush.ImageSourceKey); }
+    public set ImageSource(value: ImageSource | undefined) { this.set_property_value(ImageBrush.ImageSourceKey, value); }
 
-    public get Stretch(): Stretch { return this.get_property_value('Stretch'); }
-    public set Stretch(value: Stretch) { this.set_property_value('Stretch', value); }
+    public get Stretch(): Stretch { return this.get_property_value(ImageBrush.StretchKey); }
+    public set Stretch(value: Stretch) { this.set_property_value(ImageBrush.StretchKey, value); }
 
-    public get AlignmentX(): AlignmentX { return this.get_property_value('AlignmentX'); }
-    public set AlignmentX(value: AlignmentX) { this.set_property_value('AlignmentX', value); }
+    public get AlignmentX(): AlignmentX { return this.get_property_value(ImageBrush.AlignmentXKey); }
+    public set AlignmentX(value: AlignmentX) { this.set_property_value(ImageBrush.AlignmentXKey, value); }
 
-    public get AlignmentY(): AlignmentY { return this.get_property_value('AlignmentY'); }
-    public set AlignmentY(value: AlignmentY) { this.set_property_value('AlignmentY', value); }
+    public get AlignmentY(): AlignmentY { return this.get_property_value(ImageBrush.AlignmentYKey); }
+    public set AlignmentY(value: AlignmentY) { this.set_property_value(ImageBrush.AlignmentYKey, value); }
 }

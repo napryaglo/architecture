@@ -310,7 +310,7 @@ export class ComboBoxItemList extends ItemsControl
             c.SelectedIndex    = index;
             c.IsDropDownOpen   = false;
         };
-        row.AddPropertyChangedListener('IsMouseOver', () =>
+        row.AddPropertyChangedListener(Visual.IsMouseOverKey, () =>
         {
             const c = this.combo;
             row.Background = c !== undefined
@@ -376,12 +376,13 @@ export class ComboBoxItemList extends ItemsControl
 // the visual tree.
 export class ComboBox extends Visual
 {
+    public static readonly ItemsKey          = Model.RegisterProperty<readonly unknown[] | undefined>(ComboBox, 'Items',          undefined, MetaData.Measure);
+    public static readonly SelectedItemKey   = Model.RegisterProperty<unknown>(                       ComboBox, 'SelectedItem',   undefined, MetaData.Measure | MetaData.Render);
+    public static readonly SelectedIndexKey  = Model.RegisterProperty<number>(                        ComboBox, 'SelectedIndex',  -1,        MetaData.None);
+    public static readonly IsDropDownOpenKey = Model.RegisterProperty<boolean>(                       ComboBox, 'IsDropDownOpen', false,     MetaData.Measure);
+    public static readonly PlaceholderKey    = Model.RegisterProperty<string>(                        ComboBox, 'Placeholder',    'Select…', MetaData.Measure | MetaData.Render);
+
     static {
-        Model.RegisterProperty(ComboBox, 'Items',          undefined, MetaData.Measure);
-        Model.RegisterProperty(ComboBox, 'SelectedItem',   undefined, MetaData.Measure | MetaData.Render);
-        Model.RegisterProperty(ComboBox, 'SelectedIndex',  -1,        MetaData.None);
-        Model.RegisterProperty(ComboBox, 'IsDropDownOpen', false,     MetaData.Measure);
-        Model.RegisterProperty(ComboBox, 'Placeholder',    'Select…', MetaData.Measure | MetaData.Render);
         // Registers the consolidated controls theme exactly once so
         // DefaultComboBoxSelection / DefaultComboBoxPopup resolve via
         // Application.ResolveDefaultResource during construction.
@@ -460,20 +461,20 @@ export class ComboBox extends Visual
         this.refreshSelectionText();
     }
 
-    public get Items(): readonly unknown[] | undefined { return this.get_property_value('Items'); }
-    public set Items(v: readonly unknown[] | undefined) { this.set_property_value('Items', v); }
+    public get Items(): readonly unknown[] | undefined { return this.get_property_value(ComboBox.ItemsKey); }
+    public set Items(v: readonly unknown[] | undefined) { this.set_property_value(ComboBox.ItemsKey, v); }
 
-    public get SelectedItem(): unknown { return this.get_property_value('SelectedItem'); }
-    public set SelectedItem(v: unknown) { this.set_property_value('SelectedItem', v); }
+    public get SelectedItem(): unknown { return this.get_property_value(ComboBox.SelectedItemKey); }
+    public set SelectedItem(v: unknown) { this.set_property_value(ComboBox.SelectedItemKey, v); }
 
-    public get SelectedIndex(): number { return this.get_property_value('SelectedIndex'); }
-    public set SelectedIndex(v: number) { this.set_property_value('SelectedIndex', v); }
+    public get SelectedIndex(): number { return this.get_property_value(ComboBox.SelectedIndexKey); }
+    public set SelectedIndex(v: number) { this.set_property_value(ComboBox.SelectedIndexKey, v); }
 
-    public get IsDropDownOpen(): boolean { return this.get_property_value('IsDropDownOpen'); }
-    public set IsDropDownOpen(v: boolean) { this.set_property_value('IsDropDownOpen', v); }
+    public get IsDropDownOpen(): boolean { return this.get_property_value(ComboBox.IsDropDownOpenKey); }
+    public set IsDropDownOpen(v: boolean) { this.set_property_value(ComboBox.IsDropDownOpenKey, v); }
 
-    public get Placeholder(): string { return this.get_property_value('Placeholder'); }
-    public set Placeholder(v: string) { this.set_property_value('Placeholder', v); }
+    public get Placeholder(): string { return this.get_property_value(ComboBox.PlaceholderKey); }
+    public set Placeholder(v: string) { this.set_property_value(ComboBox.PlaceholderKey, v); }
 
     public override get visualChildren(): readonly Visual[]
     {

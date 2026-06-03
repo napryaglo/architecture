@@ -99,10 +99,11 @@ function displayString(item: unknown): string
 // mirroring WPF's dual-mode SelectedItem.
 export class ListBox extends ItemsControl
 {
+    public static readonly SelectionModeKey = Model.RegisterProperty<SelectionMode>(ListBox, 'SelectionMode', SelectionMode.Single, MetaData.None);
+    public static readonly SelectedIndexKey = Model.RegisterProperty<number>(       ListBox, 'SelectedIndex', -1,                   MetaData.None);
+    public static readonly SelectedItemKey  = Model.RegisterProperty<unknown>(      ListBox, 'SelectedItem',  undefined,            MetaData.None);
+
     static {
-        Model.RegisterProperty(ListBox, 'SelectionMode',  SelectionMode.Single, MetaData.None);
-        Model.RegisterProperty(ListBox, 'SelectedIndex',  -1,                   MetaData.None);
-        Model.RegisterProperty(ListBox, 'SelectedItem',   undefined,            MetaData.None);
         ensureControlsTheme();
     }
 
@@ -143,14 +144,14 @@ export class ListBox extends ItemsControl
         this.Items = this._declarativeItems;
     }
 
-    public get SelectionMode(): SelectionMode { return this.get_property_value('SelectionMode'); }
-    public set SelectionMode(v: SelectionMode) { this.set_property_value('SelectionMode', v); }
+    public get SelectionMode(): SelectionMode { return this.get_property_value(ListBox.SelectionModeKey); }
+    public set SelectionMode(v: SelectionMode) { this.set_property_value(ListBox.SelectionModeKey, v); }
 
-    public get SelectedIndex(): number { return this.get_property_value('SelectedIndex'); }
-    public set SelectedIndex(v: number) { this.set_property_value('SelectedIndex', v); }
+    public get SelectedIndex(): number { return this.get_property_value(ListBox.SelectedIndexKey); }
+    public set SelectedIndex(v: number) { this.set_property_value(ListBox.SelectedIndexKey, v); }
 
-    public get SelectedItem(): unknown { return this.get_property_value('SelectedItem'); }
-    public set SelectedItem(v: unknown) { this.set_property_value('SelectedItem', v); }
+    public get SelectedItem(): unknown { return this.get_property_value(ListBox.SelectedItemKey); }
+    public set SelectedItem(v: unknown) { this.set_property_value(ListBox.SelectedItemKey, v); }
 
     // Compiler routes `ListBox { ListBoxItem … }` body elements through
     // here (DEFAULT_SLOT_INFO maps ListBox to { name: 'Items', kind:
@@ -215,17 +216,33 @@ export class ListBox extends ItemsControl
 
     // ── ItemsControl override seams ────────────────────────────────
 
+    public override IsItemItsOwnContainerOverride(item: unknown): boolean
+    {
+        return item instanceof ListBoxItem;
+    }
+
     public override GetContainerForItemOverride(item: unknown): Visual
     {
-        // Items added declaratively are already containers — pass them
-        // through. Data values get auto-wrapped with the source value
+        // Pass-through for composed markup is handled by the generator
+        // via IsItemItsOwnContainerOverride; here we're always on the
+        // data-driven path. Auto-wrap data values, stashing the source
         // on Tag so SelectedItem reads return the data, not the
-        // container.
-        if (item instanceof ListBoxItem) return item;
+        // ListBoxItem container.
         const li = new ListBoxItem();
         li.Tag     = item;
         li.Content = new TextBlock(displayString(item));
         return li;
+    }
+
+    public override RebindContainerForItemOverride(container: Visual, item: unknown): void
+    {
+        // Reused ListBoxItem (from the generator's recycle pool) —
+        // flip Tag + replace Content with a fresh display TextBlock so
+        // the row reflects the new data. Avoids re-running the
+        // ListBoxItem template; matches WPF's recycling semantics.
+        if (!(container instanceof ListBoxItem)) return;
+        container.Tag     = item;
+        container.Content = new TextBlock(displayString(item));
     }
 
     public override ClearContainerForItemOverride(container: Visual, item: unknown): void
@@ -533,8 +550,10 @@ export class ListBox extends ItemsControl
 // HandleItemClick with the originating PointerEventArgs.Modifiers.
 export class ListBoxItem extends ContentControl
 {
+    public static readonly IsSelectedKey = Model.RegisterProperty<boolean>(
+        ListBoxItem, 'IsSelected', false, MetaData.Render);
+
     static {
-        Model.RegisterProperty(ListBoxItem, 'IsSelected', false, MetaData.Render);
         ensureControlsTheme();
     }
 
@@ -547,19 +566,19 @@ export class ListBoxItem extends ContentControl
         this.Template = resolveTemplate(KEY_LISTBOX_ITEM);
         this._border = this.GetTemplateChild('PART_Border') as Border | undefined;
         if (content !== undefined) this.Content = content;
-        this.AddPropertyChangedListener('IsMouseOver', () => this.refreshBackground());
+        this.AddPropertyChangedListener(Visual.IsMouseOverKey, () => this.refreshBackground());
         this.refreshBackground();
     }
 
-    public get IsSelected(): boolean { return this.get_property_value('IsSelected'); }
-    public set IsSelected(v: boolean) { this.set_property_value('IsSelected', v); }
+    public get IsSelected(): boolean { return this.get_property_value(ListBoxItem.IsSelectedKey); }
+    public set IsSelected(v: boolean) { this.set_property_value(ListBoxItem.IsSelectedKey, v); }
 
     // Setter exposed for ListBox's internal selection bookkeeping —
     // bypasses HandleItemClick so writing the DP doesn't loop back
     // through the click pipeline.
     public SetIsSelectedInternal(v: boolean): void
     {
-        this.set_property_value('IsSelected', v);
+        this.set_property_value(ListBoxItem.IsSelectedKey, v);
     }
 
     protected override OnPointerDown(_args: PointerEventArgs): void

@@ -19,8 +19,8 @@ class TestLeaf extends Visual
     static {
         Model.RegisterProperty(TestLeaf, 'Brush', undefined, MetaData.None);
     }
-    public get Brush(): unknown { return this.get_property_value('Brush'); }
-    public set Brush(v: unknown) { this.set_property_value('Brush', v); }
+    public get Brush(): unknown { return this._get_property_value_by_name('Brush'); }
+    public set Brush(v: unknown) { this._set_property_value_by_name('Brush', v); }
     protected override MeasureOverride(_a: Size): Size { return Size.Zero; }
     protected override RenderOverride(_dc: DrawingContext): void { }
 }

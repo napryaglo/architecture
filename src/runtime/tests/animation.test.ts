@@ -32,12 +32,12 @@ class AnimTest extends Visual
         Model.RegisterProperty(AnimTest, 'Color',     Color.Black,    MetaData.None);
         Model.RegisterProperty(AnimTest, 'Thickness', new Thickness(0), MetaData.None);
     }
-    public get Number(): number { return this.get_property_value('Number'); }
-    public set Number(v: number) { this.set_property_value('Number', v); }
-    public get Color(): Color { return this.get_property_value('Color'); }
-    public set Color(v: Color) { this.set_property_value('Color', v); }
-    public get Thickness(): Thickness { return this.get_property_value('Thickness'); }
-    public set Thickness(v: Thickness) { this.set_property_value('Thickness', v); }
+    public get Number(): number { return this._get_property_value_by_name('Number'); }
+    public set Number(v: number) { this._set_property_value_by_name('Number', v); }
+    public get Color(): Color { return this._get_property_value_by_name('Color'); }
+    public set Color(v: Color) { this._set_property_value_by_name('Color', v); }
+    public get Thickness(): Thickness { return this._get_property_value_by_name('Thickness'); }
+    public set Thickness(v: Thickness) { this._set_property_value_by_name('Thickness', v); }
 }
 
 // Install a fresh ManualClock on the AnimationManager singleton before
@@ -227,28 +227,28 @@ describe('EVD animation slot — precedence', () => {
         const v = new AnimTest();
         v.Number = 5;
         assert.equal(v.Number, 5);
-        v.SetAnimatedValue('Number', 99);
+        v._set_animated_value_by_name('Number', 99);
         assert.equal(v.Number, 99);
-        assert.equal(v.GetValueSource('Number'), PropertyValueSource.AnimatedValue);
+        assert.equal(v._get_value_source_by_name('Number'), PropertyValueSource.AnimatedValue);
     });
 
     test('ClearAnimatedValue restores the Local value', () => {
         const v = new AnimTest();
         v.Number = 5;
-        v.SetAnimatedValue('Number', 99);
-        v.ClearAnimatedValue('Number');
+        v._set_animated_value_by_name('Number', 99);
+        v._clear_animated_value_by_name('Number');
         assert.equal(v.Number, 5);
-        assert.equal(v.GetValueSource('Number'), PropertyValueSource.LocalValue);
+        assert.equal(v._get_value_source_by_name('Number'), PropertyValueSource.LocalValue);
     });
 
     test('Local writes while animation is active update the underlying slot quietly', () => {
         const v = new AnimTest();
         v.Number = 5;
-        v.SetAnimatedValue('Number', 99);
+        v._set_animated_value_by_name('Number', 99);
         v.Number = 7;                       // Local write under the mask.
         assert.equal(v.Number, 99,
             'effective value stays at the animated value');
-        v.ClearAnimatedValue('Number');
+        v._clear_animated_value_by_name('Number');
         assert.equal(v.Number, 7,
             'after Clear, the FRESH local value re-surfaces (not the pre-anim 5)');
     });
@@ -256,14 +256,14 @@ describe('EVD animation slot — precedence', () => {
     test('ClearAnimatedValue with no prior animation is a no-op', () => {
         const v = new AnimTest();
         v.Number = 5;
-        v.ClearAnimatedValue('Number');
+        v._clear_animated_value_by_name('Number');
         assert.equal(v.Number, 5);
     });
 
     test('Default falls through when no other slot is set', () => {
         const v = new AnimTest();
-        v.SetAnimatedValue('Number', 99);
-        v.ClearAnimatedValue('Number');
+        v._set_animated_value_by_name('Number', 99);
+        v._clear_animated_value_by_name('Number');
         assert.equal(v.Number, 0,
             'no Local was ever set; effective value resolves to the registered default');
     });
@@ -304,7 +304,7 @@ describe('Storyboard — single-target', () => {
         clock.Tick(200);    // 100 ms past end.
         assert.equal(v.Number, 50);
         assert.equal(sb.State, StoryboardState.Filling);
-        assert.equal(v.GetValueSource('Number'), PropertyValueSource.AnimatedValue,
+        assert.equal(v._get_value_source_by_name('Number'), PropertyValueSource.AnimatedValue,
             'HoldEnd keeps the animation slot active');
     });
 
@@ -321,7 +321,7 @@ describe('Storyboard — single-target', () => {
         // Animation slot dropped → fresh Local (10) re-surfaces.
         assert.equal(v.Number, 10);
         assert.equal(sb.State, StoryboardState.Stopped);
-        assert.equal(v.GetValueSource('Number'), PropertyValueSource.LocalValue);
+        assert.equal(v._get_value_source_by_name('Number'), PropertyValueSource.LocalValue);
     });
 
     test('Stop() releases the animation slot mid-run', () => {
@@ -422,7 +422,7 @@ describe('Storyboard — multi-target', () => {
         clock.Tick(25);
         // 'before' phase — no animation slot written, local value visible.
         assert.equal(v.Number, 5);
-        assert.equal(v.GetValueSource('Number'), PropertyValueSource.LocalValue);
+        assert.equal(v._get_value_source_by_name('Number'), PropertyValueSource.LocalValue);
         clock.Tick(50);                  // total elapsed = 75 → 25 ms into running
         // 25 / 100 = 0.25 → From=5 + (100-5) * 0.25 = 28.75
         assert.equal(v.Number, 28.75);

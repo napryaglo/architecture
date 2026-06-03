@@ -36,10 +36,8 @@ import { findDataTemplateForType } from './data-template.js';
 // ContentControl with no template is a logical-only container).
 export class ContentControl extends Visual
 {
-    static {
-        Model.RegisterProperty(ContentControl, 'Content',  undefined, MetaData.Measure);
-        Model.RegisterProperty(ContentControl, 'Template', undefined, MetaData.Measure);
-    }
+    public static readonly ContentKey  = Model.RegisterProperty<Visual | Model | undefined>(    ContentControl, 'Content',  undefined, MetaData.Measure);
+    public static readonly TemplateKey = Model.RegisterProperty<ControlTemplate | undefined>(   ContentControl, 'Template', undefined, MetaData.Measure);
 
     // The current applied template instance (root + presenter). When
     // Template changes, the old instance is torn down and a new one
@@ -56,7 +54,7 @@ export class ContentControl extends Visual
 
     public get Content(): Visual | Model | undefined
     {
-        return this.get_property_value('Content');
+        return this.get_property_value(ContentControl.ContentKey);
     }
 
     // Setter accepts a Visual OR a plain Model:
@@ -81,7 +79,7 @@ export class ContentControl extends Visual
         // Side-effect dispatched from OnPropertyChanged so that binding
         // pushes (which bypass JS setters) produce the same behavior
         // as direct assignment.
-        this.set_property_value('Content', value);
+        this.set_property_value(ContentControl.ContentKey, value);
     }
 
     private applyContent(oldValue: Visual | Model | undefined, newValue: Visual | Model | undefined): void
@@ -141,14 +139,14 @@ export class ContentControl extends Visual
 
     public get Template(): ControlTemplate | undefined
     {
-        return this.get_property_value('Template');
+        return this.get_property_value(ContentControl.TemplateKey);
     }
 
     public set Template(value: ControlTemplate | undefined)
     {
         const old = this.Template;
         if (old === value) return;
-        this.set_property_value('Template', value);
+        this.set_property_value(ContentControl.TemplateKey, value);
         this.rebuildTemplate(value);
     }
 

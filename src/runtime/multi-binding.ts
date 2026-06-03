@@ -10,11 +10,11 @@ import type { Visual } from './visual.js';
 // property so the EVD machinery picks it up.
 class MultiBindingWatcher extends Model
 {
-    static {
-        Model.RegisterProperty(MultiBindingWatcher, 'Value', undefined, MetaData.None);
-    }
-    public get Value(): unknown { return this.get_property_value('Value'); }
-    public set Value(v: unknown) { this.set_property_value('Value', v); }
+    public static readonly ValueKey = Model.RegisterProperty<unknown>(
+        MultiBindingWatcher, 'Value', undefined, MetaData.None);
+
+    public get Value(): unknown { return this.get_property_value(MultiBindingWatcher.ValueKey); }
+    public set Value(v: unknown) { this.set_property_value(MultiBindingWatcher.ValueKey, v); }
 }
 
 // MultiBinding: resolves N dotted paths against the host Visual's
@@ -63,14 +63,14 @@ class MultiBindingImpl extends Binding
         this.sourceCallbacks = new Array(paths.length).fill(undefined);
 
         this.dcCallback = () => this.refresh();
-        target.AddPropertyChangedListener('DataContext', this.dcCallback);
+        target._add_property_changed_listener_by_name('DataContext', this.dcCallback);
         this.refresh();
     }
 
     public override dispose(): void
     {
         super.dispose();
-        this.target.RemovePropertyChangedListener('DataContext', this.dcCallback);
+        this.target._remove_property_changed_listener_by_name('DataContext', this.dcCallback);
         this.unsubscribeAll();
     }
 
@@ -82,7 +82,7 @@ class MultiBindingImpl extends Binding
             const cb  = this.sourceCallbacks[i];
             if (src !== undefined && cb !== undefined)
             {
-                src.RemovePropertyChangedListener(firstSegment(this.paths[i]!), cb);
+                src._remove_property_changed_listener_by_name(firstSegment(this.paths[i]!), cb);
             }
             this.currentSources[i]  = undefined;
             this.sourceCallbacks[i] = undefined;
@@ -110,7 +110,7 @@ class MultiBindingImpl extends Binding
             {
                 const first = firstSegment(path);
                 const cb: PropertyChangeCallback = () => this.recompute();
-                dc.AddPropertyChangedListener(first, cb);
+                dc._add_property_changed_listener_by_name(first, cb);
                 this.currentSources[i]  = dc;
                 this.sourceCallbacks[i] = cb;
             }
@@ -156,7 +156,7 @@ function walkPath(root: unknown, path: string): unknown
     for (const seg of path.split('.'))
     {
         if (cur === undefined || cur === null) return undefined;
-        if (cur instanceof Model) cur = cur.get_property_value(seg);
+        if (cur instanceof Model) cur = cur._get_property_value_by_name(seg);
         else if (typeof cur === 'object') cur = (cur as Record<string, unknown>)[seg];
         else return undefined;
     }

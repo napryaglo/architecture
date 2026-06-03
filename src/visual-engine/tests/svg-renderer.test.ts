@@ -37,14 +37,13 @@ describe('SvgRenderer — initial paint', () => {
         const renderer = new SvgRenderer(surface, { document });
 
         // Border > TextBlock, both arranged at non-zero offsets so
-        // the transform path also exercises.
+        // the transform path also exercises. Border with a Background
+        // and TextBlock with Text both emit own primitives so each
+        // outer ends up with a mural-own child after the lazy-attach.
         const border = new Border();
-        const child  = new TextBlock();
+        border.Background = new SolidColorBrush(Color.FromHex('#4caf50'));
+        const child  = new TextBlock('hi');
         border.SetChild(child);
-        // Fake the layout state so the renderer has something to paint.
-        // The renderer reads ArrangedRect; setting it via the test by
-        // running Measure + Arrange against an explicit size produces
-        // realistic numbers.
         border.Measure(new Size(200, 80));
         border.Arrange(new Rect(0, 0, 200, 80));
 
@@ -53,11 +52,47 @@ describe('SvgRenderer — initial paint', () => {
         const outers = surface.querySelectorAll('g.mural-visual');
         // Border + TextBlock = 2 outer groups.
         assert.equal(outers.length, 2);
-        // Each outer has exactly one `mural-own` child container.
+        // Both Visuals paint, so each outer has a mural-own child
+        // container. Layout-only Visuals (panels, presenters, etc.)
+        // are covered by the "lazy-attach own" test below.
         for (const g of outers)
         {
             assert.equal(g.querySelector(':scope > g.mural-own') !== null, true);
         }
+    });
+
+    test('layout-only Visuals (no own primitives) get no mural-own group', () => {
+        const { document, surface } = makeDom();
+        const renderer = new SvgRenderer(surface, { document });
+
+        // A bare Canvas paints nothing of its own — it's a pure layout
+        // panel. Border with Background paints a rect; TextBlock with
+        // Text paints text. Expectation: 3 outer groups, 2 mural-own
+        // (Border + TextBlock), zero on the Canvas.
+        const canvas = new Canvas();
+        const border = new Border();
+        border.Background = new SolidColorBrush(Color.FromHex('#4caf50'));
+        border.Width = 10; border.Height = 10;
+        Canvas.SetLeft(border, 0); Canvas.SetTop(border, 0);
+        canvas.AddChild(border);
+        const label = new TextBlock('hi');
+        Canvas.SetLeft(label, 0); Canvas.SetTop(label, 20);
+        canvas.AddChild(label);
+
+        canvas.Measure(new Size(200, 200));
+        canvas.Arrange(new Rect(0, 0, 200, 200));
+        renderer.Render(canvas, undefined, null, null);
+
+        const outers = surface.querySelectorAll('g.mural-visual');
+        assert.equal(outers.length, 3);
+        const owns = surface.querySelectorAll('g.mural-own');
+        // Border + TextBlock paint own primitives; Canvas does not.
+        assert.equal(owns.length, 2);
+
+        // The Canvas's outer specifically has NO own child container.
+        const canvasOuter = [...outers]
+            .find(g => (g as unknown as { [k: symbol]: Visual })[VISUAL_BACKREF] === canvas)!;
+        assert.equal(canvasOuter.querySelector(':scope > g.mural-own'), null);
     });
 
     test('stamps VISUAL_BACKREF on every outer <g> so hit-test can recover the Visual', () => {

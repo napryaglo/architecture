@@ -116,7 +116,7 @@ export class Storyboard
         // correctly.
         for (const c of this._children)
         {
-            c.baseValue   = c.target.get_property_value(c.propertyName);
+            c.baseValue   = c.target._get_property_value_by_name(c.propertyName);
             c.everWritten = false;
         }
         this._state = StoryboardState.Running;
@@ -141,7 +141,7 @@ export class Storyboard
         AnimationManager.Instance.Unregister(this);
         for (const c of this._children)
         {
-            if (c.everWritten) c.target.ClearAnimatedValue(c.propertyName);
+            if (c.everWritten) c.target._clear_animated_value_by_name(c.propertyName);
         }
         this._state = StoryboardState.Stopped;
         this._pausedElapsed = undefined;
@@ -222,13 +222,13 @@ export class Storyboard
                 {
                     if (c.everWritten)
                     {
-                        c.target.ClearAnimatedValue(c.propertyName);
+                        c.target._clear_animated_value_by_name(c.propertyName);
                         c.everWritten = false;
                     }
                     continue;
                 }
                 const finalValue = c.timeline.Evaluate(elapsed, c.baseValue);
-                c.target.SetAnimatedValue(c.propertyName, finalValue);
+                c.target._set_animated_value_by_name(c.propertyName, finalValue);
                 c.everWritten = true;
                 continue;
             }
@@ -236,7 +236,7 @@ export class Storyboard
             // and push to the animation slot.
             allFinished = false;
             const value = c.timeline.Evaluate(elapsed, c.baseValue);
-            c.target.SetAnimatedValue(c.propertyName, value);
+            c.target._set_animated_value_by_name(c.propertyName, value);
             c.everWritten = true;
         }
 

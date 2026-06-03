@@ -9,8 +9,8 @@ class TargetLeaf extends Visual
     static {
         Model.RegisterProperty(TargetLeaf, 'Brush', undefined, MetaData.None);
     }
-    public get Brush(): unknown { return this.get_property_value('Brush'); }
-    public set Brush(v: unknown) { this.set_property_value('Brush', v); }
+    public get Brush(): unknown { return this._get_property_value_by_name('Brush'); }
+    public set Brush(v: unknown) { this._set_property_value_by_name('Brush', v); }
     protected override MeasureOverride(_a: Size): Size { return Size.Zero; }
     protected override RenderOverride(_dc: DrawingContext): void { }
 }
@@ -214,7 +214,7 @@ describe('DynamicResource', () => {
         const leaf = new TargetLeaf();
         root.AddChild(leaf);
 
-        leaf.set_property_value('Brush', DynamicResource(leaf, 'Brush'));
+        leaf._set_property_value_by_name('Brush', DynamicResource(leaf, 'Brush'));
         assert.equal(leaf.Brush, 'gold');
     });
 
@@ -225,7 +225,7 @@ describe('DynamicResource', () => {
         const leaf = new TargetLeaf();
         root.AddChild(leaf);
 
-        leaf.set_property_value('Brush', DynamicResource(leaf, 'Brush'));
+        leaf._set_property_value_by_name('Brush', DynamicResource(leaf, 'Brush'));
         assert.equal(leaf.Brush, 'gold');
 
         root.Resources.Set('Brush', 'silver');
@@ -241,7 +241,7 @@ describe('DynamicResource', () => {
         const leaf = new TargetLeaf();
         root.AddChild(leaf);
 
-        leaf.set_property_value('Brush', DynamicResource(leaf, 'Brush'));
+        leaf._set_property_value_by_name('Brush', DynamicResource(leaf, 'Brush'));
         assert.equal(leaf.Brush, 'theme-blue');
 
         theme.Set('Brush', 'theme-red');
@@ -261,7 +261,7 @@ describe('DynamicResource', () => {
         const leaf = new TargetLeaf();
         root.AddChild(leaf);
 
-        leaf.set_property_value('Brush', DynamicResource(leaf, 'Brush'));
+        leaf._set_property_value_by_name('Brush', DynamicResource(leaf, 'Brush'));
         assert.equal(leaf.Brush, undefined);
 
         const theme = new ResourceDictionary();
@@ -277,8 +277,8 @@ describe('DynamicResource', () => {
         const leaf = new TargetLeaf();
         root.AddChild(leaf);
 
-        leaf.set_property_value('Brush', DynamicResource(leaf, 'Brush'));
-        leaf.set_property_value('Brush', 'manual');
+        leaf._set_property_value_by_name('Brush', DynamicResource(leaf, 'Brush'));
+        leaf._set_property_value_by_name('Brush', 'manual');
         assert.equal(leaf.Brush, 'manual');
 
         // After replacement, the old subscription is disposed —
@@ -297,7 +297,7 @@ describe('DynamicResource', () => {
         const leaf = new TargetLeaf();
         inner.AddChild(leaf);
 
-        leaf.set_property_value('Brush', DynamicResource(leaf, 'Brush'));
+        leaf._set_property_value_by_name('Brush', DynamicResource(leaf, 'Brush'));
         assert.equal(leaf.Brush, 'inner');
     });
 });

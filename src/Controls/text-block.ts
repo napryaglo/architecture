@@ -45,22 +45,20 @@ export enum TextWrapping
 // "TextElement.FontSize on a Window" pattern.
 export class TextBlock extends Visual
 {
-    static {
-        // Each of these changes the painted glyph stream, so both
-        // Measure (size changes with content / weight / size) AND
-        // Render (we must repaint to show the new pixels) are needed.
-        // The renderer's incremental update only re-emits primitives
-        // for render-dirty visuals — without the Render flag a bound
-        // Text update would re-layout but the on-screen text would
-        // stay stale until something else dirtied this visual.
-        Model.RegisterProperty(TextBlock, 'Text',       '',                  MetaData.Measure | MetaData.Render);
-        Model.RegisterProperty(TextBlock, 'FontFamily', DEFAULT_FONT_FAMILY, MetaData.Measure | MetaData.Render | MetaData.Inherits);
-        Model.RegisterProperty(TextBlock, 'FontSize',   14,                  MetaData.Measure | MetaData.Render | MetaData.Inherits);
-        Model.RegisterProperty(TextBlock, 'FontWeight', FontWeight.Normal,   MetaData.Measure | MetaData.Render | MetaData.Inherits);
-        Model.RegisterProperty(TextBlock, 'FontStyle',  FontStyle.Normal,    MetaData.Measure | MetaData.Render | MetaData.Inherits);
-        Model.RegisterProperty(TextBlock, 'Foreground',   undefined,           MetaData.Render  | MetaData.Inherits);
-        Model.RegisterProperty(TextBlock, 'TextWrapping', TextWrapping.NoWrap, MetaData.Measure | MetaData.Render);
-    }
+    // Each of these changes the painted glyph stream, so both Measure
+    // (size changes with content / weight / size) AND Render (we must
+    // repaint to show the new pixels) are needed. The renderer's
+    // incremental update only re-emits primitives for render-dirty
+    // visuals — without the Render flag a bound Text update would
+    // re-layout but the on-screen text would stay stale until something
+    // else dirtied this visual.
+    public static readonly TextKey         = Model.RegisterProperty<string>(    TextBlock, 'Text',       '',                  MetaData.Measure | MetaData.Render);
+    public static readonly FontFamilyKey   = Model.RegisterProperty<string>(    TextBlock, 'FontFamily', DEFAULT_FONT_FAMILY, MetaData.Measure | MetaData.Render | MetaData.Inherits);
+    public static readonly FontSizeKey     = Model.RegisterProperty<number>(    TextBlock, 'FontSize',   14,                  MetaData.Measure | MetaData.Render | MetaData.Inherits);
+    public static readonly FontWeightKey   = Model.RegisterProperty<FontWeight>(TextBlock, 'FontWeight', FontWeight.Normal,   MetaData.Measure | MetaData.Render | MetaData.Inherits);
+    public static readonly FontStyleKey    = Model.RegisterProperty<FontStyle>( TextBlock, 'FontStyle',  FontStyle.Normal,    MetaData.Measure | MetaData.Render | MetaData.Inherits);
+    public static readonly ForegroundKey   = Model.RegisterProperty<Brush | undefined>(TextBlock, 'Foreground',   undefined,           MetaData.Render  | MetaData.Inherits);
+    public static readonly TextWrappingKey = Model.RegisterProperty<TextWrapping>(TextBlock, 'TextWrapping', TextWrapping.NoWrap, MetaData.Measure | MetaData.Render);
 
     // Lines computed by MeasureOverride when TextWrapping = Wrap. Each
     // entry holds the substring and the measurer-reported metrics for
@@ -75,26 +73,26 @@ export class TextBlock extends Visual
         if (text !== undefined) this.Text = text;
     }
 
-    public get Text(): string { return this.get_property_value('Text'); }
-    public set Text(value: string) { this.set_property_value('Text', value); }
+    public get Text(): string { return this.get_property_value(TextBlock.TextKey); }
+    public set Text(value: string) { this.set_property_value(TextBlock.TextKey, value); }
 
-    public get FontFamily(): string { return this.get_property_value('FontFamily'); }
-    public set FontFamily(value: string) { this.set_property_value('FontFamily', value); }
+    public get FontFamily(): string { return this.get_property_value(TextBlock.FontFamilyKey); }
+    public set FontFamily(value: string) { this.set_property_value(TextBlock.FontFamilyKey, value); }
 
-    public get FontSize(): number { return this.get_property_value('FontSize'); }
-    public set FontSize(value: number) { this.set_property_value('FontSize', value); }
+    public get FontSize(): number { return this.get_property_value(TextBlock.FontSizeKey); }
+    public set FontSize(value: number) { this.set_property_value(TextBlock.FontSizeKey, value); }
 
-    public get FontWeight(): FontWeight { return this.get_property_value('FontWeight'); }
-    public set FontWeight(value: FontWeight) { this.set_property_value('FontWeight', value); }
+    public get FontWeight(): FontWeight { return this.get_property_value(TextBlock.FontWeightKey); }
+    public set FontWeight(value: FontWeight) { this.set_property_value(TextBlock.FontWeightKey, value); }
 
-    public get FontStyle(): FontStyle { return this.get_property_value('FontStyle'); }
-    public set FontStyle(value: FontStyle) { this.set_property_value('FontStyle', value); }
+    public get FontStyle(): FontStyle { return this.get_property_value(TextBlock.FontStyleKey); }
+    public set FontStyle(value: FontStyle) { this.set_property_value(TextBlock.FontStyleKey, value); }
 
-    public get Foreground(): Brush | undefined { return this.get_property_value('Foreground'); }
-    public set Foreground(value: Brush | undefined) { this.set_property_value('Foreground', value); }
+    public get Foreground(): Brush | undefined { return this.get_property_value(TextBlock.ForegroundKey); }
+    public set Foreground(value: Brush | undefined) { this.set_property_value(TextBlock.ForegroundKey, value); }
 
-    public get TextWrapping(): TextWrapping { return this.get_property_value('TextWrapping'); }
-    public set TextWrapping(value: TextWrapping) { this.set_property_value('TextWrapping', value); }
+    public get TextWrapping(): TextWrapping { return this.get_property_value(TextBlock.TextWrappingKey); }
+    public set TextWrapping(value: TextWrapping) { this.set_property_value(TextBlock.TextWrappingKey, value); }
 
     protected override MeasureOverride(availableSize: Size): Size
     {

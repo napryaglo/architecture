@@ -89,12 +89,11 @@ export class PathFigure
 // renderer composes it with any DC.PushTransform frames above it.
 export abstract class Geometry extends Model
 {
-    static {
-        Model.RegisterProperty(Geometry, 'Transform', Transform.Identity, MetaData.Render);
-    }
+    public static readonly TransformKey = Model.RegisterProperty<Transform>(
+        Geometry, 'Transform', Transform.Identity, MetaData.Render);
 
-    public get Transform(): Transform { return this.get_property_value('Transform'); }
-    public set Transform(value: Transform) { this.set_property_value('Transform', value); }
+    public get Transform(): Transform { return this.get_property_value(Geometry.TransformKey); }
+    public set Transform(value: Transform) { this.set_property_value(Geometry.TransformKey, value); }
 }
 
 // Axis-aligned rectangle, optionally with rounded corners. When RadiusX
@@ -102,11 +101,9 @@ export abstract class Geometry extends Model
 // rounded corners are drawn (SVG rx/ry attributes, Canvas roundRect).
 export class RectangleGeometry extends Geometry
 {
-    static {
-        Model.RegisterProperty(RectangleGeometry, 'Rect',    Rect.Zero, MetaData.Render);
-        Model.RegisterProperty(RectangleGeometry, 'RadiusX', 0,         MetaData.Render);
-        Model.RegisterProperty(RectangleGeometry, 'RadiusY', 0,         MetaData.Render);
-    }
+    public static readonly RectKey    = Model.RegisterProperty<Rect>(  RectangleGeometry, 'Rect',    Rect.Zero, MetaData.Render);
+    public static readonly RadiusXKey = Model.RegisterProperty<number>(RectangleGeometry, 'RadiusX', 0,         MetaData.Render);
+    public static readonly RadiusYKey = Model.RegisterProperty<number>(RectangleGeometry, 'RadiusY', 0,         MetaData.Render);
 
     constructor(rect?: Rect, radiusX?: number, radiusY?: number)
     {
@@ -116,25 +113,23 @@ export class RectangleGeometry extends Geometry
         if (radiusY !== undefined) this.RadiusY = radiusY;
     }
 
-    public get Rect(): Rect { return this.get_property_value('Rect'); }
-    public set Rect(value: Rect) { this.set_property_value('Rect', value); }
+    public get Rect(): Rect { return this.get_property_value(RectangleGeometry.RectKey); }
+    public set Rect(value: Rect) { this.set_property_value(RectangleGeometry.RectKey, value); }
 
-    public get RadiusX(): number { return this.get_property_value('RadiusX'); }
-    public set RadiusX(value: number) { this.set_property_value('RadiusX', value); }
+    public get RadiusX(): number { return this.get_property_value(RectangleGeometry.RadiusXKey); }
+    public set RadiusX(value: number) { this.set_property_value(RectangleGeometry.RadiusXKey, value); }
 
-    public get RadiusY(): number { return this.get_property_value('RadiusY'); }
-    public set RadiusY(value: number) { this.set_property_value('RadiusY', value); }
+    public get RadiusY(): number { return this.get_property_value(RectangleGeometry.RadiusYKey); }
+    public set RadiusY(value: number) { this.set_property_value(RectangleGeometry.RadiusYKey, value); }
 }
 
 // Ellipse centered at Center with the given X/Y radii. Renderer emits
 // <ellipse> for SVG, ctx.ellipse for Canvas. Use equal radii for a circle.
 export class EllipseGeometry extends Geometry
 {
-    static {
-        Model.RegisterProperty(EllipseGeometry, 'Center',  Point.Zero, MetaData.Render);
-        Model.RegisterProperty(EllipseGeometry, 'RadiusX', 0,          MetaData.Render);
-        Model.RegisterProperty(EllipseGeometry, 'RadiusY', 0,          MetaData.Render);
-    }
+    public static readonly CenterKey  = Model.RegisterProperty<Point>( EllipseGeometry, 'Center',  Point.Zero, MetaData.Render);
+    public static readonly RadiusXKey = Model.RegisterProperty<number>(EllipseGeometry, 'RadiusX', 0,          MetaData.Render);
+    public static readonly RadiusYKey = Model.RegisterProperty<number>(EllipseGeometry, 'RadiusY', 0,          MetaData.Render);
 
     constructor(center?: Point, radiusX?: number, radiusY?: number)
     {
@@ -144,24 +139,22 @@ export class EllipseGeometry extends Geometry
         if (radiusY !== undefined) this.RadiusY = radiusY;
     }
 
-    public get Center(): Point { return this.get_property_value('Center'); }
-    public set Center(value: Point) { this.set_property_value('Center', value); }
+    public get Center(): Point { return this.get_property_value(EllipseGeometry.CenterKey); }
+    public set Center(value: Point) { this.set_property_value(EllipseGeometry.CenterKey, value); }
 
-    public get RadiusX(): number { return this.get_property_value('RadiusX'); }
-    public set RadiusX(value: number) { this.set_property_value('RadiusX', value); }
+    public get RadiusX(): number { return this.get_property_value(EllipseGeometry.RadiusXKey); }
+    public set RadiusX(value: number) { this.set_property_value(EllipseGeometry.RadiusXKey, value); }
 
-    public get RadiusY(): number { return this.get_property_value('RadiusY'); }
-    public set RadiusY(value: number) { this.set_property_value('RadiusY', value); }
+    public get RadiusY(): number { return this.get_property_value(EllipseGeometry.RadiusYKey); }
+    public set RadiusY(value: number) { this.set_property_value(EllipseGeometry.RadiusYKey, value); }
 }
 
 // Straight line segment from StartPoint to EndPoint. No fill — only the
 // pen contributes. Renderer emits <line>.
 export class LineGeometry extends Geometry
 {
-    static {
-        Model.RegisterProperty(LineGeometry, 'StartPoint', Point.Zero, MetaData.Render);
-        Model.RegisterProperty(LineGeometry, 'EndPoint',   Point.Zero, MetaData.Render);
-    }
+    public static readonly StartPointKey = Model.RegisterProperty<Point>(LineGeometry, 'StartPoint', Point.Zero, MetaData.Render);
+    public static readonly EndPointKey   = Model.RegisterProperty<Point>(LineGeometry, 'EndPoint',   Point.Zero, MetaData.Render);
 
     constructor(startPoint?: Point, endPoint?: Point)
     {
@@ -170,11 +163,11 @@ export class LineGeometry extends Geometry
         if (endPoint !== undefined)   this.EndPoint = endPoint;
     }
 
-    public get StartPoint(): Point { return this.get_property_value('StartPoint'); }
-    public set StartPoint(value: Point) { this.set_property_value('StartPoint', value); }
+    public get StartPoint(): Point { return this.get_property_value(LineGeometry.StartPointKey); }
+    public set StartPoint(value: Point) { this.set_property_value(LineGeometry.StartPointKey, value); }
 
-    public get EndPoint(): Point { return this.get_property_value('EndPoint'); }
-    public set EndPoint(value: Point) { this.set_property_value('EndPoint', value); }
+    public get EndPoint(): Point { return this.get_property_value(LineGeometry.EndPointKey); }
+    public set EndPoint(value: Point) { this.set_property_value(LineGeometry.EndPointKey, value); }
 }
 
 // Arbitrary geometry built from one or more PathFigures. Each figure is
@@ -186,10 +179,8 @@ export class LineGeometry extends Geometry
 // concatenating SVG path commands.
 export class PathGeometry extends Geometry
 {
-    static {
-        Model.RegisterProperty(PathGeometry, 'Figures',  [] as readonly PathFigure[], MetaData.Render);
-        Model.RegisterProperty(PathGeometry, 'FillRule', FillRule.EvenOdd,            MetaData.Render);
-    }
+    public static readonly FiguresKey  = Model.RegisterProperty<readonly PathFigure[]>(PathGeometry, 'Figures',  [], MetaData.Render);
+    public static readonly FillRuleKey = Model.RegisterProperty<FillRule>(             PathGeometry, 'FillRule', FillRule.EvenOdd, MetaData.Render);
 
     constructor(figures?: readonly PathFigure[])
     {
@@ -197,11 +188,11 @@ export class PathGeometry extends Geometry
         if (figures !== undefined) this.Figures = figures;
     }
 
-    public get Figures(): readonly PathFigure[] { return this.get_property_value('Figures'); }
-    public set Figures(value: readonly PathFigure[]) { this.set_property_value('Figures', value); }
+    public get Figures(): readonly PathFigure[] { return this.get_property_value(PathGeometry.FiguresKey); }
+    public set Figures(value: readonly PathFigure[]) { this.set_property_value(PathGeometry.FiguresKey, value); }
 
-    public get FillRule(): FillRule { return this.get_property_value('FillRule'); }
-    public set FillRule(value: FillRule) { this.set_property_value('FillRule', value); }
+    public get FillRule(): FillRule { return this.get_property_value(PathGeometry.FillRuleKey); }
+    public set FillRule(value: FillRule) { this.set_property_value(PathGeometry.FillRuleKey, value); }
 }
 
 // Composite geometry — multiple child geometries combined under a
@@ -215,10 +206,8 @@ export class PathGeometry extends Geometry
 // model layer.
 export class GeometryGroup extends Geometry
 {
-    static {
-        Model.RegisterProperty(GeometryGroup, 'Children', [] as readonly Geometry[], MetaData.Render);
-        Model.RegisterProperty(GeometryGroup, 'FillRule', FillRule.EvenOdd,          MetaData.Render);
-    }
+    public static readonly ChildrenKey = Model.RegisterProperty<readonly Geometry[]>(GeometryGroup, 'Children', [], MetaData.Render);
+    public static readonly FillRuleKey = Model.RegisterProperty<FillRule>(           GeometryGroup, 'FillRule', FillRule.EvenOdd, MetaData.Render);
 
     constructor(children?: readonly Geometry[])
     {
@@ -226,9 +215,9 @@ export class GeometryGroup extends Geometry
         if (children !== undefined) this.Children = children;
     }
 
-    public get Children(): readonly Geometry[] { return this.get_property_value('Children'); }
-    public set Children(value: readonly Geometry[]) { this.set_property_value('Children', value); }
+    public get Children(): readonly Geometry[] { return this.get_property_value(GeometryGroup.ChildrenKey); }
+    public set Children(value: readonly Geometry[]) { this.set_property_value(GeometryGroup.ChildrenKey, value); }
 
-    public get FillRule(): FillRule { return this.get_property_value('FillRule'); }
-    public set FillRule(value: FillRule) { this.set_property_value('FillRule', value); }
+    public get FillRule(): FillRule { return this.get_property_value(GeometryGroup.FillRuleKey); }
+    public set FillRule(value: FillRule) { this.set_property_value(GeometryGroup.FillRuleKey, value); }
 }

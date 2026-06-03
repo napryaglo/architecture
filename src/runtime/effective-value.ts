@@ -24,7 +24,7 @@ export type InternalPropertyChangeCallback = (
 ) => void;
 
 // Where the effective value came from. Mirrors WPF's BaseValueSource.
-// Read via Model.GetValueSource(property).
+// Read via Model.GetValueSource(propertyKey).
 //
 // Priority order (highest to lowest):
 //   Coerced > Animated > Binding > Local > Trigger > Style > Inherited > Default

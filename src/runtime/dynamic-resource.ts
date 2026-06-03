@@ -13,15 +13,14 @@ import type { Visual } from './visual.js';
 // Not exported — DynamicResource owns the lifecycle.
 class ResourceWatcher extends Model
 {
-    static {
-        // MetaData.None — this Model isn't a Visual, so the
-        // Measure / Arrange / Render flags are inert; Value purely
-        // serves as the binding source's signal channel.
-        Model.RegisterProperty(ResourceWatcher, 'Value', undefined, MetaData.None);
-    }
+    // MetaData.None — this Model isn't a Visual, so the
+    // Measure / Arrange / Render flags are inert; Value purely
+    // serves as the binding source's signal channel.
+    public static readonly ValueKey = Model.RegisterProperty<unknown>(
+        ResourceWatcher, 'Value', undefined, MetaData.None);
 
-    public get Value(): unknown { return this.get_property_value('Value'); }
-    public set Value(v: unknown) { this.set_property_value('Value', v); }
+    public get Value(): unknown { return this.get_property_value(ResourceWatcher.ValueKey); }
+    public set Value(v: unknown) { this.set_property_value(ResourceWatcher.ValueKey, v); }
 }
 
 // Binding subclass for resource references. The binding source is an
@@ -103,7 +102,7 @@ class DynamicResourceBinding extends Binding
 // automatically.
 //
 // Usage:
-//   border.set_property_value('Background', DynamicResource(border, 'AccentBrush'));
+//   border.set_property_value(Border.BackgroundKey, DynamicResource(border, 'AccentBrush'));
 //
 // Behaviorally equivalent to a Binding source, so it composes with
 // the EVD's value-source priority (Binding sits above LocalValue and

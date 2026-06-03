@@ -47,32 +47,36 @@ const SCROLLBAR_GUTTER = 10;
 // system yet).
 export class ScrollViewer extends Visual
 {
-    static {
-        Model.RegisterProperty(ScrollViewer, 'Content',          undefined, MetaData.Measure);
-        // Offsets are Measure | Arrange: MeasureOverride uses them
-        // to drive the IScrollInfo provider's viewport (delegate
-        // mode), so a re-measure must run when they change.
-        // ArrangeOverride also depends on them (clip-and-translate
-        // mode's content translation), so flag both.
-        Model.RegisterProperty(ScrollViewer, 'HorizontalOffset', 0,         MetaData.Measure | MetaData.Arrange);
-        Model.RegisterProperty(ScrollViewer, 'VerticalOffset',   0,         MetaData.Measure | MetaData.Arrange);
-        // Per-axis scroll opt-out. When false, the matching axis is
-        // measured with the bounded available size instead of +Infinity,
-        // so a soft-wrapping child (TextBox in Wrap mode) sees a real
-        // width budget to wrap against. The matching scrollbar also
-        // stays hidden on a disabled axis even when extent > viewport
-        // (the bar would dangle uselessly). Defaults are true so the
-        // existing TreeView / ListBox templates behave as before.
-        Model.RegisterProperty(ScrollViewer, 'HorizontalScrollEnabled', true, MetaData.Measure | MetaData.Arrange);
-        Model.RegisterProperty(ScrollViewer, 'VerticalScrollEnabled',   true, MetaData.Measure | MetaData.Arrange);
-        // Forwarded to the inner ScrollBars' IsAutoHide DPs in the
-        // constructor + via the listener below. Lets a consumer set
-        // ScrollViewer.IsAutoHideScrollBars=true and get the macOS /
-        // Slack-style overlay behaviour without reaching for the bars.
-        // Default false to match the discoverable always-visible bar
-        // shape that TreeView / ListBox lean on.
-        Model.RegisterProperty(ScrollViewer, 'IsAutoHideScrollBars', false, MetaData.None);
-    }
+    public static readonly ContentKey = Model.RegisterProperty<Visual | undefined>(
+        ScrollViewer, 'Content', undefined, MetaData.Measure);
+    // Offsets are Measure | Arrange: MeasureOverride uses them to drive
+    // the IScrollInfo provider's viewport (delegate mode), so a
+    // re-measure must run when they change. ArrangeOverride also depends
+    // on them (clip-and-translate mode's content translation), so flag
+    // both.
+    public static readonly HorizontalOffsetKey = Model.RegisterProperty<number>(
+        ScrollViewer, 'HorizontalOffset', 0, MetaData.Measure | MetaData.Arrange);
+    public static readonly VerticalOffsetKey   = Model.RegisterProperty<number>(
+        ScrollViewer, 'VerticalOffset',   0, MetaData.Measure | MetaData.Arrange);
+    // Per-axis scroll opt-out. When false, the matching axis is measured
+    // with the bounded available size instead of +Infinity, so a soft-
+    // wrapping child (TextBox in Wrap mode) sees a real width budget to
+    // wrap against. The matching scrollbar also stays hidden on a
+    // disabled axis even when extent > viewport (the bar would dangle
+    // uselessly). Defaults are true so the existing TreeView / ListBox
+    // templates behave as before.
+    public static readonly HorizontalScrollEnabledKey = Model.RegisterProperty<boolean>(
+        ScrollViewer, 'HorizontalScrollEnabled', true, MetaData.Measure | MetaData.Arrange);
+    public static readonly VerticalScrollEnabledKey   = Model.RegisterProperty<boolean>(
+        ScrollViewer, 'VerticalScrollEnabled',   true, MetaData.Measure | MetaData.Arrange);
+    // Forwarded to the inner ScrollBars' IsAutoHide DPs in the
+    // constructor + via the listener below. Lets a consumer set
+    // ScrollViewer.IsAutoHideScrollBars=true and get the macOS /
+    // Slack-style overlay behaviour without reaching for the bars.
+    // Default false to match the discoverable always-visible bar shape
+    // that TreeView / ListBox lean on.
+    public static readonly IsAutoHideScrollBarsKey = Model.RegisterProperty<boolean>(
+        ScrollViewer, 'IsAutoHideScrollBars', false, MetaData.None);
 
     // Set by MeasureOverride; read by the public getters and by
     // ArrangeOverride. Initialized to zero so a pre-measure read
@@ -129,33 +133,33 @@ export class ScrollViewer extends Visual
             this._hScrollBar.IsAutoHide = v;
         };
         applyAutoHide();
-        this.AddPropertyChangedListener('IsAutoHideScrollBars', applyAutoHide);
+        this.AddPropertyChangedListener(ScrollViewer.IsAutoHideScrollBarsKey, applyAutoHide);
     }
 
-    public get IsAutoHideScrollBars(): boolean { return this.get_property_value('IsAutoHideScrollBars'); }
-    public set IsAutoHideScrollBars(v: boolean) { this.set_property_value('IsAutoHideScrollBars', v); }
+    public get IsAutoHideScrollBars(): boolean { return this.get_property_value(ScrollViewer.IsAutoHideScrollBarsKey); }
+    public set IsAutoHideScrollBars(v: boolean) { this.set_property_value(ScrollViewer.IsAutoHideScrollBarsKey, v); }
 
-    public get Content(): Visual | undefined { return this.get_property_value('Content'); }
+    public get Content(): Visual | undefined { return this.get_property_value(ScrollViewer.ContentKey); }
     public set Content(value: Visual | undefined)
     {
         const old = this.Content;
         if (old === value) return;
         if (old !== undefined) this.Detach(old);
-        this.set_property_value('Content', value);
+        this.set_property_value(ScrollViewer.ContentKey, value);
         if (value !== undefined) this.Attach(value);
     }
 
-    public get HorizontalOffset(): number { return this.get_property_value('HorizontalOffset'); }
-    public set HorizontalOffset(value: number) { this.set_property_value('HorizontalOffset', value); }
+    public get HorizontalOffset(): number { return this.get_property_value(ScrollViewer.HorizontalOffsetKey); }
+    public set HorizontalOffset(value: number) { this.set_property_value(ScrollViewer.HorizontalOffsetKey, value); }
 
-    public get VerticalOffset(): number { return this.get_property_value('VerticalOffset'); }
-    public set VerticalOffset(value: number) { this.set_property_value('VerticalOffset', value); }
+    public get VerticalOffset(): number { return this.get_property_value(ScrollViewer.VerticalOffsetKey); }
+    public set VerticalOffset(value: number) { this.set_property_value(ScrollViewer.VerticalOffsetKey, value); }
 
-    public get HorizontalScrollEnabled(): boolean { return this.get_property_value('HorizontalScrollEnabled'); }
-    public set HorizontalScrollEnabled(v: boolean) { this.set_property_value('HorizontalScrollEnabled', v); }
+    public get HorizontalScrollEnabled(): boolean { return this.get_property_value(ScrollViewer.HorizontalScrollEnabledKey); }
+    public set HorizontalScrollEnabled(v: boolean) { this.set_property_value(ScrollViewer.HorizontalScrollEnabledKey, v); }
 
-    public get VerticalScrollEnabled(): boolean { return this.get_property_value('VerticalScrollEnabled'); }
-    public set VerticalScrollEnabled(v: boolean) { this.set_property_value('VerticalScrollEnabled', v); }
+    public get VerticalScrollEnabled(): boolean { return this.get_property_value(ScrollViewer.VerticalScrollEnabledKey); }
+    public set VerticalScrollEnabled(v: boolean) { this.set_property_value(ScrollViewer.VerticalScrollEnabledKey, v); }
 
     public get ExtentWidth():    number { return this._extentWidth; }
     public get ExtentHeight():   number { return this._extentHeight; }

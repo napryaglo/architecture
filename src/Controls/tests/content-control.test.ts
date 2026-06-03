@@ -35,8 +35,8 @@ class Leaf extends Visual
 
     constructor(private box: Size = new Size(10, 10)) { super(); }
 
-    public get Tint(): string { return this.get_property_value('Tint'); }
-    public set Tint(value: string) { this.set_property_value('Tint', value); }
+    public get Tint(): string { return this._get_property_value_by_name('Tint'); }
+    public set Tint(value: string) { this._set_property_value_by_name('Tint', value); }
 
     protected override MeasureOverride(_a: Size): Size { return this.box; }
     protected override RenderOverride(_dc: DrawingContext): void { }
@@ -105,7 +105,7 @@ describe('ContentControl + ControlTemplate', () => {
         const leaf = new Leaf();
         cc.Content = leaf;
 
-        cc.set_property_value(Leaf, 'Tint', 'crimson');
+        cc._set_property_value_by_name(Leaf, 'Tint', 'crimson');
         assert.equal(leaf.Tint, 'crimson');
     });
 
@@ -200,7 +200,7 @@ describe('ContentControl + ControlTemplate', () => {
         // the ContentControl where Tint is set.
         const template = new ControlTemplate(_tp => new Leaf());
         const cc = new ContentControl();
-        cc.set_property_value(Leaf, 'Tint', 'royalblue');
+        cc._set_property_value_by_name(Leaf, 'Tint', 'royalblue');
         cc.Template = template;
 
         const inner = cc.visualChildren[0] as Leaf;
@@ -217,7 +217,7 @@ describe('ContentControl + ControlTemplate', () => {
         const inner = cc.visualChildren[0] as Leaf;
         assert.equal(inner.Tint, 'default');  // no value set yet
 
-        cc.set_property_value(Leaf, 'Tint', 'crimson');
+        cc._set_property_value_by_name(Leaf, 'Tint', 'crimson');
         assert.equal(inner.Tint, 'crimson');
     });
 
@@ -233,7 +233,7 @@ describe('ContentControl + ControlTemplate', () => {
         });
         const cc = new ContentControl();
         cc.Template = template;
-        cc.set_property_value(Leaf, 'Tint', 'amber');
+        cc._set_property_value_by_name(Leaf, 'Tint', 'amber');
 
         const border = cc.visualChildren[0] as Border;
         const nestedLeaf = border.child as Leaf;
@@ -355,7 +355,7 @@ describe('ContentControl + ControlTemplate', () => {
 
         const template = new ControlTemplate(tp => {
             const b = new Border();
-            b.set_property_value('Background', TemplateBinding(tp, 'Background'));
+            b._set_property_value_by_name('Background', TemplateBinding(tp, 'Background'));
             b.BorderThickness = new Thickness(1);
             return b;
         });
@@ -364,14 +364,14 @@ describe('ContentControl + ControlTemplate', () => {
         cc.Template = template;
 
         const blue = new SolidColorBrush(Color.Blue);
-        cc.set_property_value('Background', blue);
+        cc._set_property_value_by_name('Background', blue);
 
         const border = cc.visualChildren[0] as Border;
         assert.equal(border.Background, blue);
 
         // Changing the source pushes the new value to the bound target.
         const red = new SolidColorBrush(Color.Red);
-        cc.set_property_value('Background', red);
+        cc._set_property_value_by_name('Background', red);
         assert.equal(border.Background, red);
     });
 
@@ -442,8 +442,8 @@ describe('ContentControl + ControlTemplate', () => {
         // Has() calls would find.
         const a = new Leaf();
         const b = new Leaf();
-        a.AddPropertyChangedListener('Tint', () => {});  // keep `a` referenced
-        b.AddPropertyChangedListener('Tint', () => {});
+        a._add_property_changed_listener_by_name('Tint', () => {});  // keep `a` referenced
+        b._add_property_changed_listener_by_name('Tint', () => {});
         // TryFindResource walks past `a` (which has no logical parent),
         // returns undefined. No allocation should have happened.
         assert.equal(a.TryFindResource('K'), undefined);

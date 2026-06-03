@@ -81,6 +81,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['ItemContainerGenerator',  '@visualisation-sub/mural/Controls'],
     ['ItemsPresenter',          '@visualisation-sub/mural/Controls'],
     ['HierarchicalDataTemplate','@visualisation-sub/mural/Controls'],
+    ['ItemsPanelTemplate',      '@visualisation-sub/mural/Controls'],
     ['CollectionView',          '@visualisation-sub/mural/Controls'],
     ['SortDescription',         '@visualisation-sub/mural/Controls'],
     ['GroupDescription',        '@visualisation-sub/mural/Controls'],

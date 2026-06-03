@@ -28,12 +28,12 @@ class AnimTest extends Visual
         Model.RegisterProperty(AnimTest, 'Color',     Color.Black,      MetaData.None);
         Model.RegisterProperty(AnimTest, 'Thickness', new Thickness(0), MetaData.None);
     }
-    public get Number(): number { return this.get_property_value('Number'); }
-    public set Number(v: number) { this.set_property_value('Number', v); }
-    public get Color(): Color { return this.get_property_value('Color'); }
-    public set Color(v: Color) { this.set_property_value('Color', v); }
-    public get Thickness(): Thickness { return this.get_property_value('Thickness'); }
-    public set Thickness(v: Thickness) { this.set_property_value('Thickness', v); }
+    public get Number(): number { return this._get_property_value_by_name('Number'); }
+    public set Number(v: number) { this._set_property_value_by_name('Number', v); }
+    public get Color(): Color { return this._get_property_value_by_name('Color'); }
+    public set Color(v: Color) { this._set_property_value_by_name('Color', v); }
+    public get Thickness(): Thickness { return this._get_property_value_by_name('Thickness'); }
+    public set Thickness(v: Thickness) { this._set_property_value_by_name('Thickness', v); }
 }
 
 function freshClock(): ManualClock

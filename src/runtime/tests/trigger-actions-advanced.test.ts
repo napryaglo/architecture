@@ -35,10 +35,10 @@ class TriggerTest extends Visual
         Model.RegisterProperty(TriggerTest, 'Active', false, MetaData.None);
         Model.RegisterProperty(TriggerTest, 'Width',  0,     MetaData.Arrange);
     }
-    public get Active(): boolean { return this.get_property_value('Active'); }
-    public set Active(v: boolean) { this.set_property_value('Active', v); }
-    public get Width(): number { return this.get_property_value('Width'); }
-    public set Width(v: number) { this.set_property_value('Width', v); }
+    public get Active(): boolean { return this._get_property_value_by_name('Active'); }
+    public set Active(v: boolean) { this._set_property_value_by_name('Active', v); }
+    public get Width(): number { return this._get_property_value_by_name('Width'); }
+    public set Width(v: number) { this._set_property_value_by_name('Width', v); }
 }
 
 // ── PropertyTrigger enter / exit actions ──────────────────────────────

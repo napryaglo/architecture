@@ -108,7 +108,7 @@ describe('compile — text-mode bodies', () => {
                 TextBlock x:root{Hello mural}
             } }
         `);
-        assert.match(js, /\.set_property_value\("Text", "Hello mural"\);/);
+        assert.match(js, /\._set_property_value_by_name\("Text", "Hello mural"\);/);
     });
 
     test('Non-string-bodied control still parses {…} structurally', () => {
@@ -125,7 +125,7 @@ describe('compile — text-mode bodies', () => {
                 TextBlock x:root{Hello \\{brace\\} world}
             } }
         `);
-        assert.match(js, /set_property_value\("Text", "Hello \{brace\} world"\)/);
+        assert.match(js, /_set_property_value_by_name\("Text", "Hello \{brace\} world"\)/);
     });
 });
 
@@ -189,11 +189,11 @@ describe('compile — macros', () => {
         // the emit.
         assert.match(
             js,
-            /set_property_value\("Background", new SolidColorBrush\(Color\.FromHex\('#4caf50'\)\)\);/,
+            /_set_property_value_by_name\("Background", new SolidColorBrush\(Color\.FromHex\('#4caf50'\)\)\);/,
         );
         assert.match(
             js,
-            /set_property_value\("Padding", new Thickness\(8\)\);/,
+            /_set_property_value_by_name\("Padding", new Thickness\(8\)\);/,
         );
         // The macro itself isn't a control — `panel` should not appear
         // in the imports nor `new panel()` anywhere.
@@ -216,9 +216,9 @@ describe('compile — macros', () => {
                 }
             } }
         `);
-        assert.match(js, /set_property_value\("Background", new SolidColorBrush\(Color\.FromHex\('#0000ff'\)\)/);
-        assert.match(js, /set_property_value\("Padding", new Thickness\(4\)\)/);
-        assert.match(js, /set_property_value\("Padding", new Thickness\(2\)\)/);
+        assert.match(js, /_set_property_value_by_name\("Background", new SolidColorBrush\(Color\.FromHex\('#0000ff'\)\)/);
+        assert.match(js, /_set_property_value_by_name\("Padding", new Thickness\(4\)\)/);
+        assert.match(js, /_set_property_value_by_name\("Padding", new Thickness\(2\)\)/);
     });
 
     test('default parameter values fill missing args', () => {
@@ -230,7 +230,7 @@ describe('compile — macros', () => {
         `);
         assert.match(
             js,
-            /set_property_value\("Background", new SolidColorBrush\(Color\.FromHex\('#ffffff'\)\)\);/,
+            /_set_property_value_by_name\("Background", new SolidColorBrush\(Color\.FromHex\('#ffffff'\)\)\);/,
         );
     });
 
@@ -346,8 +346,8 @@ describe('instantiate — deferreds end-to-end', () => {
         // Set DataContext on an ancestor — inheritance flows down.
         class Person extends Model {
             static { Model.RegisterProperty(Person, 'Name', '', MetaData.None); }
-            public get Name(): string { return this.get_property_value('Name') as string; }
-            public set Name(v: string) { this.set_property_value('Name', v); }
+            public get Name(): string { return this._get_property_value_by_name('Name') as string; }
+            public set Name(v: string) { this._set_property_value_by_name('Name', v); }
         }
         const p = new Person(); p.Name = 'Eugene';
         border.DataContext = p;

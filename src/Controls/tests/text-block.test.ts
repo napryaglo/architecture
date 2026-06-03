@@ -132,16 +132,16 @@ describe('TextBlock inheritance — ancestor sets a font property, descendant pi
         // Set FontSize through cross-class explicit owner — outer is a
         // Border, not a TextBlock, but the inheritance machinery cascades
         // any MetaData.Inherits property through composite-key lookup.
-        outer.set_property_value(TextBlock, 'FontSize', 24);
+        outer._set_property_value_by_name(TextBlock, 'FontSize', 24);
 
         assert.equal(inner.FontSize, 24);
-        assert.equal(inner.GetValueSource('FontSize'), PropertyValueSource.InheritedValue);
+        assert.equal(inner._get_value_source_by_name('FontSize'), PropertyValueSource.InheritedValue);
     });
 
     test('a local override on the TextBlock shadows the inherited value', () => {
         const inner = new TextBlock('Hi');
         const outer = new Border(inner);
-        outer.set_property_value(TextBlock, 'FontSize', 24);
+        outer._set_property_value_by_name(TextBlock, 'FontSize', 24);
         inner.FontSize = 11;
         assert.equal(inner.FontSize, 11);
     });

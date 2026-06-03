@@ -26,12 +26,32 @@ class Leaf extends Visual
         Model.RegisterProperty(Leaf, 'Tag', 'plain', MetaData.None);
     }
     constructor(public readonly source: unknown) { super(); }
-    public get Tag(): string { return this.get_property_value('Tag'); }
+    public get Tag(): string { return this._get_property_value_by_name('Tag'); }
     protected override MeasureOverride(_a: Size): Size { return new Size(10, 10); }
     protected override RenderOverride(_dc: DrawingContext): void { }
 }
 
 class TestPanel extends Panel { }
+
+// Test subclass: the base ItemsControl wraps each item in a
+// ContentPresenter for WPF parity, but most tests in this file are
+// validating the original "template's Visual IS the container"
+// semantic (ItemContainerStyle targeting Leaf, AlternationIndex
+// stamped on Leaf, etc.). Skipping the wrap keeps the existing
+// assertions readable; the wrap behavior is exercised separately
+// where it's actually under test.
+class TestIC extends ItemsControl
+{
+    public override GetContainerForItemOverride(item: unknown): Visual
+    {
+        const tmpl = this.ItemTemplateSelector?.(item) ?? this.ItemTemplate;
+        if (tmpl === undefined)
+        {
+            throw new Error('test fixture: no template');
+        }
+        return tmpl.Apply(item);
+    }
+}
 
 function makeTemplate(): DataTemplate
 {
@@ -40,7 +60,7 @@ function makeTemplate(): DataTemplate
 
 function makeIC(items: readonly unknown[]): ItemsControl
 {
-    const ic = new ItemsControl();
+    const ic = new TestIC();
     ic.ItemTemplate = makeTemplate();
     ic.ItemsPanel = () => new TestPanel();
     ic.Items = items;
@@ -49,7 +69,7 @@ function makeIC(items: readonly unknown[]): ItemsControl
 
 describe('ItemsControl — ItemContainerStyle', () => {
     test('applies style to each generated container on initial load', () => {
-        const ic = new ItemsControl();
+        const ic = new TestIC();
         ic.ItemTemplate = makeTemplate();
         ic.ItemsPanel = () => new TestPanel();
         ic.ItemContainerStyle = new Style(Leaf, [new Setter(Leaf, 'Tag', 'styled')]);
@@ -81,7 +101,7 @@ describe('ItemsControl — ItemContainerStyle', () => {
 
     test('style applies to inserted containers too (incremental path)', () => {
         const obs = new ObservableCollection<string>(['a']);
-        const ic = new ItemsControl();
+        const ic = new TestIC();
         ic.ItemTemplate = makeTemplate();
         ic.ItemsPanel = () => new TestPanel();
         ic.ItemContainerStyle = new Style(Leaf, [new Setter(Leaf, 'Tag', 'styled')]);
@@ -102,7 +122,7 @@ describe('ItemsControl — AlternationCount / AlternationIndex', () => {
     });
 
     test('AlternationCount=2 stamps alternating 0,1,0,1,...', () => {
-        const ic = new ItemsControl();
+        const ic = new TestIC();
         ic.AlternationCount = 2;
         ic.ItemTemplate = makeTemplate();
         ic.ItemsPanel = () => new TestPanel();
@@ -116,7 +136,7 @@ describe('ItemsControl — AlternationCount / AlternationIndex', () => {
 
     test('inserting an item re-stamps subsequent containers', () => {
         const obs = new ObservableCollection<string>(['a', 'b', 'c']);
-        const ic = new ItemsControl();
+        const ic = new TestIC();
         ic.AlternationCount = 2;
         ic.ItemTemplate = makeTemplate();
         ic.ItemsPanel = () => new TestPanel();
@@ -131,7 +151,7 @@ describe('ItemsControl — AlternationCount / AlternationIndex', () => {
     });
 
     test('changing AlternationCount re-stamps every realized container', () => {
-        const ic = new ItemsControl();
+        const ic = new TestIC();
         ic.AlternationCount = 2;
         ic.ItemTemplate = makeTemplate();
         ic.ItemsPanel = () => new TestPanel();
@@ -148,7 +168,7 @@ describe('ItemsControl — AlternationCount / AlternationIndex', () => {
 
 describe('ItemsControl — HasItems', () => {
     test('starts false with no Items', () => {
-        const ic = new ItemsControl();
+        const ic = new TestIC();
         assert.equal(ic.HasItems, false);
     });
 
@@ -165,7 +185,7 @@ describe('ItemsControl — HasItems', () => {
 
     test('tracks ObservableCollection mutations', () => {
         const obs = new ObservableCollection<string>();
-        const ic = new ItemsControl();
+        const ic = new TestIC();
         ic.ItemTemplate = makeTemplate();
         ic.ItemsPanel = () => new TestPanel();
         ic.Items = obs;
@@ -194,7 +214,7 @@ describe('ItemsControl — ItemTemplateSelector', () => {
             return undefined;
         };
 
-        const ic = new ItemsControl();
+        const ic = new TestIC();
         ic.ItemTemplate = tplDefault;
         ic.ItemTemplateSelector = selector;
         ic.ItemsPanel = () => new TestPanel();
@@ -210,7 +230,7 @@ describe('ItemsControl — ItemTemplateSelector', () => {
     });
 
     test('changing the selector rebuilds containers', () => {
-        const ic = new ItemsControl();
+        const ic = new TestIC();
         ic.ItemTemplate = new DataTemplate(d => new Leaf(d));
         ic.ItemsPanel = () => new TestPanel();
         ic.Items = ['x', 'y'];
@@ -316,7 +336,7 @@ describe('ItemContainerGenerator — recycle pool', () => {
 
 describe('ItemsControl — ItemsSource', () => {
     test('assigning ItemsSource auto-wraps in a CollectionView; Items returns it', () => {
-        const ic = new ItemsControl();
+        const ic = new TestIC();
         ic.ItemTemplate = makeTemplate();
         ic.ItemsPanel = () => new TestPanel();
         ic.ItemsSource = ['a', 'b', 'c'];
@@ -327,7 +347,7 @@ describe('ItemsControl — ItemsSource', () => {
     });
 
     test('directly assigning Items while ItemsSource is set throws', () => {
-        const ic = new ItemsControl();
+        const ic = new TestIC();
         ic.ItemTemplate = makeTemplate();
         ic.ItemsPanel = () => new TestPanel();
         ic.ItemsSource = ['a'];
@@ -335,7 +355,7 @@ describe('ItemsControl — ItemsSource', () => {
     });
 
     test('clearing ItemsSource clears the projection', () => {
-        const ic = new ItemsControl();
+        const ic = new TestIC();
         ic.ItemTemplate = makeTemplate();
         ic.ItemsPanel = () => new TestPanel();
         ic.ItemsSource = ['a', 'b'];

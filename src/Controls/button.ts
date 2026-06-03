@@ -2,10 +2,10 @@ import {
     Application,
     MetaData,
     Model,
+    Visual,
     type ICommand,
     type PointerEventArgs,
     type PropertyDescriptor,
-    type Visual,
 } from '../runtime/index.js';
 import type { Border } from './border.js';
 import { ContentControl } from './content-control.js';
@@ -83,11 +83,12 @@ function defaultButtonTemplate(): ControlTemplate
 // drag onto + release".
 export class Button extends ContentControl
 {
+    public static readonly CommandKey          = Model.RegisterProperty<ICommand | undefined>(Button, 'Command',          undefined,         MetaData.None);
+    public static readonly CommandParameterKey = Model.RegisterProperty<unknown>(             Button, 'CommandParameter', undefined,         MetaData.None);
+    public static readonly ClickModeKey        = Model.RegisterProperty<ClickMode>(           Button, 'ClickMode',        ClickMode.Release, MetaData.None);
+
     static
     {
-        Model.RegisterProperty(Button, 'Command',          undefined,         MetaData.None);
-        Model.RegisterProperty(Button, 'CommandParameter', undefined,         MetaData.None);
-        Model.RegisterProperty(Button, 'ClickMode',        ClickMode.Release, MetaData.None);
         // Ensures the consolidated controls theme — which holds the
         // DefaultButton ControlTemplate — is registered with Application
         // exactly once. Resolution against DEFAULT_BUTTON_KEY then picks
@@ -142,7 +143,7 @@ export class Button extends ContentControl
     {
         // Cross-class inherited default — propagates down to any TextBlock
         // descendant of the Content via the standard inheritance walk.
-        this.set_property_value(TextBlock, 'Foreground', Theme.primaryInk);
+        this.set_property_value(TextBlock.ForegroundKey, Theme.primaryInk);
 
         const part = this.GetTemplateChild('PART_Border') as Border | undefined;
         if (part === undefined) return;
@@ -151,18 +152,18 @@ export class Button extends ContentControl
             else if (this.IsMouseOver) part.Background = Theme.primaryHover;
             else                       part.Background = Theme.primary;
         };
-        this.AddPropertyChangedListener('IsPressed',   refresh);
-        this.AddPropertyChangedListener('IsMouseOver', refresh);
+        this.AddPropertyChangedListener(Visual.IsPressedKey,   refresh);
+        this.AddPropertyChangedListener(Visual.IsMouseOverKey, refresh);
     }
 
-    public get Command(): ICommand | undefined { return this.get_property_value('Command'); }
-    public set Command(v: ICommand | undefined) { this.set_property_value('Command', v); }
+    public get Command(): ICommand | undefined { return this.get_property_value(Button.CommandKey); }
+    public set Command(v: ICommand | undefined) { this.set_property_value(Button.CommandKey, v); }
 
-    public get CommandParameter(): unknown { return this.get_property_value('CommandParameter'); }
-    public set CommandParameter(v: unknown) { this.set_property_value('CommandParameter', v); }
+    public get CommandParameter(): unknown { return this.get_property_value(Button.CommandParameterKey); }
+    public set CommandParameter(v: unknown) { this.set_property_value(Button.CommandParameterKey, v); }
 
-    public get ClickMode(): ClickMode { return this.get_property_value('ClickMode'); }
-    public set ClickMode(v: ClickMode) { this.set_property_value('ClickMode', v); }
+    public get ClickMode(): ClickMode { return this.get_property_value(Button.ClickModeKey); }
+    public set ClickMode(v: ClickMode) { this.set_property_value(Button.ClickModeKey, v); }
 
     // Register a handler invoked alongside Command on every click.
     // Returns the same handler so chaining patterns like
@@ -184,7 +185,7 @@ export class Button extends ContentControl
     protected override OnPointerDown(args: PointerEventArgs): void
     {
         this._pressOriginatedHere = true;
-        this.set_property_value('IsPressed', true);
+        this.set_property_value(Visual.IsPressedKey, true);
         if (this.ClickMode === ClickMode.Press)
         {
             this.fireClick(args);
@@ -201,7 +202,7 @@ export class Button extends ContentControl
             && this.IsMouseOver;
         // Clear IsPressed BEFORE the click so handlers reading
         // IsPressed inside their callback see the post-release state.
-        this.set_property_value('IsPressed', false);
+        this.set_property_value(Visual.IsPressedKey, false);
         this._pressOriginatedHere = false;
         if (fire) this.fireClick(args);
     }
@@ -217,7 +218,7 @@ export class Button extends ContentControl
         // press is still active restores the IsPressed visual cue.
         if (this._pressOriginatedHere)
         {
-            this.set_property_value('IsPressed', true);
+            this.set_property_value(Visual.IsPressedKey, true);
         }
     }
 
@@ -229,7 +230,7 @@ export class Button extends ContentControl
         // visual without re-routing through PointerDown.
         if (this._pressOriginatedHere)
         {
-            this.set_property_value('IsPressed', false);
+            this.set_property_value(Visual.IsPressedKey, false);
         }
     }
 

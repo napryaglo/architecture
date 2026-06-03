@@ -18,32 +18,30 @@ import { Brush, LineGeometry, Pen } from '../visual-engine/index.js';
 // hit area tight to the line rather than blanket-covering the canvas.
 export class Line extends Visual
 {
-    static {
-        Model.RegisterProperty(Line, 'X1',              0,         MetaData.Measure | MetaData.Render);
-        Model.RegisterProperty(Line, 'Y1',              0,         MetaData.Measure | MetaData.Render);
-        Model.RegisterProperty(Line, 'X2',              0,         MetaData.Measure | MetaData.Render);
-        Model.RegisterProperty(Line, 'Y2',              0,         MetaData.Measure | MetaData.Render);
-        Model.RegisterProperty(Line, 'Stroke',          undefined, MetaData.Render);
-        Model.RegisterProperty(Line, 'StrokeThickness', 1,         MetaData.Render);
-    }
+    public static readonly X1Key              = Model.RegisterProperty<number>(           Line, 'X1',              0,         MetaData.Measure | MetaData.Render);
+    public static readonly Y1Key              = Model.RegisterProperty<number>(           Line, 'Y1',              0,         MetaData.Measure | MetaData.Render);
+    public static readonly X2Key              = Model.RegisterProperty<number>(           Line, 'X2',              0,         MetaData.Measure | MetaData.Render);
+    public static readonly Y2Key              = Model.RegisterProperty<number>(           Line, 'Y2',              0,         MetaData.Measure | MetaData.Render);
+    public static readonly StrokeKey          = Model.RegisterProperty<Brush | undefined>(Line, 'Stroke',          undefined, MetaData.Render);
+    public static readonly StrokeThicknessKey = Model.RegisterProperty<number>(           Line, 'StrokeThickness', 1,         MetaData.Render);
 
-    public get X1(): number { return this.get_property_value('X1'); }
-    public set X1(value: number) { this.set_property_value('X1', value); }
+    public get X1(): number { return this.get_property_value(Line.X1Key); }
+    public set X1(value: number) { this.set_property_value(Line.X1Key, value); }
 
-    public get Y1(): number { return this.get_property_value('Y1'); }
-    public set Y1(value: number) { this.set_property_value('Y1', value); }
+    public get Y1(): number { return this.get_property_value(Line.Y1Key); }
+    public set Y1(value: number) { this.set_property_value(Line.Y1Key, value); }
 
-    public get X2(): number { return this.get_property_value('X2'); }
-    public set X2(value: number) { this.set_property_value('X2', value); }
+    public get X2(): number { return this.get_property_value(Line.X2Key); }
+    public set X2(value: number) { this.set_property_value(Line.X2Key, value); }
 
-    public get Y2(): number { return this.get_property_value('Y2'); }
-    public set Y2(value: number) { this.set_property_value('Y2', value); }
+    public get Y2(): number { return this.get_property_value(Line.Y2Key); }
+    public set Y2(value: number) { this.set_property_value(Line.Y2Key, value); }
 
-    public get Stroke(): Brush | undefined { return this.get_property_value('Stroke'); }
-    public set Stroke(value: Brush | undefined) { this.set_property_value('Stroke', value); }
+    public get Stroke(): Brush | undefined { return this.get_property_value(Line.StrokeKey); }
+    public set Stroke(value: Brush | undefined) { this.set_property_value(Line.StrokeKey, value); }
 
-    public get StrokeThickness(): number { return this.get_property_value('StrokeThickness'); }
-    public set StrokeThickness(value: number) { this.set_property_value('StrokeThickness', value); }
+    public get StrokeThickness(): number { return this.get_property_value(Line.StrokeThicknessKey); }
+    public set StrokeThickness(value: number) { this.set_property_value(Line.StrokeThicknessKey, value); }
 
     protected override MeasureOverride(_availableSize: Size): Size
     {

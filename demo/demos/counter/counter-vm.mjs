@@ -14,25 +14,25 @@ export class CounterVM extends Model
         Model.RegisterProperty(CounterVM, 'Reset',     undefined, MetaData.None);
     }
 
-    get Count()     { return this.get_property_value('Count'); }
-    set Count(v)    { this.set_property_value('Count', v); }
-    get Step()      { return this.get_property_value('Step'); }
-    set Step(v)     { this.set_property_value('Step', v); }
-    get Steps()     { return this.get_property_value('Steps'); }
-    get Increment() { return this.get_property_value('Increment'); }
-    get Reset()     { return this.get_property_value('Reset'); }
+    get Count()     { return this._get_property_value_by_name('Count'); }
+    set Count(v)    { this._set_property_value_by_name('Count', v); }
+    get Step()      { return this._get_property_value_by_name('Step'); }
+    set Step(v)     { this._set_property_value_by_name('Step', v); }
+    get Steps()     { return this._get_property_value_by_name('Steps'); }
+    get Increment() { return this._get_property_value_by_name('Increment'); }
+    get Reset()     { return this._get_property_value_by_name('Reset'); }
 
     constructor() {
         super();
-        this.set_property_value('Steps', Object.freeze([1, 2, 5]));
+        this._set_property_value_by_name('Steps', Object.freeze([1, 2, 5]));
         const inc = new RelayCommand(
             () => { this.Count = Math.min(10, this.Count + this.Step); },
             () => this.Count < 10,
         );
-        this.set_property_value('Increment', inc);
-        this.set_property_value('Reset',
+        this._set_property_value_by_name('Increment', inc);
+        this._set_property_value_by_name('Reset',
             new RelayCommand(() => { this.Count = 0; }));
-        this.AddPropertyChangedListener('Count', () => {
+        this._add_property_changed_listener_by_name('Count', () => {
             inc.RaiseCanExecuteChanged();
         });
     }

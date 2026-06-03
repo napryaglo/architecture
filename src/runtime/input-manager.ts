@@ -293,34 +293,36 @@ export class InputManager
 // IsMouseOver and IsPressed are DPs registered on Visual itself.
 // These helpers are duck-typed so this module doesn't need to import
 // Visual (which already imports things that would cycle). At runtime
-// `set_property_value` is the public Model API; the property names
-// are exactly the strings registered in visual.ts.
+// `_set_property_value_by_name` is Model's framework-internal string-
+// keyed setter (the public typed-key surface lives on the same Model,
+// just not reachable through a string at this seam); the property
+// names are exactly the strings registered in visual.ts.
 interface VisualWithDp
 {
-    set_property_value(name: string, value: unknown): void;
+    _set_property_value_by_name(name: string, value: unknown): void;
 }
 
 function setIsMouseOver(v: Visual, value: boolean): void
 {
-    (v as unknown as VisualWithDp).set_property_value('IsMouseOver', value);
+    (v as unknown as VisualWithDp)._set_property_value_by_name('IsMouseOver', value);
 }
 
 function setIsPressed(v: Visual, value: boolean): void
 {
-    (v as unknown as VisualWithDp).set_property_value('IsPressed', value);
+    (v as unknown as VisualWithDp)._set_property_value_by_name('IsPressed', value);
 }
 
 function setIsFocused(v: Visual, value: boolean): void
 {
-    (v as unknown as VisualWithDp).set_property_value('IsFocused', value);
+    (v as unknown as VisualWithDp)._set_property_value_by_name('IsFocused', value);
 }
 
 // Read the Focusable DP without importing Visual (would cycle through
 // to routed-event.ts via the type alias). Same duck-typed read pattern
 // as the setters above.
-interface VisualWithReadDp { get_property_value(name: string): unknown }
+interface VisualWithReadDp { _get_property_value_by_name(name: string): unknown }
 
 function isFocusable(v: Visual): boolean
 {
-    return (v as unknown as VisualWithReadDp).get_property_value('Focusable') === true;
+    return (v as unknown as VisualWithReadDp)._get_property_value_by_name('Focusable') === true;
 }

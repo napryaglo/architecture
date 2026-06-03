@@ -62,7 +62,20 @@ export class ParseError extends Error
     }
 }
 
-const RESOURCE_KEYWORDS = new Set(['style', 'template', 'datatemplate', 'hierarchicaldatatemplate']);
+const RESOURCE_KEYWORDS = new Set([
+    'style', 'template', 'datatemplate',
+    'hierarchicaldatatemplate', 'itemspaneltemplate',
+]);
+
+// Subset of RESOURCE_KEYWORDS that produce a *template* value (something
+// invoked at apply time) — these are accepted both as keyed entries in a
+// ResourceDictionary AND as inline values of a slot-assign (e.g.,
+// `ItemsPanel: itemspaneltemplate { … }`). `style` is excluded: styles
+// only ever live as keyed dictionary entries today.
+const INLINE_TEMPLATE_KEYWORDS = new Set([
+    'template', 'datatemplate',
+    'hierarchicaldatatemplate', 'itemspaneltemplate',
+]);
 
 export interface ParserOptions
 {
@@ -123,7 +136,8 @@ export class Parser
                 case 'style':
                 case 'template':
                 case 'datatemplate':
-                case 'hierarchicaldatatemplate': return this.parseResourceForm();
+                case 'hierarchicaldatatemplate':
+                case 'itemspaneltemplate': return this.parseResourceForm();
                 default:             return this.parseElement();
             }
         }
@@ -205,7 +219,7 @@ export class Parser
     private parseResourceForm(): ResourceForm
     {
         const head    = this.expect(TokenKind.Ident);
-        const keyword = head.value as 'style' | 'template' | 'datatemplate' | 'hierarchicaldatatemplate';
+        const keyword = head.value as 'style' | 'template' | 'datatemplate' | 'hierarchicaldatatemplate' | 'itemspaneltemplate';
         if (!RESOURCE_KEYWORDS.has(keyword))
         {
             throw new ParseError(`expected resource keyword, got '${keyword}'`, head.span);
@@ -215,18 +229,26 @@ export class Parser
         // the `[ … ]` block, mirroring parseElement.
         const xAttrs = this.parseLeadingXAttrs();
 
-        this.expect(TokenKind.LBracket);
-        const attrs = this.parseAttrListBody();
-        this.expect(TokenKind.RBracket);
-
-        // Resource form meta-attrs are named only; positionals + leftover
-        // XAttrs are syntactic errors at this point.
+        // The `[ meta=value, … ]` block is OPTIONAL — `template` /
+        // `datatemplate` / `hierarchicaldatatemplate` need it (targettype /
+        // datatype / itemsselector are required there), but
+        // `itemspaneltemplate` and inline-only forms have no required
+        // meta-attrs, so the bracket pair can be omitted entirely. The
+        // compiler validates required meta-attrs per-keyword downstream.
         const metaAttrs: NamedAttr[] = [];
-        for (const a of attrs)
+        if (this.peek().kind === TokenKind.LBracket)
         {
-            if (a.kind === 'named-attr') metaAttrs.push(a);
-            else throw new ParseError(
-                'resource forms do not accept positional attributes', a.span);
+            this.consume();
+            const attrs = this.parseAttrListBody();
+            this.expect(TokenKind.RBracket);
+            // Resource form meta-attrs are named only; positionals are a
+            // syntactic error at this point.
+            for (const a of attrs)
+            {
+                if (a.kind === 'named-attr') metaAttrs.push(a);
+                else throw new ParseError(
+                    'resource forms do not accept positional attributes', a.span);
+            }
         }
 
         this.expect(TokenKind.LBrace);
@@ -830,7 +852,8 @@ export class Parser
                 case 'style':
                 case 'template':
                 case 'datatemplate':
-                case 'hierarchicaldatatemplate': return this.parseResourceForm();
+                case 'hierarchicaldatatemplate':
+                case 'itemspaneltemplate': return this.parseResourceForm();
                 case 'def':          return this.parseDefForm();
                 default:
                     // SlotAssign vs Element disambiguation.
@@ -850,12 +873,23 @@ export class Parser
     {
         const ident = this.expect(TokenKind.Ident);
         this.expect(TokenKind.Colon);
-        let value: ValueNode | StructuredBody;
+        let value: ValueNode | StructuredBody | ResourceForm;
         if (this.peek().kind === TokenKind.LBrace)
         {
             this.consume();
             value = this.parseStructuredBody();
             this.expect(TokenKind.RBrace);
+        }
+        else if (this.peek().kind === TokenKind.Ident
+              && INLINE_TEMPLATE_KEYWORDS.has(this.peek().value as string))
+        {
+            // Inline template at the slot-value position:
+            //   `ItemsPanel: itemspaneltemplate { WrapPanel[…] }`
+            //   `ItemTemplate: datatemplate [datatype=FooVM] { … }`
+            // Parses identically to a keyed resource form; the compiler
+            // emits an anonymous template construction at the assignment
+            // site (no x:key required).
+            value = this.parseResourceForm();
         }
         else
         {

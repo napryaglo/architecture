@@ -155,6 +155,6 @@ describe('DockPanel', () => {
     test('DockPanel.Dock is stored on the child under DockPanel namespace', () => {
         const leaf = new FixedSizeLeaf(new Size(10, 10));
         DockPanel.SetDock(leaf, Dock.Right);
-        assert.equal(leaf.get_property_value(DockPanel, 'Dock'), Dock.Right);
+        assert.equal(leaf._get_property_value_by_name(DockPanel, 'Dock'), Dock.Right);
     });
 });

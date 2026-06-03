@@ -64,14 +64,12 @@ export class DashStyle
 // MiterLimit=10.
 export class Pen extends Model
 {
-    static {
-        Model.RegisterProperty(Pen, 'Brush',      undefined,        MetaData.Render);
-        Model.RegisterProperty(Pen, 'Thickness',  1,                MetaData.Render);
-        Model.RegisterProperty(Pen, 'DashStyle',  DashStyle.Solid,  MetaData.Render);
-        Model.RegisterProperty(Pen, 'LineCap',    LineCap.Flat,     MetaData.Render);
-        Model.RegisterProperty(Pen, 'LineJoin',   LineJoin.Miter,   MetaData.Render);
-        Model.RegisterProperty(Pen, 'MiterLimit', 10,               MetaData.Render);
-    }
+    public static readonly BrushKey      = Model.RegisterProperty<Brush | undefined>(Pen, 'Brush',      undefined,       MetaData.Render);
+    public static readonly ThicknessKey  = Model.RegisterProperty<number>(           Pen, 'Thickness',  1,               MetaData.Render);
+    public static readonly DashStyleKey  = Model.RegisterProperty<DashStyle>(        Pen, 'DashStyle',  DashStyle.Solid, MetaData.Render);
+    public static readonly LineCapKey    = Model.RegisterProperty<LineCap>(          Pen, 'LineCap',    LineCap.Flat,    MetaData.Render);
+    public static readonly LineJoinKey   = Model.RegisterProperty<LineJoin>(         Pen, 'LineJoin',   LineJoin.Miter,  MetaData.Render);
+    public static readonly MiterLimitKey = Model.RegisterProperty<number>(           Pen, 'MiterLimit', 10,              MetaData.Render);
 
     // Convenience for the common cases — `new Pen()`, `new Pen(brush)`,
     // `new Pen(brush, 2)`. Anything beyond brush+thickness goes through
@@ -83,21 +81,21 @@ export class Pen extends Model
         if (thickness !== undefined) this.Thickness = thickness;
     }
 
-    public get Brush(): Brush | undefined { return this.get_property_value('Brush'); }
-    public set Brush(value: Brush | undefined) { this.set_property_value('Brush', value); }
+    public get Brush(): Brush | undefined { return this.get_property_value(Pen.BrushKey); }
+    public set Brush(value: Brush | undefined) { this.set_property_value(Pen.BrushKey, value); }
 
-    public get Thickness(): number { return this.get_property_value('Thickness'); }
-    public set Thickness(value: number) { this.set_property_value('Thickness', value); }
+    public get Thickness(): number { return this.get_property_value(Pen.ThicknessKey); }
+    public set Thickness(value: number) { this.set_property_value(Pen.ThicknessKey, value); }
 
-    public get DashStyle(): DashStyle { return this.get_property_value('DashStyle'); }
-    public set DashStyle(value: DashStyle) { this.set_property_value('DashStyle', value); }
+    public get DashStyle(): DashStyle { return this.get_property_value(Pen.DashStyleKey); }
+    public set DashStyle(value: DashStyle) { this.set_property_value(Pen.DashStyleKey, value); }
 
-    public get LineCap(): LineCap { return this.get_property_value('LineCap'); }
-    public set LineCap(value: LineCap) { this.set_property_value('LineCap', value); }
+    public get LineCap(): LineCap { return this.get_property_value(Pen.LineCapKey); }
+    public set LineCap(value: LineCap) { this.set_property_value(Pen.LineCapKey, value); }
 
-    public get LineJoin(): LineJoin { return this.get_property_value('LineJoin'); }
-    public set LineJoin(value: LineJoin) { this.set_property_value('LineJoin', value); }
+    public get LineJoin(): LineJoin { return this.get_property_value(Pen.LineJoinKey); }
+    public set LineJoin(value: LineJoin) { this.set_property_value(Pen.LineJoinKey, value); }
 
-    public get MiterLimit(): number { return this.get_property_value('MiterLimit'); }
-    public set MiterLimit(value: number) { this.set_property_value('MiterLimit', value); }
+    public get MiterLimit(): number { return this.get_property_value(Pen.MiterLimitKey); }
+    public set MiterLimit(value: number) { this.set_property_value(Pen.MiterLimitKey, value); }
 }

@@ -1,12 +1,15 @@
 // Notification payload describing a mutation to an ObservableCollection.
 // Subscribers receive one of these for every Add / Insert / Remove /
-// SetAt / Clear. Mirrors WPF's NotifyCollectionChangedAction set —
-// `replaced` covers single-index swaps; multi-index moves aren't
-// supported (compose from a Remove + Insert if needed).
+// SetAt / Move / Clear. Mirrors WPF's NotifyCollectionChangedAction set.
+//
+// `moved` carries both old and new indices so listeners can shift
+// container bookkeeping (item identity is preserved across the move,
+// so containers can be re-positioned without re-realization).
 export type CollectionChange<T> =
     | { kind: 'inserted'; index: number; items: readonly T[] }
     | { kind: 'removed';  index: number; items: readonly T[] }
     | { kind: 'replaced'; index: number; oldItem: T; newItem: T }
+    | { kind: 'moved';    oldIndex: number; newIndex: number; item: T }
     | { kind: 'cleared' };
 
 export type CollectionChangeListener<T> = (change: CollectionChange<T>) => void;
@@ -105,6 +108,30 @@ export class ObservableCollection<T> implements IReadOnlyObservableCollection<T>
         this.items[index] = item;
         this.notify({ kind: 'replaced', index, oldItem: old, newItem: item });
         return old;
+    }
+
+    // Move the item at `oldIndex` to `newIndex`, shifting intervening
+    // items to fill the gap. Item identity is preserved — the SAME
+    // value moves position. WPF parity with ObservableCollection<T>.Move.
+    //
+    // Subscribers receive a `'moved'` event (not a remove + insert
+    // pair) so consumers like ItemsControl can reorder their already-
+    // realized container without re-running PrepareContainerForItemOverride.
+    public Move(oldIndex: number, newIndex: number): void
+    {
+        if (oldIndex < 0 || oldIndex >= this.items.length)
+        {
+            throw new RangeError(`ObservableCollection.Move: oldIndex ${oldIndex} out of range [0, ${this.items.length})`);
+        }
+        if (newIndex < 0 || newIndex >= this.items.length)
+        {
+            throw new RangeError(`ObservableCollection.Move: newIndex ${newIndex} out of range [0, ${this.items.length})`);
+        }
+        if (oldIndex === newIndex) return;
+        const item = this.items[oldIndex]!;
+        this.items.splice(oldIndex, 1);
+        this.items.splice(newIndex, 0, item);
+        this.notify({ kind: 'moved', oldIndex, newIndex, item });
     }
 
     public Clear(): void

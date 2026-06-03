@@ -55,15 +55,13 @@ import { OverlayLayer } from './overlay-layer.js';
 // window.devicePixelRatio at construction and assigns it).
 export abstract class PresentationTarget extends Model implements VisualHost
 {
-    static {
-        // NaN = "auto" — the axis sizes to Content.DesiredSize at
-        // Render time. Any finite number = fixed mode for that axis.
-        Model.RegisterProperty(PresentationTarget, 'Width',       Number.NaN, MetaData.Measure);
-        Model.RegisterProperty(PresentationTarget, 'Height',      Number.NaN, MetaData.Measure);
-        Model.RegisterProperty(PresentationTarget, 'DeviceScale', 1,          MetaData.Measure);
-        Model.RegisterProperty(PresentationTarget, 'Content',     undefined,  MetaData.Render);
-        Model.RegisterProperty(PresentationTarget, 'Background',  undefined,  MetaData.Render);
-    }
+    // NaN = "auto" — the axis sizes to Content.DesiredSize at Render
+    // time. Any finite number = fixed mode for that axis.
+    public static readonly WidthKey       = Model.RegisterProperty<number>(            PresentationTarget, 'Width',       Number.NaN, MetaData.Measure);
+    public static readonly HeightKey      = Model.RegisterProperty<number>(            PresentationTarget, 'Height',      Number.NaN, MetaData.Measure);
+    public static readonly DeviceScaleKey = Model.RegisterProperty<number>(            PresentationTarget, 'DeviceScale', 1,          MetaData.Measure);
+    public static readonly ContentKey     = Model.RegisterProperty<Visual | undefined>(PresentationTarget, 'Content',     undefined,  MetaData.Render);
+    public static readonly BackgroundKey  = Model.RegisterProperty<Brush | undefined>( PresentationTarget, 'Background',  undefined,  MetaData.Render);
 
     private _actualWidth:  number = 0;
     private _actualHeight: number = 0;
@@ -85,14 +83,14 @@ export abstract class PresentationTarget extends Model implements VisualHost
     // User-set width. NaN (the default) means the width is resolved
     // from Content.DesiredSize at Render time. A finite value pins
     // the surface to exactly that width.
-    public get Width(): number { return this.get_property_value('Width'); }
-    public set Width(value: number) { this.set_property_value('Width', value); }
+    public get Width(): number { return this.get_property_value(PresentationTarget.WidthKey); }
+    public set Width(value: number) { this.set_property_value(PresentationTarget.WidthKey, value); }
 
     // User-set height. NaN (the default) means the height is resolved
     // from Content.DesiredSize at Render time. A finite value pins
     // the surface to exactly that height.
-    public get Height(): number { return this.get_property_value('Height'); }
-    public set Height(value: number) { this.set_property_value('Height', value); }
+    public get Height(): number { return this.get_property_value(PresentationTarget.HeightKey); }
+    public set Height(value: number) { this.set_property_value(PresentationTarget.HeightKey, value); }
 
     // Resolved surface dimensions in DIPs, updated by the concrete
     // target's Render pass. In fixed mode these equal Width / Height;
@@ -187,10 +185,10 @@ export abstract class PresentationTarget extends Model implements VisualHost
         return undefined;
     }
 
-    public get DeviceScale(): number { return this.get_property_value('DeviceScale'); }
-    public set DeviceScale(value: number) { this.set_property_value('DeviceScale', value); }
+    public get DeviceScale(): number { return this.get_property_value(PresentationTarget.DeviceScaleKey); }
+    public set DeviceScale(value: number) { this.set_property_value(PresentationTarget.DeviceScaleKey, value); }
 
-    public get Content(): Visual | undefined { return this.get_property_value('Content'); }
+    public get Content(): Visual | undefined { return this.get_property_value(PresentationTarget.ContentKey); }
     // Setter cascades the host back-pointer (`_target`) through the new
     // Visual subtree, and clears it on the old one. Bracket access on
     // SetTarget bypasses TS's protected-member check — same pattern as
@@ -200,7 +198,7 @@ export abstract class PresentationTarget extends Model implements VisualHost
         const old = this.Content;
         if (old === value) return;
         old?.['SetTarget'](undefined);
-        this.set_property_value('Content', value);
+        this.set_property_value(PresentationTarget.ContentKey, value);
         value?.['SetTarget'](this);
         // Kick the layout queue. The new Content's subtree may carry
         // stale `_isMeasureValid = false` flags from property writes
@@ -396,6 +394,6 @@ export abstract class PresentationTarget extends Model implements VisualHost
         this.TextMeasurer.LoadFont(family, source, weight, style);
     }
 
-    public get Background(): Brush | undefined { return this.get_property_value('Background'); }
-    public set Background(value: Brush | undefined) { this.set_property_value('Background', value); }
+    public get Background(): Brush | undefined { return this.get_property_value(PresentationTarget.BackgroundKey); }
+    public set Background(value: Brush | undefined) { this.set_property_value(PresentationTarget.BackgroundKey, value); }
 }

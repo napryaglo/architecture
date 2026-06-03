@@ -29,10 +29,10 @@ class Widget extends Visual
         Model.RegisterProperty(Widget, 'Tint',  'default', MetaData.Inherits);
         Model.RegisterProperty(Widget, 'Bias',  0,         MetaData.None);
     }
-    public get Tint(): string { return this.get_property_value('Tint'); }
-    public set Tint(v: string) { this.set_property_value('Tint', v); }
-    public get Bias(): number { return this.get_property_value('Bias'); }
-    public set Bias(v: number) { this.set_property_value('Bias', v); }
+    public get Tint(): string { return this._get_property_value_by_name('Tint'); }
+    public set Tint(v: string) { this._set_property_value_by_name('Tint', v); }
+    public get Bias(): number { return this._get_property_value_by_name('Bias'); }
+    public set Bias(v: number) { this._set_property_value_by_name('Bias', v); }
     protected override MeasureOverride(_a: Size): Size { return Size.Zero; }
     protected override RenderOverride(_dc: DrawingContext): void { }
 }
@@ -98,7 +98,7 @@ describe('Style — explicit application on Visual.Style', () => {
         const w = new Widget();
         w.Style = new Style(Widget, [new Setter(Widget, 'Bias', 42)]);
         assert.equal(w.Bias, 42);
-        assert.equal(w.GetValueSource('Bias'), PropertyValueSource.StyleValue);
+        assert.equal(w._get_value_source_by_name('Bias'), PropertyValueSource.StyleValue);
     });
 
     test('LocalValue shadows StyleValue (write after Style is applied)', () => {
@@ -106,7 +106,7 @@ describe('Style — explicit application on Visual.Style', () => {
         w.Style = new Style(Widget, [new Setter(Widget, 'Bias', 42)]);
         w.Bias = 7;
         assert.equal(w.Bias, 7);
-        assert.equal(w.GetValueSource('Bias'), PropertyValueSource.LocalValue);
+        assert.equal(w._get_value_source_by_name('Bias'), PropertyValueSource.LocalValue);
     });
 
     test('LocalValue shadows StyleValue (write before Style is applied)', () => {
@@ -116,18 +116,18 @@ describe('Style — explicit application on Visual.Style', () => {
         // Bias was locally set to 7; the style value is now cached but
         // shadowed. Local still wins.
         assert.equal(w.Bias, 7);
-        assert.equal(w.GetValueSource('Bias'), PropertyValueSource.LocalValue);
+        assert.equal(w._get_value_source_by_name('Bias'), PropertyValueSource.LocalValue);
     });
 
     test('ClearValue (Local-clear) falls back to the styled value', () => {
         const w = new Widget();
         w.Style = new Style(Widget, [new Setter(Widget, 'Bias', 42)]);
         w.Bias = 7;
-        assert.equal(w.GetValueSource('Bias'), PropertyValueSource.LocalValue);
+        assert.equal(w._get_value_source_by_name('Bias'), PropertyValueSource.LocalValue);
 
-        w.ClearValue('Bias');
+        w._clear_value_by_name('Bias');
         assert.equal(w.Bias, 42);
-        assert.equal(w.GetValueSource('Bias'), PropertyValueSource.StyleValue);
+        assert.equal(w._get_value_source_by_name('Bias'), PropertyValueSource.StyleValue);
     });
 
     test('replacing Style swaps the StyleValue: old setters cleared, new applied', () => {
@@ -153,18 +153,18 @@ describe('Style — explicit application on Visual.Style', () => {
         assert.equal(w.Bias, 42);
         w.Style = undefined;
         assert.equal(w.Bias, 0);  // descriptor default
-        assert.equal(w.GetValueSource('Bias'), PropertyValueSource.Default);
+        assert.equal(w._get_value_source_by_name('Bias'), PropertyValueSource.Default);
     });
 
     test('StyleValue shadows InheritedValue', () => {
         const parent = new Widget();
-        parent.set_property_value(Widget, 'Tint', 'inherited-tint');
+        parent._set_property_value_by_name(Widget, 'Tint', 'inherited-tint');
         const child = new Widget();
         const root = new TestPanel();
         root.AddChild(parent);
         // Place child under parent so it inherits.
         const wrapper = new TestPanel();
-        parent.set_property_value(Widget, 'Tint', 'inherited-tint');
+        parent._set_property_value_by_name(Widget, 'Tint', 'inherited-tint');
         wrapper.AddChild(child);
         parent['property_values'];  // touch to silence type lint
         // Apply style on child — should win over the inherited value.
@@ -173,7 +173,7 @@ describe('Style — explicit application on Visual.Style', () => {
         // baseline.)
         child.Style = new Style(Widget, [new Setter(Widget, 'Tint', 'styled-tint')]);
         assert.equal(child.Tint, 'styled-tint');
-        assert.equal(child.GetValueSource('Tint'), PropertyValueSource.StyleValue);
+        assert.equal(child._get_value_source_by_name('Tint'), PropertyValueSource.StyleValue);
     });
 
     test('cross-class setter (attached property) lands on the target via explicit owner', () => {
@@ -186,7 +186,7 @@ describe('Style — explicit application on Visual.Style', () => {
 
         const w = new Widget();
         w.Style = new Style(Widget, [new Setter(Marker, 'Tag', 'styled')]);
-        assert.equal(w.get_property_value(Marker, 'Tag'), 'styled');
+        assert.equal(w._get_property_value_by_name(Marker, 'Tag'), 'styled');
     });
 });
 
@@ -199,7 +199,7 @@ describe('Style — implicit lookup via TargetType', () => {
         const w = new Widget();
         root.AddChild(w);
         assert.equal(w.Bias, 11);
-        assert.equal(w.GetValueSource('Bias'), PropertyValueSource.StyleValue);
+        assert.equal(w._get_value_source_by_name('Bias'), PropertyValueSource.StyleValue);
     });
 
     test('explicit Style wins over implicit', () => {
@@ -272,8 +272,8 @@ describe('Style — interaction with Binding (Binding shadows Style)', () => {
         // Use a tiny source Model with a getter Binding can target.
         class Src extends Model {
             static { Model.RegisterProperty(Src, 'V', 999, MetaData.None); }
-            public get V(): number { return this.get_property_value('V'); }
-            public set V(v: number) { this.set_property_value('V', v); }
+            public get V(): number { return this._get_property_value_by_name('V'); }
+            public set V(v: number) { this._set_property_value_by_name('V', v); }
         }
 
         const src = new Src();
@@ -281,9 +281,9 @@ describe('Style — interaction with Binding (Binding shadows Style)', () => {
         w.Style = new Style(Widget, [new Setter(Widget, 'Bias', 5)]);
         assert.equal(w.Bias, 5);
 
-        w.set_property_value('Bias', new Binding(src, 'V'));
+        w._set_property_value_by_name('Bias', new Binding(src, 'V'));
         assert.equal(w.Bias, 999);
-        assert.equal(w.GetValueSource('Bias'), PropertyValueSource.Binding);
+        assert.equal(w._get_value_source_by_name('Bias'), PropertyValueSource.Binding);
 
         // Update the source — binding propagates the change.
         src.V = 7;
@@ -343,8 +343,8 @@ describe('Style — Setter.value supports Binding (via SetterFactory)', () => {
     test('Binding value pushes initial source value into StyleValue tier', () => {
         class Src extends Model {
             static { Model.RegisterProperty(Src, 'V', 42, MetaData.None); }
-            public get V(): number { return this.get_property_value('V'); }
-            public set V(v: number) { this.set_property_value('V', v); }
+            public get V(): number { return this._get_property_value_by_name('V'); }
+            public set V(v: number) { this._set_property_value_by_name('V', v); }
         }
         const src = new Src();
         const w = new Widget();
@@ -354,14 +354,14 @@ describe('Style — Setter.value supports Binding (via SetterFactory)', () => {
             )),
         ]);
         assert.equal(w.Bias, 42);
-        assert.equal(w.GetValueSource('Bias'), PropertyValueSource.StyleValue);
+        assert.equal(w._get_value_source_by_name('Bias'), PropertyValueSource.StyleValue);
     });
 
     test('Binding value updates reactively when the source changes', () => {
         class Src extends Model {
             static { Model.RegisterProperty(Src, 'V', 0, MetaData.None); }
-            public get V(): number { return this.get_property_value('V'); }
-            public set V(v: number) { this.set_property_value('V', v); }
+            public get V(): number { return this._get_property_value_by_name('V'); }
+            public set V(v: number) { this._set_property_value_by_name('V', v); }
         }
         const src = new Src();
         const w = new Widget();
@@ -382,8 +382,8 @@ describe('Style — Setter.value supports Binding (via SetterFactory)', () => {
         // targets observe source mutations.
         class Src extends Model {
             static { Model.RegisterProperty(Src, 'V', 1, MetaData.None); }
-            public get V(): number { return this.get_property_value('V'); }
-            public set V(v: number) { this.set_property_value('V', v); }
+            public get V(): number { return this._get_property_value_by_name('V'); }
+            public set V(v: number) { this._set_property_value_by_name('V', v); }
         }
         const src = new Src();
         const style = new Style(Widget, [
@@ -405,8 +405,8 @@ describe('Style — Setter.value supports Binding (via SetterFactory)', () => {
     test('replacing a Style disposes its Binding subscriptions', () => {
         class Src extends Model {
             static { Model.RegisterProperty(Src, 'V', 1, MetaData.None); }
-            public get V(): number { return this.get_property_value('V'); }
-            public set V(v: number) { this.set_property_value('V', v); }
+            public get V(): number { return this._get_property_value_by_name('V'); }
+            public set V(v: number) { this._set_property_value_by_name('V', v); }
         }
         const src = new Src();
         const w = new Widget();
@@ -555,7 +555,7 @@ describe('Style — PropertyTrigger', () => {
 
         w.Tint = 'hot';
         assert.equal(w.Bias, 99);  // trigger active, shadows style
-        assert.equal(w.GetValueSource('Bias'), PropertyValueSource.TriggerValue);
+        assert.equal(w._get_value_source_by_name('Bias'), PropertyValueSource.TriggerValue);
     });
 
     test('deactivating a trigger restores the underlying style value', () => {
@@ -571,7 +571,7 @@ describe('Style — PropertyTrigger', () => {
         assert.equal(w.Bias, 99);
         w.Tint = 'cold';
         assert.equal(w.Bias, 1);  // style value resumes
-        assert.equal(w.GetValueSource('Bias'), PropertyValueSource.StyleValue);
+        assert.equal(w._get_value_source_by_name('Bias'), PropertyValueSource.StyleValue);
     });
 
     test('trigger evaluates immediately at apply if the property already matches', () => {
@@ -595,10 +595,10 @@ describe('Style — PropertyTrigger', () => {
         w.Bias = 5;        // local set
         w.Tint = 'hot';    // trigger activates but local still wins
         assert.equal(w.Bias, 5);
-        assert.equal(w.GetValueSource('Bias'), PropertyValueSource.LocalValue);
+        assert.equal(w._get_value_source_by_name('Bias'), PropertyValueSource.LocalValue);
 
         // Clearing local lets trigger value surface.
-        w.ClearValue('Bias');
+        w._clear_value_by_name('Bias');
         assert.equal(w.Bias, 99);
     });
 

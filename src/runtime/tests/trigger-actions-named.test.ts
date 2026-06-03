@@ -22,8 +22,8 @@ class NamedTest extends Visual
     static {
         Model.RegisterProperty(NamedTest, 'Width', 0, MetaData.None);
     }
-    public get Width(): number { return this.get_property_value('Width'); }
-    public set Width(v: number) { this.set_property_value('Width', v); }
+    public get Width(): number { return this._get_property_value_by_name('Width'); }
+    public set Width(v: number) { this._set_property_value_by_name('Width', v); }
 }
 
 function freshClock(): ManualClock

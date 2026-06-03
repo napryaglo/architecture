@@ -8,9 +8,13 @@ import { SvgDomDrawingContext } from './svg-dom-drawing-context.js';
 // Document structure per visual:
 //
 //   <g class="mural-visual" [transform=…] [clip-path=…]>
-//     <g class="mural-own">           // own primitives — cleared and
-//       … RenderOverride emissions …  // re-emitted on render-dirty
-//     </g>
+//     <rect class="mural-hit" .../>     // invisible pointer-event pad
+//     <g class="mural-own">             // present IFF RenderOverride
+//       … RenderOverride emissions …    //   produced ≥ 1 primitive;
+//     </g>                              //   detached when empty so
+//                                       //   layout-only Visuals (panels,
+//                                       //   presenters, containers)
+//                                       //   don't pay for an empty <g>.
 //     … child visuals' outer <g>s …
 //   </g>
 //
@@ -18,6 +22,9 @@ import { SvgDomDrawingContext } from './svg-dom-drawing-context.js';
 // and clip-path (from the Visual.Clip DP) so child visuals inherit
 // both transforms. The inner `<g class="mural-own">` is the only thing
 // touched on a render-only invalidation — child outers stay put.
+// When `repaintOwn` runs and the visual emits no primitives, the own
+// group is removed from the outer; a later re-paint that does emit
+// primitives re-inserts it (right after the hit pad, before children).
 //
 // Each outer `<g>` is stamped with the VISUAL_BACKREF symbol so the
 // HtmlTarget's pointer hit-test (event.target → ancestor walk → back
@@ -253,7 +260,8 @@ export class SvgRenderer
             // pad goes FIRST and gets the lowest priority — descendants
             // and own-group paint always win when they cover the point.
             info.outer.appendChild(info.hit);
-            info.outer.appendChild(info.own);
+            // `own` is left detached for now — repaintOwn (called below)
+            // inserts it iff the visual emits at least one primitive.
             this.nodes.set(visual, info);
             parentNode.appendChild(info.outer);
         }
@@ -303,7 +311,7 @@ export class SvgRenderer
         // them — so `moveChanged` alone is NOT a trigger.
         if (isNew || renderDirty === null || renderDirty.has(visual) || sizeChanged)
         {
-            this.repaintOwn(info.own, visual);
+            this.repaintOwn(info, visual);
         }
 
         // Recurse into children. Each child's walk will either re-use
@@ -403,10 +411,11 @@ export class SvgRenderer
         outer.setAttribute('clip-path', `url(#${id})`);
     }
 
-    private repaintOwn(own: SVGGElement, visual: RenderableVisual): void
+    private repaintOwn(info: VisualNodes, visual: RenderableVisual): void
     {
         // Drop everything we drew last pass — child outers live in
         // the outer group, NOT inside `own`, so this clear is safe.
+        const own = info.own;
         while (own.firstChild !== null) own.removeChild(own.firstChild);
 
         const dc = new SvgDomDrawingContext(own, {
@@ -415,6 +424,27 @@ export class SvgRenderer
             document:   this.doc,
         });
         visual.Render(dc);
+
+        // Lazy-attach the own group: keep it in the DOM iff at least
+        // one primitive was emitted. Layout-only Visuals (panels,
+        // ItemsPresenter, ContentPresenter, the TreeViewItem container,
+        // CollapsibleStack, ...) emit nothing here, so for them the
+        // empty `<g class="mural-own">` never reaches the DOM.
+        //
+        // When re-emit produces primitives on a previously-empty pass,
+        // `insertBefore(own, hit.nextSibling)` puts own right after the
+        // hit pad, before any child outers — preserves the document
+        // order own paint → child paint that the hit-test relies on.
+        const shouldAttach = own.firstChild !== null;
+        const isAttached   = own.parentNode === info.outer;
+        if (shouldAttach && !isAttached)
+        {
+            info.outer.insertBefore(own, info.hit.nextSibling);
+        }
+        else if (!shouldAttach && isAttached)
+        {
+            own.remove();
+        }
     }
 
     // Detach everything the renderer added; leaves the surface itself
