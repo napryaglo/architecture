@@ -7,7 +7,7 @@
 //
 // Run with:  npm run build && node demo/verify.mjs
 //
-// Writes the SVG to demo/dashboard.svg for inspection.
+// Writes the SVG to demo/demos/dashboard/dashboard.svg for inspection.
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -19,7 +19,8 @@ import * as controls   from '../dist/Controls/index.js';
 import * as engine     from '../dist/visual-engine/index.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const src = readFileSync(join(here, 'dashboard.mu'), 'utf8');
+const dashboardDir = join(here, 'demos', 'dashboard');
+const src = readFileSync(join(dashboardDir, 'dashboard.mu'), 'utf8');
 
 const ctx = { ...runtime, ...controls, ...engine };
 const app = instantiate(src, ctx);
@@ -37,6 +38,6 @@ const dc = new engine.SvgDrawingContext();
 target.Render(dc);
 const svg = dc.ToSvg(W, H);
 
-const outPath = join(here, 'dashboard.svg');
+const outPath = join(dashboardDir, 'dashboard.svg');
 writeFileSync(outPath, svg, 'utf8');
 console.log(`✓ verified: ${outPath} (${svg.length} bytes)`);

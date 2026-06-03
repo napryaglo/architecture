@@ -8,6 +8,7 @@ import {
     type PropertyDescriptor,
 } from '../runtime/index.js';
 import { ControlTemplate, type TemplateInstance } from './control-template.js';
+import { findDataTemplateForType } from './data-template.js';
 
 // Base class for controls that present a single piece of consumer-
 // supplied content inside a ControlTemplate-defined visual structure.
@@ -45,46 +46,97 @@ export class ContentControl extends Visual
     // built. undefined when Template is undefined.
     private _templateInstance: TemplateInstance | undefined;
 
-    public get Content(): Visual | undefined
+    // The Visual currently slotted into the presenter. Distinct from
+    // Content because Content may be a non-Visual Model — in that case
+    // a DataTemplate is auto-resolved by data type and applied to
+    // produce a Visual which is the one actually slotted. Tracked
+    // separately so Content-change / Template-change paths can detach
+    // it cleanly without touching the data Model.
+    private _resolvedContent: Visual | undefined;
+
+    public get Content(): Visual | Model | undefined
     {
         return this.get_property_value('Content');
     }
 
-    // Setter wires three things in order:
-    //   1. Visually unslot the OLD content from the presenter (if any).
-    //   2. Logically detach the OLD content from this control.
-    //   3. Logically attach the NEW content to this control.
-    //   4. Visually slot the NEW content into the presenter (if any).
-    // Order matters: detach-visual before detach-logical so the content's
-    // visual parent isn't left dangling at a presenter mid-swap.
-    public set Content(value: Visual | undefined)
+    // Setter accepts a Visual OR a plain Model:
+    //
+    //   * Visual    — slotted directly into the presenter as the
+    //                 ContentPresenter's visualChild. Logical parent =
+    //                 this ContentControl.
+    //   * Model     — looked up via Application resources for a
+    //                 DataTemplate whose DataType matches the Model's
+    //                 constructor name. The template is applied, the
+    //                 produced Visual's DataContext is set to the
+    //                 Model, and that Visual is slotted. The Model
+    //                 itself is NOT a logical child (Models aren't
+    //                 Visuals); $-bindings inside the template see
+    //                 the Model via the generated Visual's DataContext.
+    //
+    // Order: visually unslot the old resolved content first, then
+    // logically detach the old (Visual) Content, then logically attach
+    // the new (Visual) Content, then resolve + slot the new visual.
+    public set Content(value: Visual | Model | undefined)
     {
-        const old = this.Content;
-        if (old === value) return;
+        // Side-effect dispatched from OnPropertyChanged so that binding
+        // pushes (which bypass JS setters) produce the same behavior
+        // as direct assignment.
+        this.set_property_value('Content', value);
+    }
 
+    private applyContent(oldValue: Visual | Model | undefined, newValue: Visual | Model | undefined): void
+    {
         const presenter = this._templateInstance?.contentPresenter;
 
-        if (old !== undefined && presenter !== undefined)
+        // Unslot the visual that was actually in the presenter — could
+        // be the old Content (when Visual) or a template-generated
+        // visual (when Model).
+        if (this._resolvedContent !== undefined && presenter !== undefined)
         {
-            // Clear the presenter's visual slot for the outgoing content
-            // first; SetContent(undefined) handles the DetachVisual.
             presenter.SetContent(undefined);
         }
-        if (old !== undefined)
+        this._resolvedContent = undefined;
+
+        if (oldValue instanceof Visual)
         {
-            this.DetachLogical(old);
+            this.DetachLogical(oldValue);
         }
 
-        this.set_property_value('Content', value);
+        if (newValue instanceof Visual)
+        {
+            this.AttachLogical(newValue);
+        }
 
-        if (value !== undefined)
+        this._resolvedContent = this.resolveContentVisual(newValue);
+        if (this._resolvedContent !== undefined && presenter !== undefined)
         {
-            this.AttachLogical(value);
+            presenter.SetContent(this._resolvedContent);
         }
-        if (value !== undefined && presenter !== undefined)
-        {
-            presenter.SetContent(value);
-        }
+    }
+
+    // Bridges a Content value to the Visual that should sit in the
+    // presenter. Returns the Visual directly when Content is already
+    // one; otherwise finds a DataTemplate matching the Model's runtime
+    // type via Application resources, applies it, and sets the result's
+    // DataContext so $-bindings inside the template resolve against
+    // the data.
+    private resolveContentVisual(value: Visual | Model | undefined): Visual | undefined
+    {
+        if (value === undefined) return undefined;
+        if (value instanceof Visual) return value;
+        // Non-Visual Model — auto-resolve a DataTemplate by type name.
+        const typeName = value.constructor.name;
+        const template = findDataTemplateForType(typeName);
+        if (template === undefined) return undefined;
+        const visual = template.Apply(value);
+        visual.DataContext = value;
+        // Optional VM hook: when the data exposes an `OnViewMounted`
+        // function, hand the freshly-built visual to it so VM-driven
+        // imperative setup (FindName lookups, click handlers, animation
+        // wiring) can run once per resolution.
+        const hook = (value as { OnViewMounted?: (v: Visual) => void }).OnViewMounted;
+        if (typeof hook === 'function') hook.call(value, visual);
+        return visual;
     }
 
     public get Template(): ControlTemplate | undefined
@@ -109,13 +161,14 @@ export class ContentControl extends Visual
             : [];
     }
 
-    // Logical child = the Content (when set). Empty otherwise. Stays
-    // valid regardless of Template state — re-templating swaps the
-    // visual tree without touching the logical tree.
+    // Logical child = the Visual Content (when set). A non-Visual
+    // Model Content is NOT a logical child — its visual stand-in lives
+    // visually under the presenter via _resolvedContent and sees the
+    // Model through DataContext, not via the logical chain.
     public override get logicalChildren(): readonly Visual[]
     {
         const c = this.Content;
-        return c !== undefined ? [c] : [];
+        return c instanceof Visual ? [c] : [];
     }
 
     // Inheritance propagation: refresh the Content slot AND the
@@ -127,18 +180,16 @@ export class ContentControl extends Visual
     // through the templatedParent fallback.
     protected override propagate_inheritance_to_logical_children(): void
     {
-        this.Content?.['refresh_inheritance_subtree']();
+        const c = this.Content;
+        if (c instanceof Visual) c['refresh_inheritance_subtree']();
         this._templateInstance?.root['refresh_inheritance_subtree']();
     }
 
     protected override propagate_inheritance_for_logical_children(descriptor: PropertyDescriptor): void
     {
-        this.Content?.['refresh_inherited'](descriptor);
+        const c = this.Content;
+        if (c instanceof Visual) c['refresh_inherited'](descriptor);
         this._templateInstance?.root['refresh_inherited'](descriptor);
-        // refresh_inherited on the template root fires OnPropertyChanged
-        // when the value actually changed, which cascades through the
-        // root's own propagate hook into its logical descendants. No
-        // manual walk needed here.
     }
 
     // Target propagation rides the VISUAL tree, so it cascades through
@@ -153,22 +204,22 @@ export class ContentControl extends Visual
     }
 
     // Tear down the previous template (if any) and apply the new one.
-    // Re-slots the current Content into the new template's presenter
-    // so the logical Content survives a Template swap intact — that's
-    // the headline benefit of the two-tree split.
+    // Re-slots the resolved Content (Visual directly, or template-
+    // generated Visual for a Model Content) into the new template's
+    // presenter so the logical Content survives a Template swap intact.
     private rebuildTemplate(newTemplate: ControlTemplate | undefined): void
     {
-        const carriedContent = this.Content;
+        const carriedResolved = this._resolvedContent;
 
         if (this._templateInstance !== undefined)
         {
             const oldPresenter = this._templateInstance.contentPresenter;
-            if (oldPresenter !== undefined && carriedContent !== undefined)
+            if (oldPresenter !== undefined && carriedResolved !== undefined)
             {
-                // Unslot the carried content visually before tearing down
-                // the old template tree, otherwise DetachVisual on the
-                // template root would refuse to detach a node that has
-                // descendants with foreign visual parents.
+                // Unslot the carried resolved visual before tearing
+                // down the old template tree — otherwise DetachVisual
+                // on the template root would refuse to detach a node
+                // that has descendants with foreign visual parents.
                 oldPresenter.SetContent(undefined);
             }
             this.DetachVisual(this._templateInstance.root);
@@ -180,17 +231,11 @@ export class ContentControl extends Visual
         const instance = newTemplate.Apply(this);
         this.AttachVisual(instance.root);
         this._templateInstance = instance;
-        // Now that the template subtree has a TemplatedParent stamped
-        // (Apply did that) and a target (AttachVisual cascaded it),
-        // refresh inheritance so template internals pull values from
-        // this control via the walk_inherited templatedParent fallback.
-        // Without this, values set on the control BEFORE the template
-        // was applied wouldn't propagate into the template tree.
         instance.root['refresh_inheritance_subtree']();
 
-        if (carriedContent !== undefined && instance.contentPresenter !== undefined)
+        if (carriedResolved !== undefined && instance.contentPresenter !== undefined)
         {
-            instance.contentPresenter.SetContent(carriedContent);
+            instance.contentPresenter.SetContent(carriedResolved);
         }
     }
 
@@ -223,4 +268,21 @@ export class ContentControl extends Visual
     // No own paint — the template tree paints itself when the renderer
     // walks visualChildren.
     protected override RenderOverride(_dc: DrawingContext): void { }
+
+    protected override OnPropertyChanged(
+        descriptor: PropertyDescriptor,
+        oldValue: unknown,
+        newValue: unknown,
+    ): void
+    {
+        super.OnPropertyChanged(descriptor, oldValue, newValue);
+        if (descriptor.Name === 'Content')
+        {
+            this.applyContent(
+                oldValue as Visual | Model | undefined,
+                newValue as Visual | Model | undefined,
+            );
+        }
+    }
 }
+

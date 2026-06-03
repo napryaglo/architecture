@@ -53,103 +53,40 @@
     <pre id="status"></pre>
 
     <script type="module">
-        // The shell.
-        import { app }                  from './platform.mu.js';
-        import { HtmlTarget }           from '@visualisation-sub/mural/visual-engine';
-        import { PageView, TreeView, TreeViewItem }
-                                        from '@visualisation-sub/mural/Controls';
+        // The shell — fully MVVM. PlatformVM holds the registered
+        // demos plus the ItemTemplate / ItemContainerStyle / Title /
+        // Subtitle / Content / SelectedDemo properties. platform.mu
+        // binds every TreeView and PageView slot through DataContext.
+        // No tree-walking, no selection-listener wiring, no FindName:
+        // the only thing the host JS does is build the VM and hand it
+        // to the root as DataContext.
+        import { app }        from './platform.mu.js';
+        import { HtmlTarget } from '@visualisation-sub/mural/visual-engine';
 
         // Demo modules self-register on import. Each module calls
         // `register(...)` at top level — the side effect of importing
         // is enough to enroll the demo with the platform's registry.
-        import './demos/dashboard.mjs';
-        import './demos/diagram.mjs';
-        import './demos/counter.mjs';
-        import './demos/drawer.mjs';
-        import './demos/tree-view.mjs';
-        import './demos/list-box.mjs';
-        import './demos/text-box.mjs';
-        import './demos/spin-edit.mjs';
-        import './demos/slider.mjs';
-        import './demos/animation.mjs';
-        import './demos/animation-declarative.mjs';
-        import './demos/animation-triggers.mjs';
-        import './demos/animation-named.mjs';
+        import '../demos/dashboard/dashboard.mjs';
+        import '../demos/diagram/diagram.mjs';
+        import '../demos/counter/counter.mjs';
+        import '../demos/drawer/drawer.mjs';
+        import '../demos/tree-view/tree-view.mjs';
+        import '../demos/list-box/list-box.mjs';
+        import '../demos/text-box/text-box.mjs';
+        import '../demos/spin-edit/spin-edit.mjs';
+        import '../demos/slider/slider.mjs';
+        import '../demos/animation/animation.mjs';
+        import '../demos/animation-declarative/animation-declarative.mjs';
+        import '../demos/animation-triggers/animation-triggers.mjs';
+        import '../demos/animation-named/animation-named.mjs';
 
-        import { allDemos, instantiateDemo } from './registry.mjs';
-
-        // Group the registered demos: { groupName: DemoDefinition[] }.
-        function groupDemos(defs) {
-            const m = new Map();
-            for (const d of defs) {
-                const list = m.get(d.group);
-                if (list === undefined) m.set(d.group, [d]);
-                else                    list.push(d);
-            }
-            return m;
-        }
+        import { allDemos }   from './registry.mjs';
+        import { PlatformVM } from './platform-vm.mjs';
 
         const status = document.getElementById('status');
         try {
-            const target = new HtmlTarget(document.getElementById('app'));
-            target.Show(app.Root);
-
-            // x:name lookups via FindName — `nav` is the empty
-            // TreeView in the left strip; `page` is the PageView
-            // filling the body. Both are declared in platform.mu.
-            const tree = app.Root.FindName('nav');
-            const page = app.Root.FindName('page');
-            if (!(tree instanceof TreeView))  throw new Error('platform.mu missing x:name="nav" TreeView');
-            if (!(page instanceof PageView))  throw new Error('platform.mu missing x:name="page" PageView');
-
-            // Build the tree: one folder-style top-level TreeViewItem
-            // per group, with each registered demo as a leaf child.
-            // Tag carries the DemoDefinition so the selection listener
-            // can recover it without a side map.
-            const grouped = groupDemos(allDemos());
-            for (const [groupName, defs] of grouped) {
-                const group = new TreeViewItem();
-                group.Header     = groupName;
-                group.IsExpanded = true;
-                for (const def of defs) {
-                    const leaf = new TreeViewItem();
-                    leaf.Header = def.title;
-                    leaf.Tag    = def;
-                    group.AddChild(leaf);
-                }
-                tree.AddChild(group);
-            }
-
-            // Activate a demo: pull its Visual from the registry cache
-            // (instantiated lazily on first call) and slot it into the
-            // PageView along with the title metadata.
-            function activate(def) {
-                const root = instantiateDemo(def.id);
-                if (root === undefined) return;
-                page.Title    = def.title;
-                page.Subtitle = def.subtitle ?? '';
-                page.Content  = root;
-            }
-
-            // Selection listener — fires whenever the user clicks a row
-            // in the tree. We only react to LEAF clicks (Tag is set on
-            // leaves only); clicking the group folder just selects the
-            // group without activating anything.
-            tree.AddSelectionChangedListener(() => {
-                const item = tree.SelectedItem;
-                if (item === undefined) return;
-                const def = item.Tag;
-                if (def === undefined || typeof def !== 'object') return;
-                activate(def);
-            });
-
-            // First-load: pick the first leaf in the first group so the
-            // user lands on an actual demo, not the empty welcome state.
-            const firstGroup = tree.RootItems[0];
-            const firstLeaf  = firstGroup?.SubItems[0];
-            if (firstLeaf !== undefined) {
-                tree.HandleRowClick(firstLeaf, { Shift: false, Control: false, Alt: false, Meta: false });
-            }
+            new HtmlTarget(document.getElementById('app')).Show(app.Root);
+            app.Root.DataContext = new PlatformVM(allDemos());
         } catch (e) {
             status.textContent = 'Error: ' + (e?.message ?? String(e));
             console.error(e);

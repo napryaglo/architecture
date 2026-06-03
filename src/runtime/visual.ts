@@ -1136,12 +1136,15 @@ export class Visual extends Model
         // Implicit-style lookup runs AFTER inheritance refresh — the
         // resource chain now reflects the child's new ancestry, so the
         // (TargetType-keyed) Style lookup sees what the consumer would
-        // see at this position in the tree. subscribe_implicit_style
-        // wires reactive re-resolution: a later mutation on any
-        // ancestor's ResourceDictionary refires resolve_implicit_style
-        // (the same way DynamicResource reacts to its tracked dicts).
-        child.resolve_implicit_style();
-        child.subscribe_implicit_style();
+        // see at this position in the tree. Cascades through the
+        // ENTIRE subtree because descendants' ancestor chain just
+        // grew above them too (bottom-up construction is common: a
+        // Border with `resources: { style[targettype=Button] }` gets
+        // its inner Buttons built and AddChild'd before the Border
+        // itself is attached anywhere; the Buttons resolved an empty
+        // chain at their original AddChild and only see the Border's
+        // style when their chain extends up to it on THIS attach).
+        child.refresh_implicit_style_subtree();
     }
 
     protected DetachLogical(child: Visual): void
@@ -1150,16 +1153,39 @@ export class Visual extends Model
         {
             throw new Error('Cannot detach a Visual that is not a logical child of this.');
         }
-        // Tear down ancestor-resource subscriptions FIRST so the
-        // resolve_implicit_style triggered by detach doesn't fire
-        // through stale subs.
-        child.unsubscribe_implicit_style();
+        // Tear down ancestor-resource subscriptions FIRST (whole
+        // subtree) so a mutation on the now-detached chain doesn't
+        // fire resolve_implicit_style through stale subs.
+        child.unsubscribe_implicit_style_subtree();
         child.SetLogicalParent(undefined);
         child.refresh_inheritance_subtree();
-        // No ancestor chain anymore, so the implicit-style lookup
-        // returns undefined and refresh_active_style clears it. If
-        // an explicit Style is set it stays active.
-        child.resolve_implicit_style();
+        // No ancestor chain anymore — re-resolve drops any inherited
+        // implicit style across the subtree. Explicit Style stays
+        // active because refresh_active_style prefers Style over
+        // _implicitStyle.
+        child.refresh_implicit_style_subtree();
+    }
+
+    // Cascades unsubscribe → resolve → subscribe through THIS visual
+    // and every logical descendant. Used by AttachLogical / DetachLogical
+    // to re-propagate implicit-style lookups when the ancestor chain
+    // changes at any level above the subtree (which invalidates every
+    // descendant's chain, not just the directly-attached child).
+    protected refresh_implicit_style_subtree(): void
+    {
+        this.unsubscribe_implicit_style();
+        this.resolve_implicit_style();
+        this.subscribe_implicit_style();
+        for (const c of this.logicalChildren) c['refresh_implicit_style_subtree']();
+    }
+
+    // Cascades unsubscribe through THIS visual and every logical
+    // descendant. Called before a subtree detach so subs torn down
+    // FIRST can't fire through the still-attached ancestor chain.
+    protected unsubscribe_implicit_style_subtree(): void
+    {
+        this.unsubscribe_implicit_style();
+        for (const c of this.logicalChildren) c['unsubscribe_implicit_style_subtree']();
     }
 
     // Convenience for the common case where a child belongs to BOTH

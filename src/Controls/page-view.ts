@@ -12,6 +12,7 @@ import {
 } from '../runtime/index.js';
 import { SolidColorBrush } from '../visual-engine/index.js';
 import type { ContentPresenter } from './content-presenter.js';
+import { findDataTemplateForType } from './data-template.js';
 import type { DockPanel } from './dock-panel.js';
 import { StackPanel } from './stack-panel.js';
 import { TextBlock } from './text-block.js';
@@ -103,27 +104,67 @@ export class PageView extends Visual
     public get Subtitle(): string { return this.get_property_value('Subtitle'); }
     public set Subtitle(v: string) { this.set_property_value('Subtitle', v); }
 
-    public get Content(): Visual | undefined { return this.get_property_value('Content'); }
-    public set Content(value: Visual | undefined)
-    {
-        const old = this.Content;
-        if (old === value) return;
+    // Tracks the Visual actually inside the ContentPresenter. When
+    // Content is itself a Visual, _resolvedContent === Content. When
+    // Content is a non-Visual Model, _resolvedContent is the visual
+    // produced by applying the matching DataTemplate.
+    private _resolvedContent: Visual | undefined;
 
-        // Same teardown order as ContentControl — unslot visually
-        // BEFORE detaching the logical parent so the safety check on
-        // DetachVisual sees a coherent state.
-        if (old !== undefined)
+    public get Content(): Visual | Model | undefined { return this.get_property_value('Content'); }
+    public set Content(value: Visual | Model | undefined)
+    {
+        // Side-effect (presenter swap + DataTemplate resolution) is
+        // dispatched from OnPropertyChanged so that binding pushes
+        // (which bypass JS setters via set_property_value) produce the
+        // same behavior as direct assignment.
+        this.set_property_value('Content', value);
+    }
+
+    private applyContent(oldValue: Visual | Model | undefined, newValue: Visual | Model | undefined): void
+    {
+        // Unslot the currently-presented visual (the template-resolved
+        // one when prior Content was a Model) before detaching the OLD
+        // logical Content.
+        if (this._resolvedContent !== undefined)
         {
             this._contentPresenter.SetContent(undefined);
-            this.DetachLogical(old);
+        }
+        this._resolvedContent = undefined;
+
+        if (oldValue instanceof Visual)
+        {
+            this.DetachLogical(oldValue);
         }
 
-        this.set_property_value('Content', value);
-
-        if (value !== undefined)
+        if (newValue instanceof Visual)
         {
-            this.AttachLogical(value);
-            this._contentPresenter.SetContent(value);
+            this.AttachLogical(newValue);
+            this._resolvedContent = newValue;
+        }
+        else if (newValue instanceof Model)
+        {
+            // Auto-resolve a DataTemplate by data type. The produced
+            // Visual hosts the data through its DataContext so
+            // $-bindings inside the template resolve naturally.
+            const tpl = findDataTemplateForType(newValue.constructor.name);
+            if (tpl !== undefined)
+            {
+                const v = tpl.Apply(newValue);
+                v.DataContext = newValue;
+                // Optional VM hook: when the data exposes an
+                // `OnViewMounted` function, hand the freshly-built
+                // visual to it so VM-driven imperative setup
+                // (FindName, click handlers, animation wiring) can run
+                // once per resolution.
+                const hook = (newValue as unknown as { OnViewMounted?: (v: Visual) => void }).OnViewMounted;
+                if (typeof hook === 'function') hook.call(newValue, v);
+                this._resolvedContent = v;
+            }
+        }
+
+        if (this._resolvedContent !== undefined)
+        {
+            this._contentPresenter.SetContent(this._resolvedContent);
         }
     }
 
@@ -131,17 +172,19 @@ export class PageView extends Visual
     public override get logicalChildren(): readonly Visual[]
     {
         const c = this.Content;
-        return c !== undefined ? [c] : [];
+        return c instanceof Visual ? [c] : [];
     }
 
     protected override propagate_inheritance_to_logical_children(): void
     {
-        this.Content?.['refresh_inheritance_subtree']();
+        const c = this.Content;
+        if (c instanceof Visual) c['refresh_inheritance_subtree']();
     }
 
     protected override propagate_inheritance_for_logical_children(d: PropertyDescriptor): void
     {
-        this.Content?.['refresh_inherited'](d);
+        const c = this.Content;
+        if (c instanceof Visual) c['refresh_inherited'](d);
     }
 
     protected override propagate_target_to_visual_children(): void
@@ -164,6 +207,12 @@ export class PageView extends Visual
             case 'Subtitle':
                 this._subtitleText.Text = String(newValue ?? '');
                 this.refreshSubtitleSlot();
+                break;
+            case 'Content':
+                this.applyContent(
+                    oldValue as Visual | Model | undefined,
+                    newValue as Visual | Model | undefined,
+                );
                 break;
         }
     }

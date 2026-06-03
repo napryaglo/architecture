@@ -12,6 +12,7 @@ import {
 } from '../runtime/index.js';
 import { RectangleGeometry, type Brush } from '../visual-engine/index.js';
 import { Border } from './border.js';
+import { HierarchicalDataTemplate } from './data-template.js';
 import { ItemsControl } from './items-control.js';
 import { ScrollViewer } from './scroll-viewer.js';
 import { StackPanel } from './stack-panel.js';
@@ -183,8 +184,24 @@ export class TreeView extends ItemsControl
 {
     static {
         Model.RegisterProperty(TreeView, 'Indent', 16, MetaData.Measure | MetaData.Arrange);
+        // TwoWay by default — the standard binding pattern is a VM
+        // round-trip: user clicks a row → DP updates → push to VM;
+        // VM sets the property → DP updates → tree selects the
+        // matching container. Mirrors WPF's SelectedValue + selection-
+        // binding idiom, except we always carry the DATA item (via
+        // ItemContainerGenerator's reverse map) rather than a value
+        // pulled by SelectedValuePath.
+        Model.RegisterProperty(TreeView, 'SelectedDataItem', undefined,
+            MetaData.None | MetaData.BindsTwoWayByDefault);
         ensureControlsTheme();
     }
+
+    // Guard for the SelectedDataItem ↔ internal-selection feedback
+    // loop. Set when an internal selection-change is mirroring out to
+    // the DP; cleared when the mirror is done. OnPropertyChanged
+    // checks the flag and skips the inbound-write path while it's
+    // set.
+    private _suppressSelectedDataSync = false;
 
     // Backing for AddChild — declarative children land here when no
     // caller-supplied Items collection is in place. Same pattern as
@@ -212,17 +229,19 @@ export class TreeView extends ItemsControl
     public get Indent(): number { return this.get_property_value('Indent'); }
     public set Indent(v: number) { this.set_property_value('Indent', v); }
 
+    // The currently-selected data item — the value the generator maps
+    // FROM the selected container, OR the container itself when no
+    // mapping exists (composed-markup mode where the consumer added
+    // TreeViewItems directly). Bindable both ways: writing the DP
+    // (from a VM or by other code) selects the matching row.
+    public get SelectedDataItem(): unknown { return this.get_property_value('SelectedDataItem'); }
+    public set SelectedDataItem(v: unknown) { this.set_property_value('SelectedDataItem', v); }
+
     // ── ItemsControl override seams ────────────────────────────────
 
     public override GetContainerForItemOverride(item: unknown): Visual
     {
-        // Composed-markup items are TreeViewItem instances and pass
-        // through unchanged. Data-driven items (a future
-        // HierarchicalDataTemplate path) would wrap here.
-        if (item instanceof TreeViewItem) return item;
-        const tvi = new TreeViewItem();
-        tvi.Header = String(item ?? '');
-        return tvi;
+        return wrapTreeItem(item, this.ItemTemplate);
     }
 
     public override ClearContainerForItemOverride(container: Visual, item: unknown): void
@@ -427,7 +446,33 @@ export class TreeView extends ItemsControl
 
     private fireSelectionChanged(): void
     {
+        this.syncSelectedDataItem();
         for (const l of this._selectionListeners) l();
+    }
+
+    // Push the first-selected container's data item out to the
+    // SelectedDataItem DP. Guarded so the resulting OnPropertyChanged
+    // doesn't loop back into the selection-from-DP path.
+    //
+    // In a hierarchical tree, the selected container's data lives in
+    // the generator of its DIRECT parent ItemsControl — typically a
+    // nested TreeViewItem, not the root TreeView. Rather than walking
+    // generators by ancestry, we read `_itemsControlData` straight off
+    // the container — every container realized through
+    // PrepareContainerForItemOverride is stamped with the data item
+    // there. Falls back to the container itself in composed-markup
+    // mode where there is no data.
+    private syncSelectedDataItem(): void
+    {
+        const first: TreeViewItem | undefined =
+            this._selectedItems.values().next().value;
+        const data = first === undefined
+            ? undefined
+            : (dataOf(first) ?? first);
+        if (this.SelectedDataItem === data) return;
+        this._suppressSelectedDataSync = true;
+        this.set_property_value('SelectedDataItem', data);
+        this._suppressSelectedDataSync = false;
     }
 
     protected override OnPropertyChanged(
@@ -443,7 +488,41 @@ export class TreeView extends ItemsControl
             // bare Measure flag on the DP only invalidates the TreeView,
             // not its descendants. Force the cascade ourselves.
             for (const i of this.RootItems) TreeView.invalidateMeasureSubtree(i);
+            return;
         }
+        if (descriptor.Name === 'SelectedDataItem')
+        {
+            if (this._suppressSelectedDataSync) return;
+            this.applySelectedDataItem(newValue);
+        }
+    }
+
+    // External write to SelectedDataItem (typically from a TwoWay VM
+    // binding). Find the container backing this data item and select
+    // it. Undefined clears the selection. When the data has no
+    // realized container yet (e.g., a VM set this property before
+    // ItemsSource finished realizing), we leave the selection alone —
+    // the next realization will catch up when the container is
+    // generated. Composed-markup mode: the data item IS its container.
+    private applySelectedDataItem(value: unknown): void
+    {
+        if (value === undefined)
+        {
+            this.ClearSelection();
+            return;
+        }
+        // The data may belong to any nested ItemsControl in this
+        // TreeView, so we walk the realized container tree depth-first
+        // and match on `_itemsControlData`. Composed-markup mode: the
+        // value IS its container.
+        const container = value instanceof TreeViewItem
+            ? value
+            : findContainerByData(this.RootItems, value);
+        if (container === undefined) return;
+        this.setSelected([container]);
+        this._anchor = container;
+        for (const l of this._selectionListeners) l();
+        this.syncSelectedDataItem();
     }
 
     private static invalidateMeasureSubtree(item: TreeViewItem): void
@@ -565,10 +644,7 @@ export class TreeViewItem extends ItemsControl
 
     public override GetContainerForItemOverride(item: unknown): Visual
     {
-        if (item instanceof TreeViewItem) return item;
-        const tvi = new TreeViewItem();
-        tvi.Header = String(item ?? '');
-        return tvi;
+        return wrapTreeItem(item, this.ItemTemplate);
     }
 
     public override ClearContainerForItemOverride(container: Visual, item: unknown): void
@@ -733,4 +809,80 @@ export class TreeViewItem extends ItemsControl
             this._chevronText.Text = this.IsExpanded ? CHEVRON_EXPANDED : CHEVRON_COLLAPSED;
         }
     }
+}
+
+// Shared container construction for TreeView and TreeViewItem. Routes
+// the data item through a HierarchicalDataTemplate when one is in
+// place so child-items propagate down the tree as their parent rows
+// are realized. Behavior matrix:
+//
+//   * item IS already a TreeViewItem (composed-markup path) → return
+//     it unchanged.
+//   * template is a HierarchicalDataTemplate → wrap the data in a
+//     fresh TreeViewItem with Header = `displayString(item)` (Label /
+//     Name / Text convention), set the sub-Items to the children the
+//     template's itemsSelector pulls off the data, and recur the
+//     same template down the tree (or `template.itemTemplate` when
+//     it's set, for "different template for children" scenarios).
+//   * template is a plain DataTemplate or undefined → just stringify
+//     the data into the Header. The user's ItemTemplate (if any) is
+//     ignored at this level — TreeView doesn't currently host the
+//     factory's Visual as a Header (the row template owns the
+//     PART_Label slot).
+function wrapTreeItem(item: unknown, template: unknown): Visual
+{
+    if (item instanceof TreeViewItem) return item;
+    const tvi = new TreeViewItem();
+    tvi.Header = displayTreeHeader(item);
+    if (template instanceof HierarchicalDataTemplate)
+    {
+        const childTpl = template.itemTemplate ?? template;
+        tvi.ItemTemplate = childTpl as never;
+        tvi.Items = [...template.ItemsOf(item)];
+    }
+    return tvi;
+}
+
+// Read the data item stamped on a container by
+// ItemsControl.PrepareContainerForItemOverride. Type-erased because
+// ContainerWithData is an internal interface inside items-control.ts;
+// the field is always `_itemsControlData` regardless.
+function dataOf(container: TreeViewItem): unknown
+{
+    return (container as unknown as { _itemsControlData?: unknown })._itemsControlData;
+}
+
+// Depth-first search of the realized container tree for the
+// TreeViewItem whose stamped data === `value`. Returns undefined when
+// the data isn't realized yet (e.g., a VM set SelectedDataItem before
+// the items pipeline finished).
+function findContainerByData(
+    roots: readonly TreeViewItem[],
+    value: unknown,
+): TreeViewItem | undefined
+{
+    for (const node of roots)
+    {
+        if (dataOf(node) === value) return node;
+        const inSub = findContainerByData(node.SubItems, value);
+        if (inSub !== undefined) return inSub;
+    }
+    return undefined;
+}
+
+// Header resolution — same convention as ListBox/ComboBox's
+// displayString: strings pass through, objects use a conventional
+// Label / Name / Text field, anything else stringifies.
+function displayTreeHeader(item: unknown): string
+{
+    if (item === undefined || item === null) return '';
+    if (typeof item === 'string') return item;
+    if (typeof item === 'object')
+    {
+        const obj = item as Record<string, unknown>;
+        if (typeof obj.Label === 'string') return obj.Label;
+        if (typeof obj.Name  === 'string') return obj.Name;
+        if (typeof obj.Text  === 'string') return obj.Text;
+    }
+    return String(item);
 }

@@ -1,4 +1,4 @@
-import type { Visual } from '../runtime/index.js';
+import { Application, ResourceDictionary, type Visual } from '../runtime/index.js';
 
 // Factory signature for a DataTemplate. Constructs a fresh visual
 // subtree for one item of data — typically run once per item by
@@ -25,9 +25,27 @@ export type DataTemplateFactory = (data: unknown) => Visual;
 //
 // Used by ItemsControl.ItemTemplate to render each item in its Items
 // collection.
+//
+// `DataType` (optional) names the data type this template renders. When
+// set, ContentPresenter / PageView look up an applicable template for
+// non-Visual Content by walking ancestor resources and matching this
+// field against the content's runtime constructor name. Match by string
+// avoids a class-reference compile dependency between the .mu file and
+// the VM module — the .mu can declare `datatype=CounterVM` and the
+// runtime resolves it via `content.constructor.name === 'CounterVM'`.
+// (WPF parity would use {x:Type} class refs; the string form is
+// equivalent for non-minified projects and trivial to upgrade later.)
 export class DataTemplate
 {
-    constructor(public readonly factory: DataTemplateFactory) {}
+    public DataType: string | undefined;
+
+    constructor(
+        public readonly factory: DataTemplateFactory,
+        dataType?: string,
+    )
+    {
+        this.DataType = dataType;
+    }
 
     public Apply(data: unknown): Visual
     {
@@ -64,9 +82,10 @@ export class HierarchicalDataTemplate extends DataTemplate
         public readonly itemsSelector: HierarchicalChildSelector,
         public readonly itemTemplate: DataTemplate | undefined = undefined,
         public readonly itemContainerStyle: unknown | undefined = undefined,
+        dataType?: string,
     )
     {
-        super(factory);
+        super(factory, dataType);
     }
 
     // Walk the child-items pulled from `data` via itemsSelector.
@@ -78,4 +97,31 @@ export class HierarchicalDataTemplate extends DataTemplate
         if (it === undefined) return;
         yield* it;
     }
+}
+
+// Find a DataTemplate whose DataType matches `typeName`, by walking
+// the current Application's resources (own entries first, then merged
+// dictionaries recursively). Returns undefined when no Application is
+// current OR when no matching template is registered. Used by
+// ContentControl + PageView to auto-resolve a template for non-Visual
+// Content based on the data's constructor name.
+export function findDataTemplateForType(typeName: string): DataTemplate | undefined
+{
+    const app = Application.current;
+    if (app === null) return undefined;
+    return walkResourcesForDataTemplate(app.Resources, typeName);
+}
+
+function walkResourcesForDataTemplate(rd: ResourceDictionary, typeName: string): DataTemplate | undefined
+{
+    for (const [, v] of rd.Entries())
+    {
+        if (v instanceof DataTemplate && v.DataType === typeName) return v;
+    }
+    for (const merged of rd.MergedDictionaries)
+    {
+        const r = walkResourcesForDataTemplate(merged, typeName);
+        if (r !== undefined) return r;
+    }
+    return undefined;
 }

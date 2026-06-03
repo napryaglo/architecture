@@ -270,6 +270,55 @@ export class ItemsControl extends Visual
         void item;
     }
 
+    // Centralised side-effect dispatcher for ItemsControl-owned DPs.
+    // JS setters and Binding writes both flow through set_property_value,
+    // which fires this hook — so a TwoWay binding push has the same
+    // effect as a direct assignment without needing each setter to
+    // re-implement the work.
+    protected override OnPropertyChanged(
+        descriptor: PropertyDescriptor,
+        oldValue: unknown,
+        newValue: unknown,
+    ): void
+    {
+        super.OnPropertyChanged(descriptor, oldValue, newValue);
+        switch (descriptor.Name)
+        {
+            case 'ItemTemplate':
+            case 'ItemTemplateSelector':
+                // Cached containers were built against the prior
+                // template/selector — drop and rebuild.
+                this.rebuildContainers();
+                return;
+            case 'ItemContainerStyle':
+            {
+                // Re-apply style across realized containers. New
+                // containers will pick it up via the next
+                // PrepareContainerForItemOverride run; existing ones
+                // are updated here.
+                const style = newValue as Style | undefined;
+                for (let i = 0; i < this._containers.length; i++)
+                {
+                    const c = this._containers[i]!;
+                    if (style !== undefined) this.applyContainerStyle(c, style);
+                    else                     this.clearContainerStyle(c);
+                }
+                return;
+            }
+            case 'AlternationCount':
+                // Re-stamp AlternationIndex on every realized container
+                // so the new modulus takes effect immediately.
+                for (let i = 0; i < this._containers.length; i++)
+                {
+                    ItemsControl.SetAlternationIndex(this._containers[i]!, this.computeAlternationIndex(i));
+                }
+                return;
+            case 'ItemsSource':
+                this.refreshItemsFromSource();
+                return;
+        }
+    }
+
     private computeAlternationIndex(slot: number): number
     {
         const n = this.AlternationCount;
@@ -322,12 +371,10 @@ export class ItemsControl extends Visual
 
     public set ItemTemplate(value: DataTemplate | undefined)
     {
-        if (this.ItemTemplate === value) return;
+        // The actual rebuild lives in OnPropertyChanged so the binding
+        // system's set_property_value writes (which bypass JS setters)
+        // produce the same effect as direct assignment.
         this.set_property_value('ItemTemplate', value);
-        // Template change invalidates every cached container — Realize
-        // would return stale instances built from the old template.
-        // rebuildContainers will detach + clear the generator first.
-        this.rebuildContainers();
     }
 
     // Per-item template selector — queried before ItemTemplate by
@@ -340,11 +387,9 @@ export class ItemsControl extends Visual
 
     public set ItemTemplateSelector(value: ItemTemplateSelector | undefined)
     {
-        if (this.ItemTemplateSelector === value) return;
+        // Side effect (rebuild) handled in OnPropertyChanged — see
+        // ItemTemplate above for the rationale.
         this.set_property_value('ItemTemplateSelector', value);
-        // Selector change invalidates cached containers — each item
-        // may now resolve to a different DataTemplate.
-        this.rebuildContainers();
     }
 
     // Style applied to every generated container during
@@ -357,24 +402,9 @@ export class ItemsControl extends Visual
 
     public set ItemContainerStyle(value: Style | undefined)
     {
-        if (this.ItemContainerStyle === value) return;
+        // Side effect (re-apply style across realized containers)
+        // handled in OnPropertyChanged — see ItemTemplate above.
         this.set_property_value('ItemContainerStyle', value);
-        // Reapply the style to every already-realized container.
-        // PrepareContainerForItemOverride re-runs the style set; the
-        // old style (if any) is unapplied by Visual.Style's setter
-        // priority handoff.
-        for (let i = 0; i < this._containers.length; i++)
-        {
-            const c = this._containers[i]!;
-            if (value !== undefined)
-            {
-                this.applyContainerStyle(c, value);
-            }
-            else
-            {
-                this.clearContainerStyle(c);
-            }
-        }
     }
 
     public get AlternationCount(): number
@@ -384,15 +414,9 @@ export class ItemsControl extends Visual
 
     public set AlternationCount(value: number)
     {
-        if (this.AlternationCount === value) return;
+        // Side effect (re-stamp AlternationIndex) handled in
+        // OnPropertyChanged — see ItemTemplate above.
         this.set_property_value('AlternationCount', value);
-        // Re-stamp AlternationIndex on every realized container so the
-        // new modulus takes effect immediately. New container index =
-        // old slot index % new AlternationCount (or 0 when count = 0).
-        for (let i = 0; i < this._containers.length; i++)
-        {
-            ItemsControl.SetAlternationIndex(this._containers[i]!, this.computeAlternationIndex(i));
-        }
     }
 
     public get HasItems(): boolean
@@ -412,10 +436,12 @@ export class ItemsControl extends Visual
 
     public set ItemsSource(value: unknown)
     {
-        const old = this.get_property_value('ItemsSource');
-        if (old === value) return;
+        // Side effect (re-projection through CollectionView) handled
+        // in OnPropertyChanged — see ItemTemplate above. Same reason:
+        // bindings push values via set_property_value, bypassing the
+        // JS setter; lifting the work into OnPropertyChanged keeps
+        // both code paths equivalent.
         this.set_property_value('ItemsSource', value);
-        this.refreshItemsFromSource();
     }
 
     // Lazily-acquired CollectionView for the current ItemsSource. Held

@@ -393,6 +393,12 @@ export class Compiler
             this.registerResourceFormVar(rdVar, rf, tmplVar, /*allowImplicit*/ false);
             return;
         }
+        if (rf.keyword === 'hierarchicaldatatemplate')
+        {
+            const tmplVar = this.compileHierarchicalDataTemplateForm(rf);
+            this.registerResourceFormVar(rdVar, rf, tmplVar, /*allowImplicit*/ false);
+            return;
+        }
         throw new EmitError(
             `unknown resource form '${rf.keyword}'`, rf.span);
     }
@@ -464,10 +470,13 @@ export class Compiler
             throw new EmitError(
                 'datatemplate body must be a single element', rf.span);
         }
-        // Same as ControlTemplate — DataType is metadata for the spec
-        // but isn't carried by the runtime DataTemplate. Required for
-        // author clarity.
-        this.requireTargetType(rf);
+        // `datatype=Foo` resolves to a class name string — passed to
+        // DataTemplate so ContentPresenter / PageView can match it
+        // against `content.constructor.name` when auto-resolving a
+        // template for a non-Visual data Content. WPF parity would use
+        // {x:Type}; the string form is equivalent for non-minified
+        // builds and trivial to upgrade later.
+        const dataType = this.requireTargetType(rf);
 
         this.ensureImport('DataTemplate');
         const tmplVar = this.fresh('tmpl');
@@ -481,7 +490,48 @@ export class Compiler
         const rootVar = this.compileElement(rf.body);
         this.line(`return ${rootVar};`);
         this.indent -= 4;
-        this.line(`});`);
+        this.line(`}, ${JSON.stringify(dataType)});`);
+        return tmplVar;
+    }
+
+    // ── HierarchicalDataTemplate ────────────────────────────────────
+    //
+    // `hierarchicaldatatemplate x:key="…" [datatype=Foo, itemsselector=Bar] { … }`
+    // emits a HierarchicalDataTemplate whose itemsSelector pulls `data.Bar`
+    // off each parent data item, returning undefined for items without
+    // that property (TreeView treats undefined-children as a leaf row).
+    // Used by TreeView (and other hierarchical ItemsControls) to walk
+    // a recursive data structure with one template per level.
+    private compileHierarchicalDataTemplateForm(rf: ResourceForm): string
+    {
+        if (rf.body.kind !== 'element')
+        {
+            throw new EmitError(
+                'hierarchicaldatatemplate body must be a single element',
+                rf.span);
+        }
+        const dataType = this.requireTargetType(rf);
+        const selector = this.findIdentMetaAttr(rf, 'itemsselector');
+        if (selector === undefined)
+        {
+            throw new EmitError(
+                'hierarchicaldatatemplate requires `itemsselector=<PropertyName>` — names the children property on the data',
+                rf.span);
+        }
+
+        this.ensureImport('HierarchicalDataTemplate');
+        const tmplVar = this.fresh('tmpl');
+        this.line(`const ${tmplVar} = new HierarchicalDataTemplate((_data) => {`);
+        this.indent += 4;
+        const rootVar = this.compileElement(rf.body);
+        this.line(`return ${rootVar};`);
+        this.indent -= 4;
+        // Selector reads `data?.<selector>`. Optional chain → returns
+        // undefined when the data has no children property (leaf row),
+        // which HierarchicalDataTemplate.ItemsOf treats as an empty
+        // iterable.
+        this.line(
+            `}, (data) => data?.${selector}, undefined, undefined, ${JSON.stringify(dataType)});`);
         return tmplVar;
     }
 
@@ -1605,8 +1655,12 @@ export class Compiler
 
     private requireTargetType(rf: ResourceForm): string
     {
-        // Style/Template use 'targettype'; DataTemplate uses 'datatype'.
-        const name = (rf.keyword === 'datatemplate') ? 'datatype' : 'targettype';
+        // Style/Template use 'targettype'; DataTemplate (and
+        // HierarchicalDataTemplate) use 'datatype'.
+        const name = (rf.keyword === 'datatemplate'
+                  || rf.keyword === 'hierarchicaldatatemplate')
+            ? 'datatype'
+            : 'targettype';
         const m = rf.metaAttrs.find(
             a => a.path.parts.length === 1 && a.path.parts[0] === name);
         if (m === undefined)
@@ -1618,6 +1672,23 @@ export class Compiler
         {
             throw new EmitError(
                 `${name} must be a type reference (PascalCase identifier)`,
+                m.span);
+        }
+        return m.value.name;
+    }
+
+    // Read a named meta-attr by name from a resource form. Returns
+    // undefined when the attr is absent. Used for optional meta-attrs
+    // like hierarchicaldatatemplate's `itemsselector=PropertyName`.
+    private findIdentMetaAttr(rf: ResourceForm, name: string): string | undefined
+    {
+        const m = rf.metaAttrs.find(
+            a => a.path.parts.length === 1 && a.path.parts[0] === name);
+        if (m === undefined) return undefined;
+        if (m.value.kind !== 'ident')
+        {
+            throw new EmitError(
+                `${name} must be an identifier (property name)`,
                 m.span);
         }
         return m.value.name;

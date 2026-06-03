@@ -1,0 +1,99 @@
+// list-box.mu — ListBox demo: composed-markup rows on the left, a
+// counterpart bound to the Items convenience path on the right. Both
+// share a single DockPanel header strip.
+//
+// The right pane's data wiring + Sort/Filter button handlers live on
+// ListBoxVM.OnViewMounted, which uses FindName on the freshly-built
+// template subtree (resolved through DataTemplate by data type).
+//
+// Packaged as a DataTemplate keyed off ListBoxVM.
+
+ResourceDictionary {
+    datatemplate x:key="ListBoxTemplate" [datatype=ListBoxVM] {
+        // x:root marks this Border as the NameScope owner so x:name
+        // attributes inside register against its scope — VM's
+        // OnViewMounted then resolves them via FindName.
+        Border x:root [Background=#ffffff, BorderBrush=#e2e8f0,
+                       BorderThickness=(1)]{
+
+            // DockPanel — a header strip on top, a horizontal split
+            // below. Gives both ListBoxes finite-height slots so the
+            // built-in ScrollViewers have a bounded viewport.
+            DockPanel{
+                // Header strip
+                Border[DockPanel.Dock=Top,
+                       Background=#1976d2, Padding=(16,12,16,12)]{
+                    TextBlock[Text="ListBox demo — declarative vs. Items",
+                              FontSize=15, FontWeight=Bold,
+                              Foreground=#ffffff]
+                }
+
+                // Two-up split — declarative on the left, Items on the
+                // right, separated by a hairline divider. Each side
+                // takes half the residual width via a horizontal
+                // StackPanel sized inside the dock's LastChildFill slot.
+                StackPanel[Orientation=Horizontal]{
+
+                    // Left: composed-markup ListBoxItems. Each item's
+                    // Content is a TextBlock; Tag is unset, so the
+                    // host's SelectedItem read returns the ListBoxItem
+                    // reference itself (matching WPF's declarative-mode
+                    // SelectedItem convention).
+                    StackPanel[Orientation=Vertical, Width=240, Margin=(12,12,6,12)]{
+                        TextBlock[Text="Declarative", FontSize=12,
+                                  FontWeight=Bold, Margin=(0,0,0,8)]
+                        ListBox [SelectionMode=Extended]{
+                            ListBoxItem{ TextBlock[Text="Apples"]   }
+                            ListBoxItem{ TextBlock[Text="Bananas"]  }
+                            ListBoxItem{ TextBlock[Text="Cherries"] }
+                            ListBoxItem{ TextBlock[Text="Durian"]   }
+                            ListBoxItem{ TextBlock[Text="Elderberry"]}
+                            ListBoxItem{ TextBlock[Text="Fig"]      }
+                        }
+                    }
+
+                    // Divider
+                    Border[Width=1, Background=#e0e0e0, Margin=(0,12,0,12)]
+
+                    // Middle: Items convenience path. The host walks the
+                    // attached Items array (string values) and auto-
+                    // generates one ListBoxItem per element, with Tag
+                    // = the source value. Single-select by default.
+                    StackPanel[Orientation=Vertical, Width=240, Margin=(6,12,6,12)]{
+                        TextBlock[Text="Items=[…] convenience",
+                                  FontSize=12, FontWeight=Bold,
+                                  Margin=(0,0,0,8)]
+                        ListBox [Items=["Red","Green","Blue","Yellow","Magenta","Cyan"]]
+                    }
+
+                    // Divider
+                    Border[Width=1, Background=#e0e0e0, Margin=(0,12,0,12)]
+
+                    // Right: ItemsSource + CollectionView. VM wires
+                    // CollectionView with Filter + Sort applied;
+                    // buttons toggle them on/off. Demonstrates the
+                    // Tier 3 surface: filtering and sorting a data
+                    // source without touching the underlying array.
+                    StackPanel[Orientation=Vertical, Width=240, Margin=(6,12,12,12)]{
+                        TextBlock[Text="ItemsSource + CollectionView",
+                                  FontSize=12, FontWeight=Bold,
+                                  Margin=(0,0,0,8)]
+                        StackPanel[Orientation=Horizontal, Margin=(0,0,0,8)]{
+                            Button x:name="btnSort"   [Margin=(0,0,4,0)]{
+                                TextBlock[Text="Sort A↕Z", FontSize=11]
+                            }
+                            Button x:name="btnFilter"{
+                                TextBlock[Text="Engineers only", FontSize=11]
+                            }
+                        }
+                        TextBlock x:name="statusLine"
+                                  [Text="6 of 6 visible",
+                                   FontSize=10, Foreground=#1976d2,
+                                   Margin=(0,0,0,4)]
+                        ListBox x:name="bound"
+                    }
+                }
+            }
+        }
+    }
+}

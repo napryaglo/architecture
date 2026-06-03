@@ -161,13 +161,13 @@ export interface KeyValueResource
     span: SourceSpan;
 }
 
-// ── Resource forms (style, template, datatemplate) ──────────────────
+// ── Resource forms (style, template, datatemplate, hierarchicaldatatemplate) ──
 
 export interface ResourceForm
 {
     kind:      'resource-form';
-    keyword:   'style' | 'template' | 'datatemplate';
-    metaAttrs: NamedAttr[];        // targettype, datatype, basedon, …
+    keyword:   'style' | 'template' | 'datatemplate' | 'hierarchicaldatatemplate';
+    metaAttrs: NamedAttr[];        // targettype, datatype, itemsselector, basedon, …
     xAttrs:    XAttr[];            // x:key, future x:* meta
     body:      SetterList | ElementNode;
     span:      SourceSpan;

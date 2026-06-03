@@ -1,4 +1,4 @@
-import { Binding, BindingMode } from './binding.js';
+import { Binding } from './binding.js';
 import { MetaData } from './metadata.js';
 import { Model } from './model.js';
 import type { PropertyChangeCallback } from './effective-value.js';
@@ -55,7 +55,12 @@ class DataContextBindingImpl extends Binding
     constructor(target: Visual, path: string)
     {
         const watcher = new DataContextWatcher();
-        super(watcher, 'Value', BindingMode.OneWay);
+        // Mode is left unset so the EVD's ResolveDefaultMode hook can
+        // upgrade it to TwoWay when the target DP declares
+        // BindsTwoWayByDefault (e.g., TreeView.SelectedDataItem). For
+        // every other DP the binding stays OneWay (the default mode
+        // when the EVD doesn't flip it).
+        super(watcher, 'Value');
         this.watcher = watcher;
         this.target  = target;
         this.pathStr = path;
@@ -70,6 +75,57 @@ class DataContextBindingImpl extends Binding
         super.dispose();
         this.target.RemovePropertyChangedListener('DataContext', this.dcCallback);
         this.unsubscribeSource();
+    }
+
+    // TwoWay writeback: when the target DP changes and the EVD asks
+    // the binding to push the value back, send it through the
+    // DataContext path so the actual VM property updates. Without
+    // this override, the base Binding.set_value writes only to the
+    // internal `watcher.Value` slot — the VM never sees the change
+    // and the source-side listener never re-fires. Returns true when
+    // the writeback succeeded (mode is TwoWay/OneWayToSource and the
+    // path is reachable + writable); false leaves the EVD to fall
+    // back to local-replace as if no binding were installed.
+    public override set_value(value: unknown): boolean
+    {
+        // Mode check lives in the base — bail out fast if this binding
+        // isn't writable. The base call also writes `watcher.Value`,
+        // which fires our setOnValueChanged hook in the EVD so the
+        // target DP's effective value reflects the new push without
+        // waiting for the source-side listener to round-trip.
+        if (!super.set_value(value)) return false;
+
+        const dc = this.target.DataContext;
+        if (dc === undefined || dc === null) return true;
+        const segments = this.pathStr.split('.');
+        let cur: unknown = dc;
+        for (let i = 0; i < segments.length - 1; i++)
+        {
+            const seg = segments[i]!;
+            if (cur instanceof Model)
+            {
+                cur = cur.get_property_value(seg);
+            }
+            else if (cur !== null && typeof cur === 'object')
+            {
+                cur = (cur as Record<string, unknown>)[seg];
+            }
+            else
+            {
+                return true;
+            }
+            if (cur === undefined || cur === null) return true;
+        }
+        const lastSeg = segments[segments.length - 1]!;
+        if (cur instanceof Model)
+        {
+            cur.set_property_value(lastSeg, value);
+        }
+        else if (cur !== null && typeof cur === 'object')
+        {
+            (cur as Record<string, unknown>)[lastSeg] = value;
+        }
+        return true;
     }
 
     private unsubscribeSource(): void

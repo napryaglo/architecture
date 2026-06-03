@@ -63,4 +63,19 @@ export class ItemsPresenter extends Visual
     // Renders nothing of its own — the items panel paints itself when
     // the tree walk reaches it through visualChildren.
     protected override RenderOverride(_dc: DrawingContext): void { }
+
+    // Target propagation rides the VISUAL tree. SetItemsPanel calls
+    // AttachVisual which seeds the target at attach time, but later
+    // host changes (e.g., the TreeViewItem template subtree being
+    // attached to a real host AFTER the items panel was slotted) need
+    // to re-propagate. Without this override, an items panel slotted
+    // before the ItemsPresenter received its target stays target-less
+    // — its InvalidateVisual / OnRenderInvalidated path is a silent
+    // no-op, so runtime Clip changes (e.g., CollapsibleStack
+    // toggling expand/collapse) never flow back to the renderer's
+    // applyClip pass, leaving stale clip-path attributes on the DOM.
+    protected override propagate_target_to_visual_children(): void
+    {
+        this._itemsPanel?.['SetTarget'](this['target']);
+    }
 }

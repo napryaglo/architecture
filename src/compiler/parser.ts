@@ -62,7 +62,7 @@ export class ParseError extends Error
     }
 }
 
-const RESOURCE_KEYWORDS = new Set(['style', 'template', 'datatemplate']);
+const RESOURCE_KEYWORDS = new Set(['style', 'template', 'datatemplate', 'hierarchicaldatatemplate']);
 
 export interface ParserOptions
 {
@@ -122,7 +122,8 @@ export class Parser
                 case 'def':          return this.parseDefForm();
                 case 'style':
                 case 'template':
-                case 'datatemplate': return this.parseResourceForm();
+                case 'datatemplate':
+                case 'hierarchicaldatatemplate': return this.parseResourceForm();
                 default:             return this.parseElement();
             }
         }
@@ -204,7 +205,7 @@ export class Parser
     private parseResourceForm(): ResourceForm
     {
         const head    = this.expect(TokenKind.Ident);
-        const keyword = head.value as 'style' | 'template' | 'datatemplate';
+        const keyword = head.value as 'style' | 'template' | 'datatemplate' | 'hierarchicaldatatemplate';
         if (!RESOURCE_KEYWORDS.has(keyword))
         {
             throw new ParseError(`expected resource keyword, got '${keyword}'`, head.span);
@@ -828,7 +829,8 @@ export class Parser
             {
                 case 'style':
                 case 'template':
-                case 'datatemplate': return this.parseResourceForm();
+                case 'datatemplate':
+                case 'hierarchicaldatatemplate': return this.parseResourceForm();
                 case 'def':          return this.parseDefForm();
                 default:
                     // SlotAssign vs Element disambiguation.

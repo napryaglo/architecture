@@ -1,21 +1,28 @@
-// platform.mu — Shell for the µ-mural demo platform. A two-pane
-// DockPanel:
+// platform.mu — MVVM shell for the µ-mural demo platform.
 //
-//   * Left  — fixed-width nav strip with a brand header and an
-//             empty TreeView the host populates from the registry
-//             at startup.
-//   * Right — a PageView that hosts whatever demo is currently
-//             selected. Title + Subtitle are written from code
-//             when the host swaps in a demo's root visual.
+//   View    — this .mu file: a DockPanel with a nav strip on the left
+//             and a PageView on the right.
+//   ViewModel — PlatformVM (demo/platform/platform-vm.mjs), with
+//             Groups / SelectedDemo / Title / Subtitle / Content.
+//             Constructed and assigned as the root's DataContext by
+//             the host script.
 //
-// No fixed Width / Height on the root: the Border stretches to fill
-// whatever rectangle the HtmlTarget reports for its host element. The
-// host page sizes #app to the browser viewport via CSS; the
-// HtmlTarget's ResizeObserver re-publishes that size on every browser
-// resize, and the resulting Measure / Arrange flushes propagate to
-// the entire shell automatically.
+// All non-static bindings go through DataContext:
 //
-// Both TreeView and PageView resolve from the host via FindName.
+//   * TreeView.ItemsSource — set in host JS from $Groups (the host
+//             also installs the HierarchicalDataTemplate; that's a
+//             JS-only construct today). Selection-change updates
+//             VM.SelectedDemo, which fans out through the rest.
+//   * PageView.Title / Subtitle — bound to $Title / $Subtitle, which
+//             the VM recomputes from SelectedDemo on every change.
+//   * PageView.Content — bound to $Content. The VM materializes the
+//             demo's root Visual on first activation via the registry
+//             (cached, so a nav-back-and-forth resurfaces the same
+//             instance + state).
+//
+// The HtmlTarget's ResizeObserver re-publishes the host element's
+// size on every browser resize, and the resulting Measure / Arrange
+// flushes propagate to the entire shell automatically.
 
 Application{
     resources: {
@@ -25,8 +32,34 @@ Application{
         @primInk    = #ffffff
         @navBg      = #f8fafc
 
+        // ── Nav-tree templates ──────────────────────────────────────
+        //
+        // GroupTemplate — applied to every GroupVM row (and, by
+        // recursion, to every DemoVM leaf row as well). The
+        // itemsselector reads `data.Demos`; for GroupVMs it returns
+        // the demo collection (so each group expands to its demos),
+        // for DemoVMs the property is absent so optional-chain
+        // returns undefined and the row stays a leaf.
+        //
+        // The body's `TreeViewItem` is a placeholder factory result
+        // — TreeView ignores it because wrapTreeItem builds its own
+        // TreeViewItem and sets Header through the Label/Name/Text
+        // display-string convention. DataTemplate's API requires a
+        // body element so we satisfy it with a no-op.
+        hierarchicaldatatemplate x:key="GroupTemplate" [datatype=GroupVM, itemsselector=Demos] {
+            TreeViewItem
+        }
+
+        // Default style applied to every root-level TreeViewItem:
+        // expand each Group on first show. Demo leaves inherit it
+        // harmlessly — IsExpanded=true on a leaf is a no-op (no
+        // children to show).
+        style x:key="NavRowStyle" [targettype=TreeViewItem]{
+            IsExpanded = true;
+        }
+
         Border x:root [Background=@paper]{
-            DockPanel [lastChildFill=true] {
+            DockPanel [LastChildFill=true] {
 
                 // Nav strip — fixed cross-axis width (260 DIP), full
                 // host height. Hairline on the inner edge separates it
@@ -42,21 +75,33 @@ Application{
                                       FontSize=14, FontWeight=Bold,
                                       Foreground=@primInk]
                         }
-                        // The TreeView is left empty in markup; the
-                        // host code reads the registry on startup
-                        // and builds one TreeViewItem per demo,
-                        // grouped under a folder-style top-level
-                        // item per group. x:name="nav" lets the
-                        // host find it via app.Root.FindName.
-                        TreeView x:name="nav"[Indent=18, Margin=(8,8,8,8)]
+                        // Fully declarative tree wiring — bindings
+                        // resolve through DataContext (PlatformVM)
+                        // and Resources:
+                        //   * ItemsSource        → vm.Groups
+                        //   * ItemTemplate       → @GroupTemplate
+                        //       (recursive HierarchicalDataTemplate
+                        //        keyed in this file's resources)
+                        //   * ItemContainerStyle → @NavRowStyle
+                        //       (IsExpanded=true on root rows)
+                        //   * SelectedDataItem   → vm.SelectedDemo
+                        //       (TwoWay by default)
+                        TreeView [Indent=18, Margin=(8,8,8,8),
+                                  ItemsSource=$Groups,
+                                  ItemTemplate=@GroupTemplate,
+                                  ItemContainerStyle=@NavRowStyle,
+                                  SelectedDataItem=$SelectedDemo]
                     }
                 }
 
-                // Demo body — filled by the host as soon as the
-                // first demo is selected. Empty Title/Subtitle here
-                // are placeholders; the host always overwrites them
-                // before the visual surfaces.
-                PageView x:name="page"[Title="", Subtitle=""]
+                // Page body — Title / Subtitle / Content all bound to
+                // the platform VM via DataContext. When VM.SelectedDemo
+                // changes, the VM recomputes these three properties
+                // and the bindings push them into the PageView.
+                PageView x:name="page"
+                         [Title=$Title,
+                          Subtitle=$Subtitle,
+                          Content=$Content]
             }
         }
     }
