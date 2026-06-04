@@ -632,12 +632,21 @@ export class HtmlTarget extends PresentationTarget
         }
         // move
         this.InputManager.InjectPointerMove(hit ?? null, init);
-        // Update the ghost AND the cursor to follow the new state.
-        // Order: dispatch first so receivers can update Effect, THEN
-        // reposition the ghost and pull the cursor — keeps both from
-        // rendering a frame ahead of the receiver feedback.
+        // The declarative IsDraggable latch starts the drag during
+        // *move* (after the threshold trip), not during down. The down
+        // path above only catches imperative DoDragDrop calls made
+        // from a PointerDown handler. Without this second pickup, the
+        // latch-driven case leaves dragOverlay undefined, originalCursor
+        // unsaved (so OnDragSessionEnded can't restore the cursor at
+        // session end), and no ghost is ever drawn.
+        if (this.InputManager.IsDragActive && this.dragOverlay === undefined)
+        {
+            this.OnDragSessionStarted();
+        }
         if (this.InputManager.IsDragActive)
         {
+            // Order: dispatch first so receivers can update Effect, THEN
+            // reposition the ghost and pull the cursor.
             this.SetDragGhostPosition(hostX, hostY);
             this.UpdateCursorForEffect(this.InputManager.CurrentDragEffect);
         }
