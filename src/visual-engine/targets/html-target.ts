@@ -98,6 +98,22 @@ export interface HtmlTargetOptions
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
+// Walk a freshly-cloned subtree and force pointer-events="none" on
+// every element. Used when building the drag overlay's ghost: the
+// renderer stamps `mural-hit` rects with `pointer-events="all"` (so
+// hit-testing of normal scene visuals works against their empty
+// fill); that explicit `all` would otherwise beat the overlay's
+// inherited `none` and pollute elementsFromPoint with ghost geometry.
+function suppressPointerEvents(root: Element): void
+{
+    root.setAttribute('pointer-events', 'none');
+    const descendants = root.querySelectorAll('*');
+    for (let i = 0; i < descendants.length; i++)
+    {
+        descendants[i]!.setAttribute('pointer-events', 'none');
+    }
+}
+
 // PresentationTarget for browser hosting. Owns:
 //   * the host Element (passed by the consumer — a <div>, <section>, …)
 //   * the rendering surface (<svg> or <canvas>) appended inside the host
@@ -540,6 +556,11 @@ export class HtmlTarget extends PresentationTarget
         const doc = this.host.ownerDocument ?? document;
         const ghost = doc.createElementNS(SVG_NS, 'g');
         ghost.setAttribute('class', 'mural-drag-ghost');
+        // Same hit-test transparency contract as mode A — the renderer
+        // stamped pointer-events="all" on every mural-hit descendant
+        // of the freshly-painted preview, and we need them invisible
+        // to HitTest while the ghost follows the cursor.
+        suppressPointerEvents(outer);
         ghost.appendChild(outer);
         overlay.appendChild(ghost);
         this.dragGhost           = ghost;
@@ -562,7 +583,18 @@ export class HtmlTarget extends PresentationTarget
         const ghost   = doc.createElementNS(SVG_NS, 'g');
         ghost.setAttribute('class',   'mural-drag-ghost');
         ghost.setAttribute('opacity', '0.6');
-        ghost.appendChild(sourceOuter.cloneNode(true) as Node);
+        const clone = sourceOuter.cloneNode(true) as Element;
+        // The renderer paints each visual with an invisible `mural-hit`
+        // rect carrying `pointer-events="all"` so hit-testing of normal
+        // scene content works against the empty fill. That explicit
+        // `all` overrides the inherited `pointer-events="none"` from
+        // the drag-overlay — meaning elementsFromPoint would return the
+        // ghost's CLONED hit rects FIRST and HitTest would not be able
+        // to walk past them to the actual scene underneath. Strip the
+        // attribute (and set explicit `none`) on every element in the
+        // cloned subtree so the ghost is truly transparent to hit-test.
+        suppressPointerEvents(clone);
+        ghost.appendChild(clone);
         overlay.appendChild(ghost);
         this.dragGhost = ghost;
     }
