@@ -23,6 +23,7 @@ import type {
 import { Storyboard } from './animation/storyboard.js';
 import type { AnimationTimeline } from './animation/timeline.js';
 import { EventTrigger } from './trigger-actions.js';
+import { DragDrop, DragDropEffects, type DataObject, type DragPreviewKind } from './drag-drop.js';
 
 // Routed event names that map to the per-instance _routedListeners
 // registry. These are the public NAMES authors use in `on Xxx { … }`
@@ -178,6 +179,21 @@ export class Visual extends Model
     public static readonly AllowDropKey  = Model.RegisterProperty<boolean>(Visual, 'AllowDrop',  false, MetaData.None);
     public static readonly IsDragOverKey = Model.RegisterProperty<boolean>(Visual, 'IsDragOver', false, MetaData.None);
 
+    // Declarative drag source. When IsDraggable = true the framework
+    // installs a PointerDown / Move / Up latch that calls OnDragStart
+    // after the pointer travels > DragDrop.DragThreshold pixels. The
+    // callback returns either null (cancel) or
+    // { data, effects, preview? } which the framework feeds straight
+    // into DragDrop.DoDragDrop. Spec § 6.
+    public static readonly IsDraggableKey = Model.RegisterProperty<boolean>(
+        Visual, 'IsDraggable', false, MetaData.None);
+
+    public static readonly OnDragStartKey = Model.RegisterProperty<
+        ((source: Visual) =>
+            { data: DataObject; effects: DragDropEffects; preview?: DragPreviewKind } | null
+        ) | undefined
+    >(Visual, 'OnDragStart', undefined, MetaData.None);
+
     // Focusable — opt-in for keyboard focus. Default false so a random
     // Border / TextBlock / Panel never accidentally swallows keys;
     // controls that handle keyboard input (TextBox, Button) set this to
@@ -218,6 +234,26 @@ export class Visual extends Model
     // receiver". Read-only contract — flips via _set_property_value_by_name
     // from the InputManager's drag-session driver.
     public get IsDragOver(): boolean { return this.get_property_value(Visual.IsDragOverKey); }
+
+    // Declarative drag source. Set IsDraggable=true and supply an
+    // OnDragStart callback; the framework calls the callback once the
+    // pointer has moved past DragDrop.DragThreshold and starts a drag.
+    // See `_onDragLatch*` listeners installed in OnPropertyChanged.
+    public get IsDraggable(): boolean { return this.get_property_value(Visual.IsDraggableKey); }
+    public set IsDraggable(v: boolean) { this.set_property_value(Visual.IsDraggableKey, v); }
+
+    public get OnDragStart():
+        ((source: Visual) =>
+            { data: DataObject; effects: DragDropEffects; preview?: DragPreviewKind } | null
+        ) | undefined
+    {
+        return this.get_property_value(Visual.OnDragStartKey);
+    }
+    public set OnDragStart(
+        v: ((source: Visual) =>
+            { data: DataObject; effects: DragDropEffects; preview?: DragPreviewKind } | null
+        ) | undefined,
+    ) { this.set_property_value(Visual.OnDragStartKey, v); }
 
     // Opt-in for keyboard focus. Controls that handle keyboard input
     // (TextBox, Button) flip this on in their constructor; everything
@@ -372,6 +408,47 @@ export class Visual extends Model
     // Visuals never register a routed listener so the empty Map allo
     // stays cheap.
     private _routedListeners: Map<string, Set<(args: unknown) => void>> | undefined;
+
+    // Declarative drag-source latch state. When IsDraggable=true the
+    // ctor installs PointerDown/Move/Up listeners; the latch captures
+    // the down position and arms; on a subsequent move past the
+    // threshold it calls OnDragStart and DoDragDrop.
+    private _draggableInstalled = false;
+    private _draggableLatch:
+        { downX: number; downY: number; pointerId: number; armed: boolean } | null = null;
+
+    private readonly _onDragLatchPointerDown = (raw: unknown): void => {
+        const args = raw as PointerEventArgs;
+        this._draggableLatch = {
+            downX: args.HostX, downY: args.HostY,
+            pointerId: args.PointerId,
+            armed: true,
+        };
+    };
+    private readonly _onDragLatchPointerMove = (raw: unknown): void => {
+        const args = raw as PointerEventArgs;
+        const latch = this._draggableLatch;
+        if (latch === null || !latch.armed || latch.pointerId !== args.PointerId) return;
+        const dx = args.HostX - latch.downX;
+        const dy = args.HostY - latch.downY;
+        if (Math.hypot(dx, dy) < DragDrop.DragThreshold) return;
+        // Threshold reached — invoke OnDragStart and start the drag.
+        // Disarm before the callback so a re-entrant move that fires
+        // synchronously can't double-start.
+        latch.armed = false;
+        const start = this.OnDragStart;
+        if (start === undefined) return;
+        const r = start(this);
+        if (r === null) return;
+        DragDrop.DoDragDrop(this, r.data, r.effects, { preview: r.preview });
+    };
+    private readonly _onDragLatchPointerUp = (raw: unknown): void => {
+        const args = raw as PointerEventArgs;
+        if (this._draggableLatch?.pointerId === args.PointerId)
+        {
+            this._draggableLatch = null;
+        }
+    };
 
     // Loaded-listeners — fire exactly once when this Visual first
     // attaches to a target. Adding a listener AFTER the Visual is
@@ -1738,7 +1815,7 @@ export class Visual extends Model
     protected override OnPropertyChanged(
         descriptor: PropertyDescriptor,
         _old_value: any,
-        _new_value: any,
+        new_value: any,
     ): void
     {
         const meta = descriptor.MetaData;
@@ -1753,6 +1830,29 @@ export class Visual extends Model
         // resolver so the new Style's setters / triggers install no
         // matter how the property is written.
         if (descriptor.Name === 'Style') this.refresh_active_style();
+        // Install / uninstall the declarative drag-source latch as
+        // IsDraggable flips. Listening on PointerDown/Move/Up rather
+        // than overriding the virtuals means subclass overrides of
+        // OnPointerDown etc. are untouched — both run.
+        if (descriptor.Name === 'IsDraggable')
+        {
+            const nowDraggable = new_value === true;
+            if (nowDraggable && !this._draggableInstalled)
+            {
+                this.AddRoutedEventListener('PointerDown', this._onDragLatchPointerDown);
+                this.AddRoutedEventListener('PointerMove', this._onDragLatchPointerMove);
+                this.AddRoutedEventListener('PointerUp',   this._onDragLatchPointerUp);
+                this._draggableInstalled = true;
+            }
+            else if (!nowDraggable && this._draggableInstalled)
+            {
+                this.RemoveRoutedEventListener('PointerDown', this._onDragLatchPointerDown);
+                this.RemoveRoutedEventListener('PointerMove', this._onDragLatchPointerMove);
+                this.RemoveRoutedEventListener('PointerUp',   this._onDragLatchPointerUp);
+                this._draggableInstalled = false;
+                this._draggableLatch = null;
+            }
+        }
     }
 
     // ------------------------------------------------------------------

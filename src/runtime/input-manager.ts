@@ -126,6 +126,13 @@ export class InputManager
         if (dispatchTarget === null || dispatchTarget === undefined) return;
 
         dispatchPointer(new PointerEventArgs('PointerMove', dispatchTarget, init, this, this));
+
+        // A PointerMove handler may have called DragDrop.DoDragDrop —
+        // the declarative IsDraggable latch does exactly this once the
+        // pointer crosses the threshold. Pick up the pending session
+        // so the very next move drives the drag loop instead of
+        // dispatching another PointerMove.
+        this.PickUpPendingDragSession();
     }
 
     public InjectPointerLeave(init: PointerEventInit): void

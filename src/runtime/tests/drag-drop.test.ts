@@ -515,3 +515,88 @@ describe('InputManager — drag session lifecycle', () => {
         im.ObserveSessionCancellation();
     });
 });
+
+describe('Visual.IsDraggable + OnDragStart — declarative latch', () => {
+    test('IsDraggable=true latches PointerDown and starts a drag after threshold movement', () => {
+        resetPendingDrag();
+        const im = new InputManager();
+        const v = new DragLoggerPanel('v');
+        v.IsDraggable = true;
+        v.OnDragStart = () => ({
+            data:    new DataObject().Set('mural/node-kind', 'rect'),
+            effects: DragDropEffects.Copy,
+        });
+
+        im.InjectPointerDown(v, dragInit({ HostX: 10, HostY: 10 }));
+        // 3px movement — below threshold (default 4).
+        im.InjectPointerMove(v, dragInit({ HostX: 12, HostY: 12 }));
+        assert.equal(im.IsDragActive, false);
+        // 5px movement — above threshold; should latch and start.
+        im.InjectPointerMove(v, dragInit({ HostX: 14, HostY: 13 }));
+        assert.equal(im.IsDragActive, true);
+
+        im.CurrentDragSession?.Cancel();
+        im.ObserveSessionCancellation();
+    });
+
+    test('OnDragStart returning null skips the drag', () => {
+        resetPendingDrag();
+        const im = new InputManager();
+        const v = new DragLoggerPanel('v');
+        v.IsDraggable = true;
+        v.OnDragStart = () => null;
+
+        im.InjectPointerDown(v, dragInit({ HostX: 0, HostY: 0 }));
+        im.InjectPointerMove(v, dragInit({ HostX: 10, HostY: 10 }));
+        assert.equal(im.IsDragActive, false);
+    });
+
+    test('PointerUp before the threshold detaches the latch; no drag starts on a subsequent move', () => {
+        resetPendingDrag();
+        const im = new InputManager();
+        const v = new DragLoggerPanel('v');
+        v.IsDraggable = true;
+        v.OnDragStart = () => ({
+            data:    new DataObject(),
+            effects: DragDropEffects.Copy,
+        });
+
+        im.InjectPointerDown(v, dragInit({ HostX: 0, HostY: 0 }));
+        im.InjectPointerMove(v, dragInit({ HostX: 2, HostY: 2 }));
+        im.InjectPointerUp  (v, dragInit({ HostX: 2, HostY: 2 }));
+        // No pending down — a stray move without a fresh down must not
+        // start a drag.
+        im.InjectPointerMove(v, dragInit({ HostX: 20, HostY: 20 }));
+        assert.equal(im.IsDragActive, false);
+    });
+
+    test('toggling IsDraggable=false uninstalls the listeners', () => {
+        resetPendingDrag();
+        const im = new InputManager();
+        const v = new DragLoggerPanel('v');
+        v.IsDraggable = true;
+        v.OnDragStart = () => ({ data: new DataObject(), effects: DragDropEffects.Copy });
+        v.IsDraggable = false;
+        im.InjectPointerDown(v, dragInit({ HostX: 0, HostY: 0 }));
+        im.InjectPointerMove(v, dragInit({ HostX: 20, HostY: 20 }));
+        assert.equal(im.IsDragActive, false);
+    });
+
+    test('Threshold is read at trip time so tuning DragThreshold mid-session works', () => {
+        resetPendingDrag();
+        DragDrop.DragThreshold = 20;             // tighten the gate
+        const im = new InputManager();
+        const v = new DragLoggerPanel('v');
+        v.IsDraggable = true;
+        v.OnDragStart = () => ({ data: new DataObject(), effects: DragDropEffects.Copy });
+
+        im.InjectPointerDown(v, dragInit({ HostX: 0, HostY: 0 }));
+        im.InjectPointerMove(v, dragInit({ HostX: 10, HostY: 0 }));  // 10 < 20
+        assert.equal(im.IsDragActive, false);
+        im.InjectPointerMove(v, dragInit({ HostX: 25, HostY: 0 }));  // 25 > 20
+        assert.equal(im.IsDragActive, true);
+        DragDrop.DragThreshold = 4;              // restore default
+        im.CurrentDragSession?.Cancel();
+        im.ObserveSessionCancellation();
+    });
+});
