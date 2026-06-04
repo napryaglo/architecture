@@ -1,5 +1,6 @@
 import type { Storyboard } from './animation/storyboard.js';
 import type { Visual } from './visual.js';
+import type { ICommand } from './command.js';
 
 // Imperative side of declarative trigger actions. A TriggerAction is the
 // thing an EventTrigger fires when its routed event lands; the most
@@ -20,8 +21,13 @@ import type { Visual } from './visual.js';
 export abstract class TriggerAction
 {
     /** Run the action against the Visual the firing EventTrigger is
-     *  registered on. */
-    public abstract Invoke(target: Visual): void;
+     *  registered on. `args` is the routed-event args of the firing
+     *  event (PointerEventArgs, KeyEventArgs, DragEventArgs, …) — the
+     *  install_event_trigger wiring in Visual passes it through.
+     *  Actions that don't need the args (BeginStoryboard et al.) can
+     *  ignore the parameter; InvokeCommandAction forwards it as the
+     *  ICommand's Execute parameter so commands can read the args. */
+    public abstract Invoke(target: Visual, args?: unknown): void;
 }
 
 // Build + Begin a fresh Storyboard each time the parent EventTrigger
@@ -149,4 +155,40 @@ export class EventTrigger
         public readonly RoutedEvent: string,
         public readonly Actions:     readonly TriggerAction[],
     ) {}
+}
+
+// InvokeCommandAction — fires an ICommand when the parent EventTrigger
+// fires. Authoring shape in `.mu`:
+//
+//   on Click   { InvokeCommand[Command=$SaveCommand] }
+//   on Drop    { InvokeCommand[Command=$DropCommand] }
+//   on KeyDown { InvokeCommand[Command=$KeyCommand] }
+//
+// Each invocation calls the supplied factory to resolve the current
+// ICommand (so VM-side replacement of the command DP propagates), then
+// calls Execute(args) with the routed-event args as the parameter.
+// Receivers (a `RelayCommand` backed by a VM method) inspect `args` if
+// they need event details (DragEventArgs.Effect, KeyEventArgs.Key, …).
+//
+// Factory-based rather than a captured ICommand reference for the
+// same reason BeginStoryboardAction is factory-based — the command
+// can be replaced on the VM after binding, and the action must see
+// the live value.
+export class InvokeCommandAction extends TriggerAction
+{
+    public readonly Factory: (target: Visual) => ICommand | undefined;
+
+    public constructor(factory: (target: Visual) => ICommand | undefined)
+    {
+        super();
+        this.Factory = factory;
+    }
+
+    public override Invoke(target: Visual, args?: unknown): void
+    {
+        const cmd = this.Factory(target);
+        if (cmd === undefined) return;
+        if (!cmd.CanExecute(args)) return;
+        cmd.Execute(args);
+    }
 }

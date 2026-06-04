@@ -99,6 +99,7 @@ export {
 export {
     BeginStoryboardAction,
     EventTrigger,
+    InvokeCommandAction,
     PauseStoryboardAction,
     ResumeStoryboardAction,
     StopStoryboardAction,

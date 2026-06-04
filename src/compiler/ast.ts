@@ -147,9 +147,9 @@ export interface SlotAssign
     name:  string;
     // `Name: <plain value>`        — primitive / ident / @key / binding-expr
     // `Name: { <body> }`           — structured (used for `resources: { … }`)
-    // `Name: <template> { … }`     — inline template (template / datatemplate
-    //                                / hierarchicaldatatemplate /
-    //                                itemspaneltemplate). The compiler emits
+    // `Name: <template> { … }`     — inline template (Template / DataTemplate
+    //                                / HierarchicalDataTemplate /
+    //                                ItemsPanelTemplate). The compiler emits
     //                                an anonymous template construction at
     //                                the assignment site.
     value: ValueNode | StructuredBody | ResourceForm;
@@ -168,17 +168,30 @@ export interface KeyValueResource
     span: SourceSpan;
 }
 
-// ── Resource forms (style, template, datatemplate, hierarchicaldatatemplate,
-//                    itemspaneltemplate) ───────────────────────────────────
+// ── Resource forms (Style, Template, DataTemplate, HierarchicalDataTemplate,
+//                    ItemsPanelTemplate) ───────────────────────────────────
 
 export interface ResourceForm
 {
     kind:      'resource-form';
-    keyword:   'style' | 'template' | 'datatemplate' | 'hierarchicaldatatemplate' | 'itemspaneltemplate';
+    keyword:   'Style' | 'Template' | 'DataTemplate' | 'HierarchicalDataTemplate' | 'ItemsPanelTemplate';
     metaAttrs: NamedAttr[];        // targettype, datatype, itemsselector, basedon, …
     xAttrs:    XAttr[];            // x:key, future x:* meta
-    body:      SetterList | ElementNode;
+    body:      SetterList | ElementNode | DataTemplateBody;
     span:      SourceSpan;
+}
+
+// Body of a DataTemplate / HierarchicalDataTemplate that carries
+// triggers alongside its single root element. Triggers fire against
+// the realized subtree at Apply time; their setters can target named
+// descendants via `Name.Property = value` LHS.
+export interface DataTemplateBody
+{
+    kind:          'data-template-body';
+    root:          ElementNode;
+    triggers:      TriggerGroup[];
+    eventTriggers: EventTriggerGroup[];
+    span:          SourceSpan;
 }
 
 export interface SetterList
@@ -213,7 +226,8 @@ export type TriggerActionNode =
     | BeginStoryboardNode
     | StopStoryboardNode
     | PauseStoryboardNode
-    | ResumeStoryboardNode;
+    | ResumeStoryboardNode
+    | InvokeCommandNode;
 
 // `BeginStoryboard [Name="fade"] { Animation[…] Animation[…] }` — bundles
 // the inner animations into a single runtime Storyboard. Each animation
@@ -250,6 +264,22 @@ export interface ResumeStoryboardNode
     kind: 'resume-storyboard';
     name: string;
     span: SourceSpan;
+}
+
+// `InvokeCommand [Command=$SaveCommand]` — fires an ICommand at trigger
+// time, passing the routed-event args as the command parameter.
+// Authoring shape:
+//   on Click   { InvokeCommand[Command=$SaveCommand] }
+//   on Drop    { InvokeCommand[Command=$DropCommand] }
+//   on KeyDown { InvokeCommand[Command=$KeyCommand] }
+// The `command` attribute is the only supported attr — it MUST be an
+// inline-expression resolving to an ICommand on the firing Visual's
+// DataContext (typically a RelayCommand DP on the VM).
+export interface InvokeCommandNode
+{
+    kind:    'invoke-command';
+    command: ValueNode;          // expected: inline-expr to an ICommand
+    span:    SourceSpan;
 }
 
 // `Ident [attr=value, …]` for animation timeline construction. The
@@ -289,7 +319,13 @@ export interface TriggerTerm
 {
     kind:     'trigger-term';
     negated:  boolean;
-    property: string;
+    // Property name on the styled target (PropertyTrigger form,
+    // `when( IsMouseOver )`). Mutually exclusive with `path`.
+    property: string | undefined;
+    // DataContext-relative dotted path (DataTrigger form,
+    // `when( $IsSelected )` / `when( $foo.bar )`). Mutually exclusive
+    // with `property`.
+    path:     string | undefined;
     value:    ValueNode | null;     // null means implicit `= true`
     span:     SourceSpan;
 }

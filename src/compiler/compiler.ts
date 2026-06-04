@@ -4,6 +4,7 @@ import type {
     AttrPath,
     BeginStoryboardNode,
     BodyItem,
+    InvokeCommandNode,
     PauseStoryboardNode,
     ResumeStoryboardNode,
     StopStoryboardNode,
@@ -55,12 +56,15 @@ function formatJsLiteral(value: unknown, span: SourceSpan): string
     }
 }
 // Local shape — a flattened disjunct from `flattenOr()`. Reduces a
-// TriggerOr / TriggerTerm tree into a list of (property, value, negated)
-// records, each emitted as its own PropertyTrigger sharing the setter
-// list of the surrounding TriggerGroup.
+// TriggerOr / TriggerTerm tree into a list of (property | path, value,
+// negated) records. Single-term conjuncts emit as PropertyTrigger or
+// DataTrigger depending on which of property / path is set. Multi-term
+// conjuncts emit as MultiTrigger (PropertyTrigger-only — mixing
+// data-paths in is a follow-up).
 interface TriggerTermLite
 {
-    property: string;
+    property: string | undefined;
+    path:     string | undefined;
     value:    ValueNode | null;
     negated:  boolean;
     span:     SourceSpan;
@@ -156,6 +160,16 @@ export class Compiler
     // multi-scope lookups (templates have their own), so this is
     // intentionally limited to the single application-root scope.
     private nameScopeOwnerVar: string | undefined;
+    // Inside a DataTemplate body these track x:names declared on
+    // descendants of the template root: `templateNameScope` is the
+    // set of registered names, and `templateNameOwners` maps each to
+    // the element's runtime class. Used by `when()` setter lowering
+    // to route `targetName.Property = value` through TargetedSetter
+    // instead of treating the first segment as an attached-property
+    // owner type. Reset to undefined when not inside a DataTemplate
+    // body so Style-side setter compilation is unaffected.
+    private templateNameScope:  Set<string>           | undefined;
+    private templateNameOwners: Map<string, string>   | undefined;
     // Current indent prefix (multiples of 4 spaces) — incremented when
     // we open a nested scope (template factory body, future macro
     // expansions, etc.), decremented at close. Cosmetic for the emitted
@@ -193,7 +207,7 @@ export class Compiler
         }
 
         // Pass 2: locate the single root element. Bare top-level
-        // resource forms (`template`, `style`, `datatemplate`) are
+        // resource forms (`Template`, `Style`, `DataTemplate`) are
         // rejected — author them inside an explicit
         // `ResourceDictionary { … }` element so the dictionary wrapper
         // is visible in the source (matches the WPF
@@ -263,7 +277,7 @@ export class Compiler
     // emits a `create()` factory returning a populated ResourceDictionary.
     // Body items are the same shape the `resources:` slot of an
     // Application accepts: keyed key-value resources (`@name = value`),
-    // resource forms (`template` / `style` / `datatemplate`), or x:key /
+    // resource forms (`Template` / `Style` / `DataTemplate`), or x:key /
     // x:root-marked element entries.
     private compileResourceDictionaryRoot(elem: ElementNode): string
     {
@@ -375,31 +389,31 @@ export class Compiler
 
     private compileResourceForm(rdVar: string, rf: ResourceForm): void
     {
-        if (rf.keyword === 'style')
+        if (rf.keyword === 'Style')
         {
             const styleVar = this.compileStyleForm(rf);
             this.registerResourceFormVar(rdVar, rf, styleVar, /*allowImplicit*/ true);
             return;
         }
-        if (rf.keyword === 'template')
+        if (rf.keyword === 'Template')
         {
             const tmplVar = this.compileControlTemplateForm(rf);
             this.registerResourceFormVar(rdVar, rf, tmplVar, /*allowImplicit*/ false);
             return;
         }
-        if (rf.keyword === 'datatemplate')
+        if (rf.keyword === 'DataTemplate')
         {
             const tmplVar = this.compileDataTemplateForm(rf);
             this.registerResourceFormVar(rdVar, rf, tmplVar, /*allowImplicit*/ false);
             return;
         }
-        if (rf.keyword === 'hierarchicaldatatemplate')
+        if (rf.keyword === 'HierarchicalDataTemplate')
         {
             const tmplVar = this.compileHierarchicalDataTemplateForm(rf);
             this.registerResourceFormVar(rdVar, rf, tmplVar, /*allowImplicit*/ false);
             return;
         }
-        if (rf.keyword === 'itemspaneltemplate')
+        if (rf.keyword === 'ItemsPanelTemplate')
         {
             const tmplVar = this.compileItemsPanelTemplateForm(rf);
             this.registerResourceFormVar(rdVar, rf, tmplVar, /*allowImplicit*/ false);
@@ -409,9 +423,9 @@ export class Compiler
             `unknown resource form '${rf.keyword}'`, rf.span);
     }
 
-    // Helper: register a freshly-built resource (style / template /
-    // datatemplate) in the dictionary by x:key (string) or, when the
-    // form supports implicit registration (style only — see spec §7),
+    // Helper: register a freshly-built resource (Style / Template /
+    // DataTemplate) in the dictionary by x:key (string) or, when the
+    // form supports implicit registration (Style only — see spec §7),
     // by TargetType (Function).
     private registerResourceFormVar(
         rdVar: string, rf: ResourceForm, valueVar: string,
@@ -461,7 +475,17 @@ export class Compiler
         this.indent += 4;
         const wasInTemplate = this.inTemplateBody;
         this.inTemplateBody = true;
+        // Stash the surrounding DataTemplate's name scope (if any) so
+        // x:names declared inside a nested ControlTemplate body don't
+        // pollute the data-template-scope used by TargetedSetter
+        // lowering above this control template.
+        const savedTNS = this.templateNameScope;
+        const savedTNO = this.templateNameOwners;
+        this.templateNameScope  = undefined;
+        this.templateNameOwners = undefined;
         const rootVar = this.compileElement(rf.body);
+        this.templateNameScope  = savedTNS;
+        this.templateNameOwners = savedTNO;
         this.inTemplateBody = wasInTemplate;
         this.line(`return ${rootVar};`);
         this.indent -= 4;
@@ -471,10 +495,11 @@ export class Compiler
 
     private compileDataTemplateForm(rf: ResourceForm): string
     {
-        if (rf.body.kind !== 'element')
+        if (rf.body.kind !== 'element' && rf.body.kind !== 'data-template-body')
         {
             throw new EmitError(
-                'datatemplate body must be a single element', rf.span);
+                'DataTemplate body must be a single element (optionally followed by `when()` triggers)',
+                rf.span);
         }
         // `datatype=Foo` resolves to a class name string — passed to
         // DataTemplate so ContentPresenter / PageView can match it
@@ -483,26 +508,203 @@ export class Compiler
         // {x:Type}; the string form is equivalent for non-minified
         // builds and trivial to upgrade later.
         const dataType = this.requireTargetType(rf);
+        const rootElement = rf.body.kind === 'element' ? rf.body : rf.body.root;
+        const triggers      = rf.body.kind === 'data-template-body' ? rf.body.triggers      : [];
+        const eventTriggers = rf.body.kind === 'data-template-body' ? rf.body.eventTriggers : [];
 
         this.ensureImport('DataTemplate');
         const tmplVar = this.fresh('tmpl');
-        this.line(`const ${tmplVar} = new DataTemplate((_data) => {`);
-        this.indent += 4;
-        // DataTemplate's factory binds the data argument, not a
-        // templated parent. $$Property doesn't apply here — leave
-        // inTemplateBody false so an authoring slip raises a clear
-        // error. ($Path uses _data via the visual's DataContext, which
-        // a caller would have to set; that's a separate concern.)
-        const rootVar = this.compileElement(rf.body);
-        this.line(`return ${rootVar};`);
-        this.indent -= 4;
-        this.line(`}, ${JSON.stringify(dataType)});`);
+        // Open a fresh template-local name scope for this DataTemplate
+        // body so x:names declared inside register here (without
+        // colliding with another DataTemplate in the same file or the
+        // application-root scope). Restored on the way out.
+        const savedTNS    = this.templateNameScope;
+        const savedTNO    = this.templateNameOwners;
+        this.templateNameScope  = new Set<string>();
+        this.templateNameOwners = new Map<string, string>();
+        // EventTrigger lowering inside a DataTemplate body lands in a
+        // future patch — surface a clean compile-time error before we
+        // bother compiling anything else so the author isn't confused
+        // by silent emit-time drops.
+        if (eventTriggers.length > 0)
+        {
+            throw new EmitError(
+                'event triggers inside a DataTemplate body are not yet supported',
+                eventTriggers[0]!.span);
+        }
+        if (triggers.length === 0)
+        {
+            // Trigger-free path: preserve the historical 2-arg emit
+            // shape so existing snapshot tests keep matching.
+            this.line(`const ${tmplVar} = new DataTemplate((_data) => {`);
+            this.indent += 4;
+            const rootVar = this.compileElement(rootElement);
+            this.line(`return ${rootVar};`);
+            this.indent -= 4;
+            this.line(`}, ${JSON.stringify(dataType)});`);
+        }
+        else
+        {
+            // Triggers reference x:names declared inside the factory
+            // body, so they MUST be compiled after the factory walk
+            // (which populates templateNameScope) — but their `const`
+            // declarations must SYNTACTICALLY precede the
+            // `new DataTemplate(...)` call. Wrapping the whole
+            // construction in an IIFE keeps the declaration order
+            // legal while letting the factory body run first inside a
+            // local scope. Adds one closure per DataTemplate; cheap.
+            this.line(`const ${tmplVar} = (() => {`);
+            this.indent += 4;
+            this.line(`const _factory = (_data) => {`);
+            this.indent += 4;
+            const rootVar = this.compileElement(rootElement);
+            this.line(`return ${rootVar};`);
+            this.indent -= 4;
+            this.line(`};`);
+            const { propertyTriggers, dataTriggers } =
+                this.compileDataTemplateTriggers(triggers);
+            const propsArr = `[${propertyTriggers.join(', ')}]`;
+            const dataArr  = `[${dataTriggers.join(', ')}]`;
+            this.line(
+                `return new DataTemplate(_factory, ${JSON.stringify(dataType)}, ${propsArr}, ${dataArr});`);
+            this.indent -= 4;
+            this.line(`})();`);
+        }
+        this.templateNameScope  = savedTNS;
+        this.templateNameOwners = savedTNO;
         return tmplVar;
+    }
+
+    // Emit a TemplatePropertyTrigger / TemplateDataTrigger per `when()`
+    // block in a DataTemplate body. Setter LHS resolution: when the
+    // first segment matches an x:name registered in the surrounding
+    // template scope, it becomes the setter's `targetName`; otherwise
+    // it's an attached-property owner type (unchanged behaviour). The
+    // condition itself reuses the same DNF + `evaluateTermValue`
+    // pipeline as Style triggers.
+    private compileDataTemplateTriggers(
+        triggers: readonly TriggerGroup[],
+    ): { propertyTriggers: string[]; dataTriggers: string[] }
+    {
+        const propertyTriggers: string[] = [];
+        const dataTriggers:     string[] = [];
+        for (const tg of triggers)
+        {
+            const disjuncts = this.flattenToDNF(tg.condition);
+            if (disjuncts.length !== 1 || disjuncts[0]!.length !== 1)
+            {
+                throw new EmitError(
+                    "DataTemplate triggers currently support only a single-term `when( … )` condition",
+                    tg.span);
+            }
+            const term = disjuncts[0]![0]!;
+            if (term.negated)
+            {
+                throw new EmitError(
+                    "DataTemplate triggers do not support `not` — write `$path = false` instead",
+                    term.span);
+            }
+            // Setters: each setter LHS may be `Property = …`,
+            // `TargetName.Property = …`, or `Owner.Property = …`
+            // (attached). The compiler routes the second form through
+            // TargetedSetter; the others stay regular Setters.
+            const settersArrVar = this.fresh('tplSet');
+            const setterExprs:  string[] = [];
+            for (const item of tg.setters.items)
+            {
+                if (item.kind !== 'property-setter')
+                {
+                    throw new EmitError(
+                        "only property setters are allowed inside DataTemplate `when()` blocks",
+                        item.span);
+                }
+                setterExprs.push(this.compileTemplateSetter(item));
+            }
+            this.line(`const ${settersArrVar} = [${setterExprs.join(', ')}];`);
+
+            const valueExpr = this.evaluateTermValue(term);
+            if (term.path !== undefined)
+            {
+                this.ensureImport('TemplateDataTrigger');
+                const v = this.fresh('tplDataTrig');
+                this.line(
+                    `const ${v} = new TemplateDataTrigger(${JSON.stringify(term.path)}, ${valueExpr}, ${settersArrVar});`);
+                dataTriggers.push(v);
+            }
+            else
+            {
+                // Property-trigger form needs an owner type to scope
+                // the watched DP. The current DSL doesn't carry an
+                // explicit owner on the trigger condition, so we hand
+                // the runtime `undefined` for the owner — and the
+                // runtime resolves the property name against the
+                // source visual's own class. That mirrors how WPF's
+                // Trigger.Property looks up by DependencyProperty
+                // identity rather than owner-class.
+                throw new EmitError(
+                    "property-trigger `when( PropertyName )` inside DataTemplate bodies is not supported yet — use `when( $path )` against the data context",
+                    term.span);
+            }
+        }
+        return { propertyTriggers, dataTriggers };
+    }
+
+    // Lower one DataTemplate-body setter into either a TargetedSetter
+    // (when the LHS first segment matches a registered x:name in the
+    // current template scope) or a plain Setter (attached-property
+    // form). Stays close in shape to compileSetter so the value-side
+    // emission is reused.
+    private compileTemplateSetter(item: PropertySetter): string
+    {
+        this.ensureImport('TargetedSetter');
+        const parts = item.path.parts;
+        if (parts.length === 1)
+        {
+            // Bare `Property = value;` — owner defaults to the template
+            // root's runtime class. We can't statically know that
+            // class, so emit a TargetedSetter with targetName=undefined
+            // and look up the descriptor by name on the resolved
+            // target at apply time. The runtime takes (owner,
+            // property, value, targetName) so we still need an owner
+            // class. Reject for now until the root-class inference
+            // story is solid.
+            throw new EmitError(
+                "bare `Property = value;` in DataTemplate triggers is not supported yet — write `Owner.Property = value` (e.g. `Border.Background = …`) or `targetName.Property = value`",
+                item.span);
+        }
+        const first  = parts[0]!;
+        const second = parts[1]!;
+        const valueExpr = this.compileValue(item.value, {
+            propertyName: second,
+            targetExpr:   undefined,
+        });
+        const isName = this.templateNameScope?.has(first) ?? false;
+        if (isName)
+        {
+            // TargetedSetter(owner=undefined?  No — runtime needs an
+            // owner class for descriptor lookup. We require a third
+            // path segment: TargetName.OwnerClass.Property = value.
+            // That's verbose. Pragmatic alternative: infer owner from
+            // first segment's recorded class.
+            const ownerType = this.templateNameOwners?.get(first);
+            if (ownerType === undefined)
+            {
+                throw new EmitError(
+                    `cannot resolve owner class for target '${first}' — ensure the named element is declared earlier in the template body`,
+                    item.span);
+            }
+            this.ensureImport(ownerType);
+            return `new TargetedSetter(${ownerType}, ${JSON.stringify(second)}, ${valueExpr}, ${JSON.stringify(first)})`;
+        }
+        // Attached-property form: `Owner.Property = value` targets the
+        // template root. Same shape the Style compiler uses.
+        this.ensureImport(first);
+        return `new TargetedSetter(${first}, ${JSON.stringify(second)}, ${valueExpr})`;
     }
 
     // ── HierarchicalDataTemplate ────────────────────────────────────
     //
-    // `hierarchicaldatatemplate x:key="…" [datatype=Foo, itemsselector=Bar] { … }`
+    // `HierarchicalDataTemplate x:key="…" [datatype=Foo, itemsselector=Bar] { … }`
     // emits a HierarchicalDataTemplate whose itemsSelector pulls `data.Bar`
     // off each parent data item, returning undefined for items without
     // that property (TreeView treats undefined-children as a leaf row).
@@ -513,7 +715,7 @@ export class Compiler
         if (rf.body.kind !== 'element')
         {
             throw new EmitError(
-                'hierarchicaldatatemplate body must be a single element',
+                'HierarchicalDataTemplate body must be a single element',
                 rf.span);
         }
         const dataType = this.requireTargetType(rf);
@@ -521,7 +723,7 @@ export class Compiler
         if (selector === undefined)
         {
             throw new EmitError(
-                'hierarchicaldatatemplate requires `itemsselector=<PropertyName>` — names the children property on the data',
+                'HierarchicalDataTemplate requires `itemsselector=<PropertyName>` — names the children property on the data',
                 rf.span);
         }
 
@@ -551,10 +753,10 @@ export class Compiler
     // here — styles only ever live as keyed dictionary entries.
     private compileInlineTemplateValue(rf: ResourceForm): string
     {
-        if (rf.keyword === 'template')                  return this.compileControlTemplateForm(rf);
-        if (rf.keyword === 'datatemplate')              return this.compileDataTemplateForm(rf);
-        if (rf.keyword === 'hierarchicaldatatemplate')  return this.compileHierarchicalDataTemplateForm(rf);
-        if (rf.keyword === 'itemspaneltemplate')        return this.compileItemsPanelTemplateForm(rf);
+        if (rf.keyword === 'Template')                  return this.compileControlTemplateForm(rf);
+        if (rf.keyword === 'DataTemplate')              return this.compileDataTemplateForm(rf);
+        if (rf.keyword === 'HierarchicalDataTemplate')  return this.compileHierarchicalDataTemplateForm(rf);
+        if (rf.keyword === 'ItemsPanelTemplate')        return this.compileItemsPanelTemplateForm(rf);
         throw new EmitError(
             `'${rf.keyword}' is not allowed inline as a slot-assign value (only template forms are)`,
             rf.span);
@@ -562,7 +764,7 @@ export class Compiler
 
     // ── ItemsPanelTemplate ──────────────────────────────────────────
     //
-    // `itemspaneltemplate x:key="…" { Panel … }` emits an
+    // `ItemsPanelTemplate x:key="…" { Panel … }` emits an
     // ItemsPanelTemplate whose Apply() produces a fresh Panel each call.
     // No required meta-attrs — the produced Visual just has to be a
     // Panel-derived class (validated at runtime by the consumer, not at
@@ -574,7 +776,7 @@ export class Compiler
         if (rf.body.kind !== 'element')
         {
             throw new EmitError(
-                'itemspaneltemplate body must be a single element', rf.span);
+                'ItemsPanelTemplate body must be a single element', rf.span);
         }
         this.ensureImport('ItemsPanelTemplate');
         const tmplVar = this.fresh('tmpl');
@@ -646,6 +848,7 @@ export class Compiler
         const setterVars:       string[] = [];
         const triggerVars:      string[] = [];
         const multiTriggerVars: string[] = [];
+        const dataTriggerVars:  string[] = [];
         const eventTriggerVars: string[] = [];
         for (const item of rf.body.items)
         {
@@ -662,27 +865,36 @@ export class Compiler
                 const out = this.compileTriggerGroup(tt, item);
                 triggerVars.push(...out.propertyTriggers);
                 multiTriggerVars.push(...out.multiTriggers);
+                dataTriggerVars.push(...out.dataTriggers);
             }
         }
         const settersArr       = `[${setterVars.join(', ')}]`;
         const triggersArr      = `[${triggerVars.join(', ')}]`;
         const multiTriggersArr = `[${multiTriggerVars.join(', ')}]`;
+        const dataTriggersArr  = `[${dataTriggerVars.join(', ')}]`;
         const eventTriggersArr = `[${eventTriggerVars.join(', ')}]`;
 
         const styleVar = this.fresh('style');
-        // Style(targetType, setters, basedOn, triggers, multiTriggers, eventTriggers).
-        // The eventTriggers argument is omitted from the emit when empty
-        // so existing snapshot tests of the legacy 5-arg form keep
-        // matching.
-        if (eventTriggerVars.length === 0)
+        // Style(targetType, setters, basedOn, triggers, multiTriggers,
+        //       eventTriggers, dataTriggers). Trailing arguments are
+        // omitted from the emit when empty so existing snapshot tests
+        // of the legacy 5- and 6-arg forms keep matching — a Style
+        // with no event triggers and no data triggers reproduces the
+        // historical 5-arg call.
+        if (eventTriggerVars.length === 0 && dataTriggerVars.length === 0)
         {
             this.line(
                 `const ${styleVar} = new Style(${tt}, ${settersArr}, undefined, ${triggersArr}, ${multiTriggersArr});`);
         }
-        else
+        else if (dataTriggerVars.length === 0)
         {
             this.line(
                 `const ${styleVar} = new Style(${tt}, ${settersArr}, undefined, ${triggersArr}, ${multiTriggersArr}, ${eventTriggersArr});`);
+        }
+        else
+        {
+            this.line(
+                `const ${styleVar} = new Style(${tt}, ${settersArr}, undefined, ${triggersArr}, ${multiTriggersArr}, ${eventTriggersArr}, ${dataTriggersArr});`);
         }
         return styleVar;
     }
@@ -731,7 +943,33 @@ export class Compiler
             case 'stop-storyboard':   return this.compileStopStoryboard(action);
             case 'pause-storyboard':  return this.compilePauseStoryboard(action);
             case 'resume-storyboard': return this.compileResumeStoryboard(action);
+            case 'invoke-command':    return this.compileInvokeCommand(action);
         }
+    }
+
+    // `InvokeCommand[Command=$SaveCommand]` lowers to:
+    //   const _act0 = new InvokeCommandAction((_target) =>
+    //       _target.DataContext?.SaveCommand);
+    // The factory reads the command on every fire so VM-side replacement
+    // of the command DP propagates without re-installing the trigger.
+    // For multi-part paths (`$VM.Save.Command`) the chain uses optional
+    // chaining so an unbound DataContext or missing intermediate stays
+    // a silent no-op rather than throwing inside the dispatch loop.
+    private compileInvokeCommand(node: InvokeCommandNode): string
+    {
+        this.ensureImport('InvokeCommandAction');
+        const cmd = node.command;
+        if (cmd.kind !== 'binding')
+        {
+            throw new EmitError(
+                'InvokeCommand Command attribute must be a $-binding to an ICommand',
+                node.span);
+        }
+        const v = this.fresh('act');
+        const chain = cmd.path.map(p => `?.${p}`).join('');
+        this.line(
+            `const ${v} = new InvokeCommandAction((_target) => _target.DataContext${chain});`);
+        return v;
     }
 
     private compileStopStoryboard(node: StopStoryboardNode): string
@@ -893,7 +1131,7 @@ export class Compiler
 
     private compileTriggerGroup(
         targetType: string, tg: TriggerGroup,
-    ): { propertyTriggers: string[]; multiTriggers: string[] }
+    ): { propertyTriggers: string[]; multiTriggers: string[]; dataTriggers: string[] }
     {
         this.ensureImport(targetType);
 
@@ -969,21 +1207,57 @@ export class Compiler
 
         const propertyTriggers: string[] = [];
         const multiTriggers:    string[] = [];
+        const dataTriggers:     string[] = [];
 
         for (const conjunct of disjuncts)
         {
             if (conjunct.length === 1)
             {
-                this.ensureImport('PropertyTrigger');
                 const term = conjunct[0]!;
                 const valueExpr = this.evaluateTermValue(term);
-                const v = this.fresh('trigger');
-                this.line(
-                    `const ${v} = new PropertyTrigger(${targetType}, ${JSON.stringify(term.property)}, ${valueExpr}, ${settersArrVar}${triggerTail});`);
-                propertyTriggers.push(v);
+                if (term.path !== undefined)
+                {
+                    // DataTrigger — `when($Path)` / `when($Path = expr)`.
+                    // Watches the styled target's DataContext for `path`.
+                    // Currently rejects `not $Path` outright because
+                    // DataTrigger's runtime compares with === only;
+                    // a negated form would require a separate value-
+                    // mismatch path that's not in v0.
+                    if (term.negated)
+                    {
+                        throw new EmitError(
+                            "`not $path` inside when() is not supported yet — use `$path = false` instead",
+                            term.span);
+                    }
+                    this.ensureImport('DataTrigger');
+                    const v = this.fresh('dataTrig');
+                    this.line(
+                        `const ${v} = new DataTrigger(${JSON.stringify(term.path)}, ${valueExpr}, ${settersArrVar}${triggerTail});`);
+                    dataTriggers.push(v);
+                }
+                else
+                {
+                    this.ensureImport('PropertyTrigger');
+                    const v = this.fresh('trigger');
+                    this.line(
+                        `const ${v} = new PropertyTrigger(${targetType}, ${JSON.stringify(term.property)}, ${valueExpr}, ${settersArrVar}${triggerTail});`);
+                    propertyTriggers.push(v);
+                }
             }
             else
             {
+                // Multi-term conjunct — emit as MultiTrigger. Mixing a
+                // $path term into a multi-term conjunct isn't supported
+                // yet (the runtime MultiTrigger only watches DPs).
+                for (const term of conjunct)
+                {
+                    if (term.path !== undefined)
+                    {
+                        throw new EmitError(
+                            "`$path` terms inside `when( … and … )` are not supported yet — split the disjunction or use a single $path term",
+                            term.span);
+                    }
+                }
                 this.ensureImport('MultiTrigger');
                 const conditionExprs: string[] = [];
                 for (const term of conjunct)
@@ -998,7 +1272,7 @@ export class Compiler
                 multiTriggers.push(v);
             }
         }
-        return { propertyTriggers, multiTriggers };
+        return { propertyTriggers, multiTriggers, dataTriggers };
     }
 
     private evaluateTermValue(term: TriggerTermLite): string
@@ -1025,7 +1299,8 @@ export class Compiler
     {
         if (expr.kind === 'trigger-term')
         {
-            return [[{ property: expr.property, value: expr.value,
+            return [[{ property: expr.property, path: expr.path,
+                       value: expr.value,
                        negated: expr.negated, span: expr.span }]];
         }
         if (expr.kind === 'trigger-or')
@@ -1382,7 +1657,7 @@ export class Compiler
                 // Inline template at the value position — emit an
                 // anonymous template (no x:key) and assign the resulting
                 // var to the slot. Lets consumers write
-                //   ListBox { ItemsPanel: itemspaneltemplate { WrapPanel[…] } }
+                //   ListBox { ItemsPanel: ItemsPanelTemplate { WrapPanel[…] } }
                 // without registering a keyed dictionary entry just to
                 // reference it once.
                 if (typeof item.value === 'object' && 'kind' in item.value
@@ -1723,8 +1998,8 @@ export class Compiler
     {
         // Style/Template use 'targettype'; DataTemplate (and
         // HierarchicalDataTemplate) use 'datatype'.
-        const name = (rf.keyword === 'datatemplate'
-                  || rf.keyword === 'hierarchicaldatatemplate')
+        const name = (rf.keyword === 'DataTemplate'
+                  || rf.keyword === 'HierarchicalDataTemplate')
             ? 'datatype'
             : 'targettype';
         const m = rf.metaAttrs.find(
@@ -1745,7 +2020,7 @@ export class Compiler
 
     // Read a named meta-attr by name from a resource form. Returns
     // undefined when the attr is absent. Used for optional meta-attrs
-    // like hierarchicaldatatemplate's `itemsselector=PropertyName`.
+    // like HierarchicalDataTemplate's `itemsselector=PropertyName`.
     private findIdentMetaAttr(rf: ResourceForm, name: string): string | undefined
     {
         const m = rf.metaAttrs.find(
@@ -1792,7 +2067,21 @@ export class Compiler
                     'x:name requires a string literal value', xName.span);
             }
             const nameLit = JSON.stringify(xName.value.value);
+            const nameStr = xName.value.value as string;
             this.line(`${v}.Name = ${nameLit};`);
+            // Track inside the active DataTemplate's name scope so
+            // setter LHS resolution in trigger blocks can route names
+            // through TargetedSetter. Recorded BEFORE the inTemplateBody
+            // early-out so DataTemplate bodies (which also set
+            // inTemplateBody for the ControlTemplate case) capture the
+            // entry. Note: ControlTemplate factories never carry a
+            // templateNameScope (it's only set inside compileDataTemplateForm),
+            // so this is a no-op for those.
+            if (this.templateNameScope !== undefined)
+            {
+                this.templateNameScope.add(nameStr);
+                this.templateNameOwners!.set(nameStr, elem.name);
+            }
             // Inside a template body, ControlTemplate.Apply walks the
             // freshly-built subtree and registers every named visual in
             // the template's NameScope — so the factory itself must NOT

@@ -11,11 +11,13 @@ import type {
     AttrPath,
     BeginStoryboardNode,
     BindingValue,
+    InvokeCommandNode,
     PauseStoryboardNode,
     ResumeStoryboardNode,
     StopStoryboardNode,
     BodyItem,
     ColorValue,
+    DataTemplateBody,
     Document,
     DefForm,
     DynamicResourceValue,
@@ -63,18 +65,18 @@ export class ParseError extends Error
 }
 
 const RESOURCE_KEYWORDS = new Set([
-    'style', 'template', 'datatemplate',
-    'hierarchicaldatatemplate', 'itemspaneltemplate',
+    'Style', 'Template', 'DataTemplate',
+    'HierarchicalDataTemplate', 'ItemsPanelTemplate',
 ]);
 
 // Subset of RESOURCE_KEYWORDS that produce a *template* value (something
 // invoked at apply time) — these are accepted both as keyed entries in a
 // ResourceDictionary AND as inline values of a slot-assign (e.g.,
-// `ItemsPanel: itemspaneltemplate { … }`). `style` is excluded: styles
+// `ItemsPanel: ItemsPanelTemplate { … }`). `Style` is excluded: styles
 // only ever live as keyed dictionary entries today.
 const INLINE_TEMPLATE_KEYWORDS = new Set([
-    'template', 'datatemplate',
-    'hierarchicaldatatemplate', 'itemspaneltemplate',
+    'Template', 'DataTemplate',
+    'HierarchicalDataTemplate', 'ItemsPanelTemplate',
 ]);
 
 export interface ParserOptions
@@ -133,11 +135,11 @@ export class Parser
             {
                 case 'import':       return this.parseImport();
                 case 'def':          return this.parseDefForm();
-                case 'style':
-                case 'template':
-                case 'datatemplate':
-                case 'hierarchicaldatatemplate':
-                case 'itemspaneltemplate': return this.parseResourceForm();
+                case 'Style':
+                case 'Template':
+                case 'DataTemplate':
+                case 'HierarchicalDataTemplate':
+                case 'ItemsPanelTemplate': return this.parseResourceForm();
                 default:             return this.parseElement();
             }
         }
@@ -219,7 +221,7 @@ export class Parser
     private parseResourceForm(): ResourceForm
     {
         const head    = this.expect(TokenKind.Ident);
-        const keyword = head.value as 'style' | 'template' | 'datatemplate' | 'hierarchicaldatatemplate' | 'itemspaneltemplate';
+        const keyword = head.value as 'Style' | 'Template' | 'DataTemplate' | 'HierarchicalDataTemplate' | 'ItemsPanelTemplate';
         if (!RESOURCE_KEYWORDS.has(keyword))
         {
             throw new ParseError(`expected resource keyword, got '${keyword}'`, head.span);
@@ -229,10 +231,10 @@ export class Parser
         // the `[ … ]` block, mirroring parseElement.
         const xAttrs = this.parseLeadingXAttrs();
 
-        // The `[ meta=value, … ]` block is OPTIONAL — `template` /
-        // `datatemplate` / `hierarchicaldatatemplate` need it (targettype /
+        // The `[ meta=value, … ]` block is OPTIONAL — `Template` /
+        // `DataTemplate` / `HierarchicalDataTemplate` need it (targettype /
         // datatype / itemsselector are required there), but
-        // `itemspaneltemplate` and inline-only forms have no required
+        // `ItemsPanelTemplate` and inline-only forms have no required
         // meta-attrs, so the bracket pair can be omitted entirely. The
         // compiler validates required meta-attrs per-keyword downstream.
         const metaAttrs: NamedAttr[] = [];
@@ -252,10 +254,49 @@ export class Parser
         }
 
         this.expect(TokenKind.LBrace);
-        let body: SetterList | ElementNode;
-        if (keyword === 'style')
+        let body: SetterList | ElementNode | DataTemplateBody;
+        if (keyword === 'Style')
         {
             body = this.parseSetterList();
+        }
+        else if (keyword === 'DataTemplate' || keyword === 'HierarchicalDataTemplate')
+        {
+            // Trailing trigger groups / event triggers are allowed after
+            // the root element — WPF parity for DataTemplate.Triggers
+            // on (Hierarchical)DataTemplate. Without any trailing
+            // triggers the body collapses to the historical "single
+            // element" shape; the body kind discriminates downstream.
+            const bodyStart = this.peek().span.start;
+            const root = this.parseElement();
+            const triggers:      TriggerGroup[]      = [];
+            const eventTriggers: EventTriggerGroup[] = [];
+            while (this.peek().kind === TokenKind.Ident)
+            {
+                const ident = this.peek();
+                if (ident.value === 'when')
+                {
+                    triggers.push(this.parseTriggerGroup());
+                    continue;
+                }
+                if (ident.value === 'on')
+                {
+                    eventTriggers.push(this.parseEventTriggerGroup());
+                    continue;
+                }
+                break;
+            }
+            // Skip optional trailing semicolons between trigger blocks
+            // and the closing brace, mirroring setter-list / when()
+            // trailing-`;` tolerance.
+            while (this.peek().kind === TokenKind.Semicolon) this.consume();
+            const bodyEnd = this.lastEnd();
+            body = {
+                kind:          'data-template-body',
+                root,
+                triggers,
+                eventTriggers,
+                span:          this.span(bodyStart, bodyEnd),
+            };
         }
         else
         {
@@ -336,10 +377,49 @@ export class Parser
             if (tk.value === 'StopStoryboard')   return this.parseStopStoryboard();
             if (tk.value === 'PauseStoryboard')  return this.parsePauseStoryboard();
             if (tk.value === 'ResumeStoryboard') return this.parseResumeStoryboard();
+            if (tk.value === 'InvokeCommand')    return this.parseInvokeCommand();
         }
         throw new ParseError(
-            `expected BeginStoryboard / StopStoryboard / PauseStoryboard / ResumeStoryboard inside event-trigger body; got '${tk.value}'`,
+            `expected BeginStoryboard / StopStoryboard / PauseStoryboard / ResumeStoryboard / InvokeCommand inside event-trigger body; got '${tk.value}'`,
             tk.span);
+    }
+
+    // `InvokeCommand[Command=$SaveCommand]` — one required attribute,
+    // Command, holding a binding to an ICommand on the firing Visual's
+    // DataContext. No body. The compiler lowers this to
+    // `new InvokeCommandAction((target) => <bound command>)`.
+    private parseInvokeCommand(): InvokeCommandNode
+    {
+        const start = this.expectIdent('InvokeCommand').span.start;
+        const lbracket = this.peek();
+        if (lbracket.kind !== TokenKind.LBracket)
+        {
+            throw new ParseError(
+                'InvokeCommand requires a [Command=...] attribute',
+                lbracket.span);
+        }
+        this.expect(TokenKind.LBracket);
+        const attrs = this.parseAttrListBody();
+        const closer = this.expect(TokenKind.RBracket);
+        if (attrs.length !== 1)
+        {
+            throw new ParseError(
+                'InvokeCommand requires exactly one attribute: Command',
+                lbracket.span);
+        }
+        const attr = attrs[0]!;
+        if (attr.kind !== 'named-attr' || attr.path.parts.length !== 1
+            || attr.path.parts[0] !== 'Command')
+        {
+            throw new ParseError(
+                'InvokeCommand only accepts the Command attribute',
+                attr.span);
+        }
+        return {
+            kind:    'invoke-command',
+            command: attr.value,
+            span:    this.span(start, closer.span.end),
+        };
     }
 
     // `BeginStoryboard [Name="fade"] { Animation[…] Animation[…] }` — the
@@ -542,7 +622,30 @@ export class Parser
             this.consume();
             negated = true;
         }
-        const idTk = this.expect(TokenKind.Ident);
+        // `$Path` or `$Path.tail` — DataTrigger form. Resolves against
+        // the styled target's DataContext, mirroring binding syntax in
+        // attribute values. Same dotted-path tail as $-bindings.
+        let property: string | undefined;
+        let path:     string | undefined;
+        let startTk:  Token = tk;
+        if (this.peek().kind === TokenKind.Dollar)
+        {
+            const dollar = this.consume();
+            startTk = dollar;
+            const firstSeg = this.expect(TokenKind.Ident).value;
+            const segments: string[] = [firstSeg];
+            while (this.peek().kind === TokenKind.Dot)
+            {
+                this.consume();
+                segments.push(this.expect(TokenKind.Ident).value);
+            }
+            path = segments.join('.');
+        }
+        else
+        {
+            const idTk = this.expect(TokenKind.Ident);
+            property = idTk.value;
+        }
         let value: ValueNode | null = null;
         if (this.peek().kind === TokenKind.Equals)
         {
@@ -553,9 +656,10 @@ export class Parser
         return {
             kind: 'trigger-term',
             negated,
-            property: idTk.value,
+            property,
+            path,
             value,
-            span: this.span(tk.span.start, end),
+            span: this.span(startTk.span.start, end),
         };
     }
 
@@ -849,11 +953,11 @@ export class Parser
         {
             switch (tk.value)
             {
-                case 'style':
-                case 'template':
-                case 'datatemplate':
-                case 'hierarchicaldatatemplate':
-                case 'itemspaneltemplate': return this.parseResourceForm();
+                case 'Style':
+                case 'Template':
+                case 'DataTemplate':
+                case 'HierarchicalDataTemplate':
+                case 'ItemsPanelTemplate': return this.parseResourceForm();
                 case 'def':          return this.parseDefForm();
                 default:
                     // SlotAssign vs Element disambiguation.
@@ -884,8 +988,8 @@ export class Parser
               && INLINE_TEMPLATE_KEYWORDS.has(this.peek().value as string))
         {
             // Inline template at the slot-value position:
-            //   `ItemsPanel: itemspaneltemplate { WrapPanel[…] }`
-            //   `ItemTemplate: datatemplate [datatype=FooVM] { … }`
+            //   `ItemsPanel: ItemsPanelTemplate { WrapPanel[…] }`
+            //   `ItemTemplate: DataTemplate [datatype=FooVM] { … }`
             // Parses identically to a keyed resource form; the compiler
             // emits an anonymous template construction at the assignment
             // site (no x:key required).

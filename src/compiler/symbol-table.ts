@@ -21,6 +21,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['PropertyTrigger',     '@visualisation-sub/mural/runtime'],
     ['EventTrigger',           '@visualisation-sub/mural/runtime'],
     ['BeginStoryboardAction',  '@visualisation-sub/mural/runtime'],
+    ['InvokeCommandAction',    '@visualisation-sub/mural/runtime'],
     ['StopStoryboardAction',   '@visualisation-sub/mural/runtime'],
     ['PauseStoryboardAction',  '@visualisation-sub/mural/runtime'],
     ['ResumeStoryboardAction', '@visualisation-sub/mural/runtime'],

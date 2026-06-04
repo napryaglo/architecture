@@ -844,8 +844,8 @@ export class Visual extends Model
 
     private install_event_trigger(trigger: EventTrigger): void
     {
-        const fire = (): void => {
-            for (const a of trigger.Actions) a.Invoke(this);
+        const fire = (args: unknown): void => {
+            for (const a of trigger.Actions) a.Invoke(this, args);
         };
         // Click via Button.AddClickHandler / RemoveClickHandler — duck-
         // typed so we don't drag a Controls import into the runtime.
@@ -858,7 +858,7 @@ export class Visual extends Model
             if (typeof self.AddClickHandler === 'function'
              && typeof self.RemoveClickHandler === 'function')
             {
-                const handler = (_args: unknown): void => fire();
+                const handler = (args: unknown): void => fire(args);
                 self.AddClickHandler(handler);
                 this._eventTriggerSubscriptions.set(trigger, () => {
                     self.RemoveClickHandler!(handler);
@@ -871,7 +871,7 @@ export class Visual extends Model
         // fire synchronously so the listener still sees the load edge.
         if (trigger.RoutedEvent === 'Loaded')
         {
-            const handler = (): void => fire();
+            const handler = (): void => fire(undefined);
             if (this._loadedListeners === undefined) this._loadedListeners = new Set();
             this._loadedListeners.add(handler);
             this._eventTriggerSubscriptions.set(trigger, () => {
@@ -881,13 +881,13 @@ export class Visual extends Model
             return;
         }
         // Generic routed events — PointerDown / PointerUp / PointerMove /
-        // PointerWheel / KeyDown / KeyUp / GotFocus / LostFocus.
-        // Plugs into the routed-event dispatch via the per-instance
-        // listener registry; the dispatcher calls FireRoutedListeners
-        // on each Visual after the bubble-phase virtual.
+        // PointerWheel / KeyDown / KeyUp / GotFocus / LostFocus / drag
+        // events. The handler forwards the routed-event args to each
+        // TriggerAction so InvokeCommandAction can pass them to the
+        // bound ICommand's Execute method.
         if (KNOWN_ROUTED_EVENTS.has(trigger.RoutedEvent))
         {
-            const handler = (_args: unknown): void => fire();
+            const handler = (args: unknown): void => fire(args);
             this.AddRoutedEventListener(trigger.RoutedEvent, handler);
             this._eventTriggerSubscriptions.set(trigger, () => {
                 this.RemoveRoutedEventListener(trigger.RoutedEvent, handler);
