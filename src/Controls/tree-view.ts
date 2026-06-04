@@ -2,7 +2,6 @@ import {
     Application,
     MetaData,
     Model,
-    ObservableCollection,
     Rect,
     Size,
     Visual,
@@ -206,12 +205,6 @@ export class TreeView extends ItemsControl
     // set.
     private _suppressSelectedDataSync = false;
 
-    // Backing for AddChild — declarative children land here when no
-    // caller-supplied Items collection is in place. Same pattern as
-    // ListBox.
-    private readonly _declarativeItems: ObservableCollection<unknown>
-        = new ObservableCollection<unknown>();
-
     private readonly _selectedItems: Set<TreeViewItem> = new Set();
     private _anchor: TreeViewItem | undefined;
     private readonly _selectionListeners: Set<() => void> = new Set();
@@ -226,7 +219,7 @@ export class TreeView extends ItemsControl
         super();
         this.Template = resolveTemplate(KEY_TREEVIEW);
         this.ItemsPanel = () => new StackPanel();
-        this.Items = this._declarativeItems;
+        // Base ItemsControl constructor seeded Items = _declarativeItems.
     }
 
     public get Indent(): number { return this.get_property_value(TreeView.IndentKey); }
@@ -272,43 +265,14 @@ export class TreeView extends ItemsControl
 
     // ── Declarative AddChild → Items routing ──────────────────────
 
-    public AddChild(child: Visual): void
+    // Base ItemsControl.AddChild handles the route-into-Items + promote
+    // logic; we only gate on container type.
+    protected override validateDeclarativeChild(child: Visual): void
     {
         if (!(child instanceof TreeViewItem))
         {
             throw new Error('TreeView only accepts TreeViewItem children');
         }
-        const items = this.Items;
-        if (items instanceof ObservableCollection)
-        {
-            items.Add(child);
-        }
-        else
-        {
-            this.promoteToObservable();
-            this._declarativeItems.Add(child);
-        }
-    }
-
-    public RemoveChild(child: Visual): void
-    {
-        if (!(child instanceof TreeViewItem)) return;
-        const items = this.Items;
-        if (items instanceof ObservableCollection)
-        {
-            items.Remove(child);
-        }
-    }
-
-    private promoteToObservable(): void
-    {
-        const current = this.Items;
-        this._declarativeItems.Clear();
-        if (Array.isArray(current))
-        {
-            for (const v of current) this._declarativeItems.Add(v);
-        }
-        this.Items = this._declarativeItems;
     }
 
     // The root items — live read-only view of the realized
@@ -600,10 +564,6 @@ export class TreeViewItem extends ItemsControl
         ensureControlsTheme();
     }
 
-    // Backing for AddChild — declarative children land here.
-    private readonly _declarativeItems: ObservableCollection<unknown>
-        = new ObservableCollection<unknown>();
-
     // Captured by the ItemsPanel factory on first invocation. The
     // IsExpanded handler reaches into it to drive collapse without
     // depending on a named PART_ lookup.
@@ -644,7 +604,7 @@ export class TreeViewItem extends ItemsControl
             cs.SetCollapsed(!this.IsExpanded);
             return cs;
         };
-        this.Items = this._declarativeItems;
+        // Base ItemsControl seeded Items = _declarativeItems.
 
         this.refreshChevron();
         this.refreshRowBackground();
@@ -691,44 +651,14 @@ export class TreeViewItem extends ItemsControl
         this.refreshChevron();
     }
 
-    // Declarative AddChild → Items routing (same as TreeView).
-    public AddChild(child: Visual): void
+    // Base ItemsControl.AddChild handles the route-into-Items + promote
+    // logic; we only gate on container type.
+    protected override validateDeclarativeChild(child: Visual): void
     {
         if (!(child instanceof TreeViewItem))
         {
             throw new Error('TreeViewItem only accepts TreeViewItem children');
         }
-        const items = this.Items;
-        if (items instanceof ObservableCollection)
-        {
-            items.Add(child);
-        }
-        else
-        {
-            this.promoteToObservable();
-            this._declarativeItems.Add(child);
-        }
-    }
-
-    public RemoveChild(child: Visual): void
-    {
-        if (!(child instanceof TreeViewItem)) return;
-        const items = this.Items;
-        if (items instanceof ObservableCollection)
-        {
-            items.Remove(child);
-        }
-    }
-
-    private promoteToObservable(): void
-    {
-        const current = this.Items;
-        this._declarativeItems.Clear();
-        if (Array.isArray(current))
-        {
-            for (const v of current) this._declarativeItems.Add(v);
-        }
-        this.Items = this._declarativeItems;
     }
 
     // Live view of the nested items in document order.

@@ -217,6 +217,110 @@ export class ItemsControl extends Visual
 
     public get Generator(): ItemContainerGenerator { return this._generator; }
 
+    // ── Declarative-children backing ───────────────────────────────
+    //
+    // Compiler routes `Control { ChildA; ChildB }` body elements through
+    // AddChild. WPF parity: those declarative children should land in
+    // the same Items collection that data-driven population uses, so a
+    // single materialization pipeline owns both modes.
+    //
+    // Each ItemsControl owns an internal ObservableCollection. The
+    // constructor seeds `Items = _declarativeItems` so consumers can
+    // `lb.Items.Add(value)` without first assigning a collection. When
+    // a consumer later reassigns `Items = someArray`, declarative
+    // children added afterward are promoted back into the observable
+    // (preserving existing array entries) — that's promoteToObservable.
+    //
+    // Subclasses opt into declarative children by overriding
+    // validateDeclarativeChild to type-check the incoming Visual; the
+    // base rejects all declarative children since plain ItemsControl
+    // doesn't have a specific container shape to wrap with.
+    protected readonly _declarativeItems: ObservableCollection<unknown>
+        = new ObservableCollection<unknown>();
+
+    constructor()
+    {
+        super();
+        // Seed Items with our internal observable. Setting this triggers
+        // OnPropertyChanged('Items') which calls rebuildContainers — but
+        // rebuildContainers bails out when _itemsPanel is undefined (the
+        // common case during construction), so this is a cheap no-op
+        // beyond the DP write itself. The subclass constructor still
+        // runs afterward and sets Template / ItemsPanel which kick off
+        // real container materialization.
+        this.Items = this._declarativeItems;
+    }
+
+    // Subclass hook for declarative child validation. The base throws
+    // unconditionally — a plain ItemsControl has no item container type,
+    // so accepting an arbitrary Visual would be ambiguous. Subclasses
+    // override to accept their specific container type:
+    //
+    //   protected override validateDeclarativeChild(child: Visual): void
+    //   {
+    //       if (!(child instanceof ListBoxItem))
+    //           throw new Error('ListBox only accepts ListBoxItem children');
+    //   }
+    //
+    // Called by AddChild before the item lands in Items.
+    protected validateDeclarativeChild(_child: Visual): void
+    {
+        throw new Error(
+            'ItemsControl: declarative children require a concrete subclass '
+            + '(ListBox / TreeView / ComboBox / …). Override '
+            + 'validateDeclarativeChild to accept your container type.',
+        );
+    }
+
+    // Compiler-emitted body-elements path. Each subclass's DEFAULT_SLOT_INFO
+    // routes `Control { … }` body items through AddChild; we accept any
+    // Visual the subclass validates, then route into Items so the
+    // ItemsControl pipeline does the rest (logical tree wiring, container
+    // generation, selection bookkeeping, etc.).
+    public AddChild(child: Visual): void
+    {
+        this.validateDeclarativeChild(child);
+        const items = this.Items;
+        if (items instanceof ObservableCollection)
+        {
+            items.Add(child);
+        }
+        else
+        {
+            // Items was reassigned to a plain array (or undefined).
+            // Promote back to our observable, preserving content.
+            this.promoteToObservable();
+            this._declarativeItems.Add(child);
+        }
+    }
+
+    public RemoveChild(child: Visual): void
+    {
+        const items = this.Items;
+        if (items instanceof ObservableCollection)
+        {
+            items.Remove(child);
+        }
+    }
+
+    // Re-promote Items to the internal observable, preserving any
+    // existing entries from the prior array (or undefined). Called by
+    // AddChild when the consumer mid-flight reassigned Items to a fixed
+    // array and now wants to append declaratively.
+    protected promoteToObservable(): void
+    {
+        const current = this.Items;
+        this._declarativeItems.Clear();
+        if (Array.isArray(current))
+        {
+            for (const v of current) this._declarativeItems.Add(v);
+        }
+        // ItemsSource guard in the setter accepts undefined; ItemsSource
+        // can't have been set when we arrived here because the declarative
+        // AddChild path is mutually exclusive with bound mode.
+        this.Items = this._declarativeItems;
+    }
+
     // Public container-lifecycle hooks. Both the internal non-
     // virtualizing path (rebuildContainers / handleItemsChange) and
     // VirtualizingPanel realization route through here, so _containers
@@ -576,6 +680,24 @@ export class ItemsControl extends Visual
                     this.rebuildContainers();
                 }
                 return;
+            case 'ItemsPanel':
+                // Tear down the current panel + attach the new one.
+                // Routed through OnPropertyChanged so a markup write
+                // (`_set_property_value_by_name('ItemsPanel', …)`)
+                // or a binding push produces the same effect as the
+                // JS setter. Identity guard mirrors the prior setter's
+                // early-out.
+                if (oldValue === newValue) return;
+                this.teardownItemsPanel();
+                if (newValue !== undefined)
+                {
+                    this.materializeItemsPanel(newValue as ItemsPanelTemplate | ItemsPanelFactory);
+                }
+                return;
+            case 'Template':
+                if (oldValue === newValue) return;
+                this.rebuildTemplate();
+                return;
         }
     }
 
@@ -910,9 +1032,10 @@ export class ItemsControl extends Visual
     // (or direct slot) into the new presenter.
     public set Template(value: ControlTemplate | undefined)
     {
-        if (this.Template === value) return;
+        // Side effect (template teardown + re-apply, panel re-host) is
+        // in OnPropertyChanged so markup writes and binding pushes
+        // produce the same effect as this JS setter.
         this.set_property_value(ItemsControl.TemplateKey, value);
-        this.rebuildTemplate();
     }
 
     public get ItemsPanel(): ItemsPanelTemplate | ItemsPanelFactory | undefined
@@ -985,81 +1108,75 @@ export class ItemsControl extends Visual
 
     public set ItemsPanel(value: ItemsPanelTemplate | ItemsPanelFactory | undefined)
     {
-        if (this.ItemsPanel === value) return;
-
-        // Tear down the old panel. Two paths:
-        //   * VirtualizingPanel: it manages its own container lifecycle
-        //     via SetItemsOwner(undefined) → RecycleAll → handles
-        //     visual detach + logical detach + generator recycle on
-        //     its own. We just visually detach the panel itself.
-        //   * Plain Panel: walk our _containers list, detach each both
-        //     from the panel and logically from us.
-        if (this._itemsPanel !== undefined)
-        {
-            if (this._itemsPanel instanceof VirtualizingPanel)
-            {
-                // SetItemsOwner(undefined) calls RecycleAll on the
-                // panel, which iterates its realized containers and
-                // calls our DetachContainer + generator.Recycle on
-                // each. _containers / generator land in clean state.
-                this._itemsPanel.SetItemsOwner(undefined);
-            }
-            else
-            {
-                // Snapshot before iteration — DetachContainer
-                // mutates _containers.
-                for (const c of [...this._containers])
-                {
-                    this._itemsPanel.RemoveVisualChild(c);
-                    this.DetachContainer(c);
-                }
-                this._generator.Clear();
-            }
-            // Visually unparent from wherever the panel currently
-            // lives — inside the ItemsPresenter when a Template is
-            // applied; otherwise directly under us.
-            if (this._itemsPresenter !== undefined)
-            {
-                this._itemsPresenter.SetItemsPanel(undefined);
-            }
-            else
-            {
-                this.DetachVisual(this._itemsPanel);
-            }
-            this._itemsPanel = undefined;
-        }
-
+        // Side effect (panel teardown + materialize + attach) is in
+        // OnPropertyChanged so markup writes (`_set_property_value_by_name`)
+        // and binding pushes produce the same effect as this JS setter.
         this.set_property_value(ItemsControl.ItemsPanelKey, value);
+    }
 
-        if (value !== undefined)
+    // Teardown half of the ItemsPanel swap: detach all realized
+    // containers from the current panel, then unparent the panel
+    // itself from wherever it lives visually (inside an
+    // ItemsPresenter when a Template is applied; directly under this
+    // control otherwise).
+    private teardownItemsPanel(): void
+    {
+        if (this._itemsPanel === undefined) return;
+        if (this._itemsPanel instanceof VirtualizingPanel)
         {
-            // Two accepted shapes: an ItemsPanelTemplate (markup path)
-            // or a bare `() => Panel` factory (JS path). Both bottom out
-            // in invoking the factory once to materialize the panel.
-            this._itemsPanel = value instanceof ItemsPanelTemplate
-                ? value.Apply()
-                : value();
-            // Where does the panel live visually? Inside an
-            // ItemsPresenter when a Template is applied; directly
-            // under this control otherwise.
-            if (this._itemsPresenter !== undefined)
+            // SetItemsOwner(undefined) calls RecycleAll on the panel,
+            // which iterates its realized containers and calls our
+            // DetachContainer + generator.Recycle on each. _containers /
+            // generator land in clean state.
+            this._itemsPanel.SetItemsOwner(undefined);
+        }
+        else
+        {
+            // Snapshot before iteration — DetachContainer mutates
+            // _containers.
+            for (const c of [...this._containers])
             {
-                this._itemsPresenter.SetItemsPanel(this._itemsPanel);
+                this._itemsPanel.RemoveVisualChild(c);
+                this.DetachContainer(c);
             }
-            else
-            {
-                this.AttachVisual(this._itemsPanel);
-            }
-            if (this._itemsPanel instanceof VirtualizingPanel)
-            {
-                // Hand the panel a back-pointer; the panel realizes
-                // containers on demand from MeasureOverride.
-                this._itemsPanel.SetItemsOwner(this);
-            }
-            else
-            {
-                this.rebuildContainers();
-            }
+            this._generator.Clear();
+        }
+        if (this._itemsPresenter !== undefined)
+        {
+            this._itemsPresenter.SetItemsPanel(undefined);
+        }
+        else
+        {
+            this.DetachVisual(this._itemsPanel);
+        }
+        this._itemsPanel = undefined;
+    }
+
+    // Materialize-and-attach half of the ItemsPanel swap: invoke the
+    // factory (or ItemsPanelTemplate.Apply) to produce the panel
+    // instance, attach it to either the ItemsPresenter slot or
+    // directly under this control, and either kick off rebuildContainers
+    // (plain panel) or hand the panel a back-pointer (virtualizing).
+    private materializeItemsPanel(value: ItemsPanelTemplate | ItemsPanelFactory): void
+    {
+        this._itemsPanel = value instanceof ItemsPanelTemplate
+            ? value.Apply()
+            : value();
+        if (this._itemsPresenter !== undefined)
+        {
+            this._itemsPresenter.SetItemsPanel(this._itemsPanel);
+        }
+        else
+        {
+            this.AttachVisual(this._itemsPanel);
+        }
+        if (this._itemsPanel instanceof VirtualizingPanel)
+        {
+            this._itemsPanel.SetItemsOwner(this);
+        }
+        else
+        {
+            this.rebuildContainers();
         }
     }
 

@@ -2,7 +2,6 @@ import {
     Application,
     MetaData,
     Model,
-    ObservableCollection,
     Visual,
     type ModifierKeys,
     type PointerEventArgs,
@@ -108,14 +107,6 @@ export class ListBox extends ItemsControl
         ensureControlsTheme();
     }
 
-    // Backing for AddChild — when no caller-supplied Items collection
-    // is in place, declarative children land in this observable list,
-    // which we expose as the active Items value. A later
-    // `lb.Items = newArr` replaces it (and the declarative items it
-    // held) — WPF parity.
-    private readonly _declarativeItems: ObservableCollection<unknown>
-        = new ObservableCollection<unknown>();
-
     // Selection bookkeeping — same shape as TreeView, minus the
     // visible/expanded distinction (every ListBoxItem is always visible).
     private readonly _selectedItems: Set<ListBoxItem> = new Set();
@@ -139,10 +130,9 @@ export class ListBox extends ItemsControl
         // the panel that hosts containers (vertical StackPanel).
         this.Template = resolveTemplate(KEY_LISTBOX);
         this.ItemsPanel = () => new StackPanel();
-        // Establish the default Items source so declarative AddChild
-        // has somewhere to push into without the caller pre-setting
-        // Items.
-        this.Items = this._declarativeItems;
+        // Base ItemsControl constructor already seeded Items =
+        // _declarativeItems, so declarative AddChild lands in the right
+        // collection without further setup here.
     }
 
     public get SelectionMode(): SelectionMode { return this.get_property_value(ListBox.SelectionModeKey); }
@@ -155,64 +145,16 @@ export class ListBox extends ItemsControl
     public set SelectedItem(v: unknown) { this.set_property_value(ListBox.SelectedItemKey, v); }
 
     // Compiler routes `ListBox { ListBoxItem … }` body elements through
-    // here (DEFAULT_SLOT_INFO maps ListBox to { name: 'Items', kind:
-    // 'list' }, which emits AddChild). Forwarding to Items keeps the
-    // declarative path on the SAME materialization pipeline as the
-    // data-driven path — IsItemItsOwnContainerOverride (the next
-    // method) recognises pre-built ListBoxItems and passes them
-    // through GetContainerForItemOverride without wrapping.
-    public AddChild(child: Visual): void
+    // ItemsControl.AddChild → Items. We only need to gate on the
+    // container type — base does the rest of the routing,
+    // promote-to-observable, and the IsItemItsOwnContainerOverride
+    // pass-through (so a pre-built ListBoxItem isn't re-wrapped).
+    protected override validateDeclarativeChild(child: Visual): void
     {
         if (!(child instanceof ListBoxItem))
         {
             throw new Error('ListBox only accepts ListBoxItem children');
         }
-        // Route through Items so the ItemsControl pipeline does the
-        // tree wiring + selection bookkeeping. If the caller swapped
-        // Items out from under us with their own observable, we
-        // append to THAT one; declarative items "join" the data list.
-        const items = this.Items;
-        if (items instanceof ObservableCollection)
-        {
-            items.Add(child);
-        }
-        else
-        {
-            // Items is a plain array (or undefined) — neither
-            // supports incremental append. Promote to our observable
-            // backing list (containing whatever was already there)
-            // so the new child lands cleanly.
-            this.promoteToObservable();
-            this._declarativeItems.Add(child);
-        }
-    }
-
-    public RemoveChild(child: Visual): void
-    {
-        if (!(child instanceof ListBoxItem)) return;
-        const items = this.Items;
-        if (items instanceof ObservableCollection)
-        {
-            items.Remove(child);
-        }
-    }
-
-    // Flips Items from a plain array (or undefined) to the
-    // declarative ObservableCollection, preserving content. Used when
-    // a consumer set Items to a fixed array and then declarative
-    // AddChild needs to append.
-    private promoteToObservable(): void
-    {
-        const current = this.Items;
-        this._declarativeItems.Clear();
-        if (Array.isArray(current))
-        {
-            for (const v of current) this._declarativeItems.Add(v);
-        }
-        // Bypass the "Items is read-only while ItemsSource is set" guard
-        // — ItemsSource is undefined here by definition (otherwise the
-        // declarative AddChild would have rejected earlier).
-        this.Items = this._declarativeItems;
     }
 
     // ── ItemsControl override seams ────────────────────────────────
