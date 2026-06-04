@@ -7,12 +7,15 @@ import {
     DragDropEffects,
     DragEventArgs,
     DragSession,
+    InputManager,
     NoModifiers,
     Panel,
+    PointerButton,
     Size,
     Visual,
     dispatchDrag,
     type DrawingContext,
+    type PointerEventInit,
 } from '../index.js';
 
 // Drag-event probe class — minimal Panel subclass that records each
@@ -284,5 +287,231 @@ describe('Visual.AllowDrop / IsDragOver DPs', () => {
         (v as unknown as { _set_property_value_by_name(name: string, value: unknown): void })
             ._set_property_value_by_name('IsDragOver', true);
         assert.equal(v.IsDragOver, true);
+    });
+});
+
+// Drag receiver — records each drag virtual it sees and translates a
+// recognized format into a Copy effect on DragOver. Used by the
+// InputManager-session tests below.
+class DropPanel extends Panel
+{
+    public readonly log: string[] = [];
+    public readonly tag: string;
+    constructor(tag: string) { super(); this.tag = tag; this.AllowDrop = true; }
+    protected override OnDragEnter(args: DragEventArgs): void
+    {
+        this.log.push(`Enter@${args.HostX},${args.HostY}`);
+    }
+    protected override OnDragLeave(args: DragEventArgs): void
+    {
+        this.log.push(`Leave@${args.HostX},${args.HostY}`);
+    }
+    protected override OnDragOver(args: DragEventArgs): void
+    {
+        this.log.push(`Over@${args.HostX},${args.HostY}`);
+        if (args.Data.Has('mural/node-kind')) args.Effect = DragDropEffects.Copy;
+    }
+    protected override OnDrop(args: DragEventArgs): void
+    {
+        this.log.push(`Drop@${args.HostX},${args.HostY},effect=${args.Effect}`);
+    }
+    protected override MeasureOverride(_a: Size): Size { return Size.Zero; }
+    protected override RenderOverride(_dc: DrawingContext): void { }
+}
+
+function dragInit(overrides: Partial<PointerEventInit> = {}): PointerEventInit
+{
+    return {
+        HostX: 0, HostY: 0,
+        Button: PointerButton.Primary, Buttons: 1,
+        Modifiers: NoModifiers, PointerId: 0, Pressure: 0,
+        PointerType: 'mouse',
+        ...overrides,
+    };
+}
+
+function resetPendingDrag(): void
+{
+    DragDrop._pendingSession = null;
+    DragDrop._pendingOptions = {};
+}
+
+describe('InputManager — drag session lifecycle', () => {
+    test('PickUpPendingDragSession picks up a session started by DoDragDrop', () => {
+        resetPendingDrag();
+        const im = new InputManager();
+        const src = new DropPanel('src');
+        DragDrop.DoDragDrop(src, new DataObject(), DragDropEffects.Copy);
+        im.PickUpPendingDragSession();
+        assert.equal(im.IsDragActive, true);
+        // _pendingSession is consumed.
+        assert.equal(DragDrop._pendingSession, null);
+        im.CurrentDragSession?.Cancel();
+        im.ObserveSessionCancellation();
+    });
+
+    test('over a receiver: DragEnter+DragOver fire and IsDragOver flips to true', () => {
+        resetPendingDrag();
+        const im     = new InputManager();
+        const src    = new DropPanel('src');
+        const target = new DropPanel('t');
+        const data = new DataObject().Set('mural/node-kind', 'rect');
+        DragDrop.DoDragDrop(src, data, DragDropEffects.Copy);
+        im.PickUpPendingDragSession();
+
+        im.DriveDragMove(target, dragInit({ HostX: 5, HostY: 7 }));
+
+        assert.deepEqual(target.log, ['Enter@5,7', 'Over@5,7']);
+        assert.equal(target.IsDragOver, true);
+        assert.equal(im.CurrentDragEffect, DragDropEffects.Copy);
+
+        im.CurrentDragSession?.Cancel();
+        im.ObserveSessionCancellation();
+    });
+
+    test('moving off the receiver fires DragLeave + IsDragOver=false', () => {
+        resetPendingDrag();
+        const im     = new InputManager();
+        const src    = new DropPanel('src');
+        const target = new DropPanel('t');
+        DragDrop.DoDragDrop(src, new DataObject().Set('mural/node-kind', 'rect'), DragDropEffects.Copy);
+        im.PickUpPendingDragSession();
+
+        im.DriveDragMove(target, dragInit({ HostX: 5, HostY: 5 }));
+        im.DriveDragMove(null,   dragInit({ HostX: 99, HostY: 99 }));
+
+        assert.equal(target.IsDragOver, false);
+        assert.equal(target.log[target.log.length - 1], 'Leave@99,99');
+        assert.equal(im.CurrentDragEffect, DragDropEffects.None);
+
+        im.CurrentDragSession?.Cancel();
+        im.ObserveSessionCancellation();
+    });
+
+    test('findAllowDropAncestor — receiver = nearest ancestor with AllowDrop=true', () => {
+        resetPendingDrag();
+        const im     = new InputManager();
+        const src    = new DropPanel('src');
+        // Build root(AllowDrop) → mid → leaf. Only root accepts drops;
+        // hitting the leaf still drives DragEnter on root.
+        const root = new DropPanel('root');
+        const mid  = new DragLoggerPanel('mid');
+        mid.AllowDrop = false;
+        const leaf = new DragLoggerPanel('leaf');
+        leaf.AllowDrop = false;
+        root.AddChild(mid);
+        mid.AddChild(leaf);
+
+        DragDrop.DoDragDrop(src, new DataObject().Set('mural/node-kind', 'rect'), DragDropEffects.Copy);
+        im.PickUpPendingDragSession();
+        im.DriveDragMove(leaf, dragInit({ HostX: 1, HostY: 1 }));
+
+        assert.equal(im.CurrentDragReceiver, root);
+        assert.equal(root.IsDragOver, true);
+
+        im.CurrentDragSession?.Cancel();
+        im.ObserveSessionCancellation();
+    });
+
+    test('pointer-up over a receiver fires Drop when Effect!=None and resolves session', async () => {
+        resetPendingDrag();
+        const im     = new InputManager();
+        const src    = new DropPanel('src');
+        const target = new DropPanel('t');
+        const session = DragDrop.DoDragDrop(src,
+            new DataObject().Set('mural/node-kind', 'rect'),
+            DragDropEffects.Copy);
+        im.PickUpPendingDragSession();
+
+        im.DriveDragMove(target, dragInit({ HostX: 3, HostY: 4 }));
+        im.DriveDragUp  (target, dragInit({ HostX: 3, HostY: 4 }));
+
+        const effect = await session;
+        assert.equal(effect, DragDropEffects.Copy);
+        assert.ok(target.log.includes('Drop@3,4,effect=1'));
+        assert.equal(im.IsDragActive, false);
+    });
+
+    test('pointer-up with Effect=None does NOT fire Drop; session resolves None', async () => {
+        resetPendingDrag();
+        const im     = new InputManager();
+        const src    = new DropPanel('src');
+        // DropPanel only accepts mural/node-kind; sending a different
+        // format gets Effect=None.
+        const target = new DropPanel('t');
+        const session = DragDrop.DoDragDrop(src,
+            new DataObject().Set('text/plain', 'no'),
+            DragDropEffects.Copy);
+        im.PickUpPendingDragSession();
+
+        im.DriveDragMove(target, dragInit({ HostX: 1, HostY: 1 }));
+        im.DriveDragUp  (target, dragInit({ HostX: 1, HostY: 1 }));
+
+        const effect = await session;
+        assert.equal(effect, DragDropEffects.None);
+        assert.ok(!target.log.some((s) => s.startsWith('Drop@')));
+    });
+
+    test('Cancel() resolves the session and clears IsDragOver on the receiver', async () => {
+        resetPendingDrag();
+        const im     = new InputManager();
+        const src    = new DropPanel('src');
+        const target = new DropPanel('t');
+        const session = DragDrop.DoDragDrop(src,
+            new DataObject().Set('mural/node-kind', 'rect'),
+            DragDropEffects.Copy);
+        im.PickUpPendingDragSession();
+        im.DriveDragMove(target, dragInit({ HostX: 0, HostY: 0 }));
+        assert.equal(target.IsDragOver, true);
+
+        session.Cancel();
+        im.ObserveSessionCancellation();
+
+        assert.equal(target.IsDragOver, false);
+        assert.equal(im.IsDragActive, false);
+        const effect = await session;
+        assert.equal(effect, DragDropEffects.None);
+    });
+
+    test('InjectPointerDown picks up a session started inside a PointerDown handler', () => {
+        resetPendingDrag();
+        const im   = new InputManager();
+        const root = new DropPanel('root');     // root has AllowDrop=true
+        const v = new (class extends Panel {
+            protected override OnPointerDown(args: PointerEventArgs): void
+            {
+                DragDrop.DoDragDrop(
+                    args.Source,
+                    new DataObject().Set('mural/node-kind', 'rect'),
+                    DragDropEffects.Copy,
+                );
+            }
+            protected override MeasureOverride(_a: Size): Size { return Size.Zero; }
+            protected override RenderOverride(_dc: DrawingContext): void { }
+        })();
+        root.AddChild(v);
+        im.InjectPointerDown(v, dragInit());
+        assert.equal(im.IsDragActive, true);
+
+        im.CurrentDragSession?.Cancel();
+        im.ObserveSessionCancellation();
+    });
+
+    test('InjectPointerMove routes through DriveDragMove while a session is live', () => {
+        resetPendingDrag();
+        const im     = new InputManager();
+        const src    = new DropPanel('src');
+        const target = new DropPanel('t');
+        DragDrop.DoDragDrop(src,
+            new DataObject().Set('mural/node-kind', 'rect'),
+            DragDropEffects.Copy);
+        im.PickUpPendingDragSession();
+
+        im.InjectPointerMove(target, dragInit({ HostX: 50, HostY: 50 }));
+        assert.equal(target.IsDragOver, true);
+        assert.equal(target.log[0], 'Enter@50,50');
+
+        im.CurrentDragSession?.Cancel();
+        im.ObserveSessionCancellation();
     });
 });
