@@ -11,6 +11,7 @@ import {
     NoModifiers,
     Panel,
     PointerButton,
+    PointerEventArgs,
     Size,
     Visual,
     dispatchDrag,
@@ -596,6 +597,33 @@ describe('Visual.IsDraggable + OnDragStart — declarative latch', () => {
         im.InjectPointerMove(v, dragInit({ HostX: 25, HostY: 0 }));  // 25 > 20
         assert.equal(im.IsDragActive, true);
         DragDrop.DragThreshold = 4;              // restore default
+        im.CurrentDragSession?.Cancel();
+        im.ObserveSessionCancellation();
+    });
+});
+
+describe('PointerEventArgs.BeginDragDrop', () => {
+    test('sugar wraps DragDrop.DoDragDrop using args.Source', () => {
+        resetPendingDrag();
+        const im = new InputManager();
+        const v = new DragLoggerPanel('v');
+        let session: DragSession | null = null;
+        v.AddRoutedEventListener('PointerDown', (raw: unknown) => {
+            const args = raw as PointerEventArgs;
+            session = args.BeginDragDrop(
+                new DataObject().Set('mural/port', { nodeId: 'n1', side: 0 }),
+                DragDropEffects.Link,
+                { preview: null },
+            );
+        });
+
+        im.InjectPointerDown(v, dragInit({ HostX: 5, HostY: 5 }));
+
+        assert.ok(session !== null);
+        assert.equal((session as DragSession).Source, v);
+        assert.equal((session as DragSession).AllowedEffects, DragDropEffects.Link);
+        assert.equal(im.IsDragActive, true);
+
         im.CurrentDragSession?.Cancel();
         im.ObserveSessionCancellation();
     });

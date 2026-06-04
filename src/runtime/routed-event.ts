@@ -1,5 +1,5 @@
 import type { Visual } from './visual.js';
-import { DragDropEffects, type DataObject } from './drag-drop.js';
+import { DragDrop, DragDropEffects, type DataObject, type DragDropOptions, type DragSession } from './drag-drop.js';
 
 // Routed-event infrastructure.
 //
@@ -220,6 +220,19 @@ export class PointerEventArgs extends RoutedEventArgs
     public SetFocus(target?: Visual): void
     {
         this._focusSink?.SetFocus(target ?? this.Source);
+    }
+
+    // Sugar for DragDrop.DoDragDrop(this.Source, data, effects, opts).
+    // Authors call this from a PointerDown / PointerMove handler when
+    // they want to start a drag without importing the static class.
+    // Returns the same DragSession that DoDragDrop returns.
+    public BeginDragDrop(
+        data: DataObject,
+        allowedEffects: DragDropEffects,
+        opts?: DragDropOptions,
+    ): DragSession
+    {
+        return DragDrop.DoDragDrop(this.Source, data, allowedEffects, opts);
     }
 }
 

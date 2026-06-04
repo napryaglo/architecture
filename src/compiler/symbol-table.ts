@@ -35,6 +35,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['MultiBinding',        '@visualisation-sub/mural/runtime'],
     ['TemplateBinding',     '@visualisation-sub/mural/runtime'],
     ['MultiTrigger',        '@visualisation-sub/mural/runtime'],
+    ['DataTrigger',         '@visualisation-sub/mural/runtime'],
     ['HorizontalAlignment', '@visualisation-sub/mural/runtime'],
     ['VerticalAlignment',   '@visualisation-sub/mural/runtime'],
     ['Point',               '@visualisation-sub/mural/runtime'],
@@ -43,6 +44,9 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['Color',               '@visualisation-sub/mural/runtime'],
     ['Matrix',              '@visualisation-sub/mural/runtime'],
     ['Thickness',           '@visualisation-sub/mural/runtime'],
+    ['DataObject',          '@visualisation-sub/mural/runtime'],
+    ['DragDropEffects',     '@visualisation-sub/mural/runtime'],
+    ['DragDrop',            '@visualisation-sub/mural/runtime'],
 
     // ── Controls ────────────────────────────────────────────────────
     ['Border',                  '@visualisation-sub/mural/Controls'],
@@ -77,6 +81,9 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['ContentPresenter',        '@visualisation-sub/mural/Controls'],
     ['ControlTemplate',         '@visualisation-sub/mural/Controls'],
     ['DataTemplate',            '@visualisation-sub/mural/Controls'],
+    ['TargetedSetter',          '@visualisation-sub/mural/Controls'],
+    ['TemplatePropertyTrigger', '@visualisation-sub/mural/Controls'],
+    ['TemplateDataTrigger',     '@visualisation-sub/mural/Controls'],
     ['ItemsControl',            '@visualisation-sub/mural/Controls'],
     ['ItemContainerGenerator',  '@visualisation-sub/mural/Controls'],
     ['ItemsPresenter',          '@visualisation-sub/mural/Controls'],
