@@ -51,6 +51,7 @@ export {
     KeyEventArgs,
     TextInputEventArgs,
     FocusEventArgs,
+    DragEventArgs,
     PointerButton,
     NoModifiers,
     buildRoute,
@@ -59,6 +60,7 @@ export {
     dispatchKey,
     dispatchTextInput,
     dispatchFocus,
+    dispatchDrag,
     type RoutedEventKind,
     type PointerEventInit,
     type WheelEventInit,
@@ -69,6 +71,8 @@ export {
     type TextInputEventInit,
     type KeyboardEventHandlers,
     type FocusEventHandlers,
+    type DragEventInit,
+    type DragEventHandlers,
 } from './routed-event.js';
 export { InputManager } from './input-manager.js';
 export {

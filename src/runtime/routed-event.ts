@@ -1,4 +1,5 @@
 import type { Visual } from './visual.js';
+import { DragDropEffects, type DataObject } from './drag-drop.js';
 
 // Routed-event infrastructure.
 //
@@ -36,7 +37,11 @@ export type RoutedEventKind =
     | 'KeyUp'
     | 'TextInput'
     | 'GotFocus'
-    | 'LostFocus';
+    | 'LostFocus'
+    | 'DragEnter'
+    | 'DragLeave'
+    | 'DragOver'
+    | 'Drop';
 
 // Base for everything dispatched through the tree walker.
 //
@@ -334,6 +339,45 @@ export class FocusEventArgs extends RoutedEventArgs
     }
 }
 
+// ── Drag events ────────────────────────────────────────────────────
+
+export interface DragEventInit
+{
+    HostX:           number;
+    HostY:           number;
+    Modifiers:       ModifierKeys;
+    Data:            DataObject;
+    AllowedEffects:  DragDropEffects;
+}
+
+// Per the spec § 5 — receivers handle DragOver and set args.Effect to a
+// subset of AllowedEffects (default None). The framework reads Effect
+// to drive cursor feedback and to decide whether Drop fires on
+// pointer-up.
+export class DragEventArgs extends RoutedEventArgs
+{
+    public readonly HostX:          number;
+    public readonly HostY:          number;
+    public readonly Modifiers:      ModifierKeys;
+    public readonly Data:           DataObject;
+    public readonly AllowedEffects: DragDropEffects;
+    public          Effect:         DragDropEffects = DragDropEffects.None;
+
+    constructor(
+        kind: 'DragEnter' | 'DragLeave' | 'DragOver' | 'Drop',
+        source: Visual,
+        init: DragEventInit,
+    )
+    {
+        super(kind, source);
+        this.HostX          = init.HostX;
+        this.HostY          = init.HostY;
+        this.Modifiers      = init.Modifiers;
+        this.Data           = init.Data;
+        this.AllowedEffects = init.AllowedEffects;
+    }
+}
+
 // ── Visual-side virtual surface ─────────────────────────────────────
 
 // Names of the virtual methods the dispatcher invokes. Kept in one
@@ -410,6 +454,36 @@ export const POINTER_BUBBLE_HANDLERS: Readonly<Record<PointerTunnelBubbleKind, k
 export const POINTER_DIRECT_HANDLERS: Readonly<Record<'PointerEnter' | 'PointerLeave', keyof PointerEventHandlers>> = {
     PointerEnter: 'OnPointerEnter',
     PointerLeave: 'OnPointerLeave',
+} as const;
+
+// ── Drag-event Visual-side surface ──────────────────────────────────
+
+export interface DragEventHandlers
+{
+    OnPreviewDragEnter(args: DragEventArgs): void;
+    OnDragEnter       (args: DragEventArgs): void;
+    OnPreviewDragLeave(args: DragEventArgs): void;
+    OnDragLeave       (args: DragEventArgs): void;
+    OnPreviewDragOver (args: DragEventArgs): void;
+    OnDragOver        (args: DragEventArgs): void;
+    OnPreviewDrop     (args: DragEventArgs): void;
+    OnDrop            (args: DragEventArgs): void;
+}
+
+type DragTunnelBubbleKind = 'DragEnter' | 'DragLeave' | 'DragOver' | 'Drop';
+
+export const DRAG_PREVIEW_HANDLERS: Readonly<Record<DragTunnelBubbleKind, keyof DragEventHandlers>> = {
+    DragEnter:  'OnPreviewDragEnter',
+    DragLeave:  'OnPreviewDragLeave',
+    DragOver:   'OnPreviewDragOver',
+    Drop:       'OnPreviewDrop',
+} as const;
+
+export const DRAG_BUBBLE_HANDLERS: Readonly<Record<DragTunnelBubbleKind, keyof DragEventHandlers>> = {
+    DragEnter:  'OnDragEnter',
+    DragLeave:  'OnDragLeave',
+    DragOver:   'OnDragOver',
+    Drop:       'OnDrop',
 } as const;
 
 // ── Dispatcher ──────────────────────────────────────────────────────
@@ -600,6 +674,44 @@ export function dispatchFocus(args: FocusEventArgs): void
     {
         args.Visual = v;
         const handler = (v as unknown as FocusEventHandlers)[name] as (a: FocusEventArgs) => void;
+        handler.call(v, args);
+        if (args.Handled) return;
+        fireRoutedListeners(v, args.Kind, args);
+        if (args.Handled) return;
+    }
+}
+
+// Tunnel-then-bubble dispatch for DragEnter / DragLeave / DragOver /
+// Drop. Symmetric with dispatchPointer; uses the drag-specific
+// handler tables. args.Handled = true at any hop stops both passes.
+export function dispatchDrag(args: DragEventArgs): void
+{
+    if (args.Kind !== 'DragEnter' && args.Kind !== 'DragLeave'
+        && args.Kind !== 'DragOver' && args.Kind !== 'Drop')
+    {
+        throw new Error(
+            `dispatchDrag: ${args.Kind} is not a drag event` +
+            ' — use dispatchPointer / dispatchKey / dispatchFocus instead');
+    }
+    const route       = buildRoute(args.Source);
+    const previewName = DRAG_PREVIEW_HANDLERS[args.Kind];
+    const bubbleName  = DRAG_BUBBLE_HANDLERS [args.Kind];
+
+    args.Strategy = 'tunnel';
+    for (let i = route.length - 1; i >= 0; i--)
+    {
+        const v = route[i]!;
+        args.Visual = v;
+        const handler = (v as unknown as DragEventHandlers)[previewName] as (a: DragEventArgs) => void;
+        handler.call(v, args);
+        if (args.Handled) return;
+    }
+
+    args.Strategy = 'bubble';
+    for (const v of route)
+    {
+        args.Visual = v;
+        const handler = (v as unknown as DragEventHandlers)[bubbleName] as (a: DragEventArgs) => void;
         handler.call(v, args);
         if (args.Handled) return;
         fireRoutedListeners(v, args.Kind, args);

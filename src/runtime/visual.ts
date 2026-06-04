@@ -3,11 +3,12 @@ import type { PropertyDescriptor } from './property-descriptor.js';
 import { PropertyValueSource } from './effective-value.js';
 import { MetaData, affectsArrange, affectsMeasure, affectsRender, inherits } from './metadata.js';
 import { Binding } from './binding.js';
+import { DataContextBinding } from './data-context-binding.js';
 import { NameScope } from './namescope.js';
 import { ObservableCollection, type IReadOnlyObservableCollection } from './observable-collection.js';
 import { ResourceDictionary, type ResourceKey } from './resource-dictionary.js';
 import { Application } from './application.js';
-import { Setter, SetterFactory, Style, PropertyTrigger, MultiTrigger } from './style.js';
+import { Setter, SetterFactory, Style, PropertyTrigger, MultiTrigger, DataTrigger } from './style.js';
 import { Rect, Size, Thickness } from './primitives.js';
 import type { DrawingContext } from './drawing-context.js';
 import type { TextMeasurer } from './text-measurer.js';
@@ -17,6 +18,7 @@ import type {
     KeyEventArgs,
     TextInputEventArgs,
     FocusEventArgs,
+    DragEventArgs,
 } from './routed-event.js';
 import { Storyboard } from './animation/storyboard.js';
 import type { AnimationTimeline } from './animation/timeline.js';
@@ -31,6 +33,7 @@ const KNOWN_ROUTED_EVENTS = new Set([
     'PointerEnter', 'PointerLeave',
     'KeyDown', 'KeyUp', 'TextInput',
     'GotFocus', 'LostFocus',
+    'DragEnter', 'DragLeave', 'DragOver', 'Drop',
 ]);
 
 // Horizontal positioning of a Visual within its parent-given slot when
@@ -325,11 +328,11 @@ export class Visual extends Model
     // Currently-matched triggers. A trigger is added on its watched
     // property matching the trigger's value; removed when the value
     // diverges. Trigger setters are applied / cleared in lock-step.
-    private _activeTriggers: Set<PropertyTrigger | MultiTrigger> = new Set();
+    private _activeTriggers: Set<PropertyTrigger | MultiTrigger | DataTrigger> = new Set();
 
     // Per-trigger unsubscribe callback, set at install_trigger,
     // invoked at uninstall_trigger. Keyed by the trigger instance.
-    private _triggerSubscriptions: Map<PropertyTrigger | MultiTrigger, () => void> = new Map();
+    private _triggerSubscriptions: Map<PropertyTrigger | MultiTrigger | DataTrigger, () => void> = new Map();
 
     // Per-EventTrigger unsubscribe callback. Different map from
     // _triggerSubscriptions because EventTriggers don't watch a
@@ -588,6 +591,10 @@ export class Visual extends Model
         {
             this.install_multi_trigger(multi);
         }
+        for (const data of style.ResolveDataTriggers())
+        {
+            this.install_data_trigger(data);
+        }
         // EventTriggers sit outside the trigger-value tier — they fire
         // imperative actions rather than installing property values, so
         // their resolution happens AFTER property-trigger setup so the
@@ -611,6 +618,10 @@ export class Visual extends Model
         // Triggers next: they sit ABOVE style values in priority, so
         // taking them down before the style values keeps the value
         // resolution coherent at each EVD step. Then style setters.
+        for (const data of style.ResolveDataTriggers())
+        {
+            this.uninstall_trigger(data);
+        }
         for (const multi of style.ResolveMultiTriggers())
         {
             this.uninstall_trigger(multi);
@@ -689,6 +700,22 @@ export class Visual extends Model
             binding.dispose();
             bindings.delete(setter);
         }
+    }
+
+    // Public hooks used by DataTemplate triggers — they let a trigger
+    // wired up at the template root apply/clear setters on a named
+    // descendant ('TargetName' in WPF) at the Trigger priority tier,
+    // exactly the way a Style-installed PropertyTrigger/DataTrigger
+    // would but with the styled visual and the setter target being two
+    // different Visuals. The setter machinery itself doesn't care about
+    // the split; it just operates on `this`.
+    public ApplyTriggerSetter(setter: Setter): void
+    {
+        this.apply_setter(setter, 'trigger');
+    }
+    public ClearTriggerSetter(setter: Setter): void
+    {
+        this.unapply_setter(setter, 'trigger');
     }
 
     // Wire the EventTrigger's RoutedEvent to a dispatch that invokes
@@ -868,7 +895,7 @@ export class Visual extends Model
         this.evaluate_trigger(trigger);
     }
 
-    private uninstall_trigger(trigger: PropertyTrigger | MultiTrigger): void
+    private uninstall_trigger(trigger: PropertyTrigger | MultiTrigger | DataTrigger): void
     {
         this._triggerSubscriptions.get(trigger)?.();
         this._triggerSubscriptions.delete(trigger);
@@ -922,6 +949,44 @@ export class Visual extends Model
             for (const action of trigger.enterActions) action.Invoke(this);
         }
         else if (!allMatch && wasActive)
+        {
+            for (const setter of trigger.setters)
+            {
+                this.unapply_setter(setter, 'trigger');
+            }
+            this._activeTriggers.delete(trigger);
+            for (const action of trigger.exitActions) action.Invoke(this);
+        }
+    }
+
+    // Data-driven trigger install. Watches `this.DataContext` via a
+    // DataContextBinding for `trigger.path`; whenever the bound value
+    // changes (DataContext swap OR a property mutation on the first
+    // segment), re-evaluates against `trigger.value` and flips setter
+    // state accordingly. Symmetric with install_trigger.
+    private install_data_trigger(trigger: DataTrigger): void
+    {
+        const binding = DataContextBinding(this, trigger.path);
+        binding.setOnValueChanged(() => { this.evaluate_data_trigger(trigger, binding); });
+        this._triggerSubscriptions.set(trigger, () => { binding.dispose(); });
+        this.evaluate_data_trigger(trigger, binding);
+    }
+
+    private evaluate_data_trigger(trigger: DataTrigger, binding: Binding): void
+    {
+        const current = binding.get_value();
+        const matched = current === trigger.value;
+        const wasActive = this._activeTriggers.has(trigger);
+        if (matched && !wasActive)
+        {
+            for (const setter of trigger.setters)
+            {
+                this.apply_setter(setter, 'trigger');
+            }
+            this._activeTriggers.add(trigger);
+            for (const action of trigger.enterActions) action.Invoke(this);
+        }
+        else if (!matched && wasActive)
         {
             for (const setter of trigger.setters)
             {
@@ -1574,6 +1639,21 @@ export class Visual extends Model
     // the post-change state.
     protected OnGotFocus  (_args: FocusEventArgs): void { }
     protected OnLostFocus (_args: FocusEventArgs): void { }
+
+    // Drag-event virtuals. Default no-ops; subclasses (and consumer
+    // Visuals via AddRoutedEventListener) override these. See
+    // dispatchDrag in routed-event.ts for ordering — tunnel + bubble,
+    // same shape as the pointer pair. Receivers are gated by AllowDrop;
+    // the InputManager only invokes dispatchDrag against an ancestor
+    // with AllowDrop=true (findAllowDropAncestor).
+    protected OnPreviewDragEnter(_args: DragEventArgs): void { }
+    protected OnDragEnter       (_args: DragEventArgs): void { }
+    protected OnPreviewDragLeave(_args: DragEventArgs): void { }
+    protected OnDragLeave       (_args: DragEventArgs): void { }
+    protected OnPreviewDragOver (_args: DragEventArgs): void { }
+    protected OnDragOver        (_args: DragEventArgs): void { }
+    protected OnPreviewDrop     (_args: DragEventArgs): void { }
+    protected OnDrop            (_args: DragEventArgs): void { }
 
     // ------------------------------------------------------------------
     // Invalidation API
