@@ -148,6 +148,19 @@ class DataContextBindingImpl extends Binding
     // Re-resolve the path against the target's current DataContext and
     // wire up a fresh source-side subscription on the first segment so
     // mutations propagate while this binding lives.
+    //
+    // WPF parity: when the first path segment isn't a registered DP on
+    // the current DataContext, the binding silently resolves to
+    // undefined rather than throwing. This matters when a binding is
+    // installed against an inherited DataContext that will later be
+    // replaced with the "real" source — e.g. `OnDragStart=$Foo` set on
+    // an ItemsControl's container Style: the container's DataContext
+    // briefly points at the outer VM (no `Foo` DP) before the
+    // ContentPresenter swaps it to the per-item VM (which DOES carry
+    // `Foo`). A throw in the brief window would abort template apply
+    // and leave the demo blank. The DataContext re-bind triggers a
+    // fresh refresh() once the per-item source is set, and the
+    // subscription targets the right Model at that point.
     private refresh(): void
     {
         this.unsubscribeSource();
@@ -158,7 +171,7 @@ class DataContextBindingImpl extends Binding
             return;
         }
         const first = this.firstSegment();
-        if (dc instanceof Model)
+        if (dc instanceof Model && Model.HasProperty(dc.constructor, first))
         {
             this.currentSource  = dc;
             this.sourceCallback = () => { this.watcher.Value = this.walkPath(dc); };
@@ -169,7 +182,10 @@ class DataContextBindingImpl extends Binding
 
     // Walk the dotted path starting from `root`. Each segment reads
     // either a Model property or a plain-object field; intermediate
-    // undefined/null short-circuits to undefined.
+    // undefined/null short-circuits to undefined. Same WPF-parity
+    // tolerance as `refresh` — a missing segment in the middle of the
+    // path resolves to undefined rather than throwing, so a partial
+    // DataContext (or a path against a sibling type) silently no-ops.
     private walkPath(root: unknown): unknown
     {
         let cur: unknown = root;
@@ -178,6 +194,7 @@ class DataContextBindingImpl extends Binding
             if (cur === undefined || cur === null) return undefined;
             if (cur instanceof Model)
             {
+                if (!Model.HasProperty(cur.constructor, seg)) return undefined;
                 cur = cur._get_property_value_by_name(seg);
             }
             else if (typeof cur === 'object')

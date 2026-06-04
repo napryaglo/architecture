@@ -116,6 +116,16 @@ export class Model
         return undefined;
     }
 
+    // Public peek used by bindings to check whether a property is
+    // registered on a class without throwing. Same body as
+    // find_descriptor; exposed so the binding layer (DataContextBinding,
+    // future MultiBinding) can implement WPF-style "silent no-op on
+    // missing path" without reaching into protected internals.
+    public static HasProperty(klass: Function, property: string): boolean
+    {
+        return Model.find_descriptor(klass, property) !== undefined;
+    }
+
     // Resolves a class-name string (e.g. 'Grid') to the registered class
     // object. Used by the PropertyPath parser for attached-property
     // syntax. Returns undefined if no such class has been registered, or
@@ -131,6 +141,39 @@ export class Model
             return undefined;
         }
         return cls;
+    }
+
+    // Public DP enumeration — walks `klass`'s prototype chain and
+    // gathers every PropertyDescriptor registered on it or any ancestor.
+    // Used by tooling (LSP completion / hover) that needs the full DP
+    // surface of a class identified by name from source. When a
+    // descendant overrides a property (rare — typically only changing
+    // metadata), the descendant's descriptor wins.
+    //
+    // Output order: descendant-first within each class's bag (insertion
+    // order), then walks up the prototype chain so child classes'
+    // properties come before parents'. Duplicates by name are
+    // de-duplicated keeping the most-derived descriptor.
+    public static EnumerateProperties(klass: Function): PropertyDescriptor[]
+    {
+        const seen = new Set<string>();
+        const out: PropertyDescriptor[] = [];
+        let current: Function | null = klass;
+        while (current !== null && current !== Function.prototype)
+        {
+            const bag = Model.property_bags.get(current);
+            if (bag !== undefined)
+            {
+                for (const [name, desc] of bag)
+                {
+                    if (seen.has(name)) continue;
+                    seen.add(name);
+                    out.push(desc);
+                }
+            }
+            current = Object.getPrototypeOf(current);
+        }
+        return out;
     }
 
     private static remember_class(klass: Function): void
