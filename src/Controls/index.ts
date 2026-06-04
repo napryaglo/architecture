@@ -24,6 +24,7 @@ export { SpinEdit } from './spin-edit.js';
 export { Slider, SliderLayout } from './slider.js';
 export { PageView } from './page-view.js';
 export { StackPanel, Orientation } from './stack-panel.js';
+export { UniformGrid } from './uniform-grid.js';
 export { ContentControl } from './content-control.js';
 export { ContentPresenter } from './content-presenter.js';
 export {
@@ -35,6 +36,9 @@ export {
 export {
     DataTemplate,
     HierarchicalDataTemplate,
+    TargetedSetter,
+    TemplateDataTrigger,
+    TemplatePropertyTrigger,
     type DataTemplateFactory,
     type HierarchicalChildSelector,
 } from './data-template.js';
