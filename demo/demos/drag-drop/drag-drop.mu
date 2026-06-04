@@ -14,11 +14,14 @@ ResourceDictionary {
         TextBlock [Text=$Label, Padding=(8,4,8,4), FontSize=12]
     }
 
-    // ListBoxItem container style — declarative drag source. The
-    // framework's IsDraggable latch reads OnDragStart at the
-    // 4px-threshold trip, calls the bound function, and starts a
-    // DragSession with the returned {data, effects} payload.
-    Style x:key="DragDropItemContainerStyle" [targettype=ListBoxItem] {
+    // ItemsControl wraps each item in a ContentPresenter — its
+    // DataContext is set to the item when the ItemTemplate applies,
+    // so the OnDragStart=$BeginDragData binding resolves against the
+    // ItemVM and finds the function-DP. (ListBox's data path renders
+    // via displayString() and would leave DataContext as the parent
+    // VM, breaking the binding — that's why this demo uses
+    // ItemsControl rather than ListBox.)
+    Style x:key="DragDropItemContainerStyle" [targettype=ContentPresenter] {
         IsDraggable = true;
         OnDragStart = $BeginDragData;
     }
@@ -50,7 +53,7 @@ ResourceDictionary {
                             TextBlock[Text="Left", FontWeight=Bold,
                                       FontSize=12, Foreground=#374151,
                                       Margin=(10,8,8,4)]
-                            ListBox x:name="leftList"
+                            ItemsControl x:name="leftList"
                                     [ItemsSource=$LeftItems,
                                      ItemTemplate=@DragDropItemTemplate,
                                      ItemContainerStyle=@DragDropItemContainerStyle]
@@ -62,7 +65,7 @@ ResourceDictionary {
                             TextBlock[Text="Right", FontWeight=Bold,
                                       FontSize=12, Foreground=#374151,
                                       Margin=(10,8,8,4)]
-                            ListBox x:name="rightList"
+                            ItemsControl x:name="rightList"
                                     [ItemsSource=$RightItems,
                                      ItemTemplate=@DragDropItemTemplate,
                                      ItemContainerStyle=@DragDropItemContainerStyle]

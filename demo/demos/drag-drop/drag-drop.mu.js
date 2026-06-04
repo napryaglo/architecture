@@ -1,4 +1,4 @@
-import { Border, DataTemplate, DockPanel, ListBox, ListBoxItem, Orientation, StackPanel, TextBlock, TextWrapping } from "@visualisation-sub/mural/Controls";
+import { Border, ContentPresenter, DataTemplate, DockPanel, ItemsControl, Orientation, StackPanel, TextBlock, TextWrapping } from "@visualisation-sub/mural/Controls";
 import { Application, Color, DataContextBinding, NameScope, ResourceDictionary, Setter, SetterFactory, Style, Thickness } from "@visualisation-sub/mural/runtime";
 import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
 
@@ -12,9 +12,9 @@ export function create() {
         return _textBlock2;
     }, "ItemVM");
     _rd0.Set("DragDropItemTemplate", _tmpl1);
-    const _setter3 = new Setter(ListBoxItem, "IsDraggable", true);
-    const _setter4 = new Setter(ListBoxItem, "OnDragStart", new SetterFactory((_t) => DataContextBinding(_t, "BeginDragData")));
-    const _style5 = new Style(ListBoxItem, [_setter3, _setter4], undefined, [], []);
+    const _setter3 = new Setter(ContentPresenter, "IsDraggable", true);
+    const _setter4 = new Setter(ContentPresenter, "OnDragStart", new SetterFactory((_t) => DataContextBinding(_t, "BeginDragData")));
+    const _style5 = new Style(ContentPresenter, [_setter3, _setter4], undefined, [], []);
     _rd0.Set("DragDropItemContainerStyle", _style5);
     const _tmpl6 = new DataTemplate((_data) => {
         const _border7 = new Border();
@@ -59,13 +59,13 @@ export function create() {
         _textBlock16._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#374151')));
         _textBlock16._set_property_value_by_name("Margin", new Thickness(10, 8, 8, 4));
         _stackPanel15.AddChild(_textBlock16);
-        const _listBox17 = new ListBox();
-        _listBox17.Name = "leftList";
-        _border7.nameScope.Register("leftList", _listBox17);
-        _listBox17._set_property_value_by_name("ItemsSource", DataContextBinding(_listBox17, "LeftItems"));
-        _listBox17._set_property_value_by_name("ItemTemplate", Application.current.Resources.Resolve("DragDropItemTemplate"));
-        _listBox17._set_property_value_by_name("ItemContainerStyle", Application.current.Resources.Resolve("DragDropItemContainerStyle"));
-        _stackPanel15.AddChild(_listBox17);
+        const _itemsControl17 = new ItemsControl();
+        _itemsControl17.Name = "leftList";
+        _border7.nameScope.Register("leftList", _itemsControl17);
+        _itemsControl17._set_property_value_by_name("ItemsSource", DataContextBinding(_itemsControl17, "LeftItems"));
+        _itemsControl17._set_property_value_by_name("ItemTemplate", Application.current.Resources.Resolve("DragDropItemTemplate"));
+        _itemsControl17._set_property_value_by_name("ItemContainerStyle", Application.current.Resources.Resolve("DragDropItemContainerStyle"));
+        _stackPanel15.AddChild(_itemsControl17);
         _border14.SetChild(_stackPanel15);
         _stackPanel13.AddChild(_border14);
         const _border18 = new Border();
@@ -80,13 +80,13 @@ export function create() {
         _textBlock20._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#374151')));
         _textBlock20._set_property_value_by_name("Margin", new Thickness(10, 8, 8, 4));
         _stackPanel19.AddChild(_textBlock20);
-        const _listBox21 = new ListBox();
-        _listBox21.Name = "rightList";
-        _border7.nameScope.Register("rightList", _listBox21);
-        _listBox21._set_property_value_by_name("ItemsSource", DataContextBinding(_listBox21, "RightItems"));
-        _listBox21._set_property_value_by_name("ItemTemplate", Application.current.Resources.Resolve("DragDropItemTemplate"));
-        _listBox21._set_property_value_by_name("ItemContainerStyle", Application.current.Resources.Resolve("DragDropItemContainerStyle"));
-        _stackPanel19.AddChild(_listBox21);
+        const _itemsControl21 = new ItemsControl();
+        _itemsControl21.Name = "rightList";
+        _border7.nameScope.Register("rightList", _itemsControl21);
+        _itemsControl21._set_property_value_by_name("ItemsSource", DataContextBinding(_itemsControl21, "RightItems"));
+        _itemsControl21._set_property_value_by_name("ItemTemplate", Application.current.Resources.Resolve("DragDropItemTemplate"));
+        _itemsControl21._set_property_value_by_name("ItemContainerStyle", Application.current.Resources.Resolve("DragDropItemContainerStyle"));
+        _stackPanel19.AddChild(_itemsControl21);
         _border18.SetChild(_stackPanel19);
         _stackPanel13.AddChild(_border18);
         _dockPanel8.AddChild(_stackPanel13);

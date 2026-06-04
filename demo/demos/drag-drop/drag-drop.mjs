@@ -4,7 +4,7 @@
 // OnDragStart; this file is the glue.
 
 import { Application } from '@visualisation-sub/mural/runtime';
-import { ListBox } from '@visualisation-sub/mural/Controls';
+import { ItemsControl } from '@visualisation-sub/mural/Controls';
 import { create as createResources } from './drag-drop.mu.js';
 import { DragDropVM } from './drag-drop-vm.mjs';
 import { attachListBoxDrop } from './behaviors/listbox-drop-behavior.mjs';
@@ -16,8 +16,8 @@ let vmInstance;
 function attachBehaviors(view, vm) {
     const left  = view.FindName('leftList');
     const right = view.FindName('rightList');
-    if (!(left  instanceof ListBox)) throw new Error('drag-drop.mu missing x:name="leftList"');
-    if (!(right instanceof ListBox)) throw new Error('drag-drop.mu missing x:name="rightList"');
+    if (!(left  instanceof ItemsControl)) throw new Error('drag-drop.mu missing x:name="leftList"');
+    if (!(right instanceof ItemsControl)) throw new Error('drag-drop.mu missing x:name="rightList"');
 
     const detachLeft  = attachListBoxDrop(left,  vm, 'left');
     const detachRight = attachListBoxDrop(right, vm, 'right');
