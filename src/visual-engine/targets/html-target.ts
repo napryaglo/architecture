@@ -1,6 +1,7 @@
 import type { Visual } from '../../runtime/index.js';
 import {
     AnimationManager,
+    DragDropEffects,
     ManualClock,
     PointerButton,
     type DataObject,
@@ -142,6 +143,9 @@ export class HtmlTarget extends PresentationTarget
     // via session.OnMove (e.g. the diagram demo's rubber-band line).
     private dragOverlay: SVGGElement | undefined;
     private dragGhost:   SVGGElement | undefined;
+    // Snapshot of host.style.cursor captured when the session starts;
+    // restored on session end. `null` outside an active session.
+    private originalCursor: string | null = null;
 
     constructor(host: Element, options: HtmlTargetOptions = {})
     {
@@ -409,6 +413,15 @@ export class HtmlTarget extends PresentationTarget
     {
         const session = this.InputManager.CurrentDragSession;
         if (session === null) return;
+        // Capture and override the cursor first so it's set even if the
+        // preview branches early-return (mode A with no painted source).
+        // Initial state has no receiver, so 'not-allowed' is the right
+        // default — receivers' DragOver flips it to copy/move/alias.
+        if (this.originalCursor === null)
+        {
+            this.originalCursor = (this.host as HTMLElement).style.cursor;
+            (this.host as HTMLElement).style.cursor = 'not-allowed';
+        }
         const opts = this.InputManager.CurrentDragOptions;
         if (opts.preview === null)
         {
@@ -421,6 +434,21 @@ export class HtmlTarget extends PresentationTarget
             return;
         }
         this.attachGhostFromTemplate(opts.preview, session.Data);
+    }
+
+    // Map the receiver-published Effect to a CSS cursor. Per spec § 5:
+    //   Copy → 'copy', Move → 'move', Link → 'alias', None → 'not-allowed'.
+    // When the receiver returns a combined flag set, the most permissive
+    // single mode wins (Copy beats Move beats Link); WPF uses the same
+    // priority order.
+    public UpdateCursorForEffect(effect: DragDropEffects): void
+    {
+        let cursor: string;
+        if      ((effect & DragDropEffects.Copy) !== 0) cursor = 'copy';
+        else if ((effect & DragDropEffects.Move) !== 0) cursor = 'move';
+        else if ((effect & DragDropEffects.Link) !== 0) cursor = 'alias';
+        else                                            cursor = 'not-allowed';
+        (this.host as HTMLElement).style.cursor = cursor;
     }
 
     public OnDragSessionEnded(): void
@@ -436,6 +464,11 @@ export class HtmlTarget extends PresentationTarget
             this._modeCPreviewVisual = undefined;
         }
         this.removeDragOverlay();
+        if (this.originalCursor !== null)
+        {
+            (this.host as HTMLElement).style.cursor = this.originalCursor;
+            this.originalCursor = null;
+        }
     }
 
     private _modeCPreviewVisual: Visual | undefined;
@@ -550,13 +583,14 @@ export class HtmlTarget extends PresentationTarget
         }
         // move
         this.InputManager.InjectPointerMove(hit ?? null, init);
-        // Update the ghost to follow the cursor while a session is
-        // active. Order: dispatch first so receivers can update Effect,
-        // THEN reposition the ghost — keeps the ghost from rendering
-        // a frame ahead of the receiver feedback.
+        // Update the ghost AND the cursor to follow the new state.
+        // Order: dispatch first so receivers can update Effect, THEN
+        // reposition the ghost and pull the cursor — keeps both from
+        // rendering a frame ahead of the receiver feedback.
         if (this.InputManager.IsDragActive)
         {
             this.SetDragGhostPosition(hostX, hostY);
+            this.UpdateCursorForEffect(this.InputManager.CurrentDragEffect);
         }
     }
 

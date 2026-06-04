@@ -223,3 +223,71 @@ describe('HtmlTarget — drag preview mode C (DataTemplate)', () => {
             'preview Visual detached from OverlayLayer');
     });
 });
+
+describe('HtmlTarget — cursor styling', () => {
+    beforeEach(() => {
+        Application.current = null;
+        resetPendingDrag();
+    });
+
+    test('OnDragSessionStarted captures cursor and sets not-allowed initially', () => {
+        const { host } = makeDom();
+        const target = new HtmlTarget(host);
+        const root = new Border();
+        target.Content = root;
+        const source = new TestSquare();
+        root.SetChild(source);
+        target.Flush();
+
+        DragDrop.DoDragDrop(source, new DataObject(), DragDropEffects.All);
+        target.InputManager.PickUpPendingDragSession();
+        target.OnDragSessionStarted();
+        assert.equal((host as HTMLElement).style.cursor, 'not-allowed');
+    });
+
+    test('UpdateCursorForEffect translates each Effect flag to the right CSS cursor', () => {
+        const { host } = makeDom();
+        const target = new HtmlTarget(host);
+        const root = new Border();
+        target.Content = root;
+        const source = new TestSquare();
+        root.SetChild(source);
+        target.Flush();
+
+        DragDrop.DoDragDrop(source, new DataObject(), DragDropEffects.All);
+        target.InputManager.PickUpPendingDragSession();
+        target.OnDragSessionStarted();
+
+        target.UpdateCursorForEffect(DragDropEffects.Copy);
+        assert.equal((host as HTMLElement).style.cursor, 'copy');
+        target.UpdateCursorForEffect(DragDropEffects.Move);
+        assert.equal((host as HTMLElement).style.cursor, 'move');
+        target.UpdateCursorForEffect(DragDropEffects.Link);
+        assert.equal((host as HTMLElement).style.cursor, 'alias');
+        target.UpdateCursorForEffect(DragDropEffects.None);
+        assert.equal((host as HTMLElement).style.cursor, 'not-allowed');
+        // Combined flags — Copy wins priority.
+        target.UpdateCursorForEffect(DragDropEffects.Copy | DragDropEffects.Move);
+        assert.equal((host as HTMLElement).style.cursor, 'copy');
+    });
+
+    test('OnDragSessionEnded restores the captured original cursor', () => {
+        const { host } = makeDom();
+        const target = new HtmlTarget(host);
+        const root = new Border();
+        target.Content = root;
+        const source = new TestSquare();
+        root.SetChild(source);
+        target.Flush();
+        (host as HTMLElement).style.cursor = 'default';
+
+        DragDrop.DoDragDrop(source, new DataObject(), DragDropEffects.Copy);
+        target.InputManager.PickUpPendingDragSession();
+        target.OnDragSessionStarted();
+        target.UpdateCursorForEffect(DragDropEffects.Copy);
+        assert.equal((host as HTMLElement).style.cursor, 'copy');
+
+        target.OnDragSessionEnded();
+        assert.equal((host as HTMLElement).style.cursor, 'default');
+    });
+});
