@@ -188,6 +188,42 @@ export class ItemsControl extends Visual
         return v.get_property_value(ItemsControl.AlternationIndexKey);
     }
 
+    // Walk the logical-parent chain from `visual` looking for the
+    // nearest enclosing ItemsControl. WPF's
+    // ItemsControl.ItemsControlFromItemContainer analogue, with an
+    // optional `typeGuard` predicate so callers can skip past
+    // intermediate ItemsControl-shaped ancestors (e.g. a TreeViewItem
+    // hosting more rows underneath — its findTree() walks PAST
+    // ancestor TreeViewItems until it hits the root TreeView).
+    //
+    //   // Find the owning ListBox from a row.
+    //   const lb = ItemsControl.FromContainer<ListBox>(this, (v): v is ListBox => v instanceof ListBox);
+    //
+    //   // Find any enclosing ItemsControl.
+    //   const ic = ItemsControl.FromContainer(this);
+    //
+    // Returns undefined if no qualifying ancestor exists.
+    public static FromContainer<T extends ItemsControl = ItemsControl>(
+        visual: Visual,
+        typeGuard?: (v: Visual) => v is T,
+    ): T | undefined
+    {
+        let cur: Visual | undefined = visual.GetLogicalParent();
+        while (cur !== undefined)
+        {
+            if (typeGuard !== undefined)
+            {
+                if (typeGuard(cur)) return cur;
+            }
+            else if (cur instanceof ItemsControl)
+            {
+                return cur as T;
+            }
+            cur = cur.GetLogicalParent();
+        }
+        return undefined;
+    }
+
     private _itemsPanel: Panel | undefined;
     private _itemsSubscription: (() => void) | undefined;
     // Subscription to the projected view's GroupDescriptions. When

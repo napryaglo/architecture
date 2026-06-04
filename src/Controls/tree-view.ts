@@ -673,16 +673,14 @@ export class TreeViewItem extends ItemsControl
         this.set_property_value(TreeViewItem.IsSelectedKey, v);
     }
 
-    // Walk the logical-parent chain to find the owning TreeView.
+    // Walk past any intermediate TreeViewItems to the root TreeView.
+    // The predicate is what makes this skip past intermediate
+    // TreeViewItems — a plain ItemsControl.FromContainer(this) would
+    // stop at the parent TreeViewItem (which is also an ItemsControl).
     private findTree(): TreeView | undefined
     {
-        let cur: Visual | undefined = this.GetLogicalParent();
-        while (cur !== undefined)
-        {
-            if (cur instanceof TreeView) return cur;
-            cur = cur.GetLogicalParent();
-        }
-        return undefined;
+        return ItemsControl.FromContainer<TreeView>(
+            this, (v): v is TreeView => v instanceof TreeView);
     }
 
     // Depth = number of TreeViewItem ancestors between this item and

@@ -556,7 +556,8 @@ export class ListBoxItem extends ContentControl
         const fire = this._pressOriginatedHere && this.IsMouseOver;
         this._pressOriginatedHere = false;
         if (!fire) return;
-        const lb = this.findListBox();
+        const lb = ItemsControl.FromContainer<ListBox>(
+            this, (v): v is ListBox => v instanceof ListBox);
         if (lb !== undefined) lb.HandleItemClick(this, args.Modifiers);
     }
 
@@ -573,18 +574,6 @@ export class ListBoxItem extends ContentControl
     {
         super.OnPropertyChanged(descriptor, oldValue, newValue);
         if (descriptor.Name === 'IsSelected') this.refreshBackground();
-    }
-
-    // Walk the logical-parent chain for the owning ListBox.
-    private findListBox(): ListBox | undefined
-    {
-        let cur: Visual | undefined = this.GetLogicalParent();
-        while (cur !== undefined)
-        {
-            if (cur instanceof ListBox) return cur;
-            cur = cur.GetLogicalParent();
-        }
-        return undefined;
     }
 
     // Background priority: selected wins over hover. Transparent
