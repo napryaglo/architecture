@@ -42,12 +42,20 @@ ResourceDictionary {
                     }
                 }
 
-                // Two-up split.
+                // Two-up split. Each side is a fixed-size Border
+                // hosting a DockPanel — the column header is docked
+                // Top, and the ListBox takes LastChildFill so its
+                // arranged rect covers the whole drop area. Without
+                // the fixed Height, the outer Border shrink-wraps to
+                // its content and the ListBox arranges to just the
+                // items' height, so drops only land over actual rows.
                 StackPanel[Orientation=Horizontal, Margin=(20)]{
-                    Border[Width=220, Margin=(0,0,16,0),
+                    Border[Width=220, Height=240,
+                           Margin=(0,0,16,0),
                            BorderBrush=#e2e8f0, BorderThickness=(1)]{
-                        StackPanel{
-                            TextBlock[Text="Left", FontWeight=Bold,
+                        DockPanel{
+                            TextBlock[DockPanel.Dock=Top,
+                                      Text="Left", FontWeight=Bold,
                                       FontSize=12, Foreground=#374151,
                                       Margin=(10,8,8,4)]
                             ListBox x:name="leftList"
@@ -56,10 +64,11 @@ ResourceDictionary {
                                      ItemContainerStyle=@DragDropItemContainerStyle]
                         }
                     }
-                    Border[Width=220, BorderBrush=#e2e8f0,
-                           BorderThickness=(1)]{
-                        StackPanel{
-                            TextBlock[Text="Right", FontWeight=Bold,
+                    Border[Width=220, Height=240,
+                           BorderBrush=#e2e8f0, BorderThickness=(1)]{
+                        DockPanel{
+                            TextBlock[DockPanel.Dock=Top,
+                                      Text="Right", FontWeight=Bold,
                                       FontSize=12, Foreground=#374151,
                                       Margin=(10,8,8,4)]
                             ListBox x:name="rightList"
