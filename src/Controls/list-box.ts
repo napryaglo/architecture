@@ -12,6 +12,7 @@ import type { Brush } from '../visual-engine/index.js';
 import type { Border } from './border.js';
 import { ContentControl } from './content-control.js';
 import type { ControlTemplate } from './control-template.js';
+import { findDataTemplateForType } from './data-template.js';
 import { ItemsControl } from './items-control.js';
 import { Orientation, StackPanel } from './stack-panel.js';
 import { ScrollViewer } from './scroll-viewer.js';
@@ -225,24 +226,46 @@ export class ListBox extends ItemsControl
     {
         // Pass-through for composed markup is handled by the generator
         // via IsItemItsOwnContainerOverride; here we're always on the
-        // data-driven path. Auto-wrap data values, stashing the source
-        // on Tag so SelectedItem reads return the data, not the
-        // ListBoxItem container.
+        // data-driven path. WPF parity:
+        //   * Tag = item — SelectedItem reads return the data, not
+        //     the ListBoxItem.
+        //   * DataContext = item — bindings on the container (from
+        //     ItemContainerStyle setters) resolve against the item, so
+        //     `IsDraggable=true; OnDragStart=$BeginDragData` finds the
+        //     per-row VM's DPs rather than the parent VM's. Matches
+        //     ContentPresenter behavior in ItemsControl.
+        //   * Content routing:
+        //       Model with a registered DataTemplate → li.Content = item
+        //         (ContentControl.resolveContentVisual finds the template
+        //         and applies it). This is the ItemTemplate-driven path.
+        //       everything else → wrap in TextBlock(displayString(item))
+        //         so plain `Items=["Apple","Pear"]` and untemplated Models
+        //         still render something.
         const li = new ListBoxItem();
-        li.Tag     = item;
-        li.Content = new TextBlock(displayString(item));
+        li.Tag         = item;
+        li.DataContext = item;
+        li.Content     = this.contentForItem(item);
         return li;
     }
 
     public override RebindContainerForItemOverride(container: Visual, item: unknown): void
     {
-        // Reused ListBoxItem (from the generator's recycle pool) —
-        // flip Tag + replace Content with a fresh display TextBlock so
-        // the row reflects the new data. Avoids re-running the
-        // ListBoxItem template; matches WPF's recycling semantics.
+        // Reused ListBoxItem (from the generator's recycle pool) — flip
+        // Tag / DataContext / Content so the row reflects the new data.
         if (!(container instanceof ListBoxItem)) return;
-        container.Tag     = item;
-        container.Content = new TextBlock(displayString(item));
+        container.Tag         = item;
+        container.DataContext = item;
+        container.Content     = this.contentForItem(item);
+    }
+
+    private contentForItem(item: unknown): Visual | Model {
+        if (item instanceof Visual) return item;
+        if (item instanceof Model
+            && findDataTemplateForType(item.constructor.name) !== undefined)
+        {
+            return item;
+        }
+        return new TextBlock(displayString(item));
     }
 
     public override ClearContainerForItemOverride(container: Visual, item: unknown): void

@@ -7,29 +7,18 @@
 // drop-target wiring isn't yet available, hence the Behavior.
 
 ResourceDictionary {
-    // Each item renders as a left-padded label. The container style
-    // below adds the drag-source behavior; the template only carries
-    // visualization.
+    // Each item renders as a left-padded label. ListBox routes
+    // ItemTemplate through ContentControl when a matching DataTemplate
+    // is registered for the item's type (DataType=ItemVM here).
     DataTemplate x:key="DragDropItemTemplate" [datatype=ItemVM] {
         TextBlock [Text=$Label, Margin=(8,4,8,4), FontSize=12]
     }
 
-    // Default ItemsControl has no Template, so the panel attaches
-    // directly under the control — we need to set ItemsPanel
-    // explicitly. Vertical StackPanel gives us the standard list
-    // layout.
-    ItemsPanelTemplate x:key="DragDropItemsPanel" {
-        StackPanel
-    }
-
-    // ItemsControl wraps each item in a ContentPresenter — its
-    // DataContext is set to the item when the ItemTemplate applies,
-    // so the OnDragStart=$BeginDragData binding resolves against the
-    // ItemVM and finds the function-DP. (ListBox's data path renders
-    // via displayString() and would leave DataContext as the parent
-    // VM, breaking the binding — that's why this demo uses
-    // ItemsControl rather than ListBox.)
-    Style x:key="DragDropItemContainerStyle" [targettype=ContentPresenter] {
+    // ListBoxItem container style — declarative drag source. ListBox
+    // sets the container's DataContext to the per-row item, so the
+    // OnDragStart=$BeginDragData binding resolves against ItemVM and
+    // finds the function-DP.
+    Style x:key="DragDropItemContainerStyle" [targettype=ListBoxItem] {
         IsDraggable = true;
         OnDragStart = $BeginDragData;
     }
@@ -61,9 +50,8 @@ ResourceDictionary {
                             TextBlock[Text="Left", FontWeight=Bold,
                                       FontSize=12, Foreground=#374151,
                                       Margin=(10,8,8,4)]
-                            ItemsControl x:name="leftList"
+                            ListBox x:name="leftList"
                                     [ItemsSource=$LeftItems,
-                                     ItemsPanel=@DragDropItemsPanel,
                                      ItemTemplate=@DragDropItemTemplate,
                                      ItemContainerStyle=@DragDropItemContainerStyle]
                         }
@@ -74,9 +62,8 @@ ResourceDictionary {
                             TextBlock[Text="Right", FontWeight=Bold,
                                       FontSize=12, Foreground=#374151,
                                       Margin=(10,8,8,4)]
-                            ItemsControl x:name="rightList"
+                            ListBox x:name="rightList"
                                     [ItemsSource=$RightItems,
-                                     ItemsPanel=@DragDropItemsPanel,
                                      ItemTemplate=@DragDropItemTemplate,
                                      ItemContainerStyle=@DragDropItemContainerStyle]
                         }
