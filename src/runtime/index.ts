@@ -77,7 +77,11 @@ export {
 export { InputManager } from './input-manager.js';
 export {
     DataObject,
+    DragDrop,
     DragDropEffects,
+    DragSession,
+    type DragDropOptions,
+    type DragPreviewKind,
 } from './drag-drop.js';
 export {
     RelayCommand,

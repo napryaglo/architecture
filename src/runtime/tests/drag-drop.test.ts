@@ -3,8 +3,10 @@ import assert from 'node:assert/strict';
 
 import {
     DataObject,
+    DragDrop,
     DragDropEffects,
     DragEventArgs,
+    DragSession,
     NoModifiers,
     Panel,
     Size,
@@ -162,6 +164,102 @@ describe('drag events — dispatch order', () => {
         const args = dragArgs('DragOver', v);
         (args as unknown as { Kind: string }).Kind = 'PointerMove';
         assert.throws(() => dispatchDrag(args), /not a drag event/);
+    });
+});
+
+function makeBareVisual(): Visual { return new DragLoggerPanel('bare'); }
+
+describe('DragSession — standalone (no InputManager wiring yet)', () => {
+    test('DoDragDrop returns a session carrying Source/Data/AllowedEffects', () => {
+        DragDrop._pendingSession = null;             // baseline
+        const source = makeBareVisual();
+        const data   = new DataObject().Set('mural/node-kind', 'rect');
+        const session = DragDrop.DoDragDrop(source, data, DragDropEffects.Copy);
+        assert.equal(session.Source,          source);
+        assert.equal(session.Data,            data);
+        assert.equal(session.AllowedEffects,  DragDropEffects.Copy);
+        // Pending slot was filled for the InputManager to pick up.
+        assert.equal(DragDrop._pendingSession, session);
+        DragDrop._pendingSession = null;
+        DragDrop._pendingOptions = {};
+    });
+
+    test('OnMove subscribers fire when the session is driven', () => {
+        const session = DragDrop.DoDragDrop(makeBareVisual(), new DataObject(), DragDropEffects.Copy);
+        const calls: Array<[number, number]> = [];
+        session.OnMove((x, y) => calls.push([x, y]));
+
+        session._fireMove(10, 20);
+        session._fireMove(30, 40);
+
+        assert.deepEqual(calls, [[10, 20], [30, 40]]);
+        DragDrop._pendingSession = null;
+    });
+
+    test('OnMove returns an unsubscribe function that stops further callbacks', () => {
+        const session = DragDrop.DoDragDrop(makeBareVisual(), new DataObject(), DragDropEffects.Copy);
+        const calls: Array<[number, number]> = [];
+        const unsub = session.OnMove((x, y) => calls.push([x, y]));
+
+        session._fireMove(1, 2);
+        unsub();
+        session._fireMove(3, 4);
+
+        assert.deepEqual(calls, [[1, 2]]);
+        DragDrop._pendingSession = null;
+    });
+
+    test('Cancel resolves the promise with None', async () => {
+        const session = DragDrop.DoDragDrop(makeBareVisual(), new DataObject(), DragDropEffects.Copy);
+        session.Cancel();
+        assert.equal(session.IsSettled, true);
+        const effect = await session;
+        assert.equal(effect, DragDropEffects.None);
+        DragDrop._pendingSession = null;
+    });
+
+    test('Cancel detaches all OnMove subscribers', () => {
+        const session = DragDrop.DoDragDrop(makeBareVisual(), new DataObject(), DragDropEffects.Copy);
+        const calls: number[] = [];
+        session.OnMove(() => calls.push(1));
+        session.Cancel();
+        session._fireMove(0, 0);
+        assert.deepEqual(calls, []);
+        DragDrop._pendingSession = null;
+    });
+
+    test('then() resolves with the effect provided by _complete', async () => {
+        const session = DragDrop.DoDragDrop(makeBareVisual(), new DataObject(), DragDropEffects.All);
+        session._complete(DragDropEffects.Move);
+        const effect = await session;
+        assert.equal(effect, DragDropEffects.Move);
+        DragDrop._pendingSession = null;
+    });
+
+    test('_complete is idempotent — second call is ignored', async () => {
+        const session = DragDrop.DoDragDrop(makeBareVisual(), new DataObject(), DragDropEffects.All);
+        session._complete(DragDropEffects.Copy);
+        session._complete(DragDropEffects.Move);  // ignored
+        const effect = await session;
+        assert.equal(effect, DragDropEffects.Copy);
+        DragDrop._pendingSession = null;
+    });
+
+    test('DragDrop.DragThreshold exposes a tunable threshold defaulting to 4', () => {
+        assert.equal(DragDrop.DragThreshold, 4);
+        DragDrop.DragThreshold = 8;
+        assert.equal(DragDrop.DragThreshold, 8);
+        DragDrop.DragThreshold = 4;
+    });
+
+    test('opts.preview is stashed on _pendingOptions', () => {
+        DragDrop._pendingSession = null;
+        const session = DragDrop.DoDragDrop(makeBareVisual(), new DataObject(),
+            DragDropEffects.Copy, { preview: null });
+        assert.equal(DragDrop._pendingOptions.preview, null);
+        DragDrop._pendingSession = null;
+        DragDrop._pendingOptions = {};
+        void session;
     });
 });
 
