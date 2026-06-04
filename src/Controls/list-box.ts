@@ -184,9 +184,7 @@ export class ListBox extends ItemsControl
         //         so plain `Items=["Apple","Pear"]` and untemplated Models
         //         still render something.
         const li = new ListBoxItem();
-        li.Tag         = item;
-        li.DataContext = item;
-        li.Content     = this.contentForItem(item);
+        this.bindContainer(li, item);
         return li;
     }
 
@@ -195,9 +193,18 @@ export class ListBox extends ItemsControl
         // Reused ListBoxItem (from the generator's recycle pool) — flip
         // Tag / DataContext / Content so the row reflects the new data.
         if (!(container instanceof ListBoxItem)) return;
-        container.Tag         = item;
-        container.DataContext = item;
-        container.Content     = this.contentForItem(item);
+        this.bindContainer(container, item);
+    }
+
+    // Wire a freshly-created OR recycled ListBoxItem to its data row.
+    // Shared by GetContainerForItemOverride (fresh) and
+    // RebindContainerForItemOverride (recycled) so both paths stay in
+    // lock-step with no chance of one drifting.
+    private bindContainer(li: ListBoxItem, item: unknown): void
+    {
+        li.Tag         = item;
+        li.DataContext = item;
+        li.Content     = this.contentForItem(item);
     }
 
     private contentForItem(item: unknown): Visual | Model {
@@ -241,14 +248,11 @@ export class ListBox extends ItemsControl
     // Snapshot of the current multi-selection, in insertion order.
     // Each entry is the container's Tag when present (Items-driven
     // path) or the container itself when Tag is unset (declarative
-    // path).
+    // path) — see exposedValueOf.
     public get SelectedItems(): readonly unknown[]
     {
         const out: unknown[] = [];
-        for (const c of this._selectedItems)
-        {
-            out.push(c.Tag !== undefined ? c.Tag : c);
-        }
+        for (const c of this._selectedItems) out.push(ListBox.exposedValueOf(c));
         return out;
     }
 
@@ -378,11 +382,22 @@ export class ListBox extends ItemsControl
         for (const l of this._selectionListeners) l();
     }
 
+    // Public-DP value seen by external consumers for a given row:
+    // Tag is what the data-driven path carries (the source data);
+    // composed-markup rows without an explicit Tag fall back to the
+    // container itself.
+    private static exposedValueOf(li: ListBoxItem): unknown
+    {
+        return li.Tag !== undefined ? li.Tag : li;
+    }
+
     // Push the internal selection set's first member out to the
-    // public DPs. Read-only mirror — the DPs reflect the multi-
-    // selection model's "primary" item but never drive the model on
-    // their own (HandleItemClick / ClearSelection / direct DP writes
-    // do).
+    // public SelectedIndex / SelectedItem DPs. Read-only mirror — the
+    // DPs reflect the multi-selection model's "primary" item but
+    // never drive the model on their own (HandleItemClick /
+    // ClearSelection / direct DP writes do). The cross-DP guard is
+    // raised so this mirror doesn't loop through OnPropertyChanged
+    // back into applySelectedIndex / applySelectedItem.
     private refreshExposedSelection(): void
     {
         const first: ListBoxItem | undefined =
@@ -395,9 +410,8 @@ export class ListBox extends ItemsControl
         }
         else
         {
-            const containers = this.ItemContainers;
-            this.SelectedIndex = containers.indexOf(first);
-            this.SelectedItem  = first.Tag !== undefined ? first.Tag : first;
+            this.SelectedIndex = this.logicalChildren.indexOf(first);
+            this.SelectedItem  = ListBox.exposedValueOf(first);
         }
         this._suppressSelectionSync = false;
     }
@@ -436,24 +450,9 @@ export class ListBox extends ItemsControl
             this.setSelected([item]);
             this._anchor = item;
         }
-        // Mirror back out — keep BOTH DPs consistent with the
-        // selection set. Includes normalising an out-of-range write
-        // back to -1.
-        this._suppressSelectionSync = true;
-        const first: ListBoxItem | undefined =
-            this._selectedItems.values().next().value;
-        if (first === undefined)
-        {
-            this.SelectedIndex = -1;
-            this.SelectedItem  = undefined;
-        }
-        else
-        {
-            const containers2 = this.ItemContainers;
-            this.SelectedIndex = containers2.indexOf(first);
-            this.SelectedItem  = first.Tag !== undefined ? first.Tag : first;
-        }
-        this._suppressSelectionSync = false;
+        // Single mirror path for both apply* methods. Also normalises
+        // an out-of-range index write back to -1.
+        this.refreshExposedSelection();
         this.fireSelectionChanged();
     }
 
@@ -481,15 +480,7 @@ export class ListBox extends ItemsControl
                 this._anchor = undefined;
             }
         }
-        // Mirror back out: keep SelectedIndex consistent with the new
-        // SelectedItem write.
-        this._suppressSelectionSync = true;
-        const first: ListBoxItem | undefined =
-            this._selectedItems.values().next().value;
-        this.SelectedIndex = first === undefined
-            ? -1
-            : this.ItemContainers.indexOf(first);
-        this._suppressSelectionSync = false;
+        this.refreshExposedSelection();
         this.fireSelectionChanged();
     }
 }
