@@ -72,6 +72,10 @@ export {
 } from './routed-event.js';
 export { InputManager } from './input-manager.js';
 export {
+    DataObject,
+    DragDropEffects,
+} from './drag-drop.js';
+export {
     RelayCommand,
     type ICommand,
 } from './command.js';
@@ -81,6 +85,7 @@ export {
     SetterFactory,
     PropertyTrigger,
     MultiTrigger,
+    DataTrigger,
     type TriggerCondition,
 } from './style.js';
 export {
