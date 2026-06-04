@@ -131,6 +131,13 @@ export class HtmlTarget extends PresentationTarget
     private readonly onPointerWheel: (e: WheelEvent)   => void;
     private readonly onKeyDown:      (e: KeyboardEvent) => void;
     private readonly onKeyUp:        (e: KeyboardEvent) => void;
+    // Drag cancellation listeners — ESC, host blur, and the browser's
+    // pointercancel (OS reclaiming the pointer, e.g. via a touch
+    // gesture cancellation). All three call session.Cancel() and poll
+    // the InputManager to tear down state.
+    private readonly onDragKeyDown:   (e: KeyboardEvent) => void;
+    private readonly onDragBlur:      () => void;
+    private readonly onPointerCancel: (e: PointerEvent) => void;
 
     // Drag overlay — a <g> appended on top of the renderer's scene
     // when a session starts and removed on session end. Mode A
@@ -254,13 +261,37 @@ export class HtmlTarget extends PresentationTarget
         this.onPointerWheel = (e) => this.handleWheel(e);
         this.onKeyDown      = (e) => this.handleKey('down', e);
         this.onKeyUp        = (e) => this.handleKey('up',   e);
-        this.host.addEventListener('pointermove',  this.onPointerMove  as EventListener);
-        this.host.addEventListener('pointerdown',  this.onPointerDown  as EventListener);
-        this.host.addEventListener('pointerup',    this.onPointerUp    as EventListener);
-        this.host.addEventListener('pointerleave', this.onPointerLeave as EventListener);
-        this.host.addEventListener('wheel',        this.onPointerWheel as EventListener);
-        this.host.addEventListener('keydown',      this.onKeyDown      as EventListener);
-        this.host.addEventListener('keyup',        this.onKeyUp        as EventListener);
+        this.onDragKeyDown = (e: KeyboardEvent) => {
+            if (this.InputManager.IsDragActive && e.key === 'Escape')
+            {
+                this.InputManager.CurrentDragSession?.Cancel();
+                this.PollSessionCancellation();
+            }
+        };
+        this.onDragBlur = () => {
+            if (this.InputManager.IsDragActive)
+            {
+                this.InputManager.CurrentDragSession?.Cancel();
+                this.PollSessionCancellation();
+            }
+        };
+        this.onPointerCancel = (_e: PointerEvent) => {
+            if (this.InputManager.IsDragActive)
+            {
+                this.InputManager.CurrentDragSession?.Cancel();
+                this.PollSessionCancellation();
+            }
+        };
+        this.host.addEventListener('pointermove',   this.onPointerMove   as EventListener);
+        this.host.addEventListener('pointerdown',   this.onPointerDown   as EventListener);
+        this.host.addEventListener('pointerup',     this.onPointerUp     as EventListener);
+        this.host.addEventListener('pointerleave',  this.onPointerLeave  as EventListener);
+        this.host.addEventListener('pointercancel', this.onPointerCancel as EventListener);
+        this.host.addEventListener('wheel',         this.onPointerWheel  as EventListener);
+        this.host.addEventListener('keydown',       this.onKeyDown       as EventListener);
+        this.host.addEventListener('keydown',       this.onDragKeyDown   as EventListener);
+        this.host.addEventListener('keyup',         this.onKeyUp         as EventListener);
+        this.host.addEventListener('blur',          this.onDragBlur      as EventListener);
 
         // SvgRenderer paints the visual tree into the SVG surface and
         // maintains DOM identity per visual across re-render passes.
@@ -333,15 +364,33 @@ export class HtmlTarget extends PresentationTarget
     public Dispose(): void
     {
         this.resize_observer.disconnect();
-        this.host.removeEventListener('pointermove',  this.onPointerMove  as EventListener);
-        this.host.removeEventListener('pointerdown',  this.onPointerDown  as EventListener);
-        this.host.removeEventListener('pointerup',    this.onPointerUp    as EventListener);
-        this.host.removeEventListener('pointerleave', this.onPointerLeave as EventListener);
-        this.host.removeEventListener('wheel',        this.onPointerWheel as EventListener);
-        this.host.removeEventListener('keydown',      this.onKeyDown      as EventListener);
-        this.host.removeEventListener('keyup',        this.onKeyUp        as EventListener);
+        this.host.removeEventListener('pointermove',   this.onPointerMove   as EventListener);
+        this.host.removeEventListener('pointerdown',   this.onPointerDown   as EventListener);
+        this.host.removeEventListener('pointerup',     this.onPointerUp     as EventListener);
+        this.host.removeEventListener('pointerleave',  this.onPointerLeave  as EventListener);
+        this.host.removeEventListener('pointercancel', this.onPointerCancel as EventListener);
+        this.host.removeEventListener('wheel',         this.onPointerWheel  as EventListener);
+        this.host.removeEventListener('keydown',       this.onKeyDown       as EventListener);
+        this.host.removeEventListener('keydown',       this.onDragKeyDown   as EventListener);
+        this.host.removeEventListener('keyup',         this.onKeyUp         as EventListener);
+        this.host.removeEventListener('blur',          this.onDragBlur      as EventListener);
         this.renderer.Dispose();
         this.surface.remove();
+    }
+
+    // Drag cancellation poll. Called by the cancellation listeners and
+    // available to consumers (e.g. tests) that want to react to a
+    // session.Cancel() from author code without going through a DOM
+    // event. Reads InputManager.ObserveSessionCancellation and, if the
+    // session is now done, runs OnDragSessionEnded for DOM cleanup.
+    public PollSessionCancellation(): void
+    {
+        if (!this.InputManager.IsDragActive) return;
+        this.InputManager.ObserveSessionCancellation();
+        if (!this.InputManager.IsDragActive)
+        {
+            this.OnDragSessionEnded();
+        }
     }
 
     // ── HitTest ────────────────────────────────────────────────────

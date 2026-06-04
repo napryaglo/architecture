@@ -291,3 +291,91 @@ describe('HtmlTarget — cursor styling', () => {
         assert.equal((host as HTMLElement).style.cursor, 'default');
     });
 });
+
+describe('HtmlTarget — drag cancellation', () => {
+    beforeEach(() => {
+        Application.current = null;
+        resetPendingDrag();
+    });
+
+    test('ESC keydown during drag resolves session with None', async () => {
+        const { host, document: doc } = makeDom();
+        const target = new HtmlTarget(host);
+        const root = new Border();
+        target.Content = root;
+        const source = new TestSquare();
+        root.SetChild(source);
+        target.Flush();
+
+        const session = DragDrop.DoDragDrop(source, new DataObject(), DragDropEffects.Copy);
+        target.InputManager.PickUpPendingDragSession();
+        target.OnDragSessionStarted();
+
+        // Synthesize an ESC keydown on the host. The host listener
+        // matches e.key === 'Escape' and calls Cancel + poll.
+        const win = doc.defaultView!;
+        host.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+        const effect = await session;
+        assert.equal(effect, DragDropEffects.None);
+        assert.equal(target.InputManager.IsDragActive, false);
+        assert.equal(doc.querySelector('g.mural-drag-overlay'), null);
+    });
+
+    test('blur on the host during drag cancels the session', async () => {
+        const { host } = makeDom();
+        const target = new HtmlTarget(host);
+        const root = new Border();
+        target.Content = root;
+        const source = new TestSquare();
+        root.SetChild(source);
+        target.Flush();
+
+        const session = DragDrop.DoDragDrop(source, new DataObject(), DragDropEffects.Copy);
+        target.InputManager.PickUpPendingDragSession();
+        target.OnDragSessionStarted();
+
+        host.dispatchEvent(new (host.ownerDocument!.defaultView as Window).FocusEvent('blur',
+            { bubbles: false }));
+
+        const effect = await session;
+        assert.equal(effect, DragDropEffects.None);
+        assert.equal(target.InputManager.IsDragActive, false);
+    });
+
+    test('session.Cancel() from author code is observed via PollSessionCancellation', async () => {
+        const { host, document: doc } = makeDom();
+        const target = new HtmlTarget(host);
+        const root = new Border();
+        target.Content = root;
+        const source = new TestSquare();
+        root.SetChild(source);
+        target.Flush();
+
+        const session = DragDrop.DoDragDrop(source, new DataObject(), DragDropEffects.Copy);
+        target.InputManager.PickUpPendingDragSession();
+        target.OnDragSessionStarted();
+        assert.ok(doc.querySelector('g.mural-drag-overlay'));
+
+        session.Cancel();
+        target.PollSessionCancellation();
+
+        const effect = await session;
+        assert.equal(effect, DragDropEffects.None);
+        assert.equal(target.InputManager.IsDragActive, false);
+        assert.equal(doc.querySelector('g.mural-drag-overlay'), null);
+    });
+
+    test('ESC outside a drag session is a no-op', () => {
+        const { host, document: doc } = makeDom();
+        const target = new HtmlTarget(host);
+        const root = new Border();
+        target.Content = root;
+        target.Flush();
+
+        // No drag — ESC must not crash or affect state.
+        const win = doc.defaultView!;
+        host.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        assert.equal(target.InputManager.IsDragActive, false);
+    });
+});
