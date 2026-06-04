@@ -164,3 +164,27 @@ describe('drag events — dispatch order', () => {
         assert.throws(() => dispatchDrag(args), /not a drag event/);
     });
 });
+
+describe('Visual.AllowDrop / IsDragOver DPs', () => {
+    test('AllowDrop defaults to false', () => {
+        const v = new DragLoggerPanel('v');
+        assert.equal(v.AllowDrop, false);
+    });
+
+    test('AllowDrop is settable from consumer code', () => {
+        const v = new DragLoggerPanel('v');
+        v.AllowDrop = true;
+        assert.equal(v.AllowDrop, true);
+        v.AllowDrop = false;
+        assert.equal(v.AllowDrop, false);
+    });
+
+    test('IsDragOver defaults to false and is set via _set_property_value_by_name', () => {
+        const v = new DragLoggerPanel('v');
+        assert.equal(v.IsDragOver, false);
+        // Mirror of the InputManager's setIsMouseOver helper pattern.
+        (v as unknown as { _set_property_value_by_name(name: string, value: unknown): void })
+            ._set_property_value_by_name('IsDragOver', true);
+        assert.equal(v.IsDragOver, true);
+    });
+});

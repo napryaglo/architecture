@@ -169,6 +169,15 @@ export class Visual extends Model
     public static readonly IsMouseOverKey = Model.RegisterProperty<boolean>(Visual, 'IsMouseOver', false, MetaData.None);
     public static readonly IsPressedKey   = Model.RegisterProperty<boolean>(Visual, 'IsPressed',   false, MetaData.None);
 
+    // Drop-target flags. Maintained by the InputManager during drag
+    // dispatch, in lock-step with IsMouseOver during normal hover.
+    // AllowDrop is consumer-set (defaults to false so a random Visual
+    // never accidentally accepts drops); IsDragOver is framework-written
+    // and behaves like IsMouseOver — public read, no public setter
+    // (Style triggers like `when{ IsDragOver }` read it).
+    public static readonly AllowDropKey  = Model.RegisterProperty<boolean>(Visual, 'AllowDrop',  false, MetaData.None);
+    public static readonly IsDragOverKey = Model.RegisterProperty<boolean>(Visual, 'IsDragOver', false, MetaData.None);
+
     // Focusable — opt-in for keyboard focus. Default false so a random
     // Border / TextBlock / Panel never accidentally swallows keys;
     // controls that handle keyboard input (TextBox, Button) set this to
@@ -198,6 +207,17 @@ export class Visual extends Model
     // True when the InputManager has this Visual as its current focused
     // target. Read-only by convention; use Focus() / Blur() to change.
     public get IsFocused():   boolean { return this.get_property_value(Visual.IsFocusedKey); }
+
+    // Drop-target opt-in. The InputManager's drag dispatcher walks the
+    // visual ancestor chain from the pointer-hit Visual until it finds
+    // one with AllowDrop=true (`findAllowDropAncestor`); that Visual
+    // becomes the drag receiver.
+    public get AllowDrop():  boolean { return this.get_property_value(Visual.AllowDropKey); }
+    public set AllowDrop(v:  boolean) { this.set_property_value(Visual.AllowDropKey, v); }
+    // Framework-written mirror of "this Visual is the current drag
+    // receiver". Read-only contract — flips via _set_property_value_by_name
+    // from the InputManager's drag-session driver.
+    public get IsDragOver(): boolean { return this.get_property_value(Visual.IsDragOverKey); }
 
     // Opt-in for keyboard focus. Controls that handle keyboard input
     // (TextBox, Button) flip this on in their constructor; everything
