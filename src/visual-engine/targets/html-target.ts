@@ -3,6 +3,7 @@ import {
     AnimationManager,
     ManualClock,
     PointerButton,
+    type DataObject,
     type KeyEventInit,
     type PointerEventInit,
     type WheelEventInit,
@@ -395,11 +396,15 @@ export class HtmlTarget extends PresentationTarget
 
     // Public hook the pointer adapter calls when a session enters.
     // Reads the session's preview option from
-    // InputManager.CurrentDragOptions. Mode A (preview undefined):
-    // snapshot the source's outer <g> and append a 60%-opacity clone
-    // to the overlay. Mode B (null): create the overlay shell only
-    // (author renders feedback via session.OnMove). Mode C lands in
-    // Task 7.
+    // InputManager.CurrentDragOptions.
+    //   mode A (preview undefined): snapshot the source's outer <g>
+    //     and append a 60%-opacity clone to the overlay.
+    //   mode B (preview === null): create the overlay shell only —
+    //     author renders feedback via session.OnMove.
+    //   mode C (preview is a DataTemplate-shaped object): instantiate
+    //     the template, route the produced Visual through AttachOverlay
+    //     so the renderer paints it, then move its outer <g> into the
+    //     drag overlay so SetDragGhostPosition can translate it.
     public OnDragSessionStarted(): void
     {
         const session = this.InputManager.CurrentDragSession;
@@ -415,12 +420,48 @@ export class HtmlTarget extends PresentationTarget
             this.attachGhostFromSource(session.Source);
             return;
         }
-        // Mode C — Task 7.
+        this.attachGhostFromTemplate(opts.preview, session.Data);
     }
 
     public OnDragSessionEnded(): void
     {
+        // Detach the mode-C preview Visual from the OverlayLayer if it
+        // was attached — keeps the framework's overlay tracking in
+        // sync. The <g> is already gone (parented under dragOverlay
+        // which removeDragOverlay clears), so this just clears the
+        // visual-tree side.
+        if (this._modeCPreviewVisual !== undefined)
+        {
+            this.DetachOverlay(this._modeCPreviewVisual);
+            this._modeCPreviewVisual = undefined;
+        }
         this.removeDragOverlay();
+    }
+
+    private _modeCPreviewVisual: Visual | undefined;
+
+    private attachGhostFromTemplate(
+        template: { Apply(data: unknown): Visual },
+        data: DataObject,
+    ): void
+    {
+        const overlay = this.ensureDragOverlay();
+        const previewVisual = template.Apply(data);
+        // Route through the existing OverlayLayer so the renderer
+        // paints the preview into the overlay's outer <g>.
+        this.AttachOverlay(previewVisual);
+        this.Flush();
+        const outer = this.findOuterGForVisual(previewVisual);
+        if (outer === null) return;          // renderer didn't paint
+        // Wrap in a translate-able ghost <g> and re-parent the
+        // produced outer <g> under it.
+        const doc = this.host.ownerDocument ?? document;
+        const ghost = doc.createElementNS(SVG_NS, 'g');
+        ghost.setAttribute('class', 'mural-drag-ghost');
+        ghost.appendChild(outer);
+        overlay.appendChild(ghost);
+        this.dragGhost           = ghost;
+        this._modeCPreviewVisual = previewVisual;
     }
 
     public SetDragGhostPosition(hostX: number, hostY: number): void

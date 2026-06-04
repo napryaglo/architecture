@@ -166,3 +166,60 @@ describe('HtmlTarget — drag ghost overlay (mode A)', () => {
         assert.equal(doc.querySelector('g.mural-drag-ghost'), null, 'no ghost in mode B');
     });
 });
+
+describe('HtmlTarget — drag preview mode C (DataTemplate)', () => {
+    beforeEach(() => {
+        Application.current = null;
+        resetPendingDrag();
+    });
+
+    test('opts.preview = DataTemplate instantiates the template and adds the produced Visual to the overlay', () => {
+        const { host, document: doc } = makeDom();
+        const target = new HtmlTarget(host);
+        const root = new Border();
+        target.Content = root;
+        const source = new TestSquare();
+        root.SetChild(source);
+        target.Flush();
+
+        // Minimal duck-typed preview matching the spec — Apply(data)
+        // returns a Visual. We use TestSquare so the renderer paints a
+        // <rect>; the test checks the rect makes it into the overlay
+        // subtree.
+        const template = { Apply: (_data: unknown): Visual => new TestSquare() };
+        const data = new DataObject().Set('mural/node-kind', 'rect');
+
+        DragDrop.DoDragDrop(source, data, DragDropEffects.Copy, { preview: template });
+        target.InputManager.PickUpPendingDragSession();
+        target.OnDragSessionStarted();
+
+        const overlay = doc.querySelector('g.mural-drag-overlay');
+        assert.ok(overlay !== null);
+        const ghost = overlay!.querySelector('g.mural-drag-ghost');
+        assert.ok(ghost !== null, 'mode C ghost wraps the preview Visual');
+        const rectInOverlay = overlay!.querySelector('rect');
+        assert.ok(rectInOverlay !== null, 'rendered preview content is in the overlay');
+    });
+
+    test('ending a mode-C session detaches the preview Visual from the OverlayLayer', () => {
+        const { host, document: doc } = makeDom();
+        const target = new HtmlTarget(host);
+        const root = new Border();
+        target.Content = root;
+        const source = new TestSquare();
+        root.SetChild(source);
+        target.Flush();
+
+        const template = { Apply: (_data: unknown): Visual => new TestSquare() };
+        DragDrop.DoDragDrop(source, new DataObject(), DragDropEffects.Copy,
+            { preview: template });
+        target.InputManager.PickUpPendingDragSession();
+        target.OnDragSessionStarted();
+        assert.ok(doc.querySelector('g.mural-drag-ghost'));
+
+        target.OnDragSessionEnded();
+        assert.equal(doc.querySelector('g.mural-drag-overlay'), null);
+        assert.equal(target.OverlayRoot?.visualChildren.length ?? 0, 0,
+            'preview Visual detached from OverlayLayer');
+    });
+});
