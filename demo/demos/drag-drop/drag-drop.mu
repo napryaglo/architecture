@@ -26,8 +26,10 @@ ResourceDictionary {
     // Demo shell.
     DataTemplate x:key="DragDropTemplate" [datatype=DragDropVM] {
         Border x:root [Background=#ffffff, BorderBrush=#e2e8f0,
-                       BorderThickness=(1)]{
-            DockPanel{
+                       BorderThickness=(1)]
+        {
+            DockPanel
+            {
                 // Header strip.
                 Border[DockPanel.Dock=Top,
                        Background=#1976d2, Padding=(16,12,16,12)]{
@@ -42,6 +44,11 @@ ResourceDictionary {
                     }
                 }
 
+                TextBlock[DockPanel.Dock=Bottom, Margin=(20,4,20,16),
+                          FontSize=11, Foreground=#6b7280,
+                          TextWrapping=Wrap,
+                          Text="Drag any item from one list to the other to move it. The framework's IsDraggable + OnDragStart binding starts the drag; a Behavior on each ListBox handles DragOver/Drop and dispatches to VM commands."]
+
                 // Two-up split. Each side is a fixed-size Border
                 // hosting a DockPanel — the column header is docked
                 // Top, and the ListBox takes LastChildFill so its
@@ -49,11 +56,14 @@ ResourceDictionary {
                 // the fixed Height, the outer Border shrink-wraps to
                 // its content and the ListBox arranges to just the
                 // items' height, so drops only land over actual rows.
-                StackPanel[Orientation=Horizontal, Margin=(20)]{
-                    Border[Width=220, Height=240,
+                StackPanel[Orientation=Horizontal, Margin=(20), VerticalAlignment=Stretch]
+                {
+                    Border[Width=220, VerticalAlignment=Stretch,
                            Margin=(0,0,16,0),
-                           BorderBrush=#e2e8f0, BorderThickness=(1)]{
-                        DockPanel{
+                           BorderBrush=#e2e8f0, BorderThickness=(1)]
+                    {
+                        DockPanel
+                        {
                             TextBlock[DockPanel.Dock=Top,
                                       Text="Left", FontWeight=Bold,
                                       FontSize=12, Foreground=#374151,
@@ -64,13 +74,17 @@ ResourceDictionary {
                                      ItemContainerStyle=@DragDropItemContainerStyle]
                         }
                     }
-                    Border[Width=220, Height=240,
-                           BorderBrush=#e2e8f0, BorderThickness=(1)]{
-                        DockPanel{
+
+                    Border[Width=220, VerticalAlignment=Stretch,
+                           BorderBrush=#e2e8f0, BorderThickness=(1)]
+                    {
+                        DockPanel
+                        {
                             TextBlock[DockPanel.Dock=Top,
                                       Text="Right", FontWeight=Bold,
                                       FontSize=12, Foreground=#374151,
                                       Margin=(10,8,8,4)]
+
                             ListBox x:name="rightList"
                                     [ItemsSource=$RightItems,
                                      ItemTemplate=@DragDropItemTemplate,
@@ -78,11 +92,6 @@ ResourceDictionary {
                         }
                     }
                 }
-
-                TextBlock[Margin=(20,4,20,16),
-                          FontSize=11, Foreground=#6b7280,
-                          TextWrapping=Wrap,
-                          Text="Drag any item from one list to the other to move it. The framework's IsDraggable + OnDragStart binding starts the drag; a Behavior on each ListBox handles DragOver/Drop and dispatches to VM commands."]
             }
         }
     }

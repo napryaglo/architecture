@@ -556,6 +556,10 @@ export class HtmlTarget extends PresentationTarget
         const doc = this.host.ownerDocument ?? document;
         const ghost = doc.createElementNS(SVG_NS, 'g');
         ghost.setAttribute('class', 'mural-drag-ghost');
+        // Strip the scene-position transform so the preview content
+        // lands at the ghost's local origin — see attachGhostFromSource
+        // for the full reasoning.
+        outer.removeAttribute('transform');
         // Same hit-test transparency contract as mode A — the renderer
         // stamped pointer-events="all" on every mural-hit descendant
         // of the freshly-painted preview, and we need them invisible
@@ -584,6 +588,16 @@ export class HtmlTarget extends PresentationTarget
         ghost.setAttribute('class',   'mural-drag-ghost');
         ghost.setAttribute('opacity', '0.6');
         const clone = sourceOuter.cloneNode(true) as Element;
+        // The renderer set a `transform="translate(srcX,srcY)"` on the
+        // source's outer <g> to position it within the scene. cloneNode
+        // copies that attribute, so without stripping it the clone
+        // would render at the source's original scene position
+        // ADDED to the ghost's own translate — leaving the visual
+        // feedback offset from the cursor by (srcX, srcY). We want the
+        // clone's content to land at the ghost's local origin (0,0),
+        // which the per-move SetDragGhostPosition then translates to
+        // the cursor.
+        clone.removeAttribute('transform');
         // The renderer paints each visual with an invisible `mural-hit`
         // rect carrying `pointer-events="all"` so hit-testing of normal
         // scene content works against the empty fill. That explicit
