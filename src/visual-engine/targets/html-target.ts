@@ -130,6 +130,18 @@ export class HtmlTarget extends PresentationTarget
     private readonly onKeyDown:      (e: KeyboardEvent) => void;
     private readonly onKeyUp:        (e: KeyboardEvent) => void;
 
+    // Drag overlay — a <g> appended on top of the renderer's scene
+    // when a session starts and removed on session end. Mode A
+    // (preview = undefined) populates `dragGhost` with a translucent
+    // clone of the source's outer <g>; mode C (preview = DataTemplate)
+    // routes the template's produced Visual through the OverlayLayer
+    // and re-parents its outer <g> into `dragGhost` so the cursor-
+    // follow transform covers it. Mode B (preview = null) creates the
+    // overlay but no ghost — the author renders the feedback themselves
+    // via session.OnMove (e.g. the diagram demo's rubber-band line).
+    private dragOverlay: SVGGElement | undefined;
+    private dragGhost:   SVGGElement | undefined;
+
     constructor(host: Element, options: HtmlTargetOptions = {})
     {
         super();
@@ -356,6 +368,97 @@ export class HtmlTarget extends PresentationTarget
         return undefined;
     }
 
+    // ── Drag overlay (modes A and C) ────────────────────────────────
+
+    private ensureDragOverlay(): SVGGElement
+    {
+        if (this.dragOverlay !== undefined) return this.dragOverlay;
+        const doc = this.host.ownerDocument ?? document;
+        const g = doc.createElementNS(SVG_NS, 'g');
+        g.setAttribute('class', 'mural-drag-overlay');
+        // pointer-events=none so the ghost never blocks receiver
+        // hit-testing — receivers under the cursor still pick up
+        // pointermove events. The overlay only carries visuals.
+        g.setAttribute('pointer-events', 'none');
+        // Append AFTER the renderer's scene so it paints on top.
+        this.surface.appendChild(g);
+        this.dragOverlay = g;
+        return g;
+    }
+
+    private removeDragOverlay(): void
+    {
+        this.dragOverlay?.parentNode?.removeChild(this.dragOverlay);
+        this.dragOverlay = undefined;
+        this.dragGhost   = undefined;
+    }
+
+    // Public hook the pointer adapter calls when a session enters.
+    // Reads the session's preview option from
+    // InputManager.CurrentDragOptions. Mode A (preview undefined):
+    // snapshot the source's outer <g> and append a 60%-opacity clone
+    // to the overlay. Mode B (null): create the overlay shell only
+    // (author renders feedback via session.OnMove). Mode C lands in
+    // Task 7.
+    public OnDragSessionStarted(): void
+    {
+        const session = this.InputManager.CurrentDragSession;
+        if (session === null) return;
+        const opts = this.InputManager.CurrentDragOptions;
+        if (opts.preview === null)
+        {
+            this.ensureDragOverlay();      // mode B — shell only
+            return;
+        }
+        if (opts.preview === undefined)
+        {
+            this.attachGhostFromSource(session.Source);
+            return;
+        }
+        // Mode C — Task 7.
+    }
+
+    public OnDragSessionEnded(): void
+    {
+        this.removeDragOverlay();
+    }
+
+    public SetDragGhostPosition(hostX: number, hostY: number): void
+    {
+        if (this.dragGhost === undefined) return;
+        this.dragGhost.setAttribute('transform', `translate(${hostX},${hostY})`);
+    }
+
+    private attachGhostFromSource(source: Visual): void
+    {
+        const sourceOuter = this.findOuterGForVisual(source);
+        if (sourceOuter === null) return;        // not yet painted
+
+        const overlay = this.ensureDragOverlay();
+        const doc     = this.host.ownerDocument ?? document;
+        const ghost   = doc.createElementNS(SVG_NS, 'g');
+        ghost.setAttribute('class',   'mural-drag-ghost');
+        ghost.setAttribute('opacity', '0.6');
+        ghost.appendChild(sourceOuter.cloneNode(true) as Node);
+        overlay.appendChild(ghost);
+        this.dragGhost = ghost;
+    }
+
+    // Locate the outer <g> for a given Visual by walking the surface
+    // looking for a node whose VISUAL_BACKREF matches.
+    private findOuterGForVisual(target: Visual): SVGGElement | null
+    {
+        const stack: Node[] = [this.surface];
+        while (stack.length > 0)
+        {
+            const node = stack.pop()!;
+            const back = (node as unknown as BackrefHost)[VISUAL_BACKREF];
+            if (back === target) return node as SVGGElement;
+            for (const child of Array.from(node.childNodes)) stack.push(child);
+        }
+        return null;
+    }
+
     // ── Pointer adapters ───────────────────────────────────────────
 
     private handlePointer(
@@ -384,15 +487,36 @@ export class HtmlTarget extends PresentationTarget
             // case the host happens to be outside the viewport.
             (this.host as HTMLElement).focus({ preventScroll: true });
             if (hit !== undefined) this.InputManager.InjectPointerDown(hit, init);
+            // After dispatch, the InputManager may have picked up a
+            // newly-started drag session (PointerDown handler called
+            // DoDragDrop). Sync the overlay if so.
+            if (this.InputManager.IsDragActive && this.dragOverlay === undefined)
+            {
+                this.OnDragSessionStarted();
+                this.SetDragGhostPosition(hostX, hostY);
+            }
             return;
         }
         if (phase === 'up')
         {
+            const wasActive = this.InputManager.IsDragActive;
             this.InputManager.InjectPointerUp(hit ?? null, init);
+            if (wasActive && !this.InputManager.IsDragActive)
+            {
+                this.OnDragSessionEnded();
+            }
             return;
         }
         // move
         this.InputManager.InjectPointerMove(hit ?? null, init);
+        // Update the ghost to follow the cursor while a session is
+        // active. Order: dispatch first so receivers can update Effect,
+        // THEN reposition the ghost — keeps the ghost from rendering
+        // a frame ahead of the receiver feedback.
+        if (this.InputManager.IsDragActive)
+        {
+            this.SetDragGhostPosition(hostX, hostY);
+        }
     }
 
     // Keyboard dispatch. KeyDown / KeyUp route to the InputManager's
