@@ -3,6 +3,17 @@
 // the server just wires connection events to the appropriate provider
 // call.
 //
+// We side-effect-import the runtime, Controls and visual-engine barrel
+// modules so every class's `static { Model.RegisterProperty(...) }`
+// block fires once at server boot. The completion provider then asks
+// `Model.find_class(name)` + `Model.EnumerateProperties(klass)` to
+// list the DPs available for any target type referenced from .mu
+// sources — without this import the registry is empty when the user
+// first opens a .mu file.
+import '@visualisation-sub/mural/runtime';
+import '@visualisation-sub/mural/Controls';
+import '@visualisation-sub/mural/visual-engine';
+//
 // Lifecycle:
 //   1. The client sends `initialize` — we declare our capabilities.
 //   2. The TextDocuments manager streams document open / change / close

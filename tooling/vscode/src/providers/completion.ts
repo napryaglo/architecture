@@ -34,11 +34,15 @@ import {
     type ElementNode,
 } from '@visualisation-sub/mural/compiler';
 
+import { Model } from '@visualisation-sub/mural/runtime';
+
 import {
     analyze,
     elementAt,
     attributeAt,
+    resourceFormAt,
     type DocAnalysis,
+    type ResourceFormContext,
 } from '../analyzer.js';
 
 // ── Static catalogues ───────────────────────────────────────────────
@@ -126,6 +130,18 @@ export function completions(doc: TextDocument, pos: Position): CompletionItem[]
 
     // Contextual completions need the AST.
     if (analysis.ast === null) return flatFallback();
+
+    // Resource-form body context (Style / Template / DataTemplate /
+    // HierarchicalDataTemplate). Style is the headline case: the body
+    // is a setter list, so completions are the targettype's DPs, not
+    // element names. Element-style forms (Template, DataTemplate) fall
+    // through to the existing element/body logic below — they DO host
+    // a Visual subtree.
+    const rf = resourceFormAt(analysis, offset);
+    if (rf !== undefined && rf.keyword === 'Style')
+    {
+        return styleBodyContext(rf);
+    }
 
     const element = elementAt(analysis, offset);
     if (element === null) return topLevel();
@@ -227,6 +243,82 @@ function topLevel(): CompletionItem[]
         keyword('import', 'import declaration'),
         keyword('def', 'macro definition'),
     ];
+}
+
+// Completions inside `Style [targettype=X] { … }` — setter LHS, trigger
+// keywords, and the `BasedOn=` meta. The setter slate is built by
+// enumerating DPs registered on the targettype's class (plus its
+// ancestors via prototype-chain walk in Model.EnumerateProperties).
+//
+// When the class isn't found in the runtime registry (e.g. the user
+// typed a name we don't recognize, or the runtime modules haven't
+// loaded yet), we fall back to the COMMON_PROPERTIES list so the user
+// still sees something useful.
+function styleBodyContext(rf: ResourceFormContext): CompletionItem[]
+{
+    const out: CompletionItem[] = [];
+    // Trigger keywords usable at the top of a setter list.
+    out.push(snippet(
+        'when',
+        'when( ${1:Property} ){\n\t$0\n}',
+        'property trigger — fires when the watched DP matches',
+    ));
+    out.push(snippet(
+        'when($Path)',
+        'when( \\$${1:Path} ){\n\t$0\n}',
+        'data trigger — fires when DataContext.Path matches',
+    ));
+    out.push(snippet(
+        'on Click',
+        'on Click {\n\tBeginStoryboard {\n\t\t$0\n\t}\n}',
+        'event trigger — fires on a routed event',
+    ));
+
+    // DP setters from the targettype's runtime class. Skip when no
+    // type is set (the LSP still wants to offer common props so
+    // typing is responsive while the author is still authoring the
+    // [targettype=X] header).
+    const klass = rf.targetType !== undefined ? Model.find_class(rf.targetType) : undefined;
+    if (klass !== undefined)
+    {
+        const props = Model.EnumerateProperties(klass);
+        for (const desc of props)
+        {
+            out.push({
+                label:  desc.Name,
+                kind:   CompletionItemKind.Property,
+                detail: dpDetail(desc),
+            });
+        }
+    }
+    else
+    {
+        // Fallback — at least surface the common DPs so the editor
+        // stays responsive while the user is mid-typing the targettype.
+        for (const name of COMMON_PROPERTIES)
+        {
+            out.push({
+                label:  name,
+                kind:   CompletionItemKind.Property,
+                detail: rf.targetType === undefined
+                    ? 'property (no targettype set)'
+                    : `property (class '${rf.targetType}' not registered)`,
+            });
+        }
+    }
+    return out;
+}
+
+// Render the right-hand `detail` text shown next to a DP completion.
+// Format: `<OwnerClass>` if inherited from an ancestor, or the bare
+// `property` label when the descriptor is registered directly on the
+// queried type. Keeps the suggestion list scannable.
+function dpDetail(
+    desc: { Owner: Function; RootOwner: Function; Name: string },
+): string
+{
+    const owner = desc.RootOwner?.name ?? desc.Owner?.name;
+    return owner !== undefined ? `${owner}.${desc.Name}` : 'property';
 }
 
 function attributeContext(element: ElementNode): CompletionItem[]

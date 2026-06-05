@@ -44,8 +44,32 @@ export interface ResourceDef
     /** For `@key = …` entries: the literal value (color, brush, …).
      *  For keyed styles/templates: undefined. */
     value?: ValueNode;
-    /** Discriminates the entry kind for hover rendering. */
-    kind:  'value' | 'style' | 'template' | 'datatemplate';
+    /** Discriminates the entry kind for hover rendering. Mirrors
+     *  `ResourceForm['keyword']` plus the `'value'` form for `@key = …`
+     *  primitive entries. */
+    kind:  'value' | ResourceForm['keyword'];
+}
+
+// Resource-form context surface — every Style / Template / DataTemplate /
+// HierarchicalDataTemplate / ItemsPanelTemplate in the document, plus the
+// metadata the LSP needs to provide contextual completions inside that
+// form's body. The completion provider queries `resourceFormAt(offset)`
+// to know whether the cursor is inside, say, a `Style[targettype=Border]`
+// body — and if so what DPs to surface.
+export interface ResourceFormContext
+{
+    keyword:    ResourceForm['keyword'];
+    /** Span of the entire resource form. */
+    fullSpan:   SourceSpan;
+    /** Span of the body braces — i.e. the region where the cursor
+     *  triggers in-body completions. Open `{` to close `}` inclusive. */
+    bodySpan:   SourceSpan;
+    /** `targettype` (Style / Template) or `datatype` (DataTemplate /
+     *  HierarchicalDataTemplate) value — used to look up the class
+     *  for DP enumeration. Undefined for forms that don't carry the
+     *  attribute (ItemsPanelTemplate) or when the meta-attr was
+     *  omitted entirely. */
+    targetType: string | undefined;
 }
 
 export interface DocAnalysis
@@ -65,6 +89,11 @@ export interface DocAnalysis
     /** Flat list of every ElementNode with its source span — used by
      *  hover / completion to find the element under the cursor. */
     elements:   ElementNode[];
+    /** Flat list of every Style / Template / DataTemplate /
+     *  HierarchicalDataTemplate / ItemsPanelTemplate in the document
+     *  with its body span + targetType, used by the completion
+     *  provider for in-body context detection. */
+    resourceForms: ResourceFormContext[];
 }
 
 const cache = new Map<string, DocAnalysis>();
@@ -102,6 +131,7 @@ function build(text: string, version: number): DocAnalysis
         emitError:  null,
         resources:  new Map(),
         elements:   [],
+        resourceForms: [],
     };
 
     // ── Parse ──────────────────────────────────────────────────────
@@ -202,6 +232,19 @@ function walk(node: unknown, out: DocAnalysis): void
                     kind:     f.keyword,
                 });
             }
+            // Record the in-body context so the completion provider
+            // can offer DP names against the form's targettype. Body
+            // span is approximated as everything strictly inside the
+            // form's outer span minus the metadata prefix — good
+            // enough for a "is cursor inside the body" containment
+            // check; the precise `{` … `}` span isn't carried on
+            // ResourceForm today.
+            out.resourceForms.push({
+                keyword:    f.keyword,
+                fullSpan:   f.span,
+                bodySpan:   bodySpanOf(f, out.text),
+                targetType: pickTargetTypeMeta(f),
+            });
             walk(f.metaAttrs, out);
             walk(f.body, out);
             return;
@@ -237,6 +280,112 @@ function recordResource(out: DocAnalysis, def: ResourceDef): void
     {
         out.resources.set(def.key, def);
     }
+}
+
+// True body span — the region strictly inside the resource form's
+// `{ … }` braces. We scan the source text from the form's start
+// looking for the first un-nested `{` (the body opener); pair it with
+// the form's end offset minus 1 (which points at the closing `}`).
+//
+// `f.body.span.start` would seem like the obvious answer but the parser
+// puts it at the FIRST token of the body's first item — for an empty
+// body or a cursor sitting on the line right after `{` (before any
+// setter), that span misses the cursor and `resourceFormAt` returns
+// undefined, suppressing in-body completions. Scanning the text fixes
+// that.
+function bodySpanOf(f: ResourceForm, text: string): SourceSpan
+{
+    let openIdx = -1;
+    let inString = false;
+    let stringChar = '';
+    let bracketDepth = 0;
+    for (let i = f.span.start.offset; i < f.span.end.offset; i++)
+    {
+        const c = text[i];
+        if (inString)
+        {
+            if (c === '\\') { i++; continue; }
+            if (c === stringChar) inString = false;
+            continue;
+        }
+        if (c === '"' || c === '\'') { inString = true; stringChar = c; continue; }
+        if (c === '[') bracketDepth++;
+        else if (c === ']') bracketDepth--;
+        else if (c === '{' && bracketDepth === 0) { openIdx = i; break; }
+    }
+    if (openIdx < 0)
+    {
+        // No body brace found — fall back to the parser-reported body
+        // span. Better to over-restrict than to return a bogus span.
+        return { start: f.body.span.start, end: f.span.end };
+    }
+    // Body interior = (openIdx + 1) … (f.span.end - 1). We DON'T have
+    // a per-character line/column converter here; SourceSpan carries
+    // {line, column, offset}, but resourceFormAt only consults
+    // `.offset` for containment, so synthesizing the line/column on
+    // the brace position with zeros is harmless for the LSP path.
+    const startPos = positionAt(text, openIdx + 1);
+    const endPos   = f.span.end;
+    return { start: startPos, end: endPos };
+}
+
+// Offset → SourceSpan position helper. We can't reuse the parser's
+// counter here (it works per-document on the way down); a linear scan
+// is fine because we only run this once per resource form.
+function positionAt(text: string, offset: number): { line: number; column: number; offset: number }
+{
+    let line = 1, col = 1;
+    for (let i = 0; i < offset && i < text.length; i++)
+    {
+        if (text[i] === '\n') { line++; col = 1; }
+        else col++;
+    }
+    return { line, column: col, offset };
+}
+
+// `targettype` for Style / Template, `datatype` for DataTemplate /
+// HierarchicalDataTemplate, undefined for ItemsPanelTemplate (no
+// type-bearing meta) and for any form where the attribute is omitted
+// or carries a non-ident value.
+function pickTargetTypeMeta(f: ResourceForm): string | undefined
+{
+    const wanted =
+        (f.keyword === 'DataTemplate' || f.keyword === 'HierarchicalDataTemplate')
+            ? 'datatype'
+            : (f.keyword === 'Style' || f.keyword === 'Template')
+                ? 'targettype'
+                : undefined;
+    if (wanted === undefined) return undefined;
+    const m = f.metaAttrs.find(
+        a => a.path.parts.length === 1 && a.path.parts[0] === wanted);
+    if (m === undefined || m.value.kind !== 'ident') return undefined;
+    return m.value.name;
+}
+
+// Innermost resource-form context whose body span contains `offset`.
+// "Innermost" matters for nested forms — e.g. a `Style` inside a
+// `Resources` slot inside a `DataTemplate` body — so the cursor sees
+// the closest target type's DPs first. Returns undefined when the
+// cursor is not inside any resource-form body.
+export function resourceFormAt(
+    analysis: DocAnalysis, offset: number,
+): ResourceFormContext | undefined
+{
+    let best: ResourceFormContext | undefined;
+    let bestSize = Infinity;
+    for (const rf of analysis.resourceForms)
+    {
+        if (offset >= rf.bodySpan.start.offset && offset <= rf.bodySpan.end.offset)
+        {
+            const size = rf.bodySpan.end.offset - rf.bodySpan.start.offset;
+            if (size < bestSize)
+            {
+                best = rf;
+                bestSize = size;
+            }
+        }
+    }
+    return best;
 }
 
 // ── Position helpers (LSP <-> mural offsets) ──────────────────────

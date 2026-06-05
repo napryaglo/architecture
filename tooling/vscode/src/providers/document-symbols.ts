@@ -37,14 +37,20 @@ export function documentSymbols(doc: TextDocument): DocumentSymbol[]
     return out;
 }
 
-function kindFor(kind: 'value' | 'style' | 'template' | 'datatemplate'): SymbolKind
+type ResourceDefKind = 'value'
+    | 'Style' | 'Template' | 'DataTemplate'
+    | 'HierarchicalDataTemplate' | 'ItemsPanelTemplate';
+
+function kindFor(kind: ResourceDefKind): SymbolKind
 {
     switch (kind)
     {
-        case 'value':        return SymbolKind.Variable;
-        case 'style':        return SymbolKind.Class;
-        case 'template':     return SymbolKind.Constructor;
-        case 'datatemplate': return SymbolKind.Constructor;
+        case 'value':                    return SymbolKind.Variable;
+        case 'Style':                    return SymbolKind.Class;
+        case 'Template':                 return SymbolKind.Constructor;
+        case 'DataTemplate':             return SymbolKind.Constructor;
+        case 'HierarchicalDataTemplate': return SymbolKind.Constructor;
+        case 'ItemsPanelTemplate':       return SymbolKind.Constructor;
     }
 }
 
