@@ -302,9 +302,43 @@ export abstract class PresentationTarget extends Model implements VisualHost
     // _isMeasureValid / _isArrangeValid caches short-circuit if nothing
     // actually changed since the last Flush.
     //
-    // Render-set state is preserved — a concrete subclass's renderer is
-    // responsible for consuming it during paint.
-    public Flush(): void
+    // Iterates until the dirty queues stay empty after a layout pass.
+    // The common case converges in one iteration: a single measure +
+    // arrange does the work and no cross-Visual coupling re-invalidates
+    // anyone. Cross-Visual coupling (e.g. Grid's SharedSizeGroup
+    // member-set invalidation) can take 1–2 extra iterations to
+    // settle: pass N's invalidation lands in the queue, pass N+1
+    // re-measures the affected visual, and any new invalidations land
+    // in turn. `maxIterations` caps the loop so a pathological scene
+    // (cyclic invalidation that never reaches a fixed point) can't
+    // hang the host — when the cap is hit, the queues are cleared
+    // anyway and Flush returns silently. Default is plenty for
+    // realistic scenes; specialised hosts can raise it.
+    //
+    // Render-set state is preserved across iterations — a concrete
+    // subclass's renderer is responsible for consuming it during paint.
+    public Flush(maxIterations: number = 16): void
+    {
+        for (let iter = 0; iter < maxIterations; iter++)
+        {
+            // Clear measure/arrange queues BEFORE each pass so any
+            // invalidations triggered DURING the pass are captured
+            // fresh. Per-Visual _isMeasureValid / _isArrangeValid
+            // caches still drive what actually gets re-measured —
+            // visuals that aren't dirty skip the recompute.
+            this.measureDirty.clear();
+            this.arrangeDirty.clear();
+            this.runLayoutPass();
+            // Converged when the pass produced no new invalidations.
+            if (this.measureDirty.size === 0 && this.arrangeDirty.size === 0) break;
+        }
+        // Final clear — Flush is done regardless of whether we
+        // converged or hit the cap. HasPendingLayout reflects that.
+        this.measureDirty.clear();
+        this.arrangeDirty.clear();
+    }
+
+    private runLayoutPass(): void
     {
         const content = this.Content;
         const autoW = Number.isNaN(this.Width);
@@ -346,9 +380,6 @@ export abstract class PresentationTarget extends Model implements VisualHost
             this._overlayRoot.Measure(new Size(surfaceW, surfaceH));
             this._overlayRoot.Arrange(new Rect(0, 0, surfaceW, surfaceH));
         }
-
-        this.measureDirty.clear();
-        this.arrangeDirty.clear();
     }
 
     // Text measurement service exposed via VisualHost. Default is the

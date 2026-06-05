@@ -271,6 +271,119 @@ describe('PresentationTarget.Flush — layout drain semantics', () => {
     });
 });
 
+describe('PresentationTarget.Flush — convergence loop', () => {
+    // A leaf that invalidates a SIBLING during its own Measure — exactly
+    // the shape that cross-Visual coupling produces (SharedSizeGroup,
+    // adorner-driven re-measure, etc.). Used to verify Flush iterates
+    // until the sibling chain settles.
+    class CoupledLeaf extends Visual
+    {
+        public sibling: CoupledLeaf | undefined;
+        public measureCount = 0;
+        constructor(private box: Size) { super(); }
+        protected override MeasureOverride(_a: Size): Size {
+            this.measureCount++;
+            // First measure invalidates the sibling exactly ONCE — a real
+            // coupling test would gate on some condition, but for the
+            // test fixture we just want to prove Flush re-runs on the
+            // sibling and then converges.
+            if (this.measureCount === 1 && this.sibling !== undefined)
+            {
+                this.sibling.InvalidateMeasure();
+            }
+            return this.box;
+        }
+    }
+
+    test('Flush converges in a single call when a Visual invalidates a sibling during Measure', () => {
+        const a = new CoupledLeaf(new Size(10, 10));
+        const b = new CoupledLeaf(new Size(20, 20));
+        a.sibling = b;   // a's first measure invalidates b
+        // Mount under a simple container that measures both children.
+        class Panel2 extends Visual {
+            private kids: Visual[] = [];
+            public override get visualChildren(): readonly Visual[] { return this.kids; }
+            protected override MeasureOverride(av: Size): Size {
+                for (const c of this.kids) c.Measure(av);
+                return new Size(0, 0);
+            }
+            public Add(c: Visual): void {
+                this.kids.push(c);
+                (this as unknown as { AttachVisual: (v: Visual) => void }).AttachVisual(c);
+            }
+        }
+        const root = new Panel2();
+        root.Add(a); root.Add(b);
+        const t = makeTarget(root, 100, 100);
+
+        // Reset measure counts after target wiring so the assertion
+        // reflects ONLY the work done by the explicit Flush below.
+        a.measureCount = 0;
+        b.measureCount = 0;
+        a.InvalidateMeasure();
+        t.Flush();
+
+        // After Flush, the coupled invalidation chain has settled —
+        // no pending layout reported.
+        assert.equal(t.HasPendingLayout, false);
+        // `a` is measured at least once; the sibling invalidation
+        // triggered during a's first measure put `b` back in the queue
+        // and the convergence loop re-measured it. Both are valid
+        // afterward.
+        assert.ok(a.measureCount >= 1, 'a measured at least once');
+        assert.ok(b.measureCount >= 1, 'b measured at least once');
+    });
+
+    test('Flush respects the maxIterations cap on a pathological cycle', () => {
+        // Two leaves that re-invalidate EACH OTHER on every measure —
+        // an infinite ping-pong. The cap should make Flush return
+        // after `maxIterations` passes regardless.
+        class Pingpong extends Visual {
+            public partner: Pingpong | undefined;
+            public measureCount = 0;
+            protected override MeasureOverride(_a: Size): Size {
+                this.measureCount++;
+                this.partner?.InvalidateMeasure();
+                return Size.Zero;
+            }
+        }
+        const x = new Pingpong();
+        const y = new Pingpong();
+        x.partner = y; y.partner = x;
+        class Wrap extends Visual {
+            private kids: Visual[] = [];
+            public override get visualChildren(): readonly Visual[] { return this.kids; }
+            protected override MeasureOverride(av: Size): Size {
+                for (const c of this.kids) c.Measure(av);
+                return Size.Zero;
+            }
+            public Add(c: Visual): void {
+                this.kids.push(c);
+                (this as unknown as { AttachVisual: (v: Visual) => void }).AttachVisual(c);
+            }
+        }
+        const root = new Wrap();
+        root.Add(x); root.Add(y);
+        const t = makeTarget(root, 100, 100);
+
+        x.measureCount = 0;
+        y.measureCount = 0;
+        x.InvalidateMeasure();
+        // 5-iteration cap — chosen low so the test runs fast. The
+        // convergence body runs the inner loop at most 5 times before
+        // forcing a return.
+        t.Flush(5);
+
+        // Each iteration measures both x and y once (because each
+        // re-invalidates the other). So total measure counts are
+        // bounded by `cap` per visual; we just assert the loop didn't
+        // hang and reported clean state on exit.
+        assert.equal(t.HasPendingLayout, false);
+        assert.ok(x.measureCount <= 5);
+        assert.ok(y.measureCount <= 5);
+    });
+});
+
 describe('HeadlessTarget.Render now drains Flush() and clears renderDirty', () => {
     test('Render(dc) drains a pending layout invalidation before painting', () => {
         const leaf = new TestLeaf(new Size(40, 25));

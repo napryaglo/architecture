@@ -230,6 +230,35 @@ Property-to-invalidation routing:
 Combine flags with `|`: a property that affects both layout and rendering
 uses `MetaData.Measure | MetaData.Render`.
 
+### `PresentationTarget.Flush` — convergence loop
+
+`Flush` runs a measure + arrange pass on the host's `Content` (and on
+the overlay layer if attached). Cross-Visual coupling — `Grid`'s
+`SharedSizeGroup`, future adorner-driven re-measures, etc. — can
+re-invalidate Visuals during a pass: the measure / arrange queues
+become non-empty mid-flush.
+
+`Flush` handles this by iterating: each pass clears the dirty queues,
+runs the layout walk, and checks whether the queues are empty again.
+If they are, the layout has converged and Flush returns. If
+something got re-dirtied, Flush runs another pass.
+
+```ts
+target.Flush();                    // default: up to 16 iterations
+target.Flush(/*maxIterations=*/8); // override the cap
+```
+
+The default cap (16) is generous for realistic scenes; the common
+case converges on iteration 1. Pathological cyclic invalidation
+(Visual A invalidates B which invalidates A which …) hits the cap
+and Flush returns silently with the queues cleared — the renderer
+sees whatever state the last iteration produced, not an infinite
+hang.
+
+Only the measure / arrange queues drive the convergence check;
+`renderDirty` is intentionally not part of it (a render pass is what
+clears renderDirty, and Flush doesn't paint).
+
 ## 6. Sizing — Width / Height / Min / Max
 
 Visual defines six sizing properties, all bindable:
