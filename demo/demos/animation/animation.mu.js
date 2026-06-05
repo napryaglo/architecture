@@ -1,4 +1,5 @@
-import { Border, Button, DataTemplate, DockPanel, Orientation, StackPanel, TextBlock } from "@visualisation-sub/mural/Controls";
+import { AnimationVM } from "./animation-vm.mjs";
+import { Border, Button, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@visualisation-sub/mural/Controls";
 import { Color, NameScope, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
 import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
 
@@ -12,7 +13,7 @@ export function create() {
         _border2._set_property_value_by_name("BorderThickness", new Thickness(1));
         const _dockPanel3 = new DockPanel();
         const _border4 = new Border();
-        _border4._set_property_value_by_name(DockPanel, "Dock", "Top");
+        _border4._set_property_value_by_name(DockPanel, "Dock", Dock.Top);
         _border4._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#1976d2')));
         _border4._set_property_value_by_name("Padding", new Thickness(16, 12, 16, 12));
         const _textBlock5 = new TextBlock();
@@ -38,7 +39,6 @@ export function create() {
         _stackPanel9._set_property_value_by_name("Orientation", Orientation.Horizontal);
         const _button10 = new Button();
         _button10.Name = "slideBtn";
-        _border2.nameScope.Register("slideBtn", _button10);
         _button10._set_property_value_by_name("Width", 90);
         const _textBlock11 = new TextBlock();
         _textBlock11._set_property_value_by_name("Text", "Play");
@@ -46,7 +46,6 @@ export function create() {
         _stackPanel9.AddChild(_button10);
         const _border12 = new Border();
         _border12.Name = "slideTarget";
-        _border2.nameScope.Register("slideTarget", _border12);
         _border12._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#4caf50')));
         _border12._set_property_value_by_name("Width", 100);
         _border12._set_property_value_by_name("Height", 24);
@@ -74,7 +73,6 @@ export function create() {
         _stackPanel16._set_property_value_by_name("Orientation", Orientation.Horizontal);
         const _button17 = new Button();
         _button17.Name = "loopBtn";
-        _border2.nameScope.Register("loopBtn", _button17);
         _button17._set_property_value_by_name("Width", 90);
         const _textBlock18 = new TextBlock();
         _textBlock18._set_property_value_by_name("Text", "Start");
@@ -82,7 +80,6 @@ export function create() {
         _stackPanel16.AddChild(_button17);
         const _border19 = new Border();
         _border19.Name = "loopTarget";
-        _border2.nameScope.Register("loopTarget", _border19);
         _border19._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#1976d2')));
         _border19._set_property_value_by_name("Width", 100);
         _border19._set_property_value_by_name("Height", 24);
@@ -110,7 +107,6 @@ export function create() {
         _stackPanel23._set_property_value_by_name("Orientation", Orientation.Horizontal);
         const _button24 = new Button();
         _button24.Name = "pulseBtn";
-        _border2.nameScope.Register("pulseBtn", _button24);
         _button24._set_property_value_by_name("Width", 90);
         const _textBlock25 = new TextBlock();
         _textBlock25._set_property_value_by_name("Text", "Play");
@@ -118,7 +114,6 @@ export function create() {
         _stackPanel23.AddChild(_button24);
         const _border26 = new Border();
         _border26.Name = "pulseTarget";
-        _border2.nameScope.Register("pulseTarget", _border26);
         _border26._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#4caf50')));
         _border26._set_property_value_by_name("BorderBrush", new SolidColorBrush(Color.FromHex('#1976d2')));
         _border26._set_property_value_by_name("BorderThickness", new Thickness(1));
@@ -151,7 +146,6 @@ export function create() {
         _stackPanel31._set_property_value_by_name("Orientation", Orientation.Horizontal);
         const _button32 = new Button();
         _button32.Name = "colorBtn";
-        _border2.nameScope.Register("colorBtn", _button32);
         _button32._set_property_value_by_name("Width", 90);
         const _textBlock33 = new TextBlock();
         _textBlock33._set_property_value_by_name("Text", "Play");
@@ -159,7 +153,6 @@ export function create() {
         _stackPanel31.AddChild(_button32);
         const _border34 = new Border();
         _border34.Name = "colorTarget";
-        _border2.nameScope.Register("colorTarget", _border34);
         _border34._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#1976d2')));
         _border34._set_property_value_by_name("Width", 140);
         _border34._set_property_value_by_name("Height", 24);
@@ -186,7 +179,6 @@ export function create() {
         _stackPanel38._set_property_value_by_name("Orientation", Orientation.Horizontal);
         const _button39 = new Button();
         _button39.Name = "bezierBtn";
-        _border2.nameScope.Register("bezierBtn", _button39);
         _button39._set_property_value_by_name("Width", 90);
         const _textBlock40 = new TextBlock();
         _textBlock40._set_property_value_by_name("Text", "Play both");
@@ -197,7 +189,6 @@ export function create() {
         _stackPanel41._set_property_value_by_name("Margin", new Thickness(20, 0, 0, 0));
         const _border42 = new Border();
         _border42.Name = "bezierA";
-        _border2.nameScope.Register("bezierA", _border42);
         _border42._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#1976d2')));
         _border42._set_property_value_by_name("Width", 100);
         _border42._set_property_value_by_name("Height", 14);
@@ -206,7 +197,6 @@ export function create() {
         _stackPanel41.AddChild(_border42);
         const _border43 = new Border();
         _border43.Name = "bezierB";
-        _border2.nameScope.Register("bezierB", _border43);
         _border43._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#4caf50')));
         _border43._set_property_value_by_name("Width", 100);
         _border43._set_property_value_by_name("Height", 14);
@@ -225,7 +215,7 @@ export function create() {
         _dockPanel3.AddChild(_stackPanel6);
         _border2.SetChild(_dockPanel3);
         return _border2;
-    }, "AnimationVM");
+    }, AnimationVM);
     _rd0.Set("AnimationTemplate", _tmpl1);
     return _rd0;
 }

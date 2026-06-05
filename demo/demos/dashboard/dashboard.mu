@@ -1,3 +1,5 @@
+import DashboardVM from "./dashboard-vm.mjs"
+
 // dashboard.mu — sample µ-mural source for the HTML demo.
 //
 // Demonstrates: a Canvas root with three positioned Borders styled
@@ -22,7 +24,7 @@ ResourceDictionary {
     // always wins over a style-tier setter — that's why these
     // styles own the brushes instead of the Border attributes
     // setting them).
-    style x:key="DashboardPrimaryCard" [targettype=Border]{
+    Style x:key="DashboardPrimaryCard" [TargetType=Border]{
         Background      = #4caf50;
         BorderBrush     = #1b5e20;
         BorderThickness = (2);
@@ -32,7 +34,7 @@ ResourceDictionary {
         when( IsPressed   ){ Background = #2e7d32; BorderThickness = (4); }
     }
 
-    style x:key="DashboardDangerCard" [targettype=Border]{
+    Style x:key="DashboardDangerCard" [TargetType=Border]{
         Background      = #d32f2f;
         BorderBrush     = #7f0000;
         BorderThickness = (2);
@@ -42,7 +44,7 @@ ResourceDictionary {
         when( IsPressed   ){ Background = #b71c1c; BorderThickness = (4); }
     }
 
-    style x:key="DashboardPaperCard" [targettype=Border]{
+    Style x:key="DashboardPaperCard" [TargetType=Border]{
         Background      = #ffffff;
         BorderBrush     = #d1d5db;
         BorderThickness = (1);
@@ -52,7 +54,7 @@ ResourceDictionary {
         when( IsPressed   ){ Background = #e0e0e0; BorderThickness = (3); }
     }
 
-    datatemplate x:key="DashboardTemplate" [datatype=DashboardVM] {
+    DataTemplate x:key="DashboardTemplate" [DataType=DashboardVM] {
         Canvas {
 
             // Top-left card — primary palette + triggers via DashboardPrimaryCard.

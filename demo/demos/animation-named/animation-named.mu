@@ -1,3 +1,5 @@
+import AnimationNamedVM from "./animation-named-vm.mjs"
+
 // animation-named.mu — named-storyboard showcase: Pause / Resume / Stop.
 //
 // Each Button runs a "loop" Storyboard from Loaded; hovering pauses it,
@@ -26,11 +28,11 @@
 // scopes to this demo only.
 
 ResourceDictionary {
-    datatemplate x:key="AnimationNamedTemplate" [datatype=AnimationNamedVM] {
+    DataTemplate x:key="AnimationNamedTemplate" [DataType=AnimationNamedVM] {
         Border [Background=#ffffff, BorderBrush=#e2e8f0,
                 BorderThickness=(1)]{
             resources: {
-                style[targettype=Button]{
+                Style[TargetType=Button]{
                     on Loaded {
                         BeginStoryboard [Name="loop"] {
                             DoubleAnimation[TargetProperty=Width,

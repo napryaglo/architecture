@@ -1,3 +1,5 @@
+import CounterVM from "./counter-vm.mjs"
+
 // counter.mu — a ResourceDictionary holding the demo's DataTemplate.
 // The template is parameterized by CounterVM: when the platform shell
 // sets PageView.Content to a CounterVM instance, the ContentControl
@@ -6,7 +8,7 @@
 // to the CounterVM so the $-bindings inside the template resolve.
 
 ResourceDictionary {
-    datatemplate x:key="CounterTemplate" [datatype=CounterVM] {
+    DataTemplate x:key="CounterTemplate" [DataType=CounterVM] {
         Border [Background=#ffffff, BorderBrush=#e2e8f0, BorderThickness=(1)] {
             Canvas {
                 TextBlock[Canvas.Left=24, Canvas.Top=20,

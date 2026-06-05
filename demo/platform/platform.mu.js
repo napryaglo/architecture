@@ -1,4 +1,5 @@
-import { Border, DockPanel, HierarchicalDataTemplate, PageView, StackPanel, TextBlock, TreeView, TreeViewItem } from "@visualisation-sub/mural/Controls";
+import { GroupVM } from "./platform-vm.mjs";
+import { Border, Dock, DockPanel, HierarchicalDataTemplate, PageView, StackPanel, TextBlock, TreeView, TreeViewItem } from "@visualisation-sub/mural/Controls";
 import { Application, Color, DataContextBinding, NameScope, Setter, Style, Thickness } from "@visualisation-sub/mural/runtime";
 import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
 
@@ -13,7 +14,7 @@ export const app = (() => {
     const _tmpl2 = new HierarchicalDataTemplate((_data) => {
         const _treeViewItem3 = new TreeViewItem();
         return _treeViewItem3;
-    }, (data) => data?.Demos, undefined, undefined, "GroupVM");
+    }, (data) => data?.Demos, undefined, undefined, GroupVM);
     _rd1.Set("GroupTemplate", _tmpl2);
     const _setter4 = new Setter(TreeViewItem, "IsExpanded", true);
     const _style5 = new Style(TreeViewItem, [_setter4], undefined, [], []);
@@ -24,7 +25,7 @@ export const app = (() => {
     const _dockPanel7 = new DockPanel();
     _dockPanel7._set_property_value_by_name("LastChildFill", true);
     const _border8 = new Border();
-    _border8._set_property_value_by_name(DockPanel, "Dock", "Left");
+    _border8._set_property_value_by_name(DockPanel, "Dock", Dock.Left);
     _border8._set_property_value_by_name("Width", 260);
     _border8._set_property_value_by_name("Background", Application.current.Resources.Resolve("navBg"));
     _border8._set_property_value_by_name("BorderBrush", Application.current.Resources.Resolve("hairline"));

@@ -1,3 +1,5 @@
+import AnimationDeclarativeVM from "./animation-declarative-vm.mjs"
+
 // animation-declarative.mu — declarative trigger-action showcase.
 //
 // All animation wiring lives in the markup via Style EventTriggers — no
@@ -10,14 +12,14 @@
 // Packaged as a DataTemplate keyed off AnimationDeclarativeVM.
 
 ResourceDictionary {
-    datatemplate x:key="AnimationDeclarativeTemplate" [datatype=AnimationDeclarativeVM] {
+    DataTemplate x:key="AnimationDeclarativeTemplate" [DataType=AnimationDeclarativeVM] {
         Border [Background=#ffffff, BorderBrush=#e2e8f0,
                 BorderThickness=(1)]{
             resources: {
                 // Implicit style on Button — every Button inside this
                 // Border's subtree picks it up automatically. The
                 // EventTrigger fires a fresh Storyboard per click.
-                style[targettype=Button]{
+                Style[TargetType=Button]{
                     on Click {
                         BeginStoryboard {
                             DoubleAnimation[TargetProperty=Width, From=80, To=240, Duration=400]

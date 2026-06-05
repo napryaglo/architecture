@@ -1,3 +1,5 @@
+import GroupVM from "./platform-vm.mjs"
+
 // platform.mu — MVVM shell for the µ-mural demo platform.
 //
 //   View    — this .mu file: a DockPanel with a nav strip on the left
@@ -46,7 +48,7 @@ Application{
         // TreeViewItem and sets Header through the Label/Name/Text
         // display-string convention. DataTemplate's API requires a
         // body element so we satisfy it with a no-op.
-        hierarchicaldatatemplate x:key="GroupTemplate" [datatype=GroupVM, itemsselector=Demos] {
+        HierarchicalDataTemplate x:key="GroupTemplate" [DataType=GroupVM, itemsselector=Demos] {
             TreeViewItem
         }
 
@@ -54,7 +56,7 @@ Application{
         // expand each Group on first show. Demo leaves inherit it
         // harmlessly — IsExpanded=true on a leaf is a no-op (no
         // children to show).
-        style x:key="NavRowStyle" [targettype=TreeViewItem]{
+        Style x:key="NavRowStyle" [TargetType=TreeViewItem]{
             IsExpanded = true;
         }
 

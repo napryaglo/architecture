@@ -1,3 +1,5 @@
+import TextBoxVM from "./text-box-vm.mjs"
+
 // text-box.mu — TextBox overflow showcase.
 //
 // Three fields demonstrating the overflow behaviours we ship:
@@ -17,7 +19,7 @@
 // TextBoxVM instance.
 
 ResourceDictionary {
-    datatemplate x:key="TextBoxTemplate" [datatype=TextBoxVM] {
+    DataTemplate x:key="TextBoxTemplate" [DataType=TextBoxVM] {
         Border [Background=#ffffff, BorderBrush=#e2e8f0,
                 BorderThickness=(1)]{
 

@@ -1,3 +1,4 @@
+import { CounterVM } from "./counter-vm.mjs";
 import { Border, Button, Canvas, ComboBox, DataTemplate, TextBlock, TextWrapping } from "@visualisation-sub/mural/Controls";
 import { Color, DataContextBinding, MultiBinding, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
 import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
@@ -68,7 +69,7 @@ export function create() {
         _canvas3.AddChild(_textBlock12);
         _border2.SetChild(_canvas3);
         return _border2;
-    }, "CounterVM");
+    }, CounterVM);
     _rd0.Set("CounterTemplate", _tmpl1);
     return _rd0;
 }

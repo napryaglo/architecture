@@ -1,4 +1,5 @@
-import { Border, Button, DataTemplate, DockPanel, Orientation, StackPanel, TextBlock } from "@visualisation-sub/mural/Controls";
+import { AnimationTriggersVM } from "./animation-triggers-vm.mjs";
+import { Border, Button, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@visualisation-sub/mural/Controls";
 import { BeginStoryboardAction, Color, DoubleAnimation, EventTrigger, NameScope, PropertyTrigger, ResourceDictionary, Storyboard, Style, Thickness } from "@visualisation-sub/mural/runtime";
 import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
 
@@ -41,7 +42,7 @@ export function create() {
         _rd3.Set(Button, _style18);
         const _dockPanel19 = new DockPanel();
         const _border20 = new Border();
-        _border20._set_property_value_by_name(DockPanel, "Dock", "Top");
+        _border20._set_property_value_by_name(DockPanel, "Dock", Dock.Top);
         _border20._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#1976d2')));
         _border20._set_property_value_by_name("Padding", new Thickness(16, 12, 16, 12));
         const _textBlock21 = new TextBlock();
@@ -104,7 +105,6 @@ export function create() {
         _stackPanel33.AddChild(_textBlock34);
         const _button35 = new Button();
         _button35.Name = "bannerBtn";
-        _border2.nameScope.Register("bannerBtn", _button35);
         _button35._set_property_value_by_name("Width", 200);
         _button35._set_property_value_by_name("Height", 28);
         _button35._set_property_value_by_name("Margin", new Thickness(0, 0, 0, 12));
@@ -114,7 +114,6 @@ export function create() {
         _stackPanel33.AddChild(_button35);
         const _border37 = new Border();
         _border37.Name = "banner";
-        _border2.nameScope.Register("banner", _border37);
         _border37._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#ff9800')));
         _border37._set_property_value_by_name("Width", 80);
         _border37._set_property_value_by_name("Height", 20);
@@ -124,7 +123,7 @@ export function create() {
         _dockPanel19.AddChild(_stackPanel22);
         _border2.SetChild(_dockPanel19);
         return _border2;
-    }, "AnimationTriggersVM");
+    }, AnimationTriggersVM);
     _rd0.Set("AnimationTriggersTemplate", _tmpl1);
     return _rd0;
 }

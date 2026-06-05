@@ -1,4 +1,5 @@
-import { Border, Button, DataTemplate, DockPanel, ListBox, ListBoxItem, Orientation, SelectionMode, StackPanel, TextBlock } from "@visualisation-sub/mural/Controls";
+import { ListBoxVM } from "./list-box-vm.mjs";
+import { Border, Button, DataTemplate, Dock, DockPanel, ListBox, ListBoxItem, Orientation, SelectionMode, StackPanel, TextBlock } from "@visualisation-sub/mural/Controls";
 import { Color, NameScope, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
 import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
 
@@ -12,7 +13,7 @@ export function create() {
         _border2._set_property_value_by_name("BorderThickness", new Thickness(1));
         const _dockPanel3 = new DockPanel();
         const _border4 = new Border();
-        _border4._set_property_value_by_name(DockPanel, "Dock", "Top");
+        _border4._set_property_value_by_name(DockPanel, "Dock", Dock.Top);
         _border4._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#1976d2')));
         _border4._set_property_value_by_name("Padding", new Thickness(16, 12, 16, 12));
         const _textBlock5 = new TextBlock();
@@ -107,7 +108,6 @@ export function create() {
         _stackPanel29._set_property_value_by_name("Margin", new Thickness(0, 0, 0, 8));
         const _button30 = new Button();
         _button30.Name = "btnSort";
-        _border2.nameScope.Register("btnSort", _button30);
         _button30._set_property_value_by_name("Margin", new Thickness(0, 0, 4, 0));
         const _textBlock31 = new TextBlock();
         _textBlock31._set_property_value_by_name("Text", "Sort A↕Z");
@@ -116,7 +116,6 @@ export function create() {
         _stackPanel29.AddChild(_button30);
         const _button32 = new Button();
         _button32.Name = "btnFilter";
-        _border2.nameScope.Register("btnFilter", _button32);
         const _textBlock33 = new TextBlock();
         _textBlock33._set_property_value_by_name("Text", "Engineers only");
         _textBlock33._set_property_value_by_name("FontSize", 11);
@@ -125,7 +124,6 @@ export function create() {
         _stackPanel27.AddChild(_stackPanel29);
         const _textBlock34 = new TextBlock();
         _textBlock34.Name = "statusLine";
-        _border2.nameScope.Register("statusLine", _textBlock34);
         _textBlock34._set_property_value_by_name("Text", "6 of 6 visible");
         _textBlock34._set_property_value_by_name("FontSize", 10);
         _textBlock34._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#1976d2')));
@@ -133,13 +131,12 @@ export function create() {
         _stackPanel27.AddChild(_textBlock34);
         const _listBox35 = new ListBox();
         _listBox35.Name = "bound";
-        _border2.nameScope.Register("bound", _listBox35);
         _stackPanel27.AddChild(_listBox35);
         _stackPanel6.AddChild(_stackPanel27);
         _dockPanel3.AddChild(_stackPanel6);
         _border2.SetChild(_dockPanel3);
         return _border2;
-    }, "ListBoxVM");
+    }, ListBoxVM);
     _rd0.Set("ListBoxTemplate", _tmpl1);
     return _rd0;
 }

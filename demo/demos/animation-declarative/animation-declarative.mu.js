@@ -1,4 +1,5 @@
-import { Border, Button, DataTemplate, DockPanel, Orientation, StackPanel, TextBlock } from "@visualisation-sub/mural/Controls";
+import { AnimationDeclarativeVM } from "./animation-declarative-vm.mjs";
+import { Border, Button, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@visualisation-sub/mural/Controls";
 import { BeginStoryboardAction, Color, DoubleAnimation, EventTrigger, ResourceDictionary, Storyboard, Style, Thickness } from "@visualisation-sub/mural/runtime";
 import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
 
@@ -20,7 +21,7 @@ export function create() {
         _rd3.Set(Button, _style7);
         const _dockPanel8 = new DockPanel();
         const _border9 = new Border();
-        _border9._set_property_value_by_name(DockPanel, "Dock", "Top");
+        _border9._set_property_value_by_name(DockPanel, "Dock", Dock.Top);
         _border9._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#1976d2')));
         _border9._set_property_value_by_name("Padding", new Thickness(16, 12, 16, 12));
         const _textBlock10 = new TextBlock();
@@ -72,7 +73,7 @@ export function create() {
         _dockPanel8.AddChild(_stackPanel11);
         _border2.SetChild(_dockPanel8);
         return _border2;
-    }, "AnimationDeclarativeVM");
+    }, AnimationDeclarativeVM);
     _rd0.Set("AnimationDeclarativeTemplate", _tmpl1);
     return _rd0;
 }

@@ -1,3 +1,5 @@
+import ListBoxVM from "./list-box-vm.mjs"
+
 // list-box.mu — ListBox demo: composed-markup rows on the left, a
 // counterpart bound to the Items convenience path on the right. Both
 // share a single DockPanel header strip.
@@ -9,7 +11,7 @@
 // Packaged as a DataTemplate keyed off ListBoxVM.
 
 ResourceDictionary {
-    datatemplate x:key="ListBoxTemplate" [datatype=ListBoxVM] {
+    DataTemplate x:key="ListBoxTemplate" [DataType=ListBoxVM] {
         // x:root marks this Border as the NameScope owner so x:name
         // attributes inside register against its scope — VM's
         // OnViewMounted then resolves them via FindName.

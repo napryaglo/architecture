@@ -1,33 +1,46 @@
+import DragDropVM from "./drag-drop-vm.mjs"
+import ItemVM     from "./drag-drop-vm.mjs"
+
 // drag-drop.mu — two ListBoxes, items move between them via drag.
 //
-// Each ListBoxItem is a declarative drag source via the
-// DragDropItemContainerStyle (IsDraggable=true + OnDragStart bound to
+// Each ListBoxItem is a declarative drag source via an implicit
+// ListBoxItem Style (IsDraggable=true + OnDragStart bound to
 // ItemVM.BeginDragData). The drop receivers (the two ListBoxes) are
 // wired by listbox-drop-behavior from the bootstrap — pure-markup
 // drop-target wiring isn't yet available, hence the Behavior.
+//
+// No `x:key` anywhere — DataTemplates resolve by DataType identity,
+// the Style by TargetType. The container Style lives inside the demo
+// shell's local resources so it only re-styles ListBoxItems rendered
+// by THIS demo, not every demo on the platform.
 
 ResourceDictionary {
-    // Each item renders as a left-padded label. ListBox routes
-    // ItemTemplate through ContentControl when a matching DataTemplate
-    // is registered for the item's type (DataType=ItemVM here).
-    DataTemplate x:key="DragDropItemTemplate" [datatype=ItemVM] {
+
+    // Per-item template: ListBox.contentForItem auto-resolves via
+    // findDataTemplateForType(ItemVM) when ItemTemplate is unset.
+    DataTemplate [DataType=ItemVM] {
         TextBlock [Text=$Label, Margin=(8,4,8,4), FontSize=12]
     }
 
-    // ListBoxItem container style — declarative drag source. ListBox
-    // sets the container's DataContext to the per-row item, so the
-    // OnDragStart=$BeginDragData binding resolves against ItemVM and
-    // finds the function-DP.
-    Style x:key="DragDropItemContainerStyle" [targettype=ListBoxItem] {
-        IsDraggable = true;
-        OnDragStart = $BeginDragData;
-    }
-
     // Demo shell.
-    DataTemplate x:key="DragDropTemplate" [datatype=DragDropVM] {
+    DataTemplate [DataType=DragDropVM] {
         Border x:root [Background=#ffffff, BorderBrush=#e2e8f0,
                        BorderThickness=(1)]
         {
+            resources: {
+                // ListBoxItem container style — declarative drag source.
+                // Lives in the shell's local resources so the implicit
+                // [TargetType=ListBoxItem] lookup only matches inside
+                // this demo's subtree. ListBox sets the container's
+                // DataContext to the per-row item, so OnDragStart=
+                // $BeginDragData resolves against ItemVM and finds the
+                // function-DP.
+                Style [TargetType=ListBoxItem] {
+                    IsDraggable = true;
+                    OnDragStart = $BeginDragData;
+                }
+            }
+
             DockPanel
             {
                 // Header strip.
@@ -69,9 +82,7 @@ ResourceDictionary {
                                       FontSize=12, Foreground=#374151,
                                       Margin=(10,8,8,4)]
                             ListBox x:name="leftList"
-                                    [ItemsSource=$LeftItems,
-                                     ItemTemplate=@DragDropItemTemplate,
-                                     ItemContainerStyle=@DragDropItemContainerStyle]
+                                    [ItemsSource=$LeftItems]
                         }
                     }
 
@@ -86,9 +97,7 @@ ResourceDictionary {
                                       Margin=(10,8,8,4)]
 
                             ListBox x:name="rightList"
-                                    [ItemsSource=$RightItems,
-                                     ItemTemplate=@DragDropItemTemplate,
-                                     ItemContainerStyle=@DragDropItemContainerStyle]
+                                    [ItemsSource=$RightItems]
                         }
                     }
                 }

@@ -1,3 +1,5 @@
+import DrawerVM from "./drawer-vm.mjs"
+
 // drawer.mu — Drawer demo wiring a Persistent left nav rail and a
 // Temporary right options pane through a single DockPanel host.
 //
@@ -19,7 +21,7 @@
 // via LastChildFill.
 
 ResourceDictionary {
-    datatemplate x:key="DrawerTemplate" [datatype=DrawerVM] {
+    DataTemplate x:key="DrawerTemplate" [DataType=DrawerVM] {
         Border [Background=#ffffff, BorderBrush=#e2e8f0,
                 BorderThickness=(1)]{
 

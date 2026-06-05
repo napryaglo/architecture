@@ -1,3 +1,5 @@
+import AnimationTriggersVM from "./animation-triggers-vm.mjs"
+
 // animation-triggers.mu — declarative trigger-action showcase covering
 // the advanced shapes:
 //
@@ -17,7 +19,7 @@
 // scopes to this demo only.
 
 ResourceDictionary {
-    datatemplate x:key="AnimationTriggersTemplate" [datatype=AnimationTriggersVM] {
+    DataTemplate x:key="AnimationTriggersTemplate" [DataType=AnimationTriggersVM] {
         // x:root marks this Border as the NameScope owner so the
         // inner `x:name="banner"` / `x:name="bannerBtn"` registrations
         // resolve via FindName at trigger-fire time.
@@ -27,7 +29,7 @@ ResourceDictionary {
                 // PropertyTrigger enter/exit actions — hover edges
                 // trigger setters AND storyboards together. Every
                 // Button in this template's subtree picks it up.
-                style[targettype=Button]{
+                Style[TargetType=Button]{
                     on Loaded {
                         BeginStoryboard {
                             DoubleAnimation[TargetProperty=Width, From=60, To=140, Duration=500]

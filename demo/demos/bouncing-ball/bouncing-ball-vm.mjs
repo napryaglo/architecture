@@ -1,0 +1,75 @@
+// Bouncing-ball VM. A single ball flies in a fixed-size box, reflecting
+// velocity off each wall. Pure simulation state lives here; the
+// per-tick integration runs from the bootstrap subscribing to the
+// animation clock (Rule 5: VMs don't touch host globals — the clock is
+// the framework's injectable service, the bootstrap does the wiring).
+
+import { MetaData, Model } from '@visualisation-sub/mural/runtime';
+
+// Fixed playfield, in CSS pixels. The view's Border is sized to match;
+// the VM's collision logic is the source of truth.
+const BOUNDS_W = 640;
+const BOUNDS_H = 360;
+
+// Ball diameter, also in pixels. Plain constant — the view binds the
+// Ellipse's Width / Height to the Diameter DP, but the value never
+// changes after construction so a DP is overkill.
+const DIAMETER = 36;
+
+export const PLAYFIELD_W = BOUNDS_W;
+export const PLAYFIELD_H = BOUNDS_H;
+
+export class BouncingBallVM extends Model
+{
+    static {
+        // X / Y are the top-left of the ball's bounding box, in
+        // playfield-local pixel coordinates. The view binds Ellipse's
+        // Canvas.Left / Canvas.Top straight to them, so a single Step
+        // call moves the ball on screen via the binding.
+        Model.RegisterProperty(BouncingBallVM, 'X',        0,        MetaData.None);
+        Model.RegisterProperty(BouncingBallVM, 'Y',        0,        MetaData.None);
+        Model.RegisterProperty(BouncingBallVM, 'Diameter', DIAMETER, MetaData.None);
+    }
+
+    constructor() {
+        super();
+        // Plain fields for the simulation — velocity (px / ms) and the
+        // playfield bounds. None of these are bound by the view; keeping
+        // them off the DP system avoids change-notification spam from
+        // the per-tick integration and saves a few allocations per ms.
+        this._vx = 0.28;
+        this._vy = 0.19;
+
+        // Seed the ball roughly centred so the first frame doesn't draw
+        // it clipped against the corner.
+        this._set_property_value_by_name('X', (BOUNDS_W - DIAMETER) / 2);
+        this._set_property_value_by_name('Y', (BOUNDS_H - DIAMETER) / 3);
+    }
+
+    get X()        { return this._get_property_value_by_name('X'); }
+    get Y()        { return this._get_property_value_by_name('Y'); }
+    get Diameter() { return this._get_property_value_by_name('Diameter'); }
+
+    // Integrate position by velocity * dt, then reflect off any wall
+    // the ball has crossed. Reflection uses the "mirror back" trick —
+    // if the ball overshot the right wall by `over`, set the new x to
+    // `(right - over)` so the trajectory looks continuous instead of
+    // clamping flat against the edge for a frame.
+    Step(dtMs)
+    {
+        if (dtMs <= 0 || dtMs > 100) return; // skip pause-resume gaps
+        const d  = this.Diameter;
+        let nx = this.X + this._vx * dtMs;
+        let ny = this.Y + this._vy * dtMs;
+        const right  = BOUNDS_W - d;
+        const bottom = BOUNDS_H - d;
+
+        if (nx < 0)         { nx = -nx;                 this._vx = -this._vx; }
+        else if (nx > right){ nx = 2 * right - nx;      this._vx = -this._vx; }
+        if (ny < 0)         { ny = -ny;                 this._vy = -this._vy; }
+        else if (ny > bottom){ ny = 2 * bottom - ny;    this._vy = -this._vy; }
+
+        this._set_property_value_by_name('X', nx);
+        this._set_property_value_by_name('Y', ny);
+    }
+}

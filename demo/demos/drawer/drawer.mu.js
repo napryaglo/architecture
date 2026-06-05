@@ -1,4 +1,5 @@
-import { Border, Button, DataTemplate, DockPanel, Drawer, Orientation, StackPanel, TextBlock, TextWrapping } from "@visualisation-sub/mural/Controls";
+import { DrawerVM } from "./drawer-vm.mjs";
+import { Border, Button, DataTemplate, Dock, DockPanel, Drawer, DrawerVariant, Orientation, StackPanel, TextBlock, TextWrapping } from "@visualisation-sub/mural/Controls";
 import { Color, DataContextBinding, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
 import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
 
@@ -11,7 +12,7 @@ export function create() {
         _border2._set_property_value_by_name("BorderThickness", new Thickness(1));
         const _dockPanel3 = new DockPanel();
         const _border4 = new Border();
-        _border4._set_property_value_by_name(DockPanel, "Dock", "Top");
+        _border4._set_property_value_by_name(DockPanel, "Dock", Dock.Top);
         _border4._set_property_value_by_name("Height", 56);
         _border4._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#1976d2')));
         _border4._set_property_value_by_name("BorderThickness", new Thickness(0, 0, 0, 0));
@@ -35,9 +36,9 @@ export function create() {
         _border4.SetChild(_stackPanel5);
         _dockPanel3.AddChild(_border4);
         const _drawer9 = new Drawer();
-        _drawer9._set_property_value_by_name(DockPanel, "Dock", "Left");
-        _drawer9._set_property_value_by_name("Variant", "Persistent");
-        _drawer9._set_property_value_by_name("Anchor", "Left");
+        _drawer9._set_property_value_by_name(DockPanel, "Dock", Dock.Left);
+        _drawer9._set_property_value_by_name("Variant", DrawerVariant.Persistent);
+        _drawer9._set_property_value_by_name("Anchor", Dock.Left);
         _drawer9._set_property_value_by_name("DrawerSize", 200);
         _drawer9._set_property_value_by_name("RailSize", 56);
         _drawer9._set_property_value_by_name("IsOpen", DataContextBinding(_drawer9, "NavOpen"));
@@ -65,8 +66,8 @@ export function create() {
         _drawer9.Content = _border10;
         _dockPanel3.AddChild(_drawer9);
         const _drawer15 = new Drawer();
-        _drawer15._set_property_value_by_name("Variant", "Temporary");
-        _drawer15._set_property_value_by_name("Anchor", "Right");
+        _drawer15._set_property_value_by_name("Variant", DrawerVariant.Temporary);
+        _drawer15._set_property_value_by_name("Anchor", Dock.Right);
         _drawer15._set_property_value_by_name("DrawerSize", 320);
         _drawer15._set_property_value_by_name("IsOpen", DataContextBinding(_drawer15, "OptionsOpen"));
         const _border16 = new Border();
@@ -128,7 +129,7 @@ export function create() {
         _dockPanel3.AddChild(_border22);
         _border2.SetChild(_dockPanel3);
         return _border2;
-    }, "DrawerVM");
+    }, DrawerVM);
     _rd0.Set("DrawerTemplate", _tmpl1);
     return _rd0;
 }

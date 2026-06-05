@@ -1,3 +1,5 @@
+import TreeViewVM from "./tree-view-vm.mjs"
+
 // tree-view.mu — TreeView demo, two-pane:
 //
 //   * Left:  composed-markup tree (consumer authors every
@@ -13,7 +15,7 @@
 // Packaged as a DataTemplate keyed off TreeViewVM.
 
 ResourceDictionary {
-    datatemplate x:key="TreeViewTemplate" [datatype=TreeViewVM] {
+    DataTemplate x:key="TreeViewTemplate" [DataType=TreeViewVM] {
         // x:root owns the NameScope so the bound TreeView's x:name
         // registers and the VM's OnViewMounted FindName resolves it.
         Border x:root [Background=#ffffff, BorderBrush=#e2e8f0,

@@ -1,3 +1,4 @@
+import { DashboardVM } from "./dashboard-vm.mjs";
 import { Border, Canvas, DataTemplate, TextBlock, TextWrapping } from "@visualisation-sub/mural/Controls";
 import { Application, Color, PropertyTrigger, ResourceDictionary, Setter, Style, Thickness } from "@visualisation-sub/mural/runtime";
 import { SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
@@ -89,7 +90,7 @@ export function create() {
         _border49.SetChild(_textBlock50);
         _canvas44.AddChild(_border49);
         return _canvas44;
-    }, "DashboardVM");
+    }, DashboardVM);
     _rd0.Set("DashboardTemplate", _tmpl43);
     return _rd0;
 }

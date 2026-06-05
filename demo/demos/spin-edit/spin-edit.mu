@@ -1,3 +1,5 @@
+import SpinEditVM from "./spin-edit-vm.mjs"
+
 // spin-edit.mu — SpinEdit (numeric up/down) showcase.
 //
 // Four fields demonstrating the value, formatting, range, and
@@ -17,7 +19,7 @@
 // Packaged as a DataTemplate keyed off SpinEditVM.
 
 ResourceDictionary {
-    datatemplate x:key="SpinEditTemplate" [datatype=SpinEditVM] {
+    DataTemplate x:key="SpinEditTemplate" [DataType=SpinEditVM] {
         Border [Background=#ffffff, BorderBrush=#e2e8f0,
                 BorderThickness=(1)]{
 

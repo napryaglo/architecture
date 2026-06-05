@@ -1,3 +1,5 @@
+import AnimationVM from "./animation-vm.mjs"
+
 // animation.mu — animation engine showcase.
 //
 // Five rows demonstrating the dimensions we ship:
@@ -17,7 +19,7 @@
 // Packaged as a DataTemplate keyed off AnimationVM.
 
 ResourceDictionary {
-    datatemplate x:key="AnimationTemplate" [datatype=AnimationVM] {
+    DataTemplate x:key="AnimationTemplate" [DataType=AnimationVM] {
         // x:root owns the NameScope so the inner x:names register and
         // the VM's OnViewMounted FindName resolves them.
         Border x:root [Background=#ffffff, BorderBrush=#e2e8f0,

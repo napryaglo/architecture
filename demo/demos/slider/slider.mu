@@ -1,3 +1,5 @@
+import SliderVM from "./slider-vm.mjs"
+
 // slider.mu — Slider (single-thumb range control) showcase.
 //
 // Three columns covering the dimensions we ship:
@@ -18,7 +20,7 @@
 // Packaged as a DataTemplate keyed off SliderVM.
 
 ResourceDictionary {
-    datatemplate x:key="SliderTemplate" [datatype=SliderVM] {
+    DataTemplate x:key="SliderTemplate" [DataType=SliderVM] {
         Border [Background=#ffffff, BorderBrush=#e2e8f0,
                 BorderThickness=(1)]{
 

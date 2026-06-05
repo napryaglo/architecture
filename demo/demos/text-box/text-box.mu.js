@@ -1,4 +1,5 @@
-import { Border, DataTemplate, DockPanel, Orientation, StackPanel, TextBlock, TextBox, TextWrapping } from "@visualisation-sub/mural/Controls";
+import { TextBoxVM } from "./text-box-vm.mjs";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock, TextBox, TextWrapping } from "@visualisation-sub/mural/Controls";
 import { Color, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
 import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
 
@@ -11,7 +12,7 @@ export function create() {
         _border2._set_property_value_by_name("BorderThickness", new Thickness(1));
         const _dockPanel3 = new DockPanel();
         const _border4 = new Border();
-        _border4._set_property_value_by_name(DockPanel, "Dock", "Top");
+        _border4._set_property_value_by_name(DockPanel, "Dock", Dock.Top);
         _border4._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#1976d2')));
         _border4._set_property_value_by_name("Padding", new Thickness(16, 12, 16, 12));
         const _textBlock5 = new TextBlock();
@@ -95,7 +96,7 @@ export function create() {
         _dockPanel3.AddChild(_stackPanel6);
         _border2.SetChild(_dockPanel3);
         return _border2;
-    }, "TextBoxVM");
+    }, TextBoxVM);
     _rd0.Set("TextBoxTemplate", _tmpl1);
     return _rd0;
 }
