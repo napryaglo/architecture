@@ -370,7 +370,13 @@ export class Model
         const composed = Model.compose_key(key.descriptor.RootOwner, key.descriptor.Name);
         const evd = this.property_values.get(composed);
         if (evd !== undefined) return evd.value;
-        return key.descriptor.DefaultValue;
+        // Default-value fallback walks this instance's class chain so
+        // Model.OverrideMetadata on a subclass is honored. The key's
+        // own descriptor is the root-owner registration â€” fine as the
+        // last-resort fallback when no subclass override exists.
+        const descriptor = Model.find_descriptor(this.constructor, key.descriptor.Name)
+                        ?? key.descriptor;
+        return this.resolve_default(descriptor);
     }
 
     public set_property_value<T>(key: PropertyKey<T>, value: T): void
@@ -486,7 +492,7 @@ export class Model
         const composed = Model.compose_key(descriptor.RootOwner, descriptor.Name);
         const evd = this.property_values.get(composed);
         if (evd !== undefined) return evd.value;
-        return descriptor.DefaultValue;
+        return this.resolve_default(descriptor);
     }
 
     public _set_property_value_by_name(property: string, value: any): void;
@@ -526,6 +532,18 @@ export class Model
         }
     }
 
+    // Returns the descriptor's default value after passing it through
+    // the registered CoerceValue callback (if any). Used by the
+    // property-get paths that don't yet have an EVD â€” the unset value
+    // is conceptually the default, and coerce gets to clamp/normalize
+    // it the same way it would clamp any explicit write.
+    private resolve_default(descriptor: PropertyDescriptor): any
+    {
+        const def = descriptor.DefaultValue;
+        const coerce = descriptor.CoerceValue;
+        return coerce !== undefined ? coerce(this, def) : def;
+    }
+
     private resolve_descriptor_implicit(property: string): PropertyDescriptor
     {
         const descriptor = Model.find_descriptor(this.constructor, property);
@@ -553,15 +571,14 @@ export class Model
 
         if (effective_value === undefined)
         {
-            const coerce_value = descriptor.CoerceValue;
-            if (coerce_value !== undefined)
-            {
-                value = coerce_value(this, value);
-            }
             effective_value = this.new_effective_value(descriptor);
             this.property_values.set(key, effective_value);
         }
 
+        // Raw value is stored; coerce runs on every read via EVD.value.
+        // WPF semantics: coerce never sees its previous output as input,
+        // so a clamp like `min(x, ceiling)` works idempotently even when
+        // `ceiling` later widens.
         effective_value.value = value;
     }
 

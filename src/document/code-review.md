@@ -21,7 +21,7 @@ File-by-file findings from a top-to-bottom review of the library source. Severit
 - **IMPROVE.** `MetaData` getter uses `this.parent_descriptor!.MetaData` — a non-null assertion in the fallback branch. If a root descriptor is ever constructed without `meta_data`, this throws at runtime. Currently every `RegisterProperty` path supplies `meta_data`, so the invariant holds, but it's not enforced by the type system.
 
 ### [runtime/effective-value.ts](../runtime/effective-value.ts)
-- **OK.** The four base-value slots (animated / binding / local / coerced) plus the `inherited_value` cache and `Source` enum all reconcile cleanly through the `get value` priority switch.
+- **OK.** The base-value slots (animated / binding / local / trigger / style / inherited) plus the `Default` fallback all reconcile through `compute_base_value`; `value` overlays the descriptor's `CoerceValue` callback on top. Coerce is a transform applied on every read (not a stored slot), so a write to a coerce-influencing sibling is reflected on the next access without an explicit "recoerce" call. `Source` reports `CoercedValue` when coerce changed the base; otherwise the base source.
 - **DESIGN.** `set value` routes non-Binding writes through an installed `TwoWay` / `OneWayToSource` binding before falling back to local-replace. The fallthrough on writeback failure (`!binding.set_value(val)`) silently demotes to local — by design, but worth a doc note for consumers tracking source-of-truth issues.
 - **OK.** `OnPropertyChange` fires the internal callback before the user-facing listeners. Mirrors WPF metadata-callbacks-before-PropertyChanged ordering.
 

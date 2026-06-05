@@ -511,3 +511,63 @@ describe('AnimationManager', () => {
         sb.Stop();
     });
 });
+
+// Pins backlog item 1.2: animation slot integrates with the
+// post-1.1 coerce pipeline. Coerce runs on every effective-value read,
+// including reads against the animated slot — so a property whose
+// animation drives values past a clamp ceiling reads back the clamped
+// value, and listeners see the post-coerce frames.
+describe('EVD animation slot — coerce integration', () => {
+    // Local class with a coerce callback so the AnimTest fixture stays
+    // un-coerced for the precedence tests above.
+    class Capped extends Visual
+    {
+        static {
+            Model.RegisterProperty(
+                Capped, 'Value', 0, MetaData.None,
+                (_m, v) => Math.min(v as number, 50),
+            );
+        }
+        public get Value(): number { return this._get_property_value_by_name('Value'); }
+        public set Value(v: number) { this._set_property_value_by_name('Value', v); }
+    }
+
+    test('SetAnimatedValue past the ceiling reads back as the coerced (clamped) value', () => {
+        const c = new Capped();
+        c._set_animated_value_by_name('Value', 200);
+        assert.equal(c.Value, 50);
+    });
+
+    test('GetValueSource is CoercedValue when coerce clamped the animated value', () => {
+        const c = new Capped();
+        c._set_animated_value_by_name('Value', 200);  // clamped to 50
+        // Coerce changed the base (200 → 50), so the source reports the
+        // diagnostic CoercedValue. The underlying base slot is still
+        // AnimatedValue — exposed only after ClearAnimatedValue.
+        assert.equal(c._get_value_source_by_name('Value'), PropertyValueSource.CoercedValue);
+    });
+
+    test('GetValueSource is AnimatedValue when the animated value stays under the ceiling', () => {
+        const c = new Capped();
+        c._set_animated_value_by_name('Value', 30);  // no clamp
+        assert.equal(c._get_value_source_by_name('Value'), PropertyValueSource.AnimatedValue);
+    });
+
+    test('PropertyChanged listeners see post-coerce values during a Storyboard tick', () => {
+        const clock = freshClock();
+        const c = new Capped();
+        const seen: number[] = [];
+        c._add_property_changed_listener_by_name('Value', (_m, _p, _o, n) => { seen.push(n as number); });
+
+        // To = 200, Duration = 100. At t = 100 the timeline commits To,
+        // which coerce clamps to 50. Listeners get the clamped value.
+        const sb = new Storyboard();
+        sb.Add(c, 'Value', new DoubleAnimation({ From: 0, To: 200, Duration: 100 }));
+        sb.Begin();
+        clock.Tick(100);
+        // Last fire carries the clamped final value, not the raw 200.
+        assert.equal(seen[seen.length - 1], 50);
+        assert.equal(c.Value, 50);
+        sb.Stop();
+    });
+});

@@ -58,14 +58,36 @@ Model.RegisterProperty(
 ): void
 ```
 
-`CoerceValue` runs on first set (not subsequent — see code-review note) and
-returns the normalized value:
+`CoerceValue` runs on every effective-value recomputation — every read,
+every binding push, every animation tick — and returns the normalized
+value:
 
 ```ts
 Model.RegisterProperty(Slider, 'Value', 0, MetaData.Render,
     (_model, v) => Math.max(0, Math.min(100, v))  // clamp to [0, 100]
 );
 ```
+
+Storage holds the raw write; coerce is applied on read. This means a
+coerce callback that depends on sibling state re-evaluates automatically
+when that sibling changes — no explicit `CoerceValue(dp)` call needed:
+
+```ts
+// Value clamps to whatever Ceiling currently is.
+Model.RegisterProperty(Range, 'Ceiling', 100, MetaData.None);
+Model.RegisterProperty(Range, 'Value', 0, MetaData.None,
+    (m, v) => Math.min(v as number, m._get_property_value_by_name('Ceiling')));
+
+const r = new Range();
+r._set_property_value_by_name('Value',   80);  // reads as 80
+r._set_property_value_by_name('Ceiling', 50);  // Value re-coerces → 50
+r._set_property_value_by_name('Ceiling', 200); // raw 80 re-emerges
+```
+
+`GetValueSource` returns `CoercedValue` when a coerce callback is
+registered AND its result differs from the underlying base. Otherwise
+it returns the base source (`LocalValue`, `Binding`, etc.) — useful as
+a diagnostic for "this isn't what you set".
 
 ### Default values
 
@@ -98,7 +120,8 @@ Each Model property tracks where its current value came from — the
 The priority order (highest first):
 
 ```
-CoercedValue     — value forced by a coerce callback (placeholder)
+CoercedValue     — base value transformed by a registered CoerceValue
+                   callback (overlay, not a base slot — see §1)
 AnimatedValue    — placeholder, no animation engine yet
 Binding          — value from a Binding (see §5) OR a DynamicResource
 LocalValue       — explicitly set via set_property_value

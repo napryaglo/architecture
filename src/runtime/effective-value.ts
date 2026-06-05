@@ -43,10 +43,17 @@ export enum PropertyValueSource
     Default
 }
 
-// Per-instance state for one registered property. Holds the four value
-// slots (animated / binding / local / coerced), the current source, and
-// the per-instance change listeners. Created lazily by Model on first set
-// or first listener attach.
+// Per-instance state for one registered property. Holds the base-value
+// slots (animated / binding / local / trigger / style / inherited), the
+// current base source, and the per-instance change listeners. Created
+// lazily by Model on first set or first listener attach.
+//
+// Coercion is NOT a base slot — it's a pure transform applied on every
+// `value` read (and on binding push notifications). The descriptor's
+// `CoerceValue` callback runs against whichever base slot wins; the
+// resulting value is what listeners and `value` consumers see. When
+// coerce is registered AND its result differs from the base, `Source`
+// reports `CoercedValue`; otherwise it reports the base source.
 export class EffectiveValueDescriptor
 {
     private local_value: any;
@@ -54,7 +61,6 @@ export class EffectiveValueDescriptor
     private binding_value: Binding | undefined;
     private animated_value: any;
     private has_animated_value: boolean = false;
-    private coerced_value: any;
     // Style / Trigger / Inherited slots use parallel flags because
     // `undefined` is a legitimate value (a style setter MAY want to
     // set a property to undefined explicitly, distinct from "no style
@@ -123,8 +129,21 @@ export class EffectiveValueDescriptor
         }
     }
 
+    // Reports the effective source. When a CoerceValue callback is
+    // registered AND its result differs from the underlying base value,
+    // returns CoercedValue (matches WPF — the diagnostic "this isn't
+    // what you set"). Otherwise returns the base source.
     get Source(): PropertyValueSource
     {
+        const coerce = this.property_descriptor.CoerceValue;
+        if (coerce !== undefined)
+        {
+            const base = this.compute_base_value();
+            if (coerce(this.owner, base) !== base)
+            {
+                return PropertyValueSource.CoercedValue;
+            }
+        }
         return this.source;
     }
 
@@ -147,7 +166,6 @@ export class EffectiveValueDescriptor
         this.has_local_value = false;
         this.animated_value = undefined;
         this.has_animated_value = false;
-        this.coerced_value = undefined;
         this.source = this.has_trigger_value
             ? PropertyValueSource.TriggerValue
             : this.has_style_value
@@ -206,7 +224,6 @@ export class EffectiveValueDescriptor
         if (this.source === PropertyValueSource.LocalValue
             || this.source === PropertyValueSource.Binding
             || this.source === PropertyValueSource.AnimatedValue
-            || this.source === PropertyValueSource.CoercedValue
             || this.source === PropertyValueSource.TriggerValue)
         {
             return;
@@ -243,9 +260,9 @@ export class EffectiveValueDescriptor
 
     // Caches a Trigger-driven value for this property. Trigger sits
     // above StyleValue / InheritedValue / Default but below
-    // LocalValue / Binding / Animated / Coerced. Same pattern as
-    // SetStyleValue otherwise — stash regardless, but only flip
-    // source if no higher-priority slot is active.
+    // LocalValue / Binding / Animated. Same pattern as SetStyleValue
+    // otherwise — stash regardless, but only flip source if no higher-
+    // priority slot is active.
     SetTriggerValue(value: any): void
     {
         const old_effective_value = this.value;
@@ -253,8 +270,7 @@ export class EffectiveValueDescriptor
         this.has_trigger_value = true;
         if (this.source === PropertyValueSource.LocalValue
             || this.source === PropertyValueSource.Binding
-            || this.source === PropertyValueSource.AnimatedValue
-            || this.source === PropertyValueSource.CoercedValue)
+            || this.source === PropertyValueSource.AnimatedValue)
         {
             return;
         }
@@ -376,23 +392,24 @@ export class EffectiveValueDescriptor
             // fallbacks can collapse two raw values to one displayed one).
             val.setOnValueChanged((old_resolved, new_resolved) =>
             {
-                const old_final = val.apply_transform(old_resolved);
-                const new_final = val.apply_transform(new_resolved);
+                const old_final = this.apply_coerce(val.apply_transform(old_resolved));
+                const new_final = this.apply_coerce(val.apply_transform(new_resolved));
                 if (old_final !== new_final)
                 {
                     this.OnPropertyChange(old_final, new_final);
                 }
             });
-            // Animation / Coercion stay on top — the binding cache
-            // updates so a later Stop / ClearAnimated falls through to
-            // the fresh binding, but the active source stays as it was.
-            if (this.source === PropertyValueSource.AnimatedValue
-             || this.source === PropertyValueSource.CoercedValue)
+            // Animation stays on top — the binding cache updates so a
+            // later Stop / ClearAnimated falls through to the fresh
+            // binding, but the active source stays as it was.
+            if (this.source === PropertyValueSource.AnimatedValue)
             {
                 return;
             }
             this.source = PropertyValueSource.Binding;
-            this.OnPropertyChange(old_effective_value, val.get_value());
+            // New value reads through `this.value` so coerce (if any)
+            // is applied; listeners see the same values consumers do.
+            this.OnPropertyChange(old_effective_value, this.value);
         }
         else
         {
@@ -403,13 +420,14 @@ export class EffectiveValueDescriptor
             // Binding > Local). The local slot still updates so that
             // ClearAnimatedValue / Storyboard.Stop drops back to the
             // freshest user-written value, not a stale snapshot.
-            if (this.source === PropertyValueSource.AnimatedValue
-             || this.source === PropertyValueSource.CoercedValue)
+            if (this.source === PropertyValueSource.AnimatedValue)
             {
                 return;
             }
             this.source = PropertyValueSource.LocalValue;
-            this.OnPropertyChange(old_effective_value, this.local_value);
+            // Coerce applied via `this.value` — clamped/normalized
+            // values reach listeners, not the raw write.
+            this.OnPropertyChange(old_effective_value, this.value);
         }
     }
 
@@ -475,15 +493,24 @@ export class EffectiveValueDescriptor
         }
     }
 
-    // The effective value: the highest-priority entry that is currently
-    // set, mirroring WPF's EffectiveValueEntry resolution
-    // (Coerced > Animated > Binding > Local > Trigger > Style > Inherited > Default).
+    // The effective value: the highest-priority base entry (Animated >
+    // Binding > Local > Trigger > Style > Inherited > Default), then
+    // the descriptor's CoerceValue callback (if any) applied on top.
+    // Coerce runs on every read so a write to a coerce-influencing
+    // sibling property is reflected on the next access without any
+    // explicit "recoerce" call.
     get value(): any
+    {
+        return this.apply_coerce(this.compute_base_value());
+    }
+
+    // Highest-priority base slot, excluding coercion. Source enum cases
+    // map 1:1 to slots; the field `source` never holds CoercedValue
+    // (coercion is a transform, not a base slot).
+    private compute_base_value(): any
     {
         switch (this.source)
         {
-            case PropertyValueSource.CoercedValue:
-                return this.coerced_value;
             case PropertyValueSource.AnimatedValue:
                 return this.animated_value;
             case PropertyValueSource.Binding:
@@ -499,5 +526,14 @@ export class EffectiveValueDescriptor
             default:
                 return this.property_descriptor.DefaultValue;
         }
+    }
+
+    // Apply the descriptor's coerce callback if one is registered.
+    // Used by the value getter and the binding push handler so consumer
+    // listeners see the same values `value` returns.
+    private apply_coerce(base: any): any
+    {
+        const coerce = this.property_descriptor.CoerceValue;
+        return coerce !== undefined ? coerce(this.owner, base) : base;
     }
 }
