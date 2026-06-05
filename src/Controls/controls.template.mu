@@ -1,12 +1,17 @@
 // Consolidated default theme for the µ-mural Controls library.
 //
-// Every built-in control's default ControlTemplate lives here, keyed by
-// the same `Default<ControlName>` strings the control TS files resolve
-// at construction time. Compiled to build/Controls/controls.template.mu.js
-// by `npm run build:templates`; registered exactly once with the
-// Application via Controls/default-resources.ts → ensureControlsTheme()
-// (each control's static block calls into that helper instead of
-// pushing its own factory).
+// Every built-in control's default ControlTemplate lives here.
+// Single-template controls register implicitly by TargetType — the
+// control's class function is the key, `Application.ResolveDefaultResource(
+// Button)` returns the right ControlTemplate. Compiled to
+// build/Controls/controls.template.mu.js by `npm run build:templates`;
+// registered exactly once with the Application via
+// Controls/default-resources.ts → ensureControlsTheme() (each control's
+// static block calls into that helper instead of pushing its own factory).
+//
+// Multi-template controls (ComboBox: Selection + Popup;
+// Drawer: Pane + Overlay) keep string keys because two Templates
+// can't both register implicitly under the same TargetType.
 //
 // Authoring rules used across the file:
 //   * Sizing constants (paddings, heights, row metrics) live inline in
@@ -25,7 +30,7 @@ ResourceDictionary {
     // MUI Contained variant. PART_Border is the rounded surface whose
     // Background swaps on IsPressed / IsMouseOver. The ContentPresenter
     // is discovered by ControlTemplate.Apply's first-presenter walk.
-    template x:key="DefaultButton"[targettype=Button]{
+    Template [TargetType=Button]{
         Border x:name="PART_Border"[Background=#1976d2,
                                     BorderThickness=(0),
                                     CornerRadius=4,
@@ -38,7 +43,7 @@ ResourceDictionary {
     // MUI Outlined Select look. PART_SelectionBox receives the open /
     // close toggle click; PART_SelectionText carries the selected item
     // label (or placeholder); PART_Chevron is the right-aligned glyph.
-    template x:key="DefaultComboBoxSelection"[targettype=ComboBox]{
+    Template x:key="DefaultComboBoxSelection"[TargetType=ComboBox]{
         ClickableBorder x:name="PART_SelectionBox"
                       [ Background      = #ffffff,
                         BorderBrush     = #c4c4c4,
@@ -62,7 +67,7 @@ ResourceDictionary {
     // subclass) that turns the ComboBox.Items array into one
     // ClickableBorder row per item via its own GetContainerForItem /
     // PrepareContainerForItem hooks.
-    template x:key="DefaultComboBoxPopup"[targettype=ComboBox]{
+    Template x:key="DefaultComboBoxPopup"[TargetType=ComboBox]{
         ComboBoxPopupHost x:name="PART_PopupHost"{
             ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
             Border x:name="PART_Popup"
@@ -80,7 +85,7 @@ ResourceDictionary {
     // Shared by Permanent / Persistent / Temporary variants. The
     // Temporary variant re-parents this same pane onto the overlay
     // host (see DefaultDrawerOverlay) — no duplicate pane is built.
-    template x:key="DefaultDrawerPane"[targettype=Drawer]{
+    Template x:key="DefaultDrawerPane"[TargetType=Drawer]{
         Border x:name="PART_Pane"
               [ Background      = #ffffff,
                 BorderBrush     = #e0e0e0,
@@ -94,7 +99,7 @@ ResourceDictionary {
     // to IsOpen=true. The pane is NOT a child of this template; Drawer
     // AddVisualChilds it after Apply so the same pane instance can flip
     // between in-flow and overlay hosting without being rebuilt.
-    template x:key="DefaultDrawerOverlay"[targettype=Drawer]{
+    Template x:key="DefaultDrawerOverlay"[TargetType=Drawer]{
         TemporaryOverlayHost x:name="PART_OverlayHost"{
             ScrimSurface x:name="PART_Scrim" [ BorderThickness = (0) ]
         }
@@ -104,7 +109,7 @@ ResourceDictionary {
     // ItemsControl-derived: a ScrollViewer hosting an ItemsPresenter
     // where TreeView.ItemsPanel slots a vertical StackPanel containing
     // the root TreeViewItem rows.
-    template x:key="DefaultTreeView"[targettype=TreeView]{
+    Template [TargetType=TreeView]{
         ScrollViewer x:name="PART_Scroll"{
             ItemsPresenter
         }
@@ -116,7 +121,7 @@ ResourceDictionary {
     // ItemsPanel slots a CollapsibleStack containing the sub-rows.
     // The CollapsibleStack is toggled by the IsExpanded DP so closed
     // subtrees clip to zero size (and zero hit-area).
-    template x:key="DefaultTreeViewItem"[targettype=TreeViewItem]{
+    Template [TargetType=TreeViewItem]{
         StackPanel x:name="PART_OuterStack" [ Orientation = Vertical ]{
             ClickableRow x:name="PART_Row"
                         [ BorderThickness = (0),
@@ -150,7 +155,7 @@ ResourceDictionary {
     // GetContainerForItemOverride, which wraps each data item in a
     // ListBoxItem (and passes already-ListBoxItem items through
     // unchanged so declarative markup keeps working).
-    template x:key="DefaultListBox"[targettype=ListBox]{
+    Template [TargetType=ListBox]{
         ScrollViewer x:name="PART_Scroll"{
             ItemsPresenter
         }
@@ -160,7 +165,7 @@ ResourceDictionary {
     // Material dense-list surface. PART_Border swaps Background
     // between transparent / hover / selected driven from the TS code;
     // the ContentPresenter slots the consumer-supplied Content.
-    template x:key="DefaultListBoxItem"[targettype=ListBoxItem]{
+    Template [TargetType=ListBoxItem]{
         Border x:name="PART_Border"
               [ BorderThickness = (0),
                 Padding         = (8,6,8,6),
@@ -175,7 +180,7 @@ ResourceDictionary {
     // PageView TS code adds it to PART_HeaderStack on demand when the
     // Subtitle DP is non-empty (keeps an empty Subtitle from reserving
     // a row).
-    template x:key="DefaultPageView"[targettype=PageView]{
+    Template [TargetType=PageView]{
         DockPanel x:name="PART_Dock"{
             Border x:name="PART_Header" [ DockPanel.Dock = Top,
                                           Padding        = (20,16,20,12) ]{
@@ -204,7 +209,7 @@ ResourceDictionary {
     // the textual content, the selection rectangles, and the blinking
     // caret; the TextBox itself owns the model and writes pointer +
     // keyboard handlers, treating the editor as a passive view.
-    template x:key="DefaultTextBox"[targettype=TextBox]{
+    Template [TargetType=TextBox]{
         Border x:name="PART_Border"
               [ Background      = #ffffff,
                 BorderBrush     = #c4c4c4,
@@ -228,7 +233,7 @@ ResourceDictionary {
     // PART_ButtonColumn carries a left-edge divider; PART_Up / PART_Down
     // are click targets whose onClick callbacks the TS layer binds to
     // step the value by SmallChange.
-    template x:key="DefaultSpinEdit"[targettype=SpinEdit]{
+    Template [TargetType=SpinEdit]{
         Border x:name="PART_Border"
               [ Background      = #ffffff,
                 BorderBrush     = #c4c4c4,
@@ -275,7 +280,7 @@ ResourceDictionary {
     // SliderLayout panel — this template just paints. PART_Thumb's
     // Background is rewritten at runtime on IsMouseOver / drag to
     // match the Theme palette.
-    template x:key="DefaultSlider"[targettype=Slider]{
+    Template [TargetType=Slider]{
         SliderLayout x:name="PART_Layout"{
             Border x:name="PART_Track"
                   [ Background      = #e0e0e0,
@@ -296,7 +301,7 @@ ResourceDictionary {
     // Material-flavoured flat track with a rounded thumb. The cross-
     // axis size (SCROLLBAR_THICKNESS) is pinned by the ScrollBar's
     // MeasureOverride; this template just paints the parts.
-    template x:key="DefaultScrollBar"[targettype=ScrollBar]{
+    Template [TargetType=ScrollBar]{
         ScrollBarLayout x:name="PART_Layout"{
             Border x:name="PART_Track"
                   [ Background      = #f1f5f9,

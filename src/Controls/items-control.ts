@@ -44,6 +44,13 @@ export type ItemTemplateSelector = (item: unknown) => DataTemplate | undefined;
 // the container. Returning undefined falls back to ItemContainerStyle.
 // Consulted in PrepareContainerForItemOverride before the single-style
 // ItemContainerStyle.
+// Listener shapes for ItemsControl's container-realization API. Fires
+// once per (container, item) realize / clear, regardless of which path
+// triggered it. See AddContainerPreparedListener for the broader
+// rationale.
+export type ContainerPreparedListener = (container: Visual, item: unknown, index: number) => void;
+export type ContainerClearedListener  = (container: Visual, item: unknown) => void;
+
 export type ItemContainerStyleSelector =
     (item: unknown, container: Visual) => Style | undefined;
 
@@ -580,6 +587,21 @@ export class ItemsControl extends Visual
 
     public PrepareContainerForItemOverride(container: Visual, item: unknown, index: number): void
     {
+        // Notify external observers — behavior wiring from the
+        // bootstrap, instrumentation, etc. — that a container has just
+        // been realized for `item`. Fires for every realization regardless
+        // of trigger (initial rebuild, ObservableCollection.Add, late
+        // ItemContainerStyle settling, etc.) so consumers don't have to
+        // separately observe `Items.Subscribe` AND every other path that
+        // can rebuild containers.
+        //
+        // Symmetric with OnContainerCleared on the clear side. Order:
+        // this notification fires BEFORE the per-item style /
+        // GroupItem / AlternationIndex setup below so consumers can
+        // observe a fresh container before any framework wiring; flip
+        // the order if a consumer needs the post-setup view.
+        this._containerPreparedListeners?.forEach(l => l(container, item, index));
+
         // Per-item style picker takes precedence over the single
         // ItemContainerStyle DP. WPF parity — same precedence as
         // ItemTemplateSelector over ItemTemplate.
@@ -634,12 +656,60 @@ export class ItemsControl extends Visual
      */
     public ClearContainerForItemOverride(container: Visual, item: unknown): void
     {
+        // Notify external observers BEFORE we tear container state down,
+        // so a listener that needs to read item↔container state on the
+        // way out (detach behavior, capture metrics, …) still sees the
+        // wired-up state. Symmetric with the OnContainerPrepared
+        // notification at the top of PrepareContainerForItemOverride.
+        this._containerClearedListeners?.forEach(l => l(container, item));
+
         if (this.ItemContainerStyle !== undefined)
         {
             this.clearContainerStyle(container);
         }
         (container as ContainerWithData)._itemsControlData = undefined;
         void item;
+    }
+
+    // ── Container-realization listener API ────────────────────────────
+    //
+    // External observers (typically a demo's bootstrap wiring up
+    // behaviors) register here to learn about every container
+    // realization / clearing — independent of the path that triggered
+    // it. The naive alternative — subscribing to the bound items
+    // collection — misses rebuilds (e.g. a late-arriving
+    // ItemContainerStyle) and leaves listeners attached to stale
+    // containers; that bug spawned this API.
+    //
+    // The pair below mirrors AddRoutedEventListener's shape: register
+    // many listeners; unregister symmetrically. Late registrations do
+    // NOT replay existing containers — register BEFORE any items are
+    // added or any rebuild fires. (If we grow a use case for "attach to
+    // current containers too," add a `replayCurrent` flag rather than
+    // making replay the default — most consumers don't want it and
+    // would have to filter.)
+
+    private _containerPreparedListeners: Set<ContainerPreparedListener> | undefined;
+    private _containerClearedListeners:  Set<ContainerClearedListener>  | undefined;
+
+    public AddContainerPreparedListener(listener: ContainerPreparedListener): void
+    {
+        (this._containerPreparedListeners ??= new Set()).add(listener);
+    }
+
+    public RemoveContainerPreparedListener(listener: ContainerPreparedListener): void
+    {
+        this._containerPreparedListeners?.delete(listener);
+    }
+
+    public AddContainerClearedListener(listener: ContainerClearedListener): void
+    {
+        (this._containerClearedListeners ??= new Set()).add(listener);
+    }
+
+    public RemoveContainerClearedListener(listener: ContainerClearedListener): void
+    {
+        this._containerClearedListeners?.delete(listener);
     }
 
     // Centralised side-effect dispatcher for ItemsControl-owned DPs.
@@ -1309,17 +1379,16 @@ export class ItemsControl extends Visual
         this._generator.Clear();
 
         const items = this.Items;
-        // Resolution: an item only needs SOMETHING to produce a
-        // container. Per-item resolution lives in
-        // GetContainerForItemOverride; a subclass may have overridden
-        // it and need neither ItemTemplate nor ItemTemplateSelector.
         // The rebuild bails only when the panel is missing or items
-        // collection is empty/undefined.
-        const haveResolver = this.ItemTemplate !== undefined
-                          || this.ItemTemplateSelector !== undefined
-                          || this.DisplayMemberPath !== undefined
-                          || this.hasContainerOverride();
-        if (items === undefined || !haveResolver || this._itemsPanel === undefined)
+        // collection is empty/undefined. Per-item resolution lives in
+        // GetContainerForItemOverride + ContentPresenter — even without
+        // an ItemTemplate / Selector / DisplayMemberPath, the default
+        // ContentPresenter wrap walks the resource chain via
+        // findDataTemplateForType(item.constructor) and falls through to
+        // text-stringify when no match exists. So an item always has
+        // *some* container shape; gating on the resolver here would
+        // wrongly suppress the implicit-DataTemplate path.
+        if (items === undefined || this._itemsPanel === undefined)
         {
             this.updateHasItems();
             return;
@@ -1363,16 +1432,6 @@ export class ItemsControl extends Visual
         this.InvalidateMeasure();
     }
 
-    // Subclass-override sniff: returns true when the consumer has
-    // overridden GetContainerForItemOverride. Used to allow rebuilds
-    // that don't have ItemTemplate set but DO have a custom container
-    // path. Compares against the prototype-installed default.
-    private hasContainerOverride(): boolean
-    {
-        const proto = Object.getPrototypeOf(this) as { GetContainerForItemOverride?: unknown };
-        return proto.GetContainerForItemOverride !== ItemsControl.prototype.GetContainerForItemOverride;
-    }
-
     // Incremental update path for ObservableCollection mutations on
     // Items. Dispatches by change.kind; each branch touches only the
     // affected slot(s) rather than rebuilding the whole panel.
@@ -1391,19 +1450,13 @@ export class ItemsControl extends Visual
             this.updateHasItems();
             return;
         }
-        // Insert / replace / restamp paths need a container resolver
-        // (ItemTemplate, Selector, or a subclass override). Removes
-        // and clears don't — they just unbind. Bailing only when
-        // we'd actually be unable to make progress.
-        const haveResolver = this.ItemTemplate !== undefined
-                          || this.ItemTemplateSelector !== undefined
-                          || this.DisplayMemberPath !== undefined
-                          || this.hasContainerOverride();
-        if (!haveResolver && (change.kind === 'inserted' || change.kind === 'replaced'))
-        {
-            this.updateHasItems();
-            return;
-        }
+        // No resolver guard here — `GetContainerForItemOverride` +
+        // `ContentPresenter.resolveAndSlot` always produce some container
+        // shape (matching DataTemplate via findDataTemplateForType, or
+        // stringified text as a final fallback). The base ItemsControl
+        // can therefore dispatch inserts purely by item.constructor
+        // identity through the resource chain — no explicit ItemTemplate
+        // / Selector / DisplayMemberPath required.
         if (this._itemsPanel instanceof VirtualizingPanel)
         {
             // Virtualizing panel owns its own realization; just

@@ -1,5 +1,4 @@
 import {
-    Application,
     MetaData,
     Model,
     Rect,
@@ -17,21 +16,9 @@ import { ScrollViewer } from './scroll-viewer.js';
 import { StackPanel } from './stack-panel.js';
 import { TextBlock } from './text-block.js';
 import { Theme } from './theme.js';
-import type { ControlTemplate } from './control-template.js';
-import { ensureControlsTheme } from './default-resources.js';
+import { defaultTemplate, ensureControlsTheme } from './default-resources.js';
 
-const KEY_TREEVIEW      = 'DefaultTreeView';
-const KEY_TREEVIEW_ITEM = 'DefaultTreeViewItem';
 
-function resolveTemplate(key: string): ControlTemplate
-{
-    const tpl = Application.ResolveDefaultResource<ControlTemplate>(key);
-    if (tpl === undefined)
-    {
-        throw new Error(`TreeView: default template '${key}' is not registered.`);
-    }
-    return tpl;
-}
 
 const CHEVRON_COLLAPSED = '▸';
 const CHEVRON_EXPANDED  = '▾';
@@ -195,6 +182,7 @@ export class TreeView extends ItemsControl
         MetaData.None | MetaData.BindsTwoWayByDefault);
 
     static {
+        Model.OverrideMetadata(TreeView, Visual.DefaultStyleKeyKey, { default_value: TreeView });
         ensureControlsTheme();
     }
 
@@ -217,7 +205,7 @@ export class TreeView extends ItemsControl
     constructor()
     {
         super();
-        this.Template = resolveTemplate(KEY_TREEVIEW);
+        this.Template = defaultTemplate(TreeView);
         this.ItemsPanel = () => new StackPanel();
         // Base ItemsControl constructor seeded Items = _declarativeItems.
     }
@@ -561,6 +549,7 @@ export class TreeViewItem extends ItemsControl
     public static readonly IsSelectedKey = Model.RegisterProperty<boolean>(TreeViewItem, 'IsSelected', false, MetaData.Render);
 
     static {
+        Model.OverrideMetadata(TreeViewItem, Visual.DefaultStyleKeyKey, { default_value: TreeViewItem });
         ensureControlsTheme();
     }
 
@@ -578,7 +567,7 @@ export class TreeViewItem extends ItemsControl
     constructor()
     {
         super();
-        this.Template = resolveTemplate(KEY_TREEVIEW_ITEM);
+        this.Template = defaultTemplate(TreeViewItem);
 
         const root = this.visualChildren[0]!;
         this._row         = root.FindName('PART_Row')         as ClickableRow;

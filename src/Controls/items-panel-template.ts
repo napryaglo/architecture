@@ -11,7 +11,7 @@ export type ItemsPanelFactory = () => Panel;
 // Thin template wrapper around a panel factory. Mirrors WPF's
 // ItemsPanelTemplate: a *recipe* for the layout panel that an
 // ItemsControl drops its realized item containers into. Created either
-// declaratively via the `.mu` compiler (`itemspaneltemplate x:key="…" { … }`
+// declaratively via the `.mu` compiler (`ItemsPanelTemplate x:key="…" { … }`
 // resource form, or inline as a slot-assign value) or in code by
 // passing a closure to the constructor.
 //

@@ -9,14 +9,16 @@ import { MetaData, Model, Panel, Rect, Size, Visual } from '../runtime/index.js'
 // semantics: `Canvas.SetLeft(visual, 10)` / `Canvas.GetLeft(visual)`.
 // Any Visual can be placed in a Canvas; no interface to implement.
 //
-// MetaData.None on Left/Top: changing them on a child does NOT
-// auto-invalidate either the child or the Canvas — the Canvas
-// re-reads the current values during its next Arrange pass.
-// HeadlessTarget always runs a full Measure+Arrange on every Render,
-// so this works for the static-experiment flow. Incremental layout
-// (when SvgRenderer lands) will need the Canvas to subscribe to its
-// children's Left/Top via AddPropertyChangedListener so it can
-// invalidate its own Arrange on change.
+// MetaData.Arrange on Left/Top — a write invalidates the child's
+// arrange, which propagates up to the Canvas via InvalidateArrange's
+// parent walk. The Canvas re-runs ArrangeOverride and re-reads the
+// attached properties to re-place the child.
+//
+// Why not handle this in the Canvas instead by subscribing to each
+// child's Canvas.Left / Top? Either path works; piggybacking on
+// MetaData.Arrange is one line of metadata vs. a per-child
+// subscription lifecycle, and the affectsArrange path is already
+// well-tested for non-attached DPs.
 //
 // Negative Left / Top is tolerated but children at negative
 // coordinates will paint to the left of / above the Canvas's own
@@ -25,8 +27,8 @@ import { MetaData, Model, Panel, Rect, Size, Visual } from '../runtime/index.js'
 // layout that produces negative positions should shift first.
 export class Canvas extends Panel
 {
-    public static readonly LeftKey = Model.RegisterAttachedProperty<number>(Canvas, 'Left', 0, MetaData.None);
-    public static readonly TopKey  = Model.RegisterAttachedProperty<number>(Canvas, 'Top',  0, MetaData.None);
+    public static readonly LeftKey = Model.RegisterAttachedProperty<number>(Canvas, 'Left', 0, MetaData.Arrange);
+    public static readonly TopKey  = Model.RegisterAttachedProperty<number>(Canvas, 'Top',  0, MetaData.Arrange);
 
     // Static accessors mirror WPF's Canvas.SetLeft / Canvas.GetLeft.
     // The typed keys carry the descriptor identity; the typed
@@ -52,6 +54,17 @@ export class Canvas extends Panel
         return v.get_property_value(Canvas.TopKey);
     }
 
+    // Tolerate undefined / NaN Left/Top by falling back to 0. The
+    // binding-side fix: `Canvas.Left = $X` on a container whose
+    // DataContext doesn't expose `X` resolves to undefined; without
+    // this fallback the arrange math would produce NaN and the renderer
+    // would stamp `translate(NaN,NaN)`. WPF-equivalent semantics — an
+    // unset Left reads as the registered default (0).
+    private static coord(value: unknown): number
+    {
+        return typeof value === 'number' && !Number.isNaN(value) ? value : 0;
+    }
+
     protected override MeasureOverride(_availableSize: Size): Size
     {
         let maxRight  = 0;
@@ -60,9 +73,9 @@ export class Canvas extends Panel
         for (const child of this.Children)
         {
             child.Measure(unbounded);
-            const left = Canvas.GetLeft(child);
-            const top  = Canvas.GetTop(child);
-            maxRight  = Math.max(maxRight,  left + child.DesiredSize.Width);    
+            const left = Canvas.coord(Canvas.GetLeft(child));
+            const top  = Canvas.coord(Canvas.GetTop(child));
+            maxRight  = Math.max(maxRight,  left + child.DesiredSize.Width);
             maxBottom = Math.max(maxBottom, top  + child.DesiredSize.Height);
         }
         return new Size(maxRight, maxBottom);
@@ -72,8 +85,8 @@ export class Canvas extends Panel
     {
         for (const child of this.Children)
         {
-            const left = Canvas.GetLeft(child);
-            const top  = Canvas.GetTop(child);
+            const left = Canvas.coord(Canvas.GetLeft(child));
+            const top  = Canvas.coord(Canvas.GetTop(child));
             child.Arrange(new Rect(left, top, child.DesiredSize.Width, child.DesiredSize.Height));
         }
         return finalSize;

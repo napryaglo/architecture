@@ -85,7 +85,12 @@ function markTemplated(visual: Visual, templatedParent: Visual): void
 // visual-children traversal as markTemplated, but kept separate so
 // the responsibility split is obvious: markTemplated wires the
 // back-pointer, this populates the lookup table.
-function registerNamedVisuals(visual: Visual, scope: NameScope): void
+// Exported for DataTemplate.Apply, which needs the same subtree walk —
+// names declared inside a DataTemplate factory body must land in the
+// fresh per-instance NameScope at Apply time, not at factory-emit time.
+// Keeping a single implementation here means ControlTemplate and
+// DataTemplate cannot drift on how `x:name` resolves.
+export function registerNamedVisuals(visual: Visual, scope: NameScope): void
 {
     const name = visual.Name;
     if (name !== undefined && name.length > 0)

@@ -25,8 +25,17 @@ export { Slider, SliderLayout } from './slider.js';
 export { PageView } from './page-view.js';
 export { StackPanel, Orientation } from './stack-panel.js';
 export { UniformGrid } from './uniform-grid.js';
+export {
+    Grid,
+    GridLength,
+    ColumnDefinition,
+    RowDefinition,
+    type GridUnitType,
+} from './grid.js';
 export { ContentControl } from './content-control.js';
 export { ContentPresenter } from './content-presenter.js';
+export { DiagramNode } from './diagram-node.js';
+export { Diagram } from './diagram.js';
 export {
     ControlTemplate,
     TemplateBinding,
@@ -48,6 +57,11 @@ export {
     type ItemContainerStyleSelector,
     type ItemTemplateSelector,
 } from './items-control.js';
+export { ListReorderBehavior } from './list-reorder-behavior.js';
+export {
+    Selector,
+    type SelectionChangedListener,
+} from './selector.js';
 export { AlternationConverter } from './alternation-converter.js';
 export {
     ItemsPanelTemplate,

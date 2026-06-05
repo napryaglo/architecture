@@ -1,5 +1,4 @@
 import {
-    Application,
     MetaData,
     Model,
     Visual,
@@ -9,9 +8,8 @@ import {
 } from '../runtime/index.js';
 import type { Border } from './border.js';
 import { ContentControl } from './content-control.js';
-import type { ControlTemplate } from './control-template.js';
 import { TextBlock } from './text-block.js';
-import { ensureControlsTheme } from './default-resources.js';
+import { defaultTemplate, ensureControlsTheme } from './default-resources.js';
 import { Theme } from './theme.js';
 
 // When the Click event fires. WPF parity: Release is the default
@@ -31,24 +29,6 @@ export enum ClickMode
 // position without reaching back into the input device.
 export type ClickHandler = (args: PointerEventArgs) => void;
 
-// Key under which the bundled default ControlTemplate is registered —
-// matches the `x:key="DefaultButton"` literal inside button.template.mu.
-// Consumers override the look by setting their own template under the
-// same key on `Application.current.Resources` BEFORE constructing any
-// Button (WPF implicit-Style replacement semantics).
-const DEFAULT_BUTTON_KEY = 'DefaultButton';
-
-function defaultButtonTemplate(): ControlTemplate
-{
-    const tpl = Application.ResolveDefaultResource<ControlTemplate>(DEFAULT_BUTTON_KEY);
-    if (tpl === undefined)
-    {
-        throw new Error(
-            `Button: default template '${DEFAULT_BUTTON_KEY}' is not registered. ` +
-            `Did you import the Controls barrel before constructing the Button?`);
-    }
-    return tpl;
-}
 
 // Button: a clickable ContentControl. Equivalent to WPF's Button +
 // ButtonBase rolled into one class — the abstract split exists in
@@ -89,10 +69,12 @@ export class Button extends ContentControl
 
     static
     {
+        // Theme-style lookup key — Button instances resolve their
+        // default Style via TryFindResource(Button) on attach.
+        Model.OverrideMetadata(Button, Visual.DefaultStyleKeyKey, { default_value: Button });
         // Ensures the consolidated controls theme — which holds the
-        // DefaultButton ControlTemplate — is registered with Application
-        // exactly once. Resolution against DEFAULT_BUTTON_KEY then picks
-        // up the bundled template via Application.ResolveDefaultResource.
+        // Button ControlTemplate keyed by the Button class function —
+        // is registered with Application exactly once.
         ensureControlsTheme();
     }
 
@@ -116,7 +98,7 @@ export class Button extends ContentControl
     constructor(content?: Visual)
     {
         super();
-        this.Template = defaultButtonTemplate();
+        this.Template = defaultTemplate(Button);
         this.wireDefaultTemplateBehavior();
         if (content !== undefined) this.Content = content;
     }

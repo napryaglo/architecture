@@ -1,5 +1,4 @@
 import {
-    Application,
     Color,
     MetaData,
     Model,
@@ -16,20 +15,9 @@ import { findDataTemplateForType } from './data-template.js';
 import type { DockPanel } from './dock-panel.js';
 import { StackPanel } from './stack-panel.js';
 import { TextBlock } from './text-block.js';
-import type { ControlTemplate } from './control-template.js';
-import { ensureControlsTheme } from './default-resources.js';
+import { defaultTemplate, ensureControlsTheme } from './default-resources.js';
 
-const KEY_PAGEVIEW = 'DefaultPageView';
 
-function resolveTemplate(key: string): ControlTemplate
-{
-    const tpl = Application.ResolveDefaultResource<ControlTemplate>(key);
-    if (tpl === undefined)
-    {
-        throw new Error(`PageView: default template '${key}' is not registered.`);
-    }
-    return tpl;
-}
 
 // Subtitle palette stays in code: PageView creates the subtitle
 // TextBlock dynamically (added to PART_HeaderStack only when Subtitle
@@ -61,6 +49,7 @@ export class PageView extends Visual
     public static readonly ContentKey  = Model.RegisterProperty<Visual | Model | undefined>(PageView, 'Content',  undefined, MetaData.Measure);
 
     static {
+        Model.OverrideMetadata(PageView, Visual.DefaultStyleKeyKey, { default_value: PageView });
         ensureControlsTheme();
     }
 
@@ -80,7 +69,7 @@ export class PageView extends Visual
 
         // Markup-defined chrome (Dock + Header + Divider + ContentHost)
         // resolved from DefaultPageView in the controls theme.
-        const inst = resolveTemplate(KEY_PAGEVIEW).Apply(this);
+        const inst = defaultTemplate(PageView).Apply(this);
         this._dock        = inst.root as DockPanel;
         this._headerStack = inst.root.FindName('PART_HeaderStack') as StackPanel;
         this._titleText   = inst.root.FindName('PART_TitleText')   as TextBlock;
@@ -144,10 +133,10 @@ export class PageView extends Visual
         }
         else if (newValue instanceof Model)
         {
-            // Auto-resolve a DataTemplate by data type. The produced
+            // Auto-resolve a DataTemplate by class identity. The produced
             // Visual hosts the data through its DataContext so
             // $-bindings inside the template resolve naturally.
-            const tpl = findDataTemplateForType(newValue.constructor.name);
+            const tpl = findDataTemplateForType(newValue.constructor);
             if (tpl !== undefined)
             {
                 const v = tpl.Apply(newValue);

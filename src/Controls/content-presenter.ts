@@ -7,7 +7,7 @@ import {
     type DrawingContext,
     type PropertyDescriptor,
 } from '../runtime/index.js';
-import type { DataTemplate } from './data-template.js';
+import { findDataTemplateForType, type DataTemplate } from './data-template.js';
 import { TextBlock } from './text-block.js';
 
 // The visual slot a ControlTemplate uses to host the templated
@@ -133,10 +133,12 @@ export class ContentPresenter extends Visual
     // (the existing imperative attach path) so DOM wiring is unified.
     //
     // Precedence:
-    //   1. Content is a Visual         → slot it directly.
-    //   2. ContentTemplate + Content   → Apply template, set DataContext.
-    //   3. Primitive Content            → stringify into a TextBlock.
-    //   4. undefined                    → empty slot.
+    //   1. Content is a Visual                       → slot it directly.
+    //   2. ContentTemplate + Content                 → Apply explicit template, set DataContext.
+    //   3. Content is a Model with a matching        → Apply the implicit-by-DataType template
+    //      DataTemplate in the resource chain          via findDataTemplateForType.
+    //   4. Primitive Content (or unmatched Model)    → stringify into a TextBlock.
+    //   5. undefined                                  → empty slot.
     private resolveAndSlot(): void
     {
         const content = this.Content;
@@ -145,9 +147,33 @@ export class ContentPresenter extends Visual
             this.SetContent(content);
             return;
         }
-        const tmpl = this.ContentTemplate;
+        // Explicit ContentTemplate beats implicit lookup, matching how
+        // ItemsControl prefers ItemTemplate(Selector) over the global
+        // DataType-keyed registry.
+        let tmpl = this.ContentTemplate;
+        if (tmpl === undefined && content !== undefined && content !== null
+            && typeof content === 'object')
+        {
+            // Implicit DataTemplate resolution by Function-identity match.
+            // Lets a `DataTemplate [DataType=NodeVM]` in app or element
+            // resources auto-apply to any NodeVM slotted here without an
+            // explicit ItemTemplate / ContentTemplate reference. Closes
+            // the gap that made an `ItemsControl[ItemsSource=$Edges]`
+            // with no explicit template fall through to text-stringify.
+            tmpl = findDataTemplateForType((content as object).constructor);
+        }
         if (tmpl !== undefined && content !== undefined && content !== null)
         {
+            // Set DataContext on the presenter itself so bindings
+            // attached to the presenter — including those produced by
+            // ItemContainerStyle setters in an ItemsControl wrap path
+            // (Canvas.Left={$X} etc.) — resolve against the item.
+            // Inheritance then carries the same DataContext down to
+            // the produced template subtree, so `v.DataContext = content`
+            // is redundant but kept for the case where v is a Visual
+            // that was constructed with bindings already resolved
+            // before reparenting.
+            this.DataContext = content;
             const v = tmpl.Apply(content);
             v.DataContext = content;
             this.SetContent(v);

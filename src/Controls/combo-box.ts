@@ -14,6 +14,7 @@ import {
 import { PresentationTarget } from '../visual-engine/index.js';
 import { Border } from './border.js';
 import { ItemsControl } from './items-control.js';
+import { Selector } from './selector.js';
 import { StackPanel } from './stack-panel.js';
 import { TextBlock } from './text-block.js';
 import { ensureControlsTheme } from './default-resources.js';
@@ -374,15 +375,13 @@ export class ComboBoxItemList extends ItemsControl
 // The popup lives on the OverlayLayer so it paints above ALL other
 // content, regardless of the originating selection box's depth in
 // the visual tree.
-export class ComboBox extends Visual
+export class ComboBox extends Selector
 {
-    public static readonly ItemsKey          = Model.RegisterProperty<readonly unknown[] | undefined>(ComboBox, 'Items',          undefined, MetaData.Measure);
-    public static readonly SelectedItemKey   = Model.RegisterProperty<unknown>(                       ComboBox, 'SelectedItem',   undefined, MetaData.Measure | MetaData.Render);
-    public static readonly SelectedIndexKey  = Model.RegisterProperty<number>(                        ComboBox, 'SelectedIndex',  -1,        MetaData.None);
-    public static readonly IsDropDownOpenKey = Model.RegisterProperty<boolean>(                       ComboBox, 'IsDropDownOpen', false,     MetaData.Measure);
-    public static readonly PlaceholderKey    = Model.RegisterProperty<string>(                        ComboBox, 'Placeholder',    'Select…', MetaData.Measure | MetaData.Render);
+    public static readonly IsDropDownOpenKey = Model.RegisterProperty<boolean>(ComboBox, 'IsDropDownOpen', false,     MetaData.Measure);
+    public static readonly PlaceholderKey    = Model.RegisterProperty<string>( ComboBox, 'Placeholder',    'Select…', MetaData.Measure | MetaData.Render);
 
     static {
+        Model.OverrideMetadata(ComboBox, Visual.DefaultStyleKeyKey, { default_value: ComboBox });
         // Registers the consolidated controls theme exactly once so
         // DefaultComboBoxSelection / DefaultComboBoxPopup resolve via
         // Application.ResolveDefaultResource during construction.
@@ -396,9 +395,6 @@ export class ComboBox extends Visual
     private readonly _popupList:       ComboBoxItemList;
     private readonly _popupHost:       ComboBoxPopupHost;
     private readonly _scrim:           ClickAwayScrim;
-    /** Guard for the SelectedIndex / SelectedItem cross-update — when
-     *  one DP setter writes the other we must not loop. */
-    private _suppressSelectionSync = false;
 
     /** True iff `_popupHost` is currently a child of
      *  PresentationTarget.OverlayRoot. Tracked so redundant IsOpen
@@ -461,14 +457,9 @@ export class ComboBox extends Visual
         this.refreshSelectionText();
     }
 
-    public get Items(): readonly unknown[] | undefined { return this.get_property_value(ComboBox.ItemsKey); }
-    public set Items(v: readonly unknown[] | undefined) { this.set_property_value(ComboBox.ItemsKey, v); }
-
-    public get SelectedItem(): unknown { return this.get_property_value(ComboBox.SelectedItemKey); }
-    public set SelectedItem(v: unknown) { this.set_property_value(ComboBox.SelectedItemKey, v); }
-
-    public get SelectedIndex(): number { return this.get_property_value(ComboBox.SelectedIndexKey); }
-    public set SelectedIndex(v: number) { this.set_property_value(ComboBox.SelectedIndexKey, v); }
+    // Items / SelectedItem / SelectedIndex / SelectedValue / SelectedValuePath
+    // are inherited from Selector (ItemsControl). Only ComboBox-specific DPs
+    // get accessor overrides here.
 
     public get IsDropDownOpen(): boolean { return this.get_property_value(ComboBox.IsDropDownOpenKey); }
     public set IsDropDownOpen(v: boolean) { this.set_property_value(ComboBox.IsDropDownOpenKey, v); }
@@ -534,26 +525,30 @@ export class ComboBox extends Visual
         newValue: unknown,
     ): void
     {
+        // Selector.OnPropertyChanged runs the Selected* cross-sync and
+        // dispatches to applySelected* on external writes — call it
+        // first so by the time our switch sees a Selected* write below,
+        // the rest of the selection state is already coherent.
         super.OnPropertyChanged(descriptor, oldValue, newValue);
+        // The first DP write (Items = _declarativeItems) fires from
+        // ItemsControl's super-constructor BEFORE this ComboBox's own
+        // template parts are wired. Bail until templates exist — the
+        // user's first real Items / Selected* write will land after
+        // construction completes and re-enter this switch correctly.
+        if (this._popupList === undefined) return;
         switch (descriptor.Name)
         {
             case 'Items':
-                // Forward into the internal ItemsControl — that owns
-                // container materialization now. Setter handles both
-                // arrays and undefined.
+                // Forward into the popup's ItemsControl — it owns the
+                // container materialization for the dropdown rows.
                 this._popupList.Items = (newValue as readonly unknown[] | undefined) ?? [];
-                this.syncSelectionFromIndex();
+                // Items changed → re-evaluate the selection at the
+                // current SelectedIndex. Mirrors WPF's behaviour of
+                // preserving SelectedIndex and pulling SelectedItem out
+                // of the new collection. Selector.applySelectedIndex
+                // does the cross-sync + listener fire for us.
+                this.applySelectedIndex(this.SelectedIndex);
                 this.refreshSelectionText();
-                break;
-            case 'SelectedItem':
-                this.syncIndexFromItem();
-                this.refreshSelectionText();
-                this.refreshItemHighlights();
-                break;
-            case 'SelectedIndex':
-                this.syncSelectionFromIndex();
-                this.refreshSelectionText();
-                this.refreshItemHighlights();
                 break;
             case 'IsDropDownOpen':
                 this.applyDropDownVisibility(newValue as boolean);
@@ -562,6 +557,26 @@ export class ComboBox extends Visual
                 this.refreshSelectionText();
                 break;
         }
+    }
+
+    // ── Selector apply* overrides — refresh visuals after cross-sync.
+    //
+    // applySelected* fires on external SelectedX writes (the cross-sync
+    // path is suppressed). Super.* runs first so refreshSelectionText
+    // and refreshItemHighlights see the final post-sync values.
+
+    protected override applySelectedIndex(idx: number): void
+    {
+        super.applySelectedIndex(idx);
+        this.refreshSelectionText();
+        this.refreshItemHighlights();
+    }
+
+    protected override applySelectedItem(item: unknown): void
+    {
+        super.applySelectedItem(item);
+        this.refreshSelectionText();
+        this.refreshItemHighlights();
     }
 
     // ── Internal plumbing ───────────────────────────────────────────
@@ -592,43 +607,12 @@ export class ComboBox extends Visual
         }
     }
 
-    // SelectedItem → SelectedIndex. The look-up uses identity to
-    // avoid false matches when two distinct objects stringify to the
-    // same value (a common pitfall with custom toString impls).
-    private syncIndexFromItem(): void
-    {
-        if (this._suppressSelectionSync) return;
-        const items = this.Items;
-        const selected = this.SelectedItem;
-        if (items === undefined || selected === undefined)
-        {
-            this._suppressSelectionSync = true;
-            this.SelectedIndex = -1;
-            this._suppressSelectionSync = false;
-            return;
-        }
-        const idx = items.indexOf(selected);
-        this._suppressSelectionSync = true;
-        this.SelectedIndex = idx;
-        this._suppressSelectionSync = false;
-    }
-
-    // SelectedIndex → SelectedItem.
-    private syncSelectionFromIndex(): void
-    {
-        if (this._suppressSelectionSync) return;
-        const items = this.Items;
-        const idx   = this.SelectedIndex;
-        const next  = items === undefined || idx < 0 || idx >= items.length
-            ? undefined
-            : items[idx];
-        this._suppressSelectionSync = true;
-        this.SelectedItem = next;
-        this._suppressSelectionSync = false;
-    }
-
     private refreshSelectionText(): void
     {
+        // Guard for the super-construction window — see the matching
+        // guard in OnPropertyChanged. apply* hooks fired before the
+        // template parts are wired would otherwise crash here.
+        if (this._selectionText === undefined) return;
         const item = this.SelectedItem;
         if (item === undefined || item === null)
         {

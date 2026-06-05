@@ -122,9 +122,9 @@ export class ContentControl extends Visual
     {
         if (value === undefined) return undefined;
         if (value instanceof Visual) return value;
-        // Non-Visual Model — auto-resolve a DataTemplate by type name.
-        const typeName = value.constructor.name;
-        const template = findDataTemplateForType(typeName);
+        // Non-Visual Model — auto-resolve a DataTemplate by class
+        // identity (DataType === value.constructor).
+        const template = findDataTemplateForType(value.constructor);
         if (template === undefined) return undefined;
         const visual = template.Apply(value);
         visual.DataContext = value;

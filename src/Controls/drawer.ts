@@ -180,6 +180,7 @@ export class Drawer extends Visual
     public static readonly ContentKey    = Model.RegisterProperty<Visual | undefined>(Drawer, 'Content',   undefined,                MetaData.Measure);
 
     static {
+        Model.OverrideMetadata(Drawer, Visual.DefaultStyleKeyKey, { default_value: Drawer });
         // Registers the consolidated controls theme exactly once so
         // DefaultDrawerPane / DefaultDrawerOverlay resolve via
         // Application.ResolveDefaultResource during construction.

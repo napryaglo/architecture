@@ -1,5 +1,4 @@
 import {
-    Application,
     MetaData,
     Model,
     Panel,
@@ -14,22 +13,11 @@ import {
 import type { Border } from './border.js';
 import { Orientation } from './stack-panel.js';
 import { Theme } from './theme.js';
-import type { ControlTemplate } from './control-template.js';
-import { ensureControlsTheme } from './default-resources.js';
+import { defaultTemplate, ensureControlsTheme } from './default-resources.js';
 
 // Resource-dictionary key — matches the `x:key` literal in
 // controls.template.mu's DefaultSlider entry.
-const KEY_SLIDER = 'DefaultSlider';
 
-function resolveTemplate(key: string): ControlTemplate
-{
-    const tpl = Application.ResolveDefaultResource<ControlTemplate>(key);
-    if (tpl === undefined)
-    {
-        throw new Error(`Slider: default template '${key}' is not registered.`);
-    }
-    return tpl;
-}
 
 // Cross-axis thickness pinned by the Slider's MeasureOverride — same
 // pattern ScrollBar uses to declare its own thickness. The thumb sits
@@ -119,6 +107,7 @@ export class Slider extends Visual
     public static readonly LargeChangeKey = Model.RegisterProperty<number>(     Slider, 'LargeChange', 0.1,  MetaData.None);
 
     static {
+        Model.OverrideMetadata(Slider, Visual.DefaultStyleKeyKey, { default_value: Slider });
         ensureControlsTheme();
     }
 
@@ -149,7 +138,7 @@ export class Slider extends Visual
         // happens when they tab to it).
         this.Focusable = true;
 
-        const inst = resolveTemplate(KEY_SLIDER).Apply(this);
+        const inst = defaultTemplate(Slider).Apply(this);
         this._layout = inst.root as SliderLayout;
         this._track  = inst.root.FindName('PART_Track') as Border;
         this._fill   = inst.root.FindName('PART_Fill')  as Border;

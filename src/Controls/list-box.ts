@@ -1,5 +1,4 @@
 import {
-    Application,
     MetaData,
     Model,
     Visual,
@@ -10,27 +9,15 @@ import {
 import type { Brush } from '../visual-engine/index.js';
 import type { Border } from './border.js';
 import { ContentControl } from './content-control.js';
-import type { ControlTemplate } from './control-template.js';
 import { findDataTemplateForType } from './data-template.js';
-import { ItemsControl } from './items-control.js';
+import { Selector } from './selector.js';
 import { Orientation, StackPanel } from './stack-panel.js';
 import { ScrollViewer } from './scroll-viewer.js';
 import { TextBlock } from './text-block.js';
 import { Theme } from './theme.js';
-import { ensureControlsTheme } from './default-resources.js';
+import { defaultTemplate, ensureControlsTheme } from './default-resources.js';
 
-const KEY_LISTBOX      = 'DefaultListBox';
-const KEY_LISTBOX_ITEM = 'DefaultListBoxItem';
 
-function resolveTemplate(key: string): ControlTemplate
-{
-    const tpl = Application.ResolveDefaultResource<ControlTemplate>(key);
-    if (tpl === undefined)
-    {
-        throw new Error(`ListBox: default template '${key}' is not registered.`);
-    }
-    return tpl;
-}
 
 // WPF's three-mode selector. Mirrors the WPF enum.
 //   Single   — every click sets one item; Ctrl / Shift are ignored.
@@ -97,25 +84,19 @@ function displayString(item: unknown): string
 // the first selected container when Tag is set (Items-driven path) or
 // the container itself when Tag is undefined (declarative path) —
 // mirroring WPF's dual-mode SelectedItem.
-export class ListBox extends ItemsControl
+export class ListBox extends Selector
 {
     public static readonly SelectionModeKey = Model.RegisterProperty<SelectionMode>(ListBox, 'SelectionMode', SelectionMode.Single, MetaData.None);
-    public static readonly SelectedIndexKey = Model.RegisterProperty<number>(       ListBox, 'SelectedIndex', -1,                   MetaData.None);
-    public static readonly SelectedItemKey  = Model.RegisterProperty<unknown>(      ListBox, 'SelectedItem',  undefined,            MetaData.None);
 
     static {
+        Model.OverrideMetadata(ListBox, Visual.DefaultStyleKeyKey, { default_value: ListBox });
         ensureControlsTheme();
     }
 
-    // Selection bookkeeping — same shape as TreeView, minus the
-    // visible/expanded distinction (every ListBoxItem is always visible).
+    // Multi-select bookkeeping — single-selection is just a Set of size 1.
+    // _anchor seeds Shift-click ranges in Extended mode.
     private readonly _selectedItems: Set<ListBoxItem> = new Set();
     private _anchor: ListBoxItem | undefined;
-    private readonly _selectionListeners: Set<() => void> = new Set();
-
-    // Guard for the SelectedIndex / SelectedItem cross-update — when one
-    // DP setter writes the other we must not loop.
-    private _suppressSelectionSync = false;
 
     // Cached after first template apply — the lookup walks the
     // template instance once; subsequent reads return the cached ref.
@@ -128,7 +109,7 @@ export class ListBox extends ItemsControl
         // ItemsControl: Template owns the surrounding chrome
         // (ScrollViewer + ItemsPresenter slot); ItemsPanel produces
         // the panel that hosts containers (vertical StackPanel).
-        this.Template = resolveTemplate(KEY_LISTBOX);
+        this.Template = defaultTemplate(ListBox);
         this.ItemsPanel = () => new StackPanel();
         // Base ItemsControl constructor already seeded Items =
         // _declarativeItems, so declarative AddChild lands in the right
@@ -137,12 +118,6 @@ export class ListBox extends ItemsControl
 
     public get SelectionMode(): SelectionMode { return this.get_property_value(ListBox.SelectionModeKey); }
     public set SelectionMode(v: SelectionMode) { this.set_property_value(ListBox.SelectionModeKey, v); }
-
-    public get SelectedIndex(): number { return this.get_property_value(ListBox.SelectedIndexKey); }
-    public set SelectedIndex(v: number) { this.set_property_value(ListBox.SelectedIndexKey, v); }
-
-    public get SelectedItem(): unknown { return this.get_property_value(ListBox.SelectedItemKey); }
-    public set SelectedItem(v: unknown) { this.set_property_value(ListBox.SelectedItemKey, v); }
 
     // Compiler routes `ListBox { ListBoxItem … }` body elements through
     // ItemsControl.AddChild → Items. We only need to gate on the
@@ -210,7 +185,7 @@ export class ListBox extends ItemsControl
     private contentForItem(item: unknown): Visual | Model {
         if (item instanceof Visual) return item;
         if (item instanceof Model
-            && findDataTemplateForType(item.constructor.name) !== undefined)
+            && findDataTemplateForType(item.constructor) !== undefined)
         {
             return item;
         }
@@ -276,15 +251,6 @@ export class ListBox extends ItemsControl
         return sv;
     }
 
-    public AddSelectionChangedListener(listener: () => void): void
-    {
-        this._selectionListeners.add(listener);
-    }
-    public RemoveSelectionChangedListener(listener: () => void): void
-    {
-        this._selectionListeners.delete(listener);
-    }
-
     public ClearSelection(): void
     {
         if (this._selectedItems.size === 0) return;
@@ -333,6 +299,33 @@ export class ListBox extends ItemsControl
         this.fireSelectionChanged();
     }
 
+    // ── Selector resolution overrides — Tag-based identity ─────────
+    //
+    // ListBox's selection model is per-container (each ListBoxItem
+    // carries a Tag with the source data, or stands in for itself in
+    // the declarative path). Override the base Selector seams so its
+    // cross-sync and external-write paths resolve through containers
+    // instead of the raw Items collection.
+
+    protected override resolveItemAt(index: number): unknown
+    {
+        const containers = this.ItemContainers;
+        if (index < 0 || index >= containers.length) return undefined;
+        return ListBox.exposedValueOf(containers[index]!);
+    }
+
+    protected override resolveIndexOf(item: unknown): number
+    {
+        if (item === undefined) return -1;
+        const containers = this.ItemContainers;
+        for (let i = 0; i < containers.length; i++)
+        {
+            const li = containers[i]!;
+            if (li.Tag === item || li === item) return i;
+        }
+        return -1;
+    }
+
     private setSelected(items: readonly ListBoxItem[]): void
     {
         const next = new Set(items);
@@ -377,11 +370,6 @@ export class ListBox extends ItemsControl
         this.setSelected(containers.slice(lo, hi + 1));
     }
 
-    private fireSelectionChanged(): void
-    {
-        for (const l of this._selectionListeners) l();
-    }
-
     // Public-DP value seen by external consumers for a given row:
     // Tag is what the data-driven path carries (the source data);
     // composed-markup rows without an explicit Tag fall back to the
@@ -392,51 +380,40 @@ export class ListBox extends ItemsControl
     }
 
     // Push the internal selection set's first member out to the
-    // public SelectedIndex / SelectedItem DPs. Read-only mirror — the
-    // DPs reflect the multi-selection model's "primary" item but
-    // never drive the model on their own (HandleItemClick /
-    // ClearSelection / direct DP writes do). The cross-DP guard is
-    // raised so this mirror doesn't loop through OnPropertyChanged
-    // back into applySelectedIndex / applySelectedItem.
+    // public Selector DPs (SelectedIndex / SelectedItem / SelectedValue).
+    // Read-only mirror — the DPs reflect the multi-selection model's
+    // "primary" item but never drive the model on their own (the
+    // HandleItemClick / ClearSelection paths AND the applySelected*
+    // overrides below do). Wrapped in the base's
+    // withSuppressedSelectionSync so the writes don't re-enter
+    // applySelected*.
     private refreshExposedSelection(): void
     {
         const first: ListBoxItem | undefined =
             this._selectedItems.values().next().value;
-        this._suppressSelectionSync = true;
-        if (first === undefined)
-        {
-            this.SelectedIndex = -1;
-            this.SelectedItem  = undefined;
-        }
-        else
-        {
-            this.SelectedIndex = this.logicalChildren.indexOf(first);
-            this.SelectedItem  = ListBox.exposedValueOf(first);
-        }
-        this._suppressSelectionSync = false;
+        this.withSuppressedSelectionSync(() => {
+            if (first === undefined)
+            {
+                this.SelectedIndex = -1;
+                this.SelectedItem  = undefined;
+                this.SelectedValue = this.projectValue(undefined);
+            }
+            else
+            {
+                const item = ListBox.exposedValueOf(first);
+                this.SelectedIndex = this.logicalChildren.indexOf(first);
+                this.SelectedItem  = item;
+                this.SelectedValue = this.projectValue(item);
+            }
+        });
     }
 
-    protected override OnPropertyChanged(
-        descriptor: PropertyDescriptor,
-        oldValue: unknown,
-        newValue: unknown,
-    ): void
-    {
-        super.OnPropertyChanged(descriptor, oldValue, newValue);
-        switch (descriptor.Name)
-        {
-            case 'SelectedIndex':
-                if (this._suppressSelectionSync) break;
-                this.applySelectedIndex(newValue as number);
-                break;
-            case 'SelectedItem':
-                if (this._suppressSelectionSync) break;
-                this.applySelectedItem(newValue);
-                break;
-        }
-    }
+    // ── Selector apply* overrides — sync internal multi-select state
+    //    with external DP writes. The base's apply* cross-syncs and
+    //    fires SelectionChanged; we run our own update first so the
+    //    listener sees a coherent multi-select snapshot.
 
-    private applySelectedIndex(idx: number): void
+    protected override applySelectedIndex(idx: number): void
     {
         const containers = this.ItemContainers;
         if (idx < 0 || idx >= containers.length)
@@ -450,13 +427,10 @@ export class ListBox extends ItemsControl
             this.setSelected([item]);
             this._anchor = item;
         }
-        // Single mirror path for both apply* methods. Also normalises
-        // an out-of-range index write back to -1.
-        this.refreshExposedSelection();
-        this.fireSelectionChanged();
+        super.applySelectedIndex(idx);
     }
 
-    private applySelectedItem(value: unknown): void
+    protected override applySelectedItem(value: unknown): void
     {
         const containers = this.ItemContainers;
         if (value === undefined)
@@ -466,8 +440,6 @@ export class ListBox extends ItemsControl
         }
         else
         {
-            // Match Tag identity first (Items mode), then the
-            // container itself (declarative mode without a Tag).
             const match = containers.find(li => li.Tag === value || li === value);
             if (match !== undefined)
             {
@@ -480,8 +452,7 @@ export class ListBox extends ItemsControl
                 this._anchor = undefined;
             }
         }
-        this.refreshExposedSelection();
-        this.fireSelectionChanged();
+        super.applySelectedItem(value);
     }
 }
 
@@ -510,6 +481,7 @@ export class ListBoxItem extends ContentControl
         ListBoxItem, 'IsSelected', false, MetaData.Render);
 
     static {
+        Model.OverrideMetadata(ListBoxItem, Visual.DefaultStyleKeyKey, { default_value: ListBoxItem });
         ensureControlsTheme();
     }
 
@@ -519,7 +491,7 @@ export class ListBoxItem extends ContentControl
     constructor(content?: Visual)
     {
         super();
-        this.Template = resolveTemplate(KEY_LISTBOX_ITEM);
+        this.Template = defaultTemplate(ListBoxItem);
         this._border = this.GetTemplateChild('PART_Border') as Border | undefined;
         if (content !== undefined) this.Content = content;
         this.AddPropertyChangedListener(Visual.IsMouseOverKey, () => this.refreshBackground());
@@ -547,8 +519,8 @@ export class ListBoxItem extends ContentControl
         const fire = this._pressOriginatedHere && this.IsMouseOver;
         this._pressOriginatedHere = false;
         if (!fire) return;
-        const lb = ItemsControl.FromContainer<ListBox>(
-            this, (v): v is ListBox => v instanceof ListBox);
+        const lb = Selector.FromContainer<ListBox>(
+            this, (v: Visual): v is ListBox => v instanceof ListBox);
         if (lb !== undefined) lb.HandleItemClick(this, args.Modifiers);
     }
 

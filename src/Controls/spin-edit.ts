@@ -1,5 +1,4 @@
 import {
-    Application,
     MetaData,
     Model,
     Rect,
@@ -12,24 +11,13 @@ import {
 } from '../runtime/index.js';
 import type { Border } from './border.js';
 import { ClickableBorder } from './combo-box.js';
-import type { ControlTemplate } from './control-template.js';
-import { ensureControlsTheme } from './default-resources.js';
+import { defaultTemplate, ensureControlsTheme } from './default-resources.js';
 import { TextBox } from './text-box.js';
 import { Theme } from './theme.js';
 
 // Resource-dictionary key — matches the `x:key` literal in
 // controls.template.mu's DefaultSpinEdit entry.
-const KEY_SPINEDIT = 'DefaultSpinEdit';
 
-function resolveTemplate(key: string): ControlTemplate
-{
-    const tpl = Application.ResolveDefaultResource<ControlTemplate>(key);
-    if (tpl === undefined)
-    {
-        throw new Error(`SpinEdit: default template '${key}' is not registered.`);
-    }
-    return tpl;
-}
 
 // Numeric up/down editor — the WPF / DevExpress NumericUpDown analog.
 // Composes an inner TextBox (single-line, holds the formatted display)
@@ -95,6 +83,7 @@ export class SpinEdit extends Visual
     public static readonly IsReadOnlyKey    = Model.RegisterProperty<boolean>(SpinEdit, 'IsReadOnly',    false,              MetaData.None);
 
     static {
+        Model.OverrideMetadata(SpinEdit, Visual.DefaultStyleKeyKey, { default_value: SpinEdit });
         ensureControlsTheme();
     }
 
@@ -115,7 +104,7 @@ export class SpinEdit extends Visual
     {
         super();
 
-        const inst = resolveTemplate(KEY_SPINEDIT).Apply(this);
+        const inst = defaultTemplate(SpinEdit).Apply(this);
         this._border     = inst.root as Border;
         this._textBox    = inst.root.FindName('PART_TextBox') as TextBox;
         this._upButton   = inst.root.FindName('PART_Up')      as ClickableBorder;

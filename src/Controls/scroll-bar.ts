@@ -1,5 +1,4 @@
 import {
-    Application,
     MetaData,
     Model,
     Panel,
@@ -13,20 +12,9 @@ import {
 import type { Border } from './border.js';
 import { Orientation } from './stack-panel.js';
 import { Theme } from './theme.js';
-import type { ControlTemplate } from './control-template.js';
-import { ensureControlsTheme } from './default-resources.js';
+import { defaultTemplate, ensureControlsTheme } from './default-resources.js';
 
-const KEY_SCROLLBAR = 'DefaultScrollBar';
 
-function resolveTemplate(key: string): ControlTemplate
-{
-    const tpl = Application.ResolveDefaultResource<ControlTemplate>(key);
-    if (tpl === undefined)
-    {
-        throw new Error(`ScrollBar: default template '${key}' is not registered.`);
-    }
-    return tpl;
-}
 
 // Default bar thickness on the cross axis. Matches the size browsers
 // reserve for native scrollbars in their "thin" variant.
@@ -120,6 +108,7 @@ export class ScrollBar extends Visual
     public static readonly IsAutoHideKey   = Model.RegisterProperty<boolean>(    ScrollBar, 'IsAutoHide',   false, MetaData.None);
 
     static {
+        Model.OverrideMetadata(ScrollBar, Visual.DefaultStyleKeyKey, { default_value: ScrollBar });
         ensureControlsTheme();
     }
 
@@ -160,7 +149,7 @@ export class ScrollBar extends Visual
         // radius, zero border) lives in the template; hover and
         // pressed tints come from theme.ts because ScrollBar swaps
         // them at runtime via state listeners.
-        const inst = resolveTemplate(KEY_SCROLLBAR).Apply(this);
+        const inst = defaultTemplate(ScrollBar).Apply(this);
         this._layout = inst.root as ScrollBarLayout;
         this._track  = inst.root.FindName('PART_Track') as Border;
         this._thumb  = inst.root.FindName('PART_Thumb') as Border;
