@@ -12,7 +12,7 @@ describe('compile — named storyboards (Stop / Pause / Resume)', () => {
     test('BeginStoryboard [Name="fade"] emits the 2-arg constructor form', () => {
         const js = emitted(`
             Application{ resources: {
-                style[targettype=Button]{
+                Style[TargetType=Button]{
                     on Click {
                         BeginStoryboard [Name="fade"] {
                             DoubleAnimation[TargetProperty=Width, To=100, Duration=200]
@@ -31,7 +31,7 @@ describe('compile — named storyboards (Stop / Pause / Resume)', () => {
     test('BeginStoryboard WITHOUT Name keeps the legacy 1-arg form', () => {
         const js = emitted(`
             Application{ resources: {
-                style[targettype=Button]{
+                Style[TargetType=Button]{
                     on Click {
                         BeginStoryboard {
                             DoubleAnimation[TargetProperty=Width, To=100, Duration=200]
@@ -48,7 +48,7 @@ describe('compile — named storyboards (Stop / Pause / Resume)', () => {
     test('StopStoryboard / PauseStoryboard / ResumeStoryboard emit single-arg action classes', () => {
         const js = emitted(`
             Application{ resources: {
-                style[targettype=Button]{
+                Style[TargetType=Button]{
                     on Click       { StopStoryboard[Name="fade"] }
                     on PointerDown { PauseStoryboard[Name="fade"] }
                     on PointerUp   { ResumeStoryboard[Name="fade"] }
@@ -63,7 +63,7 @@ describe('compile — named storyboards (Stop / Pause / Resume)', () => {
     test('StopStoryboard accepts a bare-ident Name', () => {
         const js = emitted(`
             Application{ resources: {
-                style[targettype=Button]{
+                Style[TargetType=Button]{
                     on Click { StopStoryboard[Name=fade] }
                 }
             }}
@@ -75,7 +75,7 @@ describe('compile — named storyboards (Stop / Pause / Resume)', () => {
         assert.throws(
             () => emitted(`
                 Application{ resources: {
-                    style[targettype=Button]{
+                    Style[TargetType=Button]{
                         on Click { StopStoryboard }
                     }
                 }}
@@ -87,7 +87,7 @@ describe('compile — named storyboards (Stop / Pause / Resume)', () => {
     test('Pause / Resume in enter / exit of a property trigger', () => {
         const js = emitted(`
             Application{ resources: {
-                style[targettype=Button]{
+                Style[TargetType=Button]{
                     on Loaded {
                         BeginStoryboard [Name="loop"] {
                             DoubleAnimation[TargetProperty=Width, From=80, To=200, Duration=600, RepeatBehavior=Infinity]

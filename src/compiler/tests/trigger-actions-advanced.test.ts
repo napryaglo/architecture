@@ -12,7 +12,7 @@ describe('compile — `on enter` / `on exit` inside when(){...}', () => {
     test('Single property trigger with enter + exit BeginStoryboard actions', () => {
         const js = emitted(`
             Application{ resources: {
-                style[targettype=Button]{
+                Style[TargetType=Button]{
                     when( IsMouseOver ){
                         Background = #2196f3;
                         on enter {
@@ -45,7 +45,7 @@ describe('compile — `on enter` / `on exit` inside when(){...}', () => {
     test("when() without action blocks keeps the legacy 4-arg PropertyTrigger shape", () => {
         const js = emitted(`
             Application{ resources: {
-                style[targettype=Border]{
+                Style[TargetType=Border]{
                     when( IsMouseOver ){
                         Background = #eeeeee;
                     }
@@ -63,7 +63,7 @@ describe('compile — `on enter` / `on exit` inside when(){...}', () => {
     test('Only `enter` or only `exit` works (the other side defaults to empty)', () => {
         const js = emitted(`
             Application{ resources: {
-                style[targettype=Button]{
+                Style[TargetType=Button]{
                     when( IsFocused ){
                         on enter {
                             BeginStoryboard {
@@ -85,7 +85,7 @@ describe('compile — `on enter` / `on exit` inside when(){...}', () => {
         assert.throws(
             () => emitted(`
                 Application{ resources: {
-                    style[targettype=Button]{
+                    Style[TargetType=Button]{
                         when( IsMouseOver ){
                             on Click { BeginStoryboard { DoubleAnimation[TargetProperty=Width, To=100, Duration=200] } }
                         }
@@ -99,7 +99,7 @@ describe('compile — `on enter` / `on exit` inside when(){...}', () => {
     test('MultiTrigger (a AND b) also carries enter / exit actions', () => {
         const js = emitted(`
             Application{ resources: {
-                style[targettype=Button]{
+                Style[TargetType=Button]{
                     when( IsMouseOver and IsFocused ){
                         on enter {
                             BeginStoryboard {
@@ -121,7 +121,7 @@ describe('compile — Storyboard.TargetName', () => {
     test('TargetName emits a _target.FindName(...) lookup as the sb.Add target', () => {
         const js = emitted(`
             Application{ resources: {
-                style[targettype=Button]{
+                Style[TargetType=Button]{
                     on Click {
                         BeginStoryboard {
                             DoubleAnimation[TargetName=anim, TargetProperty=Width, To=240, Duration=400]
@@ -139,7 +139,7 @@ describe('compile — Storyboard.TargetName', () => {
     test('No TargetName falls back to _target directly', () => {
         const js = emitted(`
             Application{ resources: {
-                style[targettype=Button]{
+                Style[TargetType=Button]{
                     on Click {
                         BeginStoryboard {
                             DoubleAnimation[TargetProperty=Width, To=240, Duration=400]
@@ -155,7 +155,7 @@ describe('compile — Storyboard.TargetName', () => {
     test('TargetName accepts a bare identifier OR a quoted string', () => {
         const jsIdent = emitted(`
             Application{ resources: {
-                style[targettype=Button]{
+                Style[TargetType=Button]{
                     on Click {
                         BeginStoryboard {
                             DoubleAnimation[TargetName=anim, TargetProperty=Width, To=200, Duration=400]
@@ -168,7 +168,7 @@ describe('compile — Storyboard.TargetName', () => {
 
         const jsString = emitted(`
             Application{ resources: {
-                style[targettype=Button]{
+                Style[TargetType=Button]{
                     on Click {
                         BeginStoryboard {
                             DoubleAnimation[TargetName="anim", TargetProperty=Width, To=200, Duration=400]

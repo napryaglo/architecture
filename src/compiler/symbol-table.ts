@@ -33,6 +33,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['BindingMode',         '@visualisation-sub/mural/runtime'],
     ['DynamicResource',     '@visualisation-sub/mural/runtime'],
     ['DataContextBinding',  '@visualisation-sub/mural/runtime'],
+    ['ElementNameBinding',  '@visualisation-sub/mural/runtime'],
     ['MultiBinding',        '@visualisation-sub/mural/runtime'],
     ['TemplateBinding',     '@visualisation-sub/mural/runtime'],
     ['MultiTrigger',        '@visualisation-sub/mural/runtime'],
@@ -81,12 +82,20 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['Orientation',             '@visualisation-sub/mural/Controls'],
     ['ContentControl',          '@visualisation-sub/mural/Controls'],
     ['ContentPresenter',        '@visualisation-sub/mural/Controls'],
+    ['DiagramNode',             '@visualisation-sub/mural/Controls'],
+    ['Diagram',                 '@visualisation-sub/mural/Controls'],
+    ['Grid',                    '@visualisation-sub/mural/Controls'],
+    ['GridLength',              '@visualisation-sub/mural/Controls'],
+    ['ColumnDefinition',        '@visualisation-sub/mural/Controls'],
+    ['RowDefinition',           '@visualisation-sub/mural/Controls'],
     ['ControlTemplate',         '@visualisation-sub/mural/Controls'],
     ['DataTemplate',            '@visualisation-sub/mural/Controls'],
     ['TargetedSetter',          '@visualisation-sub/mural/Controls'],
     ['TemplatePropertyTrigger', '@visualisation-sub/mural/Controls'],
     ['TemplateDataTrigger',     '@visualisation-sub/mural/Controls'],
     ['ItemsControl',            '@visualisation-sub/mural/Controls'],
+    ['ListReorderBehavior',     '@visualisation-sub/mural/Controls'],
+    ['Selector',                '@visualisation-sub/mural/Controls'],
     ['ItemContainerGenerator',  '@visualisation-sub/mural/Controls'],
     ['ItemsPresenter',          '@visualisation-sub/mural/Controls'],
     ['HierarchicalDataTemplate','@visualisation-sub/mural/Controls'],
@@ -95,6 +104,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['SortDescription',         '@visualisation-sub/mural/Controls'],
     ['GroupDescription',        '@visualisation-sub/mural/Controls'],
     ['ScrollViewer',            '@visualisation-sub/mural/Controls'],
+    ['ScrollBar',               '@visualisation-sub/mural/Controls'],
     ['VirtualizingPanel',       '@visualisation-sub/mural/Controls'],
     ['VirtualizingStackPanel',  '@visualisation-sub/mural/Controls'],
     ['TextWrapping',            '@visualisation-sub/mural/Controls'],
@@ -139,36 +149,61 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
 
 export const DEFAULT_SYMBOLS: SymbolMap = new Map(ENTRIES);
 
-// Set of enum class names — used by the emitter to decide whether to
-// emit `Orientation.Vertical` (when the property name happens to match
-// an enum class) or fall back to a string literal. All runtime enums
-// listed here MUST also appear in DEFAULT_SYMBOLS so the emitter can
-// pull them in via an import.
-export const ENUM_CLASSES: ReadonlySet<string> = new Set([
-    'HorizontalAlignment',
-    'VerticalAlignment',
-    'FontWeight',
-    'FontStyle',
-    'Stretch',
-    'AlignmentX',
-    'AlignmentY',
-    'BindingMode',
-    'GradientSpreadMethod',
-    'LineCap',
-    'LineJoin',
-    'FillRule',
-    'SweepDirection',
-    'TextWrapping',
-    'ClickMode',
-    'Orientation',
-    'SelectionMode',
+// Enum class name → set of valid PascalCase members. Used by the
+// emitter to decide whether to emit `Orientation.Vertical` (when the
+// property name happens to match an enum class) AND to validate the
+// member name. An ident in enum position that isn't in the member set
+// is a compile error — silently emitting `Orientation.foo` would
+// resolve to `undefined` at runtime and cascade into NaN through any
+// layout math that touches the value.
+//
+// All runtime enums listed here MUST also appear in DEFAULT_SYMBOLS so
+// the emitter can pull them in via an import. The member sets MUST
+// stay in sync with the runtime declarations (src/runtime/visual.ts,
+// src/visual-engine/*, src/Controls/*) — there's no compile-time link
+// between this table and the actual enum declarations, so adding a
+// member to the runtime without updating this table makes the new
+// member unusable from markup until the table is updated.
+export const ENUM_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<string, ReadonlySet<string>>([
+    ['HorizontalAlignment',   new Set(['Left', 'Center', 'Right', 'Stretch'])],
+    ['VerticalAlignment',     new Set(['Top', 'Center', 'Bottom', 'Stretch'])],
+    ['FontWeight',            new Set(['Normal', 'Bold'])],
+    ['FontStyle',             new Set(['Normal', 'Italic'])],
+    ['Stretch',               new Set(['None', 'Fill', 'Uniform', 'UniformToFill'])],
+    ['AlignmentX',            new Set(['Left', 'Center', 'Right'])],
+    ['AlignmentY',            new Set(['Top', 'Center', 'Bottom'])],
+    ['BindingMode',           new Set(['OneWay', 'TwoWay', 'OneTime', 'OneWayToSource'])],
+    ['GradientSpreadMethod',  new Set(['Pad', 'Reflect', 'Repeat'])],
+    ['LineCap',               new Set(['Flat', 'Round', 'Square'])],
+    ['LineJoin',              new Set(['Miter', 'Round', 'Bevel'])],
+    ['FillRule',              new Set(['EvenOdd', 'Nonzero'])],
+    ['SweepDirection',        new Set(['Counterclockwise', 'Clockwise'])],
+    ['TextWrapping',          new Set(['NoWrap', 'Wrap'])],
+    ['ClickMode',             new Set(['Release', 'Press', 'Hover'])],
+    ['Orientation',           new Set(['Vertical', 'Horizontal'])],
+    ['SelectionMode',         new Set(['Single', 'Multiple', 'Extended'])],
+    ['Dock',                  new Set(['Left', 'Top', 'Right', 'Bottom'])],
+    ['DrawerVariant',         new Set(['Permanent', 'Persistent', 'Temporary'])],
+]);
+
+// Property-name → enum class. Used when the markup property name does
+// not equal the enum class name (`Variant: DrawerVariant`,
+// `Anchor: Dock`, …). The compiler consults this map before falling
+// through to "unresolved identifier" — that way a markup author
+// writing `Variant=Persistent` gets the same strict member-validation
+// a `HorizontalAlignment=Center` site does.
+//
+// Entries here MUST point at an enum class that's also in ENUM_MEMBERS.
+export const PROPERTY_TO_ENUM: ReadonlyMap<string, string> = new Map<string, string>([
+    ['Variant', 'DrawerVariant'],
+    ['Anchor',  'Dock'],
 ]);
 
 // Meta-attr names whose RHS is a type reference (compiled as a bare
 // class name, not a string). Used by resource forms.
 export const TYPE_REF_META_ATTRS: ReadonlySet<string> = new Set([
-    'targettype',
-    'datatype',
+    'TargetType',
+    'DataType',
 ]);
 
 // Per-control default-slot info. Used by the emitter to translate
@@ -195,6 +230,7 @@ export const DEFAULT_SLOT_INFO: ReadonlyMap<string, SlotInfo> = new Map<string, 
     ['Canvas',                  { name: 'Children', kind: 'list'   }],
     ['StackPanel',              { name: 'Children', kind: 'list'   }],
     ['UniformGrid',             { name: 'Children', kind: 'list'   }],
+    ['Grid',                    { name: 'Children', kind: 'list'   }],
     ['DockPanel',               { name: 'Children', kind: 'list'   }],
     ['Drawer',                  { name: 'Content',  kind: 'object' }],
     ['TreeView',                { name: 'Items',    kind: 'list'   }],
@@ -205,7 +241,10 @@ export const DEFAULT_SLOT_INFO: ReadonlyMap<string, SlotInfo> = new Map<string, 
     ['PageView',                { name: 'Content',  kind: 'object' }],
     ['ContentControl',          { name: 'Content',  kind: 'object' }],
     ['ContentPresenter',        { name: 'Content',  kind: 'object' }],
+    ['DiagramNode',             { name: 'Content',  kind: 'object' }],
     ['ItemsControl',            { name: 'Items',    kind: 'list'   }],
+    ['Selector',                { name: 'Items',    kind: 'list'   }],
+    ['Diagram',                 { name: 'Items',    kind: 'list'   }],
     ['VirtualizingStackPanel',  { name: 'Children', kind: 'list'   }],
     ['ScrollViewer',            { name: 'Content',  kind: 'object' }],
 

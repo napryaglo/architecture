@@ -93,6 +93,38 @@ export interface TriggerCondition
     value:        unknown;
 }
 
+// Binding-driven conditional setter group — counterpart to WPF's
+// DataTrigger. The trigger watches the styled Visual's DataContext
+// for the dotted `path` (resolved through DataContextBinding's walk
+// semantics). When the bound value === `value` (or !== when negated),
+// the trigger's setters apply at the Trigger priority tier; when the
+// match flips, they're unapplied.
+//
+// Unlike PropertyTrigger this is bound by *data identity* rather than
+// a DP on the target, so the same trigger transparently fires for
+// any item whose DataContext exposes the path. Heavily used inside
+// DataTemplate triggers (where the DataContext is the per-item view
+// model), but also valid inside an ordinary Style — useful for
+// per-element data-driven re-skinning without an intermediate VM
+// flag mirrored as a DP on the target.
+//
+// Authored markup writes `when( $Path )` to invoke the bare-truthy
+// form (matches when the bound value === true; `not $Path` matches
+// when === false), or `when( $Path = expr )` to compare against a
+// specific value. Mode is parser-driven; the runtime just compares.
+export class DataTrigger
+{
+    constructor(
+        public readonly path:    string,
+        public readonly value:   unknown,
+        public readonly setters: readonly Setter[],
+        // Same edge semantics as PropertyTrigger.enterActions —
+        // activation transitions only, no initial-state replay.
+        public readonly enterActions: readonly TriggerAction[] = [],
+        public readonly exitActions:  readonly TriggerAction[] = [],
+    ) {}
+}
+
 // Multi-property AND-trigger. Counterpart to WPF's MultiTrigger.
 // Watches each condition's (owner, name) pair; when a watched value
 // changes the trigger re-evaluates. Setters apply ONLY when every
@@ -145,11 +177,9 @@ export class MultiTrigger
 // are already `readonly`), but future trigger or setter-collection
 // mutation would gate on this.
 //
-// Still skipped vs WPF: EventTrigger (no animation system),
-// MultiTrigger (multi-condition AND), DataTrigger (Binding-driven
-// trigger conditions — covers a real use case but layers cleanly
-// on top of PropertyTrigger if needed later), per-style namespace
-// scoping for setter-resolved names.
+// Per-style namespace scoping for setter-resolved names is the main
+// remaining gap vs WPF (PropertyTrigger / MultiTrigger / DataTrigger /
+// EventTrigger all parity now).
 export class Style
 {
     public readonly TargetType: Function;
@@ -157,6 +187,7 @@ export class Style
     public readonly BasedOn: Style | undefined;
     public readonly Triggers:      readonly PropertyTrigger[];
     public readonly MultiTriggers: readonly MultiTrigger[];
+    public readonly DataTriggers:  readonly DataTrigger[];
     public readonly EventTriggers: readonly EventTrigger[];
 
     private _sealed: boolean = false;
@@ -169,6 +200,7 @@ export class Style
         triggers: readonly PropertyTrigger[] = [],
         multiTriggers: readonly MultiTrigger[] = [],
         eventTriggers: readonly EventTrigger[] = [],
+        dataTriggers:  readonly DataTrigger[]  = [],
     )
     {
         this.TargetType    = targetType;
@@ -177,6 +209,7 @@ export class Style
         this.Triggers      = triggers;
         this.MultiTriggers = multiTriggers;
         this.EventTriggers = eventTriggers;
+        this.DataTriggers  = dataTriggers;
     }
 
     public get IsSealed(): boolean { return this._sealed; }
@@ -272,6 +305,19 @@ export class Style
         const list: EventTrigger[] = [];
         if (this.BasedOn !== undefined) list.push(...this.BasedOn.ResolveEventTriggers());
         list.push(...this.EventTriggers);
+        return list;
+    }
+
+    // Same resolution semantics as the other Resolve* methods — BasedOn
+    // first, then this style's own list. DataTriggers share the Trigger
+    // priority tier with PropertyTrigger / MultiTrigger and follow
+    // last-applied-wins ordering when their setters collide on the
+    // same slot.
+    public ResolveDataTriggers(): DataTrigger[]
+    {
+        const list: DataTrigger[] = [];
+        if (this.BasedOn !== undefined) list.push(...this.BasedOn.ResolveDataTriggers());
+        list.push(...this.DataTriggers);
         return list;
     }
 }

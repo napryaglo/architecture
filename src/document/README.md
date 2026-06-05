@@ -88,6 +88,12 @@ Start with whichever doc matches what you're trying to do.
 - **[controls.md](controls.md)** — concrete-control reference:
   `Border`, `TextBlock`, `Canvas`, `ContentControl`, `ItemsControl`,
   `ScrollViewer`, etc.
+- **[grid.md](grid.md)** — `Grid` panel: pixel / auto / star track
+  sizing, `Grid.Row` / `Column` / `RowSpan` / `ColumnSpan` attached
+  properties, four-pass measure / prefix-sum arrange.
+- **[behaviors.md](behaviors.md)** — `Behavior` abstract base,
+  `Visual.AddBehavior`, markup `Behaviors { … }` block, the
+  `ListReorderBehavior` reference behavior.
 
 ## Five-line tour
 

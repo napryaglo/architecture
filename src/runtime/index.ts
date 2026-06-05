@@ -25,6 +25,7 @@ export {
     type ValueConverter,
 } from './binding.js';
 export { Model, PropertyKey } from './model.js';
+export { Behavior } from './behavior.js';
 export {
     Visual,
     Single,
@@ -42,6 +43,7 @@ export {
 export { Application, type MountableTarget } from './application.js';
 export { DynamicResource } from './dynamic-resource.js';
 export { DataContextBinding } from './data-context-binding.js';
+export { ElementNameBinding } from './element-name-binding.js';
 export { MultiBinding } from './multi-binding.js';
 export { TemplateBinding } from './template-binding.js';
 export {

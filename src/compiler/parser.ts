@@ -232,8 +232,8 @@ export class Parser
         const xAttrs = this.parseLeadingXAttrs();
 
         // The `[ meta=value, … ]` block is OPTIONAL — `Template` /
-        // `DataTemplate` / `HierarchicalDataTemplate` need it (targettype /
-        // datatype / itemsselector are required there), but
+        // `DataTemplate` / `HierarchicalDataTemplate` need it (TargetType /
+        // DataType / itemsselector are required there), but
         // `ItemsPanelTemplate` and inline-only forms have no required
         // meta-attrs, so the bracket pair can be omitted entirely. The
         // compiler validates required meta-attrs per-keyword downstream.
@@ -989,7 +989,7 @@ export class Parser
         {
             // Inline template at the slot-value position:
             //   `ItemsPanel: ItemsPanelTemplate { WrapPanel[…] }`
-            //   `ItemTemplate: DataTemplate [datatype=FooVM] { … }`
+            //   `ItemTemplate: DataTemplate [DataType=FooVM] { … }`
             // Parses identically to a keyed resource form; the compiler
             // emits an anonymous template construction at the assignment
             // site (no x:key required).

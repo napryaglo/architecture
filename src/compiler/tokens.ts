@@ -85,7 +85,8 @@ export interface Token
 }
 
 export const KEYWORDS = new Set<string>([
-    'style', 'template', 'datatemplate',
+    'Style', 'Template', 'DataTemplate',
+    'HierarchicalDataTemplate', 'ItemsPanelTemplate',
     'def', 'resources',
     'import', 'from',
     'when', 'not', 'and', 'or',

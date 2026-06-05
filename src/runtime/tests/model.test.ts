@@ -1090,8 +1090,8 @@ describe('Property inheritance and metadata override', () => {
     test('OverrideMetadata changes the default for the subclass while leaving the base class alone', () => {
         class Furniture extends Model {}
         class Desk extends Furniture {}
-        Model.RegisterProperty(Furniture, 'label', 'furniture-default', MetaData.Render);
-        Model.OverrideMetadata(Desk, 'label', { default_value: 'desk-default' });
+        const LabelKey = Model.RegisterProperty(Furniture, 'label', 'furniture-default', MetaData.Render);
+        Model.OverrideMetadata(Desk, LabelKey, { default_value: 'desk-default' });
 
         assert.equal(new Furniture()._get_property_value_by_name('label'), 'furniture-default');
         assert.equal(new Desk()._get_property_value_by_name('label'), 'desk-default');
@@ -1101,10 +1101,10 @@ describe('Property inheritance and metadata override', () => {
         class Furniture extends Model {}
         class Desk extends Furniture {}
         const clamp_to_10: CoerceValue = (_m, v) => Math.min(v as number, 10);
-        Model.RegisterProperty(Furniture, 'height', 1, MetaData.Render, clamp_to_10);
+        const HeightKey = Model.RegisterProperty(Furniture, 'height', 1, MetaData.Render, clamp_to_10);
 
         // Override only the default; coerce + meta_data must still apply.
-        Model.OverrideMetadata(Desk, 'height', { default_value: 5 });
+        Model.OverrideMetadata(Desk, HeightKey, { default_value: 5 });
 
         const desk = new Desk();
         assert.equal(desk._get_property_value_by_name('height'), 5);
@@ -1117,10 +1117,10 @@ describe('Property inheritance and metadata override', () => {
     test('OverrideMetadata can replace just the coerce callback', () => {
         class Furniture extends Model {}
         class Desk extends Furniture {}
-        Model.RegisterProperty(Furniture, 'height', 1, MetaData.Render);
+        const HeightKey = Model.RegisterProperty(Furniture, 'height', 1, MetaData.Render);
 
         const clamp_to_5: CoerceValue = (_m, v) => Math.min(v as number, 5);
-        Model.OverrideMetadata(Desk, 'height', { coerce_value: clamp_to_5 });
+        Model.OverrideMetadata(Desk, HeightKey, { coerce_value: clamp_to_5 });
 
         // Desk's height uses the inherited default (1) but the override's coerce.
         assert.equal(new Desk()._get_property_value_by_name('height'), 1);
@@ -1137,8 +1137,12 @@ describe('Property inheritance and metadata override', () => {
     test('OverrideMetadata throws when no ancestor has registered the property', () => {
         class Furniture extends Model {}
         class Desk extends Furniture {}
+        // Register on a sibling class to obtain a typed key whose
+        // descriptor name doesn't appear in Desk's ancestor chain.
+        class Stranger extends Model {}
+        const StrangerKey = Model.RegisterProperty(Stranger, 'unknown', 0, MetaData.None);
         assert.throws(
-            () => Model.OverrideMetadata(Desk, 'unknown', { default_value: 0 }),
+            () => Model.OverrideMetadata(Desk, StrangerKey, { default_value: 0 }),
             /Cannot override metadata for property 'unknown'/,
         );
     });
@@ -1147,11 +1151,11 @@ describe('Property inheritance and metadata override', () => {
         class A extends Model {}
         class B extends A {}
         class C extends B {}
-        Model.RegisterProperty(A, 'x', 1, MetaData.Render);
+        const XKey = Model.RegisterProperty(A, 'x', 1, MetaData.Render);
         // B overrides default only.
-        Model.OverrideMetadata(B, 'x', { default_value: 2 });
+        Model.OverrideMetadata(B, XKey, { default_value: 2 });
         // C overrides default only too; should NOT fall back to A because B is the nearer ancestor.
-        Model.OverrideMetadata(C, 'x', { default_value: 3 });
+        Model.OverrideMetadata(C, XKey, { default_value: 3 });
 
         assert.equal(new A()._get_property_value_by_name('x'), 1);
         assert.equal(new B()._get_property_value_by_name('x'), 2);
@@ -1179,8 +1183,8 @@ describe('Property inheritance and metadata override', () => {
     test('OverrideMetadata that adds a default fires the subclass default through subsequent get_property_value', () => {
         class Furniture extends Model {}
         class Desk extends Furniture {}
-        Model.RegisterProperty(Furniture, 'label', 'furniture', MetaData.Render);
-        Model.OverrideMetadata(Desk, 'label', { default_value: 'desk' });
+        const LabelKey = Model.RegisterProperty(Furniture, 'label', 'furniture', MetaData.Render);
+        Model.OverrideMetadata(Desk, LabelKey, { default_value: 'desk' });
 
         const desk = new Desk();
         // No set — descriptor walk finds Desk's overridden default.
@@ -2472,9 +2476,9 @@ describe('Read-only properties', () => {
 
     test('OverrideMetadata on a read-only property preserves the read-only flag', () => {
         class Base extends Model {}
-        Model.RegisterReadOnlyProperty(Base, 'computed', 0, MetaData.None);
+        const ComputedKey = Model.RegisterReadOnlyProperty(Base, 'computed', 0, MetaData.None);
         class Derived extends Base {}
-        Model.OverrideMetadata(Derived, 'computed', { default_value: 99 });
+        Model.OverrideMetadata(Derived, ComputedKey, { default_value: 99 });
 
         const d = new Derived();
         assert.equal(d._get_property_value_by_name('computed'), 99);  // override default applies
@@ -3838,5 +3842,195 @@ describe('Visual layout lifecycle (Measure / Arrange / Render)', () => {
         // and default Stretch — marginedRect inside child = (15, 15, 170, 170).
         // Stretch fills, so ArrangedRect = (15, 15, 170, 170).
         assert.ok(child.ArrangedRect.Equals(new Rect(15, 15, 170, 170)));
+    });
+});
+
+describe('Model.EnumerateProperties — DP surface introspection', () => {
+    test('returns descriptors registered on the class itself', () => {
+        class Base extends Model {
+            static {
+                Model.RegisterProperty(Base, 'Alpha', 0, MetaData.None);
+                Model.RegisterProperty(Base, 'Beta',  '',  MetaData.None);
+            }
+        }
+        const props = Model.EnumerateProperties(Base);
+        const names = props.map(p => p.Name).sort();
+        assert.deepEqual(names, ['Alpha', 'Beta']);
+        for (const p of props) assert.equal(p.RootOwner, Base);
+    });
+
+    test('walks the prototype chain and surfaces ancestor DPs', () => {
+        class Parent extends Model {
+            static { Model.RegisterProperty(Parent, 'ParentProp', 0, MetaData.None); }
+        }
+        class Child extends Parent {
+            static { Model.RegisterProperty(Child, 'ChildProp', 0, MetaData.None); }
+        }
+        const props = Model.EnumerateProperties(Child);
+        const names = props.map(p => p.Name).sort();
+        assert.deepEqual(names, ['ChildProp', 'ParentProp']);
+        // RootOwner reflects each property's registering class so a
+        // consumer (e.g. the LSP completion provider) can label
+        // inherited entries differently.
+        const parentEntry = props.find(p => p.Name === 'ParentProp')!;
+        const childEntry  = props.find(p => p.Name === 'ChildProp')!;
+        assert.equal(parentEntry.RootOwner, Parent);
+        assert.equal(childEntry.RootOwner,  Child);
+    });
+
+    test('classes with no registered DPs return an empty list', () => {
+        class Empty extends Model {}
+        assert.deepEqual(Model.EnumerateProperties(Empty), []);
+    });
+
+    test('integrates with Model.find_class for name-keyed enumeration', () => {
+        // The intended LSP flow: user types `[TargetType=Foo]`, the
+        // analyzer captures 'Foo', and the completion provider hands
+        // the string to `find_class` + `EnumerateProperties`. This
+        // test pins the round-trip on a locally-declared class so it
+        // doesn't depend on Controls being loaded.
+        class Foo extends Model {
+            static { Model.RegisterProperty(Foo, 'Gamma', 0, MetaData.None); }
+        }
+        const resolved = Model.find_class('Foo');
+        assert.equal(resolved, Foo);
+        const props = Model.EnumerateProperties(resolved!);
+        assert.equal(props.length, 1);
+        assert.equal(props[0]!.Name, 'Gamma');
+    });
+});
+
+// Pins backlog item 1.1: CoerceValue runs on EVERY effective-value
+// recomputation, not just the first set. Storage holds the raw value;
+// `value` applies coerce on read. GetValueSource returns CoercedValue
+// when coerce produced a different value than the underlying base.
+describe('Coerce on every effective-value recomputation', () => {
+    const clamp_to_10: CoerceValue = (_m, v) => Math.min(v as number, 10);
+
+    test('subsequent sets are coerced (not just the first)', () => {
+        class Slider extends Model {
+            static { Model.RegisterProperty(Slider, 'Value', 0, MetaData.None, clamp_to_10); }
+        }
+        const s = new Slider();
+        s._set_property_value_by_name('Value', 100);
+        assert.equal(s._get_property_value_by_name('Value'), 10);
+
+        // Second set must also be clamped — the bug being fixed.
+        s._set_property_value_by_name('Value', 999);
+        assert.equal(s._get_property_value_by_name('Value'), 10);
+
+        // A within-range write reads back unchanged.
+        s._set_property_value_by_name('Value', 5);
+        assert.equal(s._get_property_value_by_name('Value'), 5);
+    });
+
+    test('storage holds raw — coerce that depends on sibling state re-evaluates on read', () => {
+        // ceiling-based clamp: re-coerces when Ceiling changes, even
+        // though the user never re-set Value.
+        const clamp_to_ceiling: CoerceValue = (model, v) =>
+            Math.min(v as number, model._get_property_value_by_name('Ceiling') as number);
+        class Range extends Model {
+            static {
+                Model.RegisterProperty(Range, 'Ceiling', 100, MetaData.None);
+                Model.RegisterProperty(Range, 'Value',   0,   MetaData.None, clamp_to_ceiling);
+            }
+        }
+        const r = new Range();
+        r._set_property_value_by_name('Value', 80);
+        assert.equal(r._get_property_value_by_name('Value'), 80);
+
+        // Narrow the ceiling; Value re-coerces on next read.
+        r._set_property_value_by_name('Ceiling', 50);
+        assert.equal(r._get_property_value_by_name('Value'), 50);
+
+        // Widen the ceiling; the stored raw (80) re-emerges.
+        r._set_property_value_by_name('Ceiling', 200);
+        assert.equal(r._get_property_value_by_name('Value'), 80);
+    });
+
+    test('GetValueSource returns CoercedValue when coerce changed the base value', () => {
+        class Slider extends Model {
+            static { Model.RegisterProperty(Slider, 'Value', 0, MetaData.None, clamp_to_10); }
+        }
+        const s = new Slider();
+        s._set_property_value_by_name('Value', 100);  // clamped to 10
+        assert.equal(s._get_value_source_by_name('Value'), PropertyValueSource.CoercedValue);
+    });
+
+    test('GetValueSource returns the base source when coerce left the value unchanged', () => {
+        class Slider extends Model {
+            static { Model.RegisterProperty(Slider, 'Value', 0, MetaData.None, clamp_to_10); }
+        }
+        const s = new Slider();
+        s._set_property_value_by_name('Value', 5);  // within range, no clamp
+        assert.equal(s._get_value_source_by_name('Value'), PropertyValueSource.LocalValue);
+    });
+
+    test('default value is coerced on read', () => {
+        // Default 100 with a clamp-to-10 callback: get returns 10, not 100.
+        // EVD is never created for an unset property — the default-fallback
+        // path still has to honor coerce.
+        class Capped extends Model {
+            static { Model.RegisterProperty(Capped, 'Value', 100, MetaData.None, clamp_to_10); }
+        }
+        const c = new Capped();
+        assert.equal(c._get_property_value_by_name('Value'), 10);
+    });
+
+    test('PropertyChanged listeners see post-coerce new values', () => {
+        class Slider extends Model {
+            static { Model.RegisterProperty(Slider, 'Value', 0, MetaData.None, clamp_to_10); }
+        }
+        const s = new Slider();
+        const captures: Array<[unknown, unknown]> = [];
+        s._add_property_changed_listener_by_name('Value', (_m, _p, o, n) => { captures.push([o, n]); });
+
+        s._set_property_value_by_name('Value', 100);  // clamped
+        assert.equal(captures.length, 1);
+        assert.equal(captures[0]![0], 0);   // old: default
+        assert.equal(captures[0]![1], 10);  // new: post-coerce, NOT 100
+    });
+
+    test('binding push notifications carry post-coerce values', () => {
+        class Source extends Model {
+            static { Model.RegisterProperty(Source, 'Raw', 0, MetaData.None); }
+        }
+        class Sink extends Model {
+            static { Model.RegisterProperty(Sink, 'Value', 0, MetaData.None, clamp_to_10); }
+        }
+        const src = new Source();
+        src._set_property_value_by_name('Raw', 5);
+        const sink = new Sink();
+        const captures: Array<[unknown, unknown]> = [];
+        sink._add_property_changed_listener_by_name('Value', (_m, _p, o, n) => { captures.push([o, n]); });
+
+        sink._set_property_value_by_name('Value', new Binding(src, 'Raw'));
+        // Install fires with (default 0, resolved 5) — both within range, no clamp.
+        assert.equal(captures.length, 1);
+        assert.equal(captures[0]![1], 5);
+
+        // Source mutation pushes a value the sink will clamp. The
+        // listener must see the post-coerce new value, matching what
+        // a `value` read would return.
+        src._set_property_value_by_name('Raw', 99);
+        assert.equal(captures.length, 2);
+        assert.equal(captures[1]![0], 5);    // old: post-coerce
+        assert.equal(captures[1]![1], 10);   // new: clamped, NOT 99
+        assert.equal(sink._get_property_value_by_name('Value'), 10);
+    });
+
+    test('ClearValue with a coerce callback falls back to the coerced default', () => {
+        class Capped extends Model {
+            static { Model.RegisterProperty(Capped, 'Value', 100, MetaData.None, clamp_to_10); }
+        }
+        const c = new Capped();
+        c._set_property_value_by_name('Value', 5);
+        assert.equal(c._get_property_value_by_name('Value'), 5);
+
+        c._clear_value_by_name('Value');
+        // Default is 100 raw; coerce clamps it to 10.
+        assert.equal(c._get_property_value_by_name('Value'), 10);
+        // Source flips to CoercedValue since coerce changed the base default.
+        assert.equal(c._get_value_source_by_name('Value'), PropertyValueSource.CoercedValue);
     });
 });

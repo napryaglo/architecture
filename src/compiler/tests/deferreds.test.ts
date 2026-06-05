@@ -24,7 +24,7 @@ describe('compile — compound triggers', () => {
     test("'not P' on a bare boolean emits PropertyTrigger with value=false", () => {
         const js = emitted(`
             Application{ resources: {
-                style[targettype=Border]{
+                Style[TargetType=Border]{
                     Background = #ffffff;
                     when( not IsEnabled ){ Background = #cccccc; }
                 }
@@ -39,7 +39,7 @@ describe('compile — compound triggers', () => {
     test("'A or B' splits into two PropertyTriggers sharing the setter list", () => {
         const js = emitted(`
             Application{ resources: {
-                style[targettype=Border]{
+                Style[TargetType=Border]{
                     Background = #ffffff;
                     when( IsMouseOver or IsFocused ){ Background = #eeeeee; }
                 }
@@ -59,7 +59,7 @@ describe('compile — compound triggers', () => {
     test("'A and B' emits a MultiTrigger sharing the setter list", () => {
         const js = emitted(`
             Application{ resources: {
-                style[targettype=Border]{
+                Style[TargetType=Border]{
                     when( IsMouseOver and IsFocused ){ Background = #eee; }
                 }
             } }
@@ -74,7 +74,7 @@ describe('compile — compound triggers', () => {
     test("'(A or B) and C' distributes into two MultiTriggers via DNF", () => {
         const js = emitted(`
             Application{ resources: {
-                style[targettype=Border]{
+                Style[TargetType=Border]{
                     when( (IsMouseOver or IsFocused) and IsEnabled ){
                         Background = #eee;
                     }
@@ -91,7 +91,7 @@ describe('compile — compound triggers', () => {
         assert.throws(
             () => emitted(`
                 Application{ resources: {
-                    style[targettype=Border]{
+                    Style[TargetType=Border]{
                         when( not Status = "active" ){ Background = #eee; }
                     }
                 } }
@@ -130,10 +130,10 @@ describe('compile — text-mode bodies', () => {
 });
 
 describe('compile — control templates', () => {
-    test('template x:key=…[targettype=…]{…} emits new ControlTemplate(factory)', () => {
+    test('template x:key=…[TargetType=…]{…} emits new ControlTemplate(factory)', () => {
         const js = emitted(`
             Application{ resources: {
-                template x:key="FancyBorder"[targettype=Border]{
+                Template x:key="FancyBorder"[TargetType=Border]{
                     Border[Padding=(8)]{}
                 }
             } }
@@ -145,23 +145,30 @@ describe('compile — control templates', () => {
         assert.match(js, /\.Set\("FancyBorder", _tmpl\d+\);/);
     });
 
-    test('template without x:key is a clear error (implicit not in v0)', () => {
-        assert.throws(
-            () => emitted(`
-                Application{ resources: {
-                    template[targettype=Border]{ Border{} }
-                } }
-            `),
-            /implicit/,
-        );
+    test('template without x:key auto-wraps in a Style with a Template setter', () => {
+        const js = emitted(`
+            Application{ resources: {
+                Template[TargetType=Border]{ Border{} }
+            } }
+        `);
+        // The implicit Template path is how the controls library ships
+        // its bundled chrome (see src/Controls/controls.template.mu).
+        // To keep Function keys in the resource chain single-typed
+        // (Style only — same key space as user-side [TargetType=X]
+        // implicit Styles), the Template is wrapped in a Style whose
+        // single Template setter holds it.
+        assert.match(js, /new Setter\(Border, "Template", _tmpl\d+\);/);
+        assert.match(js, /new Style\(Border, \[_setter\d+\], undefined, \[\], \[\]\);/);
+        assert.match(js, /\.Set\(Border, _style\d+\);/);
     });
 });
 
 describe('compile — data templates', () => {
-    test('datatemplate x:key=…[datatype=…]{…} emits new DataTemplate(factory)', () => {
+    test('DataTemplate x:key=…[DataType=…]{…} emits new DataTemplate(factory)', () => {
         const js = emitted(`
+            import PersonVM from "./person-vm.mjs"
             Application{ resources: {
-                datatemplate x:key="PersonRow"[datatype=Object]{
+                DataTemplate x:key="PersonRow"[DataType=PersonVM]{
                     TextBlock{row}
                 }
             } }
@@ -287,7 +294,7 @@ describe('instantiate — deferreds end-to-end', () => {
     test('Style with OR-trigger registers two PropertyTriggers sharing setters', () => {
         const app = instantiate(`
             Application{ resources: {
-                style[targettype=Border]{
+                Style[TargetType=Border]{
                     Background = #ffffff;
                     when( IsMouseOver or IsFocused ){ Background = #eeeeee; }
                 }
@@ -302,7 +309,7 @@ describe('instantiate — deferreds end-to-end', () => {
     test('Control template — apply produces fresh subtree', () => {
         const app = instantiate(`
             Application{ resources: {
-                template x:key="FancyBorder"[targettype=Border]{
+                Template x:key="FancyBorder"[TargetType=Border]{
                     Border[Padding=(8)]{}
                 }
             } }
@@ -314,9 +321,13 @@ describe('instantiate — deferreds end-to-end', () => {
     });
 
     test('Data template — apply with data returns a Visual', () => {
+        // Uses Border as a stand-in dataType — the test passes a Border
+        // instance as the data so the type-identity match through
+        // findDataTemplateForType lines up. Real consumers use a VM
+        // class imported via a top-level `import` directive.
         const app = instantiate(`
             Application{ resources: {
-                datatemplate x:key="Row"[datatype=Object]{
+                DataTemplate x:key="Row"[DataType=Border]{
                     TextBlock{row}
                 }
             } }
@@ -361,7 +372,7 @@ describe('instantiate — deferreds end-to-end', () => {
     test('$$Property — inside a ControlTemplate, binds to templated parent', () => {
         const app = instantiate(`
             Application{ resources: {
-                template x:key="MyTmpl"[targettype=Border]{
+                Template x:key="MyTmpl"[TargetType=Border]{
                     Border[Background=$$Background]{}
                 }
             } }
@@ -380,7 +391,7 @@ describe('instantiate — deferreds end-to-end', () => {
     test('MultiTrigger — AND condition activates only when both watched props match', () => {
         const app = instantiate(`
             Application{ resources: {
-                style[targettype=Border]{
+                Style[TargetType=Border]{
                     Background = #ffffff;
                     when( IsMouseOver and IsFocused ){ Background = #eeeeee; }
                 }

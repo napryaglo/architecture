@@ -100,7 +100,7 @@ describe('Parser — elements and attributes', () => {
     });
 
     test('x:foo with value', () => {
-        const f = firstForm('style x:key="primary-button"[targettype=Button]{}');
+        const f = firstForm('Style x:key="primary-button"[TargetType=Button]{}');
         assert.equal(f.kind, 'resource-form');
         if (f.kind !== 'resource-form') return;
         const x = f.xAttrs[0]!;
@@ -243,20 +243,20 @@ describe('Parser — values', () => {
 });
 
 describe('Parser — resource forms', () => {
-    test('style with implicit (keyless) target', () => {
-        const f = firstForm('style[targettype=Button]{ Background = #red; }') as ResourceForm;
+    test('Style with implicit (keyless) target', () => {
+        const f = firstForm('Style[TargetType=Button]{ Background = #red; }') as ResourceForm;
         assert.equal(f.kind,    'resource-form');
-        assert.equal(f.keyword, 'style');
+        assert.equal(f.keyword, 'Style');
         const meta = f.metaAttrs[0]!;
-        assert.deepEqual(meta.path.parts, ['targettype']);
+        assert.deepEqual(meta.path.parts, ['TargetType']);
         const setters = f.body as SetterList;
         assert.equal(setters.kind, 'setter-list');
         assert.equal(setters.items.length, 1);
     });
 
-    test('style with a trigger group', () => {
+    test('Style with a trigger group', () => {
         const f = firstForm(`
-            style[targettype=Button]{
+            Style[TargetType=Button]{
                 Background = #green;
                 when( IsMouseOver and not IsPressed ){
                     Background = #lightgreen;
@@ -272,29 +272,29 @@ describe('Parser — resource forms', () => {
         assert.equal(trig.condition.kind, 'trigger-and');
     });
 
-    test('template with x:key and TargetType', () => {
+    test('Template with x:key and TargetType', () => {
         const f = firstForm(`
-            template x:key="FancyButton"[targettype=Button]{
+            Template x:key="FancyButton"[TargetType=Button]{
                 Border[Background=$$Background]{
                     ContentPresenter
                 }
             }
         `) as ResourceForm;
-        assert.equal(f.keyword, 'template');
+        assert.equal(f.keyword, 'Template');
         const x = f.xAttrs[0]!;
         assert.equal(x.name, 'key');
         assert.equal((f.body as ElementNode).name, 'Border');
     });
 
-    test('datatemplate registers a Person-typed body', () => {
+    test('DataTemplate registers a Person-typed body', () => {
         const f = firstForm(`
-            datatemplate[datatype=Person]{
+            DataTemplate[DataType=Person]{
                 TextBlock[Text=$DisplayName]
             }
         `) as ResourceForm;
-        assert.equal(f.keyword, 'datatemplate');
+        assert.equal(f.keyword, 'DataTemplate');
         const meta = f.metaAttrs[0]!;
-        assert.deepEqual(meta.path.parts, ['datatype']);
+        assert.deepEqual(meta.path.parts, ['DataType']);
     });
 });
 
@@ -342,7 +342,7 @@ describe('Parser — end-to-end on a worked Application', () => {
             Application{
                 resources: {
                     @primary = #4caf50
-                    style[targettype=Button]{
+                    Style[TargetType=Button]{
                         Background = @primary;
                         Padding = (12, 6);
                     }

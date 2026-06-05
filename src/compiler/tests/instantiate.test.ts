@@ -100,7 +100,7 @@ describe('instantiate — happy path', () => {
         const app = buildApp(`
             Application{ resources: {
                 @primary = #4caf50
-                style[targettype=Border]{ Background = @primary; }
+                Style[TargetType=Border]{ Background = @primary; }
                 Border x:root{}
             } }
         `);
@@ -119,7 +119,7 @@ describe('instantiate — happy path', () => {
     test('Style with PropertyTrigger lands with its setters', () => {
         const app = buildApp(`
             Application{ resources: {
-                style[targettype=Border]{
+                Style[TargetType=Border]{
                     Background = #ffffff;
                     when( IsMouseOver ){
                         Background = #eeeeee;

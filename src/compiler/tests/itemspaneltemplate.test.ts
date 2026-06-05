@@ -4,11 +4,11 @@ import { compile } from '../compile.js';
 
 function emit(src: string): string { return compile(src).js; }
 
-describe('itemspaneltemplate — resource form', () => {
+describe('ItemsPanelTemplate — resource form', () => {
     test('keyed entry compiles to ItemsPanelTemplate constructor + dict Set', () => {
         const body = emit(`
 ResourceDictionary {
-    itemspaneltemplate x:key="WrapLayout" {
+    ItemsPanelTemplate x:key="WrapLayout" {
         StackPanel
     }
 }
@@ -21,7 +21,7 @@ ResourceDictionary {
     test('omitting the [meta] block is allowed', () => {
         const body = emit(`
 ResourceDictionary {
-    itemspaneltemplate x:key="X" {
+    ItemsPanelTemplate x:key="X" {
         StackPanel[Orientation=Vertical]
     }
 }
@@ -32,7 +32,7 @@ ResourceDictionary {
     test('rejects without x:key in resource position', () => {
         assert.throws(() => emit(`
 ResourceDictionary {
-    itemspaneltemplate {
+    ItemsPanelTemplate {
         StackPanel
     }
 }
@@ -40,13 +40,14 @@ ResourceDictionary {
     });
 });
 
-describe('itemspaneltemplate — inline at slot-assign value', () => {
+describe('ItemsPanelTemplate — inline at slot-assign value', () => {
     test('inline form emits anonymous template assigned to property', () => {
         const body = emit(`
+import Foo from "./foo.mjs"
 ResourceDictionary {
-    datatemplate x:key="T" [datatype=Foo] {
+    DataTemplate x:key="T" [DataType=Foo] {
         ListBox {
-            ItemsPanel: itemspaneltemplate {
+            ItemsPanel: ItemsPanelTemplate {
                 StackPanel
             }
         }
@@ -59,12 +60,14 @@ ResourceDictionary {
         assert.doesNotMatch(body, /\.Set\([^)]*WrapLayout/);
     });
 
-    test('inline datatemplate at ItemTemplate slot', () => {
+    test('inline DataTemplate at ItemTemplate slot', () => {
         const body = emit(`
+import ParentVM from "./parent-vm.mjs"
+import ItemVM   from "./item-vm.mjs"
 ResourceDictionary {
-    datatemplate x:key="Outer" [datatype=ParentVM] {
+    DataTemplate x:key="Outer" [DataType=ParentVM] {
         ListBox {
-            ItemTemplate: datatemplate [datatype=ItemVM] {
+            ItemTemplate: DataTemplate [DataType=ItemVM] {
                 TextBlock
             }
         }

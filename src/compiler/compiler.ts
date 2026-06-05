@@ -82,7 +82,8 @@ type MacroSubst = Map<
 import {
     DEFAULT_SYMBOLS,
     DEFAULT_SLOT_INFO,
-    ENUM_CLASSES,
+    ENUM_MEMBERS,
+    PROPERTY_TO_ENUM,
     type SymbolMap,
     type SlotInfo,
 } from './symbol-table.js';
@@ -170,6 +171,17 @@ export class Compiler
     // body so Style-side setter compilation is unaffected.
     private templateNameScope:  Set<string>           | undefined;
     private templateNameOwners: Map<string, string>   | undefined;
+    // x:name → emitted variable name. Distinct from templateNameOwners
+    // (which maps name → element type, used for setter type-checking).
+    // Consulted by the `$binding` lowering to detect ElementName-style
+    // bindings: when the first path segment matches an entry here, the
+    // binding source becomes the named element directly rather than the
+    // target's DataContext. The map is populated as elements are emitted
+    // in source order — a forward reference (`$foo.Prop` before
+    // `Border x:name="foo"`) won't match and falls through to the
+    // DataContext path, matching the natural top-down read order of
+    // markup.
+    private templateNameVars:   Map<string, string>   | undefined;
     // Current indent prefix (multiples of 4 spaces) — incremented when
     // we open a nested scope (template factory body, future macro
     // expansions, etc.), decremented at close. Cosmetic for the emitted
@@ -184,12 +196,42 @@ export class Compiler
 
     constructor(opts: CompilerOptions = {})
     {
-        this.symbols = opts.symbols ?? DEFAULT_SYMBOLS;
-        this.slots   = opts.slots   ?? DEFAULT_SLOT_INFO;
+        // Per-compilation copy — `import Name from "path"` directives at
+        // the top of a .mu source extend THIS map only, so user-defined
+        // types declared in one file don't leak into the next file
+        // compiled by another Compiler instance.
+        this.symbols = new Map(opts.symbols ?? DEFAULT_SYMBOLS);
+        this.slots   = opts.slots ?? DEFAULT_SLOT_INFO;
     }
 
     public Compile(doc: Document): CompilerOutput
     {
+        // Pass 0: ingest top-level `import Name from "path"` directives
+        // into the per-compilation symbol table. After this pass, any
+        // `ensureImport(Name)` call resolves Name through the same
+        // path the .mu source declared, so user-defined VM / DTO
+        // classes are first-class type references — `[DataType=NodeVM]`
+        // and `[TargetType=MyCustomBorder]` produce real Function
+        // identifiers, not strings, end-to-end.
+        for (const form of doc.forms)
+        {
+            if (form.kind !== 'import') continue;
+            if (form.source === null)
+            {
+                throw new EmitError(
+                    `import '${form.name}' requires \`from "path"\` — bare imports are reserved and not supported`,
+                    form.span);
+            }
+            const existing = this.symbols.get(form.name);
+            if (existing !== undefined && existing !== form.source)
+            {
+                throw new EmitError(
+                    `import '${form.name}' conflicts with an existing symbol bound to '${existing}'`,
+                    form.span);
+            }
+            this.symbols.set(form.name, form.source);
+        }
+
         // Pass 1: collect every top-level `def` form into the macro
         // table. Macros can call each other so this is a flat pre-walk
         // before any emit happens.
@@ -273,7 +315,7 @@ export class Compiler
 
     // ── ResourceDictionary root ─────────────────────────────────────
     //
-    // `ResourceDictionary { template x:key="…"[targettype=…]{ … } … }`
+    // `ResourceDictionary { template x:key="…"[TargetType=…]{ … } … }`
     // emits a `create()` factory returning a populated ResourceDictionary.
     // Body items are the same shape the `resources:` slot of an
     // Application accepts: keyed key-value resources (`@name = value`),
@@ -398,19 +440,47 @@ export class Compiler
         if (rf.keyword === 'Template')
         {
             const tmplVar = this.compileControlTemplateForm(rf);
-            this.registerResourceFormVar(rdVar, rf, tmplVar, /*allowImplicit*/ false);
+            // x:key path: registers the Template directly (no wrapping).
+            const xKey = this.findXAttr(rf.xAttrs, 'key');
+            if (xKey !== null)
+            {
+                this.registerResourceFormVar(rdVar, rf, tmplVar, /*allowImplicit*/ true);
+                return;
+            }
+            // Implicit path: wrap the Template in a Style so Function
+            // keys in the resource chain hold Styles only — same key
+            // space as user-side `Style [TargetType=X]` entries and the
+            // resolve_implicit_style / resolve_theme_style walkers. The
+            // Style carries a single Setter that drives the matching
+            // control's Template DP when the Style applies.
+            //
+            // `Application.ResolveDefaultResource(Klass)` now returns a
+            // Style; defaultTemplate(Klass) on the runtime side reads the
+            // Template setter's value to get the ControlTemplate for
+            // eager constructor-time use.
+            const tt = this.requireTargetType(rf);
+            this.ensureImport(tt);
+            this.ensureImport('Setter');
+            this.ensureImport('Style');
+            const setterVar = this.fresh('setter');
+            const styleVar  = this.fresh('style');
+            this.line(
+                `const ${setterVar} = new Setter(${tt}, "Template", ${tmplVar});`);
+            this.line(
+                `const ${styleVar} = new Style(${tt}, [${setterVar}], undefined, [], []);`);
+            this.line(`${rdVar}.Set(${tt}, ${styleVar});`);
             return;
         }
         if (rf.keyword === 'DataTemplate')
         {
             const tmplVar = this.compileDataTemplateForm(rf);
-            this.registerResourceFormVar(rdVar, rf, tmplVar, /*allowImplicit*/ false);
+            this.registerResourceFormVar(rdVar, rf, tmplVar, /*allowImplicit*/ true);
             return;
         }
         if (rf.keyword === 'HierarchicalDataTemplate')
         {
             const tmplVar = this.compileHierarchicalDataTemplateForm(rf);
-            this.registerResourceFormVar(rdVar, rf, tmplVar, /*allowImplicit*/ false);
+            this.registerResourceFormVar(rdVar, rf, tmplVar, /*allowImplicit*/ true);
             return;
         }
         if (rf.keyword === 'ItemsPanelTemplate')
@@ -425,8 +495,14 @@ export class Compiler
 
     // Helper: register a freshly-built resource (Style / Template /
     // DataTemplate) in the dictionary by x:key (string) or, when the
-    // form supports implicit registration (Style only — see spec §7),
-    // by TargetType (Function).
+    // form supports implicit registration, by its type-attribute as a
+    // real Function reference. The TargetType / DataType identifier
+    // is `ensureImport`-ed, so user-defined VM classes used in
+    // `[DataType=NodeVM]` must be brought into scope by a top-level
+    // `import NodeVM from "./node-vm.mjs"` directive.
+    //
+    // Template / ItemsPanelTemplate stay opt-out (implicit not enabled);
+    // their theme migration will land them inside Style.Setters instead.
     private registerResourceFormVar(
         rdVar: string, rf: ResourceForm, valueVar: string,
         allowImplicit: boolean,
@@ -481,11 +557,14 @@ export class Compiler
         // lowering above this control template.
         const savedTNS = this.templateNameScope;
         const savedTNO = this.templateNameOwners;
+        const savedTNV = this.templateNameVars;
         this.templateNameScope  = undefined;
         this.templateNameOwners = undefined;
+        this.templateNameVars   = undefined;
         const rootVar = this.compileElement(rf.body);
         this.templateNameScope  = savedTNS;
         this.templateNameOwners = savedTNO;
+        this.templateNameVars   = savedTNV;
         this.inTemplateBody = wasInTemplate;
         this.line(`return ${rootVar};`);
         this.indent -= 4;
@@ -501,13 +580,15 @@ export class Compiler
                 'DataTemplate body must be a single element (optionally followed by `when()` triggers)',
                 rf.span);
         }
-        // `datatype=Foo` resolves to a class name string — passed to
-        // DataTemplate so ContentPresenter / PageView can match it
-        // against `content.constructor.name` when auto-resolving a
-        // template for a non-Visual data Content. WPF parity would use
-        // {x:Type}; the string form is equivalent for non-minified
-        // builds and trivial to upgrade later.
+        // `DataType=Foo` resolves to a real Function reference — the
+        // identifier is `ensureImport`-ed so user-defined VM classes
+        // brought in by a top-level `import Foo from "./foo-vm.mjs"`
+        // are linkable end-to-end. ContentPresenter / PageView /
+        // ItemsControl resolve templates via Function-identity match
+        // against `content.constructor`, matching WPF's `{x:Type}`
+        // shape rather than name-string lookup.
         const dataType = this.requireTargetType(rf);
+        this.ensureImport(dataType);
         const rootElement = rf.body.kind === 'element' ? rf.body : rf.body.root;
         const triggers      = rf.body.kind === 'data-template-body' ? rf.body.triggers      : [];
         const eventTriggers = rf.body.kind === 'data-template-body' ? rf.body.eventTriggers : [];
@@ -518,21 +599,25 @@ export class Compiler
         // body so x:names declared inside register here (without
         // colliding with another DataTemplate in the same file or the
         // application-root scope). Restored on the way out.
-        const savedTNS    = this.templateNameScope;
-        const savedTNO    = this.templateNameOwners;
+        const savedTNS         = this.templateNameScope;
+        const savedTNO         = this.templateNameOwners;
+        const savedTNV         = this.templateNameVars;
+        const savedInTemplate  = this.inTemplateBody;
+        const savedScopeOwner  = this.nameScopeOwnerVar;
         this.templateNameScope  = new Set<string>();
         this.templateNameOwners = new Map<string, string>();
-        // EventTrigger lowering inside a DataTemplate body lands in a
-        // future patch — surface a clean compile-time error before we
-        // bother compiling anything else so the author isn't confused
-        // by silent emit-time drops.
-        if (eventTriggers.length > 0)
-        {
-            throw new EmitError(
-                'event triggers inside a DataTemplate body are not yet supported',
-                eventTriggers[0]!.span);
-        }
-        if (triggers.length === 0)
+        this.templateNameVars   = new Map<string, string>();
+        // Mark "inside a template body" so x:name handling SKIPS the
+        // per-name Register emit (Apply walks the subtree at runtime and
+        // registers names into the fresh per-instance NameScope). Also
+        // clear nameScopeOwnerVar — otherwise an x:name inside this
+        // factory would emit Register() against whatever x:root the
+        // PREVIOUS template (or the enclosing application root) had,
+        // resulting in `<wrong>.nameScope.Register(...)` at runtime and
+        // a ReferenceError when the variable isn't in scope.
+        this.inTemplateBody    = true;
+        this.nameScopeOwnerVar = undefined;
+        if (triggers.length === 0 && eventTriggers.length === 0)
         {
             // Trigger-free path: preserve the historical 2-arg emit
             // shape so existing snapshot tests keep matching.
@@ -541,7 +626,7 @@ export class Compiler
             const rootVar = this.compileElement(rootElement);
             this.line(`return ${rootVar};`);
             this.indent -= 4;
-            this.line(`}, ${JSON.stringify(dataType)});`);
+            this.line(`}, ${dataType});`);
         }
         else
         {
@@ -563,15 +648,41 @@ export class Compiler
             this.line(`};`);
             const { propertyTriggers, dataTriggers } =
                 this.compileDataTemplateTriggers(triggers);
-            const propsArr = `[${propertyTriggers.join(', ')}]`;
-            const dataArr  = `[${dataTriggers.join(', ')}]`;
-            this.line(
-                `return new DataTemplate(_factory, ${JSON.stringify(dataType)}, ${propsArr}, ${dataArr});`);
+            // EventTrigger lowering reuses the same compile helper the
+            // Style.EventTrigger path uses — the runtime EventTrigger
+            // shape is identical (RoutedEvent + Actions[]); only the
+            // attach surface differs (Visual.AddEventTrigger on the
+            // template root vs Style.OnApply on the styled visual).
+            const eventTriggerVars: string[] = [];
+            for (const et of eventTriggers)
+            {
+                eventTriggerVars.push(this.compileEventTriggerGroup('', et));
+            }
+            const propsArr  = `[${propertyTriggers.join(', ')}]`;
+            const dataArr   = `[${dataTriggers.join(', ')}]`;
+            // Only emit the eventTriggers argument when there's at
+            // least one — keeps the 4-arg constructor call shape stable
+            // for templates that only carry when()-style triggers and
+            // avoids churn in existing snapshot tests.
+            if (eventTriggerVars.length === 0)
+            {
+                this.line(
+                    `return new DataTemplate(_factory, ${dataType}, ${propsArr}, ${dataArr});`);
+            }
+            else
+            {
+                const eventsArr = `[${eventTriggerVars.join(', ')}]`;
+                this.line(
+                    `return new DataTemplate(_factory, ${dataType}, ${propsArr}, ${dataArr}, ${eventsArr});`);
+            }
             this.indent -= 4;
             this.line(`})();`);
         }
         this.templateNameScope  = savedTNS;
         this.templateNameOwners = savedTNO;
+        this.templateNameVars   = savedTNV;
+        this.inTemplateBody     = savedInTemplate;
+        this.nameScopeOwnerVar  = savedScopeOwner;
         return tmplVar;
     }
 
@@ -704,7 +815,7 @@ export class Compiler
 
     // ── HierarchicalDataTemplate ────────────────────────────────────
     //
-    // `HierarchicalDataTemplate x:key="…" [datatype=Foo, itemsselector=Bar] { … }`
+    // `HierarchicalDataTemplate x:key="…" [DataType=Foo, itemsselector=Bar] { … }`
     // emits a HierarchicalDataTemplate whose itemsSelector pulls `data.Bar`
     // off each parent data item, returning undefined for items without
     // that property (TreeView treats undefined-children as a leaf row).
@@ -712,13 +823,19 @@ export class Compiler
     // a recursive data structure with one template per level.
     private compileHierarchicalDataTemplateForm(rf: ResourceForm): string
     {
-        if (rf.body.kind !== 'element')
+        // Parser wraps both DataTemplate and HierarchicalDataTemplate
+        // bodies in `data-template-body` since both can carry trailing
+        // triggers. Trailing triggers aren't wired up here yet — we
+        // accept the wrap but only consume the root element.
+        if (rf.body.kind !== 'element' && rf.body.kind !== 'data-template-body')
         {
             throw new EmitError(
                 'HierarchicalDataTemplate body must be a single element',
                 rf.span);
         }
+        const rootElement = rf.body.kind === 'element' ? rf.body : rf.body.root;
         const dataType = this.requireTargetType(rf);
+        this.ensureImport(dataType);
         const selector = this.findIdentMetaAttr(rf, 'itemsselector');
         if (selector === undefined)
         {
@@ -731,7 +848,7 @@ export class Compiler
         const tmplVar = this.fresh('tmpl');
         this.line(`const ${tmplVar} = new HierarchicalDataTemplate((_data) => {`);
         this.indent += 4;
-        const rootVar = this.compileElement(rf.body);
+        const rootVar = this.compileElement(rootElement);
         this.line(`return ${rootVar};`);
         this.indent -= 4;
         // Selector reads `data?.<selector>`. Optional chain → returns
@@ -739,7 +856,7 @@ export class Compiler
         // which HierarchicalDataTemplate.ItemsOf treats as an empty
         // iterable.
         this.line(
-            `}, (data) => data?.${selector}, undefined, undefined, ${JSON.stringify(dataType)});`);
+            `}, (data) => data?.${selector}, undefined, undefined, ${dataType});`);
         return tmplVar;
     }
 
@@ -1686,6 +1803,17 @@ export class Compiler
             }
             if (item.kind === 'element')
             {
+                // `Behaviors { … }` block — not a default-slot child;
+                // each entry in the body is a Behavior class instance
+                // to attach to the parent via Visual.AddBehavior. The
+                // compiler routes each inner element through the normal
+                // compileElement pipeline (so DPs / setters / bindings
+                // all work) and then emits a single AddBehavior call.
+                if (item.name === 'Behaviors')
+                {
+                    this.compileBehaviorsBlock(parentVar, item);
+                    continue;
+                }
                 const childVar = this.compileElement(item);
                 this.assignToDefaultSlot(parentVar, parentClass, slot, childVar, item.span);
                 continue;
@@ -1693,6 +1821,46 @@ export class Compiler
             throw new EmitError(
                 `${item.kind} is not allowed in an element body`,
                 'span' in item ? item.span : body.span);
+        }
+    }
+
+    // Lowers a `Behaviors { … }` block. Each child element is a
+    // Behavior class instance — constructed, populated with its
+    // setters, then attached to `parentVar` via AddBehavior. Behaviors
+    // are class-based (subclass `Behavior`), so registering a behavior
+    // class is symmetric with registering a control class — both go
+    // through the symbol table's import map.
+    private compileBehaviorsBlock(parentVar: string, behaviorsElem: ElementNode): void
+    {
+        if (behaviorsElem.attrs.length > 0)
+        {
+            throw new EmitError(
+                "Behaviors { … } block doesn't take attributes — attach Behavior instances inside the body",
+                behaviorsElem.span);
+        }
+        const body = behaviorsElem.body;
+        if (body === null || body.kind !== 'structured-body')
+        {
+            // An empty Behaviors block is a no-op; only structured
+            // bodies (zero or more child Behavior elements) make sense
+            // here. A string body would be authoring noise.
+            if (body !== null) {
+                throw new EmitError(
+                    "Behaviors block must contain Behavior element entries",
+                    behaviorsElem.span);
+            }
+            return;
+        }
+        for (const child of body.items)
+        {
+            if (child.kind !== 'element')
+            {
+                throw new EmitError(
+                    `Behaviors block only accepts Behavior element entries (got ${child.kind})`,
+                    'span' in child ? child.span : body.span);
+            }
+            const behaviorVar = this.compileElement(child);
+            this.line(`${parentVar}.AddBehavior(${behaviorVar});`);
         }
     }
 
@@ -1782,6 +1950,41 @@ export class Compiler
                 return `new SetterFactory((_t) => DynamicResource(_t, ${JSON.stringify(val.key)}))`;
             case 'binding':
             {
+                // ElementName-style binding — when the first path
+                // segment matches an x:name declared earlier in the
+                // current template scope, the source is that named
+                // element (a fixed Visual) rather than the target's
+                // DataContext. Mirrors WPF's
+                // `{Binding ElementName=foo, Path=Bar}`. Only fires
+                // INSIDE a template body: outside a template the same
+                // syntax addresses the DataContext, as before.
+                const head = val.path[0];
+                if (head !== undefined
+                    && this.templateNameVars !== undefined
+                    && this.templateNameVars.has(head))
+                {
+                    this.ensureImport('ElementNameBinding');
+                    const sourceVar = this.templateNameVars.get(head)!;
+                    const restPath  = val.path.slice(1).join('.');
+                    if (restPath.length === 0)
+                    {
+                        // `$foo` alone — author wants the element
+                        // itself, not a property of it. Bindings need a
+                        // path; emit a single-segment lookup against the
+                        // element under a sentinel key would be
+                        // surprising, so reject with a clear message.
+                        throw new EmitError(
+                            `'$${head}' references the named element '${head}' but has no property path. ` +
+                            `Use '$${head}.<Property>' to bind to one of its properties.`,
+                            val.span);
+                    }
+                    // Style-setter wrap (ctx.targetExpr undefined) and
+                    // direct-target attribute (defined) both resolve
+                    // the source the same way: the source is a fixed
+                    // Visual captured at factory time, so there's no
+                    // per-target re-binding to wrap in a SetterFactory.
+                    return `ElementNameBinding(${sourceVar}, ${JSON.stringify(restPath)})`;
+                }
                 this.ensureImport('DataContextBinding');
                 const pathStr = val.path.join('.');
                 if (ctx.targetExpr !== undefined)
@@ -1838,10 +2041,37 @@ export class Compiler
         if (name === '-Infinity') return '-Infinity';
         if (name === 'NaN')       return 'NaN';
         // 2. Property-name match against an enum class — emit ClassName.Member.
-        if (ctx.propertyName !== undefined && ENUM_CLASSES.has(ctx.propertyName))
+        //    Validate the member: an ident in enum position must be a known
+        //    member of that enum, otherwise we'd silently emit `Enum.unknown`
+        //    which resolves to `undefined` at runtime and tends to cascade
+        //    into NaN through layout math.
+        //
+        //    Two routes to find the enum class:
+        //    (a) the property name itself equals the enum class name
+        //        (HorizontalAlignment, Orientation, …).
+        //    (b) PROPERTY_TO_ENUM maps a differently-named property onto
+        //        the enum class (`Variant: DrawerVariant`, `Anchor:
+        //        DrawerAnchor`, …).
+        if (ctx.propertyName !== undefined)
         {
-            this.ensureImport(ctx.propertyName);
-            return `${ctx.propertyName}.${name}`;
+            const enumClass =
+                ENUM_MEMBERS.has(ctx.propertyName)
+                    ? ctx.propertyName
+                    : PROPERTY_TO_ENUM.get(ctx.propertyName);
+            if (enumClass !== undefined)
+            {
+                const members = ENUM_MEMBERS.get(enumClass)!;
+                if (!members.has(name))
+                {
+                    const valid = [...members].join(', ');
+                    throw new EmitError(
+                        `'${name}' is not a member of enum ${enumClass}. ` +
+                        `Valid members: ${valid}.`,
+                        val.span);
+                }
+                this.ensureImport(enumClass);
+                return `${enumClass}.${name}`;
+            }
         }
         // 3. PascalCase ident known as a class — emit as a type reference.
         if (this.startsUppercase(name) && this.symbols.has(name))
@@ -1849,10 +2079,24 @@ export class Compiler
             this.ensureImport(name);
             return name;
         }
-        // 4. Fallback — bare string literal. Lowercase enum-like values
-        // (left, center) land here and the runtime's converters handle
-        // them at property-set time.
-        return JSON.stringify(name);
+        // 4. No resolution path matched. Silently emitting a bare string
+        //    literal here is a footgun — it produces values like the
+        //    string "Red" sitting on a Brush property, or the string
+        //    "center" sitting where a number is expected, with the
+        //    failure surfacing far away (NaN in layout, "undefined" in
+        //    text). Force the author to be explicit: a quoted string for
+        //    a string value, a `#...` literal for a colour, the right
+        //    PascalCase member for an enum, or an import for a type ref.
+        const hint =
+            ctx.propertyName !== undefined
+                ? ` (in '${ctx.propertyName}=…' position)`
+                : '';
+        throw new EmitError(
+            `unresolved identifier '${name}'${hint}. ` +
+            `Use a quoted string ("${name}") for a string value, ` +
+            `'#…' for a colour, the correct enum member, ` +
+            `or add an import so '${name}' resolves to a known type.`,
+            val.span);
     }
 
     private compileColorValue(val: ColorValue): string
@@ -1996,12 +2240,13 @@ export class Compiler
 
     private requireTargetType(rf: ResourceForm): string
     {
-        // Style/Template use 'targettype'; DataTemplate (and
-        // HierarchicalDataTemplate) use 'datatype'.
+        // Style/Template use 'TargetType'; DataTemplate (and
+        // HierarchicalDataTemplate) use 'DataType'. PascalCase to
+        // match the rest of the .mu attr surface.
         const name = (rf.keyword === 'DataTemplate'
                   || rf.keyword === 'HierarchicalDataTemplate')
-            ? 'datatype'
-            : 'targettype';
+            ? 'DataType'
+            : 'TargetType';
         const m = rf.metaAttrs.find(
             a => a.path.parts.length === 1 && a.path.parts[0] === name);
         if (m === undefined)
@@ -2081,6 +2326,7 @@ export class Compiler
             {
                 this.templateNameScope.add(nameStr);
                 this.templateNameOwners!.set(nameStr, elem.name);
+                this.templateNameVars!.set(nameStr, v);
             }
             // Inside a template body, ControlTemplate.Apply walks the
             // freshly-built subtree and registers every named visual in

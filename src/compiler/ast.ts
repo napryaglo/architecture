@@ -175,7 +175,7 @@ export interface ResourceForm
 {
     kind:      'resource-form';
     keyword:   'Style' | 'Template' | 'DataTemplate' | 'HierarchicalDataTemplate' | 'ItemsPanelTemplate';
-    metaAttrs: NamedAttr[];        // targettype, datatype, itemsselector, basedon, …
+    metaAttrs: NamedAttr[];        // TargetType, DataType, itemsselector, basedon, …
     xAttrs:    XAttr[];            // x:key, future x:* meta
     body:      SetterList | ElementNode | DataTemplateBody;
     span:      SourceSpan;
@@ -388,7 +388,7 @@ export type ValueNode =
 export interface NumberValue { kind: 'number';  raw: string;        span: SourceSpan; }
 export interface StringValue { kind: 'string';  value: string;       span: SourceSpan; }
 // Bare identifier in a value position — enum value (Vertical, Bold,
-// left), type reference (Button as targettype), named flag. The bind
+// left), type reference (Button as TargetType), named flag. The bind
 // pass interprets by context (slot type, surrounding form).
 export interface IdentValue  { kind: 'ident';   name: string;        span: SourceSpan; }
 // `#blue` → raw='blue'; `#0d47a1` → raw='0d47a1'. The bind pass

@@ -13,7 +13,7 @@ describe('compile — InvokeCommand trigger action', () => {
         const js = emitted(`
             Application{
                 resources: {
-                    Style[targettype=Button]{
+                    Style[TargetType=Button]{
                         on Click {
                             InvokeCommand[Command=$SaveCommand]
                         }
@@ -34,7 +34,7 @@ describe('compile — InvokeCommand trigger action', () => {
         const js = emitted(`
             Application{
                 resources: {
-                    Style[targettype=Button]{
+                    Style[TargetType=Button]{
                         on Click {
                             InvokeCommand[Command=$Vm.Commands.Save]
                         }
@@ -52,7 +52,7 @@ describe('compile — InvokeCommand trigger action', () => {
         const js = emitted(`
             Application{
                 resources: {
-                    Style[targettype=Button]{
+                    Style[TargetType=Button]{
                         on Click {
                             BeginStoryboard {
                                 DoubleAnimation[TargetProperty=Width, From=80, To=240, Duration=400]
@@ -73,7 +73,7 @@ describe('compile — InvokeCommand trigger action', () => {
         assert.throws(() => emitted(`
             Application{
                 resources: {
-                    Style[targettype=Button]{
+                    Style[TargetType=Button]{
                         on Click { InvokeCommand[] }
                     }
                 }
@@ -85,7 +85,7 @@ describe('compile — InvokeCommand trigger action', () => {
         assert.throws(() => emitted(`
             Application{
                 resources: {
-                    Style[targettype=Button]{
+                    Style[TargetType=Button]{
                         on Click { InvokeCommand[Command="oops"] }
                     }
                 }
@@ -97,7 +97,7 @@ describe('compile — InvokeCommand trigger action', () => {
         const js = emitted(`
             Application{
                 resources: {
-                    Style[targettype=Button]{
+                    Style[TargetType=Button]{
                         on PointerDown {
                             InvokeCommand[Command=$Probe]
                         }

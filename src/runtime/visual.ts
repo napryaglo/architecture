@@ -8,6 +8,7 @@ import { NameScope } from './namescope.js';
 import { ObservableCollection, type IReadOnlyObservableCollection } from './observable-collection.js';
 import { ResourceDictionary, type ResourceKey } from './resource-dictionary.js';
 import { Application } from './application.js';
+import type { Behavior } from './behavior.js';
 import { Setter, SetterFactory, Style, PropertyTrigger, MultiTrigger, DataTrigger } from './style.js';
 import { Rect, Size, Thickness } from './primitives.js';
 import type { DrawingContext } from './drawing-context.js';
@@ -147,6 +148,33 @@ export class Visual extends Model
     // metadata. MetaData.None keeps OnPropertyChanged from doing
     // redundant work.
     public static readonly StyleKey = Model.RegisterProperty<Style | undefined>(Visual, 'Style', undefined, MetaData.None);
+
+    // Type-keyed lookup for the theme-supplied default Style. Read-only
+    // at the instance level (no public per-instance writes); subclasses
+    // opt in by overriding metadata in their static init:
+    //
+    //     class Button extends ContentControl {
+    //         static {
+    //             Model.OverrideMetadata(Button, Visual.DefaultStyleKeyKey,
+    //                 { default_value: Button });
+    //         }
+    //     }
+    //
+    // The value is a class function used as a key into the resource
+    // chain. resolve_theme_style runs TryFindResource(DefaultStyleKey)
+    // and applies the matching Style on a fallback slot below the user
+    // ImplicitStyle. A subclass that doesn't override DefaultStyleKey
+    // inherits its base's value, so MyFancyButton renders with Button's
+    // theme chrome until it opts into its own. Default is undefined —
+    // a Visual whose DefaultStyleKey is undefined skips theme lookup.
+    //
+    // Key is public so subclasses can pass it to Model.OverrideMetadata;
+    // the read-only gate on set_property_value / by-name paths still
+    // prevents per-instance writes (set_property_value_with_key is the
+    // documented framework-internal escape hatch).
+    public static readonly DefaultStyleKeyKey = Model.RegisterReadOnlyProperty<Function | undefined>(
+        Visual, 'DefaultStyleKey', undefined, MetaData.None,
+    );
 
     // Optional clip geometry applied to this Visual and its visual
     // subtree at render time. Typed as `unknown` here so the runtime
@@ -366,12 +394,22 @@ export class Visual extends Model
     // undefined otherwise.
     private _implicitStyle: Style | undefined;
 
+    // The theme style discovered by looking up `this.DefaultStyleKey`
+    // in the same logical-chain walk as `_implicitStyle`. Sits below
+    // `_implicitStyle` in `refresh_active_style`, so a user-side
+    // `Style [TargetType=Button]` in app or element resources always
+    // shadows the theme's `[TargetType=Button]` entry — which lives in
+    // a merged theme dictionary lower in the resolver chain. Only
+    // populated when DefaultStyleKey is set; left undefined otherwise.
+    private _themeStyle: Style | undefined;
+
     // Subscriptions on ancestor ResourceDictionaries that, when fired,
-    // re-trigger resolve_implicit_style. Wired at AttachLogical for
-    // every dict found in the current ancestor chain; torn down at
-    // DetachLogical or when refresh_implicit_subscriptions rebuilds
-    // them after a tree mutation.
-    private _implicitStyleSubscriptions: Array<() => void> = [];
+    // re-trigger resolve_implicit_style AND resolve_theme_style — both
+    // sources watch the same chain so they share one subscription list.
+    // Wired at AttachLogical for every dict found in the current
+    // ancestor chain; torn down at DetachLogical or when
+    // refresh_styles_subtree rebuilds them after a tree mutation.
+    private _styleSubscriptions: Array<() => void> = [];
 
     // Per-target bindings created from Setter.value (either a Binding
     // directly, or one produced by a SetterFactory). Keyed by the
@@ -641,13 +679,25 @@ export class Visual extends Model
         this.refresh_active_style();
     }
 
-    // Pick which Style should be driving the StyleValue tier: explicit
-    // beats implicit. Unapply the previous active style (if any), apply
-    // the new one. Called from the Style setter and from the implicit-
-    // style resolver hooked into AttachLogical / DetachLogical.
+    // Read-only at the instance level. Subclasses override the default
+    // value via Model.OverrideMetadata at type-init; see the docstring
+    // on DefaultStyleKeyKey. Returns undefined for any Visual whose
+    // class (or any base) hasn't opted in.
+    public get DefaultStyleKey(): Function | undefined
+    {
+        return this.get_property_value(Visual.DefaultStyleKeyKey);
+    }
+
+    // Pick which Style should be driving the StyleValue tier. Priority
+    // matches WPF: explicit Style > implicit (user-side
+    // [TargetType=X] walked from the live tree, exact-match by
+    // constructor) > theme (DefaultStyleKey-keyed, lives in merged
+    // theme dictionaries). Unapply the previous active style (if any),
+    // apply the new one. Called from the Style setter and from the
+    // implicit / theme resolvers hooked into AttachLogical / DetachLogical.
     private refresh_active_style(): void
     {
-        const desired = this.Style ?? this._implicitStyle;
+        const desired = this.Style ?? this._implicitStyle ?? this._themeStyle;
         if (desired === this._activeStyle) return;
         if (this._activeStyle !== undefined)
         {
@@ -949,6 +999,79 @@ export class Visual extends Model
         this._loadedListeners?.delete(listener);
     }
 
+    // ── Unloaded listeners ────────────────────────────────────────────
+    //
+    // Symmetric API for the "visualParent transitioned from defined to
+    // undefined" edge — i.e., the Visual has been removed from its
+    // parent. Unlike Loaded (which is fire-once per instance to match
+    // FrameworkElement.Loaded), Unloaded fires on EVERY detach: a
+    // Visual that's added → removed → added → removed gets two
+    // Unloaded fires. The asymmetry is pragmatic — behaviors that need
+    // to release a resource on detach should run their cleanup each
+    // time the Visual leaves the tree, not just the first time.
+    //
+    // "Detach" here means visualParent changed from defined to
+    // undefined ON THIS Visual specifically — it does NOT cascade down
+    // a subtree. A panel being removed from its grandparent fires
+    // Unloaded on the panel itself, NOT on its children (whose
+    // visualParents still point inside the detached subtree). If you
+    // need teardown for a deep descendant, register an unloaded
+    // listener on the descendant itself.
+    private _unloadedListeners: Set<() => void> | undefined;
+
+    public AddUnloadedListener(listener: () => void): void
+    {
+        if (this._unloadedListeners === undefined) this._unloadedListeners = new Set();
+        this._unloadedListeners.add(listener);
+    }
+
+    public RemoveUnloadedListener(listener: () => void): void
+    {
+        this._unloadedListeners?.delete(listener);
+    }
+
+    private fire_unloaded_listeners(): void
+    {
+        if (this._unloadedListeners === undefined) return;
+        // Snapshot first — a listener that detaches itself or another
+        // listener mid-fire would otherwise mutate the Set we're
+        // iterating. Same pattern as fire_loaded_listeners.
+        const snapshot = Array.from(this._unloadedListeners);
+        for (const l of snapshot) l();
+    }
+
+    // ── Behavior attachment ────────────────────────────────────────────
+    //
+    // Behaviors are markup-attachable wiring objects (see
+    // src/runtime/behavior.ts). The compiler emits per-visual
+    // `<visual>.AddBehavior(<behavior>)` after constructing the behavior
+    // and applying its DP setters, so by the time OnAttached fires the
+    // behavior's per-instance properties are already populated.
+    //
+    // The visual holds a reference to every attached behavior so it
+    // can survive GC alongside the visual itself; that matches the
+    // behavior's natural lifetime — it's wired up to listen on the
+    // visual it was attached to, so as long as the visual is alive the
+    // behavior should be too.
+    private _behaviors: Behavior[] | undefined;
+
+    public AddBehavior(behavior: Behavior): void
+    {
+        (this._behaviors ??= []).push(behavior);
+        // Auto-wire OnDetached via the Unloaded listener so behaviors
+        // get a teardown edge without their author writing the
+        // subscription themselves. Each detach fires OnDetached again
+        // (matching the underlying Unloaded semantics) — a behavior
+        // that needs once-only teardown should track that itself.
+        this.AddUnloadedListener(() => behavior.OnDetached(this));
+        behavior.OnAttached(this);
+    }
+
+    public get Behaviors(): readonly Behavior[]
+    {
+        return this._behaviors ?? [];
+    }
+
     // ── Named storyboard registry ──────────────────────────────────────
     //
     // BeginStoryboardAction with a Name stashes the freshly-built
@@ -1130,33 +1253,66 @@ export class Visual extends Model
     // the ancestor resource chain. Called from AttachLogical (newly in
     // a tree, may have an implicit Style above), from DetachLogical
     // (no chain anymore, implicit clears), and from the ancestor-
-    // resource subscriptions wired by subscribe_implicit_style (a
-    // dictionary change might add / remove the implicit style).
+    // resource subscriptions wired by subscribe_styles (a dictionary
+    // change might add / remove the implicit style).
     private resolve_implicit_style(): void
     {
-        const found = this.TryFindResource(this.constructor) as Style | undefined;
+        // Function-keyed entries in the resource chain may be Styles
+        // (user-side `[TargetType=X]`) OR ControlTemplates (the bundled
+        // controls theme's `[TargetType=X]` Templates). The implicit-Style
+        // path takes Styles only — guard with `instanceof Style` so a
+        // ControlTemplate registered under the same key doesn't get
+        // mis-applied here (the control's constructor reads the
+        // template directly via Application.ResolveDefaultResource).
+        const raw = this.TryFindResource(this.constructor);
+        const found = raw instanceof Style ? raw : undefined;
         if (found === this._implicitStyle) return;
         this._implicitStyle = found;
         this.refresh_active_style();
     }
 
-    // Subscribe to every ResourceDictionary in the ancestor chain so
-    // changes to any of them trigger re-resolution of the implicit
-    // style. Wired at AttachLogical; rewired by future tree mutations
-    // is not automatic (same limitation as DynamicResource — works
-    // for the common case of static ancestry).
-    private subscribe_implicit_style(): void
+    // Theme-style counterpart of resolve_implicit_style. Looks up
+    // `this.DefaultStyleKey` (a class function picked by metadata
+    // override) in the same ancestor resource chain. A Visual whose
+    // DefaultStyleKey is undefined (the default) skips the lookup —
+    // theme styling is opt-in per subclass. In practice the matching
+    // entry lives in a merged theme dictionary on Application.Resources;
+    // user-side [TargetType=X] entries closer in the chain hit
+    // resolve_implicit_style first and shadow what we find here.
+    private resolve_theme_style(): void
     {
-        this.unsubscribe_implicit_style();
+        const key = this.DefaultStyleKey;
+        const raw = key !== undefined ? this.TryFindResource(key) : undefined;
+        // Same instanceof guard as resolve_implicit_style — Function
+        // keys are shared with ControlTemplate registrations, so skip
+        // anything that isn't a Style.
+        const found = raw instanceof Style ? raw : undefined;
+        if (found === this._themeStyle) return;
+        this._themeStyle = found;
+        this.refresh_active_style();
+    }
+
+    // Subscribe to every ResourceDictionary in the ancestor chain so
+    // changes to any of them re-resolve BOTH the implicit and theme
+    // styles. Wired at AttachLogical; tree mutations rebuild via
+    // refresh_styles_subtree. Implicit and theme share one subscription
+    // list because they consult the same chain — splitting would
+    // double the subscribers on every dict for no benefit.
+    private subscribe_styles(): void
+    {
+        this.unsubscribe_styles();
+        const onChange = (): void =>
+        {
+            this.resolve_implicit_style();
+            this.resolve_theme_style();
+        };
         let cursor: Visual | undefined = this;
         while (cursor !== undefined)
         {
             const r = cursor._resources;
             if (r !== undefined)
             {
-                this._implicitStyleSubscriptions.push(
-                    r.Subscribe(() => this.resolve_implicit_style()),
-                );
+                this._styleSubscriptions.push(r.Subscribe(onChange));
             }
             cursor = cursor._logicalParent ?? cursor._templatedParent;
         }
@@ -1166,16 +1322,14 @@ export class Visual extends Model
         const appRd = Application.current?.Resources;
         if (appRd !== undefined)
         {
-            this._implicitStyleSubscriptions.push(
-                appRd.Subscribe(() => this.resolve_implicit_style()),
-            );
+            this._styleSubscriptions.push(appRd.Subscribe(onChange));
         }
     }
 
-    private unsubscribe_implicit_style(): void
+    private unsubscribe_styles(): void
     {
-        for (const unsub of this._implicitStyleSubscriptions) unsub();
-        this._implicitStyleSubscriptions.length = 0;
+        for (const unsub of this._styleSubscriptions) unsub();
+        this._styleSubscriptions.length = 0;
     }
 
     // Throws when the resource isn't found anywhere up the chain — use
@@ -1201,7 +1355,17 @@ export class Visual extends Model
 
     protected SetVisualParent(p: Visual | undefined): void
     {
+        const wasAttached = this._visualParent !== undefined;
         this._visualParent = p;
+        // Fire Unloaded on the defined → undefined transition.
+        // Behaviors that registered via Visual.AddBehavior install an
+        // unloaded listener at attach time so their OnDetached fires
+        // here. Re-attach + detach cycles fire on each detach (not
+        // one-shot like Loaded — see fire_unloaded_listeners contract).
+        if (wasAttached && p === undefined)
+        {
+            this.fire_unloaded_listeners();
+        }
     }
 
     protected SetLogicalParent(p: Visual | undefined): void
@@ -1307,18 +1471,19 @@ export class Visual extends Model
         }
         child.SetLogicalParent(this);
         child.refresh_inheritance_subtree();
-        // Implicit-style lookup runs AFTER inheritance refresh — the
-        // resource chain now reflects the child's new ancestry, so the
-        // (TargetType-keyed) Style lookup sees what the consumer would
-        // see at this position in the tree. Cascades through the
-        // ENTIRE subtree because descendants' ancestor chain just
-        // grew above them too (bottom-up construction is common: a
-        // Border with `resources: { style[targettype=Button] }` gets
-        // its inner Buttons built and AddChild'd before the Border
-        // itself is attached anywhere; the Buttons resolved an empty
-        // chain at their original AddChild and only see the Border's
-        // style when their chain extends up to it on THIS attach).
-        child.refresh_implicit_style_subtree();
+        // Style lookups run AFTER inheritance refresh — the resource
+        // chain now reflects the child's new ancestry, so the
+        // type-keyed Style lookup (implicit via constructor + theme
+        // via DefaultStyleKey) sees what the consumer would see at
+        // this position in the tree. Cascades through the ENTIRE
+        // subtree because descendants' ancestor chain just grew above
+        // them too (bottom-up construction is common: a Border with
+        // `resources: { style[TargetType=Button] }` gets its inner
+        // Buttons built and AddChild'd before the Border itself is
+        // attached anywhere; the Buttons resolved an empty chain at
+        // their original AddChild and only see the Border's style
+        // when their chain extends up to it on THIS attach).
+        child.refresh_styles_subtree();
     }
 
     protected DetachLogical(child: Visual): void
@@ -1329,37 +1494,40 @@ export class Visual extends Model
         }
         // Tear down ancestor-resource subscriptions FIRST (whole
         // subtree) so a mutation on the now-detached chain doesn't
-        // fire resolve_implicit_style through stale subs.
-        child.unsubscribe_implicit_style_subtree();
+        // fire resolve_implicit_style / resolve_theme_style through
+        // stale subs.
+        child.unsubscribe_styles_subtree();
         child.SetLogicalParent(undefined);
         child.refresh_inheritance_subtree();
         // No ancestor chain anymore — re-resolve drops any inherited
-        // implicit style across the subtree. Explicit Style stays
-        // active because refresh_active_style prefers Style over
-        // _implicitStyle.
-        child.refresh_implicit_style_subtree();
+        // implicit or theme style across the subtree. Explicit Style
+        // stays active because refresh_active_style prefers Style over
+        // _implicitStyle / _themeStyle.
+        child.refresh_styles_subtree();
     }
 
     // Cascades unsubscribe → resolve → subscribe through THIS visual
     // and every logical descendant. Used by AttachLogical / DetachLogical
-    // to re-propagate implicit-style lookups when the ancestor chain
-    // changes at any level above the subtree (which invalidates every
-    // descendant's chain, not just the directly-attached child).
-    protected refresh_implicit_style_subtree(): void
+    // to re-propagate implicit and theme style lookups when the
+    // ancestor chain changes at any level above the subtree (which
+    // invalidates every descendant's chain, not just the
+    // directly-attached child).
+    protected refresh_styles_subtree(): void
     {
-        this.unsubscribe_implicit_style();
+        this.unsubscribe_styles();
         this.resolve_implicit_style();
-        this.subscribe_implicit_style();
-        for (const c of this.logicalChildren) c['refresh_implicit_style_subtree']();
+        this.resolve_theme_style();
+        this.subscribe_styles();
+        for (const c of this.logicalChildren) c['refresh_styles_subtree']();
     }
 
     // Cascades unsubscribe through THIS visual and every logical
     // descendant. Called before a subtree detach so subs torn down
     // FIRST can't fire through the still-attached ancestor chain.
-    protected unsubscribe_implicit_style_subtree(): void
+    protected unsubscribe_styles_subtree(): void
     {
-        this.unsubscribe_implicit_style();
-        for (const c of this.logicalChildren) c['unsubscribe_implicit_style_subtree']();
+        this.unsubscribe_styles();
+        for (const c of this.logicalChildren) c['unsubscribe_styles_subtree']();
     }
 
     // Convenience for the common case where a child belongs to BOTH

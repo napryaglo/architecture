@@ -291,7 +291,7 @@ describe('end-to-end: pointer → IsMouseOver → Style trigger → DP update', 
             Application{ resources: {
                 @rest  = #4caf50
                 @hover = #ff0000
-                style x:key="HoverBox"[targettype=Border]{
+                Style x:key="HoverBox"[TargetType=Border]{
                     Background = @rest;
                     when( IsMouseOver ){ Background = @hover; }
                 }

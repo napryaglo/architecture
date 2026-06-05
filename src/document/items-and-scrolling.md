@@ -110,6 +110,40 @@ Data is `unknown` — the factory knows what shape it expects. No
 DataTypeSelector (which template for which type) in this cut; a single
 template per `ItemsControl`.
 
+### Template triggers — `when()` and `on Event { … }`
+
+A `DataTemplate` carries three trigger lists, all attached to the
+freshly-built root on every `Apply`:
+
+| List | Source | Fires when | Authoring syntax |
+|---|---|---|---|
+| `Triggers` | A registered DP on a named source visual inside the template (default: the root) | The watched DP equals the declared value. | _(not exposed in markup yet — Property triggers inside DataTemplate are emit-time errors today)_ |
+| `DataTriggers` | A `DataContextBinding` path on the bound data item | The resolved path equals the declared value. | `when( $IsSelected ) { chrome.BorderBrush = #f97316; }` |
+| `EventTriggers` | A routed event raised at the template root | The event fires (per instance — every Apply gets its own registration). | `on Click { BeginStoryboard { DoubleAnimation[…] } }` |
+
+```mu
+DataTemplate [DataType=ButtonVM] {
+    Border x:root [Padding=(8), Background=#ffffff]
+    on Click {
+        BeginStoryboard {
+            DoubleAnimation[TargetProperty=Opacity, From=1, To=0.6, Duration=120, AutoReverse=true]
+        }
+    }
+    when( $IsSelected ) {
+        Border.Background = #fde68a;
+    }
+}
+```
+
+EventTriggers reuse the Style EventTrigger action vocabulary —
+`BeginStoryboard`, `StopStoryboard`, `PauseStoryboard`,
+`ResumeStoryboard`, `InvokeCommand` — and the same lowering. At Apply
+time the template root receives the trigger via
+`Visual.AddEventTrigger`; the routed event is matched by name (e.g.
+`Click` resolves to `Button.AddClickHandler` for Button-rooted
+templates and warns-and-no-ops for visuals that don't expose that
+hook).
+
 ## 4. `ItemsControl`
 
 ```ts

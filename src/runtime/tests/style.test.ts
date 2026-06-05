@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
     Binding,
     BindingMode,
+    DataTrigger,
     DynamicResource,
     MetaData,
     Model,
@@ -38,6 +39,28 @@ class Widget extends Visual
 }
 
 class TestPanel extends Panel { }
+
+// ThemedWidget — opts into the DefaultStyleKey machinery by overriding
+// metadata to itself. A `Style [TargetType=ThemedWidget]` placed in the
+// resource chain (theme dict, ancestor, app) is picked up via
+// resolve_theme_style. Two subclasses exercise the inheritance + opt-out
+// paths: ChildOfThemed inherits ThemedWidget's DefaultStyleKey default
+// (renders with the ThemedWidget theme), while OwnThemedChild overrides
+// to itself (renders only when a `[TargetType=OwnThemedChild]` entry
+// exists).
+class ThemedWidget extends Widget
+{
+    static {
+        Model.OverrideMetadata(ThemedWidget, Visual.DefaultStyleKeyKey, { default_value: ThemedWidget });
+    }
+}
+class ChildOfThemed extends ThemedWidget { }
+class OwnThemedChild extends ThemedWidget
+{
+    static {
+        Model.OverrideMetadata(OwnThemedChild, Visual.DefaultStyleKeyKey, { default_value: OwnThemedChild });
+    }
+}
 
 describe('Style — basics', () => {
     test('Setter holds owner, property name, and value verbatim', () => {
@@ -631,5 +654,291 @@ describe('Style — PropertyTrigger', () => {
         w.Style = child;
         w.Tint = 'inherited';
         assert.equal(w.Bias, 33);
+    });
+});
+
+// Data-driven trigger: condition watches the styled visual's DataContext
+// via DataContextBinding semantics, not a DP on the visual itself.
+// Drives the diagram-style "per-element data-driven re-skinning" use
+// case. Backing VM exposes the watched property as a regular Model DP
+// so changes flow through the existing property-change machinery.
+class ItemVM extends Model
+{
+    static {
+        Model.RegisterProperty(ItemVM, 'IsSelected', false, MetaData.None);
+        Model.RegisterProperty(ItemVM, 'Score',      0,     MetaData.None);
+    }
+    public get IsSelected(): boolean { return this._get_property_value_by_name('IsSelected'); }
+    public set IsSelected(v: boolean) { this._set_property_value_by_name('IsSelected', v); }
+    public get Score(): number { return this._get_property_value_by_name('Score'); }
+    public set Score(v: number) { this._set_property_value_by_name('Score', v); }
+}
+
+describe('Style — DataTrigger', () => {
+    test('activates when bound DataContext path matches the trigger value', () => {
+        const trig = new DataTrigger('IsSelected', true, [
+            new Setter(Widget, 'Bias', 77),
+        ]);
+        const style = new Style(Widget, [], undefined, [], [], [], [trig]);
+        const vm = new ItemVM();
+        const w = new Widget();
+        w.DataContext = vm;
+        w.Style = style;
+        // Initial state: vm.IsSelected === false, trigger inactive.
+        assert.equal(w.Bias, 0);
+        vm.IsSelected = true;
+        assert.equal(w.Bias, 77);
+        vm.IsSelected = false;
+        assert.equal(w.Bias, 0);
+    });
+
+    test('re-resolves when DataContext is swapped to a different model', () => {
+        const trig = new DataTrigger('Score', 5, [
+            new Setter(Widget, 'Bias', 50),
+        ]);
+        const style = new Style(Widget, [], undefined, [], [], [], [trig]);
+        const a = new ItemVM(); a.Score = 5;
+        const b = new ItemVM(); b.Score = 0;
+        const w = new Widget();
+        w.DataContext = a;
+        w.Style = style;
+        // Initial DataContext matches → trigger active.
+        assert.equal(w.Bias, 50);
+        // Swap to a non-matching DataContext → trigger deactivates and
+        // setter unwinds. Confirms the binding refresh on DataContext
+        // change is wired through the DataTrigger evaluator.
+        w.DataContext = b;
+        assert.equal(w.Bias, 0);
+        // Make b match → activates again under the new source.
+        b.Score = 5;
+        assert.equal(w.Bias, 50);
+    });
+
+    test('unapplying the Style tears down the DataContext subscription', () => {
+        const trig = new DataTrigger('IsSelected', true, [
+            new Setter(Widget, 'Bias', 88),
+        ]);
+        const style = new Style(Widget, [], undefined, [], [], [], [trig]);
+        const vm = new ItemVM();
+        const w = new Widget();
+        w.DataContext = vm;
+        w.Style = style;
+        vm.IsSelected = true;
+        assert.equal(w.Bias, 88);
+
+        w.Style = undefined;
+        assert.equal(w.Bias, 0);
+        // After unapply, mutating the source must NOT re-activate.
+        vm.IsSelected = false;
+        vm.IsSelected = true;
+        assert.equal(w.Bias, 0);
+    });
+
+    test('DataTrigger and PropertyTrigger coexist in the same Style (disjoint setters)', () => {
+        // Disjoint setters so the two triggers don't fight over the
+        // same Trigger-tier slot. PropertyTrigger drives Bias;
+        // DataTrigger drives Tint. Both must install and evaluate
+        // correctly without disturbing each other.
+        class Surface extends Visual
+        {
+            static {
+                Model.RegisterProperty(Surface, 'Mode',   'cold',    MetaData.None);
+                Model.RegisterProperty(Surface, 'Outline', 'thin',   MetaData.None);
+                Model.RegisterProperty(Surface, 'Fill',    'none',   MetaData.None);
+            }
+            public get Mode():    string { return this._get_property_value_by_name('Mode'); }
+            public set Mode(v:    string)        { this._set_property_value_by_name('Mode', v); }
+            public get Outline(): string { return this._get_property_value_by_name('Outline'); }
+            public get Fill():    string { return this._get_property_value_by_name('Fill'); }
+            protected override MeasureOverride(_a: Size): Size { return Size.Zero; }
+            protected override RenderOverride(_dc: DrawingContext): void { }
+        }
+        const dataTrig = new DataTrigger('IsSelected', true, [
+            new Setter(Surface, 'Fill', 'orange'),
+        ]);
+        const propTrig = new PropertyTrigger(Surface, 'Mode', 'hot', [
+            new Setter(Surface, 'Outline', 'bold'),
+        ]);
+        const style = new Style(Surface, [], undefined, [propTrig], [], [], [dataTrig]);
+        const vm = new ItemVM();
+        const s = new Surface();
+        s.DataContext = vm;
+        s.Style = style;
+        // Neither trigger is active yet.
+        assert.equal(s.Outline, 'thin');
+        assert.equal(s.Fill,    'none');
+        // Fire the property trigger.
+        s.Mode = 'hot';
+        assert.equal(s.Outline, 'bold');
+        assert.equal(s.Fill,    'none');
+        // Fire the data trigger via VM mutation; both setters
+        // independently active.
+        vm.IsSelected = true;
+        assert.equal(s.Outline, 'bold');
+        assert.equal(s.Fill,    'orange');
+        // Deactivate just the data trigger — Fill restores.
+        vm.IsSelected = false;
+        assert.equal(s.Fill, 'none');
+        assert.equal(s.Outline, 'bold');
+    });
+
+    test('inherits via BasedOn', () => {
+        const baseTrig = new DataTrigger('IsSelected', true, [
+            new Setter(Widget, 'Bias', 42),
+        ]);
+        const base  = new Style(Widget, [], undefined, [], [], [], [baseTrig]);
+        const child = new Style(Widget, [], base);
+        const vm = new ItemVM();
+        const w = new Widget();
+        w.DataContext = vm;
+        w.Style = child;
+        vm.IsSelected = true;
+        assert.equal(w.Bias, 42);
+    });
+});
+
+describe('Style — DefaultStyleKey + theme style', () => {
+    test('DefaultStyleKey defaults to undefined on a class that does not override metadata', () => {
+        const w = new Widget();
+        assert.equal(w.DefaultStyleKey, undefined);
+    });
+
+    test('OverrideMetadata sets the type-init default; instances see the override', () => {
+        const t = new ThemedWidget();
+        assert.equal(t.DefaultStyleKey, ThemedWidget);
+    });
+
+    test('subclass inherits the base default when it does not override', () => {
+        const c = new ChildOfThemed();
+        // ChildOfThemed extends ThemedWidget without an override —
+        // inherits the ThemedWidget DefaultStyleKey via the descriptor
+        // parent chain. This is the WPF "looks like its base" path.
+        assert.equal(c.DefaultStyleKey, ThemedWidget);
+    });
+
+    test('a subclass override shadows the inherited value', () => {
+        const o = new OwnThemedChild();
+        assert.equal(o.DefaultStyleKey, OwnThemedChild);
+    });
+
+    test('DefaultStyleKey is read-only on the public surface', () => {
+        const w = new Widget();
+        assert.throws(
+            () => w._set_property_value_by_name('DefaultStyleKey', Widget),
+            /read-only/,
+        );
+    });
+
+    test('theme style keyed by DefaultStyleKey applies through the ancestor resource chain', () => {
+        const root = new TestPanel();
+        // A ThemedWidget's DefaultStyleKey resolves to ThemedWidget,
+        // so the resolver looks up `ThemedWidget` in the chain.
+        root.Resources.Set(ThemedWidget, new Style(ThemedWidget, [
+            new Setter(Widget, 'Bias', 42),
+        ]));
+        const t = new ThemedWidget();
+        root.AddChild(t);
+        assert.equal(t.Bias, 42);
+    });
+
+    test('subclass without its own override picks up the base theme', () => {
+        const root = new TestPanel();
+        root.Resources.Set(ThemedWidget, new Style(ThemedWidget, [
+            new Setter(Widget, 'Bias', 17),
+        ]));
+        const c = new ChildOfThemed();
+        root.AddChild(c);
+        // ChildOfThemed.DefaultStyleKey = ThemedWidget (inherited) →
+        // theme lookup hits the ThemedWidget entry → child renders
+        // with the base theme.
+        assert.equal(c.Bias, 17);
+    });
+
+    test('explicit Style shadows the theme style', () => {
+        const root = new TestPanel();
+        root.Resources.Set(ThemedWidget, new Style(ThemedWidget, [
+            new Setter(Widget, 'Bias', 1),
+        ]));
+        const t = new ThemedWidget();
+        root.AddChild(t);
+        assert.equal(t.Bias, 1);
+
+        t.Style = new Style(ThemedWidget, [new Setter(Widget, 'Bias', 99)]);
+        assert.equal(t.Bias, 99);
+        assert.equal(t._get_value_source_by_name('Bias'), PropertyValueSource.StyleValue);
+    });
+
+    test('implicit style (TryFindResource by constructor) shadows the theme style', () => {
+        const root = new TestPanel();
+        // Theme entry — keyed by ThemedWidget (the DefaultStyleKey).
+        // Lives in a merged dict to model "theme is lower in the chain."
+        const theme = new ResourceDictionary();
+        theme.Set(ThemedWidget, new Style(ThemedWidget, [
+            new Setter(Widget, 'Bias', 1),
+        ]));
+        root.Resources.AddMergedDictionary(theme);
+
+        const t = new ThemedWidget();
+        root.AddChild(t);
+        // Without an implicit-keyed entry, theme applies.
+        assert.equal(t.Bias, 1);
+
+        // Adding a [TargetType=ThemedWidget] entry directly to the
+        // local Resources puts it BEFORE the merged theme in lookup
+        // order — but more importantly resolve_implicit_style runs
+        // FIRST in refresh_active_style. Either way, the user-side
+        // implicit wins.
+        root.Resources.Set(ThemedWidget, new Style(ThemedWidget, [
+            new Setter(Widget, 'Bias', 88),
+        ]));
+        assert.equal(t.Bias, 88);
+
+        // Removing the implicit entry — theme re-surfaces.
+        root.Resources.Delete(ThemedWidget);
+        assert.equal(t.Bias, 1);
+    });
+
+    test('detaching from the logical tree drops the theme style', () => {
+        const root = new TestPanel();
+        root.Resources.Set(ThemedWidget, new Style(ThemedWidget, [
+            new Setter(Widget, 'Bias', 7),
+        ]));
+        const t = new ThemedWidget();
+        root.AddChild(t);
+        assert.equal(t.Bias, 7);
+
+        root.RemoveChild(t);
+        assert.equal(t.Bias, 0);
+    });
+
+    test('adding the theme Style to an ancestor Resources after attach picks it up', () => {
+        const root = new TestPanel();
+        root.Resources;  // pre-allocate
+        const t = new ThemedWidget();
+        root.AddChild(t);
+        assert.equal(t.Bias, 0);
+
+        root.Resources.Set(ThemedWidget, new Style(ThemedWidget, [
+            new Setter(Widget, 'Bias', 33),
+        ]));
+        assert.equal(t.Bias, 33);
+    });
+
+    test('a Widget (DefaultStyleKey=undefined) ignores theme entries even when keyed by Widget', () => {
+        const root = new TestPanel();
+        root.Resources.Set(Widget, new Style(Widget, [
+            new Setter(Widget, 'Bias', 99),
+        ]));
+        const w = new Widget();
+        root.AddChild(w);
+        // The user-side implicit resolver (keyed by constructor)
+        // STILL fires — Widget.constructor === Widget, and that's
+        // an explicit `[TargetType=Widget]` entry. That's the
+        // implicit path, not the theme path. To verify the theme
+        // path didn't contribute we drop the implicit entry and
+        // expect the default value back.
+        assert.equal(w.Bias, 99);
+        root.Resources.Delete(Widget);
+        assert.equal(w.Bias, 0);
     });
 });

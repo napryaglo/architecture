@@ -15,7 +15,7 @@ export {
 } from './tokens.js';
 export {
     DEFAULT_SYMBOLS,
-    ENUM_CLASSES,
+    ENUM_MEMBERS,
     TYPE_REF_META_ATTRS,
     DEFAULT_SLOT_INFO,
     type SymbolMap,

@@ -13,7 +13,7 @@ describe('compile — declarative EventTrigger + BeginStoryboard', () => {
         const js = emitted(`
             Application{
                 resources: {
-                    style[targettype=Button]{
+                    Style[TargetType=Button]{
                         on Click {
                             BeginStoryboard {
                                 DoubleAnimation[TargetProperty=Width, From=80, To=240, Duration=400]
@@ -48,7 +48,7 @@ describe('compile — declarative EventTrigger + BeginStoryboard', () => {
         const js = emitted(`
             Application{
                 resources: {
-                    style[targettype=Button]{
+                    Style[TargetType=Button]{
                         Background = #ff0000;
                     }
                 }
@@ -66,7 +66,7 @@ describe('compile — declarative EventTrigger + BeginStoryboard', () => {
         const js = emitted(`
             Application{
                 resources: {
-                    style[targettype=Button]{
+                    Style[TargetType=Button]{
                         on Click {
                             BeginStoryboard {
                                 DoubleAnimation[TargetProperty=Width, To=240, Duration=400]
@@ -88,7 +88,7 @@ describe('compile — declarative EventTrigger + BeginStoryboard', () => {
         const js = emitted(`
             Application{
                 resources: {
-                    style[targettype=Button]{
+                    Style[TargetType=Button]{
                         on Click {
                             BeginStoryboard {
                                 DoubleAnimation[TargetProperty=Width, To=200, Duration=300]
@@ -110,7 +110,7 @@ describe('compile — declarative EventTrigger + BeginStoryboard', () => {
     test('TargetProperty accepts a bare identifier OR a quoted string', () => {
         const jsIdent = emitted(`
             Application{ resources: {
-                style[targettype=Button]{
+                Style[TargetType=Button]{
                     on Click { BeginStoryboard { DoubleAnimation[TargetProperty=Width, To=100, Duration=200] } }
                 }
             }}
@@ -119,7 +119,7 @@ describe('compile — declarative EventTrigger + BeginStoryboard', () => {
 
         const jsString = emitted(`
             Application{ resources: {
-                style[targettype=Button]{
+                Style[TargetType=Button]{
                     on Click { BeginStoryboard { DoubleAnimation[TargetProperty="Width", To=100, Duration=200] } }
                 }
             }}
@@ -131,7 +131,7 @@ describe('compile — declarative EventTrigger + BeginStoryboard', () => {
         assert.throws(
             () => emitted(`
                 Application{ resources: {
-                    style[targettype=Button]{
+                    Style[TargetType=Button]{
                         on Click { BeginStoryboard { DoubleAnimation[To=100, Duration=200] } }
                     }
                 }}
@@ -144,7 +144,7 @@ describe('compile — declarative EventTrigger + BeginStoryboard', () => {
         assert.throws(
             () => emitted(`
                 Application{ resources: {
-                    style[targettype=Button]{
+                    Style[TargetType=Button]{
                         on Click { BeginStoryboard { } }
                     }
                 }}
@@ -157,7 +157,7 @@ describe('compile — declarative EventTrigger + BeginStoryboard', () => {
         const js = emitted(`
             Application{
                 resources: {
-                    style[targettype=Button]{
+                    Style[TargetType=Button]{
                         Background = #1976d2;
                         on Click {
                             BeginStoryboard {

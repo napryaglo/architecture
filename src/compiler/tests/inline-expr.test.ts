@@ -183,7 +183,7 @@ describe('compile — inline expressions', () => {
     test('Style setter wraps reactive MultiBinding in a SetterFactory', () => {
         const js = compile(`
             Application{ resources: {
-                style[targettype=Border]{ Width = {{ $base * 2 }}; }
+                Style[TargetType=Border]{ Width = {{ $base * 2 }}; }
             } }
         `).js;
         assert.match(

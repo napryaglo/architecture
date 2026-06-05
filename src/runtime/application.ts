@@ -1,4 +1,4 @@
-import { ResourceDictionary } from './resource-dictionary.js';
+import { ResourceDictionary, type ResourceKey } from './resource-dictionary.js';
 import type { Visual } from './visual.js';
 
 // Root container for a µ-mural application. Owns app-wide resources
@@ -90,12 +90,16 @@ export class Application
 
     // Resolve a resource (typically a default ControlTemplate) by key.
     // Walks `Application.current.Resources` first so a consumer who
-    // sets `app.Resources.Set('DefaultButton', myTemplate)` BEFORE
-    // constructing any Button overrides the bundled default — exactly
-    // the WPF implicit-Style replacement pattern. Falls back to the
-    // bundled default dictionaries directly so tests / unmounted
-    // controls without an Application still resolve.
-    public static ResolveDefaultResource<T = unknown>(key: string): T | undefined
+    // sets `app.Resources.Set(Button, myTemplate)` BEFORE constructing
+    // any Button overrides the bundled default — exactly the WPF
+    // implicit-Style replacement pattern. Falls back to the bundled
+    // default dictionaries directly so tests / unmounted controls
+    // without an Application still resolve.
+    //
+    // Accepts `string | Function` keys: built-in control templates are
+    // keyed by the control's class function (Button, ListBox, …) under
+    // the no-string-type-proxies rule; ad-hoc resources stay string-keyed.
+    public static ResolveDefaultResource<T = unknown>(key: ResourceKey): T | undefined
     {
         const app = Application.current;
         if (app !== null)

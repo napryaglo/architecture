@@ -260,6 +260,70 @@ chain. The framework disposes bindings automatically when one is replaced
 by another value, but explicit disposal is the contract if you hold a
 binding outside the framework.
 
+### Binding sources — `DataContextBinding` vs `ElementNameBinding`
+
+Two factories ship for path-style bindings; both produce a `Binding`
+the EVD knows how to install. The difference is what they bind
+**against**:
+
+| Factory | Source | Reactive on | Mirrors WPF |
+|---|---|---|---|
+| `DataContextBinding(target, path)` | The target's `DataContext`. Re-resolves whenever DataContext changes — inheritance carries this from ancestors. | `target.DataContext` changes + each Model in the path. | `{Binding Path=…}` (default Source) |
+| `ElementNameBinding(source, path)` | A FIXED Visual passed in at construction. | Each Model in the path on that Visual. No DataContext listener. | `{Binding ElementName=foo, Path=…}` |
+
+```ts
+import { DataContextBinding, ElementNameBinding } from '@visualisation-sub/mural/runtime';
+
+// Track the active VM's Title — source resolves through DataContext
+// inheritance; rebinds if DataContext is later reassigned.
+border.set_property_value(Border.BackgroundKey,
+    DataContextBinding(border, 'Active.Title'));
+
+// Mirror chrome's Background onto text.Foreground — fixed source.
+text.set_property_value(TextBlock.ForegroundKey,
+    ElementNameBinding(chrome, 'Background'));
+```
+
+#### ElementName from markup
+
+Inside a template body, the compiler tracks every `x:name` and lowers
+`$head.Property` to `ElementNameBinding(<that element's var>,
+'Property')` when `head` matches an `x:name` declared earlier in the
+same template scope. No new syntax — the same `$path` form switches
+sources based on whether the head is a Visual in scope or a
+DataContext property.
+
+```mu
+DataTemplate [DataType=ButtonVM] {
+    Border x:name="chrome" [Background=#ffffff] {
+        TextBlock [Foreground=$chrome.Background]   // ElementName binding
+        TextBlock [Text=$Label]                      // DataContext binding
+    }
+}
+```
+
+In that template:
+
+- `$chrome.Background` → `ElementNameBinding(chrome, 'Background')` —
+  `chrome` is an x:name in scope, so the binding source is that Border.
+  TwoWay-capable when the target DP declares `BindsTwoWayByDefault`.
+- `$Label` → `DataContextBinding(textBlock, 'Label')` — `Label` is not
+  an x:name, so it falls through to the DataContext (the per-template
+  ButtonVM).
+
+Disambiguation rule when an x:name shadows a DataContext path: the
+x:name wins. The author can either rename the x:name or write a
+template-binding sigil (`$$Property` against the templated parent's
+property) to access the DataContext explicitly.
+
+A bare `$head` with no trailing `.Property` is a compile error — the
+binding has no path to walk, and silently binding to "the element
+itself" would be surprising. Use `$head.Property`.
+
+The ElementName resolution only applies INSIDE a template body
+(ControlTemplate or DataTemplate). At application-root scope, `$path`
+always addresses the DataContext.
+
 ## 6. Read-only properties
 
 `RegisterReadOnlyProperty` returns a `PropertyKey` token. External code can

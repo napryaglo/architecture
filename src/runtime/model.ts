@@ -268,13 +268,21 @@ export class Model
         return new PropertyKey<T>(descriptor);
     }
 
-    public static OverrideMetadata(
+    // Overrides metadata (default value / coerce / meta flags) on `klass`
+    // for the property identified by `key`. The PropertyKey is the typed
+    // handle returned by `RegisterProperty` / `RegisterReadOnlyProperty`;
+    // it carries the original descriptor so the override chains cleanly
+    // and the value type `T` is threaded through `opts.default_value`.
+    // No string-named overload — type references are first-class through
+    // the key, matching the rest of the typed accessor surface.
+    public static OverrideMetadata<T>(
         klass: Function,
-        property: string,
+        key: PropertyKey<T>,
         opts: PropertyMetadata,
     ): void
     {
         Model.remember_class(klass);
+        const property = key.descriptor.Name;
         const bag = Model.get_property_bag(klass);
         const parent_descriptor = bag.get(property)
             ?? Model.find_descriptor(Object.getPrototypeOf(klass) as Function, property);

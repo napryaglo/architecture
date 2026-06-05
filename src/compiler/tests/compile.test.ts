@@ -164,7 +164,7 @@ describe('compile — Style emission', () => {
         const js = emitted(`
             Application{
                 resources: {
-                    style[targettype=Border]{ Padding = (12, 6); }
+                    Style[TargetType=Border]{ Padding = (12, 6); }
                 }
             }
         `);
@@ -182,7 +182,7 @@ describe('compile — Style emission', () => {
         const js = emitted(`
             Application{
                 resources: {
-                    style x:key="DangerButton"[targettype=Border]{ Background = #ff0000; }
+                    Style x:key="DangerButton"[TargetType=Border]{ Background = #ff0000; }
                 }
             }
         `);
@@ -193,7 +193,7 @@ describe('compile — Style emission', () => {
         const js = emitted(`
             Application{
                 resources: {
-                    style[targettype=Border]{
+                    Style[TargetType=Border]{
                         Background = #ffffff;
                         when( IsMouseOver ){
                             Background = #eeeeee;
@@ -212,6 +212,357 @@ describe('compile — Style emission', () => {
         // Style construction picks up the trigger; the empty fifth arg
         // is the (empty) multi-trigger list.
         assert.match(js, /new Style\(Border, \[.*\], undefined, \[_trigger\d+\], \[\]\);/);
+    });
+
+    test('when($Path) lowers to DataTrigger emission', () => {
+        const js = emitted(`
+            Application{
+                resources: {
+                    Style[TargetType=Border]{
+                        Background = #ffffff;
+                        when( $IsSelected ){
+                            Background = #ffaa00;
+                        }
+                    }
+                }
+            }
+        `);
+        // DataTrigger("IsSelected", true, _sArrN) — note no targetType
+        // argument; the trigger resolves the path against the styled
+        // visual's DataContext, not against a DP on a specific class.
+        assert.match(
+            js,
+            /new DataTrigger\("IsSelected", true, _sArr\d+\);/,
+        );
+        // Style constructor picks up the DataTrigger in its 7th
+        // argument slot. The 6th slot (event triggers) is still empty.
+        assert.match(
+            js,
+            /new Style\(Border, \[.*\], undefined, \[\], \[\], \[\], \[_dataTrig\d+\]\);/,
+        );
+        // DataTrigger import is wired alongside Style.
+        assert.match(js, /\bDataTrigger\b/);
+    });
+
+    test('when($Path = value) lowers to DataTrigger with an explicit value', () => {
+        const js = emitted(`
+            Application{
+                resources: {
+                    Style[TargetType=Border]{
+                        when( $Mode = "warn" ){ Background = #ffff00; }
+                    }
+                }
+            }
+        `);
+        assert.match(
+            js,
+            /new DataTrigger\("Mode", "warn", _sArr\d+\);/,
+        );
+    });
+
+    test('when($A.B) lowers to a dotted-path DataTrigger', () => {
+        const js = emitted(`
+            Application{
+                resources: {
+                    Style[TargetType=Border]{
+                        when( $User.IsAdmin ){ Background = #00ff00; }
+                    }
+                }
+            }
+        `);
+        assert.match(
+            js,
+            /new DataTrigger\("User\.IsAdmin", true, _sArr\d+\);/,
+        );
+    });
+
+    test('not $Path is rejected with a clear error', () => {
+        assert.throws(
+            () => emitted(`
+                Application{
+                    resources: {
+                        Style[TargetType=Border]{
+                            when( not $IsSelected ){ Background = #000; }
+                        }
+                    }
+                }
+            `),
+            (e) => e instanceof EmitError && /not \$path/.test(e.message),
+        );
+    });
+
+    test('$path inside an AND-conjunct is rejected', () => {
+        assert.throws(
+            () => emitted(`
+                Application{
+                    resources: {
+                        Style[TargetType=Border]{
+                            when( IsMouseOver and $IsSelected ){
+                                Background = #000;
+                            }
+                        }
+                    }
+                }
+            `),
+            (e) => e instanceof EmitError && /\$path/.test(e.message),
+        );
+    });
+});
+
+describe('compile — DataTemplate triggers', () => {
+    test('trailing `when($Path)` inside DataTemplate emits TemplateDataTrigger', () => {
+        const js = emitted(`
+            import FooVM from "./foo-vm.mjs"
+            ResourceDictionary {
+                DataTemplate x:key="T" [DataType=FooVM] {
+                    Border x:root {
+                        TextBlock x:name="label"
+                    }
+                    when( $IsSelected ) {
+                        Border.Background = #ffaa00;
+                    }
+                }
+            }
+        `);
+        // The TargetedSetter wraps the Background setter for the
+        // template root (Owner=Border, no targetName).
+        assert.match(js, /new TargetedSetter\(Border, "Background",/);
+        // TemplateDataTrigger consumes the setter array.
+        assert.match(
+            js,
+            /new TemplateDataTrigger\("IsSelected", true, _tplSet\d+\)/,
+        );
+        // DataTemplate construction goes through an IIFE so trigger
+        // const declarations precede the constructor while still being
+        // able to reference x:names from inside the factory body. The
+        // factory is hoisted into `_factory` so the constructor call
+        // uses the bound identifier rather than an inline arrow.
+        // DataType is the FooVM Function reference imported from
+        // "./foo-vm.mjs" — not a string. WPF parity.
+        assert.match(
+            js,
+            /new DataTemplate\(_factory, FooVM, \[\], \[_tplDataTrig\d+\]\)/,
+        );
+        assert.match(js, /import \{ FooVM \} from "\.\/foo-vm\.mjs";/);
+    });
+
+    test('`$name.Property` resolves to ElementNameBinding when name is an x:name in scope', () => {
+        const js = emitted(`
+            import FooVM from "./foo-vm.mjs"
+            ResourceDictionary {
+                DataTemplate x:key="T" [DataType=FooVM] {
+                    Border x:root {
+                        Border x:name="chrome" [Background=#ffaa00]
+                        TextBlock [Foreground=$chrome.Background]
+                    }
+                }
+            }
+        `);
+        // The TextBlock's Foreground binds to the chrome's Background
+        // via ElementNameBinding(<chrome var>, "Background"), NOT via
+        // DataContextBinding.
+        assert.match(
+            js,
+            /ElementNameBinding\(_border\d+, "Background"\)/,
+        );
+        assert.doesNotMatch(
+            js,
+            /DataContextBinding\([^,]+, "chrome\.Background"\)/,
+        );
+        // The import header pulls ElementNameBinding from the runtime.
+        assert.match(
+            js,
+            /import \{[^}]*ElementNameBinding[^}]*\} from "@visualisation-sub\/mural\/runtime";/,
+        );
+    });
+
+    test('`$name` without a trailing path is a clear error', () => {
+        assert.throws(
+            () => emitted(`
+                import FooVM from "./foo-vm.mjs"
+                ResourceDictionary {
+                    DataTemplate x:key="T" [DataType=FooVM] {
+                        Border x:root {
+                            Border x:name="chrome"
+                            TextBlock [Foreground=$chrome]
+                        }
+                    }
+                }
+            `),
+            (e: Error) =>
+                e.message.includes('chrome') &&
+                e.message.includes('no property path'),
+        );
+    });
+
+    test('`Name.Property = value` resolves to a TargetedSetter when Name is an x:name', () => {
+        const js = emitted(`
+            import FooVM from "./foo-vm.mjs"
+            ResourceDictionary {
+                DataTemplate x:key="T" [DataType=FooVM] {
+                    Border x:root {
+                        Border x:name="chrome" [Background=#ffffff]
+                    }
+                    when( $IsSelected ) {
+                        chrome.Background = #ffaa00;
+                    }
+                }
+            }
+        `);
+        // chrome → x:name → TargetedSetter with targetName="chrome",
+        // owner inferred from the named element's declared class.
+        assert.match(
+            js,
+            /new TargetedSetter\(Border, "Background", [^,]+, "chrome"\)/,
+        );
+    });
+
+    test('DataTemplate body without trailing triggers keeps the 2-arg shape', () => {
+        const js = emitted(`
+            import FooVM from "./foo-vm.mjs"
+            ResourceDictionary {
+                DataTemplate x:key="T" [DataType=FooVM] {
+                    Border x:root
+                }
+            }
+        `);
+        // No triggers → no 4-arg form; the historical
+        // `new DataTemplate((_data) => { … }, FooVM);` shape is
+        // preserved — DataType is now a Function identifier sourced
+        // from the import clause, not a string literal.
+        assert.match(js, /new DataTemplate\(\(_data\) => \{[\s\S]*\}, FooVM\);/);
+        assert.doesNotMatch(js, /TemplateDataTrigger/);
+    });
+
+    test('event triggers inside DataTemplate body lower to EventTrigger constructors passed as the 5th DataTemplate arg', () => {
+        const js = emitted(`
+            import FooVM from "./foo-vm.mjs"
+            ResourceDictionary {
+                DataTemplate x:key="T" [DataType=FooVM] {
+                    Border x:root
+                    on Click {
+                        BeginStoryboard {
+                            DoubleAnimation[TargetProperty=Opacity, From=0, To=1, Duration=200]
+                        }
+                    }
+                }
+            }
+        `);
+        // The Style EventTrigger path is reused, so the same
+        // `new EventTrigger("Click", [_act…])` shape lands here.
+        assert.match(js, /new EventTrigger\("Click", \[_act\d+\]\);/);
+        // The 5th argument carries the event-trigger array. Property
+        // and data trigger arrays are empty (no when() block).
+        assert.match(
+            js,
+            /new DataTemplate\(_factory, FooVM, \[\], \[\], \[_evt\d+\]\)/,
+        );
+    });
+
+    test('bare `Property = value` inside a DataTemplate trigger is rejected', () => {
+        assert.throws(
+            () => emitted(`
+                import FooVM from "./foo-vm.mjs"
+                ResourceDictionary {
+                    DataTemplate x:key="T" [DataType=FooVM] {
+                        Border x:root
+                        when( $IsSelected ) {
+                            Background = #ffaa00;
+                        }
+                    }
+                }
+            `),
+            (e) => e instanceof EmitError && /Owner\.Property/.test(e.message),
+        );
+    });
+
+    test('unkeyed DataTemplate registers by DataType class function', () => {
+        const js = emitted(`
+            import FooVM from "./foo-vm.mjs"
+            ResourceDictionary {
+                DataTemplate [DataType=FooVM] {
+                    Border x:root
+                }
+            }
+        `);
+        // Function-keyed entry — the imported FooVM identifier is the
+        // key. ContentPresenter / ItemsControl resolve via
+        // TryFindResource(content.constructor) — identity match.
+        assert.match(js, /\.Set\(FooVM, _tmpl\d+\);/);
+        assert.match(js, /import \{ FooVM \} from "\.\/foo-vm\.mjs";/);
+    });
+
+    test('unkeyed DataTemplate inside Application resources slot works the same way', () => {
+        const js = emitted(`
+            import FooVM from "./foo-vm.mjs"
+            Application{
+                resources: {
+                    DataTemplate [DataType=FooVM] {
+                        Border x:root
+                    }
+                }
+            }
+        `);
+        assert.match(js, /_rd\d+\.Set\(FooVM, _tmpl\d+\);/);
+    });
+
+    // HierarchicalDataTemplate parses as `data-template-body` like
+    // DataTemplate but `compileHierarchicalDataTemplateForm` only
+    // accepts `kind === 'element'`. Pre-existing gap — the form is
+    // broken in markup form even with an x:key today. The implicit
+    // wiring is in place for the day the form is reconciled.
+
+    test('explicit x:key still wins over implicit DataType', () => {
+        const js = emitted(`
+            import FooVM from "./foo-vm.mjs"
+            ResourceDictionary {
+                DataTemplate x:key="Row" [DataType=FooVM] {
+                    Border x:root
+                }
+            }
+        `);
+        // Keyed entry — registered under the user-supplied string, not
+        // under the DataType identifier.
+        assert.match(js, /\.Set\("Row", _tmpl\d+\);/);
+        assert.doesNotMatch(js, /\.Set\(FooVM, _tmpl\d+\);/);
+    });
+
+    test('top-level `import Name from "path"` extends the symbol table', () => {
+        const js = emitted(`
+            import BarVM from "../bar-vm.mjs"
+            ResourceDictionary {
+                DataTemplate x:key="K" [DataType=BarVM] {
+                    Border x:root
+                }
+            }
+        `);
+        // Single import line at the top of the emitted module, plus
+        // the constructor uses BarVM by identifier.
+        assert.match(js, /import \{ BarVM \} from "\.\.\/bar-vm\.mjs";/);
+        assert.match(js, /new DataTemplate\(\(_data\) => \{[\s\S]*\}, BarVM\);/);
+    });
+
+    test('bare `import Name` (no `from`) is rejected', () => {
+        assert.throws(
+            () => emitted(`
+                import Floating
+                ResourceDictionary {}
+            `),
+            /requires `from "path"`/,
+        );
+    });
+
+    test('referencing an un-imported type in `[DataType=...]` errors loudly', () => {
+        assert.throws(
+            () => emitted(`
+                ResourceDictionary {
+                    DataTemplate x:key="K" [DataType=UnknownVM] {
+                        Border x:root
+                    }
+                }
+            `),
+            /unknown symbol 'UnknownVM'/,
+        );
     });
 });
 
@@ -285,7 +636,7 @@ describe('compile — value emission', () => {
         const js = emitted(`
             Application{ resources: {
                 Border x:root[Width=100]{}
-                style[targettype=Border]{
+                Style[TargetType=Border]{
                     MinSize = <120, 40>;
                 }
             } }
@@ -320,7 +671,7 @@ describe('compile — value emission', () => {
     test('@@key inside a Style setter wraps in a SetterFactory', () => {
         const js = emitted(`
             Application{ resources: {
-                style[targettype=Border]{ Background = @@theme; }
+                Style[TargetType=Border]{ Background = @@theme; }
             } }
         `);
         assert.match(
@@ -356,6 +707,47 @@ describe('compile — value emission', () => {
         assert.match(
             js,
             /import \{[^}]*HorizontalAlignment[^}]*\} from "@visualisation-sub\/mural\/runtime";/,
+        );
+    });
+
+    test('Unknown enum member is a compile error', () => {
+        assert.throws(
+            () => emitted(`
+                Application{ resources: {
+                    Border x:root[HorizontalAlignment=center]{}
+                } }
+            `),
+            (err: Error) =>
+                err.message.includes('center') &&
+                err.message.includes('HorizontalAlignment') &&
+                err.message.includes('Center'),
+        );
+    });
+
+    test('Unknown enum member errors when the property name differs from the enum (Variant: DrawerVariant)', () => {
+        assert.throws(
+            () => emitted(`
+                Application{ resources: {
+                    Drawer x:root[Variant=Bogus]{}
+                } }
+            `),
+            (err: Error) =>
+                err.message.includes('Bogus') &&
+                err.message.includes('DrawerVariant') &&
+                err.message.includes('Persistent'),
+        );
+    });
+
+    test('Unresolved bareword in value position is a compile error', () => {
+        assert.throws(
+            () => emitted(`
+                Application{ resources: {
+                    TextBlock x:root[Text=SomeUnknownIdent]{}
+                } }
+            `),
+            (err: Error) =>
+                err.message.includes('unresolved identifier') &&
+                err.message.includes('SomeUnknownIdent'),
         );
     });
 });
