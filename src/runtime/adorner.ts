@@ -90,6 +90,19 @@ export abstract class Adorner extends Visual
 // hosted on without the consumer threading the layer through manually.
 export class AdornerLayer extends Panel
 {
+    constructor()
+    {
+        super();
+        // The layer itself is a passthrough — its mural-hit pad would
+        // catch pointer events on the whole arranged rect, blocking
+        // hits to the content underneath (the AdornerDecorator's
+        // Child). Opt the layer out at the renderer level; adorners
+        // inside still get their own hit-test (their pad keeps explicit
+        // "all", which beats the inherited "none" from the layer's
+        // outer <g>).
+        this.IsHitTestVisible = false;
+    }
+
     public Add(adorner: Adorner): void
     {
         this.AddVisualChild(adorner);

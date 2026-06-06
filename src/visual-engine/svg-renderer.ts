@@ -301,7 +301,7 @@ export class SvgRenderer
             || arrangeDirty.has(visual) || renderDirty.has(visual))
         {
             this.applyClip(info.outer, visual);
-            this.applyHitTestVisibility(info.outer, visual);
+            this.applyHitTestVisibility(info.outer, info.hit, visual);
         }
 
         // Own primitives — re-emit on first paint, when render-dirty,
@@ -358,22 +358,28 @@ export class SvgRenderer
     // the prior def without scanning <defs>.
     private clipDefs = new WeakMap<RenderableVisual, SVGElement>();
 
-    // Mirror IsHitTestVisible onto the outer <g>. When false, set
-    // `pointer-events="none"` so this visual AND every descendant
-    // (CSS cascade) drop out of the elementsFromPoint walk — the same
-    // contract HtmlTarget.suppressPointerEvents enforces manually for
-    // the drag ghost subtree. When true (the default), clear the
-    // attribute so the inner mural-hit pad's explicit `all` takes
-    // effect again.
-    private applyHitTestVisibility(outer: SVGGElement, visual: RenderableVisual): void
+    // Mirror IsHitTestVisible onto BOTH the outer <g> and the mural-hit
+    // pad. When false, the outer gets `pointer-events="none"` so this
+    // visual drops out of the elementsFromPoint walk; the PAD also gets
+    // "none" so it doesn't catch events with its explicit "all" — that
+    // matters for container visuals (an AdornerLayer painted over a
+    // subtree) that want to be transparent to events so hits fall
+    // through to siblings underneath. Descendants with their own
+    // explicit `pointer-events="all"` (their own mural-hit pad) keep
+    // working — CSS cascade silences inheritance, but explicit
+    // overrides win. When true (the default), clear the outer's
+    // attribute and restore the pad's explicit "all".
+    private applyHitTestVisibility(outer: SVGGElement, hit: SVGRectElement, visual: RenderableVisual): void
     {
         if (visual.IsHitTestVisible)
         {
             outer.removeAttribute('pointer-events');
+            hit.setAttribute('pointer-events', 'all');
         }
         else
         {
             outer.setAttribute('pointer-events', 'none');
+            hit.setAttribute('pointer-events', 'none');
         }
     }
 
