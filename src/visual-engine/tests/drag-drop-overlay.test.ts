@@ -230,7 +230,15 @@ describe('HtmlTarget — cursor styling', () => {
         resetPendingDrag();
     });
 
-    test('OnDragSessionStarted captures cursor and sets not-allowed initially', () => {
+    // The HtmlTarget deliberately does NOT mutate the host's cursor
+    // during a drag — the browser-native 4-direction-arrow / not-allowed
+    // / copy-plus cursors were visually loud and read as desktop chrome
+    // rather than in-app drag affordance. Effect feedback is the
+    // adorner / ghost's job. These tests pin that contract so a future
+    // edit to OnDragSessionStarted / UpdateCursorForEffect can't
+    // silently re-introduce the cursor flip.
+
+    test('OnDragSessionStarted leaves the host cursor untouched', () => {
         const { host } = makeDom();
         const target = new HtmlTarget(host);
         const root = new Border();
@@ -238,14 +246,15 @@ describe('HtmlTarget — cursor styling', () => {
         const source = new TestSquare();
         root.SetChild(source);
         target.Flush();
+        (host as HTMLElement).style.cursor = 'default';
 
         DragDrop.DoDragDrop(source, new DataObject(), DragDropEffects.All);
         target.InputManager.PickUpPendingDragSession();
         target.OnDragSessionStarted();
-        assert.equal((host as HTMLElement).style.cursor, 'not-allowed');
+        assert.equal((host as HTMLElement).style.cursor, 'default');
     });
 
-    test('UpdateCursorForEffect translates each Effect flag to the right CSS cursor', () => {
+    test('UpdateCursorForEffect is a no-op regardless of effect', () => {
         const { host } = makeDom();
         const target = new HtmlTarget(host);
         const root = new Border();
@@ -253,25 +262,23 @@ describe('HtmlTarget — cursor styling', () => {
         const source = new TestSquare();
         root.SetChild(source);
         target.Flush();
+        (host as HTMLElement).style.cursor = 'default';
 
         DragDrop.DoDragDrop(source, new DataObject(), DragDropEffects.All);
         target.InputManager.PickUpPendingDragSession();
         target.OnDragSessionStarted();
 
-        target.UpdateCursorForEffect(DragDropEffects.Copy);
-        assert.equal((host as HTMLElement).style.cursor, 'copy');
-        target.UpdateCursorForEffect(DragDropEffects.Move);
-        assert.equal((host as HTMLElement).style.cursor, 'move');
-        target.UpdateCursorForEffect(DragDropEffects.Link);
-        assert.equal((host as HTMLElement).style.cursor, 'alias');
-        target.UpdateCursorForEffect(DragDropEffects.None);
-        assert.equal((host as HTMLElement).style.cursor, 'not-allowed');
-        // Combined flags — Copy wins priority.
-        target.UpdateCursorForEffect(DragDropEffects.Copy | DragDropEffects.Move);
-        assert.equal((host as HTMLElement).style.cursor, 'copy');
+        for (const eff of [
+            DragDropEffects.Copy, DragDropEffects.Move, DragDropEffects.Link,
+            DragDropEffects.None, DragDropEffects.Copy | DragDropEffects.Move,
+        ])
+        {
+            target.UpdateCursorForEffect(eff);
+            assert.equal((host as HTMLElement).style.cursor, 'default');
+        }
     });
 
-    test('OnDragSessionEnded restores the captured original cursor', () => {
+    test('OnDragSessionEnded leaves the host cursor untouched (nothing to restore)', () => {
         const { host } = makeDom();
         const target = new HtmlTarget(host);
         const root = new Border();
@@ -285,7 +292,7 @@ describe('HtmlTarget — cursor styling', () => {
         target.InputManager.PickUpPendingDragSession();
         target.OnDragSessionStarted();
         target.UpdateCursorForEffect(DragDropEffects.Copy);
-        assert.equal((host as HTMLElement).style.cursor, 'copy');
+        assert.equal((host as HTMLElement).style.cursor, 'default');
 
         target.OnDragSessionEnded();
         assert.equal((host as HTMLElement).style.cursor, 'default');

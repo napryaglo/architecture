@@ -184,9 +184,6 @@ export class HtmlTarget extends PresentationTarget
     // via session.OnMove (e.g. the diagram demo's rubber-band line).
     private dragOverlay: SVGGElement | undefined;
     private dragGhost:   SVGGElement | undefined;
-    // Snapshot of host.style.cursor captured when the session starts;
-    // restored on session end. `null` outside an active session.
-    private originalCursor: string | null = null;
 
     constructor(host: Element, options: HtmlTargetOptions = {})
     {
@@ -508,15 +505,14 @@ export class HtmlTarget extends PresentationTarget
     {
         const session = this.InputManager.CurrentDragSession;
         if (session === null) return;
-        // Capture and override the cursor first so it's set even if the
-        // preview branches early-return (mode A with no painted source).
-        // Initial state has no receiver, so 'not-allowed' is the right
-        // default — receivers' DragOver flips it to copy/move/alias.
-        if (this.originalCursor === null)
-        {
-            this.originalCursor = (this.host as HTMLElement).style.cursor;
-            (this.host as HTMLElement).style.cursor = 'not-allowed';
-        }
+        // Cursor is deliberately NOT mutated during a drag — the
+        // browser-native "move / copy / not-allowed" CSS cursors (the
+        // 4-direction arrow on Windows, the green-plus on copy, the
+        // ⊘ on not-allowed) were visually loud and read as desktop-
+        // app chrome rather than in-app drag affordance. Receivers
+        // still publish an Effect (which the InsertionAdornerTemplate
+        // / drag-ghost reflect visually), but the host cursor stays
+        // whatever it was when the gesture started.
         const opts = this.InputManager.CurrentDragOptions;
         if (opts.preview === null)
         {
@@ -538,19 +534,15 @@ export class HtmlTarget extends PresentationTarget
         this.attachGhostFromTemplate(opts.preview, session.Data);
     }
 
-    // Map the receiver-published Effect to a CSS cursor. Per spec § 5:
-    //   Copy → 'copy', Move → 'move', Link → 'alias', None → 'not-allowed'.
-    // When the receiver returns a combined flag set, the most permissive
-    // single mode wins (Copy beats Move beats Link); WPF uses the same
-    // priority order.
-    public UpdateCursorForEffect(effect: DragDropEffects): void
+    // No-op — cursor is intentionally not mutated during a drag. See
+    // the comment in OnDragSessionStarted for the rationale. Kept as a
+    // public method (rather than removed) so the InputManager's
+    // per-move call site doesn't need a feature-flag check; tests that
+    // previously asserted cursor mappings now assert that the cursor
+    // stays unchanged.
+    public UpdateCursorForEffect(_effect: DragDropEffects): void
     {
-        let cursor: string;
-        if      ((effect & DragDropEffects.Copy) !== 0) cursor = 'copy';
-        else if ((effect & DragDropEffects.Move) !== 0) cursor = 'move';
-        else if ((effect & DragDropEffects.Link) !== 0) cursor = 'alias';
-        else                                            cursor = 'not-allowed';
-        (this.host as HTMLElement).style.cursor = cursor;
+        /* deliberately empty */
     }
 
     public OnDragSessionEnded(): void
@@ -566,11 +558,6 @@ export class HtmlTarget extends PresentationTarget
             this._modeCPreviewVisual = undefined;
         }
         this.removeDragOverlay();
-        if (this.originalCursor !== null)
-        {
-            (this.host as HTMLElement).style.cursor = this.originalCursor;
-            this.originalCursor = null;
-        }
     }
 
     private _modeCPreviewVisual: Visual | undefined;
@@ -714,6 +701,7 @@ export class HtmlTarget extends PresentationTarget
             return;
         }
         // move
+        const wasActive = this.InputManager.IsDragActive;
         this.InputManager.InjectPointerMove(hit ?? null, init);
         // The declarative IsDraggable latch starts the drag during
         // *move* (after the threshold trip), not during down. The down
@@ -732,6 +720,16 @@ export class HtmlTarget extends PresentationTarget
             // reposition the ghost and pull the cursor.
             this.SetDragGhostPosition(hostX, hostY);
             this.UpdateCursorForEffect(this.InputManager.CurrentDragEffect);
+        }
+        else if (wasActive)
+        {
+            // InjectPointerMove cancelled the session mid-move (a
+            // source-side OnContinueQuery returned false — Shift-to-
+            // cancel is the canonical case; see §8.3). PointerUp would
+            // normally fire OnDragSessionEnded for us, but the session
+            // is gone before the user releases, so we have to tear the
+            // overlay / ghost down here.
+            this.OnDragSessionEnded();
         }
     }
 
@@ -917,6 +915,19 @@ export class HtmlTarget extends PresentationTarget
         e.preventDefault();
         this.osDragSessionActive = false;
 
+        // Refresh the session's DataObject from the now-populated
+        // dataTransfer. Browsers withhold file contents (`dt.files`
+        // is empty) during dragenter/dragover for security — the
+        // session's DataObject built at dragenter time only carried
+        // the `'Files'` marker with an empty-string placeholder. At
+        // drop time the FileList is real, and receivers reading
+        // `args.Data.Get('Files')` expect the live list.
+        const session = this.InputManager.CurrentDragSession;
+        if (session !== null && e.dataTransfer !== null)
+        {
+            refreshOsDataObject(session.Data, e.dataTransfer);
+        }
+
         const { hostX, hostY } = this.toHostCoords(e);
         const hit = this.hitVisualAt(hostX, hostY);
         this.InputManager.DriveDragUp(hit ?? null, {
@@ -936,16 +947,15 @@ export class HtmlTarget extends PresentationTarget
     // drag handlers don't duplicate the rect-to-hit translation.
     private hitVisualAt(hostX: number, hostY: number): import('../../runtime/index.js').Visual | undefined
     {
-        const rect = this.host.getBoundingClientRect();
-        const clientX = rect.left + hostX;
-        const clientY = rect.top  + hostY;
-        const list = (this.host.ownerDocument ?? document).elementsFromPoint(clientX, clientY);
-        for (const el of list)
-        {
-            const v = (el as unknown as { __mural_visual__?: import('../../runtime/index.js').Visual }).__mural_visual__;
-            if (v !== undefined) return v;
-        }
-        return undefined;
+        // Delegate to the inherited PresentationTarget.HitTest (overridden
+        // above in this class), which walks the elementsFromPoint stack
+        // looking for VISUAL_BACKREF stamps on each element's parent
+        // chain. The previous implementation tried to read a
+        // `__mural_visual__` property directly on the element — that
+        // property is never set anywhere (the renderer uses the
+        // VISUAL_BACKREF Symbol), so the function silently returned
+        // undefined for every call, breaking OS drag hit-testing.
+        return this.HitTest(hostX, hostY);
     }
 
     // The host element passed to the constructor. Read-only access for
@@ -978,8 +988,21 @@ function osDataObjectFrom(dt: DataTransfer | null): DataObject
 {
     const out = new DataObject();
     if (dt === null) return out;
-    for (const type of dt.types)
+    // `dt.types` is a DOMStringList in older browsers (Safari + older
+    // Chromium) and a frozen Array in newer ones. DOMStringList is
+    // index-accessible and has .length but isn't reliably iterable —
+    // `for (const x of dt.types)` silently iterates nothing in those
+    // cases. Walk by index so both shapes work, then explicitly check
+    // the well-known `Files` marker which the spec guarantees is in
+    // `types` whenever files are part of the drag (dt.files is empty
+    // until drop for security, so this is the only signal we can read
+    // during dragenter / dragover).
+    const typesLen = dt.types?.length ?? 0;
+    let sawFiles = false;
+    for (let i = 0; i < typesLen; i++)
     {
+        const type = dt.types[i] ?? '';
+        if (type === 'Files') sawFiles = true;
         // getData throws during dragenter / dragover for some types
         // (browsers gate it for security). Wrap defensively — the
         // type is still discoverable via `out.Has(format)` even when
@@ -987,11 +1010,47 @@ function osDataObjectFrom(dt: DataTransfer | null): DataObject
         try { out.Set(type, dt.getData(type)); }
         catch { out.Set(type, ''); }
     }
+    // Belt-and-braces: even if `types` iteration somehow missed the
+    // marker, fall back to dt.files (populated on drop) so receivers
+    // that key off Has('Files') still match.
+    if (!sawFiles && dt.files !== null && dt.files.length > 0)
+    {
+        out.Set('Files', dt.files);
+    }
+    else if (sawFiles)
+    {
+        // Replace the empty-string placeholder set by the loop above
+        // with the actual FileList when it's populated (only on drop).
+        if (dt.files !== null && dt.files.length > 0)
+        {
+            out.Set('Files', dt.files);
+        }
+    }
+    return out;
+}
+
+// Drop-time refresh of the session's DataObject. At dragenter the
+// browser populates `dt.types` (including the `'Files'` marker) but
+// withholds file contents and the bytes of MIME-typed strings for
+// security; `getData(type)` either throws or returns empty. At drop
+// time those become readable. Re-walk `dt.types` and re-set each
+// format; then overwrite `'Files'` with the now-populated FileList.
+// Mutates `out` in place because the session's `Data` field is
+// readonly (consumers hold the same DataObject reference across the
+// drag).
+function refreshOsDataObject(out: DataObject, dt: DataTransfer): void
+{
+    const typesLen = dt.types?.length ?? 0;
+    for (let i = 0; i < typesLen; i++)
+    {
+        const type = dt.types[i] ?? '';
+        try { out.Set(type, dt.getData(type)); }
+        catch { /* keep the dragenter-time placeholder */ }
+    }
     if (dt.files !== null && dt.files.length > 0)
     {
         out.Set('Files', dt.files);
     }
-    return out;
 }
 
 // Best-effort translation of `DataTransfer.effectAllowed` to the
