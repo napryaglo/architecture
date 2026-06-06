@@ -90,11 +90,6 @@ export abstract class Adorner extends Visual
 // hosted on without the consumer threading the layer through manually.
 export class AdornerLayer extends Panel
 {
-    // Backref to the owning AdornerDecorator. Set by the decorator
-    // constructor; used as the walk-stop sentinel when computing the
-    // adorned element's position in this layer's frame.
-    private _decorator: AdornerDecorator | undefined;
-
     public Add(adorner: Adorner): void
     {
         this.AddVisualChild(adorner);
@@ -120,13 +115,6 @@ export class AdornerLayer extends Panel
             }
         }
         return hit;
-    }
-
-    // Internal: set by AdornerDecorator at construction so the
-    // arrange walk knows where to stop accumulating offsets.
-    public _SetDecorator(decorator: AdornerDecorator): void
-    {
-        this._decorator = decorator;
     }
 
     protected override MeasureOverride(availableSize: Size): Size
@@ -160,23 +148,32 @@ export class AdornerLayer extends Panel
     private computeAdornedRectInLayerFrame(adorner: Adorner): Rect
     {
         // Walk from the adorned element upward through the visual tree,
-        // summing ArrangedRect offsets until we reach the owning
-        // AdornerDecorator. The accumulated (x, y) is the adorned
-        // element's top-left in the decorator's frame — which IS the
-        // layer's frame, since the layer fills the decorator at (0, 0).
+        // summing ArrangedRect offsets, until we reach the layer's own
+        // visual parent (an AdornerDecorator, a ScrollContentPresenter,
+        // or any other host that mounted us). The accumulated (x, y) is
+        // the adorned element's top-left in the LAYER PARENT's frame.
+        // To convert into the layer's LOCAL frame we subtract the
+        // layer's own ArrangedRect offset — relevant for SCP-hosted
+        // layers arranged at (-offX, -offY) in clip-and-translate mode.
+        // Decorator-hosted layers sit at (0, 0) in their parent, so the
+        // subtraction is a no-op there.
+        //
         // If the walk runs off the top (adorned element not under our
-        // decorator), fall back to (0, 0) — the adorner stays at the
-        // layer origin rather than tracking an unreachable target.
+        // layer's parent), fall back to (0, 0) — the adorner stays at
+        // the layer origin rather than tracking an unreachable target.
         const adorned = adorner.AdornedElement;
+        const stop = this.GetVisualParent();
         let x = 0, y = 0;
         let cur: Visual | undefined = adorned;
-        while (cur !== undefined && cur !== this._decorator)
+        while (cur !== undefined && cur !== stop)
         {
             x += cur.ArrangedRect.X;
             y += cur.ArrangedRect.Y;
             cur = cur.GetVisualParent();
         }
         if (cur === undefined) return new Rect(0, 0, 0, 0);
+        x -= this.ArrangedRect.X;
+        y -= this.ArrangedRect.Y;
         const rs = adorned.RenderSize;
         return new Rect(x, y, rs.Width, rs.Height);
     }
@@ -253,7 +250,6 @@ export class AdornerDecorator extends Single
     {
         super();
         this._adornerLayer = new AdornerLayer();
-        this._adornerLayer._SetDecorator(this);
         this.AttachVisual(this._adornerLayer);
     }
 
@@ -321,6 +317,17 @@ export class DragGhostAdorner extends Adorner
     private _y: number = 0;
     private _w: number = 0;
     private _h: number = 0;
+
+    constructor(adornedElement: Visual)
+    {
+        super(adornedElement);
+        // Pointer events must reach the adorned element underneath —
+        // the ghost is pure decoration following the cursor and would
+        // otherwise swallow the very gestures the drag listener is
+        // waiting for (drop targets, hover highlights on potential
+        // drop zones, etc.).
+        this.IsHitTestVisible = false;
+    }
 
     public SetContent(content: Visual | undefined): void
     {

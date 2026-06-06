@@ -2,6 +2,7 @@ import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+    Adorner,
     AdornerDecorator,
     AdornerLayer,
     Application,
@@ -22,6 +23,12 @@ class FixedSquare extends Visual
         this.Width  = side;
         this.Height = side;
     }
+    protected override MeasureOverride(_a: Size): Size { return Size.Zero; }
+    protected override RenderOverride(_dc: DrawingContext): void {}
+}
+
+class BoundsAdorner extends Adorner
+{
     protected override MeasureOverride(_a: Size): Size { return Size.Zero; }
     protected override RenderOverride(_dc: DrawingContext): void {}
 }
@@ -80,6 +87,63 @@ describe('ScrollContentPresenter — inner AdornerLayer (WPF v2 parity)', () => 
         // adornment scope.
         const outsideLayer = AdornerLayer.GetAdornerLayer(sv);
         assert.equal(outsideLayer, outer.AdornerLayer);
+    });
+
+    test('adorner adorning a leaf inside the SCP lands at the leaf\'s position in the layer\'s LOCAL frame (not host coords)', () => {
+        // Pins the layer-local positioning contract. The SCP is not at
+        // host (0, 0) — it sits inside a ScrollViewer arranged at a
+        // non-zero offset. An adorner targeting a leaf inside the SCP
+        // must end up at the leaf's position RELATIVE TO THE LAYER,
+        // not relative to the host root — otherwise it paints offset
+        // by the SCP's host origin.
+        const sv = new ScrollViewer();
+        const leaf = new FixedSquare(20);
+        sv.Content = leaf;
+        const host = new Border();
+        host.SetChild(sv);
+        // Arrange the host at a non-zero offset so the SCP is NOT at
+        // host (0, 0). The bug we're guarding against is the adorner
+        // ending up at full host-coord values when the layer is at a
+        // non-zero offset inside its host.
+        host.Measure(new Size(400, 500));
+        host.Arrange(new Rect(0, 100, 400, 400));
+
+        const root = sv.visualChildren[0]!;
+        const scp = root.FindName('PART_ContentSite') as ScrollContentPresenter;
+        const layer = scp.AdornerLayer;
+
+        // Sanity: the layer is NOT at host (0, 0) — it's nested at
+        // least one ArrangedRect.Y level deep.
+        let layerHostY = 0;
+        let cur: Visual | undefined = layer;
+        while (cur !== undefined)
+        {
+            layerHostY += cur.ArrangedRect.Y;
+            cur = cur.GetVisualParent();
+        }
+        assert.ok(layerHostY > 0,
+            `layer should be offset in host coords, was ${layerHostY}`);
+
+        const adorner = new BoundsAdorner(leaf);
+        layer.Add(adorner);
+        layer.InvalidateMeasure();
+        layer.InvalidateArrange();
+        host.Measure(new Size(400, 500));
+        host.Arrange(new Rect(0, 100, 400, 400));
+
+        // The leaf sits at SCP-local (0, 0) — it's the SCP's content.
+        // The layer is a sibling arranged at the same SCP-local rect,
+        // so layer-local frame and content-local frame coincide. The
+        // adorner's default Placement returns adornedRect, so the
+        // adorner should arrange at layer-local (0, 0, 20, 20). If
+        // the lookup walks up to host coords instead, the adorner
+        // would arrange at the layer-host-Y (>=100), visibly offset.
+        assert.equal(adorner.ArrangedRect.X, 0,
+            'adorner X should be 0 in layer-local frame (leaf is at content origin)');
+        assert.equal(adorner.ArrangedRect.Y, 0,
+            'adorner Y should be 0 in layer-local frame (leaf is at content origin)');
+        assert.equal(adorner.ArrangedRect.Width,  20);
+        assert.equal(adorner.ArrangedRect.Height, 20);
     });
 
     test('SCP\'s inner layer arranges at the content\'s rect — adorners share the scrolled frame', () => {

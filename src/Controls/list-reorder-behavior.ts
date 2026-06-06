@@ -287,22 +287,35 @@ export class ListReorderBehavior extends Behavior
 
     private positionVerticalAdorner(visual: Visual, host: ItemsControl, index: number): void
     {
+        // Position-frame: when the indicator lives in an AdornerLayer
+        // mounted inside a ScrollContentPresenter (the inner-scrolled
+        // case), the Canvas wrapper sits in the LAYER's local frame —
+        // NOT host-coord. Walk to the layer's parent (where the layer
+        // is mounted) and subtract the layer's own ArrangedRect offset
+        // to get layer-local. Without a layer (the overlay-fallback
+        // path), stop = undefined (walk to root) and offset = 0 — gives
+        // back the host-coord math the OverlayLayer relies on.
+        const layer = this._adornerLayer;
+        const stop  = layer?.GetVisualParent();
+        const oX    = layer?.ArrangedRect.X ?? 0;
+        const oY    = layer?.ArrangedRect.Y ?? 0;
+
         const containers = host.logicalChildren;
         let gapY: number;
         if (index < containers.length)
         {
-            gapY = hostTop(containers[index]!);
+            gapY = topInFrame(containers[index]!, stop) - oY;
         }
         else if (containers.length > 0)
         {
             const last = containers[containers.length - 1]!;
-            gapY = hostTop(last) + last.ArrangedRect.Height;
+            gapY = topInFrame(last, stop) - oY + last.ArrangedRect.Height;
         }
         else
         {
-            gapY = hostTop(host);
+            gapY = topInFrame(host, stop) - oY;
         }
-        Canvas.SetLeft(visual, hostLeft(host));
+        Canvas.SetLeft(visual, leftInFrame(host, stop) - oX);
         visual.Width = host.ArrangedRect.Width;
         Canvas.SetTop(visual, gapY);
     }
@@ -310,8 +323,12 @@ export class ListReorderBehavior extends Behavior
     private positionWrapAdorner(visual: Visual, host: ItemsControl, index: number): void
     {
         const panel = host.ItemsPanelInstance;
-        const panelOriginX = panel !== undefined ? hostLeft(panel) : hostLeft(host);
-        const panelOriginY = panel !== undefined ? hostTop(panel)  : hostTop(host);
+        const layer = this._adornerLayer;
+        const stop  = layer?.GetVisualParent();
+        const oX    = layer?.ArrangedRect.X ?? 0;
+        const oY    = layer?.ArrangedRect.Y ?? 0;
+        const panelOriginX = (panel !== undefined ? leftInFrame(panel, stop) : leftInFrame(host, stop)) - oX;
+        const panelOriginY = (panel !== undefined ? topInFrame(panel, stop)  : topInFrame(host,  stop)) - oY;
         const itemCount = host.ItemCount();
 
         if (panel instanceof VirtualizingWrapPanel)
@@ -366,8 +383,9 @@ export class ListReorderBehavior extends Behavior
             atRightEdge = true;
         }
         const r = target.ArrangedRect;
-        const ox = hostLeft(target.GetVisualParent() ?? target);
-        const oy = hostTop(target.GetVisualParent() ?? target);
+        const parent = target.GetVisualParent() ?? target;
+        const ox = leftInFrame(parent, stop) - oX;
+        const oy = topInFrame(parent,  stop) - oY;
         visual.Width  = 2;
         visual.Height = r.Height;
         Canvas.SetLeft(visual, ox + r.X + (atRightEdge ? r.Width : 0));
@@ -423,9 +441,24 @@ export class ListReorderBehavior extends Behavior
 // a helper for clarity rather than duplicated.
 function hostTop(v: Visual): number
 {
+    return topInFrame(v, undefined);
+}
+
+function hostLeft(v: Visual): number
+{
+    return leftInFrame(v, undefined);
+}
+
+// Same walk, but stops at `stop` instead of running off the top. Used
+// for indicator positioning when the indicator sits in an AdornerLayer
+// mounted INSIDE a ScrollContentPresenter — its local frame starts at
+// the layer's parent, not at the host root. Pass `stop = undefined` for
+// the host-root walk (overlay-fallback path).
+function topInFrame(v: Visual, stop: Visual | undefined): number
+{
     let y = 0;
     let cur: Visual | undefined = v;
-    while (cur !== undefined)
+    while (cur !== undefined && cur !== stop)
     {
         y += cur.ArrangedRect.Y;
         cur = cur.GetVisualParent();
@@ -433,11 +466,11 @@ function hostTop(v: Visual): number
     return y;
 }
 
-function hostLeft(v: Visual): number
+function leftInFrame(v: Visual, stop: Visual | undefined): number
 {
     let x = 0;
     let cur: Visual | undefined = v;
-    while (cur !== undefined)
+    while (cur !== undefined && cur !== stop)
     {
         x += cur.ArrangedRect.X;
         cur = cur.GetVisualParent();
@@ -462,6 +495,11 @@ class ReorderInsertionAdorner extends Adorner
         super(adornedElement);
         this._content = content;
         this.AttachVisual(content);
+        // The insertion line is pure feedback — pointer events must
+        // reach the ItemsControl underneath so DragOver continues to
+        // fire and the line position keeps refining as the cursor
+        // moves over the same gap.
+        this.IsHitTestVisible = false;
     }
 
     public override get visualChildren(): readonly Visual[] { return [this._content]; }

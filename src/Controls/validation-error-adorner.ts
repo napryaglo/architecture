@@ -46,6 +46,10 @@ export class ValidationErrorAdorner extends Adorner
         super(adornedElement);
         this._brush     = brush;
         this._thickness = thickness;
+        // The error chrome is decoration — clicks / focus must reach
+        // the adorned TextBox / input so the user can still edit and
+        // dismiss the error.
+        this.IsHitTestVisible = false;
         // Listener fires on every HasError change; InvalidateVisual
         // schedules a repaint that runs through the standard flush
         // convergence loop. No throttle needed — HasError flips at
