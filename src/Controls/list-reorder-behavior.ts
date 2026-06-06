@@ -11,6 +11,8 @@ import type { PresentationTarget } from '../visual-engine/index.js';
 import { Canvas } from './canvas.js';
 import { DataTemplate } from './data-template.js';
 import { ItemsControl } from './items-control.js';
+import { VirtualizingWrapPanel } from './virtualizing-wrap-panel.js';
+import { WrapPanel } from './wrap-panel.js';
 
 // Drag-to-reorder behavior for an ItemsControl. Wires the receiver
 // side of the gesture: marks the ItemsControl as AllowDrop=true,
@@ -23,45 +25,49 @@ import { ItemsControl } from './items-control.js';
 // drag DataObject with `<FromIndexFormat>: <items index>` so this
 // behavior can find the source row.
 //
-// Insertion-index math: the cursor's host-Y is compared against each
-// realized container's vertical midpoint, and the new index is the
-// first container whose midpoint is BELOW the cursor (a midpoint
-// before the cursor means the cursor sits in the gap after that row).
-// The model assumes a vertically-stacked container layout — works for
-// the StackPanel-default ItemsPanel; horizontal layouts and grid
-// layouts would need a panel-orientation switch.
+// Layout-mode auto-detect: the behavior inspects the host's
+// ItemsPanelInstance at gesture time and picks one of two insertion-
+// index strategies.
 //
-// Not handled by this implementation:
-//   * Visual insertion-line indicator. The behavior performs no
-//     rendering. Consumers that want one can attach a sibling behavior
-//     listening on the same DragOver and draw into the canvas
-//     themselves.
+//   * Vertical mode — StackPanel / VirtualizingStackPanel and
+//     anything else. Cursor host-Y compared against each realized
+//     container's vertical midpoint; the new index is the first
+//     container whose midpoint is below the cursor. Indicator: a
+//     horizontal bar at the row gap.
+//
+//   * Wrap mode — WrapPanel / VirtualizingWrapPanel. Cursor (host-X,
+//     host-Y) maps to a (row, column) inside the panel; insertion
+//     index = row × columns + column, with a before/after refinement
+//     based on whether the cursor X sits left of the cell's
+//     horizontal midpoint. Indicator: a vertical bar at the column
+//     gap, full cell-height tall. For VirtualizingWrapPanel the cell
+//     geometry comes from the panel's ItemWidth + ItemHeight +
+//     Columns; for non-virtualizing WrapPanel we measure realized
+//     cells directly.
+//
+// Not handled:
 //   * Cross-list reordering. The behavior keys off `FromIndexFormat`
 //     against this control's own Items; a drop from a foreign source
-//     carrying the same key would be silently mishandled. To support
-//     cross-list, the DataObject would need a source-identity tag and
-//     this behavior would have to gate the mutation on it.
-//   * Horizontal layouts. The insertion-index math compares against
-//     container vertical midpoints, so the behavior assumes a
-//     vertically-stacked panel.
+//     carrying the same key would be silently mishandled. Cross-list
+//     drops with DIFFERENT formats just no-op here, leaving the host
+//     control to wire its own DragOver/Drop handlers for them.
 //   * Item backings other than ObservableCollection. A plain-array
 //     Items is read-only from this behavior's perspective and the
-//     Drop silently no-ops; callers that need array-backed reorder
-//     would have to wrap the array OR expose a VM-supplied
-//     OnReorder(from, to) callback (not wired today).
+//     Drop silently no-ops.
 export class ListReorderBehavior extends Behavior
 {
     public static readonly FromIndexFormatKey = Model.RegisterProperty<string>(
         ListReorderBehavior, 'FromIndexFormat', 'mural/reorder/from-index', MetaData.None);
 
-    // DataTemplate that renders the insertion-line indicator. When set,
+    // DataTemplate that renders the insertion indicator. When set,
     // the behavior materializes the template on the first DragOver of
     // a reorderable drag and positions the produced Visual at the
     // insertion gap on the host's overlay layer. Undefined → no
-    // indicator (consumers either render their own via a sibling
-    // behavior or accept the headless mode). DataContext for the
-    // template is the host ItemsControl, so the template can read
-    // theme resources or bound ancestor properties.
+    // indicator. DataContext for the template is the host
+    // ItemsControl. The behavior writes Width/Height + Canvas.Top/Left
+    // on the produced visual to size it (a horizontal bar in vertical
+    // mode, a vertical bar in wrap mode) — the template only paints,
+    // it doesn't constrain.
     public static readonly InsertionAdornerTemplateKey = Model.RegisterProperty<DataTemplate | undefined>(
         ListReorderBehavior, 'InsertionAdornerTemplate', undefined, MetaData.None);
 
@@ -71,16 +77,7 @@ export class ListReorderBehavior extends Behavior
     public get InsertionAdornerTemplate(): DataTemplate | undefined { return this.get_property_value(ListReorderBehavior.InsertionAdornerTemplateKey); }
     public set InsertionAdornerTemplate(v: DataTemplate | undefined) { this.set_property_value(ListReorderBehavior.InsertionAdornerTemplateKey, v); }
 
-    // Captured at attach time so the routed-event listeners — which
-    // need to reach the host items collection AND walk the realised
-    // container list — can resolve the right ItemsControl without an
-    // extra cast on every fire.
     private _host: ItemsControl | undefined;
-    // Materialized adorner state. The wrapper is a Canvas attached to
-    // the overlay layer; the OverlayLayer arranges its children in the
-    // full surface slot, so without the wrapper Canvas.Top/Left would
-    // be ignored. The user-supplied template's produced Visual sits as
-    // the canvas's child; we update Canvas.Top on it each move sample.
     private _adornerWrapper: Visual | undefined;
     private _adornerVisual:  Visual | undefined;
 
@@ -115,9 +112,113 @@ export class ListReorderBehavior extends Behavior
         this._host = undefined;
     }
 
-    // Materialize (lazily) the InsertionAdornerTemplate and position it
-    // at the insertion gap. Subsequent moves on the same drag re-use
-    // the same Visual — only `Canvas.Top` shifts.
+    // ── Mode detection ────────────────────────────────────────────
+
+    private isWrapMode(): boolean
+    {
+        const panel = this._host?.ItemsPanelInstance;
+        return panel instanceof WrapPanel || panel instanceof VirtualizingWrapPanel;
+    }
+
+    // ── Insertion-index math ──────────────────────────────────────
+
+    private computeInsertionIndex(args: DragEventArgs): number
+    {
+        const host = this._host;
+        if (host === undefined) return 0;
+        if (this.isWrapMode())
+        {
+            return this.computeWrapInsertionIndex(args.HostX, args.HostY, host);
+        }
+        return this.computeVerticalInsertionIndex(args.HostY, host);
+    }
+
+    private computeVerticalInsertionIndex(hostY: number, host: ItemsControl): number
+    {
+        const containers = host.logicalChildren;
+        for (let i = 0; i < containers.length; i++)
+        {
+            const c = containers[i]!;
+            const mid = hostTop(c) + c.ArrangedRect.Height / 2;
+            if (hostY < mid) return i;
+        }
+        return containers.length;
+    }
+
+    // 2D nearest-cell insertion: walk realized containers, pick the
+    // cell whose CENTER is closest to the cursor in (X, Y); refine to
+    // before-or-after based on cursor-X vs cell horizontal midpoint.
+    // For VirtualizingWrapPanel we read Columns + cell size to also
+    // handle the "past the last realized cell" case analytically —
+    // necessary when the cursor sits in a virtualized row whose
+    // containers haven't materialized.
+    private computeWrapInsertionIndex(hostX: number, hostY: number, host: ItemsControl): number
+    {
+        const panel = host.ItemsPanelInstance;
+        const containers = host.logicalChildren;
+        const itemCount = host.ItemCount();
+
+        if (itemCount === 0) return 0;
+
+        // Resolve panel-local cursor coords.
+        const panelOriginX = panel !== undefined ? hostLeft(panel) : hostLeft(host);
+        const panelOriginY = panel !== undefined ? hostTop(panel)  : hostTop(host);
+        const localX = hostX - panelOriginX;
+        const localY = hostY - panelOriginY;
+
+        if (panel instanceof VirtualizingWrapPanel)
+        {
+            const cw = panel.ItemWidth;
+            const ch = panel.ItemHeight;
+            const columns = Math.max(1, panel.Columns);
+            // Panel arranges children in viewport-LOCAL coords (with
+            // panel origin = top of the visible window). Map the
+            // cursor's panel-local Y back to a FULL-extent Y by
+            // adding the viewport's vertical offset; that's the value
+            // the row computation expects.
+            const fullY = localY + panel.Viewport.Y;
+            const col = Math.max(0, Math.min(columns - 1, Math.floor(localX / cw)));
+            const row = Math.max(0, Math.floor(fullY / ch));
+            const totalRows = Math.ceil(itemCount / columns);
+            // Past the bottom: drop at the end.
+            if (row >= totalRows) return itemCount;
+            let candidate = row * columns + col;
+            if (candidate >= itemCount) candidate = itemCount - 1;
+            // Refine: cursor-X past the cell's horizontal midpoint =
+            // insert AFTER this cell.
+            const cellCenterX = (col + 0.5) * cw;
+            return localX > cellCenterX ? candidate + 1 : candidate;
+        }
+
+        // Non-virtualizing WrapPanel — walk realized containers.
+        if (containers.length === 0) return 0;
+        let bestIdx = 0;
+        let bestDist = Number.POSITIVE_INFINITY;
+        for (let i = 0; i < containers.length; i++)
+        {
+            const c = containers[i]!;
+            const rect = c.ArrangedRect;
+            const parentX = hostLeft(c.GetVisualParent() ?? c);
+            const parentY = hostTop(c.GetVisualParent() ?? c);
+            const cellCenterX = parentX + rect.X + rect.Width / 2;
+            const cellCenterY = parentY + rect.Y + rect.Height / 2;
+            const dx = hostX - cellCenterX;
+            const dy = hostY - cellCenterY;
+            const d2 = dx * dx + dy * dy;
+            if (d2 < bestDist)
+            {
+                bestDist = d2;
+                bestIdx = i;
+            }
+        }
+        const bestRect = containers[bestIdx]!.ArrangedRect;
+        const parentX = hostLeft(containers[bestIdx]!.GetVisualParent() ?? containers[bestIdx]!);
+        const bestCenterX = parentX + bestRect.X + bestRect.Width / 2;
+        return hostX > bestCenterX ? bestIdx + 1 : bestIdx;
+    }
+
+    // ── Adorner positioning ───────────────────────────────────────
+
     private updateInsertionAdorner(args: DragEventArgs): void
     {
         const host = this._host;
@@ -128,51 +229,117 @@ export class ListReorderBehavior extends Behavior
         const pt = host['target'] as PresentationTarget | undefined;
         if (pt === undefined) return;
 
-        // Compute the host-Y position of the insertion gap.
-        const index = this.computeInsertionIndex(args.HostY, host);
+        const index = this.computeInsertionIndex(args);
+
+        if (this._adornerVisual === undefined)
+        {
+            const produced = template.Apply(host);
+            if (produced === undefined) return;
+            const wrapper = new Canvas();
+            wrapper.AddChild(produced);
+            this._adornerWrapper = wrapper;
+            this._adornerVisual = produced;
+            args.Session?.then(() => this.tearDownAdorner());
+            pt.AttachOverlay(wrapper);
+        }
+
+        if (this.isWrapMode())
+        {
+            this.positionWrapAdorner(this._adornerVisual!, host, index);
+        }
+        else
+        {
+            this.positionVerticalAdorner(this._adornerVisual!, host, index);
+        }
+    }
+
+    private positionVerticalAdorner(visual: Visual, host: ItemsControl, index: number): void
+    {
         const containers = host.logicalChildren;
         let gapY: number;
         if (index < containers.length)
         {
-            // Top edge of the container at `index`.
             gapY = hostTop(containers[index]!);
         }
         else if (containers.length > 0)
         {
-            // Past the last container — bottom edge of the last row.
             const last = containers[containers.length - 1]!;
             gapY = hostTop(last) + last.ArrangedRect.Height;
         }
         else
         {
-            // Empty list — drop at the host's top edge.
             gapY = hostTop(host);
         }
+        Canvas.SetLeft(visual, hostLeft(host));
+        visual.Width = host.ArrangedRect.Width;
+        Canvas.SetTop(visual, gapY);
+    }
 
-        // Lazy materialize on the first valid DragOver of this session.
-        if (this._adornerVisual === undefined)
+    private positionWrapAdorner(visual: Visual, host: ItemsControl, index: number): void
+    {
+        const panel = host.ItemsPanelInstance;
+        const panelOriginX = panel !== undefined ? hostLeft(panel) : hostLeft(host);
+        const panelOriginY = panel !== undefined ? hostTop(panel)  : hostTop(host);
+        const itemCount = host.ItemCount();
+
+        if (panel instanceof VirtualizingWrapPanel)
         {
-            const produced = template.Apply(host);
-            if (produced === undefined) return;
-            // Wrap in a Canvas so Canvas.Top / Canvas.Left attached
-            // props actually steer the layout — the OverlayLayer's
-            // ArrangeOverride passes the full surface slot to its
-            // children and doesn't read Canvas.* attached props itself.
-            const wrapper = new Canvas();
-            wrapper.AddChild(produced);
-            this._adornerWrapper = wrapper;
-            this._adornerVisual = produced;
-            // Auto-clean on session end.
-            args.Session?.then(() => this.tearDownAdorner());
-            // Position the produced visual within the wrapper Canvas:
-            // the host's left edge + width fix the indicator to the
-            // list's column.
-            Canvas.SetLeft(produced, hostLeft(host));
-            produced.Width = host.ArrangedRect.Width;
-            pt.AttachOverlay(wrapper);
+            const cw = panel.ItemWidth;
+            const ch = panel.ItemHeight;
+            const columns = Math.max(1, panel.Columns);
+            // Map insertion index to a row+column position. For the
+            // past-last-cell case, position at the right edge of the
+            // last cell (so the indicator sits at the end of the
+            // partial last row rather than starting a new line).
+            const clamped = Math.min(index, itemCount);
+            const col = clamped % columns;
+            const row = Math.floor(clamped / columns);
+            const cellX = col * cw;
+            // Subtract the viewport offset so the indicator lands at
+            // the same panel-local Y the cell itself was arranged at.
+            const cellY = row * ch - panel.Viewport.Y;
+            // Width=2 vertical bar at the cell's LEFT edge — the gap
+            // between (col-1) and col. Width chosen to match the
+            // vertical-mode horizontal bar's height (2px).
+            visual.Width  = 2;
+            visual.Height = ch;
+            Canvas.SetLeft(visual, panelOriginX + cellX);
+            Canvas.SetTop(visual,  panelOriginY + cellY);
+            return;
         }
 
-        Canvas.SetTop(this._adornerVisual, gapY);
+        // Non-virtualizing WrapPanel — derive position from realized
+        // containers. Insertion BEFORE container `index`: indicator at
+        // that container's left edge. PAST the last container:
+        // indicator at the last container's right edge.
+        const containers = host.logicalChildren;
+        if (containers.length === 0)
+        {
+            visual.Width  = 2;
+            visual.Height = 0;
+            Canvas.SetLeft(visual, panelOriginX);
+            Canvas.SetTop(visual,  panelOriginY);
+            return;
+        }
+        let target: Visual;
+        let atRightEdge: boolean;
+        if (index < containers.length)
+        {
+            target = containers[index]!;
+            atRightEdge = false;
+        }
+        else
+        {
+            target = containers[containers.length - 1]!;
+            atRightEdge = true;
+        }
+        const r = target.ArrangedRect;
+        const ox = hostLeft(target.GetVisualParent() ?? target);
+        const oy = hostTop(target.GetVisualParent() ?? target);
+        visual.Width  = 2;
+        visual.Height = r.Height;
+        Canvas.SetLeft(visual, ox + r.X + (atRightEdge ? r.Width : 0));
+        Canvas.SetTop(visual,  oy + r.Y);
     }
 
     private tearDownAdorner(): void
@@ -195,16 +362,11 @@ export class ListReorderBehavior extends Behavior
         const from = typeof raw === 'number' ? raw : Number.parseInt(String(raw), 10);
         if (!Number.isFinite(from)) return;
 
-        // Resolve the bound items collection. This implementation only
-        // mutates an ObservableCollection — a plain array would need
-        // the consumer to handle the swap through a callback. Bail
-        // silently when the binding doesn't expose a mutable
-        // collection.
         const items = host.Items;
         if (!(items instanceof ObservableCollection)) return;
         if (from < 0 || from >= items.Count) return;
 
-        const target = this.computeInsertionIndex(args.HostY, host);
+        const target = this.computeInsertionIndex(args);
         if (target === from || target === from + 1) return; // no-op
 
         const item = items.Get(from)!;
@@ -212,24 +374,6 @@ export class ListReorderBehavior extends Behavior
         // After RemoveAt, indices above `from` shift down by one.
         const insert = target > from ? target - 1 : target;
         items.Insert(insert, item);
-    }
-
-    private computeInsertionIndex(hostY: number, host: ItemsControl): number
-    {
-        // The container list is the realized rows in items order.
-        // For each container, compute its vertical midpoint in host
-        // coordinates by walking up the visual tree summing
-        // ArrangedRect offsets. The cursor's host-Y compared against
-        // those midpoints gives the insertion slot. Falling off the
-        // bottom drops at end-of-list.
-        const containers = host.logicalChildren;
-        for (let i = 0; i < containers.length; i++)
-        {
-            const c = containers[i]!;
-            const mid = hostTop(c) + c.ArrangedRect.Height / 2;
-            if (hostY < mid) return i;
-        }
-        return containers.length;
     }
 }
 

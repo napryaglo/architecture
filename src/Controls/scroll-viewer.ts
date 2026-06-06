@@ -11,7 +11,7 @@ import {
     type WheelEventArgs,
 } from '../runtime/index.js';
 import { ContentControl } from './content-control.js';
-import { defaultTemplate, ensureControlsTheme } from './default-resources.js';
+import { ensureControlsTheme } from './default-resources.js';
 import { ScrollBar } from './scroll-bar.js';
 import { ScrollContentPresenter } from './scroll-content-presenter.js';
 import { Orientation } from './stack-panel.js';
@@ -151,12 +151,13 @@ export class ScrollViewer extends ContentControl
     constructor()
     {
         super();
-        // Eager template apply — gives PART_ wiring something to fish out
-        // before any consumer assigns Content. Same pattern ScrollBar
-        // uses. If the implicit Style later sets the same Template
-        // instance, ContentControl.set Template short-circuits on
-        // identity, so no double-rebuild.
-        this.Template = defaultTemplate(ScrollViewer);
+        // Template flows from the default Style — DefaultStyleKey on
+        // this class names ScrollViewer itself, so the bundled controls
+        // theme entry under that key applies via applyDefaultStyle().
+        // PART_* lookups follow, fishing the SCP / scrollbars out of
+        // the freshly-applied template so the rest of the ctor can wire
+        // host back-refs and event listeners against real instances.
+        this.applyDefaultStyle();
 
         this._scp        = this.GetTemplateChild('PART_ContentSite')        as ScrollContentPresenter | undefined;
         this._vScrollBar = this.GetTemplateChild('PART_VerticalScrollBar')  as ScrollBar | undefined;

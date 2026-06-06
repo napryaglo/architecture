@@ -16,7 +16,7 @@ import { ScrollViewer } from './scroll-viewer.js';
 import { StackPanel } from './stack-panel.js';
 import { TextBlock } from './text-block.js';
 import { Theme } from './theme.js';
-import { defaultTemplate, ensureControlsTheme } from './default-resources.js';
+import { ensureControlsTheme } from './default-resources.js';
 
 
 
@@ -205,9 +205,13 @@ export class TreeView extends ItemsControl
     constructor()
     {
         super();
-        this.Template = defaultTemplate(TreeView);
+        // Template (the ScrollViewer + ItemsPresenter chrome) comes
+        // from the default Style — applied here via applyDefaultStyle()
+        // so the rest of the ctor / first measure sees a populated
+        // template tree.
         this.ItemsPanel = () => new StackPanel();
         // Base ItemsControl constructor seeded Items = _declarativeItems.
+        this.applyDefaultStyle();
     }
 
     public get Indent(): number { return this.get_property_value(TreeView.IndentKey); }
@@ -567,7 +571,17 @@ export class TreeViewItem extends ItemsControl
     constructor()
     {
         super();
-        this.Template = defaultTemplate(TreeViewItem);
+        // Template flows from the default Style — applied here via
+        // applyDefaultStyle() so the PART_ lookups below find their
+        // targets in the freshly-applied template tree. The row /
+        // chevron / label / spacer references are cached because the
+        // imperative IsSelected / IsMouseOver swap (refreshRowBackground)
+        // and chevron-text updates (refreshChevron) write to them
+        // every state change. Moving those to declarative triggers
+        // would require source-name support in `when()` (the row's
+        // IsMouseOver is on a template part, not the templated parent),
+        // which is a parser-level extension left for a follow-up.
+        this.applyDefaultStyle();
 
         const root = this.visualChildren[0]!;
         this._row         = root.FindName('PART_Row')         as ClickableRow;

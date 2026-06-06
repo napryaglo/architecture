@@ -1,6 +1,6 @@
 import { DiagramVM, EllipseNodeVM, NoteNodeVM, RectNodeVM, ToolboxShapeVM } from "./diagram-vm.mjs";
 import { Border, Button, Canvas, DataTemplate, Diagram, DiagramNode, Dock, DockPanel, Ellipse, ItemsControl, ItemsPanelTemplate, Orientation, StackPanel, TargetedSetter, TemplateDataTrigger, TextBlock, TextWrapping } from "@visualisation-sub/mural/Controls";
-import { Application, BeginStoryboardAction, Color, DataContextBinding, EventTrigger, HorizontalAlignment, InvokeCommandAction, NameScope, ResourceDictionary, Setter, SetterFactory, Storyboard, Style, Thickness, VerticalAlignment } from "@visualisation-sub/mural/runtime";
+import { BeginStoryboardAction, Color, DataContextBinding, EventTrigger, HorizontalAlignment, InvokeCommandAction, NameScope, ResourceDictionary, Setter, SetterFactory, Storyboard, Style, Thickness, VerticalAlignment } from "@visualisation-sub/mural/runtime";
 import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
 
 export function create() {
@@ -62,7 +62,7 @@ export function create() {
         const _factory = (_data) => {
             const _border22 = new Border();
             _border22.Name = "chrome";
-            _border22._set_property_value_by_name("Style", Application.current.Resources.Resolve("DiagramRectChromeStyle"));
+            _border22._set_property_value_by_name("Style", _style11);
             _border22._set_property_value_by_name("Width", 130);
             _border22._set_property_value_by_name("Height", 60);
             _border22._set_property_value_by_name("Background", DataContextBinding(_border22, "FillBrush"));
@@ -90,7 +90,7 @@ export function create() {
             _canvas27._set_property_value_by_name("Height", 60);
             const _ellipse28 = new Ellipse();
             _ellipse28.Name = "chrome";
-            _ellipse28._set_property_value_by_name("Style", Application.current.Resources.Resolve("DiagramEllipseChromeStyle"));
+            _ellipse28._set_property_value_by_name("Style", _style15);
             _ellipse28._set_property_value_by_name("Width", 130);
             _ellipse28._set_property_value_by_name("Height", 60);
             _ellipse28._set_property_value_by_name("Fill", DataContextBinding(_ellipse28, "FillBrush"));
@@ -118,7 +118,7 @@ export function create() {
         const _factory = (_data) => {
             const _border33 = new Border();
             _border33.Name = "chrome";
-            _border33._set_property_value_by_name("Style", Application.current.Resources.Resolve("DiagramNoteChromeStyle"));
+            _border33._set_property_value_by_name("Style", _style13);
             _border33._set_property_value_by_name("Width", 130);
             _border33._set_property_value_by_name("Height", 60);
             _border33._set_property_value_by_name("Background", DataContextBinding(_border33, "FillBrush"));
@@ -184,7 +184,7 @@ export function create() {
         const _itemsControl47 = new ItemsControl();
         _itemsControl47.Name = "toolbox";
         _itemsControl47._set_property_value_by_name("ItemsSource", DataContextBinding(_itemsControl47, "ToolboxShapes"));
-        _itemsControl47._set_property_value_by_name("ItemsPanel", Application.current.Resources.Resolve("DiagramToolboxPanel"));
+        _itemsControl47._set_property_value_by_name("ItemsPanel", _tmpl8);
         _stackPanel45.AddChild(_itemsControl47);
         const _textBlock48 = new TextBlock();
         _textBlock48._set_property_value_by_name("Text", "Document");
@@ -231,8 +231,8 @@ export function create() {
         const _diagram57 = new Diagram();
         _diagram57.Name = "nodes";
         _diagram57._set_property_value_by_name("ItemsSource", DataContextBinding(_diagram57, "Nodes"));
-        _diagram57._set_property_value_by_name("ItemsPanel", Application.current.Resources.Resolve("DiagramCanvasPanel"));
-        _diagram57._set_property_value_by_name("ItemContainerStyle", Application.current.Resources.Resolve("DiagramNodeStyle"));
+        _diagram57._set_property_value_by_name("ItemsPanel", _tmpl6);
+        _diagram57._set_property_value_by_name("ItemContainerStyle", _style5);
         _canvas56.AddChild(_diagram57);
         _border55.SetChild(_canvas56);
         _dockPanel39.AddChild(_border55);

@@ -1,6 +1,6 @@
 import { DashboardVM } from "./dashboard-vm.mjs";
 import { Border, Canvas, DataTemplate, TextBlock, TextWrapping } from "@visualisation-sub/mural/Controls";
-import { Application, Color, PropertyTrigger, ResourceDictionary, Setter, Style, Thickness } from "@visualisation-sub/mural/runtime";
+import { Color, PropertyTrigger, ResourceDictionary, Setter, Style, Thickness } from "@visualisation-sub/mural/runtime";
 import { SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
 
 export function create() {
@@ -53,7 +53,7 @@ export function create() {
     const _tmpl43 = new DataTemplate((_data) => {
         const _canvas44 = new Canvas();
         const _border45 = new Border();
-        _border45._set_property_value_by_name("Style", Application.current.Resources.Resolve("DashboardPrimaryCard"));
+        _border45._set_property_value_by_name("Style", _style14);
         _border45._set_property_value_by_name(Canvas, "Left", 20);
         _border45._set_property_value_by_name(Canvas, "Top", 20);
         _border45._set_property_value_by_name("Width", 200);
@@ -65,7 +65,7 @@ export function create() {
         _border45.SetChild(_textBlock46);
         _canvas44.AddChild(_border45);
         const _border47 = new Border();
-        _border47._set_property_value_by_name("Style", Application.current.Resources.Resolve("DashboardDangerCard"));
+        _border47._set_property_value_by_name("Style", _style28);
         _border47._set_property_value_by_name(Canvas, "Left", 240);
         _border47._set_property_value_by_name(Canvas, "Top", 20);
         _border47._set_property_value_by_name("Width", 200);
@@ -77,7 +77,7 @@ export function create() {
         _border47.SetChild(_textBlock48);
         _canvas44.AddChild(_border47);
         const _border49 = new Border();
-        _border49._set_property_value_by_name("Style", Application.current.Resources.Resolve("DashboardPaperCard"));
+        _border49._set_property_value_by_name("Style", _style42);
         _border49._set_property_value_by_name(Canvas, "Left", 20);
         _border49._set_property_value_by_name(Canvas, "Top", 140);
         _border49._set_property_value_by_name("Width", 420);

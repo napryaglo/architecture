@@ -4,18 +4,14 @@ import {
     Visual,
     type ModifierKeys,
     type PointerEventArgs,
-    type PropertyDescriptor,
 } from '../runtime/index.js';
-import type { Brush } from '../visual-engine/index.js';
-import type { Border } from './border.js';
 import { ContentControl } from './content-control.js';
 import { findDataTemplateForType } from './data-template.js';
 import { Selector } from './selector.js';
 import { Orientation, StackPanel } from './stack-panel.js';
 import { ScrollViewer } from './scroll-viewer.js';
 import { TextBlock } from './text-block.js';
-import { Theme } from './theme.js';
-import { defaultTemplate, ensureControlsTheme } from './default-resources.js';
+import { ensureControlsTheme } from './default-resources.js';
 
 
 
@@ -106,14 +102,19 @@ export class ListBox extends Selector
     {
         super();
         // Template + items panel are the two halves of an
-        // ItemsControl: Template owns the surrounding chrome
-        // (ScrollViewer + ItemsPresenter slot); ItemsPanel produces
-        // the panel that hosts containers (vertical StackPanel).
-        this.Template = defaultTemplate(ListBox);
+        // ItemsControl. Template (the surrounding ScrollViewer +
+        // ItemsPresenter chrome) flows from the default Style:
+        // DefaultStyleKey on this class names ListBox itself, so the
+        // bundled controls theme entry under that key applies via the
+        // applyDefaultStyle() call below. The items panel stays local
+        // because it's part of the demo-author's surface (overridable
+        // via the ItemsPanel DP); the default factory here is the
+        // vertical StackPanel WPF parity expects.
         this.ItemsPanel = () => new StackPanel();
         // Base ItemsControl constructor already seeded Items =
         // _declarativeItems, so declarative AddChild lands in the right
         // collection without further setup here.
+        this.applyDefaultStyle();
     }
 
     public get SelectionMode(): SelectionMode { return this.get_property_value(ListBox.SelectionModeKey); }
@@ -485,17 +486,20 @@ export class ListBoxItem extends ContentControl
         ensureControlsTheme();
     }
 
-    private readonly _border: Border | undefined;
     private _pressOriginatedHere = false;
 
     constructor(content?: Visual)
     {
         super();
-        this.Template = defaultTemplate(ListBoxItem);
-        this._border = this.GetTemplateChild('PART_Border') as Border | undefined;
+        // Template flows from the default Style (DefaultStyleKey on
+        // this class names ListBoxItem itself). IsSelected /
+        // IsMouseOver → PART_Border.Background ride along declaratively
+        // on `when()` triggers in the bundled template (see
+        // controls.template.mu, ListBoxItem block) — the previous
+        // imperative refreshBackground() + cached _border field are
+        // gone.
         if (content !== undefined) this.Content = content;
-        this.AddPropertyChangedListener(Visual.IsMouseOverKey, () => this.refreshBackground());
-        this.refreshBackground();
+        this.applyDefaultStyle();
     }
 
     public get IsSelected(): boolean { return this.get_property_value(ListBoxItem.IsSelectedKey); }
@@ -527,29 +531,6 @@ export class ListBoxItem extends ContentControl
     protected override OnPointerLeave(_args: PointerEventArgs): void
     {
         this._pressOriginatedHere = false;
-    }
-
-    protected override OnPropertyChanged(
-        descriptor: PropertyDescriptor,
-        oldValue: unknown,
-        newValue: unknown,
-    ): void
-    {
-        super.OnPropertyChanged(descriptor, oldValue, newValue);
-        if (descriptor.Name === 'IsSelected') this.refreshBackground();
-    }
-
-    // Background priority: selected wins over hover. Transparent
-    // (undefined Background) is the default — the ListBox's host
-    // surface shows through.
-    private refreshBackground(): void
-    {
-        if (this._border === undefined) return;
-        let bg: Brush | undefined;
-        if (this.IsSelected)            bg = Theme.itemSelectedBg;
-        else if (this.IsMouseOver)      bg = Theme.itemHoverBg;
-        else                             bg = undefined;
-        this._border.Background = bg;
     }
 }
 

@@ -45,7 +45,7 @@ import { VirtualizingPanel } from './virtualizing-panel.js';
 // viewport (consumers set Viewport manually).
 export class VirtualizingStackPanel extends VirtualizingPanel implements IScrollInfo
 {
-    public static readonly ViewportKey    = Model.RegisterProperty<Rect>(       VirtualizingStackPanel, 'Viewport',    Rect.Zero,            MetaData.Measure);
+    // Viewport DP lives on VirtualizingPanel base — see virtualizing-panel.ts.
     public static readonly ItemHeightKey  = Model.RegisterProperty<number>(     VirtualizingStackPanel, 'ItemHeight',  20,                   MetaData.Measure);
     public static readonly ItemWidthKey   = Model.RegisterProperty<number>(     VirtualizingStackPanel, 'ItemWidth',   20,                   MetaData.Measure);
     public static readonly OrientationKey = Model.RegisterProperty<Orientation>(VirtualizingStackPanel, 'Orientation', Orientation.Vertical, MetaData.Measure);
@@ -58,9 +58,13 @@ export class VirtualizingStackPanel extends VirtualizingPanel implements IScroll
     // sparse — only realized items populate; further items use the
     // estimate during viewport math.
     private sizeCache: Map<number, number> = new Map();
-
-    public get Viewport(): Rect { return this.get_property_value(VirtualizingStackPanel.ViewportKey); }
-    public set Viewport(v: Rect) { this.set_property_value(VirtualizingStackPanel.ViewportKey, v); }
+    // Max cross-axis desired size across realized containers, captured
+    // during the latest MeasureOverride. Surfaced through
+    // ExtentWidth/Height on the non-scrolling axis so a ScrollViewer
+    // sizing itself to its content's cross-axis (no explicit Width on
+    // the host) collapses to its tile width instead of stretching to
+    // fill the parent slot.
+    private measuredCross: number = 0;
 
     public get ItemHeight(): number { return this.get_property_value(VirtualizingStackPanel.ItemHeightKey); }
     public set ItemHeight(v: number) { this.set_property_value(VirtualizingStackPanel.ItemHeightKey, v); }
@@ -96,13 +100,13 @@ export class VirtualizingStackPanel extends VirtualizingPanel implements IScroll
     {
         return this.isHorizontal
             ? this.itemCount() * this.ItemWidth
-            : this.Viewport.Width;
+            : this.measuredCross;
     }
 
     public get ExtentHeight(): number
     {
         return this.isHorizontal
-            ? this.Viewport.Height
+            ? this.measuredCross
             : this.itemCount() * this.ItemHeight;
     }
 
@@ -166,6 +170,7 @@ export class VirtualizingStackPanel extends VirtualizingPanel implements IScroll
         const childSize = horizontal
             ? new Size(Number.POSITIVE_INFINITY, crossExtent)
             : new Size(crossExtent, Number.POSITIVE_INFINITY);
+        let maxCross = 0;
         for (const [index, container] of this.realized)
         {
             container.Measure(childSize);
@@ -180,13 +185,26 @@ export class VirtualizingStackPanel extends VirtualizingPanel implements IScroll
             {
                 this.sizeCache.set(index, desired);
             }
+            const cross = horizontal
+                ? container.DesiredSize.Height
+                : container.DesiredSize.Width;
+            if (Number.isFinite(cross)) maxCross = Math.max(maxCross, cross);
         }
+        this.measuredCross = maxCross;
 
         // Total extent = sum of cached sizes + estimate for the rest.
+        // Cross-axis = max of realized children's desired cross size
+        // (WPF StackPanel convention) — lets the panel collapse to its
+        // content width when the parent slot is unbounded. With
+        // virtualization the max is only over realized containers; a
+        // wider unrealized container outside the viewport would not
+        // contribute, but in practice items in a virtualized list are
+        // uniform-width and the first realized container is
+        // representative.
         const totalPrimary = this.totalPrimaryExtent(count);
         return horizontal
-            ? new Size(totalPrimary, availableSize.Height)
-            : new Size(availableSize.Width, totalPrimary);
+            ? new Size(totalPrimary, maxCross)
+            : new Size(maxCross, totalPrimary);
     }
 
     protected override ArrangeOverride(finalSize: Size): Size
@@ -202,9 +220,17 @@ export class VirtualizingStackPanel extends VirtualizingPanel implements IScroll
             offsets.push(cursor);
             cursor += this.sizeOf(i);
         }
+        // Viewport-local arrange. In delegate-mode the SCP arranges
+        // this panel into a viewport-sized slot starting at (0, 0);
+        // items at full-extent offsets (1000+ px down) would land
+        // outside the slot and never paint. Subtract the viewport's
+        // primary-axis offset so the first visible item lands at
+        // panel-local 0.
+        const vp = this.Viewport;
+        const scrollOff = horizontal ? vp.X : vp.Y;
         for (const [index, container] of this.realized)
         {
-            const off  = offsets[index]!;
+            const off  = offsets[index]! - scrollOff;
             const size = this.sizeOf(index);
             const rect = horizontal
                 ? new Rect(off, 0, size, finalSize.Height)

@@ -95,6 +95,7 @@ export {
 export { ItemsPresenter } from './items-presenter.js';
 export { VirtualizingPanel } from './virtualizing-panel.js';
 export { VirtualizingStackPanel } from './virtualizing-stack-panel.js';
+export { VirtualizingWrapPanel } from './virtualizing-wrap-panel.js';
 export { ScrollViewer, ScrollViewerLayout } from './scroll-viewer.js';
 export { ScrollContentPresenter } from './scroll-content-presenter.js';
 export { ScrollBar, ScrollBarLayout } from './scroll-bar.js';

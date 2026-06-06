@@ -6,10 +6,9 @@ import {
     type PointerEventArgs,
     type PropertyDescriptor,
 } from '../runtime/index.js';
-import type { Border } from './border.js';
 import { ContentControl } from './content-control.js';
 import { TextBlock } from './text-block.js';
-import { defaultTemplate, ensureControlsTheme } from './default-resources.js';
+import { ensureControlsTheme } from './default-resources.js';
 import { Theme } from './theme.js';
 
 // When the Click event fires. WPF parity: Release is the default
@@ -98,44 +97,18 @@ export class Button extends ContentControl
     constructor(content?: Visual)
     {
         super();
-        this.Template = defaultTemplate(Button);
-        this.wireDefaultTemplateBehavior();
-        if (content !== undefined) this.Content = content;
-    }
-
-    // Wire the IsPressed / IsMouseOver background swap and the inherited
-    // Foreground default. These live in TS rather than the template
-    // because:
-    //   * The background swap reads from the templated parent's input
-    //     flags and writes to a named template part. The template's job
-    //     is to declare the part (PART_Border); the behaviour layer
-    //     drives it from the Button's state.
-    //   * The Foreground inheritance is a cross-class write on the
-    //     templated parent itself (`Button[TextBlock.Foreground = …]`)
-    //     — it shapes how descendant TextBlocks paint, not the
-    //     template's own visual tree. Conceptually a property metadata
-    //     default rather than markup.
-    //
-    // Both are silent no-ops when a consumer replaces Template with one
-    // that omits PART_Border — the swap then has no effect, and the
-    // inherited Foreground default still applies. That matches the
-    // overridability story of WPF visual states / default property
-    // inheritance.
-    private wireDefaultTemplateBehavior(): void
-    {
-        // Cross-class inherited default — propagates down to any TextBlock
-        // descendant of the Content via the standard inheritance walk.
+        // Cross-class inherited default — propagates down to any
+        // TextBlock descendant of the Content via the standard
+        // inheritance walk. Sits on the templated parent (this Button)
+        // because it describes how descendant TextBlocks paint, not a
+        // template-internal visual; it's conceptually a property
+        // metadata default rather than markup. Triggers can't express
+        // cross-class inherited defaults, so this stays in TS.
         this.set_property_value(TextBlock.ForegroundKey, Theme.primaryInk);
-
-        const part = this.GetTemplateChild('PART_Border') as Border | undefined;
-        if (part === undefined) return;
-        const refresh = (): void => {
-            if (this.IsPressed)        part.Background = Theme.primaryPress;
-            else if (this.IsMouseOver) part.Background = Theme.primaryHover;
-            else                       part.Background = Theme.primary;
-        };
-        this.AddPropertyChangedListener(Visual.IsPressedKey,   refresh);
-        this.AddPropertyChangedListener(Visual.IsMouseOverKey, refresh);
+        if (content !== undefined) this.Content = content;
+        // Template + the IsPressed / IsMouseOver background swap live
+        // on the default Style (see controls.template.mu, Button block).
+        this.applyDefaultStyle();
     }
 
     public get Command(): ICommand | undefined { return this.get_property_value(Button.CommandKey); }

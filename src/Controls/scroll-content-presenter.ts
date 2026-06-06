@@ -7,8 +7,10 @@ import {
 } from '../runtime/index.js';
 import { RectangleGeometry } from '../visual-engine/index.js';
 import { ContentPresenter } from './content-presenter.js';
+import { ItemsControl } from './items-control.js';
+import { ItemsPresenter } from './items-presenter.js';
 import type { ScrollViewer } from './scroll-viewer.js';
-import { VirtualizingStackPanel } from './virtualizing-stack-panel.js';
+import { VirtualizingPanel } from './virtualizing-panel.js';
 
 // The presentation surface a ScrollViewer's default template wraps its
 // consumer Content in — WPF parity with ScrollContentPresenter. Lives
@@ -84,21 +86,28 @@ export class ScrollContentPresenter extends ContentPresenter
         const scrollInfo = resolveScrollInfo(content);
         if (scrollInfo !== undefined)
         {
-            // Delegate mode. Read extent BEFORE measuring so the host's
-            // ScrollableWidth / ScrollableHeight (= ExtentX - ViewportX)
-            // see the right value when we ask it for its effective
-            // offsets to push into the panel's Viewport. Contract:
-            // IScrollInfo implementations must compute Extent without
-            // requiring a prior Measure — VirtualizingStackPanel does
-            // this from itemCount × ItemHeight.
+            // Delegate mode. Push the host's effective offset + the
+            // viewport SIZE into any VirtualizingPanel before measuring
+            // so its MeasureOverride sees the right viewport rect for
+            // realization math. Both VirtualizingStackPanel and
+            // VirtualizingWrapPanel store their viewport in the base-
+            // class DP — the cast guards against future IScrollInfo
+            // implementers that aren't VirtualizingPanels (e.g. a
+            // hypothetical hand-written scroller).
+            //
+            // Read extent BEFORE measure so ScrollableWidth/Height
+            // (= Extent - Viewport) is right when the host queries it
+            // to compute effective offsets. Contract: IScrollInfo
+            // implementations must compute Extent without requiring a
+            // prior Measure — VSP/VWP do so from itemCount × cellSize.
             this._extentWidth  = scrollInfo.ExtentWidth;
             this._extentHeight = scrollInfo.ExtentHeight;
 
-            if (content instanceof VirtualizingStackPanel)
+            if (scrollInfo instanceof VirtualizingPanel)
             {
                 const offX = host !== undefined ? host['effectiveHorizontalOffset']() : 0;
                 const offY = host !== undefined ? host['effectiveVerticalOffset']()   : 0;
-                content.Viewport = new Rect(
+                scrollInfo.Viewport = new Rect(
                     offX,
                     offY,
                     availableSize.Width,
@@ -106,9 +115,9 @@ export class ScrollContentPresenter extends ContentPresenter
                 );
             }
             content.Measure(availableSize);
-            // Re-read extent in case the measure pass mutated it (e.g.,
-            // future variable-height panels). For VirtualizingStackPanel
-            // this is the same value as above.
+            // Re-read extent in case the measure pass mutated it
+            // (VirtualizingWrapPanel's ExtentWidth depends on the
+            // columns the measure pass computed against the viewport).
             this._extentWidth  = scrollInfo.ExtentWidth;
             this._extentHeight = scrollInfo.ExtentHeight;
         }
@@ -157,10 +166,20 @@ export class ScrollContentPresenter extends ContentPresenter
         const scrollInfo = resolveScrollInfo(content);
         if (scrollInfo !== undefined)
         {
-            // Delegate mode: panel only emits visible items — no clip
-            // or translate needed.
+            // Delegate mode: the panel only realizes containers whose
+            // cells intersect the viewport. But intersecting cells
+            // CAN extend past the viewport edges by a partial cell —
+            // the topmost realized row, when the viewport offset
+            // isn't a multiple of cell height, has a negative panel-
+            // local Y; the last realized row, when the viewport's
+            // bottom isn't on a cell boundary, runs past the panel's
+            // arranged height. Without a clip those edges leak into
+            // sibling panels above / below this SCP. Clip to the
+            // arranged viewport rect (in the content's own local
+            // space, which starts at (0, 0) here since we arrange the
+            // content at (0, 0)).
             content.Arrange(new Rect(0, 0, finalSize.Width, finalSize.Height));
-            content.Clip = undefined;
+            content.Clip = new RectangleGeometry(new Rect(0, 0, finalSize.Width, finalSize.Height));
         }
         else
         {
@@ -179,13 +198,38 @@ export class ScrollContentPresenter extends ContentPresenter
     }
 }
 
-// Walk to the first IScrollInfo provider. Today this only checks the
-// direct child; a future enhancement could walk visual descendants so
-// `ScrollViewer wrapping ItemsControl whose ItemsPanel is a
-// VirtualizingStackPanel` auto-delegates without the consumer setting
-// Content to the panel directly. Not done here because it would require
-// ItemsControl to expose its panel through a stable lookup.
+// Resolve the IScrollInfo provider the SCP delegates to. Three shapes
+// auto-delegate:
+//
+//   1. Direct hit — `content` itself implements IScrollInfo (a Panel
+//      set as ScrollViewer.Content directly).
+//   2. ItemsControl wrapping — `content` is an ItemsControl whose
+//      ItemsPanel implements IScrollInfo (e.g. a plain ItemsControl
+//      with ItemsPanel=VirtualizingStackPanel inside a ScrollViewer
+//      authored in markup). The panel becomes the provider.
+//   3. ItemsPresenter wrapping — `content` is an ItemsPresenter whose
+//      panel implements IScrollInfo. This is the case when a control's
+//      DEFAULT TEMPLATE wraps an ItemsPresenter in a ScrollViewer
+//      (ListBox / TreeView / ComboBox today). The SCP lives inside
+//      THAT inner ScrollViewer's template; its direct content is the
+//      ItemsPresenter the template slotted in. Walk through to the
+//      panel.
+//
+// The traversal stops at one level — deeper hierarchies (ItemsControl
+// hosting another ItemsControl) aren't a shape any current control
+// hits.
 function resolveScrollInfo(content: Visual): IScrollInfo | undefined
 {
-    return isScrollInfo(content) ? content : undefined;
+    if (isScrollInfo(content)) return content;
+    if (content instanceof ItemsControl)
+    {
+        const panel = content.ItemsPanelInstance;
+        if (panel !== undefined && isScrollInfo(panel)) return panel;
+    }
+    if (content instanceof ItemsPresenter)
+    {
+        const panel = content.ItemsPanelInstance;
+        if (panel !== undefined && isScrollInfo(panel)) return panel;
+    }
+    return undefined;
 }

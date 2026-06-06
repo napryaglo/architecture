@@ -19,6 +19,14 @@ export class ItemsPresenter extends Visual
 {
     private _itemsPanel: Panel | undefined;
 
+    // Public accessor for the slotted items panel. Exposed so the
+    // ScrollContentPresenter can walk through an ItemsPresenter when
+    // it appears as the SCP's direct content (the WPF-parity case
+    // where a ListBox's default template puts a ScrollViewer around
+    // an ItemsPresenter; the SCP needs to traverse the presenter to
+    // find the IScrollInfo-implementing panel).
+    public get ItemsPanelInstance(): Panel | undefined { return this._itemsPanel; }
+
     public override get visualChildren(): readonly Visual[]
     {
         return this._itemsPanel !== undefined ? [this._itemsPanel] : [];

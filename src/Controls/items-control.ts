@@ -260,6 +260,17 @@ export class ItemsControl extends Visual
 
     public get Generator(): ItemContainerGenerator { return this._generator; }
 
+    // The materialized ItemsPanel instance — the Panel created from
+    // ItemsPanelTemplate / ItemsPanelFactory and currently parenting
+    // the realized containers. Undefined until template / panel
+    // resolution completes (constructors typically don't have a panel
+    // until the first measure pass). Exposed so ScrollContentPresenter
+    // can traverse into the items panel for IScrollInfo / Viewport
+    // delegation when this ItemsControl is the SCP's direct content —
+    // the WPF parity for "ScrollViewer wrapping a ListBox whose
+    // ItemsPanel is a VirtualizingStackPanel auto-delegates."
+    public get ItemsPanelInstance(): Panel | undefined { return this._itemsPanel; }
+
     // ── Declarative-children backing ───────────────────────────────
     //
     // Compiler routes `Control { ChildA; ChildB }` body elements through

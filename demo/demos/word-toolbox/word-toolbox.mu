@@ -1,0 +1,181 @@
+import WordToolboxVM from "./word-toolbox-vm.mjs"
+import WordVM from "./word-toolbox-vm.mjs"
+import ListReorderBehavior from "@visualisation-sub/mural/Controls"
+import VirtualizingWrapPanel from "@visualisation-sub/mural/Controls"
+import VirtualizingStackPanel from "@visualisation-sub/mural/Controls"
+
+// word-toolbox.mu — toolbox of 100 dictionary words on the left, a
+// 2000-tile virtualized wrap-panel listbox on the right. Tiles are
+// 100×100 squares with 15px visual gaps (cell 115×115, tile centered
+// with Margin=(7.5)). Drag-from-toolbox copies a word into the
+// listbox; drag-within-listbox reorders.
+//
+// Right-pane reorder uses ListReorderBehavior in wrap-detect mode —
+// it inspects the host's ItemsPanel at gesture time and switches to
+// 2D nearest-cell math + vertical insertion bar. Same class, no
+// configuration knob — the panel type drives the algorithm.
+//
+// Tiles are draggable via a container-level Style on ContentPresenter
+// — the standard pattern shared with drag-drop-extended. Each
+// container's DataContext is a WordVM, so $BeginDragData (a per-row
+// closure populated in the VM constructor) resolves there.
+
+ResourceDictionary {
+
+    // Right-pane items panel: virtualizing wrap. ItemWidth/ItemHeight
+    // include the tile gap (cell - visible-size = 15px on each side
+    // = 15px gap between visible tile borders).
+    ItemsPanelTemplate x:key="ListBoxItemsPanel" {
+        VirtualizingWrapPanel [ItemWidth=115, ItemHeight=115]
+    }
+
+    // Left-pane items panel: VirtualizingStackPanel. Toolbox tiles
+    // stack vertically inside a single-column virtualized list; even
+    // at 100 items it's cheap, and using VSP here means both panes
+    // exercise the IScrollInfo-delegate path.
+    ItemsPanelTemplate x:key="ToolboxItemsPanel" {
+        VirtualizingStackPanel [ItemHeight=115]
+    }
+
+    // Tile data template — same shape for both panes. WordVM is the
+    // DataContext; the wrapping ContentPresenter inherits whatever
+    // container-level Style the host sets (IsDraggable + OnDragStart
+    // from the resources block).
+    DataTemplate [DataType=WordVM] {
+        Border [Background=#ffffff, BorderBrush=#cbd5e1, BorderThickness=(1),
+                Margin=(7.5), Width=100, Height=100] {
+            TextBlock [Text=$Word, FontSize=14,
+                       HorizontalAlignment=Center,
+                       VerticalAlignment=Center,
+                       Foreground=#0f172a]
+        }
+    }
+
+    // ── Right-pane ListBoxItem chrome ───────────────────────────────
+    //
+    // Custom ControlTemplate for ListBoxItem. Two reasons we need our
+    // own:
+    //
+    //   1. The bundled default template pins PART_Border to Height=32
+    //      with Padding=(8,6,8,6) — sized for a typical text row, but
+    //      our 115×115 tile cell needs the chrome stretched.
+    //   2. We want a declarative selection highlight. ListBoxItem
+    //      caches its `_border` reference at ctor time from the
+    //      original default template, so an ItemContainerStyle
+    //      Template override leaves that cache stale and the
+    //      framework's built-in refreshBackground() writes to a
+    //      detached visual. Doing the swap via a `when(IsSelected)`
+    //      trigger on this template bypasses the stale cache entirely
+    //      — the trigger drives PART_Border.Background through a
+    //      TargetedSetter resolved against the NEW template's
+    //      NameScope at Apply time.
+    //
+    // The trigger watches ListBoxItem.IsSelected (the templated
+    // parent) and writes to PART_Border (the named template part).
+    // Matches the WPF ControlTemplate.Triggers + Trigger.TargetName
+    // pattern.
+    Template x:key="WordTileItemTemplate" [TargetType=ListBoxItem] {
+        Border x:name="PART_Border" [BorderThickness=(0), Padding=(0)] {
+            ContentPresenter
+        }
+        when ( IsSelected ) {
+            PART_Border.Background = #e3f2fd;
+        }
+    }
+
+    // Style wraps the template so it can flow into ListBox via
+    // ItemContainerStyle. The drag-source setters (IsDraggable +
+    // OnDragStart=$BeginDragData) ride along on the same Style — each
+    // generated ListBoxItem container gets the chrome AND the drag
+    // wiring in one pass, replacing the previous bootstrap-side
+    // AddContainerPreparedListener hookup.
+    Style x:key="WordTileItemStyle" [TargetType=ListBoxItem] {
+        Template    = @WordTileItemTemplate;
+        IsDraggable = true;
+        OnDragStart = $BeginDragData;
+    }
+
+    DataTemplate [DataType=WordToolboxVM] {
+        Border x:root [Background=#f8fafc, BorderBrush=#e2e8f0, BorderThickness=(1)] {
+            resources: {
+                // Left-pane drag source. The toolbox is an ItemsControl
+                // whose generated containers are ContentPresenters. An
+                // implicit Style targets them and wires IsDraggable +
+                // OnDragStart from each container's DataContext (a
+                // WordVM, which exposes $BeginDragData). The right
+                // pane's ListBox container drag wiring is on the keyed
+                // WordTileItemStyle (above, applied via ItemContainerStyle).
+                Style [TargetType=ContentPresenter] {
+                    IsDraggable = true;
+                    OnDragStart = $BeginDragData;
+                }
+            }
+
+            DockPanel {
+                // Header strip.
+                Border [DockPanel.Dock=Top, Background=#0f172a, Padding=(16,12,16,12)] {
+                    StackPanel [Orientation=Vertical] {
+                        TextBlock [Text="Word toolbox — drag tiles between panes",
+                                   FontSize=15, FontWeight=Bold,
+                                   Foreground=#f8fafc]
+                        TextBlock [Text=$Status, FontSize=11,
+                                   Foreground=#94a3b8, Margin=(0,4,0,0)]
+                    }
+                }
+
+                TextBlock [DockPanel.Dock=Bottom, Margin=(20,4,20,16),
+                           FontSize=11, Foreground=#6b7280,
+                           TextWrapping=Wrap,
+                           Text="LEFT pane is a 100-tile palette; drag any tile RIGHT to copy it into the listbox. RIGHT pane is a 2000-tile virtualizing WrapPanel; drag any tile to reorder. Both panes share the same square-tile template (100×100 with 15px gaps)."]
+
+                // Two columns: toolbox on the left sized to its
+                // content, the listbox fills the rest.
+                DockPanel [LastChildFill=true] {
+
+                    // LEFT — toolbox. 100 tiles in a virtualizing
+                    // StackPanel inside a ScrollViewer.
+                    Border [DockPanel.Dock=Left,
+                            BorderBrush=#e2e8f0, BorderThickness=(0,0,1,0)] {
+                        DockPanel {
+                            Border [DockPanel.Dock=Top,
+                                    Background=#e0f2fe, Padding=(12,8,12,8)] {
+                                TextBlock [Text="Toolbox — drag a word to the listbox",
+                                           FontSize=12, FontWeight=Bold,
+                                           Foreground=#075985]
+                            }
+                            ScrollViewer [IsAutoHideScrollBars=false] {
+                                ItemsControl x:name="toolbox"
+                                             [ItemsSource=$ToolboxWords,
+                                              ItemsPanel=@ToolboxItemsPanel]
+                            }
+                        }
+                    }
+
+                    // RIGHT — listbox. Virtualizing WrapPanel hosting
+                    // 2000 tiles. ListReorderBehavior auto-detects
+                    // wrap mode from the panel instance.
+                    Border [BorderBrush=#e2e8f0, BorderThickness=(0)] {
+                        DockPanel {
+                            Border [DockPanel.Dock=Top,
+                                    Background=#dbeafe, Padding=(12,8,12,8)] {
+                                TextBlock [Text="ListBox — drag tiles to reorder; toolbox words land here",
+                                           FontSize=12, FontWeight=Bold,
+                                           Foreground=#1e3a8a]
+                            }
+                            ListBox x:name="listBox"
+                                    [ItemsSource=$ListBoxWords,
+                                     ItemsPanel=@ListBoxItemsPanel,
+                                     ItemContainerStyle=@WordTileItemStyle,
+                                     SelectionMode=Single] {
+                                Behaviors {
+                                    ListReorderBehavior x:name="reorder"
+                                        [FromIndexFormat="mural/reorder/from-index"]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

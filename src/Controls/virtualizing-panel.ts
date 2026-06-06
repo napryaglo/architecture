@@ -1,4 +1,10 @@
-import { Panel, type CollectionChange } from '../runtime/index.js';
+import {
+    MetaData,
+    Model,
+    Panel,
+    Rect,
+    type CollectionChange,
+} from '../runtime/index.js';
 import type { ItemsControl } from './items-control.js';
 
 // Marker base class for panels that manage their own container
@@ -20,8 +26,25 @@ import type { ItemsControl } from './items-control.js';
 // the panel (via AddVisualChild) and their logical parent =
 // the ItemsControl (via ItemsControl.AttachContainer). Same two-tree
 // divergence as non-virtualized ItemsControl.
+//
+// `Viewport` lives on the base so the ScrollContentPresenter delegate
+// path can push the host's viewport rect through a single
+// `instanceof VirtualizingPanel` write without case-by-case knowledge
+// of every concrete subclass (VirtualizingStackPanel,
+// VirtualizingWrapPanel, …). Subclasses' MeasureOverride reads this
+// DP to know which slice of items to realize. Default Rect.Zero so a
+// standalone panel (without a hosting ScrollViewer) materializes
+// nothing — the IScrollInfo getters still report ExtentWidth/Height
+// from itemCount × cell size so the host can pick a sensible scroll
+// extent on first pass.
 export abstract class VirtualizingPanel extends Panel
 {
+    public static readonly ViewportKey = Model.RegisterProperty<Rect>(
+        VirtualizingPanel, 'Viewport', Rect.Zero, MetaData.Measure);
+
+    public get Viewport(): Rect { return this.get_property_value(VirtualizingPanel.ViewportKey); }
+    public set Viewport(v: Rect) { this.set_property_value(VirtualizingPanel.ViewportKey, v); }
+
     private _itemsOwner: ItemsControl | undefined;
 
     // Owner-pointer accessor. Subclasses use this to read items, ask

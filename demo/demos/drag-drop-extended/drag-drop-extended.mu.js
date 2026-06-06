@@ -1,6 +1,6 @@
 import { DragDropExtendedVM, DroppedFileVM, RowVM } from "./drag-drop-extended-vm.mjs";
 import { Border, ContentPresenter, DataTemplate, Dock, DockPanel, ItemsControl, ItemsPanelTemplate, ListReorderBehavior, Orientation, ScrollViewer, StackPanel, TextBlock, TextWrapping } from "@visualisation-sub/mural/Controls";
-import { Application, Color, DataContextBinding, NameScope, ResourceDictionary, Setter, SetterFactory, Style, Thickness, VerticalAlignment } from "@visualisation-sub/mural/runtime";
+import { Color, DataContextBinding, NameScope, ResourceDictionary, Setter, SetterFactory, Style, Thickness, VerticalAlignment } from "@visualisation-sub/mural/runtime";
 import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
 
 export function create() {
@@ -115,7 +115,7 @@ export function create() {
         const _itemsControl29 = new ItemsControl();
         _itemsControl29.Name = "reorderList";
         _itemsControl29._set_property_value_by_name("ItemsSource", DataContextBinding(_itemsControl29, "Rows"));
-        _itemsControl29._set_property_value_by_name("ItemsPanel", Application.current.Resources.Resolve("ReorderListPanel"));
+        _itemsControl29._set_property_value_by_name("ItemsPanel", _tmpl1);
         const _listReorderBehavior30 = new ListReorderBehavior();
         _listReorderBehavior30.Name = "reorder";
         _listReorderBehavior30._set_property_value_by_name("FromIndexFormat", "mural/reorder/from-index");
@@ -156,7 +156,7 @@ export function create() {
         const _itemsControl38 = new ItemsControl();
         _itemsControl38.Name = "filesList";
         _itemsControl38._set_property_value_by_name("ItemsSource", DataContextBinding(_itemsControl38, "DroppedFiles"));
-        _itemsControl38._set_property_value_by_name("ItemsPanel", Application.current.Resources.Resolve("ReorderListPanel"));
+        _itemsControl38._set_property_value_by_name("ItemsPanel", _tmpl1);
         _scrollViewer37.Content = _itemsControl38;
         _dockPanel32.AddChild(_scrollViewer37);
         _border31.SetChild(_dockPanel32);

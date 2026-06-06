@@ -259,13 +259,23 @@ export class Parser
         {
             body = this.parseSetterList();
         }
-        else if (keyword === 'DataTemplate' || keyword === 'HierarchicalDataTemplate')
+        else if (keyword === 'DataTemplate' || keyword === 'HierarchicalDataTemplate' || keyword === 'Template')
         {
             // Trailing trigger groups / event triggers are allowed after
             // the root element — WPF parity for DataTemplate.Triggers
-            // on (Hierarchical)DataTemplate. Without any trailing
-            // triggers the body collapses to the historical "single
-            // element" shape; the body kind discriminates downstream.
+            // AND ControlTemplate.Triggers. For Template (ControlTemplate),
+            // the triggers' default source is the templated parent (the
+            // control being templated), so `when(IsSelected) {
+            // PART_Border.Background = …; }` inside a `Template
+            // [TargetType=ListBoxItem]` watches the ListBoxItem's
+            // IsSelected and writes to the named PART_Border via
+            // TargetedSetter. Same body shape downstream — the
+            // resource-form keyword discriminates the trigger-source
+            // resolution in the compiler / runtime.
+            //
+            // When NO trailing triggers are present, the body collapses
+            // to the single-element shape — preserves snapshot stability
+            // for existing trigger-free templates.
             const bodyStart = this.peek().span.start;
             const root = this.parseElement();
             const triggers:      TriggerGroup[]      = [];
@@ -289,14 +299,21 @@ export class Parser
             // and the closing brace, mirroring setter-list / when()
             // trailing-`;` tolerance.
             while (this.peek().kind === TokenKind.Semicolon) this.consume();
-            const bodyEnd = this.lastEnd();
-            body = {
-                kind:          'data-template-body',
-                root,
-                triggers,
-                eventTriggers,
-                span:          this.span(bodyStart, bodyEnd),
-            };
+            if (triggers.length === 0 && eventTriggers.length === 0)
+            {
+                body = root;
+            }
+            else
+            {
+                const bodyEnd = this.lastEnd();
+                body = {
+                    kind:          'data-template-body',
+                    root,
+                    triggers,
+                    eventTriggers,
+                    span:          this.span(bodyStart, bodyEnd),
+                };
+            }
         }
         else
         {

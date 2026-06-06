@@ -502,7 +502,20 @@ export class Visual extends Model
         if (start === undefined) return;
         const r = start(this);
         if (r === null) return;
-        const session = DragDrop.DoDragDrop(this, r.data, r.effects, { preview: r.preview });
+        // Press-relative offset within the source: how far the press
+        // landed from the source's host-coord top-left. The HtmlTarget
+        // subtracts this from each move sample so the cursor stays
+        // anchored at the press point inside the ghost — without it, a
+        // wide source (a stretched ItemsControl ContentPresenter) shows
+        // the centered tile far from the cursor.
+        let srcX = 0, srcY = 0;
+        for (let cur: Visual | undefined = this; cur !== undefined; cur = cur.GetVisualParent())
+        {
+            srcX += cur.ArrangedRect.X;
+            srcY += cur.ArrangedRect.Y;
+        }
+        const ghostCursorOffset = { x: latch.downX - srcX, y: latch.downY - srcY };
+        const session = DragDrop.DoDragDrop(this, r.data, r.effects, { preview: r.preview, ghostCursorOffset });
         // Wire any optional source-side hooks (8.3) onto the freshly
         // started session before the InputManager polls and picks it up.
         if (r.onFeedback      !== undefined) session.OnFeedback(r.onFeedback);
@@ -683,10 +696,17 @@ export class Visual extends Model
         }
         // Application-level fallback. The tree walk exhausts at the
         // topmost mounted root; when a key isn't found there, consult
-        // the app's root resources. Matches WPF's FrameworkElement.
-        // FindResource behavior. Returns undefined when no Application
-        // is current — fine for unattached / test fixtures.
-        return Application.current?.Resources.Resolve(key);
+        // the app's root resources THEN the bundled default factories.
+        // Matches WPF's FrameworkElement.FindResource (which walks
+        // theme dictionaries at the end) and parity's the eager-template
+        // path: a Visual whose DefaultStyleKey resolves through the
+        // bundled theme should find its Style here even before
+        // Application.current is set OR when running in a test harness
+        // without an Application instance. Delegate to
+        // Application.ResolveDefaultResource so the precedence rules
+        // (user overrides on Application.Resources beat bundled
+        // defaults) live in one place.
+        return Application.ResolveDefaultResource(key);
     }
 
     // Explicit style for this Visual. When set, takes priority over any
@@ -732,6 +752,12 @@ export class Visual extends Model
             this.unapply_style(this._activeStyle);
         }
         this._activeStyle = desired;
+        // BasedOn layering happens inside apply_style — Style.Seal()
+        // splices the TargetType's theme Style in as an implicit
+        // BasedOn (WPF parity), and Style.ResolveSetters walks the
+        // chain. So a single apply / unapply call covers the whole
+        // composed setter map without needing dual-style tracking
+        // here.
         if (desired !== undefined)
         {
             this.apply_style(desired);
@@ -1347,6 +1373,27 @@ export class Visual extends Model
         if (found === this._themeStyle) return;
         this._themeStyle = found;
         this.refresh_active_style();
+    }
+
+    // Eagerly resolve the default Style and apply it. Convention for
+    // templated controls: call this at the end of the subclass
+    // constructor. The framework would otherwise only resolve styles
+    // on AttachLogical (via refresh_styles_subtree) — fine for tree-
+    // mounted controls, but standalone tests / unmounted instances
+    // would have a missing Template (and the visualChildren / Measure
+    // contracts would observe an un-templated control). Calling this
+    // is the WPF parity for the EnsureTemplate hook that runs lazily
+    // in MeasureCore there; mural runs it eagerly at construction so
+    // unattached visualChildren reads still see the default chrome.
+    //
+    // Idempotent: re-resolving the same Style is a no-op
+    // (resolve_*_style short-circuits on identity match). Safe to call
+    // multiple times during composition (e.g. when a subclass needs
+    // the Template to be populated before its own ctor finishes).
+    protected applyDefaultStyle(): void
+    {
+        this.resolve_implicit_style();
+        this.resolve_theme_style();
     }
 
     // Subscribe to every ResourceDictionary in the ancestor chain so

@@ -96,7 +96,10 @@ export class Lexer
         if (c === '-' && this.isDigit(c2)) return this.lexNumber(start, true);
 
         // ── Identifiers ──
-        if (this.isLetter(c)) return this.lexIdent(start);
+        // Start char: letter OR underscore (the XAML PART_Border naming
+        // convention). Continuation chars in lexIdent accept underscore
+        // too, so a leading-underscore ident like `_internal` works.
+        if (this.isLetter(c) || c === '_') return this.lexIdent(start);
 
         // ── Unknown ──
         // Emit an Ident with the single bad char so the parser has
@@ -349,11 +352,15 @@ export class Lexer
         return this.isLetter(c) || this.isDigit(c);
     }
 
-    // [A-Za-z][A-Za-z0-9]* — no underscore, no hyphen.
+    // [A-Za-z_][A-Za-z0-9_]* — underscores allowed (matches the XAML
+    // PART_Border naming convention used throughout the bundled
+    // ControlTemplates and surfaces in trigger setter LHS like
+    // `PART_Border.Background = …`). Hyphens still excluded; they're
+    // reserved as a binary minus / negative-number prefix.
     private lexIdent(start: SourceLocation): Token
     {
         let out = '';
-        while (this.isAlnum(this.source[this.pos]))
+        while (this.isAlnum(this.source[this.pos]) || this.source[this.pos] === '_')
         {
             out += this.source[this.pos];
             this.advance();

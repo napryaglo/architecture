@@ -156,9 +156,16 @@ export class TemplatePropertyTrigger
         public readonly sourceName:    string | undefined = undefined,
     ) {}
 
-    public AttachTo(root: Visual): void
+    // `templatedParent` is the default source when the trigger is
+    // attached from a ControlTemplate (WPF: `Trigger.Property` on the
+    // template targets the templated control's properties). DataTemplate
+    // callers don't supply it; the default source is the template root.
+    public AttachTo(root: Visual, templatedParent?: Visual): void
     {
-        const source = this.sourceName === undefined ? root : root.FindName(this.sourceName);
+        const defaultSource = templatedParent ?? root;
+        const source = this.sourceName === undefined
+            ? defaultSource
+            : root.FindName(this.sourceName);
         if (source === undefined) return;
         const resolved = resolveTargets(root, this.setters);
         let active = false;

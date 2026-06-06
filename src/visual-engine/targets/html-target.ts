@@ -598,7 +598,19 @@ export class HtmlTarget extends PresentationTarget
     public SetDragGhostPosition(hostX: number, hostY: number): void
     {
         if (this.dragGhost === undefined) return;
-        this.dragGhost.setAttribute('transform', `translate(${hostX},${hostY})`);
+        // Subtract the press-relative cursor offset so the cursor stays
+        // anchored at the point inside the source where the user pressed.
+        // Without this, a stretched source (an ItemsControl
+        // ContentPresenter spanning a wide panel with a smaller centered
+        // tile inside) shows the visible tile offset from the cursor by
+        // the centering distance, even though the outer's scene-position
+        // transform is stripped. The latch populates ghostCursorOffset
+        // from the press coords + source's host-coord position; defaults
+        // to (0, 0) for imperative DoDragDrop callers and OS-drag.
+        const offset = this.InputManager.CurrentDragOptions.ghostCursorOffset ?? { x: 0, y: 0 };
+        const x = hostX - offset.x;
+        const y = hostY - offset.y;
+        this.dragGhost.setAttribute('transform', `translate(${x},${y})`);
     }
 
     private attachGhostFromSource(source: Visual): void

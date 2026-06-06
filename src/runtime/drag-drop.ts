@@ -211,6 +211,18 @@ export type DragPreviewKind =
 export interface DragDropOptions
 {
     preview?: DragPreviewKind;
+    // Cursor position relative to the ghost content's top-left, in host
+    // coords. The HtmlTarget subtracts this from each move sample's
+    // (hostX, hostY) so the cursor stays under the press-relative point
+    // throughout the drag — without it, a wide source (e.g. an
+    // ItemsControl ContentPresenter that stretches across its panel)
+    // shows the visible tile far from the cursor because the cloned
+    // outer's local frame starts at the source's left edge, not where
+    // the user pressed. Declarative drag-start (Visual's IsDraggable
+    // latch) populates this automatically from the press coords; for
+    // imperative DoDragDrop callers, defaulting to (0, 0) keeps the
+    // ghost anchored at its top-left.
+    ghostCursorOffset?: { x: number; y: number };
 }
 
 // Static entry point. The instance method `args.BeginDragDrop(...)`

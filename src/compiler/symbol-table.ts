@@ -110,6 +110,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['ScrollBar',               '@visualisation-sub/mural/Controls'],
     ['VirtualizingPanel',       '@visualisation-sub/mural/Controls'],
     ['VirtualizingStackPanel',  '@visualisation-sub/mural/Controls'],
+    ['VirtualizingWrapPanel',   '@visualisation-sub/mural/Controls'],
     ['TextWrapping',            '@visualisation-sub/mural/Controls'],
 
     // ── Internal helper classes ────────────────────────────────────
@@ -252,6 +253,7 @@ export const DEFAULT_SLOT_INFO: ReadonlyMap<string, SlotInfo> = new Map<string, 
     ['Selector',                { name: 'Items',    kind: 'list'   }],
     ['Diagram',                 { name: 'Items',    kind: 'list'   }],
     ['VirtualizingStackPanel',  { name: 'Children', kind: 'list'   }],
+    ['VirtualizingWrapPanel',   { name: 'Children', kind: 'list'   }],
     ['ScrollViewer',            { name: 'Content',  kind: 'object' }],
 
     // Internal helper classes (see DEFAULT_SYMBOLS comment above).

@@ -182,6 +182,17 @@ export class Compiler
     // DataContext path, matching the natural top-down read order of
     // markup.
     private templateNameVars:   Map<string, string>   | undefined;
+    // x:key-keyed local resource vars within the CURRENT
+    // ResourceDictionary being compiled — populated by
+    // registerResourceFormVar, consulted by compileValue's static-resource
+    // case. Lets `@key` in a setter (e.g. `Template = @MyTemplate;`)
+    // resolve to the local `_tmplN` JS var when the referenced key was
+    // declared earlier in the same `ResourceDictionary { … }` block,
+    // sidestepping the `Application.current.Resources.Resolve("…")`
+    // round-trip that wouldn't work for resources defined in the
+    // SAME dict being constructed (the merged dict isn't visible to
+    // Application.current.Resources until create() returns).
+    private localResourceVars:  Map<string, string>   | undefined;
     // Current indent prefix (multiples of 4 spaces) — incremented when
     // we open a nested scope (template factory body, future macro
     // expansions, etc.), decremented at close. Cosmetic for the emitted
@@ -345,7 +356,10 @@ export class Compiler
         this.ensureImport('ResourceDictionary');
         const rdVar = this.fresh('rd');
         this.line(`const ${rdVar} = new ResourceDictionary();`);
+        const savedLocalRes = this.localResourceVars;
+        this.localResourceVars = new Map<string, string>();
         this.compileResourcesBody(rdVar, elem.body);
+        this.localResourceVars = savedLocalRes;
         return rdVar;
     }
 
@@ -516,8 +530,13 @@ export class Compiler
                 throw new EmitError(
                     'x:key requires a string literal value', xKey.span);
             }
+            const keyStr = xKey.value.value;
             this.line(
-                `${rdVar}.Set(${JSON.stringify(xKey.value.value)}, ${valueVar});`);
+                `${rdVar}.Set(${JSON.stringify(keyStr)}, ${valueVar});`);
+            // Make `@key` references within the same RD resolve to the
+            // local var directly, not through Application.current.Resources
+            // (which won't see this entry until create() returns).
+            this.localResourceVars?.set(keyStr, valueVar);
             return;
         }
         if (!allowImplicit)
@@ -534,42 +553,167 @@ export class Compiler
 
     private compileControlTemplateForm(rf: ResourceForm): string
     {
-        if (rf.body.kind !== 'element')
+        if (rf.body.kind !== 'element' && rf.body.kind !== 'data-template-body')
         {
             throw new EmitError(
-                'template body must be a single element', rf.span);
+                'template body must be a single element (optionally followed by `when()` triggers)',
+                rf.span);
         }
-        // TargetType is conceptually meaningful (the control class this
-        // template targets), but the runtime ControlTemplate doesn't
-        // carry it — it's purely a factory. We still parse and validate
-        // it so authors can't omit the meta-attr.
-        this.requireTargetType(rf);
+        // TargetType is the control class this template targets. Used
+        // as the propertyOwner for any `when(IsSelected)` triggers in
+        // the body — the watched property is looked up on this class
+        // (or its bases). Also required for the original validation
+        // contract: authors can't omit it.
+        const targetType = this.requireTargetType(rf);
+
+        const rootElement = rf.body.kind === 'element' ? rf.body : rf.body.root;
+        const triggers = rf.body.kind === 'data-template-body' ? rf.body.triggers : [];
+        // ControlTemplate event triggers aren't supported yet — the
+        // attach surface (which routed events to subscribe on, with
+        // what targetedParent) is its own design. Reject loudly rather
+        // than silently dropping.
+        const eventTriggers = rf.body.kind === 'data-template-body' ? rf.body.eventTriggers : [];
+        if (eventTriggers.length > 0)
+        {
+            throw new EmitError(
+                'ControlTemplate event triggers (`on …`) are not supported yet',
+                eventTriggers[0]!.span);
+        }
 
         this.ensureImport('ControlTemplate');
         const tmplVar = this.fresh('tmpl');
-        this.line(`const ${tmplVar} = new ControlTemplate((_templatedParent) => {`);
+        // Trigger-free path: preserve the historical 1-arg
+        // `new ControlTemplate(factory)` emit shape so existing snapshot
+        // tests of un-triggered templates keep matching.
+        if (triggers.length === 0)
+        {
+            this.line(`const ${tmplVar} = new ControlTemplate((_templatedParent) => {`);
+            this.indent += 4;
+            const wasInTemplate = this.inTemplateBody;
+            this.inTemplateBody = true;
+            // Stash the surrounding DataTemplate's name scope (if any)
+            // so x:names declared inside a nested ControlTemplate body
+            // don't pollute the data-template-scope used by
+            // TargetedSetter lowering above this control template.
+            const savedTNS = this.templateNameScope;
+            const savedTNO = this.templateNameOwners;
+            const savedTNV = this.templateNameVars;
+            this.templateNameScope  = undefined;
+            this.templateNameOwners = undefined;
+            this.templateNameVars   = undefined;
+            const rootVar = this.compileElement(rootElement);
+            this.templateNameScope  = savedTNS;
+            this.templateNameOwners = savedTNO;
+            this.templateNameVars   = savedTNV;
+            this.inTemplateBody = wasInTemplate;
+            this.line(`return ${rootVar};`);
+            this.indent -= 4;
+            this.line(`});`);
+            return tmplVar;
+        }
+
+        // Triggered path. The triggers reference x:names registered
+        // inside the factory body (via TargetedSetter), so the factory
+        // must compile FIRST so templateNameScope is populated when the
+        // trigger setters lower. Wrap the whole construction in an IIFE
+        // so the `const` declarations stay legal and the factory body
+        // runs in a private scope. Same shape DataTemplate uses for
+        // triggered output.
+        this.line(`const ${tmplVar} = (() => {`);
         this.indent += 4;
-        const wasInTemplate = this.inTemplateBody;
-        this.inTemplateBody = true;
-        // Stash the surrounding DataTemplate's name scope (if any) so
-        // x:names declared inside a nested ControlTemplate body don't
-        // pollute the data-template-scope used by TargetedSetter
-        // lowering above this control template.
+        // Open a fresh template-local name scope so the trigger setters'
+        // TargetedSetter lowering finds PART_Border et al. inside this
+        // template's body, not in any outer template scope. Restored on
+        // the way out.
         const savedTNS = this.templateNameScope;
         const savedTNO = this.templateNameOwners;
         const savedTNV = this.templateNameVars;
-        this.templateNameScope  = undefined;
-        this.templateNameOwners = undefined;
-        this.templateNameVars   = undefined;
-        const rootVar = this.compileElement(rf.body);
+        const savedInTemplate = this.inTemplateBody;
+        this.templateNameScope  = new Set<string>();
+        this.templateNameOwners = new Map<string, string>();
+        this.templateNameVars   = new Map<string, string>();
+        this.inTemplateBody = true;
+        this.line(`const _factory = (_templatedParent) => {`);
+        this.indent += 4;
+        const rootVar = this.compileElement(rootElement);
+        this.line(`return ${rootVar};`);
+        this.indent -= 4;
+        this.line(`};`);
+
+        const triggerVars = this.compileControlTemplateTriggers(triggers, targetType);
         this.templateNameScope  = savedTNS;
         this.templateNameOwners = savedTNO;
         this.templateNameVars   = savedTNV;
-        this.inTemplateBody = wasInTemplate;
-        this.line(`return ${rootVar};`);
+        this.inTemplateBody     = savedInTemplate;
+
+        const triggersArr = `[${triggerVars.join(', ')}]`;
+        this.line(`return new ControlTemplate(_factory, ${triggersArr});`);
         this.indent -= 4;
-        this.line(`});`);
+        this.line(`})();`);
         return tmplVar;
+    }
+
+    // ControlTemplate trigger compiler. Mirrors DataTemplate's trigger
+    // compiler but emits TemplatePropertyTrigger watching the templated
+    // parent (the runtime supplies templatedParent as the default
+    // source). `when($path = value)` data-trigger form is rejected here
+    // — control-template triggers exist to react to the templated
+    // control's own DPs, not to its DataContext.
+    private compileControlTemplateTriggers(
+        triggers: readonly TriggerGroup[],
+        targetType: string,
+    ): string[]
+    {
+        const triggerVars: string[] = [];
+        for (const tg of triggers)
+        {
+            const disjuncts = this.flattenToDNF(tg.condition);
+            if (disjuncts.length !== 1 || disjuncts[0]!.length !== 1)
+            {
+                throw new EmitError(
+                    'ControlTemplate triggers currently support only a single-term `when( … )` condition',
+                    tg.span);
+            }
+            const term = disjuncts[0]![0]!;
+            if (term.negated)
+            {
+                throw new EmitError(
+                    'ControlTemplate triggers do not support `not` — write `Property = false` instead',
+                    term.span);
+            }
+            if (term.path !== undefined)
+            {
+                throw new EmitError(
+                    'ControlTemplate triggers don\'t support `$path` (data) conditions — use a property name (e.g. `when(IsSelected)`)',
+                    term.span);
+            }
+            // Setters: each setter LHS may be `Property = …`,
+            // `TargetName.Property = …`, or `Owner.Property = …`. The
+            // compileTemplateSetter helper routes named-element form
+            // through TargetedSetter (the whole point of this work).
+            const setterExprs: string[] = [];
+            for (const item of tg.setters.items)
+            {
+                if (item.kind !== 'property-setter')
+                {
+                    throw new EmitError(
+                        'only property setters are allowed inside ControlTemplate `when()` blocks',
+                        item.span);
+                }
+                setterExprs.push(this.compileTemplateSetter(item));
+            }
+            const settersArrVar = this.fresh('tplSet');
+            this.line(`const ${settersArrVar} = [${setterExprs.join(', ')}];`);
+
+            const valueExpr = this.evaluateTermValue(term);
+            this.ensureImport('TemplatePropertyTrigger');
+            this.ensureImport(targetType);
+            const v = this.fresh('tplTrig');
+            this.line(
+                `const ${v} = new TemplatePropertyTrigger(${targetType}, ${JSON.stringify(term.property)}, ${valueExpr}, ${settersArrVar});`);
+            triggerVars.push(v);
+        }
+        return triggerVars;
     }
 
     private compileDataTemplateForm(rf: ResourceForm): string
@@ -1982,10 +2126,25 @@ export class Compiler
                 return `[${exprs.join(', ')}]`;
             }
             case 'static-resource':
+            {
+                // Local-resource fast path: when `@key` references a
+                // resource declared earlier in the SAME
+                // ResourceDictionary, emit the JS var directly. The
+                // round-trip through Application.current.Resources would
+                // miss it — the dict being built isn't merged in until
+                // create() returns. Lets bundled themes (and demo
+                // resources) author `Style { Template = @MyTemplate; }`
+                // alongside a keyed `Template x:key="MyTemplate" {…}`
+                // in the same file.
+                const localVar = this.localResourceVars?.get(val.key);
+                if (localVar !== undefined) return localVar;
                 this.ensureImport('Application');
-                // Eager lookup against the singleton — works at any
-                // construction site since Application is built first.
+                // Eager lookup against the singleton — works for any
+                // resource that's already merged onto Application by
+                // the time create() runs (e.g. user-side overrides set
+                // by the host code before constructing controls).
                 return `Application.current.Resources.Resolve(${JSON.stringify(val.key)})`;
+            }
             case 'dynamic-resource':
                 this.ensureImport('DynamicResource');
                 if (ctx.targetExpr !== undefined)

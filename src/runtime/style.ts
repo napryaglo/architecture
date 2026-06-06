@@ -1,3 +1,4 @@
+import { Application } from './application.js';
 import { ResourceDictionary, type ResourceKey } from './resource-dictionary.js';
 import type { EventTrigger, TriggerAction } from './trigger-actions.js';
 import type { Visual } from './visual.js';
@@ -184,11 +185,22 @@ export class Style
 {
     public readonly TargetType: Function;
     public readonly Setters: readonly Setter[];
-    public readonly BasedOn: Style | undefined;
     public readonly Triggers:      readonly PropertyTrigger[];
     public readonly MultiTriggers: readonly MultiTrigger[];
     public readonly DataTriggers:  readonly DataTrigger[];
     public readonly EventTriggers: readonly EventTrigger[];
+
+    // BasedOn is exposed read-only via the getter. The backing field
+    // is mutable so Seal() can splice in the THEME style for this
+    // TargetType when the author didn't pass an explicit BasedOn — the
+    // WPF parity for "every Style implicitly inherits from the default
+    // Style for its TargetType". Theme resolution happens at Seal
+    // (first apply) so the bundled controls theme's registration race
+    // with class-static block ordering doesn't matter — by the time
+    // any Style applies, the theme has been pushed onto
+    // Application.DefaultResourceFactories.
+    private _basedOn: Style | undefined;
+    public get BasedOn(): Style | undefined { return this._basedOn; }
 
     private _sealed: boolean = false;
     private _resources: ResourceDictionary | undefined;
@@ -205,7 +217,7 @@ export class Style
     {
         this.TargetType    = targetType;
         this.Setters       = setters;
-        this.BasedOn       = basedOn;
+        this._basedOn      = basedOn;
         this.Triggers      = triggers;
         this.MultiTriggers = multiTriggers;
         this.EventTriggers = eventTriggers;
@@ -219,11 +231,33 @@ export class Style
     // marker today (Setters / Triggers / BasedOn already `readonly`);
     // gates future mutation surface (e.g., mutable trigger
     // collections) once those exist.
+    //
+    // Also performs the WPF implicit-BasedOn resolution: when no
+    // explicit BasedOn was passed AND a theme Style for the
+    // TargetType exists in the bundled defaults / Application
+    // resources, splice it in. This makes every author-side Style
+    // automatically inherit Template + chrome setters from the theme
+    // without forcing them to write BasedOn manually — setting an
+    // unrelated property (e.g. `IsExpanded = true` in
+    // `ItemContainerStyle`) no longer blows away the control's
+    // chrome.
+    //
+    // The self-reference guard skips the splice when the resolved
+    // theme IS this style (the theme's own Style getting sealed),
+    // preventing an infinite BasedOn loop.
     public Seal(): void
     {
         if (this._sealed) return;
         this._sealed = true;
-        this.BasedOn?.Seal();
+        if (this._basedOn === undefined)
+        {
+            const theme = Application.ResolveDefaultResource(this.TargetType);
+            if (theme instanceof Style && theme !== this)
+            {
+                this._basedOn = theme;
+            }
+        }
+        this._basedOn?.Seal();
     }
 
     // Lazy-created per-style ResourceDictionary. Touching this

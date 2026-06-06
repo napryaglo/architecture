@@ -144,10 +144,12 @@ export class ContentControl extends Visual
 
     public set Template(value: ControlTemplate | undefined)
     {
-        const old = this.Template;
-        if (old === value) return;
+        // No explicit rebuildTemplate call here — set_property_value
+        // routes through OnPropertyChanged, which catches the
+        // 'Template' descriptor and runs rebuildTemplate. Same
+        // pipeline as Style.apply_setter writes, so direct assignment
+        // and Style-driven assignment behave identically.
         this.set_property_value(ContentControl.TemplateKey, value);
-        this.rebuildTemplate(value);
     }
 
     // Visual child = the template's root (when applied). Empty when
@@ -280,6 +282,17 @@ export class ContentControl extends Visual
                 oldValue as Visual | Model | undefined,
                 newValue as Visual | Model | undefined,
             );
+        }
+        else if (descriptor.Name === 'Template')
+        {
+            // Template writes routed through `set_property_value`
+            // (Style.apply_setter, binding push, OverrideMetadata-default
+            // settle) bypass the JS Template setter at line ~145, so
+            // rebuildTemplate has to fire here to keep both paths in
+            // lock-step. Without this hook, applyDefaultStyle would set
+            // the Template DP value but never tear down the old template
+            // or attach the new one, leaving visualChildren empty.
+            this.rebuildTemplate(newValue as ControlTemplate | undefined);
         }
     }
 }

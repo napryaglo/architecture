@@ -1,5 +1,6 @@
 import { Binding, BindingMode, NameScope, type BindingOptions, type Visual } from '../runtime/index.js';
 import { ContentPresenter } from './content-presenter.js';
+import type { TemplatePropertyTrigger } from './data-template.js';
 
 // Factory signature for a ControlTemplate. Constructs a fresh visual
 // subtree on each call (NOT a singleton — multiple ContentControl
@@ -43,7 +44,10 @@ export interface TemplateInstance
 // imperative shape.
 export class ControlTemplate
 {
-    constructor(public readonly factory: TemplateFactory) {}
+    constructor(
+        public readonly factory:  TemplateFactory,
+        public readonly triggers: readonly TemplatePropertyTrigger[] = [],
+    ) {}
 
     public Apply(templatedParent: Visual): TemplateInstance
     {
@@ -60,6 +64,21 @@ export class ControlTemplate
         const nameScope = new NameScope();
         root.SetNameScope(nameScope);
         registerNamedVisuals(root, nameScope);
+
+        // Attach template triggers — the WPF parity for
+        // `ControlTemplate.Triggers`. Each trigger watches a property
+        // on the TEMPLATED PARENT (the control whose template this is
+        // — IsSelected, IsMouseOver, IsPressed, …) and applies its
+        // TargetedSetter setters to named template parts. The runtime
+        // takes templatedParent as the default source so the natural
+        // shape `when(IsSelected) { PART_Border.Background = …; }`
+        // resolves IsSelected against the ListBoxItem (not the template
+        // root) and writes Background on PART_Border via FindName lookup
+        // in the freshly-built nameScope.
+        for (const trigger of this.triggers)
+        {
+            trigger.AttachTo(root, templatedParent);
+        }
 
         const contentPresenter = findFirstContentPresenter(root);
         return { root, contentPresenter };
