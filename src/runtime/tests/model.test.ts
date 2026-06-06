@@ -25,6 +25,16 @@ import {
     type PropertyChangeCallback,
     type VisualHost,
     type DrawingContext,
+    ObservableCollection,
+    observe_array,
+    Validation,
+    type ValidationRule,
+    MultiBinding,
+    PriorityBinding,
+    AncestorBinding,
+    type ValidateValue,
+    isNotDataBindable,
+    isAnimationProhibited,
 } from '../index.js';
 
 // Thin convenience wrapper that forwards a class object to
@@ -4032,5 +4042,913 @@ describe('Coerce on every effective-value recomputation', () => {
         assert.equal(c._get_property_value_by_name('Value'), 10);
         // Source flips to CoercedValue since coerce changed the base default.
         assert.equal(c._get_value_source_by_name('Value'), PropertyValueSource.CoercedValue);
+    });
+});
+
+// Pins backlog item 2.4 / 7.2: bindings that traverse arrays or
+// ObservableCollections re-resolve when the collection itself mutates
+// (item replaced, item inserted/removed before the index, collection
+// cleared). For collections-as-leaf, the binding emits a pulse on
+// every mutation so consumers see PropertyChanged even though the
+// resolved value's identity is unchanged. Mirrors WPF's
+// INotifyCollectionChanged channel surfaced through the binding.
+describe('Binding — INotifyCollectionChanged through PropertyPath', () => {
+    // Local scene independent of buildScene so the OC fixtures stay
+    // isolated from the existing plain-array path tests.
+    function ocScene()
+    {
+        class Department extends Model {}
+        class Manager extends Model {}
+        class Office extends Model {}
+        class Desk extends Model {}
+        class ViewModel extends Model {}
+        Model.RegisterProperty(Department, 'managers', null, MetaData.None);
+        Model.RegisterProperty(Manager,    'office',   null, MetaData.None);
+        Model.RegisterProperty(Office,     'desk',     null, MetaData.None);
+        Model.RegisterProperty(Desk,       'label',    '',   MetaData.None);
+        Model.RegisterProperty(ViewModel,  'label',    '',   MetaData.None);
+        Model.RegisterProperty(ViewModel,  'managers', null, MetaData.None);
+
+        function makeManager(label: string): Model
+        {
+            const desk = new Desk();
+            desk._set_property_value_by_name('label', label);
+            const office = new Office();
+            office._set_property_value_by_name('desk', desk);
+            const m = new Manager();
+            m._set_property_value_by_name('office', office);
+            return m;
+        }
+        return { Department, ViewModel, makeManager };
+    }
+
+    test('ObservableCollection: SetAt at the bound index pushes the new leaf value', () => {
+        const { Department, ViewModel, makeManager } = ocScene();
+        const collection = new ObservableCollection<Model>([
+            makeManager('mgr-0'), makeManager('mgr-1'), makeManager('mgr-2'),
+        ]);
+        const dept = new Department();
+        dept._set_property_value_by_name('managers', collection);
+
+        const view = new ViewModel();
+        view._set_property_value_by_name('label', new Binding(dept, 'managers[1].office.desk.label'));
+        assert.equal(view._get_property_value_by_name('label'), 'mgr-1');
+
+        collection.SetAt(1, makeManager('mgr-1-replaced'));
+        assert.equal(view._get_property_value_by_name('label'), 'mgr-1-replaced');
+    });
+
+    test('ObservableCollection: Insert before the bound index shifts the resolved value', () => {
+        const { Department, ViewModel, makeManager } = ocScene();
+        const collection = new ObservableCollection<Model>([
+            makeManager('mgr-0'), makeManager('mgr-1'), makeManager('mgr-2'),
+        ]);
+        const dept = new Department();
+        dept._set_property_value_by_name('managers', collection);
+
+        const view = new ViewModel();
+        view._set_property_value_by_name('label', new Binding(dept, 'managers[1].office.desk.label'));
+        assert.equal(view._get_property_value_by_name('label'), 'mgr-1');
+
+        // Insert at index 0 shifts our bound index — what was index 1
+        // is now index 2; the new index 1 is what was index 0.
+        collection.Insert(0, makeManager('mgr-pre'));
+        assert.equal(view._get_property_value_by_name('label'), 'mgr-0');
+    });
+
+    test('ObservableCollection: Insert after the bound index does not change the resolved value', () => {
+        const { Department, ViewModel, makeManager } = ocScene();
+        const collection = new ObservableCollection<Model>([
+            makeManager('mgr-0'), makeManager('mgr-1'), makeManager('mgr-2'),
+        ]);
+        const dept = new Department();
+        dept._set_property_value_by_name('managers', collection);
+
+        const view = new ViewModel();
+        const captures: Array<unknown> = [];
+        view._add_property_changed_listener_by_name('label', (_m, _p, _o, n) => { captures.push(n); });
+        view._set_property_value_by_name('label', new Binding(dept, 'managers[1].office.desk.label'));
+        assert.equal(captures.length, 1);  // install fire
+
+        collection.Add(makeManager('mgr-tail'));  // append, doesn't affect idx 1
+        assert.equal(captures.length, 1, 'no spurious push when index 1 is unaffected');
+    });
+
+    test('ObservableCollection: RemoveAt before the bound index shifts the resolved value', () => {
+        const { Department, ViewModel, makeManager } = ocScene();
+        const collection = new ObservableCollection<Model>([
+            makeManager('mgr-0'), makeManager('mgr-1'), makeManager('mgr-2'),
+        ]);
+        const dept = new Department();
+        dept._set_property_value_by_name('managers', collection);
+
+        const view = new ViewModel();
+        view._set_property_value_by_name('label', new Binding(dept, 'managers[1].office.desk.label'));
+        assert.equal(view._get_property_value_by_name('label'), 'mgr-1');
+
+        collection.RemoveAt(0);
+        // What was index 1 is now index 0; what was index 2 is now index 1.
+        assert.equal(view._get_property_value_by_name('label'), 'mgr-2');
+    });
+
+    test('ObservableCollection: Clear resolves the binding to undefined', () => {
+        const { Department, ViewModel, makeManager } = ocScene();
+        const collection = new ObservableCollection<Model>([
+            makeManager('mgr-0'), makeManager('mgr-1'),
+        ]);
+        const dept = new Department();
+        dept._set_property_value_by_name('managers', collection);
+
+        const view = new ViewModel();
+        view._set_property_value_by_name('label', new Binding(dept, 'managers[0].office.desk.label'));
+        assert.equal(view._get_property_value_by_name('label'), 'mgr-0');
+
+        collection.Clear();
+        assert.equal(view._get_property_value_by_name('label'), undefined);
+    });
+
+    test('Plain array via observe_array Proxy: SetAt-style assignment pushes', () => {
+        const { Department, ViewModel, makeManager } = ocScene();
+        // Plain array, NOT ObservableCollection.
+        const arr = [makeManager('mgr-0'), makeManager('mgr-1'), makeManager('mgr-2')];
+        const dept = new Department();
+        dept._set_property_value_by_name('managers', arr);
+
+        const view = new ViewModel();
+        view._set_property_value_by_name('label', new Binding(dept, 'managers[1].office.desk.label'));
+        assert.equal(view._get_property_value_by_name('label'), 'mgr-1');
+
+        // Wrapping happens during traversal; consumers wanting reactivity
+        // mutate through the proxy. Walk to the proxy via observe_array
+        // (idempotent — returns the cached proxy).
+        const proxy = observe_array(arr);
+        proxy[1] = makeManager('mgr-1-replaced');
+        assert.equal(view._get_property_value_by_name('label'), 'mgr-1-replaced');
+    });
+
+    test('Plain array via observe_array Proxy: push triggers re-resolve at higher indices', () => {
+        const { Department, ViewModel, makeManager } = ocScene();
+        const arr = [makeManager('mgr-0')];  // single item — index 1 is initially out of range
+        const dept = new Department();
+        dept._set_property_value_by_name('managers', arr);
+
+        const view = new ViewModel();
+        view._set_property_value_by_name('label', new Binding(dept, 'managers[1].office.desk.label'));
+        assert.equal(view._get_property_value_by_name('label'), undefined);
+
+        const proxy = observe_array(arr);
+        proxy.push(makeManager('mgr-late'));
+        // Now index 1 has a manager — binding re-resolves.
+        assert.equal(view._get_property_value_by_name('label'), 'mgr-late');
+    });
+
+    test('ObservableCollection as leaf: pulses on mutation even though identity is unchanged', () => {
+        const { ViewModel } = ocScene();
+        const collection = new ObservableCollection<number>([1, 2, 3]);
+        const holder = new ViewModel();
+        holder._set_property_value_by_name('managers', collection);
+
+        const view = new ViewModel();
+        const captures: Array<unknown> = [];
+        view._add_property_changed_listener_by_name('managers', (_m, _p, _o, n) => { captures.push(n); });
+        view._set_property_value_by_name('managers', new Binding(holder, 'managers'));
+        assert.equal(captures.length, 1);  // install fire
+        assert.equal(captures[0], collection);
+
+        // Collection mutation: identity unchanged, pulse fires.
+        collection.Add(4);
+        assert.equal(captures.length, 2);
+        assert.equal(captures[1], collection);
+
+        collection.RemoveAt(0);
+        assert.equal(captures.length, 3);
+    });
+
+    test('Replacing the source collection drops the old subscription and subscribes to the new one', () => {
+        const { Department, ViewModel, makeManager } = ocScene();
+        const collA = new ObservableCollection<Model>([makeManager('a-0'), makeManager('a-1')]);
+        const collB = new ObservableCollection<Model>([makeManager('b-0'), makeManager('b-1'), makeManager('b-2')]);
+        const dept = new Department();
+        dept._set_property_value_by_name('managers', collA);
+
+        const view = new ViewModel();
+        view._set_property_value_by_name('label', new Binding(dept, 'managers[1].office.desk.label'));
+        assert.equal(view._get_property_value_by_name('label'), 'a-1');
+
+        // Swap to a new collection — the binding follows.
+        dept._set_property_value_by_name('managers', collB);
+        assert.equal(view._get_property_value_by_name('label'), 'b-1');
+
+        // Mutating the OLD collection now does nothing observable.
+        const captures: Array<unknown> = [];
+        view._add_property_changed_listener_by_name('label', (_m, _p, _o, n) => { captures.push(n); });
+        collA.SetAt(1, makeManager('a-1-orphaned'));
+        assert.equal(captures.length, 0, 'old collection is detached');
+
+        // Mutating the NEW collection still pushes.
+        collB.SetAt(1, makeManager('b-1-replaced'));
+        assert.equal(captures.length, 1);
+    });
+
+    test('Binding.dispose tears down collection subscriptions', () => {
+        const { Department, makeManager } = ocScene();
+        const collection = new ObservableCollection<Model>([makeManager('mgr-0'), makeManager('mgr-1')]);
+        const dept = new Department();
+        dept._set_property_value_by_name('managers', collection);
+
+        const binding = new Binding(dept, 'managers[1].office.desk.label');
+        let pulseCount = 0;
+        binding.setOnValueChanged(() => { pulseCount++; });
+        binding.setOnCollectionPulse(() => { pulseCount++; });
+
+        collection.SetAt(1, makeManager('mgr-1-pre-dispose'));
+        assert.equal(pulseCount, 1);
+
+        binding.dispose();
+        collection.SetAt(1, makeManager('mgr-1-post-dispose'));
+        assert.equal(pulseCount, 1, 'no callbacks fire after dispose');
+    });
+});
+
+// Pins backlog 3.5: Binding.validationRules run on every read and on
+// TwoWay writeback. Failures surface via Validation.HasError / Errors
+// attached properties on the target Model; writeback is blocked when
+// any rule fails.
+describe('Binding — ValidationRules', () => {
+    const notEmpty: ValidationRule = {
+        validate(v): { isValid: boolean; errorContent?: string } {
+            return typeof v === 'string' && v.length > 0
+                ? { isValid: true }
+                : { isValid: false, errorContent: 'required' };
+        },
+    };
+    const positive: ValidationRule = {
+        validate(v): { isValid: boolean; errorContent?: string } {
+            return typeof v === 'number' && v > 0
+                ? { isValid: true }
+                : { isValid: false, errorContent: 'must be positive' };
+        },
+    };
+
+    function vrScene()
+    {
+        class Source extends Model {
+            static { Model.RegisterProperty(Source, 'value', '', MetaData.None); }
+        }
+        class Target extends Model {
+            static { Model.RegisterProperty(Target, 'label', '', MetaData.None); }
+        }
+        return { Source, Target };
+    }
+
+    test('Install with a failing rule populates Validation.Errors on the target', () => {
+        const { Source, Target } = vrScene();
+        const src = new Source();
+        src._set_property_value_by_name('value', '');  // fails notEmpty
+
+        const target = new Target();
+        target._set_property_value_by_name(
+            'label',
+            new Binding(src, 'value', BindingMode.OneWay, { validationRules: [notEmpty] }),
+        );
+
+        assert.equal(Validation.GetHasError(target), true);
+        const errors = Validation.GetErrors(target);
+        assert.equal(errors.length, 1);
+        assert.equal(errors[0]!.errorContent, 'required');
+        assert.equal(errors[0]!.value, '');
+    });
+
+    test('Install with a passing rule leaves Validation clean', () => {
+        const { Source, Target } = vrScene();
+        const src = new Source();
+        src._set_property_value_by_name('value', 'hello');
+
+        const target = new Target();
+        target._set_property_value_by_name(
+            'label',
+            new Binding(src, 'value', BindingMode.OneWay, { validationRules: [notEmpty] }),
+        );
+
+        assert.equal(Validation.GetHasError(target), false);
+        assert.equal(Validation.GetErrors(target).length, 0);
+    });
+
+    test('Source mutation flips validation state on push', () => {
+        const { Source, Target } = vrScene();
+        const src = new Source();
+        src._set_property_value_by_name('value', 'ok');
+        const target = new Target();
+        target._set_property_value_by_name(
+            'label',
+            new Binding(src, 'value', BindingMode.OneWay, { validationRules: [notEmpty] }),
+        );
+        assert.equal(Validation.GetHasError(target), false);
+
+        src._set_property_value_by_name('value', '');  // now fails
+        assert.equal(Validation.GetHasError(target), true);
+
+        src._set_property_value_by_name('value', 'restored');  // passes again
+        assert.equal(Validation.GetHasError(target), false);
+    });
+
+    test('Multiple rules — every failure shows in Errors', () => {
+        class Source extends Model {
+            static { Model.RegisterProperty(Source, 'n', 0, MetaData.None); }
+        }
+        class Target extends Model {
+            static { Model.RegisterProperty(Target, 'n', 0, MetaData.None); }
+        }
+        const lessThan10: ValidationRule = {
+            validate(v): { isValid: boolean; errorContent?: string } {
+                return typeof v === 'number' && v < 10
+                    ? { isValid: true }
+                    : { isValid: false, errorContent: 'must be < 10' };
+            },
+        };
+        const src = new Source();
+        src._set_property_value_by_name('n', -5);  // fails positive
+        const target = new Target();
+        target._set_property_value_by_name(
+            'n',
+            new Binding(src, 'n', BindingMode.OneWay, { validationRules: [positive, lessThan10] }),
+        );
+        const errors = Validation.GetErrors(target);
+        assert.equal(errors.length, 1);
+        assert.equal(errors[0]!.errorContent, 'must be positive');
+
+        src._set_property_value_by_name('n', 100);  // fails lessThan10, passes positive
+        const errors2 = Validation.GetErrors(target);
+        assert.equal(errors2.length, 1);
+        assert.equal(errors2[0]!.errorContent, 'must be < 10');
+
+        src._set_property_value_by_name('n', 5);  // both pass
+        assert.equal(Validation.GetHasError(target), false);
+    });
+
+    test('TwoWay writeback blocked when rule fails; source keeps previous value', () => {
+        const { Source, Target } = vrScene();
+        const src = new Source();
+        src._set_property_value_by_name('value', 'good');
+
+        const target = new Target();
+        target._set_property_value_by_name(
+            'label',
+            new Binding(src, 'value', BindingMode.TwoWay, { validationRules: [notEmpty] }),
+        );
+        assert.equal(target._get_property_value_by_name('label'), 'good');
+        assert.equal(Validation.GetHasError(target), false);
+
+        // Attempt to write '' — fails notEmpty, source stays at 'good',
+        // target stays at 'good' (the previous value).
+        target._set_property_value_by_name('label', '');
+        assert.equal(src._get_property_value_by_name('value'), 'good');
+        assert.equal(target._get_property_value_by_name('label'), 'good');
+        assert.equal(Validation.GetHasError(target), true);
+        assert.equal(Validation.GetErrors(target)[0]!.errorContent, 'required');
+
+        // Valid writeback clears the error and updates the source.
+        target._set_property_value_by_name('label', 'fixed');
+        assert.equal(src._get_property_value_by_name('value'), 'fixed');
+        assert.equal(Validation.GetHasError(target), false);
+    });
+
+    test('Replacing a binding clears the old binding\'s errors', () => {
+        const { Source, Target } = vrScene();
+        const srcA = new Source();
+        srcA._set_property_value_by_name('value', '');  // fails
+        const srcB = new Source();
+        srcB._set_property_value_by_name('value', 'ok');
+
+        const target = new Target();
+        target._set_property_value_by_name(
+            'label',
+            new Binding(srcA, 'value', BindingMode.OneWay, { validationRules: [notEmpty] }),
+        );
+        assert.equal(Validation.GetHasError(target), true);
+
+        // Replace with a clean binding — the old error is dropped.
+        target._set_property_value_by_name(
+            'label',
+            new Binding(srcB, 'value', BindingMode.OneWay, { validationRules: [notEmpty] }),
+        );
+        assert.equal(Validation.GetHasError(target), false);
+        assert.equal(Validation.GetErrors(target).length, 0);
+    });
+
+    test('Multiple bindings on the same target aggregate their errors', () => {
+        class Source extends Model {
+            static {
+                Model.RegisterProperty(Source, 'a', '', MetaData.None);
+                Model.RegisterProperty(Source, 'b', '', MetaData.None);
+            }
+        }
+        class Target extends Model {
+            static {
+                Model.RegisterProperty(Target, 'a', '', MetaData.None);
+                Model.RegisterProperty(Target, 'b', '', MetaData.None);
+            }
+        }
+        const src = new Source();
+        const target = new Target();
+        target._set_property_value_by_name(
+            'a',
+            new Binding(src, 'a', BindingMode.OneWay, { validationRules: [notEmpty] }),
+        );
+        target._set_property_value_by_name(
+            'b',
+            new Binding(src, 'b', BindingMode.OneWay, { validationRules: [notEmpty] }),
+        );
+        // Both fail.
+        assert.equal(Validation.GetErrors(target).length, 2);
+
+        // Fix one — the other's error remains.
+        src._set_property_value_by_name('a', 'now-ok');
+        assert.equal(Validation.GetErrors(target).length, 1);
+        assert.equal(Validation.GetHasError(target), true);
+    });
+
+    test('Binding without validationRules pays no Validation overhead', () => {
+        const { Source, Target } = vrScene();
+        const src = new Source();
+        src._set_property_value_by_name('value', 'anything');
+
+        const target = new Target();
+        target._set_property_value_by_name(
+            'label',
+            new Binding(src, 'value', BindingMode.OneWay),  // no rules
+        );
+        // Validation properties stay at their defaults.
+        assert.equal(Validation.GetHasError(target), false);
+        assert.equal(Validation.GetErrors(target).length, 0);
+    });
+});
+
+// Pins backlog 3.6: general MultiBinding(bindings[], converter) +
+// PriorityBinding(bindings[]). Closes the WPF-shape gap alongside the
+// existing inline-expression MultiBinding factory.
+describe('MultiBinding / PriorityBinding — child Binding form', () => {
+    function mbScene()
+    {
+        class A extends Model {
+            static { Model.RegisterProperty(A, 'x', 0, MetaData.None); }
+        }
+        class B extends Model {
+            static { Model.RegisterProperty(B, 'y', 0, MetaData.None); }
+        }
+        class Target extends Model {
+            static { Model.RegisterProperty(Target, 'sum', 0, MetaData.None); }
+        }
+        return { A, B, Target };
+    }
+
+    test('MultiBinding combines values from independent sources via the converter', () => {
+        const { A, B, Target } = mbScene();
+        const a = new A(); a._set_property_value_by_name('x', 2);
+        const b = new B(); b._set_property_value_by_name('y', 3);
+
+        const target = new Target();
+        target._set_property_value_by_name(
+            'sum',
+            MultiBinding(
+                [new Binding(a, 'x'), new Binding(b, 'y')],
+                (x, y) => (x as number) + (y as number),
+            ),
+        );
+        assert.equal(target._get_property_value_by_name('sum'), 5);
+
+        a._set_property_value_by_name('x', 10);
+        assert.equal(target._get_property_value_by_name('sum'), 13);
+
+        b._set_property_value_by_name('y', 100);
+        assert.equal(target._get_property_value_by_name('sum'), 110);
+    });
+
+    test('MultiBinding converter exceptions surface as undefined (fallbackValue can apply on the outer target)', () => {
+        const { A, B, Target } = mbScene();
+        const a = new A(); a._set_property_value_by_name('x', 0);
+        const b = new B(); b._set_property_value_by_name('y', 1);
+
+        const target = new Target();
+        target._set_property_value_by_name(
+            'sum',
+            MultiBinding(
+                [new Binding(a, 'x'), new Binding(b, 'y')],
+                (x, y) =>
+                {
+                    if ((x as number) === 0) throw new Error('boom');
+                    return (x as number) / (y as number);
+                },
+            ),
+        );
+        assert.equal(target._get_property_value_by_name('sum'), undefined);
+
+        // Fix the source so the converter no longer throws.
+        a._set_property_value_by_name('x', 4);
+        assert.equal(target._get_property_value_by_name('sum'), 4);
+    });
+
+    test('MultiBinding existing factory overload (Visual + paths) still compiles and runs via the same export', () => {
+        // The legacy inline-expression factory is the 3-arg overload.
+        // This test confirms the overloaded signature didn't break it.
+        // We use the simplest possible case — a fixed Visual subclass
+        // with a DataContext — to verify the dispatch path.
+        class Host extends Visual {
+            static { Model.RegisterProperty(Host, 'sum', 0, MetaData.None); }
+        }
+        const host = new Host();
+        host.DataContext = { a: 7, b: 8 };
+
+        host._set_property_value_by_name(
+            'sum',
+            MultiBinding(host, ['a', 'b'], (a, b) => (a as number) + (b as number)),
+        );
+        assert.equal(host._get_property_value_by_name('sum'), 15);
+    });
+
+    test('PriorityBinding picks the first child whose resolved value is not undefined', () => {
+        class A extends Model {
+            static { Model.RegisterProperty(A, 'preferred', undefined, MetaData.None); }
+        }
+        class B extends Model {
+            static { Model.RegisterProperty(B, 'fallback', 'default', MetaData.None); }
+        }
+        class Target extends Model {
+            static { Model.RegisterProperty(Target, 'title', '', MetaData.None); }
+        }
+        const a = new A();
+        const b = new B();
+        const target = new Target();
+
+        target._set_property_value_by_name(
+            'title',
+            PriorityBinding([new Binding(a, 'preferred'), new Binding(b, 'fallback')]),
+        );
+        assert.equal(target._get_property_value_by_name('title'), 'default');
+
+        // Set the preferred — it now wins.
+        a._set_property_value_by_name('preferred', 'user-set');
+        assert.equal(target._get_property_value_by_name('title'), 'user-set');
+
+        // Clear the preferred back to undefined — fallback re-appears.
+        a._set_property_value_by_name('preferred', undefined);
+        assert.equal(target._get_property_value_by_name('title'), 'default');
+    });
+
+    test('PriorityBinding returns undefined when every child is undefined', () => {
+        class A extends Model {
+            static { Model.RegisterProperty(A, 'x', undefined, MetaData.None); }
+        }
+        class Target extends Model {
+            static { Model.RegisterProperty(Target, 'title', 'INITIAL', MetaData.None); }
+        }
+        const a1 = new A();
+        const a2 = new A();
+        const target = new Target();
+        target._set_property_value_by_name(
+            'title',
+            PriorityBinding([new Binding(a1, 'x'), new Binding(a2, 'x')]),
+        );
+        // Both undefined → combined value undefined → propagates through
+        // (no fallbackValue here, so the consumer sees undefined).
+        assert.equal(target._get_property_value_by_name('title'), undefined);
+    });
+
+    test('MultiBinding.dispose tears down child bindings', () => {
+        const { A, B, Target } = mbScene();
+        const a = new A(); a._set_property_value_by_name('x', 1);
+        const b = new B(); b._set_property_value_by_name('y', 1);
+
+        const mb = MultiBinding(
+            [new Binding(a, 'x'), new Binding(b, 'y')],
+            (x, y) => (x as number) + (y as number),
+        );
+        const target = new Target();
+        target._set_property_value_by_name('sum', mb);
+        assert.equal(target._get_property_value_by_name('sum'), 2);
+
+        // Replace with a local value — EVD disposes the binding.
+        target._set_property_value_by_name('sum', 99);
+        assert.equal(target._get_property_value_by_name('sum'), 99);
+
+        // Mutations on the original sources no longer push.
+        a._set_property_value_by_name('x', 100);
+        b._set_property_value_by_name('y', 100);
+        assert.equal(target._get_property_value_by_name('sum'), 99);
+    });
+});
+
+// Pins backlog 3.7 (FindAncestor part): AncestorBinding walks visualParent
+// chain to find a named-type ancestor, then binds to one of its
+// properties. ElementName side already covered by element-name-binding.ts
+// and the compiler's $head.Property lowering.
+describe('AncestorBinding — FindAncestor RelativeSource', () => {
+    test('Binds to the nearest ancestor of the named type', () => {
+        class Outer extends Panel {
+            static { Model.RegisterProperty(Outer, 'Title', 'outer-title', MetaData.None); }
+        }
+        class Inner extends Visual {
+            static { Model.RegisterProperty(Inner, 'echo', '', MetaData.None); }
+        }
+        const outer = new Outer();
+        const inner = new Inner();
+        outer.AddChild(inner);
+
+        inner._set_property_value_by_name(
+            'echo',
+            AncestorBinding(inner, Outer, 'Title'),
+        );
+        assert.equal(inner._get_property_value_by_name('echo'), 'outer-title');
+
+        outer._set_property_value_by_name('Title', 'changed');
+        assert.equal(inner._get_property_value_by_name('echo'), 'changed');
+    });
+
+    test('Walks past intermediate non-matching ancestors', () => {
+        class Outer extends Panel {
+            static { Model.RegisterProperty(Outer, 'Tag', 'A', MetaData.None); }
+        }
+        class Middle extends Panel {}
+        class Inner extends Visual {
+            static { Model.RegisterProperty(Inner, 'echo', '', MetaData.None); }
+        }
+        const outer = new Outer();
+        const middle = new Middle();
+        const inner = new Inner();
+        outer.AddChild(middle);
+        middle.AddChild(inner);
+
+        inner._set_property_value_by_name('echo', AncestorBinding(inner, Outer, 'Tag'));
+        assert.equal(inner._get_property_value_by_name('echo'), 'A');
+    });
+
+    test('level=2 finds the 2nd-nearest matching ancestor', () => {
+        class Grand extends Panel {
+            static { Model.RegisterProperty(Grand, 'Tag', 'GRAND', MetaData.None); }
+        }
+        class Parent extends Grand {}  // also matches Grand
+        class Inner extends Visual {
+            static { Model.RegisterProperty(Inner, 'echo', '', MetaData.None); }
+        }
+        const grand = new Grand();
+        const parent = new Parent();
+        const inner = new Inner();
+        grand.AddChild(parent);
+        parent.AddChild(inner);
+
+        // level=1 → nearest (parent), level=2 → grandparent.
+        inner._set_property_value_by_name('echo', AncestorBinding(inner, Grand, 'Tag', 2));
+        assert.equal(inner._get_property_value_by_name('echo'), 'GRAND');
+
+        grand._set_property_value_by_name('Tag', 'updated');
+        assert.equal(inner._get_property_value_by_name('echo'), 'updated');
+    });
+
+    test('Missing ancestor resolves to undefined', () => {
+        class NotAnAncestor extends Panel {}
+        class Outer extends Panel {}
+        class Inner extends Visual {
+            static { Model.RegisterProperty(Inner, 'echo', 'INITIAL', MetaData.None); }
+        }
+        const outer = new Outer();
+        const inner = new Inner();
+        outer.AddChild(inner);
+
+        inner._set_property_value_by_name(
+            'echo',
+            AncestorBinding(inner, NotAnAncestor, 'whatever'),
+        );
+        assert.equal(inner._get_property_value_by_name('echo'), undefined);
+    });
+
+    test('dispose unsubscribes from the resolved ancestor', () => {
+        class Outer extends Panel {
+            static { Model.RegisterProperty(Outer, 'Title', 'first', MetaData.None); }
+        }
+        class Inner extends Visual {
+            static { Model.RegisterProperty(Inner, 'echo', '', MetaData.None); }
+        }
+        const outer = new Outer();
+        const inner = new Inner();
+        outer.AddChild(inner);
+
+        inner._set_property_value_by_name('echo', AncestorBinding(inner, Outer, 'Title'));
+        assert.equal(inner._get_property_value_by_name('echo'), 'first');
+
+        // Replace with a local value — EVD disposes the binding.
+        inner._set_property_value_by_name('echo', 'local');
+        assert.equal(inner._get_property_value_by_name('echo'), 'local');
+
+        // Mutations on the ancestor no longer push through.
+        outer._set_property_value_by_name('Title', 'after-dispose');
+        assert.equal(inner._get_property_value_by_name('echo'), 'local');
+    });
+});
+
+// Pins backlog 4.2: ValidateValue callback in PropertyMetadata rejects
+// writes that fall outside the property's allowed domain. WPF parity.
+describe('ValidateValue callback', () => {
+    const positiveInt: ValidateValue = (v) =>
+        typeof v === 'number' && Number.isInteger(v) && v >= 0;
+
+    test('A valid write succeeds; an invalid write throws and does not mutate state', () => {
+        class Item extends Model {
+            static {
+                Model.RegisterProperty(Item, 'count', 0, MetaData.None, undefined, positiveInt);
+            }
+        }
+        const item = new Item();
+        item._set_property_value_by_name('count', 5);
+        assert.equal(item._get_property_value_by_name('count'), 5);
+
+        assert.throws(
+            () => item._set_property_value_by_name('count', -1),
+            /rejected by validate_value/,
+        );
+        // State unchanged after a rejected write.
+        assert.equal(item._get_property_value_by_name('count'), 5);
+
+        assert.throws(
+            () => item._set_property_value_by_name('count', 1.5),
+            /rejected by validate_value/,
+        );
+        assert.equal(item._get_property_value_by_name('count'), 5);
+    });
+
+    test('Default value that fails the rule throws at registration time', () => {
+        class Bad extends Model {}
+        assert.throws(
+            () => Model.RegisterProperty(Bad, 'count', -1, MetaData.None, undefined, positiveInt),
+            /Default value for property 'Bad\.count' fails its validate_value callback/,
+        );
+    });
+
+    test('Validate runs BEFORE coerce — a value the rule rejects never reaches coerce', () => {
+        let coerceCalls = 0;
+        const coerce: CoerceValue = (_m, v) =>
+        {
+            coerceCalls++;
+            return v;
+        };
+        class Slider extends Model {
+            static {
+                Model.RegisterProperty(Slider, 'Value', 0, MetaData.None, coerce, positiveInt);
+            }
+        }
+        const s = new Slider();
+        s._set_property_value_by_name('Value', 3);
+        const before = coerceCalls;
+
+        assert.throws(() => s._set_property_value_by_name('Value', -5), /rejected by validate_value/);
+        // Coerce was not called for the rejected write.
+        assert.equal(coerceCalls, before);
+    });
+
+    test('Bindings bypass validate_value at write time — the binding install is not a "value"', () => {
+        // The user installs a Binding object; what matters for validation
+        // is the resolved value the binding produces, not the Binding
+        // instance itself. validate_value applies to direct value sets.
+        class Source extends Model {
+            static { Model.RegisterProperty(Source, 'n', 0, MetaData.None); }
+        }
+        class Target extends Model {
+            static {
+                Model.RegisterProperty(Target, 'n', 0, MetaData.None, undefined, positiveInt);
+            }
+        }
+        const src = new Source();
+        src._set_property_value_by_name('n', 42);
+        const target = new Target();
+        // No throw — installing a Binding is always valid; the binding's
+        // resolved value is what matters at read time, and validate_value
+        // is a write-side gate.
+        target._set_property_value_by_name('n', new Binding(src, 'n'));
+        assert.equal(target._get_property_value_by_name('n'), 42);
+    });
+
+    test('OverrideMetadata can replace just the validate_value callback', () => {
+        class Furniture extends Model {
+            static {
+                Model.RegisterProperty(Furniture, 'height', 1, MetaData.None);
+            }
+        }
+        class Desk extends Furniture {}
+        const HeightKey = Model.RegisterProperty(Furniture, 'height', 1, MetaData.None);
+
+        // Override to add validate_value on Desk.
+        Model.OverrideMetadata(Desk, HeightKey, { validate_value: positiveInt });
+
+        const desk = new Desk();
+        desk._set_property_value_by_name('height', 3);
+        assert.equal(desk._get_property_value_by_name('height'), 3);
+
+        assert.throws(
+            () => desk._set_property_value_by_name('height', -2),
+            /rejected by validate_value/,
+        );
+    });
+});
+
+// Pins backlog 4.4: MetaData.IsNotDataBindable rejects Binding installs
+// at the call site; MetaData.IsAnimationProhibited rejects animation
+// writes. Both are author-intent contracts encoded in the DP metadata
+// — the LSP can surface them and the runtime fails clearly instead of
+// allowing structural / nonsensical operations.
+describe('IsNotDataBindable / IsAnimationProhibited gates', () => {
+    test('Predicates read the flag bits', () => {
+        assert.equal(isNotDataBindable(MetaData.IsNotDataBindable), true);
+        assert.equal(isNotDataBindable(MetaData.None), false);
+        assert.equal(isAnimationProhibited(MetaData.IsAnimationProhibited), true);
+        assert.equal(isAnimationProhibited(MetaData.None), false);
+        // Flags compose with other bits via |.
+        assert.equal(
+            isNotDataBindable(MetaData.Measure | MetaData.IsNotDataBindable),
+            true,
+        );
+    });
+
+    test('IsNotDataBindable rejects Binding installs; direct writes succeed', () => {
+        class Source extends Model {
+            static { Model.RegisterProperty(Source, 'val', 0, MetaData.None); }
+        }
+        class Target extends Model {
+            static {
+                Model.RegisterProperty(Target, 'kind', 'A', MetaData.IsNotDataBindable);
+            }
+        }
+        const src = new Source();
+        const target = new Target();
+
+        // Direct write — fine.
+        target._set_property_value_by_name('kind', 'B');
+        assert.equal(target._get_property_value_by_name('kind'), 'B');
+
+        // Binding install — throws.
+        assert.throws(
+            () => target._set_property_value_by_name('kind', new Binding(src, 'val')),
+            /IsNotDataBindable/,
+        );
+        // State unchanged after the rejected install.
+        assert.equal(target._get_property_value_by_name('kind'), 'B');
+    });
+
+    test('IsAnimationProhibited rejects SetAnimatedValue; direct + binding writes succeed', () => {
+        class Target extends Model {
+            static {
+                Model.RegisterProperty(Target, 'collection', undefined, MetaData.IsAnimationProhibited);
+            }
+        }
+        const target = new Target();
+        const list = [1, 2, 3];
+
+        // Direct write — fine.
+        target._set_property_value_by_name('collection', list);
+        assert.equal(target._get_property_value_by_name('collection'), list);
+
+        // Animation write — throws.
+        assert.throws(
+            () => target._set_animated_value_by_name('collection', [4, 5, 6]),
+            /IsAnimationProhibited/,
+        );
+        // State unchanged.
+        assert.equal(target._get_property_value_by_name('collection'), list);
+    });
+
+    test('Visual.DataContext is IsAnimationProhibited by default', () => {
+        const v = new Visual();
+        const vm = { name: 'whatever' };
+        v.DataContext = vm;
+        assert.equal(v.DataContext, vm);
+
+        assert.throws(
+            () => v._set_animated_value_by_name('DataContext', { name: 'animated' }),
+            /IsAnimationProhibited/,
+        );
+        // DataContext is still bindable, just not animatable.
+        assert.equal(v.DataContext, vm);
+    });
+
+    test('OverrideMetadata can install IsNotDataBindable on a subclass', () => {
+        class Base extends Model {
+            static { Model.RegisterProperty(Base, 'kind', 'A', MetaData.None); }
+        }
+        class Sub extends Base {}
+        const KindKey = Model.RegisterProperty(Base, 'kind', 'A', MetaData.None);
+        Model.OverrideMetadata(Sub, KindKey, { meta_data: MetaData.IsNotDataBindable });
+
+        const sub = new Sub();
+        class Src extends Model {
+            static { Model.RegisterProperty(Src, 'v', 'X', MetaData.None); }
+        }
+        const src = new Src();
+        assert.throws(
+            () => sub._set_property_value_by_name('kind', new Binding(src, 'v')),
+            /IsNotDataBindable/,
+        );
+
+        // Base instance still accepts Bindings — override is per-class.
+        const base = new Base();
+        base._set_property_value_by_name('kind', new Binding(src, 'v'));
+        assert.equal(base._get_property_value_by_name('kind'), 'X');
     });
 });

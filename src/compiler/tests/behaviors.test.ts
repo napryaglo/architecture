@@ -157,3 +157,69 @@ describe('instantiate — Behaviors end-to-end', () => {
         assert.equal((border.Behaviors[1] as StubBehavior).Label, 'second');
     });
 });
+
+// Pins backlog 9.2: Behaviors { … } inside a when() trigger body
+// lowers to paired AttachBehaviorAction / DetachBehaviorAction in the
+// trigger's enterActions / exitActions arrays.
+describe('compile — triggered Behaviors block', () => {
+    test('Behaviors block inside when() emits Attach + Detach action pair', () => {
+        const js = emitted(`
+            Application{ resources: {
+                Style[TargetType=Border]{
+                    when( IsMouseOver ){
+                        Behaviors { StubBehavior [Label="hover"] }
+                    }
+                }
+            }}
+        `);
+        // Imports — both action types pulled in.
+        assert.match(js, /AttachBehaviorAction/);
+        assert.match(js, /DetachBehaviorAction/);
+        // Attach action with factory closure that constructs the
+        // behavior fresh and returns it.
+        assert.match(
+            js,
+            /new AttachBehaviorAction\(\(\) => \{[\s\S]*new StubBehavior\(\)[\s\S]*return [^;]+;[\s\S]*\}\)/,
+        );
+        // Detach action wraps the attach action handle.
+        assert.match(js, /new DetachBehaviorAction\(_attBeh\d+\)/);
+        // PropertyTrigger gets the 6-arg form with both action arrays
+        // populated.
+        assert.match(
+            js,
+            /new PropertyTrigger\(Border, "IsMouseOver", true, _sArr\d+, _enter\d+, _exit\d+\)/,
+        );
+    });
+
+    test('Behaviors block at Style body level (outside when()) is a compile error', () => {
+        assert.throws(
+            () => emitted(`
+                Application{ resources: {
+                    Style[TargetType=Border]{
+                        Behaviors { StubBehavior }
+                    }
+                }}
+            `),
+            /Behaviors \{ … \} block is only allowed inside a when\(…\) trigger body/,
+        );
+    });
+
+    test('Multiple behaviors in one trigger body emit multiple Attach/Detach pairs', () => {
+        const js = emitted(`
+            Application{ resources: {
+                Style[TargetType=Border]{
+                    when( IsMouseOver ){
+                        Behaviors {
+                            StubBehavior [Label="a"]
+                            StubBehavior [Label="b"]
+                        }
+                    }
+                }
+            }}
+        `);
+        const attaches = js.match(/new AttachBehaviorAction\(/g) ?? [];
+        const detaches = js.match(/new DetachBehaviorAction\(/g) ?? [];
+        assert.equal(attaches.length, 2);
+        assert.equal(detaches.length, 2);
+    });
+});

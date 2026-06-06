@@ -1,10 +1,12 @@
 import type { Visual } from '../../runtime/index.js';
 import {
     AnimationManager,
+    DataObject,
     DragDropEffects,
+    DragSession,
     ManualClock,
+    NoModifiers,
     PointerButton,
-    type DataObject,
     type KeyEventInit,
     type PointerEventInit,
     type WheelEventInit,
@@ -154,6 +156,22 @@ export class HtmlTarget extends PresentationTarget
     private readonly onDragKeyDown:   (e: KeyboardEvent) => void;
     private readonly onDragBlur:      () => void;
     private readonly onPointerCancel: (e: PointerEvent) => void;
+    // OS-level drag listeners (8.1). The browser fires `dragenter` when
+    // a drag crosses the host's bounding box (from outside OR from one
+    // descendant to another), `dragover` continuously while moving,
+    // `dragleave` when the drag exits the host, and `drop` on release.
+    // The handlers synthesize a `DragSession` on first enter and
+    // dispatch the same DragEnter/Over/Drop routed events the in-app
+    // drag path uses.
+    private readonly onOsDragEnter: (e: DragEvent) => void;
+    private readonly onOsDragOver:  (e: DragEvent) => void;
+    private readonly onOsDragLeave: (e: DragEvent) => void;
+    private readonly onOsDrop:      (e: DragEvent) => void;
+    // True while an OS drag is being tracked. Used to keep
+    // `dragleave` from cancelling on internal element-boundary
+    // crossings (the browser fires dragleave then dragenter on the
+    // new element — the session must stay alive across that pair).
+    private osDragSessionActive: boolean = false;
 
     // Drag overlay — a <g> appended on top of the renderer's scene
     // when a session starts and removed on session end. Mode A
@@ -298,6 +316,10 @@ export class HtmlTarget extends PresentationTarget
                 this.PollSessionCancellation();
             }
         };
+        this.onOsDragEnter = (e: DragEvent) => this.handleOsDragEnter(e);
+        this.onOsDragOver  = (e: DragEvent) => this.handleOsDragOver(e);
+        this.onOsDragLeave = (e: DragEvent) => this.handleOsDragLeave(e);
+        this.onOsDrop      = (e: DragEvent) => this.handleOsDrop(e);
         this.host.addEventListener('pointermove',   this.onPointerMove   as EventListener);
         this.host.addEventListener('pointerdown',   this.onPointerDown   as EventListener);
         this.host.addEventListener('pointerup',     this.onPointerUp     as EventListener);
@@ -308,6 +330,14 @@ export class HtmlTarget extends PresentationTarget
         this.host.addEventListener('keydown',       this.onDragKeyDown   as EventListener);
         this.host.addEventListener('keyup',         this.onKeyUp         as EventListener);
         this.host.addEventListener('blur',          this.onDragBlur      as EventListener);
+        // OS-level drop wiring. `dragenter` synthesizes the session on
+        // the first crossing; `dragover` must call preventDefault() to
+        // tell the browser to allow the drop (the default is to reject);
+        // `drop` finishes the session.
+        this.host.addEventListener('dragenter', this.onOsDragEnter as EventListener);
+        this.host.addEventListener('dragover',  this.onOsDragOver  as EventListener);
+        this.host.addEventListener('dragleave', this.onOsDragLeave as EventListener);
+        this.host.addEventListener('drop',      this.onOsDrop      as EventListener);
 
         // SvgRenderer paints the visual tree into the SVG surface and
         // maintains DOM identity per visual across re-render passes.
@@ -495,7 +525,14 @@ export class HtmlTarget extends PresentationTarget
         }
         if (opts.preview === undefined)
         {
-            this.attachGhostFromSource(session.Source);
+            // Mode A — translucent clone of the source. OS-level drops
+            // (8.1) have `Source === undefined`; the browser already
+            // owns the drag image in that case, so the framework
+            // skips its own ghost.
+            if (session.Source !== undefined)
+            {
+                this.attachGhostFromSource(session.Source);
+            }
             return;
         }
         this.attachGhostFromTemplate(opts.preview, session.Data);
@@ -775,6 +812,142 @@ export class HtmlTarget extends PresentationTarget
         };
     }
 
+    // ── OS-level drag/drop handlers (8.1) ──────────────────────────────
+    //
+    // The browser's DragEvent model:
+    //   * dragenter — drag crossed into a new element (host root counts;
+    //                 child elements also fire it as the cursor moves
+    //                 between siblings inside the host).
+    //   * dragover  — continuous while held over an element. MUST call
+    //                 preventDefault() to allow the eventual drop.
+    //   * dragleave — drag left the element. Fires on every internal
+    //                 element-to-element crossing too, so we can't
+    //                 cancel the session here without distinguishing
+    //                 "leaving the host root" from "moving between
+    //                 children".
+    //   * drop      — pointer released over the host. MUST call
+    //                 preventDefault() to suppress the browser's
+    //                 default (e.g., opening a dropped file in a new
+    //                 tab).
+    //
+    // Source-side drags initiated by the framework (via DoDragDrop) use
+    // PointerEvent flow, NOT DragEvent — so these handlers fire only
+    // for drags that originate outside the host (file drops from the
+    // OS, drag-and-drop from another browser window, etc.). In that
+    // case `session.Source === undefined`.
+
+    private handleOsDragEnter(e: DragEvent): void
+    {
+        // If a framework-initiated drag is already active, this
+        // dragenter is from one of OUR descendant elements during a
+        // pointer drag — ignore it. (Browsers don't actually fire
+        // DragEvents during a Pointer Events drag we initiated, but
+        // defence-in-depth.)
+        if (this.InputManager.IsDragActive && !this.osDragSessionActive) return;
+
+        e.preventDefault();
+
+        if (!this.osDragSessionActive)
+        {
+            const data = osDataObjectFrom(e.dataTransfer);
+            const allowed = osAllowedEffectsFrom(e.dataTransfer);
+            const session = new DragSession(undefined, data, allowed);
+            this.InputManager.BeginOsDragSession(session);
+            this.osDragSessionActive = true;
+        }
+
+        // Drive the first move so the receiver chain's DragEnter fires.
+        const { hostX, hostY } = this.toHostCoords(e);
+        const hit = this.hitVisualAt(hostX, hostY);
+        this.InputManager.DriveDragMove(hit ?? null, {
+            HostX: hostX, HostY: hostY,
+            Button:      PointerButton.Primary,
+            Buttons:     1,
+            Modifiers:   NoModifiers,
+            PointerId:   0,
+            Pressure:    0,
+            PointerType: 'mouse',
+        });
+    }
+
+    private handleOsDragOver(e: DragEvent): void
+    {
+        if (!this.osDragSessionActive) return;
+        e.preventDefault();
+
+        const { hostX, hostY } = this.toHostCoords(e);
+        const hit = this.hitVisualAt(hostX, hostY);
+        this.InputManager.DriveDragMove(hit ?? null, {
+            HostX: hostX, HostY: hostY,
+            Button:      PointerButton.Primary,
+            Buttons:     1,
+            Modifiers:   NoModifiers,
+            PointerId:   0,
+            Pressure:    0,
+            PointerType: 'mouse',
+        });
+        // Mirror the receiver's chosen Effect back to the browser so
+        // the OS cursor matches.
+        if (e.dataTransfer !== null)
+        {
+            e.dataTransfer.dropEffect = osDropEffectFor(this.InputManager.CurrentDragEffect);
+        }
+    }
+
+    private handleOsDragLeave(e: DragEvent): void
+    {
+        if (!this.osDragSessionActive) return;
+        // Internal element-boundary crossings fire dragleave on the old
+        // element followed by dragenter on the new one — but BOTH may
+        // be inside the host root. Distinguish "leaving the host" by
+        // checking whether the relatedTarget (the element being entered)
+        // is still inside this.host. If relatedTarget is null OR
+        // outside the host, the drag has actually left.
+        const related = e.relatedTarget as Node | null;
+        if (related !== null && this.host.contains(related)) return;
+
+        this.osDragSessionActive = false;
+        this.InputManager.CurrentDragSession?.Cancel();
+        this.PollSessionCancellation();
+    }
+
+    private handleOsDrop(e: DragEvent): void
+    {
+        if (!this.osDragSessionActive) return;
+        e.preventDefault();
+        this.osDragSessionActive = false;
+
+        const { hostX, hostY } = this.toHostCoords(e);
+        const hit = this.hitVisualAt(hostX, hostY);
+        this.InputManager.DriveDragUp(hit ?? null, {
+            HostX: hostX, HostY: hostY,
+            Button:      PointerButton.Primary,
+            Buttons:     1,
+            Modifiers:   NoModifiers,
+            PointerId:   0,
+            Pressure:    0,
+            PointerType: 'mouse',
+        });
+    }
+
+    // Hit-test at host coordinates. Mirror of the path used by
+    // PointerEvent handlers above — both end up calling the same
+    // PresentationTarget.HitTest. Extracted as a helper so the OS
+    // drag handlers don't duplicate the rect-to-hit translation.
+    private hitVisualAt(hostX: number, hostY: number): import('../../runtime/index.js').Visual | undefined
+    {
+        const rect = this.host.getBoundingClientRect();
+        const clientX = rect.left + hostX;
+        const clientY = rect.top  + hostY;
+        const list = (this.host.ownerDocument ?? document).elementsFromPoint(clientX, clientY);
+        for (const el of list)
+        {
+            const v = (el as unknown as { __mural_visual__?: import('../../runtime/index.js').Visual }).__mural_visual__;
+            if (v !== undefined) return v;
+        }
+        return undefined;
+    }
+
     // The host element passed to the constructor. Read-only access for
     // debugging and for event-routing code that needs to attach
     // listeners at the host root rather than the surface.
@@ -792,4 +965,63 @@ export class HtmlTarget extends PresentationTarget
         this.Content = content;
         return this;
     }
+}
+
+// ── OS-drag helpers (8.1) ─────────────────────────────────────────────
+
+// Translate a browser DataTransfer into a framework DataObject.
+// Browser MIME format keys carry over verbatim (`text/plain`,
+// `text/uri-list`, …). The synthetic `Files` key carries
+// `FileList` when one or more files are part of the drag — receivers
+// that want files iterate this list.
+function osDataObjectFrom(dt: DataTransfer | null): DataObject
+{
+    const out = new DataObject();
+    if (dt === null) return out;
+    for (const type of dt.types)
+    {
+        // getData throws during dragenter / dragover for some types
+        // (browsers gate it for security). Wrap defensively — the
+        // type is still discoverable via `out.Has(format)` even when
+        // the value isn't readable until drop.
+        try { out.Set(type, dt.getData(type)); }
+        catch { out.Set(type, ''); }
+    }
+    if (dt.files !== null && dt.files.length > 0)
+    {
+        out.Set('Files', dt.files);
+    }
+    return out;
+}
+
+// Best-effort translation of `DataTransfer.effectAllowed` to the
+// framework's `DragDropEffects` flag set. The browser's `'all'` /
+// `'uninitialized'` map to All; specific allow-modes map to the
+// matching subset; `'none'` maps to None so receivers reject.
+function osAllowedEffectsFrom(dt: DataTransfer | null): DragDropEffects
+{
+    if (dt === null) return DragDropEffects.All;
+    switch (dt.effectAllowed)
+    {
+        case 'none':           return DragDropEffects.None;
+        case 'copy':           return DragDropEffects.Copy;
+        case 'move':           return DragDropEffects.Move;
+        case 'link':           return DragDropEffects.Link;
+        case 'copyLink':       return DragDropEffects.Copy | DragDropEffects.Link;
+        case 'copyMove':       return DragDropEffects.Copy | DragDropEffects.Move;
+        case 'linkMove':       return DragDropEffects.Link | DragDropEffects.Move;
+        case 'all':            return DragDropEffects.All;
+        case 'uninitialized':  return DragDropEffects.All;
+        default:               return DragDropEffects.All;
+    }
+}
+
+// Mirror the receiver's chosen `Effect` back to the browser's
+// `dataTransfer.dropEffect` so the OS cursor matches.
+function osDropEffectFor(effect: DragDropEffects): 'none' | 'copy' | 'move' | 'link'
+{
+    if (effect & DragDropEffects.Copy) return 'copy';
+    if (effect & DragDropEffects.Move) return 'move';
+    if (effect & DragDropEffects.Link) return 'link';
+    return 'none';
 }

@@ -977,6 +977,18 @@ export class Compiler
             {
                 eventTriggerVars.push(this.compileEventTriggerGroup(tt, item));
             }
+            else if (item.kind === 'behaviors-block')
+            {
+                // `Behaviors { … }` at Style body level would attach the
+                // same per-style Behavior instances to every target —
+                // multiple targets would stomp on each other's state.
+                // Behaviors inside a Style only make sense scoped to a
+                // trigger body (each enter creates a fresh instance via
+                // the AttachBehaviorAction factory).
+                throw new EmitError(
+                    "Behaviors { … } block is only allowed inside a when(…) trigger body — not at Style body level",
+                    item.span);
+            }
             else
             {
                 const out = this.compileTriggerGroup(tt, item);
@@ -1294,6 +1306,21 @@ export class Compiler
                     `inside when(): only 'enter' and 'exit' are valid 'on' names — got '${item.eventName}'`,
                     item.span);
             }
+            if (item.kind === 'behaviors-block')
+            {
+                // Each Behavior entry lowers to a paired Attach + Detach
+                // action: Attach enters via the trigger's activation
+                // edge (factory-based so every target instance gets a
+                // fresh Behavior), Detach exits via the matching
+                // deactivation edge.
+                for (const entry of item.entries)
+                {
+                    const { attachVar, detachVar } = this.compileTriggeredBehavior(entry);
+                    enterActionVars.push(attachVar);
+                    exitActionVars.push(detachVar);
+                }
+                continue;
+            }
             throw new EmitError(
                 'nested triggers are not supported', item.span);
         }
@@ -1390,6 +1417,27 @@ export class Compiler
             }
         }
         return { propertyTriggers, multiTriggers, dataTriggers };
+    }
+
+    // Emits a paired Attach/Detach action for one entry in a trigger's
+    // Behaviors block. The factory closure wrapped by
+    // AttachBehaviorAction re-invokes the entry's full compileElement
+    // path each fire, so each (trigger, target) pair gets a fresh
+    // Behavior with its own per-instance DPs.
+    private compileTriggeredBehavior(entry: ElementNode): { attachVar: string; detachVar: string }
+    {
+        this.ensureImport('AttachBehaviorAction');
+        this.ensureImport('DetachBehaviorAction');
+        const attachVar = this.fresh('attBeh');
+        const detachVar = this.fresh('detBeh');
+        this.line(`const ${attachVar} = new AttachBehaviorAction(() => {`);
+        this.indent += 4;
+        const behaviorVar = this.compileElement(entry);
+        this.line(`return ${behaviorVar};`);
+        this.indent -= 4;
+        this.line(`});`);
+        this.line(`const ${detachVar} = new DetachBehaviorAction(${attachVar});`);
+        return { attachVar, detachVar };
     }
 
     private evaluateTermValue(term: TriggerTermLite): string

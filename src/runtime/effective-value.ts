@@ -1,6 +1,8 @@
 import { Binding, BindingMode } from './binding.js';
+import { isAnimationProhibited, isNotDataBindable } from './metadata.js';
 import type { Model } from './model.js';
 import type { PropertyDescriptor } from './property-descriptor.js';
+import { Validation } from './validation.js';
 
 // Invoked after a property's effective value changes, with the model
 // whose property changed and the old/new effective values. Users get the
@@ -346,6 +348,19 @@ export class EffectiveValueDescriptor
     // and the previous binding (if any) is disposed.
     set value(val: any)
     {
+        // IsNotDataBindable gate: structural DPs (Style.TargetType,
+        // DataTemplate.DataType, Setter.Property, …) refuse Binding
+        // installs at the call site rather than producing weird
+        // downstream behavior when the binding resolves to something
+        // the framework can't interpret. Direct value writes go
+        // through unchanged.
+        if (val instanceof Binding && isNotDataBindable(this.property_descriptor.MetaData))
+        {
+            throw new Error(
+                `Property '${this.property_descriptor.RootOwner.name}.${this.property_descriptor.Name}' is marked IsNotDataBindable — Binding installs are rejected.`,
+            );
+        }
+
         const old_effective_value = this.value;
 
         // TwoWay / OneWayToSource writeback: route non-Binding writes
@@ -355,6 +370,17 @@ export class EffectiveValueDescriptor
             && (this.binding_value.mode === BindingMode.TwoWay
              || this.binding_value.mode === BindingMode.OneWayToSource))
         {
+            // Validation gate: any failing rule blocks the writeback
+            // and surfaces the errors on the target via Validation
+            // attached properties. The source keeps its previous
+            // value; consumers see the target's previous value too
+            // (no OnPropertyChange fires).
+            if (this.binding_value.HasValidationRules)
+            {
+                const errors = this.binding_value.Validate(val);
+                Validation.SetErrors(this.owner, this.binding_value, errors);
+                if (errors.length > 0) return;
+            }
             if (this.binding_value.set_value(val))
             {
                 // Source update fired the binding's push notification,
@@ -370,6 +396,13 @@ export class EffectiveValueDescriptor
         // would keep holding (now-silent) listener references — a leak.
         if (this.binding_value !== undefined && this.binding_value !== val)
         {
+            // Clear any validation errors the old binding had set on
+            // the target — the binding is no longer the source of
+            // truth for those errors.
+            if (this.binding_value.HasValidationRules)
+            {
+                Validation.SetErrors(this.owner, this.binding_value, []);
+            }
             this.binding_value.dispose();
             this.binding_value = undefined;
         }
@@ -394,10 +427,30 @@ export class EffectiveValueDescriptor
             {
                 const old_final = this.apply_coerce(val.apply_transform(old_resolved));
                 const new_final = this.apply_coerce(val.apply_transform(new_resolved));
+                // Validation on every push: source-side reads update
+                // the target's error state but the value still flows
+                // through to consumers (per the chosen scope).
+                if (val.HasValidationRules)
+                {
+                    Validation.SetErrors(this.owner, val, val.Validate(new_final));
+                }
                 if (old_final !== new_final)
                 {
                     this.OnPropertyChange(old_final, new_final);
                 }
+            });
+            // Collection-as-leaf pulse: the binding's source path
+            // resolves to a collection (ObservableCollection or
+            // observable-array proxy) and its contents change. The
+            // value identity hasn't shifted — bypassing the dedup
+            // above is exactly the point. Listeners fire with
+            // (coll, coll) so a consumer bound to the collection
+            // sees PropertyChanged on every mutation, mirroring
+            // INotifyCollectionChanged.
+            val.setOnCollectionPulse(() =>
+            {
+                const v = this.value;
+                this.OnPropertyChange(v, v);
             });
             // Animation stays on top — the binding cache updates so a
             // later Stop / ClearAnimated falls through to the fresh
@@ -409,7 +462,15 @@ export class EffectiveValueDescriptor
             this.source = PropertyValueSource.Binding;
             // New value reads through `this.value` so coerce (if any)
             // is applied; listeners see the same values consumers do.
-            this.OnPropertyChange(old_effective_value, this.value);
+            const new_effective_value = this.value;
+            // Initial validation pass on install so the target's
+            // Validation state reflects the freshly-resolved value
+            // before any push notification fires.
+            if (val.HasValidationRules)
+            {
+                Validation.SetErrors(this.owner, val, val.Validate(new_effective_value));
+            }
+            this.OnPropertyChange(old_effective_value, new_effective_value);
         }
         else
         {
@@ -442,6 +503,12 @@ export class EffectiveValueDescriptor
     // responsibility to release.
     SetAnimatedValue(value: any): void
     {
+        if (isAnimationProhibited(this.property_descriptor.MetaData))
+        {
+            throw new Error(
+                `Property '${this.property_descriptor.RootOwner.name}.${this.property_descriptor.Name}' is marked IsAnimationProhibited — animation writes are rejected.`,
+            );
+        }
         const old_effective_value = this.value;
         this.animated_value = value;
         this.has_animated_value = true;

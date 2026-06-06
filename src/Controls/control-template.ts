@@ -67,15 +67,28 @@ export class ControlTemplate
 }
 
 // Walks the visual subtree of a freshly-built template and stamps
-// the TemplatedParent back-pointer on every node. Recurses into
-// visualChildren — logicalChildren aren't followed because at this
-// point the template tree contains only template-internal visuals
-// (the consumer's Content hasn't been slotted yet) and they coincide.
+// the TemplatedParent back-pointer on every node. Stops at sub-template
+// roots so a nested templated control's internal parts keep THEIR own
+// templatedParent (set by their inner Apply), not ours. Also walks
+// logicalChildren that aren't direct visualChildren — for a templated
+// control authored in the outer template (e.g. `ScrollViewer { ... }`)
+// the consumer's Content lives logically here but is visually buried
+// inside the inner template, past the nameScope barrier we just
+// skipped.
 function markTemplated(visual: Visual, templatedParent: Visual): void
 {
     visual.SetTemplatedParent(templatedParent);
-    for (const child of visual.visualChildren)
+    const visualKids = visual.visualChildren;
+    for (const child of visualKids)
     {
+        if (child.nameScope !== undefined) continue;
+        markTemplated(child, templatedParent);
+    }
+    const logicalKids = visual.logicalChildren;
+    if (logicalKids.length === 0) return;
+    for (const child of logicalKids)
+    {
+        if (visualKids.includes(child)) continue;
         markTemplated(child, templatedParent);
     }
 }
@@ -97,7 +110,8 @@ export function registerNamedVisuals(visual: Visual, scope: NameScope): void
     {
         scope.Register(name, visual);
     }
-    for (const child of visual.visualChildren)
+    const visualKids = visual.visualChildren;
+    for (const child of visualKids)
     {
         // Stop at a sub-template root — its own NameScope owns the
         // descendants below it, and re-registering them in the outer
@@ -109,17 +123,42 @@ export function registerNamedVisuals(visual: Visual, scope: NameScope): void
         if (child.nameScope !== undefined) continue;
         registerNamedVisuals(child, scope);
     }
+    // Walk logical-only children too. A templated visual's CONSUMER
+    // Content (set via `.Content = …` in the surrounding template) is
+    // its logical child but NOT its direct visual child — visually it
+    // lives inside the template's internal ContentPresenter slot, on
+    // the OTHER side of the nameScope barrier we just skipped. Without
+    // this second pass, names set on consumer-supplied content of a
+    // templated control (e.g. `TextEditorSurface x:name="PART_Editor"`
+    // inside `ScrollViewer x:name="PART_Scroll" { … }`) would never
+    // reach the outer scope. Skip entries already covered by the visual
+    // pass so a non-templated host (Border, StackPanel) doesn't
+    // double-register its single Child.
+    const logicalKids = visual.logicalChildren;
+    if (logicalKids.length === 0) return;
+    for (const child of logicalKids)
+    {
+        if (visualKids.includes(child)) continue;
+        registerNamedVisuals(child, scope);
+    }
 }
 
 // Depth-first search for the first ContentPresenter in the template
 // subtree. WPF's convention is "the first one wins" when a template
 // contains multiple — covers the common case (one Content slot)
-// without forcing the factory to expose it explicitly.
+// without forcing the factory to expose it explicitly. Stops at
+// sub-template roots: a nested templated control's internal
+// ContentPresenter (e.g. the SCP inside a ScrollViewer that the
+// OUTER template authored) is THAT control's slot, not ours. Without
+// this barrier a Button whose template happens to embed a
+// ScrollViewer would route Button.Content into the ScrollViewer's
+// SCP instead of the Button's own ContentPresenter.
 function findFirstContentPresenter(visual: Visual): ContentPresenter | undefined
 {
     if (visual instanceof ContentPresenter) return visual;
     for (const child of visual.visualChildren)
     {
+        if (child.nameScope !== undefined) continue;
         const found = findFirstContentPresenter(child);
         if (found !== undefined) return found;
     }

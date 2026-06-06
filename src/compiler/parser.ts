@@ -339,7 +339,40 @@ export class Parser
         {
             return this.parseEventTriggerGroup();
         }
+        if (tk.kind === TokenKind.Ident && tk.value === 'Behaviors'
+            && this.peek(1).kind === TokenKind.LBrace)
+        {
+            return this.parseBehaviorsBlock();
+        }
         return this.parsePropertySetter();
+    }
+
+    // `Behaviors { BehaviorClass[Foo=…] BehaviorClass2[…] }` inside a
+    // `when()` trigger body. Each child is a Behavior class invocation
+    // (parsed via the normal element parser). Compiler lowers each into
+    // an AttachBehaviorAction / DetachBehaviorAction pair on the
+    // trigger's enter / exit edges. A `Behaviors { … }` block at Style
+    // body level (outside any trigger) is rejected by the compiler —
+    // the parser still accepts it so the error message points at the
+    // emit phase rather than a parser confusion.
+    private parseBehaviorsBlock(): import('./ast.js').BehaviorsBlock
+    {
+        const start = this.expectIdent('Behaviors').span.start;
+        this.expect(TokenKind.LBrace);
+        const entries: ElementNode[] = [];
+        while (this.peek().kind !== TokenKind.RBrace
+            && this.peek().kind !== TokenKind.EOF)
+        {
+            entries.push(this.parseElement());
+        }
+        const closer = this.expect(TokenKind.RBrace);
+        // Trailing semicolon is consistent with on{} / when{} blocks.
+        if (this.peek().kind === TokenKind.Semicolon) this.consume();
+        return {
+            kind:    'behaviors-block',
+            entries,
+            span:    this.span(start, closer.span.end),
+        };
     }
 
     // `on EventName { TriggerAction-list }` — declarative routed-event

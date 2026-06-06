@@ -201,7 +201,26 @@ export interface SetterList
     span:  SourceSpan;
 }
 
-export type SetterItem = PropertySetter | TriggerGroup | EventTriggerGroup;
+export type SetterItem = PropertySetter | TriggerGroup | EventTriggerGroup | BehaviorsBlock;
+
+// Conditional behavior attach inside a `when()` trigger body. Each
+// entry is a Behavior element — the compiler emits a paired
+// AttachBehaviorAction (into the trigger's enterActions) and
+// DetachBehaviorAction (into the trigger's exitActions) so the
+// behavior is attached when the trigger activates and torn off when
+// it deactivates. Mirrors WPF's Interaction.Triggers + InvokeBehavior
+// pattern within the existing trigger machinery.
+//
+// Authoring shape:
+//   when($IsBusy) {
+//       Behaviors { ShakeBehavior[Amplitude=4] }
+//   }
+export interface BehaviorsBlock
+{
+    kind:    'behaviors-block';
+    entries: ElementNode[];
+    span:    SourceSpan;
+}
 
 // Routed-event trigger inside a style block. Lowered to runtime
 // EventTrigger + TriggerAction wiring at emit. Body is a sequence of

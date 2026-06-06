@@ -628,3 +628,99 @@ describe('PointerEventArgs.BeginDragDrop', () => {
         im.ObserveSessionCancellation();
     });
 });
+
+// Pins backlog 8.3: OnFeedback / OnContinueQuery source-side hooks.
+describe('DragSession — source-side feedback hooks', () => {
+    function pointerInit(x: number, y: number): PointerEventInit
+    {
+        return {
+            HostX: x, HostY: y,
+            ButtonIndex: PointerButton.Primary,
+            Modifiers: NoModifiers,
+        };
+    }
+
+    function setupSession(): { im: InputManager; source: Visual; session: DragSession }
+    {
+        const im = new InputManager();
+        const source = new Panel();
+        DragDrop.DoDragDrop(source, new DataObject(), DragDropEffects.Copy);
+        im.PickUpPendingDragSession();
+        const session = im.CurrentDragSession!;
+        return { im, source, session };
+    }
+
+    test('OnFeedback fires on every receiver-effect change; dedupes on identical effects', () => {
+        const { session } = setupSession();
+        const fires: DragDropEffects[] = [];
+        session.OnFeedback((e) => { fires.push(e); });
+
+        session._fireFeedback(DragDropEffects.Copy);
+        session._fireFeedback(DragDropEffects.Copy);  // duplicate — skipped
+        session._fireFeedback(DragDropEffects.Move);
+        session._fireFeedback(DragDropEffects.None);
+        assert.deepEqual(fires, [DragDropEffects.Copy, DragDropEffects.Move, DragDropEffects.None]);
+    });
+
+    test('Returning false from OnContinueQuery cancels the drag on next move', () => {
+        const { im } = setupSession();
+        const session = im.CurrentDragSession!;
+        let shouldContinue = true;
+        session.OnContinueQuery(() => shouldContinue);
+        assert.equal(im.IsDragActive, true);
+
+        // Continue=true → move samples flow through.
+        im.DriveDragMove(null, pointerInit(10, 10));
+        assert.equal(im.IsDragActive, true);
+
+        // Flip to false → next move cancels.
+        shouldContinue = false;
+        im.DriveDragMove(null, pointerInit(20, 20));
+        assert.equal(im.IsDragActive, false);
+        assert.equal(session.IsSettled, true);
+    });
+
+    test('Multiple OnContinueQuery callbacks AND together — any false cancels', () => {
+        const { im } = setupSession();
+        const session = im.CurrentDragSession!;
+        session.OnContinueQuery(() => true);
+        session.OnContinueQuery(() => false);  // this one wants cancel
+        session.OnContinueQuery(() => true);
+
+        im.DriveDragMove(null, pointerInit(10, 10));
+        assert.equal(im.IsDragActive, false);
+    });
+
+    test('Feedback and continue subscribers are cleared on session complete', () => {
+        const { im } = setupSession();
+        const session = im.CurrentDragSession!;
+        let feedbackFired = 0;
+        let continueFired = 0;
+        session.OnFeedback(() => { feedbackFired++; });
+        session.OnContinueQuery(() => { continueFired++; return true; });
+
+        session.Cancel();
+        // Post-complete invocations of the framework-internal hooks are
+        // no-ops — the subscriber sets have been cleared.
+        session._fireFeedback(DragDropEffects.Copy);
+        session._pollContinue();
+        assert.equal(feedbackFired, 0);
+        assert.equal(continueFired, 0);
+    });
+});
+
+// Pins backlog 8.1: OS-level drops synthesize a DragSession with
+// `Source === undefined`. This test verifies the shape — the actual
+// HTML5 DragEvent wiring lives in HtmlTarget and is covered by the
+// integration tests there.
+describe('DragSession — OS-level drops (Source: undefined)', () => {
+    test('Session with undefined source is constructible and reports it', () => {
+        const data = new DataObject().Set('text/plain', 'hello');
+        const session = new DragSession(undefined, data, DragDropEffects.Copy);
+        assert.equal(session.Source, undefined);
+        assert.equal(session.Data.Get('text/plain'), 'hello');
+        // Lifecycle still works.
+        session.Cancel();
+        assert.equal(session.IsSettled, true);
+    });
+});

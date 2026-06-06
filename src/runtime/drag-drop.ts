@@ -70,16 +70,24 @@ import type { Visual } from './visual.js';
 // session end. then() returns the inner promise's then().
 export class DragSession implements PromiseLike<DragDropEffects>
 {
-    public readonly Source:         Visual;
+    // Source is the originating Visual when the drag was initiated by
+    // user code via `DragDrop.DoDragDrop`. For OS-level drops (8.1) the
+    // session is synthesized by the host with no in-tree origin —
+    // Source is then `undefined` and consumers can detect "this came
+    // from outside the app" by that.
+    public readonly Source:         Visual | undefined;
     public readonly Data:           DataObject;
     public readonly AllowedEffects: DragDropEffects;
 
-    private readonly _moveSubs:     Set<(x: number, y: number) => void> = new Set();
-    private readonly _completion:   Promise<DragDropEffects>;
-    private          _resolve!:     (e: DragDropEffects) => void;
-    private          _settled:      boolean = false;
+    private readonly _moveSubs:        Set<(x: number, y: number) => void> = new Set();
+    private readonly _feedbackSubs:    Set<(effect: DragDropEffects) => void> = new Set();
+    private readonly _continueQueries: Set<() => boolean> = new Set();
+    private readonly _completion:      Promise<DragDropEffects>;
+    private          _resolve!:        (e: DragDropEffects) => void;
+    private          _settled:         boolean = false;
+    private          _lastFeedback:    DragDropEffects = DragDropEffects.None;
 
-    constructor(source: Visual, data: DataObject, allowedEffects: DragDropEffects)
+    constructor(source: Visual | undefined, data: DataObject, allowedEffects: DragDropEffects)
     {
         this.Source         = source;
         this.Data           = data;
@@ -91,6 +99,38 @@ export class DragSession implements PromiseLike<DragDropEffects>
     {
         this._moveSubs.add(cb);
         return () => { this._moveSubs.delete(cb); };
+    }
+
+    // Source-side feedback hook — fires whenever the receiver chooses a
+    // new `Effect` (different from the previous one). Useful for swapping
+    // a custom drag-image when the cursor moves over a "delete" zone vs
+    // a "move" zone, or for updating source-side UI to mirror the
+    // receiver's intent. Initial state is `None`; the first
+    // non-None receiver triggers a feedback fire.
+    //
+    // Returns the unsubscribe thunk. Mirrors WPF's `GiveFeedback`
+    // (cursor case excluded — the framework's automatic
+    // `host.style.cursor` writes already handle that).
+    public OnFeedback(cb: (effect: DragDropEffects) => void): () => void
+    {
+        this._feedbackSubs.add(cb);
+        return () => { this._feedbackSubs.delete(cb); };
+    }
+
+    // Source-side cancel hook — polled every move sample. Returning
+    // `false` cancels the drag (the InputManager calls
+    // session._complete(None) and clears the drag state). Useful for
+    // modifier-key abort patterns: e.g., a query that reads
+    // `host.modifiers.shift` and returns false when Shift is held.
+    //
+    // Multiple queries are AND-ed (if ANY returns false, the drag
+    // cancels). The query is allowed to mutate external state
+    // (logging, hint badges, etc.) — but should be fast since it
+    // fires on every move.
+    public OnContinueQuery(cb: () => boolean): () => void
+    {
+        this._continueQueries.add(cb);
+        return () => { this._continueQueries.delete(cb); };
     }
 
     public Cancel(): void
@@ -118,11 +158,38 @@ export class DragSession implements PromiseLike<DragDropEffects>
         for (const cb of this._moveSubs) cb(hostX, hostY);
     }
 
+    // Fired by the InputManager after each DragOver dispatch. Skips the
+    // notification when the receiver's chosen effect hasn't changed
+    // since the previous sample — feedback handlers only see the
+    // edges, not every move.
+    public _fireFeedback(effect: DragDropEffects): void
+    {
+        if (effect === this._lastFeedback) return;
+        this._lastFeedback = effect;
+        for (const cb of this._feedbackSubs) cb(effect);
+    }
+
+    // Polled by the InputManager on every move sample. Returns `false`
+    // when ANY registered query returned `false`, signalling the
+    // caller (DriveDragMove) to cancel the drag. Returns `true` when
+    // every query agrees the drag should continue OR no queries are
+    // installed.
+    public _pollContinue(): boolean
+    {
+        for (const q of this._continueQueries)
+        {
+            if (q() === false) return false;
+        }
+        return true;
+    }
+
     public _complete(effect: DragDropEffects): void
     {
         if (this._settled) return;
         this._settled = true;
         this._moveSubs.clear();
+        this._feedbackSubs.clear();
+        this._continueQueries.clear();
         this._resolve(effect);
     }
 

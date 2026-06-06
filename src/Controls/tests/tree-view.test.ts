@@ -89,13 +89,16 @@ describe('TreeView — composed-markup tree shape', () => {
         assert.equal(tree.RootItems.length, 1);
         assert.equal(tree.RootItems[0], a);
         // ItemsControl-shape visual tree: TreeView → ScrollViewer →
-        // ItemsPresenter → items panel (StackPanel) → root rows. The
-        // extra ItemsPresenter layer is the slot the ItemsControl
+        // ScrollContentPresenter → ItemsPresenter → items panel
+        // (StackPanel) → root rows. SCP comes from ScrollViewer's
+        // default template (since the §11 templated-ScrollViewer
+        // refactor); the ItemsPresenter is the slot the ItemsControl
         // base wires the panel into; the StackPanel is built by
-        // TreeView.ItemsPanel.
+        // TreeView.ItemsPanel. Walk through ScrollViewer.ContentPresenter
+        // to skip past the template's layout panel.
         const sv = tree.visualChildren[0]!;
         assert.ok(sv instanceof ScrollViewer);
-        const presenter = sv.visualChildren[0]!;
+        const presenter = sv.ContentPresenter!.visualChildren[0]!;
         assert.ok(presenter instanceof ItemsPresenter);
         const stack = presenter.visualChildren[0]!;
         assert.ok(stack instanceof StackPanel);

@@ -10,6 +10,17 @@ export enum MetaData
     Render               = 1 << 2,
     Inherits             = 1 << 3,
     BindsTwoWayByDefault = 1 << 4,
+    // Reject Binding installs on this property. Used for structural
+    // DPs that the framework needs to resolve at parse / template-build
+    // time — Style.TargetType, DataTemplate.DataType, Setter.Property,
+    // and similar — where a runtime-resolved binding would silently
+    // break style/template lookup or NameScope registration.
+    IsNotDataBindable    = 1 << 5,
+    // Reject Storyboard / SetAnimatedValue on this property. Used for
+    // reference-type identity DPs (DataContext, ItemsSource) and
+    // structural collections (RowDefinitions) where interpolation is
+    // nonsensical and would yield undefined intermediate states.
+    IsAnimationProhibited = 1 << 6,
 }
 
 export function affectsMeasure(meta: MetaData): boolean
@@ -35,4 +46,14 @@ export function inherits(meta: MetaData): boolean
 export function bindsTwoWayByDefault(meta: MetaData): boolean
 {
     return (meta & MetaData.BindsTwoWayByDefault) !== 0;
+}
+
+export function isNotDataBindable(meta: MetaData): boolean
+{
+    return (meta & MetaData.IsNotDataBindable) !== 0;
+}
+
+export function isAnimationProhibited(meta: MetaData): boolean
+{
+    return (meta & MetaData.IsAnimationProhibited) !== 0;
 }

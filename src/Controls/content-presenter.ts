@@ -79,6 +79,21 @@ export class ContentPresenter extends Visual
         this.InvalidateMeasure();
     }
 
+    // Cascade host (`target`) to the slotted content. ContentPresenter's
+    // _content is its only visual child, but Visual's default
+    // propagate_target_to_visual_children is a no-op (Single / Panel
+    // override it). Without this override, a presenter that received its
+    // Content BEFORE its own target was set (e.g. SCP inside
+    // ScrollViewer's template — Content is assigned by the OUTER template
+    // factory at construction time, but `target` doesn't arrive until
+    // the containing target's Content setter cascades down later) would
+    // never propagate target to its child, leaving the slotted Visual
+    // unable to InvalidateVisual / register routed-event listeners.
+    protected override propagate_target_to_visual_children(): void
+    {
+        this._content?.['SetTarget'](this['target']);
+    }
+
     protected override MeasureOverride(availableSize: Size): Size
     {
         if (this._content === undefined) return Size.Zero;

@@ -2,6 +2,11 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
     Color,
+    DataObject,
+    DragDropEffects,
+    DragEventArgs,
+    DragSession,
+    NoModifiers,
     Rect,
     Size,
     Visual,
@@ -125,17 +130,20 @@ describe('ScrollViewer — clip-and-translate mode (plain content)', () => {
         assert.equal(sv.VerticalOffset, 0);
     });
 
-    test('Content is a logical AND visual child of the ScrollViewer', () => {
+    test('Content is a logical child of the ScrollViewer; visually it lands in the SCP slot', () => {
         const sv = new ScrollViewer();
         const content = new FixedRect(new Size(100, 100));
         sv.Content = content;
-        // Default-template surface: Content + vertical bar + horizontal
-        // bar. Identity-check Content's slot rather than deep-equaling
-        // the whole array — the scrollbars carry their own template
-        // sub-tree that would slow a deep compare to a crawl.
-        assert.equal(sv.visualChildren.length, 3);
-        assert.equal(sv.visualChildren[0], content);
-        assert.deepEqual(sv.logicalChildren, [content]);
+        // ScrollViewer is now ContentControl-derived — visualChildren is
+        // the template root (ScrollViewerLayout); the consumer Content
+        // lives visually inside the ScrollContentPresenter slot, which
+        // is reachable via the ContentPresenter accessor. logicalChildren
+        // still tracks Content directly because the template only owns
+        // the visual tree.
+        assert.equal(sv.logicalChildren.length, 1);
+        assert.equal(sv.logicalChildren[0], content);
+        assert.ok(sv.ContentPresenter !== undefined);
+        assert.equal(sv.ContentPresenter!.visualChildren[0], content);
     });
 
     test('replacing Content detaches the previous instance and attaches the new one', () => {
@@ -144,9 +152,11 @@ describe('ScrollViewer — clip-and-translate mode (plain content)', () => {
         const b = new FixedRect(new Size(200, 200));
         sv.Content = a;
         sv.Content = b;
-        // First slot in visualChildren is the live Content.
-        assert.equal(sv.visualChildren[0], b);
-        // Detached `a` has no parent now.
+        // The SCP's visual slot now holds `b` — the consumer-facing
+        // contract is "Content goes through the presenter," not "Content
+        // is sv.visualChildren[0]" (which is the template root now).
+        assert.equal(sv.ContentPresenter!.visualChildren[0], b);
+        // Detached `a` has no visual parent now.
         const aParent = (a as unknown as { visualParent: Visual | undefined }).visualParent;
         assert.equal(aParent, undefined);
     });
@@ -250,5 +260,123 @@ describe('ScrollViewer — delegate mode (IScrollInfo content, e.g., Virtualizin
         sv.Measure(new Size(100, 50));
         sv.Arrange(new Rect(0, 0, 100, 50));
         assert.equal(sv.Clip, undefined);
+    });
+});
+
+// Pins backlog 8.4: auto-scroll while a drag is hovering near the
+// viewport edges. The behavior installs an OnMove subscription on the
+// active session; the move callback nudges HorizontalOffset /
+// VerticalOffset toward the cursor's edge while the cursor stays in
+// the gutter.
+describe('ScrollViewer — auto-scroll near edges during drag (8.4)', () => {
+    function setupForAutoScroll(): { sv: ScrollViewer; session: DragSession }
+    {
+        const sv = new ScrollViewer();
+        // Auto-hide bars so the always-visible-bar gutter (10px) doesn't
+        // shrink the effective viewport — keeps the test coordinates clean.
+        sv.IsAutoHideScrollBars = true;
+        // Inflate content so the viewport has scrollable extent.
+        sv.Content = new (class extends Visual {
+            protected override MeasureOverride(_a: Size): Size { return new Size(500, 500); }
+        })();
+        sv.Measure(new Size(100, 100));
+        sv.Arrange(new Rect(0, 0, 100, 100));
+        // Step large enough to see motion in one tick.
+        sv.AutoScrollStep = 10;
+
+        const session = new DragSession(undefined, new DataObject(), DragDropEffects.Copy);
+        return { sv, session };
+    }
+
+    function fireEnter(sv: ScrollViewer, session: DragSession): void
+    {
+        const args = new DragEventArgs('DragEnter', sv, {
+            HostX: 50, HostY: 50,
+            Modifiers: NoModifiers,
+            Data: session.Data,
+            AllowedEffects: session.AllowedEffects,
+            Session: session,
+        });
+        // Drive the preview virtual directly (mirrors what
+        // applyReceiverChange + dispatchDrag do).
+        (sv as unknown as { OnPreviewDragEnter(args: DragEventArgs): void }).OnPreviewDragEnter(args);
+    }
+
+    test('AutoScrollGutter defaults to 24; AutoScrollStep to 4', () => {
+        const sv = new ScrollViewer();
+        assert.equal(sv.AutoScrollGutter, 24);
+        assert.equal(sv.AutoScrollStep, 4);
+    });
+
+    test('A drag enter wires a session.OnMove subscription that nudges VerticalOffset when near the bottom edge', async () => {
+        const { sv, session } = setupForAutoScroll();
+        fireEnter(sv, session);
+
+        assert.equal(sv.VerticalOffset, 0);
+        // Sample a move near the BOTTOM edge — within the 24px gutter
+        // (viewport is 100×100 so y > 76 is in the gutter).
+        session._fireMove(50, 95);
+        // First tick fires synchronously inside _startAutoScrollTick.
+        assert.equal(sv.VerticalOffset, 10);
+        session.Cancel();  // tear down setInterval so the test runner exits
+        await Promise.resolve();
+    });
+
+    test('A move in the middle stops the auto-scroll tick', async () => {
+        const { sv, session } = setupForAutoScroll();
+        fireEnter(sv, session);
+
+        session._fireMove(50, 95);
+        assert.equal(sv.VerticalOffset, 10);
+
+        // Move back to the middle — tick must stop; subsequent move samples
+        // don't change the offset.
+        session._fireMove(50, 50);
+        const before = sv.VerticalOffset;
+        session._fireMove(50, 50);
+        assert.equal(sv.VerticalOffset, before);
+        session.Cancel();
+        await Promise.resolve();
+    });
+
+    test('Cursor outside the viewport stops the tick', async () => {
+        const { sv, session } = setupForAutoScroll();
+        fireEnter(sv, session);
+        session._fireMove(50, 95);
+        const before = sv.VerticalOffset;
+
+        // Cursor moves above the viewport (negative y in local) — stop.
+        session._fireMove(50, -10);
+        const after = sv.VerticalOffset;
+        assert.equal(after, before);
+        session.Cancel();
+        await Promise.resolve();
+    });
+
+    test('AutoScrollGutter = 0 disables the feature', async () => {
+        const { sv, session } = setupForAutoScroll();
+        sv.AutoScrollGutter = 0;
+        fireEnter(sv, session);
+        session._fireMove(50, 95);
+        assert.equal(sv.VerticalOffset, 0, 'no scroll when gutter is 0');
+        session.Cancel();
+        await Promise.resolve();
+    });
+
+    test('Session completion tears down the auto-scroll wiring', async () => {
+        const { sv, session } = setupForAutoScroll();
+        fireEnter(sv, session);
+        session._fireMove(50, 95);
+        assert.ok(sv.VerticalOffset > 0);
+
+        session.Cancel();
+        // Wait one microtask for the .then() callback to fire.
+        await Promise.resolve();
+        const after = sv.VerticalOffset;
+
+        // Post-cancel moves should not nudge — the OnMove subscriber
+        // was cleared on session complete.
+        session._fireMove(50, 95);
+        assert.equal(sv.VerticalOffset, after);
     });
 });

@@ -54,8 +54,23 @@ Model.RegisterProperty(
     property: string,      // the property name
     default_value: any,    // returned by get when no value has been set
     meta_data: MetaData,   // flag enum — affects Measure/Arrange/Render/Inherits routing
-    coerce_value?: CoerceValue,  // optional value-normalization callback
+    coerce_value?: CoerceValue,        // optional value-normalization callback
+    validate_value?: ValidateValue,    // optional boolean gate — rejected writes throw
 ): void
+```
+
+`ValidateValue` is a `(value) => boolean` predicate that runs BEFORE
+storage and coerce on every write. A `false` result rejects the write
+with no side effects — neither storage nor listeners fire. The default
+value is checked against the rule at registration time; a default that
+fails throws at registration. Bindings bypass the gate (installing a
+Binding is not a value-in-the-domain write).
+
+```ts
+Model.RegisterProperty(Item, 'count', 0, MetaData.None,
+    undefined,                  // no coerce
+    (v) => typeof v === 'number' && v >= 0,  // reject negatives
+);
 ```
 
 `CoerceValue` runs on every effective-value recomputation — every read,
@@ -230,6 +245,41 @@ The path attaches change listeners at each Model along the chain. When any
 chain member's relevant property mutates, the path re-traverses from the
 mutated segment forward and pushes the new terminal value through.
 
+### Collection reactivity (`INotifyCollectionChanged`)
+
+When a path traverses an `ObservableCollection<T>` or a plain `Array<T>`
+at an index segment (`managers[2]`), the binding subscribes to that
+collection's mutation channel. Operations that affect the value at the
+bound index — `SetAt(2, …)`, `Insert(0, …)` (shifts our item right),
+`RemoveAt(0)` (shifts left), `Clear()` — re-resolve the binding and push
+the new terminal value through. Operations that don't affect the index
+(e.g., `Add(item)` on a tail-only mutation) re-evaluate but emit no push
+because the resolved value at index 2 is unchanged.
+
+`ObservableCollection<T>` is the canonical reactive collection; plain
+arrays get the same behavior via a Proxy wrapper minted on first read
+(`observe_array(arr)` returns the same proxy on repeated calls). The
+caveat for plain arrays: only mutations routed through the proxy
+notify. The proxy is what the binding returns and what
+`view._get_property_value_by_name(...)` resolves to when the property
+holds the binding; mutating the underlying raw array directly bypasses
+the trap and won't push. For guaranteed reactivity regardless of how
+the collection is held, use `ObservableCollection<T>`.
+
+#### Collection-as-leaf pulses
+
+A binding whose path resolves to a collection itself
+(`new Binding(holder, 'managers')`) emits a pulse on every mutation
+even though the resolved collection's identity is unchanged. The pulse
+fires through the same `PropertyChanged` channel that delivers normal
+value transitions; consumers see `(coll, coll)` and read the current
+contents through the resolved value. This mirrors WPF's
+`INotifyCollectionChanged` channel surfaced through `INotifyPropertyChanged`.
+`ItemsControl` and other collection consumers normally subscribe to
+the collection directly rather than going through this pulse, but the
+channel exists so a bound property can react to "items changed" without
+extra plumbing.
+
 ### Binding pipeline
 
 Optional `BindingOptions` apply transformations between source and target.
@@ -252,6 +302,92 @@ new Binding(model, 'count', BindingMode.OneWay, {
 - `StringFormat` wraps after convert; one-way only (TwoWay writeback bypasses).
 - `TargetNullValue` substitutes when the resolved value is null.
 - `FallbackValue` substitutes when the resolved value is undefined.
+
+### `validationRules` — gating the binding
+
+`BindingOptions.validationRules?: readonly ValidationRule[]` runs every
+rule against the post-pipeline value on every push (source → target) and
+on every TwoWay / OneWayToSource writeback (target → source). Failures
+surface on the target via the `Validation.HasError` / `Validation.Errors`
+attached properties; on writeback, the source write is blocked so the
+source keeps its previous value.
+
+```ts
+import { Binding, BindingMode, Validation, type ValidationRule } from '@visualisation-sub/mural/runtime';
+
+const notEmpty: ValidationRule = {
+    validate(v) {
+        return typeof v === 'string' && v.length > 0
+            ? { isValid: true }
+            : { isValid: false, errorContent: 'required' };
+    },
+};
+
+target.set_property_value_by_name(
+    'label',
+    new Binding(src, 'title', BindingMode.TwoWay, { validationRules: [notEmpty] }),
+);
+Validation.GetHasError(target);  // false / true
+Validation.GetErrors(target);    // readonly ValidationError[]
+```
+
+Multiple bindings on the same target aggregate their errors. Replacing
+or clearing a binding drops its contribution. `PropertyTriggers` can
+react to `Validation.HasError` against a target the same way they react
+to any other DP.
+
+### MultiBinding / PriorityBinding
+
+`MultiBinding(bindings: Binding[], converter)` combines N child Bindings
+through a converter — each child can have its own source, mode,
+converter, and rules. The converter receives the children's resolved
+values in array order. Converter exceptions surface as `undefined` so
+the outer Binding's `fallbackValue` can apply.
+
+```ts
+import { MultiBinding, PriorityBinding, Binding } from '@visualisation-sub/mural/runtime';
+
+target.set_property_value_by_name('sum',
+    MultiBinding(
+        [new Binding(a, 'x'), new Binding(b, 'y')],
+        (x, y) => x + y,
+    ));
+
+// First child with a non-undefined value wins. Useful as a fallback
+// chain — user-set title, then VM title, then a resource lookup.
+target.set_property_value_by_name('title',
+    PriorityBinding([
+        new Binding(userPrefs, 'title'),
+        new Binding(vm,        'title'),
+        new Binding(resources, 'defaultTitle'),
+    ]));
+```
+
+The existing 3-arg `MultiBinding(target: Visual, paths: string[], converter)`
+form (used by the inline-expression compiler) is still available as an
+overload — same export, different signature.
+
+### AncestorBinding — `RelativeSource FindAncestor`
+
+`AncestorBinding(start, ancestorType, property, level=1)` walks
+`start.GetVisualParent()` chain looking for the `level`-th ancestor that
+is an instance of `ancestorType`, then binds to one of its properties.
+Useful inside templates that need to reach the outer `ListBox`,
+`ItemsControl`, or similar.
+
+```ts
+import { AncestorBinding } from '@visualisation-sub/mural/runtime';
+
+container.set_property_value_by_name(
+    'IsSelected',
+    AncestorBinding(container, ListBox, 'SelectedItem'),
+);
+```
+
+`Self` is expressible directly as `new Binding(self, 'Prop')`;
+`TemplatedParent` uses the existing `TemplateBinding(templatedParent,
+property)` factory. Ancestor resolution is captured at construction
+time — re-parenting the start Visual does not trigger a re-resolve.
 
 ### Disposing bindings
 
@@ -382,8 +518,18 @@ MetaData.Measure                               // affects Visual layout's measur
 MetaData.Arrange                               // affects Visual layout's arrange pass
 MetaData.Render                                // affects Visual rendering
 MetaData.Inherits                              // value cascades through the visual tree
-MetaData.Measure | MetaData.Render             // both
+MetaData.BindsTwoWayByDefault                  // bindings default to TwoWay on this DP
+MetaData.IsNotDataBindable                     // Binding installs throw — structural DPs only
+MetaData.IsAnimationProhibited                 // SetAnimatedValue throws — identity / collection DPs
+MetaData.Measure | MetaData.Render             // combine with bitwise OR
 ```
+
+`IsNotDataBindable` and `IsAnimationProhibited` are author-intent
+contracts. The runtime throws at the binding install / animation write
+site so a mistake fails clearly instead of producing weird downstream
+behavior. `Visual.DataContext`, `ItemsControl.Items`, and
+`ItemsControl.ItemsSource` ship with `IsAnimationProhibited` — animating
+a DataContext or a collection reference is nonsensical.
 
 On plain `Model`, the flags are advisory — `Model.OnPropertyChanged` is a
 no-op. `Visual` overrides `OnPropertyChanged` to dispatch:

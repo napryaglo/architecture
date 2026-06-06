@@ -163,6 +163,66 @@ function walkPath(root: unknown, path: string): unknown
     return cur;
 }
 
+// Watcher Model for the general (child-bindings) MultiBinding /
+// PriorityBinding forms. Each child is a full Binding (potentially
+// with its own source, converter, ValidationRules, etc.); the watcher
+// holds the composed result and the outer Binding subclass listens on
+// its Value property the same way as the inline-expression form.
+class CombinedBindingWatcher extends Model
+{
+    public static readonly ValueKey = Model.RegisterProperty<unknown>(
+        CombinedBindingWatcher, 'Value', undefined, MetaData.None);
+
+    public get Value(): unknown { return this.get_property_value(CombinedBindingWatcher.ValueKey); }
+    public set Value(v: unknown) { this.set_property_value(CombinedBindingWatcher.ValueKey, v); }
+}
+
+// Backing class for MultiBinding(bindings, converter) and
+// PriorityBinding(bindings). Subscribes to each child Binding's value
+// notifications; on any change, re-runs the `recompute` strategy and
+// pushes the result through the watcher. Exception safety: child or
+// recompute throws surface as `undefined` so fallbackValue can apply
+// on the outer target.
+class CombinedBindingImpl extends Binding
+{
+    private readonly watcher:  CombinedBindingWatcher;
+    private readonly children: readonly Binding[];
+    private readonly recompute: () => unknown;
+
+    constructor(children: readonly Binding[], recompute: () => unknown)
+    {
+        const watcher = new CombinedBindingWatcher();
+        super(watcher, 'Value', BindingMode.OneWay);
+        this.watcher   = watcher;
+        this.children  = children;
+        this.recompute = recompute;
+
+        // Each child's resolved value changing — for any reason
+        // (path mutation, source DataContext flip, collection
+        // pulse) — triggers a fresh combine.
+        for (const child of children)
+        {
+            child.setOnValueChanged(() => this.fire());
+            child.setOnCollectionPulse(() => this.fire());
+        }
+        this.fire();
+    }
+
+    public override dispose(): void
+    {
+        super.dispose();
+        for (const child of this.children) child.dispose();
+    }
+
+    private fire(): void
+    {
+        let next: unknown;
+        try { next = this.recompute(); }
+        catch { next = undefined; }
+        this.watcher.Value = next;
+    }
+}
+
 // Public factory — matches the shape of DataContextBinding / DynamicResource
 // so the compiler can emit a uniform `set_property_value("Foo",
 // MultiBinding(target, paths, converter))` line.
@@ -172,11 +232,59 @@ function walkPath(root: unknown, path: string): unknown
 //   new Setter(Border, 'Width',
 //              new SetterFactory(t =>
 //                  MultiBinding(t, ['a','b'], (a, b) => a + b)));
+//
+// Overload (general WPF form):
+//   MultiBinding(bindings: Binding[], converter)
+// Each child Binding carries its own source / path / converter. The
+// converter receives the children's resolved values in array order.
+// Useful when sources differ (e.g., mixing DataContext and ElementName
+// bindings) or when each child needs its own pipeline.
 export function MultiBinding(
     target:    Visual,
     paths:     ReadonlyArray<string>,
     converter: (...values: unknown[]) => unknown,
+): Binding;
+export function MultiBinding(
+    bindings:  ReadonlyArray<Binding>,
+    converter: (...values: unknown[]) => unknown,
+): Binding;
+export function MultiBinding(
+    arg1: Visual | ReadonlyArray<Binding>,
+    arg2: ReadonlyArray<string> | ((...values: unknown[]) => unknown),
+    arg3?: (...values: unknown[]) => unknown,
 ): Binding
 {
-    return new MultiBindingImpl(target, paths, converter);
+    if (Array.isArray(arg1))
+    {
+        // General form: children + converter.
+        const children = arg1 as ReadonlyArray<Binding>;
+        const converter = arg2 as (...values: unknown[]) => unknown;
+        const values = (): unknown[] => children.map(c => c.get_value());
+        return new CombinedBindingImpl(children, () => converter(...values()));
+    }
+    // Inline-expression form: target Visual + paths + converter.
+    return new MultiBindingImpl(
+        arg1 as Visual,
+        arg2 as ReadonlyArray<string>,
+        arg3!,
+    );
+}
+
+// Resolves to the first child whose value is not `undefined`. Used for
+// fallback chains — e.g., a TextBlock that prefers a user-set Title,
+// then the VM's Title, then a resource lookup. Mirrors WPF's
+// PriorityBinding. When every child resolves to undefined, the
+// combined value is undefined and the outer binding's fallbackValue
+// applies on the consumer side.
+export function PriorityBinding(bindings: ReadonlyArray<Binding>): Binding
+{
+    return new CombinedBindingImpl(bindings, () =>
+    {
+        for (const b of bindings)
+        {
+            const v = b.get_value();
+            if (v !== undefined) return v;
+        }
+        return undefined;
+    });
 }

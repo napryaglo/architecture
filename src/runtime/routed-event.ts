@@ -361,6 +361,12 @@ export interface DragEventInit
     Modifiers:       ModifierKeys;
     Data:            DataObject;
     AllowedEffects:  DragDropEffects;
+    /** The active drag session — receivers that need source-side
+     *  hooks (OnFeedback / OnMove) or auto-scroll wiring (8.4) read
+     *  this. May be `undefined` for synthesized events fired outside
+     *  the InputManager's normal dispatch path (tests, some adapter
+     *  edge cases). */
+    Session?:        DragSession;
 }
 
 // Per the spec § 5 — receivers handle DragOver and set args.Effect to a
@@ -374,6 +380,7 @@ export class DragEventArgs extends RoutedEventArgs
     public readonly Modifiers:      ModifierKeys;
     public readonly Data:           DataObject;
     public readonly AllowedEffects: DragDropEffects;
+    public readonly Session:        DragSession | undefined;
     public          Effect:         DragDropEffects = DragDropEffects.None;
 
     constructor(
@@ -388,6 +395,7 @@ export class DragEventArgs extends RoutedEventArgs
         this.Modifiers      = init.Modifiers;
         this.Data           = init.Data;
         this.AllowedEffects = init.AllowedEffects;
+        this.Session        = init.Session;
     }
 }
 

@@ -143,8 +143,8 @@ import { ItemsPanelTemplate, type ItemsPanelFactory } from './items-panel-templa
 //   * ItemBindingGroup                      ✗ no validation grouping.
 export class ItemsControl extends Visual
 {
-    public static readonly ItemsKey                      = Model.RegisterProperty<readonly unknown[] | ObservableCollection<unknown> | CollectionView | undefined>(ItemsControl, 'Items',                      undefined, MetaData.Measure);
-    public static readonly ItemsSourceKey                = Model.RegisterProperty<unknown>(                                                                       ItemsControl, 'ItemsSource',                undefined, MetaData.Measure);
+    public static readonly ItemsKey                      = Model.RegisterProperty<readonly unknown[] | ObservableCollection<unknown> | CollectionView | undefined>(ItemsControl, 'Items',                      undefined, MetaData.Measure | MetaData.IsAnimationProhibited);
+    public static readonly ItemsSourceKey                = Model.RegisterProperty<unknown>(                                                                       ItemsControl, 'ItemsSource',                undefined, MetaData.Measure | MetaData.IsAnimationProhibited);
     public static readonly ItemTemplateKey               = Model.RegisterProperty<DataTemplate | undefined>(                                                      ItemsControl, 'ItemTemplate',               undefined, MetaData.Measure);
     public static readonly ItemTemplateSelectorKey       = Model.RegisterProperty<ItemTemplateSelector | undefined>(                                              ItemsControl, 'ItemTemplateSelector',       undefined, MetaData.Measure);
     public static readonly ItemContainerStyleKey         = Model.RegisterProperty<Style | undefined>(                                                             ItemsControl, 'ItemContainerStyle',         undefined, MetaData.Measure);

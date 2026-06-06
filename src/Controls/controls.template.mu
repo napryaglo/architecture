@@ -297,6 +297,24 @@ ResourceDictionary {
         }
     }
 
+    // ── ScrollViewer ────────────────────────────────────────────────
+    // ScrollViewerLayout is a custom panel that hands its
+    // ArrangeOverride back to the host ScrollViewer (which carries the
+    // gutter / placement math). PART_ContentSite is the
+    // ScrollContentPresenter (extends ContentPresenter, so consumer
+    // Content lands here automatically via the template's first-
+    // ContentPresenter slot resolution). PART_VerticalScrollBar /
+    // PART_HorizontalScrollBar are the default scrollbars — re-template
+    // to swap them or move their position; the host fishes them out by
+    // PART name.
+    Template [TargetType=ScrollViewer]{
+        ScrollViewerLayout x:name="PART_Layout"{
+            ScrollContentPresenter x:name="PART_ContentSite"
+            ScrollBar x:name="PART_VerticalScrollBar"
+            ScrollBar x:name="PART_HorizontalScrollBar"
+        }
+    }
+
     // ── ScrollBar ───────────────────────────────────────────────────
     // Material-flavoured flat track with a rounded thumb. The cross-
     // axis size (SCROLLBAR_THICKNESS) is pinned by the ScrollBar's

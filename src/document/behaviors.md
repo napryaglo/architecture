@@ -342,3 +342,44 @@ side uses a non-default format key.
   `ItemsControl`; do the same for behaviors that require a specific
   host shape — it catches authoring mistakes at the right time
   (template materialisation, not arbitrary event firing).
+
+## 8. Triggered Behavior attach (Style triggers)
+
+A `Behaviors { … }` block inside a `when()` trigger body attaches
+behaviors only while the trigger is active and tears them off on
+deactivation. Useful for transient interactions — a Shake behavior on
+`IsBusy`, a Tooltip behavior on `IsMouseOver`, etc.
+
+```mu
+Style[TargetType=Button] {
+    when( IsBusy ) {
+        Behaviors { ShakeBehavior [Amplitude=4] }
+    }
+}
+```
+
+The compiler lowers each entry to a paired
+[`AttachBehaviorAction`](../runtime/trigger-actions.ts) +
+[`DetachBehaviorAction`](../runtime/trigger-actions.ts) in the
+trigger's `enterActions` / `exitActions` arrays. The Attach action is
+factory-based — each enter invokes the factory to construct a fresh
+`Behavior` for the firing Visual. Two Visuals sharing the same Style
+each get their own Behavior instance (no cross-target stomping on DPs
+or per-instance state). Re-entry of a trigger that's already in the
+attached state detaches the prior instance cleanly before installing
+the new one.
+
+`Behaviors { … }` at Style body level (outside any `when()`) is
+**rejected** at compile time — attaching the same Behavior instances
+to every target would have them stomp on each other. Use the
+always-on `Behaviors { … }` block at the Visual level (§3 above) for
+behaviors that aren't trigger-conditional.
+
+### Imperative companion
+
+`Visual.RemoveBehavior(behavior)` is the imperative analogue. The
+trigger machinery uses it via `DetachBehaviorAction`, but consumers
+can also call it directly when a behavior needs to be torn off before
+the visual unloads. Calling `RemoveBehavior` fires `OnDetached` once
+and unsubscribes the auto-wired Unloaded listener, so a later unload
+edge doesn't fire `OnDetached` a second time.

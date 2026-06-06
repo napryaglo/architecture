@@ -1,56 +1,98 @@
 import {
     MetaData,
     Model,
+    Panel,
     Rect,
     Size,
     Visual,
-    isScrollInfo,
-    type DrawingContext,
-    type IScrollInfo,
+    type DragEventArgs,
+    type DragSession,
     type PropertyDescriptor,
     type WheelEventArgs,
 } from '../runtime/index.js';
-import { RectangleGeometry } from '../visual-engine/index.js';
+import { ContentControl } from './content-control.js';
+import { defaultTemplate, ensureControlsTheme } from './default-resources.js';
 import { ScrollBar } from './scroll-bar.js';
+import { ScrollContentPresenter } from './scroll-content-presenter.js';
 import { Orientation } from './stack-panel.js';
-import { VirtualizingStackPanel } from './virtualizing-stack-panel.js';
 
 // Reserved cross-axis space for an active scrollbar. Mirrors the
 // ScrollBar control's own SCROLLBAR_THICKNESS constant — kept locally
 // here to avoid an import cycle.
 const SCROLLBAR_GUTTER = 10;
 
-// A scrollable viewport that shows a portion of its Content. Two
-// scrolling modes:
+// Internal Panel that hosts ScrollViewer's template parts (the
+// ScrollContentPresenter + the two ScrollBars) and delegates the
+// gutter / placement math back to the owning ScrollViewer. Same role
+// the ScrollBarLayout plays for ScrollBar: a template root that exists
+// only because the .mu factory needs a single rooted subtree, with the
+// actual control-specific layout still on the owning control where
+// the DP-driven metrics live.
+//
+// Exported for the compiled-`.mu` ScrollViewer template (not public API).
+export class ScrollViewerLayout extends Panel
+{
+    public host: ScrollViewer | undefined;
+
+    protected override MeasureOverride(availableSize: Size): Size
+    {
+        for (const c of this.visualChildren) c.Measure(availableSize);
+        // Mirror the OLD ScrollViewer.MeasureOverride contract: report
+        // min(available, extent) so an unbounded parent axis (vertical
+        // StackPanel hosting our default-template TreeView is the
+        // canonical case) doesn't propagate Infinity up the tree — the
+        // outer arrange would otherwise hand us an Infinity-tall slot
+        // and the SCP's clip rect / content translate land at
+        // height="Infinity" / translate(_, NaN) in the SVG output.
+        // The SCP owns the extent numbers (it ran them in its
+        // MeasureOverride above); read them through the host.
+        const extentW = this.host?.ExtentWidth  ?? 0;
+        const extentH = this.host?.ExtentHeight ?? 0;
+        const w = Math.min(availableSize.Width,  extentW);
+        const h = Math.min(availableSize.Height, extentH);
+        return new Size(
+            Number.isFinite(w) ? w : 0,
+            Number.isFinite(h) ? h : 0,
+        );
+    }
+
+    protected override ArrangeOverride(finalSize: Size): Size
+    {
+        return this.host?.ArrangeTemplateParts(finalSize) ?? finalSize;
+    }
+}
+
+// A scrollable viewport that shows a portion of its Content. Templated
+// since the §11 refactor — the scroll-presentation surface
+// (ScrollContentPresenter) and the two ScrollBars live in the default
+// ControlTemplate as PART_ContentSite / PART_VerticalScrollBar /
+// PART_HorizontalScrollBar, inside a ScrollViewerLayout root that
+// arranges them via this control.
+//
+// ScrollViewer owns the PUBLIC scrolling surface (offset DPs, extent /
+// viewport readbacks, OnPointerWheel input, the §8.4 auto-scroll, and
+// ScrollIntoView). The mechanics — clip-and-translate vs IScrollInfo
+// delegation — live inside ScrollContentPresenter. Two scrolling modes
+// flow naturally from the SCP's internal split:
 //
 //   * Delegate mode — Content implements IScrollInfo (today: a
-//     VirtualizingPanel). The ScrollViewer drives the panel's
-//     Viewport / offsets; the panel decides which items to realize.
-//     No clip / translate on this side — the panel only emits the
-//     visible portion of its content.
+//     VirtualizingPanel). SCP drives the panel's Viewport; the panel
+//     decides which items to realize. No clip / translate.
 //
-//   * Clip-and-translate mode — Content is anything else. The
-//     ScrollViewer measures Content with infinite available size
-//     (so it reports its natural extent), arranges it offset by
-//     (-HorizontalOffset, -VerticalOffset), and clips itself to the
-//     viewport rect so the off-viewport portion stays invisible.
+//   * Clip-and-translate mode — Content is anything else. SCP measures
+//     it with +Infinity (natural extent), arranges at
+//     (-HorizontalOffset, -VerticalOffset), and installs a viewport-
+//     sized clip on the content's own local coords.
 //
-// In both modes the ScrollViewer reports ExtentWidth / ExtentHeight
-// (full content size) and ViewportWidth / ViewportHeight (visible
-// area). ScrollableWidth / ScrollableHeight are the max offsets
-// (Extent - Viewport, never negative).
-//
-// Offsets are NOT clamped on assignment — the raw value stays
-// queryable so binding sources see what they wrote. The effective
-// offset used during Arrange is the clamped value. Programmatic-only
-// scrolling for now: no mouse wheel, no keyboard input (no event
-// system yet).
-export class ScrollViewer extends Visual
+// Offsets are NOT clamped on assignment — the raw value stays queryable
+// so binding sources see what they wrote. The effective offset used
+// during Arrange is the clamped value, computed by
+// effectiveHorizontalOffset / effectiveVerticalOffset (read by SCP
+// each layout pass).
+export class ScrollViewer extends ContentControl
 {
-    public static readonly ContentKey = Model.RegisterProperty<Visual | undefined>(
-        ScrollViewer, 'Content', undefined, MetaData.Measure);
-    // Offsets are Measure | Arrange: MeasureOverride uses them to drive
-    // the IScrollInfo provider's viewport (delegate mode), so a
+    // Offsets are Measure | Arrange: SCP's MeasureOverride uses them to
+    // drive the IScrollInfo provider's viewport (delegate mode), so a
     // re-measure must run when they change. ArrangeOverride also depends
     // on them (clip-and-translate mode's content translation), so flag
     // both.
@@ -78,59 +120,85 @@ export class ScrollViewer extends Visual
     public static readonly IsAutoHideScrollBarsKey = Model.RegisterProperty<boolean>(
         ScrollViewer, 'IsAutoHideScrollBars', false, MetaData.None);
 
-    // Set by MeasureOverride; read by the public getters and by
-    // ArrangeOverride. Initialized to zero so a pre-measure read
-    // returns sensible defaults.
-    private _extentWidth:    number = 0;
-    private _extentHeight:   number = 0;
-    private _viewportWidth:  number = 0;
-    private _viewportHeight: number = 0;
+    // Edge-gutter width (in viewport-local px) that triggers auto-scroll
+    // while a drag is hovering over the ScrollViewer (8.4). Setting `0`
+    // disables auto-scroll. Default 24 — matches the Visio / Figma / drawio
+    // gutter where dragged items pull the viewport along.
+    public static readonly AutoScrollGutterKey = Model.RegisterProperty<number>(
+        ScrollViewer, 'AutoScrollGutter', 24, MetaData.None);
+    // Pixels per auto-scroll tick. 4px × 30 ticks/sec ≈ 120 px/sec —
+    // brisk but controllable. The tick rate uses `setInterval(32)` so a
+    // value of 4 yields 125 px/sec.
+    public static readonly AutoScrollStepKey = Model.RegisterProperty<number>(
+        ScrollViewer, 'AutoScrollStep', 4, MetaData.None);
 
-    // Default-template scrollbars. Always present so the consumer
-    // doesn't compose them manually; auto-show when extent exceeds
-    // viewport on the matching axis. ValueChanged from a drag or a
-    // track-click writes back through the corresponding offset DP;
-    // the OnPropertyChanged hook on Vertical / HorizontalOffset
-    // pushes external changes (wheel, programmatic) the other way.
-    // The `_suppressOffsetSync` guard breaks the obvious feedback
-    // loop (Visual.set_property_value already short-circuits on
-    // equal values, but the guard makes the intent explicit).
-    private readonly _vScrollBar: ScrollBar;
-    private readonly _hScrollBar: ScrollBar;
+    static {
+        Model.OverrideMetadata(ScrollViewer, Visual.DefaultStyleKeyKey, { default_value: ScrollViewer });
+        ensureControlsTheme();
+    }
+
+    // ── Template parts ──────────────────────────────────────────────
+    // Populated in the constructor after the default template applies.
+    // The presenter holds the SCP-side scrolling mechanics; the bars
+    // are the default scrollbars (consumers can re-template to swap
+    // them out — the GetTemplateChild lookup still finds the named
+    // parts in any conforming template).
+    private _scp:        ScrollContentPresenter | undefined;
+    private _vScrollBar: ScrollBar | undefined;
+    private _hScrollBar: ScrollBar | undefined;
     private _suppressOffsetSync = false;
 
     constructor()
     {
         super();
-        this._vScrollBar = new ScrollBar();
-        this._vScrollBar.Orientation = Orientation.Vertical;
-        this._vScrollBar.AddValueChangedListener((v) => {
+        // Eager template apply — gives PART_ wiring something to fish out
+        // before any consumer assigns Content. Same pattern ScrollBar
+        // uses. If the implicit Style later sets the same Template
+        // instance, ContentControl.set Template short-circuits on
+        // identity, so no double-rebuild.
+        this.Template = defaultTemplate(ScrollViewer);
+
+        this._scp        = this.GetTemplateChild('PART_ContentSite')        as ScrollContentPresenter | undefined;
+        this._vScrollBar = this.GetTemplateChild('PART_VerticalScrollBar')  as ScrollBar | undefined;
+        this._hScrollBar = this.GetTemplateChild('PART_HorizontalScrollBar') as ScrollBar | undefined;
+
+        // SCP needs the back-ref so its MeasureOverride / ArrangeOverride
+        // can read offsets and enable flags from here. Without it the SCP
+        // degrades to a non-scrolling ContentPresenter — see its host
+        // === undefined branches.
+        if (this._scp !== undefined) this._scp.host = this;
+        // Layout panel uses the host back-ref to defer arrange to
+        // ArrangeTemplateParts (where the gutter math lives).
+        const layout = this['_templateInstance']?.root;
+        if (layout instanceof ScrollViewerLayout) layout.host = this;
+
+        // Wire the default scrollbars. Each writes its Value back into
+        // the matching offset DP; the OnPropertyChanged hook below
+        // pushes external offset changes (wheel, programmatic) the other
+        // way. _suppressOffsetSync guards the obvious feedback loop —
+        // the EffectiveValueDescriptor short-circuits equal writes, but
+        // the guard is explicit.
+        this._vScrollBar?.AddValueChangedListener((v) => {
             if (this._suppressOffsetSync) return;
             this.VerticalOffset = v;
         });
-
-        this._hScrollBar = new ScrollBar();
-        this._hScrollBar.Orientation = Orientation.Horizontal;
-        this._hScrollBar.AddValueChangedListener((v) => {
+        this._hScrollBar?.AddValueChangedListener((v) => {
             if (this._suppressOffsetSync) return;
             this.HorizontalOffset = v;
         });
+        // Set Orientation on the bars (the default template emits them
+        // un-oriented; the consumer's re-template can pre-set the right
+        // value).
+        if (this._vScrollBar !== undefined) this._vScrollBar.Orientation = Orientation.Vertical;
+        if (this._hScrollBar !== undefined) this._hScrollBar.Orientation = Orientation.Horizontal;
 
-        // Visual children only — neither bar is a logical child of the
-        // ScrollViewer, so a DataContext bound on consumer Content
-        // doesn't accidentally propagate into them. AttachVisual cascades
-        // the host target the same way the existing Content path does.
-        this.AttachVisual(this._vScrollBar);
-        this.AttachVisual(this._hScrollBar);
-
-        // Propagate IsAutoHideScrollBars down to both bars. Setting
-        // here covers the initial value; the listener catches runtime
-        // toggles so a consumer flipping the DP at any point still
-        // takes effect.
+        // Propagate IsAutoHideScrollBars down to both bars. Setting here
+        // covers the initial value; the listener catches runtime toggles
+        // so a consumer flipping the DP at any point still takes effect.
         const applyAutoHide = (): void => {
             const v = this.IsAutoHideScrollBars;
-            this._vScrollBar.IsAutoHide = v;
-            this._hScrollBar.IsAutoHide = v;
+            if (this._vScrollBar !== undefined) this._vScrollBar.IsAutoHide = v;
+            if (this._hScrollBar !== undefined) this._hScrollBar.IsAutoHide = v;
         };
         applyAutoHide();
         this.AddPropertyChangedListener(ScrollViewer.IsAutoHideScrollBarsKey, applyAutoHide);
@@ -138,16 +206,6 @@ export class ScrollViewer extends Visual
 
     public get IsAutoHideScrollBars(): boolean { return this.get_property_value(ScrollViewer.IsAutoHideScrollBarsKey); }
     public set IsAutoHideScrollBars(v: boolean) { this.set_property_value(ScrollViewer.IsAutoHideScrollBarsKey, v); }
-
-    public get Content(): Visual | undefined { return this.get_property_value(ScrollViewer.ContentKey); }
-    public set Content(value: Visual | undefined)
-    {
-        const old = this.Content;
-        if (old === value) return;
-        if (old !== undefined) this.Detach(old);
-        this.set_property_value(ScrollViewer.ContentKey, value);
-        if (value !== undefined) this.Attach(value);
-    }
 
     public get HorizontalOffset(): number { return this.get_property_value(ScrollViewer.HorizontalOffsetKey); }
     public set HorizontalOffset(value: number) { this.set_property_value(ScrollViewer.HorizontalOffsetKey, value); }
@@ -161,16 +219,35 @@ export class ScrollViewer extends Visual
     public get VerticalScrollEnabled(): boolean { return this.get_property_value(ScrollViewer.VerticalScrollEnabledKey); }
     public set VerticalScrollEnabled(v: boolean) { this.set_property_value(ScrollViewer.VerticalScrollEnabledKey, v); }
 
-    public get ExtentWidth():    number { return this._extentWidth; }
-    public get ExtentHeight():   number { return this._extentHeight; }
-    public get ViewportWidth():  number { return this._viewportWidth; }
-    public get ViewportHeight(): number { return this._viewportHeight; }
+    public get AutoScrollGutter(): number { return this.get_property_value(ScrollViewer.AutoScrollGutterKey); }
+    public set AutoScrollGutter(v: number) { this.set_property_value(ScrollViewer.AutoScrollGutterKey, v); }
 
-    // Maximum useful offset values: any larger gets clamped at
-    // Arrange time. Clamped to >= 0 so an extent smaller than the
-    // viewport doesn't yield a negative scrollable area.
-    public get ScrollableWidth():  number { return Math.max(0, this._extentWidth  - this._viewportWidth); }
-    public get ScrollableHeight(): number { return Math.max(0, this._extentHeight - this._viewportHeight); }
+    public get AutoScrollStep(): number { return this.get_property_value(ScrollViewer.AutoScrollStepKey); }
+    public set AutoScrollStep(v: number) { this.set_property_value(ScrollViewer.AutoScrollStepKey, v); }
+
+    // Read-through to the SCP — the presenter owns the extent / viewport
+    // numbers because it's the one that runs the measure / arrange
+    // mechanics. Returning 0 before a template is applied keeps callers
+    // who construct a ScrollViewer in tests and inspect these getters
+    // before a layout pass from crashing.
+    public get ExtentWidth():    number { return this._scp?.ExtentWidth    ?? 0; }
+    public get ExtentHeight():   number { return this._scp?.ExtentHeight   ?? 0; }
+    public get ViewportWidth():  number { return this._scp?.ViewportWidth  ?? 0; }
+    public get ViewportHeight(): number { return this._scp?.ViewportHeight ?? 0; }
+
+    // Maximum useful offset values: any larger gets clamped at Arrange
+    // time. Clamped to >= 0 so an extent smaller than the viewport
+    // doesn't yield a negative scrollable area.
+    public get ScrollableWidth():  number { return Math.max(0, this.ExtentWidth  - this.ViewportWidth); }
+    public get ScrollableHeight(): number { return Math.max(0, this.ExtentHeight - this.ViewportHeight); }
+
+    // Public read-only handles to the default-template parts. Useful
+    // for consumers that want to wire behavior (e.g., an inner adorner)
+    // against the actual content surface. Returns undefined when a
+    // consumer-supplied Template doesn't include the matching PART.
+    public get ContentPresenter(): ScrollContentPresenter | undefined { return this._scp; }
+    public get VerticalScrollBar():   ScrollBar | undefined { return this._vScrollBar; }
+    public get HorizontalScrollBar(): ScrollBar | undefined { return this._hScrollBar; }
 
     // Convenience scroll methods — mirror WPF's ScrollViewer surface.
     // Each just sets the offset; the clamping happens at Arrange.
@@ -200,8 +277,8 @@ export class ScrollViewer extends Visual
 
         const hOff = this.HorizontalOffset;
         const vOff = this.VerticalOffset;
-        const vw   = this._viewportWidth;
-        const vh   = this._viewportHeight;
+        const vw   = this.ViewportWidth;
+        const vh   = this.ViewportHeight;
 
         // When the rect is TALLER (or WIDER) than the viewport, the
         // "show the top edge" and "show the bottom edge" branches both
@@ -239,148 +316,20 @@ export class ScrollViewer extends Visual
         if (newV !== vOff) this.VerticalOffset   = newV;
     }
 
-    public override get visualChildren(): readonly Visual[]
+    // Called by ScrollViewerLayout.ArrangeOverride. Owns the gutter math
+    // (show/hide each bar based on overflow), arranges the SCP into the
+    // remaining slot, then arranges each bar into its trailing-edge
+    // rectangle (or to a zero-size rect when hidden). Sync'd the
+    // scrollbar metrics here too — they're computed from the now-final
+    // viewport size which we only know after the gutter decision.
+    public ArrangeTemplateParts(finalSize: Size): Size
     {
-        // Order: Content first so the scrollbars paint on top of any
-        // edge-aligned content. Hidden bars (no scrollable extent on
-        // their axis) still appear here but Arrange collapses them to
-        // a zero-size rect so they don't paint or hit.
-        const c = this.Content;
-        if (c === undefined) return [this._vScrollBar, this._hScrollBar];
-        return [c, this._vScrollBar, this._hScrollBar];
-    }
-
-    public override get logicalChildren(): readonly Visual[]
-    {
-        const c = this.Content;
-        return c !== undefined ? [c] : [];
-    }
-
-    protected override propagate_target_to_visual_children(): void
-    {
-        const t = this['target'];
-        this.Content?.['SetTarget'](t);
-        this._vScrollBar['SetTarget'](t);
-        this._hScrollBar['SetTarget'](t);
-    }
-
-    protected override propagate_inheritance_to_logical_children(): void
-    {
-        this.Content?.['refresh_inheritance_subtree']();
-    }
-
-    protected override propagate_inheritance_for_logical_children(descriptor: PropertyDescriptor): void
-    {
-        this.Content?.['refresh_inherited'](descriptor);
-    }
-
-    // Detect an IScrollInfo provider. Currently checks the Content
-    // directly; a future enhancement would walk visual descendants
-    // (so ScrollViewer wrapping an ItemsControl whose ItemsPanel is
-    // a VirtualizingStackPanel would auto-delegate). Not done here
-    // because it requires ItemsControl to expose the panel through
-    // a stable lookup.
-    private resolveScrollInfo(): IScrollInfo | undefined
-    {
-        const c = this.Content;
-        if (c === undefined) return undefined;
-        return isScrollInfo(c) ? c : undefined;
-    }
-
-    protected override MeasureOverride(availableSize: Size): Size
-    {
-        // Viewport size = the area our parent gave us. Always set,
-        // so ScrollableWidth/Height are usable immediately after
-        // Measure even with no content.
-        this._viewportWidth  = availableSize.Width;
-        this._viewportHeight = availableSize.Height;
-
-        // Default-template scrollbars are always measured so each one
-        // has a valid DesiredSize before Arrange picks its rect. The
-        // measure is cheap (no nested children) and the bars carry their
-        // own cross-axis thickness regardless of input.
-        this._vScrollBar.Measure(availableSize);
-        this._hScrollBar.Measure(availableSize);
-
-        const c = this.Content;
-        if (c === undefined)
-        {
-            this._extentWidth  = 0;
-            this._extentHeight = 0;
-            return Size.Zero;
-        }
-
-        const scrollInfo = this.resolveScrollInfo();
-        if (scrollInfo !== undefined)
-        {
-            // Delegate mode — drive the panel's viewport (position +
-            // size) and read its extent back. Read extent FIRST so
-            // ScrollableWidth / ScrollableHeight are correct when we
-            // clamp the offsets; otherwise the clamp would see
-            // ScrollableHeight=0 (stale) and pin VerticalOffset to 0
-            // before any extent is known. Contract: IScrollInfo
-            // implementations must compute Extent without requiring a
-            // prior Measure (VirtualizingStackPanel does this from
-            // itemCount × ItemHeight).
-            this._extentWidth  = scrollInfo.ExtentWidth;
-            this._extentHeight = scrollInfo.ExtentHeight;
-
-            if (c instanceof VirtualizingStackPanel)
-            {
-                c.Viewport = new Rect(
-                    this.effectiveHorizontalOffset(),
-                    this.effectiveVerticalOffset(),
-                    availableSize.Width,
-                    availableSize.Height,
-                );
-            }
-            c.Measure(availableSize);
-            // Re-read extent in case the measure pass changed it
-            // (e.g., future variable-height panels). For
-            // VirtualizingStackPanel this is the same value as above.
-            this._extentWidth  = scrollInfo.ExtentWidth;
-            this._extentHeight = scrollInfo.ExtentHeight;
-        }
-        else
-        {
-            // Clip-and-translate mode — measure with no upper bound on
-            // axes that scroll, so content reports its natural extent.
-            // For axes a consumer has explicitly disabled (TextBox in
-            // Wrap mode opts out of horizontal scroll so the editor
-            // wraps to width), pass the BOUNDED viewport size on that
-            // axis instead — the child sees its real budget and shapes
-            // its own content to fit.
-            const measureW = this.HorizontalScrollEnabled ? Number.POSITIVE_INFINITY : availableSize.Width;
-            const measureH = this.VerticalScrollEnabled   ? Number.POSITIVE_INFINITY : availableSize.Height;
-            c.Measure(new Size(measureW, measureH));
-            this._extentWidth  = c.DesiredSize.Width;
-            this._extentHeight = c.DesiredSize.Height;
-        }
-        // Desired size = whatever fits in the parent, never more than
-        // the content's extent. Returning `availableSize` verbatim
-        // would propagate Infinity up the tree any time we sit in an
-        // unbounded axis (vertical StackPanel — the natural host for
-        // a TreeView's default ScrollViewer template). Infinity then
-        // poisons the Arrange pass: the clip RectangleGeometry SVG
-        // can't paint a `height=Infinity` <rect>, and the visible
-        // tree disappears entirely.
-        return new Size(
-            Math.min(availableSize.Width,  this._extentWidth),
-            Math.min(availableSize.Height, this._extentHeight),
-        );
-    }
-
-    protected override ArrangeOverride(finalSize: Size): Size
-    {
-        // Decide which bars are active for THIS arrange pass — the
-        // measure step above already wrote ExtentWidth/Height, so the
-        // visible-axis check is just `extent > viewport_along_axis`.
-        // Re-running it here (cheap) means a re-arrange with a new
-        // finalSize honours the new viewport without waiting for the
-        // next measure. Per-axis-disabled scroll also forces the bar
-        // off regardless of extent (consumer doesn't want that axis).
-        const wantsV = this.VerticalScrollEnabled   && this._extentHeight > finalSize.Height;
-        const wantsH = this.HorizontalScrollEnabled && this._extentWidth  > finalSize.Width;
+        // Decide which bars are active for THIS arrange pass. The
+        // measure step has already populated ExtentWidth/Height on the
+        // SCP; per-axis-disabled scroll also forces the bar off
+        // regardless of extent (consumer doesn't want that axis).
+        const wantsV = this.VerticalScrollEnabled   && this.ExtentHeight > finalSize.Height;
+        const wantsH = this.HorizontalScrollEnabled && this.ExtentWidth  > finalSize.Width;
         // Auto-hide bars overlay the content (macOS / Slack pattern):
         // no reserved gutter, the bar floats on top of the content's
         // trailing edge. Without this branch a single-line TextBox sized
@@ -393,63 +342,36 @@ export class ScrollViewer extends Visual
         const vGutter = (wantsV && !overlay) ? SCROLLBAR_GUTTER : 0;
         const hGutter = (wantsH && !overlay) ? SCROLLBAR_GUTTER : 0;
 
-        // Adjust the available content slot once we know what each bar
-        // is reserving.
+        // Adjust the SCP slot once we know what each bar is reserving.
         const contentW = Math.max(0, finalSize.Width  - vGutter);
         const contentH = Math.max(0, finalSize.Height - hGutter);
 
-        // Re-publish viewport size from the slot the content actually
-        // occupies (NOT the full finalSize). Public ViewportWidth /
-        // ViewportHeight now reflect the painted area.
-        this._viewportWidth  = contentW;
-        this._viewportHeight = contentH;
+        // Arrange the SCP into the reduced slot. SCP.ArrangeOverride
+        // republishes its viewport from this finalSize and installs the
+        // child's clip/translate using the host's clamped offsets (which
+        // are valid now because ExtentWidth/Height are populated).
+        this._scp?.Arrange(new Rect(0, 0, contentW, contentH));
 
-        // ScrollViewer's outer <g> stays unclipped — otherwise the
-        // viewport-shaped clip would also clip the scrollbar children
-        // (they sit at x >= contentW, beyond the viewport rect). The
-        // clip lives on the Content visual instead, in its own local
-        // coord space, where it cuts only the content's overflow.
-        this.Clip = undefined;
-
-        const c = this.Content;
-        if (c !== undefined)
-        {
-            const scrollInfo = this.resolveScrollInfo();
-            if (scrollInfo !== undefined)
-            {
-                // Panel only emits visible items — no clip needed.
-                c.Arrange(new Rect(0, 0, contentW, contentH));
-                c.Clip = undefined;
-            }
-            else
-            {
-                // Clip-and-translate: place the (full-extent) content
-                // at negative offset so the visible portion lands at
-                // (0, 0); clip the content in its own local space so
-                // only the viewport-sized window paints. (offsetX,
-                // offsetY) is the local rect's top-left because the
-                // content's outer carries a translate of -(offset).
-                const offX = this.effectiveHorizontalOffset();
-                const offY = this.effectiveVerticalOffset();
-                c.Arrange(new Rect(-offX, -offY, this._extentWidth, this._extentHeight));
-                c.Clip = new RectangleGeometry(new Rect(offX, offY, contentW, contentH));
-            }
-        }
-
-        // Sync scrollbar DPs to the now-final viewport sizes, BEFORE
-        // arranging the bars so each thumb lands at the correct length
-        // / offset. _suppressOffsetSync guards the ValueChanged loop —
+        // Sync scrollbar DPs to the now-final viewport sizes BEFORE
+        // arranging the bars so each thumb lands at the correct length /
+        // offset. _suppressOffsetSync guards the ValueChanged loop —
         // we're writing scroll position into the bar, not the other
         // way around.
         this._suppressOffsetSync = true;
-        this._vScrollBar.Minimum      = 0;
-        this._vScrollBar.Maximum      = this.ScrollableHeight;
-        this._vScrollBar.ViewportSize = this._viewportHeight;
-        this._vScrollBar.Value        = this.effectiveVerticalOffset();
-        this._hScrollBar.Minimum      = 0;
-        this._hScrollBar.Maximum      = this.ScrollableWidth;
-        this._hScrollBar.ViewportSize = this._viewportWidth;
-        this._hScrollBar.Value        = this.effectiveHorizontalOffset();
+        if (this._vScrollBar !== undefined)
+        {
+            this._vScrollBar.Minimum      = 0;
+            this._vScrollBar.Maximum      = this.ScrollableHeight;
+            this._vScrollBar.ViewportSize = this.ViewportHeight;
+            this._vScrollBar.Value        = this.effectiveVerticalOffset();
+        }
+        if (this._hScrollBar !== undefined)
+        {
+            this._hScrollBar.Minimum      = 0;
+            this._hScrollBar.Maximum      = this.ScrollableWidth;
+            this._hScrollBar.ViewportSize = this.ViewportWidth;
+            this._hScrollBar.Value        = this.effectiveHorizontalOffset();
+        }
         this._suppressOffsetSync = false;
 
         // Position the bars: vertical on the right edge of the viewport,
@@ -460,32 +382,34 @@ export class ScrollViewer extends Visual
         // content — same screen position, just no gutter was reserved.
         // A hidden bar arranges to a zero-size rect so the renderer
         // paints nothing and pointer events miss.
-        const barWidth  = SCROLLBAR_GUTTER;
-        if (wantsV)
+        const barWidth = SCROLLBAR_GUTTER;
+        if (this._vScrollBar !== undefined)
         {
-            const vX = overlay ? contentW - barWidth : contentW;
-            this._vScrollBar.Arrange(new Rect(vX, 0, barWidth, contentH));
+            if (wantsV)
+            {
+                const vX = overlay ? contentW - barWidth : contentW;
+                this._vScrollBar.Arrange(new Rect(vX, 0, barWidth, contentH));
+            }
+            else
+            {
+                this._vScrollBar.Arrange(new Rect(0, 0, 0, 0));
+            }
         }
-        else
+        if (this._hScrollBar !== undefined)
         {
-            this._vScrollBar.Arrange(new Rect(0, 0, 0, 0));
-        }
-        if (wantsH)
-        {
-            const hY = overlay ? contentH - barWidth : contentH;
-            this._hScrollBar.Arrange(new Rect(0, hY, contentW, barWidth));
-        }
-        else
-        {
-            this._hScrollBar.Arrange(new Rect(0, 0, 0, 0));
+            if (wantsH)
+            {
+                const hY = overlay ? contentH - barWidth : contentH;
+                this._hScrollBar.Arrange(new Rect(0, hY, contentW, barWidth));
+            }
+            else
+            {
+                this._hScrollBar.Arrange(new Rect(0, 0, 0, 0));
+            }
         }
 
         return finalSize;
     }
-
-    // Nothing of our own to paint — the clip / translate is
-    // installed by ArrangeOverride; Content paints inside it.
-    protected override RenderOverride(_dc: DrawingContext): void { }
 
     // Mouse / trackpad scrolling. Default WPF behaviour: the wheel
     // adjusts VerticalOffset (Shift+wheel routes to HorizontalOffset,
@@ -499,7 +423,7 @@ export class ScrollViewer extends Visual
     protected override OnPointerWheel(args: WheelEventArgs): void
     {
         const scale = args.DeltaMode === 'line' ? 16
-                    : args.DeltaMode === 'page' ? this._viewportHeight
+                    : args.DeltaMode === 'page' ? this.ViewportHeight
                     : 1;
         const dy = args.DeltaY * scale;
         const dx = args.DeltaX * scale;
@@ -536,14 +460,166 @@ export class ScrollViewer extends Visual
         }
     }
 
-    private effectiveHorizontalOffset(): number
+    // Clamped offsets for the SCP / scrollbar metrics. Public reads
+    // (`HorizontalOffset` / `VerticalOffset`) still return the raw user-
+    // written value so binding sources see what they wrote. SCP reads
+    // these by name — kept on the prototype rather than private fields
+    // so bracket access from the presenter resolves.
+    public effectiveHorizontalOffset(): number
     {
         return Math.max(0, Math.min(this.HorizontalOffset, this.ScrollableWidth));
     }
 
-    private effectiveVerticalOffset(): number
+    public effectiveVerticalOffset(): number
     {
         return Math.max(0, Math.min(this.VerticalOffset, this.ScrollableHeight));
+    }
+
+    // ── Auto-scroll near edges during drag (8.4) ───────────────────────
+    //
+    // While a drag session is hovering inside this ScrollViewer's
+    // viewport, a cursor within `AutoScrollGutter` px of any edge
+    // schedules a recurring nudge of the offset toward that edge. This
+    // mirrors the Visio / Figma / drawio UX where dragging an item
+    // near the boundary pulls the canvas along.
+    //
+    // Lifecycle: the OnPreviewDragEnter handler attaches an OnMove
+    // listener on the drag session the first time a drag involves this
+    // ScrollViewer's subtree. The listener computes the cursor's
+    // host-relative position vs. this ScrollViewer's host rect and
+    // starts / cancels the auto-scroll timer accordingly. Session
+    // completion (resolve via the PromiseLike interface) tears
+    // everything down.
+    private _autoScrollSession: DragSession | undefined;
+    private _autoScrollOnMoveUnsub: (() => void) | undefined;
+    private _autoScrollTimer: ReturnType<typeof setInterval> | undefined;
+    private _autoScrollVelocity: { x: number; y: number } = { x: 0, y: 0 };
+
+    protected override OnPreviewDragEnter(args: DragEventArgs): void
+    {
+        if (this.AutoScrollGutter <= 0) return;
+        const session = args.Session;
+        if (session === undefined) return;       // synthesized event with no session
+        if (this._autoScrollSession === session) return;
+        this._tearDownAutoScroll();
+
+        this._autoScrollSession = session;
+        this._autoScrollOnMoveUnsub = session.OnMove(
+            (hostX: number, hostY: number) => this._evaluateAutoScroll(hostX, hostY),
+        );
+        // Auto-clean on drag end (resolve / cancel).
+        session.then(() => this._tearDownAutoScroll());
+    }
+
+    private _evaluateAutoScroll(hostX: number, hostY: number): void
+    {
+        // Translate host coords to viewport-local. The viewport's
+        // origin in host space is the sum of ArrangedRect.X/Y up the
+        // parent chain.
+        let ox = 0;
+        let oy = 0;
+        let cur: Visual | undefined = this;
+        while (cur !== undefined)
+        {
+            ox += cur.ArrangedRect.X;
+            oy += cur.ArrangedRect.Y;
+            cur = cur.GetVisualParent();
+        }
+        const lx = hostX - ox;
+        const ly = hostY - oy;
+        const vw = this.ViewportWidth;
+        const vh = this.ViewportHeight;
+
+        // Cursor outside the viewport? Stop scrolling — the drag has
+        // moved off this ScrollViewer.
+        if (lx < 0 || ly < 0 || lx > vw || ly > vh)
+        {
+            this._stopAutoScrollTick();
+            return;
+        }
+
+        const gutter = this.AutoScrollGutter;
+        let dx = 0;
+        let dy = 0;
+        if (lx < gutter && this.HorizontalScrollEnabled) dx = -1;
+        else if (lx > vw - gutter && this.HorizontalScrollEnabled) dx = 1;
+        if (ly < gutter && this.VerticalScrollEnabled)   dy = -1;
+        else if (ly > vh - gutter && this.VerticalScrollEnabled) dy = 1;
+
+        if (dx === 0 && dy === 0)
+        {
+            this._stopAutoScrollTick();
+            return;
+        }
+        this._autoScrollVelocity = { x: dx, y: dy };
+        this._startAutoScrollTick();
+    }
+
+    private _startAutoScrollTick(): void
+    {
+        if (this._autoScrollTimer !== undefined) return;
+        const tick = (): void =>
+        {
+            const step = this.AutoScrollStep;
+            const { x, y } = this._autoScrollVelocity;
+            if (x !== 0)
+            {
+                const nextX = clamp(this.HorizontalOffset + x * step, 0, this.ScrollableWidth);
+                if (nextX !== this.HorizontalOffset) this.HorizontalOffset = nextX;
+            }
+            if (y !== 0)
+            {
+                const nextY = clamp(this.VerticalOffset + y * step, 0, this.ScrollableHeight);
+                if (nextY !== this.VerticalOffset) this.VerticalOffset = nextY;
+            }
+        };
+        // First tick now so the offset starts moving immediately,
+        // not after a 32ms delay.
+        tick();
+        this._autoScrollTimer = setInterval(tick, 32);
+    }
+
+    private _stopAutoScrollTick(): void
+    {
+        if (this._autoScrollTimer !== undefined)
+        {
+            clearInterval(this._autoScrollTimer);
+            this._autoScrollTimer = undefined;
+        }
+    }
+
+    private _tearDownAutoScroll(): void
+    {
+        this._stopAutoScrollTick();
+        this._autoScrollOnMoveUnsub?.();
+        this._autoScrollOnMoveUnsub = undefined;
+        this._autoScrollSession = undefined;
+    }
+
+    // OnPropertyChanged hook: an offset DP changing must invalidate the
+    // SCP's measure AND arrange — MetaData.Measure|Arrange on the
+    // offset DPs flags those on the ScrollViewer itself, but the
+    // template root's iterative re-walk only re-asks SCP for measure /
+    // arrange if SCP's own cache flags are stale. SCP reads offsets in
+    // both phases (push into IScrollInfo.Viewport during Measure,
+    // translate during Arrange), so we have to push both.
+    protected override OnPropertyChanged(
+        descriptor: PropertyDescriptor,
+        oldValue: unknown,
+        newValue: unknown,
+    ): void
+    {
+        super.OnPropertyChanged(descriptor, oldValue, newValue);
+        if (descriptor.Name === 'HorizontalOffset' || descriptor.Name === 'VerticalOffset'
+         || descriptor.Name === 'HorizontalScrollEnabled' || descriptor.Name === 'VerticalScrollEnabled')
+        {
+            // SCP reads these in its own MeasureOverride / ArrangeOverride
+            // — without nudging its caches the template-root re-walk will
+            // short-circuit and the new ScrollEnabled / offset never
+            // reaches the slotted content.
+            this._scp?.InvalidateMeasure();
+            this._scp?.InvalidateArrange();
+        }
     }
 }
 

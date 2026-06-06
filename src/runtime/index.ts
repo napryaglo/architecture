@@ -7,11 +7,14 @@ export {
     affectsRender,
     inherits,
     bindsTwoWayByDefault,
+    isNotDataBindable,
+    isAnimationProhibited,
 } from './metadata.js';
 export {
     PropertyDescriptor,
     type PropertyMetadata,
     type CoerceValue,
+    type ValidateValue,
 } from './property-descriptor.js';
 export {
     EffectiveValueDescriptor,
@@ -24,6 +27,12 @@ export {
     type BindingOptions,
     type ValueConverter,
 } from './binding.js';
+export {
+    Validation,
+    type ValidationError,
+    type ValidationResult,
+    type ValidationRule,
+} from './validation.js';
 export { Model, PropertyKey } from './model.js';
 export { Behavior } from './behavior.js';
 export {
@@ -44,7 +53,8 @@ export { Application, type MountableTarget } from './application.js';
 export { DynamicResource } from './dynamic-resource.js';
 export { DataContextBinding } from './data-context-binding.js';
 export { ElementNameBinding } from './element-name-binding.js';
-export { MultiBinding } from './multi-binding.js';
+export { MultiBinding, PriorityBinding } from './multi-binding.js';
+export { AncestorBinding } from './ancestor-binding.js';
 export { TemplateBinding } from './template-binding.js';
 export {
     RoutedEventArgs,
@@ -99,7 +109,9 @@ export {
     type TriggerCondition,
 } from './style.js';
 export {
+    AttachBehaviorAction,
     BeginStoryboardAction,
+    DetachBehaviorAction,
     EventTrigger,
     InvokeCommandAction,
     PauseStoryboardAction,
@@ -114,6 +126,7 @@ export {
     type CollectionChangeListener,
     type IReadOnlyObservableCollection,
 } from './observable-collection.js';
+export { observe_array, subscribe_array, is_observed_array } from './observable-array.js';
 export { Point, Size, Rect, Color, Matrix, Thickness } from './primitives.js';
 export { type DrawingContext } from './drawing-context.js';
 export {

@@ -1,7 +1,8 @@
+import { Binding } from './binding.js';
 import { EffectiveValueDescriptor, PropertyValueSource } from './effective-value.js';
 import type { InternalPropertyChangeCallback, PropertyChangeCallback } from './effective-value.js';
 import { PropertyDescriptor } from './property-descriptor.js';
-import type { CoerceValue, PropertyMetadata } from './property-descriptor.js';
+import type { CoerceValue, PropertyMetadata, ValidateValue } from './property-descriptor.js';
 import type { MetaData } from './metadata.js';
 
 // Branded handle returned by Model.RegisterProperty (and the read-only /
@@ -199,11 +200,18 @@ export class Model
         default_value: T,
         meta_data: MetaData,
         coerce_value?: CoerceValue,
+        validate_value?: ValidateValue,
     ): PropertyKey<T>
     {
         if (property.includes('.'))
         {
             throw new Error(`Property name '${property}' may not contain '.' (reserved for composite keys).`);
+        }
+        if (validate_value !== undefined && !validate_value(default_value))
+        {
+            throw new Error(
+                `Default value for property '${owner.name}.${property}' fails its validate_value callback.`,
+            );
         }
         Model.remember_class(owner);
         const bag = Model.get_property_bag(owner);
@@ -214,6 +222,10 @@ export class Model
             if (coerce_value !== undefined)
             {
                 opts.coerce_value = coerce_value;
+            }
+            if (validate_value !== undefined)
+            {
+                opts.validate_value = validate_value;
             }
             descriptor = new PropertyDescriptor(owner, property, opts);
             bag.set(property, descriptor);
@@ -231,9 +243,12 @@ export class Model
         default_value: T,
         meta_data: MetaData,
         coerce_value?: CoerceValue,
+        validate_value?: ValidateValue,
     ): PropertyKey<T>
     {
-        return Model.RegisterProperty<T>(owner, property, default_value, meta_data, coerce_value);
+        return Model.RegisterProperty<T>(
+            owner, property, default_value, meta_data, coerce_value, validate_value,
+        );
     }
 
     // Registers a read-only property and returns a PropertyKey that
@@ -246,11 +261,18 @@ export class Model
         default_value: T,
         meta_data: MetaData,
         coerce_value?: CoerceValue,
+        validate_value?: ValidateValue,
     ): PropertyKey<T>
     {
         if (property.includes('.'))
         {
             throw new Error(`Property name '${property}' may not contain '.' (reserved for composite keys).`);
+        }
+        if (validate_value !== undefined && !validate_value(default_value))
+        {
+            throw new Error(
+                `Default value for property '${owner.name}.${property}' fails its validate_value callback.`,
+            );
         }
         Model.remember_class(owner);
         const bag = Model.get_property_bag(owner);
@@ -262,6 +284,10 @@ export class Model
         if (coerce_value !== undefined)
         {
             opts.coerce_value = coerce_value;
+        }
+        if (validate_value !== undefined)
+        {
+            opts.validate_value = validate_value;
         }
         const descriptor = new PropertyDescriptor(owner, property, opts, undefined, /* readOnly */ true);
         bag.set(property, descriptor);
@@ -574,6 +600,18 @@ export class Model
 
     private set_via_descriptor(descriptor: PropertyDescriptor, value: any): void
     {
+        // Validate-value gate runs first (before any storage / coerce /
+        // listener-firing) so an invalid write is a clean rejection
+        // with no side effects. Bindings are exempt — the value is a
+        // Binding instance, not a "value" in the property's domain.
+        const validate = descriptor.ValidateValue;
+        if (validate !== undefined && !(value instanceof Binding) && !validate(value))
+        {
+            throw new Error(
+                `Value ${JSON.stringify(value)} rejected by validate_value for '${descriptor.RootOwner.name}.${descriptor.Name}'.`,
+            );
+        }
+
         const key = Model.compose_key(descriptor.RootOwner, descriptor.Name);
         let effective_value = this.property_values.get(key);
 

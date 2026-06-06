@@ -1,7 +1,10 @@
 import type { PropertyChangeCallback } from './effective-value.js';
 import { bindsTwoWayByDefault } from './metadata.js';
 import { Model } from './model.js';
+import { ObservableCollection } from './observable-collection.js';
+import { observe_array, subscribe_array } from './observable-array.js';
 import type { PropertyDescriptor } from './property-descriptor.js';
+import type { ValidationError, ValidationRule } from './validation.js';
 
 // Internal: one parsed segment of a property path. Tracks the Model the
 // segment is currently bound to so listeners can be detached on rebind.
@@ -9,11 +12,19 @@ import type { PropertyDescriptor } from './property-descriptor.js';
 // the owner-class name (resolved to a class via Model.find_class at
 // traversal time) and `propertyName` holds the property name. For
 // regular dotted segments, `ownerName` is undefined.
+//
+// When a segment is stepped into an ObservableCollection or a plain
+// Array (observable-array-wrapped), the collection subscription's
+// unsubscribe thunk lives on `collectionUnsub`. `Model` and
+// `collectionUnsub` are mutually exclusive at any given time — each
+// segment is either attached to a Model property or to a collection
+// mutation channel.
 class PropertyPathSegment
 {
     private propertyName: string;
     private ownerName: string | undefined;
     private object: Model | undefined;
+    private collectionUnsub: (() => void) | undefined;
 
     constructor(
         propertyName: string,
@@ -34,6 +45,16 @@ class PropertyPathSegment
     get Model(): Model | undefined
     {
         return this.object;
+    }
+
+    set CollectionUnsub(unsub: (() => void) | undefined)
+    {
+        this.collectionUnsub = unsub;
+    }
+
+    get CollectionUnsub(): (() => void) | undefined
+    {
+        return this.collectionUnsub;
     }
 
     get PropertyName(): string
@@ -59,6 +80,14 @@ class PropertyPath
     private readonly onChangedBound: PropertyChangeCallback;
     private resolvedValue: any;
     private onValueChanged: ((old_value: any, new_value: any) => void) | undefined;
+    // Fires when the resolved-leaf value is a collection (Observable
+    // Collection OR plain array) and its contents mutate. The
+    // resolved value's identity is unchanged, so the regular
+    // onValueChanged dedup would swallow the notification — this
+    // separate channel exists so consumers can see a "collection
+    // mutated" pulse. Consumers fetch the current resolved value
+    // via the regular `get_value` path if they need it.
+    private onCollectionPulseCallback: (() => void) | undefined;
     model: Model | undefined;
 
     constructor(source: Model, path: string)
@@ -78,6 +107,17 @@ class PropertyPath
         this.onValueChanged = cb;
     }
 
+    // Subscribe to collection-as-leaf mutation pulses. The callback
+    // fires whenever the resolved leaf value is a collection (Observable
+    // Collection or plain array) and that collection mutates. The
+    // resolved value's identity is unchanged across the pulse — call
+    // `get_value` if you need the current contents. Pass undefined to
+    // detach.
+    setOnCollectionPulse(cb: (() => void) | undefined): void
+    {
+        this.onCollectionPulseCallback = cb;
+    }
+
     // Removes every listener registered by Traverse/OnChanged from chain
     // Models and clears the callback. Idempotent. After disposal the path
     // is detached: get_value/set_value still walk the source argument, but
@@ -86,13 +126,19 @@ class PropertyPath
     {
         for (const segment of this.segments)
         {
-            if (segment.Model !== undefined)
+            if (segment.Model !== undefined || segment.CollectionUnsub !== undefined)
             {
                 this.detach_segment(segment);
                 segment.Model = undefined;
             }
         }
+        if (this.leafCollectionUnsub !== undefined)
+        {
+            this.leafCollectionUnsub();
+            this.leafCollectionUnsub = undefined;
+        }
         this.onValueChanged = undefined;
+        this.onCollectionPulseCallback = undefined;
         this.resolvedValue = undefined;
         this.model = undefined;
     }
@@ -140,7 +186,9 @@ class PropertyPath
 
     // Reads `segment` from `current`, dispatching to the right Model
     // overload (implicit-owner or explicit-owner) when `current` is a
-    // Model. For non-Model values, falls back to bracket access.
+    // Model. For ObservableCollection parents the segment name is
+    // parsed as a numeric index and routed through `.Get(idx)`. For
+    // plain arrays + every other shape, falls back to bracket access.
     private static read_segment(current: any, segment: PropertyPathSegment): any
     {
         if (current === undefined || current === null) return undefined;
@@ -154,6 +202,12 @@ class PropertyPath
             const owner = Model.find_class(ownerName);
             if (owner === undefined) return undefined;
             return current._get_property_value_by_name(owner, segment.PropertyName);
+        }
+        if (current instanceof ObservableCollection)
+        {
+            const idx = Number(segment.PropertyName);
+            if (Number.isFinite(idx)) return current.Get(idx);
+            return undefined;
         }
         return current[segment.PropertyName];
     }
@@ -185,6 +239,17 @@ class PropertyPath
     // Attaches the path's onChanged listener to `current` for `segment`,
     // using the right Model overload. Sets segment.Model for later
     // detachment. Returns the next value along the chain.
+    //
+    // Collection branches:
+    //   * `current` is ObservableCollection — subscribe to its
+    //     CollectionChange channel and return `Get(idx)`.
+    //   * `current` is a plain Array — wrap via `observe_array`,
+    //     subscribe to the proxy's mutation channel, and return the
+    //     value at the index. Mutations through the proxy push;
+    //     mutations on the unwrapped original do not (caveat
+    //     documented on observable-array.ts).
+    // Either way the unsubscribe thunk lives on `segment.CollectionUnsub`
+    // so dispose / re-resolve tears it down deterministically.
     private attach_and_step(current: any, segment: PropertyPathSegment): any
     {
         if (current === undefined || current === null)
@@ -206,14 +271,38 @@ class PropertyPath
             current._add_property_changed_listener_by_name(owner, segment.PropertyName, this.onChangedBound);
             return current._get_property_value_by_name(owner, segment.PropertyName);
         }
+        if (current instanceof ObservableCollection)
+        {
+            segment.Model = undefined;
+            const idx = Number(segment.PropertyName);
+            if (!Number.isFinite(idx)) return undefined;
+            segment.CollectionUnsub = current.Subscribe(() => this.OnCollectionChanged(segment));
+            return current.Get(idx);
+        }
+        if (Array.isArray(current))
+        {
+            segment.Model = undefined;
+            const idx = Number(segment.PropertyName);
+            if (!Number.isFinite(idx)) return (current as any)[segment.PropertyName];
+            const wrapped = observe_array(current);
+            segment.CollectionUnsub = subscribe_array(wrapped, () => this.OnCollectionChanged(segment));
+            return wrapped[idx];
+        }
         segment.Model = undefined;
         return current[segment.PropertyName];
     }
 
     // Detaches the path's onChanged listener for a previously-attached
-    // segment. Mirrors attach_and_step.
+    // segment. Mirrors attach_and_step — handles Model property
+    // listeners and collection-mutation subscriptions.
     private detach_segment(segment: PropertyPathSegment): void
     {
+        if (segment.CollectionUnsub !== undefined)
+        {
+            segment.CollectionUnsub();
+            segment.CollectionUnsub = undefined;
+            return;
+        }
         if (segment.Model === undefined) return;
         const ownerName = segment.OwnerName;
         if (ownerName === undefined)
@@ -227,6 +316,87 @@ class PropertyPath
             {
                 segment.Model._remove_property_changed_listener_by_name(owner, segment.PropertyName, this.onChangedBound);
             }
+        }
+    }
+
+    // Fires from an ObservableCollection / observed-array mutation
+    // affecting an index segment we're attached to. The collection's
+    // identity is unchanged — only the value AT the index may have
+    // shifted. Re-resolves from the index segment forward; emits an
+    // onValueChanged when the resolved value changes (standard dedup).
+    OnCollectionChanged(targetSegment: PropertyPathSegment): void
+    {
+        const segmentIdx = this.segments.indexOf(targetSegment);
+        if (segmentIdx === -1) return;
+
+        // Walk to the collection (segments before the index) — these
+        // are still valid; their Model subscriptions haven't fired.
+        let current: any = this.model;
+        for (let j = 0; j < segmentIdx; j++)
+        {
+            current = PropertyPath.read_segment(current, this.segments[j]!);
+        }
+        // Read the value at the index from the still-subscribed
+        // collection.
+        let stepped: any = PropertyPath.read_segment(current, targetSegment);
+
+        // Detach + re-attach every segment AFTER the index segment;
+        // their upstream values may have changed.
+        for (let j = segmentIdx + 1; j < this.segments.length; j++)
+        {
+            this.detach_segment(this.segments[j]!);
+        }
+        for (let j = segmentIdx + 1; j < this.segments.length; j++)
+        {
+            stepped = this.attach_and_step(stepped, this.segments[j]!);
+        }
+
+        const previous = this.resolvedValue;
+        this.resolvedValue = stepped;
+        if (previous !== stepped)
+        {
+            this.onValueChanged?.(previous, stepped);
+        }
+        // Re-wire the leaf-collection pulse: if the resolved leaf is
+        // (still) a collection, the subscription needs to track the
+        // current resolved value.
+        this.refresh_leaf_collection_subscription();
+    }
+
+    // Maintains a subscription on the resolved leaf value when that
+    // leaf is itself a collection (ObservableCollection OR a plain
+    // Array — both are observable via observe_array). Fires
+    // onValueChanged((coll, coll)) on every mutation so consumers
+    // bound to the collection itself see a pulse — collection
+    // identity is unchanged but contents shifted. WPF parity: this
+    // is the INotifyCollectionChanged channel surfaced through the
+    // same binding callback that delivers INotifyPropertyChanged
+    // events. Called after Traverse and after OnChanged /
+    // OnCollectionChanged refit the resolved value.
+    private leafCollectionUnsub: (() => void) | undefined;
+
+    private refresh_leaf_collection_subscription(): void
+    {
+        if (this.leafCollectionUnsub !== undefined)
+        {
+            this.leafCollectionUnsub();
+            this.leafCollectionUnsub = undefined;
+        }
+        const value = this.resolvedValue;
+        const pulse = (): void => { this.onCollectionPulseCallback?.(); };
+        if (value instanceof ObservableCollection)
+        {
+            this.leafCollectionUnsub = value.Subscribe(pulse);
+            return;
+        }
+        if (Array.isArray(value))
+        {
+            // Wrap so mutations routed through the binding-returned
+            // proxy notify. Mutations on the underlying raw array
+            // bypass the Proxy and don't push — see
+            // observable-array.ts for the caveat.
+            const wrapped = observe_array(value);
+            this.leafCollectionUnsub = subscribe_array(wrapped, pulse);
         }
     }
 
@@ -252,6 +422,7 @@ class PropertyPath
                 {
                     this.onValueChanged?.(previous, current);
                 }
+                this.refresh_leaf_collection_subscription();
                 break;
             }
         }
@@ -265,6 +436,7 @@ class PropertyPath
             current = this.attach_and_step(current, segment);
         }
         this.resolvedValue = current;
+        this.refresh_leaf_collection_subscription();
     }
 
     get_value(root: any): any
@@ -355,6 +527,12 @@ export interface BindingOptions
     // the source) OR — if you want WPF parity later — when anything
     // in the pipeline threw.
     fallbackValue?: any;
+    // Rules that run on every read (push notification → consumer) and
+    // on every TwoWay/OneWayToSource writeback. Failing rules surface
+    // on the target via the `Validation.HasError` / `Validation.Errors`
+    // attached properties; on writeback, the source write is blocked
+    // and the old source value stays put.
+    validationRules?: readonly ValidationRule[];
 }
 
 // Composes two converters: outer(inner(value)) for convert; for
@@ -391,6 +569,7 @@ export class Binding
     private readonly fallbackValue: any;
     private readonly hasTargetNull: boolean;
     private readonly targetNullValue: any;
+    private readonly validationRules: readonly ValidationRule[];
 
     constructor(
         source: Model,
@@ -426,6 +605,36 @@ export class Binding
         this.fallbackValue = opts?.fallbackValue;
         this.hasTargetNull = opts !== undefined && 'targetNullValue' in opts;
         this.targetNullValue = opts?.targetNullValue;
+        this.validationRules = opts?.validationRules ?? [];
+    }
+
+    // True when at least one ValidationRule was supplied at construction.
+    // EVD reads this to skip validation overhead on bindings with no rules.
+    public get HasValidationRules(): boolean
+    {
+        return this.validationRules.length > 0;
+    }
+
+    // Runs every rule against `value` and returns the list of failures.
+    // Empty list means "all rules pass". Used by EVD on push notifications
+    // and on TwoWay/OneWayToSource writeback.
+    public Validate(value: unknown): readonly ValidationError[]
+    {
+        if (this.validationRules.length === 0) return [];
+        const errors: ValidationError[] = [];
+        for (const rule of this.validationRules)
+        {
+            const result = rule.validate(value);
+            if (!result.isValid)
+            {
+                errors.push({
+                    rule,
+                    errorContent: result.errorContent ?? '(no message)',
+                    value,
+                });
+            }
+        }
+        return errors;
     }
 
     public get mode(): BindingMode
@@ -473,6 +682,20 @@ export class Binding
     setOnValueChanged(cb: ((old_value: any, new_value: any) => void) | undefined): void
     {
         this.path.setOnValueChanged(cb);
+    }
+
+    // Subscribe to collection-as-leaf mutation pulses. Fires when the
+    // bound source path resolves to a collection (ObservableCollection
+    // or plain array) and its contents change. The path-resolved value
+    // identity stays the same; consumers receive a pulse to know the
+    // collection's contents shifted (mirrors WPF's
+    // INotifyCollectionChanged channel surfaced through the same
+    // binding). EVD wires this during install so a target property
+    // bound to a collection sees PropertyChanged listeners fire on
+    // every Add / Remove / Insert / Move / Clear.
+    setOnCollectionPulse(cb: (() => void) | undefined): void
+    {
+        this.path.setOnCollectionPulse(cb);
     }
 
     // Tears down the underlying path: removes every listener it registered

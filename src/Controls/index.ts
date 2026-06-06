@@ -24,6 +24,7 @@ export { SpinEdit } from './spin-edit.js';
 export { Slider, SliderLayout } from './slider.js';
 export { PageView } from './page-view.js';
 export { StackPanel, Orientation } from './stack-panel.js';
+export { WrapPanel } from './wrap-panel.js';
 export { UniformGrid } from './uniform-grid.js';
 export {
     Grid,
@@ -94,7 +95,8 @@ export {
 export { ItemsPresenter } from './items-presenter.js';
 export { VirtualizingPanel } from './virtualizing-panel.js';
 export { VirtualizingStackPanel } from './virtualizing-stack-panel.js';
-export { ScrollViewer } from './scroll-viewer.js';
+export { ScrollViewer, ScrollViewerLayout } from './scroll-viewer.js';
+export { ScrollContentPresenter } from './scroll-content-presenter.js';
 export { ScrollBar, ScrollBarLayout } from './scroll-bar.js';
 
 // Internal helper classes used by the bundled `.template.mu` defaults.

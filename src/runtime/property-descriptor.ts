@@ -5,6 +5,14 @@ import type { Model } from './model.js';
 // returning the value that becomes the coerced entry.
 export type CoerceValue = (model: Model, base_value: any) => any;
 
+// Invoked to gate a write at the property boundary. `true` accepts the
+// value; `false` rejects it and the set throws. Runs BEFORE coerce on
+// every set and on default-value registration — a default the rule
+// rejects is a registration-time error. Mirrors WPF's
+// ValidateValueCallback (PropertyMetadata.PropertyChangedCallback's
+// companion).
+export type ValidateValue = (value: any) => boolean;
+
 // Per-class metadata options. Root registrations must supply default_value
 // and meta_data; overrides may omit any field, in which case reads fall
 // through to the parent descriptor's value (WPF-style metadata merge).
@@ -13,6 +21,7 @@ export interface PropertyMetadata
     default_value?: any;
     meta_data?: MetaData;
     coerce_value?: CoerceValue;
+    validate_value?: ValidateValue;
 }
 
 // Class-level schema entry for a registered property. One descriptor per
@@ -91,5 +100,11 @@ export class PropertyDescriptor
     {
         if ('coerce_value' in this.own) return this.own.coerce_value;
         return this.parent_descriptor?.CoerceValue;
+    }
+
+    public get ValidateValue(): ValidateValue | undefined
+    {
+        if ('validate_value' in this.own) return this.own.validate_value;
+        return this.parent_descriptor?.ValidateValue;
     }
 }

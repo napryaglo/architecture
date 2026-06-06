@@ -320,6 +320,28 @@ export class InputManager
         DragDrop._pendingOptions = {};
     }
 
+    // Begin an OS-initiated drag session (8.1). Called by the host
+    // adapter on the first `dragenter` from outside the app — the
+    // browser already owns the drag image, so options.preview is
+    // implicitly `null` (no framework ghost). The DataObject is
+    // populated by the caller from `e.dataTransfer` (browser MIME
+    // formats: text/plain, text/uri-list, Files). `Source` is
+    // `undefined` — there is no in-tree origin.
+    //
+    // Idempotent — calling while a drag is already active is a no-op.
+    // The host adapter's `dragenter` handler tracks its own re-entry
+    // (a drag that crosses the boundary between two in-host elements
+    // fires dragenter on each), but the safeguard here keeps two
+    // adapters racing safe.
+    public BeginOsDragSession(session: DragSession): void
+    {
+        if (this._dragSession !== null) return;
+        this._dragSession = session;
+        // OS-level drops don't get a framework ghost — the browser
+        // already paints the drag image.
+        this._dragOptions = { preview: null };
+    }
+
     // Called by the host adapter once per `pointermove` while a drag is
     // active. `hit` is the deepest Visual under (hostX, hostY) — the host
     // hit-tested it via the existing PresentationTarget.HitTest path.
@@ -329,6 +351,18 @@ export class InputManager
     {
         const session = this._dragSession;
         if (session === null) return;
+
+        // QueryContinueDrag (8.3) runs BEFORE any DragOver dispatch so
+        // a cancelled drag doesn't fire phantom enter/over events.
+        if (!session._pollContinue())
+        {
+            this.applyReceiverChange(null, init);
+            session._complete(DragDropEffects.None);
+            this._dragSession       = null;
+            this._dragOptions       = {};
+            this._currentDragEffect = DragDropEffects.None;
+            return;
+        }
 
         const receiver = hit === null ? null : findAllowDropAncestor(hit);
         this.applyReceiverChange(receiver, init);
@@ -344,6 +378,10 @@ export class InputManager
             this._currentDragEffect = DragDropEffects.None;
         }
 
+        // GiveFeedback (8.3) fires AFTER the DragOver dispatch so the
+        // effect reflects the receiver's choice for this sample. Dedup
+        // lives inside _fireFeedback — handlers only see edges.
+        session._fireFeedback(this._currentDragEffect);
         session._fireMove(init.HostX, init.HostY);
     }
 
@@ -528,6 +566,7 @@ function dragInitFor(init: PointerEventInit, session: DragSession): DragEventIni
         Modifiers:      init.Modifiers,
         Data:           session.Data,
         AllowedEffects: session.AllowedEffects,
+        Session:        session,
     };
 }
 

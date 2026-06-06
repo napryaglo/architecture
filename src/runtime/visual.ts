@@ -187,7 +187,7 @@ export class Visual extends Model
     // a binding written as `$Path` on a descendant resolves against the
     // nearest ancestor's DataContext. No measure / arrange / render
     // impact — pure data plumbing — hence the inherits-only flag.
-    public static readonly DataContextKey = Model.RegisterProperty<unknown>(Visual, 'DataContext', undefined, MetaData.Inherits);
+    public static readonly DataContextKey = Model.RegisterProperty<unknown>(Visual, 'DataContext', undefined, MetaData.Inherits | MetaData.IsAnimationProhibited);
 
     // Input state flags. Maintained by the InputManager, not by user
     // code — handlers should treat both as read-only. Default `false` so
@@ -218,7 +218,19 @@ export class Visual extends Model
 
     public static readonly OnDragStartKey = Model.RegisterProperty<
         ((source: Visual) =>
-            { data: DataObject; effects: DragDropEffects; preview?: DragPreviewKind } | null
+            {
+                data: DataObject;
+                effects: DragDropEffects;
+                preview?: DragPreviewKind;
+                // Optional source-side hooks (backlog 8.3). When
+                // returned, the framework wires them onto the
+                // freshly-started DragSession before DoDragDrop hands
+                // control back to the InputManager. Lets a declarative
+                // drag source attach GiveFeedback / QueryContinueDrag
+                // without imperatively reaching into the session.
+                onFeedback?:      (effect: DragDropEffects) => void;
+                onContinueQuery?: () => boolean;
+            } | null
         ) | undefined
     >(Visual, 'OnDragStart', undefined, MetaData.None);
 
@@ -272,14 +284,26 @@ export class Visual extends Model
 
     public get OnDragStart():
         ((source: Visual) =>
-            { data: DataObject; effects: DragDropEffects; preview?: DragPreviewKind } | null
+            {
+                data: DataObject;
+                effects: DragDropEffects;
+                preview?: DragPreviewKind;
+                onFeedback?:      (effect: DragDropEffects) => void;
+                onContinueQuery?: () => boolean;
+            } | null
         ) | undefined
     {
         return this.get_property_value(Visual.OnDragStartKey);
     }
     public set OnDragStart(
         v: ((source: Visual) =>
-            { data: DataObject; effects: DragDropEffects; preview?: DragPreviewKind } | null
+            {
+                data: DataObject;
+                effects: DragDropEffects;
+                preview?: DragPreviewKind;
+                onFeedback?:      (effect: DragDropEffects) => void;
+                onContinueQuery?: () => boolean;
+            } | null
         ) | undefined,
     ) { this.set_property_value(Visual.OnDragStartKey, v); }
 
@@ -478,7 +502,11 @@ export class Visual extends Model
         if (start === undefined) return;
         const r = start(this);
         if (r === null) return;
-        DragDrop.DoDragDrop(this, r.data, r.effects, { preview: r.preview });
+        const session = DragDrop.DoDragDrop(this, r.data, r.effects, { preview: r.preview });
+        // Wire any optional source-side hooks (8.3) onto the freshly
+        // started session before the InputManager polls and picks it up.
+        if (r.onFeedback      !== undefined) session.OnFeedback(r.onFeedback);
+        if (r.onContinueQuery !== undefined) session.OnContinueQuery(r.onContinueQuery);
     };
     private readonly _onDragLatchPointerUp = (raw: unknown): void => {
         const args = raw as PointerEventArgs;
@@ -1054,6 +1082,11 @@ export class Visual extends Model
     // visual it was attached to, so as long as the visual is alive the
     // behavior should be too.
     private _behaviors: Behavior[] | undefined;
+    // Per-behavior unload listener — kept so `RemoveBehavior` can pull
+    // the listener back off `AddUnloadedListener` and fire `OnDetached`
+    // exactly once on imperative removal (vs. the unload edge firing
+    // it later anyway).
+    private _behaviorUnloadListeners: Map<Behavior, () => void> | undefined;
 
     public AddBehavior(behavior: Behavior): void
     {
@@ -1063,8 +1096,32 @@ export class Visual extends Model
         // subscription themselves. Each detach fires OnDetached again
         // (matching the underlying Unloaded semantics) — a behavior
         // that needs once-only teardown should track that itself.
-        this.AddUnloadedListener(() => behavior.OnDetached(this));
+        const onUnloaded = (): void => { behavior.OnDetached(this); };
+        this.AddUnloadedListener(onUnloaded);
+        (this._behaviorUnloadListeners ??= new Map()).set(behavior, onUnloaded);
         behavior.OnAttached(this);
+    }
+
+    // Imperative companion to AddBehavior — used by triggered-behavior
+    // actions (style triggers with a Behaviors block) and any consumer
+    // that needs to drop a behavior before the Visual is unloaded.
+    // Fires `OnDetached` once and unsubscribes the unload listener so
+    // a later Unloaded edge doesn't fire `OnDetached` a second time.
+    // No-op when `behavior` is not currently attached.
+    public RemoveBehavior(behavior: Behavior): void
+    {
+        if (this._behaviors === undefined) return;
+        const idx = this._behaviors.indexOf(behavior);
+        if (idx < 0) return;
+        this._behaviors.splice(idx, 1);
+
+        const onUnloaded = this._behaviorUnloadListeners?.get(behavior);
+        if (onUnloaded !== undefined)
+        {
+            this.RemoveUnloadedListener(onUnloaded);
+            this._behaviorUnloadListeners!.delete(behavior);
+        }
+        behavior.OnDetached(this);
     }
 
     public get Behaviors(): readonly Behavior[]

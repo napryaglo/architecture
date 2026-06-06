@@ -1,6 +1,7 @@
 import type { Storyboard } from './animation/storyboard.js';
 import type { Visual } from './visual.js';
 import type { ICommand } from './command.js';
+import type { Behavior } from './behavior.js';
 
 // Imperative side of declarative trigger actions. A TriggerAction is the
 // thing an EventTrigger fires when its routed event lands; the most
@@ -190,5 +191,96 @@ export class InvokeCommandAction extends TriggerAction
         if (cmd === undefined) return;
         if (!cmd.CanExecute(args)) return;
         cmd.Execute(args);
+    }
+}
+
+// Triggered-behavior attach. The trigger's enter edge wires a fresh
+// Behavior instance onto the firing Visual; the matching
+// DetachBehaviorAction (placed in the trigger's exitActions) tears it
+// back off on the trigger's deactivation edge.
+//
+// Factory-based so two Visuals sharing the same Style + DataTrigger
+// each get an independent Behavior instance (sharing a single Behavior
+// across multiple Visuals would have them stomp on each other's
+// per-instance properties at the second OnAttached).
+//
+// Authoring shape in `.mu`:
+//
+//   Style[TargetType=Border] {
+//       DataTrigger { when($IsBusy) {
+//           Behaviors { ShakeBehavior[Amplitude=4] }
+//       }}
+//   }
+//
+// Compiler emission:
+//   const _a = new AttachBehaviorAction(() => {
+//       const _b = new ShakeBehavior(); _b.Amplitude = 4; return _b;
+//   });
+//   const _d = new DetachBehaviorAction(_a);
+//   // enterActions: [_a]; exitActions: [_d]
+//
+// Re-entry safety: invoking Attach on a target that's already holding
+// the attached behavior (e.g., the trigger flickers active→active
+// without an intervening exit) detaches the prior instance before
+// attaching a fresh one — keeps the per-target reference unique.
+export class AttachBehaviorAction extends TriggerAction
+{
+    public readonly Factory: () => Behavior;
+    /** Per-target attached behavior. WeakMap so a target Visual dropping
+     *  out of use lets its behavior ref be GC'd; the DetachBehaviorAction
+     *  paired with this Attach reads back through the same WeakMap. */
+    private readonly attached: WeakMap<Visual, Behavior> = new WeakMap();
+
+    public constructor(factory: () => Behavior)
+    {
+        super();
+        this.Factory = factory;
+    }
+
+    public override Invoke(target: Visual): void
+    {
+        const existing = this.attached.get(target);
+        if (existing !== undefined)
+        {
+            // Re-entry without an intervening exit — drop the old
+            // attachment cleanly before installing the new one.
+            target.RemoveBehavior(existing);
+        }
+        const beh = this.Factory();
+        target.AddBehavior(beh);
+        this.attached.set(target, beh);
+    }
+
+    /** Internal — called by the paired DetachBehaviorAction. Looks up
+     *  the most-recently-attached behavior for `target` and removes
+     *  it; no-op when nothing is currently attached (e.g., the trigger
+     *  exit fires before any enter, or after a forced Visual unload). */
+    public DetachFrom(target: Visual): void
+    {
+        const beh = this.attached.get(target);
+        if (beh === undefined) return;
+        target.RemoveBehavior(beh);
+        this.attached.delete(target);
+    }
+}
+
+// Pairs with `AttachBehaviorAction`. Placed in a trigger's exitActions
+// so the behavior installed on the enter edge is torn back off when
+// the trigger deactivates. References the AttachBehaviorAction instance
+// directly so the per-target attachment map is shared — no separate
+// state to keep in sync.
+export class DetachBehaviorAction extends TriggerAction
+{
+    public readonly Attach: AttachBehaviorAction;
+
+    public constructor(attach: AttachBehaviorAction)
+    {
+        super();
+        this.Attach = attach;
+    }
+
+    public override Invoke(target: Visual): void
+    {
+        this.Attach.DetachFrom(target);
     }
 }

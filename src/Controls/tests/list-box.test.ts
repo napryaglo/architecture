@@ -60,14 +60,15 @@ describe('ListBox — composed-markup tree shape', () => {
         assert.equal(lb.ItemContainers.length, 1);
         assert.equal(lb.ItemContainers[0], item);
 
-        // visual: ItemsControl shape — ListBox → ScrollViewer →
+        // visual: ItemsControl shape — ListBox → ScrollViewer → SCP →
         // ItemsPresenter → items panel (StackPanel) → row containers.
-        // The extra ItemsPresenter layer is the slot the ItemsControl
-        // base wires the panel into; before the ItemsControl refactor
-        // the StackPanel was a direct ScrollViewer child.
+        // SCP comes from ScrollViewer's default template (templated SV
+        // refactor); ItemsPresenter is the slot the ItemsControl base
+        // wires the panel into. Walk via ScrollViewer.ContentPresenter
+        // to skip past the template's layout panel.
         const sv = lb.visualChildren[0]!;
         assert.ok(sv instanceof ScrollViewer);
-        const presenter = sv.visualChildren[0]!;
+        const presenter = sv.ContentPresenter!.visualChildren[0]!;
         assert.ok(presenter instanceof ItemsPresenter);
         const stack = presenter.visualChildren[0]!;
         assert.ok(stack instanceof StackPanel);
