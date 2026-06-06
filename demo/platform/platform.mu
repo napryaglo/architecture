@@ -1,4 +1,5 @@
 import GroupVM from "./platform-vm.mjs"
+import AdornerDecorator from "@visualisation-sub/mural/Controls"
 
 // platform.mu — MVVM shell for the µ-mural demo platform.
 //
@@ -61,6 +62,13 @@ Application{
         }
 
         Border x:root [Background=@paper]{
+            // AdornerDecorator scopes adornment to the whole platform
+            // root — any control inside (TreeView nav rows, the page
+            // body, the active demo's tree) can locate this layer via
+            // AdornerLayer.GetAdornerLayer(this) and drop adorners
+            // here. ListReorderBehavior's insertion-line is the first
+            // consumer; drag ghosts and validation chrome follow on.
+            AdornerDecorator {
             DockPanel [LastChildFill=true] {
 
                 // Nav strip — fixed cross-axis width (260 DIP), full
@@ -104,6 +112,7 @@ Application{
                          [Title=$Title,
                           Subtitle=$Subtitle,
                           Content=$Content]
+            }
             }
         }
     }

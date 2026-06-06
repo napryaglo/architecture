@@ -91,7 +91,21 @@ export class ListBox extends Selector
 
     // Multi-select bookkeeping — single-selection is just a Set of size 1.
     // _anchor seeds Shift-click ranges in Extended mode.
+    //
+    // Two mirrors of the selection live here:
+    //   * _selectedItems: live containers currently representing a
+    //     selected row. Used for IsSelected-flag bookkeeping and for
+    //     SelectedItems insertion order (which carries the
+    //     Tag-exposed values out via SelectedItems / refreshExposedSelection).
+    //   * _selectedData: the underlying data identities. The source of
+    //     truth across container recycle — when a virtualizing panel
+    //     reuses a ListBoxItem for a different row, bindContainer
+    //     consults this set to re-sync IsSelected to the new data.
+    //     Without it, a recycled container would keep its prior row's
+    //     selection chrome (and would incorrectly contribute its NEW
+    //     row to SelectedItems via container-Tag exposure).
     private readonly _selectedItems: Set<ListBoxItem> = new Set();
+    private readonly _selectedData:  Set<unknown>     = new Set();
     private _anchor: ListBoxItem | undefined;
 
     // Cached after first template apply — the lookup walks the
@@ -176,11 +190,30 @@ export class ListBox extends Selector
     // Shared by GetContainerForItemOverride (fresh) and
     // RebindContainerForItemOverride (recycled) so both paths stay in
     // lock-step with no chance of one drifting.
+    //
+    // Selection-sync rider: ListBox stores selection by data identity in
+    // _selectedData, with _selectedItems mirroring which live containers
+    // currently represent those rows. When a virtualizing panel recycles
+    // a container for a new row, this method re-syncs the container's
+    // IsSelected (and its membership in _selectedItems) against the new
+    // data. Without this, a recycled container would carry over its
+    // previous row's selection chrome and bleed into SelectedItems.
     private bindContainer(li: ListBoxItem, item: unknown): void
     {
         li.Tag         = item;
         li.DataContext = item;
         li.Content     = this.contentForItem(item);
+        const shouldBeSelected = this._selectedData.has(item);
+        if (shouldBeSelected)
+        {
+            this._selectedItems.add(li);
+            li.SetIsSelectedInternal(true);
+        }
+        else if (this._selectedItems.has(li))
+        {
+            this._selectedItems.delete(li);
+            li.SetIsSelectedInternal(false);
+        }
     }
 
     private contentForItem(item: unknown): Visual | Model {
@@ -201,6 +234,12 @@ export class ListBox extends Selector
         // ItemsControl detaches it. Listeners observe the post-clean
         // state.
         const wasSelected = this._selectedItems.delete(container);
+        // Drop the data-side mirror too — for the data-driven path the
+        // Tag carries the item, so once the container leaves the live
+        // tree its row's selection identity goes with it. (Composed-
+        // markup rows have li === exposedValueOf so the same delete
+        // covers them.)
+        this._selectedData.delete(ListBox.exposedValueOf(container));
         if (wasSelected) container.SetIsSelectedInternal(false);
         if (this._anchor === container) this._anchor = undefined;
         if (wasSelected)
@@ -254,9 +293,10 @@ export class ListBox extends Selector
 
     public ClearSelection(): void
     {
-        if (this._selectedItems.size === 0) return;
+        if (this._selectedItems.size === 0 && this._selectedData.size === 0) return;
         for (const i of this._selectedItems) i.SetIsSelectedInternal(false);
         this._selectedItems.clear();
+        this._selectedData.clear();
         this._anchor = undefined;
         this.refreshExposedSelection();
         this.fireSelectionChanged();
@@ -343,7 +383,12 @@ export class ListBox extends Selector
             if (!this._selectedItems.has(i)) i.SetIsSelectedInternal(true);
         }
         this._selectedItems.clear();
-        for (const i of items) this._selectedItems.add(i);
+        this._selectedData.clear();
+        for (const i of items)
+        {
+            this._selectedItems.add(i);
+            this._selectedData.add(ListBox.exposedValueOf(i));
+        }
     }
 
     private toggleSelected(item: ListBoxItem): void
@@ -351,11 +396,13 @@ export class ListBox extends Selector
         if (this._selectedItems.has(item))
         {
             this._selectedItems.delete(item);
+            this._selectedData.delete(ListBox.exposedValueOf(item));
             item.SetIsSelectedInternal(false);
         }
         else
         {
             this._selectedItems.add(item);
+            this._selectedData.add(ListBox.exposedValueOf(item));
             item.SetIsSelectedInternal(true);
         }
     }

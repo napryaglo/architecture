@@ -230,6 +230,7 @@ export interface SlotInfo
 // One entry per known control. Unknown controls fall back to 'single'
 // + 'Child' with an emit-time error if the body doesn't match.
 export const DEFAULT_SLOT_INFO: ReadonlyMap<string, SlotInfo> = new Map<string, SlotInfo>([
+    ['AdornerDecorator',        { name: 'Child',    kind: 'single' }],
     ['Border',                  { name: 'Child',    kind: 'single' }],
     ['Button',                  { name: 'Content',  kind: 'object' }],
     ['TextBlock',               { name: 'Text',     kind: 'string' }],

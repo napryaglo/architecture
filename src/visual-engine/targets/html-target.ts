@@ -1,8 +1,10 @@
 import type { Visual } from '../../runtime/index.js';
 import {
+    AdornerLayer,
     AnimationManager,
     DataObject,
     DragDropEffects,
+    DragGhostAdorner,
     DragSession,
     ManualClock,
     NoModifiers,
@@ -519,6 +521,19 @@ export class HtmlTarget extends PresentationTarget
             this.ensureDragOverlay();      // mode B — shell only
             return;
         }
+
+        // Prefer the AdornerLayer path when the visual tree carries an
+        // AdornerDecorator — the drag ghost then participates in the
+        // standard render pipeline (the renderer's outer-<g> translate
+        // handles positioning) instead of riding a surface-level
+        // dragOverlay <g> owned by the host. Mode A clones the
+        // source's painted subtree under the adorner's outer; mode C
+        // hosts the preview Visual as the adorner's content.
+        const content = this.Content;
+        const layer = content !== undefined
+            ? AdornerLayer.FindFirstInSubtree(content)
+            : undefined;
+
         if (opts.preview === undefined)
         {
             // Mode A — translucent clone of the source. OS-level drops
@@ -527,11 +542,25 @@ export class HtmlTarget extends PresentationTarget
             // skips its own ghost.
             if (session.Source !== undefined)
             {
-                this.attachGhostFromSource(session.Source);
+                if (layer !== undefined)
+                {
+                    this.attachGhostAdornerFromSource(layer, session.Source);
+                }
+                else
+                {
+                    this.attachGhostFromSource(session.Source);
+                }
             }
             return;
         }
-        this.attachGhostFromTemplate(opts.preview, session.Data);
+        if (layer !== undefined)
+        {
+            this.attachGhostAdornerFromTemplate(layer, opts.preview, session.Data);
+        }
+        else
+        {
+            this.attachGhostFromTemplate(opts.preview, session.Data);
+        }
     }
 
     // No-op — cursor is intentionally not mutated during a drag. See
@@ -547,6 +576,17 @@ export class HtmlTarget extends PresentationTarget
 
     public OnDragSessionEnded(): void
     {
+        // Adorner-mode teardown takes precedence — the adorner owns the
+        // ghost <g> (mode A) / preview Visual (mode C) in this case;
+        // removing the adorner detaches both from the layer.
+        if (this._ghostAdorner !== undefined && this._ghostAdornerLayer !== undefined)
+        {
+            this._ghostAdornerLayer.Remove(this._ghostAdorner);
+            this._ghostAdorner       = undefined;
+            this._ghostAdornerLayer  = undefined;
+            this._modeCPreviewVisual = undefined;
+            return;
+        }
         // Detach the mode-C preview Visual from the OverlayLayer if it
         // was attached — keeps the framework's overlay tracking in
         // sync. The <g> is already gone (parented under dragOverlay
@@ -561,6 +601,11 @@ export class HtmlTarget extends PresentationTarget
     }
 
     private _modeCPreviewVisual: Visual | undefined;
+    // Adorner-mode state. Populated when an AdornerLayer is present in
+    // the content tree and we host the ghost there instead of on a
+    // surface-level dragOverlay <g>.
+    private _ghostAdorner:        DragGhostAdorner | undefined;
+    private _ghostAdornerLayer:   AdornerLayer | undefined;
 
     private attachGhostFromTemplate(
         template: { Apply(data: unknown): Visual },
@@ -597,7 +642,6 @@ export class HtmlTarget extends PresentationTarget
 
     public SetDragGhostPosition(hostX: number, hostY: number): void
     {
-        if (this.dragGhost === undefined) return;
         // Subtract the press-relative cursor offset so the cursor stays
         // anchored at the point inside the source where the user pressed.
         // Without this, a stretched source (an ItemsControl
@@ -608,9 +652,94 @@ export class HtmlTarget extends PresentationTarget
         // from the press coords + source's host-coord position; defaults
         // to (0, 0) for imperative DoDragDrop callers and OS-drag.
         const offset = this.InputManager.CurrentDragOptions.ghostCursorOffset ?? { x: 0, y: 0 };
-        const x = hostX - offset.x;
-        const y = hostY - offset.y;
-        this.dragGhost.setAttribute('transform', `translate(${x},${y})`);
+        const hx = hostX - offset.x;
+        const hy = hostY - offset.y;
+
+        if (this._ghostAdorner !== undefined && this._ghostAdornerLayer !== undefined)
+        {
+            // Adorner path — write layer-local coords. The renderer's
+            // outer-translate then positions the ghost via the
+            // standard arrange pipeline.
+            const layerOff = this.layerHostOffset(this._ghostAdornerLayer);
+            this._ghostAdorner.SetPosition(hx - layerOff.x, hy - layerOff.y);
+            return;
+        }
+        if (this.dragGhost === undefined) return;
+        this.dragGhost.setAttribute('transform', `translate(${hx},${hy})`);
+    }
+
+    // Adorner-mode mode-A: the adorner is a positioning shell; after
+    // the next Flush paints its outer <g>, we append the source's
+    // cloned <g> into it. The transform-strip + pointer-events
+    // suppression contracts are identical to the surface-overlay path
+    // — only the host changes.
+    private attachGhostAdornerFromSource(layer: AdornerLayer, source: Visual): void
+    {
+        const sourceOuter = this.findOuterGForVisual(source);
+        if (sourceOuter === null) return;
+
+        const adorner = new DragGhostAdorner(layer);
+        layer.Add(adorner);
+        this._ghostAdorner      = adorner;
+        this._ghostAdornerLayer = layer;
+        // Drive a paint so the renderer creates the adorner's outer <g>.
+        this.Flush();
+        const adornerOuter = this.findOuterGForVisual(adorner);
+        if (adornerOuter === null) return;
+
+        const clone = sourceOuter.cloneNode(true) as Element;
+        clone.removeAttribute('transform');
+        suppressPointerEvents(clone);
+        adornerOuter.setAttribute('opacity', '0.6');
+        adornerOuter.appendChild(clone);
+    }
+
+    // Adorner-mode mode-C: the preview Visual becomes the adorner's
+    // child. The renderer paints it under the adorner's outer <g> — no
+    // DOM gymnastics needed because the preview is a real Visual.
+    private attachGhostAdornerFromTemplate(
+        layer: AdornerLayer,
+        template: { Apply(data: unknown): Visual },
+        data: DataObject,
+    ): void
+    {
+        const previewVisual = template.Apply(data);
+        const adorner = new DragGhostAdorner(layer);
+        adorner.SetContent(previewVisual);
+        layer.Add(adorner);
+        this._ghostAdorner       = adorner;
+        this._ghostAdornerLayer  = layer;
+        this._modeCPreviewVisual = previewVisual;
+        // Drive a paint so the adorner / preview Visual reach the DOM
+        // before the first move sample writes a Position into them.
+        this.Flush();
+        const adornerOuter = this.findOuterGForVisual(adorner);
+        if (adornerOuter !== null)
+        {
+            // Pointer-events transparency contract — same as the
+            // surface-overlay drag ghost. The preview's mural-hit
+            // rects would otherwise eat HitTest while the cursor
+            // tracks the ghost.
+            suppressPointerEvents(adornerOuter);
+            adornerOuter.setAttribute('opacity', '0.6');
+        }
+    }
+
+    // Walk from the AdornerLayer up through ArrangedRect offsets to
+    // compute the layer's top-left in host coords. Used to convert
+    // host-coord cursor positions to layer-local coords before
+    // writing them into a DragGhostAdorner.
+    private layerHostOffset(layer: AdornerLayer): { x: number; y: number }
+    {
+        let x = 0, y = 0;
+        let cur: Visual | undefined = layer;
+        while (cur !== undefined)
+        {
+            x += cur.ArrangedRect.X;
+            y += cur.ArrangedRect.Y;
+            cur = cur.GetVisualParent();
+        }
+        return { x, y };
     }
 
     private attachGhostFromSource(source: Visual): void

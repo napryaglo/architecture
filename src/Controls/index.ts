@@ -1,5 +1,10 @@
 // Barrel re-exports for the control library. Consumers import from here
 // rather than the individual control files.
+// Adorner primitives live in runtime/ (no Controls dependency); the
+// re-export here keeps the import surface uniform for consumers that
+// already pull everything from "@visualisation-sub/mural/Controls".
+export { Adorner, AdornerLayer, AdornerDecorator } from '../runtime/index.js';
+export { ValidationErrorAdorner } from './validation-error-adorner.js';
 export { Border } from './border.js';
 export {
     Button,

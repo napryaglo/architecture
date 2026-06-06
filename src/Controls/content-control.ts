@@ -292,6 +292,16 @@ export class ContentControl extends Visual
             // lock-step. Without this hook, applyDefaultStyle would set
             // the Template DP value but never tear down the old template
             // or attach the new one, leaving visualChildren empty.
+            //
+            // Idempotency guard: when an ItemContainerStyle (or any
+            // user Style) chains BasedOn → theme default, the theme's
+            // Template setter re-fires on every Style apply with the
+            // same ControlTemplate instance. Without the identity
+            // check, rebuildTemplate tears down the live template tree
+            // and re-materialises it — invalidating subclass-cached
+            // template-part references (TreeViewItem._label etc.) and
+            // breaking any wiring done in the constructor.
+            if (newValue === oldValue) return;
             this.rebuildTemplate(newValue as ControlTemplate | undefined);
         }
     }

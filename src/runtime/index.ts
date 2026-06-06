@@ -43,6 +43,7 @@ export {
     VerticalAlignment,
     type VisualHost,
 } from './visual.js';
+export { Adorner, AdornerLayer, AdornerDecorator, DragGhostAdorner } from './adorner.js';
 export { NameScope } from './namescope.js';
 export {
     ResourceDictionary,

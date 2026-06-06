@@ -1,7 +1,8 @@
 import {
+    AdornerLayer,
     Rect,
     Size,
-    type Visual,
+    Visual,
     isScrollInfo,
     type IScrollInfo,
 } from '../runtime/index.js';
@@ -61,6 +62,41 @@ export class ScrollContentPresenter extends ContentPresenter
     private _viewportWidth:  number = 0;
     private _viewportHeight: number = 0;
 
+    // Inner AdornerLayer painted ON TOP of the consumer's content,
+    // sharing the SCP's scroll arrangement so adorners track their
+    // adorned elements as the viewport moves. WPF parity — WPF's
+    // ScrollContentPresenter carries an internal AdornerLayer for the
+    // same reason. Discovered via AdornerLayer.GetAdornerLayer's
+    // duck-typing walk (`cur.AdornerLayer instanceof AdornerLayer`).
+    //
+    // We deliberately DON'T host the consumer content via an internal
+    // AdornerDecorator: AdornerDecorator's Child slot does logical-
+    // tree attach, but ContentControl already owns the consumer
+    // content logically. Bypassing that with a sibling-layer setup
+    // keeps the logical tree clean while still giving adorners the
+    // scrolled frame.
+    private readonly _adornerLayer: AdornerLayer = new AdornerLayer();
+
+    constructor()
+    {
+        super();
+        this.AttachVisual(this._adornerLayer);
+    }
+
+    public get AdornerLayer(): AdornerLayer { return this._adornerLayer; }
+
+    // Append the inner AdornerLayer as a sibling of the content (after
+    // it in z-order so adorners paint above). ContentPresenter's base
+    // surface returns [_content]; we extend that with our layer so the
+    // renderer walks both.
+    public override get visualChildren(): readonly Visual[]
+    {
+        const base = super.visualChildren;
+        return base.length === 0
+            ? [this._adornerLayer]
+            : [...base, this._adornerLayer];
+    }
+
     public get ExtentWidth():    number { return this._extentWidth; }
     public get ExtentHeight():   number { return this._extentHeight; }
     public get ViewportWidth():  number { return this._viewportWidth; }
@@ -74,7 +110,11 @@ export class ScrollContentPresenter extends ContentPresenter
         this._viewportWidth  = availableSize.Width;
         this._viewportHeight = availableSize.Height;
 
-        const content = this.visualChildren[0];
+        // ContentPresenter.visualChildren returns [_content] when set;
+        // SCP's override appends the layer. Pull the consumer's content
+        // off the base getter so the index doesn't collide with the
+        // layer-attached case.
+        const content = super.visualChildren[0];
         if (content === undefined)
         {
             this._extentWidth  = 0;
@@ -139,6 +179,12 @@ export class ScrollContentPresenter extends ContentPresenter
             this._extentHeight = content.DesiredSize.Height;
         }
 
+        // Inner AdornerLayer shares the scrolled frame with the
+        // content — measure it against the content's rendered size so
+        // adorners inside size against the same slot as the items
+        // they decorate.
+        this._adornerLayer.Measure(content.DesiredSize);
+
         // DesiredSize: fit-in-parent, never larger than extent. Same
         // shape the old ScrollViewer.MeasureOverride returned — returning
         // availableSize verbatim would propagate Infinity up the tree any
@@ -159,11 +205,16 @@ export class ScrollContentPresenter extends ContentPresenter
         this._viewportWidth  = finalSize.Width;
         this._viewportHeight = finalSize.Height;
 
-        const content = this.visualChildren[0];
+        // ContentPresenter.visualChildren returns [_content] when set;
+        // SCP's override appends the layer. Pull the consumer's content
+        // off the base getter so the index doesn't collide with the
+        // layer-attached case.
+        const content = super.visualChildren[0];
         if (content === undefined) return finalSize;
 
         const host = this.host;
         const scrollInfo = resolveScrollInfo(content);
+        let contentRect: Rect;
         if (scrollInfo !== undefined)
         {
             // Delegate mode: the panel only realizes containers whose
@@ -178,8 +229,9 @@ export class ScrollContentPresenter extends ContentPresenter
             // arranged viewport rect (in the content's own local
             // space, which starts at (0, 0) here since we arrange the
             // content at (0, 0)).
-            content.Arrange(new Rect(0, 0, finalSize.Width, finalSize.Height));
-            content.Clip = new RectangleGeometry(new Rect(0, 0, finalSize.Width, finalSize.Height));
+            contentRect = new Rect(0, 0, finalSize.Width, finalSize.Height);
+            content.Arrange(contentRect);
+            content.Clip = new RectangleGeometry(contentRect);
         }
         else
         {
@@ -191,9 +243,16 @@ export class ScrollContentPresenter extends ContentPresenter
             // a translate of -(offset).
             const offX = host !== undefined ? host['effectiveHorizontalOffset']() : 0;
             const offY = host !== undefined ? host['effectiveVerticalOffset']()   : 0;
-            content.Arrange(new Rect(-offX, -offY, this._extentWidth, this._extentHeight));
+            contentRect = new Rect(-offX, -offY, this._extentWidth, this._extentHeight);
+            content.Arrange(contentRect);
             content.Clip = new RectangleGeometry(new Rect(offX, offY, finalSize.Width, finalSize.Height));
         }
+        // Arrange the AdornerLayer at the same rect as the content so
+        // adorners inside share its scroll-translate frame — host-coord
+        // ancestor walks from any adorned element under the SCP land at
+        // the same point whether they go through the content tree or
+        // through the adorner-layer tree.
+        this._adornerLayer.Arrange(contentRect);
         return finalSize;
     }
 }

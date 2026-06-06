@@ -1,10 +1,15 @@
 import {
+    Adorner,
+    AdornerLayer,
     Behavior,
     MetaData,
     Model,
     ObservableCollection,
+    Rect,
+    Size,
+    type DrawingContext,
     type DragEventArgs,
-    type Visual,
+    Visual,
 } from '../runtime/index.js';
 import { DragDropEffects } from '../runtime/index.js';
 import type { PresentationTarget } from '../visual-engine/index.js';
@@ -78,6 +83,14 @@ export class ListReorderBehavior extends Behavior
     public set InsertionAdornerTemplate(v: DataTemplate | undefined) { this.set_property_value(ListReorderBehavior.InsertionAdornerTemplateKey, v); }
 
     private _host: ItemsControl | undefined;
+    // Adorner that hosts the insertion-line visual. Bound when the
+    // host's tree contains an AdornerDecorator (the modern path);
+    // _layer caches the resolved layer so teardown can remove it.
+    private _adorner:        ReorderInsertionAdorner | undefined;
+    private _adornerLayer:   AdornerLayer | undefined;
+    // Overlay-fallback path for hosts NOT wrapped in an AdornerDecorator.
+    // Same shape as before the migration so consumers without an
+    // AdornerDecorator at the root keep getting an insertion line.
     private _adornerWrapper: Visual | undefined;
     private _adornerVisual:  Visual | undefined;
 
@@ -226,9 +239,6 @@ export class ListReorderBehavior extends Behavior
         const template = this.InsertionAdornerTemplate;
         if (template === undefined) return;
 
-        const pt = host['target'] as PresentationTarget | undefined;
-        if (pt === undefined) return;
-
         const index = this.computeInsertionIndex(args);
 
         if (this._adornerVisual === undefined)
@@ -240,7 +250,29 @@ export class ListReorderBehavior extends Behavior
             this._adornerWrapper = wrapper;
             this._adornerVisual = produced;
             args.Session?.then(() => this.tearDownAdorner());
-            pt.AttachOverlay(wrapper);
+
+            // Prefer adorner-layer hosting when the tree contains an
+            // AdornerLayer provider. Look up FROM the items panel
+            // rather than from the host so the nearest layer is the
+            // ScrollContentPresenter's inner one (shares the scrolled
+            // frame, so the insertion line tracks during auto-scroll)
+            // rather than a root-level AdornerDecorator. Falls back
+            // to the host when no items panel has been realized yet.
+            const lookupRoot = host.ItemsPanelInstance ?? host;
+            const layer = AdornerLayer.GetAdornerLayer(lookupRoot);
+            if (layer !== undefined)
+            {
+                const adorner = new ReorderInsertionAdorner(host, wrapper);
+                layer.Add(adorner);
+                this._adorner      = adorner;
+                this._adornerLayer = layer;
+            }
+            else
+            {
+                const pt = host['target'] as PresentationTarget | undefined;
+                if (pt === undefined) return;
+                pt.AttachOverlay(wrapper);
+            }
         }
 
         if (this.isWrapMode())
@@ -346,11 +378,20 @@ export class ListReorderBehavior extends Behavior
     {
         const w = this._adornerWrapper;
         if (w === undefined) return;
-        const host = this._host;
-        const pt = host?.['target'] as PresentationTarget | undefined;
-        pt?.DetachOverlay(w);
+        if (this._adorner !== undefined && this._adornerLayer !== undefined)
+        {
+            this._adornerLayer.Remove(this._adorner);
+        }
+        else
+        {
+            const host = this._host;
+            const pt = host?.['target'] as PresentationTarget | undefined;
+            pt?.DetachOverlay(w);
+        }
+        this._adorner        = undefined;
+        this._adornerLayer   = undefined;
         this._adornerWrapper = undefined;
-        this._adornerVisual = undefined;
+        this._adornerVisual  = undefined;
     }
 
     private onDrop(args: DragEventArgs): void
@@ -402,4 +443,56 @@ function hostLeft(v: Visual): number
         cur = cur.GetVisualParent();
     }
     return x;
+}
+
+// Adorner that hosts the user's InsertionAdornerTemplate-produced
+// visual. Placement returns the full layer rect so the inner Canvas
+// (where the behavior writes Canvas.SetLeft / SetTop on each move
+// sample) shares the layer's coordinate frame. When the
+// AdornerDecorator wraps the host root that's host-coord space —
+// identical to the OverlayLayer behaviour the behaviour used to rely
+// on, so the existing positionVerticalAdorner / positionWrapAdorner
+// math doesn't need adjustment.
+class ReorderInsertionAdorner extends Adorner
+{
+    private readonly _content: Visual;
+
+    constructor(adornedElement: Visual, content: Visual)
+    {
+        super(adornedElement);
+        this._content = content;
+        this.AttachVisual(content);
+    }
+
+    public override get visualChildren(): readonly Visual[] { return [this._content]; }
+
+    // The behaviour writes Canvas.SetLeft / SetTop in host-coord space
+    // on the inner Canvas; for those writes to land at the same on-
+    // screen position when we hand things to the renderer, the
+    // adorner must fill the layer's full rect. AdornerLayer passes
+    // the layer's local-frame slot as `adornedRect` for the host
+    // ItemsControl, but we want the broader layer frame — so derive
+    // it from the layer's RenderSize directly.
+    public override Placement(adornedRect: Rect, _desired: Size): Rect
+    {
+        void adornedRect;
+        const layer = this.GetVisualParent();
+        if (layer === undefined) return new Rect(0, 0, 0, 0);
+        const ls = layer.RenderSize;
+        return new Rect(0, 0, ls.Width, ls.Height);
+    }
+
+    protected override MeasureOverride(available: Size): Size
+    {
+        this._content.Measure(available);
+        return this._content.DesiredSize;
+    }
+
+    protected override ArrangeOverride(finalSize: Size): Size
+    {
+        this._content.Arrange(new Rect(0, 0, finalSize.Width, finalSize.Height));
+        return finalSize;
+    }
+
+    protected override RenderOverride(_dc: DrawingContext): void { }
 }

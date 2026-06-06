@@ -207,6 +207,19 @@ export class Visual extends Model
     public static readonly AllowDropKey  = Model.RegisterProperty<boolean>(Visual, 'AllowDrop',  false, MetaData.None);
     public static readonly IsDragOverKey = Model.RegisterProperty<boolean>(Visual, 'IsDragOver', false, MetaData.None);
 
+    // Hit-test opt-out (WPF parity — UIElement.IsHitTestVisible). When
+    // false, this visual AND its visual subtree are transparent to the
+    // hit-test pipeline: pointer events fall through to whatever sits
+    // below. Pure-decoration adorners (insertion lines, validation
+    // chrome, drag ghosts) flip this off so they don't intercept clicks
+    // meant for the controls they decorate. Default true — opt-out
+    // model matches WPF.
+    //
+    // Renderer side: a false value emits `pointer-events="none"` on
+    // the outer <g>, which CSS-cascades to every descendant element.
+    // MetaData.Render so flips repaint without further wiring.
+    public static readonly IsHitTestVisibleKey = Model.RegisterProperty<boolean>(Visual, 'IsHitTestVisible', true, MetaData.Render);
+
     // Declarative drag source. When IsDraggable = true the framework
     // installs a PointerDown / Move / Up latch that calls OnDragStart
     // after the pointer travels > DragDrop.DragThreshold pixels. The
@@ -274,6 +287,12 @@ export class Visual extends Model
     // receiver". Read-only contract — flips via _set_property_value_by_name
     // from the InputManager's drag-session driver.
     public get IsDragOver(): boolean { return this.get_property_value(Visual.IsDragOverKey); }
+
+    // Hit-test opt-out. WPF parity — IsHitTestVisible=false renders
+    // this Visual (and every descendant) transparent to pointer-event
+    // hit-testing.
+    public get IsHitTestVisible():  boolean { return this.get_property_value(Visual.IsHitTestVisibleKey); }
+    public set IsHitTestVisible(v: boolean) { this.set_property_value(Visual.IsHitTestVisibleKey, v); }
 
     // Declarative drag source. Set IsDraggable=true and supply an
     // OnDragStart callback; the framework calls the callback once the
@@ -747,93 +766,89 @@ export class Visual extends Model
     {
         const desired = this.Style ?? this._implicitStyle ?? this._themeStyle;
         if (desired === this._activeStyle) return;
-        if (this._activeStyle !== undefined)
-        {
-            this.unapply_style(this._activeStyle);
-        }
+        const previous = this._activeStyle;
         this._activeStyle = desired;
-        // BasedOn layering happens inside apply_style — Style.Seal()
-        // splices the TargetType's theme Style in as an implicit
-        // BasedOn (WPF parity), and Style.ResolveSetters walks the
-        // chain. So a single apply / unapply call covers the whole
-        // composed setter map without needing dual-style tracking
-        // here.
-        if (desired !== undefined)
-        {
-            this.apply_style(desired);
-        }
-    }
+        // Diff-style swap. The naive sequence — unapply(previous) →
+        // apply(desired) — transitions every shared property through
+        // the StyleValue=default fallback even when both styles set the
+        // same value (typical for an ItemContainerStyle chained
+        // BasedOn → theme: Template lives on the theme, NavRowStyle
+        // contributes only IsExpanded, ResolveSetters returns the same
+        // Template setter on both sides). The two OnPropertyChange
+        // pulses that result trigger ContentControl.rebuildTemplate
+        // twice, invalidating any constructor-cached template-part
+        // references (TreeViewItem._label etc.) and leaving Header
+        // writes pointed at a detached TextBlock — every group row in
+        // the platform's HDT-driven nav tree rendered blank.
+        //
+        // Instead, diff the resolved setter maps and only touch what
+        // actually changed. Property values for shared-value setters
+        // stay put; OnPropertyChange fires only for genuinely new or
+        // removed setters. Same diff strategy applies to triggers.
+        if (previous !== undefined) previous.Seal();
+        if (desired  !== undefined) desired.Seal();
 
-    private apply_style(style: Style): void
-    {
-        // Reject mismatched TargetType up front — applying a Style with
-        // an incompatible target is a programming error that would
-        // silently leak unrelated setters otherwise.
-        if (!(this instanceof (style.TargetType as new (...args: any[]) => Visual)))
+        const prevSetters = previous?.ResolveSetters() ?? new Map<string, Setter>();
+        const nextSetters = desired?.ResolveSetters()  ?? new Map<string, Setter>();
+        // Unapply first when the property is gone OR the setter
+        // instance has been replaced — replacement disposes the old
+        // Binding subscription before the next setter installs its own.
+        // Setters that live on the shared theme base (same instance on
+        // both sides via ResolveSetters' BasedOn walk) skip both
+        // branches and leave their EVD untouched.
+        for (const [name, prevSetter] of prevSetters)
+        {
+            if (nextSetters.get(name) === prevSetter) continue;
+            this.unapply_setter(prevSetter, 'style');
+        }
+        for (const [name, nextSetter] of nextSetters)
+        {
+            if (prevSetters.get(name) === nextSetter) continue;
+            this.apply_setter(nextSetter, 'style');
+        }
+
+        // Triggers: install / uninstall on identity-mismatch only. The
+        // resolved arrays come from the chain walk, so a trigger that
+        // lives on the theme base appears in both arrays as the same
+        // instance — skipping it preserves any latched trigger state.
+        const prevTriggers = previous?.ResolveTriggers() ?? [];
+        const nextTriggers = desired?.ResolveTriggers()  ?? [];
+        const prevTriggerSet = new Set(prevTriggers);
+        const nextTriggerSet = new Set(nextTriggers);
+        for (const t of prevTriggers) if (!nextTriggerSet.has(t)) this.uninstall_trigger(t);
+        for (const t of nextTriggers) if (!prevTriggerSet.has(t)) this.install_trigger(t);
+
+        const prevMulti = previous?.ResolveMultiTriggers() ?? [];
+        const nextMulti = desired?.ResolveMultiTriggers()  ?? [];
+        const prevMultiSet = new Set(prevMulti);
+        const nextMultiSet = new Set(nextMulti);
+        for (const t of prevMulti) if (!nextMultiSet.has(t)) this.uninstall_trigger(t);
+        for (const t of nextMulti) if (!prevMultiSet.has(t)) this.install_multi_trigger(t);
+
+        const prevData = previous?.ResolveDataTriggers() ?? [];
+        const nextData = desired?.ResolveDataTriggers()  ?? [];
+        const prevDataSet = new Set(prevData);
+        const nextDataSet = new Set(nextData);
+        for (const t of prevData) if (!nextDataSet.has(t)) this.uninstall_trigger(t);
+        for (const t of nextData) if (!prevDataSet.has(t)) this.install_data_trigger(t);
+
+        const prevEvt = previous?.ResolveEventTriggers() ?? [];
+        const nextEvt = desired?.ResolveEventTriggers()  ?? [];
+        const prevEvtSet = new Set(prevEvt);
+        const nextEvtSet = new Set(nextEvt);
+        for (const t of prevEvt) if (!nextEvtSet.has(t)) this.uninstall_event_trigger(t);
+        for (const t of nextEvt) if (!prevEvtSet.has(t)) this.install_event_trigger(t);
+
+        // TargetType-mismatch guard mirrors what apply_style did before.
+        // Run on the desired style only — previous already validated when
+        // it was applied.
+        if (desired !== undefined
+            && !(this instanceof (desired.TargetType as new (...args: any[]) => Visual)))
         {
             const actual = (this as Visual).constructor.name;
             throw new Error(
-                `Style.TargetType '${style.TargetType.name}' does not match target '${actual}'.`,
+                `Style.TargetType '${desired.TargetType.name}' does not match target '${actual}'.`,
             );
-        }
-        // Seal on first apply (WPF parity). Idempotent — subsequent
-        // applies are no-ops on Seal but still drive the setters.
-        style.Seal();
-
-        for (const setter of style.ResolveSetters().values())
-        {
-            this.apply_setter(setter, 'style');
-        }
-        for (const trigger of style.ResolveTriggers())
-        {
-            this.install_trigger(trigger);
-        }
-        for (const multi of style.ResolveMultiTriggers())
-        {
-            this.install_multi_trigger(multi);
-        }
-        for (const data of style.ResolveDataTriggers())
-        {
-            this.install_data_trigger(data);
-        }
-        // EventTriggers sit outside the trigger-value tier — they fire
-        // imperative actions rather than installing property values, so
-        // their resolution happens AFTER property-trigger setup so the
-        // first action invocation observes the style's full value state.
-        for (const evt of style.ResolveEventTriggers())
-        {
-            this.install_event_trigger(evt);
-        }
-    }
-
-    private unapply_style(style: Style): void
-    {
-        // EventTriggers first — symmetric to install order. Detaching
-        // before the trigger-value teardown means a running action
-        // (e.g., a Storyboard that just started on its final frame)
-        // can't observe a torn-down property state mid-tick.
-        for (const evt of style.ResolveEventTriggers())
-        {
-            this.uninstall_event_trigger(evt);
-        }
-        // Triggers next: they sit ABOVE style values in priority, so
-        // taking them down before the style values keeps the value
-        // resolution coherent at each EVD step. Then style setters.
-        for (const data of style.ResolveDataTriggers())
-        {
-            this.uninstall_trigger(data);
-        }
-        for (const multi of style.ResolveMultiTriggers())
-        {
-            this.uninstall_trigger(multi);
-        }
-        for (const trigger of style.ResolveTriggers())
-        {
-            this.uninstall_trigger(trigger);
-        }
-        for (const setter of style.ResolveSetters().values())
-        {
-            this.unapply_setter(setter, 'style');
         }
     }
 

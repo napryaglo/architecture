@@ -96,6 +96,7 @@ interface RenderableVisual extends BackrefHost
 {
     readonly ArrangedRect: { X: number; Y: number; Width: number; Height: number };
     readonly Clip:         unknown;
+    readonly IsHitTestVisible: boolean;
     readonly visualChildren: Iterable<RenderableVisual>;
     Render(dc: SvgDomDrawingContext): void;
 }
@@ -300,6 +301,7 @@ export class SvgRenderer
             || arrangeDirty.has(visual) || renderDirty.has(visual))
         {
             this.applyClip(info.outer, visual);
+            this.applyHitTestVisibility(info.outer, visual);
         }
 
         // Own primitives — re-emit on first paint, when render-dirty,
@@ -355,6 +357,25 @@ export class SvgRenderer
     // for this visual. Tracked via a WeakMap so we can find and remove
     // the prior def without scanning <defs>.
     private clipDefs = new WeakMap<RenderableVisual, SVGElement>();
+
+    // Mirror IsHitTestVisible onto the outer <g>. When false, set
+    // `pointer-events="none"` so this visual AND every descendant
+    // (CSS cascade) drop out of the elementsFromPoint walk — the same
+    // contract HtmlTarget.suppressPointerEvents enforces manually for
+    // the drag ghost subtree. When true (the default), clear the
+    // attribute so the inner mural-hit pad's explicit `all` takes
+    // effect again.
+    private applyHitTestVisibility(outer: SVGGElement, visual: RenderableVisual): void
+    {
+        if (visual.IsHitTestVisible)
+        {
+            outer.removeAttribute('pointer-events');
+        }
+        else
+        {
+            outer.setAttribute('pointer-events', 'none');
+        }
+    }
 
     private applyClip(outer: SVGGElement, visual: RenderableVisual): void
     {
