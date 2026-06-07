@@ -171,6 +171,7 @@ ResourceDictionary {
                                      ItemsPanel=@ListBoxItemsPanel,
                                      ItemContainerStyle=@WordTileItemStyle,
                                      SelectionMode=Extended,
+                                     MarqueeBoundsPolicy=Contained,
                                      AllowMarqueeSelection=true] {
                                 Behaviors {
                                     ListReorderBehavior x:name="reorder"

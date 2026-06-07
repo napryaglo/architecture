@@ -1,5 +1,5 @@
 import { WordToolboxVM, WordVM } from "./word-toolbox-vm.mjs";
-import { Border, ContentPresenter, ControlTemplate, DataTemplate, Dock, DockPanel, ItemsControl, ItemsPanelTemplate, ListBox, ListBoxItem, ListReorderBehavior, Orientation, ScrollViewer, SelectionMode, StackPanel, TargetedSetter, TemplatePropertyTrigger, TextBlock, TextWrapping, VirtualizingStackPanel, VirtualizingWrapPanel } from "@visualisation-sub/mural/Controls";
+import { Border, ContentPresenter, ControlTemplate, DataTemplate, Dock, DockPanel, ItemsControl, ItemsPanelTemplate, ListBox, ListBoxItem, ListReorderBehavior, MarqueeBoundsPolicy, Orientation, ScrollViewer, SelectionMode, StackPanel, TargetedSetter, TemplatePropertyTrigger, TextBlock, TextWrapping, VirtualizingStackPanel, VirtualizingWrapPanel } from "@visualisation-sub/mural/Controls";
 import { Color, DataContextBinding, HorizontalAlignment, NameScope, ResourceDictionary, Setter, SetterFactory, Style, Thickness, VerticalAlignment } from "@visualisation-sub/mural/runtime";
 import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
 
@@ -140,6 +140,7 @@ export function create() {
         _listBox40._set_property_value_by_name("ItemsPanel", _tmpl1);
         _listBox40._set_property_value_by_name("ItemContainerStyle", _style16);
         _listBox40._set_property_value_by_name("SelectionMode", SelectionMode.Extended);
+        _listBox40._set_property_value_by_name("MarqueeBoundsPolicy", MarqueeBoundsPolicy.Contained);
         _listBox40._set_property_value_by_name("AllowMarqueeSelection", true);
         const _listReorderBehavior41 = new ListReorderBehavior();
         _listReorderBehavior41.Name = "reorder";

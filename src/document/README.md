@@ -94,6 +94,10 @@ Start with whichever doc matches what you're trying to do.
 - **[behaviors.md](behaviors.md)** — `Behavior` abstract base,
   `Visual.AddBehavior`, markup `Behaviors { … }` block, the
   `ListReorderBehavior` reference behavior.
+- **[marquee-selection.md](marquee-selection.md)** — Explorer-style
+  rubber-band multi-select on any `Selector`. `AllowMarqueeSelection` /
+  `MarqueeBoundsPolicy` DPs, modifier modes, click-on-empty-space
+  semantics, adorner placement, batching.
 
 ## Five-line tour
 
