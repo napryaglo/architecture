@@ -175,6 +175,26 @@ export class Grid extends Panel
     public get ColumnDefinitions(): ObservableCollection<ColumnDefinition> { return this._columns; }
     public get RowDefinitions():    ObservableCollection<RowDefinition>    { return this._rows; }
 
+    // Resolved on-screen track sizes from the last Measure pass. Reads
+    // 0 when the index is out of range OR when no Measure has run yet
+    // (the underlying arrays are empty until the first pass). Consumers
+    // like GridSplitter use these to compute current widths/heights
+    // BEFORE writing new GridLengths back on a drag — knowing where the
+    // track ended up after star resolution matters for "preserve total
+    // star sum" semantics.
+    public GetColumnWidth(index: number): number
+    {
+        return index >= 0 && index < this._colWidths.length
+            ? this._colWidths[index]!
+            : 0;
+    }
+    public GetRowHeight(index: number): number
+    {
+        return index >= 0 && index < this._rowHeights.length
+            ? this._rowHeights[index]!
+            : 0;
+    }
+
     // Cached resolved track sizes after MeasureOverride. Arrange reuses
     // them so we don't repeat the three-pass resolution per phase.
     private _colWidths:  number[] = [];

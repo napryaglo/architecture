@@ -392,4 +392,49 @@ ResourceDictionary {
     Style [TargetType=ScrollBar] {
         Template = @DefaultScrollBar;
     }
+
+    // ── Thumb ──────────────────────────────────────────────────────
+    // Templatable drag affordance — the primitive ScrollBar's PART_Thumb
+    // and GridSplitter inherit from. Default chrome is a soft neutral
+    // bar; consumers re-template for richer affordances. PART_Border is
+    // the named handle for runtime tinting.
+    Template x:key="DefaultThumb" [TargetType=Thumb]{
+        Border x:name="PART_Border"
+              [ Background      = #cbd5e1,
+                CornerRadius    = 2,
+                BorderThickness = (0) ]
+    }
+    Style [TargetType=Thumb] {
+        Template = @DefaultThumb;
+    }
+
+    // ── GridSplitter ───────────────────────────────────────────────
+    // A thin draggable bar that lives in a Grid cell and resizes the
+    // adjacent columns/rows on drag. The default chrome is the same
+    // soft neutral as Thumb; the GridSplitter sets its own resize
+    // Cursor at runtime depending on ResizeDirection so the user gets
+    // the right affordance on hover.
+    Template x:key="DefaultGridSplitter" [TargetType=GridSplitter]{
+        Border x:name="PART_Border"
+              [ Background      = #cbd5e1,
+                CornerRadius    = 0,
+                BorderThickness = (0) ]
+    }
+    Style [TargetType=GridSplitter] {
+        Template = @DefaultGridSplitter;
+    }
+
+    // ── Splitter ───────────────────────────────────────────────────
+    // Standalone orientation-aware splitter for non-Grid containers.
+    // Same chrome as GridSplitter; the orientation determines the
+    // resize axis.
+    Template x:key="DefaultSplitter" [TargetType=Splitter]{
+        Border x:name="PART_Border"
+              [ Background      = #cbd5e1,
+                CornerRadius    = 0,
+                BorderThickness = (0) ]
+    }
+    Style [TargetType=Splitter] {
+        Template = @DefaultSplitter;
+    }
 }

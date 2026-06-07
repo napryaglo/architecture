@@ -220,6 +220,17 @@ export class Visual extends Model
     // MetaData.Render so flips repaint without further wiring.
     public static readonly IsHitTestVisibleKey = Model.RegisterProperty<boolean>(Visual, 'IsHitTestVisible', true, MetaData.Render);
 
+    // Hover-cursor affordance. String value passes through to the SVG
+    // renderer which stamps it as the `cursor` attribute on the outer
+    // <g>; the host inherits SVG's standard cursor cascade. Accepts any
+    // CSS cursor keyword ('default', 'pointer', 'ew-resize', 'ns-resize',
+    // 'grab', 'crosshair', …) or a `url(...)` value. Default `undefined`
+    // means "inherit from the parent visual / host" — no attribute
+    // emitted, browser's default cursor wins. MetaData.Render so flips
+    // repaint without further wiring. WPF parity — UIElement.Cursor.
+    public static readonly CursorKey = Model.RegisterProperty<string | undefined>(
+        Visual, 'Cursor', undefined, MetaData.Render);
+
     // Declarative drag source. When IsDraggable = true the framework
     // installs a PointerDown / Move / Up latch that calls OnDragStart
     // after the pointer travels > DragDrop.DragThreshold pixels. The
@@ -293,6 +304,9 @@ export class Visual extends Model
     // hit-testing.
     public get IsHitTestVisible():  boolean { return this.get_property_value(Visual.IsHitTestVisibleKey); }
     public set IsHitTestVisible(v: boolean) { this.set_property_value(Visual.IsHitTestVisibleKey, v); }
+
+    public get Cursor():  string | undefined { return this.get_property_value(Visual.CursorKey); }
+    public set Cursor(v: string | undefined) { this.set_property_value(Visual.CursorKey, v); }
 
     // Declarative drag source. Set IsDraggable=true and supply an
     // OnDragStart callback; the framework calls the callback once the

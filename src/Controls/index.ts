@@ -104,6 +104,18 @@ export { VirtualizingWrapPanel } from './virtualizing-wrap-panel.js';
 export { ScrollViewer, ScrollViewerLayout } from './scroll-viewer.js';
 export { ScrollContentPresenter } from './scroll-content-presenter.js';
 export { ScrollBar, ScrollBarLayout } from './scroll-bar.js';
+export {
+    Thumb,
+    type DragStartedEventArgs,
+    type DragDeltaEventArgs,
+    type DragCompletedEventArgs,
+} from './thumb.js';
+export {
+    GridSplitter,
+    type GridResizeDirection,
+    type GridResizeBehavior,
+} from './grid-splitter.js';
+export { Splitter } from './splitter.js';
 
 // Internal helper classes used by the bundled `.template.mu` defaults.
 // Re-exported so the package's symbol table — which advertises them to

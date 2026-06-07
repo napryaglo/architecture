@@ -97,6 +97,7 @@ interface RenderableVisual extends BackrefHost
     readonly ArrangedRect: { X: number; Y: number; Width: number; Height: number };
     readonly Clip:         unknown;
     readonly IsHitTestVisible: boolean;
+    readonly Cursor:           string | undefined;
     readonly visualChildren: Iterable<RenderableVisual>;
     Render(dc: SvgDomDrawingContext): void;
 }
@@ -302,6 +303,7 @@ export class SvgRenderer
         {
             this.applyClip(info.outer, visual);
             this.applyHitTestVisibility(info.outer, info.hit, visual);
+            this.applyCursor(info.outer, visual);
         }
 
         // Own primitives — re-emit on first paint, when render-dirty,
@@ -380,6 +382,24 @@ export class SvgRenderer
         {
             outer.setAttribute('pointer-events', 'none');
             hit.setAttribute('pointer-events', 'none');
+        }
+    }
+
+    // Mirror Visual.Cursor onto the outer <g>'s `cursor` attribute.
+    // Undefined clears the attribute so the browser inherits from the
+    // parent SVG element (matching CSS cursor inheritance). Anything
+    // else passes through verbatim — accepts standard CSS keywords
+    // ('ew-resize', 'pointer', 'grab') and url(...) references.
+    private applyCursor(outer: SVGGElement, visual: RenderableVisual): void
+    {
+        const cursor = visual.Cursor;
+        if (cursor === undefined)
+        {
+            outer.removeAttribute('cursor');
+        }
+        else
+        {
+            outer.setAttribute('cursor', cursor);
         }
     }
 

@@ -1,0 +1,268 @@
+import {
+    Adorner,
+    AdornerLayer,
+    Color,
+    MetaData,
+    Model,
+    Rect,
+    Size,
+    Visual,
+    type DrawingContext,
+    type KeyEventArgs,
+} from '../runtime/index.js';
+import { Brush, SolidColorBrush } from '../visual-engine/index.js';
+import { ensureControlsTheme } from './default-resources.js';
+import { Orientation } from './stack-panel.js';
+import { Thumb, type DragDeltaEventArgs, type DragStartedEventArgs, type DragCompletedEventArgs } from './thumb.js';
+
+const DEFAULT_PREVIEW_BRUSH = new SolidColorBrush(Color.FromHex('#1976d2'));
+
+// Splitter — a standalone orientation-aware drag bar for non-Grid
+// containers (StackPanel, DockPanel, …). On drag, mutates the
+// PREVIOUS LOGICAL SIBLING's Width (Vertical splitter) or Height
+// (Horizontal splitter).
+//
+// Orientation convention (matches Slider / ScrollBar):
+//   Horizontal — the splitter is a horizontal bar that drags vertically
+//                and resizes a row above. ns-resize cursor.
+//   Vertical   — the splitter is a vertical bar that drags horizontally
+//                and resizes a column to the left. ew-resize cursor.
+//
+// GridSplitter is the better choice inside a Grid (it understands Star
+// sizing and SharedSizeGroups). Use Splitter when the surrounding
+// container is a DockPanel / StackPanel / Canvas and the previous
+// sibling has an explicit Width or Height DP — Splitter writes Pixel
+// values into that DP.
+//
+// If the previous sibling has no explicit Width/Height (its size comes
+// from layout), Splitter falls back to writing the ArrangedRect's
+// dimension as the new explicit Width/Height. The drag still works but
+// the first move "commits" the sibling to an explicit pixel size.
+export class Splitter extends Thumb
+{
+    public static readonly OrientationKey = Model.RegisterProperty<Orientation>(
+        Splitter, 'Orientation', Orientation.Vertical, MetaData.Render);
+
+    public static readonly ShowsPreviewKey = Model.RegisterProperty<boolean>(
+        Splitter, 'ShowsPreview', false, MetaData.None);
+
+    public static readonly DragIncrementKey = Model.RegisterProperty<number>(
+        Splitter, 'DragIncrement', 1, MetaData.None);
+
+    public static readonly KeyboardIncrementKey = Model.RegisterProperty<number>(
+        Splitter, 'KeyboardIncrement', 10, MetaData.None);
+
+    public static readonly PreviewBrushKey = Model.RegisterProperty<Brush | undefined>(
+        Splitter, 'PreviewBrush', undefined, MetaData.None);
+
+    static {
+        Model.OverrideMetadata(Splitter, Visual.DefaultStyleKeyKey, { default_value: Splitter });
+        ensureControlsTheme();
+    }
+
+    private _resizeTarget: Visual | undefined;
+    private _startSize: number = 0;
+    private _accumDelta = 0;
+    private _previewAdorner: SplitterPreviewAdorner | undefined;
+    private _previewLayer:   AdornerLayer | undefined;
+
+    constructor()
+    {
+        super();
+        this.AddDragStartedListener(args => this.onDragStarted(args));
+        this.AddDragDeltaListener(args => this.onDragDelta(args));
+        this.AddDragCompletedListener(args => this.onDragCompleted(args));
+        this.refreshCursor();
+    }
+
+    public get Orientation(): Orientation { return this.get_property_value(Splitter.OrientationKey); }
+    public set Orientation(v: Orientation) { this.set_property_value(Splitter.OrientationKey, v); this.refreshCursor(); }
+
+    public get ShowsPreview(): boolean { return this.get_property_value(Splitter.ShowsPreviewKey); }
+    public set ShowsPreview(v: boolean) { this.set_property_value(Splitter.ShowsPreviewKey, v); }
+
+    public get DragIncrement(): number { return this.get_property_value(Splitter.DragIncrementKey); }
+    public set DragIncrement(v: number) { this.set_property_value(Splitter.DragIncrementKey, v); }
+
+    public get KeyboardIncrement(): number { return this.get_property_value(Splitter.KeyboardIncrementKey); }
+    public set KeyboardIncrement(v: number) { this.set_property_value(Splitter.KeyboardIncrementKey, v); }
+
+    public get PreviewBrush(): Brush | undefined { return this.get_property_value(Splitter.PreviewBrushKey); }
+    public set PreviewBrush(v: Brush | undefined) { this.set_property_value(Splitter.PreviewBrushKey, v); }
+
+    private refreshCursor(): void
+    {
+        this.Cursor = this.Orientation === Orientation.Vertical ? 'ew-resize' : 'ns-resize';
+    }
+
+    // ── Drag lifecycle ────────────────────────────────────────────
+
+    private onDragStarted(_args: DragStartedEventArgs): void
+    {
+        this._accumDelta = 0;
+        const target = this.findPreviousSibling();
+        if (target === undefined)
+        {
+            this._resizeTarget = undefined;
+            return;
+        }
+        this._resizeTarget = target;
+        const isVertical = this.Orientation === Orientation.Vertical;
+        // Prefer the explicit DP if it's set; otherwise pin the current
+        // arranged size so the drag has a stable starting point.
+        const explicit = isVertical ? target.Width : target.Height;
+        const arranged = isVertical ? target.ArrangedRect.Width : target.ArrangedRect.Height;
+        this._startSize = Number.isFinite(explicit) ? explicit : arranged;
+        if (this.ShowsPreview)
+        {
+            const layer = AdornerLayer.GetAdornerLayer(this);
+            if (layer !== undefined)
+            {
+                const brush = this.PreviewBrush ?? DEFAULT_PREVIEW_BRUSH;
+                const adorner = new SplitterPreviewAdorner(this, this.Orientation, brush);
+                layer.Add(adorner);
+                this._previewAdorner = adorner;
+                this._previewLayer   = layer;
+            }
+        }
+    }
+
+    private onDragDelta(args: DragDeltaEventArgs): void
+    {
+        if (this._resizeTarget === undefined) return;
+        const raw = this.Orientation === Orientation.Vertical
+            ? args.HorizontalChange
+            : args.VerticalChange;
+        const stepped = this.snapToIncrement(raw);
+        if (stepped === 0) return;
+        this._accumDelta += stepped;
+        if (this.ShowsPreview)
+        {
+            this._previewAdorner?.SetDelta(this._accumDelta);
+            this._previewLayer?.InvalidateArrange();
+        }
+        else
+        {
+            this.applyResize(this._accumDelta);
+        }
+    }
+
+    private onDragCompleted(args: DragCompletedEventArgs): void
+    {
+        if (this._resizeTarget === undefined) return;
+        if (this.ShowsPreview && !args.Canceled)
+        {
+            this.applyResize(this._accumDelta);
+        }
+        if (this._previewAdorner !== undefined && this._previewLayer !== undefined)
+        {
+            this._previewLayer.Remove(this._previewAdorner);
+        }
+        this._previewAdorner = undefined;
+        this._previewLayer   = undefined;
+    }
+
+    private findPreviousSibling(): Visual | undefined
+    {
+        const parent = this.GetVisualParent();
+        if (parent === undefined) return undefined;
+        const siblings = parent.visualChildren;
+        const idx = siblings.indexOf(this);
+        if (idx <= 0) return undefined;
+        return siblings[idx - 1];
+    }
+
+    private snapToIncrement(raw: number): number
+    {
+        const inc = this.DragIncrement;
+        if (inc <= 1) return raw;
+        return Math.round(raw / inc) * inc;
+    }
+
+    private applyResize(delta: number): void
+    {
+        const target = this._resizeTarget;
+        if (target === undefined) return;
+        const next = Math.max(0, this._startSize + delta);
+        if (this.Orientation === Orientation.Vertical)
+        {
+            target.Width  = next;
+        }
+        else
+        {
+            target.Height = next;
+        }
+    }
+
+    // ── Keyboard nudges ────────────────────────────────────────────
+
+    protected override OnKeyDown(args: KeyEventArgs): void
+    {
+        super.OnKeyDown(args);
+        if (args.Handled || this.IsDragging) return;
+        const inc = this.KeyboardIncrement;
+        const isVertical = this.Orientation === Orientation.Vertical;
+        let delta: number;
+        switch (args.Key)
+        {
+            case 'ArrowLeft':  if (!isVertical) return; delta = -inc; break;
+            case 'ArrowRight': if (!isVertical) return; delta =  inc; break;
+            case 'ArrowUp':    if (isVertical)  return; delta = -inc; break;
+            case 'ArrowDown':  if (isVertical)  return; delta =  inc; break;
+            default: return;
+        }
+        const target = this.findPreviousSibling();
+        if (target === undefined) return;
+        const isVerticalAgain = isVertical;
+        const explicit = isVerticalAgain ? target.Width : target.Height;
+        const arranged = isVerticalAgain ? target.ArrangedRect.Width : target.ArrangedRect.Height;
+        const start = Number.isFinite(explicit) ? explicit : arranged;
+        const next = Math.max(0, start + delta);
+        if (isVerticalAgain) target.Width = next;
+        else                  target.Height = next;
+        args.Handled = true;
+    }
+}
+
+class SplitterPreviewAdorner extends Adorner
+{
+    private _delta = 0;
+    private readonly _orientation: Orientation;
+    private readonly _brush: Brush;
+
+    constructor(splitter: Splitter, orientation: Orientation, brush: Brush)
+    {
+        super(splitter);
+        this._orientation = orientation;
+        this._brush = brush;
+        this.IsHitTestVisible = false;
+    }
+
+    public SetDelta(delta: number): void
+    {
+        if (this._delta === delta) return;
+        this._delta = delta;
+        this.InvalidateArrange();
+        this.GetVisualParent()?.InvalidateArrange();
+    }
+
+    public override Placement(adornedRect: Rect, _desired: Size): Rect
+    {
+        if (this._orientation === Orientation.Vertical)
+        {
+            return new Rect(adornedRect.X + this._delta, adornedRect.Y,
+                            adornedRect.Width, adornedRect.Height);
+        }
+        return new Rect(adornedRect.X, adornedRect.Y + this._delta,
+                        adornedRect.Width, adornedRect.Height);
+    }
+
+    protected override MeasureOverride(_a: Size): Size { return Size.Zero; }
+
+    protected override RenderOverride(dc: DrawingContext): void
+    {
+        const s = this.RenderSize;
+        if (s.Width <= 0 || s.Height <= 0) return;
+        dc.DrawRectangle(this._brush, undefined, new Rect(0, 0, s.Width, s.Height));
+    }
+}
