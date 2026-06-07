@@ -391,6 +391,15 @@ export class Visual extends Model
     private _visualParent:  Visual | undefined;
     private _logicalParent: Visual | undefined;
     private _target: VisualHost | undefined;
+    // Set true when InvalidateVisual fires while _target is undefined
+    // (the Visual is detached — typically sitting in a recycle pool
+    // between Rebind and re-attach). On re-attach SetTarget invalidates
+    // so the renderer sees the pending repaint. Without this flag, a
+    // property change during the detached window (e.g. ListBoxItem's
+    // IsSelected flipping during bindContainer for a recycled
+    // container) silently never reaches the SVG and the stale paint
+    // from the prior binding leaks through.
+    private _renderInvalidatedWhileDetached: boolean = false;
 
     // The control whose ControlTemplate generated this Visual, or
     // undefined for Visuals authored by the consumer. Set by the
@@ -1509,6 +1518,16 @@ export class Visual extends Model
         const wasLoaded = this._target !== undefined;
         this._target = target;
         this.propagate_target_to_visual_children();
+        // Replay any pending render invalidation queued while detached.
+        // Without this, a property change inside a recycle/rebind cycle
+        // (the trigger un-applying a Background while the container
+        // sits in the pool) silently never reaches the renderer and
+        // the SVG keeps the prior binding's paint.
+        if (target !== undefined && this._renderInvalidatedWhileDetached)
+        {
+            this._renderInvalidatedWhileDetached = false;
+            target.OnRenderInvalidated(this);
+        }
         // Fire Loaded listeners on the undefined → defined transition.
         // One-shot: subsequent re-attach (detach + attach) doesn't
         // re-fire — Loaded matches WPF FrameworkElement.Loaded which
@@ -2085,10 +2104,21 @@ export class Visual extends Model
 
     // Request a re-render on the next render pass. Render state isn't
     // cached on the Visual (RenderOverride is always re-runnable), so
-    // this is purely a host notification.
+    // this is purely a host notification. When called on a detached
+    // visual (no target), remember the pending invalidation so the
+    // next attach can replay it — a recycled container's IsSelected
+    // flip during bindContainer happens while the container sits in
+    // the pool, and would otherwise never reach the renderer.
     public InvalidateVisual(): void
     {
-        this._target?.OnRenderInvalidated(this);
+        if (this._target !== undefined)
+        {
+            this._target.OnRenderInvalidated(this);
+        }
+        else
+        {
+            this._renderInvalidatedWhileDetached = true;
+        }
     }
 
     // ------------------------------------------------------------------
