@@ -8,10 +8,22 @@ import ToolboxShapeVM  from "./diagram-vm.mjs"
 
 // diagram.mu — node-only Visio-/drawio-style scene. The container is a
 // DiagramNode (custom ContentControl) — DiagramNode bakes drag-to-move
-// into the control itself, so no per-node behavior wiring is needed.
-// Position rides through TwoWay bindings on DiagramNode.X / Y (both DPs
-// are flagged BindsTwoWayByDefault), so a drag mutates the VM's
-// NodeVM.X / Y directly through the ItemContainerStyle.
+// AND click-to-select (via Selector.HandleContainerClick) into the
+// control itself, so no per-node behavior wiring is needed. Position
+// rides through TwoWay bindings on DiagramNode.X / Y (both DPs are
+// flagged BindsTwoWayByDefault), so a drag mutates the VM's NodeVM.X /
+// Y directly through the ItemContainerStyle.
+//
+// Diagram is a Selector (subclass), so:
+//   * SelectionMode=Extended enables Ctrl-click toggle / Shift-click
+//     range / plain-click replace.
+//   * AllowMarqueeSelection=true wires the framework's rubber-band
+//     behavior on the items panel — drag on empty area selects
+//     intersecting nodes; click on empty area clears (Explorer parity).
+//   * Per-NodeVM IsSelected stays the chrome trigger source — the
+//     bootstrap mirrors Selector.SelectedItems → NodeVM.IsSelected on
+//     SelectionChanged, so the existing `when($IsSelected)` triggers
+//     keep working without per-shape template changes.
 
 ResourceDictionary {
 
@@ -20,11 +32,12 @@ ResourceDictionary {
     // The Diagram ItemsControl materializes a DiagramNode per item;
     // this Style runs on each materialized DiagramNode. X / Y are
     // BindsTwoWayByDefault so the `$X` / `$Y` bindings flow drag-time
-    // mutations back to the bound NodeVM.
+    // mutations back to the bound NodeVM. No PointerDown trigger here —
+    // DiagramNode.OnPointerUp dispatches to Selector.HandleContainerClick
+    // directly when the gesture didn't cross the drag threshold.
     Style x:key="DiagramNodeStyle" [TargetType=DiagramNode] {
         X = $X;
         Y = $Y;
-        on PointerDown { InvokeCommand[Command=$SelectNodeCommand] }
     }
 
     // ── Shared Canvas ItemsPanel ────────────────────────────────────
@@ -170,28 +183,41 @@ ResourceDictionary {
                                 TextBlock[Text="Load", FontSize=11]
                             }
                         }
-                        TextBlock[Text="Drag onto the canvas. Click to
-                                        select. Drag a node to move it.
-                                        Press Delete to remove the
-                                        selected node.",
+                        TextBlock[Text="Drag a shape onto the canvas to
+                                        place it. Click a node to
+                                        select; Ctrl-click to toggle;
+                                        Shift-click to range-extend.
+                                        Drag-rectangle on empty space
+                                        for marquee. Click empty space
+                                        to clear. Drag a node to move.
+                                        Delete removes every selected
+                                        node.",
                                   TextWrapping=Wrap,
                                   FontSize=10, Foreground=#6b7280,
                                   Margin=(2,16,2,0)]
                     }
                 }
 
-                // Drawing area — a Canvas hosts the Diagram, whose
-                // DiagramNode containers position themselves at their
-                // X / Y via Canvas.Left / Canvas.Top.
+                // Drawing area — the Diagram fills the surface Border
+                // directly. Its ItemsPanel is a Canvas, so DiagramNode
+                // containers position themselves via Canvas.Left /
+                // Canvas.Top (DiagramNode mirrors X / Y onto those
+                // attached properties on each write).
+                //
+                // Selection wiring is declarative:
+                //   * SelectionMode=Extended      — Ctrl-/Shift-click on nodes work as expected.
+                //   * AllowMarqueeSelection=true  — rubber-band on the empty Canvas surface;
+                //                                    plain click on empty area clears.
+                //   * MarqueeBoundsPolicy=Intersect (default) — Explorer-style "touch to
+                //                                    include" rather than Finder's "must enclose".
                 Border x:name="surface" [Background=#f1f5f9]
                 {
-                    Canvas x:name="canvas"
-                    {
-                        Diagram x:name="nodes"
-                               [ItemsSource = $Nodes,
-                                ItemsPanel = @DiagramCanvasPanel,
-                                ItemContainerStyle = @DiagramNodeStyle]
-                    }
+                    Diagram x:name="nodes"
+                           [ItemsSource = $Nodes,
+                            ItemsPanel = @DiagramCanvasPanel,
+                            ItemContainerStyle = @DiagramNodeStyle,
+                            SelectionMode = Extended,
+                            AllowMarqueeSelection = true]
                 }
             }
         }

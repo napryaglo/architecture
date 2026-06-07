@@ -3,11 +3,13 @@ import {
     Model,
     type PointerEventArgs,
     type PropertyDescriptor,
+    type Visual,
 } from '../runtime/index.js';
 import { Canvas } from './canvas.js';
 import { ContentControl } from './content-control.js';
 import { ContentPresenter } from './content-presenter.js';
 import { ControlTemplate } from './control-template.js';
+import { Selector } from './selector.js';
 
 // A movable, content-hosting control intended as the container shape
 // inside the diagrammer's ItemsControl (see Diagram). DiagramNode owns
@@ -22,7 +24,13 @@ import { ControlTemplate } from './control-template.js';
 //     press offset; OnPointerMove writes back to X / Y; OnPointerUp
 //     releases capture. Capture means the drag survives the cursor
 //     leaving the node's hit area, so no per-canvas listener wiring is
-//     needed.
+//     needed. The handler also distinguishes click-vs-drag: any move
+//     past CLICK_THRESHOLD_PX commits to drag mode; if the gesture
+//     ends without ever crossing the threshold, OnPointerUp calls the
+//     owning Selector's HandleContainerClick — same path ListBoxItem
+//     uses — so single-click / Ctrl-click / Shift-click on a node go
+//     through the standard Selector machinery (anchor-relative range
+//     selection, modifier modes, SelectionChanged batching).
 //
 // Default Template: a single ContentPresenter. ContentControl's content
 // resolution does the rest — when DiagramNode.Content is set to a Model
@@ -37,7 +45,18 @@ export class DiagramNode extends ContentControl
     public static readonly YKey = Model.RegisterProperty<number>(
         DiagramNode, 'Y', 0, MetaData.Arrange | MetaData.BindsTwoWayByDefault);
 
+    // Below CLICK_THRESHOLD_PX of movement the gesture stays in
+    // "click" mode (no X / Y writes happen and OnPointerUp routes
+    // through Selector.HandleContainerClick). Cross the threshold
+    // once and the gesture commits to drag mode for the rest of the
+    // session — even if the cursor wobbles back inside the threshold,
+    // we keep dragging.
+    private static readonly CLICK_THRESHOLD_PX = 4;
+
     private _dragging:    boolean = false;
+    private _moved:       boolean = false;
+    private _pressHostX:  number  = 0;
+    private _pressHostY:  number  = 0;
     private _grabOffsetX: number  = 0;
     private _grabOffsetY: number  = 0;
 
@@ -93,6 +112,9 @@ export class DiagramNode extends ContentControl
         // — moving the node is then "wherever the cursor goes, subtract
         // the grab offset to place the top-left."
         this._dragging    = true;
+        this._moved       = false;
+        this._pressHostX  = args.HostX;
+        this._pressHostY  = args.HostY;
         this._grabOffsetX = args.HostX - this.X;
         this._grabOffsetY = args.HostY - this.Y;
         args.CapturePointer(this);
@@ -102,6 +124,16 @@ export class DiagramNode extends ContentControl
     protected override OnPointerMove(args: PointerEventArgs): void
     {
         if (!this._dragging) return;
+        // Stay in click mode under the threshold so a normal click
+        // doesn't drag the node by 1px and turn off the click-to-
+        // select path.
+        if (!this._moved)
+        {
+            const dx = args.HostX - this._pressHostX;
+            const dy = args.HostY - this._pressHostY;
+            if (Math.hypot(dx, dy) < DiagramNode.CLICK_THRESHOLD_PX) return;
+            this._moved = true;
+        }
         this.X = args.HostX - this._grabOffsetX;
         this.Y = args.HostY - this._grabOffsetY;
         args.Handled = true;
@@ -110,8 +142,16 @@ export class DiagramNode extends ContentControl
     protected override OnPointerUp(args: PointerEventArgs): void
     {
         if (!this._dragging) return;
+        const wasDrag = this._moved;
         this._dragging = false;
+        this._moved    = false;
         args.ReleasePointerCapture();
+        if (!wasDrag)
+        {
+            const selector = Selector.FromContainer<Selector>(
+                this, (v: Visual): v is Selector => v instanceof Selector);
+            selector?.HandleContainerClick(this, args.Modifiers);
+        }
         args.Handled = true;
     }
 }

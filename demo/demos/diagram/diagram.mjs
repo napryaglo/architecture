@@ -1,21 +1,29 @@
-// diagram demo bootstrap — node-only scene.
+// diagram demo bootstrap — node-only scene with marquee multi-select.
 //
 // What lives here:
 //   * VM factory (registered with the demo platform).
-//   * One view-init step: wire the canvas's drop receiver so toolbox
+//   * One view-init step: wire the diagram's drop receiver so toolbox
 //     tiles materialize new nodes when dropped.
-//   * KeyDown listener on the view root → routes to the VM's
-//     KeyDownCommand (Delete to remove the selected node).
+//   * KeyDown listener on the view root → Delete removes ALL currently
+//     selected nodes (multi-select via the Selector's SelectedItems).
+//   * Selection bridge: Diagram is a Selector, so SelectionChanged
+//     fires on click / Ctrl-click / Shift-click / marquee. The bridge
+//     reflects Selector.SelectedItems onto each NodeVM.IsSelected so
+//     the existing data-template triggers (`when($IsSelected) { … }`)
+//     keep driving per-shape chrome without any template changes.
 //
-// Everything previously here that managed edges, ports, or per-node
-// pointer behaviors is gone — drag-to-move now lives inside the
-// DiagramNode control (src/Controls/diagram-node.ts), and there are no
-// edges or ports anymore.
+// What used to live here that's GONE:
+//   * surface.AddRoutedEventListener('PointerDown', …) that cleared
+//     selection on background click — the marquee behavior now does
+//     this declaratively (plain click on empty area runs ClearSelection).
+//   * vm.Select / vm.SelectNodeCommand / vm.ClearSelectionCommand —
+//     selection state lives on the Selector now; the VM stays
+//     data-only + Save/Load commands.
 
 import { Application } from '@visualisation-sub/mural/runtime';
-import { Canvas } from '@visualisation-sub/mural/Controls';
+import { Diagram } from '@visualisation-sub/mural/Controls';
 import { create as createDiagramResources } from './diagram.mu.js';
-import { DiagramVM } from './diagram-vm.mjs';
+import { DiagramVM, NodeVM } from './diagram-vm.mjs';
 import { attachCanvasDropBehavior } from './behaviors/canvas-drop-behavior.mjs';
 import { register } from '../../platform/registry.mjs';
 
@@ -27,25 +35,58 @@ const LocalStorageService = {
 let resourcesMerged = false;
 let vmInstance;
 
+// Mirror Selector.SelectedItems onto NodeVM.IsSelected so the existing
+// per-shape DataTemplate triggers keep driving chrome. Diff against the
+// prior snapshot so we only flip the rows that actually changed.
+function attachSelectionBridge(diagram) {
+    let prev = new Set();
+    const sync = () => {
+        const next = new Set();
+        for (const item of diagram.SelectedItems) next.add(item);
+        for (const n of prev) {
+            if (!next.has(n) && n instanceof NodeVM) n.IsSelected = false;
+        }
+        for (const n of next) {
+            if (!prev.has(n) && n instanceof NodeVM) n.IsSelected = true;
+        }
+        prev = next;
+    };
+    diagram.AddSelectionChangedListener(sync);
+    return function detach() {
+        diagram.RemoveSelectionChangedListener(sync);
+        // Best-effort cleanup: clear lingering IsSelected so a re-mount
+        // doesn't start with stale chrome.
+        for (const n of prev) if (n instanceof NodeVM) n.IsSelected = false;
+        prev = new Set();
+    };
+}
+
 function attachDiagramBehaviors(view, vm) {
-    const canvas  = view.FindName('canvas');
     const surface = view.FindName('surface');
-    if (!(canvas instanceof Canvas))  throw new Error('diagram.mu missing x:name="canvas"');
-    if (surface === undefined)        throw new Error('diagram.mu missing x:name="surface"');
+    const nodes   = view.FindName('nodes');
+    if (surface === undefined) throw new Error('diagram.mu missing x:name="surface"');
+    if (!(nodes instanceof Diagram)) throw new Error('diagram.mu missing x:name="nodes" Diagram');
 
-    // Toolbox → canvas drop receiver (the only behavior that needs the
-    // bootstrap — the surface-level coord transform is naturally a
-    // view-tree concern).
-    const detachCanvasDrop = attachCanvasDropBehavior(canvas, vm);
+    // Toolbox → diagram drop receiver. Attached to the Diagram itself
+    // (which fills the surface Border post-flatten) so the local coord
+    // walk lands in panel-local space (Canvas.Left / Top units).
+    const detachCanvasDrop = attachCanvasDropBehavior(nodes, vm, nodes);
 
-    // Empty-canvas click clears selection.
-    surface.AddRoutedEventListener('PointerDown', (args) => {
-        if (args.Source === surface) vm.Select(null);
-    });
+    // Selection → data bridge — so `when($IsSelected)` template
+    // triggers fire on click / marquee / Ctrl- / Shift-click without
+    // any per-shape DataTemplate edits.
+    const detachSelectionBridge = attachSelectionBridge(nodes);
 
-    // Keyboard route — Delete on the view root.
+    // Keyboard route — Delete / Backspace removes every selected node
+    // through the VM. Snapshot SelectedItems FIRST because the
+    // ObservableCollection mutations re-enter the Selector's recycle
+    // hook and shrink the live set under our iteration.
     view.AddRoutedEventListener('KeyDown', (args) => {
-        if (vm.KeyDownCommand.CanExecute(args)) vm.KeyDownCommand.Execute(args);
+        if (args?.Key !== 'Delete' && args?.Key !== 'Backspace') return;
+        const snapshot = [...nodes.SelectedItems];
+        if (snapshot.length === 0) return;
+        vm.DeleteNodes(snapshot);
+        args.Handled = true;
     });
 
     // Seed a few nodes so the demo isn't empty on open.
@@ -58,6 +99,7 @@ function attachDiagramBehaviors(view, vm) {
 
     return function detachAll() {
         detachCanvasDrop();
+        detachSelectionBridge();
     };
 }
 
@@ -65,7 +107,7 @@ register({
     id:       'diagram',
     group:    'Demos',
     title:    'Diagrammer',
-    subtitle: 'Drag shapes from the toolbox; drag a node to move it; Delete to remove.',
+    subtitle: 'Drag shapes from the toolbox; drag a node to move; click / marquee to select; Delete to remove.',
     factory: () => {
         if (!resourcesMerged) {
             Application.current?.Resources.AddMergedDictionary(createDiagramResources());

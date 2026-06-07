@@ -1,19 +1,25 @@
 // Diagrammer — node-only MVVM. Edges, ports and any wiring that
 // surrounds them have been removed; what remains is a Canvas-based
 // scene of movable nodes plus a drag-from-toolbox placement gesture.
-// Movement is handled INSIDE the DiagramNode control (see
-// src/Controls/diagram-node.ts) — the bootstrap no longer wires any
-// per-node behaviors.
+// Movement and click-to-select are handled INSIDE the DiagramNode
+// control (see src/Controls/diagram-node.ts); selection state lives on
+// the Diagram itself (a Selector subclass) — the bootstrap mirrors
+// Diagram.SelectedItems onto each NodeVM.IsSelected for chrome.
 //
 // Surface:
 //   * NodeVM         — base for the three shape kinds (DPs: Id, X, Y,
-//                      IsSelected, FillBrush, LabelText)
+//                      IsSelected, FillBrush, LabelText). IsSelected is
+//                      WRITTEN by the bootstrap selection bridge, READ
+//                      by the per-shape DataTemplate triggers.
 //   * RectNodeVM /
 //     EllipseNodeVM /
 //     NoteNodeVM     — per-shape defaults via Model.OverrideMetadata
 //   * ToolboxShapeVM — one per toolbox tile (DPs: Kind, Label, Swatch,
 //                      BeginKindDragData)
-//   * DiagramVM      — the host (DPs + ICommands; no view reaches)
+//   * DiagramVM      — the host (DPs + ICommands; no view reaches).
+//                      Holds the Nodes collection + toolbox catalog +
+//                      Save / Load commands. Selection-related commands
+//                      moved out — the Selector owns that state now.
 
 import {
     DataObject, DragDropEffects,
@@ -138,15 +144,11 @@ export class ToolboxShapeVM extends Model
 export class DiagramVM extends Model
 {
     static {
-        Model.RegisterProperty(DiagramVM, 'Nodes',                 undefined,                          MetaData.None);
-        Model.RegisterProperty(DiagramVM, 'ToolboxShapes',         undefined,                          MetaData.None);
-        Model.RegisterProperty(DiagramVM, 'Status',                'drag a shape from the toolbox →', MetaData.None);
-        Model.RegisterProperty(DiagramVM, 'SelectedNode',          null,                               MetaData.None);
-        Model.RegisterProperty(DiagramVM, 'SaveCommand',           undefined,                          MetaData.None);
-        Model.RegisterProperty(DiagramVM, 'LoadCommand',           undefined,                          MetaData.None);
-        Model.RegisterProperty(DiagramVM, 'KeyDownCommand',        undefined,                          MetaData.None);
-        Model.RegisterProperty(DiagramVM, 'SelectNodeCommand',     undefined,                          MetaData.None);
-        Model.RegisterProperty(DiagramVM, 'ClearSelectionCommand', undefined,                          MetaData.None);
+        Model.RegisterProperty(DiagramVM, 'Nodes',         undefined,                          MetaData.None);
+        Model.RegisterProperty(DiagramVM, 'ToolboxShapes', undefined,                          MetaData.None);
+        Model.RegisterProperty(DiagramVM, 'Status',        'drag a shape from the toolbox →', MetaData.None);
+        Model.RegisterProperty(DiagramVM, 'SaveCommand',   undefined,                          MetaData.None);
+        Model.RegisterProperty(DiagramVM, 'LoadCommand',   undefined,                          MetaData.None);
     }
 
     constructor(storage) {
@@ -164,40 +166,14 @@ export class DiagramVM extends Model
             new RelayCommand(() => this.Save()));
         this._set_property_value_by_name('LoadCommand',
             new RelayCommand(() => this.Load()));
-        this._set_property_value_by_name('KeyDownCommand',
-            new RelayCommand((args) => this.HandleKeyDown(args)));
-        this._set_property_value_by_name('SelectNodeCommand',
-            new RelayCommand((nodeOrArgs) => {
-                if (nodeOrArgs instanceof NodeVM) {
-                    this.Select(nodeOrArgs);
-                    return;
-                }
-                const node = nodeOrArgs?.Source?.DataContext;
-                if (node instanceof NodeVM) this.Select(node);
-            }));
-        this._set_property_value_by_name('ClearSelectionCommand',
-            new RelayCommand(() => this.Select(null)));
     }
 
-    get Nodes()                 { return this._get_property_value_by_name('Nodes'); }
-    get ToolboxShapes()         { return this._get_property_value_by_name('ToolboxShapes'); }
-    get Status()                { return this._get_property_value_by_name('Status'); }
-    set Status(v)               { this._set_property_value_by_name('Status', v); }
-    get SelectedNode()          { return this._get_property_value_by_name('SelectedNode'); }
-    set SelectedNode(v)         { this._set_property_value_by_name('SelectedNode', v); }
-    get SaveCommand()           { return this._get_property_value_by_name('SaveCommand'); }
-    get LoadCommand()           { return this._get_property_value_by_name('LoadCommand'); }
-    get KeyDownCommand()        { return this._get_property_value_by_name('KeyDownCommand'); }
-    get SelectNodeCommand()     { return this._get_property_value_by_name('SelectNodeCommand'); }
-    get ClearSelectionCommand() { return this._get_property_value_by_name('ClearSelectionCommand'); }
-
-    Select(node) {
-        const prev = this.SelectedNode;
-        if (prev === node) return;
-        if (prev !== null) prev.IsSelected = false;
-        this.SelectedNode = node;
-        if (node !== null) node.IsSelected = true;
-    }
+    get Nodes()         { return this._get_property_value_by_name('Nodes'); }
+    get ToolboxShapes() { return this._get_property_value_by_name('ToolboxShapes'); }
+    get Status()        { return this._get_property_value_by_name('Status'); }
+    set Status(v)       { this._set_property_value_by_name('Status', v); }
+    get SaveCommand()   { return this._get_property_value_by_name('SaveCommand'); }
+    get LoadCommand()   { return this._get_property_value_by_name('LoadCommand'); }
 
     CreateNode(kind, x, y) {
         const Cls = KIND_TO_CLASS[kind];
@@ -208,26 +184,20 @@ export class DiagramVM extends Model
         return node;
     }
 
-    DeleteSelected() {
-        const node = this.SelectedNode;
-        if (node === null) return;
-        const kind = node.Kind;
-        this.removeNode(node);
-        this.Status = `Deleted ${kind}. ${this.Nodes.Count} nodes.`;
-    }
-
-    HandleKeyDown(args) {
-        if (this.SelectedNode === null) return;
-        if (args?.Key === 'Delete' || args?.Key === 'Backspace') {
-            this.DeleteSelected();
-            args.Handled = true;
-        }
+    // Remove every node in `nodes` from the bound Nodes collection.
+    // The Selector reacts via ClearContainerForItemOverride — selection
+    // state for the removed rows drops out automatically, so the
+    // bootstrap doesn't need to mirror the delete back into selector
+    // state.
+    DeleteNodes(nodes) {
+        if (!Array.isArray(nodes) || nodes.length === 0) return;
+        for (const node of nodes) this.removeNode(node);
+        this.Status = `Deleted ${nodes.length} node${nodes.length === 1 ? '' : 's'}. ${this.Nodes.Count} remain.`;
     }
 
     removeNode(node) {
         const idx = this.Nodes.IndexOf(node);
         if (idx >= 0) this.Nodes.RemoveAt(idx);
-        if (this.SelectedNode === node) this.SelectedNode = null;
     }
 
     // ── Save / Load ───────────────────────────────────────────────

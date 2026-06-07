@@ -51,15 +51,21 @@ export class Diagram extends Selector
     // that's a WPF parity decision (a ContentControl's outer bindings see
     // the outer scope). For container-shaped subclasses like DiagramNode
     // we want the item exposed; that's this method's job.
+    //
+    // Tag is set so Selector.exposedValueOf returns the bound item — so
+    // SelectedItem / SelectedItems / SelectionChanged surface the
+    // NodeVM, not the DiagramNode container. Same pattern as ListBox.
     private bindContainer(node: DiagramNode, item: unknown): void
     {
         if (item instanceof Model)
         {
+            node.Tag         = item;
             node.DataContext = item;
             node.Content     = item;
         }
         else
         {
+            node.Tag         = undefined;
             node.DataContext = undefined;
             node.Content     = undefined;
         }
