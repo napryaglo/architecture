@@ -4,6 +4,7 @@ import {
     Color,
     MetaData,
     Model,
+    PropertyDescriptor,
     Rect,
     Size,
     Visual,
@@ -76,7 +77,20 @@ export class Splitter extends Thumb
     }
 
     public get Orientation(): Orientation { return this.get_property_value(Splitter.OrientationKey); }
-    public set Orientation(v: Orientation) { this.set_property_value(Splitter.OrientationKey, v); this.refreshCursor(); }
+    public set Orientation(v: Orientation) { this.set_property_value(Splitter.OrientationKey, v); }
+
+    protected override OnPropertyChanged(
+        descriptor: PropertyDescriptor,
+        oldValue:   unknown,
+        newValue:   unknown,
+    ): void
+    {
+        super.OnPropertyChanged(descriptor, oldValue, newValue);
+        // Markup writes bypass the TS setter and go through the descriptor,
+        // so the cursor refresh has to live here to catch parser-driven
+        // Orientation writes (e.g. `Splitter [Orientation=Horizontal]`).
+        if (descriptor.Name === 'Orientation') this.refreshCursor();
+    }
 
     public get ShowsPreview(): boolean { return this.get_property_value(Splitter.ShowsPreviewKey); }
     public set ShowsPreview(v: boolean) { this.set_property_value(Splitter.ShowsPreviewKey, v); }

@@ -5,6 +5,7 @@ import {
     HorizontalAlignment,
     MetaData,
     Model,
+    PropertyDescriptor,
     Rect,
     Size,
     VerticalAlignment,
@@ -139,7 +140,20 @@ export class GridSplitter extends Thumb
     // ── Public DPs ─────────────────────────────────────────────────
 
     public get ResizeDirection(): GridResizeDirection { return this.get_property_value(GridSplitter.ResizeDirectionKey); }
-    public set ResizeDirection(v: GridResizeDirection) { this.set_property_value(GridSplitter.ResizeDirectionKey, v); this.refreshCursor(); }
+    public set ResizeDirection(v: GridResizeDirection) { this.set_property_value(GridSplitter.ResizeDirectionKey, v); }
+
+    protected override OnPropertyChanged(
+        descriptor: PropertyDescriptor,
+        oldValue:   unknown,
+        newValue:   unknown,
+    ): void
+    {
+        super.OnPropertyChanged(descriptor, oldValue, newValue);
+        // Markup writes bypass the TS setter and go through the descriptor,
+        // so the cursor refresh has to live here to catch parser-driven
+        // ResizeDirection writes.
+        if (descriptor.Name === 'ResizeDirection') this.refreshCursor();
+    }
 
     public get ResizeBehavior(): GridResizeBehavior { return this.get_property_value(GridSplitter.ResizeBehaviorKey); }
     public set ResizeBehavior(v: GridResizeBehavior) { this.set_property_value(GridSplitter.ResizeBehaviorKey, v); }

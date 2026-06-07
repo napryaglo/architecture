@@ -13,6 +13,7 @@ import { Border } from './border.js';
 import { HierarchicalDataTemplate } from './data-template.js';
 import { ItemsControl } from './items-control.js';
 import { ScrollViewer } from './scroll-viewer.js';
+import { Selector, SelectionMode } from './selector.js';
 import { StackPanel } from './stack-panel.js';
 import { TextBlock } from './text-block.js';
 import { Theme } from './theme.js';
@@ -164,19 +165,22 @@ export class CollapsibleStack extends StackPanel
 //
 // Compiler routes body items through AddChild → Items so declarative
 // children join the same materialization pipeline as data-driven
-// items (future: HierarchicalDataTemplate). Selection state lives
-// here on the root TreeView; clicks bubble up via findTree().
-export class TreeView extends ItemsControl
+// items (HierarchicalDataTemplate for the data-driven path). Selection
+// state lives on the Selector base — TreeView routes through the same
+// _selectedContainers / _selectedData / SelectionChanged surface, with
+// SelectionMode pinned to Extended (Shift / Ctrl modifier semantics)
+// because hierarchical-tree selection has no Single-mode WPF parity.
+// Clicks bubble up via findTree() and call HandleContainerClick.
+export class TreeView extends Selector
 {
     public static readonly IndentKey = Model.RegisterProperty<number>(
         TreeView, 'Indent', 16, MetaData.Measure | MetaData.Arrange);
     // TwoWay by default — the standard binding pattern is a VM
     // round-trip: user clicks a row → DP updates → push to VM;
     // VM sets the property → DP updates → tree selects the matching
-    // container. Mirrors WPF's SelectedValue + selection-binding idiom,
-    // except we always carry the DATA item (via
-    // ItemContainerGenerator's reverse map) rather than a value pulled
-    // by SelectedValuePath.
+    // container. Cross-syncs with Selector.SelectedItem (the canonical
+    // primary-row mirror) — writing either DP updates the other and
+    // selects the matching row.
     public static readonly SelectedDataItemKey = Model.RegisterProperty<unknown>(
         TreeView, 'SelectedDataItem', undefined,
         MetaData.None | MetaData.BindsTwoWayByDefault);
@@ -186,16 +190,10 @@ export class TreeView extends ItemsControl
         ensureControlsTheme();
     }
 
-    // Guard for the SelectedDataItem ↔ internal-selection feedback
-    // loop. Set when an internal selection-change is mirroring out to
-    // the DP; cleared when the mirror is done. OnPropertyChanged
-    // checks the flag and skips the inbound-write path while it's
-    // set.
+    // Guard for the SelectedDataItem ↔ SelectedItem feedback loop. Set
+    // while mirroring across the two DPs; cleared when the mirror is
+    // done. OnPropertyChanged checks the flag to avoid recursion.
     private _suppressSelectedDataSync = false;
-
-    private readonly _selectedItems: Set<TreeViewItem> = new Set();
-    private _anchor: TreeViewItem | undefined;
-    private readonly _selectionListeners: Set<() => void> = new Set();
 
     // Cached template-part reference. Resolved lazily on first access
     // because the template subtree only exists after the constructor's
@@ -210,6 +208,10 @@ export class TreeView extends ItemsControl
         // so the rest of the ctor / first measure sees a populated
         // template tree.
         this.ItemsPanel = () => new StackPanel();
+        // Hierarchical trees use Extended-mode semantics by default
+        // (Shift / Ctrl modifier handling). Override via the
+        // SelectionMode DP if a consumer wants Single / Multiple.
+        this.SelectionMode = SelectionMode.Extended;
         // Base ItemsControl constructor seeded Items = _declarativeItems.
         this.applyDefaultStyle();
     }
@@ -249,10 +251,15 @@ export class TreeView extends ItemsControl
 
     public override ClearContainerForItemOverride(container: Visual, item: unknown): void
     {
+        // Drop everything under the detached subtree from selection
+        // BEFORE the base detaches the container. The base's Selector
+        // override drops just `container` itself; the subtree purge
+        // handles the rest.
+        if (container instanceof TreeViewItem)
+        {
+            this.PurgeSubtreeFromSelection(container);
+        }
         super.ClearContainerForItemOverride(container, item);
-        if (!(container instanceof TreeViewItem)) return;
-        // Drop everything under the detached subtree from selection.
-        this.PurgeSubtreeFromSelection(container);
     }
 
     // ── Declarative AddChild → Items routing ──────────────────────
@@ -276,124 +283,60 @@ export class TreeView extends ItemsControl
         return this.logicalChildren as readonly TreeViewItem[];
     }
 
-    public get SelectedItem(): TreeViewItem | undefined
-    {
-        for (const v of this._selectedItems) return v;       // first
-        return undefined;
-    }
-
-    public get SelectedItems(): readonly TreeViewItem[]
-    {
-        return [...this._selectedItems];
-    }
-
-    public AddSelectionChangedListener(listener: () => void): void
-    {
-        this._selectionListeners.add(listener);
-    }
-
-    public RemoveSelectionChangedListener(listener: () => void): void
-    {
-        this._selectionListeners.delete(listener);
-    }
-
-    // Programmatically clear selection.
-    public ClearSelection(): void
-    {
-        if (this._selectedItems.size === 0) return;
-        for (const i of this._selectedItems) i.SetIsSelectedInternal(false);
-        this._selectedItems.clear();
-        this._anchor = undefined;
-        this.fireSelectionChanged();
-    }
-
     // Invoked from TreeViewItem.RemoveChild AND from
     // ClearContainerForItemOverride so a subtree being detached
     // anywhere in the tree drops its selection contribution. Without
-    // this hook a deeply-nested detach would leave orphan
-    // TreeViewItems in `_selectedItems`, corrupting SelectedItem
-    // reads. Fires SelectionChanged exactly once if at least one
-    // item was actually dropped.
+    // this hook a deeply-nested detach would leave orphan TreeViewItems
+    // in `_selectedContainers`, corrupting SelectedItems reads. Fires
+    // SelectionChanged exactly once if at least one item was actually
+    // dropped.
     public PurgeSubtreeFromSelection(item: TreeViewItem): void
     {
         let dropped = false;
         for (const node of TreeView.walkSubtree(item))
         {
-            if (this._selectedItems.has(node))
+            if (this._selectedContainers.has(node))
             {
-                this._selectedItems.delete(node);
-                node.SetIsSelectedInternal(false);
+                this._selectedContainers.delete(node);
+                this._selectedData.delete(this.exposedValueOf(node));
+                Selector.SetIsSelected(node, false);
                 dropped = true;
             }
             if (this._anchor === node) this._anchor = undefined;
         }
-        if (dropped) this.fireSelectionChanged();
+        if (dropped)
+        {
+            this.refreshExposedSelection();
+            this.fireSelectionChanged();
+        }
     }
 
-    // Entry point for row clicks.
+    // Backward-compatible alias for the routed click entry point.
+    // Container code (ClickableRow.onClick) calls this; it forwards to
+    // the Selector base's modifier-aware click handler.
     public HandleRowClick(item: TreeViewItem, modifiers: ModifierKeys): void
     {
-        const shiftActive = modifiers.Shift && this._anchor !== undefined;
-        if (shiftActive)
-        {
-            this.selectRange(this._anchor!, item);
-        }
-        else if (modifiers.Control)
-        {
-            this.toggleSelected(item);
-            this._anchor = item;
-        }
-        else
-        {
-            this.setSelected([item]);
-            this._anchor = item;
-        }
-        this.fireSelectionChanged();
+        this.HandleContainerClick(item, modifiers);
     }
 
-    private setSelected(items: readonly TreeViewItem[]): void
+    // Walk past any intermediate TreeViewItems to the root TreeView when
+    // resolving a clicked row — used by PurgeSubtreeFromSelection.
+    private static *walkSubtree(item: TreeViewItem): Generator<TreeViewItem>
     {
-        const next = new Set(items);
-        for (const i of this._selectedItems)
+        yield item;
+        for (const c of item.SubItems)
         {
-            if (!next.has(i)) i.SetIsSelectedInternal(false);
-        }
-        for (const i of next)
-        {
-            if (!this._selectedItems.has(i)) i.SetIsSelectedInternal(true);
-        }
-        this._selectedItems.clear();
-        for (const i of items) this._selectedItems.add(i);
-    }
-
-    private toggleSelected(item: TreeViewItem): void
-    {
-        if (this._selectedItems.has(item))
-        {
-            this._selectedItems.delete(item);
-            item.SetIsSelectedInternal(false);
-        }
-        else
-        {
-            this._selectedItems.add(item);
-            item.SetIsSelectedInternal(true);
+            yield* TreeView.walkSubtree(c);
         }
     }
 
-    private selectRange(from: TreeViewItem, to: TreeViewItem): void
-    {
-        const visible = this.visibleItems();
-        const fromIdx = visible.indexOf(from);
-        const toIdx   = visible.indexOf(to);
-        if (fromIdx < 0 || toIdx < 0) return;
-        const lo = Math.min(fromIdx, toIdx);
-        const hi = Math.max(fromIdx, toIdx);
-        this.setSelected(visible.slice(lo, hi + 1));
-    }
+    // ── Selector override seams ────────────────────────────────────
 
-    // Visible-items walk: depth-first in document order, skipping
-    // the subtree of any collapsed item.
-    private visibleItems(): TreeViewItem[]
+    // Hierarchical range selection follows the visible-items walk
+    // (depth-first, skipping collapsed subtrees). Default
+    // (logicalChildren) would only include direct children of the
+    // root, which would make Shift+click meaningless.
+    protected override containerOrderForRange(): readonly Visual[]
     {
         const out: TreeViewItem[] = [];
         const walk = (item: TreeViewItem): void =>
@@ -408,45 +351,28 @@ export class TreeView extends ItemsControl
         return out;
     }
 
-    // Depth-first walk including collapsed subtrees.
-    private static *walkSubtree(item: TreeViewItem): Generator<TreeViewItem>
+    // Containers backing the selection identity. Composed markup —
+    // the TreeViewItem IS the data; data-driven — the data item lives
+    // in the container's `_itemsControlData` stamp from
+    // PrepareContainerForItemOverride. Selector's default
+    // exposedValueOf reads container.Tag (which TreeView doesn't
+    // populate); override to read the stamp.
+    protected override exposedValueOf(container: Visual): unknown
     {
-        yield item;
-        for (const c of item.SubItems)
-        {
-            yield* TreeView.walkSubtree(c);
-        }
+        if (!(container instanceof TreeViewItem)) return container;
+        const data = dataOf(container);
+        return data !== undefined ? data : container;
     }
 
-    private fireSelectionChanged(): void
+    // Find the container backing a data item via depth-first walk of
+    // the realized tree. Selector's default uses Generator.ContainerFromItem
+    // which only knows the direct generator — for hierarchical data the
+    // item may live under a nested TreeViewItem's generator.
+    protected override containerForItem(item: unknown): Visual | undefined
     {
-        this.syncSelectedDataItem();
-        for (const l of this._selectionListeners) l();
-    }
-
-    // Push the first-selected container's data item out to the
-    // SelectedDataItem DP. Guarded so the resulting OnPropertyChanged
-    // doesn't loop back into the selection-from-DP path.
-    //
-    // In a hierarchical tree, the selected container's data lives in
-    // the generator of its DIRECT parent ItemsControl — typically a
-    // nested TreeViewItem, not the root TreeView. Rather than walking
-    // generators by ancestry, we read `_itemsControlData` straight off
-    // the container — every container realized through
-    // PrepareContainerForItemOverride is stamped with the data item
-    // there. Falls back to the container itself in composed-markup
-    // mode where there is no data.
-    private syncSelectedDataItem(): void
-    {
-        const first: TreeViewItem | undefined =
-            this._selectedItems.values().next().value;
-        const data = first === undefined
-            ? undefined
-            : (dataOf(first) ?? first);
-        if (this.SelectedDataItem === data) return;
-        this._suppressSelectedDataSync = true;
-        this.set_property_value(TreeView.SelectedDataItemKey, data);
-        this._suppressSelectedDataSync = false;
+        if (item === undefined) return undefined;
+        if (item instanceof TreeViewItem) return item;
+        return findContainerByData(this.RootItems, item);
     }
 
     protected override OnPropertyChanged(
@@ -464,39 +390,22 @@ export class TreeView extends ItemsControl
             for (const i of this.RootItems) TreeView.invalidateMeasureSubtree(i);
             return;
         }
-        if (descriptor.Name === 'SelectedDataItem')
+        // SelectedDataItem ↔ SelectedItem cross-sync. Each writes the
+        // other (and the apply* chain) once, guarded against re-entry.
+        if (this._suppressSelectedDataSync) return;
+        if (descriptor.Name === 'SelectedDataItem' && descriptor.Owner === TreeView)
         {
-            if (this._suppressSelectedDataSync) return;
-            this.applySelectedDataItem(newValue);
+            this._suppressSelectedDataSync = true;
+            try { this.SelectedItem = newValue; }
+            finally { this._suppressSelectedDataSync = false; }
         }
-    }
-
-    // External write to SelectedDataItem (typically from a TwoWay VM
-    // binding). Find the container backing this data item and select
-    // it. Undefined clears the selection. When the data has no
-    // realized container yet (e.g., a VM set this property before
-    // ItemsSource finished realizing), we leave the selection alone —
-    // the next realization will catch up when the container is
-    // generated. Composed-markup mode: the data item IS its container.
-    private applySelectedDataItem(value: unknown): void
-    {
-        if (value === undefined)
+        else if (descriptor.Name === 'SelectedItem' && descriptor.Owner === Selector)
         {
-            this.ClearSelection();
-            return;
+            const next = newValue ?? (this._selectedContainers.size === 0 ? undefined : newValue);
+            this._suppressSelectedDataSync = true;
+            try { this.set_property_value(TreeView.SelectedDataItemKey, next); }
+            finally { this._suppressSelectedDataSync = false; }
         }
-        // The data may belong to any nested ItemsControl in this
-        // TreeView, so we walk the realized container tree depth-first
-        // and match on `_itemsControlData`. Composed-markup mode: the
-        // value IS its container.
-        const container = value instanceof TreeViewItem
-            ? value
-            : findContainerByData(this.RootItems, value);
-        if (container === undefined) return;
-        this.setSelected([container]);
-        this._anchor = container;
-        for (const l of this._selectionListeners) l();
-        this.syncSelectedDataItem();
     }
 
     private static invalidateMeasureSubtree(item: TreeViewItem): void
@@ -550,12 +459,19 @@ export class TreeViewItem extends ItemsControl
 {
     public static readonly HeaderKey     = Model.RegisterProperty<string>( TreeViewItem, 'Header',     '',    MetaData.Measure | MetaData.Render);
     public static readonly IsExpandedKey = Model.RegisterProperty<boolean>(TreeViewItem, 'IsExpanded', false, MetaData.Measure | MetaData.Arrange);
+    // Instance-level IsSelected mirror — kept for triggers /
+    // refreshRowBackground listeners. Source of truth is
+    // `Selector.IsSelected` (attached); the OnPropertyChanged mirror
+    // (below) keeps the two in lock-step.
     public static readonly IsSelectedKey = Model.RegisterProperty<boolean>(TreeViewItem, 'IsSelected', false, MetaData.Render);
 
     static {
         Model.OverrideMetadata(TreeViewItem, Visual.DefaultStyleKeyKey, { default_value: TreeViewItem });
         ensureControlsTheme();
     }
+
+    // Guards the IsSelected attached↔instance mirror against recursion.
+    private _syncingIsSelected = false;
 
     // Captured by the ItemsPanel factory on first invocation. The
     // IsExpanded handler reaches into it to drive collapse without
@@ -593,7 +509,7 @@ export class TreeViewItem extends ItemsControl
         chevron.onClick = (): void => { this.IsExpanded = !this.IsExpanded; };
         this._row.onClick = (modifiers): void => {
             const tree = this.findTree();
-            if (tree !== undefined) tree.HandleRowClick(this, modifiers);
+            if (tree !== undefined) tree.HandleContainerClick(this, modifiers);
         };
         this._row.AddPropertyChangedListener(Visual.IsMouseOverKey, () => this.refreshRowBackground());
 
@@ -619,8 +535,12 @@ export class TreeViewItem extends ItemsControl
     public get IsExpanded(): boolean { return this.get_property_value(TreeViewItem.IsExpandedKey); }
     public set IsExpanded(v: boolean) { this.set_property_value(TreeViewItem.IsExpandedKey, v); }
 
-    public get IsSelected(): boolean { return this.get_property_value(TreeViewItem.IsSelectedKey); }
-    public set IsSelected(v: boolean) { this.set_property_value(TreeViewItem.IsSelectedKey, v); }
+    // IsSelected reads/writes go through the canonical attached
+    // Selector.IsSelected; the instance DP is kept in lock-step via the
+    // mirror in OnPropertyChanged so existing refreshRowBackground
+    // listener and any `when (IsSelected)` triggers keep firing.
+    public get IsSelected(): boolean { return Selector.GetIsSelected(this); }
+    public set IsSelected(v: boolean) { Selector.SetIsSelected(this, v); }
 
     // ── ItemsControl override seams ────────────────────────────────
 
@@ -670,10 +590,11 @@ export class TreeViewItem extends ItemsControl
         return this.logicalChildren as readonly TreeViewItem[];
     }
 
-    // Setter exposed for TreeView's internal selection bookkeeping.
+    // Backwards-compatible setter — preserved so older callers keep
+    // working, but the canonical seam is now Selector.SetIsSelected.
     public SetIsSelectedInternal(v: boolean): void
     {
-        this.set_property_value(TreeViewItem.IsSelectedKey, v);
+        Selector.SetIsSelected(this, v);
     }
 
     // Walk past any intermediate TreeViewItems to the root TreeView.
@@ -714,14 +635,35 @@ export class TreeViewItem extends ItemsControl
                 this.refreshChevron();
                 this._childWrap?.SetCollapsed(!(newValue as boolean));
                 this.InvalidateMeasure();
-                break;
-            case 'IsSelected':
-                this.refreshRowBackground();
-                break;
+                return;
             case 'Header':
                 this._label.Text = String(newValue ?? '');
-                break;
+                return;
         }
+        // IsSelected mirror — attached `Selector.IsSelected` is the
+        // canonical seam, instance `TreeViewItem.IsSelected` is the
+        // trigger-observable mirror. Owner distinguishes them.
+        if (this._syncingIsSelected || descriptor.Name !== 'IsSelected') return;
+        const fromAttached = descriptor.Owner === Selector;
+        const fromInstance = descriptor.Owner === TreeViewItem;
+        if (!fromAttached && !fromInstance) return;
+        this._syncingIsSelected = true;
+        try
+        {
+            if (fromAttached)
+            {
+                this.set_property_value(TreeViewItem.IsSelectedKey, newValue as boolean);
+            }
+            else
+            {
+                Selector.SetIsSelected(this, newValue as boolean);
+            }
+        }
+        finally
+        {
+            this._syncingIsSelected = false;
+        }
+        this.refreshRowBackground();
     }
 
     protected override MeasureOverride(availableSize: Size): Size
