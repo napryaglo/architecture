@@ -15,6 +15,7 @@ import { Canvas } from '../canvas.js';
 import { DataTemplate } from '../data-template.js';
 import { ItemsControl } from '../items-control.js';
 import { ListReorderBehavior } from '../list-reorder-behavior.js';
+import { VirtualizingWrapPanel } from '../virtualizing-wrap-panel.js';
 
 // Stand-in row visual whose ArrangedRect we can stamp directly so the
 // reorder math has predictable container midpoints to compare against.
@@ -127,6 +128,153 @@ function snapshot<T>(c: ObservableCollection<T>): T[] {
     for (let i = 0; i < c.Count; i++) out.push(c.Get(i)!);
     return out;
 }
+
+// Wrap-mode coverage. Spins up a real VirtualizingWrapPanel inside an
+// ItemsControl with non-zero HorizontalSpacing / VerticalSpacing so the
+// behavior's cursor-to-cell and adorner-placement math has to use cell
+// strides (cell + spacing), not raw ItemWidth / ItemHeight.
+describe('ListReorderBehavior — VirtualizingWrapPanel with spacing', () => {
+    class Cell extends Visual {
+        protected override MeasureOverride(_a: Size): Size { return new Size(100, 100); }
+    }
+
+    function buildWrapIC(
+        itemCount: number,
+        opts: {
+            viewport:           Rect;
+            horizontalSpacing?: number;
+            verticalSpacing?:   number;
+        },
+    ): { ic: ItemsControl; panel: VirtualizingWrapPanel; coll: ObservableCollection<string> } {
+        const panel = new VirtualizingWrapPanel();
+        panel.ItemWidth         = 100;
+        panel.ItemHeight        = 100;
+        if (opts.horizontalSpacing !== undefined) panel.HorizontalSpacing = opts.horizontalSpacing;
+        if (opts.verticalSpacing   !== undefined) panel.VerticalSpacing   = opts.verticalSpacing;
+        panel.Viewport = opts.viewport;
+        const ic = new ItemsControl();
+        ic.ItemsPanel   = () => panel;
+        ic.ItemTemplate = new DataTemplate(() => new Cell());
+        const coll = new ObservableCollection<string>();
+        for (let i = 0; i < itemCount; i++) coll.Add(`w${i}`);
+        ic.Items = coll;
+        ic.Measure(new Size(opts.viewport.Width, opts.viewport.Height));
+        ic.Arrange(new Rect(0, 0, opts.viewport.Width, opts.viewport.Height));
+        return { ic, panel, coll };
+    }
+
+    function dropAt(hostX: number, hostY: number, fromIndex: number): DragEventArgs {
+        return new DragEventArgs('Drop', new StubRow(), {
+            HostX: hostX, HostY: hostY,
+            Data: new DataObject().Set('mural/reorder/from-index', fromIndex),
+            AllowedEffects: DragDropEffects.Move,
+            Modifiers: NoModifiers,
+        });
+    }
+
+    test('cursor in the inter-column gap resolves the same column as a cursor just inside that column', () => {
+        // 4 cols × 100 + 3 gaps × 20 = 460 → fits in 460-wide viewport.
+        // Stride X = 120.
+        // Cell 1 paints x = [120, 220), gap to cell 2 = [220, 240).
+        // A cursor at x = 230 is in the GAP between col 1 and col 2; the
+        // floor-stride map says col = floor(230 / 120) = 1, and the
+        // midpoint refinement (x > col*120 + 50 = 170) tips to "after col
+        // 1" → insertion index = 2. Without stride-aware math, x=230 would
+        // resolve to col = floor(230 / 100) = 2 and the midpoint would
+        // also shift, giving a different insertion column.
+        const { ic, coll } = buildWrapIC(8, {
+            viewport:          new Rect(0, 0, 460, 200),
+            horizontalSpacing: 20,
+        });
+        ic.AddBehavior(new ListReorderBehavior());
+        // From index 0; with target insertion 2, after the RemoveAt
+        // adjustment we get insert=1 → ['w1','w0','w2','w3',…].
+        ic.FireRoutedListeners('Drop', dropAt(230, 50, 0));
+        assert.deepEqual(snapshot(coll).slice(0, 4), ['w1', 'w0', 'w2', 'w3']);
+    });
+
+    test('row mapping uses ItemHeight + VerticalSpacing as the stride', () => {
+        // 3 cols, stride X = 100 (no hSp). Stride Y = 120 (vSp=20).
+        // Row 0 paints y = [0, 100); gap y = [100, 120); row 1 paints
+        // y = [120, 220). Cursor at y = 180 (middle of row 1) →
+        // row = floor(180/120) = 1 → cells [3..5]. Cursor X = 50 sits
+        // squarely in col 0 → candidate index = 3. Midpoint of col 0
+        // = 50; localX(50) > 50 is false → insertion at 3. Without
+        // stride-aware Y math, the old code would compute row =
+        // floor(180/100) = 1 too — but only coincidentally; bumping
+        // y to 110 (in the row-gap) used to spuriously say row 1
+        // (floor(110/100)=1) when the cursor is between rows. With
+        // the stride floor(110/120)=0, row 0 wins, which is correct.
+        // We pick y=180 here because it's unambiguously inside row 1
+        // under either policy; the spacing-sensitive case (y in the
+        // gap) is what the formula change protects.
+        const { ic, coll } = buildWrapIC(9, {
+            viewport:        new Rect(0, 0, 300, 300),
+            verticalSpacing: 20,
+        });
+        ic.AddBehavior(new ListReorderBehavior());
+        // Drop from=7 (w7); insertion=3; after RemoveAt(7) the insert
+        // index doesn't shift (target < from) → coll = [w0,w1,w2,w7,w3..w6,w8].
+        ic.FireRoutedListeners('Drop', dropAt(50, 180, 7));
+        assert.deepEqual(snapshot(coll), ['w0', 'w1', 'w2', 'w7', 'w3', 'w4', 'w5', 'w6', 'w8']);
+    });
+
+    test('insertion adorner sits centered in the inter-column gap (col > 0) and at the panel left edge (col 0)', () => {
+        // 3 cols × 100 + 2 gaps × 30 = 360 fits a 360-wide viewport.
+        // Stride X = 130. Cell 0 left = 0; cell 1 left = 130; cell 2
+        // left = 260. The gap between cells 0 and 1 spans x = [100, 130);
+        // its center is x = 115 = col(1)*130 − 30/2.
+        const target = new (class {
+            public readonly attached: Visual[] = [];
+            public AttachOverlay(v: Visual): void { this.attached.push(v); }
+            public DetachOverlay(_v: Visual): void { }
+        })();
+        const { ic, panel } = buildWrapIC(6, {
+            viewport:          new Rect(0, 0, 360, 200),
+            horizontalSpacing: 30,
+            verticalSpacing:   30,
+        });
+        (ic as unknown as { _target: typeof target })._target = target;
+        const beh = new ListReorderBehavior();
+        beh.InsertionAdornerTemplate = new DataTemplate(() => new (class extends Visual {
+            protected override MeasureOverride(_a: Size): Size { return new Size(0, 0); }
+        })());
+        ic.AddBehavior(beh);
+
+        // Cursor at panel-local x=120 (in the gap between col 0 and col
+        // 1). Floor-stride says col=0; midpoint of col 0 = 50; x > 50 →
+        // insertion at col 1 → index = 1.
+        const session = new DragSession(undefined, new DataObject(), DragDropEffects.Move);
+        const data = session.Data;
+        data.Set('mural/reorder/from-index', 5);
+        ic.FireRoutedListeners('DragOver', new DragEventArgs('DragOver', new StubRow(), {
+            HostX: 120, HostY: 50,
+            Data: data,
+            AllowedEffects: DragDropEffects.Move,
+            Modifiers: NoModifiers,
+            Session: session,
+        }));
+        const wrapper = target.attached[0]!;
+        const adorner = wrapper.visualChildren[0]!;
+        // Indicator centered in the gap = col(1)*130 − 15 = 115.
+        assert.equal(Canvas.GetLeft(adorner), 115);
+        // Width is 2px, height = ItemHeight.
+        assert.equal(adorner.Width,  2);
+        assert.equal(adorner.Height, panel.ItemHeight);
+
+        // Now move to a cursor that lands in col 0 (index 0 insertion).
+        // The indicator pins to the panel's left edge (x=0).
+        ic.FireRoutedListeners('DragOver', new DragEventArgs('DragOver', new StubRow(), {
+            HostX: 10, HostY: 50,
+            Data: data,
+            AllowedEffects: DragDropEffects.Move,
+            Modifiers: NoModifiers,
+            Session: session,
+        }));
+        assert.equal(Canvas.GetLeft(adorner), 0);
+        session.Cancel();
+    });
+});
 
 // Pins backlog 8.5: InsertionAdornerTemplate DP — when set, the
 // behavior materializes the template at the insertion gap on the

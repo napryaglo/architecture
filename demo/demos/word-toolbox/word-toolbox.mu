@@ -22,11 +22,13 @@ import VirtualizingStackPanel from "@visualisation-sub/mural/Controls"
 
 ResourceDictionary {
 
-    // Right-pane items panel: virtualizing wrap. ItemWidth/ItemHeight
-    // include the tile gap (cell - visible-size = 15px on each side
-    // = 15px gap between visible tile borders).
+    // Right-pane items panel: virtualizing wrap. Each cell is the tile's
+    // own ItemWidth × ItemHeight (the defaults — 100 × 100). Horizontal /
+    // Vertical Spacing add 15px gaps BETWEEN cells without bloating the
+    // tile's own slot, so the tile template can author its Border at the
+    // full cell size and skip the old `Margin=(7.5)` workaround.
     ItemsPanelTemplate x:key="ListBoxItemsPanel" {
-        VirtualizingWrapPanel [ItemWidth=115, ItemHeight=115]
+        VirtualizingWrapPanel [HorizontalSpacing=15, VerticalSpacing=15]
     }
 
     // Left-pane items panel: VirtualizingStackPanel. Toolbox tiles
@@ -34,16 +36,18 @@ ResourceDictionary {
     // at 100 items it's cheap, and using VSP here means both panes
     // exercise the IScrollInfo-delegate path.
     ItemsPanelTemplate x:key="ToolboxItemsPanel" {
-        VirtualizingStackPanel [ItemHeight=115]
+        VirtualizingStackPanel
     }
 
     // Tile data template — same shape for both panes. WordVM is the
     // DataContext; the wrapping ContentPresenter inherits whatever
     // container-level Style the host sets (IsDraggable + OnDragStart
-    // from the resources block).
+    // from the resources block). The 15px inter-tile gap is now owned
+    // by the VirtualizingWrapPanel's HorizontalSpacing / VerticalSpacing
+    // — the tile itself fills its 100×100 cell, so the ListBoxItem's
+    // selection chrome (PART_Border) aligns with the painted border.
     DataTemplate [DataType=WordVM] {
-        Border [Background=#ffffff, BorderBrush=#cbd5e1, BorderThickness=(1),
-                Margin=(7.5), Width=100, Height=100] {
+        Border [BorderBrush=#cbd5e1, BorderThickness=(1)]{
             TextBlock [Text=$Word, FontSize=14,
                        HorizontalAlignment=Center,
                        VerticalAlignment=Center,
@@ -75,7 +79,7 @@ ResourceDictionary {
     // Matches the WPF ControlTemplate.Triggers + Trigger.TargetName
     // pattern.
     Template x:key="WordTileItemTemplate" [TargetType=ListBoxItem] {
-        Border x:name="PART_Border" [BorderThickness=(0), Padding=(0)] {
+        Border x:name="PART_Border" [BorderThickness=(0), Padding=(3)] {
             ContentPresenter
         }
         when ( IsSelected ) {
@@ -166,7 +170,8 @@ ResourceDictionary {
                                     [ItemsSource=$ListBoxWords,
                                      ItemsPanel=@ListBoxItemsPanel,
                                      ItemContainerStyle=@WordTileItemStyle,
-                                     SelectionMode=Single] {
+                                     SelectionMode=Extended,
+                                     AllowMarqueeSelection=true] {
                                 Behaviors {
                                     ListReorderBehavior x:name="reorder"
                                         [FromIndexFormat="mural/reorder/from-index"]

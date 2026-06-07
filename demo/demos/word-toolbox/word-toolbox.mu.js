@@ -7,25 +7,20 @@ export function create() {
     const _rd0 = new ResourceDictionary();
     const _tmpl1 = new ItemsPanelTemplate(() => {
         const _virtualizingWrapPanel2 = new VirtualizingWrapPanel();
-        _virtualizingWrapPanel2._set_property_value_by_name("ItemWidth", 115);
-        _virtualizingWrapPanel2._set_property_value_by_name("ItemHeight", 115);
+        _virtualizingWrapPanel2._set_property_value_by_name("HorizontalSpacing", 15);
+        _virtualizingWrapPanel2._set_property_value_by_name("VerticalSpacing", 15);
         return _virtualizingWrapPanel2;
     });
     _rd0.Set("ListBoxItemsPanel", _tmpl1);
     const _tmpl3 = new ItemsPanelTemplate(() => {
         const _virtualizingStackPanel4 = new VirtualizingStackPanel();
-        _virtualizingStackPanel4._set_property_value_by_name("ItemHeight", 115);
         return _virtualizingStackPanel4;
     });
     _rd0.Set("ToolboxItemsPanel", _tmpl3);
     const _tmpl5 = new DataTemplate((_data) => {
         const _border6 = new Border();
-        _border6._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#ffffff')));
         _border6._set_property_value_by_name("BorderBrush", new SolidColorBrush(Color.FromHex('#cbd5e1')));
         _border6._set_property_value_by_name("BorderThickness", new Thickness(1));
-        _border6._set_property_value_by_name("Margin", new Thickness(7.5));
-        _border6._set_property_value_by_name("Width", 100);
-        _border6._set_property_value_by_name("Height", 100);
         const _textBlock7 = new TextBlock();
         _textBlock7._set_property_value_by_name("Text", DataContextBinding(_textBlock7, "Word"));
         _textBlock7._set_property_value_by_name("FontSize", 14);
@@ -41,7 +36,7 @@ export function create() {
             const _border9 = new Border();
             _border9.Name = "PART_Border";
             _border9._set_property_value_by_name("BorderThickness", new Thickness(0));
-            _border9._set_property_value_by_name("Padding", new Thickness(0));
+            _border9._set_property_value_by_name("Padding", new Thickness(3));
             const _contentPresenter10 = new ContentPresenter();
             _border9.SetChild(_contentPresenter10);
             return _border9;
@@ -144,7 +139,8 @@ export function create() {
         _listBox40._set_property_value_by_name("ItemsSource", DataContextBinding(_listBox40, "ListBoxWords"));
         _listBox40._set_property_value_by_name("ItemsPanel", _tmpl1);
         _listBox40._set_property_value_by_name("ItemContainerStyle", _style16);
-        _listBox40._set_property_value_by_name("SelectionMode", SelectionMode.Single);
+        _listBox40._set_property_value_by_name("SelectionMode", SelectionMode.Extended);
+        _listBox40._set_property_value_by_name("AllowMarqueeSelection", true);
         const _listReorderBehavior41 = new ListReorderBehavior();
         _listReorderBehavior41.Name = "reorder";
         _listReorderBehavior41._set_property_value_by_name("FromIndexFormat", "mural/reorder/from-index");

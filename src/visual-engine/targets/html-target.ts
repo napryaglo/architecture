@@ -607,6 +607,19 @@ export class HtmlTarget extends PresentationTarget
     private _ghostAdorner:        DragGhostAdorner | undefined;
     private _ghostAdornerLayer:   AdornerLayer | undefined;
 
+    // True iff a drag ghost is currently in the DOM (either path):
+    //   * `dragOverlay` defined  — surface-level overlay path (legacy /
+    //                              no-adorner fallback).
+    //   * `_ghostAdorner` defined — adorner-layer path (the AdornerDecorator
+    //                              is present somewhere in the content tree).
+    // Either condition means OnDragSessionStarted has already wired up
+    // the ghost for the active drag; callers use this to avoid a second
+    // wire-up on the next move sample.
+    private isGhostAttached(): boolean
+    {
+        return this.dragOverlay !== undefined || this._ghostAdorner !== undefined;
+    }
+
     private attachGhostFromTemplate(
         template: { Apply(data: unknown): Visual },
         data: DataObject,
@@ -824,7 +837,7 @@ export class HtmlTarget extends PresentationTarget
             // After dispatch, the InputManager may have picked up a
             // newly-started drag session (PointerDown handler called
             // DoDragDrop). Sync the overlay if so.
-            if (this.InputManager.IsDragActive && this.dragOverlay === undefined)
+            if (this.InputManager.IsDragActive && !this.isGhostAttached())
             {
                 this.OnDragSessionStarted();
                 this.SetDragGhostPosition(hostX, hostY);
@@ -851,7 +864,13 @@ export class HtmlTarget extends PresentationTarget
         // latch-driven case leaves dragOverlay undefined, originalCursor
         // unsaved (so OnDragSessionEnded can't restore the cursor at
         // session end), and no ghost is ever drawn.
-        if (this.InputManager.IsDragActive && this.dragOverlay === undefined)
+        //
+        // The `isGhostAttached()` check covers BOTH the surface-overlay
+        // path (`dragOverlay`) AND the adorner-layer path (`_ghostAdorner`).
+        // Without the adorner-side check, every subsequent move sample
+        // re-fired OnDragSessionStarted, appending another ghost clone
+        // — visible as a trail of translucent copies behind the cursor.
+        if (this.InputManager.IsDragActive && !this.isGhostAttached())
         {
             this.OnDragSessionStarted();
         }

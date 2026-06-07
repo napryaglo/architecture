@@ -15,20 +15,34 @@ import { VirtualizingPanel } from './virtualizing-panel.js';
 // measuring un-realized containers entirely (the dominant cost in a
 // non-virtualized WrapPanel at scale).
 //
-// Layout, given N items and a (Width × Height) viewport with offset
-// (X, Y) inside an Extent of (columns × ItemWidth, totalRows × ItemHeight):
+// Layout, with strideX = ItemWidth + HorizontalSpacing and strideY =
+// ItemHeight + VerticalSpacing, given N items and a (Width × Height)
+// viewport with offset (X, Y):
 //
-//   columns       = max(1, floor(viewportWidth / ItemWidth))
-//   firstVisRow   = floor(Y / ItemHeight)
-//   lastVisRow    = floor((Y + viewportHeight) / ItemHeight)
+//   columns       = max(1, floor((viewportWidth + HorizontalSpacing) / strideX))
+//   firstVisRow   = floor(Y / strideY)
+//   lastVisRow    = floor((Y + viewportHeight - 1) / strideY)
 //   firstIndex    = firstVisRow × columns
 //   lastIndex     = min(N - 1, (lastVisRow + 1) × columns - 1)
+//   Extent        = (columns × strideX − HorizontalSpacing,
+//                    totalRows × strideY − VerticalSpacing)
 //
 // Items below the last full row get a partial-row slot; the cross-axis
-// extent of the panel is `columns × ItemWidth` regardless of how many
-// items the last row contains. The IScrollInfo getters report this so
-// a hosting ScrollViewer can publish a stable horizontal extent (cells
-// never re-pack horizontally as Y changes).
+// extent of the panel is `columns × strideX − HorizontalSpacing`
+// regardless of how many items the last row contains. The IScrollInfo
+// getters report this so a hosting ScrollViewer can publish a stable
+// horizontal extent (cells never re-pack horizontally as Y changes).
+//
+// Spacing semantics:
+//   * `HorizontalSpacing` is the gap BETWEEN adjacent cells in a row.
+//     n cells in a row consume n·ItemWidth + (n−1)·HorizontalSpacing;
+//     the "+HorizontalSpacing" trick in the column-count formula is what
+//     comes from solving n ≤ (W + HorizontalSpacing) / strideX.
+//   * `VerticalSpacing` is the gap BETWEEN adjacent rows. Same shape.
+//   * Both default to 0 so existing consumers keep their current
+//     uniform-cell layout. The cell Measure call stays at
+//     Size(ItemWidth, ItemHeight) — items still get the cell budget
+//     exactly; spacing just spreads them further apart.
 //
 // Orientation:
 //   * Horizontal (default) — items flow left-to-right, wrap to the
@@ -43,22 +57,26 @@ import { VirtualizingPanel } from './virtualizing-panel.js';
 //     A future variable-cell variant would need a per-item size cache
 //     and a binary-search viewport hit-test (same shape as VSP's
 //     sizeCache, but 2D).
-//   * Sub-cell spacing — the gap between cells is the item template's
-//     Margin / Padding. Consumers tune ItemWidth + Margin together so
-//     the visible gap is what they expect; the panel itself doesn't
-//     interpret Margin specially.
 //   * Item alignment within a partial last row — items pack left-to-
 //     right with no centering / justification.
 export class VirtualizingWrapPanel extends VirtualizingPanel implements IScrollInfo
 {
-    public static readonly ItemWidthKey   = Model.RegisterProperty<number>(VirtualizingWrapPanel, 'ItemWidth',  100, MetaData.Measure);
-    public static readonly ItemHeightKey  = Model.RegisterProperty<number>(VirtualizingWrapPanel, 'ItemHeight', 100, MetaData.Measure);
+    public static readonly ItemWidthKey         = Model.RegisterProperty<number>(VirtualizingWrapPanel, 'ItemWidth',         100, MetaData.Measure);
+    public static readonly ItemHeightKey        = Model.RegisterProperty<number>(VirtualizingWrapPanel, 'ItemHeight',        100, MetaData.Measure);
+    public static readonly HorizontalSpacingKey = Model.RegisterProperty<number>(VirtualizingWrapPanel, 'HorizontalSpacing',   0, MetaData.Measure);
+    public static readonly VerticalSpacingKey   = Model.RegisterProperty<number>(VirtualizingWrapPanel, 'VerticalSpacing',     0, MetaData.Measure);
 
     public get ItemWidth():  number { return this.get_property_value(VirtualizingWrapPanel.ItemWidthKey); }
     public set ItemWidth(v:  number) { this.set_property_value(VirtualizingWrapPanel.ItemWidthKey, v); }
 
     public get ItemHeight(): number { return this.get_property_value(VirtualizingWrapPanel.ItemHeightKey); }
     public set ItemHeight(v: number) { this.set_property_value(VirtualizingWrapPanel.ItemHeightKey, v); }
+
+    public get HorizontalSpacing(): number { return this.get_property_value(VirtualizingWrapPanel.HorizontalSpacingKey); }
+    public set HorizontalSpacing(v: number) { this.set_property_value(VirtualizingWrapPanel.HorizontalSpacingKey, v); }
+
+    public get VerticalSpacing(): number { return this.get_property_value(VirtualizingWrapPanel.VerticalSpacingKey); }
+    public set VerticalSpacing(v: number) { this.set_property_value(VirtualizingWrapPanel.VerticalSpacingKey, v); }
 
     // Sparse map from item index → realized container Visual.
     private realized: Map<number, Visual> = new Map();
@@ -82,7 +100,12 @@ export class VirtualizingWrapPanel extends VirtualizingPanel implements IScrollI
     {
         const cw = this.ItemWidth;
         if (cw <= 0) return 1;
-        return Math.max(1, Math.floor(viewportPrimary / cw));
+        // n cells with (n−1) gaps fit when n·cw + (n−1)·hSp ≤ W, which
+        // rearranges to n ≤ (W + hSp) / (cw + hSp). The `+hSp` collapses
+        // away when HorizontalSpacing is 0, preserving the original
+        // floor(W / cw) result.
+        const hSp = Math.max(0, this.HorizontalSpacing);
+        return Math.max(1, Math.floor((viewportPrimary + hSp) / (cw + hSp)));
     }
 
     private rowsFor(count: number, columns: number): number
@@ -103,14 +126,21 @@ export class VirtualizingWrapPanel extends VirtualizingPanel implements IScrollI
     {
         const vp = this.Viewport;
         const columns = vp.Width > 0 ? this.columnsFor(vp.Width) : 1;
-        return columns * this.ItemWidth;
+        // columns × cw + (columns−1) × hSp  ≡  columns × strideX − hSp.
+        // Clamp to 0 when there are no columns (defensive — columnsFor
+        // already returns at least 1, but the math should still be
+        // honest about an empty extent).
+        const hSp = Math.max(0, this.HorizontalSpacing);
+        return columns > 0 ? columns * (this.ItemWidth + hSp) - hSp : 0;
     }
 
     public get ExtentHeight(): number
     {
         const vp = this.Viewport;
         const columns = vp.Width > 0 ? this.columnsFor(vp.Width) : 1;
-        return this.rowsFor(this.itemCount(), columns) * this.ItemHeight;
+        const rows = this.rowsFor(this.itemCount(), columns);
+        const vSp = Math.max(0, this.VerticalSpacing);
+        return rows > 0 ? rows * (this.ItemHeight + vSp) - vSp : 0;
     }
 
     public get ViewportWidth():  number { return this.Viewport.Width; }
@@ -141,6 +171,9 @@ export class VirtualizingWrapPanel extends VirtualizingPanel implements IScrollI
         const count = this.itemCount();
         const cw = this.ItemWidth;
         const ch = this.ItemHeight;
+        const hSp = Math.max(0, this.HorizontalSpacing);
+        const vSp = Math.max(0, this.VerticalSpacing);
+        const strideY = ch + vSp;
         const vp = this.Viewport;
 
         // Columns are computed against the viewport (the slot the SCP
@@ -158,15 +191,17 @@ export class VirtualizingWrapPanel extends VirtualizingPanel implements IScrollI
 
         // Compute realized range from the viewport. When the viewport
         // is zero (pre-measure / no host), realize nothing — the
-        // panel still reports a sensible Extent.
+        // panel still reports a sensible Extent. With non-zero
+        // VerticalSpacing the row stride grows by vSp, so the
+        // viewport-to-row mapping divides by strideY instead of ch.
         const vpStart = vp.Y;
         const vpLen   = vp.Height;
         let first = 0;
         let last  = -1;
-        if (vpLen > 0 && ch > 0)
+        if (vpLen > 0 && strideY > 0)
         {
-            const firstRow = Math.max(0, Math.floor(vpStart / ch));
-            const lastRow  = Math.min(rows - 1, Math.floor((vpStart + vpLen - 1) / ch));
+            const firstRow = Math.max(0, Math.floor(vpStart / strideY));
+            const lastRow  = Math.min(rows - 1, Math.floor((vpStart + vpLen - 1) / strideY));
             first = firstRow * this._columns;
             last  = Math.min(count - 1, (lastRow + 1) * this._columns - 1);
         }
@@ -182,26 +217,35 @@ export class VirtualizingWrapPanel extends VirtualizingPanel implements IScrollI
             container.Measure(cellSize);
         }
 
-        return new Size(this._columns * cw, rows * ch);
+        // DesiredSize: full-content extent, with inter-cell spacing
+        // accounted for via the `n × stride − spacing` identity.
+        return new Size(
+            this._columns > 0 ? this._columns * (cw + hSp) - hSp : 0,
+            rows > 0 ? rows * (ch + vSp) - vSp : 0,
+        );
     }
 
     protected override ArrangeOverride(finalSize: Size): Size
     {
         const cw = this.ItemWidth;
         const ch = this.ItemHeight;
+        const hSp = Math.max(0, this.HorizontalSpacing);
+        const vSp = Math.max(0, this.VerticalSpacing);
+        const strideX = cw + hSp;
+        const strideY = ch + vSp;
         const columns = this._columns;
         // Viewport-local arrange. The SCP gives this panel a viewport-
         // sized slot at (0, 0) in delegate mode; items positioned at
-        // full-extent row offsets (row*ch) would land below the slot
-        // when row > viewport.Y/ch and never paint. Subtract the
-        // viewport's vertical offset so the first visible row lands
+        // full-extent row offsets (row × strideY) would land below the
+        // slot when row > viewport.Y/strideY and never paint. Subtract
+        // the viewport's vertical offset so the first visible row lands
         // at panel-local 0.
         const vpY = this.Viewport.Y;
         for (const [index, container] of this.realized)
         {
             const row = Math.floor(index / columns);
             const col = index % columns;
-            container.Arrange(new Rect(col * cw, row * ch - vpY, cw, ch));
+            container.Arrange(new Rect(col * strideX, row * strideY - vpY, cw, ch));
         }
         return finalSize;
     }

@@ -70,6 +70,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['ListBox',                 '@visualisation-sub/mural/Controls'],
     ['ListBoxItem',             '@visualisation-sub/mural/Controls'],
     ['SelectionMode',           '@visualisation-sub/mural/Controls'],
+    ['MarqueeBoundsPolicy',     '@visualisation-sub/mural/Controls'],
     ['TextBox',                 '@visualisation-sub/mural/Controls'],
     ['SpinEdit',                '@visualisation-sub/mural/Controls'],
     ['Slider',                  '@visualisation-sub/mural/Controls'],
@@ -191,6 +192,7 @@ export const ENUM_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<st
     ['ClickMode',             new Set(['Release', 'Press', 'Hover'])],
     ['Orientation',           new Set(['Vertical', 'Horizontal'])],
     ['SelectionMode',         new Set(['Single', 'Multiple', 'Extended'])],
+    ['MarqueeBoundsPolicy',   new Set(['Intersect', 'Contained'])],
     ['Dock',                  new Set(['Left', 'Top', 'Right', 'Bottom'])],
     ['DrawerVariant',         new Set(['Permanent', 'Persistent', 'Temporary'])],
 ]);

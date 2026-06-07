@@ -36,21 +36,33 @@ ResourceDictionary {
                 // StackPanel sized inside the dock's LastChildFill slot.
                 StackPanel[Orientation=Horizontal]{
 
-                    // Left: composed-markup ListBoxItems. Each item's
-                    // Content is a TextBlock; Tag is unset, so the
-                    // host's SelectedItem read returns the ListBoxItem
-                    // reference itself (matching WPF's declarative-mode
-                    // SelectedItem convention).
+                    // Left: composed-markup ListBoxItems with
+                    // Windows-Explorer-style marquee multi-select.
+                    // SelectionMode=Extended + AllowMarqueeSelection=true
+                    // enables drag-rectangle selection: drag on the
+                    // empty space between rows to rubber-band a group.
+                    // Ctrl-drag adds to the existing selection;
+                    // Shift-drag extends from the prior snapshot.
                     StackPanel[Orientation=Vertical, Width=240, Margin=(12,12,6,12)]{
-                        TextBlock[Text="Declarative", FontSize=12,
-                                  FontWeight=Bold, Margin=(0,0,0,8)]
-                        ListBox [SelectionMode=Extended]{
+                        TextBlock[Text="Declarative + marquee select",
+                                  FontSize=12, FontWeight=Bold,
+                                  Margin=(0,0,0,4)]
+                        TextBlock[Text="Drag in empty space to marquee-select. Ctrl=add. Shift=extend.",
+                                  FontSize=10, Foreground=#64748b,
+                                  TextWrapping=Wrap,
+                                  Margin=(0,0,0,8)]
+                        ListBox [SelectionMode=Extended,
+                                 AllowMarqueeSelection=true]{
                             ListBoxItem{ TextBlock[Text="Apples"]   }
                             ListBoxItem{ TextBlock[Text="Bananas"]  }
                             ListBoxItem{ TextBlock[Text="Cherries"] }
                             ListBoxItem{ TextBlock[Text="Durian"]   }
                             ListBoxItem{ TextBlock[Text="Elderberry"]}
                             ListBoxItem{ TextBlock[Text="Fig"]      }
+                            ListBoxItem{ TextBlock[Text="Grape"]    }
+                            ListBoxItem{ TextBlock[Text="Honeydew"] }
+                            ListBoxItem{ TextBlock[Text="Kiwi"]     }
+                            ListBoxItem{ TextBlock[Text="Lemon"]    }
                         }
                     }
 

@@ -47,8 +47,12 @@ import { WrapPanel } from './wrap-panel.js';
 //     horizontal midpoint. Indicator: a vertical bar at the column
 //     gap, full cell-height tall. For VirtualizingWrapPanel the cell
 //     geometry comes from the panel's ItemWidth + ItemHeight +
-//     Columns; for non-virtualizing WrapPanel we measure realized
-//     cells directly.
+//     Columns AND its HorizontalSpacing / VerticalSpacing — the
+//     cursor→cell map uses strides (ItemWidth + HorizontalSpacing,
+//     ItemHeight + VerticalSpacing), and the indicator is centered in
+//     the inter-cell gap (or pinned to the panel edge for col 0).
+//     For non-virtualizing WrapPanel we measure realized cells
+//     directly so spacing falls out for free.
 //
 // Not handled:
 //   * Cross-list reordering. The behavior keys off `FromIndexFormat`
@@ -183,6 +187,10 @@ export class ListReorderBehavior extends Behavior
         {
             const cw = panel.ItemWidth;
             const ch = panel.ItemHeight;
+            const hSp = Math.max(0, panel.HorizontalSpacing);
+            const vSp = Math.max(0, panel.VerticalSpacing);
+            const strideX = cw + hSp;
+            const strideY = ch + vSp;
             const columns = Math.max(1, panel.Columns);
             // Panel arranges children in viewport-LOCAL coords (with
             // panel origin = top of the visible window). Map the
@@ -190,16 +198,24 @@ export class ListReorderBehavior extends Behavior
             // adding the viewport's vertical offset; that's the value
             // the row computation expects.
             const fullY = localY + panel.Viewport.Y;
-            const col = Math.max(0, Math.min(columns - 1, Math.floor(localX / cw)));
-            const row = Math.max(0, Math.floor(fullY / ch));
+            // Floor-stride mapping: a cursor inside the inter-cell
+            // gap (X in [col·strideX + cw, (col+1)·strideX)) still
+            // resolves to `col` — the midpoint refinement below then
+            // tips it to "after col" when cursor-X sits past col's
+            // own horizontal midpoint, which is the correct behavior
+            // for a cursor in the right half of the gap.
+            const col = Math.max(0, Math.min(columns - 1, Math.floor(localX / strideX)));
+            const row = Math.max(0, Math.floor(fullY / strideY));
             const totalRows = Math.ceil(itemCount / columns);
             // Past the bottom: drop at the end.
             if (row >= totalRows) return itemCount;
             let candidate = row * columns + col;
             if (candidate >= itemCount) candidate = itemCount - 1;
             // Refine: cursor-X past the cell's horizontal midpoint =
-            // insert AFTER this cell.
-            const cellCenterX = (col + 0.5) * cw;
+            // insert AFTER this cell. Midpoint is in CELL-local coords
+            // (the cell sits at [col·strideX, col·strideX + cw)), so
+            // the midpoint is col·strideX + cw/2.
+            const cellCenterX = col * strideX + cw / 2;
             return localX > cellCenterX ? candidate + 1 : candidate;
         }
 
@@ -335,6 +351,10 @@ export class ListReorderBehavior extends Behavior
         {
             const cw = panel.ItemWidth;
             const ch = panel.ItemHeight;
+            const hSp = Math.max(0, panel.HorizontalSpacing);
+            const vSp = Math.max(0, panel.VerticalSpacing);
+            const strideX = cw + hSp;
+            const strideY = ch + vSp;
             const columns = Math.max(1, panel.Columns);
             // Map insertion index to a row+column position. For the
             // past-last-cell case, position at the right edge of the
@@ -343,13 +363,20 @@ export class ListReorderBehavior extends Behavior
             const clamped = Math.min(index, itemCount);
             const col = clamped % columns;
             const row = Math.floor(clamped / columns);
-            const cellX = col * cw;
+            // Indicator sits in the inter-cell GAP between (col-1)
+            // and col when col > 0 — centered in the gap looks
+            // cleanest. For col 0 there's no gap to the left, so pin
+            // to the cell's left edge (= panel left edge).
+            const cellLeftEdge = col * strideX;
+            const cellX = col === 0 ? 0 : cellLeftEdge - hSp / 2;
             // Subtract the viewport offset so the indicator lands at
             // the same panel-local Y the cell itself was arranged at.
-            const cellY = row * ch - panel.Viewport.Y;
-            // Width=2 vertical bar at the cell's LEFT edge — the gap
-            // between (col-1) and col. Width chosen to match the
-            // vertical-mode horizontal bar's height (2px).
+            // Row uses the stride so vertical spacing pushes the
+            // indicator down past row gaps too.
+            const cellY = row * strideY - panel.Viewport.Y;
+            // Width=2 vertical bar across the gap (or at panel edge
+            // for col 0). Width chosen to match the vertical-mode
+            // horizontal bar's height (2px).
             visual.Width  = 2;
             visual.Height = ch;
             Canvas.SetLeft(visual, panelOriginX + cellX);

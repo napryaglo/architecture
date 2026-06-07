@@ -6,6 +6,7 @@ import {
     type PropertyDescriptor,
 } from '../runtime/index.js';
 import { ItemsControl } from './items-control.js';
+import { attachMarqueeSelection } from './marquee-selection-behavior.js';
 
 // WPF SelectionMode enum, promoted from ListBox so any multi-select-
 // capable Selector descendant (ListBox today; future DataGrid /
@@ -20,6 +21,18 @@ export enum SelectionMode
     Single   = 'Single',
     Multiple = 'Multiple',
     Extended = 'Extended',
+}
+
+// Marquee bounds policy — Windows Explorer / macOS Finder parity.
+//   Intersect — the marquee rect must just TOUCH the item's bounds for
+//                the item to be included. Windows Explorer default,
+//                touch-friendly.
+//   Contained — the item's bounds must be FULLY CONTAINED in the rect.
+//                Stricter, macOS Finder default.
+export enum MarqueeBoundsPolicy
+{
+    Intersect = 'Intersect',
+    Contained = 'Contained',
 }
 
 // Selector — the WPF parity layer between ItemsControl and any list-
@@ -86,6 +99,19 @@ export class Selector extends ItemsControl
     public static readonly SelectedValuePathKey = Model.RegisterProperty<string | undefined>(Selector, 'SelectedValuePath', undefined, MetaData.None);
     public static readonly SelectionModeKey     = Model.RegisterProperty<SelectionMode>(    Selector, 'SelectionMode',     SelectionMode.Single, MetaData.None);
 
+    // Marquee multi-select — Windows Explorer-style drag-rectangle that
+    // selects every container it touches. Opt-in per instance; default
+    // off so single-select Selector descendants (ComboBox, TabControl)
+    // don't pay for the wiring.
+    public static readonly AllowMarqueeSelectionKey = Model.RegisterProperty<boolean>(
+        Selector, 'AllowMarqueeSelection', false, MetaData.None);
+
+    // Item-inclusion policy when the marquee crosses an item's bounds.
+    // Defaults to Intersect (Explorer parity); flip to Contained for
+    // stricter Finder-style semantics.
+    public static readonly MarqueeBoundsPolicyKey = Model.RegisterProperty<MarqueeBoundsPolicy>(
+        Selector, 'MarqueeBoundsPolicy', MarqueeBoundsPolicy.Intersect, MetaData.None);
+
     // Attached DP — any Visual carrying it represents a selectable row.
     // Source of truth for "is this row selected"; templates and styles
     // observe it via instance-level mirrors on ListBoxItem / TreeViewItem
@@ -139,6 +165,12 @@ export class Selector extends ItemsControl
 
     public get SelectionMode(): SelectionMode { return this.get_property_value(Selector.SelectionModeKey); }
     public set SelectionMode(v: SelectionMode) { this.set_property_value(Selector.SelectionModeKey, v); }
+
+    public get AllowMarqueeSelection(): boolean { return this.get_property_value(Selector.AllowMarqueeSelectionKey); }
+    public set AllowMarqueeSelection(v: boolean) { this.set_property_value(Selector.AllowMarqueeSelectionKey, v); }
+
+    public get MarqueeBoundsPolicy(): MarqueeBoundsPolicy { return this.get_property_value(Selector.MarqueeBoundsPolicyKey); }
+    public set MarqueeBoundsPolicy(v: MarqueeBoundsPolicy) { this.set_property_value(Selector.MarqueeBoundsPolicyKey, v); }
 
     // Snapshot of the multi-selection in insertion order. Each entry is
     // the container's Tag when present (Items-driven path) or the
@@ -608,12 +640,36 @@ export class Selector extends ItemsControl
     ): void
     {
         super.OnPropertyChanged(descriptor, oldValue, newValue);
+        if (descriptor.Name === 'AllowMarqueeSelection' && descriptor.Owner === Selector)
+        {
+            this.refreshMarqueeAttachment(newValue as boolean);
+            return;
+        }
         if (this._suppressSync) return;
         switch (descriptor.Name)
         {
             case 'SelectedIndex': this.applySelectedIndex(newValue as number);  break;
             case 'SelectedItem':  this.applySelectedItem(newValue);             break;
             case 'SelectedValue': this.applySelectedValue(newValue);            break;
+        }
+    }
+
+    private _marqueeDetach: (() => void) | undefined;
+
+    // Attach / detach the marquee behavior in response to AllowMarqueeSelection
+    // flips. The behavior wires routed-event listeners and creates an
+    // adorner on demand — it's safe to attach before the items panel
+    // exists because the listeners filter by source on every event.
+    private refreshMarqueeAttachment(enabled: boolean): void
+    {
+        if (enabled && this._marqueeDetach === undefined)
+        {
+            this._marqueeDetach = attachMarqueeSelection(this);
+        }
+        else if (!enabled && this._marqueeDetach !== undefined)
+        {
+            this._marqueeDetach();
+            this._marqueeDetach = undefined;
         }
     }
 }
