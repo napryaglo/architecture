@@ -15,7 +15,7 @@ For the per-file code review (issues, improvements, design notes) see
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│  Controls   (src/Controls/)                                             │
+│  Basic      (src/Basic/)                                                │
 │  Border, TextBlock, Canvas, ContentControl + ContentPresenter,          │
 │  ItemsControl + ItemsPresenter + ItemContainerGenerator,                │
 │  VirtualizingStackPanel, ScrollViewer, ControlTemplate, DataTemplate    │
@@ -40,8 +40,8 @@ For the per-file code review (issues, improvements, design notes) see
 
 Dependencies flow downward only. The split mirrors WPF's: `runtime` is the
 WindowsBase analogue (DependencyObject layer), `visual-engine` is the
-PresentationCore analogue (Visual + Drawing layer), `Controls` is the
-PresentationFramework analogue (FrameworkElement-based controls).
+PresentationCore analogue (Visual + Drawing layer), `Basic` is the
+PresentationFramework analogue (the templated-control library).
 
 ## Documentation index
 
@@ -85,7 +85,7 @@ Start with whichever doc matches what you're trying to do.
   `ObservableCollection`, `DataTemplate`, `ItemsControl` +
   `ItemsPresenter` + `ItemContainerGenerator`, `VirtualizingPanel` +
   `VirtualizingStackPanel`, `IScrollInfo`, `ScrollViewer`.
-- **[controls.md](controls.md)** — concrete-control reference:
+- **[basic.md](basic.md)** — concrete-control reference:
   `Border`, `TextBlock`, `Canvas`, `ContentControl`, `ItemsControl`,
   `ScrollViewer`, etc.
 - **[grid.md](grid.md)** — `Grid` panel: pixel / auto / star track
@@ -101,15 +101,16 @@ Start with whichever doc matches what you're trying to do.
 - **[commands-and-surfaces.md](commands-and-surfaces.md)** — UI/UX
   design for the command system: layered architecture (commands stay
   pure, controls own all visual UX), ToolBar / Menu (hamburger
-  fly-out) / Ribbon (core + contextual tabs) surfaces, the planned
-  `commands` demo. Sketch level; ties to backlog 5.9.1–5.9.2.
+  fly-out) / Ribbon (core + contextual tabs) surfaces, the `commands`
+  demo. ToolBar + Menu + ContextMenu shipped; Ribbon tracked in
+  [backlog § 5.11](../../current-backlog.md).
 
 ## Five-line tour
 
 ```ts
 import { Color, Thickness } from '../runtime/index.js';
 import { HeadlessTarget, SolidColorBrush, SvgDrawingContext } from '../visual-engine/index.js';
-import { Border, TextBlock } from '../Controls/index.js';
+import { Border, TextBlock } from '../Basic/index.js';
 
 const text   = new TextBlock('Hello, Mural!');
 text.FontSize = 24;
@@ -134,7 +135,7 @@ flow is the same except the last three lines become a single `new HtmlTarget(hos
 
 ## Running the demos
 
-Three demos ship under [Controls/tests/](../Controls/tests/):
+Three demos ship under [Basic/tests/](../Basic/tests/):
 
 ```bash
 npm run demo:border    # 100×100 blue/black border on a 300×300 surface
@@ -143,13 +144,13 @@ npm run demo:gfont     # Inter from Google Fonts (real per-glyph metrics)
 npm run ge             # a small graph viz on a 1600×1200 canvas
 ```
 
-Each writes an SVG to `src/Controls/tests/output/` (or to the working
+Each writes an SVG to `src/Basic/tests/output/` (or to the working
 directory for `ge`). Open in a browser to inspect the rendering.
 
 ## Running the tests
 
 ```bash
-npm test          # ~1470 tests across runtime, visual-engine, Controls
+npm test          # ~1500+ tests across runtime, visual-engine, Basic
 npm run typecheck # tsc --noEmit
 ```
 
@@ -206,25 +207,42 @@ See [build-targets.md](build-targets.md) for the full npm-script catalog.
   concrete `ScrollBar`.
 - Layout panels: `Canvas`, `Single`, `Panel`, `StackPanel`, `WrapPanel`,
   `DockPanel`, `UniformGrid`, `Grid` (with shared-size groups).
-- Controls: `Border`, `TextBlock`, `Button`, `TextBox`, `ComboBox`,
-  `ListBox`, `TreeView`, `Slider`, `SpinEdit`, `Drawer`, `PageView`,
-  `Diagram`, shapes (`Ellipse`, `Line`), `Thumb`, `Splitter`,
-  `GridSplitter`.
+- Basic controls: `Border`, `TextBlock`, `Button`, `ToggleButton`, `TextBox`,
+  `ComboBox`, `ListBox`, `TreeView`, `Slider`, `SpinEdit`, `Drawer`,
+  `PageView`, `Diagram`, shapes (`Ellipse`, `Line`), `Thumb`,
+  `Splitter`, `GridSplitter`.
+- Command-surface controls (in `@visualisation-sub/mural/framework/surface.js`):
+  `ToolBar` + `ToolBarButton` + `ToolBarToggleButton` + `ToolBarSeparator`
+  with overflow popup; `Menu` + `MenuButton` + `MenuItem` +
+  `MenuSeparator` (hamburger fly-out); `ContextMenu` with the attached
+  `ContextMenu` DP + auto-open on right-click.
 - Selection: `Selector` base with `SelectionMode` ∈ {Single, Multiple,
   Extended}, attached `Selector.IsSelected`, marquee multi-select with
   `MarqueeBoundsPolicy`, click-on-empty-clear, anchor-relative range.
-- Commands (today's slice): `ICommand` + `RelayCommand` +
-  `Button.Command` + `InvokeCommandAction` trigger action. Broader
-  surface (ICommandSource, InputBindings, ToolBar / Menu / Ribbon)
-  tracked in [backlog § 5.9 + § 5.11](../../current-backlog.md).
+- Commands: full WPF surface — `ICommand` + `RelayCommand` +
+  `RoutedCommand` (identity-only command with InputGestures metadata)
+  + `CommandBinding` (`Executed` / `CanExecute` / `Relay`-to-ICommand
+  sugar) + `CommandManager` (per-instance + per-class binding registry,
+  tree-walking dispatch, `RequerySuggested` pulse) + `ICommandSource`
+  contract (`Command` + `CommandParameter` + `CommandTarget` DPs on
+  invokers) via `CommandSourceHelper` + `InputBindings` collection on
+  every `Visual` with `KeyBinding` / `MouseBinding` dispatching through
+  the routed-event bubble pass + named-command libraries
+  (`ApplicationCommands`, `EditingCommands`, `NavigationCommands`,
+  `MediaCommands`). `Button` implements `ICommandSource` today;
+  `InvokeCommandAction` trigger action wires routed-event triggers into
+  commands. Surface controls (Toolbar / Menu / Ribbon, [backlog
+  § 5.11](../../current-backlog.md)) sit on top of this stack.
 - Text measurement: `ApproximateTextMeasurer`, `FontMetricsMeasurer`
   (opentype.js), Google Fonts loader.
 
 **Roadmap and known gaps** — see [current-backlog.md](../../current-backlog.md):
 - § 5 — architectural gaps (Freezable, hit-pad opt-out, Visual →
   PresentationTarget lookup, non-SVG hit-testing).
-- § 5.9 + § 5.11 — command infrastructure (ICommandSource, InputBindings,
-  RoutedCommand) and surface controls (Toolbar / Menu / Ribbon).
+- § 5.11 — Ribbon command-surface control. ToolBar, Menu / MenuButton /
+  MenuItem, and ContextMenu shipped; Ribbon (5.11.3) + its demo-mode
+  followup (5.11.4) remain. Underlying command infrastructure (§ 5.9)
+  shipped.
 - § 7 — triggers & setters (`DataTrigger`, `MultiTrigger`, `EventTrigger`,
   enter/exit actions).
 - § 8 — drag & drop v2 (multi-pointer).

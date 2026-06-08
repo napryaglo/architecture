@@ -1,5 +1,7 @@
 import { DragDropExtendedVM, DroppedFileVM, RowVM } from "./drag-drop-extended-vm.mjs";
-import { Border, ContentPresenter, DataTemplate, Dock, DockPanel, ItemsControl, ItemsPanelTemplate, ListReorderBehavior, Orientation, ScrollViewer, StackPanel, TextBlock, TextWrapping } from "@visualisation-sub/mural/Controls";
+import { Border, ContentPresenter, DataTemplate, Dock, DockPanel, ItemsPanelTemplate, ListReorderBehavior, Orientation, StackPanel, TextBlock, TextWrapping } from "@visualisation-sub/mural/Basic";
+import { ItemsControl } from "@visualisation-sub/mural/framework/items-control.js";
+import { ScrollViewer } from "@visualisation-sub/mural/framework/scroll-viewer.js";
 import { Color, DataContextBinding, NameScope, ResourceDictionary, Setter, SetterFactory, Style, Thickness, VerticalAlignment } from "@visualisation-sub/mural/runtime";
 import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
 

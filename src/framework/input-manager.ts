@@ -1,0 +1,595 @@
+import {
+    DragEventArgs,
+    FocusEventArgs,
+    KeyEventArgs,
+    NoModifiers,
+    PointerButton,
+    PointerEventArgs,
+    TextInputEventArgs,
+    WheelEventArgs,
+    type DragEventInit,
+    type KeyEventInit,
+    type PointerEventInit,
+    type TextInputEventInit,
+    type WheelEventInit,
+    buildRoute,
+    dispatchDrag,
+    dispatchFocus,
+    dispatchKey,
+    dispatchPointer,
+    dispatchPointerDirect,
+    dispatchTextInput,
+} from '../runtime/routed-event.js';
+import { DragDrop, DragDropEffects, DragSession, type DragDropOptions } from '../runtime/drag-drop.js';
+import type { Visual } from '../runtime/visual.js';
+import { CommandManager } from './commands/command-manager.js';
+
+// Owns the per-target pointer state and turns raw pointer hits into
+// routed-event dispatches. One InputManager per PresentationTarget;
+// each target's host adapter (HtmlTarget for browser, future native
+// targets) instantiates one and forwards normalised PointerEventInit
+// records into the public Inject* methods.
+//
+// Responsibilities:
+//
+//   * Hover-chain diffing — when the pointer moves over a new Visual,
+//     compute the route from the new leaf up to the root, diff it
+//     against the previous route, and raise PointerLeave on visuals
+//     dropped from the chain plus PointerEnter on visuals added. The
+//     hover diff is what keeps `IsMouseOver` correct on containers as
+//     the pointer crosses sibling boundaries.
+//
+//   * IsMouseOver maintenance — the dispatcher itself doesn't touch
+//     DPs; the InputManager sets `IsMouseOver` on every Visual in the
+//     new chain to `true` and on every Visual leaving the chain to
+//     `false`. Triggers see the DP change and re-evaluate via the
+//     existing PropertyTrigger plumbing.
+//
+//   * IsPressed maintenance — PointerDown sets IsPressed on the Source
+//     visual; PointerUp clears it. WPF clears IsPressed even when the
+//     up happens outside the visual's bounds, so the manager tracks
+//     the down-Source separately from the current hover chain.
+//
+//   * PointerMove dispatch — fired after the hover diff so handlers
+//     see a stable chain.
+
+export class InputManager
+{
+    // Most-recent hover route (leaf-first), or empty when the pointer
+    // is outside the target. Used to diff against the new route on
+    // every move.
+    private hoverRoute: Visual[] = [];
+
+    // Visual on which the active primary-button press began. Tracked
+    // so PointerUp can clear IsPressed regardless of where the pointer
+    // ends up — matches WPF Button behaviour where pressing inside a
+    // button then dragging outside still clears IsPressed on Up.
+    //
+    // Keyed off pointer ID so multi-touch presses on different visuals
+    // can coexist; for v1 every browser pointer event with the same
+    // pointerId shares a press target.
+    private pressTargets: Map<number, Visual> = new Map();
+
+    // Per-pointer capture. While captured, Move / Up events route to
+    // the captured Visual regardless of what's actually under the
+    // pointer — the same contract as WPF's Mouse.Capture / the DOM's
+    // setPointerCapture. Used by drag-tracking controls (e.g. a
+    // ScrollBar thumb) so the drag survives a pointer that wanders
+    // outside the source visual.
+    //
+    // Hover state (IsMouseOver / Enter / Leave) is NOT redirected —
+    // hover follows the actual hit so visual feedback stays accurate
+    // even during a capture.
+    private pointerCaptures: Map<number, Visual> = new Map();
+
+    // Currently-focused Visual — the keyboard event source. At most one
+    // per target. Set by SetFocus (from Visual.Focus() / args.SetFocus()
+    // / host-side click-to-focus) and cleared by SetFocus(undefined).
+    // Maintained in lock-step with the IsFocused DP on each Visual so
+    // Style triggers / read-back via tb.IsFocused stay coherent.
+    private focusedVisual: Visual | undefined;
+
+    // Active drag session, or null when no drag is in flight. Mutates
+    // the InjectPointerMove / InjectPointerUp paths: while non-null,
+    // raw pointer events bypass the normal route walker and feed the
+    // drag cursor-sampling loop instead.
+    private _dragSession: DragSession | null = null;
+    private _dragOptions: DragDropOptions   = {};
+    // Last receiver that handled DragEnter/Over for the current session.
+    // null means the cursor isn't currently over any AllowDrop ancestor.
+    private _currentDragReceiver: Visual | null = null;
+    // Last Effect returned by the current receiver's DragOver. Read on
+    // PointerUp to decide whether Drop fires.
+    private _currentDragEffect: DragDropEffects = DragDropEffects.None;
+
+    // ── Public entry points ────────────────────────────────────────
+
+    // Pointer moved to a new (or null) Visual at the given host
+    // coords. `hit === null` means the pointer left the host element
+    // entirely.
+    public InjectPointerMove(hit: Visual | null, init: PointerEventInit): void
+    {
+        // Drag session intercepts pointer moves — the route walker
+        // routes through dispatchDrag against the AllowDrop ancestor
+        // chain instead of the normal pointer pipeline. Hover is also
+        // suppressed: while dragging, IsMouseOver / Enter / Leave
+        // should not fire on receiver chains (the IsDragOver flag is
+        // the drag-specific equivalent).
+        if (this._dragSession !== null) { this.DriveDragMove(hit, init); return; }
+
+        this.updateHoverChain(hit, init);
+
+        // Capture overrides hit-test for dispatch — a thumb being
+        // dragged keeps receiving Move events even when the cursor
+        // crosses outside its bounds.
+        const captured = this.pointerCaptures.get(init.PointerId);
+        const dispatchTarget = captured ?? hit;
+        if (dispatchTarget === null || dispatchTarget === undefined) return;
+
+        dispatchPointer(new PointerEventArgs('PointerMove', dispatchTarget, init, this, this));
+
+        // A PointerMove handler may have called DragDrop.DoDragDrop —
+        // the declarative IsDraggable latch does exactly this once the
+        // pointer crosses the threshold. Pick up the pending session
+        // so the very next move drives the drag loop instead of
+        // dispatching another PointerMove.
+        this.PickUpPendingDragSession();
+    }
+
+    public InjectPointerLeave(init: PointerEventInit): void
+    {
+        // Pointer left the host entirely — collapse the chain.
+        this.updateHoverChain(null, init);
+    }
+
+    public InjectPointerDown(hit: Visual, init: PointerEventInit): void
+    {
+        // Make sure hover state is current before the down event —
+        // a fast tap can race ahead of a move event.
+        this.updateHoverChain(hit, init);
+
+        this.pressTargets.set(init.PointerId, hit);
+        setIsPressed(hit, true);
+        dispatchPointer(new PointerEventArgs('PointerDown', hit, init, this, this));
+
+        // A handler may have called DragDrop.DoDragDrop synchronously —
+        // pick up the pending session so subsequent moves drive the
+        // drag loop instead of the normal pointer dispatch.
+        this.PickUpPendingDragSession();
+    }
+
+    public InjectPointerUp(hit: Visual | null, init: PointerEventInit): void
+    {
+        // Drag session intercepts: PointerUp ends the drag, fires Drop
+        // (if Effect != None) and resolves the session.
+        if (this._dragSession !== null) { this.DriveDragUp(hit, init); return; }
+
+        const pressTarget = this.pressTargets.get(init.PointerId);
+        if (pressTarget !== undefined)
+        {
+            setIsPressed(pressTarget, false);
+            this.pressTargets.delete(init.PointerId);
+        }
+
+        // Dispatch Up to the captured visual first (drag-end belongs to
+        // the dragger), then the hit, then the press target as a final
+        // fallback so a click outside the visual still notifies it.
+        const captured = this.pointerCaptures.get(init.PointerId);
+        const dispatchTarget = captured ?? hit ?? pressTarget;
+        if (dispatchTarget !== undefined)
+        {
+            dispatchPointer(new PointerEventArgs('PointerUp', dispatchTarget, init, this, this));
+        }
+
+        // Capture auto-releases on PointerUp — matches DOM
+        // pointercancel / pointerup behaviour for setPointerCapture.
+        if (captured !== undefined) this.pointerCaptures.delete(init.PointerId);
+
+        if (hit !== null) this.updateHoverChain(hit, init);
+    }
+
+    public InjectPointerWheel(hit: Visual | null, init: WheelEventInit): void
+    {
+        if (hit === null) return;
+        dispatchPointer(new WheelEventArgs(hit, init, this, this));
+    }
+
+    // ── Pointer capture ────────────────────────────────────────────
+
+    // Begin capturing every subsequent Move / Up for `pointerId` to
+    // `visual`. Capture stays until ReleasePointerCapture is called
+    // or until the matching PointerUp arrives (auto-release). Calling
+    // CapturePointer again with the same id swaps the captured visual.
+    public CapturePointer(visual: Visual, pointerId: number = 0): void
+    {
+        this.pointerCaptures.set(pointerId, visual);
+    }
+
+    public ReleasePointerCapture(pointerId: number = 0): void
+    {
+        this.pointerCaptures.delete(pointerId);
+    }
+
+    public GetCapturedVisual(pointerId: number = 0): Visual | undefined
+    {
+        return this.pointerCaptures.get(pointerId);
+    }
+
+    // ── Focus ──────────────────────────────────────────────────────
+
+    public GetFocusedVisual(): Visual | undefined
+    {
+        return this.focusedVisual;
+    }
+
+    // Move focus to `visual` (or clear focus when undefined). Refuses
+    // to focus a Visual whose `Focusable` is false — the call is a
+    // silent no-op in that case (matches WPF Keyboard.Focus on a non-
+    // focusable element). When the target is unchanged, nothing fires.
+    //
+    // Sequence on a real focus change:
+    //   1. Clear IsFocused on the old focused Visual (if any).
+    //   2. Dispatch LostFocus on the old Visual (bubble pass).
+    //   3. Set IsFocused on the new focused Visual.
+    //   4. Dispatch GotFocus on the new Visual (bubble pass).
+    // DP writes BEFORE dispatch so handlers see the post-change state.
+    public SetFocus(visual: Visual | undefined): void
+    {
+        if (visual === this.focusedVisual) return;
+        if (visual !== undefined && !isFocusable(visual)) return;
+
+        const old = this.focusedVisual;
+        this.focusedVisual = visual;
+
+        if (old !== undefined)
+        {
+            setIsFocused(old, false);
+            dispatchFocus(new FocusEventArgs('LostFocus', old));
+        }
+        if (visual !== undefined)
+        {
+            setIsFocused(visual, true);
+            dispatchFocus(new FocusEventArgs('GotFocus', visual));
+        }
+
+        // Publish to CommandManager so RoutedCommand.Execute (the bare
+        // ICommand surface) can resolve a target, and so RequerySuggested
+        // subscribers re-evaluate. Focus changes commonly affect which
+        // CommandBinding catches a routed command — every menu/toolbar
+        // listening for ApplicationCommands.Copy needs to refresh when
+        // focus moves between a TextBox (handles Copy) and a non-text
+        // element (doesn't).
+        CommandManager.PublishFocusedVisual(visual);
+    }
+
+    // ── Keyboard ───────────────────────────────────────────────────
+
+    // Dispatch KeyDown to the currently-focused Visual (and its
+    // ancestors via tunnel + bubble). Returns true if any handler
+    // marked the event Handled — the host adapter (HtmlTarget) uses
+    // that to decide whether to preventDefault on the underlying DOM
+    // event (suppress page scroll on Space, autorepeat on arrows, etc).
+    // Returns false when nothing is focused, when focus is unattached
+    // to a target, or when no handler claimed the key.
+    public InjectKeyDown(init: KeyEventInit): boolean
+    {
+        const target = this.focusedVisual;
+        if (target === undefined) return false;
+        const args = new KeyEventArgs('KeyDown', target, init);
+        dispatchKey(args);
+        return args.Handled;
+    }
+
+    public InjectKeyUp(init: KeyEventInit): boolean
+    {
+        const target = this.focusedVisual;
+        if (target === undefined) return false;
+        const args = new KeyEventArgs('KeyUp', target, init);
+        dispatchKey(args);
+        return args.Handled;
+    }
+
+    // Dispatch TextInput to the currently-focused Visual. Separated
+    // from KeyDown so handlers can subscribe only to "textual" content
+    // (already composed by the IME / browser layer) without seeing
+    // every arrow / function key. HtmlTarget synthesises this from
+    // printable keydown events when no IME compose is in flight; the
+    // browser's beforeinput / compositionend events feed it on real
+    // text input.
+    public InjectTextInput(init: TextInputEventInit): boolean
+    {
+        const target = this.focusedVisual;
+        if (target === undefined) return false;
+        const args = new TextInputEventArgs(target, init);
+        dispatchTextInput(args);
+        return args.Handled;
+    }
+
+    // ── Drag session API (called by the host adapter) ────────────────
+
+    public get IsDragActive(): boolean { return this._dragSession !== null; }
+
+    public get CurrentDragSession(): DragSession | null { return this._dragSession; }
+
+    public get CurrentDragOptions(): DragDropOptions { return this._dragOptions; }
+
+    public get CurrentDragReceiver(): Visual | null { return this._currentDragReceiver; }
+
+    public get CurrentDragEffect(): DragDropEffects { return this._currentDragEffect; }
+
+    // Polled by the host adapter (HtmlTarget) right after every pointer
+    // dispatch to detect a session newly started by a handler. Picks up
+    // `DragDrop._pendingSession` if set, otherwise no-op.
+    public PickUpPendingDragSession(): void
+    {
+        const pending = DragDrop._pendingSession;
+        if (pending === null) return;
+        this._dragSession        = pending;
+        this._dragOptions        = DragDrop._pendingOptions;
+        DragDrop._pendingSession = null;
+        DragDrop._pendingOptions = {};
+    }
+
+    // Begin an OS-initiated drag session (8.1). Called by the host
+    // adapter on the first `dragenter` from outside the app — the
+    // browser already owns the drag image, so options.preview is
+    // implicitly `null` (no framework ghost). The DataObject is
+    // populated by the caller from `e.dataTransfer` (browser MIME
+    // formats: text/plain, text/uri-list, Files). `Source` is
+    // `undefined` — there is no in-tree origin.
+    //
+    // Idempotent — calling while a drag is already active is a no-op.
+    // The host adapter's `dragenter` handler tracks its own re-entry
+    // (a drag that crosses the boundary between two in-host elements
+    // fires dragenter on each), but the safeguard here keeps two
+    // adapters racing safe.
+    public BeginOsDragSession(session: DragSession): void
+    {
+        if (this._dragSession !== null) return;
+        this._dragSession = session;
+        // OS-level drops don't get a framework ghost — the browser
+        // already paints the drag image.
+        this._dragOptions = { preview: null };
+    }
+
+    // Called by the host adapter once per `pointermove` while a drag is
+    // active. `hit` is the deepest Visual under (hostX, hostY) — the host
+    // hit-tested it via the existing PresentationTarget.HitTest path.
+    // The drag dispatcher walks UP from `hit` looking for AllowDrop=true;
+    // the first such ancestor becomes the current receiver.
+    public DriveDragMove(hit: Visual | null, init: PointerEventInit): void
+    {
+        const session = this._dragSession;
+        if (session === null) return;
+
+        // QueryContinueDrag (8.3) runs BEFORE any DragOver dispatch so
+        // a cancelled drag doesn't fire phantom enter/over events.
+        if (!session._pollContinue())
+        {
+            this.applyReceiverChange(null, init);
+            session._complete(DragDropEffects.None);
+            this._dragSession       = null;
+            this._dragOptions       = {};
+            this._currentDragEffect = DragDropEffects.None;
+            return;
+        }
+
+        const receiver = hit === null ? null : findAllowDropAncestor(hit);
+        this.applyReceiverChange(receiver, init);
+
+        if (receiver !== null)
+        {
+            const args = new DragEventArgs('DragOver', receiver, dragInitFor(init, session));
+            dispatchDrag(args);
+            this._currentDragEffect = args.Effect;
+        }
+        else
+        {
+            this._currentDragEffect = DragDropEffects.None;
+        }
+
+        // GiveFeedback (8.3) fires AFTER the DragOver dispatch so the
+        // effect reflects the receiver's choice for this sample. Dedup
+        // lives inside _fireFeedback — handlers only see edges.
+        session._fireFeedback(this._currentDragEffect);
+        session._fireMove(init.HostX, init.HostY);
+    }
+
+    // Called by the host adapter on `pointerup` while a drag is active.
+    // Fires Drop if the receiver's last DragOver set a non-None effect,
+    // then resolves the session and clears state.
+    public DriveDragUp(hit: Visual | null, init: PointerEventInit): void
+    {
+        const session = this._dragSession;
+        if (session === null) return;
+
+        // Sample one more move so the receiver sees the final cursor
+        // position and updates its Effect.
+        this.DriveDragMove(hit, init);
+
+        const receiver = this._currentDragReceiver;
+        const effect   = this._currentDragEffect;
+
+        if (receiver !== null && effect !== DragDropEffects.None)
+        {
+            const args = new DragEventArgs('Drop', receiver, dragInitFor(init, session));
+            args.Effect = effect;
+            dispatchDrag(args);
+        }
+
+        // Clear IsDragOver on the last receiver and resolve.
+        this.applyReceiverChange(null, init);
+        session._complete(receiver !== null ? effect : DragDropEffects.None);
+        this._dragSession       = null;
+        this._dragOptions       = {};
+        this._currentDragEffect = DragDropEffects.None;
+    }
+
+    // Observe a session canceled outside the pointer-event pipeline
+    // (author code calling session.Cancel(), ESC handler, blur listener).
+    // The host adapter polls this; the InputManager checks the session's
+    // IsSettled flag and runs the receiver-cleanup + state-reset on
+    // the same path PointerUp uses.
+    public ObserveSessionCancellation(): void
+    {
+        const session = this._dragSession;
+        if (session === null) return;
+        if (!session.IsSettled) return;
+        this.applyReceiverChange(null, syntheticPointerInit());
+        this._dragSession       = null;
+        this._dragOptions       = {};
+        this._currentDragEffect = DragDropEffects.None;
+    }
+
+    // ── Internals ──────────────────────────────────────────────────
+
+    // Swap the current drag receiver. Fires DragLeave on the old one,
+    // DragEnter on the new one, and writes IsDragOver in lock-step.
+    // No-op when nothing changes.
+    private applyReceiverChange(next: Visual | null, init: PointerEventInit): void
+    {
+        const session = this._dragSession;
+        if (session === null) return;
+        const prev = this._currentDragReceiver;
+        if (prev === next) return;
+
+        if (prev !== null)
+        {
+            setIsDragOver(prev, false);
+            const args = new DragEventArgs('DragLeave', prev, dragInitFor(init, session));
+            dispatchDrag(args);
+        }
+        if (next !== null)
+        {
+            setIsDragOver(next, true);
+            const args = new DragEventArgs('DragEnter', next, dragInitFor(init, session));
+            dispatchDrag(args);
+        }
+        this._currentDragReceiver = next;
+    }
+
+    // Diff the prior hover route against the new one, fire Leave on
+    // visuals dropped and Enter on visuals added, and update
+    // IsMouseOver in lock-step. Visuals that stay in the route (the
+    // common-ancestor prefix shared between old and new routes) are
+    // left untouched — no DP write, no Enter/Leave fire.
+    private updateHoverChain(hit: Visual | null, init: PointerEventInit): void
+    {
+        const newRoute = hit === null ? [] : buildRoute(hit);
+        const oldSet   = new Set(this.hoverRoute);
+        const newSet   = new Set(newRoute);
+
+        // Leave: in old but not new. Walk leaf-first so child sees
+        // Leave before its parent (matches WPF firing order).
+        for (const v of this.hoverRoute)
+        {
+            if (newSet.has(v)) continue;
+            setIsMouseOver(v, false);
+            dispatchPointerDirect(new PointerEventArgs('PointerLeave', v, init));
+        }
+
+        // Enter: in new but not old. Walk leaf-first so the deepest
+        // newly-entered visual fires Enter first; tunnel pass on each
+        // dispatch still walks root → target as usual.
+        for (const v of newRoute)
+        {
+            if (oldSet.has(v)) continue;
+            setIsMouseOver(v, true);
+            dispatchPointerDirect(new PointerEventArgs('PointerEnter', v, init));
+        }
+
+        this.hoverRoute = newRoute;
+    }
+}
+
+// ── DP write helpers ───────────────────────────────────────────────
+
+// IsMouseOver and IsPressed are DPs registered on Visual itself.
+// These helpers are duck-typed so this module doesn't need to import
+// Visual (which already imports things that would cycle). At runtime
+// `_set_property_value_by_name` is Model's framework-internal string-
+// keyed setter (the public typed-key surface lives on the same Model,
+// just not reachable through a string at this seam); the property
+// names are exactly the strings registered in visual.ts.
+interface VisualWithDp
+{
+    _set_property_value_by_name(name: string, value: unknown): void;
+}
+
+function setIsMouseOver(v: Visual, value: boolean): void
+{
+    (v as unknown as VisualWithDp)._set_property_value_by_name('IsMouseOver', value);
+}
+
+function setIsPressed(v: Visual, value: boolean): void
+{
+    (v as unknown as VisualWithDp)._set_property_value_by_name('IsPressed', value);
+}
+
+function setIsFocused(v: Visual, value: boolean): void
+{
+    (v as unknown as VisualWithDp)._set_property_value_by_name('IsFocused', value);
+}
+
+// Read the Focusable DP without importing Visual (would cycle through
+// to routed-event.ts via the type alias). Same duck-typed read pattern
+// as the setters above.
+interface VisualWithReadDp { _get_property_value_by_name(name: string): unknown }
+
+function isFocusable(v: Visual): boolean
+{
+    return (v as unknown as VisualWithReadDp)._get_property_value_by_name('Focusable') === true;
+}
+
+// IsDragOver is the drag-specific mirror of IsMouseOver; same DP-write
+// shape, framework-only write surface.
+function setIsDragOver(v: Visual, value: boolean): void
+{
+    (v as unknown as VisualWithDp)._set_property_value_by_name('IsDragOver', value);
+}
+
+// Walk up the visual parent chain from `start` looking for the nearest
+// ancestor (including `start` itself) with AllowDrop=true. Returns null
+// if no ancestor qualifies. Mirrors WPF's receiver hit-test gate.
+interface VisualWithAllowDrop
+{
+    AllowDrop: boolean;
+    GetVisualParent(): Visual | undefined;
+}
+function findAllowDropAncestor(start: Visual): Visual | null
+{
+    let cur: Visual | undefined = start;
+    while (cur !== undefined)
+    {
+        const v = cur as unknown as VisualWithAllowDrop;
+        if (v.AllowDrop === true) return cur;
+        cur = v.GetVisualParent();
+    }
+    return null;
+}
+
+function dragInitFor(init: PointerEventInit, session: DragSession): DragEventInit
+{
+    return {
+        HostX:          init.HostX,
+        HostY:          init.HostY,
+        Modifiers:      init.Modifiers,
+        Data:           session.Data,
+        AllowedEffects: session.AllowedEffects,
+        Session:        session,
+    };
+}
+
+// Used by ObserveSessionCancellation when there's no real pointer event
+// to drive the receiver-leave with. The init.HostX/Y don't matter here —
+// the only consumer is the synthetic DragLeave that fires when the
+// session was canceled mid-drag, and HostX/Y are ignored at that point.
+function syntheticPointerInit(): PointerEventInit
+{
+    return {
+        HostX: 0, HostY: 0,
+        Button: PointerButton.None, Buttons: 0,
+        Modifiers: NoModifiers, PointerId: 0, Pressure: 0,
+        PointerType: 'mouse',
+    };
+}

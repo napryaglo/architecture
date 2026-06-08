@@ -1,5 +1,5 @@
 import { SplitterVM } from "./splitter-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, Splitter, StackPanel, TextBlock, TextWrapping } from "@visualisation-sub/mural/Controls";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, Splitter, StackPanel, TextBlock, TextWrapping } from "@visualisation-sub/mural/Basic";
 import { Color, HorizontalAlignment, ResourceDictionary, Thickness, VerticalAlignment } from "@visualisation-sub/mural/runtime";
 import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
 

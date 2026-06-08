@@ -1,5 +1,7 @@
 import { CounterVM } from "./counter-vm.mjs";
-import { Border, Button, Canvas, ComboBox, DataTemplate, TextBlock, TextWrapping } from "@visualisation-sub/mural/Controls";
+import { Border, Canvas, DataTemplate, TextBlock, TextWrapping } from "@visualisation-sub/mural/Basic";
+import { Button } from "@visualisation-sub/mural/framework/button.js";
+import { ComboBox } from "@visualisation-sub/mural/framework/list/combo-box.js";
 import { Color, DataContextBinding, MultiBinding, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
 import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
 

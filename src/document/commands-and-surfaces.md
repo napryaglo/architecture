@@ -8,11 +8,15 @@ lives on the **control** side. Surface controls are templated
 appears in multiple surfaces without redeclaration on the command layer.
 
 This document captures the design at sketch-level: control inventory,
-DPs, UX rules, and mockups. Implementation is pending — see backlog
-items 5.9.1 (`ICommandSource`) and 5.9.2 (`InputBindings`) in
-[current-backlog.md](../../current-backlog.md). The named-command
-library / cross-tree routing path (5.9.3–5.9.5) is explicitly out of
-scope for this sketch.
+DPs, UX rules, and mockups. The **infrastructure** (5.9.1–5.9.5) has
+shipped — `ICommandSource` contract, `CommandTarget`, `RoutedCommand` +
+`CommandBindings`, `InputBindings` + `KeyBinding` / `MouseBinding`, the
+four named-command libraries (`ApplicationCommands` / `EditingCommands`
+/ `NavigationCommands` / `MediaCommands`), and
+`CommandManager.RequerySuggested` all live now (see
+[completed-backlog.md](../../completed-backlog.md) §5.9). What's still
+pending is the **surface** controls (5.11) — ToolBar / Menu / Ribbon
+plus the `commands` demo that exercises them.
 
 **Related:** [behaviors.md](behaviors.md),
 [marquee-selection.md](marquee-selection.md),
@@ -76,20 +80,25 @@ an optional `canExecute` predicate, and a `RaiseCanExecuteChanged()`
 the VM calls when its world changes. Surface controls subscribe to
 `CanExecuteChanged` to auto-disable.
 
-## 3. `ICommandSource` (planned — backlog 5.9.1)
+## 3. `ICommandSource` (shipping)
 
-A mixin / base contract every command invoker implements. Three DPs:
+A contract every command invoker implements. Three DPs:
 
 | DP | Type | Default | Meaning |
 |---|---|---|---|
-| `Command` | `ICommand \| undefined` | `undefined` | The command to invoke. `undefined` = the source is non-interactive (or driven by other means like a click handler). |
+| `Command` | `ICommand \| undefined` | `undefined` | The command to invoke. `undefined` = the source is non-interactive (or driven by other means like a click handler). Accepts both `RelayCommand` and `RoutedCommand`. |
 | `CommandParameter` | `unknown` | `undefined` | Passed as the argument to `Execute` / `CanExecute`. |
-| `CommandTarget` | `Visual \| undefined` | `undefined` | Override the routed-command target. Inert until `RoutedCommand` (5.9.3) ships — for plain `ICommand` consumers, this DP just sits at `undefined`. |
+| `CommandTarget` | `Visual \| undefined` | `undefined` | RoutedCommand-only override of the routing dispatch target. Plain `ICommand` ignores this DP. When unset, RoutedCommand dispatches from the source Visual itself. |
 
-`Button` already exposes `Command` and `CommandParameter`. The 5.9.1
-work promotes them onto a shared base or mixin so `MenuItem`,
-`ToolBarButton`, `RibbonButton`, `Hyperlink`, `ToggleButton`, etc.
-all expose them with consistent semantics.
+`Button` implements `ICommandSource` today through `CommandSourceHelper`
+([src/runtime/command-source.ts](../runtime/command-source.ts)). Each
+command-source control registers its own `Command` /
+`CommandParameter` / `CommandTarget` DPs and forwards
+`OnPropertyChanged` writes to a `CommandSourceHelper` instance that
+handles the cached `_canExecute` boolean, the `CanExecuteChanged`
+subscription, and the RoutedCommand-vs-plain-ICommand dispatch branch.
+Future ICommandSource controls (`MenuItem`, `ToolBarButton`,
+`RibbonButton`, `Hyperlink`, `ToggleButton`) follow the same pattern.
 
 **Auto-disable contract**: when `Command !== undefined` and
 `Command.CanExecute(CommandParameter) === false`, the source visually
@@ -97,7 +106,7 @@ appears disabled (low alpha, no hover/press states, click ignored).
 Driven by `CanExecuteChanged` — every invoker subscribes when
 `Command` is set, unsubscribes when it clears.
 
-## 4. `InputBindings` (planned — backlog 5.9.2)
+## 4. `InputBindings` (shipping)
 
 Per-`Visual` collection of gesture-to-command mappings:
 
@@ -106,18 +115,23 @@ Window x:name="root" {
     InputBindings {
         KeyBinding   [Key=S, Modifiers=Control, Command=$SaveCmd]
         KeyBinding   [Key=Delete,                Command=$DeleteCmd]
-        MouseBinding [Button=Middle,             Command=$PanCmd]
+        MouseBinding [Gesture=MiddleClick,       Command=$PanCmd]
     }
     /* content */
 }
 ```
 
-Dispatch model: `PreviewKeyDown` at the focus root walks down to the
-focused element, consulting each visual's `InputBindings` along the
-way. First gesture match runs `Command.Execute(CommandParameter)`
-(with `CommandParameter` configurable on the binding) and sets
-`args.Handled = true`. No match → the original `KeyDown` event fires
-through the normal route.
+Dispatch model: the routed-event walker's `KeyDown` bubble pass calls
+into `_tryFireInputBindingsForVisual` at each ancestor on the route up
+from the focused element. Per-instance bindings (`Visual.InputBindings`)
+are consulted first, then per-class bindings registered via
+`CommandManager.RegisterClassInputBinding`. The innermost matching
+binding wins because the bubble walker stops on `args.Handled = true`.
+When the bound command is a `RoutedCommand`, dispatch flows through
+`CommandManager.Execute` against `CommandTarget ?? host`; for plain
+`ICommand` the binding calls `Execute(CommandParameter)` directly.
+`KeyBinding` fires on `KeyDown` only (matches WPF — `KeyUp` doesn't
+trigger commands).
 
 **For surface controls**: a `MenuItem`'s displayed `InputGestureText`
 is a STRING, not a wire. It's the menu's UI hint. The actual shortcut
@@ -475,13 +489,6 @@ All pure `ICommand`s on the VM. No visual metadata on the command.
 
 ## 10. Open items / future work
 
-- **5.9.3 RoutedCommand**: cross-tree command routing through the
-  visual tree. Not load-bearing for this design; revisit if a demo
-  surfaces a real need (e.g., a real TextBox selection-driven Edit
-  menu).
-- **5.9.4 ApplicationCommands / EditingCommands** static catalogs:
-  trivial once `RoutedCommand` exists. Worth adding when several
-  controls register internal CommandBindings for the same verbs.
 - **KeyTips** (Alt-prefix letter overlay for Ribbon): a focused
   feature for ribbon-heavy apps; defer until v2 ribbon work.
 - **Backstage view** (Ribbon's File-tab full-screen): only worthwhile

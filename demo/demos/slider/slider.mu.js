@@ -1,5 +1,5 @@
 import { SliderVM } from "./slider-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, Slider, StackPanel, TextBlock } from "@visualisation-sub/mural/Controls";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, Slider, StackPanel, TextBlock } from "@visualisation-sub/mural/Basic";
 import { Color, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
 import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
 

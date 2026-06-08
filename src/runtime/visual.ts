@@ -1193,6 +1193,14 @@ export class Visual extends Model
         return this._behaviors ?? [];
     }
 
+    // CommandBindings / InputBindings live on Control (the templated-
+    // control base in `@visualisation-sub/mural/framework`). Routed
+    // commands + InputBindings dispatch only reach Control-shaped
+    // visuals — Border / Canvas / plain panels participate in routing
+    // but don't carry per-instance binding tables. CommandManager and
+    // the routed-event walker `instanceof Control` before reading the
+    // collections.
+
     // ── Named storyboard registry ──────────────────────────────────────
     //
     // BeginStoryboardAction with a Name stashes the freshly-built

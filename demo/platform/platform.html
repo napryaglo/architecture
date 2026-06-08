@@ -35,10 +35,15 @@
     <script type="importmap">
     {
         "imports": {
-            "@visualisation-sub/mural/runtime":       "../../dist/runtime/index.js",
-            "@visualisation-sub/mural/Controls":      "../../dist/Controls/index.js",
-            "@visualisation-sub/mural/visual-engine": "../../dist/visual-engine/index.js",
-            "opentype.js":                            "../opentype-shim.mjs"
+            "@visualisation-sub/mural/runtime":        "../../dist/runtime/index.js",
+            "@visualisation-sub/mural/runtime/":       "../../dist/runtime/",
+            "@visualisation-sub/mural/Basic":          "../../dist/Basic/index.js",
+            "@visualisation-sub/mural/Basic/":         "../../dist/Basic/",
+            "@visualisation-sub/mural/framework":      "../../dist/framework/index.js",
+            "@visualisation-sub/mural/framework/":     "../../dist/framework/",
+            "@visualisation-sub/mural/visual-engine":  "../../dist/visual-engine/index.js",
+            "@visualisation-sub/mural/visual-engine/": "../../dist/visual-engine/",
+            "opentype.js":                             "../opentype-shim.mjs"
         }
     }
     </script>
@@ -68,6 +73,11 @@
         // is enough to enroll the demo with the platform's registry.
         import '../demos/dashboard/dashboard.mjs';
         import '../demos/diagram/diagram.mjs';
+        import '../demos/commands/commands.mjs';
+        import '../demos/toggle-button/toggle-button.mjs';
+        import '../demos/tool-bar/tool-bar.mjs';
+        import '../demos/menu/menu.mjs';
+        import '../demos/context-menu/context-menu.mjs';
         import '../demos/counter/counter.mjs';
         import '../demos/drawer/drawer.mjs';
         import '../demos/tree-view/tree-view.mjs';

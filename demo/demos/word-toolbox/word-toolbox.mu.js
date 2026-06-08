@@ -1,5 +1,9 @@
 import { WordToolboxVM, WordVM } from "./word-toolbox-vm.mjs";
-import { Border, ContentPresenter, ControlTemplate, DataTemplate, Dock, DockPanel, ItemsControl, ItemsPanelTemplate, ListBox, ListBoxItem, ListReorderBehavior, MarqueeBoundsPolicy, Orientation, ScrollViewer, SelectionMode, StackPanel, TargetedSetter, TemplatePropertyTrigger, TextBlock, TextWrapping, VirtualizingStackPanel, VirtualizingWrapPanel } from "@visualisation-sub/mural/Controls";
+import { Border, ContentPresenter, ControlTemplate, DataTemplate, Dock, DockPanel, ItemsPanelTemplate, ListReorderBehavior, Orientation, StackPanel, TargetedSetter, TemplatePropertyTrigger, TextBlock, TextWrapping, VirtualizingStackPanel, VirtualizingWrapPanel } from "@visualisation-sub/mural/Basic";
+import { ItemsControl } from "@visualisation-sub/mural/framework/items-control.js";
+import { ListBox, ListBoxItem, SelectionMode } from "@visualisation-sub/mural/framework/list/list-box.js";
+import { MarqueeBoundsPolicy } from "@visualisation-sub/mural/framework/list/selector.js";
+import { ScrollViewer } from "@visualisation-sub/mural/framework/scroll-viewer.js";
 import { Color, DataContextBinding, HorizontalAlignment, NameScope, ResourceDictionary, Setter, SetterFactory, Style, Thickness, VerticalAlignment } from "@visualisation-sub/mural/runtime";
 import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
 

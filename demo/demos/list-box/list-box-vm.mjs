@@ -9,9 +9,11 @@
 // OnViewMounted. CollectionView subscription + toggle state live on
 // the VM so the demo data and behavior travel with the model.
 import { Model } from '@visualisation-sub/mural/runtime';
+import { SortDescription, TextBlock } from '@visualisation-sub/mural/Basic';
+import { Button } from '@visualisation-sub/mural/framework';
 import {
-    Button, ListBox, ListBoxItem, SortDescription, TextBlock,
-} from '@visualisation-sub/mural/Controls';
+    ListBox, ListBoxItem,
+} from '@visualisation-sub/mural/framework';
 
 const PEOPLE = [
     { name: 'Alice',   role: 'eng'    },

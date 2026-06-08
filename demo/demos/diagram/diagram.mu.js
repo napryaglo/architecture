@@ -1,5 +1,10 @@
 import { DiagramVM, EllipseNodeVM, NoteNodeVM, RectNodeVM, ToolboxShapeVM } from "./diagram-vm.mjs";
-import { Border, Button, Canvas, DataTemplate, Diagram, DiagramNode, Dock, DockPanel, Ellipse, ItemsControl, ItemsPanelTemplate, Orientation, SelectionMode, StackPanel, TargetedSetter, TemplateDataTrigger, TextBlock, TextWrapping } from "@visualisation-sub/mural/Controls";
+import { Border, Canvas, DataTemplate, Dock, DockPanel, Ellipse, ItemsPanelTemplate, Orientation, StackPanel, TargetedSetter, TemplateDataTrigger, TextBlock, TextWrapping } from "@visualisation-sub/mural/Basic";
+import { Button } from "@visualisation-sub/mural/framework/button.js";
+import { DiagramNode } from "@visualisation-sub/mural/framework/diagram/diagram-node.js";
+import { Diagram } from "@visualisation-sub/mural/framework/diagram/diagram.js";
+import { ItemsControl } from "@visualisation-sub/mural/framework/items-control.js";
+import { SelectionMode } from "@visualisation-sub/mural/framework/list/list-box.js";
 import { Color, DataContextBinding, HorizontalAlignment, NameScope, ResourceDictionary, Setter, SetterFactory, Style, Thickness, VerticalAlignment } from "@visualisation-sub/mural/runtime";
 import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
 

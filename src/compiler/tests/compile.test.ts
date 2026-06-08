@@ -33,7 +33,7 @@ describe('compile — application skeleton', () => {
         // sorted too.
         assert.match(
             js,
-            /import \{ Border \} from "@visualisation-sub\/mural\/Controls";/,
+            /import \{ Border \} from "@visualisation-sub\/mural\/Basic";/,
         );
         // x:root materialises a NameScope on the root visual so x:name
         // descendants resolve there; the emitter pulls NameScope into
@@ -811,7 +811,7 @@ describe('compile — result metadata', () => {
     test('imports map exposes the modules and symbols', () => {
         const r = compile(`Application{ resources: { Border x:root{} } }`);
         assert.ok(r.imports.has('@visualisation-sub/mural/runtime'));
-        assert.ok(r.imports.has('@visualisation-sub/mural/Controls'));
-        assert.equal(r.imports.get('@visualisation-sub/mural/Controls')!.has('Border'), true);
+        assert.ok(r.imports.has('@visualisation-sub/mural/Basic'));
+        assert.equal(r.imports.get('@visualisation-sub/mural/Basic')!.has('Border'), true);
     });
 });

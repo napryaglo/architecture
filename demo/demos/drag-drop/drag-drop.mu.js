@@ -1,5 +1,6 @@
 import { DragDropVM, ItemVM } from "./drag-drop-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, ListBox, ListBoxItem, Orientation, StackPanel, TextBlock, TextWrapping } from "@visualisation-sub/mural/Controls";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock, TextWrapping } from "@visualisation-sub/mural/Basic";
+import { ListBox, ListBoxItem } from "@visualisation-sub/mural/framework/list/list-box.js";
 import { Color, DataContextBinding, NameScope, ResourceDictionary, Setter, SetterFactory, Style, Thickness, VerticalAlignment } from "@visualisation-sub/mural/runtime";
 import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
 

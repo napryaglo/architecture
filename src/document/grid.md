@@ -10,11 +10,11 @@ standard three-mode WPF resolver, simplified to a four-pass
 measure/arrange.
 
 **Implemented in:**
-- [Controls/grid.ts](../Controls/grid.ts) — `Grid`, `GridLength`,
+- [Basic/grid.ts](../Basic/grid.ts) — `Grid`, `GridLength`,
   `ColumnDefinition`, `RowDefinition`, `GridUnitType`
 
 See also: [layout.md](layout.md) for the underlying measure / arrange
-contract every panel implements, [controls.md](controls.md) for the
+contract every panel implements, [basic.md](basic.md) for the
 broader control roster.
 
 ## 0. Version scope
@@ -40,7 +40,7 @@ with a separate agreement.
 The value type describing one track's sizing rule.
 
 ```ts
-import { GridLength } from '@visualisation-sub/mural/Controls';
+import { GridLength } from '@visualisation-sub/mural/Basic';
 
 new GridLength(120)              // pixel: exact size in pixels
 new GridLength(120, 'pixel')     // same — explicit unit type
@@ -65,7 +65,7 @@ appear in the Grid's `ColumnDefinitions` / `RowDefinitions`
 ObservableCollections.
 
 ```ts
-import { Grid, ColumnDefinition, RowDefinition, GridLength } from '@visualisation-sub/mural/Controls';
+import { Grid, ColumnDefinition, RowDefinition, GridLength } from '@visualisation-sub/mural/Basic';
 
 const grid = new Grid();
 const c0 = new ColumnDefinition(); c0.Width = new GridLength(200);
@@ -97,7 +97,7 @@ spread a child across its parent's bounds.
 | `Grid.ColumnSpan` | `1` | Number of columns this child spans. |
 
 ```ts
-import { Grid } from '@visualisation-sub/mural/Controls';
+import { Grid } from '@visualisation-sub/mural/Basic';
 
 Grid.SetRow(child, 1);
 Grid.SetColumn(child, 2);

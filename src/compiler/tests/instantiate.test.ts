@@ -2,10 +2,10 @@ import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { instantiate } from '../compile.js';
 import * as runtime from '../../runtime/index.js';
-import * as controls from '../../Controls/index.js';
+import * as controls from '../../Basic/index.js';
 import * as engine from '../../visual-engine/index.js';
 import { Application, Style, Color, Thickness } from '../../runtime/index.js';
-import { Border, Canvas } from '../../Controls/index.js';
+import { Border, Canvas } from '../../Basic/index.js';
 import { SolidColorBrush } from '../../visual-engine/index.js';
 
 // End-to-end smoke. Compiles source to JS, evals against the real

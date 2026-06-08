@@ -87,7 +87,7 @@ export {
     type DragEventInit,
     type DragEventHandlers,
 } from './routed-event.js';
-export { InputManager } from './input-manager.js';
+// InputManager moved to `@visualisation-sub/mural/framework`.
 export {
     DataObject,
     DragDrop,
@@ -100,6 +100,12 @@ export {
     RelayCommand,
     type ICommand,
 } from './command.js';
+// RoutedCommand / CommandBinding / CommandManager / InputBinding /
+// KeyBinding / MouseBinding / ICommandSource + CommandSourceHelper /
+// ApplicationCommands etc. moved to
+// `@visualisation-sub/mural/framework/commands`. Re-exports stay there
+// — the runtime barrel keeps only the foundational `ICommand` +
+// `RelayCommand` from `./command.js`.
 export {
     Style,
     Setter,

@@ -1,4 +1,5 @@
-import { APPROXIMATE_TEXT_MEASURER, InputManager, MetaData, Model, Size } from '../runtime/index.js';
+import { APPROXIMATE_TEXT_MEASURER, MetaData, Model, Size } from '../runtime/index.js';
+import { InputManager } from '../framework/input-manager.js';
 import { Rect } from '../runtime/index.js';
 import type { TextMeasurer, Visual, VisualHost } from '../runtime/index.js';
 import type { Brush } from './brush.js';

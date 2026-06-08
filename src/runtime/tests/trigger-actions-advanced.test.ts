@@ -16,7 +16,7 @@ import {
     Style,
     Visual,
 } from '../index.js';
-import { Border } from '../../Controls/border.js';
+import { Border } from '../../Basic/border.js';
 
 function freshClock(): ManualClock
 {

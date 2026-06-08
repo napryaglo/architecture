@@ -48,7 +48,7 @@ import {
 // ── Static catalogues ───────────────────────────────────────────────
 
 // Properties we surface as completions inside `[…]`. Drawn from the
-// known DependencyProperty names across runtime + Controls. Not an
+// known DependencyProperty names across runtime + Basic. Not an
 // authoritative list — just the common ones. Falls back gracefully when
 // the user picks one we don't know about.
 const COMMON_PROPERTIES: ReadonlyArray<string> = [

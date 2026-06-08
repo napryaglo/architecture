@@ -4,7 +4,7 @@
 // OnDragStart; this file is the glue.
 
 import { Application } from '@visualisation-sub/mural/runtime';
-import { ListBox } from '@visualisation-sub/mural/Controls';
+import { ListBox } from '@visualisation-sub/mural/framework';
 import { create as createResources } from './drag-drop.mu.js';
 import { DragDropVM } from './drag-drop-vm.mjs';
 import { attachListBoxDrop } from './behaviors/listbox-drop-behavior.mjs';

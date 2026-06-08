@@ -1,5 +1,6 @@
 import { GroupVM } from "./platform-vm.mjs";
-import { AdornerDecorator, Border, Dock, DockPanel, HierarchicalDataTemplate, PageView, StackPanel, TextBlock, TreeView, TreeViewItem } from "@visualisation-sub/mural/Controls";
+import { AdornerDecorator, Border, Dock, DockPanel, HierarchicalDataTemplate, PageView, StackPanel, TextBlock } from "@visualisation-sub/mural/Basic";
+import { TreeView, TreeViewItem } from "@visualisation-sub/mural/framework/list/tree-view.js";
 import { Application, Color, DataContextBinding, NameScope, Setter, Style, Thickness } from "@visualisation-sub/mural/runtime";
 import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
 

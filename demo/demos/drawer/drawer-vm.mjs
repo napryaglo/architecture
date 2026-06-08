@@ -11,7 +11,7 @@
 // this round-trip the next OpenOptions invocation would do nothing —
 // IsOpen would still bind to `true` from the VM's perspective.
 import { MetaData, Model, RelayCommand } from '@visualisation-sub/mural/runtime';
-import { Drawer, DrawerVariant } from '@visualisation-sub/mural/Controls';
+import { Drawer, DrawerVariant } from '@visualisation-sub/mural/framework';
 
 export class DrawerVM extends Model
 {

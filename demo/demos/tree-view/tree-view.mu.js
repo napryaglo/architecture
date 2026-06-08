@@ -1,5 +1,6 @@
 import { TreeViewVM } from "./tree-view-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock, TreeView, TreeViewItem } from "@visualisation-sub/mural/Controls";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@visualisation-sub/mural/Basic";
+import { TreeView, TreeViewItem } from "@visualisation-sub/mural/framework/list/tree-view.js";
 import { Color, NameScope, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
 import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
 

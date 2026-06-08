@@ -1,0 +1,69 @@
+import MenuVM from "./menu-vm.mjs"
+
+// menu.mu — MenuButton + MenuItem showcase. A single hamburger button
+// opens a vertical column of menu rows:
+//   * File group   — New, Open, Save, Save As, Close
+//   * Edit group   — Undo, Redo
+//   * View group   — Show Grid (checkable), Snap to Grid (checkable)
+//
+// What's exercised:
+//   * Header           — row text in the second column.
+//   * InputGestureText — display-only chord ("Ctrl+S", "Del", …).
+//   * Command          — invoked on click.
+//   * IsCheckable + IsChecked — ✓ glyph in the icon column when set.
+//   * MenuSeparator    — horizontal divider between groups.
+
+ResourceDictionary {
+
+    DataTemplate x:key="MenuTemplate" [DataType=MenuVM] {
+        Border [Background=#ffffff, BorderBrush=#e2e8f0,
+                BorderThickness=(1)]{
+
+            DockPanel{
+                // Header
+                Border[DockPanel.Dock=Top,
+                       Background=#1976d2, Padding=(16,12,16,12)]{
+                    TextBlock[Text="MenuButton — hamburger fly-out with checkable items and gesture text.",
+                              FontSize=15, FontWeight=Bold,
+                              Foreground=#ffffff]
+                }
+
+                // Body
+                StackPanel[Orientation=Vertical, Margin=(16,16,16,16)]{
+
+                    TextBlock[Text="Click the button to open the menu:",
+                              FontSize=12, Foreground=#6b7280,
+                              Margin=(0,0,0,8)]
+
+                    MenuButton[Header="☰  File"]{
+                        MenuItem[Header="New",      InputGestureText="Ctrl+N",
+                                 Command=$NewCommand]
+                        MenuItem[Header="Open…",    InputGestureText="Ctrl+O",
+                                 Command=$OpenCommand]
+                        MenuSeparator
+                        MenuItem[Header="Save",     InputGestureText="Ctrl+S",
+                                 Command=$SaveCommand]
+                        MenuItem[Header="Save As…", InputGestureText="Ctrl+Shift+S",
+                                 Command=$SaveAsCommand]
+                        MenuSeparator
+                        MenuItem[Header="Close",    InputGestureText="Ctrl+F4",
+                                 Command=$CloseCommand]
+                        MenuSeparator
+                        MenuItem[Header="Undo",     InputGestureText="Ctrl+Z",
+                                 Command=$UndoCommand]
+                        MenuItem[Header="Redo",     InputGestureText="Ctrl+Y",
+                                 Command=$RedoCommand]
+                        MenuSeparator
+                        MenuItem[Header="Show Grid",    IsCheckable=true,
+                                 IsChecked=$ShowGrid,    Command=$ShowGridCommand]
+                        MenuItem[Header="Snap to Grid", IsCheckable=true,
+                                 IsChecked=$SnapToGrid,  Command=$SnapToGridCommand]
+                    }
+
+                    TextBlock[Text=$Status, FontSize=13,
+                              Foreground=#1f2937, Margin=(0,16,0,0)]
+                }
+            }
+        }
+    }
+}

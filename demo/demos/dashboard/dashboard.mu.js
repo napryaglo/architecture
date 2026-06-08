@@ -1,5 +1,5 @@
 import { DashboardVM } from "./dashboard-vm.mjs";
-import { Border, Canvas, DataTemplate, TextBlock, TextWrapping } from "@visualisation-sub/mural/Controls";
+import { Border, Canvas, DataTemplate, TextBlock, TextWrapping } from "@visualisation-sub/mural/Basic";
 import { Color, PropertyTrigger, ResourceDictionary, Setter, Style, Thickness } from "@visualisation-sub/mural/runtime";
 import { SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
 

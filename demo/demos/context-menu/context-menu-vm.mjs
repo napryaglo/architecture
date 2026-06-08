@@ -1,0 +1,28 @@
+// ContextMenuVM — three colored panels each with its OWN ContextMenu.
+// Right-click any panel to open its menu; the route-walker finds the
+// nearest ancestor with an attached ContextMenu and opens it at the
+// cursor position.
+import {
+    MetaData,
+    Model,
+    RelayCommand,
+} from '@visualisation-sub/mural/runtime';
+
+export class ContextMenuVM extends Model
+{
+    static StatusKey = Model.RegisterProperty(ContextMenuVM, 'Status', 'Right-click any panel.', MetaData.None);
+
+    constructor() {
+        super();
+        const setStatus = (msg) => this._set_property_value_by_name('Status', msg);
+        // Three sets of commands keyed by panel colour. The data flows
+        // through CommandParameter so the same VM method can format
+        // distinct status messages per source.
+        this.RedCommand    = new RelayCommand((label) => setStatus(`Red panel  — ${label}.`));
+        this.GreenCommand  = new RelayCommand((label) => setStatus(`Green panel — ${label}.`));
+        this.BlueCommand   = new RelayCommand((label) => setStatus(`Blue panel  — ${label}.`));
+    }
+
+    get Status()  { return this._get_property_value_by_name('Status'); }
+    set Status(v) { this._set_property_value_by_name('Status', v); }
+}

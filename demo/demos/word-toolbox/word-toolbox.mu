@@ -1,8 +1,8 @@
 import WordToolboxVM from "./word-toolbox-vm.mjs"
 import WordVM from "./word-toolbox-vm.mjs"
-import ListReorderBehavior from "@visualisation-sub/mural/Controls"
-import VirtualizingWrapPanel from "@visualisation-sub/mural/Controls"
-import VirtualizingStackPanel from "@visualisation-sub/mural/Controls"
+import ListReorderBehavior from "@visualisation-sub/mural/Basic"
+import VirtualizingWrapPanel from "@visualisation-sub/mural/Basic"
+import VirtualizingStackPanel from "@visualisation-sub/mural/Basic"
 
 // word-toolbox.mu — toolbox of 100 dictionary words on the left, a
 // 2000-tile virtualized wrap-panel listbox on the right. Tiles are

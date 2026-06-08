@@ -1,0 +1,26 @@
+// menu demo — MenuButton + MenuItem + MenuSeparator showcase. The
+// hamburger button opens a fly-out menu with File / Edit / View
+// groups (separators between), plus two checkable items demonstrating
+// IsCheckable + IsChecked.
+import { Application } from '@visualisation-sub/mural/runtime';
+import { create as createMenuResources } from './menu.mu.js';
+import { MenuVM } from './menu-vm.mjs';
+import { register } from '../../platform/registry.mjs';
+
+let resourcesMerged = false;
+let vmInstance;
+
+register({
+    id:       'menu',
+    group:    'Controls',
+    title:    'Menu',
+    subtitle: 'Hamburger MenuButton with grouped MenuItems, separators, gesture text, and checkable items.',
+    factory: () => {
+        if (!resourcesMerged) {
+            Application.current?.Resources.AddMergedDictionary(createMenuResources());
+            resourcesMerged = true;
+        }
+        if (vmInstance === undefined) vmInstance = new MenuVM();
+        return vmInstance;
+    },
+});

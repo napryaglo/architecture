@@ -23,7 +23,7 @@ A `Setter` is `(owner, property, value)` — explicit owner so cross-class
 
 ```ts
 import { Setter, Style } from '../runtime/index.js';
-import { Border, Canvas, TextBlock } from '../Controls/index.js';
+import { Border, Canvas, TextBlock } from '../Basic/index.js';
 
 new Setter(Border, 'BorderThickness', new Thickness(2));
 new Setter(Canvas, 'Left', 20);           // attached property setter

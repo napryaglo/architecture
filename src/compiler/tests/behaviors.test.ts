@@ -2,7 +2,7 @@ import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { compile, instantiate } from '../compile.js';
 import * as runtime from '../../runtime/index.js';
-import * as controls from '../../Controls/index.js';
+import * as controls from '../../Basic/index.js';
 import * as engine from '../../visual-engine/index.js';
 import {
     Application,
@@ -11,7 +11,7 @@ import {
     MetaData,
     type Visual,
 } from '../../runtime/index.js';
-import { Border } from '../../Controls/index.js';
+import { Border } from '../../Basic/index.js';
 
 // Stub Behavior subclass exercised by the markup→runtime tests. Mirrors
 // the contract real authors follow: subclass Behavior, register DPs for

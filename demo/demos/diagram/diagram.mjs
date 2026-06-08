@@ -21,7 +21,7 @@
 //     data-only + Save/Load commands.
 
 import { Application } from '@visualisation-sub/mural/runtime';
-import { Diagram } from '@visualisation-sub/mural/Controls';
+import { Diagram } from '@visualisation-sub/mural/framework';
 import { create as createDiagramResources } from './diagram.mu.js';
 import { DiagramVM, NodeVM } from './diagram-vm.mjs';
 import { attachCanvasDropBehavior } from './behaviors/canvas-drop-behavior.mjs';

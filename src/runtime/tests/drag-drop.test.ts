@@ -7,7 +7,6 @@ import {
     DragDropEffects,
     DragEventArgs,
     DragSession,
-    InputManager,
     NoModifiers,
     Panel,
     PointerButton,
@@ -18,6 +17,7 @@ import {
     type DrawingContext,
     type PointerEventInit,
 } from '../index.js';
+import { InputManager } from '../../framework/index.js';
 
 // Drag-event probe class — minimal Panel subclass that records each
 // drag virtual it sees (tunnel + bubble). Used across the dispatch

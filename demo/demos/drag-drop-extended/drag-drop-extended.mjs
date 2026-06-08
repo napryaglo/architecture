@@ -18,7 +18,7 @@
 // internally once InsertionAdornerTemplate is set).
 
 import { Application } from '@visualisation-sub/mural/runtime';
-import { DataTemplate } from '@visualisation-sub/mural/Controls';
+import { DataTemplate } from '@visualisation-sub/mural/Basic';
 import { create as createResources } from './drag-drop-extended.mu.js';
 import { DragDropExtendedVM } from './drag-drop-extended-vm.mjs';
 import { attachOsFileDrop } from './behaviors/os-file-drop-behavior.mjs';
@@ -59,7 +59,7 @@ function importControls()      { return (_controls      ??= controlsRef); }
 function importRuntime()       { return (_runtime       ??= runtimeRef); }
 function importVisualEngine()  { return (_visualEngine  ??= visualEngineRef); }
 
-import * as controlsRef from '@visualisation-sub/mural/Controls';
+import * as controlsRef from '@visualisation-sub/mural/Basic';
 import * as runtimeRef from '@visualisation-sub/mural/runtime';
 import * as visualEngineRef from '@visualisation-sub/mural/visual-engine';
 

@@ -1,5 +1,6 @@
 import { AnimationTriggersVM } from "./animation-triggers-vm.mjs";
-import { Border, Button, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@visualisation-sub/mural/Controls";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@visualisation-sub/mural/Basic";
+import { Button } from "@visualisation-sub/mural/framework/button.js";
 import { BeginStoryboardAction, Color, DoubleAnimation, EventTrigger, NameScope, PropertyTrigger, ResourceDictionary, Storyboard, Style, Thickness } from "@visualisation-sub/mural/runtime";
 import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
 

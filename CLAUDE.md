@@ -41,7 +41,7 @@ implementations, or behaviors.
 - **VMs MUST NOT import view-layer modules.** Permitted runtime
   imports: `@visualisation-sub/mural/runtime` (DPs, bindings, ICommand,
   ObservableCollection, primitives, routed event TYPES). Forbidden:
-  `Controls`, `visual-engine`, any host target. No `Border`, `Canvas`,
+  `Basic`, `visual-engine`, any host target. No `Border`, `Canvas`,
   `Line`, `SolidColorBrush`, `Color` references in VM code. *Why:* the
   moment a VM types view objects, swapping the template or the host
   backend requires VM edits. *How to apply:* if `instanceof Border`
@@ -113,7 +113,7 @@ or complex event-sequencing — without polluting the VM.
 
 **Location.** Demo-local behaviors live at `demo/demos/<demo>/behaviors/`
 as `*-behavior.mjs` files. Reusable behaviors that ship with the
-framework eventually live alongside controls in `src/Controls/behaviors/`,
+framework eventually live alongside controls in `src/Basic/behaviors/`,
 but no behavior gets promoted there until at least two demos need it.
 
 **Shape.** A behavior exports one or more attach functions:
@@ -152,5 +152,5 @@ deactivation, and live-edit reloads all need a clean way to unwire.
 same view-layer pattern shows up in three demos, it's a candidate for
 either (a) a framework primitive (new trigger action, new attached
 property, new Control) or (b) a shared behavior moved to
-`src/Controls/behaviors/`. A behavior in one demo is fine; a behavior
+`src/Basic/behaviors/`. A behavior in one demo is fine; a behavior
 copy-pasted across demos is a framework-gap signal.

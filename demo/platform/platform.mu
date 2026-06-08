@@ -1,5 +1,5 @@
 import GroupVM from "./platform-vm.mjs"
-import AdornerDecorator from "@visualisation-sub/mural/Controls"
+import AdornerDecorator from "@visualisation-sub/mural/Basic"
 
 // platform.mu — MVVM shell for the µ-mural demo platform.
 //

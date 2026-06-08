@@ -1,5 +1,7 @@
 import { DrawerVM } from "./drawer-vm.mjs";
-import { Border, Button, DataTemplate, Dock, DockPanel, Drawer, DrawerVariant, Orientation, StackPanel, TextBlock, TextWrapping } from "@visualisation-sub/mural/Controls";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock, TextWrapping } from "@visualisation-sub/mural/Basic";
+import { Button } from "@visualisation-sub/mural/framework/button.js";
+import { Drawer, DrawerVariant } from "@visualisation-sub/mural/framework/drawer.js";
 import { Color, DataContextBinding, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
 import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
 

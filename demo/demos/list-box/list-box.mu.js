@@ -1,5 +1,7 @@
 import { ListBoxVM } from "./list-box-vm.mjs";
-import { Border, Button, DataTemplate, Dock, DockPanel, ListBox, ListBoxItem, Orientation, SelectionMode, StackPanel, TextBlock, TextWrapping } from "@visualisation-sub/mural/Controls";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock, TextWrapping } from "@visualisation-sub/mural/Basic";
+import { Button } from "@visualisation-sub/mural/framework/button.js";
+import { ListBox, ListBoxItem, SelectionMode } from "@visualisation-sub/mural/framework/list/list-box.js";
 import { Color, NameScope, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
 import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
 

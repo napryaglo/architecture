@@ -28,7 +28,7 @@ npm run build:templates && npm run build:demos && tsc
 
 The full build pipeline. Runs the three stages in order:
 
-1. Compile `src/Controls/*.template.mu` to `build/Controls/*.template.mu.{js,d.ts}`.
+1. Compile `src/Basic/*.template.mu` to `build/Basic/*.template.mu.{js,d.ts}`.
 2. Compile `demo/**/*.mu` to in-place `demo/**/*.mu.js` files.
 3. Run `tsc` against `src/**/*.ts`, emitting `dist/**/*.{js,d.ts,js.map}`.
 
@@ -40,7 +40,7 @@ Run this after pulling, before serving the demo, or any time TypeScript or `.mu`
 tsx src/tooling/build-control-templates.ts
 ```
 
-Compiles internal control templates only. Input: `src/Controls/*.template.mu`. Output: `build/Controls/*.template.mu.js` plus a `.d.ts` stub.
+Compiles internal control templates only. Input: `src/Basic/*.template.mu`. Output: `build/Basic/*.template.mu.js` plus a `.d.ts` stub.
 
 Run when you've edited a control template but nothing else, or as the minimum step before `npm test` (the `pretest` hook calls this automatically).
 
@@ -81,9 +81,9 @@ Runs the full build and prints a reminder of how to serve the demo. Doesn't actu
 ### `npm run demo:border` / `demo:text` / `demo:gfont`
 
 ```
-tsx src/Controls/tests/border-render.ts
-tsx src/Controls/tests/text-render.ts
-tsx src/Controls/tests/google-font-render.ts
+tsx src/Basic/tests/border-render.ts
+tsx src/Basic/tests/text-render.ts
+tsx src/Basic/tests/google-font-render.ts
 ```
 
 Standalone render-pinning scripts. Each writes a rasterized output to disk for visual verification. Not the platform demo — these are old smoke tests kept around for regression checks on specific renderers.

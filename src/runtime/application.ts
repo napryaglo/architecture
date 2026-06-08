@@ -79,13 +79,42 @@ export class Application
     // process-wide singleton — every Application instance shares the
     // SAME default dictionaries so the underlying ControlTemplate
     // instances are identical across applications.
+    //
+    // Incremental on subsequent calls: when a factory is appended AFTER
+    // the first materialisation (e.g. a deferred-loaded surface theme
+    // pushed from a control's static block that ran post-startup), the
+    // new factory is invoked now and its dict appended to the cache.
+    // Already-merged dicts on every live Application.Resources are not
+    // refreshed here — call `mergePendingDefaults()` for that.
     private static getDefaultResources(): ResourceDictionary[]
     {
-        if (this._defaultResources === undefined)
+        if (this._defaultResources === undefined) this._defaultResources = [];
+        while (this._defaultResources.length < this.DefaultResourceFactories.length)
         {
-            this._defaultResources = this.DefaultResourceFactories.map(f => f());
+            const f = this.DefaultResourceFactories[this._defaultResources.length]!;
+            this._defaultResources.push(f());
         }
         return this._defaultResources;
+    }
+
+    // Merge any default-resource dicts created since the current
+    // Application was constructed into its Resources. Surface controls
+    // call this from their static blocks (via `ensureSurfaceTheme`) so
+    // a MenuButton constructed AFTER Application.current was assigned
+    // still sees its bundled Style on the merged-dictionary chain. The
+    // `getDefaultResources` call materialises any newly-registered
+    // factories first.
+    public static MergePendingDefaults(): void
+    {
+        const app = Application.current;
+        if (app === null) return;
+        for (const dict of this.getDefaultResources())
+        {
+            if (!app.Resources.MergedDictionaries.includes(dict))
+            {
+                app.Resources.AddMergedDictionary(dict);
+            }
+        }
     }
 
     // Resolve a resource (typically a default ControlTemplate) by key.
@@ -99,18 +128,29 @@ export class Application
     // Accepts `string | Function` keys: built-in control templates are
     // keyed by the control's class function (Button, ListBox, …) under
     // the no-string-type-proxies rule; ad-hoc resources stay string-keyed.
+    //
+    // Class-keyed lookups walk the prototype chain on miss: a Style with
+    // TargetType = ToggleButton (which doesn't register a theme of its
+    // own) cleanly falls back to the Button theme it inherits from. This
+    // matches the way DefaultStyleKey resolves and lets `[TargetType=X]`
+    // Styles auto-BasedOn the nearest ancestor's theme without forcing
+    // each subclass to redeclare its theme entry.
     public static ResolveDefaultResource<T = unknown>(key: ResourceKey): T | undefined
     {
         const app = Application.current;
-        if (app !== null)
+        const dicts = this.getDefaultResources();
+        for (let cur: ResourceKey | null = key; cur !== null; cur = nextPrototypeKey(cur))
         {
-            const v = app.Resources.Resolve(key);
-            if (v !== undefined) return v as T;
-        }
-        for (const dict of this.getDefaultResources())
-        {
-            const v = dict.Resolve(key);
-            if (v !== undefined) return v as T;
+            if (app !== null)
+            {
+                const v = app.Resources.Resolve(cur);
+                if (v !== undefined) return v as T;
+            }
+            for (const dict of dicts)
+            {
+                const v = dict.Resolve(cur);
+                if (v !== undefined) return v as T;
+            }
         }
         return undefined;
     }
@@ -140,4 +180,17 @@ export class Application
         target.Content = this.Root;
         return target;
     }
+}
+
+// Walk the prototype chain of a class-keyed lookup. String keys end
+// the walk immediately (they're not class-shaped). For Function keys,
+// `Object.getPrototypeOf(C)` is `C`'s parent constructor — `Button`'s
+// parent is `ContentControl`, etc. The walk terminates when the chain
+// hits the base `Function.prototype` (Object's own constructor proto).
+function nextPrototypeKey(key: ResourceKey): ResourceKey | null
+{
+    if (typeof key !== 'function') return null;
+    const proto = Object.getPrototypeOf(key);
+    if (typeof proto !== 'function' || proto === Function.prototype) return null;
+    return proto;
 }

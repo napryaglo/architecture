@@ -651,7 +651,36 @@ export function dispatchKey(args: KeyEventArgs): void
         if (args.Handled) return;
         fireRoutedListeners(v, args.Kind, args);
         if (args.Handled) return;
+        // InputBindings consultation — per-instance then per-class. A
+        // KeyBinding whose gesture matches the args fires its Command
+        // and marks args.Handled. Innermost binding wins because we
+        // walk source → root and stop on Handled. Bypassed for KeyUp
+        // (KeyBindings only ever fire on KeyDown).
+        if (args.Kind === 'KeyDown')
+        {
+            tryFireInputBindings(v, args);
+            if (args.Handled) return;
+        }
     }
+}
+
+// Indirection so this module doesn't import input-binding.ts directly
+// (input-binding imports CommandManager which imports CommandBinding
+// which imports Visual — a cycle if routed-event.ts joins the chain).
+// Duck-typed against the function exported by input-binding.ts; the
+// runtime wires it via setInputBindingDispatcher at module init.
+let _inputBindingDispatcher: ((v: Visual, args: KeyEventArgs) => void) | undefined;
+
+export function _setInputBindingDispatcher(
+    fn: (v: Visual, args: KeyEventArgs) => void,
+): void
+{
+    _inputBindingDispatcher = fn;
+}
+
+function tryFireInputBindings(v: Visual, args: KeyEventArgs): void
+{
+    _inputBindingDispatcher?.(v, args);
 }
 
 // Tunnel-then-bubble dispatch for TextInput. Separate from KeyDown so

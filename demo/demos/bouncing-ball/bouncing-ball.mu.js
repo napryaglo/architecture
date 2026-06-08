@@ -1,5 +1,5 @@
 import { BouncingBallVM } from "./bouncing-ball-vm.mjs";
-import { Border, Canvas, DataTemplate, Ellipse } from "@visualisation-sub/mural/Controls";
+import { Border, Canvas, DataTemplate, Ellipse } from "@visualisation-sub/mural/Basic";
 import { Color, DataContextBinding, NameScope, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
 import { SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
 
