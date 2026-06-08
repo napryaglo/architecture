@@ -198,11 +198,19 @@ describe('TextBlock end-to-end through SvgDrawingContext', () => {
         assert.ok(out.includes('font-style="italic"'));
     });
 
-    test('TextBlock with no Foreground falls back to black fill in SVG', () => {
+    test('TextBlock with no Foreground falls back to Theme.ink (or the neutral when no Application is registered)', () => {
+        // Previously the SVG renderer hardcoded a black fill when
+        // Foreground was undefined; that produced unreadable text in
+        // dark theme. TextBlock.RenderOverride now substitutes
+        // Theme.ink at draw time. Without an Application + Material
+        // palette, Theme.ink falls back to the neutral #808080 marker
+        // (theme.ts's NEUTRAL brush) which is visually obvious as a
+        // "missing theme" signal.
         const t = new TextBlock('plain');
         const target = new HeadlessTarget(200, 50, t);
         const dc = new SvgDrawingContext();
         target.Render(dc);
-        assert.ok(dc.ToFragment().includes('fill="rgb(0,0,0)"'));
+        assert.ok(dc.ToFragment().includes('fill="rgb(128,128,128)"'),
+            'TextBlock without an active palette should paint the neutral fallback');
     });
 });
