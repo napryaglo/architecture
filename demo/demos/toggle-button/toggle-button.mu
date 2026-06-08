@@ -15,19 +15,33 @@ import ToggleButtonVM from "./toggle-button-vm.mjs"
 
 ResourceDictionary {
 
-    // Triggered button style — IsChecked=true swaps the background to
-    // a "pressed-stays" look. Targets ToggleButton so toolbar-style
-    // chips inherit it; the demo applies it directly via Style=@.
-    Style x:key="StyleToggle" [TargetType=ToggleButton] {
-        Background = @Surface;
-        BorderBrush = @Outline;
-        BorderThickness = (1);
-        Padding = (16,8,16,8);
-
-        when( IsChecked ){
-            Background = @Primary;
-            BorderBrush = @PrimaryPress;
+    // Re-templated ToggleButton chrome. Setters on ToggleButton.Background
+    // / BorderBrush wouldn't be visible because the bundled Filled-Button
+    // template paints `PART_Border.Background = @Primary` directly — a
+    // Style override at the parent doesn't propagate into a hardcoded
+    // template part. So we ship a custom template whose IsChecked trigger
+    // writes to `PART_Border` via TargetedSetter, and apply it through
+    // `Style.Template = @ToggleChromeTemplate`.
+    Template x:key="ToggleChromeTemplate" [TargetType=ToggleButton] {
+        Border x:name="PART_Border" [
+            Background      = @Surface,
+            BorderBrush     = @Outline,
+            BorderThickness = (1),
+            CornerRadius    = @ShapeSmall,
+            Padding         = (16,8,16,8)
+        ] {
+            ContentPresenter
         }
+        when ( IsChecked ) {
+            PART_Border.Background  = @Primary;
+            PART_Border.BorderBrush = @PrimaryPress;
+        }
+    }
+
+    // The Style itself becomes a thin shell — Template setter only.
+    // Each ToggleButton picks up the chrome via Style=@StyleToggle.
+    Style x:key="StyleToggle" [TargetType=ToggleButton] {
+        Template = @ToggleChromeTemplate;
     }
 
     DataTemplate x:key="ToggleButtonTemplate" [DataType=ToggleButtonVM] {
