@@ -680,7 +680,12 @@ describe('compile — value emission', () => {
         );
     });
 
-    test('@key emits an eager Application.current.Resources.Resolve()', () => {
+    test('@key emits a DynamicResource binding for non-local lookups', () => {
+        // `@key` falls through to dynamic semantics when the key isn't in
+        // the local ResourceDictionary being built. The local fast path
+        // still applies inside a single RD (Style { Template = @key; } where
+        // @key is declared in the same RD) — that case is exercised by
+        // the basic.template.mu round-trip.
         const js = emitted(`
             Application{ resources: {
                 @primary = #4caf50
@@ -689,7 +694,7 @@ describe('compile — value emission', () => {
         `);
         assert.match(
             js,
-            /Application\.current\.Resources\.Resolve\("primary"\)/,
+            /\._set_property_value_by_name\("Background", DynamicResource\(_border\d+, "primary"\)\);/,
         );
     });
 

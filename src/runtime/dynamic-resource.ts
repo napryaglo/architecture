@@ -1,3 +1,4 @@
+import { Application } from './application.js';
 import { Binding, BindingMode } from './binding.js';
 import { MetaData } from './metadata.js';
 import { Model } from './model.js';
@@ -63,8 +64,14 @@ class DynamicResourceBinding extends Binding
 
     // Walks the host's logical ancestor chain (with templatedParent
     // fallback — same path as TryFindResource) and subscribes to each
-    // ResourceDictionary encountered. Any change in any of them
-    // triggers a re-resolve.
+    // ResourceDictionary encountered. After the chain walk also
+    // subscribes to Application.current.Resources — the Application
+    // is NOT a Visual, so the ancestor walk never reaches its
+    // dictionary, but TryFindResource's Application-level fallback
+    // does consult it. Theme dictionaries (Material light/dark) live
+    // there, so a SetTheme swap has to propagate to existing bindings
+    // even when the host has no resource-bearing visual ancestors.
+    // Any change in any of them triggers a re-resolve.
     private wireSubscriptions(): void
     {
         // Bracket access into Visual's private resource field is
@@ -86,6 +93,11 @@ class DynamicResourceBinding extends Binding
                 this.subscriptions.push(dict.Subscribe(() => this.refresh()));
             }
             cursor = back['_logicalParent'] ?? back['_templatedParent'];
+        }
+        const app = Application.current;
+        if (app !== undefined && app !== null)
+        {
+            this.subscriptions.push(app.Resources.Subscribe(() => this.refresh()));
         }
     }
 

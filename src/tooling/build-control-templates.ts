@@ -58,8 +58,13 @@ function discoverTemplateSources(dir: string): string[]
                 if (entry.name === 'tests') continue;
                 walk(full);
             }
-            else if (entry.name.endsWith('.template.mu'))
+            else if (entry.name.endsWith('.mu'))
             {
+                // Discovery is scoped to framework source trees
+                // (src/Basic, src/framework); any `.mu` file here is
+                // build-pipeline-owned — control templates
+                // (`*.template.mu`) and token dictionaries
+                // (`material/*.mu`) alike.
                 out.push(full);
             }
         }

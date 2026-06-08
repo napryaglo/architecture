@@ -2138,21 +2138,31 @@ export class Compiler
                 // in the same file.
                 const localVar = this.localResourceVars?.get(val.key);
                 if (localVar !== undefined) return localVar;
-                this.ensureImport('Application');
-                // Eager lookup against the singleton — works for any
-                // resource that's already merged onto Application by
-                // the time create() runs (e.g. user-side overrides set
-                // by the host code before constructing controls).
-                return `Application.current.Resources.Resolve(${JSON.stringify(val.key)})`;
-            }
-            case 'dynamic-resource':
+                // Non-local `@key` falls through to dynamic-resource
+                // semantics: install a Binding that walks the visual's
+                // resource chain at construction time and listens for
+                // dictionary swaps (theme switching, AddMergedDictionary,
+                // local Resources mutations). This makes `@Primary` in a
+                // template react to Application.Theme = 'dark' without
+                // rebuilding the template.
                 this.ensureImport('DynamicResource');
                 if (ctx.targetExpr !== undefined)
                 {
                     return `DynamicResource(${ctx.targetExpr}, ${JSON.stringify(val.key)})`;
                 }
-                // No live target — wrap in a SetterFactory so each
-                // Style application creates a fresh per-target binding.
+                this.ensureImport('SetterFactory');
+                return `new SetterFactory((_t) => DynamicResource(_t, ${JSON.stringify(val.key)}))`;
+            }
+            case 'dynamic-resource':
+                // `@@key` is the explicit-dynamic form, retained for
+                // authors who want to be unambiguous even when a key
+                // happens to also be local. Same emit as the non-local
+                // `@key` branch above.
+                this.ensureImport('DynamicResource');
+                if (ctx.targetExpr !== undefined)
+                {
+                    return `DynamicResource(${ctx.targetExpr}, ${JSON.stringify(val.key)})`;
+                }
                 this.ensureImport('SetterFactory');
                 return `new SetterFactory((_t) => DynamicResource(_t, ${JSON.stringify(val.key)}))`;
             case 'binding':

@@ -36,22 +36,29 @@
 ResourceDictionary {
 
     // ── Button ──────────────────────────────────────────────────────
-    // MUI Contained variant. PART_Border is the rounded surface whose
-    // Background swaps on IsPressed / IsMouseOver via declarative
-    // triggers on the templated parent (the Button itself). IsPressed
-    // is ordered last so it wins when both IsMouseOver and IsPressed
-    // are active — same precedence the previous imperative refresh
-    // closure enforced. The ContentPresenter is discovered by
-    // ControlTemplate.Apply's first-presenter walk.
+    // Material 3 Filled Button. PART_Border is the rounded surface
+    // whose Background swaps on IsPressed / IsMouseOver via
+    // declarative triggers on the templated parent (the Button
+    // itself). IsPressed is ordered last so it wins when both
+    // IsMouseOver and IsPressed are active — same precedence the
+    // previous imperative refresh closure enforced. The
+    // ContentPresenter is discovered by ControlTemplate.Apply's
+    // first-presenter walk.
+    //
+    // Tokens (resolved via the Material palette merged onto
+    // Application.Resources at startup; SetTheme('light'|'dark') swaps
+    // them at runtime):
+    //   * Primary / PrimaryHover / PrimaryPress — fill colours
+    //   * ShapeFull — M3 baseline pill (radius >> button height)
     Template x:key="DefaultButton" [TargetType=Button]{
-        Border x:name="PART_Border"[Background=#1976d2,
-                                    BorderThickness=(0),
-                                    CornerRadius=4,
-                                    Padding=(16,6,16,6)]{
+        Border x:name="PART_Border"[Background      = @Primary,
+                                    BorderThickness = (0),
+                                    CornerRadius    = @ShapeFull,
+                                    Padding         = (24,10,24,10)]{
             ContentPresenter
         }
-        when ( IsMouseOver ) { PART_Border.Background = #1565c0; }
-        when ( IsPressed   ) { PART_Border.Background = #0d47a1; }
+        when ( IsMouseOver ) { PART_Border.Background = @PrimaryHover; }
+        when ( IsPressed   ) { PART_Border.Background = @PrimaryPress; }
     }
     Style [TargetType=Button] {
         Template = @DefaultButton;

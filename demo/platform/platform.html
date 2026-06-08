@@ -39,8 +39,9 @@
             "@visualisation-sub/mural/runtime/":       "../../dist/runtime/",
             "@visualisation-sub/mural/Basic":          "../../dist/Basic/index.js",
             "@visualisation-sub/mural/Basic/":         "../../dist/Basic/",
-            "@visualisation-sub/mural/framework":      "../../dist/framework/index.js",
-            "@visualisation-sub/mural/framework/":     "../../dist/framework/",
+            "@visualisation-sub/mural/framework":           "../../dist/framework/index.js",
+            "@visualisation-sub/mural/framework/":          "../../dist/framework/",
+            "@visualisation-sub/mural/framework/material":  "../../dist/framework/material/index.js",
             "@visualisation-sub/mural/visual-engine":  "../../dist/visual-engine/index.js",
             "@visualisation-sub/mural/visual-engine/": "../../dist/visual-engine/",
             "opentype.js":                             "../opentype-shim.mjs"
@@ -65,8 +66,19 @@
         // No tree-walking, no selection-listener wiring, no FindName:
         // the only thing the host JS does is build the VM and hand it
         // to the root as DataContext.
-        import { app }        from './platform.mu.js';
-        import { HtmlTarget } from '@visualisation-sub/mural/visual-engine';
+        import { app }         from './platform.mu.js';
+        import { HtmlTarget }  from '@visualisation-sub/mural/visual-engine';
+        import { SetTheme }    from '@visualisation-sub/mural/framework/material';
+
+        // Register the Material light palette as soon as the
+        // Application is parsed but BEFORE any control template
+        // applies. Without this, the DynamicResource bindings inside
+        // basic.template.mu / surface.template.mu would resolve to
+        // `undefined` on first paint (no tokens in the resource
+        // chain), and the controls would render with default-value
+        // brushes (transparent). PlatformVM exposes a Theme command
+        // the header binds to so users can toggle light/dark live.
+        SetTheme('light');
 
         // Demo modules self-register on import. Each module calls
         // `register(...)` at top level — the side effect of importing
