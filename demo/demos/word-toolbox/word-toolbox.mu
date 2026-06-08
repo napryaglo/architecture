@@ -83,7 +83,11 @@ ResourceDictionary {
             ContentPresenter
         }
         when ( IsSelected ) {
-            PART_Border.Background = #e3f2fd;
+            // @SecondaryContainer is the M3 spec for list-item selection
+            // surface — pale lavender in light, dark muted purple in
+            // dark — matches the default ListBoxItem trigger and the
+            // ContextMenu / Menu selection states.
+            PART_Border.Background = @SecondaryContainer;
         }
     }
 

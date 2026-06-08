@@ -45,7 +45,7 @@ export function create() {
             _border9.SetChild(_contentPresenter10);
             return _border9;
         };
-        const _tplSet11 = [new TargetedSetter(Border, "Background", new SolidColorBrush(Color.FromHex('#e3f2fd')), "PART_Border")];
+        const _tplSet11 = [new TargetedSetter(Border, "Background", new SetterFactory((_t) => DynamicResource(_t, "SecondaryContainer")), "PART_Border")];
         const _tplTrig12 = new TemplatePropertyTrigger(ListBoxItem, "IsSelected", true, _tplSet11);
         return new ControlTemplate(_factory, [_tplTrig12]);
     })();
