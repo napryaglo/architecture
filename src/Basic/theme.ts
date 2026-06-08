@@ -38,6 +38,22 @@ function brush(key: string): SolidColorBrush
     return NEUTRAL;
 }
 
+// Default font family — owned by the theme module so the framework's
+// typography defaults live in one place. M3 baseline is Roboto but
+// the value here is the OS-system stack so the framework doesn't ship
+// a web-font dependency. Material's `@FontFamily` token starts at the
+// same value; a host overriding it in Application.Resources reaches
+// every TextBlock via `Theme.fontFamily` below.
+export const DEFAULT_FONT_FAMILY = 'system-ui, sans-serif';
+
+function fontFamilyToken(): string
+{
+    const app = Application.current;
+    if (app === null) return DEFAULT_FONT_FAMILY;
+    const v = app.Resources.Resolve('FontFamily');
+    return typeof v === 'string' && v.length > 0 ? v : DEFAULT_FONT_FAMILY;
+}
+
 // Compile-time string-typed mapping from the historical Theme.<name>
 // keys to Material 3 token names. Adding a new entry: pick the
 // closest M3 token (see light.mu / dark.mu for the catalogue) rather
@@ -89,4 +105,13 @@ export const Theme = {
     // here since the token dictionaries register it as fully opaque
     // black, which would defeat the dim effect.
     scrim: new SolidColorBrush(new Color(0, 0, 0, 102)),
+
+    // ── Typography ──────────────────────────────────────────────────
+    // Active font-family stack. Resolves the Material `@FontFamily`
+    // token if the palette is registered; falls back to the OS-system
+    // default constant otherwise. TextBlock keeps `DEFAULT_FONT_FAMILY`
+    // as the DP-registration default (a constant must be known at
+    // static init) and consults `Theme.fontFamily` at render time only
+    // when consumers want the active theme value explicitly.
+    get fontFamily()       { return fontFamilyToken(); },
 } as const;

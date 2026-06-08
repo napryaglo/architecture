@@ -78,4 +78,7 @@ ResourceDictionary {
     @ShapeLarge           = 16
     @ShapeExtraLarge      = 28
     @ShapeFull            = 9999
+
+    // ── Typography family (identical across schemes) ────────────────
+    @FontFamily           = "system-ui, sans-serif"
 }

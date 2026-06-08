@@ -9,12 +9,7 @@ import {
     type TextMetrics,
 } from '../runtime/index.js';
 import { Brush, FontStyle, FontWeight, FormattedText } from '../visual-engine/index.js';
-import { Theme } from './theme.js';
-
-// Default font stack: matches what modern OSes ship with — falls back
-// through system-ui (the OS UI font), then generic sans-serif as a last
-// resort. Lives at module scope so changing it is one place.
-const DEFAULT_FONT_FAMILY = 'system-ui, sans-serif';
+import { DEFAULT_FONT_FAMILY, Theme } from './theme.js';
 
 // Mirrors WPF's TextWrapping enum. NoWrap (default) keeps the historic
 // single-line behaviour — text overflows the host width when too long.

@@ -92,4 +92,12 @@ ResourceDictionary {
     @ShapeLarge           = 16
     @ShapeExtraLarge      = 28
     @ShapeFull            = 9999
+
+    // ── Typography family ───────────────────────────────────────────
+    // Material 3 baseline is Roboto, but loading a web-font ships a
+    // network request + a layout-stability hazard, so the token ships
+    // the OS-system stack. Hosts that want Roboto override this token
+    // at Application.Resources level (or merge a custom dict) and the
+    // change reaches every TextBlock via Theme.fontFamily.
+    @FontFamily           = "system-ui, sans-serif"
 }
