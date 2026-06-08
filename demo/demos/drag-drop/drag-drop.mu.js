@@ -36,12 +36,12 @@ export function create() {
         _textBlock12._set_property_value_by_name("Text", "Drag-drop between lists");
         _textBlock12._set_property_value_by_name("FontSize", 15);
         _textBlock12._set_property_value_by_name("FontWeight", FontWeight.Bold);
-        _textBlock12._set_property_value_by_name("Foreground", DynamicResource(_textBlock12, "Surface"));
+        _textBlock12._set_property_value_by_name("Foreground", DynamicResource(_textBlock12, "OnPrimary"));
         _stackPanel11.AddChild(_textBlock12);
         const _textBlock13 = new TextBlock();
         _textBlock13._set_property_value_by_name("Text", DataContextBinding(_textBlock13, "Status"));
         _textBlock13._set_property_value_by_name("FontSize", 12);
-        _textBlock13._set_property_value_by_name("Foreground", DynamicResource(_textBlock13, "Surface"));
+        _textBlock13._set_property_value_by_name("Foreground", DynamicResource(_textBlock13, "OnPrimary"));
         _textBlock13._set_property_value_by_name("Margin", new Thickness(20, 4, 0, 0));
         _stackPanel11.AddChild(_textBlock13);
         _border10.SetChild(_stackPanel11);

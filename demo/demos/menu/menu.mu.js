@@ -20,7 +20,7 @@ export function create() {
         _textBlock5._set_property_value_by_name("Text", "MenuButton — hamburger fly-out with checkable items and gesture text.");
         _textBlock5._set_property_value_by_name("FontSize", 15);
         _textBlock5._set_property_value_by_name("FontWeight", FontWeight.Bold);
-        _textBlock5._set_property_value_by_name("Foreground", DynamicResource(_textBlock5, "Surface"));
+        _textBlock5._set_property_value_by_name("Foreground", DynamicResource(_textBlock5, "OnPrimary"));
         _border4.SetChild(_textBlock5);
         _dockPanel3.AddChild(_border4);
         const _stackPanel6 = new StackPanel();

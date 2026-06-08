@@ -49,10 +49,10 @@ ResourceDictionary {
                     StackPanel[Orientation=Horizontal]{
                         TextBlock[Text="Drag-drop between lists",
                                   FontSize=15, FontWeight=Bold,
-                                  Foreground=@Surface]
+                                  Foreground=@OnPrimary]
                         TextBlock[Text=$Status,
                                   FontSize=12,
-                                  Foreground=@Surface,
+                                  Foreground=@OnPrimary,
                                   Margin=(20,4,0,0)]
                     }
                 }

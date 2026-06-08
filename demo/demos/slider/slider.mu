@@ -30,7 +30,7 @@ ResourceDictionary {
                        Background=@Primary, Padding=(16,12,16,12)]{
                     TextBlock[Text="Slider demo — single-thumb range, horizontal + vertical",
                               FontSize=15, FontWeight=Bold,
-                              Foreground=@Surface]
+                              Foreground=@OnPrimary]
                 }
 
                 StackPanel[Orientation=Horizontal]{

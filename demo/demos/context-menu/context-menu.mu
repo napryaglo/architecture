@@ -45,7 +45,7 @@ ResourceDictionary {
                        Background=@Primary, Padding=(16,12,16,12)]{
                     TextBlock[Text="ContextMenu — right-click any panel; the nearest ancestor's menu opens at the cursor.",
                               FontSize=15, FontWeight=Bold,
-                              Foreground=@Surface]
+                              Foreground=@OnPrimary]
                 }
 
                 StackPanel[Orientation=Vertical, Margin=(16,16,16,16)]{
@@ -54,7 +54,7 @@ ResourceDictionary {
                                Margin=(0,0,12,0),
                                ContextMenuService.ContextMenu=@RedMenu]{
                             TextBlock[Text="Right-click me",
-                                      Foreground=@Surface, FontSize=14,
+                                      Foreground=@OnPrimary, FontSize=14,
                                       FontWeight=Bold,
                                       HorizontalAlignment=Center,
                                       VerticalAlignment=Center]
@@ -63,7 +63,7 @@ ResourceDictionary {
                                Margin=(0,0,12,0),
                                ContextMenuService.ContextMenu=@GreenMenu]{
                             TextBlock[Text="Right-click me",
-                                      Foreground=@Surface, FontSize=14,
+                                      Foreground=@OnPrimary, FontSize=14,
                                       FontWeight=Bold,
                                       HorizontalAlignment=Center,
                                       VerticalAlignment=Center]
@@ -71,7 +71,7 @@ ResourceDictionary {
                         Border[Background=#3b82f6, Width=180, Height=120,
                                ContextMenuService.ContextMenu=@BlueMenu]{
                             TextBlock[Text="Right-click me",
-                                      Foreground=@Surface, FontSize=14,
+                                      Foreground=@OnPrimary, FontSize=14,
                                       FontWeight=Bold,
                                       HorizontalAlignment=Center,
                                       VerticalAlignment=Center]

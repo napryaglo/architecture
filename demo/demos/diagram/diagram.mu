@@ -143,10 +143,10 @@ ResourceDictionary {
                                Margin=(16,10,0,0)]{
                         TextBlock[Text="Diagrammer",
                                   FontSize=15, FontWeight=Bold,
-                                  Foreground=@Surface]
+                                  Foreground=@OnPrimary]
                         TextBlock[Text=$Status,
                                   FontSize=12,
-                                  Foreground=@Surface,
+                                  Foreground=@OnPrimary,
                                   Margin=(20,3,0,0)]
                     }
                 }

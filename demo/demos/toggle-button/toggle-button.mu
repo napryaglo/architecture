@@ -20,13 +20,13 @@ ResourceDictionary {
     // chips inherit it; the demo applies it directly via Style=@.
     Style x:key="StyleToggle" [TargetType=ToggleButton] {
         Background = @Surface;
-        BorderBrush = #c4c4c4;
+        BorderBrush = @Outline;
         BorderThickness = (1);
         Padding = (16,8,16,8);
 
         when( IsChecked ){
             Background = @Primary;
-            BorderBrush = #0d47a1;
+            BorderBrush = @PrimaryPress;
         }
     }
 
@@ -40,7 +40,7 @@ ResourceDictionary {
                        Background=@Primary, Padding=(16,12,16,12)]{
                     TextBlock[Text="ToggleButton — IsChecked flips on click; TwoWay binding keeps the VM in sync.",
                               FontSize=15, FontWeight=Bold,
-                              Foreground=@Surface]
+                              Foreground=@OnPrimary]
                 }
 
                 StackPanel[Orientation=Vertical, Margin=(16,16,16,16)]{

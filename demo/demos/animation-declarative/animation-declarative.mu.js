@@ -29,7 +29,7 @@ export function create() {
         _textBlock10._set_property_value_by_name("Text", "Declarative animation — on Click { BeginStoryboard { ... } }");
         _textBlock10._set_property_value_by_name("FontSize", 15);
         _textBlock10._set_property_value_by_name("FontWeight", FontWeight.Bold);
-        _textBlock10._set_property_value_by_name("Foreground", DynamicResource(_textBlock10, "Surface"));
+        _textBlock10._set_property_value_by_name("Foreground", DynamicResource(_textBlock10, "OnPrimary"));
         _border9.SetChild(_textBlock10);
         _dockPanel8.AddChild(_border9);
         const _stackPanel11 = new StackPanel();

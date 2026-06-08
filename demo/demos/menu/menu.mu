@@ -25,7 +25,7 @@ ResourceDictionary {
                        Background=@Primary, Padding=(16,12,16,12)]{
                     TextBlock[Text="MenuButton — hamburger fly-out with checkable items and gesture text.",
                               FontSize=15, FontWeight=Bold,
-                              Foreground=@Surface]
+                              Foreground=@OnPrimary]
                 }
 
                 // Body

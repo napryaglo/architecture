@@ -64,12 +64,13 @@ ResourceDictionary {
             }
 
             DockPanel {
-                // Header strip.
-                Border [DockPanel.Dock=Top, Background=@OnSurface, Padding=(16,12,16,12)] {
+                // Header strip — InverseSurface flips with the theme
+                // so the bar stays high-contrast against the page.
+                Border [DockPanel.Dock=Top, Background=@InverseSurface, Padding=(16,12,16,12)] {
                     StackPanel [Orientation=Vertical] {
                         TextBlock [Text="Drag & drop extended",
                                    FontSize=15, FontWeight=Bold,
-                                   Foreground=@SurfaceContainerLow]
+                                   Foreground=@InverseOnSurface]
                         StackPanel [Orientation=Horizontal, Margin=(0,4,0,0)] {
                             TextBlock [Text="Last receiver effect:",
                                        FontSize=11, Foreground=@Outline]

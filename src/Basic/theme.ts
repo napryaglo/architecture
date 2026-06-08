@@ -79,6 +79,11 @@ export const Theme = {
     get scrollThumbHover() { return brush('Outline'); },
     get scrollThumbDrag()  { return brush('OnSurfaceVariant'); },
 
+    // ── Validation / status ─────────────────────────────────────────
+    // M3 semantic error colour. Used by ValidationErrorAdorner's
+    // default fallback when no explicit Pen / Brush has been set.
+    get error()            { return brush('Error'); },
+
     // ── Scrim (semi-transparent dim over content) ───────────────────
     // Material's scrim is Scrim-tinted black at ~40% — preallocated
     // here since the token dictionaries register it as fully opaque

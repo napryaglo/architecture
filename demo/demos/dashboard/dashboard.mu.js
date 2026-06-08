@@ -61,7 +61,7 @@ export function create() {
         const _textBlock46 = new TextBlock();
         _textBlock46._set_property_value_by_name("Text", "Hello mural");
         _textBlock46._set_property_value_by_name("FontSize", 20);
-        _textBlock46._set_property_value_by_name("Foreground", DynamicResource(_textBlock46, "Surface"));
+        _textBlock46._set_property_value_by_name("Foreground", DynamicResource(_textBlock46, "OnPrimary"));
         _border45.SetChild(_textBlock46);
         _canvas44.AddChild(_border45);
         const _border47 = new Border();
@@ -73,7 +73,7 @@ export function create() {
         const _textBlock48 = new TextBlock();
         _textBlock48._set_property_value_by_name("Text", "Danger zone");
         _textBlock48._set_property_value_by_name("FontSize", 20);
-        _textBlock48._set_property_value_by_name("Foreground", DynamicResource(_textBlock48, "Surface"));
+        _textBlock48._set_property_value_by_name("Foreground", DynamicResource(_textBlock48, "OnPrimary"));
         _border47.SetChild(_textBlock48);
         _canvas44.AddChild(_border47);
         const _border49 = new Border();

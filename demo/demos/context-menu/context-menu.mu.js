@@ -77,7 +77,7 @@ export function create() {
         _textBlock20._set_property_value_by_name("Text", "ContextMenu — right-click any panel; the nearest ancestor's menu opens at the cursor.");
         _textBlock20._set_property_value_by_name("FontSize", 15);
         _textBlock20._set_property_value_by_name("FontWeight", FontWeight.Bold);
-        _textBlock20._set_property_value_by_name("Foreground", DynamicResource(_textBlock20, "Surface"));
+        _textBlock20._set_property_value_by_name("Foreground", DynamicResource(_textBlock20, "OnPrimary"));
         _border19.SetChild(_textBlock20);
         _dockPanel18.AddChild(_border19);
         const _stackPanel21 = new StackPanel();
@@ -94,7 +94,7 @@ export function create() {
         _border23._set_property_value_by_name(ContextMenuService, "ContextMenu", DynamicResource(_border23, "RedMenu"));
         const _textBlock24 = new TextBlock();
         _textBlock24._set_property_value_by_name("Text", "Right-click me");
-        _textBlock24._set_property_value_by_name("Foreground", DynamicResource(_textBlock24, "Surface"));
+        _textBlock24._set_property_value_by_name("Foreground", DynamicResource(_textBlock24, "OnPrimary"));
         _textBlock24._set_property_value_by_name("FontSize", 14);
         _textBlock24._set_property_value_by_name("FontWeight", FontWeight.Bold);
         _textBlock24._set_property_value_by_name("HorizontalAlignment", HorizontalAlignment.Center);
@@ -109,7 +109,7 @@ export function create() {
         _border25._set_property_value_by_name(ContextMenuService, "ContextMenu", DynamicResource(_border25, "GreenMenu"));
         const _textBlock26 = new TextBlock();
         _textBlock26._set_property_value_by_name("Text", "Right-click me");
-        _textBlock26._set_property_value_by_name("Foreground", DynamicResource(_textBlock26, "Surface"));
+        _textBlock26._set_property_value_by_name("Foreground", DynamicResource(_textBlock26, "OnPrimary"));
         _textBlock26._set_property_value_by_name("FontSize", 14);
         _textBlock26._set_property_value_by_name("FontWeight", FontWeight.Bold);
         _textBlock26._set_property_value_by_name("HorizontalAlignment", HorizontalAlignment.Center);
@@ -123,7 +123,7 @@ export function create() {
         _border27._set_property_value_by_name(ContextMenuService, "ContextMenu", DynamicResource(_border27, "BlueMenu"));
         const _textBlock28 = new TextBlock();
         _textBlock28._set_property_value_by_name("Text", "Right-click me");
-        _textBlock28._set_property_value_by_name("Foreground", DynamicResource(_textBlock28, "Surface"));
+        _textBlock28._set_property_value_by_name("Foreground", DynamicResource(_textBlock28, "OnPrimary"));
         _textBlock28._set_property_value_by_name("FontSize", 14);
         _textBlock28._set_property_value_by_name("FontWeight", FontWeight.Bold);
         _textBlock28._set_property_value_by_name("HorizontalAlignment", HorizontalAlignment.Center);

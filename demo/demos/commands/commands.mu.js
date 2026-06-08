@@ -148,7 +148,7 @@ export function create() {
         _textBlock38._set_property_value_by_name("Text", "ToolBar + Menu + ContextMenu over a Diagram. Select nodes (click / Ctrl-click / marquee) and use the commands.");
         _textBlock38._set_property_value_by_name("FontSize", 14);
         _textBlock38._set_property_value_by_name("FontWeight", FontWeight.Bold);
-        _textBlock38._set_property_value_by_name("Foreground", DynamicResource(_textBlock38, "Surface"));
+        _textBlock38._set_property_value_by_name("Foreground", DynamicResource(_textBlock38, "OnPrimary"));
         _border37.SetChild(_textBlock38);
         _dockPanel36.AddChild(_border37);
         const _border39 = new Border();

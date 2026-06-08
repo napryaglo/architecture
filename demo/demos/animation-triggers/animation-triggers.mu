@@ -60,7 +60,7 @@ ResourceDictionary {
                        Background=@Primary, Padding=(16,12,16,12)]{
                     TextBlock[Text="Trigger actions — enter/exit, Loaded, TargetName",
                               FontSize=15, FontWeight=Bold,
-                              Foreground=@Surface]
+                              Foreground=@OnPrimary]
                 }
 
                 StackPanel[Orientation=Vertical, Margin=(20,24,20,20)]{

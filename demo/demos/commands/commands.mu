@@ -109,7 +109,7 @@ ResourceDictionary {
                        Background=@Primary, Padding=(16,10,16,10)]{
                     TextBlock[Text="ToolBar + Menu + ContextMenu over a Diagram. Select nodes (click / Ctrl-click / marquee) and use the commands.",
                               FontSize=14, FontWeight=Bold,
-                              Foreground=@Surface]
+                              Foreground=@OnPrimary]
                 }
 
                 // MenuButton strip (above the toolbar)

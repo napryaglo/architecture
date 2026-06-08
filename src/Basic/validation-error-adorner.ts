@@ -1,7 +1,6 @@
 import {
     Adorner,
     AdornerLayer,
-    Color,
     Rect,
     Size,
     Validation,
@@ -9,8 +8,8 @@ import {
     type DrawingContext,
 } from '../runtime/index.js';
 import { Pen, SolidColorBrush } from '../visual-engine/index.js';
+import { Theme } from './theme.js';
 
-const DEFAULT_ERROR_BRUSH = new SolidColorBrush(Color.FromHex('#d32f2f'));
 const DEFAULT_ERROR_THICKNESS = 1.5;
 
 // ValidationErrorAdorner — paints a red rectangle around the adorned
@@ -40,11 +39,15 @@ export class ValidationErrorAdorner extends Adorner
     private _thickness: number;
 
     constructor(adornedElement: Visual,
-                brush: SolidColorBrush = DEFAULT_ERROR_BRUSH,
+                brush?: SolidColorBrush,
                 thickness: number = DEFAULT_ERROR_THICKNESS)
     {
         super(adornedElement);
-        this._brush     = brush;
+        // Theme.error resolves through Application.Resources at
+        // construction time so the chrome picks up the active palette
+        // (M3 @Error — red in both schemes, but the right brush
+        // instance keeps tone parity with the rest of the theme).
+        this._brush     = brush ?? Theme.error;
         this._thickness = thickness;
         // The error chrome is decoration — clicks / focus must reach
         // the adorned TextBox / input so the user can still edit and

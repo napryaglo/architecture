@@ -27,7 +27,7 @@ ResourceDictionary {
                        Background=@Primary, Padding=(16,12,16,12)]{
                     TextBlock[Text="ListBox demo — declarative vs. Items",
                               FontSize=15, FontWeight=Bold,
-                              Foreground=@Surface]
+                              Foreground=@OnPrimary]
                 }
 
                 // Two-up split — declarative on the left, Items on the
@@ -48,7 +48,7 @@ ResourceDictionary {
                                   FontSize=12, FontWeight=Bold,
                                   Margin=(0,0,0,4)]
                         TextBlock[Text="Drag in empty space to marquee-select. Ctrl=add. Shift=extend.",
-                                  FontSize=10, Foreground=#64748b,
+                                  FontSize=10, Foreground=@OnSurfaceVariant,
                                   TextWrapping=Wrap,
                                   Margin=(0,0,0,8)]
                         ListBox [SelectionMode=Extended,

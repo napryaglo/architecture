@@ -1,17 +1,17 @@
 import { ToggleButtonVM } from "./toggle-button-vm.mjs";
 import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@visualisation-sub/mural/Basic";
 import { ToggleButton } from "@visualisation-sub/mural/framework/toggle-button.js";
-import { Color, DataContextBinding, DynamicResource, PropertyTrigger, ResourceDictionary, Setter, SetterFactory, Style, Thickness } from "@visualisation-sub/mural/runtime";
-import { FontStyle, FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
+import { DataContextBinding, DynamicResource, PropertyTrigger, ResourceDictionary, Setter, SetterFactory, Style, Thickness } from "@visualisation-sub/mural/runtime";
+import { FontStyle, FontWeight } from "@visualisation-sub/mural/visual-engine";
 
 export function create() {
     const _rd0 = new ResourceDictionary();
     const _setter1 = new Setter(ToggleButton, "Background", new SetterFactory((_t) => DynamicResource(_t, "Surface")));
-    const _setter2 = new Setter(ToggleButton, "BorderBrush", new SolidColorBrush(Color.FromHex('#c4c4c4')));
+    const _setter2 = new Setter(ToggleButton, "BorderBrush", new SetterFactory((_t) => DynamicResource(_t, "Outline")));
     const _setter3 = new Setter(ToggleButton, "BorderThickness", new Thickness(1));
     const _setter4 = new Setter(ToggleButton, "Padding", new Thickness(16, 8, 16, 8));
     const _setter5 = new Setter(ToggleButton, "Background", new SetterFactory((_t) => DynamicResource(_t, "Primary")));
-    const _setter6 = new Setter(ToggleButton, "BorderBrush", new SolidColorBrush(Color.FromHex('#0d47a1')));
+    const _setter6 = new Setter(ToggleButton, "BorderBrush", new SetterFactory((_t) => DynamicResource(_t, "PrimaryPress")));
     const _sArr7 = [_setter5, _setter6];
     const _trigger8 = new PropertyTrigger(ToggleButton, "IsChecked", true, _sArr7);
     const _style9 = new Style(ToggleButton, [_setter1, _setter2, _setter3, _setter4], undefined, [_trigger8], []);
@@ -30,7 +30,7 @@ export function create() {
         _textBlock14._set_property_value_by_name("Text", "ToggleButton — IsChecked flips on click; TwoWay binding keeps the VM in sync.");
         _textBlock14._set_property_value_by_name("FontSize", 15);
         _textBlock14._set_property_value_by_name("FontWeight", FontWeight.Bold);
-        _textBlock14._set_property_value_by_name("Foreground", DynamicResource(_textBlock14, "Surface"));
+        _textBlock14._set_property_value_by_name("Foreground", DynamicResource(_textBlock14, "OnPrimary"));
         _border13.SetChild(_textBlock14);
         _dockPanel12.AddChild(_border13);
         const _stackPanel15 = new StackPanel();

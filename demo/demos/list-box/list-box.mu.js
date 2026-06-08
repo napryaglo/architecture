@@ -2,8 +2,8 @@ import { ListBoxVM } from "./list-box-vm.mjs";
 import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock, TextWrapping } from "@visualisation-sub/mural/Basic";
 import { Button } from "@visualisation-sub/mural/framework/button.js";
 import { ListBox, ListBoxItem, SelectionMode } from "@visualisation-sub/mural/framework/list/list-box.js";
-import { Color, DynamicResource, NameScope, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
-import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
+import { DynamicResource, NameScope, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
+import { FontWeight } from "@visualisation-sub/mural/visual-engine";
 
 export function create() {
     const _rd0 = new ResourceDictionary();
@@ -22,7 +22,7 @@ export function create() {
         _textBlock5._set_property_value_by_name("Text", "ListBox demo — declarative vs. Items");
         _textBlock5._set_property_value_by_name("FontSize", 15);
         _textBlock5._set_property_value_by_name("FontWeight", FontWeight.Bold);
-        _textBlock5._set_property_value_by_name("Foreground", DynamicResource(_textBlock5, "Surface"));
+        _textBlock5._set_property_value_by_name("Foreground", DynamicResource(_textBlock5, "OnPrimary"));
         _border4.SetChild(_textBlock5);
         _dockPanel3.AddChild(_border4);
         const _stackPanel6 = new StackPanel();
@@ -40,7 +40,7 @@ export function create() {
         const _textBlock9 = new TextBlock();
         _textBlock9._set_property_value_by_name("Text", "Drag in empty space to marquee-select. Ctrl=add. Shift=extend.");
         _textBlock9._set_property_value_by_name("FontSize", 10);
-        _textBlock9._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#64748b')));
+        _textBlock9._set_property_value_by_name("Foreground", DynamicResource(_textBlock9, "OnSurfaceVariant"));
         _textBlock9._set_property_value_by_name("TextWrapping", TextWrapping.Wrap);
         _textBlock9._set_property_value_by_name("Margin", new Thickness(0, 0, 0, 8));
         _stackPanel7.AddChild(_textBlock9);

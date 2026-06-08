@@ -37,7 +37,7 @@ ResourceDictionary {
                         }
                         TextBlock[Text="Drawer demo",
                                   FontSize=18, FontWeight=Bold,
-                                  Foreground=@Surface,
+                                  Foreground=@OnPrimary,
                                   Margin=(16,16,0,0)]
                     }
                 }

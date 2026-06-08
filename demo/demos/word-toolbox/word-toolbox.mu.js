@@ -69,7 +69,7 @@ export function create() {
         const _dockPanel23 = new DockPanel();
         const _border24 = new Border();
         _border24._set_property_value_by_name(DockPanel, "Dock", Dock.Top);
-        _border24._set_property_value_by_name("Background", DynamicResource(_border24, "OnSurface"));
+        _border24._set_property_value_by_name("Background", DynamicResource(_border24, "InverseSurface"));
         _border24._set_property_value_by_name("Padding", new Thickness(16, 12, 16, 12));
         const _stackPanel25 = new StackPanel();
         _stackPanel25._set_property_value_by_name("Orientation", Orientation.Vertical);
@@ -77,12 +77,12 @@ export function create() {
         _textBlock26._set_property_value_by_name("Text", "Word toolbox — drag tiles between panes");
         _textBlock26._set_property_value_by_name("FontSize", 15);
         _textBlock26._set_property_value_by_name("FontWeight", FontWeight.Bold);
-        _textBlock26._set_property_value_by_name("Foreground", DynamicResource(_textBlock26, "SurfaceContainerLow"));
+        _textBlock26._set_property_value_by_name("Foreground", DynamicResource(_textBlock26, "InverseOnSurface"));
         _stackPanel25.AddChild(_textBlock26);
         const _textBlock27 = new TextBlock();
         _textBlock27._set_property_value_by_name("Text", DataContextBinding(_textBlock27, "Status"));
         _textBlock27._set_property_value_by_name("FontSize", 11);
-        _textBlock27._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#94a3b8')));
+        _textBlock27._set_property_value_by_name("Foreground", DynamicResource(_textBlock27, "OnSurfaceVariant"));
         _textBlock27._set_property_value_by_name("Margin", new Thickness(0, 4, 0, 0));
         _stackPanel25.AddChild(_textBlock27);
         _border24.SetChild(_stackPanel25);

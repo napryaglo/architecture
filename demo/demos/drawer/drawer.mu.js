@@ -32,7 +32,7 @@ export function create() {
         _textBlock8._set_property_value_by_name("Text", "Drawer demo");
         _textBlock8._set_property_value_by_name("FontSize", 18);
         _textBlock8._set_property_value_by_name("FontWeight", FontWeight.Bold);
-        _textBlock8._set_property_value_by_name("Foreground", DynamicResource(_textBlock8, "Surface"));
+        _textBlock8._set_property_value_by_name("Foreground", DynamicResource(_textBlock8, "OnPrimary"));
         _textBlock8._set_property_value_by_name("Margin", new Thickness(16, 16, 0, 0));
         _stackPanel5.AddChild(_textBlock8);
         _border4.SetChild(_stackPanel5);

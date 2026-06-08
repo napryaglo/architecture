@@ -29,7 +29,7 @@ ResourceDictionary {
                        Background=@Primary, Padding=(16,12,16,12)]{
                     TextBlock[Text="SpinEdit demo — value, range, precision, read-only",
                               FontSize=15, FontWeight=Bold,
-                              Foreground=@Surface]
+                              Foreground=@OnPrimary]
                 }
 
                 // Four columns: each a labelled SpinEdit + a hint line.

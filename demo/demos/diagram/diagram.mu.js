@@ -159,12 +159,12 @@ export function create() {
         _textBlock40._set_property_value_by_name("Text", "Diagrammer");
         _textBlock40._set_property_value_by_name("FontSize", 15);
         _textBlock40._set_property_value_by_name("FontWeight", FontWeight.Bold);
-        _textBlock40._set_property_value_by_name("Foreground", DynamicResource(_textBlock40, "Surface"));
+        _textBlock40._set_property_value_by_name("Foreground", DynamicResource(_textBlock40, "OnPrimary"));
         _stackPanel39.AddChild(_textBlock40);
         const _textBlock41 = new TextBlock();
         _textBlock41._set_property_value_by_name("Text", DataContextBinding(_textBlock41, "Status"));
         _textBlock41._set_property_value_by_name("FontSize", 12);
-        _textBlock41._set_property_value_by_name("Foreground", DynamicResource(_textBlock41, "Surface"));
+        _textBlock41._set_property_value_by_name("Foreground", DynamicResource(_textBlock41, "OnPrimary"));
         _textBlock41._set_property_value_by_name("Margin", new Thickness(20, 3, 0, 0));
         _stackPanel39.AddChild(_textBlock41);
         _border38.SetChild(_stackPanel39);

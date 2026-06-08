@@ -50,7 +50,7 @@ export function create() {
         _textBlock21._set_property_value_by_name("Text", "Trigger actions — enter/exit, Loaded, TargetName");
         _textBlock21._set_property_value_by_name("FontSize", 15);
         _textBlock21._set_property_value_by_name("FontWeight", FontWeight.Bold);
-        _textBlock21._set_property_value_by_name("Foreground", DynamicResource(_textBlock21, "Surface"));
+        _textBlock21._set_property_value_by_name("Foreground", DynamicResource(_textBlock21, "OnPrimary"));
         _border20.SetChild(_textBlock21);
         _dockPanel19.AddChild(_border20);
         const _stackPanel22 = new StackPanel();

@@ -1,7 +1,6 @@
 import {
     Adorner,
     AdornerLayer,
-    Color,
     MetaData,
     Model,
     PropertyDescriptor,
@@ -11,12 +10,15 @@ import {
     type DrawingContext,
     type KeyEventArgs,
 } from '../runtime/index.js';
-import { Brush, SolidColorBrush } from '../visual-engine/index.js';
+import { Brush } from '../visual-engine/index.js';
 import { ensureControlsTheme } from './default-resources.js';
 import { Orientation } from './stack-panel.js';
+import { Theme } from './theme.js';
 import { Thumb, type DragDeltaEventArgs, type DragStartedEventArgs, type DragCompletedEventArgs } from './thumb.js';
 
-const DEFAULT_PREVIEW_BRUSH = new SolidColorBrush(Color.FromHex('#1976d2'));
+// Default brush for the drag-preview adorner — Material Primary so
+// the bar tints with the active theme. Consumers pin a specific
+// colour via the PreviewBrush DP.
 
 // Splitter — a standalone orientation-aware drag bar for non-Grid
 // containers (StackPanel, DockPanel, …). On drag, mutates the
@@ -132,7 +134,7 @@ export class Splitter extends Thumb
             const layer = AdornerLayer.GetAdornerLayer(this);
             if (layer !== undefined)
             {
-                const brush = this.PreviewBrush ?? DEFAULT_PREVIEW_BRUSH;
+                const brush = this.PreviewBrush ?? Theme.primary;
                 const adorner = new SplitterPreviewAdorner(this, this.Orientation, brush);
                 layer.Add(adorner);
                 this._previewAdorner = adorner;

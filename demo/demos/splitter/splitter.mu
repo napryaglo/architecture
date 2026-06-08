@@ -27,7 +27,7 @@ ResourceDictionary {
                     StackPanel [Orientation=Vertical] {
                         TextBlock [Text="Splitter demo — standalone draggable bar",
                                    FontSize=15, FontWeight=Bold,
-                                   Foreground=@Surface]
+                                   Foreground=@OnPrimary]
                         TextBlock [Text="Drag the gray bars to resize. ArrowLeft / ArrowRight (or Up / Down) nudge by 10px when focused.",
                                    FontSize=11, Foreground=@Outline,
                                    Margin=(0,4,0,0)]

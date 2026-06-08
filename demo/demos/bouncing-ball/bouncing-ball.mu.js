@@ -8,8 +8,8 @@ export function create() {
     const _tmpl1 = new DataTemplate((_data) => {
         const _border2 = new Border();
         _border2.SetNameScope(new NameScope());
-        _border2._set_property_value_by_name("Background", DynamicResource(_border2, "OnSurface"));
-        _border2._set_property_value_by_name("BorderBrush", new SolidColorBrush(Color.FromHex('#334155')));
+        _border2._set_property_value_by_name("Background", DynamicResource(_border2, "InverseSurface"));
+        _border2._set_property_value_by_name("BorderBrush", DynamicResource(_border2, "Outline"));
         _border2._set_property_value_by_name("BorderThickness", new Thickness(1));
         _border2._set_property_value_by_name("Width", 640);
         _border2._set_property_value_by_name("Height", 360);

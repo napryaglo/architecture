@@ -1,5 +1,4 @@
 import {
-    Color,
     MetaData,
     Model,
     Rect,
@@ -9,20 +8,13 @@ import {
     type DrawingContext,
     type PropertyDescriptor,
 } from '../runtime/index.js';
-import { SolidColorBrush } from '../visual-engine/index.js';
 import type { ContentPresenter } from './content-presenter.js';
 import { findDataTemplateForType } from './data-template.js';
 import type { DockPanel } from './dock-panel.js';
 import { StackPanel } from './stack-panel.js';
 import { TextBlock } from './text-block.js';
+import { Theme } from './theme.js';
 import { defaultTemplate, ensureControlsTheme } from './default-resources.js';
-
-
-
-// Subtitle palette stays in code: PageView creates the subtitle
-// TextBlock dynamically (added to PART_HeaderStack only when Subtitle
-// is non-empty) so it can't live in the static markup template.
-const SUBTITLE_TEXT = new SolidColorBrush(Color.FromHex('#475569'));
 
 // A title strip + slottable content area, modelled on Material UI's
 // "page" pattern: bold title with optional subtitle, a 1-DIP divider,
@@ -81,7 +73,12 @@ export class PageView extends Visual
         // Subtitle is created here (not in markup) because it gets
         // added to / removed from the header stack on demand.
         this._subtitleText = new TextBlock('');
-        this._subtitleText.Foreground = SUBTITLE_TEXT;
+        // Subtitle TextBlock is created dynamically (added to
+        // PART_HeaderStack only when Subtitle is non-empty) so it
+        // can't live in the static markup template. Read the
+        // medium-emphasis foreground via Theme so it tracks the
+        // active palette.
+        this._subtitleText.Foreground = Theme.hint;
         this._subtitleText.FontSize   = 13;
         this._subtitleText.Margin     = new Thickness(0, 2, 0, 0);
 

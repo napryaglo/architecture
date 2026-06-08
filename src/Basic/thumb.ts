@@ -1,5 +1,4 @@
 import {
-    Color,
     MetaData,
     Model,
     Rect,
@@ -9,7 +8,6 @@ import {
     type KeyEventArgs,
     type PointerEventArgs,
 } from '../runtime/index.js';
-import { SolidColorBrush } from '../visual-engine/index.js';
 import { Border } from './border.js';
 
 // Thumb — WPF System.Windows.Controls.Primitives.Thumb analog. A
@@ -42,7 +40,13 @@ import { Border } from './border.js';
 // `Style [TargetType=Thumb] { Template = … }` and apply it explicitly;
 // the Style's Template wins through the standard property pipeline.
 
-const DEFAULT_THUMB_BRUSH = new SolidColorBrush(Color.FromHex('#cbd5e1'));
+import { Theme } from './theme.js';
+// Default brush for a Thumb constructed without a Style/Template — a
+// soft neutral. Routed through Theme so it follows the active palette
+// (M3 OutlineVariant flips between light and dark schemes). The bundled
+// Thumb template overrides this via @OutlineVariant on PART_Border;
+// this constructor-time assignment only paints when no template
+// applies (typically during tests or before the default Style merges).
 
 export interface DragStartedEventArgs
 {
@@ -96,7 +100,7 @@ export class Thumb extends Visual
         super();
         this.Focusable = true;
         this._border = new Border();
-        this._border.Background = DEFAULT_THUMB_BRUSH;
+        this._border.Background = Theme.scrollThumb;
         this.AttachVisual(this._border);
     }
 

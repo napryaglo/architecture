@@ -58,7 +58,7 @@ export function create() {
         const _dockPanel17 = new DockPanel();
         const _border18 = new Border();
         _border18._set_property_value_by_name(DockPanel, "Dock", Dock.Top);
-        _border18._set_property_value_by_name("Background", DynamicResource(_border18, "OnSurface"));
+        _border18._set_property_value_by_name("Background", DynamicResource(_border18, "InverseSurface"));
         _border18._set_property_value_by_name("Padding", new Thickness(16, 12, 16, 12));
         const _stackPanel19 = new StackPanel();
         _stackPanel19._set_property_value_by_name("Orientation", Orientation.Vertical);
@@ -66,7 +66,7 @@ export function create() {
         _textBlock20._set_property_value_by_name("Text", "Drag & drop extended");
         _textBlock20._set_property_value_by_name("FontSize", 15);
         _textBlock20._set_property_value_by_name("FontWeight", FontWeight.Bold);
-        _textBlock20._set_property_value_by_name("Foreground", DynamicResource(_textBlock20, "SurfaceContainerLow"));
+        _textBlock20._set_property_value_by_name("Foreground", DynamicResource(_textBlock20, "InverseOnSurface"));
         _stackPanel19.AddChild(_textBlock20);
         const _stackPanel21 = new StackPanel();
         _stackPanel21._set_property_value_by_name("Orientation", Orientation.Horizontal);

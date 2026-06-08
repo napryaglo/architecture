@@ -21,7 +21,7 @@ export function create() {
         _textBlock6._set_property_value_by_name("Text", "Splitter demo — standalone draggable bar");
         _textBlock6._set_property_value_by_name("FontSize", 15);
         _textBlock6._set_property_value_by_name("FontWeight", FontWeight.Bold);
-        _textBlock6._set_property_value_by_name("Foreground", DynamicResource(_textBlock6, "Surface"));
+        _textBlock6._set_property_value_by_name("Foreground", DynamicResource(_textBlock6, "OnPrimary"));
         _stackPanel5.AddChild(_textBlock6);
         const _textBlock7 = new TextBlock();
         _textBlock7._set_property_value_by_name("Text", "Drag the gray bars to resize. ArrowLeft / ArrowRight (or Up / Down) nudge by 10px when focused.");

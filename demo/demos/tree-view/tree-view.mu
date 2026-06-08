@@ -27,7 +27,7 @@ ResourceDictionary {
                        Background=@Primary, Padding=(16,12,16,12)]{
                     TextBlock[Text="TreeView — composed markup vs. HierarchicalDataTemplate",
                               FontSize=15, FontWeight=Bold,
-                              Foreground=@Surface]
+                              Foreground=@OnPrimary]
                 }
 
                 // Two-up split — composed-markup on the left, data-bound

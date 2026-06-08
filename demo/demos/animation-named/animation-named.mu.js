@@ -37,7 +37,7 @@ export function create() {
         _textBlock18._set_property_value_by_name("Text", "Named storyboards — Begin / Pause / Resume / Stop");
         _textBlock18._set_property_value_by_name("FontSize", 15);
         _textBlock18._set_property_value_by_name("FontWeight", FontWeight.Bold);
-        _textBlock18._set_property_value_by_name("Foreground", DynamicResource(_textBlock18, "Surface"));
+        _textBlock18._set_property_value_by_name("Foreground", DynamicResource(_textBlock18, "OnPrimary"));
         _border17.SetChild(_textBlock18);
         _dockPanel16.AddChild(_border17);
         const _stackPanel19 = new StackPanel();

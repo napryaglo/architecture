@@ -63,7 +63,7 @@ ResourceDictionary {
                    Width=200, Height=80]{
                 TextBlock[Text="Hello mural",
                           FontSize=20,
-                          Foreground=@Surface]
+                          Foreground=@OnPrimary]
             }
 
             // Top-right card — danger palette, same hover / press shape.
@@ -72,7 +72,7 @@ ResourceDictionary {
                    Width=200, Height=80]{
                 TextBlock[Text="Danger zone",
                           FontSize=20,
-                          Foreground=@Surface]
+                          Foreground=@OnPrimary]
             }
 
             // Wide bottom panel — paper palette, subtler tint shift on

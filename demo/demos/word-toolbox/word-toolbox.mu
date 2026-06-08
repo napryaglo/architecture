@@ -120,14 +120,19 @@ ResourceDictionary {
             }
 
             DockPanel {
-                // Header strip.
-                Border [DockPanel.Dock=Top, Background=@OnSurface, Padding=(16,12,16,12)] {
+                // Header strip — InverseSurface gives a high-contrast
+                // bar whose colour flips with the theme (dark bar in
+                // light mode, light bar in dark mode) and stays
+                // distinct from the surrounding page. Foreground uses
+                // the matching InverseOnSurface token so text contrast
+                // holds in both schemes.
+                Border [DockPanel.Dock=Top, Background=@InverseSurface, Padding=(16,12,16,12)] {
                     StackPanel [Orientation=Vertical] {
                         TextBlock [Text="Word toolbox — drag tiles between panes",
                                    FontSize=15, FontWeight=Bold,
-                                   Foreground=@SurfaceContainerLow]
+                                   Foreground=@InverseOnSurface]
                         TextBlock [Text=$Status, FontSize=11,
-                                   Foreground=#94a3b8, Margin=(0,4,0,0)]
+                                   Foreground=@OnSurfaceVariant, Margin=(0,4,0,0)]
                     }
                 }
 
