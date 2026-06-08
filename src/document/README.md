@@ -98,6 +98,11 @@ Start with whichever doc matches what you're trying to do.
   rubber-band multi-select on any `Selector`. `AllowMarqueeSelection` /
   `MarqueeBoundsPolicy` DPs, modifier modes, click-on-empty-space
   semantics, adorner placement, batching.
+- **[commands-and-surfaces.md](commands-and-surfaces.md)** — UI/UX
+  design for the command system: layered architecture (commands stay
+  pure, controls own all visual UX), ToolBar / Menu (hamburger
+  fly-out) / Ribbon (core + contextual tabs) surfaces, the planned
+  `commands` demo. Sketch level; ties to backlog 5.9.1–5.9.2.
 
 ## Five-line tour
 
