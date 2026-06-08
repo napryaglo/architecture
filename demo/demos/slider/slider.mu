@@ -21,16 +21,16 @@ import SliderVM from "./slider-vm.mjs"
 
 ResourceDictionary {
     DataTemplate x:key="SliderTemplate" [DataType=SliderVM] {
-        Border [Background=#ffffff, BorderBrush=#e2e8f0,
+        Border [Background=@Surface, BorderBrush=@OutlineVariant,
                 BorderThickness=(1)]{
 
             DockPanel{
                 // Header strip
                 Border[DockPanel.Dock=Top,
-                       Background=#1976d2, Padding=(16,12,16,12)]{
+                       Background=@Primary, Padding=(16,12,16,12)]{
                     TextBlock[Text="Slider demo — single-thumb range, horizontal + vertical",
                               FontSize=15, FontWeight=Bold,
-                              Foreground=#ffffff]
+                              Foreground=@Surface]
                 }
 
                 StackPanel[Orientation=Horizontal]{
@@ -42,7 +42,7 @@ ResourceDictionary {
                                   Margin=(0,0,0,12)]
                         Slider [Width=200, Value=0.6]
                         TextBlock[Text="Default 0..1 range; SmallChange 0.01, LargeChange 0.1.",
-                                  FontSize=11, Foreground=#6b7280,
+                                  FontSize=11, Foreground=@OnSurfaceVariant,
                                   Margin=(0,12,0,0)]
                     }
 
@@ -54,7 +54,7 @@ ResourceDictionary {
                         Slider [Width=200, Minimum=0, Maximum=11,
                                 Value=7, SmallChange=1, LargeChange=2]
                         TextBlock[Text="Arrow ±1, Page ±2, Home / End snap to 0 / 11.",
-                                  FontSize=11, Foreground=#6b7280,
+                                  FontSize=11, Foreground=@OnSurfaceVariant,
                                   Margin=(0,12,0,0)]
                     }
 
@@ -66,7 +66,7 @@ ResourceDictionary {
                         Slider [Orientation=Vertical,
                                 Height=200, Value=0.35]
                         TextBlock[Text="Up = higher; thumb sits at Min when at the bottom.",
-                                  FontSize=11, Foreground=#6b7280,
+                                  FontSize=11, Foreground=@OnSurfaceVariant,
                                   Margin=(0,12,0,0)]
                     }
                 }

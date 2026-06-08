@@ -54,7 +54,7 @@ ResourceDictionary {
 
     // ── Default chrome styles per shape kind ─────────────────────────
     Style x:key="DiagramRectChromeStyle" [TargetType=Border] {
-        BorderBrush = #1d4ed8;
+        BorderBrush = @Primary;
     }
     Style x:key="DiagramNoteChromeStyle" [TargetType=Border] {
         BorderBrush = #a16207;
@@ -66,14 +66,14 @@ ResourceDictionary {
     // ── Toolbox tile template ───────────────────────────────────────
     DataTemplate x:key="DiagramTileTemplate" [DataType=ToolboxShapeVM] {
         Border x:root [IsDraggable=true, OnDragStart=$BeginKindDragData,
-                       Background=#ffffff, BorderBrush=#e2e8f0,
+                       Background=@Surface, BorderBrush=@OutlineVariant,
                        BorderThickness=(1), Padding=(8),
                        Margin=(0,0,0,8)]{
             StackPanel [Orientation=Horizontal]{
                 Border [Width=28, Height=18, Background=$Swatch,
                         Margin=(0,4,8,0)]
                 TextBlock [Text=$Label, FontSize=12,
-                           Foreground=#1f2937, Margin=(0,6,0,0)]
+                           Foreground=@OnSurface, Margin=(0,6,0,0)]
             }
         }
     }
@@ -86,7 +86,7 @@ ResourceDictionary {
                Background=$FillBrush,
                BorderThickness=(1.5), CornerRadius=4]{
             TextBlock [Text=$LabelText, FontSize=13,
-                       Foreground=#1f2937,
+                       Foreground=@OnSurface,
                        HorizontalAlignment=Center,
                        VerticalAlignment=Center]
         }
@@ -105,7 +105,7 @@ ResourceDictionary {
             TextBlock [Canvas.Left=0, Canvas.Top=0,
                        Width=130, Height=60,
                        Text=$LabelText, FontSize=13,
-                       Foreground=#1f2937,
+                       Foreground=@OnSurface,
                        HorizontalAlignment=Center,
                        VerticalAlignment=Center]
         }
@@ -121,7 +121,7 @@ ResourceDictionary {
                Background=$FillBrush,
                BorderThickness=(1.5), CornerRadius=2]{
             TextBlock [Text=$LabelText, FontSize=13,
-                       Foreground=#1f2937,
+                       Foreground=@OnSurface,
                        HorizontalAlignment=Center,
                        VerticalAlignment=Center]
         }
@@ -132,21 +132,21 @@ ResourceDictionary {
 
     // ── Diagram shell ───────────────────────────────────────────────
     DataTemplate x:key="DiagramTemplate" [DataType=DiagramVM] {
-        Border x:root [Background=#ffffff, BorderBrush=#e2e8f0,
+        Border x:root [Background=@Surface, BorderBrush=@OutlineVariant,
                        BorderThickness=(1)]{
             DockPanel {
 
                 // Header strip.
                 Border[DockPanel.Dock=Top, Height=44,
-                       Background=#1976d2]{
+                       Background=@Primary]{
                     StackPanel[Orientation=Horizontal,
                                Margin=(16,10,0,0)]{
                         TextBlock[Text="Diagrammer",
                                   FontSize=15, FontWeight=Bold,
-                                  Foreground=#ffffff]
+                                  Foreground=@Surface]
                         TextBlock[Text=$Status,
                                   FontSize=12,
-                                  Foreground=#ffffff,
+                                  Foreground=@Surface,
                                   Margin=(20,3,0,0)]
                     }
                 }
@@ -155,21 +155,21 @@ ResourceDictionary {
                 // bound through DiagramTileTemplate. Drag a tile onto
                 // the canvas to place a new node.
                 Border[DockPanel.Dock=Left, Width=140,
-                       Background=#f8fafc,
-                       BorderBrush=#e2e8f0,
+                       Background=@SurfaceContainerLow,
+                       BorderBrush=@OutlineVariant,
                        BorderThickness=(0,0,1,0),
                        Padding=(12)]{
                     StackPanel{
                         TextBlock[Text="Shapes",
                                   FontSize=11, FontWeight=Bold,
-                                  Foreground=#6b7280,
+                                  Foreground=@OnSurfaceVariant,
                                   Margin=(2,0,0,8)]
                         ItemsControl x:name="toolbox"
                                     [ItemsSource=$ToolboxShapes,
                                      ItemsPanel=@DiagramToolboxPanel]
                         TextBlock[Text="Document",
                                   FontSize=11, FontWeight=Bold,
-                                  Foreground=#6b7280,
+                                  Foreground=@OnSurfaceVariant,
                                   Margin=(2,12,0,8)]
                         StackPanel[Orientation=Horizontal,
                                    Margin=(0,0,0,8)]{
@@ -193,7 +193,7 @@ ResourceDictionary {
                                         Delete removes every selected
                                         node.",
                                   TextWrapping=Wrap,
-                                  FontSize=10, Foreground=#6b7280,
+                                  FontSize=10, Foreground=@OnSurfaceVariant,
                                   Margin=(2,16,2,0)]
                     }
                 }
@@ -210,7 +210,7 @@ ResourceDictionary {
                 //                                    plain click on empty area clears.
                 //   * MarqueeBoundsPolicy=Intersect (default) — Explorer-style "touch to
                 //                                    include" rather than Finder's "must enclose".
-                Border x:name="surface" [Background=#f1f5f9]
+                Border x:name="surface" [Background=@SurfaceContainerLow]
                 {
                     Diagram x:name="nodes"
                            [ItemsSource = $Nodes,

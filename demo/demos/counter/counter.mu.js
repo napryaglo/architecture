@@ -2,22 +2,22 @@ import { CounterVM } from "./counter-vm.mjs";
 import { Border, Canvas, DataTemplate, TextBlock, TextWrapping } from "@visualisation-sub/mural/Basic";
 import { Button } from "@visualisation-sub/mural/framework/button.js";
 import { ComboBox } from "@visualisation-sub/mural/framework/list/combo-box.js";
-import { Color, DataContextBinding, MultiBinding, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
-import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
+import { DataContextBinding, DynamicResource, MultiBinding, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
+import { FontWeight } from "@visualisation-sub/mural/visual-engine";
 
 export function create() {
     const _rd0 = new ResourceDictionary();
     const _tmpl1 = new DataTemplate((_data) => {
         const _border2 = new Border();
-        _border2._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#ffffff')));
-        _border2._set_property_value_by_name("BorderBrush", new SolidColorBrush(Color.FromHex('#e2e8f0')));
+        _border2._set_property_value_by_name("Background", DynamicResource(_border2, "Surface"));
+        _border2._set_property_value_by_name("BorderBrush", DynamicResource(_border2, "OutlineVariant"));
         _border2._set_property_value_by_name("BorderThickness", new Thickness(1));
         const _canvas3 = new Canvas();
         const _textBlock4 = new TextBlock();
         _textBlock4._set_property_value_by_name(Canvas, "Left", 24);
         _textBlock4._set_property_value_by_name(Canvas, "Top", 20);
         _textBlock4._set_property_value_by_name("FontSize", 14);
-        _textBlock4._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#6b7280')));
+        _textBlock4._set_property_value_by_name("Foreground", DynamicResource(_textBlock4, "OnSurfaceVariant"));
         _textBlock4._set_property_value_by_name("Text", "Counter:");
         _canvas3.AddChild(_textBlock4);
         const _textBlock5 = new TextBlock();
@@ -25,14 +25,14 @@ export function create() {
         _textBlock5._set_property_value_by_name(Canvas, "Top", 40);
         _textBlock5._set_property_value_by_name("FontSize", 42);
         _textBlock5._set_property_value_by_name("FontWeight", FontWeight.Bold);
-        _textBlock5._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#1976d2')));
+        _textBlock5._set_property_value_by_name("Foreground", DynamicResource(_textBlock5, "Primary"));
         _textBlock5._set_property_value_by_name("Text", MultiBinding(_textBlock5, ["Count"], (_p0) => ( String(_p0) )));
         _canvas3.AddChild(_textBlock5);
         const _textBlock6 = new TextBlock();
         _textBlock6._set_property_value_by_name(Canvas, "Left", 170);
         _textBlock6._set_property_value_by_name(Canvas, "Top", 124);
         _textBlock6._set_property_value_by_name("FontSize", 12);
-        _textBlock6._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#6b7280')));
+        _textBlock6._set_property_value_by_name("Foreground", DynamicResource(_textBlock6, "OnSurfaceVariant"));
         _textBlock6._set_property_value_by_name("Text", "Step:");
         _canvas3.AddChild(_textBlock6);
         const _comboBox7 = new ComboBox();
@@ -65,7 +65,7 @@ export function create() {
         _textBlock12._set_property_value_by_name(Canvas, "Top", 232);
         _textBlock12._set_property_value_by_name("Width", 312);
         _textBlock12._set_property_value_by_name("FontSize", 12);
-        _textBlock12._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#6b7280')));
+        _textBlock12._set_property_value_by_name("Foreground", DynamicResource(_textBlock12, "OnSurfaceVariant"));
         _textBlock12._set_property_value_by_name("TextWrapping", TextWrapping.Wrap);
         _textBlock12._set_property_value_by_name("Text", "The ComboBox sets Step. Increment adds Step to Count and stops at 10. Reset always works.");
         _canvas3.AddChild(_textBlock12);

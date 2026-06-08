@@ -36,16 +36,16 @@ ResourceDictionary {
     }
 
     DataTemplate x:key="ContextMenuTemplate" [DataType=ContextMenuVM] {
-        Border [Background=#ffffff, BorderBrush=#e2e8f0,
+        Border [Background=@Surface, BorderBrush=@OutlineVariant,
                 BorderThickness=(1)]{
 
             DockPanel{
                 // Header
                 Border[DockPanel.Dock=Top,
-                       Background=#1976d2, Padding=(16,12,16,12)]{
+                       Background=@Primary, Padding=(16,12,16,12)]{
                     TextBlock[Text="ContextMenu — right-click any panel; the nearest ancestor's menu opens at the cursor.",
                               FontSize=15, FontWeight=Bold,
-                              Foreground=#ffffff]
+                              Foreground=@Surface]
                 }
 
                 StackPanel[Orientation=Vertical, Margin=(16,16,16,16)]{
@@ -54,7 +54,7 @@ ResourceDictionary {
                                Margin=(0,0,12,0),
                                ContextMenuService.ContextMenu=@RedMenu]{
                             TextBlock[Text="Right-click me",
-                                      Foreground=#ffffff, FontSize=14,
+                                      Foreground=@Surface, FontSize=14,
                                       FontWeight=Bold,
                                       HorizontalAlignment=Center,
                                       VerticalAlignment=Center]
@@ -63,7 +63,7 @@ ResourceDictionary {
                                Margin=(0,0,12,0),
                                ContextMenuService.ContextMenu=@GreenMenu]{
                             TextBlock[Text="Right-click me",
-                                      Foreground=#ffffff, FontSize=14,
+                                      Foreground=@Surface, FontSize=14,
                                       FontWeight=Bold,
                                       HorizontalAlignment=Center,
                                       VerticalAlignment=Center]
@@ -71,7 +71,7 @@ ResourceDictionary {
                         Border[Background=#3b82f6, Width=180, Height=120,
                                ContextMenuService.ContextMenu=@BlueMenu]{
                             TextBlock[Text="Right-click me",
-                                      Foreground=#ffffff, FontSize=14,
+                                      Foreground=@Surface, FontSize=14,
                                       FontWeight=Bold,
                                       HorizontalAlignment=Center,
                                       VerticalAlignment=Center]
@@ -79,7 +79,7 @@ ResourceDictionary {
                     }
 
                     TextBlock[Text=$Status, FontSize=13,
-                              Foreground=#1f2937]
+                              Foreground=@OnSurface]
                 }
             }
         }

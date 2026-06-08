@@ -37,7 +37,7 @@ ResourceDictionary {
     ItemsPanelTemplate x:key="CommandsCanvasPanel" { Canvas }
 
     // ── Chrome styles per shape kind ────────────────────────────────
-    Style x:key="CommandsRectChromeStyle"    [TargetType=Border]  { BorderBrush = #1d4ed8; }
+    Style x:key="CommandsRectChromeStyle"    [TargetType=Border]  { BorderBrush = @Primary; }
     Style x:key="CommandsNoteChromeStyle"    [TargetType=Border]  { BorderBrush = #a16207; }
     Style x:key="CommandsEllipseChromeStyle" [TargetType=Ellipse] { Stroke      = #15803d; }
 
@@ -59,7 +59,7 @@ ResourceDictionary {
                BorderThickness=(1.5), CornerRadius=4,
                ContextMenuService.ContextMenu=@NodeContextMenu]{
             TextBlock [Text=$LabelText, FontSize=13,
-                       Foreground=#1f2937,
+                       Foreground=@OnSurface,
                        HorizontalAlignment=Center,
                        VerticalAlignment=Center]
         }
@@ -76,7 +76,7 @@ ResourceDictionary {
             TextBlock [Canvas.Left=0, Canvas.Top=0,
                        Width=130, Height=60,
                        Text=$LabelText, FontSize=13,
-                       Foreground=#1f2937,
+                       Foreground=@OnSurface,
                        HorizontalAlignment=Center,
                        VerticalAlignment=Center]
         }
@@ -91,7 +91,7 @@ ResourceDictionary {
                BorderThickness=(1.5), CornerRadius=2,
                ContextMenuService.ContextMenu=@NodeContextMenu]{
             TextBlock [Text=$LabelText, FontSize=13,
-                       Foreground=#1f2937,
+                       Foreground=@OnSurface,
                        HorizontalAlignment=Center,
                        VerticalAlignment=Center]
         }
@@ -100,22 +100,22 @@ ResourceDictionary {
 
     // ── Demo shell ──────────────────────────────────────────────────
     DataTemplate x:key="CommandsTemplate" [DataType=CommandsVM] {
-        Border [Background=#ffffff, BorderBrush=#e2e8f0,
+        Border [Background=@Surface, BorderBrush=@OutlineVariant,
                 BorderThickness=(1)]{
 
             DockPanel {
                 // Header
                 Border[DockPanel.Dock=Top,
-                       Background=#1976d2, Padding=(16,10,16,10)]{
+                       Background=@Primary, Padding=(16,10,16,10)]{
                     TextBlock[Text="ToolBar + Menu + ContextMenu over a Diagram. Select nodes (click / Ctrl-click / marquee) and use the commands.",
                               FontSize=14, FontWeight=Bold,
-                              Foreground=#ffffff]
+                              Foreground=@Surface]
                 }
 
                 // MenuButton strip (above the toolbar)
                 Border[DockPanel.Dock=Top,
-                       Background=#f8fafc,
-                       BorderBrush=#e2e8f0,
+                       Background=@SurfaceContainerLow,
+                       BorderBrush=@OutlineVariant,
                        BorderThickness=(0,0,0,1),
                        Padding=(8,6,8,6)]{
                     StackPanel[Orientation=Horizontal]{
@@ -134,15 +134,15 @@ ResourceDictionary {
                             MenuItem[Header="Undo", InputGestureText="Ctrl+Z", Command=$UndoCommand]
                             MenuItem[Header="Redo", InputGestureText="Ctrl+Y", Command=$RedoCommand]
                         }
-                        TextBlock[Text=$Status, FontSize=12, Foreground=#1f2937,
+                        TextBlock[Text=$Status, FontSize=12, Foreground=@OnSurface,
                                   Margin=(12,8,0,0)]
                     }
                 }
 
                 // ToolBar strip
                 Border[DockPanel.Dock=Top,
-                       Background=#ffffff,
-                       BorderBrush=#e2e8f0,
+                       Background=@Surface,
+                       BorderBrush=@OutlineVariant,
                        BorderThickness=(0,0,0,1)]{
                     ToolBar {
                         ToolBarButton[Command=$SaveCommand]{      TextBlock[Text="💾"] }
@@ -167,7 +167,7 @@ ResourceDictionary {
                 }
 
                 // Canvas — fills remaining space
-                Border x:name="surface" [Background=#f1f5f9]{
+                Border x:name="surface" [Background=@SurfaceContainerLow]{
                     Diagram x:name="nodes"
                            [ItemsSource = $Nodes,
                             ItemsPanel = @CommandsCanvasPanel,

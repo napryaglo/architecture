@@ -29,7 +29,7 @@ import AnimationNamedVM from "./animation-named-vm.mjs"
 
 ResourceDictionary {
     DataTemplate x:key="AnimationNamedTemplate" [DataType=AnimationNamedVM] {
-        Border [Background=#ffffff, BorderBrush=#e2e8f0,
+        Border [Background=@Surface, BorderBrush=@OutlineVariant,
                 BorderThickness=(1)]{
             resources: {
                 Style[TargetType=Button]{
@@ -51,15 +51,15 @@ ResourceDictionary {
             }
             DockPanel{
                 Border[DockPanel.Dock=Top,
-                       Background=#1976d2, Padding=(16,12,16,12)]{
+                       Background=@Primary, Padding=(16,12,16,12)]{
                     TextBlock[Text="Named storyboards — Begin / Pause / Resume / Stop",
                               FontSize=15, FontWeight=Bold,
-                              Foreground=#ffffff]
+                              Foreground=@Surface]
                 }
 
                 StackPanel[Orientation=Vertical, Margin=(20,24,20,20)]{
                     TextBlock[Text="Each button starts a looping Width animation on Loaded. Hover pauses; un-hover resumes; click stops for good.",
-                              FontSize=12, Foreground=#6b7280,
+                              FontSize=12, Foreground=@OnSurfaceVariant,
                               Margin=(0,0,0,16)]
                     StackPanel[Orientation=Vertical]{
                         Button [Height=28, Margin=(0,0,0,8)]{
@@ -73,7 +73,7 @@ ResourceDictionary {
                         }
                     }
                     TextBlock[Text="The named registry is per-Visual — pausing Loop A doesn't pause Loop B or C.",
-                              FontSize=11, Foreground=#6b7280,
+                              FontSize=11, Foreground=@OnSurfaceVariant,
                               Margin=(0,16,0,0)]
                 }
             }

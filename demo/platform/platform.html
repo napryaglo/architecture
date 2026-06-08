@@ -15,10 +15,31 @@
         body { display: flex; flex-direction: column; }
         header { flex: 0 0 auto;
                  padding: 10px 20px; background: #fff;
-                 border-bottom: 1px solid #e2e8f0; }
-        header h1 { margin: 0; font-size: 14px; color: #334155; }
+                 border-bottom: 1px solid #e2e8f0;
+                 display: flex; align-items: center; gap: 16px; }
+        header h1 { margin: 0; font-size: 14px; color: #334155; flex: 1 1 auto; }
         header h1 code { background: #f1f5f9; padding: 1px 6px; border-radius: 4px;
                          font-size: 12px; }
+        /* Theme toggle — small, label-only button. Bound to Material's
+           ToggleTheme(); its caption flips to the next theme so the user
+           sees what clicking it will do, not what's currently active. */
+        #theme-toggle { flex: 0 0 auto;
+                        padding: 6px 14px; border: 1px solid #cbd5e1;
+                        background: #f1f5f9; color: #334155;
+                        border-radius: 9999px; font-size: 12px;
+                        cursor: pointer; }
+        #theme-toggle:hover { background: #e2e8f0; }
+        /* Dark-mode chrome for the host page so the body / header
+           don't stay light when Material flips. Triggered by adding
+           `data-theme="dark"` on <html>. */
+        html[data-theme="dark"] body { background: #1c1b1f; color: #e6e1e5; }
+        html[data-theme="dark"] header { background: #211f26; border-bottom-color: #49454f; }
+        html[data-theme="dark"] header h1 { color: #cac4d0; }
+        html[data-theme="dark"] header h1 code { background: #2b2930; color: #e6e1e5; }
+        html[data-theme="dark"] #app { background: #1c1b1f; }
+        html[data-theme="dark"] #theme-toggle { background: #2b2930; color: #e6e1e5;
+                                                border-color: #49454f; }
+        html[data-theme="dark"] #theme-toggle:hover { background: #36343b; }
         /* main + #app expand to fill the window; min-height:0 lets the
            flex child actually shrink below its content-box height so
            #app doesn't push beyond the viewport. */
@@ -52,6 +73,7 @@
 <body>
     <header>
         <h1>µ-mural demo platform — pick a demo from the <code>TreeView</code> on the left</h1>
+        <button id="theme-toggle" type="button">Switch to dark</button>
     </header>
     <main>
         <div id="app"></div>
@@ -66,9 +88,9 @@
         // No tree-walking, no selection-listener wiring, no FindName:
         // the only thing the host JS does is build the VM and hand it
         // to the root as DataContext.
-        import { app }         from './platform.mu.js';
-        import { HtmlTarget }  from '@visualisation-sub/mural/visual-engine';
-        import { SetTheme }    from '@visualisation-sub/mural/framework/material';
+        import { app }                                 from './platform.mu.js';
+        import { HtmlTarget }                          from '@visualisation-sub/mural/visual-engine';
+        import { SetTheme, ToggleTheme, CurrentTheme } from '@visualisation-sub/mural/framework/material';
 
         // Register the Material light palette as soon as the
         // Application is parsed but BEFORE any control template
@@ -76,9 +98,26 @@
         // basic.template.mu / surface.template.mu would resolve to
         // `undefined` on first paint (no tokens in the resource
         // chain), and the controls would render with default-value
-        // brushes (transparent). PlatformVM exposes a Theme command
-        // the header binds to so users can toggle light/dark live.
+        // brushes (transparent).
         SetTheme('light');
+
+        // Header theme toggle. Each click flips light↔dark via
+        // ToggleTheme; the button caption advertises the NEXT theme
+        // so the user sees what clicking it will do, not what's
+        // already active. `data-theme="dark"` on <html> drives the
+        // host-page CSS overrides above so the body / header / pad
+        // chrome flip in lockstep with Material.
+        const themeToggle = document.getElementById('theme-toggle');
+        const applyHostChrome = () => {
+            const t = CurrentTheme() ?? 'light';
+            document.documentElement.setAttribute('data-theme', t);
+            themeToggle.textContent = t === 'dark' ? 'Switch to light' : 'Switch to dark';
+        };
+        applyHostChrome();
+        themeToggle.addEventListener('click', () => {
+            ToggleTheme();
+            applyHostChrome();
+        });
 
         // Demo modules self-register on import. Each module calls
         // `register(...)` at top level — the side effect of importing

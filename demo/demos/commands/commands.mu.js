@@ -4,7 +4,7 @@ import { DiagramNode } from "@visualisation-sub/mural/framework/diagram/diagram-
 import { Diagram } from "@visualisation-sub/mural/framework/diagram/diagram.js";
 import { SelectionMode } from "@visualisation-sub/mural/framework/list/list-box.js";
 import { ContextMenu, ContextMenuService, MenuButton, MenuItem, MenuSeparator, ToolBar, ToolBarButton, ToolBarSeparator } from "@visualisation-sub/mural/framework/surface.js";
-import { Application, Color, DataContextBinding, HorizontalAlignment, NameScope, ResourceDictionary, Setter, SetterFactory, Style, Thickness, VerticalAlignment } from "@visualisation-sub/mural/runtime";
+import { Color, DataContextBinding, DynamicResource, HorizontalAlignment, NameScope, ResourceDictionary, Setter, SetterFactory, Style, Thickness, VerticalAlignment } from "@visualisation-sub/mural/runtime";
 import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
 
 export function create() {
@@ -18,7 +18,7 @@ export function create() {
         return _canvas5;
     });
     _rd0.Set("CommandsCanvasPanel", _tmpl4);
-    const _setter6 = new Setter(Border, "BorderBrush", new SolidColorBrush(Color.FromHex('#1d4ed8')));
+    const _setter6 = new Setter(Border, "BorderBrush", new SetterFactory((_t) => DynamicResource(_t, "Primary")));
     const _style7 = new Style(Border, [_setter6], undefined, [], []);
     _rd0.Set("CommandsRectChromeStyle", _style7);
     const _setter8 = new Setter(Border, "BorderBrush", new SolidColorBrush(Color.FromHex('#a16207')));
@@ -61,11 +61,11 @@ export function create() {
             _border19._set_property_value_by_name("Background", DataContextBinding(_border19, "FillBrush"));
             _border19._set_property_value_by_name("BorderThickness", new Thickness(1.5));
             _border19._set_property_value_by_name("CornerRadius", 4);
-            _border19._set_property_value_by_name(ContextMenuService, "ContextMenu", Application.current.Resources.Resolve("NodeContextMenu"));
+            _border19._set_property_value_by_name(ContextMenuService, "ContextMenu", DynamicResource(_border19, "NodeContextMenu"));
             const _textBlock20 = new TextBlock();
             _textBlock20._set_property_value_by_name("Text", DataContextBinding(_textBlock20, "LabelText"));
             _textBlock20._set_property_value_by_name("FontSize", 13);
-            _textBlock20._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#1f2937')));
+            _textBlock20._set_property_value_by_name("Foreground", DynamicResource(_textBlock20, "OnSurface"));
             _textBlock20._set_property_value_by_name("HorizontalAlignment", HorizontalAlignment.Center);
             _textBlock20._set_property_value_by_name("VerticalAlignment", VerticalAlignment.Center);
             _border19.SetChild(_textBlock20);
@@ -82,7 +82,7 @@ export function create() {
             _canvas24.SetNameScope(new NameScope());
             _canvas24._set_property_value_by_name("Width", 130);
             _canvas24._set_property_value_by_name("Height", 60);
-            _canvas24._set_property_value_by_name(ContextMenuService, "ContextMenu", Application.current.Resources.Resolve("NodeContextMenu"));
+            _canvas24._set_property_value_by_name(ContextMenuService, "ContextMenu", DynamicResource(_canvas24, "NodeContextMenu"));
             const _ellipse25 = new Ellipse();
             _ellipse25.Name = "chrome";
             _ellipse25._set_property_value_by_name("Style", _style11);
@@ -98,7 +98,7 @@ export function create() {
             _textBlock26._set_property_value_by_name("Height", 60);
             _textBlock26._set_property_value_by_name("Text", DataContextBinding(_textBlock26, "LabelText"));
             _textBlock26._set_property_value_by_name("FontSize", 13);
-            _textBlock26._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#1f2937')));
+            _textBlock26._set_property_value_by_name("Foreground", DynamicResource(_textBlock26, "OnSurface"));
             _textBlock26._set_property_value_by_name("HorizontalAlignment", HorizontalAlignment.Center);
             _textBlock26._set_property_value_by_name("VerticalAlignment", VerticalAlignment.Center);
             _canvas24.AddChild(_textBlock26);
@@ -119,11 +119,11 @@ export function create() {
             _border30._set_property_value_by_name("Background", DataContextBinding(_border30, "FillBrush"));
             _border30._set_property_value_by_name("BorderThickness", new Thickness(1.5));
             _border30._set_property_value_by_name("CornerRadius", 2);
-            _border30._set_property_value_by_name(ContextMenuService, "ContextMenu", Application.current.Resources.Resolve("NodeContextMenu"));
+            _border30._set_property_value_by_name(ContextMenuService, "ContextMenu", DynamicResource(_border30, "NodeContextMenu"));
             const _textBlock31 = new TextBlock();
             _textBlock31._set_property_value_by_name("Text", DataContextBinding(_textBlock31, "LabelText"));
             _textBlock31._set_property_value_by_name("FontSize", 13);
-            _textBlock31._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#1f2937')));
+            _textBlock31._set_property_value_by_name("Foreground", DynamicResource(_textBlock31, "OnSurface"));
             _textBlock31._set_property_value_by_name("HorizontalAlignment", HorizontalAlignment.Center);
             _textBlock31._set_property_value_by_name("VerticalAlignment", VerticalAlignment.Center);
             _border30.SetChild(_textBlock31);
@@ -136,25 +136,25 @@ export function create() {
     _rd0.Set(NoteNodeVM, _tmpl29);
     const _tmpl34 = new DataTemplate((_data) => {
         const _border35 = new Border();
-        _border35._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#ffffff')));
-        _border35._set_property_value_by_name("BorderBrush", new SolidColorBrush(Color.FromHex('#e2e8f0')));
+        _border35._set_property_value_by_name("Background", DynamicResource(_border35, "Surface"));
+        _border35._set_property_value_by_name("BorderBrush", DynamicResource(_border35, "OutlineVariant"));
         _border35._set_property_value_by_name("BorderThickness", new Thickness(1));
         const _dockPanel36 = new DockPanel();
         const _border37 = new Border();
         _border37._set_property_value_by_name(DockPanel, "Dock", Dock.Top);
-        _border37._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#1976d2')));
+        _border37._set_property_value_by_name("Background", DynamicResource(_border37, "Primary"));
         _border37._set_property_value_by_name("Padding", new Thickness(16, 10, 16, 10));
         const _textBlock38 = new TextBlock();
         _textBlock38._set_property_value_by_name("Text", "ToolBar + Menu + ContextMenu over a Diagram. Select nodes (click / Ctrl-click / marquee) and use the commands.");
         _textBlock38._set_property_value_by_name("FontSize", 14);
         _textBlock38._set_property_value_by_name("FontWeight", FontWeight.Bold);
-        _textBlock38._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#ffffff')));
+        _textBlock38._set_property_value_by_name("Foreground", DynamicResource(_textBlock38, "Surface"));
         _border37.SetChild(_textBlock38);
         _dockPanel36.AddChild(_border37);
         const _border39 = new Border();
         _border39._set_property_value_by_name(DockPanel, "Dock", Dock.Top);
-        _border39._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#f8fafc')));
-        _border39._set_property_value_by_name("BorderBrush", new SolidColorBrush(Color.FromHex('#e2e8f0')));
+        _border39._set_property_value_by_name("Background", DynamicResource(_border39, "SurfaceContainerLow"));
+        _border39._set_property_value_by_name("BorderBrush", DynamicResource(_border39, "OutlineVariant"));
         _border39._set_property_value_by_name("BorderThickness", new Thickness(0, 0, 0, 1));
         _border39._set_property_value_by_name("Padding", new Thickness(8, 6, 8, 6));
         const _stackPanel40 = new StackPanel();
@@ -222,15 +222,15 @@ export function create() {
         const _textBlock55 = new TextBlock();
         _textBlock55._set_property_value_by_name("Text", DataContextBinding(_textBlock55, "Status"));
         _textBlock55._set_property_value_by_name("FontSize", 12);
-        _textBlock55._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#1f2937')));
+        _textBlock55._set_property_value_by_name("Foreground", DynamicResource(_textBlock55, "OnSurface"));
         _textBlock55._set_property_value_by_name("Margin", new Thickness(12, 8, 0, 0));
         _stackPanel40.AddChild(_textBlock55);
         _border39.SetChild(_stackPanel40);
         _dockPanel36.AddChild(_border39);
         const _border56 = new Border();
         _border56._set_property_value_by_name(DockPanel, "Dock", Dock.Top);
-        _border56._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#ffffff')));
-        _border56._set_property_value_by_name("BorderBrush", new SolidColorBrush(Color.FromHex('#e2e8f0')));
+        _border56._set_property_value_by_name("Background", DynamicResource(_border56, "Surface"));
+        _border56._set_property_value_by_name("BorderBrush", DynamicResource(_border56, "OutlineVariant"));
         _border56._set_property_value_by_name("BorderThickness", new Thickness(0, 0, 0, 1));
         const _toolBar57 = new ToolBar();
         const _toolBarButton58 = new ToolBarButton();
@@ -329,7 +329,7 @@ export function create() {
         _dockPanel36.AddChild(_border56);
         const _border90 = new Border();
         _border90.Name = "surface";
-        _border90._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#f1f5f9')));
+        _border90._set_property_value_by_name("Background", DynamicResource(_border90, "SurfaceContainerLow"));
         const _diagram91 = new Diagram();
         _diagram91.Name = "nodes";
         _diagram91._set_property_value_by_name("ItemsSource", DataContextBinding(_diagram91, "Nodes"));

@@ -4,7 +4,7 @@ import { ItemsControl } from "@visualisation-sub/mural/framework/items-control.j
 import { ListBox, ListBoxItem, SelectionMode } from "@visualisation-sub/mural/framework/list/list-box.js";
 import { MarqueeBoundsPolicy } from "@visualisation-sub/mural/framework/list/selector.js";
 import { ScrollViewer } from "@visualisation-sub/mural/framework/scroll-viewer.js";
-import { Color, DataContextBinding, HorizontalAlignment, NameScope, ResourceDictionary, Setter, SetterFactory, Style, Thickness, VerticalAlignment } from "@visualisation-sub/mural/runtime";
+import { Color, DataContextBinding, DynamicResource, HorizontalAlignment, NameScope, ResourceDictionary, Setter, SetterFactory, Style, Thickness, VerticalAlignment } from "@visualisation-sub/mural/runtime";
 import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
 
 export function create() {
@@ -23,14 +23,14 @@ export function create() {
     _rd0.Set("ToolboxItemsPanel", _tmpl3);
     const _tmpl5 = new DataTemplate((_data) => {
         const _border6 = new Border();
-        _border6._set_property_value_by_name("BorderBrush", new SolidColorBrush(Color.FromHex('#cbd5e1')));
+        _border6._set_property_value_by_name("BorderBrush", DynamicResource(_border6, "Outline"));
         _border6._set_property_value_by_name("BorderThickness", new Thickness(1));
         const _textBlock7 = new TextBlock();
         _textBlock7._set_property_value_by_name("Text", DataContextBinding(_textBlock7, "Word"));
         _textBlock7._set_property_value_by_name("FontSize", 14);
         _textBlock7._set_property_value_by_name("HorizontalAlignment", HorizontalAlignment.Center);
         _textBlock7._set_property_value_by_name("VerticalAlignment", VerticalAlignment.Center);
-        _textBlock7._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#0f172a')));
+        _textBlock7._set_property_value_by_name("Foreground", DynamicResource(_textBlock7, "OnSurface"));
         _border6.SetChild(_textBlock7);
         return _border6;
     }, WordVM);
@@ -58,8 +58,8 @@ export function create() {
     const _tmpl17 = new DataTemplate((_data) => {
         const _border18 = new Border();
         _border18.SetNameScope(new NameScope());
-        _border18._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#f8fafc')));
-        _border18._set_property_value_by_name("BorderBrush", new SolidColorBrush(Color.FromHex('#e2e8f0')));
+        _border18._set_property_value_by_name("Background", DynamicResource(_border18, "SurfaceContainerLow"));
+        _border18._set_property_value_by_name("BorderBrush", DynamicResource(_border18, "OutlineVariant"));
         _border18._set_property_value_by_name("BorderThickness", new Thickness(1));
         const _rd19 = _border18.Resources;
         const _setter20 = new Setter(ContentPresenter, "IsDraggable", true);
@@ -69,7 +69,7 @@ export function create() {
         const _dockPanel23 = new DockPanel();
         const _border24 = new Border();
         _border24._set_property_value_by_name(DockPanel, "Dock", Dock.Top);
-        _border24._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#0f172a')));
+        _border24._set_property_value_by_name("Background", DynamicResource(_border24, "OnSurface"));
         _border24._set_property_value_by_name("Padding", new Thickness(16, 12, 16, 12));
         const _stackPanel25 = new StackPanel();
         _stackPanel25._set_property_value_by_name("Orientation", Orientation.Vertical);
@@ -77,7 +77,7 @@ export function create() {
         _textBlock26._set_property_value_by_name("Text", "Word toolbox — drag tiles between panes");
         _textBlock26._set_property_value_by_name("FontSize", 15);
         _textBlock26._set_property_value_by_name("FontWeight", FontWeight.Bold);
-        _textBlock26._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#f8fafc')));
+        _textBlock26._set_property_value_by_name("Foreground", DynamicResource(_textBlock26, "SurfaceContainerLow"));
         _stackPanel25.AddChild(_textBlock26);
         const _textBlock27 = new TextBlock();
         _textBlock27._set_property_value_by_name("Text", DataContextBinding(_textBlock27, "Status"));
@@ -91,7 +91,7 @@ export function create() {
         _textBlock28._set_property_value_by_name(DockPanel, "Dock", Dock.Bottom);
         _textBlock28._set_property_value_by_name("Margin", new Thickness(20, 4, 20, 16));
         _textBlock28._set_property_value_by_name("FontSize", 11);
-        _textBlock28._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#6b7280')));
+        _textBlock28._set_property_value_by_name("Foreground", DynamicResource(_textBlock28, "OnSurfaceVariant"));
         _textBlock28._set_property_value_by_name("TextWrapping", TextWrapping.Wrap);
         _textBlock28._set_property_value_by_name("Text", "LEFT pane is a 100-tile palette; drag any tile RIGHT to copy it into the listbox. RIGHT pane is a 2000-tile virtualizing WrapPanel; drag any tile to reorder. Both panes share the same square-tile template (100×100 with 15px gaps).");
         _dockPanel23.AddChild(_textBlock28);
@@ -99,7 +99,7 @@ export function create() {
         _dockPanel29._set_property_value_by_name("LastChildFill", true);
         const _border30 = new Border();
         _border30._set_property_value_by_name(DockPanel, "Dock", Dock.Left);
-        _border30._set_property_value_by_name("BorderBrush", new SolidColorBrush(Color.FromHex('#e2e8f0')));
+        _border30._set_property_value_by_name("BorderBrush", DynamicResource(_border30, "OutlineVariant"));
         _border30._set_property_value_by_name("BorderThickness", new Thickness(0, 0, 1, 0));
         const _dockPanel31 = new DockPanel();
         const _border32 = new Border();
@@ -124,7 +124,7 @@ export function create() {
         _border30.SetChild(_dockPanel31);
         _dockPanel29.AddChild(_border30);
         const _border36 = new Border();
-        _border36._set_property_value_by_name("BorderBrush", new SolidColorBrush(Color.FromHex('#e2e8f0')));
+        _border36._set_property_value_by_name("BorderBrush", DynamicResource(_border36, "OutlineVariant"));
         _border36._set_property_value_by_name("BorderThickness", new Thickness(0));
         const _dockPanel37 = new DockPanel();
         const _border38 = new Border();
@@ -135,7 +135,7 @@ export function create() {
         _textBlock39._set_property_value_by_name("Text", "ListBox — drag tiles to reorder; toolbox words land here");
         _textBlock39._set_property_value_by_name("FontSize", 12);
         _textBlock39._set_property_value_by_name("FontWeight", FontWeight.Bold);
-        _textBlock39._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#1e3a8a')));
+        _textBlock39._set_property_value_by_name("Foreground", DynamicResource(_textBlock39, "PrimaryContainer"));
         _border38.SetChild(_textBlock39);
         _dockPanel37.AddChild(_border38);
         const _listBox40 = new ListBox();

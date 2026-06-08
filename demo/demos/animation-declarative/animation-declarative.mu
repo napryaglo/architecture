@@ -13,7 +13,7 @@ import AnimationDeclarativeVM from "./animation-declarative-vm.mjs"
 
 ResourceDictionary {
     DataTemplate x:key="AnimationDeclarativeTemplate" [DataType=AnimationDeclarativeVM] {
-        Border [Background=#ffffff, BorderBrush=#e2e8f0,
+        Border [Background=@Surface, BorderBrush=@OutlineVariant,
                 BorderThickness=(1)]{
             resources: {
                 // Implicit style on Button — every Button inside this
@@ -30,15 +30,15 @@ ResourceDictionary {
             DockPanel{
                 // Header
                 Border[DockPanel.Dock=Top,
-                       Background=#1976d2, Padding=(16,12,16,12)]{
+                       Background=@Primary, Padding=(16,12,16,12)]{
                     TextBlock[Text="Declarative animation — on Click { BeginStoryboard { ... } }",
                               FontSize=15, FontWeight=Bold,
-                              Foreground=#ffffff]
+                              Foreground=@Surface]
                 }
 
                 StackPanel[Orientation=Vertical, Margin=(20,24,20,20)]{
                     TextBlock[Text="Click any Button. The style's EventTrigger animates the Button's own Width from 80 to 240 over 400 ms — no host-side handler wired.",
-                              FontSize=12, Foreground=#6b7280,
+                              FontSize=12, Foreground=@OnSurfaceVariant,
                               Margin=(0,0,0,16)]
                     StackPanel[Orientation=Vertical]{
                         Button [Width=80, Margin=(0,0,0,8)]{
@@ -52,7 +52,7 @@ ResourceDictionary {
                         }
                     }
                     TextBlock[Text="Each Button carries its own animation instance — clicking them simultaneously plays independent storyboards (each baseline-captures From=80 at fire time).",
-                              FontSize=11, Foreground=#6b7280,
+                              FontSize=11, Foreground=@OnSurfaceVariant,
                               Margin=(0,16,0,0)]
                 }
             }

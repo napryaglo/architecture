@@ -20,16 +20,16 @@ import SpinEditVM from "./spin-edit-vm.mjs"
 
 ResourceDictionary {
     DataTemplate x:key="SpinEditTemplate" [DataType=SpinEditVM] {
-        Border [Background=#ffffff, BorderBrush=#e2e8f0,
+        Border [Background=@Surface, BorderBrush=@OutlineVariant,
                 BorderThickness=(1)]{
 
             DockPanel{
                 // Header strip
                 Border[DockPanel.Dock=Top,
-                       Background=#1976d2, Padding=(16,12,16,12)]{
+                       Background=@Primary, Padding=(16,12,16,12)]{
                     TextBlock[Text="SpinEdit demo — value, range, precision, read-only",
                               FontSize=15, FontWeight=Bold,
-                              Foreground=#ffffff]
+                              Foreground=@Surface]
                 }
 
                 // Four columns: each a labelled SpinEdit + a hint line.
@@ -42,7 +42,7 @@ ResourceDictionary {
                                   Margin=(0,0,0,6)]
                         SpinEdit [Width=140, Height=32, Value=10]
                         TextBlock[Text="Default — ±1 per ▴/▾, ±10 per Page.",
-                                  FontSize=11, Foreground=#6b7280,
+                                  FontSize=11, Foreground=@OnSurfaceVariant,
                                   Margin=(0,8,0,0)]
                     }
 
@@ -56,7 +56,7 @@ ResourceDictionary {
                                   DecimalPlaces=2, SmallChange=0.5,
                                   LargeChange=10]
                         TextBlock[Text="Half-step increments; clamps at edges.",
-                                  FontSize=11, Foreground=#6b7280,
+                                  FontSize=11, Foreground=@OnSurfaceVariant,
                                   Margin=(0,8,0,0)]
                     }
 
@@ -69,7 +69,7 @@ ResourceDictionary {
                                   Value=7, Minimum=0, Maximum=11,
                                   SmallChange=1, LargeChange=2]
                         TextBlock[Text="PageUp / PageDown step by 2.",
-                                  FontSize=11, Foreground=#6b7280,
+                                  FontSize=11, Foreground=@OnSurfaceVariant,
                                   Margin=(0,8,0,0)]
                     }
 
@@ -81,7 +81,7 @@ ResourceDictionary {
                         SpinEdit [Width=140, Height=32,
                                   Value=42, IsReadOnly=true]
                         TextBlock[Text="Buttons + keys are inert; display only.",
-                                  FontSize=11, Foreground=#6b7280,
+                                  FontSize=11, Foreground=@OnSurfaceVariant,
                                   Margin=(0,8,0,0)]
                     }
                 }

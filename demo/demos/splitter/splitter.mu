@@ -17,19 +17,19 @@ import SplitterVM from "./splitter-vm.mjs"
 ResourceDictionary {
 
     DataTemplate x:key="SplitterTemplate" [DataType=SplitterVM] {
-        Border [Background=#ffffff, BorderBrush=#e2e8f0, BorderThickness=(1)] {
+        Border [Background=@Surface, BorderBrush=@OutlineVariant, BorderThickness=(1)] {
 
             DockPanel {
 
                 // Header strip.
                 Border [DockPanel.Dock=Top,
-                        Background=#1976d2, Padding=(16,12,16,12)] {
+                        Background=@Primary, Padding=(16,12,16,12)] {
                     StackPanel [Orientation=Vertical] {
                         TextBlock [Text="Splitter demo — standalone draggable bar",
                                    FontSize=15, FontWeight=Bold,
-                                   Foreground=#ffffff]
+                                   Foreground=@Surface]
                         TextBlock [Text="Drag the gray bars to resize. ArrowLeft / ArrowRight (or Up / Down) nudge by 10px when focused.",
-                                   FontSize=11, Foreground=#cbd5e1,
+                                   FontSize=11, Foreground=@Outline,
                                    Margin=(0,4,0,0)]
                     }
                 }
@@ -40,14 +40,14 @@ ResourceDictionary {
                     TextBlock [Text="Vertical Splitter — horizontal StackPanel sibling resize",
                                FontSize=12, FontWeight=Bold,
                                Margin=(0,8,0,8)]
-                    Border [Height=140, BorderBrush=#cbd5e1, BorderThickness=(1)] {
+                    Border [Height=140, BorderBrush=@Outline, BorderThickness=(1)] {
                         StackPanel [Orientation=Horizontal] {
                             Border [Width=200, Height=138, Background=#dbeafe] {
                                 TextBlock [Text="Width=200",
                                            FontSize=14, FontWeight=Bold,
                                            HorizontalAlignment=Center,
                                            VerticalAlignment=Center,
-                                           Foreground=#1e3a8a]
+                                           Foreground=@PrimaryContainer]
                             }
                             Splitter [Width=8, Height=138]
                             Border [Width=300, Height=138, Background=#e0f2fe] {
@@ -65,7 +65,7 @@ ResourceDictionary {
                     TextBlock [Text="Horizontal Splitter — DockPanel top-sibling resize",
                                FontSize=12, FontWeight=Bold,
                                Margin=(0,24,0,8)]
-                    Border [Height=260, BorderBrush=#cbd5e1, BorderThickness=(1)] {
+                    Border [Height=260, BorderBrush=@Outline, BorderThickness=(1)] {
                         DockPanel {
                             Border [DockPanel.Dock=Top, Height=80, Background=#dcfce7] {
                                 TextBlock [Text="Height=80",

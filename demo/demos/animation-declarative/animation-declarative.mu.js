@@ -1,15 +1,15 @@
 import { AnimationDeclarativeVM } from "./animation-declarative-vm.mjs";
 import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@visualisation-sub/mural/Basic";
 import { Button } from "@visualisation-sub/mural/framework/button.js";
-import { BeginStoryboardAction, Color, DoubleAnimation, EventTrigger, ResourceDictionary, Storyboard, Style, Thickness } from "@visualisation-sub/mural/runtime";
-import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
+import { BeginStoryboardAction, DoubleAnimation, DynamicResource, EventTrigger, ResourceDictionary, Storyboard, Style, Thickness } from "@visualisation-sub/mural/runtime";
+import { FontWeight } from "@visualisation-sub/mural/visual-engine";
 
 export function create() {
     const _rd0 = new ResourceDictionary();
     const _tmpl1 = new DataTemplate((_data) => {
         const _border2 = new Border();
-        _border2._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#ffffff')));
-        _border2._set_property_value_by_name("BorderBrush", new SolidColorBrush(Color.FromHex('#e2e8f0')));
+        _border2._set_property_value_by_name("Background", DynamicResource(_border2, "Surface"));
+        _border2._set_property_value_by_name("BorderBrush", DynamicResource(_border2, "OutlineVariant"));
         _border2._set_property_value_by_name("BorderThickness", new Thickness(1));
         const _rd3 = _border2.Resources;
         const _act5 = new BeginStoryboardAction((_target) => {
@@ -23,13 +23,13 @@ export function create() {
         const _dockPanel8 = new DockPanel();
         const _border9 = new Border();
         _border9._set_property_value_by_name(DockPanel, "Dock", Dock.Top);
-        _border9._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#1976d2')));
+        _border9._set_property_value_by_name("Background", DynamicResource(_border9, "Primary"));
         _border9._set_property_value_by_name("Padding", new Thickness(16, 12, 16, 12));
         const _textBlock10 = new TextBlock();
         _textBlock10._set_property_value_by_name("Text", "Declarative animation — on Click { BeginStoryboard { ... } }");
         _textBlock10._set_property_value_by_name("FontSize", 15);
         _textBlock10._set_property_value_by_name("FontWeight", FontWeight.Bold);
-        _textBlock10._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#ffffff')));
+        _textBlock10._set_property_value_by_name("Foreground", DynamicResource(_textBlock10, "Surface"));
         _border9.SetChild(_textBlock10);
         _dockPanel8.AddChild(_border9);
         const _stackPanel11 = new StackPanel();
@@ -38,7 +38,7 @@ export function create() {
         const _textBlock12 = new TextBlock();
         _textBlock12._set_property_value_by_name("Text", "Click any Button. The style's EventTrigger animates the Button's own Width from 80 to 240 over 400 ms — no host-side handler wired.");
         _textBlock12._set_property_value_by_name("FontSize", 12);
-        _textBlock12._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#6b7280')));
+        _textBlock12._set_property_value_by_name("Foreground", DynamicResource(_textBlock12, "OnSurfaceVariant"));
         _textBlock12._set_property_value_by_name("Margin", new Thickness(0, 0, 0, 16));
         _stackPanel11.AddChild(_textBlock12);
         const _stackPanel13 = new StackPanel();
@@ -68,7 +68,7 @@ export function create() {
         const _textBlock20 = new TextBlock();
         _textBlock20._set_property_value_by_name("Text", "Each Button carries its own animation instance — clicking them simultaneously plays independent storyboards (each baseline-captures From=80 at fire time).");
         _textBlock20._set_property_value_by_name("FontSize", 11);
-        _textBlock20._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#6b7280')));
+        _textBlock20._set_property_value_by_name("Foreground", DynamicResource(_textBlock20, "OnSurfaceVariant"));
         _textBlock20._set_property_value_by_name("Margin", new Thickness(0, 16, 0, 0));
         _stackPanel11.AddChild(_textBlock20);
         _dockPanel8.AddChild(_stackPanel11);

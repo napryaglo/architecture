@@ -10,7 +10,7 @@ import BouncingBallVM from "./bouncing-ball-vm.mjs"
 ResourceDictionary {
 
     DataTemplate x:key="BouncingBallTemplate" [DataType=BouncingBallVM] {
-        Border x:root [Background=#0f172a,
+        Border x:root [Background=@OnSurface,
                        BorderBrush=#334155,
                        BorderThickness=(1),
                        Width=640, Height=360]{

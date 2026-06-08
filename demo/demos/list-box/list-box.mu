@@ -15,7 +15,7 @@ ResourceDictionary {
         // x:root marks this Border as the NameScope owner so x:name
         // attributes inside register against its scope — VM's
         // OnViewMounted then resolves them via FindName.
-        Border x:root [Background=#ffffff, BorderBrush=#e2e8f0,
+        Border x:root [Background=@Surface, BorderBrush=@OutlineVariant,
                        BorderThickness=(1)]{
 
             // DockPanel — a header strip on top, a horizontal split
@@ -24,10 +24,10 @@ ResourceDictionary {
             DockPanel{
                 // Header strip
                 Border[DockPanel.Dock=Top,
-                       Background=#1976d2, Padding=(16,12,16,12)]{
+                       Background=@Primary, Padding=(16,12,16,12)]{
                     TextBlock[Text="ListBox demo — declarative vs. Items",
                               FontSize=15, FontWeight=Bold,
-                              Foreground=#ffffff]
+                              Foreground=@Surface]
                 }
 
                 // Two-up split — declarative on the left, Items on the
@@ -67,7 +67,7 @@ ResourceDictionary {
                     }
 
                     // Divider
-                    Border[Width=1, Background=#e0e0e0, Margin=(0,12,0,12)]
+                    Border[Width=1, Background=@OutlineVariant, Margin=(0,12,0,12)]
 
                     // Middle: Items convenience path. The host walks the
                     // attached Items array (string values) and auto-
@@ -81,7 +81,7 @@ ResourceDictionary {
                     }
 
                     // Divider
-                    Border[Width=1, Background=#e0e0e0, Margin=(0,12,0,12)]
+                    Border[Width=1, Background=@OutlineVariant, Margin=(0,12,0,12)]
 
                     // Right: ItemsSource + CollectionView. VM wires
                     // CollectionView with Filter + Sort applied;
@@ -102,7 +102,7 @@ ResourceDictionary {
                         }
                         TextBlock x:name="statusLine"
                                   [Text="6 of 6 visible",
-                                   FontSize=10, Foreground=#1976d2,
+                                   FontSize=10, Foreground=@Primary,
                                    Margin=(0,0,0,4)]
                         ListBox x:name="bound"
                     }

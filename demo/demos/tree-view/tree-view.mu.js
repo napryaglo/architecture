@@ -1,27 +1,27 @@
 import { TreeViewVM } from "./tree-view-vm.mjs";
 import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@visualisation-sub/mural/Basic";
 import { TreeView, TreeViewItem } from "@visualisation-sub/mural/framework/list/tree-view.js";
-import { Color, NameScope, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
-import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
+import { DynamicResource, NameScope, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
+import { FontWeight } from "@visualisation-sub/mural/visual-engine";
 
 export function create() {
     const _rd0 = new ResourceDictionary();
     const _tmpl1 = new DataTemplate((_data) => {
         const _border2 = new Border();
         _border2.SetNameScope(new NameScope());
-        _border2._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#ffffff')));
-        _border2._set_property_value_by_name("BorderBrush", new SolidColorBrush(Color.FromHex('#e2e8f0')));
+        _border2._set_property_value_by_name("Background", DynamicResource(_border2, "Surface"));
+        _border2._set_property_value_by_name("BorderBrush", DynamicResource(_border2, "OutlineVariant"));
         _border2._set_property_value_by_name("BorderThickness", new Thickness(1));
         const _dockPanel3 = new DockPanel();
         const _border4 = new Border();
         _border4._set_property_value_by_name(DockPanel, "Dock", Dock.Top);
-        _border4._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#1976d2')));
+        _border4._set_property_value_by_name("Background", DynamicResource(_border4, "Primary"));
         _border4._set_property_value_by_name("Padding", new Thickness(16, 12, 16, 12));
         const _textBlock5 = new TextBlock();
         _textBlock5._set_property_value_by_name("Text", "TreeView — composed markup vs. HierarchicalDataTemplate");
         _textBlock5._set_property_value_by_name("FontSize", 15);
         _textBlock5._set_property_value_by_name("FontWeight", FontWeight.Bold);
-        _textBlock5._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#ffffff')));
+        _textBlock5._set_property_value_by_name("Foreground", DynamicResource(_textBlock5, "Surface"));
         _border4.SetChild(_textBlock5);
         _dockPanel3.AddChild(_border4);
         const _stackPanel6 = new StackPanel();
@@ -34,7 +34,7 @@ export function create() {
         _textBlock8._set_property_value_by_name("Text", "Composed markup");
         _textBlock8._set_property_value_by_name("FontSize", 12);
         _textBlock8._set_property_value_by_name("FontWeight", FontWeight.Bold);
-        _textBlock8._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#6b7280')));
+        _textBlock8._set_property_value_by_name("Foreground", DynamicResource(_textBlock8, "OnSurfaceVariant"));
         _textBlock8._set_property_value_by_name("Margin", new Thickness(0, 0, 0, 8));
         _stackPanel7.AddChild(_textBlock8);
         const _treeView9 = new TreeView();
@@ -97,7 +97,7 @@ export function create() {
         _stackPanel6.AddChild(_stackPanel7);
         const _border27 = new Border();
         _border27._set_property_value_by_name("Width", 1);
-        _border27._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#e0e0e0')));
+        _border27._set_property_value_by_name("Background", DynamicResource(_border27, "OutlineVariant"));
         _border27._set_property_value_by_name("Margin", new Thickness(0, 12, 0, 12));
         _stackPanel6.AddChild(_border27);
         const _stackPanel28 = new StackPanel();
@@ -108,7 +108,7 @@ export function create() {
         _textBlock29._set_property_value_by_name("Text", "HierarchicalDataTemplate");
         _textBlock29._set_property_value_by_name("FontSize", 12);
         _textBlock29._set_property_value_by_name("FontWeight", FontWeight.Bold);
-        _textBlock29._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#6b7280')));
+        _textBlock29._set_property_value_by_name("Foreground", DynamicResource(_textBlock29, "OnSurfaceVariant"));
         _textBlock29._set_property_value_by_name("Margin", new Thickness(0, 0, 0, 8));
         _stackPanel28.AddChild(_textBlock29);
         const _treeView30 = new TreeView();

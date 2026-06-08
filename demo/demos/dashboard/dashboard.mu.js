@@ -1,6 +1,6 @@
 import { DashboardVM } from "./dashboard-vm.mjs";
 import { Border, Canvas, DataTemplate, TextBlock, TextWrapping } from "@visualisation-sub/mural/Basic";
-import { Color, PropertyTrigger, ResourceDictionary, Setter, Style, Thickness } from "@visualisation-sub/mural/runtime";
+import { Color, DynamicResource, PropertyTrigger, ResourceDictionary, Setter, SetterFactory, Style, Thickness } from "@visualisation-sub/mural/runtime";
 import { SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
 
 export function create() {
@@ -35,16 +35,16 @@ export function create() {
     const _trigger27 = new PropertyTrigger(Border, "IsPressed", true, _sArr26);
     const _style28 = new Style(Border, [_setter15, _setter16, _setter17, _setter18, _setter19], undefined, [_trigger23, _trigger27], []);
     _rd0.Set("DashboardDangerCard", _style28);
-    const _setter29 = new Setter(Border, "Background", new SolidColorBrush(Color.FromHex('#ffffff')));
-    const _setter30 = new Setter(Border, "BorderBrush", new SolidColorBrush(Color.FromHex('#d1d5db')));
+    const _setter29 = new Setter(Border, "Background", new SetterFactory((_t) => DynamicResource(_t, "Surface")));
+    const _setter30 = new Setter(Border, "BorderBrush", new SetterFactory((_t) => DynamicResource(_t, "OutlineVariant")));
     const _setter31 = new Setter(Border, "BorderThickness", new Thickness(1));
     const _setter32 = new Setter(Border, "CornerRadius", new Thickness(6));
     const _setter33 = new Setter(Border, "Padding", new Thickness(20));
-    const _setter34 = new Setter(Border, "Background", new SolidColorBrush(Color.FromHex('#f5f5f5')));
+    const _setter34 = new Setter(Border, "Background", new SetterFactory((_t) => DynamicResource(_t, "SurfaceContainerHigh")));
     const _setter35 = new Setter(Border, "BorderThickness", new Thickness(2));
     const _sArr36 = [_setter34, _setter35];
     const _trigger37 = new PropertyTrigger(Border, "IsMouseOver", true, _sArr36);
-    const _setter38 = new Setter(Border, "Background", new SolidColorBrush(Color.FromHex('#e0e0e0')));
+    const _setter38 = new Setter(Border, "Background", new SetterFactory((_t) => DynamicResource(_t, "OutlineVariant")));
     const _setter39 = new Setter(Border, "BorderThickness", new Thickness(3));
     const _sArr40 = [_setter38, _setter39];
     const _trigger41 = new PropertyTrigger(Border, "IsPressed", true, _sArr40);
@@ -61,7 +61,7 @@ export function create() {
         const _textBlock46 = new TextBlock();
         _textBlock46._set_property_value_by_name("Text", "Hello mural");
         _textBlock46._set_property_value_by_name("FontSize", 20);
-        _textBlock46._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#ffffff')));
+        _textBlock46._set_property_value_by_name("Foreground", DynamicResource(_textBlock46, "Surface"));
         _border45.SetChild(_textBlock46);
         _canvas44.AddChild(_border45);
         const _border47 = new Border();
@@ -73,7 +73,7 @@ export function create() {
         const _textBlock48 = new TextBlock();
         _textBlock48._set_property_value_by_name("Text", "Danger zone");
         _textBlock48._set_property_value_by_name("FontSize", 20);
-        _textBlock48._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#ffffff')));
+        _textBlock48._set_property_value_by_name("Foreground", DynamicResource(_textBlock48, "Surface"));
         _border47.SetChild(_textBlock48);
         _canvas44.AddChild(_border47);
         const _border49 = new Border();
@@ -86,7 +86,7 @@ export function create() {
         _textBlock50._set_property_value_by_name("Text", "Hover over the cards above to see Style triggers fire on IsMouseOver. Press and hold to see the IsPressed trigger lock in.");
         _textBlock50._set_property_value_by_name("FontSize", 14);
         _textBlock50._set_property_value_by_name("TextWrapping", TextWrapping.Wrap);
-        _textBlock50._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#1f2937')));
+        _textBlock50._set_property_value_by_name("Foreground", DynamicResource(_textBlock50, "OnSurface"));
         _border49.SetChild(_textBlock50);
         _canvas44.AddChild(_border49);
         return _canvas44;

@@ -45,13 +45,13 @@ ResourceDictionary {
     }
 
     Style x:key="DashboardPaperCard" [TargetType=Border]{
-        Background      = #ffffff;
-        BorderBrush     = #d1d5db;
+        Background      = @Surface;
+        BorderBrush     = @OutlineVariant;
         BorderThickness = (1);
         CornerRadius    = (6);
         Padding         = (20);
-        when( IsMouseOver ){ Background = #f5f5f5; BorderThickness = (2); }
-        when( IsPressed   ){ Background = #e0e0e0; BorderThickness = (3); }
+        when( IsMouseOver ){ Background = @SurfaceContainerHigh; BorderThickness = (2); }
+        when( IsPressed   ){ Background = @OutlineVariant; BorderThickness = (3); }
     }
 
     DataTemplate x:key="DashboardTemplate" [DataType=DashboardVM] {
@@ -63,7 +63,7 @@ ResourceDictionary {
                    Width=200, Height=80]{
                 TextBlock[Text="Hello mural",
                           FontSize=20,
-                          Foreground=#ffffff]
+                          Foreground=@Surface]
             }
 
             // Top-right card — danger palette, same hover / press shape.
@@ -72,7 +72,7 @@ ResourceDictionary {
                    Width=200, Height=80]{
                 TextBlock[Text="Danger zone",
                           FontSize=20,
-                          Foreground=#ffffff]
+                          Foreground=@Surface]
             }
 
             // Wide bottom panel — paper palette, subtler tint shift on
@@ -83,7 +83,7 @@ ResourceDictionary {
                 TextBlock[Text="Hover over the cards above to see Style triggers fire on IsMouseOver. Press and hold to see the IsPressed trigger lock in.",
                           FontSize=14,
                           TextWrapping=Wrap,
-                          Foreground=#1f2937]
+                          Foreground=@OnSurface]
             }
         }
     }

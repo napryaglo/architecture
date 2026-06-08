@@ -22,14 +22,14 @@ import DrawerVM from "./drawer-vm.mjs"
 
 ResourceDictionary {
     DataTemplate x:key="DrawerTemplate" [DataType=DrawerVM] {
-        Border [Background=#ffffff, BorderBrush=#e2e8f0,
+        Border [Background=@Surface, BorderBrush=@OutlineVariant,
                 BorderThickness=(1)]{
 
             DockPanel {
 
                 // ── Header bar (Top) ───────────────────────────
                 Border[DockPanel.Dock=Top, Height=56,
-                       Background=#1976d2,
+                       Background=@Primary,
                        BorderThickness=(0,0,0,0)]{
                     StackPanel[Orientation=Horizontal]{
                         Button[Width=44, Command=$ToggleNav]{
@@ -37,7 +37,7 @@ ResourceDictionary {
                         }
                         TextBlock[Text="Drawer demo",
                                   FontSize=18, FontWeight=Bold,
-                                  Foreground=#ffffff,
+                                  Foreground=@Surface,
                                   Margin=(16,16,0,0)]
                     }
                 }
@@ -47,9 +47,9 @@ ResourceDictionary {
                        Variant=Persistent, Anchor=Left,
                        DrawerSize=200, RailSize=56,
                        IsOpen=$NavOpen]{
-                    Border[Background=#f8fafc,
+                    Border[Background=@SurfaceContainerLow,
                            BorderThickness=(0,0,1,0),
-                           BorderBrush=#e2e8f0]{
+                           BorderBrush=@OutlineVariant]{
                         StackPanel{
                             TextBlock[Text="🏠",
                                       FontSize=18,
@@ -70,19 +70,19 @@ ResourceDictionary {
                 // body as the DockPanel's LastChildFill slot.
                 Drawer[Variant=Temporary, Anchor=Right,
                        DrawerSize=320, IsOpen=$OptionsOpen]{
-                    Border[Background=#ffffff,
+                    Border[Background=@Surface,
                            BorderThickness=(1,0,0,0),
-                           BorderBrush=#e2e8f0,
+                           BorderBrush=@OutlineVariant,
                            Padding=(24)]{
                         StackPanel{
                             TextBlock[Text="Options",
                                       FontSize=20, FontWeight=Bold,
-                                      Foreground=#1f2937]
+                                      Foreground=@OnSurface]
                             TextBlock[Text="Drag the slider, flip the
                                             toggles, pick a colour.
                                             Click outside to dismiss.",
                                       TextWrapping=Wrap,
-                                      FontSize=12, Foreground=#6b7280,
+                                      FontSize=12, Foreground=@OnSurfaceVariant,
                                       Margin=(0,8,0,0)]
                             Button[Command=$CloseOptions,
                                    Margin=(0,24,0,0), Width=120]{
@@ -93,14 +93,14 @@ ResourceDictionary {
                 }
 
                 // ── Main body (fills via LastChildFill) ────────
-                Border[Background=#ffffff, Padding=(24)]{
+                Border[Background=@Surface, Padding=(24)]{
                     StackPanel{
                         TextBlock[Text="The left drawer is Persistent —
                                         the rail is always visible (56
                                         DIPs); the header button toggles
                                         the pane open / closed (200 DIPs).",
                                   TextWrapping=Wrap,
-                                  FontSize=13, Foreground=#1f2937]
+                                  FontSize=13, Foreground=@OnSurface]
 
                         Button[Command=$OpenOptions, Width=180,
                                Margin=(0,16,0,0)]{
@@ -113,7 +113,7 @@ ResourceDictionary {
                                         the scrim or the Close button to
                                         dismiss.",
                                   TextWrapping=Wrap,
-                                  FontSize=12, Foreground=#6b7280,
+                                  FontSize=12, Foreground=@OnSurfaceVariant,
                                   Margin=(0,16,0,0)]
                     }
                 }

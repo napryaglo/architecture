@@ -1,19 +1,19 @@
 import { SplitterVM } from "./splitter-vm.mjs";
 import { Border, DataTemplate, Dock, DockPanel, Orientation, Splitter, StackPanel, TextBlock, TextWrapping } from "@visualisation-sub/mural/Basic";
-import { Color, HorizontalAlignment, ResourceDictionary, Thickness, VerticalAlignment } from "@visualisation-sub/mural/runtime";
+import { Color, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness, VerticalAlignment } from "@visualisation-sub/mural/runtime";
 import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
 
 export function create() {
     const _rd0 = new ResourceDictionary();
     const _tmpl1 = new DataTemplate((_data) => {
         const _border2 = new Border();
-        _border2._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#ffffff')));
-        _border2._set_property_value_by_name("BorderBrush", new SolidColorBrush(Color.FromHex('#e2e8f0')));
+        _border2._set_property_value_by_name("Background", DynamicResource(_border2, "Surface"));
+        _border2._set_property_value_by_name("BorderBrush", DynamicResource(_border2, "OutlineVariant"));
         _border2._set_property_value_by_name("BorderThickness", new Thickness(1));
         const _dockPanel3 = new DockPanel();
         const _border4 = new Border();
         _border4._set_property_value_by_name(DockPanel, "Dock", Dock.Top);
-        _border4._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#1976d2')));
+        _border4._set_property_value_by_name("Background", DynamicResource(_border4, "Primary"));
         _border4._set_property_value_by_name("Padding", new Thickness(16, 12, 16, 12));
         const _stackPanel5 = new StackPanel();
         _stackPanel5._set_property_value_by_name("Orientation", Orientation.Vertical);
@@ -21,12 +21,12 @@ export function create() {
         _textBlock6._set_property_value_by_name("Text", "Splitter demo — standalone draggable bar");
         _textBlock6._set_property_value_by_name("FontSize", 15);
         _textBlock6._set_property_value_by_name("FontWeight", FontWeight.Bold);
-        _textBlock6._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#ffffff')));
+        _textBlock6._set_property_value_by_name("Foreground", DynamicResource(_textBlock6, "Surface"));
         _stackPanel5.AddChild(_textBlock6);
         const _textBlock7 = new TextBlock();
         _textBlock7._set_property_value_by_name("Text", "Drag the gray bars to resize. ArrowLeft / ArrowRight (or Up / Down) nudge by 10px when focused.");
         _textBlock7._set_property_value_by_name("FontSize", 11);
-        _textBlock7._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#cbd5e1')));
+        _textBlock7._set_property_value_by_name("Foreground", DynamicResource(_textBlock7, "Outline"));
         _textBlock7._set_property_value_by_name("Margin", new Thickness(0, 4, 0, 0));
         _stackPanel5.AddChild(_textBlock7);
         _border4.SetChild(_stackPanel5);
@@ -42,7 +42,7 @@ export function create() {
         _stackPanel8.AddChild(_textBlock9);
         const _border10 = new Border();
         _border10._set_property_value_by_name("Height", 140);
-        _border10._set_property_value_by_name("BorderBrush", new SolidColorBrush(Color.FromHex('#cbd5e1')));
+        _border10._set_property_value_by_name("BorderBrush", DynamicResource(_border10, "Outline"));
         _border10._set_property_value_by_name("BorderThickness", new Thickness(1));
         const _stackPanel11 = new StackPanel();
         _stackPanel11._set_property_value_by_name("Orientation", Orientation.Horizontal);
@@ -56,7 +56,7 @@ export function create() {
         _textBlock13._set_property_value_by_name("FontWeight", FontWeight.Bold);
         _textBlock13._set_property_value_by_name("HorizontalAlignment", HorizontalAlignment.Center);
         _textBlock13._set_property_value_by_name("VerticalAlignment", VerticalAlignment.Center);
-        _textBlock13._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#1e3a8a')));
+        _textBlock13._set_property_value_by_name("Foreground", DynamicResource(_textBlock13, "PrimaryContainer"));
         _border12.SetChild(_textBlock13);
         _stackPanel11.AddChild(_border12);
         const _splitter14 = new Splitter();
@@ -86,7 +86,7 @@ export function create() {
         _stackPanel8.AddChild(_textBlock17);
         const _border18 = new Border();
         _border18._set_property_value_by_name("Height", 260);
-        _border18._set_property_value_by_name("BorderBrush", new SolidColorBrush(Color.FromHex('#cbd5e1')));
+        _border18._set_property_value_by_name("BorderBrush", DynamicResource(_border18, "Outline"));
         _border18._set_property_value_by_name("BorderThickness", new Thickness(1));
         const _dockPanel19 = new DockPanel();
         const _border20 = new Border();

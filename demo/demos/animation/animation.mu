@@ -22,15 +22,15 @@ ResourceDictionary {
     DataTemplate x:key="AnimationTemplate" [DataType=AnimationVM] {
         // x:root owns the NameScope so the inner x:names register and
         // the VM's OnViewMounted FindName resolves them.
-        Border x:root [Background=#ffffff, BorderBrush=#e2e8f0,
+        Border x:root [Background=@Surface, BorderBrush=@OutlineVariant,
                        BorderThickness=(1)]{
             DockPanel{
                 // Header
                 Border[DockPanel.Dock=Top,
-                       Background=#1976d2, Padding=(16,12,16,12)]{
+                       Background=@Primary, Padding=(16,12,16,12)]{
                     TextBlock[Text="Animation — From/To, AutoReverse + Repeat, keyframes",
                               FontSize=15, FontWeight=Bold,
-                              Foreground=#ffffff]
+                              Foreground=@Surface]
                 }
 
                 // Body
@@ -50,7 +50,7 @@ ResourceDictionary {
                                    CornerRadius=4, Margin=(20,4,0,0)]
                         }
                         TextBlock[Text="Click to reset and animate. Each click cancels any in-flight slide.",
-                                  FontSize=11, Foreground=#6b7280,
+                                  FontSize=11, Foreground=@OnSurfaceVariant,
                                   Margin=(0,8,0,0)]
                     }
 
@@ -64,11 +64,11 @@ ResourceDictionary {
                                 TextBlock[Text="Start"]
                             }
                             Border x:name="loopTarget"
-                                  [Background=#1976d2, Width=100, Height=24,
+                                  [Background=@Primary, Width=100, Height=24,
                                    CornerRadius=4, Margin=(20,4,0,0)]
                         }
                         TextBlock[Text="Click again to Stop — the animation slot releases and Width returns to 100.",
-                                  FontSize=11, Foreground=#6b7280,
+                                  FontSize=11, Foreground=@OnSurfaceVariant,
                                   Margin=(0,8,0,0)]
                     }
 
@@ -83,14 +83,14 @@ ResourceDictionary {
                             }
                             Border x:name="pulseTarget"
                                   [Background=#4caf50,
-                                   BorderBrush=#1976d2, BorderThickness=(1),
+                                   BorderBrush=@Primary, BorderThickness=(1),
                                    CornerRadius=4, Margin=(20,4,0,0),
                                    Padding=(8)]{
                                 TextBlock[Text="Padding ripple", FontSize=11]
                             }
                         }
                         TextBlock[Text="Padding cycles (8) → (24, 8, 24, 8) → (8, 24, 8, 24) → (8).",
-                                  FontSize=11, Foreground=#6b7280,
+                                  FontSize=11, Foreground=@OnSurfaceVariant,
                                   Margin=(0,8,0,0)]
                     }
 
@@ -104,11 +104,11 @@ ResourceDictionary {
                                 TextBlock[Text="Play"]
                             }
                             Border x:name="colorTarget"
-                                  [Background=#1976d2, Width=140, Height=24,
+                                  [Background=@Primary, Width=140, Height=24,
                                    CornerRadius=4, Margin=(20,4,0,0)]
                         }
                         TextBlock[Text="Background brush fades blue → green → blue using CSS-style ease-in-out.",
-                                  FontSize=11, Foreground=#6b7280,
+                                  FontSize=11, Foreground=@OnSurfaceVariant,
                                   Margin=(0,8,0,0)]
                     }
 
@@ -123,7 +123,7 @@ ResourceDictionary {
                             }
                             StackPanel[Orientation=Vertical, Margin=(20,0,0,0)]{
                                 Border x:name="bezierA"
-                                      [Background=#1976d2, Width=100, Height=14,
+                                      [Background=@Primary, Width=100, Height=14,
                                        CornerRadius=2, Margin=(0,2,0,2)]
                                 Border x:name="bezierB"
                                       [Background=#4caf50, Width=100, Height=14,
@@ -131,7 +131,7 @@ ResourceDictionary {
                             }
                         }
                         TextBlock[Text="Top: linear. Bottom: cubicBezier(0.68, -0.55, 0.27, 1.55) — anticipate + overshoot.",
-                                  FontSize=11, Foreground=#6b7280,
+                                  FontSize=11, Foreground=@OnSurfaceVariant,
                                   Margin=(0,8,0,0)]
                     }
                 }

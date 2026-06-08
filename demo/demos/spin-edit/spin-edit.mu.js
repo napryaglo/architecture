@@ -1,25 +1,25 @@
 import { SpinEditVM } from "./spin-edit-vm.mjs";
 import { Border, DataTemplate, Dock, DockPanel, Orientation, SpinEdit, StackPanel, TextBlock } from "@visualisation-sub/mural/Basic";
-import { Color, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
-import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
+import { DynamicResource, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
+import { FontWeight } from "@visualisation-sub/mural/visual-engine";
 
 export function create() {
     const _rd0 = new ResourceDictionary();
     const _tmpl1 = new DataTemplate((_data) => {
         const _border2 = new Border();
-        _border2._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#ffffff')));
-        _border2._set_property_value_by_name("BorderBrush", new SolidColorBrush(Color.FromHex('#e2e8f0')));
+        _border2._set_property_value_by_name("Background", DynamicResource(_border2, "Surface"));
+        _border2._set_property_value_by_name("BorderBrush", DynamicResource(_border2, "OutlineVariant"));
         _border2._set_property_value_by_name("BorderThickness", new Thickness(1));
         const _dockPanel3 = new DockPanel();
         const _border4 = new Border();
         _border4._set_property_value_by_name(DockPanel, "Dock", Dock.Top);
-        _border4._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#1976d2')));
+        _border4._set_property_value_by_name("Background", DynamicResource(_border4, "Primary"));
         _border4._set_property_value_by_name("Padding", new Thickness(16, 12, 16, 12));
         const _textBlock5 = new TextBlock();
         _textBlock5._set_property_value_by_name("Text", "SpinEdit demo — value, range, precision, read-only");
         _textBlock5._set_property_value_by_name("FontSize", 15);
         _textBlock5._set_property_value_by_name("FontWeight", FontWeight.Bold);
-        _textBlock5._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#ffffff')));
+        _textBlock5._set_property_value_by_name("Foreground", DynamicResource(_textBlock5, "Surface"));
         _border4.SetChild(_textBlock5);
         _dockPanel3.AddChild(_border4);
         const _stackPanel6 = new StackPanel();
@@ -42,7 +42,7 @@ export function create() {
         const _textBlock10 = new TextBlock();
         _textBlock10._set_property_value_by_name("Text", "Default — ±1 per ▴/▾, ±10 per Page.");
         _textBlock10._set_property_value_by_name("FontSize", 11);
-        _textBlock10._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#6b7280')));
+        _textBlock10._set_property_value_by_name("Foreground", DynamicResource(_textBlock10, "OnSurfaceVariant"));
         _textBlock10._set_property_value_by_name("Margin", new Thickness(0, 8, 0, 0));
         _stackPanel7.AddChild(_textBlock10);
         _stackPanel6.AddChild(_stackPanel7);
@@ -69,7 +69,7 @@ export function create() {
         const _textBlock14 = new TextBlock();
         _textBlock14._set_property_value_by_name("Text", "Half-step increments; clamps at edges.");
         _textBlock14._set_property_value_by_name("FontSize", 11);
-        _textBlock14._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#6b7280')));
+        _textBlock14._set_property_value_by_name("Foreground", DynamicResource(_textBlock14, "OnSurfaceVariant"));
         _textBlock14._set_property_value_by_name("Margin", new Thickness(0, 8, 0, 0));
         _stackPanel11.AddChild(_textBlock14);
         _stackPanel6.AddChild(_stackPanel11);
@@ -95,7 +95,7 @@ export function create() {
         const _textBlock18 = new TextBlock();
         _textBlock18._set_property_value_by_name("Text", "PageUp / PageDown step by 2.");
         _textBlock18._set_property_value_by_name("FontSize", 11);
-        _textBlock18._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#6b7280')));
+        _textBlock18._set_property_value_by_name("Foreground", DynamicResource(_textBlock18, "OnSurfaceVariant"));
         _textBlock18._set_property_value_by_name("Margin", new Thickness(0, 8, 0, 0));
         _stackPanel15.AddChild(_textBlock18);
         _stackPanel6.AddChild(_stackPanel15);
@@ -118,7 +118,7 @@ export function create() {
         const _textBlock22 = new TextBlock();
         _textBlock22._set_property_value_by_name("Text", "Buttons + keys are inert; display only.");
         _textBlock22._set_property_value_by_name("FontSize", 11);
-        _textBlock22._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#6b7280')));
+        _textBlock22._set_property_value_by_name("Foreground", DynamicResource(_textBlock22, "OnSurfaceVariant"));
         _textBlock22._set_property_value_by_name("Margin", new Thickness(0, 8, 0, 0));
         _stackPanel19.AddChild(_textBlock22);
         _stackPanel6.AddChild(_stackPanel19);

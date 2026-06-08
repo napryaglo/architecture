@@ -2,26 +2,26 @@ import { ToolBarVM } from "./tool-bar-vm.mjs";
 import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@visualisation-sub/mural/Basic";
 import { ToolBar, ToolBarButton, ToolBarSeparator } from "@visualisation-sub/mural/framework/surface.js";
 import { ToggleButton } from "@visualisation-sub/mural/framework/toggle-button.js";
-import { Color, DataContextBinding, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
-import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
+import { DataContextBinding, DynamicResource, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
+import { FontWeight } from "@visualisation-sub/mural/visual-engine";
 
 export function create() {
     const _rd0 = new ResourceDictionary();
     const _tmpl1 = new DataTemplate((_data) => {
         const _border2 = new Border();
-        _border2._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#ffffff')));
-        _border2._set_property_value_by_name("BorderBrush", new SolidColorBrush(Color.FromHex('#e2e8f0')));
+        _border2._set_property_value_by_name("Background", DynamicResource(_border2, "Surface"));
+        _border2._set_property_value_by_name("BorderBrush", DynamicResource(_border2, "OutlineVariant"));
         _border2._set_property_value_by_name("BorderThickness", new Thickness(1));
         const _dockPanel3 = new DockPanel();
         const _border4 = new Border();
         _border4._set_property_value_by_name(DockPanel, "Dock", Dock.Top);
-        _border4._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#1976d2')));
+        _border4._set_property_value_by_name("Background", DynamicResource(_border4, "Primary"));
         _border4._set_property_value_by_name("Padding", new Thickness(16, 12, 16, 12));
         const _textBlock5 = new TextBlock();
         _textBlock5._set_property_value_by_name("Text", "ToolBar — Button rows, separators, and command binding.");
         _textBlock5._set_property_value_by_name("FontSize", 15);
         _textBlock5._set_property_value_by_name("FontWeight", FontWeight.Bold);
-        _textBlock5._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#ffffff')));
+        _textBlock5._set_property_value_by_name("Foreground", DynamicResource(_textBlock5, "Surface"));
         _border4.SetChild(_textBlock5);
         _dockPanel3.AddChild(_border4);
         const _stackPanel6 = new StackPanel();
@@ -64,7 +64,7 @@ export function create() {
         const _textBlock18 = new TextBlock();
         _textBlock18._set_property_value_by_name("Text", DataContextBinding(_textBlock18, "Status"));
         _textBlock18._set_property_value_by_name("FontSize", 13);
-        _textBlock18._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#1f2937')));
+        _textBlock18._set_property_value_by_name("Foreground", DynamicResource(_textBlock18, "OnSurface"));
         _textBlock18._set_property_value_by_name("Margin", new Thickness(0, 16, 0, 4));
         _stackPanel6.AddChild(_textBlock18);
         const _stackPanel19 = new StackPanel();
@@ -73,7 +73,7 @@ export function create() {
         const _textBlock20 = new TextBlock();
         _textBlock20._set_property_value_by_name("Text", "Selection state:");
         _textBlock20._set_property_value_by_name("FontSize", 12);
-        _textBlock20._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#6b7280')));
+        _textBlock20._set_property_value_by_name("Foreground", DynamicResource(_textBlock20, "OnSurfaceVariant"));
         _textBlock20._set_property_value_by_name("Margin", new Thickness(0, 8, 8, 0));
         _stackPanel19.AddChild(_textBlock20);
         const _toggleButton21 = new ToggleButton();
@@ -86,7 +86,7 @@ export function create() {
         const _textBlock23 = new TextBlock();
         _textBlock23._set_property_value_by_name("Text", "  (Delete is selection-gated — toggle to ungate.)");
         _textBlock23._set_property_value_by_name("FontSize", 11);
-        _textBlock23._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#6b7280')));
+        _textBlock23._set_property_value_by_name("Foreground", DynamicResource(_textBlock23, "OnSurfaceVariant"));
         _textBlock23._set_property_value_by_name("Margin", new Thickness(8, 8, 0, 0));
         _stackPanel19.AddChild(_textBlock23);
         _stackPanel6.AddChild(_stackPanel19);

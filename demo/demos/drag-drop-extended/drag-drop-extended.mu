@@ -29,16 +29,16 @@ ResourceDictionary {
     }
 
     DataTemplate [DataType=RowVM] {
-        Border [Background=#ffffff, Padding=(12,6,12,6)] {
-            TextBlock [Text=$Label, FontSize=13, Foreground=#1f2937]
+        Border [Background=@Surface, Padding=(12,6,12,6)] {
+            TextBlock [Text=$Label, FontSize=13, Foreground=@OnSurface]
         }
     }
 
     DataTemplate [DataType=DroppedFileVM] {
         Border [Padding=(8,3,8,3)] {
             StackPanel [Orientation=Horizontal] {
-                TextBlock [Text=$Name, FontSize=12, Foreground=#0f172a]
-                TextBlock [Text=$Size, FontSize=11, Foreground=#6b7280,
+                TextBlock [Text=$Name, FontSize=12, Foreground=@OnSurface]
+                TextBlock [Text=$Size, FontSize=11, Foreground=@OnSurfaceVariant,
                            Margin=(8,1,0,0)]
             }
         }
@@ -50,7 +50,7 @@ ResourceDictionary {
     // after view materialization.
 
     DataTemplate [DataType=DragDropExtendedVM] {
-        Border x:root [Background=#ffffff, BorderBrush=#e2e8f0, BorderThickness=(1)] {
+        Border x:root [Background=@Surface, BorderBrush=@OutlineVariant, BorderThickness=(1)] {
             resources: {
                 // Per-row drag source — every ItemsControl-generated
                 // container becomes draggable, with the OnDragStart
@@ -65,14 +65,14 @@ ResourceDictionary {
 
             DockPanel {
                 // Header strip.
-                Border [DockPanel.Dock=Top, Background=#0f172a, Padding=(16,12,16,12)] {
+                Border [DockPanel.Dock=Top, Background=@OnSurface, Padding=(16,12,16,12)] {
                     StackPanel [Orientation=Vertical] {
                         TextBlock [Text="Drag & drop extended",
                                    FontSize=15, FontWeight=Bold,
-                                   Foreground=#f8fafc]
+                                   Foreground=@SurfaceContainerLow]
                         StackPanel [Orientation=Horizontal, Margin=(0,4,0,0)] {
                             TextBlock [Text="Last receiver effect:",
-                                       FontSize=11, Foreground=#cbd5e1]
+                                       FontSize=11, Foreground=@Outline]
                             TextBlock [Text=$LastEffect, FontSize=11,
                                        FontWeight=Bold,
                                        Foreground=#60a5fa,
@@ -84,7 +84,7 @@ ResourceDictionary {
                 }
 
                 TextBlock [DockPanel.Dock=Bottom, Margin=(20,4,20,16),
-                           FontSize=11, Foreground=#6b7280,
+                           FontSize=11, Foreground=@OnSurfaceVariant,
                            TextWrapping=Wrap,
                            Text="LEFT: drag any row to reorder — the blue insertion line previews the drop position (backlog 8.5). Drag toward the top / bottom edges to auto-scroll the ScrollViewer (8.4). Hold Shift mid-drag to cancel via OnContinueQuery (8.3). RIGHT: drop files, text, or URLs from your OS / other browser windows (8.1)."]
 
@@ -94,7 +94,7 @@ ResourceDictionary {
                     // ScrollViewer auto-scrolls when the cursor enters
                     // the AutoScrollGutter (24px default).
                     Border [Width=320, Height=280,
-                            BorderBrush=#e2e8f0, BorderThickness=(1),
+                            BorderBrush=@OutlineVariant, BorderThickness=(1),
                             Margin=(0,0,16,0)] {
                         ScrollViewer x:name="scroll"
                                      [AutoScrollGutter=32,
@@ -115,8 +115,8 @@ ResourceDictionary {
 
                     // RIGHT — OS drop zone + dropped-files log.
                     Border [Width=320, Height=280,
-                            BorderBrush=#cbd5e1, BorderThickness=(2),
-                            Background=#f1f5f9] {
+                            BorderBrush=@Outline, BorderThickness=(2),
+                            Background=@SurfaceContainerLow] {
                         DockPanel {
                             Border [DockPanel.Dock=Top,
                                     Background=#dbeafe,
@@ -124,10 +124,10 @@ ResourceDictionary {
                                 StackPanel [Orientation=Vertical] {
                                     TextBlock [Text="OS file drop zone",
                                                FontSize=13, FontWeight=Bold,
-                                               Foreground=#0f172a]
+                                               Foreground=@OnSurface]
                                     TextBlock [Text=$FileStatus,
                                                FontSize=11,
-                                               Foreground=#1e3a8a,
+                                               Foreground=@PrimaryContainer,
                                                Margin=(0,4,0,0),
                                                TextWrapping=Wrap]
                                 }

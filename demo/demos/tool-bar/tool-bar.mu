@@ -18,16 +18,16 @@ import ToolBarVM from "./tool-bar-vm.mjs"
 ResourceDictionary {
 
     DataTemplate x:key="ToolBarTemplate" [DataType=ToolBarVM] {
-        Border [Background=#ffffff, BorderBrush=#e2e8f0,
+        Border [Background=@Surface, BorderBrush=@OutlineVariant,
                 BorderThickness=(1)]{
 
             DockPanel{
                 // Header
                 Border[DockPanel.Dock=Top,
-                       Background=#1976d2, Padding=(16,12,16,12)]{
+                       Background=@Primary, Padding=(16,12,16,12)]{
                     TextBlock[Text="ToolBar — Button rows, separators, and command binding.",
                               FontSize=15, FontWeight=Bold,
-                              Foreground=#ffffff]
+                              Foreground=@Surface]
                 }
 
                 // Body
@@ -54,18 +54,18 @@ ResourceDictionary {
                     }
 
                     TextBlock[Text=$Status, FontSize=13,
-                              Foreground=#1f2937, Margin=(0,16,0,4)]
+                              Foreground=@OnSurface, Margin=(0,16,0,4)]
 
                     StackPanel[Orientation=Horizontal, Margin=(0,8,0,0)]{
                         TextBlock[Text="Selection state:",
-                                  FontSize=12, Foreground=#6b7280,
+                                  FontSize=12, Foreground=@OnSurfaceVariant,
                                   Margin=(0,8,8,0)]
                         ToggleButton[IsChecked=$HasSelection,
                                      Command=$ToggleSelectionCommand]{
                             TextBlock[Text="HasSelection"]
                         }
                         TextBlock[Text="  (Delete is selection-gated — toggle to ungate.)",
-                                  FontSize=11, Foreground=#6b7280,
+                                  FontSize=11, Foreground=@OnSurfaceVariant,
                                   Margin=(8,8,0,0)]
                     }
                 }

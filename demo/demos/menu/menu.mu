@@ -16,23 +16,23 @@ import MenuVM from "./menu-vm.mjs"
 ResourceDictionary {
 
     DataTemplate x:key="MenuTemplate" [DataType=MenuVM] {
-        Border [Background=#ffffff, BorderBrush=#e2e8f0,
+        Border [Background=@Surface, BorderBrush=@OutlineVariant,
                 BorderThickness=(1)]{
 
             DockPanel{
                 // Header
                 Border[DockPanel.Dock=Top,
-                       Background=#1976d2, Padding=(16,12,16,12)]{
+                       Background=@Primary, Padding=(16,12,16,12)]{
                     TextBlock[Text="MenuButton — hamburger fly-out with checkable items and gesture text.",
                               FontSize=15, FontWeight=Bold,
-                              Foreground=#ffffff]
+                              Foreground=@Surface]
                 }
 
                 // Body
                 StackPanel[Orientation=Vertical, Margin=(16,16,16,16)]{
 
                     TextBlock[Text="Click the button to open the menu:",
-                              FontSize=12, Foreground=#6b7280,
+                              FontSize=12, Foreground=@OnSurfaceVariant,
                               Margin=(0,0,0,8)]
 
                     MenuButton[Header="☰  File"]{
@@ -61,7 +61,7 @@ ResourceDictionary {
                     }
 
                     TextBlock[Text=$Status, FontSize=13,
-                              Foreground=#1f2937, Margin=(0,16,0,0)]
+                              Foreground=@OnSurface, Margin=(0,16,0,0)]
                 }
             }
         }

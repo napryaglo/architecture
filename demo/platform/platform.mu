@@ -29,11 +29,11 @@ import AdornerDecorator from "@visualisation-sub/mural/Basic"
 
 Application{
     resources: {
-        @paper      = #ffffff
-        @hairline   = #e2e8f0
-        @primary    = #1976d2
-        @primInk    = #ffffff
-        @navBg      = #f8fafc
+        // Colours come from the Material 3 palette (registered by the
+        // host bootstrap via SetTheme). References like @Surface /
+        // @Primary fall through to dynamic-resource bindings so a
+        // ToggleTheme() call repaints the whole platform shell —
+        // brand header bar included — without rebuilding anything.
 
         // ── Nav-tree templates ──────────────────────────────────────
         //
@@ -61,7 +61,7 @@ Application{
             IsExpanded = true;
         }
 
-        Border x:root [Background=@paper]{
+        Border x:root [Background=@Surface]{
             // AdornerDecorator scopes adornment to the whole platform
             // root — any control inside (TreeView nav rows, the page
             // body, the active demo's tree) can locate this layer via
@@ -75,15 +75,15 @@ Application{
                 // host height. Hairline on the inner edge separates it
                 // from the page body.
                 Border[DockPanel.Dock=Left, Width=260,
-                       Background=@navBg,
-                       BorderBrush=@hairline,
+                       Background=@SurfaceContainerLow,
+                       BorderBrush=@OutlineVariant,
                        BorderThickness=(0,0,1,0)]{
                     StackPanel{
                         // Brand header.
-                        Border[Background=@primary, Padding=(20,16,20,16)]{
+                        Border[Background=@Primary, Padding=(20,16,20,16)]{
                             TextBlock[Text="µ-mural demos",
                                       FontSize=14, FontWeight=Bold,
-                                      Foreground=@primInk]
+                                      Foreground=@OnPrimary]
                         }
                         // Fully declarative tree wiring — bindings
                         // resolve through DataContext (PlatformVM)

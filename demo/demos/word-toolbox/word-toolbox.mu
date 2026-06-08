@@ -47,11 +47,11 @@ ResourceDictionary {
     // — the tile itself fills its 100×100 cell, so the ListBoxItem's
     // selection chrome (PART_Border) aligns with the painted border.
     DataTemplate [DataType=WordVM] {
-        Border [BorderBrush=#cbd5e1, BorderThickness=(1)]{
+        Border [BorderBrush=@Outline, BorderThickness=(1)]{
             TextBlock [Text=$Word, FontSize=14,
                        HorizontalAlignment=Center,
                        VerticalAlignment=Center,
-                       Foreground=#0f172a]
+                       Foreground=@OnSurface]
         }
     }
 
@@ -100,7 +100,7 @@ ResourceDictionary {
     }
 
     DataTemplate [DataType=WordToolboxVM] {
-        Border x:root [Background=#f8fafc, BorderBrush=#e2e8f0, BorderThickness=(1)] {
+        Border x:root [Background=@SurfaceContainerLow, BorderBrush=@OutlineVariant, BorderThickness=(1)] {
             resources: {
                 // Left-pane drag source. The toolbox is an ItemsControl
                 // whose generated containers are ContentPresenters. An
@@ -117,18 +117,18 @@ ResourceDictionary {
 
             DockPanel {
                 // Header strip.
-                Border [DockPanel.Dock=Top, Background=#0f172a, Padding=(16,12,16,12)] {
+                Border [DockPanel.Dock=Top, Background=@OnSurface, Padding=(16,12,16,12)] {
                     StackPanel [Orientation=Vertical] {
                         TextBlock [Text="Word toolbox — drag tiles between panes",
                                    FontSize=15, FontWeight=Bold,
-                                   Foreground=#f8fafc]
+                                   Foreground=@SurfaceContainerLow]
                         TextBlock [Text=$Status, FontSize=11,
                                    Foreground=#94a3b8, Margin=(0,4,0,0)]
                     }
                 }
 
                 TextBlock [DockPanel.Dock=Bottom, Margin=(20,4,20,16),
-                           FontSize=11, Foreground=#6b7280,
+                           FontSize=11, Foreground=@OnSurfaceVariant,
                            TextWrapping=Wrap,
                            Text="LEFT pane is a 100-tile palette; drag any tile RIGHT to copy it into the listbox. RIGHT pane is a 2000-tile virtualizing WrapPanel; drag any tile to reorder. Both panes share the same square-tile template (100×100 with 15px gaps)."]
 
@@ -139,7 +139,7 @@ ResourceDictionary {
                     // LEFT — toolbox. 100 tiles in a virtualizing
                     // StackPanel inside a ScrollViewer.
                     Border [DockPanel.Dock=Left,
-                            BorderBrush=#e2e8f0, BorderThickness=(0,0,1,0)] {
+                            BorderBrush=@OutlineVariant, BorderThickness=(0,0,1,0)] {
                         DockPanel {
                             Border [DockPanel.Dock=Top,
                                     Background=#e0f2fe, Padding=(12,8,12,8)] {
@@ -158,13 +158,13 @@ ResourceDictionary {
                     // RIGHT — listbox. Virtualizing WrapPanel hosting
                     // 2000 tiles. ListReorderBehavior auto-detects
                     // wrap mode from the panel instance.
-                    Border [BorderBrush=#e2e8f0, BorderThickness=(0)] {
+                    Border [BorderBrush=@OutlineVariant, BorderThickness=(0)] {
                         DockPanel {
                             Border [DockPanel.Dock=Top,
                                     Background=#dbeafe, Padding=(12,8,12,8)] {
                                 TextBlock [Text="ListBox — drag tiles to reorder; toolbox words land here",
                                            FontSize=12, FontWeight=Bold,
-                                           Foreground=#1e3a8a]
+                                           Foreground=@PrimaryContainer]
                             }
                             ListBox x:name="listBox"
                                     [ItemsSource=$ListBoxWords,

@@ -18,16 +18,16 @@ ResourceDictionary {
     DataTemplate x:key="TreeViewTemplate" [DataType=TreeViewVM] {
         // x:root owns the NameScope so the bound TreeView's x:name
         // registers and the VM's OnViewMounted FindName resolves it.
-        Border x:root [Background=#ffffff, BorderBrush=#e2e8f0,
+        Border x:root [Background=@Surface, BorderBrush=@OutlineVariant,
                        BorderThickness=(1)]{
 
             DockPanel{
                 // Header strip
                 Border[DockPanel.Dock=Top,
-                       Background=#1976d2, Padding=(16,12,16,12)]{
+                       Background=@Primary, Padding=(16,12,16,12)]{
                     TextBlock[Text="TreeView — composed markup vs. HierarchicalDataTemplate",
                               FontSize=15, FontWeight=Bold,
-                              Foreground=#ffffff]
+                              Foreground=@Surface]
                 }
 
                 // Two-up split — composed-markup on the left, data-bound
@@ -39,7 +39,7 @@ ResourceDictionary {
                                 Margin=(12,12,6,12)]{
                         TextBlock[Text="Composed markup",
                                   FontSize=12, FontWeight=Bold,
-                                  Foreground=#6b7280,
+                                  Foreground=@OnSurfaceVariant,
                                   Margin=(0,0,0,8)]
                         TreeView[Indent=18]{
                             TreeViewItem[Header="src/", IsExpanded=true]{
@@ -68,7 +68,7 @@ ResourceDictionary {
                     }
 
                     // Divider
-                    Border[Width=1, Background=#e0e0e0, Margin=(0,12,0,12)]
+                    Border[Width=1, Background=@OutlineVariant, Margin=(0,12,0,12)]
 
                     // ── Right: data-bound via HierarchicalDataTemplate ─
                     // The TreeView is bare here; the VM wires
@@ -77,7 +77,7 @@ ResourceDictionary {
                                 Margin=(6,12,12,12)]{
                         TextBlock[Text="HierarchicalDataTemplate",
                                   FontSize=12, FontWeight=Bold,
-                                  Foreground=#6b7280,
+                                  Foreground=@OnSurfaceVariant,
                                   Margin=(0,0,0,8)]
                         TreeView x:name="bound" [Indent=18]
                     }

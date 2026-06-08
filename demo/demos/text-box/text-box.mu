@@ -20,7 +20,7 @@ import TextBoxVM from "./text-box-vm.mjs"
 
 ResourceDictionary {
     DataTemplate x:key="TextBoxTemplate" [DataType=TextBoxVM] {
-        Border [Background=#ffffff, BorderBrush=#e2e8f0,
+        Border [Background=@Surface, BorderBrush=@OutlineVariant,
                 BorderThickness=(1)]{
 
             // Header + body via a vertical DockPanel so the header gets
@@ -28,10 +28,10 @@ ResourceDictionary {
             DockPanel{
                 // Header strip
                 Border[DockPanel.Dock=Top,
-                       Background=#1976d2, Padding=(16,12,16,12)]{
+                       Background=@Primary, Padding=(16,12,16,12)]{
                     TextBlock[Text="TextBox demo — single-line + multi-line",
                               FontSize=15, FontWeight=Bold,
-                              Foreground=#ffffff]
+                              Foreground=@Surface]
                 }
 
                 // Two-up split: single-line on the left, multi-line on
@@ -49,7 +49,7 @@ ResourceDictionary {
                         TextBox [Width=260,
                                  Text="This is a single-line TextBox whose content overflows the field width."]
                         TextBlock[Text="No scrollbar. Type / Home / End — text follows the caret.",
-                                  FontSize=11, Foreground=#6b7280,
+                                  FontSize=11, Foreground=@OnSurfaceVariant,
                                   Margin=(0,8,0,0)]
                     }
 
@@ -63,7 +63,7 @@ ResourceDictionary {
                                  AcceptsReturn=true,
                                  Text="Default wrap mode: this paragraph is long enough that it should break across several visual lines at word boundaries. ArrowDown moves down visual rows.\nA hard newline starts a new logical line that also wraps on overflow."]
                         TextBlock[Text="Word-wrap. Resize the column to see lines re-flow.",
-                                  FontSize=11, Foreground=#6b7280,
+                                  FontSize=11, Foreground=@OnSurfaceVariant,
                                   Margin=(0,8,0,0)]
                     }
 
@@ -79,7 +79,7 @@ ResourceDictionary {
                                  TextWrapping=NoWrap,
                                  Text="function example() {\n    const longLineThatWillNotWrap = 'extends past the viewport horizontally';\n    return longLineThatWillNotWrap;\n}"]
                         TextBlock[Text="Both axes scroll; lines never break.",
-                                  FontSize=11, Foreground=#6b7280,
+                                  FontSize=11, Foreground=@OnSurfaceVariant,
                                   Margin=(0,8,0,0)]
                     }
                 }

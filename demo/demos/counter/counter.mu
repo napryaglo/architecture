@@ -9,19 +9,19 @@ import CounterVM from "./counter-vm.mjs"
 
 ResourceDictionary {
     DataTemplate x:key="CounterTemplate" [DataType=CounterVM] {
-        Border [Background=#ffffff, BorderBrush=#e2e8f0, BorderThickness=(1)] {
+        Border [Background=@Surface, BorderBrush=@OutlineVariant, BorderThickness=(1)] {
             Canvas {
                 TextBlock[Canvas.Left=24, Canvas.Top=20,
-                          FontSize=14, Foreground=#6b7280,
+                          FontSize=14, Foreground=@OnSurfaceVariant,
                           Text="Counter:"]
 
                 TextBlock[Canvas.Left=24, Canvas.Top=40,
                           FontSize=42, FontWeight=Bold,
-                          Foreground=#1976d2,
+                          Foreground=@Primary,
                           Text={{ String($Count) }}]
 
                 TextBlock[Canvas.Left=170, Canvas.Top=124,
-                          FontSize=12, Foreground=#6b7280,
+                          FontSize=12, Foreground=@OnSurfaceVariant,
                           Text="Step:"]
 
                 ComboBox[Canvas.Left=170, Canvas.Top=140,
@@ -41,7 +41,7 @@ ResourceDictionary {
 
                 TextBlock[Canvas.Left=24, Canvas.Top=232,
                           Width=312,
-                          FontSize=12, Foreground=#6b7280,
+                          FontSize=12, Foreground=@OnSurfaceVariant,
                           TextWrapping=Wrap,
                           Text="The ComboBox sets Step. Increment adds Step to Count and stops at 10. Reset always works."]
             }

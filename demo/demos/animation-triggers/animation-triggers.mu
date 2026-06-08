@@ -23,7 +23,7 @@ ResourceDictionary {
         // x:root marks this Border as the NameScope owner so the
         // inner `x:name="banner"` / `x:name="bannerBtn"` registrations
         // resolve via FindName at trigger-fire time.
-        Border x:root [Background=#ffffff, BorderBrush=#e2e8f0,
+        Border x:root [Background=@Surface, BorderBrush=@OutlineVariant,
                        BorderThickness=(1)]{
             resources: {
                 // PropertyTrigger enter/exit actions — hover edges
@@ -57,10 +57,10 @@ ResourceDictionary {
             }
             DockPanel{
                 Border[DockPanel.Dock=Top,
-                       Background=#1976d2, Padding=(16,12,16,12)]{
+                       Background=@Primary, Padding=(16,12,16,12)]{
                     TextBlock[Text="Trigger actions — enter/exit, Loaded, TargetName",
                               FontSize=15, FontWeight=Bold,
-                              Foreground=#ffffff]
+                              Foreground=@Surface]
                 }
 
                 StackPanel[Orientation=Vertical, Margin=(20,24,20,20)]{
@@ -84,7 +84,7 @@ ResourceDictionary {
                             }
                         }
                         TextBlock[Text="On first mount the same buttons run the Loaded storyboard — Width grows from 60 to 140.",
-                                  FontSize=11, Foreground=#6b7280,
+                                  FontSize=11, Foreground=@OnSurfaceVariant,
                                   Margin=(0,12,0,0)]
                     }
 

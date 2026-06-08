@@ -24,7 +24,7 @@ ResourceDictionary {
 
     // Demo shell.
     DataTemplate [DataType=DragDropVM] {
-        Border x:root [Background=#ffffff, BorderBrush=#e2e8f0,
+        Border x:root [Background=@Surface, BorderBrush=@OutlineVariant,
                        BorderThickness=(1)]
         {
             resources: {
@@ -45,20 +45,20 @@ ResourceDictionary {
             {
                 // Header strip.
                 Border[DockPanel.Dock=Top,
-                       Background=#1976d2, Padding=(16,12,16,12)]{
+                       Background=@Primary, Padding=(16,12,16,12)]{
                     StackPanel[Orientation=Horizontal]{
                         TextBlock[Text="Drag-drop between lists",
                                   FontSize=15, FontWeight=Bold,
-                                  Foreground=#ffffff]
+                                  Foreground=@Surface]
                         TextBlock[Text=$Status,
                                   FontSize=12,
-                                  Foreground=#ffffff,
+                                  Foreground=@Surface,
                                   Margin=(20,4,0,0)]
                     }
                 }
 
                 TextBlock[DockPanel.Dock=Bottom, Margin=(20,4,20,16),
-                          FontSize=11, Foreground=#6b7280,
+                          FontSize=11, Foreground=@OnSurfaceVariant,
                           TextWrapping=Wrap,
                           Text="Drag any item from one list to the other to move it. The framework's IsDraggable + OnDragStart binding starts the drag; a Behavior on each ListBox handles DragOver/Drop and dispatches to VM commands."]
 
@@ -73,13 +73,13 @@ ResourceDictionary {
                 {
                     Border[Width=220, VerticalAlignment=Stretch,
                            Margin=(0,0,16,0),
-                           BorderBrush=#e2e8f0, BorderThickness=(1)]
+                           BorderBrush=@OutlineVariant, BorderThickness=(1)]
                     {
                         DockPanel
                         {
                             TextBlock[DockPanel.Dock=Top,
                                       Text="Left", FontWeight=Bold,
-                                      FontSize=12, Foreground=#374151,
+                                      FontSize=12, Foreground=@OnSurface,
                                       Margin=(10,8,8,4)]
                             ListBox x:name="leftList"
                                     [ItemsSource=$LeftItems]
@@ -87,13 +87,13 @@ ResourceDictionary {
                     }
 
                     Border[Width=220, VerticalAlignment=Stretch,
-                           BorderBrush=#e2e8f0, BorderThickness=(1)]
+                           BorderBrush=@OutlineVariant, BorderThickness=(1)]
                     {
                         DockPanel
                         {
                             TextBlock[DockPanel.Dock=Top,
                                       Text="Right", FontWeight=Bold,
-                                      FontSize=12, Foreground=#374151,
+                                      FontSize=12, Foreground=@OnSurface,
                                       Margin=(10,8,8,4)]
 
                             ListBox x:name="rightList"

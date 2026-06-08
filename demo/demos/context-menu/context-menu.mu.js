@@ -1,7 +1,7 @@
 import { ContextMenuVM } from "./context-menu-vm.mjs";
 import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@visualisation-sub/mural/Basic";
 import { ContextMenu, ContextMenuService, MenuItem, MenuSeparator } from "@visualisation-sub/mural/framework/surface.js";
-import { Application, Color, DataContextBinding, HorizontalAlignment, ResourceDictionary, Thickness, VerticalAlignment } from "@visualisation-sub/mural/runtime";
+import { Color, DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness, VerticalAlignment } from "@visualisation-sub/mural/runtime";
 import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
 
 export function create() {
@@ -65,19 +65,19 @@ export function create() {
     _rd0.Set("BlueMenu", _contextMenu11);
     const _tmpl16 = new DataTemplate((_data) => {
         const _border17 = new Border();
-        _border17._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#ffffff')));
-        _border17._set_property_value_by_name("BorderBrush", new SolidColorBrush(Color.FromHex('#e2e8f0')));
+        _border17._set_property_value_by_name("Background", DynamicResource(_border17, "Surface"));
+        _border17._set_property_value_by_name("BorderBrush", DynamicResource(_border17, "OutlineVariant"));
         _border17._set_property_value_by_name("BorderThickness", new Thickness(1));
         const _dockPanel18 = new DockPanel();
         const _border19 = new Border();
         _border19._set_property_value_by_name(DockPanel, "Dock", Dock.Top);
-        _border19._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#1976d2')));
+        _border19._set_property_value_by_name("Background", DynamicResource(_border19, "Primary"));
         _border19._set_property_value_by_name("Padding", new Thickness(16, 12, 16, 12));
         const _textBlock20 = new TextBlock();
         _textBlock20._set_property_value_by_name("Text", "ContextMenu — right-click any panel; the nearest ancestor's menu opens at the cursor.");
         _textBlock20._set_property_value_by_name("FontSize", 15);
         _textBlock20._set_property_value_by_name("FontWeight", FontWeight.Bold);
-        _textBlock20._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#ffffff')));
+        _textBlock20._set_property_value_by_name("Foreground", DynamicResource(_textBlock20, "Surface"));
         _border19.SetChild(_textBlock20);
         _dockPanel18.AddChild(_border19);
         const _stackPanel21 = new StackPanel();
@@ -91,10 +91,10 @@ export function create() {
         _border23._set_property_value_by_name("Width", 180);
         _border23._set_property_value_by_name("Height", 120);
         _border23._set_property_value_by_name("Margin", new Thickness(0, 0, 12, 0));
-        _border23._set_property_value_by_name(ContextMenuService, "ContextMenu", Application.current.Resources.Resolve("RedMenu"));
+        _border23._set_property_value_by_name(ContextMenuService, "ContextMenu", DynamicResource(_border23, "RedMenu"));
         const _textBlock24 = new TextBlock();
         _textBlock24._set_property_value_by_name("Text", "Right-click me");
-        _textBlock24._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#ffffff')));
+        _textBlock24._set_property_value_by_name("Foreground", DynamicResource(_textBlock24, "Surface"));
         _textBlock24._set_property_value_by_name("FontSize", 14);
         _textBlock24._set_property_value_by_name("FontWeight", FontWeight.Bold);
         _textBlock24._set_property_value_by_name("HorizontalAlignment", HorizontalAlignment.Center);
@@ -106,10 +106,10 @@ export function create() {
         _border25._set_property_value_by_name("Width", 180);
         _border25._set_property_value_by_name("Height", 120);
         _border25._set_property_value_by_name("Margin", new Thickness(0, 0, 12, 0));
-        _border25._set_property_value_by_name(ContextMenuService, "ContextMenu", Application.current.Resources.Resolve("GreenMenu"));
+        _border25._set_property_value_by_name(ContextMenuService, "ContextMenu", DynamicResource(_border25, "GreenMenu"));
         const _textBlock26 = new TextBlock();
         _textBlock26._set_property_value_by_name("Text", "Right-click me");
-        _textBlock26._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#ffffff')));
+        _textBlock26._set_property_value_by_name("Foreground", DynamicResource(_textBlock26, "Surface"));
         _textBlock26._set_property_value_by_name("FontSize", 14);
         _textBlock26._set_property_value_by_name("FontWeight", FontWeight.Bold);
         _textBlock26._set_property_value_by_name("HorizontalAlignment", HorizontalAlignment.Center);
@@ -120,10 +120,10 @@ export function create() {
         _border27._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#3b82f6')));
         _border27._set_property_value_by_name("Width", 180);
         _border27._set_property_value_by_name("Height", 120);
-        _border27._set_property_value_by_name(ContextMenuService, "ContextMenu", Application.current.Resources.Resolve("BlueMenu"));
+        _border27._set_property_value_by_name(ContextMenuService, "ContextMenu", DynamicResource(_border27, "BlueMenu"));
         const _textBlock28 = new TextBlock();
         _textBlock28._set_property_value_by_name("Text", "Right-click me");
-        _textBlock28._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#ffffff')));
+        _textBlock28._set_property_value_by_name("Foreground", DynamicResource(_textBlock28, "Surface"));
         _textBlock28._set_property_value_by_name("FontSize", 14);
         _textBlock28._set_property_value_by_name("FontWeight", FontWeight.Bold);
         _textBlock28._set_property_value_by_name("HorizontalAlignment", HorizontalAlignment.Center);
@@ -134,7 +134,7 @@ export function create() {
         const _textBlock29 = new TextBlock();
         _textBlock29._set_property_value_by_name("Text", DataContextBinding(_textBlock29, "Status"));
         _textBlock29._set_property_value_by_name("FontSize", 13);
-        _textBlock29._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#1f2937')));
+        _textBlock29._set_property_value_by_name("Foreground", DynamicResource(_textBlock29, "OnSurface"));
         _stackPanel21.AddChild(_textBlock29);
         _dockPanel18.AddChild(_stackPanel21);
         _border17.SetChild(_dockPanel18);

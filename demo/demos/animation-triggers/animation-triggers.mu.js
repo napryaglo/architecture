@@ -1,7 +1,7 @@
 import { AnimationTriggersVM } from "./animation-triggers-vm.mjs";
 import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@visualisation-sub/mural/Basic";
 import { Button } from "@visualisation-sub/mural/framework/button.js";
-import { BeginStoryboardAction, Color, DoubleAnimation, EventTrigger, NameScope, PropertyTrigger, ResourceDictionary, Storyboard, Style, Thickness } from "@visualisation-sub/mural/runtime";
+import { BeginStoryboardAction, Color, DoubleAnimation, DynamicResource, EventTrigger, NameScope, PropertyTrigger, ResourceDictionary, Storyboard, Style, Thickness } from "@visualisation-sub/mural/runtime";
 import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
 
 export function create() {
@@ -9,8 +9,8 @@ export function create() {
     const _tmpl1 = new DataTemplate((_data) => {
         const _border2 = new Border();
         _border2.SetNameScope(new NameScope());
-        _border2._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#ffffff')));
-        _border2._set_property_value_by_name("BorderBrush", new SolidColorBrush(Color.FromHex('#e2e8f0')));
+        _border2._set_property_value_by_name("Background", DynamicResource(_border2, "Surface"));
+        _border2._set_property_value_by_name("BorderBrush", DynamicResource(_border2, "OutlineVariant"));
         _border2._set_property_value_by_name("BorderThickness", new Thickness(1));
         const _rd3 = _border2.Resources;
         const _act5 = new BeginStoryboardAction((_target) => {
@@ -44,13 +44,13 @@ export function create() {
         const _dockPanel19 = new DockPanel();
         const _border20 = new Border();
         _border20._set_property_value_by_name(DockPanel, "Dock", Dock.Top);
-        _border20._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#1976d2')));
+        _border20._set_property_value_by_name("Background", DynamicResource(_border20, "Primary"));
         _border20._set_property_value_by_name("Padding", new Thickness(16, 12, 16, 12));
         const _textBlock21 = new TextBlock();
         _textBlock21._set_property_value_by_name("Text", "Trigger actions — enter/exit, Loaded, TargetName");
         _textBlock21._set_property_value_by_name("FontSize", 15);
         _textBlock21._set_property_value_by_name("FontWeight", FontWeight.Bold);
-        _textBlock21._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#ffffff')));
+        _textBlock21._set_property_value_by_name("Foreground", DynamicResource(_textBlock21, "Surface"));
         _border20.SetChild(_textBlock21);
         _dockPanel19.AddChild(_border20);
         const _stackPanel22 = new StackPanel();
@@ -92,7 +92,7 @@ export function create() {
         const _textBlock32 = new TextBlock();
         _textBlock32._set_property_value_by_name("Text", "On first mount the same buttons run the Loaded storyboard — Width grows from 60 to 140.");
         _textBlock32._set_property_value_by_name("FontSize", 11);
-        _textBlock32._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#6b7280')));
+        _textBlock32._set_property_value_by_name("Foreground", DynamicResource(_textBlock32, "OnSurfaceVariant"));
         _textBlock32._set_property_value_by_name("Margin", new Thickness(0, 12, 0, 0));
         _stackPanel23.AddChild(_textBlock32);
         _stackPanel22.AddChild(_stackPanel23);

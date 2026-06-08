@@ -2,7 +2,7 @@ import { DragDropExtendedVM, DroppedFileVM, RowVM } from "./drag-drop-extended-v
 import { Border, ContentPresenter, DataTemplate, Dock, DockPanel, ItemsPanelTemplate, ListReorderBehavior, Orientation, StackPanel, TextBlock, TextWrapping } from "@visualisation-sub/mural/Basic";
 import { ItemsControl } from "@visualisation-sub/mural/framework/items-control.js";
 import { ScrollViewer } from "@visualisation-sub/mural/framework/scroll-viewer.js";
-import { Color, DataContextBinding, NameScope, ResourceDictionary, Setter, SetterFactory, Style, Thickness, VerticalAlignment } from "@visualisation-sub/mural/runtime";
+import { Color, DataContextBinding, DynamicResource, NameScope, ResourceDictionary, Setter, SetterFactory, Style, Thickness, VerticalAlignment } from "@visualisation-sub/mural/runtime";
 import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
 
 export function create() {
@@ -14,12 +14,12 @@ export function create() {
     _rd0.Set("ReorderListPanel", _tmpl1);
     const _tmpl3 = new DataTemplate((_data) => {
         const _border4 = new Border();
-        _border4._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#ffffff')));
+        _border4._set_property_value_by_name("Background", DynamicResource(_border4, "Surface"));
         _border4._set_property_value_by_name("Padding", new Thickness(12, 6, 12, 6));
         const _textBlock5 = new TextBlock();
         _textBlock5._set_property_value_by_name("Text", DataContextBinding(_textBlock5, "Label"));
         _textBlock5._set_property_value_by_name("FontSize", 13);
-        _textBlock5._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#1f2937')));
+        _textBlock5._set_property_value_by_name("Foreground", DynamicResource(_textBlock5, "OnSurface"));
         _border4.SetChild(_textBlock5);
         return _border4;
     }, RowVM);
@@ -32,12 +32,12 @@ export function create() {
         const _textBlock9 = new TextBlock();
         _textBlock9._set_property_value_by_name("Text", DataContextBinding(_textBlock9, "Name"));
         _textBlock9._set_property_value_by_name("FontSize", 12);
-        _textBlock9._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#0f172a')));
+        _textBlock9._set_property_value_by_name("Foreground", DynamicResource(_textBlock9, "OnSurface"));
         _stackPanel8.AddChild(_textBlock9);
         const _textBlock10 = new TextBlock();
         _textBlock10._set_property_value_by_name("Text", DataContextBinding(_textBlock10, "Size"));
         _textBlock10._set_property_value_by_name("FontSize", 11);
-        _textBlock10._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#6b7280')));
+        _textBlock10._set_property_value_by_name("Foreground", DynamicResource(_textBlock10, "OnSurfaceVariant"));
         _textBlock10._set_property_value_by_name("Margin", new Thickness(8, 1, 0, 0));
         _stackPanel8.AddChild(_textBlock10);
         _border7.SetChild(_stackPanel8);
@@ -47,8 +47,8 @@ export function create() {
     const _tmpl11 = new DataTemplate((_data) => {
         const _border12 = new Border();
         _border12.SetNameScope(new NameScope());
-        _border12._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#ffffff')));
-        _border12._set_property_value_by_name("BorderBrush", new SolidColorBrush(Color.FromHex('#e2e8f0')));
+        _border12._set_property_value_by_name("Background", DynamicResource(_border12, "Surface"));
+        _border12._set_property_value_by_name("BorderBrush", DynamicResource(_border12, "OutlineVariant"));
         _border12._set_property_value_by_name("BorderThickness", new Thickness(1));
         const _rd13 = _border12.Resources;
         const _setter14 = new Setter(ContentPresenter, "IsDraggable", true);
@@ -58,7 +58,7 @@ export function create() {
         const _dockPanel17 = new DockPanel();
         const _border18 = new Border();
         _border18._set_property_value_by_name(DockPanel, "Dock", Dock.Top);
-        _border18._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#0f172a')));
+        _border18._set_property_value_by_name("Background", DynamicResource(_border18, "OnSurface"));
         _border18._set_property_value_by_name("Padding", new Thickness(16, 12, 16, 12));
         const _stackPanel19 = new StackPanel();
         _stackPanel19._set_property_value_by_name("Orientation", Orientation.Vertical);
@@ -66,7 +66,7 @@ export function create() {
         _textBlock20._set_property_value_by_name("Text", "Drag & drop extended");
         _textBlock20._set_property_value_by_name("FontSize", 15);
         _textBlock20._set_property_value_by_name("FontWeight", FontWeight.Bold);
-        _textBlock20._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#f8fafc')));
+        _textBlock20._set_property_value_by_name("Foreground", DynamicResource(_textBlock20, "SurfaceContainerLow"));
         _stackPanel19.AddChild(_textBlock20);
         const _stackPanel21 = new StackPanel();
         _stackPanel21._set_property_value_by_name("Orientation", Orientation.Horizontal);
@@ -74,7 +74,7 @@ export function create() {
         const _textBlock22 = new TextBlock();
         _textBlock22._set_property_value_by_name("Text", "Last receiver effect:");
         _textBlock22._set_property_value_by_name("FontSize", 11);
-        _textBlock22._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#cbd5e1')));
+        _textBlock22._set_property_value_by_name("Foreground", DynamicResource(_textBlock22, "Outline"));
         _stackPanel21.AddChild(_textBlock22);
         const _textBlock23 = new TextBlock();
         _textBlock23._set_property_value_by_name("Text", DataContextBinding(_textBlock23, "LastEffect"));
@@ -95,7 +95,7 @@ export function create() {
         _textBlock25._set_property_value_by_name(DockPanel, "Dock", Dock.Bottom);
         _textBlock25._set_property_value_by_name("Margin", new Thickness(20, 4, 20, 16));
         _textBlock25._set_property_value_by_name("FontSize", 11);
-        _textBlock25._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#6b7280')));
+        _textBlock25._set_property_value_by_name("Foreground", DynamicResource(_textBlock25, "OnSurfaceVariant"));
         _textBlock25._set_property_value_by_name("TextWrapping", TextWrapping.Wrap);
         _textBlock25._set_property_value_by_name("Text", "LEFT: drag any row to reorder — the blue insertion line previews the drop position (backlog 8.5). Drag toward the top / bottom edges to auto-scroll the ScrollViewer (8.4). Hold Shift mid-drag to cancel via OnContinueQuery (8.3). RIGHT: drop files, text, or URLs from your OS / other browser windows (8.1).");
         _dockPanel17.AddChild(_textBlock25);
@@ -106,7 +106,7 @@ export function create() {
         const _border27 = new Border();
         _border27._set_property_value_by_name("Width", 320);
         _border27._set_property_value_by_name("Height", 280);
-        _border27._set_property_value_by_name("BorderBrush", new SolidColorBrush(Color.FromHex('#e2e8f0')));
+        _border27._set_property_value_by_name("BorderBrush", DynamicResource(_border27, "OutlineVariant"));
         _border27._set_property_value_by_name("BorderThickness", new Thickness(1));
         _border27._set_property_value_by_name("Margin", new Thickness(0, 0, 16, 0));
         const _scrollViewer28 = new ScrollViewer();
@@ -128,9 +128,9 @@ export function create() {
         const _border31 = new Border();
         _border31._set_property_value_by_name("Width", 320);
         _border31._set_property_value_by_name("Height", 280);
-        _border31._set_property_value_by_name("BorderBrush", new SolidColorBrush(Color.FromHex('#cbd5e1')));
+        _border31._set_property_value_by_name("BorderBrush", DynamicResource(_border31, "Outline"));
         _border31._set_property_value_by_name("BorderThickness", new Thickness(2));
-        _border31._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#f1f5f9')));
+        _border31._set_property_value_by_name("Background", DynamicResource(_border31, "SurfaceContainerLow"));
         const _dockPanel32 = new DockPanel();
         const _border33 = new Border();
         _border33._set_property_value_by_name(DockPanel, "Dock", Dock.Top);
@@ -142,12 +142,12 @@ export function create() {
         _textBlock35._set_property_value_by_name("Text", "OS file drop zone");
         _textBlock35._set_property_value_by_name("FontSize", 13);
         _textBlock35._set_property_value_by_name("FontWeight", FontWeight.Bold);
-        _textBlock35._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#0f172a')));
+        _textBlock35._set_property_value_by_name("Foreground", DynamicResource(_textBlock35, "OnSurface"));
         _stackPanel34.AddChild(_textBlock35);
         const _textBlock36 = new TextBlock();
         _textBlock36._set_property_value_by_name("Text", DataContextBinding(_textBlock36, "FileStatus"));
         _textBlock36._set_property_value_by_name("FontSize", 11);
-        _textBlock36._set_property_value_by_name("Foreground", new SolidColorBrush(Color.FromHex('#1e3a8a')));
+        _textBlock36._set_property_value_by_name("Foreground", DynamicResource(_textBlock36, "PrimaryContainer"));
         _textBlock36._set_property_value_by_name("Margin", new Thickness(0, 4, 0, 0));
         _textBlock36._set_property_value_by_name("TextWrapping", TextWrapping.Wrap);
         _stackPanel34.AddChild(_textBlock36);
