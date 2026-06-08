@@ -98,6 +98,7 @@ interface RenderableVisual extends BackrefHost
     readonly Clip:         unknown;
     readonly IsHitTestVisible: boolean;
     readonly Cursor:           string | undefined;
+    readonly Effect:           { toCssFilter(): string } | undefined;
     readonly visualChildren: Iterable<RenderableVisual>;
     Render(dc: SvgDomDrawingContext): void;
 }
@@ -304,6 +305,7 @@ export class SvgRenderer
             this.applyClip(info.outer, visual);
             this.applyHitTestVisibility(info.outer, info.hit, visual);
             this.applyCursor(info.outer, visual);
+            this.applyEffect(info.outer, visual);
         }
 
         // Own primitives — re-emit on first paint, when render-dirty,
@@ -400,6 +402,21 @@ export class SvgRenderer
         else
         {
             outer.setAttribute('cursor', cursor);
+        }
+    }
+
+    // Visual.Effect → CSS `filter` on the outer wrapper. Setting
+    // `filter` rather than `<filter>` keeps the implementation small
+    // and works in both HTML and SVG contexts. The check for an
+    // equal filter string avoids re-touching the DOM when the visual
+    // is render-dirty for an unrelated reason.
+    private applyEffect(outer: SVGGElement, visual: RenderableVisual): void
+    {
+        const effect = visual.Effect;
+        const next = effect !== undefined ? effect.toCssFilter() : '';
+        if (outer.style.filter !== next)
+        {
+            outer.style.filter = next;
         }
     }
 

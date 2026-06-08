@@ -29,7 +29,7 @@ ResourceDictionary {
     Template x:key="DefaultMenuButtonTrigger" [TargetType=MenuButton]{
         Button x:name="PART_Trigger"{
             StackPanel x:name="PART_TriggerStack" [Orientation = Horizontal]{
-                TextBlock x:name="PART_HeaderText" [Foreground = #ffffff]
+                TextBlock x:name="PART_HeaderText" [Foreground = @OnPrimary]
             }
         }
     }
@@ -44,9 +44,11 @@ ResourceDictionary {
         MenuPopupHost x:name="PART_PopupHost"{
             ClickAwayScrim x:name="PART_Scrim" [BorderThickness = (0)]
             Border x:name="PART_PopupContainer"
-                  [Background      = #ffffff,
-                   BorderBrush     = #e0e0e0,
+                  [Background      = @SurfaceContainerHigh,
+                   BorderBrush     = @OutlineVariant,
                    BorderThickness = (1),
+                   CornerRadius    = @ShapeExtraSmall,
+                   Effect          = @Elevation2,
                    Padding         = (0)]{
                 Menu x:name="PART_Menu"
             }
@@ -72,9 +74,11 @@ ResourceDictionary {
         MenuPopupHost x:name="PART_PopupHost"{
             ClickAwayScrim x:name="PART_Scrim" [BorderThickness = (0)]
             Border x:name="PART_PopupContainer"
-                  [Background      = #ffffff,
-                   BorderBrush     = #e0e0e0,
+                  [Background      = @SurfaceContainerHigh,
+                   BorderBrush     = @OutlineVariant,
                    BorderThickness = (1),
+                   CornerRadius    = @ShapeExtraSmall,
+                   Effect          = @Elevation2,
                    Padding         = (0)]{
                 Menu x:name="PART_Menu"
             }

@@ -56,6 +56,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['Border',                  '@visualisation-sub/mural/Basic'],
     ['Button',                  '@visualisation-sub/mural/framework/button.js'],
     ['ClickMode',               '@visualisation-sub/mural/framework/button.js'],
+    ['ButtonVariant',           '@visualisation-sub/mural/framework/button.js'],
     ['TextBlock',               '@visualisation-sub/mural/Basic'],
     ['Canvas',                  '@visualisation-sub/mural/Basic'],
     ['Ellipse',                 '@visualisation-sub/mural/Basic'],
@@ -217,6 +218,7 @@ export const ENUM_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<st
     ['SweepDirection',        new Set(['Counterclockwise', 'Clockwise'])],
     ['TextWrapping',          new Set(['NoWrap', 'Wrap'])],
     ['ClickMode',             new Set(['Release', 'Press', 'Hover'])],
+    ['ButtonVariant',         new Set(['Filled', 'Elevated', 'Tonal', 'Outlined', 'Text'])],
     ['Orientation',           new Set(['Vertical', 'Horizontal'])],
     ['SelectionMode',         new Set(['Single', 'Multiple', 'Extended'])],
     ['MarqueeBoundsPolicy',   new Set(['Intersect', 'Contained'])],
@@ -224,17 +226,26 @@ export const ENUM_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<st
     ['DrawerVariant',         new Set(['Permanent', 'Persistent', 'Temporary'])],
 ]);
 
-// Property-name → enum class. Used when the markup property name does
-// not equal the enum class name (`Variant: DrawerVariant`,
-// `Anchor: Dock`, …). The compiler consults this map before falling
-// through to "unresolved identifier" — that way a markup author
-// writing `Variant=Persistent` gets the same strict member-validation
-// a `HorizontalAlignment=Center` site does.
+// Property-name → enum class candidates. Used when the markup
+// property name does not equal the enum class name (`Variant`,
+// `Anchor`, …). The compiler consults this map before falling through
+// to "unresolved identifier" — that way a markup author writing
+// `Variant=Persistent` gets the same strict member-validation a
+// `HorizontalAlignment=Center` site does.
 //
-// Entries here MUST point at an enum class that's also in ENUM_MEMBERS.
-export const PROPERTY_TO_ENUM: ReadonlyMap<string, string> = new Map<string, string>([
-    ['Variant', 'DrawerVariant'],
-    ['Anchor',  'Dock'],
+// Multiple candidate enums per property let the same DP name carry
+// different value sets across host classes — e.g. `Variant` is both
+// `DrawerVariant` (Permanent/Persistent/Temporary) on Drawer AND
+// `ButtonVariant` (Filled/Elevated/Tonal/…) on Button. The compiler
+// walks the candidates and picks the one whose ENUM_MEMBERS set
+// contains the literal — the values never overlap across host classes
+// today, so there's no ambiguity to flag.
+//
+// Entries here MUST point at enum classes that are also in
+// ENUM_MEMBERS.
+export const PROPERTY_TO_ENUM: ReadonlyMap<string, readonly string[]> = new Map<string, readonly string[]>([
+    ['Variant', ['ButtonVariant', 'DrawerVariant']],
+    ['Anchor',  ['Dock']],
 ]);
 
 // Meta-attr names whose RHS is a type reference (compiled as a bare

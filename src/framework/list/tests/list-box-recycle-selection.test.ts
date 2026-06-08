@@ -226,7 +226,18 @@ describe('ListBox selection survives container recycle by data identity', () => 
             're-attach with no new invalidation must not replay anything');
     });
 
-    test('PART_Border.Background clears on rebind to a non-selected item (chrome end-to-end)', () => {
+    test('PART_Border.Background clears on rebind to a non-selected item (chrome end-to-end)', async () => {
+        // The default ListBoxItem template's IsSelected trigger writes
+        // PART_Border.Background = @SecondaryContainer. That's a
+        // DynamicResource lookup that needs SOME palette merged into
+        // Application.Resources — without it the trigger value
+        // resolves to undefined and the assertion below has nothing
+        // to snapshot. Register a Material palette for the same
+        // reason real demos do.
+        new Application();
+        const { SetTheme } = await import('../../material/index.js');
+        SetTheme('light');
+
         const lb = new ListBox();
         lb.Items = ['A', 'B', 'C', 'D'];
         lb.SelectedItem = 'B';
@@ -239,9 +250,9 @@ describe('ListBox selection survives container recycle by data identity', () => 
         const partBorder = root.FindName('PART_Border') as Border | undefined;
         assert.ok(partBorder instanceof Border,
             'PART_Border must be findable in the templated row');
-        // While selected, the IsSelected trigger writes light-blue
-        // Background. Snapshot it so we can verify it clears after
-        // rebind.
+        // While selected, the IsSelected trigger writes the
+        // SecondaryContainer brush. Snapshot it so we can verify it
+        // clears after rebind.
         const selectedBg = partBorder.Background;
         assert.ok(selectedBg !== undefined,
             'selected row should have a non-undefined background from the trigger');

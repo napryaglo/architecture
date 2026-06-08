@@ -2271,21 +2271,47 @@ export class Compiler
         //        DrawerAnchor`, …).
         if (ctx.propertyName !== undefined)
         {
-            const enumClass =
-                ENUM_MEMBERS.has(ctx.propertyName)
-                    ? ctx.propertyName
-                    : PROPERTY_TO_ENUM.get(ctx.propertyName);
+            // (a) the property name itself equals the enum class name —
+            //     single candidate.
+            // (b) PROPERTY_TO_ENUM yields one OR MORE candidate enum
+            //     classes — pick the one whose member set contains the
+            //     literal. The member sets across candidates don't
+            //     overlap today, so first match wins; if none has the
+            //     literal, surface the first candidate's set in the
+            //     error message (most likely the author intended that
+            //     enum).
+            const candidates: readonly string[] = ENUM_MEMBERS.has(ctx.propertyName)
+                ? [ctx.propertyName]
+                : (PROPERTY_TO_ENUM.get(ctx.propertyName) ?? []);
+            let enumClass: string | undefined;
+            for (const c of candidates)
+            {
+                if (ENUM_MEMBERS.get(c)?.has(name))
+                {
+                    enumClass = c;
+                    break;
+                }
+            }
+            if (enumClass === undefined && candidates.length > 0)
+            {
+                // No candidate matched the literal. List every
+                // candidate + its valid members so the author sees
+                // which enum they meant. Single-candidate path
+                // ('HorizontalAlignment') collapses to a one-enum
+                // report; the multi-candidate path (`Variant` →
+                // ButtonVariant / DrawerVariant) names both.
+                const parts: string[] = [];
+                for (const c of candidates)
+                {
+                    const members = ENUM_MEMBERS.get(c)!;
+                    parts.push(`${c} (${[...members].join(', ')})`);
+                }
+                throw new EmitError(
+                    `'${name}' is not a member of enum ${parts.join(' or ')}.`,
+                    val.span);
+            }
             if (enumClass !== undefined)
             {
-                const members = ENUM_MEMBERS.get(enumClass)!;
-                if (!members.has(name))
-                {
-                    const valid = [...members].join(', ');
-                    throw new EmitError(
-                        `'${name}' is not a member of enum ${enumClass}. ` +
-                        `Valid members: ${valid}.`,
-                        val.span);
-                }
                 this.ensureImport(enumClass);
                 return `${enumClass}.${name}`;
             }

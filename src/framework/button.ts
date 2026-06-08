@@ -27,6 +27,26 @@ export enum ClickMode
     Hover   = 'Hover',
 }
 
+// Material 3 button variants. Each variant has its own ControlTemplate
+// in basic.template.mu (DefaultFilledButton, DefaultElevatedButton, …);
+// the default Button Style picks the template that matches the Variant
+// DP value via a property trigger. Setting Variant at construction
+// time is fully supported; setting it after the Style is already
+// active retargets the Template via the trigger pipeline (same path
+// the existing IsMouseOver / IsPressed triggers ride on).
+//
+// Filled is the M3 baseline (and the historical mural default — the
+// previous single template was effectively a Filled button), so it's
+// the default value.
+export enum ButtonVariant
+{
+    Filled   = 'Filled',
+    Elevated = 'Elevated',
+    Tonal    = 'Tonal',
+    Outlined = 'Outlined',
+    Text     = 'Text',
+}
+
 // Click handler signature. The originating PointerEventArgs rides
 // along so handlers can branch on modifier keys, button index, or
 // position without reaching back into the input device.
@@ -75,6 +95,10 @@ export class Button extends ContentControl implements ICommandSource
     // a toolbar Button typically wants.
     public static readonly CommandTargetKey    = Model.RegisterProperty<Visual | undefined>(  Button, 'CommandTarget',    undefined,         MetaData.None);
     public static readonly ClickModeKey        = Model.RegisterProperty<ClickMode>(           Button, 'ClickMode',        ClickMode.Release, MetaData.None);
+    // Material 3 visual variant. Drives the default Style's Template-
+    // picker trigger chain in basic.template.mu. MetaData.None — the
+    // trigger system reacts to DP changes via OnPropertyChanged.
+    public static readonly VariantKey          = Model.RegisterProperty<ButtonVariant>(       Button, 'Variant',          ButtonVariant.Filled, MetaData.None);
 
     static
     {
@@ -126,6 +150,9 @@ export class Button extends ContentControl implements ICommandSource
 
     public get ClickMode(): ClickMode { return this.get_property_value(Button.ClickModeKey); }
     public set ClickMode(v: ClickMode) { this.set_property_value(Button.ClickModeKey, v); }
+
+    public get Variant(): ButtonVariant { return this.get_property_value(Button.VariantKey); }
+    public set Variant(v: ButtonVariant) { this.set_property_value(Button.VariantKey, v); }
 
     // Register a handler invoked alongside Command on every click.
     // Returns the same handler so chaining patterns like

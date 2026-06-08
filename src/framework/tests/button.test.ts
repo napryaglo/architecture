@@ -5,7 +5,7 @@ import { Application, NoModifiers, PointerButton, RelayCommand, type PointerEven
 import { InputManager } from '../../framework/index.js';;
 import { Border } from '../../Basic/border.js';
 import { type ClickHandler } from '../button.js';
-import { Button, ClickMode } from '../button.js';
+import { Button, ButtonVariant, ClickMode } from '../button.js';
 import { ContentPresenter } from '../../Basic/content-presenter.js';
 import { Panel } from '../../runtime/index.js';
 import { TextBlock } from '../../Basic/text-block.js';
@@ -304,5 +304,33 @@ describe('Button — ClickMode variants', () => {
         // on newly-added visuals in the hover chain).
         im.InjectPointerMove(btn, pointer({ Button: PointerButton.None, Buttons: 0 }));
         assert.equal(fired, 1);
+    });
+});
+
+describe('Button — Variant DP', () => {
+    beforeEach(() => { Application.current = null; });
+
+    test('Variant default is Filled', () => {
+        const btn = new Button();
+        assert.equal(btn.Variant, ButtonVariant.Filled);
+    });
+
+    test('Variant is a settable, get-roundtrips DP', () => {
+        const btn = new Button();
+        btn.Variant = ButtonVariant.Outlined;
+        assert.equal(btn.Variant, ButtonVariant.Outlined);
+        btn.Variant = ButtonVariant.Elevated;
+        assert.equal(btn.Variant, ButtonVariant.Elevated);
+    });
+
+    test('Default template (Filled) installs the Border + ContentPresenter chrome', () => {
+        const btn = new Button();
+        const root = btn.visualChildren[0];
+        assert.ok(root instanceof Border,
+            'Filled template root should be a Border (PART_Border)');
+        // The Filled variant carries no Effect — elevation lives only
+        // on the Elevated variant.
+        assert.equal(root.Effect, undefined,
+            'Filled variant should have no Effect at rest');
     });
 });

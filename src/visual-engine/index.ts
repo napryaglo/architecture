@@ -33,6 +33,8 @@ export {
     SweepDirection,
 } from './geometry.js';
 export { FormattedText, FontWeight, FontStyle } from './formatted-text.js';
+export { Effect } from './effect.js';
+export { DropShadowEffect, MaterialElevationEffect } from './drop-shadow-effect.js';
 export { type DrawingContext } from './drawing-context.js';
 export { SvgDrawingContext } from './svg-drawing-context.js';
 export {

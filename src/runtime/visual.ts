@@ -26,6 +26,17 @@ import type { AnimationTimeline } from './animation/timeline.js';
 import { EventTrigger } from './trigger-actions.js';
 import { DragDrop, DragDropEffects, type DataObject, type DragPreviewKind } from './drag-drop.js';
 
+// Marker shape for a renderer-side effect. The concrete classes
+// (DropShadowEffect, MaterialElevationEffect) live in visual-engine
+// — runtime can't take a value-import dependency on that module
+// without inverting the package layering. Anything matching this
+// shape (a `toCssFilter(): string` method) is a valid Effect value
+// for Visual.Effect.
+export interface IEffect
+{
+    toCssFilter(): string;
+}
+
 // Routed event names that map to the per-instance _routedListeners
 // registry. These are the public NAMES authors use in `on Xxx { … }`
 // markup; the routed-event dispatcher fires them after each
@@ -148,6 +159,20 @@ export class Visual extends Model
     // metadata. MetaData.None keeps OnPropertyChanged from doing
     // redundant work.
     public static readonly StyleKey = Model.RegisterProperty<Style | undefined>(Visual, 'Style', undefined, MetaData.None);
+
+    // Effect — a renderer-side post-process applied to the Visual's
+    // painted output. Concrete effect classes live in visual-engine
+    // (DropShadowEffect, MaterialElevationEffect). The runtime side
+    // accepts anything matching the IEffect contract (toCssFilter())
+    // so visual-engine can ship classes without runtime taking a
+    // value-import dependency on it.
+    //
+    // MetaData.Render so changing the Effect re-emits via the
+    // renderer (which reads the Effect during repaintOwn). The
+    // renderer is allowed to no-op when the new filter string equals
+    // the previously applied one — equality is the contract this DP
+    // doesn't enforce.
+    public static readonly EffectKey = Model.RegisterProperty<IEffect | undefined>(Visual, 'Effect', undefined, MetaData.Render);
 
     // Type-keyed lookup for the theme-supplied default Style. Read-only
     // at the instance level (no public per-instance writes); subclasses
@@ -768,6 +793,14 @@ export class Visual extends Model
         this.set_property_value(Visual.StyleKey, value);
         this.refresh_active_style();
     }
+
+    // Visual Effect (DropShadow, MaterialElevation, …). Set this to
+    // attach a renderer-side post-process. The renderer reads
+    // effect.toCssFilter() and assigns the result to the visual's
+    // wrapper element's CSS filter. Setting to undefined clears any
+    // previously applied filter.
+    public get Effect(): IEffect | undefined { return this.get_property_value(Visual.EffectKey); }
+    public set Effect(value: IEffect | undefined) { this.set_property_value(Visual.EffectKey, value); }
 
     // Read-only at the instance level. Subclasses override the default
     // value via Model.OverrideMetadata at type-init; see the docstring

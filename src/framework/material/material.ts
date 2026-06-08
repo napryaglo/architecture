@@ -1,6 +1,8 @@
 import { Application, ResourceDictionary } from '../../runtime/index.js';
+import { MaterialElevationEffect } from '../../visual-engine/index.js';
 import { create as createLight } from '../../../build/framework/material/light.mu.js';
 import { create as createDark } from '../../../build/framework/material/dark.mu.js';
+import { create as createTypography } from '../../../build/framework/material/typography.mu.js';
 
 // Material 3 theme registration for µ-mural.
 //
@@ -34,6 +36,12 @@ let _currentDict: ResourceDictionary | undefined;
 let _currentName: MaterialThemeName  | undefined;
 let _currentApp:  Application        | undefined;
 
+// Typography is light/dark agnostic — same FontSize / FontWeight
+// values across schemes. Merged once on first SetTheme call and never
+// swapped, only re-attached if the Application changes.
+let _typographyDict:    ResourceDictionary | undefined;
+let _typographyApp:     Application        | undefined;
+
 // Switch Material to `theme`. Idempotent — calling with the current
 // theme is a no-op. Must be called AFTER an Application is constructed
 // (so Application.current is defined). Common bootstrap shape:
@@ -66,10 +74,30 @@ export function SetTheme(theme: MaterialThemeName): void
     }
 
     const dict = theme === 'dark' ? createDark() : createLight();
+    // M3 elevation tokens — registered alongside the colour palette so
+    // `Effect = @Elevation2` resolves through the same DynamicResource
+    // chain. Identical in both light and dark schemes (shadow tint is
+    // already part of the elevation ramp).
+    registerElevationTokens(dict);
     app.Resources.AddMergedDictionary(dict);
     _currentDict = dict;
     _currentName = theme;
     _currentApp  = app;
+
+    // Typography piggybacks on the same Application lifecycle but
+    // doesn't swap on theme change. Merge it lazily the first time
+    // SetTheme runs for a given Application — subsequent SetTheme
+    // calls on the same Application skip this branch.
+    if (_typographyApp !== app)
+    {
+        if (_typographyDict !== undefined && _typographyApp !== undefined)
+        {
+            _typographyApp.Resources.RemoveMergedDictionary(_typographyDict);
+        }
+        _typographyDict = createTypography();
+        app.Resources.AddMergedDictionary(_typographyDict);
+        _typographyApp  = app;
+    }
 }
 
 // The currently-active theme, or undefined if SetTheme hasn't been
@@ -89,4 +117,19 @@ export function ToggleTheme(): MaterialThemeName
         _currentName === 'light' ? 'dark' : 'light';
     SetTheme(next);
     return next;
+}
+
+// Adds @Elevation1 … @Elevation5 entries to a freshly-built palette
+// dictionary. Kept inline (vs declaring in *.mu) because Effects are
+// runtime objects not expressible as `.mu` literal values today.
+// Levels follow the M3 elevation spec (dual-shadow per level — see
+// MaterialElevationEffect). Templates and authors reference them via
+// `Effect = @Elevation2` exactly like any colour token.
+function registerElevationTokens(dict: ResourceDictionary): void
+{
+    dict.Set('Elevation1', new MaterialElevationEffect(1));
+    dict.Set('Elevation2', new MaterialElevationEffect(2));
+    dict.Set('Elevation3', new MaterialElevationEffect(3));
+    dict.Set('Elevation4', new MaterialElevationEffect(4));
+    dict.Set('Elevation5', new MaterialElevationEffect(5));
 }

@@ -1,54 +1,87 @@
-import { Color } from '../runtime/index.js';
+import { Application, Color } from '../runtime/index.js';
 import { SolidColorBrush } from '../visual-engine/index.js';
 
-// Default Material UI palette used by the Controls library's built-in
-// ControlTemplates. Centralised here so the same brush instance is
-// reused across every control that needs it — saves re-allocating a
-// SolidColorBrush on every template apply, and gives the codebase one
-// place to retune the visual identity.
+// Material 3 token proxy.
 //
-// The accompanying `.template.mu` files embed the matching hex literals
-// inline (template authors prefer self-contained markup over reaching
-// into a shared module). When a template needs the same colour at
-// runtime — typically for a hover or pressed swap driven by the
-// templated parent's IsMouseOver / IsPressed listeners — the code-side
-// constructor imports from here so both sides agree on identity.
+// Background: this file used to hold a hard-coded MUI palette read by
+// imperative refresh closures in controls (Slider thumb tinting,
+// ScrollBar thumb hover, ComboBox border focus, Menu item hover, …).
+// Templates now read Material tokens via `@Primary` / `@Surface` /
+// etc. (DynamicResource bindings), but the imperative paths haven't
+// been migrated yet — each touches a Visual property directly and
+// needs a Brush right now, not a Binding.
+//
+// To keep both worlds running we expose `Theme.<name>` as getters that
+// resolve the matching Material token from Application.Resources each
+// time they're read. Theme swap (light → dark) reflects in the next
+// imperative refresh, which is good enough until those paths migrate
+// to template triggers or per-control DynamicResource bindings.
+//
+// Fallback: when no Application or no Material palette has been
+// registered (test harness, unmounted control), each getter returns a
+// neutral grey so the control draws *something* instead of crashing
+// on `.Background = undefined`. The previous default-Material hex
+// values would have been a defensible fallback too — but neutrals
+// make a missing-theme bug visually obvious, which is what we want
+// from a fallback.
+
+// Single neutral brush returned when a token can't be resolved. Cached
+// so consumers don't pay per-access allocations during fallback.
+const NEUTRAL = new SolidColorBrush(Color.FromHex('#808080'));
+
+function brush(key: string): SolidColorBrush
+{
+    const app = Application.current;
+    if (app === null) return NEUTRAL;
+    const v = app.Resources.Resolve(key);
+    if (v instanceof SolidColorBrush) return v;
+    return NEUTRAL;
+}
+
+// Compile-time string-typed mapping from the historical Theme.<name>
+// keys to Material 3 token names. Adding a new entry: pick the
+// closest M3 token (see light.mu / dark.mu for the catalogue) rather
+// than adding a new token — the imperative paths need to converge on
+// the same tokens the templates use.
 export const Theme = {
     // ── Surfaces ────────────────────────────────────────────────────
-    paper:           new SolidColorBrush(Color.FromHex('#ffffff')),
-    hairline:        new SolidColorBrush(Color.FromHex('#e2e8f0')),
-    nav:             new SolidColorBrush(Color.FromHex('#f8fafc')),
-    navHover:        new SolidColorBrush(Color.FromHex('#e2e8f0')),
+    get paper()            { return brush('Surface'); },
+    get hairline()         { return brush('OutlineVariant'); },
+    get nav()              { return brush('SurfaceContainerLow'); },
+    get navHover()         { return brush('SurfaceContainer'); },
 
-    // ── Ink ─────────────────────────────────────────────────────────
-    ink:             new SolidColorBrush(Color.FromHex('#1f2937')),
-    hint:            new SolidColorBrush(Color.FromHex('#6b7280')),
-    placeholder:     new SolidColorBrush(Color.FromHex('#9e9e9e')),
-    fieldText:       new SolidColorBrush(Color.FromHex('#212121')),
+    // ── Ink (foreground colours on surfaces) ────────────────────────
+    get ink()              { return brush('OnSurface'); },
+    get hint()             { return brush('OnSurfaceVariant'); },
+    get placeholder()      { return brush('OnSurfaceVariant'); },
+    get fieldText()        { return brush('OnSurface'); },
 
-    // ── Primary (MUI Contained Button) ──────────────────────────────
-    primary:         new SolidColorBrush(Color.FromHex('#1976d2')),
-    primaryHover:    new SolidColorBrush(Color.FromHex('#1565c0')),
-    primaryPress:    new SolidColorBrush(Color.FromHex('#0d47a1')),
-    primaryInk:      new SolidColorBrush(Color.FromHex('#ffffff')),
+    // ── Primary tier ────────────────────────────────────────────────
+    get primary()          { return brush('Primary'); },
+    get primaryHover()     { return brush('PrimaryHover'); },
+    get primaryPress()     { return brush('PrimaryPress'); },
+    get primaryInk()       { return brush('OnPrimary'); },
 
-    // ── Form field (MUI Outlined) ───────────────────────────────────
-    fieldBg:         new SolidColorBrush(Color.FromHex('#ffffff')),
-    fieldBorder:     new SolidColorBrush(Color.FromHex('#c4c4c4')),
-    fieldBorderOpen: new SolidColorBrush(Color.FromHex('#1976d2')),
+    // ── Form-field outlined chrome ──────────────────────────────────
+    get fieldBg()          { return brush('Surface'); },
+    get fieldBorder()      { return brush('Outline'); },
+    get fieldBorderOpen()  { return brush('Primary'); },
 
     // ── Popup / dropdown ────────────────────────────────────────────
-    popupBg:         new SolidColorBrush(Color.FromHex('#ffffff')),
-    popupBorder:     new SolidColorBrush(Color.FromHex('#e0e0e0')),
-    itemHoverBg:     new SolidColorBrush(Color.FromHex('#f5f5f5')),
-    itemSelectedBg:  new SolidColorBrush(Color.FromHex('#e3f2fd')),
+    get popupBg()          { return brush('SurfaceContainerHigh'); },
+    get popupBorder()      { return brush('OutlineVariant'); },
+    get itemHoverBg()      { return brush('SurfaceContainerHigh'); },
+    get itemSelectedBg()   { return brush('SecondaryContainer'); },
 
     // ── Scrollbar ───────────────────────────────────────────────────
-    scrollTrack:     new SolidColorBrush(Color.FromHex('#f1f5f9')),
-    scrollThumb:     new SolidColorBrush(Color.FromHex('#cbd5e1')),
-    scrollThumbHover:new SolidColorBrush(Color.FromHex('#94a3b8')),
-    scrollThumbDrag: new SolidColorBrush(Color.FromHex('#64748b')),
+    get scrollTrack()      { return brush('SurfaceContainerLow'); },
+    get scrollThumb()      { return brush('OutlineVariant'); },
+    get scrollThumbHover() { return brush('Outline'); },
+    get scrollThumbDrag()  { return brush('OnSurfaceVariant'); },
 
-    // ── Scrim ───────────────────────────────────────────────────────
-    scrim:           new SolidColorBrush(Color.FromHex('#00000066')),
+    // ── Scrim (semi-transparent dim over content) ───────────────────
+    // Material's scrim is Scrim-tinted black at ~40% — preallocated
+    // here since the token dictionaries register it as fully opaque
+    // black, which would defeat the dim effect.
+    scrim: new SolidColorBrush(new Color(0, 0, 0, 102)),
 } as const;

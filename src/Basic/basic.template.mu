@@ -35,22 +35,22 @@
 
 ResourceDictionary {
 
-    // ── Button ──────────────────────────────────────────────────────
-    // Material 3 Filled Button. PART_Border is the rounded surface
-    // whose Background swaps on IsPressed / IsMouseOver via
-    // declarative triggers on the templated parent (the Button
-    // itself). IsPressed is ordered last so it wins when both
-    // IsMouseOver and IsPressed are active — same precedence the
-    // previous imperative refresh closure enforced. The
-    // ContentPresenter is discovered by ControlTemplate.Apply's
-    // first-presenter walk.
+    // ── Button: variant-driven Material 3 chrome ───────────────────
+    // Five M3 button variants, one ControlTemplate per variant. The
+    // default Button Style sets the Filled template as a baseline,
+    // then a property-trigger chain on the Variant DP swaps in the
+    // variant-specific template. The IsMouseOver / IsPressed colour
+    // swaps live INSIDE each template (each variant has its own
+    // state colours), so the trigger graph stays one level deep.
     //
-    // Tokens (resolved via the Material palette merged onto
+    // PART_Border is the rounded surface; ContentPresenter is
+    // discovered by ControlTemplate.Apply's first-presenter walk.
+    // Tokens come from the Material palette merged onto
     // Application.Resources at startup; SetTheme('light'|'dark') swaps
-    // them at runtime):
-    //   * Primary / PrimaryHover / PrimaryPress — fill colours
-    //   * ShapeFull — M3 baseline pill (radius >> button height)
-    Template x:key="DefaultButton" [TargetType=Button]{
+    // every dependent colour through the DynamicResource bindings.
+
+    // Filled — the M3 baseline, also the historical mural default.
+    Template x:key="DefaultFilledButton" [TargetType=Button]{
         Border x:name="PART_Border"[Background      = @Primary,
                                     BorderThickness = (0),
                                     CornerRadius    = @ShapeFull,
@@ -60,8 +60,78 @@ ResourceDictionary {
         when ( IsMouseOver ) { PART_Border.Background = @PrimaryHover; }
         when ( IsPressed   ) { PART_Border.Background = @PrimaryPress; }
     }
+
+    // Elevated — surface-tinted base, primary text, elevation 1 at
+    // rest. Hover bumps elevation; pressed lowers it back to 1 so the
+    // press feedback is recession + colour both.
+    Template x:key="DefaultElevatedButton" [TargetType=Button]{
+        Border x:name="PART_Border"[Background      = @SurfaceContainerLow,
+                                    BorderThickness = (0),
+                                    CornerRadius    = @ShapeFull,
+                                    Effect          = @Elevation1,
+                                    Padding         = (24,10,24,10)]{
+            ContentPresenter
+        }
+        when ( IsMouseOver ) { PART_Border.Background = @SurfaceContainer;
+                               PART_Border.Effect     = @Elevation2; }
+        when ( IsPressed   ) { PART_Border.Background = @SurfaceContainerHigh;
+                               PART_Border.Effect     = @Elevation1; }
+    }
+
+    // Tonal (Filled Tonal) — secondary-container base. Sits between
+    // Filled (high emphasis) and Outlined (low) in the M3 emphasis
+    // hierarchy. No elevation at rest.
+    Template x:key="DefaultTonalButton" [TargetType=Button]{
+        Border x:name="PART_Border"[Background      = @SecondaryContainer,
+                                    BorderThickness = (0),
+                                    CornerRadius    = @ShapeFull,
+                                    Padding         = (24,10,24,10)]{
+            ContentPresenter
+        }
+        when ( IsMouseOver ) { PART_Border.Background = @SurfaceContainerHigh; }
+        when ( IsPressed   ) { PART_Border.Background = @SurfaceContainerHighest; }
+    }
+
+    // Outlined — transparent surface, 1-DIP outline, primary text.
+    // Hover / press tint via the SurfaceContainer ramp so the outline
+    // stays the dominant chrome.
+    Template x:key="DefaultOutlinedButton" [TargetType=Button]{
+        Border x:name="PART_Border"[Background      = #00000000,
+                                    BorderBrush     = @Outline,
+                                    BorderThickness = (1),
+                                    CornerRadius    = @ShapeFull,
+                                    Padding         = (23,9,23,9)]{
+            ContentPresenter
+        }
+        when ( IsMouseOver ) { PART_Border.Background = @SurfaceContainerLow; }
+        when ( IsPressed   ) { PART_Border.Background = @SurfaceContainerHigh; }
+    }
+
+    // Text — fully transparent base, no chrome at rest. Hover / press
+    // reveal a low-emphasis tint. Tighter padding than the other
+    // variants matches the M3 spec.
+    Template x:key="DefaultTextButton" [TargetType=Button]{
+        Border x:name="PART_Border"[Background      = #00000000,
+                                    BorderThickness = (0),
+                                    CornerRadius    = @ShapeFull,
+                                    Padding         = (12,10,12,10)]{
+            ContentPresenter
+        }
+        when ( IsMouseOver ) { PART_Border.Background = @SurfaceContainerLow; }
+        when ( IsPressed   ) { PART_Border.Background = @SurfaceContainerHigh; }
+    }
+
+    // Default Style — picks the template by Variant via property
+    // triggers. Filled is the baseline (the Setter); each non-Filled
+    // variant rides its own trigger to swap Template. Setting Variant
+    // at construction time or via a later set both flow through the
+    // same trigger pipeline.
     Style [TargetType=Button] {
-        Template = @DefaultButton;
+        Template = @DefaultFilledButton;
+        when ( Variant = Elevated ) { Template = @DefaultElevatedButton; }
+        when ( Variant = Tonal    ) { Template = @DefaultTonalButton; }
+        when ( Variant = Outlined ) { Template = @DefaultOutlinedButton; }
+        when ( Variant = Text     ) { Template = @DefaultTextButton; }
     }
 
     // ── ComboBox (in-flow selection box) ────────────────────────────
@@ -73,15 +143,15 @@ ResourceDictionary {
     // them by key explicitly.
     Template x:key="DefaultComboBoxSelection"[TargetType=ComboBox]{
         ClickableBorder x:name="PART_SelectionBox"
-                      [ Background      = #ffffff,
-                        BorderBrush     = #c4c4c4,
+                      [ Background      = @Surface,
+                        BorderBrush     = @Outline,
                         BorderThickness = (1),
-                        CornerRadius    = 4,
+                        CornerRadius    = @ShapeExtraSmall,
                         Padding         = (14,8,14,8),
                         Height          = 40 ]{
             SplitRow{
-                TextBlock x:name="PART_SelectionText" [ Foreground = #9e9e9e ]
-                TextBlock x:name="PART_Chevron"       [ Foreground = #212121,
+                TextBlock x:name="PART_SelectionText" [ Foreground = @OnSurfaceVariant ]
+                TextBlock x:name="PART_Chevron"       [ Foreground = @OnSurface,
                                                         Text       = "▾" ]
             }
         }
@@ -99,10 +169,11 @@ ResourceDictionary {
         ComboBoxPopupHost x:name="PART_PopupHost"{
             ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
             Border x:name="PART_Popup"
-                  [ Background      = #ffffff,
-                    BorderBrush     = #e0e0e0,
+                  [ Background      = @SurfaceContainerHigh,
+                    BorderBrush     = @OutlineVariant,
                     BorderThickness = (1),
-                    CornerRadius    = 4,
+                    CornerRadius    = @ShapeExtraSmall,
+                    Effect          = @Elevation2,
                     Padding         = (0,4,0,4) ]{
                 ComboBoxItemList x:name="PART_PopupList"
             }
@@ -117,8 +188,8 @@ ResourceDictionary {
     // ctor reads them explicitly.
     Template x:key="DefaultDrawerPane"[TargetType=Drawer]{
         Border x:name="PART_Pane"
-              [ Background      = #ffffff,
-                BorderBrush     = #e0e0e0,
+              [ Background      = @SurfaceContainerLow,
+                BorderBrush     = @OutlineVariant,
                 BorderThickness = (1) ]{
             ContentPresenter
         }
@@ -166,13 +237,13 @@ ResourceDictionary {
                                   [ Width           = 20,
                                     BorderThickness = (0) ]{
                         TextBlock x:name="PART_ChevronText"
-                                  [ Foreground         = #616161,
+                                  [ Foreground         = @OnSurfaceVariant,
                                     FontSize           = 12,
                                     VerticalAlignment  = Center,
                                     Text               = "▸" ]
                     }
                     TextBlock x:name="PART_Label"
-                              [ Foreground         = #212121,
+                              [ Foreground         = @OnSurface,
                                 FontSize           = 14,
                                 VerticalAlignment  = Center ]
                 }
@@ -217,8 +288,8 @@ ResourceDictionary {
                 Height          = 32 ]{
             ContentPresenter
         }
-        when ( IsMouseOver ) { PART_Border.Background = #f5f5f5; }
-        when ( IsSelected  ) { PART_Border.Background = #e3f2fd; }
+        when ( IsMouseOver ) { PART_Border.Background = @SurfaceContainerHigh; }
+        when ( IsSelected  ) { PART_Border.Background = @SecondaryContainer; }
     }
     Style [TargetType=ListBoxItem] {
         Template = @DefaultListBoxItem;
@@ -236,13 +307,12 @@ ResourceDictionary {
                                           Padding        = (20,16,20,12) ]{
                 StackPanel x:name="PART_HeaderStack" [ Orientation = Vertical ]{
                     TextBlock x:name="PART_TitleText"
-                              [ Foreground = #0f172a,
-                                FontSize   = 18,
-                                FontWeight = Bold ]
+                              [ Foreground = @OnSurface,
+                                Style      = @TitleLarge ]
                 }
             }
             Border x:name="PART_Divider" [ DockPanel.Dock  = Top,
-                                           Background      = #e2e8f0,
+                                           Background      = @OutlineVariant,
                                            BorderThickness = (0),
                                            Height          = 1 ]
             Border x:name="PART_ContentHost" [ Padding = (0) ]{
@@ -264,10 +334,10 @@ ResourceDictionary {
     // keyboard handlers, treating the editor as a passive view.
     Template x:key="DefaultTextBox" [TargetType=TextBox]{
         Border x:name="PART_Border"
-              [ Background      = #ffffff,
-                BorderBrush     = #c4c4c4,
+              [ Background      = @Surface,
+                BorderBrush     = @Outline,
                 BorderThickness = (1),
-                CornerRadius    = 4,
+                CornerRadius    = @ShapeExtraSmall,
                 Padding         = (12,8,12,8) ]{
             ScrollViewer x:name="PART_Scroll"{
                 TextEditorSurface x:name="PART_Editor"
@@ -291,15 +361,15 @@ ResourceDictionary {
     // step the value by SmallChange.
     Template x:key="DefaultSpinEdit" [TargetType=SpinEdit]{
         Border x:name="PART_Border"
-              [ Background      = #ffffff,
-                BorderBrush     = #c4c4c4,
+              [ Background      = @Surface,
+                BorderBrush     = @Outline,
                 BorderThickness = (1),
-                CornerRadius    = 4 ]{
+                CornerRadius    = @ShapeExtraSmall ]{
             DockPanel{
                 Border x:name="PART_ButtonColumn"
                       [ DockPanel.Dock  = Right,
                         Width           = 18,
-                        BorderBrush     = #e0e0e0,
+                        BorderBrush     = @OutlineVariant,
                         BorderThickness = (1,0,0,0) ]{
                     StackPanel [ Orientation = Vertical ]{
                         ClickableBorder x:name="PART_Up"
@@ -308,7 +378,7 @@ ResourceDictionary {
                                          Height          = 14 ]{
                             TextBlock [ Text                = "▴",
                                         FontSize            = 10,
-                                        Foreground          = #424242,
+                                        Foreground          = @OnSurfaceVariant,
                                         HorizontalAlignment = Center,
                                         VerticalAlignment   = Center ]
                         }
@@ -318,7 +388,7 @@ ResourceDictionary {
                                          Height          = 14 ]{
                             TextBlock [ Text                = "▾",
                                         FontSize            = 10,
-                                        Foreground          = #424242,
+                                        Foreground          = @OnSurfaceVariant,
                                         HorizontalAlignment = Center,
                                         VerticalAlignment   = Center ]
                         }
@@ -342,16 +412,16 @@ ResourceDictionary {
     Template x:key="DefaultSlider" [TargetType=Slider]{
         SliderLayout x:name="PART_Layout"{
             Border x:name="PART_Track"
-                  [ Background      = #e0e0e0,
+                  [ Background      = @SurfaceContainerHighest,
                     CornerRadius    = 2,
                     BorderThickness = (0) ]
             Border x:name="PART_Fill"
-                  [ Background      = #1976d2,
+                  [ Background      = @Primary,
                     CornerRadius    = 2,
                     BorderThickness = (0) ]
             Border x:name="PART_Thumb"
-                  [ Background      = #1976d2,
-                    CornerRadius    = 8,
+                  [ Background      = @Primary,
+                    CornerRadius    = @ShapeFull,
                     BorderThickness = (0) ]
         }
     }
@@ -387,12 +457,12 @@ ResourceDictionary {
     Template x:key="DefaultScrollBar" [TargetType=ScrollBar]{
         ScrollBarLayout x:name="PART_Layout"{
             Border x:name="PART_Track"
-                  [ Background      = #f1f5f9,
-                    CornerRadius    = 4,
+                  [ Background      = @SurfaceContainerLow,
+                    CornerRadius    = @ShapeExtraSmall,
                     BorderThickness = (0) ]
             Border x:name="PART_Thumb"
-                  [ Background      = #cbd5e1,
-                    CornerRadius    = 4,
+                  [ Background      = @OutlineVariant,
+                    CornerRadius    = @ShapeExtraSmall,
                     BorderThickness = (0) ]
         }
     }
@@ -407,7 +477,7 @@ ResourceDictionary {
     // the named handle for runtime tinting.
     Template x:key="DefaultThumb" [TargetType=Thumb]{
         Border x:name="PART_Border"
-              [ Background      = #cbd5e1,
+              [ Background      = @OutlineVariant,
                 CornerRadius    = 2,
                 BorderThickness = (0) ]
     }
@@ -423,7 +493,7 @@ ResourceDictionary {
     // the right affordance on hover.
     Template x:key="DefaultGridSplitter" [TargetType=GridSplitter]{
         Border x:name="PART_Border"
-              [ Background      = #cbd5e1,
+              [ Background      = @OutlineVariant,
                 CornerRadius    = 0,
                 BorderThickness = (0) ]
     }
@@ -437,7 +507,7 @@ ResourceDictionary {
     // resize axis.
     Template x:key="DefaultSplitter" [TargetType=Splitter]{
         Border x:name="PART_Border"
-              [ Background      = #cbd5e1,
+              [ Background      = @OutlineVariant,
                 CornerRadius    = 0,
                 BorderThickness = (0) ]
     }
