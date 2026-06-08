@@ -1,6 +1,5 @@
 import {
     APPROXIMATE_TEXT_MEASURER,
-    Application,
     MetaData,
     Model,
     Point,
@@ -11,44 +10,6 @@ import {
 } from '../runtime/index.js';
 import { Brush, FontStyle, FontWeight, FormattedText } from '../visual-engine/index.js';
 import { Theme } from './theme.js';
-
-// Live TextBlock instances whose Foreground falls back to the theme.
-// On a palette swap (Application.Resources mutation) every entry gets
-// InvalidateVisual'd so the next render picks up the new
-// `Theme.ink`. WeakSet keeps GC'd visuals from leaking — once a
-// TextBlock loses its last ref, it drops out silently.
-const _liveTextBlocks = new WeakSet<TextBlock>();
-// Track each TextBlock individually too — WeakSet doesn't iterate, so
-// invalidation needs a parallel iterable structure. WeakRef ensures
-// GC'd visuals still collect; the loop cleans dead refs on each pass.
-const _liveTextBlockRefs: Array<WeakRef<TextBlock>> = [];
-// Subscribe to Application.Resources at module load. Material's
-// SetTheme path calls AddMergedDictionary, which fires this signal;
-// resources mutations during dev / tests also flow through here.
-let _themeSubscribed = false;
-function ensureThemeSubscription(): void
-{
-    if (_themeSubscribed) return;
-    _themeSubscribed = true;
-    const app = Application.current;
-    if (app === null) return;
-    app.Resources.Subscribe(() =>
-    {
-        for (let i = _liveTextBlockRefs.length - 1; i >= 0; i--)
-        {
-            const tb = _liveTextBlockRefs[i]!.deref();
-            if (tb === undefined)
-            {
-                _liveTextBlockRefs.splice(i, 1);
-                continue;
-            }
-            // Only re-render text that has NO explicit Foreground —
-            // bound / set values already propagate through the regular
-            // DP pipeline.
-            if (tb.Foreground === undefined) tb.InvalidateVisual();
-        }
-    });
-}
 
 // Default font stack: matches what modern OSes ship with — falls back
 // through system-ui (the OS UI font), then generic sans-serif as a last
@@ -111,18 +72,6 @@ export class TextBlock extends Visual
     {
         super();
         if (text !== undefined) this.Text = text;
-        // Register with the theme-swap invalidation list so a
-        // Material.SetTheme call re-paints this TextBlock's text
-        // when Foreground is using the Theme.ink fallback. Subscribing
-        // every TextBlock individually would be wasteful; instead one
-        // module-level Application.Resources listener walks the WeakRef
-        // list when a theme swap fires.
-        ensureThemeSubscription();
-        if (!_liveTextBlocks.has(this))
-        {
-            _liveTextBlocks.add(this);
-            _liveTextBlockRefs.push(new WeakRef(this));
-        }
     }
 
     public get Text(): string { return this.get_property_value(TextBlock.TextKey); }
