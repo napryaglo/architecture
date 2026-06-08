@@ -348,20 +348,9 @@ that Grid resolve to the final group max.
 
 ## 8. What's not in Grid v2.2
 
-Grouped by the planned version that would deliver them. See § 0 for
-the full version map.
-
-### Grid v3 — debug aids + edge-case allocation policy
-
-- **`ShowGridLines`** — debug-rendering of cell boundaries. Trivial to
-  add to `RenderOverride`; the rendering layer is ready, the DP isn't
-  registered.
-
-- **Star-track shrinkage when Auto tracks request more than
-  available.** WPF clamps Auto sizes to keep at least some room for
-  Star tracks; Grid lets Stars go to 0 today. In practice this only
-  manifests when the available size is too small to accommodate
-  Auto-driven content — usually a layout bug at a higher level.
+Tracked as Grid v3 in [current-backlog.md § 14](../../current-backlog.md):
+- **`ShowGridLines`** — § 14.1.
+- **Star-track shrinkage when Auto requests more than available** — § 14.2.
 
 ## 9. Choosing Grid vs. other panels
 

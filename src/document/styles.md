@@ -250,27 +250,20 @@ Practical implications:
 
 ## 9. Limitations
 
-- **No `DataTrigger`.** PropertyTrigger watches a property on the
-  styled target. A `DataTrigger`-equivalent that watches a `Binding`'s
-  resolved value would layer naturally on top — not built yet.
-- **No `MultiTrigger`.** No AND-of-multiple-conditions trigger.
-- **No `EventTrigger`.** WPF's EventTrigger fires animations on event
-  occurrence. We don't have an animation system.
-- **No `Style.Triggers` with `EnterActions` / `ExitActions`.** Triggers
-  just apply / unapply their setters; no "run a Storyboard on activate"
-  hook.
+User-visible gotchas. Roadmap-shaped items (`DataTrigger`, `MultiTrigger`,
+`EventTrigger`, `EnterActions` / `ExitActions`, sealing follow-up) are
+tracked in [current-backlog.md § 7](../../current-backlog.md).
+
 - **Setter.value cloning vs sharing.** A bare `Binding` shared across
   multiple targets of the same style hits a callback-overwrite issue
   (last attached target wins). `SetterFactory` is the workaround; the
   framework doesn't auto-clone Bindings.
-- **No sealing of Setters / Triggers in practice.** `Seal()` sets
-  `IsSealed` but the readonly fields prevent mutation already. Future
-  mutable trigger / setter collections would gate on this flag.
 - **Implicit style is reactive at the dictionary level, not tree level.**
   Subscribes to the resource dicts the Visual found at AttachLogical;
   doesn't auto-subscribe to dicts that appear later on ancestors that
   hadn't allocated `Resources` yet. (Same limitation as
-  [DynamicResource](resources.md#6-limitations).)
+  [DynamicResource](resources.md#6-limitations); backlog
+  [§ 12.1](../../current-backlog.md#12-resources--bindings).)
 - **No per-style namespace scoping for setter-resolved names.** Setter
   values don't go through a `FindName` lookup; they're literal values
   or factory-produced bindings.

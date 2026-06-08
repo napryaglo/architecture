@@ -294,12 +294,12 @@ PresentationTarget observation:
 
 ## 11. Open questions to defer
 
-These are real but not blockers for v1 — punt explicitly until the framework forces an answer.
+Tracked in [current-backlog.md](../../current-backlog.md):
 
-- **Sub-Model listener automation.** When a Visual holds a `Brush` property and the brush's `Color` changes, the Visual needs to re-render. Right now the Visual would have to manually `Add/RemovePropertyChangedListener` on every sub-property of every brush, pen, geometry it holds. WPF solves this with `Freezable` — a Brush either freezes (immutable, no listeners needed) or it inherits change notification upstream via parent pointers. We can pick one of: (a) implement Freezable, (b) have the holder Visual listen on a `Changed` event emitted by every Model, (c) auto-subscribe when a Model-typed property is assigned. Pick after we hit the first concrete pain point.
-- **Hit testing for Canvas/WebGL renderers.** SVG gives this for free. Canvas needs a spatial index or a hidden picking buffer. Defer until we actually build the Canvas renderer.
-- **Render-thread vs UI-thread.** Currently single-threaded. Compositing layers and async commits land in the renderer when needed; the Visual API doesn't change.
-- **Visual → PresentationTarget ancestor lookup.** WPF has `PresentationSource.FromVisual(v)` so any Visual can find its hosting window for DPI / size queries. Could add `Visual.FindAncestorPresentationTarget()` that walks `parent` and then asks the renderer. Deferred until DPI-aware text measurement or similar concretely needs it.
+- **Sub-Model listener automation (Freezable-equivalent).** Backlog § 5.2.
+- **Hit testing for Canvas/WebGL renderers.** Backlog § 5.13. Pairs with `CanvasRenderer` (§ 9.1).
+- **`Visual.FindAncestorPresentationTarget()`.** Backlog § 5.12.
+- **Render-thread vs UI-thread.** Not yet backlogged — single-threaded model holds today; compositing / async commits would land at the renderer layer without touching the Visual API.
 
 ## 12. Build order
 

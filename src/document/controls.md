@@ -101,12 +101,9 @@ b.BorderThickness = new Thickness(2);
 
 ### Limitations
 
-- **Non-uniform border thickness** is rendered as uniform using
-  `BorderThickness.Top`. Per-side strokes need a custom path geometry
-  (deferred).
-- **CornerRadius** is registered but not yet honored — `DrawingContext`
-  doesn't have a `DrawRoundedRectangle` helper yet. Setting CornerRadius
-  fires render invalidation but produces no visual effect.
+Tracked in [current-backlog.md § 13](../../current-backlog.md):
+- **Non-uniform `BorderThickness`** rendered as uniform via `.Top` — § 13.1.
+- **`CornerRadius`** not yet honored by the drawing context — § 13.2.
 
 ### Usage
 
@@ -311,14 +308,11 @@ card.Padding         = new Thickness(16);
 
 ### Limitations
 
-- **Single line only** — no `TextWrapping`, no automatic line breaks. Multi-line
-  text needs a future TextWrapping property and shaper integration.
-- **No text alignment within the block** — `HorizontalAlignment` /
-  `VerticalAlignment` position the *whole block* within its parent slot.
-  Text-within-block alignment (like CSS `text-align: center`) would be a
-  separate property (`TextAlignment`) once we have a measurer that can
-  return line breaks.
-- **No selection or caret** — pure display today.
+Tracked in [current-backlog.md § 13](../../current-backlog.md):
+- **Single line only** (no `TextWrapping`) — § 13.3.
+- **No `TextAlignment`** within the block — § 13.4.
+- **No selection or caret** — pure display today; use `TextBox` for
+  editable text.
 
 ---
 
@@ -431,15 +425,14 @@ automatically.
 
 ## What's still coming
 
-These are the natural next controls:
+Shipped since this list was first written: `Ellipse`, `Line`,
+`StackPanel`, `Grid`, `WrapPanel`, `DockPanel`, `UniformGrid`,
+`Button`, `ScrollBar`, `TextBox`, `ComboBox`, `ListBox`, `TreeView`,
+`Slider`, `SpinEdit`, `Drawer`, `PageView`, `Diagram`.
 
-- **`Rectangle`** / **`Ellipse`** — shape primitives that wrap a Geometry.
-- **`StackPanel`** — vertical or horizontal stack layout (non-virtualizing).
-- **`Grid`** — row/column layout with proportional sizing.
-- **`Image`** — wraps an `ImageBrush`.
-- **`Button`** — interactive (needs event routing first).
-- **`ScrollBar`** — visual control bound to `ScrollViewer.HorizontalOffset` /
-  `VerticalOffset` / `ScrollableWidth` / `ScrollableHeight`.
+Still on the [backlog](../../current-backlog.md):
+- **`Rectangle`** shape primitive — § 13.5.
+- **`Image`** control wrapping `ImageBrush` — § 13.6.
 
 The framework primitives are in place — adding any of these is overriding
 `MeasureOverride` / `ArrangeOverride` / `RenderOverride` and registering

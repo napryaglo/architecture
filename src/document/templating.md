@@ -275,15 +275,13 @@ visible to user content. Correct WPF semantics.
 
 ## 9. Limitations
 
-- **Imperative factories only.** No XAML parser. Templates are
-  TypeScript functions that construct visuals. A markup layer
-  (lowering to this same imperative shape) would be a separate
-  effort.
-- **No `EventTrigger` inside templates.** Templates can't carry
-  storyboards / animations; we don't have an animation system.
-- **No `MultiBinding` for `TemplateBinding`.** A single
-  `TemplateBinding` resolves one source path; combining multiple
-  source values would need a `MultiBinding`-equivalent.
+Roadmap items (`MultiBinding` for `TemplateBinding`, `Style.TargetType=TemplateType`,
+`EventTrigger` inside templates) are tracked in
+[current-backlog.md § 11](../../current-backlog.md) and § 7.
+
+- **Markup is `.mu`, not XAML.** Templates can be authored declaratively
+  in `.mu` or imperatively as TypeScript factory functions. No XAML
+  parser.
 - **First-presenter-wins for `ContentPresenter` / `ItemsPresenter`
   discovery.** Templates with multiple presenters are unusual and
   ambiguous; we don't try to disambiguate.
@@ -297,7 +295,4 @@ visible to user content. Correct WPF semantics.
   would have the inner Button's template internals see the inner
   Button as templated parent, not transitively the outer. WPF
   semantics; correct but worth knowing.
-- **No `Style.TargetType = TemplateType` integration.** Mural styles
-  don't auto-apply to a control through its template the way WPF's
-  themed styles do.
 </content>

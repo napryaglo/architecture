@@ -303,23 +303,17 @@ clears the prior selection" will look like they pass while the prior
 
 ## 12. Limitations and non-goals
 
-- **No keyboard equivalent.** Marquee is mouse-only. Shift+arrow row
-  range extension is `Selector`-level and already covered by
-  `selectContainerRange`.
+Tracked in [current-backlog.md § 10](../../current-backlog.md):
+- **Marquee autoscroll** — § 10.7.
+- **Marquee keyboard equivalent** — § 10.8.
 
-- **No autoscroll.** Dragging the cursor past the panel's edges holds
-  the marquee at the edge; the underlying `ScrollViewer` doesn't
-  auto-scroll to bring more rows into the gesture. Wiring autoscroll
-  would mirror the same hook drag-drop's `8.4` autoscroll uses but is
-  not implemented today.
-
+Non-goals (no backlog entry):
 - **No DataGrid / multi-axis hit-tests.** The implementation assumes
   the items panel's coordinate frame matches the rect arithmetic — true
   for `VirtualizingStackPanel`, `VirtualizingWrapPanel`, and the
   non-virtualizing siblings. A `DataGrid` row/column intersection model
   would need a different `computeMarqueeSelection`.
-
 - **`MarqueeBoundsPolicy` per-session is fixed at the DP value.**
   Changing the DP mid-drag won't change the active session's policy
   (the policy is re-read on every move sample, so this is actually
-  live — the limitation here is that there's no per-gesture override).
+  live — the limitation is that there's no per-gesture override).

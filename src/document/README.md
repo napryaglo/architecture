@@ -149,9 +149,11 @@ directory for `ge`). Open in a browser to inspect the rendering.
 ## Running the tests
 
 ```bash
-npm test          # ~470 tests across runtime, visual-engine, Controls
+npm test          # ~1470 tests across runtime, visual-engine, Controls
 npm run typecheck # tsc --noEmit
 ```
+
+See [build-targets.md](build-targets.md) for the full npm-script catalog.
 
 ## Conventions
 
@@ -172,38 +174,75 @@ npm run typecheck # tsc --noEmit
 ## What's stable vs. in-flight
 
 **Stable** — has tests, used by demos, unlikely to change shape:
-- Property/binding system (`runtime/`), including the full value-priority
-  ladder with Style/Trigger tiers and `Visual.Style` apply machinery
-- `Visual` + `Single` + `Panel` tree, visual/logical split, layout lifecycle
-  with invalidation cascade
-- Brush/Pen/Geometry/Transform models
-- `SvgDrawingContext` including `DrawGeometry` + `PushClip`
-- `HeadlessTarget` (the headless render pipeline)
-- `Border`, `TextBlock`, `Canvas` (with `Left` / `Top` attached properties)
-- `ContentControl` + `ContentPresenter` + `ControlTemplate` + `TemplateBinding`,
-  per-template `NameScope`, implicit style lookup
-- `ItemsControl` + `ItemsPresenter` + `ItemContainerGenerator` +
-  `DataTemplate`, `ObservableCollection` with incremental change dispatch
-- `VirtualizingStackPanel` with `IScrollInfo`, `ScrollViewer`
-  (clip-and-translate and delegate modes)
-- `TextMeasurer` + `ApproximateTextMeasurer` + `FontMetricsMeasurer` + Google Fonts loader
+- Property / binding / inheritance system (full value-priority ladder
+  with Style / Trigger / Animated tiers and `Visual.Style` apply machinery,
+  attached + cross-class properties, `MultiBinding`, `PriorityBinding`,
+  `AncestorBinding`, `MetaData` flag set).
+- `Visual` + `Single` + `Panel` tree, visual/logical split, layout
+  lifecycle with invalidation cascade.
+- Brush / Pen / Geometry / Transform models.
+- Drawing: `SvgDrawingContext`, `SvgRenderer` (dirty-tracking real-time
+  renderer powering `HtmlTarget`), `PushClip`, `PushTransform`.
+- Targets: `HeadlessTarget`, `HtmlTarget` (real-time SVG via
+  `SvgRenderer`). `FileTarget` is scaffold-only — see
+  [backlog § 9.2](../../current-backlog.md).
+- Routed events: `PointerDown/Up/Move/Wheel/Enter/Leave`, `KeyDown/Up`,
+  `TextInput`, `GotFocus/LostFocus`, `Drag*`. Tunnel-then-bubble dispatch,
+  `Handled` short-circuit, per-Visual `AddRoutedEventListener`.
+- Drag & drop: `AllowDrop`, `IsDraggable`, `OnDragStart`, `DataObject`,
+  `DragDropEffects`, three preview modes (ghost / null / DataTemplate).
+- Adorners: `Adorner`, `AdornerLayer`, `AdornerDecorator`, the inner-SCP
+  layer for scroll-aligned overlays.
+- Behaviors: `Behavior` base + `Visual.AddBehavior` + markup `Behaviors {…}`,
+  `OnDetached` lifecycle, `ListReorderBehavior`,
+  `MarqueeSelectionBehavior`.
+- Templating: `ControlTemplate`, `ContentControl` + `ContentPresenter`,
+  `TemplateBinding`, `TemplatedParent`, per-template `NameScope`.
+- Items / virtualization: `ItemsControl` + `ItemsPresenter` +
+  `ItemContainerGenerator` + recycle pool, `DataTemplate`,
+  `ObservableCollection` with incremental dispatch, `VirtualizingStackPanel`,
+  `VirtualizingWrapPanel` (with `HorizontalSpacing` / `VerticalSpacing`),
+  `IScrollInfo`, `ScrollViewer` (clip-and-translate + delegate modes),
+  concrete `ScrollBar`.
+- Layout panels: `Canvas`, `Single`, `Panel`, `StackPanel`, `WrapPanel`,
+  `DockPanel`, `UniformGrid`, `Grid` (with shared-size groups).
+- Controls: `Border`, `TextBlock`, `Button`, `TextBox`, `ComboBox`,
+  `ListBox`, `TreeView`, `Slider`, `SpinEdit`, `Drawer`, `PageView`,
+  `Diagram`, shapes (`Ellipse`, `Line`), `Thumb`, `Splitter`,
+  `GridSplitter`.
+- Selection: `Selector` base with `SelectionMode` ∈ {Single, Multiple,
+  Extended}, attached `Selector.IsSelected`, marquee multi-select with
+  `MarqueeBoundsPolicy`, click-on-empty-clear, anchor-relative range.
+- Commands (today's slice): `ICommand` + `RelayCommand` +
+  `Button.Command` + `InvokeCommandAction` trigger action. Broader
+  surface (ICommandSource, InputBindings, ToolBar / Menu / Ribbon)
+  tracked in [backlog § 5.9 + § 5.11](../../current-backlog.md).
+- Text measurement: `ApproximateTextMeasurer`, `FontMetricsMeasurer`
+  (opentype.js), Google Fonts loader.
 
-**In flight** — works enough for the demos but the renderer integration is pending:
-- `HtmlTarget` — DOM mount and resize tracking are live, painting is TODO
-- `FileTarget` — scaffold only; `Save()` throws
-
-**Not yet built** — referenced but deferred:
-- `SvgRenderer` (the dirty-tracking real-time renderer for `HtmlTarget`)
-- `CanvasRenderer`
-- Layout panels beyond `Canvas` / `Single` / abstract `Panel` (StackPanel,
-  Grid, WrapPanel, etc.)
-- Input event routing (no mouse / keyboard / wheel today; `ScrollViewer`
-  offsets are programmatic-only)
-- Animation system (no `EventTrigger`, no smooth-scroll, no Storyboard)
-- Concrete `ScrollBar` visual control
-- `DataTrigger` (a `PropertyTrigger`-equivalent driven by a `Binding`)
-- `MultiTrigger` (AND of multiple conditions)
-- Container recycling across items in virtualizing panels
+**Roadmap and known gaps** — see [current-backlog.md](../../current-backlog.md):
+- § 5 — architectural gaps (Freezable, hit-pad opt-out, Visual →
+  PresentationTarget lookup, non-SVG hit-testing).
+- § 5.9 + § 5.11 — command infrastructure (ICommandSource, InputBindings,
+  RoutedCommand) and surface controls (Toolbar / Menu / Ribbon).
+- § 7 — triggers & setters (`DataTrigger`, `MultiTrigger`, `EventTrigger`,
+  enter/exit actions).
+- § 8 — drag & drop v2 (multi-pointer).
+- § 9 — renderers & targets (`CanvasRenderer`, `FileTarget` writers).
+- § 10 — items, scrolling, virtualization (variable item heights,
+  horizontal virtualization, template selectors, smooth scrolling,
+  marquee autoscroll).
+- § 11 — templating gaps (`MultiBinding` for `TemplateBinding`,
+  `Style.TargetType=TemplateType`).
+- § 12 — resources / bindings (DynamicResource re-wire, MergedDictionaries
+  URI source, coarse change notifications, keyed sealing).
+- § 13 — concrete-control gaps (Border per-side BorderThickness +
+  CornerRadius rendering, TextBlock multi-line + TextAlignment,
+  Rectangle, Image).
+- § 14 — Grid v3 (`ShowGridLines`, star-shrinkage policy).
+- § 15 — attached-properties follow-ups.
+- § 16 — animation system (the biggest missing piece; blocks several
+  other items).
 - Variable item heights in `VirtualizingStackPanel`
 - Horizontal-orientation virtualization
 - Walking visual descendants for `IScrollInfo` (ScrollViewer requires

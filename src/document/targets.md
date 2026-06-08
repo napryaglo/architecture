@@ -321,15 +321,14 @@ target.AddPropertyChangedListener('Width', (_, _p, _old, w) => {
 
 ## 10. What's not yet built
 
-- **`SvgRenderer`** — the dirty-tracking real-time renderer that HtmlTarget
-  will use. Maintains a slot tree of `<g>` elements per Visual, applies
-  attribute diffs on re-render, schedules via rAF. Build-order step 12.8.
-- **`CanvasRenderer`** — for the Canvas backend of HtmlTarget. Same dirty
-  tracking, different DC implementation.
-- **`FileTarget` writers** — SVG serializer (trivial via SvgDrawingContext),
-  PNG rasterizer (needs a Canvas2D), PDF emitter (needs a pdf library).
-- **Event routing** — DOM events on the HtmlTarget surface mapped to
-  Visual tree traversal.
+`SvgRenderer` is shipped and powers `HtmlTarget`'s real-time scene; event
+routing through the visual tree is live. The remaining renderer / target
+gaps are tracked in [current-backlog.md § 9](../../current-backlog.md):
 
-The abstractions are in place — adding a renderer doesn't require touching
-the Visual API.
+- **`CanvasRenderer`** (§ 9.1) — Canvas2D backend for the same Visual
+  tree. Pairs with non-SVG hit-testing (§ 5.13).
+- **`FileTarget` writers** (§ 9.2) — `Save()` throws today. SVG / PNG /
+  PDF are the natural three.
+
+The abstractions are in place — adding a renderer doesn't require
+touching the Visual API.

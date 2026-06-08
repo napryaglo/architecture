@@ -261,9 +261,10 @@ Roughly **120–150 lines** of production code. Existing 103 tests should keep p
 
 ## 8. Open questions deferred for later (not blocking)
 
-- **`targetType` validation on attached properties.** WPF allows specifying that an attached property is only valid for certain target types. Not in scope; revisit if a use case appears.
-- **Bulk cross-class inheritance enumeration.** If a `Border` ancestor sets many inheritable cross-class properties, a freshly-attached subtree fills them via per-property cascades. There's no single "walk ancestors and discover what inheritable cross-class properties they hold" pass — works fine for normal usage; revisit only if performance demands a different approach.
-- **Removal vs Clear.** `ClearValue` resets to default but leaves the EVD slot. A `RemoveValue` that deletes the EVD entirely would save memory per target. Not worth the API surface unless profiling shows the cost.
+Tracked in [current-backlog.md § 15](../../current-backlog.md):
+- **`targetType` validation on attached properties** — § 15.1.
+- **Bulk cross-class inheritance enumeration** — § 15.2.
+- **`RemoveValue` vs `ClearValue`** — § 15.3.
 
 ## 9. Decisions captured
 

@@ -161,27 +161,13 @@ property does the same.
 
 ## 6. Limitations
 
-- **Subscriptions wired at construction.** `DynamicResource` walks the
-  host's ancestor chain ONCE at construction and subscribes to every
-  `Resources` dict it finds. Re-parenting the host afterwards, or an
-  ancestor first-accessing its `Resources` (allocating its dict) after
-  the DynamicResource was already built, won't re-wire. Covers the common
-  case of consuming resources from a fixed Application / Window /
-  templated control; not the case of moving controls around between
-  resource scopes at runtime.
-- **No XAML resource markup.** Mural is imperative-only. Resources are
-  populated with `Set(...)` calls; there's no `<ResourceDictionary>` /
-  `<StaticResource>` / `<DynamicResource>` parser.
-- **No `MergedDictionaries.Source` URI loading.** Consumers construct
-  resource dictionaries imperatively; there's no built-in "load this
-  XAML / JSON / file at this URI" path.
-- **Coarse-grained change notifications.** `Subscribe` is `() => void`
-  (no per-key diff payload). Consumers re-resolve the specific keys
-  they care about on each fire. Fine for typical resource counts; would
-  be wasteful for dictionaries with thousands of entries where most
-  changes don't affect a given consumer.
-- **No keyed sealing.** WPF freezes a resource value once committed;
-  Mural lets you `Set` over an existing key.
+Roadmap items (`DynamicResource` re-wiring, `MergedDictionaries.Source`,
+coarse-grained notifications, keyed sealing) are tracked in
+[current-backlog.md § 12](../../current-backlog.md).
+
+- **Markup is `.mu`, not XAML.** Resources can be authored declaratively
+  in `.mu`'s `resources:` slot or imperatively via `Set(...)` calls.
+  No XAML parser.
 - **`Resources` getter allocates on first read.** Reading `v.Resources`
   just to inspect (without intent to write) wastes an empty dictionary
   allocation. `TryFindResource` / `FindResource` avoid this by reading

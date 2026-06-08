@@ -395,49 +395,35 @@ target.Render(dc);
 
 ## 12. Limitations
 
-- **Variable item heights**. `VirtualizingStackPanel` assumes uniform
-  `ItemHeight`. Real-world content with measured-per-item heights
-  (typical for text-heavy lists) needs a different panel that caches
-  per-item sizes.
-- **Vertical orientation only**. No `Orientation = Horizontal` for the
-  virtualizing panel; trivial to add but not done.
-- **No container recycling across items**. `Recycle` drops the
-  mapping; the next `Realize` creates a fresh container. A pool /
-  recycle queue would let you reuse the same Visual instance for a
-  different item — saves allocation for very long lists.
-- **No item-based selection / focus**. `ItemsControl` is the data
-  display foundation; the selection model of WPF's `ListBox` /
-  `TreeView` / `DataGrid` is built on top and not part of this cut.
-- **No item recycling on style / template change**. Changing
-  `ItemTemplate` clears the generator and re-realizes everything from
-  scratch.
-- **No incremental update on `ObservableCollection.Insert` at an
-  index covered by VirtualizingStackPanel**. The panel's
-  `OnItemsChanged` default is "recycle all + invalidate measure" —
-  the next measure realizes from scratch. Subclasses could override
-  `OnItemsChanged` for finer-grained incremental update.
-- **No `DataTemplateSelector`** (pick a template per item type).
-  ItemTemplate is one-size-fits-all.
-- **No `HierarchicalDataTemplate`** (the TreeView analogue).
-- **No `MultiBinding` for data items.** A container's bindings against
-  the data item are direct property bindings.
+Most roadmap items here are tracked in
+[current-backlog.md § 10](../../current-backlog.md):
+- Variable item heights in VirtualizingStackPanel — § 10.1.
+- Horizontal-orientation virtualization — § 10.2.
+- `ItemTemplateSelector` / `DataTemplateSelector` — § 10.3.
+- Incremental items-change handling — § 10.4.
+- `HierarchicalDataTemplate` — § 10.9.
+- `MultiBinding` for data items — § 11.1 (template) covers the
+  template-side gap; data-side MultiBinding is the same shape.
+
+Built since this doc was first written:
+- **Container recycling** — virtualizing panels now pull from a
+  recycle pool via `Generator.ClaimRecycled`.
+- **Item-based selection** — `Selector` ships (`ListBox` / `TreeView` /
+  `Diagram` extend it), with multi-select + marquee.
 
 ### Scroll-specific limitations
 
-- **No input events**. ScrollViewer offsets are programmatic. A
-  future input layer connects mouse wheel / drag / keyboard /
-  touchpad gestures to the offsets.
-- **No scrollbar control**. `ScrollableWidth` / `ScrollableHeight` are
-  exposed for a future ScrollBar visual to bind to, but the
-  ScrollBar itself isn't built.
-- **No smooth scrolling / animation**. Offsets change
-  instantaneously.
-- **ScrollViewer doesn't walk descendants for `IScrollInfo`**. Content
-  must be the IScrollInfo provider directly. Wrapping a ScrollViewer
-  around an `ItemsControl` whose ItemsPanel is a
-  VirtualizingStackPanel won't auto-delegate — needs a stable
-  lookup from ItemsControl through to its inner panel.
-- **Cross-axis virtualization** (e.g., a virtualizing grid that
-  realizes a 2D viewport's worth of cells) — out of scope for the
-  current `VirtualizingStackPanel`.
+Built since this doc was first written:
+- **Input events** — mouse / wheel / keyboard route through the visual
+  tree via the routed-event system.
+- **ScrollBar visual control** — concrete `ScrollBar` ships; bound by
+  the default `ScrollViewer` template.
+
+Still gaps (tracked in
+[current-backlog.md § 10](../../current-backlog.md)):
+- **Smooth scrolling / animation** — § 10.5 (waiting on animation
+  system § 16.1).
+- **`ScrollViewer` descendant walk for `IScrollInfo`** — § 10.6.
+- **Cross-axis virtualization** — `VirtualizingWrapPanel` covers the
+  2D wrap case; a 2D scrolling grid would be a separate panel.
 </content>
