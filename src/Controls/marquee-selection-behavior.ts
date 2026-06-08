@@ -286,24 +286,45 @@ export function attachMarqueeSelection(selector: Selector): () => void
             }
         }
 
-        // Translate host coords → panel-local. Adorner's Placement
-        // returns rect in the adorner-layer frame, which equals the
-        // panel's frame (the inner SCP layer shares the scrolled frame
-        // with the content).
+        // Two rects, two coordinate frames:
+        //
+        //   * PANEL-LOCAL — fed to computeMarqueeSelection, which
+        //     compares against each container's rectInFrame(c, panel).
+        //     Always the panel's local frame, independent of where
+        //     the adorner lives.
+        //
+        //   * LAYER-LOCAL — fed to adorner.SetRect; the Adorner's
+        //     Placement returns this rect in the adorner-layer's
+        //     local frame, and the renderer paints there.
+        //
+        // The two frames coincide when the layer is an inner SCP
+        // AdornerLayer arranged at the same rect as the content
+        // (word-toolbox / ListBox path). They differ when the layer
+        // is a platform-root AdornerDecorator (Diagram has no SCP,
+        // so the layer resolves to the platform root; layer-host-
+        // origin = (0, 0), panel-host-origin = wherever the Diagram
+        // sits inside its parent chain). Without this split the
+        // marquee draws at (cursorHost - panelHost) instead of
+        // (cursorHost - layerHost) and the rect appears offset by
+        // -panelOriginInHost.
         const panelOrigin = originIn(panel, undefined);
-        const lx = Math.min(startHostX, args.HostX) - panelOrigin.x;
-        const ly = Math.min(startHostY, args.HostY) - panelOrigin.y;
-        const lw = Math.abs(args.HostX - startHostX);
-        const lh = Math.abs(args.HostY - startHostY);
-        const marqueeRect = new Rect(lx, ly, lw, lh);
-        adorner?.SetRect(marqueeRect);
+        const layerOrigin = layer !== undefined
+            ? originIn(layer, undefined)
+            : panelOrigin;
+        const hostMinX = Math.min(startHostX, args.HostX);
+        const hostMinY = Math.min(startHostY, args.HostY);
+        const w = Math.abs(args.HostX - startHostX);
+        const h = Math.abs(args.HostY - startHostY);
+        const panelRect = new Rect(hostMinX - panelOrigin.x, hostMinY - panelOrigin.y, w, h);
+        const layerRect = new Rect(hostMinX - layerOrigin.x, hostMinY - layerOrigin.y, w, h);
+        adorner?.SetRect(layerRect);
 
         // Recompute and apply the selection. BeginUpdate / EndUpdate
         // coalesce the per-row IsSelected flips into a single
         // SelectionChanged fire — important when the rect crosses
         // dozens of rows in one move sample.
         const nextSelection = computeMarqueeSelection(
-            selector, marqueeRect, snapshot, mode,
+            selector, panelRect, snapshot, mode,
             selector.MarqueeBoundsPolicy, panel);
         const sel = selector as unknown as {
             setSelectedContainers(items: readonly Visual[]): void;
