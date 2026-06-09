@@ -27,7 +27,7 @@ import AnimationNamedVM from "./animation-named-vm.mjs"
 // Button style lives in the template root's local resources so it
 // scopes to this demo only.
 
-ResourceDictionary {
+resources AnimationNamedDemo {
     DataTemplate x:key="AnimationNamedTemplate" [DataType=AnimationNamedVM] {
         Border [Background=@Surface, BorderBrush=@OutlineVariant,
                 BorderThickness=(1)]{

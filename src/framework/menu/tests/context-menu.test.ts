@@ -5,7 +5,7 @@ import { Application, NoModifiers, Panel, PointerButton, RelayCommand, type Poin
 import { InputManager } from '../../../framework/index.js';;
 import { HeadlessTarget } from '../../../visual-engine/index.js';
 import { ContextMenu, ContextMenuService } from '../context-menu.js';
-import { MenuItem } from '../menu.js';
+import { MenuItem } from '../menu-strip.js';
 
 class Root extends Panel {}
 
@@ -35,14 +35,13 @@ describe('ContextMenu — attached DP + auto-open', () => {
         assert.equal(cm.IsOpen, false);
     });
 
-    test('ContextMenu Items mirror into the inner Menu', () => {
+    test('ContextMenu Items hold its data items (it IS the ItemsControl)', () => {
         const cm = new ContextMenu();
         const mi = new MenuItem();
         mi.Header = 'Delete';
         cm.Items = [mi];
-        const innerMenu = (cm as unknown as { _menu: { Items: unknown } })._menu;
-        const innerItems = innerMenu.Items as unknown;
-        const count = Array.isArray(innerItems) ? innerItems.length : 0;
+        const items = cm.Items as unknown;
+        const count = Array.isArray(items) ? items.length : 0;
         assert.equal(count, 1);
     });
 

@@ -4,7 +4,7 @@
 // On first activation the demo merges its ResourceDictionary into
 // Application resources and hands the platform a VM instance.
 import { Application } from '@visualisation-sub/mural/runtime';
-import { create as createAnimationDeclarativeResources } from './animation-declarative.mu.js';
+import { AnimationDeclarativeDemo } from './animation-declarative.mu.js';
 import { AnimationDeclarativeVM } from './animation-declarative-vm.mjs';
 import { register } from '../../platform/registry.mjs';
 
@@ -18,7 +18,7 @@ register({
     subtitle: '`on Click { BeginStoryboard { DoubleAnimation[...] } }` inside a style — no host-side JS.',
     factory: () => {
         if (!resourcesMerged) {
-            Application.current?.Resources.AddMergedDictionary(createAnimationDeclarativeResources());
+            Application.current?.Resources.AddMergedDictionary(AnimationDeclarativeDemo.Clone());
             resourcesMerged = true;
         }
         if (vmInstance === undefined) vmInstance = new AnimationDeclarativeVM();

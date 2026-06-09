@@ -3,7 +3,7 @@
 // the demo merges its ResourceDictionary into Application resources
 // and hands the platform a VM instance.
 import { Application } from '@visualisation-sub/mural/runtime';
-import { create as createSliderResources } from './slider.mu.js';
+import { SliderDemo } from './slider.mu.js';
 import { SliderVM } from './slider-vm.mjs';
 import { register } from '../../platform/registry.mjs';
 
@@ -17,7 +17,7 @@ register({
     subtitle: 'Single-thumb range with horizontal + vertical orientation, keyboard nudges, and track-click jump-to-point.',
     factory: () => {
         if (!resourcesMerged) {
-            Application.current?.Resources.AddMergedDictionary(createSliderResources());
+            Application.current?.Resources.AddMergedDictionary(SliderDemo.Clone());
             resourcesMerged = true;
         }
         if (vmInstance === undefined) vmInstance = new SliderVM();

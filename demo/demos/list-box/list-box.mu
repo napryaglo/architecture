@@ -10,7 +10,7 @@ import ListBoxVM from "./list-box-vm.mjs"
 //
 // Packaged as a DataTemplate keyed off ListBoxVM.
 
-ResourceDictionary {
+resources ListBoxDemo {
     DataTemplate x:key="ListBoxTemplate" [DataType=ListBoxVM] {
         // x:root marks this Border as the NameScope owner so x:name
         // attributes inside register against its scope — VM's

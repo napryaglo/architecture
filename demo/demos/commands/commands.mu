@@ -25,7 +25,7 @@ import NoteNodeVM    from "./commands-vm.mjs"
 // CommandsVM.PublishSelectionState — that pulse drives
 // CanExecuteChanged on every gated command.
 
-ResourceDictionary {
+resources CommandsDemo {
 
     // ── Per-node container style (drag-to-move + selection click) ───
     Style x:key="CommandsNodeStyle" [TargetType=DiagramNode] {

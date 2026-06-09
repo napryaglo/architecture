@@ -5,7 +5,7 @@
 
 import { Application } from '@visualisation-sub/mural/runtime';
 import { ListBox } from '@visualisation-sub/mural/framework';
-import { create as createResources } from './drag-drop.mu.js';
+import { DragDropDemo } from './drag-drop.mu.js';
 import { DragDropVM } from './drag-drop-vm.mjs';
 import { attachListBoxDrop } from './behaviors/listbox-drop-behavior.mjs';
 import { register } from '../../platform/registry.mjs';
@@ -35,7 +35,7 @@ register({
     subtitle: 'Drag any item from one list to the other to move it.',
     factory: () => {
         if (!resourcesMerged) {
-            Application.current?.Resources.AddMergedDictionary(createResources());
+            Application.current?.Resources.AddMergedDictionary(DragDropDemo.Clone());
             resourcesMerged = true;
         }
         if (vmInstance === undefined) vmInstance = new DragDropVM();

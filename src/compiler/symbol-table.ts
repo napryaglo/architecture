@@ -151,7 +151,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['ToolBarButton',           '@visualisation-sub/mural/framework/surface.js'],
     ['ToolBarToggleButton',     '@visualisation-sub/mural/framework/surface.js'],
     ['ToolBarSeparator',        '@visualisation-sub/mural/framework/surface.js'],
-    ['Menu',                    '@visualisation-sub/mural/framework/surface.js'],
+    ['MenuStrip',               '@visualisation-sub/mural/framework/surface.js'],
     ['MenuButton',              '@visualisation-sub/mural/framework/surface.js'],
     ['MenuItem',                '@visualisation-sub/mural/framework/surface.js'],
     ['MenuSeparator',           '@visualisation-sub/mural/framework/surface.js'],
@@ -323,7 +323,7 @@ export const DEFAULT_SLOT_INFO: ReadonlyMap<string, SlotInfo> = new Map<string, 
     ['ToolBarToggleButton',     { name: 'Content',  kind: 'object' }],
     // ToolBarSeparator has no body; falls back to single/Child error
     // path on accidental nesting — fine.
-    ['Menu',                    { name: 'Items',    kind: 'list'   }],
+    ['MenuStrip',               { name: 'Items',    kind: 'list'   }],
     ['MenuButton',              { name: 'Items',    kind: 'list'   }],
     ['MenuItem',                { name: 'Items',    kind: 'list'   }],
     // MenuSeparator: no body

@@ -12,7 +12,7 @@
 // makes the demo entertaining when you navigate away briefly.
 
 import { Application, AnimationManager } from '@visualisation-sub/mural/runtime';
-import { create as createBouncingBallResources } from './bouncing-ball.mu.js';
+import { BouncingBallDemo } from './bouncing-ball.mu.js';
 import { BouncingBallVM } from './bouncing-ball-vm.mjs';
 import { register } from '../../platform/registry.mjs';
 
@@ -42,7 +42,7 @@ register({
     subtitle: 'A circle in a box, bouncing forever.',
     factory: () => {
         if (!resourcesMerged) {
-            Application.current?.Resources.AddMergedDictionary(createBouncingBallResources());
+            Application.current?.Resources.AddMergedDictionary(BouncingBallDemo.Clone());
             resourcesMerged = true;
         }
         if (vmInstance === undefined) vmInstance = new BouncingBallVM();

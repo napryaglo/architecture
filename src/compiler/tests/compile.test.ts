@@ -313,7 +313,7 @@ describe('compile — DataTemplate triggers', () => {
     test('trailing `when($Path)` inside DataTemplate emits TemplateDataTrigger', () => {
         const js = emitted(`
             import FooVM from "./foo-vm.mjs"
-            ResourceDictionary {
+            resources Test {
                 DataTemplate x:key="T" [DataType=FooVM] {
                     Border x:root {
                         TextBlock x:name="label"
@@ -349,7 +349,7 @@ describe('compile — DataTemplate triggers', () => {
     test('`$name.Property` resolves to ElementNameBinding when name is an x:name in scope', () => {
         const js = emitted(`
             import FooVM from "./foo-vm.mjs"
-            ResourceDictionary {
+            resources Test {
                 DataTemplate x:key="T" [DataType=FooVM] {
                     Border x:root {
                         Border x:name="chrome" [Background=#ffaa00]
@@ -380,7 +380,7 @@ describe('compile — DataTemplate triggers', () => {
         assert.throws(
             () => emitted(`
                 import FooVM from "./foo-vm.mjs"
-                ResourceDictionary {
+                resources Test {
                     DataTemplate x:key="T" [DataType=FooVM] {
                         Border x:root {
                             Border x:name="chrome"
@@ -398,7 +398,7 @@ describe('compile — DataTemplate triggers', () => {
     test('`Name.Property = value` resolves to a TargetedSetter when Name is an x:name', () => {
         const js = emitted(`
             import FooVM from "./foo-vm.mjs"
-            ResourceDictionary {
+            resources Test {
                 DataTemplate x:key="T" [DataType=FooVM] {
                     Border x:root {
                         Border x:name="chrome" [Background=#ffffff]
@@ -420,7 +420,7 @@ describe('compile — DataTemplate triggers', () => {
     test('DataTemplate body without trailing triggers keeps the 2-arg shape', () => {
         const js = emitted(`
             import FooVM from "./foo-vm.mjs"
-            ResourceDictionary {
+            resources Test {
                 DataTemplate x:key="T" [DataType=FooVM] {
                     Border x:root
                 }
@@ -437,7 +437,7 @@ describe('compile — DataTemplate triggers', () => {
     test('event triggers inside DataTemplate body lower to EventTrigger constructors passed as the 5th DataTemplate arg', () => {
         const js = emitted(`
             import FooVM from "./foo-vm.mjs"
-            ResourceDictionary {
+            resources Test {
                 DataTemplate x:key="T" [DataType=FooVM] {
                     Border x:root
                     on Click {
@@ -463,7 +463,7 @@ describe('compile — DataTemplate triggers', () => {
         assert.throws(
             () => emitted(`
                 import FooVM from "./foo-vm.mjs"
-                ResourceDictionary {
+                resources Test {
                     DataTemplate x:key="T" [DataType=FooVM] {
                         Border x:root
                         when( $IsSelected ) {
@@ -479,7 +479,7 @@ describe('compile — DataTemplate triggers', () => {
     test('unkeyed DataTemplate registers by DataType class function', () => {
         const js = emitted(`
             import FooVM from "./foo-vm.mjs"
-            ResourceDictionary {
+            resources Test {
                 DataTemplate [DataType=FooVM] {
                     Border x:root
                 }
@@ -515,7 +515,7 @@ describe('compile — DataTemplate triggers', () => {
     test('explicit x:key still wins over implicit DataType', () => {
         const js = emitted(`
             import FooVM from "./foo-vm.mjs"
-            ResourceDictionary {
+            resources Test {
                 DataTemplate x:key="Row" [DataType=FooVM] {
                     Border x:root
                 }
@@ -530,7 +530,7 @@ describe('compile — DataTemplate triggers', () => {
     test('top-level `import Name from "path"` extends the symbol table', () => {
         const js = emitted(`
             import BarVM from "../bar-vm.mjs"
-            ResourceDictionary {
+            resources Test {
                 DataTemplate x:key="K" [DataType=BarVM] {
                     Border x:root
                 }
@@ -546,7 +546,7 @@ describe('compile — DataTemplate triggers', () => {
         assert.throws(
             () => emitted(`
                 import Floating
-                ResourceDictionary {}
+                resources Test {}
             `),
             /requires `from "path"`/,
         );
@@ -555,7 +555,7 @@ describe('compile — DataTemplate triggers', () => {
     test('referencing an un-imported type in `[DataType=...]` errors loudly', () => {
         assert.throws(
             () => emitted(`
-                ResourceDictionary {
+                resources Test {
                     DataTemplate x:key="K" [DataType=UnknownVM] {
                         Border x:root
                     }
@@ -818,5 +818,152 @@ describe('compile — result metadata', () => {
         assert.ok(r.imports.has('@visualisation-sub/mural/runtime'));
         assert.ok(r.imports.has('@visualisation-sub/mural/Basic'));
         assert.equal(r.imports.get('@visualisation-sub/mural/Basic')!.has('Border'), true);
+    });
+});
+
+describe('compile — resources block (typed dictionary class)', () => {
+    test('emits an export class extending ResourceDictionary with a static Clone', () => {
+        const r = compile(`
+            resources MyTheme {
+                Style x:key="Foo" [TargetType=TextBlock] { FontSize = 14; }
+            }
+        `);
+        assert.equal(r.kind,           'resources');
+        assert.equal(r.isApplication,  false);
+        assert.equal(r.exportName,     '');
+        assert.match(r.js, /export class MyTheme extends ResourceDictionary/);
+        assert.match(r.js, /static Clone\(\)/);
+        assert.match(r.js, /const _gate_MyTheme = Symbol\("MyTheme\.ctor"\)/);
+        assert.match(r.js, /MyTheme is private — use MyTheme\.Clone\(\)/);
+    });
+
+    test('private constructor throws when called without the gate symbol', () => {
+        const r = compile(`
+            resources Gated {
+                Style x:key="A" [TargetType=TextBlock] { FontSize = 14; }
+            }
+        `);
+        // The throw is gated on `_g !== _gate_Gated` so any
+        // direct `new Gated()` from outside the module fails fast.
+        assert.match(r.js, /if \(_g !== _gate_Gated\)/);
+        assert.match(r.js, /throw new Error\(.*Gated is private/);
+    });
+
+    test('typed accessors emit for every x:key on a root resource', () => {
+        const r = compile(`
+            resources A {
+                Style x:key="One"   [TargetType=TextBlock] { FontSize = 14; }
+                Style x:key="Two"   [TargetType=TextBlock] { FontSize = 16; }
+                Style x:key="Three" [TargetType=TextBlock] { FontSize = 18; }
+            }
+        `);
+        // get / set pairs on the class.
+        assert.match(r.js, /get One\(\) \{ return this\.Resolve\("One"\); \}/);
+        assert.match(r.js, /set One\(v\) \{ this\.Set\("One", v\); \}/);
+        assert.match(r.js, /get Two\(\) \{ return this\.Resolve\("Two"\); \}/);
+        assert.match(r.js, /get Three\(\) \{ return this\.Resolve\("Three"\); \}/);
+        // Metadata surfaces them too so the .d.ts emitter knows what
+        // to declare.
+        const meta = r.resourcesBlocks?.[0];
+        assert.equal(meta?.name, 'A');
+        assert.equal(meta?.accessors.length, 3);
+        assert.deepEqual(meta?.accessors.map(a => a.name), ['One', 'Two', 'Three']);
+        // ResourceForm accessor type is the runtime class — Style here.
+        assert.equal(meta?.accessors[0]!.type, 'Style');
+    });
+
+    test('implicit-by-type Styles (no x:key) get no class accessor', () => {
+        const r = compile(`
+            resources B {
+                Style [TargetType=TextBlock] { FontSize = 14; }
+            }
+        `);
+        const meta = r.resourcesBlocks?.[0];
+        assert.equal(meta?.accessors.length, 0);
+        // The Style still lands in the dict — keyed by the TextBlock class.
+        assert.match(r.js, /t\.Set\(TextBlock,/);
+    });
+
+    test('Template with x:key emits ControlTemplate-typed accessor', () => {
+        const r = compile(`
+            resources C {
+                Template x:key="MyTmpl" [TargetType=Border] {
+                    Border x:root {}
+                }
+            }
+        `);
+        const meta = r.resourcesBlocks?.[0];
+        assert.equal(meta?.accessors[0]!.name, 'MyTmpl');
+        assert.equal(meta?.accessors[0]!.type, 'ControlTemplate');
+    });
+
+    test('imports inside a block merge with last-write-wins, locals override', () => {
+        const r = compile(`
+            resources Child {
+                import Parent from "./parent.mu.js"
+
+                Style x:key="Override" [TargetType=TextBlock] { FontSize = 24; }
+            }
+        `);
+        // ES import for Parent surfaces at the top of the module.
+        assert.match(r.js, /import \{ Parent \} from "\.\/parent\.mu\.js";/);
+        // Merge loop runs FIRST so locals override.
+        assert.match(
+            r.js,
+            /for \(const \[k, v\] of Parent\.Clone\(\)\.Entries\(\)\) t\.Set\(k, v\);[\s\S]*t\.Set\("Override",/,
+        );
+    });
+
+    test('multiple resources blocks per file emit one class each', () => {
+        const r = compile(`
+            resources First {
+                Style x:key="X" [TargetType=TextBlock] { FontSize = 14; }
+            }
+            resources Second {
+                Style x:key="Y" [TargetType=TextBlock] { FontSize = 16; }
+            }
+        `);
+        assert.equal(r.resourcesBlocks?.length, 2);
+        assert.match(r.js, /export class First extends ResourceDictionary/);
+        assert.match(r.js, /export class Second extends ResourceDictionary/);
+    });
+
+    test('duplicate class names within a file raise an EmitError', () => {
+        assert.throws(
+            () => compile(`
+                resources Dup { Style x:key="A" [TargetType=TextBlock] { FontSize = 14; } }
+                resources Dup { Style x:key="B" [TargetType=TextBlock] { FontSize = 16; } }
+            `),
+            (err) => err instanceof EmitError && /duplicate `resources Dup`/.test(err.message),
+        );
+    });
+
+    test('legacy `ResourceDictionary { … }` root form is rejected with migration hint', () => {
+        assert.throws(
+            () => compile(`
+                ResourceDictionary {
+                    Style x:key="A" [TargetType=TextBlock] { FontSize = 14; }
+                }
+            `),
+            (err) => err instanceof EmitError && /resources NAME/.test(err.message),
+        );
+    });
+
+    test('non-identifier x:key (e.g. with spaces) keeps the dict entry but skips the accessor', () => {
+        // `dict.Resolve("Some Key")` still works; the class just can't
+        // expose `dict["Some Key"]` as a typed property — the runtime
+        // accessor names are bare identifiers.
+        const r = compile(`
+            resources Mixed {
+                Style x:key="Some Key" [TargetType=TextBlock] { FontSize = 14; }
+                Style x:key="Valid"    [TargetType=TextBlock] { FontSize = 16; }
+            }
+        `);
+        const meta = r.resourcesBlocks?.[0];
+        assert.equal(meta?.accessors.length, 1);
+        assert.equal(meta?.accessors[0]!.name, 'Valid');
+        // But the dict still carries both — `Set("Some Key", …)` is
+        // emitted in Clone.
+        assert.match(r.js, /t\.Set\("Some Key",/);
     });
 });

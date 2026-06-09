@@ -3,7 +3,7 @@
 // Button style (scoped to the template root) that drives Begin /
 // Pause / Resume / Stop via named storyboards.
 import { Application } from '@visualisation-sub/mural/runtime';
-import { create as createAnimationNamedResources } from './animation-named.mu.js';
+import { AnimationNamedDemo } from './animation-named.mu.js';
 import { AnimationNamedVM } from './animation-named-vm.mjs';
 import { register } from '../../platform/registry.mjs';
 
@@ -17,7 +17,7 @@ register({
     subtitle: '`BeginStoryboard[Name=loop]` + Pause / Resume / Stop on hover and click — markup-only.',
     factory: () => {
         if (!resourcesMerged) {
-            Application.current?.Resources.AddMergedDictionary(createAnimationNamedResources());
+            Application.current?.Resources.AddMergedDictionary(AnimationNamedDemo.Clone());
             resourcesMerged = true;
         }
         if (vmInstance === undefined) vmInstance = new AnimationNamedVM();

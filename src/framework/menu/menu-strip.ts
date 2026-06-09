@@ -1,17 +1,16 @@
 import {
-    Application,
     MetaData,
     Model,
-    ObservableCollection,
     Panel,
     Rect,
     Size,
     Visual,
     type DrawingContext,
+    type PointerEventArgs,
+    type PropertyDescriptor,
 } from '../../runtime/index.js';
 import { ensureSurfaceTheme } from './default-surface-resources.js';
 import { PresentationTarget } from '../../visual-engine/index.js';
-import { Control } from '../index.js';
 import { Border } from '../../Basic/border.js';
 import { ContentPresenter } from '../../Basic/content-presenter.js';
 import { ControlTemplate } from '../../Basic/control-template.js';
@@ -24,70 +23,92 @@ import { ClickAwayScrim } from '../tool-bar/tool-bar.js';
 import { Button } from '../button.js';
 import type { ICommand } from '../../runtime/command.js';
 
-// String keys for the surface-bundle templates the MenuButton ctor
-// reads from. The template definitions live in
-// `src/Controls/surface.template.mu` and are registered with
-// `Application.DefaultResourceFactories` by `ensureSurfaceTheme`.
-const KEY_TRIGGER = 'DefaultMenuButtonTrigger';
-const KEY_POPUP   = 'DefaultMenuButtonPopup';
-
-function resolveSurfaceTemplate(key: string): ControlTemplate
-{
-    const tpl = Application.ResolveDefaultResource<ControlTemplate>(key);
-    if (tpl === undefined)
-    {
-        throw new Error(
-            `MenuButton: default template '${key}' is not registered. ` +
-            'Did `ensureSurfaceTheme()` run before construction?');
-    }
-    return tpl;
-}
-
-// Menu — a vertical column of MenuItems and Separators. Used as both
-// the popup body of a MenuButton (hamburger fly-out) and the floating
-// surface of a ContextMenu. Inside a MenuItem submenu the same control
-// reappears one level deeper.
+// ─────────────────────────────────────────────────────────────────────
+// MenuStrip — horizontal main-menu bar. Holds top-level MenuItems whose
+// click opens a submenu popup below the row.
 //
-// Menu is just a "vertical ItemsControl" — most of the smarts live on
-// MenuItem. Default ItemsPanel = StackPanel (vertical); container
-// generation accepts any Visual, but the common populating shape is
-// MenuItem + MenuSeparator.
-export class Menu extends ItemsControl
+// Authoring shape:
+//
+//   MenuStrip {
+//       MenuItem [Header="File"] {
+//           MenuItem [Header="New",  InputGestureText="Ctrl+N"]
+//           MenuItem [Header="Open", InputGestureText="Ctrl+O"]
+//           MenuSeparator
+//           MenuItem [Header="Save", InputGestureText="Ctrl+S"]
+//       }
+//       MenuItem [Header="Edit"] { … }
+//   }
+//
+// MenuStrip is just an ItemsControl whose default Style supplies:
+//   * Background      — surface-container token
+//   * ItemsPanel      — horizontal StackPanel (Orientation DP drives it
+//                       on swap; default Horizontal)
+//   * ItemContainerStyle — MenuStripItemStyle, which sets each
+//                          container MenuItem's RowTemplate to the
+//                          stripped chrome (no icon/gesture/chevron
+//                          columns).
+//
+// The submenu mechanic comes for free from MenuItem — clicking a
+// top-level MenuItem flips IsSubmenuOpen which mounts its submenu
+// popup on the OverlayLayer below the row.
+export class MenuStrip extends ItemsControl
 {
+    public static readonly OrientationKey = Model.RegisterProperty<Orientation>(
+        MenuStrip, 'Orientation', Orientation.Horizontal, MetaData.Measure,
+    );
+
+    public get Orientation():  Orientation { return this.get_property_value(MenuStrip.OrientationKey); }
+    public set Orientation(v: Orientation) { this.set_property_value(MenuStrip.OrientationKey, v); }
+
     static
     {
-        // Type-keyed lookup for the default Style — registered in
-        // `surface.template.mu` as `Style [TargetType=Menu]`. The
-        // Style supplies the vertical-StackPanel ItemsPanel via an
-        // ItemsPanelTemplate so authors don't have to set it manually.
-        Model.OverrideMetadata(Menu, Visual.DefaultStyleKeyKey, { default_value: Menu });
+        Model.OverrideMetadata(MenuStrip, Visual.DefaultStyleKeyKey, { default_value: MenuStrip });
         ensureSurfaceTheme();
     }
 
     constructor()
     {
         super();
-        // Eager Style resolution: pulls in the bundled
-        // `Style [TargetType=Menu]`, which sets ItemsPanel = vertical
-        // StackPanel. The Menu itself paints no chrome — the popup
-        // host (MenuButton's PART_PopupContainer / ContextMenu's
-        // overlay / a parent MenuItem's submenu) supplies that.
         this.applyDefaultStyle();
     }
 
-    // `.mu` body — `Menu { MenuItem; MenuSeparator; … }` — routes through
-    // ItemsControl.AddChild. We accept any Visual; conventional content
-    // is MenuItem / MenuSeparator, but the menu is generic enough that
-    // a custom Visual can replace a row when authors need it.
     protected override validateDeclarativeChild(_child: Visual): void { }
 
-    // Visual items declared in markup ARE their own container — Menu
-    // doesn't ship an ItemTemplate of its own, so a MenuItem / Visual
-    // is slotted directly. Non-Visual data items would need an
-    // ItemTemplate (and take the default ContentPresenter wrap).
     public override IsItemItsOwnContainerOverride(item: unknown): boolean
     {
         return item instanceof Visual;
+    }
+
+    // Wire onActivated on each materialised top-level MenuItem so a
+    // descendant activation collapses the popup chain back to the
+    // strip.
+    public override PrepareContainerForItemOverride(container: Visual, item: unknown, index: number): void
+    {
+        super.PrepareContainerForItemOverride(container, item, index);
+        if (container instanceof MenuItem)
+        {
+            container._onActivated = (): void => { container.IsSubmenuOpen = false; };
+        }
+    }
+
+    protected override OnPropertyChanged(
+        descriptor: PropertyDescriptor,
+        oldValue: unknown,
+        newValue: unknown,
+    ): void
+    {
+        super.OnPropertyChanged(descriptor, oldValue, newValue);
+        if (descriptor.Name === 'Orientation')
+        {
+            // Items panel orientation tracks the DP. The Style hands us
+            // a horizontal StackPanel by default; on swap we update the
+            // live panel's Orientation so re-measure picks it up.
+            const panel = (this as unknown as { _itemsPanel: StackPanel | undefined })._itemsPanel;
+            if (panel instanceof StackPanel)
+            {
+                panel.Orientation = newValue as Orientation;
+            }
+        }
     }
 }
 
@@ -126,6 +147,15 @@ export class MenuItem extends ItemsControl
     public static readonly CommandKey           = Model.RegisterProperty<ICommand | undefined>(MenuItem, 'Command',           undefined, MetaData.None);
     public static readonly CommandParameterKey  = Model.RegisterProperty<unknown>(            MenuItem, 'CommandParameter',  undefined, MetaData.None);
     public static readonly IsSubmenuOpenKey     = Model.RegisterProperty<boolean>(           MenuItem, 'IsSubmenuOpen',     false,     MetaData.None);
+    // RowTemplate — the ControlTemplate for the inline visible row
+    // chrome. MenuItem's primary Template (ItemsControl-inherited) is
+    // the SUBMENU popup chrome with an ItemsPresenter; the row
+    // ("trigger" in MenuButton parlance) is a separate keyed template
+    // applied imperatively. RowTemplate is settable so a parent
+    // MenuStrip can swap to a stripped chrome via ItemContainerStyle.
+    public static readonly RowTemplateKey       = Model.RegisterProperty<ControlTemplate | undefined>(
+        MenuItem, 'RowTemplate', undefined, MetaData.Measure,
+    );
 
     public get Header():           string | undefined { return this.get_property_value(MenuItem.HeaderKey); }
     public set Header(v:           string | undefined) { this.set_property_value(MenuItem.HeaderKey, v); }
@@ -151,22 +181,31 @@ export class MenuItem extends ItemsControl
     public get IsSubmenuOpen():    boolean { return this.get_property_value(MenuItem.IsSubmenuOpenKey); }
     public set IsSubmenuOpen(v:    boolean) { this.set_property_value(MenuItem.IsSubmenuOpenKey, v); }
 
+    public get RowTemplate():      ControlTemplate | undefined { return this.get_property_value(MenuItem.RowTemplateKey); }
+    public set RowTemplate(v:      ControlTemplate | undefined) { this.set_property_value(MenuItem.RowTemplateKey, v); }
+
     /** Set by the hosting popup (MenuButton or ContextMenu) so an
      *  activated item can request the popup chain to close. Click
      *  fires this BEFORE Command — gives the popup teardown a chance
      *  to release focus before any dialog the command opens steals it. */
     public _onActivated: (() => void) | undefined;
 
-    // Template parts cached from `surface.template.mu`'s
-    // `DefaultMenuItem` template. Populated lazily on first
-    // refreshRow() — the template Style is applied eagerly from the
-    // constructor but the parts only become reachable AFTER the
-    // applied Template's NameScope is wired up by Visual.ApplyTemplate.
-    private _iconHost:    Border    | undefined;
-    private _rowLabel:    TextBlock | undefined;
+    // Row template parts — cached after the row template Apply.
+    private _rowRoot:      Visual    | undefined;
+    private _iconHost:     Border    | undefined;
+    private _rowLabel:     TextBlock | undefined;
     private _gestureLabel: TextBlock | undefined;
     private _chevronLabel: TextBlock | undefined;
-    private _partsBound = false;
+
+    // Submenu popup parts — cached after applyDefaultStyle materialises
+    // the primary Template. The popup root is DETACHED from MenuItem so
+    // the OverlayLayer can adopt it without dual-parent errors.
+    private _popupHost:      MenuPopupHost  | undefined;
+    private _scrim:          ClickAwayScrim | undefined;
+    private _popupContainer: Border         | undefined;
+
+    private _popupMounted = false;
+    private _lastKnownTarget: PresentationTarget | undefined;
 
     private _pressOriginatedHere = false;
 
@@ -174,10 +213,13 @@ export class MenuItem extends ItemsControl
     {
         // Type-keyed lookup for the default Style — registered as
         // `Style [TargetType=MenuItem]` in surface.template.mu. The
-        // Style supplies the DefaultMenuItem template with the
-        // PART_Row / PART_Icon / PART_Label / PART_Gesture /
-        // PART_Chevron parts and the IsMouseOver / IsPressed /
-        // IsChecked / IsSubmenuOpen state triggers.
+        // Style supplies:
+        //   * Template     = DefaultMenuItemSubmenu  (popup chrome with
+        //                    ItemsPresenter for submenu rows)
+        //   * ItemsPanel   = DefaultMenuItemsPanel   (vertical stack
+        //                    materialised into the ItemsPresenter)
+        //   * RowTemplate  = DefaultMenuItemRow      (inline row chrome
+        //                    with state triggers; applied imperatively)
         Model.OverrideMetadata(MenuItem, Visual.DefaultStyleKeyKey, { default_value: MenuItem });
         ensureSurfaceTheme();
     }
@@ -185,67 +227,107 @@ export class MenuItem extends ItemsControl
     constructor()
     {
         super();
-        // ItemsPanel for submenu items — kept vertical even though
-        // submenu popup materialisation is deferred (5.11.2 follow-up).
-        // The presenter isn't visually wired today; the panel stays
-        // here so ItemsControl's pipeline finds a non-undefined
-        // factory when items are populated.
-        this.ItemsPanel = (): Panel =>
-        {
-            const sp = new StackPanel();
-            sp.Orientation = Orientation.Vertical;
-            return sp;
-        };
-        // Eager Style resolution — applies DefaultMenuItem template
-        // and wires the IsMouseOver / IsPressed / IsChecked /
-        // IsSubmenuOpen state triggers. After this call the template
-        // PART_* visuals are reachable via GetTemplateChild.
+        // applyDefaultStyle resolves Style[TargetType=MenuItem] which
+        // sets Template (popup chrome), ItemsPanel (vertical stack),
+        // and RowTemplate. ItemsControl.rebuildTemplate Apply()s the
+        // popup chrome and slots in the ItemsPanel — both end up in the
+        // detached popup subtree we adopt below.
         this.applyDefaultStyle();
-        // Initial content sync: pulls Header / Icon / InputGesture /
-        // Items into the freshly-bound parts.
+        this.adoptPopupTemplate();
+        this.rebuildRow();
+        // Initial content sync — empty Header / Icon / no submenu so
+        // the columns auto-hide.
         this.refreshRow();
     }
 
+    // Find the popup template parts (PART_PopupHost, PART_Scrim,
+    // PART_PopupContainer), wire scrim onClick + host.popup, then
+    // detach the templateRoot so the OverlayLayer can adopt it later.
+    private adoptPopupTemplate(): void
+    {
+        const root = super.visualChildren[0];
+        if (!(root instanceof MenuPopupHost)) return;
+        this._popupHost      = root;
+        this._scrim          = root.FindName('PART_Scrim')          as ClickAwayScrim;
+        this._popupContainer = root.FindName('PART_PopupContainer') as Border;
+        this._popupHost.popup = this._popupContainer;
+        this._scrim.onClick   = (): void => { this.IsSubmenuOpen = false; };
+        this.DetachVisual(this._popupHost);
+    }
+
+    // Materialise (or re-materialise) the row chrome from RowTemplate.
+    // Called from the ctor and from OnPropertyChanged('RowTemplate')
+    // when a parent MenuStrip swaps in a stripped chrome via
+    // ItemContainerStyle.
+    private rebuildRow(): void
+    {
+        if (this._rowRoot !== undefined)
+        {
+            this.DetachVisual(this._rowRoot);
+            this._rowRoot      = undefined;
+            this._iconHost     = undefined;
+            this._rowLabel     = undefined;
+            this._gestureLabel = undefined;
+            this._chevronLabel = undefined;
+        }
+        const tpl = this.RowTemplate;
+        if (tpl === undefined)
+        {
+            throw new Error(
+                'MenuItem.RowTemplate is undefined. Every MenuItem must be ' +
+                'paired with a Style that sets RowTemplate (the default ' +
+                'Style in surface.template.mu sets RowTemplate = ' +
+                '@DefaultMenuItemRow). Did `ensureSurfaceTheme()` run ' +
+                'before construction?');
+        }
+        const inst = tpl.Apply(this);
+        this._rowRoot = inst.root;
+        this.AttachVisual(this._rowRoot);
+        const icon    = this._rowRoot.FindName('PART_Icon');
+        const label   = this._rowRoot.FindName('PART_Label');
+        const gesture = this._rowRoot.FindName('PART_Gesture');
+        const chevron = this._rowRoot.FindName('PART_Chevron');
+        if (icon instanceof Border)       this._iconHost     = icon;
+        if (label instanceof TextBlock)   this._rowLabel     = label;
+        if (gesture instanceof TextBlock) this._gestureLabel = gesture;
+        if (chevron instanceof TextBlock) this._chevronLabel = chevron;
+    }
+
+    public override get visualChildren(): readonly Visual[]
+    {
+        return this._rowRoot !== undefined ? [this._rowRoot] : [];
+    }
+
     // Submenu items declared in `.mu` (`MenuItem { MenuItem ▶ … }`)
-    // route through ItemsControl.AddChild. Same lenient gate as Menu —
-    // any Visual is accepted; conventional content is MenuItem /
-    // MenuSeparator.
+    // route through ItemsControl.AddChild. Lenient gate — any Visual
+    // is accepted; conventional content is MenuItem / MenuSeparator.
     protected override validateDeclarativeChild(_child: Visual): void { }
 
-    // Submenu items declared in markup ARE their own container — same
-    // story as Menu.
+    // Submenu items declared in markup ARE their own container.
     public override IsItemItsOwnContainerOverride(item: unknown): boolean
     {
         return item instanceof Visual;
     }
 
-    // Resolve the template parts once the DefaultMenuItem template is
-    // applied. The Style's Template setter feeds through
-    // ItemsControl.rebuildTemplate, so the template root sits at
-    // `visualChildren[0]` and FindName resolves against the freshly-
-    // built NameScope. Idempotent: partial resolution still counts as
-    // bound, so author-side re-templates that drop a part opt out of
-    // the corresponding feature (e.g. a row without a gesture column).
-    private bindTemplateParts(): void
+    // Wire onActivated on each materialised submenu MenuItem so an
+    // activation closes the popup chain. Walks up to the root popup
+    // host via _onActivated chaining.
+    public override PrepareContainerForItemOverride(container: Visual, item: unknown, index: number): void
     {
-        if (this._partsBound) return;
-        const root = this.visualChildren[0];
-        if (root === undefined) return;
-        const icon    = root.FindName('PART_Icon');
-        const label   = root.FindName('PART_Label');
-        const gesture = root.FindName('PART_Gesture');
-        const chevron = root.FindName('PART_Chevron');
-        if (icon instanceof Border)       this._iconHost     = icon;
-        if (label instanceof TextBlock)   this._rowLabel     = label;
-        if (gesture instanceof TextBlock) this._gestureLabel = gesture;
-        if (chevron instanceof TextBlock) this._chevronLabel = chevron;
-        this._partsBound = true;
+        super.PrepareContainerForItemOverride(container, item, index);
+        if (container instanceof MenuItem)
+        {
+            container._onActivated = (): void =>
+            {
+                this.IsSubmenuOpen = false;
+                this._onActivated?.();
+            };
+        }
     }
 
     /** Public refresh for tests + DP-change forwarding. */
     public refreshRow(): void
     {
-        this.bindTemplateParts();
         // Header text — empty string when undefined to keep TextBlock happy.
         if (this._rowLabel !== undefined)
         {
@@ -263,7 +345,11 @@ export class MenuItem extends ItemsControl
         {
             const hasSubmenu = this.itemCount() > 0;
             this._chevronLabel.Text = hasSubmenu ? '▶' : '';
-            this._chevronLabel.Width = hasSubmenu ? 12 : 0;
+            // Don't force a width when the stripped MenuStrip row
+            // template already pinned Width=0 via local setters — only
+            // restore to 12 when there's actually a submenu AND the
+            // template's preferred (non-zero) width allowed for the
+            // chevron column.
         }
         // Icon column — host the consumer's Icon, OR an inline check
         // glyph when IsCheckable + IsChecked, OR clear it.
@@ -292,13 +378,24 @@ export class MenuItem extends ItemsControl
     }
 
     protected override OnPropertyChanged(
-        descriptor: import('../../runtime/index.js').PropertyDescriptor,
+        descriptor: PropertyDescriptor,
         oldValue: unknown,
         newValue: unknown,
     ): void
     {
         super.OnPropertyChanged(descriptor, oldValue, newValue);
         const name = descriptor.Name;
+        if (name === 'RowTemplate')
+        {
+            this.rebuildRow();
+            this.refreshRow();
+            return;
+        }
+        if (name === 'IsSubmenuOpen' && this._popupHost !== undefined)
+        {
+            if (newValue === true) this.mountSubmenu();
+            else                   this.unmountSubmenu();
+        }
         if (
             name === 'Header' || name === 'Icon' || name === 'InputGestureText' ||
             name === 'IsCheckable' || name === 'IsChecked' || name === 'Items'
@@ -308,22 +405,61 @@ export class MenuItem extends ItemsControl
         }
     }
 
+    protected override propagate_target_to_visual_children(): void
+    {
+        const newTarget = (this as unknown as { target: PresentationTarget | undefined }).target;
+        const oldTarget = this._lastKnownTarget;
+        if (oldTarget !== undefined && oldTarget !== newTarget && this._popupMounted)
+        {
+            if (this._popupHost !== undefined) oldTarget.DetachOverlay(this._popupHost);
+            this._popupMounted = false;
+        }
+        this._lastKnownTarget = newTarget;
+        super.propagate_target_to_visual_children();
+        if (newTarget !== undefined && this.IsSubmenuOpen) this.mountSubmenu();
+    }
+
+    private mountSubmenu(): void
+    {
+        if (this._popupMounted) return;
+        if (this._popupHost === undefined) return;
+        const t = this._lastKnownTarget;
+        if (t === undefined) return;
+        // Anchor at our own row so the submenu positions below it.
+        // (Nested-vs-top-level positioning differentiation is a
+        // future-cut concern — MVP opens BELOW in both cases, which
+        // matches MenuStrip's top-level use and is acceptable inline
+        // for nested submenus until the right-anchored layout lands.)
+        if (this._rowRoot !== undefined) this._popupHost.anchor = this._rowRoot;
+        t.AttachOverlay(this._popupHost);
+        this._popupMounted = true;
+    }
+
+    private unmountSubmenu(): void
+    {
+        if (!this._popupMounted) return;
+        if (this._popupHost === undefined) return;
+        const t = this._lastKnownTarget;
+        if (t === undefined) { this._popupMounted = false; return; }
+        t.DetachOverlay(this._popupHost);
+        this._popupMounted = false;
+    }
+
     // Pointer handlers — IsMouseOver / IsPressed visuals come from the
     // template's `when()` triggers, so these only need to track the
     // press-originated-here flag for click routing.
-    protected override OnPointerDown(_args: import('../../runtime/index.js').PointerEventArgs): void
+    protected override OnPointerDown(_args: PointerEventArgs): void
     {
         this._pressOriginatedHere = true;
     }
 
-    protected override OnPointerUp(_args: import('../../runtime/index.js').PointerEventArgs): void
+    protected override OnPointerUp(_args: PointerEventArgs): void
     {
         const fire = this._pressOriginatedHere && this.IsMouseOver;
         this._pressOriginatedHere = false;
         if (!fire) return;
         // Click protocol:
-        //   * Has submenu → toggle IsSubmenuOpen (submenu popup deferred,
-        //     so this just flips the DP for now)
+        //   * Has submenu → toggle IsSubmenuOpen
         //   * No submenu  → flip checkable + fire Command + onActivated
         if (this.itemCount() > 0)
         {
@@ -341,12 +477,12 @@ export class MenuItem extends ItemsControl
         }
     }
 
-    protected override OnPointerEnter(_args: import('../../runtime/index.js').PointerEventArgs): void
+    protected override OnPointerEnter(_args: PointerEventArgs): void
     {
         // Template trigger handles the IsMouseOver visual swap.
     }
 
-    protected override OnPointerLeave(_args: import('../../runtime/index.js').PointerEventArgs): void
+    protected override OnPointerLeave(_args: PointerEventArgs): void
     {
         // Template trigger handles the IsMouseOver visual swap — the
         // template tier knows about the press-originated-here / drag-
@@ -412,7 +548,7 @@ export class MenuSeparator extends Visual
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// MenuButton — hamburger button that opens a popup containing a Menu.
+// MenuButton — hamburger button that opens a popup of menu items.
 //
 // Authoring shape:
 //
@@ -426,31 +562,39 @@ export class MenuSeparator extends Visual
 //       }
 //   }
 //
-// MenuButton is NOT an ItemsControl itself — its visible chrome is a
-// single Button, and the items list belongs to an inner `_menu: Menu`
-// that's the actual ItemsControl. MenuButton.Items is a thin DP that
-// proxies writes to `_menu.Items`. This keeps the items rendered ONCE
-// (inside the popup) without the dual-parent issue an outer
-// ItemsControl wrapper would cause when the data items are Visuals
-// (`new MenuItem(...)` populated directly into Items).
-export class MenuButton extends Control
+// MenuButton IS an ItemsControl. Two templates feed its visual layout
+// (both registered in surface.template.mu):
+//
+//   * DefaultMenuButtonTrigger  — the inline trigger Button. Resolved
+//                                 in the ctor and attached as
+//                                 visualChildren[0].
+//   * DefaultMenuButtonPopup    — the popup chrome (MenuPopupHost >
+//                                 [Scrim, Border > ItemsPresenter]).
+//                                 Plugged into MenuButton's
+//                                 ItemsControl.Template via the Style;
+//                                 rebuildTemplate() materialises it
+//                                 and slots the ItemsPanel into the
+//                                 ItemsPresenter. The ctor then
+//                                 DETACHES the popup templateRoot
+//                                 from MenuButton so it can be mounted
+//                                 on the OverlayLayer instead — same
+//                                 dual-parent avoidance the ContextMenu
+//                                 path uses.
+//
+// visualChildren returns [trigger] always; the popup root is kept as
+// a private field, mounted/unmounted by mountPopup / unmountPopup.
+export class MenuButton extends ItemsControl
 {
-    public static readonly ItemsKey = Model.RegisterProperty<
-        readonly unknown[] | import('../../runtime/index.js').ObservableCollection<unknown> | undefined
-    >(MenuButton, 'Items', undefined, MetaData.Measure);
-
-    public get Items(): readonly unknown[] | import('../../runtime/index.js').ObservableCollection<unknown> | undefined
-    {
-        return this.get_property_value(MenuButton.ItemsKey);
-    }
-    public set Items(v: readonly unknown[] | import('../../runtime/index.js').ObservableCollection<unknown> | undefined)
-    {
-        this.set_property_value(MenuButton.ItemsKey, v);
-    }
-
-    public static readonly IsOpenKey   = Model.RegisterProperty<boolean>(           MenuButton, 'IsOpen', false,     MetaData.None);
-    public static readonly IconKey     = Model.RegisterProperty<Visual | undefined>(MenuButton, 'Icon',   undefined, MetaData.Measure);
-    public static readonly HeaderKey   = Model.RegisterProperty<string | undefined>(MenuButton, 'Header', undefined, MetaData.Measure | MetaData.Render);
+    public static readonly IsOpenKey          = Model.RegisterProperty<boolean>(           MenuButton, 'IsOpen', false,     MetaData.None);
+    public static readonly IconKey            = Model.RegisterProperty<Visual | undefined>(MenuButton, 'Icon',   undefined, MetaData.Measure);
+    public static readonly HeaderKey          = Model.RegisterProperty<string | undefined>(MenuButton, 'Header', undefined, MetaData.Measure | MetaData.Render);
+    // TriggerTemplate — the inline visible Button chrome. MenuButton's
+    // primary Template (ItemsControl-inherited) is the popup chrome,
+    // so the trigger has to live in a second template DP that the
+    // default Style sets to `@DefaultMenuButtonTrigger`.
+    public static readonly TriggerTemplateKey = Model.RegisterProperty<ControlTemplate | undefined>(
+        MenuButton, 'TriggerTemplate', undefined, MetaData.Measure,
+    );
 
     public get IsOpen():  boolean { return this.get_property_value(MenuButton.IsOpenKey); }
     public set IsOpen(v: boolean) { this.set_property_value(MenuButton.IsOpenKey, v); }
@@ -461,13 +605,20 @@ export class MenuButton extends Control
     public get Header():  string | undefined { return this.get_property_value(MenuButton.HeaderKey); }
     public set Header(v:  string | undefined) { this.set_property_value(MenuButton.HeaderKey, v); }
 
-    private readonly _button:        Button;
-    private readonly _buttonStack:   StackPanel;
-    private readonly _buttonText:    TextBlock;
-    private readonly _popupHost:     MenuPopupHost;
-    private readonly _scrim:         ClickAwayScrim;
-    private readonly _popupContainer: Border;
-    private readonly _menu:          Menu;
+    public get TriggerTemplate():  ControlTemplate | undefined { return this.get_property_value(MenuButton.TriggerTemplateKey); }
+    public set TriggerTemplate(v: ControlTemplate | undefined) { this.set_property_value(MenuButton.TriggerTemplateKey, v); }
+
+    private _button:         Button         | undefined;
+    private _buttonStack:    StackPanel     | undefined;
+    private _buttonText:     TextBlock      | undefined;
+
+    // The popup templateRoot is owned by ItemsControl's Template
+    // machinery; cached here for mount/unmount. Initially attached as
+    // our visualChild by rebuildTemplate; we detach immediately so the
+    // OverlayLayer can adopt it later without dual-parent errors.
+    private _popupHost:      MenuPopupHost  | undefined;
+    private _scrim:          ClickAwayScrim | undefined;
+    private _popupContainer: Border         | undefined;
 
     private _popupMounted = false;
     private _lastKnownTarget: PresentationTarget | undefined;
@@ -475,13 +626,13 @@ export class MenuButton extends Control
     static
     {
         // Theme-style lookup key — MenuButton instances resolve their
-        // default Style (HorizontalAlignment.Left / VerticalAlignment.Top
-        // so the trigger sizes to its content instead of stretching to
-        // the parent container) via TryFindResource(MenuButton) on
-        // attach. The setter values live in surface.template.mu under
-        // the `Style [TargetType=MenuButton]` block. Surface theme is
-        // kept apart from the main controls theme to avoid the
-        // `extends Button` TDZ cycle (see default-resources.ts).
+        // default Style (Template = popup chrome, ItemsPanel = vertical
+        // StackPanel, HorizontalAlignment/Vertical sizing pins) via
+        // TryFindResource(MenuButton) on attach. The setter values live
+        // in surface.template.mu under the `Style [TargetType=MenuButton]`
+        // block. Surface theme is kept apart from the main controls
+        // theme to avoid the `extends Button` TDZ cycle (see
+        // default-resources.ts).
         Model.OverrideMetadata(MenuButton, Visual.DefaultStyleKeyKey, { default_value: MenuButton });
         ensureSurfaceTheme();
     }
@@ -490,52 +641,55 @@ export class MenuButton extends Control
     {
         super();
 
-        // ── Trigger subtree ───────────────────────────────────────────
-        // surface.template.mu declares DefaultMenuButtonTrigger as a
-        // Button(PART_Trigger) > StackPanel(PART_TriggerStack) >
-        // TextBlock(PART_HeaderText). Cosmetic defaults (Foreground,
-        // Orientation) live in markup; this ctor only wires behaviour
-        // (click → IsOpen, Header sync via OnPropertyChanged).
-        const triggerTpl  = resolveSurfaceTemplate(KEY_TRIGGER);
+        // ── Popup subtree via ItemsControl.Template ──────────────────
+        // applyDefaultStyle resolves Style[TargetType=MenuButton] which
+        // sets Template = @DefaultMenuButtonPopup. ItemsControl's
+        // rebuildTemplate then Apply()s it, finds the ItemsPresenter
+        // inside, slots in the vertical-stack ItemsPanel (also set by
+        // the Style), and attaches the root as our visualChild.
+        this.applyDefaultStyle();
+        this.adoptPopupTemplate();
+
+        // ── Trigger subtree (separate template DP) ──────────────────
+        // The default Style sets TriggerTemplate = @DefaultMenuButtonTrigger
+        // (Button(PART_Trigger) > StackPanel(PART_TriggerStack) >
+        // TextBlock(PART_HeaderText)). It can't share ItemsControl's
+        // Template slot because Template is the popup chrome with the
+        // ItemsPresenter that hosts Items. Click flips IsOpen.
+        const triggerTpl = this.TriggerTemplate;
+        if (triggerTpl === undefined)
+        {
+            throw new Error(
+                'MenuButton.TriggerTemplate is undefined. The default ' +
+                'Style in surface.template.mu sets TriggerTemplate = ' +
+                '@DefaultMenuButtonTrigger. Did `ensureSurfaceTheme()` ' +
+                'run before construction?');
+        }
         const triggerInst = triggerTpl.Apply(this);
         this._button      = triggerInst.root as Button;
         this._buttonStack = triggerInst.root.FindName('PART_TriggerStack') as StackPanel;
         this._buttonText  = triggerInst.root.FindName('PART_HeaderText')   as TextBlock;
         this._button.AddClickHandler(() => { this.IsOpen = !this.IsOpen; });
-
-        // ── Popup subtree ─────────────────────────────────────────────
-        // DefaultMenuButtonPopup declares MenuPopupHost(PART_PopupHost)
-        // > [ClickAwayScrim(PART_Scrim), Border(PART_PopupContainer) >
-        // Menu(PART_Menu)]. The host's anchor / popup references and
-        // the scrim's onClick callback can't appear in markup (they
-        // form a cycle through the trigger subtree), so we patch them
-        // in here after both templates have been applied.
-        const popupTpl  = resolveSurfaceTemplate(KEY_POPUP);
-        const popupInst = popupTpl.Apply(this);
-        this._popupHost      = popupInst.root as MenuPopupHost;
-        this._scrim          = popupInst.root.FindName('PART_Scrim')          as ClickAwayScrim;
-        this._popupContainer = popupInst.root.FindName('PART_PopupContainer') as Border;
-        this._menu           = popupInst.root.FindName('PART_Menu')           as Menu;
-        this._popupHost.anchor = this._button;
-        this._popupHost.popup  = this._popupContainer;
-        this._scrim.onClick = (): void => { this.IsOpen = false; };
-
-        // Wire the inner Menu's containers to fire onActivated → close
-        // popup on click. Same wiring ContextMenu uses.
-        const closePopup = (): void => { this.IsOpen = false; };
-        (this._menu as unknown as { _closePopup: () => void })._closePopup = closePopup;
-        wireMenuActivationClose(this._menu);
-
-        // Attach the trigger Button as our only inline visual child.
-        // The popup host stays detached until IsOpen flips true and
-        // mountPopup() attaches it to PresentationTarget.OverlayLayer.
         this.AttachVisual(this._button);
+    }
 
-        // Pull in the default Style (HorizontalAlignment / VerticalAlignment
-        // setters from surface.template.mu) eagerly so a MenuButton dropped
-        // into a Stretch-defaulting parent doesn't flash full-width before
-        // the AttachLogical-time resolution kicks in.
-        this.applyDefaultStyle();
+    // Find the popup template parts after rebuildTemplate has run, wire
+    // their cross-references (host.anchor → trigger, host.popup →
+    // container, scrim.onClick → close), then detach the templateRoot
+    // from our visual subtree so the OverlayLayer can adopt it.
+    private adoptPopupTemplate(): void
+    {
+        const root = super.visualChildren[0];
+        if (!(root instanceof MenuPopupHost)) return;
+        this._popupHost      = root;
+        this._scrim          = root.FindName('PART_Scrim')          as ClickAwayScrim;
+        this._popupContainer = root.FindName('PART_PopupContainer') as Border;
+        this._popupHost.popup  = this._popupContainer;
+        this._scrim.onClick    = (): void => { this.IsOpen = false; };
+        // Detach so AttachOverlay won't trip the single-parent check.
+        // We claim it back in unmountPopup via reattachPopupTemplate if
+        // the IsOpen DP ever flips false while we still own the root.
+        this.DetachVisual(this._popupHost);
     }
 
     public override get visualChildren(): readonly Visual[]
@@ -548,22 +702,22 @@ export class MenuButton extends Control
         return [];
     }
 
-    // `.mu` body — `MenuButton { MenuItem; MenuSeparator; … }` — routes
-    // through AddChild. MenuButton is a Visual (not an ItemsControl), so
-    // we initialise an ObservableCollection on first declarative-child
-    // push and append to it. OnPropertyChanged('Items') mirrors the
-    // collection into the inner Menu, which materializes the row visuals.
-    public AddChild(child: Visual): void
+    /** Items declared as a Visual in `.mu` (`MenuButton { MenuItem; … }`)
+     *  ARE their own container — slot the Visual directly. */
+    public override IsItemItsOwnContainerOverride(item: unknown): boolean
     {
-        let items = this.Items;
-        if (!(items instanceof ObservableCollection))
+        return item instanceof Visual;
+    }
+
+    /** Wire onActivated on each materialised MenuItem so an activation
+     *  closes the popup. */
+    public override PrepareContainerForItemOverride(container: Visual, item: unknown, index: number): void
+    {
+        super.PrepareContainerForItemOverride(container, item, index);
+        if (container instanceof MenuItem)
         {
-            const seeded = new ObservableCollection<unknown>();
-            if (Array.isArray(items)) for (const e of items) seeded.Add(e);
-            this.Items = seeded;
-            items = seeded;
+            container._onActivated = (): void => { this.IsOpen = false; };
         }
-        (items as ObservableCollection<unknown>).Add(child);
     }
 
     protected override MeasureOverride(availableSize: Size): Size
@@ -581,7 +735,7 @@ export class MenuButton extends Control
     }
 
     protected override OnPropertyChanged(
-        descriptor: import('../../runtime/index.js').PropertyDescriptor,
+        descriptor: PropertyDescriptor,
         oldValue: unknown,
         newValue: unknown,
     ): void
@@ -593,7 +747,7 @@ export class MenuButton extends Control
             if (newValue === true) this.mountPopup();
             else                   this.unmountPopup();
         }
-        if (name === 'Icon' && this._buttonStack !== undefined)
+        if (name === 'Icon' && this._buttonStack !== undefined && this._buttonText !== undefined)
         {
             // Rebuild the button stack with the new icon at the front.
             // Children of a StackPanel can't be easily re-ordered, so we
@@ -610,22 +764,6 @@ export class MenuButton extends Control
         {
             this._buttonText.Text = (newValue as string | undefined) ?? '';
         }
-        if (name === 'Items')
-        {
-            // Mirror our Items into the inner Menu so the popup
-            // renders them. The Menu is its own ItemsControl with its
-            // own container generation, so the same data items get
-            // realized as distinct visuals there.
-            //
-            // Guard against the constructor-time fire: super() runs
-            // ItemsControl's constructor which sets Items, firing this
-            // OnPropertyChanged before `this._menu` (initialized after
-            // super) exists. The mirror is unnecessary at that point —
-            // the Menu doesn't exist yet — and the eventual `this.Items
-            // = ...` call in the demo / test re-fires this branch with
-            // _menu in place.
-            if (this._menu !== undefined) this._menu.Items = this.Items;
-        }
     }
 
     protected override propagate_target_to_visual_children(): void
@@ -634,7 +772,7 @@ export class MenuButton extends Control
         const oldTarget = this._lastKnownTarget;
         if (oldTarget !== undefined && oldTarget !== newTarget && this._popupMounted)
         {
-            oldTarget.DetachOverlay(this._popupHost);
+            if (this._popupHost !== undefined) oldTarget.DetachOverlay(this._popupHost);
             this._popupMounted = false;
         }
         this._lastKnownTarget = newTarget;
@@ -645,8 +783,12 @@ export class MenuButton extends Control
     private mountPopup(): void
     {
         if (this._popupMounted) return;
+        if (this._popupHost === undefined) return;
         const t = this._lastKnownTarget;
         if (t === undefined) return;
+        // The anchor reference is set every mount so a target change
+        // (or a late-bound trigger) doesn't leave stale coords.
+        if (this._button !== undefined) this._popupHost.anchor = this._button;
         t.AttachOverlay(this._popupHost);
         this._popupMounted = true;
     }
@@ -654,33 +796,12 @@ export class MenuButton extends Control
     private unmountPopup(): void
     {
         if (!this._popupMounted) return;
+        if (this._popupHost === undefined) return;
         const t = this._lastKnownTarget;
         if (t === undefined) { this._popupMounted = false; return; }
         t.DetachOverlay(this._popupHost);
         this._popupMounted = false;
     }
-}
-
-// Walk a Menu's PrepareContainerForItemOverride extension point —
-// each materialized MenuItem container gets its _onActivated set to
-// the menu's close callback. The callback is published via a hidden
-// _closePopup field on the menu instance (set by MenuButton /
-// ContextMenu before items materialize). Exported so ContextMenu
-// (in a sibling module) can reuse the same wiring path without
-// duplicating the patch.
-export function wireMenuActivationClose(menu: Menu): void
-{
-    const original = menu.PrepareContainerForItemOverride.bind(menu);
-    (menu as unknown as { PrepareContainerForItemOverride: (c: Visual, i: unknown, idx: number) => void })
-        .PrepareContainerForItemOverride = (container: Visual, item: unknown, index: number) =>
-    {
-        original(container, item, index);
-        const close = (menu as unknown as { _closePopup?: () => void })._closePopup;
-        if (container instanceof MenuItem && close !== undefined)
-        {
-            container._onActivated = close;
-        }
-    };
 }
 
 // ─────────────────────────────────────────────────────────────────────

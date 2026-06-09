@@ -7,7 +7,7 @@ function emit(src: string): string { return compile(src).js; }
 describe('ItemsPanelTemplate — resource form', () => {
     test('keyed entry compiles to ItemsPanelTemplate constructor + dict Set', () => {
         const body = emit(`
-ResourceDictionary {
+resources Test {
     ItemsPanelTemplate x:key="WrapLayout" {
         StackPanel
     }
@@ -20,7 +20,7 @@ ResourceDictionary {
 
     test('omitting the [meta] block is allowed', () => {
         const body = emit(`
-ResourceDictionary {
+resources Test {
     ItemsPanelTemplate x:key="X" {
         StackPanel[Orientation=Vertical]
     }
@@ -31,7 +31,7 @@ ResourceDictionary {
 
     test('rejects without x:key in resource position', () => {
         assert.throws(() => emit(`
-ResourceDictionary {
+resources Test {
     ItemsPanelTemplate {
         StackPanel
     }
@@ -44,7 +44,7 @@ describe('ItemsPanelTemplate — inline at slot-assign value', () => {
     test('inline form emits anonymous template assigned to property', () => {
         const body = emit(`
 import Foo from "./foo.mjs"
-ResourceDictionary {
+resources Test {
     DataTemplate x:key="T" [DataType=Foo] {
         ListBox {
             ItemsPanel: ItemsPanelTemplate {
@@ -64,7 +64,7 @@ ResourceDictionary {
         const body = emit(`
 import ParentVM from "./parent-vm.mjs"
 import ItemVM   from "./item-vm.mjs"
-ResourceDictionary {
+resources Test {
     DataTemplate x:key="Outer" [DataType=ParentVM] {
         ListBox {
             ItemTemplate: DataTemplate [DataType=ItemVM] {

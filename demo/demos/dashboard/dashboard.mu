@@ -15,7 +15,7 @@ import DashboardVM from "./dashboard-vm.mjs"
 // `Dashboard*Card` prefix keeps them from colliding with other demos
 // that merge their own resources into Application.current.Resources.
 
-ResourceDictionary {
+resources DashboardDemo {
 
     // Keyed Border styles. Each carries its own Background +
     // BorderBrush so the hover / press triggers can override the

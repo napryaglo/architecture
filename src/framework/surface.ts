@@ -19,12 +19,12 @@ export {
     type ToolBarButtonOptions,
 } from './tool-bar/tool-bar-items.js';
 export {
-    Menu,
+    MenuStrip,
     MenuButton,
     MenuItem,
     MenuPopupHost,
     MenuSeparator,
-} from './menu/menu.js';
+} from './menu/menu-strip.js';
 export {
     ContextMenu,
     ContextMenuService,

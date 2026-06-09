@@ -18,7 +18,7 @@ import AnimationTriggersVM from "./animation-triggers-vm.mjs"
 // Button style lives in the template root's local resources so it
 // scopes to this demo only.
 
-ResourceDictionary {
+resources AnimationTriggersDemo {
     DataTemplate x:key="AnimationTriggersTemplate" [DataType=AnimationTriggersVM] {
         // x:root marks this Border as the NameScope owner so the
         // inner `x:name="banner"` / `x:name="bannerBtn"` registrations

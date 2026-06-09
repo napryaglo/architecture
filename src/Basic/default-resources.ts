@@ -1,5 +1,5 @@
 import { Application, Style } from '../runtime/index.js';
-import { create as createControlsTheme } from '../../build/Basic/basic.template.mu.js';
+import { BasicTheme } from '../../build/Basic/basic.template.mu.js';
 import { ControlTemplate } from './control-template.js';
 
 // Every built-in control's default ControlTemplate ships in a single
@@ -17,10 +17,20 @@ import { ControlTemplate } from './control-template.js';
 // factories array works because function declarations are bound at
 // module instantiation time, so the imported `createControlsTheme`
 // reference is stable across every reentrant call.
+// Wrapper around `BasicTheme.Clone` so the factory reference is a
+// FUNCTION declaration — hoisted at module instantiation — rather than
+// a static-method access on a CLASS, which is bound only after the
+// class declaration evaluates. The Basic barrel cycle reaches this
+// module mid-load through every control's static block; a direct
+// `BasicTheme.Clone` reference would TDZ-error because basic.template.mu.js
+// is still evaluating when the first control hits us.
+import type { ResourceDictionary } from '../runtime/index.js';
+function basicThemeFactory(): ResourceDictionary { return BasicTheme.Clone(); }
+
 export function ensureControlsTheme(): void
 {
-    if (Application.DefaultResourceFactories.includes(createControlsTheme)) return;
-    Application.DefaultResourceFactories.push(createControlsTheme);
+    if (Application.DefaultResourceFactories.includes(basicThemeFactory)) return;
+    Application.DefaultResourceFactories.push(basicThemeFactory);
 }
 
 // `ensureSurfaceTheme` lives in `./default-surface-resources.ts`, NOT

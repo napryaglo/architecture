@@ -4,106 +4,122 @@ import { ToggleButton } from "@visualisation-sub/mural/framework/toggle-button.j
 import { DataContextBinding, DynamicResource, ResourceDictionary, Setter, SetterFactory, Style, Thickness } from "@visualisation-sub/mural/runtime";
 import { FontStyle, FontWeight } from "@visualisation-sub/mural/visual-engine";
 
-export function create() {
-    const _rd0 = new ResourceDictionary();
-    const _tmpl1 = (() => {
-        const _factory = (_templatedParent) => {
-            const _border2 = new Border();
-            _border2.Name = "PART_Border";
-            _border2._set_property_value_by_name("Background", DynamicResource(_border2, "Surface"));
-            _border2._set_property_value_by_name("BorderBrush", DynamicResource(_border2, "Outline"));
-            _border2._set_property_value_by_name("BorderThickness", new Thickness(1));
-            _border2._set_property_value_by_name("CornerRadius", DynamicResource(_border2, "ShapeSmall"));
-            _border2._set_property_value_by_name("Padding", new Thickness(16, 8, 16, 8));
-            const _contentPresenter3 = new ContentPresenter();
-            _border2.SetChild(_contentPresenter3);
-            return _border2;
-        };
-        const _tplSet4 = [new TargetedSetter(Border, "Background", new SetterFactory((_t) => DynamicResource(_t, "Primary")), "PART_Border"), new TargetedSetter(Border, "BorderBrush", new SetterFactory((_t) => DynamicResource(_t, "PrimaryPress")), "PART_Border")];
-        const _tplTrig5 = new TemplatePropertyTrigger(ToggleButton, "IsChecked", true, _tplSet4);
-        return new ControlTemplate(_factory, [_tplTrig5]);
-    })();
-    _rd0.Set("ToggleChromeTemplate", _tmpl1);
-    const _setter6 = new Setter(ToggleButton, "Template", _tmpl1);
-    const _style7 = new Style(ToggleButton, [_setter6], undefined, [], []);
-    _rd0.Set("StyleToggle", _style7);
-    const _tmpl8 = new DataTemplate((_data) => {
-        const _border9 = new Border();
-        _border9._set_property_value_by_name("Background", DynamicResource(_border9, "Surface"));
-        _border9._set_property_value_by_name("BorderBrush", DynamicResource(_border9, "OutlineVariant"));
-        _border9._set_property_value_by_name("BorderThickness", new Thickness(1));
-        const _dockPanel10 = new DockPanel();
-        const _border11 = new Border();
-        _border11._set_property_value_by_name(DockPanel, "Dock", Dock.Top);
-        _border11._set_property_value_by_name("Background", DynamicResource(_border11, "Primary"));
-        _border11._set_property_value_by_name("Padding", new Thickness(16, 12, 16, 12));
-        const _textBlock12 = new TextBlock();
-        _textBlock12._set_property_value_by_name("Text", "ToggleButton — IsChecked flips on click; TwoWay binding keeps the VM in sync.");
-        _textBlock12._set_property_value_by_name("FontSize", 15);
-        _textBlock12._set_property_value_by_name("FontWeight", FontWeight.Bold);
-        _textBlock12._set_property_value_by_name("Foreground", DynamicResource(_textBlock12, "OnPrimary"));
-        _border11.SetChild(_textBlock12);
-        _dockPanel10.AddChild(_border11);
-        const _stackPanel13 = new StackPanel();
-        _stackPanel13._set_property_value_by_name("Orientation", Orientation.Vertical);
-        _stackPanel13._set_property_value_by_name("Margin", new Thickness(16, 16, 16, 16));
-        const _stackPanel14 = new StackPanel();
-        _stackPanel14._set_property_value_by_name("Orientation", Orientation.Horizontal);
-        _stackPanel14._set_property_value_by_name("Margin", new Thickness(0, 0, 0, 16));
-        const _toggleButton15 = new ToggleButton();
-        _toggleButton15._set_property_value_by_name("Style", _style7);
-        _toggleButton15._set_property_value_by_name("IsChecked", DataContextBinding(_toggleButton15, "IsBold"));
-        _toggleButton15._set_property_value_by_name("Margin", new Thickness(0, 0, 8, 0));
-        const _textBlock16 = new TextBlock();
-        _textBlock16._set_property_value_by_name("Text", "B");
-        _textBlock16._set_property_value_by_name("FontWeight", FontWeight.Bold);
-        _textBlock16._set_property_value_by_name("Foreground", DynamicResource(_textBlock16, "OnSurface"));
-        _toggleButton15.Content = _textBlock16;
-        _stackPanel14.AddChild(_toggleButton15);
-        const _toggleButton17 = new ToggleButton();
-        _toggleButton17._set_property_value_by_name("Style", _style7);
-        _toggleButton17._set_property_value_by_name("IsChecked", DataContextBinding(_toggleButton17, "IsItalic"));
-        _toggleButton17._set_property_value_by_name("Margin", new Thickness(0, 0, 8, 0));
-        const _textBlock18 = new TextBlock();
-        _textBlock18._set_property_value_by_name("Text", "I");
-        _textBlock18._set_property_value_by_name("FontStyle", FontStyle.Italic);
-        _textBlock18._set_property_value_by_name("Foreground", DynamicResource(_textBlock18, "OnSurface"));
-        _toggleButton17.Content = _textBlock18;
-        _stackPanel14.AddChild(_toggleButton17);
-        const _toggleButton19 = new ToggleButton();
-        _toggleButton19._set_property_value_by_name("Style", _style7);
-        _toggleButton19._set_property_value_by_name("IsChecked", DataContextBinding(_toggleButton19, "IsUnderline"));
-        const _textBlock20 = new TextBlock();
-        _textBlock20._set_property_value_by_name("Text", "U");
-        _textBlock20._set_property_value_by_name("FontWeight", FontWeight.Bold);
-        _textBlock20._set_property_value_by_name("Foreground", DynamicResource(_textBlock20, "OnSurface"));
-        _toggleButton19.Content = _textBlock20;
-        _stackPanel14.AddChild(_toggleButton19);
-        _stackPanel13.AddChild(_stackPanel14);
-        const _border21 = new Border();
-        _border21._set_property_value_by_name("Background", DynamicResource(_border21, "SurfaceContainerLow"));
-        _border21._set_property_value_by_name("Padding", new Thickness(12, 12, 12, 12));
-        _border21._set_property_value_by_name("BorderBrush", DynamicResource(_border21, "Outline"));
-        _border21._set_property_value_by_name("BorderThickness", new Thickness(1));
-        const _stackPanel22 = new StackPanel();
-        _stackPanel22._set_property_value_by_name("Orientation", Orientation.Vertical);
-        const _textBlock23 = new TextBlock();
-        _textBlock23._set_property_value_by_name("Text", DataContextBinding(_textBlock23, "PreviewText"));
-        _textBlock23._set_property_value_by_name("FontSize", 16);
-        _textBlock23._set_property_value_by_name("Foreground", DynamicResource(_textBlock23, "OnSurface"));
-        _stackPanel22.AddChild(_textBlock23);
-        const _textBlock24 = new TextBlock();
-        _textBlock24._set_property_value_by_name("Text", "(Bold / Italic / Underline DPs above drive this preview's chrome via TwoWay bindings.)");
-        _textBlock24._set_property_value_by_name("FontSize", 11);
-        _textBlock24._set_property_value_by_name("Foreground", DynamicResource(_textBlock24, "OnSurfaceVariant"));
-        _textBlock24._set_property_value_by_name("Margin", new Thickness(0, 8, 0, 0));
-        _stackPanel22.AddChild(_textBlock24);
-        _border21.SetChild(_stackPanel22);
-        _stackPanel13.AddChild(_border21);
-        _dockPanel10.AddChild(_stackPanel13);
-        _border9.SetChild(_dockPanel10);
-        return _border9;
-    }, ToggleButtonVM);
-    _rd0.Set("ToggleButtonTemplate", _tmpl8);
-    return _rd0;
+
+const _gate_ToggleButtonDemo = Symbol("ToggleButtonDemo.ctor");
+export class ToggleButtonDemo extends ResourceDictionary {
+    constructor(_g) {
+        super();
+        if (_g !== _gate_ToggleButtonDemo) {
+            throw new Error("ToggleButtonDemo is private — use ToggleButtonDemo.Clone()");
+        }
+    }
+    static Clone() {
+        const t = new ToggleButtonDemo(_gate_ToggleButtonDemo);
+        const _tmpl0 = (() => {
+            const _factory = (_templatedParent) => {
+                const _border1 = new Border();
+                _border1.Name = "PART_Border";
+                _border1._set_property_value_by_name("Background", DynamicResource(_border1, "Surface"));
+                _border1._set_property_value_by_name("BorderBrush", DynamicResource(_border1, "Outline"));
+                _border1._set_property_value_by_name("BorderThickness", new Thickness(1));
+                _border1._set_property_value_by_name("CornerRadius", DynamicResource(_border1, "ShapeSmall"));
+                _border1._set_property_value_by_name("Padding", new Thickness(16, 8, 16, 8));
+                const _contentPresenter2 = new ContentPresenter();
+                _border1.SetChild(_contentPresenter2);
+                return _border1;
+            };
+            const _tplSet3 = [new TargetedSetter(Border, "Background", new SetterFactory((_t) => DynamicResource(_t, "Primary")), "PART_Border"), new TargetedSetter(Border, "BorderBrush", new SetterFactory((_t) => DynamicResource(_t, "PrimaryPress")), "PART_Border")];
+            const _tplTrig4 = new TemplatePropertyTrigger(ToggleButton, "IsChecked", true, _tplSet3);
+            return new ControlTemplate(_factory, [_tplTrig4]);
+        })();
+        t.Set("ToggleChromeTemplate", _tmpl0);
+        const _setter5 = new Setter(ToggleButton, "Template", _tmpl0);
+        const _style6 = new Style(ToggleButton, [_setter5], undefined, [], []);
+        t.Set("StyleToggle", _style6);
+        const _tmpl7 = new DataTemplate((_data) => {
+            const _border8 = new Border();
+            _border8._set_property_value_by_name("Background", DynamicResource(_border8, "Surface"));
+            _border8._set_property_value_by_name("BorderBrush", DynamicResource(_border8, "OutlineVariant"));
+            _border8._set_property_value_by_name("BorderThickness", new Thickness(1));
+            const _dockPanel9 = new DockPanel();
+            const _border10 = new Border();
+            _border10._set_property_value_by_name(DockPanel, "Dock", Dock.Top);
+            _border10._set_property_value_by_name("Background", DynamicResource(_border10, "Primary"));
+            _border10._set_property_value_by_name("Padding", new Thickness(16, 12, 16, 12));
+            const _textBlock11 = new TextBlock();
+            _textBlock11._set_property_value_by_name("Text", "ToggleButton — IsChecked flips on click; TwoWay binding keeps the VM in sync.");
+            _textBlock11._set_property_value_by_name("FontSize", 15);
+            _textBlock11._set_property_value_by_name("FontWeight", FontWeight.Bold);
+            _textBlock11._set_property_value_by_name("Foreground", DynamicResource(_textBlock11, "OnPrimary"));
+            _border10.SetChild(_textBlock11);
+            _dockPanel9.AddChild(_border10);
+            const _stackPanel12 = new StackPanel();
+            _stackPanel12._set_property_value_by_name("Orientation", Orientation.Vertical);
+            _stackPanel12._set_property_value_by_name("Margin", new Thickness(16, 16, 16, 16));
+            const _stackPanel13 = new StackPanel();
+            _stackPanel13._set_property_value_by_name("Orientation", Orientation.Horizontal);
+            _stackPanel13._set_property_value_by_name("Margin", new Thickness(0, 0, 0, 16));
+            const _toggleButton14 = new ToggleButton();
+            _toggleButton14._set_property_value_by_name("Style", _style6);
+            _toggleButton14._set_property_value_by_name("IsChecked", DataContextBinding(_toggleButton14, "IsBold"));
+            _toggleButton14._set_property_value_by_name("Margin", new Thickness(0, 0, 8, 0));
+            const _textBlock15 = new TextBlock();
+            _textBlock15._set_property_value_by_name("Text", "B");
+            _textBlock15._set_property_value_by_name("FontWeight", FontWeight.Bold);
+            _textBlock15._set_property_value_by_name("Foreground", DynamicResource(_textBlock15, "OnSurface"));
+            _toggleButton14.Content = _textBlock15;
+            _stackPanel13.AddChild(_toggleButton14);
+            const _toggleButton16 = new ToggleButton();
+            _toggleButton16._set_property_value_by_name("Style", _style6);
+            _toggleButton16._set_property_value_by_name("IsChecked", DataContextBinding(_toggleButton16, "IsItalic"));
+            _toggleButton16._set_property_value_by_name("Margin", new Thickness(0, 0, 8, 0));
+            const _textBlock17 = new TextBlock();
+            _textBlock17._set_property_value_by_name("Text", "I");
+            _textBlock17._set_property_value_by_name("FontStyle", FontStyle.Italic);
+            _textBlock17._set_property_value_by_name("Foreground", DynamicResource(_textBlock17, "OnSurface"));
+            _toggleButton16.Content = _textBlock17;
+            _stackPanel13.AddChild(_toggleButton16);
+            const _toggleButton18 = new ToggleButton();
+            _toggleButton18._set_property_value_by_name("Style", _style6);
+            _toggleButton18._set_property_value_by_name("IsChecked", DataContextBinding(_toggleButton18, "IsUnderline"));
+            const _textBlock19 = new TextBlock();
+            _textBlock19._set_property_value_by_name("Text", "U");
+            _textBlock19._set_property_value_by_name("FontWeight", FontWeight.Bold);
+            _textBlock19._set_property_value_by_name("Foreground", DynamicResource(_textBlock19, "OnSurface"));
+            _toggleButton18.Content = _textBlock19;
+            _stackPanel13.AddChild(_toggleButton18);
+            _stackPanel12.AddChild(_stackPanel13);
+            const _border20 = new Border();
+            _border20._set_property_value_by_name("Background", DynamicResource(_border20, "SurfaceContainerLow"));
+            _border20._set_property_value_by_name("Padding", new Thickness(12, 12, 12, 12));
+            _border20._set_property_value_by_name("BorderBrush", DynamicResource(_border20, "Outline"));
+            _border20._set_property_value_by_name("BorderThickness", new Thickness(1));
+            const _stackPanel21 = new StackPanel();
+            _stackPanel21._set_property_value_by_name("Orientation", Orientation.Vertical);
+            const _textBlock22 = new TextBlock();
+            _textBlock22._set_property_value_by_name("Text", DataContextBinding(_textBlock22, "PreviewText"));
+            _textBlock22._set_property_value_by_name("FontSize", 16);
+            _textBlock22._set_property_value_by_name("Foreground", DynamicResource(_textBlock22, "OnSurface"));
+            _stackPanel21.AddChild(_textBlock22);
+            const _textBlock23 = new TextBlock();
+            _textBlock23._set_property_value_by_name("Text", "(Bold / Italic / Underline DPs above drive this preview's chrome via TwoWay bindings.)");
+            _textBlock23._set_property_value_by_name("FontSize", 11);
+            _textBlock23._set_property_value_by_name("Foreground", DynamicResource(_textBlock23, "OnSurfaceVariant"));
+            _textBlock23._set_property_value_by_name("Margin", new Thickness(0, 8, 0, 0));
+            _stackPanel21.AddChild(_textBlock23);
+            _border20.SetChild(_stackPanel21);
+            _stackPanel12.AddChild(_border20);
+            _dockPanel9.AddChild(_stackPanel12);
+            _border8.SetChild(_dockPanel9);
+            return _border8;
+        }, ToggleButtonVM);
+        t.Set("ToggleButtonTemplate", _tmpl7);
+        return t;
+    }
+    get ToggleChromeTemplate() { return this.Resolve("ToggleChromeTemplate"); }
+    set ToggleChromeTemplate(v) { this.Set("ToggleChromeTemplate", v); }
+    get StyleToggle() { return this.Resolve("StyleToggle"); }
+    set StyleToggle(v) { this.Set("StyleToggle", v); }
+    get ToggleButtonTemplate() { return this.Resolve("ToggleButtonTemplate"); }
+    set ToggleButtonTemplate(v) { this.Set("ToggleButtonTemplate", v); }
 }

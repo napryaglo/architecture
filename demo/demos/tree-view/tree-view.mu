@@ -14,7 +14,7 @@ import TreeViewVM from "./tree-view-vm.mjs"
 //
 // Packaged as a DataTemplate keyed off TreeViewVM.
 
-ResourceDictionary {
+resources TreeViewDemo {
     DataTemplate x:key="TreeViewTemplate" [DataType=TreeViewVM] {
         // x:root owns the NameScope so the bound TreeView's x:name
         // registers and the VM's OnViewMounted FindName resolves it.

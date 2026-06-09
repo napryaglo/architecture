@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import { Application, NoModifiers, Panel, PointerButton, RelayCommand, Size, type PointerEventInit } from '../../../runtime/index.js';
 import { InputManager } from '../../../framework/index.js';;
-import { Menu, MenuButton, MenuItem, MenuSeparator } from '../menu.js';
+import { MenuButton, MenuItem, MenuSeparator, MenuStrip } from '../menu-strip.js';
 
 class Root extends Panel {}
 
@@ -17,12 +17,12 @@ function pointer(button: PointerButton = PointerButton.Primary): PointerEventIni
     };
 }
 
-describe('Menu / MenuItem / MenuSeparator', () => {
+describe('MenuStrip / MenuItem / MenuSeparator', () => {
     beforeEach(() => { Application.current = null; });
 
-    test('Menu instantiates with a vertical-stack ItemsPanel', () => {
-        const menu = new Menu();
-        assert.ok(menu instanceof Menu);
+    test('MenuStrip instantiates with a horizontal-stack ItemsPanel', () => {
+        const strip = new MenuStrip();
+        assert.ok(strip instanceof MenuStrip);
     });
 
     test('MenuItem default state — empty Header, no Icon, IsCheckable=false', () => {
@@ -95,17 +95,13 @@ describe('MenuButton', () => {
         assert.equal(mb.IsOpen, false);
     });
 
-    test('MenuButton.Items mirror into the inner Menu', () => {
+    test('MenuButton.Items hold its data items (it IS the ItemsControl)', () => {
         const mb = new MenuButton();
         mb.Items = ['a', 'b', 'c'];
-        // The MenuButton's Items DP holds the data items; the inner
-        // Menu's Items should mirror them after the property-change
-        // forwarding.
-        const inner = (mb as unknown as { _menu: Menu })._menu;
-        const innerItems = inner.Items;
-        const count = innerItems === undefined
+        const items = mb.Items;
+        const count = items === undefined
             ? 0
-            : Array.isArray(innerItems) ? innerItems.length : (innerItems as { Count: number }).Count;
+            : Array.isArray(items) ? items.length : (items as { Count: number }).Count;
         assert.equal(count, 3);
     });
 });

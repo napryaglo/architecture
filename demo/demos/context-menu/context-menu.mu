@@ -10,7 +10,7 @@ import ContextMenuVM from "./context-menu-vm.mjs"
 // MenuItem passes a CommandParameter the VM uses to format the
 // per-panel status string.
 
-ResourceDictionary {
+resources ContextMenuDemo {
 
     // One ContextMenu per panel, keyed so the panels can reference
     // them through the attached property. Items differ across the

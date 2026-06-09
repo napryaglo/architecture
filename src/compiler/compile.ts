@@ -25,13 +25,33 @@ export interface CompileResult
 {
     /** Whole-module JS source ready to write to a `.mu.js` file. */
     js: string;
-    /** Whether the root form was `Application{…}`. */
+    /** Output shape — drives how the build tool emits the companion
+     *  `.d.ts`. `'application'` exports `const app`; `'fragment'` exports
+     *  `function create()`; `'resources'` exports one or more
+     *  `class … extends ResourceDictionary` declarations (see
+     *  `resourcesBlocks` for the typed-accessor metadata). */
+    kind: 'application' | 'fragment' | 'resources';
+    /** Whether the root form was `Application{…}`. Retained for callers
+     *  that still branch on this flag; `kind === 'application'` is
+     *  equivalent. */
     isApplication: boolean;
-    /** Suggested export name. */
-    exportName: 'app' | 'create';
+    /** Suggested export name. Empty string for `'resources'` files (which
+     *  carry one or more named class exports — branch on `kind`). */
+    exportName: 'app' | 'create' | '';
     /** Module → symbol set. Same data the imports header was built from
      *  — exposed for tooling that wants to introspect or post-process. */
     imports: Map<string, Set<string>>;
+    /** For `kind === 'resources'`: metadata for each `resources NAME { … }`
+     *  block in the source — class name, imported aliases, and the
+     *  x:name'd resource property pairs the `.d.ts` companion declares. */
+    resourcesBlocks?: ResourcesBlockMeta[];
+}
+
+export interface ResourcesBlockMeta
+{
+    name:      string;
+    imports:   string[];
+    accessors: Array<{ name: string; type: string }>;
 }
 
 // Build a sorted import line set from the imports map. Deterministic
@@ -61,12 +81,18 @@ export function compile(source: string, options: CompilerOptions = {}): CompileR
     const out = runPipeline(source, options);
     const importsBlock = formatImports(out.imports);
     let exportBlock: string;
-    if (out.isApplication)
+    if (out.kind === 'application')
     {
         exportBlock =
             `export const app = (() => {\n` +
             indent(out.body, 4) +
             `\n})();`;
+    }
+    else if (out.kind === 'resources')
+    {
+        // No wrap — the body is already a complete module-scope set of
+        // `export class … extends ResourceDictionary` declarations.
+        exportBlock = out.body;
     }
     else
     {
@@ -80,9 +106,11 @@ export function compile(source: string, options: CompilerOptions = {}): CompileR
         : `${exportBlock}\n`;
     return {
         js,
-        isApplication: out.isApplication,
-        exportName:    out.exportName,
-        imports:       out.imports,
+        kind:            out.kind,
+        isApplication:   out.isApplication,
+        exportName:      out.exportName,
+        imports:         out.imports,
+        resourcesBlocks: out.resourcesBlocks,
     };
 }
 

@@ -3,7 +3,7 @@
 // activation the demo merges its ResourceDictionary into Application
 // resources and hands the platform a VM instance.
 import { Application } from '@visualisation-sub/mural/runtime';
-import { create as createSpinEditResources } from './spin-edit.mu.js';
+import { SpinEditDemo } from './spin-edit.mu.js';
 import { SpinEditVM } from './spin-edit-vm.mjs';
 import { register } from '../../platform/registry.mjs';
 
@@ -17,7 +17,7 @@ register({
     subtitle: 'Numeric up/down with clamping, decimal precision, and small/large step keys (Arrow, PageUp/Down).',
     factory: () => {
         if (!resourcesMerged) {
-            Application.current?.Resources.AddMergedDictionary(createSpinEditResources());
+            Application.current?.Resources.AddMergedDictionary(SpinEditDemo.Clone());
             resourcesMerged = true;
         }
         if (vmInstance === undefined) vmInstance = new SpinEditVM();

@@ -29,7 +29,7 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 
 import {
     DEFAULT_SYMBOLS,
-    ENUM_CLASSES,
+    ENUM_MEMBERS,
     DEFAULT_SLOT_INFO,
     type ElementNode,
 } from '@visualisation-sub/mural/compiler';
@@ -185,7 +185,7 @@ function matchEnumProperty(before: string): string | null
     const m = before.match(/\b([A-Z][A-Za-z0-9]*)\s*=\s*[A-Za-z]*$/);
     if (m === null) return null;
     const name = m[1]!;
-    return ENUM_CLASSES.has(name) ? name : null;
+    return ENUM_MEMBERS.has(name) ? name : null;
 }
 
 // ── Builders ────────────────────────────────────────────────────────

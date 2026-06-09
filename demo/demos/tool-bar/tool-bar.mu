@@ -15,7 +15,7 @@ import ToolBarVM from "./tool-bar-vm.mjs"
 // "one-visual-one-parent" rule. The framework needs a "move on
 // overflow" mechanism before this demo can showcase that path safely.
 
-ResourceDictionary {
+resources ToolBarDemo {
 
     DataTemplate x:key="ToolBarTemplate" [DataType=ToolBarVM] {
         Border [Background=@Surface, BorderBrush=@OutlineVariant,

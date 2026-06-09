@@ -26,7 +26,7 @@
 // the typography dictionary is merged on the first SetTheme call and
 // never removed.
 
-ResourceDictionary {
+resources Typography {
 
     // ── Display tier (large hero headings) ──────────────────────────
     Style x:key="DisplayLarge"  [TargetType=TextBlock] { FontSize = 57; FontWeight = Normal; }

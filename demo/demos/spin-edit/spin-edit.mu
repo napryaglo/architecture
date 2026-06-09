@@ -18,7 +18,7 @@ import SpinEditVM from "./spin-edit-vm.mjs"
 //
 // Packaged as a DataTemplate keyed off SpinEditVM.
 
-ResourceDictionary {
+resources SpinEditDemo {
     DataTemplate x:key="SpinEditTemplate" [DataType=SpinEditVM] {
         Border [Background=@Surface, BorderBrush=@OutlineVariant,
                 BorderThickness=(1)]{

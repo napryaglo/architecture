@@ -5,7 +5,7 @@
 // ResourceDictionary into Application resources and hands the
 // platform a VM instance.
 import { Application } from '@visualisation-sub/mural/runtime';
-import { create as createListBoxResources } from './list-box.mu.js';
+import { ListBoxDemo } from './list-box.mu.js';
 import { ListBoxVM } from './list-box-vm.mjs';
 import { register } from '../../platform/registry.mjs';
 
@@ -19,7 +19,7 @@ register({
     subtitle: 'Declarative · Items=[…] convenience · ItemsSource + CollectionView with Sort / Filter toggles.',
     factory: () => {
         if (!resourcesMerged) {
-            Application.current?.Resources.AddMergedDictionary(createListBoxResources());
+            Application.current?.Resources.AddMergedDictionary(ListBoxDemo.Clone());
             resourcesMerged = true;
         }
         if (vmInstance === undefined) vmInstance = new ListBoxVM();

@@ -11,7 +11,7 @@ import AnimationDeclarativeVM from "./animation-declarative-vm.mjs"
 //
 // Packaged as a DataTemplate keyed off AnimationDeclarativeVM.
 
-ResourceDictionary {
+resources AnimationDeclarativeDemo {
     DataTemplate x:key="AnimationDeclarativeTemplate" [DataType=AnimationDeclarativeVM] {
         Border [Background=@Surface, BorderBrush=@OutlineVariant,
                 BorderThickness=(1)]{

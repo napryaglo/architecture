@@ -5,7 +5,7 @@
 // PageView's ContentControl auto-resolves the template by data type
 // and slots the produced Visual.
 import { Application } from '@visualisation-sub/mural/runtime';
-import { create as createTextBoxResources } from './text-box.mu.js';
+import { TextBoxDemo } from './text-box.mu.js';
 import { TextBoxVM } from './text-box-vm.mjs';
 import { register } from '../../platform/registry.mjs';
 
@@ -19,7 +19,7 @@ register({
     subtitle: 'Single-line + multi-line text editing with selection, navigation, and clipboard (Ctrl+A/C/X/V).',
     factory: () => {
         if (!resourcesMerged) {
-            Application.current?.Resources.AddMergedDictionary(createTextBoxResources());
+            Application.current?.Resources.AddMergedDictionary(TextBoxDemo.Clone());
             resourcesMerged = true;
         }
         if (vmInstance === undefined) vmInstance = new TextBoxVM();

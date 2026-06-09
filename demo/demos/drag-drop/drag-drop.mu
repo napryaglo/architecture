@@ -14,7 +14,7 @@ import ItemVM     from "./drag-drop-vm.mjs"
 // shell's local resources so it only re-styles ListBoxItems rendered
 // by THIS demo, not every demo on the platform.
 
-ResourceDictionary {
+resources DragDropDemo {
 
     // Per-item template: ListBox.contentForItem auto-resolves via
     // findDataTemplateForType(ItemVM) when ItemTemplate is unset.

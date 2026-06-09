@@ -19,7 +19,7 @@ import ListReorderBehavior from "@visualisation-sub/mural/Basic"
 // row-level Behaviors{} block — declarative attach inside the same
 // element that hosts the list.
 
-ResourceDictionary {
+resources DragDropExtendedDemo {
 
     // Vertical StackPanel ItemsPanel — plain ItemsControl has no
     // default, so explicit panels are required for containers to

@@ -18,7 +18,7 @@ import TextBoxVM from "./text-box-vm.mjs"
 // ContentControl auto-resolves it when PlatformVM.Content is set to a
 // TextBoxVM instance.
 
-ResourceDictionary {
+resources TextBoxDemo {
     DataTemplate x:key="TextBoxTemplate" [DataType=TextBoxVM] {
         Border [Background=@Surface, BorderBrush=@OutlineVariant,
                 BorderThickness=(1)]{

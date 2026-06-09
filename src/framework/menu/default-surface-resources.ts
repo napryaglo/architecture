@@ -1,5 +1,11 @@
 import { Application } from '../../runtime/index.js';
-import { create as createSurfaceTheme } from '../../../build/framework/menu/surface.template.mu.js';
+import type { ResourceDictionary } from '../../runtime/index.js';
+import { SurfaceTheme } from '../../../build/framework/menu/surface.template.mu.js';
+
+// See default-resources.ts for the rationale — wrapping `Clone` in a
+// function declaration sidesteps the class-binding TDZ inside the
+// surface-import cycle.
+function surfaceThemeFactory(): ResourceDictionary { return SurfaceTheme.Clone(); }
 
 // Default theme bundle for the command-surface controls — ToggleButton,
 // ToolBar, Menu / MenuItem / MenuButton, ContextMenu. Kept in its own
@@ -18,8 +24,8 @@ import { create as createSurfaceTheme } from '../../../build/framework/menu/surf
 // the surface re-exports.
 export function ensureSurfaceTheme(): void
 {
-    if (Application.DefaultResourceFactories.includes(createSurfaceTheme)) return;
-    Application.DefaultResourceFactories.push(createSurfaceTheme);
+    if (Application.DefaultResourceFactories.includes(surfaceThemeFactory)) return;
+    Application.DefaultResourceFactories.push(surfaceThemeFactory);
     // We deliberately do NOT call `Application.MergePendingDefaults`
     // here — that would invoke `createSurfaceTheme()` immediately
     // (through `getDefaultResources`), and the factory reads

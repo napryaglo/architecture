@@ -33,7 +33,7 @@
 // can't both ride a single TargetType-keyed default Style, and the
 // control's ctor reads each by string key explicitly.
 
-ResourceDictionary {
+resources BasicTheme {
 
     // ── Button: variant-driven Material 3 chrome ───────────────────
     // Five M3 button variants, one ControlTemplate per variant. The

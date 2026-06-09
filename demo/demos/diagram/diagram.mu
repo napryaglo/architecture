@@ -25,7 +25,7 @@ import ToolboxShapeVM  from "./diagram-vm.mjs"
 //     SelectionChanged, so the existing `when($IsSelected)` triggers
 //     keep working without per-shape template changes.
 
-ResourceDictionary {
+resources DiagramDemo {
 
     // ── Per-node container style ────────────────────────────────────
     //

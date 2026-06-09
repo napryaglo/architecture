@@ -3,94 +3,112 @@ import { Border, Canvas, DataTemplate, TextBlock, TextWrapping } from "@visualis
 import { Color, DynamicResource, PropertyTrigger, ResourceDictionary, Setter, SetterFactory, Style, Thickness } from "@visualisation-sub/mural/runtime";
 import { SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
 
-export function create() {
-    const _rd0 = new ResourceDictionary();
-    const _setter1 = new Setter(Border, "Background", new SolidColorBrush(Color.FromHex('#4caf50')));
-    const _setter2 = new Setter(Border, "BorderBrush", new SolidColorBrush(Color.FromHex('#1b5e20')));
-    const _setter3 = new Setter(Border, "BorderThickness", new Thickness(2));
-    const _setter4 = new Setter(Border, "CornerRadius", new Thickness(8));
-    const _setter5 = new Setter(Border, "Padding", new Thickness(16));
-    const _setter6 = new Setter(Border, "Background", new SolidColorBrush(Color.FromHex('#66bb6a')));
-    const _setter7 = new Setter(Border, "BorderThickness", new Thickness(3));
-    const _sArr8 = [_setter6, _setter7];
-    const _trigger9 = new PropertyTrigger(Border, "IsMouseOver", true, _sArr8);
-    const _setter10 = new Setter(Border, "Background", new SolidColorBrush(Color.FromHex('#2e7d32')));
-    const _setter11 = new Setter(Border, "BorderThickness", new Thickness(4));
-    const _sArr12 = [_setter10, _setter11];
-    const _trigger13 = new PropertyTrigger(Border, "IsPressed", true, _sArr12);
-    const _style14 = new Style(Border, [_setter1, _setter2, _setter3, _setter4, _setter5], undefined, [_trigger9, _trigger13], []);
-    _rd0.Set("DashboardPrimaryCard", _style14);
-    const _setter15 = new Setter(Border, "Background", new SolidColorBrush(Color.FromHex('#d32f2f')));
-    const _setter16 = new Setter(Border, "BorderBrush", new SolidColorBrush(Color.FromHex('#7f0000')));
-    const _setter17 = new Setter(Border, "BorderThickness", new Thickness(2));
-    const _setter18 = new Setter(Border, "CornerRadius", new Thickness(8));
-    const _setter19 = new Setter(Border, "Padding", new Thickness(16));
-    const _setter20 = new Setter(Border, "Background", new SolidColorBrush(Color.FromHex('#ef5350')));
-    const _setter21 = new Setter(Border, "BorderThickness", new Thickness(3));
-    const _sArr22 = [_setter20, _setter21];
-    const _trigger23 = new PropertyTrigger(Border, "IsMouseOver", true, _sArr22);
-    const _setter24 = new Setter(Border, "Background", new SolidColorBrush(Color.FromHex('#b71c1c')));
-    const _setter25 = new Setter(Border, "BorderThickness", new Thickness(4));
-    const _sArr26 = [_setter24, _setter25];
-    const _trigger27 = new PropertyTrigger(Border, "IsPressed", true, _sArr26);
-    const _style28 = new Style(Border, [_setter15, _setter16, _setter17, _setter18, _setter19], undefined, [_trigger23, _trigger27], []);
-    _rd0.Set("DashboardDangerCard", _style28);
-    const _setter29 = new Setter(Border, "Background", new SetterFactory((_t) => DynamicResource(_t, "Surface")));
-    const _setter30 = new Setter(Border, "BorderBrush", new SetterFactory((_t) => DynamicResource(_t, "OutlineVariant")));
-    const _setter31 = new Setter(Border, "BorderThickness", new Thickness(1));
-    const _setter32 = new Setter(Border, "CornerRadius", new Thickness(6));
-    const _setter33 = new Setter(Border, "Padding", new Thickness(20));
-    const _setter34 = new Setter(Border, "Background", new SetterFactory((_t) => DynamicResource(_t, "SurfaceContainerHigh")));
-    const _setter35 = new Setter(Border, "BorderThickness", new Thickness(2));
-    const _sArr36 = [_setter34, _setter35];
-    const _trigger37 = new PropertyTrigger(Border, "IsMouseOver", true, _sArr36);
-    const _setter38 = new Setter(Border, "Background", new SetterFactory((_t) => DynamicResource(_t, "OutlineVariant")));
-    const _setter39 = new Setter(Border, "BorderThickness", new Thickness(3));
-    const _sArr40 = [_setter38, _setter39];
-    const _trigger41 = new PropertyTrigger(Border, "IsPressed", true, _sArr40);
-    const _style42 = new Style(Border, [_setter29, _setter30, _setter31, _setter32, _setter33], undefined, [_trigger37, _trigger41], []);
-    _rd0.Set("DashboardPaperCard", _style42);
-    const _tmpl43 = new DataTemplate((_data) => {
-        const _canvas44 = new Canvas();
-        const _border45 = new Border();
-        _border45._set_property_value_by_name("Style", _style14);
-        _border45._set_property_value_by_name(Canvas, "Left", 20);
-        _border45._set_property_value_by_name(Canvas, "Top", 20);
-        _border45._set_property_value_by_name("Width", 200);
-        _border45._set_property_value_by_name("Height", 80);
-        const _textBlock46 = new TextBlock();
-        _textBlock46._set_property_value_by_name("Text", "Hello mural");
-        _textBlock46._set_property_value_by_name("FontSize", 20);
-        _textBlock46._set_property_value_by_name("Foreground", DynamicResource(_textBlock46, "OnPrimary"));
-        _border45.SetChild(_textBlock46);
-        _canvas44.AddChild(_border45);
-        const _border47 = new Border();
-        _border47._set_property_value_by_name("Style", _style28);
-        _border47._set_property_value_by_name(Canvas, "Left", 240);
-        _border47._set_property_value_by_name(Canvas, "Top", 20);
-        _border47._set_property_value_by_name("Width", 200);
-        _border47._set_property_value_by_name("Height", 80);
-        const _textBlock48 = new TextBlock();
-        _textBlock48._set_property_value_by_name("Text", "Danger zone");
-        _textBlock48._set_property_value_by_name("FontSize", 20);
-        _textBlock48._set_property_value_by_name("Foreground", DynamicResource(_textBlock48, "OnPrimary"));
-        _border47.SetChild(_textBlock48);
-        _canvas44.AddChild(_border47);
-        const _border49 = new Border();
-        _border49._set_property_value_by_name("Style", _style42);
-        _border49._set_property_value_by_name(Canvas, "Left", 20);
-        _border49._set_property_value_by_name(Canvas, "Top", 140);
-        _border49._set_property_value_by_name("Width", 420);
-        _border49._set_property_value_by_name("Height", 160);
-        const _textBlock50 = new TextBlock();
-        _textBlock50._set_property_value_by_name("Text", "Hover over the cards above to see Style triggers fire on IsMouseOver. Press and hold to see the IsPressed trigger lock in.");
-        _textBlock50._set_property_value_by_name("FontSize", 14);
-        _textBlock50._set_property_value_by_name("TextWrapping", TextWrapping.Wrap);
-        _textBlock50._set_property_value_by_name("Foreground", DynamicResource(_textBlock50, "OnSurface"));
-        _border49.SetChild(_textBlock50);
-        _canvas44.AddChild(_border49);
-        return _canvas44;
-    }, DashboardVM);
-    _rd0.Set("DashboardTemplate", _tmpl43);
-    return _rd0;
+
+const _gate_DashboardDemo = Symbol("DashboardDemo.ctor");
+export class DashboardDemo extends ResourceDictionary {
+    constructor(_g) {
+        super();
+        if (_g !== _gate_DashboardDemo) {
+            throw new Error("DashboardDemo is private — use DashboardDemo.Clone()");
+        }
+    }
+    static Clone() {
+        const t = new DashboardDemo(_gate_DashboardDemo);
+        const _setter0 = new Setter(Border, "Background", new SolidColorBrush(Color.FromHex('#4caf50')));
+        const _setter1 = new Setter(Border, "BorderBrush", new SolidColorBrush(Color.FromHex('#1b5e20')));
+        const _setter2 = new Setter(Border, "BorderThickness", new Thickness(2));
+        const _setter3 = new Setter(Border, "CornerRadius", new Thickness(8));
+        const _setter4 = new Setter(Border, "Padding", new Thickness(16));
+        const _setter5 = new Setter(Border, "Background", new SolidColorBrush(Color.FromHex('#66bb6a')));
+        const _setter6 = new Setter(Border, "BorderThickness", new Thickness(3));
+        const _sArr7 = [_setter5, _setter6];
+        const _trigger8 = new PropertyTrigger(Border, "IsMouseOver", true, _sArr7);
+        const _setter9 = new Setter(Border, "Background", new SolidColorBrush(Color.FromHex('#2e7d32')));
+        const _setter10 = new Setter(Border, "BorderThickness", new Thickness(4));
+        const _sArr11 = [_setter9, _setter10];
+        const _trigger12 = new PropertyTrigger(Border, "IsPressed", true, _sArr11);
+        const _style13 = new Style(Border, [_setter0, _setter1, _setter2, _setter3, _setter4], undefined, [_trigger8, _trigger12], []);
+        t.Set("DashboardPrimaryCard", _style13);
+        const _setter14 = new Setter(Border, "Background", new SolidColorBrush(Color.FromHex('#d32f2f')));
+        const _setter15 = new Setter(Border, "BorderBrush", new SolidColorBrush(Color.FromHex('#7f0000')));
+        const _setter16 = new Setter(Border, "BorderThickness", new Thickness(2));
+        const _setter17 = new Setter(Border, "CornerRadius", new Thickness(8));
+        const _setter18 = new Setter(Border, "Padding", new Thickness(16));
+        const _setter19 = new Setter(Border, "Background", new SolidColorBrush(Color.FromHex('#ef5350')));
+        const _setter20 = new Setter(Border, "BorderThickness", new Thickness(3));
+        const _sArr21 = [_setter19, _setter20];
+        const _trigger22 = new PropertyTrigger(Border, "IsMouseOver", true, _sArr21);
+        const _setter23 = new Setter(Border, "Background", new SolidColorBrush(Color.FromHex('#b71c1c')));
+        const _setter24 = new Setter(Border, "BorderThickness", new Thickness(4));
+        const _sArr25 = [_setter23, _setter24];
+        const _trigger26 = new PropertyTrigger(Border, "IsPressed", true, _sArr25);
+        const _style27 = new Style(Border, [_setter14, _setter15, _setter16, _setter17, _setter18], undefined, [_trigger22, _trigger26], []);
+        t.Set("DashboardDangerCard", _style27);
+        const _setter28 = new Setter(Border, "Background", new SetterFactory((_t) => DynamicResource(_t, "Surface")));
+        const _setter29 = new Setter(Border, "BorderBrush", new SetterFactory((_t) => DynamicResource(_t, "OutlineVariant")));
+        const _setter30 = new Setter(Border, "BorderThickness", new Thickness(1));
+        const _setter31 = new Setter(Border, "CornerRadius", new Thickness(6));
+        const _setter32 = new Setter(Border, "Padding", new Thickness(20));
+        const _setter33 = new Setter(Border, "Background", new SetterFactory((_t) => DynamicResource(_t, "SurfaceContainerHigh")));
+        const _setter34 = new Setter(Border, "BorderThickness", new Thickness(2));
+        const _sArr35 = [_setter33, _setter34];
+        const _trigger36 = new PropertyTrigger(Border, "IsMouseOver", true, _sArr35);
+        const _setter37 = new Setter(Border, "Background", new SetterFactory((_t) => DynamicResource(_t, "OutlineVariant")));
+        const _setter38 = new Setter(Border, "BorderThickness", new Thickness(3));
+        const _sArr39 = [_setter37, _setter38];
+        const _trigger40 = new PropertyTrigger(Border, "IsPressed", true, _sArr39);
+        const _style41 = new Style(Border, [_setter28, _setter29, _setter30, _setter31, _setter32], undefined, [_trigger36, _trigger40], []);
+        t.Set("DashboardPaperCard", _style41);
+        const _tmpl42 = new DataTemplate((_data) => {
+            const _canvas43 = new Canvas();
+            const _border44 = new Border();
+            _border44._set_property_value_by_name("Style", _style13);
+            _border44._set_property_value_by_name(Canvas, "Left", 20);
+            _border44._set_property_value_by_name(Canvas, "Top", 20);
+            _border44._set_property_value_by_name("Width", 200);
+            _border44._set_property_value_by_name("Height", 80);
+            const _textBlock45 = new TextBlock();
+            _textBlock45._set_property_value_by_name("Text", "Hello mural");
+            _textBlock45._set_property_value_by_name("FontSize", 20);
+            _textBlock45._set_property_value_by_name("Foreground", DynamicResource(_textBlock45, "OnPrimary"));
+            _border44.SetChild(_textBlock45);
+            _canvas43.AddChild(_border44);
+            const _border46 = new Border();
+            _border46._set_property_value_by_name("Style", _style27);
+            _border46._set_property_value_by_name(Canvas, "Left", 240);
+            _border46._set_property_value_by_name(Canvas, "Top", 20);
+            _border46._set_property_value_by_name("Width", 200);
+            _border46._set_property_value_by_name("Height", 80);
+            const _textBlock47 = new TextBlock();
+            _textBlock47._set_property_value_by_name("Text", "Danger zone");
+            _textBlock47._set_property_value_by_name("FontSize", 20);
+            _textBlock47._set_property_value_by_name("Foreground", DynamicResource(_textBlock47, "OnPrimary"));
+            _border46.SetChild(_textBlock47);
+            _canvas43.AddChild(_border46);
+            const _border48 = new Border();
+            _border48._set_property_value_by_name("Style", _style41);
+            _border48._set_property_value_by_name(Canvas, "Left", 20);
+            _border48._set_property_value_by_name(Canvas, "Top", 140);
+            _border48._set_property_value_by_name("Width", 420);
+            _border48._set_property_value_by_name("Height", 160);
+            const _textBlock49 = new TextBlock();
+            _textBlock49._set_property_value_by_name("Text", "Hover over the cards above to see Style triggers fire on IsMouseOver. Press and hold to see the IsPressed trigger lock in.");
+            _textBlock49._set_property_value_by_name("FontSize", 14);
+            _textBlock49._set_property_value_by_name("TextWrapping", TextWrapping.Wrap);
+            _textBlock49._set_property_value_by_name("Foreground", DynamicResource(_textBlock49, "OnSurface"));
+            _border48.SetChild(_textBlock49);
+            _canvas43.AddChild(_border48);
+            return _canvas43;
+        }, DashboardVM);
+        t.Set("DashboardTemplate", _tmpl42);
+        return t;
+    }
+    get DashboardPrimaryCard() { return this.Resolve("DashboardPrimaryCard"); }
+    set DashboardPrimaryCard(v) { this.Set("DashboardPrimaryCard", v); }
+    get DashboardDangerCard() { return this.Resolve("DashboardDangerCard"); }
+    set DashboardDangerCard(v) { this.Set("DashboardDangerCard", v); }
+    get DashboardPaperCard() { return this.Resolve("DashboardPaperCard"); }
+    set DashboardPaperCard(v) { this.Set("DashboardPaperCard", v); }
+    get DashboardTemplate() { return this.Resolve("DashboardTemplate"); }
+    set DashboardTemplate(v) { this.Set("DashboardTemplate", v); }
 }

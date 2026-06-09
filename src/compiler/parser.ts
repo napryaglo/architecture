@@ -34,6 +34,8 @@ import type {
     NumberValue,
     PropertySetter,
     ResourceForm,
+    ResourcesBlock,
+    ResourcesImport,
     SetterItem,
     SetterList,
     SizeValue,
@@ -135,6 +137,7 @@ export class Parser
             {
                 case 'import':       return this.parseImport();
                 case 'def':          return this.parseDefForm();
+                case 'resources':    return this.parseResourcesBlock();
                 case 'Style':
                 case 'Template':
                 case 'DataTemplate':
@@ -144,6 +147,60 @@ export class Parser
             }
         }
         throw new ParseError(`unexpected token '${tk.value}' at top level`, tk.span);
+    }
+
+    // `resources Identifier { import Alias from "..."; …entries… }` —
+    // the canonical root form. Compiles to `class Identifier extends
+    // ResourceDictionary` with a private ctor and a static Clone factory
+    // (see ast.ts ResourcesBlock for the shape). Body uses the same
+    // structured-body item grammar that `ResourceDictionary { … }` used,
+    // plus a header of `import` clauses that scope to this block only.
+    private parseResourcesBlock(): ResourcesBlock
+    {
+        const head  = this.expectIdent('resources');
+        const start = head.span.start;
+        const name  = this.expect(TokenKind.Ident).value;
+        this.expect(TokenKind.LBrace);
+
+        // Header: zero or more `import Alias from "..."` clauses. The
+        // moment we see a body-item start token (resource form, element,
+        // `@name = …`), the header is closed.
+        const imports: ResourcesImport[] = [];
+        while (
+            this.peek().kind === TokenKind.Ident
+            && this.peek().value === 'import'
+        )
+        {
+            imports.push(this.parseResourcesImport());
+        }
+
+        // Body is the same structured-body shape as the old
+        // ResourceDictionary root — reuse the existing parser.
+        const body = this.parseStructuredBody();
+        this.expect(TokenKind.RBrace);
+        const end = this.lastEnd();
+        return {
+            kind: 'resources-block',
+            name,
+            imports,
+            body,
+            span: this.span(start, end),
+        };
+    }
+
+    private parseResourcesImport(): ResourcesImport
+    {
+        const start = this.expectIdent('import').span.start;
+        const alias = this.expect(TokenKind.Ident).value;
+        this.expectIdent('from');
+        const source = this.expect(TokenKind.String).value;
+        const end = this.lastEnd();
+        return {
+            kind: 'resources-import',
+            alias,
+            source,
+            span: this.span(start, end),
+        };
     }
 
     private parseImport(): ImportForm

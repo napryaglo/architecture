@@ -7,7 +7,7 @@
 // SelectionChanged event and updates VM state in lockstep.
 import { Application } from '@visualisation-sub/mural/runtime';
 import { Diagram } from '@visualisation-sub/mural/framework';
-import { create as createCommandsResources } from './commands.mu.js';
+import { CommandsDemo } from './commands.mu.js';
 import { CommandsVM, NodeVM } from './commands-vm.mjs';
 import { register } from '../../platform/registry.mjs';
 
@@ -81,7 +81,7 @@ register({
     subtitle: 'ToolBar + Menu + ContextMenu over a Diagram. One ICommand instance drives every surface.',
     factory: () => {
         if (!resourcesMerged) {
-            Application.current?.Resources.AddMergedDictionary(createCommandsResources());
+            Application.current?.Resources.AddMergedDictionary(CommandsDemo.Clone());
             resourcesMerged = true;
         }
         if (vmInstance === undefined) vmInstance = new CommandsVM(LocalStorageService);

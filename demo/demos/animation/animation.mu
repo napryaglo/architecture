@@ -18,7 +18,7 @@ import AnimationVM from "./animation-vm.mjs"
 //
 // Packaged as a DataTemplate keyed off AnimationVM.
 
-ResourceDictionary {
+resources AnimationDemo {
     DataTemplate x:key="AnimationTemplate" [DataType=AnimationVM] {
         // x:root owns the NameScope so the inner x:names register and
         // the VM's OnViewMounted FindName resolves them.

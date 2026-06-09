@@ -7,7 +7,7 @@ import BouncingBallVM from "./bouncing-ball-vm.mjs"
 // The bouncing happens in the VM's per-tick Step; the view is purely a
 // passive render of (X, Y) over time.
 
-ResourceDictionary {
+resources BouncingBallDemo {
 
     DataTemplate x:key="BouncingBallTemplate" [DataType=BouncingBallVM] {
         Border x:root [Background=@InverseSurface,

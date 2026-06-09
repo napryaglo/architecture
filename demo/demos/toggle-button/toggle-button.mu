@@ -13,7 +13,7 @@ import ToggleButtonVM from "./toggle-button-vm.mjs"
 //     reads $IsChecked back so the row chrome reflects state without
 //     needing a separate listener.
 
-ResourceDictionary {
+resources ToggleButtonDemo {
 
     // Re-templated ToggleButton chrome. PART_Border ships a Surface
     // default Background; the IsChecked trigger overrides to Primary

@@ -4,7 +4,7 @@
 // ResourceDictionary into Application resources and hands the
 // platform a VM instance.
 import { Application } from '@visualisation-sub/mural/runtime';
-import { create as createAnimationResources } from './animation.mu.js';
+import { AnimationDemo } from './animation.mu.js';
 import { AnimationVM } from './animation-vm.mjs';
 import { register } from '../../platform/registry.mjs';
 
@@ -18,7 +18,7 @@ register({
     subtitle: 'From/To, AutoReverse + Repeat, ThicknessAnimationUsingKeyFrames — driven by AnimationManager on RafClock.',
     factory: () => {
         if (!resourcesMerged) {
-            Application.current?.Resources.AddMergedDictionary(createAnimationResources());
+            Application.current?.Resources.AddMergedDictionary(AnimationDemo.Clone());
             resourcesMerged = true;
         }
         if (vmInstance === undefined) vmInstance = new AnimationVM();

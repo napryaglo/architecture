@@ -14,7 +14,7 @@ import SplitterVM from "./splitter-vm.mjs"
 // markup — see backlog 5.x. GridSplitter is fully covered by the
 // grid-splitter.test.ts suite.
 
-ResourceDictionary {
+resources SplitterDemo {
 
     DataTemplate x:key="SplitterTemplate" [DataType=SplitterVM] {
         Border [Background=@Surface, BorderBrush=@OutlineVariant, BorderThickness=(1)] {

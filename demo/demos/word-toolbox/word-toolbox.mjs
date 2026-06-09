@@ -16,7 +16,7 @@
 
 import { Application, DragDropEffects } from '@visualisation-sub/mural/runtime';
 import { DataTemplate } from '@visualisation-sub/mural/Basic';
-import { create as createResources } from './word-toolbox.mu.js';
+import { WordToolboxDemo } from './word-toolbox.mu.js';
 import { WordToolboxVM, FMT_WORD_COPY } from './word-toolbox-vm.mjs';
 import { register } from '../../platform/registry.mjs';
 
@@ -107,7 +107,7 @@ register({
     subtitle: 'Drag tiles between a 100-word toolbox and a 2000-tile virtualized wrap-panel listbox.',
     factory: () => {
         if (!resourcesMerged) {
-            Application.current?.Resources.AddMergedDictionary(createResources());
+            Application.current?.Resources.AddMergedDictionary(WordToolboxDemo.Clone());
             resourcesMerged = true;
         }
         if (vmInstance === undefined) vmInstance = new WordToolboxVM();

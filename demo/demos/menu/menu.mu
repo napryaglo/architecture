@@ -13,7 +13,7 @@ import MenuVM from "./menu-vm.mjs"
 //   * IsCheckable + IsChecked — ✓ glyph in the icon column when set.
 //   * MenuSeparator    — horizontal divider between groups.
 
-ResourceDictionary {
+resources MenuDemo {
 
     DataTemplate x:key="MenuTemplate" [DataType=MenuVM] {
         Border [Background=@Surface, BorderBrush=@OutlineVariant,

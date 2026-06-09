@@ -1,8 +1,8 @@
 import { Application, ResourceDictionary } from '../../runtime/index.js';
 import { MaterialElevationEffect } from '../../visual-engine/index.js';
-import { create as createLight } from '../../../build/framework/material/light.mu.js';
-import { create as createDark } from '../../../build/framework/material/dark.mu.js';
-import { create as createTypography } from '../../../build/framework/material/typography.mu.js';
+import { LightPalette } from '../../../build/framework/material/light.mu.js';
+import { DarkPalette }  from '../../../build/framework/material/dark.mu.js';
+import { Typography }   from '../../../build/framework/material/typography.mu.js';
 
 // Material 3 theme registration for µ-mural.
 //
@@ -32,15 +32,19 @@ export type MaterialThemeName = 'light' | 'dark';
 // Application's Resources. Without this tracking, `SetTheme('light')`
 // after a previous identical call would dedup and skip the merge,
 // leaving the new Application without the palette.
-let _currentDict: ResourceDictionary | undefined;
-let _currentName: MaterialThemeName  | undefined;
-let _currentApp:  Application        | undefined;
+// Narrow type: the active palette is either a LightPalette or a
+// DarkPalette instance, never anything else. Consumers reaching for
+// `theme.Primary` etc. via the typed accessors are protected by this
+// narrowing (the field is set in exactly one branch — Light or Dark).
+let _currentDict: LightPalette | DarkPalette | undefined;
+let _currentName: MaterialThemeName             | undefined;
+let _currentApp:  Application                   | undefined;
 
 // Typography is light/dark agnostic — same FontSize / FontWeight
 // values across schemes. Merged once on first SetTheme call and never
 // swapped, only re-attached if the Application changes.
-let _typographyDict:    ResourceDictionary | undefined;
-let _typographyApp:     Application        | undefined;
+let _typographyDict:    Typography  | undefined;
+let _typographyApp:     Application | undefined;
 
 // Switch Material to `theme`. Idempotent — calling with the current
 // theme is a no-op. Must be called AFTER an Application is constructed
@@ -73,7 +77,7 @@ export function SetTheme(theme: MaterialThemeName): void
         _currentDict = undefined;
     }
 
-    const dict = theme === 'dark' ? createDark() : createLight();
+    const dict = theme === 'dark' ? DarkPalette.Clone() : LightPalette.Clone();
     // M3 elevation tokens — registered alongside the colour palette so
     // `Effect = @Elevation2` resolves through the same DynamicResource
     // chain. Identical in both light and dark schemes (shadow tint is
@@ -94,7 +98,7 @@ export function SetTheme(theme: MaterialThemeName): void
         {
             _typographyApp.Resources.RemoveMergedDictionary(_typographyDict);
         }
-        _typographyDict = createTypography();
+        _typographyDict = Typography.Clone();
         app.Resources.AddMergedDictionary(_typographyDict);
         _typographyApp  = app;
     }

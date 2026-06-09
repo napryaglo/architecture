@@ -15,7 +15,7 @@
 // runtime (e.g. trigger-driven Background swaps) read it back through
 // the same dictionary lookup, so identity is preserved across uses.
 
-ResourceDictionary {
+resources LightPalette {
 
     // ── Primary tier ────────────────────────────────────────────────
     @Primary              = #6750A4

@@ -5,73 +5,85 @@ import { ComboBox } from "@visualisation-sub/mural/framework/list/combo-box.js";
 import { DataContextBinding, DynamicResource, MultiBinding, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
 import { FontWeight } from "@visualisation-sub/mural/visual-engine";
 
-export function create() {
-    const _rd0 = new ResourceDictionary();
-    const _tmpl1 = new DataTemplate((_data) => {
-        const _border2 = new Border();
-        _border2._set_property_value_by_name("Background", DynamicResource(_border2, "Surface"));
-        _border2._set_property_value_by_name("BorderBrush", DynamicResource(_border2, "OutlineVariant"));
-        _border2._set_property_value_by_name("BorderThickness", new Thickness(1));
-        const _canvas3 = new Canvas();
-        const _textBlock4 = new TextBlock();
-        _textBlock4._set_property_value_by_name(Canvas, "Left", 24);
-        _textBlock4._set_property_value_by_name(Canvas, "Top", 20);
-        _textBlock4._set_property_value_by_name("FontSize", 14);
-        _textBlock4._set_property_value_by_name("Foreground", DynamicResource(_textBlock4, "OnSurfaceVariant"));
-        _textBlock4._set_property_value_by_name("Text", "Counter:");
-        _canvas3.AddChild(_textBlock4);
-        const _textBlock5 = new TextBlock();
-        _textBlock5._set_property_value_by_name(Canvas, "Left", 24);
-        _textBlock5._set_property_value_by_name(Canvas, "Top", 40);
-        _textBlock5._set_property_value_by_name("FontSize", 42);
-        _textBlock5._set_property_value_by_name("FontWeight", FontWeight.Bold);
-        _textBlock5._set_property_value_by_name("Foreground", DynamicResource(_textBlock5, "Primary"));
-        _textBlock5._set_property_value_by_name("Text", MultiBinding(_textBlock5, ["Count"], (_p0) => ( String(_p0) )));
-        _canvas3.AddChild(_textBlock5);
-        const _textBlock6 = new TextBlock();
-        _textBlock6._set_property_value_by_name(Canvas, "Left", 170);
-        _textBlock6._set_property_value_by_name(Canvas, "Top", 124);
-        _textBlock6._set_property_value_by_name("FontSize", 12);
-        _textBlock6._set_property_value_by_name("Foreground", DynamicResource(_textBlock6, "OnSurfaceVariant"));
-        _textBlock6._set_property_value_by_name("Text", "Step:");
-        _canvas3.AddChild(_textBlock6);
-        const _comboBox7 = new ComboBox();
-        _comboBox7._set_property_value_by_name(Canvas, "Left", 170);
-        _comboBox7._set_property_value_by_name(Canvas, "Top", 140);
-        _comboBox7._set_property_value_by_name("Width", 164);
-        _comboBox7._set_property_value_by_name("Items", DataContextBinding(_comboBox7, "Steps"));
-        _comboBox7._set_property_value_by_name("SelectedItem", DataContextBinding(_comboBox7, "Step"));
-        _canvas3.AddChild(_comboBox7);
-        const _button8 = new Button();
-        _button8._set_property_value_by_name(Canvas, "Left", 24);
-        _button8._set_property_value_by_name(Canvas, "Top", 140);
-        _button8._set_property_value_by_name("Width", 80);
-        _button8._set_property_value_by_name("Command", DataContextBinding(_button8, "Increment"));
-        const _textBlock9 = new TextBlock();
-        _textBlock9._set_property_value_by_name("Text", "+ Step");
-        _button8.Content = _textBlock9;
-        _canvas3.AddChild(_button8);
-        const _button10 = new Button();
-        _button10._set_property_value_by_name(Canvas, "Left", 24);
-        _button10._set_property_value_by_name(Canvas, "Top", 190);
-        _button10._set_property_value_by_name("Width", 80);
-        _button10._set_property_value_by_name("Command", DataContextBinding(_button10, "Reset"));
-        const _textBlock11 = new TextBlock();
-        _textBlock11._set_property_value_by_name("Text", "Reset");
-        _button10.Content = _textBlock11;
-        _canvas3.AddChild(_button10);
-        const _textBlock12 = new TextBlock();
-        _textBlock12._set_property_value_by_name(Canvas, "Left", 24);
-        _textBlock12._set_property_value_by_name(Canvas, "Top", 232);
-        _textBlock12._set_property_value_by_name("Width", 312);
-        _textBlock12._set_property_value_by_name("FontSize", 12);
-        _textBlock12._set_property_value_by_name("Foreground", DynamicResource(_textBlock12, "OnSurfaceVariant"));
-        _textBlock12._set_property_value_by_name("TextWrapping", TextWrapping.Wrap);
-        _textBlock12._set_property_value_by_name("Text", "The ComboBox sets Step. Increment adds Step to Count and stops at 10. Reset always works.");
-        _canvas3.AddChild(_textBlock12);
-        _border2.SetChild(_canvas3);
-        return _border2;
-    }, CounterVM);
-    _rd0.Set("CounterTemplate", _tmpl1);
-    return _rd0;
+
+const _gate_CounterDemo = Symbol("CounterDemo.ctor");
+export class CounterDemo extends ResourceDictionary {
+    constructor(_g) {
+        super();
+        if (_g !== _gate_CounterDemo) {
+            throw new Error("CounterDemo is private — use CounterDemo.Clone()");
+        }
+    }
+    static Clone() {
+        const t = new CounterDemo(_gate_CounterDemo);
+        const _tmpl0 = new DataTemplate((_data) => {
+            const _border1 = new Border();
+            _border1._set_property_value_by_name("Background", DynamicResource(_border1, "Surface"));
+            _border1._set_property_value_by_name("BorderBrush", DynamicResource(_border1, "OutlineVariant"));
+            _border1._set_property_value_by_name("BorderThickness", new Thickness(1));
+            const _canvas2 = new Canvas();
+            const _textBlock3 = new TextBlock();
+            _textBlock3._set_property_value_by_name(Canvas, "Left", 24);
+            _textBlock3._set_property_value_by_name(Canvas, "Top", 20);
+            _textBlock3._set_property_value_by_name("FontSize", 14);
+            _textBlock3._set_property_value_by_name("Foreground", DynamicResource(_textBlock3, "OnSurfaceVariant"));
+            _textBlock3._set_property_value_by_name("Text", "Counter:");
+            _canvas2.AddChild(_textBlock3);
+            const _textBlock4 = new TextBlock();
+            _textBlock4._set_property_value_by_name(Canvas, "Left", 24);
+            _textBlock4._set_property_value_by_name(Canvas, "Top", 40);
+            _textBlock4._set_property_value_by_name("FontSize", 42);
+            _textBlock4._set_property_value_by_name("FontWeight", FontWeight.Bold);
+            _textBlock4._set_property_value_by_name("Foreground", DynamicResource(_textBlock4, "Primary"));
+            _textBlock4._set_property_value_by_name("Text", MultiBinding(_textBlock4, ["Count"], (_p0) => ( String(_p0) )));
+            _canvas2.AddChild(_textBlock4);
+            const _textBlock5 = new TextBlock();
+            _textBlock5._set_property_value_by_name(Canvas, "Left", 170);
+            _textBlock5._set_property_value_by_name(Canvas, "Top", 124);
+            _textBlock5._set_property_value_by_name("FontSize", 12);
+            _textBlock5._set_property_value_by_name("Foreground", DynamicResource(_textBlock5, "OnSurfaceVariant"));
+            _textBlock5._set_property_value_by_name("Text", "Step:");
+            _canvas2.AddChild(_textBlock5);
+            const _comboBox6 = new ComboBox();
+            _comboBox6._set_property_value_by_name(Canvas, "Left", 170);
+            _comboBox6._set_property_value_by_name(Canvas, "Top", 140);
+            _comboBox6._set_property_value_by_name("Width", 164);
+            _comboBox6._set_property_value_by_name("Items", DataContextBinding(_comboBox6, "Steps"));
+            _comboBox6._set_property_value_by_name("SelectedItem", DataContextBinding(_comboBox6, "Step"));
+            _canvas2.AddChild(_comboBox6);
+            const _button7 = new Button();
+            _button7._set_property_value_by_name(Canvas, "Left", 24);
+            _button7._set_property_value_by_name(Canvas, "Top", 140);
+            _button7._set_property_value_by_name("Width", 80);
+            _button7._set_property_value_by_name("Command", DataContextBinding(_button7, "Increment"));
+            const _textBlock8 = new TextBlock();
+            _textBlock8._set_property_value_by_name("Text", "+ Step");
+            _button7.Content = _textBlock8;
+            _canvas2.AddChild(_button7);
+            const _button9 = new Button();
+            _button9._set_property_value_by_name(Canvas, "Left", 24);
+            _button9._set_property_value_by_name(Canvas, "Top", 190);
+            _button9._set_property_value_by_name("Width", 80);
+            _button9._set_property_value_by_name("Command", DataContextBinding(_button9, "Reset"));
+            const _textBlock10 = new TextBlock();
+            _textBlock10._set_property_value_by_name("Text", "Reset");
+            _button9.Content = _textBlock10;
+            _canvas2.AddChild(_button9);
+            const _textBlock11 = new TextBlock();
+            _textBlock11._set_property_value_by_name(Canvas, "Left", 24);
+            _textBlock11._set_property_value_by_name(Canvas, "Top", 232);
+            _textBlock11._set_property_value_by_name("Width", 312);
+            _textBlock11._set_property_value_by_name("FontSize", 12);
+            _textBlock11._set_property_value_by_name("Foreground", DynamicResource(_textBlock11, "OnSurfaceVariant"));
+            _textBlock11._set_property_value_by_name("TextWrapping", TextWrapping.Wrap);
+            _textBlock11._set_property_value_by_name("Text", "The ComboBox sets Step. Increment adds Step to Count and stops at 10. Reset always works.");
+            _canvas2.AddChild(_textBlock11);
+            _border1.SetChild(_canvas2);
+            return _border1;
+        }, CounterVM);
+        t.Set("CounterTemplate", _tmpl0);
+        return t;
+    }
+    get CounterTemplate() { return this.Resolve("CounterTemplate"); }
+    set CounterTemplate(v) { this.Set("CounterTemplate", v); }
 }

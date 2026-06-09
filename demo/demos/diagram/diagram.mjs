@@ -22,7 +22,7 @@
 
 import { Application } from '@visualisation-sub/mural/runtime';
 import { Diagram } from '@visualisation-sub/mural/framework';
-import { create as createDiagramResources } from './diagram.mu.js';
+import { DiagramDemo } from './diagram.mu.js';
 import { DiagramVM, NodeVM } from './diagram-vm.mjs';
 import { attachCanvasDropBehavior } from './behaviors/canvas-drop-behavior.mjs';
 import { register } from '../../platform/registry.mjs';
@@ -110,7 +110,7 @@ register({
     subtitle: 'Drag shapes from the toolbox; drag a node to move; click / marquee to select; Delete to remove.',
     factory: () => {
         if (!resourcesMerged) {
-            Application.current?.Resources.AddMergedDictionary(createDiagramResources());
+            Application.current?.Resources.AddMergedDictionary(DiagramDemo.Clone());
             resourcesMerged = true;
         }
         if (vmInstance === undefined) vmInstance = new DiagramVM(LocalStorageService);

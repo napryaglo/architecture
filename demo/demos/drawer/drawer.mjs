@@ -5,7 +5,7 @@
 // applied) wires the Temporary drawer's Closed listener so a scrim
 // click reflects OptionsOpen=false back into the VM.
 import { Application } from '@visualisation-sub/mural/runtime';
-import { create as createDrawerResources } from './drawer.mu.js';
+import { DrawerDemo } from './drawer.mu.js';
 import { DrawerVM } from './drawer-vm.mjs';
 import { register } from '../../platform/registry.mjs';
 
@@ -19,7 +19,7 @@ register({
     subtitle: 'Persistent rail + Temporary overlay drawer driven from the same VM.',
     factory: () => {
         if (!resourcesMerged) {
-            Application.current?.Resources.AddMergedDictionary(createDrawerResources());
+            Application.current?.Resources.AddMergedDictionary(DrawerDemo.Clone());
             resourcesMerged = true;
         }
         if (vmInstance === undefined) vmInstance = new DrawerVM();

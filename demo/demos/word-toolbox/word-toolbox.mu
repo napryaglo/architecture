@@ -20,7 +20,7 @@ import VirtualizingStackPanel from "@visualisation-sub/mural/Basic"
 // container's DataContext is a WordVM, so $BeginDragData (a per-row
 // closure populated in the VM constructor) resolves there.
 
-ResourceDictionary {
+resources WordToolboxDemo {
 
     // Right-pane items panel: virtualizing wrap. Each cell is the tile's
     // own ItemWidth × ItemHeight (the defaults — 100 × 100). Horizontal /

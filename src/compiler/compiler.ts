@@ -18,6 +18,7 @@ import type {
     KeyValueResource,
     PropertySetter,
     ResourceForm,
+    ResourcesBlock,
     SlotAssign,
     StringBody,
     StructuredBody,
@@ -114,15 +115,39 @@ export interface CompilerOptions
 
 export interface CompilerOutput
 {
-    /** JS source — the body of the IIFE / factory (no imports). */
-    body:           string;
+    /** JS source. For `'fragment'` / `'application'` this is the BODY of
+     *  the factory / IIFE (gets wrapped in `function create() { … }` or
+     *  `(() => { … })()` by `compile()`). For `'resources'` this is the
+     *  COMPLETE module content — one or more `export class` declarations,
+     *  no wrapping needed. */
+    body:             string;
     /** Module → set of symbol names that should be imported. */
-    imports:        Map<string, Set<string>>;
-    /** True when the root form is `Application{…}` and the export shape
-     *  is an eager `export const app`. False for fragment factories. */
-    isApplication:  boolean;
-    /** Suggested export name — 'app' for Applications, 'create' for fragments. */
-    exportName:     'app' | 'create';
+    imports:          Map<string, Set<string>>;
+    /** Output shape selector — drives how `compile()` wraps the body. */
+    kind:             'application' | 'fragment' | 'resources';
+    /** True when `kind === 'application'`. Retained for callers that
+     *  still pattern-match on this flag. */
+    isApplication:    boolean;
+    /** Suggested export name. For `'resources'` there is no single export,
+     *  so this carries the empty string; callers should branch on `kind`. */
+    exportName:       'app' | 'create' | '';
+    /** For `kind === 'resources'`: one entry per `resources NAME { … }`
+     *  block in the source, carrying the class name and the typed
+     *  property metadata the `.d.ts` emitter wants. Empty / absent for
+     *  the other kinds. */
+    resourcesBlocks?: ResourcesBlockMeta[];
+}
+
+export interface ResourcesBlockMeta
+{
+    /** Class name from `resources NAME { … }`. */
+    name:      string;
+    /** ES-side names imported by the block via `import Alias from "…"`. */
+    imports:   string[];
+    /** Typed property pairs to emit on the class in the `.d.ts` companion.
+     *  `type` is the runtime class name (`Style`, `ControlTemplate`,
+     *  `SolidColorBrush`, …) for the x:name'd resource. */
+    accessors: Array<{ name: string; type: string }>;
 }
 
 // ── Internal value-emission context ─────────────────────────────────
@@ -259,13 +284,78 @@ export class Compiler
             }
         }
 
-        // Pass 2: locate the single root element. Bare top-level
-        // resource forms (`Template`, `Style`, `DataTemplate`) are
-        // rejected — author them inside an explicit
-        // `ResourceDictionary { … }` element so the dictionary wrapper
-        // is visible in the source (matches the WPF
-        // `<ResourceDictionary>` authoring pattern). imports are
-        // silently ignored.
+        // Pass 2: scan for `resources NAME { … }` blocks. A file that
+        // contains ANY resources blocks compiles to ONLY class
+        // declarations — mixing with an Application / element / bare
+        // ResourceDictionary root is rejected so the output shape is
+        // unambiguous.
+        const resourcesBlocks: ResourcesBlock[] = [];
+        for (const form of doc.forms)
+        {
+            if (form.kind === 'resources-block') resourcesBlocks.push(form);
+        }
+
+        if (resourcesBlocks.length > 0)
+        {
+            // No other root form is allowed alongside resources blocks.
+            for (const form of doc.forms)
+            {
+                if (form.kind === 'element')
+                {
+                    throw new EmitError(
+                        `compile: top-level element '${form.name}' is not allowed ` +
+                        `alongside \`resources\` blocks — a file is either a ` +
+                        `resources file (one or more \`resources NAME { … }\` blocks) ` +
+                        `or a visual file (a single Application / Visual root).`,
+                        form.span);
+                }
+                if (form.kind === 'resource-form')
+                {
+                    throw new EmitError(
+                        `compile: top-level '${form.keyword}' is not allowed — ` +
+                        `wrap it inside a \`resources NAME { … }\` block.`,
+                        form.span);
+                }
+                // import / def / resources-block consumed.
+            }
+            // Reject duplicate class names early — two `resources NAME`
+            // blocks with the same identifier would emit two
+            // `export class NAME` declarations and two `const _gate_NAME`
+            // bindings, both JS-level redeclaration errors. Catch it
+            // at compile time so the diagnostic points at the source
+            // line rather than at the loaded module.
+            const seenNames = new Map<string, ResourcesBlock>();
+            for (const block of resourcesBlocks)
+            {
+                const prior = seenNames.get(block.name);
+                if (prior !== undefined)
+                {
+                    throw new EmitError(
+                        `duplicate \`resources ${block.name}\` block — class names ` +
+                        `must be unique within a file (first declared at ` +
+                        `${prior.span.start.line}:${prior.span.start.column}).`,
+                        block.span);
+                }
+                seenNames.set(block.name, block);
+            }
+            const metas: ResourcesBlockMeta[] = [];
+            for (const block of resourcesBlocks)
+            {
+                metas.push(this.compileResourcesBlock(block));
+            }
+            return {
+                body:             this.lines.join('\n'),
+                imports:          this.imports,
+                kind:             'resources',
+                isApplication:    false,
+                exportName:       '',
+                resourcesBlocks:  metas,
+            };
+        }
+
+        // No resources blocks → fall back to the legacy single-root
+        // element shape. Bare top-level resource forms are still rejected
+        // (wrap them in a `resources NAME { … }` block).
         let root: ElementNode | undefined;
         for (const form of doc.forms)
         {
@@ -282,11 +372,10 @@ export class Compiler
             {
                 throw new EmitError(
                     `compile: top-level '${form.keyword}' is not allowed — ` +
-                    `wrap it inside an explicit \`ResourceDictionary { … }\` element ` +
-                    `so the dictionary wrapper appears in the source.`,
+                    `wrap it inside a \`resources NAME { … }\` block.`,
                     form.span);
             }
-            // import / def silently consumed.
+            // import / def consumed.
         }
 
         if (root === undefined)
@@ -295,22 +384,22 @@ export class Compiler
                 'compile: source has no top-level element to emit', doc.span);
         }
 
-        // Three recognised top-level roots: Application (with a
-        // resources slot), ResourceDictionary (bare dictionary that
-        // emits a factory), or a plain Visual (fragment).
-        const isApp = (root.name === 'Application');
-        const isRD  = (root.name === 'ResourceDictionary');
-        if (isRD)
+        // Two remaining root shapes: Application (with a resources slot)
+        // or a plain Visual fragment. The historic
+        // `ResourceDictionary { … }` root form has been replaced by the
+        // typed `resources NAME { … }` block — point authors at the new
+        // syntax with a clear error rather than silently treating it as
+        // a Visual.
+        if (root.name === 'ResourceDictionary')
         {
-            const rdVar = this.compileResourceDictionaryRoot(root);
-            this.line(`return ${rdVar};`);
-            return {
-                body:          this.lines.join('\n'),
-                imports:       this.imports,
-                isApplication: false,
-                exportName:    'create',
-            };
+            throw new EmitError(
+                'ResourceDictionary { … } as a root form is no longer supported. ' +
+                'Use a typed `resources NAME { … }` block instead. The compiled ' +
+                'output is `export class NAME extends ResourceDictionary` with a ' +
+                'static `Clone()` factory.',
+                root.span);
         }
+        const isApp = (root.name === 'Application');
         const rootVar = isApp
             ? this.compileApplication(root)
             : this.compileElement(root);
@@ -319,48 +408,161 @@ export class Compiler
         return {
             body:          this.lines.join('\n'),
             imports:       this.imports,
+            kind:          isApp ? 'application' : 'fragment',
             isApplication: isApp,
             exportName:    isApp ? 'app' : 'create',
         };
     }
 
-    // ── ResourceDictionary root ─────────────────────────────────────
+    // ── `resources NAME { import …; …entries… }` ────────────────────
     //
-    // `ResourceDictionary { template x:key="…"[TargetType=…]{ … } … }`
-    // emits a `create()` factory returning a populated ResourceDictionary.
-    // Body items are the same shape the `resources:` slot of an
-    // Application accepts: keyed key-value resources (`@name = value`),
-    // resource forms (`Template` / `Style` / `DataTemplate`), or x:key /
-    // x:root-marked element entries.
-    private compileResourceDictionaryRoot(elem: ElementNode): string
+    // Emits a class declaration for one `resources` block. Class shape:
+    //
+    //   const _gate_NAME = Symbol('NAME.ctor');
+    //   export class NAME extends ResourceDictionary {
+    //       constructor(_g) {
+    //           super();
+    //           if (_g !== _gate_NAME) throw new Error('NAME is private — use NAME.Clone()');
+    //       }
+    //       static Clone() {
+    //           const t = new NAME(_gate_NAME);
+    //           // merge imports (last import wins same-key collisions)
+    //           for (const [k, v] of Alias.Clone().Entries()) t.Set(k, v);
+    //           // …populate locals — locals override imports…
+    //           return t;
+    //       }
+    //       get FooName() { return this.Resolve('FooName'); }
+    //       set FooName(v) { this.Set('FooName', v); }
+    //       // …one accessor pair per x:name'd resource…
+    //   }
+    //
+    // The accessor metadata is collected by `gatherNamedResources()` and
+    // returned to the build tool via `ResourcesBlockMeta` so the `.d.ts`
+    // companion can declare typed property shapes.
+    private compileResourcesBlock(block: ResourcesBlock): ResourcesBlockMeta
     {
-        if (elem.attrs.length > 0)
-        {
-            throw new EmitError(
-                'ResourceDictionary: attributes are not supported at the root ' +
-                '(only a body block of resource entries)',
-                elem.span);
-        }
-        if (elem.xAttrs.length > 0)
-        {
-            throw new EmitError(
-                'ResourceDictionary: x:* attributes are not supported at the root',
-                elem.span);
-        }
-        if (elem.body === null || elem.body.kind !== 'structured-body')
-        {
-            throw new EmitError(
-                'ResourceDictionary: expected a `{ … }` body block of resource entries',
-                elem.span);
-        }
         this.ensureImport('ResourceDictionary');
-        const rdVar = this.fresh('rd');
-        this.line(`const ${rdVar} = new ResourceDictionary();`);
+
+        // Register each import — adds an ES `import` line at the top of
+        // the emitted module and makes the alias available as a value
+        // reference inside the class body.
+        for (const imp of block.imports)
+        {
+            this.ensureExplicitImport(imp.alias, imp.source);
+        }
+
+        // Walk the body BEFORE emitting so the accessor list is ready to
+        // emit AFTER the static Clone block. Same xAttr lookup the body
+        // emitter uses — we want a single source of truth for "what
+        // counts as an x:name'd resource".
+        const accessors = this.gatherNamedResources(block.body);
+
+        const name = block.name;
+        const gateVar = `_gate_${name}`;
+
+        this.line('');
+        this.line(`const ${gateVar} = Symbol(${JSON.stringify(`${name}.ctor`)});`);
+        this.line(`export class ${name} extends ResourceDictionary {`);
+        this.indent += 4;
+
+        // Private ctor — every instance MUST come through Clone().
+        this.line(`constructor(_g) {`);
+        this.indent += 4;
+        this.line(`super();`);
+        this.line(`if (_g !== ${gateVar}) {`);
+        this.indent += 4;
+        this.line(`throw new Error(${JSON.stringify(`${name} is private — use ${name}.Clone()`)});`);
+        this.indent -= 4;
+        this.line(`}`);
+        this.indent -= 4;
+        this.line(`}`);
+
+        // Static Clone — produces a fresh, mutable instance every call.
+        this.line(`static Clone() {`);
+        this.indent += 4;
+        this.line(`const t = new ${name}(${gateVar});`);
+        for (const imp of block.imports)
+        {
+            this.line(`for (const [k, v] of ${imp.alias}.Clone().Entries()) t.Set(k, v);`);
+        }
+        // Populate locals — locals override imports for same-key entries
+        // because they're written AFTER the merge loop above. The
+        // localResourceVars map gives `compileValue` a shortcut: `@key`
+        // references inside this block resolve to the local JS var, not
+        // a DynamicResource (the dict isn't observable from the
+        // application's resource chain until Clone() returns).
         const savedLocalRes = this.localResourceVars;
         this.localResourceVars = new Map<string, string>();
-        this.compileResourcesBody(rdVar, elem.body);
+        this.compileResourcesBody('t', block.body);
         this.localResourceVars = savedLocalRes;
-        return rdVar;
+        this.line(`return t;`);
+        this.indent -= 4;
+        this.line(`}`);
+
+        // Typed accessors — one get/set pair per x:name'd resource.
+        // Runtime is untyped (the type info lives in the `.d.ts`).
+        for (const acc of accessors)
+        {
+            const keyJson = JSON.stringify(acc.name);
+            this.line(`get ${acc.name}() { return this.Resolve(${keyJson}); }`);
+            this.line(`set ${acc.name}(v) { this.Set(${keyJson}, v); }`);
+        }
+
+        this.indent -= 4;
+        this.line(`}`);
+
+        return {
+            name,
+            imports:   block.imports.map(i => i.alias),
+            accessors,
+        };
+    }
+
+    // Walk the resources-block body and return one accessor descriptor
+    // for each entry that carries `x:key="…"`. The TS-side type
+    // declared on the accessor is the entry's runtime class:
+    //
+    //   * ResourceForm  → 'Style', 'ControlTemplate', 'DataTemplate', etc.
+    //   * Element       → the element's own type (Color, SolidColorBrush, …)
+    //   * KeyValueResource (`@key = value`) → keyed by string, type is
+    //                                         not statically known →
+    //                                         emitted as `unknown`.
+    //
+    // `x:key` produces BOTH the dictionary key AND the typed class
+    // accessor — one extension does both jobs. `x:name` retains its
+    // existing NameScope FindName meaning on Visuals nested inside
+    // templates; it is not consulted at the resource-root level.
+    private gatherNamedResources(body: StructuredBody): Array<{ name: string; type: string }>
+    {
+        const out: Array<{ name: string; type: string }> = [];
+        const seen = new Set<string>();
+        const push = (name: string, type: string): void =>
+        {
+            if (!isValidIdent(name)) return;  // skip non-identifier keys silently
+            if (seen.has(name)) return;       // first-write-wins on duplicates
+            seen.add(name);
+            out.push({ name, type });
+        };
+        for (const item of body.items)
+        {
+            if (item.kind === 'resource-form')
+            {
+                const keyAttr = this.findXAttr(item.xAttrs, 'key');
+                if (keyAttr === null || keyAttr.value === null || keyAttr.value.kind !== 'string') continue;
+                push(keyAttr.value.value, resourceFormType(item.keyword, item));
+            }
+            else if (item.kind === 'element')
+            {
+                const keyAttr = this.findXAttr(item.xAttrs, 'key');
+                if (keyAttr === null || keyAttr.value === null || keyAttr.value.kind !== 'string') continue;
+                push(keyAttr.value.value, item.name);
+            }
+            else if (item.kind === 'key-value-resource')
+            {
+                push(item.key, 'unknown');
+            }
+        }
+        return out;
     }
 
     // ── Application root ────────────────────────────────────────────
@@ -2623,6 +2825,33 @@ export class Compiler
         s.add(symbol);
     }
 
+    // Same as `ensureImport`, but the module path is given explicitly
+    // (resolved at the source — `import Foo from "path"` inside a
+    // `resources` block) rather than looked up in the symbol table.
+    // Conflicts with an existing entry that maps `symbol` to a different
+    // module are caught early so the same name can't refer to two
+    // different things across blocks in the same file.
+    private ensureExplicitImport(symbol: string, mod: string): void
+    {
+        for (const [existingMod, syms] of this.imports)
+        {
+            if (existingMod === mod) continue;
+            if (syms.has(symbol))
+            {
+                throw new EmitError(
+                    `import alias '${symbol}' conflicts: already imported ` +
+                    `from '${existingMod}', cannot also import from '${mod}'`);
+            }
+        }
+        let s = this.imports.get(mod);
+        if (s === undefined)
+        {
+            s = new Set();
+            this.imports.set(mod, s);
+        }
+        s.add(symbol);
+    }
+
     private fresh(hint: string): string
     {
         return `_${hint}${this.varCounter++}`;
@@ -2653,5 +2882,40 @@ export class Compiler
         }
         return /^[0-9a-fA-F]+$/.test(raw);
     }
+}
+
+// Check whether a string is a safe JS identifier so we can emit it as
+// a bare property name on the typed dictionary class. Resource keys
+// with non-identifier characters (spaces, hyphens, leading digits)
+// still live in the dictionary — they just don't get a class
+// accessor; consumers reach them through `dict.Resolve("Some Key")`.
+function isValidIdent(s: string): boolean
+{
+    return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(s);
+}
+
+// The runtime class for each resource-form keyword — used by
+// `gatherNamedResources` to fill the typed `.d.ts` accessor shape.
+// `Template` is a special case: with `x:key` it stays as ControlTemplate;
+// without it the emitter wraps it in a Style so the dictionary key
+// space stays consistent with implicit-by-type Styles.
+function resourceFormType(keyword: string, rf: ResourceForm): string
+{
+    if (keyword === 'Style')                    return 'Style';
+    if (keyword === 'DataTemplate')             return 'DataTemplate';
+    if (keyword === 'HierarchicalDataTemplate') return 'HierarchicalDataTemplate';
+    if (keyword === 'ItemsPanelTemplate')       return 'ItemsPanelTemplate';
+    if (keyword === 'Template')
+    {
+        // findXAttr is on the Compiler instance — replicate here via a
+        // direct scan since this helper is module-scope (kept here so
+        // the `.d.ts` emit can call it without instantiating a Compiler).
+        for (const x of rf.xAttrs)
+        {
+            if (x.name === 'key') return 'ControlTemplate';
+        }
+        return 'Style';
+    }
+    return keyword;
 }
 

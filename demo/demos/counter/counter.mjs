@@ -4,7 +4,7 @@
 // auto-resolves the template by matching the VM's constructor name
 // against the template's DataType.
 import { Application } from '@visualisation-sub/mural/runtime';
-import { create as createCounterResources } from './counter.mu.js';
+import { CounterDemo } from './counter.mu.js';
 import { CounterVM } from './counter-vm.mjs';
 import { register } from '../../platform/registry.mjs';
 
@@ -21,7 +21,7 @@ register({
         // on first activation. After this, ContentControl finds the
         // template by walking Application.current.Resources.
         if (!resourcesMerged) {
-            Application.current?.Resources.AddMergedDictionary(createCounterResources());
+            Application.current?.Resources.AddMergedDictionary(CounterDemo.Clone());
             resourcesMerged = true;
         }
         // The "demo content" is now the VM, not a Visual. The platform

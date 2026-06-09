@@ -20,7 +20,7 @@ import DrawerVM from "./drawer-vm.mjs"
 // size 0, no flow contribution); the remaining slot is the main body
 // via LastChildFill.
 
-ResourceDictionary {
+resources DrawerDemo {
     DataTemplate x:key="DrawerTemplate" [DataType=DrawerVM] {
         Border [Background=@Surface, BorderBrush=@OutlineVariant,
                 BorderThickness=(1)]{

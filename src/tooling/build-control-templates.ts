@@ -2,7 +2,7 @@
 import { readFileSync, writeFileSync, readdirSync, mkdirSync } from 'node:fs';
 import { join, dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { compile, EmitError } from '../compiler/compile.js';
+import { compile, EmitError, type CompileResult } from '../compiler/compile.js';
 import { ParseError } from '../compiler/parser.js';
 import { DEFAULT_SLOT_INFO, type SlotInfo } from '../compiler/symbol-table.js';
 
@@ -81,6 +81,94 @@ export interface BuildOptions
     outDir:    string;
 }
 
+// Format the companion `.d.ts` for a compiled `.mu` file.
+//   * `kind === 'resources'`  — one `export class NAME extends
+//                               ResourceDictionary` per block, with
+//                               `Clone(): NAME` plus typed
+//                               getter/setter pairs for each
+//                               `x:name`'d resource. Auxiliary type
+//                               imports are collected from the
+//                               accessor metadata.
+//   * Legacy `'fragment'`     — historic `function create():
+//                               ResourceDictionary` shape.
+//   * `'application'`         — `const app: Application` shape.
+function formatDts(out: CompileResult): string
+{
+    if (out.kind === 'resources')
+    {
+        const blocks = out.resourcesBlocks ?? [];
+        // Collect type symbols referenced by accessors so the `.d.ts`
+        // can import them. Group by source module via the same
+        // imports map the `.mu.js` uses — the build pipeline already
+        // resolved each symbol to its bundle, so we can reuse it here.
+        const accessorTypes = new Set<string>();
+        for (const b of blocks)
+        {
+            for (const a of b.accessors) accessorTypes.add(a.type);
+        }
+        // Map each symbol → source module. The body's `out.imports`
+        // contains module → set; invert it for lookup.
+        const symbolToModule = new Map<string, string>();
+        for (const [mod, syms] of out.imports)
+        {
+            for (const s of syms) symbolToModule.set(s, mod);
+        }
+        // Build the import header: ResourceDictionary always; plus
+        // each accessor type (only if the symbol came from a known
+        // module — otherwise fall back to `unknown` at use site).
+        const importsByModule = new Map<string, Set<string>>();
+        const ensureType = (sym: string, mod: string): void =>
+        {
+            let s = importsByModule.get(mod);
+            if (s === undefined) { s = new Set(); importsByModule.set(mod, s); }
+            s.add(sym);
+        };
+        ensureType('ResourceDictionary', '@visualisation-sub/mural/runtime');
+        for (const t of accessorTypes)
+        {
+            const mod = symbolToModule.get(t);
+            if (mod !== undefined) ensureType(t, mod);
+        }
+        // Also import any block-import classes — accessor types may
+        // reference them in the future; for now they appear in the
+        // .mu.js but not the .d.ts (block imports are runtime concerns).
+        const headerLines: string[] = [];
+        const sortedModules = [...importsByModule.keys()].sort();
+        for (const mod of sortedModules)
+        {
+            const syms = [...importsByModule.get(mod)!].sort().join(', ');
+            headerLines.push(`import type { ${syms} } from ${JSON.stringify(mod)};`);
+        }
+        const declarations: string[] = [];
+        for (const b of blocks)
+        {
+            const lines: string[] = [];
+            lines.push(`export declare class ${b.name} extends ResourceDictionary {`);
+            lines.push(`    static Clone(): ${b.name};`);
+            for (const a of b.accessors)
+            {
+                const t = symbolToModule.has(a.type) ? a.type : 'unknown';
+                lines.push(`    ${a.name}: ${t};`);
+            }
+            lines.push(`}`);
+            declarations.push(lines.join('\n'));
+        }
+        return headerLines.join('\n') + '\n\n' + declarations.join('\n\n') + '\n';
+    }
+    if (out.kind === 'application')
+    {
+        return (
+            `import type { Application } from '@visualisation-sub/mural/runtime';\n` +
+            `export declare const app: Application;\n`
+        );
+    }
+    // Fragment / legacy ResourceDictionary root.
+    return (
+        `import type { ResourceDictionary } from '@visualisation-sub/mural/runtime';\n` +
+        `export function create(): ResourceDictionary;\n`
+    );
+}
+
 export function buildControlTemplates(opts: BuildOptions): number
 {
     const slots  = buildSlotInfo();
@@ -109,14 +197,15 @@ export function buildControlTemplates(opts: BuildOptions): number
         const dtsPath  = join(opts.outDir, rel.replace(/\.mu$/, '.mu.d.ts'));
         mkdirSync(dirname(outPath), { recursive: true });
         writeFileSync(outPath, out.js, 'utf8');
-        // Companion `.d.ts` — gives TypeScript a typed shape for the
-        // emitted `create()` factory. Each `.mu` file's top-level
-        // resource forms produce a single `create(): ResourceDictionary`.
-        writeFileSync(
-            dtsPath,
-            `import type { ResourceDictionary } from '@visualisation-sub/mural/runtime';\n` +
-            `export function create(): ResourceDictionary;\n`,
-            'utf8');
+        // Companion `.d.ts`. Two shapes:
+        //   * `resources NAME { … }` files (new model) — one declared
+        //     class per block, plus a typed `Clone()` and one
+        //     getter/setter pair per `x:name`'d resource.
+        //   * Legacy `ResourceDictionary { … }` / fragment files — the
+        //     historical `export function create(): ResourceDictionary`
+        //     shape. (Both Application and bare fragments use this until
+        //     they migrate.)
+        writeFileSync(dtsPath, formatDts(out), 'utf8');
         process.stdout.write(
             `${relative(process.cwd(), input)} → ${relative(process.cwd(), outPath)} (+ .d.ts)\n`);
     }

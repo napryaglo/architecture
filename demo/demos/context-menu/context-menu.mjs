@@ -2,7 +2,7 @@
 // ContextMenu. Right-click resolves to the nearest ancestor with a
 // menu via the auto-installed PointerDown patch on Visual.prototype.
 import { Application } from '@visualisation-sub/mural/runtime';
-import { create as createContextMenuResources } from './context-menu.mu.js';
+import { ContextMenuDemo } from './context-menu.mu.js';
 import { ContextMenuVM } from './context-menu-vm.mjs';
 import { register } from '../../platform/registry.mjs';
 
@@ -16,7 +16,7 @@ register({
     subtitle: 'Right-click any coloured panel — attached ContextMenu DP routes to the nearest ancestor.',
     factory: () => {
         if (!resourcesMerged) {
-            Application.current?.Resources.AddMergedDictionary(createContextMenuResources());
+            Application.current?.Resources.AddMergedDictionary(ContextMenuDemo.Clone());
             resourcesMerged = true;
         }
         if (vmInstance === undefined) vmInstance = new ContextMenuVM();

@@ -3,7 +3,7 @@
 // triggers. On first activation the demo merges its ResourceDictionary
 // into Application resources and hands the platform a VM instance.
 import { Application } from '@visualisation-sub/mural/runtime';
-import { create as createDashboardResources } from './dashboard.mu.js';
+import { DashboardDemo } from './dashboard.mu.js';
 import { DashboardVM } from './dashboard-vm.mjs';
 import { register } from '../../platform/registry.mjs';
 
@@ -17,7 +17,7 @@ register({
     subtitle: 'Three Border cards with property triggers (IsMouseOver / IsPressed).',
     factory: () => {
         if (!resourcesMerged) {
-            Application.current?.Resources.AddMergedDictionary(createDashboardResources());
+            Application.current?.Resources.AddMergedDictionary(DashboardDemo.Clone());
             resourcesMerged = true;
         }
         if (vmInstance === undefined) vmInstance = new DashboardVM();

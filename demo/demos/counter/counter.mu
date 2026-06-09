@@ -7,7 +7,7 @@ import CounterVM from "./counter-vm.mjs"
 // DataType, applies it, and sets the produced Visual's DataContext
 // to the CounterVM so the $-bindings inside the template resolve.
 
-ResourceDictionary {
+resources CounterDemo {
     DataTemplate x:key="CounterTemplate" [DataType=CounterVM] {
         Border [Background=@Surface, BorderBrush=@OutlineVariant, BorderThickness=(1)] {
             Canvas {

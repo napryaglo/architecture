@@ -19,13 +19,48 @@ export interface Document
     span:  SourceSpan;
 }
 
-export type TopForm = ImportForm | DefForm | ElementNode | ResourceForm;
+export type TopForm = ImportForm | DefForm | ElementNode | ResourceForm | ResourcesBlock;
 
 export interface ImportForm
 {
     kind:   'import';
     name:   string;            // identifier after `import`
     source: string | null;     // `from "path"` literal, or null when omitted
+    span:   SourceSpan;
+}
+
+// ── `resources Identifier { import …; …entries… }` ──────────────────
+//
+// Top-level form that defines a NAMED, typed ResourceDictionary subclass.
+// Compiles to `export class Identifier extends ResourceDictionary` with:
+//   * private constructor
+//   * static `Clone()` factory that produces a fresh, mutable instance
+//   * static `_imports` array of import factories merged into the
+//     instance at Clone time
+//   * typed getter/setter pairs for every `x:name`'d resource declared
+//     in the body
+//
+// Multiple `resources` blocks may appear in a single file — each
+// compiles to its own class export. Imports declared inside a block
+// scope to THAT block only (they propagate into the class's `_imports`
+// array and into the file-level ES `import` header).
+export interface ResourcesBlock
+{
+    kind:    'resources-block';
+    name:    string;            // identifier after `resources` — the class name
+    imports: ResourcesImport[]; // `import Alias from "..."` clauses inside the block
+    body:    StructuredBody;    // same shape as the old `ResourceDictionary { ... }` body
+    span:    SourceSpan;
+}
+
+// `import Alias from "module-specifier"` — appears as the FIRST items
+// inside a ResourcesBlock body. The alias must match a class exported
+// by the target module (an Identifier extends ResourceDictionary).
+export interface ResourcesImport
+{
+    kind:   'resources-import';
+    alias:  string;
+    source: string;
     span:   SourceSpan;
 }
 
