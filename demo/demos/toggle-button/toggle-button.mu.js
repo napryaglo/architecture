@@ -10,6 +10,7 @@ export function create() {
         const _factory = (_templatedParent) => {
             const _border2 = new Border();
             _border2.Name = "PART_Border";
+            _border2._set_property_value_by_name("Background", DynamicResource(_border2, "Surface"));
             _border2._set_property_value_by_name("BorderBrush", DynamicResource(_border2, "Outline"));
             _border2._set_property_value_by_name("BorderThickness", new Thickness(1));
             _border2._set_property_value_by_name("CornerRadius", DynamicResource(_border2, "ShapeSmall"));

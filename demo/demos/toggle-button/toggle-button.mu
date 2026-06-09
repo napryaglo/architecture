@@ -15,17 +15,14 @@ import ToggleButtonVM from "./toggle-button-vm.mjs"
 
 ResourceDictionary {
 
-    // Re-templated ToggleButton chrome. PART_Border deliberately omits
-    // Background from the factory — the IsChecked trigger owns it
-    // entirely. Mural's TriggerValue tier sits below LocalValue, so a
-    // factory-set Background would block the trigger. (The bundled
-    // Filled-Button template has the same blocked-trigger shape but
-    // gets away with it because Primary and PrimaryHover differ only
-    // subtly.) Leaving Background unset means the unchecked state
-    // shows the surrounding surface through the outlined chrome, and
-    // the checked-state trigger paints Primary at Trigger tier.
+    // Re-templated ToggleButton chrome. PART_Border ships a Surface
+    // default Background; the IsChecked trigger overrides to Primary
+    // at TriggerValue tier (which sits above LocalValue under mural's
+    // priority order — see effective-value.ts). Same TargetedSetter
+    // pattern the default ListBoxItem template uses.
     Template x:key="ToggleChromeTemplate" [TargetType=ToggleButton] {
         Border x:name="PART_Border" [
+            Background      = @Surface,
             BorderBrush     = @Outline,
             BorderThickness = (1),
             CornerRadius    = @ShapeSmall,

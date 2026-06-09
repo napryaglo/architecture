@@ -609,19 +609,33 @@ describe('Style — PropertyTrigger', () => {
         assert.equal(w.Bias, 50);  // initial evaluation activated trigger
     });
 
-    test('LocalValue shadows trigger setter values', () => {
+    test('Trigger shadows LocalValue when active; cached local re-surfaces when trigger deactivates', () => {
+        // Mural's priority order is Trigger > Binding > Local (vs.
+        // WPF's Local > Trigger). Template factories write LocalValue
+        // via the per-part `_set_property_value_by_name` calls, and
+        // template / style triggers express state-driven overrides —
+        // so triggers MUST be able to override local writes for the
+        // common `when ( IsMouseOver / IsChecked ) { … }` pattern to
+        // be visible. See effective-value.ts header comment for the
+        // full rationale and the WPF deviation.
         const trigger = new PropertyTrigger(Widget, 'Tint', 'hot', [
             new Setter(Widget, 'Bias', 99),
         ]);
         const w = new Widget();
         w.Style = new Style(Widget, [], undefined, [trigger]);
         w.Bias = 5;        // local set
-        w.Tint = 'hot';    // trigger activates but local still wins
+        w.Tint = 'hot';    // trigger activates and overrides local
+        assert.equal(w.Bias, 99);
+        assert.equal(w._get_value_source_by_name('Bias'), PropertyValueSource.TriggerValue);
+
+        // Deactivating the trigger drops the trigger slot and the
+        // cached local value surfaces.
+        w.Tint = 'cold';
         assert.equal(w.Bias, 5);
         assert.equal(w._get_value_source_by_name('Bias'), PropertyValueSource.LocalValue);
 
-        // Clearing local lets trigger value surface.
-        w._clear_value_by_name('Bias');
+        // Re-activating the trigger over the cached local: trigger wins again.
+        w.Tint = 'hot';
         assert.equal(w.Bias, 99);
     });
 

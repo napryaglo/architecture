@@ -25,11 +25,24 @@ export type InternalPropertyChangeCallback = (
     new_value: any,
 ) => void;
 
-// Where the effective value came from. Mirrors WPF's BaseValueSource.
-// Read via Model.GetValueSource(propertyKey).
+// Where the effective value came from. Read via Model.GetValueSource(key).
 //
 // Priority order (highest to lowest):
-//   Coerced > Animated > Binding > Local > Trigger > Style > Inherited > Default
+//   Coerced > Animated > Trigger > Binding > Local > Style > Inherited > Default
+//
+// Deviation from WPF: mural promotes Trigger ABOVE Binding and Local.
+// In WPF the order is Local > Trigger, but mural's `.mu` templates emit
+// per-part defaults via the factory's `_set_property_value_by_name`
+// calls (LocalValue tier) and then express state-driven overrides
+// (`when ( IsMouseOver ) { PART_Border.Background = … }`) via
+// TemplatePropertyTrigger — which writes at TriggerValue. With the WPF
+// order those state triggers were invisible (LocalValue blocked them),
+// so every templated control's hover / press / IsChecked feedback
+// silently broke. Promoting Trigger above Local matches the way
+// authors write templates here, at the cost of consumers no longer
+// being able to write `widget.Background = brush` over an active
+// trigger.
+//
 // The enum values themselves don't encode priority — the EVD's `value`
 // getter and the various Set / Clear methods encode the priority via
 // their dispatch.
@@ -261,8 +274,8 @@ export class EffectiveValueDescriptor
     }
 
     // Caches a Trigger-driven value for this property. Trigger sits
-    // above StyleValue / InheritedValue / Default but below
-    // LocalValue / Binding / Animated. Same pattern as SetStyleValue
+    // above Binding / Local / Style / Inherited / Default; only
+    // Animated and Coerced outrank it. Same pattern as SetStyleValue
     // otherwise — stash regardless, but only flip source if no higher-
     // priority slot is active.
     SetTriggerValue(value: any): void
@@ -270,9 +283,7 @@ export class EffectiveValueDescriptor
         const old_effective_value = this.value;
         this.trigger_value = value;
         this.has_trigger_value = true;
-        if (this.source === PropertyValueSource.LocalValue
-            || this.source === PropertyValueSource.Binding
-            || this.source === PropertyValueSource.AnimatedValue)
+        if (this.source === PropertyValueSource.AnimatedValue)
         {
             return;
         }
@@ -285,8 +296,9 @@ export class EffectiveValueDescriptor
     }
 
     // Drops the trigger slot. If Trigger was the current source,
-    // falls through to StyleValue (if cached), then InheritedValue,
-    // then Default. Higher-priority sources are unaffected.
+    // falls through to Binding (live binding still installed), then
+    // LocalValue, then StyleValue, then InheritedValue, then Default.
+    // Higher-priority sources (Animated) are unaffected.
     ClearTriggerValue(): void
     {
         if (!this.has_trigger_value) return;
@@ -295,11 +307,15 @@ export class EffectiveValueDescriptor
         this.has_trigger_value = false;
         if (this.source === PropertyValueSource.TriggerValue)
         {
-            this.source = this.has_style_value
-                ? PropertyValueSource.StyleValue
-                : this.has_inherited_value
-                    ? PropertyValueSource.InheritedValue
-                    : PropertyValueSource.Default;
+            this.source = this.binding_value !== undefined
+                ? PropertyValueSource.Binding
+                : this.has_local_value
+                    ? PropertyValueSource.LocalValue
+                    : this.has_style_value
+                        ? PropertyValueSource.StyleValue
+                        : this.has_inherited_value
+                            ? PropertyValueSource.InheritedValue
+                            : PropertyValueSource.Default;
         }
         const new_effective_value = this.value;
         if (old_effective_value !== new_effective_value)
@@ -452,10 +468,13 @@ export class EffectiveValueDescriptor
                 const v = this.value;
                 this.OnPropertyChange(v, v);
             });
-            // Animation stays on top — the binding cache updates so a
-            // later Stop / ClearAnimated falls through to the fresh
-            // binding, but the active source stays as it was.
-            if (this.source === PropertyValueSource.AnimatedValue)
+            // Animation AND active triggers stay on top — the binding
+            // cache updates so a later Stop / ClearTriggerValue /
+            // ClearAnimated falls through to the fresh binding, but
+            // the visible source stays at the higher tier until that
+            // clears.
+            if (this.source === PropertyValueSource.AnimatedValue
+                || this.source === PropertyValueSource.TriggerValue)
             {
                 return;
             }
@@ -476,12 +495,17 @@ export class EffectiveValueDescriptor
         {
             this.local_value = val;
             this.has_local_value = true;
-            // Local writes are NOT visible while an animation slot
-            // shadows them — same precedence WPF uses (Animated >
-            // Binding > Local). The local slot still updates so that
-            // ClearAnimatedValue / Storyboard.Stop drops back to the
-            // freshest user-written value, not a stale snapshot.
-            if (this.source === PropertyValueSource.AnimatedValue)
+            // Local writes are NOT visible while an animation OR an
+            // active trigger shadows them. Mural's priority order
+            // (Animated > Trigger > Binding > Local) intentionally
+            // deviates from WPF's (Local > Trigger) so template
+            // factories can set per-part defaults while state-driven
+            // triggers in the same template still take effect. The
+            // local slot still updates so that ClearAnimatedValue /
+            // ClearTriggerValue drops back to the freshest user-
+            // written value, not a stale snapshot.
+            if (this.source === PropertyValueSource.AnimatedValue
+                || this.source === PropertyValueSource.TriggerValue)
             {
                 return;
             }
@@ -526,13 +550,13 @@ export class EffectiveValueDescriptor
     }
 
     // Drop the Animated slot. If Animated was the current source, falls
-    // through to Binding / Local / Trigger / Style / Inherited / Default
+    // through to Trigger / Binding / Local / Style / Inherited / Default
     // in priority order — whichever slot is still set wins. The
     // underlying value is whatever was last written to those slots
-    // BEFORE / DURING the animation (the value setter keeps local +
-    // binding caches fresh under the animated mask), so the post-
-    // ClearAnimatedValue effective value matches what the user has
-    // most recently written.
+    // BEFORE / DURING the animation (the value setter keeps trigger /
+    // local / binding caches fresh under the animated mask), so the
+    // post-ClearAnimatedValue effective value matches the highest-
+    // priority slot still set.
     ClearAnimatedValue(): void
     {
         if (!this.has_animated_value) return;
@@ -541,12 +565,12 @@ export class EffectiveValueDescriptor
         this.has_animated_value = false;
         if (this.source === PropertyValueSource.AnimatedValue)
         {
-            this.source = this.binding_value !== undefined
-                ? PropertyValueSource.Binding
-                : this.has_local_value
-                    ? PropertyValueSource.LocalValue
-                    : this.has_trigger_value
-                        ? PropertyValueSource.TriggerValue
+            this.source = this.has_trigger_value
+                ? PropertyValueSource.TriggerValue
+                : this.binding_value !== undefined
+                    ? PropertyValueSource.Binding
+                    : this.has_local_value
+                        ? PropertyValueSource.LocalValue
                         : this.has_style_value
                             ? PropertyValueSource.StyleValue
                             : this.has_inherited_value
