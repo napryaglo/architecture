@@ -6,7 +6,6 @@ import {
     Panel,
     Rect,
     Size,
-    Thickness,
     Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
@@ -55,17 +54,25 @@ function resolveSurfaceTemplate(key: string): ControlTemplate
 // MenuItem + MenuSeparator.
 export class Menu extends ItemsControl
 {
+    static
+    {
+        // Type-keyed lookup for the default Style — registered in
+        // `surface.template.mu` as `Style [TargetType=Menu]`. The
+        // Style supplies the vertical-StackPanel ItemsPanel via an
+        // ItemsPanelTemplate so authors don't have to set it manually.
+        Model.OverrideMetadata(Menu, Visual.DefaultStyleKeyKey, { default_value: Menu });
+        ensureSurfaceTheme();
+    }
+
     constructor()
     {
         super();
-        this.ItemsPanel = (): Panel =>
-        {
-            const sp = new StackPanel();
-            sp.Orientation = Orientation.Vertical;
-            return sp;
-        };
-        // No chrome of our own — the popup hosting Menu (MenuButton's
-        // popup, ContextMenu's overlay) wraps it in a bordered Border.
+        // Eager Style resolution: pulls in the bundled
+        // `Style [TargetType=Menu]`, which sets ItemsPanel = vertical
+        // StackPanel. The Menu itself paints no chrome — the popup
+        // host (MenuButton's PART_PopupContainer / ContextMenu's
+        // overlay / a parent MenuItem's submenu) supplies that.
+        this.applyDefaultStyle();
     }
 
     // `.mu` body — `Menu { MenuItem; MenuSeparator; … }` — routes through
@@ -150,69 +157,52 @@ export class MenuItem extends ItemsControl
      *  to release focus before any dialog the command opens steals it. */
     public _onActivated: (() => void) | undefined;
 
-    private _rowBorder: Border;
-    private _rowLabel:  TextBlock;
-    private _gestureLabel: TextBlock;
-    private _iconHost:    Border;
-    private _chevronLabel: TextBlock;
+    // Template parts cached from `surface.template.mu`'s
+    // `DefaultMenuItem` template. Populated lazily on first
+    // refreshRow() — the template Style is applied eagerly from the
+    // constructor but the parts only become reachable AFTER the
+    // applied Template's NameScope is wired up by Visual.ApplyTemplate.
+    private _iconHost:    Border    | undefined;
+    private _rowLabel:    TextBlock | undefined;
+    private _gestureLabel: TextBlock | undefined;
+    private _chevronLabel: TextBlock | undefined;
+    private _partsBound = false;
+
     private _pressOriginatedHere = false;
+
+    static
+    {
+        // Type-keyed lookup for the default Style — registered as
+        // `Style [TargetType=MenuItem]` in surface.template.mu. The
+        // Style supplies the DefaultMenuItem template with the
+        // PART_Row / PART_Icon / PART_Label / PART_Gesture /
+        // PART_Chevron parts and the IsMouseOver / IsPressed /
+        // IsChecked / IsSubmenuOpen state triggers.
+        Model.OverrideMetadata(MenuItem, Visual.DefaultStyleKeyKey, { default_value: MenuItem });
+        ensureSurfaceTheme();
+    }
 
     constructor()
     {
         super();
-        // No items panel materialization for now — submenu popup is the
-        // expansion path (5.11.2 follow-up). For v1, items collection is
-        // populated; submenu popup activation defers to a forthcoming
-        // sub-pass. The MenuItem still renders its row.
-        // (Setting an empty ItemsPanel keeps ItemsControl happy.)
+        // ItemsPanel for submenu items — kept vertical even though
+        // submenu popup materialisation is deferred (5.11.2 follow-up).
+        // The presenter isn't visually wired today; the panel stays
+        // here so ItemsControl's pipeline finds a non-undefined
+        // factory when items are populated.
         this.ItemsPanel = (): Panel =>
         {
             const sp = new StackPanel();
             sp.Orientation = Orientation.Vertical;
             return sp;
         };
-
-        // Build the row template imperatively. Four "columns":
-        // icon | header | gesture | chevron. Each is a fixed-width or
-        // auto-width host that auto-hides when its content is empty.
-        const stack = new StackPanel();
-        stack.Orientation = Orientation.Horizontal;
-
-        this._iconHost = new Border();
-        this._iconHost.Width = 24;
-        this._iconHost.MinWidth = 24;
-        stack.AddChild(this._iconHost);
-
-        this._rowLabel = new TextBlock('');
-        this._rowLabel.Foreground = Theme.ink;
-        this._rowLabel.Margin = new Thickness(8, 0, 16, 0);
-        this._rowLabel.MinWidth = 80;
-        stack.AddChild(this._rowLabel);
-
-        this._gestureLabel = new TextBlock('');
-        this._gestureLabel.Foreground = Theme.hint;
-        this._gestureLabel.Margin = new Thickness(0, 0, 16, 0);
-        stack.AddChild(this._gestureLabel);
-
-        this._chevronLabel = new TextBlock('');
-        this._chevronLabel.Foreground = Theme.hint;
-        this._chevronLabel.Width = 12;
-        stack.AddChild(this._chevronLabel);
-
-        this._rowBorder = new Border();
-        this._rowBorder.Background = Theme.popupBg;
-        this._rowBorder.Padding    = new Thickness(8, 6, 8, 6);
-        this._rowBorder.SetChild(stack);
-
-        // Set Template so ItemsControl's apply pipeline knows where to
-        // stamp the ItemsPresenter — but the presenter isn't used in v1
-        // (sub-menu deferred). We keep a no-op template root that's
-        // just the row Border.
-        this.Template = new ControlTemplate((_tp) => this._rowBorder);
-
-        // Watch DPs that affect the row visuals and refresh on change.
-        // OnPropertyChanged could route these, but a one-shot per-DP
-        // listener keeps the refresh logic readable.
+        // Eager Style resolution — applies DefaultMenuItem template
+        // and wires the IsMouseOver / IsPressed / IsChecked /
+        // IsSubmenuOpen state triggers. After this call the template
+        // PART_* visuals are reachable via GetTemplateChild.
+        this.applyDefaultStyle();
+        // Initial content sync: pulls Header / Icon / InputGesture /
+        // Items into the freshly-bound parts.
         this.refreshRow();
     }
 
@@ -229,36 +219,68 @@ export class MenuItem extends ItemsControl
         return item instanceof Visual;
     }
 
+    // Resolve the template parts once the DefaultMenuItem template is
+    // applied. The Style's Template setter feeds through
+    // ItemsControl.rebuildTemplate, so the template root sits at
+    // `visualChildren[0]` and FindName resolves against the freshly-
+    // built NameScope. Idempotent: partial resolution still counts as
+    // bound, so author-side re-templates that drop a part opt out of
+    // the corresponding feature (e.g. a row without a gesture column).
+    private bindTemplateParts(): void
+    {
+        if (this._partsBound) return;
+        const root = this.visualChildren[0];
+        if (root === undefined) return;
+        const icon    = root.FindName('PART_Icon');
+        const label   = root.FindName('PART_Label');
+        const gesture = root.FindName('PART_Gesture');
+        const chevron = root.FindName('PART_Chevron');
+        if (icon instanceof Border)       this._iconHost     = icon;
+        if (label instanceof TextBlock)   this._rowLabel     = label;
+        if (gesture instanceof TextBlock) this._gestureLabel = gesture;
+        if (chevron instanceof TextBlock) this._chevronLabel = chevron;
+        this._partsBound = true;
+    }
+
     /** Public refresh for tests + DP-change forwarding. */
     public refreshRow(): void
     {
-        // Skip until the row template parts exist — refresh fires from
-        // OnPropertyChanged the moment super() sets Items, before this
-        // constructor has built the row visuals.
-        if (this._rowLabel === undefined) return;
+        this.bindTemplateParts();
         // Header text — empty string when undefined to keep TextBlock happy.
-        this._rowLabel.Text = this.Header ?? '';
-        // Gesture column — auto-hide when empty.
-        const g = this.InputGestureText ?? '';
-        this._gestureLabel.Text = g;
-        this._gestureLabel.Width = g.length === 0 ? 0 : Number.NaN;
+        if (this._rowLabel !== undefined)
+        {
+            this._rowLabel.Text = this.Header ?? '';
+        }
+        // Gesture column — auto-hide when empty by zeroing Width.
+        if (this._gestureLabel !== undefined)
+        {
+            const g = this.InputGestureText ?? '';
+            this._gestureLabel.Text = g;
+            this._gestureLabel.Width = g.length === 0 ? 0 : Number.NaN;
+        }
         // Chevron column — populated when this item has a submenu.
-        const hasSubmenu = this.itemCount() > 0;
-        this._chevronLabel.Text = hasSubmenu ? '▶' : '';
-        this._chevronLabel.Width = hasSubmenu ? 12 : 0;
-        // Icon — replace the icon host's content.
-        if (this.Icon !== undefined)
+        if (this._chevronLabel !== undefined)
         {
-            this._iconHost.SetChild(this.Icon);
+            const hasSubmenu = this.itemCount() > 0;
+            this._chevronLabel.Text = hasSubmenu ? '▶' : '';
+            this._chevronLabel.Width = hasSubmenu ? 12 : 0;
         }
-        else if (this.IsCheckable && this.IsChecked)
+        // Icon column — host the consumer's Icon, OR an inline check
+        // glyph when IsCheckable + IsChecked, OR clear it.
+        if (this._iconHost !== undefined)
         {
-            // Inline check glyph when Icon is unset.
-            this._iconHost.SetChild(makeGlyph('✓'));
-        }
-        else
-        {
-            this._iconHost.SetChild(undefined);
+            if (this.Icon !== undefined)
+            {
+                this._iconHost.SetChild(this.Icon);
+            }
+            else if (this.IsCheckable && this.IsChecked)
+            {
+                this._iconHost.SetChild(makeGlyph('✓'));
+            }
+            else
+            {
+                this._iconHost.SetChild(undefined);
+            }
         }
     }
 
@@ -286,17 +308,18 @@ export class MenuItem extends ItemsControl
         }
     }
 
+    // Pointer handlers — IsMouseOver / IsPressed visuals come from the
+    // template's `when()` triggers, so these only need to track the
+    // press-originated-here flag for click routing.
     protected override OnPointerDown(_args: import('../../runtime/index.js').PointerEventArgs): void
     {
         this._pressOriginatedHere = true;
-        this._rowBorder.Background = Theme.itemHoverBg;
     }
 
     protected override OnPointerUp(_args: import('../../runtime/index.js').PointerEventArgs): void
     {
         const fire = this._pressOriginatedHere && this.IsMouseOver;
         this._pressOriginatedHere = false;
-        this._rowBorder.Background = Theme.popupBg;
         if (!fire) return;
         // Click protocol:
         //   * Has submenu → toggle IsSubmenuOpen (submenu popup deferred,
@@ -320,12 +343,14 @@ export class MenuItem extends ItemsControl
 
     protected override OnPointerEnter(_args: import('../../runtime/index.js').PointerEventArgs): void
     {
-        this._rowBorder.Background = Theme.itemHoverBg;
+        // Template trigger handles the IsMouseOver visual swap.
     }
 
     protected override OnPointerLeave(_args: import('../../runtime/index.js').PointerEventArgs): void
     {
-        if (!this._pressOriginatedHere) this._rowBorder.Background = Theme.popupBg;
+        // Template trigger handles the IsMouseOver visual swap — the
+        // template tier knows about the press-originated-here / drag-
+        // off behaviour through the IsPressed trigger fading first.
     }
 }
 
@@ -345,11 +370,23 @@ export class MenuSeparator extends Visual
         MenuSeparator, 'LineBrush', undefined, MetaData.Render,
     );
 
+    static
+    {
+        // Type-keyed lookup for the default Style — registered as
+        // `Style [TargetType=MenuSeparator]` in surface.template.mu.
+        // The Style supplies Height / MinWidth / LineBrush via
+        // DynamicResource so the line tints flip with the theme
+        // palette without consumers having to set LineBrush.
+        Model.OverrideMetadata(MenuSeparator, Visual.DefaultStyleKeyKey, { default_value: MenuSeparator });
+        ensureSurfaceTheme();
+    }
+
     constructor()
     {
         super();
-        this.Height = 9;       // 4px padding | 1px line | 4px padding
-        this.MinWidth = 16;
+        // Eager Style resolution — Height / MinWidth / LineBrush come
+        // from the bundled `Style [TargetType=MenuSeparator]`.
+        this.applyDefaultStyle();
     }
 
     public get LineBrush():  Brush | undefined { return this.get_property_value(MenuSeparator.LineBrushKey); }

@@ -49,7 +49,8 @@ ResourceDictionary {
                    BorderThickness = (1),
                    CornerRadius    = @ShapeExtraSmall,
                    Effect          = @Elevation2,
-                   Padding         = (0)]{
+                   Padding         = (0),
+                   MaxWidth        = 400]{
                 Menu x:name="PART_Menu"
             }
         }
@@ -83,5 +84,72 @@ ResourceDictionary {
                 Menu x:name="PART_Menu"
             }
         }
+    }
+
+    // ── Menu: default chrome ───────────────────────────────────────
+    // Menu has no painted chrome of its own — the popup hosting Menu
+    // (MenuButton's PART_PopupContainer / ContextMenu's overlay /
+    // MenuItem submenus) supplies the bordered surface. The default
+    // Style only pins the items-panel orientation so authors don't
+    // need to import StackPanel + Orientation just to lay out a
+    // vertical menu.
+    ItemsPanelTemplate x:key="DefaultMenuItemsPanel" {
+        StackPanel [Orientation = Vertical]
+    }
+    Style [TargetType=Menu] {
+        ItemsPanel = @DefaultMenuItemsPanel;
+    }
+
+    // ── MenuSeparator: chrome tokens ───────────────────────────────
+    // MenuSeparator paints its own thin line via RenderOverride —
+    // the Style just tunes the default size and LineBrush so the
+    // default visual flips with the theme palette without forcing
+    // each consumer to set LineBrush explicitly.
+    Style [TargetType=MenuSeparator] {
+        Height    = 9;
+        MinWidth  = 16;
+        LineBrush = @OutlineVariant;
+    }
+
+    // ── MenuItem: row chrome ───────────────────────────────────────
+    // The row is a single PART_Row Border hosting a horizontal stack
+    // with four columns: icon / header / gesture / chevron. Each
+    // column's Visual is named so MenuItem.OnApplyTemplate can grab
+    // it via FindName for content updates (the Header / Icon /
+    // InputGestureText DPs feed the Text / Child slots imperatively,
+    // and the chevron column auto-hides when there's no submenu).
+    //
+    // State chrome is fully declarative:
+    //   * IsMouseOver / IsPressed swap PART_Row.Background through
+    //     the SurfaceContainer ramp (matches the M3 menu-item
+    //     hover / pressed surface).
+    //   * IsChecked and IsSubmenuOpen both tint the row
+    //     @SecondaryContainer — same token the default ListBoxItem
+    //     selection state uses.
+    //
+    // Mural's TriggerValue tier sits ABOVE LocalValue (see
+    // effective-value.ts), so the trigger Background writes win over
+    // the row's factory defaults even when authors re-skin via a
+    // child Style.
+    Template x:key="DefaultMenuItem" [TargetType=MenuItem] {
+        Border x:name="PART_Row" [Padding = (8,6,8,6)] {
+            StackPanel [Orientation = Horizontal] {
+                Border    x:name="PART_Icon"    [Width = 24, MinWidth = 24]
+                TextBlock x:name="PART_Label"   [Margin = (8,0,16,0),
+                                                 MinWidth = 80,
+                                                 Foreground = @OnSurface]
+                TextBlock x:name="PART_Gesture" [Margin = (0,0,16,0),
+                                                 Foreground = @OnSurfaceVariant]
+                TextBlock x:name="PART_Chevron" [Width = 12,
+                                                 Foreground = @OnSurfaceVariant]
+            }
+        }
+        when ( IsMouseOver )   { PART_Row.Background = @SurfaceContainerHigh; }
+        when ( IsPressed )     { PART_Row.Background = @SurfaceContainerHighest; }
+        when ( IsChecked )     { PART_Row.Background = @SecondaryContainer; }
+        when ( IsSubmenuOpen ) { PART_Row.Background = @SecondaryContainer; }
+    }
+    Style [TargetType=MenuItem] {
+        Template = @DefaultMenuItem;
     }
 }
