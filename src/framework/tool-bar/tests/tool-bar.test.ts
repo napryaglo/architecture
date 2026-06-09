@@ -47,6 +47,24 @@ describe('ToolBar — items + overflow', () => {
         assert.equal(executed, 0);
     });
 
+    test('ToolBarButton flips Icon / Text / ShowText dynamically — Content re-stacks', () => {
+        const btn = ToolBarButton.create({ icon: '💾', text: 'Save', showText: true });
+        const stack0 = btn.Content;
+        assert.ok(stack0 !== undefined);
+        // Same stack instance is reused across rebuilds so the Icon
+        // Visual's single-parent invariant holds.
+        btn.ShowText = false;
+        assert.equal(btn.Content, stack0, 'reused stack survives ShowText flip');
+        btn.Text = 'Save As';
+        assert.equal(btn.Content, stack0, 'reused stack survives Text flip');
+        // Flipping Icon to undefined removes it from the stack; the
+        // label still renders because showText would re-enable display
+        // (toggle it on again for the next assertion).
+        btn.ShowText = true;
+        btn.Icon = undefined;
+        assert.equal(btn.Content, stack0, 'reused stack survives Icon clear');
+    });
+
     test('ToolBarSeparator measures to its Width + the available height', () => {
         const sep = new ToolBarSeparator();
         sep.Measure(new Size(100, 24));

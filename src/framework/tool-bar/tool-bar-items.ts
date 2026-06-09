@@ -6,6 +6,7 @@ import {
     Thickness,
     Visual,
     type DrawingContext,
+    type PropertyDescriptor,
 } from '../../runtime/index.js';
 import { Brush } from '../../visual-engine/index.js';
 import { Button } from '../button.js';
@@ -14,31 +15,32 @@ import { TextBlock } from '../../Basic/text-block.js';
 import { Theme } from '../../Basic/theme.js';
 import { ToggleButton } from '../toggle-button.js';
 
-// ToolBarButton — Button shaped for use inside a ToolBar. Adds two DPs
-// over plain Button:
+// ToolBarButton — Button shaped for use inside a ToolBar. Adds three
+// DPs over plain Button:
 //
 //   * Icon     — a Visual rendered to the left of (or instead of) the
-//                 text content. Typically a TextBlock with a glyph or
+//                 text label. Typically a TextBlock with a glyph or
 //                 a small vector graphic. Optional.
+//   * Text     — string label rendered beside the Icon when ShowText
+//                 is true (or instead of the Icon when no Icon is set).
 //   * ShowText — when false (default), only the Icon is shown; when
-//                 true, both Icon and Content (text) are shown
-//                 side-by-side.
+//                 true, both Icon and Text are shown side-by-side.
+//
+// Flipping any of these DPs at runtime re-stacks `Content` via
+// rebuildContent() (wired through OnPropertyChanged). Authors can
+// drive Icon / Text / ShowText with bindings or imperative writes and
+// the inline layout updates without recreating the button.
 //
 // The button itself uses Button's default chrome (theme background,
 // hover / pressed visuals). The Icon + text layout is composed into
 // `Content` as a horizontal StackPanel.
-//
-// Note: changing Icon, Content, or ShowText after construction does
-// NOT auto-rebuild the inline layout — these DPs are read on the
-// ergonomic `create()` factory path. Authors who flip them later
-// should re-run their layout (typically by re-creating the button).
-// The simpler shape kept the v1 footprint low; a smarter
-// "OnPropertyChanged → re-stack the children" path is an obvious
-// follow-up if real-world usage demands dynamic icon swaps.
 export class ToolBarButton extends Button
 {
     public static readonly IconKey     = Model.RegisterProperty<Visual | undefined>(
         ToolBarButton, 'Icon', undefined, MetaData.Measure,
+    );
+    public static readonly TextKey     = Model.RegisterProperty<string | undefined>(
+        ToolBarButton, 'Text', undefined, MetaData.Measure | MetaData.Render,
     );
     public static readonly ShowTextKey = Model.RegisterProperty<boolean>(
         ToolBarButton, 'ShowText', false, MetaData.Measure,
@@ -47,8 +49,25 @@ export class ToolBarButton extends Button
     public get Icon():  Visual | undefined { return this.get_property_value(ToolBarButton.IconKey); }
     public set Icon(v: Visual | undefined) { this.set_property_value(ToolBarButton.IconKey, v); }
 
+    public get Text():  string | undefined { return this.get_property_value(ToolBarButton.TextKey); }
+    public set Text(v: string | undefined) { this.set_property_value(ToolBarButton.TextKey, v); }
+
     public get ShowText():  boolean { return this.get_property_value(ToolBarButton.ShowTextKey); }
     public set ShowText(v: boolean) { this.set_property_value(ToolBarButton.ShowTextKey, v); }
+
+    protected override OnPropertyChanged(
+        descriptor: PropertyDescriptor,
+        oldValue: unknown,
+        newValue: unknown,
+    ): void
+    {
+        super.OnPropertyChanged(descriptor, oldValue, newValue);
+        const name = descriptor.Name;
+        if (name === 'Icon' || name === 'Text' || name === 'ShowText')
+        {
+            rebuildContent(this);
+        }
+    }
 
     public static create(opts: ToolBarButtonOptions): ToolBarButton
     {
@@ -67,6 +86,9 @@ export class ToolBarToggleButton extends ToggleButton
     public static readonly IconKey     = Model.RegisterProperty<Visual | undefined>(
         ToolBarToggleButton, 'Icon', undefined, MetaData.Measure,
     );
+    public static readonly TextKey     = Model.RegisterProperty<string | undefined>(
+        ToolBarToggleButton, 'Text', undefined, MetaData.Measure | MetaData.Render,
+    );
     public static readonly ShowTextKey = Model.RegisterProperty<boolean>(
         ToolBarToggleButton, 'ShowText', false, MetaData.Measure,
     );
@@ -74,8 +96,25 @@ export class ToolBarToggleButton extends ToggleButton
     public get Icon():  Visual | undefined { return this.get_property_value(ToolBarToggleButton.IconKey); }
     public set Icon(v: Visual | undefined) { this.set_property_value(ToolBarToggleButton.IconKey, v); }
 
+    public get Text():  string | undefined { return this.get_property_value(ToolBarToggleButton.TextKey); }
+    public set Text(v: string | undefined) { this.set_property_value(ToolBarToggleButton.TextKey, v); }
+
     public get ShowText():  boolean { return this.get_property_value(ToolBarToggleButton.ShowTextKey); }
     public set ShowText(v: boolean) { this.set_property_value(ToolBarToggleButton.ShowTextKey, v); }
+
+    protected override OnPropertyChanged(
+        descriptor: PropertyDescriptor,
+        oldValue: unknown,
+        newValue: unknown,
+    ): void
+    {
+        super.OnPropertyChanged(descriptor, oldValue, newValue);
+        const name = descriptor.Name;
+        if (name === 'Icon' || name === 'Text' || name === 'ShowText')
+        {
+            rebuildContent(this);
+        }
+    }
 
     public static create(opts: ToolBarButtonOptions): ToolBarToggleButton
     {
@@ -141,28 +180,55 @@ export interface ToolBarButtonOptions
 
 function applyOpts(btn: ToolBarButton | ToolBarToggleButton, opts: ToolBarButtonOptions): void
 {
-    const iconV = resolveIcon(opts.icon);
-    const showText = opts.showText === true;
-    btn.Icon     = iconV;
-    btn.ShowText = showText;
+    // Write DPs; rebuildContent fires for each via OnPropertyChanged.
+    // Ordering: Text + Icon + ShowText together would produce three
+    // rebuilds; cheap enough at construction time (one StackPanel
+    // allocation each), and the dynamic-update path uses the same
+    // pipeline so we don't fork the logic.
+    btn.Icon     = resolveIcon(opts.icon);
+    btn.Text     = opts.text;
+    btn.ShowText = opts.showText === true;
     if (opts.command !== undefined)          btn.Command          = opts.command;
     if (opts.commandParameter !== undefined) btn.CommandParameter = opts.commandParameter;
+}
 
-    // Compose Content = horizontal stack of [icon, text] depending on
-    // ShowText. Slotted into Button's default ContentPresenter — no
-    // template override needed; Button's chrome (hover / pressed
-    // backgrounds, padding) stays intact.
-    const stack = new StackPanel();
-    stack.Orientation = Orientation.Horizontal;
-    if (iconV !== undefined) stack.AddChild(iconV);
-    if (opts.text !== undefined && (showText || iconV === undefined))
+// (Re-)compose Button.Content from the live values of the Icon / Text /
+// ShowText DPs. Reuses ONE StackPanel per button (lazily allocated on
+// first rebuild and held in a private side-channel) so the Icon Visual
+// — which the consumer owns and may keep a reference to — has exactly
+// one stable parent across rebuilds. Allocating a fresh stack each
+// time would leave the Icon parented to the previous stack and trip
+// the single-parent check on the next AddChild.
+//
+// Called from the ctor (via applyOpts → DP writes → OnPropertyChanged)
+// and from every later DP flip on Icon / Text / ShowText.
+function rebuildContent(btn: ToolBarButton | ToolBarToggleButton): void
+{
+    const iconV    = btn.Icon;
+    const text     = btn.Text;
+    const showText = btn.ShowText;
+
+    const slot = btn as unknown as { _toolbarStack?: StackPanel };
+    let stack = slot._toolbarStack;
+    if (stack === undefined)
     {
-        const label = new TextBlock(opts.text);
+        stack = new StackPanel();
+        stack.Orientation = Orientation.Horizontal;
+        slot._toolbarStack = stack;
+        btn.Content = stack;
+    }
+    // Clear without disturbing visuals we're about to re-add. Snapshot
+    // first because RemoveChild mutates visualChildren mid-iteration.
+    for (const c of [...stack.visualChildren]) stack.RemoveChild(c);
+
+    if (iconV !== undefined) stack.AddChild(iconV);
+    if (text !== undefined && (showText || iconV === undefined))
+    {
+        const label = new TextBlock(text);
         label.Foreground = Theme.primaryInk;
         if (iconV !== undefined) label.Margin = new Thickness(6, 0, 0, 0);
         stack.AddChild(label);
     }
-    btn.Content = stack;
 }
 
 function resolveIcon(icon: string | Visual | undefined): Visual | undefined

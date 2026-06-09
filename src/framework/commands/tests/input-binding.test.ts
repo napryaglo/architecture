@@ -1,12 +1,14 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { Application, NoModifiers, RelayCommand, Visual, type KeyEventInit } from '../../../runtime/index.js';
+import { Application, NoModifiers, PointerButton, RelayCommand, Visual, type KeyEventInit, type PointerEventInit } from '../../../runtime/index.js';
 import { Control, InputManager } from '../../../framework/index.js';;
 import {
     CommandBinding,
     CommandManager,
     KeyBinding,
+    MouseBinding,
+    MouseGesture,
     RoutedCommand,
 } from '../../index.js';;
 
@@ -16,6 +18,19 @@ function key(overrides: Partial<KeyEventInit> = {}): KeyEventInit
         Key: 'A', Code: 'KeyA',
         Modifiers: NoModifiers,
         IsRepeat: false,
+        ...overrides,
+    };
+}
+
+function pointer(overrides: Partial<PointerEventInit> = {}): PointerEventInit
+{
+    return {
+        HostX: 0, HostY: 0,
+        Button: PointerButton.Primary,
+        Buttons: 1,
+        Modifiers: NoModifiers,
+        PointerId: 0, Pressure: 0,
+        PointerType: 'mouse',
         ...overrides,
     };
 }
@@ -175,6 +190,53 @@ describe('KeyBinding — markup-declared shortcuts', () => {
         im.InjectKeyDown(key({ Key: 'A', Modifiers: { ...NoModifiers, Control: true } }));
         // 'plain' has Control unspecified — it matches Ctrl+A and fires first.
         assert.deepEqual(log, ['plain']);
+    });
+
+    test('MouseBinding(LeftClick) fires on a single primary PointerDown', () => {
+        const root = new FocusableRoot();
+        let fired = 0;
+        root.InputBindings.push(new MouseBinding(MouseGesture.LeftClick, {},
+            new RelayCommand(() => { fired++; })));
+
+        const im = new InputManager();
+        im.InjectPointerDown(root, pointer({ Button: PointerButton.Primary }));
+        assert.equal(fired, 1);
+    });
+
+    test('MouseBinding(LeftDoubleClick) only fires when IsDoubleClick=true', () => {
+        const root = new FocusableRoot();
+        let fired = 0;
+        root.InputBindings.push(new MouseBinding(MouseGesture.LeftDoubleClick, {},
+            new RelayCommand(() => { fired++; })));
+
+        const im = new InputManager();
+        // First click: not a double-click — should NOT fire.
+        im.InjectPointerDown(root, pointer({ Button: PointerButton.Primary }));
+        assert.equal(fired, 0);
+        // Second click flagged as double — should fire.
+        im.InjectPointerDown(root, pointer({ Button: PointerButton.Primary, IsDoubleClick: true }));
+        assert.equal(fired, 1);
+    });
+
+    test('MouseBinding ordering — LeftDoubleClick declared before LeftClick wins on double-click', () => {
+        // InputBindings are walked in declaration order; the first
+        // match fires + sets Handled. Authors who want a double-click
+        // to take precedence over a generic LeftClick on the same
+        // visual list LeftDoubleClick FIRST.
+        const root = new FocusableRoot();
+        const log: string[] = [];
+        root.InputBindings.push(new MouseBinding(MouseGesture.LeftDoubleClick, {},
+            new RelayCommand(() => { log.push('double'); })));
+        root.InputBindings.push(new MouseBinding(MouseGesture.LeftClick, {},
+            new RelayCommand(() => { log.push('single'); })));
+
+        const im = new InputManager();
+        // First press is a single click — only LeftClick matches.
+        im.InjectPointerDown(root, pointer({ Button: PointerButton.Primary }));
+        // Second press is a double click — LeftDoubleClick wins because
+        // it's listed first.
+        im.InjectPointerDown(root, pointer({ Button: PointerButton.Primary, IsDoubleClick: true }));
+        assert.deepEqual(log, ['single', 'double']);
     });
 
     test('CommandTarget on KeyBinding redirects RoutedCommand dispatch', () => {

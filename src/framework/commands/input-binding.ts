@@ -162,29 +162,30 @@ export class MouseBinding extends InputBinding
 
     public override MatchesPointer(args: PointerEventArgs): boolean
     {
-        // Click vs double-click discrimination needs application-level
-        // gesture recognition (timing + distance threshold). v1 keeps
-        // it simple: single-clicks are PointerUp events; double-clicks
-        // require an explicit IsDoubleClick marker on the args (added by
-        // the host adapter when applicable — pending 5.9 follow-up).
-        // For now MouseBinding only matches single-click gestures via
-        // PointerDown; the *DoubleClick variants are documented but
-        // remain unhandled until the gesture-recognizer ships. Authors
-        // needing double-click today should use a PointerDown handler
-        // that inspects args.Buttons and a per-instance click counter.
+        // Single-click gestures fire on every PointerDown that matches
+        // their button (including the second press of a double-click).
+        // Double-click gestures match ONLY when the host adapter has
+        // flagged `args.IsDoubleClick` — set on the second PointerDown
+        // within the OS-typical 500 ms / 4 px tolerance window
+        // (html-target.ts classifyDoubleClick). This is the WPF parity:
+        // a binding on LeftClick + a binding on LeftDoubleClick both
+        // fire when you double-click, because two MouseDown events
+        // physically occur.
         if (args.Kind !== 'PointerDown') return false;
         let buttonOk = false;
+        let requireDouble = false;
         switch (this.Gesture)
         {
             case MouseGesture.LeftClick:         buttonOk = args.Button === /*Primary*/   0; break;
             case MouseGesture.MiddleClick:       buttonOk = args.Button === /*Middle*/    1; break;
             case MouseGesture.RightClick:        buttonOk = args.Button === /*Secondary*/ 2; break;
-            // Double-click variants intentionally don't match yet (see
-            // comment above). Return false rather than throwing — keeps
-            // KeyBinding-heavy demos working without a side-channel.
+            case MouseGesture.LeftDoubleClick:   buttonOk = args.Button === /*Primary*/   0; requireDouble = true; break;
+            case MouseGesture.MiddleDoubleClick: buttonOk = args.Button === /*Middle*/    1; requireDouble = true; break;
+            case MouseGesture.RightDoubleClick:  buttonOk = args.Button === /*Secondary*/ 2; requireDouble = true; break;
             default:                             buttonOk = false; break;
         }
         if (!buttonOk) return false;
+        if (requireDouble && !args.IsDoubleClick) return false;
         if (!modifiersMatch(args.Modifiers, this.Modifiers)) return false;
         return true;
     }

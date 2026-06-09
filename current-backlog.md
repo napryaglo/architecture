@@ -16,12 +16,12 @@ Open gaps in the property/binding/control system compared to WPF. Closed items m
 
   **Recommended cut line.** 5.11.3 (Ribbon) is heavy — defer until a real demo or app explicitly demands the tabbed grouped chrome. The 5.11.4 followup lands alongside it.
 
-  Surface-control follow-ups worth tracking even before Ribbon:
-   - **Submenu fly-outs** for MenuItem.Items. The current v1 toggles `IsSubmenuOpen` but the actual right-side popup containing the submenu isn't mounted yet.
-   - **Submenu keyboard navigation** (arrow keys, Enter, Esc to close one level, letter-key accelerators). v1 ships pointer-only.
-   - **Double-click gesture for MouseBinding.** The DoubleClick variants in `MouseGesture` are scaffolded but never match — they need the host adapter to flag PointerEventArgs.IsDoubleClick (a small follow-up in the host pipeline).
-   - **Dynamic Icon / ShowText on ToolBarButton.** v1 reads these DPs at `ToolBarButton.create()` time. Re-stack on `OnPropertyChanged` so authors can flip them dynamically post-construction.
-   - **ToolBar HasOverflowItems styling.** v1 always shows the chevron; trigger a visibility swap when `HasOverflowItems=false`.
+  Surface-control follow-ups (all shipped — see [completed-backlog.md](completed-backlog.md) for the closed entries):
+   - ~~**Submenu fly-outs** for MenuItem.Items.~~ Closed. `MenuItem.IsSubmenuOpen=true` mounts the submenu popup on the OverlayLayer. Positioning honours an `anchorSide: 'below' | 'right'` flag on `MenuPopupHost`: top-level rows in a `MenuStrip` open below; nested rows open to the right (WPF parity).
+   - ~~**Submenu keyboard navigation**~~ Closed. `MenuItem.Focusable=true`; `OnKeyDown` handles Arrow keys, Enter, Space, Escape, and letter accelerators. `KeyEventArgs` now carries a focus sink so handlers can transfer focus via `args.SetFocus(target)`.
+   - ~~**Double-click gesture for MouseBinding.**~~ Closed. `PointerEventInit.IsDoubleClick` flows through the host adapter — `HtmlTarget` classifies consecutive presses within 500 ms / 4 px tolerance and sets the flag on the second one. `dispatchPointer`'s bubble pass now consults `InputBindings` for `PointerDown` (the historic gap), so `MouseBinding(LeftDoubleClick)` fires.
+   - ~~**Dynamic Icon / ShowText on ToolBarButton.**~~ Closed. Added a `Text: string | undefined` DP alongside `Icon` / `ShowText`; flipping any of the three rebuilds the inline `Content` stack via `OnPropertyChanged` (reusing a single per-button `StackPanel` instance so the icon Visual's single-parent invariant holds).
+   - ~~**ToolBar HasOverflowItems styling.**~~ Closed. `OnPropertyChanged('HasOverflowItems')` collapses the chevron Button to `Width=0` when no items overflow; restores to `NaN` (auto) when they do.
 
 5.12. **`Visual.FindAncestorPresentationTarget()`.** WPF has `PresentationSource.FromVisual(v)` so any Visual can find its hosting window / DPI / size from anywhere in the tree. Today consumers walk `GetVisualParent()` manually. From [visual-engine-design.md](src/document/visual-engine-design.md) § 11. Defer until DPI-aware text measurement or similar concretely needs it.
 

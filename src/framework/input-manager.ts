@@ -275,7 +275,7 @@ export class InputManager
     {
         const target = this.focusedVisual;
         if (target === undefined) return false;
-        const args = new KeyEventArgs('KeyDown', target, init);
+        const args = new KeyEventArgs('KeyDown', target, init, this);
         dispatchKey(args);
         return args.Handled;
     }
@@ -284,7 +284,7 @@ export class InputManager
     {
         const target = this.focusedVisual;
         if (target === undefined) return false;
-        const args = new KeyEventArgs('KeyUp', target, init);
+        const args = new KeyEventArgs('KeyUp', target, init, this);
         dispatchKey(args);
         return args.Handled;
     }

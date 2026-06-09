@@ -131,6 +131,15 @@ export interface PointerEventInit
     Pressure: number;
     /** Discriminates input modalities. PointerEvent.pointerType. */
     PointerType: 'mouse' | 'pen' | 'touch' | 'unknown';
+    /** True when the host adapter has identified this PointerDown as
+     *  the second press of a double-click sequence (same button, within
+     *  the host's timing + distance threshold of the previous press).
+     *  Synthetic events that don't supply the flag are treated as
+     *  single clicks (`false`). MouseBinding's *DoubleClick variants
+     *  match exclusively on this flag; the single-click variants
+     *  ignore it (so both clicks of a double-click also fire a single-
+     *  click binding — same dispatch shape as WPF's MouseDown). */
+    IsDoubleClick?: boolean;
 }
 
 // Minimal capture surface exposed on PointerEventArgs. The InputManager
@@ -160,14 +169,15 @@ export interface FocusSink
 // is read-only.
 export class PointerEventArgs extends RoutedEventArgs
 {
-    public readonly HostX:       number;
-    public readonly HostY:       number;
-    public readonly Button:      PointerButton;
-    public readonly Buttons:     number;
-    public readonly Modifiers:   ModifierKeys;
-    public readonly PointerId:   number;
-    public readonly Pressure:    number;
-    public readonly PointerType: PointerEventInit['PointerType'];
+    public readonly HostX:         number;
+    public readonly HostY:         number;
+    public readonly Button:        PointerButton;
+    public readonly Buttons:       number;
+    public readonly Modifiers:     ModifierKeys;
+    public readonly PointerId:     number;
+    public readonly Pressure:      number;
+    public readonly PointerType:   PointerEventInit['PointerType'];
+    public readonly IsDoubleClick: boolean;
 
     // Optional capture + focus hooks. Populated by the InputManager
     // when it dispatches an event; undefined for synthetic events
@@ -186,14 +196,15 @@ export class PointerEventArgs extends RoutedEventArgs
     )
     {
         super(kind, source);
-        this.HostX       = init.HostX;
-        this.HostY       = init.HostY;
-        this.Button      = init.Button;
-        this.Buttons     = init.Buttons;
-        this.Modifiers   = init.Modifiers;
-        this.PointerId   = init.PointerId;
-        this.Pressure    = init.Pressure;
-        this.PointerType = init.PointerType;
+        this.HostX         = init.HostX;
+        this.HostY         = init.HostY;
+        this.Button        = init.Button;
+        this.Buttons       = init.Buttons;
+        this.Modifiers     = init.Modifiers;
+        this.PointerId     = init.PointerId;
+        this.Pressure      = init.Pressure;
+        this.PointerType   = init.PointerType;
+        this.IsDoubleClick = init.IsDoubleClick === true;
         this._captureSink = captureSink;
         this._focusSink   = focusSink;
     }
@@ -307,13 +318,30 @@ export class KeyEventArgs extends RoutedEventArgs
     public readonly Modifiers: ModifierKeys;
     public readonly IsRepeat:  boolean;
 
-    constructor(kind: 'KeyDown' | 'KeyUp', source: Visual, init: KeyEventInit)
+    // Focus sink — same back-channel shape PointerEventArgs uses. Lets
+    // handlers (typically a MenuItem's OnKeyDown moving focus to a
+    // sibling on ArrowDown) transfer focus during event dispatch
+    // without reaching for the host. The InputManager implements it
+    // and passes itself in when constructing the args; synthetic
+    // events from tests that don't drive focus leave it undefined.
+    private readonly _focusSink: FocusSink | undefined;
+
+    constructor(kind: 'KeyDown' | 'KeyUp', source: Visual, init: KeyEventInit, focusSink?: FocusSink)
     {
         super(kind, source);
         this.Key       = init.Key;
         this.Code      = init.Code;
         this.Modifiers = init.Modifiers;
         this.IsRepeat  = init.IsRepeat;
+        this._focusSink = focusSink;
+    }
+
+    /** Transfer keyboard focus to `target` (or to `args.Source` when
+     *  omitted). Silent no-op when the dispatcher didn't supply a
+     *  focus sink (synthetic test events without an InputManager). */
+    public SetFocus(target?: Visual): void
+    {
+        this._focusSink?.SetFocus(target ?? this.Source);
     }
 }
 
@@ -581,6 +609,18 @@ export function dispatchPointer(args: PointerEventArgs): void
         if (args.Handled) return;
         fireRoutedListeners(v, args.Kind, args);
         if (args.Handled) return;
+        // InputBindings consultation — per-instance then per-class.
+        // A MouseBinding whose Gesture (LeftClick / LeftDoubleClick /
+        // …) matches the args fires its Command and marks
+        // args.Handled. Innermost binding wins because the bubble
+        // walk goes source → root and stops on Handled. Bound only
+        // for PointerDown (single-click + double-click sequences fire
+        // on Down; PointerUp / Move don't activate gestures).
+        if (args.Kind === 'PointerDown')
+        {
+            tryFireInputBindings(v, args);
+            if (args.Handled) return;
+        }
     }
 }
 
@@ -669,16 +709,20 @@ export function dispatchKey(args: KeyEventArgs): void
 // which imports Visual — a cycle if routed-event.ts joins the chain).
 // Duck-typed against the function exported by input-binding.ts; the
 // runtime wires it via setInputBindingDispatcher at module init.
-let _inputBindingDispatcher: ((v: Visual, args: KeyEventArgs) => void) | undefined;
+// Accepts either KeyEventArgs (KeyDown path) or PointerEventArgs
+// (PointerDown path) — input-binding.ts's matchesBinding dispatches
+// on which fields are present.
+let _inputBindingDispatcher:
+    ((v: Visual, args: KeyEventArgs | PointerEventArgs) => void) | undefined;
 
 export function _setInputBindingDispatcher(
-    fn: (v: Visual, args: KeyEventArgs) => void,
+    fn: (v: Visual, args: KeyEventArgs | PointerEventArgs) => void,
 ): void
 {
     _inputBindingDispatcher = fn;
 }
 
-function tryFireInputBindings(v: Visual, args: KeyEventArgs): void
+function tryFireInputBindings(v: Visual, args: KeyEventArgs | PointerEventArgs): void
 {
     _inputBindingDispatcher?.(v, args);
 }

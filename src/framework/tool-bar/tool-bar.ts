@@ -95,11 +95,13 @@ export class ToolBar extends ItemsControl
             return p;
         };
 
-        // Build the chevron button — opens the overflow popup. Stays in
-        // the template chrome regardless of overflow; consumers who
-        // care can hook a Style trigger on HasOverflowItems to hide it
-        // when nothing's overflowed. For v1 the chevron remains visible
-        // but its click is a no-op when _overflowedItems is empty.
+        // Build the chevron button — opens the overflow popup. The
+        // chevron collapses to Width=0 when `HasOverflowItems` flips
+        // false (driven by `applyChevronVisibility` from the OnProperty
+        // Changed handler below); when overflow rows reappear the
+        // chevron restores to its natural width. Same Width=0 collapse
+        // pattern the auto-hiding MenuItem columns use — mural has no
+        // Visibility DP, so width is the load-bearing knob.
         this._chevron = new Button();
         const chevronLabel = new TextBlock('⋯');
         chevronLabel.Foreground = Theme.primaryInk;
@@ -153,6 +155,18 @@ export class ToolBar extends ItemsControl
         this._popupHost.popup   = this._popupContainer;
         this._popupHost.AddChild(this._scrim);
         this._popupHost.AddChild(this._popupContainer);
+
+        // Initial chevron visibility — collapsed because Items is empty.
+        this.applyChevronVisibility(this.HasOverflowItems);
+    }
+
+    // Width=0 collapses the chevron flush so the toolbar reads as if
+    // it has no overflow region; restoring sets Width to NaN which the
+    // layout pipeline treats as "auto-size to content" (the chevron
+    // re-measures to its natural glyph + padding width).
+    private applyChevronVisibility(visible: boolean): void
+    {
+        this._chevron.Width = visible ? Number.NaN : 0;
     }
 
     public get IsOverflowOpen():  boolean { return this.get_property_value(ToolBar.IsOverflowOpenKey); }
@@ -230,6 +244,10 @@ export class ToolBar extends ItemsControl
         {
             if (newValue === true) this.mountPopup();
             else                   this.unmountPopup();
+        }
+        if (descriptor.Name === 'HasOverflowItems' && this._chevron !== undefined)
+        {
+            this.applyChevronVisibility(newValue === true);
         }
     }
 

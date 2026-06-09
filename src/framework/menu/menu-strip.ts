@@ -6,6 +6,7 @@ import {
     Size,
     Visual,
     type DrawingContext,
+    type KeyEventArgs,
     type PointerEventArgs,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
@@ -227,6 +228,10 @@ export class MenuItem extends ItemsControl
     constructor()
     {
         super();
+        // Focusable so OnKeyDown receives arrow / Enter / Escape /
+        // letter-accelerator events. Set BEFORE applyDefaultStyle in
+        // case the Style ever wants to read Focusable.
+        this.Focusable = true;
         // applyDefaultStyle resolves Style[TargetType=MenuItem] which
         // sets Template (popup chrome), ItemsPanel (vertical stack),
         // and RowTemplate. ItemsControl.rebuildTemplate Apply()s the
@@ -273,12 +278,14 @@ export class MenuItem extends ItemsControl
         const tpl = this.RowTemplate;
         if (tpl === undefined)
         {
-            throw new Error(
-                'MenuItem.RowTemplate is undefined. Every MenuItem must be ' +
-                'paired with a Style that sets RowTemplate (the default ' +
-                'Style in surface.template.mu sets RowTemplate = ' +
-                '@DefaultMenuItemRow). Did `ensureSurfaceTheme()` run ' +
-                'before construction?');
+            // Transient: a Style swap (e.g. when MenuStrip's
+            // ItemContainerStyle takes effect on container attach) can
+            // briefly clear RowTemplate between unapplying the old
+            // Style's setter and applying the new one. The follow-up
+            // setter re-fires OnPropertyChanged with the new template
+            // and rebuildRow runs again. Leave _rowRoot empty for now;
+            // it'll be re-populated on the next pass.
+            return;
         }
         const inst = tpl.Apply(this);
         this._rowRoot = inst.root;
@@ -425,14 +432,25 @@ export class MenuItem extends ItemsControl
         if (this._popupHost === undefined) return;
         const t = this._lastKnownTarget;
         if (t === undefined) return;
-        // Anchor at our own row so the submenu positions below it.
-        // (Nested-vs-top-level positioning differentiation is a
-        // future-cut concern — MVP opens BELOW in both cases, which
-        // matches MenuStrip's top-level use and is acceptable inline
-        // for nested submenus until the right-anchored layout lands.)
+        // Anchor at our own row. Side selection mirrors WPF menu
+        // convention:
+        //   * Top-level item in a horizontal MenuStrip → submenu below.
+        //   * Nested (inside a ContextMenu / MenuButton popup / parent
+        //     MenuItem's submenu) → submenu to the right.
+        // Detection: the immediate logical parent's class identifies
+        // the host. MenuStrip → horizontal context; anything else
+        // (ContextMenu, MenuButton, MenuItem, anonymous wrappers) →
+        // vertical context.
         if (this._rowRoot !== undefined) this._popupHost.anchor = this._rowRoot;
+        this._popupHost.anchorSide = this.isTopLevelInMenuStrip() ? 'below' : 'right';
         t.AttachOverlay(this._popupHost);
         this._popupMounted = true;
+    }
+
+    private isTopLevelInMenuStrip(): boolean
+    {
+        const parent = this.GetLogicalParent();
+        return parent instanceof MenuStrip;
     }
 
     private unmountSubmenu(): void
@@ -458,9 +476,15 @@ export class MenuItem extends ItemsControl
         const fire = this._pressOriginatedHere && this.IsMouseOver;
         this._pressOriginatedHere = false;
         if (!fire) return;
-        // Click protocol:
-        //   * Has submenu → toggle IsSubmenuOpen
-        //   * No submenu  → flip checkable + fire Command + onActivated
+        this.activate();
+    }
+
+    // Shared activation path called by pointer click AND keyboard
+    // Enter / Space. Mirrors WPF: clicking or pressing Enter on a
+    // checkable item flips IsChecked then fires Command + onActivated;
+    // clicking or pressing Enter on a parent item toggles IsSubmenuOpen.
+    private activate(): void
+    {
         if (this.itemCount() > 0)
         {
             this.IsSubmenuOpen = !this.IsSubmenuOpen;
@@ -487,6 +511,198 @@ export class MenuItem extends ItemsControl
         // Template trigger handles the IsMouseOver visual swap — the
         // template tier knows about the press-originated-here / drag-
         // off behaviour through the IsPressed trigger fading first.
+    }
+
+    // Keyboard navigation. Handles arrow keys, Enter / Space, Escape,
+    // and letter accelerators. WPF parity:
+    //
+    //   * Inside a vertical menu (ContextMenu / MenuButton popup /
+    //     parent submenu): Down/Up move focus between siblings; Right
+    //     opens own submenu; Left closes parent submenu (focus jumps
+    //     back to the parent MenuItem).
+    //   * Top-level item in a horizontal MenuStrip: Right/Left move
+    //     between top-level items; Down opens own submenu and focuses
+    //     the first child.
+    //   * Enter / Space → activate (same path as pointer-click).
+    //   * Escape → close one level (own submenu, or parent's submenu).
+    //   * Single letter → focus the next sibling whose Header starts
+    //     with that letter (case-insensitive, wraps around).
+    protected override OnKeyDown(args: KeyEventArgs): void
+    {
+        if (args.Handled) return;
+        const k = args.Key;
+        const inStrip = this.isTopLevelInMenuStrip();
+
+        if (k === 'ArrowDown')
+        {
+            if (inStrip)
+            {
+                if (this.itemCount() > 0)
+                {
+                    this.IsSubmenuOpen = true;
+                    this.focusFirstSubmenuChild(args);
+                }
+            }
+            else
+            {
+                this.focusSibling(args, +1);
+            }
+            args.Handled = true;
+            return;
+        }
+        if (k === 'ArrowUp')
+        {
+            if (!inStrip) this.focusSibling(args, -1);
+            args.Handled = true;
+            return;
+        }
+        if (k === 'ArrowRight')
+        {
+            if (inStrip)
+            {
+                this.focusSibling(args, +1);
+            }
+            else if (this.itemCount() > 0)
+            {
+                this.IsSubmenuOpen = true;
+                this.focusFirstSubmenuChild(args);
+            }
+            args.Handled = true;
+            return;
+        }
+        if (k === 'ArrowLeft')
+        {
+            if (inStrip)
+            {
+                this.focusSibling(args, -1);
+            }
+            else
+            {
+                // Step out one nesting level: close the parent
+                // MenuItem's submenu and focus the parent. If we're
+                // already at the outermost popup (no parent MenuItem),
+                // do nothing — the user can press Escape to close the
+                // whole chain instead.
+                const parentMI = this.findParentMenuItem();
+                if (parentMI !== undefined)
+                {
+                    parentMI.IsSubmenuOpen = false;
+                    args.SetFocus(parentMI);
+                }
+            }
+            args.Handled = true;
+            return;
+        }
+        if (k === 'Enter' || k === ' ')
+        {
+            this.activate();
+            args.Handled = true;
+            return;
+        }
+        if (k === 'Escape')
+        {
+            if (this.IsSubmenuOpen) this.IsSubmenuOpen = false;
+            const parentMI = this.findParentMenuItem();
+            if (parentMI !== undefined)
+            {
+                parentMI.IsSubmenuOpen = false;
+                args.SetFocus(parentMI);
+            }
+            else
+            {
+                // Top of the menu chain — fire onActivated so the
+                // hosting popup (ContextMenu / MenuButton / MenuStrip)
+                // tears down.
+                this._onActivated?.();
+            }
+            args.Handled = true;
+            return;
+        }
+        // Letter accelerator — single printable character, no modifiers.
+        if (k.length === 1 && /[A-Za-z0-9]/.test(k))
+        {
+            const noMods = !args.Modifiers.Control && !args.Modifiers.Alt && !args.Modifiers.Meta;
+            if (noMods)
+            {
+                this.focusSiblingByLetter(args, k.toUpperCase());
+                args.Handled = true;
+            }
+        }
+    }
+
+    // Find every MenuItem container in the same items panel as `this`
+    // and return them in panel order. Used by all the sibling-walk
+    // helpers below. For top-level MenuStrip items the parent panel is
+    // the MenuStrip's items panel; for nested rows it's the parent
+    // MenuItem / ContextMenu / MenuButton's items panel.
+    private collectSiblings(): MenuItem[]
+    {
+        const panel = this.GetVisualParent();
+        if (panel === undefined) return [this];
+        const out: MenuItem[] = [];
+        for (const c of panel.visualChildren)
+        {
+            if (c instanceof MenuItem) out.push(c);
+        }
+        return out;
+    }
+
+    private focusSibling(args: KeyEventArgs, direction: 1 | -1): void
+    {
+        const siblings = this.collectSiblings();
+        if (siblings.length === 0) return;
+        const idx = siblings.indexOf(this);
+        if (idx < 0) return;
+        const len = siblings.length;
+        const next = siblings[((idx + direction) % len + len) % len]!;
+        args.SetFocus(next);
+    }
+
+    private focusSiblingByLetter(args: KeyEventArgs, upperLetter: string): void
+    {
+        const siblings = this.collectSiblings();
+        if (siblings.length === 0) return;
+        const start = siblings.indexOf(this);
+        // Walk siblings starting AFTER self so successive presses of
+        // the same letter cycle through matching items.
+        for (let off = 1; off <= siblings.length; off++)
+        {
+            const cand = siblings[(start + off) % siblings.length]!;
+            const head = (cand.Header ?? '').trim();
+            if (head.length > 0 && head[0]!.toUpperCase() === upperLetter)
+            {
+                args.SetFocus(cand);
+                return;
+            }
+        }
+    }
+
+    private focusFirstSubmenuChild(args: KeyEventArgs): void
+    {
+        // First MenuItem inside this MenuItem's own items panel. The
+        // panel sits inside the detached popup subtree (`_popupContainer`).
+        const presenter = this._popupContainer?.visualChildren[0];
+        const panel = presenter?.visualChildren[0];
+        if (panel === undefined) return;
+        for (const c of panel.visualChildren)
+        {
+            if (c instanceof MenuItem) { args.SetFocus(c); return; }
+        }
+    }
+
+    // Walk the logical parent chain looking for the enclosing MenuItem
+    // (one level up). Returns undefined when this MenuItem is the
+    // outermost popup row (its logical parent is a MenuStrip /
+    // ContextMenu / MenuButton).
+    private findParentMenuItem(): MenuItem | undefined
+    {
+        let cur: Visual | undefined = this.GetLogicalParent();
+        while (cur !== undefined)
+        {
+            if (cur instanceof MenuItem) return cur;
+            cur = cur.GetLogicalParent();
+        }
+        return undefined;
     }
 }
 
@@ -811,8 +1027,17 @@ export class MenuButton extends ItemsControl
 export class MenuPopupHost extends Panel
 {
     /** Anchor for popup positioning. When set, the popup is laid out
-     *  immediately below the anchor's bottom edge, left-aligned. */
+     *  relative to the anchor according to `anchorSide`. */
     public anchor: Visual | undefined;
+    /** Which side of the anchor the popup sits against:
+     *   * 'below' (default) — popup's top-left aligns with anchor's
+     *     bottom-left. Matches MenuButton triggers and horizontal
+     *     MenuStrip top-level items.
+     *   * 'right'           — popup's top-left aligns with anchor's
+     *     top-right. The conventional submenu-fly-out position for
+     *     MenuItems nested inside a vertical popup (ContextMenu /
+     *     MenuButton popup body / another MenuItem's submenu). */
+    public anchorSide: 'below' | 'right' = 'below';
     /** Fixed-point anchor for ContextMenu (host-coordinates). When set
      *  AND `anchor` is unset, the popup top-left lands at this point. */
     public fixedPoint: { x: number; y: number } | undefined;
@@ -841,9 +1066,20 @@ export class MenuPopupHost extends Panel
         if (this.anchor !== undefined)
         {
             const origin = absoluteOriginOf(this.anchor);
-            const ar = this.anchor.ArrangedRect;
-            px = origin.x;
-            py = origin.y + ar.Height;
+            const ar     = this.anchor.ArrangedRect;
+            if (this.anchorSide === 'right')
+            {
+                // Submenu fly-out: top-left of popup at top-right of
+                // the anchor row.
+                px = origin.x + ar.Width;
+                py = origin.y;
+            }
+            else
+            {
+                // Default: popup directly below the anchor.
+                px = origin.x;
+                py = origin.y + ar.Height;
+            }
         }
         else if (this.fixedPoint !== undefined)
         {

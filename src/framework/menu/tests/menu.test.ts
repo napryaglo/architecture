@@ -1,7 +1,7 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { Application, NoModifiers, Panel, PointerButton, RelayCommand, Size, type PointerEventInit } from '../../../runtime/index.js';
+import { Application, NoModifiers, Panel, PointerButton, RelayCommand, Size, type KeyEventInit, type PointerEventInit } from '../../../runtime/index.js';
 import { InputManager } from '../../../framework/index.js';;
 import { MenuButton, MenuItem, MenuSeparator, MenuStrip } from '../menu-strip.js';
 
@@ -103,5 +103,137 @@ describe('MenuButton', () => {
             ? 0
             : Array.isArray(items) ? items.length : (items as { Count: number }).Count;
         assert.equal(count, 3);
+    });
+});
+
+function keyEvent(key: string, overrides: Partial<KeyEventInit> = {}): KeyEventInit
+{
+    return {
+        Key: key, Code: key,
+        Modifiers: NoModifiers,
+        IsRepeat: false,
+        ...overrides,
+    };
+}
+
+describe('MenuItem — keyboard navigation', () => {
+    beforeEach(() => { Application.current = null; });
+
+    test('Focusable=true so OnKeyDown can receive events', () => {
+        const mi = new MenuItem();
+        assert.equal(mi.Focusable, true);
+    });
+
+    test('Enter on a checkable item flips IsChecked (no submenu path)', () => {
+        const mi = new MenuItem();
+        mi.IsCheckable = true;
+        const im = new InputManager();
+        im.SetFocus(mi);
+        im.InjectKeyDown(keyEvent('Enter'));
+        assert.equal(mi.IsChecked, true);
+        im.InjectKeyDown(keyEvent('Enter'));
+        assert.equal(mi.IsChecked, false);
+    });
+
+    test('Enter fires Command + onActivated', () => {
+        const mi = new MenuItem();
+        let executed = 0;
+        let activated = 0;
+        mi.Command      = new RelayCommand(() => { executed++; });
+        mi._onActivated = (): void => { activated++; };
+        const im = new InputManager();
+        im.SetFocus(mi);
+        im.InjectKeyDown(keyEvent('Enter'));
+        assert.equal(executed, 1);
+        assert.equal(activated, 1);
+    });
+
+    test('ArrowDown moves focus to next sibling in a vertical popup', () => {
+        const popup = new MenuButton();
+        const a = new MenuItem(); a.Header = 'Apple';
+        const b = new MenuItem(); b.Header = 'Banana';
+        const c = new MenuItem(); c.Header = 'Cherry';
+        popup.Items = [a, b, c];
+        const im = new InputManager();
+        im.SetFocus(a);
+        im.InjectKeyDown(keyEvent('ArrowDown'));
+        assert.equal(b.IsFocused, true);
+        im.InjectKeyDown(keyEvent('ArrowDown'));
+        assert.equal(c.IsFocused, true);
+        // Wraps.
+        im.InjectKeyDown(keyEvent('ArrowDown'));
+        assert.equal(a.IsFocused, true);
+    });
+
+    test('ArrowUp walks backwards and wraps', () => {
+        const popup = new MenuButton();
+        const a = new MenuItem(); a.Header = 'Apple';
+        const b = new MenuItem(); b.Header = 'Banana';
+        popup.Items = [a, b];
+        const im = new InputManager();
+        im.SetFocus(a);
+        im.InjectKeyDown(keyEvent('ArrowUp'));
+        assert.equal(b.IsFocused, true, 'wraps from first → last');
+    });
+
+    test('Letter accelerator jumps to the matching sibling (case-insensitive, wraps)', () => {
+        const popup = new MenuButton();
+        const a = new MenuItem(); a.Header = 'Apple';
+        const b = new MenuItem(); b.Header = 'Banana';
+        const c = new MenuItem(); c.Header = 'Cherry';
+        popup.Items = [a, b, c];
+        const im = new InputManager();
+        im.SetFocus(a);
+        im.InjectKeyDown(keyEvent('c'));
+        assert.equal(c.IsFocused, true);
+        // Re-pressing the same letter from C wraps back to A (since C
+        // is the only C-prefix; the walk starts AFTER self).
+        im.InjectKeyDown(keyEvent('b'));
+        assert.equal(b.IsFocused, true);
+    });
+
+    test('ArrowRight on a top-level MenuStrip item walks horizontally; vertical popup item opens submenu', () => {
+        const strip = new MenuStrip();
+        const file = new MenuItem(); file.Header = 'File';
+        const edit = new MenuItem(); edit.Header = 'Edit';
+        strip.Items = [file, edit];
+        const im = new InputManager();
+        im.SetFocus(file);
+        im.InjectKeyDown(keyEvent('ArrowRight'));
+        assert.equal(edit.IsFocused, true);
+
+        // Vertical-popup item with a submenu: Right opens it.
+        const popup = new MenuButton();
+        const parent = new MenuItem(); parent.Header = 'Format';
+        const child  = new MenuItem(); child.Header  = 'Bold';
+        parent.Items = [child];
+        popup.Items  = [parent];
+        const im2 = new InputManager();
+        im2.SetFocus(parent);
+        im2.InjectKeyDown(keyEvent('ArrowRight'));
+        assert.equal(parent.IsSubmenuOpen, true);
+    });
+
+    test('ArrowDown on a top-level MenuStrip item with a submenu opens it', () => {
+        const strip = new MenuStrip();
+        const file = new MenuItem(); file.Header = 'File';
+        const open = new MenuItem(); open.Header = 'Open';
+        file.Items  = [open];
+        strip.Items = [file];
+        const im = new InputManager();
+        im.SetFocus(file);
+        im.InjectKeyDown(keyEvent('ArrowDown'));
+        assert.equal(file.IsSubmenuOpen, true);
+    });
+
+    test('Escape closes own submenu', () => {
+        const mi = new MenuItem();
+        const child = new MenuItem(); child.Header = 'Child';
+        mi.Items = [child];
+        mi.IsSubmenuOpen = true;
+        const im = new InputManager();
+        im.SetFocus(mi);
+        im.InjectKeyDown(keyEvent('Escape'));
+        assert.equal(mi.IsSubmenuOpen, false);
     });
 });

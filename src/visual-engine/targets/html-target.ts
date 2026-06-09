@@ -33,7 +33,12 @@ interface BackrefHost { [VISUAL_BACKREF]?: Visual; }
 // that with PointerButton.None instead of leaking the negative value
 // through the runtime types. `pressure` defaults to 0.5 for non-pressure
 // pointers per the W3C spec — we forward whatever the event carries.
-function pointerInit(e: PointerEvent, hostX: number, hostY: number): PointerEventInit
+function pointerInit(
+    e: PointerEvent,
+    hostX: number,
+    hostY: number,
+    isDoubleClick = false,
+): PointerEventInit
 {
     return {
         HostX: hostX,
@@ -44,8 +49,16 @@ function pointerInit(e: PointerEvent, hostX: number, hostY: number): PointerEven
         PointerId: e.pointerId,
         Pressure: e.pressure,
         PointerType: normalisePointerType(e.pointerType),
+        IsDoubleClick: isDoubleClick,
     };
 }
+
+// Double-click detection thresholds. Standard OS defaults are ~500 ms
+// + 4 px (Windows uses GetDoubleClickTime / GetSystemMetrics SM_CXDOUBLECLK).
+// We don't read those system values here — they're not exposed to web
+// content — but the constants line up with the typical OS feel.
+const DOUBLE_CLICK_INTERVAL_MS = 500;
+const DOUBLE_CLICK_TOLERANCE_PX = 4;
 
 function extractModifiers(e: MouseEvent | KeyboardEvent | WheelEvent): ModifierKeys
 {
@@ -174,6 +187,18 @@ export class HtmlTarget extends PresentationTarget
     // crossings (the browser fires dragleave then dragenter on the
     // new element — the session must stay alive across that pair).
     private osDragSessionActive: boolean = false;
+
+    // Double-click detection state — the host adapter is the source of
+    // truth for `PointerEventArgs.IsDoubleClick` because the browser
+    // doesn't dispatch separate Down events for the second tap of a
+    // platform-native dblclick. Each pointerdown compares button +
+    // time + position against the last recorded press; if all three
+    // are within tolerance the new press is flagged as a double-click
+    // and the timestamp is cleared so a third tap doesn't ALSO match.
+    private lastClickAt:     number = 0;
+    private lastClickX:      number = 0;
+    private lastClickY:      number = 0;
+    private lastClickButton: number = -1;
 
     // Drag overlay — a <g> appended on top of the renderer's scene
     // when a session starts and removed on session end. Mode A
@@ -808,13 +833,49 @@ export class HtmlTarget extends PresentationTarget
 
     // ── Pointer adapters ───────────────────────────────────────────
 
+    // Classify this PointerDown as a double-click if:
+    //   * same button as the previous press
+    //   * within DOUBLE_CLICK_INTERVAL_MS of the previous press
+    //   * within DOUBLE_CLICK_TOLERANCE_PX of the previous position
+    // On a positive match the timestamp is cleared so a third press
+    // doesn't ALSO match — only the immediate next press would qualify
+    // for another double-click sequence (i.e. clicks 3-4 could pair).
+    // On a negative match the new press's stats are recorded so it can
+    // become the first half of the NEXT double-click.
+    private classifyDoubleClick(e: PointerEvent, hostX: number, hostY: number): boolean
+    {
+        const now = e.timeStamp;
+        const dt  = now - this.lastClickAt;
+        const dx  = hostX - this.lastClickX;
+        const dy  = hostY - this.lastClickY;
+        const sameButton = e.button === this.lastClickButton;
+        const inTime     = dt > 0 && dt <= DOUBLE_CLICK_INTERVAL_MS;
+        const inDist     =
+            Math.abs(dx) <= DOUBLE_CLICK_TOLERANCE_PX &&
+            Math.abs(dy) <= DOUBLE_CLICK_TOLERANCE_PX;
+        if (sameButton && inTime && inDist)
+        {
+            this.lastClickAt = 0;
+            return true;
+        }
+        this.lastClickAt     = now;
+        this.lastClickX      = hostX;
+        this.lastClickY      = hostY;
+        this.lastClickButton = e.button;
+        return false;
+    }
+
     private handlePointer(
         phase: 'move' | 'down' | 'up' | 'leave',
         e: PointerEvent,
     ): void
     {
         const { hostX, hostY } = this.toHostCoords(e);
-        const init = pointerInit(e, hostX, hostY);
+        // Double-click detection — only meaningful for the `down`
+        // phase. We classify BEFORE building the init record so the
+        // flag flows straight through.
+        const isDoubleClick = phase === 'down' && this.classifyDoubleClick(e, hostX, hostY);
+        const init = pointerInit(e, hostX, hostY, isDoubleClick);
         if (phase === 'leave')
         {
             this.InputManager.InjectPointerLeave(init);
