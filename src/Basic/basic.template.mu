@@ -393,6 +393,12 @@ resources BasicTheme {
                 BorderBrush     = @Outline,
                 BorderThickness = (1),
                 CornerRadius    = @ShapeExtraSmall ]{
+            // SpinEdit isn't focusable itself; IsEditFocused /
+            // IsEditHovered mirror the INNER TextBox's state via DPs
+            // forwarded in SpinEdit's ctor. Hover tints the outline
+            // toward OnSurface; focus paints it Primary (the Material
+            // Outlined "active field" look). Default falls through to
+            // the @Outline already on the Border.
             DockPanel{
                 Border x:name="PART_ButtonColumn"
                       [ DockPanel.Dock  = Right,
@@ -425,6 +431,8 @@ resources BasicTheme {
                 TextBox x:name="PART_TextBox"
             }
         }
+        when ( IsEditHovered ) { PART_Border.BorderBrush = @OnSurface; }
+        when ( IsEditFocused ) { PART_Border.BorderBrush = @Primary; }
     }
     Style [TargetType=SpinEdit] {
         Template = @DefaultSpinEdit;

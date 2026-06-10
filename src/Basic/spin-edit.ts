@@ -13,7 +13,6 @@ import type { Border } from './border.js';
 import { ClickableBorder } from '../framework/list/combo-box.js';
 import { defaultTemplate, ensureControlsTheme } from './default-resources.js';
 import { TextBox } from './text-box.js';
-import { Theme } from './theme.js';
 
 // Resource-dictionary key — matches the `x:key` literal in
 // controls.template.mu's DefaultSpinEdit entry.
@@ -81,6 +80,20 @@ export class SpinEdit extends Visual
     public static readonly LargeChangeKey   = Model.RegisterProperty<number>( SpinEdit, 'LargeChange',   10,                 MetaData.None);
     public static readonly DecimalPlacesKey = Model.RegisterProperty<number>( SpinEdit, 'DecimalPlaces', 0,                  MetaData.None);
     public static readonly IsReadOnlyKey    = Model.RegisterProperty<boolean>(SpinEdit, 'IsReadOnly',    false,              MetaData.None);
+
+    public get IsEditFocused(): boolean { return this.get_property_value(SpinEdit.IsEditFocusedKey); }
+    public get IsEditHovered(): boolean { return this.get_property_value(SpinEdit.IsEditHoveredKey); }
+    // Surface the inner TextBox's IsFocused / IsMouseOver onto SpinEdit
+    // itself so the DefaultSpinEdit template can trigger on these to
+    // swap PART_Border.BorderBrush — no imperative refreshChrome
+    // routine reaching into the inner TextBox. The forwarding listeners
+    // wired in the ctor keep these DPs synced.
+    private static readonly _IsEditFocusedPriv = Model.RegisterReadOnlyProperty<boolean>(
+        SpinEdit, 'IsEditFocused', false, MetaData.None);
+    public  static readonly IsEditFocusedKey  = SpinEdit._IsEditFocusedPriv;
+    private static readonly _IsEditHoveredPriv = Model.RegisterReadOnlyProperty<boolean>(
+        SpinEdit, 'IsEditHovered', false, MetaData.None);
+    public  static readonly IsEditHoveredKey  = SpinEdit._IsEditHoveredPriv;
 
     static {
         Model.OverrideMetadata(SpinEdit, Visual.DefaultStyleKeyKey, { default_value: SpinEdit });
@@ -150,18 +163,24 @@ export class SpinEdit extends Visual
             this.step(-1, 'small');
         };
 
-        // ── Chrome reacts to the INNER TextBox's focus / hover ─────
-        // SpinEdit itself isn't focusable — focus lives on the composed
-        // TextBox. Drive the outer border brush off the TextBox's flags
-        // so clicking into the value text turns the outline blue.
-        const refreshChrome = (): void => {
-            if (this._textBox.IsFocused)        this._border.BorderBrush = Theme.fieldBorderOpen;
-            else if (this._textBox.IsMouseOver) this._border.BorderBrush = Theme.fieldText;
-            else                                this._border.BorderBrush = Theme.fieldBorder;
+        // ── Inner TextBox focus / hover forwarded as own DPs ───────
+        // SpinEdit isn't focusable itself — focus lives on the composed
+        // TextBox. Surface that state as IsEditFocused / IsEditHovered
+        // on SpinEdit so the DefaultSpinEdit template can trigger on
+        // them to swap PART_Border.BorderBrush (see basic.template.mu).
+        // No imperative `_border.BorderBrush =` writes from this class.
+        const forwardFocus = (): void =>
+        {
+            this.set_property_value_with_key(SpinEdit._IsEditFocusedPriv, this._textBox.IsFocused);
         };
-        this._textBox.AddPropertyChangedListener(Visual.IsFocusedKey,   refreshChrome);
-        this._textBox.AddPropertyChangedListener(Visual.IsMouseOverKey, refreshChrome);
-        refreshChrome();
+        const forwardHover = (): void =>
+        {
+            this.set_property_value_with_key(SpinEdit._IsEditHoveredPriv, this._textBox.IsMouseOver);
+        };
+        this._textBox.AddPropertyChangedListener(Visual.IsFocusedKey,   forwardFocus);
+        this._textBox.AddPropertyChangedListener(Visual.IsMouseOverKey, forwardHover);
+        forwardFocus();
+        forwardHover();
 
         // ── Text <-> Value plumbing ─────────────────────────────────
         // Initial sync of the display from the default Value.
