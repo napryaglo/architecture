@@ -6,7 +6,7 @@
 // flips every dependent template through the `@key` DynamicResource
 // bindings.
 
-resources DarkPalette {
+scheme MaterialDark against Material {
 
     // ── Primary tier ────────────────────────────────────────────────
     @Primary              = #D0BCFF

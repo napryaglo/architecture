@@ -1,9 +1,14 @@
 import { Color, Theme, ThemeManager, defineScheme, defineTheme } from '../../runtime/index.js';
 import type { ResourceDictionary, Scheme, TokenCatalog } from '../../runtime/index.js';
 import { MaterialElevationEffect, SolidColorBrush } from '../../visual-engine/index.js';
-import { LightPalette } from '../../../build/framework/material/light.mu.js';
-import { DarkPalette }  from '../../../build/framework/material/dark.mu.js';
-import { Typography }   from '../../../build/framework/material/typography.mu.js';
+// The palette files are now compiled via the new `scheme NAME against
+// Material { … }` grammar — they emit `Scheme` value objects, not
+// `ResourceDictionary` subclasses. Typography stays as a
+// scheme-agnostic ResourceDictionary (Typography styles are
+// applied per-target, not consumed as @-tokens).
+import { MaterialLight } from '../../../build/framework/material/light.mu.js';
+import { MaterialDark }  from '../../../build/framework/material/dark.mu.js';
+import { Typography }    from '../../../build/framework/material/typography.mu.js';
 
 // Material 3 theme registration for µ-mural.
 //
@@ -151,15 +156,18 @@ function elevationTokens(): Map<string, unknown>
     return m;
 }
 
-// Build the Scheme value object for one palette + optional extras
-// (Typography + Elevation merged in so every token in the catalog is
-// covered). Used once per scheme at module load.
-function buildScheme(name: MaterialThemeName, palette: ResourceDictionary): Scheme
+// Compose a runtime-ready Scheme for the active theme: the palette
+// scheme (compiled from light.mu / dark.mu) supplies most tokens;
+// Typography (a scheme-agnostic ResourceDictionary) and Elevation
+// (runtime Effect objects that can't be expressed in .mu) get merged
+// on top so every token in the catalog is covered. Used once per
+// scheme at module load.
+function composeScheme(name: MaterialThemeName, palette: Scheme): Scheme
 {
     const tokens = new Map<string, unknown>();
     // Order matters where keys overlap, but palette / typography /
     // elevation never share keys in practice. Last-write-wins is fine.
-    for (const [k, v] of tokensFromDict(palette))                 tokens.set(k, v);
+    for (const [k, v] of palette.tokens)                          tokens.set(k, v);
     for (const [k, v] of tokensFromDict(Typography.Clone()))      tokens.set(k, v);
     for (const [k, v] of elevationTokens())                       tokens.set(k, v);
     // Selection / marquee defaults — same in both schemes for now;
@@ -189,8 +197,8 @@ function ensureRegistered(): Theme
 {
     if (_theme !== undefined) return _theme;
 
-    const light = buildScheme('light', LightPalette.Clone());
-    const dark  = buildScheme('dark',  DarkPalette.Clone());
+    const light = composeScheme('light', MaterialLight);
+    const dark  = composeScheme('dark',  MaterialDark);
 
     _theme = defineTheme({
         name:           'material',

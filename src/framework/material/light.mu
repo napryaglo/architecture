@@ -15,7 +15,7 @@
 // runtime (e.g. trigger-driven Background swaps) read it back through
 // the same dictionary lookup, so identity is preserved across uses.
 
-resources LightPalette {
+scheme MaterialLight against Material {
 
     // ── Primary tier ────────────────────────────────────────────────
     @Primary              = #6750A4

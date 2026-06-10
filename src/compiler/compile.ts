@@ -42,9 +42,16 @@ export interface CompileResult
      *  — exposed for tooling that wants to introspect or post-process. */
     imports: Map<string, Set<string>>;
     /** For `kind === 'resources'`: metadata for each `resources NAME { … }`
-     *  block in the source — class name, imported aliases, and the
-     *  x:name'd resource property pairs the `.d.ts` companion declares. */
+     *  AND each `theme NAME { … }` block in the source — class name,
+     *  imported aliases, and the x:name'd resource property pairs the
+     *  `.d.ts` companion declares. */
     resourcesBlocks?: ResourcesBlockMeta[];
+    /** Names of any `theme NAME { … }` blocks. Drives the `.d.ts`
+     *  emitter to also declare the sibling `NAMECatalog` const. */
+    themeNames?:     string[];
+    /** Names of any `scheme NAME against … { … }` blocks. Drives the
+     *  `.d.ts` emitter to declare `export const NAME: Scheme`. */
+    schemeNames?:    string[];
 }
 
 export interface ResourcesBlockMeta
@@ -111,6 +118,8 @@ export function compile(source: string, options: CompilerOptions = {}): CompileR
         exportName:      out.exportName,
         imports:         out.imports,
         resourcesBlocks: out.resourcesBlocks,
+        themeNames:      out.themeNames,
+        schemeNames:     out.schemeNames,
     };
 }
 

@@ -136,10 +136,17 @@ export interface CompilerOutput
      *  so this carries the empty string; callers should branch on `kind`. */
     exportName:       'app' | 'create' | '';
     /** For `kind === 'resources'`: one entry per `resources NAME { … }`
-     *  block in the source, carrying the class name and the typed
-     *  property metadata the `.d.ts` emitter wants. Empty / absent for
-     *  the other kinds. */
+     *  block AND per `theme NAME { … }` block (themes ride the same
+     *  ResourceDictionary subclass shape). Empty / absent for the
+     *  other kinds. */
     resourcesBlocks?: ResourcesBlockMeta[];
+    /** Names of any `theme NAME { … }` blocks in the source. Used by
+     *  the `.d.ts` emitter to also declare the sibling `NAMECatalog`
+     *  const each theme produces. */
+    themeNames?:     string[];
+    /** Names of any `scheme NAME against THEME { … }` blocks. Used by
+     *  the `.d.ts` emitter to declare `export const NAME: Scheme`. */
+    schemeNames?:    string[];
 }
 
 export interface ResourcesBlockMeta
@@ -375,6 +382,8 @@ export class Compiler
                 isApplication:    false,
                 exportName:       '',
                 resourcesBlocks:  metas,
+                themeNames:       themeBlocks.map(b => b.name),
+                schemeNames:      schemeBlocks.map(b => b.name),
             };
         }
 

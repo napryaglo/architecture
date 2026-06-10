@@ -96,7 +96,9 @@ function formatDts(out: CompileResult): string
 {
     if (out.kind === 'resources')
     {
-        const blocks = out.resourcesBlocks ?? [];
+        const blocks      = out.resourcesBlocks ?? [];
+        const themeNames  = new Set(out.themeNames  ?? []);
+        const schemeNames = out.schemeNames ?? [];
         // Collect type symbols referenced by accessors so the `.d.ts`
         // can import them. Group by source module via the same
         // imports map the `.mu.js` uses — the build pipeline already
@@ -124,6 +126,14 @@ function formatDts(out: CompileResult): string
             s.add(sym);
         };
         ensureType('ResourceDictionary', '@visualisation-sub/mural/runtime');
+        if (themeNames.size > 0)
+        {
+            ensureType('TokenCatalog', '@visualisation-sub/mural/runtime');
+        }
+        if (schemeNames.length > 0)
+        {
+            ensureType('Scheme', '@visualisation-sub/mural/runtime');
+        }
         for (const t of accessorTypes)
         {
             const mod = symbolToModule.get(t);
@@ -152,6 +162,17 @@ function formatDts(out: CompileResult): string
             }
             lines.push(`}`);
             declarations.push(lines.join('\n'));
+        }
+        // Theme catalogs — one sibling const per `theme NAME { … }` block.
+        for (const name of themeNames)
+        {
+            declarations.push(`export declare const ${name}Catalog: TokenCatalog;`);
+        }
+        // Scheme exports — one const per `scheme NAME against … { … }`
+        // block.
+        for (const name of schemeNames)
+        {
+            declarations.push(`export declare const ${name}: Scheme;`);
         }
         return headerLines.join('\n') + '\n\n' + declarations.join('\n\n') + '\n';
     }
