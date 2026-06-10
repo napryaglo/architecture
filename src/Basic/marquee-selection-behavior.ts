@@ -48,10 +48,15 @@ import { MarqueeBoundsPolicy, SelectionMode, Selector } from '../framework/list/
 //   * Contained           — item must be FULLY INSIDE the marquee
 //                            (Finder).
 
-const MARQUEE_FILL   = new SolidColorBrush(Color.FromHex('#3699cc33'));
-const MARQUEE_STROKE = (() => {
+// Fallback brushes used only when no theme has registered @MarqueeFill
+// / @MarqueeStroke tokens. The active theme's scheme provides these
+// (see material/light.mu, dark.mu); the adorner reads them via
+// TryFindResource at render time so theme swaps re-paint live.
+const FALLBACK_FILL   = new SolidColorBrush(Color.FromHex('#3699cc33'));
+const FALLBACK_STROKE = new SolidColorBrush(Color.FromHex('#3699cc'));
+const FALLBACK_PEN: Pen = (() => {
     const p = new Pen();
-    p.Brush     = new SolidColorBrush(Color.FromHex('#3699cc'));
+    p.Brush     = FALLBACK_STROKE;
     p.Thickness = 1;
     return p;
 })();
@@ -91,8 +96,32 @@ class MarqueeAdorner extends Adorner
     {
         const s = this.RenderSize;
         if (s.Width <= 0 || s.Height <= 0) return;
-        dc.DrawRectangle(MARQUEE_FILL, MARQUEE_STROKE, new Rect(0, 0, s.Width, s.Height));
+        // Theme-driven brushes — resolve via the resource chain so a
+        // SetTheme() swap re-paints on next render. Falls back to the
+        // built-in cyan when no theme has registered the tokens (e.g.
+        // bare tests).
+        const fill = (this.TryFindResource('MarqueeFill')   as SolidColorBrush | undefined) ?? FALLBACK_FILL;
+        const strokeBrush = this.TryFindResource('MarqueeStroke') as SolidColorBrush | undefined;
+        const pen = strokeBrush !== undefined ? buildPen(strokeBrush) : FALLBACK_PEN;
+        dc.DrawRectangle(fill, pen, new Rect(0, 0, s.Width, s.Height));
     }
+}
+
+// One Pen instance per stroke brush identity, cached so repeated
+// renders don't allocate. Keyed by Brush identity — when SetTheme
+// swaps the underlying brush, the next render builds a fresh Pen.
+const _penCache = new WeakMap<SolidColorBrush, Pen>();
+function buildPen(brush: SolidColorBrush): Pen
+{
+    let p = _penCache.get(brush);
+    if (p === undefined)
+    {
+        p = new Pen();
+        p.Brush     = brush;
+        p.Thickness = 1;
+        _penCache.set(brush, p);
+    }
+    return p;
 }
 
 // Sum ArrangedRect.X / .Y from `v` up to but not including `stop` —

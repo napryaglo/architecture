@@ -61,7 +61,8 @@ resources DarkPalette {
     @InversePrimary       = #6750A4
 
     // ── Scrim / shadow tint ─────────────────────────────────────────
-    @Scrim                = #000000
+    // See light.mu for the @Scrim contract — 50% black for now.
+    @Scrim                = #00000080
     @Shadow               = #000000
 
     // ── State-layer overlay colours ─────────────────────────────────
@@ -82,4 +83,11 @@ resources DarkPalette {
 
     // ── Typography family (identical across schemes) ────────────────
     @FontFamily           = "system-ui, sans-serif"
+
+    // ── Selection / marquee colors ──────────────────────────────────
+    // See light.mu for the consumer wiring. Dark-mode keeps the same
+    // M3 cyan accent for now; can specialise later if M3 publishes a
+    // dark-specific accent for marquee tooling.
+    @MarqueeFill          = #3699cc33
+    @MarqueeStroke        = #3699cc
 }

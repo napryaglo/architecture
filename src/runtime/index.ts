@@ -140,6 +140,20 @@ export {
 export { observe_array, subscribe_array, is_observed_array } from './observable-array.js';
 export { Point, Size, Rect, Color, Matrix, Thickness } from './primitives.js';
 export { CornerRadius } from './corner-radius.js';
+export {
+    Scheme,
+    Theme,
+    ThemeManager,
+    defineScheme,
+    defineTheme,
+    type ActivateThemeOptions,
+    type AutoSchemeOptions,
+    type SchemeOptions,
+    type ThemeOptions,
+    type TokenCatalog,
+    type TokenSpec,
+    type TokenType,
+} from './theme.js';
 export { type DrawingContext } from './drawing-context.js';
 export {
     ApproximateTextMeasurer,

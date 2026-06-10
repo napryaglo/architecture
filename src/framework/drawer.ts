@@ -50,12 +50,13 @@ export enum DrawerVariant
     Temporary  = 'Temporary',
 }
 
-// Material default scrim — 50% black overlay (A=128 in the 0..255
-// channel space). The pane's resting palette ships in
-// `drawer.template.mu`; the scrim brush stays in code because it's a
-// DP default (consumer-overridable via `ScrimBrush=…`) rather than
-// markup-side styling.
-const DEFAULT_SCRIM = new SolidColorBrush(new Color(0, 0, 0, 128));
+// Fallback scrim — 50% black overlay. Used only when neither the
+// consumer-set Drawer.ScrimBrush nor the active theme's `@Scrim` token
+// resolve. Real production code always has the active theme provide a
+// scrim brush via the resource chain (see material/light.mu, dark.mu);
+// this constant covers the bare-test case where no theme has been
+// activated.
+const FALLBACK_SCRIM = new SolidColorBrush(new Color(0, 0, 0, 128));
 
 // Scrim — covers the whole overlay slot under the pane and dismisses
 // the drawer when the user clicks anywhere off-pane. Press-here-release-
@@ -177,7 +178,11 @@ export class Drawer extends Control
     public static readonly IsOpenKey     = Model.RegisterProperty<boolean>(          Drawer, 'IsOpen',     false,                    MetaData.Measure | MetaData.Arrange);
     public static readonly DrawerSizeKey = Model.RegisterProperty<number>(           Drawer, 'DrawerSize', 280,                      MetaData.Measure | MetaData.Arrange);
     public static readonly RailSizeKey   = Model.RegisterProperty<number>(           Drawer, 'RailSize',   0,                        MetaData.Measure | MetaData.Arrange);
-    public static readonly ScrimBrushKey = Model.RegisterProperty<Brush | undefined>(Drawer, 'ScrimBrush', DEFAULT_SCRIM,            MetaData.Render);
+    // ScrimBrush — undefined by default; the scrim render path falls
+    // back to the active theme's `@Scrim` token, then to FALLBACK_SCRIM
+    // (50% black) when no theme is active. Consumers can still pin the
+    // brush explicitly via the DP.
+    public static readonly ScrimBrushKey = Model.RegisterProperty<Brush | undefined>(Drawer, 'ScrimBrush', undefined,                MetaData.Render);
     public static readonly ContentKey    = Model.RegisterProperty<Visual | undefined>(Drawer, 'Content',   undefined,                MetaData.Measure);
 
     static {
@@ -286,6 +291,19 @@ export class Drawer extends Control
     private fireClosed(): void
     {
         for (const l of this._closedListeners) l();
+    }
+
+    // Resolve the effective scrim brush. Lookup order:
+    //   1. Drawer.ScrimBrush DP (consumer-pinned) — caller already
+    //      preferred this before calling resolveScrim, so callers pass
+    //      `undefined` here only when they want the theme fallback.
+    //   2. Active theme's `@Scrim` token via the resource chain.
+    //   3. FALLBACK_SCRIM (50% black) for bare-test cases without a
+    //      theme.
+    private resolveScrim(): Brush
+    {
+        const themed = this.TryFindResource('Scrim') as Brush | undefined;
+        return themed ?? FALLBACK_SCRIM;
     }
 
     // ── Tree exposure ───────────────────────────────────────────────
@@ -403,7 +421,7 @@ export class Drawer extends Control
                 this._overlayHost  = overlayInst.root as TemporaryOverlayHost;
                 this._scrim        = overlayInst.root.FindName('PART_Scrim') as ScrimSurface;
                 this._overlayHost.drawer = this;
-                this._scrim.Background = this.ScrimBrush ?? DEFAULT_SCRIM;
+                this._scrim.Background = this.resolveScrim();
                 this._scrim.onClick = (): void =>
                 {
                     // User-initiated dismissal: flip IsOpen and tell
@@ -500,7 +518,7 @@ export class Drawer extends Control
             case 'ScrimBrush':
                 if (this._scrim !== undefined)
                 {
-                    this._scrim.Background = (newValue as Brush | undefined) ?? DEFAULT_SCRIM;
+                    this._scrim.Background = (newValue as Brush | undefined) ?? this.resolveScrim();
                 }
                 break;
         }

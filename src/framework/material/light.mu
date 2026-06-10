@@ -73,7 +73,13 @@ resources LightPalette {
     @InversePrimary       = #D0BCFF
 
     // ── Scrim / shadow tint ─────────────────────────────────────────
-    @Scrim                = #000000
+    // Scrim is the modal-overlay tint behind drawers, dialogs, and
+    // bottom sheets. Consumed by Drawer (and others) at render time as
+    // a finished Brush — alpha is baked in, not separately applied.
+    // M3 spec is 32% black; mural's historical default was 50% to read
+    // through theme-tinted surfaces. Keeping 50% (#80) for parity until
+    // we adopt the M3 32% (#52) deliberately.
+    @Scrim                = #00000080
     @Shadow               = #000000
 
     // ── State-layer overlay colours ─────────────────────────────────
@@ -104,4 +110,12 @@ resources LightPalette {
     // at Application.Resources level (or merge a custom dict) and the
     // change reaches every TextBlock via Theme.fontFamily.
     @FontFamily           = "system-ui, sans-serif"
+
+    // ── Selection / marquee colors ──────────────────────────────────
+    // Consumed by MarqueeSelectionBehavior at adorner-render time via
+    // TryFindResource — swapping the active scheme re-paints the
+    // marquee rectangle live. Light-mode uses the same M3 cyan accent
+    // as the historical hardcoded constants.
+    @MarqueeFill          = #3699cc33
+    @MarqueeStroke        = #3699cc
 }
