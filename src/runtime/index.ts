@@ -149,6 +149,7 @@ export {
     type ActivateThemeOptions,
     type AutoSchemeOptions,
     type SchemeOptions,
+    type SchemeTransition,
     type ThemeOptions,
     type TokenCatalog,
     type TokenSpec,

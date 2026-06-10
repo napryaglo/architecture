@@ -348,3 +348,30 @@ describe('ThemeManager — activation', () => {
         reset();
     });
 });
+
+describe('ThemeManager — SchemeTransition surface', () => {
+    test('SchemeTransition is undefined by default', () => {
+        reset();
+        assert.equal(ThemeManager.Current.SchemeTransition, undefined);
+        assert.equal(ThemeManager.Current.EffectiveSchemeTransition, undefined);
+        reset();
+    });
+
+    test('Setter stores the config; getter returns it unchanged', () => {
+        reset();
+        const cfg = { duration: 200, tokens: 'brushes-only' as const };
+        ThemeManager.Current.SchemeTransition = cfg;
+        assert.equal(ThemeManager.Current.SchemeTransition, cfg);
+        reset();
+    });
+
+    test('EffectiveSchemeTransition returns the configured transition normally', () => {
+        reset();
+        freshApp();
+        ThemeManager.Current.SchemeTransition = { duration: 200 };
+        // No PrefersReducedMotion DP on a fresh root → effective = configured.
+        assert.deepEqual(ThemeManager.Current.EffectiveSchemeTransition,
+                         { duration: 200 });
+        reset();
+    });
+});

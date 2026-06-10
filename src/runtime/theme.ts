@@ -206,6 +206,28 @@ export interface AutoSchemeOptions
     listen: boolean;
 }
 
+// Opt-in animation policy for scheme swaps. When set, Brush-typed
+// tokens animate from their previous values to the new ones at the
+// configured duration / easing; non-animatable token types
+// (CornerRadius, number, Effect, …) snap regardless. Honours
+// PrefersReducedMotion — when the ambient DP is true, every swap
+// snaps.
+//
+// API surface only in v1 — the actual animation hook (a
+// SolidColorBrushAnimation install at the DynamicResource level) is a
+// follow-up. The property accepts and stores the config today so
+// consumers can wire it now; transitions land in a later commit.
+export interface SchemeTransition
+{
+    /** Animation length in milliseconds. */
+    duration: number;
+    /** Easing curve. Picks any of mural's standard easings. */
+    easing?:  unknown;
+    /** Which token types to animate. `'brushes-only'` is the default
+     *  and only fully-supported value today. */
+    tokens?:  'all' | 'brushes-only' | 'none';
+}
+
 // Singleton service. One ThemeManager per process — bound to whichever
 // Application is current. Activation pushes resources into
 // Application.current.Resources; if the current Application changes
@@ -405,6 +427,31 @@ export class ThemeManager
     {
         const v = this.rootVisual();
         return v !== undefined ? GetPrefersColorScheme(v) : PreferredScheme.NoPreference;
+    }
+
+    // ── Scheme transitions ────────────────────────────────────────────
+    //
+    // Opt-in animation policy applied to ActivateScheme. Setting this
+    // to a SchemeTransition object expresses intent — the actual
+    // animation install at the DynamicResource layer is a follow-up
+    // (the API surface ships now so consumers can wire their preferred
+    // duration / easing without further code changes when the tween
+    // lands). When undefined (default), all scheme swaps snap.
+    private _schemeTransition: SchemeTransition | undefined;
+
+    public get SchemeTransition(): SchemeTransition | undefined { return this._schemeTransition; }
+    public set SchemeTransition(v: SchemeTransition | undefined) { this._schemeTransition = v; }
+
+    /** Effective transition for the next scheme swap. Returns
+     *  `undefined` when no transition was configured OR when the
+     *  active PrefersReducedMotion DP is true (a11y override). The
+     *  DynamicResource integration consults this before deciding
+     *  whether to animate or snap a particular token swap. */
+    public get EffectiveSchemeTransition(): SchemeTransition | undefined
+    {
+        if (this._schemeTransition === undefined) return undefined;
+        if (this.PrefersReducedMotion)            return undefined;
+        return this._schemeTransition;
     }
 
     /** Activate a Theme by name. Optionally specify a starting Scheme;
