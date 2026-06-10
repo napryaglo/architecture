@@ -57,8 +57,13 @@ resources BasicTheme {
                                     Padding         = (24,10,24,10)]{
             ContentPresenter
         }
-        when ( IsMouseOver ) { PART_Border.Background = @PrimaryHover; }
-        when ( IsPressed   ) { PART_Border.Background = @PrimaryPress; }
+        when ( IsMouseOver )           { PART_Border.Background = @PrimaryHover; }
+        when ( IsPressed   )           { PART_Border.Background = @PrimaryPress; }
+        // Adaptive layout — Compact tightens, Comfortable loosens,
+        // Coarse pointer bumps the touch target.
+        when ( Density = Compact )     { PART_Border.Padding = (16,6,16,6); }
+        when ( Density = Comfortable ) { PART_Border.Padding = (28,12,28,12); }
+        when ( Pointer = Coarse )      { PART_Border.Padding = (24,14,24,14); }
     }
 
     // Elevated — surface-tinted base, primary text, elevation 1 at
@@ -103,8 +108,14 @@ resources BasicTheme {
                                     Padding         = (23,9,23,9)]{
             ContentPresenter
         }
-        when ( IsMouseOver ) { PART_Border.Background = @SurfaceContainerLow; }
-        when ( IsPressed   ) { PART_Border.Background = @SurfaceContainerHigh; }
+        when ( IsMouseOver )            { PART_Border.Background     = @SurfaceContainerLow; }
+        when ( IsPressed   )            { PART_Border.Background     = @SurfaceContainerHigh; }
+        when ( Density = Compact )      { PART_Border.Padding        = (15,5,15,5); }
+        when ( Density = Comfortable )  { PART_Border.Padding        = (27,11,27,11); }
+        when ( Pointer = Coarse )       { PART_Border.Padding        = (23,13,23,13); }
+        // High-contrast a11y — thicker outline so the chrome reads
+        // even when the surface tint is muted.
+        when ( PrefersContrast = More ) { PART_Border.BorderThickness = (2); }
     }
 
     // Text — fully transparent base, no chrome at rest. Hover / press

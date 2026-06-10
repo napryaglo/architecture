@@ -289,11 +289,16 @@ resources SurfaceTheme {
                 Padding         = (12,8,12,8) ] {
             ContentPresenter
         }
-        when ( IsMouseOver )       { PART_Border.Background  = @StateHoverOverlay; }
-        when ( IsPressed )         { PART_Border.Background  = @StatePressOverlay; }
-        when ( Position = Only  )  { PART_Border.CornerRadius = CornerRadius.Full; }
-        when ( Position = First )  { PART_Border.CornerRadius = CornerRadius.LeftRounded; }
-        when ( Position = Last  )  { PART_Border.CornerRadius = CornerRadius.RightRounded; }
+        when ( IsMouseOver )           { PART_Border.Background   = @StateHoverOverlay; }
+        when ( IsPressed )             { PART_Border.Background   = @StatePressOverlay; }
+        when ( Position = Only  )      { PART_Border.CornerRadius = CornerRadius.Full; }
+        when ( Position = First )      { PART_Border.CornerRadius = CornerRadius.LeftRounded; }
+        when ( Position = Last  )      { PART_Border.CornerRadius = CornerRadius.RightRounded; }
+        // Adaptive layout — tighter in Compact, larger touch target
+        // on coarse-pointer devices.
+        when ( Density = Compact )     { PART_Border.Padding = (8,4,8,4); }
+        when ( Density = Comfortable ) { PART_Border.Padding = (16,10,16,10); }
+        when ( Pointer = Coarse )      { PART_Border.Padding = (16,14,16,14); }
     }
 
     Style [TargetType=ToolBarButton] {
