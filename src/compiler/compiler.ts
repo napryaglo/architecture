@@ -86,6 +86,7 @@ import {
     DEFAULT_SLOT_INFO,
     ENUM_MEMBERS,
     PROPERTY_TO_ENUM,
+    STATIC_MEMBERS,
     type SymbolMap,
     type SlotInfo,
 } from './symbol-table.js';
@@ -2577,6 +2578,35 @@ export class Compiler
         if (name === 'Infinity')  return 'Infinity';
         if (name === '-Infinity') return '-Infinity';
         if (name === 'NaN')       return 'NaN';
+        // 1c. Dotted static-member reference — `Type.Member`. The parser
+        //     produces these in any value position (resource RHS,
+        //     attribute RHS, tuple element, …). The head must be a known
+        //     PascalCase symbol AND have an entry in STATIC_MEMBERS that
+        //     lists the tail. We don't fall back to "emit whatever and
+        //     trust runtime" — an unknown tail would silently resolve to
+        //     `undefined` at runtime and poison the host DP.
+        if (name.includes('.'))
+        {
+            const dot = name.indexOf('.');
+            const head = name.slice(0, dot);
+            const tail = name.slice(dot + 1);
+            const members = STATIC_MEMBERS.get(head);
+            if (members === undefined)
+            {
+                throw new EmitError(
+                    `dotted reference '${name}' — '${head}' has no statically-resolvable members. ` +
+                    `Add an entry to STATIC_MEMBERS to expose '${head}.${tail}' to .mu source.`,
+                    val.span);
+            }
+            if (!members.has(tail))
+            {
+                throw new EmitError(
+                    `'${tail}' is not a static member of ${head} (${[...members].join(', ')}).`,
+                    val.span);
+            }
+            this.ensureImport(head);
+            return `${head}.${tail}`;
+        }
         // 2. Property-name match against an enum class — emit ClassName.Member.
         //    Validate the member: an ident in enum position must be a known
         //    member of that enum, otherwise we'd silently emit `Enum.unknown`

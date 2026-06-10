@@ -49,6 +49,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['Color',               '@visualisation-sub/mural/runtime'],
     ['Matrix',              '@visualisation-sub/mural/runtime'],
     ['Thickness',           '@visualisation-sub/mural/runtime'],
+    ['CornerRadius',        '@visualisation-sub/mural/runtime'],
     ['DataObject',          '@visualisation-sub/mural/runtime'],
     ['DragDropEffects',     '@visualisation-sub/mural/runtime'],
     ['DragDrop',            '@visualisation-sub/mural/runtime'],
@@ -104,6 +105,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['TemplateMultiDataTrigger', '@visualisation-sub/mural/Basic'],
     ['ItemsControl',            '@visualisation-sub/mural/framework/items-control.js'],
     ['ListReorderBehavior',     '@visualisation-sub/mural/Basic'],
+    ['LogBehavior',             '@visualisation-sub/mural/Basic'],
     ['Selector',                '@visualisation-sub/mural/framework/list/selector.js'],
     ['ItemContainerGenerator',  '@visualisation-sub/mural/Basic'],
     ['ItemsPresenter',          '@visualisation-sub/mural/Basic'],
@@ -155,6 +157,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['ToolBarButton',           '@visualisation-sub/mural/framework/surface.js'],
     ['ToolBarToggleButton',     '@visualisation-sub/mural/framework/surface.js'],
     ['ToolBarSeparator',        '@visualisation-sub/mural/framework/surface.js'],
+    ['ToolBarPosition',         '@visualisation-sub/mural/framework/surface.js'],
     ['MenuStrip',               '@visualisation-sub/mural/framework/surface.js'],
     ['MenuButton',              '@visualisation-sub/mural/framework/surface.js'],
     ['MenuItem',                '@visualisation-sub/mural/framework/surface.js'],
@@ -228,6 +231,23 @@ export const ENUM_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<st
     ['MarqueeBoundsPolicy',   new Set(['Intersect', 'Contained'])],
     ['Dock',                  new Set(['Left', 'Top', 'Right', 'Bottom'])],
     ['DrawerVariant',         new Set(['Permanent', 'Persistent', 'Temporary'])],
+    ['ToolBarPosition',       new Set(['None', 'Only', 'First', 'Middle', 'Last'])],
+]);
+
+// Type → set of valid static-member names exposed for use in DOTTED
+// value position (`CornerRadius.Full`, …). Distinct from ENUM_MEMBERS
+// because the lookup trigger is different: enum members resolve from a
+// BARE ident inside a property-context match, static members resolve
+// from an explicit `Type.Member` dotted ref. Adding a class here lets
+// `.mu` authors write the dotted form anywhere a ValueNode is accepted
+// — including resource RHS positions (`@ShapeFull = CornerRadius.Full`)
+// where no property-name context exists.
+//
+// The class must also appear in DEFAULT_SYMBOLS so the emitter can pull
+// it in via an import. The member set must stay in sync with the
+// runtime class's exported statics — there's no compile-time link.
+export const STATIC_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<string, ReadonlySet<string>>([
+    ['CornerRadius', new Set(['Full', 'Zero', 'LeftRounded', 'RightRounded'])],
 ]);
 
 // Property-name → enum class candidates. Used when the markup
@@ -248,8 +268,9 @@ export const ENUM_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<st
 // Entries here MUST point at enum classes that are also in
 // ENUM_MEMBERS.
 export const PROPERTY_TO_ENUM: ReadonlyMap<string, readonly string[]> = new Map<string, readonly string[]>([
-    ['Variant', ['ButtonVariant', 'DrawerVariant']],
-    ['Anchor',  ['Dock']],
+    ['Variant',  ['ButtonVariant', 'DrawerVariant']],
+    ['Anchor',   ['Dock']],
+    ['Position', ['ToolBarPosition']],
 ]);
 
 // Meta-attr names whose RHS is a type reference (compiled as a bare

@@ -2,7 +2,8 @@ import type { Point, Rect } from '../runtime/index.js';
 import type { DrawingContext } from '../runtime/index.js';
 import { Brush, SolidColorBrush } from './brush.js';
 import { DashStyle, LineCap, type Pen } from './pen.js';
-import { EllipseGeometry, LineGeometry, RectangleGeometry, type Geometry } from './geometry.js';
+import { EllipseGeometry, LineGeometry, PathGeometry, RectangleGeometry, type Geometry } from './geometry.js';
+import { pathGeometryToSvgD } from './path-to-svg.js';
 import { Transform } from './transform.js';
 import { FontStyle, FontWeight, type FormattedText } from './formatted-text.js';
 import { Stretch, type ImageSource } from './image-source.js';
@@ -134,6 +135,17 @@ export class SvgDomDrawingContext implements DrawingContext
             applyFill  (r, brush);
             applyStroke(r, pen);
             this.current().appendChild(r);
+        }
+        else if (geometry instanceof PathGeometry)
+        {
+            // Lower to `<path d="…">`. Both DCs share the d-string
+            // generator so the two renderers stay in sync.
+            const p = this.create('path');
+            p.setAttribute('d', pathGeometryToSvgD(geometry));
+            if (geometry.FillRule === 'evenodd') p.setAttribute('fill-rule', 'evenodd');
+            applyFill  (p, brush);
+            applyStroke(p, pen);
+            this.current().appendChild(p);
         }
         else
         {

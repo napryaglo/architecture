@@ -14,6 +14,36 @@ import { Orientation, StackPanel } from '../../Basic/stack-panel.js';
 import { TextBlock } from '../../Basic/text-block.js';
 import { Theme } from '../../Basic/theme.js';
 import { ToggleButton } from '../toggle-button.js';
+import { ensureSurfaceTheme } from '../menu/default-surface-resources.js';
+
+// Where a button sits inside the inline ToolBar strip's connected-bar
+// chrome. ToolBar's panel updates the Position DP on each inline
+// ToolBarButton / ToolBarToggleButton after every layout pass; the
+// default Style's triggers swap the button's CornerRadius accordingly:
+//
+//   * Only   — alone in its group (or the only inline button overall):
+//              fully pill-rounded (@ShapeFull) on both ends.
+//   * First  — left-edge of a group: outer-left corners rounded, inner
+//              right corners square. Connects flush to the next button.
+//   * Middle — interior of a group: every corner square.
+//   * Last   — right-edge of a group: inner left corners square, outer
+//              right corners rounded.
+//   * None   — not inside a ToolBar (the button is being used
+//              standalone), or sits in the overflow popup where the
+//              connected-bar look doesn't apply. Square corners.
+//
+// Groups are delimited by ToolBarSeparator children: each contiguous
+// run of non-separator children is its own group with its own
+// First/Middle/Last assignment, so authors get visible group segments
+// out of the box.
+export enum ToolBarPosition
+{
+    None   = 'None',
+    Only   = 'Only',
+    First  = 'First',
+    Middle = 'Middle',
+    Last   = 'Last',
+}
 
 // ToolBarButton — Button shaped for use inside a ToolBar. Adds three
 // DPs over plain Button:
@@ -45,6 +75,28 @@ export class ToolBarButton extends Button
     public static readonly ShowTextKey = Model.RegisterProperty<boolean>(
         ToolBarButton, 'ShowText', false, MetaData.Measure,
     );
+    // Written by the owning ToolBar's panel after each Arrange pass;
+    // read by the default Style's triggers to pick the per-corner
+    // CornerRadius (see surface.template.mu, DefaultToolBarButton).
+    // Default `None` so a ToolBarButton used standalone (outside a
+    // ToolBar) gets square corners — `Only` is reserved for the case
+    // where a ToolBar actively reports "you are the sole inline item".
+    public static readonly PositionKey = Model.RegisterProperty<ToolBarPosition>(
+        ToolBarButton, 'Position', ToolBarPosition.None, MetaData.None,
+    );
+
+    static
+    {
+        // Theme lookup uses ToolBarButton as the key — the default Style
+        // in surface.template.mu is keyed `[TargetType=ToolBarButton]`.
+        // Without this override, applyDefaultStyle would walk up to
+        // Button's key and pick up the pill chrome, defeating the
+        // connected-bar look.
+        Model.OverrideMetadata(ToolBarButton, Visual.DefaultStyleKeyKey, { default_value: ToolBarButton });
+        // Surface theme owns the default Style; this registers the
+        // bundle's factory with Application on first ToolBarButton load.
+        ensureSurfaceTheme();
+    }
 
     public get Icon():  Visual | undefined { return this.get_property_value(ToolBarButton.IconKey); }
     public set Icon(v: Visual | undefined) { this.set_property_value(ToolBarButton.IconKey, v); }
@@ -54,6 +106,9 @@ export class ToolBarButton extends Button
 
     public get ShowText():  boolean { return this.get_property_value(ToolBarButton.ShowTextKey); }
     public set ShowText(v: boolean) { this.set_property_value(ToolBarButton.ShowTextKey, v); }
+
+    public get Position():  ToolBarPosition { return this.get_property_value(ToolBarButton.PositionKey); }
+    public set Position(v: ToolBarPosition) { this.set_property_value(ToolBarButton.PositionKey, v); }
 
     protected override OnPropertyChanged(
         descriptor: PropertyDescriptor,
@@ -92,6 +147,17 @@ export class ToolBarToggleButton extends ToggleButton
     public static readonly ShowTextKey = Model.RegisterProperty<boolean>(
         ToolBarToggleButton, 'ShowText', false, MetaData.Measure,
     );
+    // Same connected-bar Position protocol as ToolBarButton — see the
+    // PositionKey docstring on ToolBarButton above.
+    public static readonly PositionKey = Model.RegisterProperty<ToolBarPosition>(
+        ToolBarToggleButton, 'Position', ToolBarPosition.None, MetaData.None,
+    );
+
+    static
+    {
+        Model.OverrideMetadata(ToolBarToggleButton, Visual.DefaultStyleKeyKey, { default_value: ToolBarToggleButton });
+        ensureSurfaceTheme();
+    }
 
     public get Icon():  Visual | undefined { return this.get_property_value(ToolBarToggleButton.IconKey); }
     public set Icon(v: Visual | undefined) { this.set_property_value(ToolBarToggleButton.IconKey, v); }
@@ -101,6 +167,9 @@ export class ToolBarToggleButton extends ToggleButton
 
     public get ShowText():  boolean { return this.get_property_value(ToolBarToggleButton.ShowTextKey); }
     public set ShowText(v: boolean) { this.set_property_value(ToolBarToggleButton.ShowTextKey, v); }
+
+    public get Position():  ToolBarPosition { return this.get_property_value(ToolBarToggleButton.PositionKey); }
+    public set Position(v: ToolBarPosition) { this.set_property_value(ToolBarToggleButton.PositionKey, v); }
 
     protected override OnPropertyChanged(
         descriptor: PropertyDescriptor,

@@ -56,8 +56,7 @@ resources SurfaceTheme {
                    BorderThickness = (1),
                    CornerRadius    = @ShapeExtraSmall,
                    Effect          = @Elevation2,
-                   Padding         = (0),
-                   MaxWidth        = 400]{
+                   Padding         = (0)]{
                 ItemsPresenter
             }
         }
@@ -172,8 +171,12 @@ resources SurfaceTheme {
                                                  Foreground = @OnSurfaceVariant]
             }
         }
-        when ( IsMouseOver )   { PART_Row.Background = @SurfaceContainerHigh; }
-        when ( IsPressed )     { PART_Row.Background = @SurfaceContainerHighest; }
+        // M3 state-layer tokens: semi-transparent OnSurface tints over
+        // whatever surface the popup chrome paints. Using a solid token
+        // like @SurfaceContainerHigh here would be invisible — the
+        // ContextMenu / MenuButton popup chrome IS @SurfaceContainerHigh.
+        when ( IsMouseOver )   { PART_Row.Background = @StateHoverOverlay; }
+        when ( IsPressed )     { PART_Row.Background = @StatePressOverlay; }
         when ( IsChecked )     { PART_Row.Background = @SecondaryContainer; }
         when ( IsSubmenuOpen ) { PART_Row.Background = @SecondaryContainer; }
     }
@@ -198,8 +201,7 @@ resources SurfaceTheme {
                    BorderThickness = (1),
                    CornerRadius    = @ShapeExtraSmall,
                    Effect          = @Elevation2,
-                   Padding         = (0),
-                   MaxWidth        = 400]{
+                   Padding         = (0)]{
                 ItemsPresenter
             }
         }
@@ -230,8 +232,9 @@ resources SurfaceTheme {
                                                  Foreground = @OnSurfaceVariant]
             }
         }
-        when ( IsMouseOver )   { PART_Row.Background = @SurfaceContainerHigh; }
-        when ( IsPressed )     { PART_Row.Background = @SurfaceContainerHighest; }
+        // State-layer tokens — see DefaultMenuItemRow above for why.
+        when ( IsMouseOver )   { PART_Row.Background = @StateHoverOverlay; }
+        when ( IsPressed )     { PART_Row.Background = @StatePressOverlay; }
         when ( IsSubmenuOpen ) { PART_Row.Background = @SecondaryContainer; }
     }
 
@@ -253,5 +256,73 @@ resources SurfaceTheme {
         Padding            = (4,2,4,2);
         ItemsPanel         = @DefaultMenuStripPanel;
         ItemContainerStyle = @MenuStripItemStyle;
+    }
+
+    // ── ToolBarButton: connected-bar chrome ────────────────────────
+    // A ToolBarButton lives inside a ToolBar's inline strip alongside
+    // peer buttons and ToolBarSeparators. The strip is meant to read as
+    // one connected bar (Google Docs / Material 3 toolbar look), not a
+    // row of disconnected pill buttons — so the default CornerRadius is
+    // 0 (square), and the owning ToolBar rewrites the button's Position
+    // DP after each layout pass to surface where it sits in its group:
+    //
+    //   * Position = Only   — sole button in its group → fully pill
+    //   * Position = First  — leftmost in a multi-button group →
+    //                          outer-left corners rounded, inner right
+    //                          corners square (flush with the next
+    //                          button).
+    //   * Position = Last   — rightmost in a multi-button group → mirror
+    //                          of First.
+    //   * Position = Middle — interior of a group → every corner square.
+    //   * Position = None   — standalone (no owning ToolBar) or in the
+    //                          overflow popup → square corners.
+    //
+    // Padding is the M3 icon-button spec (4-square padding around a 24px
+    // glyph); a ToolBarButton with `ShowText=true` carries enough room
+    // for the label via the inner StackPanel's margin (set by
+    // rebuildContent in tool-bar-items.ts).
+    Template x:key="DefaultToolBarButton" [TargetType=ToolBarButton] {
+        Border x:name="PART_Border"
+              [ Background      = @SurfaceContainerHigh,
+                BorderThickness = (0),
+                CornerRadius    = 0,
+                Padding         = (12,8,12,8) ] {
+            ContentPresenter
+        }
+        when ( IsMouseOver )       { PART_Border.Background  = @StateHoverOverlay; }
+        when ( IsPressed )         { PART_Border.Background  = @StatePressOverlay; }
+        when ( Position = Only  )  { PART_Border.CornerRadius = CornerRadius.Full; }
+        when ( Position = First )  { PART_Border.CornerRadius = CornerRadius.LeftRounded; }
+        when ( Position = Last  )  { PART_Border.CornerRadius = CornerRadius.RightRounded; }
+    }
+
+    Style [TargetType=ToolBarButton] {
+        Template = @DefaultToolBarButton;
+    }
+
+    // ── ToolBarToggleButton: connected-bar chrome ──────────────────
+    // Same shape as ToolBarButton but with an IsChecked trigger on top —
+    // the chrome reads as "Filled Tonal" while checked so a sticky
+    // toggle (Bold, Italic, …) stays visible against the surrounding
+    // square buttons. The position triggers ride on top of IsChecked
+    // because they target a different DP (CornerRadius vs Background).
+    Template x:key="DefaultToolBarToggleButton" [TargetType=ToolBarToggleButton] {
+        Border x:name="PART_Border"
+              [ Background      = @SurfaceContainerHigh,
+                BorderThickness = (0),
+                CornerRadius    = 0,
+                Padding         = (12,8,12,8) ] {
+            ContentPresenter
+        }
+        when ( IsMouseOver )       { PART_Border.Background  = @StateHoverOverlay; }
+        when ( IsPressed )         { PART_Border.Background  = @StatePressOverlay; }
+        when ( IsChecked )         { PART_Border.Background  = @SecondaryContainer; }
+        when ( Position = Only  )  { PART_Border.CornerRadius = CornerRadius.Full; }
+        when ( Position = First )  { PART_Border.CornerRadius = CornerRadius.LeftRounded; }
+        when ( Position = Last  )  { PART_Border.CornerRadius = CornerRadius.RightRounded; }
+    }
+
+    Style [TargetType=ToolBarToggleButton] {
+        Template = @DefaultToolBarToggleButton;
     }
 }

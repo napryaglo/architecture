@@ -55,6 +55,7 @@ export {
     type TemplateDataTriggerCondition,
 } from './data-template.js';
 export { ListReorderBehavior } from './list-reorder-behavior.js';
+export { LogBehavior } from './log-behavior.js';
 export { attachMarqueeSelection } from './marquee-selection-behavior.js';
 export { AlternationConverter } from './alternation-converter.js';
 export {

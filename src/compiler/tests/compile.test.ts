@@ -774,6 +774,53 @@ describe('compile — value emission', () => {
                 err.message.includes('SomeUnknownIdent'),
         );
     });
+
+    test('Dotted Type.Member ref emits ClassName.Member and adds the import', () => {
+        // Token-resource RHS — the canonical site exercised by light.mu /
+        // dark.mu's `@ShapeFull = CornerRadius.Full`. The emitter
+        // validates the head against the symbol table and the tail
+        // against STATIC_MEMBERS, then emits a real type-member ref.
+        const js = emitted(`
+            Application{ resources: {
+                @ShapeFull = CornerRadius.Full
+                Border x:root[CornerRadius=@ShapeFull]{}
+            } }
+        `);
+        assert.match(js, /\.Set\("ShapeFull", CornerRadius\.Full\)/);
+        assert.match(
+            js,
+            /import \{[^}]*CornerRadius[^}]*\} from "@visualisation-sub\/mural\/runtime";/,
+        );
+    });
+
+    test('Dotted ref with unknown head is a compile error', () => {
+        assert.throws(
+            () => emitted(`
+                Application{ resources: {
+                    @x = Nonsense.Full
+                    Border x:root[Background=@x]{}
+                } }
+            `),
+            (err: Error) =>
+                err.message.includes("'Nonsense'") &&
+                err.message.includes('STATIC_MEMBERS'),
+        );
+    });
+
+    test('Dotted ref with unknown tail is a compile error', () => {
+        assert.throws(
+            () => emitted(`
+                Application{ resources: {
+                    @x = CornerRadius.Bogus
+                    Border x:root[CornerRadius=@x]{}
+                } }
+            `),
+            (err: Error) =>
+                err.message.includes("'Bogus'") &&
+                err.message.includes('static member') &&
+                err.message.includes('Full'),
+        );
+    });
 });
 
 describe('compile — deferred & errored features', () => {

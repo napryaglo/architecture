@@ -2,7 +2,8 @@ import type { Point, Rect } from '../runtime/index.js';
 import type { DrawingContext } from '../runtime/index.js';
 import { Brush, SolidColorBrush } from './brush.js';
 import { DashStyle, LineCap, type Pen } from './pen.js';
-import { EllipseGeometry, LineGeometry, RectangleGeometry, type Geometry } from './geometry.js';
+import { EllipseGeometry, LineGeometry, PathGeometry, RectangleGeometry, type Geometry } from './geometry.js';
+import { pathGeometryToSvgD } from './path-to-svg.js';
 import { Transform } from './transform.js';
 import { FontStyle, FontWeight, type FormattedText } from './formatted-text.js';
 import { Stretch, type ImageSource } from './image-source.js';
@@ -122,11 +123,23 @@ export class SvgDrawingContext implements DrawingContext
             attrs.push(...strokeAttrs(pen));
             this.output.push(`<rect ${attrs.join(' ')} />`);
         }
+        else if (geometry instanceof PathGeometry)
+        {
+            // Lower to <path d="…">. Both DCs share the d-string
+            // generator so the two renderers stay in sync.
+            const attrs: string[] = [
+                `d="${pathGeometryToSvgD(geometry)}"`,
+            ];
+            if (geometry.FillRule === 'evenodd') attrs.push('fill-rule="evenodd"');
+            attrs.push(fillAttr(brush));
+            attrs.push(...strokeAttrs(pen));
+            this.output.push(`<path ${attrs.join(' ')} />`);
+        }
         else
         {
-            // PathGeometry, GeometryGroup — lower to <path d="…"> when a
-            // concrete user needs them. Throw loudly until then so a
-            // silent miss doesn't ship an empty SVG.
+            // GeometryGroup — lower to <path d="…"> by concatenation
+            // when a concrete user needs it. Throw loudly until then so
+            // a silent miss doesn't ship an empty SVG.
             if (wrap) this.Pop();
             throw new Error(`SvgDrawingContext.DrawGeometry: ${geometry.constructor.name} not implemented yet.`);
         }

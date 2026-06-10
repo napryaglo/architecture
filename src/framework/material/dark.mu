@@ -72,12 +72,13 @@ resources DarkPalette {
     @StatePressOverlay    = #E6E1E51F   // OnSurface @ 12%
 
     // ── Shape (corner radii — identical across schemes) ─────────────
+    // See light.mu for the @ShapeFull contract.
     @ShapeExtraSmall      = 4
     @ShapeSmall           = 8
     @ShapeMedium          = 12
     @ShapeLarge           = 16
     @ShapeExtraLarge      = 28
-    @ShapeFull            = 9999
+    @ShapeFull            = CornerRadius.Full
 
     // ── Typography family (identical across schemes) ────────────────
     @FontFamily           = "system-ui, sans-serif"

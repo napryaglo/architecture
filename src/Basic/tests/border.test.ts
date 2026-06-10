@@ -2,13 +2,14 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
     Color,
+    CornerRadius,
     Rect,
     Size,
     Thickness,
     Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
-import { Brush, Pen, SolidColorBrush } from '../../visual-engine/index.js';
+import { Brush, Pen, SolidColorBrush, type Geometry } from '../../visual-engine/index.js';
 import { Border } from '../index.js';
 
 // Tiny Visual stand-in for Border's child slot — reports a configurable
@@ -41,9 +42,17 @@ interface CapturedRect
     radiusY?: number;
 }
 
+interface CapturedGeometry
+{
+    brush: Brush | undefined;
+    pen: Pen | undefined;
+    geometry: Geometry;
+}
+
 class CapturingContext implements DrawingContext
 {
     public rects: CapturedRect[] = [];
+    public geometries: CapturedGeometry[] = [];
     DrawRectangle(brush: Brush | undefined, pen: Pen | undefined, rect: Rect): void
     {
         this.rects.push({ brush, pen, rect });
@@ -58,7 +67,10 @@ class CapturingContext implements DrawingContext
     {
         this.rects.push({ brush, pen, rect, radiusX, radiusY });
     }
-    DrawGeometry(): void { throw new Error('not used'); }
+    DrawGeometry(brush: Brush | undefined, pen: Pen | undefined, geometry: Geometry): void
+    {
+        this.geometries.push({ brush, pen, geometry });
+    }
     DrawText(): void     { throw new Error('not used'); }
     PushTransform(): void { /* no-op for tests */ }
     PushClip(): void      { /* no-op for tests */ }
@@ -420,6 +432,90 @@ describe('Border render — CornerRadius', () => {
         assert.equal(dc.rects[0]!.radiusX, 8);
         // Stroke second (radius=8 - half=1 = 7).
         assert.equal(dc.rects[1]!.radiusX, 7);
+    });
+
+    test('CornerRadius.Full clamps to min(width, height)/2 — wide rect → stadium', () => {
+        const b = new Border();
+        b.Background   = new SolidColorBrush(Color.Red);
+        b.CornerRadius = CornerRadius.Full;
+        b.Measure(new Size(200, 40));
+        b.Arrange(new Rect(0, 0, 200, 40));
+
+        const dc = new CapturingContext();
+        b.Render(dc);
+
+        assert.equal(dc.rects.length, 1);
+        const r = dc.rects[0]!;
+        // Half the shorter side — height was 40, so radius = 20.
+        assert.equal(r.radiusX, 20);
+        assert.equal(r.radiusY, 20);
+    });
+
+    test('CornerRadius.Full on a square rect produces a circle', () => {
+        const b = new Border();
+        b.Background   = new SolidColorBrush(Color.Red);
+        b.CornerRadius = CornerRadius.Full;
+        b.Measure(new Size(64, 64));
+        b.Arrange(new Rect(0, 0, 64, 64));
+
+        const dc = new CapturingContext();
+        b.Render(dc);
+
+        assert.equal(dc.rects[0]!.radiusX, 32);
+        assert.equal(dc.rects[0]!.radiusY, 32);
+    });
+
+    test('CornerRadius.Full with stroke insets the inner radius by half the thickness', () => {
+        const b = new Border();
+        b.BorderBrush     = new SolidColorBrush(Color.Black);
+        b.BorderThickness = new Thickness(4);
+        b.CornerRadius    = CornerRadius.Full;
+        b.Measure(new Size(80, 40));
+        b.Arrange(new Rect(0, 0, 80, 40));
+
+        const dc = new CapturingContext();
+        b.Render(dc);
+
+        assert.equal(dc.rects.length, 1);
+        // Outer radius = min(80,40)/2 = 20. Inner = 20 - 4/2 = 18.
+        assert.equal(dc.rects[0]!.radiusX, 18);
+        assert.equal(dc.rects[0]!.radiusY, 18);
+    });
+
+    test('CornerRadius.Full is a CornerRadius with every corner Number.POSITIVE_INFINITY', () => {
+        // Documenting the sentinel encoding — render-side code keys off
+        // !Number.isFinite on EACH corner independently, so anyone
+        // introducing a NEW sentinel (e.g. a `Half` family) needs to
+        // keep that recognition path in sync. Each corner non-finite
+        // gets folded to min(width, height) / 2 at paint time.
+        assert.ok(CornerRadius.Full instanceof CornerRadius);
+        assert.equal(CornerRadius.Full.TopLeft,     Number.POSITIVE_INFINITY);
+        assert.equal(CornerRadius.Full.TopRight,    Number.POSITIVE_INFINITY);
+        assert.equal(CornerRadius.Full.BottomRight, Number.POSITIVE_INFINITY);
+        assert.equal(CornerRadius.Full.BottomLeft,  Number.POSITIVE_INFINITY);
+    });
+
+    test('CornerRadius asymmetric (Full, 0, 0, Full) paints rounded outer ends only', () => {
+        // The connected-bar shape ToolBar's First button uses: rounded
+        // top-left + bottom-left, square top-right + bottom-right.
+        // The renderer can't lower this to a primitive `<rect rx ry>`,
+        // so it falls back to a PathGeometry via DrawGeometry. We
+        // assert the geometry path was taken (no rounded-rect call).
+        const b = new Border();
+        b.Background = new SolidColorBrush(Color.Red);
+        b.CornerRadius = new CornerRadius(
+            Number.POSITIVE_INFINITY, 0, 0, Number.POSITIVE_INFINITY);
+        b.Measure(new Size(200, 40));
+        b.Arrange(new Rect(0, 0, 200, 40));
+
+        const dc = new CapturingContext();
+        b.Render(dc);
+
+        // Non-uniform corners — the rounded-rect primitive isn't usable,
+        // so the background flows through DrawGeometry (captured into
+        // `geometries`, not `rects`).
+        assert.equal(dc.rects.length, 0);
+        assert.equal(dc.geometries.length, 1);
     });
 });
 

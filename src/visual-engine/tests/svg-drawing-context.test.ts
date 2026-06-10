@@ -1,13 +1,18 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { Color, Point, Rect } from '../../runtime/index.js';
+import { Color, Point, Rect, Size } from '../../runtime/index.js';
 import {
+    ArcSegment,
     EllipseGeometry,
+    GeometryGroup,
     LineGeometry,
-    Pen,
+    LineSegment,
+    PathFigure,
     PathGeometry,
+    Pen,
     RectangleGeometry,
     SolidColorBrush,
+    SweepDirection,
     SvgDrawingContext,
 } from '../index.js';
 
@@ -83,11 +88,41 @@ describe('SvgDrawingContext.DrawGeometry', () => {
         assert.ok(out.includes('ry="4"'));
     });
 
-    test('Unsupported Geometry (PathGeometry) throws clearly', () => {
+    test('PathGeometry lowers to <path d="…"> with line + arc segments', () => {
+        // Round-trip a closed figure with a LineSegment and a clockwise
+        // ArcSegment — the canonical shape Border's non-uniform
+        // CornerRadius path uses. Asserts the path emits and the
+        // d-string contains both `L` and `A` commands plus the closing
+        // `Z` from IsClosed=true.
+        const dc = new SvgDrawingContext();
+        dc.DrawGeometry(
+            new SolidColorBrush(Color.Red), undefined,
+            new PathGeometry([
+                new PathFigure(
+                    new Point(0, 0),
+                    [
+                        new LineSegment(new Point(10, 0)),
+                        new ArcSegment(
+                            new Point(20, 10),
+                            new Size(10, 10), 0, false, SweepDirection.Clockwise),
+                    ],
+                    true,
+                ),
+            ]),
+        );
+        const out = dc.ToFragment();
+        assert.ok(out.includes('<path '), 'emitted a <path> element');
+        assert.match(out, /d="M 0 0 L 10 0 A 10 10 0 0 1 20 10 Z"/);
+    });
+
+    test('GeometryGroup still throws clearly — lowering deferred', () => {
+        // PathGeometry now lowers to <path>; the remaining unsupported
+        // geometry that should throw clearly is GeometryGroup
+        // (deferred until a consumer needs CSG-style composition).
         const dc = new SvgDrawingContext();
         assert.throws(
-            () => dc.DrawGeometry(undefined, undefined, new PathGeometry()),
-            /PathGeometry not implemented/,
+            () => dc.DrawGeometry(undefined, undefined, new GeometryGroup()),
+            /GeometryGroup not implemented/,
         );
     });
 });

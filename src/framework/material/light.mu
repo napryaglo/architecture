@@ -86,12 +86,16 @@ resources LightPalette {
 
     // ── Shape (corner radii — M3 shape scale) ───────────────────────
     // Numeric tokens consumed via Border.CornerRadius = @ShapeMedium etc.
+    // `Full` is the M3 "fully rounded" shape family — Border's render
+    // path recognises CornerRadius.Full (Number.POSITIVE_INFINITY) and
+    // clamps to min(width, height)/2, so a square button becomes a
+    // circle and a wide one becomes a stadium / pill.
     @ShapeExtraSmall      = 4
     @ShapeSmall           = 8
     @ShapeMedium          = 12
     @ShapeLarge           = 16
     @ShapeExtraLarge      = 28
-    @ShapeFull            = 9999
+    @ShapeFull            = CornerRadius.Full
 
     // ── Typography family ───────────────────────────────────────────
     // Material 3 baseline is Roboto, but loading a web-font ships a

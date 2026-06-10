@@ -16,6 +16,7 @@ export {
     ToolBarButton,
     ToolBarToggleButton,
     ToolBarSeparator,
+    ToolBarPosition,
     type ToolBarButtonOptions,
 } from './tool-bar/tool-bar-items.js';
 export {

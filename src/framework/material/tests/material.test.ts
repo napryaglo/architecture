@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
     Application,
     Color,
+    CornerRadius,
     MetaData,
     Model,
     Visual,
@@ -78,7 +79,12 @@ describe('Material — palette registration', () => {
     test('shape tokens resolve to numbers (CornerRadius / spacing inputs)', () => {
         SetTheme('light');
         assert.equal(Application.current!.Resources.Resolve('ShapeMedium'), 12);
-        assert.equal(Application.current!.Resources.Resolve('ShapeFull'), 9999);
+        // ShapeFull is the M3 "fully rounded" sentinel — CornerRadius.Full,
+        // a CornerRadius value with every corner Number.POSITIVE_INFINITY.
+        // Border's render path clamps each non-finite corner to
+        // min(width, height) / 2 at paint time.
+        assert.equal(Application.current!.Resources.Resolve('ShapeFull'),
+                     CornerRadius.Full);
     });
 
     test('CurrentTheme reports the active palette name after SetTheme', () => {

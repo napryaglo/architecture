@@ -1,7 +1,7 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { Application, NoModifiers, Panel, PointerButton, RelayCommand, Size, type KeyEventInit, type PointerEventInit } from '../../../runtime/index.js';
+import { Application, NoModifiers, Panel, PointerButton, Rect, RelayCommand, Size, type KeyEventInit, type PointerEventInit } from '../../../runtime/index.js';
 import { InputManager } from '../../../framework/index.js';;
 import { MenuButton, MenuItem, MenuSeparator, MenuStrip } from '../menu-strip.js';
 
@@ -68,12 +68,25 @@ describe('MenuStrip / MenuItem / MenuSeparator', () => {
         assert.equal(mi.IsChecked, false);
     });
 
-    test('MenuSeparator measures to its Height + the available width', () => {
+    test('MenuSeparator measures to MinWidth × Height — popup chrome shrink-wraps', () => {
+        // Separator reports MinWidth so it doesn't force the hosting
+        // popup to fill the available area horizontally. The vertical
+        // StackPanel that hosts it allocates finalSize.Width during
+        // Arrange — that's what RenderOverride actually paints, so the
+        // line still spans the full popup width.
         const sep = new MenuSeparator();
         sep.Measure(new Size(100, 12));
         const ds = sep.DesiredSize;
         assert.equal(ds.Height, 9);
-        assert.equal(ds.Width, 100);
+        assert.equal(ds.Width, sep.MinWidth);
+    });
+
+    test('MenuSeparator arranges to its full slot width — line paints across the popup', () => {
+        const sep = new MenuSeparator();
+        sep.Measure(new Size(100, 12));
+        sep.Arrange(new Rect(0, 0, 100, 9));
+        assert.equal(sep.ArrangedRect.Width, 100);
+        assert.equal(sep.ArrangedRect.Height, 9);
     });
 });
 

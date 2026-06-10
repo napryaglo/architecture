@@ -11,6 +11,12 @@ import {
     type PointerEventArgs,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
+import {
+    ToolBarButton,
+    ToolBarPosition,
+    ToolBarSeparator,
+    ToolBarToggleButton,
+} from './tool-bar-items.js';
 import { PresentationTarget } from '../../visual-engine/index.js';
 import { Border } from '../../Basic/border.js';
 import { Button } from '../button.js';
@@ -71,6 +77,18 @@ export class ToolBar extends ItemsControl
     // ItemsControl ItemsSource. Reset (via Clear + Add loop) by
     // SyncOverflow after each measure / arrange pass.
     private readonly _overflowedItems: ObservableCollection<unknown> = new ObservableCollection<unknown>([]);
+
+    // Per-item natural-size cache. Updated whenever an item is measured
+    // inline; consumed when the item lives in the overflow popup (where
+    // the inline ToolBarPanel can't measure it directly because it's
+    // not a child anymore). Stale only if an item's intrinsic size
+    // changes while it's in the popup — typical Buttons / Separators
+    // have stable sizes so the cache holds for the common case. The
+    // map keys are item identity so non-Visual items (data items) just
+    // don't get a cache entry; they fall through to "best fit zero
+    // width" which is wrong but currently irrelevant (ToolBars are
+    // authored with Visual children in practice).
+    public readonly _widthCache: WeakMap<Visual, { width: number; height: number }> = new WeakMap();
 
     private readonly _chevron:         Button;
     private readonly _popupHost:       ToolBarPopupHost;
@@ -191,45 +209,139 @@ export class ToolBar extends ItemsControl
     }
 
     /** Internal — called by ToolBarPanel after each Arrange pass with
-     *  the index of the last item that fit. Anything past it is moved
-     *  into `_overflowedItems`. */
+     *  the index of the last item that fit. Items past it move from the
+     *  inline panel into the popup; items that fit again move back.
+     *
+     *  Move-on-overflow contract: Visual items have ONE parent at a
+     *  time. The inline ToolBarPanel and the popup ItemsControl's panel
+     *  are distinct hosts. When an item overflows we explicitly
+     *  detach it from the inline panel (visual-only — its logical
+     *  parent stays this ToolBar) BEFORE handing it to
+     *  `_overflowedItems`; the popup ItemsControl's pipeline then
+     *  attaches it to the popup panel. On restore we reverse the
+     *  sequence: pull from `_overflowedItems` (popup detaches), then
+     *  re-insert into the inline panel at the correct master-Items
+     *  index. Both panel calls use the VisualChild variants so logical
+     *  parent stays this ToolBar — same shape ItemsControl's own
+     *  pipeline uses.
+     *
+     *  Inline ItemContainerGenerator's container registry is left
+     *  alone: Items collection isn't mutated by overflow, so the
+     *  generator's "what container realized which item" map stays
+     *  truthful; the divergence between "registered as container" and
+     *  "actually a child of the inline panel" is local to overflow
+     *  bookkeeping and doesn't cascade. */
     public _syncOverflow(lastFittingIndex: number): void
     {
         const items = this.Items;
         const itemCount = items === undefined
             ? 0
             : (items instanceof ObservableCollection ? items.Count : items.length);
-        const overflowStart = lastFittingIndex + 1;
-        const newOverflow: unknown[] = [];
-        for (let i = overflowStart; i < itemCount; i++)
+
+        // Partition into target inline (Visuals only — non-Visual items
+        // already flow through the standard ContentPresenter path and
+        // aren't affected by the parent-collision bug) and target
+        // overflow (everything past the cutoff).
+        const targetInlineVisuals: Visual[] = [];
+        const targetOverflow:      unknown[] = [];
+        for (let i = 0; i < itemCount; i++)
         {
-            newOverflow.push(
-                items instanceof ObservableCollection ? items.Get(i) : (items as readonly unknown[])[i],
-            );
+            const item = items instanceof ObservableCollection
+                ? items.Get(i)
+                : (items as readonly unknown[])[i];
+            if (i <= lastFittingIndex)
+            {
+                if (item instanceof Visual) targetInlineVisuals.push(item);
+            }
+            else
+            {
+                targetOverflow.push(item);
+            }
         }
 
-        // Cheap diff: if length + identities match, do nothing. Avoids
-        // tearing the popup ItemsControl on every layout pass.
+        // 1. Detach items leaving inline. These are Visuals currently
+        //    parented to the inline panel that now belong in overflow.
+        //    After this loop they're orphans; the popup ItemsControl
+        //    will adopt them when we update `_overflowedItems` below.
+        const inlinePanel = this.ItemsPanelInstance;
+        if (inlinePanel !== undefined)
+        {
+            const overflowVisuals = targetOverflow.filter((x): x is Visual => x instanceof Visual);
+            for (const item of overflowVisuals)
+            {
+                if (inlinePanel.visualChildren.includes(item))
+                {
+                    (inlinePanel as Panel).RemoveVisualChild(item);
+                }
+            }
+        }
+
+        // 2. Update `_overflowedItems` (drives popup ItemsControl).
+        //    Cheap diff first — if nothing changed, skip both the
+        //    Clear and the re-add to avoid tearing the popup containers
+        //    on every layout pass.
         const current = this._overflowedItems;
-        let same = current.Count === newOverflow.length;
+        let same = current.Count === targetOverflow.length;
         if (same)
         {
-            for (let i = 0; i < newOverflow.length; i++)
+            for (let i = 0; i < targetOverflow.length; i++)
             {
-                if (current.Get(i) !== newOverflow[i]) { same = false; break; }
+                if (current.Get(i) !== targetOverflow[i]) { same = false; break; }
             }
         }
         if (!same)
         {
             current.Clear();
-            for (const x of newOverflow) current.Add(x);
+            for (const x of targetOverflow) current.Add(x);
         }
 
-        const has = newOverflow.length > 0;
+        // 3. Re-attach items entering inline. These are Visuals that
+        //    should be inline at some master index but currently aren't
+        //    a child of the inline panel. The popup pipeline has
+        //    already detached them (step 2 Clear), so they're orphans
+        //    ready to be inserted.
+        //
+        //    Insertion index is the position in `targetInlineVisuals`
+        //    (the inline panel only hosts inline Visuals; non-Visual
+        //    items live as ContentPresenter children at separate
+        //    indices, but for the common Visual-only ToolBar case the
+        //    two indices match). Iterating in increasing index order
+        //    guarantees positions 0..idx-1 are already populated by the
+        //    time we hit idx.
+        if (inlinePanel !== undefined)
+        {
+            for (let idx = 0; idx < targetInlineVisuals.length; idx++)
+            {
+                const item = targetInlineVisuals[idx]!;
+                if (!inlinePanel.visualChildren.includes(item))
+                {
+                    (inlinePanel as Panel).InsertVisualChild(idx, item);
+                }
+            }
+        }
+
+        const has = targetOverflow.length > 0;
         if (this.HasOverflowItems !== has)
         {
             this.set_property_value_with_key(ToolBar._HasOverflowItemsPriv, has);
             if (!has && this.IsOverflowOpen) this.IsOverflowOpen = false;
+        }
+
+        // Update Position on inline ToolBarButton / ToolBarToggleButton
+        // children so each button's default Style picks the right
+        // per-corner CornerRadius. Walk inline visuals, breaking into
+        // groups at every ToolBarSeparator — each group of size 1 is
+        // `Only`, larger groups assign `First` / `Middle` / `Last`.
+        // Overflowed items are reset to `None` (their default chrome —
+        // they live inside the popup where the connected-bar look
+        // doesn't apply).
+        assignPositions(targetInlineVisuals);
+        for (const v of targetOverflow)
+        {
+            if (v instanceof ToolBarButton || v instanceof ToolBarToggleButton)
+            {
+                v.Position = ToolBarPosition.None;
+            }
         }
     }
 
@@ -304,42 +416,99 @@ export class ToolBarPanel extends Panel
 
     protected override MeasureOverride(availableSize: Size): Size
     {
-        const children = this.visualChildren;
         const budget = Number.isFinite(availableSize.Width) ? availableSize.Width : Number.POSITIVE_INFINITY;
-        let used = 0;
-        let maxH = 0;
-        let lastFit = children.length - 1;
-        for (let i = 0; i < children.length; i++)
+
+        // Measure currently-parented children so they have fresh
+        // DesiredSize values and we can refresh the cache.
+        for (const c of this.visualChildren)
         {
-            const c = children[i]!;
-            // Pass infinite height so items measure to their NATURAL
-            // height — a horizontal toolbar's height should be the max
-            // of its items, not whatever vertical space the parent
-            // happened to offer. Without this, a top-docked toolbar in
-            // a DockPanel pulls every child to the panel's full height
-            // (Buttons inherit VerticalAlignment.Stretch by default).
             c.Measure(new Size(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY));
-            const w = c.DesiredSize.Width;
-            const h = c.DesiredSize.Height;
+            this._toolbar?._widthCache.set(c, {
+                width:  c.DesiredSize.Width,
+                height: c.DesiredSize.Height,
+            });
+        }
+
+        // Master-index cutoff: walk ToolBar.Items in their authored
+        // order, using fresh DesiredSize for items currently inline and
+        // the width cache for items in the overflow popup (items not
+        // parented to us so we can't measure them through visualChildren).
+        // Reporting in master-index space lets _syncOverflow know which
+        // items should fit when the budget grows enough to bring popup
+        // items back inline.
+        const items = this._toolbar?.Items;
+        if (items === undefined)
+        {
+            // Standalone usage — no owning toolbar / master collection
+            // to consult for restore-on-grow. Fall back to fit-math
+            // against current children only (the pre-move-on-overflow
+            // behavior). Tests rely on this for in-isolation panel
+            // exercise; the production path always has a toolbar.
+            const children = this.visualChildren;
+            let usedFb = 0;
+            let maxHFb = 0;
+            let lastFitFb = children.length - 1;
+            for (let i = 0; i < children.length; i++)
+            {
+                const c = children[i]!;
+                const w = c.DesiredSize.Width;
+                const h = c.DesiredSize.Height;
+                if (usedFb + w > budget && i > 0)
+                {
+                    lastFitFb = i - 1;
+                    break;
+                }
+                usedFb += w;
+                if (h > maxHFb) maxHFb = h;
+            }
+            for (let i = lastFitFb + 1; i < children.length; i++)
+            {
+                const h = children[i]!.DesiredSize.Height;
+                if (h > maxHFb) maxHFb = h;
+            }
+            this._lastFittingIndex = lastFitFb;
+            return new Size(Math.min(usedFb, budget), maxHFb);
+        }
+
+        const itemCount = items instanceof ObservableCollection
+            ? items.Count
+            : items.length;
+        let used    = 0;
+        let maxH    = 0;
+        let lastFit = -1;
+        for (let i = 0; i < itemCount; i++)
+        {
+            const item = items instanceof ObservableCollection
+                ? items.Get(i)
+                : (items as readonly unknown[])[i];
+            let w = 0;
+            let h = 0;
+            if (item instanceof Visual)
+            {
+                const cached = this._toolbar?._widthCache.get(item);
+                if (cached !== undefined) { w = cached.width; h = cached.height; }
+            }
             if (used + w > budget && i > 0)
             {
-                // The first non-fitting child marks the cutoff. The
-                // condition `i > 0` keeps the very first item visible
-                // even when wider than the budget (it'll be clipped
-                // visually, but the panel doesn't pretend nothing fit).
                 lastFit = i - 1;
                 break;
             }
             used += w;
             if (h > maxH) maxH = h;
+            lastFit = i;
         }
-        // Account for items past the cutoff for height purposes — they
-        // arrange at Rect.Zero but the panel's height should still reflect
-        // the tallest measured item to keep layout stable through resize.
-        for (let i = lastFit + 1; i < children.length; i++)
+        // Sweep the rest for height-only (popup items still contribute
+        // to maxH so resize doesn't jitter the panel vertically).
+        for (let i = lastFit + 1; i < itemCount; i++)
         {
-            const h = children[i]!.DesiredSize.Height;
-            if (h > maxH) maxH = h;
+            const item = items instanceof ObservableCollection
+                ? items.Get(i)
+                : (items as readonly unknown[])[i];
+            if (item instanceof Visual)
+            {
+                const cached = this._toolbar?._widthCache.get(item);
+                if (cached !== undefined && cached.height > maxH) maxH = cached.height;
+            }
         }
         this._lastFittingIndex = lastFit;
         return new Size(Math.min(used, budget), maxH);
@@ -454,16 +623,104 @@ export class ToolBarOverflowItemsControl extends ItemsControl
 {
     public _toolbar: ToolBar | undefined;
 
+    // Items default through the base ContentPresenter wrap. Even though
+    // ToolBar's items are Visuals, we deliberately DON'T treat them as
+    // their own container in this popup — that would call AttachLogical
+    // on the item Visual, which already has its logical parent set to
+    // the outer ToolBar (set during the inline AttachContainer). A
+    // ContentPresenter wrap keeps the logical tree intact: the
+    // ContentPresenter is the popup's logical child, and the item rides
+    // in as `cp.Content` via visual-only AttachVisual. ToolBar._syncOverflow
+    // detaches the item from the inline panel before this runs so the
+    // visual-only attach has no prior parent to collide with.
+
     public override PrepareContainerForItemOverride(container: Visual, item: unknown, index: number): void
     {
         super.PrepareContainerForItemOverride(container, item, index);
         // Auto-close the popup when an overflowed Button is clicked.
-        if (container instanceof Button)
+        // Item is the source-of-truth Visual (the ToolBarButton authored
+        // in markup); container is the popup-side ContentPresenter wrap
+        // that hosts it visually. Click handler goes on the item — the
+        // ContentPresenter doesn't surface Button semantics.
+        const clickTarget = item instanceof Button ? item : container;
+        if (clickTarget instanceof Button)
         {
-            container.AddClickHandler(() =>
+            clickTarget.AddClickHandler(() =>
             {
                 this._toolbar!.IsOverflowOpen = false;
             });
+        }
+    }
+
+    /** When a container is cleared (e.g. CollectionView's Refresh-based
+     *  'cleared' that fires on every source mutation), the base hook
+     *  resets style + data but leaves `cp.Content` pointing at the item
+     *  — which keeps the item Visual parented under this stale cp. The
+     *  next 'inserted' event then tries to slot the item into a fresh
+     *  cp, hitting the parent-collision assertion.
+     *
+     *  Clearing `cp.Content` here detaches the item from cp via
+     *  ContentPresenter.SetContent's symmetric DetachVisual, leaving
+     *  the item orphan-ready for re-realization. */
+    public override ClearContainerForItemOverride(container: Visual, item: unknown): void
+    {
+        super.ClearContainerForItemOverride(container, item);
+        if (container instanceof ContentPresenter)
+        {
+            container.Content = undefined;
+        }
+    }
+}
+
+// Compute and write the Position DP on every ToolBarButton /
+// ToolBarToggleButton in the inline strip. Walks the strip splitting at
+// ToolBarSeparator children: each contiguous run of non-separator
+// Visuals is one group. Runs of length 1 are `Only`; longer runs assign
+// `First` to the first button, `Last` to the last, `Middle` to the
+// interior, where "button" here means specifically a ToolBarButton /
+// ToolBarToggleButton — other Visuals in the strip (a TextBlock the
+// consumer dropped in, a chevron from a future ToolBar variant) are
+// treated as gap fillers that DON'T receive a Position write but still
+// break a connected segment at their slot, so the visible buttons on
+// either side cap the run with rounded outer corners.
+function assignPositions(visuals: readonly Visual[]): void
+{
+    // First pass — partition into groups bounded by ToolBarSeparator.
+    // Each group is a list of indices into `visuals`. A non-ToolBarButton
+    // Visual that ISN'T a separator (rare — typical ToolBars are all
+    // buttons + separators) interrupts the group the same way a
+    // separator does, so the surrounding buttons cap correctly even
+    // when a non-button visual sits inline.
+    const groups: number[][] = [];
+    let cur: number[] = [];
+    for (let i = 0; i < visuals.length; i++)
+    {
+        const v = visuals[i]!;
+        const isButton = v instanceof ToolBarButton || v instanceof ToolBarToggleButton;
+        if (v instanceof ToolBarSeparator || !isButton)
+        {
+            if (cur.length > 0) { groups.push(cur); cur = []; }
+            continue;
+        }
+        cur.push(i);
+    }
+    if (cur.length > 0) groups.push(cur);
+
+    // Second pass — write Position on each button in each group.
+    for (const g of groups)
+    {
+        if (g.length === 1)
+        {
+            const btn = visuals[g[0]!]! as ToolBarButton | ToolBarToggleButton;
+            btn.Position = ToolBarPosition.Only;
+            continue;
+        }
+        for (let i = 0; i < g.length; i++)
+        {
+            const btn = visuals[g[i]!]! as ToolBarButton | ToolBarToggleButton;
+            if (i === 0)               btn.Position = ToolBarPosition.First;
+            else if (i === g.length - 1) btn.Position = ToolBarPosition.Last;
+            else                       btn.Position = ToolBarPosition.Middle;
         }
     }
 }

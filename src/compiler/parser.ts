@@ -1183,6 +1183,22 @@ export class Parser
     private consumeAsIdent(): IdentValue
     {
         const tk = this.consume();
+        // `Type.Member` — dotted static-member reference in value
+        // position (e.g. `@ShapeFull = CornerRadius.Full`). Only one
+        // tail segment is permitted; arbitrary `A.B.C` chains would
+        // collide with attached-property syntax used elsewhere in the
+        // grammar and we don't need them today. The emitter validates
+        // both halves against the symbol table / STATIC_MEMBERS.
+        if (this.peek().kind === TokenKind.Dot)
+        {
+            this.consume();
+            const tail = this.expect(TokenKind.Ident);
+            return {
+                kind: 'ident',
+                name: `${tk.value}.${tail.value}`,
+                span: this.span(tk.span.start, tail.span.end),
+            };
+        }
         return { kind: 'ident', name: tk.value, span: tk.span };
     }
 

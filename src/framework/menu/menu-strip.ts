@@ -305,6 +305,27 @@ export class MenuItem extends ItemsControl
         return this._rowRoot !== undefined ? [this._rowRoot] : [];
     }
 
+    // MenuItem's inline footprint is the row chrome — the popup template
+    // owned by ItemsControl._templateInstance is the SUBMENU and was
+    // detached from us in the ctor so the OverlayLayer can adopt it on
+    // open. Inheriting ItemsControl.MeasureOverride would route Measure
+    // to that detached popup root, leaving the row never measured and
+    // collapsing the item to zero height (the bug that turned the
+    // ContextMenu popup into a thin ribbon). Delegate straight to
+    // _rowRoot instead.
+    protected override MeasureOverride(availableSize: Size): Size
+    {
+        if (this._rowRoot === undefined) return Size.Zero;
+        this._rowRoot.Measure(availableSize);
+        return this._rowRoot.DesiredSize;
+    }
+
+    protected override ArrangeOverride(finalSize: Size): Size
+    {
+        this._rowRoot?.Arrange(new Rect(0, 0, finalSize.Width, finalSize.Height));
+        return finalSize;
+    }
+
     // Submenu items declared in `.mu` (`MenuItem { MenuItem ▶ … }`)
     // route through ItemsControl.AddChild. Lenient gate — any Visual
     // is accepted; conventional content is MenuItem / MenuSeparator.
@@ -423,6 +444,13 @@ export class MenuItem extends ItemsControl
         }
         this._lastKnownTarget = newTarget;
         super.propagate_target_to_visual_children();
+        // ItemsControl's cascade only reaches _templateInstance.root (the
+        // detached submenu popup). _rowRoot is the inline row chrome and
+        // lives outside that chain — without this hop, Background writes
+        // from IsMouseOver / IsPressed triggers can't reach the renderer
+        // (InvalidateVisual finds no target and parks the dirty flag).
+        (this._rowRoot as unknown as { SetTarget?: (t: PresentationTarget | undefined) => void } | undefined)
+            ?.SetTarget?.(newTarget);
         if (newTarget !== undefined && this.IsSubmenuOpen) this.mountSubmenu();
     }
 
@@ -744,12 +772,15 @@ export class MenuSeparator extends Visual
     public get LineBrush():  Brush | undefined { return this.get_property_value(MenuSeparator.LineBrushKey); }
     public set LineBrush(v: Brush | undefined) { this.set_property_value(MenuSeparator.LineBrushKey, v); }
 
-    protected override MeasureOverride(availableSize: Size): Size
+    protected override MeasureOverride(_availableSize: Size): Size
     {
-        return new Size(
-            Number.isFinite(availableSize.Width) ? availableSize.Width : this.MinWidth,
-            this.Height,
-        );
+        // Report MinWidth only — the Arrange phase of the hosting
+        // vertical StackPanel allocates the cross-axis to finalSize.Width,
+        // which is what RenderOverride actually paints. Reporting the
+        // full availableSize.Width here would dominate StackPanel's
+        // cross-axis max and stretch the entire popup to fill its
+        // available area (no MaxWidth on ContextMenu's popup chrome).
+        return new Size(this.MinWidth, this.Height);
     }
 
     protected override ArrangeOverride(finalSize: Size): Size { return finalSize; }
@@ -918,6 +949,13 @@ export class MenuButton extends ItemsControl
         return [];
     }
 
+    /** Body items declared in `.mu` (`MenuButton { MenuItem; … }`) come
+     *  in as MenuItem / MenuSeparator Visuals. The base ItemsControl
+     *  guard throws unless we accept them here — sibling controls
+     *  (MenuStrip, MenuItem, ContextMenu) follow the same accept-anything
+     *  shape since their markup body is meant to be heterogeneous. */
+    protected override validateDeclarativeChild(_child: Visual): void { }
+
     /** Items declared as a Visual in `.mu` (`MenuButton { MenuItem; … }`)
      *  ARE their own container — slot the Visual directly. */
     public override IsItemItsOwnContainerOverride(item: unknown): boolean
@@ -993,6 +1031,12 @@ export class MenuButton extends ItemsControl
         }
         this._lastKnownTarget = newTarget;
         super.propagate_target_to_visual_children();
+        // ItemsControl's cascade only reaches _templateInstance.root (the
+        // detached popup template). The inline trigger Button is OUR
+        // visualChild and needs the target too — without it, the Button's
+        // IsMouseOver / IsPressed triggers can't reach the renderer.
+        (this._button as unknown as { SetTarget?: (t: PresentationTarget | undefined) => void } | undefined)
+            ?.SetTarget?.(newTarget);
         if (newTarget !== undefined && this.IsOpen) this.mountPopup();
     }
 

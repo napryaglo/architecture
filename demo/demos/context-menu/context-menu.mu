@@ -17,10 +17,16 @@ resources ContextMenuDemo {
     // three menus to make it clear that route-walking found the
     // right ancestor.
     ContextMenu x:key="RedMenu" {
-        MenuItem[Header="Red — Cut",  Command=$RedCommand, CommandParameter="Cut"]
-        MenuItem[Header="Red — Copy", Command=$RedCommand, CommandParameter="Copy"]
+        MenuItem[Header="Red — Cut",  Command=$RedCommand, CommandParameter="Cut"]{
+            Behaviors { LogBehavior [Property="IsMouseOver", Tag="red-cut"] }
+        }
+        MenuItem[Header="Red — Copy", Command=$RedCommand, CommandParameter="Copy"]{
+            Behaviors { LogBehavior [Property="IsMouseOver", Tag="red-copy"] }
+        }
         MenuSeparator
-        MenuItem[Header="Red — Delete", Command=$RedCommand, CommandParameter="Delete"]
+        MenuItem[Header="Red — Delete", Command=$RedCommand, CommandParameter="Delete"]{
+            Behaviors { LogBehavior [Property="IsMouseOver", Tag="red-delete"] }
+        }
     }
     ContextMenu x:key="GreenMenu" {
         MenuItem[Header="Green — Inspect",   Command=$GreenCommand, CommandParameter="Inspect"]

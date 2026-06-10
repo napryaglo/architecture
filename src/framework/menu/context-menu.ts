@@ -101,6 +101,13 @@ export class ContextMenu extends ItemsControl
         this._partsBound = true;
     }
 
+    /** Body items declared in `.mu` (`ContextMenu { MenuItem; … }`) come
+     *  in as MenuItem / MenuSeparator Visuals. The base ItemsControl
+     *  guard throws unless we accept them here — sibling controls
+     *  (MenuStrip, MenuButton) follow the same accept-anything shape
+     *  since their markup body is meant to be heterogeneous. */
+    protected override validateDeclarativeChild(_child: Visual): void { }
+
     /** Items declared as a Visual in `.mu` (`ContextMenu { MenuItem; … }`)
      *  ARE their own container — slot the Visual directly without a
      *  ContentPresenter wrap. */
