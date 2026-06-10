@@ -1,7 +1,15 @@
 import { Application } from './application.js';
+import type { Binding } from './binding.js';
 import { ResourceDictionary, type ResourceKey } from './resource-dictionary.js';
 import type { EventTrigger, TriggerAction } from './trigger-actions.js';
 import type { Visual } from './visual.js';
+
+// Factory that produces a fresh Binding per styled target. DataTrigger /
+// MultiDataTrigger accept these to support sources beyond DataContext
+// paths (ElementName, RelativeSource, Source, converters). One factory
+// invocation per target, so the per-target setOnValueChanged callback
+// can't accidentally cross-wire two styled visuals.
+export type DataTriggerBindingFactory = (target: Visual) => Binding;
 
 // Wrapper that defers Setter / Trigger value creation until the style
 // is applied to a specific target. Use when the value needs the
@@ -72,13 +80,17 @@ export class PropertyTrigger
         // Actions invoked on the activation EDGE — i.e., the trigger
         // transitions from non-matching to matching. NOT fired on
         // initial style apply when the property already matches the
-        // trigger value (consumers wanting that pattern script it
-        // imperatively or use Loaded event triggers). One-shot per
-        // edge — no idempotence guards inside the runtime, so an
-        // action that mutates target state will see the same
-        // transitions the user sees.
+        // trigger value, nor on Style detach (uninstall) when the
+        // trigger was active. WPF parity: enter/exit fire only on
+        // genuine property-driven transitions; install/uninstall are
+        // resting-state changes, not edges. Consumers wanting initial
+        // state replay script it imperatively or use a Loaded event
+        // trigger. One-shot per edge — no idempotence guards inside
+        // the runtime, so an action that mutates target state will see
+        // the same transitions the user sees.
         public readonly enterActions: readonly TriggerAction[] = [],
         // Symmetric — fires on the deactivation edge (matching → not).
+        // Like enterActions, NOT fired on Style detach.
         public readonly exitActions:  readonly TriggerAction[] = [],
     ) {}
 }
@@ -95,35 +107,64 @@ export interface TriggerCondition
 }
 
 // Binding-driven conditional setter group — counterpart to WPF's
-// DataTrigger. The trigger watches the styled Visual's DataContext
-// for the dotted `path` (resolved through DataContextBinding's walk
-// semantics). When the bound value === `value` (or !== when negated),
-// the trigger's setters apply at the Trigger priority tier; when the
-// match flips, they're unapplied.
+// DataTrigger. Two source forms:
+//
+//   * String path (the common case): resolved through
+//     DataContextBinding's walk semantics on the styled Visual's
+//     DataContext. Authored markup writes `when( $Path )` (matches
+//     when the bound value === true; `not $Path` matches when ===
+//     false), or `when( $Path = expr )` to compare against a specific
+//     value.
+//   * Binding factory (the escape hatch): `(target) => Binding` so the
+//     trigger can read from arbitrary Binding sources — ElementName,
+//     RelativeSource, Source, converters, etc. WPF's full Binding
+//     surface that the bare-path form can't reach. Programmatic only
+//     today; the parser doesn't have markup syntax for it yet.
+//
+// In either form: when the resolved value === `value`, the trigger's
+// setters apply at the Trigger priority tier; when the match flips,
+// they're unapplied. Same edge semantics as PropertyTrigger
+// (initial-state match applies setters silently; enterActions /
+// exitActions fire only on genuine transitions).
 //
 // Unlike PropertyTrigger this is bound by *data identity* rather than
 // a DP on the target, so the same trigger transparently fires for
-// any item whose DataContext exposes the path. Heavily used inside
-// DataTemplate triggers (where the DataContext is the per-item view
-// model), but also valid inside an ordinary Style — useful for
+// any item whose source resolves to a matching value. Heavily used
+// inside DataTemplate triggers (where the DataContext is the per-item
+// view model), but also valid inside an ordinary Style — useful for
 // per-element data-driven re-skinning without an intermediate VM
 // flag mirrored as a DP on the target.
-//
-// Authored markup writes `when( $Path )` to invoke the bare-truthy
-// form (matches when the bound value === true; `not $Path` matches
-// when === false), or `when( $Path = expr )` to compare against a
-// specific value. Mode is parser-driven; the runtime just compares.
 export class DataTrigger
 {
+    // Populated when constructed with a string source; undefined for
+    // the binding-factory form.
+    public readonly path: string | undefined;
+    // Populated when constructed with a binding-factory source;
+    // undefined for the path form. The factory is invoked once per
+    // styled target at install time.
+    public readonly bindingFactory: DataTriggerBindingFactory | undefined;
+
     constructor(
-        public readonly path:    string,
+        pathOrBindingFactory: string | DataTriggerBindingFactory,
         public readonly value:   unknown,
         public readonly setters: readonly Setter[],
         // Same edge semantics as PropertyTrigger.enterActions —
         // activation transitions only, no initial-state replay.
         public readonly enterActions: readonly TriggerAction[] = [],
         public readonly exitActions:  readonly TriggerAction[] = [],
-    ) {}
+    )
+    {
+        if (typeof pathOrBindingFactory === 'string')
+        {
+            this.path = pathOrBindingFactory;
+            this.bindingFactory = undefined;
+        }
+        else
+        {
+            this.path = undefined;
+            this.bindingFactory = pathOrBindingFactory;
+        }
+    }
 }
 
 // Multi-property AND-trigger. Counterpart to WPF's MultiTrigger.
@@ -143,6 +184,44 @@ export class MultiTrigger
         public readonly setters:    readonly Setter[],
         // Same edge semantics as PropertyTrigger.enterActions — see
         // there for full notes.
+        public readonly enterActions: readonly TriggerAction[] = [],
+        public readonly exitActions:  readonly TriggerAction[] = [],
+    ) {}
+}
+
+// One conjunct condition inside a MultiDataTrigger — a binding source
+// + expected value pair. Mirrors TriggerCondition's shape but reads
+// from a Binding rather than a DP on the target. The source is either
+// a DataContext path (the common case, resolved via
+// DataContextBinding(this, path)) or a binding factory (the escape
+// hatch for ElementName / RelativeSource / Source / converters).
+export interface DataTriggerCondition
+{
+    path?:           string;
+    bindingFactory?: DataTriggerBindingFactory;
+    value:           unknown;
+}
+
+// Multi-binding AND-trigger. Counterpart to WPF's MultiDataTrigger.
+// Watches each condition's DataContext path; setters apply ONLY when
+// every bound value === its expected, deactivate as soon as any one
+// stops matching. The N bindings are independent — a swap of the
+// styled visual's DataContext re-resolves all of them.
+//
+// Authored markup writes `when( $A and $B )` (or mixed
+// `when( IsMouseOver and $IsHot )`); the compiler emits a
+// MultiDataTrigger when ANY conjunct term carries a $path, otherwise
+// the existing pure-DP MultiTrigger. Mixed conjuncts (DP + $path) are
+// lowered by stamping the DP-path conditions as `Owner.Name` pseudo-
+// paths — the runtime's install path consults DataContextBinding for
+// $-prefixed entries and the DP lookup for the rest.
+export class MultiDataTrigger
+{
+    constructor(
+        public readonly conditions: readonly DataTriggerCondition[],
+        public readonly setters:    readonly Setter[],
+        // Same edge semantics as PropertyTrigger.enterActions —
+        // activation transitions only, no initial-state replay.
         public readonly enterActions: readonly TriggerAction[] = [],
         public readonly exitActions:  readonly TriggerAction[] = [],
     ) {}
@@ -185,10 +264,11 @@ export class Style
 {
     public readonly TargetType: Function;
     public readonly Setters: readonly Setter[];
-    public readonly Triggers:      readonly PropertyTrigger[];
-    public readonly MultiTriggers: readonly MultiTrigger[];
-    public readonly DataTriggers:  readonly DataTrigger[];
-    public readonly EventTriggers: readonly EventTrigger[];
+    public readonly Triggers:          readonly PropertyTrigger[];
+    public readonly MultiTriggers:     readonly MultiTrigger[];
+    public readonly DataTriggers:      readonly DataTrigger[];
+    public readonly MultiDataTriggers: readonly MultiDataTrigger[];
+    public readonly EventTriggers:     readonly EventTrigger[];
 
     // BasedOn is exposed read-only via the getter. The backing field
     // is mutable so Seal() can splice in the THEME style for this
@@ -213,15 +293,17 @@ export class Style
         multiTriggers: readonly MultiTrigger[] = [],
         eventTriggers: readonly EventTrigger[] = [],
         dataTriggers:  readonly DataTrigger[]  = [],
+        multiDataTriggers: readonly MultiDataTrigger[] = [],
     )
     {
-        this.TargetType    = targetType;
-        this.Setters       = setters;
-        this._basedOn      = basedOn;
-        this.Triggers      = triggers;
-        this.MultiTriggers = multiTriggers;
-        this.EventTriggers = eventTriggers;
-        this.DataTriggers  = dataTriggers;
+        this.TargetType        = targetType;
+        this.Setters           = setters;
+        this._basedOn          = basedOn;
+        this.Triggers          = triggers;
+        this.MultiTriggers     = multiTriggers;
+        this.EventTriggers     = eventTriggers;
+        this.DataTriggers      = dataTriggers;
+        this.MultiDataTriggers = multiDataTriggers;
     }
 
     public get IsSealed(): boolean { return this._sealed; }
@@ -352,6 +434,17 @@ export class Style
         const list: DataTrigger[] = [];
         if (this.BasedOn !== undefined) list.push(...this.BasedOn.ResolveDataTriggers());
         list.push(...this.DataTriggers);
+        return list;
+    }
+
+    // BasedOn-first resolution for MultiDataTriggers — sibling of
+    // ResolveMultiTriggers / ResolveDataTriggers. Same Trigger priority
+    // tier; last-applied-wins ordering.
+    public ResolveMultiDataTriggers(): MultiDataTrigger[]
+    {
+        const list: MultiDataTrigger[] = [];
+        if (this.BasedOn !== undefined) list.push(...this.BasedOn.ResolveMultiDataTriggers());
+        list.push(...this.MultiDataTriggers);
         return list;
     }
 }

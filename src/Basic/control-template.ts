@@ -1,4 +1,4 @@
-import { Binding, BindingMode, NameScope, type BindingOptions, type Visual } from '../runtime/index.js';
+import { Binding, BindingMode, NameScope, type BindingOptions, type EventTrigger, type Visual } from '../runtime/index.js';
 import { ContentPresenter } from './content-presenter.js';
 import type { TemplatePropertyTrigger } from './data-template.js';
 
@@ -45,8 +45,14 @@ export interface TemplateInstance
 export class ControlTemplate
 {
     constructor(
-        public readonly factory:  TemplateFactory,
-        public readonly triggers: readonly TemplatePropertyTrigger[] = [],
+        public readonly factory:       TemplateFactory,
+        public readonly triggers:      readonly TemplatePropertyTrigger[] = [],
+        // `on Event { … }` triggers inside ControlTemplate.Triggers.
+        // Each freshly-built template-internal root gets its own
+        // AddEventTrigger registration so storyboards and command
+        // dispatch fire on the per-instance routed-event path. Mirrors
+        // WPF's `<ControlTemplate.Triggers><EventTrigger…>` shape.
+        public readonly eventTriggers: readonly EventTrigger[] = [],
     ) {}
 
     public Apply(templatedParent: Visual): TemplateInstance
@@ -79,6 +85,13 @@ export class ControlTemplate
         {
             trigger.AttachTo(root, templatedParent);
         }
+
+        // Routed-event triggers attach to the template-internal root —
+        // same path as DataTemplate.EventTriggers. The freshly-built
+        // root carries its own per-instance subscription so two
+        // templated controls authored from the same ControlTemplate
+        // never share listener state.
+        for (const t of this.eventTriggers) root.AddEventTrigger(t);
 
         const contentPresenter = findFirstContentPresenter(root);
         return { root, contentPresenter };

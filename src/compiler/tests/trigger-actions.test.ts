@@ -177,3 +177,88 @@ describe('compile — declarative EventTrigger + BeginStoryboard', () => {
         );
     });
 });
+
+describe('compile — ControlTemplate event triggers', () => {
+    test('ControlTemplate with `on Click { … }` passes the EventTrigger to the ControlTemplate ctor', () => {
+        const js = emitted(`
+            Application{
+                resources: {
+                    Template x:key="FancyBorder"[TargetType=Border]{
+                        Border[Padding=(8)]{}
+                        on Loaded {
+                            BeginStoryboard {
+                                DoubleAnimation[TargetProperty=Width, To=200, Duration=100]
+                            }
+                        }
+                    }
+                }
+            }
+        `);
+        // EventTrigger is constructed inside the ControlTemplate IIFE.
+        assert.match(js, /new EventTrigger\("Loaded", \[_act\d+\]\);/);
+        // ControlTemplate ctor receives both the triggers list (empty
+        // here) and the eventTriggers list.
+        assert.match(js, /new ControlTemplate\(_factory, \[\], \[_evt\d+\]\);/);
+    });
+});
+
+describe('compile — DataTemplate MultiDataTrigger', () => {
+    test('DataTemplate with `when ( $A and $B )` emits a TemplateMultiDataTrigger', () => {
+        const js = emitted(`
+            import FooVM from "./foo-vm.mjs"
+            Application{
+                resources: {
+                    DataTemplate x:key="T" [DataType=FooVM] {
+                        TextBlock{row}
+                        when ( $IsSelected and $IsHot ) {
+                            TextBlock.Foreground = #ff0000;
+                        }
+                    }
+                }
+            }
+        `);
+        assert.match(
+            js,
+            /new TemplateMultiDataTrigger\(\[\{ path: "IsSelected", value: true \}, \{ path: "IsHot", value: true \}\], _tplSet\d+\);/,
+        );
+        // DataTemplate ctor receives the multi-data-trigger array as
+        // the 6th positional arg.
+        assert.match(
+            js,
+            /new DataTemplate\(_factory, FooVM, \[\], \[\], \[\], \[_tplMultiDataTrig\d+\]\);/,
+        );
+    });
+
+    test('DataTemplate trigger body with `Behaviors { … }` lowers Attach/Detach into enter/exit', () => {
+        // The `partitionTriggerBody` helper routes behaviors-block items
+        // through `compileTriggeredBehavior`, producing paired
+        // AttachBehaviorAction / DetachBehaviorAction trigger actions.
+        // The template trigger then carries them as enterActions /
+        // exitActions, firing on activation / deactivation edges.
+        const js = emitted(`
+            import FooVM from "./foo-vm.mjs"
+            import StubBehavior from "./stub.mjs"
+            Application{
+                resources: {
+                    DataTemplate x:key="T" [DataType=FooVM] {
+                        TextBlock{row}
+                        when ( $IsActive ) {
+                            TextBlock.Foreground = #ff0000;
+                            Behaviors {
+                                StubBehavior
+                            }
+                        }
+                    }
+                }
+            }
+        `);
+        // Behavior lowered to paired Attach/Detach actions.
+        assert.match(js, /new AttachBehaviorAction\(\(\) => \{/);
+        assert.match(js, /new DetachBehaviorAction\(_attBeh\d+\);/);
+        // Template trigger ctor receives enter/exit action arrays.
+        assert.match(
+            js,
+            /new TemplateDataTrigger\("IsActive", true, _tplSet\d+, undefined, _tplEnter\d+, _tplExit\d+\);/,
+        );
+    });
+});

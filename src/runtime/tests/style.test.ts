@@ -7,6 +7,8 @@ import {
     DynamicResource,
     MetaData,
     Model,
+    MultiDataTrigger,
+    MultiTrigger,
     Panel,
     PropertyTrigger,
     PropertyValueSource,
@@ -15,8 +17,11 @@ import {
     SetterFactory,
     Size,
     Style,
+    TriggerAction,
     Visual,
+    type DataTriggerCondition,
     type DrawingContext,
+    type TriggerCondition,
 } from '../index.js';
 
 // Leaf with a couple of properties (one local, one inheritable) used
@@ -808,6 +813,271 @@ describe('Style — DataTrigger', () => {
         w.Style = child;
         vm.IsSelected = true;
         assert.equal(w.Bias, 42);
+    });
+
+    test('binding-factory source lets a DataTrigger watch a non-DataContext source', async () => {
+        // The factory form bypasses DataContextBinding and lets the
+        // trigger watch arbitrary Binding sources — ElementName,
+        // RelativeSource, Source, etc. We synthesise a trivial
+        // binding that reads from an outside ItemVM directly to
+        // demonstrate the dispatch path works.
+        const { Binding } = await import('../binding.js');
+        const vm = new ItemVM();
+        const trig = new DataTrigger(
+            // Factory: build a fresh Binding(vm, 'IsSelected') per
+            // styled target. The factory closure can capture any
+            // out-of-tree source.
+            (_target) => new Binding(vm, 'IsSelected'),
+            true,
+            [new Setter(Widget, 'Bias', 21)],
+        );
+        const style = new Style(Widget, [], undefined, [], [], [], [trig]);
+        const w = new Widget();
+        // Note: NO DataContext assignment — the trigger watches `vm`
+        // directly, not via the styled visual's DataContext walk.
+        w.Style = style;
+        assert.equal(w.Bias, 0);
+        vm.IsSelected = true;
+        assert.equal(w.Bias, 21);
+        vm.IsSelected = false;
+        assert.equal(w.Bias, 0);
+    });
+
+    test('bare-boolean DataTrigger lowers `not $Path` to value=false', () => {
+        // The compiler emits `DataTrigger(path, false, …)` for `not
+        // $Path` — runtime behaves like any other DataTrigger comparing
+        // the bound value against `false` via ===.
+        const trig = new DataTrigger('IsSelected', false, [
+            new Setter(Widget, 'Bias', 11),
+        ]);
+        const style = new Style(Widget, [], undefined, [], [], [], [trig]);
+        const vm = new ItemVM();
+        const w = new Widget();
+        w.DataContext = vm;
+        w.Style = style;
+        // IsSelected starts false → trigger matches (negated) → setters apply.
+        assert.equal(w.Bias, 11);
+        vm.IsSelected = true;
+        assert.equal(w.Bias, 0);
+        vm.IsSelected = false;
+        assert.equal(w.Bias, 11);
+    });
+});
+
+// A no-op TriggerAction whose Invoke just records the firing target.
+// Bound to enter/exit slots so we can count edges without dragging the
+// storyboard machinery into Style-level tests.
+class CounterAction extends TriggerAction
+{
+    public calls: number = 0;
+    public lastTarget: Visual | undefined;
+    public Invoke(target: Visual): void
+    {
+        this.calls++;
+        this.lastTarget = target;
+    }
+}
+
+describe('Style — MultiTrigger', () => {
+    test('activates only when EVERY condition matches; deactivates on first mismatch', () => {
+        const conds: TriggerCondition[] = [
+            { propertyOwner: Widget, propertyName: 'Tint', value: 'hot' },
+            { propertyOwner: Widget, propertyName: 'Bias', value: 7    },
+        ];
+        const mt = new MultiTrigger(conds, [new Setter(Widget, 'Tint', 'glow')]);
+        const style = new Style(Widget, [], undefined, [], [mt]);
+        const w = new Widget();
+        w.Style = style;
+        // One condition matches → still inactive.
+        w.Tint = 'hot';
+        assert.equal(w.Tint, 'hot');
+        // Second condition matches → activates and setter overrides Tint.
+        w.Bias = 7;
+        assert.equal(w.Tint, 'glow');
+        // One condition flips off → deactivates.
+        w.Bias = 0;
+        assert.equal(w.Tint, 'hot');
+    });
+
+    test('initial-state full match applies setters silently (no enterActions fire)', () => {
+        const probe = new CounterAction();
+        const conds: TriggerCondition[] = [
+            { propertyOwner: Widget, propertyName: 'Tint', value: 'hot' },
+            { propertyOwner: Widget, propertyName: 'Bias', value: 7    },
+        ];
+        const mt = new MultiTrigger(conds, [new Setter(Widget, 'Tint', 'glow')], [probe]);
+        const w = new Widget();
+        w.Tint = 'hot';
+        w.Bias = 7;
+        w.Style = new Style(Widget, [], undefined, [], [mt]);
+        // Setter applies — but no edge.
+        assert.equal(w.Tint, 'glow');
+        assert.equal(probe.calls, 0);
+        // Transition off then on — that IS the edge.
+        w.Bias = 0;
+        w.Bias = 7;
+        assert.equal(probe.calls, 1);
+    });
+
+    test('exitActions fire on deactivation EDGE only', () => {
+        const enter = new CounterAction();
+        const exit  = new CounterAction();
+        const conds: TriggerCondition[] = [
+            { propertyOwner: Widget, propertyName: 'Tint', value: 'hot' },
+            { propertyOwner: Widget, propertyName: 'Bias', value: 7    },
+        ];
+        const mt = new MultiTrigger(conds, [], [enter], [exit]);
+        const w = new Widget();
+        w.Style = new Style(Widget, [], undefined, [], [mt]);
+        // Not yet matched.
+        assert.equal(enter.calls, 0);
+        assert.equal(exit.calls, 0);
+        // Match → enter edge.
+        w.Tint = 'hot';
+        w.Bias = 7;
+        assert.equal(enter.calls, 1);
+        assert.equal(exit.calls,  0);
+        // Break match → exit edge.
+        w.Bias = 0;
+        assert.equal(enter.calls, 1);
+        assert.equal(exit.calls,  1);
+    });
+
+    test('unapplying the Style tears down all condition subscriptions', () => {
+        const conds: TriggerCondition[] = [
+            { propertyOwner: Widget, propertyName: 'Tint', value: 'hot' },
+            { propertyOwner: Widget, propertyName: 'Bias', value: 7    },
+        ];
+        const mt = new MultiTrigger(conds, [new Setter(Widget, 'Tint', 'glow')]);
+        const style = new Style(Widget, [], undefined, [], [mt]);
+        const w = new Widget();
+        w.Style = style;
+        w.Tint = 'hot';
+        w.Bias = 7;
+        assert.equal(w.Tint, 'glow');
+
+        w.Style = undefined;
+        assert.equal(w.Tint, 'hot');
+        // Subsequent changes must NOT re-activate the unsubscribed trigger.
+        w.Bias = 0;
+        w.Bias = 7;
+        assert.equal(w.Tint, 'hot');
+    });
+});
+
+describe('Style — MultiDataTrigger', () => {
+    test('activates only when EVERY DataContext-bound condition matches', () => {
+        const conds: DataTriggerCondition[] = [
+            { path: 'IsSelected', value: true },
+            { path: 'Score',      value: 5    },
+        ];
+        const mt = new MultiDataTrigger(conds, [new Setter(Widget, 'Bias', 99)]);
+        const style = new Style(Widget, [], undefined, [], [], [], [], [mt]);
+        const vm = new ItemVM();
+        const w = new Widget();
+        w.DataContext = vm;
+        w.Style = style;
+        assert.equal(w.Bias, 0);
+        // One match, other not — inactive.
+        vm.IsSelected = true;
+        assert.equal(w.Bias, 0);
+        // Both match — active.
+        vm.Score = 5;
+        assert.equal(w.Bias, 99);
+        // Break one — inactive.
+        vm.IsSelected = false;
+        assert.equal(w.Bias, 0);
+    });
+
+    test('re-resolves all bindings when DataContext swaps', () => {
+        const conds: DataTriggerCondition[] = [
+            { path: 'IsSelected', value: true },
+            { path: 'Score',      value: 5    },
+        ];
+        const mt = new MultiDataTrigger(conds, [new Setter(Widget, 'Bias', 42)]);
+        const style = new Style(Widget, [], undefined, [], [], [], [], [mt]);
+        const a = new ItemVM(); a.IsSelected = true; a.Score = 5;
+        const b = new ItemVM(); b.IsSelected = false; b.Score = 0;
+        const w = new Widget();
+        w.DataContext = a;
+        w.Style = style;
+        assert.equal(w.Bias, 42);
+        w.DataContext = b;
+        assert.equal(w.Bias, 0);
+        b.IsSelected = true; b.Score = 5;
+        assert.equal(w.Bias, 42);
+    });
+
+    test('initial-state full match applies setters silently (no enterActions fire)', () => {
+        const probe = new CounterAction();
+        const conds: DataTriggerCondition[] = [
+            { path: 'IsSelected', value: true },
+            { path: 'Score',      value: 5    },
+        ];
+        const mt = new MultiDataTrigger(conds, [new Setter(Widget, 'Bias', 50)], [probe]);
+        const vm = new ItemVM(); vm.IsSelected = true; vm.Score = 5;
+        const w = new Widget();
+        w.DataContext = vm;
+        w.Style = new Style(Widget, [], undefined, [], [], [], [], [mt]);
+        // Setter applied, but no enter edge.
+        assert.equal(w.Bias, 50);
+        assert.equal(probe.calls, 0);
+        // Genuine transition (off → on) → edge.
+        vm.IsSelected = false;
+        vm.IsSelected = true;
+        assert.equal(probe.calls, 1);
+    });
+
+    test('unapplying the Style tears down all DataContext subscriptions', () => {
+        const conds: DataTriggerCondition[] = [
+            { path: 'IsSelected', value: true },
+            { path: 'Score',      value: 5    },
+        ];
+        const mt = new MultiDataTrigger(conds, [new Setter(Widget, 'Bias', 7)]);
+        const style = new Style(Widget, [], undefined, [], [], [], [], [mt]);
+        const vm = new ItemVM(); vm.IsSelected = true; vm.Score = 5;
+        const w = new Widget();
+        w.DataContext = vm;
+        w.Style = style;
+        assert.equal(w.Bias, 7);
+
+        w.Style = undefined;
+        assert.equal(w.Bias, 0);
+        // Subsequent mutations on the source must NOT re-activate.
+        vm.IsSelected = false;
+        vm.IsSelected = true;
+        assert.equal(w.Bias, 0);
+    });
+});
+
+describe('Style — DataTrigger enter/exit actions', () => {
+    test('enterActions fire on bound-value match EDGE; not on initial-match apply', () => {
+        const enter = new CounterAction();
+        const trig = new DataTrigger('IsSelected', true, [], [enter]);
+        const vm = new ItemVM();
+        vm.IsSelected = true;
+        const w = new Widget();
+        w.DataContext = vm;
+        w.Style = new Style(Widget, [], undefined, [], [], [], [trig]);
+        // Initial match → setters apply (none here), enter does not fire.
+        assert.equal(enter.calls, 0);
+        // Genuine false→true transition fires.
+        vm.IsSelected = false;
+        vm.IsSelected = true;
+        assert.equal(enter.calls, 1);
+    });
+
+    test('exitActions fire on bound-value mismatch EDGE', () => {
+        const exit = new CounterAction();
+        const trig = new DataTrigger('IsSelected', true, [], [], [exit]);
+        const vm = new ItemVM();
+        const w = new Widget();
+        w.DataContext = vm;
+        w.Style = new Style(Widget, [], undefined, [], [], [], [trig]);
+        vm.IsSelected = true;
+        assert.equal(exit.calls, 0);
+        vm.IsSelected = false;
+        assert.equal(exit.calls, 1);
     });
 });
 

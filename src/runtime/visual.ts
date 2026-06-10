@@ -9,7 +9,7 @@ import { ObservableCollection, type IReadOnlyObservableCollection } from './obse
 import { ResourceDictionary, type ResourceKey } from './resource-dictionary.js';
 import { Application } from './application.js';
 import type { Behavior } from './behavior.js';
-import { Setter, SetterFactory, Style, PropertyTrigger, MultiTrigger, DataTrigger } from './style.js';
+import { Setter, SetterFactory, Style, PropertyTrigger, MultiTrigger, DataTrigger, MultiDataTrigger } from './style.js';
 import { Rect, Size, Thickness } from './primitives.js';
 import type { DrawingContext } from './drawing-context.js';
 import type { TextMeasurer } from './text-measurer.js';
@@ -513,11 +513,11 @@ export class Visual extends Model
     // Currently-matched triggers. A trigger is added on its watched
     // property matching the trigger's value; removed when the value
     // diverges. Trigger setters are applied / cleared in lock-step.
-    private _activeTriggers: Set<PropertyTrigger | MultiTrigger | DataTrigger> = new Set();
+    private _activeTriggers: Set<PropertyTrigger | MultiTrigger | DataTrigger | MultiDataTrigger> = new Set();
 
     // Per-trigger unsubscribe callback, set at install_trigger,
     // invoked at uninstall_trigger. Keyed by the trigger instance.
-    private _triggerSubscriptions: Map<PropertyTrigger | MultiTrigger | DataTrigger, () => void> = new Map();
+    private _triggerSubscriptions: Map<PropertyTrigger | MultiTrigger | DataTrigger | MultiDataTrigger, () => void> = new Map();
 
     // Per-EventTrigger unsubscribe callback. Different map from
     // _triggerSubscriptions because EventTriggers don't watch a
@@ -666,6 +666,21 @@ export class Visual extends Model
     public get templatedParent(): Visual | undefined
     {
         return this._templatedParent;
+    }
+
+    // The PresentationTarget hosting this Visual's tree, or undefined
+    // when the Visual is unattached. WPF equivalent of
+    // PresentationSource.FromVisual(v) — consumers reach for the host's
+    // ActualWidth / ActualHeight / DeviceScale / TextMeasurer / overlay
+    // surface without walking GetVisualParent() themselves. Returns the
+    // structural VisualHost contract; consumers in the visual-engine
+    // layer that need the concrete PresentationTarget surface cast at
+    // the call site. The back-pointer is cascaded through SetTarget at
+    // attach time, so this is an O(1) read despite the name — no
+    // ancestor walk happens at call time.
+    public FindAncestorPresentationTarget(): VisualHost | undefined
+    {
+        return this._target;
     }
 
     // Set by the template-apply pipeline (Controls/control-template.ts)
@@ -888,6 +903,13 @@ export class Visual extends Model
         for (const t of prevData) if (!nextDataSet.has(t)) this.uninstall_trigger(t);
         for (const t of nextData) if (!prevDataSet.has(t)) this.install_data_trigger(t);
 
+        const prevMultiData = previous?.ResolveMultiDataTriggers() ?? [];
+        const nextMultiData = desired?.ResolveMultiDataTriggers()  ?? [];
+        const prevMultiDataSet = new Set(prevMultiData);
+        const nextMultiDataSet = new Set(nextMultiData);
+        for (const t of prevMultiData) if (!nextMultiDataSet.has(t)) this.uninstall_trigger(t);
+        for (const t of nextMultiData) if (!prevMultiDataSet.has(t)) this.install_multi_data_trigger(t);
+
         const prevEvt = previous?.ResolveEventTriggers() ?? [];
         const nextEvt = desired?.ResolveEventTriggers()  ?? [];
         const prevEvtSet = new Set(prevEvt);
@@ -1053,6 +1075,18 @@ export class Visual extends Model
                 this._loadedListeners?.delete(handler);
             });
             if (this._hasFiredLoaded) handler();
+            return;
+        }
+        // Unloaded — fires on every detach edge (not one-shot, matching
+        // fire_unloaded_listeners contract). Re-attach + detach cycles
+        // fire on each detach.
+        if (trigger.RoutedEvent === 'Unloaded')
+        {
+            const handler = (): void => fire(undefined);
+            this.AddUnloadedListener(handler);
+            this._eventTriggerSubscriptions.set(trigger, () => {
+                this.RemoveUnloadedListener(handler);
+            });
             return;
         }
         // Generic routed events — PointerDown / PointerUp / PointerMove /
@@ -1274,10 +1308,10 @@ export class Visual extends Model
         this._triggerSubscriptions.set(trigger, () => {
             this._remove_property_changed_listener_by_name(trigger.propertyOwner, trigger.propertyName, onChange);
         });
-        this.evaluate_trigger(trigger);
+        this.evaluate_trigger(trigger, /*isInitialEvaluation*/ true);
     }
 
-    private uninstall_trigger(trigger: PropertyTrigger | MultiTrigger | DataTrigger): void
+    private uninstall_trigger(trigger: PropertyTrigger | MultiTrigger | DataTrigger | MultiDataTrigger): void
     {
         this._triggerSubscriptions.get(trigger)?.();
         this._triggerSubscriptions.delete(trigger);
@@ -1310,10 +1344,10 @@ export class Visual extends Model
             });
         }
         this._triggerSubscriptions.set(trigger, () => { for (const u of unsubs) u(); });
-        this.evaluate_multi_trigger(trigger);
+        this.evaluate_multi_trigger(trigger, /*isInitialEvaluation*/ true);
     }
 
-    private evaluate_multi_trigger(trigger: MultiTrigger): void
+    private evaluate_multi_trigger(trigger: MultiTrigger, isInitialEvaluation: boolean = false): void
     {
         const allMatch = trigger.conditions.every(cond =>
             this._get_property_value_by_name(cond.propertyOwner, cond.propertyName) === cond.value);
@@ -1327,8 +1361,15 @@ export class Visual extends Model
             this._activeTriggers.add(trigger);
             // Enter actions fire AFTER setters apply so any storyboard
             // started by an action sees the post-trigger property state
-            // as its baseline.
-            for (const action of trigger.enterActions) action.Invoke(this);
+            // as its baseline. Suppressed on initial evaluation (Style
+            // apply) — WPF edge semantics: enterActions fire only on
+            // false→true TRANSITIONS, not on the initial "already true"
+            // state. Setters still apply silently so the resting visual
+            // matches the trigger.
+            if (!isInitialEvaluation)
+            {
+                for (const action of trigger.enterActions) action.Invoke(this);
+            }
         }
         else if (!allMatch && wasActive)
         {
@@ -1337,7 +1378,10 @@ export class Visual extends Model
                 this.unapply_setter(setter, 'trigger');
             }
             this._activeTriggers.delete(trigger);
-            for (const action of trigger.exitActions) action.Invoke(this);
+            if (!isInitialEvaluation)
+            {
+                for (const action of trigger.exitActions) action.Invoke(this);
+            }
         }
     }
 
@@ -1348,13 +1392,69 @@ export class Visual extends Model
     // state accordingly. Symmetric with install_trigger.
     private install_data_trigger(trigger: DataTrigger): void
     {
-        const binding = DataContextBinding(this, trigger.path);
+        const binding = trigger.path !== undefined
+            ? DataContextBinding(this, trigger.path)
+            : trigger.bindingFactory!(this);
         binding.setOnValueChanged(() => { this.evaluate_data_trigger(trigger, binding); });
         this._triggerSubscriptions.set(trigger, () => { binding.dispose(); });
-        this.evaluate_data_trigger(trigger, binding);
+        this.evaluate_data_trigger(trigger, binding, /*isInitialEvaluation*/ true);
     }
 
-    private evaluate_data_trigger(trigger: DataTrigger, binding: Binding): void
+    // Multi-binding AND-trigger install. Allocates one DataContextBinding
+    // per condition; any condition's bound value change re-evaluates the
+    // conjunction. All-or-nothing activation, symmetric with
+    // install_multi_trigger.
+    private install_multi_data_trigger(trigger: MultiDataTrigger): void
+    {
+        const bindings = trigger.conditions.map(cond =>
+            cond.path !== undefined
+                ? DataContextBinding(this, cond.path)
+                : cond.bindingFactory!(this));
+        const onChange = (): void => { this.evaluate_multi_data_trigger(trigger, bindings); };
+        for (const b of bindings) b.setOnValueChanged(onChange);
+        this._triggerSubscriptions.set(trigger, () => {
+            for (const b of bindings) b.dispose();
+        });
+        this.evaluate_multi_data_trigger(trigger, bindings, /*isInitialEvaluation*/ true);
+    }
+
+    private evaluate_multi_data_trigger(
+        trigger: MultiDataTrigger,
+        bindings: Binding[],
+        isInitialEvaluation: boolean = false,
+    ): void
+    {
+        const allMatch = trigger.conditions.every(
+            (cond, i) => bindings[i]!.get_value() === cond.value,
+        );
+        const wasActive = this._activeTriggers.has(trigger);
+        if (allMatch && !wasActive)
+        {
+            for (const setter of trigger.setters)
+            {
+                this.apply_setter(setter, 'trigger');
+            }
+            this._activeTriggers.add(trigger);
+            if (!isInitialEvaluation)
+            {
+                for (const action of trigger.enterActions) action.Invoke(this);
+            }
+        }
+        else if (!allMatch && wasActive)
+        {
+            for (const setter of trigger.setters)
+            {
+                this.unapply_setter(setter, 'trigger');
+            }
+            this._activeTriggers.delete(trigger);
+            if (!isInitialEvaluation)
+            {
+                for (const action of trigger.exitActions) action.Invoke(this);
+            }
+        }
+    }
+
+    private evaluate_data_trigger(trigger: DataTrigger, binding: Binding, isInitialEvaluation: boolean = false): void
     {
         const current = binding.get_value();
         const matched = current === trigger.value;
@@ -1366,7 +1466,10 @@ export class Visual extends Model
                 this.apply_setter(setter, 'trigger');
             }
             this._activeTriggers.add(trigger);
-            for (const action of trigger.enterActions) action.Invoke(this);
+            if (!isInitialEvaluation)
+            {
+                for (const action of trigger.enterActions) action.Invoke(this);
+            }
         }
         else if (!matched && wasActive)
         {
@@ -1375,7 +1478,10 @@ export class Visual extends Model
                 this.unapply_setter(setter, 'trigger');
             }
             this._activeTriggers.delete(trigger);
-            for (const action of trigger.exitActions) action.Invoke(this);
+            if (!isInitialEvaluation)
+            {
+                for (const action of trigger.exitActions) action.Invoke(this);
+            }
         }
     }
 
@@ -1383,7 +1489,7 @@ export class Visual extends Model
     // value; flip activation state accordingly. Apply its setters
     // on activation; clear them on deactivation. === equality only
     // (WPF parity for PropertyTrigger).
-    private evaluate_trigger(trigger: PropertyTrigger): void
+    private evaluate_trigger(trigger: PropertyTrigger, isInitialEvaluation: boolean = false): void
     {
         const current = this._get_property_value_by_name(trigger.propertyOwner, trigger.propertyName);
         const matched = current === trigger.value;
@@ -1397,8 +1503,15 @@ export class Visual extends Model
             this._activeTriggers.add(trigger);
             // Enter actions fire AFTER setters apply so any storyboard
             // started by an action sees the post-trigger property state
-            // as its baseline.
-            for (const action of trigger.enterActions) action.Invoke(this);
+            // as its baseline. Suppressed on initial evaluation (Style
+            // apply) — WPF edge semantics: enterActions fire only on
+            // false→true TRANSITIONS, not on the initial "already true"
+            // state. Setters still apply silently so the resting visual
+            // matches the trigger.
+            if (!isInitialEvaluation)
+            {
+                for (const action of trigger.enterActions) action.Invoke(this);
+            }
         }
         else if (!matched && wasActive)
         {
@@ -1407,7 +1520,10 @@ export class Visual extends Model
                 this.unapply_setter(setter, 'trigger');
             }
             this._activeTriggers.delete(trigger);
-            for (const action of trigger.exitActions) action.Invoke(this);
+            if (!isInitialEvaluation)
+            {
+                for (const action of trigger.exitActions) action.Invoke(this);
+            }
         }
     }
 

@@ -2,7 +2,7 @@
 
 Open gaps in the property/binding/control system compared to WPF. Closed items moved to [completed-backlog.md](completed-backlog.md) — section numbers preserved across both files so cross-references survive.
 
-**Status:** Property / binding / inheritance / layout / render pipeline is feature-complete for WPF parity; the concrete-control roster covers Border, Grid (with shared-size groups), StackPanel, WrapPanel, DockPanel, Canvas, UniformGrid, VirtualizingStackPanel, VirtualizingWrapPanel, Button, ToggleButton, TextBlock, TextBox, ComboBox, ListBox, TreeView, Slider, SpinEdit, ScrollBar, ScrollViewer, ContentControl, ItemsControl, ControlTemplate, DataTemplate, Drawer, PageView, Diagram (with Selector-based multi-select + marquee), Thumb, Splitter, GridSplitter, ToolBar (+ ToolBarButton / ToolBarToggleButton / ToolBarSeparator with overflow popup), Menu / MenuButton / MenuItem / MenuSeparator (hamburger fly-out), ContextMenu (attached DP + right-click auto-open), and shapes (Ellipse, Line). 5.3 `Dispatcher` / thread affinity dropped — N/A for single-threaded JS. Test suite: 1543 tests passing.
+**Status:** Property / binding / inheritance / layout / render pipeline is feature-complete for WPF parity; the concrete-control roster covers Border, Grid (with shared-size groups), StackPanel, WrapPanel, DockPanel, Canvas, UniformGrid, VirtualizingStackPanel, VirtualizingWrapPanel, Button, ToggleButton, TextBlock, TextBox, ComboBox, ListBox, TreeView, Slider, SpinEdit, ScrollBar, ScrollViewer, ContentControl, ItemsControl, ControlTemplate, DataTemplate, Drawer, PageView, Diagram (with Selector-based multi-select + marquee), Thumb, Splitter, GridSplitter, ToolBar (+ ToolBarButton / ToolBarToggleButton / ToolBarSeparator with overflow popup), Menu / MenuButton / MenuItem / MenuSeparator (hamburger fly-out), ContextMenu (attached DP + right-click auto-open), and shapes (Ellipse, Line). 5.3 `Dispatcher` / thread affinity dropped — N/A for single-threaded JS. Test suite: 1612 tests passing.
 
 ## 5. Architectural gaps
 
@@ -23,8 +23,6 @@ Open gaps in the property/binding/control system compared to WPF. Closed items m
    - ~~**Dynamic Icon / ShowText on ToolBarButton.**~~ Closed. Added a `Text: string | undefined` DP alongside `Icon` / `ShowText`; flipping any of the three rebuilds the inline `Content` stack via `OnPropertyChanged` (reusing a single per-button `StackPanel` instance so the icon Visual's single-parent invariant holds).
    - ~~**ToolBar HasOverflowItems styling.**~~ Closed. `OnPropertyChanged('HasOverflowItems')` collapses the chevron Button to `Width=0` when no items overflow; restores to `NaN` (auto) when they do.
 
-5.12. **`Visual.FindAncestorPresentationTarget()`.** WPF has `PresentationSource.FromVisual(v)` so any Visual can find its hosting window / DPI / size from anywhere in the tree. Today consumers walk `GetVisualParent()` manually. From [visual-engine-design.md](src/document/visual-engine-design.md) § 11. Defer until DPI-aware text measurement or similar concretely needs it.
-
 5.13. **Hit testing for non-SVG renderers.** SVG gets hit-testing free via `elementsFromPoint`. Canvas needs a spatial index or hidden picking buffer. WebGL same. Pairs with the CanvasRenderer (9.1). From [visual-engine-design.md](src/document/visual-engine-design.md) § 11.
 
 5.7. **`mural-hit` pad opt-out for non-interactive Visuals.** Today `SvgRenderer` emits an invisible `<rect class="mural-hit" fill="none" pointer-events="all" .../>` inside every Visual's outer `<g>`, sized to its `ArrangedRect`. The pad exists so pointer events register on the whitespace between painted descendants (a TreeView row's gaps between chevron and label glyphs would otherwise fall through under SVG's default `visiblePainted`). One pad per Visual ≈ half the `<rect>` count in any non-trivial scene (~280 of the 633 rects in the tree-view demo, ~28 KB of attributes for a 108 KB dump). For most Visuals the pad is dead weight — purely decorative `TextBlock`s, `Border`s, layout panels, etc. never get a routed-event listener and never appear in an `IsMouseOver`/`IsPressed`/`IsFocused` trigger. The pad is only load-bearing for Visuals that: (a) have a per-instance routed-event listener (`AddPointerDownListener` etc.), (b) appear as the watched target in a `PropertyTrigger` over `IsMouseOver`/`IsPressed`/`IsFocused`, (c) have `Focusable=true`, or (d) override an input virtual (`OnPointerDown`, …). The renderer doesn't currently know any of those criteria. Two viable shapes for the opt-out: an `interactive` bit on Visual that subclasses opt into (cheap, explicit, requires touching every interactive control); or a renderer-side derivation that walks the listener Maps + Style triggers when materializing the outer `<g>` (no control-side change, but couples the renderer to the routed-event + style internals). Either way, the pad still gets re-emitted at the moment a Visual transitions from non-interactive to interactive (new listener added at runtime, Focusable flipped, a trigger installed via Style.OverrideMetadata on a descendant class). Pairs naturally with the existing "lazy-attach `mural-own`" optimization — together they could plausibly halve the steady-state SVG size for layout-heavy demos.
@@ -32,22 +30,6 @@ Open gaps in the property/binding/control system compared to WPF. Closed items m
 ## 6. Path parser
 
 6.2. **No type-qualified indexers.** WPF supports `[(sys:Int32)0]` to disambiguate indexer overloads. Probably fine to skip for JS.
-
----
-
-## 7. Triggers & Setters
-
-From [styles.md § 9](src/document/styles.md) and [templating.md § 9](src/document/templating.md).
-
-7.1. **`DataTrigger`.** Watches a `Binding`'s resolved value rather than a property on the styled target. Layers naturally on top of `PropertyTrigger` — same activation / exit machinery, different condition source. Unblocks `Behaviors v3` (conditional-attach behaviors, mentioned in [behaviors.md § 0](src/document/behaviors.md)).
-
-7.2. **`MultiTrigger`.** AND-of-multiple-conditions trigger. Each condition is a (property, value) pair on the styled target; trigger activates only when every condition holds. Layers on top of `PropertyTrigger`.
-
-7.3. **`EventTrigger`.** Fires on event occurrence; primary use case is launching a Storyboard. Stays dormant until the animation system (16.1) lands.
-
-7.4. **`Style.Triggers` with `EnterActions` / `ExitActions`.** Trigger-activation / -deactivation hooks. The existing `AttachBehavior` / `DetachBehavior` trigger action covers the behaviors flavour; the WPF-equivalent `Storyboard` flavour waits on the animation system (16.1).
-
-7.5. **Setter / Trigger sealing follow-up.** `Seal()` sets `IsSealed` but readonly fields already prevent mutation. Future mutable trigger / setter collections would gate on this flag.
 
 ---
 

@@ -276,22 +276,28 @@ describe('compile — Style emission', () => {
         );
     });
 
-    test('not $Path is rejected with a clear error', () => {
-        assert.throws(
-            () => emitted(`
-                Application{
-                    resources: {
-                        Style[TargetType=Border]{
-                            when( not $IsSelected ){ Background = #000; }
-                        }
+    test('not $Path lowers to DataTrigger with value=false (bare-boolean negation)', () => {
+        const js = emitted(`
+            Application{
+                resources: {
+                    Style[TargetType=Border]{
+                        when( not $IsSelected ){ Background = #000; }
                     }
                 }
-            `),
-            (e) => e instanceof EmitError && /not \$path/.test(e.message),
+            }
+        `);
+        assert.match(
+            js,
+            /new DataTrigger\("IsSelected", false, _sArr\d+\);/,
         );
     });
 
-    test('$path inside an AND-conjunct is rejected', () => {
+    test('mixed DP + $path inside an AND-conjunct is rejected', () => {
+        // Pure-DP and pure-$path conjuncts both lower fine (MultiTrigger
+        // and MultiDataTrigger respectively). MIXING them inside the
+        // same conjunct stays rejected — mural mirrors WPF's split
+        // (MultiTrigger.Conditions are DP-only; MultiDataTrigger.
+        // Conditions are binding-only).
         assert.throws(
             () => emitted(`
                 Application{
@@ -304,8 +310,21 @@ describe('compile — Style emission', () => {
                     }
                 }
             `),
-            (e) => e instanceof EmitError && /\$path/.test(e.message),
+            (e) => e instanceof EmitError && /mixing \$path terms and DP terms/.test(e.message),
         );
+    });
+
+    test('pure $path AND-conjunct lowers to MultiDataTrigger', () => {
+        const js = emitted(`
+            Application{
+                resources: {
+                    Style[TargetType=Border]{
+                        when( $IsSelected and $IsHot ){ Background = #000; }
+                    }
+                }
+            }
+        `);
+        assert.match(js, /new MultiDataTrigger\(\[/);
     });
 });
 

@@ -4,6 +4,7 @@ import {
     Color,
     MetaData,
     Model,
+    Panel,
     Size,
     Visual,
     type DrawingContext,
@@ -428,5 +429,72 @@ describe('HeadlessTarget.Render now drains Flush() and clears renderDirty', () =
         assert.equal(t.ActualWidth, 40);
         const out = dc2.ToFragment();
         assert.ok(out.includes('fill="rgb(255,0,0)"'));
+    });
+});
+
+describe('Visual.FindAncestorPresentationTarget', () => {
+    test('detached Visual returns undefined', () => {
+        const v = new TestLeaf(new Size(10, 10));
+        assert.equal(v.FindAncestorPresentationTarget(), undefined);
+    });
+
+    test('Visual mounted as Content returns the target', () => {
+        const root = new TestLeaf(new Size(10, 10));
+        const t = makeTarget(root, 100, 100);
+        assert.equal(root.FindAncestorPresentationTarget(), t);
+    });
+
+    test('deep descendant of Content returns the same target', () => {
+        const outer = new Panel();
+        const inner = new Panel();
+        const leaf  = new TestLeaf(new Size(10, 10));
+        outer.AddChild(inner);
+        inner.AddChild(leaf);
+
+        const t = makeTarget(outer, 100, 100);
+        assert.equal(outer.FindAncestorPresentationTarget(), t);
+        assert.equal(inner.FindAncestorPresentationTarget(), t);
+        assert.equal(leaf .FindAncestorPresentationTarget(), t);
+    });
+
+    test('reassigning Content clears the back-pointer on the previous subtree', () => {
+        const oldRoot = new Panel();
+        const oldLeaf = new TestLeaf(new Size(10, 10));
+        oldRoot.AddChild(oldLeaf);
+
+        const t = makeTarget(oldRoot, 100, 100);
+        assert.equal(oldLeaf.FindAncestorPresentationTarget(), t);
+
+        const newRoot = new TestLeaf(new Size(10, 10));
+        t.Content = newRoot;
+
+        assert.equal(oldLeaf.FindAncestorPresentationTarget(), undefined);
+        assert.equal(oldRoot.FindAncestorPresentationTarget(), undefined);
+        assert.equal(newRoot.FindAncestorPresentationTarget(), t);
+    });
+
+    test('child added after Content attachment picks up the target', () => {
+        const root = new Panel();
+        const t = makeTarget(root, 100, 100);
+        const lateChild = new TestLeaf(new Size(10, 10));
+        assert.equal(lateChild.FindAncestorPresentationTarget(), undefined);
+
+        root.AddChild(lateChild);
+        assert.equal(lateChild.FindAncestorPresentationTarget(), t);
+
+        root.RemoveChild(lateChild);
+        assert.equal(lateChild.FindAncestorPresentationTarget(), undefined);
+    });
+
+    test('overlay-mounted Visual reports the target as its host', () => {
+        const root = new TestLeaf(new Size(10, 10));
+        const t = makeTarget(root, 100, 100);
+
+        const popup = new TestLeaf(new Size(20, 20));
+        t.AttachOverlay(popup);
+        assert.equal(popup.FindAncestorPresentationTarget(), t);
+
+        t.DetachOverlay(popup);
+        assert.equal(popup.FindAncestorPresentationTarget(), undefined);
     });
 });

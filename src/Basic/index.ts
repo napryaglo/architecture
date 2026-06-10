@@ -46,9 +46,11 @@ export {
     HierarchicalDataTemplate,
     TargetedSetter,
     TemplateDataTrigger,
+    TemplateMultiDataTrigger,
     TemplatePropertyTrigger,
     type DataTemplateFactory,
     type HierarchicalChildSelector,
+    type TemplateDataTriggerCondition,
 } from './data-template.js';
 export { ListReorderBehavior } from './list-reorder-behavior.js';
 export { attachMarqueeSelection } from './marquee-selection-behavior.js';

@@ -114,6 +114,9 @@ export {
     PropertyTrigger,
     MultiTrigger,
     DataTrigger,
+    MultiDataTrigger,
+    type DataTriggerBindingFactory,
+    type DataTriggerCondition,
     type TriggerCondition,
 } from './style.js';
 export {

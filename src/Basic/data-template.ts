@@ -5,6 +5,7 @@ import {
     NameScope,
     ResourceDictionary,
     Setter,
+    type TriggerAction,
     type Visual,
 } from '../runtime/index.js';
 import { registerNamedVisuals } from './control-template.js';
@@ -54,26 +55,29 @@ export type DataTemplateFactory = (data: unknown) => Visual;
 export class DataTemplate
 {
     public DataType: Function | undefined;
-    public readonly Triggers:      readonly TemplatePropertyTrigger[];
-    public readonly DataTriggers:  readonly TemplateDataTrigger[];
+    public readonly Triggers:          readonly TemplatePropertyTrigger[];
+    public readonly DataTriggers:      readonly TemplateDataTrigger[];
+    public readonly MultiDataTriggers: readonly TemplateMultiDataTrigger[];
     /** `on <Event> { … }` triggers in the template body. Routed events
      *  fire on a per-instance basis once per Apply — every call gets
      *  its own AddEventTrigger registration on the freshly-built root,
      *  matching WPF's `<DataTemplate.Triggers><EventTrigger…>` shape. */
-    public readonly EventTriggers: readonly EventTrigger[];
+    public readonly EventTriggers:     readonly EventTrigger[];
 
     constructor(
         public readonly factory: DataTemplateFactory,
         dataType?: Function,
-        triggers:      readonly TemplatePropertyTrigger[] = [],
-        dataTriggers:  readonly TemplateDataTrigger[]     = [],
-        eventTriggers: readonly EventTrigger[]            = [],
+        triggers:          readonly TemplatePropertyTrigger[]  = [],
+        dataTriggers:      readonly TemplateDataTrigger[]      = [],
+        eventTriggers:     readonly EventTrigger[]             = [],
+        multiDataTriggers: readonly TemplateMultiDataTrigger[] = [],
     )
     {
-        this.DataType      = dataType;
-        this.Triggers      = triggers;
-        this.DataTriggers  = dataTriggers;
-        this.EventTriggers = eventTriggers;
+        this.DataType          = dataType;
+        this.Triggers          = triggers;
+        this.DataTriggers      = dataTriggers;
+        this.EventTriggers     = eventTriggers;
+        this.MultiDataTriggers = multiDataTriggers;
     }
 
     public Apply(data: unknown): Visual
@@ -87,8 +91,9 @@ export class DataTemplate
         const nameScope = new NameScope();
         root.SetNameScope(nameScope);
         registerNamedVisuals(root, nameScope);
-        for (const t of this.Triggers)      t.AttachTo(root);
-        for (const t of this.DataTriggers)  t.AttachTo(root);
+        for (const t of this.Triggers)          t.AttachTo(root);
+        for (const t of this.DataTriggers)      t.AttachTo(root);
+        for (const t of this.MultiDataTriggers) t.AttachTo(root);
         // Routed-event triggers attach to the template root — Visual's
         // AddEventTrigger walks the per-event subscription pathway
         // (e.g. `Click` → Button.AddClickHandler). Unrecognised routed
@@ -154,6 +159,12 @@ export class TemplatePropertyTrigger
         public readonly value:         unknown,
         public readonly setters:       readonly TargetedSetter[],
         public readonly sourceName:    string | undefined = undefined,
+        // Same edge semantics as Style triggers — fired only on
+        // genuine transitions (not on initial-state match), not on
+        // template teardown. Behaviors block lowering routes through
+        // AttachBehaviorAction / DetachBehaviorAction pairs.
+        public readonly enterActions: readonly TriggerAction[] = [],
+        public readonly exitActions:  readonly TriggerAction[] = [],
     ) {}
 
     // `templatedParent` is the default source when the trigger is
@@ -169,6 +180,10 @@ export class TemplatePropertyTrigger
         if (source === undefined) return;
         const resolved = resolveTargets(root, this.setters);
         let active = false;
+        let initial = true;
+        const enterActions = this.enterActions;
+        const exitActions  = this.exitActions;
+        const actionTarget = templatedParent ?? root;
         const evaluate = (): void => {
             const current = source._get_property_value_by_name(this.propertyOwner, this.propertyName);
             const matched = current === this.value;
@@ -176,12 +191,21 @@ export class TemplatePropertyTrigger
             {
                 for (const r of resolved) r.target.ApplyTriggerSetter(r.setter);
                 active = true;
+                if (!initial)
+                {
+                    for (const a of enterActions) a.Invoke(actionTarget);
+                }
             }
             else if (!matched && active)
             {
                 for (const r of resolved) r.target.ClearTriggerSetter(r.setter);
                 active = false;
+                if (!initial)
+                {
+                    for (const a of exitActions) a.Invoke(actionTarget);
+                }
             }
+            initial = false;
         };
         source._add_property_changed_listener_by_name(
             this.propertyOwner, this.propertyName, evaluate);
@@ -201,6 +225,10 @@ export class TemplateDataTrigger
         public readonly value:   unknown,
         public readonly setters: readonly TargetedSetter[],
         public readonly sourceName: string | undefined = undefined,
+        // Same edge semantics as TemplatePropertyTrigger.enterActions
+        // — activation transitions only, no initial-state replay.
+        public readonly enterActions: readonly TriggerAction[] = [],
+        public readonly exitActions:  readonly TriggerAction[] = [],
     ) {}
 
     public AttachTo(root: Visual): void
@@ -210,6 +238,9 @@ export class TemplateDataTrigger
         const resolved = resolveTargets(root, this.setters);
         const binding = DataContextBinding(source, this.path);
         let active = false;
+        let initial = true;
+        const enterActions = this.enterActions;
+        const exitActions  = this.exitActions;
         const evaluate = (): void => {
             const current = binding.get_value();
             const matched = current === this.value;
@@ -217,14 +248,93 @@ export class TemplateDataTrigger
             {
                 for (const r of resolved) r.target.ApplyTriggerSetter(r.setter);
                 active = true;
+                if (!initial)
+                {
+                    for (const a of enterActions) a.Invoke(root);
+                }
             }
             else if (!matched && active)
             {
                 for (const r of resolved) r.target.ClearTriggerSetter(r.setter);
                 active = false;
+                if (!initial)
+                {
+                    for (const a of exitActions) a.Invoke(root);
+                }
             }
+            initial = false;
         };
         binding.setOnValueChanged(evaluate);
+        evaluate();
+    }
+}
+
+// One conjunct condition inside a TemplateMultiDataTrigger — a
+// DataContext path + expected value pair. Mirrors the runtime-side
+// DataTriggerCondition shape, but the binding is sourced from the
+// template root (or the named sourceName).
+export interface TemplateDataTriggerCondition
+{
+    path:  string;
+    value: unknown;
+}
+
+// Multi-binding AND-trigger for DataTemplate / ControlTemplate
+// bodies. Watches each condition's DataContext path on the template
+// root (or `sourceName`); setters apply at the Trigger priority tier
+// only when every binding's resolved value === its expected, and
+// unwind when any condition flips. Counterpart to MultiDataTrigger at
+// the Style level.
+//
+// Authored by `when ( $A and $B ) { … }` inside DataTemplate or
+// ControlTemplate bodies. Setters use the same TargetedSetter shape
+// (named-element form via `Name.Property = …`); the resolved targets
+// receive ApplyTriggerSetter / ClearTriggerSetter on the activation /
+// deactivation edges. enterActions / exitActions follow the same
+// no-initial-replay edge semantics as TemplatePropertyTrigger.
+export class TemplateMultiDataTrigger
+{
+    constructor(
+        public readonly conditions: readonly TemplateDataTriggerCondition[],
+        public readonly setters:    readonly TargetedSetter[],
+        public readonly sourceName: string | undefined = undefined,
+        public readonly enterActions: readonly TriggerAction[] = [],
+        public readonly exitActions:  readonly TriggerAction[] = [],
+    ) {}
+
+    public AttachTo(root: Visual): void
+    {
+        const source = this.sourceName === undefined ? root : root.FindName(this.sourceName);
+        if (source === undefined) return;
+        const resolved = resolveTargets(root, this.setters);
+        const bindings = this.conditions.map(c => DataContextBinding(source, c.path));
+        let active = false;
+        let initial = true;
+        const enterActions = this.enterActions;
+        const exitActions  = this.exitActions;
+        const evaluate = (): void => {
+            const allMatch = this.conditions.every((c, i) => bindings[i]!.get_value() === c.value);
+            if (allMatch && !active)
+            {
+                for (const r of resolved) r.target.ApplyTriggerSetter(r.setter);
+                active = true;
+                if (!initial)
+                {
+                    for (const a of enterActions) a.Invoke(root);
+                }
+            }
+            else if (!allMatch && active)
+            {
+                for (const r of resolved) r.target.ClearTriggerSetter(r.setter);
+                active = false;
+                if (!initial)
+                {
+                    for (const a of exitActions) a.Invoke(root);
+                }
+            }
+            initial = false;
+        };
+        for (const b of bindings) b.setOnValueChanged(evaluate);
         evaluate();
     }
 }

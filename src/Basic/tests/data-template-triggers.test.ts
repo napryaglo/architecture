@@ -8,12 +8,23 @@ import {
     Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
+import { TriggerAction } from '../../runtime/index.js';
 import {
     DataTemplate,
     TargetedSetter,
     TemplateDataTrigger,
+    TemplateMultiDataTrigger,
     TemplatePropertyTrigger,
+    type TemplateDataTriggerCondition,
 } from '../data-template.js';
+
+// Counter action — records firing target without dragging the
+// storyboard machinery into template-level tests.
+class CounterAction extends TriggerAction
+{
+    public calls: number = 0;
+    public Invoke(_target: Visual): void { this.calls++; }
+}
 
 // Minimal Visual used as the template root — exposes Tint + Bias so a
 // trigger has properties to flip and to watch. RenderOverride no-ops
@@ -161,5 +172,99 @@ describe('DataTemplate.Triggers — TemplatePropertyTrigger', () => {
         assert.equal(root.Bias, 99);
         root.Tint = 'cold';
         assert.equal(root.Bias, 0);
+    });
+
+    test('enterActions fire on transition; not on initial-state match', () => {
+        const enter = new CounterAction();
+        const tmpl = new DataTemplate(
+            () => {
+                const t = new Tile();
+                t.Tint = 'hot'; // already in matching state at Apply time
+                return t;
+            },
+            undefined,
+            [new TemplatePropertyTrigger(
+                Tile, 'Tint', 'hot',
+                [new TargetedSetter(Tile, 'Bias', 99)],
+                undefined,
+                [enter],
+            )],
+        );
+        const root = tmpl.Apply(undefined) as Tile;
+        // Setter applies — but no enter edge.
+        assert.equal(root.Bias, 99);
+        assert.equal(enter.calls, 0);
+        // Transition off then on — that IS the edge.
+        root.Tint = 'cold';
+        root.Tint = 'hot';
+        assert.equal(enter.calls, 1);
+    });
+});
+
+describe('DataTemplate.Triggers — TemplateMultiDataTrigger', () => {
+    test('activates only when every bound condition matches', () => {
+        const conds: TemplateDataTriggerCondition[] = [
+            { path: 'IsSelected', value: true },
+            { path: 'Score',      value: 5    },
+        ];
+        const tmpl = new DataTemplate(
+            (data) => {
+                const t = new Tile();
+                t.DataContext = data;
+                return t;
+            },
+            undefined,
+            [], [], [],
+            [new TemplateMultiDataTrigger(conds, [new TargetedSetter(Tile, 'Bias', 42)])],
+        );
+        class MultiVM extends Model
+        {
+            static {
+                Model.RegisterProperty(MultiVM, 'IsSelected', false, MetaData.None);
+                Model.RegisterProperty(MultiVM, 'Score',       0,    MetaData.None);
+            }
+            public get IsSelected(): boolean { return this._get_property_value_by_name('IsSelected'); }
+            public set IsSelected(v: boolean) { this._set_property_value_by_name('IsSelected', v); }
+            public get Score(): number { return this._get_property_value_by_name('Score'); }
+            public set Score(v: number) { this._set_property_value_by_name('Score', v); }
+        }
+        const vm = new MultiVM();
+        const root = tmpl.Apply(vm) as Tile;
+        assert.equal(root.Bias, 0);
+        vm.IsSelected = true;
+        assert.equal(root.Bias, 0, 'one condition match — still inactive');
+        vm.Score = 5;
+        assert.equal(root.Bias, 42, 'both match — active');
+        vm.IsSelected = false;
+        assert.equal(root.Bias, 0, 'break one — inactive');
+    });
+});
+
+describe('DataTemplate.Triggers — TemplateDataTrigger enter/exit', () => {
+    test('enterActions fire only on the activation edge', () => {
+        const enter = new CounterAction();
+        const tmpl = new DataTemplate(
+            (data) => {
+                const t = new Tile();
+                t.DataContext = data;
+                return t;
+            },
+            undefined,
+            [],
+            [new TemplateDataTrigger(
+                'IsSelected', true,
+                [],
+                undefined,
+                [enter],
+            )],
+        );
+        const vm = new ItemVM();
+        const root = tmpl.Apply(vm) as Tile;
+        assert.equal(enter.calls, 0);
+        vm.IsSelected = true;
+        assert.equal(enter.calls, 1);
+        vm.IsSelected = false;
+        vm.IsSelected = true;
+        assert.equal(enter.calls, 2);
     });
 });

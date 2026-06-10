@@ -99,6 +99,59 @@ describe('compile — compound triggers', () => {
             /bare boolean properties/,
         );
     });
+
+    test("'not \\$Path' emits a DataTrigger with value=false (bare-boolean negation)", () => {
+        const js = emitted(`
+            Application{ resources: {
+                Style[TargetType=Border]{
+                    when( not $IsActive ){ Background = #cccccc; }
+                }
+            } }
+        `);
+        assert.match(
+            js,
+            /new DataTrigger\("IsActive", false, _sArr\d+\);/,
+        );
+    });
+
+    test("'\\$A and \\$B' emits a MultiDataTrigger sharing the setter list", () => {
+        const js = emitted(`
+            Application{ resources: {
+                Style[TargetType=Border]{
+                    when( $IsSelected and $IsHot ){ Background = #eee; }
+                }
+            } }
+        `);
+        assert.match(
+            js,
+            /new MultiDataTrigger\(\[\{ path: "IsSelected", value: true \}, \{ path: "IsHot", value: true \}\], _sArr\d+\);/,
+        );
+    });
+
+    test("'(\\$A or \\$B) and \\$C' distributes into two MultiDataTriggers via DNF", () => {
+        const js = emitted(`
+            Application{ resources: {
+                Style[TargetType=Border]{
+                    when( ($A or $B) and $C ){ Background = #eee; }
+                }
+            } }
+        `);
+        const matches = js.match(/new MultiDataTrigger\(/g) ?? [];
+        assert.equal(matches.length, 2);
+    });
+
+    test("mixing DP and \\$path inside the same conjunct is rejected", () => {
+        assert.throws(
+            () => emitted(`
+                Application{ resources: {
+                    Style[TargetType=Border]{
+                        when( IsMouseOver and $IsHot ){ Background = #eee; }
+                    }
+                } }
+            `),
+            /mixing \$path terms and DP terms/,
+        );
+    });
 });
 
 describe('compile — text-mode bodies', () => {

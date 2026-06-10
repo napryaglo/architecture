@@ -117,7 +117,7 @@ describe('PropertyTrigger enter / exit actions', () => {
             [], [enterAction], [],
         );
 
-        // Match WPF: applying a Style whose PropertyTrigger condition
+        // WPF parity: applying a Style whose PropertyTrigger condition
         // is ALREADY satisfied applies the SETTERS but doesn't fire
         // EnterActions — the activation is an "initial state" not a
         // "transition". The runtime's _activeTriggers add still occurs
@@ -125,8 +125,42 @@ describe('PropertyTrigger enter / exit actions', () => {
         const style = new Style(TriggerTest, [], undefined, [trigger]);
         freshClock();
         t.Style = style;
+        assert.equal(enterCalls, 0,
+            'initial-state match is NOT a transition; enterActions stay dormant');
+
+        // A subsequent false→true transition IS an edge — fires.
+        t.Active = false;
+        t.Active = true;
         assert.equal(enterCalls, 1,
-            'note: mural fires enter on first evaluation when condition matches at apply time — documenting current behaviour');
+            'genuine false→true transition fires enterActions');
+    });
+
+    test('Exit actions DO NOT fire on style detach when the trigger was active', () => {
+        const t = new TriggerTest();
+        t.Active = true;
+
+        let exitCalls = 0;
+        const exitAction = new BeginStoryboardAction((target) => {
+            exitCalls++;
+            const sb = new Storyboard();
+            sb.Add(target, 'Width', new DoubleAnimation({ To: 0, Duration: 50 }));
+            return sb;
+        });
+        const trigger = new PropertyTrigger(
+            TriggerTest, 'Active', true,
+            [], [], [exitAction],
+        );
+
+        const style = new Style(TriggerTest, [], undefined, [trigger]);
+        freshClock();
+        t.Style = style;
+        // Symmetric to the enter case: detaching a Style whose trigger
+        // is currently active unapplies setters silently — uninstall is
+        // not a deactivation edge, just a teardown. Genuine true→false
+        // property transitions are the only thing that fires exitActions.
+        t.Style = undefined;
+        assert.equal(exitCalls, 0,
+            'Style detach is not a deactivation edge; exitActions stay dormant');
     });
 });
 

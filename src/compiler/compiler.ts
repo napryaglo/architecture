@@ -19,6 +19,7 @@ import type {
     PropertySetter,
     ResourceForm,
     ResourcesBlock,
+    SetterItem,
     SlotAssign,
     StringBody,
     StructuredBody,
@@ -770,24 +771,21 @@ export class Compiler
 
         const rootElement = rf.body.kind === 'element' ? rf.body : rf.body.root;
         const triggers = rf.body.kind === 'data-template-body' ? rf.body.triggers : [];
-        // ControlTemplate event triggers aren't supported yet — the
-        // attach surface (which routed events to subscribe on, with
-        // what targetedParent) is its own design. Reject loudly rather
-        // than silently dropping.
+        // ControlTemplate event triggers — `on Click { … }` etc.
+        // inside the body. Lowered into the EventTriggers tail param
+        // of new ControlTemplate(...). The runtime calls
+        // root.AddEventTrigger on each freshly-built template root, so
+        // every templated instance gets independent per-instance
+        // subscriptions (matches WPF's <ControlTemplate.Triggers>
+        // shape).
         const eventTriggers = rf.body.kind === 'data-template-body' ? rf.body.eventTriggers : [];
-        if (eventTriggers.length > 0)
-        {
-            throw new EmitError(
-                'ControlTemplate event triggers (`on …`) are not supported yet',
-                eventTriggers[0]!.span);
-        }
 
         this.ensureImport('ControlTemplate');
         const tmplVar = this.fresh('tmpl');
         // Trigger-free path: preserve the historical 1-arg
         // `new ControlTemplate(factory)` emit shape so existing snapshot
         // tests of un-triggered templates keep matching.
-        if (triggers.length === 0)
+        if (triggers.length === 0 && eventTriggers.length === 0)
         {
             this.line(`const ${tmplVar} = new ControlTemplate((_templatedParent) => {`);
             this.indent += 4;
@@ -843,13 +841,32 @@ export class Compiler
         this.line(`};`);
 
         const triggerVars = this.compileControlTemplateTriggers(triggers, targetType);
+        // Event-trigger lowering: same shape as DataTemplate's path —
+        // EventTrigger ctor takes a string event name + actions; the
+        // runtime resolves it through Visual.AddEventTrigger on the
+        // freshly-built template root. The empty targetType passed to
+        // compileEventTriggerGroup means "no implicit target import"
+        // because the routed event is named by string, not by class.
+        const eventTriggerVars: string[] = [];
+        for (const et of eventTriggers)
+        {
+            eventTriggerVars.push(this.compileEventTriggerGroup('', et));
+        }
         this.templateNameScope  = savedTNS;
         this.templateNameOwners = savedTNO;
         this.templateNameVars   = savedTNV;
         this.inTemplateBody     = savedInTemplate;
 
         const triggersArr = `[${triggerVars.join(', ')}]`;
-        this.line(`return new ControlTemplate(_factory, ${triggersArr});`);
+        if (eventTriggerVars.length === 0)
+        {
+            this.line(`return new ControlTemplate(_factory, ${triggersArr});`);
+        }
+        else
+        {
+            const eventsArr = `[${eventTriggerVars.join(', ')}]`;
+            this.line(`return new ControlTemplate(_factory, ${triggersArr}, ${eventsArr});`);
+        }
         this.indent -= 4;
         this.line(`})();`);
         return tmplVar;
@@ -889,30 +906,48 @@ export class Compiler
                     'ControlTemplate triggers don\'t support `$path` (data) conditions — use a property name (e.g. `when(IsSelected)`)',
                     term.span);
             }
-            // Setters: each setter LHS may be `Property = …`,
-            // `TargetName.Property = …`, or `Owner.Property = …`. The
-            // compileTemplateSetter helper routes named-element form
-            // through TargetedSetter (the whole point of this work).
-            const setterExprs: string[] = [];
-            for (const item of tg.setters.items)
-            {
-                if (item.kind !== 'property-setter')
-                {
-                    throw new EmitError(
-                        'only property setters are allowed inside ControlTemplate `when()` blocks',
-                        item.span);
-                }
-                setterExprs.push(this.compileTemplateSetter(item));
-            }
+            // Partition: setters use compileTemplateSetter; enter/exit
+            // and behaviors blocks lower the same way they do in Style
+            // triggers. The runtime fires enterActions/exitActions on
+            // the transition edges (no initial-state replay), with the
+            // templatedParent as the action target so InvokeCommandAction
+            // and BeginStoryboardAction operate against the control
+            // whose template this is.
+            const { setterVars, enterActionVars, exitActionVars } =
+                this.partitionTriggerBody(tg.setters.items, (ps) => this.compileTemplateSetter(ps));
             const settersArrVar = this.fresh('tplSet');
-            this.line(`const ${settersArrVar} = [${setterExprs.join(', ')}];`);
+            this.line(`const ${settersArrVar} = [${setterVars.join(', ')}];`);
+
+            let enterArrVar = '[]';
+            if (enterActionVars.length > 0)
+            {
+                enterArrVar = this.fresh('tplEnter');
+                this.line(`const ${enterArrVar} = [${enterActionVars.join(', ')}];`);
+            }
+            let exitArrVar = '[]';
+            if (exitActionVars.length > 0)
+            {
+                exitArrVar = this.fresh('tplExit');
+                this.line(`const ${exitArrVar} = [${exitActionVars.join(', ')}];`);
+            }
+            const hasActions = enterActionVars.length > 0 || exitActionVars.length > 0;
 
             const valueExpr = this.evaluateTermValue(term);
             this.ensureImport('TemplatePropertyTrigger');
             this.ensureImport(targetType);
             const v = this.fresh('tplTrig');
-            this.line(
-                `const ${v} = new TemplatePropertyTrigger(${targetType}, ${JSON.stringify(term.property)}, ${valueExpr}, ${settersArrVar});`);
+            if (hasActions)
+            {
+                // TemplatePropertyTrigger(owner, name, value, setters,
+                //                         sourceName, enterActions, exitActions).
+                this.line(
+                    `const ${v} = new TemplatePropertyTrigger(${targetType}, ${JSON.stringify(term.property)}, ${valueExpr}, ${settersArrVar}, undefined, ${enterArrVar}, ${exitArrVar});`);
+            }
+            else
+            {
+                this.line(
+                    `const ${v} = new TemplatePropertyTrigger(${targetType}, ${JSON.stringify(term.property)}, ${valueExpr}, ${settersArrVar});`);
+            }
             triggerVars.push(v);
         }
         return triggerVars;
@@ -992,7 +1027,7 @@ export class Compiler
             this.line(`return ${rootVar};`);
             this.indent -= 4;
             this.line(`};`);
-            const { propertyTriggers, dataTriggers } =
+            const { propertyTriggers, dataTriggers, multiDataTriggers } =
                 this.compileDataTemplateTriggers(triggers);
             // EventTrigger lowering reuses the same compile helper the
             // Style.EventTrigger path uses — the runtime EventTrigger
@@ -1004,22 +1039,29 @@ export class Compiler
             {
                 eventTriggerVars.push(this.compileEventTriggerGroup('', et));
             }
-            const propsArr  = `[${propertyTriggers.join(', ')}]`;
-            const dataArr   = `[${dataTriggers.join(', ')}]`;
-            // Only emit the eventTriggers argument when there's at
-            // least one — keeps the 4-arg constructor call shape stable
-            // for templates that only carry when()-style triggers and
-            // avoids churn in existing snapshot tests.
-            if (eventTriggerVars.length === 0)
+            const propsArr     = `[${propertyTriggers.join(', ')}]`;
+            const dataArr      = `[${dataTriggers.join(', ')}]`;
+            const multiDataArr = `[${multiDataTriggers.join(', ')}]`;
+            // Only emit trailing arguments when populated — keeps the
+            // 4-arg constructor call shape stable for templates that
+            // only carry when()-style triggers and avoids churn in
+            // existing snapshot tests.
+            if (eventTriggerVars.length === 0 && multiDataTriggers.length === 0)
             {
                 this.line(
                     `return new DataTemplate(_factory, ${dataType}, ${propsArr}, ${dataArr});`);
+            }
+            else if (multiDataTriggers.length === 0)
+            {
+                const eventsArr = `[${eventTriggerVars.join(', ')}]`;
+                this.line(
+                    `return new DataTemplate(_factory, ${dataType}, ${propsArr}, ${dataArr}, ${eventsArr});`);
             }
             else
             {
                 const eventsArr = `[${eventTriggerVars.join(', ')}]`;
                 this.line(
-                    `return new DataTemplate(_factory, ${dataType}, ${propsArr}, ${dataArr}, ${eventsArr});`);
+                    `return new DataTemplate(_factory, ${dataType}, ${propsArr}, ${dataArr}, ${eventsArr}, ${multiDataArr});`);
             }
             this.indent -= 4;
             this.line(`})();`);
@@ -1032,78 +1074,168 @@ export class Compiler
         return tmplVar;
     }
 
-    // Emit a TemplatePropertyTrigger / TemplateDataTrigger per `when()`
-    // block in a DataTemplate body. Setter LHS resolution: when the
-    // first segment matches an x:name registered in the surrounding
-    // template scope, it becomes the setter's `targetName`; otherwise
-    // it's an attached-property owner type (unchanged behaviour). The
-    // condition itself reuses the same DNF + `evaluateTermValue`
-    // pipeline as Style triggers.
+    // Partition a trigger-group body into (setters, enterActions,
+    // exitActions). Used by Style triggers (via compileTriggerGroup
+    // inline), DataTemplate triggers, and ControlTemplate triggers —
+    // the setter compiler differs (compileSetter vs compileTemplateSetter)
+    // so callers pass it in via `compileSetterItem`. Returns variable
+    // names that have already been emitted as locals.
+    private partitionTriggerBody(
+        items: readonly SetterItem[],
+        compileSetterItem: (ps: PropertySetter) => string,
+    ): { setterVars: string[]; enterActionVars: string[]; exitActionVars: string[] }
+    {
+        const setterVars:      string[] = [];
+        const enterActionVars: string[] = [];
+        const exitActionVars:  string[] = [];
+        for (const item of items)
+        {
+            if (item.kind === 'property-setter')
+            {
+                setterVars.push(compileSetterItem(item));
+                continue;
+            }
+            if (item.kind === 'event-trigger')
+            {
+                if (item.eventName === 'enter')
+                {
+                    for (const a of item.actions)
+                    {
+                        enterActionVars.push(this.compileTriggerAction(a));
+                    }
+                    continue;
+                }
+                if (item.eventName === 'exit')
+                {
+                    for (const a of item.actions)
+                    {
+                        exitActionVars.push(this.compileTriggerAction(a));
+                    }
+                    continue;
+                }
+                throw new EmitError(
+                    `inside when(): only 'enter' and 'exit' are valid 'on' names — got '${item.eventName}'`,
+                    item.span);
+            }
+            if (item.kind === 'behaviors-block')
+            {
+                for (const entry of item.entries)
+                {
+                    const { attachVar, detachVar } = this.compileTriggeredBehavior(entry);
+                    enterActionVars.push(attachVar);
+                    exitActionVars.push(detachVar);
+                }
+                continue;
+            }
+            throw new EmitError(
+                'nested triggers are not supported', item.span);
+        }
+        return { setterVars, enterActionVars, exitActionVars };
+    }
+
+    // Emit a TemplatePropertyTrigger / TemplateDataTrigger /
+    // TemplateMultiDataTrigger per `when()` block in a DataTemplate
+    // body. DNF flattening produces a list of conjuncts; single-term
+    // conjuncts emit TemplateDataTrigger, multi-term `$path`-only
+    // conjuncts emit TemplateMultiDataTrigger. Setter LHS resolution:
+    // when the first segment matches an x:name registered in the
+    // surrounding template scope, it becomes the setter's `targetName`;
+    // otherwise it's an attached-property owner type.
     private compileDataTemplateTriggers(
         triggers: readonly TriggerGroup[],
-    ): { propertyTriggers: string[]; dataTriggers: string[] }
+    ): { propertyTriggers: string[]; dataTriggers: string[]; multiDataTriggers: string[] }
     {
-        const propertyTriggers: string[] = [];
-        const dataTriggers:     string[] = [];
+        const propertyTriggers:  string[] = [];
+        const dataTriggers:      string[] = [];
+        const multiDataTriggers: string[] = [];
         for (const tg of triggers)
         {
             const disjuncts = this.flattenToDNF(tg.condition);
-            if (disjuncts.length !== 1 || disjuncts[0]!.length !== 1)
-            {
-                throw new EmitError(
-                    "DataTemplate triggers currently support only a single-term `when( … )` condition",
-                    tg.span);
-            }
-            const term = disjuncts[0]![0]!;
-            if (term.negated)
-            {
-                throw new EmitError(
-                    "DataTemplate triggers do not support `not` — write `$path = false` instead",
-                    term.span);
-            }
-            // Setters: each setter LHS may be `Property = …`,
-            // `TargetName.Property = …`, or `Owner.Property = …`
-            // (attached). The compiler routes the second form through
-            // TargetedSetter; the others stay regular Setters.
+            // Partition the body once for the whole `when()` — all
+            // disjuncts share the same setter/enter/exit lists.
+            const { setterVars, enterActionVars, exitActionVars } =
+                this.partitionTriggerBody(tg.setters.items, (ps) => this.compileTemplateSetter(ps));
             const settersArrVar = this.fresh('tplSet');
-            const setterExprs:  string[] = [];
-            for (const item of tg.setters.items)
-            {
-                if (item.kind !== 'property-setter')
-                {
-                    throw new EmitError(
-                        "only property setters are allowed inside DataTemplate `when()` blocks",
-                        item.span);
-                }
-                setterExprs.push(this.compileTemplateSetter(item));
-            }
-            this.line(`const ${settersArrVar} = [${setterExprs.join(', ')}];`);
+            this.line(`const ${settersArrVar} = [${setterVars.join(', ')}];`);
 
-            const valueExpr = this.evaluateTermValue(term);
-            if (term.path !== undefined)
+            let enterArrVar = '[]';
+            if (enterActionVars.length > 0)
             {
-                this.ensureImport('TemplateDataTrigger');
-                const v = this.fresh('tplDataTrig');
-                this.line(
-                    `const ${v} = new TemplateDataTrigger(${JSON.stringify(term.path)}, ${valueExpr}, ${settersArrVar});`);
-                dataTriggers.push(v);
+                enterArrVar = this.fresh('tplEnter');
+                this.line(`const ${enterArrVar} = [${enterActionVars.join(', ')}];`);
             }
-            else
+            let exitArrVar = '[]';
+            if (exitActionVars.length > 0)
             {
-                // Property-trigger form needs an owner type to scope
-                // the watched DP. The current DSL doesn't carry an
-                // explicit owner on the trigger condition, so we hand
-                // the runtime `undefined` for the owner — and the
-                // runtime resolves the property name against the
-                // source visual's own class. That mirrors how WPF's
-                // Trigger.Property looks up by DependencyProperty
-                // identity rather than owner-class.
-                throw new EmitError(
-                    "property-trigger `when( PropertyName )` inside DataTemplate bodies is not supported yet — use `when( $path )` against the data context",
-                    term.span);
+                exitArrVar = this.fresh('tplExit');
+                this.line(`const ${exitArrVar} = [${exitActionVars.join(', ')}];`);
+            }
+            const hasActions = enterActionVars.length > 0 || exitActionVars.length > 0;
+
+            for (const conjunct of disjuncts)
+            {
+                if (conjunct.length === 1)
+                {
+                    const term = conjunct[0]!;
+                    if (term.path === undefined)
+                    {
+                        throw new EmitError(
+                            "property-trigger `when( PropertyName )` inside DataTemplate bodies is not supported yet — use `when( $path )` against the data context",
+                            term.span);
+                    }
+                    const valueExpr = this.evaluateTermValue(term);
+                    this.ensureImport('TemplateDataTrigger');
+                    const v = this.fresh('tplDataTrig');
+                    if (hasActions)
+                    {
+                        this.line(
+                            `const ${v} = new TemplateDataTrigger(${JSON.stringify(term.path)}, ${valueExpr}, ${settersArrVar}, undefined, ${enterArrVar}, ${exitArrVar});`);
+                    }
+                    else
+                    {
+                        this.line(
+                            `const ${v} = new TemplateDataTrigger(${JSON.stringify(term.path)}, ${valueExpr}, ${settersArrVar});`);
+                    }
+                    dataTriggers.push(v);
+                }
+                else
+                {
+                    // Multi-term conjunct — only pure-$path is supported
+                    // inside DataTemplate bodies (DataTemplate's natural
+                    // trigger source IS the per-item DataContext).
+                    for (const term of conjunct)
+                    {
+                        if (term.path === undefined)
+                        {
+                            throw new EmitError(
+                                "DP-property terms inside `when( … and … )` are not supported inside DataTemplate bodies — DataTemplate triggers fire on $path conditions, not target DPs",
+                                term.span);
+                        }
+                    }
+                    this.ensureImport('TemplateMultiDataTrigger');
+                    const conditionExprs: string[] = [];
+                    for (const term of conjunct)
+                    {
+                        const valueExpr = this.evaluateTermValue(term);
+                        conditionExprs.push(
+                            `{ path: ${JSON.stringify(term.path!)}, value: ${valueExpr} }`);
+                    }
+                    const v = this.fresh('tplMultiDataTrig');
+                    if (hasActions)
+                    {
+                        this.line(
+                            `const ${v} = new TemplateMultiDataTrigger([${conditionExprs.join(', ')}], ${settersArrVar}, undefined, ${enterArrVar}, ${exitArrVar});`);
+                    }
+                    else
+                    {
+                        this.line(
+                            `const ${v} = new TemplateMultiDataTrigger([${conditionExprs.join(', ')}], ${settersArrVar});`);
+                    }
+                    multiDataTriggers.push(v);
+                }
             }
         }
-        return { propertyTriggers, dataTriggers };
+        return { propertyTriggers, dataTriggers, multiDataTriggers };
     }
 
     // Lower one DataTemplate-body setter into either a TargetedSetter
@@ -1308,11 +1440,12 @@ export class Compiler
         const tt = this.requireTargetType(rf);
         this.ensureImport(tt);
 
-        const setterVars:       string[] = [];
-        const triggerVars:      string[] = [];
-        const multiTriggerVars: string[] = [];
-        const dataTriggerVars:  string[] = [];
-        const eventTriggerVars: string[] = [];
+        const setterVars:           string[] = [];
+        const triggerVars:          string[] = [];
+        const multiTriggerVars:     string[] = [];
+        const dataTriggerVars:      string[] = [];
+        const multiDataTriggerVars: string[] = [];
+        const eventTriggerVars:     string[] = [];
         for (const item of rf.body.items)
         {
             if (item.kind === 'property-setter')
@@ -1341,35 +1474,42 @@ export class Compiler
                 triggerVars.push(...out.propertyTriggers);
                 multiTriggerVars.push(...out.multiTriggers);
                 dataTriggerVars.push(...out.dataTriggers);
+                multiDataTriggerVars.push(...out.multiDataTriggers);
             }
         }
-        const settersArr       = `[${setterVars.join(', ')}]`;
-        const triggersArr      = `[${triggerVars.join(', ')}]`;
-        const multiTriggersArr = `[${multiTriggerVars.join(', ')}]`;
-        const dataTriggersArr  = `[${dataTriggerVars.join(', ')}]`;
-        const eventTriggersArr = `[${eventTriggerVars.join(', ')}]`;
+        const settersArr           = `[${setterVars.join(', ')}]`;
+        const triggersArr          = `[${triggerVars.join(', ')}]`;
+        const multiTriggersArr     = `[${multiTriggerVars.join(', ')}]`;
+        const dataTriggersArr      = `[${dataTriggerVars.join(', ')}]`;
+        const multiDataTriggersArr = `[${multiDataTriggerVars.join(', ')}]`;
+        const eventTriggersArr     = `[${eventTriggerVars.join(', ')}]`;
 
         const styleVar = this.fresh('style');
         // Style(targetType, setters, basedOn, triggers, multiTriggers,
-        //       eventTriggers, dataTriggers). Trailing arguments are
-        // omitted from the emit when empty so existing snapshot tests
-        // of the legacy 5- and 6-arg forms keep matching — a Style
-        // with no event triggers and no data triggers reproduces the
-        // historical 5-arg call.
-        if (eventTriggerVars.length === 0 && dataTriggerVars.length === 0)
+        //       eventTriggers, dataTriggers, multiDataTriggers). Trailing
+        // arguments are omitted from the emit when empty so existing
+        // snapshot tests of the legacy 5- / 6- / 7-arg forms keep
+        // matching — a Style with no event triggers / no data triggers /
+        // no multi-data triggers reproduces the historical shorter call.
+        if (eventTriggerVars.length === 0 && dataTriggerVars.length === 0 && multiDataTriggerVars.length === 0)
         {
             this.line(
                 `const ${styleVar} = new Style(${tt}, ${settersArr}, undefined, ${triggersArr}, ${multiTriggersArr});`);
         }
-        else if (dataTriggerVars.length === 0)
+        else if (dataTriggerVars.length === 0 && multiDataTriggerVars.length === 0)
         {
             this.line(
                 `const ${styleVar} = new Style(${tt}, ${settersArr}, undefined, ${triggersArr}, ${multiTriggersArr}, ${eventTriggersArr});`);
         }
-        else
+        else if (multiDataTriggerVars.length === 0)
         {
             this.line(
                 `const ${styleVar} = new Style(${tt}, ${settersArr}, undefined, ${triggersArr}, ${multiTriggersArr}, ${eventTriggersArr}, ${dataTriggersArr});`);
+        }
+        else
+        {
+            this.line(
+                `const ${styleVar} = new Style(${tt}, ${settersArr}, undefined, ${triggersArr}, ${multiTriggersArr}, ${eventTriggersArr}, ${dataTriggersArr}, ${multiDataTriggersArr});`);
         }
         return styleVar;
     }
@@ -1606,7 +1746,7 @@ export class Compiler
 
     private compileTriggerGroup(
         targetType: string, tg: TriggerGroup,
-    ): { propertyTriggers: string[]; multiTriggers: string[]; dataTriggers: string[] }
+    ): { propertyTriggers: string[]; multiTriggers: string[]; dataTriggers: string[]; multiDataTriggers: string[] }
     {
         this.ensureImport(targetType);
 
@@ -1620,56 +1760,8 @@ export class Compiler
         // `on exit` action groups. Other event names (e.g. `on Click`)
         // are rejected inside a `when()` body — Click is a top-level
         // routed event, not a property-trigger edge.
-        const setterVars:      string[] = [];
-        const enterActionVars: string[] = [];
-        const exitActionVars:  string[] = [];
-        for (const item of tg.setters.items)
-        {
-            if (item.kind === 'property-setter')
-            {
-                setterVars.push(this.compileSetter(targetType, item));
-                continue;
-            }
-            if (item.kind === 'event-trigger')
-            {
-                if (item.eventName === 'enter')
-                {
-                    for (const a of item.actions)
-                    {
-                        enterActionVars.push(this.compileTriggerAction(a));
-                    }
-                    continue;
-                }
-                if (item.eventName === 'exit')
-                {
-                    for (const a of item.actions)
-                    {
-                        exitActionVars.push(this.compileTriggerAction(a));
-                    }
-                    continue;
-                }
-                throw new EmitError(
-                    `inside when(): only 'enter' and 'exit' are valid 'on' names — got '${item.eventName}'`,
-                    item.span);
-            }
-            if (item.kind === 'behaviors-block')
-            {
-                // Each Behavior entry lowers to a paired Attach + Detach
-                // action: Attach enters via the trigger's activation
-                // edge (factory-based so every target instance gets a
-                // fresh Behavior), Detach exits via the matching
-                // deactivation edge.
-                for (const entry of item.entries)
-                {
-                    const { attachVar, detachVar } = this.compileTriggeredBehavior(entry);
-                    enterActionVars.push(attachVar);
-                    exitActionVars.push(detachVar);
-                }
-                continue;
-            }
-            throw new EmitError(
-                'nested triggers are not supported', item.span);
-        }
+        const { setterVars, enterActionVars, exitActionVars } =
+            this.partitionTriggerBody(tg.setters.items, (ps) => this.compileSetter(targetType, ps));
         const settersArrVar = this.fresh('sArr');
         this.line(`const ${settersArrVar} = [${setterVars.join(', ')}];`);
 
@@ -1695,9 +1787,10 @@ export class Compiler
             ? `, ${enterArrVar}, ${exitArrVar}`
             : '';
 
-        const propertyTriggers: string[] = [];
-        const multiTriggers:    string[] = [];
-        const dataTriggers:     string[] = [];
+        const propertyTriggers:  string[] = [];
+        const multiTriggers:     string[] = [];
+        const dataTriggers:      string[] = [];
+        const multiDataTriggers: string[] = [];
 
         for (const conjunct of disjuncts)
         {
@@ -1709,16 +1802,15 @@ export class Compiler
                 {
                     // DataTrigger — `when($Path)` / `when($Path = expr)`.
                     // Watches the styled target's DataContext for `path`.
-                    // Currently rejects `not $Path` outright because
-                    // DataTrigger's runtime compares with === only;
-                    // a negated form would require a separate value-
-                    // mismatch path that's not in v0.
-                    if (term.negated)
-                    {
-                        throw new EmitError(
-                            "`not $path` inside when() is not supported yet — use `$path = false` instead",
-                            term.span);
-                    }
+                    // Bare-boolean `not $Path` flows through
+                    // evaluateTermValue's `term.value === null` branch
+                    // which returns 'false' — emitted as
+                    // `DataTrigger(path, false, …)` and compared via
+                    // strict equality at runtime. The explicit-value
+                    // negated form `not $Path = expr` is still rejected
+                    // by evaluateTermValue (would need a `!=` mode on
+                    // DataTrigger and isn't required for WPF parity —
+                    // WPF DataTrigger has no Not mode either).
                     this.ensureImport('DataTrigger');
                     const v = this.fresh('dataTrig');
                     this.line(
@@ -1736,33 +1828,59 @@ export class Compiler
             }
             else
             {
-                // Multi-term conjunct — emit as MultiTrigger. Mixing a
-                // $path term into a multi-term conjunct isn't supported
-                // yet (the runtime MultiTrigger only watches DPs).
+                // Multi-term conjunct — partition by source kind. Pure-DP
+                // conjuncts lower to MultiTrigger; pure-$path conjuncts
+                // lower to MultiDataTrigger (WPF MultiDataTrigger parity).
+                // Mixed DP+$path conjuncts are rejected — WPF has the
+                // same split (its MultiTrigger.Conditions are property
+                // Conditions; its MultiDataTrigger.Conditions are binding
+                // Conditions; no mixing).
+                let allPaths = true;
+                let allProps = true;
                 for (const term of conjunct)
                 {
-                    if (term.path !== undefined)
+                    if (term.path !== undefined) allProps = false;
+                    else                          allPaths = false;
+                }
+                if (!allPaths && !allProps)
+                {
+                    throw new EmitError(
+                        "mixing $path terms and DP terms inside the same `when( … and … )` is not supported — split into separate when() blocks or use MultiTrigger / MultiDataTrigger styles",
+                        conjunct[0]!.span);
+                }
+                if (allPaths)
+                {
+                    this.ensureImport('MultiDataTrigger');
+                    const conditionExprs: string[] = [];
+                    for (const term of conjunct)
                     {
-                        throw new EmitError(
-                            "`$path` terms inside `when( … and … )` are not supported yet — split the disjunction or use a single $path term",
-                            term.span);
+                        const valueExpr = this.evaluateTermValue(term);
+                        conditionExprs.push(
+                            `{ path: ${JSON.stringify(term.path!)}, value: ${valueExpr} }`);
                     }
+                    const v = this.fresh('multiDataTrig');
+                    this.line(
+                        `const ${v} = new MultiDataTrigger([${conditionExprs.join(', ')}], ${settersArrVar}${triggerTail});`);
+                    multiDataTriggers.push(v);
                 }
-                this.ensureImport('MultiTrigger');
-                const conditionExprs: string[] = [];
-                for (const term of conjunct)
+                else
                 {
-                    const valueExpr = this.evaluateTermValue(term);
-                    conditionExprs.push(
-                        `{ propertyOwner: ${targetType}, propertyName: ${JSON.stringify(term.property)}, value: ${valueExpr} }`);
+                    this.ensureImport('MultiTrigger');
+                    const conditionExprs: string[] = [];
+                    for (const term of conjunct)
+                    {
+                        const valueExpr = this.evaluateTermValue(term);
+                        conditionExprs.push(
+                            `{ propertyOwner: ${targetType}, propertyName: ${JSON.stringify(term.property)}, value: ${valueExpr} }`);
+                    }
+                    const v = this.fresh('multiTrig');
+                    this.line(
+                        `const ${v} = new MultiTrigger([${conditionExprs.join(', ')}], ${settersArrVar}${triggerTail});`);
+                    multiTriggers.push(v);
                 }
-                const v = this.fresh('multiTrig');
-                this.line(
-                    `const ${v} = new MultiTrigger([${conditionExprs.join(', ')}], ${settersArrVar}${triggerTail});`);
-                multiTriggers.push(v);
             }
         }
-        return { propertyTriggers, multiTriggers, dataTriggers };
+        return { propertyTriggers, multiTriggers, dataTriggers, multiDataTriggers };
     }
 
     // Emits a paired Attach/Detach action for one entry in a trigger's
