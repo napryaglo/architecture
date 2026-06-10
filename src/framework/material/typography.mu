@@ -29,27 +29,27 @@
 resources Typography {
 
     // ── Display tier (large hero headings) ──────────────────────────
-    Style x:key="DisplayLarge"  [TargetType=TextBlock] { FontSize = 57; FontWeight = Normal; }
-    Style x:key="DisplayMedium" [TargetType=TextBlock] { FontSize = 45; FontWeight = Normal; }
-    Style x:key="DisplaySmall"  [TargetType=TextBlock] { FontSize = 36; FontWeight = Normal; }
+    Style x:key="DisplayLarge"  [TargetType=TextBlock] { FontSize = 57; FontWeight = Normal; LineHeight = 64; }
+    Style x:key="DisplayMedium" [TargetType=TextBlock] { FontSize = 45; FontWeight = Normal; LineHeight = 52; }
+    Style x:key="DisplaySmall"  [TargetType=TextBlock] { FontSize = 36; FontWeight = Normal; LineHeight = 44; }
 
     // ── Headline tier (page / section headings) ─────────────────────
-    Style x:key="HeadlineLarge"  [TargetType=TextBlock] { FontSize = 32; FontWeight = Normal; }
-    Style x:key="HeadlineMedium" [TargetType=TextBlock] { FontSize = 28; FontWeight = Normal; }
-    Style x:key="HeadlineSmall"  [TargetType=TextBlock] { FontSize = 24; FontWeight = Normal; }
+    Style x:key="HeadlineLarge"  [TargetType=TextBlock] { FontSize = 32; FontWeight = Normal; LineHeight = 40; }
+    Style x:key="HeadlineMedium" [TargetType=TextBlock] { FontSize = 28; FontWeight = Normal; LineHeight = 36; }
+    Style x:key="HeadlineSmall"  [TargetType=TextBlock] { FontSize = 24; FontWeight = Normal; LineHeight = 32; }
 
     // ── Title tier (card / sub-section titles) ──────────────────────
-    Style x:key="TitleLarge"  [TargetType=TextBlock] { FontSize = 22; FontWeight = Normal; }
-    Style x:key="TitleMedium" [TargetType=TextBlock] { FontSize = 16; FontWeight = Normal; }
-    Style x:key="TitleSmall"  [TargetType=TextBlock] { FontSize = 14; FontWeight = Normal; }
+    Style x:key="TitleLarge"  [TargetType=TextBlock] { FontSize = 22; FontWeight = Normal; LineHeight = 28; }
+    Style x:key="TitleMedium" [TargetType=TextBlock] { FontSize = 16; FontWeight = Normal; LineHeight = 24; }
+    Style x:key="TitleSmall"  [TargetType=TextBlock] { FontSize = 14; FontWeight = Normal; LineHeight = 20; }
 
     // ── Body tier (paragraph / list / form text) ────────────────────
-    Style x:key="BodyLarge"  [TargetType=TextBlock] { FontSize = 16; FontWeight = Normal; }
-    Style x:key="BodyMedium" [TargetType=TextBlock] { FontSize = 14; FontWeight = Normal; }
-    Style x:key="BodySmall"  [TargetType=TextBlock] { FontSize = 12; FontWeight = Normal; }
+    Style x:key="BodyLarge"  [TargetType=TextBlock] { FontSize = 16; FontWeight = Normal; LineHeight = 24; }
+    Style x:key="BodyMedium" [TargetType=TextBlock] { FontSize = 14; FontWeight = Normal; LineHeight = 20; }
+    Style x:key="BodySmall"  [TargetType=TextBlock] { FontSize = 12; FontWeight = Normal; LineHeight = 16; }
 
     // ── Label tier (button / chip / dense-list captions) ────────────
-    Style x:key="LabelLarge"  [TargetType=TextBlock] { FontSize = 14; FontWeight = Normal; }
-    Style x:key="LabelMedium" [TargetType=TextBlock] { FontSize = 12; FontWeight = Normal; }
-    Style x:key="LabelSmall"  [TargetType=TextBlock] { FontSize = 11; FontWeight = Normal; }
+    Style x:key="LabelLarge"  [TargetType=TextBlock] { FontSize = 14; FontWeight = Normal; LineHeight = 20; }
+    Style x:key="LabelMedium" [TargetType=TextBlock] { FontSize = 12; FontWeight = Normal; LineHeight = 16; }
+    Style x:key="LabelSmall"  [TargetType=TextBlock] { FontSize = 11; FontWeight = Normal; LineHeight = 16; }
 }

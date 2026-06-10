@@ -73,6 +73,18 @@ export class TextBlock extends Visual
     // doesn't change the block's DesiredSize, and the runtime applies
     // the per-line x offset inside RenderOverride.
     public static readonly TextAlignmentKey = Model.RegisterProperty<TextAlignment>(TextBlock, 'TextAlignment', TextAlignment.Left,  MetaData.Render);
+    // LineHeight — explicit per-line vertical spacing in DIPs. NaN
+    // (default) defers to the measurer's per-line Height (font ascent +
+    // descent), preserving the historic "lines pack as close as the
+    // font says" behaviour. A finite value overrides — typography
+    // tokens like @BodyMedium set 20 here to lock in M3's "14pt body
+    // with 20px line-height" pairing without hand-rolling per-line
+    // arithmetic in templates.
+    //
+    // Inherits so the same value flows from an ancestor (e.g. a Page
+    // root with `LineHeight=24`) to every descendant TextBlock without
+    // re-stamping on each one.
+    public static readonly LineHeightKey    = Model.RegisterProperty<number>(       TextBlock, 'LineHeight',    Number.NaN,          MetaData.Measure | MetaData.Render | MetaData.Inherits);
 
     // Lines computed by MeasureOverride when TextWrapping = Wrap. Each
     // entry holds the substring and the measurer-reported metrics for
@@ -111,6 +123,19 @@ export class TextBlock extends Visual
     public get TextAlignment(): TextAlignment { return this.get_property_value(TextBlock.TextAlignmentKey); }
     public set TextAlignment(value: TextAlignment) { this.set_property_value(TextBlock.TextAlignmentKey, value); }
 
+    public get LineHeight(): number { return this.get_property_value(TextBlock.LineHeightKey); }
+    public set LineHeight(value: number) { this.set_property_value(TextBlock.LineHeightKey, value); }
+
+    // Effective line-stride in DIPs. Explicit LineHeight wins; falls
+    // back to the measurer's per-line height (font ascent + descent).
+    // Used by both Measure (to size the block when wrapping pushes
+    // multiple lines) and Render (to position line `i` at y = i * stride).
+    private effectiveLineHeight(measuredHeight: number): number
+    {
+        const lh = this.LineHeight;
+        return Number.isFinite(lh) && lh > 0 ? lh : measuredHeight;
+    }
+
     protected override MeasureOverride(availableSize: Size): Size
     {
         const text = this.Text;
@@ -134,7 +159,10 @@ export class TextBlock extends Visual
             const metrics = measurer.Measure(
                 text, this.FontFamily, this.FontSize, this.FontWeight, this.FontStyle);
             this._lines = [{ text, metrics }];
-            return new Size(metrics.Width, metrics.Height);
+            // Effective height honours an explicit LineHeight — a 14pt
+            // typography token paired with `LineHeight=20` (M3 BodyMedium)
+            // should report a 20px-tall block, not a 17px-tall font hull.
+            return new Size(metrics.Width, this.effectiveLineHeight(metrics.Height));
         }
 
         // Wrap: greedy word-wrap. Splits on whitespace, accumulates
@@ -180,9 +208,10 @@ export class TextBlock extends Visual
         this._lines = lines;
         // Surface-side metric: max line width × stacked height. Per-line
         // metrics live on each `_lines` entry; render uses the right
-        // ascent per line for baseline placement.
+        // ascent per line for baseline placement. Effective line-stride
+        // honours an explicit LineHeight DP override.
         const maxW = lines.reduce((m, l) => Math.max(m, l.metrics.Width), 0);
-        const lineH = lines[0]!.metrics.Height;
+        const lineH = this.effectiveLineHeight(lines[0]!.metrics.Height);
         const totalH = lineH * lines.length;
         return new Size(maxW, totalH);
     }
@@ -224,7 +253,8 @@ export class TextBlock extends Visual
         // when per-line measurements vary slightly under approximate
         // measurers. Per-line metrics still ride along on the
         // FormattedText so SvgDrawingContext gets the right Ascent.
-        const lineH = this._lines[0]!.metrics.Height;
+        // effectiveLineHeight honours an explicit LineHeight DP override.
+        const lineH = this.effectiveLineHeight(this._lines[0]!.metrics.Height);
 
         // Per-line horizontal alignment factor:
         //   Left   → 0   (no shift)
