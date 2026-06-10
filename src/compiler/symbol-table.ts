@@ -158,6 +158,8 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['ToolBarToggleButton',     '@visualisation-sub/mural/framework/surface.js'],
     ['ToolBarSeparator',        '@visualisation-sub/mural/framework/surface.js'],
     ['ToolBarPosition',         '@visualisation-sub/mural/framework/surface.js'],
+    ['ToolBarPopupHost',        '@visualisation-sub/mural/framework/surface.js'],
+    ['ToolBarOverflowItemsControl', '@visualisation-sub/mural/framework/surface.js'],
     ['MenuStrip',               '@visualisation-sub/mural/framework/surface.js'],
     ['MenuButton',              '@visualisation-sub/mural/framework/surface.js'],
     ['MenuItem',                '@visualisation-sub/mural/framework/surface.js'],
@@ -344,6 +346,7 @@ export const DEFAULT_SLOT_INFO: ReadonlyMap<string, SlotInfo> = new Map<string, 
     // ── Command-surface controls (5.11) ─────────────────────────────
     ['ToggleButton',            { name: 'Content',  kind: 'object' }],
     ['ToolBar',                 { name: 'Items',    kind: 'list'   }],
+    ['ToolBarPopupHost',        { name: 'Children', kind: 'list'   }],
     ['ToolBarButton',           { name: 'Content',  kind: 'object' }],
     ['ToolBarToggleButton',     { name: 'Content',  kind: 'object' }],
     // ToolBarSeparator has no body; falls back to single/Child error

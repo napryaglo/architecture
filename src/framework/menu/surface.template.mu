@@ -325,4 +325,53 @@ resources SurfaceTheme {
     Style [TargetType=ToolBarToggleButton] {
         Template = @DefaultToolBarToggleButton;
     }
+
+    // ── ToolBar: inline chrome ─────────────────────────────────────
+    // Border + DockPanel + chevron + ItemsPresenter. ToolBar's ctor
+    // calls applyDefaultStyle, then FindNames each PART_ — the chevron
+    // gets its click handler wired here, the popup is materialised
+    // separately via @DefaultToolBarPopup.
+    //
+    // The chevron is a plain Button (Filled variant — gets its M3 pill
+    // chrome from the basic theme). Its width is toggled between
+    // Number.NaN (auto) and 0 by ToolBar.applyChevronVisibility based
+    // on whether any items have overflowed.
+    Template x:key="DefaultToolBar" [TargetType=ToolBar] {
+        Border x:name="PART_Border"
+              [ Background      = @Surface,
+                BorderBrush     = @Outline,
+                BorderThickness = (1),
+                Padding         = (4) ] {
+            DockPanel x:name="PART_Layout" [LastChildFill=true] {
+                Button x:name="PART_Chevron" [DockPanel.Dock=Right] {
+                    TextBlock [Text="⋯"]
+                }
+                ItemsPresenter x:name="PART_ItemsPresenter"
+            }
+        }
+    }
+
+    // ── ToolBar: overflow popup ────────────────────────────────────
+    // Mounted onto the PresentationTarget's OverlayLayer when
+    // IsOverflowOpen flips true. PART_PopupList is an internal
+    // ItemsControl bound to ToolBar._overflowedItems (the items that
+    // moved off the inline strip because they wouldn't fit).
+    // PART_PopupHost.anchor is wired to the chevron in ToolBar's ctor.
+    Template x:key="DefaultToolBarPopup" [TargetType=ToolBar] {
+        ToolBarPopupHost x:name="PART_PopupHost" {
+            ClickAwayScrim x:name="PART_Scrim" [BorderThickness=(0)]
+            Border x:name="PART_PopupContainer"
+                  [ Background      = @SurfaceContainerHigh,
+                    BorderBrush     = @OutlineVariant,
+                    BorderThickness = (1),
+                    Padding         = (4) ] {
+                ToolBarOverflowItemsControl x:name="PART_PopupList"
+            }
+        }
+    }
+
+    Style [TargetType=ToolBar] {
+        Template      = @DefaultToolBar;
+        PopupTemplate = @DefaultToolBarPopup;
+    }
 }

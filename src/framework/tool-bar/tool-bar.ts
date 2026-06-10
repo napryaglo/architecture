@@ -5,7 +5,6 @@ import {
     Panel,
     Rect,
     Size,
-    Thickness,
     Visual,
     type DrawingContext,
     type PointerEventArgs,
@@ -20,15 +19,14 @@ import {
 import { PresentationTarget } from '../../visual-engine/index.js';
 import { Border } from '../../Basic/border.js';
 import { Button } from '../button.js';
+import { ClickAwayScrim } from '../list/combo-box.js';
 import { ContentControl } from '../content-control.js';
 import { ContentPresenter } from '../../Basic/content-presenter.js';
 import { ControlTemplate } from '../../Basic/control-template.js';
 import { Dock, DockPanel } from '../../Basic/dock-panel.js';
 import { ItemsControl } from '../items-control.js';
-import { ItemsPresenter } from '../../Basic/items-presenter.js';
 import { StackPanel } from '../../Basic/stack-panel.js';
-import { TextBlock } from '../../Basic/text-block.js';
-import { Theme } from '../../Basic/theme.js';
+import { ensureSurfaceTheme } from '../menu/default-surface-resources.js';
 
 // ToolBar — horizontal command strip. Items overflow into a popup when
 // the available width can't fit them all. Hosts ToolBarButton,
@@ -68,6 +66,27 @@ export class ToolBar extends ItemsControl
     public static readonly IsOverflowOpenKey = Model.RegisterProperty<boolean>(
         ToolBar, 'IsOverflowOpen', false, MetaData.None,
     );
+    // PopupTemplate — the overflow popup chrome (ToolBarPopupHost +
+    // Scrim + container + overflow ItemsControl). Mirrors MenuButton's
+    // TriggerTemplate split: ItemsControl's primary `Template` slot is
+    // the INLINE chrome (so the ItemsPresenter inside hosts items
+    // inline), and the off-tree popup lives in this second template DP.
+    // The default Style sets it to @DefaultToolBarPopup; ToolBar's ctor
+    // reads it via the DP getter, applies it, FindNames the parts, then
+    // mountPopup attaches the host onto the OverlayLayer on demand.
+    public static readonly PopupTemplateKey = Model.RegisterProperty<ControlTemplate | undefined>(
+        ToolBar, 'PopupTemplate', undefined, MetaData.None,
+    );
+
+    static
+    {
+        // Theme lookup uses ToolBar as the key — the default Style
+        // `Style [TargetType=ToolBar]` in surface.template.mu wires
+        // both `Template` (inline chrome with chevron + ItemsPresenter)
+        // and `PopupTemplate` (overlay popup with overflow ItemsControl).
+        Model.OverrideMetadata(ToolBar, Visual.DefaultStyleKeyKey, { default_value: ToolBar });
+        ensureSurfaceTheme();
+    }
     private static readonly _HasOverflowItemsPriv = Model.RegisterReadOnlyProperty<boolean>(
         ToolBar, 'HasOverflowItems', false, MetaData.None,
     );
@@ -90,11 +109,11 @@ export class ToolBar extends ItemsControl
     // authored with Visual children in practice).
     public readonly _widthCache: WeakMap<Visual, { width: number; height: number }> = new WeakMap();
 
-    private readonly _chevron:         Button;
-    private readonly _popupHost:       ToolBarPopupHost;
-    private readonly _scrim:           ClickAwayScrim;
-    private readonly _popupContainer:  Border;
-    private readonly _popupList:       ToolBarOverflowItemsControl;
+    private _chevron!:         Button;
+    private _popupHost!:       ToolBarPopupHost;
+    private _scrim!:           ClickAwayScrim;
+    private _popupContainer!:  Border;
+    private _popupList!:       ToolBarOverflowItemsControl;
 
     private _popupMounted = false;
     private _lastKnownTarget: PresentationTarget | undefined;
@@ -113,70 +132,83 @@ export class ToolBar extends ItemsControl
             return p;
         };
 
-        // Build the chevron button — opens the overflow popup. The
-        // chevron collapses to Width=0 when `HasOverflowItems` flips
-        // false (driven by `applyChevronVisibility` from the OnProperty
-        // Changed handler below); when overflow rows reappear the
-        // chevron restores to its natural width. Same Width=0 collapse
-        // pattern the auto-hiding MenuItem columns use — mural has no
-        // Visibility DP, so width is the load-bearing knob.
-        this._chevron = new Button();
-        const chevronLabel = new TextBlock('⋯');
-        chevronLabel.Foreground = Theme.primaryInk;
-        this._chevron.Content = chevronLabel;
-        this._chevron.AddClickHandler(() =>
-        {
-            if (this.HasOverflowItems) this.IsOverflowOpen = !this.IsOverflowOpen;
-        });
-        DockPanel.SetDock(this._chevron, Dock.Right);
-
-        // Apply the control template — Border > DockPanel > (chevron,
-        // ItemsPresenter). The presenter is what ItemsControl wires
-        // the items panel into.
-        this.Template = new ControlTemplate((_tp) =>
-        {
-            const presenter = new ItemsPresenter();
-            const layout = new DockPanel();
-            layout.LastChildFill = true;
-            layout.AddChild(this._chevron);
-            layout.AddChild(presenter);
-            const border = new Border();
-            border.Background      = Theme.paper;
-            border.BorderBrush     = Theme.fieldBorder;
-            border.BorderThickness = new Thickness(1);
-            border.Padding         = new Thickness(4);
-            border.SetChild(layout);
-            return border;
-        });
-
-        // Build the overflow popup subtree. Same overlay pattern as
-        // ComboBox — Scrim + anchored popup body containing an
-        // ItemsControl bound to `_overflowedItems`.
-        this._scrim = new ClickAwayScrim();
-        this._scrim.onClick = (): void => { this.IsOverflowOpen = false; };
-
-        this._popupList = new ToolBarOverflowItemsControl();
-        this._popupList._toolbar      = this;
-        this._popupList.ItemsSource   = this._overflowedItems;
-        this._popupList.ItemsPanel    = (): Panel => new StackPanel();
-
-        this._popupContainer = new Border();
-        this._popupContainer.Background      = Theme.popupBg;
-        this._popupContainer.BorderBrush     = Theme.popupBorder;
-        this._popupContainer.BorderThickness = new Thickness(1);
-        this._popupContainer.Padding         = new Thickness(4);
-        this._popupContainer.SetChild(this._popupList);
-
-        this._popupHost = new ToolBarPopupHost();
-        this._popupHost.toolbar = this;
-        this._popupHost.anchor  = this._chevron;
-        this._popupHost.popup   = this._popupContainer;
-        this._popupHost.AddChild(this._scrim);
-        this._popupHost.AddChild(this._popupContainer);
+        // Apply the default Style — sets both `Template` (inline chrome
+        // with chevron + ItemsPresenter) and `PopupTemplate` (overflow
+        // popup that mounts onto the OverlayLayer when IsOverflowOpen
+        // flips true). ItemsControl's rebuildTemplate materialises the
+        // primary Template synchronously here so the chevron's parts
+        // are FindName-able immediately below.
+        this.applyDefaultStyle();
+        this.adoptInlineTemplate();
+        this.adoptPopupTemplate();
 
         // Initial chevron visibility — collapsed because Items is empty.
         this.applyChevronVisibility(this.HasOverflowItems);
     }
+
+    // After applyDefaultStyle, ItemsControl's primary Template has been
+    // materialised as super.visualChildren[0]. Find the chevron part and
+    // wire its click handler. The chevron's width is toggled between
+    // Number.NaN (auto) and 0 by applyChevronVisibility based on
+    // HasOverflowItems.
+    private adoptInlineTemplate(): void
+    {
+        const root = super.visualChildren[0];
+        if (root === undefined)
+        {
+            throw new Error(
+                'ToolBar template did not materialise. Did the default Style ' +
+                '(surface.template.mu, `Style [TargetType=ToolBar]`) set `Template = @DefaultToolBar`?');
+        }
+        const chevron = root.FindName('PART_Chevron') as Button | undefined;
+        if (chevron === undefined)
+        {
+            throw new Error(
+                'ToolBar template is missing PART_Chevron. See @DefaultToolBar in surface.template.mu.');
+        }
+        this._chevron = chevron;
+        DockPanel.SetDock(this._chevron, Dock.Right);
+        this._chevron.AddClickHandler(() =>
+        {
+            if (this.HasOverflowItems) this.IsOverflowOpen = !this.IsOverflowOpen;
+        });
+    }
+
+    // Apply the off-tree PopupTemplate, FindName the popup parts, wire
+    // back-refs. The host is held but NOT attached to our visual tree
+    // — mountPopup attaches it onto the PresentationTarget's overlay
+    // layer when IsOverflowOpen flips true.
+    private adoptPopupTemplate(): void
+    {
+        const popupTpl = this.PopupTemplate;
+        if (popupTpl === undefined)
+        {
+            throw new Error(
+                'ToolBar.PopupTemplate is undefined. The default Style in '
+                + 'surface.template.mu sets PopupTemplate = @DefaultToolBarPopup. '
+                + 'Did `ensureSurfaceTheme()` run before construction?');
+        }
+        const inst = popupTpl.Apply(this);
+        this._popupHost      = inst.root as ToolBarPopupHost;
+        this._scrim          = inst.root.FindName('PART_Scrim')          as ClickAwayScrim;
+        this._popupContainer = inst.root.FindName('PART_PopupContainer') as Border;
+        this._popupList      = inst.root.FindName('PART_PopupList')      as ToolBarOverflowItemsControl;
+
+        this._popupHost.toolbar     = this;
+        this._popupHost.anchor      = this._chevron;
+        this._popupHost.popup       = this._popupContainer;
+        this._popupList._toolbar    = this;
+        this._popupList.ItemsSource = this._overflowedItems;
+        this._popupList.ItemsPanel  = (): Panel => new StackPanel();
+        this._scrim.onClick         = (): void => { this.IsOverflowOpen = false; };
+
+        // ControlTemplate.Apply doesn't attach the root to the templated
+        // parent — the popup host is orphan-ready for mountPopup to
+        // adopt via PresentationTarget.AttachOverlay.
+    }
+
+    public get PopupTemplate():  ControlTemplate | undefined { return this.get_property_value(ToolBar.PopupTemplateKey); }
+    public set PopupTemplate(v: ControlTemplate | undefined) { this.set_property_value(ToolBar.PopupTemplateKey, v); }
 
     // Width=0 collapses the chevron flush so the toolbar reads as if
     // it has no overflow region; restoring sets Width to NaN which the
@@ -588,32 +620,10 @@ export class ToolBarPopupHost extends Panel
     }
 }
 
-// Click-away scrim — invisible, full overlay slot. PointerDown +
-// PointerUp inside the scrim closes the popup.
-export class ClickAwayScrim extends Border
-{
-    public onClick: (() => void) | undefined;
-    private _pressOriginatedHere = false;
-
-    protected override OnPointerDown(args: PointerEventArgs): void
-    {
-        this._pressOriginatedHere = true;
-        args.Handled = true;
-    }
-
-    protected override OnPointerUp(args: PointerEventArgs): void
-    {
-        const fire = this._pressOriginatedHere && this.IsMouseOver;
-        this._pressOriginatedHere = false;
-        args.Handled = true;
-        if (fire) this.onClick?.();
-    }
-
-    protected override OnPointerLeave(_args: PointerEventArgs): void
-    {
-        this._pressOriginatedHere = false;
-    }
-}
+// Re-export ClickAwayScrim — historically lived locally, now shared
+// with the combo-box / menu popup infrastructure. Sibling controls
+// (context-menu, menu-strip) still import it via this path.
+export { ClickAwayScrim } from '../list/combo-box.js';
 
 // Inner popup ItemsControl. Same container generation as the inline
 // ToolBarPanel — toolbar-style items materialize identically. The
