@@ -11,10 +11,12 @@
 export { Adorner, AdornerLayer, AdornerDecorator } from '../runtime/index.js';
 export { ValidationErrorAdorner } from './validation-error-adorner.js';
 export { Border } from './border.js';
-export { TextBlock, TextWrapping } from './text-block.js';
+export { TextBlock, TextAlignment, TextWrapping } from './text-block.js';
 export { Canvas } from './canvas.js';
 export { Ellipse } from './ellipse.js';
+export { Image } from './image.js';
 export { Line } from './line.js';
+export { Rectangle } from './rectangle.js';
 export { DockPanel, Dock } from './dock-panel.js';
 export {
     TextBox,

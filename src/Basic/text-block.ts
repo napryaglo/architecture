@@ -22,6 +22,20 @@ export enum TextWrapping
     Wrap   = 'Wrap',
 }
 
+// Per-line horizontal alignment WITHIN the block. Left (default) is the
+// historic shape — every line starts at x=0. Center and Right shift each
+// line by `(RenderSize.Width - lineWidth) * factor` so a TextBlock that
+// receives a slot wider than its natural content (HorizontalAlignment =
+// Stretch under a wide parent) centers / right-aligns its glyphs inside
+// that slot. Justify is intentionally omitted — it needs variable
+// inter-word spacing the FormattedText surface doesn't support.
+export enum TextAlignment
+{
+    Left   = 'Left',
+    Center = 'Center',
+    Right  = 'Right',
+}
+
 // Renders a single run of text. The simplest concrete Visual that's
 // actually visible — exercises MeasureOverride (text dimensions),
 // RenderOverride (dc.DrawText), property inheritance (font properties
@@ -54,7 +68,11 @@ export class TextBlock extends Visual
     public static readonly FontWeightKey   = Model.RegisterProperty<FontWeight>(TextBlock, 'FontWeight', FontWeight.Normal,   MetaData.Measure | MetaData.Render | MetaData.Inherits);
     public static readonly FontStyleKey    = Model.RegisterProperty<FontStyle>( TextBlock, 'FontStyle',  FontStyle.Normal,    MetaData.Measure | MetaData.Render | MetaData.Inherits);
     public static readonly ForegroundKey   = Model.RegisterProperty<Brush | undefined>(TextBlock, 'Foreground',   undefined,           MetaData.Render  | MetaData.Inherits);
-    public static readonly TextWrappingKey = Model.RegisterProperty<TextWrapping>(TextBlock, 'TextWrapping', TextWrapping.NoWrap, MetaData.Measure | MetaData.Render);
+    public static readonly TextWrappingKey  = Model.RegisterProperty<TextWrapping>( TextBlock, 'TextWrapping',  TextWrapping.NoWrap, MetaData.Measure | MetaData.Render);
+    // TextAlignment is render-only — moving the text within the block
+    // doesn't change the block's DesiredSize, and the runtime applies
+    // the per-line x offset inside RenderOverride.
+    public static readonly TextAlignmentKey = Model.RegisterProperty<TextAlignment>(TextBlock, 'TextAlignment', TextAlignment.Left,  MetaData.Render);
 
     // Lines computed by MeasureOverride when TextWrapping = Wrap. Each
     // entry holds the substring and the measurer-reported metrics for
@@ -89,6 +107,9 @@ export class TextBlock extends Visual
 
     public get TextWrapping(): TextWrapping { return this.get_property_value(TextBlock.TextWrappingKey); }
     public set TextWrapping(value: TextWrapping) { this.set_property_value(TextBlock.TextWrappingKey, value); }
+
+    public get TextAlignment(): TextAlignment { return this.get_property_value(TextBlock.TextAlignmentKey); }
+    public set TextAlignment(value: TextAlignment) { this.set_property_value(TextBlock.TextAlignmentKey, value); }
 
     protected override MeasureOverride(availableSize: Size): Size
     {
@@ -204,6 +225,19 @@ export class TextBlock extends Visual
         // measurers. Per-line metrics still ride along on the
         // FormattedText so SvgDrawingContext gets the right Ascent.
         const lineH = this._lines[0]!.metrics.Height;
+
+        // Per-line horizontal alignment factor:
+        //   Left   → 0   (no shift)
+        //   Center → 0.5 (half of slack on each side)
+        //   Right  → 1   (all slack on the left)
+        // Slack = RenderSize.Width - lineWidth. Negative slack (RenderSize
+        // narrower than the line) clamps to 0 — the line still starts at
+        // x=0 and is allowed to overflow the slot, matching WPF.
+        const align = this.TextAlignment;
+        const factor = align === TextAlignment.Center ? 0.5
+                     : align === TextAlignment.Right  ? 1
+                     : 0;
+        const slotW = this.RenderSize.Width;
         for (let i = 0; i < this._lines.length; i++)
         {
             const line = this._lines[i]!;
@@ -216,11 +250,14 @@ export class TextBlock extends Visual
                 this.FontStyle,
                 line.metrics,
             );
-            // Origin is this Visual's local (0, 0) for the first line —
-            // alignment + arranged offset are applied by Visual.Arrange
-            // + the renderer tree walk. Subsequent lines step down by
-            // one shared line height.
-            dc.DrawText(formatted, new Point(0, i * lineH));
+            // Origin is this Visual's local (offsetX, i * lineHeight) — the
+            // arranged-rect offset is applied by Visual.Arrange + the
+            // renderer tree walk, so we only need the in-block offsets
+            // here.
+            const offsetX = factor === 0
+                ? 0
+                : Math.max(0, (slotW - line.metrics.Width) * factor);
+            dc.DrawText(formatted, new Point(offsetX, i * lineH));
         }
     }
 }

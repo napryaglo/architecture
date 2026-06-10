@@ -18,7 +18,7 @@ import {
     SolidColorBrush,
     SvgDrawingContext,
 } from '../../visual-engine/index.js';
-import { Border, TextBlock } from '../index.js';
+import { Border, TextAlignment, TextBlock, TextWrapping } from '../index.js';
 
 // Captures DrawText calls so tests can assert exactly what TextBlock's
 // RenderOverride emitted (the FormattedText payload and the origin).
@@ -196,6 +196,84 @@ describe('TextBlock end-to-end through SvgDrawingContext', () => {
         const out = dc.ToFragment();
         assert.ok(out.includes('font-weight="bold"'));
         assert.ok(out.includes('font-style="italic"'));
+    });
+
+    test('TextAlignment defaults to Left and emits x=0 origin', () => {
+        const t = new TextBlock('hello');
+        t.Measure(new Size(500, 500));
+        // Arrange wider than the natural text so alignment slack exists.
+        t.Arrange(new Rect(0, 0, 500, 30));
+        const dc = new CapturingContext();
+        t.Render(dc);
+        assert.equal(t.TextAlignment, TextAlignment.Left);
+        assert.equal(dc.texts[0]!.origin.X, 0);
+    });
+
+    test('TextAlignment.Center shifts each line by (slot - line) / 2', () => {
+        const t = new TextBlock('hello');
+        t.TextAlignment = TextAlignment.Center;
+        t.Measure(new Size(500, 500));
+        t.Arrange(new Rect(0, 0, 500, 30));
+        const dc = new CapturingContext();
+        t.Render(dc);
+        // The approximate measurer reports `5 chars × 7px ≈ 35` for the
+        // line; slack = 500 - 35 = 465; centered origin = 232.5.
+        const line = (t as unknown as { _lines: Array<{ metrics: { Width: number } }> })._lines[0]!;
+        const expectedX = (500 - line.metrics.Width) / 2;
+        assert.equal(dc.texts[0]!.origin.X, expectedX);
+    });
+
+    test('TextAlignment.Right shifts each line by (slot - line)', () => {
+        const t = new TextBlock('hi');
+        t.TextAlignment = TextAlignment.Right;
+        t.Measure(new Size(500, 500));
+        t.Arrange(new Rect(0, 0, 500, 30));
+        const dc = new CapturingContext();
+        t.Render(dc);
+        const line = (t as unknown as { _lines: Array<{ metrics: { Width: number } }> })._lines[0]!;
+        assert.equal(dc.texts[0]!.origin.X, 500 - line.metrics.Width);
+    });
+
+    test('TextAlignment clamps to 0 when the slot is narrower than the line (text overflows; no negative shift)', () => {
+        const t = new TextBlock('a very long line that overflows the slot');
+        t.TextAlignment = TextAlignment.Right;
+        t.Measure(new Size(50, 50));
+        t.Arrange(new Rect(0, 0, 50, 20));
+        const dc = new CapturingContext();
+        t.Render(dc);
+        // RenderSize comes from arranging at 50; natural line width is
+        // much larger. Right-align clamps the negative shift to 0.
+        assert.equal(dc.texts[0]!.origin.X, 0);
+    });
+
+    test('Wrap + Center: each wrapped line is independently centered against the slot', () => {
+        const t = new TextBlock('hello world goodbye world');
+        t.TextWrapping = TextWrapping.Wrap;
+        t.TextAlignment = TextAlignment.Center;
+        t.Measure(new Size(80, 500));
+        t.Arrange(new Rect(0, 0, 200, 60));
+        const dc = new CapturingContext();
+        t.Render(dc);
+        assert.ok(dc.texts.length >= 2, 'wrap produced at least 2 lines');
+        const lines = (t as unknown as { _lines: Array<{ metrics: { Width: number } }> })._lines;
+        for (let i = 0; i < dc.texts.length; i++)
+        {
+            const expected = (200 - lines[i]!.metrics.Width) / 2;
+            assert.equal(dc.texts[i]!.origin.X, expected,
+                `line ${i} should be centered`);
+        }
+    });
+
+    test('TextAlignment is a Render-only DP — changing it leaves measure / arrange valid', () => {
+        const t = new TextBlock('hi');
+        t.Measure(new Size(100, 30));
+        t.Arrange(new Rect(0, 0, 100, 30));
+        assert.equal(t.IsMeasureValid, true);
+        assert.equal(t.IsArrangeValid, true);
+
+        t.TextAlignment = TextAlignment.Right;
+        assert.equal(t.IsMeasureValid, true);
+        assert.equal(t.IsArrangeValid, true);
     });
 
     test('TextBlock with no Foreground falls back to Theme.ink (or the neutral when no Application is registered)', () => {

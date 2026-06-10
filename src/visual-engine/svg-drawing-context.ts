@@ -5,6 +5,7 @@ import { DashStyle, LineCap, type Pen } from './pen.js';
 import { EllipseGeometry, LineGeometry, RectangleGeometry, type Geometry } from './geometry.js';
 import { Transform } from './transform.js';
 import { FontStyle, FontWeight, type FormattedText } from './formatted-text.js';
+import { Stretch, type ImageSource } from './image-source.js';
 
 // Minimal SVG implementation of DrawingContext. Translates draw calls
 // into string-form SVG elements buffered in `output`; the consumer (a
@@ -47,6 +48,27 @@ export class SvgDrawingContext implements DrawingContext
             fillAttr(brush),
             ...strokeAttrs(pen),
         ];
+        this.output.push(`<rect ${attrs.join(' ')} />`);
+    }
+
+    public DrawRoundedRectangle(
+        brush: Brush | undefined,
+        pen: Pen | undefined,
+        rect: Rect,
+        radiusX: number,
+        radiusY: number,
+    ): void
+    {
+        const attrs: string[] = [
+            `x="${formatNumber(rect.X)}"`,
+            `y="${formatNumber(rect.Y)}"`,
+            `width="${formatNumber(rect.Width)}"`,
+            `height="${formatNumber(rect.Height)}"`,
+        ];
+        if (radiusX > 0) attrs.push(`rx="${formatNumber(radiusX)}"`);
+        if (radiusY > 0) attrs.push(`ry="${formatNumber(radiusY)}"`);
+        attrs.push(fillAttr(brush));
+        attrs.push(...strokeAttrs(pen));
         this.output.push(`<rect ${attrs.join(' ')} />`);
     }
 
@@ -160,6 +182,19 @@ export class SvgDrawingContext implements DrawingContext
         // shows up as caret micro-drift rather than visible glyph
         // distortion, which is the better trade-off.
         this.output.push(`<text ${attrs.join(' ')}>${escapeXmlText(text.Text)}</text>`);
+    }
+
+    public DrawImage(source: ImageSource, rect: Rect, stretch: Stretch): void
+    {
+        const attrs: string[] = [
+            `href="${escapeXmlAttr(source.Uri)}"`,
+            `x="${formatNumber(rect.X)}"`,
+            `y="${formatNumber(rect.Y)}"`,
+            `width="${formatNumber(rect.Width)}"`,
+            `height="${formatNumber(rect.Height)}"`,
+            `preserveAspectRatio="${stretchToPreserveAspectRatio(stretch)}"`,
+        ];
+        this.output.push(`<image ${attrs.join(' ')} />`);
     }
 
     public PushTransform(transform: Transform): void
@@ -303,4 +338,26 @@ function escapeXmlText(s: string): string
 function escapeXmlAttr(s: string): string
 {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+}
+
+// Translate a Stretch enum value to the matching SVG `preserveAspectRatio`
+// attribute value.
+//
+//   * None          — `xMinYMin meet` lets the image render at its
+//     natural size anchored at the slot's top-left. Combined with the
+//     slot being sized to NaturalSize by Image.MeasureOverride, no
+//     stretching happens.
+//   * Fill          — `none` disables aspect-ratio preservation.
+//   * Uniform       — `xMidYMid meet` scales to fit, centered.
+//   * UniformToFill — `xMidYMid slice` scales to fill, centered, clipped.
+function stretchToPreserveAspectRatio(stretch: Stretch): string
+{
+    switch (stretch)
+    {
+        case Stretch.None:          return 'xMinYMin meet';
+        case Stretch.Fill:          return 'none';
+        case Stretch.UniformToFill: return 'xMidYMid slice';
+        case Stretch.Uniform:
+        default:                    return 'xMidYMid meet';
+    }
 }

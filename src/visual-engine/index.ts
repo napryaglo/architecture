@@ -10,11 +10,14 @@ export {
     ImageBrush,
     GradientStop,
     GradientSpreadMethod,
-    Stretch,
     AlignmentX,
     AlignmentY,
-    ImageSource,
 } from './brush.js';
+export {
+    BitmapImage,
+    ImageSource,
+    Stretch,
+} from './image-source.js';
 export { Pen, DashStyle, LineCap, LineJoin } from './pen.js';
 export {
     Geometry,

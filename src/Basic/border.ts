@@ -32,11 +32,18 @@ import { Brush, Pen } from '../visual-engine/index.js';
 //   * Background fills the entire Border rect (under the stroke).
 //   * BorderBrush + BorderThickness produce a stroked rectangle inset
 //     by half the thickness so the stroke sits inside the layout rect.
-//   * CornerRadius is registered but not yet honored — DrawingContext
-//     gets a DrawRoundedRectangle helper later (see visual-engine §5).
-//   * Non-uniform BorderThickness is rendered as uniform using
-//     BorderThickness.Top — per-side stroke needs a custom path
-//     geometry (deferred).
+//   * CornerRadius rounds both the background fill and the stroke.
+//     The stroke's inner radius is `CornerRadius - StrokeThickness/2`
+//     (clamped to zero) so the stroke sits exactly on the rounded
+//     outline. Applies to UNIFORM thickness only; the asymmetric
+//     four-rect path below renders sharp corners regardless of radius
+//     (a single mitered path would need DrawPathGeometry, which the
+//     DC doesn't have today).
+//   * Non-uniform BorderThickness paints four filled rectangles (top,
+//     bottom, left, right) whose union forms the frame. Top and Bottom
+//     span the full width; Left and Right fit between them. Each side
+//     respects its own thickness independently. CornerRadius is
+//     ignored for this case.
 export class Border extends Single
 {
     // Typed-key DPs. The `T` on each key flows through the typed
@@ -132,25 +139,84 @@ export class Border extends Single
     protected override RenderOverride(dc: DrawingContext): void
     {
         const size = this.RenderSize;
+        const radius = this.CornerRadius;
 
         // Background fills the entire border rect (under the stroke).
         if (this.Background !== undefined)
         {
-            dc.DrawRectangle(this.Background, undefined, new Rect(0, 0, size.Width, size.Height));
+            if (radius > 0)
+            {
+                dc.DrawRoundedRectangle(
+                    this.Background, undefined,
+                    new Rect(0, 0, size.Width, size.Height),
+                    radius, radius);
+            }
+            else
+            {
+                dc.DrawRectangle(this.Background, undefined, new Rect(0, 0, size.Width, size.Height));
+            }
         }
 
-        // Stroked border. Uniform thickness only for v1 — uses BorderThickness.Top.
-        // Stroke is centered on the path, so inset by half-thickness to keep it inside size.
-        const thickness = this.BorderThickness.Top;
-        if (this.BorderBrush !== undefined && thickness > 0)
+        // Stroked border. Uniform thickness uses a single stroked rect
+        // (rounded or square); asymmetric thickness uses four filled
+        // rects forming the frame.
+        const bt = this.BorderThickness;
+        if (this.BorderBrush === undefined) return;
+        const isUniform = bt.Left === bt.Top && bt.Top === bt.Right && bt.Right === bt.Bottom;
+
+        if (isUniform)
         {
+            const thickness = bt.Top;
+            if (thickness <= 0) return;
             const pen = new Pen(this.BorderBrush, thickness);
             const half = thickness / 2;
-            dc.DrawRectangle(
-                undefined,
-                pen,
-                new Rect(half, half, Math.max(0, size.Width - thickness), Math.max(0, size.Height - thickness)),
+            const innerRect = new Rect(
+                half, half,
+                Math.max(0, size.Width  - thickness),
+                Math.max(0, size.Height - thickness),
             );
+            if (radius > 0)
+            {
+                // Inset the corner radius by the same half-thickness so
+                // the stroke sits exactly on the rounded outline. Clamp
+                // to zero so very thick borders with small radii degrade
+                // to a sharp inner corner instead of going negative.
+                const innerR = Math.max(0, radius - half);
+                dc.DrawRoundedRectangle(undefined, pen, innerRect, innerR, innerR);
+            }
+            else
+            {
+                dc.DrawRectangle(undefined, pen, innerRect);
+            }
+            return;
+        }
+
+        // Asymmetric path — fill one rect per side. Top and Bottom span
+        // the full width; Left and Right sit between Top and Bottom so
+        // corner pixels are owned by Top/Bottom (a single deterministic
+        // assignment instead of overlapping corners that double up the
+        // alpha when the brush is translucent).
+        const innerY = bt.Top;
+        const innerH = Math.max(0, size.Height - bt.Top - bt.Bottom);
+        if (bt.Top > 0)
+        {
+            dc.DrawRectangle(this.BorderBrush, undefined,
+                new Rect(0, 0, size.Width, bt.Top));
+        }
+        if (bt.Bottom > 0)
+        {
+            dc.DrawRectangle(this.BorderBrush, undefined,
+                new Rect(0, size.Height - bt.Bottom, size.Width, bt.Bottom));
+        }
+        if (bt.Left > 0)
+        {
+            dc.DrawRectangle(this.BorderBrush, undefined,
+                new Rect(0, innerY, bt.Left, innerH));
+        }
+        if (bt.Right > 0)
+        {
+            dc.DrawRectangle(this.BorderBrush, undefined,
+                new Rect(size.Width - bt.Right, innerY, bt.Right, innerH));
         }
     }
 }

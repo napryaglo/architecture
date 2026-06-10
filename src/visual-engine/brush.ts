@@ -29,15 +29,11 @@ export enum GradientSpreadMethod
     Repeat  = 'repeat',
 }
 
-// How an ImageBrush fits its source image into the target rectangle.
-// Same semantics as WPF Stretch.
-export enum Stretch
-{
-    None           = 'none',
-    Fill           = 'fill',
-    Uniform        = 'uniform',
-    UniformToFill  = 'uniformToFill',
-}
+// Stretch enum lives in image-source.ts so the Image control and
+// ImageBrush share the same values. Re-exported here for the historical
+// import path.
+export { Stretch } from './image-source.js';
+import { Stretch } from './image-source.js';
 
 // Horizontal placement of an ImageBrush image inside its target rect
 // when Stretch is None or Uniform (and so doesn't fill horizontally).
@@ -56,15 +52,12 @@ export enum AlignmentY
     Bottom = 'bottom',
 }
 
-// Placeholder image-source wrapper. Holds whatever the renderer needs to
-// resolve the actual pixels — currently just a URL string; future
-// renderers will accept HTMLImageElement / ImageBitmap / a fetch
-// callback. Kept as its own type so ImageBrush.ImageSource has a stable
-// declared type even as the underlying payload grows.
-export class ImageSource
-{
-    constructor(public readonly Source: string) {}
-}
+// ImageSource (with its BitmapImage concrete subclass) lives in
+// image-source.ts so both ImageBrush (paint source) and the Image
+// control (Visual) can share the same type. Re-exported here for the
+// historical import path.
+export { BitmapImage, ImageSource } from './image-source.js';
+import { ImageSource } from './image-source.js';
 
 // Paint source for fill operations on a DrawingContext. Abstract — concrete
 // subclasses are SolidColorBrush, LinearGradientBrush, RadialGradientBrush,

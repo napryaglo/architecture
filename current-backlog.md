@@ -2,7 +2,7 @@
 
 Open gaps in the property/binding/control system compared to WPF. Closed items moved to [completed-backlog.md](completed-backlog.md) — section numbers preserved across both files so cross-references survive.
 
-**Status:** Property / binding / inheritance / layout / render pipeline is feature-complete for WPF parity; the concrete-control roster covers Border, Grid (with shared-size groups), StackPanel, WrapPanel, DockPanel, Canvas, UniformGrid, VirtualizingStackPanel, VirtualizingWrapPanel, Button, ToggleButton, TextBlock, TextBox, ComboBox, ListBox, TreeView, Slider, SpinEdit, ScrollBar, ScrollViewer, ContentControl, ItemsControl, ControlTemplate, DataTemplate, Drawer, PageView, Diagram (with Selector-based multi-select + marquee), Thumb, Splitter, GridSplitter, ToolBar (+ ToolBarButton / ToolBarToggleButton / ToolBarSeparator with overflow popup), Menu / MenuButton / MenuItem / MenuSeparator (hamburger fly-out), ContextMenu (attached DP + right-click auto-open), and shapes (Ellipse, Line). 5.3 `Dispatcher` / thread affinity dropped — N/A for single-threaded JS. Test suite: 1612 tests passing.
+**Status:** Property / binding / inheritance / layout / render pipeline is feature-complete for WPF parity; the concrete-control roster covers Border, Grid (with shared-size groups), StackPanel, WrapPanel, DockPanel, Canvas, UniformGrid, VirtualizingStackPanel, VirtualizingWrapPanel, Button, ToggleButton, TextBlock, TextBox, ComboBox, ListBox, TreeView, Slider, SpinEdit, ScrollBar, ScrollViewer, ContentControl, ItemsControl, ControlTemplate, DataTemplate, Drawer, PageView, Diagram (with Selector-based multi-select + marquee), Thumb, Splitter, GridSplitter, ToolBar (+ ToolBarButton / ToolBarToggleButton / ToolBarSeparator with overflow popup), Menu / MenuButton / MenuItem / MenuSeparator (hamburger fly-out), ContextMenu (attached DP + right-click auto-open), and shapes (Ellipse, Line). 5.3 `Dispatcher` / thread affinity dropped — N/A for single-threaded JS. Test suite: 1650 tests passing.
 
 ## 5. Architectural gaps
 
@@ -24,6 +24,18 @@ Open gaps in the property/binding/control system compared to WPF. Closed items m
    - ~~**ToolBar HasOverflowItems styling.**~~ Closed. `OnPropertyChanged('HasOverflowItems')` collapses the chevron Button to `Width=0` when no items overflow; restores to `NaN` (auto) when they do.
 
 5.13. **Hit testing for non-SVG renderers.** SVG gets hit-testing free via `elementsFromPoint`. Canvas needs a spatial index or hidden picking buffer. WebGL same. Pairs with the CanvasRenderer (9.1). From [visual-engine-design.md](src/document/visual-engine-design.md) § 11.
+
+5.15. **Migrate imperative `Theme.*` consumers to declarative bindings.** [src/Basic/theme.ts](src/Basic/theme.ts) was introduced as a bridge between imperative paint paths in controls (Slider thumb tinting, ScrollBar thumb hover, ComboBox border focus, Menu item hover, etc.) and the Material 3 token system that templates consume via `DynamicResource`. Each `Theme.x` getter resolves the matching M3 token from `Application.Resources` on every read, so theme swap (light ↔ dark) reflects in the next imperative refresh — but the call sites still mutate Visual props directly instead of binding declaratively. 15 src files import from `theme.ts` today; ~35 distinct read sites. Three migration categories:
+
+  - **Hover / press / focus painters** — the prime candidates. `ScrollBar` thumb drag/hover/normal ([scroll-bar.ts:504-506](src/Basic/scroll-bar.ts#L504-L506)), `Slider` thumb drag/hover/normal ([slider.ts:488-490](src/Basic/slider.ts#L488-L490)), `SpinEdit` border focus/hover/normal ([spin-edit.ts:158-160](src/Basic/spin-edit.ts#L158-L160)), `ComboBox` selection / popup item / placeholder ([combo-box.ts:589-639](src/Basic/combo-box.ts#L589-L639)), `TreeView` row hover/selected ([tree-view.ts:689-690](src/framework/list/tree-view.ts#L689-L690)). All of these are state-driven and should lower to template `when(IsMouseOver)` / `when(IsPressed)` / `when(IsSelected)` triggers with `Background = @SurfaceContainerHigh` style setters reading the token via DynamicResource.
+
+  - **Static-default callsites** — `Button.Foreground = Theme.primaryInk` ([button.ts:135](src/framework/button.ts#L135)), `PageView.subtitleText.Foreground = Theme.hint` ([page-view.ts:81](src/Basic/page-view.ts#L81)), `Thumb.Background = Theme.scrollThumb` ([thumb.ts:103](src/Basic/thumb.ts#L103)), `MenuStrip` text foreground ([menu-strip.ts:712](src/framework/menu/menu-strip.ts#L712)), `ToolBar` chrome border/background setup ([tool-bar.ts:126-147](src/framework/tool-bar/tool-bar.ts#L126-L147)). One-shot writes during template apply — should become `Setter` entries in the control's default `Style` reading the token via DynamicResource.
+
+  - **Optional-public-API fallbacks** — `PreviewBrush ?? Theme.primary` ([splitter.ts:137](src/Basic/splitter.ts#L137), [grid-splitter.ts:210](src/Basic/grid-splitter.ts#L210)), `LineBrush ?? Theme.fieldBorder` ([menu-strip.ts:760](src/framework/menu/menu-strip.ts#L760), [tool-bar-items.ts:159](src/framework/tool-bar/tool-bar-items.ts#L159)), `brush ?? Theme.error` ([validation-error-adorner.ts:50](src/Basic/validation-error-adorner.ts#L50)), `Foreground ?? Theme.ink` ([text-block.ts:178](src/Basic/text-block.ts#L178)). These fall back to a theme token only when the consumer didn't override. Migration: register the DP default as a `DynamicResource` factory in the control's default Style, so unset consumers pick up the token via the resource chain instead of via `Theme.x` lookup at render time.
+
+  **Residual after migration.** Two values stay framework-owned and would remain in `theme.ts` (or move to a smaller `defaults.ts`): `DEFAULT_FONT_FAMILY` (referenced at TextBlock DP-registration time, before any `Application` exists) and the preallocated `scrim` brush (M3's `Scrim` token registers as fully opaque black; we want ~40% black for popup dimming). The rest of `Theme` collapses once the consumers above migrate.
+
+  **Pacing.** Per-control PRs — `ScrollBar`, `Slider`, `SpinEdit`, `ComboBox`, `TreeView` are the heaviest hover/state consumers and would benefit most. Static-defaults sweep is bookkeeping once the trigger-based migrations land.
 
 5.7. **`mural-hit` pad opt-out for non-interactive Visuals.** Today `SvgRenderer` emits an invisible `<rect class="mural-hit" fill="none" pointer-events="all" .../>` inside every Visual's outer `<g>`, sized to its `ArrangedRect`. The pad exists so pointer events register on the whitespace between painted descendants (a TreeView row's gaps between chevron and label glyphs would otherwise fall through under SVG's default `visiblePainted`). One pad per Visual ≈ half the `<rect>` count in any non-trivial scene (~280 of the 633 rects in the tree-view demo, ~28 KB of attributes for a 108 KB dump). For most Visuals the pad is dead weight — purely decorative `TextBlock`s, `Border`s, layout panels, etc. never get a routed-event listener and never appear in an `IsMouseOver`/`IsPressed`/`IsFocused` trigger. The pad is only load-bearing for Visuals that: (a) have a per-instance routed-event listener (`AddPointerDownListener` etc.), (b) appear as the watched target in a `PropertyTrigger` over `IsMouseOver`/`IsPressed`/`IsFocused`, (c) have `Focusable=true`, or (d) override an input virtual (`OnPointerDown`, …). The renderer doesn't currently know any of those criteria. Two viable shapes for the opt-out: an `interactive` bit on Visual that subclasses opt into (cheap, explicit, requires touching every interactive control); or a renderer-side derivation that walks the listener Maps + Style triggers when materializing the outer `<g>` (no control-side change, but couples the renderer to the routed-event + style internals). Either way, the pad still gets re-emitted at the moment a Visual transitions from non-interactive to interactive (new listener added at runtime, Focusable flipped, a trigger installed via Style.OverrideMetadata on a descendant class). Pairs naturally with the existing "lazy-attach `mural-own`" optimization — together they could plausibly halve the steady-state SVG size for layout-heavy demos.
 
@@ -97,23 +109,6 @@ From [resources.md § 6](src/document/resources.md).
 
 12.4. **No keyed sealing of resources.** WPF freezes a resource value once committed; Mural lets you `Set` over an existing key. Defensive copy-on-write may be needed if shared Brush/Geometry instances start getting mutated.
 
----
-
-## 13. Concrete controls — primitive gaps
-
-From [controls.md](src/document/controls.md) limitations sections and the "what's still coming" list.
-
-13.1. **`Border` per-side `BorderThickness` rendering.** Today rendered as uniform using `BorderThickness.Top`. Per-side strokes need a custom path geometry (one rect per side, or a single path with mitered corners).
-
-13.2. **`Border` `CornerRadius` rendering.** DP is registered and triggers render invalidation, but `SvgDrawingContext.DrawRectangle` doesn't accept a corner-radius argument. Either extend `DrawRectangle` or add `DrawRoundedRectangle`.
-
-13.3. **`TextBlock` `TextWrapping` / multi-line.** Single-line only today. Multi-line needs a measurer that returns line-break positions for a given width budget — the current `FontMetricsMeasurer` measures whole strings.
-
-13.4. **`TextBlock` `TextAlignment`.** Per-line / within-block text alignment (CSS `text-align`). Depends on 13.3 (multi-line measurement).
-
-13.5. **`Rectangle` shape primitive.** Status quo has `Ellipse` and `Line`; `Rectangle` is the obvious missing third. Wraps a `RectangleGeometry`.
-
-13.6. **`Image` control.** Wraps an `ImageBrush`. Image sources (URL / data URI / blob).
 
 ---
 

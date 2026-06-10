@@ -5,6 +5,7 @@ import { DashStyle, LineCap, type Pen } from './pen.js';
 import { EllipseGeometry, LineGeometry, RectangleGeometry, type Geometry } from './geometry.js';
 import { Transform } from './transform.js';
 import { FontStyle, FontWeight, type FormattedText } from './formatted-text.js';
+import { Stretch, type ImageSource } from './image-source.js';
 
 // DOM-mode DrawingContext. Mirrors SvgDrawingContext (string builder)
 // but appends real SVG elements to a host node instead of accumulating
@@ -63,6 +64,26 @@ export class SvgDomDrawingContext implements DrawingContext
         r.setAttribute('y',      formatNumber(rect.Y));
         r.setAttribute('width',  formatNumber(rect.Width));
         r.setAttribute('height', formatNumber(rect.Height));
+        applyFill  (r, brush);
+        applyStroke(r, pen);
+        this.current().appendChild(r);
+    }
+
+    public DrawRoundedRectangle(
+        brush: Brush | undefined,
+        pen: Pen | undefined,
+        rect: Rect,
+        radiusX: number,
+        radiusY: number,
+    ): void
+    {
+        const r = this.create('rect');
+        r.setAttribute('x',      formatNumber(rect.X));
+        r.setAttribute('y',      formatNumber(rect.Y));
+        r.setAttribute('width',  formatNumber(rect.Width));
+        r.setAttribute('height', formatNumber(rect.Height));
+        if (radiusX > 0) r.setAttribute('rx', formatNumber(radiusX));
+        if (radiusY > 0) r.setAttribute('ry', formatNumber(radiusY));
         applyFill  (r, brush);
         applyStroke(r, pen);
         this.current().appendChild(r);
@@ -163,6 +184,21 @@ export class SvgDomDrawingContext implements DrawingContext
         this.current().appendChild(t);
     }
 
+    public DrawImage(source: ImageSource, rect: Rect, stretch: Stretch): void
+    {
+        const i = this.create('image');
+        // SVG 2 prefers `href`; legacy `xlink:href` is still accepted
+        // by all browsers but emits a deprecation warning in some
+        // tooling. Mural targets modern SVG only.
+        i.setAttribute('href', source.Uri);
+        i.setAttribute('x',      formatNumber(rect.X));
+        i.setAttribute('y',      formatNumber(rect.Y));
+        i.setAttribute('width',  formatNumber(rect.Width));
+        i.setAttribute('height', formatNumber(rect.Height));
+        i.setAttribute('preserveAspectRatio', stretchToPreserveAspectRatio(stretch));
+        this.current().appendChild(i);
+    }
+
     public PushTransform(transform: Transform): void
     {
         const m = transform.Matrix;
@@ -243,6 +279,19 @@ export class SvgDomDrawingContext implements DrawingContext
 //   factor out if a third DC backend appears.
 
 function formatNumber(n: number): string { return n.toString(); }
+
+// Mirrors stretchToPreserveAspectRatio in svg-drawing-context.ts.
+function stretchToPreserveAspectRatio(stretch: Stretch): string
+{
+    switch (stretch)
+    {
+        case Stretch.None:          return 'xMinYMin meet';
+        case Stretch.Fill:          return 'none';
+        case Stretch.UniformToFill: return 'xMidYMid slice';
+        case Stretch.Uniform:
+        default:                    return 'xMidYMid meet';
+    }
+}
 
 function applyFill(el: SVGElement, brush: Brush | undefined): void
 {

@@ -4,6 +4,7 @@ import type { Pen } from './pen.js';
 import type { Geometry } from './geometry.js';
 import type { Transform } from './transform.js';
 import type { FormattedText } from './formatted-text.js';
+import type { ImageSource, Stretch } from './image-source.js';
 
 // Augments the runtime DrawingContext marker interface with the actual
 // renderer-supplied draw methods. Visual.Render (in runtime) takes a
@@ -22,8 +23,10 @@ import type { FormattedText } from './formatted-text.js';
 // Surface starts deliberately small (DrawRectangle / DrawText /
 // DrawGeometry / PushTransform / Pop) per build-order step 12.5 of the
 // visual-engine design. Convenience primitives (DrawEllipse, DrawLine,
-// DrawImage, DrawRoundedRectangle, PushClip, PushOpacity) get added when
-// a concrete Visual first needs one.
+// DrawImage, PushOpacity) get added when a concrete Visual first needs
+// one. DrawRoundedRectangle and PushClip are already in the surface
+// because Border (corner-radii) and ScrollViewer / hardware clipping
+// need them.
 declare module '../runtime/drawing-context.js'
 {
     interface DrawingContext
@@ -35,9 +38,29 @@ declare module '../runtime/drawing-context.js'
 
         DrawRectangle(brush: Brush | undefined, pen: Pen | undefined, rect: Rect): void;
 
+        // Rounded variant. `radiusX` / `radiusY` are the horizontal /
+        // vertical corner radii (uniform across all four corners — WPF's
+        // per-corner CornerRadius isn't surfaced yet). Implementations
+        // fall back to DrawRectangle semantics when both radii are 0.
+        DrawRoundedRectangle(
+            brush: Brush | undefined,
+            pen: Pen | undefined,
+            rect: Rect,
+            radiusX: number,
+            radiusY: number,
+        ): void;
+
         DrawGeometry(brush: Brush | undefined, pen: Pen | undefined, geometry: Geometry): void;
 
         DrawText(text: FormattedText, origin: Point): void;
+
+        // Paints `source` into the given rect using the supplied stretch
+        // policy. The image is identified by its host-supplied URI
+        // (HTTP/HTTPS / data / blob); decoding and rasterization are the
+        // renderer's responsibility. Stretch maps to the renderer's
+        // native aspect-ratio control (SVG `preserveAspectRatio`,
+        // canvas drawImage source-rect math, etc.).
+        DrawImage(source: ImageSource, rect: Rect, stretch: Stretch): void;
 
         // ----- Stack frames -----
         // Each Push opens a frame; Pop closes the most recent open frame.
