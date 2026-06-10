@@ -5,7 +5,6 @@ import {
     Panel,
     Rect,
     Size,
-    Thickness,
     Visual,
     type DrawingContext,
     type PointerEventArgs,
@@ -142,6 +141,42 @@ export class ClickableBorder extends Border
     {
         this._pressOriginatedHere = false;
     }
+}
+
+// ComboBoxItem — popup row container. Carries an `IsSelected` DP so a
+// default Style can drive the hover / selected chrome via standard
+// triggers, instead of the historical refreshItemHighlights writing
+// Background imperatively. ComboBox writes IsSelected on every realised
+// row when SelectedIndex changes; the row's Style reacts.
+//
+// Default Style ships in basic.template.mu under
+// `Style [TargetType=ComboBoxItem]` — Background = @SurfaceContainerHigh
+// at rest, @StateHoverOverlay on hover, @SecondaryContainer when
+// IsSelected. The class overrides DefaultStyleKey to itself so the
+// theme lookup picks the ComboBoxItem entry rather than walking up to
+// ClickableBorder (which has no default Style today).
+export class ComboBoxItem extends ClickableBorder
+{
+    public static readonly IsSelectedKey = Model.RegisterProperty<boolean>(
+        ComboBoxItem, 'IsSelected', false, MetaData.None);
+
+    static {
+        Model.OverrideMetadata(ComboBoxItem, Visual.DefaultStyleKeyKey, { default_value: ComboBoxItem });
+        ensureControlsTheme();
+    }
+
+    constructor()
+    {
+        super();
+        // The default Style sets Background / Padding via setters and
+        // hover / selected via triggers. applyDefaultStyle runs the
+        // resolver synchronously so the chrome is in place by the time
+        // the host adds this container to the popup tree.
+        this.applyDefaultStyle();
+    }
+
+    public get IsSelected():  boolean { return this.get_property_value(ComboBoxItem.IsSelectedKey); }
+    public set IsSelected(v: boolean) { this.set_property_value(ComboBoxItem.IsSelectedKey, v); }
 }
 
 // Invisible outside-click absorber. Same press-here-release-here gate
@@ -287,12 +322,13 @@ export class ComboBoxItemList extends ItemsControl
 
     public override GetContainerForItemOverride(item: unknown): Visual
     {
-        const row = new ClickableBorder();
-        row.Background      = Theme.popupBg;
-        row.BorderThickness = Thickness.Zero;
-        row.Padding         = new Thickness(16, 8, 16, 8);
+        // ComboBoxItem's default Style fills in Background / Padding /
+        // hover / selected chrome via triggers — see
+        // `Style [TargetType=ComboBoxItem]` in basic.template.mu. The
+        // label TextBlock is the only content authoring; everything
+        // visual rides through the Style.
+        const row   = new ComboBoxItem();
         const label = new TextBlock(displayString(item));
-        label.Foreground = Theme.fieldText;
         row.SetChild(label);
         return row;
     }
@@ -300,7 +336,7 @@ export class ComboBoxItemList extends ItemsControl
     public override PrepareContainerForItemOverride(container: Visual, item: unknown, index: number): void
     {
         super.PrepareContainerForItemOverride(container, item, index);
-        const row = container as ClickableBorder;
+        const row = container as ComboBoxItem;
         // Closures capture index — combo items are rebuilt wholesale
         // on every Items reassignment, so the closure's index stays in
         // sync with the row's position in the realized list.
@@ -311,13 +347,13 @@ export class ComboBoxItemList extends ItemsControl
             c.SelectedIndex    = index;
             c.IsDropDownOpen   = false;
         };
-        row.AddPropertyChangedListener(Visual.IsMouseOverKey, () =>
+        // Initial selected state — refreshItemHighlights handles
+        // subsequent SelectedIndex changes via the public IsSelected DP.
+        const c = this.combo;
+        if (c !== undefined && c.SelectedIndex === index)
         {
-            const c = this.combo;
-            row.Background = c !== undefined
-                ? c['itemBackgroundFor'](index, row.IsMouseOver)
-                : Theme.popupBg;
-        });
+            row.IsSelected = true;
+        }
     }
 
     // Symmetric: wipe row.onClick on detach so a recycled / orphaned
@@ -326,9 +362,10 @@ export class ComboBoxItemList extends ItemsControl
     public override ClearContainerForItemOverride(container: Visual, item: unknown): void
     {
         super.ClearContainerForItemOverride(container, item);
-        if (container instanceof ClickableBorder)
+        if (container instanceof ComboBoxItem)
         {
-            container.onClick = undefined;
+            container.onClick    = undefined;
+            container.IsSelected = false;
         }
     }
 }
@@ -581,29 +618,19 @@ export class ComboBox extends Selector
 
     // ── Internal plumbing ───────────────────────────────────────────
 
-    // Row background priority: selected > hover > default. Read by
-    // ComboBoxItemList's per-row IsMouseOver listener AND by
-    // refreshItemHighlights when SelectedIndex changes from elsewhere.
-    private itemBackgroundFor(index: number, hover: boolean)
-    {
-        if (index === this.SelectedIndex) return Theme.itemSelectedBg;
-        if (hover)                        return Theme.itemHoverBg;
-        return Theme.popupBg;
-    }
-
+    // Set IsSelected on the realised popup rows according to the
+    // current SelectedIndex. The row's default Style (in
+    // basic.template.mu) reacts via triggers — IsSelected → selected
+    // chrome, IsMouseOver → hover chrome, selected wins. No Background
+    // writes from this class.
     private refreshItemHighlights(): void
     {
-        // ComboBoxItemList.logicalChildren is the realized container
-        // list in items order — one ClickableBorder per item. Walking
-        // it directly avoids holding a parallel _itemContainers array.
         const containers = this._popupList.logicalChildren;
+        const sel = this.SelectedIndex;
         for (let i = 0; i < containers.length; i++)
         {
             const c = containers[i];
-            if (c instanceof ClickableBorder)
-            {
-                c.Background = this.itemBackgroundFor(i, c.IsMouseOver);
-            }
+            if (c instanceof ComboBoxItem) c.IsSelected = (i === sel);
         }
     }
 

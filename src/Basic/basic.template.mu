@@ -191,6 +191,23 @@ resources BasicTheme {
         }
     }
 
+    // ── ComboBoxItem: popup row chrome ──────────────────────────────
+    // Drives hover / selected colours via triggers. ComboBox sets
+    // IsSelected on each row when SelectedIndex changes; the row's
+    // IsMouseOver flips when the pointer enters / leaves. The Style's
+    // setter list yields the base look; trigger order (IsMouseOver
+    // first, IsSelected last) gives selected > hover priority through
+    // the TriggerValue tier (which sits above LocalValue — so the
+    // imperative Background writes from prior versions of this code
+    // would have been masked by triggers anyway).
+    Style [TargetType=ComboBoxItem] {
+        Background      = @SurfaceContainerHigh;
+        BorderThickness = (0);
+        Padding         = (16,8,16,8);
+        when ( IsMouseOver ) { Background = @StateHoverOverlay; }
+        when ( IsSelected )  { Background = @SecondaryContainer; }
+    }
+
     // ── Drawer (in-flow pane) ───────────────────────────────────────
     // Shared by Permanent / Persistent / Temporary variants. The
     // Temporary variant re-parents this same pane onto the overlay

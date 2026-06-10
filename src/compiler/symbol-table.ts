@@ -148,6 +148,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['ClickAwayScrim',          '@visualisation-sub/mural/framework/list/combo-box.js'],
     ['SplitRow',                '@visualisation-sub/mural/framework/list/combo-box.js'],
     ['ComboBoxPopupHost',       '@visualisation-sub/mural/framework/list/combo-box.js'],
+    ['ComboBoxItem',            '@visualisation-sub/mural/framework/list/combo-box.js'],
     ['ComboBoxItemList',        '@visualisation-sub/mural/framework/list/combo-box.js'],
     ['ScrimSurface',            '@visualisation-sub/mural/framework/drawer.js'],
     ['TemporaryOverlayHost',    '@visualisation-sub/mural/framework/drawer.js'],
