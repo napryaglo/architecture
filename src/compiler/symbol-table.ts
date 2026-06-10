@@ -50,6 +50,10 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['Matrix',              '@visualisation-sub/mural/runtime'],
     ['Thickness',           '@visualisation-sub/mural/runtime'],
     ['CornerRadius',        '@visualisation-sub/mural/runtime'],
+    // Theme engine — emitted by `theme` / `scheme` top-level forms.
+    ['defineScheme',        '@visualisation-sub/mural/runtime'],
+    ['defineTheme',         '@visualisation-sub/mural/runtime'],
+    ['ThemeManager',        '@visualisation-sub/mural/runtime'],
     // Adaptive context — inherited DPs on Visual written by ThemeManager
     // / MediaWatcher; templates trigger on these via the standard `when`
     // syntax (`when (Density = Compact) { … }`).

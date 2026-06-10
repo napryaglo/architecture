@@ -36,6 +36,7 @@ import type {
     ResourceForm,
     ResourcesBlock,
     ResourcesImport,
+    SchemeBlock,
     SetterItem,
     SetterList,
     SizeValue,
@@ -46,6 +47,8 @@ import type {
     StringValue,
     StructuredBody,
     TemplateBindingValue,
+    ThemeBlock,
+    TokenCatalogEntry,
     TopForm,
     TriggerActionNode,
     TriggerExpr,
@@ -64,6 +67,42 @@ export class ParseError extends Error
         super(`${message} (at ${span.start.line}:${span.start.column})`);
         this.span = span;
     }
+}
+
+// Expand a `@Foo1..@Foo8`-style range into the individual token names.
+// Both ends must share a common alphabetic prefix and end in a numeric
+// suffix; the prefix is preserved and the numeric range is generated
+// inclusively. `expandTokenRange('Space1', 'Space8', span)` returns
+// `['Space1', 'Space2', 'Space3', 'Space4', 'Space5', 'Space6',
+//   'Space7', 'Space8']`.
+function expandTokenRange(first: string, last: string, span: SourceSpan): string[]
+{
+    const m1 = /^([A-Za-z_]+)(\d+)$/.exec(first);
+    const m2 = /^([A-Za-z_]+)(\d+)$/.exec(last);
+    if (m1 === null || m2 === null)
+    {
+        throw new ParseError(
+            `token range '${first}..${last}' must end in numeric suffixes`,
+            span);
+    }
+    if (m1[1] !== m2[1])
+    {
+        throw new ParseError(
+            `token range '${first}..${last}' must share a common prefix (got '${m1[1]}' vs '${m2[1]}')`,
+            span);
+    }
+    const prefix = m1[1]!;
+    const lo = parseInt(m1[2]!, 10);
+    const hi = parseInt(m2[2]!, 10);
+    if (lo > hi)
+    {
+        throw new ParseError(
+            `token range '${first}..${last}' is descending (${lo} > ${hi})`,
+            span);
+    }
+    const out: string[] = [];
+    for (let i = lo; i <= hi; i++) out.push(`${prefix}${i}`);
+    return out;
 }
 
 const RESOURCE_KEYWORDS = new Set([
@@ -138,6 +177,8 @@ export class Parser
                 case 'import':       return this.parseImport();
                 case 'def':          return this.parseDefForm();
                 case 'resources':    return this.parseResourcesBlock();
+                case 'theme':        return this.parseThemeBlock();
+                case 'scheme':       return this.parseSchemeBlock();
                 case 'Style':
                 case 'Template':
                 case 'DataTemplate':
@@ -199,6 +240,156 @@ export class Parser
             kind: 'resources-import',
             alias,
             source,
+            span: this.span(start, end),
+        };
+    }
+
+    // `theme Identifier { import …; tokens { … }; …body… }`
+    //
+    // Compiles to a ResourceDictionary subclass (`class Identifier
+    // extends ResourceDictionary`) plus a sibling `IdentifierCatalog`
+    // export that holds the token catalog. Body shape is the same as
+    // `resources` — templates, default Styles, DataTemplates ride here.
+    private parseThemeBlock(): ThemeBlock
+    {
+        const head  = this.expectIdent('theme');
+        const start = head.span.start;
+        const name  = this.expect(TokenKind.Ident).value;
+        this.expect(TokenKind.LBrace);
+
+        // Header: zero or more `import Alias from "..."` clauses,
+        // followed by an optional `tokens { … }` block. Either header
+        // can be absent; both must precede any body item.
+        const imports: ResourcesImport[] = [];
+        while (
+            this.peek().kind === TokenKind.Ident
+            && this.peek().value === 'import'
+        )
+        {
+            imports.push(this.parseResourcesImport());
+        }
+
+        let tokens: TokenCatalogEntry[] = [];
+        if (this.peek().kind === TokenKind.Ident && this.peek().value === 'tokens')
+        {
+            tokens = this.parseTokenCatalog();
+        }
+
+        const body = this.parseStructuredBody();
+        this.expect(TokenKind.RBrace);
+        const end = this.lastEnd();
+        return {
+            kind: 'theme-block',
+            name,
+            imports,
+            tokens,
+            body,
+            span: this.span(start, end),
+        };
+    }
+
+    // `tokens { @Name : Type "desc"  …  @A..@B : Type "desc" }`
+    //
+    // Each entry binds one or more catalog names to a type plus
+    // optional description. The range form (`@A..@B`) requires both
+    // ends to share a common alphabetic prefix and end in a numeric
+    // suffix that defines the range bounds (`Space1..Space8`).
+    private parseTokenCatalog(): TokenCatalogEntry[]
+    {
+        this.expectIdent('tokens');
+        this.expect(TokenKind.LBrace);
+        const entries: TokenCatalogEntry[] = [];
+        while (this.peek().kind === TokenKind.At)
+        {
+            entries.push(this.parseTokenCatalogEntry());
+        }
+        this.expect(TokenKind.RBrace);
+        return entries;
+    }
+
+    private parseTokenCatalogEntry(): TokenCatalogEntry
+    {
+        const at = this.expect(TokenKind.At);
+        const first = this.expect(TokenKind.Ident).value;
+        // Optional range form `@Foo1..@Foo8`. Two consecutive dots
+        // form the range operator. The grammar reserves `..` for this
+        // — it doesn't appear elsewhere at this position.
+        const names: string[] = [first];
+        if (this.peek().kind === TokenKind.Dot
+            && this.peek(1).kind === TokenKind.Dot)
+        {
+            this.consume(); // first dot
+            this.consume(); // second dot
+            this.expect(TokenKind.At);
+            const second = this.expect(TokenKind.Ident).value;
+            const expanded = expandTokenRange(first, second, at.span);
+            names.length = 0;
+            names.push(...expanded);
+        }
+        this.expect(TokenKind.Colon);
+        // Type name — bare ident (`Brush`, `CornerRadius`, `number`,
+        // `Typography`, `Effect`, `Easing`). Union types live as
+        // descriptions for now; the runtime catalog stores the type
+        // verbatim and the contract validator does an exact-name match.
+        const typeText = this.expect(TokenKind.Ident).value;
+        let description: string | undefined;
+        if (this.peek().kind === TokenKind.String)
+        {
+            description = this.consume().value;
+        }
+        const end = this.lastEnd();
+        return {
+            kind:        'token-catalog-entry',
+            names,
+            typeText,
+            description,
+            span:        this.span(at.span.start, end),
+        };
+    }
+
+    // `scheme Identifier against ThemeName [basedOn Other.scheme] { … }`
+    //
+    // Compiles to a `defineScheme({ … })` call exported as the named
+    // constant. Body uses the same StructuredBody shape; bind / emit
+    // pass enforces that only `@Name = value` assignments appear.
+    private parseSchemeBlock(): SchemeBlock
+    {
+        const head  = this.expectIdent('scheme');
+        const start = head.span.start;
+        const name  = this.expect(TokenKind.Ident).value;
+        this.expectIdent('against');
+        const theme = this.expect(TokenKind.Ident).value;
+
+        let basedOn: string | undefined;
+        if (this.peek().kind === TokenKind.Ident && this.peek().value === 'basedOn')
+        {
+            this.consume();
+            const parentTheme = this.expect(TokenKind.Ident).value;
+            this.expect(TokenKind.Dot);
+            const parentScheme = this.expect(TokenKind.Ident).value;
+            basedOn = `${parentTheme}.${parentScheme}`;
+        }
+
+        this.expect(TokenKind.LBrace);
+        const imports: ResourcesImport[] = [];
+        while (
+            this.peek().kind === TokenKind.Ident
+            && this.peek().value === 'import'
+        )
+        {
+            imports.push(this.parseResourcesImport());
+        }
+
+        const body = this.parseStructuredBody();
+        this.expect(TokenKind.RBrace);
+        const end = this.lastEnd();
+        return {
+            kind: 'scheme-block',
+            name,
+            theme,
+            basedOn,
+            imports,
+            body,
             span: this.span(start, end),
         };
     }

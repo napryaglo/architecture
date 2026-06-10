@@ -19,7 +19,14 @@ export interface Document
     span:  SourceSpan;
 }
 
-export type TopForm = ImportForm | DefForm | ElementNode | ResourceForm | ResourcesBlock;
+export type TopForm =
+    | ImportForm
+    | DefForm
+    | ElementNode
+    | ResourceForm
+    | ResourcesBlock
+    | ThemeBlock
+    | SchemeBlock;
 
 export interface ImportForm
 {
@@ -62,6 +69,74 @@ export interface ResourcesImport
     alias:  string;
     source: string;
     span:   SourceSpan;
+}
+
+// ── `theme Identifier { tokens { … } imports… body… }` ──────────────
+//
+// Top-level form that defines a Theme bundle — a ResourceDictionary
+// subclass enriched with an explicit token catalog. Compiles to:
+//   * `export class Identifier extends ResourceDictionary` (same shape
+//     as ResourcesBlock — templates, default styles, DataTemplates ride
+//     in the body)
+//   * `export const IdentifierCatalog: TokenCatalog` — the catalog Map
+//     built from the `tokens { … }` declarations
+//
+// At runtime the consumer's TS code wraps these into a Theme via
+// defineTheme({ name, templates: [Identifier.Clone()], catalog:
+// IdentifierCatalog, schemes, defaultScheme }).
+export interface ThemeBlock
+{
+    kind:    'theme-block';
+    name:    string;
+    imports: ResourcesImport[];   // same shape as ResourcesBlock imports
+    tokens:  TokenCatalogEntry[]; // empty when no `tokens { … }` was authored
+    body:    StructuredBody;      // same shape as ResourcesBlock body
+    span:    SourceSpan;
+}
+
+// One entry inside a Theme's `tokens { … }` block.
+//
+//   @Primary  : Brush "Primary brand color"
+//   @Space1..@Space8 : number "M3 spacing scale"
+//
+// A range form expands to N entries during emit (`@Foo1`..`@Foo3` →
+// three separate catalog entries with the same type + description).
+export interface TokenCatalogEntry
+{
+    kind:        'token-catalog-entry';
+    /** Name(s) the entry expands to. Always one or more identifiers.
+     *  Single-token form yields `[ 'Primary' ]`; range form like
+     *  `@Space1..@Space8` yields `[ 'Space1', 'Space2', ..., 'Space8' ]`. */
+    names:       string[];
+    /** Type name as written — `Brush`, `CornerRadius`, `number`,
+     *  `Typography`, `Effect`, … plus union types like `number |
+     *  CornerRadius`. Verbatim text for now; the runtime catalog
+     *  stores the same string. */
+    typeText:    string;
+    description: string | undefined;
+    span:        SourceSpan;
+}
+
+// ── `scheme Identifier against ThemeName [basedOn Other] { @x=v … }` ──
+//
+// Top-level form that defines a Scheme — a pure token-value dictionary
+// declared against a specific Theme. Compiles to:
+//   * `export const Identifier = defineScheme({ name, theme, basedOn?,
+//     tokens })` — a Scheme value object ready for ThemeManager.RegisterTheme.
+//
+// The body is restricted to `@Name = value` resource entries (no
+// element declarations, no styles, no triggers); the parser uses the
+// same StructuredBody grammar and the bind pass enforces the "pure
+// values" rule.
+export interface SchemeBlock
+{
+    kind:     'scheme-block';
+    name:     string;            // identifier after `scheme` — the export name
+    theme:    string;            // identifier after `against` — the target Theme
+    basedOn:  string | undefined; // `<theme>.<scheme>` after `basedOn`, when present
+    imports:  ResourcesImport[];
+    body:     StructuredBody;
+    span:     SourceSpan;
 }
 
 // ── Element ────────────────────────────────────────────────────────

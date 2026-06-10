@@ -19,6 +19,8 @@ import type {
     PropertySetter,
     ResourceForm,
     ResourcesBlock,
+    SchemeBlock,
+    ThemeBlock,
     SetterItem,
     SlotAssign,
     StringBody,
@@ -286,18 +288,27 @@ export class Compiler
             }
         }
 
-        // Pass 2: scan for `resources NAME { … }` blocks. A file that
-        // contains ANY resources blocks compiles to ONLY class
+        // Pass 2: scan for `resources NAME { … }`, `theme NAME { … }`,
+        // and `scheme NAME against THEME { … }` blocks. A file that
+        // contains ANY of these compiles to ONLY class / const
         // declarations — mixing with an Application / element / bare
         // ResourceDictionary root is rejected so the output shape is
-        // unambiguous.
-        const resourcesBlocks: ResourcesBlock[] = [];
+        // unambiguous. Themes and Schemes ride the resources-block
+        // pipeline because they share the same class-emission shape
+        // (Theme = ResourceDictionary subclass + catalog const;
+        // Scheme = defineScheme(...) const).
+        const resourcesBlocks: ResourcesBlock[]            = [];
+        const themeBlocks:     ThemeBlock[]                = [];
+        const schemeBlocks:    SchemeBlock[]               = [];
         for (const form of doc.forms)
         {
             if (form.kind === 'resources-block') resourcesBlocks.push(form);
+            else if (form.kind === 'theme-block')  themeBlocks.push(form);
+            else if (form.kind === 'scheme-block') schemeBlocks.push(form);
         }
+        const totalBlocks = resourcesBlocks.length + themeBlocks.length + schemeBlocks.length;
 
-        if (resourcesBlocks.length > 0)
+        if (totalBlocks > 0)
         {
             // No other root form is allowed alongside resources blocks.
             for (const form of doc.forms)
@@ -344,6 +355,18 @@ export class Compiler
             for (const block of resourcesBlocks)
             {
                 metas.push(this.compileResourcesBlock(block));
+            }
+            for (const block of themeBlocks)
+            {
+                // Theme bundle = ResourcesBlock body + a sibling
+                // `NAMECatalog` constant. compileThemeBlock emits both
+                // and returns the resources-block meta so callers
+                // see the same shape.
+                metas.push(this.compileThemeBlock(block));
+            }
+            for (const block of schemeBlocks)
+            {
+                this.compileSchemeBlock(block);
             }
             return {
                 body:             this.lines.join('\n'),
@@ -565,6 +588,105 @@ export class Compiler
             }
         }
         return out;
+    }
+
+    // ── `theme NAME { tokens { … } …body… }` ─────────────────────────
+    //
+    // Emits the same shape as a ResourcesBlock — a `class NAME extends
+    // ResourceDictionary` with a static `Clone()` factory holding the
+    // theme's templates / styles / DataTemplates — plus an additional
+    // `NAMECatalog` constant of type `TokenCatalog` holding the
+    // explicit token contract authored inside `tokens { … }`.
+    private compileThemeBlock(block: ThemeBlock): ResourcesBlockMeta
+    {
+        // Reuse the ResourcesBlock pipeline for the dictionary body —
+        // a ThemeBlock IS a ResourcesBlock with extra catalog metadata.
+        const meta = this.compileResourcesBlock({
+            kind:    'resources-block',
+            name:    block.name,
+            imports: block.imports,
+            body:    block.body,
+            span:    block.span,
+        });
+
+        // Emit the catalog constant. Imports the Map / TokenSpec shape
+        // implicitly — TokenCatalog is just `ReadonlyMap<string,
+        // TokenSpec>` so plain `new Map([...])` literal is enough.
+        const catalogName = `${block.name}Catalog`;
+        this.line('');
+        this.line(`// Token catalog declared in \`theme ${block.name}\` (${block.tokens.length} entry`
+            + `${block.tokens.length === 1 ? '' : 'ies'}).`);
+        this.line(`export const ${catalogName} = new Map([`);
+        for (const entry of block.tokens)
+        {
+            for (const name of entry.names)
+            {
+                const desc = entry.description !== undefined
+                    ? `, description: ${JSON.stringify(entry.description)}`
+                    : '';
+                this.line(`    [${JSON.stringify(name)}, { type: ${JSON.stringify(entry.typeText)}${desc} }],`);
+            }
+        }
+        this.line(`]);`);
+        return meta;
+    }
+
+    // ── `scheme NAME against THEME [basedOn OTHER] { @x = v … }` ─────
+    //
+    // Emits `export const NAME = defineScheme({ name, theme, basedOn?,
+    // tokens })` — a Scheme value object ready for
+    // ThemeManager.RegisterTheme. The body's `@Name = value`
+    // assignments populate the tokens map.
+    private compileSchemeBlock(block: SchemeBlock): void
+    {
+        this.ensureImport('defineScheme');
+
+        // Register any block-scoped `import Alias from "..."` clauses
+        // so brushes / effects defined elsewhere are available as
+        // values when their tokens are referenced inside this scheme.
+        for (const imp of block.imports)
+        {
+            this.ensureExplicitImport(imp.alias, imp.source);
+        }
+
+        // Walk the body and collect every `@Name = value` assignment.
+        // Element / style / trigger / def items inside a scheme are a
+        // hard error — schemes are pure value dictionaries.
+        const tokens: Array<{ name: string; expr: string }> = [];
+        for (const item of block.body.items)
+        {
+            if (item.kind === 'key-value-resource')
+            {
+                const expr = this.compileValue(item.value, {});
+                tokens.push({ name: item.key, expr });
+            }
+            else
+            {
+                throw new EmitError(
+                    `\`scheme ${block.name}\` body must contain only \`@Name = value\` `
+                    + `assignments — got ${item.kind}.`,
+                    item.span);
+            }
+        }
+
+        this.line('');
+        this.line(`// Scheme '${block.name}' against theme '${block.theme}'`
+            + (block.basedOn !== undefined ? ` based on '${block.basedOn}'` : '')
+            + '.');
+        this.line(`export const ${block.name} = defineScheme({`);
+        this.line(`    name:    ${JSON.stringify(block.name)},`);
+        this.line(`    theme:   ${JSON.stringify(block.theme)},`);
+        if (block.basedOn !== undefined)
+        {
+            this.line(`    basedOn: ${JSON.stringify(block.basedOn)},`);
+        }
+        this.line(`    tokens:  new Map([`);
+        for (const t of tokens)
+        {
+            this.line(`        [${JSON.stringify(t.name)}, ${t.expr}],`);
+        }
+        this.line(`    ]),`);
+        this.line(`});`);
     }
 
     // ── Application root ────────────────────────────────────────────

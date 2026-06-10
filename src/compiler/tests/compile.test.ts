@@ -1033,3 +1033,77 @@ describe('compile — resources block (typed dictionary class)', () => {
         assert.match(r.js, /t\.Set\("Some Key",/);
     });
 });
+
+describe('compile — `theme NAME { tokens { … } … }` block', () => {
+    test('emits a class + a sibling NAMECatalog Map', () => {
+        const js = emitted(`
+            theme Material {
+                tokens {
+                    @Primary   : Brush  "Primary brand color"
+                    @ShapeFull : CornerRadius
+                    @Space1..@Space3 : number "M3 spacing scale"
+                }
+                Style x:key="DemoStyle" [TargetType=TextBlock] { FontSize = 14; }
+            }
+        `);
+        // ResourceDictionary subclass for the templates / styles body.
+        assert.match(js, /export class Material extends ResourceDictionary/);
+        // Sibling catalog Map with each token entry.
+        assert.match(js, /export const MaterialCatalog = new Map\(\[/);
+        assert.match(js, /\["Primary",\s*\{\s*type:\s*"Brush",\s*description:\s*"Primary brand color"\s*\}\]/);
+        // Description-less entry omits the field.
+        assert.match(js, /\["ShapeFull",\s*\{\s*type:\s*"CornerRadius"\s*\}\]/);
+        // Range form expands to N entries.
+        assert.match(js, /\["Space1",\s*\{\s*type:\s*"number"/);
+        assert.match(js, /\["Space2",\s*\{\s*type:\s*"number"/);
+        assert.match(js, /\["Space3",\s*\{\s*type:\s*"number"/);
+    });
+
+    test('`theme NAME { }` without a tokens block still compiles (empty catalog)', () => {
+        const js = emitted(`
+            theme Empty {
+                Style x:key="X" [TargetType=TextBlock] { FontSize = 14; }
+            }
+        `);
+        assert.match(js, /export const EmptyCatalog = new Map\(\[\s*\]\)/);
+    });
+});
+
+describe('compile — `scheme NAME against THEME { … }` block', () => {
+    test('emits a defineScheme call exporting the scheme value', () => {
+        const js = emitted(`
+            scheme MaterialLight against Material {
+                @Primary   = #6750A4
+                @OnPrimary = #FFFFFF
+                @ShapeFull = 999
+            }
+        `);
+        assert.match(js, /export const MaterialLight = defineScheme\(\{/);
+        assert.match(js, /name:\s*"MaterialLight"/);
+        assert.match(js, /theme:\s*"Material"/);
+        assert.match(js, /tokens:\s*new Map\(\[/);
+        assert.match(js, /\["Primary",/);
+        // defineScheme imported from the runtime.
+        assert.match(js, /import \{[^}]*defineScheme[^}]*\} from "@visualisation-sub\/mural\/runtime"/);
+    });
+
+    test('`basedOn theme.scheme` emits as a string field', () => {
+        const js = emitted(`
+            scheme FluentLight against Fluent basedOn Material.light {
+                @Primary = #0078D4
+            }
+        `);
+        assert.match(js, /basedOn:\s*"Material\.light"/);
+    });
+
+    test('non-value items in a scheme body are rejected', () => {
+        assert.throws(
+            () => compile(`
+                scheme Bad against Demo {
+                    @Primary = #6750A4
+                    Style x:key="X" [TargetType=TextBlock] { FontSize = 14; }
+                }
+            `),
+            (err) => err instanceof EmitError && /body must contain only/.test(err.message));
+    });
+});

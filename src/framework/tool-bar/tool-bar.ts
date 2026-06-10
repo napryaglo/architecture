@@ -7,7 +7,6 @@ import {
     Size,
     Visual,
     type DrawingContext,
-    type PointerEventArgs,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
 import {
