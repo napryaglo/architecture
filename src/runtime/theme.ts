@@ -18,6 +18,22 @@
 
 import { Application } from './application.js';
 import { ResourceDictionary } from './resource-dictionary.js';
+import {
+    Density,
+    GetDensity,
+    GetPointer,
+    GetPrefersColorScheme,
+    GetPrefersContrast,
+    GetPrefersReducedMotion,
+    GetViewportClass,
+    MediaWatcher,
+    Pointer,
+    PreferredScheme,
+    PrefersContrast,
+    SetDensity,
+    ViewportClass,
+} from './adaptive.js';
+import type { Visual } from './visual.js';
 
 // ── Token catalog ──────────────────────────────────────────────────────
 
@@ -315,6 +331,81 @@ export class ThemeManager
 
     public get ActiveTheme():  Theme  | undefined { return this._activeTheme; }
     public get ActiveScheme(): Scheme | undefined { return this._activeScheme; }
+
+    // ── Adaptive context ──────────────────────────────────────────────
+    //
+    // Density is the only app-controlled adaptive DP (no OS source).
+    // The other adaptive DPs (Pointer, PrefersContrast,
+    // PrefersReducedMotion, PrefersColorScheme, ViewportClass) come
+    // from the MediaWatcher service — exposed here as read-only
+    // getters that bridge the inherited DP on the Application root.
+
+    private readonly _mediaWatcher = new MediaWatcher();
+
+    public get MediaWatcher(): MediaWatcher { return this._mediaWatcher; }
+
+    /** Attach the MediaWatcher to a Visual (usually Application's
+     *  root mount). Idempotent. After this, OS preference / viewport
+     *  changes write the corresponding inherited DPs on `root`, which
+     *  cascade to every descendant. */
+    public StartMediaWatcher(root: Visual): void
+    {
+        this._mediaWatcher.Start(root);
+    }
+
+    /** Detach the MediaWatcher. Safe to call when not started. */
+    public StopMediaWatcher(): void
+    {
+        this._mediaWatcher.Stop();
+    }
+
+    private rootVisual(): Visual | undefined
+    {
+        const app = Application.current;
+        return app?.Resources?.Root;
+    }
+
+    public get Density(): Density
+    {
+        const v = this.rootVisual();
+        return v !== undefined ? GetDensity(v) : Density.Regular;
+    }
+
+    public set Density(value: Density)
+    {
+        const v = this.rootVisual();
+        if (v !== undefined) SetDensity(v, value);
+    }
+
+    public get ViewportClass(): ViewportClass
+    {
+        const v = this.rootVisual();
+        return v !== undefined ? GetViewportClass(v) : ViewportClass.Desktop;
+    }
+
+    public get Pointer(): Pointer
+    {
+        const v = this.rootVisual();
+        return v !== undefined ? GetPointer(v) : Pointer.Fine;
+    }
+
+    public get PrefersContrast(): PrefersContrast
+    {
+        const v = this.rootVisual();
+        return v !== undefined ? GetPrefersContrast(v) : PrefersContrast.Normal;
+    }
+
+    public get PrefersReducedMotion(): boolean
+    {
+        const v = this.rootVisual();
+        return v !== undefined ? GetPrefersReducedMotion(v) : false;
+    }
+
+    public get PrefersColorScheme(): PreferredScheme
+    {
+        const v = this.rootVisual();
+        return v !== undefined ? GetPrefersColorScheme(v) : PreferredScheme.NoPreference;
+    }
 
     /** Activate a Theme by name. Optionally specify a starting Scheme;
      *  defaults to the Theme's `defaultScheme`. */

@@ -50,6 +50,14 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['Matrix',              '@visualisation-sub/mural/runtime'],
     ['Thickness',           '@visualisation-sub/mural/runtime'],
     ['CornerRadius',        '@visualisation-sub/mural/runtime'],
+    // Adaptive context — inherited DPs on Visual written by ThemeManager
+    // / MediaWatcher; templates trigger on these via the standard `when`
+    // syntax (`when (Density = Compact) { … }`).
+    ['Density',             '@visualisation-sub/mural/runtime'],
+    ['ViewportClass',       '@visualisation-sub/mural/runtime'],
+    ['Pointer',             '@visualisation-sub/mural/runtime'],
+    ['PrefersContrast',     '@visualisation-sub/mural/runtime'],
+    ['PreferredScheme',     '@visualisation-sub/mural/runtime'],
     ['DataObject',          '@visualisation-sub/mural/runtime'],
     ['DragDropEffects',     '@visualisation-sub/mural/runtime'],
     ['DragDrop',            '@visualisation-sub/mural/runtime'],
@@ -234,6 +242,11 @@ export const ENUM_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<st
     ['Dock',                  new Set(['Left', 'Top', 'Right', 'Bottom'])],
     ['DrawerVariant',         new Set(['Permanent', 'Persistent', 'Temporary'])],
     ['ToolBarPosition',       new Set(['None', 'Only', 'First', 'Middle', 'Last'])],
+    ['Density',               new Set(['Compact', 'Regular', 'Comfortable'])],
+    ['ViewportClass',         new Set(['Mobile', 'Tablet', 'Desktop'])],
+    ['Pointer',               new Set(['Fine', 'Coarse'])],
+    ['PrefersContrast',       new Set(['Normal', 'More'])],
+    ['PreferredScheme',       new Set(['NoPreference', 'Light', 'Dark'])],
 ]);
 
 // Type → set of valid static-member names exposed for use in DOTTED
