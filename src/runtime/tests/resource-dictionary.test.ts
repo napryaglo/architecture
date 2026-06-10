@@ -270,6 +270,61 @@ describe('DynamicResource', () => {
         assert.equal(leaf.Brush, 'merged-in');
     });
 
+    test('re-parenting re-wires ancestor subscriptions', () => {
+        // After moving a Visual (with a DynamicResource binding) to a
+        // new ancestor chain, the binding picks up resources defined
+        // on the new ancestors AND stops responding to changes on the
+        // old ones. AttachLogical / DetachLogical drive the re-wire
+        // via Visual.refresh_dynamic_resources_subtree.
+        class TestPanel extends Panel { }
+        const oldRoot = new TestPanel();
+        const newRoot = new TestPanel();
+        oldRoot.Resources.Set('Brush', 'from-old-root');
+        newRoot.Resources.Set('Brush', 'from-new-root');
+
+        const leaf = new TargetLeaf();
+        oldRoot.AddChild(leaf);
+        leaf._set_property_value_by_name('Brush', DynamicResource(leaf, 'Brush'));
+        assert.equal(leaf.Brush, 'from-old-root');
+
+        // Move the leaf to a different ancestor chain.
+        oldRoot.RemoveChild(leaf);
+        newRoot.AddChild(leaf);
+        assert.equal(leaf.Brush, 'from-new-root',
+            'binding should re-walk and pick up newRoot value');
+
+        // Changes on the OLD chain no longer propagate.
+        oldRoot.Resources.Set('Brush', 'mutated-on-old-root');
+        assert.equal(leaf.Brush, 'from-new-root',
+            'old-root mutation should be ignored after re-parent');
+
+        // Changes on the NEW chain do.
+        newRoot.Resources.Set('Brush', 'mutated-on-new-root');
+        assert.equal(leaf.Brush, 'mutated-on-new-root');
+    });
+
+    test('re-parenting through an intermediate ancestor cascades to grand-descendants', () => {
+        // The fire-on-subtree path: a deep DynamicResource binding
+        // doesn't have its own _logicalParent change when an ancestor
+        // re-attaches; the recursive propagate_dynamic_resources_to_
+        // logical_children walk has to reach down.
+        class TestPanel extends Panel { }
+        const newRoot = new TestPanel();
+        newRoot.Resources.Set('Brush', 'from-new-root');
+
+        const mid  = new TestPanel();
+        const leaf = new TargetLeaf();
+        mid.AddChild(leaf);
+
+        leaf._set_property_value_by_name('Brush', DynamicResource(leaf, 'Brush'));
+        assert.equal(leaf.Brush, undefined,
+            'no ancestor with the key yet');
+
+        newRoot.AddChild(mid);
+        assert.equal(leaf.Brush, 'from-new-root',
+            'cascade through mid reaches leaf');
+    });
+
     test('replacing the DynamicResource with a local value disposes subscriptions', () => {
         class TestPanel extends Panel { }
         const root = new TestPanel();

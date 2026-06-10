@@ -1793,6 +1793,12 @@ export class Visual extends Model
         // their original AddChild and only see the Border's style
         // when their chain extends up to it on THIS attach).
         child.refresh_styles_subtree();
+        // DynamicResource bindings cached their ancestor-chain
+        // subscriptions at construction. Reparenting grew (or shrank)
+        // that chain — re-walk so any new ancestor's Resources dict
+        // becomes observable, and so a fresh active theme lookup runs
+        // for every bound DP across the subtree.
+        child.refresh_dynamic_resources_subtree();
     }
 
     protected DetachLogical(child: Visual): void
@@ -1813,6 +1819,11 @@ export class Visual extends Model
         // stays active because refresh_active_style prefers Style over
         // _implicitStyle / _themeStyle.
         child.refresh_styles_subtree();
+        // DynamicResource bindings re-walk their ancestor chain — the
+        // detached subtree's bindings drop ancestor subscriptions and
+        // fall back to Application-only resolution (still valid for
+        // theme tokens).
+        child.refresh_dynamic_resources_subtree();
     }
 
     // Cascades unsubscribe → resolve → subscribe through THIS visual
@@ -2415,6 +2426,44 @@ export class Visual extends Model
 
     protected propagate_inheritance_for_logical_children(_descriptor: PropertyDescriptor): void { /* override in Single / Panel */ }
 
+    // ── DynamicResource re-wire support ──────────────────────────────
+    //
+    // DynamicResource bindings cache their ancestor-chain subscriptions
+    // at construction. Reparenting changes the chain (new ancestors
+    // visible, old ones gone), so the binding has to re-walk. Each
+    // binding registers a re-wire callback via _subscribe_dynamic_resource;
+    // AttachLogical / DetachLogical fire them across the subtree.
+    private _dynamic_resource_listeners: Array<() => void> = [];
+
+    /** @internal — DynamicResourceBinding only. Subscribes a callback
+     *  that fires when this Visual's ancestor chain may have changed.
+     *  Returns an unsubscribe thunk. */
+    public _subscribe_dynamic_resource(listener: () => void): () => void
+    {
+        this._dynamic_resource_listeners.push(listener);
+        return (): void =>
+        {
+            const i = this._dynamic_resource_listeners.indexOf(listener);
+            if (i >= 0) this._dynamic_resource_listeners.splice(i, 1);
+        };
+    }
+
+    private fire_dynamic_resource_listeners(): void
+    {
+        // Snapshot so a listener that unsubscribes itself mid-fire
+        // doesn't perturb the iteration.
+        const snapshot = this._dynamic_resource_listeners.slice();
+        for (const l of snapshot) l();
+    }
+
+    protected refresh_dynamic_resources_subtree(): void
+    {
+        this.fire_dynamic_resource_listeners();
+        this.propagate_dynamic_resources_to_logical_children();
+    }
+
+    protected propagate_dynamic_resources_to_logical_children(): void { /* override in Single / Panel */ }
+
     private static collect_inheritable_descriptors(klass: Function): PropertyDescriptor[]
     {
         const seen = new Set<string>();
@@ -2495,6 +2544,11 @@ export abstract class Single extends Visual
     protected override propagate_inheritance_for_logical_children(descriptor: PropertyDescriptor): void
     {
         this._child?.['refresh_inherited'](descriptor);
+    }
+
+    protected override propagate_dynamic_resources_to_logical_children(): void
+    {
+        this._child?.['refresh_dynamic_resources_subtree']();
     }
 
     protected override propagate_target_to_visual_children(): void
@@ -2621,6 +2675,11 @@ export class Panel extends Visual
     protected override propagate_inheritance_for_logical_children(descriptor: PropertyDescriptor): void
     {
         for (const c of this._children) c['refresh_inherited'](descriptor);
+    }
+
+    protected override propagate_dynamic_resources_to_logical_children(): void
+    {
+        for (const c of this._children) c['refresh_dynamic_resources_subtree']();
     }
 
     protected override propagate_target_to_visual_children(): void

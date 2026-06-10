@@ -42,6 +42,7 @@ class DynamicResourceBinding extends Binding
     private readonly subscriptions: Array<() => void>;
     private readonly host: Visual;
     private readonly key: string;
+    private readonly unsubscribeRewire: () => void;
 
     constructor(host: Visual, key: string)
     {
@@ -53,13 +54,33 @@ class DynamicResourceBinding extends Binding
         this.key = key;
         this.wireSubscriptions();
         this.refresh();
+        // Re-walk the ancestor chain whenever the host is attached /
+        // detached. Visual.refresh_dynamic_resources_subtree fires this
+        // callback on every binding registered against any node in the
+        // affected subtree.
+        this.unsubscribeRewire = host._subscribe_dynamic_resource(() =>
+        {
+            this.rewire();
+        });
     }
 
     public override dispose(): void
     {
         super.dispose();
+        this.unsubscribeRewire();
         for (const unsub of this.subscriptions) unsub();
         this.subscriptions.length = 0;
+    }
+
+    // Tear down the current ancestor-chain subscriptions and re-walk.
+    // Called on AttachLogical / DetachLogical via the host's re-wire
+    // listener list.
+    private rewire(): void
+    {
+        for (const unsub of this.subscriptions) unsub();
+        this.subscriptions.length = 0;
+        this.wireSubscriptions();
+        this.refresh();
     }
 
     // Walks the host's logical ancestor chain (with templatedParent
@@ -121,16 +142,19 @@ class DynamicResourceBinding extends Binding
 // InheritedValue). Replacing the binding (or calling ClearValue)
 // disposes the resource subscriptions.
 //
-// Limitations:
+// Reactivity to tree changes:
 //   * Subscriptions are wired at construction from the host's current
-//     ancestor chain. Re-parenting the host AFTER construction won't
-//     re-wire — re-create the binding if you reshape the tree under
-//     the host.
-//   * A dictionary that joins the resolution chain later (an ancestor
-//     having its first Resources access AFTER construction) won't be
-//     observed. The common case of consuming resources from a fixed
-//     ancestor (Application / Window / templated control) is fully
-//     supported.
+//     ancestor chain AND re-wired automatically on every
+//     AttachLogical / DetachLogical that affects the host's subtree
+//     (via Visual.refresh_dynamic_resources_subtree). So reparenting
+//     "just works" — any new ancestor's Resources dict becomes
+//     observable on attach, dropped ancestors stop firing on detach.
+//   * A dictionary that joins the resolution chain later WITHOUT a
+//     tree mutation (an ancestor having its first Resources access
+//     AFTER construction without being detached / re-attached) won't
+//     be observed. The common case of consuming resources from a
+//     fixed ancestor (Application / Window / templated control) is
+//     fully supported.
 export function DynamicResource(host: Visual, key: string): Binding
 {
     return new DynamicResourceBinding(host, key);
