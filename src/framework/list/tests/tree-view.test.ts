@@ -1,5 +1,6 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { initTestApp } from '../../../Basic/tests/test-app.js';
 
 import { Application, NoModifiers, PointerButton, Rect, Size, type PointerEventInit, type ModifierKeys } from '../../../runtime/index.js';
 import { InputManager } from '../../../framework/index.js';;
@@ -65,7 +66,7 @@ function spacerOf(item: TreeViewItem) {
 }
 
 describe('TreeView — composed-markup tree shape', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('AddChild on TreeView attaches root items both visually and logically', () => {
         const tree = new TreeView();
@@ -131,7 +132,7 @@ describe('TreeView — composed-markup tree shape', () => {
 });
 
 describe('TreeViewItem — expansion behaviour', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('chevron click toggles IsExpanded', () => {
         const item = new TreeViewItem();
@@ -186,7 +187,7 @@ describe('TreeViewItem — expansion behaviour', () => {
 });
 
 describe('TreeView — depth indent', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('indent spacer width = depth × TreeView.Indent', () => {
         const { tree, root, a, b1 } = buildFixture();
@@ -222,7 +223,7 @@ describe('TreeView — depth indent', () => {
 });
 
 describe('TreeView — selection (multi-select via Ctrl / Shift)', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('plain click selects one item and moves the anchor', () => {
         const { tree, root, a } = buildFixture();

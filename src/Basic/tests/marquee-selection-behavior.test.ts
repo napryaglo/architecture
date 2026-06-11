@@ -1,5 +1,6 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { initTestApp } from './test-app.js';
 
 import { Application, NoModifiers, ObservableCollection, PointerButton, Visual, type ModifierKeys, type PointerEventInit } from '../../runtime/index.js';
 import { InputManager } from '../../framework/index.js';;
@@ -55,7 +56,7 @@ function buildFixture(): {
 }
 
 describe('MarqueeSelectionBehavior — DPs and attach state', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('AllowMarqueeSelection defaults to false', () => {
         const lb = new ListBox();
@@ -81,7 +82,7 @@ describe('MarqueeSelectionBehavior — DPs and attach state', () => {
 });
 
 describe('MarqueeSelectionBehavior — gesture filtering', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('disabled → drag on background is a no-op', () => {
         const { lb, panel } = buildFixture();
@@ -128,7 +129,7 @@ describe('MarqueeSelectionBehavior — gesture filtering', () => {
 });
 
 describe('MarqueeSelectionBehavior — Intersect policy (default)', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('rect touching first two rows selects them', () => {
         const { lb, a, b, c, panel } = buildFixture();
@@ -160,7 +161,7 @@ describe('MarqueeSelectionBehavior — Intersect policy (default)', () => {
 });
 
 describe('MarqueeSelectionBehavior — Contained policy', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('partial overlap is NOT enough — full containment required', () => {
         const { lb, a, b, panel } = buildFixture();
@@ -193,7 +194,7 @@ describe('MarqueeSelectionBehavior — Contained policy', () => {
 });
 
 describe('MarqueeSelectionBehavior — modifier modes', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('Plain drag (replace) clears prior selection then adds rect contents', () => {
         const { lb, a, b, c, panel } = buildFixture();
@@ -239,7 +240,7 @@ describe('MarqueeSelectionBehavior — modifier modes', () => {
 });
 
 describe('MarqueeSelectionBehavior — click-on-empty-space clears selection', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('Plain click on background clears the existing selection', () => {
         const { lb, a, b, c, panel } = buildFixture();
@@ -305,7 +306,7 @@ describe('MarqueeSelectionBehavior — click-on-empty-space clears selection', (
 });
 
 describe('MarqueeSelectionBehavior — click-on-empty-space with VirtualizingWrapPanel (word-toolbox shape)', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     // Builds a ListBox laid out like the word-toolbox demo: VirtualizingWrapPanel
     // ItemsPanel with HorizontalSpacing/VerticalSpacing, 9 data items in a 3×3
@@ -358,7 +359,7 @@ describe('MarqueeSelectionBehavior — click-on-empty-space with VirtualizingWra
 });
 
 describe('MarqueeSelectionBehavior — SelectionChanged batching', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('one SelectionChanged fire per move sample, not per row', () => {
         const { lb, panel } = buildFixture();
@@ -378,7 +379,7 @@ describe('MarqueeSelectionBehavior — SelectionChanged batching', () => {
 });
 
 describe('MarqueeSelectionBehavior — TreeView opt-in', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('Selector base hook works on any Selector descendant', () => {
         // Smoke-test that the DP machinery isn't ListBox-specific.

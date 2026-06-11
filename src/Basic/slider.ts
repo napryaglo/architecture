@@ -13,7 +13,7 @@ import {
 import type { Border } from './border.js';
 import { Orientation } from './stack-panel.js';
 import { Theme } from './theme.js';
-import { defaultTemplate, ensureControlsTheme } from './default-resources.js';
+import { defaultTemplate } from './default-template.js';
 
 // Resource-dictionary key — matches the `x:key` literal in
 // controls.template.mu's DefaultSlider entry.
@@ -108,7 +108,6 @@ export class Slider extends Visual
 
     static {
         Model.OverrideMetadata(Slider, Visual.DefaultStyleKeyKey, { default_value: Slider });
-        ensureControlsTheme();
     }
 
     // ── Template parts ─────────────────────────────────────────────

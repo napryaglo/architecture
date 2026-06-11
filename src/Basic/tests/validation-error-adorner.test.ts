@@ -1,5 +1,6 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { initTestApp } from './test-app.js';
 
 import {
     AdornerDecorator,
@@ -46,7 +47,7 @@ function setup()
 }
 
 describe('ValidationErrorAdorner', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('AttachTo finds the layer and installs an adorner', () => {
         const { decorator, target } = setup();

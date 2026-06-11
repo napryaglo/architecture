@@ -62,7 +62,7 @@
             "@visualisation-sub/mural/Basic/":         "../../dist/Basic/",
             "@visualisation-sub/mural/framework":           "../../dist/framework/index.js",
             "@visualisation-sub/mural/framework/":          "../../dist/framework/",
-            "@visualisation-sub/mural/framework/material":  "../../dist/framework/material/index.js",
+            "@visualisation-sub/mural/resources/material":  "../../dist/resources/material/index.js",
             "@visualisation-sub/mural/visual-engine":  "../../dist/visual-engine/index.js",
             "@visualisation-sub/mural/visual-engine/": "../../dist/visual-engine/",
             "opentype.js":                             "../opentype-shim.mjs"
@@ -90,16 +90,16 @@
         // to the root as DataContext.
         import { app }                                 from './platform.mu.js';
         import { HtmlTarget }                          from '@visualisation-sub/mural/visual-engine';
-        import { SetTheme, ToggleTheme, CurrentTheme } from '@visualisation-sub/mural/framework/material';
-
-        // Register the Material light palette as soon as the
-        // Application is parsed but BEFORE any control template
-        // applies. Without this, the DynamicResource bindings inside
-        // basic.template.mu / surface.template.mu would resolve to
-        // `undefined` on first paint (no tokens in the resource
-        // chain), and the controls would render with default-value
-        // brushes (transparent).
-        SetTheme('light');
+        // ToggleTheme / CurrentTheme power the header switch button —
+        // theme activation itself runs inside platform.mu's IIFE via
+        // the `Application[Theme=Material Scheme=MaterialLight]`
+        // attribute, so the host script no longer has to call
+        // app.initialize. By the time `app` is imported here, the
+        // theme is already active and every control inside the IIFE
+        // resolved its DynamicResource lookups against the live token
+        // dictionary on first paint.
+        import { ToggleTheme, CurrentTheme }
+            from '@visualisation-sub/mural/resources/material';
 
         // Header theme toggle. Each click flips light↔dark via
         // ToggleTheme; the button caption advertises the NEXT theme

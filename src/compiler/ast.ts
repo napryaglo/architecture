@@ -89,6 +89,20 @@ export interface ThemeBlock
     kind:    'theme-block';
     name:    string;
     imports: ResourcesImport[];   // same shape as ResourcesBlock imports
+    /** `schemes: [Ident, Ident, …]` header. Each ident must match a
+     *  Scheme class imported at the top of the file. The compiler
+     *  weaves `<ident>.instance` into the Theme's schemes array. */
+    schemes:        string[];
+    /** `defaultScheme: Ident` header. Ident must appear in `schemes`.
+     *  Compiler emits the matching string name into `defaultScheme`. */
+    defaultScheme:  string | undefined;
+    /** `dictionaries: [Ident, Ident, …]` header. Each ident must match
+     *  a ResourceDictionary class imported at the top of the file
+     *  (typically `BasicTheme`, `SurfaceTheme`, or any user-authored
+     *  bundle). The compiler emits `<ident>.Clone()` into the Theme's
+     *  dictionaries array, followed by the theme's own body dict.
+     *  Empty when no `dictionaries:` header is authored. */
+    dictionaries:   string[];
     tokens:  TokenCatalogEntry[]; // empty when no `tokens { … }` was authored
     body:    StructuredBody;      // same shape as ResourcesBlock body
     span:    SourceSpan;
@@ -512,7 +526,8 @@ export type ValueNode =
     | DynamicResourceValue
     | MacroHoleValue
     | InlineExprValue
-    | FlagValue;
+    | FlagValue
+    | ElementNode;
 
 export interface NumberValue { kind: 'number';  raw: string;        span: SourceSpan; }
 export interface StringValue { kind: 'string';  value: string;       span: SourceSpan; }

@@ -25,7 +25,6 @@ import { ControlTemplate } from '../../Basic/control-template.js';
 import { Dock, DockPanel } from '../../Basic/dock-panel.js';
 import { ItemsControl } from '../items-control.js';
 import { StackPanel } from '../../Basic/stack-panel.js';
-import { ensureSurfaceTheme } from '../menu/default-surface-resources.js';
 
 // ToolBar — horizontal command strip. Items overflow into a popup when
 // the available width can't fit them all. Hosts ToolBarButton,
@@ -84,7 +83,6 @@ export class ToolBar extends ItemsControl
         // both `Template` (inline chrome with chevron + ItemsPresenter)
         // and `PopupTemplate` (overlay popup with overflow ItemsControl).
         Model.OverrideMetadata(ToolBar, Visual.DefaultStyleKeyKey, { default_value: ToolBar });
-        ensureSurfaceTheme();
     }
     private static readonly _HasOverflowItemsPriv = Model.RegisterReadOnlyProperty<boolean>(
         ToolBar, 'HasOverflowItems', false, MetaData.None,
@@ -185,7 +183,8 @@ export class ToolBar extends ItemsControl
             throw new Error(
                 'ToolBar.PopupTemplate is undefined. The default Style in '
                 + 'surface.template.mu sets PopupTemplate = @DefaultToolBarPopup. '
-                + 'Did `ensureSurfaceTheme()` run before construction?');
+                + 'Activate a theme that adopts SurfaceTheme via its '
+                + "`dictionaries:` header before constructing the ToolBar.");
         }
         const inst = popupTpl.Apply(this);
         this._popupHost      = inst.root as ToolBarPopupHost;

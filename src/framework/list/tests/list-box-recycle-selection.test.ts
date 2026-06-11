@@ -1,5 +1,6 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { initTestApp } from '../../../Basic/tests/test-app.js';
 
 import { Application, Color, Setter, Style, Visual } from '../../../runtime/index.js';
 import { ListBox, ListBoxItem } from '../list-box.js';
@@ -10,7 +11,7 @@ import { TargetedSetter, TemplatePropertyTrigger } from '../../../Basic/data-tem
 import { SolidColorBrush } from '../../../visual-engine/index.js';
 
 describe('ListBox selection survives container recycle by data identity', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('recycled container picks up new item selection from _selectedData', () => {
         const lb = new ListBox();
@@ -235,7 +236,7 @@ describe('ListBox selection survives container recycle by data identity', () => 
         // to snapshot. Register a Material palette for the same
         // reason real demos do.
         new Application();
-        const { SetTheme } = await import('../../material/index.js');
+        const { SetTheme } = await import('../../../resources/material/index.js');
         SetTheme('light');
 
         const lb = new ListBox();

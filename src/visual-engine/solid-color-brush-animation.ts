@@ -1,7 +1,9 @@
 import {
     AnimationTimeline,
     Color,
+    Easings,
     interpolateColor,
+    registerSchemeTransitionAnimator,
     type AnimationTimelineProps,
 } from '../runtime/index.js';
 import { SolidColorBrush } from './brush.js';
@@ -70,3 +72,25 @@ function extractColor(value: unknown): Color
     if (value instanceof SolidColorBrush) return value.Color;
     return Color.Transparent;
 }
+
+// Scheme-transition integration. Register a factory with the runtime so
+// DynamicResource animates resolved-value changes for SolidColorBrush
+// tokens whenever ThemeManager.SchemeTransition is set. Non-brush
+// pairs (CornerRadius, number, mixed types) return undefined and snap.
+//
+// Module-load side effect — importing this file (directly or via the
+// visual-engine barrel) installs the factory. Runtime tests that want
+// their own animator override the factory after import via
+// registerSchemeTransitionAnimator(...).
+registerSchemeTransitionAnimator((oldValue, newValue, transition) =>
+{
+    if (!(oldValue instanceof SolidColorBrush)) return undefined;
+    if (!(newValue instanceof SolidColorBrush)) return undefined;
+    const tl = new SolidColorBrushAnimation({
+        From:     oldValue.Color,
+        To:       newValue.Color,
+        Duration: transition.duration,
+        Easing:   transition.easing ?? Easings.Linear,
+    });
+    return tl;
+});

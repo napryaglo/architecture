@@ -76,7 +76,21 @@ export class DropShadowEffect extends Effect
 // higher inputs cap to Level 5.
 export class MaterialElevationEffect extends Effect
 {
-    constructor(public readonly Level: 1 | 2 | 3 | 4 | 5) { super(); }
+    // Level is a plain field with public getter/setter so authors can
+    // write the effect in `.mu` value position via the element-node
+    // value form:
+    //   @Elevation1 = MaterialElevationEffect [Level = 1]
+    // Effect is a lightweight non-Model base class (it doesn't
+    // participate in the property/binding pipeline), so a real DP
+    // can't be registered here — the element-node-value emit just
+    // does `_e.Level = 1` which goes through the setter.
+    public Level: 1 | 2 | 3 | 4 | 5 = 1;
+
+    constructor(level?: 1 | 2 | 3 | 4 | 5)
+    {
+        super();
+        if (level !== undefined) this.Level = level;
+    }
 
     public override toCssFilter(): string
     {

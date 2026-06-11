@@ -53,7 +53,10 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     // Theme engine — emitted by `theme` / `scheme` top-level forms.
     ['defineScheme',        '@visualisation-sub/mural/runtime'],
     ['defineTheme',         '@visualisation-sub/mural/runtime'],
+    ['Scheme',              '@visualisation-sub/mural/runtime'],
+    ['Theme',               '@visualisation-sub/mural/runtime'],
     ['ThemeManager',        '@visualisation-sub/mural/runtime'],
+    ['Application',         '@visualisation-sub/mural/runtime'],
     // Adaptive context — inherited DPs on Visual written by ThemeManager
     // / MediaWatcher; templates trigger on these via the standard `when`
     // syntax (`when (Density = Compact) { … }`).
@@ -205,6 +208,8 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['LineJoin',            '@visualisation-sub/mural/visual-engine'],
     ['FillRule',            '@visualisation-sub/mural/visual-engine'],
     ['SweepDirection',      '@visualisation-sub/mural/visual-engine'],
+    ['DropShadowEffect',         '@visualisation-sub/mural/visual-engine'],
+    ['MaterialElevationEffect',  '@visualisation-sub/mural/visual-engine'],
 ];
 
 export const DEFAULT_SYMBOLS: SymbolMap = new Map(ENTRIES);

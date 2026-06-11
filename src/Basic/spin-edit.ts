@@ -11,7 +11,7 @@ import {
 } from '../runtime/index.js';
 import type { Border } from './border.js';
 import { ClickableBorder } from '../framework/list/combo-box.js';
-import { defaultTemplate, ensureControlsTheme } from './default-resources.js';
+import { defaultTemplate } from './default-template.js';
 import { TextBox } from './text-box.js';
 
 // Resource-dictionary key — matches the `x:key` literal in
@@ -97,7 +97,6 @@ export class SpinEdit extends Visual
 
     static {
         Model.OverrideMetadata(SpinEdit, Visual.DefaultStyleKeyKey, { default_value: SpinEdit });
-        ensureControlsTheme();
     }
 
     // Template parts — all resolved from DefaultSpinEdit in the

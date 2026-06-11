@@ -41,11 +41,11 @@
         "default":     "./dist/framework/surface.js"
       }
     },
-    "./framework/material": {
-      "types": "./dist/framework/material/index.d.ts",
+    "./resources/material": {
+      "types": "./dist/resources/material/index.d.ts",
       "import": {
-        "development": "./src/framework/material/index.ts",
-        "default":     "./dist/framework/material/index.js"
+        "development": "./src/resources/material/index.ts",
+        "default":     "./dist/resources/material/index.js"
       }
     },
     "./framework/*.js": {

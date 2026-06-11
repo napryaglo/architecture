@@ -1,7 +1,9 @@
+import { FillBehavior, Storyboard } from './animation/index.js';
 import { Application } from './application.js';
 import { Binding, BindingMode } from './binding.js';
 import { MetaData } from './metadata.js';
 import { Model } from './model.js';
+import { getSchemeTransitionAnimator, ThemeManager } from './theme.js';
 import type { Visual } from './visual.js';
 
 // Internal Model that holds the most-recent resolved value of a
@@ -43,6 +45,11 @@ class DynamicResourceBinding extends Binding
     private readonly host: Visual;
     private readonly key: string;
     private readonly unsubscribeRewire: () => void;
+    // In-flight scheme-transition animation driven by this binding. Held
+    // so the next refresh / dispose can Stop() it cleanly; otherwise a
+    // back-to-back scheme swap would leave the prior animation pinning
+    // the animated slot.
+    private activeStoryboard: Storyboard | undefined;
 
     constructor(host: Visual, key: string)
     {
@@ -70,6 +77,8 @@ class DynamicResourceBinding extends Binding
         this.unsubscribeRewire();
         for (const unsub of this.subscriptions) unsub();
         this.subscriptions.length = 0;
+        this.activeStoryboard?.Stop();
+        this.activeStoryboard = undefined;
     }
 
     // Tear down the current ancestor-chain subscriptions and re-walk.
@@ -124,7 +133,62 @@ class DynamicResourceBinding extends Binding
 
     private refresh(): void
     {
-        this.watcher.Value = this.host.TryFindResource(this.key);
+        const oldValue = this.watcher.Value;
+        const newValue = this.host.TryFindResource(this.key);
+        if (oldValue === newValue) return;
+
+        // Animation gate. Skip the factory entirely when no transition is
+        // effective, when policy says 'none', when there's nothing to
+        // animate from (initial resolution), or when no factory has been
+        // registered. The factory itself returns undefined for value
+        // pairs it can't animate (non-Brush, mixed types, …) — that path
+        // also snaps.
+        let timeline = undefined;
+        const transition = ThemeManager.Current.EffectiveSchemeTransition;
+        const factory    = getSchemeTransitionAnimator();
+        if (transition !== undefined
+            && transition.tokens !== 'none'
+            && factory    !== undefined
+            && oldValue   !== undefined)
+        {
+            timeline = factory(oldValue, newValue, transition);
+        }
+
+        if (timeline === undefined)
+        {
+            // Snap path. Drop any in-flight animation so a subsequent
+            // resolution doesn't inherit a stale storyboard.
+            this.activeStoryboard?.Stop();
+            this.activeStoryboard = undefined;
+            this.watcher.Value = newValue;
+            return;
+        }
+
+        // Animate path. FillBehavior.Stop releases the animated slot at
+        // the end so the LocalValue (= newValue, written below) becomes
+        // the steady-state visible value rather than a perpetually-pinned
+        // animation slot. The factory's chosen FillBehavior is ignored —
+        // scheme transitions always release.
+        timeline.FillBehavior = FillBehavior.Stop;
+
+        const sb = new Storyboard();
+        sb.Add(this.watcher, 'Value', timeline);
+        sb.AddCompletedListener(() =>
+        {
+            if (this.activeStoryboard === sb) this.activeStoryboard = undefined;
+        });
+
+        // Stop the prior animation before replacing the slot. The Stop
+        // clears the animated slot and surfaces whatever LocalValue the
+        // watcher carries; the immediate Local write below overwrites
+        // it; then Begin() captures the new Local as baseValue and
+        // AdvanceTo(0) writes the new animated slot. All three steps
+        // run in one synchronous block, so the consumer's render
+        // invalidation batches into a single redraw at the next frame.
+        this.activeStoryboard?.Stop();
+        this.activeStoryboard = sb;
+        this.watcher.Value = newValue;
+        sb.Begin();
     }
 }
 

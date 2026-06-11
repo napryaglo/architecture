@@ -1,5 +1,6 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { initTestApp } from './test-app.js';
 
 import {
     Adorner,
@@ -34,7 +35,7 @@ class BoundsAdorner extends Adorner
 }
 
 describe('ScrollContentPresenter — inner AdornerLayer (WPF v2 parity)', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('SCP exposes an AdornerLayer property of the right type', () => {
         const scp = new ScrollContentPresenter();

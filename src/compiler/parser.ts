@@ -257,9 +257,16 @@ export class Parser
         const name  = this.expect(TokenKind.Ident).value;
         this.expect(TokenKind.LBrace);
 
-        // Header: zero or more `import Alias from "..."` clauses,
-        // followed by an optional `tokens { … }` block. Either header
-        // can be absent; both must precede any body item.
+        // Header order:
+        //   1. zero or more `import Alias from "..."` clauses
+        //   2. optional `schemes: [Ident, Ident, …]` line
+        //   3. optional `defaultScheme: Ident` line
+        //   4. optional `dictionaries: [Ident, Ident, …]` line
+        //   5. optional `tokens { … }` block
+        //   6. body
+        //
+        // Headers may appear in any order amongst themselves once the
+        // imports are done; the loop below probes for each keyword.
         const imports: ResourcesImport[] = [];
         while (
             this.peek().kind === TokenKind.Ident
@@ -270,9 +277,67 @@ export class Parser
         }
 
         let tokens: TokenCatalogEntry[] = [];
-        if (this.peek().kind === TokenKind.Ident && this.peek().value === 'tokens')
+        const schemes: string[] = [];
+        const dictionaries: string[] = [];
+        let   defaultScheme: string | undefined;
+        let   readHeaders = true;
+        while (readHeaders && this.peek().kind === TokenKind.Ident)
         {
-            tokens = this.parseTokenCatalog();
+            const word = this.peek().value;
+            if (word === 'tokens')
+            {
+                tokens = this.parseTokenCatalog();
+            }
+            else if (word === 'schemes')
+            {
+                this.consume();
+                this.expect(TokenKind.Colon);
+                this.expect(TokenKind.LBracket);
+                if (this.peek().kind !== TokenKind.RBracket)
+                {
+                    for (;;)
+                    {
+                        schemes.push(this.expect(TokenKind.Ident).value);
+                        if (this.peek().kind === TokenKind.Comma)
+                        {
+                            this.consume();
+                            continue;
+                        }
+                        break;
+                    }
+                }
+                this.expect(TokenKind.RBracket);
+            }
+            else if (word === 'defaultScheme')
+            {
+                this.consume();
+                this.expect(TokenKind.Colon);
+                defaultScheme = this.expect(TokenKind.Ident).value;
+            }
+            else if (word === 'dictionaries')
+            {
+                this.consume();
+                this.expect(TokenKind.Colon);
+                this.expect(TokenKind.LBracket);
+                if (this.peek().kind !== TokenKind.RBracket)
+                {
+                    for (;;)
+                    {
+                        dictionaries.push(this.expect(TokenKind.Ident).value);
+                        if (this.peek().kind === TokenKind.Comma)
+                        {
+                            this.consume();
+                            continue;
+                        }
+                        break;
+                    }
+                }
+                this.expect(TokenKind.RBracket);
+            }
+            else
+            {
+                readHeaders = false;
+            }
         }
 
         const body = this.parseStructuredBody();
@@ -282,6 +347,9 @@ export class Parser
             kind: 'theme-block',
             name,
             imports,
+            schemes,
+            defaultScheme,
+            dictionaries,
             tokens,
             body,
             span: this.span(start, end),
@@ -1371,7 +1439,7 @@ export class Parser
         return { kind: 'string', value: tk.value, span: tk.span };
     }
 
-    private consumeAsIdent(): IdentValue
+    private consumeAsIdent(): IdentValue | ElementNode
     {
         const tk = this.consume();
         // `Type.Member` — dotted static-member reference in value
@@ -1388,6 +1456,32 @@ export class Parser
                 kind: 'ident',
                 name: `${tk.value}.${tail.value}`,
                 span: this.span(tk.span.start, tail.span.end),
+            };
+        }
+        // Element-node value: `Ident [ Prop = val, … ]` — emit-time
+        // becomes `new Ident(); _e.Prop = val; return _e`. Lets schemes
+        // write `@Elevation1 = MaterialElevationEffect [Level = 1]`
+        // without falling back to inline JS or imperative TS sidecars.
+        //
+        // The body form (`Ident { … }`) is intentionally NOT supported
+        // in value position — `{ Prop = val; … }` would collide with
+        // parseStructuredBody's element-or-slot-assign dispatch. The
+        // attribute-list form is enough for the common case (single
+        // property on a value-type-like Effect / Transform / Brush) and
+        // matches the existing element-node attribute syntax exactly.
+        if (this.peek().kind === TokenKind.LBracket)
+        {
+            this.consume();
+            const attrs = this.parseAttrListBody();
+            this.expect(TokenKind.RBracket);
+            const end = this.lastEnd();
+            return {
+                kind:   'element',
+                name:   tk.value,
+                xAttrs: [],
+                attrs,
+                body:   null,
+                span:   this.span(tk.span.start, end),
             };
         }
         return { kind: 'ident', name: tk.value, span: tk.span };

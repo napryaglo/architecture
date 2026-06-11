@@ -33,6 +33,7 @@ import {
     SetDensity,
     ViewportClass,
 } from './adaptive.js';
+import type { AnimationTimeline, EasingFunction } from './animation/index.js';
 import type { Visual } from './visual.js';
 
 // ── Token catalog ──────────────────────────────────────────────────────
@@ -117,12 +118,15 @@ export interface ThemeOptions
     /** Theme name (e.g. 'material', 'fluent'). */
     name: string;
 
-    /** Resource dictionaries holding the theme's ControlTemplates,
-     *  default Styles, and DataTemplates. The compiler emits one or
-     *  more of these per `.template.mu` theme bundle; consumers pass
-     *  the array. ThemeManager merges them into Application.Resources
-     *  when the Theme is activated. */
-    templates: readonly ResourceDictionary[];
+    /** Resource dictionaries the theme owns — ControlTemplates,
+     *  default Styles, DataTemplates, and any other resources the
+     *  theme ships. Authored declaratively in the `.mu` theme block's
+     *  `dictionaries: [BasicTheme, SurfaceTheme, …]` header plus any
+     *  body content (the theme's own resources). ThemeManager merges
+     *  the whole list into Application.Resources when the Theme is
+     *  activated, in array order — earlier entries are shadowed by
+     *  later ones for the same key. */
+    dictionaries: readonly ResourceDictionary[];
 
     /** Token catalog — the contract every Scheme must satisfy. Emitted
      *  by the compiler from the theme bundle's `tokens { … }` block.
@@ -142,15 +146,31 @@ export interface ThemeOptions
 export class Theme
 {
     public readonly name:          string;
-    public readonly templates:     readonly ResourceDictionary[];
+    public readonly dictionaries:  readonly ResourceDictionary[];
     public readonly catalog:       TokenCatalog;
     public readonly schemes:       ReadonlyMap<string, Scheme>;
     public readonly defaultScheme: string;
 
+    /** Activate this theme's instance on the global ThemeManager,
+     *  optionally with a specific scheme. Base implementation throws —
+     *  the compiler-emitted subclass (`class Foo extends Theme` from a
+     *  `.mu` theme bundle) supplies a concrete override that resolves
+     *  its singleton instance and calls ThemeManager.ActivateTheme.
+     *
+     *  Application.initialize calls this on the registered theme class,
+     *  so a hand-authored subclass that forgets to override surfaces as
+     *  a clear runtime error rather than silently doing nothing. */
+    public static Activate(_scheme?: typeof Scheme): void
+    {
+        throw new Error(
+            `Theme.Activate: base implementation invoked on '${this.name}'. ` +
+            `Theme subclasses must override the static Activate method.`);
+    }
+
     constructor(opts: ThemeOptions)
     {
         this.name          = opts.name;
-        this.templates     = [...opts.templates];
+        this.dictionaries  = [...opts.dictionaries];
         this.catalog       = opts.catalog;
         this.defaultScheme = opts.defaultScheme;
 
@@ -213,19 +233,61 @@ export interface AutoSchemeOptions
 // PrefersReducedMotion — when the ambient DP is true, every swap
 // snaps.
 //
-// API surface only in v1 — the actual animation hook (a
-// SolidColorBrushAnimation install at the DynamicResource level) is a
-// follow-up. The property accepts and stores the config today so
-// consumers can wire it now; transitions land in a later commit.
+// The actual animation install runs at the DynamicResource layer.
+// Whoever owns the animatable value type (visual-engine for
+// SolidColorBrush) registers a SchemeTransitionAnimatorFactory via
+// `registerSchemeTransitionAnimator`; DynamicResource consults the
+// factory on each resolved-value change and Begins a Storyboard on
+// its watcher when a timeline is produced.
 export interface SchemeTransition
 {
     /** Animation length in milliseconds. */
     duration: number;
-    /** Easing curve. Picks any of mural's standard easings. */
-    easing?:  unknown;
+    /** Easing curve applied to the produced timeline. The animator
+     *  factory copies this onto the timeline it returns. */
+    easing?:  EasingFunction;
     /** Which token types to animate. `'brushes-only'` is the default
-     *  and only fully-supported value today. */
+     *  and only fully-supported value today. `'none'` skips the
+     *  factory call entirely — every swap snaps. */
     tokens?:  'all' | 'brushes-only' | 'none';
+}
+
+// Builder that produces a timeline for a single resolved-value change.
+// Receives the old and new values plus the active SchemeTransition.
+// Return `undefined` to snap (caller falls back to direct
+// watcher.Value = newValue). The returned timeline targets the
+// DynamicResource's internal watcher.Value — the factory must build a
+// timeline whose Evaluate produces values assignable to the bound
+// resource slot.
+//
+// Registration is a process-global hook installed at module load —
+// visual-engine's SolidColorBrush integration registers one. Only one
+// factory is supported (last registration wins); a future
+// multi-animator setup can layer this as a composite.
+export type SchemeTransitionAnimatorFactory = (
+    oldValue: unknown,
+    newValue: unknown,
+    transition: SchemeTransition,
+) => AnimationTimeline | undefined;
+
+let _schemeTransitionAnimatorFactory: SchemeTransitionAnimatorFactory | undefined;
+
+/** Register the process-global animator factory. Pass `undefined` to
+ *  unregister (test helper — production code calls this once at
+ *  startup from whichever module owns the animatable value types). */
+export function registerSchemeTransitionAnimator(
+    factory: SchemeTransitionAnimatorFactory | undefined,
+): void
+{
+    _schemeTransitionAnimatorFactory = factory;
+}
+
+/** Read the currently-registered animator factory. DynamicResource
+ *  calls this on every resolved-value change while a SchemeTransition
+ *  is effective. */
+export function getSchemeTransitionAnimator(): SchemeTransitionAnimatorFactory | undefined
+{
+    return _schemeTransitionAnimatorFactory;
 }
 
 // Singleton service. One ThemeManager per process — bound to whichever
@@ -348,7 +410,7 @@ export class ThemeManager
     private _activeTheme:    Theme  | undefined;
     private _activeScheme:   Scheme | undefined;
     private _activeApp:      Application       | undefined;
-    private _activeTemplates: ResourceDictionary[]      = [];
+    private _activeDictionaries: ResourceDictionary[]   = [];
     private _activeTokenDict: ResourceDictionary | undefined;
 
     public get ActiveTheme():  Theme  | undefined { return this._activeTheme; }
@@ -535,7 +597,7 @@ export class ThemeManager
         // Strip out resources we previously merged.
         if (this._activeApp !== undefined)
         {
-            for (const d of this._activeTemplates)
+            for (const d of this._activeDictionaries)
             {
                 this._activeApp.Resources.RemoveMergedDictionary(d);
             }
@@ -544,20 +606,19 @@ export class ThemeManager
                 this._activeApp.Resources.RemoveMergedDictionary(this._activeTokenDict);
             }
         }
-        this._activeTemplates  = [];
-        this._activeTokenDict  = undefined;
+        this._activeDictionaries = [];
+        this._activeTokenDict    = undefined;
 
-        // Merge theme templates. The compiled `.template.mu.js`
-        // dictionaries are immutable in practice — we add them as-is;
-        // RemoveMergedDictionary in the deactivate branch is symmetric.
-        // (Cloning would require a `Clone` method on the base
-        // ResourceDictionary, which it doesn't currently expose — only
-        // the .mu-compiled subclasses do.)
-        const templateRefs: ResourceDictionary[] = [];
-        for (const d of theme.templates)
+        // Merge the theme's dictionaries in array order — later entries
+        // shadow earlier ones for the same key. The compiled
+        // `.template.mu.js` outputs are mutable per-instance (each
+        // .Clone() in the Theme ctor produces a fresh ResourceDictionary
+        // subclass) so re-activation is symmetric without aliasing.
+        const dictionaryRefs: ResourceDictionary[] = [];
+        for (const d of theme.dictionaries)
         {
             app.Resources.AddMergedDictionary(d);
-            templateRefs.push(d);
+            dictionaryRefs.push(d);
         }
 
         // Merge scheme token dict.
@@ -566,10 +627,10 @@ export class ThemeManager
         for (const [k, v] of mergedTokens) tokenDict.Set(k, v);
         app.Resources.AddMergedDictionary(tokenDict);
 
-        this._activeTheme     = theme;
-        this._activeScheme    = scheme;
-        this._activeApp       = app;
-        this._activeTemplates = templateRefs;
-        this._activeTokenDict = tokenDict;
+        this._activeTheme        = theme;
+        this._activeScheme       = scheme;
+        this._activeApp          = app;
+        this._activeDictionaries = dictionaryRefs;
+        this._activeTokenDict    = tokenDict;
     }
 }

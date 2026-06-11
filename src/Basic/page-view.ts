@@ -14,7 +14,7 @@ import type { DockPanel } from './dock-panel.js';
 import { StackPanel } from './stack-panel.js';
 import { TextBlock } from './text-block.js';
 import { Theme } from './theme.js';
-import { defaultTemplate, ensureControlsTheme } from './default-resources.js';
+import { defaultTemplate } from './default-template.js';
 
 // A title strip + slottable content area, modelled on Material UI's
 // "page" pattern: bold title with optional subtitle, a 1-DIP divider,
@@ -42,7 +42,6 @@ export class PageView extends Visual
 
     static {
         Model.OverrideMetadata(PageView, Visual.DefaultStyleKeyKey, { default_value: PageView });
-        ensureControlsTheme();
     }
 
     // Template parts — resolved from the compiled `page-view.template.mu`

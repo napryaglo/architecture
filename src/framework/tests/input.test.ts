@@ -1,5 +1,6 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { initTestApp } from '../../Basic/tests/test-app.js';
 
 import {
     Visual,
@@ -82,7 +83,7 @@ function syntheticInit(overrides: Partial<PointerEventInit> = {}): PointerEventI
 }
 
 describe('routed events — dispatch order', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('tunnel runs root→target, then bubble runs target→root', () => {
         const root  = new ProbePanel('root');
@@ -143,7 +144,7 @@ describe('routed events — dispatch order', () => {
 });
 
 describe('IsMouseOver chain', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('Enter sets IsMouseOver on every ancestor of the hit visual', () => {
         const root = new ProbePanel('root');
@@ -224,7 +225,7 @@ describe('IsMouseOver chain', () => {
 });
 
 describe('IsPressed semantics', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('PointerDown sets IsPressed; PointerUp clears it on the same target', () => {
         const root = new ProbePanel('root');
@@ -275,7 +276,7 @@ describe('IsPressed semantics', () => {
 });
 
 describe('end-to-end: pointer → IsMouseOver → Style trigger → DP update', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('hovering a Border with an IsMouseOver style trigger swaps its Background', async () => {
         const { instantiate } = await import('../../compiler/index.js');
@@ -321,7 +322,7 @@ describe('end-to-end: pointer → IsMouseOver → Style trigger → DP update', 
 });
 
 describe('args.Visual rewriting + Source preserved', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('args.Source is the leaf hit; args.Visual rotates per hop', () => {
         const root = new ProbePanel('root');

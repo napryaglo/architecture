@@ -10,7 +10,6 @@ import {
     type PointerEventArgs,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
-import { ensureSurfaceTheme } from './default-surface-resources.js';
 import { PresentationTarget } from '../../visual-engine/index.js';
 import { Border } from '../../Basic/border.js';
 import { ContentPresenter } from '../../Basic/content-presenter.js';
@@ -64,7 +63,6 @@ export class MenuStrip extends ItemsControl
     static
     {
         Model.OverrideMetadata(MenuStrip, Visual.DefaultStyleKeyKey, { default_value: MenuStrip });
-        ensureSurfaceTheme();
     }
 
     constructor()
@@ -222,7 +220,6 @@ export class MenuItem extends ItemsControl
         //   * RowTemplate  = DefaultMenuItemRow      (inline row chrome
         //                    with state triggers; applied imperatively)
         Model.OverrideMetadata(MenuItem, Visual.DefaultStyleKeyKey, { default_value: MenuItem });
-        ensureSurfaceTheme();
     }
 
     constructor()
@@ -758,7 +755,6 @@ export class MenuSeparator extends Visual
         // DynamicResource so the line tints flip with the theme
         // palette without consumers having to set LineBrush.
         Model.OverrideMetadata(MenuSeparator, Visual.DefaultStyleKeyKey, { default_value: MenuSeparator });
-        ensureSurfaceTheme();
     }
 
     constructor()
@@ -881,7 +877,6 @@ export class MenuButton extends ItemsControl
         // theme to avoid the `extends Button` TDZ cycle (see
         // default-resources.ts).
         Model.OverrideMetadata(MenuButton, Visual.DefaultStyleKeyKey, { default_value: MenuButton });
-        ensureSurfaceTheme();
     }
 
     constructor()
@@ -909,8 +904,9 @@ export class MenuButton extends ItemsControl
             throw new Error(
                 'MenuButton.TriggerTemplate is undefined. The default ' +
                 'Style in surface.template.mu sets TriggerTemplate = ' +
-                '@DefaultMenuButtonTrigger. Did `ensureSurfaceTheme()` ' +
-                'run before construction?');
+                '@DefaultMenuButtonTrigger. Activate a theme that adopts ' +
+                "SurfaceTheme via its `dictionaries:` header before " +
+                'constructing the MenuButton.');
         }
         const triggerInst = triggerTpl.Apply(this);
         this._button      = triggerInst.root as Button;

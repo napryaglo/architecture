@@ -1,5 +1,6 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { initTestApp } from '../../../Basic/tests/test-app.js';
 
 import { Application, NoModifiers, Panel, PointerButton, Rect, RelayCommand, Size, type KeyEventInit, type PointerEventInit } from '../../../runtime/index.js';
 import { InputManager } from '../../../framework/index.js';;
@@ -18,7 +19,7 @@ function pointer(button: PointerButton = PointerButton.Primary): PointerEventIni
 }
 
 describe('MenuStrip / MenuItem / MenuSeparator', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('MenuStrip instantiates with a horizontal-stack ItemsPanel', () => {
         const strip = new MenuStrip();
@@ -91,7 +92,7 @@ describe('MenuStrip / MenuItem / MenuSeparator', () => {
 });
 
 describe('MenuButton', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('MenuButton.IsOpen toggles via the trigger Button click', () => {
         const root = new Root();
@@ -130,7 +131,7 @@ function keyEvent(key: string, overrides: Partial<KeyEventInit> = {}): KeyEventI
 }
 
 describe('MenuItem — keyboard navigation', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('Focusable=true so OnKeyDown can receive events', () => {
         const mi = new MenuItem();

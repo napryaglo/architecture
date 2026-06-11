@@ -1,5 +1,6 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { initTestApp } from './test-app.js';
 
 import { Application, HorizontalAlignment, NoModifiers, PointerButton, Rect, Size, VerticalAlignment, type PointerEventInit } from '../../runtime/index.js';
 import { InputManager } from '../../framework/index.js';;
@@ -66,7 +67,7 @@ function gridWith3Rows(totalHeight: number): { grid: Grid; splitter: GridSplitte
 }
 
 describe('GridSplitter — defaults', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('default DPs', () => {
         const s = new GridSplitter();
@@ -91,7 +92,7 @@ describe('GridSplitter — defaults', () => {
 });
 
 describe('GridSplitter — track resolution', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('column splitter with default HorizontalAlignment=Stretch resolves to PreviousAndNext', () => {
         const { grid, splitter, defA, defB } = gridWith3Cols(208);
@@ -142,7 +143,7 @@ describe('GridSplitter — track resolution', () => {
 });
 
 describe('GridSplitter — track-length policy', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('Pixel + Pixel → write pixel values', () => {
         const { grid, splitter, defA, defB } = gridWith3Cols(208,
@@ -176,7 +177,7 @@ describe('GridSplitter — track-length policy', () => {
 });
 
 describe('GridSplitter — Min/Max clamping', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('drag that would shrink B below MinWidth clamps the delta', () => {
         const { grid, splitter, defA, defB } = gridWith3Cols(208,
@@ -198,7 +199,7 @@ describe('GridSplitter — Min/Max clamping', () => {
 });
 
 describe('GridSplitter — row mode (Auto direction picks up "Rows")', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('row splitter resizes adjacent row tracks on vertical drag', () => {
         const { grid, splitter, defA, defB } = gridWith3Rows(208);
@@ -219,7 +220,7 @@ describe('GridSplitter — row mode (Auto direction picks up "Rows")', () => {
 });
 
 describe('GridSplitter — ShowsPreview defers commit', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('ShowsPreview=true does NOT mutate column widths during the drag', () => {
         const { grid, splitter, defA, defB } = gridWith3Cols(208);
@@ -263,7 +264,7 @@ describe('GridSplitter — ShowsPreview defers commit', () => {
 });
 
 describe('GridSplitter — keyboard nudges', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('ArrowRight on a column splitter nudges by KeyboardIncrement', () => {
         const { grid, splitter } = gridWith3Cols(208);

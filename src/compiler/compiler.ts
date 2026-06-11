@@ -599,31 +599,104 @@ export class Compiler
         return out;
     }
 
-    // ── `theme NAME { tokens { … } …body… }` ─────────────────────────
+    // ── `theme NAME { schemes: […] defaultScheme: … dictionaries: […] tokens { … } body }` ──
     //
-    // Emits the same shape as a ResourcesBlock — a `class NAME extends
-    // ResourceDictionary` with a static `Clone()` factory holding the
-    // theme's templates / styles / DataTemplates — plus an additional
-    // `NAMECatalog` constant of type `TokenCatalog` holding the
-    // explicit token contract authored inside `tokens { … }`.
+    // Emits a class extending Theme:
+    //
+    //   export class NAME extends Theme {
+    //       public static readonly Catalog: TokenCatalog = new Map([...]);
+    //       public static readonly DefaultScheme: typeof Scheme = <ident>;
+    //       public static readonly instance: NAME = new NAME();
+    //       constructor() { super({...}); }
+    //       static override Activate(scheme?: typeof Scheme) {
+    //           const target = scheme ?? NAME.DefaultScheme;
+    //           ThemeManager.Current.ActivateTheme(NAME.instance.name,
+    //                                              { scheme: target.name });
+    //       }
+    //   }
+    //   // module-load side effects:
+    //   ThemeManager.Current.RegisterTheme(NAME.instance);
+    //   Application.RegisterDefaultTheme(NAME);
+    //
+    // ApplicationInitOptions accepts Function references, so callers
+    // pass `NAME` (the class) rather than a `'name'` string. Auto-
+    // registration means a single `import` of the bundle wires up
+    // ThemeManager + Application.DefaultTheme without any further
+    // bootstrap code.
+    //
+    // Dictionary ownership.
+    //   The `dictionaries:` header lists ResourceDictionary classes
+    //   the theme adopts — typically `BasicTheme`, `SurfaceTheme`, or
+    //   any other shared bundle. The body's own resources (Style /
+    //   Template / DataTemplate items) compile to `${name}Templates`
+    //   and are appended LAST so the theme's authored entries shadow
+    //   shared-bundle entries for the same key. The runtime
+    //   `Theme.dictionaries` slot receives the resulting array; when
+    //   ThemeManager activates the theme, every entry is merged into
+    //   Application.Resources in order.
     private compileThemeBlock(block: ThemeBlock): ResourcesBlockMeta
     {
-        // Reuse the ResourcesBlock pipeline for the dictionary body —
-        // a ThemeBlock IS a ResourcesBlock with extra catalog metadata.
+        if (block.tokens.length === 0)
+        {
+            throw new EmitError(
+                `\`theme ${block.name}\`: tokens { … } block is required.`,
+                block.span);
+        }
+        if (block.schemes.length === 0)
+        {
+            throw new EmitError(
+                `\`theme ${block.name}\`: schemes: [...] header is required.`,
+                block.span);
+        }
+        if (block.defaultScheme === undefined)
+        {
+            throw new EmitError(
+                `\`theme ${block.name}\`: defaultScheme: Ident header is required.`,
+                block.span);
+        }
+        if (!block.schemes.includes(block.defaultScheme))
+        {
+            throw new EmitError(
+                `\`theme ${block.name}\`: defaultScheme '${block.defaultScheme}' must be one of `
+                + `the schemes list (${block.schemes.join(', ')}).`,
+                block.span);
+        }
+
+        this.ensureImport('Theme');
+        this.ensureImport('ThemeManager');
+        this.ensureImport('Application');
+
+        // Register the theme block's imports as ES imports ourselves —
+        // they're Scheme class references (named in `schemes: [...]`),
+        // NOT ResourceDictionary subclasses to merge into the templates
+        // dict. Passing them through compileResourcesBlock would emit
+        // `${alias}.Clone().Entries()` in the templates Clone() method,
+        // which fails at runtime for Scheme classes (they don't expose
+        // Clone). So we pass an EMPTY imports list to the templates
+        // pipeline below and seed the aliases here.
+        for (const imp of block.imports)
+        {
+            this.ensureExplicitImport(imp.alias, imp.source);
+        }
+
+        // Reuse the ResourcesBlock pipeline for the body — same shape
+        // as a regular resource bundle, but the EXPORTED CLASS is
+        // renamed to `${name}Templates` so the Theme class takes the
+        // base name.
+        const templatesName = `${block.name}Templates`;
         const meta = this.compileResourcesBlock({
             kind:    'resources-block',
-            name:    block.name,
-            imports: block.imports,
+            name:    templatesName,
+            imports: [],
             body:    block.body,
             span:    block.span,
         });
 
-        // Emit the catalog constant. Imports the Map / TokenSpec shape
-        // implicitly — TokenCatalog is just `ReadonlyMap<string,
-        // TokenSpec>` so plain `new Map([...])` literal is enough.
+        // Catalog: sibling const for tooling and the Theme ctor's
+        // catalog slot. Same shape as the v1 emit.
         const catalogName = `${block.name}Catalog`;
         this.line('');
-        this.line(`// Token catalog declared in \`theme ${block.name}\` (${block.tokens.length} entry`
+        this.line(`// Token catalog for theme '${block.name}' (${block.tokens.length} entry`
             + `${block.tokens.length === 1 ? '' : 'ies'}).`);
         this.line(`export const ${catalogName} = new Map([`);
         for (const entry of block.tokens)
@@ -637,18 +710,68 @@ export class Compiler
             }
         }
         this.line(`]);`);
+
+        // Theme class.
+        this.line('');
+        this.line(`// Theme class for '${block.name}' — auto-registered with`);
+        this.line(`// ThemeManager and Application.DefaultTheme at module load.`);
+        this.line(`export class ${block.name} extends Theme {`);
+        this.line(`    static Catalog = ${catalogName};`);
+        this.line(`    static DefaultScheme = ${block.defaultScheme};`);
+        this.line(`    static instance = new ${block.name}();`);
+        this.line(`    constructor() {`);
+        this.line(`        super({`);
+        this.line(`            name:           ${JSON.stringify(block.name)},`);
+        // User-declared dictionaries first (BasicTheme, SurfaceTheme,
+        // …), the theme's own body dict LAST so its entries shadow
+        // shared-bundle entries for the same key.
+        const dictionaryEntries: string[] = [
+            ...block.dictionaries.map(d => `${d}.Clone()`),
+            `${templatesName}.Clone()`,
+        ];
+        this.line(`            dictionaries:   [${dictionaryEntries.join(', ')}],`);
+        this.line(`            catalog:        ${catalogName},`);
+        this.line(`            schemes:        [${block.schemes.map(s => `${s}.instance`).join(', ')}],`);
+        this.line(`            defaultScheme:  ${JSON.stringify(block.defaultScheme)},`);
+        this.line(`        });`);
+        this.line(`    }`);
+        this.line(`    static Activate(scheme) {`);
+        this.line(`        const target = scheme ?? ${block.name}.DefaultScheme;`);
+        this.line(`        ThemeManager.Current.ActivateTheme(${block.name}.instance.name, { scheme: target.name });`);
+        this.line(`    }`);
+        this.line(`}`);
+
+        // Module-load side effects: register with ThemeManager + flag
+        // as Application's default theme. Idempotent guards so re-
+        // imports during tests don't throw.
+        this.line('');
+        this.line(`if (ThemeManager.Current.GetTheme(${JSON.stringify(block.name)}) === undefined) {`);
+        this.line(`    ThemeManager.Current.RegisterTheme(${block.name}.instance);`);
+        this.line(`}`);
+        this.line(`Application.RegisterDefaultTheme(${block.name});`);
+
         return meta;
     }
 
     // ── `scheme NAME against THEME [basedOn OTHER] { @x = v … }` ─────
     //
-    // Emits `export const NAME = defineScheme({ name, theme, basedOn?,
-    // tokens })` — a Scheme value object ready for
-    // ThemeManager.RegisterTheme. The body's `@Name = value`
-    // assignments populate the tokens map.
+    // Emits a class shape:
+    //
+    //   export class NAME extends Scheme {
+    //       public static readonly instance: NAME = new NAME();
+    //       private constructor() { super({ name, theme, basedOn?, tokens }); }
+    //   }
+    //
+    // The class IS the public API — ApplicationInitOptions takes
+    // Function references, so callers pass `NAME` (the class) rather
+    // than a `'name'` string. The singleton `instance` field exposes
+    // the underlying Scheme value for places that need the bare object
+    // (ThemeManager scheme list, etc.). No `defineScheme(...)` call is
+    // emitted; constructing the class produces the same value the old
+    // factory did, with the added benefit of a Function-typed identity.
     private compileSchemeBlock(block: SchemeBlock): void
     {
-        this.ensureImport('defineScheme');
+        this.ensureImport('Scheme');
 
         // Register any block-scoped `import Alias from "..."` clauses
         // so brushes / effects defined elsewhere are available as
@@ -682,31 +805,80 @@ export class Compiler
         this.line(`// Scheme '${block.name}' against theme '${block.theme}'`
             + (block.basedOn !== undefined ? ` based on '${block.basedOn}'` : '')
             + '.');
-        this.line(`export const ${block.name} = defineScheme({`);
-        this.line(`    name:    ${JSON.stringify(block.name)},`);
-        this.line(`    theme:   ${JSON.stringify(block.theme)},`);
+        this.line(`export class ${block.name} extends Scheme {`);
+        this.line(`    static instance = new ${block.name}();`);
+        this.line(`    constructor() {`);
+        this.line(`        super({`);
+        this.line(`            name:    ${JSON.stringify(block.name)},`);
+        this.line(`            theme:   ${JSON.stringify(block.theme)},`);
         if (block.basedOn !== undefined)
         {
-            this.line(`    basedOn: ${JSON.stringify(block.basedOn)},`);
+            this.line(`            basedOn: ${JSON.stringify(block.basedOn)},`);
         }
-        this.line(`    tokens:  new Map([`);
+        this.line(`            tokens:  new Map([`);
         for (const t of tokens)
         {
-            this.line(`        [${JSON.stringify(t.name)}, ${t.expr}],`);
+            this.line(`                [${JSON.stringify(t.name)}, ${t.expr}],`);
         }
-        this.line(`    ]),`);
-        this.line(`});`);
+        this.line(`            ]),`);
+        this.line(`        });`);
+        this.line(`    }`);
+        this.line(`}`);
     }
 
     // ── Application root ────────────────────────────────────────────
 
     private compileApplication(elem: ElementNode): string
     {
-        if (elem.attrs.length > 0)
+        // Application accepts two attributes that drive the lifecycle:
+        //   * `Theme=Material`       — the Theme class to activate.
+        //   * `Scheme=MaterialLight` — the Scheme class to pair with it.
+        // The compiler emits `_app.initialize({ theme, scheme })` right
+        // after `new Application()` so the theme is active BEFORE the
+        // body builds its visual tree. Without these attributes, the
+        // body still constructs but consumers must call initialize
+        // themselves on the returned `app` — useful for tests that
+        // want to control the lifecycle.
+        let themeIdent:  string | undefined;
+        let schemeIdent: string | undefined;
+        for (const attr of elem.attrs)
         {
-            throw new EmitError(
-                'Application: attributes are not supported (only a body block)',
-                elem.span);
+            if (attr.kind !== 'named-attr')
+            {
+                throw new EmitError(
+                    'Application: positional attributes are not supported',
+                    attr.span);
+            }
+            const propName = attr.path.parts.join('.');
+            if (propName === 'Theme')
+            {
+                if (attr.value.kind !== 'ident')
+                {
+                    throw new EmitError(
+                        `Application.Theme expects a class identifier`,
+                        attr.span);
+                }
+                themeIdent = attr.value.name;
+                this.ensureImport(themeIdent);
+            }
+            else if (propName === 'Scheme')
+            {
+                if (attr.value.kind !== 'ident')
+                {
+                    throw new EmitError(
+                        `Application.Scheme expects a class identifier`,
+                        attr.span);
+                }
+                schemeIdent = attr.value.name;
+                this.ensureImport(schemeIdent);
+            }
+            else
+            {
+                throw new EmitError(
+                    `Application: attribute '${propName}' is not supported `
+                    + `(allowed: Theme, Scheme)`,
+                    attr.span);
+            }
         }
         if (elem.body === null || elem.body.kind !== 'structured-body')
         {
@@ -717,6 +889,20 @@ export class Compiler
         this.ensureImport('Application');
         const appVar = this.fresh('app');
         this.line(`const ${appVar} = new Application();`);
+
+        // Activate the requested theme + scheme BEFORE the visual tree
+        // builds. Any DynamicResource lookup inside the body now sees
+        // the active token dictionary on first resolve; controls that
+        // read `Application.ResolveDefaultResource(MyClass)` in their
+        // constructors find their templates via the theme's
+        // dictionaries array (merged in by ThemeManager).
+        if (themeIdent !== undefined || schemeIdent !== undefined)
+        {
+            const parts: string[] = [];
+            if (themeIdent !== undefined)  parts.push(`theme: ${themeIdent}`);
+            if (schemeIdent !== undefined) parts.push(`scheme: ${schemeIdent}`);
+            this.line(`${appVar}.initialize({ ${parts.join(', ')} });`);
+        }
 
         for (const item of elem.body.items)
         {
@@ -2563,6 +2749,8 @@ export class Compiler
                 return this.compileIdentValue(val, ctx);
             case 'color':
                 return this.compileColorValue(val);
+            case 'element':
+                return this.compileElementValue(val);
             case 'tuple':
                 return this.compileTupleValue(val, ctx);
             case 'size':
@@ -2863,6 +3051,65 @@ export class Compiler
         throw new EmitError(
             `tuple of ${exprs.length} values has no Thickness shape (1, 2, or 4 expected)`,
             tuple.span);
+    }
+
+    // Element node in value position — `Ident [Prop = val, …]`. Emits a
+    // self-invoking arrow expression that constructs the instance,
+    // applies each property assignment, and returns the instance:
+    //
+    //     ((_e) => { _e.Prop = val; return _e; })(new Ident())
+    //
+    // Authored as a Scheme token value (e.g. `@Elevation1 =
+    // MaterialElevationEffect [Level = 1]`) or anywhere else a value
+    // is expected. The class name is registered with the symbol-table
+    // import so the file-level ES imports include it.
+    //
+    // Constraints (vs. body-position element parsing):
+    //   * No x:attrs — keys / root markers only make sense as body items.
+    //   * No `{ ... }` body — that would require parseStructuredBody to
+    //     accept property-setter shapes (`Prop = val;`) which it
+    //     doesn't, and the attribute-list form covers the common case.
+    //   * No nested element values inside attrs (compileValue recurses
+    //     through compileAttribute, so the structure is recursive — but
+    //     each level still needs `[attrs]` shape).
+    private compileElementValue(elem: ElementNode): string
+    {
+        if (elem.xAttrs.length > 0)
+        {
+            throw new EmitError(
+                `element value '${elem.name}': x:attrs are not allowed in value position`,
+                elem.span);
+        }
+        if (elem.body !== null)
+        {
+            throw new EmitError(
+                `element value '${elem.name}': '{ ... }' body is not allowed in value position — use '[Prop = val]' instead`,
+                elem.span);
+        }
+        this.ensureImport(elem.name);
+        if (elem.attrs.length === 0)
+        {
+            return `new ${elem.name}()`;
+        }
+        // Each named attr becomes `_e.Prop = val` inside the IIFE.
+        // Positional attrs (`new Foo(1, 2)`) aren't supported here —
+        // they'd require knowing the ctor signature, which the
+        // compiler doesn't carry. Authors use named DPs in value
+        // position.
+        const sets: string[] = [];
+        for (const attr of elem.attrs)
+        {
+            if (attr.kind !== 'named-attr')
+            {
+                throw new EmitError(
+                    `element value '${elem.name}': positional attributes are not supported — use 'Name = value' form`,
+                    attr.span);
+            }
+            const propName = attr.path.parts.join('.');
+            const valExpr = this.compileValue(attr.value, { propertyName: propName });
+            sets.push(`_e.${propName} = ${valExpr};`);
+        }
+        return `((_e) => { ${sets.join(' ')} return _e; })(new ${elem.name}())`;
     }
 
     // `{{ … }}` lowering. Constant body folds to a literal; reactive

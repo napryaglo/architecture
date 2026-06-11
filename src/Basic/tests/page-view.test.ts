@@ -1,5 +1,6 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { initTestApp } from './test-app.js';
 
 import { Application, Rect, Size, Visual } from '../../runtime/index.js';
 import { HeadlessTarget } from '../../visual-engine/index.js';
@@ -23,7 +24,7 @@ function subtitleStack(pv: PageView) {
 }
 
 describe('PageView — basic shape', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('Title text propagates into the header title TextBlock', () => {
         const pv = new PageView();
@@ -60,7 +61,7 @@ describe('PageView — basic shape', () => {
 });
 
 describe('PageView — Content swap', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('swapping Content detaches the old logical parent and attaches the new', () => {
         const pv = new PageView();
@@ -128,7 +129,7 @@ describe('PageView — Content swap', () => {
 });
 
 describe('Visual.Tag DP', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('Tag is undefined by default and round-trips through the setter', () => {
         const v = new Border();

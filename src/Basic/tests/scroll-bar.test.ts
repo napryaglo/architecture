@@ -1,5 +1,6 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { initTestApp } from './test-app.js';
 
 import { Application, NoModifiers, PointerButton, Rect, Size, Visual, type PointerEventInit } from '../../runtime/index.js';
 import { InputManager } from '../../framework/index.js';;
@@ -29,7 +30,7 @@ function trackOf(sb: ScrollBar): Visual { return sb.Track; }
 function thumbOf(sb: ScrollBar): Visual { return sb.Thumb; }
 
 describe('ScrollBar — basics', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('default Orientation is Vertical, Min=0, Max=1, Value=0', () => {
         const sb = new ScrollBar();
@@ -57,7 +58,7 @@ describe('ScrollBar — basics', () => {
 });
 
 describe('ScrollBar — thumb geometry', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('thumb length tracks ViewportSize / (range + viewport) on a vertical bar', () => {
         const sb = new ScrollBar();
@@ -126,7 +127,7 @@ describe('ScrollBar — thumb geometry', () => {
 });
 
 describe('ScrollBar — pointer interaction', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     function setupVertical(): { sb: ScrollBar; im: InputManager } {
         const sb = new ScrollBar();
@@ -191,7 +192,7 @@ describe('ScrollBar — pointer interaction', () => {
 });
 
 describe('InputManager — pointer capture', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('Move events route to the captured visual even when hit-test misses', () => {
         const im = new InputManager();

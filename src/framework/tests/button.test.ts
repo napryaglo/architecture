@@ -1,5 +1,6 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { initTestApp } from '../../Basic/tests/test-app.js';
 
 import { Application, NoModifiers, PointerButton, RelayCommand, type PointerEventInit } from '../../runtime/index.js';
 import { InputManager } from '../../framework/index.js';;
@@ -32,7 +33,7 @@ function pointer(overrides: Partial<PointerEventInit> = {}): PointerEventInit
 class Root extends Panel { }
 
 describe('Button — default template', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('Button construction installs a Border + ContentPresenter template', () => {
         const btn = new Button();
@@ -54,7 +55,7 @@ describe('Button — default template', () => {
 });
 
 describe('Button — Click protocol (Release mode)', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('PointerDown then PointerUp inside fires Command + handlers + OnClick', () => {
         const root = new Root();
@@ -160,7 +161,7 @@ describe('Button — Click protocol (Release mode)', () => {
 });
 
 describe('Button — ICommand integration', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('Execute receives CommandParameter', () => {
         const root = new Root();
@@ -267,7 +268,7 @@ describe('Button — ICommand integration', () => {
 });
 
 describe('Button — ClickMode variants', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('ClickMode.Press fires Click on PointerDown', () => {
         const root = new Root();
@@ -308,7 +309,7 @@ describe('Button — ClickMode variants', () => {
 });
 
 describe('Button — Variant DP', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('Variant default is Filled', () => {
         const btn = new Button();

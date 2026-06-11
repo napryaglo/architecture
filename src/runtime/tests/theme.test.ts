@@ -38,7 +38,7 @@ function tinyCatalog(): TokenCatalog
 }
 
 describe('Theme — value class', () => {
-    test('defineTheme exposes name, templates, catalog, schemes, defaultScheme', () => {
+    test('defineTheme exposes name, dictionaries, catalog, schemes, defaultScheme', () => {
         const scheme = defineScheme({
             name:   'light',
             theme:  'tiny',
@@ -46,13 +46,13 @@ describe('Theme — value class', () => {
         });
         const theme = defineTheme({
             name:           'tiny',
-            templates:      [new ResourceDictionary()],
+            dictionaries:   [new ResourceDictionary()],
             catalog:        tinyCatalog(),
             schemes:        [scheme],
             defaultScheme:  'light',
         });
         assert.equal(theme.name, 'tiny');
-        assert.equal(theme.templates.length, 1);
+        assert.equal(theme.dictionaries.length, 1);
         assert.equal(theme.catalog.get('Primary')?.type, 'Brush');
         assert.equal(theme.schemes.get('light'), scheme);
         assert.equal(theme.defaultScheme, 'light');
@@ -67,7 +67,7 @@ describe('Theme — value class', () => {
         assert.throws(
             () => defineTheme({
                 name:          'tiny',
-                templates:     [],
+                dictionaries:  [],
                 catalog:       tinyCatalog(),
                 schemes:       [scheme],
                 defaultScheme: 'light',
@@ -81,7 +81,7 @@ describe('Theme — value class', () => {
         assert.throws(
             () => defineTheme({
                 name:          'tiny',
-                templates:     [],
+                dictionaries:  [],
                 catalog:       tinyCatalog(),
                 schemes:       [a, b],
                 defaultScheme: 'light',
@@ -94,7 +94,7 @@ describe('Theme — value class', () => {
         assert.throws(
             () => defineTheme({
                 name:          'tiny',
-                templates:     [],
+                dictionaries:  [],
                 catalog:       tinyCatalog(),
                 schemes:       [scheme],
                 defaultScheme: 'dark',   // does not exist
@@ -132,7 +132,7 @@ describe('ThemeManager — registration', () => {
             tokens: { Primary: 'p', Surface: 's', ShapeFull: 999 },
         });
         const theme = defineTheme({
-            name: 'tiny', templates: [],
+            name: 'tiny', dictionaries: [],
             catalog: tinyCatalog(), schemes: [light], defaultScheme: 'light',
         });
         ThemeManager.Current.RegisterTheme(theme);
@@ -147,7 +147,7 @@ describe('ThemeManager — registration', () => {
             tokens: { Primary: 'p', Surface: 's', ShapeFull: 999 },
         });
         const theme = defineTheme({
-            name: 'tiny', templates: [],
+            name: 'tiny', dictionaries: [],
             catalog: tinyCatalog(), schemes: [scheme], defaultScheme: 'light',
         });
         ThemeManager.Current.RegisterTheme(theme);
@@ -164,7 +164,7 @@ describe('ThemeManager — registration', () => {
             tokens: { Primary: 'p' /* Surface, ShapeFull missing */ },
         });
         const theme = defineTheme({
-            name: 'tiny', templates: [],
+            name: 'tiny', dictionaries: [],
             catalog: tinyCatalog(), schemes: [incomplete], defaultScheme: 'light',
         });
         assert.throws(
@@ -182,7 +182,7 @@ describe('ThemeManager — basedOn scheme borrowing', () => {
             tokens: { Primary: 'parent-p', Surface: 'parent-s', ShapeFull: 100 },
         });
         const parentTheme = defineTheme({
-            name: 'tiny', templates: [],
+            name: 'tiny', dictionaries: [],
             catalog: tinyCatalog(), schemes: [parent], defaultScheme: 'light',
         });
         ThemeManager.Current.RegisterTheme(parentTheme);
@@ -194,7 +194,7 @@ describe('ThemeManager — basedOn scheme borrowing', () => {
             tokens:  { Primary: 'child-p' },   // override Primary only
         });
         const childTheme = defineTheme({
-            name: 'tiny2', templates: [],
+            name: 'tiny2', dictionaries: [],
             catalog: tinyCatalog(),    // same shape
             schemes: [child], defaultScheme: 'light',
         });
@@ -220,7 +220,7 @@ describe('ThemeManager — basedOn scheme borrowing', () => {
             tokens:  { Primary: 'p', Surface: 's', ShapeFull: 999 },
         });
         const theme = defineTheme({
-            name: 'tiny', templates: [],
+            name: 'tiny', dictionaries: [],
             catalog: tinyCatalog(), schemes: [child], defaultScheme: 'x',
         });
         assert.throws(
@@ -243,7 +243,7 @@ describe('ThemeManager — activation', () => {
             tokens: { Primary: 'p-light', Surface: 's-light', ShapeFull: 999 },
         });
         const theme = defineTheme({
-            name: 'tiny', templates: [templates],
+            name: 'tiny', dictionaries: [templates],
             catalog: tinyCatalog(), schemes: [light], defaultScheme: 'light',
         });
         ThemeManager.Current.RegisterTheme(theme);
@@ -269,7 +269,7 @@ describe('ThemeManager — activation', () => {
             tokens: { Primary: 'p-dark', Surface: 's-dark', ShapeFull: 888 },
         });
         const theme = defineTheme({
-            name: 'tiny', templates: [],
+            name: 'tiny', dictionaries: [],
             catalog: tinyCatalog(),
             schemes: [light, dark], defaultScheme: 'light',
         });
@@ -291,7 +291,7 @@ describe('ThemeManager — activation', () => {
             tokens: { Primary: 'p', Surface: 's', ShapeFull: 999 },
         });
         const theme = defineTheme({
-            name: 'tiny', templates: [],
+            name: 'tiny', dictionaries: [],
             catalog: tinyCatalog(), schemes: [scheme], defaultScheme: 'light',
         });
         ThemeManager.Current.RegisterTheme(theme);
@@ -310,7 +310,7 @@ describe('ThemeManager — activation', () => {
             tokens: { Primary: 'p', Surface: 's', ShapeFull: 999 },
         });
         const theme = defineTheme({
-            name: 'tiny', templates: [],
+            name: 'tiny', dictionaries: [],
             catalog: tinyCatalog(), schemes: [scheme], defaultScheme: 'light',
         });
         ThemeManager.Current.RegisterTheme(theme);
@@ -337,7 +337,7 @@ describe('ThemeManager — activation', () => {
             tokens: { Primary: 'p', Surface: 's', ShapeFull: 999 },
         });
         const theme = defineTheme({
-            name: 'tiny', templates: [],
+            name: 'tiny', dictionaries: [],
             catalog: tinyCatalog(), schemes: [scheme], defaultScheme: 'light',
         });
         ThemeManager.Current.RegisterTheme(theme);

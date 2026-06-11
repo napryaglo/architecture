@@ -1,5 +1,6 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { initTestApp } from '../../../Basic/tests/test-app.js';
 
 import {
     Application,
@@ -42,7 +43,7 @@ function modifiers(extras: Partial<ModifierKeys> = {}): ModifierKeys
 }
 
 describe('Selector — defaults', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('SelectionMode defaults to Single', () => {
         const s = new TestSelector();
@@ -63,7 +64,7 @@ describe('Selector — defaults', () => {
 });
 
 describe('Selector — attached IsSelected DP', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('Selector.GetIsSelected defaults to false on any Visual', () => {
         const v = new Border();
@@ -92,7 +93,7 @@ describe('Selector — attached IsSelected DP', () => {
 });
 
 describe('Selector — HandleContainerClick (Single mode)', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('plain click selects one container, exposes via SelectedItem / SelectedItems', () => {
         const s = new TestSelector();
@@ -135,7 +136,7 @@ describe('Selector — HandleContainerClick (Single mode)', () => {
 });
 
 describe('Selector — HandleContainerClick (Multiple mode)', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('plain clicks toggle membership without modifiers', () => {
         const s = new TestSelector();
@@ -160,7 +161,7 @@ describe('Selector — HandleContainerClick (Multiple mode)', () => {
 });
 
 describe('Selector — HandleContainerClick (Extended mode)', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('Ctrl+click toggles a row without clearing the rest', () => {
         const s = new TestSelector();
@@ -208,7 +209,7 @@ describe('Selector — HandleContainerClick (Extended mode)', () => {
 });
 
 describe('Selector — ClearSelection / SelectionChanged', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('ClearSelection empties the selection and fires SelectionChanged once', () => {
         const s = new TestSelector();
@@ -249,7 +250,7 @@ describe('Selector — ClearSelection / SelectionChanged', () => {
 });
 
 describe('Selector — BeginUpdate / EndUpdate bulk transaction', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('mutations inside Begin/End coalesce into ONE SelectionChanged fire', () => {
         const s = new TestSelector();
@@ -309,7 +310,7 @@ describe('Selector — BeginUpdate / EndUpdate bulk transaction', () => {
 });
 
 describe('Selector — programmatic SelectedIndex / SelectedItem writes', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('SelectedIndex setter flips IsSelected on the matching container', () => {
         const s = new TestSelector();

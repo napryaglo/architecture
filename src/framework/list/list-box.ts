@@ -11,7 +11,6 @@ import { Selector } from './selector.js';
 import { Orientation, StackPanel } from '../../Basic/stack-panel.js';
 import { ScrollViewer } from '../scroll-viewer.js';
 import { TextBlock } from '../../Basic/text-block.js';
-import { ensureControlsTheme } from '../../Basic/default-resources.js';
 
 // SelectionMode is now owned by Selector and re-exported here so
 // existing `import { SelectionMode } from './list-box.js'` consumers
@@ -73,7 +72,6 @@ export class ListBox extends Selector
 {
     static {
         Model.OverrideMetadata(ListBox, Visual.DefaultStyleKeyKey, { default_value: ListBox });
-        ensureControlsTheme();
     }
 
     // Cached after first template apply — the lookup walks the
@@ -288,7 +286,6 @@ export class ListBoxItem extends ContentControl
 
     static {
         Model.OverrideMetadata(ListBoxItem, Visual.DefaultStyleKeyKey, { default_value: ListBoxItem });
-        ensureControlsTheme();
     }
 
     private _pressOriginatedHere = false;

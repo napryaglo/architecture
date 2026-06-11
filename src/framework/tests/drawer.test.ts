@@ -1,5 +1,6 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { initTestApp } from '../../Basic/tests/test-app.js';
 
 import { Application, NoModifiers, PointerButton, Panel, Rect, Size, Visual, type PointerEventInit } from '../../runtime/index.js';
 import { InputManager } from '../../framework/index.js';;
@@ -27,7 +28,7 @@ function pointer(overrides: Partial<PointerEventInit> = {}): PointerEventInit
 class Root extends Panel { }
 
 describe('Drawer — Permanent variant', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('always reports DrawerSize on anchor axis regardless of IsOpen', () => {
         const d = new Drawer();
@@ -66,7 +67,7 @@ describe('Drawer — Permanent variant', () => {
 });
 
 describe('Drawer — Persistent variant', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('open / closed sizes swap DrawerSize ↔ RailSize on anchor axis', () => {
         const d = new Drawer();
@@ -156,7 +157,7 @@ describe('Drawer — Persistent variant', () => {
 });
 
 describe('Drawer — Temporary variant', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     function mount(d: Drawer): HeadlessTarget {
         const root = new Root();
@@ -289,7 +290,7 @@ describe('Drawer — Temporary variant', () => {
 });
 
 describe('Drawer — Variant is read-once at structural setup', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('changing Variant after the first measure has no structural effect', () => {
         const d = new Drawer();

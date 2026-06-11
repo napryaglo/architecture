@@ -1,7 +1,20 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { Color } from '../../runtime/index.js';
+import {
+    AnimationManager,
+    Application,
+    Color,
+    DynamicResource,
+    ManualClock,
+    MetaData,
+    Model,
+    Panel,
+    Size,
+    ThemeManager,
+    Visual,
+    type DrawingContext,
+} from '../../runtime/index.js';
 import { SolidColorBrush } from '../brush.js';
 import { SolidColorBrushAnimation } from '../solid-color-brush-animation.js';
 
@@ -77,5 +90,99 @@ describe('SolidColorBrushAnimation', () => {
         assert.notEqual(b1, b2, 'each tick must produce a fresh brush');
         // ...but with equal colour values.
         assert.equal(b1.Color.R, b2.Color.R);
+    });
+});
+
+// End-to-end SchemeTransition wiring. Imports of the
+// `solid-color-brush-animation` module register a factory with the
+// runtime — DynamicResource consults it whenever ThemeManager has an
+// active SchemeTransition. The test creates a Visual with a Brush DP
+// bound through DynamicResource, swaps the resource value, and asserts
+// that the consumer sees interpolated SolidColorBrushes per clock tick.
+describe('SolidColorBrushAnimation — DynamicResource scheme-transition integration', () => {
+    class BrushHost extends Visual
+    {
+        static {
+            Model.RegisterProperty(BrushHost, 'Background', undefined, MetaData.None);
+        }
+        public get Background(): unknown { return this._get_property_value_by_name('Background'); }
+        public set Background(v: unknown) { this._set_property_value_by_name('Background', v); }
+        protected override MeasureOverride(_a: Size): Size { return Size.Zero; }
+        protected override RenderOverride(_dc: DrawingContext): void { }
+    }
+
+    function reset(): void
+    {
+        AnimationManager.ResetForTests();
+        ThemeManager._resetForTesting();
+        Application.current = null;
+    }
+
+    test('Brush value swap under an active SchemeTransition tweens through interpolated SolidColorBrushes', () => {
+        reset();
+        const clock = new ManualClock();
+        AnimationManager.Instance.Clock = clock;
+
+        // The factory registered at module load picks up this transition.
+        ThemeManager.Current.SchemeTransition = { duration: 100 };
+
+        class TestPanel extends Panel { }
+        const root = new TestPanel();
+        const red  = new SolidColorBrush(new Color(255, 0, 0, 255));
+        const blue = new SolidColorBrush(new Color(0,   0, 255, 255));
+        root.Resources.Set('Brush', red);
+
+        const host = new BrushHost();
+        root.AddChild(host);
+        host._set_property_value_by_name('Background', DynamicResource(host, 'Brush'));
+        assert.ok(host.Background instanceof SolidColorBrush);
+        assert.equal((host.Background as SolidColorBrush).Color.R, 255);
+
+        // Swap red → blue. DynamicResource consults the registered
+        // factory, which builds a SolidColorBrushAnimation From=red
+        // To=blue and Begins a Storyboard on the watcher.
+        root.Resources.Set('Brush', blue);
+
+        const start = host.Background as SolidColorBrush;
+        assert.ok(start instanceof SolidColorBrush);
+        assert.equal(start.Color.R, 255, 'storyboard at t=0 pins From=red');
+        assert.equal(start.Color.B, 0);
+
+        clock.Tick(50);
+        const mid = host.Background as SolidColorBrush;
+        assert.ok(mid instanceof SolidColorBrush);
+        assert.equal(mid.Color.R, 127.5, 'mid-animation red channel');
+        assert.equal(mid.Color.B, 127.5, 'mid-animation blue channel');
+
+        clock.Tick(50);
+        const end = host.Background as SolidColorBrush;
+        assert.ok(end instanceof SolidColorBrush);
+        // Animation cleared, LocalValue (= blue) surfaces — and it's
+        // the exact same instance the resource dictionary holds.
+        assert.equal(end, blue, 'after Stop, the LocalValue brush surfaces');
+        reset();
+    });
+
+    test('Non-SolidColorBrush values fall through to snap (factory returns undefined)', () => {
+        reset();
+        const clock = new ManualClock();
+        AnimationManager.Instance.Clock = clock;
+        ThemeManager.Current.SchemeTransition = { duration: 100 };
+
+        class TestPanel extends Panel { }
+        const root = new TestPanel();
+        root.Resources.Set('Brush', new SolidColorBrush(new Color(255, 0, 0, 255)));
+
+        const host = new BrushHost();
+        root.AddChild(host);
+        host._set_property_value_by_name('Background', DynamicResource(host, 'Brush'));
+
+        // Replace the brush with a plain number — the factory rejects
+        // the pair and the binding snaps.
+        root.Resources.Set('Brush', 42);
+        assert.equal(host.Background, 42);
+        assert.equal(AnimationManager.Instance.ActiveCount, 0,
+            'no storyboard ran for the mixed-type swap');
+        reset();
     });
 });

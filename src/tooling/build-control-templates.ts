@@ -6,10 +6,11 @@ import { compile, EmitError, type CompileResult } from '../compiler/compile.js';
 import { ParseError } from '../compiler/parser.js';
 import { DEFAULT_SLOT_INFO, type SlotInfo } from '../compiler/symbol-table.js';
 
-// Compiles every `src/Basic/<name>.template.mu` into a matching
-// `build/Basic/<name>.template.mu.{js,d.ts}`. Run via
-// `npm run build:templates`. The generated files are NOT in `src/`
-// (they're build artifacts) and are gitignored under `build/`.
+// Compiles every `*.mu` file under the framework source trees
+// (src/resources, src/Basic, src/framework) into a matching
+// `build/<tree>/<name>.{js,d.ts}`. Run via `npm run build:templates`.
+// The generated files are NOT in `src/` (they're build artifacts) and
+// are gitignored under `build/`.
 //
 // Why the public symbol table works as-is now: each control file's
 // internal helpers (`ClickableBorder`, `ComboBoxPopupHost`, …) are
@@ -129,6 +130,7 @@ function formatDts(out: CompileResult): string
         if (themeNames.size > 0)
         {
             ensureType('TokenCatalog', '@visualisation-sub/mural/runtime');
+            ensureType('Theme', '@visualisation-sub/mural/runtime');
         }
         if (schemeNames.length > 0)
         {
@@ -152,6 +154,13 @@ function formatDts(out: CompileResult): string
         const declarations: string[] = [];
         for (const b of blocks)
         {
+            // Theme blocks emit a class extending Theme (with
+            // statics + Activate); the templates dictionary lives
+            // alongside as `${name}Templates`. Skip the dictionary
+            // declaration here — emit the Theme class itself further
+            // below, after catalogs.
+            if (themeNames.has(b.name)) continue;
+
             const lines: string[] = [];
             lines.push(`export declare class ${b.name} extends ResourceDictionary {`);
             lines.push(`    static Clone(): ${b.name};`);
@@ -168,11 +177,44 @@ function formatDts(out: CompileResult): string
         {
             declarations.push(`export declare const ${name}Catalog: TokenCatalog;`);
         }
-        // Scheme exports — one const per `scheme NAME against … { … }`
-        // block.
+        // Theme classes — one per `theme NAME { … }` block. The
+        // emitted JS carries a sibling `${name}Templates` resource
+        // dictionary plus the `${name}Catalog` constant and a
+        // self-registering side effect for ThemeManager / Application.
+        // The .d.ts captures the public surface only.
+        for (const name of themeNames)
+        {
+            const templateBlock = blocks.find(b => b.name === name);
+            if (templateBlock !== undefined)
+            {
+                const lines: string[] = [];
+                lines.push(`export declare class ${name}Templates extends ResourceDictionary {`);
+                lines.push(`    static Clone(): ${name}Templates;`);
+                for (const a of templateBlock.accessors)
+                {
+                    const t = symbolToModule.has(a.type) ? a.type : 'unknown';
+                    lines.push(`    ${a.name}: ${t};`);
+                }
+                lines.push(`}`);
+                declarations.push(lines.join('\n'));
+            }
+            const themeClass: string[] = [];
+            themeClass.push(`export declare class ${name} extends Theme {`);
+            themeClass.push(`    static readonly Catalog: TokenCatalog;`);
+            themeClass.push(`    static readonly DefaultScheme: typeof Scheme;`);
+            themeClass.push(`    static readonly instance: ${name};`);
+            themeClass.push(`    static Activate(scheme?: typeof Scheme): void;`);
+            themeClass.push(`}`);
+            declarations.push(themeClass.join('\n'));
+        }
+        // Scheme classes — one per `scheme NAME against … { … }` block.
         for (const name of schemeNames)
         {
-            declarations.push(`export declare const ${name}: Scheme;`);
+            const lines: string[] = [];
+            lines.push(`export declare class ${name} extends Scheme {`);
+            lines.push(`    static readonly instance: ${name};`);
+            lines.push(`}`);
+            declarations.push(lines.join('\n'));
         }
         return headerLines.join('\n') + '\n\n' + declarations.join('\n\n') + '\n';
     }
@@ -246,12 +288,19 @@ if (process.argv[1] !== undefined
     // Walk two levels up for the project root.
     const here        = fileURLToPath(import.meta.url);
     const projectRoot = join(dirname(here), '..', '..');
-    // Two source trees:
-    //   * src/Basic     — the primitive control library (basic.template.mu)
-    //   * src/framework — Control + complex controls (per-group templates
-    //                     under framework/menu/, …). Output mirrors the
-    //                     source structure under build/.
+    // Three source trees:
+    //   * src/resources — the theme bundles (basic.template.mu,
+    //                     surface.template.mu, material/*.mu) and the
+    //                     default-resources / default-surface-resources
+    //                     TDZ shims. Compiled outputs go to build/resources/.
+    //   * src/Basic     — primitive controls (no `.mu` files now that
+    //                     basic.template.mu moved into src/resources; walk
+    //                     kept so authoring a control-local .mu still works).
+    //   * src/framework — composite controls (no .mu files now that
+    //                     surface.template.mu moved). Walked for the same
+    //                     forward-compat reason.
     const trees: ReadonlyArray<readonly [string, string]> = [
+        [join(projectRoot, 'src',   'resources'), join(projectRoot, 'build', 'resources')],
         [join(projectRoot, 'src',   'Basic'),     join(projectRoot, 'build', 'Basic')],
         [join(projectRoot, 'src',   'framework'), join(projectRoot, 'build', 'framework')],
     ];

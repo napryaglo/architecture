@@ -118,4 +118,15 @@ scheme MaterialLight against Material {
     // as the historical hardcoded constants.
     @MarqueeFill          = #3699cc33
     @MarqueeStroke        = #3699cc
+
+    // ── Elevation (M3 dual-shadow ramp) ─────────────────────────────
+    // Each token is a MaterialElevationEffect at the named level. The
+    // element-node value form (`Ident [Prop = val]`) drops the effect
+    // through the scheme straight into the resource chain — no
+    // imperative TS sidecar required.
+    @Elevation1           = MaterialElevationEffect[Level = 1]
+    @Elevation2           = MaterialElevationEffect[Level = 2]
+    @Elevation3           = MaterialElevationEffect[Level = 3]
+    @Elevation4           = MaterialElevationEffect[Level = 4]
+    @Elevation5           = MaterialElevationEffect[Level = 5]
 }

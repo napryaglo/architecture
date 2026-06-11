@@ -90,4 +90,12 @@ scheme MaterialDark against Material {
     // dark-specific accent for marquee tooling.
     @MarqueeFill          = #3699cc33
     @MarqueeStroke        = #3699cc
+
+    // ── Elevation (M3 dual-shadow ramp) ─────────────────────────────
+    // Mirror light.mu — M3 elevation ramps don't vary by scheme.
+    @Elevation1           = MaterialElevationEffect[Level = 1]
+    @Elevation2           = MaterialElevationEffect[Level = 2]
+    @Elevation3           = MaterialElevationEffect[Level = 3]
+    @Elevation4           = MaterialElevationEffect[Level = 4]
+    @Elevation5           = MaterialElevationEffect[Level = 5]
 }

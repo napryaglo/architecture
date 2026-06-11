@@ -12,7 +12,7 @@ import {
 import type { Border } from './border.js';
 import { Orientation } from './stack-panel.js';
 import { Theme } from './theme.js';
-import { defaultTemplate, ensureControlsTheme } from './default-resources.js';
+import { defaultTemplate } from './default-template.js';
 
 
 
@@ -109,7 +109,6 @@ export class ScrollBar extends Visual
 
     static {
         Model.OverrideMetadata(ScrollBar, Visual.DefaultStyleKeyKey, { default_value: ScrollBar });
-        ensureControlsTheme();
     }
 
     // ── Template parts ──────────────────────────────────────────────

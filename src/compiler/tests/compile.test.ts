@@ -1034,10 +1034,16 @@ describe('compile — resources block (typed dictionary class)', () => {
     });
 });
 
-describe('compile — `theme NAME { tokens { … } … }` block', () => {
-    test('emits a class + a sibling NAMECatalog Map', () => {
+describe('compile — `theme NAME { schemes: [...] defaultScheme: ... tokens { ... } ... }` block', () => {
+    test('emits a class extending Theme + sibling NAMECatalog Map + NAMETemplates dict + auto-register', () => {
         const js = emitted(`
             theme Material {
+                import MaterialLight from "./light.mu.js"
+                import MaterialDark  from "./dark.mu.js"
+
+                schemes:       [MaterialLight, MaterialDark]
+                defaultScheme: MaterialLight
+
                 tokens {
                     @Primary   : Brush  "Primary brand color"
                     @ShapeFull : CornerRadius
@@ -1046,8 +1052,8 @@ describe('compile — `theme NAME { tokens { … } … }` block', () => {
                 Style x:key="DemoStyle" [TargetType=TextBlock] { FontSize = 14; }
             }
         `);
-        // ResourceDictionary subclass for the templates / styles body.
-        assert.match(js, /export class Material extends ResourceDictionary/);
+        // Templates dictionary sibling — same shape as a resources block.
+        assert.match(js, /export class MaterialTemplates extends ResourceDictionary/);
         // Sibling catalog Map with each token entry.
         assert.match(js, /export const MaterialCatalog = new Map\(\[/);
         assert.match(js, /\["Primary",\s*\{\s*type:\s*"Brush",\s*description:\s*"Primary brand color"\s*\}\]/);
@@ -1057,20 +1063,58 @@ describe('compile — `theme NAME { tokens { … } … }` block', () => {
         assert.match(js, /\["Space1",\s*\{\s*type:\s*"number"/);
         assert.match(js, /\["Space2",\s*\{\s*type:\s*"number"/);
         assert.match(js, /\["Space3",\s*\{\s*type:\s*"number"/);
+        // Theme class with statics + ctor + Activate.
+        assert.match(js, /export class Material extends Theme/);
+        assert.match(js, /static Catalog = MaterialCatalog/);
+        assert.match(js, /static DefaultScheme = MaterialLight/);
+        assert.match(js, /static instance = new Material\(\)/);
+        assert.match(js, /schemes:\s*\[MaterialLight\.instance,\s*MaterialDark\.instance\]/);
+        assert.match(js, /defaultScheme:\s*"MaterialLight"/);
+        assert.match(js, /static Activate\(scheme\)/);
+        // Auto-register side effects.
+        assert.match(js, /ThemeManager\.Current\.RegisterTheme\(Material\.instance\)/);
+        assert.match(js, /Application\.RegisterDefaultTheme\(Material\)/);
+        // Theme + Application imported from runtime.
+        assert.match(js, /import \{[^}]*Theme[^}]*\} from "@visualisation-sub\/mural\/runtime"/);
     });
 
-    test('`theme NAME { }` without a tokens block still compiles (empty catalog)', () => {
-        const js = emitted(`
-            theme Empty {
-                Style x:key="X" [TargetType=TextBlock] { FontSize = 14; }
-            }
-        `);
-        assert.match(js, /export const EmptyCatalog = new Map\(\[\s*\]\)/);
+    test('theme block without tokens is rejected', () => {
+        assert.throws(
+            () => compile(`
+                theme T {
+                    schemes:       [S]
+                    defaultScheme: S
+                }
+            `),
+            (err) => err instanceof EmitError && /tokens \{ … \} block is required/.test(err.message));
+    });
+
+    test('theme block without schemes header is rejected', () => {
+        assert.throws(
+            () => compile(`
+                theme T {
+                    defaultScheme: S
+                    tokens { @X : Brush }
+                }
+            `),
+            (err) => err instanceof EmitError && /schemes: \[\.\.\.\] header is required/.test(err.message));
+    });
+
+    test('defaultScheme must appear in schemes list', () => {
+        assert.throws(
+            () => compile(`
+                theme T {
+                    schemes:       [A, B]
+                    defaultScheme: C
+                    tokens { @X : Brush }
+                }
+            `),
+            (err) => err instanceof EmitError && /defaultScheme 'C' must be one of/.test(err.message));
     });
 });
 
 describe('compile — `scheme NAME against THEME { … }` block', () => {
-    test('emits a defineScheme call exporting the scheme value', () => {
+    test('emits a class extending Scheme with a static singleton instance', () => {
         const js = emitted(`
             scheme MaterialLight against Material {
                 @Primary   = #6750A4
@@ -1078,13 +1122,14 @@ describe('compile — `scheme NAME against THEME { … }` block', () => {
                 @ShapeFull = 999
             }
         `);
-        assert.match(js, /export const MaterialLight = defineScheme\(\{/);
+        assert.match(js, /export class MaterialLight extends Scheme/);
+        assert.match(js, /static instance = new MaterialLight\(\)/);
         assert.match(js, /name:\s*"MaterialLight"/);
         assert.match(js, /theme:\s*"Material"/);
         assert.match(js, /tokens:\s*new Map\(\[/);
         assert.match(js, /\["Primary",/);
-        // defineScheme imported from the runtime.
-        assert.match(js, /import \{[^}]*defineScheme[^}]*\} from "@visualisation-sub\/mural\/runtime"/);
+        // Scheme imported from the runtime.
+        assert.match(js, /import \{[^}]*Scheme[^}]*\} from "@visualisation-sub\/mural\/runtime"/);
     });
 
     test('`basedOn theme.scheme` emits as a string field', () => {
@@ -1105,5 +1150,30 @@ describe('compile — `scheme NAME against THEME { … }` block', () => {
                 }
             `),
             (err) => err instanceof EmitError && /body must contain only/.test(err.message));
+    });
+});
+
+describe('compile — element-node value form `Ident [Prop = val]`', () => {
+    test('emits an IIFE that constructs the class and applies named-attr setters', () => {
+        const js = emitted(`
+            scheme S against T {
+                @Elev = MaterialElevationEffect [Level = 1]
+            }
+        `);
+        assert.match(js, /\["Elev",\s*\(\(_e\) => \{\s*_e\.Level = 1;\s*return _e;\s*\}\)\(new MaterialElevationEffect\(\)\)\]/);
+        // The class name is registered as an import.
+        assert.match(js, /import \{[^}]*MaterialElevationEffect[^}]*\} from "@visualisation-sub\/mural\/visual-engine"/);
+    });
+
+    test('element value with no attrs emits a bare `new Ident()`', () => {
+        const js = emitted(`
+            scheme S against T {
+                @Empty = MaterialElevationEffect
+            }
+        `);
+        // No attrs → plain construction (the parser stops at the bare
+        // ident because there's no '[' following). Verifies the ident
+        // fallthrough still works when '[' isn't present.
+        assert.match(js, /\["Empty",\s*MaterialElevationEffect\]/);
     });
 });

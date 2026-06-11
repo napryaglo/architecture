@@ -1,5 +1,6 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { initTestApp } from './test-app.js';
 
 import { Application, NoModifiers, Panel, PointerButton, Visual, type FocusEventArgs, type KeyEventArgs, type KeyEventInit, type ModifierKeys, type PointerEventInit } from '../../runtime/index.js';
 import { InputManager } from '../../framework/index.js';;
@@ -71,7 +72,7 @@ function fixture(initialText: string = ''): {
 }
 
 describe('Focus model — runtime plumbing', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('default Focusable is false; Focus() on a non-focusable Visual is a no-op', () => {
         const tb     = new TextBox();
@@ -158,7 +159,7 @@ describe('Focus model — runtime plumbing', () => {
 });
 
 describe('TextBox — text input', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('OnTextInput inserts a printable character at the caret', () => {
         const { tb, im } = fixture('hello');
@@ -207,7 +208,7 @@ describe('TextBox — text input', () => {
 });
 
 describe('TextBox — editing keys', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('Backspace removes the char before the caret', () => {
         const { tb, im } = fixture('hello');
@@ -246,7 +247,7 @@ describe('TextBox — editing keys', () => {
 });
 
 describe('TextBox — navigation', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('ArrowLeft / ArrowRight move the caret by 1', () => {
         const { tb, im } = fixture('abc');
@@ -333,7 +334,7 @@ describe('TextBox — navigation', () => {
 });
 
 describe('TextBox — mouse positioning', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('PointerDown takes focus and positions the caret at the click', () => {
         const { tb, im, target } = fixture('hello');
@@ -368,7 +369,7 @@ describe('TextBox — mouse positioning', () => {
 });
 
 describe('TextBox — clipboard', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('Ctrl+C copies the current selection to the clipboard', async () => {
         const cb = makeClipboardStub();
@@ -440,7 +441,7 @@ function lineColOf(tb: TextBox, idx: number): { line: number; col: number }
 }
 
 describe('TextBox — caret + selection re-render plumbing', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     // Regression: a previous version invalidated `TextBox` itself when
     // the caret moved / focus changed, but TextBox's RenderOverride is
@@ -484,7 +485,7 @@ describe('TextBox — caret + selection re-render plumbing', () => {
 });
 
 describe('TextBox — soft-wrap overflow handling', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     // Helper: lay out a TextBox with a fixed (small) Width so wrap
     // actually has a budget to break against. ApproximateTextMeasurer

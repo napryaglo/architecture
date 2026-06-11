@@ -1,11 +1,13 @@
 import { GroupVM } from "./platform-vm.mjs";
 import { AdornerDecorator, Border, Dock, DockPanel, HierarchicalDataTemplate, PageView, StackPanel, TextBlock } from "@visualisation-sub/mural/Basic";
 import { TreeView, TreeViewItem } from "@visualisation-sub/mural/framework/list/tree-view.js";
+import { Material, MaterialLight } from "@visualisation-sub/mural/resources/material";
 import { Application, DataContextBinding, DynamicResource, NameScope, Setter, Style, Thickness } from "@visualisation-sub/mural/runtime";
 import { FontWeight } from "@visualisation-sub/mural/visual-engine";
 
 export const app = (() => {
     const _app0 = new Application();
+    _app0.initialize({ theme: Material, scheme: MaterialLight });
     const _rd1 = _app0.Resources;
     const _tmpl2 = new HierarchicalDataTemplate((_data) => {
         const _treeViewItem3 = new TreeViewItem();

@@ -14,7 +14,6 @@ import { Orientation, StackPanel } from '../../Basic/stack-panel.js';
 import { TextBlock } from '../../Basic/text-block.js';
 import { Theme } from '../../Basic/theme.js';
 import { ToggleButton } from '../toggle-button.js';
-import { ensureSurfaceTheme } from '../menu/default-surface-resources.js';
 
 // Where a button sits inside the inline ToolBar strip's connected-bar
 // chrome. ToolBar's panel updates the Position DP on each inline
@@ -95,7 +94,6 @@ export class ToolBarButton extends Button
         Model.OverrideMetadata(ToolBarButton, Visual.DefaultStyleKeyKey, { default_value: ToolBarButton });
         // Surface theme owns the default Style; this registers the
         // bundle's factory with Application on first ToolBarButton load.
-        ensureSurfaceTheme();
     }
 
     public get Icon():  Visual | undefined { return this.get_property_value(ToolBarButton.IconKey); }
@@ -156,7 +154,6 @@ export class ToolBarToggleButton extends ToggleButton
     static
     {
         Model.OverrideMetadata(ToolBarToggleButton, Visual.DefaultStyleKeyKey, { default_value: ToolBarToggleButton });
-        ensureSurfaceTheme();
     }
 
     public get Icon():  Visual | undefined { return this.get_property_value(ToolBarToggleButton.IconKey); }

@@ -1,6 +1,22 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { DynamicResource, MetaData, Model, Panel, ResourceDictionary, Size, Visual, type DrawingContext } from '../index.js';
+import {
+    AnimationManager,
+    Application,
+    DoubleAnimation,
+    DynamicResource,
+    ManualClock,
+    MetaData,
+    Model,
+    Panel,
+    ResourceDictionary,
+    SetPrefersReducedMotion,
+    Size,
+    ThemeManager,
+    Visual,
+    registerSchemeTransitionAnimator,
+    type DrawingContext,
+} from '../index.js';
 
 // Tiny Visual with one MetaData.None property used as a DynamicResource
 // target. Plain Visual doesn't expose anything settable, so we wrap.
@@ -397,5 +413,244 @@ describe('ResourceDictionary — Root marker (x:root)', () => {
         assert.equal(d.Root, undefined);
         d.Root = b;
         assert.equal(d.Root, b);
+    });
+});
+
+// Scheme-transition integration. Verifies that DynamicResource consults
+// the registered animator factory + ThemeManager.SchemeTransition, and
+// drives a Storyboard on its internal watcher when both are present.
+// The factory is a stub that produces a DoubleAnimation — the value
+// type being animated is irrelevant to the integration; what matters is
+// that the watcher's Value is interpolated and the consumer's binding
+// observes the intermediate values. The real SolidColorBrush
+// integration is covered in visual-engine tests.
+describe('DynamicResource — scheme-transition animation', () => {
+    class TestPanel extends Panel { }
+
+    function setupClock(): ManualClock
+    {
+        const clock = new ManualClock();
+        AnimationManager.Instance.Clock = clock;
+        return clock;
+    }
+
+    function reset(): void
+    {
+        AnimationManager.ResetForTests();
+        ThemeManager._resetForTesting();
+        Application.current = null;
+        // Drop any factory a prior test installed so suites run in
+        // isolation regardless of import order.
+        registerSchemeTransitionAnimator(undefined);
+    }
+
+    function numberAnimatorFactory(
+        oldValue: unknown,
+        newValue: unknown,
+        transition: { duration: number },
+    ): DoubleAnimation | undefined
+    {
+        if (typeof oldValue !== 'number') return undefined;
+        if (typeof newValue !== 'number') return undefined;
+        return new DoubleAnimation({
+            From:     oldValue,
+            To:       newValue,
+            Duration: transition.duration,
+        });
+    }
+
+    test('value swap snaps when no transition is configured', () => {
+        reset();
+        setupClock();
+        registerSchemeTransitionAnimator(numberAnimatorFactory);
+
+        const root = new TestPanel();
+        root.Resources.Set('Brush', 10);
+        const leaf = new TargetLeaf();
+        root.AddChild(leaf);
+        leaf._set_property_value_by_name('Brush', DynamicResource(leaf, 'Brush'));
+
+        root.Resources.Set('Brush', 20);
+        assert.equal(leaf.Brush, 20, 'no SchemeTransition → snap');
+        reset();
+    });
+
+    test('value swap snaps when no factory is registered', () => {
+        reset();
+        setupClock();
+        ThemeManager.Current.SchemeTransition = { duration: 100 };
+
+        const root = new TestPanel();
+        root.Resources.Set('Brush', 10);
+        const leaf = new TargetLeaf();
+        root.AddChild(leaf);
+        leaf._set_property_value_by_name('Brush', DynamicResource(leaf, 'Brush'));
+
+        root.Resources.Set('Brush', 20);
+        assert.equal(leaf.Brush, 20, 'no factory → snap');
+        reset();
+    });
+
+    test('value swap snaps when transition.tokens is "none"', () => {
+        reset();
+        setupClock();
+        registerSchemeTransitionAnimator(numberAnimatorFactory);
+        ThemeManager.Current.SchemeTransition = { duration: 100, tokens: 'none' };
+
+        const root = new TestPanel();
+        root.Resources.Set('Brush', 10);
+        const leaf = new TargetLeaf();
+        root.AddChild(leaf);
+        leaf._set_property_value_by_name('Brush', DynamicResource(leaf, 'Brush'));
+
+        root.Resources.Set('Brush', 20);
+        assert.equal(leaf.Brush, 20, 'tokens=none short-circuits the factory');
+        reset();
+    });
+
+    test('value swap snaps when factory returns undefined for the pair', () => {
+        reset();
+        setupClock();
+        // Factory returns undefined for everything — exercises the
+        // "factory can't animate this pair" path.
+        registerSchemeTransitionAnimator(() => undefined);
+        ThemeManager.Current.SchemeTransition = { duration: 100 };
+
+        const root = new TestPanel();
+        root.Resources.Set('Brush', 10);
+        const leaf = new TargetLeaf();
+        root.AddChild(leaf);
+        leaf._set_property_value_by_name('Brush', DynamicResource(leaf, 'Brush'));
+
+        root.Resources.Set('Brush', 20);
+        assert.equal(leaf.Brush, 20, 'factory returned undefined → snap');
+        reset();
+    });
+
+    test('initial resolution always snaps (no oldValue to animate from)', () => {
+        reset();
+        setupClock();
+        registerSchemeTransitionAnimator(numberAnimatorFactory);
+        ThemeManager.Current.SchemeTransition = { duration: 100 };
+
+        const root = new TestPanel();
+        root.Resources.Set('Brush', 7);
+        const leaf = new TargetLeaf();
+        root.AddChild(leaf);
+        leaf._set_property_value_by_name('Brush', DynamicResource(leaf, 'Brush'));
+        assert.equal(leaf.Brush, 7, 'first resolve is a snap regardless of policy');
+        reset();
+    });
+
+    test('value swap with transition + factory drives the animation through the watcher', () => {
+        reset();
+        const clock = setupClock();
+        registerSchemeTransitionAnimator(numberAnimatorFactory);
+        ThemeManager.Current.SchemeTransition = { duration: 100 };
+
+        const root = new TestPanel();
+        root.Resources.Set('Brush', 10);
+        const leaf = new TargetLeaf();
+        root.AddChild(leaf);
+        leaf._set_property_value_by_name('Brush', DynamicResource(leaf, 'Brush'));
+        assert.equal(leaf.Brush, 10);
+
+        // Trigger the swap — animation begins at t=0 with animated slot
+        // pinned at From=10. Consumer sees the start value, not the
+        // post-swap snap.
+        root.Resources.Set('Brush', 20);
+        assert.equal(leaf.Brush, 10, 'at t=0 the animated slot is From');
+
+        // Mid-animation — linear progress=0.5 → 15.
+        clock.Tick(50);
+        assert.equal(leaf.Brush, 15, 'mid-animation interpolated value');
+
+        // End of animation — FillBehavior.Stop releases the slot,
+        // LocalValue=20 surfaces.
+        clock.Tick(50);
+        assert.equal(leaf.Brush, 20, 'after animation completes the LocalValue surfaces');
+        reset();
+    });
+
+    test('back-to-back swaps mid-animation: the prior storyboard is stopped, a new one begins', () => {
+        reset();
+        const clock = setupClock();
+        registerSchemeTransitionAnimator(numberAnimatorFactory);
+        ThemeManager.Current.SchemeTransition = { duration: 100 };
+
+        const root = new TestPanel();
+        root.Resources.Set('Brush', 0);
+        const leaf = new TargetLeaf();
+        root.AddChild(leaf);
+        leaf._set_property_value_by_name('Brush', DynamicResource(leaf, 'Brush'));
+
+        root.Resources.Set('Brush', 100);
+        clock.Tick(50);
+        assert.equal(leaf.Brush, 50, 'first animation halfway');
+
+        // Mid-flight, swap again. The factory's `oldValue` is the
+        // CURRENT effective value (mid-animation = 50, not the prior
+        // LocalValue 100), so the new animation tweens From=50 To=0 —
+        // continuous from where we were.
+        root.Resources.Set('Brush', 0);
+        assert.equal(leaf.Brush, 50, 'new animation begins continuously from the mid-flight value');
+
+        clock.Tick(50);
+        assert.equal(leaf.Brush, 25, 'halfway between 50 and 0');
+        clock.Tick(50);
+        assert.equal(leaf.Brush, 0, 'final value surfaces');
+        reset();
+    });
+
+    test('PrefersReducedMotion on the active root gates the transition off', () => {
+        reset();
+        setupClock();
+        registerSchemeTransitionAnimator(numberAnimatorFactory);
+        ThemeManager.Current.SchemeTransition = { duration: 100 };
+
+        // ThemeManager reads PrefersReducedMotion from Application.current
+        // .Resources.Root — wire up that chain so the gate engages.
+        const app  = new Application();
+        const root = new TestPanel();
+        Application.current = app;
+        app.Resources.Root = root;
+        SetPrefersReducedMotion(root, true);
+
+        root.Resources.Set('Brush', 10);
+        const leaf = new TargetLeaf();
+        root.AddChild(leaf);
+        leaf._set_property_value_by_name('Brush', DynamicResource(leaf, 'Brush'));
+
+        root.Resources.Set('Brush', 20);
+        assert.equal(leaf.Brush, 20, 'a11y override snaps');
+        assert.equal(AnimationManager.Instance.ActiveCount, 0,
+            'no storyboard was registered');
+        reset();
+    });
+
+    test('replacing the DynamicResource binding stops the in-flight storyboard', () => {
+        reset();
+        const clock = setupClock();
+        registerSchemeTransitionAnimator(numberAnimatorFactory);
+        ThemeManager.Current.SchemeTransition = { duration: 100 };
+
+        const root = new TestPanel();
+        root.Resources.Set('Brush', 0);
+        const leaf = new TargetLeaf();
+        root.AddChild(leaf);
+        leaf._set_property_value_by_name('Brush', DynamicResource(leaf, 'Brush'));
+
+        root.Resources.Set('Brush', 100);
+        clock.Tick(50);
+        assert.equal(leaf.Brush, 50);
+        assert.equal(AnimationManager.Instance.ActiveCount, 1);
+
+        // Replace the binding with a direct local write. The previous
+        // binding's dispose stops the storyboard.
+        leaf._set_property_value_by_name('Brush', 999);
+        assert.equal(AnimationManager.Instance.ActiveCount, 0,
+            'disposing the binding cancels the storyboard');
+        assert.equal(leaf.Brush, 999);
+        reset();
     });
 });

@@ -51,7 +51,11 @@ export {
     type ResourceChangeListener,
     type ResourceKey,
 } from './resource-dictionary.js';
-export { Application, type MountableTarget } from './application.js';
+export {
+    Application,
+    type ApplicationInitOptions,
+    type MountableTarget,
+} from './application.js';
 export { DynamicResource } from './dynamic-resource.js';
 export { DataContextBinding } from './data-context-binding.js';
 export { ElementNameBinding } from './element-name-binding.js';
@@ -146,10 +150,13 @@ export {
     ThemeManager,
     defineScheme,
     defineTheme,
+    getSchemeTransitionAnimator,
+    registerSchemeTransitionAnimator,
     type ActivateThemeOptions,
     type AutoSchemeOptions,
     type SchemeOptions,
     type SchemeTransition,
+    type SchemeTransitionAnimatorFactory,
     type ThemeOptions,
     type TokenCatalog,
     type TokenSpec,

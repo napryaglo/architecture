@@ -11,7 +11,6 @@ import {
     type KeyEventArgs,
 } from '../runtime/index.js';
 import { Brush } from '../visual-engine/index.js';
-import { ensureControlsTheme } from './default-resources.js';
 import { Orientation } from './stack-panel.js';
 import { Theme } from './theme.js';
 import { Thumb, type DragDeltaEventArgs, type DragStartedEventArgs, type DragCompletedEventArgs } from './thumb.js';
@@ -60,7 +59,6 @@ export class Splitter extends Thumb
 
     static {
         Model.OverrideMetadata(Splitter, Visual.DefaultStyleKeyKey, { default_value: Splitter });
-        ensureControlsTheme();
     }
 
     private _resizeTarget: Visual | undefined;

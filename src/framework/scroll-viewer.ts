@@ -11,7 +11,6 @@ import {
     type WheelEventArgs,
 } from '../runtime/index.js';
 import { ContentControl } from './content-control.js';
-import { ensureControlsTheme } from '../Basic/default-resources.js';
 import { ScrollBar } from '../Basic/scroll-bar.js';
 import { ScrollContentPresenter } from '../Basic/scroll-content-presenter.js';
 import { Orientation } from '../Basic/stack-panel.js';
@@ -134,7 +133,6 @@ export class ScrollViewer extends ContentControl
 
     static {
         Model.OverrideMetadata(ScrollViewer, Visual.DefaultStyleKeyKey, { default_value: ScrollViewer });
-        ensureControlsTheme();
     }
 
     // ── Template parts ──────────────────────────────────────────────

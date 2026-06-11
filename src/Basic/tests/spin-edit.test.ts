@@ -1,5 +1,6 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { initTestApp } from './test-app.js';
 
 import {
     Application,
@@ -69,7 +70,7 @@ function fixture(): {
 }
 
 describe('SpinEdit — defaults', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('Default Value is 0, DecimalPlaces=0, SmallChange=1, LargeChange=10', () => {
         const sp = new SpinEdit();
@@ -87,7 +88,7 @@ describe('SpinEdit — defaults', () => {
 });
 
 describe('SpinEdit — buttons', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('Click ▴ increments by SmallChange', () => {
         const { sp, target, up } = fixture();
@@ -153,7 +154,7 @@ describe('SpinEdit — buttons', () => {
 });
 
 describe('SpinEdit — keyboard', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('ArrowUp increments by SmallChange (intercepted in tunnel)', () => {
         const { sp, target, inner } = fixture();
@@ -213,7 +214,7 @@ describe('SpinEdit — keyboard', () => {
 });
 
 describe('SpinEdit — Text commit', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('Enter commits the inner Text into Value', () => {
         const { sp, target, inner } = fixture();
@@ -293,7 +294,7 @@ describe('SpinEdit — Text commit', () => {
 });
 
 describe('SpinEdit — DecimalPlaces formatting + rounding', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('DecimalPlaces=2 formats the display with two decimals', () => {
         const { sp, inner } = fixture();
@@ -333,7 +334,7 @@ describe('SpinEdit — DecimalPlaces formatting + rounding', () => {
 });
 
 describe('SpinEdit — clamping + NaN', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('Value setter clamps to [Minimum, Maximum]', () => {
         const sp = new SpinEdit();
@@ -365,7 +366,7 @@ describe('SpinEdit — clamping + NaN', () => {
 });
 
 describe('SpinEdit — IsReadOnly propagation', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('IsReadOnly is forwarded to the inner TextBox', () => {
         const { sp, inner } = fixture();

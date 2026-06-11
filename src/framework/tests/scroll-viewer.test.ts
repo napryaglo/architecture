@@ -1,5 +1,6 @@
-import { test, describe } from 'node:test';
+import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { initTestApp } from '../../Basic/tests/test-app.js';
 import {
     Color,
     DataObject,
@@ -29,6 +30,8 @@ class FixedRect extends Visual
 }
 
 describe('ScrollViewer — clip-and-translate mode (plain content)', () => {
+    beforeEach(() => { initTestApp(); });
+
     test('without Content, ExtentWidth/Height are zero', () => {
         const sv = new ScrollViewer();
         sv.Measure(new Size(100, 100));
@@ -212,6 +215,8 @@ function makeStandalonePanel(items: readonly unknown[], itemHeight = 20): Virtua
 }
 
 describe('ScrollViewer — delegate mode (IScrollInfo content, e.g., VirtualizingStackPanel)', () => {
+    beforeEach(() => { initTestApp(); });
+
     test('drives the panel\'s Viewport (position + size) and reads Extent back', () => {
         const sv    = new ScrollViewer();
         const panel = makeStandalonePanel(Array.from({ length: 100 }, (_, i) => i), 20);
@@ -265,6 +270,8 @@ describe('ScrollViewer — delegate mode (IScrollInfo content, e.g., Virtualizin
 // VerticalOffset toward the cursor's edge while the cursor stays in
 // the gutter.
 describe('ScrollViewer — auto-scroll near edges during drag (8.4)', () => {
+    beforeEach(() => { initTestApp(); });
+
     function setupForAutoScroll(): { sv: ScrollViewer; session: DragSession }
     {
         const sv = new ScrollViewer();

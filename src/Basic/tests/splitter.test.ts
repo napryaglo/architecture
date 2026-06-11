@@ -1,5 +1,6 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { initTestApp } from './test-app.js';
 
 import { Application, NoModifiers, PointerButton, Rect, Size, Visual, type DrawingContext, type PointerEventInit } from '../../runtime/index.js';
 import { InputManager } from '../../framework/index.js';;
@@ -36,7 +37,7 @@ class FixedSize extends Visual
 }
 
 describe('Splitter — defaults', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('default DPs', () => {
         const s = new Splitter();
@@ -55,7 +56,7 @@ describe('Splitter — defaults', () => {
 });
 
 describe('Splitter — horizontal StackPanel resize', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('vertical splitter writes new Width to the previous sibling', () => {
         // Horizontal StackPanel: [PrevBorder(W=100), Splitter(W=8), NextBorder]
@@ -128,7 +129,7 @@ describe('Splitter — horizontal StackPanel resize', () => {
 });
 
 describe('Splitter — vertical DockPanel resize', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('horizontal splitter writes new Height to the previous sibling', () => {
         const dp = new DockPanel();
@@ -156,7 +157,7 @@ describe('Splitter — vertical DockPanel resize', () => {
 });
 
 describe('Splitter — keyboard nudges', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('ArrowRight on a vertical splitter grows the previous sibling by KeyboardIncrement', () => {
         const sp = new StackPanel();

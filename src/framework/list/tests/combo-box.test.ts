@@ -1,5 +1,6 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { initTestApp } from '../../../Basic/tests/test-app.js';
 
 import { Application, NoModifiers, PointerButton, Panel, Size, Rect, Visual, type PointerEventInit } from '../../../runtime/index.js';
 import { InputManager } from '../../../framework/index.js';;
@@ -27,7 +28,7 @@ function pointer(overrides: Partial<PointerEventInit> = {}): PointerEventInit
 class Root extends Panel { }
 
 describe('StackPanel — layout', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('Vertical: children stack top-to-bottom; width = max child width', () => {
         const sp = new StackPanel();
@@ -66,7 +67,7 @@ describe('StackPanel — layout', () => {
 });
 
 describe('ComboBox — selection model', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('SelectedIndex syncs SelectedItem and vice versa', () => {
         const cb = new ComboBox();
@@ -128,7 +129,7 @@ function popupItems(target: HeadlessTarget): readonly Visual[] {
 }
 
 describe('ComboBox — popup behaviour', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('Closed combo has only the selection box as a visual child', () => {
         const cb = new ComboBox();

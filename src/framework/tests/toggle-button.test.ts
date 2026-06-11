@@ -1,5 +1,6 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { initTestApp } from '../../Basic/tests/test-app.js';
 
 import { Application, NoModifiers, PointerButton, RelayCommand, type PointerEventInit } from '../../runtime/index.js';
 import { InputManager } from '../../framework/index.js';;
@@ -19,7 +20,7 @@ function pointer(): PointerEventInit
 }
 
 describe('ToggleButton', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('IsChecked defaults to false', () => {
         const tb = new ToggleButton();

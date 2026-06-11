@@ -1,5 +1,6 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { initTestApp } from '../../../Basic/tests/test-app.js';
 
 import { Application, NoModifiers, PointerButton, type ModifierKeys, type PointerEventInit } from '../../../runtime/index.js';
 import { InputManager } from '../../../framework/index.js';;
@@ -39,7 +40,7 @@ function buildDeclarativeFixture()
 }
 
 describe('ListBox — composed-markup tree shape', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('AddChild attaches a ListBoxItem both visually and logically', () => {
         const lb = new ListBox();
@@ -85,7 +86,7 @@ describe('ListBox — composed-markup tree shape', () => {
 });
 
 describe('ListBox — Items convenience path', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('setting Items auto-generates one ListBoxItem per source value', () => {
         const lb = new ListBox();
@@ -134,7 +135,7 @@ describe('ListBox — Items convenience path', () => {
 });
 
 describe('ListBox — selection (Single mode default)', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('plain click selects one item and exposes it via SelectedItem', () => {
         const { lb, a } = buildDeclarativeFixture();
@@ -207,7 +208,7 @@ describe('ListBox — selection (Single mode default)', () => {
 });
 
 describe('ListBox — selection (Multiple mode)', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('plain clicks toggle membership without modifiers', () => {
         const { lb, a, b, c } = buildDeclarativeFixture();
@@ -238,7 +239,7 @@ describe('ListBox — selection (Multiple mode)', () => {
 });
 
 describe('ListBox — selection (Extended mode: Ctrl + Shift)', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     function buildExtended()
     {
@@ -309,7 +310,7 @@ describe('ListBox — selection (Extended mode: Ctrl + Shift)', () => {
 });
 
 describe('ListBox — programmatic selection via DPs', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('SelectedIndex setter selects the row at that position', () => {
         const { lb, b } = buildDeclarativeFixture();
@@ -345,7 +346,7 @@ describe('ListBox — programmatic selection via DPs', () => {
 });
 
 describe('ListBox — selection change notifications', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('SelectionChanged fires on every selection-modifying click', () => {
         const { lb, a, b } = buildDeclarativeFixture();

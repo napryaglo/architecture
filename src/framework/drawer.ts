@@ -17,7 +17,6 @@ import { Border } from '../Basic/border.js';
 import { ContentPresenter } from '../Basic/content-presenter.js';
 import { Dock } from '../Basic/dock-panel.js';
 import type { ControlTemplate } from '../Basic/control-template.js';
-import { ensureControlsTheme } from '../Basic/default-resources.js';
 
 const KEY_PANE    = 'DefaultDrawerPane';
 const KEY_OVERLAY = 'DefaultDrawerOverlay';
@@ -190,7 +189,6 @@ export class Drawer extends Control
         // Registers the consolidated controls theme exactly once so
         // DefaultDrawerPane / DefaultDrawerOverlay resolve via
         // Application.ResolveDefaultResource during construction.
-        ensureControlsTheme();
     }
 
     // ── Template parts (always built; structurally wired lazily) ────

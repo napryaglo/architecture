@@ -17,7 +17,6 @@ import { Selector, SelectionMode } from './selector.js';
 import { StackPanel } from '../../Basic/stack-panel.js';
 import { TextBlock } from '../../Basic/text-block.js';
 import { Theme } from '../../Basic/theme.js';
-import { ensureControlsTheme } from '../../Basic/default-resources.js';
 
 
 
@@ -187,7 +186,6 @@ export class TreeView extends Selector
 
     static {
         Model.OverrideMetadata(TreeView, Visual.DefaultStyleKeyKey, { default_value: TreeView });
-        ensureControlsTheme();
     }
 
     // Guard for the SelectedDataItem ↔ SelectedItem feedback loop. Set
@@ -467,7 +465,6 @@ export class TreeViewItem extends ItemsControl
 
     static {
         Model.OverrideMetadata(TreeViewItem, Visual.DefaultStyleKeyKey, { default_value: TreeViewItem });
-        ensureControlsTheme();
     }
 
     // Guards the IsSelected attached↔instance mirror against recursion.

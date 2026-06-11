@@ -16,7 +16,6 @@ import { ItemsControl } from '../items-control.js';
 import { Selector } from './selector.js';
 import { StackPanel } from '../../Basic/stack-panel.js';
 import { TextBlock } from '../../Basic/text-block.js';
-import { ensureControlsTheme } from '../../Basic/default-resources.js';
 import { Theme } from '../../Basic/theme.js';
 import type { ControlTemplate } from '../../Basic/control-template.js';
 
@@ -162,7 +161,6 @@ export class ComboBoxItem extends ClickableBorder
 
     static {
         Model.OverrideMetadata(ComboBoxItem, Visual.DefaultStyleKeyKey, { default_value: ComboBoxItem });
-        ensureControlsTheme();
     }
 
     constructor()
@@ -306,7 +304,6 @@ export class ComboBoxPopupHost extends Panel
 export class ComboBoxItemList extends ItemsControl
 {
     static {
-        ensureControlsTheme();
     }
 
     // Set by ComboBox after the popup template has been applied — the
@@ -422,7 +419,6 @@ export class ComboBox extends Selector
         // Registers the consolidated controls theme exactly once so
         // DefaultComboBoxSelection / DefaultComboBoxPopup resolve via
         // Application.ResolveDefaultResource during construction.
-        ensureControlsTheme();
     }
 
     // ── Template parts ─────────────────────────────────────────────

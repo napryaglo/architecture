@@ -1,5 +1,6 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { initTestApp } from './test-app.js';
 
 import { Application, NoModifiers, PointerButton, Rect, Size, type KeyEventInit, type ModifierKeys, type PointerEventInit } from '../../runtime/index.js';
 import { InputManager } from '../../framework/index.js';;
@@ -46,7 +47,7 @@ function horizontalAt200(): { sl: Slider; track: ReturnType<Slider['Track' & key
 }
 
 describe('Slider — defaults', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('default Orientation=Horizontal, Min=0, Max=1, Value=0', () => {
         const sl = new Slider();
@@ -79,7 +80,7 @@ describe('Slider — defaults', () => {
 });
 
 describe('Slider — horizontal thumb geometry', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('Value=Min → thumb at the left edge of the track', () => {
         const { sl } = horizontalAt200();
@@ -122,7 +123,7 @@ describe('Slider — horizontal thumb geometry', () => {
 });
 
 describe('Slider — vertical thumb geometry (Min at bottom)', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     function verticalAt200(): Slider {
         const sl = new Slider();
@@ -150,7 +151,7 @@ describe('Slider — vertical thumb geometry (Min at bottom)', () => {
 });
 
 describe('Slider — clamping', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('Out-of-range Value writes are preserved on the DP, painted clamped', () => {
         const { sl } = horizontalAt200();
@@ -182,7 +183,7 @@ describe('Slider — clamping', () => {
 });
 
 describe('Slider — keyboard', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     function focused(): { sl: Slider; im: InputManager } {
         const sl = new Slider();
@@ -245,7 +246,7 @@ describe('Slider — keyboard', () => {
 });
 
 describe('Slider — pointer interaction', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('Dragging the thumb moves Value proportionally to the pointer delta', () => {
         const { sl, thumb } = horizontalAt200();
@@ -311,7 +312,7 @@ describe('Slider — pointer interaction', () => {
 });
 
 describe('Slider — ValueChanged listeners', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('Listener fires with the committed value on every change', () => {
         const sl = new Slider();

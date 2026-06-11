@@ -2,7 +2,7 @@
 
 Open gaps in the property/binding/control system compared to WPF. Closed items moved to [completed-backlog.md](completed-backlog.md) — section numbers preserved across both files so cross-references survive.
 
-**Status:** Property / binding / inheritance / layout / render pipeline is feature-complete for WPF parity; the concrete-control roster covers Border, Grid (with shared-size groups), StackPanel, WrapPanel, DockPanel, Canvas, UniformGrid, VirtualizingStackPanel, VirtualizingWrapPanel, Button, ToggleButton, TextBlock, TextBox, ComboBox, ListBox, TreeView, Slider, SpinEdit, ScrollBar, ScrollViewer, ContentControl, ItemsControl, ControlTemplate, DataTemplate, Drawer, PageView, Diagram (with Selector-based multi-select + marquee), Thumb, Splitter, GridSplitter, ToolBar (+ ToolBarButton / ToolBarToggleButton / ToolBarSeparator with overflow popup), Menu / MenuButton / MenuItem / MenuSeparator (hamburger fly-out), ContextMenu (attached DP + right-click auto-open), and shapes (Ellipse, Line). 5.3 `Dispatcher` / thread affinity dropped — N/A for single-threaded JS. Test suite: 1650 tests passing.
+**Status:** Property / binding / inheritance / layout / render pipeline is feature-complete for WPF parity; the concrete-control roster covers Border, Grid (with shared-size groups), StackPanel, WrapPanel, DockPanel, Canvas, UniformGrid, VirtualizingStackPanel, VirtualizingWrapPanel, Button, ToggleButton, TextBlock, TextBox, ComboBox, ListBox, TreeView, Slider, SpinEdit, ScrollBar, ScrollViewer, ContentControl, ItemsControl, ControlTemplate, DataTemplate, Drawer, PageView, Diagram (with Selector-based multi-select + marquee), Thumb, Splitter, GridSplitter, ToolBar (+ ToolBarButton / ToolBarToggleButton / ToolBarSeparator with overflow popup), Menu / MenuButton / MenuItem / MenuSeparator (hamburger fly-out), ContextMenu (attached DP + right-click auto-open), and shapes (Ellipse, Line). Two-level Theme + Scheme architecture shipped — Material Theme with Light/Dark Schemes, six adaptive inherited DPs, opt-in `SchemeTransition` animation for Brush tokens via the DynamicResource hook. 5.3 `Dispatcher` / thread affinity dropped — N/A for single-threaded JS. Test suite: 1708 tests passing.
 
 ## 5. Architectural gaps
 
@@ -101,7 +101,7 @@ From [templating.md § 9](src/document/templating.md).
 
 From [resources.md § 6](src/document/resources.md).
 
-12.1. **`DynamicResource` re-wiring on host re-parent.** `DynamicResource` walks the host's ancestor chain ONCE at construction and subscribes to every `Resources` dict it finds. Re-parenting the host afterwards, or an ancestor first-accessing its `Resources` (allocating its dict) after the DynamicResource was already built, doesn't re-wire. Covers the common case of consuming resources from a fixed Application / Window / templated control; not the case of moving controls between resource scopes at runtime.
+12.1. **`DynamicResource` re-wiring on first-access mid-life.** Host re-parent re-wires (Attach/Detach drive `refresh_dynamic_resources_subtree`), so moving Visuals between resource scopes at runtime works. Remaining gap: an ancestor that first-accesses its `Resources` (lazily allocating its dict) AFTER a descendant's `DynamicResource` was already built — without a tree mutation in between — doesn't get subscribed to. Common shapes hit the closed paths; this one is exotic.
 
 12.2. **`MergedDictionaries.Source` URI loading.** Consumers populate resource dictionaries imperatively or via `.mu`. No built-in "load this .mu / JSON / file at this URI" path.
 
@@ -139,4 +139,34 @@ From [attached-properties-design.md § 8](src/document/attached-properties-desig
 A genuine gap: there's no time-driven property animation today. Needed before several other backlog items become actionable (7.3 `EventTrigger`, 7.4 `EnterActions/ExitActions`, 10.5 smooth scrolling).
 
 16.1. **Animation framework.** `Storyboard`, `DoubleAnimation`, `ColorAnimation`, `AnimationTimeline` — the WPF shape, or a simpler primitive: a per-property tween scheduled via rAF that writes through the DP system at the Animated tier of the value-priority ladder (already reserved in [property-system.md § 3](src/document/property-system.md)). Large item — design first.
+
+---
+
+## 17. Theme system follow-ups
+
+The two-level (Theme + Scheme) architecture shipped — see [theme-architecture.md](theme-architecture.md), [theme-authoring.md](src/document/theme-authoring.md). Material Theme + Light/Dark Schemes are live, the `tokens { … }` catalog is compiler-validated, adaptive DPs (Density / ViewportClass / Pointer / PrefersContrast / PrefersReducedMotion / PrefersColorScheme) cascade through the tree, and SchemeTransition animates `SolidColorBrush` token swaps via DynamicResource. These items are the residual gaps.
+
+17.1. **`Visual.Scheme` / `Visual.Theme` inherited DPs.** Spec § Slice 3 called for these alongside the six adaptive DPs — they never landed ([src/runtime/adaptive.ts](src/runtime/adaptive.ts) only exposes Density, ViewportClass, Pointer, PrefersContrast, PrefersReducedMotion, PrefersColorScheme). Without them, subtree `Scheme=@MaterialDark` overrides don't actually exist; every consumer reads from the global `Application.Resources` merge. Wiring requires the inherited DPs + a `DynamicResource` re-resolve when the nearest-ancestor `Scheme` value changes (so descendants see Theme A's templates against Theme B's scheme on the local subtree). Pairs with 17.2.
+
+17.2. **Cross-theme scheme reuse at runtime.** Spec settled on **authoring-only** via `defineScheme({ basedOn: '<theme>.<scheme>' })`. A runtime mode pairing Theme A's templates with Theme B's scheme — useful for design-system A/B previews or skin-only branding — is open. Pairs with 17.1.
+
+17.3. **SchemeTransition: non-Brush token animators.** The DynamicResource hook (`registerSchemeTransitionAnimator` in [src/runtime/theme.ts](src/runtime/theme.ts)) is type-agnostic; only `SolidColorBrush` has a registered factory ([src/visual-engine/solid-color-brush-animation.ts](src/visual-engine/solid-color-brush-animation.ts)). CornerRadius / Thickness / number / Typography tokens snap regardless. `tokens: 'all'` is therefore silently equivalent to `'brushes-only'` until per-type factories land. Each new factory needs an `interpolate*` helper (most already exist for the matching animation timeline) and the right "rebuild a frame's value" shape.
+
+17.4. **SchemeTransition for inherited DP changes.** Pre-deferred in [theme-architecture.md § Deferred](theme-architecture.md#deferred-topics-own-brainstorms): tween spacing values when `Density` flips, similar token-swap semantics but driven off an inherited DP rather than an `Application.Resources` mutation. Requires extending the animator hook to also wrap inherited-DP transitions, or a parallel mechanism on the DP plumbing.
+
+17.5. **Container queries.** Per-element responsive observers ("when *this* container is narrower than X, restyle"). Pre-deferred in [theme-architecture.md § Deferred](theme-architecture.md#deferred-topics-own-brainstorms). Needs one `ResizeObserver` per container; concrete demand absent.
+
+17.6. **`Theme.ApplyTo` as attached property.** Subtree theme swap via an attached DP rather than `Visual.Theme` write. Pre-deferred in [theme-architecture.md § Deferred](theme-architecture.md#deferred-topics-own-brainstorms); revisit if a concrete side-by-side full-design-language preview consumer appears. Pairs with 17.1.
+
+17.7. **Adaptive trigger coverage gaps.** Density + Pointer + PrefersContrast triggers shipped on `Button`, `Outlined`, `MenuButton` ([src/Basic/basic.template.mu](src/Basic/basic.template.mu), [src/framework/menu/surface.template.mu](src/framework/menu/surface.template.mu)). Missing on: `ToolBarButton` / `ToolBarToggleButton`, `ToggleButton`, `ComboBox` (popup + selection), `Slider` thumb, `SpinEdit`, `ScrollBar` thumb, `TextBox`, `TreeView` rows, `ListBox` rows, `MenuItem` rows. Each needs `when(Density=Compact)` / `when(Density=Comfortable)` / `when(Pointer=Coarse)` Padding/Size setters per M3 spec.
+
+17.8. **ViewportClass structural swap — Menu → Drawer on Mobile.** Slice 4 scope from the theme spec. `Menu` / `ContextMenu` should retemplate to a drawer-shaped surface when `ViewportClass=Mobile`. The drawer-shaped `MenuPopup` template never landed; pairs naturally with the existing `Drawer` control. Spec also names this as the canonical demo of the structural-fluid responsive tier.
+
+17.9. **Configurable viewport breakpoints.** `M3_BREAKPOINTS` in [src/runtime/adaptive.ts](src/runtime/adaptive.ts) is hard-coded (Mobile ≤ 600, Tablet 600–840, Desktop > 840). Spec called for `ThemeManager.Breakpoints = { mobile, tablet }` as a configurable knob so apps can shift the cutovers without forking the framework. Mechanical add — a constant becomes a getter on `ThemeManager` that `MediaWatcher` consults on resize.
+
+17.10. **`Typography` value class + per-scheme typography swaps.** Slice 5 scope; never landed. Schemes today inline typography token entries from a sibling `Typography.Clone()` dict; the proper shape is a `Typography` Model with `family / size / weight / lineHeight / tracking` DPs that can be authored in `.mu` value position (e.g. `@BodyMedium = Typography { Family: "Roboto" Size: 14 Weight: 400 LineHeight: 20 }`). Template references like `Style = @BodyMedium` fan out to TextBlock at apply time. LineHeight DP itself (Slice 5's prerequisite) shipped — see [src/Basic/text-block.ts](src/Basic/text-block.ts).
+
+17.11. **Hard-deprecation pathway for legacy `SetTheme` / `CurrentTheme` / `ToggleTheme`.** These survive as aliases over `ThemeManager.Current.ActivateScheme` / `ActiveScheme`. The "keep forever" answer was leaning at spec time; alternative is a deprecation warning gate followed by removal. Open until a concrete reason to choose one over the other appears.
+
+17.12. **Material theme: ContextualGroup adaptive triggers + auxiliary surfaces.** Once 5.11.3 (Ribbon) lands, the Material Theme needs to define its Ribbon templates + tokens. Separate from the framework gap in 5.11.3 — this is the Theme-side authoring once the controls exist.
 

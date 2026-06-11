@@ -14,7 +14,6 @@ import {
 } from '../runtime/index.js';
 import { Brush } from '../visual-engine/index.js';
 import { Grid, GridLength } from './grid.js';
-import { ensureControlsTheme } from './default-resources.js';
 import { Theme } from './theme.js';
 import { Thumb, type DragDeltaEventArgs, type DragStartedEventArgs, type DragCompletedEventArgs } from './thumb.js';
 
@@ -97,7 +96,6 @@ export class GridSplitter extends Thumb
 
     static {
         Model.OverrideMetadata(GridSplitter, Visual.DefaultStyleKeyKey, { default_value: GridSplitter });
-        ensureControlsTheme();
     }
 
     // Snapshot taken on DragStarted so the drag stays consistent even

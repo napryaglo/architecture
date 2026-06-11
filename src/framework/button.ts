@@ -12,7 +12,6 @@ import {
 } from '../framework/commands/command-source.js';
 import { ContentControl } from './content-control.js';
 import { TextBlock } from '../Basic/text-block.js';
-import { ensureControlsTheme } from '../Basic/default-resources.js';
 import { Theme } from '../Basic/theme.js';
 
 // When the Click event fires. WPF parity: Release is the default
@@ -108,7 +107,6 @@ export class Button extends ContentControl implements ICommandSource
         // Ensures the consolidated controls theme — which holds the
         // Button ControlTemplate keyed by the Button class function —
         // is registered with Application exactly once.
-        ensureControlsTheme();
     }
 
     private readonly _clickHandlers: ClickHandler[] = [];

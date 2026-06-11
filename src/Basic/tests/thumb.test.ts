@@ -1,5 +1,6 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { initTestApp } from './test-app.js';
 
 import { Application, NoModifiers, PointerButton, Rect, Size, type KeyEventInit, type PointerEventInit } from '../../runtime/index.js';
 import { InputManager } from '../../framework/index.js';;
@@ -39,7 +40,7 @@ function makeThumb(): Thumb
 }
 
 describe('Thumb — defaults', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('IsDragging defaults to false', () => {
         const t = new Thumb();
@@ -58,7 +59,7 @@ describe('Thumb — defaults', () => {
 });
 
 describe('Thumb — drag lifecycle', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('PointerDown fires DragStarted with the press offset INSIDE the thumb', () => {
         const t = makeThumb();

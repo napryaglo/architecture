@@ -8,7 +8,6 @@ import {
 import { PresentationTarget } from '../../visual-engine/index.js';
 import { ItemsControl } from '../items-control.js';
 import { Border } from '../../Basic/border.js';
-import { ensureSurfaceTheme } from './default-surface-resources.js';
 import { MenuItem, MenuPopupHost } from './menu-strip.js';
 import { ClickAwayScrim } from '../tool-bar/tool-bar.js';
 
@@ -70,7 +69,6 @@ export class ContextMenu extends ItemsControl
         // Theme-style lookup key for the default Style — pulled in by
         // applyDefaultStyle() in the ctor.
         Model.OverrideMetadata(ContextMenu, Visual.DefaultStyleKeyKey, { default_value: ContextMenu });
-        ensureSurfaceTheme();
     }
 
     constructor()

@@ -5,7 +5,11 @@ import {
     MetaData,
     Model,
     Panel,
+    ResourceDictionary,
+    Scheme,
     Size,
+    Theme,
+    ThemeManager,
     Visual,
     type DrawingContext,
     type MountableTarget,
@@ -150,5 +154,145 @@ describe('Application — resource-walk fallback', () => {
         assert.equal(leaf.TryFindResource('OnlyAtApp'), 42);
         assert.equal(leaf.TryFindResource('Other'),    'something-else');
         assert.equal(leaf.TryFindResource('Missing'),  undefined);
+    });
+});
+
+describe('Application.initialize', () => {
+    // Fresh manager + app per test — initialize is stateful (flips
+    // IsInitialized to true) and ThemeManager activates merge into
+    // Application.Resources. Cross-test leak would mask real bugs.
+    beforeEach(() => {
+        ThemeManager._resetForTesting();
+        Application._resetDefaultThemeForTesting();
+        Application.current = null;
+    });
+
+    // Tiny test theme — emulates a compiler-emitted theme class
+    // shape so the test exercises the same code path Material does
+    // without pulling in the visual-engine cycle.
+    class TinyLight extends Scheme
+    {
+        public static readonly instance: TinyLight = new TinyLight();
+        private constructor()
+        {
+            super({ name: 'TinyLight', theme: 'Tiny', tokens: { Token: 'L' } });
+        }
+    }
+    class TinyDark extends Scheme
+    {
+        public static readonly instance: TinyDark = new TinyDark();
+        private constructor()
+        {
+            super({ name: 'TinyDark', theme: 'Tiny', tokens: { Token: 'D' } });
+        }
+    }
+    class Tiny extends Theme
+    {
+        public static readonly instance: Tiny = new Tiny();
+        private constructor()
+        {
+            super({
+                name:           'Tiny',
+                dictionaries:   [new ResourceDictionary()],
+                catalog:        new Map([['Token', { type: 'string' }]]),
+                schemes:        [TinyLight.instance, TinyDark.instance],
+                defaultScheme:  'TinyLight',
+            });
+        }
+        public static override Activate(scheme?: typeof Scheme): void
+        {
+            const target = scheme ?? TinyLight;
+            ThemeManager.Current.ActivateTheme(Tiny.instance.name, { scheme: target.name });
+        }
+    }
+
+    function registerTiny(): void
+    {
+        if (ThemeManager.Current.GetTheme('Tiny') === undefined)
+        {
+            ThemeManager.Current.RegisterTheme(Tiny.instance);
+        }
+    }
+
+    test('fresh Application is not yet initialized', () => {
+        const app = new Application();
+        assert.equal(app.IsInitialized, false);
+    });
+
+    test('initialize() with no options flips IsInitialized to true and activates the registered default theme', () => {
+        registerTiny();
+        Application.RegisterDefaultTheme(Tiny);
+        const app = new Application();
+        app.initialize();
+        assert.equal(app.IsInitialized, true);
+        assert.equal(ThemeManager.Current.ActiveTheme?.name, 'Tiny',
+            'default theme is activated implicitly');
+    });
+
+    test('initialize() with no options and no registered default is a quiet no-op', () => {
+        const app = new Application();
+        app.initialize();
+        assert.equal(app.IsInitialized, true);
+        assert.equal(ThemeManager.Current.ActiveTheme, undefined);
+    });
+
+    test('initialize({ theme }) activates the theme via its static Activate', () => {
+        registerTiny();
+        const app = new Application();
+        app.initialize({ theme: Tiny });
+        assert.equal(app.IsInitialized, true);
+        assert.equal(ThemeManager.Current.ActiveTheme?.name, 'Tiny');
+        assert.equal(ThemeManager.Current.ActiveScheme?.name, 'TinyLight',
+            'omitted scheme falls back to the theme DefaultScheme');
+        assert.equal(app.Resources.Resolve('Token'), 'L',
+            'theme tokens are merged into the application resource chain');
+    });
+
+    test('initialize({ theme, scheme }) activates the named scheme', () => {
+        registerTiny();
+        const app = new Application();
+        app.initialize({ theme: Tiny, scheme: TinyDark });
+        assert.equal(ThemeManager.Current.ActiveScheme?.name, 'TinyDark');
+        assert.equal(app.Resources.Resolve('Token'), 'D');
+    });
+
+    test('initialize is idempotent — repeat calls are no-ops', () => {
+        registerTiny();
+        const app = new Application();
+        app.initialize({ theme: Tiny, scheme: TinyDark });
+        app.initialize({ theme: Tiny, scheme: TinyLight });
+        assert.equal(ThemeManager.Current.ActiveScheme?.name, 'TinyDark',
+            'second initialize did not re-activate');
+    });
+
+    test('RegisterDefaultTheme is first-wins', () => {
+        registerTiny();
+        Application.RegisterDefaultTheme(Tiny);
+        // Build a second theme; registering it should NOT replace Tiny
+        // as the default. The Theme ctor's scheme/theme cross-check
+        // requires this theme's scheme to target itself, so build a
+        // standalone scheme.
+        class OtherLight extends Scheme {
+            public static readonly instance: OtherLight = new OtherLight();
+            private constructor() {
+                super({ name: 'OtherLight', theme: 'Other', tokens: { Token: '_' } });
+            }
+        }
+        class Other extends Theme {
+            public static readonly instance: Other = new Other();
+            private constructor() {
+                super({
+                    name: 'Other',
+                    dictionaries: [],
+                    catalog: new Map([['Token', { type: 'string' }]]),
+                    schemes: [OtherLight.instance],
+                    defaultScheme: 'OtherLight',
+                });
+            }
+            public static override Activate(): void { /* unused */ }
+        }
+        Application.RegisterDefaultTheme(Other);
+        assert.equal(Application.DefaultTheme, Tiny,
+            'first registered theme remains the default');
     });
 });

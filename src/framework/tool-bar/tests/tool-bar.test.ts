@@ -1,12 +1,13 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { initTestApp } from '../../../Basic/tests/test-app.js';
 
 import { Application, RelayCommand, Size } from '../../../runtime/index.js';
 import { ToolBar, ToolBarPanel } from '../tool-bar.js';
 import { ToolBarButton, ToolBarSeparator } from '../tool-bar-items.js';
 
 describe('ToolBar — items + overflow', () => {
-    beforeEach(() => { Application.current = null; });
+    beforeEach(() => { initTestApp(); });
 
     test('ToolBar instantiates with an empty Items collection', () => {
         const tb = new ToolBar();

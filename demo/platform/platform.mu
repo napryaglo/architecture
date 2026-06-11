@@ -1,5 +1,7 @@
 import GroupVM from "./platform-vm.mjs"
 import AdornerDecorator from "@visualisation-sub/mural/Basic"
+import Material from "@visualisation-sub/mural/resources/material"
+import MaterialLight from "@visualisation-sub/mural/resources/material"
 
 // platform.mu — MVVM shell for the µ-mural demo platform.
 //
@@ -27,7 +29,7 @@ import AdornerDecorator from "@visualisation-sub/mural/Basic"
 // size on every browser resize, and the resulting Measure / Arrange
 // flushes propagate to the entire shell automatically.
 
-Application{
+Application[Theme = Material, Scheme = MaterialLight] {
     resources: {
         // Colours come from the Material 3 palette (registered by the
         // host bootstrap via SetTheme). References like @Surface /
