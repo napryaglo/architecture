@@ -1,5 +1,5 @@
-import { MetaData, Model, Point, Size, Visual, type DrawingContext } from '../runtime/index.js';
-import { Brush, EllipseGeometry, Pen } from '../visual-engine/index.js';
+import { MetaData, Model, Point, Size, Visual, type DrawingContext } from '../../runtime/index.js';
+import { Brush, EllipseGeometry, Pen } from '../../visual-engine/index.js';
 
 // Ellipse shape — fills its arranged rect with an ellipse, optionally
 // stroked. WPF parity: same DPs (Fill, Stroke, StrokeThickness), same

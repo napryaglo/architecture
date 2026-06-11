@@ -1,8 +1,13 @@
-// Material 3 theme barrel — re-exports the runtime API
-// (SetTheme / CurrentTheme / ToggleTheme). The compiled token
-// dictionaries (light.mu.js, dark.mu.js) are pulled in by material.ts
-// itself; consumers don't import them directly.
+// Material 3 theme barrel.
+//
+// Exports the compiler-emitted Theme / Scheme classes (Material,
+// MaterialLight, MaterialDark) so consumer .mu files can write
+// `Application[Theme = Material, Scheme = MaterialLight]`, plus the
+// legacy SetTheme / CurrentTheme / ToggleTheme helpers.
 export {
+    Material,
+    MaterialLight,
+    MaterialDark,
     SetTheme,
     CurrentTheme,
     ToggleTheme,

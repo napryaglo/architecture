@@ -55,6 +55,16 @@ export enum TextAlignment
 // "TextElement.FontSize on a Window" pattern.
 export class TextBlock extends Visual
 {
+    static
+    {
+        // Type-keyed default Style lookup — `Style [TargetType=TextBlock]`
+        // in basic.resources.mu binds Foreground / FontFamily to the
+        // active theme tokens via DynamicResource so a theme switch
+        // re-tints every untemplated TextBlock without consumers having
+        // to set Foreground=@OnSurface on every instance.
+        Model.OverrideMetadata(TextBlock, Visual.DefaultStyleKeyKey, { default_value: TextBlock });
+    }
+
     // Each of these changes the painted glyph stream, so both Measure
     // (size changes with content / weight / size) AND Render (we must
     // repaint to show the new pixels) are needed. The renderer's
@@ -96,6 +106,13 @@ export class TextBlock extends Visual
     constructor(text?: string)
     {
         super();
+        // Eager default-Style resolution so Foreground / FontFamily
+        // bindings to the active theme are in place before the first
+        // paint — same pattern as MenuSeparator / StatusBarSeparator.
+        // Falls through silently when no theme is active (tests,
+        // bootstrap-before-Application.initialize); a later
+        // refresh_styles_subtree on attach picks it up then.
+        this.applyDefaultStyle();
         if (text !== undefined) this.Text = text;
     }
 
@@ -218,13 +235,14 @@ export class TextBlock extends Visual
 
     protected override RenderOverride(dc: DrawingContext): void
     {
-        // When Foreground hasn't been explicitly set (DP default is
-        // undefined and no ancestor's inheritance landed a value), fall
-        // back to the active palette's OnSurface ink rather than the
-        // SVG renderer's hardcoded rgb(0,0,0). In dark mode the
-        // renderer fallback paints black-on-dark text — unreadable.
-        // Reading Theme.ink at render time means a theme swap re-paints
-        // the next time the visual is render-dirty.
+        // Foreground rides the default `Style[TargetType=TextBlock]`
+        // setter (Foreground = @OnSurface via DynamicResource) once a
+        // theme is active — a theme switch re-tints live through that
+        // path. The `?? Theme.ink` tail catches the no-Application
+        // case (test harnesses constructing a TextBlock with no
+        // active palette): Theme.ink falls through to the NEUTRAL
+        // marker brush so the render produces a visible glyph rather
+        // than the SVG renderer's hardcoded black.
         const fg = this.Foreground ?? Theme.ink;
 
         // Fallback for callers that Render without a prior Measure

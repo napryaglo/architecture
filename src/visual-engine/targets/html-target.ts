@@ -277,10 +277,23 @@ export class HtmlTarget extends PresentationTarget
             const entry = entries[0];
             if (entry === undefined) return;
             const { width, height } = entry.contentRect;
+            const sizeChanged = width !== this.Width || height !== this.Height;
+            if (!sizeChanged) return;
             this.Width = width;
             this.Height = height;
             this.surface.setAttribute('width',  String(width));
             this.surface.setAttribute('height', String(height));
+            // PresentationTarget.OnPropertyChanged is a no-op (Model
+            // default), so the Width / Height writes above don't
+            // automatically schedule a layout pass. Invalidate the
+            // Content + OverlayLayer explicitly so the next microtask
+            // Flush re-measures and re-arranges them against the new
+            // surface size. Without this the host element resizes but
+            // the Visual tree stays laid out for the old dimensions.
+            this.Content?.InvalidateMeasure();
+            this.Content?.InvalidateArrange();
+            this.OverlayRoot?.InvalidateMeasure();
+            this.OverlayRoot?.InvalidateArrange();
         });
         this.resize_observer.observe(this.host);
 

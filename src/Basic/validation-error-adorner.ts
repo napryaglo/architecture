@@ -1,6 +1,7 @@
 import {
     Adorner,
     AdornerLayer,
+    Application,
     Rect,
     Size,
     Validation,
@@ -8,7 +9,6 @@ import {
     type DrawingContext,
 } from '../runtime/index.js';
 import { Pen, SolidColorBrush } from '../visual-engine/index.js';
-import { Theme } from './theme.js';
 
 const DEFAULT_ERROR_THICKNESS = 1.5;
 
@@ -35,7 +35,7 @@ const DEFAULT_ERROR_THICKNESS = 1.5;
 export class ValidationErrorAdorner extends Adorner
 {
     private _propertyListener: (() => void) | undefined;
-    private _brush:     SolidColorBrush;
+    private _brush:     SolidColorBrush | undefined;
     private _thickness: number;
 
     constructor(adornedElement: Visual,
@@ -43,11 +43,12 @@ export class ValidationErrorAdorner extends Adorner
                 thickness: number = DEFAULT_ERROR_THICKNESS)
     {
         super(adornedElement);
-        // Theme.error resolves through Application.Resources at
-        // construction time so the chrome picks up the active palette
-        // (M3 @Error — red in both schemes, but the right brush
-        // instance keeps tone parity with the rest of the theme).
-        this._brush     = brush ?? Theme.error;
+        // Explicit consumer-supplied brush wins (LOCAL tier semantics).
+        // Otherwise leave `_brush` undefined and resolve `@Error`
+        // through Application.Resources at every render so a theme
+        // switch repaints the chrome with the new palette without
+        // requiring the adorner to re-subscribe to the dictionary.
+        this._brush     = brush;
         this._thickness = thickness;
         // The error chrome is decoration — clicks / focus must reach
         // the adorned TextBox / input so the user can still edit and
@@ -103,7 +104,18 @@ export class ValidationErrorAdorner extends Adorner
         if (!Validation.GetHasError(this.AdornedElement)) return;
         const size = this.RenderSize;
         if (size.Width <= 0 || size.Height <= 0) return;
-        const pen = new Pen(this._brush, this._thickness);
+        // Resolve @Error against the live Application.Resources at
+        // every render so theme switches re-tint the chrome without an
+        // imperative refresh / dictionary subscription. Consumer-
+        // supplied brush wins (constructor-time override).
+        let brush: SolidColorBrush | undefined = this._brush;
+        if (brush === undefined)
+        {
+            const resolved = Application.current?.Resources.Resolve('Error');
+            if (resolved instanceof SolidColorBrush) brush = resolved;
+        }
+        if (brush === undefined) return;
+        const pen = new Pen(brush, this._thickness);
         // Inset by half-thickness so the stroke sits inside the
         // adorned bounds rather than straddling them (matches Border's
         // own stroke convention).

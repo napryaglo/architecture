@@ -15,7 +15,7 @@ import { ClickAwayScrim } from '../tool-bar/tool-bar.js';
 // secondary-button click on the Visual it's attached to.
 //
 // ContextMenu IS an ItemsControl. Its DefaultStyle (registered in
-// surface.template.mu) wires:
+// framework.resources.mu) wires:
 //   * Template   = DefaultContextMenuPopup — the popup chrome
 //                  (MenuPopupHost > [Scrim, Border > ItemsPresenter])
 //   * ItemsPanel = DefaultMenuItemsPanel    — vertical StackPanel

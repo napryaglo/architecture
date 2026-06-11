@@ -1,5 +1,5 @@
-import { MetaData, Model, Rect, Size, Visual, type DrawingContext } from '../runtime/index.js';
-import { Brush, Pen, RectangleGeometry } from '../visual-engine/index.js';
+import { MetaData, Model, Rect, Size, Visual, type DrawingContext } from '../../runtime/index.js';
+import { Brush, Pen, RectangleGeometry } from '../../visual-engine/index.js';
 
 // Rectangle shape — fills its arranged rect, optionally stroked, with
 // optional corner radii. WPF parity: same DPs (Fill, Stroke,

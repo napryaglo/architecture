@@ -30,3 +30,9 @@ export {
     ContextMenu,
     ContextMenuService,
 } from './menu/context-menu.js';
+export {
+    StatusBar,
+    StatusBarItem,
+    StatusBarSeparator,
+} from './status-bar/status-bar.js';
+export { ThemeSelector } from './theme-selector/theme-selector.js';

@@ -216,7 +216,7 @@ describe('inline expressions — end-to-end', () => {
                 Border x:root[Width = {{ $A + $B * 2 }}]{}
             } }
         `, CTX) as Application;
-        const border = app.Root as Border;
+        const border = app.Resources.Root as Border;
         const model  = new M();
         model.A = 10;
         model.B = 5;
@@ -251,7 +251,7 @@ describe('inline expressions — end-to-end', () => {
                 TextBlock x:root{Hi {{ $Name }}, you have {{ $Count }} messages}
             } }
         `, CTX) as Application;
-        const tb = app.Root as TextBlock;
+        const tb = app.Resources.Root as TextBlock;
         const m  = new M();
         m.Name  = 'Alice';
         m.Count = 3;

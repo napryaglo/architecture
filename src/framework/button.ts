@@ -1,4 +1,5 @@
 import {
+    DynamicResource,
     MetaData,
     Model,
     Visual,
@@ -12,7 +13,6 @@ import {
 } from '../framework/commands/command-source.js';
 import { ContentControl } from './content-control.js';
 import { TextBlock } from '../Basic/text-block.js';
-import { Theme } from '../Basic/theme.js';
 
 // When the Click event fires. WPF parity: Release is the default
 // (visible press feedback, fire on PointerUp inside bounds), Press
@@ -27,7 +27,7 @@ export enum ClickMode
 }
 
 // Material 3 button variants. Each variant has its own ControlTemplate
-// in basic.template.mu (DefaultFilledButton, DefaultElevatedButton, …);
+// in basic.resources.mu (DefaultFilledButton, DefaultElevatedButton, …);
 // the default Button Style picks the template that matches the Variant
 // DP value via a property trigger. Setting Variant at construction
 // time is fully supported; setting it after the Style is already
@@ -95,7 +95,7 @@ export class Button extends ContentControl implements ICommandSource
     public static readonly CommandTargetKey    = Model.RegisterProperty<Visual | undefined>(  Button, 'CommandTarget',    undefined,         MetaData.None);
     public static readonly ClickModeKey        = Model.RegisterProperty<ClickMode>(           Button, 'ClickMode',        ClickMode.Release, MetaData.None);
     // Material 3 visual variant. Drives the default Style's Template-
-    // picker trigger chain in basic.template.mu. MetaData.None — the
+    // picker trigger chain in basic.resources.mu. MetaData.None — the
     // trigger system reacts to DP changes via OnPropertyChanged.
     public static readonly VariantKey          = Model.RegisterProperty<ButtonVariant>(       Button, 'Variant',          ButtonVariant.Filled, MetaData.None);
 
@@ -129,8 +129,14 @@ export class Button extends ContentControl implements ICommandSource
         // because it describes how descendant TextBlocks paint, not a
         // template-internal visual; it's conceptually a property
         // metadata default rather than markup. Triggers can't express
-        // cross-class inherited defaults, so this stays in TS.
-        this.set_property_value(TextBlock.ForegroundKey, Theme.primaryInk);
+        // cross-class inherited defaults, so this stays in TS — but
+        // the value rides through DynamicResource so a theme switch
+        // re-resolves @OnPrimary against the new dictionary and the
+        // change cascades down via the inheritance walk to every
+        // TextBlock in the button's content.
+        this._set_property_value_by_name(
+            TextBlock, 'Foreground', DynamicResource(this, 'OnPrimary'),
+        );
         if (content !== undefined) this.Content = content;
         // Template + the IsPressed / IsMouseOver background swap live
         // on the default Style (see controls.template.mu, Button block).

@@ -1,4 +1,5 @@
 import {
+    DynamicResource,
     MetaData,
     Model,
     Rect,
@@ -13,7 +14,6 @@ import { findDataTemplateForType } from './data-template.js';
 import type { DockPanel } from './dock-panel.js';
 import { StackPanel } from './stack-panel.js';
 import { TextBlock } from './text-block.js';
-import { Theme } from './theme.js';
 import { defaultTemplate } from './default-template.js';
 
 // A title strip + slottable content area, modelled on Material UI's
@@ -74,10 +74,13 @@ export class PageView extends Visual
         this._subtitleText = new TextBlock('');
         // Subtitle TextBlock is created dynamically (added to
         // PART_HeaderStack only when Subtitle is non-empty) so it
-        // can't live in the static markup template. Read the
-        // medium-emphasis foreground via Theme so it tracks the
-        // active palette.
-        this._subtitleText.Foreground = Theme.hint;
+        // can't live in the static markup template. Bind Foreground
+        // to @OnSurfaceVariant via DynamicResource so theme switches
+        // re-tint the medium-emphasis label live — same effect a
+        // template setter would have if Subtitle lived in markup.
+        this._subtitleText._set_property_value_by_name(
+            'Foreground', DynamicResource(this._subtitleText, 'OnSurfaceVariant'),
+        );
         this._subtitleText.FontSize   = 13;
         this._subtitleText.Margin     = new Thickness(0, 2, 0, 0);
 

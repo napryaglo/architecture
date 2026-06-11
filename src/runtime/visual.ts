@@ -174,6 +174,16 @@ export class Visual extends Model
     // doesn't enforce.
     public static readonly EffectKey = Model.RegisterProperty<IEffect | undefined>(Visual, 'Effect', undefined, MetaData.Render);
 
+    // Per-subtree paint opacity. Default 1 = fully opaque. The SVG
+    // renderer mirrors this onto the outer <g>'s `opacity` attribute, so
+    // children of an opacity<1 visual visually fade with the parent
+    // (SVG's `opacity` composes multiplicatively across nested groups).
+    // WPF parity: Opacity is paint-only — hit-testing ignores it, so a
+    // 0-opacity visual still receives pointer events unless
+    // IsHitTestVisible is also false. Authors hide-without-interaction
+    // by combining the two; pure visual fades flip just Opacity.
+    public static readonly OpacityKey = Model.RegisterProperty<number>(Visual, 'Opacity', 1, MetaData.Render);
+
     // Type-keyed lookup for the theme-supplied default Style. Read-only
     // at the instance level (no public per-instance writes); subclasses
     // opt in by overriding metadata in their static init:
@@ -816,6 +826,12 @@ export class Visual extends Model
     // previously applied filter.
     public get Effect(): IEffect | undefined { return this.get_property_value(Visual.EffectKey); }
     public set Effect(value: IEffect | undefined) { this.set_property_value(Visual.EffectKey, value); }
+
+    /** Per-subtree paint opacity in [0, 1]. Default 1. Values outside
+     *  the range are accepted by the DP but the renderer clamps before
+     *  emitting the SVG attribute. */
+    public get Opacity(): number       { return this.get_property_value(Visual.OpacityKey); }
+    public set Opacity(value: number)  { this.set_property_value(Visual.OpacityKey, value); }
 
     // Read-only at the instance level. Subclasses override the default
     // value via Model.OverrideMetadata at type-init; see the docstring

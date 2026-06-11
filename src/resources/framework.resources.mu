@@ -1,14 +1,11 @@
 // Default theme entries for the command-surface controls — ToggleButton
-// / ToolBar / Menu / MenuButton / ContextMenu. Kept separate from the
-// main `controls.template.mu` because that file is loaded eagerly by
-// Button's static block (via `ensureControlsTheme()`), and pulling any
-// Button subclass into that cascade triggers a TDZ on the not-yet-
-// initialised Button binding. See the Controls barrel comment around
-// `surface.js` for the full explanation.
+// / ToolBar / Menu / MenuButton / ContextMenu. Kept separate from
+// `basic.resources.mu` because the surface bundle's `extends Button`
+// declarations would TDZ on the not-yet-initialised Button binding if
+// they were pulled in through Button's own static block path.
 //
-// This file is loaded only when the surface bundle is imported — its
-// factory is registered with Application by `ensureSurfaceTheme()`,
-// which surface controls call from their own static blocks.
+// Themes pull this bundle in by listing `MuralFramework` in their
+// `dictionaries:` header (see Material's `material.mu`).
 //
 // MenuButton and ContextMenu each ship TWO keyed templates (trigger +
 // popup for MenuButton; just popup for ContextMenu) because they need
@@ -17,9 +14,9 @@
 // PresentationTarget's OverlayLayer when IsOpen flips true. WPF's
 // MenuButton / ContextMenu carry an analogous split in their default
 // styles; ComboBox + Drawer use the same dual-template shape (see
-// controls.template.mu).
+// `basic.resources.mu`).
 
-resources SurfaceTheme {
+resources MuralFramework {
 
     // ── MenuButton: trigger button ─────────────────────────────────
     // The visible inline part of a MenuButton — a Button with a header
@@ -289,8 +286,19 @@ resources SurfaceTheme {
                 Padding         = (12,8,12,8) ] {
             ContentPresenter
         }
-        when ( IsMouseOver )           { PART_Border.Background   = @StateHoverOverlay; }
-        when ( IsPressed )             { PART_Border.Background   = @StatePressOverlay; }
+        // Opaque steps on the M3 SurfaceContainer ladder — going UP
+        // for hover gives the button visibly more emphasis vs. the
+        // surrounding @Surface toolbar, going DOWN for press signals
+        // the "depressed" tap feedback. Using @StateHoverOverlay /
+        // @StatePressOverlay here would be barely visible because
+        // those tokens are translucent OnSurface tints; REPLACING the
+        // resting @SurfaceContainerHigh with a translucent overlay
+        // shows the toolbar's @Surface bleeding through, making hover
+        // look LESS opaque than rest. MenuItem rows can use the
+        // overlays because they're transparent at rest — see the
+        // comment on DefaultMenuItemRow.
+        when ( IsMouseOver )           { PART_Border.Background   = @SurfaceContainerHighest; }
+        when ( IsPressed )             { PART_Border.Background   = @SurfaceContainer; }
         when ( Position = Only  )      { PART_Border.CornerRadius = CornerRadius.Full; }
         when ( Position = First )      { PART_Border.CornerRadius = CornerRadius.LeftRounded; }
         when ( Position = Last  )      { PART_Border.CornerRadius = CornerRadius.RightRounded; }
@@ -319,8 +327,14 @@ resources SurfaceTheme {
                 Padding         = (12,8,12,8) ] {
             ContentPresenter
         }
-        when ( IsMouseOver )       { PART_Border.Background  = @StateHoverOverlay; }
-        when ( IsPressed )         { PART_Border.Background  = @StatePressOverlay; }
+        // Same SurfaceContainer-ladder pattern as DefaultToolBarButton
+        // (see the comment there for why opaque steps beat overlays
+        // for this template). IsChecked is declared LAST so its
+        // @SecondaryContainer setter outranks hover / press when the
+        // toggle is checked — matches the "checked beats hover" intent
+        // the previous template carried.
+        when ( IsMouseOver )       { PART_Border.Background  = @SurfaceContainerHighest; }
+        when ( IsPressed )         { PART_Border.Background  = @SurfaceContainer; }
         when ( IsChecked )         { PART_Border.Background  = @SecondaryContainer; }
         when ( Position = Only  )  { PART_Border.CornerRadius = CornerRadius.Full; }
         when ( Position = First )  { PART_Border.CornerRadius = CornerRadius.LeftRounded; }
@@ -329,6 +343,18 @@ resources SurfaceTheme {
 
     Style [TargetType=ToolBarToggleButton] {
         Template = @DefaultToolBarToggleButton;
+    }
+
+    // ── ToolBarSeparator (vertical divider) ────────────────────────
+    // 1-px line painted by the class's RenderOverride. The Style
+    // supplies Width / MinHeight / LineBrush so divider tints follow
+    // the active theme. Same shape MenuSeparator / StatusBarSeparator
+    // use — the imperative `LineBrush ?? Theme.fieldBorder` fallback
+    // is gone now that the DP default rides through DynamicResource.
+    Style [TargetType=ToolBarSeparator] {
+        Width     = 9;
+        MinHeight = 16;
+        LineBrush = @Outline;
     }
 
     // ── ToolBar: inline chrome ─────────────────────────────────────
@@ -378,5 +404,134 @@ resources SurfaceTheme {
     Style [TargetType=ToolBar] {
         Template      = @DefaultToolBar;
         PopupTemplate = @DefaultToolBarPopup;
+    }
+
+    // ── StatusBar: bottom strip ────────────────────────────────────
+    // ItemsControl wrapping each item in a StatusBarItem. The default
+    // ItemsPanel is a DockPanel with LastChildFill=true so authors can
+    // dock left/right cells via `DockPanel.Dock` on each item and put a
+    // stretchy middle one last. Chrome is a single Border on top of
+    // @SurfaceContainerLow.
+    Template x:key="DefaultStatusBar" [TargetType=StatusBar] {
+        Border [ Background      = @SurfaceContainerLow,
+                 BorderBrush     = @OutlineVariant,
+                 BorderThickness = (0,1,0,0),
+                 Padding         = (4,2,4,2) ] {
+            ItemsPresenter
+        }
+    }
+
+    // ── StatusBar: DockPanel items panel ───────────────────────────
+    // Dockable cells out of the box. Setting DockPanel.Dock on a
+    // StatusBarItem in markup pins it to the corresponding edge; the
+    // last un-docked cell fills the residue.
+    ItemsPanelTemplate x:key="DefaultStatusBarPanel" {
+        DockPanel [LastChildFill = true]
+    }
+
+    Style [TargetType=StatusBar] {
+        Template   = @DefaultStatusBar;
+        ItemsPanel = @DefaultStatusBarPanel;
+    }
+
+    // ── StatusBarItem (one cell) ───────────────────────────────────
+    // Padded ContentPresenter. No state triggers — status cells are
+    // read-only chrome, not interactive surfaces, so they don't react
+    // to IsMouseOver / IsPressed.
+    //
+    // No Foreground / FontSize setters here: those DPs live on TextBlock,
+    // not on Visual / Control / ContentControl, so a Style setter targeting
+    // the StatusBarItem type would be silently dropped by apply_setter.
+    // Consumers set Foreground / FontSize on the TextBlock they place
+    // inside the Content (bound to @OnSurfaceVariant so theme switches
+    // re-tint).
+    Template x:key="DefaultStatusBarItem" [TargetType=StatusBarItem] {
+        Border [ Padding = (8,2,8,2) ] {
+            ContentPresenter
+        }
+    }
+    Style [TargetType=StatusBarItem] {
+        Template = @DefaultStatusBarItem;
+    }
+
+    // ── StatusBarSeparator (vertical divider) ──────────────────────
+    // 1-px line painted by the class's RenderOverride. The Style
+    // supplies Width / MinHeight / LineBrush so the divider tints
+    // follow the active theme.
+    Style [TargetType=StatusBarSeparator] {
+        Width     = 9;
+        MinHeight = 16;
+        LineBrush = @OutlineVariant;
+    }
+
+    // ── ThemeSelector (theme + scheme picker) ──────────────────────
+    // Two icon-toggle + ComboBox pairs in a horizontal row. Each icon
+    // is a Text-variant Button (no chrome — paints just the glyph);
+    // clicking it flips the matching IsXxxPickerOpen DP on the
+    // ThemeSelector, which the template triggers below pick up to
+    // expand the sibling ComboBox from Width=0 / Opacity=0 to its
+    // resting width.
+    //
+    // The ComboBox lives wrapped in a Border whose Width is what the
+    // open/closed trigger toggles. Keeping the toggle on the wrapper
+    // (not the ComboBox itself) means the ComboBox's natural measure
+    // pass is undisturbed when it's open — width is just the wrapper
+    // clipping it down to zero when closed.
+    //
+    // ThemeSelector's ctor finds PART_ThemeToggle / PART_ThemeCombo /
+    // PART_SchemeToggle / PART_SchemeCombo and wires click + selection
+    // listeners. Items + SelectedItem on both ComboBoxes are written
+    // imperatively from syncFromThemeManager — the bound list is
+    // derived from ThemeManager state, not authored declaratively.
+    Template x:key="DefaultThemeSelector" [TargetType=ThemeSelector] {
+        StackPanel x:name="PART_Layout" [Orientation = Horizontal] {
+            // Always-visible icon affordances. TextBlock Foreground is
+            // tinted to @OnPrimary so the icons stay legible on the top
+            // app bar; hosts hanging the ThemeSelector on a different
+            // surface should re-template and pick their own Foreground.
+            TextBlock [Text = "Aa", Foreground = @OnPrimary, FontSize = 14,
+                       VerticalAlignment = Center, Margin = (4,0,4,0)]
+            Border x:name="PART_ThemeComboWrap"
+                  [Width = 0, MinWidth = 0, Opacity = 0, Padding = (4,0,4,0)] {
+                ComboBox x:name="PART_ThemeCombo" [Width = 140, Density = Compact]
+            }
+
+            TextBlock [Text = "◐", Foreground = @OnPrimary, FontSize = 14,
+                       VerticalAlignment = Center, Margin = (4,0,4,0)]
+            Border x:name="PART_SchemeComboWrap"
+                  [Width = 0, MinWidth = 0, Opacity = 0, Padding = (4,0,4,0)] {
+                ComboBox x:name="PART_SchemeCombo" [Width = 140, Density = Compact]
+            }
+        }
+
+        // Slide-in reveal driven by hover. The IsMouseOver trigger
+        // fires off the ThemeSelector's own hover state (each trigger's
+        // default source is the templated parent). The parallel
+        // PART_xxxCombo.IsDropDownOpen trigger carries the same body —
+        // it keeps the combo visible while its dropdown popup is open,
+        // since opening the popup moves the cursor onto the
+        // OverlayLayer-mounted popup and would otherwise drop
+        // IsMouseOver to false and retract the combo out from under
+        // the pointer. Trigger semantics make this safe: both triggers
+        // write the same property/value pair, so concurrent activation
+        // is idempotent. Closed state (neither trigger active) is the
+        // resting Width=0 / Opacity=0 baked into the template above.
+        //
+        // The compiler's ControlTemplate trigger system accepts only
+        // single-term `when()` conditions today, so we duplicate the
+        // body across two triggers rather than spelling `IsMouseOver or
+        // PART_xxxCombo.IsDropDownOpen`.
+        when ( IsMouseOver )                  { PART_ThemeComboWrap.Width   = 148;
+                                                 PART_ThemeComboWrap.Opacity = 1; }
+        when ( PART_ThemeCombo.IsDropDownOpen ){ PART_ThemeComboWrap.Width   = 148;
+                                                 PART_ThemeComboWrap.Opacity = 1; }
+        when ( IsMouseOver )                  { PART_SchemeComboWrap.Width   = 148;
+                                                 PART_SchemeComboWrap.Opacity = 1; }
+        when ( PART_SchemeCombo.IsDropDownOpen ){ PART_SchemeComboWrap.Width   = 148;
+                                                  PART_SchemeComboWrap.Opacity = 1; }
+    }
+
+    Style [TargetType=ThemeSelector] {
+        Template = @DefaultThemeSelector;
     }
 }

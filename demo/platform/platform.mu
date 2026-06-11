@@ -1,5 +1,6 @@
 import GroupVM from "./platform-vm.mjs"
 import AdornerDecorator from "@visualisation-sub/mural/Basic"
+import ThemeSelector from "@visualisation-sub/mural/framework/surface.js"
 import Material from "@visualisation-sub/mural/resources/material"
 import MaterialLight from "@visualisation-sub/mural/resources/material"
 
@@ -73,6 +74,22 @@ Application[Theme = Material, Scheme = MaterialLight] {
             AdornerDecorator {
             DockPanel [LastChildFill=true] {
 
+                // App-wide top bar — brand title on the left, the
+                // ThemeSelector chrome control on the right. Sits above
+                // the nav strip + page body and gives the picker enough
+                // horizontal room for both ComboBoxes to expand.
+                Border[DockPanel.Dock=Top,
+                       Background=@Primary,
+                       Padding=(20,8,12,8)]{
+                    DockPanel [LastChildFill=true] {
+                        ThemeSelector [DockPanel.Dock=Right]
+                        TextBlock[Text="µ-mural demos",
+                                  FontSize=14, FontWeight=Bold,
+                                  Foreground=@OnPrimary,
+                                  VerticalAlignment=Center]
+                    }
+                }
+
                 // Nav strip — fixed cross-axis width (260 DIP), full
                 // host height. Hairline on the inner edge separates it
                 // from the page body.
@@ -81,12 +98,6 @@ Application[Theme = Material, Scheme = MaterialLight] {
                        BorderBrush=@OutlineVariant,
                        BorderThickness=(0,0,1,0)]{
                     StackPanel{
-                        // Brand header.
-                        Border[Background=@Primary, Padding=(20,16,20,16)]{
-                            TextBlock[Text="µ-mural demos",
-                                      FontSize=14, FontWeight=Bold,
-                                      Foreground=@OnPrimary]
-                        }
                         // Fully declarative tree wiring — bindings
                         // resolve through DataContext (PlatformVM)
                         // and Resources:

@@ -33,7 +33,27 @@
 // can't both ride a single TargetType-keyed default Style, and the
 // control's ctor reads each by string key explicitly.
 
-resources BasicTheme {
+resources MuralBasic {
+
+    // ── TextBlock: default text contract ───────────────────────────
+    // Binds Foreground / FontFamily to the active theme so a scheme
+    // switch (light ↔ dark) re-tints every untemplated TextBlock
+    // without per-instance Foreground=@OnSurface noise. FontSize /
+    // FontWeight / LineHeight pin to the M3 BodyMedium baseline
+    // (consumers opt into other type-scale tokens via Style=@TitleLarge
+    // etc. from the Typography dictionary).
+    //
+    // Explicit Foreground/FontSize/etc. setters on individual TextBlocks
+    // still win because the .mu's `[Foreground=...]` writes go through
+    // _set_property_value_by_name at the Local tier, which outranks the
+    // Style tier.
+    Style [TargetType=TextBlock] {
+        Foreground = @OnSurface;
+        FontFamily = @FontFamily;
+        FontSize   = 14;
+        FontWeight = Normal;
+        LineHeight = 20;
+    }
 
     // ── Button: variant-driven Material 3 chrome ───────────────────
     // Five M3 button variants, one ControlTemplate per variant. The
@@ -166,6 +186,22 @@ resources BasicTheme {
                                                         Text       = "▾" ]
             }
         }
+        // HasSelection swaps PART_SelectionText.Foreground from
+        // @OnSurfaceVariant (placeholder tint) to @OnSurface (selected
+        // item tint). IsDropDownOpen swaps PART_SelectionBox.BorderBrush
+        // from @Outline (resting) to @Primary (open). Both ride through
+        // DynamicResource so theme switches re-tint live.
+        when ( HasSelection )   { PART_SelectionText.Foreground = @OnSurface; }
+        when ( IsDropDownOpen ) { PART_SelectionBox.BorderBrush = @Primary; }
+        // M3 density variants — tighter cell on Compact, looser on
+        // Comfortable. Density is an inherited attached DP, so dropping
+        // a ComboBox under a `Density = Compact` ancestor (chrome bars,
+        // toolbars, the ThemeSelector pick row) shrinks automatically
+        // without touching individual call sites.
+        when ( Density = Compact )     { PART_SelectionBox.Padding = (10,4,10,4);
+                                          PART_SelectionBox.Height  = 32; }
+        when ( Density = Comfortable ) { PART_SelectionBox.Padding = (16,10,16,10);
+                                          PART_SelectionBox.Height  = 48; }
     }
 
     // ── ComboBox (overlay popup host) ───────────────────────────────
@@ -278,6 +314,15 @@ resources BasicTheme {
             }
             ItemsPresenter x:name="PART_ChildHost"
         }
+        // Hover + selection chrome ride through DynamicResource so
+        // theme switches re-tint live. Hover sources from PART_Row's
+        // IsMouseOver so a parent row doesn't light up when the
+        // pointer is over a child row (TreeViewItem.IsMouseOver fires
+        // for the whole subtree). Selection sources from the
+        // templated parent and is declared LAST so its trigger setter
+        // outranks hover at the trigger tier when both match.
+        when ( PART_Row.IsMouseOver ) { PART_Row.Background = @SurfaceContainerHigh; }
+        when ( IsSelected )           { PART_Row.Background = @SecondaryContainer; }
     }
     Style [TargetType=TreeViewItem] {
         Template = @DefaultTreeViewItem;
@@ -371,9 +416,23 @@ resources BasicTheme {
                 TextEditorSurface x:name="PART_Editor"
             }
         }
+        // Border focus / hover chrome. Order matters: hover declared
+        // before focused so focused wins the trigger tier when both
+        // match. Both ride through DynamicResource so theme switches
+        // re-tint live.
+        when ( IsMouseOver ) { PART_Border.BorderBrush = @OnSurface; }
+        when ( IsFocused )   { PART_Border.BorderBrush = @Primary; }
     }
     Style [TargetType=TextBox] {
-        Template = @DefaultTextBox;
+        Template       = @DefaultTextBox;
+        // Foreground / SelectionBrush / CaretBrush defaults flow
+        // through DynamicResource so theme switches re-tint live.
+        // TextEditorSurface picks them up at render time off the
+        // owning TextBox (PART_Editor.textBox); consumer overrides at
+        // the Local tier still win.
+        Foreground     = @OnSurface;
+        SelectionBrush = @SecondaryContainer;
+        CaretBrush     = @OnSurface;
     }
 
     // ── SpinEdit ────────────────────────────────────────────────────
@@ -460,6 +519,12 @@ resources BasicTheme {
                     CornerRadius    = @ShapeFull,
                     BorderThickness = (0) ]
         }
+        // Thumb state chrome. Hover sources from PART_Thumb's
+        // IsMouseOver; dragging sources from Slider's read-only
+        // IsDragging DP. Dragging trigger is declared LAST so its
+        // setter outranks hover when both match.
+        when ( PART_Thumb.IsMouseOver ) { PART_Thumb.Background = @PrimaryHover; }
+        when ( IsDragging )             { PART_Thumb.Background = @PrimaryPress; }
     }
     Style [TargetType=Slider] {
         Template = @DefaultSlider;
@@ -501,6 +566,17 @@ resources BasicTheme {
                     CornerRadius    = @ShapeExtraSmall,
                     BorderThickness = (0) ]
         }
+        // Thumb tint: hover → @Outline (slightly darker), drag →
+        // @OnSurfaceVariant (darkest). Drag declared LAST so it wins
+        // over hover at the trigger tier when both match.
+        when ( PART_Thumb.IsMouseOver ) { PART_Thumb.Background = @Outline; }
+        when ( IsDragging )             { PART_Thumb.Background = @OnSurfaceVariant; }
+        // Auto-hide resting state: fade the template layout root to
+        // Opacity=0 so both track and thumb disappear without disturbing
+        // layout / hit-test geometry. pulseActivity restores Opacity by
+        // flipping IsFaded back to false (default value of 1 takes over
+        // again).
+        when ( IsFaded )                { PART_Layout.Opacity = 0; }
     }
     Style [TargetType=ScrollBar] {
         Template = @DefaultScrollBar;
@@ -534,7 +610,11 @@ resources BasicTheme {
                 BorderThickness = (0) ]
     }
     Style [TargetType=GridSplitter] {
-        Template = @DefaultGridSplitter;
+        Template     = @DefaultGridSplitter;
+        // PreviewBrush rides the active theme via DynamicResource so a
+        // theme switch re-tints the drag-preview adorner live. Consumer
+        // overrides at the Local tier still win.
+        PreviewBrush = @Primary;
     }
 
     // ── Splitter ───────────────────────────────────────────────────
@@ -548,13 +628,18 @@ resources BasicTheme {
                 BorderThickness = (0) ]
     }
     Style [TargetType=Splitter] {
-        Template = @DefaultSplitter;
+        Template     = @DefaultSplitter;
+        // PreviewBrush rides the active theme via DynamicResource so a
+        // theme switch re-tints the drag-preview adorner live. Consumer
+        // overrides at the Local tier still win (Style setter sits at
+        // a lower tier than LocalValue).
+        PreviewBrush = @Primary;
     }
 
     // NOTE: command-surface controls (ToggleButton / ToolBar / Menu /
     // MenuButton / ContextMenu) keep their default Styles in the sibling
-    // `surface.template.mu`. Loading their bundle through THIS file would
-    // run their `extends Button` declarations during Button's own static
-    // block — see the Controls barrel comment around `surface.js` for the
-    // TDZ explanation.
+    // `framework.resources.mu`. Loading their bundle through THIS file
+    // would run their `extends Button` declarations during Button's own
+    // static block — see the Controls barrel comment around `surface.js`
+    // for the TDZ explanation.
 }

@@ -1,4 +1,5 @@
 import {
+    DynamicResource,
     MetaData,
     Model,
     Rect,
@@ -40,7 +41,6 @@ import { Border } from './border.js';
 // `Style [TargetType=Thumb] { Template = … }` and apply it explicitly;
 // the Style's Template wins through the standard property pipeline.
 
-import { Theme } from './theme.js';
 // Default brush for a Thumb constructed without a Style/Template — a
 // soft neutral. Routed through Theme so it follows the active palette
 // (M3 OutlineVariant flips between light and dark schemes). The bundled
@@ -100,7 +100,12 @@ export class Thumb extends Visual
         super();
         this.Focusable = true;
         this._border = new Border();
-        this._border.Background = Theme.scrollThumb;
+        // Background tracks the active theme via DynamicResource —
+        // a theme switch re-resolves @OutlineVariant against the new
+        // dictionary and re-paints without an imperative refresh.
+        this._border._set_property_value_by_name(
+            'Background', DynamicResource(this._border, 'OutlineVariant'),
+        );
         this.AttachVisual(this._border);
     }
 

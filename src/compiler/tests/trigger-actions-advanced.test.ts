@@ -96,6 +96,44 @@ describe('compile — `on enter` / `on exit` inside when(){...}', () => {
         );
     });
 
+    test('ControlTemplate `when(PART_X.IsMouseOver)` lowers to TemplatePropertyTrigger with sourceName="PART_X"', () => {
+        const js = emitted(`
+            Application{ resources: {
+                Template x:key="Tmpl" [TargetType=Border] {
+                    Border x:name="PART_Row" {}
+                    when ( PART_Row.IsMouseOver ) {
+                        PART_Row.Background = #eeeeee;
+                    }
+                }
+            }}
+        `);
+        // 5-arg form (no enter/exit actions): the sourceName slot
+        // carries "PART_Row" instead of undefined.
+        assert.match(
+            js,
+            /new TemplatePropertyTrigger\(Border, "IsMouseOver", true, _tplSet\d+, "PART_Row"\);/,
+        );
+    });
+
+    test('ControlTemplate `when(IsMouseOver)` keeps the undefined sourceName slot (templated parent watch)', () => {
+        const js = emitted(`
+            Application{ resources: {
+                Template x:key="Tmpl" [TargetType=Border] {
+                    Border x:name="PART_Row" {}
+                    when ( IsMouseOver ) {
+                        PART_Row.Background = #eeeeee;
+                    }
+                }
+            }}
+        `);
+        // 5-arg form with explicit undefined sourceName — the
+        // historic shape (watch the templated parent).
+        assert.match(
+            js,
+            /new TemplatePropertyTrigger\(Border, "IsMouseOver", true, _tplSet\d+, undefined\);/,
+        );
+    });
+
     test('MultiTrigger (a AND b) also carries enter / exit actions', () => {
         const js = emitted(`
             Application{ resources: {

@@ -12,7 +12,6 @@ import { Brush } from '../../visual-engine/index.js';
 import { Button } from '../button.js';
 import { Orientation, StackPanel } from '../../Basic/stack-panel.js';
 import { TextBlock } from '../../Basic/text-block.js';
-import { Theme } from '../../Basic/theme.js';
 import { ToggleButton } from '../toggle-button.js';
 
 // Where a button sits inside the inline ToolBar strip's connected-bar
@@ -76,7 +75,7 @@ export class ToolBarButton extends Button
     );
     // Written by the owning ToolBar's panel after each Arrange pass;
     // read by the default Style's triggers to pick the per-corner
-    // CornerRadius (see surface.template.mu, DefaultToolBarButton).
+    // CornerRadius (see framework.resources.mu, DefaultToolBarButton).
     // Default `None` so a ToolBarButton used standalone (outside a
     // ToolBar) gets square corners — `Only` is reserved for the case
     // where a ToolBar actively reports "you are the sole inline item".
@@ -87,7 +86,7 @@ export class ToolBarButton extends Button
     static
     {
         // Theme lookup uses ToolBarButton as the key — the default Style
-        // in surface.template.mu is keyed `[TargetType=ToolBarButton]`.
+        // in framework.resources.mu is keyed `[TargetType=ToolBarButton]`.
         // Without this override, applyDefaultStyle would walk up to
         // Button's key and pick up the pill chrome, defeating the
         // connected-bar look.
@@ -199,11 +198,19 @@ export class ToolBarSeparator extends Visual
         ToolBarSeparator, 'LineBrush', undefined, MetaData.Render,
     );
 
+    static
+    {
+        // Default Style supplies Width / MinHeight / LineBrush via
+        // DynamicResource so the divider tints follow the active theme
+        // palette without an imperative `?? Theme.fieldBorder` fallback
+        // in RenderOverride.
+        Model.OverrideMetadata(ToolBarSeparator, Visual.DefaultStyleKeyKey, { default_value: ToolBarSeparator });
+    }
+
     constructor()
     {
         super();
-        this.Width = 9;        // 4px padding | 1px line | 4px padding
-        this.MinHeight = 16;
+        this.applyDefaultStyle();
     }
 
     public get LineBrush():  Brush | undefined { return this.get_property_value(ToolBarSeparator.LineBrushKey); }
@@ -222,7 +229,8 @@ export class ToolBarSeparator extends Visual
     protected override RenderOverride(dc: DrawingContext): void
     {
         const rect = this.ArrangedRect;
-        const brush = this.LineBrush ?? Theme.fieldBorder;
+        const brush = this.LineBrush;
+        if (brush === undefined) return;
         const x = Math.floor(rect.Width / 2);
         const yTop = 2;
         const yBot = Math.max(2, rect.Height - 2);
@@ -291,7 +299,8 @@ function rebuildContent(btn: ToolBarButton | ToolBarToggleButton): void
     if (text !== undefined && (showText || iconV === undefined))
     {
         const label = new TextBlock(text);
-        label.Foreground = Theme.primaryInk;
+        // Foreground rides the TextBlock default Style — @OnSurface
+        // via DynamicResource so theme switches re-tint live.
         if (iconV !== undefined) label.Margin = new Thickness(6, 0, 0, 0);
         stack.AddChild(label);
     }
@@ -302,9 +311,7 @@ function resolveIcon(icon: string | Visual | undefined): Visual | undefined
     if (icon === undefined) return undefined;
     if (typeof icon === 'string')
     {
-        const tb = new TextBlock(icon);
-        tb.Foreground = Theme.primaryInk;
-        return tb;
+        return new TextBlock(icon);
     }
     return icon;
 }

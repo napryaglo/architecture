@@ -17,14 +17,14 @@
 // and declare the `tokens { … }` contract. The compiler does the rest.
 
 theme Material {
-    import MaterialLight from "./light.mu.js"
-    import MaterialDark  from "./dark.mu.js"
-    import BasicTheme    from "../basic.template.mu.js"
-    import SurfaceTheme  from "../surface.template.mu.js"
+    import MaterialLight  from "./light.mu.js"
+    import MaterialDark   from "./dark.mu.js"
+    import MuralBasic     from "../basic.resources.mu.js"
+    import MuralFramework from "../framework.resources.mu.js"
 
     schemes:       [MaterialLight, MaterialDark]
     defaultScheme: MaterialLight
-    dictionaries:  [BasicTheme, SurfaceTheme]
+    dictionaries:  [MuralBasic, MuralFramework]
 
     tokens {
         // ── Primary tier ────────────────────────────────────────────

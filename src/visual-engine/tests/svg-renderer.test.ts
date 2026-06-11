@@ -115,6 +115,58 @@ describe('SvgRenderer — initial paint', () => {
         assert.ok(refs.includes(child));
     });
 
+    test('Opacity defaults to 1 — no opacity attribute on outer', () => {
+        const { document, surface } = makeDom();
+        const renderer = new SvgRenderer(surface, { document });
+
+        const border = new Border();
+        border.Measure(new Size(50, 50));
+        border.Arrange(new Rect(0, 0, 50, 50));
+
+        renderer.Render(border, undefined, null, null);
+
+        const outer = surface.querySelector('g.mural-visual');
+        assert.ok(outer);
+        assert.equal(outer.hasAttribute('opacity'), false);
+    });
+
+    test('Opacity < 1 lands on the outer <g> as the opacity attribute', () => {
+        const { document, surface } = makeDom();
+        const renderer = new SvgRenderer(surface, { document });
+
+        const border = new Border();
+        border.Opacity = 0.5;
+        border.Measure(new Size(50, 50));
+        border.Arrange(new Rect(0, 0, 50, 50));
+
+        renderer.Render(border, undefined, null, null);
+
+        const outer = surface.querySelector('g.mural-visual');
+        assert.ok(outer);
+        assert.equal(outer.getAttribute('opacity'), '0.5');
+    });
+
+    test('Opacity is clamped to [0,1] before emission', () => {
+        const { document, surface } = makeDom();
+        const renderer = new SvgRenderer(surface, { document });
+
+        const border = new Border();
+        border.Opacity = 1.5;
+        border.Measure(new Size(50, 50));
+        border.Arrange(new Rect(0, 0, 50, 50));
+
+        renderer.Render(border, undefined, null, null);
+
+        const outer = surface.querySelector('g.mural-visual');
+        assert.ok(outer);
+        // Clamped back to 1 → attribute omitted.
+        assert.equal(outer.hasAttribute('opacity'), false);
+
+        border.Opacity = -0.3;
+        renderer.Render(border, undefined, new Set([border]), new Set());
+        assert.equal(outer.getAttribute('opacity'), '0');
+    });
+
     test('translate transform appears on outer when ArrangedRect.X/Y are non-zero', () => {
         const { document, surface } = makeDom();
         const renderer = new SvgRenderer(surface, { document });

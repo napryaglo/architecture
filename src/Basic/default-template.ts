@@ -15,7 +15,7 @@ import { ControlTemplate } from './control-template.js';
 // active theme's dictionaries (merged into Application.Resources by
 // ThemeManager.activate) are walked first; the package's bundled
 // default dictionaries are walked second. A theme that adopts
-// `BasicTheme` + `SurfaceTheme` via its `dictionaries:` header carries
+// `MuralBasic` + `MuralFramework` via its `dictionaries:` header carries
 // every control's default Style.
 export function defaultTemplate(klass: Function): ControlTemplate
 {
@@ -24,7 +24,7 @@ export function defaultTemplate(klass: Function): ControlTemplate
     {
         throw new Error(
             `${klass.name}: default Style is not registered. ` +
-            `Activate a theme that adopts BasicTheme (and SurfaceTheme for ` +
+            `Activate a theme that adopts MuralBasic (and MuralFramework for ` +
             `command-surface controls) via 'dictionaries:' before constructing the control.`);
     }
     if (resource instanceof ControlTemplate) return resource;

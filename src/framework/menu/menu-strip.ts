@@ -17,7 +17,6 @@ import { ControlTemplate } from '../../Basic/control-template.js';
 import { ItemsControl } from '../items-control.js';
 import { Orientation, StackPanel } from '../../Basic/stack-panel.js';
 import { TextBlock } from '../../Basic/text-block.js';
-import { Theme } from '../../Basic/theme.js';
 import { Brush } from '../../visual-engine/index.js';
 import { ClickAwayScrim } from '../tool-bar/tool-bar.js';
 import { Button } from '../button.js';
@@ -211,7 +210,7 @@ export class MenuItem extends ItemsControl
     static
     {
         // Type-keyed lookup for the default Style — registered as
-        // `Style [TargetType=MenuItem]` in surface.template.mu. The
+        // `Style [TargetType=MenuItem]` in framework.resources.mu. The
         // Style supplies:
         //   * Template     = DefaultMenuItemSubmenu  (popup chrome with
         //                    ItemsPresenter for submenu rows)
@@ -733,9 +732,9 @@ export class MenuItem extends ItemsControl
 
 function makeGlyph(text: string): TextBlock
 {
-    const t = new TextBlock(text);
-    t.Foreground = Theme.ink;
-    return t;
+    // Foreground rides the TextBlock default Style — @OnSurface via
+    // DynamicResource so theme switches re-tint live.
+    return new TextBlock(text);
 }
 
 // ─────────────────────────────────────────────────────────────────────
@@ -750,7 +749,7 @@ export class MenuSeparator extends Visual
     static
     {
         // Type-keyed lookup for the default Style — registered as
-        // `Style [TargetType=MenuSeparator]` in surface.template.mu.
+        // `Style [TargetType=MenuSeparator]` in framework.resources.mu.
         // The Style supplies Height / MinWidth / LineBrush via
         // DynamicResource so the line tints flip with the theme
         // palette without consumers having to set LineBrush.
@@ -783,8 +782,13 @@ export class MenuSeparator extends Visual
 
     protected override RenderOverride(dc: DrawingContext): void
     {
+        // LineBrush rides the `Style[TargetType=MenuSeparator]` setter
+        // via DynamicResource (@OutlineVariant) so theme switches re-tint
+        // live. No `?? Theme.fieldBorder` fallback now that the DP
+        // default flows through the resource chain.
+        const brush = this.LineBrush;
+        if (brush === undefined) return;
         const rect = this.ArrangedRect;
-        const brush = this.LineBrush ?? Theme.fieldBorder;
         const y = Math.floor(rect.Height / 2);
         dc.DrawRectangle(brush, undefined, new Rect(2, y, Math.max(2, rect.Width - 4), 1));
     }
@@ -806,7 +810,7 @@ export class MenuSeparator extends Visual
 //   }
 //
 // MenuButton IS an ItemsControl. Two templates feed its visual layout
-// (both registered in surface.template.mu):
+// (both registered in framework.resources.mu):
 //
 //   * DefaultMenuButtonTrigger  — the inline trigger Button. Resolved
 //                                 in the ctor and attached as
@@ -872,7 +876,7 @@ export class MenuButton extends ItemsControl
         // default Style (Template = popup chrome, ItemsPanel = vertical
         // StackPanel, HorizontalAlignment/Vertical sizing pins) via
         // TryFindResource(MenuButton) on attach. The setter values live
-        // in surface.template.mu under the `Style [TargetType=MenuButton]`
+        // in framework.resources.mu under the `Style [TargetType=MenuButton]`
         // block. Surface theme is kept apart from the main controls
         // theme to avoid the `extends Button` TDZ cycle (see
         // default-resources.ts).
@@ -903,9 +907,9 @@ export class MenuButton extends ItemsControl
         {
             throw new Error(
                 'MenuButton.TriggerTemplate is undefined. The default ' +
-                'Style in surface.template.mu sets TriggerTemplate = ' +
+                'Style in framework.resources.mu sets TriggerTemplate = ' +
                 '@DefaultMenuButtonTrigger. Activate a theme that adopts ' +
-                "SurfaceTheme via its `dictionaries:` header before " +
+                "MuralFramework via its `dictionaries:` header before " +
                 'constructing the MenuButton.');
         }
         const triggerInst = triggerTpl.Apply(this);

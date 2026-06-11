@@ -98,7 +98,7 @@ export interface ThemeBlock
     defaultScheme:  string | undefined;
     /** `dictionaries: [Ident, Ident, …]` header. Each ident must match
      *  a ResourceDictionary class imported at the top of the file
-     *  (typically `BasicTheme`, `SurfaceTheme`, or any user-authored
+     *  (typically `MuralBasic`, `MuralFramework`, or any user-authored
      *  bundle). The compiler emits `<ident>.Clone()` into the Theme's
      *  dictionaries array, followed by the theme's own body dict.
      *  Empty when no `dictionaries:` header is authored. */
@@ -465,6 +465,16 @@ export interface TriggerTerm
     // Property name on the styled target (PropertyTrigger form,
     // `when( IsMouseOver )`). Mutually exclusive with `path`.
     property: string | undefined;
+    // Named source visual (PART) whose `property` to watch. When
+    // undefined the trigger watches the templated parent (or the
+    // template root for DataTemplates) — the historic shape. When
+    // set, the parser saw `when( PART_Row.IsMouseOver )` and the
+    // compiler lowers it to `TemplatePropertyTrigger.sourceName`,
+    // so the trigger subscribes to the named visual's property
+    // change instead of the templated parent's. Only valid in
+    // `property`-form terms; `$path` (DataTrigger) terms always
+    // resolve through DataContext and have no source-name slot.
+    sourceName: string | undefined;
     // DataContext-relative dotted path (DataTrigger form,
     // `when( $IsSelected )` / `when( $foo.bar )`). Mutually exclusive
     // with `property`.

@@ -35,8 +35,8 @@ import type { InputBinding } from './commands/input-binding.js';
 //
 // Subclasses opt in by extending Control instead of Visual and
 // declaring their default Style + ControlTemplate in their respective
-// `*.template.mu` files (basic.template.mu for the primitive controls,
-// surface.template.mu for the command-surface bundle).
+// `*.resources.mu` files (basic.resources.mu for the primitive controls,
+// framework.resources.mu for the command-surface bundle).
 export class Control extends Visual
 {
     // ── Routed-command + input-binding tables ─────────────────────────

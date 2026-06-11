@@ -121,7 +121,7 @@ export interface ThemeOptions
     /** Resource dictionaries the theme owns — ControlTemplates,
      *  default Styles, DataTemplates, and any other resources the
      *  theme ships. Authored declaratively in the `.mu` theme block's
-     *  `dictionaries: [BasicTheme, SurfaceTheme, …]` header plus any
+     *  `dictionaries: [MuralBasic, MuralFramework, …]` header plus any
      *  body content (the theme's own resources). ThemeManager merges
      *  the whole list into Application.Resources when the Theme is
      *  activated, in array order — earlier entries are shadowed by
@@ -344,6 +344,16 @@ export class ThemeManager
         return this._themes.get(name);
     }
 
+    /** All themes currently registered, in registration order. The
+     *  ThemeSelector control reads this to populate its theme dropdown;
+     *  application-side tooling uses it for diagnostics ("which themes
+     *  did this build import?"). The returned array is a fresh copy —
+     *  mutating it has no effect on the registry. */
+    public get RegisteredThemes(): readonly Theme[]
+    {
+        return [...this._themes.values()];
+    }
+
     // Resolve `basedOn` chains. Returns the fully merged token dict for
     // the scheme. Detects circular borrowings.
     private resolveBasedOn(scheme: Scheme): Map<string, unknown>
@@ -415,6 +425,24 @@ export class ThemeManager
 
     public get ActiveTheme():  Theme  | undefined { return this._activeTheme; }
     public get ActiveScheme(): Scheme | undefined { return this._activeScheme; }
+
+    // ── Activation listeners ──────────────────────────────────────────
+    //
+    // Fired after every successful activate() — both theme swaps and
+    // scheme-only swaps. ThemeSelector subscribes to keep its DPs in
+    // sync when AutoScheme or any other code flips the active scheme
+    // out from under it.
+    private readonly _activatedListeners = new Set<(theme: Theme, scheme: Scheme) => void>();
+
+    public AddActivatedListener(cb: (theme: Theme, scheme: Scheme) => void): void
+    {
+        this._activatedListeners.add(cb);
+    }
+
+    public RemoveActivatedListener(cb: (theme: Theme, scheme: Scheme) => void): void
+    {
+        this._activatedListeners.delete(cb);
+    }
 
     // ── Adaptive context ──────────────────────────────────────────────
     //
@@ -594,43 +622,64 @@ export class ThemeManager
             return;
         }
 
-        // Strip out resources we previously merged.
-        if (this._activeApp !== undefined)
+        // Scheme-only swap on the SAME (theme, app)? Leave the theme
+        // dictionaries in place and only churn the token dict. Removing
+        // and re-adding the theme dictionaries with identical refs would
+        // fire DynamicResource subscribers on every keyed entry — that
+        // cascades through ItemsControl.OnPropertyChanged('ItemsPanel'),
+        // which tears down realised containers; for popup-hosting
+        // controls (MenuItem / MenuButton / ContextMenu) the cascade
+        // hits ItemsControl.rebuildTemplate which assumes the template
+        // root is still its visual child, but those controls detach it
+        // in their ctor for overlay mounting. Easiest win: don't churn
+        // what didn't change.
+        const sameTheme = this._activeTheme === theme && this._activeApp === app;
+        if (!sameTheme && this._activeApp !== undefined)
         {
             for (const d of this._activeDictionaries)
             {
                 this._activeApp.Resources.RemoveMergedDictionary(d);
             }
-            if (this._activeTokenDict !== undefined)
-            {
-                this._activeApp.Resources.RemoveMergedDictionary(this._activeTokenDict);
-            }
+            this._activeDictionaries = [];
         }
-        this._activeDictionaries = [];
-        this._activeTokenDict    = undefined;
+        if (this._activeApp !== undefined && this._activeTokenDict !== undefined)
+        {
+            this._activeApp.Resources.RemoveMergedDictionary(this._activeTokenDict);
+        }
+        this._activeTokenDict = undefined;
 
         // Merge the theme's dictionaries in array order — later entries
         // shadow earlier ones for the same key. The compiled
         // `.template.mu.js` outputs are mutable per-instance (each
         // .Clone() in the Theme ctor produces a fresh ResourceDictionary
         // subclass) so re-activation is symmetric without aliasing.
-        const dictionaryRefs: ResourceDictionary[] = [];
-        for (const d of theme.dictionaries)
+        if (!sameTheme)
         {
-            app.Resources.AddMergedDictionary(d);
-            dictionaryRefs.push(d);
+            const dictionaryRefs: ResourceDictionary[] = [];
+            for (const d of theme.dictionaries)
+            {
+                app.Resources.AddMergedDictionary(d);
+                dictionaryRefs.push(d);
+            }
+            this._activeDictionaries = dictionaryRefs;
         }
 
-        // Merge scheme token dict.
+        // Merge scheme token dict (always — schemes change on every
+        // activate that isn't a (theme, scheme, app) no-op).
         const tokenDict = new ResourceDictionary();
         const mergedTokens = this.resolveBasedOn(scheme);
         for (const [k, v] of mergedTokens) tokenDict.Set(k, v);
         app.Resources.AddMergedDictionary(tokenDict);
 
-        this._activeTheme        = theme;
-        this._activeScheme       = scheme;
-        this._activeApp          = app;
-        this._activeDictionaries = dictionaryRefs;
-        this._activeTokenDict    = tokenDict;
+        this._activeTheme     = theme;
+        this._activeScheme    = scheme;
+        this._activeApp       = app;
+        this._activeTokenDict = tokenDict;
+
+        // Notify subscribers after state is committed so listeners that
+        // read ActiveTheme/ActiveScheme observe the new values. Snapshot
+        // the set so a listener that unsubscribes (or subscribes) during
+        // dispatch doesn't perturb this iteration.
+        for (const cb of [...this._activatedListeners]) cb(theme, scheme);
     }
 }

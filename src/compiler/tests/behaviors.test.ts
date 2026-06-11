@@ -129,7 +129,7 @@ describe('instantiate — Behaviors end-to-end', () => {
                 }
             } }
         `) as Application;
-        const border = app.Root as Border;
+        const border = app.Resources.Root as Border;
         assert.ok(border instanceof Border);
         assert.equal(border.Behaviors.length, 1);
         const b = border.Behaviors[0] as StubBehavior;
@@ -151,7 +151,7 @@ describe('instantiate — Behaviors end-to-end', () => {
                 }
             } }
         `) as Application;
-        const border = app.Root as Border;
+        const border = app.Resources.Root as Border;
         assert.equal(border.Behaviors.length, 2);
         assert.equal((border.Behaviors[0] as StubBehavior).Label, 'first');
         assert.equal((border.Behaviors[1] as StubBehavior).Label, 'second');

@@ -13,33 +13,13 @@
                      background: #f1f5f9; color: #0f172a;
                      font-family: -apple-system, "Segoe UI", system-ui, sans-serif; }
         body { display: flex; flex-direction: column; }
-        header { flex: 0 0 auto;
-                 padding: 10px 20px; background: #fff;
-                 border-bottom: 1px solid #e2e8f0;
-                 display: flex; align-items: center; gap: 16px; }
-        header h1 { margin: 0; font-size: 14px; color: #334155; flex: 1 1 auto; }
-        header h1 code { background: #f1f5f9; padding: 1px 6px; border-radius: 4px;
-                         font-size: 12px; }
-        /* Theme toggle — small, label-only button. Bound to Material's
-           ToggleTheme(); its caption flips to the next theme so the user
-           sees what clicking it will do, not what's currently active. */
-        #theme-toggle { flex: 0 0 auto;
-                        padding: 6px 14px; border: 1px solid #cbd5e1;
-                        background: #f1f5f9; color: #334155;
-                        border-radius: 9999px; font-size: 12px;
-                        cursor: pointer; }
-        #theme-toggle:hover { background: #e2e8f0; }
-        /* Dark-mode chrome for the host page so the body / header
-           don't stay light when Material flips. Triggered by adding
-           `data-theme="dark"` on <html>. */
+        /* Dark-mode chrome for the host page body so it doesn't stay
+           light when Material flips. Triggered by adding
+           `data-theme="dark"` on <html> from the ThemeManager.Activated
+           listener below; the in-app ThemeSelector control is what the
+           user actually clicks. */
         html[data-theme="dark"] body { background: #1c1b1f; color: #e6e1e5; }
-        html[data-theme="dark"] header { background: #211f26; border-bottom-color: #49454f; }
-        html[data-theme="dark"] header h1 { color: #cac4d0; }
-        html[data-theme="dark"] header h1 code { background: #2b2930; color: #e6e1e5; }
         html[data-theme="dark"] #app { background: #1c1b1f; }
-        html[data-theme="dark"] #theme-toggle { background: #2b2930; color: #e6e1e5;
-                                                border-color: #49454f; }
-        html[data-theme="dark"] #theme-toggle:hover { background: #36343b; }
         /* main + #app expand to fill the window; min-height:0 lets the
            flex child actually shrink below its content-box height so
            #app doesn't push beyond the viewport. */
@@ -71,10 +51,6 @@
     </script>
 </head>
 <body>
-    <header>
-        <h1>µ-mural demo platform — pick a demo from the <code>TreeView</code> on the left</h1>
-        <button id="theme-toggle" type="button">Switch to dark</button>
-    </header>
     <main>
         <div id="app"></div>
     </main>
@@ -90,34 +66,22 @@
         // to the root as DataContext.
         import { app }                                 from './platform.mu.js';
         import { HtmlTarget }                          from '@visualisation-sub/mural/visual-engine';
-        // ToggleTheme / CurrentTheme power the header switch button —
-        // theme activation itself runs inside platform.mu's IIFE via
-        // the `Application[Theme=Material Scheme=MaterialLight]`
-        // attribute, so the host script no longer has to call
-        // app.initialize. By the time `app` is imported here, the
-        // theme is already active and every control inside the IIFE
-        // resolved its DynamicResource lookups against the live token
-        // dictionary on first paint.
-        import { ToggleTheme, CurrentTheme }
-            from '@visualisation-sub/mural/resources/material';
+        // ThemeManager.Activated fires whenever the active scheme
+        // swaps — the in-app ThemeSelector control drives the swap;
+        // we just mirror the current scheme name onto <html> via
+        // `data-theme="dark"` so the host page body chrome flips in
+        // lockstep with Material.
+        import { ThemeManager }
+            from '@visualisation-sub/mural/runtime';
 
-        // Header theme toggle. Each click flips light↔dark via
-        // ToggleTheme; the button caption advertises the NEXT theme
-        // so the user sees what clicking it will do, not what's
-        // already active. `data-theme="dark"` on <html> drives the
-        // host-page CSS overrides above so the body / header / pad
-        // chrome flip in lockstep with Material.
-        const themeToggle = document.getElementById('theme-toggle');
         const applyHostChrome = () => {
-            const t = CurrentTheme() ?? 'light';
-            document.documentElement.setAttribute('data-theme', t);
-            themeToggle.textContent = t === 'dark' ? 'Switch to light' : 'Switch to dark';
+            const scheme = ThemeManager.Current.ActiveScheme;
+            const name = scheme?.name ?? '';
+            const isDark = name.toLowerCase().includes('dark');
+            document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
         };
         applyHostChrome();
-        themeToggle.addEventListener('click', () => {
-            ToggleTheme();
-            applyHostChrome();
-        });
+        ThemeManager.Current.AddActivatedListener(applyHostChrome);
 
         // Demo modules self-register on import. Each module calls
         // `register(...)` at top level — the side effect of importing
@@ -127,6 +91,7 @@
         import '../demos/commands/commands.mjs';
         import '../demos/toggle-button/toggle-button.mjs';
         import '../demos/tool-bar/tool-bar.mjs';
+        import '../demos/status-bar/status-bar.mjs';
         import '../demos/menu/menu.mjs';
         import '../demos/context-menu/context-menu.mjs';
         import '../demos/counter/counter.mjs';
@@ -151,8 +116,17 @@
 
         const status = document.getElementById('status');
         try {
-            new HtmlTarget(document.getElementById('app')).Show(app.Root);
-            app.Root.DataContext = new PlatformVM(allDemos());
+            // initialize(target, { dataContext }) mounts the root onto
+            // the HtmlTarget and seeds the PlatformVM in one call —
+            // replaces the old `new HtmlTarget(...).Show(app.Root);
+            // app.Root.DataContext = ...` pair. The .mu IIFE already
+            // ran initialize for theme activation; the second call
+            // here picks up the target + dataContext branches and
+            // skips theme (theme is idempotent).
+            app.initialize(
+                new HtmlTarget(document.getElementById('app')),
+                { dataContext: new PlatformVM(allDemos()) },
+            );
         } catch (e) {
             status.textContent = 'Error: ' + (e?.message ?? String(e));
             console.error(e);

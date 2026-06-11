@@ -14,7 +14,6 @@ import {
 } from '../runtime/index.js';
 import { Brush } from '../visual-engine/index.js';
 import { Grid, GridLength } from './grid.js';
-import { Theme } from './theme.js';
 import { Thumb, type DragDeltaEventArgs, type DragStartedEventArgs, type DragCompletedEventArgs } from './thumb.js';
 
 // ResizeDirection — WPF parity:
@@ -205,7 +204,12 @@ export class GridSplitter extends Thumb
             const layer = AdornerLayer.GetAdornerLayer(this);
             if (layer !== undefined)
             {
-                const brush = this.PreviewBrush ?? Theme.primary;
+                // PreviewBrush rides the default
+                // `Style[TargetType=GridSplitter]` setter via
+                // DynamicResource (@Primary) so a theme switch re-tints
+                // the adorner live. No `?? Theme.primary` fallback.
+                const brush = this.PreviewBrush;
+                if (brush === undefined) return;
                 const adorner = new GridSplitterPreviewAdorner(this, snap.axis, brush);
                 layer.Add(adorner);
                 this._previewAdorner = adorner;

@@ -13,10 +13,10 @@ export { ValidationErrorAdorner } from './validation-error-adorner.js';
 export { Border } from './border.js';
 export { TextBlock, TextAlignment, TextWrapping } from './text-block.js';
 export { Canvas } from './canvas.js';
-export { Ellipse } from './ellipse.js';
+export { Ellipse } from './shapes/ellipse.js';
 export { Image } from './image.js';
-export { Line } from './line.js';
-export { Rectangle } from './rectangle.js';
+export { Line } from './shapes/line.js';
+export { Rectangle } from './shapes/rectangle.js';
 export { DockPanel, Dock } from './dock-panel.js';
 export {
     TextBox,

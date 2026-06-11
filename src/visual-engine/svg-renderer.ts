@@ -99,6 +99,7 @@ interface RenderableVisual extends BackrefHost
     readonly IsHitTestVisible: boolean;
     readonly Cursor:           string | undefined;
     readonly Effect:           { toCssFilter(): string } | undefined;
+    readonly Opacity:          number;
     readonly visualChildren: Iterable<RenderableVisual>;
     Render(dc: SvgDomDrawingContext): void;
 }
@@ -306,6 +307,7 @@ export class SvgRenderer
             this.applyHitTestVisibility(info.outer, info.hit, visual);
             this.applyCursor(info.outer, visual);
             this.applyEffect(info.outer, visual);
+            this.applyOpacity(info.outer, visual);
         }
 
         // Own primitives — re-emit on first paint, when render-dirty,
@@ -417,6 +419,30 @@ export class SvgRenderer
         if (outer.style.filter !== next)
         {
             outer.style.filter = next;
+        }
+    }
+
+    // Visual.Opacity → outer <g>'s `opacity` attribute. SVG composes
+    // group opacities multiplicatively, so a 0.5-opacity ancestor with
+    // a 0.5-opacity child renders the child at 0.25 — matching WPF's
+    // Opacity-cascade semantics. Omitting the attribute when the value
+    // is 1 (fully opaque) keeps the painted DOM clean.
+    //
+    // Hit-testing intentionally ignores opacity here; that's
+    // applyHitTestVisibility's job. WPF parity: an Opacity=0 visual
+    // still receives pointer events unless IsHitTestVisible is also
+    // false. Authors hide-and-disable by flipping both DPs.
+    private applyOpacity(outer: SVGGElement, visual: RenderableVisual): void
+    {
+        const raw = visual.Opacity;
+        const clamped = Number.isFinite(raw) ? Math.max(0, Math.min(1, raw)) : 1;
+        if (clamped >= 1)
+        {
+            outer.removeAttribute('opacity');
+        }
+        else
+        {
+            outer.setAttribute('opacity', formatNumber(clamped));
         }
     }
 

@@ -339,7 +339,7 @@ describe('instantiate — deferreds end-to-end', () => {
                 TextBlock x:root{Hello mural}
             } }
         `, CTX) as Application;
-        const tb = app.Root as TextBlock;
+        const tb = app.Resources.Root as TextBlock;
         assert.ok(tb instanceof TextBlock);
         assert.equal(tb.Text, 'Hello mural');
     });
@@ -400,7 +400,7 @@ describe('instantiate — deferreds end-to-end', () => {
                 }
             } }
         `, CTX) as Application;
-        const border = app.Root as Border;
+        const border = app.Resources.Root as Border;
         const tb = border.child as TextBlock;
         assert.ok(tb instanceof TextBlock);
         // No DataContext set → binding resolves to undefined; the
@@ -469,7 +469,7 @@ describe('instantiate — deferreds end-to-end', () => {
                 }
             } }
         `, CTX) as Application;
-        const outer = app.Root as Border;
+        const outer = app.Resources.Root as Border;
         const inner = outer.child as Border;
         assert.ok(inner instanceof Border);
         // Inner Border has the macro-provided Background.

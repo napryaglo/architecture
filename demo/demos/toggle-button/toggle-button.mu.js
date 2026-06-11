@@ -29,7 +29,7 @@ export class ToggleButtonDemo extends ResourceDictionary {
                 return _border1;
             };
             const _tplSet3 = [new TargetedSetter(Border, "Background", new SetterFactory((_t) => DynamicResource(_t, "Primary")), "PART_Border"), new TargetedSetter(Border, "BorderBrush", new SetterFactory((_t) => DynamicResource(_t, "PrimaryPress")), "PART_Border")];
-            const _tplTrig4 = new TemplatePropertyTrigger(ToggleButton, "IsChecked", true, _tplSet3);
+            const _tplTrig4 = new TemplatePropertyTrigger(ToggleButton, "IsChecked", true, _tplSet3, undefined);
             return new ControlTemplate(_factory, [_tplTrig4]);
         })();
         t.Set("ToggleChromeTemplate", _tmpl0);

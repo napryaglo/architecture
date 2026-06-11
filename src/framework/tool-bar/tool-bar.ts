@@ -79,7 +79,7 @@ export class ToolBar extends ItemsControl
     static
     {
         // Theme lookup uses ToolBar as the key — the default Style
-        // `Style [TargetType=ToolBar]` in surface.template.mu wires
+        // `Style [TargetType=ToolBar]` in framework.resources.mu wires
         // both `Template` (inline chrome with chevron + ItemsPresenter)
         // and `PopupTemplate` (overlay popup with overflow ItemsControl).
         Model.OverrideMetadata(ToolBar, Visual.DefaultStyleKeyKey, { default_value: ToolBar });
@@ -155,13 +155,13 @@ export class ToolBar extends ItemsControl
         {
             throw new Error(
                 'ToolBar template did not materialise. Did the default Style ' +
-                '(surface.template.mu, `Style [TargetType=ToolBar]`) set `Template = @DefaultToolBar`?');
+                '(framework.resources.mu, `Style [TargetType=ToolBar]`) set `Template = @DefaultToolBar`?');
         }
         const chevron = root.FindName('PART_Chevron') as Button | undefined;
         if (chevron === undefined)
         {
             throw new Error(
-                'ToolBar template is missing PART_Chevron. See @DefaultToolBar in surface.template.mu.');
+                'ToolBar template is missing PART_Chevron. See @DefaultToolBar in framework.resources.mu.');
         }
         this._chevron = chevron;
         DockPanel.SetDock(this._chevron, Dock.Right);
@@ -182,8 +182,8 @@ export class ToolBar extends ItemsControl
         {
             throw new Error(
                 'ToolBar.PopupTemplate is undefined. The default Style in '
-                + 'surface.template.mu sets PopupTemplate = @DefaultToolBarPopup. '
-                + 'Activate a theme that adopts SurfaceTheme via its '
+                + 'framework.resources.mu sets PopupTemplate = @DefaultToolBarPopup. '
+                + 'Activate a theme that adopts MuralFramework via its '
                 + "`dictionaries:` header before constructing the ToolBar.");
         }
         const inst = popupTpl.Apply(this);

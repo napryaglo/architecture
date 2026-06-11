@@ -67,11 +67,12 @@ function formatJsLiteral(value: unknown, span: SourceSpan): string
 // data-paths in is a follow-up).
 interface TriggerTermLite
 {
-    property: string | undefined;
-    path:     string | undefined;
-    value:    ValueNode | null;
-    negated:  boolean;
-    span:     SourceSpan;
+    property:   string | undefined;
+    sourceName: string | undefined;
+    path:       string | undefined;
+    value:      ValueNode | null;
+    negated:    boolean;
+    span:       SourceSpan;
 }
 
 // Macro substitution map. A hole is bound either to a ValueNode (named
@@ -626,9 +627,9 @@ export class Compiler
     //
     // Dictionary ownership.
     //   The `dictionaries:` header lists ResourceDictionary classes
-    //   the theme adopts — typically `BasicTheme`, `SurfaceTheme`, or
+    //   the theme adopts — typically `MuralBasic`, `MuralFramework`, or
     //   any other shared bundle. The body's own resources (Style /
-    //   Template / DataTemplate items) compile to `${name}Templates`
+    //   Template / DataTemplate items) compile to `${name}Resources`
     //   and are appended LAST so the theme's authored entries shadow
     //   shared-bundle entries for the same key. The runtime
     //   `Theme.dictionaries` slot receives the resulting array; when
@@ -681,12 +682,12 @@ export class Compiler
 
         // Reuse the ResourcesBlock pipeline for the body — same shape
         // as a regular resource bundle, but the EXPORTED CLASS is
-        // renamed to `${name}Templates` so the Theme class takes the
+        // renamed to `${name}Resources` so the Theme class takes the
         // base name.
-        const templatesName = `${block.name}Templates`;
+        const resourcesName = `${block.name}Resources`;
         const meta = this.compileResourcesBlock({
             kind:    'resources-block',
-            name:    templatesName,
+            name:    resourcesName,
             imports: [],
             body:    block.body,
             span:    block.span,
@@ -722,12 +723,12 @@ export class Compiler
         this.line(`    constructor() {`);
         this.line(`        super({`);
         this.line(`            name:           ${JSON.stringify(block.name)},`);
-        // User-declared dictionaries first (BasicTheme, SurfaceTheme,
+        // User-declared dictionaries first (MuralBasic, MuralFramework,
         // …), the theme's own body dict LAST so its entries shadow
         // shared-bundle entries for the same key.
         const dictionaryEntries: string[] = [
             ...block.dictionaries.map(d => `${d}.Clone()`),
-            `${templatesName}.Clone()`,
+            `${resourcesName}.Clone()`,
         ];
         this.line(`            dictionaries:   [${dictionaryEntries.join(', ')}],`);
         this.line(`            catalog:        ${catalogName},`);
@@ -1252,19 +1253,43 @@ export class Compiler
 
             const valueExpr = this.evaluateTermValue(term);
             this.ensureImport('TemplatePropertyTrigger');
-            this.ensureImport(targetType);
+            // PART-source form (`when(PART_X.IsMouseOver)`) lowers the
+            // source-name into TemplatePropertyTrigger's optional
+            // sourceName arg so the trigger subscribes to the named
+            // PART's property change instead of the templated parent's.
+            // The propertyOwner ALSO has to switch to the PART's type
+            // (resolved from the template's x:name registry) — the
+            // runtime looks up the property descriptor by (owner, name)
+            // on the source visual, and using the templated parent's
+            // type for a property declared on the PART (e.g.
+            // ComboBox.IsDropDownOpen targeted via PART_xxxCombo) would
+            // fail descriptor resolution. undefined keeps the historic
+            // shape (watch the templated parent at the templated-parent
+            // type).
+            let ownerType = targetType;
+            let sourceArg = 'undefined';
+            if (term.sourceName !== undefined)
+            {
+                const partType = this.templateNameOwners?.get(term.sourceName);
+                if (partType !== undefined)
+                {
+                    ownerType = partType;
+                }
+                sourceArg = JSON.stringify(term.sourceName);
+            }
+            this.ensureImport(ownerType);
             const v = this.fresh('tplTrig');
             if (hasActions)
             {
                 // TemplatePropertyTrigger(owner, name, value, setters,
                 //                         sourceName, enterActions, exitActions).
                 this.line(
-                    `const ${v} = new TemplatePropertyTrigger(${targetType}, ${JSON.stringify(term.property)}, ${valueExpr}, ${settersArrVar}, undefined, ${enterArrVar}, ${exitArrVar});`);
+                    `const ${v} = new TemplatePropertyTrigger(${ownerType}, ${JSON.stringify(term.property)}, ${valueExpr}, ${settersArrVar}, ${sourceArg}, ${enterArrVar}, ${exitArrVar});`);
             }
             else
             {
                 this.line(
-                    `const ${v} = new TemplatePropertyTrigger(${targetType}, ${JSON.stringify(term.property)}, ${valueExpr}, ${settersArrVar});`);
+                    `const ${v} = new TemplatePropertyTrigger(${ownerType}, ${JSON.stringify(term.property)}, ${valueExpr}, ${settersArrVar}, ${sourceArg});`);
             }
             triggerVars.push(v);
         }
@@ -2246,9 +2271,12 @@ export class Compiler
     {
         if (expr.kind === 'trigger-term')
         {
-            return [[{ property: expr.property, path: expr.path,
-                       value: expr.value,
-                       negated: expr.negated, span: expr.span }]];
+            return [[{ property:   expr.property,
+                       sourceName: expr.sourceName,
+                       path:       expr.path,
+                       value:      expr.value,
+                       negated:    expr.negated,
+                       span:       expr.span }]];
         }
         if (expr.kind === 'trigger-or')
         {

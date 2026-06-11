@@ -12,7 +12,6 @@ import {
 } from '../runtime/index.js';
 import type { Border } from './border.js';
 import { Orientation } from './stack-panel.js';
-import { Theme } from './theme.js';
 import { defaultTemplate } from './default-template.js';
 
 // Resource-dictionary key — matches the `x:key` literal in
@@ -105,6 +104,15 @@ export class Slider extends Visual
     public static readonly ValueKey       = Model.RegisterProperty<number>(     Slider, 'Value',       0,    MetaData.Arrange);
     public static readonly SmallChangeKey = Model.RegisterProperty<number>(     Slider, 'SmallChange', 0.01, MetaData.None);
     public static readonly LargeChangeKey = Model.RegisterProperty<number>(     Slider, 'LargeChange', 0.1,  MetaData.None);
+    // Read-only "thumb is being dragged" state, surfaced as a DP so
+    // the default template's `when(IsDragging) { PART_Thumb.Background
+    // = @PrimaryPress; }` trigger fires off the same flag the drag
+    // handler flips. Internal write-key keeps the setter private to
+    // the drag path; consumers see it through the public boolean getter.
+    private static readonly _IsDraggingPriv = Model.RegisterReadOnlyProperty<boolean>(
+        Slider, 'IsDragging', false, MetaData.None,
+    );
+    public  static readonly IsDraggingKey  = Slider._IsDraggingPriv;
 
     static {
         Model.OverrideMetadata(Slider, Visual.DefaultStyleKeyKey, { default_value: Slider });
@@ -121,7 +129,6 @@ export class Slider extends Visual
     // dragOriginValue is .Value at that moment. PointerMove computes
     // the new value from a pure delta so dragging never makes the thumb
     // teleport.
-    private _dragging        = false;
     private _dragOriginPx    = 0;
     private _dragOriginValue = 0;
 
@@ -144,10 +151,11 @@ export class Slider extends Visual
         this._thumb  = inst.root.FindName('PART_Thumb') as Border;
         this._layout.host = this;
 
-        // Hover / press visual swap on the thumb — same shape ScrollBar
-        // uses for its own thumb. The colours come from Theme so the
-        // template author and TS side agree on identity.
-        this._thumb.AddPropertyChangedListener(Visual.IsMouseOverKey, () => this.refreshThumbBrush());
+        // Hover / press visual swap on the thumb is declarative — the
+        // DefaultSlider template's `when(PART_Thumb.IsMouseOver)` and
+        // `when(IsDragging)` triggers paint PART_Thumb.Background via
+        // DynamicResource, so a theme switch re-tints live and the TS
+        // side carries no imperative refresh hook.
 
         this.AttachVisual(this._layout);
     }
@@ -167,6 +175,15 @@ export class Slider extends Visual
     public set SmallChange(v: number) { this.set_property_value(Slider.SmallChangeKey, v); }
     public get LargeChange(): number { return this.get_property_value(Slider.LargeChangeKey); }
     public set LargeChange(v: number) { this.set_property_value(Slider.LargeChangeKey, v); }
+    /** True while the thumb is being dragged. Read-only DP — flipped
+     *  internally by the pointer-down / pointer-up path; the default
+     *  template watches it via `when(IsDragging)` to swap the thumb
+     *  brush. */
+    public get IsDragging(): boolean { return this.get_property_value(Slider.IsDraggingKey); }
+    private setIsDragging(v: boolean): void
+    {
+        this.set_property_value_with_key(Slider._IsDraggingPriv, v);
+    }
 
     // ── Public events ──────────────────────────────────────────────
     public AddValueChangedListener(listener: (value: number) => void): void
@@ -312,11 +329,10 @@ export class Slider extends Visual
         // Thumb press — start a value-preserving drag.
         if (args.Source === this._thumb)
         {
-            this._dragging        = true;
+            this.setIsDragging(true);
             this._dragOriginPx    = this.primary(args.HostX, args.HostY);
             this._dragOriginValue = this.clampedValue();
             args.CapturePointer(this);
-            this.refreshThumbBrush();
             args.Handled = true;
             return;
         }
@@ -327,17 +343,16 @@ export class Slider extends Visual
         // without releasing.
         const valueAtPointer = this.valueForPointerPx(this.primary(args.HostX, args.HostY));
         this.setClampedValue(valueAtPointer);
-        this._dragging        = true;
+        this.setIsDragging(true);
         this._dragOriginPx    = this.primary(args.HostX, args.HostY);
         this._dragOriginValue = this.clampedValue();
         args.CapturePointer(this);
-        this.refreshThumbBrush();
         args.Handled = true;
     }
 
     protected override OnPointerMove(args: PointerEventArgs): void
     {
-        if (!this._dragging) return;
+        if (!this.IsDragging) return;
         const m = this.metricsFor(this.ArrangedRect.Size);
         const travel = m.trackLength - THUMB_SIZE;
         if (travel <= 0) return;
@@ -355,10 +370,9 @@ export class Slider extends Visual
 
     protected override OnPointerUp(args: PointerEventArgs): void
     {
-        if (!this._dragging) return;
-        this._dragging = false;
+        if (!this.IsDragging) return;
+        this.setIsDragging(false);
         args.ReleasePointerCapture();
-        this.refreshThumbBrush();
         args.Handled = true;
     }
 
@@ -482,12 +496,6 @@ export class Slider extends Visual
         this.Value = next;
     }
 
-    private refreshThumbBrush(): void
-    {
-        this._thumb.Background = this._dragging          ? Theme.primaryPress
-                                : this._thumb.IsMouseOver ? Theme.primaryHover
-                                : Theme.primary;
-    }
 }
 
 function clamp(value: number, min: number, max: number): number

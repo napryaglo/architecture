@@ -7,7 +7,7 @@ import {
     type DrawingContext,
 } from '../../runtime/index.js';
 import { Brush, Pen, RectangleGeometry, SolidColorBrush } from '../../visual-engine/index.js';
-import { Rectangle } from '../rectangle.js';
+import { Rectangle } from '../shapes/rectangle.js';
 
 // Captures DrawGeometry calls so we can assert shape, fill, stroke.
 interface CapturedGeom

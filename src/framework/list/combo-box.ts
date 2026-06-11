@@ -16,7 +16,6 @@ import { ItemsControl } from '../items-control.js';
 import { Selector } from './selector.js';
 import { StackPanel } from '../../Basic/stack-panel.js';
 import { TextBlock } from '../../Basic/text-block.js';
-import { Theme } from '../../Basic/theme.js';
 import type { ControlTemplate } from '../../Basic/control-template.js';
 
 // Resource-dictionary keys for the two ControlTemplates the ComboBox
@@ -148,7 +147,7 @@ export class ClickableBorder extends Border
 // Background imperatively. ComboBox writes IsSelected on every realised
 // row when SelectedIndex changes; the row's Style reacts.
 //
-// Default Style ships in basic.template.mu under
+// Default Style ships in basic.resources.mu under
 // `Style [TargetType=ComboBoxItem]` — Background = @SurfaceContainerHigh
 // at rest, @StateHoverOverlay on hover, @SecondaryContainer when
 // IsSelected. The class overrides DefaultStyleKey to itself so the
@@ -321,7 +320,7 @@ export class ComboBoxItemList extends ItemsControl
     {
         // ComboBoxItem's default Style fills in Background / Padding /
         // hover / selected chrome via triggers — see
-        // `Style [TargetType=ComboBoxItem]` in basic.template.mu. The
+        // `Style [TargetType=ComboBoxItem]` in basic.resources.mu. The
         // label TextBlock is the only content authoring; everything
         // visual rides through the Style.
         const row   = new ComboBoxItem();
@@ -413,6 +412,15 @@ export class ComboBox extends Selector
 {
     public static readonly IsDropDownOpenKey = Model.RegisterProperty<boolean>(ComboBox, 'IsDropDownOpen', false,     MetaData.Measure);
     public static readonly PlaceholderKey    = Model.RegisterProperty<string>( ComboBox, 'Placeholder',    'Select…', MetaData.Measure | MetaData.Render);
+    // Read-only "the user has picked an item, not the Placeholder" DP.
+    // Flipped by refreshSelectionText whenever SelectedItem swaps;
+    // the DefaultComboBoxSelection template triggers on it to switch
+    // PART_SelectionText.Foreground from @OnSurfaceVariant (placeholder
+    // tint) to @OnSurface (selected-item tint) via DynamicResource.
+    private static readonly _HasSelectionPriv = Model.RegisterReadOnlyProperty<boolean>(
+        ComboBox, 'HasSelection', false, MetaData.None,
+    );
+    public  static readonly HasSelectionKey   = ComboBox._HasSelectionPriv;
 
     static {
         Model.OverrideMetadata(ComboBox, Visual.DefaultStyleKeyKey, { default_value: ComboBox });
@@ -616,7 +624,7 @@ export class ComboBox extends Selector
 
     // Set IsSelected on the realised popup rows according to the
     // current SelectedIndex. The row's default Style (in
-    // basic.template.mu) reacts via triggers — IsSelected → selected
+    // basic.resources.mu) reacts via triggers — IsSelected → selected
     // chrome, IsMouseOver → hover chrome, selected wins. No Background
     // writes from this class.
     private refreshItemHighlights(): void
@@ -637,30 +645,23 @@ export class ComboBox extends Selector
         // template parts are wired would otherwise crash here.
         if (this._selectionText === undefined) return;
         const item = this.SelectedItem;
-        if (item === undefined || item === null)
-        {
-            this._selectionText.Text       = this.Placeholder;
-            this._selectionText.Foreground = Theme.placeholder;
-        }
-        else
-        {
-            this._selectionText.Text       = displayString(item);
-            this._selectionText.Foreground = Theme.fieldText;
-        }
+        const hasSelection = item !== undefined && item !== null;
+        this._selectionText.Text = hasSelection ? displayString(item) : this.Placeholder;
+        // PART_SelectionText.Foreground is owned by the template's
+        // `when(HasSelection)` trigger via DynamicResource — flipping
+        // HasSelection here is enough to re-tint live (and tracks
+        // theme switches without any imperative refresh).
+        this.set_property_value_with_key(ComboBox._HasSelectionPriv, hasSelection);
     }
 
     private applyDropDownVisibility(open: boolean): void
     {
-        if (open)
-        {
-            this.mountPopup();
-            this._selectionBox.BorderBrush = Theme.fieldBorderOpen;
-        }
-        else
-        {
-            this.unmountPopup();
-            this._selectionBox.BorderBrush = Theme.fieldBorder;
-        }
+        // PART_SelectionBox.BorderBrush is owned by the template's
+        // `when(IsDropDownOpen)` trigger via DynamicResource — flipping
+        // IsDropDownOpen here is enough to re-tint live and theme
+        // switches re-resolve the brush.
+        if (open) this.mountPopup();
+        else      this.unmountPopup();
     }
 
     private mountPopup(): void

@@ -64,44 +64,56 @@ describe('Application — construction and ambient singleton', () => {
     });
 });
 
-describe('Application — Root delegation', () => {
+describe('Application — initialize(target) mounting', () => {
     beforeEach(() => { Application.current = null; });
 
-    test('Root is undefined until Resources.Root is set', () => {
-        const app = new Application();
-        assert.equal(app.Root, undefined);
-    });
-
-    test('Application.Root delegates to Resources.Root', () => {
-        const app = new Application();
-        const root = new TestLeaf();
-        app.Resources.Root = root;
-        assert.equal(app.Root, root);
-    });
-});
-
-describe('Application — Mount', () => {
-    beforeEach(() => { Application.current = null; });
-
-    test('Mount throws when no x:root has been registered', () => {
+    test('initialize(target) throws when no x:root has been registered', () => {
         const app = new Application();
         const target = makeFakeTarget();
         assert.throws(
-            () => app.Mount(target),
+            () => app.initialize(target),
             /no x:root marker in Resources/,
         );
         // Target unchanged on failure.
         assert.equal(target.Content, undefined);
     });
 
-    test('Mount assigns Root to target.Content and returns the target', () => {
+    test('initialize(target) assigns Resources.Root to target.Content and returns the target', () => {
         const app = new Application();
         const root = new TestLeaf();
         app.Resources.Root = root;
         const target = makeFakeTarget();
-        const result = app.Mount(target);
+        const result = app.initialize(target);
         assert.equal(target.Content, root);
         assert.equal(result, target);
+    });
+
+    test('initialize(target, { dataContext }) assigns dataContext to the root', () => {
+        const app = new Application();
+        const root = new TestLeaf();
+        app.Resources.Root = root;
+        const target = makeFakeTarget();
+        const vm = { name: 'vm' };
+        app.initialize(target, { dataContext: vm });
+        assert.equal(root.DataContext, vm);
+    });
+
+    test('app.DataContext getter/setter proxies to the root visual', () => {
+        const app = new Application();
+        const root = new TestLeaf();
+        app.Resources.Root = root;
+        const vm = { name: 'vm' };
+        app.DataContext = vm;
+        assert.equal(root.DataContext, vm);
+        assert.equal(app.DataContext, vm);
+    });
+
+    test('app.DataContext setter throws before Resources.Root is set', () => {
+        const app = new Application();
+        assert.throws(
+            () => { app.DataContext = { x: 1 }; },
+            /no x:root marker in Resources/,
+        );
     });
 });
 

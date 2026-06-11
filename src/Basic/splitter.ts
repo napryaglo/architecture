@@ -12,7 +12,6 @@ import {
 } from '../runtime/index.js';
 import { Brush } from '../visual-engine/index.js';
 import { Orientation } from './stack-panel.js';
-import { Theme } from './theme.js';
 import { Thumb, type DragDeltaEventArgs, type DragStartedEventArgs, type DragCompletedEventArgs } from './thumb.js';
 
 // Default brush for the drag-preview adorner — Material Primary so
@@ -132,7 +131,14 @@ export class Splitter extends Thumb
             const layer = AdornerLayer.GetAdornerLayer(this);
             if (layer !== undefined)
             {
-                const brush = this.PreviewBrush ?? Theme.primary;
+                // PreviewBrush rides the default
+                // `Style[TargetType=Splitter]` setter via DynamicResource
+                // (@Primary) so a theme switch re-tints the adorner
+                // live; the imperative `?? Theme.primary` fallback is
+                // unnecessary now that the DP default flows through
+                // the resource chain.
+                const brush = this.PreviewBrush;
+                if (brush === undefined) return;
                 const adorner = new SplitterPreviewAdorner(this, this.Orientation, brush);
                 layer.Add(adorner);
                 this._previewAdorner = adorner;

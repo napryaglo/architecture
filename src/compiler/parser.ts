@@ -991,9 +991,18 @@ export class Parser
         // `$Path` or `$Path.tail` — DataTrigger form. Resolves against
         // the styled target's DataContext, mirroring binding syntax in
         // attribute values. Same dotted-path tail as $-bindings.
-        let property: string | undefined;
-        let path:     string | undefined;
-        let startTk:  Token = tk;
+        //
+        // `Ident.Ident` (no `$`) — PART-sourced PropertyTrigger. The
+        // first segment names a template PART, the second the property
+        // on that part to watch (`when(PART_Row.IsMouseOver)`). Lowers
+        // to TemplatePropertyTrigger.sourceName so the runtime
+        // subscribes to the named visual's property change instead of
+        // the templated parent's. Only two segments are accepted —
+        // deeper dotted paths against PARTs aren't a thing today.
+        let property:   string | undefined;
+        let sourceName: string | undefined;
+        let path:       string | undefined;
+        let startTk:    Token = tk;
         if (this.peek().kind === TokenKind.Dollar)
         {
             const dollar = this.consume();
@@ -1010,7 +1019,18 @@ export class Parser
         else
         {
             const idTk = this.expect(TokenKind.Ident);
-            property = idTk.value;
+            if (this.peek().kind === TokenKind.Dot)
+            {
+                // PART-source form: idTk is the part name, next ident
+                // is the property.
+                this.consume();
+                sourceName = idTk.value;
+                property   = this.expect(TokenKind.Ident).value;
+            }
+            else
+            {
+                property = idTk.value;
+            }
         }
         let value: ValueNode | null = null;
         if (this.peek().kind === TokenKind.Equals)
@@ -1023,6 +1043,7 @@ export class Parser
             kind: 'trigger-term',
             negated,
             property,
+            sourceName,
             path,
             value,
             span: this.span(startTk.span.start, end),

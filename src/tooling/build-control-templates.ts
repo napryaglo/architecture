@@ -155,8 +155,8 @@ function formatDts(out: CompileResult): string
         for (const b of blocks)
         {
             // Theme blocks emit a class extending Theme (with
-            // statics + Activate); the templates dictionary lives
-            // alongside as `${name}Templates`. Skip the dictionary
+            // statics + Activate); the body resources dictionary lives
+            // alongside as `${name}Resources`. Skip the dictionary
             // declaration here — emit the Theme class itself further
             // below, after catalogs.
             if (themeNames.has(b.name)) continue;
@@ -178,19 +178,19 @@ function formatDts(out: CompileResult): string
             declarations.push(`export declare const ${name}Catalog: TokenCatalog;`);
         }
         // Theme classes — one per `theme NAME { … }` block. The
-        // emitted JS carries a sibling `${name}Templates` resource
+        // emitted JS carries a sibling `${name}Resources` resource
         // dictionary plus the `${name}Catalog` constant and a
         // self-registering side effect for ThemeManager / Application.
         // The .d.ts captures the public surface only.
         for (const name of themeNames)
         {
-            const templateBlock = blocks.find(b => b.name === name);
-            if (templateBlock !== undefined)
+            const resourcesBlock = blocks.find(b => b.name === name);
+            if (resourcesBlock !== undefined)
             {
                 const lines: string[] = [];
-                lines.push(`export declare class ${name}Templates extends ResourceDictionary {`);
-                lines.push(`    static Clone(): ${name}Templates;`);
-                for (const a of templateBlock.accessors)
+                lines.push(`export declare class ${name}Resources extends ResourceDictionary {`);
+                lines.push(`    static Clone(): ${name}Resources;`);
+                for (const a of resourcesBlock.accessors)
                 {
                     const t = symbolToModule.has(a.type) ? a.type : 'unknown';
                     lines.push(`    ${a.name}: ${t};`);
@@ -238,7 +238,7 @@ export function buildControlTemplates(opts: BuildOptions): number
     const inputs = discoverTemplateSources(opts.sourceDir);
     if (inputs.length === 0)
     {
-        process.stdout.write('build-control-templates: no .template.mu sources found\n');
+        process.stdout.write('build-control-templates: no .mu sources found\n');
         return 0;
     }
     mkdirSync(opts.outDir, { recursive: true });
@@ -289,16 +289,17 @@ if (process.argv[1] !== undefined
     const here        = fileURLToPath(import.meta.url);
     const projectRoot = join(dirname(here), '..', '..');
     // Three source trees:
-    //   * src/resources — the theme bundles (basic.template.mu,
-    //                     surface.template.mu, material/*.mu) and the
-    //                     default-resources / default-surface-resources
-    //                     TDZ shims. Compiled outputs go to build/resources/.
+    //   * src/resources — the theme bundles (basic.resources.mu,
+    //                     framework.resources.mu, material/*.mu) and any
+    //                     shared resource dicts. Compiled outputs go to
+    //                     build/resources/.
     //   * src/Basic     — primitive controls (no `.mu` files now that
-    //                     basic.template.mu moved into src/resources; walk
-    //                     kept so authoring a control-local .mu still works).
+    //                     basic.resources.mu moved into src/resources;
+    //                     walk kept so authoring a control-local .mu still
+    //                     works).
     //   * src/framework — composite controls (no .mu files now that
-    //                     surface.template.mu moved). Walked for the same
-    //                     forward-compat reason.
+    //                     framework.resources.mu moved). Walked for the
+    //                     same forward-compat reason.
     const trees: ReadonlyArray<readonly [string, string]> = [
         [join(projectRoot, 'src',   'resources'), join(projectRoot, 'build', 'resources')],
         [join(projectRoot, 'src',   'Basic'),     join(projectRoot, 'build', 'Basic')],

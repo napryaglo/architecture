@@ -55,7 +55,7 @@ export class WordToolboxDemo extends ResourceDictionary {
                 return _border8;
             };
             const _tplSet10 = [new TargetedSetter(Border, "Background", new SetterFactory((_t) => DynamicResource(_t, "SecondaryContainer")), "PART_Border")];
-            const _tplTrig11 = new TemplatePropertyTrigger(ListBoxItem, "IsSelected", true, _tplSet10);
+            const _tplTrig11 = new TemplatePropertyTrigger(ListBoxItem, "IsSelected", true, _tplSet10, undefined);
             return new ControlTemplate(_factory, [_tplTrig11]);
         })();
         t.Set("WordTileItemTemplate", _tmpl7);

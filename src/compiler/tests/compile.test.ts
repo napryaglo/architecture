@@ -704,7 +704,7 @@ describe('compile — value emission', () => {
         // the local ResourceDictionary being built. The local fast path
         // still applies inside a single RD (Style { Template = @key; } where
         // @key is declared in the same RD) — that case is exercised by
-        // the basic.template.mu round-trip.
+        // the basic.resources.mu round-trip.
         const js = emitted(`
             Application{ resources: {
                 @primary = #4caf50
@@ -1035,7 +1035,7 @@ describe('compile — resources block (typed dictionary class)', () => {
 });
 
 describe('compile — `theme NAME { schemes: [...] defaultScheme: ... tokens { ... } ... }` block', () => {
-    test('emits a class extending Theme + sibling NAMECatalog Map + NAMETemplates dict + auto-register', () => {
+    test('emits a class extending Theme + sibling NAMECatalog Map + NAMEResources dict + auto-register', () => {
         const js = emitted(`
             theme Material {
                 import MaterialLight from "./light.mu.js"
@@ -1052,8 +1052,8 @@ describe('compile — `theme NAME { schemes: [...] defaultScheme: ... tokens { .
                 Style x:key="DemoStyle" [TargetType=TextBlock] { FontSize = 14; }
             }
         `);
-        // Templates dictionary sibling — same shape as a resources block.
-        assert.match(js, /export class MaterialTemplates extends ResourceDictionary/);
+        // Resources dictionary sibling — same shape as a resources block.
+        assert.match(js, /export class MaterialResources extends ResourceDictionary/);
         // Sibling catalog Map with each token entry.
         assert.match(js, /export const MaterialCatalog = new Map\(\[/);
         assert.match(js, /\["Primary",\s*\{\s*type:\s*"Brush",\s*description:\s*"Primary brand color"\s*\}\]/);

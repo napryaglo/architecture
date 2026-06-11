@@ -183,8 +183,12 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['ContextMenu',             '@visualisation-sub/mural/framework/surface.js'],
     ['ContextMenuService',      '@visualisation-sub/mural/framework/surface.js'],
     // Popup host shared by MenuButton + ContextMenu; referenced by the
-    // surface.template.mu default ControlTemplates.
+    // framework.resources.mu default ControlTemplates.
     ['MenuPopupHost',           '@visualisation-sub/mural/framework/surface.js'],
+    ['StatusBar',               '@visualisation-sub/mural/framework/surface.js'],
+    ['StatusBarItem',           '@visualisation-sub/mural/framework/surface.js'],
+    ['StatusBarSeparator',      '@visualisation-sub/mural/framework/surface.js'],
+    ['ThemeSelector',           '@visualisation-sub/mural/framework/surface.js'],
 
     // ── Framework layer ─────────────────────────────────────────────
     // Templated-control base class. Sits between runtime's `Visual`
@@ -381,6 +385,9 @@ export const DEFAULT_SLOT_INFO: ReadonlyMap<string, SlotInfo> = new Map<string, 
     ['ContextMenu',             { name: 'Items',    kind: 'list'   }],
     // MenuPopupHost: Panel-shaped, takes Scrim + popup-container as
     // children declaratively from the default ControlTemplates in
-    // surface.template.mu.
+    // framework.resources.mu.
     ['MenuPopupHost',           { name: 'Children', kind: 'list'   }],
+    ['StatusBar',               { name: 'Items',    kind: 'list'   }],
+    ['StatusBarItem',           { name: 'Content',  kind: 'object' }],
+    // StatusBarSeparator: no body
 ]);

@@ -26,6 +26,10 @@ export interface ApplicationInitOptions
     /** Scheme class to activate inside the named theme. Defaults to
      *  the theme's `DefaultScheme` when omitted. */
     scheme?: Function;
+
+    /** Optional DataContext to assign to the root visual. Equivalent
+     *  to writing `app.DataContext = value` after the call returns. */
+    dataContext?: unknown;
 }
 
 // Root container for a µ-mural application. Owns app-wide resources
@@ -75,7 +79,7 @@ export class Application
 
     // Resolve a resource (typically a default ControlTemplate) by key.
     // Walks `Application.current.Resources`, which the active theme
-    // populates via its `dictionaries:` header (BasicTheme, SurfaceTheme,
+    // populates via its `dictionaries:` header (MuralBasic, MuralFramework,
     // and the theme's own body dict are all merged in by
     // ThemeManager.activate). A theme that hasn't been activated will
     // return undefined — `app.initialize({ theme, scheme })` is
@@ -104,13 +108,41 @@ export class Application
         return undefined;
     }
 
-    // The visual marked with `x:root` in the application's resources.
-    // Delegates to Resources.Root so there's a single source of truth
-    // and a single setter (the dictionary's). Reads as undefined until
-    // the compiler-emitted bind pass registers a root.
-    public get Root(): Visual | undefined
+    // The root visual is INTERNAL state — consumers reach it through
+    // `app.initialize(target, …)` (which mounts it onto a target),
+    // through `app.DataContext` (which proxies to the root's
+    // DataContext), or through the resource dictionary's marker
+    // (`app.Resources.Root`) when tests need to assert against the
+    // constructed tree. No `app.Root` shortcut by design: exposing the
+    // root visual on the Application invites callers to mutate the
+    // visual tree from outside, bypassing the data-bindings + lifecycle
+    // contracts that the mount path enforces.
+    private get _root(): Visual | undefined
     {
         return this.Resources.Root;
+    }
+
+    /** DataContext on the root visual. Reads/writes proxy to
+     *  `Resources.Root.DataContext`. Setting before the root is
+     *  registered (the compiler-emitted bind pass sets `Resources.Root`
+     *  after constructing the tree) throws — the caller's data is
+     *  meaningless without a tree to flow into. Reading before that
+     *  point returns undefined. */
+    public get DataContext(): unknown
+    {
+        return this._root?.DataContext;
+    }
+    public set DataContext(value: unknown)
+    {
+        const root = this._root;
+        if (root === undefined)
+        {
+            throw new Error(
+                'Application.DataContext: no x:root marker in Resources — '
+                + 'set DataContext after the visual tree is constructed.',
+            );
+        }
+        root.DataContext = value;
     }
 
     // ── Initialisation lifecycle ─────────────────────────────────────
@@ -187,31 +219,85 @@ export class Application
         Application._defaultTheme = undefined;
     }
 
-    public initialize(opts?: ApplicationInitOptions): void
+    /** Theme-only initialize — called by the compiler-emitted IIFE
+     *  *before* the visual tree is built so DynamicResource lookups
+     *  inside the body resolve against the active token dictionary on
+     *  first paint. Theme activation is idempotent: a subsequent
+     *  initialize call with a different theme does NOT re-activate
+     *  (the second activation would unmount live visuals from the
+     *  first theme's dictionaries). */
+    public initialize(opts?: ApplicationInitOptions): void;
+    /** Mount-mode initialize — called by the host script *after* the
+     *  visual tree is built. Activates the theme (idempotent — no-op
+     *  if a prior initialize already did), attaches the root visual to
+     *  `target.Content`, and applies `opts.dataContext` to the root if
+     *  provided. Returns the target so callers can chain a handle. */
+    public initialize<T extends MountableTarget>(target: T, opts?: ApplicationInitOptions): T;
+    public initialize<T extends MountableTarget>(
+        targetOrOpts?: T | ApplicationInitOptions,
+        opts?: ApplicationInitOptions,
+    ): T | void
     {
-        if (this._initialized) return;
-        const themeClass = opts?.theme ?? Application._defaultTheme;
-        if (themeClass !== undefined)
+        // Distinguish the two overloads. MountableTarget has a writable
+        // `Content` slot — the duck-type check matches any concrete
+        // PresentationTarget (HtmlTarget, HeadlessTarget, custom hosts).
+        // ApplicationInitOptions doesn't carry `Content`, so the
+        // discrimination is unambiguous.
+        let target: T | undefined;
+        let init: ApplicationInitOptions | undefined;
+        if (targetOrOpts !== undefined && 'Content' in (targetOrOpts as object))
         {
-            themeClass.Activate(opts?.scheme);
+            target = targetOrOpts as T;
+            init   = opts;
         }
-        this._initialized = true;
-    }
+        else
+        {
+            init = targetOrOpts as ApplicationInitOptions | undefined;
+        }
 
-    // Attach Root to a mountable target and return the target. Throws
-    // when no x:root marker has been registered — mounting an
-    // Application with nothing to show is a programming error worth
-    // catching loudly. The target keeps responsibility for layout +
-    // render + lifecycle; Application's job ends after the assignment.
-    public Mount<T extends MountableTarget>(target: T): T
-    {
-        if (this.Root === undefined)
+        // Theme activation rides the existing idempotency. Re-activation
+        // would tear down the first theme's dictionaries and re-merge
+        // the new ones — a Resource cascade that can fire on already-
+        // realised Visuals whose Style.Resource subscriptions outlived
+        // the first theme. First-wins keeps that hazard out.
+        if (!this._initialized)
         {
-            throw new Error(
-                'Application.Mount: no x:root marker in Resources — nothing to mount.',
-            );
+            const themeClass = init?.theme ?? Application._defaultTheme;
+            if (themeClass !== undefined)
+            {
+                themeClass.Activate(init?.scheme);
+            }
+            this._initialized = true;
         }
-        target.Content = this.Root;
+
+        // Mount + DataContext are NOT gated by _initialized — the host
+        // can call initialize repeatedly with a different target /
+        // dataContext to re-host or rebind the same Application
+        // (e.g. portal-mounted previews, hot-reload).
+        if (target !== undefined)
+        {
+            const root = this._root;
+            if (root === undefined)
+            {
+                throw new Error(
+                    'Application.initialize: no x:root marker in Resources — nothing to mount.',
+                );
+            }
+            target.Content = root;
+        }
+
+        if (init?.dataContext !== undefined)
+        {
+            const root = this._root;
+            if (root === undefined)
+            {
+                throw new Error(
+                    'Application.initialize: cannot set DataContext without an x:root marker.',
+                );
+            }
+            root.DataContext = init.dataContext;
+        }
+
         return target;
     }
 }

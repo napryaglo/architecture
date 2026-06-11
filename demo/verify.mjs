@@ -28,12 +28,12 @@ const app = instantiate(src, ctx);
 if (!(app instanceof runtime.Application)) {
     throw new Error('instantiate() did not return an Application');
 }
-if (app.Root === undefined) {
+if (app.Resources.Root === undefined) {
     throw new Error('Application has no x:root');
 }
 
 const W = 460, H = 320;
-const target = new engine.HeadlessTarget(W, H, app.Root);
+const target = app.initialize(new engine.HeadlessTarget(W, H));
 const dc = new engine.SvgDrawingContext();
 target.Render(dc);
 const svg = dc.ToSvg(W, H);

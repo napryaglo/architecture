@@ -1186,10 +1186,15 @@ export class ItemsControl extends Control
             }
         }
 
-        // Tear down the old template tree.
+        // Tear down the old template tree. A templated control may
+        // re-parent its template root away from itself between Apply
+        // and the next rebuild (MenuItem / MenuButton / ContextMenu all
+        // detach their popup root in the ctor so the OverlayLayer can
+        // adopt it). Only detach when the root is still our child.
         if (this._templateInstance !== undefined)
         {
-            this.DetachVisual(this._templateInstance.root);
+            const root = this._templateInstance.root;
+            if (root['_visualParent'] === this) this.DetachVisual(root);
             this._templateInstance = undefined;
             this._itemsPresenter = undefined;
         }

@@ -166,7 +166,7 @@ export class SpinEdit extends Visual
         // SpinEdit isn't focusable itself — focus lives on the composed
         // TextBox. Surface that state as IsEditFocused / IsEditHovered
         // on SpinEdit so the DefaultSpinEdit template can trigger on
-        // them to swap PART_Border.BorderBrush (see basic.template.mu).
+        // them to swap PART_Border.BorderBrush (see basic.resources.mu).
         // No imperative `_border.BorderBrush =` writes from this class.
         const forwardFocus = (): void =>
         {

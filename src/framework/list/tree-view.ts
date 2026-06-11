@@ -8,7 +8,7 @@ import {
     type PointerEventArgs,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
-import { RectangleGeometry, type Brush } from '../../visual-engine/index.js';
+import { RectangleGeometry } from '../../visual-engine/index.js';
 import { Border } from '../../Basic/border.js';
 import { HierarchicalDataTemplate } from '../../Basic/data-template.js';
 import { ItemsControl } from '../items-control.js';
@@ -16,7 +16,6 @@ import { ScrollViewer } from '../scroll-viewer.js';
 import { Selector, SelectionMode } from './selector.js';
 import { StackPanel } from '../../Basic/stack-panel.js';
 import { TextBlock } from '../../Basic/text-block.js';
-import { Theme } from '../../Basic/theme.js';
 
 
 
@@ -508,7 +507,10 @@ export class TreeViewItem extends ItemsControl
             const tree = this.findTree();
             if (tree !== undefined) tree.HandleContainerClick(this, modifiers);
         };
-        this._row.AddPropertyChangedListener(Visual.IsMouseOverKey, () => this.refreshRowBackground());
+        // Hover + selection chrome ride through the DefaultTreeViewItem
+        // template's `when(PART_Row.IsMouseOver)` / `when(IsSelected)`
+        // triggers — both write PART_Row.Background via DynamicResource
+        // so theme switches re-tint live. No imperative refresh hook.
 
         // Items panel = CollapsibleStack. The factory caches the
         // single instance so IsExpanded toggles can flip its
@@ -523,7 +525,6 @@ export class TreeViewItem extends ItemsControl
         // Base ItemsControl seeded Items = _declarativeItems.
 
         this.refreshChevron();
-        this.refreshRowBackground();
     }
 
     public get Header(): string { return this.get_property_value(TreeViewItem.HeaderKey); }
@@ -660,7 +661,8 @@ export class TreeViewItem extends ItemsControl
         {
             this._syncingIsSelected = false;
         }
-        this.refreshRowBackground();
+        // Row chrome (hover + selected) rides through declarative
+        // template triggers — no imperative refresh needed.
     }
 
     protected override MeasureOverride(availableSize: Size): Size
@@ -676,17 +678,6 @@ export class TreeViewItem extends ItemsControl
         // Delegate to ItemsControl.MeasureOverride which walks the
         // template root (and from there into the row + ItemsPresenter).
         return super.MeasureOverride(availableSize);
-    }
-
-    // Row background priority: selected wins over hover. Transparent
-    // (undefined Background) is the default.
-    private refreshRowBackground(): void
-    {
-        let bg: Brush | undefined;
-        if (this.IsSelected)            bg = Theme.itemSelectedBg;
-        else if (this._row.IsMouseOver) bg = Theme.itemHoverBg;
-        else                             bg = undefined;
-        this._row.Background = bg;
     }
 
     // Leaf items render a blank chevron cell so columns line up; non-

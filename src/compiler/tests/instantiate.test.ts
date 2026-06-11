@@ -31,7 +31,7 @@ describe('instantiate — happy path', () => {
     test('Application with no resources mounts cleanly', () => {
         const app = buildApp(`Application{ resources: {} }`);
         assert.ok(app instanceof Application);
-        assert.equal(app.Root, undefined);
+        assert.equal(app.Resources.Root, undefined);
     });
 
     test('@primary brush registered as a runtime SolidColorBrush', () => {
@@ -55,9 +55,9 @@ describe('instantiate — happy path', () => {
                 Border x:root[Padding=(16)]{}
             } }
         `);
-        assert.ok(app.Root instanceof Border);
+        assert.ok(app.Resources.Root instanceof Border);
         // Padding=(16) → Thickness(16) all sides.
-        const padding = (app.Root as Border).Padding as Thickness;
+        const padding = (app.Resources.Root as Border).Padding as Thickness;
         assert.equal(padding.Left,   16);
         assert.equal(padding.Top,    16);
         assert.equal(padding.Right,  16);
@@ -73,7 +73,7 @@ describe('instantiate — happy path', () => {
                 }
             } }
         `);
-        const canvas = app.Root as Canvas;
+        const canvas = app.Resources.Root as Canvas;
         const kids = [...canvas.Children];
         assert.equal(kids.length, 2);
         assert.equal(Canvas.GetLeft(kids[0]!), 10);
@@ -90,7 +90,7 @@ describe('instantiate — happy path', () => {
                 }
             } }
         `);
-        const outer = app.Root as Border;
+        const outer = app.Resources.Root as Border;
         const inner = outer.child as Border;
         assert.ok(inner instanceof Border);
         assert.equal((inner.Padding as Thickness).Left, 4);
@@ -151,7 +151,7 @@ describe('instantiate — happy path', () => {
                 }
             }
         `);
-        const root = app.Root!;
+        const root = app.Resources.Root!;
         const bg = root.FindName('background');
         const overlay = root.FindName('overlay');
         assert.ok(bg !== undefined,      'FindName("background") should resolve');
@@ -174,7 +174,7 @@ describe('instantiate — happy path', () => {
                 }
             }
         `);
-        const root  = app.Root!;
+        const root  = app.Resources.Root!;
         const inner = root.FindName('inner');
         assert.ok(inner !== undefined);
         // FindName called from the inner visual itself walks logical

@@ -301,7 +301,7 @@ describe('end-to-end: pointer → IsMouseOver → Style trigger → DP update', 
                 }
             } }
         `, ctx) as runtime.Application;
-        const canvas = app.Root as InstanceType<typeof controls.Canvas>;
+        const canvas = app.Resources.Root as InstanceType<typeof controls.Canvas>;
         const border = [...canvas.visualChildren][0]! as InstanceType<typeof controls.Border>;
 
         const restColour = (border.Background as unknown as { Color: { ToCss(): string } }).Color.ToCss();

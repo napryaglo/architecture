@@ -1,5 +1,5 @@
-import { MetaData, Model, Point, Size, Visual, type DrawingContext } from '../runtime/index.js';
-import { Brush, LineGeometry, Pen } from '../visual-engine/index.js';
+import { MetaData, Model, Point, Size, Visual, type DrawingContext } from '../../runtime/index.js';
+import { Brush, LineGeometry, Pen } from '../../visual-engine/index.js';
 
 // Straight-line shape — draws a stroked line from (X1, Y1) to (X2, Y2)
 // in its own LOCAL coordinate space. WPF parity: same DPs (X1, Y1, X2,
