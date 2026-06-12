@@ -93,6 +93,8 @@ scheme MaterialDark against Material {
     @OnSecondaryContainerPressLayer = #E8DEF81F   // OnSecondaryContainer @ 12%
     @OnSurfaceVariantHoverLayer     = #CAC4D014   // OnSurfaceVariant @ 8%
     @OnSurfaceVariantPressLayer     = #CAC4D01F   // OnSurfaceVariant @ 12%
+    @OnPrimaryContainerHoverLayer   = #EADDFF14   // OnPrimaryContainer @ 8%
+    @OnPrimaryContainerPressLayer   = #EADDFF1F   // OnPrimaryContainer @ 12%
 
     // ── Shape (corner radii — identical across schemes) ─────────────
     // See light.mu for the @ShapeFull contract.

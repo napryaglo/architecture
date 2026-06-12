@@ -118,6 +118,8 @@ theme Material {
         @OnSecondaryContainerPressLayer : Brush "OnSecondaryContainer @ 12% — Tonal Button overlay"
         @OnSurfaceVariantHoverLayer     : Brush "OnSurfaceVariant @ 8% — Standard IconButton overlay (unchecked)"
         @OnSurfaceVariantPressLayer     : Brush "OnSurfaceVariant @ 12% — Standard IconButton overlay (unchecked)"
+        @OnPrimaryContainerHoverLayer   : Brush "OnPrimaryContainer @ 8% — FloatingActionButton overlay"
+        @OnPrimaryContainerPressLayer   : Brush "OnPrimaryContainer @ 12% — FloatingActionButton overlay"
 
         // ── Shape ───────────────────────────────────────────────────
         @ShapeNone            : number "0dp — square corners"

@@ -74,6 +74,8 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['Button',                  '@visualisation-sub/mural/framework/button.js'],
     ['IconButton',              '@visualisation-sub/mural/framework/icon-button.js'],
     ['IconButtonToggle',        '@visualisation-sub/mural/framework/icon-button-toggle.js'],
+    ['FloatingActionButton',    '@visualisation-sub/mural/framework/fab.js'],
+    ['FabSize',                 '@visualisation-sub/mural/framework/fab.js'],
     ['ClickMode',               '@visualisation-sub/mural/framework/button.js'],
     ['ButtonVariant',           '@visualisation-sub/mural/framework/button.js'],
     ['TextBlock',               '@visualisation-sub/mural/basic'],
@@ -255,6 +257,7 @@ export const ENUM_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<st
     ['TextWrapping',          new Set(['NoWrap', 'Wrap'])],
     ['ClickMode',             new Set(['Release', 'Press', 'Hover'])],
     ['ButtonVariant',         new Set(['Filled', 'Elevated', 'Tonal', 'Outlined', 'Text', 'Standard'])],
+    ['FabSize',               new Set(['Small', 'Default', 'Large', 'Extended'])],
     ['Orientation',           new Set(['Vertical', 'Horizontal'])],
     ['SelectionMode',         new Set(['Single', 'Multiple', 'Extended'])],
     ['MarqueeBoundsPolicy',   new Set(['Intersect', 'Contained'])],
@@ -316,6 +319,7 @@ export const STATIC_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<
 // ENUM_MEMBERS.
 export const PROPERTY_TO_ENUM: ReadonlyMap<string, readonly string[]> = new Map<string, readonly string[]>([
     ['Variant',  ['ButtonVariant', 'DrawerVariant']],
+    ['Size',     ['FabSize']],
     ['Anchor',   ['Dock']],
     ['Position', ['ToolBarPosition']],
 ]);
@@ -350,6 +354,7 @@ export const DEFAULT_SLOT_INFO: ReadonlyMap<string, SlotInfo> = new Map<string, 
     ['Button',                  { name: 'Content',  kind: 'object' }],
     ['IconButton',              { name: 'Content',  kind: 'object' }],
     ['IconButtonToggle',        { name: 'Content',  kind: 'object' }],
+    ['FloatingActionButton',    { name: 'Content',  kind: 'object' }],
     ['TextBlock',               { name: 'Text',     kind: 'string' }],
     ['Canvas',                  { name: 'Children', kind: 'list'   }],
     ['StackPanel',              { name: 'Children', kind: 'list'   }],

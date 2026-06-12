@@ -115,6 +115,8 @@ scheme MaterialLight against Material {
     @OnSecondaryContainerPressLayer = #1D192B1F   // OnSecondaryContainer @ 12%
     @OnSurfaceVariantHoverLayer     = #49454F14   // OnSurfaceVariant @ 8%
     @OnSurfaceVariantPressLayer     = #49454F1F   // OnSurfaceVariant @ 12%
+    @OnPrimaryContainerHoverLayer   = #21005D14   // OnPrimaryContainer @ 8%
+    @OnPrimaryContainerPressLayer   = #21005D1F   // OnPrimaryContainer @ 12%
 
     // ── Shape (corner radii — M3 shape scale) ───────────────────────
     // Numeric tokens consumed via Border.CornerRadius = @ShapeMedium etc.

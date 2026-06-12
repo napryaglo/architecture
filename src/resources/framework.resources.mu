@@ -555,6 +555,125 @@ resources MuralFramework {
         when ( IsChecked and Variant = Standard ) { TextBlock.Foreground = @Primary; }
     }
 
+    // ── FloatingActionButton: M3 primary screen-action surface ─────
+    // Four templates pick chrome by the Size DP — Small (40dp),
+    // Default (56dp), Large (96dp), Extended (56dp tall, content-driven
+    // width with an icon+label slot). All four share the same colour
+    // wiring (@PrimaryContainer container, @OnPrimaryContainer ink,
+    // @ElevationLevel3 at rest with a hover bump to @ElevationLevel4),
+    // so the only per-size deltas are Width / Height / CornerRadius
+    // and (for Extended) the Padding around the content slot.
+    //
+    // State-layer overlay follows the same strict-M3 pattern as the
+    // Button family: PART_StateLayer is a transparent inner Border that
+    // flips Background to @OnPrimaryContainerHoverLayer /
+    // @OnPrimaryContainerPressLayer on hover / press. Elevation is bumped
+    // on hover via PART_Border.Effect in the same trigger body.
+
+    // Default FAB — 56dp icon-only.
+    Template x:key="DefaultFab" [TargetType=FloatingActionButton] {
+        Border x:name="PART_Border"
+              [ Background          = @PrimaryContainer,
+                BorderThickness     = (0),
+                CornerRadius        = @ShapeLarge,
+                Width               = 56,
+                Height              = 56,
+                Effect              = @ElevationLevel3,
+                TextBlock.Foreground = @OnPrimaryContainer ] {
+            Border x:name="PART_StateLayer"
+                  [ Background   = #00000000,
+                    CornerRadius = @ShapeLarge,
+                    Padding      = (16,16,16,16) ] {
+                ContentPresenter
+            }
+        }
+        when ( IsMouseOver )  { PART_StateLayer.Background = @OnPrimaryContainerHoverLayer;
+                                PART_Border.Effect          = @ElevationLevel4; }
+        when ( IsPressed   )  { PART_StateLayer.Background = @OnPrimaryContainerPressLayer; }
+    }
+
+    // FAB Small — 40dp icon-only, @ShapeMedium corners.
+    Template x:key="DefaultFabSmall" [TargetType=FloatingActionButton] {
+        Border x:name="PART_Border"
+              [ Background          = @PrimaryContainer,
+                BorderThickness     = (0),
+                CornerRadius        = @ShapeMedium,
+                Width               = 40,
+                Height              = 40,
+                Effect              = @ElevationLevel3,
+                TextBlock.Foreground = @OnPrimaryContainer ] {
+            Border x:name="PART_StateLayer"
+                  [ Background   = #00000000,
+                    CornerRadius = @ShapeMedium,
+                    Padding      = (8,8,8,8) ] {
+                ContentPresenter
+            }
+        }
+        when ( IsMouseOver )  { PART_StateLayer.Background = @OnPrimaryContainerHoverLayer;
+                                PART_Border.Effect          = @ElevationLevel4; }
+        when ( IsPressed   )  { PART_StateLayer.Background = @OnPrimaryContainerPressLayer; }
+    }
+
+    // FAB Large — 96dp icon-only, @ShapeExtraLarge corners.
+    Template x:key="DefaultFabLarge" [TargetType=FloatingActionButton] {
+        Border x:name="PART_Border"
+              [ Background          = @PrimaryContainer,
+                BorderThickness     = (0),
+                CornerRadius        = @ShapeExtraLarge,
+                Width               = 96,
+                Height              = 96,
+                Effect              = @ElevationLevel3,
+                TextBlock.Foreground = @OnPrimaryContainer ] {
+            Border x:name="PART_StateLayer"
+                  [ Background   = #00000000,
+                    CornerRadius = @ShapeExtraLarge,
+                    Padding      = (30,30,30,30) ] {
+                ContentPresenter
+            }
+        }
+        when ( IsMouseOver )  { PART_StateLayer.Background = @OnPrimaryContainerHoverLayer;
+                                PART_Border.Effect          = @ElevationLevel4; }
+        when ( IsPressed   )  { PART_StateLayer.Background = @OnPrimaryContainerPressLayer; }
+    }
+
+    // Extended FAB — 56dp tall, content-driven width, @ShapeLarge corners.
+    // The content slot expects icon-then-label (typically a horizontal
+    // StackPanel). Padding is asymmetric per M3: 16dp leading (icon side)
+    // and 20dp trailing (label side); we apply 16dp uniform here and let
+    // the consumer's StackPanel space the gap between icon and label.
+    // No explicit Width — Border auto-sizes to the content's measured width.
+    Template x:key="DefaultFabExtended" [TargetType=FloatingActionButton] {
+        Border x:name="PART_Border"
+              [ Background          = @PrimaryContainer,
+                BorderThickness     = (0),
+                CornerRadius        = @ShapeLarge,
+                Height              = 56,
+                Effect              = @ElevationLevel3,
+                TextBlock.Foreground = @OnPrimaryContainer,
+                TextBlock.FontFamily = @LabelLargeFont,
+                TextBlock.FontWeight = @LabelLargeWeight,
+                TextBlock.FontSize   = @LabelLargeSize ] {
+            Border x:name="PART_StateLayer"
+                  [ Background   = #00000000,
+                    CornerRadius = @ShapeLarge,
+                    Padding      = (16,0,20,0) ] {
+                ContentPresenter
+            }
+        }
+        when ( IsMouseOver )  { PART_StateLayer.Background = @OnPrimaryContainerHoverLayer;
+                                PART_Border.Effect          = @ElevationLevel4; }
+        when ( IsPressed   )  { PART_StateLayer.Background = @OnPrimaryContainerPressLayer; }
+    }
+
+    // Default Style — picks Template by Size. Default (56dp) is the
+    // baseline; Small / Large / Extended each ride their own trigger.
+    Style [TargetType=FloatingActionButton] {
+        Template = @DefaultFab;
+        when ( Size = Small    ) { Template = @DefaultFabSmall; }
+        when ( Size = Large    ) { Template = @DefaultFabLarge; }
+        when ( Size = Extended ) { Template = @DefaultFabExtended; }
+    }
+
     // ── ToolBarToggleButton: connected-bar chrome ──────────────────
     // Same shape as ToolBarButton but with an IsChecked trigger on top —
     // the chrome reads as "Filled Tonal" while checked so a sticky
