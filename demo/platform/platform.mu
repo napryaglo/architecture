@@ -2,6 +2,8 @@ import GroupVM from "./platform-vm.mjs"
 import AdornerDecorator from "@visualisation-sub/mural/basic"
 import ThemeSelector from "@visualisation-sub/mural/framework/surface.js"
 import TopAppBar from "@visualisation-sub/mural/framework/top-app-bar/top-app-bar.js"
+import NavigationRail from "@visualisation-sub/mural/framework/navigation/navigation-rail.js"
+import NavigationItem from "@visualisation-sub/mural/framework/navigation/navigation-item.js"
 import Material from "@visualisation-sub/mural/resources/material"
 import MaterialLight from "@visualisation-sub/mural/resources/material"
 
@@ -39,32 +41,6 @@ Application[Theme = Material, Scheme = MaterialLight] {
         // ToggleTheme() call repaints the whole platform shell —
         // brand header bar included — without rebuilding anything.
 
-        // ── Nav-tree templates ──────────────────────────────────────
-        //
-        // GroupTemplate — applied to every GroupVM row (and, by
-        // recursion, to every DemoVM leaf row as well). The
-        // itemsselector reads `data.Demos`; for GroupVMs it returns
-        // the demo collection (so each group expands to its demos),
-        // for DemoVMs the property is absent so optional-chain
-        // returns undefined and the row stays a leaf.
-        //
-        // The body's `TreeViewItem` is a placeholder factory result
-        // — TreeView ignores it because wrapTreeItem builds its own
-        // TreeViewItem and sets Header through the Label/Name/Text
-        // display-string convention. DataTemplate's API requires a
-        // body element so we satisfy it with a no-op.
-        HierarchicalDataTemplate x:key="GroupTemplate" [DataType=GroupVM, itemsselector=Demos] {
-            TreeViewItem
-        }
-
-        // Default style applied to every root-level TreeViewItem:
-        // expand each Group on first show. Demo leaves inherit it
-        // harmlessly — IsExpanded=true on a leaf is a no-op (no
-        // children to show).
-        Style x:key="NavRowStyle" [TargetType=TreeViewItem]{
-            IsExpanded = true;
-        }
-
         Border x:root [Background=@Surface]{
             // AdornerDecorator scopes adornment to the whole platform
             // root — any control inside (TreeView nav rows, the page
@@ -91,43 +67,36 @@ Application[Theme = Material, Scheme = MaterialLight] {
                 Border [DockPanel.Dock=Top, Height=1,
                         Background=@OutlineVariant]
 
-                // Nav strip — fixed cross-axis width (260 DIP), full
-                // host height. Hairline on the inner edge separates it
-                // from the page body.
+                // Two-level navigation. M3 NavigationRail (80dp wide)
+                // on the very left picks the GROUP via SelectedIndex;
+                // a ListBox to its right shows the selected group's
+                // Demos and picks the DEMO via SelectedDataItem.
                 //
-                // Why not a NavigationRail? Phase 6 considered migrating
-                // this strip to the new M3 NavigationRail control and
-                // deferred: the demo registry has 25+ destinations grouped
-                // into 4-5 categories, well above M3's 3-7 destination
-                // guidance for a Rail. The TreeView's expandable group
-                // anatomy is the right fit for this navigation density.
-                // A future demo-platform redesign that surfaces only a
-                // top-level category set (with secondary navigation
-                // inside each category) would re-open the NavigationRail
-                // migration question — for now, see
-                // demos/navigation-rail/ for the standalone control
-                // showcase.
-                Border[DockPanel.Dock=Left, Width=260,
-                       Background=@SurfaceContainerLow,
-                       BorderBrush=@OutlineVariant,
-                       BorderThickness=(0,0,1,0)]{
-                    StackPanel{
-                        // Fully declarative tree wiring — bindings
-                        // resolve through DataContext (PlatformVM)
-                        // and Resources:
-                        //   * ItemsSource        → vm.Groups
-                        //   * ItemTemplate       → @GroupTemplate
-                        //       (recursive HierarchicalDataTemplate
-                        //        keyed in this file's resources)
-                        //   * ItemContainerStyle → @NavRowStyle
-                        //       (IsExpanded=true on root rows)
-                        //   * SelectedDataItem   → vm.SelectedDemo
-                        //       (TwoWay by default)
-                        TreeView [Indent=18, Margin=(8,8,8,8),
-                                  ItemsSource=$Groups,
-                                  ItemTemplate=@GroupTemplate,
-                                  ItemContainerStyle=@NavRowStyle,
-                                  SelectedDataItem=$SelectedDemo]
+                // The five top-level groups (Animation / Controls /
+                // Demos / Patterns / Styles & Triggers) are authored
+                // declaratively here — group identity is stable enough
+                // that hardcoded NavigationItems read more cleanly than
+                // a data-driven path (which would also need a custom
+                // adapter to map GroupVM.IconGlyph into NavigationItem.
+                // Icon). New groups added to demo.* will need a matching
+                // NavigationItem here AND a corresponding GROUP_ICONS
+                // entry in platform-vm.mjs.
+                DockPanel [DockPanel.Dock=Left, LastChildFill=true] {
+                    NavigationRail [DockPanel.Dock=Left,
+                                    SelectedIndex=$SelectedGroupIndex] {
+                        NavigationItem [Label="Animation"]         { TextBlock [Text="✦", FontSize=22] }
+                        NavigationItem [Label="Controls"]          { TextBlock [Text="☷", FontSize=22] }
+                        NavigationItem [Label="Demos"]             { TextBlock [Text="◑", FontSize=22] }
+                        NavigationItem [Label="Patterns"]          { TextBlock [Text="◇", FontSize=22] }
+                        NavigationItem [Label="Styles & Triggers"] { TextBlock [Text="✺", FontSize=22] }
+                    }
+                    Border [Width=200,
+                            Background=@SurfaceContainerLow,
+                            BorderBrush=@OutlineVariant,
+                            BorderThickness=(0,0,1,0)]{
+                        ListBox [Margin=(8,8,8,8),
+                                 ItemsSource=$CurrentDemos,
+                                 SelectedDataItem=$SelectedDemo]
                     }
                 }
 
