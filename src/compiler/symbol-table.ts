@@ -76,6 +76,8 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['IconButtonToggle',        '@visualisation-sub/mural/framework/icon-button-toggle.js'],
     ['FloatingActionButton',    '@visualisation-sub/mural/framework/fab.js'],
     ['FabSize',                 '@visualisation-sub/mural/framework/fab.js'],
+    ['Card',                    '@visualisation-sub/mural/framework/card.js'],
+    ['CardVariant',             '@visualisation-sub/mural/framework/card.js'],
     ['ClickMode',               '@visualisation-sub/mural/framework/button.js'],
     ['ButtonVariant',           '@visualisation-sub/mural/framework/button.js'],
     ['TextBlock',               '@visualisation-sub/mural/basic'],
@@ -258,6 +260,7 @@ export const ENUM_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<st
     ['ClickMode',             new Set(['Release', 'Press', 'Hover'])],
     ['ButtonVariant',         new Set(['Filled', 'Elevated', 'Tonal', 'Outlined', 'Text', 'Standard'])],
     ['FabSize',               new Set(['Small', 'Default', 'Large', 'Extended'])],
+    ['CardVariant',           new Set(['Filled', 'Elevated', 'Outlined'])],
     ['Orientation',           new Set(['Vertical', 'Horizontal'])],
     ['SelectionMode',         new Set(['Single', 'Multiple', 'Extended'])],
     ['MarqueeBoundsPolicy',   new Set(['Intersect', 'Contained'])],
@@ -311,14 +314,18 @@ export const STATIC_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<
 // different value sets across host classes — e.g. `Variant` is both
 // `DrawerVariant` (Permanent/Persistent/Temporary) on Drawer AND
 // `ButtonVariant` (Filled/Elevated/Tonal/…) on Button. The compiler
-// walks the candidates and picks the one whose ENUM_MEMBERS set
-// contains the literal — the values never overlap across host classes
-// today, so there's no ambiguity to flag.
+// walks the candidates and picks the first one whose ENUM_MEMBERS set
+// contains the literal. When two candidates share a literal (Card and
+// Button both define `Filled`/`Elevated`/`Outlined`), the emit picks
+// whichever appears first in this list — that's still runtime-correct
+// because the shared literals carry identical string values across
+// every Variant enum (Filled === 'Filled' in every enum that defines
+// it), so the host's setter still receives the same string at the wire.
 //
 // Entries here MUST point at enum classes that are also in
 // ENUM_MEMBERS.
 export const PROPERTY_TO_ENUM: ReadonlyMap<string, readonly string[]> = new Map<string, readonly string[]>([
-    ['Variant',  ['ButtonVariant', 'DrawerVariant']],
+    ['Variant',  ['ButtonVariant', 'DrawerVariant', 'CardVariant']],
     ['Size',     ['FabSize']],
     ['Anchor',   ['Dock']],
     ['Position', ['ToolBarPosition']],
@@ -355,6 +362,7 @@ export const DEFAULT_SLOT_INFO: ReadonlyMap<string, SlotInfo> = new Map<string, 
     ['IconButton',              { name: 'Content',  kind: 'object' }],
     ['IconButtonToggle',        { name: 'Content',  kind: 'object' }],
     ['FloatingActionButton',    { name: 'Content',  kind: 'object' }],
+    ['Card',                    { name: 'Content',  kind: 'object' }],
     ['TextBlock',               { name: 'Text',     kind: 'string' }],
     ['Canvas',                  { name: 'Children', kind: 'list'   }],
     ['StackPanel',              { name: 'Children', kind: 'list'   }],

@@ -674,6 +674,92 @@ resources MuralFramework {
         when ( Size = Extended ) { Template = @DefaultFabExtended; }
     }
 
+    // ── Card: M3 content container ─────────────────────────────────
+    // Three variants — Filled / Elevated / Outlined. Each ships a
+    // PART_Border container with the variant's resting chrome and a
+    // PART_StateLayer overlay that composites @StateHoverOverlay /
+    // @StatePressOverlay on hover / press. All three share the same
+    // @ShapeMedium corner radius and the same 16dp content padding;
+    // they differ in Background, BorderThickness, and resting Effect.
+    //
+    // Hover behaviour (all variants): elevation bumps one level above
+    // the resting value (Filled / Outlined go Level0 → Level1, Elevated
+    // goes Level1 → Level2) and the state layer composites a translucent
+    // @OnSurface tint over the container. Press composites the slightly
+    // stronger @StatePressOverlay and lowers Effect back to the resting
+    // value — the M3 "press = recession" cue.
+    //
+    // IsMouseOver / IsPressed flip generically through InputManager's
+    // hit-target write path (no Click protocol required), so Card gets
+    // the press / hover state from any pointer interaction without
+    // having to extend Button.
+
+    // Filled — @SurfaceContainerHighest, no border, no resting Effect.
+    Template x:key="DefaultFilledCard" [TargetType=Card] {
+        Border x:name="PART_Border"
+              [ Background     = @SurfaceContainerHighest,
+                BorderThickness = (0),
+                CornerRadius   = @ShapeMedium ] {
+            Border x:name="PART_StateLayer"
+                  [ Background   = #00000000,
+                    CornerRadius = @ShapeMedium,
+                    Padding      = (16,16,16,16) ] {
+                ContentPresenter
+            }
+        }
+        when ( IsMouseOver )  { PART_StateLayer.Background = @StateHoverOverlay;
+                                PART_Border.Effect          = @ElevationLevel1; }
+        when ( IsPressed   )  { PART_StateLayer.Background = @StatePressOverlay; }
+    }
+
+    // Elevated — @SurfaceContainerLow, no border, resting Level1.
+    Template x:key="DefaultElevatedCard" [TargetType=Card] {
+        Border x:name="PART_Border"
+              [ Background     = @SurfaceContainerLow,
+                BorderThickness = (0),
+                CornerRadius   = @ShapeMedium,
+                Effect         = @ElevationLevel1 ] {
+            Border x:name="PART_StateLayer"
+                  [ Background   = #00000000,
+                    CornerRadius = @ShapeMedium,
+                    Padding      = (16,16,16,16) ] {
+                ContentPresenter
+            }
+        }
+        when ( IsMouseOver )  { PART_StateLayer.Background = @StateHoverOverlay;
+                                PART_Border.Effect          = @ElevationLevel2; }
+        when ( IsPressed   )  { PART_StateLayer.Background = @StatePressOverlay;
+                                PART_Border.Effect          = @ElevationLevel1; }
+    }
+
+    // Outlined — @Surface, 1-DIP @Outline border, no resting Effect.
+    Template x:key="DefaultOutlinedCard" [TargetType=Card] {
+        Border x:name="PART_Border"
+              [ Background     = @Surface,
+                BorderBrush    = @Outline,
+                BorderThickness = (1),
+                CornerRadius   = @ShapeMedium ] {
+            Border x:name="PART_StateLayer"
+                  [ Background   = #00000000,
+                    CornerRadius = @ShapeMedium,
+                    Padding      = (15,15,15,15) ] {
+                ContentPresenter
+            }
+        }
+        when ( IsMouseOver )                          { PART_StateLayer.Background  = @StateHoverOverlay;
+                                                        PART_Border.Effect           = @ElevationLevel1; }
+        when ( IsPressed   )                          { PART_StateLayer.Background  = @StatePressOverlay; }
+        when ( ThemeManager.PrefersContrast = More )  { PART_Border.BorderThickness = (2); }
+    }
+
+    // Default Style — picks Template by Variant. Filled is the baseline
+    // (the Setter); Elevated / Outlined each ride their own trigger.
+    Style [TargetType=Card] {
+        Template = @DefaultFilledCard;
+        when ( Variant = Elevated ) { Template = @DefaultElevatedCard; }
+        when ( Variant = Outlined ) { Template = @DefaultOutlinedCard; }
+    }
+
     // ── ToolBarToggleButton: connected-bar chrome ──────────────────
     // Same shape as ToolBarButton but with an IsChecked trigger on top —
     // the chrome reads as "Filled Tonal" while checked so a sticky

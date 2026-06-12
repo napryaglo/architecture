@@ -27,6 +27,7 @@ export {
 export { IconButton } from './icon-button.js';
 export { IconButtonToggle } from './icon-button-toggle.js';
 export { FloatingActionButton, FabSize } from './fab.js';
+export { Card, CardVariant } from './card.js';
 export { ToggleButton } from './toggle-button.js';
 export { Drawer, DrawerVariant, ScrimSurface, TemporaryOverlayHost } from './drawer.js';
 export { ScrollViewer, ScrollViewerLayout } from './scroll-viewer.js';
