@@ -96,6 +96,24 @@ export class TopAppBar extends TemplatedControl
     );
     public static readonly IsScrolledKey = TopAppBar._IsScrolledPriv;
 
+    // Read-only derived DP: the Variant value the Style's Template-
+    // picker actually keys on. Equals `Variant` except when scroll-
+    // collapse is engaged (IsScrolled + Variant in {Medium, Large}),
+    // in which case it falls to `Small`. The class re-computes this
+    // on every Variant / IsScrolled change.
+    //
+    // This indirection exists because the Style's TriggerValue tier
+    // holds a single slot per DP, so a multi-condition Style trigger
+    // overriding the Variant trigger wouldn't correctly resume the
+    // Variant value on IsScrolled releasing (ClearTriggerValue empties
+    // the slot). Driving EffectiveVariant as the trigger key sidesteps
+    // that limitation entirely — there's only ever one active trigger
+    // matching the current EffectiveVariant.
+    private static readonly _EffectiveVariantPriv = Model.RegisterReadOnlyProperty<TopAppBarVariant>(
+        TopAppBar, 'EffectiveVariant', TopAppBarVariant.Small, MetaData.None,
+    );
+    public static readonly EffectiveVariantKey = TopAppBar._EffectiveVariantPriv;
+
     static
     {
         Model.OverrideMetadata(
@@ -117,6 +135,10 @@ export class TopAppBar extends TemplatedControl
         // markup body `TopAppBar { … }` always has a target to push into.
         this.set_property_value(TopAppBar.ActionsKey, new ObservableCollection<Visual>());
 
+        // Seed EffectiveVariant BEFORE the Style applies so the
+        // Variant-driven Template trigger picks the right template on
+        // the first pass.
+        this.updateEffectiveVariant();
         // applyDefaultStyle → Template DP → rebuildTemplate fires → the
         // template tree is materialised under us before we FindName the
         // parts and seed them with the current DP values.
@@ -145,7 +167,8 @@ export class TopAppBar extends TemplatedControl
     public get ScrollSource():  ScrollViewer | undefined { return this.get_property_value(TopAppBar.ScrollSourceKey); }
     public set ScrollSource(v: ScrollViewer | undefined) { this.set_property_value(TopAppBar.ScrollSourceKey, v); }
 
-    public get IsScrolled(): boolean { return this.get_property_value(TopAppBar.IsScrolledKey); }
+    public get IsScrolled():       boolean          { return this.get_property_value(TopAppBar.IsScrolledKey); }
+    public get EffectiveVariant(): TopAppBarVariant { return this.get_property_value(TopAppBar.EffectiveVariantKey); }
 
     // Markup default-slot routing — `TopAppBar { ThemeSelector }` lands
     // here via the compiler's `parent.AddChild(child)` emit for
@@ -281,6 +304,33 @@ export class TopAppBar extends TemplatedControl
     {
         if (this.IsScrolled === v) return;
         this.set_property_value_with_key(TopAppBar._IsScrolledPriv, v);
+        // Read-only DP writes go through SetReadOnlyValue, which dispatches
+        // the property-change pipeline, so OnPropertyChanged below picks
+        // up the IsScrolled flip and calls updateEffectiveVariant. The
+        // explicit call here is belt-and-braces against any future write
+        // path that skips dispatch.
+        this.updateEffectiveVariant();
+    }
+
+    // Two-row variants (Medium, Large) collapse to the Small chrome
+    // when the bound ScrollSource reports IsScrolled. Implemented by
+    // recomputing the derived EffectiveVariant DP — the Style's
+    // Template-picker triggers key on EffectiveVariant, so the Template
+    // swap rides through the regular trigger pipeline.
+    //
+    // EffectiveVariant defaults to the consumer's Variant; collapse-
+    // engagement maps Medium / Large to Small while the source is
+    // scrolled. CenterAligned never collapses per M3 spec — only the
+    // two-row variants do.
+    private updateEffectiveVariant(): void
+    {
+        const variant = this.Variant;
+        const collapses = (variant === TopAppBarVariant.Medium || variant === TopAppBarVariant.Large);
+        const effective = this.IsScrolled && collapses
+            ? TopAppBarVariant.Small
+            : variant;
+        if (effective === this.EffectiveVariant) return;
+        this.set_property_value_with_key(TopAppBar._EffectiveVariantPriv, effective);
     }
 
     private handleActionsChange(ev: CollectionChange<Visual>): void
@@ -362,6 +412,11 @@ export class TopAppBar extends TemplatedControl
                 oldValue as ScrollViewer | undefined,
                 newValue as ScrollViewer | undefined,
             );
+            return;
+        }
+        if (name === 'Variant' || name === 'IsScrolled')
+        {
+            this.updateEffectiveVariant();
             return;
         }
     }

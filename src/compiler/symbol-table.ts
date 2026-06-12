@@ -330,6 +330,7 @@ export const STATIC_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<
 // ENUM_MEMBERS.
 export const PROPERTY_TO_ENUM: ReadonlyMap<string, readonly string[]> = new Map<string, readonly string[]>([
     ['Variant',  ['ButtonVariant', 'DrawerVariant', 'CardVariant', 'TopAppBarVariant']],
+    ['EffectiveVariant', ['TopAppBarVariant']],
     ['Size',     ['FabSize']],
     ['Anchor',   ['Dock']],
     ['Position', ['ToolBarPosition']],

@@ -957,12 +957,25 @@ resources MuralFramework {
         when ( IsScrolled ) { PART_Border.Background = @SurfaceContainer; }
     }
 
-    // Default Style — picks Template by Variant. Small is the baseline.
+    // Default Style — picks Template by EffectiveVariant (a derived
+    // read-only DP on TopAppBar that equals Variant except when scroll-
+    // collapse is engaged, in which case it falls to Small for Medium /
+    // Large bars). Small is the baseline.
+    //
+    // Why EffectiveVariant rather than Variant directly? The Style
+    // trigger pipeline holds a single TriggerValue per DP. A multi-
+    // condition trigger like `when (IsScrolled and Variant = Large)`
+    // overriding `when (Variant = Large)` would not correctly resume
+    // the Variant value on IsScrolled releasing — ClearTriggerValue
+    // would empty the tier entirely, falling through to the Setter
+    // (Small). Driving EffectiveVariant as the trigger key sidesteps
+    // that constraint because only one Variant trigger matches the
+    // current EffectiveVariant at a time.
     Style [TargetType=TopAppBar] {
         Template = @DefaultSmallTopAppBar;
-        when ( Variant = CenterAligned ) { Template = @DefaultCenterAlignedTopAppBar; }
-        when ( Variant = Medium        ) { Template = @DefaultMediumTopAppBar; }
-        when ( Variant = Large         ) { Template = @DefaultLargeTopAppBar; }
+        when ( EffectiveVariant = CenterAligned ) { Template = @DefaultCenterAlignedTopAppBar; }
+        when ( EffectiveVariant = Medium        ) { Template = @DefaultMediumTopAppBar; }
+        when ( EffectiveVariant = Large         ) { Template = @DefaultLargeTopAppBar; }
     }
 
     // ── ToolBarToggleButton: connected-bar chrome ──────────────────

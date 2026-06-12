@@ -239,3 +239,91 @@ describe('TopAppBar — scroll-tint via ScrollSource', () => {
         assert.equal(bar.IsScrolled, true, 'new source\'s changes flow through');
     });
 });
+
+describe('TopAppBar — scroll-collapse', () => {
+    beforeEach(() => { initTestApp(); });
+
+    // Probe each Variant's "applied" template by checking the
+    // PART_Border's Height — every variant's Border carries a distinct
+    // height (Small/CenterAligned = 64, Medium = 112, Large = 152),
+    // so it's a stable proxy for "which template is live".
+    function appliedHeight(bar: TopAppBar): number {
+        const border = bar.visualChildren[0].FindName('PART_Border') as Border;
+        return border.Height;
+    }
+
+    test('Medium variant collapses to Small chrome when ScrollSource flips IsScrolled', () => {
+        const sv  = new ScrollViewer();
+        const bar = new TopAppBar();
+        bar.Variant      = TopAppBarVariant.Medium;
+        bar.ScrollSource = sv;
+        assert.equal(appliedHeight(bar), 112,
+            'Medium variant should mount at 112dp before any scroll');
+        sv.VerticalOffset = 50;
+        assert.equal(appliedHeight(bar), 64,
+            'scroll should snap the Medium template to the Small variant\'s 64dp chrome');
+        sv.VerticalOffset = 0;
+        assert.equal(appliedHeight(bar), 112,
+            'returning to the origin should restore the declared Medium chrome');
+    });
+
+    test('Large variant collapses to Small chrome on scroll', () => {
+        const sv  = new ScrollViewer();
+        const bar = new TopAppBar();
+        bar.Variant      = TopAppBarVariant.Large;
+        bar.ScrollSource = sv;
+        assert.equal(appliedHeight(bar), 152, 'Large variant should mount at 152dp');
+        sv.VerticalOffset = 25;
+        assert.equal(appliedHeight(bar), 64,
+            'scroll should snap the Large template to Small');
+        sv.VerticalOffset = 0;
+        assert.equal(appliedHeight(bar), 152, 'unscroll restores Large');
+    });
+
+    test('Small variant ignores scroll-collapse (stays at 64dp regardless)', () => {
+        const sv  = new ScrollViewer();
+        const bar = new TopAppBar();
+        bar.ScrollSource = sv;
+        assert.equal(appliedHeight(bar), 64);
+        sv.VerticalOffset = 50;
+        assert.equal(appliedHeight(bar), 64,
+            'Small bar shouldn\'t change height on scroll — only the tint flips');
+    });
+
+    test('CenterAligned variant ignores scroll-collapse (M3 spec — single-row bars keep height)', () => {
+        const sv  = new ScrollViewer();
+        const bar = new TopAppBar();
+        bar.Variant      = TopAppBarVariant.CenterAligned;
+        bar.ScrollSource = sv;
+        assert.equal(appliedHeight(bar), 64);
+        sv.VerticalOffset = 50;
+        assert.equal(appliedHeight(bar), 64,
+            'CenterAligned stays at 64dp under scroll — only the tint flips');
+    });
+
+    test('Title, NavigationIcon, and Actions survive the scroll-collapse template swap', () => {
+        const sv = new ScrollViewer();
+        const bar = new TopAppBar();
+        bar.Variant = TopAppBarVariant.Medium;
+        bar.Title   = 'Inbox';
+        const glyph = new TextBlock('☰');
+        bar.NavigationIcon = glyph;
+        const action = new TextBlock('⋯');
+        bar.Actions.Add(action);
+        bar.ScrollSource = sv;
+
+        sv.VerticalOffset = 30;
+        // After collapse, the slotted children should still be present
+        // in the new (Small) template's parts.
+        const root = bar.visualChildren[0];
+        const titleText = root.FindName('PART_TitleText') as TextBlock;
+        const navSlot   = root.FindName('PART_NavSlot')   as Border;
+        const stack     = root.FindName('PART_ActionsStack') as StackPanel;
+        assert.equal(titleText.Text, 'Inbox',
+            'title should re-sync into the freshly-stamped PART_TitleText');
+        assert.equal(navSlot.child, glyph,
+            'nav icon should re-slot into the freshly-stamped PART_NavSlot');
+        assert.equal(stack.visualChildren[0], action,
+            'action should re-mirror into the freshly-stamped PART_ActionsStack');
+    });
+});
