@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.base.json",
+  "exclude": [
+    "catalog",
+    "**/demo",
+    "scripts/",
+    "labs/gb/"
+  ]
+}
