@@ -23,6 +23,8 @@ import type {
 } from './input/routed-event.js';
 import { Storyboard } from './animation/storyboard.js';
 import type { AnimationTimeline } from './animation/timeline.js';
+import { applyImplicitTransition } from './animation/implicit-transition-engine.js';
+import { PropertyTransition } from './animation/property-transition.js';
 import { EventTrigger } from './input/event-trigger.js';
 import { DragDrop, DragDropEffects, type DataObject, type DragPreviewKind } from './input/drag-drop.js';
 
@@ -233,6 +235,25 @@ export class Visual extends Model
     public static readonly IsMouseOverKey = Model.RegisterProperty<boolean>(Visual, 'IsMouseOver', false, MetaData.None);
     public static readonly IsPressedKey   = Model.RegisterProperty<boolean>(Visual, 'IsPressed',   false, MetaData.None);
 
+    // Implicit per-DP transition specs — CSS-`transition`-style. When a
+    // DP whose name matches a PropertyTransition.Property changes on
+    // this Visual, the implicit-transition engine cancels any running
+    // animation for that DP and starts a fresh one from oldValue →
+    // newValue over the spec's Duration / Easing. Unmatched DPs snap as
+    // usual. See animation/implicit-transition-engine.ts for the
+    // mechanism + type dispatch (number / Color / Thickness only;
+    // brushes route through their own scheme-transition factory).
+    //
+    // The DP is undefined by default (no allocation cost when no
+    // transitions are declared). The `Transitions` JS getter below
+    // auto-instantiates the collection on first access — matches the
+    // mutate-then-set pattern of `CommandBindings` / `InputBindings`
+    // on Control. The compiler's `Transitions { … }` body block routes
+    // its inner PropertyTransition elements through this getter, so
+    // markup authoring never deals with the undefined case.
+    public static readonly TransitionsKey = Model.RegisterProperty<ObservableCollection<PropertyTransition> | undefined>(
+        Visual, 'Transitions', undefined, MetaData.None);
+
     // Drop-target flags. Maintained by the InputManager during drag
     // dispatch, in lock-step with IsMouseOver during normal hover.
     // AllowDrop is consumer-set (defaults to false so a random Visual
@@ -319,6 +340,21 @@ export class Visual extends Model
     // exclusively by the InputManager during pointer dispatch.
     public get IsMouseOver(): boolean { return this.get_property_value(Visual.IsMouseOverKey); }
     public get IsPressed():   boolean { return this.get_property_value(Visual.IsPressedKey); }
+
+    // Lazy-allocated. The collection is mutate-in-place — pushes /
+    // removes take effect immediately because the engine reads the
+    // current Transitions on every matched DP write rather than
+    // caching per-Visual.
+    public get Transitions(): ObservableCollection<PropertyTransition>
+    {
+        let t = this.get_property_value(Visual.TransitionsKey);
+        if (t === undefined)
+        {
+            t = new ObservableCollection<PropertyTransition>();
+            this.set_property_value(Visual.TransitionsKey, t);
+        }
+        return t;
+    }
     // True when the InputManager has this Visual as its current focused
     // target. Read-only by convention; use Focus() / Blur() to change.
     public get IsFocused():   boolean { return this.get_property_value(Visual.IsFocusedKey); }
@@ -2327,6 +2363,40 @@ export class Visual extends Model
     // MetaData flags and routes to the matching Invalidate* method
     // plus — when the property is marked Inherits — pushes the change
     // down the subtree.
+    // Pre-write hook — fires for every set_property_value before the
+    // EVD's base-value tier is updated. The implicit-transition engine
+    // hangs off here so a re-write during an in-flight animation can
+    // see the new target value and re-engage (OnPropertyChanged would
+    // miss it: the Animated tier is masking the Local write, so the
+    // EVD doesn't observe an effective-value change).
+    //
+    // Skips the Transitions DP itself (changing the collection isn't
+    // a property transition source) and any DP whose match against the
+    // Transitions collection fails. Reads the current effective value
+    // BEFORE the write so the animation starts from where the eye is
+    // actually looking (including any in-flight animated value).
+    protected override OnBeforeBaseValueWrite(
+        descriptor: PropertyDescriptor,
+        new_value: any,
+    ): void
+    {
+        if (descriptor.Name === 'Transitions') return;
+        const transitions = this.get_property_value(Visual.TransitionsKey) as
+            ObservableCollection<PropertyTransition> | undefined;
+        if (transitions === undefined || transitions.Count === 0) return;
+        for (const t of transitions)
+        {
+            if (t.Property !== descriptor.Name) continue;
+            // Capture the effective value just before the write — picks
+            // up an in-flight Animated value when one's active.
+            const composed = Model.compose_key(descriptor.RootOwner, descriptor.Name);
+            const evd = this['property_values'].get(composed);
+            const old_effective = evd !== undefined ? evd.value : descriptor.DefaultValue;
+            applyImplicitTransition(this, descriptor.Name, old_effective, new_value, t);
+            return;
+        }
+    }
+
     protected override OnPropertyChanged(
         descriptor: PropertyDescriptor,
         _old_value: any,

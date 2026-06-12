@@ -621,12 +621,34 @@ export class Model
             this.property_values.set(key, effective_value);
         }
 
+        // Pre-write virtual hook. Fires before the base-value tier is
+        // updated, regardless of whether a higher-priority tier
+        // (Animated, Trigger) currently masks the effective value.
+        // OnPropertyChanged only fires when the EFFECTIVE value
+        // changes, which means a Local write that's masked by an
+        // active animation never reaches OnPropertyChanged — but the
+        // implicit-transition engine on Visual still needs to see it
+        // so a re-write mid-animation can re-target. Override this
+        // hook (not OnPropertyChanged) for "fires on every raw write"
+        // semantics.
+        this.OnBeforeBaseValueWrite(descriptor, value);
+
         // Raw value is stored; coerce runs on every read via EVD.value.
         // WPF semantics: coerce never sees its previous output as input,
         // so a clamp like `min(x, ceiling)` works idempotently even when
         // `ceiling` later widens.
         effective_value.value = value;
     }
+
+    // Virtual hook fired BEFORE a base-value tier write (Local /
+    // Binding / Style — i.e., set_via_descriptor and friends). Unlike
+    // OnPropertyChanged, this fires every time set_property_value is
+    // invoked, regardless of whether the write's effective value
+    // matters. No-op at the Model layer; Visual overrides this to
+    // drive the implicit-transition engine (which needs to see the
+    // raw write even when a running animation is masking the
+    // effective value).
+    protected OnBeforeBaseValueWrite(_descriptor: PropertyDescriptor, _value: any): void { }
 
     // Returns the EVD for the given descriptor, creating it lazily at
     // Default source if no value has been set yet. Used by listener

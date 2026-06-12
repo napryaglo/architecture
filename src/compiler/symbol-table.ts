@@ -108,6 +108,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     // consumer's source doesn't name them directly — added on demand
     // by the emit pass.
     ['NameScope',               '@visualisation-sub/mural/runtime'],
+    ['PropertyTransition',      '@visualisation-sub/mural/runtime'],
     ['StackPanel',              '@visualisation-sub/mural/basic'],
     ['WrapPanel',               '@visualisation-sub/mural/basic'],
     ['UniformGrid',             '@visualisation-sub/mural/basic'],

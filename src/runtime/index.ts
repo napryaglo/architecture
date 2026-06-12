@@ -193,6 +193,7 @@ export {
     LinearThicknessKeyFrame,
     cubicBezier,
     ManualClock,
+    PropertyTransition,
     RafClock,
     Storyboard,
     StoryboardState,

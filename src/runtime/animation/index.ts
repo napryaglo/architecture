@@ -45,3 +45,4 @@ export {
     type ThicknessAnimationUsingKeyFramesProps,
 } from './keyframes.js';
 export { cubicBezier } from './easing.js';
+export { PropertyTransition } from './property-transition.js';

@@ -2714,6 +2714,15 @@ export class Compiler
                     this.compilePropertyCollectionBlock(parentVar, item.name, item);
                     continue;
                 }
+                // Transitions { PropertyTransition[...] } — implicit per-DP
+                // animation specs. Each inner element gets pushed into the
+                // parent Visual's Transitions ObservableCollection (lazy-
+                // allocated on first access via the JS getter).
+                if (item.name === 'Transitions')
+                {
+                    this.compilePropertyCollectionBlock(parentVar, 'Transitions', item);
+                    continue;
+                }
                 const childVar = this.compileElement(item);
                 this.assignToDefaultSlot(parentVar, parentClass, slot, childVar, item.span);
                 continue;
