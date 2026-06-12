@@ -78,6 +78,8 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['FabSize',                 '@visualisation-sub/mural/framework/fab.js'],
     ['Card',                    '@visualisation-sub/mural/framework/card.js'],
     ['CardVariant',             '@visualisation-sub/mural/framework/card.js'],
+    ['TopAppBar',               '@visualisation-sub/mural/framework/top-app-bar/top-app-bar.js'],
+    ['TopAppBarVariant',        '@visualisation-sub/mural/framework/top-app-bar/top-app-bar.js'],
     ['ClickMode',               '@visualisation-sub/mural/framework/button.js'],
     ['ButtonVariant',           '@visualisation-sub/mural/framework/button.js'],
     ['TextBlock',               '@visualisation-sub/mural/basic'],
@@ -261,6 +263,7 @@ export const ENUM_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<st
     ['ButtonVariant',         new Set(['Filled', 'Elevated', 'Tonal', 'Outlined', 'Text', 'Standard'])],
     ['FabSize',               new Set(['Small', 'Default', 'Large', 'Extended'])],
     ['CardVariant',           new Set(['Filled', 'Elevated', 'Outlined'])],
+    ['TopAppBarVariant',      new Set(['Small', 'CenterAligned', 'Medium', 'Large'])],
     ['Orientation',           new Set(['Vertical', 'Horizontal'])],
     ['SelectionMode',         new Set(['Single', 'Multiple', 'Extended'])],
     ['MarqueeBoundsPolicy',   new Set(['Intersect', 'Contained'])],
@@ -325,7 +328,7 @@ export const STATIC_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<
 // Entries here MUST point at enum classes that are also in
 // ENUM_MEMBERS.
 export const PROPERTY_TO_ENUM: ReadonlyMap<string, readonly string[]> = new Map<string, readonly string[]>([
-    ['Variant',  ['ButtonVariant', 'DrawerVariant', 'CardVariant']],
+    ['Variant',  ['ButtonVariant', 'DrawerVariant', 'CardVariant', 'TopAppBarVariant']],
     ['Size',     ['FabSize']],
     ['Anchor',   ['Dock']],
     ['Position', ['ToolBarPosition']],
@@ -363,6 +366,7 @@ export const DEFAULT_SLOT_INFO: ReadonlyMap<string, SlotInfo> = new Map<string, 
     ['IconButtonToggle',        { name: 'Content',  kind: 'object' }],
     ['FloatingActionButton',    { name: 'Content',  kind: 'object' }],
     ['Card',                    { name: 'Content',  kind: 'object' }],
+    ['TopAppBar',               { name: 'Actions',  kind: 'list'   }],
     ['TextBlock',               { name: 'Text',     kind: 'string' }],
     ['Canvas',                  { name: 'Children', kind: 'list'   }],
     ['StackPanel',              { name: 'Children', kind: 'list'   }],

@@ -1,6 +1,7 @@
 import GroupVM from "./platform-vm.mjs"
 import AdornerDecorator from "@visualisation-sub/mural/basic"
 import ThemeSelector from "@visualisation-sub/mural/framework/surface.js"
+import TopAppBar from "@visualisation-sub/mural/framework/top-app-bar/top-app-bar.js"
 import Material from "@visualisation-sub/mural/resources/material"
 import MaterialLight from "@visualisation-sub/mural/resources/material"
 
@@ -74,21 +75,21 @@ Application[Theme = Material, Scheme = MaterialLight] {
             AdornerDecorator {
             DockPanel [LastChildFill=true] {
 
-                // App-wide top bar — brand title on the left, the
-                // ThemeSelector chrome control on the right. Sits above
-                // the nav strip + page body and gives the picker enough
-                // horizontal room for both ComboBoxes to expand.
-                Border[DockPanel.Dock=Top,
-                       Background=@Primary,
-                       Padding=(20,8,12,8)]{
-                    DockPanel [LastChildFill=true] {
-                        ThemeSelector [DockPanel.Dock=Right]
-                        TextBlock[Text="µ-mural demos",
-                                  FontSize=14, FontWeight=Bold,
-                                  Foreground=@OnPrimary,
-                                  VerticalAlignment=Center]
-                    }
+                // App-wide top bar — Material 3 TopAppBar (Small variant
+                // by default). Title sits leading on @Surface; the
+                // ThemeSelector lands in the trailing Actions slot via
+                // the markup body (DEFAULT_SLOT_INFO routes TopAppBar
+                // body children into Actions via AddChild).
+                //
+                // OutlineVariant hairline on the bottom edge separates
+                // it from the page body underneath since mural doesn't
+                // yet have M3's scroll-state container tint.
+                TopAppBar [DockPanel.Dock=Top,
+                           Title="µ-mural demos"]{
+                    ThemeSelector
                 }
+                Border [DockPanel.Dock=Top, Height=1,
+                        Background=@OutlineVariant]
 
                 // Nav strip — fixed cross-axis width (260 DIP), full
                 // host height. Hairline on the inner edge separates it
