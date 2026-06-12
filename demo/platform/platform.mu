@@ -94,6 +94,19 @@ Application[Theme = Material, Scheme = MaterialLight] {
                 // Nav strip — fixed cross-axis width (260 DIP), full
                 // host height. Hairline on the inner edge separates it
                 // from the page body.
+                //
+                // Why not a NavigationRail? Phase 6 considered migrating
+                // this strip to the new M3 NavigationRail control and
+                // deferred: the demo registry has 25+ destinations grouped
+                // into 4-5 categories, well above M3's 3-7 destination
+                // guidance for a Rail. The TreeView's expandable group
+                // anatomy is the right fit for this navigation density.
+                // A future demo-platform redesign that surfaces only a
+                // top-level category set (with secondary navigation
+                // inside each category) would re-open the NavigationRail
+                // migration question — for now, see
+                // demos/navigation-rail/ for the standalone control
+                // showcase.
                 Border[DockPanel.Dock=Left, Width=260,
                        Background=@SurfaceContainerLow,
                        BorderBrush=@OutlineVariant,
