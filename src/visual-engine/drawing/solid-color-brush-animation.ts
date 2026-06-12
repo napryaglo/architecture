@@ -2,7 +2,9 @@ import {
     AnimationTimeline,
     Color,
     Easings,
+    FillBehavior,
     interpolateColor,
+    registerImplicitTransitionBuilder,
     registerSchemeTransitionAnimator,
     type AnimationTimelineProps,
 } from '../../runtime/index.js';
@@ -92,5 +94,34 @@ registerSchemeTransitionAnimator((oldValue, newValue, transition) =>
         Duration: transition.duration,
         Easing:   transition.easing ?? Easings.Linear,
     });
+    return tl;
+});
+
+// Implicit-transition integration. Mirrors the SchemeTransition path
+// above: the runtime can't import SolidColorBrush (would invert the
+// runtime → visual-engine layering), so visual-engine pushes the brush-
+// aware builder UP via registration. When a Brush-typed DP carries a
+// PropertyTransition, the implicit-transition engine asks the
+// registered builders to produce a timeline — this one matches
+// SolidColorBrush → SolidColorBrush writes and emits a
+// SolidColorBrushAnimation that interpolates the Color across the
+// transition's Duration / Easing.
+//
+// Cross-type writes (SolidColorBrush ↔ LinearGradientBrush ↔
+// ImageBrush) decline here — adding support for those would mean a
+// separate builder that knows how to fade between the two, or a
+// generic opacity-crossfade pattern. Punted until a concrete demo asks
+// for it.
+registerImplicitTransitionBuilder((oldValue, newValue, transition) =>
+{
+    if (!(oldValue instanceof SolidColorBrush)) return undefined;
+    if (!(newValue instanceof SolidColorBrush)) return undefined;
+    const tl = new SolidColorBrushAnimation({
+        From:     oldValue.Color,
+        To:       newValue.Color,
+        Duration: transition.Duration,
+        Easing:   transition.Easing,
+    });
+    tl.FillBehavior = FillBehavior.HoldEnd;
     return tl;
 });

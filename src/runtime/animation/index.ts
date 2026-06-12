@@ -46,3 +46,8 @@ export {
 } from './keyframes.js';
 export { cubicBezier } from './easing.js';
 export { PropertyTransition } from './property-transition.js';
+export {
+    registerImplicitTransitionBuilder,
+    _resetImplicitTransitionBuildersForTests,
+    type ImplicitTransitionBuilder,
+} from './implicit-transition-engine.js';

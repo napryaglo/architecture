@@ -68,9 +68,52 @@ export function cancelImplicitTransition(visual: Visual, propertyName: string): 
     m.delete(propertyName);
 }
 
-// Construct the right Timeline subclass for the value type. Returns
-// undefined for types we don't know how to interpolate — the caller
-// short-circuits to a snap in that case.
+// Builder that produces an animation timeline for a specific value
+// type. Registered by upper layers (visual-engine, app code) at module-
+// load time so types the runtime can't import (Brush, custom
+// renderable types) can still ride the implicit-transition flow.
+//
+// Return `undefined` to decline (the engine tries the next builder, or
+// falls through to a snap if none match). Builders run AFTER the
+// built-in number / Color / Thickness dispatch — the built-ins always
+// win for those three types so a registered builder can specialise on
+// the same shape without contention.
+//
+// Identical shape to SchemeTransitionAnimatorFactory in theme.ts, but
+// the contract is different: the SchemeTransition factory only fires
+// on token-driven resource swaps; the implicit-transition builder
+// fires on any DP write that has a matching PropertyTransition.
+export type ImplicitTransitionBuilder = (
+    oldValue: unknown,
+    newValue: unknown,
+    transition: PropertyTransition,
+) => AnimationTimeline | undefined;
+
+const _builders: ImplicitTransitionBuilder[] = [];
+
+// Register a custom animation builder. The visual-engine brush
+// integration calls this at module load to surface Brush-typed
+// implicit transitions to the runtime without inverting the
+// runtime → visual-engine layering. Multiple builders are supported:
+// they're tried in registration order, first non-undefined wins.
+export function registerImplicitTransitionBuilder(builder: ImplicitTransitionBuilder): void
+{
+    _builders.push(builder);
+}
+
+// Test helper — clear every registered builder. Production code never
+// calls this; tests that want a fresh registration state across runs
+// reset before re-registering. Built-in type dispatch (number / Color
+// / Thickness) is unaffected.
+export function _resetImplicitTransitionBuildersForTests(): void
+{
+    _builders.length = 0;
+}
+
+// Construct the right Timeline subclass for the value type. Built-in
+// number / Color / Thickness dispatch first, then registered
+// builders. Returns undefined when nothing matches — the caller
+// short-circuits to a snap.
 function buildTimeline(
     oldValue: unknown,
     newValue: unknown,
@@ -109,6 +152,17 @@ function buildTimeline(
         t.Easing       = transition.Easing;
         t.FillBehavior = FillBehavior.HoldEnd;
         return t;
+    }
+    for (const builder of _builders)
+    {
+        const tl = builder(oldValue, newValue, transition);
+        if (tl !== undefined)
+        {
+            // FillBehavior is honoured per-builder so a custom builder
+            // that wants Stop semantics can express that — the engine
+            // doesn't second-guess.
+            return tl;
+        }
     }
     return undefined;
 }
