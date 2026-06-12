@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { JSDOM } from 'jsdom';
 
 import { Application, Color, Rect, Size, Visual } from '../../runtime/index.js';
-import { Border, Canvas } from '../../Basic/index.js';
+import { Border, Canvas } from '../../basic/index.js';
 import {
     HeadlessTarget,
     OverlayLayer,

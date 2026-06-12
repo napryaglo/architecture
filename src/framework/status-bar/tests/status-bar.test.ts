@@ -1,10 +1,10 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { initTestApp } from '../../../Basic/tests/test-app.js';
+import { initTestApp } from '../../../basic/tests/test-app.js';
 
 import { Size } from '../../../runtime/index.js';
 import { StatusBar, StatusBarItem, StatusBarSeparator } from '../status-bar.js';
-import { TextBlock } from '../../../Basic/text-block.js';
+import { TextBlock } from '../../../basic/text-block.js';
 
 describe('StatusBar — items + container wrapping', () => {
     beforeEach(() => { initTestApp(); });

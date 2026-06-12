@@ -55,18 +55,18 @@
         "default":     "./dist/framework/*.js"
       }
     },
-    "./Basic": {
-      "types": "./dist/Basic/index.d.ts",
+    "./basic": {
+      "types": "./dist/basic/index.d.ts",
       "import": {
-        "development": "./src/Basic/index.ts",
-        "default":     "./dist/Basic/index.js"
+        "development": "./src/basic/index.ts",
+        "default":     "./dist/basic/index.js"
       }
     },
-    "./Basic/surface.js": {
-      "types": "./dist/Basic/surface.d.ts",
+    "./basic/surface.js": {
+      "types": "./dist/basic/surface.d.ts",
       "import": {
-        "development": "./src/Basic/surface.ts",
-        "default":     "./dist/Basic/surface.js"
+        "development": "./src/basic/surface.ts",
+        "default":     "./dist/basic/surface.js"
       }
     },
     "./compiler": {

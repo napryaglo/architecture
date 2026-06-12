@@ -1,66 +1,8 @@
 // Barrel re-exports for the visual engine. Consumers import from here
-// rather than the individual files. Geometric primitives (Point, Size,
-// Rect, Color, Matrix) live in `runtime` — import them from there.
-export { Transform, TranslateTransform, MatrixTransform } from './transform.js';
-export {
-    Brush,
-    SolidColorBrush,
-    LinearGradientBrush,
-    RadialGradientBrush,
-    ImageBrush,
-    GradientStop,
-    GradientSpreadMethod,
-    AlignmentX,
-    AlignmentY,
-} from './brush.js';
-export {
-    BitmapImage,
-    ImageSource,
-    Stretch,
-} from './image-source.js';
-export { Pen, DashStyle, LineCap, LineJoin } from './pen.js';
-export {
-    Geometry,
-    RectangleGeometry,
-    EllipseGeometry,
-    LineGeometry,
-    PathGeometry,
-    GeometryGroup,
-    PathFigure,
-    PathSegment,
-    LineSegment,
-    CubicBezierSegment,
-    QuadraticBezierSegment,
-    ArcSegment,
-    FillRule,
-    SweepDirection,
-} from './geometry.js';
-export { FormattedText, FontWeight, FontStyle } from './formatted-text.js';
-export { Effect } from './effect.js';
-export { DropShadowEffect, MaterialElevationEffect } from './drop-shadow-effect.js';
-export { type DrawingContext } from './drawing-context.js';
-export { SvgDrawingContext } from './svg-drawing-context.js';
-export {
-    SvgDomDrawingContext,
-    type SvgDomDrawingContextOptions,
-} from './svg-dom-drawing-context.js';
-export { SvgRenderer, VISUAL_BACKREF, type SvgRendererOptions } from './svg-renderer.js';
-export { FontMetricsMeasurer } from './font-metrics-measurer.js';
-export { CanvasTextMeasurer } from './canvas-text-measurer.js';
-export { SvgTextMeasurer } from './svg-text-measurer.js';
-export { RafClock } from './raf-clock.js';
-export {
-    SolidColorBrushAnimation,
-    type SolidColorBrushAnimationProps,
-} from './solid-color-brush-animation.js';
-export {
-    loadGoogleFont,
-    loadGoogleFontInto,
-    type GoogleFontOptions,
-    type LoadedGoogleFont,
-} from './google-font-loader.js';
-export { PresentationTarget } from './presentation-target.js';
-export { OverlayLayer } from './overlay-layer.js';
-export { HtmlTarget, type HtmlTargetOptions } from './targets/html-target.js';
-export { FileTarget, type FileTargetOptions, type FileTargetFormat } from './targets/file-target.js';
-export { HeadlessTarget } from './targets/headless-target.js';
+// rather than the individual subfolders. Geometric primitives (Point,
+// Size, Rect, Color, Matrix) live in `runtime` — import them from
+// there.
+export * from './geometry/index.js';
+export * from './drawing/index.js';
+export * from './text/index.js';
+export * from './targets/index.js';

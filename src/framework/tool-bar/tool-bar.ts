@@ -16,15 +16,15 @@ import {
     ToolBarToggleButton,
 } from './tool-bar-items.js';
 import { PresentationTarget } from '../../visual-engine/index.js';
-import { Border } from '../../Basic/border.js';
+import { Border } from '../../basic/border.js';
 import { Button } from '../button.js';
 import { ClickAwayScrim } from '../list/combo-box.js';
 import { ContentControl } from '../content-control.js';
-import { ContentPresenter } from '../../Basic/content-presenter.js';
-import { ControlTemplate } from '../../Basic/control-template.js';
-import { Dock, DockPanel } from '../../Basic/dock-panel.js';
+import { ContentPresenter } from '../../basic/templates/content-presenter.js';
+import { ControlTemplate } from '../../basic/templates/control-template.js';
+import { Dock, DockPanel } from '../../basic/panels/dock-panel.js';
 import { ItemsControl } from '../items-control.js';
-import { StackPanel } from '../../Basic/stack-panel.js';
+import { StackPanel } from '../../basic/panels/stack-panel.js';
 
 // ToolBar — horizontal command strip. Items overflow into a popup when
 // the available width can't fit them all. Hosts ToolBarButton,

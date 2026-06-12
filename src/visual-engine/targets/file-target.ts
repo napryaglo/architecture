@@ -1,5 +1,5 @@
 import type { Visual } from '../../runtime/index.js';
-import { PresentationTarget } from '../presentation-target.js';
+import { PresentationTarget } from './presentation-target.js';
 
 // Output formats supported by FileTarget. Each picks a different
 // renderer internally — `svg` is direct serialization, `png` needs a

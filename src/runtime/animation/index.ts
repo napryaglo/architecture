@@ -2,6 +2,7 @@
 // composition, and an Application-wide AnimationManager. See individual
 // files for the per-type contracts.
 export { type IClock, ManualClock }                      from './clock.js';
+export { RafClock }                                      from './raf-clock.js';
 export { type EasingFunction, Easings }                  from './easing.js';
 export {
     type Interpolator,

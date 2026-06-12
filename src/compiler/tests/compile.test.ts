@@ -33,7 +33,7 @@ describe('compile — application skeleton', () => {
         // sorted too.
         assert.match(
             js,
-            /import \{ Border \} from "@visualisation-sub\/mural\/Basic";/,
+            /import \{ Border \} from "@visualisation-sub\/mural\/basic";/,
         );
         // x:root materialises a NameScope on the root visual so x:name
         // descendants resolve there; the emitter pulls NameScope into
@@ -882,8 +882,8 @@ describe('compile — result metadata', () => {
     test('imports map exposes the modules and symbols', () => {
         const r = compile(`Application{ resources: { Border x:root{} } }`);
         assert.ok(r.imports.has('@visualisation-sub/mural/runtime'));
-        assert.ok(r.imports.has('@visualisation-sub/mural/Basic'));
-        assert.equal(r.imports.get('@visualisation-sub/mural/Basic')!.has('Border'), true);
+        assert.ok(r.imports.has('@visualisation-sub/mural/basic'));
+        assert.equal(r.imports.get('@visualisation-sub/mural/basic')!.has('Border'), true);
     });
 });
 
@@ -1072,7 +1072,7 @@ describe('compile — `theme NAME { schemes: [...] defaultScheme: ... tokens { .
         assert.match(js, /defaultScheme:\s*"MaterialLight"/);
         assert.match(js, /static Activate\(scheme\)/);
         // Auto-register side effects.
-        assert.match(js, /ThemeManager\.Current\.RegisterTheme\(Material\.instance\)/);
+        assert.match(js, /ThemeManager\.RegisterTheme\(Material\.instance\)/);
         assert.match(js, /Application\.RegisterDefaultTheme\(Material\)/);
         // Theme + Application imported from runtime.
         assert.match(js, /import \{[^}]*Theme[^}]*\} from "@visualisation-sub\/mural\/runtime"/);

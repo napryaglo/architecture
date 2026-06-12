@@ -1,5 +1,5 @@
 import { StatusBarVM } from "./status-bar-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@visualisation-sub/mural/Basic";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@visualisation-sub/mural/basic";
 import { Button } from "@visualisation-sub/mural/framework/button.js";
 import { StatusBar, StatusBarItem, StatusBarSeparator } from "@visualisation-sub/mural/framework/surface.js";
 import { DataContextBinding, DynamicResource, MultiBinding, ResourceDictionary, Thickness, VerticalAlignment } from "@visualisation-sub/mural/runtime";

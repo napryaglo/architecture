@@ -1,6 +1,6 @@
-import { Binding } from './binding.js';
-import { EffectiveValueDescriptor, PropertyValueSource } from './effective-value.js';
-import type { InternalPropertyChangeCallback, PropertyChangeCallback } from './effective-value.js';
+import { Binding } from './binding/binding.js';
+import { EffectiveValueDescriptor, PropertyValueSource } from './binding/effective-value.js';
+import type { InternalPropertyChangeCallback, PropertyChangeCallback } from './binding/effective-value.js';
 import { PropertyDescriptor } from './property-descriptor.js';
 import type { CoerceValue, PropertyMetadata, ValidateValue } from './property-descriptor.js';
 import type { MetaData } from './metadata.js';

@@ -1,5 +1,5 @@
 import { CommandsVM, EllipseNodeVM, NoteNodeVM, RectNodeVM } from "./commands-vm.mjs";
-import { Border, Canvas, DataTemplate, Dock, DockPanel, Ellipse, ItemsPanelTemplate, Orientation, StackPanel, TargetedSetter, TemplateDataTrigger, TextBlock } from "@visualisation-sub/mural/Basic";
+import { Border, Canvas, DataTemplate, Dock, DockPanel, Ellipse, ItemsPanelTemplate, Orientation, StackPanel, TargetedSetter, TemplateDataTrigger, TextBlock } from "@visualisation-sub/mural/basic";
 import { DiagramNode } from "@visualisation-sub/mural/framework/diagram/diagram-node.js";
 import { Diagram } from "@visualisation-sub/mural/framework/diagram/diagram.js";
 import { SelectionMode } from "@visualisation-sub/mural/framework/list/list-box.js";

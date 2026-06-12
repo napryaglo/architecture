@@ -191,7 +191,7 @@ Template x:key="DefaultToolBarButton" [TargetType=ToolBarButton] {
 ```
 
 No new trigger grammar — adaptive DPs are just inherited DPs on Visual
-written by `ThemeManager.Current`.
+written by `ThemeManager`.
 
 ### 3.5 Structural variants (popup vs drawer)
 
@@ -378,14 +378,14 @@ const material = defineTheme({
     defaultScheme:  'light',
 });
 
-ThemeManager.Current.RegisterTheme(material);
+ThemeManager.RegisterTheme(material);
 
 // Convenience aliases retained for back-compat:
 export function SetTheme(name: 'light' | 'dark'): void {
-    ThemeManager.Current.ActivateScheme(name);
+    ThemeManager.ActivateScheme(name);
 }
 export function CurrentTheme(): string {
-    return ThemeManager.Current.ActiveScheme?.name ?? 'light';
+    return ThemeManager.ActiveScheme?.name ?? 'light';
 }
 export function ToggleTheme(): string {
     const next = CurrentTheme() === 'light' ? 'dark' : 'light';
@@ -410,10 +410,10 @@ with `ThemeManager`) and activates:
 import '@visualisation-sub/mural/framework/material';     // side-effect: registers Material
 import { ThemeManager } from '@visualisation-sub/mural/runtime';
 
-ThemeManager.Current.ActivateTheme('material');           // → light (defaultScheme)
+ThemeManager.ActivateTheme('material');           // → light (defaultScheme)
 
 // Or: track OS preference automatically
-ThemeManager.Current.AutoScheme({
+ThemeManager.AutoScheme({
     light:  'light',
     dark:   'dark',
     listen: true,
@@ -476,7 +476,7 @@ case), it still has to appear in every Scheme. There's no notion of
    });
    ```
 
-The app can activate it with `ThemeManager.Current.ActivateScheme('new-variant')`.
+The app can activate it with `ThemeManager.ActivateScheme('new-variant')`.
 
 ### 7.4 Adding a whole new Theme alongside Material
 
@@ -488,7 +488,7 @@ The app can activate it with `ThemeManager.Current.ActivateScheme('new-variant')
 3. Write the Schemes — or use `basedOn` to start from a Material
    Scheme as a baseline.
 4. Register in the new Theme's `.ts` file. Material is untouched.
-5. App opts in with `ThemeManager.Current.ActivateTheme('<name>')`.
+5. App opts in with `ThemeManager.ActivateTheme('<name>')`.
 
 ---
 

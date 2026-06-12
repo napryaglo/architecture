@@ -10,7 +10,6 @@ import {
     Model,
     Panel,
     ResourceDictionary,
-    SetPrefersReducedMotion,
     Size,
     ThemeManager,
     Visual,
@@ -478,7 +477,7 @@ describe('DynamicResource — scheme-transition animation', () => {
     test('value swap snaps when no factory is registered', () => {
         reset();
         setupClock();
-        ThemeManager.Current.SchemeTransition = { duration: 100 };
+        ThemeManager.SchemeTransition = { duration: 100 };
 
         const root = new TestPanel();
         root.Resources.Set('Brush', 10);
@@ -495,7 +494,7 @@ describe('DynamicResource — scheme-transition animation', () => {
         reset();
         setupClock();
         registerSchemeTransitionAnimator(numberAnimatorFactory);
-        ThemeManager.Current.SchemeTransition = { duration: 100, tokens: 'none' };
+        ThemeManager.SchemeTransition = { duration: 100, tokens: 'none' };
 
         const root = new TestPanel();
         root.Resources.Set('Brush', 10);
@@ -514,7 +513,7 @@ describe('DynamicResource — scheme-transition animation', () => {
         // Factory returns undefined for everything — exercises the
         // "factory can't animate this pair" path.
         registerSchemeTransitionAnimator(() => undefined);
-        ThemeManager.Current.SchemeTransition = { duration: 100 };
+        ThemeManager.SchemeTransition = { duration: 100 };
 
         const root = new TestPanel();
         root.Resources.Set('Brush', 10);
@@ -531,7 +530,7 @@ describe('DynamicResource — scheme-transition animation', () => {
         reset();
         setupClock();
         registerSchemeTransitionAnimator(numberAnimatorFactory);
-        ThemeManager.Current.SchemeTransition = { duration: 100 };
+        ThemeManager.SchemeTransition = { duration: 100 };
 
         const root = new TestPanel();
         root.Resources.Set('Brush', 7);
@@ -546,7 +545,7 @@ describe('DynamicResource — scheme-transition animation', () => {
         reset();
         const clock = setupClock();
         registerSchemeTransitionAnimator(numberAnimatorFactory);
-        ThemeManager.Current.SchemeTransition = { duration: 100 };
+        ThemeManager.SchemeTransition = { duration: 100 };
 
         const root = new TestPanel();
         root.Resources.Set('Brush', 10);
@@ -576,7 +575,7 @@ describe('DynamicResource — scheme-transition animation', () => {
         reset();
         const clock = setupClock();
         registerSchemeTransitionAnimator(numberAnimatorFactory);
-        ThemeManager.Current.SchemeTransition = { duration: 100 };
+        ThemeManager.SchemeTransition = { duration: 100 };
 
         const root = new TestPanel();
         root.Resources.Set('Brush', 0);
@@ -606,7 +605,7 @@ describe('DynamicResource — scheme-transition animation', () => {
         reset();
         setupClock();
         registerSchemeTransitionAnimator(numberAnimatorFactory);
-        ThemeManager.Current.SchemeTransition = { duration: 100 };
+        ThemeManager.SchemeTransition = { duration: 100 };
 
         // ThemeManager reads PrefersReducedMotion from Application.current
         // .Resources.Root — wire up that chain so the gate engages.
@@ -614,7 +613,7 @@ describe('DynamicResource — scheme-transition animation', () => {
         const root = new TestPanel();
         Application.current = app;
         app.Resources.Root = root;
-        SetPrefersReducedMotion(root, true);
+        ThemeManager.SetPrefersReducedMotion(root, true);
 
         root.Resources.Set('Brush', 10);
         const leaf = new TargetLeaf();
@@ -632,7 +631,7 @@ describe('DynamicResource — scheme-transition animation', () => {
         reset();
         const clock = setupClock();
         registerSchemeTransitionAnimator(numberAnimatorFactory);
-        ThemeManager.Current.SchemeTransition = { duration: 100 };
+        ThemeManager.SchemeTransition = { duration: 100 };
 
         const root = new TestPanel();
         root.Resources.Set('Brush', 0);

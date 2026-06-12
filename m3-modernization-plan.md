@@ -250,7 +250,7 @@ Currently µ-mural has no `IconButton`. M3 ships 4 variants
 (Filled / Tonal / Outlined / Standard).
 
 Deliverables:
-- New `IconButton` class in `src/Basic/icon-button.ts`, extends
+- New `IconButton` class in `src/basic/icon-button.ts`, extends
   `Button`, sets `DefaultStyleKey = IconButton`.
 - Optional `IconButton.Toggle` variant on top.
 - Default templates per variant in `basic.resources.mu`.
@@ -281,7 +281,7 @@ Currently no FAB control exists. M3 ships 3 sizes (FAB / FAB Small /
 FAB Large) plus Extended FAB.
 
 Deliverables:
-- New `FloatingActionButton` class in `src/Basic/fab.ts` (or
+- New `FloatingActionButton` class in `src/basic/fab.ts` (or
   `src/framework/fab.ts` — TBD based on whether it ships RoutedCommand
   support, which lives on Control).
 - Sizes via a `Size` DP (`Small | Default | Large`) similar to
@@ -309,7 +309,7 @@ M3 spec: <https://m3.material.io/components/cards/overview>
 Currently a `Border` does the job. M3 Card has 3 variants.
 
 Deliverables:
-- New `Card` class in `src/Basic/card.ts` extending `ContentControl`.
+- New `Card` class in `src/basic/card.ts` extending `ContentControl`.
 - `Variant` DP (`Filled | Elevated | Outlined`).
 - Default templates in `basic.resources.mu`.
 - Demo: `demo/demos/card/`.
@@ -508,7 +508,7 @@ deferred (no concrete demo demand today).
 | --- | --- | --- | --- |
 | Cards — Filled / Elevated / Outlined | [cards](https://m3.material.io/components/cards/overview) | none (callers use `Border`) | 4 |
 | Carousel | [carousel](https://m3.material.io/components/carousel/overview) | none | — |
-| Dialogs — Basic / Full-screen | [dialogs](https://m3.material.io/components/dialogs/overview) | none | 9 |
+| Dialogs — basic / Full-screen | [dialogs](https://m3.material.io/components/dialogs/overview) | none | 9 |
 | Bottom sheets — Modal / Standard | [bottom-sheets](https://m3.material.io/components/bottom-sheets/overview) | none | — |
 | Side sheets — Modal / Standard | [side-sheets](https://m3.material.io/components/side-sheets/overview) | none (Drawer is the closest analog) | — |
 
@@ -697,7 +697,7 @@ splash transitions, and marker glyphs. They're closed-path geometries,
 typically used as `Clip` or as the silhouette of a `Shape` Visual.
 
 µ-mural already has `Ellipse`, `Rectangle`, `Line` in
-[src/Basic/shapes/](src/Basic/shapes/). The plan: each M3 shape lands
+[src/basic/shapes/](src/basic/shapes/). The plan: each M3 shape lands
 as one `Visual` subclass under the same folder, each with the same
 shape contract — `Fill`, `Stroke`, `StrokeThickness` DPs — and a
 matching `<ShapeName>Geometry` class in
@@ -830,13 +830,13 @@ parameterized by the underlying source shape + a grid resolution.
 - Geometry math lives in `src/visual-engine/geometry.ts` alongside
   the existing `EllipseGeometry`, `RectangleGeometry`, `LineGeometry`.
 - File layout: each shape (and each parametric family) gets its own
-  file in [src/Basic/shapes/](src/Basic/shapes/) — same pattern as
+  file in [src/basic/shapes/](src/basic/shapes/) — same pattern as
   the existing `ellipse.ts` / `rectangle.ts` / `line.ts`. Aliases
   (e.g. `FourSidedCookie` over `Cookie`) sit at the bottom of the
   parametric class's file.
 - Symbol-table entries: bulk-add to
   [src/compiler/symbol-table.ts](src/compiler/symbol-table.ts) under
-  the `@visualisation-sub/mural/Basic` path so `.mu` consumers can
+  the `@visualisation-sub/mural/basic` path so `.mu` consumers can
   drop them straight in.
 - Demo: one consolidated `demo/demos/shapes/` page rendering the
   whole catalogue in the 5×7 grid layout from the M3 reference image.

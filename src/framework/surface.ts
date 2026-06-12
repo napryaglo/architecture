@@ -1,4 +1,4 @@
-// Command-surface barrel — ToggleButton (in Basic), ToolBar, Menu,
+// Command-surface barrel — ToggleButton (in basic), ToolBar, Menu,
 // ContextMenu families. Kept separate from `./index.ts` because these
 // controls extend `Button` and would trigger an ES-module TDZ when
 // loaded as a side effect of Button's default-style cascade.

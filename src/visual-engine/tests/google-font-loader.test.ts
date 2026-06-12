@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseFontFaces } from '../google-font-loader.js';
+import { parseFontFaces } from '../text/google-font-loader.js';
 
 // Only the parser is unit-tested — the loader's actual fetch path
 // depends on network reachability to Google Fonts, which is too fragile

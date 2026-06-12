@@ -15,12 +15,12 @@
 // triggers wrap mode.
 
 import { Application, DragDropEffects } from '@visualisation-sub/mural/runtime';
-import { DataTemplate } from '@visualisation-sub/mural/Basic';
+import { DataTemplate } from '@visualisation-sub/mural/basic';
 import { WordToolboxDemo } from './word-toolbox.mu.js';
 import { WordToolboxVM, FMT_WORD_COPY } from './word-toolbox-vm.mjs';
 import { register } from '../../platform/registry.mjs';
 
-import * as controlsRef from '@visualisation-sub/mural/Basic';
+import * as controlsRef from '@visualisation-sub/mural/basic';
 import * as runtimeRef from '@visualisation-sub/mural/runtime';
 import * as visualEngineRef from '@visualisation-sub/mural/visual-engine';
 

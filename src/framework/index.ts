@@ -6,7 +6,7 @@
 //   * `./commands/` — RoutedCommand / CommandBinding / CommandManager /
 //     InputBinding / ICommandSource / ApplicationCommands etc.
 //   * (Forthcoming as `mv` proceeds) Menu, ToolBar, Diagram, list
-//     controls — promoted from the Basic primitives layer.
+//     controls — promoted from the basic primitives layer.
 
 export { Control } from './control.js';
 

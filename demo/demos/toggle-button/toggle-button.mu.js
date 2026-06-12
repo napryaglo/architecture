@@ -1,5 +1,5 @@
 import { ToggleButtonVM } from "./toggle-button-vm.mjs";
-import { Border, ContentPresenter, ControlTemplate, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TargetedSetter, TemplatePropertyTrigger, TextBlock } from "@visualisation-sub/mural/Basic";
+import { Border, ContentPresenter, ControlTemplate, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TargetedSetter, TemplatePropertyTrigger, TextBlock } from "@visualisation-sub/mural/basic";
 import { ToggleButton } from "@visualisation-sub/mural/framework/toggle-button.js";
 import { DataContextBinding, DynamicResource, ResourceDictionary, Setter, SetterFactory, Style, Thickness } from "@visualisation-sub/mural/runtime";
 import { FontStyle, FontWeight } from "@visualisation-sub/mural/visual-engine";

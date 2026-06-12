@@ -83,7 +83,7 @@ can diverge.
 ## 3. Building a tree
 
 ```ts
-import { Border, TextBlock } from '../Basic/index.js';
+import { Border, TextBlock } from '../basic/index.js';
 
 const label = new TextBlock('Hello');
 const card  = new Border(label);    // Single.SetChild → Attach → both trees wired
@@ -310,7 +310,7 @@ public get templatedParent(): Visual | undefined
 public SetTemplatedParent(p: Visual | undefined): void
 ```
 
-Set by the template-apply pipeline ([Basic/control-template.ts](../Basic/control-template.ts))
+Set by the template-apply pipeline ([basic/templates/control-template.ts](../basic/templates/control-template.ts))
 on every node in a `ControlTemplate`'s generated subtree. Distinct
 from both parents — visual / logical ancestry walks past it; this is
 a single-hop back-pointer to "the control whose template generated

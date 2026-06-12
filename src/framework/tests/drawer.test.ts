@@ -1,14 +1,14 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { initTestApp } from '../../Basic/tests/test-app.js';
+import { initTestApp } from '../../basic/tests/test-app.js';
 
 import { Application, NoModifiers, PointerButton, Panel, Rect, Size, Visual, type PointerEventInit } from '../../runtime/index.js';
 import { InputManager } from '../../framework/index.js';;
 import { HeadlessTarget } from '../../visual-engine/index.js';
-import { Border } from '../../Basic/border.js';
-import { Dock, DockPanel } from '../../Basic/dock-panel.js';
+import { Border } from '../../basic/border.js';
+import { Dock, DockPanel } from '../../basic/panels/dock-panel.js';
 import { Drawer, DrawerVariant } from '../drawer.js';
-import { TextBlock } from '../../Basic/text-block.js';
+import { TextBlock } from '../../basic/text-block.js';
 
 function pointer(overrides: Partial<PointerEventInit> = {}): PointerEventInit
 {

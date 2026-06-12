@@ -1,6 +1,6 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { initTestApp } from '../../Basic/tests/test-app.js';
+import { initTestApp } from '../../basic/tests/test-app.js';
 
 import { Application, NoModifiers, PointerButton, RelayCommand, type PointerEventInit } from '../../runtime/index.js';
 import { InputManager } from '../../framework/index.js';;

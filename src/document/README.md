@@ -15,7 +15,7 @@ For the per-file code review (issues, improvements, design notes) see
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│  Basic      (src/Basic/)                                                │
+│  basic      (src/basic/)                                                │
 │  Border, TextBlock, Canvas, ContentControl + ContentPresenter,          │
 │  ItemsControl + ItemsPresenter + ItemContainerGenerator,                │
 │  VirtualizingStackPanel, ScrollViewer, ControlTemplate, DataTemplate    │
@@ -40,7 +40,7 @@ For the per-file code review (issues, improvements, design notes) see
 
 Dependencies flow downward only. The split mirrors WPF's: `runtime` is the
 WindowsBase analogue (DependencyObject layer), `visual-engine` is the
-PresentationCore analogue (Visual + Drawing layer), `Basic` is the
+PresentationCore analogue (Visual + Drawing layer), `basic` is the
 PresentationFramework analogue (the templated-control library).
 
 ## Documentation index
@@ -110,7 +110,7 @@ Start with whichever doc matches what you're trying to do.
 ```ts
 import { Color, Thickness } from '../runtime/index.js';
 import { HeadlessTarget, SolidColorBrush, SvgDrawingContext } from '../visual-engine/index.js';
-import { Border, TextBlock } from '../Basic/index.js';
+import { Border, TextBlock } from '../basic/index.js';
 
 const text   = new TextBlock('Hello, Mural!');
 text.FontSize = 24;
@@ -135,7 +135,7 @@ flow is the same except the last three lines become a single `new HtmlTarget(hos
 
 ## Running the demos
 
-Three demos ship under [Basic/tests/](../Basic/tests/):
+Three demos ship under [basic/tests/](../basic/tests/):
 
 ```bash
 npm run demo:border    # 100×100 blue/black border on a 300×300 surface
@@ -144,13 +144,13 @@ npm run demo:gfont     # Inter from Google Fonts (real per-glyph metrics)
 npm run ge             # a small graph viz on a 1600×1200 canvas
 ```
 
-Each writes an SVG to `src/Basic/tests/output/` (or to the working
+Each writes an SVG to `src/basic/tests/output/` (or to the working
 directory for `ge`). Open in a browser to inspect the rendering.
 
 ## Running the tests
 
 ```bash
-npm test          # ~1500+ tests across runtime, visual-engine, Basic
+npm test          # ~1500+ tests across runtime, visual-engine, basic
 npm run typecheck # tsc --noEmit
 ```
 
@@ -207,7 +207,7 @@ See [build-targets.md](build-targets.md) for the full npm-script catalog.
   concrete `ScrollBar`.
 - Layout panels: `Canvas`, `Single`, `Panel`, `StackPanel`, `WrapPanel`,
   `DockPanel`, `UniformGrid`, `Grid` (with shared-size groups).
-- Basic controls: `Border`, `TextBlock`, `Button`, `ToggleButton`, `TextBox`,
+- basic controls: `Border`, `TextBlock`, `Button`, `ToggleButton`, `TextBox`,
   `ComboBox`, `ListBox`, `TreeView`, `Slider`, `SpinEdit`, `Drawer`,
   `PageView`, `Diagram`, shapes (`Ellipse`, `Line`), `Thumb`,
   `Splitter`, `GridSplitter`.

@@ -1,4 +1,4 @@
-# Basic
+# basic
 
 The user-facing widgets — `Border`, `TextBlock`, layout panels
 (`Canvas`), content / item hosts (`ContentControl`, `ItemsControl`),
@@ -7,29 +7,29 @@ templating primitives that knit them together (`ControlTemplate`,
 `ContentPresenter`, `ItemsPresenter`, `DataTemplate`).
 
 **Implemented in:**
-- [Basic/border.ts](../Basic/border.ts) — `Border`
-- [Basic/text-block.ts](../Basic/text-block.ts) — `TextBlock`
-- [Basic/canvas.ts](../Basic/canvas.ts) — `Canvas` + `Left` /
+- [basic/border.ts](../basic/border.ts) — `Border`
+- [basic/text-block.ts](../basic/text-block.ts) — `TextBlock`
+- [basic/panels/canvas.ts](../basic/panels/canvas.ts) — `Canvas` + `Left` /
   `Top` attached properties
-- [Basic/content-control.ts](../Basic/content-control.ts) —
+- [basic/content-control.ts](../basic/content-control.ts) —
   `ContentControl`
-- [Basic/content-presenter.ts](../Basic/content-presenter.ts) —
+- [basic/templates/content-presenter.ts](../basic/templates/content-presenter.ts) —
   `ContentPresenter`
-- [Basic/control-template.ts](../Basic/control-template.ts) —
+- [basic/templates/control-template.ts](../basic/templates/control-template.ts) —
   `ControlTemplate`, `TemplateBinding`
-- [Basic/data-template.ts](../Basic/data-template.ts) —
+- [basic/templates/data-template.ts](../basic/templates/data-template.ts) —
   `DataTemplate`
-- [Basic/items-control.ts](../Basic/items-control.ts) —
+- [basic/items-control.ts](../basic/items-control.ts) —
   `ItemsControl`
-- [Basic/items-presenter.ts](../Basic/items-presenter.ts) —
+- [basic/templates/items-presenter.ts](../basic/templates/items-presenter.ts) —
   `ItemsPresenter`
-- [Basic/item-container-generator.ts](../Basic/item-container-generator.ts) —
+- [basic/collections/item-container-generator.ts](../basic/collections/item-container-generator.ts) —
   `ItemContainerGenerator`
-- [Basic/virtualizing-panel.ts](../Basic/virtualizing-panel.ts) —
+- [basic/panels/virtualisation/virtualizing-panel.ts](../basic/panels/virtualisation/virtualizing-panel.ts) —
   `VirtualizingPanel` (abstract)
-- [Basic/virtualizing-stack-panel.ts](../Basic/virtualizing-stack-panel.ts) —
+- [basic/panels/virtualisation/virtualizing-stack-panel.ts](../basic/panels/virtualisation/virtualizing-stack-panel.ts) —
   `VirtualizingStackPanel`
-- [Basic/scroll-viewer.ts](../Basic/scroll-viewer.ts) —
+- [basic/scroll-viewer.ts](../basic/scroll-viewer.ts) —
   `ScrollViewer`
 
 See [layout.md](layout.md) for the underlying `Visual` properties every
@@ -318,22 +318,22 @@ Tracked in [current-backlog.md § 13](../../current-backlog.md):
 
 ## Combining controls — the demos
 
-The three demo scripts under [Basic/tests/](../Basic/tests/) show
+The three demo scripts under [basic/tests/](../basic/tests/) show
 the controls in action:
 
-- **[border-render.ts](../Basic/tests/border-render.ts)** (`npm run demo:border`) —
+- **[border-render.ts](../basic/tests/border-render.ts)** (`npm run demo:border`) —
   100×100 Border with blue background, 3px black stroke, centered in a 300×300 target.
 
-- **[text-render.ts](../Basic/tests/text-render.ts)** (`npm run demo:text`) —
+- **[text-render.ts](../basic/tests/text-render.ts)** (`npm run demo:text`) —
   Bold "Hello, Mural!" TextBlock inside a styled Border, with approximate
   text metrics.
 
-- **[google-font-render.ts](../Basic/tests/google-font-render.ts)** (`npm run demo:gfont`) —
+- **[google-font-render.ts](../basic/tests/google-font-render.ts)** (`npm run demo:gfont`) —
   Same scene as text-render.ts but with Inter fetched live from Google Fonts
   and a `FontMetricsMeasurer` installed, so the text width and baseline are
   the real Inter metrics.
 
-Each demo writes an SVG to `Basic/tests/output/`. Open in a browser to
+Each demo writes an SVG to `basic/tests/output/`. Open in a browser to
 inspect.
 
 ---
@@ -346,7 +346,7 @@ Sizes itself to the union bounding box of all placed children — paired
 with `HeadlessTarget`'s auto-mode, the surface fits the contents.
 
 ```ts
-import { Canvas } from '../Basic/index.js';
+import { Canvas } from '../basic/index.js';
 
 const c = new Canvas();
 const child = new Border();

@@ -1,6 +1,6 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { initTestApp } from '../../../Basic/tests/test-app.js';
+import { initTestApp } from '../../../basic/tests/test-app.js';
 
 import { Application, RelayCommand, Size } from '../../../runtime/index.js';
 import { ToolBar, ToolBarPanel } from '../tool-bar.js';

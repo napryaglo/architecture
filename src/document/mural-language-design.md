@@ -4,7 +4,7 @@ Working name **µ-mural** (`.mu` files). A compact, LaTeX-inspired markup over t
 
 ## 0. Goals and non-goals
 
-**Goals.** Tight syntax for the common cases (element trees, attribute setting, attached properties, bindings, resources, styles, templates). One uniform skeleton — `Name[attrs]{body}` — for elements, resource forms, and macros. A small extensibility mechanism (scope extensions) for adding markup-language directives without growing the grammar. Direct mapping to existing runtime primitives ([src/runtime/](src/runtime/), [src/Basic/](src/Basic/)) so the language is purely a parse-and-construct layer.
+**Goals.** Tight syntax for the common cases (element trees, attribute setting, attached properties, bindings, resources, styles, templates). One uniform skeleton — `Name[attrs]{body}` — for elements, resource forms, and macros. A small extensibility mechanism (scope extensions) for adding markup-language directives without growing the grammar. Direct mapping to existing runtime primitives ([src/runtime/](src/runtime/), [src/basic/](src/basic/)) so the language is purely a parse-and-construct layer.
 
 **Non-goals.** XAML compatibility at the byte level — semantics align with WPF where it costs nothing, the syntax does not. C#/.NET interop. Designer tooling, hot reload, validation against a schema language. Markup-driven flow control (loops, conditionals) beyond what styles + triggers already cover.
 
@@ -15,7 +15,7 @@ A single file exercising every clause type. Each section is referenced from the 
 ```
 // dashboard.mu — exercises every clause type.
 
-import Basic from "@visualisation-sub/mural"
+import basic from "@visualisation-sub/mural"
 
 def card[#bg, #title, #1]{
   Border[Background=#bg, CornerRadius=(8), Padding=(16)]{
@@ -460,7 +460,7 @@ function bindResourcesSlot(
 
 ### 12.1 Architecture
 
-Compilation runs at build time. `.mu` files compile to plain JS modules that import directly against the existing runtime ([src/runtime/](src/runtime/), [src/Basic/](src/Basic/), [src/visual-engine/](src/visual-engine/)) and use it imperatively — no parser ships with the consumer's runtime bundle.
+Compilation runs at build time. `.mu` files compile to plain JS modules that import directly against the existing runtime ([src/runtime/](src/runtime/), [src/basic/](src/basic/), [src/visual-engine/](src/visual-engine/)) and use it imperatively — no parser ships with the consumer's runtime bundle.
 
 The compiler is also exported as a library function so consumers can compile and run markup dynamically (server-delivered templates, designer hot-reload, prototyping). The dynamic path runs the *same* parse + bind logic; the only difference is whether the emitted JS goes through a `.js` file or `new Function(…)`.
 
@@ -488,7 +488,7 @@ Application{
 
 ```js
 import { Application, Style, Setter, DynamicResource } from '@visualisation-sub/mural/runtime';
-import { Border, TextBlock, Button, Window } from '@visualisation-sub/mural/Basic';
+import { Border, TextBlock, Button, Window } from '@visualisation-sub/mural/basic';
 import { SolidColorBrush, Color, Thickness } from '@visualisation-sub/mural/visual-engine';
 
 export const app = (() => {
@@ -758,4 +758,4 @@ XAML's `Style.BasedOn` lets one Style inherit setters from another. Whether µ-m
 - [visual-engine-design.md](visual-engine-design.md) — the render layer below the control library.
 - [src/runtime/resource-dictionary.ts](src/runtime/resource-dictionary.ts) — the dictionary µ-mural's `resources:` slot fills.
 - [src/runtime/visual.ts](src/runtime/visual.ts) — `TryFindResource`, implicit-style resolution, the resource walk.
-- [src/Basic/](src/Basic/) — the control library whose constructors the bind pass targets.
+- [src/basic/](src/basic/) — the control library whose constructors the bind pass targets.

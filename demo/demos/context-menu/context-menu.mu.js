@@ -1,5 +1,5 @@
 import { ContextMenuVM } from "./context-menu-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@visualisation-sub/mural/Basic";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@visualisation-sub/mural/basic";
 import { ContextMenu, ContextMenuService, MenuItem, MenuSeparator } from "@visualisation-sub/mural/framework/surface.js";
 import { Color, DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness, VerticalAlignment } from "@visualisation-sub/mural/runtime";
 import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";

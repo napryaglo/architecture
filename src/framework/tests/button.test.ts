@@ -1,15 +1,15 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { initTestApp } from '../../Basic/tests/test-app.js';
+import { initTestApp } from '../../basic/tests/test-app.js';
 
 import { Application, NoModifiers, PointerButton, RelayCommand, type PointerEventInit } from '../../runtime/index.js';
 import { InputManager } from '../../framework/index.js';;
-import { Border } from '../../Basic/border.js';
+import { Border } from '../../basic/border.js';
 import { type ClickHandler } from '../button.js';
 import { Button, ButtonVariant, ClickMode } from '../button.js';
-import { ContentPresenter } from '../../Basic/content-presenter.js';
+import { ContentPresenter } from '../../basic/templates/content-presenter.js';
 import { Panel } from '../../runtime/index.js';
-import { TextBlock } from '../../Basic/text-block.js';
+import { TextBlock } from '../../basic/text-block.js';
 
 function pointer(overrides: Partial<PointerEventInit> = {}): PointerEventInit
 {

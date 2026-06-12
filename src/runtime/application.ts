@@ -156,7 +156,7 @@ export class Application
     //
     // What it does:
     //   1. If `opts.theme` is provided, calls
-    //      `ThemeManager.Current.ActivateTheme(theme, { scheme })` —
+    //      `ThemeManager.ActivateTheme(theme, { scheme })` —
     //      same effect as the legacy `SetTheme(scheme)` helper, but
     //      generic across theme bundles.
     //   2. Marks the Application as initialised. `IsInitialized` flips

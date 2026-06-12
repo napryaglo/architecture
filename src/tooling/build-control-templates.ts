@@ -7,19 +7,19 @@ import { ParseError } from '../compiler/parser.js';
 import { DEFAULT_SLOT_INFO, type SlotInfo } from '../compiler/symbol-table.js';
 
 // Compiles every `*.mu` file under the framework source trees
-// (src/resources, src/Basic, src/framework) into a matching
+// (src/resources, src/basic, src/framework) into a matching
 // `build/<tree>/<name>.{js,d.ts}`. Run via `npm run build:templates`.
 // The generated files are NOT in `src/` (they're build artifacts) and
 // are gitignored under `build/`.
 //
 // Why the public symbol table works as-is now: each control file's
 // internal helpers (`ClickableBorder`, `ComboBoxPopupHost`, …) are
-// re-exported from the `@visualisation-sub/mural/Basic` barrel, so
+// re-exported from the `@visualisation-sub/mural/basic` barrel, so
 // the package's `DEFAULT_SYMBOLS` already resolves them. The build
 // script uses the DEFAULT map straight through and lets the compiled
 // `.mu.js` emit imports against the package self-reference — exactly
 // the same shape consumers' compiled `.mu.js` files use. Both the
-// build outputs and the consumer outputs resolve to `dist/Basic/`
+// build outputs and the consumer outputs resolve to `dist/basic/`
 // at load time via the package's `exports` field.
 
 // Default slot info for the internal helper classes — same shape the
@@ -62,7 +62,7 @@ function discoverTemplateSources(dir: string): string[]
             else if (entry.name.endsWith('.mu'))
             {
                 // Discovery is scoped to framework source trees
-                // (src/Basic, src/framework); any `.mu` file here is
+                // (src/basic, src/framework); any `.mu` file here is
                 // build-pipeline-owned — control templates
                 // (`*.template.mu`) and token dictionaries
                 // (`material/*.mu`) alike.
@@ -246,8 +246,8 @@ export function buildControlTemplates(opts: BuildOptions): number
     {
         const source = readFileSync(input, 'utf8');
         // No custom symbols map — the default symbol table already
-        // points every Basic class (including internal helpers) at
-        // `@visualisation-sub/mural/Basic`. The emitted `.mu.js`
+        // points every basic class (including internal helpers) at
+        // `@visualisation-sub/mural/basic`. The emitted `.mu.js`
         // resolves that self-reference via the package's `exports`
         // field at load time, the same as any consumer template would.
         const out      = compile(source, { slots });
@@ -293,7 +293,7 @@ if (process.argv[1] !== undefined
     //                     framework.resources.mu, material/*.mu) and any
     //                     shared resource dicts. Compiled outputs go to
     //                     build/resources/.
-    //   * src/Basic     — primitive controls (no `.mu` files now that
+    //   * src/basic     — primitive controls (no `.mu` files now that
     //                     basic.resources.mu moved into src/resources;
     //                     walk kept so authoring a control-local .mu still
     //                     works).
@@ -302,7 +302,7 @@ if (process.argv[1] !== undefined
     //                     same forward-compat reason.
     const trees: ReadonlyArray<readonly [string, string]> = [
         [join(projectRoot, 'src',   'resources'), join(projectRoot, 'build', 'resources')],
-        [join(projectRoot, 'src',   'Basic'),     join(projectRoot, 'build', 'Basic')],
+        [join(projectRoot, 'src',   'basic'),     join(projectRoot, 'build', 'basic')],
         [join(projectRoot, 'src',   'framework'), join(projectRoot, 'build', 'framework')],
     ];
     try

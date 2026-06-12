@@ -1,0 +1,414 @@
+import {
+    Application,
+    DataContextBinding,
+    EventTrigger,
+    NameScope,
+    ResourceDictionary,
+    Setter,
+    type TriggerAction,
+    type Visual,
+} from '../../runtime/index.js';
+import { registerNamedVisuals } from './control-template.js';
+
+// Factory signature for a DataTemplate. Constructs a fresh visual
+// subtree for one item of data — typically run once per item by
+// ItemsControl's container generator.
+//
+// The data is opaque to the framework — it can be a Model (so the
+// factory can wire Bindings against it), a plain object, a primitive,
+// or anything else. The factory is responsible for knowing what shape
+// the data is in.
+export type DataTemplateFactory = (data: unknown) => Visual;
+
+// A DataTemplate describes how to render a single data item as a
+// Visual. Distinct from ControlTemplate (which builds a control's
+// visual structure from its properties) — DataTemplate is data-driven,
+// applied once per item.
+//
+// WPF parity is intentionally partial:
+//   * No DataType field — selecting a template by data type (the
+//     `{x:Type customer}` form) requires a registry; can be layered
+//     on later as DataTemplateSelector if needed.
+//   * No template caching across instances — each Apply call runs
+//     the factory and produces a fresh Visual subtree.
+//   * No DataTrigger.
+//
+// Used by ItemsControl.ItemTemplate to render each item in its Items
+// collection.
+//
+// `DataType` (optional) names the data type this template renders. When
+// set, ContentPresenter / PageView / ItemsControl look up an applicable
+// template for non-Visual Content by walking ancestor resources and
+// matching this field against the content's runtime constructor.
+// Function-identity match — matches WPF's `{x:Type}` shape; the .mu
+// compiler emits the real class reference (backed by an `import` clause
+// at the top of the source) so the lookup is robust against renames and
+// minification.
+//
+// `Triggers` / `DataTriggers` / `EventTriggers`: wired during Apply
+// against the freshly-produced visual subtree. Each trigger's setters
+// carry an optional `targetName` — resolved at Apply time against the
+// template root's NameScope to pick which descendant Visual receives
+// the setter. When `targetName` is undefined, the setter targets the
+// template root itself. Counterpart to WPF's `DataTemplate.Triggers`
+// with `<Setter TargetName="…" />`.
+export class DataTemplate
+{
+    public DataType: Function | undefined;
+    public readonly Triggers:          readonly TemplatePropertyTrigger[];
+    public readonly DataTriggers:      readonly TemplateDataTrigger[];
+    public readonly MultiDataTriggers: readonly TemplateMultiDataTrigger[];
+    /** `on <Event> { … }` triggers in the template body. Routed events
+     *  fire on a per-instance basis once per Apply — every call gets
+     *  its own AddEventTrigger registration on the freshly-built root,
+     *  matching WPF's `<DataTemplate.Triggers><EventTrigger…>` shape. */
+    public readonly EventTriggers:     readonly EventTrigger[];
+
+    constructor(
+        public readonly factory: DataTemplateFactory,
+        dataType?: Function,
+        triggers:          readonly TemplatePropertyTrigger[]  = [],
+        dataTriggers:      readonly TemplateDataTrigger[]      = [],
+        eventTriggers:     readonly EventTrigger[]             = [],
+        multiDataTriggers: readonly TemplateMultiDataTrigger[] = [],
+    )
+    {
+        this.DataType          = dataType;
+        this.Triggers          = triggers;
+        this.DataTriggers      = dataTriggers;
+        this.EventTriggers     = eventTriggers;
+        this.MultiDataTriggers = multiDataTriggers;
+    }
+
+    public Apply(data: unknown): Visual
+    {
+        const root = this.factory(data);
+        // Each Apply call materialises a fresh subtree, so each call
+        // gets its own NameScope on the root. The walk-and-register
+        // mirrors ControlTemplate.Apply — the factory itself no longer
+        // emits Register() calls for `x:name`, so this is the only
+        // place template-local names become resolvable via FindName.
+        const nameScope = new NameScope();
+        root.SetNameScope(nameScope);
+        registerNamedVisuals(root, nameScope);
+        for (const t of this.Triggers)          t.AttachTo(root);
+        for (const t of this.DataTriggers)      t.AttachTo(root);
+        for (const t of this.MultiDataTriggers) t.AttachTo(root);
+        // Routed-event triggers attach to the template root — Visual's
+        // AddEventTrigger walks the per-event subscription pathway
+        // (e.g. `Click` → Button.AddClickHandler). Unrecognised routed
+        // events warn instead of throwing, so a misnamed event in a
+        // template doesn't blow up the whole subtree's render.
+        for (const t of this.EventTriggers) root.AddEventTrigger(t);
+        return root;
+    }
+}
+
+// Setter variant for use inside DataTemplate triggers. `targetName`
+// references an x:name on a descendant of the template's root; when
+// undefined the template root itself receives the setter. The base
+// `Setter` carries (owner, property, value), so the apply machinery
+// at the resolved target visual sees a plain Setter and doesn't need
+// to know about the targeting wrap.
+export class TargetedSetter extends Setter
+{
+    constructor(
+        owner: Function,
+        property: string,
+        value: unknown,
+        public readonly targetName: string | undefined = undefined,
+    )
+    {
+        super(owner, property, value);
+    }
+}
+
+// Resolves each TargetedSetter's `targetName` to a Visual under `root`.
+// Setters whose target can't be resolved are silently dropped — keeps
+// authoring mistakes from blowing up Apply, mirroring WPF's "Setter is
+// ignored" semantics for a missing TargetName.
+function resolveTargets(
+    root: Visual, setters: readonly TargetedSetter[],
+): Array<{ target: Visual; setter: TargetedSetter }>
+{
+    const out: Array<{ target: Visual; setter: TargetedSetter }> = [];
+    for (const s of setters)
+    {
+        const target = s.targetName === undefined ? root : root.FindName(s.targetName);
+        if (target !== undefined) out.push({ target, setter: s });
+    }
+    return out;
+}
+
+// Property-trigger flavour of a DataTemplate trigger. The watched
+// property lives on a specific source Visual — by default the template
+// root, but `sourceName` can target a named descendant. Setters fire on
+// each resolved target visual at the Trigger priority tier and unwind
+// on the deactivation edge.
+//
+// Mirrors WPF's Trigger inside <DataTemplate.Triggers> with optional
+// SourceName + per-Setter TargetName. The condition itself doesn't
+// chain into the styled-target trigger machinery — it owns its own
+// per-template subscription via add/remove property-change listener
+// on the resolved source visual.
+export class TemplatePropertyTrigger
+{
+    constructor(
+        public readonly propertyOwner: Function,
+        public readonly propertyName:  string,
+        public readonly value:         unknown,
+        public readonly setters:       readonly TargetedSetter[],
+        public readonly sourceName:    string | undefined = undefined,
+        // Same edge semantics as Style triggers — fired only on
+        // genuine transitions (not on initial-state match), not on
+        // template teardown. Behaviors block lowering routes through
+        // AttachBehaviorAction / DetachBehaviorAction pairs.
+        public readonly enterActions: readonly TriggerAction[] = [],
+        public readonly exitActions:  readonly TriggerAction[] = [],
+    ) {}
+
+    // `templatedParent` is the default source when the trigger is
+    // attached from a ControlTemplate (WPF: `Trigger.Property` on the
+    // template targets the templated control's properties). DataTemplate
+    // callers don't supply it; the default source is the template root.
+    public AttachTo(root: Visual, templatedParent?: Visual): void
+    {
+        const defaultSource = templatedParent ?? root;
+        const source = this.sourceName === undefined
+            ? defaultSource
+            : root.FindName(this.sourceName);
+        if (source === undefined) return;
+        const resolved = resolveTargets(root, this.setters);
+        let active = false;
+        let initial = true;
+        const enterActions = this.enterActions;
+        const exitActions  = this.exitActions;
+        const actionTarget = templatedParent ?? root;
+        const evaluate = (): void => {
+            const current = source._get_property_value_by_name(this.propertyOwner, this.propertyName);
+            const matched = current === this.value;
+            if (matched && !active)
+            {
+                for (const r of resolved) r.target.ApplyTriggerSetter(r.setter);
+                active = true;
+                if (!initial)
+                {
+                    for (const a of enterActions) a.Invoke(actionTarget);
+                }
+            }
+            else if (!matched && active)
+            {
+                for (const r of resolved) r.target.ClearTriggerSetter(r.setter);
+                active = false;
+                if (!initial)
+                {
+                    for (const a of exitActions) a.Invoke(actionTarget);
+                }
+            }
+            initial = false;
+        };
+        source._add_property_changed_listener_by_name(
+            this.propertyOwner, this.propertyName, evaluate);
+        evaluate();
+    }
+}
+
+// Data-trigger flavour. The condition is a DataContextBinding installed
+// against the template root (or a named source), so the trigger fires
+// based on the data behind the template — typically the per-item view-
+// model — rather than a DP on a Visual. Setters apply to resolved
+// targets just like TemplatePropertyTrigger.
+export class TemplateDataTrigger
+{
+    constructor(
+        public readonly path:    string,
+        public readonly value:   unknown,
+        public readonly setters: readonly TargetedSetter[],
+        public readonly sourceName: string | undefined = undefined,
+        // Same edge semantics as TemplatePropertyTrigger.enterActions
+        // — activation transitions only, no initial-state replay.
+        public readonly enterActions: readonly TriggerAction[] = [],
+        public readonly exitActions:  readonly TriggerAction[] = [],
+    ) {}
+
+    public AttachTo(root: Visual): void
+    {
+        const source = this.sourceName === undefined ? root : root.FindName(this.sourceName);
+        if (source === undefined) return;
+        const resolved = resolveTargets(root, this.setters);
+        const binding = DataContextBinding(source, this.path);
+        let active = false;
+        let initial = true;
+        const enterActions = this.enterActions;
+        const exitActions  = this.exitActions;
+        const evaluate = (): void => {
+            const current = binding.get_value();
+            const matched = current === this.value;
+            if (matched && !active)
+            {
+                for (const r of resolved) r.target.ApplyTriggerSetter(r.setter);
+                active = true;
+                if (!initial)
+                {
+                    for (const a of enterActions) a.Invoke(root);
+                }
+            }
+            else if (!matched && active)
+            {
+                for (const r of resolved) r.target.ClearTriggerSetter(r.setter);
+                active = false;
+                if (!initial)
+                {
+                    for (const a of exitActions) a.Invoke(root);
+                }
+            }
+            initial = false;
+        };
+        binding.setOnValueChanged(evaluate);
+        evaluate();
+    }
+}
+
+// One conjunct condition inside a TemplateMultiDataTrigger — a
+// DataContext path + expected value pair. Mirrors the runtime-side
+// DataTriggerCondition shape, but the binding is sourced from the
+// template root (or the named sourceName).
+export interface TemplateDataTriggerCondition
+{
+    path:  string;
+    value: unknown;
+}
+
+// Multi-binding AND-trigger for DataTemplate / ControlTemplate
+// bodies. Watches each condition's DataContext path on the template
+// root (or `sourceName`); setters apply at the Trigger priority tier
+// only when every binding's resolved value === its expected, and
+// unwind when any condition flips. Counterpart to MultiDataTrigger at
+// the Style level.
+//
+// Authored by `when ( $A and $B ) { … }` inside DataTemplate or
+// ControlTemplate bodies. Setters use the same TargetedSetter shape
+// (named-element form via `Name.Property = …`); the resolved targets
+// receive ApplyTriggerSetter / ClearTriggerSetter on the activation /
+// deactivation edges. enterActions / exitActions follow the same
+// no-initial-replay edge semantics as TemplatePropertyTrigger.
+export class TemplateMultiDataTrigger
+{
+    constructor(
+        public readonly conditions: readonly TemplateDataTriggerCondition[],
+        public readonly setters:    readonly TargetedSetter[],
+        public readonly sourceName: string | undefined = undefined,
+        public readonly enterActions: readonly TriggerAction[] = [],
+        public readonly exitActions:  readonly TriggerAction[] = [],
+    ) {}
+
+    public AttachTo(root: Visual): void
+    {
+        const source = this.sourceName === undefined ? root : root.FindName(this.sourceName);
+        if (source === undefined) return;
+        const resolved = resolveTargets(root, this.setters);
+        const bindings = this.conditions.map(c => DataContextBinding(source, c.path));
+        let active = false;
+        let initial = true;
+        const enterActions = this.enterActions;
+        const exitActions  = this.exitActions;
+        const evaluate = (): void => {
+            const allMatch = this.conditions.every((c, i) => bindings[i]!.get_value() === c.value);
+            if (allMatch && !active)
+            {
+                for (const r of resolved) r.target.ApplyTriggerSetter(r.setter);
+                active = true;
+                if (!initial)
+                {
+                    for (const a of enterActions) a.Invoke(root);
+                }
+            }
+            else if (!allMatch && active)
+            {
+                for (const r of resolved) r.target.ClearTriggerSetter(r.setter);
+                active = false;
+                if (!initial)
+                {
+                    for (const a of exitActions) a.Invoke(root);
+                }
+            }
+            initial = false;
+        };
+        for (const b of bindings) b.setOnValueChanged(evaluate);
+        evaluate();
+    }
+}
+
+// Selector that extracts the child-items iterable from a parent data
+// item, used by HierarchicalDataTemplate. Returning undefined means
+// "leaf" — the item has no children. Returning an iterable (array,
+// ObservableCollection, etc.) means the consumer (a TreeView-style
+// ItemsControl) should recursively realize containers for each child.
+export type HierarchicalChildSelector = (data: unknown) => Iterable<unknown> | undefined;
+
+// DataTemplate variant that announces a child-items relationship in
+// addition to building the parent container. Used by hierarchical
+// ItemsControls (TreeView and friends) to discover sub-items without
+// the data model needing a fixed interface.
+//
+// Three fields beyond DataTemplate's factory:
+//   * `itemsSelector` — pulls children off the parent data
+//   * `itemTemplate`  — DataTemplate for the children; when undefined,
+//     consumers typically fall back to the same HierarchicalDataTemplate
+//     (recursive realization with one template throughout the tree).
+//   * `itemContainerStyle` — optional Style applied to each child
+//     container (TreeView passes this down to nested ItemsControls).
+//
+// The template itself doesn't realize children — that's the consumer's
+// responsibility. HierarchicalDataTemplate just carries the policy.
+export class HierarchicalDataTemplate extends DataTemplate
+{
+    constructor(
+        factory: DataTemplateFactory,
+        public readonly itemsSelector: HierarchicalChildSelector,
+        public readonly itemTemplate: DataTemplate | undefined = undefined,
+        public readonly itemContainerStyle: unknown | undefined = undefined,
+        dataType?: Function,
+    )
+    {
+        super(factory, dataType);
+    }
+
+    // Walk the child-items pulled from `data` via itemsSelector.
+    // Returns an empty iterable when the selector returns undefined,
+    // so callers can iterate uniformly without an extra branch.
+    public *ItemsOf(data: unknown): Iterable<unknown>
+    {
+        const it = this.itemsSelector(data);
+        if (it === undefined) return;
+        yield* it;
+    }
+}
+
+// Find a DataTemplate whose DataType matches `klass`, by walking the
+// current Application's resources (own entries first, then merged
+// dictionaries recursively). Returns undefined when no Application is
+// current OR when no matching template is registered. Used by
+// ContentControl + PageView + ListBox to auto-resolve a template for
+// non-Visual Content based on the data's runtime class. Identity match
+// — `klass === content.constructor`.
+export function findDataTemplateForType(klass: Function): DataTemplate | undefined
+{
+    const app = Application.current;
+    if (app === null) return undefined;
+    return walkResourcesForDataTemplate(app.Resources, klass);
+}
+
+function walkResourcesForDataTemplate(rd: ResourceDictionary, klass: Function): DataTemplate | undefined
+{
+    for (const [, v] of rd.Entries())
+    {
+        if (v instanceof DataTemplate && v.DataType === klass) return v;
+    }
+    for (const merged of rd.MergedDictionaries)
+    {
+        const r = walkResourcesForDataTemplate(merged, klass);
+        if (r !== undefined) return r;
+    }
+    return undefined;
+}

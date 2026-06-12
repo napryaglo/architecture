@@ -69,20 +69,20 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['DragDropEffects',     '@visualisation-sub/mural/runtime'],
     ['DragDrop',            '@visualisation-sub/mural/runtime'],
 
-    // ── Basic controls ──────────────────────────────────────────────
-    ['Border',                  '@visualisation-sub/mural/Basic'],
+    // ── basic controls ──────────────────────────────────────────────
+    ['Border',                  '@visualisation-sub/mural/basic'],
     ['Button',                  '@visualisation-sub/mural/framework/button.js'],
     ['ClickMode',               '@visualisation-sub/mural/framework/button.js'],
     ['ButtonVariant',           '@visualisation-sub/mural/framework/button.js'],
-    ['TextBlock',               '@visualisation-sub/mural/Basic'],
-    ['Canvas',                  '@visualisation-sub/mural/Basic'],
-    ['Ellipse',                 '@visualisation-sub/mural/Basic'],
-    ['Image',                   '@visualisation-sub/mural/Basic'],
-    ['Line',                    '@visualisation-sub/mural/Basic'],
-    ['Rectangle',               '@visualisation-sub/mural/Basic'],
+    ['TextBlock',               '@visualisation-sub/mural/basic'],
+    ['Canvas',                  '@visualisation-sub/mural/basic'],
+    ['Ellipse',                 '@visualisation-sub/mural/basic'],
+    ['Image',                   '@visualisation-sub/mural/basic'],
+    ['Line',                    '@visualisation-sub/mural/basic'],
+    ['Rectangle',               '@visualisation-sub/mural/basic'],
     ['ComboBox',                '@visualisation-sub/mural/framework/list/combo-box.js'],
-    ['DockPanel',               '@visualisation-sub/mural/Basic'],
-    ['Dock',                    '@visualisation-sub/mural/Basic'],
+    ['DockPanel',               '@visualisation-sub/mural/basic'],
+    ['Dock',                    '@visualisation-sub/mural/basic'],
     ['Drawer',                  '@visualisation-sub/mural/framework/drawer.js'],
     ['DrawerVariant',           '@visualisation-sub/mural/framework/drawer.js'],
     ['TreeView',                '@visualisation-sub/mural/framework/list/tree-view.js'],
@@ -91,57 +91,57 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['ListBoxItem',             '@visualisation-sub/mural/framework/list/list-box.js'],
     ['SelectionMode',           '@visualisation-sub/mural/framework/list/list-box.js'],
     ['MarqueeBoundsPolicy',     '@visualisation-sub/mural/framework/list/selector.js'],
-    ['TextBox',                 '@visualisation-sub/mural/Basic'],
-    ['SpinEdit',                '@visualisation-sub/mural/Basic'],
-    ['Slider',                  '@visualisation-sub/mural/Basic'],
-    ['PageView',                '@visualisation-sub/mural/Basic'],
+    ['TextBox',                 '@visualisation-sub/mural/basic'],
+    ['SpinEdit',                '@visualisation-sub/mural/basic'],
+    ['Slider',                  '@visualisation-sub/mural/basic'],
+    ['PageView',                '@visualisation-sub/mural/basic'],
 
     // Runtime types that the emitter may reference even when the
     // consumer's source doesn't name them directly — added on demand
     // by the emit pass.
     ['NameScope',               '@visualisation-sub/mural/runtime'],
-    ['StackPanel',              '@visualisation-sub/mural/Basic'],
-    ['WrapPanel',               '@visualisation-sub/mural/Basic'],
-    ['UniformGrid',             '@visualisation-sub/mural/Basic'],
-    ['Orientation',             '@visualisation-sub/mural/Basic'],
+    ['StackPanel',              '@visualisation-sub/mural/basic'],
+    ['WrapPanel',               '@visualisation-sub/mural/basic'],
+    ['UniformGrid',             '@visualisation-sub/mural/basic'],
+    ['Orientation',             '@visualisation-sub/mural/basic'],
     ['ContentControl',          '@visualisation-sub/mural/framework/content-control.js'],
-    ['ContentPresenter',        '@visualisation-sub/mural/Basic'],
+    ['ContentPresenter',        '@visualisation-sub/mural/basic'],
     ['DiagramNode',             '@visualisation-sub/mural/framework/diagram/diagram-node.js'],
     ['Diagram',                 '@visualisation-sub/mural/framework/diagram/diagram.js'],
-    ['Grid',                    '@visualisation-sub/mural/Basic'],
-    ['GridLength',              '@visualisation-sub/mural/Basic'],
-    ['ColumnDefinition',        '@visualisation-sub/mural/Basic'],
-    ['RowDefinition',           '@visualisation-sub/mural/Basic'],
-    ['ControlTemplate',         '@visualisation-sub/mural/Basic'],
-    ['DataTemplate',            '@visualisation-sub/mural/Basic'],
-    ['TargetedSetter',          '@visualisation-sub/mural/Basic'],
-    ['TemplatePropertyTrigger',  '@visualisation-sub/mural/Basic'],
-    ['TemplateDataTrigger',      '@visualisation-sub/mural/Basic'],
-    ['TemplateMultiDataTrigger', '@visualisation-sub/mural/Basic'],
+    ['Grid',                    '@visualisation-sub/mural/basic'],
+    ['GridLength',              '@visualisation-sub/mural/basic'],
+    ['ColumnDefinition',        '@visualisation-sub/mural/basic'],
+    ['RowDefinition',           '@visualisation-sub/mural/basic'],
+    ['ControlTemplate',         '@visualisation-sub/mural/basic'],
+    ['DataTemplate',            '@visualisation-sub/mural/basic'],
+    ['TargetedSetter',          '@visualisation-sub/mural/basic'],
+    ['TemplatePropertyTrigger',  '@visualisation-sub/mural/basic'],
+    ['TemplateDataTrigger',      '@visualisation-sub/mural/basic'],
+    ['TemplateMultiDataTrigger', '@visualisation-sub/mural/basic'],
     ['ItemsControl',            '@visualisation-sub/mural/framework/items-control.js'],
-    ['ListReorderBehavior',     '@visualisation-sub/mural/Basic'],
-    ['LogBehavior',             '@visualisation-sub/mural/Basic'],
+    ['ListReorderBehavior',     '@visualisation-sub/mural/basic'],
+    ['LogBehavior',             '@visualisation-sub/mural/basic'],
     ['Selector',                '@visualisation-sub/mural/framework/list/selector.js'],
-    ['ItemContainerGenerator',  '@visualisation-sub/mural/Basic'],
-    ['ItemsPresenter',          '@visualisation-sub/mural/Basic'],
-    ['HierarchicalDataTemplate','@visualisation-sub/mural/Basic'],
-    ['ItemsPanelTemplate',      '@visualisation-sub/mural/Basic'],
-    ['CollectionView',          '@visualisation-sub/mural/Basic'],
-    ['SortDescription',         '@visualisation-sub/mural/Basic'],
-    ['GroupDescription',        '@visualisation-sub/mural/Basic'],
+    ['ItemContainerGenerator',  '@visualisation-sub/mural/basic'],
+    ['ItemsPresenter',          '@visualisation-sub/mural/basic'],
+    ['HierarchicalDataTemplate','@visualisation-sub/mural/basic'],
+    ['ItemsPanelTemplate',      '@visualisation-sub/mural/basic'],
+    ['CollectionView',          '@visualisation-sub/mural/basic'],
+    ['SortDescription',         '@visualisation-sub/mural/basic'],
+    ['GroupDescription',        '@visualisation-sub/mural/basic'],
     ['ScrollViewer',            '@visualisation-sub/mural/framework/scroll-viewer.js'],
-    ['ScrollBar',               '@visualisation-sub/mural/Basic'],
-    ['Thumb',                   '@visualisation-sub/mural/Basic'],
-    ['GridSplitter',            '@visualisation-sub/mural/Basic'],
-    ['Splitter',                '@visualisation-sub/mural/Basic'],
-    ['VirtualizingPanel',       '@visualisation-sub/mural/Basic'],
-    ['VirtualizingStackPanel',  '@visualisation-sub/mural/Basic'],
-    ['VirtualizingWrapPanel',   '@visualisation-sub/mural/Basic'],
-    ['TextWrapping',            '@visualisation-sub/mural/Basic'],
+    ['ScrollBar',               '@visualisation-sub/mural/basic'],
+    ['Thumb',                   '@visualisation-sub/mural/basic'],
+    ['GridSplitter',            '@visualisation-sub/mural/basic'],
+    ['Splitter',                '@visualisation-sub/mural/basic'],
+    ['VirtualizingPanel',       '@visualisation-sub/mural/basic'],
+    ['VirtualizingStackPanel',  '@visualisation-sub/mural/basic'],
+    ['VirtualizingWrapPanel',   '@visualisation-sub/mural/basic'],
+    ['TextWrapping',            '@visualisation-sub/mural/basic'],
 
     // ── Internal helper classes ────────────────────────────────────
     // Layout / behaviour primitives owned by individual controls but
-    // exported from their files (and re-exported from the Basic
+    // exported from their files (and re-exported from the basic
     // barrel) so the controls' bundled `.template.mu` defaults can
     // reference them by name. Registered here as well so the LSP /
     // analyzer accepts them when an in-tree template is opened — the
@@ -158,15 +158,15 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['ClickableRow',            '@visualisation-sub/mural/framework/list/tree-view.js'],
     ['ChevronTarget',           '@visualisation-sub/mural/framework/list/tree-view.js'],
     ['CollapsibleStack',        '@visualisation-sub/mural/framework/list/tree-view.js'],
-    ['ScrollBarLayout',         '@visualisation-sub/mural/Basic'],
+    ['ScrollBarLayout',         '@visualisation-sub/mural/basic'],
     ['ScrollViewerLayout',      '@visualisation-sub/mural/framework/scroll-viewer.js'],
-    ['ScrollContentPresenter',  '@visualisation-sub/mural/Basic'],
-    ['SliderLayout',            '@visualisation-sub/mural/Basic'],
-    ['TextEditorSurface',       '@visualisation-sub/mural/Basic'],
+    ['ScrollContentPresenter',  '@visualisation-sub/mural/basic'],
+    ['SliderLayout',            '@visualisation-sub/mural/basic'],
+    ['TextEditorSurface',       '@visualisation-sub/mural/basic'],
 
     // ── Command-surface controls (5.11) ─────────────────────────────
     // These extend Button / Visual and live in a separate barrel
-    // (`./surface.js`) to avoid a TDZ cycle through the main Basic
+    // (`./surface.js`) to avoid a TDZ cycle through the main basic
     // barrel during Button's default-style theme cascade.
     ['ToggleButton',            '@visualisation-sub/mural/framework/toggle-button.js'],
     ['ToolBar',                 '@visualisation-sub/mural/framework/surface.js'],
@@ -229,7 +229,7 @@ export const DEFAULT_SYMBOLS: SymbolMap = new Map(ENTRIES);
 // All runtime enums listed here MUST also appear in DEFAULT_SYMBOLS so
 // the emitter can pull them in via an import. The member sets MUST
 // stay in sync with the runtime declarations (src/runtime/visual.ts,
-// src/visual-engine/*, src/Basic/*) — there's no compile-time link
+// src/visual-engine/*, src/basic/*) — there's no compile-time link
 // between this table and the actual enum declarations, so adding a
 // member to the runtime without updating this table makes the new
 // member unusable from markup until the table is updated.

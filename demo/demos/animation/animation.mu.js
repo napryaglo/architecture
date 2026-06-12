@@ -1,5 +1,5 @@
 import { AnimationVM } from "./animation-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@visualisation-sub/mural/Basic";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@visualisation-sub/mural/basic";
 import { Button } from "@visualisation-sub/mural/framework/button.js";
 import { Color, DynamicResource, NameScope, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
 import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";

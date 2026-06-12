@@ -1,5 +1,5 @@
 import { SpinEditVM } from "./spin-edit-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, SpinEdit, StackPanel, TextBlock } from "@visualisation-sub/mural/Basic";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, SpinEdit, StackPanel, TextBlock } from "@visualisation-sub/mural/basic";
 import { DynamicResource, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
 import { FontWeight } from "@visualisation-sub/mural/visual-engine";
 

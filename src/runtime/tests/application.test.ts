@@ -214,15 +214,15 @@ describe('Application.initialize', () => {
         public static override Activate(scheme?: typeof Scheme): void
         {
             const target = scheme ?? TinyLight;
-            ThemeManager.Current.ActivateTheme(Tiny.instance.name, { scheme: target.name });
+            ThemeManager.ActivateTheme(Tiny.instance.name, { scheme: target.name });
         }
     }
 
     function registerTiny(): void
     {
-        if (ThemeManager.Current.GetTheme('Tiny') === undefined)
+        if (ThemeManager.GetTheme('Tiny') === undefined)
         {
-            ThemeManager.Current.RegisterTheme(Tiny.instance);
+            ThemeManager.RegisterTheme(Tiny.instance);
         }
     }
 
@@ -237,7 +237,7 @@ describe('Application.initialize', () => {
         const app = new Application();
         app.initialize();
         assert.equal(app.IsInitialized, true);
-        assert.equal(ThemeManager.Current.ActiveTheme?.name, 'Tiny',
+        assert.equal(ThemeManager.ActiveTheme?.name, 'Tiny',
             'default theme is activated implicitly');
     });
 
@@ -245,7 +245,7 @@ describe('Application.initialize', () => {
         const app = new Application();
         app.initialize();
         assert.equal(app.IsInitialized, true);
-        assert.equal(ThemeManager.Current.ActiveTheme, undefined);
+        assert.equal(ThemeManager.ActiveTheme, undefined);
     });
 
     test('initialize({ theme }) activates the theme via its static Activate', () => {
@@ -253,8 +253,8 @@ describe('Application.initialize', () => {
         const app = new Application();
         app.initialize({ theme: Tiny });
         assert.equal(app.IsInitialized, true);
-        assert.equal(ThemeManager.Current.ActiveTheme?.name, 'Tiny');
-        assert.equal(ThemeManager.Current.ActiveScheme?.name, 'TinyLight',
+        assert.equal(ThemeManager.ActiveTheme?.name, 'Tiny');
+        assert.equal(ThemeManager.ActiveScheme?.name, 'TinyLight',
             'omitted scheme falls back to the theme DefaultScheme');
         assert.equal(app.Resources.Resolve('Token'), 'L',
             'theme tokens are merged into the application resource chain');
@@ -264,7 +264,7 @@ describe('Application.initialize', () => {
         registerTiny();
         const app = new Application();
         app.initialize({ theme: Tiny, scheme: TinyDark });
-        assert.equal(ThemeManager.Current.ActiveScheme?.name, 'TinyDark');
+        assert.equal(ThemeManager.ActiveScheme?.name, 'TinyDark');
         assert.equal(app.Resources.Resolve('Token'), 'D');
     });
 
@@ -273,7 +273,7 @@ describe('Application.initialize', () => {
         const app = new Application();
         app.initialize({ theme: Tiny, scheme: TinyDark });
         app.initialize({ theme: Tiny, scheme: TinyLight });
-        assert.equal(ThemeManager.Current.ActiveScheme?.name, 'TinyDark',
+        assert.equal(ThemeManager.ActiveScheme?.name, 'TinyDark',
             'second initialize did not re-activate');
     });
 

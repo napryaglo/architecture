@@ -9,7 +9,7 @@ import {
     Rect,
     Color,
 } from '../../runtime/index.js';
-import { Border, Canvas, TextBlock } from '../../Basic/index.js';
+import { Border, Canvas, TextBlock } from '../../basic/index.js';
 import {
     SvgRenderer,
     VISUAL_BACKREF,

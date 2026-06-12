@@ -6,7 +6,7 @@
 // TreeView via FindName and wires its ItemTemplate / ItemsSource
 // post-build.
 import { Model } from '@visualisation-sub/mural/runtime';
-import { HierarchicalDataTemplate } from '@visualisation-sub/mural/Basic';
+import { HierarchicalDataTemplate } from '@visualisation-sub/mural/basic';
 import { TreeView, TreeViewItem } from '@visualisation-sub/mural/framework';
 
 // A small file-tree-shaped data set. Each node has Name (consumed by

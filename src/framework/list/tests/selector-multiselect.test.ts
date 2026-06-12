@@ -1,6 +1,6 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { initTestApp } from '../../../Basic/tests/test-app.js';
+import { initTestApp } from '../../../basic/tests/test-app.js';
 
 import {
     Application,
@@ -8,7 +8,7 @@ import {
     Visual,
     type ModifierKeys,
 } from '../../../runtime/index.js';
-import { Border } from '../../../Basic/border.js';
+import { Border } from '../../../basic/border.js';
 import { Selector, SelectionMode } from '../selector.js';
 
 // Tiny Selector subclass for testing the promoted API directly,

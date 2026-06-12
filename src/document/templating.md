@@ -7,12 +7,12 @@ controls without touching the consumer-facing API. Mirrors WPF's
 `TemplatedParent` pattern.
 
 **Implemented in:**
-- [Basic/control-template.ts](../Basic/control-template.ts) —
+- [basic/templates/control-template.ts](../basic/templates/control-template.ts) —
   `ControlTemplate`, `TemplateFactory`, `TemplateInstance`,
   `TemplateBinding`
-- [Basic/content-presenter.ts](../Basic/content-presenter.ts) —
+- [basic/templates/content-presenter.ts](../basic/templates/content-presenter.ts) —
   `ContentPresenter`
-- [Basic/content-control.ts](../Basic/content-control.ts) —
+- [basic/content-control.ts](../basic/content-control.ts) —
   `ContentControl`
 - [runtime/visual.ts](../runtime/visual.ts) — `TemplatedParent` accessor,
   `Name` + `FindName` + `NameScope`
@@ -56,8 +56,8 @@ wraps a function `(templatedParent: Visual) => Visual` that constructs
 a fresh visual subtree each call.
 
 ```ts
-import { ControlTemplate, ContentPresenter } from '../Basic/index.js';
-import { Border } from '../Basic/index.js';
+import { ControlTemplate, ContentPresenter } from '../basic/index.js';
+import { Border } from '../basic/index.js';
 import { SolidColorBrush } from '../visual-engine/index.js';
 
 const cardTemplate = new ControlTemplate(templatedParent => {
@@ -123,7 +123,7 @@ Measure / Arrange delegate to the slotted content.
 ## 4. `ContentControl`
 
 ```ts
-import { ContentControl } from '../Basic/index.js';
+import { ContentControl } from '../basic/index.js';
 
 const cc = new ContentControl();
 cc.Template = cardTemplate;
@@ -177,7 +177,7 @@ A convenience that creates a `Binding` whose source is the
 the control.
 
 ```ts
-import { TemplateBinding } from '../Basic/index.js';
+import { TemplateBinding } from '../basic/index.js';
 
 const template = new ControlTemplate(tp => {
     const border = new Border();

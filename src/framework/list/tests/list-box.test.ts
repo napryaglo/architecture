@@ -1,15 +1,15 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { initTestApp } from '../../../Basic/tests/test-app.js';
+import { initTestApp } from '../../../basic/tests/test-app.js';
 
 import { Application, NoModifiers, PointerButton, type ModifierKeys, type PointerEventInit } from '../../../runtime/index.js';
 import { InputManager } from '../../../framework/index.js';;
 import { HeadlessTarget } from '../../../visual-engine/index.js';
-import { ItemsPresenter } from '../../../Basic/items-presenter.js';
+import { ItemsPresenter } from '../../../basic/templates/items-presenter.js';
 import { ListBox, ListBoxItem, SelectionMode } from '../list-box.js';
 import { ScrollViewer } from '../../../framework/scroll-viewer.js';
-import { StackPanel } from '../../../Basic/stack-panel.js';
-import { TextBlock } from '../../../Basic/text-block.js';
+import { StackPanel } from '../../../basic/panels/stack-panel.js';
+import { TextBlock } from '../../../basic/text-block.js';
 
 function pointer(mods: Partial<ModifierKeys> = {}): PointerEventInit
 {

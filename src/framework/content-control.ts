@@ -8,8 +8,8 @@ import {
     type PropertyDescriptor,
 } from '../runtime/index.js';
 import { Control } from './control.js';
-import { ControlTemplate, type TemplateInstance } from '../Basic/control-template.js';
-import { findDataTemplateForType } from '../Basic/data-template.js';
+import { ControlTemplate, type TemplateInstance } from '../basic/templates/control-template.js';
+import { findDataTemplateForType } from '../basic/templates/data-template.js';
 
 // Base class for controls that present a single piece of consumer-
 // supplied content inside a ControlTemplate-defined visual structure.

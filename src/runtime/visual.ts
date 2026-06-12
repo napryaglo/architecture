@@ -1,9 +1,9 @@
 import { Model } from './model.js';
 import type { PropertyDescriptor } from './property-descriptor.js';
-import { PropertyValueSource } from './effective-value.js';
+import { PropertyValueSource } from './binding/effective-value.js';
 import { MetaData, affectsArrange, affectsMeasure, affectsRender, inherits } from './metadata.js';
-import { Binding } from './binding.js';
-import { DataContextBinding } from './data-context-binding.js';
+import { Binding } from './binding/binding.js';
+import { DataContextBinding } from './binding/data-context-binding.js';
 import { NameScope } from './namescope.js';
 import { ObservableCollection, type IReadOnlyObservableCollection } from './observable-collection.js';
 import { ResourceDictionary, type ResourceKey } from './resource-dictionary.js';
@@ -20,11 +20,11 @@ import type {
     TextInputEventArgs,
     FocusEventArgs,
     DragEventArgs,
-} from './routed-event.js';
+} from './input/routed-event.js';
 import { Storyboard } from './animation/storyboard.js';
 import type { AnimationTimeline } from './animation/timeline.js';
-import { EventTrigger } from './trigger-actions.js';
-import { DragDrop, DragDropEffects, type DataObject, type DragPreviewKind } from './drag-drop.js';
+import { EventTrigger } from './input/event-trigger.js';
+import { DragDrop, DragDropEffects, type DataObject, type DragPreviewKind } from './input/drag-drop.js';
 
 // Marker shape for a renderer-side effect. The concrete classes
 // (DropShadowEffect, MaterialElevationEffect) live in visual-engine

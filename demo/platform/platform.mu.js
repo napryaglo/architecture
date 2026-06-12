@@ -1,5 +1,5 @@
 import { GroupVM } from "./platform-vm.mjs";
-import { AdornerDecorator, Border, Dock, DockPanel, HierarchicalDataTemplate, PageView, StackPanel, TextBlock } from "@visualisation-sub/mural/Basic";
+import { AdornerDecorator, Border, Dock, DockPanel, HierarchicalDataTemplate, PageView, StackPanel, TextBlock } from "@visualisation-sub/mural/basic";
 import { TreeView, TreeViewItem } from "@visualisation-sub/mural/framework/list/tree-view.js";
 import { ThemeSelector } from "@visualisation-sub/mural/framework/surface.js";
 import { Material, MaterialLight } from "@visualisation-sub/mural/resources/material";

@@ -11,19 +11,19 @@ without paying for every off-screen item.
   `IReadOnlyObservableCollection<T>`
 - [runtime/scroll-info.ts](../runtime/scroll-info.ts) — `IScrollInfo` +
   `isScrollInfo`
-- [Basic/data-template.ts](../Basic/data-template.ts) —
+- [basic/templates/data-template.ts](../basic/templates/data-template.ts) —
   `DataTemplate`
-- [Basic/item-container-generator.ts](../Basic/item-container-generator.ts) —
+- [basic/collections/item-container-generator.ts](../basic/collections/item-container-generator.ts) —
   `ItemContainerGenerator`
-- [Basic/items-control.ts](../Basic/items-control.ts) —
+- [basic/items-control.ts](../basic/items-control.ts) —
   `ItemsControl`
-- [Basic/items-presenter.ts](../Basic/items-presenter.ts) —
+- [basic/templates/items-presenter.ts](../basic/templates/items-presenter.ts) —
   `ItemsPresenter`
-- [Basic/virtualizing-panel.ts](../Basic/virtualizing-panel.ts) —
+- [basic/panels/virtualisation/virtualizing-panel.ts](../basic/panels/virtualisation/virtualizing-panel.ts) —
   `VirtualizingPanel` (abstract)
-- [Basic/virtualizing-stack-panel.ts](../Basic/virtualizing-stack-panel.ts) —
+- [basic/panels/virtualisation/virtualizing-stack-panel.ts](../basic/panels/virtualisation/virtualizing-stack-panel.ts) —
   `VirtualizingStackPanel`
-- [Basic/scroll-viewer.ts](../Basic/scroll-viewer.ts) —
+- [basic/scroll-viewer.ts](../basic/scroll-viewer.ts) —
   `ScrollViewer`
 
 See also: [templating.md](templating.md) for `ContentControl` /
@@ -96,7 +96,7 @@ internal subscription).
 A factory that turns one data item into a Visual:
 
 ```ts
-import { DataTemplate } from '../Basic/index.js';
+import { DataTemplate } from '../basic/index.js';
 
 const personTemplate = new DataTemplate(data => {
     const person = data as { name: string };
@@ -147,8 +147,8 @@ hook).
 ## 4. `ItemsControl`
 
 ```ts
-import { ItemsControl, DataTemplate } from '../Basic/index.js';
-import { Canvas } from '../Basic/index.js';
+import { ItemsControl, DataTemplate } from '../basic/index.js';
+import { Canvas } from '../basic/index.js';
 
 const ic = new ItemsControl();
 ic.ItemsPanel   = () => new Canvas();          // panel factory
@@ -289,7 +289,7 @@ offsets mirror Viewport.X/Y. `isScrollInfo(v)` is a duck-type guard
 ## 9. `ScrollViewer`
 
 ```ts
-import { ScrollViewer } from '../Basic/index.js';
+import { ScrollViewer } from '../basic/index.js';
 
 const sv = new ScrollViewer();
 sv.Content = someContent;          // any Visual
@@ -365,7 +365,7 @@ import {
     ScrollViewer,
     TextBlock,
     VirtualizingStackPanel,
-} from '../Basic/index.js';
+} from '../basic/index.js';
 
 // 10,000 items
 const items = Array.from({ length: 10000 }, (_, i) => `Row ${i}`);

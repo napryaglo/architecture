@@ -13,10 +13,10 @@ import {
 } from '../runtime/index.js';
 import { PresentationTarget, SolidColorBrush, type Brush } from '../visual-engine/index.js';
 import { Control } from './control.js';
-import { Border } from '../Basic/border.js';
-import { ContentPresenter } from '../Basic/content-presenter.js';
-import { Dock } from '../Basic/dock-panel.js';
-import type { ControlTemplate } from '../Basic/control-template.js';
+import { Border } from '../basic/border.js';
+import { ContentPresenter } from '../basic/templates/content-presenter.js';
+import { Dock } from '../basic/panels/dock-panel.js';
+import type { ControlTemplate } from '../basic/templates/control-template.js';
 
 const KEY_PANE    = 'DefaultDrawerPane';
 const KEY_OVERLAY = 'DefaultDrawerOverlay';

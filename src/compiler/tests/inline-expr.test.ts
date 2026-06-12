@@ -8,14 +8,14 @@ import {
     InlineExprError,
 } from '../inline-expr.js';
 import * as runtime from '../../runtime/index.js';
-import * as controls from '../../Basic/index.js';
+import * as controls from '../../basic/index.js';
 import * as engine from '../../visual-engine/index.js';
 import {
     Application,
     Model,
     MetaData,
 } from '../../runtime/index.js';
-import { Border, TextBlock } from '../../Basic/index.js';
+import { Border, TextBlock } from '../../basic/index.js';
 
 const CTX: Record<string, unknown> = { ...runtime, ...controls, ...engine };
 

@@ -6,7 +6,7 @@
 //   * ManualClock (this file)         — deterministic, advanced by Tick(dt)
 //                                       from test code. Used as the default
 //                                       so tests don't need rAF / timers.
-//   * RafClock    (visual-engine)     — wraps requestAnimationFrame for the
+//   * RafClock    (./raf-clock.ts)    — wraps requestAnimationFrame for the
 //                                       browser. HtmlTarget installs it on
 //                                       AnimationManager at first construction.
 //

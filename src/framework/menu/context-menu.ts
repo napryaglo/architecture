@@ -7,7 +7,7 @@ import {
 } from '../../runtime/index.js';
 import { PresentationTarget } from '../../visual-engine/index.js';
 import { ItemsControl } from '../items-control.js';
-import { Border } from '../../Basic/border.js';
+import { Border } from '../../basic/border.js';
 import { MenuItem, MenuPopupHost } from './menu-strip.js';
 import { ClickAwayScrim } from '../tool-bar/tool-bar.js';
 

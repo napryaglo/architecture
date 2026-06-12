@@ -1,6 +1,6 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { initTestApp } from '../../Basic/tests/test-app.js';
+import { initTestApp } from '../../basic/tests/test-app.js';
 import {
     Color,
     DataObject,
@@ -14,7 +14,7 @@ import {
     type DrawingContext,
 } from '../../runtime/index.js';
 import { RectangleGeometry, SolidColorBrush } from '../../visual-engine/index.js';
-import { DataTemplate, VirtualizingStackPanel } from '../../Basic/index.js';
+import { DataTemplate, VirtualizingStackPanel } from '../../basic/index.js';
 import { ItemsControl, ScrollViewer } from '@visualisation-sub/mural/framework';
 
 // Fixed-size leaf that paints a colored rect — useful as ScrollViewer

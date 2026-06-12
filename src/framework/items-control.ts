@@ -12,12 +12,12 @@ import {
     type PropertyDescriptor,
 } from '../runtime/index.js';
 import { Control } from './control.js';
-import { CollectionViewGroup } from '../Basic/collection-view-group.js';
-import { ContentPresenter } from '../Basic/content-presenter.js';
-import { ControlTemplate, type TemplateInstance } from '../Basic/control-template.js';
-import { DataTemplate } from '../Basic/data-template.js';
-import { TextBlock } from '../Basic/text-block.js';
-import { GroupStyle } from '../Basic/group-style.js';
+import { CollectionViewGroup } from '../basic/collections/collection-view-group.js';
+import { ContentPresenter } from '../basic/templates/content-presenter.js';
+import { ControlTemplate, type TemplateInstance } from '../basic/templates/control-template.js';
+import { DataTemplate } from '../basic/templates/data-template.js';
+import { TextBlock } from '../basic/text-block.js';
+import { GroupStyle } from '../basic/collections/group-style.js';
 
 // Per-level GroupStyle picker for nested grouping. Receives the group
 // being wrapped + its nesting level (0 = outermost), returns the
@@ -30,9 +30,9 @@ import {
     ItemContainerGenerator,
     ItemsChangedAction,
     type ItemsChangedArgs,
-} from '../Basic/item-container-generator.js';
-import { ItemsPresenter } from '../Basic/items-presenter.js';
-import { VirtualizingPanel } from '../Basic/virtualizing-panel.js';
+} from '../basic/collections/item-container-generator.js';
+import { ItemsPresenter } from '../basic/templates/items-presenter.js';
+import { VirtualizingPanel } from '../basic/panels/virtualisation/virtualizing-panel.js';
 
 // Function form of WPF's DataTemplateSelector. Given a data item,
 // return the DataTemplate that should materialize its container, or
@@ -84,16 +84,16 @@ export function _registerGroupItemCtor(factory: () => GroupedContainer): void
 // as a type alias here (the concrete class lives in collection-view.ts)
 // so the ItemsControl's ItemsSource setter has a typed hook without
 // importing the heavy implementation file at module-load time.
-import type { CollectionView } from '../Basic/collection-view.js';
+import type { CollectionView } from '../basic/collections/collection-view.js';
 
 // Re-exported from items-panel-template — same shape as ControlTemplate's
 // factory, invoked once per ItemsControl when ItemsPanel changes. The
 // `ItemsPanelTemplate` class wraps this same factory; ItemsControl
 // accepts either form on assignment (the template is the markup-friendly
 // path, the bare function is the hand-rolled JS path).
-export { ItemsPanelTemplate } from '../Basic/items-panel-template.js';
-export type { ItemsPanelFactory } from '../Basic/items-panel-template.js';
-import { ItemsPanelTemplate, type ItemsPanelFactory } from '../Basic/items-panel-template.js';
+export { ItemsPanelTemplate } from '../basic/panels/items-panel-template.js';
+export type { ItemsPanelFactory } from '../basic/panels/items-panel-template.js';
+import { ItemsPanelTemplate, type ItemsPanelFactory } from '../basic/panels/items-panel-template.js';
 
 // Data-driven container that materializes a Visual per item in its
 // Items collection, using ItemTemplate to render each one, hosted
@@ -1729,7 +1729,7 @@ function createCollectionView(src: unknown): CollectionView
         // semantics enough for the non-Tier-3 cases.
         throw new Error(
             'ItemsControl.ItemsSource: CollectionView not registered. ' +
-            'Import @visualisation-sub/mural/Basic (the barrel) before assigning ItemsSource — ' +
+            'Import @visualisation-sub/mural/basic (the barrel) before assigning ItemsSource — ' +
             'collection-view.ts registers itself with ItemsControl on load.',
         );
     }

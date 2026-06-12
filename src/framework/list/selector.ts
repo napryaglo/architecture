@@ -6,7 +6,7 @@ import {
     type PropertyDescriptor,
 } from '../../runtime/index.js';
 import { ItemsControl } from '../items-control.js';
-import { attachMarqueeSelection } from '../../Basic/marquee-selection-behavior.js';
+import { attachMarqueeSelection } from '../../basic/behaviors/marquee-selection-behavior.js';
 
 // WPF SelectionMode enum, promoted from ListBox so any multi-select-
 // capable Selector descendant (ListBox today; future DataGrid /

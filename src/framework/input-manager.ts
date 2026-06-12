@@ -19,8 +19,8 @@ import {
     dispatchPointer,
     dispatchPointerDirect,
     dispatchTextInput,
-} from '../runtime/routed-event.js';
-import { DragDrop, DragDropEffects, DragSession, type DragDropOptions } from '../runtime/drag-drop.js';
+} from '../runtime/input/routed-event.js';
+import { DragDrop, DragDropEffects, DragSession, type DragDropOptions } from '../runtime/input/drag-drop.js';
 import type { Visual } from '../runtime/visual.js';
 import { CommandManager } from './commands/command-manager.js';
 

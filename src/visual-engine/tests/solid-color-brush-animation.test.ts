@@ -15,8 +15,8 @@ import {
     Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
-import { SolidColorBrush } from '../brush.js';
-import { SolidColorBrushAnimation } from '../solid-color-brush-animation.js';
+import { SolidColorBrush } from '../drawing/brush.js';
+import { SolidColorBrushAnimation } from '../drawing/solid-color-brush-animation.js';
 
 describe('SolidColorBrushAnimation', () => {
     test('Evaluate at t=0 returns a fresh SolidColorBrush with From colour', () => {
@@ -124,7 +124,7 @@ describe('SolidColorBrushAnimation — DynamicResource scheme-transition integra
         AnimationManager.Instance.Clock = clock;
 
         // The factory registered at module load picks up this transition.
-        ThemeManager.Current.SchemeTransition = { duration: 100 };
+        ThemeManager.SchemeTransition = { duration: 100 };
 
         class TestPanel extends Panel { }
         const root = new TestPanel();
@@ -167,7 +167,7 @@ describe('SolidColorBrushAnimation — DynamicResource scheme-transition integra
         reset();
         const clock = new ManualClock();
         AnimationManager.Instance.Clock = clock;
-        ThemeManager.Current.SchemeTransition = { duration: 100 };
+        ThemeManager.SchemeTransition = { duration: 100 };
 
         class TestPanel extends Panel { }
         const root = new TestPanel();

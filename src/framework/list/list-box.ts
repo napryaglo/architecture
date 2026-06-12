@@ -6,11 +6,11 @@ import {
     type PropertyDescriptor,
 } from '../../runtime/index.js';
 import { ContentControl } from '../content-control.js';
-import { findDataTemplateForType } from '../../Basic/data-template.js';
+import { findDataTemplateForType } from '../../basic/templates/data-template.js';
 import { Selector } from './selector.js';
-import { Orientation, StackPanel } from '../../Basic/stack-panel.js';
+import { Orientation, StackPanel } from '../../basic/panels/stack-panel.js';
 import { ScrollViewer } from '../scroll-viewer.js';
-import { TextBlock } from '../../Basic/text-block.js';
+import { TextBlock } from '../../basic/text-block.js';
 
 // SelectionMode is now owned by Selector and re-exported here so
 // existing `import { SelectionMode } from './list-box.js'` consumers

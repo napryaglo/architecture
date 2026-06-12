@@ -611,12 +611,12 @@ export class Compiler
     //       constructor() { super({...}); }
     //       static override Activate(scheme?: typeof Scheme) {
     //           const target = scheme ?? NAME.DefaultScheme;
-    //           ThemeManager.Current.ActivateTheme(NAME.instance.name,
+    //           ThemeManager.ActivateTheme(NAME.instance.name,
     //                                              { scheme: target.name });
     //       }
     //   }
     //   // module-load side effects:
-    //   ThemeManager.Current.RegisterTheme(NAME.instance);
+    //   ThemeManager.RegisterTheme(NAME.instance);
     //   Application.RegisterDefaultTheme(NAME);
     //
     // ApplicationInitOptions accepts Function references, so callers
@@ -738,7 +738,7 @@ export class Compiler
         this.line(`    }`);
         this.line(`    static Activate(scheme) {`);
         this.line(`        const target = scheme ?? ${block.name}.DefaultScheme;`);
-        this.line(`        ThemeManager.Current.ActivateTheme(${block.name}.instance.name, { scheme: target.name });`);
+        this.line(`        ThemeManager.ActivateTheme(${block.name}.instance.name, { scheme: target.name });`);
         this.line(`    }`);
         this.line(`}`);
 
@@ -746,8 +746,8 @@ export class Compiler
         // as Application's default theme. Idempotent guards so re-
         // imports during tests don't throw.
         this.line('');
-        this.line(`if (ThemeManager.Current.GetTheme(${JSON.stringify(block.name)}) === undefined) {`);
-        this.line(`    ThemeManager.Current.RegisterTheme(${block.name}.instance);`);
+        this.line(`if (ThemeManager.GetTheme(${JSON.stringify(block.name)}) === undefined) {`);
+        this.line(`    ThemeManager.RegisterTheme(${block.name}.instance);`);
         this.line(`}`);
         this.line(`Application.RegisterDefaultTheme(${block.name});`);
 
@@ -1253,19 +1253,24 @@ export class Compiler
 
             const valueExpr = this.evaluateTermValue(term);
             this.ensureImport('TemplatePropertyTrigger');
-            // PART-source form (`when(PART_X.IsMouseOver)`) lowers the
-            // source-name into TemplatePropertyTrigger's optional
-            // sourceName arg so the trigger subscribes to the named
-            // PART's property change instead of the templated parent's.
-            // The propertyOwner ALSO has to switch to the PART's type
-            // (resolved from the template's x:name registry) — the
-            // runtime looks up the property descriptor by (owner, name)
-            // on the source visual, and using the templated parent's
-            // type for a property declared on the PART (e.g.
-            // ComboBox.IsDropDownOpen targeted via PART_xxxCombo) would
-            // fail descriptor resolution. undefined keeps the historic
-            // shape (watch the templated parent at the templated-parent
-            // type).
+            // `when(Prefix.Property)` has two disambiguated forms:
+            //
+            //   * PART-source — `Prefix` matches an x:name registered
+            //     inside this template's body. The trigger subscribes
+            //     to that PART's property change; both the propertyOwner
+            //     and the runtime source come from the PART element.
+            //
+            //   * Class-prefix — `Prefix` matches a known type symbol
+            //     (e.g. `ThemeManager.Density` for the static ambient
+            //     theme manager, `Visual.IsMouseOver` for a fully-
+            //     qualified inherited DP). The propertyOwner is the
+            //     class itself; sourceName stays undefined so the
+            //     runtime resolves the source as the templated parent
+            //     (where the inherited / attached DP's value is read
+            //     from the per-Visual property bag).
+            //
+            // No prefix at all → propertyOwner = templated control's
+            // own type (default-source path).
             let ownerType = targetType;
             let sourceArg = 'undefined';
             if (term.sourceName !== undefined)
@@ -1273,9 +1278,27 @@ export class Compiler
                 const partType = this.templateNameOwners?.get(term.sourceName);
                 if (partType !== undefined)
                 {
+                    // PART-source.
                     ownerType = partType;
+                    sourceArg = JSON.stringify(term.sourceName);
                 }
-                sourceArg = JSON.stringify(term.sourceName);
+                else if (this.symbols.has(term.sourceName))
+                {
+                    // Class-prefix — runtime source stays as the
+                    // templated parent; ownerType becomes the class
+                    // ref so the descriptor lookup hits the right
+                    // (owner, name) tuple.
+                    ownerType = term.sourceName;
+                }
+                else
+                {
+                    throw new EmitError(
+                        `when(${term.sourceName}.${term.property}): `
+                        + `'${term.sourceName}' is neither a template-local x:name `
+                        + `nor a known imported type. Add an import for it or `
+                        + `check that the PART name matches an x:name in the template body.`,
+                        term.span);
+                }
             }
             this.ensureImport(ownerType);
             const v = this.fresh('tplTrig');

@@ -7,12 +7,12 @@ click on the background clears it. Modifier keys switch between
 replace / add / extend semantics.
 
 **Implemented in:**
-- [Basic/selector.ts](../Basic/selector.ts) —
+- [basic/selector.ts](../basic/selector.ts) —
   `AllowMarqueeSelection` and `MarqueeBoundsPolicy` DPs, the auto-attach
   hook, and the multi-select machinery the behavior writes into
   (`BeginUpdate` / `EndUpdate`, `ClearSelection`, `setSelectedContainers`,
   `_selectedContainers`)
-- [Basic/marquee-selection-behavior.ts](../Basic/marquee-selection-behavior.ts) —
+- [basic/behaviors/marquee-selection-behavior.ts](../basic/behaviors/marquee-selection-behavior.ts) —
   `MarqueeAdorner` + `attachMarqueeSelection(selector)` factory
 
 See also: [behaviors.md](behaviors.md) for the `Behavior` framework,
@@ -264,7 +264,7 @@ each entry point keeps them disjoint.
 ## 11. Working in tests
 
 The behavior's tests live in
-[Basic/tests/marquee-selection-behavior.test.ts](../Basic/tests/marquee-selection-behavior.test.ts).
+[basic/tests/marquee-selection-behavior.test.ts](../basic/tests/marquee-selection-behavior.test.ts).
 The fixture pattern:
 
 ```ts

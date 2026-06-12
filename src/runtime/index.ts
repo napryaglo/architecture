@@ -17,22 +17,25 @@ export {
     type ValidateValue,
 } from './property-descriptor.js';
 export {
-    EffectiveValueDescriptor,
-    PropertyValueSource,
-    type PropertyChangeCallback,
-} from './effective-value.js';
-export {
+    AncestorBinding,
     Binding,
     BindingMode,
-    type BindingOptions,
-    type ValueConverter,
-} from './binding.js';
-export {
+    DataContextBinding,
+    DynamicResource,
+    EffectiveValueDescriptor,
+    ElementNameBinding,
+    MultiBinding,
+    PriorityBinding,
+    PropertyValueSource,
+    TemplateBinding,
     Validation,
+    type BindingOptions,
+    type PropertyChangeCallback,
     type ValidationError,
     type ValidationResult,
     type ValidationRule,
-} from './validation.js';
+    type ValueConverter,
+} from './binding/index.js';
 export { Model, PropertyKey } from './model.js';
 export { Behavior } from './behavior.js';
 export {
@@ -56,61 +59,53 @@ export {
     type ApplicationInitOptions,
     type MountableTarget,
 } from './application.js';
-export { DynamicResource } from './dynamic-resource.js';
-export { DataContextBinding } from './data-context-binding.js';
-export { ElementNameBinding } from './element-name-binding.js';
-export { MultiBinding, PriorityBinding } from './multi-binding.js';
-export { AncestorBinding } from './ancestor-binding.js';
-export { TemplateBinding } from './template-binding.js';
-export {
-    RoutedEventArgs,
-    PointerEventArgs,
-    WheelEventArgs,
-    KeyEventArgs,
-    TextInputEventArgs,
-    FocusEventArgs,
-    DragEventArgs,
-    PointerButton,
-    NoModifiers,
-    buildRoute,
-    dispatchPointer,
-    dispatchPointerDirect,
-    dispatchKey,
-    dispatchTextInput,
-    dispatchFocus,
-    dispatchDrag,
-    type RoutedEventKind,
-    type PointerEventInit,
-    type WheelEventInit,
-    type WheelDeltaMode,
-    type ModifierKeys,
-    type PointerEventHandlers,
-    type KeyEventInit,
-    type TextInputEventInit,
-    type KeyboardEventHandlers,
-    type FocusEventHandlers,
-    type DragEventInit,
-    type DragEventHandlers,
-} from './routed-event.js';
 // InputManager moved to `@visualisation-sub/mural/framework`.
+// RoutedCommand / CommandBinding / CommandManager / InputBinding /
+// KeyBinding / MouseBinding / ICommandSource + CommandSourceHelper /
+// ApplicationCommands etc. moved to
+// `@visualisation-sub/mural/framework/commands`. The runtime barrel
+// keeps only the foundational `ICommand` + `RelayCommand` from
+// `./input/command.js`.
 export {
     DataObject,
     DragDrop,
     DragDropEffects,
+    DragEventArgs,
     DragSession,
-    type DragDropOptions,
-    type DragPreviewKind,
-} from './drag-drop.js';
-export {
+    EventTrigger,
+    FocusEventArgs,
+    InvokeCommandAction,
+    KeyEventArgs,
+    NoModifiers,
+    PointerButton,
+    PointerEventArgs,
     RelayCommand,
+    RoutedEventArgs,
+    TextInputEventArgs,
+    WheelEventArgs,
+    buildRoute,
+    dispatchDrag,
+    dispatchFocus,
+    dispatchKey,
+    dispatchPointer,
+    dispatchPointerDirect,
+    dispatchTextInput,
+    type DragDropOptions,
+    type DragEventHandlers,
+    type DragEventInit,
+    type DragPreviewKind,
+    type FocusEventHandlers,
     type ICommand,
-} from './command.js';
-// RoutedCommand / CommandBinding / CommandManager / InputBinding /
-// KeyBinding / MouseBinding / ICommandSource + CommandSourceHelper /
-// ApplicationCommands etc. moved to
-// `@visualisation-sub/mural/framework/commands`. Re-exports stay there
-// — the runtime barrel keeps only the foundational `ICommand` +
-// `RelayCommand` from `./command.js`.
+    type KeyEventInit,
+    type KeyboardEventHandlers,
+    type ModifierKeys,
+    type PointerEventHandlers,
+    type PointerEventInit,
+    type RoutedEventKind,
+    type TextInputEventInit,
+    type WheelDeltaMode,
+    type WheelEventInit,
+} from './input/index.js';
 export {
     Style,
     Setter,
@@ -127,8 +122,6 @@ export {
     AttachBehaviorAction,
     BeginStoryboardAction,
     DetachBehaviorAction,
-    EventTrigger,
-    InvokeCommandAction,
     PauseStoryboardAction,
     ResumeStoryboardAction,
     StopStoryboardAction,
@@ -145,9 +138,17 @@ export { observe_array, subscribe_array, is_observed_array } from './observable-
 export { Point, Size, Rect, Color, Matrix, Thickness } from './primitives.js';
 export { CornerRadius } from './corner-radius.js';
 export {
+    Density,
+    M3_BREAKPOINTS,
+    MediaWatcher,
+    Pointer,
+    PreferredScheme,
+    PrefersContrast,
     Scheme,
     Theme,
     ThemeManager,
+    ViewportClass,
+    classifyViewport,
     defineScheme,
     defineTheme,
     getSchemeTransitionAnimator,
@@ -161,36 +162,8 @@ export {
     type TokenCatalog,
     type TokenSpec,
     type TokenType,
-} from './theme.js';
-export {
-    Density,
-    DensityKey,
-    GetDensity,
-    GetPointer,
-    GetPrefersColorScheme,
-    GetPrefersContrast,
-    GetPrefersReducedMotion,
-    GetViewportClass,
-    M3_BREAKPOINTS,
-    MediaWatcher,
-    Pointer,
-    PointerKey,
-    PreferredScheme,
-    PrefersColorSchemeKey,
-    PrefersContrast,
-    PrefersContrastKey,
-    PrefersReducedMotionKey,
-    SetDensity,
-    SetPointer,
-    SetPrefersColorScheme,
-    SetPrefersContrast,
-    SetPrefersReducedMotion,
-    SetViewportClass,
-    ViewportClass,
-    ViewportClassKey,
-    classifyViewport,
     type ViewportBreakpoints,
-} from './adaptive.js';
+} from './theme/index.js';
 export { type DrawingContext } from './drawing-context.js';
 export {
     ApproximateTextMeasurer,
@@ -220,6 +193,7 @@ export {
     LinearThicknessKeyFrame,
     cubicBezier,
     ManualClock,
+    RafClock,
     Storyboard,
     StoryboardState,
     ThicknessAnimation,

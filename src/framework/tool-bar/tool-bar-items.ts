@@ -10,8 +10,8 @@ import {
 } from '../../runtime/index.js';
 import { Brush } from '../../visual-engine/index.js';
 import { Button } from '../button.js';
-import { Orientation, StackPanel } from '../../Basic/stack-panel.js';
-import { TextBlock } from '../../Basic/text-block.js';
+import { Orientation, StackPanel } from '../../basic/panels/stack-panel.js';
+import { TextBlock } from '../../basic/text-block.js';
 import { ToggleButton } from '../toggle-button.js';
 
 // Where a button sits inside the inline ToolBar strip's connected-bar
@@ -248,7 +248,7 @@ export interface ToolBarButtonOptions
     icon?:             string | Visual;
     text?:             string;
     showText?:         boolean;
-    command?:          import('../../runtime/command.js').ICommand;
+    command?:          import('../../runtime/input/command.js').ICommand;
     commandParameter?: unknown;
 }
 

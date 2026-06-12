@@ -135,8 +135,8 @@ describe('ThemeManager — registration', () => {
             name: 'tiny', dictionaries: [],
             catalog: tinyCatalog(), schemes: [light], defaultScheme: 'light',
         });
-        ThemeManager.Current.RegisterTheme(theme);
-        assert.equal(ThemeManager.Current.GetTheme('tiny'), theme);
+        ThemeManager.RegisterTheme(theme);
+        assert.equal(ThemeManager.GetTheme('tiny'), theme);
         reset();
     });
 
@@ -150,9 +150,9 @@ describe('ThemeManager — registration', () => {
             name: 'tiny', dictionaries: [],
             catalog: tinyCatalog(), schemes: [scheme], defaultScheme: 'light',
         });
-        ThemeManager.Current.RegisterTheme(theme);
+        ThemeManager.RegisterTheme(theme);
         assert.throws(
-            () => ThemeManager.Current.RegisterTheme(theme),
+            () => ThemeManager.RegisterTheme(theme),
             /already registered/);
         reset();
     });
@@ -168,7 +168,7 @@ describe('ThemeManager — registration', () => {
             catalog: tinyCatalog(), schemes: [incomplete], defaultScheme: 'light',
         });
         assert.throws(
-            () => ThemeManager.Current.RegisterTheme(theme),
+            () => ThemeManager.RegisterTheme(theme),
             /missing tokens.*Surface.*ShapeFull/);
         reset();
     });
@@ -185,7 +185,7 @@ describe('ThemeManager — basedOn scheme borrowing', () => {
             name: 'tiny', dictionaries: [],
             catalog: tinyCatalog(), schemes: [parent], defaultScheme: 'light',
         });
-        ThemeManager.Current.RegisterTheme(parentTheme);
+        ThemeManager.RegisterTheme(parentTheme);
 
         const child = defineScheme({
             name:    'light',
@@ -198,13 +198,13 @@ describe('ThemeManager — basedOn scheme borrowing', () => {
             catalog: tinyCatalog(),    // same shape
             schemes: [child], defaultScheme: 'light',
         });
-        ThemeManager.Current.RegisterTheme(childTheme);
+        ThemeManager.RegisterTheme(childTheme);
 
         // Activation pulls the merged dict into Application.Resources;
         // the merged dict is what gets validated, so successful
         // registration above is the assertion. Spot-check via activation:
         const app = freshApp();
-        ThemeManager.Current.ActivateTheme('tiny2');
+        ThemeManager.ActivateTheme('tiny2');
         assert.equal(app.Resources.Resolve('Primary'),   'child-p');     // child wins
         assert.equal(app.Resources.Resolve('Surface'),   'parent-s');   // borrowed
         assert.equal(app.Resources.Resolve('ShapeFull'), 100);          // borrowed
@@ -224,7 +224,7 @@ describe('ThemeManager — basedOn scheme borrowing', () => {
             catalog: tinyCatalog(), schemes: [child], defaultScheme: 'x',
         });
         assert.throws(
-            () => ThemeManager.Current.RegisterTheme(theme),
+            () => ThemeManager.RegisterTheme(theme),
             /basedOn references unknown scheme 'missing\.scheme'/);
         reset();
     });
@@ -246,13 +246,13 @@ describe('ThemeManager — activation', () => {
             name: 'tiny', dictionaries: [templates],
             catalog: tinyCatalog(), schemes: [light], defaultScheme: 'light',
         });
-        ThemeManager.Current.RegisterTheme(theme);
-        ThemeManager.Current.ActivateTheme('tiny');
+        ThemeManager.RegisterTheme(theme);
+        ThemeManager.ActivateTheme('tiny');
 
         assert.equal(app.Resources.Resolve('Primary'),       'p-light');
         assert.equal(app.Resources.Resolve('DefaultButton'), 'button-template-marker');
-        assert.equal(ThemeManager.Current.ActiveTheme,       theme);
-        assert.equal(ThemeManager.Current.ActiveScheme,      light);
+        assert.equal(ThemeManager.ActiveTheme,       theme);
+        assert.equal(ThemeManager.ActiveScheme,      light);
         reset();
     });
 
@@ -273,13 +273,13 @@ describe('ThemeManager — activation', () => {
             catalog: tinyCatalog(),
             schemes: [light, dark], defaultScheme: 'light',
         });
-        ThemeManager.Current.RegisterTheme(theme);
-        ThemeManager.Current.ActivateTheme('tiny');
+        ThemeManager.RegisterTheme(theme);
+        ThemeManager.ActivateTheme('tiny');
         assert.equal(app.Resources.Resolve('Primary'), 'p-light');
 
-        ThemeManager.Current.ActivateScheme('dark');
+        ThemeManager.ActivateScheme('dark');
         assert.equal(app.Resources.Resolve('Primary'), 'p-dark');
-        assert.equal(ThemeManager.Current.ActiveScheme, dark);
+        assert.equal(ThemeManager.ActiveScheme, dark);
         reset();
     });
 
@@ -294,10 +294,10 @@ describe('ThemeManager — activation', () => {
             name: 'tiny', dictionaries: [],
             catalog: tinyCatalog(), schemes: [scheme], defaultScheme: 'light',
         });
-        ThemeManager.Current.RegisterTheme(theme);
-        ThemeManager.Current.ActivateTheme('tiny');
+        ThemeManager.RegisterTheme(theme);
+        ThemeManager.ActivateTheme('tiny');
         const merged1 = app.Resources.MergedDictionaries.length;
-        ThemeManager.Current.ActivateTheme('tiny');
+        ThemeManager.ActivateTheme('tiny');
         const merged2 = app.Resources.MergedDictionaries.length;
         assert.equal(merged1, merged2);
         reset();
@@ -313,9 +313,9 @@ describe('ThemeManager — activation', () => {
             name: 'tiny', dictionaries: [],
             catalog: tinyCatalog(), schemes: [scheme], defaultScheme: 'light',
         });
-        ThemeManager.Current.RegisterTheme(theme);
+        ThemeManager.RegisterTheme(theme);
         assert.throws(
-            () => ThemeManager.Current.ActivateTheme('tiny'),
+            () => ThemeManager.ActivateTheme('tiny'),
             /no Application\.current/);
         reset();
     });
@@ -324,7 +324,7 @@ describe('ThemeManager — activation', () => {
         reset();
         freshApp();
         assert.throws(
-            () => ThemeManager.Current.ActivateScheme('dark'),
+            () => ThemeManager.ActivateScheme('dark'),
             /no active theme/);
         reset();
     });
@@ -340,10 +340,10 @@ describe('ThemeManager — activation', () => {
             name: 'tiny', dictionaries: [],
             catalog: tinyCatalog(), schemes: [scheme], defaultScheme: 'light',
         });
-        ThemeManager.Current.RegisterTheme(theme);
-        ThemeManager.Current.ActivateTheme('tiny');
+        ThemeManager.RegisterTheme(theme);
+        ThemeManager.ActivateTheme('tiny');
         assert.throws(
-            () => ThemeManager.Current.ActivateScheme('high-contrast'),
+            () => ThemeManager.ActivateScheme('high-contrast'),
             /has no scheme 'high-contrast'/);
         reset();
     });
@@ -352,25 +352,25 @@ describe('ThemeManager — activation', () => {
 describe('ThemeManager — SchemeTransition surface', () => {
     test('SchemeTransition is undefined by default', () => {
         reset();
-        assert.equal(ThemeManager.Current.SchemeTransition, undefined);
-        assert.equal(ThemeManager.Current.EffectiveSchemeTransition, undefined);
+        assert.equal(ThemeManager.SchemeTransition, undefined);
+        assert.equal(ThemeManager.EffectiveSchemeTransition, undefined);
         reset();
     });
 
     test('Setter stores the config; getter returns it unchanged', () => {
         reset();
         const cfg = { duration: 200, tokens: 'brushes-only' as const };
-        ThemeManager.Current.SchemeTransition = cfg;
-        assert.equal(ThemeManager.Current.SchemeTransition, cfg);
+        ThemeManager.SchemeTransition = cfg;
+        assert.equal(ThemeManager.SchemeTransition, cfg);
         reset();
     });
 
     test('EffectiveSchemeTransition returns the configured transition normally', () => {
         reset();
         freshApp();
-        ThemeManager.Current.SchemeTransition = { duration: 200 };
+        ThemeManager.SchemeTransition = { duration: 200 };
         // No PrefersReducedMotion DP on a fresh root → effective = configured.
-        assert.deepEqual(ThemeManager.Current.EffectiveSchemeTransition,
+        assert.deepEqual(ThemeManager.EffectiveSchemeTransition,
                          { duration: 200 });
         reset();
     });

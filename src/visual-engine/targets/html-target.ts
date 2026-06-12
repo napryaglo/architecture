@@ -9,16 +9,16 @@ import {
     ManualClock,
     NoModifiers,
     PointerButton,
+    RafClock,
     type KeyEventInit,
     type PointerEventInit,
     type WheelEventInit,
     type WheelDeltaMode,
     type ModifierKeys,
 } from '../../runtime/index.js';
-import { CanvasTextMeasurer } from '../canvas-text-measurer.js';
-import { PresentationTarget } from '../presentation-target.js';
-import { RafClock } from '../raf-clock.js';
-import { SvgRenderer, VISUAL_BACKREF } from '../svg-renderer.js';
+import { CanvasTextMeasurer } from '../text/canvas-text-measurer.js';
+import { PresentationTarget } from './presentation-target.js';
+import { SvgRenderer, VISUAL_BACKREF } from '../drawing/svg-renderer.js';
 
 // VISUAL_BACKREF stamp lives in svg-renderer.ts; re-import here for
 // the HitTest walk so the read side agrees with the write side.

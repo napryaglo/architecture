@@ -1,13 +1,13 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { initTestApp } from '../../../Basic/tests/test-app.js';
+import { initTestApp } from '../../../basic/tests/test-app.js';
 
 import { Application, Color, Setter, Style, Visual } from '../../../runtime/index.js';
 import { ListBox, ListBoxItem } from '../list-box.js';
-import { Border } from '../../../Basic/border.js';
-import { ContentPresenter } from '../../../Basic/content-presenter.js';
-import { ControlTemplate } from '../../../Basic/control-template.js';
-import { TargetedSetter, TemplatePropertyTrigger } from '../../../Basic/data-template.js';
+import { Border } from '../../../basic/border.js';
+import { ContentPresenter } from '../../../basic/templates/content-presenter.js';
+import { ControlTemplate } from '../../../basic/templates/control-template.js';
+import { TargetedSetter, TemplatePropertyTrigger } from '../../../basic/templates/data-template.js';
 import { SolidColorBrush } from '../../../visual-engine/index.js';
 
 describe('ListBox selection survives container recycle by data identity', () => {

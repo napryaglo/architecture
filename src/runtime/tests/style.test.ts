@@ -821,7 +821,7 @@ describe('Style — DataTrigger', () => {
         // RelativeSource, Source, etc. We synthesise a trivial
         // binding that reads from an outside ItemVM directly to
         // demonstrate the dispatch path works.
-        const { Binding } = await import('../binding.js');
+        const { Binding } = await import('../binding/binding.js');
         const vm = new ItemVM();
         const trig = new DataTrigger(
             // Factory: build a fresh Binding(vm, 'IsSelected') per

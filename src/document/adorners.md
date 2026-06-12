@@ -4,7 +4,7 @@ Architecture and usage reference for the adorner subsystem — Visuals that deco
 
 WPF parity with mural-specific divergences called out inline. Closes backlog item 5.8.
 
-Implementation: [src/runtime/adorner.ts](src/runtime/adorner.ts), [src/Basic/scroll-content-presenter.ts](src/Basic/scroll-content-presenter.ts), [src/Basic/validation-error-adorner.ts](src/Basic/validation-error-adorner.ts).
+Implementation: [src/runtime/adorner.ts](src/runtime/adorner.ts), [src/basic/scroll/scroll-content-presenter.ts](src/basic/scroll/scroll-content-presenter.ts), [src/basic/validation-error-adorner.ts](src/basic/validation-error-adorner.ts).
 
 ---
 
@@ -52,7 +52,7 @@ class BoundsAdorner extends Adorner {
 `IsHitTestVisible` defaults to `false` on the layer itself. The layer is a positioning shell, not a hit target; individual adorners opt back in.
 
 Static lookups:
-- **`GetAdornerLayer(visual): AdornerLayer | undefined`** — walks UP from `visual` and returns the first ancestor that exposes an `AdornerLayer` property of the right type. Duck-typed (`(cur as { AdornerLayer?: unknown }).AdornerLayer`) so providers in `Basic/` (the `ScrollContentPresenter`) don't force a runtime → Basic dependency. Returns `undefined` when no ancestor provides one; callers either short-circuit or fall back to an imperative overlay.
+- **`GetAdornerLayer(visual): AdornerLayer | undefined`** — walks UP from `visual` and returns the first ancestor that exposes an `AdornerLayer` property of the right type. Duck-typed (`(cur as { AdornerLayer?: unknown }).AdornerLayer`) so providers in `basic/` (the `ScrollContentPresenter`) don't force a runtime → basic dependency. Returns `undefined` when no ancestor provides one; callers either short-circuit or fall back to an imperative overlay.
 - **`FindFirstInSubtree(root): AdornerLayer | undefined`** — DFS the subtree from `root`. For top-level hosts (`HtmlTarget`) that need to drop an adornment without an in-tree anchor — the outermost `AdornerDecorator` typically wraps the app root, so the DFS finds it on the first hit.
 
 ### `AdornerDecorator`
@@ -251,7 +251,7 @@ Cursor-anchored adorner used by `HtmlTarget` to host the drag preview when the v
 
 `IsHitTestVisible = false` so the ghost doesn't intercept the drag-over dispatch the receiver is waiting for.
 
-### `ReorderInsertionAdorner` — [src/Basic/list-reorder-behavior.ts](src/Basic/list-reorder-behavior.ts)
+### `ReorderInsertionAdorner` — [src/basic/behaviors/list-reorder-behavior.ts](src/basic/behaviors/list-reorder-behavior.ts)
 
 Internal adorner the `ListReorderBehavior` instantiates when an `InsertionAdornerTemplate` is set and a reorderable drag is in progress. Hosts a Canvas wrapper that contains the user-supplied template's produced Visual; the behavior writes `Canvas.SetLeft / SetTop` in **layer-local** coords on the wrapper so the line lands at the right gap.
 
@@ -259,7 +259,7 @@ Adornment target is the host `ItemsControl`. `Placement` returns the full layer 
 
 When the host's tree contains an AdornerLayer (typical case: the SCP's inner layer for a virtualized ListBox), the line **rides the scrolled subtree's translate** — it stays glued to its gap as auto-scroll fires, no DragOver re-fire heuristic needed. Falls back to the imperative `PresentationTarget.AttachOverlay` path on hosts not under any AdornerLayer.
 
-### `ValidationErrorAdorner` — [src/Basic/validation-error-adorner.ts](src/Basic/validation-error-adorner.ts)
+### `ValidationErrorAdorner` — [src/basic/validation-error-adorner.ts](src/basic/validation-error-adorner.ts)
 
 Reactive adorner that paints a red rectangle around the adorned element when `Validation.GetHasError(target)` is true. Subscribes to the adorned element's `Validation.HasErrorKey` change notifications via `AddPropertyChangedListener`; `InvalidateVisual` on every flip flows through the standard repaint loop.
 
@@ -337,7 +337,7 @@ if (layer !== undefined) {
 | `Adorner.AdornedElement` (ctor) | `Adorner.AdornedElement` (ctor, readonly) | Same — set once, can't be re-targeted. |
 | `OnRender(DrawingContext)` | `RenderOverride(dc)` | Same shape; name follows the existing `MeasureOverride` / `ArrangeOverride` convention. |
 | `GetDesiredTransform(elementTransform)` | `Placement(adornedRect, desiredSize): Rect` | Different shape. WPF returns a Transform; we return the rect to arrange at, which composes with the layer's arrange step. Simpler in a system without a full Transform stack. |
-| `AdornerLayer.GetAdornerLayer(UIElement)` | `AdornerLayer.GetAdornerLayer(Visual)` | Same semantics — walks UP, returns nearest. Duck-types on the `AdornerLayer` property so providers in `Basic/` don't force a runtime → Basic dep. |
+| `AdornerLayer.GetAdornerLayer(UIElement)` | `AdornerLayer.GetAdornerLayer(Visual)` | Same semantics — walks UP, returns nearest. Duck-types on the `AdornerLayer` property so providers in `basic/` don't force a runtime → basic dep. |
 | `AdornerLayer.Add` / `Remove` | `AdornerLayer.Add` / `Remove` | Same. |
 | `AdornerLayer.GetAdorners(UIElement)` | `AdornerLayer.GetAdorners(Visual)` | Returns `undefined` for none (µ-mural's absent convention) vs. WPF's `null`. |
 | `AdornerDecorator` (`extends Decorator`) | `AdornerDecorator extends Single` | `Single` is µ-mural's `Decorator` analog. |
@@ -373,8 +373,8 @@ The adorner work surfaced two unrelated bugs that needed to ship alongside:
 | Suite | What it pins |
 |---|---|
 | `src/runtime/tests/adorner.test.ts` (11 tests) | Adorner / Layer / Decorator construction, attach, GetAdornerLayer walk, FindFirstInSubtree DFS, arrange-time positioning. |
-| `src/Basic/tests/scp-adorner-layer.test.ts` (5 tests) | SCP exposes layer; GetAdornerLayer lands on SCP layer when walking up from content; SCP inner layer wins over outer AdornerDecorator; layer arranges at content rect; adorner adorning a leaf inside non-origin SCP lands at layer-local position (the regression for the walk bug). |
-| `src/Basic/tests/validation-error-adorner.test.ts` (7 tests) | AttachTo finds the layer; detach removes the adorner; HasError flip triggers repaint; Dispose unsubscribes; positions at the adorned rect; integration with TextBox. |
-| `src/Basic/tests/list-box-recycle-selection.test.ts` (5 tests) | Recycle/rebind preserves IsSelected via _selectedData; chrome end-to-end; ItemContainerStyle + custom template + IsSelected trigger across recycle (word-toolbox parity); InvalidateVisual-while-detached replay. |
+| `src/basic/tests/scp-adorner-layer.test.ts` (5 tests) | SCP exposes layer; GetAdornerLayer lands on SCP layer when walking up from content; SCP inner layer wins over outer AdornerDecorator; layer arranges at content rect; adorner adorning a leaf inside non-origin SCP lands at layer-local position (the regression for the walk bug). |
+| `src/basic/tests/validation-error-adorner.test.ts` (7 tests) | AttachTo finds the layer; detach removes the adorner; HasError flip triggers repaint; Dispose unsubscribes; positions at the adorned rect; integration with TextBox. |
+| `src/basic/tests/list-box-recycle-selection.test.ts` (5 tests) | Recycle/rebind preserves IsSelected via _selectedData; chrome end-to-end; ItemContainerStyle + custom template + IsSelected trigger across recycle (word-toolbox parity); InvalidateVisual-while-detached replay. |
 
 Plus indirect coverage through `list-reorder-behavior.test.ts` (insertion-line via fallback path) and `drag-drop-overlay.test.ts` (HtmlTarget drag ghost integration).

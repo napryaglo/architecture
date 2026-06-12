@@ -3,8 +3,8 @@ import {
     type DrawingContext,
     type Visual,
 } from '../../runtime/index.js';
-import { PresentationTarget } from '../presentation-target.js';
-import { TranslateTransform } from '../transform.js';
+import { PresentationTarget } from './presentation-target.js';
+import { TranslateTransform } from '../drawing/transform.js';
 
 // PresentationTarget with no host — used by tests, build-time SVG/PNG
 // export, and server-side rendering. Owns nothing in the DOM; just

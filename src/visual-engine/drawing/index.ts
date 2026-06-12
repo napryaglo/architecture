@@ -1,0 +1,34 @@
+// Drawing — brushes, pens, effects, image sources, transforms, and the
+// DrawingContext + SvgRenderer pipeline that turns Visual.Render calls
+// into SVG output.
+export { Transform, TranslateTransform, MatrixTransform } from './transform.js';
+export {
+    Brush,
+    SolidColorBrush,
+    LinearGradientBrush,
+    RadialGradientBrush,
+    ImageBrush,
+    GradientStop,
+    GradientSpreadMethod,
+    AlignmentX,
+    AlignmentY,
+} from './brush.js';
+export {
+    BitmapImage,
+    ImageSource,
+    Stretch,
+} from './image-source.js';
+export { Pen, DashStyle, LineCap, LineJoin } from './pen.js';
+export { Effect } from './effect.js';
+export { DropShadowEffect, MaterialElevationEffect } from './drop-shadow-effect.js';
+export { type DrawingContext } from './drawing-context.js';
+export { SvgDrawingContext } from './svg-drawing-context.js';
+export {
+    SvgDomDrawingContext,
+    type SvgDomDrawingContextOptions,
+} from './svg-dom-drawing-context.js';
+export { SvgRenderer, VISUAL_BACKREF, type SvgRendererOptions } from './svg-renderer.js';
+export {
+    SolidColorBrushAnimation,
+    type SolidColorBrushAnimationProps,
+} from './solid-color-brush-animation.js';

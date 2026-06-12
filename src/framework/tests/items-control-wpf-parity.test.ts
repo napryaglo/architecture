@@ -10,7 +10,7 @@ import {
     Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
-import { AlternationConverter, ContentPresenter, DataTemplate, StackPanel } from '../../Basic/index.js';
+import { AlternationConverter, ContentPresenter, DataTemplate, StackPanel } from '../../basic/index.js';
 import { ItemsControl } from '@visualisation-sub/mural/framework';
 
 // Tiny container with a registered DP so the per-item style picker
@@ -110,7 +110,7 @@ describe('ItemContainerStyleSelector', () => {
 
 describe('DisplayMemberPath', () => {
     test('auto-template renders String(item[path]) in a TextBlock', async () => {
-        const { TextBlock } = await import('../../Basic/text-block.js');
+        const { TextBlock } = await import('../../basic/text-block.js');
         const ic = new ItemsControl();
         ic.ItemsPanel = () => new StackPanel();
         ic.DisplayMemberPath = 'name';

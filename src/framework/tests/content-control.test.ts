@@ -2,7 +2,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { Color, MetaData, Model, Rect, Size, Thickness, Visual, type DrawingContext } from '../../runtime/index.js';
 import { SolidColorBrush } from '../../visual-engine/index.js';
-import { Border, ContentPresenter, ControlTemplate, TemplateBinding } from '../../Basic/index.js';
+import { Border, ContentPresenter, ControlTemplate, TemplateBinding } from '../../basic/index.js';
 import { ContentControl } from '@visualisation-sub/mural/framework';
 
 // Test-side accessors for Visual's protected parent / templatedParent

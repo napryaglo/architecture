@@ -11,12 +11,12 @@ import {
     type PropertyDescriptor,
 } from '../../runtime/index.js';
 import { PresentationTarget } from '../../visual-engine/index.js';
-import { Border } from '../../Basic/border.js';
+import { Border } from '../../basic/border.js';
 import { ItemsControl } from '../items-control.js';
 import { Selector } from './selector.js';
-import { StackPanel } from '../../Basic/stack-panel.js';
-import { TextBlock } from '../../Basic/text-block.js';
-import type { ControlTemplate } from '../../Basic/control-template.js';
+import { StackPanel } from '../../basic/panels/stack-panel.js';
+import { TextBlock } from '../../basic/text-block.js';
+import type { ControlTemplate } from '../../basic/templates/control-template.js';
 
 // Resource-dictionary keys for the two ControlTemplates the ComboBox
 // loads from the consolidated controls theme — match the `x:key="…"`

@@ -5,10 +5,10 @@ import {
     type PropertyDescriptor,
     type Visual,
 } from '../../runtime/index.js';
-import { Canvas } from '../../Basic/canvas.js';
+import { Canvas } from '../../basic/panels/canvas.js';
 import { ContentControl } from '../content-control.js';
-import { ContentPresenter } from '../../Basic/content-presenter.js';
-import { ControlTemplate } from '../../Basic/control-template.js';
+import { ContentPresenter } from '../../basic/templates/content-presenter.js';
+import { ControlTemplate } from '../../basic/templates/control-template.js';
 import { Selector } from '../list/selector.js';
 
 // A movable, content-hosting control intended as the container shape

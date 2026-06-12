@@ -11,7 +11,7 @@ import {
     Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
-import { DataTemplate, HierarchicalDataTemplate, type ItemTemplateSelector } from '../../Basic/index.js';
+import { DataTemplate, HierarchicalDataTemplate, type ItemTemplateSelector } from '../../basic/index.js';
 import { ItemsControl } from '@visualisation-sub/mural/framework';
 
 // Tiny container — registered DP `Tag` lets ItemContainerStyle drive a

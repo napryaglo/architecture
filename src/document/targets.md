@@ -71,7 +71,7 @@ import {
     HeadlessTarget, SolidColorBrush, SvgDrawingContext,
 } from '../visual-engine/index.js';
 import { Color } from '../runtime/index.js';
-import { Border, TextBlock } from '../Basic/index.js';
+import { Border, TextBlock } from '../basic/index.js';
 
 const scene  = new Border(new TextBlock('Hello'));
 scene.Background = new SolidColorBrush(Color.Blue);

@@ -1,5 +1,5 @@
 import GroupVM from "./platform-vm.mjs"
-import AdornerDecorator from "@visualisation-sub/mural/Basic"
+import AdornerDecorator from "@visualisation-sub/mural/basic"
 import ThemeSelector from "@visualisation-sub/mural/framework/surface.js"
 import Material from "@visualisation-sub/mural/resources/material"
 import MaterialLight from "@visualisation-sub/mural/resources/material"

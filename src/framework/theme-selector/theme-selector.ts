@@ -100,7 +100,7 @@ export class ThemeSelector extends ContentControl
         // future activations so external code paths (AutoScheme listener,
         // direct ThemeManager calls) keep the picker honest.
         this.syncFromThemeManager();
-        ThemeManager.Current.AddActivatedListener(this._onThemeActivated);
+        ThemeManager.AddActivatedListener(this._onThemeActivated);
     }
 
     // ── Public DPs ────────────────────────────────────────────────────
@@ -128,7 +128,7 @@ export class ThemeSelector extends ContentControl
      *  Theme. */
     public SelectTheme(name: string): void
     {
-        const tm = ThemeManager.Current;
+        const tm = ThemeManager;
         if (tm.GetTheme(name) === undefined) return;
         if (tm.ActiveTheme?.name === name) return;
         tm.ActivateTheme(name);
@@ -138,7 +138,7 @@ export class ThemeSelector extends ContentControl
      *  is active or the scheme name isn't registered on it. */
     public SelectScheme(name: string): void
     {
-        const tm = ThemeManager.Current;
+        const tm = ThemeManager;
         const theme = tm.ActiveTheme;
         if (theme === undefined) return;
         if (!theme.schemes.has(name)) return;
@@ -154,7 +154,7 @@ export class ThemeSelector extends ContentControl
         this._syncing = true;
         try
         {
-            const tm     = ThemeManager.Current;
+            const tm     = ThemeManager;
             const theme  = tm.ActiveTheme;
             const scheme = tm.ActiveScheme;
 

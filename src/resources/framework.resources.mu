@@ -304,9 +304,9 @@ resources MuralFramework {
         when ( Position = Last  )      { PART_Border.CornerRadius = CornerRadius.RightRounded; }
         // Adaptive layout — tighter in Compact, larger touch target
         // on coarse-pointer devices.
-        when ( Density = Compact )     { PART_Border.Padding = (8,4,8,4); }
-        when ( Density = Comfortable ) { PART_Border.Padding = (16,10,16,10); }
-        when ( Pointer = Coarse )      { PART_Border.Padding = (16,14,16,14); }
+        when ( ThemeManager.Density = Compact )     { PART_Border.Padding = (8,4,8,4); }
+        when ( ThemeManager.Density = Comfortable ) { PART_Border.Padding = (16,10,16,10); }
+        when ( ThemeManager.Pointer = Coarse )      { PART_Border.Padding = (16,14,16,14); }
     }
 
     Style [TargetType=ToolBarButton] {
@@ -493,14 +493,14 @@ resources MuralFramework {
                        VerticalAlignment = Center, Margin = (4,0,4,0)]
             Border x:name="PART_ThemeComboWrap"
                   [Width = 0, MinWidth = 0, Opacity = 0, Padding = (4,0,4,0)] {
-                ComboBox x:name="PART_ThemeCombo" [Width = 140, Density = Compact]
+                ComboBox x:name="PART_ThemeCombo" [Width = 140, ThemeManager.Density = Compact]
             }
 
             TextBlock [Text = "◐", Foreground = @OnPrimary, FontSize = 14,
                        VerticalAlignment = Center, Margin = (4,0,4,0)]
             Border x:name="PART_SchemeComboWrap"
                   [Width = 0, MinWidth = 0, Opacity = 0, Padding = (4,0,4,0)] {
-                ComboBox x:name="PART_SchemeCombo" [Width = 140, Density = Compact]
+                ComboBox x:name="PART_SchemeCombo" [Width = 140, ThemeManager.Density = Compact]
             }
         }
 

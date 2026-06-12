@@ -9,13 +9,13 @@ import {
     type PropertyDescriptor,
 } from '../../runtime/index.js';
 import { RectangleGeometry } from '../../visual-engine/index.js';
-import { Border } from '../../Basic/border.js';
-import { HierarchicalDataTemplate } from '../../Basic/data-template.js';
+import { Border } from '../../basic/border.js';
+import { HierarchicalDataTemplate } from '../../basic/templates/data-template.js';
 import { ItemsControl } from '../items-control.js';
 import { ScrollViewer } from '../scroll-viewer.js';
 import { Selector, SelectionMode } from './selector.js';
-import { StackPanel } from '../../Basic/stack-panel.js';
-import { TextBlock } from '../../Basic/text-block.js';
+import { StackPanel } from '../../basic/panels/stack-panel.js';
+import { TextBlock } from '../../basic/text-block.js';
 
 
 

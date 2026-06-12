@@ -12,7 +12,7 @@ import {
     type ICommandSource,
 } from '../framework/commands/command-source.js';
 import { ContentControl } from './content-control.js';
-import { TextBlock } from '../Basic/text-block.js';
+import { TextBlock } from '../basic/text-block.js';
 
 // When the Click event fires. WPF parity: Release is the default
 // (visible press feedback, fire on PointerUp inside bounds), Press

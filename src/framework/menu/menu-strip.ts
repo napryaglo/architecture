@@ -11,16 +11,16 @@ import {
     type PropertyDescriptor,
 } from '../../runtime/index.js';
 import { PresentationTarget } from '../../visual-engine/index.js';
-import { Border } from '../../Basic/border.js';
-import { ContentPresenter } from '../../Basic/content-presenter.js';
-import { ControlTemplate } from '../../Basic/control-template.js';
+import { Border } from '../../basic/border.js';
+import { ContentPresenter } from '../../basic/templates/content-presenter.js';
+import { ControlTemplate } from '../../basic/templates/control-template.js';
 import { ItemsControl } from '../items-control.js';
-import { Orientation, StackPanel } from '../../Basic/stack-panel.js';
-import { TextBlock } from '../../Basic/text-block.js';
+import { Orientation, StackPanel } from '../../basic/panels/stack-panel.js';
+import { TextBlock } from '../../basic/text-block.js';
 import { Brush } from '../../visual-engine/index.js';
 import { ClickAwayScrim } from '../tool-bar/tool-bar.js';
 import { Button } from '../button.js';
-import type { ICommand } from '../../runtime/command.js';
+import type { ICommand } from '../../runtime/input/command.js';
 
 // ─────────────────────────────────────────────────────────────────────
 // MenuStrip — horizontal main-menu bar. Holds top-level MenuItems whose

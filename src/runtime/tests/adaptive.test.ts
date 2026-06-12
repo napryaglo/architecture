@@ -3,12 +3,6 @@ import assert from 'node:assert/strict';
 import {
     Application,
     Density,
-    GetDensity,
-    GetPointer,
-    GetPrefersColorScheme,
-    GetPrefersContrast,
-    GetPrefersReducedMotion,
-    GetViewportClass,
     M3_BREAKPOINTS,
     MediaWatcher,
     Panel,
@@ -16,18 +10,31 @@ import {
     PreferredScheme,
     PrefersContrast,
     Rect,
-    SetDensity,
-    SetPointer,
-    SetPrefersColorScheme,
-    SetPrefersContrast,
-    SetPrefersReducedMotion,
-    SetViewportClass,
     Size,
+    ThemeManager,
     Visual,
     ViewportClass,
     classifyViewport,
     type DrawingContext,
 } from '../index.js';
+
+// Local aliases — the Get/Set helpers used to be free functions
+// exported from adaptive.ts; they're now static methods on
+// ThemeManager. Aliasing here keeps the body of this test file
+// unchanged while the call sites continue exercising the same
+// inherited-DP cascade behaviour.
+const GetDensity              = ThemeManager.GetDensity;
+const SetDensity              = ThemeManager.SetDensity;
+const GetViewportClass        = ThemeManager.GetViewportClass;
+const SetViewportClass        = ThemeManager.SetViewportClass;
+const GetPointer              = ThemeManager.GetPointer;
+const SetPointer              = ThemeManager.SetPointer;
+const GetPrefersContrast      = ThemeManager.GetPrefersContrast;
+const SetPrefersContrast      = ThemeManager.SetPrefersContrast;
+const GetPrefersReducedMotion = ThemeManager.GetPrefersReducedMotion;
+const SetPrefersReducedMotion = ThemeManager.SetPrefersReducedMotion;
+const GetPrefersColorScheme   = ThemeManager.GetPrefersColorScheme;
+const SetPrefersColorScheme   = ThemeManager.SetPrefersColorScheme;
 
 // A bare-bones Panel subclass — Panel exposes public AddChild that wires
 // logical+visual parents in one step, which is what the inheritance

@@ -1,6 +1,6 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { initTestApp } from '../../Basic/tests/test-app.js';
+import { initTestApp } from '../../basic/tests/test-app.js';
 
 import {
     Visual,
@@ -281,7 +281,7 @@ describe('end-to-end: pointer → IsMouseOver → Style trigger → DP update', 
     test('hovering a Border with an IsMouseOver style trigger swaps its Background', async () => {
         const { instantiate } = await import('../../compiler/index.js');
         const runtime  = await import('../../runtime/index.js');
-        const controls = await import('../../Basic/index.js');
+        const controls = await import('../../basic/index.js');
         const engine   = await import('../../visual-engine/index.js');
         const ctx: Record<string, unknown> = { ...runtime, ...controls, ...engine };
 

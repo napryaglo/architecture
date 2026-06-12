@@ -42,7 +42,7 @@ export function SetTheme(theme: MaterialThemeName): void
 
 export function CurrentTheme(): MaterialThemeName | undefined
 {
-    const s = ThemeManager.Current.ActiveScheme;
+    const s = ThemeManager.ActiveScheme;
     if (s === undefined) return undefined;
     if (s.name === 'MaterialLight') return 'light';
     if (s.name === 'MaterialDark')  return 'dark';

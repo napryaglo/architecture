@@ -18,7 +18,7 @@ that runs once at materialization.
   `Visual.Behaviors`
 - [compiler/compiler.ts](../compiler/compiler.ts) —
   `compileBehaviorsBlock` (the `Behaviors { … }` markup lowering)
-- [Basic/list-reorder-behavior.ts](../Basic/list-reorder-behavior.ts) —
+- [basic/behaviors/list-reorder-behavior.ts](../basic/behaviors/list-reorder-behavior.ts) —
   first concrete behavior (drag-to-reorder for `ItemsControl`)
 
 See also: [property-system.md](property-system.md) for the DP system

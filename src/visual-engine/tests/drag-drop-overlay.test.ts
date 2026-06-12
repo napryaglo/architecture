@@ -11,7 +11,7 @@ import {
     Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
-import { Border, TextBlock } from '../../Basic/index.js';
+import { Border, TextBlock } from '../../basic/index.js';
 import { HtmlTarget } from '../index.js';
 import { SolidColorBrush } from '../index.js';
 import { Color } from '../../runtime/index.js';

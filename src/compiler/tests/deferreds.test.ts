@@ -2,7 +2,7 @@ import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { compile, instantiate } from '../compile.js';
 import * as runtime from '../../runtime/index.js';
-import * as controls from '../../Basic/index.js';
+import * as controls from '../../basic/index.js';
 import * as engine from '../../visual-engine/index.js';
 import {
     Application,
@@ -11,7 +11,7 @@ import {
     MultiTrigger,
     Style,
 } from '../../runtime/index.js';
-import { Border, TextBlock, ControlTemplate, DataTemplate } from '../../Basic/index.js';
+import { Border, TextBlock, ControlTemplate, DataTemplate } from '../../basic/index.js';
 
 const CTX: Record<string, unknown> = { ...runtime, ...controls, ...engine };
 

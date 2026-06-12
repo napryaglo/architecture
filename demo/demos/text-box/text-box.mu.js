@@ -1,5 +1,5 @@
 import { TextBoxVM } from "./text-box-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock, TextBox, TextWrapping } from "@visualisation-sub/mural/Basic";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock, TextBox, TextWrapping } from "@visualisation-sub/mural/basic";
 import { DynamicResource, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
 import { FontWeight } from "@visualisation-sub/mural/visual-engine";
 

@@ -9,7 +9,7 @@ import {
     Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
-import { Canvas, DataTemplate } from '../../Basic/index.js';
+import { Canvas, DataTemplate } from '../../basic/index.js';
 import { ItemsControl } from '@visualisation-sub/mural/framework';
 
 // Test-side accessor for Visual's protected parent getters.

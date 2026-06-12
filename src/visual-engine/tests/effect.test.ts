@@ -1,7 +1,7 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Color } from '../../runtime/index.js';
-import { DropShadowEffect, MaterialElevationEffect } from '../drop-shadow-effect.js';
+import { DropShadowEffect, MaterialElevationEffect } from '../drawing/drop-shadow-effect.js';
 
 describe('DropShadowEffect', () => {
     test('defaults: Direction = 270 (straight down), Color = Black, Opacity = 1', () => {

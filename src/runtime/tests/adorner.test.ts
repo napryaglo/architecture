@@ -11,8 +11,8 @@ import {
     Visual,
     type DrawingContext,
 } from '../index.js';
-import { Border } from '../../Basic/border.js';
-import { Canvas } from '../../Basic/canvas.js';
+import { Border } from '../../basic/border.js';
+import { Canvas } from '../../basic/panels/canvas.js';
 
 // Concrete leaf for placement/size assertions. Reports the size given
 // to its constructor and paints nothing.

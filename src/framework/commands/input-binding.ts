@@ -1,12 +1,12 @@
 import type { Visual } from '../../runtime/visual.js';
 import { Control } from '../control.js';
-import type { ICommand } from '../../runtime/command.js';
+import type { ICommand } from '../../runtime/input/command.js';
 import {
     _setInputBindingDispatcher,
     type KeyEventArgs,
     type PointerEventArgs,
     type ModifierKeys,
-} from '../../runtime/routed-event.js';
+} from '../../runtime/input/routed-event.js';
 import { RoutedCommand } from './routed-command.js';
 import { CommandManager } from './command-manager.js';
 

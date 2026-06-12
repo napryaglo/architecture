@@ -1,5 +1,5 @@
 import { MenuVM } from "./menu-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@visualisation-sub/mural/Basic";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@visualisation-sub/mural/basic";
 import { MenuButton, MenuItem, MenuSeparator } from "@visualisation-sub/mural/framework/surface.js";
 import { DataContextBinding, DynamicResource, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
 import { FontWeight } from "@visualisation-sub/mural/visual-engine";
