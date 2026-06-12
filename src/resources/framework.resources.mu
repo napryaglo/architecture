@@ -783,25 +783,28 @@ resources MuralFramework {
     // scrolls under the bar) isn't wired yet because mural has no
     // scroll-position signal to gate it on.
 
-    // Small — single row, leading-aligned title.
+    // Small — single row, leading-aligned title. 3-column Grid layout
+    // (Auto / * / Auto) — nav and actions take their natural width,
+    // the title column fills the remaining space.
     Template x:key="DefaultSmallTopAppBar" [TargetType=TopAppBar] {
         Border [ Background = @Surface,
                  Height     = 64 ] {
-            DockPanel [LastChildFill=true] {
+            Grid {
+                ColumnDefinitions {
+                    ColumnDefinition [Width=GridLength.Auto]
+                    ColumnDefinition [Width=GridLength.Star]
+                    ColumnDefinition [Width=GridLength.Auto]
+                }
                 Border x:name="PART_NavSlot"
-                      [ DockPanel.Dock      = Left,
+                      [ Grid.Column         = 0,
                         Width               = 48,
                         Height              = 48,
                         Margin              = (4,8,4,8),
                         VerticalAlignment   = Center,
                         HorizontalAlignment = Center ]
-                StackPanel x:name="PART_ActionsStack"
-                          [ DockPanel.Dock    = Right,
-                            Orientation       = Horizontal,
-                            VerticalAlignment = Center,
-                            Margin            = (4,8,4,8) ]
                 TextBlock x:name="PART_TitleText"
-                         [ FontFamily          = @TitleLargeFont,
+                         [ Grid.Column         = 1,
+                           FontFamily          = @TitleLargeFont,
                            FontWeight          = @TitleLargeWeight,
                            FontSize            = @TitleLargeSize,
                            LineHeight          = @TitleLargeLineHeight,
@@ -810,34 +813,45 @@ resources MuralFramework {
                            VerticalAlignment   = Center,
                            HorizontalAlignment = Left,
                            Margin              = (12,0,12,0) ]
+                StackPanel x:name="PART_ActionsStack"
+                          [ Grid.Column      = 2,
+                            Orientation       = Horizontal,
+                            VerticalAlignment = Center,
+                            Margin            = (4,8,4,8) ]
             }
         }
     }
 
-    // CenterAligned — single row, centre-aligned title. Same anatomy
-    // as Small with HorizontalAlignment=Center on PART_TitleText. The
-    // centring is relative to the remaining DockPanel slot (after nav
-    // + actions), not the absolute bar centre — strict M3 absolute
-    // centring would need Grid markup support (not landed yet) for the
-    // 3-column layout.
+    // CenterAligned — single row, absolute-centred title. The trick is
+    // a 3-column layout where the OUTER columns are equally-weighted
+    // stars (so they take the same width regardless of nav / actions
+    // intrinsic size), with nav + actions floated within their cell at
+    // the bar's edges. The title sits in an Auto-sized centre column
+    // that naturally lands on the bar's geometric centre.
+    //
+    // This was previously deferred (centring within the remaining
+    // DockPanel slot rather than the absolute centre) because the .mu
+    // compiler didn't accept `ColumnDefinitions { … }` collection-child
+    // syntax — that limitation is now lifted.
     Template x:key="DefaultCenterAlignedTopAppBar" [TargetType=TopAppBar] {
         Border [ Background = @Surface,
                  Height     = 64 ] {
-            DockPanel [LastChildFill=true] {
+            Grid {
+                ColumnDefinitions {
+                    ColumnDefinition [Width=GridLength.Star]
+                    ColumnDefinition [Width=GridLength.Auto]
+                    ColumnDefinition [Width=GridLength.Star]
+                }
                 Border x:name="PART_NavSlot"
-                      [ DockPanel.Dock      = Left,
+                      [ Grid.Column         = 0,
                         Width               = 48,
                         Height              = 48,
                         Margin              = (4,8,4,8),
                         VerticalAlignment   = Center,
-                        HorizontalAlignment = Center ]
-                StackPanel x:name="PART_ActionsStack"
-                          [ DockPanel.Dock    = Right,
-                            Orientation       = Horizontal,
-                            VerticalAlignment = Center,
-                            Margin            = (4,8,4,8) ]
+                        HorizontalAlignment = Left ]
                 TextBlock x:name="PART_TitleText"
-                         [ FontFamily          = @TitleLargeFont,
+                         [ Grid.Column         = 1,
+                           FontFamily          = @TitleLargeFont,
                            FontWeight          = @TitleLargeWeight,
                            FontSize            = @TitleLargeSize,
                            LineHeight          = @TitleLargeLineHeight,
@@ -846,6 +860,12 @@ resources MuralFramework {
                            VerticalAlignment   = Center,
                            HorizontalAlignment = Center,
                            Margin              = (12,0,12,0) ]
+                StackPanel x:name="PART_ActionsStack"
+                          [ Grid.Column      = 2,
+                            Orientation       = Horizontal,
+                            VerticalAlignment = Center,
+                            HorizontalAlignment = Right,
+                            Margin            = (4,8,4,8) ]
             }
         }
     }

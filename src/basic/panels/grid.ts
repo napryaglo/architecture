@@ -67,6 +67,11 @@ export type GridUnitType = 'pixel' | 'auto' | 'star';
 export class GridLength
 {
     public static readonly Auto: GridLength = new GridLength(0, 'auto');
+    // `*` — proportional fill. Single-star (weight=1) is the markup
+    // default; consumers wanting heavier weights still construct
+    // `new GridLength(2, 'star')` etc. in JS. The static lets `.mu`
+    // templates write `Width=GridLength.Star` without inline construction.
+    public static readonly Star: GridLength = new GridLength(1, 'star');
 
     public constructor(
         public readonly Value: number,

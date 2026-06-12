@@ -9,9 +9,11 @@ import SplitterVM from "./splitter-vm.mjs"
 //     previous sibling's Height.
 //
 // GridSplitter (the WPF-parity sibling control for Grid cells) ships
-// alongside but isn't shown here because the compiler doesn't yet
-// support the `ColumnDefinitions { … }` collection-child syntax in
-// markup — see backlog 5.x. GridSplitter is fully covered by the
+// alongside but isn't shown here. The `ColumnDefinitions { … }`
+// collection-child markup that GridSplitter needs is now supported
+// (added during Phase 5 deviation closing — see commit history); a
+// dedicated GridSplitter demo can land alongside any future Grid
+// showcase. GridSplitter itself is fully covered by the
 // grid-splitter.test.ts suite.
 
 resources SplitterDemo {

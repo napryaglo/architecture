@@ -2695,6 +2695,25 @@ export class Compiler
                     this.compileBehaviorsBlock(parentVar, item);
                     continue;
                 }
+                // Property-collection blocks — `ColumnDefinitions { … }`
+                // and `RowDefinitions { … }` under Grid. The block isn't
+                // itself an element to instantiate; each inner element is
+                // appended to the named ObservableCollection on the parent
+                // (Grid.ColumnDefinitions / Grid.RowDefinitions). Mirrors
+                // XAML's property-element syntax for collection-typed
+                // properties.
+                //
+                // Scoped to Grid by spec, but the compiler doesn't enforce
+                // the parent type: any parent exposing a matching
+                // `Xxx.Add(child)` API would accept it. An invalid parent
+                // (e.g., `StackPanel { ColumnDefinitions { … } }`) emits
+                // code that TypeErrors at runtime — appropriate for an
+                // authoring mistake the symbol-table couldn't catch.
+                if (item.name === 'ColumnDefinitions' || item.name === 'RowDefinitions')
+                {
+                    this.compilePropertyCollectionBlock(parentVar, item.name, item);
+                    continue;
+                }
                 const childVar = this.compileElement(item);
                 this.assignToDefaultSlot(parentVar, parentClass, slot, childVar, item.span);
                 continue;
@@ -2742,6 +2761,50 @@ export class Compiler
             }
             const behaviorVar = this.compileElement(child);
             this.line(`${parentVar}.AddBehavior(${behaviorVar});`);
+        }
+    }
+
+    // Lowers a property-collection block like
+    //   `Grid { ColumnDefinitions { ColumnDefinition[Width=Auto] … } }`
+    // — each inner element is compiled and appended to the named
+    // ObservableCollection on `parentVar` via `.Add(child)`. Behavioural
+    // sibling of compileBehaviorsBlock; differs in that the inner
+    // elements aren't Behaviors (no AddBehavior contract) — they're
+    // regular collection items.
+    private compilePropertyCollectionBlock(
+        parentVar: string,
+        propertyName: string,
+        blockElem: ElementNode,
+    ): void
+    {
+        if (blockElem.attrs.length > 0)
+        {
+            throw new EmitError(
+                `${propertyName} { … } block doesn't take attributes — `
+                + `attach instances inside the body`,
+                blockElem.span);
+        }
+        const body = blockElem.body;
+        if (body === null || body.kind !== 'structured-body')
+        {
+            if (body !== null)
+            {
+                throw new EmitError(
+                    `${propertyName} block must contain element entries`,
+                    blockElem.span);
+            }
+            return;
+        }
+        for (const child of body.items)
+        {
+            if (child.kind !== 'element')
+            {
+                throw new EmitError(
+                    `${propertyName} block only accepts element entries (got ${child.kind})`,
+                    'span' in child ? child.span : body.span);
+            }
+            const childVar = this.compileElement(child);
+            this.line(`${parentVar}.${propertyName}.Add(${childVar});`);
         }
     }
 

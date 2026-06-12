@@ -291,6 +291,7 @@ export const ENUM_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<st
 // runtime class's exported statics — there's no compile-time link.
 export const STATIC_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<string, ReadonlySet<string>>([
     ['CornerRadius', new Set(['Full', 'Zero', 'LeftRounded', 'RightRounded'])],
+    ['GridLength',   new Set(['Auto', 'Star'])],
     ['Easings', new Set([
         'Linear', 'QuadIn', 'QuadOut', 'QuadInOut',
         'CubicIn', 'CubicOut', 'CubicInOut',
