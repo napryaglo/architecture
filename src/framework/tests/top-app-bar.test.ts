@@ -5,6 +5,7 @@ import { initTestApp } from '../../basic/tests/test-app.js';
 import { Border } from '../../basic/border.js';
 import { StackPanel } from '../../basic/panels/stack-panel.js';
 import { TextBlock } from '../../basic/text-block.js';
+import { ScrollViewer } from '../scroll-viewer.js';
 import { TopAppBar, TopAppBarVariant } from '../top-app-bar/top-app-bar.js';
 
 describe('TopAppBar — Variant DP', () => {
@@ -163,5 +164,78 @@ describe('TopAppBar — Actions collection + markup default slot', () => {
         assert.equal(stack.visualChildren.length, 1,
             'after Variant swap the action should re-mirror into the freshly-stamped PART_ActionsStack');
         assert.equal(stack.visualChildren[0], action);
+    });
+});
+
+describe('TopAppBar — scroll-tint via ScrollSource', () => {
+    beforeEach(() => { initTestApp(); });
+
+    test('IsScrolled defaults to false; no ScrollSource means no tint', () => {
+        const bar = new TopAppBar();
+        assert.equal(bar.IsScrolled, false);
+        assert.equal(bar.ScrollSource, undefined);
+    });
+
+    test('ScrollViewer.IsScrolled mirrors HorizontalOffset / VerticalOffset != 0', () => {
+        const sv = new ScrollViewer();
+        assert.equal(sv.IsScrolled, false, 'fresh ScrollViewer is at origin');
+        sv.VerticalOffset = 10;
+        assert.equal(sv.IsScrolled, true, 'non-zero VerticalOffset flips IsScrolled');
+        sv.VerticalOffset = 0;
+        assert.equal(sv.IsScrolled, false, 'returning to 0 clears IsScrolled');
+        sv.HorizontalOffset = 5;
+        assert.equal(sv.IsScrolled, true, 'horizontal-only scroll also flips IsScrolled');
+        sv.HorizontalOffset = 0;
+        assert.equal(sv.IsScrolled, false);
+    });
+
+    test('Binding a ScrollSource pulls the source\'s current IsScrolled into the bar', () => {
+        const sv = new ScrollViewer();
+        sv.VerticalOffset = 20;
+        const bar = new TopAppBar();
+        bar.ScrollSource = sv;
+        assert.equal(bar.IsScrolled, true,
+            'initial pull mirrors the source\'s current state');
+    });
+
+    test('Source IsScrolled changes propagate to bar.IsScrolled', () => {
+        const sv = new ScrollViewer();
+        const bar = new TopAppBar();
+        bar.ScrollSource = sv;
+        assert.equal(bar.IsScrolled, false);
+        sv.VerticalOffset = 50;
+        assert.equal(bar.IsScrolled, true,
+            'source flipping to IsScrolled should propagate to bar');
+        sv.VerticalOffset = 0;
+        assert.equal(bar.IsScrolled, false);
+    });
+
+    test('Clearing ScrollSource resets bar.IsScrolled to false and detaches the listener', () => {
+        const sv = new ScrollViewer();
+        sv.VerticalOffset = 10;
+        const bar = new TopAppBar();
+        bar.ScrollSource = sv;
+        assert.equal(bar.IsScrolled, true);
+        bar.ScrollSource = undefined;
+        assert.equal(bar.IsScrolled, false,
+            'clearing ScrollSource collapses bar.IsScrolled to false');
+        // Mutating the previously-bound source should NOT touch the bar.
+        sv.VerticalOffset = 100;
+        assert.equal(bar.IsScrolled, false,
+            'old source\'s changes shouldn\'t leak to a detached bar');
+    });
+
+    test('Swapping ScrollSource detaches the old listener', () => {
+        const a = new ScrollViewer();
+        const b = new ScrollViewer();
+        const bar = new TopAppBar();
+        bar.ScrollSource = a;
+        bar.ScrollSource = b;
+        // Mutate the OLD source — bar should ignore it now.
+        a.VerticalOffset = 200;
+        assert.equal(bar.IsScrolled, false,
+            'after swap, old source mutations should not reach the bar');
+        b.VerticalOffset = 5;
+        assert.equal(bar.IsScrolled, true, 'new source\'s changes flow through');
     });
 });

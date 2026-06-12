@@ -6,10 +6,12 @@ import {
     type CollectionChange,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
+import type { PropertyChangeCallback } from '../../runtime/binding/effective-value.js';
 import { Border } from '../../basic/border.js';
 import { StackPanel } from '../../basic/panels/stack-panel.js';
 import { TemplatedControl } from '../../basic/templated-control.js';
 import { TextBlock } from '../../basic/text-block.js';
+import { ScrollViewer } from '../scroll-viewer.js';
 
 // Material 3 Top App Bar size variants. Each ships its own
 // ControlTemplate in framework.resources.mu; the default Style picks
@@ -74,6 +76,26 @@ export class TopAppBar extends TemplatedControl
         MetaData.None,
     );
 
+    // Reference to the ScrollViewer whose scroll-state drives this bar's
+    // scroll-tint behaviour. When the source's IsScrolled flips, this
+    // bar's own IsScrolled DP mirrors the flip and the @Surface →
+    // @SurfaceContainer template trigger fires.
+    //
+    // Undefined (the default) leaves the bar at @Surface always — the
+    // appropriate behaviour for the demo platform's static header
+    // before scroll integration ships per-screen.
+    public static readonly ScrollSourceKey = Model.RegisterProperty<ScrollViewer | undefined>(
+        TopAppBar, 'ScrollSource', undefined, MetaData.None,
+    );
+
+    // Read-only mirror of `ScrollSource.IsScrolled` (or false when no
+    // source is set). Template triggers reach this for the scroll-tint
+    // Background flip.
+    private static readonly _IsScrolledPriv = Model.RegisterReadOnlyProperty<boolean>(
+        TopAppBar, 'IsScrolled', false, MetaData.None,
+    );
+    public static readonly IsScrolledKey = TopAppBar._IsScrolledPriv;
+
     static
     {
         Model.OverrideMetadata(
@@ -85,7 +107,8 @@ export class TopAppBar extends TemplatedControl
     private _navSlot:      Border     | undefined;
     private _titleText:    TextBlock  | undefined;
     private _actionsStack: StackPanel | undefined;
-    private _actionsSubscription: (() => void) | undefined;
+    private _actionsSubscription:      (() => void) | undefined;
+    private _scrollSourceSubscription: (() => void) | undefined;
 
     constructor()
     {
@@ -118,6 +141,11 @@ export class TopAppBar extends TemplatedControl
     {
         return this.get_property_value(TopAppBar.ActionsKey);
     }
+
+    public get ScrollSource():  ScrollViewer | undefined { return this.get_property_value(TopAppBar.ScrollSourceKey); }
+    public set ScrollSource(v: ScrollViewer | undefined) { this.set_property_value(TopAppBar.ScrollSourceKey, v); }
+
+    public get IsScrolled(): boolean { return this.get_property_value(TopAppBar.IsScrolledKey); }
 
     // Markup default-slot routing — `TopAppBar { ThemeSelector }` lands
     // here via the compiler's `parent.AddChild(child)` emit for
@@ -214,6 +242,47 @@ export class TopAppBar extends TemplatedControl
         for (const v of this.Actions) stack.AddChild(v);
     }
 
+    // ── Scroll-tint plumbing ───────────────────────────────────────
+
+    // Subscribe to the new ScrollSource's IsScrolled DP. Pulls the
+    // current value through immediately so the bar reflects the
+    // source's resting state without waiting for the first change.
+    private rebindScrollSource(_prev: ScrollViewer | undefined, next: ScrollViewer | undefined): void
+    {
+        this._scrollSourceSubscription?.();
+        this._scrollSourceSubscription = undefined;
+
+        if (next === undefined)
+        {
+            this.writeIsScrolled(false);
+            return;
+        }
+
+        // Initial pull from the source's current state.
+        this.writeIsScrolled(next.IsScrolled);
+
+        const callback: PropertyChangeCallback = (
+            _model, _name, _oldValue, newValue,
+        ): void =>
+        {
+            this.writeIsScrolled(newValue as boolean);
+        };
+        next.AddPropertyChangedListener(ScrollViewer.IsScrolledKey, callback);
+        // AddPropertyChangedListener doesn't return an unsubscribe
+        // thunk — build one that flips the wire back via the symmetric
+        // Remove* call.
+        this._scrollSourceSubscription = (): void =>
+        {
+            next.RemovePropertyChangedListener(ScrollViewer.IsScrolledKey, callback);
+        };
+    }
+
+    private writeIsScrolled(v: boolean): void
+    {
+        if (this.IsScrolled === v) return;
+        this.set_property_value_with_key(TopAppBar._IsScrolledPriv, v);
+    }
+
     private handleActionsChange(ev: CollectionChange<Visual>): void
     {
         const stack = this._actionsStack;
@@ -285,6 +354,14 @@ export class TopAppBar extends TemplatedControl
         if (name === 'Title')
         {
             this.syncTitle();
+            return;
+        }
+        if (name === 'ScrollSource')
+        {
+            this.rebindScrollSource(
+                oldValue as ScrollViewer | undefined,
+                newValue as ScrollViewer | undefined,
+            );
             return;
         }
     }

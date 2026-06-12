@@ -787,8 +787,9 @@ resources MuralFramework {
     // (Auto / * / Auto) — nav and actions take their natural width,
     // the title column fills the remaining space.
     Template x:key="DefaultSmallTopAppBar" [TargetType=TopAppBar] {
-        Border [ Background = @Surface,
-                 Height     = 64 ] {
+        Border x:name="PART_Border"
+              [ Background = @Surface,
+                Height     = 64 ] {
             Grid {
                 ColumnDefinitions {
                     ColumnDefinition [Width=GridLength.Auto]
@@ -820,6 +821,12 @@ resources MuralFramework {
                             Margin            = (4,8,4,8) ]
             }
         }
+        // M3 scroll-tint — when the bound ScrollSource flips IsScrolled
+        // true (the user has scrolled content under the bar), the
+        // container colour switches from @Surface to @SurfaceContainer
+        // for differentiation. ScrollSource undefined leaves the bar
+        // at @Surface (IsScrolled stays false).
+        when ( IsScrolled ) { PART_Border.Background = @SurfaceContainer; }
     }
 
     // CenterAligned — single row, absolute-centred title. The trick is
@@ -834,8 +841,9 @@ resources MuralFramework {
     // compiler didn't accept `ColumnDefinitions { … }` collection-child
     // syntax — that limitation is now lifted.
     Template x:key="DefaultCenterAlignedTopAppBar" [TargetType=TopAppBar] {
-        Border [ Background = @Surface,
-                 Height     = 64 ] {
+        Border x:name="PART_Border"
+              [ Background = @Surface,
+                Height     = 64 ] {
             Grid {
                 ColumnDefinitions {
                     ColumnDefinition [Width=GridLength.Star]
@@ -868,13 +876,15 @@ resources MuralFramework {
                             Margin            = (4,8,4,8) ]
             }
         }
+        when ( IsScrolled ) { PART_Border.Background = @SurfaceContainer; }
     }
 
     // Medium — two-row, 112dp tall. Row 1 (64dp) carries nav + actions;
     // Row 2 carries the larger title bottom-aligned.
     Template x:key="DefaultMediumTopAppBar" [TargetType=TopAppBar] {
-        Border [ Background = @Surface,
-                 Height     = 112 ] {
+        Border x:name="PART_Border"
+              [ Background = @Surface,
+                Height     = 112 ] {
             DockPanel [LastChildFill=true] {
                 DockPanel [DockPanel.Dock=Top, Height=64, LastChildFill=true] {
                     Border x:name="PART_NavSlot"
@@ -906,13 +916,15 @@ resources MuralFramework {
                 }
             }
         }
+        when ( IsScrolled ) { PART_Border.Background = @SurfaceContainer; }
     }
 
     // Large — two-row, 152dp tall. Same shape as Medium with a taller
     // title row and HeadlineMedium typography on the title.
     Template x:key="DefaultLargeTopAppBar" [TargetType=TopAppBar] {
-        Border [ Background = @Surface,
-                 Height     = 152 ] {
+        Border x:name="PART_Border"
+              [ Background = @Surface,
+                Height     = 152 ] {
             DockPanel [LastChildFill=true] {
                 DockPanel [DockPanel.Dock=Top, Height=64, LastChildFill=true] {
                     Border x:name="PART_NavSlot"
@@ -942,6 +954,7 @@ resources MuralFramework {
                 }
             }
         }
+        when ( IsScrolled ) { PART_Border.Background = @SurfaceContainer; }
     }
 
     // Default Style — picks Template by Variant. Small is the baseline.

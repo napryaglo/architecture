@@ -131,6 +131,23 @@ export class ScrollViewer extends ContentControl
     public static readonly AutoScrollStepKey = Model.RegisterProperty<number>(
         ScrollViewer, 'AutoScrollStep', 4, MetaData.None);
 
+    // Read-only signal that the viewport has scrolled away from the
+    // origin (either axis). False when both HorizontalOffset and
+    // VerticalOffset are 0; flips true the moment either drifts off
+    // zero. The signal is maintained in OnPropertyChanged below — there
+    // is no scrollbar / wheel binding step involved, every offset write
+    // path lands here.
+    //
+    // Primary consumer: M3 TopAppBar, which binds its scroll-tint to a
+    // ScrollViewer's IsScrolled signal so the bar's container colour
+    // switches from @Surface to @SurfaceContainer the moment any
+    // content scrolls under it (the M3 "scrolled" container colour
+    // rule). Any other control with a "this surface is now scrolled-
+    // under" cue can subscribe to the same DP.
+    private static readonly _IsScrolledPriv = Model.RegisterReadOnlyProperty<boolean>(
+        ScrollViewer, 'IsScrolled', false, MetaData.None);
+    public static readonly IsScrolledKey = ScrollViewer._IsScrolledPriv;
+
     static {
         Model.OverrideMetadata(ScrollViewer, Visual.DefaultStyleKeyKey, { default_value: ScrollViewer });
     }
@@ -211,6 +228,8 @@ export class ScrollViewer extends ContentControl
 
     public get VerticalOffset(): number { return this.get_property_value(ScrollViewer.VerticalOffsetKey); }
     public set VerticalOffset(value: number) { this.set_property_value(ScrollViewer.VerticalOffsetKey, value); }
+
+    public get IsScrolled(): boolean { return this.get_property_value(ScrollViewer.IsScrolledKey); }
 
     public get HorizontalScrollEnabled(): boolean { return this.get_property_value(ScrollViewer.HorizontalScrollEnabledKey); }
     public set HorizontalScrollEnabled(v: boolean) { this.set_property_value(ScrollViewer.HorizontalScrollEnabledKey, v); }
@@ -618,6 +637,19 @@ export class ScrollViewer extends ContentControl
             // reaches the slotted content.
             this._scp?.InvalidateMeasure();
             this._scp?.InvalidateArrange();
+        }
+        if (descriptor.Name === 'HorizontalOffset' || descriptor.Name === 'VerticalOffset')
+        {
+            // IsScrolled is a derived read-only DP: true when EITHER
+            // offset is non-zero. We push the new value through
+            // `_set_property_value_by_name` (the read-only DP's setter
+            // route) so any subscriber — Style triggers, TopAppBar's
+            // scroll-tint listener — sees the flip immediately.
+            const next = this.HorizontalOffset !== 0 || this.VerticalOffset !== 0;
+            if (next !== this.IsScrolled)
+            {
+                this.set_property_value_with_key(ScrollViewer._IsScrolledPriv, next);
+            }
         }
     }
 }
