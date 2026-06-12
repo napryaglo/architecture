@@ -686,3 +686,171 @@ WPF parity) and stay where they are:
 - `Thumb` — drag-aware primitive shared by `ScrollBar` / `Slider` /
   `GridSplitter`.
 - `ThemeSelector` — the picker built earlier in this session.
+
+---
+
+## Appendix C — M3 Expressive shape library
+
+The Material 3 Expressive shape palette (2025) ships 35 shapes used
+for icon containers, FAB silhouettes, avatar masks, badge backdrops,
+splash transitions, and marker glyphs. They're closed-path geometries,
+typically used as `Clip` or as the silhouette of a `Shape` Visual.
+
+µ-mural already has `Ellipse`, `Rectangle`, `Line` in
+[src/Basic/shapes/](src/Basic/shapes/). The plan: each M3 shape lands
+as one `Visual` subclass under the same folder, each with the same
+shape contract — `Fill`, `Stroke`, `StrokeThickness` DPs — and a
+matching `<ShapeName>Geometry` class in
+[src/visual-engine/geometry.ts](src/visual-engine/geometry.ts). Where
+M3 ships a parametric family (cookies with N sides, clovers with N
+leaves, sunny / burst with N lobes), one parameterized class covers
+the family rather than one per stop.
+
+Phase slot: lands as **Phase 4.5** — after Phase 1 tokens are in,
+before Phase 4 Cards (which use shape masks for the M3 expressive
+card chrome). Most of the work is geometry math; the Visual subclass
+shell is mechanical.
+
+### C.1 Round / rectangular base shapes
+
+Closed superellipses or composite arc geometries. Trivial DPs (Fill,
+Stroke, StrokeThickness only).
+
+| Shape | M3 name | Implementation notes |
+| --- | --- | --- |
+| Circle | `Circle` | Already in `Ellipse` — promote or alias. Squircle variant possible via `Superness` DP. |
+| Square | `Square` | Squircle (rounded square via superellipse exponent ~4). Existing `Rectangle` covers the strict-square case; add a `SquircleGeometry`. |
+| Slanted | `Slanted` | Square with diagonal lean transform. Inherit `Square`; add `LeanAngle` DP. |
+| Oval | `Oval` | Already in `Ellipse` with non-equal axes — promote or alias. |
+| Pill | `Pill` | Rectangle with full-circle ends (`CornerRadius = min(W,H)/2`). Cover via `Rectangle.RadiusX/Y` or dedicated `PillGeometry`. |
+| Diamond | `Diamond` | 4-sided rounded polygon. Reuse `NSidedCookie(sides=4, rotation=45°, cornerRadius=high)`. |
+| Pentagon | `Pentagon` | Reuse `NSidedCookie(sides=5)` — the rounded-corner pentagon matches the M3 shape. |
+| Gem | `Gem` | Hexagonal flat-top with rounded corners. Reuse `NSidedCookie(sides=6, rotation=0°)`. |
+
+### C.2 Architectural shapes (one-off geometries)
+
+Each has a hand-tuned path. No parametric family.
+
+| Shape | M3 name | Implementation notes |
+| --- | --- | --- |
+| Arch | `Arch` | Rounded-top rectangle (top corners full-radius, bottom corners square). Direct path. |
+| Semicircle | `Semicircle` | Half-ellipse + base line. Direct path. |
+| Triangle | `Triangle` | Rounded equilateral triangle. Direct path. |
+| Arrow | `Arrow` | Rounded triangle with concave base. Direct path. |
+| Fan | `Fan` | Quarter-circle with arc edge. Direct path. |
+| Clamshell | `Clamshell` | Hexagon-ish wide-flat shape. Direct path. |
+
+### C.3 Cookies (parametric polygons)
+
+Convex polygons with N rounded sides. Single class `NSidedCookie` /
+`CookieGeometry`, parameterized by `Sides` (3–24+) and `CornerRadius`.
+Defaults to the M3 named stops. M3 catalogue ships:
+
+| Shape | `Sides` | M3 name |
+| --- | --- | --- |
+| 4-sided cookie | 4 | `FourSidedCookie` |
+| 6-sided cookie | 6 | `SixSidedCookie` |
+| 7-sided cookie | 7 | `SevenSidedCookie` |
+| 9-sided cookie | 9 | `NineSidedCookie` |
+| 12-sided cookie | 12 | `TwelveSidedCookie` |
+
+Authored convenience: one named `Cookie` class with `Sides` DP plus
+five thin pass-through aliases (`FourSidedCookie`, `SixSidedCookie`,
+…) that just set the DP for ergonomic markup.
+
+### C.4 Sunny / star bursts (parametric radial waves)
+
+Single radial-wave generator: a closed curve whose radius is
+`base + amplitude · cos(N · θ + phase)`. Single class `RadialWave` /
+`RadialWaveGeometry`, parameterized by `Lobes`, `Amplitude`,
+`Sharpness`. Defaults match the M3 named stops:
+
+| Shape | M3 name | Lobes | Amplitude | Sharpness |
+| --- | --- | --- | --- | --- |
+| Sunny | `Sunny` | 8 | low | smooth |
+| Very sunny | `VerySunny` | 8 | high | smooth |
+| Burst | `Burst` | 12 | medium | sharp |
+| Soft burst | `SoftBurst` | 12 | medium | smooth |
+| Boom | `Boom` | 14 | high | sharp |
+| Soft boom | `SoftBoom` | 14 | high | smooth |
+| Flower | `Flower` | 10 | medium | smooth |
+
+Eight aliases over one `RadialWave` class.
+
+### C.5 Clovers (parametric multi-lobed petals)
+
+Closed curve with `N` deep lobes (concave cusps between). Single class
+`Clover` / `CloverGeometry` parameterized by `Leaves` (4 or 8 named in
+M3, but supports any even count).
+
+| Shape | M3 name | Leaves |
+| --- | --- | --- |
+| 4-leaf clover | `FourLeafClover` | 4 |
+| 8-leaf clover | `EightLeafClover` | 8 |
+
+### C.6 Puffy / pillow shapes (rounded bumps on a square)
+
+Square with each edge bumped outward by a half-circle. Single class
+`Puffy` / `PuffyGeometry` parameterized by `BumpsPerSide` (default 2)
+and underlying shape (square vs diamond).
+
+| Shape | M3 name | BumpsPerSide | Base |
+| --- | --- | --- | --- |
+| Puffy | `Puffy` | 2 | Square |
+| Puffy diamond | `PuffyDiamond` | 2 | Diamond (45°-rotated Puffy) |
+
+### C.7 Special / character glyphs (one-off hand-tuned paths)
+
+Iconic shapes — no parameters, just a fixed path.
+
+| Shape | M3 name | Implementation notes |
+| --- | --- | --- |
+| Ghost-ish | `Ghostish` | Pill with a scalloped bottom edge. Direct path. |
+| Bun | `Bun` | Symmetric horizontal squash (two stacked humps). Direct path. |
+| Heart | `Heart` | Classic heart silhouette. Direct path — use cubic Béziers. |
+
+### C.8 Pixel-art shapes (rasterized polygons)
+
+Constructed from axis-aligned unit squares — same "stair-step" look as
+8-bit sprites. Single class `PixelShape` / `PixelGeometry`,
+parameterized by the underlying source shape + a grid resolution.
+
+| Shape | M3 name | Source | Notes |
+| --- | --- | --- | --- |
+| Pixel circle | `PixelCircle` | Circle | Bresenham-style discretization at the configured grid size. |
+| Pixel triangle | `PixelTriangle` | Triangle | Same — DDA-style rasterization. |
+
+### C.9 Totals + roll-up
+
+- **35 M3 shape variants** → **~18 µ-mural classes** after parametric
+  consolidation.
+- Each class extends `Visual`, owns `Fill` / `Stroke` /
+  `StrokeThickness` DPs, plus the family-specific parameter DPs
+  documented above.
+- Geometry math lives in `src/visual-engine/geometry.ts` alongside
+  the existing `EllipseGeometry`, `RectangleGeometry`, `LineGeometry`.
+- File layout: each shape (and each parametric family) gets its own
+  file in [src/Basic/shapes/](src/Basic/shapes/) — same pattern as
+  the existing `ellipse.ts` / `rectangle.ts` / `line.ts`. Aliases
+  (e.g. `FourSidedCookie` over `Cookie`) sit at the bottom of the
+  parametric class's file.
+- Symbol-table entries: bulk-add to
+  [src/compiler/symbol-table.ts](src/compiler/symbol-table.ts) under
+  the `@visualisation-sub/mural/Basic` path so `.mu` consumers can
+  drop them straight in.
+- Demo: one consolidated `demo/demos/shapes/` page rendering the
+  whole catalogue in the 5×7 grid layout from the M3 reference image.
+
+### C.10 Sequencing
+
+Slots between Phases 4 and 5 of the main plan (after Cards land, since
+Cards consume the basic shape contract; before App bars, which don't
+depend on shape work). Single phase, ~3-4 focused commits:
+
+1. **C.S1** — Round / rectangular base + architectural shapes (C.1 + C.2).
+   Includes `SquircleGeometry`, `PillGeometry`, and the hand-tuned
+   architectural paths.
+2. **C.S2** — Parametric polygon families (C.3 cookies + C.5 clovers).
+3. **C.S3** — Parametric radial-wave family (C.4 sunny/burst/boom/flower).
+4. **C.S4** — Puffy, special-glyph paths, and pixel rasterization
+   (C.6 + C.7 + C.8) plus the consolidated demo.
