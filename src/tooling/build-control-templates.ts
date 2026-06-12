@@ -238,7 +238,11 @@ export function buildControlTemplates(opts: BuildOptions): number
     const inputs = discoverTemplateSources(opts.sourceDir);
     if (inputs.length === 0)
     {
-        process.stdout.write('build-control-templates: no .mu sources found\n');
+        // Empty tree is a normal forward-compat outcome — the build
+        // root walks src/basic and src/framework even though neither
+        // ships a `.mu` file today (the call site comment explains why
+        // the walk is kept). Stay silent so the build log only carries
+        // entries for trees that produced output.
         return 0;
     }
     mkdirSync(opts.outDir, { recursive: true });
