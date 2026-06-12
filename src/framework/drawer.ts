@@ -31,17 +31,30 @@ function resolveTemplate(key: string): ControlTemplate
     return tpl;
 }
 
-// Three flavours that closely follow Material Design's drawer variants:
+// Three flavours that closely follow Material Design 3's drawer variants.
+// Mural's names predate the M3 v2024 nomenclature rationalisation; the
+// mapping is:
 //
-//   * Permanent  — fixed strip on an edge that is always visible.
-//                  Ignores IsOpen, always reports DrawerSize.
-//   * Persistent — toggles between DrawerSize (open) and RailSize
-//                  (closed). Lives in host flow; sibling content
-//                  resizes to fill the gap. RailSize=0 collapses
-//                  fully, RailSize=56 produces Material's mini rail.
-//   * Temporary  — overlay drawer with a dismissable scrim. Reports
-//                  0 in host flow and mounts itself + scrim onto
-//                  PresentationTarget.OverlayRoot when IsOpen=true.
+//   Mural        ↔ M3                Behaviour
+//   Permanent    ↔ Standard          Always-visible side panel; ignores
+//                                     IsOpen, always reports DrawerSize.
+//   Persistent   ↔ Dismissible       Toggles between DrawerSize (open) and
+//                                     RailSize (closed). In-flow; sibling
+//                                     content resizes around it.
+//                                     RailSize=0 collapses fully;
+//                                     RailSize=56 produces M3's mini-rail
+//                                     pattern.
+//   Temporary    ↔ Modal             Overlay drawer with a dismissable
+//                                     scrim. Reports 0 in host flow and
+//                                     mounts itself + scrim onto
+//                                     PresentationTarget.OverlayRoot when
+//                                     IsOpen=true. Elevated above the page
+//                                     content via @ElevationLevel1.
+//
+// The names are kept stable for backwards compatibility — the mapping
+// is documented here so M3-spec readers can navigate the API without
+// renaming churn. A future major version can rename if/when other
+// breaking changes justify the migration.
 export enum DrawerVariant
 {
     Permanent  = 'Permanent',
@@ -175,7 +188,7 @@ export class Drawer extends Control
     // invalidation cascade that doesn't go anywhere useful.
     public static readonly VariantKey    = Model.RegisterProperty<DrawerVariant>(    Drawer, 'Variant',    DrawerVariant.Persistent, MetaData.None);
     public static readonly IsOpenKey     = Model.RegisterProperty<boolean>(          Drawer, 'IsOpen',     false,                    MetaData.Measure | MetaData.Arrange);
-    public static readonly DrawerSizeKey = Model.RegisterProperty<number>(           Drawer, 'DrawerSize', 280,                      MetaData.Measure | MetaData.Arrange);
+    public static readonly DrawerSizeKey = Model.RegisterProperty<number>(           Drawer, 'DrawerSize', 360,                      MetaData.Measure | MetaData.Arrange);
     public static readonly RailSizeKey   = Model.RegisterProperty<number>(           Drawer, 'RailSize',   0,                        MetaData.Measure | MetaData.Arrange);
     // ScrimBrush — undefined by default; the scrim render path falls
     // back to the active theme's `@Scrim` token, then to FALLBACK_SCRIM

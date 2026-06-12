@@ -288,13 +288,29 @@ resources MuralBasic {
     // host (see DefaultDrawerOverlay) — no duplicate pane is built.
     // Drawer has TWO templates (pane + overlay) — both keyed; the
     // ctor reads them explicitly.
+    //
+    // M3 spec deltas closed by this template:
+    //   * Background: @SurfaceContainerLow (M3 Standard / Modal).
+    //   * Padding:    (0,12,0,0) — M3's 12dp top inset baked in.
+    //   * Elevation:  @ElevationLevel1 when Variant=Temporary (M3 Modal
+    //                 floats over content with a shadow ramp; Permanent
+    //                 / Persistent stay at Level0 per M3 Standard /
+    //                 Dismissible).
+    //
+    // M3 spec deltas NOT yet closed (documented gap):
+    //   * Trailing-edge corner radius (M3 Modal has @ShapeLargeEnd on
+    //     the trailing corners — 16dp on the edge furthest from the
+    //     screen edge). Needs Anchor-aware corner-radius computation
+    //     mural's template DSL doesn't support yet.
     Template x:key="DefaultDrawerPane"[TargetType=Drawer]{
         Border x:name="PART_Pane"
               [ Background      = @SurfaceContainerLow,
                 BorderBrush     = @OutlineVariant,
-                BorderThickness = (1) ]{
+                BorderThickness = (1),
+                Padding         = (0,12,0,0) ]{
             ContentPresenter
         }
+        when ( Variant = Temporary ) { PART_Pane.Effect = @ElevationLevel1; }
     }
 
     // ── Drawer (overlay host for the Temporary variant) ─────────────
