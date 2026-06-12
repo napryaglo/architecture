@@ -1,12 +1,15 @@
 import type { TextMetrics } from '../../runtime/index.js';
 import type { Brush } from '../drawing/brush.js';
 
-// Boldness of a glyph. v1 keeps the WPF FontWeights set tight — just
-// the two values that have first-class SVG / CSS keywords. Numeric
-// weights (100–900) can layer on later as a separate type.
+// Boldness of a glyph. Normal (400) / Medium (500) / Bold (700) cover
+// the three weights M3 typography roles call out — Title and Label
+// tiers spec Medium, everything else spec Normal or Bold. Numeric
+// values are CSS-valid `font-weight` strings; SVG renderers emit them
+// verbatim as the `font-weight` attribute.
 export enum FontWeight
 {
     Normal = 'normal',
+    Medium = '500',
     Bold   = 'bold',
 }
 
@@ -39,6 +42,14 @@ export class FormattedText
     // undefined, renderers fall back to an approximation based on
     // FontSize.
     public readonly Metrics: TextMetrics | undefined;
+    // Extra space between adjacent glyphs, in DIPs. M3 typography
+    // tokens spec this as `tracking` (e.g. DisplayLarge = -0.25,
+    // LabelLarge = 0.1). Defaults to 0 (browser default kerning).
+    // Renderers emit `letter-spacing` on the SVG `<text>` element when
+    // non-zero. Note: not factored into Metrics.Width, so wrapping
+    // ignores it — fine for the small M3 tracking values, would need
+    // measurer integration for larger values.
+    public readonly LetterSpacing: number;
 
     constructor(
         text: string,
@@ -48,6 +59,7 @@ export class FormattedText
         fontWeight: FontWeight = FontWeight.Normal,
         fontStyle: FontStyle = FontStyle.Normal,
         metrics?: TextMetrics,
+        letterSpacing: number = 0,
     )
     {
         this.Text = text;
@@ -57,5 +69,6 @@ export class FormattedText
         this.FontWeight = fontWeight;
         this.FontStyle = fontStyle;
         this.Metrics = metrics;
+        this.LetterSpacing = letterSpacing;
     }
 }

@@ -186,6 +186,10 @@ export class SvgDomDrawingContext implements DrawingContext
         {
             t.setAttribute('font-style', text.FontStyle);
         }
+        if (text.LetterSpacing !== 0)
+        {
+            t.setAttribute('letter-spacing', formatNumber(text.LetterSpacing));
+        }
         applyTextFill(t, text.Foreground);
         // No textLength / lengthAdjust here — see the matching block
         // in svg-drawing-context.ts. Forcing the SVG render width to

@@ -292,3 +292,53 @@ describe('TextBlock end-to-end through SvgDrawingContext', () => {
             'TextBlock without an active palette should paint the neutral fallback');
     });
 });
+
+describe('TextBlock LetterSpacing (M3 tracking)', () => {
+    test('default LetterSpacing is 0', () => {
+        const t = new TextBlock('A');
+        assert.equal(t.LetterSpacing, 0);
+    });
+
+    test('LetterSpacing rides through to FormattedText on Render', () => {
+        const t = new TextBlock('A');
+        t.LetterSpacing = 0.5;
+        t.Measure(new Size(500, 500));
+        t.Arrange(new Rect(0, 0, 100, 30));
+
+        const dc = new CapturingContext();
+        t.Render(dc);
+        assert.equal(dc.texts.length, 1);
+        assert.equal(dc.texts[0]!.text.LetterSpacing, 0.5);
+    });
+
+    test('LetterSpacing is MetaData.Inherits — cascades from a Border ancestor', () => {
+        const inner = new TextBlock('Hi');
+        const outer = new Border(inner);
+        outer._set_property_value_by_name(TextBlock, 'LetterSpacing', 0.25);
+
+        assert.equal(inner.LetterSpacing, 0.25);
+        assert.equal(inner._get_value_source_by_name('LetterSpacing'), PropertyValueSource.InheritedValue);
+    });
+
+    test('LetterSpacing emits letter-spacing on SVG <text> when non-zero', () => {
+        const t = new TextBlock('Hello');
+        t.LetterSpacing = 0.5;
+
+        const target = new HeadlessTarget(200, 50, t);
+        const dc = new SvgDrawingContext();
+        target.Render(dc);
+
+        assert.match(dc.ToFragment(), /letter-spacing="0\.5"/);
+    });
+
+    test('LetterSpacing of 0 omits the attribute (default browser kerning)', () => {
+        const t = new TextBlock('Hello');
+        // No explicit LetterSpacing — defaults to 0.
+
+        const target = new HeadlessTarget(200, 50, t);
+        const dc = new SvgDrawingContext();
+        target.Render(dc);
+
+        assert.doesNotMatch(dc.ToFragment(), /letter-spacing=/);
+    });
+});

@@ -1,25 +1,17 @@
 // Material 3 type scale.
 //
 // Each token is a keyed Style[TargetType=TextBlock] that consumers
-// apply via `TextBlock [Style = @TitleLarge]`. Sizes and weights
-// follow the M3 spec
-// (https://m3.material.io/styles/typography/type-scale-tokens) —
-// thirteen styles spanning Display / Headline / Title / Body / Label,
-// each at three weights (Large / Medium / Small). LineHeight is part
-// of the spec but TextBlock doesn't yet expose a LineHeight DP; once
-// it does these Styles will gain matching Setters.
+// apply via `TextBlock [Style = @TitleLarge]`. The setter values bind
+// to the atomic typography tokens declared in material.mu's
+// `tokens { … }` block, so a theme that wants to override a single
+// atom (e.g. flip the body family to a brand typeface without
+// restating the sizes) re-binds the matching @-token at scheme
+// registration and every consumer Style picks the change up live via
+// the DynamicResource pipeline.
 //
-// FontFamily intentionally stays default. M3 baseline is Roboto, but
-// loading a non-system font in the framework would be a fingerprinting
-// surface and a layout-stability hazard. Hosts that want Roboto can
-// override per-Style or set Application-level FontFamily.
-//
-// FontWeight: M3 specifies Medium (500) for Title/Label tiers, but the
-// framework's FontWeight enum only exposes Normal and Bold today. Until
-// Medium lands, those tiers ship as Normal (which preserves the
-// per-FontSize ordering even if it understates the title emphasis).
-// Once FontWeight.Medium exists, this file updates and no consumer
-// markup has to change.
+// All five atoms — Font, Weight, Size, LineHeight, Tracking — flow
+// through here per role. Tracking maps to TextBlock.LetterSpacing
+// (added in Phase 0 of m3-modernization-plan.md).
 //
 // Typography is light/dark agnostic — these Styles register once and
 // stay across SetTheme swaps. material.ts handles that lifecycle:
@@ -29,27 +21,117 @@
 resources Typography {
 
     // ── Display tier (large hero headings) ──────────────────────────
-    Style x:key="DisplayLarge"  [TargetType=TextBlock] { FontSize = 57; FontWeight = Normal; LineHeight = 64; }
-    Style x:key="DisplayMedium" [TargetType=TextBlock] { FontSize = 45; FontWeight = Normal; LineHeight = 52; }
-    Style x:key="DisplaySmall"  [TargetType=TextBlock] { FontSize = 36; FontWeight = Normal; LineHeight = 44; }
+    Style x:key="DisplayLarge"  [TargetType=TextBlock] {
+        FontFamily    = @DisplayLargeFont;
+        FontWeight    = @DisplayLargeWeight;
+        FontSize      = @DisplayLargeSize;
+        LineHeight    = @DisplayLargeLineHeight;
+        LetterSpacing = @DisplayLargeTracking;
+    }
+    Style x:key="DisplayMedium" [TargetType=TextBlock] {
+        FontFamily    = @DisplayMediumFont;
+        FontWeight    = @DisplayMediumWeight;
+        FontSize      = @DisplayMediumSize;
+        LineHeight    = @DisplayMediumLineHeight;
+        LetterSpacing = @DisplayMediumTracking;
+    }
+    Style x:key="DisplaySmall"  [TargetType=TextBlock] {
+        FontFamily    = @DisplaySmallFont;
+        FontWeight    = @DisplaySmallWeight;
+        FontSize      = @DisplaySmallSize;
+        LineHeight    = @DisplaySmallLineHeight;
+        LetterSpacing = @DisplaySmallTracking;
+    }
 
     // ── Headline tier (page / section headings) ─────────────────────
-    Style x:key="HeadlineLarge"  [TargetType=TextBlock] { FontSize = 32; FontWeight = Normal; LineHeight = 40; }
-    Style x:key="HeadlineMedium" [TargetType=TextBlock] { FontSize = 28; FontWeight = Normal; LineHeight = 36; }
-    Style x:key="HeadlineSmall"  [TargetType=TextBlock] { FontSize = 24; FontWeight = Normal; LineHeight = 32; }
+    Style x:key="HeadlineLarge"  [TargetType=TextBlock] {
+        FontFamily    = @HeadlineLargeFont;
+        FontWeight    = @HeadlineLargeWeight;
+        FontSize      = @HeadlineLargeSize;
+        LineHeight    = @HeadlineLargeLineHeight;
+        LetterSpacing = @HeadlineLargeTracking;
+    }
+    Style x:key="HeadlineMedium" [TargetType=TextBlock] {
+        FontFamily    = @HeadlineMediumFont;
+        FontWeight    = @HeadlineMediumWeight;
+        FontSize      = @HeadlineMediumSize;
+        LineHeight    = @HeadlineMediumLineHeight;
+        LetterSpacing = @HeadlineMediumTracking;
+    }
+    Style x:key="HeadlineSmall"  [TargetType=TextBlock] {
+        FontFamily    = @HeadlineSmallFont;
+        FontWeight    = @HeadlineSmallWeight;
+        FontSize      = @HeadlineSmallSize;
+        LineHeight    = @HeadlineSmallLineHeight;
+        LetterSpacing = @HeadlineSmallTracking;
+    }
 
     // ── Title tier (card / sub-section titles) ──────────────────────
-    Style x:key="TitleLarge"  [TargetType=TextBlock] { FontSize = 22; FontWeight = Normal; LineHeight = 28; }
-    Style x:key="TitleMedium" [TargetType=TextBlock] { FontSize = 16; FontWeight = Normal; LineHeight = 24; }
-    Style x:key="TitleSmall"  [TargetType=TextBlock] { FontSize = 14; FontWeight = Normal; LineHeight = 20; }
+    Style x:key="TitleLarge"  [TargetType=TextBlock] {
+        FontFamily    = @TitleLargeFont;
+        FontWeight    = @TitleLargeWeight;
+        FontSize      = @TitleLargeSize;
+        LineHeight    = @TitleLargeLineHeight;
+        LetterSpacing = @TitleLargeTracking;
+    }
+    Style x:key="TitleMedium" [TargetType=TextBlock] {
+        FontFamily    = @TitleMediumFont;
+        FontWeight    = @TitleMediumWeight;
+        FontSize      = @TitleMediumSize;
+        LineHeight    = @TitleMediumLineHeight;
+        LetterSpacing = @TitleMediumTracking;
+    }
+    Style x:key="TitleSmall"  [TargetType=TextBlock] {
+        FontFamily    = @TitleSmallFont;
+        FontWeight    = @TitleSmallWeight;
+        FontSize      = @TitleSmallSize;
+        LineHeight    = @TitleSmallLineHeight;
+        LetterSpacing = @TitleSmallTracking;
+    }
 
     // ── Body tier (paragraph / list / form text) ────────────────────
-    Style x:key="BodyLarge"  [TargetType=TextBlock] { FontSize = 16; FontWeight = Normal; LineHeight = 24; }
-    Style x:key="BodyMedium" [TargetType=TextBlock] { FontSize = 14; FontWeight = Normal; LineHeight = 20; }
-    Style x:key="BodySmall"  [TargetType=TextBlock] { FontSize = 12; FontWeight = Normal; LineHeight = 16; }
+    Style x:key="BodyLarge"  [TargetType=TextBlock] {
+        FontFamily    = @BodyLargeFont;
+        FontWeight    = @BodyLargeWeight;
+        FontSize      = @BodyLargeSize;
+        LineHeight    = @BodyLargeLineHeight;
+        LetterSpacing = @BodyLargeTracking;
+    }
+    Style x:key="BodyMedium" [TargetType=TextBlock] {
+        FontFamily    = @BodyMediumFont;
+        FontWeight    = @BodyMediumWeight;
+        FontSize      = @BodyMediumSize;
+        LineHeight    = @BodyMediumLineHeight;
+        LetterSpacing = @BodyMediumTracking;
+    }
+    Style x:key="BodySmall"  [TargetType=TextBlock] {
+        FontFamily    = @BodySmallFont;
+        FontWeight    = @BodySmallWeight;
+        FontSize      = @BodySmallSize;
+        LineHeight    = @BodySmallLineHeight;
+        LetterSpacing = @BodySmallTracking;
+    }
 
     // ── Label tier (button / chip / dense-list captions) ────────────
-    Style x:key="LabelLarge"  [TargetType=TextBlock] { FontSize = 14; FontWeight = Normal; LineHeight = 20; }
-    Style x:key="LabelMedium" [TargetType=TextBlock] { FontSize = 12; FontWeight = Normal; LineHeight = 16; }
-    Style x:key="LabelSmall"  [TargetType=TextBlock] { FontSize = 11; FontWeight = Normal; LineHeight = 16; }
+    Style x:key="LabelLarge"  [TargetType=TextBlock] {
+        FontFamily    = @LabelLargeFont;
+        FontWeight    = @LabelLargeWeight;
+        FontSize      = @LabelLargeSize;
+        LineHeight    = @LabelLargeLineHeight;
+        LetterSpacing = @LabelLargeTracking;
+    }
+    Style x:key="LabelMedium" [TargetType=TextBlock] {
+        FontFamily    = @LabelMediumFont;
+        FontWeight    = @LabelMediumWeight;
+        FontSize      = @LabelMediumSize;
+        LineHeight    = @LabelMediumLineHeight;
+        LetterSpacing = @LabelMediumTracking;
+    }
+    Style x:key="LabelSmall"  [TargetType=TextBlock] {
+        FontFamily    = @LabelSmallFont;
+        FontWeight    = @LabelSmallWeight;
+        FontSize      = @LabelSmallSize;
+        LineHeight    = @LabelSmallLineHeight;
+        LetterSpacing = @LabelSmallTracking;
+    }
 }

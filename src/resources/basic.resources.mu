@@ -70,86 +70,124 @@ resources MuralBasic {
     // every dependent colour through the DynamicResource bindings.
 
     // Filled — the M3 baseline, also the historical mural default.
+    // Resting: @Primary container + @OnPrimary ink (LabelLarge, weight
+    // Medium = 500).
+    // State layer: a translucent @OnPrimary overlay composited via
+    // PART_StateLayer (the inner Border). Hover = @OnPrimaryHoverLayer
+    // (8% alpha), pressed = @OnPrimaryPressLayer (12%) — matches the
+    // M3 reference implementation pattern (container colour stays
+    // constant; the ink-colour overlay carries the state tint).
+    // TextBlock.Foreground / FontWeight are cross-class attached writes
+    // on PART_Border that cascade down to the descendant TextBlock in
+    // the Content via the standard inheritance walk.
     Template x:key="DefaultFilledButton" [TargetType=Button]{
-        Border x:name="PART_Border"[Background      = @Primary,
-                                    BorderThickness = (0),
-                                    CornerRadius    = @ShapeFull,
-                                    Padding         = (24,10,24,10)]{
-            ContentPresenter
+        Border x:name="PART_Border"[Background          = @Primary,
+                                    BorderThickness     = (0),
+                                    CornerRadius        = @ShapeFull,
+                                    TextBlock.Foreground = @OnPrimary,
+                                    TextBlock.FontWeight = @TypefaceWeightMedium]{
+            Border x:name="PART_StateLayer"[Background      = #00000000,
+                                            CornerRadius    = @ShapeFull,
+                                            Padding         = (24,10,24,10)]{
+                ContentPresenter
+            }
         }
-        when ( IsMouseOver )           { PART_Border.Background = @PrimaryHover; }
-        when ( IsPressed   )           { PART_Border.Background = @PrimaryPress; }
+        when ( IsMouseOver )           { PART_StateLayer.Background = @OnPrimaryHoverLayer; }
+        when ( IsPressed   )           { PART_StateLayer.Background = @OnPrimaryPressLayer; }
         // Adaptive layout — Compact tightens, Comfortable loosens,
-        // Coarse pointer bumps the touch target.
-        when ( ThemeManager.Density = Compact )     { PART_Border.Padding = (16,6,16,6); }
-        when ( ThemeManager.Density = Comfortable ) { PART_Border.Padding = (28,12,28,12); }
-        when ( ThemeManager.Pointer = Coarse )      { PART_Border.Padding = (24,14,24,14); }
+        // Coarse pointer bumps the touch target. Padding lives on the
+        // state layer so its hit area matches the painted chrome.
+        when ( ThemeManager.Density = Compact )     { PART_StateLayer.Padding = (16,6,16,6); }
+        when ( ThemeManager.Density = Comfortable ) { PART_StateLayer.Padding = (28,12,28,12); }
+        when ( ThemeManager.Pointer = Coarse )      { PART_StateLayer.Padding = (24,14,24,14); }
     }
 
-    // Elevated — surface-tinted base, primary text, elevation 1 at
-    // rest. Hover bumps elevation; pressed lowers it back to 1 so the
-    // press feedback is recession + colour both.
+    // Elevated — surface-tinted base, @Primary text, elevation Level1
+    // at rest. Hover bumps to Level2; pressed lowers to Level1 so the
+    // press feedback is recession + colour both. The state layer is
+    // tinted @Primary (the ink) per M3 spec.
     Template x:key="DefaultElevatedButton" [TargetType=Button]{
-        Border x:name="PART_Border"[Background      = @SurfaceContainerLow,
-                                    BorderThickness = (0),
-                                    CornerRadius    = @ShapeFull,
-                                    Effect          = @Elevation1,
-                                    Padding         = (24,10,24,10)]{
-            ContentPresenter
+        Border x:name="PART_Border"[Background          = @SurfaceContainerLow,
+                                    BorderThickness     = (0),
+                                    CornerRadius        = @ShapeFull,
+                                    Effect              = @ElevationLevel1,
+                                    TextBlock.Foreground = @Primary,
+                                    TextBlock.FontWeight = @TypefaceWeightMedium]{
+            Border x:name="PART_StateLayer"[Background      = #00000000,
+                                            CornerRadius    = @ShapeFull,
+                                            Padding         = (24,10,24,10)]{
+                ContentPresenter
+            }
         }
-        when ( IsMouseOver ) { PART_Border.Background = @SurfaceContainer;
-                               PART_Border.Effect     = @Elevation2; }
-        when ( IsPressed   ) { PART_Border.Background = @SurfaceContainerHigh;
-                               PART_Border.Effect     = @Elevation1; }
+        when ( IsMouseOver ) { PART_StateLayer.Background = @PrimaryHoverLayer;
+                               PART_Border.Effect         = @ElevationLevel2; }
+        when ( IsPressed   ) { PART_StateLayer.Background = @PrimaryPressLayer;
+                               PART_Border.Effect         = @ElevationLevel1; }
     }
 
-    // Tonal (Filled Tonal) — secondary-container base. Sits between
-    // Filled (high emphasis) and Outlined (low) in the M3 emphasis
-    // hierarchy. No elevation at rest.
+    // Tonal (Filled Tonal) — @SecondaryContainer base, @OnSecondaryContainer
+    // text. Sits between Filled (high emphasis) and Outlined (low) in
+    // the M3 emphasis hierarchy. State layer tinted @OnSecondaryContainer.
     Template x:key="DefaultTonalButton" [TargetType=Button]{
-        Border x:name="PART_Border"[Background      = @SecondaryContainer,
-                                    BorderThickness = (0),
-                                    CornerRadius    = @ShapeFull,
-                                    Padding         = (24,10,24,10)]{
-            ContentPresenter
+        Border x:name="PART_Border"[Background          = @SecondaryContainer,
+                                    BorderThickness     = (0),
+                                    CornerRadius        = @ShapeFull,
+                                    TextBlock.Foreground = @OnSecondaryContainer,
+                                    TextBlock.FontWeight = @TypefaceWeightMedium]{
+            Border x:name="PART_StateLayer"[Background      = #00000000,
+                                            CornerRadius    = @ShapeFull,
+                                            Padding         = (24,10,24,10)]{
+                ContentPresenter
+            }
         }
-        when ( IsMouseOver ) { PART_Border.Background = @SurfaceContainerHigh; }
-        when ( IsPressed   ) { PART_Border.Background = @SurfaceContainerHighest; }
+        when ( IsMouseOver ) { PART_StateLayer.Background = @OnSecondaryContainerHoverLayer; }
+        when ( IsPressed   ) { PART_StateLayer.Background = @OnSecondaryContainerPressLayer; }
     }
 
-    // Outlined — transparent surface, 1-DIP outline, primary text.
-    // Hover / press tint via the SurfaceContainer ramp so the outline
-    // stays the dominant chrome.
+    // Outlined — transparent surface, 1-DIP outline, @Primary text.
+    // State layer is @Primary-tinted (matches the ink) so the press
+    // feedback reads as the button's own colour pulse, not a generic
+    // surface tint.
     Template x:key="DefaultOutlinedButton" [TargetType=Button]{
-        Border x:name="PART_Border"[Background      = #00000000,
-                                    BorderBrush     = @Outline,
-                                    BorderThickness = (1),
-                                    CornerRadius    = @ShapeFull,
-                                    Padding         = (23,9,23,9)]{
-            ContentPresenter
+        Border x:name="PART_Border"[Background          = #00000000,
+                                    BorderBrush         = @Outline,
+                                    BorderThickness     = (1),
+                                    CornerRadius        = @ShapeFull,
+                                    TextBlock.Foreground = @Primary,
+                                    TextBlock.FontWeight = @TypefaceWeightMedium]{
+            Border x:name="PART_StateLayer"[Background      = #00000000,
+                                            CornerRadius    = @ShapeFull,
+                                            Padding         = (23,9,23,9)]{
+                ContentPresenter
+            }
         }
-        when ( IsMouseOver )            { PART_Border.Background     = @SurfaceContainerLow; }
-        when ( IsPressed   )            { PART_Border.Background     = @SurfaceContainerHigh; }
-        when ( ThemeManager.Density = Compact )      { PART_Border.Padding        = (15,5,15,5); }
-        when ( ThemeManager.Density = Comfortable )  { PART_Border.Padding        = (27,11,27,11); }
-        when ( ThemeManager.Pointer = Coarse )       { PART_Border.Padding        = (23,13,23,13); }
+        when ( IsMouseOver )            { PART_StateLayer.Background = @PrimaryHoverLayer; }
+        when ( IsPressed   )            { PART_StateLayer.Background = @PrimaryPressLayer; }
+        when ( ThemeManager.Density = Compact )      { PART_StateLayer.Padding    = (15,5,15,5); }
+        when ( ThemeManager.Density = Comfortable )  { PART_StateLayer.Padding    = (27,11,27,11); }
+        when ( ThemeManager.Pointer = Coarse )       { PART_StateLayer.Padding    = (23,13,23,13); }
         // High-contrast a11y — thicker outline so the chrome reads
         // even when the surface tint is muted.
         when ( ThemeManager.PrefersContrast = More ) { PART_Border.BorderThickness = (2); }
     }
 
-    // Text — fully transparent base, no chrome at rest. Hover / press
-    // reveal a low-emphasis tint. Tighter padding than the other
+    // Text — fully transparent base, no chrome at rest, @Primary text.
+    // State layer is @Primary-tinted. Tighter padding than the other
     // variants matches the M3 spec.
     Template x:key="DefaultTextButton" [TargetType=Button]{
-        Border x:name="PART_Border"[Background      = #00000000,
-                                    BorderThickness = (0),
-                                    CornerRadius    = @ShapeFull,
-                                    Padding         = (12,10,12,10)]{
-            ContentPresenter
+        Border x:name="PART_Border"[Background          = #00000000,
+                                    BorderThickness     = (0),
+                                    CornerRadius        = @ShapeFull,
+                                    TextBlock.Foreground = @Primary,
+                                    TextBlock.FontWeight = @TypefaceWeightMedium]{
+            Border x:name="PART_StateLayer"[Background      = #00000000,
+                                            CornerRadius    = @ShapeFull,
+                                            Padding         = (12,10,12,10)]{
+                ContentPresenter
+            }
         }
-        when ( IsMouseOver ) { PART_Border.Background = @SurfaceContainerLow; }
-        when ( IsPressed   ) { PART_Border.Background = @SurfaceContainerHigh; }
+        when ( IsMouseOver ) { PART_StateLayer.Background = @PrimaryHoverLayer; }
+        when ( IsPressed   ) { PART_StateLayer.Background = @PrimaryPressLayer; }
     }
 
     // Default Style — picks the template by Variant via property

@@ -84,9 +84,9 @@ export class MaterialElevationEffect extends Effect
     // participate in the property/binding pipeline), so a real DP
     // can't be registered here — the element-node-value emit just
     // does `_e.Level = 1` which goes through the setter.
-    public Level: 1 | 2 | 3 | 4 | 5 = 1;
+    public Level: 0 | 1 | 2 | 3 | 4 | 5 = 1;
 
-    constructor(level?: 1 | 2 | 3 | 4 | 5)
+    constructor(level?: 0 | 1 | 2 | 3 | 4 | 5)
     {
         super();
         if (level !== undefined) this.Level = level;
@@ -94,6 +94,10 @@ export class MaterialElevationEffect extends Effect
 
     public override toCssFilter(): string
     {
+        // Level 0 = M3 "Resting / flat" — no shadow at all. Returning
+        // the empty filter string lets the renderer treat it the same
+        // as not setting `filter` at all.
+        if (this.Level === 0) return '';
         // (offsetY1, blur1, offsetY2, blur2) per M3 spec, abridged.
         const RAMP: ReadonlyArray<readonly [number, number, number, number]> = [
             [1,  2, 1,  3],   // Level 1

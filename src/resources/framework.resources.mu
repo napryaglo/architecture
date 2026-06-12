@@ -313,6 +313,248 @@ resources MuralFramework {
         Template = @DefaultToolBarButton;
     }
 
+    // ── IconButton: 40×40 chrome with M3 variant-driven skinning ────
+    // Four M3 variants — Filled (Primary container), Tonal
+    // (SecondaryContainer), Outlined (1-DIP outline), Standard (no
+    // chrome at rest). The glyph rides through the inherited Content
+    // path; TextBlock.Foreground writes on PART_Border cascade to a
+    // TextBlock Content so authors can drop in `IconButton{ TextBlock
+    // [Text="×"] }` without restating the icon colour.
+    //
+    // 40×40 baseline (Coarse pointer bumps to 48×48); padding stays at
+    // 8dp on all sides to leave a 24dp inner glyph slot. @ShapeFull
+    // clamps to 20dp at render, so each variant reads as a circle.
+
+    // Filled — Primary container, OnPrimary glyph. State layer composites
+    // OnPrimary at 8% / 12% over Primary per M3 strict spec.
+    Template x:key="DefaultFilledIconButton" [TargetType=IconButton] {
+        Border x:name="PART_Border"
+              [ Background          = @Primary,
+                BorderThickness     = (0),
+                CornerRadius        = @ShapeFull,
+                Width               = 40,
+                Height              = 40,
+                TextBlock.Foreground = @OnPrimary ] {
+            Border x:name="PART_StateLayer"
+                  [ Background   = #00000000,
+                    CornerRadius = @ShapeFull,
+                    Padding      = (8,8,8,8) ] {
+                ContentPresenter
+            }
+        }
+        when ( IsMouseOver )                    { PART_StateLayer.Background = @OnPrimaryHoverLayer; }
+        when ( IsPressed   )                    { PART_StateLayer.Background = @OnPrimaryPressLayer; }
+        when ( ThemeManager.Pointer = Coarse )  { PART_Border.Width  = 48;
+                                                  PART_Border.Height = 48; }
+    }
+
+    // Tonal — SecondaryContainer, OnSecondaryContainer glyph.
+    Template x:key="DefaultTonalIconButton" [TargetType=IconButton] {
+        Border x:name="PART_Border"
+              [ Background          = @SecondaryContainer,
+                BorderThickness     = (0),
+                CornerRadius        = @ShapeFull,
+                Width               = 40,
+                Height              = 40,
+                TextBlock.Foreground = @OnSecondaryContainer ] {
+            Border x:name="PART_StateLayer"
+                  [ Background   = #00000000,
+                    CornerRadius = @ShapeFull,
+                    Padding      = (8,8,8,8) ] {
+                ContentPresenter
+            }
+        }
+        when ( IsMouseOver )                    { PART_StateLayer.Background = @OnSecondaryContainerHoverLayer; }
+        when ( IsPressed   )                    { PART_StateLayer.Background = @OnSecondaryContainerPressLayer; }
+        when ( ThemeManager.Pointer = Coarse )  { PART_Border.Width  = 48;
+                                                  PART_Border.Height = 48; }
+    }
+
+    // Outlined — transparent, 1-DIP outline, OnSurfaceVariant glyph.
+    Template x:key="DefaultOutlinedIconButton" [TargetType=IconButton] {
+        Border x:name="PART_Border"
+              [ Background          = #00000000,
+                BorderBrush         = @Outline,
+                BorderThickness     = (1),
+                CornerRadius        = @ShapeFull,
+                Width               = 40,
+                Height              = 40,
+                TextBlock.Foreground = @OnSurfaceVariant ] {
+            Border x:name="PART_StateLayer"
+                  [ Background   = #00000000,
+                    CornerRadius = @ShapeFull,
+                    Padding      = (8,8,8,8) ] {
+                ContentPresenter
+            }
+        }
+        when ( IsMouseOver )                          { PART_StateLayer.Background  = @OnSurfaceVariantHoverLayer; }
+        when ( IsPressed   )                          { PART_StateLayer.Background  = @OnSurfaceVariantPressLayer; }
+        when ( ThemeManager.Pointer = Coarse )        { PART_Border.Width           = 48;
+                                                        PART_Border.Height          = 48; }
+        when ( ThemeManager.PrefersContrast = More )  { PART_Border.BorderThickness = (2); }
+    }
+
+    // Standard — fully transparent at rest, OnSurfaceVariant glyph.
+    // The low-emphasis default for toolbar-style icon buttons.
+    Template x:key="DefaultStandardIconButton" [TargetType=IconButton] {
+        Border x:name="PART_Border"
+              [ Background          = #00000000,
+                BorderThickness     = (0),
+                CornerRadius        = @ShapeFull,
+                Width               = 40,
+                Height              = 40,
+                TextBlock.Foreground = @OnSurfaceVariant ] {
+            Border x:name="PART_StateLayer"
+                  [ Background   = #00000000,
+                    CornerRadius = @ShapeFull,
+                    Padding      = (8,8,8,8) ] {
+                ContentPresenter
+            }
+        }
+        when ( IsMouseOver )                    { PART_StateLayer.Background = @OnSurfaceVariantHoverLayer; }
+        when ( IsPressed   )                    { PART_StateLayer.Background = @OnSurfaceVariantPressLayer; }
+        when ( ThemeManager.Pointer = Coarse )  { PART_Border.Width  = 48;
+                                                  PART_Border.Height = 48; }
+    }
+
+    // Default Style — picks the template by Variant via property
+    // triggers. Filled is the baseline; the other three variants ride
+    // their own triggers. Mirrors the Button Style structure in
+    // basic.resources.mu (with Standard added for the chrome-less case).
+    Style [TargetType=IconButton] {
+        Template = @DefaultFilledIconButton;
+        when ( Variant = Tonal    ) { Template = @DefaultTonalIconButton; }
+        when ( Variant = Outlined ) { Template = @DefaultOutlinedIconButton; }
+        when ( Variant = Standard ) { Template = @DefaultStandardIconButton; }
+    }
+
+    // ── IconButtonToggle: IconButton with an IsChecked state flip ───
+    // Four templates mirror the IconButton variants. Each ships a
+    // resting (unchecked) chrome whose colours match the M3 "unselected"
+    // role, then a `when ( IsChecked )` trigger swaps to the variant's
+    // "selected" role pair. Hover / press tints layer on top of either
+    // state — checked + hover composes as expected because the trigger
+    // graph stays one level deep (IsChecked sets the base; IsMouseOver
+    // / IsPressed re-tints).
+
+    // Filled Toggle — unchecked = SurfaceContainerHighest, checked = Primary.
+    // State layer overlay uses the unchecked ink (OnSurfaceVariant) at
+    // 8/12% for all hover/press states. Strict M3 would swap the
+    // overlay colour to OnPrimary on checked hover/press, but
+    // ControlTemplate triggers don't currently accept the multi-term
+    // `when (IsChecked and IsMouseOver)` form (only Style triggers do).
+    // Visual delta is minimal because the alpha is low.
+    Template x:key="DefaultFilledIconButtonToggle" [TargetType=IconButtonToggle] {
+        Border x:name="PART_Border"
+              [ Background      = @SurfaceContainerHighest,
+                BorderThickness = (0),
+                CornerRadius    = @ShapeFull,
+                Width           = 40,
+                Height          = 40 ] {
+            Border x:name="PART_StateLayer"
+                  [ Background   = #00000000,
+                    CornerRadius = @ShapeFull,
+                    Padding      = (8,8,8,8) ] {
+                ContentPresenter
+            }
+        }
+        when ( IsChecked   )                    { PART_Border.Background     = @Primary; }
+        when ( IsMouseOver )                    { PART_StateLayer.Background = @OnSurfaceVariantHoverLayer; }
+        when ( IsPressed   )                    { PART_StateLayer.Background = @OnSurfaceVariantPressLayer; }
+        when ( ThemeManager.Pointer = Coarse )  { PART_Border.Width  = 48;
+                                                  PART_Border.Height = 48; }
+    }
+
+    // Tonal Toggle — unchecked = SurfaceContainerHighest, checked = SecondaryContainer.
+    Template x:key="DefaultTonalIconButtonToggle" [TargetType=IconButtonToggle] {
+        Border x:name="PART_Border"
+              [ Background      = @SurfaceContainerHighest,
+                BorderThickness = (0),
+                CornerRadius    = @ShapeFull,
+                Width           = 40,
+                Height          = 40 ] {
+            Border x:name="PART_StateLayer"
+                  [ Background   = #00000000,
+                    CornerRadius = @ShapeFull,
+                    Padding      = (8,8,8,8) ] {
+                ContentPresenter
+            }
+        }
+        when ( IsChecked   )                    { PART_Border.Background     = @SecondaryContainer; }
+        when ( IsMouseOver )                    { PART_StateLayer.Background = @OnSurfaceVariantHoverLayer; }
+        when ( IsPressed   )                    { PART_StateLayer.Background = @OnSurfaceVariantPressLayer; }
+        when ( ThemeManager.Pointer = Coarse )  { PART_Border.Width  = 48;
+                                                  PART_Border.Height = 48; }
+    }
+
+    // Outlined Toggle — unchecked = transparent + outline,
+    // checked = InverseSurface (no border).
+    Template x:key="DefaultOutlinedIconButtonToggle" [TargetType=IconButtonToggle] {
+        Border x:name="PART_Border"
+              [ Background      = #00000000,
+                BorderBrush     = @Outline,
+                BorderThickness = (1),
+                CornerRadius    = @ShapeFull,
+                Width           = 40,
+                Height          = 40 ] {
+            Border x:name="PART_StateLayer"
+                  [ Background   = #00000000,
+                    CornerRadius = @ShapeFull,
+                    Padding      = (8,8,8,8) ] {
+                ContentPresenter
+            }
+        }
+        when ( IsChecked   )                          { PART_Border.Background      = @InverseSurface;
+                                                        PART_Border.BorderThickness = (0); }
+        when ( IsMouseOver )                          { PART_StateLayer.Background  = @OnSurfaceVariantHoverLayer; }
+        when ( IsPressed   )                          { PART_StateLayer.Background  = @OnSurfaceVariantPressLayer; }
+        when ( ThemeManager.Pointer = Coarse )        { PART_Border.Width           = 48;
+                                                        PART_Border.Height          = 48; }
+        when ( ThemeManager.PrefersContrast = More )  { PART_Border.BorderThickness = (2); }
+    }
+
+    // Standard Toggle — unchecked = transparent / OnSurfaceVariant,
+    // checked = transparent / Primary. No container colour change; the
+    // Style-level Foreground trigger is the only visible cue.
+    Template x:key="DefaultStandardIconButtonToggle" [TargetType=IconButtonToggle] {
+        Border x:name="PART_Border"
+              [ Background      = #00000000,
+                BorderThickness = (0),
+                CornerRadius    = @ShapeFull,
+                Width           = 40,
+                Height          = 40 ] {
+            Border x:name="PART_StateLayer"
+                  [ Background   = #00000000,
+                    CornerRadius = @ShapeFull,
+                    Padding      = (8,8,8,8) ] {
+                ContentPresenter
+            }
+        }
+        when ( IsMouseOver )                    { PART_StateLayer.Background = @OnSurfaceVariantHoverLayer; }
+        when ( IsPressed   )                    { PART_StateLayer.Background = @OnSurfaceVariantPressLayer; }
+        when ( ThemeManager.Pointer = Coarse )  { PART_Border.Width  = 48;
+                                                  PART_Border.Height = 48; }
+    }
+
+    // IconButtonToggle Style — picks Template by Variant and writes
+    // TextBlock.Foreground on the templated parent for both states
+    // (unchecked = OnSurfaceVariant per M3, checked = per-variant
+    // "selected" ink). Multi-condition `Variant=X and IsChecked` triggers
+    // give us 4 distinct checked-state foregrounds without needing the
+    // 3-segment template-trigger LHS the compiler rejects.
+    Style [TargetType=IconButtonToggle] {
+        Template             = @DefaultFilledIconButtonToggle;
+        TextBlock.Foreground = @OnSurfaceVariant;
+        TextBlock.FontWeight = @TypefaceWeightMedium;
+        when ( Variant = Tonal    ) { Template = @DefaultTonalIconButtonToggle; }
+        when ( Variant = Outlined ) { Template = @DefaultOutlinedIconButtonToggle; }
+        when ( Variant = Standard ) { Template = @DefaultStandardIconButtonToggle; }
+        when ( IsChecked and Variant = Filled   ) { TextBlock.Foreground = @OnPrimary; }
+        when ( IsChecked and Variant = Tonal    ) { TextBlock.Foreground = @OnSecondaryContainer; }
+        when ( IsChecked and Variant = Outlined ) { TextBlock.Foreground = @InverseOnSurface; }
+        when ( IsChecked and Variant = Standard ) { TextBlock.Foreground = @Primary; }
+    }
+
     // ── ToolBarToggleButton: connected-bar chrome ──────────────────
     // Same shape as ToolBarButton but with an IsChecked trigger on top —
     // the chrome reads as "Filled Tonal" while checked so a sticky

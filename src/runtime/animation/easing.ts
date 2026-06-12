@@ -27,6 +27,19 @@ export const Easings = {
     CubicOut:    (t: number): number => 1 - Math.pow(1 - t, 3),
     CubicInOut:  (t: number): number =>
         t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2,
+
+    // ── M3 motion curves (https://m3.material.io/styles/motion/easing-and-duration/tokens-specs)
+    // Authored as cubic-beziers via the same machinery as the Linear /
+    // Quad / Cubic families above. Each curve is materialised once at
+    // module load (the cubicBezier closure caches its precomputed
+    // polynomial coefficients) so theme tokens can reference them
+    // without per-frame allocations.
+    Standard:             cubicBezier(0.2,  0,    0,    1   ),
+    StandardAccelerate:   cubicBezier(0.3,  0,    1,    1   ),
+    StandardDecelerate:   cubicBezier(0,    0,    0,    1   ),
+    Emphasized:           cubicBezier(0.2,  0,    0,    1   ),
+    EmphasizedAccelerate: cubicBezier(0.3,  0,    0.8,  0.15),
+    EmphasizedDecelerate: cubicBezier(0.05, 0.7,  0.1,  1   ),
 } as const;
 
 // Build a CSS-style cubic-bezier easing from two interior control points.

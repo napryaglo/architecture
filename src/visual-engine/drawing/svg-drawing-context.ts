@@ -180,6 +180,10 @@ export class SvgDrawingContext implements DrawingContext
         {
             attrs.push(`font-style="${text.FontStyle}"`);
         }
+        if (text.LetterSpacing !== 0)
+        {
+            attrs.push(`letter-spacing="${formatNumber(text.LetterSpacing)}"`);
+        }
         attrs.push(fillAttrForText(text.Foreground));
 
         // Deliberately NOT emitting textLength + lengthAdjust here. The

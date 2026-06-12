@@ -95,6 +95,18 @@ export class TextBlock extends Visual
     // root with `LineHeight=24`) to every descendant TextBlock without
     // re-stamping on each one.
     public static readonly LineHeightKey    = Model.RegisterProperty<number>(       TextBlock, 'LineHeight',    Number.NaN,          MetaData.Measure | MetaData.Render | MetaData.Inherits);
+    // LetterSpacing — extra space between glyphs, in DIPs. M3 typography
+    // tokens spec this as `tracking` (e.g. @BodyMedium tracking = 0.25,
+    // @LabelLarge tracking = 0.1). Render-only — the value rides through
+    // FormattedText to the renderer's `letter-spacing` attribute but is
+    // NOT factored into measure. M3 tracking values stay under ±0.5 DIP
+    // so wrapping inaccuracy is sub-pixel; honouring it in measure
+    // would need a measurer-signature change and isn't worth it for
+    // this scale.
+    //
+    // Inherits so the typography role's tracking flows down a subtree
+    // alongside FontSize / LineHeight in the same per-role setter block.
+    public static readonly LetterSpacingKey = Model.RegisterProperty<number>(       TextBlock, 'LetterSpacing', 0,                   MetaData.Render | MetaData.Inherits);
 
     // Lines computed by MeasureOverride when TextWrapping = Wrap. Each
     // entry holds the substring and the measurer-reported metrics for
@@ -142,6 +154,9 @@ export class TextBlock extends Visual
 
     public get LineHeight(): number { return this.get_property_value(TextBlock.LineHeightKey); }
     public set LineHeight(value: number) { this.set_property_value(TextBlock.LineHeightKey, value); }
+
+    public get LetterSpacing(): number { return this.get_property_value(TextBlock.LetterSpacingKey); }
+    public set LetterSpacing(value: number) { this.set_property_value(TextBlock.LetterSpacingKey, value); }
 
     // Effective line-stride in DIPs. Explicit LineHeight wins; falls
     // back to the measurer's per-line height (font ascent + descent).
@@ -261,6 +276,7 @@ export class TextBlock extends Visual
                 this.FontWeight,
                 this.FontStyle,
                 undefined,
+                this.LetterSpacing,
             );
             dc.DrawText(formatted, Point.Zero);
             return;
@@ -297,6 +313,7 @@ export class TextBlock extends Visual
                 this.FontWeight,
                 this.FontStyle,
                 line.metrics,
+                this.LetterSpacing,
             );
             // Origin is this Visual's local (offsetX, i * lineHeight) — the
             // arranged-rect offset is applied by Visual.Arrange + the

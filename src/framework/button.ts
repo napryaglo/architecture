@@ -1,5 +1,4 @@
 import {
-    DynamicResource,
     MetaData,
     Model,
     Visual,
@@ -12,7 +11,6 @@ import {
     type ICommandSource,
 } from '../framework/commands/command-source.js';
 import { ContentControl } from './content-control.js';
-import { TextBlock } from '../basic/text-block.js';
 
 // When the Click event fires. WPF parity: Release is the default
 // (visible press feedback, fire on PointerUp inside bounds), Press
@@ -44,6 +42,11 @@ export enum ButtonVariant
     Tonal    = 'Tonal',
     Outlined = 'Outlined',
     Text     = 'Text',
+    // Icon-button only — no chrome at rest, OnSurfaceVariant glyph
+    // ink. Drives DefaultStandardIconButton; on a regular Button the
+    // trigger chain falls through to Filled because no Button template
+    // exists for it.
+    Standard = 'Standard',
 }
 
 // Click handler signature. The originating PointerEventArgs rides
@@ -123,23 +126,14 @@ export class Button extends ContentControl implements ICommandSource
     constructor(content?: Visual)
     {
         super();
-        // Cross-class inherited default — propagates down to any
-        // TextBlock descendant of the Content via the standard
-        // inheritance walk. Sits on the templated parent (this Button)
-        // because it describes how descendant TextBlocks paint, not a
-        // template-internal visual; it's conceptually a property
-        // metadata default rather than markup. Triggers can't express
-        // cross-class inherited defaults, so this stays in TS — but
-        // the value rides through DynamicResource so a theme switch
-        // re-resolves @OnPrimary against the new dictionary and the
-        // change cascades down via the inheritance walk to every
-        // TextBlock in the button's content.
-        this._set_property_value_by_name(
-            TextBlock, 'Foreground', DynamicResource(this, 'OnPrimary'),
-        );
         if (content !== undefined) this.Content = content;
-        // Template + the IsPressed / IsMouseOver background swap live
-        // on the default Style (see controls.template.mu, Button block).
+        // Template + IsPressed / IsMouseOver swaps + per-variant
+        // Foreground / FontWeight defaults all live on the default
+        // Style (see basic.resources.mu, Button block). Each variant's
+        // template writes `TextBlock.Foreground = @<correct M3 role>`
+        // on PART_Border, which inherits down to the user-supplied
+        // Content's TextBlock(s) — Filled paints OnPrimary, Elevated /
+        // Outlined / Text paint Primary, Tonal paints OnSecondaryContainer.
         this.applyDefaultStyle();
     }
 

@@ -72,6 +72,8 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     // ── basic controls ──────────────────────────────────────────────
     ['Border',                  '@visualisation-sub/mural/basic'],
     ['Button',                  '@visualisation-sub/mural/framework/button.js'],
+    ['IconButton',              '@visualisation-sub/mural/framework/icon-button.js'],
+    ['IconButtonToggle',        '@visualisation-sub/mural/framework/icon-button-toggle.js'],
     ['ClickMode',               '@visualisation-sub/mural/framework/button.js'],
     ['ButtonVariant',           '@visualisation-sub/mural/framework/button.js'],
     ['TextBlock',               '@visualisation-sub/mural/basic'],
@@ -214,6 +216,9 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['SweepDirection',      '@visualisation-sub/mural/visual-engine'],
     ['DropShadowEffect',         '@visualisation-sub/mural/visual-engine'],
     ['MaterialElevationEffect',  '@visualisation-sub/mural/visual-engine'],
+
+    // ── runtime/animation (motion easing curve palette) ────────────────
+    ['Easings',             '@visualisation-sub/mural/runtime'],
 ];
 
 export const DEFAULT_SYMBOLS: SymbolMap = new Map(ENTRIES);
@@ -236,7 +241,7 @@ export const DEFAULT_SYMBOLS: SymbolMap = new Map(ENTRIES);
 export const ENUM_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<string, ReadonlySet<string>>([
     ['HorizontalAlignment',   new Set(['Left', 'Center', 'Right', 'Stretch'])],
     ['VerticalAlignment',     new Set(['Top', 'Center', 'Bottom', 'Stretch'])],
-    ['FontWeight',            new Set(['Normal', 'Bold'])],
+    ['FontWeight',            new Set(['Normal', 'Medium', 'Bold'])],
     ['FontStyle',             new Set(['Normal', 'Italic'])],
     ['Stretch',               new Set(['None', 'Fill', 'Uniform', 'UniformToFill'])],
     ['AlignmentX',            new Set(['Left', 'Center', 'Right'])],
@@ -249,7 +254,7 @@ export const ENUM_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<st
     ['SweepDirection',        new Set(['Counterclockwise', 'Clockwise'])],
     ['TextWrapping',          new Set(['NoWrap', 'Wrap'])],
     ['ClickMode',             new Set(['Release', 'Press', 'Hover'])],
-    ['ButtonVariant',         new Set(['Filled', 'Elevated', 'Tonal', 'Outlined', 'Text'])],
+    ['ButtonVariant',         new Set(['Filled', 'Elevated', 'Tonal', 'Outlined', 'Text', 'Standard'])],
     ['Orientation',           new Set(['Vertical', 'Horizontal'])],
     ['SelectionMode',         new Set(['Single', 'Multiple', 'Extended'])],
     ['MarqueeBoundsPolicy',   new Set(['Intersect', 'Contained'])],
@@ -277,6 +282,19 @@ export const ENUM_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<st
 // runtime class's exported statics — there's no compile-time link.
 export const STATIC_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<string, ReadonlySet<string>>([
     ['CornerRadius', new Set(['Full', 'Zero', 'LeftRounded', 'RightRounded'])],
+    ['Easings', new Set([
+        'Linear', 'QuadIn', 'QuadOut', 'QuadInOut',
+        'CubicIn', 'CubicOut', 'CubicInOut',
+        // M3 motion easing tokens (https://m3.material.io/styles/motion/easing-and-duration/tokens-specs)
+        'Standard', 'StandardAccelerate', 'StandardDecelerate',
+        'Emphasized', 'EmphasizedAccelerate', 'EmphasizedDecelerate',
+    ])],
+    // FontWeight is also in ENUM_MEMBERS so `FontWeight = Normal` works
+    // when the LHS property's enum type is FontWeight. STATIC_MEMBERS
+    // covers the standalone case — `@SomeToken = FontWeight.Normal` in
+    // scheme value position, where there's no LHS property to drive
+    // the enum-member resolution.
+    ['FontWeight', new Set(['Normal', 'Medium', 'Bold'])],
 ]);
 
 // Property-name → enum class candidates. Used when the markup
@@ -330,6 +348,8 @@ export const DEFAULT_SLOT_INFO: ReadonlyMap<string, SlotInfo> = new Map<string, 
     ['AdornerDecorator',        { name: 'Child',    kind: 'single' }],
     ['Border',                  { name: 'Child',    kind: 'single' }],
     ['Button',                  { name: 'Content',  kind: 'object' }],
+    ['IconButton',              { name: 'Content',  kind: 'object' }],
+    ['IconButtonToggle',        { name: 'Content',  kind: 'object' }],
     ['TextBlock',               { name: 'Text',     kind: 'string' }],
     ['Canvas',                  { name: 'Children', kind: 'list'   }],
     ['StackPanel',              { name: 'Children', kind: 'list'   }],

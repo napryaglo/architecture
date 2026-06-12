@@ -35,20 +35,25 @@ class Root extends Panel { }
 describe('Button — default template', () => {
     beforeEach(() => { initTestApp(); });
 
-    test('Button construction installs a Border + ContentPresenter template', () => {
+    test('Button construction installs a Border + StateLayer + ContentPresenter template', () => {
         const btn = new Button();
         const root = btn.visualChildren[0];
-        assert.ok(root instanceof Border, 'template root should be a Border');
-        const inner = (root as Border).child;
-        assert.ok(inner instanceof ContentPresenter,
-            'Border child should be the ContentPresenter slot');
+        assert.ok(root instanceof Border, 'template root should be a Border (PART_Border)');
+        const stateLayer = (root as Border).child;
+        assert.ok(stateLayer instanceof Border,
+            'PART_Border child should be the PART_StateLayer Border (M3 state-layer overlay)');
+        const presenter = (stateLayer as Border).child;
+        assert.ok(presenter instanceof ContentPresenter,
+            'PART_StateLayer child should be the ContentPresenter slot');
     });
 
     test('Content set on Button slots into the templated ContentPresenter', () => {
         const btn = new Button();
         const label = new TextBlock('Click me');
         btn.Content = label;
-        const presenter = (btn.visualChildren[0] as Border).child as ContentPresenter;
+        const root = btn.visualChildren[0] as Border;
+        const stateLayer = root.child as Border;
+        const presenter = stateLayer.child as ContentPresenter;
         // ContentPresenter holds the slotted visual as its single visual child.
         assert.equal(presenter.visualChildren[0], label);
     });
