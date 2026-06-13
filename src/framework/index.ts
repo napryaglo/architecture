@@ -44,6 +44,7 @@ export {
 } from './segmented-button.js';
 export { ButtonGroup } from './button-group.js';
 export { SplitButton } from './split-button.js';
+export { FabMenu } from './fab-menu.js';
 export { TabControl, TabItem } from './tabs.js';
 export { SearchBar } from './search-bar.js';
 export { Divider } from './divider.js';
