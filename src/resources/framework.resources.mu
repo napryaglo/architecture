@@ -1405,6 +1405,75 @@ resources MuralFramework {
         FontSize   = @LabelLargeSize;
     }
 
+    // ── SegmentedButton: M3 connected-segment selection row ──────────
+    // Items panel is a horizontal StackPanel; per-segment chrome lives
+    // on DefaultSegmentedItem. SegmentedButton itself is a thin shell
+    // — the outline + corner-rounding story is owned by the per-item
+    // template since each segment's corners depend on Position
+    // (Single / Start / Middle / End), which SegmentedButton stamps
+    // onto each container after items change.
+    Template x:key="DefaultSegmentedButton" [TargetType=SegmentedButton] {
+        ItemsPresenter
+    }
+    ItemsPanelTemplate x:key="DefaultSegmentedButtonPanel" {
+        StackPanel [Orientation=Horizontal]
+    }
+    Style [TargetType=SegmentedButton] {
+        Template   = @DefaultSegmentedButton;
+        ItemsPanel = @DefaultSegmentedButtonPanel;
+    }
+
+    // ── SegmentedItem: per-segment chrome ────────────────────────────
+    // Corner radius selection: Single rounds all four corners; Start
+    // rounds left only; End rounds right only; Middle stays square.
+    // BorderThickness sheds the right edge on Start / Middle so the
+    // following segment's left edge becomes the visible divider —
+    // the row reads as one continuous outline rather than a stack of
+    // independent boxes.
+    //
+    // Selection chrome: filled with @SecondaryContainer; M3 spec uses
+    // the same fill for both single- and multi-select segmented
+    // variants. State-layer ladder (hover / focus / press) overlays
+    // @SecondaryContainer on the selected case and @Surface otherwise.
+    Template x:key="DefaultSegmentedItem" [TargetType=SegmentedItem] {
+        Border x:name="PART_Border"
+              [ Background      = @Surface,
+                BorderBrush     = @Outline,
+                BorderThickness = (1, 1, 0, 1),
+                CornerRadius    = (0),
+                Padding         = (@Spacing3, @Spacing1, @Spacing3, @Spacing1),
+                Height          = 40 ] {
+            ContentPresenter [VerticalAlignment=Center, HorizontalAlignment=Center]
+        }
+
+        // ── Position triggers — corner / border shape ────────────────
+        when ( Position = Single ) { PART_Border.CornerRadius    = @ShapeFull;
+                                     PART_Border.BorderThickness = (1, 1, 1, 1); }
+        when ( Position = Start )  { PART_Border.CornerRadius    = (@ShapeFull, 0, 0, @ShapeFull);
+                                     PART_Border.BorderThickness = (1, 1, 0, 1); }
+        when ( Position = Middle ) { PART_Border.CornerRadius    = (0);
+                                     PART_Border.BorderThickness = (1, 1, 0, 1); }
+        when ( Position = End )    { PART_Border.CornerRadius    = (0, @ShapeFull, @ShapeFull, 0);
+                                     PART_Border.BorderThickness = (1, 1, 1, 1); }
+
+        // ── Selection chrome ────────────────────────────────────────
+        when ( IsSelected ) { PART_Border.Background = @SecondaryContainer; }
+
+        // ── State layers (ordered after Position + Selected so the
+        // pressed/hover tint overlays whichever resting fill applied) ──
+        when ( IsMouseOver )       { PART_Border.Background = @StateHoverOverlay; }
+        when ( IsFocused )         { PART_Border.Background = @StateFocusOverlay; }
+        when ( IsPressed )         { PART_Border.Background = @StatePressOverlay; }
+        when ( IsEnabled = false ) { PART_Border.Opacity    = @DisabledContentOpacity; }
+    }
+    Style [TargetType=SegmentedItem] {
+        Template   = @DefaultSegmentedItem;
+        Foreground = @OnSurface;
+        FontFamily = @LabelLargeFont;
+        FontWeight = @LabelLargeWeight;
+        FontSize   = @LabelLargeSize;
+    }
+
     // ── TabControl: M3 horizontal tab strip + content area ────────
     // ItemsPresenter on top renders each TabItem's header surface;
     // ContentPresenter below shows the selected TabItem's Content.

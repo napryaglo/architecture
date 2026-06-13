@@ -37,6 +37,11 @@ export { Switch } from './switch.js';
 export { Checkbox } from './checkbox.js';
 export { RadioButton } from './radio-button.js';
 export { Chip, ChipVariant } from './chip.js';
+export {
+    SegmentedButton,
+    SegmentedItem,
+    SegmentedPosition,
+} from './segmented-button.js';
 export { TabControl, TabItem } from './tabs.js';
 export { SearchBar } from './search-bar.js';
 export { Divider } from './divider.js';
