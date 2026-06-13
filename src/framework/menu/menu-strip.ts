@@ -467,7 +467,10 @@ export class MenuItem extends ItemsControl
         // vertical context.
         if (this._rowRoot !== undefined) this._popupHost.anchor = this._rowRoot;
         this._popupHost.anchorSide = this.isTopLevelInMenuStrip() ? 'below' : 'right';
-        t.AttachOverlay(this._popupHost);
+        // AttachOverlayChild: visual hop → target's OverlayLayer; logical
+        // hop → THIS MenuItem so the submenu inherits resources /
+        // DataContext / inheritable DPs from the row that opened it.
+        this.AttachOverlayChild(this._popupHost);
         this._popupMounted = true;
     }
 
@@ -481,9 +484,7 @@ export class MenuItem extends ItemsControl
     {
         if (!this._popupMounted) return;
         if (this._popupHost === undefined) return;
-        const t = this._lastKnownTarget;
-        if (t === undefined) { this._popupMounted = false; return; }
-        t.DetachOverlay(this._popupHost);
+        this.DetachOverlayChild(this._popupHost);
         this._popupMounted = false;
     }
 
@@ -1049,7 +1050,10 @@ export class MenuButton extends ItemsControl
         // The anchor reference is set every mount so a target change
         // (or a late-bound trigger) doesn't leave stale coords.
         if (this._button !== undefined) this._popupHost.anchor = this._button;
-        t.AttachOverlay(this._popupHost);
+        // AttachOverlayChild: visual hop → target's OverlayLayer; logical
+        // hop → THIS MenuButton so the popup chrome + items inherit
+        // resources / DataContext / inheritable DPs from us.
+        this.AttachOverlayChild(this._popupHost);
         this._popupMounted = true;
     }
 
@@ -1057,9 +1061,7 @@ export class MenuButton extends ItemsControl
     {
         if (!this._popupMounted) return;
         if (this._popupHost === undefined) return;
-        const t = this._lastKnownTarget;
-        if (t === undefined) { this._popupMounted = false; return; }
-        t.DetachOverlay(this._popupHost);
+        this.DetachOverlayChild(this._popupHost);
         this._popupMounted = false;
     }
 }

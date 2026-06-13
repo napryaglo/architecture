@@ -1519,12 +1519,38 @@ resources MuralFramework {
         when ( IsEnabled = false ) { PART_PrimaryButton.Opacity = @DisabledContentOpacity;
                                      PART_TriggerButton.Opacity = @DisabledContentOpacity; }
     }
+    // Popup chrome — instantiated by SplitButton's mountPopup with the
+    // SplitButton as templatedParent. Same shape as MenuButton / ContextMenu:
+    //   * PART_PopupHost  — MenuPopupHost positions PART_PopupBody at the
+    //                       anchor (the SplitButton). Its first child is
+    //                       PART_Scrim (sized to the overlay surface to
+    //                       absorb outside clicks); second child is the
+    //                       chromed popup body (sized to its content +
+    //                       arranged below the anchor).
+    //   * PART_PopupBody  — the chrome Border that receives MenuContent
+    //                       via SetChild at mount time.
+    // Brushes / shape / elevation come from M3 tokens so the popup tracks
+    // theme changes through the DynamicResource path the rest of the
+    // framework uses — no JS-side resource lookups in the demo bootstrap.
+    Template x:key="DefaultSplitButtonPopup" [TargetType=SplitButton] {
+        MenuPopupHost x:name="PART_PopupHost"{
+            ClickAwayScrim x:name="PART_Scrim" [BorderThickness = (0)]
+            Border x:name="PART_PopupBody"
+                  [ Background      = @SurfaceContainerHigh,
+                    BorderBrush     = @OutlineVariant,
+                    BorderThickness = (1),
+                    CornerRadius    = @ShapeExtraSmall,
+                    Effect          = @Elevation2,
+                    Padding         = (4) ]
+        }
+    }
     Style [TargetType=SplitButton] {
-        Template   = @DefaultSplitButton;
-        Foreground = @OnPrimary;
-        FontFamily = @LabelLargeFont;
-        FontWeight = @LabelLargeWeight;
-        FontSize   = @LabelLargeSize;
+        Template      = @DefaultSplitButton;
+        PopupTemplate = @DefaultSplitButtonPopup;
+        Foreground    = @OnPrimary;
+        FontFamily    = @LabelLargeFont;
+        FontWeight    = @LabelLargeWeight;
+        FontSize      = @LabelLargeSize;
     }
 
     // ── TabControl: M3 horizontal tab strip + content area ────────

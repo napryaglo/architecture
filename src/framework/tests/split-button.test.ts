@@ -37,11 +37,13 @@ describe('SplitButton popup mount/unmount', () => {
         const overlay = target.OverlayRoot as Border | undefined;
         assert.ok(overlay !== undefined, 'overlay mounts on IsOpen=true');
         const children = (overlay as unknown as { Children: { Count: number } }).Children;
-        // Two visuals: the scrim + the popup host.
-        assert.equal(children.Count, 2);
+        // One root: the MenuPopupHost (which internally hosts PART_Scrim +
+        // PART_PopupBody). The framework popup pattern mounts a single
+        // anchor-aware host rather than two siblings.
+        assert.equal(children.Count, 1);
     });
 
-    test('IsOpen → false detaches both popup host and scrim', () => {
+    test('IsOpen → false detaches the popup host from the overlay', () => {
         initTestApp();
         const sb = new SplitButton();
         sb.Content     = new TextBlock('Send');
@@ -55,7 +57,7 @@ describe('SplitButton popup mount/unmount', () => {
         const overlay = target.OverlayRoot as Border | undefined;
         const childrenCount = (overlay as unknown as { Children?: { Count: number } } | undefined)
             ?.Children?.Count ?? 0;
-        assert.equal(childrenCount, 0, 'popup + scrim both detached');
+        assert.equal(childrenCount, 0, 'popup host detached');
     });
 
     test('IsOpen=true with no MenuContent skips the mount (no-op safe)', () => {

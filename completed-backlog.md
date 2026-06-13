@@ -1,6 +1,6 @@
 # Completed Backlog
 
-Items moved from [current-backlog.md](current-backlog.md) once closed. Section numbering matches the original backlog so cross-references survive. Test suite: **1954 tests passing.**
+Items moved from [current-backlog.md](current-backlog.md) once closed. Section numbering matches the original backlog so cross-references survive. Test suite: **1963 tests passing.**
 
 ## 1. Value resolution (`EffectiveValueDescriptor` / `Model`)
 
@@ -240,7 +240,7 @@ Coarse-grained log of closures, in roughly the order they shipped:
 
 ## 18. M3 modernization (shipped)
 
-Mirror of [m3-modernization-plan.md](m3-modernization-plan.md)'s strike-through markings. Sub-numbers `18.A`-`18.E` are used here to avoid colliding with [current-backlog.md § 18](current-backlog.md)'s open follow-up entries (18.1-18.9).
+Mirror of [m3-modernization-plan.md](m3-modernization-plan.md)'s strike-through markings, plus closures of open § 18 entries from [current-backlog.md](current-backlog.md). Sub-numbers `18.A`-`18.H` are used here to avoid colliding with current's open follow-up entries (18.1-18.12).
 
 ~~**18.A. M3 Phases 0-9 — core modernization umbrella.**~~ ✅ Done. The 10 numbered phases of [m3-modernization-plan.md](m3-modernization-plan.md) all shipped:
 
@@ -273,6 +273,30 @@ Mirror of [m3-modernization-plan.md](m3-modernization-plan.md)'s strike-through 
 ~~**18.E. Phase 2.5 part 3 — SplitButton (primary + chevron menu trigger).**~~ ✅ Done (commit `055c0a5`). Closes the M3 plan's "Split button" entry. `SplitButton extends ContentControl`. Chrome: horizontal StackPanel of two Border halves sharing one outline. PART_PrimaryButton (rounds left only) fires Command + CommandParameter on press-here-release-here; PART_TriggerButton (rounds right only) toggles IsOpen on press-here-release-here. On IsOpen → true, `mountPopup` walks to the host's PresentationTarget and `AttachOverlay()`s a transparent scrim followed by a host Border wrapping MenuContent. Demo at [demo/demos/split-button/](demo/demos/split-button/). Inline-author limitation of MenuContent tracked at [§ 18.5 in current](current-backlog.md). 5 new tests.
 
 ~~**18.F. Phase 3.5 — FabMenu (FAB that reveals secondary actions).**~~ ✅ Done (commit `ac0b60f`). Closes the M3 plan's "FAB menu (M3 2024 addition)" entry. `FabMenu extends FloatingActionButton`. Click handler overridden to toggle IsOpen. Reveal motion: Items mount on the OverlayLayer in a vertical StackPanel above the FAB; each item pre-pins to Opacity=0 + Margin=(0, HiddenOffset, 0, 0) before the reveal Storyboard starts. Opening Storyboard animates each item's Opacity 0 → 1 with `BeginTime = (N - 1 - i) · StaggerMs` — bottom-first stagger so the menu reads as growing toward the FAB. Closing reverses (top-first) + a setTimeout off `DurationMs + (N-1)·StaggerMs` schedules deterministic unmount. Scrim Border catches outside clicks → clears IsOpen. Icon snap (Visual lacks `RenderTransform` DP) tracked at [§ 18.1 in current](current-backlog.md). Demo at [demo/demos/fab-menu/](demo/demos/fab-menu/). 5 new tests.
+
+~~**18.G. SplitButton.PopupTemplate — popup chrome via framework template (closes [§ 18.5 in current](current-backlog.md)).**~~ ✅ Done. Architecture review against [theme-architecture.md](theme-architecture.md) flagged that `SplitButton`'s popup body was being hand-built in the demo `.mjs` bootstrap with M3 brushes resolved via a non-existent `Application.current.TryFindResource(...)` JS call — option (b) from § 18.5 implemented as the fix. New `SplitButton.PopupTemplate: ControlTemplate | undefined` DP ([split-button.ts](src/framework/split-button.ts)) parallel to `MenuButton.TriggerTemplate`. Default Style block in [framework.resources.mu](src/resources/framework.resources.mu) sets `PopupTemplate = @DefaultSplitButtonPopup`, a template carrying the M3 chrome (`@SurfaceContainerHigh` fill, `@OutlineVariant` stroke, `@ShapeExtraSmall` corner, `@Elevation2` shadow) around a named `PART_PopupBody` Border slot. `mountPopup` instantiates the template via `tpl.Apply(this)` (templatedParent=SplitButton so DynamicResource bindings inside the chrome subscribe to the SplitButton's resource chain → theme tokens flip with scheme swaps), finds `PART_PopupBody` via FindName, and `SetChild`s `MenuContent` into it. Bare-Border fallback path retained for tests that skip the framework theme bundle. Demo bootstrap at [demo/demos/split-button/split-button.mjs](demo/demos/split-button/split-button.mjs) now ships only the items `StackPanel` — no `@Token` references in JS, no chrome construction. Two architectural caveats surfaced during the review: theme-archicture-level (§ 18.10 — subtree `Scheme` overrides into overlay-mounted popups) and template-lifecycle (§ 18.12 — `ControlTemplate` DP swap-while-active). 1954/1954 tests pass (no count change — fallback path covers tests).
+
+~~**18.H. Overlay-mounted popups now logically belong to their owner (closes [§ 18.10 in current](current-backlog.md)).**~~ ✅ Done. Architecture insight from the § 18.10 review: a popup's *visual* parent is the OverlayLayer (renders on top), but its *logical* parent should be the control that opened it (resource cascades / DataContext / inheritable-DP cascades flow from there). Mural already had the right primitive — `Panel.AddVisualChild` for visual-only attach, used by ItemsControl ([items-control.ts:1438](src/framework/items-control.ts#L1438)) — but `PresentationTarget.AttachOverlay` used `Panel.AddChild` which sets both trees.
+
+  **Runtime changes** ([visual.ts](src/runtime/visual.ts)): New `Visual.AttachOverlayChild(child)` / `DetachOverlayChild(child)` public API; combines `target.AttachOverlay(child)` (visual hop, idempotent re-attach for cross-target migration) with `this.AttachLogical(child)` (logical hop, initial inheritance / style / DynamicResource refresh). New `_overlayChildren` field tracks owner-side overlay children so the existing cascade methods (`refresh_inheritance_subtree`, `refresh_dynamic_resources_subtree`, `refresh_styles_subtree`, `unsubscribe_styles_subtree`, per-descriptor `OnPropertyChanged` inheritance path) walk through them alongside `logicalChildren`. `VisualHost` interface extended with `AttachOverlay` / `DetachOverlay` so Visual can route the visual hop without importing visual-engine.
+
+  **PresentationTarget changes** ([presentation-target.ts](src/visual-engine/targets/presentation-target.ts), [overlay-layer.ts](src/visual-engine/targets/overlay-layer.ts)): `AttachOverlay` / `DetachOverlay` switched from `AddChild`/`RemoveChild` to `AddVisualChild`/`RemoveVisualChild` — visual-only. `OverlayLayer` overrides `logicalChildren` to return `[]` so logical-tree walks never mistake overlay-hosted popups for the layer's logical descendants.
+
+  **Caller migrations**: 10 sites migrated to the new API.
+  - [src/framework/split-button.ts](src/framework/split-button.ts) — scrim + popupHost
+  - [src/framework/menu/menu-strip.ts](src/framework/menu/menu-strip.ts) — MenuButton.mountPopup + MenuItem.mountSubmenu
+  - [src/framework/menu/context-menu.ts](src/framework/menu/context-menu.ts) — `OpenAt(target, host, x, y)` gained a `host` parameter; right-click pointer-down dispatcher at line 261 supplies the right-clicked Visual as the logical owner
+  - [src/framework/fab-menu.ts](src/framework/fab-menu.ts) — scrim + menuHost
+  - [src/framework/list/combo-box.ts](src/framework/list/combo-box.ts) — popupHost
+  - [src/framework/tool-bar/tool-bar.ts](src/framework/tool-bar/tool-bar.ts) — overflow popup
+  - [src/framework/drawer.ts](src/framework/drawer.ts) — Temporary-mode overlayHost
+  - [src/framework/overlay-helpers.ts](src/framework/overlay-helpers.ts) — Tooltip / Snackbar / Dialog all use the anchor / host Visual as the logical owner
+  - [src/basic/behaviors/list-reorder-behavior.ts](src/basic/behaviors/list-reorder-behavior.ts) — drop adorner wrapper logically owned by the list host
+  - [src/visual-engine/targets/html-target.ts](src/visual-engine/targets/html-target.ts) drag preview left as-is — HtmlTarget isn't a Visual, drag previews are transient and the app-level theme fallback is sufficient
+
+  Cross-target swap path (MenuButton / MenuItem / ToolBar / ComboBox / Drawer): `AttachOverlayChild` is idempotent on the logical hop — `oldTarget.DetachOverlay(popup)` tears down only the visual hop; the logical relationship persists across the swap, and the next mount re-establishes the visual hop on the new target without re-attaching logically.
+
+  **Tests**: 9 new tests at [src/runtime/tests/attach-overlay-child.test.ts](src/runtime/tests/attach-overlay-child.test.ts) covering the visual/logical split, OverlayLayer.logicalChildren=∅, re-attach after detach, idempotent re-attach for cross-target swap, and resource resolution through the owner (including DynamicResource live re-resolve and ancestor walks). Test suite: 1954 → **1963** passing.
 
 ---
 

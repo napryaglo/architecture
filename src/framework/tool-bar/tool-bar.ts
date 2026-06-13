@@ -412,16 +412,17 @@ export class ToolBar extends ItemsControl
         if (this._popupMounted) return;
         const t = this._lastKnownTarget;
         if (t === undefined) return;
-        t.AttachOverlay(this._popupHost);
+        // AttachOverlayChild: visual hop → target's OverlayLayer; logical
+        // hop → THIS ToolBar so overflow items inherit resources /
+        // DataContext / inheritable DPs from us.
+        this.AttachOverlayChild(this._popupHost);
         this._popupMounted = true;
     }
 
     private unmountPopup(): void
     {
         if (!this._popupMounted) return;
-        const t = this._lastKnownTarget;
-        if (t === undefined) { this._popupMounted = false; return; }
-        t.DetachOverlay(this._popupHost);
+        this.DetachOverlayChild(this._popupHost);
         this._popupMounted = false;
     }
 }

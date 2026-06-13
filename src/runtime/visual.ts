@@ -97,6 +97,15 @@ export interface VisualHost
     // can omit the methods and Focus() degrades to a no-op.
     SetFocus?(visual: Visual | undefined): void;
     GetFocusedVisual?(): Visual | undefined;
+
+    // Overlay layer — attached as the visual hop of `Visual.AttachOverlayChild`
+    // so popups / dropdowns / tooltips paint above the main Content
+    // tree. The host materialises the layer lazily on first use. Visual
+    // calls these through the VisualHost reference (not by importing
+    // PresentationTarget) so the runtime layer stays independent of
+    // visual-engine. PresentationTarget supplies the concrete shape.
+    AttachOverlay(visual: Visual): void;
+    DetachOverlay(visual: Visual): void;
 }
 
 // Tree-aware Model with WPF-style layout + render lifecycle.
@@ -496,6 +505,18 @@ export class Visual extends Model
     private _visualParent:  Visual | undefined;
     private _logicalParent: Visual | undefined;
     private _target: VisualHost | undefined;
+    // Visuals that THIS Visual owns as overlay-mounted children — popups,
+    // dropdowns, drag previews, tooltips. Distinct from visual children
+    // (which paint as descendants in the visualParent's slot) and from
+    // standard logical children: an overlay child has its VISUAL parent
+    // set to the host's OverlayLayer (so the renderer paints it above
+    // the main Content tree) but its LOGICAL parent set to this Visual
+    // (so resource / DataContext / inheritable-DP cascades flow from the
+    // owning control, not from the overlay layer — see § 18.10 in the
+    // backlog history). Populated by `AttachOverlayChild`; cleared by
+    // `DetachOverlayChild`. Walked by the inheritance / style /
+    // dynamic-resource subtree cascades alongside `logicalChildren`.
+    private _overlayChildren: Visual[] | undefined;
     // Set true when InvalidateVisual fires while _target is undefined
     // (the Visual is detached — typically sitting in a recycle pool
     // between Rebind and re-attach). On re-attach SetTarget invalidates
@@ -1924,6 +1945,10 @@ export class Visual extends Model
         this.resolve_theme_style();
         this.subscribe_styles();
         for (const c of this.logicalChildren) c['refresh_styles_subtree']();
+        if (this._overlayChildren !== undefined)
+        {
+            for (const c of this._overlayChildren) c['refresh_styles_subtree']();
+        }
     }
 
     // Cascades unsubscribe through THIS visual and every logical
@@ -1933,6 +1958,84 @@ export class Visual extends Model
     {
         this.unsubscribe_styles();
         for (const c of this.logicalChildren) c['unsubscribe_styles_subtree']();
+        if (this._overlayChildren !== undefined)
+        {
+            for (const c of this._overlayChildren) c['unsubscribe_styles_subtree']();
+        }
+    }
+
+    // ── Overlay children — logical-owner-side wiring ─────────────────
+    //
+    // A popup / dropdown / tooltip whose visual parent is the host's
+    // OverlayLayer but whose logical parent is THIS Visual. The visual
+    // hop is what the renderer walks (so the popup paints above the
+    // main Content); the logical hop is what resource / DataContext /
+    // inheritable-DP cascades walk (so theme tokens, scheme overrides,
+    // and inherited DPs flow from the owning control rather than from
+    // the overlay layer). Without this split, every overlay-mounted
+    // popup resolves resources through OverlayLayer → PresentationTarget,
+    // never reaching a subtree `Scheme=@Foo` override on the owner's
+    // ancestor — the gap tracked at § 18.10.
+    //
+    // Caller pattern:
+    //     this.AttachOverlayChild(this._popup);   // on open
+    //     this.DetachOverlayChild(this._popup);   // on close
+    //
+    // Symmetric with AddChild / RemoveChild for the in-tree case. Throws
+    // if this Visual has no host target yet — the visual hop can't
+    // resolve without one.
+    public AttachOverlayChild(child: Visual): void
+    {
+        const t = this._target;
+        if (t === undefined)
+        {
+            throw new Error(
+                'Visual.AttachOverlayChild: this Visual is not attached to a presentation target — '
+                + 'wait until the owner is mounted before attaching overlay children.',
+            );
+        }
+        // Logical hop is idempotent — controls that re-mount their popup
+        // across a host-target swap (MenuButton, MenuItem submenu) tear
+        // down the visual hop directly via `oldTarget.DetachOverlay` and
+        // then call AttachOverlayChild again. The logical relationship
+        // (popup ⊂ this owner) persists across the swap; only the visual
+        // hop flips between overlay layers. Skip the AttachLogical when
+        // the child is already in our _overlayChildren collection, but
+        // always execute the visual hop so the new target's OverlayLayer
+        // picks up the popup.
+        const alreadyOwned = this._overlayChildren?.includes(child) === true;
+        if (!alreadyOwned)
+        {
+            if (this._overlayChildren === undefined) this._overlayChildren = [];
+            this._overlayChildren.push(child);
+            // Logical hop: child._logicalParent = this; runs the
+            // inheritance / style / DynamicResource refreshes through
+            // child's subtree.
+            this.AttachLogical(child);
+        }
+        // Visual hop: the host materialises its OverlayLayer (if not yet
+        // present) and adds the child as a VISUAL-only panel child — no
+        // logical wiring on the OverlayLayer side, so the OverlayLayer
+        // doesn't claim ownership of inheritance cascades.
+        t.AttachOverlay(child);
+    }
+
+    public DetachOverlayChild(child: Visual): void
+    {
+        const t = this._target;
+        // Visual hop first so the renderer drops the child before its
+        // logical owner releases inheritance state — same teardown
+        // ordering Panel.RemoveChild uses (RemoveVisualChild → DetachLogical).
+        if (t !== undefined) t.DetachOverlay(child);
+        if (this._overlayChildren !== undefined)
+        {
+            const i = this._overlayChildren.indexOf(child);
+            if (i >= 0) this._overlayChildren.splice(i, 1);
+        }
+        // Detach the logical hop only if it still points here — the
+        // child may have been re-parented externally (rare, but cheap
+        // to guard).
+        if (child._logicalParent === this) this.DetachLogical(child);
     }
 
     // Convenience for the common case where a child belongs to BOTH
@@ -2440,7 +2543,16 @@ export class Visual extends Model
         if (affectsMeasure(meta)) this.InvalidateMeasure();
         if (affectsArrange(meta)) this.InvalidateArrange();
         if (affectsRender(meta))  this.InvalidateVisual();
-        if (inherits(meta))       this.propagate_inheritance_for_logical_children(descriptor);
+        if (inherits(meta))
+        {
+            this.propagate_inheritance_for_logical_children(descriptor);
+            // Overlay children participate in the same inheritance
+            // cascade as logical children — see _overlayChildren comment.
+            if (this._overlayChildren !== undefined)
+            {
+                for (const c of this._overlayChildren) c['refresh_inherited'](descriptor);
+            }
+        }
         // The public Style setter calls refresh_active_style after
         // writing — but anyone using set_property_value("Style", …)
         // (the compiler-emitted code path, runtime-installed bindings)
@@ -2539,6 +2651,14 @@ export class Visual extends Model
             this.refresh_inherited(descriptor);
         }
         this.propagate_inheritance_to_logical_children();
+        // Overlay children participate alongside logical children — they're
+        // the SAME logical tree from the popup's perspective, just hosted
+        // visually by the OverlayLayer instead of by a Panel in the main
+        // Content tree.
+        if (this._overlayChildren !== undefined)
+        {
+            for (const c of this._overlayChildren) c['refresh_inheritance_subtree']();
+        }
     }
 
     protected propagate_inheritance_to_logical_children(): void { /* override in Single / Panel */ }
@@ -2579,6 +2699,15 @@ export class Visual extends Model
     {
         this.fire_dynamic_resource_listeners();
         this.propagate_dynamic_resources_to_logical_children();
+        // Overlay children's DynamicResource bindings cached against the
+        // OLD chain (before this Visual joined / left its ancestor's
+        // tree). Re-walking through the popup's subtree re-resolves
+        // every `@Token` lookup so theme tokens flip when the owner's
+        // chain changes (popup mounted, owner re-parented, etc.).
+        if (this._overlayChildren !== undefined)
+        {
+            for (const c of this._overlayChildren) c['refresh_dynamic_resources_subtree']();
+        }
     }
 
     protected propagate_dynamic_resources_to_logical_children(): void { /* override in Single / Panel */ }

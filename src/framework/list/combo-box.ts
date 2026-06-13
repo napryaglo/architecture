@@ -686,7 +686,10 @@ export class ComboBox extends Selector
         const pt = this['target'] as PresentationTarget | undefined;
         if (pt === undefined) return;
         if (this._popupMounted) return;
-        pt.AttachOverlay(this._popupHost);
+        // AttachOverlayChild: visual hop → target's OverlayLayer; logical
+        // hop → THIS ComboBox so dropdown items inherit resources /
+        // DataContext / inheritable DPs from us.
+        this.AttachOverlayChild(this._popupHost);
         this._popupMounted = true;
         // Defensive — anchor needs a fresh arrange now that the host
         // is mounted, and the popup may have stale measure cached.
@@ -696,10 +699,8 @@ export class ComboBox extends Selector
 
     private unmountPopup(): void
     {
-        const pt = this['target'] as PresentationTarget | undefined;
-        if (pt === undefined) return;
         if (!this._popupMounted) return;
-        pt.DetachOverlay(this._popupHost);
+        this.DetachOverlayChild(this._popupHost);
         this._popupMounted = false;
     }
 }

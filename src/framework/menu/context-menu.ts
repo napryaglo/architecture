@@ -61,7 +61,10 @@ export class ContextMenu extends ItemsControl
     private _popupContainer: Border         | undefined;
 
     private _popupMounted   = false;
-    private _mountedTarget: PresentationTarget | undefined;
+    // The Visual that requested this open — becomes the logical owner of
+    // the menu so resource cascades flow through the right-clicked host
+    // (not the OverlayLayer). Cleared on close.
+    private _mountedHost:   Visual             | undefined;
     private _partsBound     = false;
 
     static
@@ -129,17 +132,25 @@ export class ContextMenu extends ItemsControl
     /** Open the context menu on the given PresentationTarget at the
      *  supplied (host-coordinate) point. Mounts ContextMenu (and via
      *  its template subtree, the popup chrome) on the target's
-     *  OverlayLayer; closing unmounts. */
-    public OpenAt(target: PresentationTarget, x: number, y: number): void
+     *  OverlayLayer; closing unmounts.
+     *
+     *  `host` is the Visual that requested the menu (the one whose
+     *  ContextMenu attached DP resolved to this instance). It becomes
+     *  the logical owner of the menu so resource cascades / DataContext
+     *  inheritance flow from where the user right-clicked, not from
+     *  the OverlayLayer — closes the § 18.10 gap for ContextMenu. */
+    public OpenAt(target: PresentationTarget, host: Visual, x: number, y: number): void
     {
         this.bindTemplateParts();
         if (this._popupHost === undefined) return;
         this._popupHost.fixedPoint = { x, y };
         this._popupHost.anchor     = undefined;
-        this._mountedTarget = target;
+        void target;  // PresentationTarget is resolved through `host._target` by AttachOverlayChild;
+                      // kept in the signature for callers that already have it in hand.
+        this._mountedHost   = host;
         if (!this._popupMounted)
         {
-            target.AttachOverlay(this);
+            host.AttachOverlayChild(this);
             this._popupMounted = true;
         }
         this.IsOpen = true;
@@ -161,10 +172,10 @@ export class ContextMenu extends ItemsControl
     private unmountPopup(): void
     {
         if (!this._popupMounted) return;
-        const t = this._mountedTarget;
-        if (t !== undefined) t.DetachOverlay(this);
+        const host = this._mountedHost;
+        if (host !== undefined) host.DetachOverlayChild(this);
         this._popupMounted = false;
-        this._mountedTarget = undefined;
+        this._mountedHost  = undefined;
     }
 }
 
@@ -258,7 +269,7 @@ if (proto._ContextMenuPatchInstalled !== true)
                 const t = (cur as unknown as { _target: PresentationTarget | undefined })._target;
                 if (t !== undefined)
                 {
-                    cm.OpenAt(t, args.HostX, args.HostY);
+                    cm.OpenAt(t, cur, args.HostX, args.HostY);
                     args.Handled = true;
                     suppressNextBrowserContextMenu();
                 }

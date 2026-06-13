@@ -4,6 +4,7 @@ import {
     Rect,
     Size,
     VerticalAlignment,
+    type Visual,
 } from '../../runtime/index.js';
 
 // The host-side container for visuals that paint above the main Content
@@ -45,6 +46,14 @@ export class OverlayLayer extends Panel
         this.HorizontalAlignment = HorizontalAlignment.Left;
         this.VerticalAlignment   = VerticalAlignment.Top;
     }
+
+    // Overlay-layer children are VISUAL-only — their logical parent is
+    // the control that mounted them (set by `Visual.AttachOverlayChild`),
+    // never the OverlayLayer itself. Returning [] here keeps the
+    // logical-tree walks (DataContext / resource cascades, FindName)
+    // from dragging the overlay layer into hops it doesn't own. See the
+    // _overlayChildren docstring on Visual for the full split.
+    public override get logicalChildren(): readonly Visual[] { return []; }
 
     protected override MeasureOverride(availableSize: Size): Size
     {

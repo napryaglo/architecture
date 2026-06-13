@@ -285,9 +285,12 @@ export class ListReorderBehavior extends Behavior
             }
             else
             {
+                // Host is the logical owner: drop adorner inherits
+                // resources / DataContext / inheritable DPs from the
+                // list it's reordering, not from the OverlayLayer.
                 const pt = host['target'] as PresentationTarget | undefined;
                 if (pt === undefined) return;
-                pt.AttachOverlay(wrapper);
+                host.AttachOverlayChild(wrapper);
             }
         }
 
@@ -430,8 +433,7 @@ export class ListReorderBehavior extends Behavior
         else
         {
             const host = this._host;
-            const pt = host?.['target'] as PresentationTarget | undefined;
-            pt?.DetachOverlay(w);
+            host?.DetachOverlayChild(w);
         }
         this._adorner        = undefined;
         this._adornerLayer   = undefined;

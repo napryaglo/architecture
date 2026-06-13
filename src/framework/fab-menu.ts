@@ -78,7 +78,6 @@ export class FabMenu extends FloatingActionButton
     private _menuHost:    StackPanel | undefined;
     private _scrim:       Border     | undefined;
     private _mounted = false;
-    private _lastTarget:  PresentationTarget | undefined;
     private _openStoryboard:  Storyboard | undefined;
 
     static {
@@ -140,8 +139,11 @@ export class FabMenu extends FloatingActionButton
             this._menuHost.AddChild(v);
         }
 
-        t.AttachOverlay(this._scrim);
-        t.AttachOverlay(this._menuHost);
+        // AttachOverlayChild: visual hop → target's OverlayLayer; logical
+        // hop → THIS FabMenu so items inherit resources / DataContext /
+        // inheritable DPs from us, not from the OverlayLayer.
+        this.AttachOverlayChild(this._scrim);
+        this.AttachOverlayChild(this._menuHost);
 
         // Reveal Storyboard — per-item fade-in + slide-up, staggered.
         // Bottom item starts first so the menu reads as "growing toward
@@ -162,8 +164,7 @@ export class FabMenu extends FloatingActionButton
         sb.Begin();
         this._openStoryboard = sb;
 
-        this._mounted    = true;
-        this._lastTarget = t;
+        this._mounted = true;
         this.refreshContentIcon();
     }
 
@@ -208,12 +209,8 @@ export class FabMenu extends FloatingActionButton
 
     private detachMenuChrome(): void
     {
-        const t = this._lastTarget;
-        if (t !== undefined)
-        {
-            if (this._menuHost !== undefined) t.DetachOverlay(this._menuHost);
-            if (this._scrim    !== undefined) t.DetachOverlay(this._scrim);
-        }
+        if (this._menuHost !== undefined) this.DetachOverlayChild(this._menuHost);
+        if (this._scrim    !== undefined) this.DetachOverlayChild(this._scrim);
         this._menuHost = undefined;
         this._scrim    = undefined;
         this._mounted  = false;

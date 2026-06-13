@@ -8,7 +8,10 @@ import {
 import type { ICommand } from '../runtime/index.js';
 import type { PresentationTarget } from '../visual-engine/index.js';
 import { Border } from '../basic/border.js';
+import { ControlTemplate } from '../basic/templates/control-template.js';
 import { ContentControl } from './content-control.js';
+import { MenuPopupHost } from './menu/menu-strip.js';
+import { ClickAwayScrim } from './list/combo-box.js';
 
 // M3 Split button — a primary action + an adjacent chevron trigger
 // that opens a dropdown. Two distinct click targets share one chrome.
@@ -48,6 +51,13 @@ export class SplitButton extends ContentControl
     public static readonly CommandParameterKey = Model.RegisterProperty<unknown>(                     SplitButton, 'CommandParameter',  undefined, MetaData.None);
     public static readonly MenuContentKey      = Model.RegisterProperty<Visual | undefined>(          SplitButton, 'MenuContent',       undefined, MetaData.None);
     public static readonly IsOpenKey           = Model.RegisterProperty<boolean>(                     SplitButton, 'IsOpen',            false,     MetaData.None);
+    // PopupTemplate — the M3 popup chrome (Border with SurfaceContainerHigh
+    // fill, OutlineVariant stroke, ShapeExtraSmall corner, Elevation2 shadow)
+    // wrapped around a named PART_PopupBody slot. mountPopup instantiates
+    // it and slots MenuContent into PART_PopupBody so consumers ship only
+    // the items list — no theme tokens in JS. Default set by the Style
+    // block in framework.resources.mu to @DefaultSplitButtonPopup.
+    public static readonly PopupTemplateKey    = Model.RegisterProperty<ControlTemplate | undefined>(SplitButton, 'PopupTemplate',     undefined, MetaData.None);
 
     public get Command():          ICommand | undefined { return this.get_property_value(SplitButton.CommandKey); }
     public set Command(v:          ICommand | undefined) { this.set_property_value(SplitButton.CommandKey, v); }
@@ -61,17 +71,19 @@ export class SplitButton extends ContentControl
     public get IsOpen():           boolean { return this.get_property_value(SplitButton.IsOpenKey); }
     public set IsOpen(v:           boolean) { this.set_property_value(SplitButton.IsOpenKey, v); }
 
+    public get PopupTemplate():    ControlTemplate | undefined { return this.get_property_value(SplitButton.PopupTemplateKey); }
+    public set PopupTemplate(v:    ControlTemplate | undefined) { this.set_property_value(SplitButton.PopupTemplateKey, v); }
+
     static {
         Model.OverrideMetadata(SplitButton, Visual.DefaultStyleKeyKey,
             { default_value: SplitButton });
     }
 
-    private _primary:   Border | undefined;
-    private _trigger:   Border | undefined;
-    private _popupHost: Border | undefined;
-    private _scrim:     Border | undefined;
+    private _primary:    Border         | undefined;
+    private _trigger:    Border         | undefined;
+    private _popupHost:  MenuPopupHost  | undefined;
+    private _popupBody:  Border         | undefined;
     private _mounted = false;
-    private _lastTarget: PresentationTarget | undefined;
     private _primaryPressed = false;
     private _triggerPressed = false;
 
@@ -152,37 +164,74 @@ export class SplitButton extends ContentControl
         const content = this.MenuContent;
         if (content === undefined) return;
 
-        // Scrim catches outside clicks → clears IsOpen.
-        this._scrim = new Border();
-        this._scrim.AddRoutedEventListener('PointerDown', (() => {
-            this.IsOpen = false;
-        }) as (a: unknown) => void);
-        // The popup host wraps MenuContent so the consumer's Visual
-        // stays unchanged.
-        this._popupHost = new Border();
-        this._popupHost.SetChild(content);
+        const tpl = this.PopupTemplate;
+        if (tpl === undefined)
+        {
+            // Theme bundle absent (test harnesses that skip Material). Fall
+            // back to a content-sized Border wrapping MenuContent so the
+            // overlay still mounts a sensible Visual. No anchor / scrim.
+            const fallback = new Border();
+            fallback.SetChild(content);
+            this._popupBody = fallback;
+            this.AttachOverlayChild(fallback);
+            this._mounted = true;
+            return;
+        }
 
-        t.AttachOverlay(this._scrim);
-        t.AttachOverlay(this._popupHost);
-        this._mounted    = true;
-        this._lastTarget = t;
+        // PopupTemplate root is a MenuPopupHost (parallel to MenuButton /
+        // ContextMenu). Its arrange logic places PART_PopupBody at the
+        // anchor position (default 'below') sized to the body's
+        // DesiredSize — without it, the popup Border would inherit the
+        // OverlayLayer's full-surface slot and fill the screen.
+        //
+        // Apply(this) sets templatedParent = SplitButton so DynamicResource
+        // bindings inside the chrome resolve against our resource chain
+        // → Material tokens flip with the theme.
+        const inst       = tpl.Apply(this);
+        const host       = inst.root as MenuPopupHost;
+        const scrim      = host.FindName('PART_Scrim')    as ClickAwayScrim | undefined;
+        const body       = host.FindName('PART_PopupBody') as Border        | undefined;
+        if (body === undefined)
+        {
+            throw new Error(
+                'SplitButton.PopupTemplate is missing PART_PopupBody. See '
+                + '@DefaultSplitButtonPopup in framework.resources.mu.');
+        }
+        body.SetChild(content);
+        // Anchor the popup body below the primary half so it visually
+        // hangs under the SplitButton. Fall back to the SplitButton itself
+        // if the primary part hasn't materialised (test paths).
+        host.anchor     = this._primary ?? this;
+        host.anchorSide = 'below';
+        host.popup      = body;
+        // Scrim sits between anchor and popup body in MenuPopupHost's
+        // children; arrange logic gives it the full surface slot so an
+        // outside click anywhere closes the menu.
+        if (scrim !== undefined) scrim.onClick = (): void => { this.IsOpen = false; };
+
+        this._popupHost = host;
+        this._popupBody = body;
+
+        // AttachOverlayChild: visual hop → host's OverlayLayer (renderer
+        // paints above main content); logical hop → THIS SplitButton (so
+        // resource / DataContext / inheritable-DP cascades reach the
+        // popup through us, not through the OverlayLayer — closes the
+        // § 18.10 gap).
+        this.AttachOverlayChild(host);
+        this._mounted = true;
     }
 
     private unmountPopup(): void
     {
         if (!this._mounted) return;
-        const t = this._lastTarget;
-        if (t !== undefined)
-        {
-            if (this._popupHost !== undefined) t.DetachOverlay(this._popupHost);
-            if (this._scrim     !== undefined) t.DetachOverlay(this._scrim);
-        }
-        // Drop refs so a re-open builds a fresh host (matches the
-        // ContextMenu / MenuButton lifecycle — the OverlayLayer never
-        // sees a stale visual).
-        if (this._popupHost !== undefined) this._popupHost.SetChild(undefined);
+        const root = this._popupHost ?? this._popupBody;
+        if (root !== undefined) this.DetachOverlayChild(root);
+        // Drop the consumer's MenuContent out of the chrome so a re-open
+        // builds a fresh tree (matches the ContextMenu / MenuButton
+        // lifecycle — the OverlayLayer never sees a stale visual).
+        if (this._popupBody !== undefined) this._popupBody.SetChild(undefined);
         this._popupHost = undefined;
-        this._scrim     = undefined;
+        this._popupBody = undefined;
         this._mounted   = false;
     }
 }

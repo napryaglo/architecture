@@ -549,12 +549,15 @@ export class Drawer extends Control
         const open = this.IsOpen;
         if (open && !this._overlayMounted)
         {
-            pt.AttachOverlay(this._overlayHost);
+            // AttachOverlayChild: visual hop → target's OverlayLayer;
+            // logical hop → THIS Drawer so the temporary-mode pane
+            // inherits resources / DataContext / inheritable DPs from us.
+            this.AttachOverlayChild(this._overlayHost);
             this._overlayMounted = true;
         }
         else if (!open && this._overlayMounted)
         {
-            pt.DetachOverlay(this._overlayHost);
+            this.DetachOverlayChild(this._overlayHost);
             this._overlayMounted = false;
         }
     }

@@ -124,6 +124,20 @@ export abstract class PresentationTarget extends Model implements VisualHost
     // it; it stays `undefined` until something is attached so simple
     // targets pay nothing for the feature.
 
+    // Adds `visual` as a VISUAL-only child of the overlay layer — sets
+    // its visualParent + target back-pointers, but does NOT touch its
+    // logical parent. Logical-tree wiring (so the popup inherits theme
+    // tokens, DataContext, and other inheritable DPs from its OWNING
+    // CONTROL rather than from the overlay layer) is the caller's
+    // responsibility. The recommended path is `Visual.AttachOverlayChild`,
+    // which combines this visual hop with `AttachLogical` on the owner
+    // — closes the § 18.10 gap by making "the popup belongs logically
+    // to the control that opened it" the canonical pattern.
+    //
+    // Direct callers (tests, low-level renderers) get the visual hop
+    // only; resource cascades through these popups will fall through to
+    // Application.ResolveDefaultResource (theme tokens still resolve,
+    // subtree Scheme overrides do not).
     public AttachOverlay(visual: Visual): void
     {
         if (this._overlayRoot === undefined)
@@ -135,9 +149,9 @@ export abstract class PresentationTarget extends Model implements VisualHost
             // of the same call in the Content setter below.
             this._overlayRoot['SetTarget'](this);
         }
-        this._overlayRoot.AddChild(visual);
-        // Panel.AddChild does NOT auto-invalidate its own measure; the
-        // framework leaves that to the caller. Same gap ComboBox papers
+        this._overlayRoot.AddVisualChild(visual);
+        // Panel.AddVisualChild does NOT auto-invalidate its own measure;
+        // the framework leaves that to the caller. Same gap ComboBox papers
         // over (see comments in combo-box.ts). Without the explicit
         // invalidation here the overlay keeps a stale cached size and
         // the new child never gets laid out.
@@ -153,7 +167,7 @@ export abstract class PresentationTarget extends Model implements VisualHost
     public DetachOverlay(visual: Visual): void
     {
         if (this._overlayRoot === undefined) return;
-        this._overlayRoot.RemoveChild(visual);
+        this._overlayRoot.RemoveVisualChild(visual);
         this._overlayRoot.InvalidateMeasure();
     }
 

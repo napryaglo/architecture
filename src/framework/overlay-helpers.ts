@@ -64,9 +64,11 @@ export function attachTooltip(
         if (timer !== undefined) clearTimeout(timer);
         timer = setTimeout(() => {
             timer = undefined;
-            const target = targetOf(host);
-            if (target === undefined) return;
-            target.AttachOverlay(tooltip);
+            // Host is the logical owner: tooltip inherits resources /
+            // DataContext / inheritable DPs from the visual it's
+            // anchored to, not from the OverlayLayer.
+            if (targetOf(host) === undefined) return;
+            host.AttachOverlayChild(tooltip);
             mounted = true;
         }, delayMs);
     }
@@ -76,8 +78,7 @@ export function attachTooltip(
         if (timer !== undefined) { clearTimeout(timer); timer = undefined; }
         if (mounted)
         {
-            const target = targetOf(host);
-            target?.DetachOverlay(tooltip);
+            host.DetachOverlayChild(tooltip);
             mounted = false;
         }
     }
@@ -88,7 +89,7 @@ export function attachTooltip(
     return function detach(): void
     {
         if (timer !== undefined) clearTimeout(timer);
-        if (mounted) targetOf(host)?.DetachOverlay(tooltip);
+        if (mounted) host.DetachOverlayChild(tooltip);
         host.RemoveRoutedEventListener('PointerEnter', onEnter as (a: unknown) => void);
         host.RemoveRoutedEventListener('PointerLeave', onLeave as (a: unknown) => void);
     };
@@ -117,15 +118,17 @@ export function showSnackbar(
     durationMs: number = 4000,
 ): { dismissed: Promise<void>; dismiss: () => void }
 {
-    const target = targetOf(anchor);
-    if (target === undefined)
+    if (targetOf(anchor) === undefined)
     {
         return {
             dismissed: Promise.resolve(),
             dismiss:   (): void => { /* no-op */ },
         };
     }
-    target.AttachOverlay(snackbar);
+    // Anchor is the logical owner: snackbar inherits resources /
+    // DataContext / inheritable DPs from the visual that requested
+    // the show, not from the OverlayLayer.
+    anchor.AttachOverlayChild(snackbar);
 
     let detached = false;
     let resolveDismissed: (() => void) | undefined;
@@ -135,7 +138,7 @@ export function showSnackbar(
         if (detached) return;
         detached = true;
         if (timer !== undefined) { clearTimeout(timer); }
-        target.DetachOverlay(snackbar);
+        anchor.DetachOverlayChild(snackbar);
         resolveDismissed?.();
     };
     const timer = setTimeout(detach, durationMs);
@@ -165,17 +168,18 @@ export function showDialog<T = unknown>(
     cancelValue?: T,
 ): { closed: Promise<T | undefined>; close: (value?: T) => void }
 {
-    const resolvedTarget = targetOf(anchor);
-    if (resolvedTarget === undefined)
+    if (targetOf(anchor) === undefined)
     {
         return {
             closed: Promise.resolve(undefined),
             close:  (): void => { /* no-op */ },
         };
     }
-    const target = resolvedTarget;
-    target.AttachOverlay(scrim);
-    target.AttachOverlay(dialog);
+    // Anchor is the logical owner: scrim + dialog inherit resources /
+    // DataContext / inheritable DPs from the visual that opened the
+    // dialog, not from the OverlayLayer.
+    anchor.AttachOverlayChild(scrim);
+    anchor.AttachOverlayChild(dialog);
 
     let closed = false;
     let resolveClosed: ((v: T | undefined) => void) | undefined;
@@ -185,8 +189,8 @@ export function showDialog<T = unknown>(
     {
         if (closed) return;
         closed = true;
-        target.DetachOverlay(dialog);
-        target.DetachOverlay(scrim);
+        anchor.DetachOverlayChild(dialog);
+        anchor.DetachOverlayChild(scrim);
         dialog.RemoveRoutedEventListener('KeyDown',  onKeyDown  as (a: unknown) => void);
         dialog.RemoveRoutedEventListener('LostFocus', onLostFocus as (a: unknown) => void);
         resolveClosed?.(value);
