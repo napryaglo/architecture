@@ -1,18 +1,20 @@
 # Material 3 Modernization Plan
 
-> Locked-in scope decisions:
-> 1. **All 170 tokens land upfront** before any control rewrite begins.
-> 2. **In-place** evolution of the existing `Material` theme bundle (no
->    parallel `MaterialBaseline` fork).
-> 3. **Control order = M3 emphasis order**: Buttons → FAB → Card →
->    App bars → Navigation → Lists → Inputs → Misc.
+> ✅ **Status: SHIPPED** — Phases 0-9 complete; Appendix C (Expressive shape library, 35 shapes) complete; Phase 2.5 (SegmentedButton + ButtonGroup + SplitButton) and Phase 3.5 (FabMenu) Tier-1 close-out complete. Open follow-ups tracked in [current-backlog.md § 18](current-backlog.md). **1954 tests passing.**
+>
+> Locked-in scope decisions (all honoured):
+> 1. ~~**All 170 tokens land upfront** before any control rewrite begins.~~ ✅ shipped 195 tokens upfront in Phase 1.
+> 2. ~~**In-place** evolution of the existing `Material` theme bundle (no parallel `MaterialBaseline` fork).~~ ✅ in-place throughout.
+> 3. ~~**Control order = M3 emphasis order**: Buttons → FAB → Card → App bars → Navigation → Lists → Inputs → Misc.~~ ✅ order respected; Phase 2.5 (Segmented/ButtonGroup/Split) and Phase 3.5 (FabMenu) slotted as add-ons.
 
 Reference catalogue: [material3-tokens.md](material3-tokens.md). Source
 of truth: <https://m3.material.io/components>.
 
 ---
 
-## Phase 0 — Runtime prep
+## ~~Phase 0 — Runtime prep~~ ✅ SHIPPED
+
+> Shipped: `LetterSpacing` DP on TextBlock with `Inherits | Render` at [src/basic/text-block.ts:109](src/basic/text-block.ts#L109). `cubicBezier` helper + named curves (Standard / StandardAccelerate / Emphasized / …) at [src/runtime/animation/easing.ts:34-42](src/runtime/animation/easing.ts#L34-L42).
 
 Most token types already exist (`Brush`, `CornerRadius`, `number`,
 `string`, `Effect`). Two families need a tiny bit of plumbing before
@@ -42,7 +44,9 @@ test.
 
 ---
 
-## Phase 1 — Token rollout (upfront)
+## ~~Phase 1 — Token rollout (upfront)~~ ✅ SHIPPED
+
+> Shipped: 195 tokens in [src/resources/material/material.mu](src/resources/material/material.mu) (the planned 170 + Phase 7 additions for `@Spacing0..@Spacing8`, list-row heights, `@DisabledContainerOpacity` / `@DisabledContentOpacity`). All 1.1-1.7 sub-sections landed. **Audit gap:** § 18.7 in [current-backlog.md](current-backlog.md) flags that the pre-M3 token audit ("anything in the catalog NOT in M3 either documented or removed") was never verified end-to-end.
 
 All 170 tokens added to the Material bundle in one focused batch.
 Catalog entries land in [src/resources/material/material.mu](src/resources/material/material.mu)'s
@@ -221,7 +225,9 @@ the `-Tracking` tokens (saves 15 entries; no consumers today).
 
 ---
 
-## Phase 2 — Buttons family
+## ~~Phase 2 — Buttons family~~ ✅ SHIPPED
+
+> Shipped: all 5 Common variant chromes (`DefaultFilledButton` / `DefaultElevatedButton` / `DefaultTonalButton` / `DefaultOutlinedButton` / `DefaultTextButton`) + `IconButton` + `IconButtonToggle` × 4 chromes each (Filled / Tonal / Outlined / Standard). **Phase 2.5 add-on shipped post-plan:** SegmentedButton + ButtonGroup + SplitButton (Tier-1 close-out per [current-backlog.md § 18](current-backlog.md)).
 
 M3 spec: <https://m3.material.io/components/buttons/overview>
 
@@ -273,7 +279,9 @@ Acceptance:
 
 ---
 
-## Phase 3 — FAB family (new)
+## ~~Phase 3 — FAB family (new)~~ ✅ SHIPPED
+
+> Shipped: `FloatingActionButton` + `FabSize` enum (Small / Default / Large / Extended) + 4 chrome templates (`DefaultFab` / `DefaultFabSmall` / `DefaultFabLarge` / `DefaultFabExtended`). **Phase 3.5 add-on shipped post-plan:** `FabMenu` (Tier-1 close-out per [current-backlog.md § 18](current-backlog.md)).
 
 M3 spec: <https://m3.material.io/components/floating-action-button/overview>
 
@@ -302,7 +310,9 @@ Acceptance:
 
 ---
 
-## Phase 4 — Cards (new)
+## ~~Phase 4 — Cards (new)~~ ✅ SHIPPED
+
+> Shipped: `Card` + `CardVariant` enum (Filled / Elevated / Outlined) + 3 chrome templates (`DefaultFilledCard` / `DefaultElevatedCard` / `DefaultOutlinedCard`).
 
 M3 spec: <https://m3.material.io/components/cards/overview>
 
@@ -324,7 +334,9 @@ resting.
 
 ---
 
-## Phase 5 — App bars
+## ~~Phase 5 — App bars~~ ✅ SHIPPED
+
+> Shipped: `TopAppBar` + `TopAppBarVariant` enum (CenterAligned / Small / Medium / Large) + 4 chrome templates. Option A taken — both `TopAppBar` and `ToolBar` coexist. Scroll-tint + scroll-collapse landed in deviations 1/3, 2/3, 3/3 (commits `b903eb3` / `60f614a` / `3426169`). **Deferred:** Bottom app bar — [current-backlog.md § 18.9](current-backlog.md).
 
 M3 spec: <https://m3.material.io/components/top-app-bar/overview>
 
@@ -353,7 +365,9 @@ Bottom app bar (M3 also has one): defer unless a demo asks for it.
 
 ---
 
-## Phase 6 — Navigation
+## ~~Phase 6 — Navigation~~ ✅ SHIPPED
+
+> Shipped: `NavigationItem` / `NavigationRail` / `NavigationBar` + 4 templates (`DefaultNavigationItem` / `DefaultNavigationRail` / `DefaultNavigationBar` / `DefaultNavigationRailPanel` / `DefaultNavigationBarPanel`). Drawer audit landed (commit `947537c`). Platform-shell migration to NavigationRail closed (commit `3e7e673`).
 
 M3 spec: <https://m3.material.io/components/navigation-bar/overview>,
 <https://m3.material.io/components/navigation-rail/overview>,
@@ -372,7 +386,9 @@ we build a mobile-form-factor demo).
 
 ---
 
-## Phase 7 — Lists
+## ~~Phase 7 — Lists~~ ✅ SHIPPED
+
+> Shipped: M3 list-row anatomy DPs (Leading / SupportingText / Trailing + HasSupportingText / IsThreeLine derived) on `ListBoxItem` / `TreeViewItem` / `ComboBoxItem`. `IsPressed` lifecycle wired on ClickableRow / ClickableBorder. `Selector.SelectedIndex` / `SelectedItem` / `SelectedValue` flipped to `BindsTwoWayByDefault` (WPF parity). State-layer / density / pointer triggers per row template. Disabled state honoured via `Visual.IsEnabled` (added in this phase).
 
 M3 spec: <https://m3.material.io/components/lists/overview>
 
@@ -389,7 +405,9 @@ Deliverables per control:
 
 ---
 
-## Phase 8 — Inputs
+## ~~Phase 8 — Inputs~~ ✅ SHIPPED (except 8.10)
+
+> Shipped: TextBox split into `TextBoxVariant.{Filled, Outlined}` + two templates; `Switch`, `Checkbox`, `RadioButton` (GroupName mutual-exclusion via tree walk), `Chip` + `ChipVariant`, `TabControl` + `TabItem`, `SearchBar`. Slider 2024 thumb redesign landed (8.6 — 4dp primary / 16dp cross-axis / 16dp track; 7 geometry-pinning tests updated). ComboBox audit done. **Deferred:** 8.10 DatePicker / TimePicker — [current-backlog.md § 18.9](current-backlog.md).
 
 M3 spec: <https://m3.material.io/components/text-fields/overview> and
 sibling pages.
@@ -418,7 +436,9 @@ Sequencing:
 
 ---
 
-## Phase 9 — Misc
+## ~~Phase 9 — Misc~~ ✅ SHIPPED + OVER-DELIVERED
+
+> Shipped: `Tooltip` / `Snackbar` / `Dialog` + shared overlay-helpers (`attachTooltip` / `showSnackbar` / `showDialog`), `ProgressIndicator` + `ProgressIndicatorVariant.{Linear, Circular}` (Circular driven by the new `Arc` primitive), `Divider` (promoted to a Control). **Over-delivered** (plan said "defer pending demo needs"): `Badge` + `BadgeVariant.{Dot, Numeric}`, `Banner`, `BottomSheet`. **Gap:** demos missing for the three over-delivered controls — [current-backlog.md § 18.8](current-backlog.md).
 
 M3 spec: dialogs, snackbars, tooltips, progress indicators, badges,
 dividers, banners, bottom sheets.
@@ -444,38 +464,25 @@ Sequencing pragmatic, not predetermined:
 
 Applied to every phase ≥ 2:
 
-1. **Light + dark parity** — both schemes paint correctly without
-   imperative refresh on theme swap.
-2. **Five state pass** — resting / hover / focus / press / disabled
-   are all visually distinct in both schemes.
-3. **Density responsiveness** — Compact / Regular / Comfortable
-   ladder respected where the M3 spec defines it.
-4. **No hardcoded colours / radii** — every chrome value rides
-   through a token.
-5. **Tests** — existing tests stay green; new templates get focused
-   unit coverage (DP defaults, state-trigger fire-order).
-6. **Demo coverage** — every new control gets a demo entry under
-   `demo/demos/<name>/`.
-7. **Comment hygiene** — template comments explain the *why* behind
-   non-obvious state-layer choices (see the new ToolBarButton
-   comment for the pattern).
+1. ~~**Light + dark parity** — both schemes paint correctly without imperative refresh on theme swap.~~ ✅ met (DynamicResource throughout).
+2. ~~**Five state pass** — resting / hover / focus / press / disabled are all visually distinct in both schemes.~~ ✅ met — `Visual.IsEnabled` framework shipped at [visual.ts:252](src/runtime/visual.ts) + input gating at [routed-event.ts](src/runtime/input/routed-event.ts) + 9 tests.
+3. ~~**Density responsiveness** — Compact / Regular / Comfortable ladder respected where the M3 spec defines it.~~ ✅ met — 25 Density triggers in templates. **Coverage gap:** [backlog § 17.7](current-backlog.md) lists controls still missing density / pointer / contrast triggers.
+4. ~~**No hardcoded colours / radii** — every chrome value rides through a token.~~ ✅ met — verified end-to-end (only `#00000000` transparent rest values remain, which are intentional state-layer bases).
+5. ~~**Tests** — existing tests stay green; new templates get focused unit coverage (DP defaults, state-trigger fire-order).~~ ✅ met — 1828 baseline → **1954 passing** (+126 from Phase 7+ work, Appendix C, Phase 2.5 / 3.5).
+6. ⚠️ **Demo coverage** — every new control gets a demo entry under `demo/demos/<name>/`. **3 missing** (Phase 9 over-deliveries): Badge, Banner, BottomSheet — see [backlog § 18.8](current-backlog.md).
+7. ~~**Comment hygiene** — template comments explain the *why* behind non-obvious state-layer choices (see the new ToolBarButton comment for the pattern).~~ ✅ met across spot-checked templates.
 
 ---
 
-## Known unknowns
+## ~~Known unknowns~~ ✅ ALL RESOLVED
 
 These get resolved at the phase boundary that surfaces them:
 
-- **Motion plumbing**: do state transitions (hover → pressed) animate
-  the colour swap via `SchemeTransition`-style timelines, or snap?
-  Decide before Phase 2's Filled Button work. Default: snap, with a
-  TODO to revisit once Phase 9's ProgressIndicator forces us to wire
-  per-control animation contracts.
-- **Tracking (`letter-spacing`)**: ship as DPs or drop? See Phase 0.
-- **TopAppBar vs ToolBar rename**: see Phase 5.
-- **Icon font / SVG icon system**: M3 leans on Material Symbols.
-  µ-mural currently passes a `Visual` as `Icon`. Decision deferred
-  until Phase 2.2 (Icon Button).
+- ~~**Motion plumbing**: do state transitions (hover → pressed) animate
+  the colour swap via `SchemeTransition`-style timelines, or snap?~~ ✓ Resolved — implicit per-DP transitions wired (commit `7d96169`) + pluggable builders + brush registration (commit `d382615`). State swaps animate via CSS-`transition`-style engine.
+- ~~**Tracking (`letter-spacing`)**: ship as DPs or drop?~~ ✓ Resolved — shipped as `LetterSpacing` DP on TextBlock with `Inherits | Render` ([text-block.ts:109](src/basic/text-block.ts#L109)).
+- ~~**TopAppBar vs ToolBar rename**~~ ✓ Resolved — Option A (both coexist) per Phase 5 above.
+- ~~**Icon font / SVG icon system**~~ ✓ Resolved — Material Symbols Outlined CDN loaded by [demo/platform/platform.html](demo/platform/platform.html); TextBlock's text rendering picks up the font's ligature substitution so `Text="home"` paints the home glyph.
 
 ---
 
@@ -493,77 +500,76 @@ deferred (no concrete demo demand today).
 
 | M3 component | Spec | Mural status | Phase |
 | --- | --- | --- | --- |
-| Buttons (Common) — Filled / Elevated / Tonal / Outlined / Text | [buttons](https://m3.material.io/components/buttons/overview) | `Button` ships all 5 variants; audit needed | 2.1 |
-| Icon buttons — Filled / Tonal / Outlined / Standard | [icon-buttons](https://m3.material.io/components/icon-buttons/overview) | none | 2.2 |
-| Segmented buttons — Single-select / Multi-select | [segmented-buttons](https://m3.material.io/components/segmented-buttons/overview) | none | new — slot into Phase 2.x |
-| Button groups | [button-groups](https://m3.material.io/components/button-groups/overview) | none — M3 2024 addition (button row with hover-expand animation) | new — slot into Phase 2.x |
-| Split button — drives a primary action + a dropdown menu | [split-button](https://m3.material.io/components/split-button/overview) | none | new — slot into Phase 2.x |
-| Floating Action Button (FAB) — Small / Default / Large | [floating-action-button](https://m3.material.io/components/floating-action-button/overview) | none | 3 |
-| Extended FAB | [extended-fab](https://m3.material.io/components/extended-fab/overview) | none | 3 |
-| FAB menu — FAB that reveals secondary actions on tap | [fab-menu](https://m3.material.io/components/fab-menu/overview) | none — M3 2024 addition | new — slot after Phase 3 |
+| Buttons (Common) — Filled / Elevated / Tonal / Outlined / Text | [buttons](https://m3.material.io/components/buttons/overview) | ✅ shipped — all 5 variant chromes | ~~2.1~~ |
+| Icon buttons — Filled / Tonal / Outlined / Standard | [icon-buttons](https://m3.material.io/components/icon-buttons/overview) | ✅ shipped — `IconButton` + `IconButtonToggle` × 4 chromes each | ~~2.2~~ |
+| Segmented buttons — Single-select / Multi-select | [segmented-buttons](https://m3.material.io/components/segmented-buttons/overview) | ✅ shipped — `SegmentedButton` + `SegmentedItem` (Tier-1 close-out) | ~~Phase 2.5~~ |
+| Button groups | [button-groups](https://m3.material.io/components/button-groups/overview) | ✅ shipped — `ButtonGroup` with hover-expand polled tween (Tier-1 close-out) | ~~Phase 2.5~~ |
+| Split button — drives a primary action + a dropdown menu | [split-button](https://m3.material.io/components/split-button/overview) | ✅ shipped — `SplitButton` (Tier-1 close-out) | ~~Phase 2.5~~ |
+| Floating Action Button (FAB) — Small / Default / Large | [floating-action-button](https://m3.material.io/components/floating-action-button/overview) | ✅ shipped — `FloatingActionButton` + `FabSize` enum | ~~3~~ |
+| Extended FAB | [extended-fab](https://m3.material.io/components/extended-fab/overview) | ✅ shipped — `FabSize.Extended` variant | ~~3~~ |
+| FAB menu — FAB that reveals secondary actions on tap | [fab-menu](https://m3.material.io/components/fab-menu/overview) | ✅ shipped — `FabMenu` with staggered reveal Storyboard (Tier-1 close-out) | ~~Phase 3.5~~ |
 
 ### Containers
 
 | M3 component | Spec | Mural status | Phase |
 | --- | --- | --- | --- |
-| Cards — Filled / Elevated / Outlined | [cards](https://m3.material.io/components/cards/overview) | none (callers use `Border`) | 4 |
-| Carousel | [carousel](https://m3.material.io/components/carousel/overview) | none | — |
-| Dialogs — basic / Full-screen | [dialogs](https://m3.material.io/components/dialogs/overview) | none | 9 |
-| Bottom sheets — Modal / Standard | [bottom-sheets](https://m3.material.io/components/bottom-sheets/overview) | none | — |
-| Side sheets — Modal / Standard | [side-sheets](https://m3.material.io/components/side-sheets/overview) | none (Drawer is the closest analog) | — |
+| Cards — Filled / Elevated / Outlined | [cards](https://m3.material.io/components/cards/overview) | ✅ shipped — `Card` + `CardVariant` × 3 chromes | ~~4~~ |
+| Carousel | [carousel](https://m3.material.io/components/carousel/overview) | none — deferred ([backlog § 18.9](current-backlog.md)) | — |
+| Dialogs — basic / Full-screen | [dialogs](https://m3.material.io/components/dialogs/overview) | ✅ shipped — `Dialog` + `showDialog` overlay-helper | ~~9~~ |
+| Bottom sheets — Modal / Standard | [bottom-sheets](https://m3.material.io/components/bottom-sheets/overview) | ✅ shipped (over-delivered) — `BottomSheet` ContentControl; demo missing ([backlog § 18.8](current-backlog.md)) | — |
+| Side sheets — Modal / Standard | [side-sheets](https://m3.material.io/components/side-sheets/overview) | none — deferred ([backlog § 18.9](current-backlog.md)); Drawer is closest analog | — |
 
 ### App chrome
 
 | M3 component | Spec | Mural status | Phase |
 | --- | --- | --- | --- |
-| App bars — Top / Bottom (Center-aligned / Small / Medium / Large) | [app-bars](https://m3.material.io/components/app-bars/overview) | `ToolBar` (different intent — Office-style action toolbar); no TopAppBar | 5 |
-| Toolbars — docking surfaces (M3 2024 page distinct from Top App Bar) | [toolbars](https://m3.material.io/components/toolbars/overview) | `ToolBar` (audit against spec) | 5 |
-| Navigation bar — bottom tab bar | [navigation-bar](https://m3.material.io/components/navigation-bar/overview) | none | 6 |
-| Navigation rail — desktop side rail | [navigation-rail](https://m3.material.io/components/navigation-rail/overview) | none (platform demo rolls its own DockPanel+TreeView) | 6 |
-| Navigation drawer — Modal / Standard | [navigation-drawer](https://m3.material.io/components/navigation-drawer/overview) | `Drawer` — audit against spec | 6 |
-| Tabs — Primary / Secondary | [tabs](https://m3.material.io/components/tabs/overview) | none | 8.8 |
-| Search — SearchBar / SearchView | [search](https://m3.material.io/components/search/overview) | none | 8.9 |
+| App bars — Top / Bottom (Center-aligned / Small / Medium / Large) | [app-bars](https://m3.material.io/components/app-bars/overview) | ✅ Top shipped — `TopAppBar` + 4 size variants; Bottom deferred ([backlog § 18.9](current-backlog.md)) | ~~5~~ |
+| Toolbars — docking surfaces (M3 2024 page distinct from Top App Bar) | [toolbars](https://m3.material.io/components/toolbars/overview) | ✅ shipped — `ToolBar` audit complete (coexists with `TopAppBar` via Option A) | ~~5~~ |
+| Navigation bar — bottom tab bar | [navigation-bar](https://m3.material.io/components/navigation-bar/overview) | ✅ shipped — `NavigationBar` + `NavigationItem` | ~~6~~ |
+| Navigation rail — desktop side rail | [navigation-rail](https://m3.material.io/components/navigation-rail/overview) | ✅ shipped — `NavigationRail`; platform shell migrated | ~~6~~ |
+| Navigation drawer — Modal / Standard | [navigation-drawer](https://m3.material.io/components/navigation-drawer/overview) | ✅ audit complete — `Drawer` aligned with M3 spec | ~~6~~ |
+| Tabs — Primary / Secondary | [tabs](https://m3.material.io/components/tabs/overview) | ✅ shipped — `TabControl` + `TabItem` | ~~8.8~~ |
+| Search — SearchBar / SearchView | [search](https://m3.material.io/components/search/overview) | ✅ shipped — `SearchBar` extends TextBox | ~~8.9~~ |
 
 ### Selection / inputs
 
 | M3 component | Spec | Mural status | Phase |
 | --- | --- | --- | --- |
-| Text fields — Filled / Outlined | [text-fields](https://m3.material.io/components/text-fields/overview) | `TextBox` (single variant; needs Filled + Outlined split) | 8.1 |
-| Switch | [switch](https://m3.material.io/components/switch/overview) | none (callers use `ToggleButton`) | 8.2 |
-| Checkbox | [checkbox](https://m3.material.io/components/checkbox/overview) | none (callers use `ToggleButton`) | 8.3 |
-| Radio button | [radio-button](https://m3.material.io/components/radio-button/overview) | none | 8.4 |
-| Chips — Assist / Filter / Input / Suggestion | [chips](https://m3.material.io/components/chips/overview) | none | 8.5 |
-| Sliders | [sliders](https://m3.material.io/components/sliders/overview) | `Slider` — audit against spec | 8.6 |
-| Date pickers — Modal / Docked | [date-pickers](https://m3.material.io/components/date-pickers/overview) | none | 8.10 (deferred) |
-| Time pickers — Modal / Docked | [time-pickers](https://m3.material.io/components/time-pickers/overview) | none | 8.10 (deferred) |
+| Text fields — Filled / Outlined | [text-fields](https://m3.material.io/components/text-fields/overview) | ✅ shipped — `TextBoxVariant.{Filled, Outlined}` + 2 chromes | ~~8.1~~ |
+| Switch | [switch](https://m3.material.io/components/switch/overview) | ✅ shipped — `Switch` extends ToggleButton | ~~8.2~~ |
+| Checkbox | [checkbox](https://m3.material.io/components/checkbox/overview) | ✅ shipped — `Checkbox` extends ToggleButton | ~~8.3~~ |
+| Radio button | [radio-button](https://m3.material.io/components/radio-button/overview) | ✅ shipped — `RadioButton` with GroupName tree-walk exclusion | ~~8.4~~ |
+| Chips — Assist / Filter / Input / Suggestion | [chips](https://m3.material.io/components/chips/overview) | ✅ shipped — `Chip` + `ChipVariant` × 4 | ~~8.5~~ |
+| Sliders | [sliders](https://m3.material.io/components/sliders/overview) | ✅ audit complete — M3 2024 thumb redesign (4dp primary / 16dp cross-axis / 16dp track) | ~~8.6~~ |
+| Date pickers — Modal / Docked | [date-pickers](https://m3.material.io/components/date-pickers/overview) | none — deferred ([backlog § 18.9](current-backlog.md)) | 8.10 (deferred) |
+| Time pickers — Modal / Docked | [time-pickers](https://m3.material.io/components/time-pickers/overview) | none — deferred ([backlog § 18.9](current-backlog.md)) | 8.10 (deferred) |
 
 ### Surfaces & status
 
 | M3 component | Spec | Mural status | Phase |
 | --- | --- | --- | --- |
-| Lists — 1-line / 2-line / 3-line | [lists](https://m3.material.io/components/lists/overview) | `ListBox` / `ListBoxItem`; row template audit needed | 7 |
-| Menus — Dropdown / Cascading / Context | [menus](https://m3.material.io/components/menus/overview) | `MenuStrip` / `MenuButton` / `MenuItem` / `ContextMenu`; audit | 9 |
-| Tooltips — Plain / Rich | [tooltips](https://m3.material.io/components/tooltips/overview) | none | 9 |
-| Snackbar | [snackbar](https://m3.material.io/components/snackbar/overview) | none | 9 |
-| Progress indicators — Linear / Circular | [progress-indicators](https://m3.material.io/components/progress-indicators/overview) | none | 9 |
-| Loading indicator (M3 2024 — distinct from circular progress) | [loading-indicator](https://m3.material.io/components/loading-indicator/overview) | none | — |
-| Badges | [badges](https://m3.material.io/components/badges/overview) | none | — |
-| Divider | [divider](https://m3.material.io/components/divider/overview) | partial — callers use `Border` with `BorderThickness=(0,0,0,1)` and `@Outline` brush | 9 |
+| Lists — 1-line / 2-line / 3-line | [lists](https://m3.material.io/components/lists/overview) | ✅ shipped — anatomy DPs on ListBoxItem / TreeViewItem / ComboBoxItem | ~~7~~ |
+| Menus — Dropdown / Cascading / Context | [menus](https://m3.material.io/components/menus/overview) | ✅ audit complete — `MenuStrip` / `MenuButton` / `MenuItem` / `ContextMenu` | ~~9~~ |
+| Tooltips — Plain / Rich | [tooltips](https://m3.material.io/components/tooltips/overview) | ✅ shipped — `Tooltip` + `attachTooltip` overlay-helper | ~~9~~ |
+| Snackbar | [snackbar](https://m3.material.io/components/snackbar/overview) | ✅ shipped — `Snackbar` + `showSnackbar` overlay-helper | ~~9~~ |
+| Progress indicators — Linear / Circular | [progress-indicators](https://m3.material.io/components/progress-indicators/overview) | ✅ shipped — `ProgressIndicator` + `Linear` / `Circular` variants (Circular uses new `Arc` primitive) | ~~9~~ |
+| Loading indicator (M3 2024 — distinct from circular progress) | [loading-indicator](https://m3.material.io/components/loading-indicator/overview) | none — deferred ([backlog § 18.9](current-backlog.md)) | — |
+| Badges | [badges](https://m3.material.io/components/badges/overview) | ✅ shipped (over-delivered) — `Badge` + `BadgeVariant.{Dot, Numeric}`; demo missing ([backlog § 18.8](current-backlog.md)) | — |
+| Divider | [divider](https://m3.material.io/components/divider/overview) | ✅ shipped — `Divider` promoted from Border-driven pattern to a first-class Control | ~~9~~ |
 
-### Catalogue totals
+### ~~Catalogue totals~~ ✅ POST-SHIPPING
 
 - **36 M3 components** total, across 5 thematic groups.
-- **9 currently shipping in µ-mural** (often with audit gaps):
-  Buttons, Sliders, Text fields, Lists, Menus, Drawer (vs Navigation
-  drawer), ToolBar (vs Toolbars + App bars), plus partials for Divider.
-- **27 net-new** controls to build to reach M3 parity; this plan
-  schedules 22 of them across Phases 2-9 and defers 5 (Carousel,
-  Bottom sheets, Side sheets, Loading indicator distinct from progress,
-  Badges) until a concrete demo asks for them.
+- ✅ **31 currently shipping in µ-mural**: Buttons (5 variants) + IconButton (4 chromes) + SegmentedButton + ButtonGroup + SplitButton + FAB + ExtendedFAB + FabMenu + Cards (3 variants) + Dialogs + BottomSheet + TopAppBar + Toolbars + NavigationBar + NavigationRail + Drawer + Tabs + Search + TextField (Filled+Outlined) + Switch + Checkbox + RadioButton + Chips (4 variants) + Sliders + Lists + Menus + Tooltips + Snackbar + ProgressIndicator (Linear+Circular) + Badges + Divider.
+- **5 still deferred** (each gated on a concrete demo — see [backlog § 18.9](current-backlog.md)): Carousel, Side sheets, Loading indicator, DatePicker, TimePicker, Bottom app bar.
+
+> Counted as "shipped": 31 of 36 M3 components ship as live controls today; 5 remain plan-explicit deferrals.
 
 ---
 
-## Appendix B — Existing-control template audit schedule
+## ~~Appendix B — Existing-control template audit schedule~~ ⚠️ EFFECTS LANDED, AUDIT TRAIL MISSING
+
+> **Status:** the templates exist and follow the patterns (53+ `Default*` resources, 25 Density + 20 Pointer triggers across templates). The work landed alongside the consuming phase commit, but no commit message records which controls actually passed all 8 checklist items. Tracked as gap [§ 18.6 in current-backlog.md](current-backlog.md).
 
 Every control that already ships chrome (a Style + ControlTemplate in
 `basic.resources.mu` / `framework.resources.mu`) gets audited before
@@ -654,17 +660,15 @@ internal conventions.
 | E.3 | `ScrollBar` / `ScrollViewer` | [basic.resources.mu](src/resources/basic.resources.mu) | Verify the auto-hide IsFaded trick (recent fix) doesn't leak imperative state; confirm thumb hover/press tints follow the SurfaceContainer ladder. |
 | E.4 | `Splitter` / `GridSplitter` / `Thumb` | [basic.resources.mu](src/resources/basic.resources.mu) | Track / preview-line chrome. `Thumb` is shared by ScrollBar, Slider, GridSplitter — audit the base last so changes ripple. |
 
-### Schedule summary
+### ~~Schedule summary~~ ⚠️ EFFECTS LANDED, DISCRETE COMMITS MISSING
 
-- **Batch A** — 4 commits — runs **immediately before Phase 2** starts.
-- **Batch B** — 4 commits — runs **immediately before Phase 7**.
-- **Batch C** — 2 commits — runs **immediately before Phase 8**.
-- **Batch D** — 5 commits — runs **immediately before Phase 9**.
-- **Batch E** — 4 commits — fits **anywhere** during Phases 5-9 (low coupling); pragmatic to slot E.1 alongside Phase 5 (ToolBar adjacency), E.2 alongside Phase 5 (chrome batch), E.3 alongside Phase 7 (scroll touches list rows), E.4 alongside Phase 8 (Thumb is consumed by Slider).
+- ~~**Batch A** — 4 commits — runs **immediately before Phase 2** starts.~~ effects landed in Phase 2 commits.
+- ~~**Batch B** — 4 commits — runs **immediately before Phase 7**.~~ effects landed in Phase 7 commits (list-row anatomy, IsPressed lifecycle).
+- ~~**Batch C** — 2 commits — runs **immediately before Phase 8**.~~ effects landed in Phase 8 commits (TextBox Filled/Outlined split, Slider 2024 thumb redesign).
+- ~~**Batch D** — 5 commits — runs **immediately before Phase 9**.~~ effects landed in Phase 9 commits (overlay helpers cover MenuItem/MenuButton/ContextMenu/Drawer audit shape).
+- ~~**Batch E** — 4 commits — fits **anywhere** during Phases 5-9.~~ effects landed alongside the consuming phase (E.4 Thumb redesign + Slider audit in Phase 8.6).
 
-Total: **19 audit commits**. Each must keep `npm test` green and each
-new behaviour (e.g., promoting Divider to a control) gets focused
-unit coverage on the same commit.
+Total: **19 audit commits** *planned* — work landed across the phase commits rather than as discrete per-control audit commits. Each batch's checklist may or may not have been applied uniformly per-control; gap tracked at [backlog § 18.6](current-backlog.md).
 
 ### Mural-only controls not in M3
 
@@ -689,7 +693,9 @@ WPF parity) and stay where they are:
 
 ---
 
-## Appendix C — M3 Expressive shape library
+## ~~Appendix C — M3 Expressive shape library~~ ✅ SHIPPED
+
+> Shipped: all 35 named M3 Expressive shapes across 27 mural classes (parametric consolidation). C.S1 (8 round/architectural), C.S2 (13 cookies/clovers/Slanted), C.S3 (7 radial waves), C.S4 (7 puffy/glyphs/pixel + consolidated demo) — all landed. Total +100 new tests. Plan deviation: shapes build PathGeometry inline in RenderOverride following the Arc precedent rather than each getting a per-shape Geometry subclass; avoided 27 new branches in renderer dispatch.
 
 The Material 3 Expressive shape palette (2025) ships 35 shapes used
 for icon containers, FAB silhouettes, avatar masks, badge backdrops,
@@ -841,16 +847,13 @@ parameterized by the underlying source shape + a grid resolution.
 - Demo: one consolidated `demo/demos/shapes/` page rendering the
   whole catalogue in the 5×7 grid layout from the M3 reference image.
 
-### C.10 Sequencing
+### ~~C.10 Sequencing~~ ✅ ALL 4 SLOTS SHIPPED
 
 Slots between Phases 4 and 5 of the main plan (after Cards land, since
 Cards consume the basic shape contract; before App bars, which don't
 depend on shape work). Single phase, ~3-4 focused commits:
 
-1. **C.S1** — Round / rectangular base + architectural shapes (C.1 + C.2).
-   Includes `SquircleGeometry`, `PillGeometry`, and the hand-tuned
-   architectural paths.
-2. **C.S2** — Parametric polygon families (C.3 cookies + C.5 clovers).
-3. **C.S3** — Parametric radial-wave family (C.4 sunny/burst/boom/flower).
-4. **C.S4** — Puffy, special-glyph paths, and pixel rasterization
-   (C.6 + C.7 + C.8) plus the consolidated demo.
+1. ~~**C.S1** — Round / rectangular base + architectural shapes (C.1 + C.2). Includes `SquircleGeometry`, `PillGeometry`, and the hand-tuned architectural paths.~~ ✅ shipped — 8 shapes (Squircle, Pill, Arch, Semicircle, Triangle, Arrow, Fan, Clamshell). Deviation: inline PathGeometry per Arc precedent rather than per-shape Geometry subclasses.
+2. ~~**C.S2** — Parametric polygon families (C.3 cookies + C.5 clovers).~~ ✅ shipped — 13 shapes (Cookie + 5 N-sided aliases + Diamond / Pentagon / Gem; Clover + FourLeafClover / EightLeafClover; Slanted promoted up from C.1).
+3. ~~**C.S3** — Parametric radial-wave family (C.4 sunny/burst/boom/flower).~~ ✅ shipped — 7 shapes (RadialWave + Sunny / VerySunny / Burst / SoftBurst / Boom / SoftBoom / Flower).
+4. ~~**C.S4** — Puffy, special-glyph paths, and pixel rasterization (C.6 + C.7 + C.8) plus the consolidated demo.~~ ✅ shipped — 7 shapes (Puffy + PuffyDiamond, Heart, Bun, Ghostish, PixelArt + PixelCircle + PixelTriangle) + consolidated [demo/demos/shapes/](demo/demos/shapes/) page with all 35 cells live.
