@@ -18,6 +18,42 @@ export { Arc } from './shapes/arc.js';
 export { Image } from './image.js';
 export { Line } from './shapes/line.js';
 export { Rectangle } from './shapes/rectangle.js';
+export { Squircle } from './shapes/squircle.js';
+export { Pill } from './shapes/pill.js';
+export { Arch } from './shapes/arch.js';
+export { Semicircle } from './shapes/semicircle.js';
+export { Triangle } from './shapes/triangle.js';
+export { Arrow } from './shapes/arrow.js';
+export { Fan, FanPivot } from './shapes/fan.js';
+export { Clamshell } from './shapes/clamshell.js';
+export {
+    Cookie,
+    Diamond,
+    Pentagon,
+    Gem,
+    FourSidedCookie,
+    SixSidedCookie,
+    SevenSidedCookie,
+    NineSidedCookie,
+    TwelveSidedCookie,
+} from './shapes/cookie.js';
+export { Clover, FourLeafClover, EightLeafClover } from './shapes/clover.js';
+export { Slanted } from './shapes/slanted.js';
+export { Puffy, PuffyDiamond, PuffyBase } from './shapes/puffy.js';
+export { Heart } from './shapes/heart.js';
+export { Bun } from './shapes/bun.js';
+export { Ghostish } from './shapes/ghostish.js';
+export { PixelArt, PixelCircle, PixelTriangle, PixelSource } from './shapes/pixel-shape.js';
+export {
+    RadialWave,
+    Sunny,
+    VerySunny,
+    Burst,
+    SoftBurst,
+    Boom,
+    SoftBoom,
+    Flower,
+} from './shapes/radial-wave.js';
 export { DockPanel, Dock } from './panels/dock-panel.js';
 export {
     TextBox,
