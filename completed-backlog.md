@@ -1,6 +1,6 @@
 # Completed Backlog
 
-Items moved from [current-backlog.md](current-backlog.md) once closed. Section numbering matches the original backlog so cross-references survive. Test suite: 1543 tests passing.
+Items moved from [current-backlog.md](current-backlog.md) once closed. Section numbering matches the original backlog so cross-references survive. Test suite: **1954 tests passing.**
 
 ## 1. Value resolution (`EffectiveValueDescriptor` / `Model`)
 
@@ -235,6 +235,46 @@ Coarse-grained log of closures, in roughly the order they shipped:
 - ~~Source-side drag hooks (OnFeedback / OnContinueQuery) (8.3)~~
 - ~~ScrollViewer auto-scroll near edges during drag (8.4)~~
 - ~~InsertionAdornerTemplate on ListReorderBehavior (8.5)~~
+
+---
+
+## 18. M3 modernization (shipped)
+
+Mirror of [m3-modernization-plan.md](m3-modernization-plan.md)'s strike-through markings. Sub-numbers `18.A`-`18.E` are used here to avoid colliding with [current-backlog.md § 18](current-backlog.md)'s open follow-up entries (18.1-18.9).
+
+~~**18.A. M3 Phases 0-9 — core modernization umbrella.**~~ ✅ Done. The 10 numbered phases of [m3-modernization-plan.md](m3-modernization-plan.md) all shipped:
+
+  - **Phase 0** — Runtime prep: `LetterSpacing` DP on TextBlock with `Inherits | Render` ([text-block.ts:109](src/basic/text-block.ts#L109)); `cubicBezier` + named curves (Standard / StandardAccelerate / Emphasized / …) at [easing.ts:34-42](src/runtime/animation/easing.ts#L34-L42).
+  - **Phase 1** — Token rollout: 195 tokens in [material.mu](src/resources/material/material.mu) (planned 170 + Phase 7 additions: `@Spacing0..@Spacing8`, list-row heights, disabled-opacity tokens). All 1.1-1.7 sub-sections landed.
+  - **Phase 2** — Buttons family: 5 Common variants + `IconButton` + `IconButtonToggle` × 4 chromes each.
+  - **Phase 3** — FAB family: `FloatingActionButton` + `FabSize` enum (Small / Default / Large / Extended) + 4 chrome templates.
+  - **Phase 4** — Cards: `Card` + `CardVariant` (Filled / Elevated / Outlined) + 3 chromes.
+  - **Phase 5** — App bars: `TopAppBar` + 4 size variants + scroll-tint + scroll-collapse (deviations 1-3, commits `b903eb3` / `60f614a` / `3426169`). Option A (TopAppBar coexists with ToolBar).
+  - **Phase 6** — Navigation: `NavigationItem` / `NavigationRail` / `NavigationBar` + Drawer audit + platform-shell migration to NavigationRail (commit `3e7e673`).
+  - **Phase 7** — Lists: M3 list-row anatomy DPs (Leading / SupportingText / Trailing + HasSupportingText / IsThreeLine derived) on ListBoxItem / TreeViewItem / ComboBoxItem; IsPressed lifecycle on ClickableRow / ClickableBorder; `Selector.SelectedIndex` / `SelectedItem` / `SelectedValue` flipped to `BindsTwoWayByDefault`; cross-cutting `Visual.IsEnabled` framework shipped here ([visual.ts:252](src/runtime/visual.ts#L252) + [routed-event.ts](src/runtime/input/routed-event.ts) input gating + 9 tests).
+  - **Phase 8** — Inputs: `TextBoxVariant.{Filled, Outlined}` split; `Switch` / `Checkbox` / `RadioButton` (GroupName tree-walk) / `Chip` + `ChipVariant` × 4 / `TabControl` + `TabItem` / `SearchBar` — all new. Slider 2024 thumb redesign (4dp primary / 16dp cross-axis / 16dp track; 7 geometry-pinning tests updated). ComboBox audit done. **Deferred:** 8.10 DatePicker / TimePicker → § 18.9 in current.
+  - **Phase 9** — Misc: `Tooltip` / `Snackbar` / `Dialog` + shared [overlay-helpers.ts](src/framework/overlay-helpers.ts) (`attachTooltip` / `showSnackbar` / `showDialog`); `ProgressIndicator` + `Linear` / `Circular` variants (Circular uses new `Arc` primitive); `Divider` promoted from Border-pattern to first-class Control; **over-delivered:** `Badge` + `BadgeVariant.{Dot, Numeric}`, `Banner`, `BottomSheet` (plan said "defer pending demo needs"). Demo gap for the over-delivered three tracked at [§ 18.8 in current](current-backlog.md).
+
+  Cross-cutting acceptance criteria #1-5 + #7 all met (DynamicResource throughout / Visual.IsEnabled + input gating / 25 Density triggers / no hardcoded chrome values / 1828→1954 tests / comment hygiene). Criterion #6 (demo coverage) partial — 3 missing demos tracked.
+
+~~**18.B. Appendix C — M3 Expressive shape library (35 shapes).**~~ ✅ Done. The full M3 Expressive shape palette ships as 27 mural classes (parametric consolidation per plan § C.9). All 4 sequenced slots (C.S1-C.S4) shipped + consolidated [demo/demos/shapes/](demo/demos/shapes/) page with all 35 cells live in the 5×7 grid.
+
+  - **C.S1** — 8 shapes: Squircle (Superness DP, superellipse via 4 cubic Beziers), Pill (auto-radius rectangle), Arch (rounded-top), Semicircle, Triangle (rounded equilateral with CornerRadius DP), Arrow (concave-base shield), Fan (quarter-circle wedge with Pivot DP), Clamshell (flat-rounded hex).
+  - **C.S2** — 13 shapes: Cookie (N-sided regular polygon with Sides / Rotation / CornerRadius DPs) + 5 numbered aliases (FourSidedCookie..TwelveSidedCookie) + Diamond / Pentagon / Gem; Clover (radial-wave with cusps, Leaves / CuspDepth DPs) + FourLeafClover / EightLeafClover; Slanted (extends Squircle with LeanAngle shear; factored `buildSquircleFigure` out of Squircle for reuse).
+  - **C.S3** — 7 shapes: RadialWave (Lobes / Amplitude / Sharpness DPs — convex star/burst silhouette; `r(θ) = r_outer · (1 − Amp/2 + Amp/2 · sign(cos) · |cos(N·θ)|^(1+5·Sharpness))`) + Sunny / VerySunny / Burst / SoftBurst / Boom / SoftBoom / Flower aliases.
+  - **C.S4** — 7 shapes: Puffy + PuffyDiamond (N elliptical-arc lobes per edge), Heart (4 cubic Beziers), Bun (parametric Waist pinch), Ghostish (half-ellipse top + N concave scallops), PixelArt + PixelCircle + PixelTriangle (GridSize × GridSize rasterization).
+
+  Plan deviation: shapes build PathGeometry inline in RenderOverride following the Arc precedent rather than adding per-shape Geometry subclasses — avoids 27 new branches in the renderer dispatch. Shared [polygon-helpers.ts](src/basic/shapes/polygon-helpers.ts) (`buildRoundedPolygon` / `maxCornerRadius`) consumed by Triangle / Clamshell / Cookie. +100 new tests.
+
+~~**18.C. Phase 2.5 part 1 — SegmentedButton + SegmentedItem.**~~ ✅ Done (commit `4b9cf43`). Closes the M3 plan's "SegmentedButton (Single-select + Multi-select)" entry that Appendix A flagged as "new — slot into Phase 2.x" but never sequenced. `SegmentedButton extends Selector`; `SelectionMode` flips Single ↔ Multiple without a separate class. Per-segment `Position` (Single / Start / Middle / End) is stamped in `PrepareContainerForItemOverride` + re-stamped on `ClearContainerForItemOverride` so mid-list insertion/removal re-classifies neighbours. Default chrome: outlined Border with `@SecondaryContainer` fill on IsSelected; corner-radius switches on Position; BorderThickness drops the right edge on Start/Middle so the row paints as one continuous outline. Demo at [demo/demos/segmented-button/](demo/demos/segmented-button/) covers both variants. 11 new tests.
+
+~~**18.D. Phase 2.5 part 2 — ButtonGroup (hover-expand action row).**~~ ✅ Done (commit `891be98`). Closes the M3 plan's "Button groups (M3 2024 addition)" entry. `ButtonGroup extends Panel`; PointerEnter on any child triggers a polled `setTimeout` tween (DurationMs default 200ms): the hovered child's lerp tweens toward 1 while siblings tween toward 0. `ArrangeOverride` reads current lerps and allocates each child a width on the BaseWidth → HoverWidth ramp; hovered child's expansion is absorbed by uniform shrinkage of siblings so the row's total width stays pinned at resting size. The polled tween rather than implicit-transition engine is tracked as a gap at [§ 18.3 in current](current-backlog.md). Demo at [demo/demos/button-group/](demo/demos/button-group/) covers 2 cadences. 5 new tests.
+
+~~**18.E. Phase 2.5 part 3 — SplitButton (primary + chevron menu trigger).**~~ ✅ Done (commit `055c0a5`). Closes the M3 plan's "Split button" entry. `SplitButton extends ContentControl`. Chrome: horizontal StackPanel of two Border halves sharing one outline. PART_PrimaryButton (rounds left only) fires Command + CommandParameter on press-here-release-here; PART_TriggerButton (rounds right only) toggles IsOpen on press-here-release-here. On IsOpen → true, `mountPopup` walks to the host's PresentationTarget and `AttachOverlay()`s a transparent scrim followed by a host Border wrapping MenuContent. Demo at [demo/demos/split-button/](demo/demos/split-button/). Inline-author limitation of MenuContent tracked at [§ 18.5 in current](current-backlog.md). 5 new tests.
+
+~~**18.F. Phase 3.5 — FabMenu (FAB that reveals secondary actions).**~~ ✅ Done (commit `ac0b60f`). Closes the M3 plan's "FAB menu (M3 2024 addition)" entry. `FabMenu extends FloatingActionButton`. Click handler overridden to toggle IsOpen. Reveal motion: Items mount on the OverlayLayer in a vertical StackPanel above the FAB; each item pre-pins to Opacity=0 + Margin=(0, HiddenOffset, 0, 0) before the reveal Storyboard starts. Opening Storyboard animates each item's Opacity 0 → 1 with `BeginTime = (N - 1 - i) · StaggerMs` — bottom-first stagger so the menu reads as growing toward the FAB. Closing reverses (top-first) + a setTimeout off `DurationMs + (N-1)·StaggerMs` schedules deterministic unmount. Scrim Border catches outside clicks → clears IsOpen. Icon snap (Visual lacks `RenderTransform` DP) tracked at [§ 18.1 in current](current-backlog.md). Demo at [demo/demos/fab-menu/](demo/demos/fab-menu/). 5 new tests.
+
+---
 
 ## Architectural notes (for orientation)
 
