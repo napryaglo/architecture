@@ -42,6 +42,7 @@ export {
     SegmentedItem,
     SegmentedPosition,
 } from './segmented-button.js';
+export { ButtonGroup } from './button-group.js';
 export { TabControl, TabItem } from './tabs.js';
 export { SearchBar } from './search-bar.js';
 export { Divider } from './divider.js';
