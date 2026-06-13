@@ -560,10 +560,28 @@ export function buildRoute(source: Visual): Visual[]
 
 // Local structural type so this file doesn't import the full Visual
 // class (which would cycle). The runtime adds `GetVisualParent` to
-// Visual; the dispatcher only relies on that one method.
+// Visual; the dispatcher only relies on that one method (plus the
+// IsEnabled read for disabled-state input gating below).
 interface VisualWithParentAccessor
 {
     GetVisualParent(): Visual | undefined;
+    readonly IsEnabled: boolean;
+}
+
+// Disabled-state gate. WPF parity: a disabled Visual swallows input
+// across its entire subtree, including Enter / Leave (so IsMouseOver
+// stays false on disabled rows — the `when (not IsEnabled)` trigger
+// then wins outright without trigger-ordering surgery against hover).
+// Walks the route once; bails the dispatch if any node on the chain
+// from source to root reports IsEnabled=false. Used by every dispatch*
+// function below.
+function routeSuppressedByDisabled(route: readonly Visual[]): boolean
+{
+    for (const v of route)
+    {
+        if ((v as VisualWithParentAccessor).IsEnabled === false) return true;
+    }
+    return false;
 }
 
 // Tunnel-then-bubble dispatch for Move / Down / Up / Wheel. Tunnel
@@ -585,6 +603,7 @@ export function dispatchPointer(args: PointerEventArgs): void
             ' — use dispatchPointerDirect / dispatchKey / dispatchTextInput / dispatchFocus instead');
     }
     const route       = buildRoute(args.Source);
+    if (routeSuppressedByDisabled(route)) return;
     const previewName = POINTER_PREVIEW_HANDLERS[args.Kind];
     const bubbleName  = POINTER_BUBBLE_HANDLERS [args.Kind];
 
@@ -635,6 +654,13 @@ export function dispatchPointerDirect(args: PointerEventArgs): void
         throw new Error(
             'dispatchPointerDirect: only Enter / Leave are direct events; the rest go through dispatchPointer');
     }
+    // Disabled subtree gate — same semantics as dispatchPointer. We
+    // build the route here only for the gate check; Enter / Leave still
+    // fire only on the source, not along the chain. The reason to
+    // suppress on a disabled subtree is so IsMouseOver doesn't flip on
+    // a disabled row, which would let a hover trigger fight the
+    // disabled-state opacity dim.
+    if (routeSuppressedByDisabled(buildRoute(args.Source))) return;
     args.Strategy = 'bubble';   // single hop — "bubble" by convention
     args.Visual   = args.Source;
     const name    = POINTER_DIRECT_HANDLERS[args.Kind];
@@ -669,6 +695,7 @@ function fireRoutedListeners(v: Visual, eventName: string, args: unknown): void
 export function dispatchKey(args: KeyEventArgs): void
 {
     const route       = buildRoute(args.Source);
+    if (routeSuppressedByDisabled(route)) return;
     const previewName = args.Kind === 'KeyDown' ? 'OnPreviewKeyDown' : 'OnPreviewKeyUp';
     const bubbleName  = args.Kind === 'KeyDown' ? 'OnKeyDown'        : 'OnKeyUp';
 
@@ -733,6 +760,7 @@ function tryFireInputBindings(v: Visual, args: KeyEventArgs | PointerEventArgs):
 export function dispatchTextInput(args: TextInputEventArgs): void
 {
     const route = buildRoute(args.Source);
+    if (routeSuppressedByDisabled(route)) return;
 
     args.Strategy = 'tunnel';
     for (let i = route.length - 1; i >= 0; i--)
@@ -788,6 +816,7 @@ export function dispatchDrag(args: DragEventArgs): void
             ' — use dispatchPointer / dispatchKey / dispatchFocus instead');
     }
     const route       = buildRoute(args.Source);
+    if (routeSuppressedByDisabled(route)) return;
     const previewName = DRAG_PREVIEW_HANDLERS[args.Kind];
     const bubbleName  = DRAG_BUBBLE_HANDLERS [args.Kind];
 

@@ -4,6 +4,21 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>µ-mural demo platform</title>
+
+    <!-- Material Symbols Outlined — the M3 icon font. The CDN @font-face
+         registers the family `Material Symbols Outlined`; mural's
+         TextBlock references it via FontFamily and the canvas/SVG text
+         pipelines pick it up exactly like any system font. The :opsz axis
+         pin at 24 matches M3's nav-rail icon spec; FILL=0 (outlined) is
+         the M3 default for rail destinations.
+
+         Ligature-mode rendering: each TextBlock's Text is the icon NAME
+         (e.g. "home", "tune") and the font's `liga` feature substitutes
+         the glyph at render time. measureText runs the same substitution
+         so layout sees the actual icon advance width. -->
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+
     <style>
         /* Full-viewport layout: html/body fill the browser window with
            no margins or document scrollbars. body is a vertical flex
@@ -121,6 +136,24 @@
 
         const status = document.getElementById('status');
         try {
+            // Wait for Material Symbols Outlined to load BEFORE mounting.
+            // CanvasTextMeasurer delegates to the browser's measureText,
+            // which returns the fallback-font advance until the @font-face
+            // resolves. Mounting earlier would lay out the rail icons
+            // against the literal ligature-name widths (e.g. ~6×24px
+            // for "animation") and then render the post-load 24×24 icon
+            // glyph at the start of that oversized slot — visually
+            // left-of-centre within the icon pill. The await pins layout
+            // to the loaded-font metrics; document.fonts.load resolves as
+            // soon as the variant we asked for is ready to render. The
+            // size string ("24px …") matches the FontSize the rail uses;
+            // browsers key the load promise on (family, size, weight,
+            // style), so the size matters for the variable-font opsz
+            // pick. Fonts that fail to load (CDN unreachable) reject the
+            // promise, which falls into the catch below and surfaces in
+            // the on-page status — better than mounting with broken text.
+            await document.fonts.load('24px "Material Symbols Outlined"');
+
             // initialize(target, { dataContext }) mounts the root onto
             // the HtmlTarget and seeds the PlatformVM in one call —
             // replaces the old `new HtmlTarget(...).Show(app.Root);

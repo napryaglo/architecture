@@ -34,7 +34,8 @@ function key(k: string, mods: Partial<ModifierKeys> = {}, code?: string): KeyEve
 }
 
 // Stand up a horizontal Slider arranged at (0,0,200,16). Track length
-// 200; travel = 200 - 16 = 184. Returns the slider plus its template
+// 200; travel = 200 - 4 = 196 (Phase 8.6 M3 2024:
+// thumb narrows to 4dp pill). Returns the slider plus its template
 // part handles for direct pointer routing.
 function horizontalAt200(): { sl: Slider; track: ReturnType<Slider['Track' & keyof Slider]>; thumb: ReturnType<Slider['Thumb' & keyof Slider]> }
 {
@@ -87,7 +88,7 @@ describe('Slider — horizontal thumb geometry', () => {
         sl.Value = 0;
         sl.Arrange(new Rect(0, 0, 200, 16));
         assert.equal(sl.Thumb.ArrangedRect.X,      0);
-        assert.equal(sl.Thumb.ArrangedRect.Width,  16);
+        assert.equal(sl.Thumb.ArrangedRect.Width,  4);
         assert.equal(sl.Thumb.ArrangedRect.Height, 16);
     });
 
@@ -95,23 +96,23 @@ describe('Slider — horizontal thumb geometry', () => {
         const { sl } = horizontalAt200();
         sl.Value = 100;
         sl.Arrange(new Rect(0, 0, 200, 16));
-        // travel = 200 - 16 = 184 → leading edge X=184.
-        assert.equal(sl.Thumb.ArrangedRect.X, 184);
+        // travel = 200 - 4 = 196 → leading edge X=196.
+        assert.equal(sl.Thumb.ArrangedRect.X, 196);
     });
 
     test('Value=mid-range → thumb position scales proportionally', () => {
         const { sl } = horizontalAt200();
         sl.Value = 50;
         sl.Arrange(new Rect(0, 0, 200, 16));
-        // 50/100 × 184 = 92.
-        assert.equal(sl.Thumb.ArrangedRect.X, 92);
+        // 50/100 × 196 = 98.
+        assert.equal(sl.Thumb.ArrangedRect.X, 98);
     });
 
     test('Fill width spans from track left edge to the thumb centre', () => {
         const { sl } = horizontalAt200();
         sl.Value = 50;
         sl.Arrange(new Rect(0, 0, 200, 16));
-        // Thumb leading edge 92 + half-thumb 8 = 100.
+        // Thumb leading edge 98 + half-thumb 2 = 100.
         assert.equal(sl.Fill.ArrangedRect.Width, 100);
     });
 
@@ -139,7 +140,7 @@ describe('Slider — vertical thumb geometry (Min at bottom)', () => {
         const sl = verticalAt200();
         sl.Value = 0;
         sl.Arrange(new Rect(0, 0, 16, 200));
-        assert.equal(sl.Thumb.ArrangedRect.Y, 184);
+        assert.equal(sl.Thumb.ArrangedRect.Y, 196);
     });
 
     test('Value=Max → thumb at the TOP (Y = 0)', () => {
@@ -160,8 +161,8 @@ describe('Slider — clamping', () => {
         // Raw DP value preserved (matches ScrollBar's "binding source
         // wins" convention).
         assert.equal(sl.Value, 9999);
-        // Painted thumb is at the Max position (X = 184).
-        assert.equal(sl.Thumb.ArrangedRect.X, 184);
+        // Painted thumb is at the Max position (X = 196).
+        assert.equal(sl.Thumb.ArrangedRect.X, 196);
     });
 
     test('Negative Value writes paint clamped at the Min position', () => {
@@ -254,12 +255,12 @@ describe('Slider — pointer interaction', () => {
         sl.Arrange(new Rect(0, 0, 200, 16));
 
         const im = new InputManager();
-        // Grab the thumb anywhere on it (HostX=8 — middle of the thumb
-        // at the leftmost arrangement).
-        im.InjectPointerDown(thumb, pointer({ HostX: 8, HostY: 8 }));
-        // Move 92 pixels to the right.
+        // Grab the thumb anywhere on it (HostX=2 — middle of the 4dp
+        // narrow pill at the leftmost arrangement).
+        im.InjectPointerDown(thumb, pointer({ HostX: 2, HostY: 8 }));
+        // Move 98 pixels to the right.
         im.InjectPointerMove(thumb, pointer({ HostX: 100, HostY: 8 }));
-        // travel = 184, range = 100 → deltaValue = 92 / 184 × 100 = 50.
+        // travel = 196, range = 100 → deltaValue = 98 / 196 × 100 = 50.
         assert.equal(sl.Value, 50);
         im.InjectPointerUp(thumb, pointer({ HostX: 100, HostY: 8 }));
     });
@@ -272,7 +273,7 @@ describe('Slider — pointer interaction', () => {
         const im = new InputManager();
         // Click at X=100 — the centre of the track.
         im.InjectPointerDown(track, pointer({ HostX: 100, HostY: 8 }));
-        // valueForPointerPx: leadingPx = 100 - 8 = 92 → 92 / 184 × 100 = 50.
+        // valueForPointerPx: leadingPx = 100 - 2 = 98 → 98 / 196 × 100 = 50.
         assert.equal(sl.Value, 50);
         im.InjectPointerUp(track, pointer({ HostX: 100, HostY: 8 }));
     });
@@ -299,13 +300,13 @@ describe('Slider — pointer interaction', () => {
         sl.Arrange(new Rect(0, 0, 16, 200));
 
         const im = new InputManager();
-        // Press on the thumb at its top edge (HostY=8 — centre of the
-        // 0..16 thumb).
-        im.InjectPointerDown(sl.Thumb, pointer({ HostX: 8, HostY: 8 }));
-        // Move DOWN by 92 pixels.
+        // Press on the thumb at its top edge (HostY=2 — centre of the
+        // 0..4 narrow pill, vertical orientation).
+        im.InjectPointerDown(sl.Thumb, pointer({ HostX: 8, HostY: 2 }));
+        // Move DOWN by 98 pixels.
         im.InjectPointerMove(sl.Thumb, pointer({ HostX: 8, HostY: 100 }));
-        // Vertical sign-flip: deltaPx = +92, signedDelta = -92, deltaValue =
-        // -92/184 × 100 = -50 → Value = 100 + (-50) = 50.
+        // Vertical sign-flip: deltaPx = +98, signedDelta = -98, deltaValue =
+        // -98/196 × 100 = -50 → Value = 100 + (-50) = 50.
         assert.equal(sl.Value, 50);
         im.InjectPointerUp(sl.Thumb, pointer({ HostX: 8, HostY: 100 }));
     });

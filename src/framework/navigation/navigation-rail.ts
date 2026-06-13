@@ -33,8 +33,12 @@ function displayString(item: unknown): string
 //
 // Selector semantics — exactly one item selected at a time (mural's
 // Selector base SelectionMode.Single is the default). Selection changes
-// fire ItemSelected / SelectedItem updates; consumers bind to
-// SelectedDataItem for two-way data binding to a VM.
+// fire SelectionChanged listeners and update SelectedIndex / SelectedItem
+// / SelectedValue. All three are BindsTwoWayByDefault on the Selector
+// base, so a `SelectedItem=$VmField` binding wires user clicks back to
+// the VM without an explicit Mode=TwoWay. (NavigationRail doesn't
+// define a separate `SelectedDataItem` — that surface is TreeView-only,
+// where the data-vs-container distinction matters under hierarchy.)
 //
 // Two authoring paths (same as ListBox):
 //

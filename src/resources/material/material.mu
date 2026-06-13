@@ -121,6 +121,44 @@ theme Material {
         @OnPrimaryContainerHoverLayer   : Brush "OnPrimaryContainer @ 8% — FloatingActionButton overlay"
         @OnPrimaryContainerPressLayer   : Brush "OnPrimaryContainer @ 12% — FloatingActionButton overlay"
 
+        // ── Spacing scale — M3 4dp grid ─────────────────────────────
+        // M3 component specs are written against a 4dp baseline. These
+        // tokens replace literal numbers inside Padding / Margin tuples
+        // so a theme that wants tighter or looser global rhythm can
+        // re-bind the whole scale at the dictionary level. Naming follows
+        // the dp-step convention used by Material Symbols and Web M3.
+        @Spacing0             : number "0dp"
+        @Spacing1             : number "4dp"
+        @Spacing2             : number "8dp"
+        @Spacing3             : number "12dp"
+        @Spacing4             : number "16dp"
+        @Spacing5             : number "20dp"
+        @Spacing6             : number "24dp"
+        @Spacing7             : number "28dp"
+        @Spacing8             : number "32dp"
+
+        // ── List row heights — M3 list spec ─────────────────────────
+        // Per https://m3.material.io/components/lists/specs the M3 list
+        // row is 56dp at the "comfortable" 1-line variant; mural's
+        // tightened defaults stay 32dp at Regular density so existing
+        // demos don't grow vertically without consent. Density triggers
+        // on each row template lerp through the four heights.
+        @ListRowHeightCompact     : number "28dp — Density.Compact"
+        @ListRowHeightRegular     : number "32dp — mural default"
+        @ListRowHeightComfortable : number "40dp — Density.Comfortable"
+        @ListRowHeightTouch       : number "48dp — Pointer.Coarse touch target"
+        @ListRowHeightTwoLine     : number "64dp — headline + supporting text"
+        @ListRowHeightThreeLine   : number "88dp — headline + 2-line supporting text"
+
+        // ── Disabled state opacities — M3 spec ──────────────────────
+        // M3 disabled-state guidance: container ink dims to 12%, content
+        // ink (text + leading/trailing icons) dims to 38%. Templates
+        // apply these via `when (not IsEnabled)` triggers that drop the
+        // Opacity on the relevant Visual. Tokens keep the values
+        // overridable per-theme.
+        @DisabledContainerOpacity : number "0.12 — disabled container alpha"
+        @DisabledContentOpacity   : number "0.38 — disabled content (text + icon) alpha"
+
         // ── Shape ───────────────────────────────────────────────────
         @ShapeNone            : number "0dp — square corners"
         @ShapeExtraSmall      : number "4dp"

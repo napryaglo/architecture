@@ -1,6 +1,6 @@
 import { DashboardVM } from "./dashboard-vm.mjs";
 import { Border, Canvas, DataTemplate, TextBlock, TextWrapping } from "@visualisation-sub/mural/basic";
-import { Color, DynamicResource, PropertyTrigger, ResourceDictionary, Setter, SetterFactory, Style, Thickness } from "@visualisation-sub/mural/runtime";
+import { Color, CornerRadius, DynamicResource, PropertyTrigger, ResourceDictionary, Setter, SetterFactory, Style, Thickness } from "@visualisation-sub/mural/runtime";
 import { SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
 
 
@@ -17,7 +17,7 @@ export class DashboardDemo extends ResourceDictionary {
         const _setter0 = new Setter(Border, "Background", new SolidColorBrush(Color.FromHex('#4caf50')));
         const _setter1 = new Setter(Border, "BorderBrush", new SolidColorBrush(Color.FromHex('#1b5e20')));
         const _setter2 = new Setter(Border, "BorderThickness", new Thickness(2));
-        const _setter3 = new Setter(Border, "CornerRadius", new Thickness(8));
+        const _setter3 = new Setter(Border, "CornerRadius", new CornerRadius(8));
         const _setter4 = new Setter(Border, "Padding", new Thickness(16));
         const _setter5 = new Setter(Border, "Background", new SolidColorBrush(Color.FromHex('#66bb6a')));
         const _setter6 = new Setter(Border, "BorderThickness", new Thickness(3));
@@ -32,7 +32,7 @@ export class DashboardDemo extends ResourceDictionary {
         const _setter14 = new Setter(Border, "Background", new SolidColorBrush(Color.FromHex('#d32f2f')));
         const _setter15 = new Setter(Border, "BorderBrush", new SolidColorBrush(Color.FromHex('#7f0000')));
         const _setter16 = new Setter(Border, "BorderThickness", new Thickness(2));
-        const _setter17 = new Setter(Border, "CornerRadius", new Thickness(8));
+        const _setter17 = new Setter(Border, "CornerRadius", new CornerRadius(8));
         const _setter18 = new Setter(Border, "Padding", new Thickness(16));
         const _setter19 = new Setter(Border, "Background", new SolidColorBrush(Color.FromHex('#ef5350')));
         const _setter20 = new Setter(Border, "BorderThickness", new Thickness(3));
@@ -47,7 +47,7 @@ export class DashboardDemo extends ResourceDictionary {
         const _setter28 = new Setter(Border, "Background", new SetterFactory((_t) => DynamicResource(_t, "Surface")));
         const _setter29 = new Setter(Border, "BorderBrush", new SetterFactory((_t) => DynamicResource(_t, "OutlineVariant")));
         const _setter30 = new Setter(Border, "BorderThickness", new Thickness(1));
-        const _setter31 = new Setter(Border, "CornerRadius", new Thickness(6));
+        const _setter31 = new Setter(Border, "CornerRadius", new CornerRadius(6));
         const _setter32 = new Setter(Border, "Padding", new Thickness(20));
         const _setter33 = new Setter(Border, "Background", new SetterFactory((_t) => DynamicResource(_t, "SurfaceContainerHigh")));
         const _setter34 = new Setter(Border, "BorderThickness", new Thickness(2));

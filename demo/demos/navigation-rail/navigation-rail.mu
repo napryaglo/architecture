@@ -27,18 +27,23 @@ resources NavigationRailDemo {
                 // Rail (left) + active-label readout (right)
                 DockPanel [LastChildFill=true] {
                     NavigationRail [DockPanel.Dock=Left,
-                                    SelectedDataItem=$SelectedItem] {
+                                    SelectedItem=$SelectedItem] {
+                        // Material Symbols Outlined icons — the host
+                        // page (platform.html) loads the Google Fonts
+                        // CSS that registers the family. Text is the
+                        // icon name; the font's `liga` feature swaps
+                        // it for the glyph at render time.
                         NavigationItem [Label="Home"] {
-                            TextBlock [Text="🏠", FontSize=22]
+                            TextBlock [Text="home", FontFamily="Material Symbols Outlined", FontSize=24]
                         }
                         NavigationItem [Label="Search"] {
-                            TextBlock [Text="🔍", FontSize=22]
+                            TextBlock [Text="search", FontFamily="Material Symbols Outlined", FontSize=24]
                         }
                         NavigationItem [Label="Library"] {
-                            TextBlock [Text="📚", FontSize=22]
+                            TextBlock [Text="library_books", FontFamily="Material Symbols Outlined", FontSize=24]
                         }
                         NavigationItem [Label="Settings"] {
-                            TextBlock [Text="⚙", FontSize=22]
+                            TextBlock [Text="settings", FontFamily="Material Symbols Outlined", FontSize=24]
                         }
                     }
 

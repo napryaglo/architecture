@@ -226,6 +226,23 @@ export class Visual extends Model
     // impact — pure data plumbing — hence the inherits-only flag.
     public static readonly DataContextKey = Model.RegisterProperty<unknown>(Visual, 'DataContext', undefined, MetaData.Inherits | MetaData.IsAnimationProhibited);
 
+    // Disabled-state surface. WPF parity: a disabled Visual swallows
+    // pointer / keyboard input across its entire subtree, and templates
+    // can observe `when (not IsEnabled)` to dim the chrome. Inherited
+    // downward — setting it on a control disables every descendant —
+    // matching WPF's FrameworkElement.IsEnabled (which uses CoreEnabled
+    // AND the inherited Inherited value). Default `true` so untouched
+    // visuals stay interactive.
+    //
+    // Input gating lives in the routed-event dispatcher
+    // (input/routed-event.ts): dispatchPointer / dispatchPointerDirect
+    // / dispatchKey skip tunnels/bubbles when any ancestor (or the
+    // source itself) reports IsEnabled=false. Enter/Leave still update
+    // IsMouseOver on enabled ancestors so hover chrome on a disabled
+    // descendant's surrounding container behaves naturally.
+    public static readonly IsEnabledKey = Model.RegisterProperty<boolean>(
+        Visual, 'IsEnabled', true, MetaData.Inherits | MetaData.IsAnimationProhibited);
+
     // Input state flags. Maintained by the InputManager, not by user
     // code — handlers should treat both as read-only. Default `false` so
     // triggers like `when{ IsMouseOver }{ … }` only engage once the
@@ -457,6 +474,9 @@ export class Visual extends Model
 
     public get DataContext(): unknown { return this.get_property_value(Visual.DataContextKey); }
     public set DataContext(value: unknown) { this.set_property_value(Visual.DataContextKey, value); }
+
+    public get IsEnabled(): boolean { return this.get_property_value(Visual.IsEnabledKey); }
+    public set IsEnabled(value: boolean) { this.set_property_value(Visual.IsEnabledKey, value); }
 
     // Generic consumer-side handle. The framework never reads Tag;
     // consumers attach arbitrary data (a domain object, a routing key,
@@ -736,7 +756,20 @@ export class Visual extends Model
     // machinery lives outside the Visual hierarchy.
     public SetTemplatedParent(p: Visual | undefined): void
     {
+        const changed = this._templatedParent !== p;
         this._templatedParent = p;
+        // Re-fire DynamicResource bindings attached to this Visual.
+        // Bindings constructed inside a ControlTemplate factory walk
+        // the ancestor chain at construction time — when the visual
+        // had no templated parent yet — and would otherwise hold an
+        // empty resolution chain. Stamping the templated parent
+        // expands the chain (templatedParent fallback now reaches the
+        // owning Application's Resources via the templated control's
+        // ancestors), so the binding needs a chance to re-resolve
+        // against the now-accessible token dictionary. The check
+        // against `changed` keeps the no-op write a no-op so repeated
+        // template applies don't churn resource lookups.
+        if (changed) this.fire_dynamic_resource_listeners();
     }
 
     // The NameScope this Visual owns, or undefined. Read for FindName

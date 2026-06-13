@@ -93,9 +93,20 @@ export enum MarqueeBoundsPolicy
 // Tag, TreeView hierarchical order, etc.).
 export class Selector extends ItemsControl
 {
-    public static readonly SelectedIndexKey     = Model.RegisterProperty<number>(            Selector, 'SelectedIndex',     -1,        MetaData.None);
-    public static readonly SelectedItemKey      = Model.RegisterProperty<unknown>(           Selector, 'SelectedItem',      undefined, MetaData.None);
-    public static readonly SelectedValueKey     = Model.RegisterProperty<unknown>(           Selector, 'SelectedValue',     undefined, MetaData.None);
+    // SelectedIndex / SelectedItem / SelectedValue all carry
+    // BindsTwoWayByDefault — WPF parity. Consumers binding selection to
+    // a VM almost always want the user's clicks to flow back, and
+    // typing `Mode=TwoWay` on every NavigationRail / ListBox / ComboBox
+    // selection binding is exactly the kind of papercut WPF eliminated
+    // by promoting the metadata flag here. Explicit modes on the
+    // binding still win (see Binding.ResolveDefaultMode).
+    //
+    // SelectedValuePath stays None — it's a path-spec string, not a
+    // selection-tracking surface, and the few places that bind it
+    // typically want OneWay.
+    public static readonly SelectedIndexKey     = Model.RegisterProperty<number>(            Selector, 'SelectedIndex',     -1,        MetaData.BindsTwoWayByDefault);
+    public static readonly SelectedItemKey      = Model.RegisterProperty<unknown>(           Selector, 'SelectedItem',      undefined, MetaData.BindsTwoWayByDefault);
+    public static readonly SelectedValueKey     = Model.RegisterProperty<unknown>(           Selector, 'SelectedValue',     undefined, MetaData.BindsTwoWayByDefault);
     public static readonly SelectedValuePathKey = Model.RegisterProperty<string | undefined>(Selector, 'SelectedValuePath', undefined, MetaData.None);
     public static readonly SelectionModeKey     = Model.RegisterProperty<SelectionMode>(    Selector, 'SelectionMode',     SelectionMode.Single, MetaData.None);
 

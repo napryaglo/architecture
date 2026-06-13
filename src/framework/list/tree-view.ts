@@ -33,21 +33,38 @@ export class ClickableRow extends Border
     public onClick: ((modifiers: ModifierKeys) => void) | undefined;
     private _pressOriginatedHere = false;
 
+    // IsPressed lifecycle (Button / ListBoxItem parity): Down sets
+    // both `_pressOriginatedHere` (gate for the press-here-release-here
+    // click contract) and IsPressed (M3 state-layer trigger source).
+    // Leave clears the visual cue but keeps the gate armed so a
+    // re-enter restores IsPressed; OnPointerEnter handles the
+    // re-arm. Up always clears IsPressed BEFORE the click fires so
+    // handlers reading IsPressed see the post-release state.
     protected override OnPointerDown(_args: PointerEventArgs): void
     {
         this._pressOriginatedHere = true;
+        this.set_property_value(Visual.IsPressedKey, true);
     }
 
     protected override OnPointerUp(args: PointerEventArgs): void
     {
         const fire = this._pressOriginatedHere && this.IsMouseOver;
         this._pressOriginatedHere = false;
+        this.set_property_value(Visual.IsPressedKey, false);
         if (fire) this.onClick?.(args.Modifiers);
     }
 
     protected override OnPointerLeave(_args: PointerEventArgs): void
     {
-        this._pressOriginatedHere = false;
+        this.set_property_value(Visual.IsPressedKey, false);
+    }
+
+    protected override OnPointerEnter(_args: PointerEventArgs): void
+    {
+        if (this._pressOriginatedHere)
+        {
+            this.set_property_value(Visual.IsPressedKey, true);
+        }
     }
 }
 
@@ -462,6 +479,28 @@ export class TreeViewItem extends ItemsControl
     // (below) keeps the two in lock-step.
     public static readonly IsSelectedKey = Model.RegisterProperty<boolean>(TreeViewItem, 'IsSelected', false, MetaData.Render);
 
+    // M3 list-row anatomy slots — same shape as ListBoxItem. Leading
+    // hosts the 24dp icon BETWEEN the chevron and the label (the
+    // chevron stays the leading-most element since the hierarchy
+    // affordance can't move). SupportingText flows below the Header
+    // string; empty stays 1-line, non-empty flips to 2-line, embedded
+    // newline flips to 3-line. Trailing sits at the row's right edge.
+    public static readonly LeadingKey = Model.RegisterProperty<Visual | undefined>(
+        TreeViewItem, 'Leading', undefined, MetaData.Render);
+    public static readonly SupportingTextKey = Model.RegisterProperty<string>(
+        TreeViewItem, 'SupportingText', '', MetaData.Render);
+    public static readonly TrailingKey = Model.RegisterProperty<Visual | undefined>(
+        TreeViewItem, 'Trailing', undefined, MetaData.Render);
+
+    // Derived state DPs the template observes — see ListBoxItem for the
+    // why-this-shape rationale.
+    private static readonly _HasSupportingTextPriv = Model.RegisterReadOnlyProperty<boolean>(
+        TreeViewItem, 'HasSupportingText', false, MetaData.None);
+    public static readonly HasSupportingTextKey = TreeViewItem._HasSupportingTextPriv;
+    private static readonly _IsThreeLinePriv = Model.RegisterReadOnlyProperty<boolean>(
+        TreeViewItem, 'IsThreeLine', false, MetaData.None);
+    public static readonly IsThreeLineKey = TreeViewItem._IsThreeLinePriv;
+
     static {
         Model.OverrideMetadata(TreeViewItem, Visual.DefaultStyleKeyKey, { default_value: TreeViewItem });
     }
@@ -479,6 +518,9 @@ export class TreeViewItem extends ItemsControl
     private readonly _spacer:      Border;
     private readonly _chevronText: TextBlock;
     private readonly _label:       TextBlock;
+    private readonly _leadingSlot:  Border;
+    private readonly _trailingSlot: Border;
+    private readonly _supportText:  TextBlock;
 
     constructor()
     {
@@ -496,11 +538,14 @@ export class TreeViewItem extends ItemsControl
         this.applyDefaultStyle();
 
         const root = this.visualChildren[0]!;
-        this._row         = root.FindName('PART_Row')         as ClickableRow;
-        this._spacer      = root.FindName('PART_Spacer')      as Border;
-        const chevron     = root.FindName('PART_Chevron')     as ChevronTarget;
-        this._chevronText = root.FindName('PART_ChevronText') as TextBlock;
-        this._label       = root.FindName('PART_Label')       as TextBlock;
+        this._row          = root.FindName('PART_Row')           as ClickableRow;
+        this._spacer       = root.FindName('PART_Spacer')        as Border;
+        const chevron      = root.FindName('PART_Chevron')       as ChevronTarget;
+        this._chevronText  = root.FindName('PART_ChevronText')   as TextBlock;
+        this._label        = root.FindName('PART_Label')         as TextBlock;
+        this._leadingSlot  = root.FindName('PART_LeadingSlot')   as Border;
+        this._trailingSlot = root.FindName('PART_TrailingSlot')  as Border;
+        this._supportText  = root.FindName('PART_SupportingText') as TextBlock;
 
         chevron.onClick = (): void => { this.IsExpanded = !this.IsExpanded; };
         this._row.onClick = (modifiers): void => {
@@ -539,6 +584,18 @@ export class TreeViewItem extends ItemsControl
     // listener and any `when (IsSelected)` triggers keep firing.
     public get IsSelected(): boolean { return Selector.GetIsSelected(this); }
     public set IsSelected(v: boolean) { Selector.SetIsSelected(this, v); }
+
+    public get Leading(): Visual | undefined { return this.get_property_value(TreeViewItem.LeadingKey); }
+    public set Leading(v: Visual | undefined) { this.set_property_value(TreeViewItem.LeadingKey, v); }
+
+    public get SupportingText(): string { return this.get_property_value(TreeViewItem.SupportingTextKey); }
+    public set SupportingText(v: string) { this.set_property_value(TreeViewItem.SupportingTextKey, v); }
+
+    public get Trailing(): Visual | undefined { return this.get_property_value(TreeViewItem.TrailingKey); }
+    public set Trailing(v: Visual | undefined) { this.set_property_value(TreeViewItem.TrailingKey, v); }
+
+    public get HasSupportingText(): boolean { return this.get_property_value(TreeViewItem.HasSupportingTextKey); }
+    public get IsThreeLine():       boolean { return this.get_property_value(TreeViewItem.IsThreeLineKey); }
 
     // ── ItemsControl override seams ────────────────────────────────
 
@@ -637,6 +694,35 @@ export class TreeViewItem extends ItemsControl
             case 'Header':
                 this._label.Text = String(newValue ?? '');
                 return;
+        }
+        // M3 anatomy slot syncs — Leading / Trailing flow into the
+        // PART_LeadingSlot / PART_TrailingSlot Borders via SetChild;
+        // SupportingText drives the supporting-line TextBlock AND the
+        // derived HasSupportingText / IsThreeLine DPs the template
+        // observes for row-height variants. Mirrors the ListBoxItem
+        // shape (see list-box.ts for the matching logic).
+        if (descriptor.Owner === TreeViewItem)
+        {
+            if (descriptor.Name === 'Leading')
+            {
+                this._leadingSlot.SetChild(newValue as Visual | undefined);
+                return;
+            }
+            if (descriptor.Name === 'Trailing')
+            {
+                this._trailingSlot.SetChild(newValue as Visual | undefined);
+                return;
+            }
+            if (descriptor.Name === 'SupportingText')
+            {
+                const text = (newValue as string) ?? '';
+                this._supportText.Text = text;
+                const hasText     = text.length > 0;
+                const isThreeLine = text.includes('\n');
+                this.set_property_value_with_key(TreeViewItem._HasSupportingTextPriv, hasText);
+                this.set_property_value_with_key(TreeViewItem._IsThreeLinePriv,       isThreeLine);
+                return;
+            }
         }
         // IsSelected mirror — attached `Selector.IsSelected` is the
         // canonical seam, instance `TreeViewItem.IsSelected` is the

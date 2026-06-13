@@ -6,6 +6,7 @@ import {
     type PropertyDescriptor,
 } from '../../runtime/index.js';
 import { ContentControl } from '../content-control.js';
+import { Border } from '../../basic/border.js';
 import { findDataTemplateForType } from '../../basic/templates/data-template.js';
 import { Selector } from './selector.js';
 import { Orientation, StackPanel } from '../../basic/panels/stack-panel.js';
@@ -284,12 +285,45 @@ export class ListBoxItem extends ContentControl
     public static readonly IsSelectedKey = Model.RegisterProperty<boolean>(
         ListBoxItem, 'IsSelected', false, MetaData.Render);
 
+    // M3 list-row anatomy slots. `Content` (from ContentControl) hosts
+    // the headline — its current data-driven usage is preserved
+    // unchanged. Leading and Trailing carry a Visual into the optional
+    // 24dp icon / avatar / checkbox slots flanking the headline.
+    // SupportingText surfaces the optional caption line below the
+    // headline: empty (the default) keeps the row at the 1-line
+    // height; a non-empty string flips to 2-line; a value containing
+    // an explicit newline ('\n') flips to 3-line. Auto-computed from
+    // content rather than gated on a separate Lines enum — keeps the
+    // API surface narrow.
+    public static readonly LeadingKey = Model.RegisterProperty<Visual | undefined>(
+        ListBoxItem, 'Leading', undefined, MetaData.Render);
+    public static readonly SupportingTextKey = Model.RegisterProperty<string>(
+        ListBoxItem, 'SupportingText', '', MetaData.Render);
+    public static readonly TrailingKey = Model.RegisterProperty<Visual | undefined>(
+        ListBoxItem, 'Trailing', undefined, MetaData.Render);
+
+    // Derived state DPs the template observes via `when()` triggers to
+    // pick the right row-height variant. Computed in OnPropertyChanged
+    // off SupportingText so the template's height triggers don't have
+    // to express "is supporting text non-empty" through the trigger
+    // DSL (which doesn't carry an "!=" form today). Read-only — only
+    // the class writes them.
+    private static readonly _HasSupportingTextPriv = Model.RegisterReadOnlyProperty<boolean>(
+        ListBoxItem, 'HasSupportingText', false, MetaData.None);
+    public static readonly HasSupportingTextKey = ListBoxItem._HasSupportingTextPriv;
+    private static readonly _IsThreeLinePriv = Model.RegisterReadOnlyProperty<boolean>(
+        ListBoxItem, 'IsThreeLine', false, MetaData.None);
+    public static readonly IsThreeLineKey = ListBoxItem._IsThreeLinePriv;
+
     static {
         Model.OverrideMetadata(ListBoxItem, Visual.DefaultStyleKeyKey, { default_value: ListBoxItem });
     }
 
     private _pressOriginatedHere = false;
     private _syncingIsSelected = false;
+    private _leadingSlot:  Border    | undefined;
+    private _trailingSlot: Border    | undefined;
+    private _supportText:  TextBlock | undefined;
 
     constructor(content?: Visual)
     {
@@ -301,7 +335,47 @@ export class ListBoxItem extends ContentControl
         // controls.template.mu, ListBoxItem block).
         if (content !== undefined) this.Content = content;
         this.applyDefaultStyle();
+        this.adoptTemplateParts();
+        this.syncAnatomySlots();
     }
+
+    private adoptTemplateParts(): void
+    {
+        // Leading / Trailing slots are plain Borders (not
+        // ContentPresenters) so findFirstContentPresenter walks past
+        // them and resolves ContentControl's contentPresenter to the
+        // headline slot. The class hosts the Leading / Trailing
+        // Visuals via SetChild instead.
+        this._leadingSlot  = this.GetTemplateChild('PART_LeadingSlot')  as Border    | undefined;
+        this._trailingSlot = this.GetTemplateChild('PART_TrailingSlot') as Border    | undefined;
+        this._supportText  = this.GetTemplateChild('PART_SupportingText') as TextBlock | undefined;
+    }
+
+    // Push the current DP values through to the template parts. Runs
+    // at construction, on each Template swap, and on each anatomy-DP
+    // change. Idempotent — calling repeatedly with unchanged DPs is a
+    // no-op on the underlying SetChild / Text writes.
+    private syncAnatomySlots(): void
+    {
+        this._leadingSlot?.SetChild(this.Leading);
+        this._trailingSlot?.SetChild(this.Trailing);
+        if (this._supportText !== undefined)
+        {
+            this._supportText.Text = this.SupportingText;
+        }
+    }
+
+    public get Leading(): Visual | undefined { return this.get_property_value(ListBoxItem.LeadingKey); }
+    public set Leading(v: Visual | undefined) { this.set_property_value(ListBoxItem.LeadingKey, v); }
+
+    public get SupportingText(): string { return this.get_property_value(ListBoxItem.SupportingTextKey); }
+    public set SupportingText(v: string) { this.set_property_value(ListBoxItem.SupportingTextKey, v); }
+
+    public get Trailing(): Visual | undefined { return this.get_property_value(ListBoxItem.TrailingKey); }
+    public set Trailing(v: Visual | undefined) { this.set_property_value(ListBoxItem.TrailingKey, v); }
+
+    public get HasSupportingText(): boolean { return this.get_property_value(ListBoxItem.HasSupportingTextKey); }
+    public get IsThreeLine():       boolean { return this.get_property_value(ListBoxItem.IsThreeLineKey); }
 
     public get IsSelected(): boolean { return Selector.GetIsSelected(this); }
     public set IsSelected(v: boolean) { Selector.SetIsSelected(this, v); }
@@ -314,15 +388,24 @@ export class ListBoxItem extends ContentControl
         Selector.SetIsSelected(this, v);
     }
 
+    // IsPressed lifecycle mirrors Button's WPF-parity rules so the M3
+    // state-layer ladder fires for list rows. Down → IsPressed=true;
+    // dragging off the row (Leave while pressed) clears it; dragging
+    // back on with the pointer still pressed re-asserts it (handled in
+    // OnPointerEnter below); Up always clears. IsPressed is cleared
+    // BEFORE the Selector click so a click handler that reads IsPressed
+    // sees the post-release state — same convention Button uses.
     protected override OnPointerDown(_args: PointerEventArgs): void
     {
         this._pressOriginatedHere = true;
+        this.set_property_value(Visual.IsPressedKey, true);
     }
 
     protected override OnPointerUp(args: PointerEventArgs): void
     {
         const fire = this._pressOriginatedHere && this.IsMouseOver;
         this._pressOriginatedHere = false;
+        this.set_property_value(Visual.IsPressedKey, false);
         if (!fire) return;
         const lb = Selector.FromContainer<Selector>(
             this, (v: Visual): v is Selector => v instanceof Selector);
@@ -331,14 +414,36 @@ export class ListBoxItem extends ContentControl
 
     protected override OnPointerLeave(_args: PointerEventArgs): void
     {
-        this._pressOriginatedHere = false;
+        // Leave while still pressed: clear the visual cue but keep
+        // _pressOriginatedHere — a re-entry restores IsPressed and the
+        // press-here-release-here gate stays armed.
+        this.set_property_value(Visual.IsPressedKey, false);
     }
 
-    // Two-way mirror between the instance IsSelected DP and the
-    // canonical attached Selector.IsSelected. The Selector base writes
-    // the attached when selection changes; the trigger system watches
-    // the instance DP. Without the mirror, `when (IsSelected)` would
-    // never fire under Selector-driven selection updates.
+    protected override OnPointerEnter(_args: PointerEventArgs): void
+    {
+        // Re-entering with the press still in flight restores the
+        // pressed visual cue. _pressOriginatedHere is the single source
+        // of truth for "press started on this row and is still active"
+        // — Down sets it, Up clears it; Leave doesn't touch it, so a
+        // re-Enter while it's still true means the press never ended.
+        if (this._pressOriginatedHere)
+        {
+            this.set_property_value(Visual.IsPressedKey, true);
+        }
+    }
+
+    // OnPropertyChanged handles three classes of routes:
+    //   * IsSelected ⇄ Selector.IsSelected two-way mirror (the
+    //     attached DP is the canonical seam; the instance DP is what
+    //     trigger DSL `when (IsSelected)` observes).
+    //   * Anatomy slot syncs — Leading / Trailing flow into the
+    //     PART_LeadingSlot / PART_TrailingSlot Borders' Child; the
+    //     SupportingText flows into PART_SupportingText.Text; and the
+    //     derived HasSupportingText / IsThreeLine flip the template's
+    //     row-height triggers.
+    //   * Template re-application — re-find the parts and push the
+    //     current anatomy DPs through the fresh template.
     protected override OnPropertyChanged(
         descriptor: PropertyDescriptor,
         oldValue: unknown,
@@ -346,11 +451,40 @@ export class ListBoxItem extends ContentControl
     ): void
     {
         super.OnPropertyChanged(descriptor, oldValue, newValue);
+        const name = descriptor.Name;
+        if (name === 'Template' && newValue !== oldValue)
+        {
+            this.adoptTemplateParts();
+            this.syncAnatomySlots();
+            return;
+        }
+        if (name === 'Leading' && descriptor.Owner === ListBoxItem)
+        {
+            this._leadingSlot?.SetChild(newValue as Visual | undefined);
+            return;
+        }
+        if (name === 'Trailing' && descriptor.Owner === ListBoxItem)
+        {
+            this._trailingSlot?.SetChild(newValue as Visual | undefined);
+            return;
+        }
+        if (name === 'SupportingText' && descriptor.Owner === ListBoxItem)
+        {
+            const text = (newValue as string) ?? '';
+            if (this._supportText !== undefined) this._supportText.Text = text;
+            // Recompute derived row-line state — the template watches
+            // these via `when()` to pick the right Height variant.
+            const hasText      = text.length > 0;
+            const isThreeLine  = text.includes('\n');
+            this.set_property_value_with_key(ListBoxItem._HasSupportingTextPriv, hasText);
+            this.set_property_value_with_key(ListBoxItem._IsThreeLinePriv,       isThreeLine);
+            return;
+        }
         if (this._syncingIsSelected) return;
         // Compare descriptor identity via Owner + Name pair — IsSelected
         // is registered on both Selector (attached) and ListBoxItem
         // (instance), so a string match alone would conflate them.
-        if (descriptor.Name !== 'IsSelected') return;
+        if (name !== 'IsSelected') return;
         const fromAttached = descriptor.Owner === Selector;
         const fromInstance = descriptor.Owner === ListBoxItem;
         if (!fromAttached && !fromInstance) return;

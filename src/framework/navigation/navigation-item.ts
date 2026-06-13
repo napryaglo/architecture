@@ -150,8 +150,29 @@ export class NavigationItem extends ContentControl
         const name = descriptor.Name;
         if (name === 'IsSelected' && !this._syncingIsSelected)
         {
+            // Two-way mirror between the instance IsSelected DP and the
+            // canonical Selector.IsSelected attached DP — same pattern as
+            // ListBoxItem. Source-of-truth direction: parent NavigationRail
+            // (Selector) writes the attached DP; the template's
+            // `when (IsSelected)` trigger watches the instance DP. Without
+            // the attached→instance leg the trigger never fires, and the
+            // M3 selection chrome (PART_IconContainer.Background flipping
+            // to @SecondaryContainer) stays invisible.
+            const fromAttached = descriptor.Owner === Selector;
+            const fromInstance = descriptor.Owner === NavigationItem;
+            if (!fromAttached && !fromInstance) return;
             this._syncingIsSelected = true;
-            try { Selector.SetIsSelected(this, newValue as boolean); }
+            try
+            {
+                if (fromAttached)
+                {
+                    this.set_property_value(NavigationItem.IsSelectedKey, newValue as boolean);
+                }
+                else
+                {
+                    Selector.SetIsSelected(this, newValue as boolean);
+                }
+            }
             finally { this._syncingIsSelected = false; }
             return;
         }

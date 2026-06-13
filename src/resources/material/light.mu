@@ -118,6 +118,29 @@ scheme MaterialLight against Material {
     @OnPrimaryContainerHoverLayer   = #21005D14   // OnPrimaryContainer @ 8%
     @OnPrimaryContainerPressLayer   = #21005D1F   // OnPrimaryContainer @ 12%
 
+    // ── Spacing scale (M3 4dp grid) ─────────────────────────────────
+    @Spacing0             = 0
+    @Spacing1             = 4
+    @Spacing2             = 8
+    @Spacing3             = 12
+    @Spacing4             = 16
+    @Spacing5             = 20
+    @Spacing6             = 24
+    @Spacing7             = 28
+    @Spacing8             = 32
+
+    // ── List row heights (M3 list spec) ─────────────────────────────
+    @ListRowHeightCompact     = 28
+    @ListRowHeightRegular     = 32
+    @ListRowHeightComfortable = 40
+    @ListRowHeightTouch       = 48
+    @ListRowHeightTwoLine     = 64
+    @ListRowHeightThreeLine   = 88
+
+    // ── Disabled state opacities (M3 spec) ──────────────────────────
+    @DisabledContainerOpacity = 0.12
+    @DisabledContentOpacity   = 0.38
+
     // ── Shape (corner radii — M3 shape scale) ───────────────────────
     // Numeric tokens consumed via Border.CornerRadius = @ShapeMedium etc.
     // `Full` is the M3 "fully rounded" shape family — Border's render

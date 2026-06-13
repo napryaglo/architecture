@@ -14,12 +14,14 @@ export { Border } from './border.js';
 export { TextBlock, TextAlignment, TextWrapping } from './text-block.js';
 export { Canvas } from './panels/canvas.js';
 export { Ellipse } from './shapes/ellipse.js';
+export { Arc } from './shapes/arc.js';
 export { Image } from './image.js';
 export { Line } from './shapes/line.js';
 export { Rectangle } from './shapes/rectangle.js';
 export { DockPanel, Dock } from './panels/dock-panel.js';
 export {
     TextBox,
+    TextBoxVariant,
     TextEditorSurface,
     type ClipboardSink,
 } from './text-box.js';

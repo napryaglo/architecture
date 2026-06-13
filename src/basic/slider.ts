@@ -19,9 +19,24 @@ import { TemplatedControl } from './templated-control.js';
 
 // Cross-axis thickness pinned by the Slider's MeasureOverride — same
 // pattern ScrollBar uses to declare its own thickness. The thumb sits
-// across the full cross-axis; the track is thinner and centered.
-const THUMB_SIZE      = 16;
-const TRACK_THICKNESS = 4;
+// across the full cross-axis; the track and thumb both report the
+// same cross-axis size so the slider's overall cross-axis stays 16.
+//
+// Phase 8.6 — M3 2024 Sliders redesign:
+//   * TRACK_THICKNESS grew 4 → 16. Modern M3 sliders draw the track at
+//     the same height as the cross-axis affordance, with no inset
+//     "skinny track inside a chunky thumb area" visual.
+//   * THUMB_PRIMARY 16 → 4. The thumb is now a narrow vertical pill
+//     along the drag axis (4dp wide for horizontal sliders). The 4dp
+//     wide affordance reads as a precision indicator rather than a
+//     drag-grip.
+//   * THUMB_CROSS stays 16 — matches TRACK_THICKNESS so the pill spans
+//     the full cross-axis of the slider. Combined with @ShapeFull
+//     CornerRadius on the thumb in the default template, the visible
+//     shape is a vertically-rounded narrow pill, the M3 2024 look.
+const THUMB_PRIMARY   = 4;
+const THUMB_CROSS     = 16;
+const TRACK_THICKNESS = 16;
 
 // Internal Panel hosting track + fill + thumb. The Slider owns the
 // metrics (Min, Max, Value → thumb offset) and delegates measure /
@@ -245,10 +260,10 @@ export class Slider extends TemplatedControl
         if (this.Orientation === Orientation.Vertical)
         {
             const h = Number.isFinite(availableSize.Height) ? availableSize.Height : 0;
-            return new Size(THUMB_SIZE, h);
+            return new Size(THUMB_CROSS, h);
         }
         const w = Number.isFinite(availableSize.Width) ? availableSize.Width : 0;
-        return new Size(w, THUMB_SIZE);
+        return new Size(w, THUMB_CROSS);
     }
 
     // Called from SliderLayout.ArrangeOverride — places the track (full
@@ -267,6 +282,11 @@ export class Slider extends TemplatedControl
         if (this.Orientation === Orientation.Vertical)
         {
             // Track: full height, centred on the horizontal (cross) axis.
+            // TRACK_THICKNESS = THUMB_CROSS today so the track and the
+            // thumb both span the slider's cross-axis; the centring math
+            // happens to land at 0 but the formula is preserved for
+            // clarity (and so a future asymmetric variant doesn't
+            // silently mis-arrange).
             const trackX = (finalSize.Width - TRACK_THICKNESS) / 2;
             track.Arrange(new Rect(trackX, 0, TRACK_THICKNESS, finalSize.Height));
 
@@ -274,18 +294,18 @@ export class Slider extends TemplatedControl
             // (Min lives at the bottom). thumbOffset is the offset of
             // the thumb's TOP from the top of the track in the
             // bottom-anchored frame, so:
-            //   thumbTopFromTop = trackLength - thumbSize - thumbOffset
-            //   thumbCentreFromTop = thumbTopFromTop + thumbSize/2
-            const thumbTopY    = finalSize.Height - THUMB_SIZE - m.thumbOffset;
-            const thumbCentreY = thumbTopY + THUMB_SIZE / 2;
+            //   thumbTopFromTop = trackLength - thumbPrimary - thumbOffset
+            //   thumbCentreFromTop = thumbTopFromTop + thumbPrimary/2
+            const thumbTopY    = finalSize.Height - THUMB_PRIMARY - m.thumbOffset;
+            const thumbCentreY = thumbTopY + THUMB_PRIMARY / 2;
             fill.Arrange(new Rect(
                 trackX, thumbCentreY,
                 TRACK_THICKNESS, Math.max(0, finalSize.Height - thumbCentreY),
             ));
 
-            // Thumb: square centred on the cross axis.
-            const thumbX = (finalSize.Width - THUMB_SIZE) / 2;
-            thumb.Arrange(new Rect(thumbX, thumbTopY, THUMB_SIZE, THUMB_SIZE));
+            // Thumb: narrow vertical pill centred on the cross axis.
+            const thumbX = (finalSize.Width - THUMB_CROSS) / 2;
+            thumb.Arrange(new Rect(thumbX, thumbTopY, THUMB_CROSS, THUMB_PRIMARY));
             return;
         }
 
@@ -295,11 +315,11 @@ export class Slider extends TemplatedControl
 
         // Fill from the left edge of the track to the centre of the
         // thumb. m.thumbOffset is the offset of the thumb's LEFT edge.
-        const thumbCentreX = m.thumbOffset + THUMB_SIZE / 2;
+        const thumbCentreX = m.thumbOffset + THUMB_PRIMARY / 2;
         fill.Arrange(new Rect(0, trackY, thumbCentreX, TRACK_THICKNESS));
 
-        const thumbY = (finalSize.Height - THUMB_SIZE) / 2;
-        thumb.Arrange(new Rect(m.thumbOffset, thumbY, THUMB_SIZE, THUMB_SIZE));
+        const thumbY = (finalSize.Height - THUMB_CROSS) / 2;
+        thumb.Arrange(new Rect(m.thumbOffset, thumbY, THUMB_PRIMARY, THUMB_CROSS));
     }
 
     // RenderOverride inherited from TemplatedControl (no-op — template paints).
@@ -337,7 +357,7 @@ export class Slider extends TemplatedControl
     {
         if (!this.IsDragging) return;
         const m = this.metricsFor(this.ArrangedRect.Size);
-        const travel = m.trackLength - THUMB_SIZE;
+        const travel = m.trackLength - THUMB_PRIMARY;
         if (travel <= 0) return;
         const range = Math.max(0, this.Maximum - this.Minimum);
         if (range <= 0) return;
@@ -410,7 +430,7 @@ export class Slider extends TemplatedControl
             return { trackLength: 0, thumbOffset: 0 };
         }
 
-        const travel = Math.max(0, trackLength - THUMB_SIZE);
+        const travel = Math.max(0, trackLength - THUMB_PRIMARY);
         const range  = Math.max(0, this.Maximum - this.Minimum);
         const valuePos = range > 0
             ? ((this.clampedValue() - this.Minimum) / range) * travel
@@ -430,15 +450,15 @@ export class Slider extends TemplatedControl
         const arr = this.ArrangedRect;
         const trackLength = this.Orientation === Orientation.Vertical
             ? arr.Height : arr.Width;
-        const travel = Math.max(0, trackLength - THUMB_SIZE);
+        const travel = Math.max(0, trackLength - THUMB_PRIMARY);
         if (travel <= 0) return this.clampedValue();
 
         const localPx = hostPx - this.primaryOrigin();
         // Convert centre-anchored pointer position to leading-edge
         // offset for the metric model.
         const leadingPx = this.Orientation === Orientation.Vertical
-            ? (trackLength - localPx) - THUMB_SIZE / 2
-            : localPx - THUMB_SIZE / 2;
+            ? (trackLength - localPx) - THUMB_PRIMARY / 2
+            : localPx - THUMB_PRIMARY / 2;
 
         const range = Math.max(0, this.Maximum - this.Minimum);
         if (range <= 0) return this.Minimum;

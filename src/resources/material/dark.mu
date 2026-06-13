@@ -96,6 +96,29 @@ scheme MaterialDark against Material {
     @OnPrimaryContainerHoverLayer   = #EADDFF14   // OnPrimaryContainer @ 8%
     @OnPrimaryContainerPressLayer   = #EADDFF1F   // OnPrimaryContainer @ 12%
 
+    // ── Spacing scale (identical across schemes — see material.mu) ──
+    @Spacing0             = 0
+    @Spacing1             = 4
+    @Spacing2             = 8
+    @Spacing3             = 12
+    @Spacing4             = 16
+    @Spacing5             = 20
+    @Spacing6             = 24
+    @Spacing7             = 28
+    @Spacing8             = 32
+
+    // ── List row heights (identical across schemes) ─────────────────
+    @ListRowHeightCompact     = 28
+    @ListRowHeightRegular     = 32
+    @ListRowHeightComfortable = 40
+    @ListRowHeightTouch       = 48
+    @ListRowHeightTwoLine     = 64
+    @ListRowHeightThreeLine   = 88
+
+    // ── Disabled state opacities (identical across schemes) ─────────
+    @DisabledContainerOpacity = 0.12
+    @DisabledContentOpacity   = 0.38
+
     // ── Shape (corner radii — identical across schemes) ─────────────
     // See light.mu for the @ShapeFull contract.
     @ShapeNone            = 0

@@ -174,6 +174,19 @@ interface ValueCtx
      *  bind to this target). Undefined means we're inside a Style
      *  setter and need a per-target SetterFactory wrap. */
     targetExpr?: string;
+    /** True when the value is a cell INSIDE a tuple expression (e.g.
+     *  Padding = (@Spacing2, @Spacing1, …)). The enclosing Thickness /
+     *  CornerRadius constructor expects numbers, not Binding objects,
+     *  so `@Token` cells emit a SYNCHRONOUS resource lookup against
+     *  the target Visual at template-instantiation time rather than
+     *  the usual DynamicResource Binding install. Tokens consumed this
+     *  way lose theme-reactivity — but spacing scales (@Spacing*,
+     *  @ListRowHeight*, …) don't theme-swap, which is exactly why the
+     *  trade-off is acceptable here. Colour brushes inside a tuple are
+     *  unusual but if a future template needs that, this flag would
+     *  need a per-token escape hatch (or the tuple cell would need to
+     *  be hoisted to its own DP write). */
+    insideTuple?: boolean;
 }
 
 // Visits the AST and produces JS source. Single-pass; bind and emit
@@ -2185,10 +2198,42 @@ export class Compiler
                 }
                 else
                 {
+                    // Owner resolution — same shape as the
+                    // ControlTemplate trigger path above. Style triggers
+                    // also need to honour the class-prefix form
+                    // `when (ThemeManager.Density = …)` so a TargetType-
+                    // typed Style can observe an ambient inherited DP
+                    // that doesn't live on the target's own class chain.
+                    // Without this, the PropertyTrigger emits the Style
+                    // target as the owner and resolve_descriptor_explicit
+                    // throws "Property 'Density' not found on owner
+                    // 'ComboBoxItem'" at applyDefaultStyle time. PART-
+                    // source forms (`PART_Foo.IsMouseOver`) aren't
+                    // meaningful in a Style — there's no template-local
+                    // x:name table to consult — so we only honour the
+                    // class-prefix form here.
+                    let ownerType = targetType;
+                    if (term.sourceName !== undefined)
+                    {
+                        if (this.symbols.has(term.sourceName))
+                        {
+                            ownerType = term.sourceName;
+                            this.ensureImport(ownerType);
+                        }
+                        else
+                        {
+                            throw new EmitError(
+                                `when(${term.sourceName}.${term.property}): `
+                                + `'${term.sourceName}' is not a known imported type. `
+                                + `Style triggers only support the class-prefix form `
+                                + `(PART-source triggers require a ControlTemplate context).`,
+                                term.span);
+                        }
+                    }
                     this.ensureImport('PropertyTrigger');
                     const v = this.fresh('trigger');
                     this.line(
-                        `const ${v} = new PropertyTrigger(${targetType}, ${JSON.stringify(term.property)}, ${valueExpr}, ${settersArrVar}${triggerTail});`);
+                        `const ${v} = new PropertyTrigger(${ownerType}, ${JSON.stringify(term.property)}, ${valueExpr}, ${settersArrVar}${triggerTail});`);
                     propertyTriggers.push(v);
                 }
             }
@@ -2901,6 +2946,19 @@ export class Compiler
                 // in the same file.
                 const localVar = this.localResourceVars?.get(val.key);
                 if (localVar !== undefined) return localVar;
+                // Tuple-cell sync resolution. Thickness / CornerRadius
+                // structs aren't DPs — their fields hold raw numbers, so
+                // a Binding stored per cell would just sit there as an
+                // opaque object (Padding.Top + Padding.Bottom → NaN).
+                // Resolve the token synchronously against the target's
+                // resource chain at template-instantiation time instead.
+                // Lookup falls back through TryFindResource's
+                // Application-level branch, so even an unattached
+                // template root finds bundled tokens.
+                if (ctx.insideTuple && ctx.targetExpr !== undefined)
+                {
+                    return `${ctx.targetExpr}.TryFindResource(${JSON.stringify(val.key)})`;
+                }
                 // Non-local `@key` falls through to dynamic-resource
                 // semantics: install a Binding that walks the visual's
                 // resource chain at construction time and listens for
@@ -2920,7 +2978,12 @@ export class Compiler
                 // `@@key` is the explicit-dynamic form, retained for
                 // authors who want to be unambiguous even when a key
                 // happens to also be local. Same emit as the non-local
-                // `@key` branch above.
+                // `@key` branch above. Same tuple-cell special-case as
+                // the implicit-static path above.
+                if (ctx.insideTuple && ctx.targetExpr !== undefined)
+                {
+                    return `${ctx.targetExpr}.TryFindResource(${JSON.stringify(val.key)})`;
+                }
                 this.ensureImport('DynamicResource');
                 if (ctx.targetExpr !== undefined)
                 {
@@ -3149,7 +3212,7 @@ export class Compiler
         return `new SolidColorBrush(Color.${cap})`;
     }
 
-    private compileTupleValue(tuple: TupleValue, _ctx: ValueCtx): string
+    private compileTupleValue(tuple: TupleValue, ctx: ValueCtx): string
     {
         // Tuples in value position default to Thickness — the spec's
         // most common case (Padding, Margin, BorderThickness,
@@ -3157,23 +3220,79 @@ export class Compiler
         //   (a)          → Thickness(a)
         //   (a, b)       → Thickness(a, b, a, b)
         //   (a, b, c, d) → Thickness(a, b, c, d)
-        this.ensureImport('Thickness');
-        const exprs = tuple.values.map(v => this.compileValue(v, {}));
+        //
+        // Token cells need sync resolution because Thickness's ctor
+        // wants raw numbers (a Binding stored per field would just sit
+        // there as an opaque object and `Padding.Top + Padding.Bottom`
+        // would yield NaN). Two emit shapes:
+        //
+        //   * Direct attribute (ctx.targetExpr present) — emit
+        //     `_target.TryFindResource("…")` per cell. Resolution
+        //     happens at factory time when the visual is being
+        //     constructed; resource chain falls back through
+        //     Application so even an unattached template root finds
+        //     bundled tokens. Trade-off: tokens lose theme-reactivity,
+        //     acceptable for spacing scales that don't scheme-swap.
+        //
+        //   * Trigger setter (no ctx.targetExpr) — wrap the whole
+        //     Thickness construction in `new SetterFactory((_t) =>
+        //     new Thickness(_t.TryFindResource(…), …))`. The trigger
+        //     apply path invokes the factory at apply time with the
+        //     specific target, so each fire builds a fresh Thickness
+        //     from the target's resolved tokens. Without the wrapper
+        //     the Thickness would close over cell-level Bindings
+        //     (per the direct-attribute path) but there's no target
+        //     yet to resolve them against; the SetterFactory shape is
+        //     the framework's standard "defer to apply time" pattern.
+        // CornerRadius is a tuple value-type too — same per-corner
+        // shape as Thickness but a distinct ctor. The compiler picks
+        // CornerRadius when the LHS property name is one the runtime
+        // declares as a CornerRadius DP (Border.CornerRadius is the
+        // canonical case). Falls through to Thickness for everything
+        // else so the existing emit shape stays stable.
+        const isCornerRadiusTarget = ctx.propertyName === 'CornerRadius';
+        const ctor = isCornerRadiusTarget ? 'CornerRadius' : 'Thickness';
+        this.ensureImport(ctor);
+        // Detect whether any cell is a token reference. Pure-literal
+        // tuples ((12, 6, 12, 6)) compile to a plain `new Thickness(…)`
+        // — both for direct attributes and for Setter values — so
+        // snapshot tests and the existing emit shape stay stable. Only
+        // tuples that actually contain `@Token` cells need the
+        // resource-resolution shapes below.
+        const hasToken = tuple.values.some(v =>
+            v.kind === 'static-resource' || v.kind === 'dynamic-resource');
+        const cellCtx: ValueCtx = {
+            targetExpr:  ctx.targetExpr ?? '_t',
+            insideTuple: hasToken,
+        };
+        const exprs = tuple.values.map(v => this.compileValue(v, cellCtx));
+        let body: string;
         if (exprs.length === 1)
         {
-            return `new Thickness(${exprs[0]})`;
+            body = `new ${ctor}(${exprs[0]})`;
         }
-        if (exprs.length === 2)
+        else if (exprs.length === 2)
         {
-            return `new Thickness(${exprs[0]}, ${exprs[1]}, ${exprs[0]}, ${exprs[1]})`;
+            body = `new ${ctor}(${exprs[0]}, ${exprs[1]}, ${exprs[0]}, ${exprs[1]})`;
         }
-        if (exprs.length === 4)
+        else if (exprs.length === 4)
         {
-            return `new Thickness(${exprs[0]}, ${exprs[1]}, ${exprs[2]}, ${exprs[3]})`;
+            body = `new ${ctor}(${exprs[0]}, ${exprs[1]}, ${exprs[2]}, ${exprs[3]})`;
         }
-        throw new EmitError(
-            `tuple of ${exprs.length} values has no Thickness shape (1, 2, or 4 expected)`,
-            tuple.span);
+        else
+        {
+            throw new EmitError(
+                `tuple of ${exprs.length} values has no ${ctor} shape (1, 2, or 4 expected)`,
+                tuple.span);
+        }
+        // Only wrap in SetterFactory when (a) there are token cells
+        // that need a deferred lookup AND (b) the caller didn't supply
+        // a target expression (i.e. we're in a Style / trigger setter,
+        // not a direct attribute). Pure-literal tuples and direct
+        // attributes emit the bare Thickness construction.
+        if (!hasToken || ctx.targetExpr !== undefined) return body;
+        this.ensureImport('SetterFactory');
+        return `new SetterFactory((_t) => ${body})`;
     }
 
     // Element node in value position — `Ident [Prop = val, …]`. Emits a

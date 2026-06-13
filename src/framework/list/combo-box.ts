@@ -123,21 +123,38 @@ export class ClickableBorder extends Border
     public onClick: (() => void) | undefined;
     private _pressOriginatedHere = false;
 
+    // IsPressed lifecycle — Button / ListBoxItem / ClickableRow parity.
+    // Drives the M3 state-layer ladder for every consumer that hosts
+    // a ClickableBorder in its template (ComboBoxItem rows, ComboBox
+    // selection box, SpinEdit's PART_Up / PART_Down, …) without each
+    // having to re-implement the press tracking. IsPressed clears
+    // BEFORE the click callback fires so handlers reading it see the
+    // post-release state.
     protected override OnPointerDown(_args: PointerEventArgs): void
     {
         this._pressOriginatedHere = true;
+        this.set_property_value(Visual.IsPressedKey, true);
     }
 
     protected override OnPointerUp(_args: PointerEventArgs): void
     {
         const fire = this._pressOriginatedHere && this.IsMouseOver;
         this._pressOriginatedHere = false;
+        this.set_property_value(Visual.IsPressedKey, false);
         if (fire) this.onClick?.();
     }
 
     protected override OnPointerLeave(_args: PointerEventArgs): void
     {
-        this._pressOriginatedHere = false;
+        this.set_property_value(Visual.IsPressedKey, false);
+    }
+
+    protected override OnPointerEnter(_args: PointerEventArgs): void
+    {
+        if (this._pressOriginatedHere)
+        {
+            this.set_property_value(Visual.IsPressedKey, true);
+        }
     }
 }
 

@@ -84,19 +84,33 @@ Application[Theme = Material, Scheme = MaterialLight] {
                 DockPanel [DockPanel.Dock=Left, LastChildFill=true] {
                     NavigationRail [DockPanel.Dock=Left,
                                     SelectedIndex=$SelectedGroupIndex] {
-                        NavigationItem [Label="Animation"]         { TextBlock [Text="✦", FontSize=22] }
-                        NavigationItem [Label="Controls"]          { TextBlock [Text="☷", FontSize=22] }
-                        NavigationItem [Label="Demos"]             { TextBlock [Text="◑", FontSize=22] }
-                        NavigationItem [Label="Patterns"]          { TextBlock [Text="◇", FontSize=22] }
-                        NavigationItem [Label="Styles & Triggers"] { TextBlock [Text="✺", FontSize=22] }
+                        // Material Symbols Outlined icons, loaded by
+                        // the host page's <link> tag. Each TextBlock's
+                        // Text is the icon NAME — the font's `liga`
+                        // feature substitutes the glyph at render time.
+                        // FontSize=24 matches M3's nav-rail icon spec
+                        // (the :opsz axis was pinned at 24 in the CSS
+                        // request). No TextAlignment override needed —
+                        // Material Symbols glyphs sit centred in their
+                        // em box.
+                        NavigationItem [Label="Animation"]         { TextBlock [Text="animation", FontFamily="Material Symbols Outlined", FontSize=24] }
+                        NavigationItem [Label="Controls"]          { TextBlock [Text="tune",      FontFamily="Material Symbols Outlined", FontSize=24] }
+                        NavigationItem [Label="Demos"]             { TextBlock [Text="widgets",   FontFamily="Material Symbols Outlined", FontSize=24] }
+                        NavigationItem [Label="Patterns"]          { TextBlock [Text="grid_view", FontFamily="Material Symbols Outlined", FontSize=24] }
+                        NavigationItem [Label="Styles & Triggers"] { TextBlock [Text="palette",   FontFamily="Material Symbols Outlined", FontSize=24] }
                     }
                     Border [Width=200,
                             Background=@SurfaceContainerLow,
                             BorderBrush=@OutlineVariant,
                             BorderThickness=(0,0,1,0)]{
+                        // ListBox surfaces the selected row's data via the
+                        // Selector-base `SelectedItem` DP (Tag carries the
+                        // source value on data-driven rows). TreeView's
+                        // `SelectedDataItem` is the analogue there; ListBox
+                        // doesn't define it.
                         ListBox [Margin=(8,8,8,8),
                                  ItemsSource=$CurrentDemos,
-                                 SelectedDataItem=$SelectedDemo]
+                                 SelectedItem=$SelectedDemo]
                     }
                 }
 

@@ -23,10 +23,21 @@ resources MuralFramework {
     // text label. MenuButton's ctor wires Click on PART_Trigger to flip
     // IsOpen; OnPropertyChanged keeps PART_HeaderText.Text in sync with
     // the Header DP, and rebuilds the inner stack when Icon changes.
+    // The trigger Button is a regular framework Button so its chrome
+    // (state-layer ladder + variant family + density triggers) rides
+    // through Button's default Style transitively — no audit work
+    // duplicated here. PART_HeaderText is the only knob the trigger
+    // template owns; LabelLarge is the M3 menu-button label role.
     Template x:key="DefaultMenuButtonTrigger" [TargetType=MenuButton]{
         Button x:name="PART_Trigger"{
             StackPanel x:name="PART_TriggerStack" [Orientation = Horizontal]{
-                TextBlock x:name="PART_HeaderText" [Foreground = @OnPrimary]
+                TextBlock x:name="PART_HeaderText"
+                         [ Foreground          = @OnPrimary,
+                           FontFamily          = @LabelLargeFont,
+                           FontWeight          = @LabelLargeWeight,
+                           FontSize             = @LabelLargeSize,
+                           LineHeight           = @LabelLargeLineHeight,
+                           LetterSpacing        = @LabelLargeTracking ]
             }
         }
     }
@@ -156,26 +167,51 @@ resources MuralFramework {
     // visualChildren[0]. MenuItem's primary ControlTemplate (the one
     // ItemsControl wires) is the submenu popup chrome below.
     Template x:key="DefaultMenuItemRow" [TargetType=MenuItem] {
-        Border x:name="PART_Row" [Padding = (8,6,8,6)] {
+        Border x:name="PART_Row"
+              [ Padding = (@Spacing2, @Spacing1, @Spacing2, @Spacing1) ] {
             StackPanel [Orientation = Horizontal] {
+                // Icon column reserves 24dp for an M3-spec leading
+                // icon. Width / MinWidth stay inline as a column-grid
+                // constant — the M3 menu spec calls for a 24dp icon
+                // slot specifically (not a generic spacing token).
                 Border    x:name="PART_Icon"    [Width = 24, MinWidth = 24]
-                TextBlock x:name="PART_Label"   [Margin = (8,0,16,0),
-                                                 MinWidth = 80,
-                                                 Foreground = @OnSurface]
-                TextBlock x:name="PART_Gesture" [Margin = (0,0,16,0),
-                                                 Foreground = @OnSurfaceVariant]
+                TextBlock x:name="PART_Label"
+                         [ Margin              = (@Spacing2, 0, @Spacing4, 0),
+                           MinWidth            = 80,
+                           Foreground          = @OnSurface,
+                           FontFamily          = @LabelLargeFont,
+                           FontWeight          = @LabelLargeWeight,
+                           FontSize            = @LabelLargeSize,
+                           LineHeight          = @LabelLargeLineHeight,
+                           LetterSpacing       = @LabelLargeTracking ]
+                TextBlock x:name="PART_Gesture"
+                         [ Margin              = (0, 0, @Spacing4, 0),
+                           Foreground          = @OnSurfaceVariant,
+                           FontFamily          = @LabelMediumFont,
+                           FontWeight          = @LabelMediumWeight,
+                           FontSize            = @LabelMediumSize,
+                           LineHeight          = @LabelMediumLineHeight,
+                           LetterSpacing       = @LabelMediumTracking ]
                 TextBlock x:name="PART_Chevron" [Width = 12,
                                                  Foreground = @OnSurfaceVariant]
             }
         }
-        // M3 state-layer tokens: semi-transparent OnSurface tints over
+        // M3 state-layer tokens — semi-transparent OnSurface tints over
         // whatever surface the popup chrome paints. Using a solid token
         // like @SurfaceContainerHigh here would be invisible — the
         // ContextMenu / MenuButton popup chrome IS @SurfaceContainerHigh.
-        when ( IsMouseOver )   { PART_Row.Background = @StateHoverOverlay; }
-        when ( IsPressed )     { PART_Row.Background = @StatePressOverlay; }
-        when ( IsChecked )     { PART_Row.Background = @SecondaryContainer; }
-        when ( IsSubmenuOpen ) { PART_Row.Background = @SecondaryContainer; }
+        when ( IsMouseOver )       { PART_Row.Background = @StateHoverOverlay; }
+        when ( IsFocused )         { PART_Row.Background = @StateFocusOverlay; }
+        when ( IsPressed )         { PART_Row.Background = @StatePressOverlay; }
+        when ( IsChecked )         { PART_Row.Background = @SecondaryContainer; }
+        when ( IsSubmenuOpen )     { PART_Row.Background = @SecondaryContainer; }
+        when ( IsEnabled = false ) { PART_Row.Opacity    = @DisabledContentOpacity; }
+
+        // M3 density variants — tighter Padding on Compact, looser on
+        // Comfortable. Matches the same shape ListBoxItem / ComboBox use.
+        when ( ThemeManager.Density = Compact )     { PART_Row.Padding = (@Spacing2, @Spacing0, @Spacing2, @Spacing0); }
+        when ( ThemeManager.Density = Comfortable ) { PART_Row.Padding = (@Spacing2, @Spacing2, @Spacing2, @Spacing2); }
+        when ( ThemeManager.Pointer = Coarse )      { PART_Row.Padding = (@Spacing3, @Spacing3, @Spacing3, @Spacing3); }
     }
 
     // ── MenuItem: submenu popup chrome ─────────────────────────────
@@ -218,11 +254,18 @@ resources MuralFramework {
     // still applies, so clicking a top-level item opens its submenu
     // popup below.
     Template x:key="DefaultMenuStripItemRow" [TargetType=MenuItem] {
-        Border x:name="PART_Row" [Padding = (12,6,12,6)] {
+        Border x:name="PART_Row"
+              [ Padding = (@Spacing3, @Spacing1, @Spacing3, @Spacing1) ] {
             StackPanel [Orientation = Horizontal] {
                 Border    x:name="PART_Icon"    [Width = 0, MinWidth = 0]
-                TextBlock x:name="PART_Label"   [MinWidth = 0,
-                                                 Foreground = @OnSurface]
+                TextBlock x:name="PART_Label"
+                         [ MinWidth            = 0,
+                           Foreground          = @OnSurface,
+                           FontFamily          = @LabelLargeFont,
+                           FontWeight          = @LabelLargeWeight,
+                           FontSize            = @LabelLargeSize,
+                           LineHeight          = @LabelLargeLineHeight,
+                           LetterSpacing       = @LabelLargeTracking ]
                 TextBlock x:name="PART_Gesture" [Width = 0,
                                                  Foreground = @OnSurfaceVariant]
                 TextBlock x:name="PART_Chevron" [Width = 0,
@@ -230,9 +273,15 @@ resources MuralFramework {
             }
         }
         // State-layer tokens — see DefaultMenuItemRow above for why.
-        when ( IsMouseOver )   { PART_Row.Background = @StateHoverOverlay; }
-        when ( IsPressed )     { PART_Row.Background = @StatePressOverlay; }
-        when ( IsSubmenuOpen ) { PART_Row.Background = @SecondaryContainer; }
+        when ( IsMouseOver )       { PART_Row.Background = @StateHoverOverlay; }
+        when ( IsFocused )         { PART_Row.Background = @StateFocusOverlay; }
+        when ( IsPressed )         { PART_Row.Background = @StatePressOverlay; }
+        when ( IsSubmenuOpen )     { PART_Row.Background = @SecondaryContainer; }
+        when ( IsEnabled = false ) { PART_Row.Opacity    = @DisabledContentOpacity; }
+
+        when ( ThemeManager.Density = Compact )     { PART_Row.Padding = (@Spacing3, @Spacing0, @Spacing3, @Spacing0); }
+        when ( ThemeManager.Density = Comfortable ) { PART_Row.Padding = (@Spacing3, @Spacing2, @Spacing3, @Spacing2); }
+        when ( ThemeManager.Pointer = Coarse )      { PART_Row.Padding = (@Spacing4, @Spacing3, @Spacing4, @Spacing3); }
     }
 
     // Style for MenuStrip top-level rows — applied via
@@ -1009,7 +1058,12 @@ resources MuralFramework {
     Template x:key="DefaultNavigationItem" [TargetType=NavigationItem] {
         Border x:name="PART_Outer"
               [ Background       = #00000000,
-                Padding          = (4,4,4,4),
+                // 12dp top/bottom matches the M3 spec for nav-rail item
+                // padding (icon container has its own 8dp gap below, set
+                // by PART_LabelText.Margin). 4dp left/right keeps the
+                // 56dp pill centred within the 80dp rail with breathing
+                // room on each side.
+                Padding          = (4,12,4,12),
                 HorizontalAlignment = Stretch ] {
             StackPanel [Orientation=Vertical, HorizontalAlignment=Center] {
                 Border x:name="PART_IconContainer"
@@ -1021,9 +1075,24 @@ resources MuralFramework {
                     Border x:name="PART_IconStateLayer"
                           [ Background   = #00000000,
                             CornerRadius = @ShapeFull ] {
+                        // PART_IconSlot is locked to the M3-spec 24×24dp
+                        // icon box (centred inside the 56×32dp pill).
+                        // Fixing the slot size matters because some
+                        // icon fonts (Material Symbols among them) report
+                        // a larger em-height than the visible glyph —
+                        // the font's typo descender carries whitespace
+                        // the icon doesn't fill, and a shrink-wrapped
+                        // slot would inherit that height and overflow
+                        // the 32dp pill, anchoring the glyph at the top.
+                        // The explicit 24dp box pins layout to the
+                        // glyph's actual visible extent and lets the
+                        // Center alignment in both axes land it dead-
+                        // centre.
                         ContentPresenter x:name="PART_IconSlot"
-                                         [HorizontalAlignment=Center,
-                                          VerticalAlignment=Center]
+                                         [Width  = 24,
+                                          Height = 24,
+                                          HorizontalAlignment = Center,
+                                          VerticalAlignment   = Center]
                     }
                 }
                 TextBlock x:name="PART_LabelText"
@@ -1033,7 +1102,14 @@ resources MuralFramework {
                            LineHeight          = @LabelMediumLineHeight,
                            LetterSpacing       = @LabelMediumTracking,
                            Foreground          = @OnSurfaceVariant,
-                           HorizontalAlignment = Center,
+                           HorizontalAlignment = Stretch,
+                           TextAlignment       = Center,
+                           // Wrap so longer labels (e.g. "Styles & Triggers"
+                           // in the platform demo) flow onto a second line
+                           // rather than getting clipped at the rail's 80dp
+                           // edge. Stretch + TextAlignment=Center keeps the
+                           // wrapped lines centred under the icon pill.
+                           TextWrapping        = Wrap,
                            Margin              = (0,4,0,0) ]
             }
         }
@@ -1115,6 +1191,616 @@ resources MuralFramework {
     Style [TargetType=NavigationBar] {
         Template   = @DefaultNavigationBar;
         ItemsPanel = @DefaultNavigationBarPanel;
+    }
+
+    // ── Switch: M3 binary toggle (track + sliding thumb) ───────────
+    // 52 × 32 dp pill track with a thumb that slides between the left
+    // and right edges as IsChecked flips. The Margin-based positioning
+    // hooks into Visual's implicit-transition engine — Thickness is one
+    // of the types the engine interpolates — so the off/on flip
+    // animates smoothly without a Storyboard.
+    //
+    // M3 spec colours:
+    //   * off — track @SurfaceContainerHighest, thumb @Outline (16dp).
+    //   * on  — track @Primary, thumb @OnPrimary (24dp). Thumb growth
+    //           reads as the M3 "selected handle" affordance.
+    //
+    // State-layer triggers tint the thumb on hover / focus / press,
+    // mirroring the Button family ladder. The press-state thumb size
+    // bumps to 28dp (M3 "pressed" handle) but that requires the same
+    // Margin trick as IsChecked — folded into the IsPressed trigger
+    // below.
+    Template x:key="DefaultSwitch" [TargetType=Switch] {
+        Border x:name="PART_Track"
+              [ Background      = @SurfaceContainerHighest,
+                BorderBrush     = @Outline,
+                BorderThickness = (2),
+                CornerRadius    = @ShapeFull ] {
+            // Thumb is a circle (ShapeFull) inside an absolutely-sized
+            // 32dp track. Margin (Left, Top, Right, Bottom) anchors it
+            // to the left edge with a 4dp inset top/bottom — the
+            // resulting render size is 16×24 dp (24dp inner track
+            // height, 16dp Width fixed below). The IsChecked trigger
+            // shifts to right-anchored + 24dp width.
+            Border x:name="PART_Thumb"
+                  [ Background          = @Outline,
+                    CornerRadius        = @ShapeFull,
+                    BorderThickness     = (0),
+                    Width               = 16,
+                    Height              = 16,
+                    VerticalAlignment   = Center,
+                    HorizontalAlignment = Left,
+                    Margin              = (8, 0, 0, 0) ]
+        }
+        // IsChecked — track + thumb both flip palette; the thumb grows
+        // and re-anchors to the right edge.
+        when ( IsChecked ) { PART_Track.Background    = @Primary;
+                             PART_Track.BorderBrush   = @Primary;
+                             PART_Thumb.Background    = @OnPrimary;
+                             PART_Thumb.Width         = 24;
+                             PART_Thumb.Height        = 24;
+                             PART_Thumb.Margin        = (24, 0, 0, 0); }
+        // State-layer ladder. Hover / focus / press tint the thumb at
+        // the Primary state-layer opacities so the affordance reads
+        // even when the track is unchecked.
+        when ( IsMouseOver )       { PART_Thumb.Background = @OnSurface; }
+        when ( IsFocused )         { PART_Thumb.Background = @OnSurface; }
+        when ( IsPressed )         { PART_Thumb.Width      = 28;
+                                     PART_Thumb.Height     = 28; }
+        when ( IsEnabled = false ) { PART_Track.Opacity    = @DisabledContentOpacity; }
+    }
+    Style [TargetType=Switch] {
+        Template = @DefaultSwitch;
+    }
+
+    // ── Checkbox: M3 18 × 18 dp square toggle ──────────────────────
+    // Unchecked — empty box with @OnSurfaceVariant 2dp border. Checked
+    // — solid @Primary fill with an @OnPrimary checkmark glyph. The
+    // glyph is always present in the visual tree but its Opacity flips
+    // from 0 → 1 on the IsChecked trigger so the implicit-transition
+    // engine on Visual fades it in / out without a Storyboard (Opacity
+    // is a number — one of the types the engine knows how to
+    // interpolate).
+    //
+    // No tri-state (indeterminate) chrome — see Checkbox.ts for the
+    // why-deferred rationale.
+    Template x:key="DefaultCheckbox" [TargetType=Checkbox] {
+        Border x:name="PART_Box"
+              [ Background      = #00000000,
+                BorderBrush     = @OnSurfaceVariant,
+                BorderThickness = (2),
+                CornerRadius    = @ShapeExtraSmall ] {
+            TextBlock x:name="PART_Mark"
+                     [ Text                = "✓",
+                       FontFamily          = @LabelSmallFont,
+                       FontWeight          = @TypefaceWeightBold,
+                       FontSize             = 14,
+                       Foreground           = @OnPrimary,
+                       HorizontalAlignment  = Center,
+                       VerticalAlignment    = Center,
+                       Opacity              = 0 ]
+        }
+        // IsChecked — fill the box and reveal the glyph.
+        when ( IsChecked )         { PART_Box.Background     = @Primary;
+                                     PART_Box.BorderBrush    = @Primary;
+                                     PART_Mark.Opacity       = 1; }
+        // State-layer ladder. Hover / focus / press tint the box's
+        // border (unchecked path) or pump the fill toward a press
+        // tint (checked path). Disabled dims the whole control.
+        when ( IsMouseOver )       { PART_Box.BorderBrush    = @OnSurface; }
+        when ( IsFocused )         { PART_Box.BorderBrush    = @Primary; }
+        when ( IsPressed )         { PART_Box.BorderBrush    = @Primary; }
+        when ( IsEnabled = false ) { PART_Box.Opacity        = @DisabledContentOpacity; }
+    }
+    Style [TargetType=Checkbox] {
+        Template = @DefaultCheckbox;
+    }
+
+    // ── RadioButton: M3 20 × 20 dp circular toggle ─────────────────
+    // Outer ring + inner dot. The dot is always present (a 10dp filled
+    // circle inset by 5dp) but its Opacity flips from 0 → 1 on
+    // IsChecked, so the implicit-transition engine fades it in / out
+    // without a Storyboard. The outer ring re-tints to @Primary when
+    // checked, matching the M3 affordance.
+    //
+    // Mutual exclusivity rides on the RadioButton class's
+    // OnPropertyChanged hook — set `GroupName=foo` on multiple radios
+    // and any sibling sharing that name in the same visual tree
+    // automatically clears when this one is checked. See radio-
+    // button.ts for the walker.
+    Template x:key="DefaultRadioButton" [TargetType=RadioButton] {
+        Border x:name="PART_Ring"
+              [ Background      = #00000000,
+                BorderBrush     = @OnSurfaceVariant,
+                BorderThickness = (2),
+                CornerRadius    = @ShapeFull ] {
+            Border x:name="PART_Dot"
+                  [ Background          = @Primary,
+                    CornerRadius        = @ShapeFull,
+                    BorderThickness     = (0),
+                    Width               = 10,
+                    Height              = 10,
+                    HorizontalAlignment = Center,
+                    VerticalAlignment   = Center,
+                    Opacity             = 0 ]
+        }
+        when ( IsChecked )         { PART_Ring.BorderBrush = @Primary;
+                                     PART_Dot.Opacity      = 1; }
+        when ( IsMouseOver )       { PART_Ring.BorderBrush = @OnSurface; }
+        when ( IsFocused )         { PART_Ring.BorderBrush = @Primary; }
+        when ( IsPressed )         { PART_Ring.BorderBrush = @Primary; }
+        when ( IsEnabled = false ) { PART_Ring.Opacity     = @DisabledContentOpacity; }
+    }
+    Style [TargetType=RadioButton] {
+        Template = @DefaultRadioButton;
+    }
+
+    // ── Chip: M3 compact attribute / filter / input / suggestion ───
+    // 32dp tall pill chrome with leading + trailing slots and a
+    // ContentPresenter for the label. Kind-aware triggers tint the
+    // chrome per variant:
+    //   * Assist     — outlined surface, neutral OnSurface label.
+    //   * Filter     — outlined surface at rest; flips to filled
+    //                  @SecondaryContainer when IsChecked (the
+    //                  selectable filter affordance).
+    //   * Input      — outlined surface; trailing slot conventionally
+    //                  carries a remove icon (consumer-supplied).
+    //   * Suggestion — outlined surface; same chrome as Assist, the
+    //                  semantic difference is consumer-side.
+    //
+    // The Kind variants all share base chrome — the variant-specific
+    // triggers below override only the bits that differ. Filter is the
+    // only variant that observes IsChecked at the template level; the
+    // other variants ignore it entirely (the consumer can still toggle
+    // IsChecked programmatically through ToggleButton, no chrome
+    // change).
+    Template x:key="DefaultChip" [TargetType=Chip] {
+        Border x:name="PART_Chip"
+              [ Background      = @Surface,
+                BorderBrush     = @OutlineVariant,
+                BorderThickness = (1),
+                CornerRadius    = @ShapeSmall,
+                Padding         = (@Spacing3, @Spacing1, @Spacing3, @Spacing1),
+                Height          = 32 ] {
+            DockPanel [LastChildFill=true] {
+                Border x:name="PART_LeadingSlot"
+                      [ DockPanel.Dock     = Left,
+                        VerticalAlignment   = Center,
+                        BorderThickness     = (0),
+                        Margin              = (0, 0, @Spacing1, 0) ]
+                Border x:name="PART_TrailingSlot"
+                      [ DockPanel.Dock     = Right,
+                        VerticalAlignment   = Center,
+                        BorderThickness     = (0),
+                        Margin              = (@Spacing1, 0, 0, 0) ]
+                ContentPresenter [ VerticalAlignment = Center ]
+            }
+        }
+        // Filter — selected fills with @SecondaryContainer; the
+        // outline reads as the M3 "input" indicator. The derived
+        // IsFilterSelected DP combines Kind=Filter and IsChecked
+        // because ControlTemplate triggers don't compose multi-term
+        // conjuncts; the class recomputes it on every Kind / IsChecked
+        // edge.
+        when ( IsFilterSelected ) {
+            PART_Chip.Background     = @SecondaryContainer;
+            PART_Chip.BorderBrush    = @SecondaryContainer;
+        }
+
+        // State-layer ladder — translucent OnSurface overlays over
+        // whatever variant background is currently active. Ordered
+        // BEFORE the Filter-selected trigger so a hovered selected
+        // filter chip stays in its @SecondaryContainer tint (the
+        // state-layer overlay would otherwise wash it back to neutral).
+        when ( IsMouseOver )       { PART_Chip.Background = @StateHoverOverlay; }
+        when ( IsFocused )         { PART_Chip.Background = @StateFocusOverlay; }
+        when ( IsPressed )         { PART_Chip.Background = @StatePressOverlay; }
+        when ( IsEnabled = false ) { PART_Chip.Opacity    = @DisabledContentOpacity; }
+    }
+    Style [TargetType=Chip] {
+        Template = @DefaultChip;
+        Foreground = @OnSurface;
+        FontFamily = @LabelLargeFont;
+        FontWeight = @LabelLargeWeight;
+        FontSize   = @LabelLargeSize;
+    }
+
+    // ── TabControl: M3 horizontal tab strip + content area ────────
+    // ItemsPresenter on top renders each TabItem's header surface;
+    // ContentPresenter below shows the selected TabItem's Content.
+    // Selection comes from the Selector base (TabControl extends
+    // Selector); the content area binds to SelectedItem so any data-
+    // driven swap reflects automatically.
+    //
+    // The active-indicator line — the 2dp @Primary underline that
+    // tracks under the selected tab in M3 spec — is rendered per
+    // TabItem (DefaultTabItem template below) rather than as a
+    // separately-animated indicator. The simpler shape skips the
+    // cross-tab animation but keeps the spec affordance.
+    ItemsPanelTemplate x:key="DefaultTabControlPanel" {
+        StackPanel [Orientation = Horizontal]
+    }
+    Template x:key="DefaultTabControl" [TargetType=TabControl] {
+        Border x:name="PART_Border"
+              [ Background      = @Surface,
+                BorderBrush     = @OutlineVariant,
+                BorderThickness = (0,0,0,1) ] {
+            DockPanel [LastChildFill=true] {
+                ItemsPresenter x:name="PART_ItemsPresenter"
+                              [ DockPanel.Dock = Top ]
+                ContentPresenter x:name="PART_ContentSlot"
+                                [ Content = $SelectedItem ]
+            }
+        }
+    }
+    Style [TargetType=TabControl] {
+        Template   = @DefaultTabControl;
+        ItemsPanel = @DefaultTabControlPanel;
+    }
+
+    // ── TabItem: M3 tab header ─────────────────────────────────────
+    // 48dp tall header surface — Label centred, 2dp active-indicator
+    // line at the bottom edge that's transparent until IsSelected.
+    // State-layer overlays fire on hover / focus / press over the
+    // resting @Surface background.
+    Template x:key="DefaultTabItem" [TargetType=TabItem] {
+        Border x:name="PART_Tab"
+              [ Background      = #00000000,
+                BorderBrush     = #00000000,
+                BorderThickness = (0,0,0,2),
+                Padding         = (@Spacing4, @Spacing2, @Spacing4, @Spacing2),
+                Height          = 48 ] {
+            TextBlock x:name="PART_Label"
+                     [ Text                 = $Header,
+                       Foreground           = @OnSurfaceVariant,
+                       FontFamily           = @TitleSmallFont,
+                       FontWeight           = @TitleSmallWeight,
+                       FontSize             = @TitleSmallSize,
+                       LineHeight           = @TitleSmallLineHeight,
+                       LetterSpacing        = @TitleSmallTracking,
+                       HorizontalAlignment  = Center,
+                       VerticalAlignment    = Center ]
+        }
+        when ( IsSelected )        { PART_Tab.BorderBrush = @Primary;
+                                     PART_Label.Foreground = @Primary; }
+        when ( IsMouseOver )       { PART_Tab.Background = @StateHoverOverlay; }
+        when ( IsFocused )         { PART_Tab.Background = @StateFocusOverlay; }
+        when ( IsPressed )         { PART_Tab.Background = @StatePressOverlay; }
+        when ( IsEnabled = false ) { PART_Tab.Opacity    = @DisabledContentOpacity; }
+    }
+    Style [TargetType=TabItem] {
+        Template = @DefaultTabItem;
+    }
+
+    // ── SearchBar: M3 search-field wrapper around TextBox ──────────
+    // Same DockPanel anatomy as ListBoxItem (leading | content | trailing)
+    // but the centre column hosts the inherited TextBox's ScrollViewer +
+    // TextEditorSurface instead of a ContentPresenter. The leading +
+    // trailing slots are class-managed Borders (see search-bar.ts) so
+    // findFirstContentPresenter doesn't need to walk past them — TextBox
+    // doesn't use the ContentPresenter slot, so there's no contest.
+    //
+    // ShapeFull gives the M3 stadium-shape SearchBar look; the resting
+    // background is @SurfaceContainerHigh so the field reads as
+    // elevated against neutral surrounding chrome.
+    Template x:key="DefaultSearchBar" [TargetType=SearchBar]{
+        Border x:name="PART_Border"
+              [ Background      = @SurfaceContainerHigh,
+                BorderBrush     = #00000000,
+                BorderThickness = (0),
+                CornerRadius    = @ShapeFull,
+                Padding         = (@Spacing3, @Spacing2, @Spacing3, @Spacing2),
+                Height          = 56 ] {
+            DockPanel [LastChildFill=true] {
+                Border x:name="PART_LeadingSlot"
+                      [ DockPanel.Dock     = Left,
+                        VerticalAlignment   = Center,
+                        BorderThickness     = (0),
+                        Margin              = (0, 0, @Spacing2, 0) ]
+                Border x:name="PART_TrailingSlot"
+                      [ DockPanel.Dock     = Right,
+                        VerticalAlignment   = Center,
+                        BorderThickness     = (0),
+                        Margin              = (@Spacing2, 0, 0, 0) ]
+                ScrollViewer x:name="PART_Scroll"{
+                    TextEditorSurface x:name="PART_Editor"
+                }
+            }
+        }
+        when ( IsMouseOver )       { PART_Border.Background = @SurfaceContainerHighest; }
+        when ( IsFocused )         { PART_Border.Background = @SurfaceContainerHighest; }
+        when ( IsEnabled = false ) { PART_Border.Opacity    = @DisabledContentOpacity; }
+    }
+    // ── Divider: M3 1dp rule, horizontal or vertical ───────────────
+    // Two templates — one per Orientation — because mural's CornerRadius
+    // / BorderThickness DPs are uniform across the control instance, so
+    // a single template with a trigger that just flips Orientation
+    // would still produce a 1dp box around the rule rather than a 1dp
+    // line. The Style picks the matching template based on Orientation.
+    Template x:key="DefaultHorizontalDivider" [TargetType=Divider] {
+        Border x:name="PART_Rule"
+              [ Background          = @OutlineVariant,
+                Height              = 1,
+                HorizontalAlignment = Stretch,
+                BorderThickness     = (0) ]
+    }
+    Template x:key="DefaultVerticalDivider" [TargetType=Divider] {
+        Border x:name="PART_Rule"
+              [ Background        = @OutlineVariant,
+                Width             = 1,
+                VerticalAlignment = Stretch,
+                BorderThickness   = (0) ]
+    }
+    Style [TargetType=Divider] {
+        Template = @DefaultHorizontalDivider;
+        when ( Orientation = Vertical ) { Template = @DefaultVerticalDivider; }
+    }
+
+    // ── Badge: M3 dot / numeric flag ───────────────────────────────
+    // Two templates — one per Variant. Variant=Dot ships a 6×6dp
+    // filled circle; Variant=Numeric ships a pill carrying the Count
+    // bound via a $-binding. Both use @Error / @OnError per the M3
+    // spec; consumers wanting a non-error tint re-template.
+    Template x:key="DefaultDotBadge" [TargetType=Badge] {
+        Border x:name="PART_Dot"
+              [ Background      = @Error,
+                CornerRadius    = @ShapeFull,
+                BorderThickness = (0),
+                Width           = 6,
+                Height          = 6 ]
+    }
+    Template x:key="DefaultNumericBadge" [TargetType=Badge] {
+        Border x:name="PART_Pill"
+              [ Background      = @Error,
+                CornerRadius    = @ShapeFull,
+                BorderThickness = (0),
+                Padding         = (@Spacing1, @Spacing0, @Spacing1, @Spacing0),
+                MinWidth        = 16,
+                Height          = 16 ] {
+            TextBlock [ Text                 = $Count,
+                        Foreground           = @OnError,
+                        FontFamily           = @LabelSmallFont,
+                        FontWeight           = @LabelSmallWeight,
+                        FontSize              = @LabelSmallSize,
+                        LineHeight            = @LabelSmallLineHeight,
+                        LetterSpacing         = @LabelSmallTracking,
+                        HorizontalAlignment   = Center,
+                        VerticalAlignment     = Center ]
+        }
+    }
+    Style [TargetType=Badge] {
+        Template = @DefaultNumericBadge;
+        when ( Variant = Dot ) { Template = @DefaultDotBadge; }
+    }
+
+    // ── Tooltip: M3 Plain tooltip ──────────────────────────────────
+    // Single-line opaque tooltip — @InverseSurface fill (M3's spec
+    // calls for a dark surface that inverts against the host theme
+    // so the tooltip stays legible regardless of background) with
+    // @InverseOnSurface ink for the label. ExtraSmall corner radius
+    // matches the spec.
+    Template x:key="DefaultTooltip" [TargetType=Tooltip] {
+        Border x:name="PART_Tooltip"
+              [ Background      = @InverseSurface,
+                BorderBrush     = #00000000,
+                BorderThickness = (0),
+                CornerRadius    = @ShapeExtraSmall,
+                Padding         = (@Spacing2, @Spacing1, @Spacing2, @Spacing1) ] {
+            TextBlock [ Text                 = $Text,
+                        Foreground           = @InverseOnSurface,
+                        FontFamily           = @BodySmallFont,
+                        FontWeight           = @BodySmallWeight,
+                        FontSize              = @BodySmallSize,
+                        LineHeight            = @BodySmallLineHeight,
+                        LetterSpacing         = @BodySmallTracking ]
+        }
+    }
+    Style [TargetType=Tooltip] {
+        Template = @DefaultTooltip;
+    }
+
+    // ── ProgressIndicator: M3 Linear progress ──────────────────────
+    // Determinate Linear progress — 4dp track + fill ride above one
+    // another with a CornerRadius=2 ramp (matches Slider track and M3
+    // spec). The fill's width is consumer-driven; the simple
+    // determinate path uses a Width binding to Value (0..1 expressed
+    // as a 0..100% pill width via Margin or an outer scaling layer).
+    // Mural's binding DSL doesn't yet emit unit-conversion converters
+    // declaratively, so this v0 template ships a fixed-width fill that
+    // the consumer scales via a class-level handler; the binding
+    // pipeline lands when the converter syntax does.
+    Template x:key="DefaultLinearProgressIndicator" [TargetType=ProgressIndicator] {
+        Border x:name="PART_Track"
+              [ Background      = @SurfaceContainerHighest,
+                CornerRadius    = 2,
+                BorderThickness = (0),
+                Height          = 4 ] {
+            Border x:name="PART_Fill"
+                  [ Background          = @Primary,
+                    CornerRadius        = 2,
+                    BorderThickness     = (0),
+                    HorizontalAlignment = Left,
+                    Height              = 4 ]
+        }
+        when ( IsEnabled = false ) { PART_Track.Opacity = @DisabledContentOpacity; }
+    }
+    // Circular variant — 40dp ring (M3 spec) with the active progress
+    // sweep traced by PART_Fill (Arc). PART_Track is a full-circle Arc
+    // at @SurfaceContainerHighest behind PART_Fill at @Primary; the
+    // Fill's EndAngle is bound to the consumer's Value via a class-
+    // level handler in ProgressIndicator (Value 0..1 → EndAngle
+    // StartAngle..StartAngle+360). The simple v0 template ships a
+    // 360° fill so the consumer either sets EndAngle directly or
+    // wires up a Value→EndAngle binding-converter in their app code.
+    Template x:key="DefaultCircularProgressIndicator" [TargetType=ProgressIndicator] {
+        Border x:name="PART_OuterFrame"
+              [ Background      = #00000000,
+                BorderThickness = (0),
+                Width           = 40,
+                Height          = 40 ] {
+            // Two overlapping Arc Visuals — track underneath, fill on
+            // top. Both start at -90° (top of the circle) so any
+            // sweep reads "filling clockwise from 12 o'clock", the
+            // M3 affordance.
+            Arc x:name="PART_Track"
+                [ StartAngle      = -90,
+                  EndAngle        = 270,
+                  Stroke          = @SurfaceContainerHighest,
+                  StrokeThickness = 4,
+                  Width           = 40,
+                  Height          = 40 ]
+            Arc x:name="PART_Fill"
+                [ StartAngle      = -90,
+                  EndAngle        = 270,
+                  Stroke          = @Primary,
+                  StrokeThickness = 4,
+                  Width           = 40,
+                  Height          = 40 ]
+        }
+        when ( IsEnabled = false ) { PART_OuterFrame.Opacity = @DisabledContentOpacity; }
+    }
+    Style [TargetType=ProgressIndicator] {
+        Template = @DefaultLinearProgressIndicator;
+        when ( Variant = Circular ) { Template = @DefaultCircularProgressIndicator; }
+    }
+
+    // ── Banner: M3 in-flow alert / message strip ───────────────────
+    // Leading icon | headline+supporting | trailing actions —
+    // same DockPanel shape as ListBoxItem's anatomy. Banner doesn't
+    // ship Leading / Actions class-level slot wiring (the consumer
+    // sets DP values; the template's PART_LeadingSlot is a
+    // ContentPresenter binding directly via $Leading). M3 spec uses
+    // @Surface as the resting fill with no border by default; the
+    // trailing actions row anchors right.
+    Template x:key="DefaultBanner" [TargetType=Banner] {
+        Border x:name="PART_Banner"
+              [ Background      = @Surface,
+                BorderBrush     = @OutlineVariant,
+                BorderThickness = (0, 0, 0, 1),
+                Padding         = (@Spacing4, @Spacing3, @Spacing4, @Spacing3) ] {
+            DockPanel [LastChildFill=true] {
+                ContentPresenter [ DockPanel.Dock     = Left,
+                                   Content             = $Leading,
+                                   VerticalAlignment   = Center,
+                                   Margin              = (0, 0, @Spacing3, 0) ]
+                ContentPresenter [ DockPanel.Dock     = Right,
+                                   Content             = $Actions,
+                                   VerticalAlignment   = Center,
+                                   Margin              = (@Spacing3, 0, 0, 0) ]
+                ContentPresenter [ VerticalAlignment = Center ]
+            }
+        }
+    }
+    Style [TargetType=Banner] {
+        Template      = @DefaultBanner;
+        Foreground    = @OnSurface;
+        FontFamily    = @BodyMediumFont;
+        FontWeight    = @BodyMediumWeight;
+        FontSize      = @BodyMediumSize;
+        LineHeight    = @BodyMediumLineHeight;
+        LetterSpacing = @BodyMediumTracking;
+    }
+
+    // ── Snackbar: M3 transient message ─────────────────────────────
+    // @InverseSurface fill, @InverseOnSurface ink (M3 inverts the
+    // snackbar against host theme so it stays legible regardless of
+    // backdrop). ExtraSmall corner radius matches the spec.
+    Template x:key="DefaultSnackbar" [TargetType=Snackbar] {
+        Border x:name="PART_Snackbar"
+              [ Background      = @InverseSurface,
+                BorderBrush     = #00000000,
+                BorderThickness = (0),
+                CornerRadius    = @ShapeExtraSmall,
+                Effect          = @Elevation3,
+                Padding         = (@Spacing4, @Spacing3, @Spacing2, @Spacing3) ] {
+            DockPanel [LastChildFill=true] {
+                ContentPresenter [ DockPanel.Dock     = Right,
+                                   Content             = $Actions,
+                                   VerticalAlignment   = Center,
+                                   Margin              = (@Spacing4, 0, 0, 0) ]
+                ContentPresenter [ VerticalAlignment = Center ]
+            }
+        }
+    }
+    Style [TargetType=Snackbar] {
+        Template      = @DefaultSnackbar;
+        Foreground    = @InverseOnSurface;
+        FontFamily    = @BodyMediumFont;
+        FontWeight    = @BodyMediumWeight;
+        FontSize      = @BodyMediumSize;
+        LineHeight    = @BodyMediumLineHeight;
+        LetterSpacing = @BodyMediumTracking;
+    }
+
+    // ── Dialog: M3 modal dialog ────────────────────────────────────
+    // ExtraLarge corner radius (M3 spec) + Elevation3 + @Surface
+    // resting background. Title + Content + Actions stack vertically.
+    // The modal scrim is OUTSIDE the dialog template — Dialog mounts
+    // onto the PresentationTarget's OverlayLayer and that surface
+    // owns the scrim. The dialog template just paints the floating
+    // surface itself.
+    Template x:key="DefaultDialog" [TargetType=Dialog] {
+        Border x:name="PART_Dialog"
+              [ Background      = @Surface,
+                BorderBrush     = #00000000,
+                BorderThickness = (0),
+                CornerRadius    = @ShapeExtraLarge,
+                Effect          = @Elevation3,
+                Padding         = (@Spacing6, @Spacing6, @Spacing6, @Spacing6) ] {
+            DockPanel [LastChildFill=true] {
+                TextBlock x:name="PART_Title"
+                         [ DockPanel.Dock = Top,
+                           Text                  = $Title,
+                           Foreground            = @OnSurface,
+                           FontFamily            = @HeadlineSmallFont,
+                           FontWeight            = @HeadlineSmallWeight,
+                           FontSize               = @HeadlineSmallSize,
+                           LineHeight             = @HeadlineSmallLineHeight,
+                           LetterSpacing          = @HeadlineSmallTracking,
+                           Margin                 = (0, 0, 0, @Spacing4) ]
+                ContentPresenter [ DockPanel.Dock = Bottom,
+                                   Content         = $Actions,
+                                   HorizontalAlignment = Right,
+                                   Margin              = (0, @Spacing4, 0, 0) ]
+                ContentPresenter
+            }
+        }
+    }
+    Style [TargetType=Dialog] {
+        Template = @DefaultDialog;
+    }
+
+    // ── BottomSheet: M3 bottom-anchored sheet ──────────────────────
+    // M3 spec: top corners rounded at ExtraLarge (28dp), bottom edges
+    // square so the sheet sits flush against the screen edge. The
+    // asymmetric corners ride the (TL, TR, BR, BL) CornerRadius tuple
+    // — the compiler routes tuples in a CornerRadius= position to
+    // `new CornerRadius(...)` rather than the default Thickness shape.
+    Template x:key="DefaultBottomSheet" [TargetType=BottomSheet] {
+        Border x:name="PART_Sheet"
+              [ Background      = @Surface,
+                BorderBrush     = #00000000,
+                BorderThickness = (0),
+                CornerRadius    = (@ShapeExtraLarge, @ShapeExtraLarge, 0, 0),
+                Effect          = @Elevation1,
+                Padding         = (@Spacing4, @Spacing4, @Spacing4, @Spacing4) ] {
+            ContentPresenter
+        }
+    }
+    Style [TargetType=BottomSheet] {
+        Template = @DefaultBottomSheet;
+    }
+
+    Style [TargetType=SearchBar] {
+        Template       = @DefaultSearchBar;
+        Foreground     = @OnSurface;
+        SelectionBrush = @SecondaryContainer;
+        CaretBrush     = @OnSurface;
+        FontFamily     = @BodyLargeFont;
+        FontWeight     = @BodyLargeWeight;
+        FontSize       = @BodyLargeSize;
+        LineHeight     = @BodyLargeLineHeight;
+        LetterSpacing  = @BodyLargeTracking;
     }
 
     // ── ToolBarToggleButton: connected-bar chrome ──────────────────

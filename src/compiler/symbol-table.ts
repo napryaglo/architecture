@@ -150,6 +150,9 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['VirtualizingStackPanel',  '@visualisation-sub/mural/basic'],
     ['VirtualizingWrapPanel',   '@visualisation-sub/mural/basic'],
     ['TextWrapping',            '@visualisation-sub/mural/basic'],
+    ['TextAlignment',           '@visualisation-sub/mural/basic'],
+    ['TextBoxVariant',          '@visualisation-sub/mural/basic'],
+    ['Arc',                     '@visualisation-sub/mural/basic'],
 
     // ── Internal helper classes ────────────────────────────────────
     // Layout / behaviour primitives owned by individual controls but
@@ -181,6 +184,27 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     // (`./surface.js`) to avoid a TDZ cycle through the main basic
     // barrel during Button's default-style theme cascade.
     ['ToggleButton',            '@visualisation-sub/mural/framework/toggle-button.js'],
+    // M3 Switch — capitalised `Switch` is fine in JS (only the
+    // lowercase `switch` keyword is reserved), so the class and the
+    // markup symbol both spell it `Switch`.
+    ['Switch',                  '@visualisation-sub/mural/framework/switch.js'],
+    ['Checkbox',                '@visualisation-sub/mural/framework/checkbox.js'],
+    ['RadioButton',             '@visualisation-sub/mural/framework/radio-button.js'],
+    ['Chip',                    '@visualisation-sub/mural/framework/chip.js'],
+    ['ChipVariant',             '@visualisation-sub/mural/framework/chip.js'],
+    ['TabControl',              '@visualisation-sub/mural/framework/tabs.js'],
+    ['TabItem',                 '@visualisation-sub/mural/framework/tabs.js'],
+    ['SearchBar',               '@visualisation-sub/mural/framework/search-bar.js'],
+    ['Divider',                 '@visualisation-sub/mural/framework/divider.js'],
+    ['Badge',                   '@visualisation-sub/mural/framework/badge.js'],
+    ['BadgeVariant',            '@visualisation-sub/mural/framework/badge.js'],
+    ['Tooltip',                 '@visualisation-sub/mural/framework/tooltip.js'],
+    ['ProgressIndicator',       '@visualisation-sub/mural/framework/progress-indicator.js'],
+    ['ProgressIndicatorVariant','@visualisation-sub/mural/framework/progress-indicator.js'],
+    ['Banner',                  '@visualisation-sub/mural/framework/banner.js'],
+    ['Snackbar',                '@visualisation-sub/mural/framework/snackbar.js'],
+    ['Dialog',                  '@visualisation-sub/mural/framework/dialog.js'],
+    ['BottomSheet',             '@visualisation-sub/mural/framework/bottom-sheet.js'],
     ['ToolBar',                 '@visualisation-sub/mural/framework/surface.js'],
     ['ToolBarButton',           '@visualisation-sub/mural/framework/surface.js'],
     ['ToolBarToggleButton',     '@visualisation-sub/mural/framework/surface.js'],
@@ -263,8 +287,13 @@ export const ENUM_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<st
     ['FillRule',              new Set(['EvenOdd', 'Nonzero'])],
     ['SweepDirection',        new Set(['Counterclockwise', 'Clockwise'])],
     ['TextWrapping',          new Set(['NoWrap', 'Wrap'])],
+    ['TextAlignment',         new Set(['Left', 'Center', 'Right'])],
     ['ClickMode',             new Set(['Release', 'Press', 'Hover'])],
     ['ButtonVariant',         new Set(['Filled', 'Elevated', 'Tonal', 'Outlined', 'Text', 'Standard'])],
+    ['TextBoxVariant',        new Set(['Filled', 'Outlined'])],
+    ['ChipVariant',           new Set(['Assist', 'Filter', 'Input', 'Suggestion'])],
+    ['BadgeVariant',          new Set(['Dot', 'Numeric'])],
+    ['ProgressIndicatorVariant', new Set(['Linear', 'Circular'])],
     ['FabSize',               new Set(['Small', 'Default', 'Large', 'Extended'])],
     ['CardVariant',           new Set(['Filled', 'Elevated', 'Outlined'])],
     ['TopAppBarVariant',      new Set(['Small', 'CenterAligned', 'Medium', 'Large'])],
@@ -333,7 +362,8 @@ export const STATIC_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<
 // Entries here MUST point at enum classes that are also in
 // ENUM_MEMBERS.
 export const PROPERTY_TO_ENUM: ReadonlyMap<string, readonly string[]> = new Map<string, readonly string[]>([
-    ['Variant',  ['ButtonVariant', 'DrawerVariant', 'CardVariant', 'TopAppBarVariant']],
+    ['Variant',  ['ButtonVariant', 'DrawerVariant', 'CardVariant', 'TopAppBarVariant', 'TextBoxVariant', 'BadgeVariant', 'ProgressIndicatorVariant']],
+    ['Kind',     ['ChipVariant']],
     ['EffectiveVariant', ['TopAppBarVariant']],
     ['Size',     ['FabSize']],
     ['Anchor',   ['Dock']],
@@ -376,6 +406,9 @@ export const DEFAULT_SLOT_INFO: ReadonlyMap<string, SlotInfo> = new Map<string, 
     ['NavigationItem',          { name: 'Content',  kind: 'object' }],
     ['NavigationRail',          { name: 'Items',    kind: 'list'   }],
     ['NavigationBar',           { name: 'Items',    kind: 'list'   }],
+    ['TabControl',              { name: 'Items',    kind: 'list'   }],
+    ['TabItem',                 { name: 'Content',  kind: 'object' }],
+    ['Chip',                    { name: 'Content',  kind: 'object' }],
     ['TextBlock',               { name: 'Text',     kind: 'string' }],
     ['Canvas',                  { name: 'Children', kind: 'list'   }],
     ['StackPanel',              { name: 'Children', kind: 'list'   }],
