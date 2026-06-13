@@ -1474,6 +1474,59 @@ resources MuralFramework {
         FontSize   = @LabelLargeSize;
     }
 
+    // ── SplitButton: primary action + chevron menu trigger ──────────
+    // Two distinct click targets share one container chrome. The
+    // primary half (PART_PrimaryButton) fires Command; the chevron
+    // half (PART_TriggerButton) toggles IsOpen, which mounts /
+    // unmounts MenuContent on the OverlayLayer.
+    //
+    // Corner-radius split: the primary half rounds left only, the
+    // chevron half rounds right only, so the row reads as a single
+    // capsule.
+    Template x:key="DefaultSplitButton" [TargetType=SplitButton] {
+        StackPanel [Orientation=Horizontal] {
+            Border x:name="PART_PrimaryButton"
+                  [ Background      = @Primary,
+                    CornerRadius    = (@ShapeFull, 0, 0, @ShapeFull),
+                    Padding         = (@Spacing4, @Spacing2, @Spacing4, @Spacing2),
+                    BorderThickness = (0) ] {
+                ContentPresenter [HorizontalAlignment=Center,
+                                  VerticalAlignment=Center]
+            }
+            Border x:name="PART_TriggerButton"
+                  [ Background      = @Primary,
+                    CornerRadius    = (0, @ShapeFull, @ShapeFull, 0),
+                    Padding         = (@Spacing2, @Spacing2, @Spacing2, @Spacing2),
+                    BorderThickness = (1, 0, 0, 0),
+                    BorderBrush     = @PrimaryContainer ] {
+                TextBlock [Text="▾",
+                           FontSize    = 14,
+                           FontWeight  = Bold,
+                           Foreground  = @OnPrimary,
+                           HorizontalAlignment = Center,
+                           VerticalAlignment   = Center]
+            }
+        }
+
+        // State-layer ladder — both halves track hover / press
+        // independently. M3 spec: hover overlays at 8%, press at 12%.
+        when ( PART_PrimaryButton.IsMouseOver ) { PART_PrimaryButton.Background = @StateHoverOverlay; }
+        when ( PART_PrimaryButton.IsPressed )   { PART_PrimaryButton.Background = @StatePressOverlay; }
+        when ( PART_TriggerButton.IsMouseOver ) { PART_TriggerButton.Background = @StateHoverOverlay; }
+        when ( PART_TriggerButton.IsPressed )   { PART_TriggerButton.Background = @StatePressOverlay; }
+
+        // Disabled — dim both halves at the M3 content-opacity (38%).
+        when ( IsEnabled = false ) { PART_PrimaryButton.Opacity = @DisabledContentOpacity;
+                                     PART_TriggerButton.Opacity = @DisabledContentOpacity; }
+    }
+    Style [TargetType=SplitButton] {
+        Template   = @DefaultSplitButton;
+        Foreground = @OnPrimary;
+        FontFamily = @LabelLargeFont;
+        FontWeight = @LabelLargeWeight;
+        FontSize   = @LabelLargeSize;
+    }
+
     // ── TabControl: M3 horizontal tab strip + content area ────────
     // ItemsPresenter on top renders each TabItem's header surface;
     // ContentPresenter below shows the selected TabItem's Content.
