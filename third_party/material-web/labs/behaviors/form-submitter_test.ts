@@ -9,7 +9,7 @@
 import {html, LitElement} from 'lit';
 import {customElement} from 'lit/decorators.js';
 
-import {mixinElementInternals} from '../../labs/behaviors/element-internals.js';
+import {mixinElementInternals} from './element-internals.js';
 import {Environment} from '../../testing/environment.js';
 import {Harness} from '../../testing/harness.js';
 import {mixinFormSubmitter} from './form-submitter.js';
