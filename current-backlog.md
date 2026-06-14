@@ -115,3 +115,55 @@ Surfaced by the post-shipping self-review against [m3-modernization-plan.md](m3-
 
 18.12. **`ControlTemplate` DP swap-while-active is silently ignored.** `SplitButton.OnPropertyChanged` mounts/unmounts the popup only when `IsOpen` flips ([split-button.ts](src/framework/split-button.ts)). If a consumer writes `PopupTemplate` while the popup is open, the change is ignored until the next close→open cycle. Same shape applies to `MenuButton.TriggerTemplate` (the inline trigger is captured at ctor time and not rebuilt on TriggerTemplate change), `MenuButton.Template` (popup chrome — also ctor-captured), `Drawer.Template`, and any future `Visual.RenderTransform`-style template DP. Runtime template swaps are rare enough that v1 acceptance is fine; the gap matters most under [theme-architecture.md § Slice 4](theme-architecture.md#L533)'s structural-fluid pattern (Menu→Drawer template swap on `ViewportClass=Mobile`). Fix shape: each control with a templated-part DP should rebuild its template parts in `OnPropertyChanged` when the template DP changes, with care taken not to clobber consumer-set Visual content (e.g. SplitButton's MenuContent must survive a PopupTemplate swap). Pairs with [theme-architecture.md § Slice 4](theme-architecture.md#L533) drawer-shaped Menu template — Menu can't be `ViewportClass`-trigger-driven until template swap-while-active works.
 
+---
+
+## 19. Geometry math — boolean ops & shape queries
+
+The geometry model ([src/visual-engine/geometry/geometry.ts](src/visual-engine/geometry/geometry.ts)) currently exposes `RectangleGeometry` / `EllipseGeometry` / `LineGeometry` / `PathGeometry` / `GeometryGroup` and lowers each to its own SVG element or a `<path d="…">`. Five gaps stand between today's surface and a diagram-grade geometry kernel:
+
+  1. No boolean ops between geometries — the inline note at [geometry.ts:203-206](src/visual-engine/geometry/geometry.ts#L203-L206) explicitly flags `CombinedGeometry` (Union / Intersect / Xor / Exclude) as not-yet-supported. SVG has no native operator; the result must be CSG'd into a single `<path>` at the model layer.
+  2. No `Geometry.GetBounds()` virtual — `Visual.ArrangedRect` is the only bounds source today, which is AABB-of-the-Visual-frame, not the painted shape.
+  3. No `Geometry.Contains(p)` virtual — hit-testing falls back to SVG's `elementsFromPoint` against the lowered `<rect>` / `<ellipse>` / `<path>` chrome. Works for closed-form primitives, but clicking transparent corners of M3 Expressive shapes (Heart, Clover, Squircle, etc.) still selects the node because the SVG element is the AABB-pad rect not the shape outline (pairs with 5.7).
+  4. No alignment-edges math for the diagram demo — drag operations have no "snap to other nodes' edges/centers" guides. The current branch name `align-with-combined-edges` carved out this gap.
+  5. No selection bounding-box / group resize — multi-select shows per-item chrome but no group affordance.
+
+**Design decisions (already confirmed in design conversation):**
+
+  - **Two-layer surface.** A shape-math kernel under [src/visual-engine/geometry/](src/visual-engine/geometry/) plus runtime helpers under [src/runtime/](src/runtime/). Both the declarative `CombinedGeometry` Model AND a runtime `combine(a, b, mode)` helper consume the kernel.
+  - **Curve-preserving boolean ops (Skia-style), not polygon-tessellation.** Output keeps cubic / quadratic Bezier segments instead of degenerating curves to many-sided polygons. Higher fidelity at every zoom level, no re-fit pass required.
+  - **Zero new npm deps.** The kernel is a TypeScript port of Skia's `pathops` module (BSD-3-Clause), not a runtime dependency on PathKit-WASM or polygon-clipping. License obligation: preserve Skia copyright headers on every ported file, ship `LICENSE-skia` at repo root, note derived directories in `CONTRIBUTING.md`.
+  - **Vendor Skia source as reference.** Drop `skia/src/pathops/*.{h,cpp}` and `skia/include/pathops/*.h` (just those files, not all of Skia) into `third_party/skia-pathops-source/` checked into git. Each port commit gets reviewed against its C++ original; future Skia bugfixes can be back-ported by reading the diff against the vendored snapshot.
+  - **Drop conics.** Skia uses rational quadratics (conics) for ellipse arcs and stroke joins. Our model has only line / quad / cubic + `ArcSegment` (which SVG renders directly via the `A` command). Lower `ArcSegment` to cubic Beziers at entry to the pathops layer (~50 LOC adapter, well-known approximation: each 90° of arc = one cubic with control-point distance `r * 4/3 * tan(π/8)`, subdivide for longer arcs). Saves ~10-15% of the port volume.
+  - **Object refs, not SoA.** First port mirrors Skia's pointer-linked `SkOpSpan` / `SkOpSegment` / `SkOpContour` graph as TypeScript object refs (one allocation per span, GC handles cleanup). SoA + indexed typed-arrays is a future polish pass; the engine isn't on a per-frame hot path (runs at CombinedGeometry-input-change time, not every render) so object-refs are fine and keep the port verifiable against its C++ source.
+  - **Port the regression corpus.** Skia's `tests/PathOpsOpTest.cpp` carries thousands of recorded path-pair regression tests (`path_union1_0`, `cubicOp1_d`, `bug_5240`, …). The corpus IS where Skia's 10+ years of robustness live. Phase 8 ports the corpus harness + a bulk-conversion script. Probably ~500 tests survive porting cleanly; the rest depend on Skia-specific behavior and get dropped.
+
+**Phasing — 8 milestones, ~6 weeks of work, user-visible features land before the hardest port work:**
+
+19.1. **Phase 1 — Curve math primitives.** Port `SkPathOpsPoint` / `SkPathOpsLine` / `SkPathOpsQuad` / `SkPathOpsCubic` / `SkPathOpsBounds`. Pure numerics — no graph, no Ops. Includes `cubicRoots` / `quadRoots`, `bezierExtremaT`, segment intersect, cubic × cubic intersection via T-section + bbox clipping. Lands under [src/visual-engine/geometry/pathops/](src/visual-engine/geometry/pathops/) with Skia headers preserved. ~3 days. Not user-visible but unblocks 19.2.
+
+19.2. **Phase 2 — `Geometry.GetBounds()` / `Contains(p)` / `Intersects(other)`.** Virtual on `Geometry`. Primitives have closed-form overrides (Rect, Ellipse, Line); `PathGeometry` walks figures, uses Phase 1's cubic extrema for tight bounds, uses winding-number ray cast for point-in-shape (works under either fill-rule). RenderTransform-aware via inverse-transform-then-test. `Intersects` is bbox-only for this phase with a `// 19.7 makes this exact` follow-up comment. ~2 days. Ships hit-test through M3 Expressive shapes (closes the demo #3 driver listed in design conversation; pairs with 5.7 for the `mural-hit` opt-out).
+
+19.3. **Phase 3 — Alignment-edges math + diagram behavior.** Mural-native (not ported from Skia) — pure Rect-set algorithms under [src/runtime/alignment-math.ts](src/runtime/alignment-math.ts). API: `findAlignmentGuides(moving: Rect, others: readonly Rect[], opts: { tolerance, edges?: 'min'|'mid'|'max'|'all' }) → {horizontal: number[], vertical: number[], snappedMoving: Rect}`. Lands `align-edges-behavior.mjs` under [demo/demos/diagram/behaviors/](demo/demos/diagram/behaviors/) — attaches to the Diagram surface, intercepts the drag of any `DiagramNode`, emits dashed guide lines through the existing `OverlayLayer`, snaps on release. ~2 days. Closes the `align-with-combined-edges` branch name's namesake feature (demo #1 driver).
+
+19.4. **Phase 4 — Selection bounding-box + group-resize adorner.** Uses Phase 2's `GetBounds()` composed with each Visual's `RenderTransform` to compute the tight selection rect. New `SelectionBoundsAdorner` under [src/basic/adorners/](src/basic/adorners/) — dashed AABB chrome + 8 corner / edge resize handles. Group resize applies proportional scale via a Storyboard targeting each selected Visual's `RenderTransform` (uses the existing implicit-transition engine). ~2 days. Ships demo #2 driver.
+
+19.5. **Phase 5 — Intersection core.** Port `SkIntersections` / `SkPathOpsTSect` / `SkAddIntersections` / `SkLineParameters`. The numerical heart — T-section curve × curve intersection with bbox clipping + Newton refinement, line × curve intersection, line × line with collinearity handling. ~5-7 days. Not user-visible; feeds 19.6.
+
+19.6. **Phase 6 — Half-edge graph.** Port `SkOpSpan` / `SkOpSegment` / `SkOpContour` / `SkOpEdgeBuilder` / `SkOpCoincidence`. Half-edge graph, span splitting at every intersection, coincidence detection for overlapping segments (the worst bug source — Skia's coincidence epsilon has been touched dozens of times for adversarial cases). Edge builder adapts `Geometry` input into the graph. ~5-7 days. Not user-visible; feeds 19.7.
+
+19.7. **Phase 7 — Boolean ops + `CombinedGeometry`.** Port `SkOpAngle` (angle sort at vertices to decide result-boundary walk direction) + `SkPathOpsOp` (the operation dispatcher) + `SkPathWriter` (graph → output path). Add `CombinedGeometry extends Geometry` Model class — DPs: `Geometry1`, `Geometry2`, `GeometryCombineMode` ({Union, Intersect, Xor, Exclude}). Lazy memo of the flattened `PathGeometry`; invalidated when inputs' `MetaData.Render` properties change via the same `_setRenderInvalidator` pattern `TransformGroup` uses. Runtime helper `combine(a, b, mode) → PathGeometry` exposed under [src/visual-engine/geometry/](src/visual-engine/geometry/). Also upgrades 19.2's `Geometry.Intersects(other)` from bbox-only to exact. ~5-7 days. Ships `<CombinedGeometry>` in markup.
+
+19.8. **Phase 8 — Simplify + winding utilities + corpus port.** Port `SkPathOpsSimplify` (resolves self-intersecting input — turns "input not simple" errors from Phase 6 into graceful degradation) + `SkPathOpsAsWinding`. Build the regression corpus harness: TS port of Skia's `outputProgressively`-style verifier, plus a small parser script that extracts path commands + expected ops from `skia/tests/PathOps*Test.cpp` and emits TS test stubs. Bulk-port the ~500 surviving tests. ~5 days. Robustness pass — pays huge dividends on adversarial inputs.
+
+**Deferred past Phase 8:**
+  - Path-offset / outline-widening (stroke → fill). Useful for "draw a parallel curve at offset N" diagram tooling but separate concern from boolean ops.
+  - Re-fitting boolean output back to higher-degree Beziers. Phase 7 output already preserves segments — this would smooth across boundary segments. Cosmetic polish.
+  - SoA + typed-array hot path. Performance polish if profiling shows the boolean engine on a critical path.
+  - Geometry text-on-path / geometry-from-text glyph outlines. Different problem domain (font engine territory).
+  - PathGeometry serialization (`PathGeometry.Parse("M 0 0 L 100 0 …")`). Useful for round-tripping with SVG sources.
+
+**Cross-cutting acceptance:**
+  - Every Phase commit ports against its Skia C++ counterpart inline in the PR description (side-by-side diff).
+  - Every Phase ships its test fixture before merge; corpus integration is Phase 8 but per-Phase unit tests land throughout.
+  - `LICENSE-skia` + `CONTRIBUTING.md` derivation note land in Phase 1.
+
