@@ -1,14 +1,47 @@
+import { CornerRadius } from '../corner-radius.js';
 import { Color, Thickness } from '../primitives.js';
 import type { Visual } from '../visual.js';
+import { interpolateCornerRadius } from './interpolation.js';
 import type { PropertyTransition } from './property-transition.js';
 import { Storyboard } from './storyboard.js';
 import {
+    AnimationTimeline,
     ColorAnimation,
     DoubleAnimation,
     FillBehavior,
     ThicknessAnimation,
-    type AnimationTimeline,
 } from './timeline.js';
+
+// Per-corner CornerRadius interpolation timeline used by the implicit-
+// transition engine (§ 17.4). Same shape as DoubleAnimation /
+// ColorAnimation / ThicknessAnimation but for the 4-corner shape token
+// type — Border.CornerRadius bindings, shape-token DynamicResource
+// changes, and Density-driven shape mutations animate per corner with
+// the renderer's Infinity-corner clamp handling the `CornerRadius.Full`
+// sentinel for free.
+class _CornerRadiusImplicitAnimation extends AnimationTimeline
+{
+    public From: CornerRadius | undefined;
+    public To:   CornerRadius;
+
+    constructor(from: CornerRadius, to: CornerRadius, duration: number)
+    {
+        super();
+        this.From     = from;
+        this.To       = to;
+        this.Duration = duration;
+    }
+
+    public override Evaluate(t: number, _baseValue: unknown): CornerRadius
+    {
+        if (this.Duration <= 0) return this.To;
+        const p = this.progress(t);
+        const from = this.From ?? CornerRadius.Zero;
+        if (p === 0) return from;
+        if (p === 1) return this.To;
+        return interpolateCornerRadius(from, this.To, this.Easing(p));
+    }
+}
 
 // Engine that interprets PropertyTransition specs on a Visual.
 //
@@ -149,6 +182,17 @@ function buildTimeline(
         t.From         = oldValue;
         t.To           = newValue;
         t.Duration     = transition.Duration;
+        t.Easing       = transition.Easing;
+        t.FillBehavior = FillBehavior.HoldEnd;
+        return t;
+    }
+    if (oldValue instanceof CornerRadius && newValue instanceof CornerRadius)
+    {
+        // § 17.4 — shape tokens that change with inherited DPs (Density
+        // flipping CornerRadius from 4dp to 12dp on the Button chrome,
+        // for example) tween per-corner. Same FillBehavior story as the
+        // sibling types so the final value pins until the next write.
+        const t = new _CornerRadiusImplicitAnimation(oldValue, newValue, transition.Duration);
         t.Easing       = transition.Easing;
         t.FillBehavior = FillBehavior.HoldEnd;
         return t;

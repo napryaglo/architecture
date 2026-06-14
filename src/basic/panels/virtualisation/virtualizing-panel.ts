@@ -66,18 +66,111 @@ export abstract class VirtualizingPanel extends Panel
     }
 
     // Called by ItemsControl on every CollectionChange to Items
-    // (insert / remove / replace / clear). Default: recycle all
-    // realized containers and invalidate measure — subclasses can
-    // override for incremental dispatches.
-    public OnItemsChanged(_change: CollectionChange<unknown>): void
+    // (insert / remove / replace / move / clear). Dispatches the
+    // change kind through the per-kind protected hooks so realized
+    // containers survive across mutations whenever possible — the
+    // "recycle everything" path used to be the default and was both
+    // wasteful (every survivor re-realized after every insert) and
+    // visually janky (visible rows blink during the rebuild).
+    //
+    // Incremental dispatch (§ 10.4):
+    //   * 'inserted'  → shift realized indices ≥ change.index by
+    //                    +items.length; new in-range items realize on
+    //                    the next measure pass.
+    //   * 'removed'   → recycle realized containers in the removed
+    //                    range; shift surviving indices > range down
+    //                    by items.length.
+    //   * 'replaced'  → rebind the realized container at change.index
+    //                    against the new data item; no re-realization.
+    //   * 'moved'     → full recycle (defer until a demo motivates the
+    //                    item-identity-preserving move; the
+    //                    refactoring cost outweighs the gain today).
+    //   * 'cleared'   → RecycleAll().
+    //
+    // Subclasses with simpler invariants can still override
+    // OnItemsChanged to opt out of the incremental dispatch entirely.
+    public OnItemsChanged(change: CollectionChange<unknown>): void
     {
-        this.RecycleAll();
-        this.InvalidateMeasure();
+        const generator = this._itemsOwner?.Generator;
+        switch (change.kind)
+        {
+            case 'inserted':
+                // Shift the Generator's index map AND the panel's
+                // realized map by the same delta — the (item, container)
+                // mapping is unchanged, only the (index, container)
+                // projection shifts. The next measure pass realizes
+                // the freshly-inserted items in the viewport range.
+                generator?.ShiftIndicesFrom(change.index, change.items.length);
+                this.shiftRealizedIndices(change.index, change.items.length);
+                this.InvalidateMeasure();
+                break;
+            case 'removed':
+            {
+                const lo = change.index;
+                const hi = change.index + change.items.length;
+                const victims: number[] = [];
+                for (const idx of this.realizedIndices())
+                {
+                    if (idx >= lo && idx < hi) victims.push(idx);
+                }
+                // Recycle drops the (container, item, index) triple
+                // from the Generator AND removes the container from
+                // the panel side — both maps stay coherent.
+                if (victims.length > 0) this.recycleAtIndices(victims);
+                generator?.ShiftIndicesFrom(hi, -change.items.length);
+                this.shiftRealizedIndices(hi, -change.items.length);
+                this.InvalidateMeasure();
+                break;
+            }
+            case 'replaced':
+            {
+                // If the slot was realized, drop the old container so
+                // the next measure pass realizes the new item from
+                // scratch. We don't try to re-prepare in place — the
+                // data item has changed and the container's binding
+                // state was for the old item.
+                const victim = this.realizedIndexAt(change.index);
+                if (victim !== undefined) this.recycleAtIndices([victim]);
+                this.InvalidateMeasure();
+                break;
+            }
+            case 'moved':
+            case 'cleared':
+            default:
+                this.RecycleAll();
+                this.InvalidateMeasure();
+                break;
+        }
     }
+
+    /** Returns `index` when a container is currently realized at that
+     *  index, otherwise undefined. Subclasses with a Map<number, Visual>
+     *  realized store can return `index` when present in the map. */
+    protected realizedIndexAt(_index: number): number | undefined { return undefined; }
 
     // Tear down every currently-realized container (visual detach,
     // logical detach, recycle in generator). Subclasses must call
     // this when their owner changes, when ItemsControl signals a
     // disruptive change (cleared), or when shutting down.
     protected abstract RecycleAll(): void;
+
+    /** Snapshot of currently-realized item indices. Subclasses with a
+     *  Map<number, Visual> typically return its keys. The default
+     *  yields nothing — the abstract hooks below short-circuit on
+     *  empty input, so a subclass that doesn't track realized indices
+     *  gets a full recycle on every change. */
+    protected realizedIndices(): Iterable<number> { return []; }
+
+    /** Recycle the realized containers at the listed indices (visual
+     *  detach + logical detach + generator recycle), then drop them
+     *  from the subclass's realized map. Default no-op so subclasses
+     *  with no realized state opt out cleanly. */
+    protected recycleAtIndices(_indices: readonly number[]): void { /* default no-op */ }
+
+    /** Re-key every realized index ≥ fromIndex by +delta (delta can
+     *  be negative for the 'removed' path). Preserves the container
+     *  instance — it's still the same Visual painting the same data
+     *  item, just bound to a new logical position. */
+    protected shiftRealizedIndices(_fromIndex: number, _delta: number): void { /* default no-op */ }
+
 }

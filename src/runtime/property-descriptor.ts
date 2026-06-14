@@ -13,6 +13,15 @@ export type CoerceValue = (model: Model, base_value: any) => any;
 // companion).
 export type ValidateValue = (value: any) => boolean;
 
+// Invoked when an attached property is set on a Model whose constructor
+// chain doesn't reach the property's registering class. Returns `true`
+// if the target is allowed; `false` rejects and the set throws with a
+// "property only valid on …" message. Use the `validateTargetTypes`
+// helper to construct the common "instance of one of these classes"
+// predicate. Optional — descriptors without a validate_target accept
+// any Model (the existing behavior pre-§ 15.1).
+export type ValidateTarget = (target: Model) => boolean;
+
 // Per-class metadata options. Root registrations must supply default_value
 // and meta_data; overrides may omit any field, in which case reads fall
 // through to the parent descriptor's value (WPF-style metadata merge).
@@ -22,6 +31,7 @@ export interface PropertyMetadata
     meta_data?: MetaData;
     coerce_value?: CoerceValue;
     validate_value?: ValidateValue;
+    validate_target?: ValidateTarget;
 }
 
 // Class-level schema entry for a registered property. One descriptor per
@@ -107,4 +117,37 @@ export class PropertyDescriptor
         if ('validate_value' in this.own) return this.own.validate_value;
         return this.parent_descriptor?.ValidateValue;
     }
+
+    public get ValidateTarget(): ValidateTarget | undefined
+    {
+        if ('validate_target' in this.own) return this.own.validate_target;
+        return this.parent_descriptor?.ValidateTarget;
+    }
+}
+
+// Common predicate factory: accept only targets that are instances of
+// one of the supplied classes (or any of their subclasses, since
+// `instanceof` walks the prototype chain). Useful for restricting
+// attached properties to families of Visuals — e.g.,
+// `Grid.SetRow(visual, n)` should only accept `Visual` (not raw Model).
+export function validateTargetTypes(
+    ...classes: readonly Function[]
+): ValidateTarget
+{
+    if (classes.length === 0)
+    {
+        // Defensive — a caller passing no classes presumably meant
+        // "accept everything", which is the same as omitting
+        // validate_target entirely. Returning a tautology rather than
+        // throwing keeps the registration site forgiving.
+        return _ => true;
+    }
+    return (target: Model): boolean =>
+    {
+        for (const c of classes)
+        {
+            if (target instanceof (c as new (...args: any[]) => Model)) return true;
+        }
+        return false;
+    };
 }

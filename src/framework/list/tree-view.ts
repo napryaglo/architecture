@@ -4,6 +4,7 @@ import {
     Rect,
     Size,
     Visual,
+    type KeyEventArgs,
     type ModifierKeys,
     type PointerEventArgs,
     type PropertyDescriptor,
@@ -30,7 +31,12 @@ const CHEVRON_EXPANDED  = '▾';
 // Exported for the compiled-`.mu` TreeViewItem template (not public API).
 export class ClickableRow extends Border
 {
-    public onClick: ((modifiers: ModifierKeys) => void) | undefined;
+    // Callback signature carries the full args so handlers can use
+    // args.SetFocus to move keyboard focus to the templated parent
+    // (TreeViewItem needs this for § 10.8 keyboard navigation continuity
+    // after a pointer click). Plain `modifiers` retained as a second
+    // arg for back-compat in callers that don't care about the args.
+    public onClick: ((modifiers: ModifierKeys, args: PointerEventArgs) => void) | undefined;
     private _pressOriginatedHere = false;
 
     // IsPressed lifecycle (Button / ListBoxItem parity): Down sets
@@ -51,7 +57,7 @@ export class ClickableRow extends Border
         const fire = this._pressOriginatedHere && this.IsMouseOver;
         this._pressOriginatedHere = false;
         this.set_property_value(Visual.IsPressedKey, false);
-        if (fire) this.onClick?.(args.Modifiers);
+        if (fire) this.onClick?.(args.Modifiers, args);
     }
 
     protected override OnPointerLeave(_args: PointerEventArgs): void
@@ -246,6 +252,81 @@ export class TreeView extends Selector
     public override IsItemItsOwnContainerOverride(item: unknown): boolean
     {
         return item instanceof TreeViewItem;
+    }
+
+    // ── Keyboard navigation overrides (§ 10.8) ─────────────────────────
+    //
+    // TreeView adds Left / Right arrow handling on top of the base
+    // Selector's arrow-driven row navigation. Left collapses an
+    // expanded focused row OR walks focus to the parent TreeViewItem;
+    // Right expands a collapsed focused row OR walks focus to the
+    // first child. Up / Down / Home / End / PageUp / PageDown / Ctrl+A
+    // / Space inherit from the Selector base.
+    protected override OnKeyDown(args: KeyEventArgs): void
+    {
+        const focused = this.FocusedContainer;
+        if (focused instanceof TreeViewItem)
+        {
+            if (args.Key === 'ArrowRight')
+            {
+                if (!focused.IsExpanded && this.hasTreeViewChildren(focused))
+                {
+                    focused.IsExpanded = true;
+                    args.Handled = true;
+                    return;
+                }
+                // Already expanded (or leaf) → consume the key without
+                // falling through. ArrowDown is the canonical "move to
+                // first child" gesture (Windows Explorer / VS Code
+                // parity); pressing ArrowRight on an expanded node is
+                // typically a no-op.
+                args.Handled = true;
+                return;
+            }
+            else if (args.Key === 'ArrowLeft')
+            {
+                if (focused.IsExpanded)
+                {
+                    focused.IsExpanded = false;
+                    args.Handled = true;
+                    return;
+                }
+                // Collapsed leaf or collapsed-already → walk to parent
+                // TreeViewItem if one exists. The visual-tree walk
+                // stops at this TreeView so a top-level row collapses
+                // without trying to climb out of the control.
+                const parent = this.findParentTreeViewItem(focused);
+                if (parent !== undefined)
+                {
+                    this.HandleContainerClick(parent, args.Modifiers);
+                    args.SetFocus(parent);
+                    args.Handled = true;
+                    return;
+                }
+            }
+        }
+        super.OnKeyDown(args);
+    }
+
+    private hasTreeViewChildren(item: TreeViewItem): boolean
+    {
+        const items = item.Items;
+        if (items === undefined) return false;
+        const c = items as unknown as { Count?: number; length?: number };
+        if (typeof c.Count  === 'number') return c.Count  > 0;
+        if (typeof c.length === 'number') return c.length > 0;
+        return false;
+    }
+
+    private findParentTreeViewItem(child: Visual): TreeViewItem | undefined
+    {
+        let cursor: Visual | undefined = child.GetVisualParent();
+        while (cursor !== undefined && cursor !== this)
+        {
+            if (cursor instanceof TreeViewItem) return cursor;
+            cursor = cursor.GetVisualParent();
+        }
+        return undefined;
     }
 
     public override GetContainerForItemOverride(item: unknown): Visual
@@ -525,6 +606,9 @@ export class TreeViewItem extends ItemsControl
     constructor()
     {
         super();
+        // Focusable so keyboard navigation (§ 10.8) can land focus on
+        // a clicked or arrow-navigated TreeView row.
+        this.Focusable = true;
         // Template flows from the default Style — applied here via
         // applyDefaultStyle() so the PART_ lookups below find their
         // targets in the freshly-applied template tree. The row /
@@ -548,7 +632,10 @@ export class TreeViewItem extends ItemsControl
         this._supportText  = root.FindName('PART_SupportingText') as TextBlock;
 
         chevron.onClick = (): void => { this.IsExpanded = !this.IsExpanded; };
-        this._row.onClick = (modifiers): void => {
+        this._row.onClick = (modifiers, args): void => {
+            // SetFocus moves keyboard focus to this row so subsequent
+            // arrow keys navigate from here (§ 10.8 keyboard navigation).
+            args.SetFocus(this);
             const tree = this.findTree();
             if (tree !== undefined) tree.HandleContainerClick(this, modifiers);
         };

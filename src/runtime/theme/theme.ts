@@ -276,10 +276,22 @@ export type SchemeTransitionAnimatorFactory = (
 ) => AnimationTimeline | undefined;
 
 let _schemeTransitionAnimatorFactory: SchemeTransitionAnimatorFactory | undefined;
+// Secondary animator factories (§ 17.3). Registered via
+// `addSchemeTransitionAnimator`. Tried in registration order AFTER the
+// single primary factory above; the first to return a non-undefined
+// timeline wins. Lets multiple type-specialized factories coexist
+// without forcing every animator owner to compete for the single
+// primary slot. Stored as a flat list — there's no value type registry
+// or matching priority beyond order-of-registration.
+const _schemeTransitionAnimatorSecondaries: SchemeTransitionAnimatorFactory[] = [];
 
-/** Register the process-global animator factory. Pass `undefined` to
- *  unregister (test helper — production code calls this once at
- *  startup from whichever module owns the animatable value types). */
+/** Register the process-global PRIMARY animator factory. Pass
+ *  `undefined` to unregister (test helper — production code calls this
+ *  once at startup from whichever module owns the animatable value
+ *  types). The primary slot is intended for the workhorse factory
+ *  (`SolidColorBrush` today); type-specialized factories for non-brush
+ *  tokens (Thickness, CornerRadius, number) should use
+ *  `addSchemeTransitionAnimator` instead. */
 export function registerSchemeTransitionAnimator(
     factory: SchemeTransitionAnimatorFactory | undefined,
 ): void
@@ -287,12 +299,63 @@ export function registerSchemeTransitionAnimator(
     _schemeTransitionAnimatorFactory = factory;
 }
 
+/** Register an ADDITIONAL animator factory (§ 17.3) that runs after the
+ *  primary factory in the same chain. Use for type-specialized
+ *  animators (Thickness, CornerRadius, number, …) so each owner can
+ *  register its own without competing for the single primary slot.
+ *  Returns an unregister function — call to drop the factory; safe to
+ *  call multiple times. */
+export function addSchemeTransitionAnimator(
+    factory: SchemeTransitionAnimatorFactory,
+): () => void
+{
+    _schemeTransitionAnimatorSecondaries.push(factory);
+    return () =>
+    {
+        const i = _schemeTransitionAnimatorSecondaries.indexOf(factory);
+        if (i >= 0) _schemeTransitionAnimatorSecondaries.splice(i, 1);
+    };
+}
+
+/** Test helper — clear EVERY registered animator (primary + secondaries).
+ *  Production code never calls this; the existing
+ *  `registerSchemeTransitionAnimator(undefined)` test path only clears
+ *  the primary slot, which is enough for most tests since per-type
+ *  secondaries decline on mismatched value pairs. */
+export function _clearAllSchemeTransitionAnimators(): void
+{
+    _schemeTransitionAnimatorFactory = undefined;
+    _schemeTransitionAnimatorSecondaries.length = 0;
+}
+
 /** Read the currently-registered animator factory. DynamicResource
  *  calls this on every resolved-value change while a SchemeTransition
- *  is effective. */
+ *  is effective. Returns a composite that walks the primary factory
+ *  first then each secondary in registration order. */
 export function getSchemeTransitionAnimator(): SchemeTransitionAnimatorFactory | undefined
 {
-    return _schemeTransitionAnimatorFactory;
+    // Fast path — single primary, no secondaries: return the factory
+    // directly so the call overhead matches the pre-§ 17.3 behavior.
+    if (_schemeTransitionAnimatorSecondaries.length === 0)
+    {
+        return _schemeTransitionAnimatorFactory;
+    }
+    // Composite path — try primary, then each secondary.
+    return (oldValue, newValue, transition) =>
+    {
+        const primary = _schemeTransitionAnimatorFactory;
+        if (primary !== undefined)
+        {
+            const tl = primary(oldValue, newValue, transition);
+            if (tl !== undefined) return tl;
+        }
+        for (const f of _schemeTransitionAnimatorSecondaries)
+        {
+            const tl = f(oldValue, newValue, transition);
+            if (tl !== undefined) return tl;
+        }
+        return undefined;
+    };
 }
 
 // ── MediaWatcher ──────────────────────────────────────────────────────
@@ -513,6 +576,29 @@ export class ThemeManager
     public static readonly PrefersColorSchemeKey = Model.RegisterAttachedProperty<PreferredScheme>(
         ThemeManager, 'PrefersColorScheme', PreferredScheme.NoPreference, MetaData.Inherits);
 
+    // Theme / Scheme inherited DPs (§ 17.1 / § 17.2 / § 17.6). The
+    // ambient Theme and Scheme that apply to a Visual's subtree. Writes
+    // cascade through the logical tree like every other adaptive DP.
+    // Setting `Scheme` on a Border lets that subtree resolve `@Primary`
+    // (and every other token) against the override scheme; setting
+    // `Theme` lets a subtree use a different design language's
+    // templates + default styles. Both undefined by default — the
+    // global `Application.Resources` fallback still drives lookups
+    // when nothing's been set locally. The DynamicResource subscriber
+    // listens for Scheme / Theme changes and re-resolves every bound
+    // token against the new ancestor chain.
+    //
+    // Theme types are intentionally NOT class-typed at registration —
+    // we want to keep the runtime layer free of a hard dependency on
+    // the visual-engine `Theme` class. The DP is typed as `unknown` at
+    // registration, then the public Visual getters/setters cast to
+    // the structural Theme / Scheme types that come in via the
+    // type-only imports.
+    public static readonly SchemeKey = Model.RegisterAttachedProperty<Scheme | undefined>(
+        ThemeManager, 'Scheme', undefined, MetaData.Inherits);
+    public static readonly ThemeKey = Model.RegisterAttachedProperty<Theme | undefined>(
+        ThemeManager, 'Theme', undefined, MetaData.Inherits);
+
     // Static getters/setters mirror the WPF attached-property API
     // (e.g. `DockPanel.GetDock`). Convenient for code that wants typed
     // reads without going through `_get_property_value_by_name`.
@@ -529,6 +615,43 @@ export class ThemeManager
     public static SetPrefersReducedMotion(v: Visual, value: boolean): void { v.set_property_value(ThemeManager.PrefersReducedMotionKey, value); }
     public static GetPrefersColorScheme(v: Visual): PreferredScheme { return v.get_property_value(ThemeManager.PrefersColorSchemeKey); }
     public static SetPrefersColorScheme(v: Visual, value: PreferredScheme): void { v.set_property_value(ThemeManager.PrefersColorSchemeKey, value); }
+
+    /** Read the ambient Scheme that applies to this Visual's subtree
+     *  (§ 17.1). Walks the inheritance chain; falls back to undefined
+     *  when no ancestor has set one. */
+    public static GetVisualScheme(v: Visual): Scheme | undefined { return v.get_property_value(ThemeManager.SchemeKey); }
+    /** Write the local Scheme override (§ 17.1 / § 17.2). Descendants
+     *  resolve every `@Token` against this Scheme's token map instead
+     *  of the global active scheme. Pairs with `SetVisualTheme` for full
+     *  subtree theme overrides. */
+    public static SetVisualScheme(v: Visual, value: Scheme | undefined): void { v.set_property_value(ThemeManager.SchemeKey, value); }
+    /** Read the ambient Theme override that applies to this Visual's
+     *  subtree (§ 17.6). NB: distinct from `GetTheme(name)` which looks
+     *  up a registered Theme by string identity. */
+    public static GetVisualTheme(v: Visual): Theme | undefined { return v.get_property_value(ThemeManager.ThemeKey); }
+    /** Write the local Theme override (§ 17.6). Subtree consumes the
+     *  given Theme's ControlTemplates + default Styles. Setting Scheme
+     *  alongside picks a particular Scheme inside the override Theme;
+     *  leaving Scheme unset uses the override Theme's `defaultScheme`. */
+    public static SetVisualTheme(v: Visual, value: Theme | undefined): void { v.set_property_value(ThemeManager.ThemeKey, value); }
+
+    // Module-init: wire the ambient-token resolver hook + register the
+    // Scheme / Theme descriptors as ambient-resource triggers so the
+    // Visual layer's DynamicResource cascade picks up subtree theme
+    // overrides without importing ThemeManager (would create a cycle).
+    static
+    {
+        Visual._setAmbientTokenResolver((v, key) =>
+        {
+            // The inherited DP cascade gives us the nearest-ancestor
+            // value (or undefined when no ancestor has set Scheme).
+            const scheme = v.get_property_value(ThemeManager.SchemeKey);
+            if (scheme === undefined) return undefined;
+            return scheme.tokens.get(key);
+        });
+        Visual._registerAmbientResourceTriggerDp(ThemeManager.SchemeKey.descriptor);
+        Visual._registerAmbientResourceTriggerDp(ThemeManager.ThemeKey.descriptor);
+    }
 
     // Test-only — reset all state. Used by tests that build fresh
     // Applications mid-suite and want a clean theme manager too.
@@ -684,6 +807,20 @@ export class ThemeManager
     private static readonly _mediaWatcher = new MediaWatcher();
 
     public static get MediaWatcher(): MediaWatcher { return ThemeManager._mediaWatcher; }
+
+    /** ViewportClass breakpoints (§ 17.9). Defaults to M3 baseline —
+     *  `mobileMax=600`, `tabletMax=840`. Setting a new value re-classifies
+     *  the current viewport immediately, so a downstream `when(ViewportClass=…)`
+     *  trigger re-fires without waiting for the next resize. Reads
+     *  delegate to MediaWatcher so the two stay in lockstep. */
+    public static get Breakpoints(): ViewportBreakpoints
+    {
+        return ThemeManager._mediaWatcher.Breakpoints;
+    }
+    public static set Breakpoints(v: ViewportBreakpoints)
+    {
+        ThemeManager._mediaWatcher.Breakpoints = v;
+    }
 
     /** Attach the MediaWatcher to a Visual (usually Application's
      *  root mount). Idempotent. After this, OS preference / viewport

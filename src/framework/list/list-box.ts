@@ -334,6 +334,11 @@ export class ListBoxItem extends ContentControl
         // on `when()` triggers in the bundled template (see
         // controls.template.mu, ListBoxItem block).
         if (content !== undefined) this.Content = content;
+        // Focusable so keyboard navigation (§ 10.8) can land focus on
+        // a clicked or arrow-navigated row. The Selector's OnKeyDown
+        // handler reads ListBoxItem focus state to compute where the
+        // next arrow press should land.
+        this.Focusable = true;
         this.applyDefaultStyle();
         this.adoptTemplateParts();
         this.syncAnatomySlots();
@@ -407,6 +412,9 @@ export class ListBoxItem extends ContentControl
         this._pressOriginatedHere = false;
         this.set_property_value(Visual.IsPressedKey, false);
         if (!fire) return;
+        // Move keyboard focus to the clicked row so subsequent arrow
+        // keys navigate from here (§ 10.8).
+        args.SetFocus(this);
         const lb = Selector.FromContainer<Selector>(
             this, (v: Visual): v is Selector => v instanceof Selector);
         if (lb !== undefined) lb.HandleContainerClick(this, args.Modifiers);

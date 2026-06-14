@@ -16,12 +16,19 @@
 // merged dictionary (transitive). Consumers (`DynamicResource`,
 // debugging tools) use it to know when to re-resolve.
 //
-// WPF parity is intentionally partial:
-//   * No MergedDictionaries.Source URI loading (consumers construct
-//     dictionaries imperatively; the µ-mural compiler emits the
-//     AddMergedDictionary calls).
-//   * No keyed-sealing (WPF's lock-once-set behavior) — Set is
-//     re-assignable.
+// URI loading (§ 12.2): consumers can register a global loader via
+// `SetResourceDictionaryLoader(fn)` and then call
+// `dict.AddMergedDictionaryFromUri(uri)` to fetch + merge. No built-in
+// scheme handlers — consumers supply whatever loader makes sense for
+// their environment (dynamic `import()` for JS modules in Node /
+// browsers, fetch + JSON.parse, a custom .mu interpreter). The
+// framework supplies the lifecycle; consumers supply the bytes.
+//
+// Sealing (§ 12.4): `dict.Seal()` freezes the dictionary — Set /
+// Delete / Clear / AddMergedDictionary / RemoveMergedDictionary all
+// throw thereafter. Opt-in (no auto-seal-on-first-resolve like WPF).
+// Theme bundles typically seal after construction so downstream
+// consumers can't accidentally shadow contracted tokens.
 //
 // Implicit-style lookup keyed by TargetType works through the same
 // `Map<string | Function, unknown>` storage — Function keys identify
@@ -32,6 +39,53 @@
 // a single Visual pointer designating which child of this dictionary
 // is the application's main visual, exposed to Application.Mount.
 export type ResourceChangeListener = () => void;
+
+// Loader function for URI-based merged-dictionary loading. Takes a URI
+// string, returns a Promise resolving to a fully-constructed
+// `ResourceDictionary`. Consumers supply this — there is no built-in
+// scheme handler. Typical shapes:
+//
+//   * Dynamic JS module:
+//       const loader: DictionaryLoader = async uri => {
+//           const mod = await import(uri);
+//           return mod.default;        // expect the module to export a dict
+//       };
+//
+//   * Browser-side JSON fetch + decode pass:
+//       const loader: DictionaryLoader = async uri => {
+//           const json = await (await fetch(uri)).json();
+//           const dict = new ResourceDictionary();
+//           for (const [k, v] of Object.entries(json)) dict.Set(k, v);
+//           return dict;
+//       };
+//
+// Caching, retry, source-map awareness etc. are the loader's
+// responsibility. The framework just awaits the result and feeds it
+// to `AddMergedDictionary`.
+export type DictionaryLoader = (uri: string) => Promise<ResourceDictionary>;
+
+// Module-level default loader registry. Set via the public
+// `SetResourceDictionaryLoader` function. Used by
+// `AddMergedDictionaryFromUri` when the caller doesn't pass a loader
+// explicitly. There is at most one default at a time — setting a new
+// one overwrites the previous.
+let _defaultLoader: DictionaryLoader | undefined;
+
+// Register the default loader used by `AddMergedDictionaryFromUri`
+// when the caller doesn't pass a per-call loader. Pass `undefined`
+// to clear the default. Idempotent — calling with the same loader
+// twice is a no-op.
+export function SetResourceDictionaryLoader(loader: DictionaryLoader | undefined): void
+{
+    _defaultLoader = loader;
+}
+
+// Read the currently registered default loader, or `undefined` when
+// none has been set. Test helper — production code rarely needs this.
+export function GetResourceDictionaryLoader(): DictionaryLoader | undefined
+{
+    return _defaultLoader;
+}
 
 // String keys cover the usual `dict.Set('AccentBrush', …)` case;
 // Function keys cover implicit-style lookup where the key is the
@@ -67,12 +121,22 @@ export class ResourceDictionary
 
     private readonly listeners: ResourceChangeListener[] = [];
 
+    // Sealed dictionaries reject every mutation (Set / Delete / Clear /
+    // AddMergedDictionary / RemoveMergedDictionary). Set at Seal()
+    // time; cannot be unsealed. WHY: theme bundles want to lock their
+    // dictionaries after activation so a downstream consumer can't
+    // accidentally Set a token name that shadows the theme's contract
+    // value. Opt-in — existing imperative-Set callers stay free unless
+    // they explicitly Seal().
+    private _sealed: boolean = false;
+
     // ------------------------------------------------------------------
     // Local entries
     // ------------------------------------------------------------------
 
     public Set(key: ResourceKey, value: unknown): void
     {
+        this.checkUnsealedForMutation('Set');
         // No equality check on the existing value — even setting the
         // same value re-fires the listener. Simpler and matches the
         // WPF behavior of ResourceDictionary being a write-through
@@ -97,6 +161,7 @@ export class ResourceDictionary
 
     public Delete(key: ResourceKey): boolean
     {
+        this.checkUnsealedForMutation('Delete');
         const removed = this.entries.delete(key);
         if (removed) this.notify();
         return removed;
@@ -105,6 +170,7 @@ export class ResourceDictionary
     public Clear(): void
     {
         if (this.entries.size === 0) return;
+        this.checkUnsealedForMutation('Clear');
         this.entries.clear();
         this.notify();
     }
@@ -190,6 +256,7 @@ export class ResourceDictionary
 
     public AddMergedDictionary(dict: ResourceDictionary): void
     {
+        this.checkUnsealedForMutation('AddMergedDictionary');
         if (dict === this)
         {
             throw new Error('ResourceDictionary: cannot merge a dictionary into itself.');
@@ -210,11 +277,50 @@ export class ResourceDictionary
     {
         const i = this.merged.indexOf(dict);
         if (i < 0) return false;
+        this.checkUnsealedForMutation('RemoveMergedDictionary');
         this.merged.splice(i, 1);
         const unsub = this.mergedSubscriptions.splice(i, 1)[0];
         unsub?.();
         this.notify();
         return true;
+    }
+
+    // Load a ResourceDictionary from a URI and merge it into this one.
+    // The loader (per-call argument or the module-level default
+    // registered via SetResourceDictionaryLoader) returns a Promise
+    // resolving to the new dictionary; on resolve it lands in this
+    // dict's MergedDictionaries via the standard AddMergedDictionary
+    // path, complete with cycle detection and change-forwarding.
+    //
+    // Throws ahead of the await when this dictionary is sealed —
+    // failing fast keeps the caller's await from hanging when the
+    // outcome is already determined.
+    //
+    // Re-loading the same URI is the loader's concern; the framework
+    // doesn't cache. A loader that wants cache-on-second-call
+    // semantics returns the same dict instance for the same URI, in
+    // which case AddMergedDictionary's idempotency rules govern
+    // (currently: appends a second reference; the cycle check would
+    // catch a self-merge but not a benign duplicate — consumers wanting
+    // strict-once should layer that in their loader).
+    public async AddMergedDictionaryFromUri(
+        uri:    string,
+        loader?: DictionaryLoader,
+    ): Promise<ResourceDictionary>
+    {
+        this.checkUnsealedForMutation('AddMergedDictionaryFromUri');
+        const fn = loader ?? _defaultLoader;
+        if (fn === undefined)
+        {
+            throw new Error(
+                `ResourceDictionary.AddMergedDictionaryFromUri('${uri}'): no loader. `
+                + 'Pass a loader argument, or register a default loader via '
+                + 'SetResourceDictionaryLoader(...) before calling.',
+            );
+        }
+        const dict = await fn(uri);
+        this.AddMergedDictionary(dict);
+        return dict;
     }
 
     private containsTransitively(target: ResourceDictionary): boolean
@@ -249,6 +355,45 @@ export class ResourceDictionary
         };
     }
 
+    // Per-key subscription. The listener fires only when the RESOLVED
+    // value for `key` changes — set the same key to the same value,
+    // listener stays quiet; mutate an unrelated key, listener stays
+    // quiet; mutate a merged dictionary's unrelated key, listener
+    // stays quiet. Behaviorally a memoized wrapper around `Subscribe`
+    // + per-listener `Resolve` cache.
+    //
+    // WHY: `Subscribe` is coarse — fine for a few dictionaries with
+    // small subscriber counts, wasteful for large theme dictionaries
+    // (200+ tokens) where any single Set fires every consumer's
+    // re-resolution path. SubscribeKey lets DynamicResource-style
+    // consumers register one listener per key they actually consume,
+    // skipping no-op resolutions on unrelated changes.
+    //
+    // Identity semantics for the "changed?" check: strict-equality
+    // (===). Brushes / Geometries / numbers all compare correctly;
+    // consumers that hand out fresh-but-equal Brush instances on
+    // every theme swap pay the same cost they do today via global
+    // Subscribe. The Resolve walk includes merged dictionaries, so
+    // a merged Set that newly exposes (or hides) the key fires the
+    // listener at the moment the resolved value flips.
+    //
+    // Returns an unsubscribe function — call to drop both the global
+    // Subscribe hook and the per-listener cache.
+    public SubscribeKey(key: ResourceKey, listener: ResourceChangeListener): () => void
+    {
+        // Seed the cache with the current resolved value. Initial fire
+        // is the consumer's responsibility (same contract as Subscribe);
+        // SubscribeKey only fires on CHANGE.
+        let last = this.Resolve(key);
+        return this.Subscribe(() =>
+        {
+            const next = this.Resolve(key);
+            if (next === last) return;
+            last = next;
+            listener();
+        });
+    }
+
     private notify(): void
     {
         // Snapshot so an unsubscribe-during-notify (common when a
@@ -258,5 +403,46 @@ export class ResourceDictionary
         {
             l();
         }
+    }
+
+    // ------------------------------------------------------------------
+    // Sealing (§ 12.4)
+    // ------------------------------------------------------------------
+
+    // True after Seal() has been called. Cannot be unsealed.
+    public get IsSealed(): boolean
+    {
+        return this._sealed;
+    }
+
+    // Freeze the dictionary against further mutations. After Seal(),
+    // Set / Delete / Clear / AddMergedDictionary / RemoveMergedDictionary
+    // all throw. Reads (Get / Has / Resolve / CanResolve / Entries /
+    // MergedDictionaries / Subscribe / SubscribeKey) stay unaffected.
+    //
+    // Idempotent — calling Seal() on an already-sealed dictionary is a
+    // no-op. There is no Unseal: WPF parity, and any unfreeze path
+    // would have to invalidate every DynamicResource subscription that
+    // assumed the dict was stable. Consumers that need a fresh mutable
+    // copy should construct a new dictionary and seed it from
+    // `Entries()`.
+    //
+    // Does NOT recurse into merged dictionaries — a merged dict whose
+    // entries should also be frozen has to be sealed independently.
+    // Most theme bundles seal their root dict + each merged dict
+    // explicitly as part of activation.
+    public Seal(): void
+    {
+        this._sealed = true;
+    }
+
+    private checkUnsealedForMutation(operation: string): void
+    {
+        if (!this._sealed) return;
+        throw new Error(
+            `ResourceDictionary: ${operation} rejected — dictionary is sealed. `
+            + 'Call Seal() makes the dictionary immutable; create a fresh '
+            + 'dictionary and re-seed from Entries() if you need a mutable copy.',
+        );
     }
 }

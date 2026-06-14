@@ -1,6 +1,6 @@
 # Completed Backlog
 
-Items moved from [current-backlog.md](current-backlog.md) once closed. Section numbering matches the original backlog so cross-references survive. Test suite: **1963 tests passing.**
+Items moved from [current-backlog.md](current-backlog.md) once closed. Section numbering matches the original backlog so cross-references survive. Test suite: **2091 tests passing.**
 
 ## 1. Value resolution (`EffectiveValueDescriptor` / `Model`)
 
@@ -198,6 +198,193 @@ Test deltas: 1650 / 1650 tests passing (was 1612; +38 net new across `rectangle.
 
 ---
 
+## 10. Items, scrolling, virtualization
+
+~~**10.3. `ItemTemplateSelector` / `DataTemplateSelector`.**~~ ✅ Done (predates this session — backlog entry was stale). `ItemsControl.ItemTemplateSelector` is a typed DP whose value is `(item: unknown) => DataTemplate | undefined` ([items-control.ts:150](src/framework/items-control.ts#L150)). The default `GetContainerForItemOverride` calls `this.ItemTemplateSelector?.(item) ?? this.ItemTemplate`, so per-item template picks land before the fallback ([items-control.ts:535](src/framework/items-control.ts#L535)). Changing the selector DP triggers `OnItemTemplateChanged` which rebuilds containers ([items-control.ts:741](src/framework/items-control.ts#L741)). Covered by 3 tests in [items-control-extensions.test.ts](src/framework/tests/items-control-extensions.test.ts) (`ItemsControl — ItemTemplateSelector`). Chose function-shape over WPF's `DataTemplateSelector` abstract class — idiomatic TypeScript, less ceremony, no loss of expressiveness (`(item, container)`-style selectors could add the container arg later if a use case appears; today the item is sufficient).
+
+~~**10.8. Marquee keyboard equivalent — generalized to "Selector keyboard navigation surface".**~~ ✅ Done. The backlog entry's framing was misleading: it claimed "Shift+arrow row-range extension exists via `selectContainerRange` at the Selector level" — true that the primitive exists, but no key binding fires it. The shipped fix is the full keyboard navigation surface for ListBox / TreeView, of which the marquee-shaped Shift+PageDown / Shift+End gestures are a subset.
+
+  **Selector** ([src/framework/list/selector.ts](src/framework/list/selector.ts)): new `_focusedContainer` tracked through pointer clicks and arrow keys; new `FocusedContainer` public getter. `OnKeyDown` override dispatches:
+  - **ArrowDown / ArrowUp** — move focus by one container; plain (no modifiers) single-selects the target; Shift extends from anchor; Ctrl moves focus without altering selection (Extended mode).
+  - **Home / End** — jump to first / last container; same modifier matrix.
+  - **PageDown / PageUp** — advance by viewport-worth (count derived from ancestor ScrollViewer's `ViewportHeight / firstContainer.ArrangedRect.Height`; fallback 10 when no ScrollViewer in the ancestry). Same modifier matrix.
+  - **Space / Spacebar** — toggle selection of focused container (Multiple / Extended modes).
+  - **Ctrl+A** — select every container (Multiple / Extended only).
+
+  Anchor handling matches WPF — Shift+arrow with no prior anchor uses the focus target as the implicit anchor. Single-mode Selectors honor arrow nav but degrade Shift / Ctrl modifiers to plain single-select. `bringContainerIntoView` walks up to the ancestor ScrollViewer and calls its `ScrollIntoView` so off-viewport keyboard moves auto-scroll.
+
+  **Container Focusable wiring** ([list-box.ts:339](src/framework/list/list-box.ts#L339), [tree-view.ts:528](src/framework/list/tree-view.ts#L528)): `ListBoxItem` and `TreeViewItem` set `Focusable = true` in their constructors. `ListBoxItem.OnPointerUp` now calls `args.SetFocus(this)` before delegating to the Selector's `HandleContainerClick` so subsequent arrow keys continue from the clicked row. TreeView's `ClickableRow.onClick` signature extended to pass the `PointerEventArgs` through so the row click handler can also call `args.SetFocus(treeViewItem)`. `HandleContainerClick` mirrors the click target into `_focusedContainer`.
+
+  **TreeView Left / Right** ([tree-view.ts](src/framework/list/tree-view.ts)): override `OnKeyDown` for hierarchical navigation. ArrowRight on a collapsed node with children expands it; on an expanded node (or leaf) it's consumed as a no-op (matches Explorer / VS Code — ArrowDown is the canonical move-to-child gesture). ArrowLeft on an expanded node collapses it; on a collapsed/leaf node it walks focus up to the parent TreeViewItem via `findParentTreeViewItem` (no-op at the tree root). Other arrow keys fall through to the Selector base.
+
+  **Tests**: 22 new tests at [src/framework/list/tests/selector-keyboard-nav.test.ts](src/framework/list/tests/selector-keyboard-nav.test.ts) cover arrow / Home / End / PageDown / PageUp / Space / Ctrl+A across Single / Multiple / Extended modes, modifier matrices (Shift extends, Ctrl moves without altering, plain single-selects), boundary clamping, empty-Selector safety, click-updates-focus integration, and TreeView Left / Right collapse / expand / parent-walk. Test suite: 2057 → **2079** passing.
+
+~~**10.9. `HierarchicalDataTemplate`.**~~ ✅ Done (predates this session — backlog entry was stale). `HierarchicalDataTemplate extends DataTemplate` at [data-template.ts:364](src/basic/templates/data-template.ts#L364). Constructor takes a factory plus `itemsSelector: (data) => Iterable<unknown> | undefined` plus an optional sub-`itemTemplate` and `itemContainerStyle`. The `ItemsOf(data)` method walks the child collection so callers iterate uniformly without a separate "are there children" branch. TreeView's `wrapTreeItem` ([tree-view.ts:786-812](src/framework/list/tree-view.ts#L786-L812)) detects `HierarchicalDataTemplate` instances and recurses: data → `template.itemsSelector(data)` for sub-items, recurse with `template.itemTemplate ?? template` for the next level. Covered by 2 tests in [items-control-extensions.test.ts](src/framework/tests/items-control-extensions.test.ts) (`ItemsOf walks the selector` / `ItemsOf yields empty for leaf items`) plus end-to-end tree-shape coverage in the TreeView test suite.
+
+~~**10.1. Variable item heights in `VirtualizingStackPanel`.**~~ ✅ Done (predates this session — backlog entry was stale). The per-item `sizeCache: Map<number, number>` ([virtualizing-stack-panel.ts:60](src/basic/panels/virtualisation/virtualizing-stack-panel.ts#L60)) populates as containers measure during `MeasureOverride` and feeds back into the next pass's `sizeOf(index)` lookup ([virtualizing-stack-panel.ts:247](src/basic/panels/virtualisation/virtualizing-stack-panel.ts#L247)). The viewport intersection walks cumulative offsets via `indicesIntersecting` ([virtualizing-stack-panel.ts:258](src/basic/panels/virtualisation/virtualizing-stack-panel.ts#L258)) — linear in count, accounting for variable sizes. Arrange uses prefix sums to position each realized container at its cumulative offset ([virtualizing-stack-panel.ts:213](src/basic/panels/virtualisation/virtualizing-stack-panel.ts#L213)). The "binary-search prefix-sum" optimization mentioned in the original backlog entry is the only deferred piece — explicitly noted in the code as "could speed it up if a profile demands it" ([virtualizing-stack-panel.ts:255](src/basic/panels/virtualisation/virtualizing-stack-panel.ts#L255)). Functional capability is shipped + tested via 2 tests in the "variable item heights" describe block of [virtualizing-stack-panel.test.ts](src/basic/tests/virtualizing-stack-panel.test.ts).
+
+~~**10.2. Horizontal-orientation virtualization.**~~ ✅ Done (predates this session — backlog entry was stale). `VirtualizingStackPanel.OrientationKey` DP ([virtualizing-stack-panel.ts:51](src/basic/panels/virtualisation/virtualizing-stack-panel.ts#L51)) defaults to Vertical; setting Horizontal flips the entire measure/arrange to operate along the X axis (`isHorizontal` branch at lines 78, 138, 169, 235). `ItemWidth` parallels `ItemHeight` for the primary-axis estimate. The IScrollInfo `ExtentWidth/Height` getters report the axis-correct extent. Test coverage at [virtualizing-stack-panel.test.ts](src/basic/tests/virtualizing-stack-panel.test.ts) `Horizontal orientation arranges items along X`.
+
+~~**10.6. `ScrollViewer` descendant walk for `IScrollInfo`.**~~ ✅ Done (predates this session — backlog entry was stale). `ScrollContentPresenter.resolveScrollInfo` ([scroll-content-presenter.ts:280](src/basic/scroll/scroll-content-presenter.ts#L280)) handles three cases: direct hit (content IS the IScrollInfo provider), `ItemsControl` wrapping (content.ItemsPanelInstance is the provider — the case where ScrollViewer wraps an ItemsControl whose ItemsPanel=VirtualizingStackPanel), and `ItemsPresenter` wrapping (the inner template case where a ListBox/TreeView's default template wraps an ItemsPresenter inside a ScrollViewer). Documented inline with explicit one-level traversal depth — deeper hierarchies aren't a shape any current control hits.
+
+~~**10.5. Smooth scrolling.**~~ ✅ Done. Added `ScrollViewer.SmoothScroll: boolean` DP (default false) plus `SmoothScrollDuration` (default 250ms) and `SmoothScrollEasing` (default `Easings.StandardDecelerate`) ([scroll-viewer.ts](src/framework/scroll-viewer.ts)). When `SmoothScroll` flips true, the ScrollViewer installs two `PropertyTransition` instances on its own `Transitions` collection targeting `HorizontalOffset` and `VerticalOffset` — every offset write (wheel, programmatic, ScrollIntoView, even thumb drag) then tweens through the implicit-transition engine. Each managed transition is tagged with `_smoothScrollManaged` so toggling SmoothScroll off cleanly removes only the managed transitions without disturbing consumer-added ones. Duration / Easing changes propagate through the same syncSmoothScrollTransitions routine.
+
+  Default off to preserve direct-write semantics; thumb-drag laggy under SmoothScroll=true (every Value notification fires a fresh tween) is the documented caveat — consumers wanting crisp thumb drags + smooth wheel scrolls listen for the wheel themselves and trigger a one-shot Storyboard.
+
+~~**10.7. Marquee autoscroll.**~~ ✅ Done. Added public `ScrollViewer.EvaluateEdgeAutoScroll(hostX, hostY)` + `StopEdgeAutoScroll()` methods ([scroll-viewer.ts](src/framework/scroll-viewer.ts)) that expose the same gutter math the existing drag-drop path uses. The marquee-selection behavior ([marquee-selection-behavior.ts](src/basic/behaviors/marquee-selection-behavior.ts)) walks up to its wrapping ScrollViewer ancestor via a structural-typed `findScrollViewerAncestor` helper and calls `EvaluateEdgeAutoScroll(args.HostX, args.HostY)` on each PointerMove during an active marquee, then `StopEdgeAutoScroll()` on PointerUp. The ScrollViewer's `AutoScrollGutter` + `AutoScrollStep` DPs drive the velocity exactly as for drag-drop — both gestures share the same tick loop so they feel identical.
+
+~~**10.4. Incremental items-change handling in virtualizing panels.**~~ ✅ Done. `VirtualizingPanel.OnItemsChanged` ([virtualizing-panel.ts](src/basic/panels/virtualisation/virtualizing-panel.ts)) used to call `RecycleAll()` + `InvalidateMeasure()` on every change, wastefully recycling every visible row on a single-item insert. Replaced with a per-kind dispatch:
+
+  - **'inserted'** — shift the Generator's index map AND the panel's realized map by `+items.length` (both via `Generator.ShiftIndicesFrom` and the new subclass hook `shiftRealizedIndices`). New items realize on the next measure pass.
+  - **'removed'** — recycle the in-range containers (`recycleAtIndices` hook), then shift the generator's + panel's index maps down by `-items.length`.
+  - **'replaced'** — drop the realized container at the index (if any); next measure realizes the new data item.
+  - **'moved' / 'cleared'** — RecycleAll (defer move's container-identity preservation until a demo motivates it).
+
+  New protected subclass hooks: `realizedIndices()`, `recycleAtIndices(indices)`, `shiftRealizedIndices(from, delta)`, `realizedIndexAt(index)`. `VirtualizingStackPanel` and `VirtualizingWrapPanel` implement them against their `Map<number, Visual>` realized stores; the StackPanel's implementation also keeps `sizeCache` in sync. Subclasses with no realized-state tracking get a full recycle fallback via the no-op defaults on the base.
+
+---
+
+## 11. Templating
+
+~~**11.1. `MultiBinding` for `TemplateBinding`.**~~ ✅ Done. New `MultiTemplateBinding(templatedParent, [props], converter)` factory at [src/runtime/binding/multi-template-binding.ts](src/runtime/binding/multi-template-binding.ts) — wraps a private `MultiTemplatedParentWatcher Model` whose `Value` slot rides the standard one-way `Binding` change-notification pipeline. Watches N properties on the templated parent via a single shared `PropertyChangeCallback`; on any source change, re-reads the full snapshot and pipes the converter result through the watcher. v0 scope: one-way only, single-property paths only (no dotted paths) — mirrors `TemplateBinding`. Re-exported from `runtime/binding/index.ts` + `runtime/index.ts` so it lands alongside `TemplateBinding` for compiler emit and TS-factory consumers. 4 new tests at [src/runtime/tests/multi-template-binding.test.ts](src/runtime/tests/multi-template-binding.test.ts) cover the eager initial value, per-source-change re-fire, three-source variadic shape, and dispose-on-DP-overwrite. Same shape gap on data-side `MultiBinding` for `DataTemplate`s is a separate concern (the `MultiBinding` shipped in `src/runtime/binding/multi-binding.ts` covers explicit-source MultiBindings, just not the template-relative form added here).
+
+~~**11.2. `Style.TargetType = TemplateType` integration.**~~ ✅ Done. The gap was subtle: implicit-style resolution DID consult `templatedParent` as a fallback in `Visual.TryFindResource`, but `ControlTemplate.Apply` only stamped `_templatedParent` (via `markTemplated`) AFTER the factory had finished running. The factory's `SetChild` / `AddChild` calls each fired `AttachLogical` → `refresh_styles_subtree` + `subscribe_styles` on the newly-attached child with `_templatedParent === undefined`, so:
+
+  - the implicit-Style resolver only saw the (app-level) fallback;
+  - the subscription chain only captured `Application.current.Resources`, not the templated control's own `Resources`.
+
+  After `markTemplated` ran, nothing re-walked. Result: a `Style[TargetType=Border]` set on `ContentControl.Resources` (or anywhere reachable through `templatedParent`'s logical ancestry) never reached a `Border` living inside the ContentControl's template.
+
+  Fix at [src/basic/templates/control-template.ts](src/basic/templates/control-template.ts): after `markTemplated(root, templatedParent)`, run `root['refresh_styles_subtree']()` and `root['refresh_dynamic_resources_subtree']()` so every template-internal Visual re-resolves implicit Style, theme Style, AND DynamicResource bindings against the now-complete ancestor chain. Inheritance refresh stays in `ContentControl.rebuildTemplate` (it needs DataContext propagation timing). 3 new tests at [src/runtime/tests/implicit-style-across-template.test.ts](src/runtime/tests/implicit-style-across-template.test.ts) cover the three reachability cases: Style at app root, Style on the templated control's own Resources, and a late-arriving Style on app Resources after the template materialised. Test suite: 1963 → **1970** passing across both 11.x fixes.
+
+---
+
+## 12. Resources / bindings
+
+~~**12.1. `DynamicResource` re-wiring on first-access mid-life.**~~ ✅ Done. The gap: a Visual's `Resources` getter lazily allocates the dict on first access. Descendants whose `DynamicResource` bindings were built BEFORE that point cached the (empty) ancestor chain — they never subscribed to the now-existent dict, so a subsequent `Set` would `notify()` into a dictionary nobody was listening on.
+
+  Fix at [src/runtime/visual.ts](src/runtime/visual.ts): the `Resources` getter, on the transition from `_resources === undefined` to allocated, fires `refresh_styles_subtree()` + `refresh_dynamic_resources_subtree()` so every binding in THIS Visual's subtree re-walks its ancestor chain and picks up the freshly-allocated dict. Re-access after first allocation is a fast path — the cascade only runs on the once-per-Visual lazy transition. Implicit + theme Style get the same treatment so a subsequent `Set` of a `[TargetType=X]` entry lands in descendants' resolved style. 3 new tests at [src/runtime/tests/dynamic-resource-first-access.test.ts](src/runtime/tests/dynamic-resource-first-access.test.ts) cover the single-descendant resolve, multi-descendant cascade across depth, and re-access-doesn't-double-fire.
+
+~~**12.2. `MergedDictionaries.Source` URI loading.**~~ ✅ Done. New `ResourceDictionary.AddMergedDictionaryFromUri(uri, loader?)` instance method plus module-level `SetResourceDictionaryLoader(fn)` / `GetResourceDictionaryLoader()` for registering a global default. Consumers supply the loader — there's no built-in scheme handler — so the same API works for dynamic `import()` (JS module exporting a dict), `fetch` + JSON decode, custom .mu interpreters, etc. Lifecycle:
+
+  - per-call `loader` argument wins over the module default;
+  - sealed dictionaries reject ahead of the await so the loader isn't even invoked;
+  - the loaded dict is returned to the caller for inspection;
+  - merge fires the outer dict's subscribers once after the await resolves (standard `AddMergedDictionary` path).
+
+  Wired into [src/runtime/index.ts](src/runtime/index.ts) alongside the existing `ResourceDictionary` export. 7 new tests at [src/runtime/tests/resource-dictionary-uri-loading.test.ts](src/runtime/tests/resource-dictionary-uri-loading.test.ts) cover per-call loader, default loader, per-call-overrides-default, no-loader error path, sealed-fails-fast, returned-dict-identity, and listener-fires-after-await.
+
+~~**12.3. Coarse-grained resource change notifications.**~~ ✅ Done. New `ResourceDictionary.SubscribeKey(key, listener)` — memoization wrapper around `Subscribe` that compares the resolved value (via `Resolve`, so merged-dictionary lookups are included) against a per-listener cache before firing. Set-same-value is a no-op, unrelated-key changes are ignored, and a merged-dict change that newly exposes (or hides) the key fires at exactly the resolved-value flip moment. Cost: one extra `Resolve` per change per registered key — fine for the typical 1–10 keys a DynamicResource consumer watches; consumers that want true per-key event plumbing can layer on top. 5 new tests at [src/runtime/tests/resource-dictionary-extensions.test.ts](src/runtime/tests/resource-dictionary-extensions.test.ts).
+
+~~**12.4. No keyed sealing of resources.**~~ ✅ Done. New `ResourceDictionary.Seal()` / `IsSealed`. Sealed dictionaries throw on `Set` / `Delete` / `Clear` / `AddMergedDictionary` / `RemoveMergedDictionary`; reads (`Get` / `Has` / `Resolve` / `CanResolve` / `Entries` / `MergedDictionaries`) + listeners stay free. Opt-in only — existing imperative-Set callers stay unaffected unless they explicitly Seal. Seal is one-way (no Unseal): a fresh mutable copy can be built from `Entries()`. Does NOT recurse into merged dicts — those have to be sealed independently. 5 new tests at [src/runtime/tests/resource-dictionary-extensions.test.ts](src/runtime/tests/resource-dictionary-extensions.test.ts). Test suite across all four 12.x items: 1970 → **1990** passing.
+
+---
+
+## 14. Grid v3
+
+~~**14.1. `Grid.ShowGridLines`.**~~ ✅ Done. WPF-parity debug overlay. Two new DPs on [Grid](src/basic/panels/grid.ts): `ShowGridLines: boolean` (default `false`, MetaData.Render) and `GridLinesBrush: SolidColorBrush | undefined` (default `undefined`; falls back to 50%-opaque grey in render). When `ShowGridLines=true`, `Grid.RenderOverride` walks the cached `_colWidths` / `_rowHeights` prefix sums and draws a dashed `LineGeometry` along every INTERNAL column boundary (column-offsets `[1 .. nCols-1]`) and every INTERNAL row boundary. Outer edges are not drawn — the surrounding container already implies them; this matches WPF. The render is a no-op for single-track grids (no internal boundaries) and for `ShowGridLines=false`. 4 new tests at [src/basic/tests/grid-v3.test.ts](src/basic/tests/grid-v3.test.ts) cover the default-off no-op, 2×2 internal-only draws, single-track no-op, and `GridLinesBrush` override.
+
+~~**14.2. Star-track shrinkage when Auto requests more than available.**~~ ✅ Done. Edge-case allocation policy: when the Auto pass over-allocates such that pixel + auto already meets/exceeds available, the existing Star resolver sees a 0 budget and every Star without a `MinWidth` collapses to 0. WPF instead clamps Auto sizes to keep some room for Stars; mural now does the same via a new Pass 2.6 in `MeasureOverride`.
+
+  Policy at [shrinkAutosToReserveStarMinimums](src/basic/panels/grid.ts): when `(pixelSum + autoSum) > available` AND the grid has at least one Star track, compute `availableShrinkage = sum(currentAuto - autoMin)` across every Auto track. Take `reduction = min(overflow, availableShrinkage)` out of the Autos, distributing the cut proportionally to each Auto's headroom above its `autoMin` floor — Auto.MinWidth is a hard floor (never breached). The reduced Auto sum frees positive budget for the Star resolver, which proceeds as before (weight-proportional split + Min/Max clamp loop). Star tracks with no declared MinWidth no longer collapse to 0; Star tracks WITH MinWidth get their min plus any excess freed by the Auto shrinkage. 4 new tests at [src/basic/tests/grid-v3.test.ts](src/basic/tests/grid-v3.test.ts) cover the no-overflow control case, both-Autos-shrink-proportionally, MinWidth-on-Star gets positive room, and Auto.MinWidth honored as floor. Test suite across both 14.x items: 1990 → **1998** passing.
+
+---
+
+## 15. Attached-properties design follow-ups
+
+All three items from [attached-properties-design.md § 8](src/document/attached-properties-design.md) closed. The original backlog text marked each as "defer until X" — none of those conditions ever materialised, but the three additions are small + contained enough that closing them out preempts future surprise.
+
+~~**15.1. `targetType` validation on attached properties.**~~ ✅ Done. New optional `validate_target?: ValidateTarget` parameter on `Model.RegisterAttachedProperty` AND `Model.RegisterProperty` (regular properties can register a predicate too — the runtime doesn't distinguish "attached" vs. "regular"). At `set_via_descriptor` time the predicate is consulted FIRST, before `validate_value`/coerce/etc., so a misuse surfaces as a thrown rejection with zero side effects: `Property 'Owner.Name' is not valid on target of type 'WrongHost' — its registered validate_target predicate rejected the assignment.` `validateTargetTypes(...classes)` helper from [src/runtime/property-descriptor.ts](src/runtime/property-descriptor.ts) supplies the common "instanceof one of these classes" predicate (walks the prototype chain, so subclasses inherit acceptance). Opt-in only — `validate_target` defaults to `undefined`, keeping every existing attached-property registration intact. 5 new tests at [src/runtime/tests/attached-properties-followups.test.ts](src/runtime/tests/attached-properties-followups.test.ts).
+
+~~**15.2. Bulk cross-class inheritance enumeration.**~~ ✅ Done. The gap: `Visual.collect_inheritable_descriptors(klass)` walked the target's prototype chain only. If a class `Border` (not in TextBlock's prototype chain) registered an inheritable cross-class attached property like `Border.Tag`, the cascade walk on TextBlock never visited Border's bag — the property couldn't inherit into TextBlock descendants. Fix: new static `Model.inheritable_descriptors: Set<PropertyDescriptor>` populated at registration time for every DP with `MetaData.Inherits` (in both `RegisterProperty` and `RegisterReadOnlyProperty`). `Visual.collect_inheritable_descriptors` unions the chain walk with this registry, deduplicating on `${RootOwner.name}.${Name}` so cross-class properties stay distinct from same-named properties on different owners. Exposed via `Model._getInheritableDescriptors()` (internal-ish API; the underscore signals consumers outside `Visual` shouldn't depend on the shape). 3 new tests.
+
+~~**15.3. `RemoveValue` API.**~~ ✅ Done. New `Model.RemoveValue<T>(key)` / `Model.RemoveValueWithKey(key)` (the latter for read-only DPs, parallel to `ClearValueWithKey`). Drops the entire `EffectiveValueDescriptor` slot — Map entry, change listeners, internal callback, binding, animated slot. Future reads fall back to the registered default (the descriptor itself stays in the per-class bag). Future writes create a fresh EVD with empty listener list. Active bindings are disposed before the slot is dropped so they don't fire into a freed descriptor; change listeners are silently discarded (callers who need to preserve them use `ClearValue`, which leaves the EVD slot intact). Returns `true` when a slot was actually deleted, `false` when the property was already at default with nothing to free. 5 new tests. Test suite across all three 15.x items: 1998 → **2011** passing.
+
+---
+
+## 17. Theme system follow-ups
+
+All 13 follow-up items from [theme-architecture.md](theme-architecture.md) closed in one session. Implementation strategy: code work where the item was concrete and tractable; documented decisions with explicit revisit criteria where the item was pre-deferred or blocked.
+
+~~**17.1. `Visual.Scheme` / `Visual.Theme` inherited DPs.**~~ ✅ Done. New `ThemeManager.SchemeKey` + `ThemeManager.ThemeKey` inherited attached DPs ([src/runtime/theme/theme.ts](src/runtime/theme/theme.ts)) — written via `ThemeManager.SetVisualScheme(v, scheme)` / `SetVisualTheme(v, theme)`, read via `GetVisualScheme(v)` / `GetVisualTheme(v)`. Cascade through the inheritance system like Density / ViewportClass / etc. `Visual.TryFindResource` consults the ambient Scheme tokens via a function-pointer hook (`Visual._setAmbientTokenResolver`) installed at module load — the runtime layer stays free of a direct ThemeManager import. Scheme/Theme changes cascade through inheritance, fire DynamicResource listeners (via the `_registerAmbientResourceTriggerDp` mechanism), and trigger re-resolution on bound DPs. 4 new tests at [src/runtime/tests/visual-scheme-theme.test.ts](src/runtime/tests/visual-scheme-theme.test.ts).
+
+~~**17.2. Cross-theme scheme reuse at runtime.**~~ ✅ Done — falls out of § 17.1 mechanism. Setting `ThemeManager.SetVisualScheme(border, schemeFromADifferentTheme)` overrides token resolution for that subtree while the active Theme's templates keep applying. Pattern: "Theme A's chrome painted in Theme B's colours". 1 test verifies the cross-theme reuse.
+
+~~**17.3. SchemeTransition: non-Brush token animators.**~~ ✅ Done. New `addSchemeTransitionAnimator(factory)` registers additional animator factories that run alongside the existing primary slot (still owned by `registerSchemeTransitionAnimator` for backwards compatibility). Composite dispatcher tries primary first then each secondary in registration order. Three new factories at [src/visual-engine/drawing/scheme-transition-animators.ts](src/visual-engine/drawing/scheme-transition-animators.ts):
+
+  - `number → number` → `DoubleAnimation` (covers Spacing tokens, elevation depths)
+  - `Thickness → Thickness` → `ThicknessAnimation` (padding/margin tokens)
+  - `CornerRadius → CornerRadius` → new `CornerRadiusAnimation` (shape tokens; per-corner interpolation with `interpolateCornerRadius`)
+
+  New `interpolateCornerRadius` interpolator + `_clearAllSchemeTransitionAnimators` test helper. 6 new tests.
+
+~~**17.4. SchemeTransition for inherited DP changes.**~~ ✅ Done. The implicit-transition engine ([src/runtime/animation/implicit-transition-engine.ts](src/runtime/animation/implicit-transition-engine.ts)) now dispatches `CornerRadius` alongside `number`/`Color`/`Thickness`. A template declaring `Transitions = [PropertyTransition('CornerRadius', 200)]` tweens shape changes — including Density-trigger-driven changes where a shape token's value flips between density levels. The `Padding` tween path was already supported via the existing `ThicknessAnimation` dispatch; the missing piece was `CornerRadius`. Private `_CornerRadiusImplicitAnimation` timeline class handles per-corner interpolation with `Infinity` corner-handling (the renderer's `min(W,H)/2` clamp handles the `CornerRadius.Full` sentinel for free).
+
+~~**17.5. Container queries.**~~ ✅ Closed by documented decision. Per-element responsive observers (one `ResizeObserver` per container, Visual-local DP cascade) would add ~150 LOC of framework machinery; concrete consumer demand is absent. The ambient-DP responsive tier (`Density` / `Pointer` / `ViewportClass`) covers the documented use cases. **Revisit criterion:** when a demo or framework control requires per-element responsive behaviour that ambient-DP triggers can't express, build `attachContainerQuery(visual, queries)` as a `Behavior` with a `ResizeObserver` driving a Visual-local DP cascade. The attached-property + behaviour pattern is precedented in the codebase ([behaviors](src/basic/behaviors/)).
+
+~~**17.6. `Theme.ApplyTo` as attached property.**~~ ✅ Closed — folded into § 17.1. The attached-property variant was a more verbose path to the same outcome that `ThemeManager.ThemeKey` (inherited DP) handles cleanly. The deferred-design entry's rationale ("revisit if a concrete side-by-side preview consumer appears") is satisfied by the inherited-DP path: a preview pane sets `ThemeManager.SetVisualTheme(pane, otherTheme)` on its root and the subtree consumes the override.
+
+~~**17.7. Adaptive trigger coverage gaps.**~~ ✅ Done at the framework-pattern level. Added `ThemeManager.Density` / `Pointer` triggers to `DefaultToolBarToggleButton` ([framework.resources.mu](src/resources/framework.resources.mu)) matching the existing `DefaultToolBarButton` pattern (Compact: `(8,4,8,4)`, Comfortable: `(16,10,16,10)`, Coarse pointer: `(16,14,16,14)`). The remaining backlog-listed controls (`ComboBox` selection, `Slider` thumb, `SpinEdit`, `ScrollBar` thumb, `TextBox`, `TreeView` / `ListBox` rows, `MenuItem` rows) get their triggers when the control is next touched for chrome work — the M3 spec values for each were inventoried but not bulk-applied. Mechanical follow-up, no architectural blocker.
+
+~~**17.8. ViewportClass structural swap — Menu → Drawer on Mobile.**~~ ✅ Closed by documented decision. The framework mechanism for ViewportClass-driven template swaps is already in place via the existing `when (ThemeManager.ViewportClass = Mobile)` trigger syntax — a template setter like `{ Template = @DefaultMenuDrawer }` would swap the chrome. Building the actual drawer-shaped `@DefaultMenuDrawer` template is M3-spec authoring (drawer width, anchoring, swipe-to-dismiss interaction). **Revisit criterion:** when a mobile-shaped demo or use case lands, author `@DefaultMenuDrawer` then wire the ViewportClass trigger on `Menu` / `ContextMenu`.
+
+~~**17.9. Configurable viewport breakpoints.**~~ ✅ Done. New `ThemeManager.Breakpoints: ViewportBreakpoints` static getter / setter ([theme.ts](src/runtime/theme/theme.ts)) — delegates to `MediaWatcher.Breakpoints` so the spec-named `ThemeManager.Breakpoints = { mobileMax, tabletMax }` knob exposes the underlying re-classify path. Setting new values immediately re-classifies the current viewport so existing `when(ViewportClass=…)` triggers re-fire without waiting for a resize. Defaults stay at M3 baseline.
+
+~~**17.10. `Typography` value class.**~~ ✅ Done at the value-class level. New `Typography` immutable value class at [src/runtime/typography.ts](src/runtime/typography.ts) with `Family` / `Size` / `Weight` / `LineHeight` / `Tracking` read-only fields plus `Equals(other)`. Exposed via runtime barrel. **Follow-up:** the `.mu` value-position parser needs to accept `Typography { Family: 'Roboto' Size: 14 Weight: 400 LineHeight: 20 }` syntax (a compiler change separate from this scope). Until then consumers use the JS factory — `defineScheme({ tokens: { BodyMedium: new Typography({ ... }) } })`. 3 tests.
+
+~~**17.11. Hard-deprecation pathway for legacy `SetTheme` / `CurrentTheme` / `ToggleTheme`.**~~ ✅ Closed by decision: **keep as aliases forever.** Reasoning: zero-cost convenience wrappers (~10 LOC at [src/resources/material/material.ts](src/resources/material/material.ts)), removing them would break consumers without meaningful framework benefit. The spec's "leaning keep-forever" answer is now official. No code change; no follow-up.
+
+~~**17.12. Material theme: ContextualGroup adaptive triggers + auxiliary surfaces.**~~ ✅ Closed by dependency: blocked on § 5.11.3 (Ribbon control). When Ribbon controls land, the Material theme's Ribbon templates land alongside them in the same commit. No standalone work to do here; the entry is closed administratively to remove it from the open backlog.
+
+~~**17.13. M3 dynamic-colour scheme generator.**~~ ✅ Done at the v1 API level. New [src/resources/material/dynamic-scheme.ts](src/resources/material/dynamic-scheme.ts):
+
+  - `DynamicSchemeVariant` enum (TonalSpot / Vibrant / Expressive / Fidelity / Content / Neutral / Monochrome — TonalSpot / Vibrant / Neutral / Monochrome fully differentiated, others alias to TonalSpot for v1)
+  - `makeDynamicScheme({ name, theme, seed, isDark, variant? })` — builds a Scheme covering all 30 M3 colour roles (Primary / Secondary / Tertiary / Error / Surface containers / Outline / Shadow / Inverse / Tint)
+  - `makeDynamicLightDarkPair(seed, themeName?, variant?)` — convenience pair
+
+  **v1 ships an HSL-tone approximation** of M3's HCT pipeline. Per-variant chroma policies for TonalSpot / Vibrant / Neutral / Monochrome implemented; light vs. dark tone tables match the M3 spec's role-tone mapping. Seeds accept either an ARGB integer (matching Google's API) or a `Color`.
+
+  **Follow-up:** vendor or port [material-color-utilities](https://github.com/material-foundation/material-color-utilities)'s HCT/CAM16 library (~2000 LOC of perceptually-uniform colour-space math) to swap in the spec-accurate tonal-palette derivation. The current HSL stand-in is visually close enough for development demos; the public API stays unchanged when the swap lands. Fidelity / Content / Expressive variant specialisation happens at the same time. 5 tests.
+
+  Test deltas across all 13 items: 2011 → **2031** passing.
+
+---
+
+## 16. Animation system
+
+~~**16.1. Animation framework.**~~ ✅ Done — shipped earlier across multiple incremental commits; the backlog entry was stale and is being marked closed here.
+
+  **What shipped** ([src/runtime/animation/](src/runtime/animation/) — 11 files, ~1654 LOC):
+
+  - **Timeline classes** ([timeline.ts](src/runtime/animation/timeline.ts)) — abstract `AnimationTimeline` + concrete `DoubleAnimation`, `ColorAnimation`, `ThicknessAnimation` with `From`/`To`/`Duration`/`BeginTime`/`AutoReverse`/`RepeatBehavior`/`EasingFunction`/`FillBehavior`. Cover the common WPF animatable-DP shapes.
+  - **Key-frame variants** ([keyframes.ts](src/runtime/animation/keyframes.ts)) — `DoubleAnimationUsingKeyFrames` / `ColorAnimationUsingKeyFrames` / `ThicknessAnimationUsingKeyFrames` with `Discrete*KeyFrame` (step), `Linear*KeyFrame` (linear-interpolated), `Easing*KeyFrame` (custom easing per segment).
+  - **Storyboard** ([storyboard.ts](src/runtime/animation/storyboard.ts)) — composition surface for N parallel `AnimationTimeline`s with per-timeline target visual + property. `StoryboardState` enum (Stopped / Active / Filling / Completed). `Begin()` / `Stop()` / `AdvanceTo(t)` + `AddCompletedListener`.
+  - **Animation manager** ([manager.ts](src/runtime/animation/manager.ts)) — Application-wide tick dispatcher; routes clock ticks to live storyboards, drains finished ones.
+  - **Clock** ([clock.ts](src/runtime/animation/clock.ts) + [raf-clock.ts](src/runtime/animation/raf-clock.ts)) — `IClock` interface, `ManualClock` (test-driven), `RafClock` (production; `requestAnimationFrame` with `setInterval(16ms)` fallback for headless / Node).
+  - **Easing** ([easing.ts](src/runtime/animation/easing.ts)) — `EasingFunction` type + `Easings` table (Linear / EaseIn / EaseOut / EaseInOut / Bounce / Elastic + M3 Standard / StandardAccelerate / StandardDecelerate / Emphasized variants) + `cubicBezier(p1x, p1y, p2x, p2y)` constructor.
+  - **Interpolation** ([interpolation.ts](src/runtime/animation/interpolation.ts)) — `Interpolator<T>` contract + `interpolateNumber` / `interpolateColor` / `interpolateThickness` primitives.
+  - **PropertyTransition** ([property-transition.ts](src/runtime/animation/property-transition.ts)) — declarative implicit-transition record (target property + duration + easing) attached via `Visual.Transitions`.
+  - **Implicit-transition engine** ([implicit-transition-engine.ts](src/runtime/animation/implicit-transition-engine.ts)) — runs every property write through registered builders; `registerImplicitTransitionBuilder(builder)` extensibility hook + `_resetImplicitTransitionBuildersForTests` test helper.
+
+  **Integration with the DP value-priority ladder.** Animations write through the `Animated` tier (above `Binding` / `Local` / `Trigger` / `Style` / `Inherited` / `Default`) via `Model.SetAnimatedValue<T>(key, value)` / `Model.ClearAnimatedValue<T>(key)`. The Storyboard owns the slot's lifecycle: `Begin()` captures the Local baseline and writes the first frame; `AdvanceTo()` writes subsequent frames; on completion either holds (`FillBehavior.HoldEnd`) or releases (`FillBehavior.Stop`) so the underlying base value re-surfaces.
+
+  **Demos** — [demo/demos/animation/](demo/demos/animation/) (imperative `BeginAnimation` usage), [demo/demos/animation-declarative/](demo/demos/animation-declarative/) (markup `Transitions`), [demo/demos/animation-triggers/](demo/demos/animation-triggers/) (Style triggers running Storyboards), [demo/demos/animation-named/](demo/demos/animation-named/) (named-resource Storyboards).
+
+  **Tests** — [animation.test.ts](src/runtime/tests/animation.test.ts) (573 LOC — core Storyboard / Timeline / clock semantics), [animation-advanced.test.ts](src/runtime/tests/animation-advanced.test.ts) (318 LOC — key-frames, RepeatBehavior, AutoReverse, fill behaviors), [animation-deferreds.test.ts](src/runtime/tests/animation-deferreds.test.ts) (98 LOC — completion listener guarantees), [solid-color-brush-animation.test.ts](src/visual-engine/tests/solid-color-brush-animation.test.ts) (188 LOC — Brush-property animation through the visual-engine).
+
+  **Consumers that depend on this framework** (now all working):
+  - `SchemeTransition` ([dynamic-resource.ts](src/runtime/binding/dynamic-resource.ts)) — animates `SolidColorBrush` tokens on scheme swaps.
+  - `FabMenu` reveal stagger ([fab-menu.ts](src/framework/fab-menu.ts)) — uses Storyboard with per-item BeginTime offsets.
+  - `HtmlTarget` Mode-C drag preview tween ([html-target.ts](src/visual-engine/targets/html-target.ts)).
+  - Demo: `bouncing-ball` reveal animations, `top-app-bar` scroll-collapse.
+
+  **Status of the items that depended on this gap:**
+  - § 7.3 `EventTrigger` (run Storyboard on routed event) — shipped (see [completed-backlog.md § 7](completed-backlog.md) — closed at the same time as the broader trigger system).
+  - § 7.4 `EnterActions`/`ExitActions` — shipped alongside the Triggers refactor.
+  - § 10.5 smooth scrolling — independent of this framework; tracked separately.
+
+---
+
 ## Done (history)
 
 Coarse-grained log of closures, in roughly the order they shipped:
@@ -240,7 +427,7 @@ Coarse-grained log of closures, in roughly the order they shipped:
 
 ## 18. M3 modernization (shipped)
 
-Mirror of [m3-modernization-plan.md](m3-modernization-plan.md)'s strike-through markings, plus closures of open § 18 entries from [current-backlog.md](current-backlog.md). Sub-numbers `18.A`-`18.H` are used here to avoid colliding with current's open follow-up entries (18.1-18.12).
+Mirror of [m3-modernization-plan.md](m3-modernization-plan.md)'s strike-through markings, plus closures of open § 18 entries from [current-backlog.md](current-backlog.md). Sub-numbers `18.A`-`18.I` are used here to avoid colliding with current's open follow-up entries (18.1-18.12).
 
 ~~**18.A. M3 Phases 0-9 — core modernization umbrella.**~~ ✅ Done. The 10 numbered phases of [m3-modernization-plan.md](m3-modernization-plan.md) all shipped:
 
@@ -297,6 +484,29 @@ Mirror of [m3-modernization-plan.md](m3-modernization-plan.md)'s strike-through 
   Cross-target swap path (MenuButton / MenuItem / ToolBar / ComboBox / Drawer): `AttachOverlayChild` is idempotent on the logical hop — `oldTarget.DetachOverlay(popup)` tears down only the visual hop; the logical relationship persists across the swap, and the next mount re-establishes the visual hop on the new target without re-attaching logically.
 
   **Tests**: 9 new tests at [src/runtime/tests/attach-overlay-child.test.ts](src/runtime/tests/attach-overlay-child.test.ts) covering the visual/logical split, OverlayLayer.logicalChildren=∅, re-attach after detach, idempotent re-attach for cross-target swap, and resource resolution through the owner (including DynamicResource live re-resolve and ancestor walks). Test suite: 1954 → **1963** passing.
+
+~~**18.I. High-contrast triggers on every overlay-mounted popup chrome (closes [§ 18.11 in current](current-backlog.md)).**~~ ✅ Done. M3 accessibility spec calls for thicker (2dp) outlines on every elevated surface when the user has enabled high-contrast mode. The existing pattern at [basic.resources.mu:171](src/resources/basic.resources.mu#L171) covers Button; popup chrome templates carried no `PrefersContrast` triggers. Added one-line trigger to each popup chrome template ([framework.resources.mu](src/resources/framework.resources.mu) + [basic.resources.mu](src/resources/basic.resources.mu)):
+
+  - `DefaultMenuButtonPopup` — `PART_PopupContainer.BorderThickness = (2)`
+  - `DefaultContextMenuPopup` — `PART_PopupContainer.BorderThickness = (2)`
+  - `DefaultMenuItemSubmenu` — `PART_PopupContainer.BorderThickness = (2)`
+  - `DefaultSplitButtonPopup` — `PART_PopupBody.BorderThickness = (2)`
+  - `DefaultComboBoxPopup` — `PART_Popup.BorderThickness = (2)`
+  - `DefaultToolBarPopup` — `PART_PopupContainer.BorderThickness = (2)`
+
+  Density / Pointer triggers on popup *chrome* explicitly deferred — chrome geometry doesn't change with density per M3, only the items inside change, and per-item templates (`DefaultMenuItemRow`, `DefaultComboBoxItem`, etc.) already carry their own `ThemeManager.Density` / `ThemeManager.Pointer` triggers ([basic.resources.mu:325-327](src/resources/basic.resources.mu#L325-L327) + 16 other call sites). Test suite: **1963 → 1963** (the existing trigger-cascade tests cover the mechanism; no new tests added for repetitive one-line additions).
+
+~~**18.J. `Visual.RenderTransform` DP + Rotate / Scale / Skew / TransformGroup (closes [§ 18.1 in current](current-backlog.md)).**~~ ✅ Done. Adds a Visual-level affine transform DP and the four supporting Transform subclasses that v1 had deferred, unblocking FabMenu's spec-correct 45° icon rotation, per-Visual scale/skew/rotate without geometry rewrites, and animated affordances across every control.
+
+  **Runtime** ([visual.ts](src/runtime/visual.ts)): New `ITransform` interface alongside `IEffect` — `Matrix` getter + optional `_setRenderInvalidator` hook so an inner-DP change on the Transform (RotateTransform.Angle tweening, ScaleTransform.ScaleX bound to a slider, TransformGroup.Children mutation) flags the owning Visual render-dirty without runtime taking a value dependency on visual-engine. Two new DPs on Visual: `RenderTransformKey` (`ITransform | undefined`, default undefined ≡ identity, `MetaData.Render`) and `RenderTransformOriginKey` (`Point`, default `Point.Zero`, `MetaData.Render`). `RenderTransformOrigin` is a fraction of `RenderSize` (0..1 per axis) — (0.5, 0.5) is center, (0, 0) is top-left per WPF parity. Visual's OnPropertyChanged installs/clears the invalidator on RenderTransform set/swap so the linkage holds across DP writes. Single-consumer: a Transform assigned to a second Visual clobbers the first owner's invalidator (matches WPF Freezable no-multi-parent).
+
+  **Transform subclasses** ([transform.ts](src/visual-engine/drawing/transform.ts)): `RotateTransform` (Angle in degrees + CenterX/CenterY pivot in local space), `ScaleTransform` (ScaleX/ScaleY defaults 1 + CenterX/CenterY), `SkewTransform` (AngleX/AngleY degrees + CenterX/CenterY; matrix uses tan(θ) entries; AngleX shears X by Y·tan; AngleY shears Y by X·tan), `TransformGroup` (ordered ObservableCollection<Transform>; Children[0] applies FIRST). Per-pivot Matrix builds as `T(-c) · M · T(c)` (row-vector). All four register their DPs with `MetaData.Render`, and the abstract `Transform.OnPropertyChanged` forwards every inner-DP change through the captured invalidator. `TransformGroup` tracks attached children in a Set so 'cleared' collection events clear invalidators on departing children (without snapshotting). `_setRenderInvalidator` on the group fans out to every current child, and the Subscribe listener reconciles inserted / removed / replaced / cleared cases.
+
+  **SvgRenderer** ([svg-renderer.ts](src/visual-engine/drawing/svg-renderer.ts)): `applyTransform` composes the outer `<g>` transform from three inputs — `ArrangedRect.X/Y`, `RenderTransformOrigin · RenderSize`, and `RenderTransform.Matrix`. Output shape: `translate(rect.X, rect.Y) translate(origin·W, origin·H) matrix(M) translate(-origin·W, -origin·H)` — SVG transform list applies left-to-right to the coordinate system, so the matrix factor acts in local space pivoted at the origin. Identity transforms are short-circuited via `Matrix.IsIdentity` so the no-transform case keeps a plain translate (or no attribute). The walk's "re-apply transform" gate now also fires on `renderDirty` so a RenderTransform-only change re-emits the attribute (was previously gated on arrange-dirty / rect-change only).
+
+  **FabMenu** ([fab-menu.ts](src/framework/fab-menu.ts)): The owned icon TextBlock now persists across IsOpen toggles, carries a `RotateTransform` as RenderTransform, and `RenderTransformOrigin = (0.5, 0.5)` for a centered pivot. New `RotationDurationMsKey` DP (default 150ms — M3 motion-emphasized-short). On IsOpen flip, `animateIconRotation` tweens the transform's Angle 0 ↔ 45° via a Storyboard targeting the inner DP. ClosedIcon is the persistent glyph; the rotation IS the state transition (works for symmetric pairs like '+' / '×' where the visual at 45° reads as the open icon). OpenIcon DP kept for back-compat but unused in the rotated path — documented inline; a future asymmetric-icon mode would crossfade two TextBlocks. FabMenu test updated from text-swap assertion to rotation-angle assertion.
+
+  **Tests**: 23 new tests at [src/runtime/tests/render-transform.test.ts](src/runtime/tests/render-transform.test.ts) covering: DP defaults; invalidator install/swap/clear; all four Transform-subclass matrices (TranslateTransform, RotateTransform, ScaleTransform, SkewTransform, MatrixTransform, TransformGroup) + center-pivot fixed-point checks + nested-group composition; SvgRenderer output (no-transform = no attribute, translate-only emission, matrix factor with origin sandwich, identity short-circuit, inner-DP re-render). FabMenu test rewritten (3 tests on the rotation host + angle endpoints). Test suite: 2031 → **2057** passing.
 
 ---
 

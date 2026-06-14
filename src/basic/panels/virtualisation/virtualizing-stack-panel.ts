@@ -302,6 +302,64 @@ export class VirtualizingStackPanel extends VirtualizingPanel implements IScroll
             owner?.Generator.Recycle(container);
         }
         this.realized.clear();
+        this.sizeCache.clear();
+    }
+
+    // ── Incremental items-change hooks (§ 10.4) ────────────────────────
+
+    protected override realizedIndices(): Iterable<number>
+    {
+        return this.realized.keys();
+    }
+
+    protected override recycleAtIndices(indices: readonly number[]): void
+    {
+        const owner = this.itemsOwner;
+        for (const idx of indices)
+        {
+            const container = this.realized.get(idx);
+            if (container === undefined) continue;
+            this.RemoveVisualChild(container);
+            owner?.DetachContainer(container);
+            owner?.Generator.Recycle(container);
+            this.realized.delete(idx);
+            this.sizeCache.delete(idx);
+        }
+    }
+
+    protected override shiftRealizedIndices(fromIndex: number, delta: number): void
+    {
+        if (delta === 0) return;
+        // Capture the keys-to-rewrite snapshot before mutating either
+        // map — iterating Map.keys() during mutation skips elements.
+        const movingRealized = [...this.realized.keys()].filter(k => k >= fromIndex);
+        const movingSizes    = [...this.sizeCache.keys()].filter(k => k >= fromIndex);
+        // Walk in descending order when delta > 0 (shifting up) so we
+        // don't overwrite an existing key before its own move; ascending
+        // when delta < 0 (shifting down) for the symmetric reason.
+        const sortedRealized = delta > 0
+            ? movingRealized.sort((a, b) => b - a)
+            : movingRealized.sort((a, b) => a - b);
+        for (const oldIdx of sortedRealized)
+        {
+            const c = this.realized.get(oldIdx)!;
+            this.realized.delete(oldIdx);
+            this.realized.set(oldIdx + delta, c);
+        }
+        const sortedSizes = delta > 0
+            ? movingSizes.sort((a, b) => b - a)
+            : movingSizes.sort((a, b) => a - b);
+        for (const oldIdx of sortedSizes)
+        {
+            const s = this.sizeCache.get(oldIdx)!;
+            this.sizeCache.delete(oldIdx);
+            this.sizeCache.set(oldIdx + delta, s);
+        }
+    }
+
+    protected override realizedIndexAt(index: number): number | undefined
+    {
+        return this.realized.has(index) ? index : undefined;
     }
 
     // Reconcile the realized set against the desired [first, last]

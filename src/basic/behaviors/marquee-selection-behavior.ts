@@ -164,6 +164,33 @@ function rectContains(outer: Rect, inner: Rect): boolean
         && inner.Y + inner.Height <= outer.Y + outer.Height;
 }
 
+// Walk up from `selector` looking for the nearest ScrollViewer
+// ancestor. Used by § 10.7 marquee autoscroll. Structural-typing on
+// `EvaluateEdgeAutoScroll` keeps this file from importing
+// scroll-viewer.ts (which would cycle through items-control → control →
+// basic). Returns undefined when the Selector isn't hosted inside a
+// ScrollViewer (e.g., the Selector is the root content of a
+// ScrollViewer-less HeadlessTarget).
+type EdgeAutoScrollHost = {
+    EvaluateEdgeAutoScroll(hostX: number, hostY: number): void;
+    StopEdgeAutoScroll(): void;
+};
+function findScrollViewerAncestor(start: Visual): EdgeAutoScrollHost | undefined
+{
+    let cursor: Visual | undefined = start.GetVisualParent();
+    while (cursor !== undefined)
+    {
+        const candidate = cursor as unknown as Partial<EdgeAutoScrollHost>;
+        if (typeof candidate.EvaluateEdgeAutoScroll === 'function'
+            && typeof candidate.StopEdgeAutoScroll === 'function')
+        {
+            return candidate as EdgeAutoScrollHost;
+        }
+        cursor = cursor.GetVisualParent();
+    }
+    return undefined;
+}
+
 // Walk up from `source` toward `selector`. If we hit any
 // `selector.containerOrderForRange` member first, the click is ON a
 // container and the behavior leaves it to the normal click pipeline.
@@ -365,6 +392,17 @@ export function attachMarqueeSelection(selector: Selector): () => void
         sel.refreshExposedSelection();
         sel.fireSelectionChanged();
         selector.EndUpdate();
+
+        // § 10.7 — autoscroll while the marquee drags past the wrapping
+        // ScrollViewer's edges. Walk up to the first ScrollViewer
+        // ancestor and ask it to evaluate edge-gutter velocity from the
+        // current cursor; the ScrollViewer's own AutoScrollGutter +
+        // AutoScrollStep DPs drive how aggressively the viewport pulls
+        // along. Same hook the drag-drop autoscroll uses (§ 8.4), so
+        // the two gestures share one tick loop and feel identical.
+        const sv = findScrollViewerAncestor(selector);
+        sv?.EvaluateEdgeAutoScroll(args.HostX, args.HostY);
+
         args.Handled = true;
     }
 
@@ -374,6 +412,9 @@ export function attachMarqueeSelection(selector: Selector): () => void
         const wasActive = active;
         const wasReplace = mode === 'replace';
         args.ReleasePointerCapture();
+        // Stop any autoscroll left running on the wrapping ScrollViewer
+        // (§ 10.7). Safe to call when no autoscroll was active.
+        findScrollViewerAncestor(selector)?.StopEdgeAutoScroll();
         reset();
         if (wasActive)
         {

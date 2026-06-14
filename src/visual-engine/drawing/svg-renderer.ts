@@ -100,6 +100,19 @@ interface RenderableVisual extends BackrefHost
     readonly Cursor:           string | undefined;
     readonly Effect:           { toCssFilter(): string } | undefined;
     readonly Opacity:          number;
+    // Visual.RenderTransform — affine applied after Arrange, before
+    // child paint. Reading `.Matrix` returns the composed 2D affine;
+    // undefined means identity (skip the matrix factor entirely so the
+    // outer <g>'s transform attribute stays minimal). The renderer
+    // never mutates the transform.
+    readonly RenderTransform: { readonly Matrix: {
+        M11: number; M12: number; M21: number; M22: number;
+        OffsetX: number; OffsetY: number;
+        IsIdentity: boolean;
+    } } | undefined;
+    // Visual.RenderTransformOrigin — fraction of RenderSize used as the
+    // pivot for RenderTransform. (0, 0) = top-left; (0.5, 0.5) = center.
+    readonly RenderTransformOrigin: { X: number; Y: number };
     readonly visualChildren: Iterable<RenderableVisual>;
     Render(dc: SvgDomDrawingContext): void;
 }
@@ -284,9 +297,13 @@ export class SvgRenderer
         // sibling shifts that happen during an Arrange cascade without
         // an explicit InvalidateArrange (a CollapsibleStack collapsing
         // repositions everything below it, but the dirty Sets don't
-        // track that).
+        // track that). renderDirty also triggers: Visual.RenderTransform
+        // and RenderTransformOrigin flag render-dirty (not arrange-
+        // dirty), and applyTransform composes both into the outer <g>
+        // attribute, so a transform-only change re-emits the string.
         if (isNew || renderDirty === null || arrangeDirty === null
-            || arrangeDirty.has(visual) || moveChanged || sizeChanged)
+            || arrangeDirty.has(visual) || moveChanged || sizeChanged
+            || renderDirty.has(visual))
         {
             this.applyTransform(info.outer, visual);
             this.applyHitPad(info.hit, visual);
@@ -330,20 +347,65 @@ export class SvgRenderer
         }
     }
 
+    // Compose the outer <g> transform from THREE inputs:
+    //
+    //   1. ArrangedRect.X / Y — position assigned by the parent's
+    //      Arrange pass. Always applied (translates the visual into
+    //      its layout slot).
+    //   2. Visual.RenderTransformOrigin — pivot fraction (0..1 per
+    //      axis) of RenderSize. (0, 0) is top-left (default — WPF
+    //      parity); (0.5, 0.5) is center.
+    //   3. Visual.RenderTransform.Matrix — the affine itself. Skipped
+    //      when undefined or identity, so the typical "no transform"
+    //      case stays a plain translate.
+    //
+    // SVG transform list applies LEFT-TO-RIGHT to the coordinate
+    // system, equivalently right-to-left to a point. We emit:
+    //
+    //     translate(rect.X, rect.Y)
+    //       translate(originX·W, originY·H)
+    //         matrix(M11, M12, M21, M22, OffsetX, OffsetY)
+    //       translate(-originX·W, -originY·H)
+    //
+    // — so the matrix applies in local space pivoted at the origin,
+    // and the rect translate positions the result. Removing the
+    // attribute entirely when nothing applies (no offset AND no
+    // transform) keeps the DOM clean for the common case.
     private applyTransform(outer: SVGGElement, visual: RenderableVisual): void
     {
         const rect = visual.ArrangedRect;
-        if (rect.X === 0 && rect.Y === 0)
+        const rt   = visual.RenderTransform;
+        const hasMatrix = rt !== undefined && !rt.Matrix.IsIdentity;
+        const hasOffset = rect.X !== 0 || rect.Y !== 0;
+        if (!hasMatrix && !hasOffset)
         {
             outer.removeAttribute('transform');
+            return;
         }
-        else
+        const parts: string[] = [];
+        if (hasOffset)
         {
-            outer.setAttribute(
-                'transform',
-                `translate(${formatNumber(rect.X)},${formatNumber(rect.Y)})`,
-            );
+            parts.push(`translate(${formatNumber(rect.X)},${formatNumber(rect.Y)})`);
         }
+        if (hasMatrix)
+        {
+            const origin = visual.RenderTransformOrigin;
+            const ox = origin.X * rect.Width;
+            const oy = origin.Y * rect.Height;
+            const m  = rt.Matrix;
+            if (ox !== 0 || oy !== 0)
+            {
+                parts.push(`translate(${formatNumber(ox)},${formatNumber(oy)})`);
+            }
+            parts.push(
+                `matrix(${formatNumber(m.M11)},${formatNumber(m.M12)},${formatNumber(m.M21)},${formatNumber(m.M22)},${formatNumber(m.OffsetX)},${formatNumber(m.OffsetY)})`,
+            );
+            if (ox !== 0 || oy !== 0)
+            {
+                parts.push(`translate(${formatNumber(-ox)},${formatNumber(-oy)})`);
+            }
+        }
+        outer.setAttribute('transform', parts.join(' '));
     }
 
     // Resize the hit pad to mirror the visual's ArrangedRect so the

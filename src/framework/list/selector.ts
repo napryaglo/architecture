@@ -2,6 +2,7 @@ import {
     MetaData,
     Model,
     Visual,
+    type KeyEventArgs,
     type ModifierKeys,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
@@ -269,9 +270,13 @@ export class Selector extends ItemsControl
     // Entry point for row clicks — invoked by container types
     // (ListBoxItem, TreeViewItem, future DataGridRow) from their
     // press-here-release-here handler. Modifier interpretation depends
-    // on SelectionMode. Fires SelectionChanged exactly once.
+    // on SelectionMode. Fires SelectionChanged exactly once. Also
+    // moves the keyboard focus cursor to the clicked container so a
+    // subsequent ArrowDown / ArrowUp continues navigation from where
+    // the pointer last landed.
     public HandleContainerClick(container: Visual, modifiers: ModifierKeys): void
     {
+        this._focusedContainer = container;
         const mode = this.SelectionMode;
         if (mode === SelectionMode.Single)
         {
@@ -358,6 +363,219 @@ export class Selector extends ItemsControl
         this.setSelectedContainers(order.slice(lo, hi + 1));
     }
 
+    // ── Keyboard navigation (§ 10.8) ──────────────────────────────────
+    //
+    // OnKeyDown on the Selector fires AFTER any focused child's own
+    // OnKeyDown (bubble order). When a list item is focused — set on
+    // press-here-release-here OR by a prior arrow-key move — the
+    // following keys reach this handler unchanged:
+    //
+    //   ArrowDown / ArrowUp     — move focus by one container
+    //   Home / End              — first / last container
+    //   PageDown / PageUp       — move by viewport-worth of containers
+    //                              (count derived from the wrapping
+    //                              ScrollViewer's ViewportHeight; falls
+    //                              back to 10 when no ScrollViewer found)
+    //   Shift + (any of the above) — extend selection from the anchor
+    //                                  through the new focus target
+    //                                  (Extended / Multiple modes only)
+    //   Ctrl + (any of the above)  — move focus without changing
+    //                                  selection (Extended mode only)
+    //   Space                   — toggle selection of focused container
+    //                              (Multiple / Extended modes)
+    //   Ctrl+A                  — select every container (Multiple /
+    //                              Extended modes only)
+    //
+    // The "focused container" is tracked in `_focusedContainer`. The
+    // visual focus is mirrored onto the container via args.SetFocus so
+    // Visual.IsFocused trigger-driven chrome lights up the right row.
+    // Single-mode Selectors honour ArrowDown / Up navigation but Ctrl
+    // / Shift modifiers degrade to plain single-select (range-extend
+    // semantics don't apply to Single).
+    private _focusedContainer: Visual | undefined;
+
+    /** The container currently navigated to via keyboard. Read-only —
+     *  external code should call SetFocus(container) on a Visual to
+     *  alter focus, which mirrors back via the InputManager. */
+    public get FocusedContainer(): Visual | undefined { return this._focusedContainer; }
+
+    protected override OnKeyDown(args: KeyEventArgs): void
+    {
+        super.OnKeyDown(args);
+        if (args.Handled) return;
+
+        // Ctrl+A: select all (Multiple / Extended only).
+        if ((args.Modifiers.Control || args.Modifiers.Meta)
+            && (args.Key === 'a' || args.Key === 'A'))
+        {
+            if (this.SelectionMode !== SelectionMode.Single)
+            {
+                const order = this.containerOrderForRange();
+                if (order.length > 0)
+                {
+                    this.setSelectedContainers(order);
+                    this._anchor = order[0];
+                    this.refreshExposedSelection();
+                    this.fireSelectionChanged();
+                    args.Handled = true;
+                }
+            }
+            return;
+        }
+
+        // Movement keys. Compute the target container; the navigation
+        // logic below the switch handles selection state once `target`
+        // is known.
+        const order = this.containerOrderForRange();
+        if (order.length === 0) return;
+
+        const focusedIdx = this._focusedContainer !== undefined
+            ? order.indexOf(this._focusedContainer)
+            : -1;
+        const viewportCount = this.getViewportItemCount();
+
+        let target: Visual | undefined;
+        switch (args.Key)
+        {
+            case 'ArrowDown':
+                target = focusedIdx < 0
+                    ? order[0]
+                    : order[Math.min(focusedIdx + 1, order.length - 1)];
+                break;
+            case 'ArrowUp':
+                target = focusedIdx < 0
+                    ? order[order.length - 1]
+                    : order[Math.max(focusedIdx - 1, 0)];
+                break;
+            case 'Home':
+                target = order[0];
+                break;
+            case 'End':
+                target = order[order.length - 1];
+                break;
+            case 'PageDown':
+                target = focusedIdx < 0
+                    ? order[Math.min(viewportCount - 1, order.length - 1)]
+                    : order[Math.min(focusedIdx + viewportCount, order.length - 1)];
+                break;
+            case 'PageUp':
+                target = focusedIdx < 0
+                    ? order[0]
+                    : order[Math.max(focusedIdx - viewportCount, 0)];
+                break;
+            case ' ':
+            case 'Spacebar':
+                if (this._focusedContainer !== undefined
+                    && this.SelectionMode !== SelectionMode.Single)
+                {
+                    this.toggleContainerSelected(this._focusedContainer);
+                    this._anchor = this._focusedContainer;
+                    this.refreshExposedSelection();
+                    this.fireSelectionChanged();
+                    args.Handled = true;
+                }
+                return;
+            default:
+                return;
+        }
+
+        if (target === undefined) return;
+
+        // Apply selection based on mode + modifiers, then move focus.
+        const mode = this.SelectionMode;
+        const shift = args.Modifiers.Shift;
+        const ctrl  = args.Modifiers.Control || args.Modifiers.Meta;
+
+        if (mode === SelectionMode.Single || (!shift && !ctrl))
+        {
+            // Plain navigation in any mode → single-select the target.
+            this.setSelectedContainers([target]);
+            this._anchor = target;
+            this.refreshExposedSelection();
+            this.fireSelectionChanged();
+        }
+        else if (shift)
+        {
+            // Extend from anchor through target. If no anchor yet
+            // (focused-only via a prior Ctrl+arrow), fall back to the
+            // current target as the implicit anchor — matches WPF
+            // ListBox behaviour for "Shift+Arrow with no prior anchor."
+            // Mode is guaranteed Multiple / Extended at this point —
+            // Single fell into the if-branch above.
+            const anchor = this._anchor ?? target;
+            this.selectContainerRange(anchor, target);
+            if (this._anchor === undefined) this._anchor = anchor;
+            this.refreshExposedSelection();
+            this.fireSelectionChanged();
+        }
+        // else (ctrl-only, no shift, multi-mode): move focus without
+        // touching selection. Anchor stays put.
+
+        this._focusedContainer = target;
+        args.SetFocus(target);
+        this.bringContainerIntoView(target);
+        args.Handled = true;
+    }
+
+    /** Number of containers that fit in the viewport when the Selector
+     *  is hosted inside a ScrollViewer; 10 as a fallback. PageDown /
+     *  PageUp consult this to advance by viewport-worth at a time. */
+    protected getViewportItemCount(): number
+    {
+        // Walk up the visual tree looking for a ScrollViewer ancestor.
+        // The structural typing avoids a hard import dependency on
+        // scroll-viewer.ts (which would cycle through items-control).
+        let cursor: Visual | undefined = this;
+        while (cursor !== undefined)
+        {
+            const sv = cursor as unknown as { ViewportHeight?: number };
+            if (typeof sv.ViewportHeight === 'number' && sv.ViewportHeight > 0)
+            {
+                // Estimate from the first realized container's height.
+                // Same-height assumption matches the v1 virtualizer.
+                const order = this.containerOrderForRange();
+                const sample = order[0];
+                const rowH = sample !== undefined && sample.ArrangedRect.Height > 0
+                    ? sample.ArrangedRect.Height : 0;
+                if (rowH > 0)
+                {
+                    return Math.max(1, Math.floor(sv.ViewportHeight / rowH));
+                }
+            }
+            cursor = cursor.GetVisualParent();
+        }
+        return 10;
+    }
+
+    /** Best-effort scroll-into-view for a container. Looks up the
+     *  nearest ScrollViewer ancestor and calls its ScrollIntoView with
+     *  the container's ArrangedRect (relative to the panel) if one
+     *  exists; silent no-op otherwise. Assumes the ItemsPanel is the
+     *  ScrollViewer's direct content — nested cases with intervening
+     *  Visuals would need coordinate adjustment, but the typical
+     *  Selector layout (ScrollViewer wraps the items host) hits this
+     *  fast path. */
+    protected bringContainerIntoView(container: Visual): void
+    {
+        // Structural typing keeps this file from importing scroll-viewer.ts
+        // (which would cycle through items-control). The Rect-taking
+        // ScrollIntoView is ScrollViewer's public surface; anything else
+        // with that name on an ancestor either matches the signature or
+        // gets silently bypassed.
+        type ScrollHost = { ScrollIntoView?: (rect: { X: number; Y: number; Width: number; Height: number }) => void };
+        let cursor: Visual | undefined = this.GetVisualParent();
+        while (cursor !== undefined)
+        {
+            const sv = cursor as unknown as ScrollHost;
+            if (typeof sv.ScrollIntoView === 'function')
+            {
+                sv.ScrollIntoView(container.ArrangedRect);
+                return;
+            }
+            cursor = cursor.GetVisualParent();
+        }
+    }
+
     // ── Container recycle hooks ──────────────────────────────────────
     //
     // Override the ItemsControl recycle hooks so selection survives
@@ -389,6 +607,10 @@ export class Selector extends ItemsControl
         this._selectedData.delete(this.exposedValueOf(container));
         if (wasSelected) Selector.SetIsSelected(container, false);
         if (this._anchor === container) this._anchor = undefined;
+        // Clear the keyboard-focus pointer so we don't pin a detached /
+        // recycled container in memory and so the next arrow key starts
+        // from a clean slate (§ 10.8 follow-up — caught in code review).
+        if (this._focusedContainer === container) this._focusedContainer = undefined;
         if (wasSelected)
         {
             this.refreshExposedSelection();

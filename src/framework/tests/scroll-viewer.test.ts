@@ -8,6 +8,7 @@ import {
     DragEventArgs,
     DragSession,
     NoModifiers,
+    PropertyTransition,
     Rect,
     Size,
     Visual,
@@ -381,5 +382,142 @@ describe('ScrollViewer — auto-scroll near edges during drag (8.4)', () => {
         // was cleared on session complete.
         session._fireMove(50, 95);
         assert.equal(sv.VerticalOffset, after);
+    });
+});
+
+// § 10.5 — Smooth scrolling: PropertyTransition installed on offset DPs.
+describe('ScrollViewer — § 10.5 smooth scrolling', () => {
+
+    beforeEach(() => { initTestApp(); });
+
+    test('SmoothScroll defaults to false; no PropertyTransitions installed', () => {
+        const sv = new ScrollViewer();
+        assert.equal(sv.SmoothScroll, false);
+        const tx = sv.Transitions;
+        const managed = (tx?.toArray?.() ?? []).filter(
+            (t: unknown) => (t as { _smoothScrollManaged?: boolean })._smoothScrollManaged === true,
+        );
+        assert.equal(managed.length, 0);
+    });
+
+    test('SmoothScroll=true installs two managed PropertyTransitions (H + V offsets)', () => {
+        const sv = new ScrollViewer();
+        sv.SmoothScroll = true;
+        const list = sv.Transitions;
+        const managed: unknown[] = [];
+        for (let i = 0; i < list.Count; i++)
+        {
+            const t = list.Get(i);
+            if (t !== undefined && (t as { _smoothScrollManaged?: boolean })._smoothScrollManaged === true)
+            {
+                managed.push(t);
+            }
+        }
+        assert.equal(managed.length, 2,
+            'expected one transition for HorizontalOffset, one for VerticalOffset');
+        const props = managed.map(t => (t as { Property: string }).Property).sort();
+        assert.deepEqual(props, ['HorizontalOffset', 'VerticalOffset']);
+    });
+
+    test('SmoothScroll=true → false removes the managed transitions', () => {
+        const sv = new ScrollViewer();
+        sv.SmoothScroll = true;
+        sv.SmoothScroll = false;
+        const list = sv.Transitions;
+        const managed: unknown[] = [];
+        for (let i = 0; i < (list?.Count ?? 0); i++)
+        {
+            const t = list!.Get(i);
+            if (t !== undefined && (t as { _smoothScrollManaged?: boolean })._smoothScrollManaged === true)
+            {
+                managed.push(t);
+            }
+        }
+        assert.equal(managed.length, 0);
+    });
+
+    test('Duration / Easing changes propagate to the installed transitions', () => {
+        const sv = new ScrollViewer();
+        sv.SmoothScroll         = true;
+        sv.SmoothScrollDuration = 500;
+        const list = sv.Transitions;
+        for (let i = 0; i < list.Count; i++)
+        {
+            const t = list.Get(i);
+            if (t !== undefined && (t as { _smoothScrollManaged?: boolean })._smoothScrollManaged === true)
+            {
+                assert.equal((t as { Duration: number }).Duration, 500);
+            }
+        }
+    });
+
+    test('consumer-added transitions are preserved across SmoothScroll toggle', () => {
+        const sv = new ScrollViewer();
+        const userT = new PropertyTransition();
+        userT.Property = 'Opacity';
+        sv.Transitions.Add(userT);
+
+        sv.SmoothScroll = true;
+        sv.SmoothScroll = false;
+
+        let foundOpacity = false;
+        for (let i = 0; i < sv.Transitions.Count; i++)
+        {
+            const t = sv.Transitions.Get(i);
+            if ((t as { Property: string } | undefined)?.Property === 'Opacity') foundOpacity = true;
+        }
+        assert.equal(foundOpacity, true,
+            'consumer-added Opacity transition should survive SmoothScroll on/off');
+    });
+});
+
+// § 10.7 — Marquee autoscroll: ScrollViewer.EvaluateEdgeAutoScroll
+// exposes the same gutter math the drag-drop path uses, so the marquee
+// behavior can drive autoscroll without faking a DragSession.
+describe('ScrollViewer — § 10.7 EvaluateEdgeAutoScroll public API', () => {
+
+    beforeEach(() => { initTestApp(); });
+
+    test('cursor inside the gutter near the bottom edge starts scrolling down', () => {
+        const sv = new ScrollViewer();
+        sv.AutoScrollGutter = 24;
+        sv.AutoScrollStep   = 4;
+        const content = new FixedRect(new Size(100, 1000));
+        sv.Content = content;
+        sv.Measure(new Size(100, 100));
+        sv.Arrange(new Rect(0, 0, 100, 100));
+
+        const before = sv.VerticalOffset;
+        // Bottom-gutter zone: viewport-local Y ∈ [vh - gutter, vh].
+        // hostY translates 1:1 since ScrollViewer is at host origin (0, 0).
+        sv.EvaluateEdgeAutoScroll(50, 95);
+        // First tick fires immediately — so VerticalOffset should
+        // advance by AutoScrollStep before any setInterval delay.
+        assert.ok(sv.VerticalOffset > before,
+            `expected VerticalOffset to advance from ${before}; got ${sv.VerticalOffset}`);
+        sv.StopEdgeAutoScroll();
+    });
+
+    test('cursor outside the viewport stops scrolling', () => {
+        const sv = new ScrollViewer();
+        sv.AutoScrollGutter = 24;
+        const content = new FixedRect(new Size(100, 1000));
+        sv.Content = content;
+        sv.Measure(new Size(100, 100));
+        sv.Arrange(new Rect(0, 0, 100, 100));
+
+        sv.EvaluateEdgeAutoScroll(50, 95);  // start
+        const after_first = sv.VerticalOffset;
+        sv.EvaluateEdgeAutoScroll(50, 250); // far outside
+        sv.StopEdgeAutoScroll();
+        // Make a third call from outside — should be a no-op.
+        sv.EvaluateEdgeAutoScroll(50, 250);
+        assert.ok(sv.VerticalOffset >= after_first,
+            'after stop + outside cursor, offset stays put');
+    });
+
+    test('StopEdgeAutoScroll cleans up cleanly without throwing when no autoscroll was active', () => {
+        const sv = new ScrollViewer();
+        assert.doesNotThrow(() => sv.StopEdgeAutoScroll());
     });
 });

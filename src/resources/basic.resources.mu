@@ -288,6 +288,12 @@ resources MuralBasic {
                 ComboBoxItemList x:name="PART_PopupList"
             }
         }
+
+        // High-contrast popup chrome — M3 accessibility spec calls for
+        // thicker outlines on elevated surfaces when the user has opted
+        // into a more-contrast environment. Mirrors the menu popup
+        // family's PrefersContrast handling.
+        when ( ThemeManager.PrefersContrast = More ) { PART_Popup.BorderThickness = (2); }
     }
 
     // ── ComboBoxItem: popup row chrome ──────────────────────────────

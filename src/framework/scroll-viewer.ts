@@ -2,14 +2,17 @@ import {
     MetaData,
     Model,
     Panel,
+    PropertyTransition,
     Rect,
     Size,
     Visual,
     type DragEventArgs,
     type DragSession,
+    type EasingFunction,
     type PropertyDescriptor,
     type WheelEventArgs,
 } from '../runtime/index.js';
+import { Easings } from '../runtime/animation/easing.js';
 import { ContentControl } from './content-control.js';
 import { ScrollBar } from '../basic/scroll/scroll-bar.js';
 import { ScrollContentPresenter } from '../basic/scroll/scroll-content-presenter.js';
@@ -125,6 +128,24 @@ export class ScrollViewer extends ContentControl
     // gutter where dragged items pull the viewport along.
     public static readonly AutoScrollGutterKey = Model.RegisterProperty<number>(
         ScrollViewer, 'AutoScrollGutter', 24, MetaData.None);
+
+    // Smooth-scroll (§ 10.5). When true, an installed PropertyTransition
+    // tweens every HorizontalOffset / VerticalOffset write over
+    // SmoothScrollDuration with SmoothScrollEasing. Wheel events,
+    // programmatic offset writes, and ScrollIntoView calls all tween;
+    // thumb drags also tween, which can feel laggy during a continuous
+    // drag (every Value notification fires a fresh tween) — consumers
+    // who want crisp thumb drags + smooth wheel scrolls should flip
+    // SmoothScroll off, listen for the wheel event themselves, and
+    // start a one-shot Storyboard.
+    //
+    // Default false to preserve the existing direct-write behaviour.
+    public static readonly SmoothScrollKey = Model.RegisterProperty<boolean>(
+        ScrollViewer, 'SmoothScroll', false, MetaData.None);
+    public static readonly SmoothScrollDurationKey = Model.RegisterProperty<number>(
+        ScrollViewer, 'SmoothScrollDuration', 250, MetaData.None);
+    public static readonly SmoothScrollEasingKey = Model.RegisterProperty<EasingFunction>(
+        ScrollViewer, 'SmoothScrollEasing', Easings.StandardDecelerate, MetaData.None);
     // Pixels per auto-scroll tick. 4px × 30 ticks/sec ≈ 120 px/sec —
     // brisk but controllable. The tick rate uses `setInterval(32)` so a
     // value of 4 yields 125 px/sec.
@@ -242,6 +263,15 @@ export class ScrollViewer extends ContentControl
 
     public get AutoScrollStep(): number { return this.get_property_value(ScrollViewer.AutoScrollStepKey); }
     public set AutoScrollStep(v: number) { this.set_property_value(ScrollViewer.AutoScrollStepKey, v); }
+
+    public get SmoothScroll(): boolean { return this.get_property_value(ScrollViewer.SmoothScrollKey); }
+    public set SmoothScroll(v: boolean) { this.set_property_value(ScrollViewer.SmoothScrollKey, v); }
+
+    public get SmoothScrollDuration(): number { return this.get_property_value(ScrollViewer.SmoothScrollDurationKey); }
+    public set SmoothScrollDuration(v: number) { this.set_property_value(ScrollViewer.SmoothScrollDurationKey, v); }
+
+    public get SmoothScrollEasing(): EasingFunction { return this.get_property_value(ScrollViewer.SmoothScrollEasingKey); }
+    public set SmoothScrollEasing(v: EasingFunction) { this.set_property_value(ScrollViewer.SmoothScrollEasingKey, v); }
 
     // Read-through to the SCP — the presenter owns the extent / viewport
     // numbers because it's the one that runs the measure / arrange
@@ -614,6 +644,27 @@ export class ScrollViewer extends ContentControl
         this._autoScrollSession = undefined;
     }
 
+    // Public edge-autoscroll entry for non-drag gestures (§ 10.7
+    // marquee autoscroll today; future band-select / lasso shapes can
+    // ride the same hook). Wraps the drag-driven `_evaluateAutoScroll`
+    // gutter math without requiring a DragSession — callers just feed
+    // the latest host-relative pointer position. Idempotent: repeated
+    // calls with the same cursor position re-evaluate cheaply and only
+    // toggle the timer on/off when the velocity actually changes.
+    public EvaluateEdgeAutoScroll(hostX: number, hostY: number): void
+    {
+        this._evaluateAutoScroll(hostX, hostY);
+    }
+
+    /** Stop any auto-scroll started by EvaluateEdgeAutoScroll. Safe to
+     *  call when no auto-scroll is active. Call this when the gesture
+     *  driving the auto-scroll ends (PointerUp on a marquee, etc.). */
+    public StopEdgeAutoScroll(): void
+    {
+        this._stopAutoScrollTick();
+        this._autoScrollVelocity = { x: 0, y: 0 };
+    }
+
     // OnPropertyChanged hook: an offset DP changing must invalidate the
     // SCP's measure AND arrange — MetaData.Measure|Arrange on the
     // offset DPs flags those on the ScrollViewer itself, but the
@@ -651,6 +702,64 @@ export class ScrollViewer extends ContentControl
                 this.set_property_value_with_key(ScrollViewer._IsScrolledPriv, next);
             }
         }
+        // SmoothScroll-related DP changes → re-sync the installed
+        // PropertyTransitions. Each kind of change has the same fix
+        // (rebuild the matching transitions); the OR-set keeps this
+        // simple.
+        if (descriptor.Owner === ScrollViewer
+            && (descriptor.Name === 'SmoothScroll'
+             || descriptor.Name === 'SmoothScrollDuration'
+             || descriptor.Name === 'SmoothScrollEasing'))
+        {
+            this.syncSmoothScrollTransitions();
+        }
+    }
+
+    // Install or remove the implicit PropertyTransitions on the two
+    // offset DPs to match the current SmoothScroll / Duration / Easing
+    // state. Idempotent — calling repeatedly with the same state is a
+    // no-op. The marker on each transition (_smoothScrollManaged) lets
+    // us identify the ones we own so a re-sync clears our own without
+    // disturbing transitions a consumer may have added themselves.
+    private syncSmoothScrollTransitions(): void
+    {
+        // Avoid materialising an empty Transitions collection just to
+        // disable smooth-scroll — the public Transitions getter lazy-
+        // allocates on first access (see Visual.Transitions). If
+        // SmoothScroll is off AND no Transitions collection exists yet,
+        // there's nothing to clean up and nothing to install.
+        if (!this.SmoothScroll
+            && this.get_property_value(Visual.TransitionsKey) === undefined)
+        {
+            return;
+        }
+
+        const list = this.Transitions;
+        // Drop any previously-managed entries before re-installing —
+        // covers the disable path AND the duration / easing changes.
+        for (let i = list.Count - 1; i >= 0; i--)
+        {
+            const t = list.Get(i);
+            if (t !== undefined && (t as { _smoothScrollManaged?: boolean })._smoothScrollManaged === true)
+            {
+                list.RemoveAt(i);
+            }
+        }
+        if (!this.SmoothScroll) return;
+
+        const tH = new PropertyTransition();
+        tH.Property = 'HorizontalOffset';
+        tH.Duration = this.SmoothScrollDuration;
+        tH.Easing   = this.SmoothScrollEasing;
+        (tH as { _smoothScrollManaged?: boolean })._smoothScrollManaged = true;
+        this.Transitions.Add(tH);
+
+        const tV = new PropertyTransition();
+        tV.Property = 'VerticalOffset';
+        tV.Duration = this.SmoothScrollDuration;
+        tV.Easing   = this.SmoothScrollEasing;
+        (tV as { _smoothScrollManaged?: boolean })._smoothScrollManaged = true;
+        this.Transitions.Add(tV);
     }
 }
 

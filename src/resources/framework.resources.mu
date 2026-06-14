@@ -68,6 +68,12 @@ resources MuralFramework {
                 ItemsPresenter
             }
         }
+
+        // High-contrast popup chrome — M3 accessibility spec calls for
+        // thicker outlines on every elevated surface when the user has
+        // opted into a more-contrast environment. Matches the same
+        // pattern Button uses at [basic.resources.mu:171].
+        when ( ThemeManager.PrefersContrast = More ) { PART_PopupContainer.BorderThickness = (2); }
     }
 
     // ── MenuButton: default Style ──────────────────────────────────
@@ -111,6 +117,10 @@ resources MuralFramework {
                 ItemsPresenter
             }
         }
+
+        // High-contrast popup chrome — see DefaultMenuButtonPopup for
+        // the rationale.
+        when ( ThemeManager.PrefersContrast = More ) { PART_PopupContainer.BorderThickness = (2); }
     }
 
     // ── ContextMenu: default Style ─────────────────────────────────
@@ -238,6 +248,10 @@ resources MuralFramework {
                 ItemsPresenter
             }
         }
+
+        // High-contrast popup chrome — see DefaultMenuButtonPopup for
+        // the rationale.
+        when ( ThemeManager.PrefersContrast = More ) { PART_PopupContainer.BorderThickness = (2); }
     }
 
     Style [TargetType=MenuItem] {
@@ -1543,6 +1557,10 @@ resources MuralFramework {
                     Effect          = @Elevation2,
                     Padding         = (4) ]
         }
+
+        // High-contrast popup chrome — see DefaultMenuButtonPopup for
+        // the rationale.
+        when ( ThemeManager.PrefersContrast = More ) { PART_PopupBody.BorderThickness = (2); }
     }
     Style [TargetType=SplitButton] {
         Template      = @DefaultSplitButton;
@@ -1977,6 +1995,12 @@ resources MuralFramework {
         when ( Position = Only  )  { PART_Border.CornerRadius = CornerRadius.Full; }
         when ( Position = First )  { PART_Border.CornerRadius = CornerRadius.LeftRounded; }
         when ( Position = Last  )  { PART_Border.CornerRadius = CornerRadius.RightRounded; }
+        // Adaptive layout (§ 17.7) — match DefaultToolBarButton's
+        // density / pointer triggers so the connected-bar group stays
+        // visually consistent when one button is a toggle.
+        when ( ThemeManager.Density = Compact )      { PART_Border.Padding = (8,4,8,4); }
+        when ( ThemeManager.Density = Comfortable )  { PART_Border.Padding = (16,10,16,10); }
+        when ( ThemeManager.Pointer = Coarse )       { PART_Border.Padding = (16,14,16,14); }
     }
 
     Style [TargetType=ToolBarToggleButton] {
@@ -2037,6 +2061,10 @@ resources MuralFramework {
                 ToolBarOverflowItemsControl x:name="PART_PopupList"
             }
         }
+
+        // High-contrast popup chrome — see DefaultMenuButtonPopup for
+        // the rationale.
+        when ( ThemeManager.PrefersContrast = More ) { PART_PopupContainer.BorderThickness = (2); }
     }
 
     Style [TargetType=ToolBar] {

@@ -282,3 +282,95 @@ describe('VirtualizingStackPanel — variable item heights', () => {
         assert.equal(cc.ArrangedRect.X, 20);
     });
 });
+
+// § 10.4 — Incremental items-change handling.
+describe('VirtualizingStackPanel — § 10.4 incremental items-change', () => {
+
+    test('insert in-range shifts surviving realized indices forward', () => {
+        const items = new ObservableCollection<string>(['a', 'b', 'c', 'd']);
+        const { ic, panel } = makeVirtualizingIC(items, {
+            viewport: new Rect(0, 0, 100, 80),  // covers indices 0..3 at itemHeight=20
+            itemHeight: 20,
+        });
+        ic.Measure(new Size(100, 80));
+        assert.deepEqual(panel.RealizedIndices, [0, 1, 2, 3]);
+        const containerB = ic.Generator.ContainerFromItem('b')!;
+
+        // Insert at index 1 → 'b' becomes index 2, 'c' becomes 3, 'd' becomes 4.
+        items.Insert(1, 'NEW');
+        ic.Measure(new Size(100, 80));
+
+        // The container that was bound to 'b' should STILL be the same
+        // instance, just under a new index. This is the headline win
+        // of incremental handling vs full recycle.
+        const newBContainer = ic.Generator.ContainerFromItem('b');
+        assert.equal(newBContainer, containerB,
+            'container identity for surviving "b" should be preserved across insert');
+    });
+
+    test('remove in-range recycles only the removed containers; survivors shift down', () => {
+        const items = new ObservableCollection<string>(['a', 'b', 'c', 'd', 'e']);
+        const { ic, panel } = makeVirtualizingIC(items, {
+            viewport: new Rect(0, 0, 100, 100),
+            itemHeight: 20,
+        });
+        ic.Measure(new Size(100, 100));
+        assert.deepEqual(panel.RealizedIndices, [0, 1, 2, 3, 4]);
+        const containerA = ic.Generator.ContainerFromItem('a')!;
+        const containerC = ic.Generator.ContainerFromItem('c')!;
+        const containerE = ic.Generator.ContainerFromItem('e')!;
+
+        // Remove index 1 ('b') → 'a' stays at 0, 'c' shifts to 1, etc.
+        items.RemoveAt(1);
+        ic.Measure(new Size(100, 100));
+
+        assert.equal(ic.Generator.ContainerFromItem('a'), containerA,
+            '"a" container survives a remove of its sibling');
+        assert.equal(ic.Generator.ContainerFromItem('c'), containerC,
+            '"c" container survives + shifts down');
+        assert.equal(ic.Generator.ContainerFromItem('e'), containerE,
+            '"e" container survives + shifts down');
+        assert.equal(ic.Generator.IsRealized('b'), false,
+            'removed item "b" is fully recycled');
+    });
+
+    test('replace at index recycles the old container; new item realizes on next measure', () => {
+        const items = new ObservableCollection<string>(['a', 'b', 'c']);
+        const { ic, panel } = makeVirtualizingIC(items, {
+            viewport: new Rect(0, 0, 100, 80),
+            itemHeight: 20,
+        });
+        ic.Measure(new Size(100, 80));
+        const originalContainer = ic.Generator.ContainerFromItem('b')!;
+
+        items.SetAt(1, 'B-NEW');
+        ic.Measure(new Size(100, 80));
+
+        // Old item 'b' is no longer realized — its container went back
+        // to the recycle pool. The new item 'B-NEW' picked up a
+        // container at index 1 (likely the recycled instance).
+        assert.equal(ic.Generator.IsRealized('b'), false,
+            'replaced data item should no longer be realized');
+        assert.equal(ic.Generator.IsRealized('B-NEW'), true,
+            'replacement data item should be realized after re-measure');
+        // Index 1 still has a container, but it's bound to B-NEW now.
+        assert.ok(panel.RealizedIndices.includes(1),
+            'index 1 stays realized across a replace');
+        void originalContainer;
+    });
+
+    test('clear recycles every realized container', () => {
+        const items = new ObservableCollection<string>(['a', 'b', 'c']);
+        const { ic, panel } = makeVirtualizingIC(items, {
+            viewport: new Rect(0, 0, 100, 80),
+            itemHeight: 20,
+        });
+        ic.Measure(new Size(100, 80));
+        assert.deepEqual(panel.RealizedIndices, [0, 1, 2]);
+
+        items.Clear();
+        ic.Measure(new Size(100, 80));
+
+        assert.deepEqual(panel.RealizedIndices, []);
+    });
+});

@@ -10,7 +10,7 @@ import { ResourceDictionary, type ResourceKey } from './resource-dictionary.js';
 import { Application } from './application.js';
 import type { Behavior } from './behavior.js';
 import { Setter, SetterFactory, Style, PropertyTrigger, MultiTrigger, DataTrigger, MultiDataTrigger } from './style.js';
-import { Rect, Size, Thickness } from './primitives.js';
+import { Matrix, Point, Rect, Size, Thickness } from './primitives.js';
 import type { DrawingContext } from './drawing-context.js';
 import type { TextMeasurer } from './text-measurer.js';
 import type {
@@ -37,6 +37,30 @@ import { DragDrop, DragDropEffects, type DataObject, type DragPreviewKind } from
 export interface IEffect
 {
     toCssFilter(): string;
+}
+
+// Renderer-agnostic shape for a Visual.RenderTransform value. Concrete
+// classes (TranslateTransform, RotateTransform, ScaleTransform,
+// SkewTransform, MatrixTransform, TransformGroup) live in visual-engine.
+// Runtime reads the affine via `Matrix`; the SVG renderer composes it
+// with ArrangedRect + RenderTransformOrigin into the outer <g>'s
+// transform attribute.
+//
+// `_setRenderInvalidator` lets a Transform notify its owning Visual
+// when an inner DP (RotateTransform.Angle tweening from 0 to 45,
+// ScaleTransform.ScaleX swapped in a binding, …) changes — without
+// the runtime taking a value dependency on visual-engine's Transform
+// class. The Visual installs its invalidator when RenderTransform is
+// set and clears it on swap-out (see OnPropertyChanged below).
+//
+// Single-consumer: a Transform instance set as the RenderTransform of
+// more than one Visual sees its invalidator overwritten by the latest
+// owner. Match WPF's Freezable no-multi-parent rule — clone before
+// sharing across visuals.
+export interface ITransform
+{
+    readonly Matrix: Matrix;
+    _setRenderInvalidator?(fn: (() => void) | undefined): void;
 }
 
 // Routed event names that map to the per-instance _routedListeners
@@ -184,6 +208,41 @@ export class Visual extends Model
     // the previously applied one — equality is the contract this DP
     // doesn't enforce.
     public static readonly EffectKey = Model.RegisterProperty<IEffect | undefined>(Visual, 'Effect', undefined, MetaData.Render);
+
+    // Affine transform applied to the Visual's painted output (and the
+    // painted output of every descendant) at render time. WPF parity —
+    // UIElement.RenderTransform. Does NOT participate in layout: Measure
+    // and Arrange ignore RenderTransform, so a 100×40 button that's
+    // scaled 2× still reserves 100×40 in its parent's layout slot. Pair
+    // with Margin / explicit Width/Height for layout-affecting shape
+    // changes. Default undefined ≡ identity.
+    //
+    // MetaData.Render so a whole-DP swap (`v.RenderTransform = new
+    // RotateTransform(45)`) invalidates the Visual. Inner-property
+    // changes on the Transform itself (a RotateTransform's Angle
+    // tweening, a ScaleTransform's ScaleX bound to a slider) reach the
+    // renderer through the ITransform `_setRenderInvalidator` hook,
+    // wired below in OnPropertyChanged when the DP is set / cleared.
+    //
+    // Hit-testing: the SVG renderer applies the transform via the
+    // outer <g>, so `elementsFromPoint` automatically projects the
+    // input coordinate into the visual's pre-transform local space —
+    // a rotated button hit-tests by the rotated shape, matching WPF.
+    public static readonly RenderTransformKey = Model.RegisterProperty<ITransform | undefined>(
+        Visual, 'RenderTransform', undefined, MetaData.Render);
+
+    // Origin of the RenderTransform expressed as a fraction of the
+    // Visual's RenderSize (each axis is in 0..1, values outside the
+    // unit interval are accepted and shift the pivot outside the
+    // bounding rect). (0, 0) means top-left — WPF parity default;
+    // (0.5, 0.5) is the center (typical for rotations / scaling);
+    // (1, 1) is the bottom-right. The renderer translates by
+    // (Origin.X · RenderSize.Width, Origin.Y · RenderSize.Height)
+    // before applying the matrix and back after, so a 45°
+    // RotateTransform with Origin (0.5, 0.5) spins the visual around
+    // its own center rather than around its top-left corner.
+    public static readonly RenderTransformOriginKey = Model.RegisterProperty<Point>(
+        Visual, 'RenderTransformOrigin', Point.Zero, MetaData.Render);
 
     // Per-subtree paint opacity. Default 1 = fully opaque. The SVG
     // renderer mirrors this onto the outer <g>'s `opacity` attribute, so
@@ -633,6 +692,13 @@ export class Visual extends Model
     private _draggableLatch:
         { downX: number; downY: number; pointerId: number; armed: boolean } | null = null;
 
+    // Bound closure installed on a RenderTransform's _setRenderInvalidator
+    // hook (see ITransform). Captured once per Visual so install / clear
+    // can identity-compare without allocating per call. Inner Transform
+    // property changes (RotateTransform.Angle, ScaleTransform.ScaleX, …)
+    // fire this and flag the Visual render-dirty.
+    private readonly _renderTransformInvalidator = (): void => this.InvalidateVisual();
+
     private readonly _onDragLatchPointerDown = (raw: unknown): void => {
         const args = raw as PointerEventArgs;
         this._draggableLatch = {
@@ -838,11 +904,30 @@ export class Visual extends Model
     // writers (`v.Resources.Set('Brush', …)`) but reads should go
     // through TryFindResource / FindResource, which check the
     // backing field directly and don't allocate at every walk step.
+    //
+    // First-access cascade (§ 12.1). Descendants whose DynamicResource
+    // bindings were built BEFORE this point cached the (empty)
+    // ancestor chain — they didn't subscribe here because there was
+    // nothing to subscribe to. Without the cascade, a subsequent
+    // `Set` would `notify()` into a dictionary nobody's listening on.
+    // Re-walking dynamic-resource + style subscriptions across THIS
+    // visual's subtree pulls every reachable binding back through
+    // `_subscribe_dynamic_resource`, so the freshly-created dict
+    // joins their wired ancestor chains. Same shape for implicit
+    // Style + theme Style — the next `Set` of a `[TargetType=X]`
+    // entry has to land in the descendants' resolved style.
+    //
+    // Cost: a single subtree walk per Visual per first access.
+    // Visuals whose Resources field stays untouched pay nothing
+    // (the lazy path never runs). Re-access after first allocation
+    // skips the cascade because `_resources` is already defined.
     public get Resources(): ResourceDictionary
     {
         if (this._resources === undefined)
         {
             this._resources = new ResourceDictionary();
+            this.refresh_styles_subtree();
+            this.refresh_dynamic_resources_subtree();
         }
         return this._resources;
     }
@@ -876,6 +961,18 @@ export class Visual extends Model
             }
             cursor = cursor._logicalParent ?? cursor._templatedParent;
         }
+        // Ambient-Scheme override (§ 17.1 / § 17.2). The hook is
+        // registered by ThemeManager at module load — see
+        // `_setAmbientTokenResolver`. The runtime layer can't import
+        // ThemeManager directly (theme/theme.ts already imports
+        // Visual), so the integration goes through a function-pointer
+        // hook. Only string keys can name scheme tokens; Function keys
+        // (DefaultStyleKey lookups, etc.) skip this step.
+        if (typeof key === 'string')
+        {
+            const hookResult = Visual._ambientTokenResolver?.(this, key);
+            if (hookResult !== undefined) return hookResult;
+        }
         // Application-level fallback. The tree walk exhausts at the
         // topmost mounted root; when a key isn't found there, consult
         // the app's root resources THEN the bundled default factories.
@@ -889,6 +986,41 @@ export class Visual extends Model
         // (user overrides on Application.Resources beat bundled
         // defaults) live in one place.
         return Application.ResolveDefaultResource(key);
+    }
+
+    // Hook-shaped integration with ThemeManager (§ 17.1 / § 17.2).
+    // Module-level state — there is at most one resolver in scope.
+    // ThemeManager registers itself on module load via
+    // `Visual._setAmbientTokenResolver`; tests that need to swap the
+    // resolver out can save/restore the previous value.
+    private static _ambientTokenResolver: ((v: Visual, key: string) => unknown | undefined) | undefined;
+
+    /** @internal — ThemeManager only. Installs the function that
+     *  consults the inherited `ThemeManager.Scheme` / `ThemeManager.Theme`
+     *  DP cascade for ambient token resolution. Pass `undefined` to
+     *  detach the hook (test-only). */
+    public static _setAmbientTokenResolver(
+        resolver: ((v: Visual, key: string) => unknown | undefined) | undefined,
+    ): void
+    {
+        Visual._ambientTokenResolver = resolver;
+    }
+
+    // Descriptors that should re-fire DynamicResource subscribers when
+    // they change on this Visual (§ 17.1 — Scheme/Theme cascades). The
+    // set is keyed by descriptor identity, populated by ThemeManager at
+    // module load via `_registerAmbientResourceTriggerDp`. Independent
+    // of the resolver hook because subscribers (DynamicResource bindings)
+    // need re-resolution even on the cascade's intermediate frames.
+    private static _ambientResourceTriggerDps: Set<PropertyDescriptor> = new Set();
+
+    /** @internal — ThemeManager only. Marks `descriptor` as an inherited
+     *  DP whose value changes should re-fire DynamicResource subscribers
+     *  on the affected Visual (so the next refresh pulls from the new
+     *  scheme/theme). */
+    public static _registerAmbientResourceTriggerDp(descriptor: PropertyDescriptor): void
+    {
+        Visual._ambientResourceTriggerDps.add(descriptor);
     }
 
     // Explicit style for this Visual. When set, takes priority over any
@@ -916,6 +1048,16 @@ export class Visual extends Model
     // previously applied filter.
     public get Effect(): IEffect | undefined { return this.get_property_value(Visual.EffectKey); }
     public set Effect(value: IEffect | undefined) { this.set_property_value(Visual.EffectKey, value); }
+
+    /** Affine transform applied at render time. See RenderTransformKey
+     *  for semantics. Default undefined (identity). */
+    public get RenderTransform(): ITransform | undefined { return this.get_property_value(Visual.RenderTransformKey); }
+    public set RenderTransform(value: ITransform | undefined) { this.set_property_value(Visual.RenderTransformKey, value); }
+
+    /** Origin point for RenderTransform, as a fraction of RenderSize.
+     *  See RenderTransformOriginKey for semantics. Default (0, 0). */
+    public get RenderTransformOrigin(): Point { return this.get_property_value(Visual.RenderTransformOriginKey); }
+    public set RenderTransformOrigin(value: Point) { this.set_property_value(Visual.RenderTransformOriginKey, value); }
 
     /** Per-subtree paint opacity in [0, 1]. Default 1. Values outside
      *  the range are accepted by the DP but the renderer clamps before
@@ -2552,6 +2694,16 @@ export class Visual extends Model
             {
                 for (const c of this._overlayChildren) c['refresh_inherited'](descriptor);
             }
+            // Ambient resource triggers (§ 17.1) — ThemeManager registers
+            // the Scheme and Theme descriptors as ambient-resource
+            // triggers via `_registerAmbientResourceTriggerDp`. When one
+            // of those values cascades to this Visual, every
+            // DynamicResource binding rooted here must re-resolve so the
+            // new scheme's token map drives the next paint.
+            if (Visual._ambientResourceTriggerDps.has(descriptor))
+            {
+                this.fire_dynamic_resource_listeners();
+            }
         }
         // The public Style setter calls refresh_active_style after
         // writing — but anyone using set_property_value("Style", …)
@@ -2560,6 +2712,26 @@ export class Visual extends Model
         // resolver so the new Style's setters / triggers install no
         // matter how the property is written.
         if (descriptor.Name === 'Style') this.refresh_active_style();
+        // RenderTransform DP changed — rebind the inner-property
+        // invalidator so an Angle / ScaleX / TransformGroup.Children
+        // change on the new Transform value flags THIS Visual render-
+        // dirty. The MetaData.Render flag above already invalidated for
+        // the whole-DP swap; this hook covers subsequent inner writes.
+        // Cleared on swap-out so a Transform detached from its host
+        // doesn't keep an extinct Visual alive.
+        if (descriptor.Name === 'RenderTransform' && descriptor.Owner === Visual)
+        {
+            const oldT = _old_value as ITransform | undefined;
+            const newT = new_value as ITransform | undefined;
+            if (oldT !== undefined && typeof oldT._setRenderInvalidator === 'function')
+            {
+                oldT._setRenderInvalidator(undefined);
+            }
+            if (newT !== undefined && typeof newT._setRenderInvalidator === 'function')
+            {
+                newT._setRenderInvalidator(this._renderTransformInvalidator);
+            }
+        }
         // Install / uninstall the declarative drag-source latch as
         // IsDraggable flips. Listening on PointerDown/Move/Up rather
         // than overriding the virtuals means subclass overrides of
@@ -2714,6 +2886,11 @@ export class Visual extends Model
 
     private static collect_inheritable_descriptors(klass: Function): PropertyDescriptor[]
     {
+        // The dedup key is `${RootOwner.name}.${Name}` — same composite
+        // key the per-instance value store uses, so cross-class
+        // properties on different owners stay distinct even when their
+        // simple Name collides. (Without the RootOwner prefix, a
+        // Border.Tag and a TextBlock.Tag would dedupe as one entry.)
         const seen = new Set<string>();
         const result: PropertyDescriptor[] = [];
         let current: Function | null = klass;
@@ -2722,16 +2899,28 @@ export class Visual extends Model
             const bag = Model['peek_property_bag'](current);
             if (bag !== undefined)
             {
-                for (const [name, desc] of bag)
+                for (const desc of bag.values())
                 {
-                    if (!seen.has(name) && inherits(desc.MetaData))
-                    {
-                        seen.add(name);
-                        result.push(desc);
-                    }
+                    if (!inherits(desc.MetaData)) continue;
+                    const key = `${desc.RootOwner.name}.${desc.Name}`;
+                    if (seen.has(key)) continue;
+                    seen.add(key);
+                    result.push(desc);
                 }
             }
             current = Object.getPrototypeOf(current);
+        }
+        // Global cross-class inheritable registry (§ 15.2). Any
+        // inheritable property registered on a class NOT in the target
+        // Visual's prototype chain still cascades through the logical
+        // tree — the registry exposes those descriptors so the
+        // per-property refresh_inherited walk picks them up.
+        for (const desc of Model._getInheritableDescriptors())
+        {
+            const key = `${desc.RootOwner.name}.${desc.Name}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            result.push(desc);
         }
         return result;
     }

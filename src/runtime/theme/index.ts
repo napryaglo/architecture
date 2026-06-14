@@ -9,6 +9,8 @@ export {
     ThemeManager,
     defineScheme,
     defineTheme,
+    addSchemeTransitionAnimator,
+    _clearAllSchemeTransitionAnimators,
     getSchemeTransitionAnimator,
     registerSchemeTransitionAnimator,
     type ActivateThemeOptions,

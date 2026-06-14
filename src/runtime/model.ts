@@ -2,8 +2,8 @@ import { Binding } from './binding/binding.js';
 import { EffectiveValueDescriptor, PropertyValueSource } from './binding/effective-value.js';
 import type { InternalPropertyChangeCallback, PropertyChangeCallback } from './binding/effective-value.js';
 import { PropertyDescriptor } from './property-descriptor.js';
-import type { CoerceValue, PropertyMetadata, ValidateValue } from './property-descriptor.js';
-import type { MetaData } from './metadata.js';
+import type { CoerceValue, PropertyMetadata, ValidateTarget, ValidateValue } from './property-descriptor.js';
+import { inherits, type MetaData } from './metadata.js';
 
 // Branded handle returned by Model.RegisterProperty (and the read-only /
 // attached variants). Serves two purposes:
@@ -57,6 +57,33 @@ export class Model
     // OverrideMetadata. WeakRef so classes that go out of use can still
     // be GC'd; stale entries are pruned lazily on first lookup.
     private static class_registry: Map<string, WeakRef<Function>> = new Map();
+
+    // Global registry of every PropertyDescriptor whose registered
+    // metadata includes `MetaData.Inherits` (§ 15.2). Populated at
+    // RegisterProperty time; consumed by `Visual.collect_inheritable_descriptors`
+    // to discover cross-class inheritable attached properties whose
+    // owning class isn't in the target Visual's prototype chain. Without
+    // this registry, an inheritable attached property registered on, say,
+    // `Border` would never be visible to descendants whose class chain
+    // doesn't pass through Border, since the per-class bag walk would
+    // skip Border's bag entirely.
+    //
+    // Set vs. Map: descriptors are unique per (owner, property) pair —
+    // identity-based lookup is fine. WeakSet would let us drop entries
+    // for descriptors whose owning class is GC'd, but PropertyDescriptor
+    // holds a strong reference to its owner already, so a regular Set
+    // keeps the lookup cheap without leaking. The set is module-static
+    // — there is no per-Application registry of inheritable properties.
+    private static inheritable_descriptors: Set<PropertyDescriptor> = new Set();
+
+    /** @internal — Visual.collect_inheritable_descriptors reads this
+     *  to union the global cross-class inheritable property set with
+     *  the target's class-chain walk. Consumers outside `Visual` should
+     *  not depend on the registry shape. */
+    public static _getInheritableDescriptors(): ReadonlySet<PropertyDescriptor>
+    {
+        return Model.inheritable_descriptors;
+    }
 
     // Per-instance value store keyed by composite `${RootOwner.name}.${name}`.
     // Protected so Visual's inheritance helpers can walk parent state.
@@ -201,6 +228,7 @@ export class Model
         meta_data: MetaData,
         coerce_value?: CoerceValue,
         validate_value?: ValidateValue,
+        validate_target?: ValidateTarget,
     ): PropertyKey<T>
     {
         if (property.includes('.'))
@@ -227,16 +255,37 @@ export class Model
             {
                 opts.validate_value = validate_value;
             }
+            if (validate_target !== undefined)
+            {
+                opts.validate_target = validate_target;
+            }
             descriptor = new PropertyDescriptor(owner, property, opts);
             bag.set(property, descriptor);
+            // Inheritable descriptors join the global registry so
+            // Visual.collect_inheritable_descriptors can discover them
+            // even when the property's owning class isn't in the
+            // descendant's prototype chain. See § 15.2.
+            if (inherits(meta_data))
+            {
+                Model.inheritable_descriptors.add(descriptor);
+            }
         }
         return new PropertyKey<T>(descriptor);
     }
 
-    // Pure synonym alias for clarity at declaration sites. There is no
-    // runtime distinction between "regular" and "attached" properties —
-    // any registered property can be set on any Model via the explicit-
-    // owner overload of set_property_value.
+    // Sugar synonym for RegisterProperty at attached-property declaration
+    // sites. Same runtime — any registered property can be set on any
+    // Model via the explicit-owner overload of set_property_value — but
+    // exposes one extra parameter (`validate_target`) that's primarily
+    // useful for attached properties.
+    //
+    // `validate_target` (§ 15.1): when set, every write to this property
+    // on ANY target Model passes through the predicate first. Returning
+    // `false` throws with a "property only valid on …" message. Used to
+    // constrain attached properties to specific target families — e.g.
+    // `Grid.Row` only makes sense on Visuals laid out by a Grid parent,
+    // so its registration can declare `validateTargetTypes(Visual)`.
+    // Helper exported from runtime/property-descriptor.js.
     public static RegisterAttachedProperty<T = unknown>(
         owner: Function,
         property: string,
@@ -244,10 +293,12 @@ export class Model
         meta_data: MetaData,
         coerce_value?: CoerceValue,
         validate_value?: ValidateValue,
+        validate_target?: ValidateTarget,
     ): PropertyKey<T>
     {
         return Model.RegisterProperty<T>(
-            owner, property, default_value, meta_data, coerce_value, validate_value,
+            owner, property, default_value, meta_data,
+            coerce_value, validate_value, validate_target,
         );
     }
 
@@ -291,6 +342,12 @@ export class Model
         }
         const descriptor = new PropertyDescriptor(owner, property, opts, undefined, /* readOnly */ true);
         bag.set(property, descriptor);
+        // Inheritable read-only DPs also join the global registry — see
+        // § 15.2. Same shape as RegisterProperty above.
+        if (inherits(meta_data))
+        {
+            Model.inheritable_descriptors.add(descriptor);
+        }
         return new PropertyKey<T>(descriptor);
     }
 
@@ -366,6 +423,43 @@ export class Model
     public ClearValueWithKey(key: PropertyKey<unknown>): void
     {
         this.clear_via_descriptor(key.descriptor);
+    }
+
+    // Drops the entire EffectiveValueDescriptor slot for `key` — value,
+    // binding, animated slot, change listeners, internal callback. Future
+    // reads fall back to the registered default; a future write creates
+    // a fresh EVD slot.
+    //
+    // Use case: per-target memory reclamation when a property has been
+    // set (or had listeners attached) on this instance but won't be
+    // again — virtualized list containers shedding their per-item
+    // bookkeeping at recycle time, for example. ClearValue alone
+    // preserves the EVD slot (Map entry, listeners array, base-source
+    // slots) so the property stays observable; RemoveValue throws the
+    // whole slot away.
+    //
+    // Returns true when an EVD slot was actually deleted, false when
+    // the property was never observed on this instance (already at
+    // default with no slot to free). Calling on a never-touched
+    // property is a cheap no-op.
+    //
+    // Safety: any active binding is disposed BEFORE the slot is dropped
+    // so the binding doesn't keep firing into a freed EVD. Change
+    // listeners are silently discarded — they were registered against
+    // an EVD identity that no longer exists, and a fresh EVD created by
+    // a future write has its own listener list. Callers that need to
+    // preserve listeners should call ClearValue instead.
+    public RemoveValue<T>(key: PropertyKey<T>): boolean
+    {
+        this.require_writable(key.descriptor);
+        return this.remove_via_descriptor(key.descriptor);
+    }
+
+    // Privileged RemoveValue for read-only properties — same shape as
+    // ClearValueWithKey vs. ClearValue.
+    public RemoveValueWithKey(key: PropertyKey<unknown>): boolean
+    {
+        return this.remove_via_descriptor(key.descriptor);
     }
 
     public GetValueSource<T>(key: PropertyKey<T>): PropertyValueSource
@@ -552,6 +646,22 @@ export class Model
         // Registered but never set — already at default. No-op.
     }
 
+    private remove_via_descriptor(descriptor: PropertyDescriptor): boolean
+    {
+        const key = Model.compose_key(descriptor.RootOwner, descriptor.Name);
+        const evd = this.property_values.get(key);
+        if (evd === undefined) return false;
+        // Dispose any active binding FIRST. ClearValue would have done
+        // this for us, but it also leaves the slot in place + fires
+        // listener notifications for the synthetic default-value
+        // restoration — wasted work when we're about to delete the
+        // whole EVD. Reach through the same path effective-value uses
+        // internally so binding lifecycle stays consistent.
+        evd.ClearValue();
+        this.property_values.delete(key);
+        return true;
+    }
+
     // ------------------------------------------------------------------
     // Shared cores
     // ------------------------------------------------------------------
@@ -600,7 +710,21 @@ export class Model
 
     private set_via_descriptor(descriptor: PropertyDescriptor, value: any): void
     {
-        // Validate-value gate runs first (before any storage / coerce /
+        // Validate-target gate (§ 15.1). Runs FIRST so a misuse of an
+        // attached property surfaces before any other side effect. Only
+        // attached properties declare a validate_target predicate;
+        // regular DPs leave it undefined and skip this check.
+        const validateTarget = descriptor.ValidateTarget;
+        if (validateTarget !== undefined && !validateTarget(this))
+        {
+            throw new Error(
+                `Property '${descriptor.RootOwner.name}.${descriptor.Name}' is not valid on `
+                + `target of type '${this.constructor.name}' — its registered validate_target `
+                + `predicate rejected the assignment.`,
+            );
+        }
+
+        // Validate-value gate runs second (before storage / coerce /
         // listener-firing) so an invalid write is a clean rejection
         // with no side effects. Bindings are exempt — the value is a
         // Binding instance, not a "value" in the property's domain.

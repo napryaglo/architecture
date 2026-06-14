@@ -7,6 +7,7 @@ export { type EasingFunction, Easings }                  from './easing.js';
 export {
     type Interpolator,
     interpolateColor,
+    interpolateCornerRadius,
     interpolateNumber,
     interpolateThickness,
 } from './interpolation.js';

@@ -1,13 +1,22 @@
 import {
+    Color,
     MetaData,
     Model,
     ObservableCollection,
     Panel,
+    Point,
     Rect,
     Size,
     Visual,
     type VisualHost,
 } from '../../runtime/index.js';
+import {
+    DashStyle,
+    type DrawingContext,
+    Pen,
+    SolidColorBrush,
+} from '../../visual-engine/drawing/index.js';
+import { LineGeometry } from '../../visual-engine/geometry/geometry.js';
 import { registryFor } from './shared-size-group.js';
 
 // WPF Grid panel: a 2D layout with explicit row / column definitions,
@@ -55,9 +64,12 @@ import { registryFor } from './shared-size-group.js';
 //     resolves to the max contribution across the group. See
 //     shared-size-group.ts and grid.md § 7. Member-set invalidation
 //     when the group max changes; converges in 1-2 layout passes.
-//   * Grid v3 (planned, not built) — ShowGridLines debug rendering;
-//     star-track shrinkage when Auto tracks overflow available size
-//     (Stars currently go to 0 in that case).
+//   * Grid v3 (this implementation extends v2.2) — ShowGridLines debug
+//     rendering (boolean DP + GridLinesBrush; dashed internal column +
+//     row separators in RenderOverride); star-track-keep-alive policy
+//     in Pass 2.6 of MeasureOverride (proportional Auto shrinkage when
+//     Auto over-request would otherwise zero every Star). See § 14.1 +
+//     § 14.2 in completed-backlog.md.
 
 export type GridUnitType = 'pixel' | 'auto' | 'star';
 
@@ -152,6 +164,21 @@ export class Grid extends Panel
     public static readonly ColumnKey      = Model.RegisterAttachedProperty<number>(Grid, 'Column',      0, MetaData.Arrange);
     public static readonly RowSpanKey     = Model.RegisterAttachedProperty<number>(Grid, 'RowSpan',     1, MetaData.Arrange);
     public static readonly ColumnSpanKey  = Model.RegisterAttachedProperty<number>(Grid, 'ColumnSpan',  1, MetaData.Arrange);
+
+    // Debug overlay (Grid v3 — § 14.1). When true, RenderOverride paints
+    // dashed separator lines along every internal column boundary AND
+    // every internal row boundary so authors can verify the grid math
+    // visually. WPF parity for `Grid.ShowGridLines`. Off by default.
+    // Defaults to a 1-pixel dashed line with a translucent grey stroke
+    // so the debug overlay reads without dominating the rendered
+    // content; consumers can override the stroke via GridLinesBrush.
+    public static readonly ShowGridLinesKey   = Model.RegisterProperty<boolean>(   Grid, 'ShowGridLines',   false,     MetaData.Render);
+    public static readonly GridLinesBrushKey  = Model.RegisterProperty<SolidColorBrush | undefined>(Grid, 'GridLinesBrush',  undefined, MetaData.Render);
+
+    public get ShowGridLines():     boolean { return this.get_property_value(Grid.ShowGridLinesKey); }
+    public set ShowGridLines(v:     boolean) { this.set_property_value(Grid.ShowGridLinesKey, v); }
+    public get GridLinesBrush():    SolidColorBrush | undefined { return this.get_property_value(Grid.GridLinesBrushKey); }
+    public set GridLinesBrush(v:    SolidColorBrush | undefined) { this.set_property_value(Grid.GridLinesBrushKey, v); }
 
     public static SetRow(v: Visual, row: number): void              { v.set_property_value(Grid.RowKey, row); }
     public static GetRow(v: Visual): number                          { return v.get_property_value(Grid.RowKey); }
@@ -341,6 +368,21 @@ export class Grid extends Panel
         applySharedSize(this, cols, colKind, widths, colMin, colMax, /*horizontal=*/true);
         applySharedSize(this, rows, rowKind, heights, rowMin, rowMax, /*horizontal=*/false);
 
+        // Pass 2.6 — Star-keep-alive (Grid v3 / § 14.2). When the Auto
+        // pass over-allocated such that the remaining budget can't fit
+        // every Star track's minimum, shrink Auto tracks proportionally
+        // (down to their own min floor) to free room. Without this, the
+        // Star resolver below sees a 0 budget and every Star without a
+        // MinWidth collapses to 0 — WPF instead clamps Auto sizes to
+        // keep some room for Stars. We approximate WPF's behavior by
+        // taking the room out of the Auto tracks that have headroom
+        // above their min. Stars-only or Auto-only grids skip this pass
+        // (no conflict to resolve).
+        shrinkAutosToReserveStarMinimums(
+            widths, colKind, colMin, colStars, availableSize.Width);
+        shrinkAutosToReserveStarMinimums(
+            heights, rowKind, rowMin, rowStars, availableSize.Height);
+
         // Pass 3 — distribute remaining available space among Star
         // tracks proportionally to weights, then iteratively clamp
         // against Min/Max and redistribute the residual to unclamped
@@ -398,6 +440,59 @@ export class Grid extends Panel
         void finalSize;
         return finalSize;
     }
+
+    // Debug-overlay rendering (§ 14.1). Paints a dashed line along every
+    // internal column boundary AND every internal row boundary. WPF
+    // parity for `Grid.ShowGridLines`: outer boundaries are not drawn
+    // (the surrounding container already implies them); only the
+    // separators BETWEEN tracks need a visual cue.
+    //
+    // Drawn AFTER children paint (the base Panel does no painting of
+    // its own, and the visual tree paints children before their parent's
+    // RenderOverride runs against the panel itself — see render-pass
+    // ordering in visual-tree.md). The lines therefore sit on top of
+    // child content, which is the right z-order for a debug overlay.
+    //
+    // No-op when ShowGridLines is false or when there's no internal
+    // boundary to draw (single-track grids, empty grids).
+    protected override RenderOverride(dc: DrawingContext): void
+    {
+        if (!this.ShowGridLines) return;
+        const widths  = this._colWidths;
+        const heights = this._rowHeights;
+        const nCols = widths.length;
+        const nRows = heights.length;
+        if (nCols <= 1 && nRows <= 1) return;
+
+        // 50%-opaque grey by default — visible against most surfaces
+        // without overwhelming the underlying content. Consumers can
+        // override via GridLinesBrush.
+        const brush = this.GridLinesBrush
+            ?? new SolidColorBrush(new Color(0x80, 0x80, 0x80, 0x80));
+        const pen = new Pen(brush, 1);
+        pen.DashStyle = DashStyle.Dash;
+
+        const totalW = sum(widths);
+        const totalH = sum(heights);
+        const colOffsets = prefixSums(widths);
+        const rowOffsets = prefixSums(heights);
+
+        // Internal column boundaries — skip index 0 (outer-left edge)
+        // and the last boundary (outer-right edge).
+        for (let i = 1; i < nCols; i++)
+        {
+            const x = colOffsets[i]!;
+            dc.DrawGeometry(undefined, pen,
+                new LineGeometry(new Point(x, 0), new Point(x, totalH)));
+        }
+        // Internal row boundaries — same skip-outer logic.
+        for (let i = 1; i < nRows; i++)
+        {
+            const y = rowOffsets[i]!;
+            dc.DrawGeometry(undefined, pen,
+                new LineGeometry(new Point(0, y), new Point(totalW, y)));
+        }
+    }
 }
 
 function oneStar(): ColumnDefinition
@@ -438,6 +533,104 @@ function childTouchesAuto(
     for (let i = 0; i < cs; i++) if (colKind[c0 + i] === 'auto') return true;
     for (let i = 0; i < rs; i++) if (rowKind[r0 + i] === 'auto') return true;
     return false;
+}
+
+// Star-keep-alive (Grid v3, § 14.2). When the Auto pass over-allocated
+// such that pixel + auto > available, shrink the Auto tracks down to
+// their declared min (or 0 if no min was set) to free room for Star
+// tracks. Stars without an explicit MinWidth would otherwise collapse
+// to 0 because `distributeStars` sees a 0 budget; WPF instead clamps
+// Auto sizes to keep some room for Stars.
+//
+// Policy:
+//   * Compute available shrinkage = sum(currentAuto - autoMin) across
+//     every Auto track. This is the maximum we can take out of Autos
+//     before any Auto hits its own floor.
+//   * Compute required shrinkage = (pixel + auto + starMin) - available.
+//     If required <= 0, no overflow — return.
+//   * If required >= available shrinkage, take it all: every Auto
+//     drops to its autoMin floor. Stars still see whatever's left.
+//   * Otherwise, take `required` distributed proportionally to each
+//     Auto track's shrinkage headroom (currentAuto - autoMin).
+//
+// No-op when there are no Star tracks (no reason to shrink Autos) or
+// no Auto tracks (nothing to shrink). The starMin sum is 0 when no
+// Star track declares MinWidth — in that case we still shrink Autos
+// just enough to bring (pixel + auto) below available so distributeStars
+// has a positive budget to share among weighted Stars.
+function shrinkAutosToReserveStarMinimums(
+    sizes:     number[],
+    kinds:     readonly GridUnitType[],
+    autoMins:  readonly number[],
+    starWeights: readonly number[],
+    available: number,
+): void
+{
+    if (!Number.isFinite(available) || available <= 0) return;
+    const n = sizes.length;
+    let pixelSum = 0;
+    let autoSum  = 0;
+    let starMinSum = 0;
+    let hasStars = false;
+    let hasAutos = false;
+    let availableShrinkage = 0;
+    for (let i = 0; i < n; i++)
+    {
+        const k = kinds[i];
+        if (k === 'pixel') pixelSum += sizes[i]!;
+        else if (k === 'auto')
+        {
+            autoSum += sizes[i]!;
+            availableShrinkage += Math.max(0, sizes[i]! - autoMins[i]!);
+            hasAutos = true;
+        }
+        else if (k === 'star' && starWeights[i]! > 0)
+        {
+            // Star tracks haven't been resolved yet at this pass — sizes[i]
+            // is still 0 for stars. The minimum the star will need is the
+            // declared autoMins-counterpart, but for star tracks we use
+            // the per-track Min carried alongside (passed via the same
+            // mins[] array in the caller's resolver). We don't have that
+            // here, so use 0 as a conservative floor; the resolver clamps
+            // to the real Min after the budget is set.
+            hasStars = true;
+        }
+    }
+    if (!hasStars || !hasAutos) return;
+    void starMinSum;
+
+    // Required shrinkage = how much (pixel + auto) must drop to leave
+    // a positive budget for distributeStars. We aim for budget > 0 so
+    // weighted Stars get SOMETHING; if a Star track declared a MinWidth
+    // distributeStars's clamp loop will raise it from there.
+    const overflow = (pixelSum + autoSum) - available;
+    if (overflow <= 0) return;
+
+    const reduction = Math.min(overflow, availableShrinkage);
+    if (reduction <= 0) return;
+
+    if (reduction >= availableShrinkage)
+    {
+        // Every Auto track drops to its floor — even that may not be
+        // enough to fully avoid overflow, but the Stars will at least
+        // see a smaller-than-otherwise reserved sum.
+        for (let i = 0; i < n; i++)
+        {
+            if (kinds[i] === 'auto') sizes[i] = autoMins[i]!;
+        }
+        return;
+    }
+
+    // Proportional shrinkage — each Auto track gives up a slice of
+    // `reduction` weighted by its (currentAuto - autoMin) headroom.
+    for (let i = 0; i < n; i++)
+    {
+        if (kinds[i] !== 'auto') continue;
+        const headroom = Math.max(0, sizes[i]! - autoMins[i]!);
+        if (headroom <= 0) continue;
+        const share = reduction * (headroom / availableShrinkage);
+        sizes[i] = Math.max(autoMins[i]!, sizes[i]! - share);
+    }
 }
 
 // Distribute `desired` across the AUTO tracks in [start, start+span).

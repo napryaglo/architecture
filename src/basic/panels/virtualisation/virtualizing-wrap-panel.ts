@@ -264,6 +264,51 @@ export class VirtualizingWrapPanel extends VirtualizingPanel implements IScrollI
         this.realized.clear();
     }
 
+    // ── Incremental items-change hooks (§ 10.4) ────────────────────────
+    //
+    // Shared shape with VirtualizingStackPanel — the wrap panel has no
+    // per-item size cache (uniform cells), so the hooks here just
+    // touch the realized map.
+
+    protected override realizedIndices(): Iterable<number>
+    {
+        return this.realized.keys();
+    }
+
+    protected override recycleAtIndices(indices: readonly number[]): void
+    {
+        const owner = this.itemsOwner;
+        for (const idx of indices)
+        {
+            const container = this.realized.get(idx);
+            if (container === undefined) continue;
+            this.RemoveVisualChild(container);
+            owner?.DetachContainer(container);
+            owner?.Generator.Recycle(container);
+            this.realized.delete(idx);
+        }
+    }
+
+    protected override shiftRealizedIndices(fromIndex: number, delta: number): void
+    {
+        if (delta === 0) return;
+        const moving = [...this.realized.keys()].filter(k => k >= fromIndex);
+        const sorted = delta > 0
+            ? moving.sort((a, b) => b - a)
+            : moving.sort((a, b) => a - b);
+        for (const oldIdx of sorted)
+        {
+            const c = this.realized.get(oldIdx)!;
+            this.realized.delete(oldIdx);
+            this.realized.set(oldIdx + delta, c);
+        }
+    }
+
+    protected override realizedIndexAt(index: number): number | undefined
+    {
+        return this.realized.has(index) ? index : undefined;
+    }
+
     // Reconcile the realized set against the desired [first, last]
     // range: drop out-of-range realized containers, fill in missing
     // in-range items. Mirrors VirtualizingStackPanel's realizeRange —

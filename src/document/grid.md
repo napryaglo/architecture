@@ -29,7 +29,7 @@ comment or doc resolves to the table below.
 | **Grid v1** | Yes | `GridLength` (pixel / auto / star); `RowDefinition` / `ColumnDefinition`; `Grid.Row` / `Column` / `RowSpan` / `ColumnSpan` attached properties; four-pass measure (pixel → auto → star → re-measure spanners); prefix-sum arrange; empty-definitions fallback to a single `1*` track. |
 | **Grid v2.1** | Yes (extends v1) | `MinWidth` / `MaxWidth` on `ColumnDefinition`, `MinHeight` / `MaxHeight` on `RowDefinition`. Pixel tracks clamp inline; Auto tracks raise to Min and cap at Max during their distribution pass; Star tracks clamp in a redistribution loop — if a Star hits a bound, the freed weight redistributes to the other live Stars and the loop re-runs until no track newly clamps. |
 | **Grid v2.2** | Yes (extends v2.1) | `SharedSizeGroup` on `ColumnDefinition` / `RowDefinition` — Auto tracks across multiple Grids coordinate by name, every member resolving to the max contribution across the group. Per-presentation-target registry; member-set invalidation when the max changes; removing a Grid recomputes the max from the survivors. Only Auto tracks participate; Pixel / Star ignore the DP even when set. |
-| **Grid v3** | Planned, not built | `ShowGridLines` debug rendering of cell boundaries. Star-track shrinkage policy when Auto tracks request more than the available size (WPF clamps Auto sizes to keep Star tracks alive; Grid lets Stars go to 0 today). |
+| **Grid v3** | Yes (extends v2.2) | `ShowGridLines` debug rendering of cell boundaries (`ShowGridLines: boolean` + `GridLinesBrush: SolidColorBrush \| undefined`; paints dashed lines along every internal column AND row boundary). Star-track shrinkage policy when Auto tracks request more than the available size (Pass 2.6 in `MeasureOverride` proportionally shrinks Autos down to `autoMin` to free room for Stars; Star tracks no longer collapse to 0 when Autos over-request). |
 
 Anything not in the table above is unscoped — if it comes up, we'd
 either fold it into one of the existing versions or open a new label
@@ -346,11 +346,13 @@ participating tracks' natural sizes. The group's overall max is then
 the MAX across every Grid's reported contribution. Both columns in
 that Grid resolve to the final group max.
 
-## 8. What's not in Grid v2.2
+## 8. Grid v3 — debug overlay + over-request resilience
 
-Tracked as Grid v3 in [current-backlog.md § 14](../../current-backlog.md):
-- **`ShowGridLines`** — § 14.1.
-- **Star-track shrinkage when Auto requests more than available** — § 14.2.
+Both items shipped as of Grid v3 (extends Grid v2.2). See [completed-backlog.md § 14](../../completed-backlog.md) for the full closure record.
+
+- **`ShowGridLines`** (§ 14.1) — Boolean DP, default `false`. When `true`, `RenderOverride` paints dashed lines along every internal column AND row boundary. Outer boundaries are not drawn (the surrounding container already implies them). Companion `GridLinesBrush: SolidColorBrush | undefined` overrides the default 50%-opaque grey stroke. No-op for single-track grids.
+
+- **Star-track shrinkage when Auto requests more than available** (§ 14.2) — A new Pass 2.6 in `MeasureOverride`. When `pixelSum + autoSum > available` AND the grid has at least one Star track, Auto tracks shrink proportionally to their headroom (above each track's own `MinWidth` floor) so the Star resolver receives positive budget. Stars with no declared MinWidth no longer collapse to 0; Stars WITH MinWidth get their min plus any excess freed by the Auto shrinkage. Auto.MinWidth is a hard floor.
 
 ## 9. Choosing Grid vs. other panels
 

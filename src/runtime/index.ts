@@ -12,9 +12,11 @@ export {
 } from './metadata.js';
 export {
     PropertyDescriptor,
+    validateTargetTypes,
     type PropertyMetadata,
     type CoerceValue,
     type ValidateValue,
+    type ValidateTarget,
 } from './property-descriptor.js';
 export {
     AncestorBinding,
@@ -25,6 +27,7 @@ export {
     EffectiveValueDescriptor,
     ElementNameBinding,
     MultiBinding,
+    MultiTemplateBinding,
     PriorityBinding,
     PropertyValueSource,
     TemplateBinding,
@@ -46,11 +49,15 @@ export {
     VerticalAlignment,
     type VisualHost,
     type IEffect,
+    type ITransform,
 } from './visual.js';
 export { Adorner, AdornerLayer, AdornerDecorator, DragGhostAdorner } from './adorner.js';
 export { NameScope } from './namescope.js';
 export {
     ResourceDictionary,
+    SetResourceDictionaryLoader,
+    GetResourceDictionaryLoader,
+    type DictionaryLoader,
     type ResourceChangeListener,
     type ResourceKey,
 } from './resource-dictionary.js';
@@ -138,6 +145,11 @@ export { observe_array, subscribe_array, is_observed_array } from './observable-
 export { Point, Size, Rect, Color, Matrix, Thickness } from './primitives.js';
 export { CornerRadius } from './corner-radius.js';
 export {
+    Typography,
+    type TypographyProps,
+    type TypographyWeight,
+} from './typography.js';
+export {
     Density,
     M3_BREAKPOINTS,
     MediaWatcher,
@@ -151,6 +163,8 @@ export {
     classifyViewport,
     defineScheme,
     defineTheme,
+    addSchemeTransitionAnimator,
+    _clearAllSchemeTransitionAnimators,
     getSchemeTransitionAnimator,
     registerSchemeTransitionAnimator,
     type ActivateThemeOptions,
@@ -205,6 +219,7 @@ export {
     ThicknessKeyFrame,
     interpolateColor,
     interpolateNumber,
+    interpolateCornerRadius,
     interpolateThickness,
     type AnimationTimelineProps,
     type ColorAnimationProps,

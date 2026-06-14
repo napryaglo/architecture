@@ -88,26 +88,46 @@ describe('FabMenu open/close lifecycle', () => {
     });
 });
 
-describe('FabMenu icon swap', () => {
+describe('FabMenu icon rotation', () => {
 
-    test('Content swaps between ClosedIcon and OpenIcon based on IsOpen', () => {
+    test('owned icon TextBlock carries a RotateTransform pivoted at the center', () => {
         initTestApp();
         const fm = new FabMenu();
-        // Trigger an initial swap so the FabMenu owns its Content TextBlock.
         const items = new ObservableCollection<unknown>();
         items.Add(new Border());
         fm.Items = items as unknown as ObservableCollection<import('../../runtime/index.js').Visual>;
         const target = new HeadlessTarget(400, 400);
         target.Content = fm;
         target.Flush();
-        // No Content set yet → first open writes the open icon and tags
-        // the TextBlock as class-owned.
+        // First IsOpen flip mounts the owned icon TextBlock.
         fm.IsOpen = true;
-        const openContent = fm.Content as TextBlock | undefined;
-        assert.ok(openContent instanceof TextBlock);
-        assert.equal(openContent!.Text, '×');
+        const icon = fm.Content as TextBlock | undefined;
+        assert.ok(icon instanceof TextBlock);
+        // ClosedIcon is the persistent glyph — the open-state visual
+        // comes from the 45° rotation, not a text swap.
+        assert.equal(icon!.Text, '+');
+        const transform = icon!.RenderTransform;
+        assert.ok(transform !== undefined, 'icon should have a RenderTransform');
+        const origin = icon!.RenderTransformOrigin;
+        assert.equal(origin.X, 0.5);
+        assert.equal(origin.Y, 0.5);
+    });
+
+    test('IsOpen=true rotates the icon toward 45°; IsOpen=false rotates back to 0°', async () => {
+        initTestApp();
+        const fm = new FabMenu();
+        fm.RotationDurationMs = 0;   // instant — skip the tween for a deterministic assertion.
+        const items = new ObservableCollection<unknown>();
+        items.Add(new Border());
+        fm.Items = items as unknown as ObservableCollection<import('../../runtime/index.js').Visual>;
+        const target = new HeadlessTarget(400, 400);
+        target.Content = fm;
+        target.Flush();
+        fm.IsOpen = true;
+        const icon = fm.Content as TextBlock | undefined;
+        const rotate = icon!.RenderTransform as { Angle: number };
+        assert.equal(rotate.Angle, 45);
         fm.IsOpen = false;
-        const closedContent = fm.Content as TextBlock | undefined;
-        assert.equal(closedContent!.Text, '+');
+        assert.equal(rotate.Angle, 0);
     });
 });
