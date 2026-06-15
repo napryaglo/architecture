@@ -1,12 +1,10 @@
 import {
-    MetaData,
-    Model,
     Rect,
     Size,
     Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
-import { Brush, Pen, RectangleGeometry } from '../../visual-engine/index.js';
+import { Pen, RectangleGeometry } from '../../visual-engine/index.js';
 
 // M3 Pill — capsule rectangle. The corner radius is always
 // `min(W, H) / 2`, so the short axis becomes two full half-circles.
@@ -22,18 +20,6 @@ import { Brush, Pen, RectangleGeometry } from '../../visual-engine/index.js';
 // Stroke insets by half-thickness (Border / Ellipse convention).
 export class Pill extends Visual
 {
-    public static readonly FillKey            = Model.RegisterProperty<Brush | undefined>(Pill, 'Fill',            undefined, MetaData.Render);
-    public static readonly StrokeKey          = Model.RegisterProperty<Brush | undefined>(Pill, 'Stroke',          undefined, MetaData.Render);
-    public static readonly StrokeThicknessKey = Model.RegisterProperty<number>(           Pill, 'StrokeThickness', 0,         MetaData.Render);
-
-    public get Fill(): Brush | undefined { return this.get_property_value(Pill.FillKey); }
-    public set Fill(v: Brush | undefined) { this.set_property_value(Pill.FillKey, v); }
-
-    public get Stroke(): Brush | undefined { return this.get_property_value(Pill.StrokeKey); }
-    public set Stroke(v: Brush | undefined) { this.set_property_value(Pill.StrokeKey, v); }
-
-    public get StrokeThickness(): number { return this.get_property_value(Pill.StrokeThicknessKey); }
-    public set StrokeThickness(v: number) { this.set_property_value(Pill.StrokeThicknessKey, v); }
 
     protected override MeasureOverride(_availableSize: Size): Size
     {
@@ -63,7 +49,7 @@ export class Pill extends Visual
             : undefined;
 
         dc.DrawGeometry(
-            this.Fill,
+            this.Background,
             pen,
             new RectangleGeometry(new Rect(half, half, w, h), r, r));
     }

@@ -29,7 +29,7 @@ export class BouncingBallDemo extends ResourceDictionary {
             _ellipse3._set_property_value_by_name(Canvas, "Top", DataContextBinding(_ellipse3, "Y"));
             _ellipse3._set_property_value_by_name("Width", DataContextBinding(_ellipse3, "Diameter"));
             _ellipse3._set_property_value_by_name("Height", DataContextBinding(_ellipse3, "Diameter"));
-            _ellipse3._set_property_value_by_name("Fill", new SolidColorBrush(Color.FromHex('#fbbf24')));
+            _ellipse3._set_property_value_by_name("Background", new SolidColorBrush(Color.FromHex('#fbbf24')));
             _ellipse3._set_property_value_by_name("Stroke", new SolidColorBrush(Color.FromHex('#f59e0b')));
             _ellipse3._set_property_value_by_name("StrokeThickness", 1.5);
             _canvas2.AddChild(_ellipse3);

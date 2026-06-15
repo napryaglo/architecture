@@ -1,4 +1,4 @@
-import type { Point, Rect } from '../../runtime/index.js';
+import type { Point, Rect } from '../primitives.js';
 import type { DrawingContext } from '../../runtime/index.js';
 import { Brush, SolidColorBrush } from './brush.js';
 import { DashStyle, LineCap, type Pen } from './pen.js';

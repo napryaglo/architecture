@@ -1,14 +1,14 @@
+import { addSchemeTransitionAnimator } from '../theme/theme.js';
 import {
-    addSchemeTransitionAnimator,
     AnimationTimeline,
-    CornerRadius,
     DoubleAnimation,
     Easings,
     interpolateCornerRadius,
     interpolateThickness,
     ThicknessAnimation,
-    Thickness,
-} from '../../runtime/index.js';
+} from '../animation/index.js';
+import { Thickness } from '../primitives.js';
+import { CornerRadius } from '../corner-radius.js';
 
 // Non-Brush SchemeTransition animators (§ 17.3). Each factory matches a
 // specific value-type pair and produces a per-type timeline. Registered

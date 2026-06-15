@@ -7,7 +7,6 @@ import {
     type DrawingContext,
 } from '../../runtime/index.js';
 import {
-    Brush,
     LineSegment,
     PathFigure,
     PathGeometry,
@@ -37,20 +36,8 @@ export enum PixelSource
 
 export class PixelArt extends Visual
 {
-    public static readonly FillKey            = Model.RegisterProperty<Brush | undefined>(PixelArt, 'Fill',            undefined, MetaData.Render);
-    public static readonly StrokeKey          = Model.RegisterProperty<Brush | undefined>(PixelArt, 'Stroke',          undefined, MetaData.Render);
-    public static readonly StrokeThicknessKey = Model.RegisterProperty<number>(           PixelArt, 'StrokeThickness', 0,         MetaData.Render);
     public static readonly GridSizeKey        = Model.RegisterProperty<number>(           PixelArt, 'GridSize',        8,         MetaData.Render);
     public static readonly SourceKey          = Model.RegisterProperty<PixelSource>(      PixelArt, 'Source',          PixelSource.Circle, MetaData.Render);
-
-    public get Fill(): Brush | undefined { return this.get_property_value(PixelArt.FillKey); }
-    public set Fill(v: Brush | undefined) { this.set_property_value(PixelArt.FillKey, v); }
-
-    public get Stroke(): Brush | undefined { return this.get_property_value(PixelArt.StrokeKey); }
-    public set Stroke(v: Brush | undefined) { this.set_property_value(PixelArt.StrokeKey, v); }
-
-    public get StrokeThickness(): number { return this.get_property_value(PixelArt.StrokeThicknessKey); }
-    public set StrokeThickness(v: number) { this.set_property_value(PixelArt.StrokeThicknessKey, v); }
 
     public get GridSize(): number { return this.get_property_value(PixelArt.GridSizeKey); }
     public set GridSize(v: number) { this.set_property_value(PixelArt.GridSizeKey, v); }
@@ -105,7 +92,7 @@ export class PixelArt extends Visual
             ? new Pen(this.Stroke, t)
             : undefined;
 
-        dc.DrawGeometry(this.Fill, pen, new PathGeometry(figures));
+        dc.DrawGeometry(this.Background, pen, new PathGeometry(figures));
     }
 }
 

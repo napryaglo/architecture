@@ -1,4 +1,4 @@
-import { MetaData, Model, Panel, Rect, Size, Visual } from '../../runtime/index.js';
+import { MetaData, Model, Panel, Rect, Size, Visual, type DrawingContext } from '../../runtime/index.js';
 
 // Layout panel that places each child at an absolute (Left, Top)
 // position read from attached properties. Children measure with no
@@ -27,8 +27,16 @@ import { MetaData, Model, Panel, Rect, Size, Visual } from '../../runtime/index.
 // layout that produces negative positions should shift first.
 export class Canvas extends Panel
 {
-    public static readonly LeftKey = Model.RegisterAttachedProperty<number>(Canvas, 'Left', 0, MetaData.Arrange);
-    public static readonly TopKey  = Model.RegisterAttachedProperty<number>(Canvas, 'Top',  0, MetaData.Arrange);
+    // Measure | Arrange — Canvas.MeasureOverride reads Canvas.Left /
+    // Canvas.Top to compute the union bounding box, so a child moving
+    // must invalidate the parent's MEASURE (not just arrange). Without
+    // the Measure flag the Canvas's cached DesiredSize stays stale; a
+    // surrounding ScrollViewer never re-measures and the scrollable
+    // extent doesn't grow when a node moves beyond the current bounds.
+    // The flag fires OnPropertyChanged on the CHILD; child's
+    // InvalidateMeasure cascades to the parent Canvas's measure pass.
+    public static readonly LeftKey = Model.RegisterAttachedProperty<number>(Canvas, 'Left', 0, MetaData.Measure | MetaData.Arrange);
+    public static readonly TopKey  = Model.RegisterAttachedProperty<number>(Canvas, 'Top',  0, MetaData.Measure | MetaData.Arrange);
 
     // Static accessors mirror WPF's Canvas.SetLeft / Canvas.GetLeft.
     // The typed keys carry the descriptor identity; the typed
@@ -90,5 +98,14 @@ export class Canvas extends Panel
             child.Arrange(new Rect(left, top, child.DesiredSize.Width, child.DesiredSize.Height));
         }
         return finalSize;
+    }
+
+    protected override RenderOverride(dc: DrawingContext): void
+    {
+        const bg = this.Background;
+        if (bg === undefined) return;
+        const size = this.RenderSize;
+        if (size.Width <= 0 || size.Height <= 0) return;
+        dc.DrawRectangle(bg, undefined, new Rect(0, 0, size.Width, size.Height));
     }
 }

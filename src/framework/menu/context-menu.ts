@@ -210,7 +210,7 @@ export class ContextMenuService
 // Ergonomic per-instance getter/setter for Visual.ContextMenu. Stamped
 // onto Visual.prototype below; the type-system view of Visual exposes
 // the same shape via the declare-module augmentation.
-declare module '../../runtime/visual.js'
+declare module '../../visual-engine/visual.js'
 {
     interface Visual
     {

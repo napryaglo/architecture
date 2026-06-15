@@ -47,7 +47,7 @@ describe('Fan', () => {
 
     test('Bottom-left pivot: figure starts at (0, H), arc ends at (W, H)', () => {
         const f = new Fan();
-        f.Fill = new SolidColorBrush(Color.Red);
+        f.Background = new SolidColorBrush(Color.Red);
         const dc = render(f, 100, 100);
         const fig = (dc.geoms[0]!.geometry as PathGeometry).Figures[0]!;
         assert.equal(fig.StartPoint.X, 0);

@@ -1,5 +1,5 @@
 import { MetaData, Model } from '../../runtime/index.js';
-import { Color, Point } from '../../runtime/index.js';
+import { Color, Point } from '../primitives.js';
 import { Transform } from './transform.js';
 
 // A single color stop within a gradient. Plain value type — mutate by

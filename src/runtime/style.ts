@@ -2,8 +2,8 @@ import { Application } from './application.js';
 import type { Binding } from './binding/binding.js';
 import { ResourceDictionary, type ResourceKey } from './resource-dictionary.js';
 import type { TriggerAction } from './trigger-actions.js';
-import type { EventTrigger } from './input/event-trigger.js';
-import type { Visual } from './visual.js';
+import type { EventTrigger } from './event-trigger.js';
+import type { Visual } from '../visual-engine/visual.js';
 
 // Factory that produces a fresh Binding per styled target. DataTrigger /
 // MultiDataTrigger accept these to support sources beyond DataContext

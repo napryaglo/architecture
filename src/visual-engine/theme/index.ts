@@ -1,0 +1,35 @@
+// Theme engine — Theme / Scheme / ThemeManager, the inherited adaptive
+// DPs they own (Density, Pointer, PrefersContrast, PrefersReducedMotion,
+// PrefersColorScheme, ViewportClass), the MediaWatcher that drives them,
+// and the scheme-transition animator hook. See theme-architecture.md.
+export {
+    MediaWatcher,
+    Scheme,
+    Theme,
+    ThemeManager,
+    defineScheme,
+    defineTheme,
+    addSchemeTransitionAnimator,
+    _clearAllSchemeTransitionAnimators,
+    getSchemeTransitionAnimator,
+    registerSchemeTransitionAnimator,
+    type ActivateThemeOptions,
+    type AutoSchemeOptions,
+    type SchemeOptions,
+    type SchemeTransition,
+    type SchemeTransitionAnimatorFactory,
+    type ThemeOptions,
+    type TokenCatalog,
+    type TokenSpec,
+    type TokenType,
+} from './theme.js';
+export {
+    Density,
+    M3_BREAKPOINTS,
+    Pointer,
+    PreferredScheme,
+    PrefersContrast,
+    ViewportClass,
+    classifyViewport,
+    type ViewportBreakpoints,
+} from './adaptive.js';

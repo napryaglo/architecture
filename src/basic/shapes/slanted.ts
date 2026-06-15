@@ -53,7 +53,7 @@ export class Slanted extends Squircle
 
         if (tan === 0)
         {
-            dc.DrawGeometry(this.Fill, pen, new PathGeometry([figure]));
+            dc.DrawGeometry(this.Background, pen, new PathGeometry([figure]));
             return;
         }
 
@@ -65,7 +65,7 @@ export class Slanted extends Squircle
         const skew    = new Matrix(1, 0, -tan, 1, yBottom * tan, 0);
 
         dc.PushTransform(new MatrixTransform(skew));
-        dc.DrawGeometry(this.Fill, pen, new PathGeometry([figure]));
+        dc.DrawGeometry(this.Background, pen, new PathGeometry([figure]));
         dc.Pop();
     }
 }

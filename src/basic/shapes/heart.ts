@@ -1,13 +1,10 @@
 import {
-    MetaData,
-    Model,
     Point,
     Size,
     Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
 import {
-    Brush,
     CubicBezierSegment,
     PathFigure,
     PathGeometry,
@@ -26,18 +23,6 @@ import {
 // Stroke insets by half-thickness.
 export class Heart extends Visual
 {
-    public static readonly FillKey            = Model.RegisterProperty<Brush | undefined>(Heart, 'Fill',            undefined, MetaData.Render);
-    public static readonly StrokeKey          = Model.RegisterProperty<Brush | undefined>(Heart, 'Stroke',          undefined, MetaData.Render);
-    public static readonly StrokeThicknessKey = Model.RegisterProperty<number>(           Heart, 'StrokeThickness', 0,         MetaData.Render);
-
-    public get Fill(): Brush | undefined { return this.get_property_value(Heart.FillKey); }
-    public set Fill(v: Brush | undefined) { this.set_property_value(Heart.FillKey, v); }
-
-    public get Stroke(): Brush | undefined { return this.get_property_value(Heart.StrokeKey); }
-    public set Stroke(v: Brush | undefined) { this.set_property_value(Heart.StrokeKey, v); }
-
-    public get StrokeThickness(): number { return this.get_property_value(Heart.StrokeThicknessKey); }
-    public set StrokeThickness(v: number) { this.set_property_value(Heart.StrokeThicknessKey, v); }
 
     protected override MeasureOverride(_availableSize: Size): Size { return Size.Zero; }
     protected override ArrangeOverride(finalSize: Size): Size { return finalSize; }
@@ -83,6 +68,6 @@ export class Heart extends Visual
             ? new Pen(this.Stroke, t)
             : undefined;
 
-        dc.DrawGeometry(this.Fill, pen, new PathGeometry([figure]));
+        dc.DrawGeometry(this.Background, pen, new PathGeometry([figure]));
     }
 }

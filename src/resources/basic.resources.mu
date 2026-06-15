@@ -599,7 +599,7 @@ resources MuralBasic {
         when ( IsSelected )  { PART_Border.Background = @SecondaryContainer; }
         // Disabled — dim the entire row at the M3 content-opacity (38%).
         // dispatchPointer / dispatchKey already gate input on a disabled
-        // subtree (see runtime/input/routed-event.ts), so the visual
+        // subtree (see visual-engine/routed-event.ts), so the visual
         // dim is the only template-side responsibility. Ordered LAST
         // so the dim wins regardless of which state-layer also matches
         // (a disabled row's residual hover trigger doesn't fire — input

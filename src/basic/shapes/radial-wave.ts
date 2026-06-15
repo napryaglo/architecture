@@ -7,7 +7,6 @@ import {
     type DrawingContext,
 } from '../../runtime/index.js';
 import {
-    Brush,
     LineSegment,
     PathFigure,
     PathGeometry,
@@ -37,23 +36,11 @@ import {
 // Stroke insets by half-thickness.
 export class RadialWave extends Visual
 {
-    public static readonly FillKey            = Model.RegisterProperty<Brush | undefined>(RadialWave, 'Fill',            undefined, MetaData.Render);
-    public static readonly StrokeKey          = Model.RegisterProperty<Brush | undefined>(RadialWave, 'Stroke',          undefined, MetaData.Render);
-    public static readonly StrokeThicknessKey = Model.RegisterProperty<number>(           RadialWave, 'StrokeThickness', 0,         MetaData.Render);
     public static readonly LobesKey           = Model.RegisterProperty<number>(           RadialWave, 'Lobes',           8,         MetaData.Render);
     public static readonly AmplitudeKey       = Model.RegisterProperty<number>(           RadialWave, 'Amplitude',       0.20,      MetaData.Render);
     public static readonly SharpnessKey       = Model.RegisterProperty<number>(           RadialWave, 'Sharpness',       0,         MetaData.Render);
     public static readonly RotationKey        = Model.RegisterProperty<number>(           RadialWave, 'Rotation',        -90,       MetaData.Render);
     public static readonly SamplesKey         = Model.RegisterProperty<number>(           RadialWave, 'Samples',         24,        MetaData.Render);
-
-    public get Fill(): Brush | undefined { return this.get_property_value(RadialWave.FillKey); }
-    public set Fill(v: Brush | undefined) { this.set_property_value(RadialWave.FillKey, v); }
-
-    public get Stroke(): Brush | undefined { return this.get_property_value(RadialWave.StrokeKey); }
-    public set Stroke(v: Brush | undefined) { this.set_property_value(RadialWave.StrokeKey, v); }
-
-    public get StrokeThickness(): number { return this.get_property_value(RadialWave.StrokeThicknessKey); }
-    public set StrokeThickness(v: number) { this.set_property_value(RadialWave.StrokeThicknessKey, v); }
 
     public get Lobes(): number { return this.get_property_value(RadialWave.LobesKey); }
     public set Lobes(v: number) { this.set_property_value(RadialWave.LobesKey, v); }
@@ -123,7 +110,7 @@ export class RadialWave extends Visual
             ? new Pen(this.Stroke, t)
             : undefined;
 
-        dc.DrawGeometry(this.Fill, pen, new PathGeometry([figure]));
+        dc.DrawGeometry(this.Background, pen, new PathGeometry([figure]));
     }
 }
 

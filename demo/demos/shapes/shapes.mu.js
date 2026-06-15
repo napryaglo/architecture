@@ -49,7 +49,7 @@ export class ShapesDemo extends ResourceDictionary {
             const _ellipse10 = new Ellipse();
             _ellipse10._set_property_value_by_name("Width", 64);
             _ellipse10._set_property_value_by_name("Height", 64);
-            _ellipse10._set_property_value_by_name("Fill", DynamicResource(_ellipse10, "Primary"));
+            _ellipse10._set_property_value_by_name("Background", DynamicResource(_ellipse10, "Primary"));
             _stackPanel9.AddChild(_ellipse10);
             const _textBlock11 = new TextBlock();
             _textBlock11._set_property_value_by_name("Text", "Circle (Ellipse)");
@@ -68,7 +68,7 @@ export class ShapesDemo extends ResourceDictionary {
             const _squircle14 = new Squircle();
             _squircle14._set_property_value_by_name("Width", 64);
             _squircle14._set_property_value_by_name("Height", 64);
-            _squircle14._set_property_value_by_name("Fill", DynamicResource(_squircle14, "Primary"));
+            _squircle14._set_property_value_by_name("Background", DynamicResource(_squircle14, "Primary"));
             _stackPanel13.AddChild(_squircle14);
             const _textBlock15 = new TextBlock();
             _textBlock15._set_property_value_by_name("Text", "Square (Squircle)");
@@ -87,7 +87,7 @@ export class ShapesDemo extends ResourceDictionary {
             const _slanted18 = new Slanted();
             _slanted18._set_property_value_by_name("Width", 64);
             _slanted18._set_property_value_by_name("Height", 64);
-            _slanted18._set_property_value_by_name("Fill", DynamicResource(_slanted18, "Primary"));
+            _slanted18._set_property_value_by_name("Background", DynamicResource(_slanted18, "Primary"));
             _stackPanel17.AddChild(_slanted18);
             const _textBlock19 = new TextBlock();
             _textBlock19._set_property_value_by_name("Text", "Slanted");
@@ -106,7 +106,7 @@ export class ShapesDemo extends ResourceDictionary {
             const _ellipse22 = new Ellipse();
             _ellipse22._set_property_value_by_name("Width", 80);
             _ellipse22._set_property_value_by_name("Height", 48);
-            _ellipse22._set_property_value_by_name("Fill", DynamicResource(_ellipse22, "Primary"));
+            _ellipse22._set_property_value_by_name("Background", DynamicResource(_ellipse22, "Primary"));
             _stackPanel21.AddChild(_ellipse22);
             const _textBlock23 = new TextBlock();
             _textBlock23._set_property_value_by_name("Text", "Oval (Ellipse)");
@@ -125,7 +125,7 @@ export class ShapesDemo extends ResourceDictionary {
             const _pill26 = new Pill();
             _pill26._set_property_value_by_name("Width", 80);
             _pill26._set_property_value_by_name("Height", 48);
-            _pill26._set_property_value_by_name("Fill", DynamicResource(_pill26, "Primary"));
+            _pill26._set_property_value_by_name("Background", DynamicResource(_pill26, "Primary"));
             _stackPanel25.AddChild(_pill26);
             const _textBlock27 = new TextBlock();
             _textBlock27._set_property_value_by_name("Text", "Pill");
@@ -144,7 +144,7 @@ export class ShapesDemo extends ResourceDictionary {
             const _diamond30 = new Diamond();
             _diamond30._set_property_value_by_name("Width", 64);
             _diamond30._set_property_value_by_name("Height", 64);
-            _diamond30._set_property_value_by_name("Fill", DynamicResource(_diamond30, "Primary"));
+            _diamond30._set_property_value_by_name("Background", DynamicResource(_diamond30, "Primary"));
             _stackPanel29.AddChild(_diamond30);
             const _textBlock31 = new TextBlock();
             _textBlock31._set_property_value_by_name("Text", "Diamond");
@@ -163,7 +163,7 @@ export class ShapesDemo extends ResourceDictionary {
             const _pentagon34 = new Pentagon();
             _pentagon34._set_property_value_by_name("Width", 64);
             _pentagon34._set_property_value_by_name("Height", 64);
-            _pentagon34._set_property_value_by_name("Fill", DynamicResource(_pentagon34, "Primary"));
+            _pentagon34._set_property_value_by_name("Background", DynamicResource(_pentagon34, "Primary"));
             _stackPanel33.AddChild(_pentagon34);
             const _textBlock35 = new TextBlock();
             _textBlock35._set_property_value_by_name("Text", "Pentagon");
@@ -182,7 +182,7 @@ export class ShapesDemo extends ResourceDictionary {
             const _gem38 = new Gem();
             _gem38._set_property_value_by_name("Width", 64);
             _gem38._set_property_value_by_name("Height", 64);
-            _gem38._set_property_value_by_name("Fill", DynamicResource(_gem38, "Primary"));
+            _gem38._set_property_value_by_name("Background", DynamicResource(_gem38, "Primary"));
             _stackPanel37.AddChild(_gem38);
             const _textBlock39 = new TextBlock();
             _textBlock39._set_property_value_by_name("Text", "Gem");
@@ -201,7 +201,7 @@ export class ShapesDemo extends ResourceDictionary {
             const _arch42 = new Arch();
             _arch42._set_property_value_by_name("Width", 64);
             _arch42._set_property_value_by_name("Height", 64);
-            _arch42._set_property_value_by_name("Fill", DynamicResource(_arch42, "Primary"));
+            _arch42._set_property_value_by_name("Background", DynamicResource(_arch42, "Primary"));
             _stackPanel41.AddChild(_arch42);
             const _textBlock43 = new TextBlock();
             _textBlock43._set_property_value_by_name("Text", "Arch");
@@ -220,7 +220,7 @@ export class ShapesDemo extends ResourceDictionary {
             const _semicircle46 = new Semicircle();
             _semicircle46._set_property_value_by_name("Width", 64);
             _semicircle46._set_property_value_by_name("Height", 64);
-            _semicircle46._set_property_value_by_name("Fill", DynamicResource(_semicircle46, "Primary"));
+            _semicircle46._set_property_value_by_name("Background", DynamicResource(_semicircle46, "Primary"));
             _stackPanel45.AddChild(_semicircle46);
             const _textBlock47 = new TextBlock();
             _textBlock47._set_property_value_by_name("Text", "Semicircle");
@@ -239,7 +239,7 @@ export class ShapesDemo extends ResourceDictionary {
             const _triangle50 = new Triangle();
             _triangle50._set_property_value_by_name("Width", 64);
             _triangle50._set_property_value_by_name("Height", 64);
-            _triangle50._set_property_value_by_name("Fill", DynamicResource(_triangle50, "Primary"));
+            _triangle50._set_property_value_by_name("Background", DynamicResource(_triangle50, "Primary"));
             _triangle50._set_property_value_by_name("CornerRadius", 10);
             _stackPanel49.AddChild(_triangle50);
             const _textBlock51 = new TextBlock();
@@ -259,7 +259,7 @@ export class ShapesDemo extends ResourceDictionary {
             const _arrow54 = new Arrow();
             _arrow54._set_property_value_by_name("Width", 64);
             _arrow54._set_property_value_by_name("Height", 64);
-            _arrow54._set_property_value_by_name("Fill", DynamicResource(_arrow54, "Primary"));
+            _arrow54._set_property_value_by_name("Background", DynamicResource(_arrow54, "Primary"));
             _arrow54._set_property_value_by_name("CornerRadius", 10);
             _stackPanel53.AddChild(_arrow54);
             const _textBlock55 = new TextBlock();
@@ -279,7 +279,7 @@ export class ShapesDemo extends ResourceDictionary {
             const _fan58 = new Fan();
             _fan58._set_property_value_by_name("Width", 64);
             _fan58._set_property_value_by_name("Height", 64);
-            _fan58._set_property_value_by_name("Fill", DynamicResource(_fan58, "Primary"));
+            _fan58._set_property_value_by_name("Background", DynamicResource(_fan58, "Primary"));
             _stackPanel57.AddChild(_fan58);
             const _textBlock59 = new TextBlock();
             _textBlock59._set_property_value_by_name("Text", "Fan");
@@ -298,7 +298,7 @@ export class ShapesDemo extends ResourceDictionary {
             const _clamshell62 = new Clamshell();
             _clamshell62._set_property_value_by_name("Width", 80);
             _clamshell62._set_property_value_by_name("Height", 48);
-            _clamshell62._set_property_value_by_name("Fill", DynamicResource(_clamshell62, "Primary"));
+            _clamshell62._set_property_value_by_name("Background", DynamicResource(_clamshell62, "Primary"));
             _clamshell62._set_property_value_by_name("CornerRadius", 8);
             _stackPanel61.AddChild(_clamshell62);
             const _textBlock63 = new TextBlock();
@@ -318,7 +318,7 @@ export class ShapesDemo extends ResourceDictionary {
             const _fourSidedCookie66 = new FourSidedCookie();
             _fourSidedCookie66._set_property_value_by_name("Width", 64);
             _fourSidedCookie66._set_property_value_by_name("Height", 64);
-            _fourSidedCookie66._set_property_value_by_name("Fill", DynamicResource(_fourSidedCookie66, "Primary"));
+            _fourSidedCookie66._set_property_value_by_name("Background", DynamicResource(_fourSidedCookie66, "Primary"));
             _fourSidedCookie66._set_property_value_by_name("CornerRadius", 10);
             _stackPanel65.AddChild(_fourSidedCookie66);
             const _textBlock67 = new TextBlock();
@@ -338,7 +338,7 @@ export class ShapesDemo extends ResourceDictionary {
             const _sixSidedCookie70 = new SixSidedCookie();
             _sixSidedCookie70._set_property_value_by_name("Width", 64);
             _sixSidedCookie70._set_property_value_by_name("Height", 64);
-            _sixSidedCookie70._set_property_value_by_name("Fill", DynamicResource(_sixSidedCookie70, "Primary"));
+            _sixSidedCookie70._set_property_value_by_name("Background", DynamicResource(_sixSidedCookie70, "Primary"));
             _sixSidedCookie70._set_property_value_by_name("CornerRadius", 8);
             _stackPanel69.AddChild(_sixSidedCookie70);
             const _textBlock71 = new TextBlock();
@@ -358,7 +358,7 @@ export class ShapesDemo extends ResourceDictionary {
             const _sevenSidedCookie74 = new SevenSidedCookie();
             _sevenSidedCookie74._set_property_value_by_name("Width", 64);
             _sevenSidedCookie74._set_property_value_by_name("Height", 64);
-            _sevenSidedCookie74._set_property_value_by_name("Fill", DynamicResource(_sevenSidedCookie74, "Primary"));
+            _sevenSidedCookie74._set_property_value_by_name("Background", DynamicResource(_sevenSidedCookie74, "Primary"));
             _sevenSidedCookie74._set_property_value_by_name("CornerRadius", 8);
             _stackPanel73.AddChild(_sevenSidedCookie74);
             const _textBlock75 = new TextBlock();
@@ -378,7 +378,7 @@ export class ShapesDemo extends ResourceDictionary {
             const _nineSidedCookie78 = new NineSidedCookie();
             _nineSidedCookie78._set_property_value_by_name("Width", 64);
             _nineSidedCookie78._set_property_value_by_name("Height", 64);
-            _nineSidedCookie78._set_property_value_by_name("Fill", DynamicResource(_nineSidedCookie78, "Primary"));
+            _nineSidedCookie78._set_property_value_by_name("Background", DynamicResource(_nineSidedCookie78, "Primary"));
             _nineSidedCookie78._set_property_value_by_name("CornerRadius", 6);
             _stackPanel77.AddChild(_nineSidedCookie78);
             const _textBlock79 = new TextBlock();
@@ -398,7 +398,7 @@ export class ShapesDemo extends ResourceDictionary {
             const _twelveSidedCookie82 = new TwelveSidedCookie();
             _twelveSidedCookie82._set_property_value_by_name("Width", 64);
             _twelveSidedCookie82._set_property_value_by_name("Height", 64);
-            _twelveSidedCookie82._set_property_value_by_name("Fill", DynamicResource(_twelveSidedCookie82, "Primary"));
+            _twelveSidedCookie82._set_property_value_by_name("Background", DynamicResource(_twelveSidedCookie82, "Primary"));
             _twelveSidedCookie82._set_property_value_by_name("CornerRadius", 5);
             _stackPanel81.AddChild(_twelveSidedCookie82);
             const _textBlock83 = new TextBlock();
@@ -418,7 +418,7 @@ export class ShapesDemo extends ResourceDictionary {
             const _fourLeafClover86 = new FourLeafClover();
             _fourLeafClover86._set_property_value_by_name("Width", 64);
             _fourLeafClover86._set_property_value_by_name("Height", 64);
-            _fourLeafClover86._set_property_value_by_name("Fill", DynamicResource(_fourLeafClover86, "Primary"));
+            _fourLeafClover86._set_property_value_by_name("Background", DynamicResource(_fourLeafClover86, "Primary"));
             _stackPanel85.AddChild(_fourLeafClover86);
             const _textBlock87 = new TextBlock();
             _textBlock87._set_property_value_by_name("Text", "4-Leaf Clover");
@@ -437,7 +437,7 @@ export class ShapesDemo extends ResourceDictionary {
             const _eightLeafClover90 = new EightLeafClover();
             _eightLeafClover90._set_property_value_by_name("Width", 64);
             _eightLeafClover90._set_property_value_by_name("Height", 64);
-            _eightLeafClover90._set_property_value_by_name("Fill", DynamicResource(_eightLeafClover90, "Primary"));
+            _eightLeafClover90._set_property_value_by_name("Background", DynamicResource(_eightLeafClover90, "Primary"));
             _stackPanel89.AddChild(_eightLeafClover90);
             const _textBlock91 = new TextBlock();
             _textBlock91._set_property_value_by_name("Text", "8-Leaf Clover");
@@ -456,7 +456,7 @@ export class ShapesDemo extends ResourceDictionary {
             const _sunny94 = new Sunny();
             _sunny94._set_property_value_by_name("Width", 64);
             _sunny94._set_property_value_by_name("Height", 64);
-            _sunny94._set_property_value_by_name("Fill", DynamicResource(_sunny94, "Primary"));
+            _sunny94._set_property_value_by_name("Background", DynamicResource(_sunny94, "Primary"));
             _stackPanel93.AddChild(_sunny94);
             const _textBlock95 = new TextBlock();
             _textBlock95._set_property_value_by_name("Text", "Sunny");
@@ -475,7 +475,7 @@ export class ShapesDemo extends ResourceDictionary {
             const _verySunny98 = new VerySunny();
             _verySunny98._set_property_value_by_name("Width", 64);
             _verySunny98._set_property_value_by_name("Height", 64);
-            _verySunny98._set_property_value_by_name("Fill", DynamicResource(_verySunny98, "Primary"));
+            _verySunny98._set_property_value_by_name("Background", DynamicResource(_verySunny98, "Primary"));
             _stackPanel97.AddChild(_verySunny98);
             const _textBlock99 = new TextBlock();
             _textBlock99._set_property_value_by_name("Text", "VerySunny");
@@ -494,7 +494,7 @@ export class ShapesDemo extends ResourceDictionary {
             const _burst102 = new Burst();
             _burst102._set_property_value_by_name("Width", 64);
             _burst102._set_property_value_by_name("Height", 64);
-            _burst102._set_property_value_by_name("Fill", DynamicResource(_burst102, "Primary"));
+            _burst102._set_property_value_by_name("Background", DynamicResource(_burst102, "Primary"));
             _stackPanel101.AddChild(_burst102);
             const _textBlock103 = new TextBlock();
             _textBlock103._set_property_value_by_name("Text", "Burst");
@@ -513,7 +513,7 @@ export class ShapesDemo extends ResourceDictionary {
             const _softBurst106 = new SoftBurst();
             _softBurst106._set_property_value_by_name("Width", 64);
             _softBurst106._set_property_value_by_name("Height", 64);
-            _softBurst106._set_property_value_by_name("Fill", DynamicResource(_softBurst106, "Primary"));
+            _softBurst106._set_property_value_by_name("Background", DynamicResource(_softBurst106, "Primary"));
             _stackPanel105.AddChild(_softBurst106);
             const _textBlock107 = new TextBlock();
             _textBlock107._set_property_value_by_name("Text", "SoftBurst");
@@ -532,7 +532,7 @@ export class ShapesDemo extends ResourceDictionary {
             const _boom110 = new Boom();
             _boom110._set_property_value_by_name("Width", 64);
             _boom110._set_property_value_by_name("Height", 64);
-            _boom110._set_property_value_by_name("Fill", DynamicResource(_boom110, "Primary"));
+            _boom110._set_property_value_by_name("Background", DynamicResource(_boom110, "Primary"));
             _stackPanel109.AddChild(_boom110);
             const _textBlock111 = new TextBlock();
             _textBlock111._set_property_value_by_name("Text", "Boom");
@@ -551,7 +551,7 @@ export class ShapesDemo extends ResourceDictionary {
             const _softBoom114 = new SoftBoom();
             _softBoom114._set_property_value_by_name("Width", 64);
             _softBoom114._set_property_value_by_name("Height", 64);
-            _softBoom114._set_property_value_by_name("Fill", DynamicResource(_softBoom114, "Primary"));
+            _softBoom114._set_property_value_by_name("Background", DynamicResource(_softBoom114, "Primary"));
             _stackPanel113.AddChild(_softBoom114);
             const _textBlock115 = new TextBlock();
             _textBlock115._set_property_value_by_name("Text", "SoftBoom");
@@ -570,7 +570,7 @@ export class ShapesDemo extends ResourceDictionary {
             const _flower118 = new Flower();
             _flower118._set_property_value_by_name("Width", 64);
             _flower118._set_property_value_by_name("Height", 64);
-            _flower118._set_property_value_by_name("Fill", DynamicResource(_flower118, "Primary"));
+            _flower118._set_property_value_by_name("Background", DynamicResource(_flower118, "Primary"));
             _stackPanel117.AddChild(_flower118);
             const _textBlock119 = new TextBlock();
             _textBlock119._set_property_value_by_name("Text", "Flower");
@@ -589,7 +589,7 @@ export class ShapesDemo extends ResourceDictionary {
             const _puffy122 = new Puffy();
             _puffy122._set_property_value_by_name("Width", 64);
             _puffy122._set_property_value_by_name("Height", 64);
-            _puffy122._set_property_value_by_name("Fill", DynamicResource(_puffy122, "Primary"));
+            _puffy122._set_property_value_by_name("Background", DynamicResource(_puffy122, "Primary"));
             _stackPanel121.AddChild(_puffy122);
             const _textBlock123 = new TextBlock();
             _textBlock123._set_property_value_by_name("Text", "Puffy");
@@ -608,7 +608,7 @@ export class ShapesDemo extends ResourceDictionary {
             const _puffyDiamond126 = new PuffyDiamond();
             _puffyDiamond126._set_property_value_by_name("Width", 64);
             _puffyDiamond126._set_property_value_by_name("Height", 64);
-            _puffyDiamond126._set_property_value_by_name("Fill", DynamicResource(_puffyDiamond126, "Primary"));
+            _puffyDiamond126._set_property_value_by_name("Background", DynamicResource(_puffyDiamond126, "Primary"));
             _stackPanel125.AddChild(_puffyDiamond126);
             const _textBlock127 = new TextBlock();
             _textBlock127._set_property_value_by_name("Text", "PuffyDiamond");
@@ -627,7 +627,7 @@ export class ShapesDemo extends ResourceDictionary {
             const _ghostish130 = new Ghostish();
             _ghostish130._set_property_value_by_name("Width", 64);
             _ghostish130._set_property_value_by_name("Height", 64);
-            _ghostish130._set_property_value_by_name("Fill", DynamicResource(_ghostish130, "Primary"));
+            _ghostish130._set_property_value_by_name("Background", DynamicResource(_ghostish130, "Primary"));
             _stackPanel129.AddChild(_ghostish130);
             const _textBlock131 = new TextBlock();
             _textBlock131._set_property_value_by_name("Text", "Ghost-ish");
@@ -646,7 +646,7 @@ export class ShapesDemo extends ResourceDictionary {
             const _bun134 = new Bun();
             _bun134._set_property_value_by_name("Width", 64);
             _bun134._set_property_value_by_name("Height", 64);
-            _bun134._set_property_value_by_name("Fill", DynamicResource(_bun134, "Primary"));
+            _bun134._set_property_value_by_name("Background", DynamicResource(_bun134, "Primary"));
             _stackPanel133.AddChild(_bun134);
             const _textBlock135 = new TextBlock();
             _textBlock135._set_property_value_by_name("Text", "Bun");
@@ -665,7 +665,7 @@ export class ShapesDemo extends ResourceDictionary {
             const _heart138 = new Heart();
             _heart138._set_property_value_by_name("Width", 64);
             _heart138._set_property_value_by_name("Height", 64);
-            _heart138._set_property_value_by_name("Fill", DynamicResource(_heart138, "Primary"));
+            _heart138._set_property_value_by_name("Background", DynamicResource(_heart138, "Primary"));
             _stackPanel137.AddChild(_heart138);
             const _textBlock139 = new TextBlock();
             _textBlock139._set_property_value_by_name("Text", "Heart");
@@ -684,7 +684,7 @@ export class ShapesDemo extends ResourceDictionary {
             const _pixelCircle142 = new PixelCircle();
             _pixelCircle142._set_property_value_by_name("Width", 64);
             _pixelCircle142._set_property_value_by_name("Height", 64);
-            _pixelCircle142._set_property_value_by_name("Fill", DynamicResource(_pixelCircle142, "Primary"));
+            _pixelCircle142._set_property_value_by_name("Background", DynamicResource(_pixelCircle142, "Primary"));
             _stackPanel141.AddChild(_pixelCircle142);
             const _textBlock143 = new TextBlock();
             _textBlock143._set_property_value_by_name("Text", "PixelCircle");
@@ -703,7 +703,7 @@ export class ShapesDemo extends ResourceDictionary {
             const _pixelTriangle146 = new PixelTriangle();
             _pixelTriangle146._set_property_value_by_name("Width", 64);
             _pixelTriangle146._set_property_value_by_name("Height", 64);
-            _pixelTriangle146._set_property_value_by_name("Fill", DynamicResource(_pixelTriangle146, "Primary"));
+            _pixelTriangle146._set_property_value_by_name("Background", DynamicResource(_pixelTriangle146, "Primary"));
             _stackPanel145.AddChild(_pixelTriangle146);
             const _textBlock147 = new TextBlock();
             _textBlock147._set_property_value_by_name("Text", "PixelTriangle");

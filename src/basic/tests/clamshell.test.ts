@@ -42,7 +42,7 @@ function render(c: Clamshell, w: number, h: number): CapturingContext
 describe('Clamshell', () => {
     test('sharp hex (CornerRadius=0): 5 line segments closing the 6-vertex polygon', () => {
         const c = new Clamshell();
-        c.Fill = new SolidColorBrush(Color.Red);
+        c.Background = new SolidColorBrush(Color.Red);
         const dc = render(c, 200, 100);
         const fig = (dc.geoms[0]!.geometry as PathGeometry).Figures[0]!;
         // StartPoint = V0; segments walk V1..V5 → 5 LineSegments.

@@ -1,4 +1,5 @@
-import { MetaData, Model, Size } from '../../runtime/index.js';
+import { MetaData, Model } from '../../runtime/index.js';
+import { Size } from '../primitives.js';
 
 // How an Image's source bitmap fills its layout slot. Mirrors WPF's
 // Stretch enum (System.Windows.Media.Stretch). The SVG renderer

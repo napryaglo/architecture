@@ -8,7 +8,6 @@ import {
 } from '../../runtime/index.js';
 import {
     ArcSegment,
-    Brush,
     LineSegment,
     PathFigure,
     PathGeometry,
@@ -36,19 +35,7 @@ export enum FanPivot
 
 export class Fan extends Visual
 {
-    public static readonly FillKey            = Model.RegisterProperty<Brush | undefined>(Fan, 'Fill',            undefined, MetaData.Render);
-    public static readonly StrokeKey          = Model.RegisterProperty<Brush | undefined>(Fan, 'Stroke',          undefined, MetaData.Render);
-    public static readonly StrokeThicknessKey = Model.RegisterProperty<number>(           Fan, 'StrokeThickness', 0,         MetaData.Render);
     public static readonly PivotKey           = Model.RegisterProperty<FanPivot>(         Fan, 'Pivot',           FanPivot.BottomLeft, MetaData.Render);
-
-    public get Fill(): Brush | undefined { return this.get_property_value(Fan.FillKey); }
-    public set Fill(v: Brush | undefined) { this.set_property_value(Fan.FillKey, v); }
-
-    public get Stroke(): Brush | undefined { return this.get_property_value(Fan.StrokeKey); }
-    public set Stroke(v: Brush | undefined) { this.set_property_value(Fan.StrokeKey, v); }
-
-    public get StrokeThickness(): number { return this.get_property_value(Fan.StrokeThicknessKey); }
-    public set StrokeThickness(v: number) { this.set_property_value(Fan.StrokeThicknessKey, v); }
 
     public get Pivot(): FanPivot { return this.get_property_value(Fan.PivotKey); }
     public set Pivot(v: FanPivot) { this.set_property_value(Fan.PivotKey, v); }
@@ -119,6 +106,6 @@ export class Fan extends Visual
             ? new Pen(this.Stroke, t)
             : undefined;
 
-        dc.DrawGeometry(this.Fill, pen, new PathGeometry([figure]));
+        dc.DrawGeometry(this.Background, pen, new PathGeometry([figure]));
     }
 }

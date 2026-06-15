@@ -1,4 +1,4 @@
-import { Model, type Visual } from '../../runtime/index.js';
+import { Model, type KeyEventArgs, type Visual } from '../../runtime/index.js';
 import { DiagramNode } from './diagram-node.js';
 import { Selector } from '../list/selector.js';
 
@@ -26,6 +26,46 @@ export class Diagram extends Selector
         const node = new DiagramNode();
         this.bindContainer(node, item);
         return node;
+    }
+
+    // Arrow keys nudge selected nodes' position rather than navigate
+    // selection (Visio / drawio / Figma convention). The Selector base
+    // treats ArrowDown / ArrowUp as ListBox-style "move focus to next
+    // row" — wrong shape for a free-positioned canvas surface, so the
+    // override intercepts arrows BEFORE super.OnKeyDown runs.
+    //
+    // Step size: 1 dp plain, 10 dp with Shift (matches the canonical
+    // "snap-to-grid"-ish increment in every drawing tool). Each
+    // selected DiagramNode's X / Y bumps directly; the BindsTwoWayByDefault
+    // contract on DiagramNode.X / Y back-propagates the new position to
+    // the bound item VM through ItemContainerStyle, so the data layer
+    // sees the move without the Diagram reaching into item shape.
+    //
+    // No-op (and falls through to Selector base) when nothing is
+    // selected — so arrow keys on an empty selection still drive
+    // selection navigation should the consumer rely on it.
+    protected override OnKeyDown(args: KeyEventArgs): void
+    {
+        const key = args.Key;
+        const isArrow = key === 'ArrowLeft' || key === 'ArrowRight'
+                     || key === 'ArrowUp'   || key === 'ArrowDown';
+        if (isArrow && this._selectedContainers.size > 0)
+        {
+            const step = args.Modifiers.Shift ? 10 : 1;
+            const dx = key === 'ArrowLeft' ? -step : key === 'ArrowRight' ? step : 0;
+            const dy = key === 'ArrowUp'   ? -step : key === 'ArrowDown'  ? step : 0;
+            for (const container of this._selectedContainers)
+            {
+                if (container instanceof DiagramNode)
+                {
+                    container.X = container.X + dx;
+                    container.Y = container.Y + dy;
+                }
+            }
+            args.Handled = true;
+            return;
+        }
+        super.OnKeyDown(args);
     }
 
     public override RebindContainerForItemOverride(container: Visual, item: unknown): void

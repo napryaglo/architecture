@@ -1,7 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { RelayCommand, type ICommand } from '../input/command.js';
+import { RelayCommand, type ICommand } from '../command.js';
 
 describe('RelayCommand — ICommand contract', () => {
     test('Execute invokes the supplied function with the parameter', () => {

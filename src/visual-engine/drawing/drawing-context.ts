@@ -1,4 +1,4 @@
-import type { Point, Rect } from '../../runtime/index.js';
+import type { Point, Rect } from '../primitives.js';
 import type { Brush } from './brush.js';
 import type { Pen } from './pen.js';
 import type { Geometry } from '../geometry/geometry.js';
@@ -27,7 +27,7 @@ import type { ImageSource, Stretch } from './image-source.js';
 // one. DrawRoundedRectangle and PushClip are already in the surface
 // because Border (corner-radii) and ScrollViewer / hardware clipping
 // need them.
-declare module '../../runtime/drawing-context.js'
+declare module '../drawing-context.js'
 {
     interface DrawingContext
     {
@@ -84,4 +84,4 @@ declare module '../../runtime/drawing-context.js'
 
 // Re-export the augmented interface so callers can import directly
 // from visual-engine instead of reaching into the runtime path.
-export type { DrawingContext } from '../../runtime/drawing-context.js';
+export type { DrawingContext } from '../drawing-context.js';

@@ -1,13 +1,13 @@
+import { registerSchemeTransitionAnimator } from '../theme/theme.js';
+import { registerImplicitTransitionBuilder } from '../animation/implicit-transition-engine.js';
 import {
     AnimationTimeline,
-    Color,
     Easings,
     FillBehavior,
     interpolateColor,
-    registerImplicitTransitionBuilder,
-    registerSchemeTransitionAnimator,
     type AnimationTimelineProps,
-} from '../../runtime/index.js';
+} from '../animation/index.js';
+import { Color } from '../primitives.js';
 import { SolidColorBrush } from './brush.js';
 
 // Animation of a Brush-typed DP (Border.Background, BorderBrush, TextBlock.

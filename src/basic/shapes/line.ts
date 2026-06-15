@@ -1,5 +1,5 @@
 import { MetaData, Model, Point, Size, Visual, type DrawingContext } from '../../runtime/index.js';
-import { Brush, LineGeometry, Pen } from '../../visual-engine/index.js';
+import { LineGeometry, Pen } from '../../visual-engine/index.js';
 
 // Straight-line shape — draws a stroked line from (X1, Y1) to (X2, Y2)
 // in its own LOCAL coordinate space. WPF parity: same DPs (X1, Y1, X2,
@@ -22,9 +22,6 @@ export class Line extends Visual
     public static readonly Y1Key              = Model.RegisterProperty<number>(           Line, 'Y1',              0,         MetaData.Measure | MetaData.Render);
     public static readonly X2Key              = Model.RegisterProperty<number>(           Line, 'X2',              0,         MetaData.Measure | MetaData.Render);
     public static readonly Y2Key              = Model.RegisterProperty<number>(           Line, 'Y2',              0,         MetaData.Measure | MetaData.Render);
-    public static readonly StrokeKey          = Model.RegisterProperty<Brush | undefined>(Line, 'Stroke',          undefined, MetaData.Render);
-    public static readonly StrokeThicknessKey = Model.RegisterProperty<number>(           Line, 'StrokeThickness', 1,         MetaData.Render);
-
     public get X1(): number { return this.get_property_value(Line.X1Key); }
     public set X1(value: number) { this.set_property_value(Line.X1Key, value); }
 
@@ -36,12 +33,6 @@ export class Line extends Visual
 
     public get Y2(): number { return this.get_property_value(Line.Y2Key); }
     public set Y2(value: number) { this.set_property_value(Line.Y2Key, value); }
-
-    public get Stroke(): Brush | undefined { return this.get_property_value(Line.StrokeKey); }
-    public set Stroke(value: Brush | undefined) { this.set_property_value(Line.StrokeKey, value); }
-
-    public get StrokeThickness(): number { return this.get_property_value(Line.StrokeThicknessKey); }
-    public set StrokeThickness(value: number) { this.set_property_value(Line.StrokeThicknessKey, value); }
 
     protected override MeasureOverride(_availableSize: Size): Size
     {

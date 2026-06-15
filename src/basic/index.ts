@@ -13,6 +13,7 @@ export { ValidationErrorAdorner } from './validation-error-adorner.js';
 export { Border } from './border.js';
 export { TextBlock, TextAlignment, TextWrapping } from './text-block.js';
 export { Canvas } from './panels/canvas.js';
+export { PaginatedCanvas } from './panels/paginated-canvas.js';
 export { Ellipse } from './shapes/ellipse.js';
 export { Arc } from './shapes/arc.js';
 export { Image } from './image.js';

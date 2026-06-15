@@ -2,7 +2,7 @@ import { Binding, BindingMode } from './binding.js';
 import { MetaData } from '../metadata.js';
 import { Model } from '../model.js';
 import type { PropertyChangeCallback } from './effective-value.js';
-import type { Visual } from '../visual.js';
+import type { Visual } from '../../visual-engine/visual.js';
 
 // Internal Model that holds the converter's combined output. Same shape
 // as TemplatedParentWatcher in template-binding.ts — a single Value slot

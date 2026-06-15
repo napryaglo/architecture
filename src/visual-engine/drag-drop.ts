@@ -57,7 +57,7 @@ export class DataObject
 // Forward type-only — Visual is in another module and importing the
 // value would cycle through routed-event.ts. The session never
 // instantiates a Visual, only carries the caller's reference.
-import type { Visual } from '../visual.js';
+import type { Visual } from './visual.js';
 
 // Resolution + InputManager-hookable session. Authors get this back
 // from BeginDragDrop / DoDragDrop; the InputManager drives it via the

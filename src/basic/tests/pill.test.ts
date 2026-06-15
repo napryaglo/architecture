@@ -40,14 +40,14 @@ function render(p: Pill, w: number, h: number): CapturingContext
 describe('Pill', () => {
     test('defaults', () => {
         const p = new Pill();
-        assert.equal(p.Fill, undefined);
+        assert.equal(p.Background, undefined);
         assert.equal(p.Stroke, undefined);
         assert.equal(p.StrokeThickness, 0);
     });
 
     test('wide pill: corner radius equals half the height', () => {
         const p = new Pill();
-        p.Fill = new SolidColorBrush(Color.Red);
+        p.Background = new SolidColorBrush(Color.Red);
         const dc = render(p, 200, 60);
         const g = dc.geoms[0]!.geometry as RectangleGeometry;
         assert.ok(g instanceof RectangleGeometry);

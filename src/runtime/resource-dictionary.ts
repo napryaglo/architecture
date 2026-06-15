@@ -97,7 +97,7 @@ export type ResourceKey = string | Function;
 // Type-only import — keeps the runtime layering clean (no value import
 // from visual.ts into here). At emit time the import is erased; at
 // type-check time `Root: Visual | undefined` is properly typed.
-import type { Visual } from './visual.js';
+import type { Visual } from '../visual-engine/visual.js';
 
 export class ResourceDictionary
 {

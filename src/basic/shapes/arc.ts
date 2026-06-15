@@ -8,7 +8,6 @@ import {
 } from '../../runtime/index.js';
 import {
     ArcSegment,
-    Brush,
     PathFigure,
     PathGeometry,
     Pen,
@@ -30,24 +29,11 @@ export class Arc extends Visual
 {
     public static readonly StartAngleKey      = Model.RegisterProperty<number>(           Arc, 'StartAngle',      0,         MetaData.Render);
     public static readonly EndAngleKey        = Model.RegisterProperty<number>(           Arc, 'EndAngle',        360,       MetaData.Render);
-    public static readonly StrokeKey          = Model.RegisterProperty<Brush | undefined>(Arc, 'Stroke',          undefined, MetaData.Render);
-    public static readonly StrokeThicknessKey = Model.RegisterProperty<number>(           Arc, 'StrokeThickness', 0,         MetaData.Render);
-    public static readonly FillKey            = Model.RegisterProperty<Brush | undefined>(Arc, 'Fill',            undefined, MetaData.Render);
-
     public get StartAngle(): number { return this.get_property_value(Arc.StartAngleKey); }
     public set StartAngle(v: number) { this.set_property_value(Arc.StartAngleKey, v); }
 
     public get EndAngle(): number { return this.get_property_value(Arc.EndAngleKey); }
     public set EndAngle(v: number) { this.set_property_value(Arc.EndAngleKey, v); }
-
-    public get Stroke(): Brush | undefined { return this.get_property_value(Arc.StrokeKey); }
-    public set Stroke(v: Brush | undefined) { this.set_property_value(Arc.StrokeKey, v); }
-
-    public get StrokeThickness(): number { return this.get_property_value(Arc.StrokeThicknessKey); }
-    public set StrokeThickness(v: number) { this.set_property_value(Arc.StrokeThicknessKey, v); }
-
-    public get Fill(): Brush | undefined { return this.get_property_value(Arc.FillKey); }
-    public set Fill(v: Brush | undefined) { this.set_property_value(Arc.FillKey, v); }
 
     protected override MeasureOverride(_availableSize: Size): Size
     {
@@ -118,6 +104,6 @@ export class Arc extends Visual
             ? new Pen(this.Stroke, t)
             : undefined;
 
-        dc.DrawGeometry(this.Fill, pen, path);
+        dc.DrawGeometry(this.Background, pen, path);
     }
 }

@@ -1,10 +1,10 @@
-import { FillBehavior, Storyboard } from '../animation/index.js';
+import { FillBehavior, Storyboard } from '../../visual-engine/animation/index.js';
 import { Application } from '../application.js';
 import { Binding, BindingMode } from './binding.js';
 import { MetaData } from '../metadata.js';
 import { Model } from '../model.js';
-import { getSchemeTransitionAnimator, ThemeManager } from '../theme/index.js';
-import type { Visual } from '../visual.js';
+import { getSchemeTransitionAnimator, ThemeManager } from '../../visual-engine/theme/index.js';
+import type { Visual } from '../../visual-engine/visual.js';
 
 // Internal Model that holds the most-recent resolved value of a
 // resource lookup. Used as the source of the Binding handed back by

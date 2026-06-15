@@ -1,5 +1,5 @@
-import { MetaData, Model, Point, Size, Visual, type DrawingContext } from '../../runtime/index.js';
-import { Brush, EllipseGeometry, Pen } from '../../visual-engine/index.js';
+import { Point, Size, Visual, type DrawingContext } from '../../runtime/index.js';
+import { EllipseGeometry, Pen } from '../../visual-engine/index.js';
 
 // Ellipse shape — fills its arranged rect with an ellipse, optionally
 // stroked. WPF parity: same DPs (Fill, Stroke, StrokeThickness), same
@@ -15,18 +15,6 @@ import { Brush, EllipseGeometry, Pen } from '../../visual-engine/index.js';
 // stroke sits inside the layout rect, matching Border's convention).
 export class Ellipse extends Visual
 {
-    public static readonly FillKey            = Model.RegisterProperty<Brush | undefined>(Ellipse, 'Fill',            undefined, MetaData.Render);
-    public static readonly StrokeKey          = Model.RegisterProperty<Brush | undefined>(Ellipse, 'Stroke',          undefined, MetaData.Render);
-    public static readonly StrokeThicknessKey = Model.RegisterProperty<number>(           Ellipse, 'StrokeThickness', 0,         MetaData.Render);
-
-    public get Fill(): Brush | undefined { return this.get_property_value(Ellipse.FillKey); }
-    public set Fill(value: Brush | undefined) { this.set_property_value(Ellipse.FillKey, value); }
-
-    public get Stroke(): Brush | undefined { return this.get_property_value(Ellipse.StrokeKey); }
-    public set Stroke(value: Brush | undefined) { this.set_property_value(Ellipse.StrokeKey, value); }
-
-    public get StrokeThickness(): number { return this.get_property_value(Ellipse.StrokeThicknessKey); }
-    public set StrokeThickness(value: number) { this.set_property_value(Ellipse.StrokeThicknessKey, value); }
 
     protected override MeasureOverride(_availableSize: Size): Size
     {
@@ -59,6 +47,6 @@ export class Ellipse extends Visual
             : undefined;
 
         const geom = new EllipseGeometry(new Point(cx, cy), rx, ry);
-        dc.DrawGeometry(this.Fill, pen, geom);
+        dc.DrawGeometry(this.Background, pen, geom);
     }
 }

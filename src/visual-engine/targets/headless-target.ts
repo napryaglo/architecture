@@ -1,8 +1,8 @@
 import {
-    Rect,
     type DrawingContext,
     type Visual,
 } from '../../runtime/index.js';
+import { Rect } from '../primitives.js';
 import { PresentationTarget } from './presentation-target.js';
 import { TranslateTransform } from '../drawing/transform.js';
 

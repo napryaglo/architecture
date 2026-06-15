@@ -1,5 +1,5 @@
 import { KeyGesture, RoutedCommand } from './routed-command.js';
-import type { ModifierKeys } from '../../runtime/input/routed-event.js';
+import type { ModifierKeys } from '../../visual-engine/routed-event.js';
 
 // Named-command libraries — the standard catalogue of WPF-equivalent
 // RoutedCommand singletons. These are IDENTITY ONLY: each command is

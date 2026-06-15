@@ -2,7 +2,7 @@ import { Binding } from './binding.js';
 import { MetaData } from '../metadata.js';
 import { Model } from '../model.js';
 import type { PropertyChangeCallback } from './effective-value.js';
-import type { Visual } from '../visual.js';
+import type { Visual } from '../../visual-engine/visual.js';
 
 // Internal Model that carries the resolved DataContext-path value as
 // its own property. DataContextBinding inherits from Binding with this

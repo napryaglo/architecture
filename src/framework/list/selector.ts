@@ -194,6 +194,17 @@ export class Selector extends ItemsControl
         return out;
     }
 
+    // Containers carrying selection chrome, in insertion order.
+    // Companion to SelectedItems for callers that need the Visual
+    // rather than the data item — group-drag in DiagramNode reads this
+    // to identify the partner containers that should move alongside
+    // the pressed one. Returned as a fresh snapshot so iteration is
+    // safe while selection mutates.
+    public get SelectedContainers(): readonly Visual[]
+    {
+        return [...this._selectedContainers];
+    }
+
     public AddSelectionChangedListener(listener: () => void): void
     {
         this._selectionListeners.add(listener);

@@ -1,11 +1,10 @@
 import {
     HorizontalAlignment,
     Panel,
-    Rect,
-    Size,
     VerticalAlignment,
     type Visual,
 } from '../../runtime/index.js';
+import { Rect, Size } from '../primitives.js';
 
 // The host-side container for visuals that paint above the main Content
 // tree — popups, dropdowns, drawers in Temporary mode. One per

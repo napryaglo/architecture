@@ -1,5 +1,5 @@
 import { MetaData, Model, Rect, Size, Visual, type DrawingContext } from '../../runtime/index.js';
-import { Brush, Pen, RectangleGeometry } from '../../visual-engine/index.js';
+import { Pen, RectangleGeometry } from '../../visual-engine/index.js';
 
 // Rectangle shape — fills its arranged rect, optionally stroked, with
 // optional corner radii. WPF parity: same DPs (Fill, Stroke,
@@ -14,20 +14,10 @@ import { Brush, Pen, RectangleGeometry } from '../../visual-engine/index.js';
 // Width/Height on Visual or from a Stretch-style parent slot.
 export class Rectangle extends Visual
 {
-    public static readonly FillKey            = Model.RegisterProperty<Brush | undefined>(Rectangle, 'Fill',            undefined, MetaData.Render);
-    public static readonly StrokeKey          = Model.RegisterProperty<Brush | undefined>(Rectangle, 'Stroke',          undefined, MetaData.Render);
-    public static readonly StrokeThicknessKey = Model.RegisterProperty<number>(           Rectangle, 'StrokeThickness', 0,         MetaData.Render);
-    public static readonly RadiusXKey         = Model.RegisterProperty<number>(           Rectangle, 'RadiusX',         0,         MetaData.Render);
-    public static readonly RadiusYKey         = Model.RegisterProperty<number>(           Rectangle, 'RadiusY',         0,         MetaData.Render);
-
-    public get Fill(): Brush | undefined { return this.get_property_value(Rectangle.FillKey); }
-    public set Fill(value: Brush | undefined) { this.set_property_value(Rectangle.FillKey, value); }
-
-    public get Stroke(): Brush | undefined { return this.get_property_value(Rectangle.StrokeKey); }
-    public set Stroke(value: Brush | undefined) { this.set_property_value(Rectangle.StrokeKey, value); }
-
-    public get StrokeThickness(): number { return this.get_property_value(Rectangle.StrokeThicknessKey); }
-    public set StrokeThickness(value: number) { this.set_property_value(Rectangle.StrokeThicknessKey, value); }
+    // Background / Stroke / StrokeThickness live on Visual — every shape
+    // inherits them, so the DPs aren't re-declared per primitive.
+    public static readonly RadiusXKey = Model.RegisterProperty<number>(Rectangle, 'RadiusX', 0, MetaData.Render);
+    public static readonly RadiusYKey = Model.RegisterProperty<number>(Rectangle, 'RadiusY', 0, MetaData.Render);
 
     public get RadiusX(): number { return this.get_property_value(Rectangle.RadiusXKey); }
     public set RadiusX(value: number) { this.set_property_value(Rectangle.RadiusXKey, value); }
@@ -68,6 +58,6 @@ export class Rectangle extends Visual
             this.RadiusX,
             this.RadiusY,
         );
-        dc.DrawGeometry(this.Fill, pen, geom);
+        dc.DrawGeometry(this.Background, pen, geom);
     }
 }

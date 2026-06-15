@@ -1,4 +1,4 @@
-import type { Visual } from '../../runtime/visual.js';
+import type { Visual } from '../../visual-engine/visual.js';
 import { Control } from '../control.js';
 import type { RoutedCommand } from './routed-command.js';
 import type { InputBinding } from './input-binding.js';

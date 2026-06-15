@@ -1,5 +1,5 @@
 import { MetaData, Model } from '../../runtime/index.js';
-import { Point, Rect, Size } from '../../runtime/index.js';
+import { Point, Rect, Size } from '../primitives.js';
 import { Transform } from '../drawing/transform.js';
 
 // SVG / Canvas fill-rule for shapes with self-intersecting or overlapping

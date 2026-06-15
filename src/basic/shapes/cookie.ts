@@ -6,7 +6,7 @@ import {
     Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
-import { Brush, PathGeometry, Pen } from '../../visual-engine/index.js';
+import { PathGeometry, Pen } from '../../visual-engine/index.js';
 import { buildRoundedPolygon, maxCornerRadius } from './polygon-helpers.js';
 
 // M3 Cookie — N-sided regular polygon with rounded corners. The polygon
@@ -26,21 +26,9 @@ import { buildRoundedPolygon, maxCornerRadius } from './polygon-helpers.js';
 // Stroke insets by half-thickness.
 export class Cookie extends Visual
 {
-    public static readonly FillKey            = Model.RegisterProperty<Brush | undefined>(Cookie, 'Fill',            undefined, MetaData.Render);
-    public static readonly StrokeKey          = Model.RegisterProperty<Brush | undefined>(Cookie, 'Stroke',          undefined, MetaData.Render);
-    public static readonly StrokeThicknessKey = Model.RegisterProperty<number>(           Cookie, 'StrokeThickness', 0,         MetaData.Render);
     public static readonly SidesKey           = Model.RegisterProperty<number>(           Cookie, 'Sides',           6,         MetaData.Render);
     public static readonly RotationKey        = Model.RegisterProperty<number>(           Cookie, 'Rotation',        -90,       MetaData.Render);
     public static readonly CornerRadiusKey    = Model.RegisterProperty<number>(           Cookie, 'CornerRadius',    0,         MetaData.Render);
-
-    public get Fill(): Brush | undefined { return this.get_property_value(Cookie.FillKey); }
-    public set Fill(v: Brush | undefined) { this.set_property_value(Cookie.FillKey, v); }
-
-    public get Stroke(): Brush | undefined { return this.get_property_value(Cookie.StrokeKey); }
-    public set Stroke(v: Brush | undefined) { this.set_property_value(Cookie.StrokeKey, v); }
-
-    public get StrokeThickness(): number { return this.get_property_value(Cookie.StrokeThicknessKey); }
-    public set StrokeThickness(v: number) { this.set_property_value(Cookie.StrokeThicknessKey, v); }
 
     public get Sides(): number { return this.get_property_value(Cookie.SidesKey); }
     public set Sides(v: number) { this.set_property_value(Cookie.SidesKey, v); }
@@ -84,7 +72,7 @@ export class Cookie extends Visual
             ? new Pen(this.Stroke, t)
             : undefined;
 
-        dc.DrawGeometry(this.Fill, pen, new PathGeometry([buildRoundedPolygon(verts, r)]));
+        dc.DrawGeometry(this.Background, pen, new PathGeometry([buildRoundedPolygon(verts, r)]));
     }
 }
 

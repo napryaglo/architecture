@@ -97,7 +97,7 @@ export class CommandsDemo extends ResourceDictionary {
                 _ellipse24._set_property_value_by_name("Style", _style10);
                 _ellipse24._set_property_value_by_name("Width", 130);
                 _ellipse24._set_property_value_by_name("Height", 60);
-                _ellipse24._set_property_value_by_name("Fill", DataContextBinding(_ellipse24, "FillBrush"));
+                _ellipse24._set_property_value_by_name("Background", DataContextBinding(_ellipse24, "FillBrush"));
                 _ellipse24._set_property_value_by_name("StrokeThickness", 1.5);
                 _canvas23.AddChild(_ellipse24);
                 const _textBlock25 = new TextBlock();

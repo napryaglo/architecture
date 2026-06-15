@@ -248,7 +248,7 @@ export interface ToolBarButtonOptions
     icon?:             string | Visual;
     text?:             string;
     showText?:         boolean;
-    command?:          import('../../runtime/input/command.js').ICommand;
+    command?:          import('../../runtime/command.js').ICommand;
     commandParameter?: unknown;
 }
 

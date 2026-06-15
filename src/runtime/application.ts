@@ -1,5 +1,5 @@
 import { ResourceDictionary, type ResourceKey } from './resource-dictionary.js';
-import type { Visual } from './visual.js';
+import type { Visual } from '../visual-engine/visual.js';
 
 /** Theme class accepted by Application.initialize. Any subclass of
  *  `Theme` with the static `Activate(scheme?)` method satisfies this

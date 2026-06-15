@@ -67,20 +67,43 @@ function attachDiagramBehaviors(view, vm) {
     if (surface === undefined) throw new Error('diagram.mu missing x:name="surface"');
     if (!(nodes instanceof Diagram)) throw new Error('diagram.mu missing x:name="nodes" Diagram');
 
-    // Toolbox → diagram drop receiver. Attached to the Diagram itself
-    // (which fills the surface Border post-flatten) so the local coord
-    // walk lands in panel-local space (Canvas.Left / Top units).
-    const detachCanvasDrop = attachCanvasDropBehavior(nodes, vm, nodes);
+    // Toolbox → diagram drop receiver.
+    //
+    // Routing target is the surface Border (the outer chrome that
+    // wraps the ScrollViewer + its scrollbars). Attaching directly to
+    // the Diagram missed drops near the right edge — the vertical
+    // scrollbar consumed routed drag events there, and because the
+    // scrollbar lives inside the ScrollViewer's chrome (not inside
+    // the Diagram), those events never bubble through the Diagram.
+    // Surface Border sits above both subtrees, so every drop in the
+    // canvas region bubbles through.
+    //
+    // The fourth argument pins the coordinate origin to the Diagram
+    // (its ItemsPanel ≡ canvas-local space). Without that, dropping
+    // on the surface would translate against the surface's host
+    // position — wrong frame for Canvas.Left / Canvas.Top units.
+    const detachCanvasDrop = attachCanvasDropBehavior(surface, vm, nodes, nodes);
 
     // Selection → data bridge — so `when($IsSelected)` template
     // triggers fire on click / marquee / Ctrl- / Shift-click without
     // any per-shape DataTemplate edits.
     const detachSelectionBridge = attachSelectionBridge(nodes);
 
-    // Keyboard route — Delete / Backspace removes every selected node
-    // through the VM. Snapshot SelectedItems FIRST because the
-    // ObservableCollection mutations re-enter the Selector's recycle
-    // hook and shrink the live set under our iteration.
+    // Focus capture — Diagram.Focusable=true (set in diagram.mu) opts
+    // the surface into the keyboard-focus pipeline; the listener below
+    // takes focus on every PointerDown so a click anywhere on the
+    // diagram (node, empty space, marquee start) routes subsequent
+    // keystrokes to it. Without focus, the KeyDown handlers below would
+    // never fire — Routed events flow from the focused Visual upward,
+    // and nothing else in this view-tree opts in.
+    nodes.AddRoutedEventListener('PointerDown', () => nodes.Focus());
+
+    // Keyboard route — Delete / Backspace removes every selected node.
+    // Arrow-key nudging is owned by the Diagram control itself (see
+    // Diagram.OnKeyDown override in src/framework/diagram/diagram.ts).
+    // Snapshot SelectedItems FIRST because the ObservableCollection
+    // mutations re-enter the Selector's recycle hook and shrink the
+    // live set under our iteration.
     view.AddRoutedEventListener('KeyDown', (args) => {
         if (args?.Key !== 'Delete' && args?.Key !== 'Backspace') return;
         const snapshot = [...nodes.SelectedItems];
@@ -89,12 +112,20 @@ function attachDiagramBehaviors(view, vm) {
         args.Handled = true;
     });
 
-    // Seed a few nodes so the demo isn't empty on open.
+    // Seed a few nodes so the demo isn't empty on open. Picks one from
+    // each shape family so the canvas surface shows the variety the
+    // toolbox catalogue exposes.
     queueMicrotask(() => {
-        vm.CreateNode('rect',    60, 60);
-        vm.CreateNode('ellipse', 320, 180);
-        vm.CreateNode('note',    160, 260);
+        vm.CreateNode('rectangle',     60, 60);
+        vm.CreateNode('ellipse',      220, 60);
+        vm.CreateNode('squircle',      60, 200);
+        vm.CreateNode('flower',       220, 200);
+        vm.CreateNode('heart',        380, 60);
         vm.Status = `Ready. ${vm.Nodes.Count} nodes. Drag a shape from the toolbox →`;
+        // Initial focus — so arrow keys work BEFORE the user clicks the
+        // surface. Deferred to the microtask so the view's mount path is
+        // complete (Focus() no-ops on an unattached Visual).
+        nodes.Focus();
     });
 
     return function detachAll() {

@@ -44,7 +44,7 @@ function renderVisual(v: Heart | Bun | Ghostish, w: number, h: number): Capturin
 describe('Heart', () => {
     test('emits one closed figure with 4 cubic Beziers (lobes + sides)', () => {
         const h = new Heart();
-        h.Fill = new SolidColorBrush(Color.Red);
+        h.Background = new SolidColorBrush(Color.Red);
         const dc = renderVisual(h, 100, 100);
         const fig = (dc.geoms[0]!.geometry as PathGeometry).Figures[0]!;
         assert.equal(fig.Segments.length, 4);

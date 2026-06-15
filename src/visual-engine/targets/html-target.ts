@@ -376,6 +376,28 @@ export class HtmlTarget extends PresentationTarget
         this.host.addEventListener('dragleave', this.onOsDragLeave as EventListener);
         this.host.addEventListener('drop',      this.onOsDrop      as EventListener);
 
+        // Bridge mural's pointer capture to the browser's native
+        // setPointerCapture so a captured drag survives the cursor
+        // leaving the host element's bounds. Without this, a drag
+        // (a DiagramNode reposition, a Thumb pull, …) would lose
+        // pointermove events the moment the cursor wanders into
+        // chrome / outside the document; the InputManager's internal
+        // capture map only redirects events that DO arrive. Wrap
+        // setPointerCapture / releasePointerCapture in try/catch
+        // because the DOM rejects calls for pointers that don't exist
+        // (synthesized inputs from tests, stale ids after a Cancel).
+        this.InputManager.SetCaptureBridge((target, pointerId) => {
+            const el = this.host as HTMLElement;
+            try {
+                if (target !== undefined) el.setPointerCapture(pointerId);
+                else                       el.releasePointerCapture(pointerId);
+            } catch {
+                // Pointer id may be invalid (release-after-up race, or a
+                // synthesized id from a test harness). Either way, the
+                // capture state is consistent with what we asked for.
+            }
+        });
+
         // SvgRenderer paints the visual tree into the SVG surface and
         // maintains DOM identity per visual across re-render passes.
         // The renderer is driven from Flush() below — every layout

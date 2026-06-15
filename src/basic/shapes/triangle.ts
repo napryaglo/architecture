@@ -6,7 +6,7 @@ import {
     Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
-import { Brush, PathGeometry, Pen } from '../../visual-engine/index.js';
+import { PathGeometry, Pen } from '../../visual-engine/index.js';
 import { buildRoundedPolygon, maxCornerRadius } from './polygon-helpers.js';
 
 // M3 Triangle — point-up isoceles triangle inscribed in the layout rect.
@@ -22,19 +22,7 @@ import { buildRoundedPolygon, maxCornerRadius } from './polygon-helpers.js';
 // Stroke insets by half-thickness.
 export class Triangle extends Visual
 {
-    public static readonly FillKey            = Model.RegisterProperty<Brush | undefined>(Triangle, 'Fill',            undefined, MetaData.Render);
-    public static readonly StrokeKey          = Model.RegisterProperty<Brush | undefined>(Triangle, 'Stroke',          undefined, MetaData.Render);
-    public static readonly StrokeThicknessKey = Model.RegisterProperty<number>(           Triangle, 'StrokeThickness', 0,         MetaData.Render);
     public static readonly CornerRadiusKey    = Model.RegisterProperty<number>(           Triangle, 'CornerRadius',    0,         MetaData.Render);
-
-    public get Fill(): Brush | undefined { return this.get_property_value(Triangle.FillKey); }
-    public set Fill(v: Brush | undefined) { this.set_property_value(Triangle.FillKey, v); }
-
-    public get Stroke(): Brush | undefined { return this.get_property_value(Triangle.StrokeKey); }
-    public set Stroke(v: Brush | undefined) { this.set_property_value(Triangle.StrokeKey, v); }
-
-    public get StrokeThickness(): number { return this.get_property_value(Triangle.StrokeThicknessKey); }
-    public set StrokeThickness(v: number) { this.set_property_value(Triangle.StrokeThicknessKey, v); }
 
     public get CornerRadius(): number { return this.get_property_value(Triangle.CornerRadiusKey); }
     public set CornerRadius(v: number) { this.set_property_value(Triangle.CornerRadiusKey, v); }
@@ -63,6 +51,6 @@ export class Triangle extends Visual
             ? new Pen(this.Stroke, t)
             : undefined;
 
-        dc.DrawGeometry(this.Fill, pen, new PathGeometry([buildRoundedPolygon(verts, r)]));
+        dc.DrawGeometry(this.Background, pen, new PathGeometry([buildRoundedPolygon(verts, r)]));
     }
 }

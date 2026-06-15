@@ -1,5 +1,5 @@
-import type { Visual } from '../../runtime/visual.js';
-import type { ICommand } from '../../runtime/input/command.js';
+import type { Visual } from '../../visual-engine/visual.js';
+import type { ICommand } from '../../runtime/command.js';
 import { RoutedCommand } from './routed-command.js';
 
 // Args delivered to a CommandBinding's Executed handler. Mirrors WPF's

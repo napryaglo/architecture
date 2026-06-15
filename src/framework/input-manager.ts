@@ -19,9 +19,9 @@ import {
     dispatchPointer,
     dispatchPointerDirect,
     dispatchTextInput,
-} from '../runtime/input/routed-event.js';
-import { DragDrop, DragDropEffects, DragSession, type DragDropOptions } from '../runtime/input/drag-drop.js';
-import type { Visual } from '../runtime/visual.js';
+} from '../visual-engine/routed-event.js';
+import { DragDrop, DragDropEffects, DragSession, type DragDropOptions } from '../visual-engine/drag-drop.js';
+import type { Visual } from '../visual-engine/visual.js';
 import { CommandManager } from './commands/command-manager.js';
 
 // Owns the per-target pointer state and turns raw pointer hits into
@@ -183,7 +183,11 @@ export class InputManager
 
         // Capture auto-releases on PointerUp — matches DOM
         // pointercancel / pointerup behaviour for setPointerCapture.
-        if (captured !== undefined) this.pointerCaptures.delete(init.PointerId);
+        if (captured !== undefined)
+        {
+            this.pointerCaptures.delete(init.PointerId);
+            this._captureBridge?.(undefined, init.PointerId);
+        }
 
         if (hit !== null) this.updateHoverChain(hit, init);
     }
@@ -196,6 +200,24 @@ export class InputManager
 
     // ── Pointer capture ────────────────────────────────────────────
 
+    // Optional host-side bridge so the InputManager can ask the
+    // concrete host (HtmlTarget) to acquire OS / browser pointer
+    // capture too. Without this bridge, mural's internal capture map
+    // still redirects events that DO arrive — but the browser only
+    // delivers pointermove while the cursor stays within the host
+    // element. A drag that wanders into chrome / outside the host
+    // would stop receiving Move events. The bridge lets HtmlTarget
+    // call `host.setPointerCapture(pointerId)` so the browser keeps
+    // delivering events to the host element regardless of cursor
+    // position — symmetric for release.
+    private _captureBridge: ((target: Visual | undefined, pointerId: number) => void) | undefined;
+
+    public SetCaptureBridge(
+        bridge: ((target: Visual | undefined, pointerId: number) => void) | undefined,
+    ): void {
+        this._captureBridge = bridge;
+    }
+
     // Begin capturing every subsequent Move / Up for `pointerId` to
     // `visual`. Capture stays until ReleasePointerCapture is called
     // or until the matching PointerUp arrives (auto-release). Calling
@@ -203,11 +225,13 @@ export class InputManager
     public CapturePointer(visual: Visual, pointerId: number = 0): void
     {
         this.pointerCaptures.set(pointerId, visual);
+        this._captureBridge?.(visual, pointerId);
     }
 
     public ReleasePointerCapture(pointerId: number = 0): void
     {
         this.pointerCaptures.delete(pointerId);
+        this._captureBridge?.(undefined, pointerId);
     }
 
     public GetCapturedVisual(pointerId: number = 0): Visual | undefined

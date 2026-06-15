@@ -1,6 +1,4 @@
 import {
-    MetaData,
-    Model,
     Point,
     Size,
     Visual,
@@ -8,7 +6,6 @@ import {
 } from '../../runtime/index.js';
 import {
     ArcSegment,
-    Brush,
     LineSegment,
     PathFigure,
     PathGeometry,
@@ -25,18 +22,6 @@ import {
 // Stroke insets by half-thickness (Border / Ellipse convention).
 export class Arch extends Visual
 {
-    public static readonly FillKey            = Model.RegisterProperty<Brush | undefined>(Arch, 'Fill',            undefined, MetaData.Render);
-    public static readonly StrokeKey          = Model.RegisterProperty<Brush | undefined>(Arch, 'Stroke',          undefined, MetaData.Render);
-    public static readonly StrokeThicknessKey = Model.RegisterProperty<number>(           Arch, 'StrokeThickness', 0,         MetaData.Render);
-
-    public get Fill(): Brush | undefined { return this.get_property_value(Arch.FillKey); }
-    public set Fill(v: Brush | undefined) { this.set_property_value(Arch.FillKey, v); }
-
-    public get Stroke(): Brush | undefined { return this.get_property_value(Arch.StrokeKey); }
-    public set Stroke(v: Brush | undefined) { this.set_property_value(Arch.StrokeKey, v); }
-
-    public get StrokeThickness(): number { return this.get_property_value(Arch.StrokeThicknessKey); }
-    public set StrokeThickness(v: number) { this.set_property_value(Arch.StrokeThicknessKey, v); }
 
     protected override MeasureOverride(_availableSize: Size): Size { return Size.Zero; }
     protected override ArrangeOverride(finalSize: Size): Size { return finalSize; }
@@ -75,6 +60,6 @@ export class Arch extends Visual
             ? new Pen(this.Stroke, t)
             : undefined;
 
-        dc.DrawGeometry(this.Fill, pen, new PathGeometry([figure]));
+        dc.DrawGeometry(this.Background, pen, new PathGeometry([figure]));
     }
 }

@@ -8,7 +8,6 @@ import {
 } from '../../runtime/index.js';
 import {
     ArcSegment,
-    Brush,
     LineSegment,
     PathFigure,
     PathGeometry,
@@ -30,19 +29,7 @@ import {
 // top arc and may flatten the silhouette.
 export class Ghostish extends Visual
 {
-    public static readonly FillKey            = Model.RegisterProperty<Brush | undefined>(Ghostish, 'Fill',            undefined, MetaData.Render);
-    public static readonly StrokeKey          = Model.RegisterProperty<Brush | undefined>(Ghostish, 'Stroke',          undefined, MetaData.Render);
-    public static readonly StrokeThicknessKey = Model.RegisterProperty<number>(           Ghostish, 'StrokeThickness', 0,         MetaData.Render);
     public static readonly ScallopCountKey    = Model.RegisterProperty<number>(           Ghostish, 'ScallopCount',    3,         MetaData.Render);
-
-    public get Fill(): Brush | undefined { return this.get_property_value(Ghostish.FillKey); }
-    public set Fill(v: Brush | undefined) { this.set_property_value(Ghostish.FillKey, v); }
-
-    public get Stroke(): Brush | undefined { return this.get_property_value(Ghostish.StrokeKey); }
-    public set Stroke(v: Brush | undefined) { this.set_property_value(Ghostish.StrokeKey, v); }
-
-    public get StrokeThickness(): number { return this.get_property_value(Ghostish.StrokeThicknessKey); }
-    public set StrokeThickness(v: number) { this.set_property_value(Ghostish.StrokeThicknessKey, v); }
 
     public get ScallopCount(): number { return this.get_property_value(Ghostish.ScallopCountKey); }
     public set ScallopCount(v: number) { this.set_property_value(Ghostish.ScallopCountKey, v); }
@@ -97,6 +84,6 @@ export class Ghostish extends Visual
             ? new Pen(this.Stroke, t)
             : undefined;
 
-        dc.DrawGeometry(this.Fill, pen, new PathGeometry([figure]));
+        dc.DrawGeometry(this.Background, pen, new PathGeometry([figure]));
     }
 }

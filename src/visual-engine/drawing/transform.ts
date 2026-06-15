@@ -1,17 +1,15 @@
 import {
     MetaData,
-    Matrix,
     Model,
     ObservableCollection,
     type PropertyDescriptor,
-    type ITransform,
 } from '../../runtime/index.js';
+import { Matrix } from '../primitives.js';
 
-// Renderer-agnostic transform node. Implements ITransform so it can
-// drop into Visual.RenderTransform — the SVG renderer reads `Matrix`
-// and composes it with ArrangedRect + RenderTransformOrigin into the
-// outer <g>'s transform attribute. Same Transform tree also feeds
-// Geometry.Transform for shape-local affines.
+// Renderer-agnostic transform node. Drops into Visual.RenderTransform —
+// the SVG renderer reads `Matrix` and composes it with ArrangedRect +
+// RenderTransformOrigin into the outer <g>'s transform attribute. Same
+// Transform tree also feeds Geometry.Transform for shape-local affines.
 //
 // Concrete subclasses:
 //
@@ -34,7 +32,7 @@ import {
 // Identity's Matrix is precomputed once (`Matrix.Identity`), so the
 // renderer's `if (transform === Transform.Identity) skip` short-circuit
 // is a single reference compare on the hot path.
-export abstract class Transform extends Model implements ITransform
+export abstract class Transform extends Model
 {
     public abstract get Matrix(): Matrix;
 

@@ -9,7 +9,6 @@ import {
 } from '../../runtime/index.js';
 import {
     ArcSegment,
-    Brush,
     LineSegment,
     MatrixTransform,
     PathFigure,
@@ -45,20 +44,8 @@ export enum PuffyBase
 
 export class Puffy extends Visual
 {
-    public static readonly FillKey            = Model.RegisterProperty<Brush | undefined>(Puffy, 'Fill',            undefined, MetaData.Render);
-    public static readonly StrokeKey          = Model.RegisterProperty<Brush | undefined>(Puffy, 'Stroke',          undefined, MetaData.Render);
-    public static readonly StrokeThicknessKey = Model.RegisterProperty<number>(           Puffy, 'StrokeThickness', 0,         MetaData.Render);
     public static readonly BumpsPerSideKey    = Model.RegisterProperty<number>(           Puffy, 'BumpsPerSide',    2,         MetaData.Render);
     public static readonly BaseKey            = Model.RegisterProperty<PuffyBase>(        Puffy, 'Base',            PuffyBase.Square, MetaData.Render);
-
-    public get Fill(): Brush | undefined { return this.get_property_value(Puffy.FillKey); }
-    public set Fill(v: Brush | undefined) { this.set_property_value(Puffy.FillKey, v); }
-
-    public get Stroke(): Brush | undefined { return this.get_property_value(Puffy.StrokeKey); }
-    public set Stroke(v: Brush | undefined) { this.set_property_value(Puffy.StrokeKey, v); }
-
-    public get StrokeThickness(): number { return this.get_property_value(Puffy.StrokeThicknessKey); }
-    public set StrokeThickness(v: number) { this.set_property_value(Puffy.StrokeThicknessKey, v); }
 
     public get BumpsPerSide(): number { return this.get_property_value(Puffy.BumpsPerSideKey); }
     public set BumpsPerSide(v: number) { this.set_property_value(Puffy.BumpsPerSideKey, v); }
@@ -97,7 +84,7 @@ export class Puffy extends Visual
 
         if (!isDiamond)
         {
-            dc.DrawGeometry(this.Fill, pen, new PathGeometry([figure]));
+            dc.DrawGeometry(this.Background, pen, new PathGeometry([figure]));
             return;
         }
 
@@ -114,7 +101,7 @@ export class Puffy extends Visual
         const rot = new Matrix(c, -s, s, c, ox, oy);
 
         dc.PushTransform(new MatrixTransform(rot));
-        dc.DrawGeometry(this.Fill, pen, new PathGeometry([figure]));
+        dc.DrawGeometry(this.Background, pen, new PathGeometry([figure]));
         dc.Pop();
     }
 }

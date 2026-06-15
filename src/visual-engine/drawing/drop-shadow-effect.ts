@@ -1,4 +1,4 @@
-import { Color } from '../../runtime/index.js';
+import { Color } from '../primitives.js';
 import { Effect } from './effect.js';
 
 // Single-shadow drop shadow. Mirrors WPF's

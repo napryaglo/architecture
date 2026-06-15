@@ -7,7 +7,6 @@ import {
     type DrawingContext,
 } from '../../runtime/index.js';
 import {
-    Brush,
     CubicBezierSegment,
     PathFigure,
     PathGeometry,
@@ -24,20 +23,8 @@ import {
 // Stroke insets by half-thickness.
 export class Bun extends Visual
 {
-    public static readonly FillKey            = Model.RegisterProperty<Brush | undefined>(Bun, 'Fill',            undefined, MetaData.Render);
-    public static readonly StrokeKey          = Model.RegisterProperty<Brush | undefined>(Bun, 'Stroke',          undefined, MetaData.Render);
-    public static readonly StrokeThicknessKey = Model.RegisterProperty<number>(           Bun, 'StrokeThickness', 0,         MetaData.Render);
     // 0…1. 1.0 = no pinch (pure ellipse). 0.4 = pronounced waist.
     public static readonly WaistKey           = Model.RegisterProperty<number>(           Bun, 'Waist',           0.85,      MetaData.Render);
-
-    public get Fill(): Brush | undefined { return this.get_property_value(Bun.FillKey); }
-    public set Fill(v: Brush | undefined) { this.set_property_value(Bun.FillKey, v); }
-
-    public get Stroke(): Brush | undefined { return this.get_property_value(Bun.StrokeKey); }
-    public set Stroke(v: Brush | undefined) { this.set_property_value(Bun.StrokeKey, v); }
-
-    public get StrokeThickness(): number { return this.get_property_value(Bun.StrokeThicknessKey); }
-    public set StrokeThickness(v: number) { this.set_property_value(Bun.StrokeThicknessKey, v); }
 
     public get Waist(): number { return this.get_property_value(Bun.WaistKey); }
     public set Waist(v: number) { this.set_property_value(Bun.WaistKey, v); }
@@ -99,6 +86,6 @@ export class Bun extends Visual
             ? new Pen(this.Stroke, t)
             : undefined;
 
-        dc.DrawGeometry(this.Fill, pen, new PathGeometry([figure]));
+        dc.DrawGeometry(this.Background, pen, new PathGeometry([figure]));
     }
 }

@@ -73,9 +73,8 @@ export class Border extends Single
     // owner class is fine — class declarations are hoisted, only their
     // statics aren't filled in yet, and only the class identity matters
     // to RegisterProperty.
-    public static readonly BackgroundKey = Model.RegisterProperty<Brush | undefined>(
-        Border, 'Background', undefined,
-        MetaData.Render);
+    // Background lives on Visual now — Border inherits the DP + accessor
+    // and just casts at render sites where Brush is required.
     public static readonly BorderBrushKey = Model.RegisterProperty<Brush | undefined>(
         Border, 'BorderBrush', undefined,
         MetaData.Render);
@@ -113,9 +112,6 @@ export class Border extends Single
         super();
         if (child !== undefined) this.SetChild(child);
     }
-
-    public get Background(): Brush | undefined { return this.get_property_value(Border.BackgroundKey); }
-    public set Background(value: Brush | undefined) { this.set_property_value(Border.BackgroundKey, value); }
 
     public get BorderBrush(): Brush | undefined { return this.get_property_value(Border.BorderBrushKey); }
     public set BorderBrush(value: Brush | undefined) { this.set_property_value(Border.BorderBrushKey, value); }
@@ -193,20 +189,23 @@ export class Border extends Single
         const radius = tl;  // only meaningful when isUniformRadius
 
         // Background fills the entire border rect (under the stroke).
-        if (this.Background !== undefined)
+        // Snapshot once into a local so the undefined-guard below
+        // narrows for every subsequent draw call.
+        const bg = this.Background;
+        if (bg !== undefined)
         {
             if (isUniformRadius)
             {
                 if (radius > 0)
                 {
                     dc.DrawRoundedRectangle(
-                        this.Background, undefined,
+                        bg, undefined,
                         new Rect(0, 0, size.Width, size.Height),
                         radius, radius);
                 }
                 else
                 {
-                    dc.DrawRectangle(this.Background, undefined, new Rect(0, 0, size.Width, size.Height));
+                    dc.DrawRectangle(bg, undefined, new Rect(0, 0, size.Width, size.Height));
                 }
             }
             else
@@ -214,7 +213,7 @@ export class Border extends Single
                 // Non-uniform corners can't lower to a primitive rect —
                 // build a path with arc corners and emit via DrawGeometry.
                 const path = buildRoundedRectPath(0, 0, size.Width, size.Height, tl, tr, br, bl);
-                dc.DrawGeometry(this.Background, undefined, path);
+                dc.DrawGeometry(bg, undefined, path);
             }
         }
 

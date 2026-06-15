@@ -11,18 +11,72 @@
 //   * HasSelection — bool DP the bootstrap writes from the Diagram's
 //     SelectionChanged event. The selection-gated commands' CanExecute
 //     reads it; CanExecuteChanged pulses on every flip.
+//
+// Per-shape NodeVM subclasses (RectNodeVM / EllipseNodeVM / NoteNodeVM)
+// live in THIS file rather than diagram-vm.mjs. The diagram demo moved
+// to the full 35-shape M3 library; the commands demo keeps the original
+// rect / ellipse / note triplet because its DataTemplates carry the
+// per-node ContextMenu wiring — re-using the diagram demo's catalogue
+// (which has no ContextMenu attached) would mean rewriting every shape
+// template, and the commands demo's job is to exercise commands, not
+// the shape catalogue. Standalone classes also keep DataTemplate
+// dispatch clean: the two demos' templates never compete for the same
+// DataType in the merged resource dictionary.
 
 import {
     MetaData,
     Model,
+    Color,
     RelayCommand,
 } from '@visualisation-sub/mural/runtime';
-import { DiagramVM, NodeVM } from '../diagram/diagram-vm.mjs';
+import { SolidColorBrush } from '@visualisation-sub/mural/visual-engine';
+import { DiagramVM, ShapeNodeVM } from '../diagram/diagram-vm.mjs';
 
-export { NodeVM, RectNodeVM, EllipseNodeVM, NoteNodeVM, ToolboxShapeVM } from '../diagram/diagram-vm.mjs';
+// Re-export the base so commands.mjs's `instanceof NodeVM` check keeps
+// reading from one place.
+export { ShapeNodeVM as NodeVM };
 
 const NODE_W = 130;
 const NODE_H = 60;
+
+const brush = (hex) => new SolidColorBrush(Color.FromHex(hex));
+const BG_RECT    = brush('#bfdbfe');
+const BG_ELLIPSE = brush('#bbf7d0');
+const BG_NOTE    = brush('#fde68a');
+
+// Per-kind NodeVM subclasses — pure DataType discriminators with default
+// FillBrush / LabelText overrides so each kind drops onto the canvas
+// pre-coloured.
+
+export class RectNodeVM extends ShapeNodeVM {
+    static Kind = 'rect';
+    static {
+        Model.OverrideMetadata(RectNodeVM, ShapeNodeVM.FillBrushKey, { default_value: BG_RECT });
+        Model.OverrideMetadata(RectNodeVM, ShapeNodeVM.LabelTextKey, { default_value: 'Rectangle' });
+    }
+}
+
+export class EllipseNodeVM extends ShapeNodeVM {
+    static Kind = 'ellipse';
+    static {
+        Model.OverrideMetadata(EllipseNodeVM, ShapeNodeVM.FillBrushKey, { default_value: BG_ELLIPSE });
+        Model.OverrideMetadata(EllipseNodeVM, ShapeNodeVM.LabelTextKey, { default_value: 'Ellipse' });
+    }
+}
+
+export class NoteNodeVM extends ShapeNodeVM {
+    static Kind = 'note';
+    static {
+        Model.OverrideMetadata(NoteNodeVM, ShapeNodeVM.FillBrushKey, { default_value: BG_NOTE });
+        Model.OverrideMetadata(NoteNodeVM, ShapeNodeVM.LabelTextKey, { default_value: 'Note' });
+    }
+}
+
+const CMD_KIND_TO_CLASS = {
+    rect:    RectNodeVM,
+    ellipse: EllipseNodeVM,
+    note:    NoteNodeVM,
+};
 
 export class CommandsVM extends DiagramVM
 {
@@ -90,6 +144,20 @@ export class CommandsVM extends DiagramVM
         this.RedoCommand = new RelayCommand(() => setStatus('Redo — no-op stub.'));
 
         this._clipboard = [];
+    }
+
+    // Commands-local kind map — DiagramVM's KIND_TO_CLASS (the new 35-
+    // shape catalogue with 'rectangle' / 'ellipse' / 'squircle' / …
+    // kinds) doesn't carry the commands demo's 'rect' / 'ellipse' /
+    // 'note' kinds. Override so vm.CreateNode('rect', …) materialises
+    // the local RectNodeVM rather than null-returning.
+    CreateNode(kind, x, y) {
+        const Cls = CMD_KIND_TO_CLASS[kind];
+        if (Cls === undefined) return null;
+        const id = 'n' + this._nextId++;
+        const node = new Cls(id, x, y);
+        this.Nodes.Add(node);
+        return node;
     }
 
     get HasSelection()  { return this._get_property_value_by_name('HasSelection'); }

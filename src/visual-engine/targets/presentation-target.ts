@@ -1,6 +1,6 @@
-import { APPROXIMATE_TEXT_MEASURER, MetaData, Model, Size } from '../../runtime/index.js';
+import { APPROXIMATE_TEXT_MEASURER, MetaData, Model } from '../../runtime/index.js';
 import { InputManager } from '../../framework/input-manager.js';
-import { Rect } from '../../runtime/index.js';
+import { Rect, Size } from '../primitives.js';
 import type { TextMeasurer, Visual, VisualHost } from '../../runtime/index.js';
 import type { Brush } from '../drawing/brush.js';
 import { OverlayLayer } from './overlay-layer.js';

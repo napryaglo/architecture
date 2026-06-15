@@ -20,7 +20,7 @@ import { TextBlock } from '../../basic/text-block.js';
 import { Brush } from '../../visual-engine/index.js';
 import { ClickAwayScrim } from '../tool-bar/tool-bar.js';
 import { Button } from '../button.js';
-import type { ICommand } from '../../runtime/input/command.js';
+import type { ICommand } from '../../runtime/command.js';
 
 // ─────────────────────────────────────────────────────────────────────
 // MenuStrip — horizontal main-menu bar. Holds top-level MenuItems whose

@@ -17,7 +17,7 @@ resources BouncingBallDemo {
             Canvas x:name="playArea" {
                 Ellipse [Canvas.Left=$X, Canvas.Top=$Y,
                          Width=$Diameter, Height=$Diameter,
-                         Fill=#fbbf24,
+                         Background=#fbbf24,
                          Stroke=#f59e0b,
                          StrokeThickness=1.5]
             }

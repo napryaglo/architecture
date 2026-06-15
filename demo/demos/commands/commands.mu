@@ -72,7 +72,7 @@ resources CommandsDemo {
             Ellipse x:name="chrome"
                    [Style=@CommandsEllipseChromeStyle,
                     Width=130, Height=60,
-                    Fill=$FillBrush, StrokeThickness=1.5]
+                    Background=$FillBrush, StrokeThickness=1.5]
             TextBlock [Canvas.Left=0, Canvas.Top=0,
                        Width=130, Height=60,
                        Text=$LabelText, FontSize=13,

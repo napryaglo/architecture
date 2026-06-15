@@ -7,7 +7,6 @@ import {
     type DrawingContext,
 } from '../../runtime/index.js';
 import {
-    Brush,
     LineSegment,
     PathFigure,
     PathGeometry,
@@ -39,22 +38,10 @@ import {
 // Stroke insets by half-thickness.
 export class Clover extends Visual
 {
-    public static readonly FillKey            = Model.RegisterProperty<Brush | undefined>(Clover, 'Fill',            undefined, MetaData.Render);
-    public static readonly StrokeKey          = Model.RegisterProperty<Brush | undefined>(Clover, 'Stroke',          undefined, MetaData.Render);
-    public static readonly StrokeThicknessKey = Model.RegisterProperty<number>(           Clover, 'StrokeThickness', 0,         MetaData.Render);
     public static readonly LeavesKey          = Model.RegisterProperty<number>(           Clover, 'Leaves',          4,         MetaData.Render);
     public static readonly CuspDepthKey       = Model.RegisterProperty<number>(           Clover, 'CuspDepth',       0.6,       MetaData.Render);
     public static readonly RotationKey        = Model.RegisterProperty<number>(           Clover, 'Rotation',        -90,       MetaData.Render);
     public static readonly SamplesKey         = Model.RegisterProperty<number>(           Clover, 'Samples',         24,        MetaData.Render);
-
-    public get Fill(): Brush | undefined { return this.get_property_value(Clover.FillKey); }
-    public set Fill(v: Brush | undefined) { this.set_property_value(Clover.FillKey, v); }
-
-    public get Stroke(): Brush | undefined { return this.get_property_value(Clover.StrokeKey); }
-    public set Stroke(v: Brush | undefined) { this.set_property_value(Clover.StrokeKey, v); }
-
-    public get StrokeThickness(): number { return this.get_property_value(Clover.StrokeThicknessKey); }
-    public set StrokeThickness(v: number) { this.set_property_value(Clover.StrokeThicknessKey, v); }
 
     public get Leaves(): number { return this.get_property_value(Clover.LeavesKey); }
     public set Leaves(v: number) { this.set_property_value(Clover.LeavesKey, v); }
@@ -114,7 +101,7 @@ export class Clover extends Visual
             ? new Pen(this.Stroke, t)
             : undefined;
 
-        dc.DrawGeometry(this.Fill, pen, new PathGeometry([figure]));
+        dc.DrawGeometry(this.Background, pen, new PathGeometry([figure]));
     }
 }
 

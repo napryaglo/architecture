@@ -1,5 +1,6 @@
 import {
     ObservableCollection,
+    type CollectionChange,
     type CollectionChangeListener,
     type IReadOnlyObservableCollection,
 } from '../../runtime/index.js';
@@ -120,12 +121,194 @@ export class CollectionView implements IReadOnlyObservableCollection<unknown>
         // Subscribe to source mutations when it's observable. Plain
         // arrays / iterables don't fire change events, so Refresh()
         // is the only way to pick up source mutations in that case.
+        //
+        // Forward each change incrementally — translate the source
+        // event into the matching mutation on `_projected` rather than
+        // tearing the projection down and rebuilding it. The blanket
+        // Refresh() approach used to fire 'cleared' + N × 'inserted'
+        // on every Add, which forced every realized container in the
+        // bound ItemsControl to be recycled-then-rematerialized on
+        // every mutation — wasteful, and a known source of bugs where
+        // teardown side-effects (TwoWay binding writebacks, focus
+        // restoration, ongoing drag captures) ran against the recycled
+        // containers instead of being preserved.
         if (SourceCollection instanceof ObservableCollection)
         {
-            this._sourceUnsub = SourceCollection.Subscribe(() => this.Refresh());
+            this._sourceUnsub = SourceCollection.Subscribe(
+                change => this.handleSourceChange(change as CollectionChange<unknown>),
+            );
         }
 
         this.Refresh();
+    }
+
+    // Translate a single source-collection change into the equivalent
+    // mutation(s) on `_projected`. Path varies with the active
+    // projection settings:
+    //
+    //   * No Filter / Sort / Group   → forward verbatim (identity
+    //                                   projection — source index ≡
+    //                                   projected index).
+    //   * Filter only                → translate source index to
+    //                                   projected index, gate each
+    //                                   item on the filter.
+    //   * Sort  (with/without Filter)→ insert at the sorted position,
+    //                                   remove by item identity, treat
+    //                                   'moved' as a no-op (sort order
+    //                                   doesn't depend on source
+    //                                   position).
+    //   * Group active               → fall back to a full Refresh.
+    //                                   Incremental group projection is
+    //                                   structural (parent group might
+    //                                   need to be created / merged /
+    //                                   removed); not worth optimizing
+    //                                   until a grouping-heavy demo
+    //                                   shows a profile.
+    private handleSourceChange(change: CollectionChange<unknown>): void
+    {
+        if (this.IsGrouping)
+        {
+            this.Refresh();
+            return;
+        }
+        const hasFilter = this._filter !== undefined;
+        const hasSort   = this.SortDescriptions.Count > 0;
+
+        switch (change.kind)
+        {
+            case 'inserted':
+            {
+                for (let i = 0; i < change.items.length; i++)
+                {
+                    const item = change.items[i]!;
+                    if (hasFilter && !this._filter!(item)) continue;
+                    const at = hasSort
+                        ? this.findSortedInsertionIndex(item)
+                        : this.translateSourceIndex(change.index + i);
+                    this._projected.Insert(at, item);
+                }
+                this.reconcileCurrentAfterChange();
+                return;
+            }
+            case 'removed':
+            {
+                for (const item of change.items)
+                {
+                    const idx = this._projected.IndexOf(item);
+                    if (idx >= 0) this._projected.RemoveAt(idx);
+                }
+                this.reconcileCurrentAfterChange();
+                return;
+            }
+            case 'replaced':
+            {
+                const oldIdx = this._projected.IndexOf(change.oldItem);
+                if (oldIdx >= 0) this._projected.RemoveAt(oldIdx);
+                if (!hasFilter || this._filter!(change.newItem))
+                {
+                    const at = hasSort
+                        ? this.findSortedInsertionIndex(change.newItem)
+                        : this.translateSourceIndex(change.index);
+                    this._projected.Insert(at, change.newItem);
+                }
+                this.reconcileCurrentAfterChange();
+                return;
+            }
+            case 'moved':
+            {
+                // Sort-active: projection order is independent of
+                // source position, so the move is invisible. Same
+                // result if the moved item was filtered out.
+                if (hasSort) return;
+                const fromIdx = this._projected.IndexOf(change.item);
+                if (fromIdx < 0) return;
+                const toIdx = this.translateSourceIndex(change.newIndex);
+                this._projected.Move(fromIdx, toIdx);
+                return;
+            }
+            case 'cleared':
+            {
+                this._projected.Clear();
+                this.setCurrent(-1);
+                return;
+            }
+        }
+    }
+
+    // Linear-scan insertion point for a sorted projection: returns
+    // the first index where `item` compares < projected[i]. Falls back
+    // to the end of the list when `item` is ≥ everything currently
+    // projected. O(N) per insert — fine for the list sizes mural's
+    // controls actually handle (hundreds to low thousands); a future
+    // VirtualizingPanel-scale optimization would binary-search here.
+    private findSortedInsertionIndex(item: unknown): number
+    {
+        const n = this._projected.Count;
+        for (let i = 0; i < n; i++)
+        {
+            if (this.compareItemsForSort(item, this._projected.Get(i)) < 0)
+            {
+                return i;
+            }
+        }
+        return n;
+    }
+
+    // Comparator using the current SortDescriptions chain — same
+    // lexicographic precedence as applySort uses internally during a
+    // full Refresh, but no per-Refresh key cache (called on the
+    // incremental insertion path, where cache amortization wouldn't
+    // pay off). Stable on equal keys (returns 0).
+    private compareItemsForSort(a: unknown, b: unknown): number
+    {
+        for (let i = 0; i < this.SortDescriptions.Count; i++)
+        {
+            const desc = this.SortDescriptions.Get(i)!;
+            const ka = desc.key(a);
+            const kb = desc.key(b);
+            let cmp = compareValues(ka, kb);
+            if (desc.direction === 'desc') cmp = -cmp;
+            if (cmp !== 0) return cmp;
+        }
+        return 0;
+    }
+
+    // Map a source-collection index to the matching projected-collection
+    // index, accounting for any items filtered out before that position.
+    // Only meaningful when no Sort is active (sort breaks the source-
+    // index ↔ projected-index correspondence). With no Filter either,
+    // the mapping is identity.
+    private translateSourceIndex(srcIdx: number): number
+    {
+        if (this._filter === undefined) return srcIdx;
+        const src = this.SourceCollection;
+        if (!(src instanceof ObservableCollection)) return srcIdx;
+        let projectedIdx = 0;
+        const upTo = Math.min(srcIdx, src.Count);
+        for (let i = 0; i < upTo; i++)
+        {
+            if (this._filter(src.Get(i))) projectedIdx++;
+        }
+        return projectedIdx;
+    }
+
+    // Re-pin CurrentItem after an incremental mutation: keep the same
+    // item if it survives, otherwise clamp to first / -1. Mirrors the
+    // tail of Refresh — extracted here so the incremental path settles
+    // the cursor the same way a full re-projection does.
+    private reconcileCurrentAfterChange(): void
+    {
+        const cur = this._currentItem;
+        if (cur !== undefined)
+        {
+            const idx = this._projected.IndexOf(cur);
+            if (idx !== -1)
+            {
+                this.setCurrent(idx);
+                return;
+            }
+        }
+        this.setCurrent(this._projected.Count > 0 ? 0 : -1);
     }
 
     // ── IReadOnlyObservableCollection surface ───────────────────────

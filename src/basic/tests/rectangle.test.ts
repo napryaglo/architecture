@@ -34,7 +34,7 @@ class CapturingContext implements DrawingContext
 describe('Rectangle defaults', () => {
     test('fresh Rectangle has no fill, no stroke, zero radii', () => {
         const r = new Rectangle();
-        assert.equal(r.Fill, undefined);
+        assert.equal(r.Background, undefined);
         assert.equal(r.Stroke, undefined);
         assert.equal(r.StrokeThickness, 0);
         assert.equal(r.RadiusX, 0);
@@ -65,7 +65,7 @@ describe('Rectangle render', () => {
 
     test('Fill-only paints solid rectangle covering RenderSize', () => {
         const r = new Rectangle();
-        r.Fill = new SolidColorBrush(Color.Red);
+        r.Background = new SolidColorBrush(Color.Red);
         r.Measure(new Size(100, 100));
         r.Arrange(new Rect(0, 0, 100, 100));
         const dc = new CapturingContext();
@@ -73,7 +73,7 @@ describe('Rectangle render', () => {
 
         assert.equal(dc.geoms.length, 1);
         const g = dc.geoms[0]!;
-        assert.equal(g.brush, r.Fill);
+        assert.equal(g.brush, r.Background);
         assert.equal(g.pen, undefined);
         const geom = g.geometry as RectangleGeometry;
         assert.ok(geom instanceof RectangleGeometry);
@@ -99,7 +99,7 @@ describe('Rectangle render', () => {
 
     test('RadiusX / RadiusY flow into RectangleGeometry', () => {
         const r = new Rectangle();
-        r.Fill = new SolidColorBrush(Color.Red);
+        r.Background = new SolidColorBrush(Color.Red);
         r.RadiusX = 5;
         r.RadiusY = 8;
         r.Measure(new Size(100, 100));
@@ -114,7 +114,7 @@ describe('Rectangle render', () => {
 
     test('zero-size RenderSize skips rendering', () => {
         const r = new Rectangle();
-        r.Fill = new SolidColorBrush(Color.Red);
+        r.Background = new SolidColorBrush(Color.Red);
         r.Measure(new Size(0, 0));
         r.Arrange(new Rect(0, 0, 0, 0));
         const dc = new CapturingContext();

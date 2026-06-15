@@ -12,7 +12,7 @@ import {
     type PropertyDescriptor,
     type WheelEventArgs,
 } from '../runtime/index.js';
-import { Easings } from '../runtime/animation/easing.js';
+import { Easings } from '../visual-engine/animation/easing.js';
 import { ContentControl } from './content-control.js';
 import { ScrollBar } from '../basic/scroll/scroll-bar.js';
 import { ScrollContentPresenter } from '../basic/scroll/scroll-content-presenter.js';
@@ -553,13 +553,17 @@ export class ScrollViewer extends ContentControl
 
         this._autoScrollSession = session;
         this._autoScrollOnMoveUnsub = session.OnMove(
-            (hostX: number, hostY: number) => this._evaluateAutoScroll(hostX, hostY),
+            // DragSession path: stop scrolling when the cursor moves off
+            // this ScrollViewer's viewport — a session can span multiple
+            // SVs and only the SV under the cursor should drive the
+            // auto-scroll.
+            (hostX: number, hostY: number) => this._evaluateAutoScroll(hostX, hostY, /* stopOutside */ true),
         );
         // Auto-clean on drag end (resolve / cancel).
         session.then(() => this._tearDownAutoScroll());
     }
 
-    private _evaluateAutoScroll(hostX: number, hostY: number): void
+    private _evaluateAutoScroll(hostX: number, hostY: number, stopOutside: boolean): void
     {
         // Translate host coords to viewport-local. The viewport's
         // origin in host space is the sum of ArrangedRect.X/Y up the
@@ -578,9 +582,16 @@ export class ScrollViewer extends ContentControl
         const vw = this.ViewportWidth;
         const vh = this.ViewportHeight;
 
-        // Cursor outside the viewport? Stop scrolling — the drag has
-        // moved off this ScrollViewer.
-        if (lx < 0 || ly < 0 || lx > vw || ly > vh)
+        // `stopOutside` is the DragSession path's contract — a multi-SV
+        // session expects auto-scroll on this SV to stop the moment the
+        // cursor moves onto a different SV. Non-session callers (a node
+        // drag, a marquee) want the opposite: keep scrolling even when
+        // the cursor wanders far past the viewport edge, because the
+        // user's clearly asking for more content in that direction. In
+        // the loose mode (stopOutside=false), a cursor past an edge is
+        // treated the same as a cursor right at the edge — the velocity
+        // direction is set, the timer keeps ticking.
+        if (stopOutside && (lx < 0 || ly < 0 || lx > vw || ly > vh))
         {
             this._stopAutoScrollTick();
             return;
@@ -589,10 +600,13 @@ export class ScrollViewer extends ContentControl
         const gutter = this.AutoScrollGutter;
         let dx = 0;
         let dy = 0;
-        if (lx < gutter && this.HorizontalScrollEnabled) dx = -1;
-        else if (lx > vw - gutter && this.HorizontalScrollEnabled) dx = 1;
-        if (ly < gutter && this.VerticalScrollEnabled)   dy = -1;
-        else if (ly > vh - gutter && this.VerticalScrollEnabled) dy = 1;
+        // `lx < gutter` covers both "near left edge" (0 ≤ lx < gutter)
+        // AND "past left edge" (lx < 0). Same for the right / top /
+        // bottom comparisons — `lx > vw - gutter` includes `lx > vw`.
+        if (lx < gutter      && this.HorizontalScrollEnabled) dx = -1;
+        else if (lx > vw - gutter && this.HorizontalScrollEnabled) dx =  1;
+        if (ly < gutter      && this.VerticalScrollEnabled)   dy = -1;
+        else if (ly > vh - gutter && this.VerticalScrollEnabled) dy =  1;
 
         if (dx === 0 && dy === 0)
         {
@@ -651,9 +665,15 @@ export class ScrollViewer extends ContentControl
     // the latest host-relative pointer position. Idempotent: repeated
     // calls with the same cursor position re-evaluate cheaply and only
     // toggle the timer on/off when the velocity actually changes.
+    //
+    // `stopOutside=false` — non-session gestures (node drag, marquee)
+    // keep scrolling even when the cursor wanders far past the viewport
+    // edge. The DragSession path uses the strict mode internally; this
+    // public API never needs it because the caller owns Start / Stop
+    // explicitly.
     public EvaluateEdgeAutoScroll(hostX: number, hostY: number): void
     {
-        this._evaluateAutoScroll(hostX, hostY);
+        this._evaluateAutoScroll(hostX, hostY, /* stopOutside */ false);
     }
 
     /** Stop any auto-scroll started by EvaluateEdgeAutoScroll. Safe to

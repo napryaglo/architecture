@@ -1,5 +1,5 @@
-import type { ICommand } from '../../runtime/input/command.js';
-import type { ModifierKeys } from '../../runtime/input/routed-event.js';
+import type { ICommand } from '../../runtime/command.js';
+import type { ModifierKeys } from '../../visual-engine/routed-event.js';
 
 // RoutedCommand — identity-only ICommand. Mirrors WPF's RoutedCommand:
 // the command itself contains NO execution logic. Calling Execute

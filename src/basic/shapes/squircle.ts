@@ -7,7 +7,6 @@ import {
     type DrawingContext,
 } from '../../runtime/index.js';
 import {
-    Brush,
     CubicBezierSegment,
     PathFigure,
     PathGeometry,
@@ -37,20 +36,8 @@ import {
 // Stroke insets by half-thickness (Border / Ellipse convention).
 export class Squircle extends Visual
 {
-    public static readonly FillKey            = Model.RegisterProperty<Brush | undefined>(Squircle, 'Fill',            undefined, MetaData.Render);
-    public static readonly StrokeKey          = Model.RegisterProperty<Brush | undefined>(Squircle, 'Stroke',          undefined, MetaData.Render);
-    public static readonly StrokeThicknessKey = Model.RegisterProperty<number>(           Squircle, 'StrokeThickness', 0,         MetaData.Render);
     // Superellipse exponent. M3 named "Squircle" is n = 4.
     public static readonly SupernessKey       = Model.RegisterProperty<number>(           Squircle, 'Superness',       4,         MetaData.Render);
-
-    public get Fill(): Brush | undefined { return this.get_property_value(Squircle.FillKey); }
-    public set Fill(v: Brush | undefined) { this.set_property_value(Squircle.FillKey, v); }
-
-    public get Stroke(): Brush | undefined { return this.get_property_value(Squircle.StrokeKey); }
-    public set Stroke(v: Brush | undefined) { this.set_property_value(Squircle.StrokeKey, v); }
-
-    public get StrokeThickness(): number { return this.get_property_value(Squircle.StrokeThicknessKey); }
-    public set StrokeThickness(v: number) { this.set_property_value(Squircle.StrokeThicknessKey, v); }
 
     public get Superness(): number { return this.get_property_value(Squircle.SupernessKey); }
     public set Superness(v: number) { this.set_property_value(Squircle.SupernessKey, v); }
@@ -80,7 +67,7 @@ export class Squircle extends Visual
             ? new Pen(this.Stroke, t)
             : undefined;
 
-        dc.DrawGeometry(this.Fill, pen, new PathGeometry([figure]));
+        dc.DrawGeometry(this.Background, pen, new PathGeometry([figure]));
     }
 }
 

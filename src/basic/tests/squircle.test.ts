@@ -41,7 +41,7 @@ function render(s: Squircle, w: number, h: number): CapturingContext
 describe('Squircle defaults', () => {
     test('fresh Squircle has no fill / no stroke / superness 4', () => {
         const s = new Squircle();
-        assert.equal(s.Fill, undefined);
+        assert.equal(s.Background, undefined);
         assert.equal(s.Stroke, undefined);
         assert.equal(s.StrokeThickness, 0);
         assert.equal(s.Superness, 4);
@@ -57,7 +57,7 @@ describe('Squircle defaults', () => {
 describe('Squircle render', () => {
     test('emits one PathGeometry figure with 4 cubic Bezier segments (4 quadrants)', () => {
         const s = new Squircle();
-        s.Fill = new SolidColorBrush(Color.Red);
+        s.Background = new SolidColorBrush(Color.Red);
         const dc = render(s, 100, 100);
 
         assert.equal(dc.geoms.length, 1);

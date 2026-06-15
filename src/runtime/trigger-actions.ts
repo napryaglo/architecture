@@ -1,6 +1,6 @@
-import type { Storyboard } from './animation/storyboard.js';
-import type { Visual } from './visual.js';
-import type { Behavior } from './behavior.js';
+import type { Storyboard } from '../visual-engine/animation/storyboard.js';
+import type { Visual } from '../visual-engine/visual.js';
+import type { Behavior } from '../visual-engine/behavior.js';
 
 // Imperative side of declarative trigger actions. A TriggerAction is the
 // thing an EventTrigger fires when its routed event lands; the most

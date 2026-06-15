@@ -9,6 +9,7 @@ import { Canvas } from '../../basic/panels/canvas.js';
 import { ContentControl } from '../content-control.js';
 import { ContentPresenter } from '../../basic/templates/content-presenter.js';
 import { ControlTemplate } from '../../basic/templates/control-template.js';
+import { ScrollViewer } from '../scroll-viewer.js';
 import { Selector } from '../list/selector.js';
 
 // A movable, content-hosting control intended as the container shape
@@ -59,6 +60,27 @@ export class DiagramNode extends ContentControl
     private _pressHostY:  number  = 0;
     private _grabOffsetX: number  = 0;
     private _grabOffsetY: number  = 0;
+
+    // Drag-time ScrollViewer state — populated at PointerDown with the
+    // nearest enclosing ScrollViewer and its scroll offsets at press
+    // time. Used by PointerMove to (a) feed the cursor position into
+    // the SV's auto-scroll evaluator (the canvas pulls along when the
+    // cursor approaches the viewport edge) and (b) compensate the node
+    // position for any scroll delta that happened mid-drag so the node
+    // tracks the cursor instead of lagging behind by the scroll amount.
+    // undefined when the node lives outside a ScrollViewer — both
+    // features no-op in that case.
+    private _dragScrollViewer:     ScrollViewer | undefined;
+    private _pressScrollOffsetX:   number = 0;
+    private _pressScrollOffsetY:   number = 0;
+
+    // Group-drag partners — snapshotted at PointerDown when `this` is
+    // part of the enclosing Selector's multi-selection. PointerMove
+    // applies the same X / Y delta to each partner so the whole
+    // selection translates together (PowerPoint / Figma convention).
+    // undefined when the press wasn't on a selected container — that
+    // case drags only `this` and leaves the existing selection alone.
+    private _dragPartners: DiagramNode[] | undefined;
 
     constructor()
     {
@@ -117,6 +139,34 @@ export class DiagramNode extends ContentControl
         this._pressHostY  = args.HostY;
         this._grabOffsetX = args.HostX - this.X;
         this._grabOffsetY = args.HostY - this.Y;
+        // Snapshot the enclosing ScrollViewer (if any) + its press-time
+        // offsets — auto-scroll pulses + scroll-delta compensation in
+        // OnPointerMove read these.
+        this._dragScrollViewer   = DiagramNode.findScrollViewer(this);
+        this._pressScrollOffsetX = this._dragScrollViewer?.HorizontalOffset ?? 0;
+        this._pressScrollOffsetY = this._dragScrollViewer?.VerticalOffset   ?? 0;
+        // Snapshot group-drag partners. The press-time snapshot pins
+        // the partner set for the whole gesture — selection mutations
+        // mid-drag (rare, but routed-event ordering is finicky) won't
+        // peel partners off mid-translation. `this` is excluded from
+        // the partner list and moved separately in OnPointerMove —
+        // keeps the delta-from-cursor formula honest (it reads / writes
+        // `this.X` / `this.Y` directly).
+        this._dragPartners = undefined;
+        if (Selector.GetIsSelected(this))
+        {
+            const selector = Selector.FromContainer<Selector>(
+                this, (v: Visual): v is Selector => v instanceof Selector);
+            if (selector !== undefined)
+            {
+                const partners: DiagramNode[] = [];
+                for (const c of selector.SelectedContainers)
+                {
+                    if (c !== this && c instanceof DiagramNode) partners.push(c);
+                }
+                if (partners.length > 0) this._dragPartners = partners;
+            }
+        }
         args.CapturePointer(this);
         args.Handled = true;
     }
@@ -134,8 +184,63 @@ export class DiagramNode extends ContentControl
             if (Math.hypot(dx, dy) < DiagramNode.CLICK_THRESHOLD_PX) return;
             this._moved = true;
         }
-        this.X = args.HostX - this._grabOffsetX;
-        this.Y = args.HostY - this._grabOffsetY;
+        // Compensate for any mid-drag scrolling so the cursor stays
+        // "on" the same point of the node. ScrollViewer translates its
+        // content by -Offset; when the viewport scrolls right by Δ, the
+        // canvas content shifts LEFT by Δ in host coords, so the node
+        // must shift RIGHT by Δ in canvas-local coords to keep its
+        // screen position under the cursor. Without this the node would
+        // lag the cursor by exactly the scroll delta during auto-scroll.
+        const sv = this._dragScrollViewer;
+        const scrollDx = sv !== undefined ? sv.HorizontalOffset - this._pressScrollOffsetX : 0;
+        const scrollDy = sv !== undefined ? sv.VerticalOffset   - this._pressScrollOffsetY : 0;
+        // Target position for THIS node in canvas-local coords.
+        const newX = args.HostX - this._grabOffsetX + scrollDx;
+        const newY = args.HostY - this._grabOffsetY + scrollDy;
+        // Group-drag delta: every partner shifts by the same vector
+        // `this` does this frame. Read deltas BEFORE the X / Y writes
+        // below so the formula remains delta-from-previous-position
+        // regardless of how many incremental frames have elapsed since
+        // press — a press-time absolute snapshot would accumulate
+        // floating-point drift across long drags.
+        const dx = newX - this.X;
+        const dy = newY - this.Y;
+        if (this._dragPartners !== undefined && (dx !== 0 || dy !== 0))
+        {
+            for (const partner of this._dragPartners)
+            {
+                partner.X = partner.X + dx;
+                partner.Y = partner.Y + dy;
+                // Same Local-tier teardown as the self-move below —
+                // each partner needs Local cleared so subsequent Align
+                // / Distribute writes reach the container through the
+                // Style binding without Local shadowing.
+                partner.ClearValue(DiagramNode.XKey);
+                partner.ClearValue(DiagramNode.YKey);
+            }
+        }
+        this.X = newX;
+        this.Y = newY;
+        // Local-tier teardown after the round-trip. Writing X / Y above
+        // landed a LocalValue on the container's EVD; that fired the
+        // apply_setter writeback (X / Y are BindsTwoWayByDefault), which
+        // pushed the new values back to the source VM, which in turn
+        // pushed them onto the Style tier through the binding's source-
+        // change subscription. The Style tier now holds the same value
+        // as Local, but Local shadows it — and Local shadows any FUTURE
+        // Style push too, so a later VM-side write (Align / Distribute
+        // commands writing VM.X from outside the drag pipeline) would
+        // update VM + Style but the container wouldn't move. Clearing
+        // Local here drops the Local slot so the Style tier becomes
+        // effective; visual position is unchanged (same value) but
+        // subsequent VM-driven writes flow through unobstructed.
+        this.ClearValue(DiagramNode.XKey);
+        this.ClearValue(DiagramNode.YKey);
+        // Edge auto-scroll — the SV starts / continues / stops a tick
+        // timer based on cursor proximity to its viewport edges. The
+        // pulse re-evaluates on every move; the timer keeps scrolling
+        // even when the cursor sits still near an edge.
+        sv?.EvaluateEdgeAutoScroll(args.HostX, args.HostY);
         args.Handled = true;
     }
 
@@ -145,6 +250,13 @@ export class DiagramNode extends ContentControl
         const wasDrag = this._moved;
         this._dragging = false;
         this._moved    = false;
+        // Drop the press-time partner snapshot — gesture is over.
+        this._dragPartners = undefined;
+        // Stop any auto-scroll tick we kicked off, regardless of whether
+        // the gesture was a drag or a click — StopEdgeAutoScroll is a
+        // no-op when no timer is active.
+        this._dragScrollViewer?.StopEdgeAutoScroll();
+        this._dragScrollViewer = undefined;
         args.ReleasePointerCapture();
         if (!wasDrag)
         {
@@ -153,5 +265,20 @@ export class DiagramNode extends ContentControl
             selector?.HandleContainerClick(this, args.Modifiers);
         }
         args.Handled = true;
+    }
+
+    // Walk up the visual tree to find the closest enclosing ScrollViewer
+    // (if any). Used at PointerDown so the auto-scroll / scroll-delta
+    // compensation logic in OnPointerMove can read offsets without re-
+    // walking on every move.
+    private static findScrollViewer(start: Visual): ScrollViewer | undefined
+    {
+        let cur: Visual | undefined = start.GetVisualParent();
+        while (cur !== undefined)
+        {
+            if (cur instanceof ScrollViewer) return cur;
+            cur = cur.GetVisualParent();
+        }
+        return undefined;
     }
 }

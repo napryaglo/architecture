@@ -1,4 +1,4 @@
-import type { Visual } from '../visual.js';
+import type { Visual } from './visual.js';
 import { DragDrop, DragDropEffects, type DataObject, type DragDropOptions, type DragSession } from './drag-drop.js';
 
 // Routed-event infrastructure.

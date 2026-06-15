@@ -2,7 +2,7 @@ import { Binding } from './binding.js';
 import type { PropertyChangeCallback } from './effective-value.js';
 import { MetaData } from '../metadata.js';
 import { Model } from '../model.js';
-import type { Visual } from '../visual.js';
+import type { Visual } from '../../visual-engine/visual.js';
 
 // Watcher Model — same shape as DataContextWatcher: a Model with a
 // single registered Value property. Bindings feed their resolved value

@@ -40,7 +40,7 @@ export {
     type ValueConverter,
 } from './binding/index.js';
 export { Model, PropertyKey } from './model.js';
-export { Behavior } from './behavior.js';
+export { Behavior } from '../visual-engine/behavior.js';
 export {
     Visual,
     Single,
@@ -48,11 +48,9 @@ export {
     HorizontalAlignment,
     VerticalAlignment,
     type VisualHost,
-    type IEffect,
-    type ITransform,
-} from './visual.js';
-export { Adorner, AdornerLayer, AdornerDecorator, DragGhostAdorner } from './adorner.js';
-export { NameScope } from './namescope.js';
+} from '../visual-engine/visual.js';
+export { Adorner, AdornerLayer, AdornerDecorator, DragGhostAdorner } from '../visual-engine/adorner.js';
+export { NameScope } from '../visual-engine/namescope.js';
 export {
     ResourceDictionary,
     SetResourceDictionaryLoader,
@@ -75,19 +73,26 @@ export {
 // keeps only the foundational `ICommand` + `RelayCommand` from
 // `./input/command.js`.
 export {
+    RelayCommand,
+    type ICommand,
+} from './command.js';
+export {
+    EventTrigger,
+    InvokeCommandAction,
+} from './event-trigger.js';
+// Re-export the input pipeline from visual-engine for backward compat —
+// downstream code expects these names on the runtime barrel.
+export {
     DataObject,
     DragDrop,
     DragDropEffects,
     DragEventArgs,
     DragSession,
-    EventTrigger,
     FocusEventArgs,
-    InvokeCommandAction,
     KeyEventArgs,
     NoModifiers,
     PointerButton,
     PointerEventArgs,
-    RelayCommand,
     RoutedEventArgs,
     TextInputEventArgs,
     WheelEventArgs,
@@ -103,7 +108,6 @@ export {
     type DragEventInit,
     type DragPreviewKind,
     type FocusEventHandlers,
-    type ICommand,
     type KeyEventInit,
     type KeyboardEventHandlers,
     type ModifierKeys,
@@ -113,7 +117,7 @@ export {
     type TextInputEventInit,
     type WheelDeltaMode,
     type WheelEventInit,
-} from './input/index.js';
+} from '../visual-engine/index.js';
 export {
     Style,
     Setter,
@@ -135,7 +139,7 @@ export {
     StopStoryboardAction,
     TriggerAction,
 } from './trigger-actions.js';
-export { type IScrollInfo, isScrollInfo } from './scroll-info.js';
+export { type IScrollInfo, isScrollInfo } from '../visual-engine/scroll-info.js';
 export {
     ObservableCollection,
     type CollectionChange,
@@ -143,13 +147,13 @@ export {
     type IReadOnlyObservableCollection,
 } from './observable-collection.js';
 export { observe_array, subscribe_array, is_observed_array } from './observable-array.js';
-export { Point, Size, Rect, Color, Matrix, Thickness } from './primitives.js';
-export { CornerRadius } from './corner-radius.js';
+export { Point, Size, Rect, Color, Matrix, Thickness } from '../visual-engine/primitives.js';
+export { CornerRadius } from '../visual-engine/corner-radius.js';
 export {
     Typography,
     type TypographyProps,
     type TypographyWeight,
-} from './typography.js';
+} from '../visual-engine/typography.js';
 export {
     Density,
     M3_BREAKPOINTS,
@@ -178,14 +182,14 @@ export {
     type TokenSpec,
     type TokenType,
     type ViewportBreakpoints,
-} from './theme/index.js';
-export { type DrawingContext } from './drawing-context.js';
+} from '../visual-engine/theme/index.js';
+export { type DrawingContext } from '../visual-engine/drawing-context.js';
 export {
     ApproximateTextMeasurer,
     APPROXIMATE_TEXT_MEASURER,
     type TextMeasurer,
     type TextMetrics,
-} from './text-measurer.js';
+} from '../visual-engine/text-measurer.js';
 export {
     AnimationManager,
     AnimationTimeline,
@@ -233,4 +237,4 @@ export {
     type ThicknessAnimationProps,
     type ThicknessAnimationUsingKeyFramesProps,
     type TimelinePhase,
-} from './animation/index.js';
+} from '../visual-engine/animation/index.js';
