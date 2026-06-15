@@ -634,20 +634,49 @@ resources MuralFramework {
     // on hover via PART_Border.Effect in the same trigger body.
 
     // Default FAB — 56dp icon-only.
+    //
+    // MinWidth / MinHeight pin the M3 baseline chrome size while
+    // letting the Border grow when a consumer slots a glyph that
+    // overflows the 24×24 inner cell (e.g. a 32px ligature). An
+    // explicit Width / Height would clip the larger glyph against
+    // the chrome.
+    //
+    // ContentPresenter is centered both ways so the slotted icon
+    // (typically a TextBlock with a glyph that's narrower than the
+    // 24×24 inner slot) renders dead-centre on the chrome. Without
+    // explicit Center alignment, the presenter inherits Stretch and
+    // the TextBlock fills the slot, painting its glyph at top-left
+    // of the stretched cell (text Y is `i * lineHeight`, default
+    // TextAlignment=Left). Plain Button doesn't show the same drift
+    // because its Border has no Min size and hugs content + padding,
+    // leaving no extra space.
     Template x:key="DefaultFab" [TargetType=FloatingActionButton] {
         Border x:name="PART_Border"
               [ Background          = @PrimaryContainer,
                 BorderThickness     = (0),
                 CornerRadius        = @ShapeLarge,
-                Width               = 56,
-                Height              = 56,
+                MinWidth            = 56,
+                MinHeight           = 56,
                 Effect              = @ElevationLevel3,
                 TextBlock.Foreground = @OnPrimaryContainer ] {
             Border x:name="PART_StateLayer"
                   [ Background   = #00000000,
                     CornerRadius = @ShapeLarge,
                     Padding      = (16,16,16,16) ] {
-                ContentPresenter
+                // Icon slot pinned to the M3 24dp spec — same trick the
+                // NavigationItem template uses ([framework.resources.mu:1127]).
+                // Without explicit Width/Height, the TextBlock's reported
+                // DesiredSize is the FONT line box (Material Symbols at 24px
+                // reports ~28dp tall via fontBoundingBox ascender + descender
+                // whitespace the icon doesn't fill), the line box overflows
+                // the 24dp inner slot, and ContentPresenter's Center alignment
+                // collapses to top-anchored — pushing the visible glyph above
+                // the chrome's centre. Explicit 24×24 clamps RenderSize to the
+                // icon's visible em box; the font itself centres the glyph
+                // within that box.
+                ContentPresenter [ Width  = 24, Height = 24,
+                                   HorizontalAlignment = Center,
+                                   VerticalAlignment   = Center ]
             }
         }
         when ( IsMouseOver )  { PART_StateLayer.Background = @OnPrimaryContainerHoverLayer;
@@ -661,15 +690,20 @@ resources MuralFramework {
               [ Background          = @PrimaryContainer,
                 BorderThickness     = (0),
                 CornerRadius        = @ShapeMedium,
-                Width               = 40,
-                Height              = 40,
+                MinWidth            = 40,
+                MinHeight           = 40,
                 Effect              = @ElevationLevel3,
                 TextBlock.Foreground = @OnPrimaryContainer ] {
             Border x:name="PART_StateLayer"
                   [ Background   = #00000000,
                     CornerRadius = @ShapeMedium,
                     Padding      = (8,8,8,8) ] {
-                ContentPresenter
+                // Icon slot pinned to M3's 24dp icon spec — see DefaultFab
+                // for the rationale on why MS Outlined's line box needs
+                // explicit clamping.
+                ContentPresenter [ Width  = 24, Height = 24,
+                                   HorizontalAlignment = Center,
+                                   VerticalAlignment   = Center ]
             }
         }
         when ( IsMouseOver )  { PART_StateLayer.Background = @OnPrimaryContainerHoverLayer;
@@ -683,15 +717,20 @@ resources MuralFramework {
               [ Background          = @PrimaryContainer,
                 BorderThickness     = (0),
                 CornerRadius        = @ShapeExtraLarge,
-                Width               = 96,
-                Height              = 96,
+                MinWidth            = 96,
+                MinHeight           = 96,
                 Effect              = @ElevationLevel3,
                 TextBlock.Foreground = @OnPrimaryContainer ] {
             Border x:name="PART_StateLayer"
                   [ Background   = #00000000,
                     CornerRadius = @ShapeExtraLarge,
                     Padding      = (30,30,30,30) ] {
-                ContentPresenter
+                // M3 Large FAB icon spec is 36dp (not the 24dp baseline of
+                // Small / Default). Pinned with explicit Width/Height for
+                // the same line-box-overflow reason as DefaultFab.
+                ContentPresenter [ Width  = 36, Height = 36,
+                                   HorizontalAlignment = Center,
+                                   VerticalAlignment   = Center ]
             }
         }
         when ( IsMouseOver )  { PART_StateLayer.Background = @OnPrimaryContainerHoverLayer;
@@ -710,7 +749,7 @@ resources MuralFramework {
               [ Background          = @PrimaryContainer,
                 BorderThickness     = (0),
                 CornerRadius        = @ShapeLarge,
-                Height              = 56,
+                MinHeight           = 56,
                 Effect              = @ElevationLevel3,
                 TextBlock.Foreground = @OnPrimaryContainer,
                 TextBlock.FontFamily = @LabelLargeFont,
@@ -720,7 +759,8 @@ resources MuralFramework {
                   [ Background   = #00000000,
                     CornerRadius = @ShapeLarge,
                     Padding      = (16,0,20,0) ] {
-                ContentPresenter
+                ContentPresenter [ HorizontalAlignment = Center,
+                                   VerticalAlignment   = Center ]
             }
         }
         when ( IsMouseOver )  { PART_StateLayer.Background = @OnPrimaryContainerHoverLayer;
@@ -730,8 +770,23 @@ resources MuralFramework {
 
     // Default Style — picks Template by Size. Default (56dp) is the
     // baseline; Small / Large / Extended each ride their own trigger.
+    //
+    // HorizontalAlignment / VerticalAlignment default to Center so the
+    // FAB stays at its intrinsic MinSize-floored chrome and doesn't
+    // inherit the base Visual.Stretch behaviour. Without this, a FAB
+    // dropped into a parent slot taller than its 40/56/96 dp floor
+    // (e.g. a Horizontal StackPanel arranges every child at the panel's
+    // full height — Small + Default siblings of a Large FAB end up
+    // stretched to 96 dp tall) would balloon vertically. The icon would
+    // still centre within the stretched cell, but the chrome shape
+    // (rounded rectangle with explicit CornerRadius) would read as a
+    // tall pill rather than the M3 round-ish chip. M3 FABs are
+    // intrinsically sized — the parent positions them, but the chrome
+    // itself doesn't stretch.
     Style [TargetType=FloatingActionButton] {
-        Template = @DefaultFab;
+        Template            = @DefaultFab;
+        HorizontalAlignment = Center;
+        VerticalAlignment   = Center;
         when ( Size = Small    ) { Template = @DefaultFabSmall; }
         when ( Size = Large    ) { Template = @DefaultFabLarge; }
         when ( Size = Extended ) { Template = @DefaultFabExtended; }
