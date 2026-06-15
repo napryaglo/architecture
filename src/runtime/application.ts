@@ -24,12 +24,39 @@ export interface ApplicationInitOptions
     theme?:  ActivatableTheme;
 
     /** Scheme class to activate inside the named theme. Defaults to
-     *  the theme's `DefaultScheme` when omitted. */
+     *  the theme's `DefaultScheme` when omitted. Ignored when
+     *  `autoScheme` is provided (OS preference wins). */
     scheme?: Function;
+
+    /** Pick light/dark scheme from the OS `prefers-color-scheme` media
+     *  query at startup. When set, takes precedence over `scheme`. */
+    autoScheme?: AutoSchemeInitOptions;
 
     /** Optional DataContext to assign to the root visual. Equivalent
      *  to writing `app.DataContext = value` after the call returns. */
     dataContext?: unknown;
+}
+
+// Bind a light/dark scheme pair to the OS's `prefers-color-scheme`
+// preference. Activated at `initialize()` time alongside the theme.
+//
+// Class refs match `ApplicationInitOptions.scheme` for consistency
+// (no string proxies). When the host has no `matchMedia` available
+// (Node tests, SSR), `light` is chosen — same semantics as a browser
+// reporting `prefers-color-scheme: no-preference`.
+export interface AutoSchemeInitOptions
+{
+    /** Scheme class activated when the OS reports a light preference
+     *  (or no preference, or no `matchMedia` support). */
+    light:  Function;
+
+    /** Scheme class activated when the OS reports a dark preference. */
+    dark:   Function;
+
+    /** When `true` (default), attach a `matchMedia` change listener so
+     *  later OS preference flips re-activate the scheme. Pass `false`
+     *  to read once at init and pin. */
+    listen?: boolean;
 }
 
 // Root container for a µ-mural application. Owns app-wide resources
@@ -265,9 +292,33 @@ export class Application
             const themeClass = init?.theme ?? Application._defaultTheme;
             if (themeClass !== undefined)
             {
-                themeClass.Activate(init?.scheme);
+                // `autoScheme` overrides `scheme` — when both are present
+                // the OS preference wins at the first activation.
+                const initialScheme = init?.autoScheme !== undefined
+                    ? pickAutoScheme(init.autoScheme)
+                    : init?.scheme;
+                themeClass.Activate(initialScheme);
             }
             this._initialized = true;
+        }
+
+        // autoScheme handling lives OUTSIDE the _initialized gate so a
+        // host script can override OS-preference tracking on a later
+        // `initialize(target, ...)` call even when an earlier theme-only
+        // IIFE already ran (and activated the .mu file's defaultScheme).
+        // Re-activation here is the WHOLE POINT — the .mu IIFE picked
+        // its compile-time default; the host's autoScheme call replaces
+        // that pick with the OS preference. Same-(theme, scheme) is a
+        // no-op inside ThemeManager, so calls where the .mu default and
+        // the OS preference happen to match cost nothing.
+        if (init?.autoScheme !== undefined)
+        {
+            const themeClass = init.theme ?? Application._defaultTheme;
+            if (themeClass !== undefined)
+            {
+                themeClass.Activate(pickAutoScheme(init.autoScheme));
+                this.attachAutoSchemeListener(themeClass, init.autoScheme);
+            }
         }
 
         // Mount + DataContext are NOT gated by _initialized — the host
@@ -300,6 +351,58 @@ export class Application
 
         return target;
     }
+
+    // Once per Application instance — guards against stacking duplicate
+    // matchMedia listeners when initialize() runs multiple times (e.g.
+    // theme-only IIFE + host mount, both carrying autoScheme).
+    private _autoSchemeListenerAttached = false;
+
+    private attachAutoSchemeListener(
+        themeClass: ActivatableTheme,
+        opts:       AutoSchemeInitOptions,
+    ): void
+    {
+        if (opts.listen === false) return;
+        if (this._autoSchemeListenerAttached) return;
+        const mql = osColorSchemeMql();
+        if (mql === undefined) return;
+        const handler = (e: { matches: boolean }): void => {
+            themeClass.Activate(e.matches ? opts.dark : opts.light);
+        };
+        mql.addEventListener('change', handler);
+        this._autoSchemeListenerAttached = true;
+    }
+}
+
+// One-shot OS-preference read: returns the scheme class matching the
+// current `prefers-color-scheme` media query. Used to seed
+// `themeClass.Activate(...)` at initialize() time. Falls back to
+// `opts.light` when `matchMedia` is unavailable (Node tests, SSR) or
+// when the OS reports no preference.
+function pickAutoScheme(opts: AutoSchemeInitOptions): Function
+{
+    const mql = osColorSchemeMql();
+    return mql?.matches === true ? opts.dark : opts.light;
+}
+
+// Resolve the `prefers-color-scheme: dark` MediaQueryList off either
+// `window.matchMedia` (browsers) or a globalThis-mounted `matchMedia`
+// shim (test fixtures). Returns undefined when neither is available.
+// Mirrors the detection pattern in adaptive.ts so behaviour stays
+// consistent across the runtime.
+function osColorSchemeMql():
+    { matches: boolean; addEventListener(t: 'change', l: (e: { matches: boolean }) => void): void } | undefined
+{
+    const g: typeof globalThis & {
+        window?:    typeof globalThis & { matchMedia?(query: string): MediaQueryList };
+        matchMedia?: (query: string) => MediaQueryList;
+    } = globalThis;
+    const win = g.window;
+    const matchMedia = (typeof win?.matchMedia === 'function')
+        ? win.matchMedia.bind(win)
+        : (typeof g.matchMedia === 'function' ? g.matchMedia : undefined);
+    if (matchMedia === undefined) return undefined;
+    return matchMedia('(prefers-color-scheme: dark)');
 }
 
 // Walk the prototype chain of a class-keyed lookup. String keys end

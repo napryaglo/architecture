@@ -64,6 +64,7 @@ export {
 export {
     Application,
     type ApplicationInitOptions,
+    type AutoSchemeInitOptions,
     type MountableTarget,
 } from './application.js';
 // InputManager moved to `@visualisation-sub/mural/framework`.

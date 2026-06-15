@@ -308,3 +308,226 @@ describe('Application.initialize', () => {
             'first registered theme remains the default');
     });
 });
+
+describe('Application.initialize — autoScheme (OS prefers-color-scheme)', () => {
+    // Tiny test theme — same shape as the Application.initialize
+    // describe block above but defined locally so the matchMedia
+    // mocking stays scoped.
+    class AutoSchemeLight extends Scheme {
+        public static readonly instance: AutoSchemeLight = new AutoSchemeLight();
+        private constructor() {
+            super({ name: 'AutoSchemeLight', theme: 'AutoSchemeTheme', tokens: { Token: 'L' } });
+        }
+    }
+    class AutoSchemeDark extends Scheme {
+        public static readonly instance: AutoSchemeDark = new AutoSchemeDark();
+        private constructor() {
+            super({ name: 'AutoSchemeDark', theme: 'AutoSchemeTheme', tokens: { Token: 'D' } });
+        }
+    }
+    class AutoSchemeTheme extends Theme {
+        public static readonly instance: AutoSchemeTheme = new AutoSchemeTheme();
+        private constructor() {
+            super({
+                name:          'AutoSchemeTheme',
+                dictionaries:  [new ResourceDictionary()],
+                catalog:       new Map([['Token', { type: 'string' }]]),
+                schemes:       [AutoSchemeLight.instance, AutoSchemeDark.instance],
+                defaultScheme: 'AutoSchemeLight',
+            });
+        }
+        public static override Activate(scheme?: typeof Scheme): void {
+            const target = scheme ?? AutoSchemeLight;
+            ThemeManager.ActivateTheme(AutoSchemeTheme.instance.name, { scheme: target.name });
+        }
+    }
+
+    // Mock MediaQueryList — supports a controllable .matches plus a
+    // single 'change' listener (matches Application's usage).
+    class MockMql {
+        public matches:    boolean;
+        private listener:  ((e: { matches: boolean }) => void) | undefined;
+        constructor(initial: boolean) { this.matches = initial; }
+        public addEventListener(_: 'change', l: (e: { matches: boolean }) => void): void {
+            this.listener = l;
+        }
+        public fire(matches: boolean): void {
+            this.matches = matches;
+            this.listener?.({ matches });
+        }
+    }
+
+    let installedMql: MockMql | undefined;
+    let originalMatchMedia: ((q: string) => MediaQueryList) | undefined;
+
+    function installMatchMedia(initialDark: boolean): MockMql {
+        installedMql = new MockMql(initialDark);
+        // Cast to escape TS's strict MediaQueryList shape — our mock
+        // only needs the matches + addEventListener surface that
+        // Application's autoScheme path actually touches.
+        (globalThis as unknown as { matchMedia: (q: string) => MediaQueryList })
+            .matchMedia = (_q: string) => installedMql as unknown as MediaQueryList;
+        return installedMql;
+    }
+
+    function uninstallMatchMedia(): void {
+        const g = globalThis as unknown as { matchMedia?: (q: string) => MediaQueryList };
+        if (originalMatchMedia !== undefined) g.matchMedia = originalMatchMedia;
+        else delete g.matchMedia;
+        installedMql = undefined;
+    }
+
+    beforeEach(() => {
+        ThemeManager._resetForTesting();
+        Application._resetDefaultThemeForTesting();
+        Application.current = null;
+        const g = globalThis as unknown as { matchMedia?: (q: string) => MediaQueryList };
+        originalMatchMedia = g.matchMedia;
+        if (ThemeManager.GetTheme('AutoSchemeTheme') === undefined) {
+            ThemeManager.RegisterTheme(AutoSchemeTheme.instance);
+        }
+    });
+
+    test('autoScheme picks the dark scheme when OS prefers dark', () => {
+        installMatchMedia(/* dark */ true);
+        try {
+            const app = new Application();
+            app.initialize({
+                theme:      AutoSchemeTheme,
+                autoScheme: { light: AutoSchemeLight, dark: AutoSchemeDark },
+            });
+            assert.equal(ThemeManager.ActiveScheme?.name, 'AutoSchemeDark');
+        } finally { uninstallMatchMedia(); }
+    });
+
+    test('autoScheme picks the light scheme when OS prefers light', () => {
+        installMatchMedia(/* dark */ false);
+        try {
+            const app = new Application();
+            app.initialize({
+                theme:      AutoSchemeTheme,
+                autoScheme: { light: AutoSchemeLight, dark: AutoSchemeDark },
+            });
+            assert.equal(ThemeManager.ActiveScheme?.name, 'AutoSchemeLight');
+        } finally { uninstallMatchMedia(); }
+    });
+
+    test('autoScheme takes precedence over scheme when both are supplied', () => {
+        installMatchMedia(/* dark */ true);
+        try {
+            const app = new Application();
+            app.initialize({
+                theme:      AutoSchemeTheme,
+                scheme:     AutoSchemeLight,
+                autoScheme: { light: AutoSchemeLight, dark: AutoSchemeDark },
+            });
+            assert.equal(ThemeManager.ActiveScheme?.name, 'AutoSchemeDark',
+                'autoScheme overrides the explicit scheme');
+        } finally { uninstallMatchMedia(); }
+    });
+
+    test('listen defaults to true — OS preference flips re-activate the scheme', () => {
+        const mql = installMatchMedia(/* dark */ false);
+        try {
+            const app = new Application();
+            app.initialize({
+                theme:      AutoSchemeTheme,
+                autoScheme: { light: AutoSchemeLight, dark: AutoSchemeDark },
+            });
+            assert.equal(ThemeManager.ActiveScheme?.name, 'AutoSchemeLight');
+            mql.fire(true);
+            assert.equal(ThemeManager.ActiveScheme?.name, 'AutoSchemeDark');
+            mql.fire(false);
+            assert.equal(ThemeManager.ActiveScheme?.name, 'AutoSchemeLight');
+        } finally { uninstallMatchMedia(); }
+    });
+
+    test('listen: false — initial pick honoured, later OS flips ignored', () => {
+        const mql = installMatchMedia(/* dark */ true);
+        try {
+            const app = new Application();
+            app.initialize({
+                theme:      AutoSchemeTheme,
+                autoScheme: { light: AutoSchemeLight, dark: AutoSchemeDark, listen: false },
+            });
+            assert.equal(ThemeManager.ActiveScheme?.name, 'AutoSchemeDark');
+            mql.fire(false);
+            assert.equal(ThemeManager.ActiveScheme?.name, 'AutoSchemeDark',
+                'no listener attached → ActiveScheme unchanged');
+        } finally { uninstallMatchMedia(); }
+    });
+
+    test('multiple initialize calls with autoScheme do not stack listeners', () => {
+        // A simple stacking detector: each `addEventListener` call would
+        // bump the listener count; we keep a single listener slot in
+        // MockMql, but track addEventListener invocations.
+        let registered = 0;
+        const original = MockMql.prototype.addEventListener;
+        MockMql.prototype.addEventListener = function patched(
+            this: MockMql, t: 'change', l: (e: { matches: boolean }) => void,
+        ): void {
+            registered++;
+            original.call(this, t, l);
+        };
+        installMatchMedia(/* dark */ false);
+        try {
+            const app = new Application();
+            app.initialize({
+                theme:      AutoSchemeTheme,
+                autoScheme: { light: AutoSchemeLight, dark: AutoSchemeDark },
+            });
+            // Second initialize on the same Application with autoScheme
+            // should NOT attach a second listener.
+            app.initialize({
+                theme:      AutoSchemeTheme,
+                autoScheme: { light: AutoSchemeLight, dark: AutoSchemeDark },
+            });
+            assert.equal(registered, 1,
+                'listener attached exactly once per Application');
+        } finally {
+            MockMql.prototype.addEventListener = original;
+            uninstallMatchMedia();
+        }
+    });
+
+    test('later autoScheme call overrides an earlier scheme pick (the .mu IIFE case)', () => {
+        // The platform host pattern: the compiled `.mu` IIFE runs
+        // initialize first with the file's defaultScheme (e.g. Light),
+        // then the host script calls initialize again with autoScheme
+        // wired to MaterialLight/MaterialDark. The autoScheme call must
+        // re-pick the scheme even though _initialized is already true —
+        // otherwise the .mu default sticks and the OS preference is
+        // never honoured at startup.
+        installMatchMedia(/* dark */ true);
+        try {
+            const app = new Application();
+            app.initialize({ theme: AutoSchemeTheme, scheme: AutoSchemeLight });
+            assert.equal(ThemeManager.ActiveScheme?.name, 'AutoSchemeLight',
+                'first call activates the explicit Light scheme');
+            app.initialize({
+                theme:      AutoSchemeTheme,
+                autoScheme: { light: AutoSchemeLight, dark: AutoSchemeDark },
+            });
+            assert.equal(ThemeManager.ActiveScheme?.name, 'AutoSchemeDark',
+                'second call with autoScheme re-activates to match OS preference');
+        } finally { uninstallMatchMedia(); }
+    });
+
+    test('no matchMedia available — falls back to the light scheme', () => {
+        // No installMatchMedia call — matchMedia is undefined on
+        // globalThis. autoScheme should still pick light.
+        const g = globalThis as unknown as { matchMedia?: (q: string) => MediaQueryList };
+        const prior = g.matchMedia;
+        delete g.matchMedia;
+        try {
+            const app = new Application();
+            app.initialize({
+                theme:      AutoSchemeTheme,
+                autoScheme: { light: AutoSchemeLight, dark: AutoSchemeDark },
+            });
+            assert.equal(ThemeManager.ActiveScheme?.name, 'AutoSchemeLight');
+        } finally {
+            if (prior !== undefined) g.matchMedia = prior;
+        }
+    });
+});

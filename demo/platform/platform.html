@@ -88,6 +88,24 @@
         // lockstep with Material.
         import { ThemeManager }
             from '@visualisation-sub/mural/runtime';
+        // Material scheme classes for the OS-preference wiring below.
+        // Passed as class refs (no string proxies); Application.initialize
+        // resolves each to its name for ThemeManager.
+        import { Material, MaterialLight, MaterialDark }
+            from '@visualisation-sub/mural/resources/material';
+
+        // Wire OS prefers-color-scheme into the active scheme at app
+        // startup. The platform.mu IIFE already ran `app.initialize`
+        // with the .mu file's defaultScheme (Light), so this second
+        // call carries autoScheme to override that pick with the OS
+        // preference. `listen: true` (the default) keeps the active
+        // scheme tracking subsequent OS flips. The in-app
+        // ThemeSelector still works — manual selection wins until the
+        // next OS preference change fires.
+        app.initialize({
+            theme:      Material,
+            autoScheme: { light: MaterialLight, dark: MaterialDark },
+        });
 
         const applyHostChrome = () => {
             const scheme = ThemeManager.ActiveScheme;
