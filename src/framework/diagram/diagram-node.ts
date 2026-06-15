@@ -143,8 +143,14 @@ export class DiagramNode extends ContentControl
         // offsets — auto-scroll pulses + scroll-delta compensation in
         // OnPointerMove read these.
         this._dragScrollViewer   = DiagramNode.findScrollViewer(this);
-        this._pressScrollOffsetX = this._dragScrollViewer?.HorizontalOffset ?? 0;
-        this._pressScrollOffsetY = this._dragScrollViewer?.VerticalOffset   ?? 0;
+        // Snapshot the EFFECTIVE (clamped) offsets, not the raw DP values.
+        // The raw HorizontalOffset / VerticalOffset DPs are never auto-
+        // clamped on assignment (raw stays queryable so two-way bindings
+        // see what they wrote). The canvas-origin-in-host is driven by
+        // the effective offset, so OnPointerMove's scroll compensation
+        // must be in the same frame.
+        this._pressScrollOffsetX = this._dragScrollViewer?.effectiveHorizontalOffset() ?? 0;
+        this._pressScrollOffsetY = this._dragScrollViewer?.effectiveVerticalOffset()   ?? 0;
         // Snapshot group-drag partners. The press-time snapshot pins
         // the partner set for the whole gesture — selection mutations
         // mid-drag (rare, but routed-event ordering is finicky) won't
@@ -184,33 +190,58 @@ export class DiagramNode extends ContentControl
             if (Math.hypot(dx, dy) < DiagramNode.CLICK_THRESHOLD_PX) return;
             this._moved = true;
         }
-        // Compensate for any mid-drag scrolling so the cursor stays
-        // "on" the same point of the node. ScrollViewer translates its
-        // content by -Offset; when the viewport scrolls right by Δ, the
-        // canvas content shifts LEFT by Δ in host coords, so the node
-        // must shift RIGHT by Δ in canvas-local coords to keep its
-        // screen position under the cursor. Without this the node would
-        // lag the cursor by exactly the scroll delta during auto-scroll.
         const sv = this._dragScrollViewer;
-        const scrollDx = sv !== undefined ? sv.HorizontalOffset - this._pressScrollOffsetX : 0;
-        const scrollDy = sv !== undefined ? sv.VerticalOffset   - this._pressScrollOffsetY : 0;
-        // Target position for THIS node in canvas-local coords.
-        const newX = args.HostX - this._grabOffsetX + scrollDx;
-        const newY = args.HostY - this._grabOffsetY + scrollDy;
-        // Group-drag delta: every partner shifts by the same vector
-        // `this` does this frame. Read deltas BEFORE the X / Y writes
-        // below so the formula remains delta-from-previous-position
-        // regardless of how many incremental frames have elapsed since
-        // press — a press-time absolute snapshot would accumulate
-        // floating-point drift across long drags.
-        const dx = newX - this.X;
-        const dy = newY - this.Y;
-        if (this._dragPartners !== undefined && (dx !== 0 || dy !== 0))
+
+        // Snapshot pre-move position — partners get ONE net delta per
+        // pointer-move event, after any cascade-driven re-corrections
+        // below have settled.
+        const preMoveX = this.X;
+        const preMoveY = this.Y;
+
+        // First pass: write this.X / this.Y using the current effective
+        // scroll offset.
+        this.moveSelfToCursor(args.HostX, args.HostY, sv);
+
+        // Cascade-correct loop. When the canvas (PaginatedCanvas) shrinks
+        // because our write reduced the union extent, the ScrollViewer's
+        // effective offset clamps to a smaller value at the next layout
+        // pass. The canvas-origin-in-host shifts; the position we just
+        // wrote now lands a screen-pixel off the cursor by the clamp
+        // delta. The fix: force a layout flush, re-read effective
+        // offsets, re-compute the target X / Y, write again. Iterate
+        // until offsets stop changing (or a safety cap is hit — a
+        // cyclic shrink/grow scenario shouldn't exist but cap anyway).
+        const host = this.FindAncestorPresentationTarget() as
+            unknown as { Flush?(): void } | undefined;
+        if (sv !== undefined && host?.Flush !== undefined)
+        {
+            let lastEffX = sv.effectiveHorizontalOffset();
+            let lastEffY = sv.effectiveVerticalOffset();
+            for (let iter = 0; iter < 4; iter++)
+            {
+                host.Flush();
+                const curEffX = sv.effectiveHorizontalOffset();
+                const curEffY = sv.effectiveVerticalOffset();
+                if (curEffX === lastEffX && curEffY === lastEffY) break;
+                lastEffX = curEffX;
+                lastEffY = curEffY;
+                this.moveSelfToCursor(args.HostX, args.HostY, sv);
+            }
+        }
+
+        // Group-drag delta: every partner shifts by the NET vector this
+        // ended up moving (initial + any cascade corrections). Applying
+        // partners AFTER the converge loop keeps them in lockstep with
+        // the final this.X / this.Y rather than the pre-correction
+        // intermediate.
+        const netDx = this.X - preMoveX;
+        const netDy = this.Y - preMoveY;
+        if (this._dragPartners !== undefined && (netDx !== 0 || netDy !== 0))
         {
             for (const partner of this._dragPartners)
             {
-                partner.X = partner.X + dx;
-                partner.Y = partner.Y + dy;
+                partner.X = partner.X + netDx;
+                partner.Y = partner.Y + netDy;
                 // Same Local-tier teardown as the self-move below —
                 // each partner needs Local cleared so subsequent Align
                 // / Distribute writes reach the container through the
@@ -219,29 +250,32 @@ export class DiagramNode extends ContentControl
                 partner.ClearValue(DiagramNode.YKey);
             }
         }
-        this.X = newX;
-        this.Y = newY;
-        // Local-tier teardown after the round-trip. Writing X / Y above
-        // landed a LocalValue on the container's EVD; that fired the
-        // apply_setter writeback (X / Y are BindsTwoWayByDefault), which
-        // pushed the new values back to the source VM, which in turn
-        // pushed them onto the Style tier through the binding's source-
-        // change subscription. The Style tier now holds the same value
-        // as Local, but Local shadows it — and Local shadows any FUTURE
-        // Style push too, so a later VM-side write (Align / Distribute
-        // commands writing VM.X from outside the drag pipeline) would
-        // update VM + Style but the container wouldn't move. Clearing
-        // Local here drops the Local slot so the Style tier becomes
-        // effective; visual position is unchanged (same value) but
-        // subsequent VM-driven writes flow through unobstructed.
-        this.ClearValue(DiagramNode.XKey);
-        this.ClearValue(DiagramNode.YKey);
+
         // Edge auto-scroll — the SV starts / continues / stops a tick
         // timer based on cursor proximity to its viewport edges. The
         // pulse re-evaluates on every move; the timer keeps scrolling
         // even when the cursor sits still near an edge.
         sv?.EvaluateEdgeAutoScroll(args.HostX, args.HostY);
         args.Handled = true;
+    }
+
+    // Single self-move sub-step used by OnPointerMove. Reads the
+    // ScrollViewer's EFFECTIVE (post-clamp) offsets so a shrink-driven
+    // canvas-origin shift gets compensated correctly. Writes X / Y and
+    // clears the Local tier — same Local-tier teardown rationale as the
+    // partner-move path above (so later Style-tier writes from
+    // Align / Distribute commands reach the container without Local
+    // shadowing).
+    private moveSelfToCursor(hostX: number, hostY: number, sv: ScrollViewer | undefined): void
+    {
+        const effX = sv?.effectiveHorizontalOffset() ?? 0;
+        const effY = sv?.effectiveVerticalOffset()   ?? 0;
+        const scrollDx = sv !== undefined ? effX - this._pressScrollOffsetX : 0;
+        const scrollDy = sv !== undefined ? effY - this._pressScrollOffsetY : 0;
+        this.X = hostX - this._grabOffsetX + scrollDx;
+        this.Y = hostY - this._grabOffsetY + scrollDy;
+        this.ClearValue(DiagramNode.XKey);
+        this.ClearValue(DiagramNode.YKey);
     }
 
     protected override OnPointerUp(args: PointerEventArgs): void
