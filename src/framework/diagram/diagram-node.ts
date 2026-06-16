@@ -159,20 +159,61 @@ export class DiagramNode extends ContentControl
         // keeps the delta-from-cursor formula honest (it reads / writes
         // `this.X` / `this.Y` directly).
         this._dragPartners = undefined;
-        if (Selector.GetIsSelected(this))
+        const selector = Selector.FromContainer<Selector>(
+            this, (v: Visual): v is Selector => v instanceof Selector);
+        const partners: DiagramNode[] = [];
+        // Selection-based partners — if `this` is selected, every other
+        // selected container drags along with it (PowerPoint multi-select
+        // semantics). Drag from a NON-selected node ignores the existing
+        // selection; only `this` moves.
+        if (selector !== undefined && Selector.GetIsSelected(this))
         {
-            const selector = Selector.FromContainer<Selector>(
-                this, (v: Visual): v is Selector => v instanceof Selector);
-            if (selector !== undefined)
+            for (const c of selector.SelectedContainers)
             {
-                const partners: DiagramNode[] = [];
-                for (const c of selector.SelectedContainers)
-                {
-                    if (c !== this && c instanceof DiagramNode) partners.push(c);
-                }
-                if (partners.length > 0) this._dragPartners = partners;
+                if (c !== this && c instanceof DiagramNode) partners.push(c);
             }
         }
+        // Group-membership partners — if the bound data exposes a
+        // hierarchical Parent / Members structure (Visio-style groups),
+        // every other leaf in `this`'s TOP-LEVEL ancestor drags along
+        // regardless of selection state. That matches Visio / PowerPoint:
+        // grabbing any member of a group moves the whole group, even
+        // when the selection didn't pre-cover it.
+        //
+        // Structural duck-typing on DataContext — `Parent` (chained up to
+        // the root) and `Members` (with `.Count` + `.Get(i)` on the root)
+        // are the only contract. Any data shape that fits gets group-drag
+        // for free; this framework class doesn't import the demo's
+        // GroupVM.
+        if (selector !== undefined)
+        {
+            const dc = this.DataContext as { Parent?: unknown } | undefined;
+            if (dc !== undefined)
+            {
+                // Walk up to the outermost ancestor. For a leaf NodeVM
+                // with no Parent, root === dc and collectHierarchicalLeaves
+                // returns just [dc] — the loop body then degenerates to a
+                // no-op (we skip self). For a leaf inside a group, root is
+                // the top-level group and the loop adds every other leaf.
+                // For a group container itself (no Parent, has Members),
+                // root === dc, leaves are the members, the loop adds them.
+                let root: { Parent?: unknown } = dc;
+                while (root.Parent !== undefined) root = root.Parent as { Parent?: unknown };
+                const leaves: unknown[] = [];
+                DiagramNode.collectHierarchicalLeaves(root, leaves);
+                for (const leaf of leaves)
+                {
+                    if (leaf === dc) continue;
+                    const container = selector.Generator.ContainerFromItem(leaf);
+                    if (container instanceof DiagramNode && container !== this
+                        && !partners.includes(container))
+                    {
+                        partners.push(container);
+                    }
+                }
+            }
+        }
+        if (partners.length > 0) this._dragPartners = partners;
         args.CapturePointer(this);
         args.Handled = true;
     }
@@ -299,6 +340,29 @@ export class DiagramNode extends ContentControl
             selector?.HandleContainerClick(this, args.Modifiers);
         }
         args.Handled = true;
+    }
+
+    // Recursive descent on a hierarchical DataContext, structurally typed.
+    // A node with a `Members` collection (anything exposing `.Count` and
+    // `.Get(i)` — ObservableCollection or duck-equivalent) recurses into
+    // its members; anything else is a leaf and gets appended. Used by
+    // OnPointerDown to gather group-drag partners for any node whose
+    // bound data sits inside a Visio-/PowerPoint-style group hierarchy.
+    // Defined as a static helper so the OnPointerDown body stays linear.
+    private static collectHierarchicalLeaves(entity: unknown, out: unknown[]): void
+    {
+        const members = (entity as { Members?: { Count?: number; Get?(i: number): unknown } }).Members;
+        if (members !== undefined
+            && typeof members.Count === 'number'
+            && typeof members.Get   === 'function')
+        {
+            for (let i = 0; i < members.Count; i++)
+            {
+                DiagramNode.collectHierarchicalLeaves(members.Get(i), out);
+            }
+            return;
+        }
+        out.push(entity);
     }
 
     // Walk up the visual tree to find the closest enclosing ScrollViewer

@@ -61,6 +61,9 @@ export class ShapeNodeVM extends Model
         this._set_property_value_by_name('Id', id);
         this._set_property_value_by_name('X',  x);
         this._set_property_value_by_name('Y',  y);
+        // Group back-ref. undefined ≡ "top-level node" (not inside any
+        // GroupVM). View-invisible structural metadata, so plain field.
+        this.Parent = undefined;
     }
 
     get Id()          { return this._get_property_value_by_name('Id'); }
@@ -122,6 +125,252 @@ export class BunShapeVM           extends ShapeNodeVM { static Kind = 'bun';    
 export class HeartShapeVM         extends ShapeNodeVM { static Kind = 'heart';         }
 export class PixelCircleShapeVM   extends ShapeNodeVM { static Kind = 'pixel-circle';  }
 export class PixelTriangleShapeVM extends ShapeNodeVM { static Kind = 'pixel-triangle';}
+
+// ── GroupVM ─────────────────────────────────────────────────────────
+//
+// First-class group entity (option C from the brainstorm). Holds an
+// observable list of `Members` — each member is either a `ShapeNodeVM`
+// (leaf) or another `GroupVM` (nested). Exposes the same X / Y / Width /
+// Height shape as ShapeNodeVM so recursive bbox math on nested groups
+// can read `.X / .Y / .Width / .Height` regardless of member type.
+//
+// X / Y / Width / Height are COMPUTED from the union bbox of members.
+// They're real DPs (so they fire change notifications and a binding on
+// the bbox-adorner picks them up live). Width / Height are read-only —
+// driven by `_recomputeBounds` only. X / Y ALSO accept writes from
+// alignment / distribute commands: the setter translates the assignment
+// into a rigid shift of every member by the delta, then re-runs
+// `_recomputeBounds` once. Nested groups recurse through the same
+// setter, so a top-level shift settles every leaf at any depth.
+//
+// `IsSelected` is the same shape as on ShapeNodeVM. The selection bridge
+// elevates a clicked member to its TOP-LEVEL ancestor and flips IsSelected
+// on THAT entity only — members of a selected group stay IsSelected=false,
+// so the group's bbox template (dashed border) is the single piece of
+// selection chrome the user sees for the whole group.
+//
+// `Parent` is a back-reference — undefined when the group is at the top
+// level of DiagramVM.Groups. Plain field (view-invisible structural
+// metadata; per CLAUDE.md, DPs only for state the view reads / reacts to).
+export class GroupVM extends Model
+{
+    static IsSelectedKey = Model.RegisterProperty(GroupVM, 'IsSelected', false, MetaData.None);
+    static XKey          = Model.RegisterProperty(GroupVM, 'X',          0,     MetaData.None);
+    static YKey          = Model.RegisterProperty(GroupVM, 'Y',          0,     MetaData.None);
+    static WidthKey      = Model.RegisterProperty(GroupVM, 'Width',      0,     MetaData.None);
+    static HeightKey     = Model.RegisterProperty(GroupVM, 'Height',     0,     MetaData.None);
+
+    constructor(initialMembers)
+    {
+        super();
+        // Members live in an ObservableCollection so the bounds-adorner
+        // template ItemsControl could iterate them too if we ever want a
+        // per-member chrome in addition to the per-shape Stroke triggers.
+        this._members = new ObservableCollection();
+        // Plain field — see class doc.
+        this.Parent = undefined;
+        // Per-member property-change listeners — keyed by member so we
+        // can detach cleanly on remove / clear.
+        this._memberListeners = new Map();
+        this._members.Subscribe(change => this._handleMembersChange(change));
+
+        if (Array.isArray(initialMembers))
+        {
+            for (const m of initialMembers)
+            {
+                // Detach from its current parent first so we don't end up
+                // with a member sitting in two Members lists.
+                if (m.Parent !== undefined) m.Parent._removeMember(m);
+                m.Parent = this;
+                this._members.Add(m);
+            }
+        }
+    }
+
+    get Members()      { return this._members; }
+    get IsSelected()   { return this._get_property_value_by_name('IsSelected'); }
+    set IsSelected(v)  { this._set_property_value_by_name('IsSelected', v); }
+    get X()            { return this._get_property_value_by_name('X'); }
+    get Y()            { return this._get_property_value_by_name('Y'); }
+    get Width()        { return this._get_property_value_by_name('Width'); }
+    get Height()       { return this._get_property_value_by_name('Height'); }
+
+    // Writing X / Y shifts every member by the delta — the group moves
+    // as a rigid unit (Visio / PowerPoint parity for align + distribute).
+    // Each member's X / Y setter then propagates: leaves write through to
+    // the DP, nested groups recurse with the same shift semantics. The
+    // bbox follows automatically through _recomputeBounds. Width and
+    // Height stay read-only — alignment never writes them, and resizing
+    // a group is a different gesture (would require scaling members,
+    // out of scope for this code path).
+    set X(v)
+    {
+        const cur = this._get_property_value_by_name('X');
+        const dx  = v - cur;
+        if (dx === 0) return;
+        this._shiftBy(dx, 0);
+    }
+
+    set Y(v)
+    {
+        const cur = this._get_property_value_by_name('Y');
+        const dy  = v - cur;
+        if (dy === 0) return;
+        this._shiftBy(0, dy);
+    }
+
+    // Translate every member by (dx, dy). The per-member X / Y change
+    // listener (_listenMember handler) would re-run _recomputeBounds for
+    // each member-write — partial state, transient wrong bbox, cascade
+    // up to enclosing groups N times. Suppress those during the shift
+    // and fire one final _recomputeBounds when every member has moved.
+    _shiftBy(dx, dy)
+    {
+        this._shiftSuppressed = true;
+        try
+        {
+            for (let i = 0; i < this._members.Count; i++)
+            {
+                const m = this._members.Get(i);
+                if (dx !== 0) m.X = m.X + dx;
+                if (dy !== 0) m.Y = m.Y + dy;
+            }
+        }
+        finally
+        {
+            this._shiftSuppressed = false;
+        }
+        this._recomputeBounds();
+    }
+
+    _handleMembersChange(change)
+    {
+        switch (change.kind)
+        {
+            case 'inserted':
+                for (const m of change.items) this._listenMember(m);
+                break;
+            case 'removed':
+                for (const m of change.items) this._unlistenMember(m);
+                break;
+            case 'replaced':
+                this._unlistenMember(change.oldItem);
+                this._listenMember(change.newItem);
+                break;
+            case 'cleared':
+                for (const m of [...this._memberListeners.keys()]) this._unlistenMember(m);
+                break;
+        }
+        this._recomputeBounds();
+    }
+
+    _listenMember(m)
+    {
+        // The four geometry DPs share the same name across NodeVM and
+        // GroupVM, but the Key objects differ. Pick the right Key based
+        // on the member's class.
+        const isGroup = m instanceof GroupVM;
+        const xKey = isGroup ? GroupVM.XKey      : ShapeNodeVM.XKey;
+        const yKey = isGroup ? GroupVM.YKey      : ShapeNodeVM.YKey;
+        const wKey = isGroup ? GroupVM.WidthKey  : ShapeNodeVM.WidthKey;
+        const hKey = isGroup ? GroupVM.HeightKey : ShapeNodeVM.HeightKey;
+        const handler = () => {
+            if (this._shiftSuppressed) return;
+            this._recomputeBounds();
+        };
+        m.AddPropertyChangedListener(xKey, handler);
+        m.AddPropertyChangedListener(yKey, handler);
+        m.AddPropertyChangedListener(wKey, handler);
+        m.AddPropertyChangedListener(hKey, handler);
+        this._memberListeners.set(m, { handler, xKey, yKey, wKey, hKey });
+    }
+
+    _unlistenMember(m)
+    {
+        const entry = this._memberListeners.get(m);
+        if (entry === undefined) return;
+        m.RemovePropertyChangedListener(entry.xKey, entry.handler);
+        m.RemovePropertyChangedListener(entry.yKey, entry.handler);
+        m.RemovePropertyChangedListener(entry.wKey, entry.handler);
+        m.RemovePropertyChangedListener(entry.hKey, entry.handler);
+        this._memberListeners.delete(m);
+    }
+
+    // Internal — called by GroupVM siblings during a Group operation
+    // to relocate a member out of this group without firing extra
+    // events. Members.Remove fires Subscribe's removed-change, which
+    // detaches listeners through the normal path.
+    _removeMember(m)
+    {
+        const idx = this._members.IndexOf(m);
+        if (idx >= 0) this._members.RemoveAt(idx);
+    }
+
+    _recomputeBounds()
+    {
+        if (this._members.Count === 0)
+        {
+            this._set_property_value_by_name('X', 0);
+            this._set_property_value_by_name('Y', 0);
+            this._set_property_value_by_name('Width', 0);
+            this._set_property_value_by_name('Height', 0);
+            return;
+        }
+        let minX = Number.POSITIVE_INFINITY, minY = Number.POSITIVE_INFINITY;
+        let maxX = Number.NEGATIVE_INFINITY, maxY = Number.NEGATIVE_INFINITY;
+        for (let i = 0; i < this._members.Count; i++)
+        {
+            const m = this._members.Get(i);
+            const x = m.X, y = m.Y, w = m.Width, h = m.Height;
+            if (x < minX) minX = x;
+            if (y < minY) minY = y;
+            if (x + w > maxX) maxX = x + w;
+            if (y + h > maxY) maxY = y + h;
+        }
+        this._set_property_value_by_name('X',      minX);
+        this._set_property_value_by_name('Y',      minY);
+        this._set_property_value_by_name('Width',  maxX - minX);
+        this._set_property_value_by_name('Height', maxY - minY);
+    }
+
+    // Recursively enumerate every leaf ShapeNodeVM contained (transitively).
+    // Used by the selection bridge to flip IsSelected on every member of
+    // a selected group's top-level ancestor.
+    *EnumerateLeaves()
+    {
+        for (let i = 0; i < this._members.Count; i++)
+        {
+            const m = this._members.Get(i);
+            if (m instanceof GroupVM) yield* m.EnumerateLeaves();
+            else                      yield m;
+        }
+    }
+
+    // Recursively enumerate every descendant GroupVM (excluding self).
+    *EnumerateSubGroups()
+    {
+        for (let i = 0; i < this._members.Count; i++)
+        {
+            const m = this._members.Get(i);
+            if (m instanceof GroupVM)
+            {
+                yield m;
+                yield* m.EnumerateSubGroups();
+            }
+        }
+    }
+}
+
+// Walk Parent links up to the root. Works for both ShapeNodeVM and
+// GroupVM. Returns the entity itself when it has no Parent (already
+// top-level). Used by the selection bridge to elevate a clicked leaf to
+// its outermost containing group.
+export function topLevelOf(entity)
+{
+    let cur = entity;
+    while (cur.Parent !== undefined) cur = cur.Parent;
+    return cur;
+}
 
 // kind → class lookup, drives CreateNode + Load-from-serialized.
 const KIND_TO_CLASS = {
@@ -256,13 +505,37 @@ export class DiagramVM extends Model
         Model.RegisterProperty(DiagramVM, 'AlignRightCommand',           undefined, MetaData.None);
         Model.RegisterProperty(DiagramVM, 'AlignTopCommand',             undefined, MetaData.None);
         Model.RegisterProperty(DiagramVM, 'AlignMiddleCommand',          undefined, MetaData.None);
+        Model.RegisterProperty(DiagramVM, 'AlignCenterCommand',          undefined, MetaData.None);
         Model.RegisterProperty(DiagramVM, 'DistributeHorizontalCommand', undefined, MetaData.None);
         Model.RegisterProperty(DiagramVM, 'DistributeVerticalCommand',   undefined, MetaData.None);
+        Model.RegisterProperty(DiagramVM, 'GroupCommand',                undefined, MetaData.None);
+        Model.RegisterProperty(DiagramVM, 'UngroupCommand',              undefined, MetaData.None);
+        // Selection bounding rect — union bbox of every entity with
+        // IsSelected=true, recomputed on selection / geometry changes by
+        // _updateSelectionBounds. SelectionCount lets the adorner overlay
+        // toggle Visibility purely from a binding-friendly numeric DP.
+        // The resize-adorner behavior binds its bbox border and uses
+        // these to position its 8 handles — keys captured as static
+        // properties so the behavior can subscribe via
+        // AddPropertyChangedListener.
+        DiagramVM.SelectionXKey      = Model.RegisterProperty(DiagramVM, 'SelectionX',      0, MetaData.None);
+        DiagramVM.SelectionYKey      = Model.RegisterProperty(DiagramVM, 'SelectionY',      0, MetaData.None);
+        DiagramVM.SelectionWidthKey  = Model.RegisterProperty(DiagramVM, 'SelectionWidth',  0, MetaData.None);
+        DiagramVM.SelectionHeightKey = Model.RegisterProperty(DiagramVM, 'SelectionHeight', 0, MetaData.None);
+        DiagramVM.SelectionCountKey  = Model.RegisterProperty(DiagramVM, 'SelectionCount',  0, MetaData.None);
     }
 
     constructor(storage) {
         super();
         this._storage = storage;
+        // Nodes is a flat collection of ALL diagram entities — both leaf
+        // ShapeNodeVMs AND GroupVMs. A GroupVM rendering as a transparent
+        // bbox-Border via its DataTemplate sits in this collection
+        // alongside the shape members it represents; the Parent back-ref
+        // on each member describes the tree, but Nodes stays a single flat
+        // list so the Diagram's ItemsControl reaches every visual entity
+        // with one binding. Nested groups also live here at top level —
+        // tree depth is encoded in Parent links, not in collection shape.
         this._set_property_value_by_name('Nodes', new ObservableCollection());
         this._set_property_value_by_name('ToolboxShapes',
             TOOLBOX_DEFS.map(([kind, label]) => new ToolboxShapeVM(kind, label)));
@@ -287,10 +560,22 @@ export class DiagramVM extends Model
             new RelayCommand(() => this.AlignTop(),   () => this._countSelected() >= 2));
         this._set_property_value_by_name('AlignMiddleCommand',
             new RelayCommand(() => this.AlignMiddle(),() => this._countSelected() >= 2));
+        this._set_property_value_by_name('AlignCenterCommand',
+            new RelayCommand(() => this.AlignCenter(),() => this._countSelected() >= 2));
         this._set_property_value_by_name('DistributeHorizontalCommand',
             new RelayCommand(() => this.DistributeHorizontal(), () => this._countSelected() >= 3));
         this._set_property_value_by_name('DistributeVerticalCommand',
             new RelayCommand(() => this.DistributeVertical(),   () => this._countSelected() >= 3));
+
+        // ── Group / Ungroup commands ────────────────────────────────
+        // Group needs ≥ 2 selected TOP-LEVEL entities (anything that
+        // could become the new group's members). Ungroup needs ≥ 1
+        // selected top-level GroupVM. CanExecute is re-evaluated by
+        // the same selection-listener pipeline as the align commands.
+        this._set_property_value_by_name('GroupCommand',
+            new RelayCommand(() => this.Group(),   () => this._selectedTopLevel().length >= 2));
+        this._set_property_value_by_name('UngroupCommand',
+            new RelayCommand(() => this.Ungroup(), () => this._selectedTopLevelGroups().length >= 1));
 
         // Selection-change tracking — each node's IsSelected change
         // (driven from the bootstrap's selection bridge mirroring
@@ -304,6 +589,8 @@ export class DiagramVM extends Model
     }
 
     get Nodes()                       { return this._get_property_value_by_name('Nodes'); }
+    get GroupCommand()                { return this._get_property_value_by_name('GroupCommand'); }
+    get UngroupCommand()              { return this._get_property_value_by_name('UngroupCommand'); }
     get ToolboxShapes()               { return this._get_property_value_by_name('ToolboxShapes'); }
     get Status()                      { return this._get_property_value_by_name('Status'); }
     set Status(v)                     { this._set_property_value_by_name('Status', v); }
@@ -313,8 +600,14 @@ export class DiagramVM extends Model
     get AlignRightCommand()           { return this._get_property_value_by_name('AlignRightCommand'); }
     get AlignTopCommand()             { return this._get_property_value_by_name('AlignTopCommand'); }
     get AlignMiddleCommand()          { return this._get_property_value_by_name('AlignMiddleCommand'); }
+    get AlignCenterCommand()          { return this._get_property_value_by_name('AlignCenterCommand'); }
     get DistributeHorizontalCommand() { return this._get_property_value_by_name('DistributeHorizontalCommand'); }
     get DistributeVerticalCommand()   { return this._get_property_value_by_name('DistributeVerticalCommand'); }
+    get SelectionX()                  { return this._get_property_value_by_name('SelectionX'); }
+    get SelectionY()                  { return this._get_property_value_by_name('SelectionY'); }
+    get SelectionWidth()              { return this._get_property_value_by_name('SelectionWidth'); }
+    get SelectionHeight()             { return this._get_property_value_by_name('SelectionHeight'); }
+    get SelectionCount()              { return this._get_property_value_by_name('SelectionCount'); }
 
     CreateNode(kind, x, y) {
         const Cls = KIND_TO_CLASS[kind];
@@ -439,6 +732,19 @@ export class DiagramVM extends Model
         this.Status = `Aligned ${sel.length} shapes middle.`;
     }
 
+    AlignCenter() {
+        // "Center" in PowerPoint = vertical centre line — every shape's
+        // horizontal centre lines up on a shared vertical axis. The bbox
+        // centre is the reference (same convention as AlignMiddle).
+        const sel = this._getSelected();
+        if (sel.length < 2) return;
+        const left  = Math.min(...sel.map(n => n.X));
+        const right = Math.max(...sel.map(n => n.X + n.Width));
+        const midX  = (left + right) / 2;
+        for (const n of sel) n.X = midX - n.Width / 2;
+        this.Status = `Aligned ${sel.length} shapes center.`;
+    }
+
     DistributeHorizontal() {
         const sel = this._getSelected();
         if (sel.length < 3) return;
@@ -523,20 +829,89 @@ export class DiagramVM extends Model
             case 'moved': /* selection identity unchanged */ break;
         }
         this._raiseAllCanExecute();
+        this._updateSelectionBounds();
     }
 
     _watchSelection(node) {
-        const listener = () => this._raiseAllCanExecute();
-        node.AddPropertyChangedListener(ShapeNodeVM.IsSelectedKey, listener);
-        this._selectionWatchers.set(node, listener);
+        // Nodes hold both ShapeNodeVMs and GroupVMs; their IsSelected /
+        // X / Y / Width / Height DPs are registered on different classes,
+        // so the Key objects differ even though the names match. Pick
+        // the right Key per member instance.
+        //
+        // Two listeners per node:
+        //   * onSelected   — IsSelected flipped. Toolbar CanExecute and
+        //                    the selection bbox both depend on the
+        //                    selected SET, so re-evaluate both.
+        //   * onGeometry   — X / Y / W / H moved. Only matters if THIS
+        //                    node is currently selected — otherwise the
+        //                    bbox doesn't include it. Cheap early-out.
+        const isGroup = node instanceof GroupVM;
+        const sKey = isGroup ? GroupVM.IsSelectedKey : ShapeNodeVM.IsSelectedKey;
+        const xKey = isGroup ? GroupVM.XKey          : ShapeNodeVM.XKey;
+        const yKey = isGroup ? GroupVM.YKey          : ShapeNodeVM.YKey;
+        const wKey = isGroup ? GroupVM.WidthKey      : ShapeNodeVM.WidthKey;
+        const hKey = isGroup ? GroupVM.HeightKey     : ShapeNodeVM.HeightKey;
+        const onSelected = () => {
+            this._raiseAllCanExecute();
+            this._updateSelectionBounds();
+        };
+        const onGeometry = () => {
+            if (node.IsSelected) this._updateSelectionBounds();
+        };
+        node.AddPropertyChangedListener(sKey, onSelected);
+        node.AddPropertyChangedListener(xKey, onGeometry);
+        node.AddPropertyChangedListener(yKey, onGeometry);
+        node.AddPropertyChangedListener(wKey, onGeometry);
+        node.AddPropertyChangedListener(hKey, onGeometry);
+        this._selectionWatchers.set(node, {
+            sKey, xKey, yKey, wKey, hKey, onSelected, onGeometry,
+        });
     }
 
     _unwatchSelection(node) {
-        const l = this._selectionWatchers.get(node);
-        if (l !== undefined) {
-            node.RemovePropertyChangedListener(ShapeNodeVM.IsSelectedKey, l);
-            this._selectionWatchers.delete(node);
+        const entry = this._selectionWatchers.get(node);
+        if (entry === undefined) return;
+        node.RemovePropertyChangedListener(entry.sKey, entry.onSelected);
+        node.RemovePropertyChangedListener(entry.xKey, entry.onGeometry);
+        node.RemovePropertyChangedListener(entry.yKey, entry.onGeometry);
+        node.RemovePropertyChangedListener(entry.wKey, entry.onGeometry);
+        node.RemovePropertyChangedListener(entry.hKey, entry.onGeometry);
+        this._selectionWatchers.delete(node);
+    }
+
+    // Recompute the union bbox of every currently-selected entity in the
+    // flat Nodes collection (leaves AND groups). The adorner overlay binds
+    // SelectionX / Y / Width / Height directly; the behavior reads
+    // SelectionCount to gate handle visibility. Called whenever a
+    // selection flips, a selected entity moves / resizes, or the Nodes
+    // collection itself changes.
+    _updateSelectionBounds() {
+        let minX = Infinity, minY = Infinity;
+        let maxX = -Infinity, maxY = -Infinity;
+        let count = 0;
+        const items = this.Nodes;
+        for (let i = 0; i < items.Count; i++) {
+            const n = items.Get(i);
+            if (!n.IsSelected) continue;
+            count++;
+            if (n.X < minX) minX = n.X;
+            if (n.Y < minY) minY = n.Y;
+            if (n.X + n.Width  > maxX) maxX = n.X + n.Width;
+            if (n.Y + n.Height > maxY) maxY = n.Y + n.Height;
         }
+        if (count === 0) {
+            this._set_property_value_by_name('SelectionX',      0);
+            this._set_property_value_by_name('SelectionY',      0);
+            this._set_property_value_by_name('SelectionWidth',  0);
+            this._set_property_value_by_name('SelectionHeight', 0);
+            this._set_property_value_by_name('SelectionCount',  0);
+            return;
+        }
+        this._set_property_value_by_name('SelectionX',      minX);
+        this._set_property_value_by_name('SelectionY',      minY);
+        this._set_property_value_by_name('SelectionWidth',  maxX - minX);
+        this._set_property_value_by_name('SelectionHeight', maxY - minY);
+        this._set_property_value_by_name('SelectionCount',  count);
     }
 
     _raiseAllCanExecute() {
@@ -544,8 +919,226 @@ export class DiagramVM extends Model
         this.AlignRightCommand?.RaiseCanExecuteChanged();
         this.AlignTopCommand?.RaiseCanExecuteChanged();
         this.AlignMiddleCommand?.RaiseCanExecuteChanged();
+        this.AlignCenterCommand?.RaiseCanExecuteChanged();
         this.DistributeHorizontalCommand?.RaiseCanExecuteChanged();
         this.DistributeVerticalCommand?.RaiseCanExecuteChanged();
+        this.GroupCommand?.RaiseCanExecuteChanged();
+        this.UngroupCommand?.RaiseCanExecuteChanged();
+    }
+
+    // ── Group / Ungroup ───────────────────────────────────────────────
+
+    // Currently-selected TOP-LEVEL entities — leaves with no Parent, plus
+    // top-level GroupVMs whose IsSelected bridge elevation marked them
+    // (or that the user clicked directly on the bbox border). Walks each
+    // selected entity's Parent chain to find its outermost ancestor, then
+    // dedupes via Set so sibling selections inside the same top-level
+    // group collapse to one entry.
+    _selectedTopLevel() {
+        const out = new Set();
+        const nodes = this.Nodes;
+        for (let i = 0; i < nodes.Count; i++)
+        {
+            const n = nodes.Get(i);
+            if (n.IsSelected) out.add(topLevelOf(n));
+        }
+        return [...out];
+    }
+
+    _selectedTopLevelGroups() {
+        return this._selectedTopLevel().filter(e => e instanceof GroupVM);
+    }
+
+    // Ctrl+G — wrap the current top-level selection in a new GroupVM.
+    // The new GroupVM lands IN the flat Nodes collection — inserted at
+    // the LOWEST index of any selected member so the bbox renders BEHIND
+    // those members in z-order (members on top of bbox = members catch
+    // pointer first; clicks in the empty-bbox gap fall through to the
+    // group container). Members stay where they were in Nodes; only their
+    // Parent back-ref flips to the new group. Same shape for shapes and
+    // for already-existing GroupVMs (nesting).
+    Group() {
+        const selection = this._selectedTopLevel();
+        if (selection.length < 2) return;
+        const group = new GroupVM();
+        // Find the lowest member index so the bbox is inserted there.
+        let minIdx = this.Nodes.Count;
+        for (const m of selection)
+        {
+            const idx = this.Nodes.IndexOf(m);
+            if (idx >= 0 && idx < minIdx) minIdx = idx;
+        }
+        // Re-parent every selected entity (NodeVM or nested GroupVM)
+        // to the new group. Both stay in DiagramVM.Nodes — only Parent
+        // and the group's Members list change.
+        for (const m of selection)
+        {
+            m.Parent = group;
+            group.Members.Add(m);
+        }
+        this.Nodes.Insert(minIdx, group);
+        // Selector.SelectedItems didn't change (the same items the user
+        // picked are still in it), so the bridge won't re-fire on its
+        // own — flip IsSelected here to match what it WOULD set: the
+        // new group ON, every member (leaf or sub-group) OFF, since the
+        // group's bbox is now the only chrome we want the user to see.
+        group.IsSelected = true;
+        for (const leaf of group.EnumerateLeaves()) leaf.IsSelected = false;
+        for (const sub of group.EnumerateSubGroups()) sub.IsSelected = false;
+        this._raiseAllCanExecute();
+        this.Status = `Grouped ${selection.length} item${selection.length === 1 ? '' : 's'}.`;
+    }
+
+    // Ctrl+Shift+G — dissolve every currently-selected top-level group.
+    // Members lift to the dissolved group's parent (or to no-parent if
+    // top-level). Members stay in DiagramVM.Nodes throughout (they were
+    // always there); only their Parent back-ref and the dissolved group's
+    // own slot in Nodes change.
+    Ungroup() {
+        const groups = this._selectedTopLevelGroups();
+        if (groups.length === 0) return;
+        let count = 0;
+        for (const g of groups)
+        {
+            const parent = g.Parent;
+            const members = [];
+            for (let i = 0; i < g.Members.Count; i++) members.push(g.Members.Get(i));
+            for (const m of members)
+            {
+                g._removeMember(m);
+                m.Parent = parent;
+                if (parent !== undefined) parent.Members.Add(m);
+            }
+            // Remove `g` from its parent group's Members (if nested) AND
+            // from the flat Nodes collection (always — top-level or
+            // nested, groups always live in Nodes too in this model).
+            if (parent !== undefined) parent._removeMember(g);
+            const idx = this.Nodes.IndexOf(g);
+            if (idx >= 0) this.Nodes.RemoveAt(idx);
+            count++;
+        }
+        this._raiseAllCanExecute();
+        this.Status = `Ungrouped ${count} group${count === 1 ? '' : 's'}.`;
+    }
+
+    // ── Selection resize ──────────────────────────────────────────────
+    //
+    // The resize-adorner behavior drives this trio. Begin captures the
+    // initial geometry of every selected entity (and every leaf
+    // transitively under any selected group); each Apply call computes a
+    // fresh transform from THAT snapshot plus the (dw, dh) delta — never
+    // incremental from the previous frame — so a slow user moving the
+    // pointer in tiny jitter doesn't accumulate floating-point drift.
+    // End drops the snapshot.
+    //
+    // Per-entity semantics (uniform delta for leaves, proportional
+    // scale for groups). X / Y stay or shift based on the per-handle
+    // anchor — the OPPOSITE side of the bbox stays put, the dragged
+    // side follows the pointer:
+    //
+    //   xAnchor === 'left'  → newX = snap.x                 (E handle)
+    //   xAnchor === 'right' → newX = snap.x + snap.w - newW (W handle)
+    //   xAnchor === 'none'  → newW unchanged, newX = snap.x (N / S handles)
+    //   yAnchor — same shape, vertical axis.
+    //
+    //   * leaf: newW = max(MIN, snap.w + dw), newH = max(MIN, snap.h + dh).
+    //                  newX / newY follow the anchor. When clamping kicks
+    //                  in for 'right' anchor, newX = snap.x + snap.w - MIN
+    //                  keeps the right edge fixed even after W stops
+    //                  shrinking — feels right under continued drag.
+    //   * group: newGroupX / Y / W / H derived the same way; every leaf
+    //                  inside scales proportionally relative to the group's
+    //                  new origin and scale factors.
+    //
+    // MIN_SIZE clamps each LEAF dimension. For groups, only the group's
+    // bbox is clamped — per-leaf MIN-inside-group would need a constraint
+    // propagation pass we skipped for v1.
+
+    BeginSelectionResize() {
+        const entities = [];
+        const items = this.Nodes;
+        for (let i = 0; i < items.Count; i++) {
+            const n = items.Get(i);
+            if (!n.IsSelected) continue;
+            if (n instanceof GroupVM) {
+                const leafSnaps = [];
+                for (const l of n.EnumerateLeaves()) {
+                    leafSnaps.push({ leaf: l, x: l.X, y: l.Y, w: l.Width, h: l.Height });
+                }
+                entities.push({
+                    kind: 'group',
+                    group: n,
+                    x: n.X, y: n.Y, w: n.Width, h: n.Height,
+                    leaves: leafSnaps,
+                    // Pre-collected so Apply doesn't re-walk the tree on
+                    // every pointer-move event.
+                    allGroups: [n, ...n.EnumerateSubGroups()],
+                });
+            } else {
+                entities.push({
+                    kind: 'leaf',
+                    leaf: n,
+                    x: n.X, y: n.Y, w: n.Width, h: n.Height,
+                });
+            }
+        }
+        this._resizeSnapshot = { entities };
+    }
+
+    ApplySelectionResize(dw, dh, xAnchor, yAnchor) {
+        if (this._resizeSnapshot === undefined) return;
+        const MIN = 8;
+        // Per-entity anchor math. xAnchor === 'right' keeps the right
+        // edge at snap.x + snap.w and lets X slide with W changes;
+        // 'left' pins X; 'none' is a no-W-change pass.
+        const newPosX = (sx, sw, nw) => {
+            if (xAnchor === 'right') return sx + sw - nw;
+            return sx;
+        };
+        const newPosY = (sy, sh, nh) => {
+            if (yAnchor === 'bottom') return sy + sh - nh;
+            return sy;
+        };
+        for (const e of this._resizeSnapshot.entities) {
+            if (e.kind === 'leaf') {
+                const newW = Math.max(MIN, e.w + dw);
+                const newH = Math.max(MIN, e.h + dh);
+                e.leaf.X      = newPosX(e.x, e.w, newW);
+                e.leaf.Y      = newPosY(e.y, e.h, newH);
+                e.leaf.Width  = newW;
+                e.leaf.Height = newH;
+            } else {
+                const newW = Math.max(MIN, e.w + dw);
+                const newH = Math.max(MIN, e.h + dh);
+                const newGroupX = newPosX(e.x, e.w, newW);
+                const newGroupY = newPosY(e.y, e.h, newH);
+                const scaleX = e.w === 0 ? 1 : newW / e.w;
+                const scaleY = e.h === 0 ? 1 : newH / e.h;
+                // Suppress every nested group's _recomputeBounds during
+                // the inner leaf writes — same pattern as _shiftBy. Each
+                // group fires recompute exactly once at the end, inner-
+                // most first so enclosing groups read settled inner
+                // bounds.
+                for (const g of e.allGroups) g._shiftSuppressed = true;
+                try {
+                    for (const ls of e.leaves) {
+                        ls.leaf.X      = newGroupX + (ls.x - e.x) * scaleX;
+                        ls.leaf.Y      = newGroupY + (ls.y - e.y) * scaleY;
+                        ls.leaf.Width  = Math.max(MIN, ls.w * scaleX);
+                        ls.leaf.Height = Math.max(MIN, ls.h * scaleY);
+                    }
+                } finally {
+                    for (const g of e.allGroups) g._shiftSuppressed = false;
+                }
+                for (let i = e.allGroups.length - 1; i >= 0; i--) {
+                    e.allGroups[i]._recomputeBounds();
+                }
+            }
+        }
+    }
+
+    EndSelectionResize() {
+        this._resizeSnapshot = undefined;
     }
 }
 

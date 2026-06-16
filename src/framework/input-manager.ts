@@ -70,6 +70,18 @@ export class InputManager
     // pointerId shares a press target.
     private pressTargets: Map<number, Visual> = new Map();
 
+    // Drag-time global cursor override. Set via CapturePointer's
+    // optional cursor argument (or the standalone Lock/Unlock helpers
+    // below). Auto-released alongside the capture — on
+    // ReleasePointerCapture and on the matching PointerUp's auto-release
+    // branch — so consumers can't strand a locked cursor by forgetting
+    // to clear it. WPF parity for the common case (Mouse.OverrideCursor
+    // wrapped in try/finally around a captured drag); the bridge to the
+    // host's actual cursor surface (document.body.style.cursor on
+    // HtmlTarget) is symmetric with _captureBridge.
+    private _lockedCursor: string | undefined;
+    private _cursorBridge: ((cursor: string | undefined) => void) | undefined;
+
     // Per-pointer capture. While captured, Move / Up events route to
     // the captured Visual regardless of what's actually under the
     // pointer — the same contract as WPF's Mouse.Capture / the DOM's
@@ -183,10 +195,13 @@ export class InputManager
 
         // Capture auto-releases on PointerUp — matches DOM
         // pointercancel / pointerup behaviour for setPointerCapture.
+        // Same auto-release for any locked cursor: a drag that exits via
+        // PointerUp should never leave a stuck OS cursor behind.
         if (captured !== undefined)
         {
             this.pointerCaptures.delete(init.PointerId);
             this._captureBridge?.(undefined, init.PointerId);
+            this.setLockedCursor(undefined);
         }
 
         if (hit !== null) this.updateHoverChain(hit, init);
@@ -222,21 +237,51 @@ export class InputManager
     // `visual`. Capture stays until ReleasePointerCapture is called
     // or until the matching PointerUp arrives (auto-release). Calling
     // CapturePointer again with the same id swaps the captured visual.
-    public CapturePointer(visual: Visual, pointerId: number = 0): void
+    //
+    // Optional `cursor`: a CSS cursor keyword that should display
+    // globally for the capture's duration — drag-style resize handles
+    // and splitter thumbs pass their direction-appropriate cursor here
+    // so the OS cursor stays correct even when the pointer wanders off
+    // the source visual's bounds (the most common case is the moment
+    // the user actually clicks: browsers fall back to the default
+    // cursor unless something at host level overrides it). Auto-cleared
+    // by ReleasePointerCapture and by the PointerUp auto-release path.
+    public CapturePointer(visual: Visual, pointerId: number = 0, cursor?: string): void
     {
         this.pointerCaptures.set(pointerId, visual);
         this._captureBridge?.(visual, pointerId);
+        if (cursor !== undefined) this.setLockedCursor(cursor);
     }
 
     public ReleasePointerCapture(pointerId: number = 0): void
     {
         this.pointerCaptures.delete(pointerId);
         this._captureBridge?.(undefined, pointerId);
+        this.setLockedCursor(undefined);
     }
 
     public GetCapturedVisual(pointerId: number = 0): Visual | undefined
     {
         return this.pointerCaptures.get(pointerId);
+    }
+
+    // Install the host's cursor surface. HtmlTarget wires this to
+    // `document.body.style.cursor`; native targets would route to the
+    // OS cursor API. Same shape as SetCaptureBridge — InputManager
+    // tracks the state, bridge translates to host-side mechanics.
+    public SetCursorBridge(
+        bridge: ((cursor: string | undefined) => void) | undefined,
+    ): void {
+        this._cursorBridge = bridge;
+    }
+
+    public GetLockedCursor(): string | undefined { return this._lockedCursor; }
+
+    private setLockedCursor(cursor: string | undefined): void
+    {
+        if (this._lockedCursor === cursor) return;
+        this._lockedCursor = cursor;
+        this._cursorBridge?.(cursor);
     }
 
     // ── Focus ──────────────────────────────────────────────────────

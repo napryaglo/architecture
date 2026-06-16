@@ -148,7 +148,7 @@ export interface PointerEventInit
 // already imports this file).
 export interface PointerCaptureSink
 {
-    CapturePointer(visual: Visual, pointerId?: number): void;
+    CapturePointer(visual: Visual, pointerId?: number, cursor?: string): void;
     ReleasePointerCapture(pointerId?: number): void;
 }
 
@@ -213,9 +213,16 @@ export class PointerEventArgs extends RoutedEventArgs
     // (defaults to the event's Source Visual — the natural pick for a
     // thumb starting a drag). Capture auto-releases on the matching
     // PointerUp; long-lived captures call ReleasePointerCapture earlier.
-    public CapturePointer(target?: Visual): void
+    //
+    // Optional `cursor` is a CSS cursor keyword the host should display
+    // globally for the drag's duration. Set it for direction-aware
+    // resize handles and splitter thumbs — without a host-level cursor
+    // override the OS reverts to its default the moment the user
+    // actually presses the button or the pointer leaves the source
+    // visual. Auto-cleared with the capture.
+    public CapturePointer(target?: Visual, cursor?: string): void
     {
-        this._captureSink?.CapturePointer(target ?? this.Source, this.PointerId);
+        this._captureSink?.CapturePointer(target ?? this.Source, this.PointerId, cursor);
     }
 
     public ReleasePointerCapture(): void

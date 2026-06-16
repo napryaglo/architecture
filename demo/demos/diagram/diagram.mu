@@ -1,43 +1,11 @@
 // VM type references — every [DataType=…] below must be backed by an
 // import so the compiler emits a real Function key, not a string.
+// The per-Kind shape VMs (RectangleShapeVM, EllipseShapeVM, …) used to
+// live here for the shape DataTemplates; those moved with their templates
+// to `diagram-shape-templates.mu`. Only the diagrammer-shell VMs need
+// imports here now.
 import DiagramVM              from "./diagram-vm.mjs"
 import ToolboxShapeVM         from "./diagram-vm.mjs"
-
-import RectangleShapeVM       from "./diagram-vm.mjs"
-import EllipseShapeVM         from "./diagram-vm.mjs"
-import SquircleShapeVM        from "./diagram-vm.mjs"
-import SlantedShapeVM         from "./diagram-vm.mjs"
-import PillShapeVM            from "./diagram-vm.mjs"
-import DiamondShapeVM         from "./diagram-vm.mjs"
-import PentagonShapeVM        from "./diagram-vm.mjs"
-import GemShapeVM             from "./diagram-vm.mjs"
-import ArchShapeVM            from "./diagram-vm.mjs"
-import SemicircleShapeVM      from "./diagram-vm.mjs"
-import TriangleShapeVM        from "./diagram-vm.mjs"
-import ArrowShapeVM           from "./diagram-vm.mjs"
-import FanShapeVM             from "./diagram-vm.mjs"
-import ClamshellShapeVM       from "./diagram-vm.mjs"
-import FourCookieShapeVM      from "./diagram-vm.mjs"
-import SixCookieShapeVM       from "./diagram-vm.mjs"
-import SevenCookieShapeVM     from "./diagram-vm.mjs"
-import NineCookieShapeVM      from "./diagram-vm.mjs"
-import TwelveCookieShapeVM    from "./diagram-vm.mjs"
-import FourLeafCloverShapeVM  from "./diagram-vm.mjs"
-import EightLeafCloverShapeVM from "./diagram-vm.mjs"
-import SunnyShapeVM           from "./diagram-vm.mjs"
-import VerySunnyShapeVM       from "./diagram-vm.mjs"
-import BurstShapeVM           from "./diagram-vm.mjs"
-import SoftBurstShapeVM       from "./diagram-vm.mjs"
-import BoomShapeVM            from "./diagram-vm.mjs"
-import SoftBoomShapeVM        from "./diagram-vm.mjs"
-import FlowerShapeVM          from "./diagram-vm.mjs"
-import PuffyShapeVM           from "./diagram-vm.mjs"
-import PuffyDiamondShapeVM    from "./diagram-vm.mjs"
-import GhostishShapeVM        from "./diagram-vm.mjs"
-import BunShapeVM             from "./diagram-vm.mjs"
-import HeartShapeVM           from "./diagram-vm.mjs"
-import PixelCircleShapeVM     from "./diagram-vm.mjs"
-import PixelTriangleShapeVM   from "./diagram-vm.mjs"
 
 // diagram.mu — node-only Visio-/drawio-style scene backed by the full
 // 35-shape M3 shape library. The toolbox rail enumerates every shape
@@ -112,506 +80,13 @@ resources DiagramDemo {
         }
     }
 
-    // ── Per-Kind canvas DataTemplates ───────────────────────────────
+    // ── Per-Kind canvas DataTemplates ────────────────────────────────
     //
-    // Every shape kind uses the same wrapping structure: a Canvas at
-    // $Width × $Height containing the shape primitive (Background=$FillBrush,
-    // Stroke=blue-on-rest) and a TextBlock label centered over it. The
-    // `when($IsSelected)` trigger flips the Stroke to orange. The shape
-    // primitive class is the only per-Kind delta.
-    //
-    // Width / Height bind to the VM so the same template paints both
-    // the 80×80 canvas node and the 48×48 toolbox preview.
+    // Extracted into `diagram-shape-templates.mu` (the
+    // `DiagramShapeTemplates` resource dictionary) so diagram.mu stays
+    // focused on the diagrammer shell. The bundle is merged into
+    // Application.Resources by diagram.mjs alongside `DiagramDemo`.
 
-    DataTemplate [DataType=RectangleShapeVM] {
-        Canvas x:root [Width=$Width, Height=$Height]{
-            Rectangle x:name="chrome"
-                     [Width=$Width, Height=$Height,
-                      Background=$FillBrush, Stroke=#1976d2, StrokeThickness=1.5]
-            TextBlock [Canvas.Left=0, Canvas.Top=0,
-                       Width=$Width, Height=$Height,
-                       Text=$LabelText, FontSize=11,
-                       Foreground=@OnSurface,
-                       HorizontalAlignment=Center, VerticalAlignment=Center]
-        }
-        when( $IsSelected ){ chrome.Stroke = #f97316; }
-    }
-
-    DataTemplate [DataType=EllipseShapeVM] {
-        Canvas x:root [Width=$Width, Height=$Height]{
-            Ellipse x:name="chrome"
-                   [Width=$Width, Height=$Height,
-                    Background=$FillBrush, Stroke=#1976d2, StrokeThickness=1.5]
-            TextBlock [Canvas.Left=0, Canvas.Top=0,
-                       Width=$Width, Height=$Height,
-                       Text=$LabelText, FontSize=11,
-                       Foreground=@OnSurface,
-                       HorizontalAlignment=Center, VerticalAlignment=Center]
-        }
-        when( $IsSelected ){ chrome.Stroke = #f97316; }
-    }
-
-    DataTemplate [DataType=SquircleShapeVM] {
-        Canvas x:root [Width=$Width, Height=$Height]{
-            Squircle x:name="chrome"
-                    [Width=$Width, Height=$Height,
-                     Background=$FillBrush, Stroke=#1976d2, StrokeThickness=1.5]
-            TextBlock [Canvas.Left=0, Canvas.Top=0,
-                       Width=$Width, Height=$Height,
-                       Text=$LabelText, FontSize=11,
-                       Foreground=@OnSurface,
-                       HorizontalAlignment=Center, VerticalAlignment=Center]
-        }
-        when( $IsSelected ){ chrome.Stroke = #f97316; }
-    }
-
-    DataTemplate [DataType=SlantedShapeVM] {
-        Canvas x:root [Width=$Width, Height=$Height]{
-            Slanted x:name="chrome"
-                   [Width=$Width, Height=$Height,
-                    Background=$FillBrush, Stroke=#1976d2, StrokeThickness=1.5]
-            TextBlock [Canvas.Left=0, Canvas.Top=0,
-                       Width=$Width, Height=$Height,
-                       Text=$LabelText, FontSize=11,
-                       Foreground=@OnSurface,
-                       HorizontalAlignment=Center, VerticalAlignment=Center]
-        }
-        when( $IsSelected ){ chrome.Stroke = #f97316; }
-    }
-
-    DataTemplate [DataType=PillShapeVM] {
-        Canvas x:root [Width=$Width, Height=$Height]{
-            Pill x:name="chrome"
-                [Width=$Width, Height=$Height,
-                 Background=$FillBrush, Stroke=#1976d2, StrokeThickness=1.5]
-            TextBlock [Canvas.Left=0, Canvas.Top=0,
-                       Width=$Width, Height=$Height,
-                       Text=$LabelText, FontSize=11,
-                       Foreground=@OnSurface,
-                       HorizontalAlignment=Center, VerticalAlignment=Center]
-        }
-        when( $IsSelected ){ chrome.Stroke = #f97316; }
-    }
-
-    DataTemplate [DataType=DiamondShapeVM] {
-        Canvas x:root [Width=$Width, Height=$Height]{
-            Diamond x:name="chrome"
-                   [Width=$Width, Height=$Height,
-                    Background=$FillBrush, Stroke=#1976d2, StrokeThickness=1.5]
-            TextBlock [Canvas.Left=0, Canvas.Top=0,
-                       Width=$Width, Height=$Height,
-                       Text=$LabelText, FontSize=11,
-                       Foreground=@OnSurface,
-                       HorizontalAlignment=Center, VerticalAlignment=Center]
-        }
-        when( $IsSelected ){ chrome.Stroke = #f97316; }
-    }
-
-    DataTemplate [DataType=PentagonShapeVM] {
-        Canvas x:root [Width=$Width, Height=$Height]{
-            Pentagon x:name="chrome"
-                    [Width=$Width, Height=$Height,
-                     Background=$FillBrush, Stroke=#1976d2, StrokeThickness=1.5]
-            TextBlock [Canvas.Left=0, Canvas.Top=0,
-                       Width=$Width, Height=$Height,
-                       Text=$LabelText, FontSize=11,
-                       Foreground=@OnSurface,
-                       HorizontalAlignment=Center, VerticalAlignment=Center]
-        }
-        when( $IsSelected ){ chrome.Stroke = #f97316; }
-    }
-
-    DataTemplate [DataType=GemShapeVM] {
-        Canvas x:root [Width=$Width, Height=$Height]{
-            Gem x:name="chrome"
-               [Width=$Width, Height=$Height,
-                Background=$FillBrush, Stroke=#1976d2, StrokeThickness=1.5]
-            TextBlock [Canvas.Left=0, Canvas.Top=0,
-                       Width=$Width, Height=$Height,
-                       Text=$LabelText, FontSize=11,
-                       Foreground=@OnSurface,
-                       HorizontalAlignment=Center, VerticalAlignment=Center]
-        }
-        when( $IsSelected ){ chrome.Stroke = #f97316; }
-    }
-
-    DataTemplate [DataType=ArchShapeVM] {
-        Canvas x:root [Width=$Width, Height=$Height]{
-            Arch x:name="chrome"
-                [Width=$Width, Height=$Height,
-                 Background=$FillBrush, Stroke=#1976d2, StrokeThickness=1.5]
-            TextBlock [Canvas.Left=0, Canvas.Top=0,
-                       Width=$Width, Height=$Height,
-                       Text=$LabelText, FontSize=11,
-                       Foreground=@OnSurface,
-                       HorizontalAlignment=Center, VerticalAlignment=Center]
-        }
-        when( $IsSelected ){ chrome.Stroke = #f97316; }
-    }
-
-    DataTemplate [DataType=SemicircleShapeVM] {
-        Canvas x:root [Width=$Width, Height=$Height]{
-            Semicircle x:name="chrome"
-                      [Width=$Width, Height=$Height,
-                       Background=$FillBrush, Stroke=#1976d2, StrokeThickness=1.5]
-            TextBlock [Canvas.Left=0, Canvas.Top=0,
-                       Width=$Width, Height=$Height,
-                       Text=$LabelText, FontSize=11,
-                       Foreground=@OnSurface,
-                       HorizontalAlignment=Center, VerticalAlignment=Center]
-        }
-        when( $IsSelected ){ chrome.Stroke = #f97316; }
-    }
-
-    DataTemplate [DataType=TriangleShapeVM] {
-        Canvas x:root [Width=$Width, Height=$Height]{
-            Triangle x:name="chrome"
-                    [Width=$Width, Height=$Height, CornerRadius=10,
-                     Background=$FillBrush, Stroke=#1976d2, StrokeThickness=1.5]
-            TextBlock [Canvas.Left=0, Canvas.Top=0,
-                       Width=$Width, Height=$Height,
-                       Text=$LabelText, FontSize=11,
-                       Foreground=@OnSurface,
-                       HorizontalAlignment=Center, VerticalAlignment=Center]
-        }
-        when( $IsSelected ){ chrome.Stroke = #f97316; }
-    }
-
-    DataTemplate [DataType=ArrowShapeVM] {
-        Canvas x:root [Width=$Width, Height=$Height]{
-            Arrow x:name="chrome"
-                 [Width=$Width, Height=$Height, CornerRadius=10,
-                  Background=$FillBrush, Stroke=#1976d2, StrokeThickness=1.5]
-            TextBlock [Canvas.Left=0, Canvas.Top=0,
-                       Width=$Width, Height=$Height,
-                       Text=$LabelText, FontSize=11,
-                       Foreground=@OnSurface,
-                       HorizontalAlignment=Center, VerticalAlignment=Center]
-        }
-        when( $IsSelected ){ chrome.Stroke = #f97316; }
-    }
-
-    DataTemplate [DataType=FanShapeVM] {
-        Canvas x:root [Width=$Width, Height=$Height]{
-            Fan x:name="chrome"
-               [Width=$Width, Height=$Height,
-                Background=$FillBrush, Stroke=#1976d2, StrokeThickness=1.5]
-            TextBlock [Canvas.Left=0, Canvas.Top=0,
-                       Width=$Width, Height=$Height,
-                       Text=$LabelText, FontSize=11,
-                       Foreground=@OnSurface,
-                       HorizontalAlignment=Center, VerticalAlignment=Center]
-        }
-        when( $IsSelected ){ chrome.Stroke = #f97316; }
-    }
-
-    DataTemplate [DataType=ClamshellShapeVM] {
-        Canvas x:root [Width=$Width, Height=$Height]{
-            Clamshell x:name="chrome"
-                     [Width=$Width, Height=$Height, CornerRadius=8,
-                      Background=$FillBrush, Stroke=#1976d2, StrokeThickness=1.5]
-            TextBlock [Canvas.Left=0, Canvas.Top=0,
-                       Width=$Width, Height=$Height,
-                       Text=$LabelText, FontSize=11,
-                       Foreground=@OnSurface,
-                       HorizontalAlignment=Center, VerticalAlignment=Center]
-        }
-        when( $IsSelected ){ chrome.Stroke = #f97316; }
-    }
-
-    DataTemplate [DataType=FourCookieShapeVM] {
-        Canvas x:root [Width=$Width, Height=$Height]{
-            FourSidedCookie x:name="chrome"
-                           [Width=$Width, Height=$Height, CornerRadius=10,
-                            Background=$FillBrush, Stroke=#1976d2, StrokeThickness=1.5]
-            TextBlock [Canvas.Left=0, Canvas.Top=0,
-                       Width=$Width, Height=$Height,
-                       Text=$LabelText, FontSize=11,
-                       Foreground=@OnSurface,
-                       HorizontalAlignment=Center, VerticalAlignment=Center]
-        }
-        when( $IsSelected ){ chrome.Stroke = #f97316; }
-    }
-
-    DataTemplate [DataType=SixCookieShapeVM] {
-        Canvas x:root [Width=$Width, Height=$Height]{
-            SixSidedCookie x:name="chrome"
-                          [Width=$Width, Height=$Height, CornerRadius=8,
-                           Background=$FillBrush, Stroke=#1976d2, StrokeThickness=1.5]
-            TextBlock [Canvas.Left=0, Canvas.Top=0,
-                       Width=$Width, Height=$Height,
-                       Text=$LabelText, FontSize=11,
-                       Foreground=@OnSurface,
-                       HorizontalAlignment=Center, VerticalAlignment=Center]
-        }
-        when( $IsSelected ){ chrome.Stroke = #f97316; }
-    }
-
-    DataTemplate [DataType=SevenCookieShapeVM] {
-        Canvas x:root [Width=$Width, Height=$Height]{
-            SevenSidedCookie x:name="chrome"
-                            [Width=$Width, Height=$Height, CornerRadius=8,
-                             Background=$FillBrush, Stroke=#1976d2, StrokeThickness=1.5]
-            TextBlock [Canvas.Left=0, Canvas.Top=0,
-                       Width=$Width, Height=$Height,
-                       Text=$LabelText, FontSize=11,
-                       Foreground=@OnSurface,
-                       HorizontalAlignment=Center, VerticalAlignment=Center]
-        }
-        when( $IsSelected ){ chrome.Stroke = #f97316; }
-    }
-
-    DataTemplate [DataType=NineCookieShapeVM] {
-        Canvas x:root [Width=$Width, Height=$Height]{
-            NineSidedCookie x:name="chrome"
-                           [Width=$Width, Height=$Height, CornerRadius=6,
-                            Background=$FillBrush, Stroke=#1976d2, StrokeThickness=1.5]
-            TextBlock [Canvas.Left=0, Canvas.Top=0,
-                       Width=$Width, Height=$Height,
-                       Text=$LabelText, FontSize=11,
-                       Foreground=@OnSurface,
-                       HorizontalAlignment=Center, VerticalAlignment=Center]
-        }
-        when( $IsSelected ){ chrome.Stroke = #f97316; }
-    }
-
-    DataTemplate [DataType=TwelveCookieShapeVM] {
-        Canvas x:root [Width=$Width, Height=$Height]{
-            TwelveSidedCookie x:name="chrome"
-                             [Width=$Width, Height=$Height, CornerRadius=5,
-                              Background=$FillBrush, Stroke=#1976d2, StrokeThickness=1.5]
-            TextBlock [Canvas.Left=0, Canvas.Top=0,
-                       Width=$Width, Height=$Height,
-                       Text=$LabelText, FontSize=11,
-                       Foreground=@OnSurface,
-                       HorizontalAlignment=Center, VerticalAlignment=Center]
-        }
-        when( $IsSelected ){ chrome.Stroke = #f97316; }
-    }
-
-    DataTemplate [DataType=FourLeafCloverShapeVM] {
-        Canvas x:root [Width=$Width, Height=$Height]{
-            FourLeafClover x:name="chrome"
-                          [Width=$Width, Height=$Height,
-                           Background=$FillBrush, Stroke=#1976d2, StrokeThickness=1.5]
-            TextBlock [Canvas.Left=0, Canvas.Top=0,
-                       Width=$Width, Height=$Height,
-                       Text=$LabelText, FontSize=11,
-                       Foreground=@OnSurface,
-                       HorizontalAlignment=Center, VerticalAlignment=Center]
-        }
-        when( $IsSelected ){ chrome.Stroke = #f97316; }
-    }
-
-    DataTemplate [DataType=EightLeafCloverShapeVM] {
-        Canvas x:root [Width=$Width, Height=$Height]{
-            EightLeafClover x:name="chrome"
-                           [Width=$Width, Height=$Height,
-                            Background=$FillBrush, Stroke=#1976d2, StrokeThickness=1.5]
-            TextBlock [Canvas.Left=0, Canvas.Top=0,
-                       Width=$Width, Height=$Height,
-                       Text=$LabelText, FontSize=11,
-                       Foreground=@OnSurface,
-                       HorizontalAlignment=Center, VerticalAlignment=Center]
-        }
-        when( $IsSelected ){ chrome.Stroke = #f97316; }
-    }
-
-    DataTemplate [DataType=SunnyShapeVM] {
-        Canvas x:root [Width=$Width, Height=$Height]{
-            Sunny x:name="chrome"
-                 [Width=$Width, Height=$Height,
-                  Background=$FillBrush, Stroke=#1976d2, StrokeThickness=1.5]
-            TextBlock [Canvas.Left=0, Canvas.Top=0,
-                       Width=$Width, Height=$Height,
-                       Text=$LabelText, FontSize=11,
-                       Foreground=@OnSurface,
-                       HorizontalAlignment=Center, VerticalAlignment=Center]
-        }
-        when( $IsSelected ){ chrome.Stroke = #f97316; }
-    }
-
-    DataTemplate [DataType=VerySunnyShapeVM] {
-        Canvas x:root [Width=$Width, Height=$Height]{
-            VerySunny x:name="chrome"
-                     [Width=$Width, Height=$Height,
-                      Background=$FillBrush, Stroke=#1976d2, StrokeThickness=1.5]
-            TextBlock [Canvas.Left=0, Canvas.Top=0,
-                       Width=$Width, Height=$Height,
-                       Text=$LabelText, FontSize=11,
-                       Foreground=@OnSurface,
-                       HorizontalAlignment=Center, VerticalAlignment=Center]
-        }
-        when( $IsSelected ){ chrome.Stroke = #f97316; }
-    }
-
-    DataTemplate [DataType=BurstShapeVM] {
-        Canvas x:root [Width=$Width, Height=$Height]{
-            Burst x:name="chrome"
-                 [Width=$Width, Height=$Height,
-                  Background=$FillBrush, Stroke=#1976d2, StrokeThickness=1.5]
-            TextBlock [Canvas.Left=0, Canvas.Top=0,
-                       Width=$Width, Height=$Height,
-                       Text=$LabelText, FontSize=11,
-                       Foreground=@OnSurface,
-                       HorizontalAlignment=Center, VerticalAlignment=Center]
-        }
-        when( $IsSelected ){ chrome.Stroke = #f97316; }
-    }
-
-    DataTemplate [DataType=SoftBurstShapeVM] {
-        Canvas x:root [Width=$Width, Height=$Height]{
-            SoftBurst x:name="chrome"
-                     [Width=$Width, Height=$Height,
-                      Background=$FillBrush, Stroke=#1976d2, StrokeThickness=1.5]
-            TextBlock [Canvas.Left=0, Canvas.Top=0,
-                       Width=$Width, Height=$Height,
-                       Text=$LabelText, FontSize=11,
-                       Foreground=@OnSurface,
-                       HorizontalAlignment=Center, VerticalAlignment=Center]
-        }
-        when( $IsSelected ){ chrome.Stroke = #f97316; }
-    }
-
-    DataTemplate [DataType=BoomShapeVM] {
-        Canvas x:root [Width=$Width, Height=$Height]{
-            Boom x:name="chrome"
-                [Width=$Width, Height=$Height,
-                 Background=$FillBrush, Stroke=#1976d2, StrokeThickness=1.5]
-            TextBlock [Canvas.Left=0, Canvas.Top=0,
-                       Width=$Width, Height=$Height,
-                       Text=$LabelText, FontSize=11,
-                       Foreground=@OnSurface,
-                       HorizontalAlignment=Center, VerticalAlignment=Center]
-        }
-        when( $IsSelected ){ chrome.Stroke = #f97316; }
-    }
-
-    DataTemplate [DataType=SoftBoomShapeVM] {
-        Canvas x:root [Width=$Width, Height=$Height]{
-            SoftBoom x:name="chrome"
-                    [Width=$Width, Height=$Height,
-                     Background=$FillBrush, Stroke=#1976d2, StrokeThickness=1.5]
-            TextBlock [Canvas.Left=0, Canvas.Top=0,
-                       Width=$Width, Height=$Height,
-                       Text=$LabelText, FontSize=11,
-                       Foreground=@OnSurface,
-                       HorizontalAlignment=Center, VerticalAlignment=Center]
-        }
-        when( $IsSelected ){ chrome.Stroke = #f97316; }
-    }
-
-    DataTemplate [DataType=FlowerShapeVM] {
-        Canvas x:root [Width=$Width, Height=$Height]{
-            Flower x:name="chrome"
-                  [Width=$Width, Height=$Height,
-                   Background=$FillBrush, Stroke=#1976d2, StrokeThickness=1.5]
-            TextBlock [Canvas.Left=0, Canvas.Top=0,
-                       Width=$Width, Height=$Height,
-                       Text=$LabelText, FontSize=11,
-                       Foreground=@OnSurface,
-                       HorizontalAlignment=Center, VerticalAlignment=Center]
-        }
-        when( $IsSelected ){ chrome.Stroke = #f97316; }
-    }
-
-    DataTemplate [DataType=PuffyShapeVM] {
-        Canvas x:root [Width=$Width, Height=$Height]{
-            Puffy x:name="chrome"
-                 [Width=$Width, Height=$Height,
-                  Background=$FillBrush, Stroke=#1976d2, StrokeThickness=1.5]
-            TextBlock [Canvas.Left=0, Canvas.Top=0,
-                       Width=$Width, Height=$Height,
-                       Text=$LabelText, FontSize=11,
-                       Foreground=@OnSurface,
-                       HorizontalAlignment=Center, VerticalAlignment=Center]
-        }
-        when( $IsSelected ){ chrome.Stroke = #f97316; }
-    }
-
-    DataTemplate [DataType=PuffyDiamondShapeVM] {
-        Canvas x:root [Width=$Width, Height=$Height]{
-            PuffyDiamond x:name="chrome"
-                        [Width=$Width, Height=$Height,
-                         Background=$FillBrush, Stroke=#1976d2, StrokeThickness=1.5]
-            TextBlock [Canvas.Left=0, Canvas.Top=0,
-                       Width=$Width, Height=$Height,
-                       Text=$LabelText, FontSize=11,
-                       Foreground=@OnSurface,
-                       HorizontalAlignment=Center, VerticalAlignment=Center]
-        }
-        when( $IsSelected ){ chrome.Stroke = #f97316; }
-    }
-
-    DataTemplate [DataType=GhostishShapeVM] {
-        Canvas x:root [Width=$Width, Height=$Height]{
-            Ghostish x:name="chrome"
-                    [Width=$Width, Height=$Height,
-                     Background=$FillBrush, Stroke=#1976d2, StrokeThickness=1.5]
-            TextBlock [Canvas.Left=0, Canvas.Top=0,
-                       Width=$Width, Height=$Height,
-                       Text=$LabelText, FontSize=11,
-                       Foreground=@OnSurface,
-                       HorizontalAlignment=Center, VerticalAlignment=Center]
-        }
-        when( $IsSelected ){ chrome.Stroke = #f97316; }
-    }
-
-    DataTemplate [DataType=BunShapeVM] {
-        Canvas x:root [Width=$Width, Height=$Height]{
-            Bun x:name="chrome"
-               [Width=$Width, Height=$Height,
-                Background=$FillBrush, Stroke=#1976d2, StrokeThickness=1.5]
-            TextBlock [Canvas.Left=0, Canvas.Top=0,
-                       Width=$Width, Height=$Height,
-                       Text=$LabelText, FontSize=11,
-                       Foreground=@OnSurface,
-                       HorizontalAlignment=Center, VerticalAlignment=Center]
-        }
-        when( $IsSelected ){ chrome.Stroke = #f97316; }
-    }
-
-    DataTemplate [DataType=HeartShapeVM] {
-        Canvas x:root [Width=$Width, Height=$Height]{
-            Heart x:name="chrome"
-                 [Width=$Width, Height=$Height,
-                  Background=$FillBrush, Stroke=#1976d2, StrokeThickness=1.5]
-            TextBlock [Canvas.Left=0, Canvas.Top=0,
-                       Width=$Width, Height=$Height,
-                       Text=$LabelText, FontSize=11,
-                       Foreground=@OnSurface,
-                       HorizontalAlignment=Center, VerticalAlignment=Center]
-        }
-        when( $IsSelected ){ chrome.Stroke = #f97316; }
-    }
-
-    DataTemplate [DataType=PixelCircleShapeVM] {
-        Canvas x:root [Width=$Width, Height=$Height]{
-            PixelCircle x:name="chrome"
-                       [Width=$Width, Height=$Height,
-                        Background=$FillBrush, Stroke=#1976d2, StrokeThickness=1.5]
-            TextBlock [Canvas.Left=0, Canvas.Top=0,
-                       Width=$Width, Height=$Height,
-                       Text=$LabelText, FontSize=11,
-                       Foreground=@OnSurface,
-                       HorizontalAlignment=Center, VerticalAlignment=Center]
-        }
-        when( $IsSelected ){ chrome.Stroke = #f97316; }
-    }
-
-    DataTemplate [DataType=PixelTriangleShapeVM] {
-        Canvas x:root [Width=$Width, Height=$Height]{
-            PixelTriangle x:name="chrome"
-                         [Width=$Width, Height=$Height,
-                          Background=$FillBrush, Stroke=#1976d2, StrokeThickness=1.5]
-            TextBlock [Canvas.Left=0, Canvas.Top=0,
-                       Width=$Width, Height=$Height,
-                       Text=$LabelText, FontSize=11,
-                       Foreground=@OnSurface,
-                       HorizontalAlignment=Center, VerticalAlignment=Center]
-        }
-        when( $IsSelected ){ chrome.Stroke = #f97316; }
-    }
 
     // ── Diagram shell ───────────────────────────────────────────────
     DataTemplate x:key="DiagramTemplate" [DataType=DiagramVM] {
@@ -623,14 +98,19 @@ resources DiagramDemo {
                 Border[DockPanel.Dock=Top, Height=44,
                        Background=@Primary]{
                     StackPanel[Orientation=Horizontal,
-                               Margin=(16,10,0,0)]{
+                               Margin=(16,0,0,0)]{
+                        Icon[Source=@home, Foreground=@OnPrimary,
+                             VerticalAlignment=Center]
                         TextBlock[Text="Diagrammer",
                                   FontSize=15, FontWeight=Bold,
-                                  Foreground=@OnPrimary]
+                                  Foreground=@OnPrimary,
+                                  VerticalAlignment=Center,
+                                  Margin=(8,0,0,0)]
                         TextBlock[Text=$Status,
                                   FontSize=12,
                                   Foreground=@OnPrimary,
-                                  Margin=(20,3,0,0)]
+                                  VerticalAlignment=Center,
+                                  Margin=(20,0,0,0)]
                     }
                 }
 
@@ -686,6 +166,15 @@ resources DiagramDemo {
                                       HorizontalAlignment=Center,
                                       VerticalAlignment=Center]
                         }
+                        Button x:name="btnAlignCenter"
+                               [Command=$AlignCenterCommand,
+                                Margin=(0,0,2,0), MinWidth=32, MinHeight=32]{
+                            TextBlock[Text="align_horizontal_center",
+                                      FontFamily="Material Symbols Outlined",
+                                      FontSize=20,
+                                      HorizontalAlignment=Center,
+                                      VerticalAlignment=Center]
+                        }
                         Button x:name="btnDistH"
                                [Command=$DistributeHorizontalCommand,
                                 Margin=(8,0,2,0), MinWidth=32, MinHeight=32]{
@@ -699,6 +188,31 @@ resources DiagramDemo {
                                [Command=$DistributeVerticalCommand,
                                 Margin=(0,0,0,0), MinWidth=32, MinHeight=32]{
                             TextBlock[Text="vertical_distribute",
+                                      FontFamily="Material Symbols Outlined",
+                                      FontSize=20,
+                                      HorizontalAlignment=Center,
+                                      VerticalAlignment=Center]
+                        }
+                        // Ctrl+G / Ctrl+Shift+G also wired via the
+                        // KeyDown listener in diagram.mjs. The buttons
+                        // mirror those shortcuts onto the toolbar; their
+                        // CanExecute gates come straight from the ICommand
+                        // so they disable when the selection doesn't fit
+                        // (Group needs ≥ 2 top-level entities; Ungroup
+                        // needs ≥ 1 selected top-level group).
+                        Button x:name="btnGroup"
+                               [Command=$GroupCommand,
+                                Margin=(8,0,2,0), MinWidth=32, MinHeight=32]{
+                            TextBlock[Text="group_work",
+                                      FontFamily="Material Symbols Outlined",
+                                      FontSize=20,
+                                      HorizontalAlignment=Center,
+                                      VerticalAlignment=Center]
+                        }
+                        Button x:name="btnUngroup"
+                               [Command=$UngroupCommand,
+                                Margin=(0,0,0,0), MinWidth=32, MinHeight=32]{
+                            TextBlock[Text="group_off",
                                       FontFamily="Material Symbols Outlined",
                                       FontSize=20,
                                       HorizontalAlignment=Center,

@@ -17,6 +17,22 @@ export { PaginatedCanvas } from './panels/paginated-canvas.js';
 export { Ellipse } from './shapes/ellipse.js';
 export { Arc } from './shapes/arc.js';
 export { Image } from './image.js';
+export {
+    CURRENT_COLOR,
+    Icon,
+    IconDefinition,
+    buildPathIcon,
+    makeIconShape,
+    type IconPaint,
+    type IconShape,
+    type PathIconRecord,
+} from './icon.js';
+export {
+    parseSvgIcon,
+    parsePathData,
+    ParseError as SvgIconParseError,
+    type ParseOptions as SvgIconParseOptions,
+} from './svg-icon-parser.js';
 export { Line } from './shapes/line.js';
 export { Rectangle } from './shapes/rectangle.js';
 export { Squircle } from './shapes/squircle.js';

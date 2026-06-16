@@ -21,11 +21,15 @@
 //     data-only + Save/Load commands.
 
 import { Application } from '@visualisation-sub/mural/runtime';
+import { AdornerLayer } from '@visualisation-sub/mural/visual-engine';
 import { Diagram } from '@visualisation-sub/mural/framework';
 import { DiagramDemo } from './diagram.mu.js';
-import { DiagramVM, NodeVM } from './diagram-vm.mjs';
+import { DiagramShapeTemplates } from './diagram-shape-templates.mu.js';
+import { DiagramVM, GroupVM, NodeVM, topLevelOf } from './diagram-vm.mjs';
 import { attachCanvasDropBehavior } from './behaviors/canvas-drop-behavior.mjs';
+import { SelectionResizeAdorner } from './selection-resize-adorner.mjs';
 import { register } from '../../platform/registry.mjs';
+import Icons from '../../assets/icons.mjs';
 
 const LocalStorageService = {
     GetItem(key)        { return window.localStorage.getItem(key); },
@@ -35,29 +39,74 @@ const LocalStorageService = {
 let resourcesMerged = false;
 let vmInstance;
 
-// Mirror Selector.SelectedItems onto NodeVM.IsSelected so the existing
-// per-shape DataTemplate triggers keep driving chrome. Diff against the
-// prior snapshot so we only flip the rows that actually changed.
-function attachSelectionBridge(diagram) {
-    let prev = new Set();
+// Mirror Selector.SelectedItems onto NodeVM.IsSelected + GroupVM.IsSelected
+// so the per-shape `when($IsSelected)` triggers (orange chrome) fire on
+// selected top-level leaves, AND the GroupVM bbox template (dashed border)
+// fires on selected top-level groups.
+//
+// "Elevation" rule (Visio / PowerPoint parity): clicking ANY entity walks
+// the Parent chain to the outermost ancestor, and ONLY that entity gets
+// IsSelected=true. If the top-level is a GroupVM, its members (leaves and
+// sub-groups) stay IsSelected=false — the group bbox stands in for any
+// per-member chrome. If the top-level is a leaf, only it gets IsSelected.
+//
+// Reconcile against ACTUAL IsSelected state per node, not memoized
+// "what we set last time". DiagramVM.Group() flips group.IsSelected
+// directly (Selector.SelectedItems doesn't change post-grouping, so the
+// bridge can't see the new group through the SelectionChanged callback).
+// If we memoized prev, the new group would never enter the bridge's
+// tracked set, so a later click on empty canvas would clear nothing.
+// Walking vm.Nodes here is O(N) per sync, fine at the scales the
+// diagrammer demo operates on.
+function attachSelectionBridge(diagram, vm) {
     const sync = () => {
-        const next = new Set();
-        for (const item of diagram.SelectedItems) next.add(item);
-        for (const n of prev) {
-            if (!next.has(n) && n instanceof NodeVM) n.IsSelected = false;
+        const nextLeaves = new Set();
+        const nextGroups = new Set();
+        for (const item of diagram.SelectedItems)
+        {
+            // SelectedItems carries both NodeVMs and GroupVMs (the
+            // group bbox container is in the same Nodes collection).
+            // Clicking either elevates to the top-level ancestor; only
+            // THAT entity's IsSelected lights up.
+            if (!(item instanceof NodeVM || item instanceof GroupVM)) continue;
+            const root = topLevelOf(item);
+            if (root instanceof GroupVM)
+            {
+                nextGroups.add(root);
+            }
+            else
+            {
+                nextLeaves.add(item);
+            }
         }
-        for (const n of next) {
-            if (!prev.has(n) && n instanceof NodeVM) n.IsSelected = true;
+        // Reconcile every node's IsSelected against the desired set.
+        // Flipping only when the value actually changes keeps the
+        // listener cascade quiet on unchanged rows (each IsSelected
+        // setter fires the VM's _watchSelection handler → re-evaluates
+        // toolbar CanExecute + selection bbox).
+        const nodes = vm.Nodes;
+        for (let i = 0; i < nodes.Count; i++)
+        {
+            const n = nodes.Get(i);
+            const wantSelected = (n instanceof GroupVM)
+                ? nextGroups.has(n)
+                : nextLeaves.has(n);
+            if (n.IsSelected !== wantSelected) n.IsSelected = wantSelected;
         }
-        prev = next;
     };
     diagram.AddSelectionChangedListener(sync);
     return function detach() {
         diagram.RemoveSelectionChangedListener(sync);
-        // Best-effort cleanup: clear lingering IsSelected so a re-mount
-        // doesn't start with stale chrome.
-        for (const n of prev) if (n instanceof NodeVM) n.IsSelected = false;
-        prev = new Set();
+        // Best-effort cleanup so a re-mount doesn't start with stale
+        // chrome — clear every node's IsSelected. Walk vm.Nodes since
+        // that's the canonical entity list (Selector.SelectedItems is
+        // a subset).
+        const nodes = vm.Nodes;
+        for (let i = 0; i < nodes.Count; i++)
+        {
+            const n = nodes.Get(i);
+            if (n.IsSelected) n.IsSelected = false;
+        }
     };
 }
 
@@ -87,7 +136,35 @@ function attachDiagramBehaviors(view, vm) {
     // Selection → data bridge — so `when($IsSelected)` template
     // triggers fire on click / marquee / Ctrl- / Shift-click without
     // any per-shape DataTemplate edits.
-    const detachSelectionBridge = attachSelectionBridge(nodes);
+    const detachSelectionBridge = attachSelectionBridge(nodes, vm);
+
+    // Resize adorner — single Adorner Visual hosted in the SCP's inner
+    // AdornerLayer. Riding the layer means the handles scroll with the
+    // canvas automatically (the SCP translates the layer along with its
+    // content). Adorned element is the Diagram's ItemsPanelInstance, so
+    // the adorner's layer-local frame matches canvas-local coords —
+    // bbox / handle Arrange writes land at the same positions as
+    // DiagramNode containers. The lookup is deferred to a microtask so
+    // the items panel has materialized from the template by then.
+    let detachResizeAdorner = () => {};
+    queueMicrotask(() => {
+        const itemsPanel = nodes.ItemsPanelInstance;
+        if (itemsPanel === undefined) {
+            console.warn('SelectionResizeAdorner: Diagram.ItemsPanelInstance is undefined; adorner skipped.');
+            return;
+        }
+        const layer = AdornerLayer.GetAdornerLayer(itemsPanel);
+        if (layer === undefined) {
+            console.warn('SelectionResizeAdorner: no AdornerLayer in scope; adorner skipped.');
+            return;
+        }
+        const adorner = new SelectionResizeAdorner(itemsPanel, vm);
+        layer.Add(adorner);
+        detachResizeAdorner = () => {
+            layer.Remove(adorner);
+            adorner.Dispose();
+        };
+    });
 
     // Focus capture — Diagram.Focusable=true (set in diagram.mu) opts
     // the surface into the keyboard-focus pipeline; the listener below
@@ -105,11 +182,26 @@ function attachDiagramBehaviors(view, vm) {
     // mutations re-enter the Selector's recycle hook and shrink the
     // live set under our iteration.
     view.AddRoutedEventListener('KeyDown', (args) => {
-        if (args?.Key !== 'Delete' && args?.Key !== 'Backspace') return;
-        const snapshot = [...nodes.SelectedItems];
-        if (snapshot.length === 0) return;
-        vm.DeleteNodes(snapshot);
-        args.Handled = true;
+        if (args?.Key === 'Delete' || args?.Key === 'Backspace')
+        {
+            const snapshot = [...nodes.SelectedItems];
+            if (snapshot.length === 0) return;
+            vm.DeleteNodes(snapshot);
+            args.Handled = true;
+            return;
+        }
+        // Ctrl+G / Ctrl+Shift+G — Group / Ungroup (Visio + PowerPoint
+        // parity). Going through the ICommand surface so CanExecute
+        // gating is honored (no-op when fewer than 2 top-level items
+        // are selected for Group, or no top-level group selected for
+        // Ungroup).
+        if ((args?.Key === 'g' || args?.Key === 'G') && args.Modifiers?.Control)
+        {
+            const cmd = args.Modifiers.Shift ? vm.UngroupCommand : vm.GroupCommand;
+            if (cmd?.CanExecute(null)) cmd.Execute(null);
+            args.Handled = true;
+            return;
+        }
     });
 
     // Seed a few nodes so the demo isn't empty on open. Picks one from
@@ -131,6 +223,7 @@ function attachDiagramBehaviors(view, vm) {
     return function detachAll() {
         detachCanvasDrop();
         detachSelectionBridge();
+        detachResizeAdorner();
     };
 }
 
@@ -142,6 +235,8 @@ register({
     factory: () => {
         if (!resourcesMerged) {
             Application.current?.Resources.AddMergedDictionary(DiagramDemo.Clone());
+            Application.current?.Resources.AddMergedDictionary(DiagramShapeTemplates.Clone());
+            Application.current?.Resources.AddMergedDictionary(Icons);
             resourcesMerged = true;
         }
         if (vmInstance === undefined) vmInstance = new DiagramVM(LocalStorageService);

@@ -90,6 +90,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['PaginatedCanvas',         '@visualisation-sub/mural/basic'],
     ['Ellipse',                 '@visualisation-sub/mural/basic'],
     ['Image',                   '@visualisation-sub/mural/basic'],
+    ['Icon',                    '@visualisation-sub/mural/basic'],
     ['Line',                    '@visualisation-sub/mural/basic'],
     ['Rectangle',               '@visualisation-sub/mural/basic'],
     ['ComboBox',                '@visualisation-sub/mural/framework/list/combo-box.js'],

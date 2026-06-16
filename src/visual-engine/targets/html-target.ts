@@ -398,6 +398,20 @@ export class HtmlTarget extends PresentationTarget
             }
         });
 
+        // Cursor lock bridge — stamps the drag cursor on document.body
+        // so it wins over every descendant (including the SVG surface
+        // and any element the pointer wanders over mid-drag). The
+        // Visual.Cursor DP only reaches descendants of the Visual it's
+        // set on; host elements outside the SVG tree don't see it, and
+        // the browser falls back to defaults the moment the pointer
+        // leaves the source visual. Body-level write side-steps the
+        // whole hierarchy. Cleared by InputManager on capture release
+        // and on PointerUp auto-release.
+        const doc = this.host.ownerDocument ?? document;
+        this.InputManager.SetCursorBridge((cursor) => {
+            doc.body.style.cursor = cursor ?? '';
+        });
+
         // SvgRenderer paints the visual tree into the SVG surface and
         // maintains DOM identity per visual across re-render passes.
         // The renderer is driven from Flush() below — every layout
