@@ -130,5 +130,5 @@ Phases 1–6 + 7 + 8 (including the 19.7-engine + 19.8 corpus close-outs) + the 
   - Re-fitting boolean output back to higher-degree Beziers. Phase 7 output already preserves segments — this would smooth across boundary segments. Cosmetic polish.
   - SoA + typed-array hot path. Performance polish if profiling shows the boolean engine on a critical path.
   - Geometry text-on-path / geometry-from-text glyph outlines. Different problem domain (font engine territory).
-  - PathGeometry serialization (`PathGeometry.Parse("M 0 0 L 100 0 …")`). Useful for round-tripping with SVG sources.
+  - ~~PathGeometry serialization~~ ✅ Done — see [completed-backlog.md § 19-deferred #5](completed-backlog.md). `pathGeometryFromSvgD` parses full SVG 1.1 path-data; round-trips geometry-identical through `pathGeometryToSvgD`.
 
