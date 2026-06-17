@@ -217,7 +217,7 @@ describe('OpSegment.isSimple + nextChase — terminal walks', () => {
 // ── FindSortableTop drives sortableTop ──────────────────────────
 
 describe('FindSortableTop — adaptive ray-cast driver', () => {
-    test('single-line contour produces no sortable top (no rays to bracket)', () => {
+    test('single-line contour produces a sortable top (sortableTop runs against itself)', () => {
         const state = new OpGlobalState();
         new OpCoincidence(state);
         const head = new OpContourHead();
@@ -226,11 +226,14 @@ describe('FindSortableTop — adaptive ray-cast driver', () => {
         const sub = head.appendContour();
         sub.addLine([P(0, 0), P(10, 0)]);
         sub.complete();
+        // After the § 19.7 engine fix (OpSpan.init now auto-bumps
+        // segment count), FindSortableTop reaches OpSpan.sortableTop
+        // which now succeeds for a single line — the ray cast finds
+        // no other hits, so windSum lands at 0 and the function
+        // returns the span. Earlier this case returned undefined
+        // because the segment was vacuously "done" (fCount === 0).
         const r = FindSortableTop(head);
-        // A standalone line has windValue 1 but FindSortableTop fails
-        // to produce a winding because there's no other geometry to
-        // bracket against. Returns undefined.
-        assert.equal(r, undefined);
+        assert.notEqual(r, undefined);
     });
 });
 

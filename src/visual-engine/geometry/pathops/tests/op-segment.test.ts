@@ -231,12 +231,11 @@ describe('OpSegment.markDone / release', () => {
         const { contour } = newContour();
         const s = contour.addLine([P(0, 0), P(10, 0)]);
         s.addT(0.5);
-        // head.windValue is 1 by default — bumpCount() isn't auto-called
-        // from OpSpan.init in this port, so segment count remains 0
-        // unless callers bump it. Mirror the Skia contract: callers of
-        // addT() are responsible for bumpCount() book-keeping.
-        s.bumpCount();
-        s.bumpCount();
+        // OpSpan.init now auto-bumps fCount (matches Skia's
+        // SkOpSpan::init contract — without this, OpSegment.done()
+        // returned true vacuously and the boolean-op walker
+        // produced empty paths; see § 19.7 engine fix). addLine's
+        // head + the addT(0.5) interior span = 2 bumps total.
         assert.equal(s.count(), 2);
         assert.equal(s.done(), false);
         s.markDone(s.head());
@@ -252,7 +251,7 @@ describe('OpSegment.markDone / release', () => {
     test('markDone is idempotent (re-marking done span is a no-op)', () => {
         const { contour } = newContour();
         const s = contour.addLine([P(0, 0), P(10, 0)]);
-        s.bumpCount();
+        // OpSpan.init auto-bumps via head → count = 1.
         s.markDone(s.head());
         s.markDone(s.head());     // re-mark
         assert.equal(s.done(), true);  // still done; fDoneCount didn't double-bump
@@ -261,15 +260,17 @@ describe('OpSegment.markDone / release', () => {
     test('release decrements count and respects count >= doneCount', () => {
         const { contour } = newContour();
         const s = contour.addLine([P(0, 0), P(10, 0)]);
-        s.bumpCount();
-        s.bumpCount();
+        s.addT(0.5);
+        // OpSpan.init auto-bumps both head and the addT span → count = 2.
         assert.equal(s.count(), 2);
         s.release(s.head());
         assert.equal(s.count(), 1);
-        // Marking head done + releasing should drop both counts.
-        s.markDone(s.head());
+        // Marking the surviving span done + releasing should drop
+        // both counts.
+        const survivor = s.head();
+        s.markDone(survivor);
         assert.equal(s.fDoneCount, 1);
-        s.release(s.head());
+        s.release(survivor);
         assert.equal(s.fDoneCount, 0);
         assert.equal(s.count(), 0);
     });

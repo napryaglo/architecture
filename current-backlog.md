@@ -119,15 +119,11 @@ Surfaced by the post-shipping self-review against [m3-modernization-plan.md](m3-
 
 ## 19. Geometry math — boolean ops & shape queries
 
-Phases 1–6 + the Skia-port halves of 7 and 8 + the demo-driven 4 + the audit 5.1 shipped — see [completed-backlog.md § 19](completed-backlog.md). What remains open:
+Phases 1–6 + the Skia-port halves of 7 and 8 + the demo-driven 4 + the audit 5.1 + the 19.3 / 19.4 / 19.7 / 19.5 follow-ups all shipped — see [completed-backlog.md § 19](completed-backlog.md). What remains open:
 
-19.7-followup. **`CombinedGeometry` Model class + runtime `combine(a, b, mode)` helper.** The Skia port half (`Op` + `Simplify` driver) shipped under § 19.7 in completed-backlog. Still open: add `CombinedGeometry extends Geometry` Model class — DPs: `Geometry1`, `Geometry2`, `GeometryCombineMode` ({Union, Intersect, Xor, Exclude}). Lazy memo of the flattened `PathGeometry`; invalidated when inputs' `MetaData.Render` properties change via the same `_setRenderInvalidator` pattern `TransformGroup` uses. Runtime helper `combine(a, b, mode) → PathGeometry` exposed under [src/visual-engine/geometry/](src/visual-engine/geometry/) wrapping `Op()`. Also upgrades `Geometry.Intersects(other)` from bbox-only to exact.
+19.7-engine. **Boolean-ops engine — Intersect / Difference produce wrong output for overlapping inputs.** The Skia port + `combine()` helper + `CombinedGeometry` Model class all shipped. The engine fix landed for the trivial cases (Union and Xor on overlapping rectangles produce correct output, as do single-operand Simplify calls). What remains: Intersect on overlapping rectangles returns an empty path; Exclude (Difference) returns the first operand unchanged; curve-input combines produce extra duplicate figures that mis-paint under the EvenOdd output fill. Hypothesis (untested): the chase walker's `activeOp` lookup for the Intersect / Difference rows of `gActiveEdge` interacts badly with the post-engine-fix `bumpCount` lifecycle in ways the Union / Xor rows don't. The combine tests under [src/visual-engine/geometry/tests/combine.test.ts](src/visual-engine/geometry/tests/combine.test.ts) verify the API contract (no throws, returns a `PathGeometry`); strong Contains assertions for Intersect / Exclude / curve cases are deferred to this engine fix.
 
-19.8-followup. **Regression corpus port.** Build the harness: TS port of Skia's `outputProgressively`-style verifier, plus a small parser script that extracts path commands + expected ops from `skia/tests/PathOps*Test.cpp` and emits TS test stubs. Bulk-port the ~500 surviving tests. Robustness pass — pays huge dividends on adversarial inputs.
-
-19.3-followup. **`Diagram.PositionSnap` callback hook.** § 19.3 shipped visual alignment guides during drag, but no actual snap — the framework `DiagramNode` owns drag positioning and there's no v1 hook to snap cursor-derived position before X / Y is written. A `Diagram.PositionSnap?: (rect: Rect) => Rect` callback hook would let the align-edges behavior write back the snapped rect. Frame: optional callback DP on `Diagram`; `DiagramNode.OnPointerMove` consults it after computing the candidate rect and writes the snapped result. Trivial to add when a use case warrants it.
-
-19.4-followup. **Storyboard-driven group resize on `SelectionBoundsAdorner`.** § 19.4 ships the framework adorner with a `SelectionSource` interface that abstracts the consumer's resize callbacks. Animated group resize would require reaching into per-VM transform DPs from inside the framework adorner — breaking the abstraction. A future shape: `SelectionBoundsAdorner.Animated: boolean` DP + a `SelectionSource.applyResize` overload that takes a `Storyboard` argument the source threads into its DP writes.
+19.8-followup. **Regression corpus port.** Build the harness: TS port of Skia's `outputProgressively`-style verifier, plus a small parser script that extracts path commands + expected ops from `skia/tests/PathOps*Test.cpp` and emits TS test stubs. Bulk-port the ~500 surviving tests. Blocked on 19.7-engine — the corpus tests' expected outputs require working Intersect / Difference, so porting them now would just produce a flood of red. Robustness pass — pays huge dividends on adversarial inputs once the engine is straight.
 
 **Deferred past Phase 8** (history; revisit when a concrete demo demands them):
   - Path-offset / outline-widening (stroke → fill). Useful for "draw a parallel curve at offset N" diagram tooling but separate concern from boolean ops.
@@ -135,6 +131,4 @@ Phases 1–6 + the Skia-port halves of 7 and 8 + the demo-driven 4 + the audit 5
   - SoA + typed-array hot path. Performance polish if profiling shows the boolean engine on a critical path.
   - Geometry text-on-path / geometry-from-text glyph outlines. Different problem domain (font engine territory).
   - PathGeometry serialization (`PathGeometry.Parse("M 0 0 L 100 0 …")`). Useful for round-tripping with SVG sources.
-
-**Cross-cutting acceptance — remaining open:** `CONTRIBUTING.md` derivation note (Skia derivation declaration — creating a new .md is out of scope without explicit ask).
 

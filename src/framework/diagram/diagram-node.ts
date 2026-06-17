@@ -1,6 +1,7 @@
 import {
     MetaData,
     Model,
+    Rect,
     type PointerEventArgs,
     type PropertyDescriptor,
     type Visual,
@@ -313,8 +314,28 @@ export class DiagramNode extends ContentControl
         const effY = sv?.effectiveVerticalOffset()   ?? 0;
         const scrollDx = sv !== undefined ? effX - this._pressScrollOffsetX : 0;
         const scrollDy = sv !== undefined ? effY - this._pressScrollOffsetY : 0;
-        this.X = hostX - this._grabOffsetX + scrollDx;
-        this.Y = hostY - this._grabOffsetY + scrollDy;
+        let candidateX = hostX - this._grabOffsetX + scrollDx;
+        let candidateY = hostY - this._grabOffsetY + scrollDy;
+        // §19.3 — apply the enclosing Diagram's PositionSnap callback
+        // before writing. The callback returns a snapped rect; we
+        // honour its X / Y but keep the candidate's Width / Height
+        // (snap is positional, not dimensional). Imports the Diagram
+        // class lazily to avoid the diagram.ts → diagram-node.ts
+        // cycle visible to TS.
+        const ar = this.ArrangedRect;
+        const w = ar?.Width  ?? 0;
+        const h = ar?.Height ?? 0;
+        const selector = Selector.FromContainer<Selector>(
+            this, (v: Visual): v is Selector => v instanceof Selector);
+        const snap = (selector as unknown as { PositionSnap?: (r: Rect) => Rect } | undefined)?.PositionSnap;
+        if (snap !== undefined)
+        {
+            const snapped = snap(new Rect(candidateX, candidateY, w, h));
+            candidateX = snapped.X;
+            candidateY = snapped.Y;
+        }
+        this.X = candidateX;
+        this.Y = candidateY;
         this.ClearValue(DiagramNode.XKey);
         this.ClearValue(DiagramNode.YKey);
     }

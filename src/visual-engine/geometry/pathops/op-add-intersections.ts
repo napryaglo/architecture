@@ -16,6 +16,16 @@
 
 import { Cubic } from './cubic.js';
 import { Intersections } from './intersections.js';
+// Side-effect imports — install the per-pair intersection methods
+// (intersectLineLine / Quad × Line / Cubic × Line / Quad × Quad /
+// Cubic × Quad / Cubic × Cubic) onto the Intersections prototype.
+// Without these, AddIntersectTs at line ~116 calls
+// `ts.intersectCubicCubic` which throws "not a function" when this
+// module is reached via a path that didn't pass through the pathops
+// barrel (e.g. the § 19.7 combine() driver).
+import './quad-line-intersection.js';
+import './cubic-line-intersection.js';
+import './t-sect.js';
 import { Line } from './line.js';
 import { Point } from './point.js';
 import { Quad } from './quad.js';

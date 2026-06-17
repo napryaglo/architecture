@@ -1115,10 +1115,20 @@ export class OpSegment implements OpSegmentLike {
     // Renamed-then-aliased version of markWinding so the two-arg
     // public surface still works. Skia's overloads share a name; we
     // pick concrete names to keep the dispatch transparent.
+    //
+    // The `winding === 0` and `winding == 0 && oppWinding == 0` checks
+    // mirror Skia's `SkASSERT(winding)` / `SkASSERT(winding || oppWinding)`
+    // — debug assertions that gate the *call site*, not the runtime
+    // behaviour. In release builds Skia falls through and writes
+    // windSum / oppSum even when zero. The mural port originally
+    // turned these into throws, but legitimate code paths
+    // (Simplify of a path whose ray-cast finds no other hits leaves
+    // wind == oppWind == 0) hit the assertion and aborted Op() /
+    // Simplify() output. Quiet no-op match the release-build
+    // semantics.
     public markWindingValue(span: OpSpan, winding: number): boolean
     {
         if ((span.segment() as OpSegment) !== this) throw new Error('markWindingValue: cross-segment');
-        if (winding === 0) throw new Error('markWindingValue: winding must be nonzero');
         if (span.done()) return false;
         span.setWindSum(winding);
         return true;
@@ -1127,7 +1137,6 @@ export class OpSegment implements OpSegmentLike {
     public markWindingValueBinary(span: OpSpan, winding: number, oppWinding: number): boolean
     {
         if ((span.segment() as OpSegment) !== this) throw new Error('markWindingValueBinary: cross-segment');
-        if (winding === 0 && oppWinding === 0) throw new Error('markWindingValueBinary: both zero');
         if (span.done()) return false;
         span.setWindSum(winding);
         span.setOppSum(oppWinding);

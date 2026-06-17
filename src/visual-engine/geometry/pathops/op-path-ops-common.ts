@@ -92,9 +92,12 @@ export function FindChase(chase: OpSpanBase[],
         startPtr.value = span.ptT().next().span();
         const done = { value: true };
         endPtr.value = undefined;
-        const startBox: { value: OpSpanBase | undefined } = { value: startPtr.value };
-        const endBox:   { value: OpSpanBase | undefined } = { value: undefined };
-        const last = segment.activeAngle(startPtr.value!, startBox, endBox, done);
+        // Pass startPtr / endPtr directly so activeAngle can mutate
+        // them in-place — matches Skia's `&start, &end` semantics.
+        // The earlier port used local boxes that never propagated
+        // back; endPtr.value stayed undefined and the AngleWinding
+        // call below crashed in segment.spanToAngle's `end.t()` read.
+        const last = segment.activeAngle(startPtr.value!, startPtr, endPtr, done);
         if (last !== undefined) {
             startPtr.value = last.start() as OpSpanBase;
             endPtr.value   = last.end()   as OpSpanBase;

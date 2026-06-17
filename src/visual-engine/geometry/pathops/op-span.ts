@@ -669,9 +669,12 @@ export class OpSpan extends OpSpanBase {
         this.fChased = false;
         this.fDone = false;
         // Skia: segment->bumpCount() — record that this segment now
-        // owns one more span. Phase 6 follow-up wires this through
-        // when OpSegment lands; for now we leave the count to be
-        // tracked by the segment's own constructor.
+        // owns one more span. Without this, OpSegment.done() always
+        // returns true vacuously (fDoneCount === fCount === 0) and
+        // FindSortableTop skips every segment, so the boolean-op
+        // walker never finds an anchor and bridgeWinding produces an
+        // empty output path.
+        (segment as unknown as { bumpCount(): void }).bumpCount();
         this.fAlreadyAdded = false;
     }
 

@@ -62,6 +62,17 @@ export interface SelectionSource
                 xAnchor: HorizontalAnchor,
                 yAnchor: VerticalAnchor): void;
     endResize(): void;
+
+    // §19.4 — optional animated variant. When the adorner's
+    // Animated DP is true AND the source implements this method,
+    // resize deltas route here instead of plain applyResize. The
+    // source is expected to drive its DP writes via Storyboards so
+    // per-entity Width / Height / X / Y transitions tween smoothly
+    // over the gesture. Default plain-applyResize falls through
+    // when undefined.
+    applyResizeAnimated?(dw: number, dh: number,
+                         xAnchor: HorizontalAnchor,
+                         yAnchor: VerticalAnchor): void;
 }
 
 // ── Adorner ─────────────────────────────────────────────────────
@@ -104,12 +115,25 @@ export class SelectionBoundsAdorner extends Adorner
     public static readonly ChromeFillKey   = Model.RegisterProperty<Brush>( SelectionBoundsAdorner, 'ChromeFill',   DEFAULT_FILL,   MetaData.Render);
     public static readonly HandleSizeKey   = Model.RegisterProperty<number>(SelectionBoundsAdorner, 'HandleSize',   DEFAULT_HANDLE_SIZE, MetaData.Render);
 
+    // §19.4 follow-up — Animated hint. When true AND the consumer's
+    // SelectionSource implements `applyResizeAnimated`, the adorner
+    // routes resize deltas through that callback instead of plain
+    // `applyResize`. The animated variant is expected to drive its
+    // own DP writes via Storyboards so per-entity Width / Height /
+    // X / Y transitions tween smoothly. When the source doesn't
+    // implement the variant, this DP is a no-op (direct writes
+    // through plain applyResize). MetaData.None — the DP carries
+    // intent, not paint state.
+    public static readonly AnimatedKey     = Model.RegisterProperty<boolean>(SelectionBoundsAdorner, 'Animated',     false, MetaData.None);
+
     public get ChromeStroke():  Brush  { return this.get_property_value(SelectionBoundsAdorner.ChromeStrokeKey); }
     public set ChromeStroke(v:  Brush) { this.set_property_value(SelectionBoundsAdorner.ChromeStrokeKey, v); }
     public get ChromeFill():    Brush  { return this.get_property_value(SelectionBoundsAdorner.ChromeFillKey); }
     public set ChromeFill(v:    Brush) { this.set_property_value(SelectionBoundsAdorner.ChromeFillKey, v); }
     public get HandleSize():    number { return this.get_property_value(SelectionBoundsAdorner.HandleSizeKey); }
     public set HandleSize(v:    number) { this.set_property_value(SelectionBoundsAdorner.HandleSizeKey, v); }
+    public get Animated():      boolean { return this.get_property_value(SelectionBoundsAdorner.AnimatedKey); }
+    public set Animated(v:      boolean) { this.set_property_value(SelectionBoundsAdorner.AnimatedKey, v); }
 
     // ── Internal state ──────────────────────────────────────────
     private readonly _source: SelectionSource;
@@ -208,7 +232,19 @@ export class SelectionBoundsAdorner extends Adorner
             if (this._dragSpec !== spec) return;
             const dx = args.HostX - this._pressHostX;
             const dy = args.HostY - this._pressHostY;
-            this._source.applyResize(spec.dwDir * dx, spec.dhDir * dy, spec.xAnchor, spec.yAnchor);
+            const dw = spec.dwDir * dx;
+            const dh = spec.dhDir * dy;
+            // §19.4 — route through the animated variant when the
+            // adorner's Animated flag is on AND the source
+            // implements it. Falls back to plain applyResize.
+            if (this.Animated && this._source.applyResizeAnimated !== undefined)
+            {
+                this._source.applyResizeAnimated(dw, dh, spec.xAnchor, spec.yAnchor);
+            }
+            else
+            {
+                this._source.applyResize(dw, dh, spec.xAnchor, spec.yAnchor);
+            }
             args.Handled = true;
         }) as (a: unknown) => void);
         visual.AddRoutedEventListener('PointerUp', ((args: PointerEventArgs) => {

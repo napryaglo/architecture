@@ -1,6 +1,15 @@
-import { Model, type KeyEventArgs, type Visual } from '../../runtime/index.js';
+import { MetaData, Model, Rect, type KeyEventArgs, type Visual } from '../../runtime/index.js';
 import { DiagramNode } from './diagram-node.js';
 import { Selector } from '../list/selector.js';
+
+// §19.3 follow-up — position snap callback. Consumers (e.g., the
+// diagram demo's align-edges behavior) set this DP to a pure function
+// that returns the snapped rect for a given cursor-derived candidate
+// rect. DiagramNode.OnPointerMove consults the parent Diagram and
+// applies the snap before writing X / Y, so alignment guides
+// translate into real snap-on-drag behavior without behaviors having
+// to fight the framework's drag positioning.
+export type DiagramPositionSnap = (rect: Rect) => Rect;
 
 // Selector flavour that materializes each item into a DiagramNode
 // container instead of the default ContentPresenter wrap. The Selector
@@ -21,6 +30,16 @@ import { Selector } from '../list/selector.js';
 // those attached properties so a parent Canvas places it.
 export class Diagram extends Selector
 {
+    // §19.3 — `PositionSnap` callback. Default `undefined` = no snap,
+    // identity behavior. When set, DiagramNode.OnPointerMove calls it
+    // with the cursor-derived candidate rect and uses the returned
+    // rect's X / Y for its position write.
+    public static readonly PositionSnapKey = Model.RegisterProperty<DiagramPositionSnap | undefined>(
+        Diagram, 'PositionSnap', undefined, MetaData.None);
+
+    public get PositionSnap():  DiagramPositionSnap | undefined { return this.get_property_value(Diagram.PositionSnapKey); }
+    public set PositionSnap(v: DiagramPositionSnap | undefined) { this.set_property_value(Diagram.PositionSnapKey, v); }
+
     public override GetContainerForItemOverride(item: unknown): Visual
     {
         const node = new DiagramNode();

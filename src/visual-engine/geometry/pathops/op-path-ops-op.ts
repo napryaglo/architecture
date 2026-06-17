@@ -77,9 +77,13 @@ function findChaseOp(chase: OpSpanBase[],
         const segment = startPtr.value.segment() as OpSegment;
         const done = { value: true };
         endPtr.value = undefined;
-        const startBox = { value: startPtr.value };
-        const endBox: { value: OpSpanBase | undefined } = { value: undefined };
-        const last = segment.activeAngle(startPtr.value, startBox, endBox, done);
+        // Skia passes startPtr / endPtr directly into activeAngle so it
+        // can mutate them in-place — the chase walker then reads the
+        // updated pair to feed AngleWinding. The earlier port used
+        // separate local boxes that never propagated back; that left
+        // endPtr.value === undefined and AngleWinding's
+        // segment.spanToAngle crashed on `end.t()`.
+        const last = segment.activeAngle(startPtr.value, startPtr, endPtr, done);
         if (last !== undefined) {
             startPtr.value = last.start() as OpSpanBase;
             endPtr.value   = last.end()   as OpSpanBase;
