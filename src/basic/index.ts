@@ -10,6 +10,12 @@
 
 export { Adorner, AdornerLayer, AdornerDecorator } from '../runtime/index.js';
 export { ValidationErrorAdorner } from './validation-error-adorner.js';
+export {
+    SelectionBoundsAdorner,
+    type SelectionSource,
+    type HorizontalAnchor,
+    type VerticalAnchor,
+} from './selection-bounds-adorner.js';
 export { Border } from './border.js';
 export { TextBlock, TextAlignment, TextWrapping } from './text-block.js';
 export { Canvas } from './panels/canvas.js';
