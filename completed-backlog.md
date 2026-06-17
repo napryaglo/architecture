@@ -587,6 +587,16 @@ Closure of the eight-phase Skia pathops port + the surrounding geometry / diagra
 
   No class-static `PathGeometry.Parse` added — the standalone-function shape is symmetric with `pathGeometryToSvgD` and avoids a cycle through `geometry.ts ↔ path-from-svg.ts`. Both helpers re-exported from the `geometry/index.ts` barrel.
 
+~~**19-deferred #2. Re-fit boolean output to higher-degree Beziers.**~~ ✅ Done. Two cosmetic post-passes shipped in [refit.ts](src/visual-engine/geometry/pathops/refit.ts), wired into [`combine()`](src/visual-engine/geometry/combine.ts) between `Op()` and the lift back to PathGeometry. Both transforms preserve covered area exactly; they only collapse redundant output structure.
+
+  - **`collapseCollinearLines`** — output-side cleanup. Drops zero-length `lineTo` segments and fuses any chain of collinear same-direction `lineTo` commands into a single segment to the run's final endpoint. Detection is exact: `(B-A) × (C-B) ≈ 0` AND `(B-A)·(C-B) ≥ 0`. Catches the typical Op() artefact where Union of two rectangles emits each shared edge as a chain of touching sub-lines from the intersection-split walk.
+
+  - **`coalesceSameOriginalCurve`** — same-input-curve re-fusing. The engine emits each cubic / quad sub-span as its own `cubicTo` / `quadTo`; if a single input cubic is intersected at N points and all N+1 sub-spans survive into the output, the result fragments into N+1 separate cubics that visually retrace the same parametric curve. Each curve command now carries a `CurveProvenance` (segment identity + t-range + a snapshot of the segment's original control points) attached at emit time by [`OpSegment.addCurveTo`](src/visual-engine/geometry/pathops/op-segment.ts). The coalescer walks the output, detects consecutive curves whose provenance shows the same segment with adjacent t-ranges (within `1e-9`), and re-derives the merged curve from the source control points on the union range via the existing `Quad.subDivide` / `Cubic.subDivide`. Provenance is dropped on the final returned OpPath — no downstream consumer needs it.
+
+  **Provenance plumbing.** Optional `prov?: CurveProvenance` field on [OpPathCommand](src/visual-engine/geometry/pathops/op-path.ts); `OpPath.quadTo` / `cubicTo` and [OpPathWriter.quadTo](src/visual-engine/geometry/pathops/op-path-writer.ts) / `cubicTo` accept and forward it. `reverseAddPath` drops provenance — direction reversal would require swapping `tStart` / `tEnd` and reversing source control points, which the coalescer's forward-only walk doesn't currently consume. `addCurveTo` populates provenance for `kQuad` / `kCubic` outputs only; `kLine` carries no provenance because collinear collapse handles it from geometry alone.
+
+  18 new tests at [refit.test.ts](src/visual-engine/geometry/pathops/tests/refit.test.ts) (two / three-way merge, non-adjacent t-range refusal, different-segment refusal, no-provenance passthrough, quad-source merge, collinear collapse with curves between, zero-length drop, idempotence) + 2 real-Op-output integration tests in [combine.test.ts](src/visual-engine/geometry/tests/combine.test.ts) on touching-rect Union (line-collapse path) and circle ∩ rect Intersect (curve-coalesce path). Test suite: 506 → **524** passing.
+
 ---
 
 ## Architectural notes (for orientation)

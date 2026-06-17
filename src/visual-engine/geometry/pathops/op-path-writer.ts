@@ -13,7 +13,7 @@
 // `assemble()` reorders them by closest-pair matching.
 
 import { Point } from './point.js';
-import { OpPath } from './op-path.js';
+import { OpPath, type CurveProvenance } from './op-path.js';
 import type { OpPtT } from './op-span.js';
 
 export class OpPathWriter {
@@ -75,16 +75,16 @@ export class OpPathWriter {
         return true;
     }
 
-    public quadTo(pt1: Point, pt2: OpPtT): void
+    public quadTo(pt1: Point, pt2: OpPtT, prov?: CurveProvenance): void
     {
         const pt2pt = this.update(pt2);
-        this.fCurrent.quadTo(pt1, pt2pt);
+        this.fCurrent.quadTo(pt1, pt2pt, prov);
     }
 
-    public cubicTo(pt1: Point, pt2: Point, pt3: OpPtT): void
+    public cubicTo(pt1: Point, pt2: Point, pt3: OpPtT, prov?: CurveProvenance): void
     {
         const pt3pt = this.update(pt3);
-        this.fCurrent.cubicTo(pt1, pt2, pt3pt);
+        this.fCurrent.cubicTo(pt1, pt2, pt3pt, prov);
     }
 
     public finishContour(): void

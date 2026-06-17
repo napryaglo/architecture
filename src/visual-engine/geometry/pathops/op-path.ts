@@ -12,10 +12,25 @@
 import { Point } from './point.js';
 import { OpVerb } from './op-fwd.js';
 
+// §19-deferred #2 — same-original-curve coalescing hint. Attached to
+// curve commands emitted by `Op() / Simplify()` so a post-pass can fuse
+// adjacent sub-spans of the same input curve back into one segment. The
+// `seg` field is an opaque object reference used only for identity
+// comparison; `sourcePts` is a snapshot so the post-pass doesn't have
+// to reach back into the live engine state.
+export interface CurveProvenance {
+    seg:        object;
+    tStart:     number;
+    tEnd:       number;
+    sourceVerb: OpVerb;
+    sourcePts:  Point[];
+}
+
 export interface OpPathCommand {
     verb: OpVerb;        // kMove | kLine | kQuad | kCubic | kClose
     pts:  Point[];       // 1 for move, 1 for line, 2 for quad, 3 for cubic, 0 for close
     weight?: number;     // conic only (not currently in mural's port)
+    prov?:   CurveProvenance;
 }
 
 export enum OpFillType {
@@ -73,17 +88,21 @@ export class OpPath {
         this._last = p;
     }
 
-    public quadTo(c: Point, p: Point): void
+    public quadTo(c: Point, p: Point, prov?: CurveProvenance): void
     {
         if (!this._hasMove) this.moveTo(new Point(0, 0));
-        this.fCommands.push({ verb: OpVerb.kQuad, pts: [c, p] });
+        const cmd: OpPathCommand = { verb: OpVerb.kQuad, pts: [c, p] };
+        if (prov !== undefined) cmd.prov = prov;
+        this.fCommands.push(cmd);
         this._last = p;
     }
 
-    public cubicTo(c1: Point, c2: Point, p: Point): void
+    public cubicTo(c1: Point, c2: Point, p: Point, prov?: CurveProvenance): void
     {
         if (!this._hasMove) this.moveTo(new Point(0, 0));
-        this.fCommands.push({ verb: OpVerb.kCubic, pts: [c1, c2, p] });
+        const cmd: OpPathCommand = { verb: OpVerb.kCubic, pts: [c1, c2, p] };
+        if (prov !== undefined) cmd.prov = prov;
+        this.fCommands.push(cmd);
         this._last = p;
     }
 
@@ -104,7 +123,9 @@ export class OpPath {
     public addPath(other: OpPath): void
     {
         for (const c of other.fCommands) {
-            this.fCommands.push({ verb: c.verb, pts: c.pts.slice(), weight: c.weight });
+            const copy: OpPathCommand = { verb: c.verb, pts: c.pts.slice(), weight: c.weight };
+            if (c.prov !== undefined) copy.prov = c.prov;
+            this.fCommands.push(copy);
             if (c.pts.length > 0) this._last = c.pts[c.pts.length - 1]!;
             if (c.verb === OpVerb.kMove) this._hasMove = true;
             else if (c.verb === OpVerb.kClose) this._hasMove = false;

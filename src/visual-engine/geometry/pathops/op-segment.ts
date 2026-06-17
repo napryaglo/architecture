@@ -2044,12 +2044,25 @@ export class OpSegment implements OpSegmentLike {
                 break;
             case OpVerb.kQuad: {
                 if (out.value.verb !== OpVerb.kQuad) return false;
-                path.quadTo(out.value.fQuad.fPts[1]!, end.ptT());
+                // §19-deferred #2 — provenance for same-original-curve coalescing.
+                path.quadTo(out.value.fQuad.fPts[1]!, end.ptT(), {
+                    seg: this,
+                    tStart: start.ptT().fT,
+                    tEnd:   end.ptT().fT,
+                    sourceVerb: OpVerb.kQuad,
+                    sourcePts:  this.fPts.slice(0, 3),
+                });
                 break;
             }
             case OpVerb.kCubic: {
                 if (out.value.verb !== OpVerb.kCubic) return false;
-                path.cubicTo(out.value.fCubic.fPts[1]!, out.value.fCubic.fPts[2]!, end.ptT());
+                path.cubicTo(out.value.fCubic.fPts[1]!, out.value.fCubic.fPts[2]!, end.ptT(), {
+                    seg: this,
+                    tStart: start.ptT().fT,
+                    tEnd:   end.ptT().fT,
+                    sourceVerb: OpVerb.kCubic,
+                    sourcePts:  this.fPts.slice(0, 4),
+                });
                 break;
             }
             default: return false;

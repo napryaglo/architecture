@@ -127,7 +127,7 @@ Phases 1–6 + 7 + 8 (including the 19.7-engine + 19.8 corpus close-outs) + the 
 
 **Deferred past Phase 8** (history; revisit when a concrete demo demands them):
   - Path-offset / outline-widening (stroke → fill). Useful for "draw a parallel curve at offset N" diagram tooling but separate concern from boolean ops.
-  - Re-fitting boolean output back to higher-degree Beziers. Phase 7 output already preserves segments — this would smooth across boundary segments. Cosmetic polish.
+  - ~~Re-fitting boolean output back to higher-degree Beziers~~ ✅ Done — see [completed-backlog.md § 19-deferred #2](completed-backlog.md). Collinear-line collapse + same-original-curve coalescing run inside `combine()` between `Op()` and the lift back to PathGeometry.
   - SoA + typed-array hot path. Performance polish if profiling shows the boolean engine on a critical path.
   - Geometry text-on-path / geometry-from-text glyph outlines. Different problem domain (font engine territory).
   - ~~PathGeometry serialization~~ ✅ Done — see [completed-backlog.md § 19-deferred #5](completed-backlog.md). `pathGeometryFromSvgD` parses full SVG 1.1 path-data; round-trips geometry-identical through `pathGeometryToSvgD`.

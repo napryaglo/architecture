@@ -35,6 +35,7 @@ import { OpPath, OpFillType } from './pathops/op-path.js';
 import { Op } from './pathops/op-path-ops-op.js';
 import { SkPathOp } from './pathops/op-segment.js';
 import { OpVerb } from './pathops/op-fwd.js';
+import { refitOpPath } from './pathops/refit.js';
 import { Point as DPoint } from './pathops/point.js';
 import { arcToCubics } from './pathops/arc-to-cubic.js';
 
@@ -332,7 +333,10 @@ export function combine(a: Geometry, b: Geometry, mode: GeometryCombineMode): Pa
     const skiaOp = COMBINE_MODE_TO_SKIA_OP[mode]!;
     const ok = Op(opA, opB, skiaOp, result);
     if (!ok) return new PathGeometry([]);
-    return opPathToPathGeometry(result);
+    // §19-deferred #2 — collapse collinear-line chains + coalesce
+    // adjacent sub-spans of the same input curve before lifting back to
+    // PathGeometry. Cosmetic — does not change the result's covered area.
+    return opPathToPathGeometry(refitOpPath(result));
 }
 
 // ── CombinedGeometry Model class ─────────────────────────────────

@@ -279,3 +279,33 @@ describe('combine — PathGeometry input lowers cleanly', () => {
         assert.equal(out.Contains(P(50, 200)), false);
     });
 });
+
+// §19-deferred #2 — refit pass exercised on real Op() output.
+//
+// Refit is correctness-preserving cosmetic cleanup. These tests verify
+// that the pass doesn't distort covered area on inputs that exercise
+// the line-collapse and curve-coalesce branches.
+describe('combine — refit pass on real boolean output', () => {
+    test('Two identical rects Union — covered area unchanged after refit', () => {
+        // Touching edges become collinear after the Op walker traces
+        // the shared border. Refit collapses the resulting line chains.
+        const a = rect(0, 0, 100, 10);
+        const b = rect(0, 0, 100, 10);
+        const r = combine(a, b, GeometryCombineMode.Union);
+        assert.equal(r.Contains(P(50, 5)),  true);   // inside both
+        assert.equal(r.Contains(P(50, 50)), false);  // outside both
+    });
+
+    test('Circle Intersect rect (curve coalescing path) — covered area unchanged', () => {
+        // Same shape as the ellipse + rect Intersect test above. The
+        // engine's circle output splits each quarter-arc into multiple
+        // cubic sub-spans at the rect boundary; the refit pass coalesces
+        // adjacent sub-spans of the same arc back into one cubic.
+        const circ = new EllipseGeometry(P(0, 0), 10, 10);
+        const r    = rect(-5, -5, 20, 20);
+        const out  = combine(circ, r, GeometryCombineMode.Intersect);
+        assert.equal(out.Contains(P(0, 0)), true);    // inside both
+        assert.equal(out.Contains(P(5, 5)), true);    // inside both
+        assert.equal(out.Contains(P(20, 20)), false); // outside both
+    });
+});
