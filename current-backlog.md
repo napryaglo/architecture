@@ -119,9 +119,11 @@ Surfaced by the post-shipping self-review against [m3-modernization-plan.md](m3-
 
 ## 19. Geometry math — boolean ops & shape queries
 
-Phases 1–6 + 7 + 8 (including the 19.7-engine close-out) + the demo-driven 4 + the audit 5.1 + the 19.3 / 19.4 / 19.7 / 19.5 follow-ups all shipped — see [completed-backlog.md § 19](completed-backlog.md). What remains open:
+Phases 1–6 + 7 + 8 (including the 19.7-engine + 19.8 corpus close-outs) + the demo-driven 4 + the audit 5.1 + the 19.3 / 19.4 / 19.7 / 19.5 / 19.8 follow-ups all shipped — see [completed-backlog.md § 19](completed-backlog.md). What remains open:
 
-19.8-followup. **Regression corpus port.** Build the harness: TS port of Skia's `outputProgressively`-style verifier, plus a small parser script that extracts path commands + expected ops from `skia/tests/PathOps*Test.cpp` and emits TS test stubs. Bulk-port the ~500 surviving tests. Robustness pass — pays huge dividends on adversarial inputs now that the engine is straight. Unblocked as of the 19.7 round-3 close-out.
+19.8-engine. **Coincidence / angle-ring infinite-loop safety nets for adversarial corpus inputs.** §19.8 ships the harness + ~550 ported regression tests, but running them surfaces a small number of Skia adversarial inputs that drive `op-coincidence.ts` / `op-angle.ts` loops without termination (the engine port faithfully copies Skia's `for (;;)` shapes, which depend on monotonic state changes that adversarial inputs don't guarantee). bridgeOp / bridgeWinding got hard safety nets in §19.8, but the coincidence-resolver and angle-ring iterators still hang on entries like `cubicOp35d`. Corpus tests are gated behind `RUN_PATHOPS_CORPUS=1` until each remaining loop gets either a safety net or a real termination proof.
+
+  Plan of attack: add `OpGlobalState.iterationBudget` (a global integer that every major loop decrements on entry). When the budget hits 0, set a `bailout` flag the loops check next time around — single threadsafe gate across the whole engine. Op() / Simplify() reset the budget at entry and treat a bailout as a graceful `return false` (the corpus verifier already accepts that outcome via the robustness fallback). The "find which loop loops forever" work is the read of each `for (;;)` in op-coincidence.ts / op-angle.ts + a small instrumentation pass to confirm where the cycle is.
 
 **Deferred past Phase 8** (history; revisit when a concrete demo demands them):
   - Path-offset / outline-widening (stroke → fill). Useful for "draw a parallel curve at offset N" diagram tooling but separate concern from boolean ops.

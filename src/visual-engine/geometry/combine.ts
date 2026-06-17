@@ -247,7 +247,10 @@ function appendEllipseToOpPath(g: EllipseGeometry, out: OpPath, m: Matrix): void
 
 // ── OpPath → PathGeometry ────────────────────────────────────────
 
-function opPathToPathGeometry(p: OpPath): PathGeometry
+// Exported for use by the §19.8 corpus verifier — it builds OpPath
+// inputs by parsing path strings, then lifts both inputs AND Op()'s
+// output to PathGeometry to drive Contains() probe checks.
+export function opPathToPathGeometry(p: OpPath): PathGeometry
 {
     const figures: PathFigure[] = [];
     let figureStart: Point | undefined = undefined;

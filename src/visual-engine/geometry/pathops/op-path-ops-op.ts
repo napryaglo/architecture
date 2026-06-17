@@ -164,16 +164,27 @@ function bridgeOp(contourList: OpContourHead, op: SkPathOp,
     let unsortableBox = { value: false };
     let lastSimple = false;
     let simpleBox = { value: false };
+    // Adversarial inputs in the §19.8 corpus (PathOpsOpTest fuzz
+    // entries) occasionally drive the walker into a degenerate loop
+    // where FindSortableTop keeps returning a span and the chase
+    // never advances. The hard caps are loose enough that any
+    // honest contour graph terminates well within them.
+    let outerSafety = 1_000;
     for (;;) {
+        if (--outerSafety <= 0) return false;
         const span = FindSortableTop(contourList);
         if (span === undefined) break;
         let current: OpSegment | undefined = span.segment() as OpSegment;
         let startPtr: { value: OpSpanBase | undefined } = { value: span.next() };
         let endPtr:   { value: OpSpanBase | undefined } = { value: span };
         const chase: OpSpanBase[] = [];
+        let chainSafety = 1_000;
         do {
+            if (--chainSafety <= 0) return false;
             if (current!.activeOp(startPtr.value!, endPtr.value!, xorMask, xorOpMask, op)) {
+                let innerSafety = 1_000;
                 do {
+                    if (--innerSafety <= 0) return false;
                     if (!unsortableBox.value && current!.done()) break;
                     const nextStart = { value: startPtr.value };
                     const nextEnd   = { value: endPtr.value };
@@ -361,16 +372,22 @@ export function Simplify(path: OpPath, result: OpPath): boolean
 function bridgeWinding(contourList: OpContourHead, writer: OpPathWriter): boolean
 {
     const unsortableBox = { value: false };
+    let outerSafety = 1_000;
     for (;;) {
+        if (--outerSafety <= 0) return false;
         const span = FindSortableTop(contourList);
         if (span === undefined) break;
         let current: OpSegment | undefined = span.segment() as OpSegment;
         let startPtr: { value: OpSpanBase | undefined } = { value: span.next() };
         let endPtr:   { value: OpSpanBase | undefined } = { value: span };
         const chase: OpSpanBase[] = [];
+        let chainSafety = 1_000;
         do {
+            if (--chainSafety <= 0) return false;
             if (current!.activeWinding(startPtr.value!, endPtr.value!)) {
+                let innerSafety = 1_000;
                 do {
+                    if (--innerSafety <= 0) return false;
                     if (!unsortableBox.value && current!.done()) break;
                     const nextStart = { value: startPtr.value };
                     const nextEnd   = { value: endPtr.value };
