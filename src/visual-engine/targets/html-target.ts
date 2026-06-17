@@ -19,6 +19,7 @@ import {
 import { CanvasTextMeasurer } from '../text/canvas-text-measurer.js';
 import { PresentationTarget } from './presentation-target.js';
 import { SvgRenderer, VISUAL_BACKREF } from '../drawing/svg-renderer.js';
+import { Point } from '../primitives.js';
 
 // VISUAL_BACKREF stamp lives in svg-renderer.ts; re-import here for
 // the HitTest walk so the read side agrees with the write side.
@@ -27,6 +28,28 @@ import { SvgRenderer, VISUAL_BACKREF } from '../drawing/svg-renderer.js';
 export { VISUAL_BACKREF };
 
 interface BackrefHost { [VISUAL_BACKREF]?: Visual; }
+
+// §19.2.7 — when the candidate Visual has a HitTestGeometry, the
+// browser-pick is double-checked against the geometry. The element
+// `el` is the SVG node that owns the back-ref — its `getScreenCTM()`
+// maps the Visual's local SVG frame to viewport (client) coords, so
+// the inverse takes (clientX, clientY) into local space.
+function acceptsPoint(visual: Visual, el: Element, clientX: number, clientY: number): boolean
+{
+    const geom = visual.HitTestGeometry;
+    if (geom === undefined) return true;
+    // SVGGraphicsElement.getScreenCTM is the only API surface that
+    // returns the cumulative SVG transform; bail conservatively if
+    // the element doesn't expose it (e.g., a foreignObject-mounted
+    // visual).
+    const g = el as unknown as { getScreenCTM?: () => DOMMatrix | null };
+    if (typeof g.getScreenCTM !== 'function') return true;
+    const ctm = g.getScreenCTM();
+    if (ctm === null) return true;
+    const inv = ctm.inverse();
+    const local = new DOMPoint(clientX, clientY).matrixTransform(inv);
+    return geom.Contains(new Point(local.x, local.y));
+}
 
 // Normalise a browser PointerEvent into our runtime-side init record.
 // PointerEvent.button is `-1` between presses (no button); we mirror
@@ -519,6 +542,14 @@ export class HtmlTarget extends PresentationTarget
     // VISUAL_BACKREF stamp from SvgDrawingContext. Returns undefined
     // if the pointer is outside the painted content or on a non-visual
     // DOM node (e.g., the host's chrome).
+    //
+    // §19.2.7: when a candidate Visual has a `HitTestGeometry`, the
+    // browser-pick is double-checked by inverse-mapping (clientX,
+    // clientY) into the Visual's local SVG frame via
+    // `getScreenCTM().inverse()` and calling `geometry.Contains(...)`.
+    // On rejection we fall through to the next ancestor — letting a
+    // pointer slip "through" the AABB corners of an Expressive shape
+    // to whatever sits behind it.
     public override HitTest(hostX: number, hostY: number): Visual | undefined
     {
         const rect = this.host.getBoundingClientRect();
@@ -534,7 +565,15 @@ export class HtmlTarget extends PresentationTarget
             for (let cur: Node | null = el; cur !== null; cur = cur.parentNode)
             {
                 const back = (cur as unknown as BackrefHost)[VISUAL_BACKREF];
-                if (back !== undefined) return back;
+                if (back !== undefined)
+                {
+                    if (acceptsPoint(back, cur as Element, clientX, clientY))
+                    {
+                        return back;
+                    }
+                    // Geometry rejected — keep climbing.
+                    continue;
+                }
                 if (cur === this.host) break;   // ran off the top of the host
             }
         }

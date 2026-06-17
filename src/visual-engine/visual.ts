@@ -37,6 +37,7 @@ import { EventTrigger } from '../runtime/event-trigger.js';
 import { DragDrop, DragDropEffects, type DataObject, type DragPreviewKind } from './drag-drop.js';
 import type { Effect } from './drawing/effect.js';
 import type { Transform } from './drawing/transform.js';
+import type { Geometry } from './geometry/geometry.js';
 
 
 // Routed event names that map to the per-instance _routedListeners
@@ -349,6 +350,23 @@ export class Visual extends Model
     // MetaData.Render so flips repaint without further wiring.
     public static readonly IsHitTestVisibleKey = Model.RegisterProperty<boolean>(Visual, 'IsHitTestVisible', true, MetaData.Render);
 
+    // Precise-shape hit testing (§19.2.7). When set, the target consults
+    // Geometry.Contains(localPoint) after the browser-side
+    // elementsFromPoint pick — if the geometry rejects the point, the
+    // hit walk falls through to the parent Visual. Default undefined
+    // keeps today's AABB hit-testing behavior.
+    //
+    // The geometry is interpreted in this Visual's local coordinate
+    // space (the outer <g>'s frame on the SVG backend). MetaData.None —
+    // the renderer doesn't paint geometry; the input pipeline only
+    // reads it on hit-test.
+    //
+    // Pairs with §5.7: a Visual with HitTestGeometry set is by
+    // definition interactive in the precise-shape sense, so the SVG
+    // renderer can drop the `mural-hit` pad — the geometry IS the pad.
+    public static readonly HitTestGeometryKey = Model.RegisterProperty<Geometry | undefined>(
+        Visual, 'HitTestGeometry', undefined, MetaData.None);
+
     // Hover-cursor affordance. String value passes through to the SVG
     // renderer which stamps it as the `cursor` attribute on the outer
     // <g>; the host inherits SVG's standard cursor cascade. Accepts any
@@ -448,6 +466,10 @@ export class Visual extends Model
     // hit-testing.
     public get IsHitTestVisible():  boolean { return this.get_property_value(Visual.IsHitTestVisibleKey); }
     public set IsHitTestVisible(v: boolean) { this.set_property_value(Visual.IsHitTestVisibleKey, v); }
+
+    // Precise-shape hit testing — see HitTestGeometryKey.
+    public get HitTestGeometry():  Geometry | undefined { return this.get_property_value(Visual.HitTestGeometryKey); }
+    public set HitTestGeometry(v: Geometry | undefined) { this.set_property_value(Visual.HitTestGeometryKey, v); }
 
     public get Cursor():  string | undefined { return this.get_property_value(Visual.CursorKey); }
     public set Cursor(v: string | undefined) { this.set_property_value(Visual.CursorKey, v); }
