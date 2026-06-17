@@ -33,6 +33,7 @@ import {
     AlmostDequalUlps,
     Interp,
     approximately_equal,
+    approximately_equal_half,
     approximately_one_or_less,
     approximately_zero,
     approximately_zero_or_more,
@@ -391,6 +392,91 @@ export class Cubic {
         return Cubic.RootsValidT(c0, c1, c2, c3, tValues);
     }
 
+    // binarySearch: locate the t in [min, max] where the cubic's
+    // chosen-axis coordinate equals `axisIntercept`. Used by searchRoots
+    // as the refinement step when the polynomial root finder produces a
+    // t whose evaluated point misses the axis line by more than ULP
+    // tolerance (typically because the polynomial is near-degenerate
+    // for the intended root). Returns -1 if no such t exists within the
+    // interval — the inner approximately_equal_half check catches a
+    // step's worth of t producing the same float-rounded point twice.
+    //
+    // Mirrors SkPathOpsCubic.cpp:binarySearch (~line 295).
+    public binarySearch(min: number, max: number, axisIntercept: number, xAxis: SearchAxis): number {
+        let t = (min + max) / 2;
+        let step = (t - min) / 2;
+        let cubicAtT = this.ptAtT(t);
+        const coordOf = (p: Point) => xAxis === SearchAxis.kXAxis ? p.fX : p.fY;
+        let calcPos  = coordOf(cubicAtT);
+        let calcDist = calcPos - axisIntercept;
+        do {
+            const priorT = Math.max(min, t - step);
+            const lessPt = this.ptAtT(priorT);
+            if (approximately_equal_half(lessPt.fX, cubicAtT.fX)
+                && approximately_equal_half(lessPt.fY, cubicAtT.fY)) {
+                return -1; // binary search found no point at this axis intercept
+            }
+            const lessDist = coordOf(lessPt) - axisIntercept;
+            const lastStep = step;
+            step /= 2;
+            if (calcDist > 0 ? calcDist > lessDist : calcDist < lessDist) {
+                t = priorT;
+            }
+            else {
+                const nextT = t + lastStep;
+                if (nextT > max) return -1;
+                const morePt = this.ptAtT(nextT);
+                if (approximately_equal_half(morePt.fX, cubicAtT.fX)
+                    && approximately_equal_half(morePt.fY, cubicAtT.fY)) {
+                    return -1;
+                }
+                const moreDist = coordOf(morePt) - axisIntercept;
+                if (calcDist > 0 ? calcDist <= moreDist : calcDist >= moreDist) continue;
+                t = nextT;
+            }
+            const testAtT = this.ptAtT(t);
+            cubicAtT = testAtT;
+            calcPos = coordOf(cubicAtT);
+            calcDist = calcPos - axisIntercept;
+        } while (!approximately_equal(calcPos, axisIntercept));
+        return t;
+    }
+
+    // searchRoots: monotonic-interval refinement of the polynomial root
+    // finder. When `RootsValidT` gives a coarse-grained t whose evaluated
+    // point misses the axis, split the curve at its extrema + inflections
+    // and binarySearch each monotonic sub-interval for a real crossing.
+    //
+    // Mirrors SkPathOpsCubic.cpp:searchRoots (~line 765).
+    public searchRoots(
+        extremeTs: number[], extremaIn: number, axisIntercept: number,
+        xAxis: SearchAxis, validRoots: number[],
+    ): number {
+        let extrema = extremaIn + this.findInflections(extremeTs.slice(extremaIn));
+        // findInflections wrote into a SLICE; merge back.
+        for (let i = extremaIn; i < extrema; ++i) {
+            extremeTs[i] = extremeTs.slice(extremaIn)[i - extremaIn]!;
+        }
+        extremeTs[extrema++] = 0;
+        extremeTs[extrema]   = 1;
+        if (extrema >= 6) throw new Error('Cubic.searchRoots: extrema overflow');
+        // Stable in-place sort over [0, extrema].
+        const head = extremeTs.slice(0, extrema + 1).sort((a, b) => a - b);
+        for (let i = 0; i <= extrema; ++i) extremeTs[i] = head[i]!;
+        let validCount = 0;
+        for (let index = 0; index < extrema; ) {
+            const min = extremeTs[index]!;
+            const max = extremeTs[++index]!;
+            if (min === max) continue;
+            const newT = this.binarySearch(min, max, axisIntercept, xAxis);
+            if (newT >= 0) {
+                if (validCount >= 3) return 0;
+                validRoots[validCount++] = newT;
+            }
+        }
+        return validCount;
+    }
+
     // top: track the topmost (smallest fY, with smaller fX as tie-break)
     // point along the curve over [startT, endT]. Returns the t-value of
     // the winner and writes the point into topPt. Returns -1 if no
@@ -598,6 +684,81 @@ export class Cubic {
         for (const t of tValues) rect.add(this.ptAtT(t));
         return rect;
     }
+
+    // ── hull-intersection rejection (Phase 5) ──────────────────────
+    //
+    // Iterate the hull edges (consecutive vertices on the convex hull
+    // of fPts[]). For each edge, find the two control points NOT on
+    // the edge ("odd man" pair) and rotate them + the opposite curve's
+    // points relative to the edge's line. If the opposite curve's
+    // points all sit on the side AWAY from the odd-man pair, the
+    // hulls don't intersect.
+    //
+    // *isLinear* is set when all hull-edge tests indicate the cubic's
+    // hull is degenerately flat (a thick line).
+    //
+    // Mirrors SkPathOpsCubic.cpp:158. Overloads route through this
+    // ptCount-parameterised core: hullIntersects(c2) passes ptCount=4,
+    // hullIntersects(quad) passes ptCount=3.
+    public hullIntersectsPts(pts: readonly Point[], ptCount: number, isLinear: { value: boolean }): boolean {
+        let linear = true;
+        const hullOrder: number[] = [0, 0, 0, 0];
+        const hullCount = this.convexHull(hullOrder);
+        let end1 = hullOrder[0]!;
+        let hullIndex = 0;
+        let endPt0: Point = this.fPts[end1 as 0|1|2|3]!;
+        do {
+            hullIndex = (hullIndex + 1) % hullCount;
+            const end2 = hullOrder[hullIndex]!;
+            const endPt1: Point = this.fPts[end2 as 0|1|2|3]!;
+            const origX = endPt0.fX;
+            const origY = endPt0.fY;
+            const adj = endPt1.fX - origX;
+            const opp = endPt1.fY - origY;
+            const oddManMask = other_two(end1, end2);
+            const oddMan = end1 ^ oddManMask;
+            let sign = (this.fPts[oddMan as 0|1|2|3]!.fY - origY) * adj
+                     - (this.fPts[oddMan as 0|1|2|3]!.fX - origX) * opp;
+            const oddMan2 = end2 ^ oddManMask;
+            const sign2 = (this.fPts[oddMan2 as 0|1|2|3]!.fY - origY) * adj
+                        - (this.fPts[oddMan2 as 0|1|2|3]!.fX - origX) * opp;
+            if (sign * sign2 < 0) continue;
+            if (approximately_zero(sign)) {
+                sign = sign2;
+                if (approximately_zero(sign)) continue;
+            }
+            linear = false;
+            let foundOutlier = false;
+            for (let n = 0; n < ptCount; ++n) {
+                const test = (pts[n]!.fY - origY) * adj
+                           - (pts[n]!.fX - origX) * opp;
+                if (test * sign > 0 && !precisely_zero_cubic_pathops(test)) {
+                    foundOutlier = true;
+                    break;
+                }
+            }
+            if (!foundOutlier) return false;
+            endPt0 = endPt1;
+            end1 = end2;
+        } while (hullIndex);
+        isLinear.value = linear;
+        return true;
+    }
+
+    public hullIntersects(c2: Cubic, isLinear: { value: boolean }): boolean
+    {
+        return this.hullIntersectsPts(c2.fPts, Cubic.kPointCount, isLinear);
+    }
+
+    public hullIntersectsQuad(q: Quad, isLinear: { value: boolean }): boolean
+    {
+        return this.hullIntersectsPts(q.fPts, 3, isLinear);
+    }
+}
+
+function precisely_zero_cubic_pathops(x: number): boolean
+{
+    return Math.abs(x) < 2.2204460492503131e-16;
 }
 
 // ----- module-private helpers -----

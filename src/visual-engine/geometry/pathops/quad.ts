@@ -324,6 +324,97 @@ export class Quad {
         for (const t of tValues) rect.add(this.ptAtT(t));
         return rect;
     }
+
+    // ── hull-intersection rejection (Phase 5) ──────────────────────
+    //
+    // Quick reject for the SkTSect bisection: rotate every control
+    // point of `this` relative to a line through two of `this`'s
+    // points; if the "odd man out" lies on one side of the line and
+    // all of q2's points lie on the OPPOSITE side, the hulls don't
+    // intersect (so the curves can't either).
+    //
+    // Returns true if the hulls might intersect; *isLinear* is set
+    // true when the hull degenerates to a line (the rotation found no
+    // odd man on either side, meaning all control points are
+    // collinear). Mirrors SkPathOpsQuad.cpp:53.
+    public hullIntersects(q2: Quad, isLinear: { value: boolean }): boolean {
+        let linear = true;
+        for (let oddMan = 0; oddMan < Quad.kPointCount; ++oddMan) {
+            const endPt = this.otherPts(oddMan);
+            const origX = endPt[0]!.fX;
+            const origY = endPt[0]!.fY;
+            const adj   = endPt[1]!.fX - origX;
+            const opp   = endPt[1]!.fY - origY;
+            const sign  = (this.fPts[oddMan as 0|1|2].fY - origY) * adj
+                        - (this.fPts[oddMan as 0|1|2].fX - origX) * opp;
+            if (approximately_zero_pathops(sign)) continue;
+            linear = false;
+            let foundOutlier = false;
+            for (let n = 0; n < Quad.kPointCount; ++n) {
+                const test = (q2.fPts[n as 0|1|2].fY - origY) * adj
+                           - (q2.fPts[n as 0|1|2].fX - origX) * opp;
+                if (test * sign > 0 && !precisely_zero_pathops(test)) {
+                    foundOutlier = true;
+                    break;
+                }
+            }
+            if (!foundOutlier) return false;
+        }
+        if (linear
+            && !matchesQuadEnd(this.fPts, q2.fPts[0])
+            && !matchesQuadEnd(this.fPts, q2.fPts[2]))
+        {
+            // Linear-degenerate hull: a quad whose three control points
+            // are collinear is essentially a thick line. The hull-as-line
+            // test misses an opposite-quad endpoint lying inside the
+            // triangle (this hull is a degenerate triangle). Fall through
+            // and check the triangle explicitly.
+            if (pointInTriangleQuad(this.fPts, q2.fPts[0])
+                || pointInTriangleQuad(this.fPts, q2.fPts[2]))
+            {
+                linear = false;
+            }
+        }
+        isLinear.value = linear;
+        return true;
+    }
+}
+
+// ── module-private helpers used by hullIntersects ────────────────────
+
+// Barycentric point-in-triangle test (from blackpawn.com/texts/pointinpoly).
+// Skia inlines this in SkPathOpsQuad.cpp:21.
+function pointInTriangleQuad(fPts: readonly Point[], test: Point): boolean
+{
+    const v0 = fPts[2]!.sub(fPts[0]!);
+    const v1 = fPts[1]!.sub(fPts[0]!);
+    const v2 = test.sub(fPts[0]!);
+    const dot00 = v0.dot(v0);
+    const dot01 = v0.dot(v1);
+    const dot02 = v0.dot(v2);
+    const dot11 = v1.dot(v1);
+    const dot12 = v1.dot(v2);
+    const denom = dot00 * dot11 - dot01 * dot01;
+    const u = dot11 * dot02 - dot01 * dot12;
+    const v = dot00 * dot12 - dot01 * dot02;
+    if (denom >= 0) return u >= 0 && v >= 0 && u + v < denom;
+    return u <= 0 && v <= 0 && u + v > denom;
+}
+
+function matchesQuadEnd(fPts: readonly Point[], test: Point): boolean
+{
+    return fPts[0]!.equals(test) || fPts[2]!.equals(test);
+}
+
+// Locally-named so we don't have to add to the import list above.
+function approximately_zero_pathops(x: number): boolean
+{
+    return Math.abs(x) < 1.1920928955078125e-7;
+}
+
+function precisely_zero_pathops(x: number): boolean
+{
+    return Math.abs(x) < 2.2204460492503131e-16;
 }
 
 // ----- module-private interpolation helpers -----
