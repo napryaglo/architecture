@@ -597,6 +597,18 @@ Closure of the eight-phase Skia pathops port + the surrounding geometry / diagra
 
   18 new tests at [refit.test.ts](src/visual-engine/geometry/pathops/tests/refit.test.ts) (two / three-way merge, non-adjacent t-range refusal, different-segment refusal, no-provenance passthrough, quad-source merge, collinear collapse with curves between, zero-length drop, idempotence) + 2 real-Op-output integration tests in [combine.test.ts](src/visual-engine/geometry/tests/combine.test.ts) on touching-rect Union (line-collapse path) and circle ∩ rect Intersect (curve-coalesce path). Test suite: 506 → **524** passing.
 
+~~**19-deferred #1. Path-offset / outline-widening (stroke → fill).**~~ ✅ Done. Lives at [widen.ts](src/visual-engine/geometry/widen.ts) and re-exports from the `geometry/index.ts` barrel. `widen(g: Geometry, pen: Pen): PathGeometry` flattens the input to polylines (adaptive midpoint subdivision for Quads / Cubics; `arcToCubics` for Arcs; default tolerance 0.25 DIP), then for each polyline computes parallel offsets at ±`Thickness / 2` perpendicular to each segment, joining adjacent offset segments per `Pen.LineJoin` (Miter / Round / Bevel) and capping the ends of open contours per `Pen.LineCap` (Flat / Square / Round). Output PathGeometry holds LineSegments only — Bezier output deferred; consumers wanting smoother curves can re-`combine()` the result through boolean ops which run on whichever segment type comes through.
+
+  **Surface.** WPF-parity through the existing [Pen](src/visual-engine/drawing/pen.ts) Model — `Thickness` / `LineCap` / `LineJoin` / `MiterLimit` all consumed. DashStyle is NOT applied — the polyline-first design means dashes have to be flattened upstream into separate open contours; a `dashFlatten(pen)` helper lands when a demo wants it. The widening is geometric only, with no Brush / fill awareness — the consumer styles the returned PathGeometry through `Visual.Fill` etc.
+
+  **Algorithm corners (y-down coords).** Two non-obvious pieces: (a) the cross-product sign convention is inverted vs. the y-up math convention because positive cross product means CCW math turn ≡ CW screen turn — so for a CCW-walked rectangle, the OUTER convex corners are on the `-perpLeft` (right) side of the walk, not the `perpLeft` (left) side. (b) Concave (inner) corners clip both offsets to their line intersection rather than emit a bevel: a bevel-style emission at a 90° rectangle corner draws a 45° diagonal instead of meeting at the inside corner.
+
+  **Closed-contour output.** Two `PathFigure`s — an outer ring (offset at +half on the convex side) and an inner ring (reversed). The two rings render the annulus correctly under both EvenOdd (default) and Nonzero fill rules.
+
+  **Open-contour output.** Single closed `PathFigure` — left offset + tail cap + reversed right offset + head cap. Caps wrap around the endpoints in the contour-direction sense (cap shape bulges in the direction the contour would have continued past the endpoint).
+
+  Tests at [widen.test.ts](src/visual-engine/geometry/tests/widen.test.ts) — 11 tests covering: zero-thickness short-cut, horizontal line strip with each cap, rectangle outline emits two figures + on-border coverage, V-shape miter / bevel / miter-limit fallback, closed PathGeometry yields two figures, ellipse outline contains points on the ring. Test suite: 524 → **535** passing.
+
 ---
 
 ## Architectural notes (for orientation)

@@ -19,6 +19,7 @@ export {
 } from './geometry.js';
 export { pathGeometryToSvgD }   from './path-to-svg.js';
 export { pathGeometryFromSvgD } from './path-from-svg.js';
+export { widen }                from './widen.js';
 // Note: combine.js is deliberately NOT re-exported from this barrel.
 // Cycle path that the re-export would create:
 //   geometry.ts → runtime/index.ts → visual-engine/index.ts
