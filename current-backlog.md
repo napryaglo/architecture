@@ -119,20 +119,9 @@ Surfaced by the post-shipping self-review against [m3-modernization-plan.md](m3-
 
 ## 19. Geometry math — boolean ops & shape queries
 
-Phases 1–6 + the Skia-port halves of 7 and 8 + the demo-driven 4 + the audit 5.1 + the 19.3 / 19.4 / 19.7 / 19.5 follow-ups all shipped — see [completed-backlog.md § 19](completed-backlog.md). What remains open:
+Phases 1–6 + 7 + 8 (including the 19.7-engine close-out) + the demo-driven 4 + the audit 5.1 + the 19.3 / 19.4 / 19.7 / 19.5 follow-ups all shipped — see [completed-backlog.md § 19](completed-backlog.md). What remains open:
 
-19.7-engine. **Boolean-ops engine — Intersect on overlapping-pair + curve-input duplicate-figure.** The bulk of the engine port-fidelity bugs are fixed:
-  - `OpSpan.init` now calls `segment.bumpCount()` (without it `done()` returned true vacuously).
-  - `markWindingValue{,Binary}` no longer throws on zero windings (Skia's `SkASSERT` is debug-only).
-  - `findChaseOp` / `FindChase` pass `startPtr`/`endPtr` directly to `activeAngle` so it can mutate them in place.
-  - `findNextOp` now propagates running `sumMiWinding` / `sumSuWinding` totals via a `sumRef` box through `activeOpFullRef`, matching Skia's `int* sumMiWinding, int* sumSuWinding` pointer semantics — each angle in the ring sees its own contribution adjusting the running totals.
-  - `OpSegment.rayCheck` no longer inverts the `dirIsHoriz` arg to `curveIntercept` — the prior `!dirIsHoriz` made vertical rays solve `y(t) = x` and miss every horizontal line crossing, so `sortableTop` produced bogus winding sums for B-edges inside A.
-
-  **What works now:** Union, Xor, Exclude (Difference) on overlapping rectangles + Intersect / Exclude for B-fully-inside-A — verified by strong Contains assertions in [combine.test.ts](src/visual-engine/geometry/tests/combine.test.ts).
-
-  **What's still broken:** (a) Intersect on overlapping-pair rectangles produces a malformed triangle instead of the expected overlap square — the walker traverses two of the four overlap-boundary edges then `findNextOp` can't find a valid third edge at (5, 10), so the writer "closes" the contour with an implicit diagonal back to the start. Likely the angle-ring's winding totals at the (5, 10) branch point still aren't fully correct even after the `findChaseOp` sum-ref fix; needs a closer look at how `setUpWindingsBinary` propagates running sums for the binary case (a `markAngleBinary` cousin to the `markAngle` unary form?). (b) Curve-input combines (ellipse + rect, triangle + rect) produce extra duplicate figures under EvenOdd fill — likely a separate angle-ring orientation issue when the curve's tangent at the intersection isn't axis-aligned. Combine tests probe what works (Intersect for B-fully-inside-A passes); tests for the still-broken cases verify only API contract.
-
-19.8-followup. **Regression corpus port.** Build the harness: TS port of Skia's `outputProgressively`-style verifier, plus a small parser script that extracts path commands + expected ops from `skia/tests/PathOps*Test.cpp` and emits TS test stubs. Bulk-port the ~500 surviving tests. Blocked on 19.7-engine — the corpus tests' expected outputs require working Intersect / Difference, so porting them now would just produce a flood of red. Robustness pass — pays huge dividends on adversarial inputs once the engine is straight.
+19.8-followup. **Regression corpus port.** Build the harness: TS port of Skia's `outputProgressively`-style verifier, plus a small parser script that extracts path commands + expected ops from `skia/tests/PathOps*Test.cpp` and emits TS test stubs. Bulk-port the ~500 surviving tests. Robustness pass — pays huge dividends on adversarial inputs now that the engine is straight. Unblocked as of the 19.7 round-3 close-out.
 
 **Deferred past Phase 8** (history; revisit when a concrete demo demands them):
   - Path-offset / outline-widening (stroke → fill). Useful for "draw a parallel curve at offset N" diagram tooling but separate concern from boolean ops.

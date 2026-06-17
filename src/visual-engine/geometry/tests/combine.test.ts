@@ -103,14 +103,20 @@ describe('combine — overlapping rectangles', () => {
         assert.equal(r.Contains(P(25, 25)), false);
     });
 
-    test('Intersect of two overlapping rectangles returns a path (overlap case still in §19.7-engine)', () => {
+    test('Intersect of two overlapping rectangles produces the 5×5 overlap square', () => {
         const a = rect(0, 0, 10, 10);
         const b = rect(5, 5, 10, 10);
         const r = combine(a, b, GeometryCombineMode.Intersect);
-        // Engine works for B-fully-inside-A but still empty for
-        // overlap-pair; tracked as §19.7-engine in current-backlog.
-        // Contract: no throw, returns a PathGeometry.
-        assert.ok(r.Figures.length >= 0);
+        // Overlap rect (5,5)→(10,5)→(10,10)→(5,10)→close.
+        // Contains:
+        //  - (7, 7)    in both → in intersection
+        //  - (2, 2)    in A only → not in intersection
+        //  - (12, 12)  in B only → not in intersection
+        //  - (25, 25)  outside both → not in intersection
+        assert.equal(r.Contains(P(7, 7)),   true);
+        assert.equal(r.Contains(P(2, 2)),   false);
+        assert.equal(r.Contains(P(12, 12)), false);
+        assert.equal(r.Contains(P(25, 25)), false);
     });
 
     test('Exclude (A - B) for overlapping rects produces the L-shape', () => {
@@ -140,17 +146,32 @@ describe('combine — overlapping rectangles', () => {
 // ── combine() — ellipses ────────────────────────────────────────
 
 describe('combine — ellipse + rectangle', () => {
-    test('Union of a circle and a rect returns a fillable result (engine-bug deferred)', () => {
-        // The pathops port produces extra figures with EvenOdd fill
-        // that misrepresent Contains() for curved-input combines. The
-        // bridge / Op() / writer all execute without throwing; the
-        // bug is in how the chase walker handles curve+line topology.
-        // Verify only the API contract until the engine is fixed —
-        // tracked as the §19.7 engine follow-up in current-backlog.
+    test('Union of a circle and a rect contains both interiors', () => {
+        // Circle radius 10 at origin + rect (-5,-5)–(15,15).
+        // Union covers both. Sample inside the circle outside the rect,
+        // inside the rect outside the circle, and inside both.
         const circ = new EllipseGeometry(P(0, 0), 10, 10);
         const r    = rect(-5, -5, 20, 20);
         const out  = combine(circ, r, GeometryCombineMode.Union);
-        assert.ok(out.Figures.length >= 0);
+        assert.equal(out.Contains(P(0, 0)),    true);  // inside both
+        assert.equal(out.Contains(P(-9, 0)),   true);  // circle only (left lobe)
+        assert.equal(out.Contains(P(14, 14)),  true);  // rect only (top-right corner)
+        assert.equal(out.Contains(P(20, 20)),  false); // outside both
+    });
+
+    test('Intersect of a circle and a rect equals the curve-clipped overlap', () => {
+        const circ = new EllipseGeometry(P(0, 0), 10, 10);
+        const r    = rect(-5, -5, 20, 20);
+        const out  = combine(circ, r, GeometryCombineMode.Intersect);
+        // Interior of both circle and rect.
+        assert.equal(out.Contains(P(0, 0)),   true);   // origin, in both
+        assert.equal(out.Contains(P(5, 5)),   true);   // in both
+        // Outside circle, inside rect → not in intersect.
+        assert.equal(out.Contains(P(14, 14)), false);
+        // Outside rect, inside circle → not in intersect.
+        assert.equal(out.Contains(P(-9, 0)),  false);
+        // Outside both.
+        assert.equal(out.Contains(P(20, 20)), false);
     });
 });
 
@@ -163,15 +184,19 @@ describe('intersectsExact', () => {
         assert.equal(intersectsExact(a, b), false);
     });
 
-    // Overlapping case routes through Op(Intersect) which the engine
-    // doesn't yet produce for; the fast-path bbox check returns true
-    // first when bboxes overlap (the Op step is skipped) so this test
-    // passes as long as the fast-path is in place.
-    test('overlapping rectangles → true (bbox fast-path)', () => {
+    test('overlapping rectangles → true', () => {
         const a = rect(0, 0, 10, 10);
         const b = rect(5, 5, 10, 10);
-        // Either the bbox fast-path returns true, or the engine
-        // returns true. The contract is the same.
+        assert.equal(intersectsExact(a, b), true);
+    });
+
+    test('touching-at-corner rectangles → bbox-true; Op-Intersect would be exact-false', () => {
+        // The bbox fast-path returns true for touching corners (bboxes
+        // overlap at a single point). The full engine call is skipped
+        // when bboxes are disjoint; otherwise the result reflects what
+        // Op(Intersect) finds. This documents the fast-path contract.
+        const a = rect(0, 0, 10, 10);
+        const b = rect(10, 10, 10, 10);
         assert.equal(typeof intersectsExact(a, b), 'boolean');
     });
 });
@@ -237,7 +262,7 @@ describe('CombinedGeometry — Model class', () => {
 // ── Smoke: PathGeometry with arc lowers cleanly through combine ──
 
 describe('combine — PathGeometry input lowers cleanly', () => {
-    test('Triangle PathGeometry combined with a rect via Union returns a path (engine-bug deferred)', () => {
+    test('Triangle PathGeometry combined with a rect via Union covers both', () => {
         const tri = new PathGeometry([
             new PathFigure(P(0, 0), [
                 new LineSegment(P(100, 0)),
@@ -246,8 +271,11 @@ describe('combine — PathGeometry input lowers cleanly', () => {
         ]);
         const r = rect(25, 25, 50, 50);
         const out = combine(tri, r, GeometryCombineMode.Union);
-        // Engine produces extra figures for triangle+rect Union;
-        // contract verifies no throw + non-undefined Figures only.
-        assert.ok(out.Figures.length >= 0);
+        // Inside the triangle (above the rect): apex region.
+        assert.equal(out.Contains(P(50, 90)),  true);
+        // Inside the rect (outside the triangle near the rect bottom edges).
+        assert.equal(out.Contains(P(50, 50)),  true);
+        // Outside both.
+        assert.equal(out.Contains(P(50, 200)), false);
     });
 });

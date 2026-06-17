@@ -769,13 +769,20 @@ export class OpSegment implements OpSegmentLike {
 
     public static UseInnerWinding(outerWinding: number, innerWinding: number): boolean
     {
-        // SkOpSegment.cpp tail — winding-sign comparison helper.
-        if (outerWinding === innerWinding) return false;
+        // SkOpSegment.cpp:1775 — winding-sign comparison helper.
+        //   bool result = absOut == absIn ? outerWinding < 0 : absOut < absIn;
+        // The "ladder of if-returns" port had the absOut/absIn inequality
+        // flipped — it returned `true` for absIn < absOut (use OUTER)
+        // when Skia returns `false`, and vice-versa. The flipped predicate
+        // made ComputeOneSum write the "outer" running winding to a span
+        // when it should have written the "inner" one, so any boundary
+        // where two ops disagree along the same edge (binary Intersect
+        // on overlapping operands, where the seed sumMiWinding has to
+        // pick up the "inside A" side) propagated the wrong seed
+        // through findNextOp's angle-ring walker.
         const absOut = Math.abs(outerWinding);
         const absIn  = Math.abs(innerWinding);
-        if (absOut < absIn) return false;
-        if (absIn  < absOut) return true;
-        return outerWinding < 0;
+        return absOut === absIn ? outerWinding < 0 : absOut < absIn;
     }
 
     // ── Phase 6 follow-up stubs ──────────────────────────────────
@@ -2005,9 +2012,21 @@ export class OpSegment implements OpSegmentLike {
     }
 
     // SkOpSegment.cpp:172 — emit one curve segment into the writer.
-    // The sub-divided curve is checked for degeneracy via setCurveHullSweep;
-    // a degenerated curve falls back to a line. Mural's port performs
-    // the same isCurve check on the OpCurveCarrier subDivide output.
+    //
+    // Skia's addCurveTo always populates the carrier via subDivide,
+    // then calls SkDCurveSweep::setCurveHullSweep + isCurve to detect
+    // a curve that has degenerated to a line and rewrites the verb
+    // accordingly. Mural's port skips the hull-sweep degeneracy step
+    // — inputs from the OpPath converter never produce degenerate
+    // arcs in practice — and just uses fVerb directly.
+    //
+    // The earlier port mistakenly used subDivide's return value as
+    // a stand-in for "is curve". subDivide actually returns false
+    // both for lines AND for the "endpoints already at t=0/1"
+    // early-out where the original control points carry through.
+    // Reading that as "is line" caused the writer to emit a straight
+    // line in place of a whole-segment cubic — visible as a chord
+    // across the top of every curve+rect Intersect result.
     public addCurveTo(start: OpSpanBase, end: OpSpanBase,
                       path: import('./op-path-writer.js').OpPathWriter): boolean
     {
@@ -2017,10 +2036,9 @@ export class OpSegment implements OpSegmentLike {
         const out: { value: OpCurveCarrier } = {
             value: { verb: OpVerb.kLine, fLine: undefined as never },
         };
-        const isCurve = this.subDivide(start, end, out);
-        const verb = isCurve ? this.fVerb : OpVerb.kLine;
+        this.subDivide(start, end, out);
         path.deferredMove(start.ptT());
-        switch (verb) {
+        switch (this.fVerb) {
             case OpVerb.kLine:
                 if (!path.deferredLine(end.ptT())) return false;
                 break;

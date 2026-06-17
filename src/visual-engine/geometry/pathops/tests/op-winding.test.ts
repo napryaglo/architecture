@@ -45,12 +45,17 @@ function newContour(): { state: OpGlobalState; contour: OpContour; coincidence: 
 // ── UseInnerWinding ──────────────────────────────────────────────
 
 describe('OpSegment.UseInnerWinding — inner-winding tie-break', () => {
-    test('inner < outer (abs): prefer inner', () => {
-        assert.equal(OpSegment.UseInnerWinding(3, 1), true,
-            'outer +3, inner +1 — outer is "bigger", use inner');
+    // SkOpSegment.cpp:1775 — `absOut == absIn ? outerWinding < 0 : absOut < absIn`.
+    // The rule: when the two magnitudes differ, return true (use INNER)
+    // iff the OUTER has the smaller absolute value — i.e. Skia prefers
+    // the larger-magnitude winding. When the magnitudes match, the
+    // sign of `outerWinding` decides (negative outer → use inner).
+    test('absOut < absIn: prefer inner (return true)', () => {
+        assert.equal(OpSegment.UseInnerWinding(1, 3), true,
+            'outer ±1 smaller than inner ±3 — Skia uses the inner');
     });
-    test('inner > outer (abs): prefer outer (return false)', () => {
-        assert.equal(OpSegment.UseInnerWinding(1, 3), false);
+    test('absOut > absIn: prefer outer (return false)', () => {
+        assert.equal(OpSegment.UseInnerWinding(3, 1), false);
     });
     test('equal abs but outer negative: prefer inner', () => {
         assert.equal(OpSegment.UseInnerWinding(-2, 2), true,
