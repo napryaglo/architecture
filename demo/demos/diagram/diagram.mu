@@ -124,74 +124,41 @@ resources DiagramDemo {
                 // Glyphs are Material Symbols Outlined ligatures —
                 // matches the icon-font approach FAB uses. Each tile
                 // pads the icon to a comfortable 32×32 hit target.
-                Border[DockPanel.Dock=Top, Height=40,
+                Border[DockPanel.Dock=Top, Height=48,
                        Background=@SurfaceContainer,
                        BorderBrush=@OutlineVariant,
                        BorderThickness=(0,0,0,1),
                        Padding=(8,4,8,4)]{
                     StackPanel[Orientation=Horizontal]{
-                        Button x:name="btnAlignLeft"
-                               [Command=$AlignLeftCommand,
-                                Margin=(0,0,2,0), MinWidth=32, MinHeight=32]{
-                            TextBlock[Text="align_horizontal_left",
-                                      FontFamily="Material Symbols Outlined",
-                                      FontSize=20,
-                                      HorizontalAlignment=Center,
-                                      VerticalAlignment=Center]
+                        IconButton x:name="btnAlignLeft"
+                                   [Variant=Standard, Command=$AlignLeftCommand]{
+                            Icon[Source=@alignLeft, Foreground=@OnSurfaceVariant]
                         }
-                        Button x:name="btnAlignRight"
-                               [Command=$AlignRightCommand,
-                                Margin=(0,0,2,0), MinWidth=32, MinHeight=32]{
-                            TextBlock[Text="align_horizontal_right",
-                                      FontFamily="Material Symbols Outlined",
-                                      FontSize=20,
-                                      HorizontalAlignment=Center,
-                                      VerticalAlignment=Center]
+                        IconButton x:name="btnAlignRight"
+                                   [Variant=Standard, Command=$AlignRightCommand]{
+                            Icon[Source=@alignRight, Foreground=@OnSurfaceVariant]
                         }
-                        Button x:name="btnAlignTop"
-                               [Command=$AlignTopCommand,
-                                Margin=(8,0,2,0), MinWidth=32, MinHeight=32]{
-                            TextBlock[Text="align_vertical_top",
-                                      FontFamily="Material Symbols Outlined",
-                                      FontSize=20,
-                                      HorizontalAlignment=Center,
-                                      VerticalAlignment=Center]
+                        IconButton x:name="btnAlignTop"
+                                   [Variant=Standard, Command=$AlignTopCommand,
+                                    Margin=(8,0,0,0)]{
+                            Icon[Source=@alignTop, Foreground=@OnSurfaceVariant]
                         }
-                        Button x:name="btnAlignMiddle"
-                               [Command=$AlignMiddleCommand,
-                                Margin=(0,0,2,0), MinWidth=32, MinHeight=32]{
-                            TextBlock[Text="align_vertical_center",
-                                      FontFamily="Material Symbols Outlined",
-                                      FontSize=20,
-                                      HorizontalAlignment=Center,
-                                      VerticalAlignment=Center]
+                        IconButton x:name="btnAlignMiddle"
+                                   [Variant=Standard, Command=$AlignMiddleCommand]{
+                            Icon[Source=@alignMiddle, Foreground=@OnSurfaceVariant]
                         }
-                        Button x:name="btnAlignCenter"
-                               [Command=$AlignCenterCommand,
-                                Margin=(0,0,2,0), MinWidth=32, MinHeight=32]{
-                            TextBlock[Text="align_horizontal_center",
-                                      FontFamily="Material Symbols Outlined",
-                                      FontSize=20,
-                                      HorizontalAlignment=Center,
-                                      VerticalAlignment=Center]
+                        IconButton x:name="btnAlignCenter"
+                                   [Variant=Standard, Command=$AlignCenterCommand]{
+                            Icon[Source=@alignCenter, Foreground=@OnSurfaceVariant]
                         }
-                        Button x:name="btnDistH"
-                               [Command=$DistributeHorizontalCommand,
-                                Margin=(8,0,2,0), MinWidth=32, MinHeight=32]{
-                            TextBlock[Text="horizontal_distribute",
-                                      FontFamily="Material Symbols Outlined",
-                                      FontSize=20,
-                                      HorizontalAlignment=Center,
-                                      VerticalAlignment=Center]
+                        IconButton x:name="btnDistH"
+                                   [Variant=Standard, Command=$DistributeHorizontalCommand,
+                                    Margin=(8,0,0,0)]{
+                            Icon[Source=@distributeHorizontal, Foreground=@OnSurfaceVariant]
                         }
-                        Button x:name="btnDistV"
-                               [Command=$DistributeVerticalCommand,
-                                Margin=(0,0,0,0), MinWidth=32, MinHeight=32]{
-                            TextBlock[Text="vertical_distribute",
-                                      FontFamily="Material Symbols Outlined",
-                                      FontSize=20,
-                                      HorizontalAlignment=Center,
-                                      VerticalAlignment=Center]
+                        IconButton x:name="btnDistV"
+                                   [Variant=Standard, Command=$DistributeVerticalCommand]{
+                            Icon[Source=@distributeVertical, Foreground=@OnSurfaceVariant]
                         }
                         // Ctrl+G / Ctrl+Shift+G also wired via the
                         // KeyDown listener in diagram.mjs. The buttons
@@ -200,23 +167,14 @@ resources DiagramDemo {
                         // so they disable when the selection doesn't fit
                         // (Group needs ≥ 2 top-level entities; Ungroup
                         // needs ≥ 1 selected top-level group).
-                        Button x:name="btnGroup"
-                               [Command=$GroupCommand,
-                                Margin=(8,0,2,0), MinWidth=32, MinHeight=32]{
-                            TextBlock[Text="group_work",
-                                      FontFamily="Material Symbols Outlined",
-                                      FontSize=20,
-                                      HorizontalAlignment=Center,
-                                      VerticalAlignment=Center]
+                        IconButton x:name="btnGroup"
+                                   [Variant=Standard, Command=$GroupCommand,
+                                    Margin=(8,0,0,0)]{
+                            Icon[Source=@group, Foreground=@OnSurfaceVariant]
                         }
-                        Button x:name="btnUngroup"
-                               [Command=$UngroupCommand,
-                                Margin=(0,0,0,0), MinWidth=32, MinHeight=32]{
-                            TextBlock[Text="group_off",
-                                      FontFamily="Material Symbols Outlined",
-                                      FontSize=20,
-                                      HorizontalAlignment=Center,
-                                      VerticalAlignment=Center]
+                        IconButton x:name="btnUngroup"
+                                   [Variant=Standard, Command=$UngroupCommand]{
+                            Icon[Source=@ungroup, Foreground=@OnSurfaceVariant]
                         }
                     }
                 }

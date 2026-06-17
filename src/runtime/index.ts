@@ -147,6 +147,13 @@ export {
     type IReadOnlyObservableCollection,
 } from './observable-collection.js';
 export { observe_array, subscribe_array, is_observed_array } from './observable-array.js';
+export {
+    findAlignmentGuides,
+    type AlignmentGuide,
+    type AlignmentResult,
+    type AlignmentOptions,
+    type EdgeKind,
+} from './alignment-math.js';
 export { Point, Size, Rect, Color, Matrix, Thickness } from '../visual-engine/primitives.js';
 export { CornerRadius } from '../visual-engine/corner-radius.js';
 export {

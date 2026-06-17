@@ -27,7 +27,9 @@ import { DiagramDemo } from './diagram.mu.js';
 import { DiagramShapeTemplates } from './diagram-shape-templates.mu.js';
 import { DiagramVM, GroupVM, NodeVM, topLevelOf } from './diagram-vm.mjs';
 import { attachCanvasDropBehavior } from './behaviors/canvas-drop-behavior.mjs';
+import { attachAlignEdges } from './behaviors/align-edges-behavior.mjs';
 import { SelectionResizeAdorner } from './selection-resize-adorner.mjs';
+import { AlignmentGuidesAdorner } from './alignment-guides-adorner.mjs';
 import { register } from '../../platform/registry.mjs';
 import Icons from '../../assets/icons.mjs';
 
@@ -147,6 +149,7 @@ function attachDiagramBehaviors(view, vm) {
     // DiagramNode containers. The lookup is deferred to a microtask so
     // the items panel has materialized from the template by then.
     let detachResizeAdorner = () => {};
+    let detachAlignmentGuidesAdorner = () => {};
     queueMicrotask(() => {
         const itemsPanel = nodes.ItemsPanelInstance;
         if (itemsPanel === undefined) {
@@ -164,7 +167,21 @@ function attachDiagramBehaviors(view, vm) {
             layer.Remove(adorner);
             adorner.Dispose();
         };
+        // §19.3 — alignment guides overlay sits in the same layer so it
+        // scrolls with the canvas. Painted ABOVE the resize handles in
+        // z-order (added second) — guides need to read clearly across
+        // the diagram surface.
+        const guidesAdorner = new AlignmentGuidesAdorner(itemsPanel, vm);
+        layer.Add(guidesAdorner);
+        detachAlignmentGuidesAdorner = () => {
+            layer.Remove(guidesAdorner);
+            guidesAdorner.Dispose();
+        };
     });
+
+    // Align-edges behavior — computes alignment guides during node
+    // drag and writes vm.AlignmentGuides for the adorner to paint.
+    const detachAlignEdges = attachAlignEdges(nodes, vm);
 
     // Focus capture — Diagram.Focusable=true (set in diagram.mu) opts
     // the surface into the keyboard-focus pipeline; the listener below
@@ -224,6 +241,8 @@ function attachDiagramBehaviors(view, vm) {
         detachCanvasDrop();
         detachSelectionBridge();
         detachResizeAdorner();
+        detachAlignmentGuidesAdorner();
+        detachAlignEdges();
     };
 }
 

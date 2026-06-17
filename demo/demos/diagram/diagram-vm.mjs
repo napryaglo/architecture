@@ -523,6 +523,13 @@ export class DiagramVM extends Model
         DiagramVM.SelectionWidthKey  = Model.RegisterProperty(DiagramVM, 'SelectionWidth',  0, MetaData.None);
         DiagramVM.SelectionHeightKey = Model.RegisterProperty(DiagramVM, 'SelectionHeight', 0, MetaData.None);
         DiagramVM.SelectionCountKey  = Model.RegisterProperty(DiagramVM, 'SelectionCount',  0, MetaData.None);
+        // §19.3 — list of AlignmentGuide records currently displayed
+        // by AlignmentGuidesAdorner. Mutated by align-edges-behavior
+        // on every PointerMove during a node drag, cleared on
+        // PointerUp. Plain array (not ObservableCollection) — the
+        // adorner re-arranges on PropertyChanged of the whole DP, no
+        // per-element notification needed.
+        DiagramVM.AlignmentGuidesKey = Model.RegisterProperty(DiagramVM, 'AlignmentGuides', [], MetaData.None);
     }
 
     constructor(storage) {
@@ -608,6 +615,8 @@ export class DiagramVM extends Model
     get SelectionWidth()              { return this._get_property_value_by_name('SelectionWidth'); }
     get SelectionHeight()             { return this._get_property_value_by_name('SelectionHeight'); }
     get SelectionCount()              { return this._get_property_value_by_name('SelectionCount'); }
+    get AlignmentGuides()             { return this._get_property_value_by_name('AlignmentGuides'); }
+    set AlignmentGuides(value)        { this._set_property_value_by_name('AlignmentGuides', value); }
 
     CreateNode(kind, x, y) {
         const Cls = KIND_TO_CLASS[kind];
