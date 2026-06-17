@@ -8,16 +8,17 @@
 // on input changes, and that the WPF combine modes map to the right
 // Skia ops.
 //
-// Engine status as of §19.7 (subject to follow-up fixes):
+// Engine status as of §19.7 (after the §19.7-engine fix-up):
 //
-//   * **Union, Xor** — produce correct figures. Verified by Contains
-//     against (in-A-only, in-B-only, in-overlap, outside) probe
-//     points.
-//   * **Intersect, Exclude** — engine known to produce empty /
-//     incorrect output for overlapping inputs. Tracks as the residual
-//     §19.7 engine follow-up; tests below probe what's contractually
-//     reachable (empty inputs short-cut + non-overlapping pairs)
-//     and skip the assertions that depend on the broken paths.
+//   * **Union, Xor, Exclude (Difference)** — produce correct figures
+//     verified by Contains against (in-A-only, in-B-only, in-overlap,
+//     outside) probe points.
+//   * **Intersect** — works for B-fully-inside-A; still empty for
+//     overlapping rects (chase walker doesn't reach the inner-overlap
+//     boundary). Tests probe what works and document the remaining
+//     case as a §19.7-engine follow-up.
+//   * **Curve combines** (ellipse + rect) — produce extra duplicate
+//     figures that confuse EvenOdd Contains. Same follow-up.
 
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -67,39 +68,63 @@ describe('combine — empty operand short-cuts', () => {
 // ── combine() — overlapping rectangles ──────────────────────────
 
 describe('combine — overlapping rectangles', () => {
-    test('Union of two 10×10 squares overlapping by 5×5 includes both corner points', () => {
+    test('Union of two 10×10 squares overlapping by 5×5 covers both corners + overlap', () => {
         const a = rect(0, 0, 10, 10);
         const b = rect(5, 5, 10, 10);
         const r = combine(a, b, GeometryCombineMode.Union);
-        // (2, 2) is inside A only — must be in the union.
-        assert.equal(r.Contains(P(2, 2)),  true);
-        // (12, 12) is inside B only — must be in the union.
-        assert.equal(r.Contains(P(12, 12)), true);
-        // (50, 50) is outside both — must NOT be in the union.
-        assert.equal(r.Contains(P(50, 50)), false);
+        // L-shape includes A-only, B-only, and the overlap.
+        assert.equal(r.Contains(P(2, 2)),   true);   // A only
+        assert.equal(r.Contains(P(7, 7)),   true);   // overlap
+        assert.equal(r.Contains(P(12, 12)), true);   // B only
+        assert.equal(r.Contains(P(50, 50)), false);  // outside both
     });
 
-    // Intersect / Exclude on overlapping inputs require the engine's
-    // chase walker to subtract one operand from another. The mural
-    // port's chase walker for these ops is known-broken (Union / Xor
-    // work because their truth tables produce additive walks). Skip
-    // the strong assertions until the engine is fixed; verify only
-    // the API contract (no throw, returns a PathGeometry).
-    test('Intersect of two overlapping rectangles returns a path (engine-bug deferred)', () => {
+    test('Intersect of A fully containing B equals B', () => {
+        const a = rect(0, 0, 20, 20);
+        const b = rect(5, 5, 10, 10);
+        const r = combine(a, b, GeometryCombineMode.Intersect);
+        // The engine handles the contained case correctly; result = B.
+        assert.equal(r.Contains(P(10, 10)), true);   // inside B
+        assert.equal(r.Contains(P(2, 2)),   false);  // in A only, not B
+        assert.equal(r.Contains(P(18, 18)), false);  // in A only, not B
+    });
+
+    test('Exclude (A - B) where B is fully inside A produces a donut', () => {
+        const a = rect(0, 0, 20, 20);
+        const b = rect(5, 5, 10, 10);
+        const r = combine(a, b, GeometryCombineMode.Exclude);
+        // (10, 10) inside B → removed.
+        assert.equal(r.Contains(P(10, 10)), false);
+        // (2, 2) in A only → in donut.
+        assert.equal(r.Contains(P(2, 2)),   true);
+        // (18, 18) in A only → in donut.
+        assert.equal(r.Contains(P(18, 18)), true);
+        // Outside A → not in result.
+        assert.equal(r.Contains(P(25, 25)), false);
+    });
+
+    test('Intersect of two overlapping rectangles returns a path (overlap case still in §19.7-engine)', () => {
         const a = rect(0, 0, 10, 10);
         const b = rect(5, 5, 10, 10);
         const r = combine(a, b, GeometryCombineMode.Intersect);
-        // Contract: no throw, returns a PathGeometry. Boolean output
-        // currently degenerates to empty pending engine fix — § 19.7
-        // engine follow-up in current-backlog.
+        // Engine works for B-fully-inside-A but still empty for
+        // overlap-pair; tracked as §19.7-engine in current-backlog.
+        // Contract: no throw, returns a PathGeometry.
         assert.ok(r.Figures.length >= 0);
     });
 
-    test('Exclude (A - B) returns a path (engine-bug deferred)', () => {
+    test('Exclude (A - B) for overlapping rects produces the L-shape', () => {
         const a = rect(0, 0, 10, 10);
         const b = rect(5, 5, 10, 10);
         const r = combine(a, b, GeometryCombineMode.Exclude);
-        assert.ok(r.Figures.length >= 0);
+        // L-shape: (0,0)→(10,0)→(10,5)→(5,5)→(5,10)→(0,10)→close.
+        // Contains:
+        //  - (2, 2)  in A only → in A - B
+        //  - (7, 7)  in both → removed
+        //  - (12,12) in B only → not in A - B
+        assert.equal(r.Contains(P(2, 2)),   true);
+        assert.equal(r.Contains(P(7, 7)),   false);
+        assert.equal(r.Contains(P(12, 12)), false);
     });
 
     test('Xor — overlap is the hole, both unique regions survive', () => {

@@ -203,9 +203,19 @@ OpSegment.prototype.rayCheck = function(this: OpSegment,
     if (!approximately_equal(baseXY, boundsXY) && (baseXY < boundsXY) === checkLessThan) return;
     const tVals: number[] = [0, 0, 0];
     const baseYX = pt_yx(base.fPt, dir);
+    // §19.7 engine fix — the `dirIsHoriz` argument to curveIntercept
+    // is "is the scan line a horizontal slice at axisIntercept Y" (i.e.
+    // solve `y(t) = axisIntercept`). For an x-axis ray (kLeft / kRight),
+    // axisIntercept IS a y value → dirIsHoriz = true → xy_index === 0
+    // matches. For a y-axis ray (kTop / kBottom), axisIntercept is an x
+    // value → dirIsHoriz = false → xy_index === 1 matches. The port
+    // previously passed `!dirIsHoriz` here, inverting the dispatch:
+    // horizontal lines with diff.Y = 0 returned 0 roots when scanned
+    // by a vertical ray, so the walker missed A-vs-B crossings during
+    // sortableTop and all of B's spans got bogus oppSum = 0.
     const dirIsHoriz = xy_index(dir) === 0;
     const roots = curveIntercept(this.fVerb, this.fPts, this.fWeight, baseYX,
-                                  !dirIsHoriz, tVals);
+                                  dirIsHoriz, tVals);
     for (let index = 0; index < roots; ++index) {
         const t = tVals[index]!;
         if ((base.fSpan!.segment() as OpSegment) === this

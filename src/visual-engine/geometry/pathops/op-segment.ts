@@ -802,10 +802,32 @@ export class OpSegment implements OpSegmentLike {
                         start: OpSpanBase, end: OpSpanBase, op: SkPathOp,
                         sumMiWinding: number, sumSuWinding: number): boolean
     {
+        // Single-shot form used by bridgeOp's outer activeOp() call —
+        // doesn't propagate running sums back to the caller. The
+        // findNextOp loop uses activeOpFullRef below.
+        const refBox = { sumMiWinding, sumSuWinding };
+        return this.activeOpFullRef(xorMiMask, xorSuMask, start, end, op, refBox);
+    }
+
+    // §19.7 engine fix — activeOpFull variant that propagates the
+    // running sumMiWinding / sumSuWinding totals back to the caller via
+    // the `ref` object. Mirrors Skia's `int* sumMiWinding, int* sumSuWinding`
+    // pointer semantics so findNextOp's angle-ring walk sees each
+    // angle's contribution adjusting the running totals. Without this
+    // propagation, every angle in the ring saw the same sums and the
+    // truth-table lookup produced the same activeOp result for spans
+    // that should have differed by their B-contour topology — making
+    // Intersect / Difference walks treat all of A's edges identically.
+    public activeOpFullRef(xorMiMask: number, xorSuMask: number,
+                           start: OpSpanBase, end: OpSpanBase, op: SkPathOp,
+                           ref: { sumMiWinding: number; sumSuWinding: number }): boolean
+    {
         const w = { maxWinding: 0, sumWinding: 0,
                     oppMaxWinding: 0, oppSumWinding: 0,
-                    sumMiWinding, sumSuWinding };
+                    sumMiWinding: ref.sumMiWinding, sumSuWinding: ref.sumSuWinding };
         this.setUpWindingsBinary(start, end, w);
+        ref.sumMiWinding = w.sumMiWinding;
+        ref.sumSuWinding = w.sumSuWinding;
         let miFrom: boolean, miTo: boolean, suFrom: boolean, suTo: boolean;
         if (this.operand()) {
             miFrom = (w.oppMaxWinding & xorMiMask) !== 0;
@@ -1411,6 +1433,12 @@ export class OpSegment implements OpSegmentLike {
         }
         let sumSuWinding = this.updateOppWinding(end, start);
         if (this.operand()) { const t = sumMiWinding; sumMiWinding = sumSuWinding; sumSuWinding = t; }
+        // §19.7 engine fix — Skia's findNextOp passes sumMiWinding /
+        // sumSuWinding to activeOp as int* so setUpWindings mutates
+        // the caller's running totals as each angle in the ring is
+        // visited. We mirror that with a `sumRef` box passed to
+        // activeOpFullRef.
+        const sumRef = { sumMiWinding, sumSuWinding };
         let nextAngle: OpAngle = angle.next()!;
         let foundAngle: OpAngle | undefined = undefined;
         let foundDone = false;
@@ -1418,10 +1446,10 @@ export class OpSegment implements OpSegmentLike {
         let activeCount = 0;
         do {
             nextSegment = nextAngle.segment() as OpSegment;
-            const isActive = nextSegment.activeOpFull(xorMiMask, xorSuMask,
-                                                      nextAngle.start() as OpSpanBase,
-                                                      nextAngle.end()   as OpSpanBase,
-                                                      op, sumMiWinding, sumSuWinding);
+            const isActive = nextSegment.activeOpFullRef(xorMiMask, xorSuMask,
+                                                         nextAngle.start() as OpSpanBase,
+                                                         nextAngle.end()   as OpSpanBase,
+                                                         op, sumRef);
             if (isActive) {
                 ++activeCount;
                 if (foundAngle === undefined || (foundDone && (activeCount & 1))) {

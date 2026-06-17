@@ -108,6 +108,13 @@ function findChaseOp(chase: OpSpanBase[],
         let first: OpSegment | undefined = undefined;
         const firstAngle = aw.angle;
         let probe = aw.angle.next();
+        // §19.7 engine fix — same sum-ref propagation as findNextOp.
+        // Skia's findChaseOp passes sumMiWinding / sumSuWinding as
+        // int* to setUpWindings so each angle in the ring mutates the
+        // running totals in place. The port previously created a
+        // fresh `w` object per iteration, so the totals never
+        // propagated across angles and Intersect's chase walker saw
+        // every span with the same (wrong) windings.
         while (probe !== firstAngle) {
             const seg3 = probe!.segment() as OpSegment;
             const start = probe!.start() as OpSpanBase;
@@ -115,7 +122,11 @@ function findChaseOp(chase: OpSpanBase[],
             const w = { maxWinding: 0, sumWinding: 0,
                         oppMaxWinding: 0, oppSumWinding: 0,
                         sumMiWinding, sumSuWinding };
-            if (aw.sortable) seg3.setUpWindingsBinary(start, end, w);
+            if (aw.sortable) {
+                seg3.setUpWindingsBinary(start, end, w);
+                sumMiWinding = w.sumMiWinding;
+                sumSuWinding = w.sumSuWinding;
+            }
             if (!seg3.doneByAngle(probe!)) {
                 if (first === undefined && (aw.sortable
                     || start.starter(end).windSum() !== SK_MIN_S32))
