@@ -4,6 +4,8 @@ import type {
     TextMetrics,
 } from '../../runtime/index.js';
 import { ApproximateTextMeasurer } from '../../runtime/index.js';
+import { PathFigure, PathGeometry } from '../geometry/geometry.js';
+import { glyphToFigures } from './glyph-to-geometry.js';
 
 // TextMeasurer backed by opentype.js. Parses real TTF/OTF/WOFF font
 // files and computes per-glyph advance widths + kerning, plus ascent /
@@ -85,6 +87,53 @@ export class FontMetricsMeasurer implements TextMeasurer
         };
     }
 
+    // §19-deferred #4. Convert a text run to a filled PathGeometry by
+    // concatenating each glyph's outline. The result is positioned with
+    // its baseline at y = 0 and the left edge at x = 0 (caller can
+    // Geometry.Transform their way to any other placement). Glyph
+    // outlines come from opentype.js's parsed font; advance widths +
+    // pairwise kerning drive the horizontal layout (same as Measure).
+    //
+    // No line breaks, no bidi, no text shaping (ligatures /
+    // contextual alternates dropped — same tradeoff as Measure for the
+    // same reason: opentype.js's full layout throws on common modern
+    // fonts).
+    //
+    // Returns an empty PathGeometry when:
+    //   * `text` is empty;
+    //   * the font family stack has no loaded match (caller can detect
+    //     via Measure returning the approximation fallback).
+    public BuildGeometry(
+        text: string,
+        fontFamily: string,
+        fontSize: number,
+        fontWeight: string,
+        fontStyle: string,
+    ): PathGeometry
+    {
+        if (text === '') return new PathGeometry([]);
+        const font = this.resolveFont(fontFamily, fontWeight, fontStyle);
+        if (font === undefined) return new PathGeometry([]);
+
+        const scale = fontSize / font.unitsPerEm;
+        const figures: PathFigure[] = [];
+        let cursor = 0;
+        let prev: opentype.Glyph | undefined;
+        for (const ch of Array.from(text))
+        {
+            const glyph = font.charToGlyph(ch);
+            if (prev !== undefined)
+            {
+                cursor += font.getKerningValue(prev, glyph) * scale;
+            }
+            const lowering = glyphToFigures(glyph, scale, cursor, 0);
+            for (const f of lowering.figures) figures.push(f);
+            cursor += lowering.advance;
+            prev = glyph;
+        }
+        return new PathGeometry(figures);
+    }
+
     // Sum per-glyph advance widths plus pairwise kerning. We don't use
     // font.getAdvanceWidth because that routes through opentype.js's
     // full layout pipeline (bidi + ccmp + GSUB substitutions), which
@@ -111,6 +160,14 @@ export class FontMetricsMeasurer implements TextMeasurer
             prev = glyph;
         }
         return width;
+    }
+
+    // §19-deferred #4 — exposed for `textOnPath`, which needs the
+    // resolved opentype.Font directly to walk glyphs along an arclength
+    // sample table. Returns undefined when no loaded family matches.
+    public ResolveFont(family: string, weight: string = 'normal', style: string = 'normal'): opentype.Font | undefined
+    {
+        return this.resolveFont(family, weight, style);
     }
 
     // Walk the CSS-style family stack and find the first loaded family.

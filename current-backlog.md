@@ -128,7 +128,7 @@ Phases 1–6 + 7 + 8 (including the 19.7-engine + 19.8 corpus close-outs) + the 
 **Deferred past Phase 8** (history; revisit when a concrete demo demands them):
   - ~~Path-offset / outline-widening~~ ✅ Done — see [completed-backlog.md § 19-deferred #1](completed-backlog.md). `widen(g, pen)` flattens to polylines, then walks parallel offsets at ±half-thickness with Miter / Round / Bevel joins and Flat / Square / Round caps. Output PathGeometry has LineSegments only (Bezier round-tripping deferred — caller can re-combine() through boolean ops if needed).
   - ~~Re-fitting boolean output back to higher-degree Beziers~~ ✅ Done — see [completed-backlog.md § 19-deferred #2](completed-backlog.md). Collinear-line collapse + same-original-curve coalescing run inside `combine()` between `Op()` and the lift back to PathGeometry.
-  - SoA + typed-array hot path. Performance polish if profiling shows the boolean engine on a critical path.
-  - Geometry text-on-path / geometry-from-text glyph outlines. Different problem domain (font engine territory).
+  - SoA + typed-array hot path. Performance polish if profiling shows the boolean engine on a critical path. Confirmed-deferred 2026-06-17: no profiling motivation; re-open if a real workload puts the engine on the hot path.
+  - ~~Geometry text-on-path / geometry-from-text glyph outlines~~ ✅ Done — see [completed-backlog.md § 19-deferred #4](completed-backlog.md). `FontMetricsMeasurer.BuildGeometry(text, …)` lifts a text run to a filled `PathGeometry` via opentype.js glyph outlines; `textOnPath({...})` lays text along a curve via flatten-then-sample.
   - ~~PathGeometry serialization~~ ✅ Done — see [completed-backlog.md § 19-deferred #5](completed-backlog.md). `pathGeometryFromSvgD` parses full SVG 1.1 path-data; round-trips geometry-identical through `pathGeometryToSvgD`.
 

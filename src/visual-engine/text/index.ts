@@ -11,3 +11,4 @@ export {
     type GoogleFontOptions,
     type LoadedGoogleFont,
 } from './google-font-loader.js';
+export { textOnPath, type TextOnPathOptions } from './text-on-path.js';

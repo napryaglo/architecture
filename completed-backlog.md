@@ -609,6 +609,21 @@ Closure of the eight-phase Skia pathops port + the surrounding geometry / diagra
 
   Tests at [widen.test.ts](src/visual-engine/geometry/tests/widen.test.ts) — 11 tests covering: zero-thickness short-cut, horizontal line strip with each cap, rectangle outline emits two figures + on-border coverage, V-shape miter / bevel / miter-limit fallback, closed PathGeometry yields two figures, ellipse outline contains points on the ring. Test suite: 524 → **535** passing.
 
+~~**19-deferred #4. Text-on-path / geometry-from-text glyph outlines.**~~ ✅ Done. Two pieces, both built on the already-vendored `opentype.js` runtime dep (already used by `FontMetricsMeasurer` for advance-width / kerning metrics).
+
+  - **Geometry-from-text** ([font-metrics-measurer.ts:BuildGeometry](src/visual-engine/text/font-metrics-measurer.ts)). New `BuildGeometry(text, family, size, weight, style): PathGeometry` method on `FontMetricsMeasurer`. Walks codepoints (Array.from so surrogate pairs count as one glyph), resolves each through the same family-stack / weight / style fallback as `Measure`, calls [`glyphToFigures`](src/visual-engine/text/glyph-to-geometry.ts) on each opentype.js glyph, and translates by accumulated advance + pairwise kerning. Result is a single `PathGeometry` with one or more `PathFigure` per glyph — fillable directly through any Brush surface that consumes Geometry. Baseline at y=0, left edge at x=0 — caller positions via `Geometry.Transform`.
+  - **Text-on-path** ([text-on-path.ts](src/visual-engine/text/text-on-path.ts)). `textOnPath({ text, path, measurer, fontFamily, fontSize, fontWeight?, fontStyle?, startOffset?, flattenTolerance? }): PathGeometry`. Flattens the input path to a polyline (adaptive midpoint subdivision for Quads / Cubics; `arcToCubics` for Arcs; default tolerance 0.25 DIP), builds a cumulative-arclength sample table, then for each glyph computes its anchor along the path (cursor + advance/2, kerning included), samples (x, y, tangent angle) at that arclength, and applies rotate-then-translate so the glyph's baseline tangents the path at the anchor. Glyphs landing past the path's end are dropped; `startOffset` biases the run forward (use `(totalLen - textWidth) / 2` for centering).
+
+  **Coordinate-system note.** opentype.js paths use the font-design coordinate system where Y is UP (glyph origin sits on the baseline, ascender extends positive). Mural is Y-DOWN. `glyphToFigures` flips Y on the way through: each font (fx, fy) maps to (originX + scale * fx, originY - scale * fy). Glyph outline data structure (Move / Line / Quad / Cubic / Close) maps directly to mural's `LineSegment` / `QuadraticBezierSegment` / `CubicBezierSegment` shapes.
+
+  **Layout tradeoffs.** v1 lays single lines only — no line breaks, no bidirectional text, no GSUB ligatures / contextual alternates (matches the existing `Measure` tradeoff for the same reason: opentype.js's full shaping pipeline throws on common modern fonts whose GSUB tables use lookup formats the library doesn't implement). Text-on-path places each glyph as a rigid rotated block: glyphs slightly over-bunch on tight curves because the stem-by-stem tangent alignment SVG `<textPath>` does internally is a v2 problem.
+
+  **Renderer integration.** Both surfaces return ordinary `PathGeometry` values — the renderer is unchanged. Consumers paint outlined text through whatever drawing context they use for any other Geometry (`DrawingContext.DrawGeometry`, `Path.Data`, `CombinedGeometry`, the §19-deferred #1 `widen()` helper for stroked outlines, etc.).
+
+  10 new tests at [text-geometry.test.ts](src/visual-engine/tests/text-geometry.test.ts) build a controllable in-memory test font (no font binary shipped in the repo) with two real glyph outlines — an open triangle and a rectangle — and cover: empty-text / no-loaded-font short-cuts on both surfaces, single triangle glyph at scale, two-glyph horizontal advance, horizontal text-on-path baseline, vertical text-on-path 90° rotation, glyph-past-end drop, and `startOffset` shift. Test suite: 535 → **545** passing.
+
+  **Skipped:** §19-deferred #3 SoA + typed-array hot path. No profiling motivation — re-open when a real workload puts the engine on the hot path. (Confirmed deferred 2026-06-17.)
+
 ---
 
 ## Architectural notes (for orientation)
