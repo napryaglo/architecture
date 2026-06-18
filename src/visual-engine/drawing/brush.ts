@@ -206,3 +206,74 @@ export class ImageBrush extends Brush
     public get AlignmentY(): AlignmentY { return this.get_property_value(ImageBrush.AlignmentYKey); }
     public set AlignmentY(value: AlignmentY) { this.set_property_value(ImageBrush.AlignmentYKey, value); }
 }
+
+// Procedural hatch family — pre-defined repeating motifs (stripes, dots,
+// checker, grid, cross-hatch) drawn by the renderer from JS state alone.
+// No image asset, no user-supplied Visual tile; tuning rides on the
+// brush DPs (Foreground / Background / Size / Angle / StrokeThickness).
+//
+// Layout:
+//   * Size            — tile cell side in DIPs (the repeat unit).
+//   * Foreground      — colour of the strokes / dots / dark cell.
+//   * Background      — fill behind the motif. Transparent by default
+//                       so the brush composites over whatever surface
+//                       sits behind it.
+//   * StrokeThickness — line width for Stripes / Grid / CrossHatch;
+//                       dot radius scales off this for Dots.
+//   * Angle           — rotation (degrees) applied via the renderer's
+//                       patternTransform. 0 = canonical orientation
+//                       (Stripes horizontal, Grid axis-aligned, …).
+export enum PatternKind
+{
+    /** Parallel lines at the brush Angle. StrokeThickness controls width. */
+    Stripes    = 'Stripes',
+    /** Centred filled dots, one per tile. StrokeThickness ≈ dot radius. */
+    Dots       = 'Dots',
+    /** 2×2 checkerboard within the tile — half the cells fill Foreground. */
+    Checker    = 'Checker',
+    /** Horizontal + vertical lines forming a grid. */
+    Grid       = 'Grid',
+    /** Diagonal lines + their perpendicular — woven cross-hatch. */
+    CrossHatch = 'CrossHatch',
+}
+
+export class PatternBrush extends Brush
+{
+    public static readonly KindKey            = Model.RegisterProperty<PatternKind>(
+        PatternBrush, 'Kind', PatternKind.Stripes, MetaData.Render);
+    public static readonly ForegroundKey      = Model.RegisterProperty<Color>(
+        PatternBrush, 'Foreground', Color.Black, MetaData.Render);
+    public static readonly BackgroundKey      = Model.RegisterProperty<Color>(
+        PatternBrush, 'Background', Color.Transparent, MetaData.Render);
+    public static readonly SizeKey            = Model.RegisterProperty<number>(
+        PatternBrush, 'Size', 8, MetaData.Render);
+    public static readonly AngleKey           = Model.RegisterProperty<number>(
+        PatternBrush, 'Angle', 0, MetaData.Render);
+    public static readonly StrokeThicknessKey = Model.RegisterProperty<number>(
+        PatternBrush, 'StrokeThickness', 1, MetaData.Render);
+
+    constructor(kind?: PatternKind, foreground?: Color)
+    {
+        super();
+        if (kind !== undefined)       this.Kind = kind;
+        if (foreground !== undefined) this.Foreground = foreground;
+    }
+
+    public get Kind(): PatternKind { return this.get_property_value(PatternBrush.KindKey); }
+    public set Kind(value: PatternKind) { this.set_property_value(PatternBrush.KindKey, value); }
+
+    public get Foreground(): Color { return this.get_property_value(PatternBrush.ForegroundKey); }
+    public set Foreground(value: Color) { this.set_property_value(PatternBrush.ForegroundKey, value); }
+
+    public get Background(): Color { return this.get_property_value(PatternBrush.BackgroundKey); }
+    public set Background(value: Color) { this.set_property_value(PatternBrush.BackgroundKey, value); }
+
+    public get Size(): number { return this.get_property_value(PatternBrush.SizeKey); }
+    public set Size(value: number) { this.set_property_value(PatternBrush.SizeKey, value); }
+
+    public get Angle(): number { return this.get_property_value(PatternBrush.AngleKey); }
+    public set Angle(value: number) { this.set_property_value(PatternBrush.AngleKey, value); }
+
+    public get StrokeThickness(): number { return this.get_property_value(PatternBrush.StrokeThicknessKey); }
+    public set StrokeThickness(value: number) { this.set_property_value(PatternBrush.StrokeThicknessKey, value); }
+}

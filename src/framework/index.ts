@@ -28,6 +28,17 @@ export { IconButton } from './icon-button.js';
 export { IconButtonToggle } from './icon-button-toggle.js';
 export { FloatingActionButton, FabSize } from './fab.js';
 export { Card, CardVariant } from './card.js';
+export {
+    ColorPicker,
+    ColorPickerVariant,
+    MATERIAL_PALETTE,
+    hsvToRgb,
+    rgbToHsv,
+} from './color-picker.js';
+export { BrushPicker, BrushPickerVariant } from './brush-picker.js';
+export { PenEditor } from './pen-editor.js';
+export { FillEditor, FillEditorVariant } from './fill-editor.js';
+export { ShapeFormatControl } from './shape-format-control.js';
 export { TopAppBar, TopAppBarVariant } from './top-app-bar/top-app-bar.js';
 export { NavigationItem } from './navigation/navigation-item.js';
 export { NavigationRail } from './navigation/navigation-rail.js';

@@ -4,7 +4,7 @@ import {
     Model,
     type DrawingContext,
 } from '../../runtime/index.js';
-import { MatrixTransform, PathGeometry, Pen } from '../../visual-engine/index.js';
+import { MatrixTransform, PathGeometry } from '../../visual-engine/index.js';
 import { Squircle, buildSquircleFigure } from './squircle.js';
 
 // M3 Slanted — a Squircle leaning to one side via a horizontal shear
@@ -32,7 +32,8 @@ export class Slanted extends Squircle
         const size = this.RenderSize;
         if (size.Width <= 0 || size.Height <= 0) return;
 
-        const t    = this.StrokeThickness;
+        const stroke = this.Stroke;
+        const t      = stroke?.Thickness ?? 0;
         const half = t / 2;
         const w    = Math.max(0, size.Width  - t);
         const h    = Math.max(0, size.Height - t);
@@ -47,13 +48,10 @@ export class Slanted extends Squircle
         const innerXL    = half + shift / 2;
 
         const figure = buildSquircleFigure(innerXL, half, innerWidth, h, this.Superness);
-        const pen    = this.Stroke !== undefined && t > 0
-            ? new Pen(this.Stroke, t)
-            : undefined;
 
         if (tan === 0)
         {
-            dc.DrawGeometry(this.Background, pen, new PathGeometry([figure]));
+            dc.DrawGeometry(this.Fill, stroke, new PathGeometry([figure]));
             return;
         }
 
@@ -65,7 +63,7 @@ export class Slanted extends Squircle
         const skew    = new Matrix(1, 0, -tan, 1, yBottom * tan, 0);
 
         dc.PushTransform(new MatrixTransform(skew));
-        dc.DrawGeometry(this.Background, pen, new PathGeometry([figure]));
+        dc.DrawGeometry(this.Fill, stroke, new PathGeometry([figure]));
         dc.Pop();
     }
 }

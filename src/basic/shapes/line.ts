@@ -1,5 +1,6 @@
-import { MetaData, Model, Point, Size, Visual, type DrawingContext } from '../../runtime/index.js';
-import { LineGeometry, Pen } from '../../visual-engine/index.js';
+import { MetaData, Model, Point, Size, type DrawingContext } from '../../runtime/index.js';
+import { LineGeometry } from '../../visual-engine/index.js';
+import { Shape } from './shape.js';
 
 // Straight-line shape — draws a stroked line from (X1, Y1) to (X2, Y2)
 // in its own LOCAL coordinate space. WPF parity: same DPs (X1, Y1, X2,
@@ -16,7 +17,7 @@ import { LineGeometry, Pen } from '../../visual-engine/index.js';
 // SetTop to the bounding box's top-left in canvas coords, and sets
 // X1/Y1/X2/Y2 RELATIVE to that origin. This keeps each connector's
 // hit area tight to the line rather than blanket-covering the canvas.
-export class Line extends Visual
+export class Line extends Shape
 {
     public static readonly X1Key              = Model.RegisterProperty<number>(           Line, 'X1',              0,         MetaData.Measure | MetaData.Render);
     public static readonly Y1Key              = Model.RegisterProperty<number>(           Line, 'Y1',              0,         MetaData.Measure | MetaData.Render);
@@ -40,26 +41,21 @@ export class Line extends Visual
         // Negative coords are clipped — author should keep endpoints
         // non-negative in local space (the diagram host positions the
         // Line on the Canvas via SetLeft / SetTop so this is natural).
-        const half = this.StrokeThickness / 2;
+        const half = (this.Stroke?.Thickness ?? 0) / 2;
         const w = Math.max(0, Math.max(this.X1, this.X2)) + half * 2;
         const h = Math.max(0, Math.max(this.Y1, this.Y2)) + half * 2;
         return new Size(w, h);
     }
 
-    protected override ArrangeOverride(finalSize: Size): Size
-    {
-        return finalSize;
-    }
-
     protected override RenderOverride(dc: DrawingContext): void
     {
-        if (this.Stroke === undefined || this.StrokeThickness <= 0) return;
+        const stroke = this.Stroke;
+        if (stroke === undefined || stroke.Thickness <= 0) return;
 
-        const pen = new Pen(this.Stroke, this.StrokeThickness);
         const geom = new LineGeometry(
             new Point(this.X1, this.Y1),
             new Point(this.X2, this.Y2),
         );
-        dc.DrawGeometry(undefined, pen, geom);
+        dc.DrawGeometry(undefined, stroke, geom);
     }
 }

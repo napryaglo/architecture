@@ -272,6 +272,21 @@ export class Color
         return `rgba(${r},${g},${b},${a})`;
     }
 
+    // Emits '#rrggbb' (fully opaque) or '#rrggbbaa' otherwise — the
+    // same format Color.FromHex round-trips. Channel values clamp to
+    // 0..255 before formatting so floats from converters (e.g. HSV
+    // sliders) don't trip the two-hex-digit invariant.
+    public ToHex(): string
+    {
+        const hex = (n: number): string => {
+            const v = Math.max(0, Math.min(255, Math.round(n)));
+            return v.toString(16).padStart(2, '0');
+        };
+        const base = `#${hex(this.R)}${hex(this.G)}${hex(this.B)}`;
+        if (this.A >= 255) return base;
+        return base + hex(this.A);
+    }
+
     public Equals(other: Color): boolean
     {
         return this.R === other.R && this.G === other.G

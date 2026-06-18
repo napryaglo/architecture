@@ -3,16 +3,15 @@ import {
     Model,
     Point,
     Size,
-    Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
 import {
     ArcSegment,
     PathFigure,
     PathGeometry,
-    Pen,
     SweepDirection,
 } from '../../visual-engine/index.js';
+import { Shape } from './shape.js';
 
 // Arc shape — strokes (or fills) a circular arc between StartAngle and
 // EndAngle inside the arranged rect. Angles are in degrees, with 0° at
@@ -25,7 +24,7 @@ import {
 //
 // Sweep direction: the arc draws clockwise from StartAngle to EndAngle.
 // To draw counter-clockwise, the consumer swaps the two angles.
-export class Arc extends Visual
+export class Arc extends Shape
 {
     public static readonly StartAngleKey      = Model.RegisterProperty<number>(           Arc, 'StartAngle',      0,         MetaData.Render);
     public static readonly EndAngleKey        = Model.RegisterProperty<number>(           Arc, 'EndAngle',        360,       MetaData.Render);
@@ -35,22 +34,13 @@ export class Arc extends Visual
     public get EndAngle(): number { return this.get_property_value(Arc.EndAngleKey); }
     public set EndAngle(v: number) { this.set_property_value(Arc.EndAngleKey, v); }
 
-    protected override MeasureOverride(_availableSize: Size): Size
-    {
-        return Size.Zero;
-    }
-
-    protected override ArrangeOverride(finalSize: Size): Size
-    {
-        return finalSize;
-    }
-
     protected override RenderOverride(dc: DrawingContext): void
     {
         const size = this.RenderSize;
         if (size.Width <= 0 || size.Height <= 0) return;
 
-        const t    = this.StrokeThickness;
+        const stroke = this.Stroke;
+        const t      = stroke?.Thickness ?? 0;
         const half = t / 2;
         // Inscribe the arc in the rendered rect — same "stroke sits
         // inside the layout rect" convention Border and Ellipse use.
@@ -100,10 +90,6 @@ export class Arc extends Visual
         const figure = new PathFigure(startPoint, segments, false);
         const path   = new PathGeometry([figure]);
 
-        const pen = this.Stroke !== undefined && t > 0
-            ? new Pen(this.Stroke, t)
-            : undefined;
-
-        dc.DrawGeometry(this.Background, pen, path);
+        dc.DrawGeometry(this.Fill, stroke, path);
     }
 }

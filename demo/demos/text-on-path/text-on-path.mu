@@ -60,19 +60,34 @@ resources TextOnPathDemo {
                             Slider [Width=180, Minimum=10, Maximum=72,
                                     Value=$FontSize, SmallChange=1, LargeChange=4]
                         }
-                        StackPanel [Orientation=Vertical] {
+                        StackPanel [Orientation=Vertical, Margin=(0,0,24,0)] {
+                            TextBlock [Text="Side offset", FontSize=11, FontWeight=Bold,
+                                       Foreground=@OnSurface, Margin=(0,0,0,4)]
+                            Slider [Width=180, Minimum=-50, Maximum=50,
+                                    Value=$SideOffset, SmallChange=1, LargeChange=5]
+                        }
+                        StackPanel [Orientation=Vertical, Margin=(0,0,24,0)] {
                             TextBlock [Text="Show", FontSize=11, FontWeight=Bold,
                                        Foreground=@OnSurface, Margin=(0,0,0,4)]
                             StackPanel [Orientation=Horizontal] {
-                                Button [Margin=(0,0,8,0), Padding=(10,4,10,4),
+                                Button [Margin=(0,0,8,0),
                                         Command=$TogglePathCommand] {
                                     TextBlock [Text="Path"]
                                 }
-                                Button [Padding=(10,4,10,4),
-                                        Command=$ToggleGlyphsCommand] {
+                                Button [Command=$ToggleGlyphsCommand] {
                                     TextBlock [Text="Glyphs"]
                                 }
                             }
+                        }
+                        StackPanel [Orientation=Vertical, Margin=(0,0,16,0)] {
+                            TextBlock [Text="Path colour", FontSize=11, FontWeight=Bold,
+                                       Foreground=@OnSurface, Margin=(0,0,0,4)]
+                            ColorPicker [ColorHex=$PathColorHex]
+                        }
+                        StackPanel [Orientation=Vertical] {
+                            TextBlock [Text="Glyph colour", FontSize=11, FontWeight=Bold,
+                                       Foreground=@OnSurface, Margin=(0,0,0,4)]
+                            ColorPicker [ColorHex=$GlyphColorHex]
                         }
                     }
                 }

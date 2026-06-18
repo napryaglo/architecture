@@ -186,17 +186,13 @@ export class Visual extends Model
     // doesn't enforce.
     public static readonly EffectKey = Model.RegisterProperty<Effect | undefined>(Visual, 'Effect', undefined, MetaData.Render);
 
-    // Paint inputs. Background is the fill brush; Stroke + StrokeThickness
-    // are the outline brush + thickness. Lifted onto Visual (instead of
-    // re-registered on every Border / Rectangle / Ellipse / Squircle / …)
-    // so the renderer reads from a single, predictable shape regardless
-    // of which Visual subclass the markup names. Subclasses that paint
-    // chrome (Border, Shape primitives) read these in their RenderOverride;
-    // subclasses that don't paint (Panel, ContentControl, …) ignore them
-    // and the DPs sit at default `undefined` / 0 with zero render cost.
+    // Background is the inherited fill brush — kept on Visual so Border
+    // / Panel / Canvas / ContentControl all read it from the same slot.
+    // Shape primitives expose their own typed `Fill: Brush | undefined`
+    // DP on `Shape` and ignore Visual.Background entirely. Subclasses
+    // that don't paint (Panel, ContentControl, …) leave Background at
+    // its default undefined with zero render cost.
     public static readonly BackgroundKey      = Model.RegisterProperty<Brush | undefined>(Visual, 'Background',      undefined, MetaData.Render);
-    public static readonly StrokeKey          = Model.RegisterProperty<Brush | undefined>(Visual, 'Stroke',          undefined, MetaData.Render);
-    public static readonly StrokeThicknessKey = Model.RegisterProperty<number>(            Visual, 'StrokeThickness', 0,         MetaData.Render);
 
     // Affine transform applied to the Visual's painted output (and the
     // painted output of every descendant) at render time. WPF parity —
@@ -1063,16 +1059,6 @@ export class Visual extends Model
      *  Default undefined ≡ no fill. */
     public get Background(): Brush | undefined { return this.get_property_value(Visual.BackgroundKey); }
     public set Background(value: Brush | undefined) { this.set_property_value(Visual.BackgroundKey, value); }
-
-    /** Outline brush. Paired with StrokeThickness to define the stroke
-     *  the renderer paints. Default undefined ≡ no stroke. */
-    public get Stroke(): Brush | undefined { return this.get_property_value(Visual.StrokeKey); }
-    public set Stroke(value: Brush | undefined) { this.set_property_value(Visual.StrokeKey, value); }
-
-    /** Stroke thickness in dp. 0 disables the stroke regardless of
-     *  Stroke. Default 0. */
-    public get StrokeThickness(): number { return this.get_property_value(Visual.StrokeThicknessKey); }
-    public set StrokeThickness(value: number) { this.set_property_value(Visual.StrokeThicknessKey, value); }
 
     /** Affine transform applied at render time. See RenderTransformKey
      *  for semantics. Default undefined (identity). */

@@ -89,6 +89,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['Canvas',                  '@visualisation-sub/mural/basic'],
     ['PaginatedCanvas',         '@visualisation-sub/mural/basic'],
     ['Ellipse',                 '@visualisation-sub/mural/basic'],
+    ['Shape',                   '@visualisation-sub/mural/basic'],
     ['Image',                   '@visualisation-sub/mural/basic'],
     ['Icon',                    '@visualisation-sub/mural/basic'],
     ['Line',                    '@visualisation-sub/mural/basic'],
@@ -107,6 +108,14 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['TextBox',                 '@visualisation-sub/mural/basic'],
     ['SpinEdit',                '@visualisation-sub/mural/basic'],
     ['Slider',                  '@visualisation-sub/mural/basic'],
+    ['ColorPicker',             '@visualisation-sub/mural/framework'],
+    ['ColorPickerVariant',      '@visualisation-sub/mural/framework'],
+    ['BrushPicker',             '@visualisation-sub/mural/framework'],
+    ['BrushPickerVariant',      '@visualisation-sub/mural/framework'],
+    ['PenEditor',               '@visualisation-sub/mural/framework'],
+    ['FillEditor',              '@visualisation-sub/mural/framework'],
+    ['FillEditorVariant',       '@visualisation-sub/mural/framework'],
+    ['ShapeFormatControl',      '@visualisation-sub/mural/framework'],
     ['PageView',                '@visualisation-sub/mural/basic'],
 
     // Runtime types that the emitter may reference even when the
@@ -284,6 +293,12 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
 
     // ── visual-engine ───────────────────────────────────────────────
     ['SolidColorBrush',     '@visualisation-sub/mural/visual-engine'],
+    ['LinearGradientBrush', '@visualisation-sub/mural/visual-engine'],
+    ['RadialGradientBrush', '@visualisation-sub/mural/visual-engine'],
+    ['ImageBrush',          '@visualisation-sub/mural/visual-engine'],
+    ['PatternBrush',        '@visualisation-sub/mural/visual-engine'],
+    ['PatternKind',         '@visualisation-sub/mural/visual-engine'],
+    ['GradientStop',        '@visualisation-sub/mural/visual-engine'],
     ['Brush',               '@visualisation-sub/mural/visual-engine'],
     ['Pen',                 '@visualisation-sub/mural/visual-engine'],
     ['FontWeight',          '@visualisation-sub/mural/visual-engine'],
@@ -330,6 +345,7 @@ export const ENUM_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<st
     ['AlignmentY',            new Set(['Top', 'Center', 'Bottom'])],
     ['BindingMode',           new Set(['OneWay', 'TwoWay', 'OneTime', 'OneWayToSource'])],
     ['GradientSpreadMethod',  new Set(['Pad', 'Reflect', 'Repeat'])],
+    ['PatternKind',           new Set(['Stripes', 'Dots', 'Checker', 'Grid', 'CrossHatch'])],
     ['LineCap',               new Set(['Flat', 'Round', 'Square'])],
     ['LineJoin',              new Set(['Miter', 'Round', 'Bevel'])],
     ['FillRule',              new Set(['EvenOdd', 'Nonzero'])],
@@ -341,6 +357,9 @@ export const ENUM_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<st
     ['TextAlignment',         new Set(['Left', 'Center', 'Right'])],
     ['ClickMode',             new Set(['Release', 'Press', 'Hover'])],
     ['ButtonVariant',         new Set(['Filled', 'Elevated', 'Tonal', 'Outlined', 'Text', 'Standard'])],
+    ['ColorPickerVariant',    new Set(['HSV', 'RGB'])],
+    ['BrushPickerVariant',    new Set(['Solid', 'Linear', 'Radial', 'Pattern'])],
+    ['FillEditorVariant',     new Set(['None', 'Solid', 'Linear', 'Radial', 'Pattern', 'Picture'])],
     ['TextBoxVariant',        new Set(['Filled', 'Outlined'])],
     ['ChipVariant',           new Set(['Assist', 'Filter', 'Input', 'Suggestion'])],
     ['SegmentedPosition',     new Set(['Single', 'Start', 'Middle', 'End'])],
@@ -414,8 +433,11 @@ export const STATIC_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<
 // Entries here MUST point at enum classes that are also in
 // ENUM_MEMBERS.
 export const PROPERTY_TO_ENUM: ReadonlyMap<string, readonly string[]> = new Map<string, readonly string[]>([
-    ['Variant',  ['ButtonVariant', 'DrawerVariant', 'CardVariant', 'TopAppBarVariant', 'TextBoxVariant', 'BadgeVariant', 'ProgressIndicatorVariant']],
-    ['Kind',     ['ChipVariant']],
+    ['Variant',  ['ButtonVariant', 'DrawerVariant', 'CardVariant', 'TopAppBarVariant', 'TextBoxVariant', 'BadgeVariant', 'ProgressIndicatorVariant', 'ColorPickerVariant', 'BrushPickerVariant', 'FillEditorVariant']],
+    ['Kind',     ['ChipVariant', 'PatternKind']],
+    ['PatternKind', ['PatternKind']],
+    ['LineCap',  ['LineCap']],
+    ['LineJoin', ['LineJoin']],
     ['EffectiveVariant', ['TopAppBarVariant']],
     ['Size',     ['FabSize']],
     ['Anchor',   ['Dock']],

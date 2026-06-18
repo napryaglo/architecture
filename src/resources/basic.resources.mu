@@ -1034,6 +1034,12 @@ resources MuralBasic {
         PreviewBrush = @Primary;
     }
 
+    // ── ColorPicker MOVED ──────────────────────────────────────────
+    // ColorPicker (and its two popup variants + Style) now live in the
+    // sibling `framework.resources.mu` — the control class itself moved
+    // to `src/framework/color-picker.ts` since it leans on framework
+    // primitives (MenuPopupHost, ClickAwayScrim) for its popup chrome.
+
     // NOTE: command-surface controls (ToggleButton / ToolBar / Menu /
     // MenuButton / ContextMenu) keep their default Styles in the sibling
     // `framework.resources.mu`. Loading their bundle through THIS file

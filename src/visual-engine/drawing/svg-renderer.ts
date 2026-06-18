@@ -132,7 +132,13 @@ export class SvgRenderer
     // Monotonic counter for `<clipPath>` ids — passed to every
     // SvgDomDrawingContext instance so siblings rendering into the
     // same surface don't collide on identifiers.
-    private clipCounter: number = 0;
+    private clipCounter:     number = 0;
+    private gradientCounter: number = 0;
+    // Cross-DC ImageBrush pattern cache. Same URI + Stretch / Alignment
+    // reuses a single `<pattern>` in `<defs>` across every Visual and
+    // every repaint, so the browser only resolves the href once per
+    // unique (URI, fit) pair on the surface. Cleared in Dispose.
+    private imagePatternCache: Map<string, string> = new Map<string, string>();
 
     constructor(surface: SVGSVGElement, options: SvgRendererOptions = {})
     {
@@ -571,9 +577,11 @@ export class SvgRenderer
         while (own.firstChild !== null) own.removeChild(own.firstChild);
 
         const dc = new SvgDomDrawingContext(own, {
-            defs:       this.defs,
-            nextClipId: () => `mural-dc-clip-${this.clipCounter++}`,
-            document:   this.doc,
+            defs:              this.defs,
+            nextClipId:        () => `mural-dc-clip-${this.clipCounter++}`,
+            nextGradientId:    () => `mural-dc-grad-${this.gradientCounter++}`,
+            imagePatternCache: this.imagePatternCache,
+            document:          this.doc,
         });
         visual.Render(dc);
 
@@ -609,6 +617,7 @@ export class SvgRenderer
             info.outer.remove();
         }
         this.nodes.clear();
+        this.imagePatternCache.clear();
         // <defs> stays — HtmlTarget removes the surface entirely.
     }
 }

@@ -229,6 +229,44 @@ resources DiagramDemo {
                     }
                 }
 
+                // Right-side Format Shape pane — ShapeFormatControl bound
+                // to the VM's FormatFill / FormatStroke DPs. The VM seeds
+                // these from the first selected leaf on every selection
+                // change and broadcasts user edits onto every selected
+                // leaf. ScrollViewer wraps the editor since the combined
+                // fill + line surface easily exceeds canvas-row height on
+                // smaller screens.
+                //
+                // The pane is declared FIRST among the Dock=Right items
+                // so DockPanel places it in the rightmost slot; the
+                // Splitter that follows takes the next slot (immediately
+                // to the pane's left in layout). In `visualChildren` the
+                // pane is at idx-1 — Splitter's normal "previous sibling"
+                // target — but it sits on the splitter's TRAILING side
+                // in layout, so ReverseDirection=true makes drag-LEFT
+                // widen the pane (matches the user's spatial intuition
+                // for a right-edge resize bar).
+                Border x:name="formatPane"
+                       [DockPanel.Dock=Right, Width=320,
+                        Background=@SurfaceContainerLow,
+                        BorderBrush=@OutlineVariant,
+                        BorderThickness=(1,0,0,0),
+                        Padding=(12)]{
+                    DockPanel{
+                        TextBlock[DockPanel.Dock=Top, Text="Format Shape",
+                                  FontSize=12, FontWeight=Bold,
+                                  Foreground=@OnSurfaceVariant,
+                                  Margin=(0,0,0,8)]
+                        ScrollViewer [IsAutoHideScrollBars=false]{
+                            ShapeFormatControl [Fill=$FormatFill,
+                                                Stroke=$FormatStroke]
+                        }
+                    }
+                }
+                Splitter[DockPanel.Dock=Right, Width=6,
+                         Orientation=Vertical,
+                         ReverseDirection=true]
+
                 // Drawing area — the Diagram fills the surface Border
                 // directly. Its ItemsPanel is a Canvas, so DiagramNode
                 // containers position themselves via Canvas.Left /

@@ -25,7 +25,7 @@ import {
     DataObject, DragDropEffects,
     MetaData, Model, ObservableCollection, RelayCommand,
 } from '@visualisation-sub/mural/runtime';
-import { SolidColorBrush } from '@visualisation-sub/mural/visual-engine';
+import { Pen, SolidColorBrush } from '@visualisation-sub/mural/visual-engine';
 import { Color } from '@visualisation-sub/mural/runtime';
 
 const STORAGE_KEY = 'diagram-demo-state-v1';
@@ -37,6 +37,11 @@ const brush = (hex) => new SolidColorBrush(Color.FromHex(hex));
 // is a fuller @Primary-equivalent so the 48×48 picture stays legible.
 const FILL_CANVAS  = brush('#bfdbfe');
 const FILL_PREVIEW = brush('#1976d2');
+// Stroke-brush ref shared between the per-instance default Pens —
+// safe because Pen.Brush is a Brush REFERENCE, and the brush itself
+// is never mutated (ShapeFormatControl replaces the Brush wholesale
+// when the user edits the stroke colour).
+const STROKE_BRUSH = brush('#1976d2');
 
 export const NODE_DEFAULT_SIZE = 80;
 export const PREVIEW_SIZE      = 48;
@@ -52,6 +57,12 @@ export class ShapeNodeVM extends Model
     static HeightKey     = Model.RegisterProperty(ShapeNodeVM, 'Height',     NODE_DEFAULT_SIZE, MetaData.None);
     static IsSelectedKey = Model.RegisterProperty(ShapeNodeVM, 'IsSelected', false,             MetaData.None);
     static FillBrushKey  = Model.RegisterProperty(ShapeNodeVM, 'FillBrush',  FILL_CANVAS,       MetaData.None);
+    // Stroke = the shape's outline Pen. Per-instance — each shape gets
+    // its own Pen so PenEditor's in-place mutations (Brush / Thickness /
+    // DashStyle / …) don't leak between shapes. Default constructed in
+    // the ctor below; DP default is undefined so we don't end up with
+    // every shape sharing one mutable Pen via the descriptor default.
+    static StrokeKey     = Model.RegisterProperty(ShapeNodeVM, 'Stroke',     undefined,         MetaData.None);
     static LabelTextKey  = Model.RegisterProperty(ShapeNodeVM, 'LabelText',  '',                MetaData.None);
 
     static Kind = '';
@@ -61,6 +72,12 @@ export class ShapeNodeVM extends Model
         this._set_property_value_by_name('Id', id);
         this._set_property_value_by_name('X',  x);
         this._set_property_value_by_name('Y',  y);
+        // Allocate the per-shape Pen here rather than as the DP default
+        // so each ShapeNodeVM owns a distinct Pen instance. PenEditor's
+        // broadcast pipeline copies property VALUES across selected
+        // shapes; this keeps the underlying Pen identities separate so
+        // edits to one shape never leak to another via a shared ref.
+        this._set_property_value_by_name('Stroke', new Pen(STROKE_BRUSH, 1.5));
         // Group back-ref. undefined ≡ "top-level node" (not inside any
         // GroupVM). View-invisible structural metadata, so plain field.
         this.Parent = undefined;
@@ -80,6 +97,8 @@ export class ShapeNodeVM extends Model
     set IsSelected(v) { this._set_property_value_by_name('IsSelected', v); }
     get FillBrush()   { return this._get_property_value_by_name('FillBrush'); }
     set FillBrush(v)  { this._set_property_value_by_name('FillBrush', v); }
+    get Stroke()      { return this._get_property_value_by_name('Stroke'); }
+    set Stroke(v)     { this._set_property_value_by_name('Stroke', v); }
     get LabelText()   { return this._get_property_value_by_name('LabelText'); }
     set LabelText(v)  { this._set_property_value_by_name('LabelText', v); }
 }
@@ -530,6 +549,18 @@ export class DiagramVM extends Model
         // adorner re-arranges on PropertyChanged of the whole DP, no
         // per-element notification needed.
         DiagramVM.AlignmentGuidesKey = Model.RegisterProperty(DiagramVM, 'AlignmentGuides', [], MetaData.None);
+        // FormatFill / FormatStroke — bound by the right-side
+        // ShapeFormatControl. Selection-change seeds them from the
+        // first selected leaf; user edits on them are broadcast to
+        // every selected leaf via _broadcastFill /
+        // _broadcastStrokeProp. FormatStroke holds an EDITOR-OWNED Pen
+        // cloned from the first leaf's Stroke — broadcasting copies
+        // its property values onto each selected leaf's own Pen,
+        // preserving per-shape Pen identity (so a later selection of
+        // one shape doesn't accidentally edit the others through a
+        // shared ref).
+        DiagramVM.FormatFillKey   = Model.RegisterProperty(DiagramVM, 'FormatFill',   undefined, MetaData.None);
+        DiagramVM.FormatStrokeKey = Model.RegisterProperty(DiagramVM, 'FormatStroke', undefined, MetaData.None);
     }
 
     constructor(storage) {
@@ -593,6 +624,16 @@ export class DiagramVM extends Model
         // installs / detaches as items come and go.
         this._selectionWatchers = new Map();
         this.Nodes.Subscribe(change => this._handleNodesChange(change));
+
+        // ShapeFormatControl wiring. Seed-from-selection writes are
+        // guarded by _seedingFormat so the broadcast listeners below
+        // bail without echoing the seed back onto the selected shapes
+        // (which would override every other selected shape's brush
+        // with the first one's on every click).
+        this._seedingFormat = false;
+        this._formatStrokeListeners = [];
+        this._add_property_changed_listener_by_name('FormatFill',   () => this._broadcastFill());
+        this._add_property_changed_listener_by_name('FormatStroke', () => this._onFormatStrokeChanged());
     }
 
     get Nodes()                       { return this._get_property_value_by_name('Nodes'); }
@@ -617,6 +658,10 @@ export class DiagramVM extends Model
     get SelectionCount()              { return this._get_property_value_by_name('SelectionCount'); }
     get AlignmentGuides()             { return this._get_property_value_by_name('AlignmentGuides'); }
     set AlignmentGuides(value)        { this._set_property_value_by_name('AlignmentGuides', value); }
+    get FormatFill()                  { return this._get_property_value_by_name('FormatFill'); }
+    set FormatFill(v)                 { this._set_property_value_by_name('FormatFill', v); }
+    get FormatStroke()                { return this._get_property_value_by_name('FormatStroke'); }
+    set FormatStroke(v)               { this._set_property_value_by_name('FormatStroke', v); }
 
     CreateNode(kind, x, y) {
         const Cls = KIND_TO_CLASS[kind];
@@ -839,6 +884,7 @@ export class DiagramVM extends Model
         }
         this._raiseAllCanExecute();
         this._updateSelectionBounds();
+        this._seedFormatFromSelection();
     }
 
     _watchSelection(node) {
@@ -863,6 +909,7 @@ export class DiagramVM extends Model
         const onSelected = () => {
             this._raiseAllCanExecute();
             this._updateSelectionBounds();
+            this._seedFormatFromSelection();
         };
         const onGeometry = () => {
             if (node.IsSelected) this._updateSelectionBounds();
@@ -921,6 +968,141 @@ export class DiagramVM extends Model
         this._set_property_value_by_name('SelectionWidth',  maxX - minX);
         this._set_property_value_by_name('SelectionHeight', maxY - minY);
         this._set_property_value_by_name('SelectionCount',  count);
+    }
+
+    // ── ShapeFormatControl: seed + broadcast ──────────────────────────
+    //
+    // The right-side ShapeFormatControl edits FormatFill (a Brush) and
+    // FormatStroke (a Pen the editor mutates in place). Two flows:
+    //
+    //   * Seed: selection flips → FormatFill = first leaf's FillBrush;
+    //     FormatStroke = a freshly-cloned Pen carrying the first leaf's
+    //     Stroke values. Done under _seedingFormat so the broadcast
+    //     listeners don't re-write every selected shape with the first
+    //     one's values just because the selection happens to change.
+    //
+    //   * Broadcast:
+    //       - FormatFill DP change → write the new brush ref onto every
+    //         selected leaf's FillBrush. Fine to share refs across leaves:
+    //         FillEditor swaps the brush wholesale on each edit, so a
+    //         later edit of one leaf produces a NEW brush — the others
+    //         keep the old one.
+    //       - FormatStroke per-property change (PenEditor mutates the
+    //         pen in place) → copy that property's value onto every
+    //         selected leaf's own Stroke pen. Each leaf keeps its OWN
+    //         Pen instance, so editing a single shape later (after
+    //         multi-select) won't leak through a shared ref.
+
+    _formatLeaves() {
+        // GroupVMs don't carry FillBrush/Stroke; treat a selected
+        // group as "every leaf transitively inside". Plain shape
+        // selections pass straight through. Dedupe via Set so a
+        // multi-group selection of nested groups doesn't double-
+        // broadcast onto shared leaves.
+        const seen = new Set();
+        const out = [];
+        const add = (n) => { if (!seen.has(n)) { seen.add(n); out.push(n); } };
+        const items = this.Nodes;
+        for (let i = 0; i < items.Count; i++) {
+            const n = items.Get(i);
+            if (!n.IsSelected) continue;
+            if (n instanceof GroupVM) {
+                for (const leaf of n.EnumerateLeaves()) add(leaf);
+            } else {
+                add(n);
+            }
+        }
+        return out;
+    }
+
+    _seedFormatFromSelection() {
+        const leaves = this._formatLeaves();
+        this._seedingFormat = true;
+        try {
+            if (leaves.length === 0) {
+                this._set_property_value_by_name('FormatFill',   undefined);
+                this._set_property_value_by_name('FormatStroke', undefined);
+                return;
+            }
+            const first = leaves[0];
+            this._set_property_value_by_name('FormatFill', first.FillBrush);
+            // Clone the pen for the editor — keeps per-shape Pen
+            // identity intact (see class doc above). The clone's
+            // property changes feed _broadcastStrokeProp.
+            this._set_property_value_by_name('FormatStroke', clonePen(first.Stroke));
+        } finally {
+            this._seedingFormat = false;
+        }
+    }
+
+    _broadcastFill() {
+        if (this._seedingFormat) return;
+        const brush = this.FormatFill;
+        for (const leaf of this._formatLeaves()) leaf.FillBrush = brush;
+    }
+
+    _onFormatStrokeChanged() {
+        // Detach from the prior pen first; re-attach to the new one.
+        // Fires once per FormatStroke DP write — seed (clone) or
+        // wholesale replacement by an external caller both go through
+        // here.
+        this._detachFormatStrokeListeners();
+        const pen = this.FormatStroke;
+        if (pen !== undefined) this._attachFormatStrokeListeners(pen);
+        // The replacement itself is a kind of broadcast — copy every
+        // property of the new pen onto each selected leaf's pen. Seed-
+        // driven replacements are gated by _seedingFormat so we don't
+        // override every other selected leaf with the first one's
+        // values on each click.
+        if (!this._seedingFormat) this._broadcastWholePen();
+    }
+
+    _attachFormatStrokeListeners(pen) {
+        const watch = (prop) => {
+            const h = () => this._broadcastStrokeProp(prop);
+            pen._add_property_changed_listener_by_name(prop, h);
+            this._formatStrokeListeners.push({ pen, prop, h });
+        };
+        watch('Brush');
+        watch('Thickness');
+        watch('DashStyle');
+        watch('LineCap');
+        watch('LineJoin');
+        watch('MiterLimit');
+    }
+
+    _detachFormatStrokeListeners() {
+        for (const e of this._formatStrokeListeners) {
+            e.pen._remove_property_changed_listener_by_name(e.prop, e.h);
+        }
+        this._formatStrokeListeners = [];
+    }
+
+    _broadcastStrokeProp(prop) {
+        if (this._seedingFormat) return;
+        const pen = this.FormatStroke;
+        if (pen === undefined) return;
+        const value = pen[prop];
+        for (const leaf of this._formatLeaves()) {
+            const target = leaf.Stroke;
+            if (target === undefined) continue;
+            target[prop] = value;
+        }
+    }
+
+    _broadcastWholePen() {
+        const pen = this.FormatStroke;
+        if (pen === undefined) return;
+        for (const leaf of this._formatLeaves()) {
+            const target = leaf.Stroke;
+            if (target === undefined) continue;
+            target.Brush      = pen.Brush;
+            target.Thickness  = pen.Thickness;
+            target.DashStyle  = pen.DashStyle;
+            target.LineCap    = pen.LineCap;
+            target.LineJoin   = pen.LineJoin;
+            target.MiterLimit = pen.MiterLimit;
+        }
     }
 
     _raiseAllCanExecute() {
@@ -1149,6 +1331,19 @@ export class DiagramVM extends Model
     EndSelectionResize() {
         this._resizeSnapshot = undefined;
     }
+}
+
+// Clone a Pen so the editor's working pen is decoupled from any
+// shape's Pen — broadcasting copies values, never references.
+// undefined input maps to undefined (no-op pen).
+function clonePen(pen) {
+    if (pen === undefined) return undefined;
+    const out = new Pen(pen.Brush, pen.Thickness);
+    out.DashStyle  = pen.DashStyle;
+    out.LineCap    = pen.LineCap;
+    out.LineJoin   = pen.LineJoin;
+    out.MiterLimit = pen.MiterLimit;
+    return out;
 }
 
 // Backwards-compat re-export — diagram.mjs imports NodeVM as the type

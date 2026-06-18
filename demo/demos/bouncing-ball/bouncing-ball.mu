@@ -9,6 +9,8 @@ import BouncingBallVM from "./bouncing-ball-vm.mjs"
 
 resources BouncingBallDemo {
 
+    Pen x:key="BallPen" [Brush=#f59e0b, Thickness=1.5]
+
     DataTemplate x:key="BouncingBallTemplate" [DataType=BouncingBallVM] {
         Border x:root [Background=@InverseSurface,
                        BorderBrush=@Outline,
@@ -17,9 +19,8 @@ resources BouncingBallDemo {
             Canvas x:name="playArea" {
                 Ellipse [Canvas.Left=$X, Canvas.Top=$Y,
                          Width=$Diameter, Height=$Diameter,
-                         Background=#fbbf24,
-                         Stroke=#f59e0b,
-                         StrokeThickness=1.5]
+                         Fill=#fbbf24,
+                         Stroke=@BallPen]
             }
         }
     }

@@ -1,15 +1,13 @@
 import {
     Point,
-    Size,
-    Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
 import {
     CubicBezierSegment,
     PathFigure,
     PathGeometry,
-    Pen,
 } from '../../visual-engine/index.js';
+import { Shape } from './shape.js';
 
 // M3 Heart — classic two-lobe-top + pointed-bottom silhouette. Path is
 // two cubic Beziers (one per lobe) and the meeting in the centre top,
@@ -21,18 +19,15 @@ import {
 // centre at y ≈ 0.25·H, point at (W/2, H).
 //
 // Stroke insets by half-thickness.
-export class Heart extends Visual
+export class Heart extends Shape
 {
-
-    protected override MeasureOverride(_availableSize: Size): Size { return Size.Zero; }
-    protected override ArrangeOverride(finalSize: Size): Size { return finalSize; }
-
     protected override RenderOverride(dc: DrawingContext): void
     {
         const size = this.RenderSize;
         if (size.Width <= 0 || size.Height <= 0) return;
 
-        const t    = this.StrokeThickness;
+        const stroke = this.Stroke;
+        const t      = stroke?.Thickness ?? 0;
         const half = t / 2;
         const w    = Math.max(0, size.Width  - t);
         const h    = Math.max(0, size.Height - t);
@@ -64,10 +59,6 @@ export class Heart extends Visual
             new CubicBezierSegment(ctrl1RT, ctrl2RT, valley), // lobeR → valley
         ], true);
 
-        const pen = this.Stroke !== undefined && t > 0
-            ? new Pen(this.Stroke, t)
-            : undefined;
-
-        dc.DrawGeometry(this.Background, pen, new PathGeometry([figure]));
+        dc.DrawGeometry(this.Fill, stroke, new PathGeometry([figure]));
     }
 }

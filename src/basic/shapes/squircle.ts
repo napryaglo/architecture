@@ -2,16 +2,14 @@ import {
     MetaData,
     Model,
     Point,
-    Size,
-    Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
 import {
     CubicBezierSegment,
     PathFigure,
     PathGeometry,
-    Pen,
 } from '../../visual-engine/index.js';
+import { Shape } from './shape.js';
 
 // M3 Squircle — superellipse `|2x/W|^n + |2y/H|^n = 1` rendered as a
 // closed Bezier-approximated curve. The exponent n is exposed as the
@@ -34,7 +32,7 @@ import {
 // which the M3 spec doesn't care about.
 //
 // Stroke insets by half-thickness (Border / Ellipse convention).
-export class Squircle extends Visual
+export class Squircle extends Shape
 {
     // Superellipse exponent. M3 named "Squircle" is n = 4.
     public static readonly SupernessKey       = Model.RegisterProperty<number>(           Squircle, 'Superness',       4,         MetaData.Render);
@@ -42,32 +40,20 @@ export class Squircle extends Visual
     public get Superness(): number { return this.get_property_value(Squircle.SupernessKey); }
     public set Superness(v: number) { this.set_property_value(Squircle.SupernessKey, v); }
 
-    protected override MeasureOverride(_availableSize: Size): Size
-    {
-        return Size.Zero;
-    }
-
-    protected override ArrangeOverride(finalSize: Size): Size
-    {
-        return finalSize;
-    }
-
     protected override RenderOverride(dc: DrawingContext): void
     {
         const size = this.RenderSize;
         if (size.Width <= 0 || size.Height <= 0) return;
 
-        const t    = this.StrokeThickness;
+        const stroke = this.Stroke;
+        const t      = stroke?.Thickness ?? 0;
         const half = t / 2;
         const w    = Math.max(0, size.Width  - t);
         const h    = Math.max(0, size.Height - t);
 
         const figure = buildSquircleFigure(half, half, w, h, this.Superness);
-        const pen    = this.Stroke !== undefined && t > 0
-            ? new Pen(this.Stroke, t)
-            : undefined;
 
-        dc.DrawGeometry(this.Background, pen, new PathGeometry([figure]));
+        dc.DrawGeometry(this.Fill, stroke, new PathGeometry([figure]));
     }
 }
 

@@ -24,7 +24,6 @@ import { Canvas } from '@visualisation-sub/mural/basic';
 import {
     Color,
     FontMetricsMeasurer,
-    loadGoogleFontInto,
     SolidColorBrush,
     textOnPath,
 } from '@visualisation-sub/mural/visual-engine';
@@ -35,8 +34,13 @@ import { GeometryView } from './geometry-view.mjs';
 import { getPath } from './paths.mjs';
 import { register } from '../../platform/registry.mjs';
 
-// Family the demo asks for. Modern variable face with broad coverage.
-const FONT_FAMILY = 'Roboto Slab';
+// Font we ship the demo against. Direct TTF fetch from jsdelivr —
+// `loadGoogleFontInto` routes through the CSS-API + UA-spoof path
+// that's started returning WOFF2 for some families, which opentype.js
+// can't parse. jsdelivr serves the opentype.js project's own test TTF
+// unmodified, which sidesteps the format gymnastics entirely.
+const FONT_FAMILY = 'Roboto';
+const FONT_URL    = 'https://cdn.jsdelivr.net/gh/opentypejs/opentype.js@master/test/fonts/Roboto-Black.ttf';
 
 // Module-level singleton — load once, reuse across re-activations.
 const fontMeasurer = new FontMetricsMeasurer();
@@ -44,8 +48,13 @@ let   fontReadyPromise;
 
 function ensureFontLoaded(vm) {
     if (fontReadyPromise !== undefined) return fontReadyPromise;
-    fontReadyPromise = loadGoogleFontInto(fontMeasurer, FONT_FAMILY, { weights: [400, 700] })
-        .then(() => {
+    fontReadyPromise = fetch(FONT_URL)
+        .then(r => {
+            if (!r.ok) throw new Error(`Font fetch ${FONT_URL} returned ${r.status}`);
+            return r.arrayBuffer();
+        })
+        .then(buf => {
+            fontMeasurer.LoadFont(FONT_FAMILY, buf, 'normal', 'normal');
             vm.IsFontLoaded = true;
             vm.Status = `${FONT_FAMILY} loaded — pipeline live.`;
         })
@@ -65,14 +74,26 @@ function attachBehaviors(view, vm) {
 
     // Two layered visuals — path first (under), glyphs second (over).
     const pathView  = new GeometryView();
-    pathView.Stroke      = new SolidColorBrush(Color.FromHex('#94a3b8'));
+    pathView.Stroke      = new SolidColorBrush(Color.FromHex(vm.PathColorHex));
     pathView.StrokeWidth = 1.5;
 
     const glyphView = new GeometryView();
-    glyphView.Fill = new SolidColorBrush(Color.FromHex('#0f172a'));
+    glyphView.Fill = new SolidColorBrush(Color.FromHex(vm.GlyphColorHex));
 
     canvas.AddChild(pathView);
     canvas.AddChild(glyphView);
+
+    // Re-issue the brush whenever the VM's hex changes — the GeometryView
+    // listens for Stroke / Fill DP writes through MetaData.Render, so
+    // dropping in a fresh brush instance re-paints the canvas.
+    const updatePathColor = () => {
+        try { pathView.Stroke = new SolidColorBrush(Color.FromHex(vm.PathColorHex)); }
+        catch { /* partial hex during typing — leave the prior brush in place */ }
+    };
+    const updateGlyphColor = () => {
+        try { glyphView.Fill = new SolidColorBrush(Color.FromHex(vm.GlyphColorHex)); }
+        catch { /* same */ }
+    };
 
     const updatePath = () => {
         pathView.Geometry = vm.ShowPath ? getPath(vm.PathKey) : undefined;
@@ -92,6 +113,7 @@ function attachBehaviors(view, vm) {
                 measurer: fontMeasurer,
                 fontFamily: FONT_FAMILY,
                 fontSize: vm.FontSize,
+                sideOffset: vm.SideOffset,
             });
         } catch (err) {
             console.error('textOnPath threw:', err);
@@ -105,15 +127,18 @@ function attachBehaviors(view, vm) {
     // rather than a blanket OnPropertyChanged override (per CLAUDE.md
     // memory rule about VM purity; bootstrap reads DPs as a consumer).
     const handlers = {
-        Text:         updateGlyphs,
-        PathKey:      updateBoth,
-        FontSize:     updateGlyphs,
-        IsFontLoaded: updateGlyphs,
-        ShowPath:     updatePath,
-        ShowGlyphs:   updateGlyphs,
+        Text:          updateGlyphs,
+        PathKey:       updateBoth,
+        FontSize:      updateGlyphs,
+        SideOffset:    updateGlyphs,
+        IsFontLoaded:  updateGlyphs,
+        ShowPath:      updatePath,
+        ShowGlyphs:    updateGlyphs,
+        PathColorHex:  updatePathColor,
+        GlyphColorHex: updateGlyphColor,
     };
     for (const name of Object.keys(handlers)) {
-        vm.AddPropertyChangedListener(name, handlers[name]);
+        vm._add_property_changed_listener_by_name(name, handlers[name]);
     }
 
     // Initial paint.
@@ -121,7 +146,7 @@ function attachBehaviors(view, vm) {
 
     return function detach() {
         for (const name of Object.keys(handlers)) {
-            vm.RemovePropertyChangedListener(name, handlers[name]);
+            vm._remove_property_changed_listener_by_name(name, handlers[name]);
         }
         canvas.RemoveChild(pathView);
         canvas.RemoveChild(glyphView);
@@ -133,7 +158,7 @@ let vmInstance;
 
 register({
     id:       'text-on-path',
-    group:    'Text',
+    group:    'Demos',
     title:    'Text on a path',
     subtitle: 'Glyphs lifted to PathGeometry, arclength-sampled along a curve.',
     factory: () => {

@@ -2,11 +2,10 @@ import {
     MetaData,
     Model,
     Point,
-    Size,
-    Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
-import { PathGeometry, Pen } from '../../visual-engine/index.js';
+import { PathGeometry } from '../../visual-engine/index.js';
+import { Shape } from './shape.js';
 import { buildRoundedPolygon } from './polygon-helpers.js';
 
 // M3 Clamshell — flat-top hexagonal silhouette. Six vertices placed at
@@ -19,22 +18,20 @@ import { buildRoundedPolygon } from './polygon-helpers.js';
 // incident edge.
 //
 // Stroke insets by half-thickness.
-export class Clamshell extends Visual
+export class Clamshell extends Shape
 {
     public static readonly CornerRadiusKey    = Model.RegisterProperty<number>(           Clamshell, 'CornerRadius',    0,         MetaData.Render);
 
     public get CornerRadius(): number { return this.get_property_value(Clamshell.CornerRadiusKey); }
     public set CornerRadius(v: number) { this.set_property_value(Clamshell.CornerRadiusKey, v); }
 
-    protected override MeasureOverride(_availableSize: Size): Size { return Size.Zero; }
-    protected override ArrangeOverride(finalSize: Size): Size { return finalSize; }
-
     protected override RenderOverride(dc: DrawingContext): void
     {
         const size = this.RenderSize;
         if (size.Width <= 0 || size.Height <= 0) return;
 
-        const t    = this.StrokeThickness;
+        const stroke = this.Stroke;
+        const t      = stroke?.Thickness ?? 0;
         const half = t / 2;
         const w    = Math.max(0, size.Width  - t);
         const h    = Math.max(0, size.Height - t);
@@ -58,11 +55,6 @@ export class Clamshell extends Visual
 
         const figure = buildRoundedPolygon(verts, r);
 
-        const pen = this.Stroke !== undefined && t > 0
-            ? new Pen(this.Stroke, t)
-            : undefined;
-
-        dc.DrawGeometry(this.Background, pen, new PathGeometry([figure]));
+        dc.DrawGeometry(this.Fill, stroke, new PathGeometry([figure]));
     }
 }
-

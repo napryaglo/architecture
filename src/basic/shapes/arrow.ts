@@ -2,17 +2,15 @@ import {
     MetaData,
     Model,
     Point,
-    Size,
-    Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
 import {
     LineSegment,
     PathFigure,
     PathGeometry,
-    Pen,
     QuadraticBezierSegment,
 } from '../../visual-engine/index.js';
+import { Shape } from './shape.js';
 
 // M3 Arrow — point-up shield silhouette. Same vertex skeleton as
 // `Triangle` (top, bottom-left, bottom-right) but the bottom edge bows
@@ -24,7 +22,7 @@ import {
 // endpoints attach to the rounded BL / BR offsets.
 //
 // Stroke insets by half-thickness.
-export class Arrow extends Visual
+export class Arrow extends Shape
 {
     public static readonly CornerRadiusKey    = Model.RegisterProperty<number>(           Arrow, 'CornerRadius',    0,         MetaData.Render);
     // 0 → straight base (degenerates to Triangle), 1 → base touches top.
@@ -36,15 +34,13 @@ export class Arrow extends Visual
     public get BowDepth(): number { return this.get_property_value(Arrow.BowDepthKey); }
     public set BowDepth(v: number) { this.set_property_value(Arrow.BowDepthKey, v); }
 
-    protected override MeasureOverride(_availableSize: Size): Size { return Size.Zero; }
-    protected override ArrangeOverride(finalSize: Size): Size { return finalSize; }
-
     protected override RenderOverride(dc: DrawingContext): void
     {
         const size = this.RenderSize;
         if (size.Width <= 0 || size.Height <= 0) return;
 
-        const t    = this.StrokeThickness;
+        const stroke = this.Stroke;
+        const t      = stroke?.Thickness ?? 0;
         const half = t / 2;
         const w    = Math.max(0, size.Width  - t);
         const h    = Math.max(0, size.Height - t);
@@ -100,11 +96,7 @@ export class Arrow extends Visual
 
         const figure = new PathFigure(startPoint, segments, true);
 
-        const pen = this.Stroke !== undefined && t > 0
-            ? new Pen(this.Stroke, t)
-            : undefined;
-
-        dc.DrawGeometry(this.Background, pen, new PathGeometry([figure]));
+        dc.DrawGeometry(this.Fill, stroke, new PathGeometry([figure]));
     }
 }
 

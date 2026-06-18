@@ -49,6 +49,13 @@ export interface TextOnPathOptions
     fontWeight?: string;
     fontStyle?:  string;
     startOffset?: number;
+    // Perpendicular shift of the glyph baseline away from the path, in
+    // the same units the path uses. Positive lifts the baseline toward
+    // the natural "up" side of the run (with the glyph body already
+    // extending in that direction in screen coords, positive values push
+    // the whole glyph further off the curve). Negative drops it the
+    // other way — text rides under the curve, still right-side-up.
+    sideOffset?: number;
     flattenTolerance?: number;
 }
 
@@ -69,6 +76,7 @@ export function textOnPath(opts: TextOnPathOptions): PathGeometry
 
     const totalLen = samples[samples.length - 1]!.s;
     const scale = opts.fontSize / font.unitsPerEm;
+    const sideOffset = opts.sideOffset ?? 0;
 
     const figures: PathFigure[] = [];
     let cursor = opts.startOffset ?? 0;
@@ -91,13 +99,19 @@ export function textOnPath(opts: TextOnPathOptions): PathGeometry
         const samp = sampleAt(samples, anchor);
         // The glyph's natural baseline is along +X; rotate so the +X
         // direction aligns with the local tangent, then translate the
-        // glyph's center (advance/2, 0) to land at samp.point.
+        // glyph's center (advance/2, 0) to land at samp.point. With a
+        // non-zero sideOffset, push the translation perpendicular to
+        // the tangent. In y-down screen coords the natural glyph body
+        // sits in the (sin, -cos) direction relative to the tangent
+        // (cos, sin); positive sideOffset extends in that same direction.
         const cos = Math.cos(samp.angle);
         const sin = Math.sin(samp.angle);
+        const tx = samp.point.X + sideOffset * sin;
+        const ty = samp.point.Y - sideOffset * cos;
         const lowering = glyphToFigures(glyph, scale, 0, 0);
         for (const f of lowering.figures)
         {
-            figures.push(rotateAndTranslateFigure(f, cos, sin, -advance / 2, 0, samp.point));
+            figures.push(rotateAndTranslateFigure(f, cos, sin, -advance / 2, 0, new Point(tx, ty)));
         }
         cursor += advance;
         prev = glyph;

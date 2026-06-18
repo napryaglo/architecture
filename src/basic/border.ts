@@ -106,6 +106,22 @@ export class Border extends Single
     public static readonly PaddingKey = Model.RegisterProperty<Thickness>(
         Border, 'Padding', Thickness.Zero,
         MetaData.Measure | MetaData.Arrange);
+    // Optional escape hatch — when set, fully replaces the synthesized
+    // stroke pen (BorderBrush + BorderThickness → new Pen(...)) on the
+    // uniform-thickness render path. Lets consumers reach the Pen knobs
+    // Border doesn't expose directly: DashStyle, LineCap, LineJoin,
+    // MiterLimit. Stroke brush + width come from the supplied Pen;
+    // BorderBrush is ignored in that case, and the layout-rect inset
+    // uses Pen.Thickness so the stroke sits inside its own width.
+    // BorderThickness still drives MEASURE / ARRANGE (the child slot
+    // reservation) — consumers typically set BorderThickness to a value
+    // matching Pen.Thickness, but they're free to diverge if they want
+    // the stroke to overlap padding etc. Ignored for non-uniform
+    // BorderThickness (the four-rect frame path doesn't lower to a
+    // single stroked rect, so there's no Pen to override).
+    public static readonly BorderPenKey = Model.RegisterProperty<Pen | undefined>(
+        Border, 'BorderPen', undefined,
+        MetaData.Render);
 
     constructor(child?: Visual)
     {
@@ -124,6 +140,9 @@ export class Border extends Single
 
     public get Padding(): Thickness { return this.get_property_value(Border.PaddingKey); }
     public set Padding(value: Thickness) { this.set_property_value(Border.PaddingKey, value); }
+
+    public get BorderPen(): Pen | undefined { return this.get_property_value(Border.BorderPenKey); }
+    public set BorderPen(value: Pen | undefined) { this.set_property_value(Border.BorderPenKey, value); }
 
     protected override MeasureOverride(availableSize: Size): Size
     {
@@ -219,16 +238,31 @@ export class Border extends Single
 
         // Stroked border. Uniform thickness uses a single stroked rect
         // (rounded or square); asymmetric thickness uses four filled
-        // rects forming the frame.
+        // rects forming the frame (the four-rect path doesn't lower to
+        // a single stroked rect, so BorderPen has no role there).
+        //
+        // BorderPen, when set, wins over the synthesized
+        // `new Pen(BorderBrush, BorderThickness.Top)` Pen — its Brush /
+        // Thickness / DashStyle / LineCap / LineJoin / MiterLimit all
+        // come through unchanged. Sticky details:
+        //   * Stroke thickness for the inset math comes from the
+        //     SOURCE OF TRUTH that's drawing the stroke (Pen.Thickness
+        //     when BorderPen is set, BorderThickness.Top otherwise) so
+        //     the stroke sits inside its own width.
+        //   * BorderBrush is ignored when BorderPen is set, even if
+        //     BorderPen.Brush is undefined — that lets a consumer
+        //     intentionally suppress a stroke by passing a Pen with no
+        //     Brush, instead of clearing BorderBrush.
         const bt = this.BorderThickness;
-        if (this.BorderBrush === undefined) return;
+        const customPen = this.BorderPen;
         const isUniform = bt.Left === bt.Top && bt.Top === bt.Right && bt.Right === bt.Bottom;
+        if (customPen === undefined && this.BorderBrush === undefined) return;
 
         if (isUniform)
         {
-            const thickness = bt.Top;
-            if (thickness <= 0) return;
-            const pen = new Pen(this.BorderBrush, thickness);
+            const pen = customPen ?? new Pen(this.BorderBrush, bt.Top);
+            const thickness = pen.Thickness;
+            if (thickness <= 0 || pen.Brush === undefined) return;
             const half = thickness / 2;
             const innerRect = new Rect(
                 half, half,

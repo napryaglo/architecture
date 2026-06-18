@@ -3,7 +3,6 @@ import {
     Model,
     Point,
     Size,
-    Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
 import {
@@ -11,9 +10,9 @@ import {
     LineSegment,
     PathFigure,
     PathGeometry,
-    Pen,
     SweepDirection,
 } from '../../visual-engine/index.js';
+import { Shape } from './shape.js';
 
 // M3 Ghost-ish — pill silhouette with a scalloped bottom edge. The top
 // half is a half-circle of radius W/2; the sides drop vertically; the
@@ -27,22 +26,20 @@ import {
 //
 // Layout: works best when H ≥ W/2 + (W/(2·N)). Smaller H compresses the
 // top arc and may flatten the silhouette.
-export class Ghostish extends Visual
+export class Ghostish extends Shape
 {
     public static readonly ScallopCountKey    = Model.RegisterProperty<number>(           Ghostish, 'ScallopCount',    3,         MetaData.Render);
 
     public get ScallopCount(): number { return this.get_property_value(Ghostish.ScallopCountKey); }
     public set ScallopCount(v: number) { this.set_property_value(Ghostish.ScallopCountKey, v); }
 
-    protected override MeasureOverride(_availableSize: Size): Size { return Size.Zero; }
-    protected override ArrangeOverride(finalSize: Size): Size { return finalSize; }
-
     protected override RenderOverride(dc: DrawingContext): void
     {
         const size = this.RenderSize;
         if (size.Width <= 0 || size.Height <= 0) return;
 
-        const t    = this.StrokeThickness;
+        const stroke = this.Stroke;
+        const t      = stroke?.Thickness ?? 0;
         const half = t / 2;
         const w    = Math.max(0, size.Width  - t);
         const h    = Math.max(0, size.Height - t);
@@ -80,10 +77,6 @@ export class Ghostish extends Visual
 
         const figure = new PathFigure(new Point(xL, topY), segs, true);
 
-        const pen = this.Stroke !== undefined && t > 0
-            ? new Pen(this.Stroke, t)
-            : undefined;
-
-        dc.DrawGeometry(this.Background, pen, new PathGeometry([figure]));
+        dc.DrawGeometry(this.Fill, stroke, new PathGeometry([figure]));
     }
 }

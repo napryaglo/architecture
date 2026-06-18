@@ -1,7 +1,6 @@
 import {
     Point,
     Size,
-    Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
 import {
@@ -9,9 +8,9 @@ import {
     LineSegment,
     PathFigure,
     PathGeometry,
-    Pen,
     SweepDirection,
 } from '../../visual-engine/index.js';
+import { Shape } from './shape.js';
 
 // M3 Arch — doorway silhouette. The top of the layout rect is a
 // half-ellipse; the bottom is square. Arch height (the vertical span the
@@ -20,18 +19,15 @@ import {
 // arch flattens into a wide half-ellipse that fills the full height.
 //
 // Stroke insets by half-thickness (Border / Ellipse convention).
-export class Arch extends Visual
+export class Arch extends Shape
 {
-
-    protected override MeasureOverride(_availableSize: Size): Size { return Size.Zero; }
-    protected override ArrangeOverride(finalSize: Size): Size { return finalSize; }
-
     protected override RenderOverride(dc: DrawingContext): void
     {
         const size = this.RenderSize;
         if (size.Width <= 0 || size.Height <= 0) return;
 
-        const t    = this.StrokeThickness;
+        const stroke = this.Stroke;
+        const t      = stroke?.Thickness ?? 0;
         const half = t / 2;
         const w    = Math.max(0, size.Width  - t);
         const h    = Math.max(0, size.Height - t);
@@ -56,10 +52,6 @@ export class Arch extends Visual
             ],
             true);
 
-        const pen = this.Stroke !== undefined && t > 0
-            ? new Pen(this.Stroke, t)
-            : undefined;
-
-        dc.DrawGeometry(this.Background, pen, new PathGeometry([figure]));
+        dc.DrawGeometry(this.Fill, stroke, new PathGeometry([figure]));
     }
 }

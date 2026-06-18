@@ -16,6 +16,8 @@ export {
     LinearGradientBrush,
     RadialGradientBrush,
     ImageBrush,
+    PatternBrush,
+    PatternKind,
     GradientStop,
     GradientSpreadMethod,
     AlignmentX,

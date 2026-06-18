@@ -1,0 +1,95 @@
+// VM for the pen-editor demo. A single Pen DP the editor edits in
+// place; the .mu file binds the preview Shape's Stroke to the same Pen
+// instance so user gestures repaint the preview live.
+//
+// We also expose the Pen's individual properties via flat DPs so the
+// status read-out at the bottom of the demo can show the live values
+// without binding to a Pen-typed property tree. A property-change
+// listener installed on the Pen rebuilds these mirror DPs on every
+// mutation.
+
+import { MetaData, Model } from '@visualisation-sub/mural/runtime';
+import {
+    Color,
+    Pen,
+    SolidColorBrush,
+} from '@visualisation-sub/mural/visual-engine';
+
+export class PenEditorDemoVM extends Model
+{
+    static {
+        Model.RegisterProperty(PenEditorDemoVM, 'Pen',          undefined, MetaData.None);
+        Model.RegisterProperty(PenEditorDemoVM, 'BrushSummary', '',        MetaData.None);
+        Model.RegisterProperty(PenEditorDemoVM, 'ThicknessReadout', '',    MetaData.None);
+        Model.RegisterProperty(PenEditorDemoVM, 'DashReadout',  '',        MetaData.None);
+        Model.RegisterProperty(PenEditorDemoVM, 'CapReadout',   '',        MetaData.None);
+        Model.RegisterProperty(PenEditorDemoVM, 'JoinReadout',  '',        MetaData.None);
+        Model.RegisterProperty(PenEditorDemoVM, 'MiterReadout', '',        MetaData.None);
+    }
+
+    constructor() {
+        super();
+        const pen = new Pen(new SolidColorBrush(Color.FromHex('#f59e0b')), 4);
+        this._set_property_value_by_name('Pen', pen);
+        this._installPenWatchers(pen);
+        this._refreshReadouts();
+    }
+
+    get Pen()             { return this._get_property_value_by_name('Pen'); }
+    get BrushSummary()    { return this._get_property_value_by_name('BrushSummary'); }
+    get ThicknessReadout(){ return this._get_property_value_by_name('ThicknessReadout'); }
+    get DashReadout()     { return this._get_property_value_by_name('DashReadout'); }
+    get CapReadout()      { return this._get_property_value_by_name('CapReadout'); }
+    get JoinReadout()     { return this._get_property_value_by_name('JoinReadout'); }
+    get MiterReadout()    { return this._get_property_value_by_name('MiterReadout'); }
+
+    // Subscribe to every property on the bound Pen so the status
+    // strings track live edits. Plain field for the unsubscribe thunks
+    // — view-invisible state, fine to live off the DP surface.
+    _installPenWatchers(pen) {
+        const refresh = () => this._refreshReadouts();
+        for (const prop of ['Brush', 'Thickness', 'DashStyle', 'LineCap', 'LineJoin', 'MiterLimit']) {
+            pen._add_property_changed_listener_by_name(prop, refresh);
+        }
+    }
+
+    _refreshReadouts() {
+        const pen = this.Pen;
+        if (pen === undefined) return;
+        const set = (name, value) => this._set_property_value_by_name(name, value);
+        set('BrushSummary',    describeBrush(pen.Brush));
+        set('ThicknessReadout', `Thickness ${formatNum(pen.Thickness)} px`);
+        set('DashReadout',      `Dash ${describeDash(pen.DashStyle)}`);
+        set('CapReadout',       `Cap ${pen.LineCap}`);
+        set('JoinReadout',      `Join ${pen.LineJoin}`);
+        set('MiterReadout',     `Miter limit ${formatNum(pen.MiterLimit)}`);
+    }
+}
+
+function formatNum(value) {
+    if (Math.abs(value - Math.round(value)) < 1e-6) return String(Math.round(value));
+    return value.toFixed(1);
+}
+
+function describeBrush(brush) {
+    if (brush === undefined) return 'Brush: (none)';
+    const name = brush.constructor?.name ?? 'Brush';
+    if (name === 'SolidColorBrush' && brush.Color?.ToHex) return `Brush: Solid ${brush.Color.ToHex()}`;
+    if (name === 'LinearGradientBrush')                  return `Brush: Linear (${brush.GradientStops?.length ?? 0} stops)`;
+    if (name === 'RadialGradientBrush')                  return `Brush: Radial (${brush.GradientStops?.length ?? 0} stops)`;
+    if (name === 'PatternBrush')                         return `Brush: Pattern ${brush.Kind}`;
+    return `Brush: ${name}`;
+}
+
+function describeDash(dash) {
+    if (dash === undefined || dash.Dashes === undefined) return 'Solid';
+    const d = dash.Dashes;
+    if (d.length === 0) return 'Solid';
+    // Pin against the known presets so labels match the editor dropdown.
+    const equals = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
+    if (equals(d, [2, 2]))             return 'Dash';
+    if (equals(d, [0, 2]))             return 'Dot';
+    if (equals(d, [2, 2, 0, 2]))       return 'Dash-Dot';
+    if (equals(d, [2, 2, 0, 2, 0, 2])) return 'Dash-Dot-Dot';
+    return `Custom [${d.join(', ')}]`;
+}

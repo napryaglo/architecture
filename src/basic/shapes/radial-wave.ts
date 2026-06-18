@@ -2,16 +2,14 @@ import {
     MetaData,
     Model,
     Point,
-    Size,
-    Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
 import {
     LineSegment,
     PathFigure,
     PathGeometry,
-    Pen,
 } from '../../visual-engine/index.js';
+import { Shape } from './shape.js';
 
 // M3 RadialWave — convex N-lobed star / burst silhouette. The radius
 // oscillates around the inscribing ellipse:
@@ -34,7 +32,7 @@ import {
 // dial higher for hero artwork at large sizes.
 //
 // Stroke insets by half-thickness.
-export class RadialWave extends Visual
+export class RadialWave extends Shape
 {
     public static readonly LobesKey           = Model.RegisterProperty<number>(           RadialWave, 'Lobes',           8,         MetaData.Render);
     public static readonly AmplitudeKey       = Model.RegisterProperty<number>(           RadialWave, 'Amplitude',       0.20,      MetaData.Render);
@@ -57,15 +55,13 @@ export class RadialWave extends Visual
     public get Samples(): number { return this.get_property_value(RadialWave.SamplesKey); }
     public set Samples(v: number) { this.set_property_value(RadialWave.SamplesKey, v); }
 
-    protected override MeasureOverride(_availableSize: Size): Size { return Size.Zero; }
-    protected override ArrangeOverride(finalSize: Size): Size { return finalSize; }
-
     protected override RenderOverride(dc: DrawingContext): void
     {
         const size = this.RenderSize;
         if (size.Width <= 0 || size.Height <= 0) return;
 
-        const t    = this.StrokeThickness;
+        const stroke = this.Stroke;
+        const t      = stroke?.Thickness ?? 0;
         const half = t / 2;
         const w    = Math.max(0, size.Width  - t);
         const h    = Math.max(0, size.Height - t);
@@ -106,11 +102,7 @@ export class RadialWave extends Visual
         for (let i = 1; i < samples.length; i++) segs.push(new LineSegment(samples[i]!));
         const figure = new PathFigure(samples[0]!, segs, true);
 
-        const pen = this.Stroke !== undefined && t > 0
-            ? new Pen(this.Stroke, t)
-            : undefined;
-
-        dc.DrawGeometry(this.Background, pen, new PathGeometry([figure]));
+        dc.DrawGeometry(this.Fill, stroke, new PathGeometry([figure]));
     }
 }
 

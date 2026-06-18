@@ -39,7 +39,9 @@ resources CommandsDemo {
     // ── Chrome styles per shape kind ────────────────────────────────
     Style x:key="CommandsRectChromeStyle"    [TargetType=Border]  { BorderBrush = @Primary; }
     Style x:key="CommandsNoteChromeStyle"    [TargetType=Border]  { BorderBrush = #a16207; }
-    Style x:key="CommandsEllipseChromeStyle" [TargetType=Ellipse] { Stroke      = #15803d; }
+    Style x:key="CommandsEllipseChromeStyle" [TargetType=Ellipse] { Stroke      = @CommandsEllipseRestPen; }
+    Pen   x:key="CommandsEllipseRestPen"     [Brush=#15803d, Thickness=1.5]
+    Pen   x:key="CommandsEllipseSelectedPen" [Brush=#f97316, Thickness=1.5]
 
     // ── Shared per-node ContextMenu ─────────────────────────────────
     ContextMenu x:key="NodeContextMenu" {
@@ -72,7 +74,7 @@ resources CommandsDemo {
             Ellipse x:name="chrome"
                    [Style=@CommandsEllipseChromeStyle,
                     Width=130, Height=60,
-                    Background=$FillBrush, StrokeThickness=1.5]
+                    Fill=$FillBrush]
             TextBlock [Canvas.Left=0, Canvas.Top=0,
                        Width=130, Height=60,
                        Text=$LabelText, FontSize=13,
@@ -80,7 +82,7 @@ resources CommandsDemo {
                        HorizontalAlignment=Center,
                        VerticalAlignment=Center]
         }
-        when( $IsSelected ){ chrome.Stroke = #f97316; }
+        when( $IsSelected ){ chrome.Stroke = @CommandsEllipseSelectedPen; }
     }
 
     DataTemplate [DataType=NoteNodeVM] {

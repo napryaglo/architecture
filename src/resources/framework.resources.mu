@@ -1873,6 +1873,15 @@ resources MuralFramework {
     // StartAngle..StartAngle+360). The simple v0 template ships a
     // 360° fill so the consumer either sets EndAngle directly or
     // wires up a Value→EndAngle binding-converter in their app code.
+    // Stroke pens for the circular ProgressIndicator's Arc track + fill.
+    // Pens carry the full SVG-stroke spec now (Brush + Thickness +
+    // DashStyle + LineCap + LineJoin + MiterLimit), so shape templates
+    // declare reusable Pen resources rather than `Stroke + StrokeThickness`
+    // pairs. Brushes resolve through DynamicResource, so theme switches
+    // re-tint the Pens automatically.
+    Pen x:key="ProgressTrackPen" [Brush=@SurfaceContainerHighest, Thickness=4]
+    Pen x:key="ProgressFillPen"  [Brush=@Primary,                 Thickness=4]
+
     Template x:key="DefaultCircularProgressIndicator" [TargetType=ProgressIndicator] {
         Border x:name="PART_OuterFrame"
               [ Background      = #00000000,
@@ -1884,19 +1893,17 @@ resources MuralFramework {
             // sweep reads "filling clockwise from 12 o'clock", the
             // M3 affordance.
             Arc x:name="PART_Track"
-                [ StartAngle      = -90,
-                  EndAngle        = 270,
-                  Stroke          = @SurfaceContainerHighest,
-                  StrokeThickness = 4,
-                  Width           = 40,
-                  Height          = 40 ]
+                [ StartAngle = -90,
+                  EndAngle   = 270,
+                  Stroke     = @ProgressTrackPen,
+                  Width      = 40,
+                  Height     = 40 ]
             Arc x:name="PART_Fill"
-                [ StartAngle      = -90,
-                  EndAngle        = 270,
-                  Stroke          = @Primary,
-                  StrokeThickness = 4,
-                  Width           = 40,
-                  Height          = 40 ]
+                [ StartAngle = -90,
+                  EndAngle   = 270,
+                  Stroke     = @ProgressFillPen,
+                  Width      = 40,
+                  Height     = 40 ]
         }
         when ( IsEnabled = false ) { PART_OuterFrame.Opacity = @DisabledContentOpacity; }
     }
@@ -2274,5 +2281,790 @@ resources MuralFramework {
 
     Style [TargetType=ThemeSelector] {
         Template = @DefaultThemeSelector;
+    }
+
+    // ── ColorPicker: closed chrome ─────────────────────────────────
+    // A ComboBox-style trigger: rounded outlined border housing a small
+    // swatch (Background bound to the templated parent's SwatchBrush),
+    // the current hex label, and a chevron. ColorPicker.ctor wires the
+    // PointerDown / PointerUp / PointerLeave gesture on
+    // PART_SelectionTrigger; on release the picker flips IsDropDownOpen
+    // and mountPopup spins up the overlay popup chrome below.
+    Template x:key="DefaultColorPicker" [TargetType=ColorPicker]{
+        ClickableBorder x:name="PART_SelectionTrigger"
+                       [ Background      = @Surface,
+                         BorderBrush     = @Outline,
+                         BorderThickness = (1),
+                         CornerRadius    = @ShapeExtraSmall,
+                         Padding         = (@Spacing3, @Spacing2, @Spacing3, @Spacing2) ] {
+            StackPanel [Orientation=Horizontal] {
+                Border [ Width        = 22,
+                         Height       = 18,
+                         CornerRadius = 3,
+                         BorderBrush  = @OutlineVariant,
+                         BorderThickness = (1),
+                         Margin       = (0, 0, @Spacing3, 0),
+                         Background   = $$SwatchBrush ]
+                TextBlock [ Text          = $$ColorHex,
+                            Foreground    = @OnSurface,
+                            FontFamily    = @BodyMediumFont,
+                            FontWeight    = @BodyMediumWeight,
+                            FontSize      = @BodyMediumSize,
+                            VerticalAlignment = Center,
+                            Margin        = (0, 0, @Spacing3, 0) ]
+                TextBlock [ Text          = "▾",
+                            Foreground    = @OnSurfaceVariant,
+                            FontSize      = 14,
+                            VerticalAlignment = Center ]
+            }
+        }
+
+        when ( PART_SelectionTrigger.IsMouseOver ) { PART_SelectionTrigger.Background = @StateHoverOverlay; }
+        when ( PART_SelectionTrigger.IsPressed   ) { PART_SelectionTrigger.Background = @StatePressOverlay; }
+        when ( IsDropDownOpen )                     { PART_SelectionTrigger.BorderBrush = @Primary; }
+    }
+
+    // ── ColorPicker: HSV dropdown popup ─────────────────────────────
+    // Mounted on the PresentationTarget's OverlayLayer when
+    // IsDropDownOpen flips true. The PART_PaletteContainer WrapPanel is
+    // populated by ColorPicker.populatePalette with Material 3 swatches;
+    // the three Sliders bind two-way to Hue / Saturation / Brightness
+    // via templated-parent bindings, and the TextBox round-trips the hex
+    // value through ColorHex. ColorPicker.OnPropertyChanged keeps the
+    // four channels (Color / ColorHex / HSV trio) in lock-step.
+    Template x:key="DefaultColorPickerPopup" [TargetType=ColorPicker]{
+        MenuPopupHost x:name="PART_PopupHost" {
+            ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
+            Border x:name="PART_PopupBody"
+                  [ Background      = @SurfaceContainerHigh,
+                    BorderBrush     = @OutlineVariant,
+                    BorderThickness = (1),
+                    CornerRadius    = @ShapeExtraSmall,
+                    Effect          = @Elevation2,
+                    Padding         = (10),
+                    Width           = 280 ] {
+                StackPanel [Orientation=Vertical] {
+                    StackPanel [Orientation=Horizontal, Margin=(0, 0, 0, 8)] {
+                        Border [ Width        = 36,
+                                 Height       = 36,
+                                 CornerRadius = 4,
+                                 BorderBrush  = @OutlineVariant,
+                                 BorderThickness = (1),
+                                 Margin       = (0, 0, 8, 0),
+                                 Background   = $$SwatchBrush ]
+                        TextBox x:name="PART_HexInput"
+                                [ Width         = 220,
+                                  VerticalAlignment = Center ]
+                    }
+
+                    WrapPanel x:name="PART_PaletteContainer"
+                              [ Orientation = Horizontal,
+                                Margin      = (0, 0, 0, 8) ]
+
+                    StackPanel [Orientation=Horizontal, Margin=(0, 4, 0, 0)] {
+                        TextBlock [Text="H", Width=14, Foreground=@OnSurfaceVariant, VerticalAlignment=Center, Margin=(0, 0, 6, 0)]
+                        Slider x:name="PART_HSlider" [ Width=240, Minimum=0, Maximum=360, SmallChange=1, LargeChange=15 ]
+                    }
+                    StackPanel [Orientation=Horizontal, Margin=(0, 4, 0, 0)] {
+                        TextBlock [Text="S", Width=14, Foreground=@OnSurfaceVariant, VerticalAlignment=Center, Margin=(0, 0, 6, 0)]
+                        Slider x:name="PART_SSlider" [ Width=240, Minimum=0, Maximum=100, SmallChange=1, LargeChange=10 ]
+                    }
+                    StackPanel [Orientation=Horizontal, Margin=(0, 4, 0, 0)] {
+                        TextBlock [Text="V", Width=14, Foreground=@OnSurfaceVariant, VerticalAlignment=Center, Margin=(0, 0, 6, 0)]
+                        Slider x:name="PART_VSlider" [ Width=240, Minimum=0, Maximum=100, SmallChange=1, LargeChange=10 ]
+                    }
+                }
+            }
+        }
+
+        when ( ThemeManager.PrefersContrast = More ) { PART_PopupBody.BorderThickness = (2); }
+    }
+
+    // ── ColorPicker: RGB+alpha popup variant ───────────────────────
+    // Same chrome as the HSV popup but with the Office-classic 2D
+    // hue/saturation gradient box + brightness rail in place of the
+    // palette grid, and the channel rows carry R / G / B / A sliders.
+    // The Style trigger below swaps PopupTemplate to this when
+    // Variant = RGB.
+    Template x:key="DefaultColorPickerPopupRGB" [TargetType=ColorPicker]{
+        MenuPopupHost x:name="PART_PopupHost" {
+            ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
+            Border x:name="PART_PopupBody"
+                  [ Background      = @SurfaceContainerHigh,
+                    BorderBrush     = @OutlineVariant,
+                    BorderThickness = (1),
+                    CornerRadius    = @ShapeExtraSmall,
+                    Effect          = @Elevation2,
+                    Padding         = (10),
+                    Width           = 280 ] {
+                StackPanel [Orientation=Vertical] {
+                    StackPanel [Orientation=Horizontal, Margin=(0, 0, 0, 8)] {
+                        Border [ Width        = 36,
+                                 Height       = 36,
+                                 CornerRadius = 4,
+                                 BorderBrush  = @OutlineVariant,
+                                 BorderThickness = (1),
+                                 Margin       = (0, 0, 8, 0),
+                                 Background   = $$SwatchBrush ]
+                        TextBox x:name="PART_HexInput"
+                                [ Width         = 220,
+                                  VerticalAlignment = Center ]
+                    }
+
+                    StackPanel [Orientation=Horizontal, Margin=(0, 0, 0, 12)] {
+                        Canvas x:name="PART_HsBox" [Width=220, Height=140] {
+                            Border x:name="PART_HsBoxHue"     [Width=220, Height=140]
+                            Border x:name="PART_HsBoxOverlay" [Width=220, Height=140]
+                            Border x:name="PART_HsBoxCursor"
+                                  [Width=12, Height=12, CornerRadius=6,
+                                   BorderBrush=#ffffff, BorderThickness=(2)]
+                        }
+                        Canvas x:name="PART_VRail" [Width=20, Height=140, Margin=(12, 0, 0, 0)] {
+                            Border x:name="PART_VRailFill"
+                                  [Width=20, Height=140, BorderBrush=@OutlineVariant, BorderThickness=(1)]
+                            Border x:name="PART_VRailCursor"
+                                  [Width=26, Height=4, Background=#1f2937]
+                        }
+                    }
+
+                    StackPanel [Orientation=Horizontal, Margin=(0, 4, 0, 0)] {
+                        TextBlock [Text="R", Width=14, Foreground=@OnSurfaceVariant, VerticalAlignment=Center, Margin=(0, 0, 6, 0)]
+                        Slider x:name="PART_RSlider" [ Width=240, Minimum=0, Maximum=255, SmallChange=1, LargeChange=16 ]
+                    }
+                    StackPanel [Orientation=Horizontal, Margin=(0, 4, 0, 0)] {
+                        TextBlock [Text="G", Width=14, Foreground=@OnSurfaceVariant, VerticalAlignment=Center, Margin=(0, 0, 6, 0)]
+                        Slider x:name="PART_GSlider" [ Width=240, Minimum=0, Maximum=255, SmallChange=1, LargeChange=16 ]
+                    }
+                    StackPanel [Orientation=Horizontal, Margin=(0, 4, 0, 0)] {
+                        TextBlock [Text="B", Width=14, Foreground=@OnSurfaceVariant, VerticalAlignment=Center, Margin=(0, 0, 6, 0)]
+                        Slider x:name="PART_BSlider" [ Width=240, Minimum=0, Maximum=255, SmallChange=1, LargeChange=16 ]
+                    }
+                    StackPanel [Orientation=Horizontal, Margin=(0, 4, 0, 0)] {
+                        TextBlock [Text="A", Width=14, Foreground=@OnSurfaceVariant, VerticalAlignment=Center, Margin=(0, 0, 6, 0)]
+                        Slider x:name="PART_ASlider" [ Width=240, Minimum=0, Maximum=255, SmallChange=1, LargeChange=16 ]
+                    }
+                }
+            }
+        }
+
+        when ( ThemeManager.PrefersContrast = More ) { PART_PopupBody.BorderThickness = (2); }
+    }
+
+    Style [TargetType=ColorPicker] {
+        Template      = @DefaultColorPicker;
+        PopupTemplate = @DefaultColorPickerPopup;
+        when ( Variant = RGB ) { PopupTemplate = @DefaultColorPickerPopupRGB; }
+    }
+
+    // ── BrushPicker: closed chrome ─────────────────────────────────
+    // ComboBox-style trigger like ColorPicker, but the swatch shows
+    // the current Brush (not just a colour), so it previews gradients
+    // and patterns alongside solid fills. The label reads the variant
+    // name — "Solid", "Linear", "Radial", "Pattern" — so the closed
+    // chrome conveys which brush flavour is bound without making the
+    // user open the popup. BrushPicker.ctor wires PointerDown / Up /
+    // Leave on PART_SelectionTrigger.
+    Template x:key="DefaultBrushPicker" [TargetType=BrushPicker]{
+        ClickableBorder x:name="PART_SelectionTrigger"
+                       [ Background      = @Surface,
+                         BorderBrush     = @Outline,
+                         BorderThickness = (1),
+                         CornerRadius    = @ShapeExtraSmall,
+                         Padding         = (@Spacing3, @Spacing2, @Spacing3, @Spacing2) ] {
+            StackPanel [Orientation=Horizontal] {
+                Border [ Width        = 36,
+                         Height       = 18,
+                         CornerRadius = 3,
+                         BorderBrush  = @OutlineVariant,
+                         BorderThickness = (1),
+                         Margin       = (0, 0, @Spacing3, 0),
+                         Background   = $$PreviewBrush ]
+                TextBlock x:name="PART_VariantLabel"
+                          [ Text          = "Solid",
+                            Foreground    = @OnSurface,
+                            FontFamily    = @BodyMediumFont,
+                            FontWeight    = @BodyMediumWeight,
+                            FontSize      = @BodyMediumSize,
+                            VerticalAlignment = Center,
+                            Margin        = (0, 0, @Spacing3, 0) ]
+                TextBlock [ Text          = "▾",
+                            Foreground    = @OnSurfaceVariant,
+                            FontSize      = 14,
+                            VerticalAlignment = Center ]
+            }
+        }
+
+        when ( PART_SelectionTrigger.IsMouseOver ) { PART_SelectionTrigger.Background = @StateHoverOverlay; }
+        when ( PART_SelectionTrigger.IsPressed   ) { PART_SelectionTrigger.Background = @StatePressOverlay; }
+        when ( IsDropDownOpen )                     { PART_SelectionTrigger.BorderBrush = @Primary; }
+        when ( Variant = Linear  ) { PART_VariantLabel.Text = "Linear gradient"; }
+        when ( Variant = Radial  ) { PART_VariantLabel.Text = "Radial gradient"; }
+        when ( Variant = Pattern ) { PART_VariantLabel.Text = "Pattern";         }
+    }
+
+    // ── BrushPicker: shared popup chrome helper ────────────────────
+    // Every variant popup shares the same outer shell (host / scrim /
+    // body) and the same four-tab row at top — the only thing that
+    // differs is the variant-specific sub-editor block in the middle.
+    // Tabs use ClickableBorder + state triggers; BrushPicker.mountPopup
+    // wires PointerUp on each to write Variant.
+
+    // Solid variant popup — embeds a ColorPicker for the colour body.
+    Template x:key="DefaultBrushPickerSolid" [TargetType=BrushPicker]{
+        MenuPopupHost x:name="PART_PopupHost" {
+            ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
+            Border x:name="PART_PopupBody"
+                  [ Background      = @SurfaceContainerHigh,
+                    BorderBrush     = @OutlineVariant,
+                    BorderThickness = (1),
+                    CornerRadius    = @ShapeExtraSmall,
+                    Effect          = @Elevation2,
+                    Padding         = (10),
+                    Width           = 320 ] {
+                StackPanel [Orientation=Vertical] {
+                    // ── Variant tabs ─────────────────────────────
+                    StackPanel [Orientation=Horizontal, Margin=(0, 0, 0, 10)] {
+                        ClickableBorder x:name="PART_TabSolid"
+                                       [ Background = @SecondaryContainer,
+                                         CornerRadius = @ShapeExtraSmall,
+                                         Padding = (10, 4, 10, 4),
+                                         Margin = (0, 0, 4, 0) ] {
+                            TextBlock [Text="Solid", Foreground=@OnSecondaryContainer, FontSize=12]
+                        }
+                        ClickableBorder x:name="PART_TabLinear"
+                                       [ Background = @Surface,
+                                         CornerRadius = @ShapeExtraSmall,
+                                         Padding = (10, 4, 10, 4),
+                                         Margin = (0, 0, 4, 0) ] {
+                            TextBlock [Text="Linear", Foreground=@OnSurface, FontSize=12]
+                        }
+                        ClickableBorder x:name="PART_TabRadial"
+                                       [ Background = @Surface,
+                                         CornerRadius = @ShapeExtraSmall,
+                                         Padding = (10, 4, 10, 4),
+                                         Margin = (0, 0, 4, 0) ] {
+                            TextBlock [Text="Radial", Foreground=@OnSurface, FontSize=12]
+                        }
+                        ClickableBorder x:name="PART_TabPattern"
+                                       [ Background = @Surface,
+                                         CornerRadius = @ShapeExtraSmall,
+                                         Padding = (10, 4, 10, 4) ] {
+                            TextBlock [Text="Pattern", Foreground=@OnSurface, FontSize=12]
+                        }
+                    }
+                    // ── Solid body ───────────────────────────────
+                    ColorPicker x:name="PART_SolidColor" [Variant=RGB]
+                }
+            }
+        }
+    }
+
+    // Linear gradient variant popup. Two embedded ColorPickers + an
+    // angle slider. Renders a 2-stop linear brush; BrushPicker maps
+    // angle (degrees) onto StartPoint/EndPoint in [0,1] bbox coords.
+    Template x:key="DefaultBrushPickerLinear" [TargetType=BrushPicker]{
+        MenuPopupHost x:name="PART_PopupHost" {
+            ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
+            Border x:name="PART_PopupBody"
+                  [ Background      = @SurfaceContainerHigh,
+                    BorderBrush     = @OutlineVariant,
+                    BorderThickness = (1),
+                    CornerRadius    = @ShapeExtraSmall,
+                    Effect          = @Elevation2,
+                    Padding         = (10),
+                    Width           = 320 ] {
+                StackPanel [Orientation=Vertical] {
+                    StackPanel [Orientation=Horizontal, Margin=(0, 0, 0, 10)] {
+                        ClickableBorder x:name="PART_TabSolid"
+                                       [ Background = @Surface,
+                                         CornerRadius = @ShapeExtraSmall,
+                                         Padding = (10, 4, 10, 4),
+                                         Margin = (0, 0, 4, 0) ] {
+                            TextBlock [Text="Solid", Foreground=@OnSurface, FontSize=12]
+                        }
+                        ClickableBorder x:name="PART_TabLinear"
+                                       [ Background = @SecondaryContainer,
+                                         CornerRadius = @ShapeExtraSmall,
+                                         Padding = (10, 4, 10, 4),
+                                         Margin = (0, 0, 4, 0) ] {
+                            TextBlock [Text="Linear", Foreground=@OnSecondaryContainer, FontSize=12]
+                        }
+                        ClickableBorder x:name="PART_TabRadial"
+                                       [ Background = @Surface,
+                                         CornerRadius = @ShapeExtraSmall,
+                                         Padding = (10, 4, 10, 4),
+                                         Margin = (0, 0, 4, 0) ] {
+                            TextBlock [Text="Radial", Foreground=@OnSurface, FontSize=12]
+                        }
+                        ClickableBorder x:name="PART_TabPattern"
+                                       [ Background = @Surface,
+                                         CornerRadius = @ShapeExtraSmall,
+                                         Padding = (10, 4, 10, 4) ] {
+                            TextBlock [Text="Pattern", Foreground=@OnSurface, FontSize=12]
+                        }
+                    }
+                    StackPanel [Orientation=Vertical, Margin=(0, 4, 0, 0)] {
+                        TextBlock [Text="Start colour", FontSize=11, Foreground=@OnSurfaceVariant, Margin=(0,0,0,2)]
+                        ColorPicker x:name="PART_LinearStart"
+                        TextBlock [Text="End colour", FontSize=11, Foreground=@OnSurfaceVariant, Margin=(0,8,0,2)]
+                        ColorPicker x:name="PART_LinearEnd"
+                        StackPanel [Orientation=Horizontal, Margin=(0,10,0,0)] {
+                            TextBlock [Text="Angle", Width=48, FontSize=11, Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
+                            Slider x:name="PART_LinearAngle"
+                                   [Width=240, Minimum=-180, Maximum=180, SmallChange=1, LargeChange=15]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Radial gradient variant popup. Two colour stops (inner/outer) +
+    // CenterX/CenterY in [0..100] (mapped to 0..1 by BrushPicker) +
+    // Radius in [0..100].
+    Template x:key="DefaultBrushPickerRadial" [TargetType=BrushPicker]{
+        MenuPopupHost x:name="PART_PopupHost" {
+            ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
+            Border x:name="PART_PopupBody"
+                  [ Background      = @SurfaceContainerHigh,
+                    BorderBrush     = @OutlineVariant,
+                    BorderThickness = (1),
+                    CornerRadius    = @ShapeExtraSmall,
+                    Effect          = @Elevation2,
+                    Padding         = (10),
+                    Width           = 320 ] {
+                StackPanel [Orientation=Vertical] {
+                    StackPanel [Orientation=Horizontal, Margin=(0, 0, 0, 10)] {
+                        ClickableBorder x:name="PART_TabSolid"
+                                       [ Background = @Surface, CornerRadius = @ShapeExtraSmall, Padding = (10, 4, 10, 4), Margin = (0, 0, 4, 0) ] {
+                            TextBlock [Text="Solid", Foreground=@OnSurface, FontSize=12]
+                        }
+                        ClickableBorder x:name="PART_TabLinear"
+                                       [ Background = @Surface, CornerRadius = @ShapeExtraSmall, Padding = (10, 4, 10, 4), Margin = (0, 0, 4, 0) ] {
+                            TextBlock [Text="Linear", Foreground=@OnSurface, FontSize=12]
+                        }
+                        ClickableBorder x:name="PART_TabRadial"
+                                       [ Background = @SecondaryContainer, CornerRadius = @ShapeExtraSmall, Padding = (10, 4, 10, 4), Margin = (0, 0, 4, 0) ] {
+                            TextBlock [Text="Radial", Foreground=@OnSecondaryContainer, FontSize=12]
+                        }
+                        ClickableBorder x:name="PART_TabPattern"
+                                       [ Background = @Surface, CornerRadius = @ShapeExtraSmall, Padding = (10, 4, 10, 4) ] {
+                            TextBlock [Text="Pattern", Foreground=@OnSurface, FontSize=12]
+                        }
+                    }
+                    StackPanel [Orientation=Vertical, Margin=(0, 4, 0, 0)] {
+                        TextBlock [Text="Inner colour", FontSize=11, Foreground=@OnSurfaceVariant, Margin=(0,0,0,2)]
+                        ColorPicker x:name="PART_RadialInner"
+                        TextBlock [Text="Outer colour", FontSize=11, Foreground=@OnSurfaceVariant, Margin=(0,8,0,2)]
+                        ColorPicker x:name="PART_RadialOuter"
+                        StackPanel [Orientation=Horizontal, Margin=(0,10,0,0)] {
+                            TextBlock [Text="Cx %",   Width=48, FontSize=11, Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
+                            Slider x:name="PART_RadialCenterX" [Width=240, Minimum=0, Maximum=100, SmallChange=1, LargeChange=10]
+                        }
+                        StackPanel [Orientation=Horizontal, Margin=(0,4,0,0)] {
+                            TextBlock [Text="Cy %",   Width=48, FontSize=11, Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
+                            Slider x:name="PART_RadialCenterY" [Width=240, Minimum=0, Maximum=100, SmallChange=1, LargeChange=10]
+                        }
+                        StackPanel [Orientation=Horizontal, Margin=(0,4,0,0)] {
+                            TextBlock [Text="Radius %", Width=48, FontSize=11, Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
+                            Slider x:name="PART_RadialRadius"  [Width=240, Minimum=1, Maximum=100, SmallChange=1, LargeChange=10]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Pattern variant popup. ComboBox to choose PatternKind, two
+    // ColorPickers (fg + bg) and three sliders (Size / Angle /
+    // StrokeThickness). PART_PatternKind's Items + SelectedItem are
+    // populated by BrushPicker.adoptPopupParts — string-enum values
+    // map straight through onto PatternBrush.Kind.
+    Template x:key="DefaultBrushPickerPattern" [TargetType=BrushPicker]{
+        MenuPopupHost x:name="PART_PopupHost" {
+            ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
+            Border x:name="PART_PopupBody"
+                  [ Background      = @SurfaceContainerHigh,
+                    BorderBrush     = @OutlineVariant,
+                    BorderThickness = (1),
+                    CornerRadius    = @ShapeExtraSmall,
+                    Effect          = @Elevation2,
+                    Padding         = (10),
+                    Width           = 320 ] {
+                StackPanel [Orientation=Vertical] {
+                    StackPanel [Orientation=Horizontal, Margin=(0, 0, 0, 10)] {
+                        ClickableBorder x:name="PART_TabSolid"
+                                       [ Background = @Surface, CornerRadius = @ShapeExtraSmall, Padding = (10, 4, 10, 4), Margin = (0, 0, 4, 0) ] {
+                            TextBlock [Text="Solid", Foreground=@OnSurface, FontSize=12]
+                        }
+                        ClickableBorder x:name="PART_TabLinear"
+                                       [ Background = @Surface, CornerRadius = @ShapeExtraSmall, Padding = (10, 4, 10, 4), Margin = (0, 0, 4, 0) ] {
+                            TextBlock [Text="Linear", Foreground=@OnSurface, FontSize=12]
+                        }
+                        ClickableBorder x:name="PART_TabRadial"
+                                       [ Background = @Surface, CornerRadius = @ShapeExtraSmall, Padding = (10, 4, 10, 4), Margin = (0, 0, 4, 0) ] {
+                            TextBlock [Text="Radial", Foreground=@OnSurface, FontSize=12]
+                        }
+                        ClickableBorder x:name="PART_TabPattern"
+                                       [ Background = @SecondaryContainer, CornerRadius = @ShapeExtraSmall, Padding = (10, 4, 10, 4) ] {
+                            TextBlock [Text="Pattern", Foreground=@OnSecondaryContainer, FontSize=12]
+                        }
+                    }
+                    StackPanel [Orientation=Vertical, Margin=(0, 4, 0, 0)] {
+                        StackPanel [Orientation=Horizontal, Margin=(0,0,0,8)] {
+                            TextBlock [Text="Kind", Width=64, FontSize=11, Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
+                            ComboBox x:name="PART_PatternKind" [Width=232]
+                        }
+                        TextBlock [Text="Foreground", FontSize=11, Foreground=@OnSurfaceVariant, Margin=(0,0,0,2)]
+                        ColorPicker x:name="PART_PatternForeground"
+                        TextBlock [Text="Background", FontSize=11, Foreground=@OnSurfaceVariant, Margin=(0,8,0,2)]
+                        ColorPicker x:name="PART_PatternBackground"
+                        StackPanel [Orientation=Horizontal, Margin=(0,10,0,0)] {
+                            TextBlock [Text="Size",  Width=64, FontSize=11, Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
+                            Slider x:name="PART_PatternSize"   [Width=232, Minimum=2, Maximum=64, SmallChange=1, LargeChange=4]
+                        }
+                        StackPanel [Orientation=Horizontal, Margin=(0,4,0,0)] {
+                            TextBlock [Text="Angle", Width=64, FontSize=11, Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
+                            Slider x:name="PART_PatternAngle"  [Width=232, Minimum=0,  Maximum=180, SmallChange=1, LargeChange=15]
+                        }
+                        StackPanel [Orientation=Horizontal, Margin=(0,4,0,0)] {
+                            TextBlock [Text="Stroke", Width=64, FontSize=11, Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
+                            Slider x:name="PART_PatternStroke" [Width=232, Minimum=0.5,Maximum=8,   SmallChange=0.5, LargeChange=1]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Style [TargetType=BrushPicker] {
+        Template      = @DefaultBrushPicker;
+        PopupTemplate = @DefaultBrushPickerSolid;
+        when ( Variant = Linear  ) { PopupTemplate = @DefaultBrushPickerLinear;  }
+        when ( Variant = Radial  ) { PopupTemplate = @DefaultBrushPickerRadial;  }
+        when ( Variant = Pattern ) { PopupTemplate = @DefaultBrushPickerPattern; }
+    }
+
+    // ── PenEditor: inline expanded panel ───────────────────────────
+    // PowerPoint-style: one column of labelled rows. BrushPicker on
+    // the Brush row uses TemplateBinding for Brush; sliders /
+    // comboboxes for the simpler DPs. PenEditor.OnPropertyChanged
+    // pushes each row's value onto its bound Pen so the consumer's
+    // Stroke updates as the user drags.
+    //
+    // The MiterLimit row is the only visibility-gated row — the
+    // theme has no `Visibility` enum yet, so we fake the toggle by
+    // collapsing the row's MaxHeight (and clearing its padding) when
+    // LineJoin ≠ Miter. The PART_MiterRow.Padding setter on the
+    // default branch carries the resting layout; the trigger zeroes
+    // it out when the editor's Join isn't Miter.
+    Template x:key="DefaultPenEditor" [TargetType=PenEditor] {
+        StackPanel [Orientation=Vertical] {
+            // Brush
+            StackPanel [Orientation=Vertical, Margin=(0,0,0,@Spacing3)] {
+                TextBlock [Text="Brush", FontSize=11, FontWeight=Bold, Foreground=@OnSurface, Margin=(0,0,0,2)]
+                BrushPicker x:name="PART_BrushPicker"
+            }
+            // Thickness (px)
+            StackPanel [Orientation=Vertical, Margin=(0,0,0,@Spacing3)] {
+                TextBlock [Text="Thickness", FontSize=11, FontWeight=Bold, Foreground=@OnSurface, Margin=(0,0,0,2)]
+                StackPanel [Orientation=Horizontal] {
+                    Slider x:name="PART_Thickness"
+                           [Width=200, Minimum=0, Maximum=24, SmallChange=0.5, LargeChange=2]
+                    TextBlock x:name="PART_ThicknessReadout"
+                              [Text="1 px", FontSize=12, Foreground=@OnSurfaceVariant,
+                               VerticalAlignment=Center, Margin=(8,0,0,0)]
+                }
+            }
+            // DashStyle — Items + SelectedItem populated by
+            // PenEditor.adoptTemplateParts (see DASH_OPTIONS there).
+            // DisplayMemberPath = "Label" so the dropdown shows the
+            // human strings; the editor reads .Value back.
+            StackPanel [Orientation=Vertical, Margin=(0,0,0,@Spacing3)] {
+                TextBlock [Text="Dash", FontSize=11, FontWeight=Bold, Foreground=@OnSurface, Margin=(0,0,0,2)]
+                ComboBox x:name="PART_Dash" [Width=260, DisplayMemberPath="Label"]
+            }
+            StackPanel [Orientation=Vertical, Margin=(0,0,0,@Spacing3)] {
+                TextBlock [Text="Cap", FontSize=11, FontWeight=Bold, Foreground=@OnSurface, Margin=(0,0,0,2)]
+                ComboBox x:name="PART_Cap"  [Width=260, DisplayMemberPath="Label"]
+            }
+            StackPanel [Orientation=Vertical, Margin=(0,0,0,@Spacing3)] {
+                TextBlock [Text="Join", FontSize=11, FontWeight=Bold, Foreground=@OnSurface, Margin=(0,0,0,2)]
+                ComboBox x:name="PART_Join" [Width=260, DisplayMemberPath="Label"]
+            }
+            // MiterLimit (only meaningful when Join=Miter — the
+            // visibility shape is "row is laid out but height
+            // collapses". Hidden until proper Visibility DP lands.)
+            StackPanel x:name="PART_MiterRow" [Orientation=Vertical, Margin=(0,0,0,@Spacing3)] {
+                TextBlock [Text="Miter limit", FontSize=11, FontWeight=Bold, Foreground=@OnSurface, Margin=(0,0,0,2)]
+                StackPanel [Orientation=Horizontal] {
+                    Slider x:name="PART_MiterLimit"
+                           [Width=200, Minimum=1, Maximum=20, SmallChange=0.5, LargeChange=2]
+                    TextBlock x:name="PART_MiterReadout"
+                              [Text="10", FontSize=12, Foreground=@OnSurfaceVariant,
+                               VerticalAlignment=Center, Margin=(8,0,0,0)]
+                }
+            }
+        }
+    }
+
+    Style [TargetType=PenEditor] {
+        Template = @DefaultPenEditor;
+    }
+
+    // ── FillEditor: PowerPoint-style inline fill panel ─────────────
+    // One column: variant tab row → body slot → opacity slider. The
+    // body slot's child is materialised by the FillEditor from the
+    // Style-supplied BodyTemplate (swapped on Variant change). Tabs
+    // are ClickableBorders the FillEditor wires in adoptTemplateParts;
+    // the active-tab highlight rides through Style triggers below.
+
+    Template x:key="DefaultFillEditor" [TargetType=FillEditor] {
+        StackPanel [Orientation=Vertical] {
+            // ── Variant tabs ────────────────────────────────────
+            // ClickableBorder for each of the six variants. Default
+            // background is @Surface; the Style triggers below flip
+            // the active one to @SecondaryContainer.
+            WrapPanel [Orientation=Horizontal, Margin=(0,0,0,@Spacing4)] {
+                ClickableBorder x:name="PART_TabNone"
+                               [ Background = @Surface,
+                                 BorderBrush = @OutlineVariant,
+                                 BorderThickness = (1),
+                                 CornerRadius = @ShapeExtraSmall,
+                                 Padding = (12, 6, 12, 6),
+                                 Margin = (0, 0, 4, 4) ] {
+                    TextBlock [Text="No fill", Foreground=@OnSurface, FontSize=12]
+                }
+                ClickableBorder x:name="PART_TabSolid"
+                               [ Background = @Surface,
+                                 BorderBrush = @OutlineVariant,
+                                 BorderThickness = (1),
+                                 CornerRadius = @ShapeExtraSmall,
+                                 Padding = (12, 6, 12, 6),
+                                 Margin = (0, 0, 4, 4) ] {
+                    TextBlock [Text="Solid", Foreground=@OnSurface, FontSize=12]
+                }
+                ClickableBorder x:name="PART_TabLinear"
+                               [ Background = @Surface,
+                                 BorderBrush = @OutlineVariant,
+                                 BorderThickness = (1),
+                                 CornerRadius = @ShapeExtraSmall,
+                                 Padding = (12, 6, 12, 6),
+                                 Margin = (0, 0, 4, 4) ] {
+                    TextBlock [Text="Linear", Foreground=@OnSurface, FontSize=12]
+                }
+                ClickableBorder x:name="PART_TabRadial"
+                               [ Background = @Surface,
+                                 BorderBrush = @OutlineVariant,
+                                 BorderThickness = (1),
+                                 CornerRadius = @ShapeExtraSmall,
+                                 Padding = (12, 6, 12, 6),
+                                 Margin = (0, 0, 4, 4) ] {
+                    TextBlock [Text="Radial", Foreground=@OnSurface, FontSize=12]
+                }
+                ClickableBorder x:name="PART_TabPattern"
+                               [ Background = @Surface,
+                                 BorderBrush = @OutlineVariant,
+                                 BorderThickness = (1),
+                                 CornerRadius = @ShapeExtraSmall,
+                                 Padding = (12, 6, 12, 6),
+                                 Margin = (0, 0, 4, 4) ] {
+                    TextBlock [Text="Pattern", Foreground=@OnSurface, FontSize=12]
+                }
+                ClickableBorder x:name="PART_TabPicture"
+                               [ Background = @Surface,
+                                 BorderBrush = @OutlineVariant,
+                                 BorderThickness = (1),
+                                 CornerRadius = @ShapeExtraSmall,
+                                 Padding = (12, 6, 12, 6),
+                                 Margin = (0, 0, 4, 4) ] {
+                    TextBlock [Text="Picture", Foreground=@OnSurface, FontSize=12]
+                }
+            }
+
+            // ── Body slot ───────────────────────────────────────
+            // FillEditor.applyBodyTemplate() materialises the Style-
+            // picked BodyTemplate here. Border gives a stable single-
+            // child container without any visible chrome of its own.
+            Border x:name="PART_BodyHost" [Margin=(0,0,0,@Spacing4)]
+
+            // ── Opacity row ─────────────────────────────────────
+            // Visible for every non-None variant; collapsed to
+            // Height=0 by FillEditor.refreshOpacityRowVisibility when
+            // Variant=None.
+            StackPanel x:name="PART_OpacityRow" [Orientation=Vertical] {
+                TextBlock [Text="Transparency",
+                           FontSize=11, FontWeight=Bold,
+                           Foreground=@OnSurface, Margin=(0,0,0,2)]
+                StackPanel [Orientation=Horizontal] {
+                    Slider x:name="PART_OpacitySlider"
+                           [Width=240, Minimum=0, Maximum=100, SmallChange=1, LargeChange=10]
+                    TextBlock x:name="PART_OpacityReadout"
+                              [Text="100%", FontSize=12, Foreground=@OnSurfaceVariant,
+                               VerticalAlignment=Center, Margin=(8,0,0,0)]
+                }
+            }
+        }
+
+        when ( Variant = None    ) { PART_TabNone.Background    = @SecondaryContainer; }
+        when ( Variant = Solid   ) { PART_TabSolid.Background   = @SecondaryContainer; }
+        when ( Variant = Linear  ) { PART_TabLinear.Background  = @SecondaryContainer; }
+        when ( Variant = Radial  ) { PART_TabRadial.Background  = @SecondaryContainer; }
+        when ( Variant = Pattern ) { PART_TabPattern.Background = @SecondaryContainer; }
+        when ( Variant = Picture ) { PART_TabPicture.Background = @SecondaryContainer; }
+    }
+
+    // ── Body templates ─────────────────────────────────────────────
+    // Each is a ControlTemplate against TargetType=FillEditor so $$
+    // bindings inside resolve to the FillEditor's mirror DPs. The body
+    // template's root visual gets slotted into PART_BodyHost.
+
+    Template x:key="FillEditorBodyNone" [TargetType=FillEditor] {
+        TextBlock [Text="No fill — the shape's Fill is cleared.",
+                   FontSize=12, Foreground=@OnSurfaceVariant]
+    }
+
+    Template x:key="FillEditorBodySolid" [TargetType=FillEditor] {
+        StackPanel [Orientation=Vertical] {
+            TextBlock [Text="Colour", FontSize=11, FontWeight=Bold,
+                       Foreground=@OnSurface, Margin=(0,0,0,2)]
+            ColorPicker x:name="PART_SolidColor" [Variant=RGB]
+        }
+    }
+
+    Template x:key="FillEditorBodyLinear" [TargetType=FillEditor] {
+        StackPanel [Orientation=Vertical] {
+            TextBlock [Text="Start colour", FontSize=11,
+                       Foreground=@OnSurfaceVariant, Margin=(0,0,0,2)]
+            ColorPicker x:name="PART_LinearStart"
+            TextBlock [Text="End colour", FontSize=11,
+                       Foreground=@OnSurfaceVariant, Margin=(0,8,0,2)]
+            ColorPicker x:name="PART_LinearEnd"
+            StackPanel [Orientation=Horizontal, Margin=(0,10,0,0)] {
+                TextBlock [Text="Angle", Width=56, FontSize=11,
+                           Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
+                Slider x:name="PART_LinearAngle"
+                       [Width=240, Minimum=-180, Maximum=180,
+                        SmallChange=1, LargeChange=15]
+            }
+        }
+    }
+
+    Template x:key="FillEditorBodyRadial" [TargetType=FillEditor] {
+        StackPanel [Orientation=Vertical] {
+            TextBlock [Text="Inner colour", FontSize=11,
+                       Foreground=@OnSurfaceVariant, Margin=(0,0,0,2)]
+            ColorPicker x:name="PART_RadialInner"
+            TextBlock [Text="Outer colour", FontSize=11,
+                       Foreground=@OnSurfaceVariant, Margin=(0,8,0,2)]
+            ColorPicker x:name="PART_RadialOuter"
+            StackPanel [Orientation=Horizontal, Margin=(0,10,0,0)] {
+                TextBlock [Text="Cx %", Width=56, FontSize=11,
+                           Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
+                Slider x:name="PART_RadialCenterX"
+                       [Width=240, Minimum=0, Maximum=100,
+                        SmallChange=1, LargeChange=10]
+            }
+            StackPanel [Orientation=Horizontal, Margin=(0,4,0,0)] {
+                TextBlock [Text="Cy %", Width=56, FontSize=11,
+                           Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
+                Slider x:name="PART_RadialCenterY"
+                       [Width=240, Minimum=0, Maximum=100,
+                        SmallChange=1, LargeChange=10]
+            }
+            StackPanel [Orientation=Horizontal, Margin=(0,4,0,0)] {
+                TextBlock [Text="Radius %", Width=56, FontSize=11,
+                           Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
+                Slider x:name="PART_RadialRadius"
+                       [Width=240, Minimum=1, Maximum=100,
+                        SmallChange=1, LargeChange=10]
+            }
+        }
+    }
+
+    Template x:key="FillEditorBodyPattern" [TargetType=FillEditor] {
+        StackPanel [Orientation=Vertical] {
+            StackPanel [Orientation=Horizontal, Margin=(0,0,0,8)] {
+                TextBlock [Text="Kind", Width=72, FontSize=11,
+                           Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
+                ComboBox x:name="PART_PatternKind" [Width=224]
+            }
+            TextBlock [Text="Foreground", FontSize=11,
+                       Foreground=@OnSurfaceVariant, Margin=(0,0,0,2)]
+            ColorPicker x:name="PART_PatternForeground"
+            TextBlock [Text="Background", FontSize=11,
+                       Foreground=@OnSurfaceVariant, Margin=(0,8,0,2)]
+            ColorPicker x:name="PART_PatternBackground"
+            StackPanel [Orientation=Horizontal, Margin=(0,10,0,0)] {
+                TextBlock [Text="Size", Width=72, FontSize=11,
+                           Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
+                Slider x:name="PART_PatternSize"
+                       [Width=224, Minimum=2, Maximum=64,
+                        SmallChange=1, LargeChange=4]
+            }
+            StackPanel [Orientation=Horizontal, Margin=(0,4,0,0)] {
+                TextBlock [Text="Angle", Width=72, FontSize=11,
+                           Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
+                Slider x:name="PART_PatternAngle"
+                       [Width=224, Minimum=0, Maximum=180,
+                        SmallChange=1, LargeChange=15]
+            }
+            StackPanel [Orientation=Horizontal, Margin=(0,4,0,0)] {
+                TextBlock [Text="Stroke", Width=72, FontSize=11,
+                           Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
+                Slider x:name="PART_PatternStroke"
+                       [Width=224, Minimum=0.5, Maximum=8,
+                        SmallChange=0.5, LargeChange=1]
+            }
+        }
+    }
+
+    Template x:key="FillEditorBodyPicture" [TargetType=FillEditor] {
+        StackPanel [Orientation=Vertical] {
+            TextBlock [Text="Image URL", FontSize=11,
+                       Foreground=@OnSurfaceVariant, Margin=(0,0,0,2)]
+            TextBox x:name="PART_PictureUri" [Width=296]
+            StackPanel [Orientation=Horizontal, Margin=(0,10,0,0)] {
+                TextBlock [Text="Stretch", Width=72, FontSize=11,
+                           Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
+                ComboBox x:name="PART_PictureStretch" [Width=224]
+            }
+            TextBlock [Text="Paste an absolute URL or a workspace-relative path. Uniform stretch keeps aspect; Fill stretches independently; UniformToFill crops to bbox.",
+                       FontSize=11, Foreground=@OnSurfaceVariant,
+                       TextWrapping=Wrap, Margin=(0,8,0,0)]
+        }
+    }
+
+    Style [TargetType=FillEditor] {
+        Template     = @DefaultFillEditor;
+        BodyTemplate = @FillEditorBodySolid;
+        when ( Variant = None    ) { BodyTemplate = @FillEditorBodyNone;    }
+        when ( Variant = Linear  ) { BodyTemplate = @FillEditorBodyLinear;  }
+        when ( Variant = Radial  ) { BodyTemplate = @FillEditorBodyRadial;  }
+        when ( Variant = Pattern ) { BodyTemplate = @FillEditorBodyPattern; }
+        when ( Variant = Picture ) { BodyTemplate = @FillEditorBodyPicture; }
+    }
+
+    // ── ShapeFormatControl: PowerPoint Format-Shape pane ───────────
+    // Combines FillEditor + PenEditor into one column. PART_FillEditor
+    // and PART_PenEditor are adopted by ShapeFormatControl.ts, which
+    // routes its Fill / Stroke DPs through to / from each editor under
+    // a _syncing guard. No TemplateBinding here: FillEditor swaps its
+    // Fill wholesale on every edit (TemplateBinding is OneWay, so the
+    // editor's writes wouldn't surface), and the manual wiring keeps
+    // the two editors symmetric.
+    Template x:key="DefaultShapeFormatControl" [TargetType=ShapeFormatControl] {
+        StackPanel [Orientation=Vertical] {
+            TextBlock [Text="Fill", FontSize=13, FontWeight=Bold,
+                       Foreground=@OnSurface, Margin=(0,0,0,@Spacing3)]
+            FillEditor x:name="PART_FillEditor"
+            TextBlock [Text="Line", FontSize=13, FontWeight=Bold,
+                       Foreground=@OnSurface, Margin=(0,@Spacing4,0,@Spacing3)]
+            PenEditor x:name="PART_PenEditor"
+        }
+    }
+
+    Style [TargetType=ShapeFormatControl] {
+        Template = @DefaultShapeFormatControl;
     }
 }

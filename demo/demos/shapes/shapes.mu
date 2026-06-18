@@ -25,31 +25,31 @@ resources ShapesDemo {
                             // ── Row 1: round / pill / square / slanted ──
                             Border [Padding=(8,8,8,8)]{
                                 StackPanel [Orientation=Vertical, HorizontalAlignment=Center]{
-                                    Ellipse [Width=64, Height=64, Background=@Primary]
+                                    Ellipse [Width=64, Height=64, Fill=@Primary]
                                     TextBlock [Text="Circle (Ellipse)", FontSize=10, Foreground=@OnSurfaceVariant, Margin=(0,8,0,0), HorizontalAlignment=Center]
                                 }
                             }
                             Border [Padding=(8,8,8,8)]{
                                 StackPanel [Orientation=Vertical, HorizontalAlignment=Center]{
-                                    Squircle [Width=64, Height=64, Background=@Primary]
+                                    Squircle [Width=64, Height=64, Fill=@Primary]
                                     TextBlock [Text="Square (Squircle)", FontSize=10, Foreground=@OnSurfaceVariant, Margin=(0,8,0,0), HorizontalAlignment=Center]
                                 }
                             }
                             Border [Padding=(8,8,8,8)]{
                                 StackPanel [Orientation=Vertical, HorizontalAlignment=Center]{
-                                    Slanted [Width=64, Height=64, Background=@Primary]
+                                    Slanted [Width=64, Height=64, Fill=@Primary]
                                     TextBlock [Text="Slanted", FontSize=10, Foreground=@OnSurfaceVariant, Margin=(0,8,0,0), HorizontalAlignment=Center]
                                 }
                             }
                             Border [Padding=(8,8,8,8)]{
                                 StackPanel [Orientation=Vertical, HorizontalAlignment=Center]{
-                                    Ellipse [Width=80, Height=48, Background=@Primary]
+                                    Ellipse [Width=80, Height=48, Fill=@Primary]
                                     TextBlock [Text="Oval (Ellipse)", FontSize=10, Foreground=@OnSurfaceVariant, Margin=(0,8,0,0), HorizontalAlignment=Center]
                                 }
                             }
                             Border [Padding=(8,8,8,8)]{
                                 StackPanel [Orientation=Vertical, HorizontalAlignment=Center]{
-                                    Pill [Width=80, Height=48, Background=@Primary]
+                                    Pill [Width=80, Height=48, Fill=@Primary]
                                     TextBlock [Text="Pill", FontSize=10, Foreground=@OnSurfaceVariant, Margin=(0,8,0,0), HorizontalAlignment=Center]
                                 }
                             }
@@ -57,31 +57,31 @@ resources ShapesDemo {
                             // ── Row 2: diamond / pentagon / gem / arch / semicircle ──
                             Border [Padding=(8,8,8,8)]{
                                 StackPanel [Orientation=Vertical, HorizontalAlignment=Center]{
-                                    Diamond [Width=64, Height=64, Background=@Primary]
+                                    Diamond [Width=64, Height=64, Fill=@Primary]
                                     TextBlock [Text="Diamond", FontSize=10, Foreground=@OnSurfaceVariant, Margin=(0,8,0,0), HorizontalAlignment=Center]
                                 }
                             }
                             Border [Padding=(8,8,8,8)]{
                                 StackPanel [Orientation=Vertical, HorizontalAlignment=Center]{
-                                    Pentagon [Width=64, Height=64, Background=@Primary]
+                                    Pentagon [Width=64, Height=64, Fill=@Primary]
                                     TextBlock [Text="Pentagon", FontSize=10, Foreground=@OnSurfaceVariant, Margin=(0,8,0,0), HorizontalAlignment=Center]
                                 }
                             }
                             Border [Padding=(8,8,8,8)]{
                                 StackPanel [Orientation=Vertical, HorizontalAlignment=Center]{
-                                    Gem [Width=64, Height=64, Background=@Primary]
+                                    Gem [Width=64, Height=64, Fill=@Primary]
                                     TextBlock [Text="Gem", FontSize=10, Foreground=@OnSurfaceVariant, Margin=(0,8,0,0), HorizontalAlignment=Center]
                                 }
                             }
                             Border [Padding=(8,8,8,8)]{
                                 StackPanel [Orientation=Vertical, HorizontalAlignment=Center]{
-                                    Arch [Width=64, Height=64, Background=@Primary]
+                                    Arch [Width=64, Height=64, Fill=@Primary]
                                     TextBlock [Text="Arch", FontSize=10, Foreground=@OnSurfaceVariant, Margin=(0,8,0,0), HorizontalAlignment=Center]
                                 }
                             }
                             Border [Padding=(8,8,8,8)]{
                                 StackPanel [Orientation=Vertical, HorizontalAlignment=Center]{
-                                    Semicircle [Width=64, Height=64, Background=@Primary]
+                                    Semicircle [Width=64, Height=64, Fill=@Primary]
                                     TextBlock [Text="Semicircle", FontSize=10, Foreground=@OnSurfaceVariant, Margin=(0,8,0,0), HorizontalAlignment=Center]
                                 }
                             }
@@ -89,31 +89,31 @@ resources ShapesDemo {
                             // ── Row 3: triangle / arrow / fan / clamshell / 4-cookie ──
                             Border [Padding=(8,8,8,8)]{
                                 StackPanel [Orientation=Vertical, HorizontalAlignment=Center]{
-                                    Triangle [Width=64, Height=64, Background=@Primary, CornerRadius=10]
+                                    Triangle [Width=64, Height=64, Fill=@Primary, CornerRadius=10]
                                     TextBlock [Text="Triangle", FontSize=10, Foreground=@OnSurfaceVariant, Margin=(0,8,0,0), HorizontalAlignment=Center]
                                 }
                             }
                             Border [Padding=(8,8,8,8)]{
                                 StackPanel [Orientation=Vertical, HorizontalAlignment=Center]{
-                                    Arrow [Width=64, Height=64, Background=@Primary, CornerRadius=10]
+                                    Arrow [Width=64, Height=64, Fill=@Primary, CornerRadius=10]
                                     TextBlock [Text="Arrow", FontSize=10, Foreground=@OnSurfaceVariant, Margin=(0,8,0,0), HorizontalAlignment=Center]
                                 }
                             }
                             Border [Padding=(8,8,8,8)]{
                                 StackPanel [Orientation=Vertical, HorizontalAlignment=Center]{
-                                    Fan [Width=64, Height=64, Background=@Primary]
+                                    Fan [Width=64, Height=64, Fill=@Primary]
                                     TextBlock [Text="Fan", FontSize=10, Foreground=@OnSurfaceVariant, Margin=(0,8,0,0), HorizontalAlignment=Center]
                                 }
                             }
                             Border [Padding=(8,8,8,8)]{
                                 StackPanel [Orientation=Vertical, HorizontalAlignment=Center]{
-                                    Clamshell [Width=80, Height=48, Background=@Primary, CornerRadius=8]
+                                    Clamshell [Width=80, Height=48, Fill=@Primary, CornerRadius=8]
                                     TextBlock [Text="Clamshell", FontSize=10, Foreground=@OnSurfaceVariant, Margin=(0,8,0,0), HorizontalAlignment=Center]
                                 }
                             }
                             Border [Padding=(8,8,8,8)]{
                                 StackPanel [Orientation=Vertical, HorizontalAlignment=Center]{
-                                    FourSidedCookie [Width=64, Height=64, Background=@Primary, CornerRadius=10]
+                                    FourSidedCookie [Width=64, Height=64, Fill=@Primary, CornerRadius=10]
                                     TextBlock [Text="4-Cookie", FontSize=10, Foreground=@OnSurfaceVariant, Margin=(0,8,0,0), HorizontalAlignment=Center]
                                 }
                             }
@@ -121,31 +121,31 @@ resources ShapesDemo {
                             // ── Row 4: 6/7/9/12-cookie / 4-leaf clover ──
                             Border [Padding=(8,8,8,8)]{
                                 StackPanel [Orientation=Vertical, HorizontalAlignment=Center]{
-                                    SixSidedCookie [Width=64, Height=64, Background=@Primary, CornerRadius=8]
+                                    SixSidedCookie [Width=64, Height=64, Fill=@Primary, CornerRadius=8]
                                     TextBlock [Text="6-Cookie", FontSize=10, Foreground=@OnSurfaceVariant, Margin=(0,8,0,0), HorizontalAlignment=Center]
                                 }
                             }
                             Border [Padding=(8,8,8,8)]{
                                 StackPanel [Orientation=Vertical, HorizontalAlignment=Center]{
-                                    SevenSidedCookie [Width=64, Height=64, Background=@Primary, CornerRadius=8]
+                                    SevenSidedCookie [Width=64, Height=64, Fill=@Primary, CornerRadius=8]
                                     TextBlock [Text="7-Cookie", FontSize=10, Foreground=@OnSurfaceVariant, Margin=(0,8,0,0), HorizontalAlignment=Center]
                                 }
                             }
                             Border [Padding=(8,8,8,8)]{
                                 StackPanel [Orientation=Vertical, HorizontalAlignment=Center]{
-                                    NineSidedCookie [Width=64, Height=64, Background=@Primary, CornerRadius=6]
+                                    NineSidedCookie [Width=64, Height=64, Fill=@Primary, CornerRadius=6]
                                     TextBlock [Text="9-Cookie", FontSize=10, Foreground=@OnSurfaceVariant, Margin=(0,8,0,0), HorizontalAlignment=Center]
                                 }
                             }
                             Border [Padding=(8,8,8,8)]{
                                 StackPanel [Orientation=Vertical, HorizontalAlignment=Center]{
-                                    TwelveSidedCookie [Width=64, Height=64, Background=@Primary, CornerRadius=5]
+                                    TwelveSidedCookie [Width=64, Height=64, Fill=@Primary, CornerRadius=5]
                                     TextBlock [Text="12-Cookie", FontSize=10, Foreground=@OnSurfaceVariant, Margin=(0,8,0,0), HorizontalAlignment=Center]
                                 }
                             }
                             Border [Padding=(8,8,8,8)]{
                                 StackPanel [Orientation=Vertical, HorizontalAlignment=Center]{
-                                    FourLeafClover [Width=64, Height=64, Background=@Primary]
+                                    FourLeafClover [Width=64, Height=64, Fill=@Primary]
                                     TextBlock [Text="4-Leaf Clover", FontSize=10, Foreground=@OnSurfaceVariant, Margin=(0,8,0,0), HorizontalAlignment=Center]
                                 }
                             }
@@ -153,31 +153,31 @@ resources ShapesDemo {
                             // ── Row 5: 8-leaf clover + 4 radial-wave placeholders ──
                             Border [Padding=(8,8,8,8)]{
                                 StackPanel [Orientation=Vertical, HorizontalAlignment=Center]{
-                                    EightLeafClover [Width=64, Height=64, Background=@Primary]
+                                    EightLeafClover [Width=64, Height=64, Fill=@Primary]
                                     TextBlock [Text="8-Leaf Clover", FontSize=10, Foreground=@OnSurfaceVariant, Margin=(0,8,0,0), HorizontalAlignment=Center]
                                 }
                             }
                             Border [Padding=(8,8,8,8)]{
                                 StackPanel [Orientation=Vertical, HorizontalAlignment=Center]{
-                                    Sunny [Width=64, Height=64, Background=@Primary]
+                                    Sunny [Width=64, Height=64, Fill=@Primary]
                                     TextBlock [Text="Sunny", FontSize=10, Foreground=@OnSurfaceVariant, Margin=(0,8,0,0), HorizontalAlignment=Center]
                                 }
                             }
                             Border [Padding=(8,8,8,8)]{
                                 StackPanel [Orientation=Vertical, HorizontalAlignment=Center]{
-                                    VerySunny [Width=64, Height=64, Background=@Primary]
+                                    VerySunny [Width=64, Height=64, Fill=@Primary]
                                     TextBlock [Text="VerySunny", FontSize=10, Foreground=@OnSurfaceVariant, Margin=(0,8,0,0), HorizontalAlignment=Center]
                                 }
                             }
                             Border [Padding=(8,8,8,8)]{
                                 StackPanel [Orientation=Vertical, HorizontalAlignment=Center]{
-                                    Burst [Width=64, Height=64, Background=@Primary]
+                                    Burst [Width=64, Height=64, Fill=@Primary]
                                     TextBlock [Text="Burst", FontSize=10, Foreground=@OnSurfaceVariant, Margin=(0,8,0,0), HorizontalAlignment=Center]
                                 }
                             }
                             Border [Padding=(8,8,8,8)]{
                                 StackPanel [Orientation=Vertical, HorizontalAlignment=Center]{
-                                    SoftBurst [Width=64, Height=64, Background=@Primary]
+                                    SoftBurst [Width=64, Height=64, Fill=@Primary]
                                     TextBlock [Text="SoftBurst", FontSize=10, Foreground=@OnSurfaceVariant, Margin=(0,8,0,0), HorizontalAlignment=Center]
                                 }
                             }
@@ -185,31 +185,31 @@ resources ShapesDemo {
                             // ── Row 6: Boom / SoftBoom / Flower + Puffy / PuffyDiamond ──
                             Border [Padding=(8,8,8,8)]{
                                 StackPanel [Orientation=Vertical, HorizontalAlignment=Center]{
-                                    Boom [Width=64, Height=64, Background=@Primary]
+                                    Boom [Width=64, Height=64, Fill=@Primary]
                                     TextBlock [Text="Boom", FontSize=10, Foreground=@OnSurfaceVariant, Margin=(0,8,0,0), HorizontalAlignment=Center]
                                 }
                             }
                             Border [Padding=(8,8,8,8)]{
                                 StackPanel [Orientation=Vertical, HorizontalAlignment=Center]{
-                                    SoftBoom [Width=64, Height=64, Background=@Primary]
+                                    SoftBoom [Width=64, Height=64, Fill=@Primary]
                                     TextBlock [Text="SoftBoom", FontSize=10, Foreground=@OnSurfaceVariant, Margin=(0,8,0,0), HorizontalAlignment=Center]
                                 }
                             }
                             Border [Padding=(8,8,8,8)]{
                                 StackPanel [Orientation=Vertical, HorizontalAlignment=Center]{
-                                    Flower [Width=64, Height=64, Background=@Primary]
+                                    Flower [Width=64, Height=64, Fill=@Primary]
                                     TextBlock [Text="Flower", FontSize=10, Foreground=@OnSurfaceVariant, Margin=(0,8,0,0), HorizontalAlignment=Center]
                                 }
                             }
                             Border [Padding=(8,8,8,8)]{
                                 StackPanel [Orientation=Vertical, HorizontalAlignment=Center]{
-                                    Puffy [Width=64, Height=64, Background=@Primary]
+                                    Puffy [Width=64, Height=64, Fill=@Primary]
                                     TextBlock [Text="Puffy", FontSize=10, Foreground=@OnSurfaceVariant, Margin=(0,8,0,0), HorizontalAlignment=Center]
                                 }
                             }
                             Border [Padding=(8,8,8,8)]{
                                 StackPanel [Orientation=Vertical, HorizontalAlignment=Center]{
-                                    PuffyDiamond [Width=64, Height=64, Background=@Primary]
+                                    PuffyDiamond [Width=64, Height=64, Fill=@Primary]
                                     TextBlock [Text="PuffyDiamond", FontSize=10, Foreground=@OnSurfaceVariant, Margin=(0,8,0,0), HorizontalAlignment=Center]
                                 }
                             }
@@ -217,31 +217,31 @@ resources ShapesDemo {
                             // ── Row 7: Ghostish / Bun / Heart / PixelCircle / PixelTriangle ──
                             Border [Padding=(8,8,8,8)]{
                                 StackPanel [Orientation=Vertical, HorizontalAlignment=Center]{
-                                    Ghostish [Width=64, Height=64, Background=@Primary]
+                                    Ghostish [Width=64, Height=64, Fill=@Primary]
                                     TextBlock [Text="Ghost-ish", FontSize=10, Foreground=@OnSurfaceVariant, Margin=(0,8,0,0), HorizontalAlignment=Center]
                                 }
                             }
                             Border [Padding=(8,8,8,8)]{
                                 StackPanel [Orientation=Vertical, HorizontalAlignment=Center]{
-                                    Bun [Width=64, Height=64, Background=@Primary]
+                                    Bun [Width=64, Height=64, Fill=@Primary]
                                     TextBlock [Text="Bun", FontSize=10, Foreground=@OnSurfaceVariant, Margin=(0,8,0,0), HorizontalAlignment=Center]
                                 }
                             }
                             Border [Padding=(8,8,8,8)]{
                                 StackPanel [Orientation=Vertical, HorizontalAlignment=Center]{
-                                    Heart [Width=64, Height=64, Background=@Primary]
+                                    Heart [Width=64, Height=64, Fill=@Primary]
                                     TextBlock [Text="Heart", FontSize=10, Foreground=@OnSurfaceVariant, Margin=(0,8,0,0), HorizontalAlignment=Center]
                                 }
                             }
                             Border [Padding=(8,8,8,8)]{
                                 StackPanel [Orientation=Vertical, HorizontalAlignment=Center]{
-                                    PixelCircle [Width=64, Height=64, Background=@Primary]
+                                    PixelCircle [Width=64, Height=64, Fill=@Primary]
                                     TextBlock [Text="PixelCircle", FontSize=10, Foreground=@OnSurfaceVariant, Margin=(0,8,0,0), HorizontalAlignment=Center]
                                 }
                             }
                             Border [Padding=(8,8,8,8)]{
                                 StackPanel [Orientation=Vertical, HorizontalAlignment=Center]{
-                                    PixelTriangle [Width=64, Height=64, Background=@Primary]
+                                    PixelTriangle [Width=64, Height=64, Fill=@Primary]
                                     TextBlock [Text="PixelTriangle", FontSize=10, Foreground=@OnSurfaceVariant, Margin=(0,8,0,0), HorizontalAlignment=Center]
                                 }
                             }

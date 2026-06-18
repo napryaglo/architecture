@@ -3,7 +3,6 @@ import {
     Model,
     Point,
     Size,
-    Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
 import {
@@ -11,9 +10,9 @@ import {
     LineSegment,
     PathFigure,
     PathGeometry,
-    Pen,
     SweepDirection,
 } from '../../visual-engine/index.js';
+import { Shape } from './shape.js';
 
 // M3 Fan — quarter-circle wedge anchored at the bottom-left corner of
 // the layout rect. The straight edges run along the left and bottom of
@@ -33,22 +32,20 @@ export enum FanPivot
     BottomRight = 'BottomRight',
 }
 
-export class Fan extends Visual
+export class Fan extends Shape
 {
     public static readonly PivotKey           = Model.RegisterProperty<FanPivot>(         Fan, 'Pivot',           FanPivot.BottomLeft, MetaData.Render);
 
     public get Pivot(): FanPivot { return this.get_property_value(Fan.PivotKey); }
     public set Pivot(v: FanPivot) { this.set_property_value(Fan.PivotKey, v); }
 
-    protected override MeasureOverride(_availableSize: Size): Size { return Size.Zero; }
-    protected override ArrangeOverride(finalSize: Size): Size { return finalSize; }
-
     protected override RenderOverride(dc: DrawingContext): void
     {
         const size = this.RenderSize;
         if (size.Width <= 0 || size.Height <= 0) return;
 
-        const t    = this.StrokeThickness;
+        const stroke = this.Stroke;
+        const t      = stroke?.Thickness ?? 0;
         const half = t / 2;
         const w    = Math.max(0, size.Width  - t);
         const h    = Math.max(0, size.Height - t);
@@ -102,10 +99,6 @@ export class Fan extends Visual
             ],
             true);
 
-        const pen = this.Stroke !== undefined && t > 0
-            ? new Pen(this.Stroke, t)
-            : undefined;
-
-        dc.DrawGeometry(this.Background, pen, new PathGeometry([figure]));
+        dc.DrawGeometry(this.Fill, stroke, new PathGeometry([figure]));
     }
 }

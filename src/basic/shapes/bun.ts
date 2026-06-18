@@ -2,16 +2,14 @@ import {
     MetaData,
     Model,
     Point,
-    Size,
-    Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
 import {
     CubicBezierSegment,
     PathFigure,
     PathGeometry,
-    Pen,
 } from '../../visual-engine/index.js';
+import { Shape } from './shape.js';
 
 // M3 Bun — symmetric vertical silhouette: a tall pill with a horizontal
 // pinch at the middle, evoking two stacked humps (the "top bun + bottom
@@ -21,7 +19,7 @@ import {
 // ≈ 0.4).
 //
 // Stroke insets by half-thickness.
-export class Bun extends Visual
+export class Bun extends Shape
 {
     // 0…1. 1.0 = no pinch (pure ellipse). 0.4 = pronounced waist.
     public static readonly WaistKey           = Model.RegisterProperty<number>(           Bun, 'Waist',           0.85,      MetaData.Render);
@@ -29,15 +27,13 @@ export class Bun extends Visual
     public get Waist(): number { return this.get_property_value(Bun.WaistKey); }
     public set Waist(v: number) { this.set_property_value(Bun.WaistKey, v); }
 
-    protected override MeasureOverride(_availableSize: Size): Size { return Size.Zero; }
-    protected override ArrangeOverride(finalSize: Size): Size { return finalSize; }
-
     protected override RenderOverride(dc: DrawingContext): void
     {
         const size = this.RenderSize;
         if (size.Width <= 0 || size.Height <= 0) return;
 
-        const t    = this.StrokeThickness;
+        const stroke = this.Stroke;
+        const t      = stroke?.Thickness ?? 0;
         const half = t / 2;
         const w    = Math.max(0, size.Width  - t);
         const h    = Math.max(0, size.Height - t);
@@ -82,10 +78,6 @@ export class Bun extends Visual
 
         const figure = new PathFigure(top, [seg1, seg2, seg3, seg4], true);
 
-        const pen = this.Stroke !== undefined && t > 0
-            ? new Pen(this.Stroke, t)
-            : undefined;
-
-        dc.DrawGeometry(this.Background, pen, new PathGeometry([figure]));
+        dc.DrawGeometry(this.Fill, stroke, new PathGeometry([figure]));
     }
 }

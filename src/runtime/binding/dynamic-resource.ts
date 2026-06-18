@@ -38,20 +38,29 @@ class ResourceWatcher extends Model
 // that didn't have one) WON'T re-wire subscriptions automatically —
 // a known limitation of this first-cut implementation, called out so
 // callers know to re-create the binding if they reshape the tree.
+// Lightweight duck-test for "is this object a Visual". Avoids importing
+// the Visual class concretely (would create a runtime circular import).
+// A Visual exposes TryFindResource AND _subscribe_dynamic_resource —
+// both are needed by the wiring path below.
+function isVisualHost(host: object): host is Visual
+{
+    return typeof (host as { TryFindResource?: unknown }).TryFindResource === 'function';
+}
+
 class DynamicResourceBinding extends Binding
 {
     private readonly watcher: ResourceWatcher;
     private readonly subscriptions: Array<() => void>;
-    private readonly host: Visual;
+    private readonly host: Visual | Model;
     private readonly key: string;
-    private readonly unsubscribeRewire: () => void;
+    private readonly unsubscribeRewire: (() => void) | undefined;
     // In-flight scheme-transition animation driven by this binding. Held
     // so the next refresh / dispose can Stop() it cleanly; otherwise a
     // back-to-back scheme swap would leave the prior animation pinning
     // the animated slot.
     private activeStoryboard: Storyboard | undefined;
 
-    constructor(host: Visual, key: string)
+    constructor(host: Visual | Model, key: string)
     {
         const watcher = new ResourceWatcher();
         super(watcher, 'Value', BindingMode.OneWay);
@@ -64,17 +73,17 @@ class DynamicResourceBinding extends Binding
         // Re-walk the ancestor chain whenever the host is attached /
         // detached. Visual.refresh_dynamic_resources_subtree fires this
         // callback on every binding registered against any node in the
-        // affected subtree.
-        this.unsubscribeRewire = host._subscribe_dynamic_resource(() =>
-        {
-            this.rewire();
-        });
+        // affected subtree. Non-Visual hosts (Pen resources, Brush
+        // resources, …) have no visual tree, so no re-wire hook.
+        this.unsubscribeRewire = isVisualHost(host)
+            ? host._subscribe_dynamic_resource(() => { this.rewire(); })
+            : undefined;
     }
 
     public override dispose(): void
     {
         super.dispose();
-        this.unsubscribeRewire();
+        this.unsubscribeRewire?.();
         for (const unsub of this.subscriptions) unsub();
         this.subscriptions.length = 0;
         this.activeStoryboard?.Stop();
@@ -107,22 +116,28 @@ class DynamicResourceBinding extends Binding
         // Bracket access into Visual's private resource field is
         // intentional — same pattern as model.test.ts's parent_of
         // helper. Reading via the public Resources getter would
-        // allocate empty dicts on every walk step.
+        // allocate empty dicts on every walk step. Non-Visual hosts
+        // (resource-block instances like Pen / Brush) have no visual
+        // tree, so the ancestor walk is skipped and only Application's
+        // Resources subscription drives re-resolution.
         type VisualBack = {
             ['_resources']: { Subscribe(l: () => void): () => void } | undefined;
             ['_logicalParent']: Visual | undefined;
             ['_templatedParent']: Visual | undefined;
         };
-        let cursor: Visual | undefined = this.host;
-        while (cursor !== undefined)
+        if (isVisualHost(this.host))
         {
-            const back = cursor as unknown as VisualBack;
-            const dict = back['_resources'];
-            if (dict !== undefined)
+            let cursor: Visual | undefined = this.host;
+            while (cursor !== undefined)
             {
-                this.subscriptions.push(dict.Subscribe(() => this.refresh()));
+                const back = cursor as unknown as VisualBack;
+                const dict = back['_resources'];
+                if (dict !== undefined)
+                {
+                    this.subscriptions.push(dict.Subscribe(() => this.refresh()));
+                }
+                cursor = back['_logicalParent'] ?? back['_templatedParent'];
             }
-            cursor = back['_logicalParent'] ?? back['_templatedParent'];
         }
         const app = Application.current;
         if (app !== undefined && app !== null)
@@ -134,7 +149,14 @@ class DynamicResourceBinding extends Binding
     private refresh(): void
     {
         const oldValue = this.watcher.Value;
-        const newValue = this.host.TryFindResource(this.key);
+        // Visual hosts walk their ancestor chain (Style → logical
+        // parent → ambient scheme → Application defaults). Non-Visual
+        // hosts skip straight to the Application-level fallback —
+        // that's where theme bundles live, so theme-token references
+        // (`@Primary`, …) still resolve from a Pen / Brush resource.
+        const newValue = isVisualHost(this.host)
+            ? this.host.TryFindResource(this.key)
+            : Application.ResolveDefaultResource(this.key);
         if (oldValue === newValue) return;
 
         // Animation gate. Skip the factory entirely when no transition is
@@ -219,7 +241,7 @@ class DynamicResourceBinding extends Binding
 //     be observed. The common case of consuming resources from a
 //     fixed ancestor (Application / Window / templated control) is
 //     fully supported.
-export function DynamicResource(host: Visual, key: string): Binding
+export function DynamicResource(host: Visual | Model, key: string): Binding
 {
     return new DynamicResourceBinding(host, key);
 }

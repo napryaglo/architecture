@@ -19,15 +19,31 @@ import { Thumb, type DragDeltaEventArgs, type DragStartedEventArgs, type DragCom
 // colour via the PreviewBrush DP.
 
 // Splitter — a standalone orientation-aware drag bar for non-Grid
-// containers (StackPanel, DockPanel, …). On drag, mutates the
-// PREVIOUS LOGICAL SIBLING's Width (Vertical splitter) or Height
-// (Horizontal splitter).
+// containers (StackPanel, DockPanel, …). On drag, mutates the PREVIOUS
+// LOGICAL SIBLING's Width (Vertical splitter) or Height (Horizontal
+// splitter).
 //
 // Orientation convention (matches Slider / ScrollBar):
 //   Horizontal — the splitter is a horizontal bar that drags vertically
-//                and resizes a row above. ns-resize cursor.
+//                and resizes a row above (or below, when reversed).
+//                ns-resize cursor.
 //   Vertical   — the splitter is a vertical bar that drags horizontally
-//                and resizes a column to the left. ew-resize cursor.
+//                and resizes a column to the left (or right, when
+//                reversed). ew-resize cursor.
+//
+// Direction:
+//   ReverseDirection=false (default) — drag right/down GROWS target.
+//     Use for left-edge / top-edge panels: the panel is declared
+//     first, splitter second, panel sits on splitter's leading side.
+//     `[Panel][Splitter][rest fills]`.
+//   ReverseDirection=true — drag right/down SHRINKS target.
+//     Use for right-edge / bottom-edge panels: in a DockPanel, declare
+//     the panel first with `Dock=Right/Bottom` (so it lands in the
+//     outermost slot), then the splitter with the same `Dock`. The
+//     panel ends up at `idx-1` in `visualChildren` (the previous
+//     sibling) but sits on the splitter's TRAILING side in layout —
+//     so drag LEFT/UP needs to grow it. ReverseDirection negates the
+//     drag delta to make this match the user's spatial intuition.
 //
 // GridSplitter is the better choice inside a Grid (it understands Star
 // sizing and SharedSizeGroups). Use Splitter when the surrounding
@@ -43,6 +59,9 @@ export class Splitter extends Thumb
 {
     public static readonly OrientationKey = Model.RegisterProperty<Orientation>(
         Splitter, 'Orientation', Orientation.Vertical, MetaData.Render);
+
+    public static readonly ReverseDirectionKey = Model.RegisterProperty<boolean>(
+        Splitter, 'ReverseDirection', false, MetaData.None);
 
     public static readonly ShowsPreviewKey = Model.RegisterProperty<boolean>(
         Splitter, 'ShowsPreview', false, MetaData.None);
@@ -102,6 +121,9 @@ export class Splitter extends Thumb
 
     public get PreviewBrush(): Brush | undefined { return this.get_property_value(Splitter.PreviewBrushKey); }
     public set PreviewBrush(v: Brush | undefined) { this.set_property_value(Splitter.PreviewBrushKey, v); }
+
+    public get ReverseDirection(): boolean { return this.get_property_value(Splitter.ReverseDirectionKey); }
+    public set ReverseDirection(v: boolean) { this.set_property_value(Splitter.ReverseDirectionKey, v); }
 
     private refreshCursor(): void
     {
@@ -192,6 +214,16 @@ export class Splitter extends Thumb
         return siblings[idx - 1];
     }
 
+    // Negate the raw drag delta for ReverseDirection layouts so that
+    // dragging LEFT grows a right-edge panel and dragging UP grows a
+    // bottom-edge panel — consistent with the user-visible expectation
+    // even though the target sibling sits on the splitter's trailing
+    // side in layout.
+    private effectiveDelta(delta: number): number
+    {
+        return this.ReverseDirection ? -delta : delta;
+    }
+
     private snapToIncrement(raw: number): number
     {
         const inc = this.DragIncrement;
@@ -203,7 +235,7 @@ export class Splitter extends Thumb
     {
         const target = this._resizeTarget;
         if (target === undefined) return;
-        const next = Math.max(0, this._startSize + delta);
+        const next = Math.max(0, this._startSize + this.effectiveDelta(delta));
         if (this.Orientation === Orientation.Vertical)
         {
             target.Width  = next;
@@ -237,7 +269,7 @@ export class Splitter extends Thumb
         const explicit = isVerticalAgain ? target.Width : target.Height;
         const arranged = isVerticalAgain ? target.ArrangedRect.Width : target.ArrangedRect.Height;
         const start = Number.isFinite(explicit) ? explicit : arranged;
-        const next = Math.max(0, start + delta);
+        const next = Math.max(0, start + this.effectiveDelta(delta));
         if (isVerticalAgain) target.Width = next;
         else                  target.Height = next;
         args.Handled = true;
