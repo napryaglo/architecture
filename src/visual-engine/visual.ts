@@ -527,13 +527,27 @@ export class Visual extends Model
      *  current Transitions on every matched DP write rather than
      *  caching per-Visual. § 1.16 — separated from the bare getter so
      *  a read-only consumer (binding observer) doesn't accidentally
-     *  fire the `set_property_value` write that allocation triggers. */
+     *  fire the `set_property_value` write that allocation triggers.
+     *
+     *  § 1.14 — also registers the implicit-transition pre-write
+     *  listener on first allocation. Visuals without any
+     *  PropertyTransition pay zero per-write overhead: no listener,
+     *  no Set, no fanout. Subscribers added via the public
+     *  `AddBaseValueWriteListener` on Model. */
     public EnsureTransitions(): ObservableCollection<PropertyTransition>
     {
         let t = this.get_property_value(Visual.TransitionsKey);
         if (t === undefined)
         {
             t = new ObservableCollection<PropertyTransition>();
+            // Subscribe BEFORE the write so a future
+            // `set_property_value(TransitionsKey, …)` consumer can't
+            // race past the registration. The listener self-skips on
+            // descriptor.Name === 'Transitions' so this first write
+            // (and any later collection re-assignment) is a no-op.
+            this.AddBaseValueWriteListener(
+                (descriptor, new_value) => this.handle_base_value_write(descriptor, new_value),
+            );
             this.set_property_value(Visual.TransitionsKey, t);
         }
         return t;
@@ -2396,7 +2410,11 @@ export class Visual extends Model
     // Transitions collection fails. Reads the current effective value
     // BEFORE the write so the animation starts from where the eye is
     // actually looking (including any in-flight animated value).
-    protected override OnBeforeBaseValueWrite(
+    /** § 1.14 — Pre-write listener body. Registered via
+     *  `AddBaseValueWriteListener` from `EnsureTransitions` only when
+     *  this Visual gains its first PropertyTransition; Visuals
+     *  without transitions never see the fanout. */
+    private handle_base_value_write(
         descriptor: PropertyDescriptor,
         new_value: any,
     ): void

@@ -2849,6 +2849,15 @@ export class Compiler
             }
             return;
         }
+        // § 1.16 — `Transitions` getter is now pure (returns | undefined);
+        // the mutator path goes through `EnsureTransitions()`. Special-
+        // case the emit so a `Transitions { … }` block lazy-allocates
+        // the collection. Other collection-block properties
+        // (CommandBindings / InputBindings on Control, …) still use
+        // their getter directly.
+        const accessor = propertyName === 'Transitions'
+            ? `${parentVar}.EnsureTransitions()`
+            : `${parentVar}.${propertyName}`;
         for (const child of body.items)
         {
             if (child.kind !== 'element')
@@ -2858,7 +2867,7 @@ export class Compiler
                     'span' in child ? child.span : body.span);
             }
             const childVar = this.compileElement(child);
-            this.line(`${parentVar}.${propertyName}.Add(${childVar});`);
+            this.line(`${accessor}.Add(${childVar});`);
         }
     }
 
