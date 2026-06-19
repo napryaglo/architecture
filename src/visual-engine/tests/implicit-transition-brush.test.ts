@@ -49,7 +49,7 @@ describe('Implicit transition — SolidColorBrush via registered builder', () =>
         t.Property = 'Brush';
         t.Duration = 100;
         t.Easing   = Easings.Linear;
-        v.Transitions.Add(t);
+        v.EnsureTransitions().Add(t);
 
         v.Brush = new SolidColorBrush(Color.Black);
         v.Brush = new SolidColorBrush(Color.White);
@@ -83,7 +83,7 @@ describe('Implicit transition — SolidColorBrush via registered builder', () =>
         t.Property = 'Brush';
         t.Duration = 100;
         t.Easing   = Easings.Linear;
-        v.Transitions.Add(t);
+        v.EnsureTransitions().Add(t);
 
         v.Brush = new SolidColorBrush(Color.Black);
         v.Brush = new SolidColorBrush(Color.White);  // 0 → 255 over 100ms

@@ -403,7 +403,7 @@ describe('ScrollViewer — § 10.5 smooth scrolling', () => {
     test('SmoothScroll=true installs two managed PropertyTransitions (H + V offsets)', () => {
         const sv = new ScrollViewer();
         sv.SmoothScroll = true;
-        const list = sv.Transitions;
+        const list = sv.Transitions!;
         const managed: unknown[] = [];
         for (let i = 0; i < list.Count; i++)
         {
@@ -440,7 +440,7 @@ describe('ScrollViewer — § 10.5 smooth scrolling', () => {
         const sv = new ScrollViewer();
         sv.SmoothScroll         = true;
         sv.SmoothScrollDuration = 500;
-        const list = sv.Transitions;
+        const list = sv.Transitions!;
         for (let i = 0; i < list.Count; i++)
         {
             const t = list.Get(i);
@@ -455,15 +455,16 @@ describe('ScrollViewer — § 10.5 smooth scrolling', () => {
         const sv = new ScrollViewer();
         const userT = new PropertyTransition();
         userT.Property = 'Opacity';
-        sv.Transitions.Add(userT);
+        sv.EnsureTransitions().Add(userT);
 
         sv.SmoothScroll = true;
         sv.SmoothScroll = false;
 
         let foundOpacity = false;
-        for (let i = 0; i < sv.Transitions.Count; i++)
+        const list = sv.Transitions!;
+        for (let i = 0; i < list.Count; i++)
         {
-            const t = sv.Transitions.Get(i);
+            const t = list.Get(i);
             if ((t as { Property: string } | undefined)?.Property === 'Opacity') foundOpacity = true;
         }
         assert.equal(foundOpacity, true,

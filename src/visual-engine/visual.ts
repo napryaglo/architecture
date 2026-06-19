@@ -52,6 +52,26 @@ export const KNOWN_ROUTED_EVENTS = new Set([
     'DragEnter', 'DragLeave', 'DragOver', 'Drop',
 ]);
 
+// Snapshot-then-iterate helper used by every per-instance listener
+// fan-out — routed events, Loaded, Unloaded, DynamicResource
+// re-wire. Without the snapshot, a listener that registers /
+// unregisters another listener mid-fire would mutate the Set / Array
+// we're iterating; with it, the iteration sees a stable view and
+// the registration takes effect on the NEXT fire. Same pattern that
+// used to be inlined four times (§ 1.16). Accepts iterables so both
+// Set<Fn> and Array<Fn> sites share the same helper.
+function safeFire<A extends unknown[]>(
+    listeners: Iterable<(...args: A) => void> | undefined,
+    ...args: A
+): void
+{
+    if (listeners === undefined) return;
+    // `Array.from` for both Set and Array — a Set iterator would
+    // otherwise mutate-during-iteration if a listener calls add or
+    // delete on the same Set.
+    for (const l of Array.from(listeners)) l(...args);
+}
+
 // Horizontal positioning of a Visual within its parent-given slot when
 // the rendered area is smaller than the slot. Stretch fills the slot
 // when no explicit Width is set; with an explicit Width, Stretch falls
@@ -490,11 +510,25 @@ export class Visual extends Model
         this.set_property_value_with_key(Visual.IsPressedKey, value);
     }
 
-    // Lazy-allocated. The collection is mutate-in-place — pushes /
-    // removes take effect immediately because the engine reads the
-    // current Transitions on every matched DP write rather than
-    // caching per-Visual.
-    public get Transitions(): ObservableCollection<PropertyTransition>
+    // Read-only getter — returns `undefined` when no transitions
+    // collection has been allocated. Bindings / consumers wanting the
+    // pure-read shape touch this. Mutators (the compiler's
+    // `Transitions { … }` block, runtime push / remove) call
+    // `EnsureTransitions()` below, which lazy-allocates AND fires the
+    // DP write that subscribers expect.
+    public get Transitions(): ObservableCollection<PropertyTransition> | undefined
+    {
+        return this.get_property_value(Visual.TransitionsKey);
+    }
+
+    /** Lazy-allocate the Transitions collection if missing, then
+     *  return it. The collection is mutate-in-place — pushes /
+     *  removes take effect immediately because the engine reads the
+     *  current Transitions on every matched DP write rather than
+     *  caching per-Visual. § 1.16 — separated from the bare getter so
+     *  a read-only consumer (binding observer) doesn't accidentally
+     *  fire the `set_property_value` write that allocation triggers. */
+    public EnsureTransitions(): ObservableCollection<PropertyTransition>
     {
         let t = this.get_property_value(Visual.TransitionsKey);
         if (t === undefined)
@@ -1176,6 +1210,18 @@ export class Visual extends Model
     // overrides to call `super` to keep listeners working.
     public AddRoutedEventListener(eventName: string, listener: (args: unknown) => void): void
     {
+        // § 1.16 — validate at registration so a typo
+        // (`'PointreDown'`) fails loudly instead of subscribing to a
+        // name that will never fire. The check is throw-on-unknown,
+        // matching `AttachVisual`'s policy for invalid wiring;
+        // FireRoutedListeners stays free of the per-fire check.
+        if (!KNOWN_ROUTED_EVENTS.has(eventName))
+        {
+            throw new Error(
+                `Visual.AddRoutedEventListener: unknown routed event '${eventName}'. `
+                + `Known names: ${Array.from(KNOWN_ROUTED_EVENTS).join(', ')}.`,
+            );
+        }
         if (this._routedListeners === undefined) this._routedListeners = new Map();
         let set = this._routedListeners.get(eventName);
         if (set === undefined)
@@ -1196,9 +1242,7 @@ export class Visual extends Model
     // never register).
     public FireRoutedListeners(eventName: string, args: unknown): void
     {
-        const set = this._routedListeners?.get(eventName);
-        if (set === undefined || set.size === 0) return;
-        for (const l of Array.from(set)) l(args);
+        safeFire(this._routedListeners?.get(eventName), args);
     }
 
     public AddLoadedListener(listener: () => void): void
@@ -1248,12 +1292,7 @@ export class Visual extends Model
 
     private fire_unloaded_listeners(): void
     {
-        if (this._unloadedListeners === undefined) return;
-        // Snapshot first — a listener that detaches itself or another
-        // listener mid-fire would otherwise mutate the Set we're
-        // iterating. Same pattern as fire_loaded_listeners.
-        const snapshot = Array.from(this._unloadedListeners);
-        for (const l of snapshot) l();
+        safeFire(this._unloadedListeners);
     }
 
     // ── Behavior attachment ────────────────────────────────────────────
@@ -1572,12 +1611,7 @@ export class Visual extends Model
 
     private fire_loaded_listeners(): void
     {
-        if (this._loadedListeners === undefined) return;
-        // Snapshot — a listener that adds/removes another listener
-        // mid-fire (e.g., an EventTrigger that one-shot detaches
-        // itself) must not perturb iteration.
-        const snapshot = Array.from(this._loadedListeners);
-        for (const l of snapshot) l();
+        safeFire(this._loadedListeners);
     }
 
     // § 1.15 — the four propagate_* virtuals now have one-line
@@ -2570,11 +2604,7 @@ export class Visual extends Model
 
     private fire_dynamic_resource_listeners(): void
     {
-        if (this._dynamic_resource_listeners === undefined) return;
-        // Snapshot so a listener that unsubscribes itself mid-fire
-        // doesn't perturb the iteration.
-        const snapshot = this._dynamic_resource_listeners.slice();
-        for (const l of snapshot) l();
+        safeFire(this._dynamic_resource_listeners);
     }
 
     /** @internal — § 1.10. Re-walk every DynamicResource binding

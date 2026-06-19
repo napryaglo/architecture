@@ -754,7 +754,7 @@ export class ScrollViewer extends ContentControl
             return;
         }
 
-        const list = this.Transitions;
+        const list = this.EnsureTransitions();
         // Drop any previously-managed entries before re-installing —
         // covers the disable path AND the duration / easing changes.
         for (let i = list.Count - 1; i >= 0; i--)
@@ -772,14 +772,14 @@ export class ScrollViewer extends ContentControl
         tH.Duration = this.SmoothScrollDuration;
         tH.Easing   = this.SmoothScrollEasing;
         (tH as { _smoothScrollManaged?: boolean })._smoothScrollManaged = true;
-        this.Transitions.Add(tH);
+        list.Add(tH);
 
         const tV = new PropertyTransition();
         tV.Property = 'VerticalOffset';
         tV.Duration = this.SmoothScrollDuration;
         tV.Easing   = this.SmoothScrollEasing;
         (tV as { _smoothScrollManaged?: boolean })._smoothScrollManaged = true;
-        this.Transitions.Add(tV);
+        list.Add(tV);
     }
 }
 

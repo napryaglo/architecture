@@ -65,19 +65,23 @@ describe('PropertyTransition — DP shape', () => {
 });
 
 describe('Visual.Transitions — collection plumbing', () => {
-    test('starts undefined; getter lazy-allocates an empty collection', () => {
+    test('starts undefined; EnsureTransitions allocates an empty collection', () => {
         const v = new TransitionTest();
         // Direct DP read returns undefined when nothing has touched
         // Transitions yet — zero-cost when no transitions are used.
+        // The bare getter returns the same (§ 1.16 — no side-effecting
+        // read).
         assert.equal(
             v.get_property_value(resolveKey(v, undefined, 'Transitions')),
             undefined,
         );
-        // Getter promotes the slot to an empty collection.
-        assert.equal(v.Transitions.Count, 0);
+        assert.equal(v.Transitions, undefined);
+        // EnsureTransitions promotes the slot to an empty collection.
+        assert.equal(v.EnsureTransitions().Count, 0);
         // Same instance on subsequent reads (no second alloc).
-        const first = v.Transitions;
+        const first = v.EnsureTransitions();
         assert.equal(v.Transitions, first);
+        assert.equal(v.EnsureTransitions(), first);
     });
 
     test('Add a PropertyTransition; the collection observes the push', () => {
@@ -85,9 +89,9 @@ describe('Visual.Transitions — collection plumbing', () => {
         const t = new PropertyTransition();
         t.Property = 'Number';
         t.Duration = 200;
-        v.Transitions.Add(t);
-        assert.equal(v.Transitions.Count, 1);
-        assert.equal(v.Transitions.Get(0), t);
+        v.EnsureTransitions().Add(t);
+        assert.equal(v.Transitions!.Count, 1);
+        assert.equal(v.Transitions!.Get(0), t);
     });
 });
 
@@ -101,7 +105,7 @@ describe('Implicit transition — number DP', () => {
         t.Property = 'Number';
         t.Duration = 100;
         t.Easing   = Easings.Linear;
-        v.Transitions.Add(t);
+        v.EnsureTransitions().Add(t);
 
         v.Number = 0;
         v.Number = 100;  // triggers transition; first tick snaps Number to 0 (the From).
@@ -127,7 +131,7 @@ describe('Implicit transition — number DP', () => {
         const t = new PropertyTransition();
         t.Property = 'Number';
         t.Duration = 100;
-        v.Transitions.Add(t);
+        v.EnsureTransitions().Add(t);
 
         v.Color = Color.Red;  // different DP; no matching transition.
         assert.equal(v.Color, Color.Red, 'unmatched DP should snap to the new value immediately');
@@ -138,7 +142,7 @@ describe('Implicit transition — number DP', () => {
         const t = new PropertyTransition();
         t.Property = 'Number';
         t.Duration = 0;  // explicit "no animation"
-        v.Transitions.Add(t);
+        v.EnsureTransitions().Add(t);
 
         v.Number = 50;
         assert.equal(v.Number, 50, 'Duration = 0 should snap');
@@ -150,7 +154,7 @@ describe('Implicit transition — number DP', () => {
         t.Property = 'Number';
         t.Duration = 100;
         t.Easing   = Easings.Linear;
-        v.Transitions.Add(t);
+        v.EnsureTransitions().Add(t);
 
         v.Number = 0;
         v.Number = 100;  // first transition: 0 → 100 over 100ms.
@@ -172,7 +176,7 @@ describe('Implicit transition — number DP', () => {
         const t = new PropertyTransition();
         t.Property = 'Number';
         t.Duration = 100;
-        v.Transitions.Add(t);
+        v.EnsureTransitions().Add(t);
 
         v.Number = 50;
         clock.Tick(100);  // any pending animation should finish.
@@ -191,7 +195,7 @@ describe('Implicit transition — type dispatch', () => {
         t.Property = 'Color';
         t.Duration = 100;
         t.Easing   = Easings.Linear;
-        v.Transitions.Add(t);
+        v.EnsureTransitions().Add(t);
 
         v.Color = Color.Black;
         v.Color = Color.White;
@@ -212,7 +216,7 @@ describe('Implicit transition — type dispatch', () => {
         t.Property = 'Thickness';
         t.Duration = 100;
         t.Easing   = Easings.Linear;
-        v.Transitions.Add(t);
+        v.EnsureTransitions().Add(t);
 
         v.Thickness = new Thickness(0);
         v.Thickness = new Thickness(40);
@@ -228,7 +232,7 @@ describe('Implicit transition — type dispatch', () => {
         const t = new PropertyTransition();
         t.Property = 'Label';
         t.Duration = 100;
-        v.Transitions.Add(t);
+        v.EnsureTransitions().Add(t);
 
         v.Label = 'hello';
         v.Label = 'world';  // strings aren't animatable; the engine returns
