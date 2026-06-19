@@ -700,24 +700,31 @@ export class Visual extends Model
     // Wired at AttachLogical for every dict found in the current
     // ancestor chain; torn down at DetachLogical or when
     // refresh_styles_subtree rebuilds them after a tree mutation.
-    private _styleSubscriptions: Array<() => void> = [];
+    // Lazy collections — § 1.2. Visuals that never opt into Style,
+    // Triggers, or DynamicResource (Border / TextBlock / etc. in plain
+    // content roles) pay no allocation. Write sites use the `??=`
+    // shape to materialize on first touch; read sites use `?.` or
+    // explicit `=== undefined` guards. For a 1000-item virtualized
+    // ListBox that's seven empty collections × 1000 containers
+    // reclaimed.
+    private _styleSubscriptions: Array<() => void> | undefined;
 
     // Per-target bindings created from Setter.value (either a Binding
     // directly, or one produced by a SetterFactory). Keyed by the
     // owning Setter so unapply can locate and dispose them. Separate
     // maps for style-tier vs trigger-tier because the same Setter
     // instance can legally appear in both.
-    private _styleSetterBindings: Map<Setter, Binding> = new Map();
-    private _triggerSetterBindings: Map<Setter, Binding> = new Map();
+    private _styleSetterBindings:   Map<Setter, Binding> | undefined;
+    private _triggerSetterBindings: Map<Setter, Binding> | undefined;
 
     // Currently-matched triggers. A trigger is added on its watched
     // property matching the trigger's value; removed when the value
     // diverges. Trigger setters are applied / cleared in lock-step.
-    private _activeTriggers: Set<PropertyTrigger | MultiTrigger | DataTrigger | MultiDataTrigger> = new Set();
+    private _activeTriggers: Set<PropertyTrigger | MultiTrigger | DataTrigger | MultiDataTrigger> | undefined;
 
     // Per-trigger unsubscribe callback, set at install_trigger,
     // invoked at uninstall_trigger. Keyed by the trigger instance.
-    private _triggerSubscriptions: Map<PropertyTrigger | MultiTrigger | DataTrigger | MultiDataTrigger, () => void> = new Map();
+    private _triggerSubscriptions: Map<PropertyTrigger | MultiTrigger | DataTrigger | MultiDataTrigger, () => void> | undefined;
 
     // Per-EventTrigger unsubscribe callback. Different map from
     // _triggerSubscriptions because EventTriggers don't watch a
@@ -726,7 +733,7 @@ export class Visual extends Model
     // …). Separating the two also keeps the keying clean: an
     // EventTrigger and a PropertyTrigger with the same instance
     // identity wouldn't collide here.
-    private _eventTriggerSubscriptions: Map<EventTrigger, () => void> = new Map();
+    private _eventTriggerSubscriptions: Map<EventTrigger, () => void> | undefined;
 
     // Per-event-name instance listener registry. Used by the routed-
     // event dispatcher to invoke per-Visual listeners alongside the
@@ -1322,7 +1329,10 @@ export class Visual extends Model
                 evd.AddChangeListener(targetListener);
             }
 
-            (tier === 'style' ? this._styleSetterBindings : this._triggerSetterBindings).set(setter, binding);
+            const bindings = tier === 'style'
+                ? (this._styleSetterBindings   ??= new Map())
+                : (this._triggerSetterBindings ??= new Map());
+            bindings.set(setter, binding);
             // Stash the EVD + listener on the binding so unapply_setter
             // can detach without re-resolving the descriptor / EVD.
             // Tagged with a Symbol-keyed slot so it never collides with
@@ -1358,7 +1368,7 @@ export class Visual extends Model
         // state on every Style swap / container teardown. Detaching
         // first leaves the slot-clear silent from the binding's POV.
         const bindings = tier === 'style' ? this._styleSetterBindings : this._triggerSetterBindings;
-        const binding = bindings.get(setter);
+        const binding = bindings?.get(setter);
         if (binding !== undefined)
         {
             const wb = (binding as unknown as { [SETTER_WRITEBACK]?: { evd: EffectiveValueDescriptor; listener: PropertyChangeCallback } })[SETTER_WRITEBACK];
@@ -1377,7 +1387,7 @@ export class Visual extends Model
         {
             binding.setOnValueChanged(undefined);
             binding.dispose();
-            bindings.delete(setter);
+            bindings?.delete(setter);
         }
     }
 
@@ -1442,7 +1452,7 @@ export class Visual extends Model
             {
                 const handler = (args: unknown): void => fire(args);
                 self.AddClickHandler(handler);
-                this._eventTriggerSubscriptions.set(trigger, () => {
+                (this._eventTriggerSubscriptions ??= new Map()).set(trigger, () => {
                     self.RemoveClickHandler!(handler);
                 });
             }
@@ -1456,7 +1466,7 @@ export class Visual extends Model
             const handler = (): void => fire(undefined);
             if (this._loadedListeners === undefined) this._loadedListeners = new Set();
             this._loadedListeners.add(handler);
-            this._eventTriggerSubscriptions.set(trigger, () => {
+            (this._eventTriggerSubscriptions ??= new Map()).set(trigger, () => {
                 this._loadedListeners?.delete(handler);
             });
             if (this._hasFiredLoaded) handler();
@@ -1469,7 +1479,7 @@ export class Visual extends Model
         {
             const handler = (): void => fire(undefined);
             this.AddUnloadedListener(handler);
-            this._eventTriggerSubscriptions.set(trigger, () => {
+            (this._eventTriggerSubscriptions ??= new Map()).set(trigger, () => {
                 this.RemoveUnloadedListener(handler);
             });
             return;
@@ -1483,7 +1493,7 @@ export class Visual extends Model
         {
             const handler = (args: unknown): void => fire(args);
             this.AddRoutedEventListener(trigger.RoutedEvent, handler);
-            this._eventTriggerSubscriptions.set(trigger, () => {
+            (this._eventTriggerSubscriptions ??= new Map()).set(trigger, () => {
                 this.RemoveRoutedEventListener(trigger.RoutedEvent, handler);
             });
             return;
@@ -1680,8 +1690,8 @@ export class Visual extends Model
 
     private uninstall_event_trigger(trigger: EventTrigger): void
     {
-        this._eventTriggerSubscriptions.get(trigger)?.();
-        this._eventTriggerSubscriptions.delete(trigger);
+        this._eventTriggerSubscriptions?.get(trigger)?.();
+        this._eventTriggerSubscriptions?.delete(trigger);
     }
 
     // Subscribe to the trigger's watched property and run an initial
@@ -1691,7 +1701,7 @@ export class Visual extends Model
         const key = resolveKey(this, trigger.propertyOwner, trigger.propertyName);
         const onChange = (): void => { this.evaluate_trigger(trigger, key); };
         this.AddPropertyChangedListener(key, onChange);
-        this._triggerSubscriptions.set(trigger, () => {
+        (this._triggerSubscriptions ??= new Map()).set(trigger, () => {
             this.RemovePropertyChangedListener(key, onChange);
         });
         this.evaluate_trigger(trigger, key, /*isInitialEvaluation*/ true);
@@ -1699,15 +1709,15 @@ export class Visual extends Model
 
     private uninstall_trigger(trigger: PropertyTrigger | MultiTrigger | DataTrigger | MultiDataTrigger): void
     {
-        this._triggerSubscriptions.get(trigger)?.();
-        this._triggerSubscriptions.delete(trigger);
-        if (this._activeTriggers.has(trigger))
+        this._triggerSubscriptions?.get(trigger)?.();
+        this._triggerSubscriptions?.delete(trigger);
+        if (this._activeTriggers?.has(trigger) === true)
         {
             for (const setter of trigger.setters)
             {
                 this.unapply_setter(setter, 'trigger');
             }
-            this._activeTriggers.delete(trigger);
+            this._activeTriggers?.delete(trigger);
         }
     }
 
@@ -1727,7 +1737,7 @@ export class Visual extends Model
             this.AddPropertyChangedListener(key, onChange);
             unsubs.push(() => { this.RemovePropertyChangedListener(key, onChange); });
         }
-        this._triggerSubscriptions.set(trigger, () => { for (const u of unsubs) u(); });
+        (this._triggerSubscriptions ??= new Map()).set(trigger, () => { for (const u of unsubs) u(); });
         this.evaluate_multi_trigger(trigger, keys, /*isInitialEvaluation*/ true);
     }
 
@@ -1739,14 +1749,14 @@ export class Visual extends Model
     {
         const allMatch = trigger.conditions.every((cond, i) =>
             this.get_property_value(keys[i]!) === cond.value);
-        const wasActive = this._activeTriggers.has(trigger);
+        const wasActive = this._activeTriggers?.has(trigger) === true;
         if (allMatch && !wasActive)
         {
             for (const setter of trigger.setters)
             {
                 this.apply_setter(setter, 'trigger');
             }
-            this._activeTriggers.add(trigger);
+            (this._activeTriggers ??= new Set()).add(trigger);
             // Enter actions fire AFTER setters apply so any storyboard
             // started by an action sees the post-trigger property state
             // as its baseline. Suppressed on initial evaluation (Style
@@ -1765,7 +1775,7 @@ export class Visual extends Model
             {
                 this.unapply_setter(setter, 'trigger');
             }
-            this._activeTriggers.delete(trigger);
+            this._activeTriggers?.delete(trigger);
             if (!isInitialEvaluation)
             {
                 for (const action of trigger.exitActions) action.Invoke(this);
@@ -1784,7 +1794,7 @@ export class Visual extends Model
             ? DataContextBinding(this, trigger.path)
             : trigger.bindingFactory!(this);
         binding.setOnValueChanged(() => { this.evaluate_data_trigger(trigger, binding); });
-        this._triggerSubscriptions.set(trigger, () => { binding.dispose(); });
+        (this._triggerSubscriptions ??= new Map()).set(trigger, () => { binding.dispose(); });
         this.evaluate_data_trigger(trigger, binding, /*isInitialEvaluation*/ true);
     }
 
@@ -1800,7 +1810,7 @@ export class Visual extends Model
                 : cond.bindingFactory!(this));
         const onChange = (): void => { this.evaluate_multi_data_trigger(trigger, bindings); };
         for (const b of bindings) b.setOnValueChanged(onChange);
-        this._triggerSubscriptions.set(trigger, () => {
+        (this._triggerSubscriptions ??= new Map()).set(trigger, () => {
             for (const b of bindings) b.dispose();
         });
         this.evaluate_multi_data_trigger(trigger, bindings, /*isInitialEvaluation*/ true);
@@ -1815,14 +1825,14 @@ export class Visual extends Model
         const allMatch = trigger.conditions.every(
             (cond, i) => bindings[i]!.get_value() === cond.value,
         );
-        const wasActive = this._activeTriggers.has(trigger);
+        const wasActive = this._activeTriggers?.has(trigger) === true;
         if (allMatch && !wasActive)
         {
             for (const setter of trigger.setters)
             {
                 this.apply_setter(setter, 'trigger');
             }
-            this._activeTriggers.add(trigger);
+            (this._activeTriggers ??= new Set()).add(trigger);
             if (!isInitialEvaluation)
             {
                 for (const action of trigger.enterActions) action.Invoke(this);
@@ -1834,7 +1844,7 @@ export class Visual extends Model
             {
                 this.unapply_setter(setter, 'trigger');
             }
-            this._activeTriggers.delete(trigger);
+            this._activeTriggers?.delete(trigger);
             if (!isInitialEvaluation)
             {
                 for (const action of trigger.exitActions) action.Invoke(this);
@@ -1846,14 +1856,14 @@ export class Visual extends Model
     {
         const current = binding.get_value();
         const matched = current === trigger.value;
-        const wasActive = this._activeTriggers.has(trigger);
+        const wasActive = this._activeTriggers?.has(trigger) === true;
         if (matched && !wasActive)
         {
             for (const setter of trigger.setters)
             {
                 this.apply_setter(setter, 'trigger');
             }
-            this._activeTriggers.add(trigger);
+            (this._activeTriggers ??= new Set()).add(trigger);
             if (!isInitialEvaluation)
             {
                 for (const action of trigger.enterActions) action.Invoke(this);
@@ -1865,7 +1875,7 @@ export class Visual extends Model
             {
                 this.unapply_setter(setter, 'trigger');
             }
-            this._activeTriggers.delete(trigger);
+            this._activeTriggers?.delete(trigger);
             if (!isInitialEvaluation)
             {
                 for (const action of trigger.exitActions) action.Invoke(this);
@@ -1885,14 +1895,14 @@ export class Visual extends Model
     {
         const current = this.get_property_value(key);
         const matched = current === trigger.value;
-        const wasActive = this._activeTriggers.has(trigger);
+        const wasActive = this._activeTriggers?.has(trigger) === true;
         if (matched && !wasActive)
         {
             for (const setter of trigger.setters)
             {
                 this.apply_setter(setter, 'trigger');
             }
-            this._activeTriggers.add(trigger);
+            (this._activeTriggers ??= new Set()).add(trigger);
             // Enter actions fire AFTER setters apply so any storyboard
             // started by an action sees the post-trigger property state
             // as its baseline. Suppressed on initial evaluation (Style
@@ -1911,7 +1921,7 @@ export class Visual extends Model
             {
                 this.unapply_setter(setter, 'trigger');
             }
-            this._activeTriggers.delete(trigger);
+            this._activeTriggers?.delete(trigger);
             if (!isInitialEvaluation)
             {
                 for (const action of trigger.exitActions) action.Invoke(this);
@@ -2003,7 +2013,7 @@ export class Visual extends Model
             const r = cursor._resources;
             if (r !== undefined)
             {
-                this._styleSubscriptions.push(r.Subscribe(onChange));
+                (this._styleSubscriptions ??= []).push(r.Subscribe(onChange));
             }
             cursor = cursor._logicalParent ?? cursor._templatedParent;
         }
@@ -2013,14 +2023,15 @@ export class Visual extends Model
         const appRd = Application.current?.Resources;
         if (appRd !== undefined)
         {
-            this._styleSubscriptions.push(appRd.Subscribe(onChange));
+            (this._styleSubscriptions ??= []).push(appRd.Subscribe(onChange));
         }
     }
 
     private unsubscribe_styles(): void
     {
+        if (this._styleSubscriptions === undefined) return;
         for (const unsub of this._styleSubscriptions) unsub();
-        this._styleSubscriptions.length = 0;
+        this._styleSubscriptions = undefined;
     }
 
     // Throws when the resource isn't found anywhere up the chain — use
@@ -3023,16 +3034,17 @@ export class Visual extends Model
     // visible, old ones gone), so the binding has to re-walk. Each
     // binding registers a re-wire callback via _subscribe_dynamic_resource;
     // AttachLogical / DetachLogical fire them across the subtree.
-    private _dynamic_resource_listeners: Array<() => void> = [];
+    private _dynamic_resource_listeners: Array<() => void> | undefined;
 
     /** @internal — DynamicResourceBinding only. Subscribes a callback
      *  that fires when this Visual's ancestor chain may have changed.
      *  Returns an unsubscribe thunk. */
     public _subscribe_dynamic_resource(listener: () => void): () => void
     {
-        this._dynamic_resource_listeners.push(listener);
+        (this._dynamic_resource_listeners ??= []).push(listener);
         return (): void =>
         {
+            if (this._dynamic_resource_listeners === undefined) return;
             const i = this._dynamic_resource_listeners.indexOf(listener);
             if (i >= 0) this._dynamic_resource_listeners.splice(i, 1);
         };
@@ -3040,6 +3052,7 @@ export class Visual extends Model
 
     private fire_dynamic_resource_listeners(): void
     {
+        if (this._dynamic_resource_listeners === undefined) return;
         // Snapshot so a listener that unsubscribes itself mid-fire
         // doesn't perturb the iteration.
         const snapshot = this._dynamic_resource_listeners.slice();
