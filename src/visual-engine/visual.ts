@@ -1,24 +1,17 @@
 import type { Brush } from './drawing/brush.js';
 import { Model } from '../runtime/model.js';
-import { findDescriptor, peekPropertyBag, propertyValues, resolveKey } from '../runtime/model-internals.js';
+import { peekPropertyBag, propertyValues, resolveKey } from '../runtime/model-internals.js';
 import type { PropertyDescriptor } from '../runtime/property-descriptor.js';
 import { PropertyValueSource } from '../runtime/binding/effective-value.js';
 import { MetaData, affectsArrange, affectsMeasure, affectsRender, inherits } from '../runtime/metadata.js';
-import { Binding, BindingMode } from '../runtime/binding/binding.js';
 import { DataContextBinding } from '../runtime/binding/data-context-binding.js';
-import type { EffectiveValueDescriptor, PropertyChangeCallback } from '../runtime/binding/effective-value.js';
 
-// Per-binding slot for the TwoWay writeback listener apply_setter
-// installs. Hung off the Binding via a Symbol-keyed property so the
-// associated EVD + listener can be detached in unapply_setter without a
-// parallel Map (Binding ownership matches setter ownership 1:1 already).
-const SETTER_WRITEBACK = Symbol('mural.setter.writeback');
 import { NameScope } from './namescope.js';
 import { ObservableCollection } from '../runtime/observable-collection.js';
 import { ResourceDictionary, type ResourceKey } from '../runtime/resource-dictionary.js';
 import { Application } from '../runtime/application.js';
 import type { Behavior } from './behavior.js';
-import { Setter, SetterFactory, Style, PropertyTrigger, MultiTrigger, DataTrigger, MultiDataTrigger } from '../runtime/style.js';
+import { Setter, Style, PropertyTrigger, MultiTrigger, DataTrigger, MultiDataTrigger } from '../runtime/style.js';
 import { Point, Rect, Size, Thickness } from './primitives.js';
 import type { DrawingContext } from './drawing-context.js';
 import type { TextMeasurer } from './text-measurer.js';
@@ -39,6 +32,7 @@ import { DragDrop, DragDropEffects, type DataObject, type DragPreviewKind } from
 import type { Effect } from './drawing/effect.js';
 import type { Transform } from './drawing/transform.js';
 import type { Geometry } from './geometry/geometry.js';
+import { StyleApplicator } from './style-applicator.js';
 
 
 // Routed event names that map to the per-instance _routedListeners
@@ -669,12 +663,11 @@ export class Visual extends Model
     // empty dicts on every node it passes through.
     private _resources: ResourceDictionary | undefined;
 
-    // The Style currently driving the StyleValue slot for this Visual's
-    // properties. Always equals the explicit Style if one is set; falls
-    // back to the implicit style resolved at AttachLogical when explicit
-    // is undefined. Tracked separately so the Style setter and the
-    // implicit-style resolver can each clear the prior setters cleanly.
-    private _activeStyle: Style | undefined;
+    // The Style currently driving the StyleValue slot lives on
+    // `StyleApplicator` (§ 1.7) — `_styleApplicator?.ActiveStyle`.
+    // The applicator is lazy: undefined for Visuals that never opt
+    // into Style.
+    private _styleApplicator: StyleApplicator | undefined;
 
     // The implicit style discovered by walking the logical chain at
     // AttachLogical and looking up `this.constructor` in the resource
@@ -708,13 +701,8 @@ export class Visual extends Model
     // reclaimed.
     private _styleSubscriptions: Array<() => void> | undefined;
 
-    // Per-target bindings created from Setter.value (either a Binding
-    // directly, or one produced by a SetterFactory). Keyed by the
-    // owning Setter so unapply can locate and dispose them. Separate
-    // maps for style-tier vs trigger-tier because the same Setter
-    // instance can legally appear in both.
-    private _styleSetterBindings:   Map<Setter, Binding> | undefined;
-    private _triggerSetterBindings: Map<Setter, Binding> | undefined;
+    // Per-setter bindings + writeback bookkeeping live on
+    // `StyleApplicator` (§ 1.7) — moved out of Visual.
 
     // Currently-matched triggers. A trigger is added on its watched
     // property matching the trigger's value; removed when the value
@@ -1006,9 +994,10 @@ export class Visual extends Model
         // where the lookup key lives on the Style itself rather than
         // on any tree-attached dict. BasedOn chain is walked inside
         // Style.TryResolveResource.
-        if (this._activeStyle !== undefined)
+        const active = this._styleApplicator?.ActiveStyle;
+        if (active !== undefined)
         {
-            const v = this._activeStyle.TryResolveResource(key);
+            const v = active.TryResolveResource(key);
             if (v !== undefined) return v;
         }
         let cursor: Visual | undefined = this;
@@ -1143,251 +1132,29 @@ export class Visual extends Model
     // matches WPF: explicit Style > implicit (user-side
     // [TargetType=X] walked from the live tree, exact-match by
     // constructor) > theme (DefaultStyleKey-keyed, lives in merged
-    // theme dictionaries). Unapply the previous active style (if any),
-    // apply the new one. Called from the Style setter and from the
-    // implicit / theme resolvers hooked into AttachLogical / DetachLogical.
+    // theme dictionaries). Delegates the diff-swap of setters +
+    // triggers to `StyleApplicator` (§ 1.7); the applicator is
+    // created lazily on first touch so Visuals that never opt into
+    // Style pay zero allocation.
     private refresh_active_style(): void
     {
         const desired = this.Style ?? this._implicitStyle ?? this._themeStyle;
-        if (desired === this._activeStyle) return;
-        const previous = this._activeStyle;
-        this._activeStyle = desired;
-        // Diff-style swap. The naive sequence — unapply(previous) →
-        // apply(desired) — transitions every shared property through
-        // the StyleValue=default fallback even when both styles set the
-        // same value (typical for an ItemContainerStyle chained
-        // BasedOn → theme: Template lives on the theme, NavRowStyle
-        // contributes only IsExpanded, ResolveSetters returns the same
-        // Template setter on both sides). The two OnPropertyChange
-        // pulses that result trigger ContentControl.rebuildTemplate
-        // twice, invalidating any constructor-cached template-part
-        // references (TreeViewItem._label etc.) and leaving Header
-        // writes pointed at a detached TextBlock — every group row in
-        // the platform's HDT-driven nav tree rendered blank.
-        //
-        // Instead, diff the resolved setter maps and only touch what
-        // actually changed. Property values for shared-value setters
-        // stay put; OnPropertyChange fires only for genuinely new or
-        // removed setters. Same diff strategy applies to triggers.
-        if (previous !== undefined) previous.Seal();
-        if (desired  !== undefined) desired.Seal();
-
-        const prevSetters = previous?.ResolveSetters() ?? new Map<string, Setter>();
-        const nextSetters = desired?.ResolveSetters()  ?? new Map<string, Setter>();
-        // Unapply first when the property is gone OR the setter
-        // instance has been replaced — replacement disposes the old
-        // Binding subscription before the next setter installs its own.
-        // Setters that live on the shared theme base (same instance on
-        // both sides via ResolveSetters' BasedOn walk) skip both
-        // branches and leave their EVD untouched.
-        for (const [name, prevSetter] of prevSetters)
-        {
-            if (nextSetters.get(name) === prevSetter) continue;
-            this.unapply_setter(prevSetter, 'style');
-        }
-        for (const [name, nextSetter] of nextSetters)
-        {
-            if (prevSetters.get(name) === nextSetter) continue;
-            this.apply_setter(nextSetter, 'style');
-        }
-
-        // Triggers: install / uninstall on identity-mismatch only. The
-        // resolved arrays come from the chain walk, so a trigger that
-        // lives on the theme base appears in both arrays as the same
-        // instance — skipping it preserves any latched trigger state.
-        const prevTriggers = previous?.ResolveTriggers() ?? [];
-        const nextTriggers = desired?.ResolveTriggers()  ?? [];
-        const prevTriggerSet = new Set(prevTriggers);
-        const nextTriggerSet = new Set(nextTriggers);
-        for (const t of prevTriggers) if (!nextTriggerSet.has(t)) this.uninstall_trigger(t);
-        for (const t of nextTriggers) if (!prevTriggerSet.has(t)) this.install_trigger(t);
-
-        const prevMulti = previous?.ResolveMultiTriggers() ?? [];
-        const nextMulti = desired?.ResolveMultiTriggers()  ?? [];
-        const prevMultiSet = new Set(prevMulti);
-        const nextMultiSet = new Set(nextMulti);
-        for (const t of prevMulti) if (!nextMultiSet.has(t)) this.uninstall_trigger(t);
-        for (const t of nextMulti) if (!prevMultiSet.has(t)) this.install_multi_trigger(t);
-
-        const prevData = previous?.ResolveDataTriggers() ?? [];
-        const nextData = desired?.ResolveDataTriggers()  ?? [];
-        const prevDataSet = new Set(prevData);
-        const nextDataSet = new Set(nextData);
-        for (const t of prevData) if (!nextDataSet.has(t)) this.uninstall_trigger(t);
-        for (const t of nextData) if (!prevDataSet.has(t)) this.install_data_trigger(t);
-
-        const prevMultiData = previous?.ResolveMultiDataTriggers() ?? [];
-        const nextMultiData = desired?.ResolveMultiDataTriggers()  ?? [];
-        const prevMultiDataSet = new Set(prevMultiData);
-        const nextMultiDataSet = new Set(nextMultiData);
-        for (const t of prevMultiData) if (!nextMultiDataSet.has(t)) this.uninstall_trigger(t);
-        for (const t of nextMultiData) if (!prevMultiDataSet.has(t)) this.install_multi_data_trigger(t);
-
-        const prevEvt = previous?.ResolveEventTriggers() ?? [];
-        const nextEvt = desired?.ResolveEventTriggers()  ?? [];
-        const prevEvtSet = new Set(prevEvt);
-        const nextEvtSet = new Set(nextEvt);
-        for (const t of prevEvt) if (!nextEvtSet.has(t)) this.uninstall_event_trigger(t);
-        for (const t of nextEvt) if (!prevEvtSet.has(t)) this.install_event_trigger(t);
-
-        // TargetType-mismatch guard mirrors what apply_style did before.
-        // Run on the desired style only — previous already validated when
-        // it was applied.
-        if (desired !== undefined
-            && !(this instanceof (desired.TargetType as new (...args: any[]) => Visual)))
-        {
-            const actual = (this as Visual).constructor.name;
-            throw new Error(
-                `Style.TargetType '${desired.TargetType.name}' does not match target '${actual}'.`,
-            );
-        }
+        if (desired === this._styleApplicator?.ActiveStyle) return;
+        (this._styleApplicator ??= new StyleApplicator(this)).RefreshActiveStyle(desired);
     }
 
-    // Apply a single setter at the requested priority tier. Handles
-    // all three Setter.value shapes:
-    //   * SetterFactory<T>  — invoked with `this` to produce the actual
-    //                         value, recursively normalized.
-    //   * Binding           — installed reactively; the binding's
-    //                         current value is pushed to the tier and a
-    //                         change subscription keeps it updated.
-    //                         Stashed in the per-tier binding map for
-    //                         later disposal.
-    //   * any other value   — pushed to the tier directly.
+    // § 1.7 trampolines — apply_setter / unapply_setter now live on
+    // StyleApplicator. Visual keeps thin wrappers so the trigger
+    // install / uninstall machinery (still on Visual until § 1.8)
+    // continues calling them without knowing about the applicator.
     private apply_setter(setter: Setter, tier: 'style' | 'trigger'): void
     {
-        const descriptor = findDescriptor(setter.owner, setter.property);
-        if (descriptor === undefined) return;
-        const evd = this.ensure_effective_value_for(descriptor);
-
-        let value: unknown = setter.value;
-        if (value instanceof SetterFactory)
-        {
-            value = (value as SetterFactory).create(this);
-        }
-
-        if (value instanceof Binding)
-        {
-            const binding = value;
-            // Resolve TwoWay default upfront — Binding's mode defaults
-            // to OneWay until the EVD's metadata says BindsTwoWayByDefault,
-            // and we need to know the effective mode RIGHT NOW to decide
-            // whether to wire the target → source writeback. The
-            // descriptor's metadata is the same one the EVD's set value
-            // path consults; resolving here keeps both paths consistent.
-            binding.ResolveDefaultMode(descriptor);
-
-            // Source → target push. SetStyleValue / SetTriggerValue land
-            // the value in the requested tier and fire OnPropertyChange
-            // when the effective value changes. The suppression flag
-            // below cooperates with the target listener: source-driven
-            // pushes must NOT loop back as target writes.
-            let suppressTargetListener = false;
-            const push = (v: any): void => {
-                suppressTargetListener = true;
-                try
-                {
-                    if (tier === 'style') evd.SetStyleValue(v);
-                    else                  evd.SetTriggerValue(setter, v);
-                }
-                finally
-                {
-                    suppressTargetListener = false;
-                }
-            };
-            push(binding.get_value());
-            binding.setOnValueChanged((_old, newRaw) => {
-                push(binding.apply_transform(newRaw));
-            });
-
-            // Target → source writeback (TwoWay / OneWayToSource only).
-            // Without this branch, a Style-installed binding behaves as
-            // OneWay regardless of mode: writes on the target (a user's
-            // drag on DiagramNode.X, a TextBox typing into its bound VM
-            // property) update the local slot but never reach the source,
-            // and the next source-driven push (triggered by any layout-
-            // affecting change) snaps the target back to the original
-            // source value.
-            //
-            // We listen on the EVD for effective-value changes and route
-            // them through binding.set_value, which the DataContextBinding
-            // override translates into a write on the underlying VM
-            // property. Suppression keeps the source-driven push above
-            // from being interpreted as a target-driven write and looping.
-            const writebackEnabled = binding.mode === BindingMode.TwoWay
-                                  || binding.mode === BindingMode.OneWayToSource;
-            let targetListener: PropertyChangeCallback | undefined;
-            if (writebackEnabled)
-            {
-                targetListener = (
-                    _owner: Model, _propertyName: string,
-                    _oldValue: unknown, newValue: unknown,
-                ): void => {
-                    if (suppressTargetListener) return;
-                    binding.set_value(newValue);
-                };
-                evd.AddChangeListener(targetListener);
-            }
-
-            const bindings = tier === 'style'
-                ? (this._styleSetterBindings   ??= new Map())
-                : (this._triggerSetterBindings ??= new Map());
-            bindings.set(setter, binding);
-            // Stash the EVD + listener on the binding so unapply_setter
-            // can detach without re-resolving the descriptor / EVD.
-            // Tagged with a Symbol-keyed slot so it never collides with
-            // Binding subclass state.
-            (binding as unknown as { [SETTER_WRITEBACK]?: { evd: EffectiveValueDescriptor; listener: PropertyChangeCallback } })[SETTER_WRITEBACK]
-                = targetListener !== undefined ? { evd, listener: targetListener } : undefined;
-        }
-        else
-        {
-            if (tier === 'style') evd.SetStyleValue(value);
-            else                  evd.SetTriggerValue(setter, value);
-        }
+        (this._styleApplicator ??= new StyleApplicator(this)).ApplySetter(setter, tier);
     }
 
-    // Undo apply_setter — clear the tier on the target EVD, dispose
-    // the per-target binding if one was installed, drop the
-    // bookkeeping entry.
     private unapply_setter(setter: Setter, tier: 'style' | 'trigger'): void
     {
-        const descriptor = findDescriptor(setter.owner, setter.property);
-        if (descriptor === undefined) return;
-        const key = Model.compose_key(descriptor.RootOwner, descriptor.Name);
-        const evd = propertyValues(this).get(key);
-        // CRITICAL ORDER: detach the TwoWay writeback listener BEFORE
-        // clearing the slot. ClearStyleValue / ClearTriggerValue fire
-        // OnPropertyChange when the cleared slot was the active source
-        // and the effective value drops to a lower-priority tier (Style
-        // → Inherited / Default; Trigger → Binding / Local / Style /
-        // Inherited / Default). That notification looks identical to a
-        // user write from the listener's POV — it would push the
-        // fall-through value (typically the descriptor's default) back
-        // through the binding to the source VM, destroying genuine VM
-        // state on every Style swap / container teardown. Detaching
-        // first leaves the slot-clear silent from the binding's POV.
-        const bindings = tier === 'style' ? this._styleSetterBindings : this._triggerSetterBindings;
-        const binding = bindings?.get(setter);
-        if (binding !== undefined)
-        {
-            const wb = (binding as unknown as { [SETTER_WRITEBACK]?: { evd: EffectiveValueDescriptor; listener: PropertyChangeCallback } })[SETTER_WRITEBACK];
-            if (wb !== undefined)
-            {
-                wb.evd.RemoveChangeListener(wb.listener);
-                (binding as unknown as { [SETTER_WRITEBACK]?: unknown })[SETTER_WRITEBACK] = undefined;
-            }
-        }
-        if (evd !== undefined)
-        {
-            if (tier === 'style') evd.ClearStyleValue();
-            else                  evd.ClearTriggerValue(setter);
-        }
-        if (binding !== undefined)
-        {
-            binding.setOnValueChanged(undefined);
-            binding.dispose();
-            bindings?.delete(setter);
-        }
+        this._styleApplicator?.UnapplySetter(setter, tier);
     }
 
     // Public hooks used by DataTemplate triggers — they let a trigger
@@ -1425,15 +1192,20 @@ export class Visual extends Model
     // the Style is removed.
     public AddEventTrigger(trigger: EventTrigger): void
     {
-        this.install_event_trigger(trigger);
+        this._install_event_trigger(trigger);
     }
 
     public RemoveEventTrigger(trigger: EventTrigger): void
     {
-        this.uninstall_event_trigger(trigger);
+        this._uninstall_event_trigger(trigger);
     }
 
-    private install_event_trigger(trigger: EventTrigger): void
+    /** @internal — called from StyleApplicator's RefreshActiveStyle via the
+     *  `TriggerInstallHost` friend-interface cast, and from
+     *  AddEventTrigger. Promoted from `private install_event_trigger`
+     *  to `public _install_event_trigger` so the cast resolves at the
+     *  TypeScript surface rather than going through unknown. */
+    public _install_event_trigger(trigger: EventTrigger): void
     {
         const fire = (args: unknown): void => {
             for (const a of trigger.Actions) a.Invoke(this, args);
@@ -1687,7 +1459,8 @@ export class Visual extends Model
         return this._namedStoryboards?.get(name);
     }
 
-    private uninstall_event_trigger(trigger: EventTrigger): void
+    /** @internal — see _install_event_trigger. */
+    public _uninstall_event_trigger(trigger: EventTrigger): void
     {
         this._eventTriggerSubscriptions?.get(trigger)?.();
         this._eventTriggerSubscriptions?.delete(trigger);
@@ -1742,7 +1515,8 @@ export class Visual extends Model
 
     // Subscribe to the trigger's watched property and run an initial
     // evaluation so an already-matching trigger activates immediately.
-    private install_trigger(trigger: PropertyTrigger): void
+    /** @internal — see _install_event_trigger. */
+    public _install_trigger(trigger: PropertyTrigger): void
     {
         const key = resolveKey(this, trigger.propertyOwner, trigger.propertyName);
         const evaluate = (isInitial: boolean): void => {
@@ -1757,7 +1531,8 @@ export class Visual extends Model
         evaluate(true);
     }
 
-    private uninstall_trigger(trigger: PropertyTrigger | MultiTrigger | DataTrigger | MultiDataTrigger): void
+    /** @internal — see _install_event_trigger. */
+    public _uninstall_trigger(trigger: PropertyTrigger | MultiTrigger | DataTrigger | MultiDataTrigger): void
     {
         this._triggerSubscriptions?.get(trigger)?.();
         this._triggerSubscriptions?.delete(trigger);
@@ -1776,7 +1551,8 @@ export class Visual extends Model
     // Activation is all-or-nothing: setters apply only when every
     // watched value === its expected; they deactivate as soon as one
     // stops matching.
-    private install_multi_trigger(trigger: MultiTrigger): void
+    /** @internal — see _install_event_trigger. */
+    public _install_multi_trigger(trigger: MultiTrigger): void
     {
         const keys = trigger.conditions.map(cond =>
             resolveKey(this, cond.propertyOwner, cond.propertyName));
@@ -1801,7 +1577,8 @@ export class Visual extends Model
     // changes (DataContext swap OR a property mutation on the first
     // segment), re-evaluates against `trigger.value` and flips setter
     // state accordingly. Symmetric with install_trigger.
-    private install_data_trigger(trigger: DataTrigger): void
+    /** @internal — see _install_event_trigger. */
+    public _install_data_trigger(trigger: DataTrigger): void
     {
         const binding = trigger.path !== undefined
             ? DataContextBinding(this, trigger.path)
@@ -1819,7 +1596,8 @@ export class Visual extends Model
     // per condition; any condition's bound value change re-evaluates the
     // conjunction. All-or-nothing activation, symmetric with
     // install_multi_trigger.
-    private install_multi_data_trigger(trigger: MultiDataTrigger): void
+    /** @internal — see _install_event_trigger. */
+    public _install_multi_data_trigger(trigger: MultiDataTrigger): void
     {
         const bindings = trigger.conditions.map(cond =>
             cond.path !== undefined
