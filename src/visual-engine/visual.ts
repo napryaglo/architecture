@@ -1,10 +1,9 @@
 import type { Brush } from './drawing/brush.js';
 import { Model } from '../runtime/model.js';
-import { peekPropertyBag, propertyValues, resolveKey } from '../runtime/model-internals.js';
+import { peekPropertyBag, propertyValues } from '../runtime/model-internals.js';
 import type { PropertyDescriptor } from '../runtime/property-descriptor.js';
 import { PropertyValueSource } from '../runtime/binding/effective-value.js';
 import { MetaData, affectsArrange, affectsMeasure, affectsRender, inherits } from '../runtime/metadata.js';
-import { DataContextBinding } from '../runtime/binding/data-context-binding.js';
 
 import { NameScope } from './namescope.js';
 import { ObservableCollection } from '../runtime/observable-collection.js';
@@ -33,13 +32,18 @@ import type { Effect } from './drawing/effect.js';
 import type { Transform } from './drawing/transform.js';
 import type { Geometry } from './geometry/geometry.js';
 import { StyleApplicator } from './style-applicator.js';
+import { TriggerHost } from './trigger-host.js';
 
 
 // Routed event names that map to the per-instance _routedListeners
 // registry. These are the public NAMES authors use in `on Xxx { … }`
 // markup; the routed-event dispatcher fires them after each
 // bubble-phase virtual.
-const KNOWN_ROUTED_EVENTS = new Set([
+/** @internal — shared with TriggerHost (§ 1.8) for the
+ *  "is this RoutedEvent a known generic dispatch name" check inside
+ *  EventTrigger install. Library-internal: not re-exported from any
+ *  barrel. */
+export const KNOWN_ROUTED_EVENTS = new Set([
     'PointerDown', 'PointerUp', 'PointerMove', 'PointerWheel',
     'PointerEnter', 'PointerLeave',
     'KeyDown', 'KeyUp', 'TextInput',
@@ -704,23 +708,10 @@ export class Visual extends Model
     // Per-setter bindings + writeback bookkeeping live on
     // `StyleApplicator` (§ 1.7) — moved out of Visual.
 
-    // Currently-matched triggers. A trigger is added on its watched
-    // property matching the trigger's value; removed when the value
-    // diverges. Trigger setters are applied / cleared in lock-step.
-    private _activeTriggers: Set<PropertyTrigger | MultiTrigger | DataTrigger | MultiDataTrigger> | undefined;
-
-    // Per-trigger unsubscribe callback, set at install_trigger,
-    // invoked at uninstall_trigger. Keyed by the trigger instance.
-    private _triggerSubscriptions: Map<PropertyTrigger | MultiTrigger | DataTrigger | MultiDataTrigger, () => void> | undefined;
-
-    // Per-EventTrigger unsubscribe callback. Different map from
-    // _triggerSubscriptions because EventTriggers don't watch a
-    // property value — they hook a routed event source whose detach
-    // shape is event-specific (Button.RemoveClickHandler for Click,
-    // …). Separating the two also keeps the keying clean: an
-    // EventTrigger and a PropertyTrigger with the same instance
-    // identity wouldn't collide here.
-    private _eventTriggerSubscriptions: Map<EventTrigger, () => void> | undefined;
+    // Trigger install / evaluation / teardown machinery lives on
+    // `TriggerHost` (§ 1.8). Lazy: undefined for Visuals that never
+    // opt into Style or Triggers.
+    private _triggerHost: TriggerHost | undefined;
 
     // Per-event-name instance listener registry. Used by the routed-
     // event dispatcher to invoke per-Visual listeners alongside the
@@ -1200,79 +1191,13 @@ export class Visual extends Model
         this._uninstall_event_trigger(trigger);
     }
 
-    /** @internal — called from StyleApplicator's RefreshActiveStyle via the
-     *  `TriggerInstallHost` friend-interface cast, and from
-     *  AddEventTrigger. Promoted from `private install_event_trigger`
-     *  to `public _install_event_trigger` so the cast resolves at the
-     *  TypeScript surface rather than going through unknown. */
+    /** @internal — § 1.8 trampoline. The install machinery lives on
+     *  `TriggerHost`. Called from `StyleApplicator.RefreshActiveStyle`
+     *  via the friend-interface cast and from public
+     *  `AddEventTrigger`. Lazy-creates the host on first touch. */
     public _install_event_trigger(trigger: EventTrigger): void
     {
-        const fire = (args: unknown): void => {
-            for (const a of trigger.Actions) a.Invoke(this, args);
-        };
-        // Click via Button.AddClickHandler / RemoveClickHandler — duck-
-        // typed so we don't drag a Controls import into the runtime.
-        if (trigger.RoutedEvent === 'Click')
-        {
-            const self = this as unknown as {
-                AddClickHandler?:    (h: (args: unknown) => void) => void;
-                RemoveClickHandler?: (h: (args: unknown) => void) => void;
-            };
-            if (typeof self.AddClickHandler === 'function'
-             && typeof self.RemoveClickHandler === 'function')
-            {
-                const handler = (args: unknown): void => fire(args);
-                self.AddClickHandler(handler);
-                (this._eventTriggerSubscriptions ??= new Map()).set(trigger, () => {
-                    self.RemoveClickHandler!(handler);
-                });
-            }
-            return;
-        }
-        // Loaded — fires once when this Visual first attaches to a
-        // target. If we're ALREADY loaded (Style applied after attach)
-        // fire synchronously so the listener still sees the load edge.
-        if (trigger.RoutedEvent === 'Loaded')
-        {
-            const handler = (): void => fire(undefined);
-            if (this._loadedListeners === undefined) this._loadedListeners = new Set();
-            this._loadedListeners.add(handler);
-            (this._eventTriggerSubscriptions ??= new Map()).set(trigger, () => {
-                this._loadedListeners?.delete(handler);
-            });
-            if (this._hasFiredLoaded) handler();
-            return;
-        }
-        // Unloaded — fires on every detach edge (not one-shot, matching
-        // fire_unloaded_listeners contract). Re-attach + detach cycles
-        // fire on each detach.
-        if (trigger.RoutedEvent === 'Unloaded')
-        {
-            const handler = (): void => fire(undefined);
-            this.AddUnloadedListener(handler);
-            (this._eventTriggerSubscriptions ??= new Map()).set(trigger, () => {
-                this.RemoveUnloadedListener(handler);
-            });
-            return;
-        }
-        // Generic routed events — PointerDown / PointerUp / PointerMove /
-        // PointerWheel / KeyDown / KeyUp / GotFocus / LostFocus / drag
-        // events. The handler forwards the routed-event args to each
-        // TriggerAction so InvokeCommandAction can pass them to the
-        // bound ICommand's Execute method.
-        if (KNOWN_ROUTED_EVENTS.has(trigger.RoutedEvent))
-        {
-            const handler = (args: unknown): void => fire(args);
-            this.AddRoutedEventListener(trigger.RoutedEvent, handler);
-            (this._eventTriggerSubscriptions ??= new Map()).set(trigger, () => {
-                this.RemoveRoutedEventListener(trigger.RoutedEvent, handler);
-            });
-            return;
-        }
-        // Unknown event name — log once and move on. The author gets
-        // a visible hint without their page crashing.
-        const console = (globalThis as { console?: { warn?: (m: string) => void } }).console;
-        console?.warn?.(`Visual.AddEventTrigger: routed event '${trigger.RoutedEvent}' is not yet supported.`);
+        (this._triggerHost ??= new TriggerHost(this)).InstallEventTrigger(trigger);
     }
 
     // ── Per-instance routed listener registry ──────────────────────────
@@ -1459,162 +1384,40 @@ export class Visual extends Model
         return this._namedStoryboards?.get(name);
     }
 
-    /** @internal — see _install_event_trigger. */
+    /** @internal — § 1.8 trampoline. */
     public _uninstall_event_trigger(trigger: EventTrigger): void
     {
-        this._eventTriggerSubscriptions?.get(trigger)?.();
-        this._eventTriggerSubscriptions?.delete(trigger);
+        this._triggerHost?.UninstallEventTrigger(trigger);
     }
 
-    // Single trigger-transition primitive (§ 1.3). Given a trigger
-    // and its current match status, flip the active state and apply
-    // or unapply its setters. Enter / Exit actions fire only on
-    // actual transitions — initial evaluation suppresses them, so a
-    // Style apply that finds an already-matching trigger doesn't
-    // double-fire entering actions.
-    //
-    // WPF edge semantics: enterActions / exitActions fire only on
-    // false → true / true → false transitions, not on the initial
-    // "already true" state at install time. Setters still apply
-    // silently on the initial match so the resting visual is in the
-    // matched chrome from the first frame. Enter actions fire AFTER
-    // setters apply so any storyboard started by an action sees the
-    // post-trigger property state as its baseline.
-    private apply_trigger_transition(
-        trigger: PropertyTrigger | MultiTrigger | DataTrigger | MultiDataTrigger,
-        matched: boolean,
-        isInitialEvaluation: boolean,
-    ): void
-    {
-        const wasActive = this._activeTriggers?.has(trigger) === true;
-        if (matched && !wasActive)
-        {
-            for (const setter of trigger.setters)
-            {
-                this.apply_setter(setter, 'trigger');
-            }
-            (this._activeTriggers ??= new Set()).add(trigger);
-            if (!isInitialEvaluation)
-            {
-                for (const action of trigger.enterActions) action.Invoke(this);
-            }
-        }
-        else if (!matched && wasActive)
-        {
-            for (const setter of trigger.setters)
-            {
-                this.unapply_setter(setter, 'trigger');
-            }
-            this._activeTriggers?.delete(trigger);
-            if (!isInitialEvaluation)
-            {
-                for (const action of trigger.exitActions) action.Invoke(this);
-            }
-        }
-    }
-
-    // Subscribe to the trigger's watched property and run an initial
-    // evaluation so an already-matching trigger activates immediately.
-    /** @internal — see _install_event_trigger. */
+    /** @internal — § 1.8 trampoline. */
     public _install_trigger(trigger: PropertyTrigger): void
     {
-        const key = resolveKey(this, trigger.propertyOwner, trigger.propertyName);
-        const evaluate = (isInitial: boolean): void => {
-            const matched = this.get_property_value(key) === trigger.value;
-            this.apply_trigger_transition(trigger, matched, isInitial);
-        };
-        const onChange = (): void => { evaluate(false); };
-        this.AddPropertyChangedListener(key, onChange);
-        (this._triggerSubscriptions ??= new Map()).set(trigger, () => {
-            this.RemovePropertyChangedListener(key, onChange);
-        });
-        evaluate(true);
+        (this._triggerHost ??= new TriggerHost(this)).InstallTrigger(trigger);
     }
 
-    /** @internal — see _install_event_trigger. */
+    /** @internal — § 1.8 trampoline. */
     public _uninstall_trigger(trigger: PropertyTrigger | MultiTrigger | DataTrigger | MultiDataTrigger): void
     {
-        this._triggerSubscriptions?.get(trigger)?.();
-        this._triggerSubscriptions?.delete(trigger);
-        if (this._activeTriggers?.has(trigger) === true)
-        {
-            for (const setter of trigger.setters)
-            {
-                this.unapply_setter(setter, 'trigger');
-            }
-            this._activeTriggers?.delete(trigger);
-        }
+        this._triggerHost?.UninstallTrigger(trigger);
     }
 
-    // Multi-property AND-trigger install. Subscribes to every condition's
-    // (owner, name) pair so any change re-evaluates the conjunction.
-    // Activation is all-or-nothing: setters apply only when every
-    // watched value === its expected; they deactivate as soon as one
-    // stops matching.
-    /** @internal — see _install_event_trigger. */
+    /** @internal — § 1.8 trampoline. */
     public _install_multi_trigger(trigger: MultiTrigger): void
     {
-        const keys = trigger.conditions.map(cond =>
-            resolveKey(this, cond.propertyOwner, cond.propertyName));
-        const evaluate = (isInitial: boolean): void => {
-            const matched = trigger.conditions.every((cond, i) =>
-                this.get_property_value(keys[i]!) === cond.value);
-            this.apply_trigger_transition(trigger, matched, isInitial);
-        };
-        const onChange = (): void => { evaluate(false); };
-        const unsubs: Array<() => void> = [];
-        for (const key of keys)
-        {
-            this.AddPropertyChangedListener(key, onChange);
-            unsubs.push(() => { this.RemovePropertyChangedListener(key, onChange); });
-        }
-        (this._triggerSubscriptions ??= new Map()).set(trigger, () => { for (const u of unsubs) u(); });
-        evaluate(true);
+        (this._triggerHost ??= new TriggerHost(this)).InstallMultiTrigger(trigger);
     }
 
-    // Data-driven trigger install. Watches `this.DataContext` via a
-    // DataContextBinding for `trigger.path`; whenever the bound value
-    // changes (DataContext swap OR a property mutation on the first
-    // segment), re-evaluates against `trigger.value` and flips setter
-    // state accordingly. Symmetric with install_trigger.
-    /** @internal — see _install_event_trigger. */
+    /** @internal — § 1.8 trampoline. */
     public _install_data_trigger(trigger: DataTrigger): void
     {
-        const binding = trigger.path !== undefined
-            ? DataContextBinding(this, trigger.path)
-            : trigger.bindingFactory!(this);
-        const evaluate = (isInitial: boolean): void => {
-            const matched = binding.get_value() === trigger.value;
-            this.apply_trigger_transition(trigger, matched, isInitial);
-        };
-        binding.setOnValueChanged(() => { evaluate(false); });
-        (this._triggerSubscriptions ??= new Map()).set(trigger, () => { binding.dispose(); });
-        evaluate(true);
+        (this._triggerHost ??= new TriggerHost(this)).InstallDataTrigger(trigger);
     }
 
-    // Multi-binding AND-trigger install. Allocates one DataContextBinding
-    // per condition; any condition's bound value change re-evaluates the
-    // conjunction. All-or-nothing activation, symmetric with
-    // install_multi_trigger.
-    /** @internal — see _install_event_trigger. */
+    /** @internal — § 1.8 trampoline. */
     public _install_multi_data_trigger(trigger: MultiDataTrigger): void
     {
-        const bindings = trigger.conditions.map(cond =>
-            cond.path !== undefined
-                ? DataContextBinding(this, cond.path)
-                : cond.bindingFactory!(this));
-        const evaluate = (isInitial: boolean): void => {
-            const matched = trigger.conditions.every(
-                (cond, i) => bindings[i]!.get_value() === cond.value,
-            );
-            this.apply_trigger_transition(trigger, matched, isInitial);
-        };
-        const onChange = (): void => { evaluate(false); };
-        for (const b of bindings) b.setOnValueChanged(onChange);
-        (this._triggerSubscriptions ??= new Map()).set(trigger, () => {
-            for (const b of bindings) b.dispose();
-        });
-        evaluate(true);
+        (this._triggerHost ??= new TriggerHost(this)).InstallMultiDataTrigger(trigger);
     }
 
     // Looks up an implicit Style keyed by this Visual's constructor in
