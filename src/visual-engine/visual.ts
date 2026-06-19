@@ -1,6 +1,5 @@
 import type { Brush } from './drawing/brush.js';
 import { Model } from '../runtime/model.js';
-import type { PropertyKey } from '../runtime/model.js';
 import { findDescriptor, peekPropertyBag, propertyValues, resolveKey } from '../runtime/model-internals.js';
 import type { PropertyDescriptor } from '../runtime/property-descriptor.js';
 import { PropertyValueSource } from '../runtime/binding/effective-value.js';
@@ -1694,17 +1693,68 @@ export class Visual extends Model
         this._eventTriggerSubscriptions?.delete(trigger);
     }
 
+    // Single trigger-transition primitive (§ 1.3). Given a trigger
+    // and its current match status, flip the active state and apply
+    // or unapply its setters. Enter / Exit actions fire only on
+    // actual transitions — initial evaluation suppresses them, so a
+    // Style apply that finds an already-matching trigger doesn't
+    // double-fire entering actions.
+    //
+    // WPF edge semantics: enterActions / exitActions fire only on
+    // false → true / true → false transitions, not on the initial
+    // "already true" state at install time. Setters still apply
+    // silently on the initial match so the resting visual is in the
+    // matched chrome from the first frame. Enter actions fire AFTER
+    // setters apply so any storyboard started by an action sees the
+    // post-trigger property state as its baseline.
+    private apply_trigger_transition(
+        trigger: PropertyTrigger | MultiTrigger | DataTrigger | MultiDataTrigger,
+        matched: boolean,
+        isInitialEvaluation: boolean,
+    ): void
+    {
+        const wasActive = this._activeTriggers?.has(trigger) === true;
+        if (matched && !wasActive)
+        {
+            for (const setter of trigger.setters)
+            {
+                this.apply_setter(setter, 'trigger');
+            }
+            (this._activeTriggers ??= new Set()).add(trigger);
+            if (!isInitialEvaluation)
+            {
+                for (const action of trigger.enterActions) action.Invoke(this);
+            }
+        }
+        else if (!matched && wasActive)
+        {
+            for (const setter of trigger.setters)
+            {
+                this.unapply_setter(setter, 'trigger');
+            }
+            this._activeTriggers?.delete(trigger);
+            if (!isInitialEvaluation)
+            {
+                for (const action of trigger.exitActions) action.Invoke(this);
+            }
+        }
+    }
+
     // Subscribe to the trigger's watched property and run an initial
     // evaluation so an already-matching trigger activates immediately.
     private install_trigger(trigger: PropertyTrigger): void
     {
         const key = resolveKey(this, trigger.propertyOwner, trigger.propertyName);
-        const onChange = (): void => { this.evaluate_trigger(trigger, key); };
+        const evaluate = (isInitial: boolean): void => {
+            const matched = this.get_property_value(key) === trigger.value;
+            this.apply_trigger_transition(trigger, matched, isInitial);
+        };
+        const onChange = (): void => { evaluate(false); };
         this.AddPropertyChangedListener(key, onChange);
         (this._triggerSubscriptions ??= new Map()).set(trigger, () => {
             this.RemovePropertyChangedListener(key, onChange);
         });
-        this.evaluate_trigger(trigger, key, /*isInitialEvaluation*/ true);
+        evaluate(true);
     }
 
     private uninstall_trigger(trigger: PropertyTrigger | MultiTrigger | DataTrigger | MultiDataTrigger): void
@@ -1730,7 +1780,12 @@ export class Visual extends Model
     {
         const keys = trigger.conditions.map(cond =>
             resolveKey(this, cond.propertyOwner, cond.propertyName));
-        const onChange = (): void => { this.evaluate_multi_trigger(trigger, keys); };
+        const evaluate = (isInitial: boolean): void => {
+            const matched = trigger.conditions.every((cond, i) =>
+                this.get_property_value(keys[i]!) === cond.value);
+            this.apply_trigger_transition(trigger, matched, isInitial);
+        };
+        const onChange = (): void => { evaluate(false); };
         const unsubs: Array<() => void> = [];
         for (const key of keys)
         {
@@ -1738,49 +1793,7 @@ export class Visual extends Model
             unsubs.push(() => { this.RemovePropertyChangedListener(key, onChange); });
         }
         (this._triggerSubscriptions ??= new Map()).set(trigger, () => { for (const u of unsubs) u(); });
-        this.evaluate_multi_trigger(trigger, keys, /*isInitialEvaluation*/ true);
-    }
-
-    private evaluate_multi_trigger(
-        trigger: MultiTrigger,
-        keys: ReadonlyArray<PropertyKey<unknown>>,
-        isInitialEvaluation: boolean = false,
-    ): void
-    {
-        const allMatch = trigger.conditions.every((cond, i) =>
-            this.get_property_value(keys[i]!) === cond.value);
-        const wasActive = this._activeTriggers?.has(trigger) === true;
-        if (allMatch && !wasActive)
-        {
-            for (const setter of trigger.setters)
-            {
-                this.apply_setter(setter, 'trigger');
-            }
-            (this._activeTriggers ??= new Set()).add(trigger);
-            // Enter actions fire AFTER setters apply so any storyboard
-            // started by an action sees the post-trigger property state
-            // as its baseline. Suppressed on initial evaluation (Style
-            // apply) — WPF edge semantics: enterActions fire only on
-            // false→true TRANSITIONS, not on the initial "already true"
-            // state. Setters still apply silently so the resting visual
-            // matches the trigger.
-            if (!isInitialEvaluation)
-            {
-                for (const action of trigger.enterActions) action.Invoke(this);
-            }
-        }
-        else if (!allMatch && wasActive)
-        {
-            for (const setter of trigger.setters)
-            {
-                this.unapply_setter(setter, 'trigger');
-            }
-            this._activeTriggers?.delete(trigger);
-            if (!isInitialEvaluation)
-            {
-                for (const action of trigger.exitActions) action.Invoke(this);
-            }
-        }
+        evaluate(true);
     }
 
     // Data-driven trigger install. Watches `this.DataContext` via a
@@ -1793,9 +1806,13 @@ export class Visual extends Model
         const binding = trigger.path !== undefined
             ? DataContextBinding(this, trigger.path)
             : trigger.bindingFactory!(this);
-        binding.setOnValueChanged(() => { this.evaluate_data_trigger(trigger, binding); });
+        const evaluate = (isInitial: boolean): void => {
+            const matched = binding.get_value() === trigger.value;
+            this.apply_trigger_transition(trigger, matched, isInitial);
+        };
+        binding.setOnValueChanged(() => { evaluate(false); });
         (this._triggerSubscriptions ??= new Map()).set(trigger, () => { binding.dispose(); });
-        this.evaluate_data_trigger(trigger, binding, /*isInitialEvaluation*/ true);
+        evaluate(true);
     }
 
     // Multi-binding AND-trigger install. Allocates one DataContextBinding
@@ -1808,125 +1825,18 @@ export class Visual extends Model
             cond.path !== undefined
                 ? DataContextBinding(this, cond.path)
                 : cond.bindingFactory!(this));
-        const onChange = (): void => { this.evaluate_multi_data_trigger(trigger, bindings); };
+        const evaluate = (isInitial: boolean): void => {
+            const matched = trigger.conditions.every(
+                (cond, i) => bindings[i]!.get_value() === cond.value,
+            );
+            this.apply_trigger_transition(trigger, matched, isInitial);
+        };
+        const onChange = (): void => { evaluate(false); };
         for (const b of bindings) b.setOnValueChanged(onChange);
         (this._triggerSubscriptions ??= new Map()).set(trigger, () => {
             for (const b of bindings) b.dispose();
         });
-        this.evaluate_multi_data_trigger(trigger, bindings, /*isInitialEvaluation*/ true);
-    }
-
-    private evaluate_multi_data_trigger(
-        trigger: MultiDataTrigger,
-        bindings: Binding[],
-        isInitialEvaluation: boolean = false,
-    ): void
-    {
-        const allMatch = trigger.conditions.every(
-            (cond, i) => bindings[i]!.get_value() === cond.value,
-        );
-        const wasActive = this._activeTriggers?.has(trigger) === true;
-        if (allMatch && !wasActive)
-        {
-            for (const setter of trigger.setters)
-            {
-                this.apply_setter(setter, 'trigger');
-            }
-            (this._activeTriggers ??= new Set()).add(trigger);
-            if (!isInitialEvaluation)
-            {
-                for (const action of trigger.enterActions) action.Invoke(this);
-            }
-        }
-        else if (!allMatch && wasActive)
-        {
-            for (const setter of trigger.setters)
-            {
-                this.unapply_setter(setter, 'trigger');
-            }
-            this._activeTriggers?.delete(trigger);
-            if (!isInitialEvaluation)
-            {
-                for (const action of trigger.exitActions) action.Invoke(this);
-            }
-        }
-    }
-
-    private evaluate_data_trigger(trigger: DataTrigger, binding: Binding, isInitialEvaluation: boolean = false): void
-    {
-        const current = binding.get_value();
-        const matched = current === trigger.value;
-        const wasActive = this._activeTriggers?.has(trigger) === true;
-        if (matched && !wasActive)
-        {
-            for (const setter of trigger.setters)
-            {
-                this.apply_setter(setter, 'trigger');
-            }
-            (this._activeTriggers ??= new Set()).add(trigger);
-            if (!isInitialEvaluation)
-            {
-                for (const action of trigger.enterActions) action.Invoke(this);
-            }
-        }
-        else if (!matched && wasActive)
-        {
-            for (const setter of trigger.setters)
-            {
-                this.unapply_setter(setter, 'trigger');
-            }
-            this._activeTriggers?.delete(trigger);
-            if (!isInitialEvaluation)
-            {
-                for (const action of trigger.exitActions) action.Invoke(this);
-            }
-        }
-    }
-
-    // Compare the trigger's watched property against its target
-    // value; flip activation state accordingly. Apply its setters
-    // on activation; clear them on deactivation. === equality only
-    // (WPF parity for PropertyTrigger).
-    private evaluate_trigger(
-        trigger: PropertyTrigger,
-        key: PropertyKey<unknown>,
-        isInitialEvaluation: boolean = false,
-    ): void
-    {
-        const current = this.get_property_value(key);
-        const matched = current === trigger.value;
-        const wasActive = this._activeTriggers?.has(trigger) === true;
-        if (matched && !wasActive)
-        {
-            for (const setter of trigger.setters)
-            {
-                this.apply_setter(setter, 'trigger');
-            }
-            (this._activeTriggers ??= new Set()).add(trigger);
-            // Enter actions fire AFTER setters apply so any storyboard
-            // started by an action sees the post-trigger property state
-            // as its baseline. Suppressed on initial evaluation (Style
-            // apply) — WPF edge semantics: enterActions fire only on
-            // false→true TRANSITIONS, not on the initial "already true"
-            // state. Setters still apply silently so the resting visual
-            // matches the trigger.
-            if (!isInitialEvaluation)
-            {
-                for (const action of trigger.enterActions) action.Invoke(this);
-            }
-        }
-        else if (!matched && wasActive)
-        {
-            for (const setter of trigger.setters)
-            {
-                this.unapply_setter(setter, 'trigger');
-            }
-            this._activeTriggers?.delete(trigger);
-            if (!isInitialEvaluation)
-            {
-                for (const action of trigger.exitActions) action.Invoke(this);
-            }
-        }
+        evaluate(true);
     }
 
     // Looks up an implicit Style keyed by this Visual's constructor in
