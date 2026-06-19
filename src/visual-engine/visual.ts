@@ -881,8 +881,19 @@ export class Visual extends Model
     // already loaded fires it synchronously (matches the React
     // useEffect mount-listener shape — a registered listener never
     // misses the load event).
+    //
+    // § 1.11 — the symmetric per-attach pair lives on `_attachedListeners`
+    // below. Behaviors wiring (setUp, tearDown) wants Attached + Detached
+    // (every attach + every detach); WPF-parity consumers wanting
+    // FrameworkElement.Loaded once-only stay on Loaded + Unloaded.
+    // Detached is wired as an alias to Unloaded — same edges, kept
+    // separate listener storage so authors can read their intent
+    // off the wiring (`AddDetachedListener` signals "I want
+    // Attached/Detached symmetry" without forcing the existing
+    // Unloaded callers to migrate).
     private _loadedListeners: Set<() => void> | undefined;
     private _hasFiredLoaded: boolean = false;
+    private _attachedListeners: Set<() => void> | undefined;
 
     // Layout state cache. Updated by Measure / Arrange runs; read by the
     // renderer and by parents during their own MeasureOverride /
@@ -1289,6 +1300,24 @@ export class Visual extends Model
         this._loadedListeners?.delete(listener);
     }
 
+    /** § 1.11 — Per-attach edge listener. Fires every time this
+     *  Visual's visualParent transitions from undefined to defined,
+     *  including re-attaches after a detach (recycled containers,
+     *  popups mounted+unmounted across hover edges). Symmetric with
+     *  `AddUnloadedListener` / `AddDetachedListener`. If the Visual
+     *  is already attached at registration time, the listener fires
+     *  synchronously so consumers don't miss the current edge. */
+    public AddAttachedListener(listener: () => void): void
+    {
+        (this._attachedListeners ??= new Set()).add(listener);
+        if (this._target !== undefined) listener();
+    }
+
+    public RemoveAttachedListener(listener: () => void): void
+    {
+        this._attachedListeners?.delete(listener);
+    }
+
     // ── Unloaded listeners ────────────────────────────────────────────
     //
     // Symmetric API for the "visualParent transitioned from defined to
@@ -1318,6 +1347,21 @@ export class Visual extends Model
     public RemoveUnloadedListener(listener: () => void): void
     {
         this._unloadedListeners?.delete(listener);
+    }
+
+    /** § 1.11 — Symmetric companion to `AddAttachedListener`. Wired
+     *  as an alias to `AddUnloadedListener` — same per-detach edges,
+     *  separate name so authors picking the per-attach / per-detach
+     *  pair signal their intent at the wiring site. WPF-parity
+     *  consumers (Loaded + Unloaded) stay on the existing methods. */
+    public AddDetachedListener(listener: () => void): void
+    {
+        this.AddUnloadedListener(listener);
+    }
+
+    public RemoveDetachedListener(listener: () => void): void
+    {
+        this.RemoveUnloadedListener(listener);
     }
 
     private fire_unloaded_listeners(): void
@@ -1636,6 +1680,14 @@ export class Visual extends Model
         {
             this._hasFiredLoaded = true;
             this.fire_loaded_listeners();
+        }
+        // § 1.11 — Attached fires on EVERY attach edge (not one-shot),
+        // matching `Unloaded`'s every-detach symmetry. A behavior
+        // wired with (Attached, Unloaded/Detached) sees both edges of
+        // every recycle cycle.
+        if (!wasLoaded && target !== undefined)
+        {
+            safeFire(this._attachedListeners);
         }
     }
 
