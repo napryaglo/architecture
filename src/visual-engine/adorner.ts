@@ -1,5 +1,5 @@
 import { Visual } from './visual.js';
-import { Panel, Single } from './element.js';
+import { Element, Panel, Single } from './element.js';
 import { Rect, Size } from './primitives.js';
 import type { DrawingContext } from './drawing-context.js';
 
@@ -32,7 +32,7 @@ import type { DrawingContext } from './drawing-context.js';
 // Remove. If the adorned element is detached from the tree, the
 // adorner stays visible at its last-known position; the host is
 // responsible for removing the adorner on adorned-element cleanup.
-export abstract class Adorner extends Visual
+export abstract class Adorner extends Element
 {
     private readonly _adornedElement: Visual;
 

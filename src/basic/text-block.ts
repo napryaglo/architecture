@@ -1,5 +1,6 @@
 import {
     APPROXIMATE_TEXT_MEASURER,
+    Element,
     MetaData,
     Model,
     Point,
@@ -53,7 +54,7 @@ export enum TextAlignment
 // them once (via the cross-class explicit-owner overload) and every
 // TextBlock in the subtree picks them up — that's the WPF
 // "TextElement.FontSize on a Window" pattern.
-export class TextBlock extends Visual
+export class TextBlock extends Element
 {
     static
     {

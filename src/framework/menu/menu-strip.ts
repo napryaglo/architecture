@@ -1,4 +1,5 @@
 import {
+    Element,
     MetaData,
     Model,
     Panel,
@@ -741,7 +742,7 @@ function makeGlyph(text: string): TextBlock
 // ─────────────────────────────────────────────────────────────────────
 // MenuSeparator — thin horizontal line between MenuItem groups.
 // Same idea as ToolBarSeparator but cross-axis-flipped.
-export class MenuSeparator extends Visual
+export class MenuSeparator extends Element
 {
     public static readonly LineBrushKey = Model.RegisterProperty<Brush | undefined>(
         MenuSeparator, 'LineBrush', undefined, MetaData.Render,

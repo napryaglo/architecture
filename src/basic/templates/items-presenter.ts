@@ -1,4 +1,4 @@
-import { Panel, Rect, Size, Visual, type DrawingContext } from '../../runtime/index.js';
+import { Element, Panel, Rect, Size, Visual, type DrawingContext } from '../../runtime/index.js';
 
 // The slot inside an ItemsControl's ControlTemplate where the items
 // panel lives. Counterpart to ContentPresenter (which slots a single
@@ -15,7 +15,7 @@ import { Panel, Rect, Size, Visual, type DrawingContext } from '../../runtime/in
 // containers' visual parents are the panel; their logical parents
 // are the ItemsControl. Three-level visual / two-level logical
 // divergence — same two-tree machinery as ContentControl + content.
-export class ItemsPresenter extends Visual
+export class ItemsPresenter extends Element
 {
     private _itemsPanel: Panel | undefined;
 

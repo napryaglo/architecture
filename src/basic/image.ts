@@ -1,4 +1,4 @@
-import { MetaData, Model, Rect, Size, Visual, type DrawingContext } from '../runtime/index.js';
+import { Element, MetaData, Model, Rect, Size, type DrawingContext } from '../runtime/index.js';
 import { ImageSource, Stretch } from '../visual-engine/index.js';
 
 // Image control — paints an ImageSource into its layout slot, scaled
@@ -22,7 +22,7 @@ import { ImageSource, Stretch } from '../visual-engine/index.js';
 //     explicitly when constructing the BitmapImage.
 //   * Tinting / colour transforms — consumers needing those wrap the
 //     image in a sibling Brush layer or a future Effect.
-export class Image extends Visual
+export class Image extends Element
 {
     public static readonly SourceKey  = Model.RegisterProperty<ImageSource | undefined>(
         Image, 'Source', undefined, MetaData.Measure | MetaData.Render);

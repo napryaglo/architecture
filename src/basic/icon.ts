@@ -1,9 +1,9 @@
 import {
     Color,
+    Element,
     MetaData,
     Model,
     Size,
-    Visual,
     type DrawingContext,
 } from '../runtime/index.js';
 import {
@@ -120,7 +120,7 @@ function brushForColor(color: Color): SolidColorBrush
 // RenderOverride: builds a uniform-scale matrix from viewBox → RenderSize,
 // pushes it as a transform frame, then DrawGeometry's each shape with the
 // resolved fill / stroke Brushes.
-export class Icon extends Visual
+export class Icon extends Element
 {
     public static readonly SourceKey     = Model.RegisterProperty<IconDefinition | undefined>(
         Icon, 'Source',     undefined, MetaData.Measure | MetaData.Render);

@@ -1,4 +1,5 @@
 import {
+    Element,
     MetaData,
     Model,
     Rect,
@@ -99,7 +100,7 @@ export class StatusBarItem extends ContentControl
 // imperative-paint shape as MenuSeparator: extends Visual directly
 // so the StatusBar's DockPanel can host it without ItemsControl's
 // container-wrap pass.
-export class StatusBarSeparator extends Visual
+export class StatusBarSeparator extends Element
 {
     public static readonly LineBrushKey = Model.RegisterProperty<Brush | undefined>(
         StatusBarSeparator, 'LineBrush', undefined, MetaData.Render,

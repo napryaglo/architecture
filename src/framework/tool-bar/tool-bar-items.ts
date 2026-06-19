@@ -1,4 +1,5 @@
 import {
+    Element,
     MetaData,
     Model,
     Rect,
@@ -192,7 +193,7 @@ export class ToolBarToggleButton extends ToggleButton
 // ToolBarSeparator — thin vertical line between toolbar item groups.
 // Renders as a 1px-wide rectangle centred horizontally on the visual,
 // inset 2px from top + bottom so it doesn't touch the toolbar's edges.
-export class ToolBarSeparator extends Visual
+export class ToolBarSeparator extends Element
 {
     public static readonly LineBrushKey = Model.RegisterProperty<Brush | undefined>(
         ToolBarSeparator, 'LineBrush', undefined, MetaData.Render,

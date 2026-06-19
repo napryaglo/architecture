@@ -1,4 +1,5 @@
 import {
+    Element,
     MetaData,
     Model,
     Rect,
@@ -35,7 +36,7 @@ import { TextBlock, TextWrapping } from '../text-block.js';
 // walks visualChildren and sees the presenter's content sitting inside
 // the template, while property inheritance walks logicalParent and
 // sees it under the control where the consumer authored it.
-export class ContentPresenter extends Visual
+export class ContentPresenter extends Element
 {
     // Optional consumer-facing DPs that drive the "I host one logical
     // content, possibly via a DataTemplate" path. When either changes

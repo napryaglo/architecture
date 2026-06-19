@@ -1,5 +1,6 @@
 import {
     DynamicResource,
+    Element,
     MetaData,
     Model,
     Rect,
@@ -75,7 +76,7 @@ export interface DragCompletedEventArgs
     readonly Canceled:         boolean;
 }
 
-export class Thumb extends Visual
+export class Thumb extends Element
 {
     // Read-only DP exposing the drag state so triggers can react.
     // Backing store flips through setIsDraggingInternal so external
