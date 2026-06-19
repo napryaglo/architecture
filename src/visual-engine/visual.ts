@@ -2044,6 +2044,37 @@ export class Visual extends Model
     public get visualChildren(): readonly Visual[]  { return []; }
     public get logicalChildren(): readonly Visual[] { return []; }
 
+    // Cascade-iteration helper (§ 1.5). Yields every direct subtree
+    // root that should receive a subtree-wide refresh — logical
+    // children for the main tree, plus any overlay children
+    // (popups / dropdowns / tooltips whose visual parent is the
+    // OverlayLayer but whose LOGICAL parent is this Visual). Five
+    // sites used to inline the (logicalChildren + overlayChildren)
+    // duplication; centralizing it here means the overlay-inclusion
+    // rule lives in one place — when (not if) it changes the
+    // five-site lock-step becomes one edit.
+    protected *allLogicalDescendantSubtreeRoots(): IterableIterator<Visual>
+    {
+        for (const c of this.logicalChildren) yield c;
+        if (this._overlayChildren !== undefined)
+        {
+            for (const c of this._overlayChildren) yield c;
+        }
+    }
+
+    // Companion helper for hot-path cascades that already use the
+    // `propagate_*_to_logical_children` virtual quartet (which Single /
+    // Panel override for zero-alloc iteration). Calling this immediately
+    // after the propagate_* call covers the overlay branch without
+    // re-traversing the main logical tree. Once the propagate_*
+    // quartet collapses into a single `forEachLogicalChild` virtual
+    // (§ 1.15), this helper merges with that one.
+    protected forEachOverlayChild(fn: (child: Visual) => void): void
+    {
+        if (this._overlayChildren === undefined) return;
+        for (const c of this._overlayChildren) fn(c);
+    }
+
     // VISUAL-tree wiring only: sets the child's visual parent and
     // cascades the host (renderer needs both). Does NOT touch the
     // logical parent or refresh inheritance — those ride the logical
@@ -2151,11 +2182,7 @@ export class Visual extends Model
         this.resolve_implicit_style();
         this.resolve_theme_style();
         this.subscribe_styles();
-        for (const c of this.logicalChildren) c['refresh_styles_subtree']();
-        if (this._overlayChildren !== undefined)
-        {
-            for (const c of this._overlayChildren) c['refresh_styles_subtree']();
-        }
+        for (const c of this.allLogicalDescendantSubtreeRoots()) c['refresh_styles_subtree']();
     }
 
     // Cascades unsubscribe through THIS visual and every logical
@@ -2164,11 +2191,7 @@ export class Visual extends Model
     protected unsubscribe_styles_subtree(): void
     {
         this.unsubscribe_styles();
-        for (const c of this.logicalChildren) c['unsubscribe_styles_subtree']();
-        if (this._overlayChildren !== undefined)
-        {
-            for (const c of this._overlayChildren) c['unsubscribe_styles_subtree']();
-        }
+        for (const c of this.allLogicalDescendantSubtreeRoots()) c['unsubscribe_styles_subtree']();
     }
 
     // ── Overlay children — logical-owner-side wiring ─────────────────
@@ -2790,10 +2813,7 @@ export class Visual extends Model
             this.propagate_inheritance_for_logical_children(descriptor);
             // Overlay children participate in the same inheritance
             // cascade as logical children — see _overlayChildren comment.
-            if (this._overlayChildren !== undefined)
-            {
-                for (const c of this._overlayChildren) c['refresh_inherited'](descriptor);
-            }
+            this.forEachOverlayChild(c => c['refresh_inherited'](descriptor));
             // Ambient resource triggers (§ 17.1) — ThemeManager registers
             // the Scheme and Theme descriptors as ambient-resource
             // triggers via `_registerAmbientResourceTriggerDp`. When one
@@ -2927,10 +2947,7 @@ export class Visual extends Model
         // the SAME logical tree from the popup's perspective, just hosted
         // visually by the OverlayLayer instead of by a Panel in the main
         // Content tree.
-        if (this._overlayChildren !== undefined)
-        {
-            for (const c of this._overlayChildren) c['refresh_inheritance_subtree']();
-        }
+        this.forEachOverlayChild(c => c['refresh_inheritance_subtree']());
     }
 
     protected propagate_inheritance_to_logical_children(): void { /* override in Single / Panel */ }
@@ -2978,10 +2995,7 @@ export class Visual extends Model
         // tree). Re-walking through the popup's subtree re-resolves
         // every `@Token` lookup so theme tokens flip when the owner's
         // chain changes (popup mounted, owner re-parented, etc.).
-        if (this._overlayChildren !== undefined)
-        {
-            for (const c of this._overlayChildren) c['refresh_dynamic_resources_subtree']();
-        }
+        this.forEachOverlayChild(c => c['refresh_dynamic_resources_subtree']());
     }
 
     protected propagate_dynamic_resources_to_logical_children(): void { /* override in Single / Panel */ }
