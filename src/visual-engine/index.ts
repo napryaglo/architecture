@@ -17,13 +17,12 @@ export { Point, Size, Rect, Color, Matrix, Thickness } from './primitives.js';
 export { CornerRadius } from './corner-radius.js';
 export {
     Visual,
-    Single,
-    Panel,
     HorizontalAlignment,
     VerticalAlignment,
     Visibility,
     type VisualHost,
 } from './visual.js';
+export { Element, Single, Panel } from './element.js';
 export { Adorner, AdornerLayer, AdornerDecorator, DragGhostAdorner } from './adorner.js';
 export { NameScope } from './namescope.js';
 export { Behavior } from './behavior.js';

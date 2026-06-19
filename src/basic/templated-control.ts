@@ -1,4 +1,5 @@
 import {
+    Element,
     MetaData,
     Model,
     Rect,
@@ -32,7 +33,7 @@ import type { ContentPresenter } from './templates/content-presenter.js';
 // all default to "delegate to template root" — subclasses only
 // override when they need non-template chrome alongside the root
 // (none of the current four do).
-export class TemplatedControl extends Visual
+export class TemplatedControl extends Element
 {
     public static readonly TemplateKey = Model.RegisterProperty<ControlTemplate | undefined>(
         TemplatedControl, 'Template', undefined, MetaData.Measure);

@@ -1,4 +1,4 @@
-import { MetaData, Model, Size, Visual, type DrawingContext, type PropertyDescriptor } from '../../runtime/index.js';
+import { Element, MetaData, Model, Size, type DrawingContext, type PropertyDescriptor } from '../../runtime/index.js';
 import type { PropertyKey } from '../../runtime/index.js';
 import { resolveKey } from '../../runtime/model-internals.js';
 import { Brush, Geometry, Pen } from '../../visual-engine/index.js';
@@ -26,7 +26,7 @@ import { Brush, Geometry, Pen } from '../../visual-engine/index.js';
 // call dc.DrawGeometry(this.Fill, this.Stroke, computedGeom) directly.
 // Setting this.Geometry from inside RenderOverride would re-invalidate
 // the visual, so subclasses keep the geometry local.
-export class Shape extends Visual
+export class Shape extends Element
 {
     public static readonly GeometryKey = Model.RegisterProperty<Geometry | undefined>(
         Shape, 'Geometry', undefined, MetaData.Render);

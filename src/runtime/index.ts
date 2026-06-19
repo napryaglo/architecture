@@ -43,13 +43,12 @@ export { Model, PropertyKey } from './model.js';
 export { Behavior } from '../visual-engine/behavior.js';
 export {
     Visual,
-    Single,
-    Panel,
     HorizontalAlignment,
     VerticalAlignment,
     Visibility,
     type VisualHost,
 } from '../visual-engine/visual.js';
+export { Element, Single, Panel } from '../visual-engine/element.js';
 export { Adorner, AdornerLayer, AdornerDecorator, DragGhostAdorner } from '../visual-engine/adorner.js';
 export { NameScope } from '../visual-engine/namescope.js';
 export {

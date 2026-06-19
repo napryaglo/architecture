@@ -1,12 +1,13 @@
-import { Visual } from '../runtime/index.js';
+import { Element } from '../runtime/index.js';
 import type { CommandBinding } from './commands/command-binding.js';
 import type { InputBinding } from './commands/input-binding.js';
 
 // Control — base class for templated controls. WPF parity: the
 // equivalent of `System.Windows.Controls.Control`, sitting between
-// `FrameworkElement` (which in mural is rolled into `Visual` — DataContext,
-// Style, Resources, Triggers, Template are all already on Visual) and
-// the concrete control surface (ContentControl, ItemsControl, and the
+// `Element` (mural's FrameworkElement-tier — DataContext, Style,
+// Resources, Triggers, Template all live on Element — see
+// [../visual-engine/element.ts](../visual-engine/element.ts)) and the
+// concrete control surface (ContentControl, ItemsControl, and the
 // stand-alone templated controls — MenuButton, ContextMenu, Drawer).
 //
 // Why it exists:
@@ -37,7 +38,7 @@ import type { InputBinding } from './commands/input-binding.js';
 // declaring their default Style + ControlTemplate in their respective
 // `*.resources.mu` files (basic.resources.mu for the primitive controls,
 // framework.resources.mu for the command-surface bundle).
-export class Control extends Visual
+export class Control extends Element
 {
     // ── Routed-command + input-binding tables ─────────────────────────
     //

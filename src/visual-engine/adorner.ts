@@ -1,4 +1,5 @@
-import { Panel, Single, Visual } from './visual.js';
+import { Visual } from './visual.js';
+import { Panel, Single } from './element.js';
 import { Rect, Size } from './primitives.js';
 import type { DrawingContext } from './drawing-context.js';
 
