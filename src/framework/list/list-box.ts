@@ -403,14 +403,14 @@ export class ListBoxItem extends ContentControl
     protected override OnPointerDown(_args: PointerEventArgs): void
     {
         this._pressOriginatedHere = true;
-        this.set_property_value(Visual.IsPressedKey, true);
+        this._setIsPressed(true);
     }
 
     protected override OnPointerUp(args: PointerEventArgs): void
     {
         const fire = this._pressOriginatedHere && this.IsMouseOver;
         this._pressOriginatedHere = false;
-        this.set_property_value(Visual.IsPressedKey, false);
+        this._setIsPressed(false);
         if (!fire) return;
         // Move keyboard focus to the clicked row so subsequent arrow
         // keys navigate from here (§ 10.8).
@@ -425,7 +425,7 @@ export class ListBoxItem extends ContentControl
         // Leave while still pressed: clear the visual cue but keep
         // _pressOriginatedHere — a re-entry restores IsPressed and the
         // press-here-release-here gate stays armed.
-        this.set_property_value(Visual.IsPressedKey, false);
+        this._setIsPressed(false);
     }
 
     protected override OnPointerEnter(_args: PointerEventArgs): void
@@ -437,7 +437,7 @@ export class ListBoxItem extends ContentControl
         // re-Enter while it's still true means the press never ended.
         if (this._pressOriginatedHere)
         {
-            this.set_property_value(Visual.IsPressedKey, true);
+            this._setIsPressed(true);
         }
     }
 

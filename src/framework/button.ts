@@ -175,7 +175,7 @@ export class Button extends ContentControl implements ICommandSource
     protected override OnPointerDown(args: PointerEventArgs): void
     {
         this._pressOriginatedHere = true;
-        this.set_property_value(Visual.IsPressedKey, true);
+        this._setIsPressed(true);
         if (this.ClickMode === ClickMode.Press)
         {
             this.fireClick(args);
@@ -192,7 +192,7 @@ export class Button extends ContentControl implements ICommandSource
             && this.IsMouseOver;
         // Clear IsPressed BEFORE the click so handlers reading
         // IsPressed inside their callback see the post-release state.
-        this.set_property_value(Visual.IsPressedKey, false);
+        this._setIsPressed(false);
         this._pressOriginatedHere = false;
         if (fire) this.fireClick(args);
     }
@@ -208,7 +208,7 @@ export class Button extends ContentControl implements ICommandSource
         // press is still active restores the IsPressed visual cue.
         if (this._pressOriginatedHere)
         {
-            this.set_property_value(Visual.IsPressedKey, true);
+            this._setIsPressed(true);
         }
     }
 
@@ -220,7 +220,7 @@ export class Button extends ContentControl implements ICommandSource
         // visual without re-routing through PointerDown.
         if (this._pressOriginatedHere)
         {
-            this.set_property_value(Visual.IsPressedKey, false);
+            this._setIsPressed(false);
         }
     }
 
@@ -241,7 +241,7 @@ export class Button extends ContentControl implements ICommandSource
         args.Handled = true;
         // Match WPF: pressing Space/Enter flips IsPressed for the press
         // chrome. The matching OnKeyUp (or focus loss) clears it.
-        this.set_property_value(Visual.IsPressedKey, true);
+        this._setIsPressed(true);
         // For Enter, fire activation on KeyDown (Enter is a "commit" key
         // and Repeat fires Activation in WPF as well). For Space, WPF
         // fires on KeyUp to allow the user to back out by moving focus
@@ -254,7 +254,7 @@ export class Button extends ContentControl implements ICommandSource
     protected override OnKeyUp(args: KeyEventArgs): void
     {
         if (args.Key !== ' ' && args.Key !== 'Enter') return;
-        this.set_property_value(Visual.IsPressedKey, false);
+        this._setIsPressed(false);
     }
 
     // Keyboard counterpart to fireClick — runs the Command + OnClick

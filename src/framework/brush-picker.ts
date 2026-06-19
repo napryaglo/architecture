@@ -194,17 +194,17 @@ export class BrushPicker extends TemplatedControl
             const t = this._trigger;
             t.AddRoutedEventListener('PointerDown', (() => {
                 this._triggerPressed = true;
-                t.set_property_value(Visual.IsPressedKey, true);
+                t._setIsPressed(true);
             }) as (a: unknown) => void);
             t.AddRoutedEventListener('PointerUp', (() => {
                 const fire = this._triggerPressed;
                 this._triggerPressed = false;
-                t.set_property_value(Visual.IsPressedKey, false);
+                t._setIsPressed(false);
                 if (fire) this.IsDropDownOpen = !this.IsDropDownOpen;
             }) as (a: unknown) => void);
             t.AddRoutedEventListener('PointerLeave', (() => {
                 this._triggerPressed = false;
-                t.set_property_value(Visual.IsPressedKey, false);
+                t._setIsPressed(false);
             }) as (a: unknown) => void);
         }
     }
@@ -433,17 +433,17 @@ export class BrushPicker extends TemplatedControl
             let pressed = false;
             const onDown = ((): void => {
                 pressed = true;
-                tab.set_property_value(Visual.IsPressedKey, true);
+                tab._setIsPressed(true);
             }) as (a: unknown) => void;
             const onUp = ((): void => {
                 const fire = pressed;
                 pressed = false;
-                tab.set_property_value(Visual.IsPressedKey, false);
+                tab._setIsPressed(false);
                 if (fire) this.Variant = target;
             }) as (a: unknown) => void;
             const onLeave = ((): void => {
                 pressed = false;
-                tab.set_property_value(Visual.IsPressedKey, false);
+                tab._setIsPressed(false);
             }) as (a: unknown) => void;
             tab.AddRoutedEventListener('PointerDown', onDown);
             tab.AddRoutedEventListener('PointerUp',   onUp);

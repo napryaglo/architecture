@@ -323,14 +323,16 @@ export class Visual extends Model
     public static readonly IsEnabledKey = Model.RegisterProperty<boolean>(
         Visual, 'IsEnabled', true, MetaData.Inherits | MetaData.IsAnimationProhibited);
 
-    // Input state flags. Maintained by the InputManager, not by user
-    // code — handlers should treat both as read-only. Default `false` so
-    // triggers like `when{ IsMouseOver }{ … }` only engage once the
-    // pointer enters this Visual's hover route. MetaData.None: no
-    // measure/arrange/render implication; the visible effect comes from
-    // any Style triggers that watch them.
-    public static readonly IsMouseOverKey = Model.RegisterProperty<boolean>(Visual, 'IsMouseOver', false, MetaData.None);
-    public static readonly IsPressedKey   = Model.RegisterProperty<boolean>(Visual, 'IsPressed',   false, MetaData.None);
+    // Input state flags. Maintained by the InputManager + per-control
+    // press chrome (Button / ClickableBorder), not by user code.
+    // Promoted to `RegisterReadOnlyProperty` in § 1.13 — the
+    // "read-only by convention" comment that lived here is now an
+    // enforced invariant: external `set_property_value` writes throw.
+    // Maintainers route their writes through the typed `_setIsXxx`
+    // @internal methods below (which use the privileged
+    // `set_property_value_with_key` path under the hood).
+    public static readonly IsMouseOverKey = Model.RegisterReadOnlyProperty<boolean>(Visual, 'IsMouseOver', false, MetaData.None);
+    public static readonly IsPressedKey   = Model.RegisterReadOnlyProperty<boolean>(Visual, 'IsPressed',   false, MetaData.None);
 
     // Implicit per-DP transition specs — CSS-`transition`-style. When a
     // DP whose name matches a PropertyTransition.Property changes on
@@ -358,7 +360,10 @@ export class Visual extends Model
     // and behaves like IsMouseOver — public read, no public setter
     // (Style triggers like `when{ IsDragOver }` read it).
     public static readonly AllowDropKey  = Model.RegisterProperty<boolean>(Visual, 'AllowDrop',  false, MetaData.None);
-    public static readonly IsDragOverKey = Model.RegisterProperty<boolean>(Visual, 'IsDragOver', false, MetaData.None);
+    // IsDragOver — read-only as of § 1.13; InputManager writes
+    // through `_setIsDragOver`. See IsMouseOver / IsPressed for the
+    // pattern.
+    public static readonly IsDragOverKey = Model.RegisterReadOnlyProperty<boolean>(Visual, 'IsDragOver', false, MetaData.None);
 
     // Hit-test opt-out (WPF parity — UIElement.IsHitTestVisible). When
     // false, this visual AND its visual subtree are transparent to the
@@ -454,7 +459,7 @@ export class Visual extends Model
     // here so Style triggers can branch on it
     // (`when{ IsFocused }{ BorderBrush = #1976d2 }`) and so tests can
     // assert state without reaching into the InputManager.
-    public static readonly IsFocusedKey = Model.RegisterProperty<boolean>(Visual, 'IsFocused', false, MetaData.None);
+    public static readonly IsFocusedKey = Model.RegisterReadOnlyProperty<boolean>(Visual, 'IsFocused', false, MetaData.None);
 
     // Generic consumer-side handle, mirroring WPF's FrameworkElement.Tag.
     // Common use: bind a domain object to a Visual so a click handler /
@@ -467,6 +472,23 @@ export class Visual extends Model
     // exclusively by the InputManager during pointer dispatch.
     public get IsMouseOver(): boolean { return this.get_property_value(Visual.IsMouseOverKey); }
     public get IsPressed():   boolean { return this.get_property_value(Visual.IsPressedKey); }
+
+    /** @internal — InputManager only. Typed writeback for the
+     *  read-only `IsMouseOver` DP (§ 1.13). Routes through
+     *  `set_property_value_with_key` — the registered class's
+     *  privileged write — so the read-only contract holds for
+     *  external callers. */
+    public _setIsMouseOver(value: boolean): void
+    {
+        this.set_property_value_with_key(Visual.IsMouseOverKey, value);
+    }
+
+    /** @internal — Button / ClickableBorder / InputManager only.
+     *  Typed writeback for the read-only `IsPressed` DP (§ 1.13). */
+    public _setIsPressed(value: boolean): void
+    {
+        this.set_property_value_with_key(Visual.IsPressedKey, value);
+    }
 
     // Lazy-allocated. The collection is mutate-in-place — pushes /
     // removes take effect immediately because the engine reads the
@@ -483,8 +505,17 @@ export class Visual extends Model
         return t;
     }
     // True when the InputManager has this Visual as its current focused
-    // target. Read-only by convention; use Focus() / Blur() to change.
+    // target. Read-only contract enforced via `RegisterReadOnlyProperty`
+    // (§ 1.13); use `Focus()` / `Blur()` to change, or the @internal
+    // `_setIsFocused` from InputManager.
     public get IsFocused():   boolean { return this.get_property_value(Visual.IsFocusedKey); }
+
+    /** @internal — InputManager only. Typed writeback for the
+     *  read-only `IsFocused` DP (§ 1.13). */
+    public _setIsFocused(value: boolean): void
+    {
+        this.set_property_value_with_key(Visual.IsFocusedKey, value);
+    }
 
     // Drop-target opt-in. The InputManager's drag dispatcher walks the
     // visual ancestor chain from the pointer-hit Visual until it finds
@@ -493,9 +524,17 @@ export class Visual extends Model
     public get AllowDrop():  boolean { return this.get_property_value(Visual.AllowDropKey); }
     public set AllowDrop(v:  boolean) { this.set_property_value(Visual.AllowDropKey, v); }
     // Framework-written mirror of "this Visual is the current drag
-    // receiver". Read-only contract — flips via the InputManager's
-    // drag-session driver through the typed-key write path.
+    // receiver". Read-only contract enforced via
+    // `RegisterReadOnlyProperty` (§ 1.13) — InputManager writes
+    // through `_setIsDragOver` below.
     public get IsDragOver(): boolean { return this.get_property_value(Visual.IsDragOverKey); }
+
+    /** @internal — InputManager only. Typed writeback for the
+     *  read-only `IsDragOver` DP (§ 1.13). */
+    public _setIsDragOver(value: boolean): void
+    {
+        this.set_property_value_with_key(Visual.IsDragOverKey, value);
+    }
 
     // Hit-test opt-out. WPF parity — IsHitTestVisible=false renders
     // this Visual (and every descendant) transparent to pointer-event

@@ -577,34 +577,27 @@ export class InputManager
 
 // IsMouseOver / IsPressed / IsFocused / IsDragOver / Focusable are DPs
 // registered on Visual. This module can't value-import Visual (the
-// import chain through routed-event.ts cycles back here), so it resolves
-// the keys at first-use via `resolveKey` against a passed-in Visual
-// instance, then caches them at module scope. The keys carry the
-// underlying PropertyDescriptor — identity is per-descriptor, so the
-// first resolution sticks regardless of which Visual subclass triggered
-// it.
-let mouseOverKey: PropertyKey<unknown> | undefined;
-let pressedKey:   PropertyKey<unknown> | undefined;
-let focusedKey:   PropertyKey<unknown> | undefined;
-let dragOverKey:  PropertyKey<unknown> | undefined;
+// IsMouseOver / IsPressed / IsFocused / IsDragOver are read-only DPs
+// (§ 1.13); InputManager writes through the typed `_setIsXxx`
+// @internal methods on Visual which route through the privileged
+// `set_property_value_with_key` path. The lazy `focusableKey` is
+// still resolved on first use because `Focusable` is a normal
+// writable DP and InputManager only reads it.
 let focusableKey: PropertyKey<unknown> | undefined;
 
 function setIsMouseOver(v: Visual, value: boolean): void
 {
-    mouseOverKey ??= resolveKey(v, undefined, 'IsMouseOver');
-    v.set_property_value(mouseOverKey, value);
+    v._setIsMouseOver(value);
 }
 
 function setIsPressed(v: Visual, value: boolean): void
 {
-    pressedKey ??= resolveKey(v, undefined, 'IsPressed');
-    v.set_property_value(pressedKey, value);
+    v._setIsPressed(value);
 }
 
 function setIsFocused(v: Visual, value: boolean): void
 {
-    focusedKey ??= resolveKey(v, undefined, 'IsFocused');
-    v.set_property_value(focusedKey, value);
+    v._setIsFocused(value);
 }
 
 function isFocusable(v: Visual): boolean
@@ -617,8 +610,7 @@ function isFocusable(v: Visual): boolean
 // shape, framework-only write surface.
 function setIsDragOver(v: Visual, value: boolean): void
 {
-    dragOverKey ??= resolveKey(v, undefined, 'IsDragOver');
-    v.set_property_value(dragOverKey, value);
+    v._setIsDragOver(value);
 }
 
 // Walk up the visual parent chain from `start` looking for the nearest

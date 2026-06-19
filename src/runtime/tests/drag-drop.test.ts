@@ -281,12 +281,13 @@ describe('Visual.AllowDrop / IsDragOver DPs', () => {
         assert.equal(v.AllowDrop, false);
     });
 
-    test('IsDragOver defaults to false and is set via _set_property_value_by_name', () => {
+    test('IsDragOver defaults to false and is set via _setIsDragOver', () => {
         const v = new DragLoggerPanel('v');
         assert.equal(v.IsDragOver, false);
-        // Mirror of the InputManager's setIsMouseOver helper pattern.
-        (v as unknown as { _set_property_value_by_name(name: string, value: unknown): void })
-            ._set_property_value_by_name('IsDragOver', true);
+        // Mirror of the InputManager pattern (§ 1.13) — IsDragOver is
+        // a read-only DP; framework consumers write through the typed
+        // `_setIsDragOver` @internal method.
+        v._setIsDragOver(true);
         assert.equal(v.IsDragOver, true);
     });
 });

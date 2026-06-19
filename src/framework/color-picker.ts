@@ -213,17 +213,17 @@ export class ColorPicker extends TemplatedControl
             const t = this._trigger;
             t.AddRoutedEventListener('PointerDown', (() => {
                 this._triggerPressed = true;
-                t.set_property_value(Visual.IsPressedKey, true);
+                t._setIsPressed(true);
             }) as (a: unknown) => void);
             t.AddRoutedEventListener('PointerUp', (() => {
                 const fire = this._triggerPressed;
                 this._triggerPressed = false;
-                t.set_property_value(Visual.IsPressedKey, false);
+                t._setIsPressed(false);
                 if (fire) this.IsDropDownOpen = !this.IsDropDownOpen;
             }) as (a: unknown) => void);
             t.AddRoutedEventListener('PointerLeave', (() => {
                 this._triggerPressed = false;
-                t.set_property_value(Visual.IsPressedKey, false);
+                t._setIsPressed(false);
             }) as (a: unknown) => void);
         }
     }

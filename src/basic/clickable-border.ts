@@ -1,4 +1,4 @@
-import { Visual, type PointerEventArgs } from '../runtime/index.js';
+import { type PointerEventArgs } from '../runtime/index.js';
 import { Border } from './border.js';
 
 // Border subclass that fires a click callback on PointerUp when the
@@ -21,27 +21,27 @@ export class ClickableBorder extends Border
     protected override OnPointerDown(_args: PointerEventArgs): void
     {
         this._pressOriginatedHere = true;
-        this.set_property_value(Visual.IsPressedKey, true);
+        this._setIsPressed(true);
     }
 
     protected override OnPointerUp(_args: PointerEventArgs): void
     {
         const fire = this._pressOriginatedHere && this.IsMouseOver;
         this._pressOriginatedHere = false;
-        this.set_property_value(Visual.IsPressedKey, false);
+        this._setIsPressed(false);
         if (fire) this.onClick?.();
     }
 
     protected override OnPointerLeave(_args: PointerEventArgs): void
     {
-        this.set_property_value(Visual.IsPressedKey, false);
+        this._setIsPressed(false);
     }
 
     protected override OnPointerEnter(_args: PointerEventArgs): void
     {
         if (this._pressOriginatedHere)
         {
-            this.set_property_value(Visual.IsPressedKey, true);
+            this._setIsPressed(true);
         }
     }
 }

@@ -128,17 +128,17 @@ export class SplitButton extends ContentControl
         if (part === undefined) return;
         part.AddRoutedEventListener('PointerDown', (() => {
             setFlag(true);
-            part.set_property_value(Visual.IsPressedKey, true);
+            part._setIsPressed(true);
         }) as (a: unknown) => void);
         part.AddRoutedEventListener('PointerUp', (() => {
             const wasPressed = this._primary === part ? this._primaryPressed : this._triggerPressed;
             setFlag(false);
-            part.set_property_value(Visual.IsPressedKey, false);
+            part._setIsPressed(false);
             if (wasPressed) onFire();
         }) as (a: unknown) => void);
         part.AddRoutedEventListener('PointerLeave', (() => {
             setFlag(false);
-            part.set_property_value(Visual.IsPressedKey, false);
+            part._setIsPressed(false);
         }) as (a: unknown) => void);
     }
 

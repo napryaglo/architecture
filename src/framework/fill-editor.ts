@@ -269,17 +269,17 @@ export class FillEditor extends TemplatedControl
             let pressed = false;
             const onDown = ((): void => {
                 pressed = true;
-                tab.set_property_value(Visual.IsPressedKey, true);
+                tab._setIsPressed(true);
             }) as (a: unknown) => void;
             const onUp = ((): void => {
                 const fire = pressed;
                 pressed = false;
-                tab.set_property_value(Visual.IsPressedKey, false);
+                tab._setIsPressed(false);
                 if (fire) this.Variant = target;
             }) as (a: unknown) => void;
             const onLeave = ((): void => {
                 pressed = false;
-                tab.set_property_value(Visual.IsPressedKey, false);
+                tab._setIsPressed(false);
             }) as (a: unknown) => void;
             tab.AddRoutedEventListener('PointerDown', onDown);
             tab.AddRoutedEventListener('PointerUp',   onUp);
