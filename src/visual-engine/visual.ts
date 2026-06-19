@@ -33,6 +33,7 @@ import type { Transform } from './drawing/transform.js';
 import type { Geometry } from './geometry/geometry.js';
 import { StyleApplicator } from './style-applicator.js';
 import { TriggerHost } from './trigger-host.js';
+import { ResourceResolver } from './resource-resolver.js';
 
 
 // Routed event names that map to the per-instance _routedListeners
@@ -980,88 +981,14 @@ export class Visual extends Model
     // undefined when no ancestor's composition contains the key.
     public TryFindResource(key: ResourceKey): unknown | undefined
     {
-        // Active Style's Resources first — covers `Setter.value =
-        // SetterFactory(t => DynamicResource(t, 'Accent'))` patterns
-        // where the lookup key lives on the Style itself rather than
-        // on any tree-attached dict. BasedOn chain is walked inside
-        // Style.TryResolveResource.
-        const active = this._styleApplicator?.ActiveStyle;
-        if (active !== undefined)
-        {
-            const v = active.TryResolveResource(key);
-            if (v !== undefined) return v;
-        }
-        let cursor: Visual | undefined = this;
-        while (cursor !== undefined)
-        {
-            const r = cursor._resources;
-            if (r !== undefined && r.CanResolve(key))
-            {
-                return r.Resolve(key);
-            }
-            cursor = cursor._logicalParent ?? cursor._templatedParent;
-        }
-        // Ambient-Scheme override (§ 17.1 / § 17.2). The hook is
-        // registered by ThemeManager at module load — see
-        // `_setAmbientTokenResolver`. The runtime layer can't import
-        // ThemeManager directly (theme/theme.ts already imports
-        // Visual), so the integration goes through a function-pointer
-        // hook. Only string keys can name scheme tokens; Function keys
-        // (DefaultStyleKey lookups, etc.) skip this step.
-        if (typeof key === 'string')
-        {
-            const hookResult = Visual._ambientTokenResolver?.(this, key);
-            if (hookResult !== undefined) return hookResult;
-        }
-        // Application-level fallback. The tree walk exhausts at the
-        // topmost mounted root; when a key isn't found there, consult
-        // the app's root resources THEN the bundled default factories.
-        // Matches WPF's FrameworkElement.FindResource (which walks
-        // theme dictionaries at the end) and parity's the eager-template
-        // path: a Visual whose DefaultStyleKey resolves through the
-        // bundled theme should find its Style here even before
-        // Application.current is set OR when running in a test harness
-        // without an Application instance. Delegate to
-        // Application.ResolveDefaultResource so the precedence rules
-        // (user overrides on Application.Resources beat bundled
-        // defaults) live in one place.
-        return Application.ResolveDefaultResource(key);
+        return (this._resourceResolver ??= new ResourceResolver(this)).TryFindResource(key);
     }
 
-    // Hook-shaped integration with ThemeManager (§ 17.1 / § 17.2).
-    // Module-level state — there is at most one resolver in scope.
-    // ThemeManager registers itself on module load via
-    // `Visual._setAmbientTokenResolver`; tests that need to swap the
-    // resolver out can save/restore the previous value.
-    private static _ambientTokenResolver: ((v: Visual, key: string) => unknown | undefined) | undefined;
-
-    /** @internal — ThemeManager only. Installs the function that
-     *  consults the inherited `ThemeManager.Scheme` / `ThemeManager.Theme`
-     *  DP cascade for ambient token resolution. Pass `undefined` to
-     *  detach the hook (test-only). */
-    public static _setAmbientTokenResolver(
-        resolver: ((v: Visual, key: string) => unknown | undefined) | undefined,
-    ): void
-    {
-        Visual._ambientTokenResolver = resolver;
-    }
-
-    // Descriptors that should re-fire DynamicResource subscribers when
-    // they change on this Visual (§ 17.1 — Scheme/Theme cascades). The
-    // set is keyed by descriptor identity, populated by ThemeManager at
-    // module load via `_registerAmbientResourceTriggerDp`. Independent
-    // of the resolver hook because subscribers (DynamicResource bindings)
-    // need re-resolution even on the cascade's intermediate frames.
-    private static _ambientResourceTriggerDps: Set<PropertyDescriptor> = new Set();
-
-    /** @internal — ThemeManager only. Marks `descriptor` as an inherited
-     *  DP whose value changes should re-fire DynamicResource subscribers
-     *  on the affected Visual (so the next refresh pulls from the new
-     *  scheme/theme). */
-    public static _registerAmbientResourceTriggerDp(descriptor: PropertyDescriptor): void
-    {
-        Visual._ambientResourceTriggerDps.add(descriptor);
-    }
+    // Resource-lookup machinery + ThemeManager-facing ambient-token
+    // hook live on `ResourceResolver` (§ 1.9). Visual retains a lazy
+    // `_resourceResolver` field; Visuals that never trigger a
+    // TryFindResource pay no allocation.
+    private _resourceResolver: ResourceResolver | undefined;
 
     // Explicit style for this Visual. When set, takes priority over any
     // implicit (TargetType-keyed) style discovered in the ancestor
@@ -2401,7 +2328,7 @@ export class Visual extends Model
             // of those values cascades to this Visual, every
             // DynamicResource binding rooted here must re-resolve so the
             // new scheme's token map drives the next paint.
-            if (Visual._ambientResourceTriggerDps.has(descriptor))
+            if (ResourceResolver.IsAmbientResourceTriggerDp(descriptor))
             {
                 this.fire_dynamic_resource_listeners();
             }

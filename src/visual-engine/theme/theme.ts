@@ -40,6 +40,7 @@ import {
 } from './adaptive.js';
 import type { AnimationTimeline, EasingFunction } from '../animation/index.js';
 import { Visual } from '../visual.js';
+import { ResourceResolver } from '../resource-resolver.js';
 
 // ── Token catalog ──────────────────────────────────────────────────────
 
@@ -636,12 +637,15 @@ export class ThemeManager
     public static SetVisualTheme(v: Visual, value: Theme | undefined): void { v.set_property_value(ThemeManager.ThemeKey, value); }
 
     // Module-init: wire the ambient-token resolver hook + register the
-    // Scheme / Theme descriptors as ambient-resource triggers so the
-    // Visual layer's DynamicResource cascade picks up subtree theme
-    // overrides without importing ThemeManager (would create a cycle).
+    // Scheme / Theme descriptors as ambient-resource triggers. The
+    // hooks live on `ResourceResolver` (§ 1.9) — the previous design
+    // hung them off Visual as static fields, which kept `theme.ts →
+    // visual.ts` import-cycle-free only by going through a function-
+    // pointer hook. ResourceResolver is a dedicated collaborator that
+    // theme.ts can import directly.
     static
     {
-        Visual._setAmbientTokenResolver((v, key) =>
+        ResourceResolver._setAmbientTokenResolver((v, key) =>
         {
             // The inherited DP cascade gives us the nearest-ancestor
             // value (or undefined when no ancestor has set Scheme).
@@ -649,8 +653,8 @@ export class ThemeManager
             if (scheme === undefined) return undefined;
             return scheme.tokens.get(key);
         });
-        Visual._registerAmbientResourceTriggerDp(ThemeManager.SchemeKey.descriptor);
-        Visual._registerAmbientResourceTriggerDp(ThemeManager.ThemeKey.descriptor);
+        ResourceResolver._registerAmbientResourceTriggerDp(ThemeManager.SchemeKey.descriptor);
+        ResourceResolver._registerAmbientResourceTriggerDp(ThemeManager.ThemeKey.descriptor);
     }
 
     // Test-only — reset all state. Used by tests that build fresh
