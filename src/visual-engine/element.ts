@@ -1,5 +1,4 @@
 import { Visual } from './visual.js';
-import type { PropertyDescriptor } from '../runtime/property-descriptor.js';
 import { ObservableCollection, type IReadOnlyObservableCollection } from '../runtime/observable-collection.js';
 
 // `Element` — the FrameworkElement-tier seam between `Visual` and the
@@ -89,24 +88,14 @@ export abstract class Single extends Element
         return this._child !== undefined ? [this._child] : [];
     }
 
-    protected override propagate_inheritance_to_logical_children(): void
+    protected override forEachVisualChild(fn: (child: Visual) => void): void
     {
-        this._child?._refresh_inheritance_subtree();
+        if (this._child !== undefined) fn(this._child);
     }
 
-    protected override propagate_inheritance_for_logical_children(descriptor: PropertyDescriptor): void
+    protected override forEachLogicalChild(fn: (child: Visual) => void): void
     {
-        this._child?._refresh_inherited(descriptor);
-    }
-
-    protected override propagate_dynamic_resources_to_logical_children(): void
-    {
-        this._child?._refresh_dynamic_resources_subtree();
-    }
-
-    protected override propagate_target_to_visual_children(): void
-    {
-        this._child?.['SetTarget'](this['target']);
+        if (this._child !== undefined) fn(this._child);
     }
 }
 
@@ -220,24 +209,13 @@ export class Panel extends Element
         return this._childrenSnapshot;
     }
 
-    protected override propagate_inheritance_to_logical_children(): void
+    protected override forEachVisualChild(fn: (child: Visual) => void): void
     {
-        for (const c of this._children) c._refresh_inheritance_subtree();
+        for (const c of this._children) fn(c);
     }
 
-    protected override propagate_inheritance_for_logical_children(descriptor: PropertyDescriptor): void
+    protected override forEachLogicalChild(fn: (child: Visual) => void): void
     {
-        for (const c of this._children) c._refresh_inherited(descriptor);
-    }
-
-    protected override propagate_dynamic_resources_to_logical_children(): void
-    {
-        for (const c of this._children) c._refresh_dynamic_resources_subtree();
-    }
-
-    protected override propagate_target_to_visual_children(): void
-    {
-        const t = this['target'];
-        for (const c of this._children) c['SetTarget'](t);
+        for (const c of this._children) fn(c);
     }
 }

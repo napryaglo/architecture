@@ -1541,7 +1541,21 @@ export class Visual extends Model
         for (const l of snapshot) l();
     }
 
-    protected propagate_target_to_visual_children(): void { /* override in Single / Panel */ }
+    // § 1.15 — the four propagate_* virtuals now have one-line
+    // bodies that delegate to the `forEachVisualChild` /
+    // `forEachLogicalChild` virtuals below. Single and Panel only
+    // need to override the two `forEachXxxChild` virtuals to wire
+    // up their iteration shape; the four propagates fall through
+    // automatically. Subclasses with non-uniform logical / visual
+    // topology (ContentControl, ItemsControl, Drawer) keep their
+    // custom propagate_* overrides — the helper-driven defaults
+    // don't model the "Content slot + template root in two
+    // different trees" case.
+    protected propagate_target_to_visual_children(): void
+    {
+        const t = this['target'];
+        this.forEachVisualChild(c => c['SetTarget'](t));
+    }
 
     // Children iteration surface — every Visual exposes its visual
     // children (for the renderer / hit-testing) and its logical
@@ -2473,9 +2487,24 @@ export class Visual extends Model
         this.forEachOverlayChild(c => c._refresh_inheritance_subtree());
     }
 
-    protected propagate_inheritance_to_logical_children(): void { /* override in Single / Panel */ }
+    protected propagate_inheritance_to_logical_children(): void
+    {
+        this.forEachLogicalChild(c => c._refresh_inheritance_subtree());
+    }
 
-    protected propagate_inheritance_for_logical_children(_descriptor: PropertyDescriptor): void { /* override in Single / Panel */ }
+    protected propagate_inheritance_for_logical_children(descriptor: PropertyDescriptor): void
+    {
+        this.forEachLogicalChild(c => c._refresh_inherited(descriptor));
+    }
+
+    /** Iteration virtual — Single/Panel override. Default empty for
+     *  leaf Visuals (the renderer doesn't recurse through children
+     *  on a leaf). § 1.15. */
+    protected forEachVisualChild(_fn: (child: Visual) => void): void { }
+
+    /** Iteration virtual — Single/Panel override. Default empty.
+     *  § 1.15. */
+    protected forEachLogicalChild(_fn: (child: Visual) => void): void { }
 
     // ── DynamicResource re-wire support ──────────────────────────────
     //
@@ -2524,7 +2553,10 @@ export class Visual extends Model
         this.forEachOverlayChild(c => c._refresh_dynamic_resources_subtree());
     }
 
-    protected propagate_dynamic_resources_to_logical_children(): void { /* override in Single / Panel */ }
+    protected propagate_dynamic_resources_to_logical_children(): void
+    {
+        this.forEachLogicalChild(c => c._refresh_dynamic_resources_subtree());
+    }
 
     private static collect_inheritable_descriptors(klass: Function): PropertyDescriptor[]
     {
