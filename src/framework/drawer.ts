@@ -343,12 +343,12 @@ export class Drawer extends Control
 
     protected override propagate_inheritance_to_logical_children(): void
     {
-        this.Content?.['refresh_inheritance_subtree']();
+        this.Content?.['_refresh_inheritance_subtree']();
     }
 
     protected override propagate_inheritance_for_logical_children(descriptor: PropertyDescriptor): void
     {
-        this.Content?.['refresh_inherited'](descriptor);
+        this.Content?.['_refresh_inherited'](descriptor);
     }
 
     // Target propagation hooks the lifecycle moments where the Drawer

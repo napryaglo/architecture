@@ -17,6 +17,7 @@ import type {
 } from '../runtime/binding/effective-value.js';
 import type { EventTrigger } from '../runtime/event-trigger.js';
 import type { Visual } from './visual.js';
+import type { ElementCtor } from './element.js';
 
 // Per-setter TwoWay / OneWayToSource writeback bookkeeping. Replaces
 // the Symbol-keyed slot the previous design hung off the Binding —
@@ -188,7 +189,7 @@ export class StyleApplicator
         // is an instance of the Style's declared TargetType — applying
         // a `Style[TargetType=Foo]` to a non-Foo throws.
         if (desired !== undefined
-            && !(this._target instanceof (desired.TargetType as new (...args: any[]) => Visual)))
+            && !(this._target instanceof (desired.TargetType as ElementCtor)))
         {
             const actual = (this._target as Visual).constructor.name;
             throw new Error(

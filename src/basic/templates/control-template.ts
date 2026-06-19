@@ -63,7 +63,7 @@ export class ControlTemplate
         // Style + DynamicResource re-walk through the freshly-stamped
         // templatedParent chain. WHY: the factory builds the subtree by
         // calling SetChild / AddChild, each of which fires AttachLogical
-        // → refresh_styles_subtree on the new child. At that point
+        // → _refresh_styles_subtree on the new child. At that point
         // _templatedParent is undefined (we haven't stamped yet), so
         // the resource walk in subscribe_styles / resolve_implicit_style
         // stops at the template-internal logical root and only sees the
@@ -75,10 +75,10 @@ export class ControlTemplate
         // boundaries). Same shape for DynamicResource bindings whose
         // ancestor-chain subscriptions cached the empty-templatedParent
         // chain during construction. Inheritance is left to the caller
-        // (ContentControl.rebuildTemplate runs refresh_inheritance_subtree
+        // (ContentControl.rebuildTemplate runs _refresh_inheritance_subtree
         // explicitly after AttachVisual + DataContext propagation).
-        root['refresh_styles_subtree']();
-        root['refresh_dynamic_resources_subtree']();
+        root['_refresh_styles_subtree']();
+        root['_refresh_dynamic_resources_subtree']();
 
         // Each template instance gets its own NameScope, attached to
         // the root. Walks the template subtree and registers every

@@ -33,6 +33,15 @@ export class Element extends Visual
 {
 }
 
+/** Class constructor reference for an `Element` subclass. Used as the
+ *  type for `Style.TargetType`, `DefaultStyleKey` defaults, and any
+ *  metadata that names a templated control's class. Replaces the
+ *  loose `Function | undefined` typing for these slots — `ElementCtor`
+ *  keeps the `instanceof` check on the consumer side typed without
+ *  an `as new (...args: any[]) => Visual` cast at each use site
+ *  (§ 1.10). */
+export type ElementCtor = new (...args: any[]) => Element;
+
 // A Visual that owns at most one child. SetChild(undefined) clears the
 // slot. Replacing a non-undefined child first detaches the previous one.
 export abstract class Single extends Element
@@ -82,17 +91,17 @@ export abstract class Single extends Element
 
     protected override propagate_inheritance_to_logical_children(): void
     {
-        this._child?.['refresh_inheritance_subtree']();
+        this._child?._refresh_inheritance_subtree();
     }
 
     protected override propagate_inheritance_for_logical_children(descriptor: PropertyDescriptor): void
     {
-        this._child?.['refresh_inherited'](descriptor);
+        this._child?._refresh_inherited(descriptor);
     }
 
     protected override propagate_dynamic_resources_to_logical_children(): void
     {
-        this._child?.['refresh_dynamic_resources_subtree']();
+        this._child?._refresh_dynamic_resources_subtree();
     }
 
     protected override propagate_target_to_visual_children(): void
@@ -213,17 +222,17 @@ export class Panel extends Element
 
     protected override propagate_inheritance_to_logical_children(): void
     {
-        for (const c of this._children) c['refresh_inheritance_subtree']();
+        for (const c of this._children) c._refresh_inheritance_subtree();
     }
 
     protected override propagate_inheritance_for_logical_children(descriptor: PropertyDescriptor): void
     {
-        for (const c of this._children) c['refresh_inherited'](descriptor);
+        for (const c of this._children) c._refresh_inherited(descriptor);
     }
 
     protected override propagate_dynamic_resources_to_logical_children(): void
     {
-        for (const c of this._children) c['refresh_dynamic_resources_subtree']();
+        for (const c of this._children) c._refresh_dynamic_resources_subtree();
     }
 
     protected override propagate_target_to_visual_children(): void

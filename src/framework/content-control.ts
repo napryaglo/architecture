@@ -177,20 +177,20 @@ export class ContentControl extends Control
     // child of this control (its logicalParent stays undefined), but
     // its walk_inherited falls through templatedParent → us, so it
     // needs to know about value changes too. Pushing the refresh into
-    // its subtree triggers per-node refresh_inherited, which re-reads
+    // its subtree triggers per-node _refresh_inherited, which re-reads
     // through the templatedParent fallback.
     protected override propagate_inheritance_to_logical_children(): void
     {
         const c = this.Content;
-        if (c instanceof Visual) c['refresh_inheritance_subtree']();
-        this._templateInstance?.root['refresh_inheritance_subtree']();
+        if (c instanceof Visual) c['_refresh_inheritance_subtree']();
+        this._templateInstance?.root['_refresh_inheritance_subtree']();
     }
 
     protected override propagate_inheritance_for_logical_children(descriptor: PropertyDescriptor): void
     {
         const c = this.Content;
-        if (c instanceof Visual) c['refresh_inherited'](descriptor);
-        this._templateInstance?.root['refresh_inherited'](descriptor);
+        if (c instanceof Visual) c['_refresh_inherited'](descriptor);
+        this._templateInstance?.root['_refresh_inherited'](descriptor);
     }
 
     // Target propagation rides the VISUAL tree, so it cascades through
@@ -232,7 +232,7 @@ export class ContentControl extends Control
         const instance = newTemplate.Apply(this);
         this.AttachVisual(instance.root);
         this._templateInstance = instance;
-        instance.root['refresh_inheritance_subtree']();
+        instance.root['_refresh_inheritance_subtree']();
 
         if (carriedResolved !== undefined && instance.contentPresenter !== undefined)
         {

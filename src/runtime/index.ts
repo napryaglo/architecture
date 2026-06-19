@@ -48,7 +48,7 @@ export {
     Visibility,
     type VisualHost,
 } from '../visual-engine/visual.js';
-export { Element, Single, Panel } from '../visual-engine/element.js';
+export { Element, Single, Panel, type ElementCtor } from '../visual-engine/element.js';
 export { Adorner, AdornerLayer, AdornerDecorator, DragGhostAdorner } from '../visual-engine/adorner.js';
 export { NameScope } from '../visual-engine/namescope.js';
 export {

@@ -1328,18 +1328,18 @@ export class ItemsControl extends Control
     {
         for (const c of this._containers)
         {
-            c['refresh_inheritance_subtree']();
+            c['_refresh_inheritance_subtree']();
         }
-        this._itemsPanel?.['refresh_inheritance_subtree']();
+        this._itemsPanel?.['_refresh_inheritance_subtree']();
     }
 
     protected override propagate_inheritance_for_logical_children(descriptor: PropertyDescriptor): void
     {
         for (const c of this._containers)
         {
-            c['refresh_inherited'](descriptor);
+            c['_refresh_inherited'](descriptor);
         }
-        this._itemsPanel?.['refresh_inherited'](descriptor);
+        this._itemsPanel?.['_refresh_inherited'](descriptor);
     }
 
     // Target propagation rides the visual tree, so it hops to either

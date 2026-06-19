@@ -291,7 +291,7 @@ describe('DynamicResource', () => {
         // new ancestor chain, the binding picks up resources defined
         // on the new ancestors AND stops responding to changes on the
         // old ones. AttachLogical / DetachLogical drive the re-wire
-        // via Visual.refresh_dynamic_resources_subtree.
+        // via Visual._refresh_dynamic_resources_subtree.
         class TestPanel extends Panel { }
         const oldRoot = new TestPanel();
         const newRoot = new TestPanel();

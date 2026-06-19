@@ -71,7 +71,7 @@ class DynamicResourceBinding extends Binding
         this.wireSubscriptions();
         this.refresh();
         // Re-walk the ancestor chain whenever the host is attached /
-        // detached. Visual.refresh_dynamic_resources_subtree fires this
+        // detached. Visual._refresh_dynamic_resources_subtree fires this
         // callback on every binding registered against any node in the
         // affected subtree. Non-Visual hosts (Pen resources, Brush
         // resources, …) have no visual tree, so no re-wire hook.
@@ -232,7 +232,7 @@ class DynamicResourceBinding extends Binding
 //   * Subscriptions are wired at construction from the host's current
 //     ancestor chain AND re-wired automatically on every
 //     AttachLogical / DetachLogical that affects the host's subtree
-//     (via Visual.refresh_dynamic_resources_subtree). So reparenting
+//     (via Visual._refresh_dynamic_resources_subtree). So reparenting
 //     "just works" — any new ancestor's Resources dict becomes
 //     observable on attach, dropped ancestors stop firing on detach.
 //   * A dictionary that joins the resolution chain later WITHOUT a

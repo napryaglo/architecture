@@ -200,7 +200,7 @@ describe('ContentControl + ControlTemplate', () => {
         cc.Template = template;
 
         const inner = cc.visualChildren[0] as Leaf;
-        // refresh_inheritance_subtree was called by rebuildTemplate after
+        // _refresh_inheritance_subtree was called by rebuildTemplate after
         // attach, so the value is already pulled in.
         assert.equal(inner.Tint, 'royalblue');
     });

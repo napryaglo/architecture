@@ -123,7 +123,7 @@ export class TextBlock extends Visual
         // paint — same pattern as MenuSeparator / StatusBarSeparator.
         // Falls through silently when no theme is active (tests,
         // bootstrap-before-Application.initialize); a later
-        // refresh_styles_subtree on attach picks it up then.
+        // _refresh_styles_subtree on attach picks it up then.
         this.applyDefaultStyle();
         if (text !== undefined) this.Text = text;
     }

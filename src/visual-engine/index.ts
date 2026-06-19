@@ -22,7 +22,7 @@ export {
     Visibility,
     type VisualHost,
 } from './visual.js';
-export { Element, Single, Panel } from './element.js';
+export { Element, Single, Panel, type ElementCtor } from './element.js';
 export { Adorner, AdornerLayer, AdornerDecorator, DragGhostAdorner } from './adorner.js';
 export { NameScope } from './namescope.js';
 export { Behavior } from './behavior.js';

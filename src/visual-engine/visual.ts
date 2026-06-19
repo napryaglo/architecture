@@ -696,7 +696,7 @@ export class Visual extends Model
     // sources watch the same chain so they share one subscription list.
     // Wired at AttachLogical for every dict found in the current
     // ancestor chain; torn down at DetachLogical or when
-    // refresh_styles_subtree rebuilds them after a tree mutation.
+    // _refresh_styles_subtree rebuilds them after a tree mutation.
     // Lazy collections — § 1.2. Visuals that never opt into Style,
     // Triggers, or DynamicResource (Border / TextBlock / etc. in plain
     // content roles) pay no allocation. Write sites use the `??=`
@@ -966,8 +966,8 @@ export class Visual extends Model
         if (this._resources === undefined)
         {
             this._resources = new ResourceDictionary();
-            this.refresh_styles_subtree();
-            this.refresh_dynamic_resources_subtree();
+            this._refresh_styles_subtree();
+            this._refresh_dynamic_resources_subtree();
         }
         return this._resources;
     }
@@ -1393,7 +1393,7 @@ export class Visual extends Model
     // Eagerly resolve the default Style and apply it. Convention for
     // templated controls: call this at the end of the subclass
     // constructor. The framework would otherwise only resolve styles
-    // on AttachLogical (via refresh_styles_subtree) — fine for tree-
+    // on AttachLogical (via _refresh_styles_subtree) — fine for tree-
     // mounted controls, but standalone tests / unmounted instances
     // would have a missing Template (and the visualChildren / Measure
     // contracts would observe an un-templated control). Calling this
@@ -1414,7 +1414,7 @@ export class Visual extends Model
     // Subscribe to every ResourceDictionary in the ancestor chain so
     // changes to any of them re-resolve BOTH the implicit and theme
     // styles. Wired at AttachLogical; tree mutations rebuild via
-    // refresh_styles_subtree. Implicit and theme share one subscription
+    // _refresh_styles_subtree. Implicit and theme share one subscription
     // list because they consult the same chain — splitting would
     // double the subscribers on every dict for no benefit.
     private subscribe_styles(): void
@@ -1631,7 +1631,7 @@ export class Visual extends Model
             throw new Error('Visual already has a logical parent; detach it from the current parent first.');
         }
         child.SetLogicalParent(this);
-        child.refresh_inheritance_subtree();
+        child._refresh_inheritance_subtree();
         // Style lookups run AFTER inheritance refresh — the resource
         // chain now reflects the child's new ancestry, so the
         // type-keyed Style lookup (implicit via constructor + theme
@@ -1644,13 +1644,13 @@ export class Visual extends Model
         // attached anywhere; the Buttons resolved an empty chain at
         // their original AddChild and only see the Border's style
         // when their chain extends up to it on THIS attach).
-        child.refresh_styles_subtree();
+        child._refresh_styles_subtree();
         // DynamicResource bindings cached their ancestor-chain
         // subscriptions at construction. Reparenting grew (or shrank)
         // that chain — re-walk so any new ancestor's Resources dict
         // becomes observable, and so a fresh active theme lookup runs
         // for every bound DP across the subtree.
-        child.refresh_dynamic_resources_subtree();
+        child._refresh_dynamic_resources_subtree();
     }
 
     protected DetachLogical(child: Visual): void
@@ -1663,19 +1663,19 @@ export class Visual extends Model
         // subtree) so a mutation on the now-detached chain doesn't
         // fire resolve_implicit_style / resolve_theme_style through
         // stale subs.
-        child.unsubscribe_styles_subtree();
+        child._unsubscribe_styles_subtree();
         child.SetLogicalParent(undefined);
-        child.refresh_inheritance_subtree();
+        child._refresh_inheritance_subtree();
         // No ancestor chain anymore — re-resolve drops any inherited
         // implicit or theme style across the subtree. Explicit Style
         // stays active because refresh_active_style prefers Style over
         // _implicitStyle / _themeStyle.
-        child.refresh_styles_subtree();
+        child._refresh_styles_subtree();
         // DynamicResource bindings re-walk their ancestor chain — the
         // detached subtree's bindings drop ancestor subscriptions and
         // fall back to Application-only resolution (still valid for
         // theme tokens).
-        child.refresh_dynamic_resources_subtree();
+        child._refresh_dynamic_resources_subtree();
     }
 
     // Cascades unsubscribe → resolve → subscribe through THIS visual
@@ -1684,22 +1684,31 @@ export class Visual extends Model
     // ancestor chain changes at any level above the subtree (which
     // invalidates every descendant's chain, not just the
     // directly-attached child).
-    protected refresh_styles_subtree(): void
+    /** @internal — § 1.10. Public-with-underscore so collaborators
+     *  on sibling Visuals can call it without a bracket-access cast.
+     *  Walks this Visual and every logical / overlay descendant,
+     *  re-resolving implicit + theme styles and re-subscribing to
+     *  ancestor ResourceDictionary changes. */
+    public _refresh_styles_subtree(): void
     {
         this.unsubscribe_styles();
         this.resolve_implicit_style();
         this.resolve_theme_style();
         this.subscribe_styles();
-        for (const c of this.allLogicalDescendantSubtreeRoots()) c['refresh_styles_subtree']();
+        for (const c of this.allLogicalDescendantSubtreeRoots()) c._refresh_styles_subtree();
     }
 
     // Cascades unsubscribe through THIS visual and every logical
     // descendant. Called before a subtree detach so subs torn down
     // FIRST can't fire through the still-attached ancestor chain.
-    protected unsubscribe_styles_subtree(): void
+    /** @internal — § 1.10. See `_refresh_styles_subtree`. Tears down
+     *  ancestor ResourceDictionary subscriptions across the subtree
+     *  before a detach so they can't fire through the still-attached
+     *  chain. */
+    public _unsubscribe_styles_subtree(): void
     {
         this.unsubscribe_styles();
-        for (const c of this.allLogicalDescendantSubtreeRoots()) c['unsubscribe_styles_subtree']();
+        for (const c of this.allLogicalDescendantSubtreeRoots()) c._unsubscribe_styles_subtree();
     }
 
     // ── Overlay children — logical-owner-side wiring ─────────────────
@@ -2321,7 +2330,7 @@ export class Visual extends Model
             this.propagate_inheritance_for_logical_children(descriptor);
             // Overlay children participate in the same inheritance
             // cascade as logical children — see _overlayChildren comment.
-            this.forEachOverlayChild(c => c['refresh_inherited'](descriptor));
+            this.forEachOverlayChild(c => c._refresh_inherited(descriptor));
             // Ambient resource triggers (§ 17.1) — ThemeManager registers
             // the Scheme and Theme descriptors as ambient-resource
             // triggers via `_registerAmbientResourceTriggerDp`. When one
@@ -2428,7 +2437,10 @@ export class Visual extends Model
     // the source flip and change-notification when shadowed, so this
     // method's `walk + push` is cheap when no descendant cascade is
     // warranted.
-    protected refresh_inherited(descriptor: PropertyDescriptor): void
+    /** @internal — § 1.10. Re-resolve the inherited value for the
+     *  given descriptor on this Visual; cascade by recursing into
+     *  Single / Panel children via their propagate_* overrides. */
+    public _refresh_inherited(descriptor: PropertyDescriptor): void
     {
         if (!inherits(descriptor.MetaData)) return;
 
@@ -2444,18 +2456,21 @@ export class Visual extends Model
         }
     }
 
-    protected refresh_inheritance_subtree(): void
+    /** @internal — § 1.10. Refresh every inheritable DP on this
+     *  Visual and cascade through the logical + overlay subtree.
+     *  Fired when the ancestor chain restructures. */
+    public _refresh_inheritance_subtree(): void
     {
         for (const descriptor of Visual.collect_inheritable_descriptors(this.constructor))
         {
-            this.refresh_inherited(descriptor);
+            this._refresh_inherited(descriptor);
         }
         this.propagate_inheritance_to_logical_children();
         // Overlay children participate alongside logical children — they're
         // the SAME logical tree from the popup's perspective, just hosted
         // visually by the OverlayLayer instead of by a Panel in the main
         // Content tree.
-        this.forEachOverlayChild(c => c['refresh_inheritance_subtree']());
+        this.forEachOverlayChild(c => c._refresh_inheritance_subtree());
     }
 
     protected propagate_inheritance_to_logical_children(): void { /* override in Single / Panel */ }
@@ -2494,7 +2509,10 @@ export class Visual extends Model
         for (const l of snapshot) l();
     }
 
-    protected refresh_dynamic_resources_subtree(): void
+    /** @internal — § 1.10. Re-walk every DynamicResource binding
+     *  rooted in this subtree so cached ancestor-chain subscriptions
+     *  pick up the new chain after a reparent / theme override. */
+    public _refresh_dynamic_resources_subtree(): void
     {
         this.fire_dynamic_resource_listeners();
         this.propagate_dynamic_resources_to_logical_children();
@@ -2503,7 +2521,7 @@ export class Visual extends Model
         // tree). Re-walking through the popup's subtree re-resolves
         // every `@Token` lookup so theme tokens flip when the owner's
         // chain changes (popup mounted, owner re-parented, etc.).
-        this.forEachOverlayChild(c => c['refresh_dynamic_resources_subtree']());
+        this.forEachOverlayChild(c => c._refresh_dynamic_resources_subtree());
     }
 
     protected propagate_dynamic_resources_to_logical_children(): void { /* override in Single / Panel */ }
@@ -2538,7 +2556,7 @@ export class Visual extends Model
         // inheritable property registered on a class NOT in the target
         // Visual's prototype chain still cascades through the logical
         // tree — the registry exposes those descriptors so the
-        // per-property refresh_inherited walk picks them up.
+        // per-property _refresh_inherited walk picks them up.
         for (const desc of Model._getInheritableDescriptors())
         {
             const key = `${desc.RootOwner.name}.${desc.Name}`;

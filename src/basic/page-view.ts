@@ -169,13 +169,13 @@ export class PageView extends TemplatedControl
     protected override propagate_inheritance_to_logical_children(): void
     {
         const c = this.Content;
-        if (c instanceof Visual) c['refresh_inheritance_subtree']();
+        if (c instanceof Visual) c['_refresh_inheritance_subtree']();
     }
 
     protected override propagate_inheritance_for_logical_children(d: PropertyDescriptor): void
     {
         const c = this.Content;
-        if (c instanceof Visual) c['refresh_inherited'](d);
+        if (c instanceof Visual) c['_refresh_inherited'](d);
     }
 
     protected override OnPropertyChanged(
