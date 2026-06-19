@@ -1038,9 +1038,25 @@ export class Visual extends Model
     {
         if (this._resources === undefined)
         {
-            this._resources = new ResourceDictionary();
-            this._refresh_styles_subtree();
-            this._refresh_dynamic_resources_subtree();
+            const dict = new ResourceDictionary();
+            this._resources = dict;
+            // § 1.12 — the subtree cascades that used to fire here on
+            // first allocation are now deferred to actual change events
+            // on the new dict. Subscribing once means a Set / Add /
+            // Remove that mutates the empty dict fires
+            // `_refresh_styles_subtree` + `_refresh_dynamic_resources_subtree`
+            // on the same edge a Set on an existing dict already
+            // triggers via the consumer-installed style subscriptions
+            // (see `subscribe_styles`). Net effect: descendants pick up
+            // any newly-added resources at the moment a value lands,
+            // not at the unrelated moment the dict was lazy-allocated.
+            // A pure-read consumer (`v.Resources.Has(key)`,
+            // `v.Resources.Count`, a debugger inspecting the slot)
+            // pays only the allocation, not the tree walk.
+            dict.Subscribe(() => {
+                this._refresh_styles_subtree();
+                this._refresh_dynamic_resources_subtree();
+            });
         }
         return this._resources;
     }
