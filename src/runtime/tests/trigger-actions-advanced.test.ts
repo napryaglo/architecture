@@ -16,6 +16,7 @@ import {
     Style,
     Visual,
 } from '../index.js';
+import { resolveKey } from '../model-internals.js';
 import { Border } from '../../basic/border.js';
 
 function freshClock(): ManualClock
@@ -35,9 +36,9 @@ class TriggerTest extends Visual
         Model.RegisterProperty(TriggerTest, 'Active', false, MetaData.None);
         Model.RegisterProperty(TriggerTest, 'Width',  0,     MetaData.Arrange);
     }
-    public get Active(): boolean { return this._get_property_value_by_name('Active'); }
+    public get Active(): boolean { return this.get_property_value(resolveKey(this, undefined, 'Active')); }
     public set Active(v: boolean) { this._set_property_value_by_name('Active', v); }
-    public get Width(): number { return this._get_property_value_by_name('Width'); }
+    public get Width(): number { return this.get_property_value(resolveKey(this, undefined, 'Width')); }
     public set Width(v: number) { this._set_property_value_by_name('Width', v); }
 }
 

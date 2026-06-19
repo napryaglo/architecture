@@ -261,8 +261,11 @@ describe('Button — ICommand integration', () => {
         // Sneak the listener set count via the private listeners field.
         // We're testing the subscription bookkeeping, not the public API,
         // so a structural peek is fair game.
+        // Listener bookkeeping moved to CommandBase after the
+        // RelayCommand-extends-CommandBase refactor. The base stores the
+        // set as a private `_listeners`; the structural peek follows.
         const peek = (c: RelayCommand) =>
-            ((c as unknown as { listeners: Set<unknown> }).listeners).size;
+            ((c as unknown as { _listeners: Set<unknown> })._listeners).size;
 
         assert.equal(peek(oldCmd), 1, 'Button subscribes to its current Command');
 

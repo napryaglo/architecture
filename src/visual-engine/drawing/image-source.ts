@@ -61,7 +61,7 @@ export class BitmapImage extends ImageSource
     constructor(uri?: string, naturalSize?: Size)
     {
         super();
-        if (uri !== undefined)         this._set_property_value_by_name('Uri', uri);
+        if (uri !== undefined)         this.set_property_value(BitmapImage.UriKey, uri);
         if (naturalSize !== undefined) this.NaturalSize = naturalSize;
     }
 

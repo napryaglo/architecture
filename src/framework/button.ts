@@ -3,6 +3,7 @@ import {
     Model,
     Visual,
     type ICommand,
+    type KeyEventArgs,
     type PointerEventArgs,
     type PropertyDescriptor,
 } from '../runtime/index.js';
@@ -11,6 +12,8 @@ import {
     type ICommandSource,
 } from '../framework/commands/command-source.js';
 import { ContentControl } from './content-control.js';
+import { ToolTipService } from './tooltip-service.js';
+import { CommandBase } from '../runtime/index.js';
 
 // When the Click event fires. WPF parity: Release is the default
 // (visible press feedback, fire on PointerUp inside bounds), Press
@@ -221,6 +224,51 @@ export class Button extends ContentControl implements ICommandSource
         }
     }
 
+    // Keyboard activation — Space and Enter invoke the button when it
+    // has focus. WPF parity (`ButtonBase.OnKeyDown` does the same). The
+    // key is held down → IsPressed=true so the press chrome reads; on
+    // release → IsPressed=false and Click fires. This bypasses the
+    // InputBinding/CommandBinding pipeline entirely; activation is an
+    // intrinsic Button behavior, not a re-bindable shortcut.
+    //
+    // Pointer ClickHandlers (AddClickHandler) are not invoked for
+    // keyboard activation — their args type is PointerEventArgs. The
+    // Command, OnPreClick, and OnClick subclass hooks DO fire so the
+    // user-visible behavior is consistent across activation modes.
+    protected override OnKeyDown(args: KeyEventArgs): void
+    {
+        if (args.Key !== ' ' && args.Key !== 'Enter') return;
+        args.Handled = true;
+        // Match WPF: pressing Space/Enter flips IsPressed for the press
+        // chrome. The matching OnKeyUp (or focus loss) clears it.
+        this.set_property_value(Visual.IsPressedKey, true);
+        // For Enter, fire activation on KeyDown (Enter is a "commit" key
+        // and Repeat fires Activation in WPF as well). For Space, WPF
+        // fires on KeyUp to allow the user to back out by moving focus
+        // off mid-hold — but cancelling focus mid-key isn't well
+        // supported here yet, so we fire on Down for both. Revisit when
+        // we ship space-cancel semantics.
+        this.fireClickFromKey(args);
+    }
+
+    protected override OnKeyUp(args: KeyEventArgs): void
+    {
+        if (args.Key !== ' ' && args.Key !== 'Enter') return;
+        this.set_property_value(Visual.IsPressedKey, false);
+    }
+
+    // Keyboard counterpart to fireClick — runs the Command + OnClick
+    // virtual chain, skipping the PointerEventArgs-typed ClickHandlers
+    // (their args type doesn't fit a KeyEventArgs). The CanExecute gate
+    // mirrors the pointer path so a disabled Command suppresses both.
+    private fireClickFromKey(args: KeyEventArgs): void
+    {
+        if (this.Command !== undefined && !this._commandSource.CanExecute) return;
+        this.OnPreClick(args as never);
+        this._commandSource.Execute();
+        this.OnClick(args as never);
+    }
+
     // Subclass hook. Default is empty. Called AFTER Command + handler
     // list have run, so a subclass override receives the same arg flow
     // as the public surface and can layer additional behaviour without
@@ -274,10 +322,54 @@ export class Button extends ContentControl implements ICommandSource
                 oldValue as ICommand | undefined,
                 newValue as ICommand | undefined,
             );
+            this.autoDeriveTooltipFromCommand(
+                oldValue as ICommand | undefined,
+                newValue as ICommand | undefined,
+            );
         }
         else if (descriptor.Name === 'CommandParameter' || descriptor.Name === 'CommandTarget')
         {
             this._commandSource.OnParameterOrTargetChanged();
         }
+    }
+
+    // When Command is set to a CommandBase AND no explicit ToolTip is on
+    // the button, push the command itself as the tooltip Content. The
+    // default ContentPresenter dispatch picks the DataTemplate keyed by
+    // DataType=CommandBase (shipped in framework.resources.mu) — the
+    // user gets a rich tooltip (Text + Description + shortcut row)
+    // without writing anything beyond `Button [Command=$SaveCommand]`.
+    //
+    // Auto-derive is gated three ways:
+    //   1. New value must be a CommandBase — plain ICommand impls don't
+    //      carry Text/Description, so there's nothing to display.
+    //   2. The button must not already carry an explicit ToolTip — an
+    //      author-supplied tooltip always wins.
+    //   3. If the OLD command was the same CommandBase we auto-set, we
+    //      clear it before setting the new value so a Command swap from
+    //      A → undefined cleanly retracts the auto-tooltip.
+    private _autoTooltipCommand: CommandBase | undefined;
+
+    private autoDeriveTooltipFromCommand(
+        oldCmd: ICommand | undefined,
+        newCmd: ICommand | undefined,
+    ): void
+    {
+        // Retract a prior auto-tooltip if the new command isn't going to
+        // claim the slot. Explicit ToolTip writes after our auto-set go
+        // through SetToolTip → our check below sees them and we don't
+        // overwrite.
+        if (this._autoTooltipCommand !== undefined
+            && ToolTipService.GetToolTip(this) === this._autoTooltipCommand)
+        {
+            ToolTipService.SetToolTip(this, undefined);
+            this._autoTooltipCommand = undefined;
+        }
+        if (!(newCmd instanceof CommandBase)) return;
+        // Don't overwrite an explicit ToolTip the author already set.
+        if (ToolTipService.GetToolTip(this) !== undefined) return;
+        ToolTipService.SetToolTip(this, newCmd);
+        this._autoTooltipCommand = newCmd;
+        void oldCmd; // silence unused — kept for symmetry with caller
     }
 }

@@ -61,6 +61,11 @@ export { SearchBar } from './search-bar.js';
 export { Divider } from './divider.js';
 export { Badge, BadgeVariant } from './badge.js';
 export { Tooltip } from './tooltip.js';
+export {
+    PlacementMode,
+    ToolTipService,
+    TooltipPopupHost,
+} from './tooltip-service.js';
 export { ProgressIndicator, ProgressIndicatorVariant } from './progress-indicator.js';
 export { Banner } from './banner.js';
 export { Snackbar } from './snackbar.js';
@@ -115,9 +120,9 @@ export {
 export { ComboBox } from './list/combo-box.js';
 export { TreeView, TreeViewItem } from './list/tree-view.js';
 export { ListBox, ListBoxItem, SelectionMode } from './list/list-box.js';
+export { ClickableBorder } from '../basic/clickable-border.js';
+export { ClickAwayScrim } from '../basic/click-away-scrim.js';
 export {
-    ClickableBorder,
-    ClickAwayScrim,
     SplitRow,
     ComboBoxPopupHost,
     ComboBoxItemList,

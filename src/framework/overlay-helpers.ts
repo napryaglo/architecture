@@ -2,9 +2,9 @@ import {
     Visual,
     type FocusEventArgs,
     type KeyEventArgs,
-    type PointerEventArgs,
 } from '../runtime/index.js';
 import type { PresentationTarget } from '../visual-engine/index.js';
+import { ToolTipService } from './tooltip-service.js';
 
 // Overlay-mount helpers — shared by Tooltip, Snackbar, Dialog.
 //
@@ -34,64 +34,35 @@ function targetOf(host: Visual): PresentationTarget | undefined
 // Tooltip
 // ────────────────────────────────────────────────────────────────────
 
-// Wires a Tooltip onto a host Visual: PointerEnter starts a delay
-// timer; if the pointer stays inside through the delay, the tooltip
-// mounts to the OverlayLayer. PointerLeave cancels the pending mount
-// and detaches the tooltip if it's already up.
+// Imperative shim — delegates to `ToolTipService` so a single show
+// pipeline owns hover timing, between-show windows, placement, and
+// flip-on-edge. Kept for callers that pass a pre-built `Tooltip`
+// instance instead of a string / VM through the attached DP.
 //
 // Returns a detach function — call it to remove the wiring entirely
-// (useful in a Behavior cleanup, in test teardown, or in a one-shot
-// programmatic show that wants to tear itself down).
+// (useful in a Behavior cleanup or a test teardown).
 //
-// Delay default — 500ms — matches the M3 spec's hover-to-show delay.
+// New code should prefer the declarative path:
 //
-// Position policy is intentionally trivial today: the tooltip mounts
-// at the host's host-frame origin with an 8dp vertical offset so it
-// sits just below the anchor. Refining this (clip-aware positioning,
-// flip-on-collision) is a per-host policy that hosts can layer on top
-// by overriding AttachOverlay's arrange.
+//     button [ToolTipService.ToolTip = "Save (Ctrl+S)"]{ … }
+//
+// which goes through the same `ToolTipService` underneath.
 export function attachTooltip(
     host: Visual,
     tooltip: Visual,
     delayMs: number = 500,
 ): () => void
 {
-    let timer:  ReturnType<typeof setTimeout> | undefined;
-    let mounted = false;
-
-    function onEnter(_args: PointerEventArgs): void
-    {
-        if (timer !== undefined) clearTimeout(timer);
-        timer = setTimeout(() => {
-            timer = undefined;
-            // Host is the logical owner: tooltip inherits resources /
-            // DataContext / inheritable DPs from the visual it's
-            // anchored to, not from the OverlayLayer.
-            if (targetOf(host) === undefined) return;
-            host.AttachOverlayChild(tooltip);
-            mounted = true;
-        }, delayMs);
-    }
-
-    function onLeave(_args: PointerEventArgs): void
-    {
-        if (timer !== undefined) { clearTimeout(timer); timer = undefined; }
-        if (mounted)
-        {
-            host.DetachOverlayChild(tooltip);
-            mounted = false;
-        }
-    }
-
-    host.AddRoutedEventListener('PointerEnter', onEnter as (a: unknown) => void);
-    host.AddRoutedEventListener('PointerLeave', onLeave as (a: unknown) => void);
-
+    // The service's pooled Tooltip is the canonical surface; if a
+    // caller passes a pre-built Visual, hand it to the service as the
+    // Content of the pooled chrome (it shows up unchanged in the
+    // overlay through ContentPresenter's "Content is a Visual → slot
+    // it directly" branch).
+    ToolTipService.SetInitialShowDelay(host, delayMs);
+    ToolTipService.SetToolTip(host, tooltip);
     return function detach(): void
     {
-        if (timer !== undefined) clearTimeout(timer);
-        if (mounted) host.DetachOverlayChild(tooltip);
-        host.RemoveRoutedEventListener('PointerEnter', onEnter as (a: unknown) => void);
-        host.RemoveRoutedEventListener('PointerLeave', onLeave as (a: unknown) => void);
+        ToolTipService.SetToolTip(host, undefined);
     };
 }
 

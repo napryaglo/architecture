@@ -15,6 +15,7 @@ import {
     Model,
     MetaData,
 } from '../../runtime/index.js';
+import { resolveKey } from '../../runtime/model-internals.js';
 import { Border, TextBlock } from '../../basic/index.js';
 
 const CTX: Record<string, unknown> = { ...runtime, ...controls, ...engine };
@@ -205,9 +206,9 @@ describe('inline expressions — end-to-end', () => {
                 Model.RegisterProperty(M, 'A', 0, MetaData.None);
                 Model.RegisterProperty(M, 'B', 0, MetaData.None);
             }
-            public get A(): number { return this._get_property_value_by_name('A') as number; }
+            public get A(): number { return this.get_property_value(resolveKey(this, undefined, 'A')) as number; }
             public set A(v: number) { this._set_property_value_by_name('A', v); }
-            public get B(): number { return this._get_property_value_by_name('B') as number; }
+            public get B(): number { return this.get_property_value(resolveKey(this, undefined, 'B')) as number; }
             public set B(v: number) { this._set_property_value_by_name('B', v); }
         }
 
@@ -240,9 +241,9 @@ describe('inline expressions — end-to-end', () => {
                 Model.RegisterProperty(M, 'Name',  '', MetaData.None);
                 Model.RegisterProperty(M, 'Count', 0,  MetaData.None);
             }
-            public get Name():  string { return this._get_property_value_by_name('Name')  as string; }
+            public get Name():  string { return this.get_property_value(resolveKey(this, undefined, 'Name'))  as string; }
             public set Name(v:  string){ this._set_property_value_by_name('Name',  v); }
-            public get Count(): number { return this._get_property_value_by_name('Count') as number; }
+            public get Count(): number { return this.get_property_value(resolveKey(this, undefined, 'Count')) as number; }
             public set Count(v: number){ this._set_property_value_by_name('Count', v); }
         }
 

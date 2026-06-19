@@ -1,7 +1,8 @@
 import type { Visual } from '../../visual-engine/visual.js';
+import type { ICommand } from '../../runtime/command.js';
 import { Control } from '../control.js';
 import type { RoutedCommand } from './routed-command.js';
-import type { InputBinding } from './input-binding.js';
+import { KeyBinding, type InputBinding } from './input-binding.js';
 import {
     CommandBinding,
     CanExecuteRoutedEventArgs,
@@ -116,6 +117,61 @@ export class CommandManager
             if (arr !== undefined) out.push(...arr);
         }
         return out;
+    }
+
+    // Look up the human-readable shortcut text for `command` as bound on
+    // (or above) `anchor`. Walks the visual ancestor chain — at each
+    // hop, scans the visual's instance InputBindings (when it's a
+    // Control) AND the class-level InputBindings registered for its
+    // class chain — and returns the first KeyBinding whose Command
+    // matches. Returns undefined when no binding exists, so consumers
+    // (tooltip templates, menu shortcut columns) can elide the
+    // shortcut row gracefully.
+    //
+    // Why instance-first per visual then class: a per-Visual instance
+    // binding represents an explicit per-scope override (e.g., a
+    // dialog re-binds Ctrl+S to a different command). Class bindings
+    // are the global default (Button → Space activation). Closer
+    // visuals shadow ancestors; instance shadows class at the same
+    // visual.
+    //
+    // Match policy: identity (===) on the command reference. Commands
+    // are typically static singletons (`ApplicationCommands.Save`), so
+    // identity is the right predicate; a deep-equal would let two
+    // distinct commands with the same Name collapse together, which
+    // would surprise consumers.
+    public static FindShortcutForCommand(
+        command: ICommand,
+        anchor:  Visual,
+    ): string | undefined
+    {
+        let cursor: Visual | undefined = anchor;
+        while (cursor !== undefined)
+        {
+            if (cursor instanceof Control)
+            {
+                const instance = cursor._tryGetInputBindings();
+                if (instance !== undefined)
+                {
+                    for (const b of instance)
+                    {
+                        if (b instanceof KeyBinding && b.Command === command)
+                        {
+                            return b.DisplayString;
+                        }
+                    }
+                }
+            }
+            for (const b of CommandManager._getClassInputBindingsFor(cursor))
+            {
+                if (b instanceof KeyBinding && b.Command === command)
+                {
+                    return b.DisplayString;
+                }
+            }
+            cursor = cursor.GetVisualParent();
+        }
+        return undefined;
     }
 
     private static * _walkClassChain(visual: Visual): IterableIterator<Function>

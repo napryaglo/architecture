@@ -8,7 +8,7 @@ import {
     type PropertyDescriptor,
 } from '../../runtime/index.js';
 import { findDataTemplateForType, type DataTemplate } from './data-template.js';
-import { TextBlock } from '../text-block.js';
+import { TextBlock, TextWrapping } from '../text-block.js';
 
 // The visual slot a ControlTemplate uses to host the templated
 // control's Content, AND the per-item container the base ItemsControl
@@ -196,7 +196,15 @@ export class ContentPresenter extends Visual
         }
         if (content !== undefined && content !== null)
         {
-            this.SetContent(new TextBlock(String(content)));
+            // Auto-stringify fallback. Wrap by default — tooltips,
+            // ListBox items, and other ContentControl consumers commonly
+            // receive paragraph-shaped strings and a single-line
+            // overflow is almost never what callers want. Hosts that
+            // want single-line truncation set their own TextBlock as
+            // Content with TextWrapping=NoWrap explicit.
+            const tb = new TextBlock(String(content));
+            tb.TextWrapping = TextWrapping.Wrap;
+            this.SetContent(tb);
             return;
         }
         this.SetContent(undefined);

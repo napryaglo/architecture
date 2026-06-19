@@ -11,6 +11,7 @@ import {
     MultiTrigger,
     Style,
 } from '../../runtime/index.js';
+import { resolveKey } from '../../runtime/model-internals.js';
 import { Border, TextBlock, ControlTemplate, DataTemplate } from '../../basic/index.js';
 
 const CTX: Record<string, unknown> = { ...runtime, ...controls, ...engine };
@@ -410,7 +411,7 @@ describe('instantiate — deferreds end-to-end', () => {
         // Set DataContext on an ancestor — inheritance flows down.
         class Person extends Model {
             static { Model.RegisterProperty(Person, 'Name', '', MetaData.None); }
-            public get Name(): string { return this._get_property_value_by_name('Name') as string; }
+            public get Name(): string { return this.get_property_value(resolveKey(this, undefined, 'Name')) as string; }
             public set Name(v: string) { this._set_property_value_by_name('Name', v); }
         }
         const p = new Person(); p.Name = 'Eugene';

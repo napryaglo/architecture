@@ -97,6 +97,11 @@ interface RenderableVisual extends BackrefHost
     readonly ArrangedRect: { X: number; Y: number; Width: number; Height: number };
     readonly Clip:         unknown;
     readonly IsHitTestVisible: boolean;
+    // Visual.Visibility — string-enum: 'Visible' (paint + hit-test),
+    // 'Hidden' (slot reserved, no paint, no hit), 'Collapsed' (zero
+    // slot, no paint, no hit). The renderer compares to the literal
+    // 'Visible' so a missing import here doesn't drag the enum in.
+    readonly Visibility:       string;
     readonly Cursor:           string | undefined;
     readonly Effect:           { toCssFilter(): string } | undefined;
     readonly Opacity:          number;
@@ -289,6 +294,29 @@ export class SvgRenderer
             parentNode.appendChild(info.outer);
         }
 
+        // Visibility gate. Hidden / Collapsed both suppress paint AND
+        // hit-testing. `display="none"` is the cleanest SVG knob — it
+        // cascades to every descendant element (so we don't need to
+        // touch each child <g>) and removes the subtree from the
+        // browser's hit-test walk in one shot. The own group and any
+        // child rects/transforms are NOT updated while invisible:
+        // there's nothing to paint and the rect/transform can lag until
+        // the visual becomes visible again, at which point a render-
+        // dirty signal will refresh everything.
+        //
+        // The subtree is still marked visited so the post-walk orphan
+        // sweep doesn't reap each descendant's DOM (which would force a
+        // full rebuild on every Visibility toggle).
+        if (visual.Visibility !== 'Visible')
+        {
+            info.outer.setAttribute('display', 'none');
+            this.markSubtreeVisited(visual, visited);
+            return;
+        }
+        // Clear a stale `display="none"` from a prior pass. removeAttribute
+        // on a missing attribute is a cheap no-op.
+        info.outer.removeAttribute('display');
+
         // Detect rect changes from the previous render so the cascade
         // logic below can refresh transform, hit-pad, AND own primitives
         // even when the dirty Sets miss them (an Arrange-cascade past
@@ -350,6 +378,24 @@ export class SvgRenderer
         for (const child of visual.visualChildren)
         {
             this.walk(child, info.outer, renderDirty, arrangeDirty, visited);
+        }
+    }
+
+    // Recursively mark every descendant of a non-Visible visual as
+    // visited so the post-walk orphan sweep doesn't reap their DOM. We
+    // skipped the real walk for the parent (display="none" cascades
+    // visually), but the descendants' info entries still exist in
+    // `this.nodes` and would otherwise be treated as orphans on the
+    // next pass. No DOM work — purely a bookkeeping pass.
+    private markSubtreeVisited(
+        visual:  RenderableVisual,
+        visited: Set<RenderableVisual>,
+    ): void
+    {
+        for (const child of visual.visualChildren)
+        {
+            visited.add(child);
+            this.markSubtreeVisited(child, visited);
         }
     }
 

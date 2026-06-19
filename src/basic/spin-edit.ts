@@ -6,7 +6,7 @@ import {
     Visual,
     type KeyEventArgs,
 } from '../runtime/index.js';
-import { ClickableBorder } from '../framework/list/combo-box.js';
+import { ClickableBorder } from './clickable-border.js';
 import { TemplatedControl } from './templated-control.js';
 import { TextBox } from './text-box.js';
 

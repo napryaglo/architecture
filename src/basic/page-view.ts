@@ -6,6 +6,7 @@ import {
     Visual,
     type PropertyDescriptor,
 } from '../runtime/index.js';
+import { resolveKey } from '../runtime/model-internals.js';
 import type { ContentPresenter } from './templates/content-presenter.js';
 import { findDataTemplateForType } from './templates/data-template.js';
 import { StackPanel } from './panels/stack-panel.js';
@@ -74,8 +75,12 @@ export class PageView extends TemplatedControl
         // to @OnSurfaceVariant via DynamicResource so theme switches
         // re-tint the medium-emphasis label live — same effect a
         // template setter would have if Subtitle lived in markup.
-        this._subtitleText._set_property_value_by_name(
-            'Foreground', DynamicResource(this._subtitleText, 'OnSurfaceVariant'),
+        // Resolved-key path so the value-type slot accepts a Binding
+        // (the typed `TextBlock.ForegroundKey` rejects non-Brush
+        // values at compile time).
+        this._subtitleText.set_property_value(
+            resolveKey(this._subtitleText, undefined, 'Foreground'),
+            DynamicResource(this._subtitleText, 'OnSurfaceVariant'),
         );
         this._subtitleText.FontSize   = 13;
         this._subtitleText.Margin     = new Thickness(0, 2, 0, 0);

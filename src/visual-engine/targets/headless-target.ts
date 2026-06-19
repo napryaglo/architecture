@@ -1,4 +1,5 @@
 import {
+    Visibility,
     type DrawingContext,
     type Visual,
 } from '../../runtime/index.js';
@@ -72,6 +73,12 @@ export class HeadlessTarget extends PresentationTarget
 
     private renderTree(visual: Visual, dc: DrawingContext): void
     {
+        // Visibility gate. Hidden and Collapsed both suppress paint AND
+        // the descendant walk — WPF parity. Collapsed's Arrange already
+        // produced a zero rect, so we'd no-op; Hidden's slot is preserved
+        // but its content (and any drawn children) must not appear.
+        if (visual.Visibility !== Visibility.Visible) return;
+
         // ArrangedRect is the final aligned rect in the parent's
         // coordinate space (slot.X + alignment offset, renderSize). Push
         // the translate so this Visual's RenderOverride and its

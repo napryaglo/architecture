@@ -14,6 +14,7 @@ import {
     type DrawingContext,
     type MountableTarget,
 } from '../index.js';
+import { resolveKey } from '../model-internals.js';
 
 // Tiny Visual used as a stand-in for the application's root and as a
 // resource-walk leaf. Plain Visual is abstract; this satisfies it
@@ -23,7 +24,7 @@ class TestLeaf extends Visual
     static {
         Model.RegisterProperty(TestLeaf, 'Brush', undefined, MetaData.None);
     }
-    public get Brush(): unknown { return this._get_property_value_by_name('Brush'); }
+    public get Brush(): unknown { return this.get_property_value(resolveKey(this, undefined, 'Brush')); }
     public set Brush(v: unknown) { this._set_property_value_by_name('Brush', v); }
     protected override MeasureOverride(_a: Size): Size { return Size.Zero; }
     protected override RenderOverride(_dc: DrawingContext): void { }

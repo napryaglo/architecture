@@ -2,6 +2,8 @@ import { Binding } from './binding.js';
 import type { PropertyChangeCallback } from './effective-value.js';
 import { MetaData } from '../metadata.js';
 import { Model } from '../model.js';
+import type { PropertyKey } from '../model.js';
+import { resolveKey } from '../model-internals.js';
 import type { Visual } from '../../visual-engine/visual.js';
 
 // Watcher Model — same shape as DataContextWatcher: a Model with a
@@ -68,7 +70,7 @@ class ElementNameBindingImpl extends Binding
             const seg = segments[i]!;
             if (cur instanceof Model)
             {
-                cur = cur._get_property_value_by_name(seg);
+                cur = cur.get_property_value(resolveKey(cur, undefined, seg));
             }
             else if (cur !== null && typeof cur === 'object')
             {
@@ -83,7 +85,7 @@ class ElementNameBindingImpl extends Binding
         const lastSeg = segments[segments.length - 1]!;
         if (cur instanceof Model)
         {
-            cur._set_property_value_by_name(lastSeg, value);
+            cur.set_property_value(resolveKey(cur, undefined, lastSeg), value);
         }
         else if (cur !== null && typeof cur === 'object')
         {
@@ -98,19 +100,26 @@ class ElementNameBindingImpl extends Binding
         return dot < 0 ? this.pathStr : this.pathStr.substring(0, dot);
     }
 
+    // Resolved at subscribeSource() time; reused by unsubscribeSource()
+    // so detach doesn't re-walk the descriptor map.
+    private sourceKey: PropertyKey<unknown> | undefined;
+
     private subscribeSource(): void
     {
         const first = this.firstSegment();
         if (!Model.HasProperty(this.nameSource.constructor, first)) return;
+        const key = resolveKey(this.nameSource, undefined, first);
+        this.sourceKey      = key;
         this.sourceCallback = () => { this.watcher.Value = this.walkPath(this.nameSource); };
-        this.nameSource._add_property_changed_listener_by_name(first, this.sourceCallback);
+        this.nameSource.AddPropertyChangedListener(key, this.sourceCallback);
     }
 
     private unsubscribeSource(): void
     {
-        if (this.sourceCallback === undefined) return;
-        this.nameSource._remove_property_changed_listener_by_name(this.firstSegment(), this.sourceCallback);
+        if (this.sourceCallback === undefined || this.sourceKey === undefined) return;
+        this.nameSource.RemovePropertyChangedListener(this.sourceKey, this.sourceCallback);
         this.sourceCallback = undefined;
+        this.sourceKey      = undefined;
     }
 
     private walkPath(root: unknown): unknown
@@ -122,7 +131,7 @@ class ElementNameBindingImpl extends Binding
             if (cur instanceof Model)
             {
                 if (!Model.HasProperty(cur.constructor, seg)) return undefined;
-                cur = cur._get_property_value_by_name(seg);
+                cur = cur.get_property_value(resolveKey(cur, undefined, seg));
             }
             else if (typeof cur === 'object')
             {

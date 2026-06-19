@@ -1,6 +1,8 @@
 import type { PropertyChangeCallback } from './effective-value.js';
 import { bindsTwoWayByDefault } from '../metadata.js';
 import { Model } from '../model.js';
+import type { PropertyKey } from '../model.js';
+import { resolveKey } from '../model-internals.js';
 import { ObservableCollection } from '../observable-collection.js';
 import { observe_array, subscribe_array } from '../observable-array.js';
 import type { PropertyDescriptor } from '../property-descriptor.js';
@@ -25,6 +27,10 @@ class PropertyPathSegment
     private ownerName: string | undefined;
     private object: Model | undefined;
     private collectionUnsub: (() => void) | undefined;
+    // Cached at attach_and_step time so detach can RemovePropertyChangedListener
+    // against the same key the listener was registered with — without
+    // re-resolving the descriptor through the class-hierarchy walk.
+    private resolvedKey: PropertyKey<unknown> | undefined;
 
     constructor(
         propertyName: string,
@@ -55,6 +61,16 @@ class PropertyPathSegment
     get CollectionUnsub(): (() => void) | undefined
     {
         return this.collectionUnsub;
+    }
+
+    set ResolvedKey(key: PropertyKey<unknown> | undefined)
+    {
+        this.resolvedKey = key;
+    }
+
+    get ResolvedKey(): PropertyKey<unknown> | undefined
+    {
+        return this.resolvedKey;
     }
 
     get PropertyName(): string
@@ -184,9 +200,25 @@ class PropertyPath
         return segments;
     }
 
-    // Reads `segment` from `current`, dispatching to the right Model
-    // overload (implicit-owner or explicit-owner) when `current` is a
-    // Model. For ObservableCollection parents the segment name is
+    // Resolve `segment` against `model` to a typed `PropertyKey`. Handles
+    // both implicit-owner segments (regular dotted path) and explicit-owner
+    // `(Owner.Property)` attached-property syntax. Returns undefined when
+    // the explicit owner class is unknown to `Model.find_class` — silently
+    // bails the binding rather than throwing.
+    private static resolve_segment_key(
+        model: Model,
+        segment: PropertyPathSegment,
+    ): PropertyKey<unknown> | undefined
+    {
+        const ownerName = segment.OwnerName;
+        if (ownerName === undefined) return resolveKey(model, undefined, segment.PropertyName);
+        const owner = Model.find_class(ownerName);
+        if (owner === undefined) return undefined;
+        return resolveKey(model, owner, segment.PropertyName);
+    }
+
+    // Reads `segment` from `current` via the typed-key API when `current`
+    // is a Model. For ObservableCollection parents the segment name is
     // parsed as a numeric index and routed through `.Get(idx)`. For
     // plain arrays + every other shape, falls back to bracket access.
     private static read_segment(current: any, segment: PropertyPathSegment): any
@@ -194,14 +226,9 @@ class PropertyPath
         if (current === undefined || current === null) return undefined;
         if (current instanceof Model)
         {
-            const ownerName = segment.OwnerName;
-            if (ownerName === undefined)
-            {
-                return current._get_property_value_by_name(segment.PropertyName);
-            }
-            const owner = Model.find_class(ownerName);
-            if (owner === undefined) return undefined;
-            return current._get_property_value_by_name(owner, segment.PropertyName);
+            const key = PropertyPath.resolve_segment_key(current, segment);
+            if (key === undefined) return undefined;
+            return current.get_property_value(key);
         }
         if (current instanceof ObservableCollection)
         {
@@ -218,17 +245,9 @@ class PropertyPath
     {
         if (parent instanceof Model)
         {
-            const ownerName = segment.OwnerName;
-            if (ownerName === undefined)
-            {
-                parent._set_property_value_by_name(segment.PropertyName, value);
-            }
-            else
-            {
-                const owner = Model.find_class(ownerName);
-                if (owner === undefined) return;
-                parent._set_property_value_by_name(owner, segment.PropertyName, value);
-            }
+            const key = PropertyPath.resolve_segment_key(parent, segment);
+            if (key === undefined) return;
+            parent.set_property_value(key, value);
         }
         else
         {
@@ -255,21 +274,17 @@ class PropertyPath
         if (current === undefined || current === null)
         {
             segment.Model = undefined;
+            segment.ResolvedKey = undefined;
             return undefined;
         }
         if (current instanceof Model)
         {
+            const key = PropertyPath.resolve_segment_key(current, segment);
+            if (key === undefined) return undefined;
             segment.Model = current;
-            const ownerName = segment.OwnerName;
-            if (ownerName === undefined)
-            {
-                current._add_property_changed_listener_by_name(segment.PropertyName, this.onChangedBound);
-                return current._get_property_value_by_name(segment.PropertyName);
-            }
-            const owner = Model.find_class(ownerName);
-            if (owner === undefined) return undefined;
-            current._add_property_changed_listener_by_name(owner, segment.PropertyName, this.onChangedBound);
-            return current._get_property_value_by_name(owner, segment.PropertyName);
+            segment.ResolvedKey = key;
+            current.AddPropertyChangedListener(key, this.onChangedBound);
+            return current.get_property_value(key);
         }
         if (current instanceof ObservableCollection)
         {
@@ -303,20 +318,9 @@ class PropertyPath
             segment.CollectionUnsub = undefined;
             return;
         }
-        if (segment.Model === undefined) return;
-        const ownerName = segment.OwnerName;
-        if (ownerName === undefined)
-        {
-            segment.Model._remove_property_changed_listener_by_name(segment.PropertyName, this.onChangedBound);
-        }
-        else
-        {
-            const owner = Model.find_class(ownerName);
-            if (owner !== undefined)
-            {
-                segment.Model._remove_property_changed_listener_by_name(owner, segment.PropertyName, this.onChangedBound);
-            }
-        }
+        if (segment.Model === undefined || segment.ResolvedKey === undefined) return;
+        segment.Model.RemovePropertyChangedListener(segment.ResolvedKey, this.onChangedBound);
+        segment.ResolvedKey = undefined;
     }
 
     // Fires from an ObservableCollection / observed-array mutation

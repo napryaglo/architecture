@@ -1,11 +1,13 @@
 import {
     MetaData,
     Model,
+    Panel,
     Point,
-    Thickness,
+    Visibility,
     Visual,
     type PropertyDescriptor,
 } from '../runtime/index.js';
+import { resolveKey } from '../runtime/model-internals.js';
 import {
     AlignmentX,
     AlignmentY,
@@ -25,8 +27,7 @@ import { TemplatedControl } from '../basic/templated-control.js';
 import { ControlTemplate } from '../basic/templates/control-template.js';
 import { Border } from '../basic/border.js';
 import { Slider } from '../basic/slider.js';
-import { StackPanel } from '../basic/panels/stack-panel.js';
-import { TextBlock } from '../basic/text-block.js';
+import { SpinEdit } from '../basic/spin-edit.js';
 import { TextBox } from '../basic/text-box.js';
 import { ColorPicker } from './color-picker.js';
 import { ComboBox } from './list/combo-box.js';
@@ -157,10 +158,11 @@ export class FillEditor extends TemplatedControl
     private _tabPicture: Border    | undefined;
     private _bodyHost:   Border    | undefined;
     private _bodyRoot:   Visual    | undefined;
-    private _opacitySlider:  Slider     | undefined;
-    private _opacityReadout: TextBlock  | undefined;
-    private _opacityRow:     StackPanel | undefined;
-    private _opacityRowMargin: unknown;
+    private _opacityEdit:    SpinEdit   | undefined;
+    // Typed as Panel — the template renders this as a Grid for the
+    // label/editor 2-column layout. We only touch Visibility from
+    // here, so the narrower interface is enough.
+    private _opacityRow:     Panel      | undefined;
     // Listeners for parts inside the swappable body. Drained on every
     // body re-apply so we don't leak handlers on the prior body's
     // ColorPickers / Sliders.
@@ -175,16 +177,14 @@ export class FillEditor extends TemplatedControl
         super();
         this.applyDefaultStyle();
         this.adoptTemplateParts();
-        // Seed the chrome with whatever Fill the consumer pre-set (or
-        // build the default Solid brush for an unbound editor so the
-        // body has something to render).
-        if (this.Fill !== undefined) this.decomposeFill(this.Fill);
-        else
-        {
-            this._syncing = true;
-            try { this.Fill = this.buildFillForVariant(); }
-            finally { this._syncing = false; }
-        }
+        // Seed the chrome from whatever Fill the consumer pre-set.
+        // Fill=undefined → Variant=None → whole section stays collapsed
+        // until a real brush arrives via a later binding push. We used
+        // to auto-build a default Solid brush here, but that left the
+        // editor stuck on Solid for genuinely unbound consumers (e.g.,
+        // the diagrammer's "nothing selected" state) and pushed an
+        // unrequested brush back upstream.
+        this.decomposeFill(this.Fill);
         this.refreshTabHighlight();
         this.refreshOpacityRowVisibility();
         this.applyBodyTemplate();
@@ -225,8 +225,19 @@ export class FillEditor extends TemplatedControl
         }
         if (name === 'FillOpacity')
         {
-            // FillOpacity mirrors brush.Opacity (0..1). The slider
-            // reports 0..100 so the user reads percent.
+            // FillOpacity mirrors brush.Opacity (0..1). The SpinEdit
+            // reports 0..100 so the user reads percent. Push the new
+            // value into the SpinEdit regardless of _syncing so an
+            // external decomposeFill (under _syncing) still refreshes
+            // the chrome; the SpinEdit's own listener guards on _syncing
+            // so this write doesn't echo back into FillOpacity.
+            if (this._opacityEdit !== undefined)
+            {
+                const prev = this._syncing;
+                this._syncing = true;
+                try { this._opacityEdit.Value = newValue as number; }
+                finally { this._syncing = prev; }
+            }
             const brush = this.Fill;
             if (brush !== undefined && !this._syncing)
             {
@@ -250,13 +261,8 @@ export class FillEditor extends TemplatedControl
         this._tabPattern = this.GetTemplateChild('PART_TabPattern') as Border | undefined;
         this._tabPicture = this.GetTemplateChild('PART_TabPicture') as Border | undefined;
         this._bodyHost   = this.GetTemplateChild('PART_BodyHost')   as Border | undefined;
-        this._opacitySlider  = this.GetTemplateChild('PART_OpacitySlider')  as Slider     | undefined;
-        this._opacityReadout = this.GetTemplateChild('PART_OpacityReadout') as TextBlock  | undefined;
-        this._opacityRow     = this.GetTemplateChild('PART_OpacityRow')     as StackPanel | undefined;
-        if (this._opacityRow !== undefined)
-        {
-            this._opacityRowMargin = this._opacityRow.Margin;
-        }
+        this._opacityEdit    = this.GetTemplateChild('PART_OpacityEdit')    as SpinEdit   | undefined;
+        this._opacityRow     = this.GetTemplateChild('PART_OpacityRow')     as Panel      | undefined;
 
         const wireTab = (tab: Border | undefined, target: FillEditorVariant): void => {
             if (tab === undefined) return;
@@ -291,32 +297,24 @@ export class FillEditor extends TemplatedControl
         wireTab(this._tabPattern, FillEditorVariant.Pattern);
         wireTab(this._tabPicture, FillEditorVariant.Picture);
 
-        if (this._opacitySlider !== undefined)
+        if (this._opacityEdit !== undefined)
         {
-            const s = this._opacitySlider;
+            const s = this._opacityEdit;
             this._syncing = true;
             try { s.Value = this.FillOpacity; } finally { this._syncing = false; }
-            this.updateOpacityReadout();
             const handler = (): void => {
-                this.updateOpacityReadout();
                 if (this._syncing) return;
                 this._syncing = true;
                 try { this.FillOpacity = s.Value; } finally { this._syncing = false; }
                 const brush = this.Fill;
                 if (brush !== undefined) brush.Opacity = s.Value / 100;
             };
-            s._add_property_changed_listener_by_name('Value', handler);
+            const key = resolveKey(s, undefined, 'Value');
+            s.AddPropertyChangedListener(key, handler);
             this._persistentListeners.push(() => {
-                s._remove_property_changed_listener_by_name('Value', handler);
+                s.RemovePropertyChangedListener(key, handler);
             });
         }
-    }
-
-    private updateOpacityReadout(): void
-    {
-        if (this._opacityReadout === undefined) return;
-        const v = this._opacitySlider?.Value ?? this.FillOpacity;
-        this._opacityReadout.Text = `${Math.round(v)}%`;
     }
 
     // Active-tab highlight is handled by Style triggers in the
@@ -326,24 +324,22 @@ export class FillEditor extends TemplatedControl
     // stays explicit when triggers grow later.
     private refreshTabHighlight(): void { /* trigger-driven */ }
 
-    // PowerPoint shows the Opacity slider for every non-None variant —
-    // collapse the row when there's no brush to operate on. Mirror the
-    // Height=0 trick PenEditor uses for MiterRow.
+    // When Variant=None the variant body + transparency row collapse —
+    // there's no brush to operate on — but the section header and the
+    // variant tab row stay visible so the user can click a tab to
+    // switch back to a brush. The whole-section collapse (used in the
+    // "no shape selected" empty state) lives in ShapeFormatControl,
+    // which flips PART_Editors at that level; FillEditor alone never
+    // hides its own tabs. Visibility=Collapsed zeroes the DesiredSize
+    // and suppresses paint + hit-test — no margin caching, no leaking
+    // children, no manual layout poking.
     private refreshOpacityRowVisibility(): void
     {
-        const row = this._opacityRow;
-        if (row === undefined) return;
-        const showing = this.Variant !== FillEditorVariant.None;
-        if (showing)
-        {
-            row.set_property_value(Visual.HeightKey, Number.NaN);
-            row.set_property_value(Visual.MarginKey, this._opacityRowMargin);
-        }
-        else
-        {
-            row.set_property_value(Visual.HeightKey, 0);
-            row.set_property_value(Visual.MarginKey, Thickness.Zero);
-        }
+        const v = this.Variant === FillEditorVariant.None
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+        if (this._bodyHost   !== undefined) this._bodyHost.Visibility   = v;
+        if (this._opacityRow !== undefined) this._opacityRow.Visibility = v;
     }
 
     // Materialise the variant body into PART_BodyHost. The Style picks
@@ -396,9 +392,10 @@ export class FillEditor extends TemplatedControl
                 finally { this._syncing = false; }
                 this.Fill = this.buildFillForVariant();
             };
-            cp._add_property_changed_listener_by_name('Color', handler);
+            const key = resolveKey(cp, undefined, 'Color');
+            cp.AddPropertyChangedListener(key, handler);
             this._bodyListeners.push(() => {
-                cp._remove_property_changed_listener_by_name('Color', handler);
+                cp.RemovePropertyChangedListener(key, handler);
             });
         };
         wireColor('PART_SolidColor',        () => this.SolidColor,        c => { this.SolidColor        = c; });
@@ -426,9 +423,10 @@ export class FillEditor extends TemplatedControl
                 finally { this._syncing = false; }
                 this.Fill = this.buildFillForVariant();
             };
-            s._add_property_changed_listener_by_name('Value', handler);
+            const key = resolveKey(s, undefined, 'Value');
+            s.AddPropertyChangedListener(key, handler);
             this._bodyListeners.push(() => {
-                s._remove_property_changed_listener_by_name('Value', handler);
+                s.RemovePropertyChangedListener(key, handler);
             });
         };
         wireSlider('PART_LinearAngle',   () => this.LinearAngle,   v => { this.LinearAngle   = v; });
@@ -458,9 +456,10 @@ export class FillEditor extends TemplatedControl
                 finally { this._syncing = false; }
                 this.Fill = this.buildFillForVariant();
             };
-            kindCombo._add_property_changed_listener_by_name('SelectedItem', handler);
+            const key = resolveKey(kindCombo, undefined, 'SelectedItem');
+            kindCombo.AddPropertyChangedListener(key, handler);
             this._bodyListeners.push(() => {
-                kindCombo._remove_property_changed_listener_by_name('SelectedItem', handler);
+                kindCombo.RemovePropertyChangedListener(key, handler);
             });
         }
 
@@ -477,9 +476,10 @@ export class FillEditor extends TemplatedControl
                 finally { this._syncing = false; }
                 this.Fill = this.buildFillForVariant();
             };
-            uriBox._add_property_changed_listener_by_name('Text', handler);
+            const key = resolveKey(uriBox, undefined, 'Text');
+            uriBox.AddPropertyChangedListener(key, handler);
             this._bodyListeners.push(() => {
-                uriBox._remove_property_changed_listener_by_name('Text', handler);
+                uriBox.RemovePropertyChangedListener(key, handler);
             });
         }
 
@@ -501,9 +501,10 @@ export class FillEditor extends TemplatedControl
                 finally { this._syncing = false; }
                 this.Fill = this.buildFillForVariant();
             };
-            stretchCombo._add_property_changed_listener_by_name('SelectedItem', handler);
+            const key = resolveKey(stretchCombo, undefined, 'SelectedItem');
+            stretchCombo.AddPropertyChangedListener(key, handler);
             this._bodyListeners.push(() => {
-                stretchCombo._remove_property_changed_listener_by_name('SelectedItem', handler);
+                stretchCombo.RemovePropertyChangedListener(key, handler);
             });
         }
     }

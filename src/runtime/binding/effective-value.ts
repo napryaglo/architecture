@@ -32,8 +32,8 @@ export type InternalPropertyChangeCallback = (
 //
 // Deviation from WPF: mural promotes Trigger ABOVE Binding and Local.
 // In WPF the order is Local > Trigger, but mural's `.mu` templates emit
-// per-part defaults via the factory's `_set_property_value_by_name`
-// calls (LocalValue tier) and then express state-driven overrides
+// per-part defaults via the factory's `set_property_value` calls
+// (LocalValue tier) and then express state-driven overrides
 // (`when ( IsMouseOver ) { PART_Border.Background = … }`) via
 // TemplatePropertyTrigger — which writes at TriggerValue. With the WPF
 // order those state triggers were invisible (LocalValue blocked them),
@@ -87,8 +87,19 @@ export class EffectiveValueDescriptor
     // Local + Animated also carry has_* flags. Local distinguishes
     // "user explicitly wrote undefined" from "never set"; Animated lets
     // ClearAnimatedValue know whether there was a slot to drop at all.
-    private trigger_value: any;
-    private has_trigger_value: boolean = false;
+    // Per-setter contributions to the Trigger tier. Multiple
+    // PropertyTriggers can each apply a setter to the same property at
+    // the same tier; the stack tracks (setter, value) pairs in
+    // activation order so the top entry is the current effective
+    // trigger value and ClearTriggerValue can remove a specific
+    // setter's entry without wiping a still-active sibling trigger's
+    // contribution. Without this, a second trigger's deactivation
+    // (whose setter targeted the same property as a first trigger
+    // already in the slot) used to wipe the first trigger's value too,
+    // collapsing the source to the next tier — see the FillEditor
+    // Variant=Picture→Linear failure that surfaced when two triggers'
+    // setters targeted BodyTemplate.
+    private _triggerStack: Array<{ setter: object; value: any }> = [];
     private style_value: any;
     private has_style_value: boolean = false;
     private inherited_value: any;
@@ -273,16 +284,47 @@ export class EffectiveValueDescriptor
         }
     }
 
+    private get has_trigger_value(): boolean
+    {
+        return this._triggerStack.length > 0;
+    }
+
+    // Current Trigger-tier effective value — top of the stack. WPF
+    // parity: when multiple triggers contribute setters to the same
+    // property at the same tier, last-applied wins.
+    private get trigger_value(): any
+    {
+        return this._triggerStack.length > 0
+            ? this._triggerStack[this._triggerStack.length - 1]!.value
+            : undefined;
+    }
+
     // Caches a Trigger-driven value for this property. Trigger sits
     // above Binding / Local / Style / Inherited / Default; only
     // Animated and Coerced outrank it. Same pattern as SetStyleValue
     // otherwise — stash regardless, but only flip source if no higher-
     // priority slot is active.
-    SetTriggerValue(value: any): void
+    //
+    // `setter` identifies which trigger setter contributed this value
+    // so ClearTriggerValue can drop just this setter's entry without
+    // wiping a sibling trigger's still-active contribution. If the
+    // same setter calls again (e.g., a binding push updates the
+    // tracked value), the existing stack entry's value updates in
+    // place — re-applying does NOT promote the setter past a later-
+    // activated trigger; that would invert WPF's last-applied-wins
+    // ordering when nothing about the setter itself changed.
+    SetTriggerValue(setter: object, value: any): void
     {
         const old_effective_value = this.value;
-        this.trigger_value = value;
-        this.has_trigger_value = true;
+        const existing = this._triggerStack.find(e => e.setter === setter);
+        if (existing !== undefined)
+        {
+            existing.value = value;
+        }
+        else
+        {
+            this._triggerStack.push({ setter, value });
+        }
         if (this.source === PropertyValueSource.AnimatedValue)
         {
             return;
@@ -295,17 +337,20 @@ export class EffectiveValueDescriptor
         }
     }
 
-    // Drops the trigger slot. If Trigger was the current source,
-    // falls through to Binding (live binding still installed), then
-    // LocalValue, then StyleValue, then InheritedValue, then Default.
-    // Higher-priority sources (Animated) are unaffected.
-    ClearTriggerValue(): void
+    // Removes this setter's entry from the Trigger stack. If another
+    // trigger setter is still on the stack, the source stays
+    // TriggerValue and the next-down entry's value becomes effective.
+    // If the stack drains empty, source falls through to Binding /
+    // LocalValue / StyleValue / InheritedValue / Default in the usual
+    // order. Higher-priority sources (Animated) are unaffected.
+    ClearTriggerValue(setter: object): void
     {
-        if (!this.has_trigger_value) return;
+        const idx = this._triggerStack.findIndex(e => e.setter === setter);
+        if (idx === -1) return;
         const old_effective_value = this.value;
-        this.trigger_value = undefined;
-        this.has_trigger_value = false;
-        if (this.source === PropertyValueSource.TriggerValue)
+        this._triggerStack.splice(idx, 1);
+        if (this._triggerStack.length === 0
+         && this.source === PropertyValueSource.TriggerValue)
         {
             this.source = this.binding_value !== undefined
                 ? PropertyValueSource.Binding

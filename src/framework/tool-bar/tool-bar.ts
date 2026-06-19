@@ -18,7 +18,7 @@ import {
 import { PresentationTarget } from '../../visual-engine/index.js';
 import { Border } from '../../basic/border.js';
 import { Button } from '../button.js';
-import { ClickAwayScrim } from '../list/combo-box.js';
+import { ClickAwayScrim } from '../../basic/click-away-scrim.js';
 import { ContentControl } from '../content-control.js';
 import { ContentPresenter } from '../../basic/templates/content-presenter.js';
 import { ControlTemplate } from '../../basic/templates/control-template.js';
@@ -619,10 +619,10 @@ export class ToolBarPopupHost extends Panel
     }
 }
 
-// Re-export ClickAwayScrim — historically lived locally, now shared
-// with the combo-box / menu popup infrastructure. Sibling controls
-// (context-menu, menu-strip) still import it via this path.
-export { ClickAwayScrim } from '../list/combo-box.js';
+// Re-export ClickAwayScrim — historically lived in tool-bar.ts and
+// later moved to list/combo-box.ts; now extracted to basic/. Sibling
+// controls (context-menu, menu-strip) still import it via this path.
+export { ClickAwayScrim } from '../../basic/click-away-scrim.js';
 
 // Inner popup ItemsControl. Same container generation as the inline
 // ToolBarPanel — toolbar-style items materialize identically. The

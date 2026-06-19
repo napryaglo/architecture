@@ -1,6 +1,8 @@
 import { Binding, BindingMode } from './binding.js';
 import { MetaData } from '../metadata.js';
 import { Model } from '../model.js';
+import type { PropertyKey } from '../model.js';
+import { resolveKey } from '../model-internals.js';
 import type { PropertyChangeCallback } from './effective-value.js';
 import type { Visual } from '../../visual-engine/visual.js';
 
@@ -32,8 +34,11 @@ class TemplateBindingImpl extends Binding
 {
     private readonly watcher:         TemplatedParentWatcher;
     private readonly templatedParent: Visual;
-    private readonly property:        string;
     private readonly callback:        PropertyChangeCallback;
+    // Resolved once at construction; both AddPropertyChangedListener
+    // (the lifetime-of-binding subscription) and the dispose-time
+    // RemovePropertyChangedListener use the same key.
+    private readonly key:             PropertyKey<unknown>;
 
     constructor(templatedParent: Visual, property: string)
     {
@@ -41,20 +46,20 @@ class TemplateBindingImpl extends Binding
         super(watcher, 'Value', BindingMode.OneWay);
         this.watcher         = watcher;
         this.templatedParent = templatedParent;
-        this.property        = property;
+        this.key             = resolveKey(templatedParent, undefined, property);
 
         this.callback = () =>
         {
-            this.watcher.Value = templatedParent._get_property_value_by_name(property);
+            this.watcher.Value = templatedParent.get_property_value(this.key);
         };
-        templatedParent._add_property_changed_listener_by_name(property, this.callback);
-        this.watcher.Value = templatedParent._get_property_value_by_name(property);
+        templatedParent.AddPropertyChangedListener(this.key, this.callback);
+        this.watcher.Value = templatedParent.get_property_value(this.key);
     }
 
     public override dispose(): void
     {
         super.dispose();
-        this.templatedParent._remove_property_changed_listener_by_name(this.property, this.callback);
+        this.templatedParent.RemovePropertyChangedListener(this.key, this.callback);
     }
 }
 

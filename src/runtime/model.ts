@@ -388,15 +388,17 @@ export class Model
     // a compile error and threads the value type through the accessor
     // signature so no `as T` cast is needed.
     //
-    // The string-keyed surface (`_get_property_value_by_name` and its
-    // siblings) is intentionally framework-internal — leading underscore
-    // signals "not the recommended consumer pattern." The binding
-    // pipeline, Style.Setter / Trigger, the animation timelines, and
-    // the µ-mural compiler emit code that targets properties by name
-    // because binding paths and markup property assignments come from
-    // text at parse time. Consumers should not reach for these directly
-    // when a `PropertyKey<T>` is available — that's what the migration
-    // to typed keys was for.
+    // The one surviving string-keyed accessor (`_set_property_value_by_name`)
+    // is intentionally framework-internal — leading underscore signals
+    // "not the recommended consumer pattern." It exists so the µ-mural
+    // compiler can emit a uniform write target for every markup property
+    // assignment. Every other by-name accessor (read, listener add/remove,
+    // animated set/clear, value-source query, clear-value) has moved into
+    // [./model-internals.ts](./model-internals.ts) as `resolveKey + typed-key API`:
+    // the binding pipeline, Style.Setter / Trigger machinery, animation
+    // timelines, and trigger evaluators resolve the name once and reuse
+    // the resulting `PropertyKey` so per-fire work stays at descriptor-
+    // map lookup cost.
     // ------------------------------------------------------------------
 
     // Typed-key public API ---------------------------------------------
@@ -526,102 +528,25 @@ export class Model
         this.set_via_descriptor(key.descriptor, value);
     }
 
-    // Framework-internal string-keyed surface ---------------------------
+    // Framework-internal string-keyed write surface --------------------
     //
-    // Every method below is what the binding pipeline / Setter / Trigger
-    // / animation / compiler-emitted code reaches for because they
-    // identify properties by string at runtime. Leading underscore +
-    // `_by_name` suffix signals "use the typed-key variant for direct
-    // accessor code; this exists for the binding system." Same semantics
-    // as the pre-rename string overloads — only the name changed.
-
-    public _add_property_changed_listener_by_name(property: string, callback: PropertyChangeCallback): void;
-    public _add_property_changed_listener_by_name(owner: Function, property: string, callback: PropertyChangeCallback): void;
-    public _add_property_changed_listener_by_name(arg1: any, arg2: any, arg3?: any): void
-    {
-        const descriptor = (typeof arg1 === 'string')
-            ? this.resolve_descriptor_implicit(arg1)
-            : this.resolve_descriptor_explicit(arg1, arg2);
-        const callback = (typeof arg1 === 'string') ? arg2 : arg3;
-        this.ensure_effective_value_for(descriptor).AddChangeListener(callback);
-    }
-
-    public _remove_property_changed_listener_by_name(property: string, callback: PropertyChangeCallback): void;
-    public _remove_property_changed_listener_by_name(owner: Function, property: string, callback: PropertyChangeCallback): void;
-    public _remove_property_changed_listener_by_name(arg1: any, arg2: any, arg3?: any): void
-    {
-        const descriptor = (typeof arg1 === 'string')
-            ? Model.find_descriptor(this.constructor, arg1)
-            : Model.find_descriptor(arg1, arg2);
-        if (descriptor === undefined) return;
-        const composed = Model.compose_key(descriptor.RootOwner, descriptor.Name);
-        const callback = (typeof arg1 === 'string') ? arg2 : arg3;
-        this.property_values.get(composed)?.RemoveChangeListener(callback);
-    }
-
-    public _clear_value_by_name(property: string): void;
-    public _clear_value_by_name(owner: Function, property: string): void;
-    public _clear_value_by_name(arg1: any, arg2?: any): void
-    {
-        const descriptor = (typeof arg1 === 'string')
-            ? this.resolve_descriptor_implicit(arg1)
-            : this.resolve_descriptor_explicit(arg1, arg2);
-        this.require_writable(descriptor);
-        this.clear_via_descriptor(descriptor);
-    }
-
-    public _get_value_source_by_name(property: string): PropertyValueSource;
-    public _get_value_source_by_name(owner: Function, property: string): PropertyValueSource;
-    public _get_value_source_by_name(arg1: any, arg2?: any): PropertyValueSource
-    {
-        const descriptor = (typeof arg1 === 'string')
-            ? this.resolve_descriptor_implicit(arg1)
-            : this.resolve_descriptor_explicit(arg1, arg2);
-        const composed = Model.compose_key(descriptor.RootOwner, descriptor.Name);
-        return this.property_values.get(composed)?.Source ?? PropertyValueSource.Default;
-    }
-
-    public _set_animated_value_by_name(property: string, value: any): void;
-    public _set_animated_value_by_name(owner: Function, property: string, value: any): void;
-    public _set_animated_value_by_name(arg1: any, arg2: any, arg3?: any): void
-    {
-        const descriptor = (typeof arg1 === 'string')
-            ? this.resolve_descriptor_implicit(arg1)
-            : this.resolve_descriptor_explicit(arg1, arg2);
-        const value = (typeof arg1 === 'string') ? arg2 : arg3;
-        const composed = Model.compose_key(descriptor.RootOwner, descriptor.Name);
-        let evd = this.property_values.get(composed);
-        if (evd === undefined)
-        {
-            evd = this.new_effective_value(descriptor);
-            this.property_values.set(composed, evd);
-        }
-        evd.SetAnimatedValue(value);
-    }
-
-    public _clear_animated_value_by_name(property: string): void;
-    public _clear_animated_value_by_name(owner: Function, property: string): void;
-    public _clear_animated_value_by_name(arg1: any, arg2?: any): void
-    {
-        const descriptor = (typeof arg1 === 'string')
-            ? this.resolve_descriptor_implicit(arg1)
-            : this.resolve_descriptor_explicit(arg1, arg2);
-        const composed = Model.compose_key(descriptor.RootOwner, descriptor.Name);
-        this.property_values.get(composed)?.ClearAnimatedValue();
-    }
-
-    public _get_property_value_by_name(property: string): any;
-    public _get_property_value_by_name(owner: Function, property: string): any;
-    public _get_property_value_by_name(arg1: any, arg2?: any): any
-    {
-        const descriptor = (typeof arg1 === 'string')
-            ? this.resolve_descriptor_implicit(arg1)
-            : this.resolve_descriptor_explicit(arg1, arg2);
-        const composed = Model.compose_key(descriptor.RootOwner, descriptor.Name);
-        const evd = this.property_values.get(composed);
-        if (evd !== undefined) return evd.value;
-        return this.resolve_default(descriptor);
-    }
+    // `_set_property_value_by_name` is the SOLE surviving by-name
+    // accessor on `Model`. It exists as the compiler-emit target —
+    // markup-compiled templates produce `target._set_property_value_by_name(name, value)`
+    // calls for every `Prop="value"` setter, so this method has to be
+    // reachable from user-compiled code. The other by-name overloads
+    // (add/remove listener, get value, clear, animated set/clear, get
+    // value source) were retired in favor of the
+    // [./model-internals.ts](./model-internals.ts) `resolveKey` factor:
+    // internal callers resolve the name once to a `PropertyKey`, then
+    // use the typed-key API (`set_property_value`, `get_property_value`,
+    // `AddPropertyChangedListener`, `SetAnimatedValue`, …) directly.
+    // Hot-loop sites cache the resolved key instead of re-walking the
+    // class hierarchy on every fire.
+    //
+    // Read-only DPs throw the same way they do via `set_property_value` —
+    // the by-name path doesn't grant the read-only-bypass capability that
+    // `set_property_value_with_key` carries.
 
     public _set_property_value_by_name(property: string, value: any): void;
     public _set_property_value_by_name(owner: Function, property: string, value: any): void;

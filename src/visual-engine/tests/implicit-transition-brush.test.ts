@@ -11,6 +11,7 @@ import {
     PropertyTransition,
     Visual,
 } from '../../runtime/index.js';
+import { resolveKey } from '../../runtime/model-internals.js';
 import { SolidColorBrush } from '../drawing/brush.js';
 // Importing this module triggers the registerImplicitTransitionBuilder
 // side effect that wires SolidColorBrush into the runtime's implicit-
@@ -26,7 +27,7 @@ class BrushVisualTest extends Visual
         Model.RegisterProperty(BrushVisualTest, 'Brush',
             new SolidColorBrush(Color.Black), MetaData.None);
     }
-    public get Brush():  SolidColorBrush { return this._get_property_value_by_name('Brush'); }
+    public get Brush():  SolidColorBrush { return this.get_property_value(resolveKey(this, undefined, 'Brush')); }
     public set Brush(v: SolidColorBrush) { this._set_property_value_by_name('Brush', v); }
 }
 

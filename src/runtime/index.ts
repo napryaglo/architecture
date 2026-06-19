@@ -47,6 +47,7 @@ export {
     Panel,
     HorizontalAlignment,
     VerticalAlignment,
+    Visibility,
     type VisualHost,
 } from '../visual-engine/visual.js';
 export { Adorner, AdornerLayer, AdornerDecorator, DragGhostAdorner } from '../visual-engine/adorner.js';
@@ -73,7 +74,9 @@ export {
 // keeps only the foundational `ICommand` + `RelayCommand` from
 // `./input/command.js`.
 export {
+    CommandBase,
     RelayCommand,
+    type CommandMetadataInit,
     type ICommand,
 } from './command.js';
 export {

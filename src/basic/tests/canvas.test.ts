@@ -1,6 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { Rect, Size, Visual } from '../../runtime/index.js';
+import { resolveKey } from '../../runtime/model-internals.js';
 import { Canvas } from '../panels/canvas.js';
 
 // Minimal leaf — MeasureOverride returns a fixed box so DesiredSize is
@@ -90,6 +91,6 @@ describe('Canvas', () => {
         const leaf = new FixedSizeLeaf(new Size(10, 10));
         Canvas.SetLeft(leaf, 5);
         // Explicit-owner get goes to Canvas's slot — value comes back.
-        assert.equal(leaf._get_property_value_by_name(Canvas, 'Left'), 5);
+        assert.equal(leaf.get_property_value(resolveKey(leaf, Canvas, 'Left')), 5);
     });
 });

@@ -9,6 +9,7 @@ import {
     Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
+import { resolveKey } from '../../runtime/model-internals.js';
 import { Canvas, DataTemplate } from '../../basic/index.js';
 import { ItemsControl } from '@visualisation-sub/mural/framework';
 
@@ -36,7 +37,7 @@ class ItemLeaf extends Visual
     }
     constructor(public readonly source: unknown) { super(); }
 
-    public get Tint(): string { return this._get_property_value_by_name('Tint'); }
+    public get Tint(): string { return this.get_property_value(resolveKey(this, undefined, 'Tint')); }
 
     protected override MeasureOverride(_a: Size): Size { return new Size(10, 10); }
     protected override RenderOverride(_dc: DrawingContext): void { }

@@ -1,4 +1,6 @@
 import { MetaData, Model, Size, Visual, type DrawingContext, type PropertyDescriptor } from '../../runtime/index.js';
+import type { PropertyKey } from '../../runtime/index.js';
+import { resolveKey } from '../../runtime/model-internals.js';
 import { Brush, Geometry, Pen } from '../../visual-engine/index.js';
 
 // One-line rendering primitive: hand it a Geometry, a Fill, and a
@@ -117,7 +119,7 @@ function subscribeAny(target: Model | undefined, cb: () => void): (() => void) |
 {
     if (target === undefined) return undefined;
     const props = selectPropSet(target);
-    const installed: Array<{ prop: string; cb: () => void }> = [];
+    const installed: Array<{ key: PropertyKey<unknown>; cb: () => void }> = [];
     for (const prop of props)
     {
         // Some props only exist on a subset of subclasses — skip the
@@ -125,13 +127,14 @@ function subscribeAny(target: Model | undefined, cb: () => void): (() => void) |
         // mismatch. Cheap: Model.HasProperty walks the prototype chain
         // exactly the way the binding system already does.
         if (!Model.HasProperty(target.constructor, prop)) continue;
-        target._add_property_changed_listener_by_name(prop, cb);
-        installed.push({ prop, cb });
+        const key = resolveKey(target, undefined, prop);
+        target.AddPropertyChangedListener(key, cb);
+        installed.push({ key, cb });
     }
     return () => {
-        for (const { prop, cb: c } of installed)
+        for (const { key, cb: c } of installed)
         {
-            target._remove_property_changed_listener_by_name(prop, c);
+            target.RemovePropertyChangedListener(key, c);
         }
     };
 }

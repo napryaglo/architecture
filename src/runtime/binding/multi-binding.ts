@@ -1,6 +1,8 @@
 import { Binding, BindingMode } from './binding.js';
 import { MetaData } from '../metadata.js';
 import { Model } from '../model.js';
+import type { PropertyKey } from '../model.js';
+import { resolveKey } from '../model-internals.js';
 import type { PropertyChangeCallback } from './effective-value.js';
 import type { Visual } from '../../visual-engine/visual.js';
 
@@ -40,12 +42,17 @@ class MultiBindingImpl extends Binding
     private readonly paths:     ReadonlyArray<string>;
     private readonly multiConverter: (...values: unknown[]) => unknown;
     private readonly dcCallback: PropertyChangeCallback;
+    // Cached at construction — `'DataContext'` resolves on every Visual,
+    // and the binding listens to it for its entire lifetime.
+    private readonly dataContextKey: PropertyKey<unknown>;
 
     // For each path, the Model we're currently subscribed to on its
-    // first segment, and the callback we installed. Cleared on every
-    // refresh so re-resolution is idempotent.
-    private currentSources:    (Model | undefined)[];
-    private sourceCallbacks:   (PropertyChangeCallback | undefined)[];
+    // first segment, the callback we installed, and the key we
+    // registered it under. Cleared on every refresh so re-resolution
+    // is idempotent.
+    private currentSources:     (Model | undefined)[];
+    private sourceCallbacks:    (PropertyChangeCallback | undefined)[];
+    private currentSourceKeys:  (PropertyKey<unknown> | undefined)[];
 
     constructor(
         target:    Visual,
@@ -59,18 +66,20 @@ class MultiBindingImpl extends Binding
         this.target    = target;
         this.paths     = paths;
         this.multiConverter = converter;
-        this.currentSources  = new Array(paths.length).fill(undefined);
-        this.sourceCallbacks = new Array(paths.length).fill(undefined);
+        this.dataContextKey = resolveKey(target, undefined, 'DataContext');
+        this.currentSources    = new Array(paths.length).fill(undefined);
+        this.sourceCallbacks   = new Array(paths.length).fill(undefined);
+        this.currentSourceKeys = new Array(paths.length).fill(undefined);
 
         this.dcCallback = () => this.refresh();
-        target._add_property_changed_listener_by_name('DataContext', this.dcCallback);
+        target.AddPropertyChangedListener(this.dataContextKey, this.dcCallback);
         this.refresh();
     }
 
     public override dispose(): void
     {
         super.dispose();
-        this.target._remove_property_changed_listener_by_name('DataContext', this.dcCallback);
+        this.target.RemovePropertyChangedListener(this.dataContextKey, this.dcCallback);
         this.unsubscribeAll();
     }
 
@@ -80,12 +89,14 @@ class MultiBindingImpl extends Binding
         {
             const src = this.currentSources[i];
             const cb  = this.sourceCallbacks[i];
-            if (src !== undefined && cb !== undefined)
+            const key = this.currentSourceKeys[i];
+            if (src !== undefined && cb !== undefined && key !== undefined)
             {
-                src._remove_property_changed_listener_by_name(firstSegment(this.paths[i]!), cb);
+                src.RemovePropertyChangedListener(key, cb);
             }
-            this.currentSources[i]  = undefined;
-            this.sourceCallbacks[i] = undefined;
+            this.currentSources[i]    = undefined;
+            this.sourceCallbacks[i]   = undefined;
+            this.currentSourceKeys[i] = undefined;
         }
     }
 
@@ -106,13 +117,18 @@ class MultiBindingImpl extends Binding
             // Subscribe to the first segment for this path if the
             // current DataContext is a Model. Mutations to deeper
             // segments aren't picked up — matching DataContextBinding.
+            // resolveKey throws when the first segment isn't a DP on
+            // dc — same behavior the legacy `_add_property_changed_listener_by_name`
+            // had via its `resolve_descriptor_implicit` throw.
             if (dc instanceof Model)
             {
                 const first = firstSegment(path);
+                const key = resolveKey(dc, undefined, first);
                 const cb: PropertyChangeCallback = () => this.recompute();
-                dc._add_property_changed_listener_by_name(first, cb);
-                this.currentSources[i]  = dc;
-                this.sourceCallbacks[i] = cb;
+                dc.AddPropertyChangedListener(key, cb);
+                this.currentSources[i]    = dc;
+                this.sourceCallbacks[i]   = cb;
+                this.currentSourceKeys[i] = key;
             }
         }
 
@@ -156,7 +172,7 @@ function walkPath(root: unknown, path: string): unknown
     for (const seg of path.split('.'))
     {
         if (cur === undefined || cur === null) return undefined;
-        if (cur instanceof Model) cur = cur._get_property_value_by_name(seg);
+        if (cur instanceof Model) cur = cur.get_property_value(resolveKey(cur, undefined, seg));
         else if (typeof cur === 'object') cur = (cur as Record<string, unknown>)[seg];
         else return undefined;
     }

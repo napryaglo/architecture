@@ -1,5 +1,6 @@
-import type { ICommand } from '../../runtime/command.js';
+import { CommandBase, type CommandMetadataInit } from '../../runtime/command.js';
 import type { ModifierKeys } from '../../visual-engine/routed-event.js';
+import { formatKeyGesture } from './input-binding.js';
 
 // RoutedCommand — identity-only ICommand. Mirrors WPF's RoutedCommand:
 // the command itself contains NO execution logic. Calling Execute
@@ -70,18 +71,7 @@ export class KeyGesture implements InputGesture
     }
 }
 
-function formatKeyGesture(key: string, m: ModifierKeys): string
-{
-    const parts: string[] = [];
-    if (m.Control) parts.push('Ctrl');
-    if (m.Alt)     parts.push('Alt');
-    if (m.Shift)   parts.push('Shift');
-    if (m.Meta)    parts.push('Meta');
-    parts.push(key);
-    return parts.join('+');
-}
-
-export class RoutedCommand implements ICommand
+export class RoutedCommand extends CommandBase
 {
     /** Stable identifier for the command. Same shape as WPF's RoutedCommand.Name
      *  — usually matches the static-field name (e.g. 'Save'). Used for debug
@@ -95,19 +85,24 @@ export class RoutedCommand implements ICommand
     public readonly OwnerType: Function;
 
     /** Advisory keyboard / mouse gestures associated with the command. Pure
-     *  display data: MenuItem and ribbon controls read `InputGestures[0]` to
-     *  render "Ctrl+S" next to the command name. The framework does NOT
-     *  auto-install these as keybindings — author code declares the matching
-     *  KeyBinding in Visual.InputBindings (or via
-     *  CommandManager.RegisterClassInputBinding for a control-class default). */
+     *  display data: kept as the canonical defaults a host might install
+     *  via Visual.InputBindings or CommandManager.RegisterClassInputBinding.
+     *  Tooltips do NOT consume this list — they walk actual InputBindings
+     *  through `CommandManager.FindShortcutForCommand(cmd, anchor)` so the
+     *  displayed shortcut always matches what's truly bound. */
     public readonly InputGestures: readonly InputGesture[];
 
-    private readonly _listeners: Set<() => void> = new Set();
-    private          _subscribedToRequerySuggested = false;
-    private readonly _onRequerySuggested = (): void => { this._notify(); };
+    private _subscribedToRequerySuggested = false;
+    private readonly _onRequerySuggested = (): void => { this.RaiseCanExecuteChanged(); };
 
-    constructor(name: string, ownerType: Function, gestures?: readonly InputGesture[])
+    constructor(
+        name:      string,
+        ownerType: Function,
+        gestures?: readonly InputGesture[],
+        metadata?: CommandMetadataInit,
+    )
     {
+        super(metadata);
         this.Name          = name;
         this.OwnerType     = ownerType;
         this.InputGestures = gestures ?? [];
@@ -124,14 +119,14 @@ export class RoutedCommand implements ICommand
     // own target explicitly — they detect `instanceof RoutedCommand`
     // and route via CommandManager directly.
 
-    public Execute(parameter?: unknown): void
+    public override Execute(parameter?: unknown): void
     {
         const target = CommandManager.GetFocusedVisualForRouting();
         if (target === undefined) return;
         CommandManager.Execute(this, parameter, target);
     }
 
-    public CanExecute(parameter?: unknown): boolean
+    public override CanExecute(parameter?: unknown): boolean
     {
         const target = CommandManager.GetFocusedVisualForRouting();
         if (target === undefined) return false;
@@ -144,9 +139,9 @@ export class RoutedCommand implements ICommand
     // CommandBinding catches the event at invocation time decides
     // executability, and the set of catchers depends on focus / tree
     // composition. RequerySuggested is the closest analogue.
-    public AddCanExecuteChangedListener(listener: () => void): void
+    public override AddCanExecuteChangedListener(listener: () => void): void
     {
-        this._listeners.add(listener);
+        super.AddCanExecuteChangedListener(listener);
         if (!this._subscribedToRequerySuggested)
         {
             CommandManager.SubscribeRequerySuggested(this._onRequerySuggested);
@@ -154,19 +149,13 @@ export class RoutedCommand implements ICommand
         }
     }
 
-    public RemoveCanExecuteChangedListener(listener: () => void): void
+    public override RemoveCanExecuteChangedListener(listener: () => void): void
     {
-        this._listeners.delete(listener);
-        if (this._listeners.size === 0 && this._subscribedToRequerySuggested)
+        super.RemoveCanExecuteChangedListener(listener);
+        if (this._listenerCount() === 0 && this._subscribedToRequerySuggested)
         {
             CommandManager.UnsubscribeRequerySuggested(this._onRequerySuggested);
             this._subscribedToRequerySuggested = false;
         }
-    }
-
-    private _notify(): void
-    {
-        const snap = [...this._listeners];
-        for (const cb of snap) cb();
     }
 }

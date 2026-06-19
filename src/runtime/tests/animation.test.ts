@@ -21,6 +21,7 @@ import {
     interpolateNumber,
     interpolateThickness,
 } from '../index.js';
+import { resolveKey } from '../model-internals.js';
 
 // Lightweight Visual subclass with a numeric DP for the EVD-precedence
 // tests. Stand-in for "any DP on any Visual" so the animation slot
@@ -32,11 +33,11 @@ class AnimTest extends Visual
         Model.RegisterProperty(AnimTest, 'Color',     Color.Black,    MetaData.None);
         Model.RegisterProperty(AnimTest, 'Thickness', new Thickness(0), MetaData.None);
     }
-    public get Number(): number { return this._get_property_value_by_name('Number'); }
+    public get Number(): number { return this.get_property_value(resolveKey(this, undefined, 'Number')); }
     public set Number(v: number) { this._set_property_value_by_name('Number', v); }
-    public get Color(): Color { return this._get_property_value_by_name('Color'); }
+    public get Color(): Color { return this.get_property_value(resolveKey(this, undefined, 'Color')); }
     public set Color(v: Color) { this._set_property_value_by_name('Color', v); }
-    public get Thickness(): Thickness { return this._get_property_value_by_name('Thickness'); }
+    public get Thickness(): Thickness { return this.get_property_value(resolveKey(this, undefined, 'Thickness')); }
     public set Thickness(v: Thickness) { this._set_property_value_by_name('Thickness', v); }
 }
 
@@ -227,28 +228,28 @@ describe('EVD animation slot — precedence', () => {
         const v = new AnimTest();
         v.Number = 5;
         assert.equal(v.Number, 5);
-        v._set_animated_value_by_name('Number', 99);
+        v.SetAnimatedValue(resolveKey(v, undefined, 'Number'), 99);
         assert.equal(v.Number, 99);
-        assert.equal(v._get_value_source_by_name('Number'), PropertyValueSource.AnimatedValue);
+        assert.equal(v.GetValueSource(resolveKey(v, undefined, 'Number')), PropertyValueSource.AnimatedValue);
     });
 
     test('ClearAnimatedValue restores the Local value', () => {
         const v = new AnimTest();
         v.Number = 5;
-        v._set_animated_value_by_name('Number', 99);
-        v._clear_animated_value_by_name('Number');
+        v.SetAnimatedValue(resolveKey(v, undefined, 'Number'), 99);
+        v.ClearAnimatedValue(resolveKey(v, undefined, 'Number'));
         assert.equal(v.Number, 5);
-        assert.equal(v._get_value_source_by_name('Number'), PropertyValueSource.LocalValue);
+        assert.equal(v.GetValueSource(resolveKey(v, undefined, 'Number')), PropertyValueSource.LocalValue);
     });
 
     test('Local writes while animation is active update the underlying slot quietly', () => {
         const v = new AnimTest();
         v.Number = 5;
-        v._set_animated_value_by_name('Number', 99);
+        v.SetAnimatedValue(resolveKey(v, undefined, 'Number'), 99);
         v.Number = 7;                       // Local write under the mask.
         assert.equal(v.Number, 99,
             'effective value stays at the animated value');
-        v._clear_animated_value_by_name('Number');
+        v.ClearAnimatedValue(resolveKey(v, undefined, 'Number'));
         assert.equal(v.Number, 7,
             'after Clear, the FRESH local value re-surfaces (not the pre-anim 5)');
     });
@@ -256,14 +257,14 @@ describe('EVD animation slot — precedence', () => {
     test('ClearAnimatedValue with no prior animation is a no-op', () => {
         const v = new AnimTest();
         v.Number = 5;
-        v._clear_animated_value_by_name('Number');
+        v.ClearAnimatedValue(resolveKey(v, undefined, 'Number'));
         assert.equal(v.Number, 5);
     });
 
     test('Default falls through when no other slot is set', () => {
         const v = new AnimTest();
-        v._set_animated_value_by_name('Number', 99);
-        v._clear_animated_value_by_name('Number');
+        v.SetAnimatedValue(resolveKey(v, undefined, 'Number'), 99);
+        v.ClearAnimatedValue(resolveKey(v, undefined, 'Number'));
         assert.equal(v.Number, 0,
             'no Local was ever set; effective value resolves to the registered default');
     });
@@ -304,7 +305,7 @@ describe('Storyboard — single-target', () => {
         clock.Tick(200);    // 100 ms past end.
         assert.equal(v.Number, 50);
         assert.equal(sb.State, StoryboardState.Filling);
-        assert.equal(v._get_value_source_by_name('Number'), PropertyValueSource.AnimatedValue,
+        assert.equal(v.GetValueSource(resolveKey(v, undefined, 'Number')), PropertyValueSource.AnimatedValue,
             'HoldEnd keeps the animation slot active');
     });
 
@@ -321,7 +322,7 @@ describe('Storyboard — single-target', () => {
         // Animation slot dropped → fresh Local (10) re-surfaces.
         assert.equal(v.Number, 10);
         assert.equal(sb.State, StoryboardState.Stopped);
-        assert.equal(v._get_value_source_by_name('Number'), PropertyValueSource.LocalValue);
+        assert.equal(v.GetValueSource(resolveKey(v, undefined, 'Number')), PropertyValueSource.LocalValue);
     });
 
     test('Stop() releases the animation slot mid-run', () => {
@@ -422,7 +423,7 @@ describe('Storyboard — multi-target', () => {
         clock.Tick(25);
         // 'before' phase — no animation slot written, local value visible.
         assert.equal(v.Number, 5);
-        assert.equal(v._get_value_source_by_name('Number'), PropertyValueSource.LocalValue);
+        assert.equal(v.GetValueSource(resolveKey(v, undefined, 'Number')), PropertyValueSource.LocalValue);
         clock.Tick(50);                  // total elapsed = 75 → 25 ms into running
         // 25 / 100 = 0.25 → From=5 + (100-5) * 0.25 = 28.75
         assert.equal(v.Number, 28.75);
@@ -528,36 +529,36 @@ describe('EVD animation slot — coerce integration', () => {
                 (_m, v) => Math.min(v as number, 50),
             );
         }
-        public get Value(): number { return this._get_property_value_by_name('Value'); }
+        public get Value(): number { return this.get_property_value(resolveKey(this, undefined, 'Value')); }
         public set Value(v: number) { this._set_property_value_by_name('Value', v); }
     }
 
     test('SetAnimatedValue past the ceiling reads back as the coerced (clamped) value', () => {
         const c = new Capped();
-        c._set_animated_value_by_name('Value', 200);
+        c.SetAnimatedValue(resolveKey(c, undefined, 'Value'), 200);
         assert.equal(c.Value, 50);
     });
 
     test('GetValueSource is CoercedValue when coerce clamped the animated value', () => {
         const c = new Capped();
-        c._set_animated_value_by_name('Value', 200);  // clamped to 50
+        c.SetAnimatedValue(resolveKey(c, undefined, 'Value'), 200);  // clamped to 50
         // Coerce changed the base (200 → 50), so the source reports the
         // diagnostic CoercedValue. The underlying base slot is still
         // AnimatedValue — exposed only after ClearAnimatedValue.
-        assert.equal(c._get_value_source_by_name('Value'), PropertyValueSource.CoercedValue);
+        assert.equal(c.GetValueSource(resolveKey(c, undefined, 'Value')), PropertyValueSource.CoercedValue);
     });
 
     test('GetValueSource is AnimatedValue when the animated value stays under the ceiling', () => {
         const c = new Capped();
-        c._set_animated_value_by_name('Value', 30);  // no clamp
-        assert.equal(c._get_value_source_by_name('Value'), PropertyValueSource.AnimatedValue);
+        c.SetAnimatedValue(resolveKey(c, undefined, 'Value'), 30);  // no clamp
+        assert.equal(c.GetValueSource(resolveKey(c, undefined, 'Value')), PropertyValueSource.AnimatedValue);
     });
 
     test('PropertyChanged listeners see post-coerce values during a Storyboard tick', () => {
         const clock = freshClock();
         const c = new Capped();
         const seen: number[] = [];
-        c._add_property_changed_listener_by_name('Value', (_m, _p, _o, n) => { seen.push(n as number); });
+        c.AddPropertyChangedListener(resolveKey(c, undefined, 'Value'), (_m, _p, _o, n) => { seen.push(n as number); });
 
         // To = 200, Duration = 100. At t = 100 the timeline commits To,
         // which coerce clamps to 50. Listeners get the clamped value.

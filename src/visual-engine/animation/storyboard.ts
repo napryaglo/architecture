@@ -1,4 +1,6 @@
-import type { Model } from '../../runtime/model.js';
+import type { Model, PropertyKey } from '../../runtime/model.js';
+import { resolveKey } from '../../runtime/model-internals.js';
+
 import { AnimationManager } from './manager.js';
 import { FillBehavior, type AnimationTimeline } from './timeline.js';
 
@@ -29,6 +31,10 @@ interface StoryboardChild
 {
     readonly target:       Model;
     readonly propertyName: string;
+    /** Resolved at Add() so per-tick reads / animated-slot writes go
+     *  through the typed-key API on Model rather than re-resolving the
+     *  string on every clock tick. */
+    readonly propertyKey:  PropertyKey<unknown>;
     readonly timeline:     AnimationTimeline;
     /** Property's value captured at Begin() — used as the From when the
      *  timeline's own From is undefined ("animate FROM the current"). */
@@ -90,6 +96,7 @@ export class Storyboard
         this._children.push({
             target,
             propertyName,
+            propertyKey: resolveKey(target, undefined, propertyName),
             timeline,
             baseValue:   undefined,
             everWritten: false,
@@ -116,7 +123,7 @@ export class Storyboard
         // correctly.
         for (const c of this._children)
         {
-            c.baseValue   = c.target._get_property_value_by_name(c.propertyName);
+            c.baseValue   = c.target.get_property_value(c.propertyKey);
             c.everWritten = false;
         }
         this._state = StoryboardState.Running;
@@ -141,7 +148,7 @@ export class Storyboard
         AnimationManager.Instance.Unregister(this);
         for (const c of this._children)
         {
-            if (c.everWritten) c.target._clear_animated_value_by_name(c.propertyName);
+            if (c.everWritten) c.target.ClearAnimatedValue(c.propertyKey);
         }
         this._state = StoryboardState.Stopped;
         this._pausedElapsed = undefined;
@@ -222,13 +229,13 @@ export class Storyboard
                 {
                     if (c.everWritten)
                     {
-                        c.target._clear_animated_value_by_name(c.propertyName);
+                        c.target.ClearAnimatedValue(c.propertyKey);
                         c.everWritten = false;
                     }
                     continue;
                 }
                 const finalValue = c.timeline.Evaluate(elapsed, c.baseValue);
-                c.target._set_animated_value_by_name(c.propertyName, finalValue);
+                c.target.SetAnimatedValue(c.propertyKey, finalValue);
                 c.everWritten = true;
                 continue;
             }
@@ -236,7 +243,7 @@ export class Storyboard
             // and push to the animation slot.
             allFinished = false;
             const value = c.timeline.Evaluate(elapsed, c.baseValue);
-            c.target._set_animated_value_by_name(c.propertyName, value);
+            c.target.SetAnimatedValue(c.propertyKey, value);
             c.everWritten = true;
         }
 

@@ -11,7 +11,7 @@ import { Border } from '../basic/border.js';
 import { ControlTemplate } from '../basic/templates/control-template.js';
 import { ContentControl } from './content-control.js';
 import { MenuPopupHost } from './menu/menu-strip.js';
-import { ClickAwayScrim } from './list/combo-box.js';
+import { ClickAwayScrim } from '../basic/click-away-scrim.js';
 
 // M3 Split button — a primary action + an adjacent chevron trigger
 // that opens a dropdown. Two distinct click targets share one chrome.

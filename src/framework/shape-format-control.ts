@@ -1,11 +1,15 @@
 import {
     MetaData,
     Model,
+    Visibility,
     Visual,
     type PropertyDescriptor,
 } from '../runtime/index.js';
+import { resolveKey } from '../runtime/model-internals.js';
 import { Brush, Pen } from '../visual-engine/index.js';
 import { TemplatedControl } from '../basic/templated-control.js';
+import { StackPanel } from '../basic/panels/stack-panel.js';
+import { TextBlock } from '../basic/text-block.js';
 import { FillEditor } from './fill-editor.js';
 import { PenEditor } from './pen-editor.js';
 
@@ -53,6 +57,13 @@ export class ShapeFormatControl extends TemplatedControl
     private _syncing = false;
     private _fillEditor: FillEditor | undefined;
     private _penEditor:  PenEditor  | undefined;
+    // Empty-state parts. When both Fill and Stroke are undefined (the
+    // consumer's "no shape selected" signal) PART_Editors flips to
+    // Visibility=Collapsed (zero slot, no paint, no hit) and
+    // PART_EmptyMessage flips Visible. Symmetric flip when a brush
+    // flows in.
+    private _editors:        StackPanel | undefined;
+    private _emptyMessage:   TextBlock  | undefined;
     private _partListeners: Array<() => void> = [];
 
     constructor()
@@ -66,6 +77,9 @@ export class ShapeFormatControl extends TemplatedControl
     {
         this._fillEditor = this.GetTemplateChild('PART_FillEditor') as FillEditor | undefined;
         this._penEditor  = this.GetTemplateChild('PART_PenEditor')  as PenEditor  | undefined;
+        this._editors      = this.GetTemplateChild('PART_Editors')      as StackPanel | undefined;
+        this._emptyMessage = this.GetTemplateChild('PART_EmptyMessage') as TextBlock  | undefined;
+        this.refreshEmptyState();
 
         if (this._fillEditor !== undefined)
         {
@@ -80,9 +94,10 @@ export class ShapeFormatControl extends TemplatedControl
                 this._syncing = true;
                 try { this.Fill = fe.Fill; } finally { this._syncing = false; }
             };
-            fe._add_property_changed_listener_by_name('Fill', handler);
+            const key = resolveKey(fe, undefined, 'Fill');
+            fe.AddPropertyChangedListener(key, handler);
             this._partListeners.push(() => {
-                fe._remove_property_changed_listener_by_name('Fill', handler);
+                fe.RemovePropertyChangedListener(key, handler);
             });
         }
 
@@ -96,9 +111,10 @@ export class ShapeFormatControl extends TemplatedControl
                 this._syncing = true;
                 try { this.Stroke = pe.Pen; } finally { this._syncing = false; }
             };
-            pe._add_property_changed_listener_by_name('Pen', handler);
+            const key = resolveKey(pe, undefined, 'Pen');
+            pe.AddPropertyChangedListener(key, handler);
             this._partListeners.push(() => {
-                pe._remove_property_changed_listener_by_name('Pen', handler);
+                pe.RemovePropertyChangedListener(key, handler);
             });
         }
     }
@@ -111,6 +127,13 @@ export class ShapeFormatControl extends TemplatedControl
     {
         super.OnPropertyChanged(descriptor, oldValue, newValue);
         if (descriptor.Owner !== ShapeFormatControl) return;
+        // Refresh empty-state on every Fill / Stroke write regardless of
+        // _syncing — the consumer-side clear (Fill = undefined when no
+        // shape is selected) is what flips the state.
+        if (descriptor.Name === 'Fill' || descriptor.Name === 'Stroke')
+        {
+            this.refreshEmptyState();
+        }
         if (this._syncing) return;
         // External writes (consumer set Fill / Stroke) → push the new
         // value into the matching editor under _syncing so the
@@ -127,5 +150,26 @@ export class ShapeFormatControl extends TemplatedControl
                     break;
             }
         } finally { this._syncing = false; }
+    }
+
+    // Toggle PART_Editors / PART_EmptyMessage via the Visibility DP.
+    // Both Fill and Stroke undefined → no shape is selected → collapse
+    // the editor stack, reveal the placeholder. Either present → reveal
+    // the editors, collapse the placeholder. Visibility=Collapsed zeroes
+    // the DesiredSize and suppresses paint + hit-test in one shot — no
+    // RemoveChild dance and no Height=0 leak.
+    private refreshEmptyState(): void
+    {
+        const empty = this.Fill === undefined && this.Stroke === undefined;
+        const editors = this._editors;
+        if (editors !== undefined)
+        {
+            editors.Visibility = empty ? Visibility.Collapsed : Visibility.Visible;
+        }
+        const msg = this._emptyMessage;
+        if (msg !== undefined)
+        {
+            msg.Visibility = empty ? Visibility.Visible : Visibility.Collapsed;
+        }
     }
 }

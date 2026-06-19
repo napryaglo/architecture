@@ -1,32 +1,47 @@
-// Diagrammer — node-only MVVM, now backed by the full 35-shape M3
-// shape library. Each shape kind has its own tiny ShapeNodeVM subclass
-// (so DataTemplates can dispatch by DataType the standard way), the
-// toolbox enumerates every kind, and dropping any tile creates a node
-// of the matching kind on the canvas.
+// Diagrammer — node-only MVVM, geometry-first model.
+//
+// Every node is a single `ShapeNodeVM` carrying a `Geometry`
+// (PathGeometry) DP that the canvas template renders via the generic
+// `Shape` primitive's DrawGeometry path. The per-kind silhouette comes
+// from `SHAPE_CATALOG` (./shape-catalog.mjs): at module load the
+// catalog extracts a normalized unit-1 PathGeometry from each Shape
+// subclass's RenderOverride; per-node Geometry composes that base with
+// a `ScaleTransform(Width, Height)` so resize stretches the silhouette
+// without re-extracting the path.
 //
 // Surface:
-//   * ShapeNodeVM         — base. DPs: Id, X, Y, Width, Height,
-//                           IsSelected, FillBrush, LabelText. Width /
-//                           Height default to NODE_DEFAULT_SIZE so the
-//                           per-Kind DataTemplate can bind chrome size
-//                           through `$Width` / `$Height`.
-//   * <Kind>ShapeVM       — 35 one-line subclasses (each carries only a
-//                           static Kind discriminator). Defined and
-//                           exported below so .mu can name them in
-//                           [DataType=…] clauses.
-//   * ToolboxShapeVM      — one per tile. DPs: Kind, Label, PreviewNode
-//                           (a ShapeNodeVM instance the tile renders at
-//                           48×48 via ContentControl), BeginKindDragData.
-//   * DiagramVM           — host. Holds Nodes + ToolboxShapes catalogue
-//                           + Save / Load commands. CreateNode picks the
-//                           right subclass by kind through KIND_TO_CLASS.
+//   * ShapeNodeVM    — single class. DPs: Id, Kind (catalog key), X, Y,
+//                      Width, Height, IsSelected, FillBrush, Stroke,
+//                      LabelText, Geometry. Width / Height changes
+//                      rebuild Geometry via the catalog's
+//                      buildNodeGeometry helper.
+//   * ToolboxShapeVM — one per tile. DPs: Kind, Label, PreviewNode (a
+//                      48×48 ShapeNodeVM the tile renders via the same
+//                      single DataTemplate the canvas uses),
+//                      BeginKindDragData.
+//   * DiagramVM      — host. Holds Nodes + ToolboxShapes catalogue
+//                      (driven by SHAPE_CATALOG) + Save / Load
+//                      commands. CreateNode builds a ShapeNodeVM with
+//                      catalog-supplied geometry.
 
 import {
     DataObject, DragDropEffects,
     MetaData, Model, ObservableCollection, RelayCommand,
 } from '@visualisation-sub/mural/runtime';
-import { Pen, SolidColorBrush } from '@visualisation-sub/mural/visual-engine';
+import {
+    Pen,
+    SolidColorBrush,
+    pathGeometryFromSvgD,
+    pathGeometryToSvgD,
+} from '@visualisation-sub/mural/visual-engine';
 import { Color } from '@visualisation-sub/mural/runtime';
+import {
+    GeometryCombineMode,
+    SHAPE_CATALOG,
+    SHAPE_CATALOG_MAP,
+    mergeShapes,
+    scaleGeometry,
+} from './shape-catalog.mjs';
 
 const STORAGE_KEY = 'diagram-demo-state-v1';
 
@@ -46,11 +61,17 @@ const STROKE_BRUSH = brush('#1976d2');
 export const NODE_DEFAULT_SIZE = 80;
 export const PREVIEW_SIZE      = 48;
 
-// ── ShapeNodeVM (base) ──────────────────────────────────────────────
+// ── ShapeNodeVM ──────────────────────────────────────────────────────
+//
+// Single class — no per-Kind subclasses. `Kind` is metadata (catalog
+// key, drives Save/Load and toolbox preview); `Geometry` is the
+// rendered PathGeometry, rebuilt from the catalog on every Width /
+// Height change.
 
 export class ShapeNodeVM extends Model
 {
     static IdKey         = Model.RegisterProperty(ShapeNodeVM, 'Id',         undefined,         MetaData.None);
+    static KindKey       = Model.RegisterProperty(ShapeNodeVM, 'Kind',       '',                MetaData.None);
     static XKey          = Model.RegisterProperty(ShapeNodeVM, 'X',          0,                 MetaData.None);
     static YKey          = Model.RegisterProperty(ShapeNodeVM, 'Y',          0,                 MetaData.None);
     static WidthKey      = Model.RegisterProperty(ShapeNodeVM, 'Width',      NODE_DEFAULT_SIZE, MetaData.None);
@@ -58,33 +79,72 @@ export class ShapeNodeVM extends Model
     static IsSelectedKey = Model.RegisterProperty(ShapeNodeVM, 'IsSelected', false,             MetaData.None);
     static FillBrushKey  = Model.RegisterProperty(ShapeNodeVM, 'FillBrush',  FILL_CANVAS,       MetaData.None);
     // Stroke = the shape's outline Pen. Per-instance — each shape gets
-    // its own Pen so PenEditor's in-place mutations (Brush / Thickness /
-    // DashStyle / …) don't leak between shapes. Default constructed in
-    // the ctor below; DP default is undefined so we don't end up with
-    // every shape sharing one mutable Pen via the descriptor default.
+    // its own Pen so PenEditor's in-place mutations don't leak between
+    // shapes. Default constructed in the ctor; DP default is undefined.
     static StrokeKey     = Model.RegisterProperty(ShapeNodeVM, 'Stroke',     undefined,         MetaData.None);
     static LabelTextKey  = Model.RegisterProperty(ShapeNodeVM, 'LabelText',  '',                MetaData.None);
+    // Geometry = the rendered PathGeometry. Always present — either
+    // built from the catalog (kind-based ctor / toolbox drop) or parsed
+    // from a saved SVG-d string (Load). Width / Height changes rebuild
+    // it via the catalog's buildNodeGeometry helper (or a transform-
+    // re-scaling path for d-string nodes).
+    static GeometryKey   = Model.RegisterProperty(ShapeNodeVM, 'Geometry',   undefined,         MetaData.None);
 
-    static Kind = '';
-
-    constructor(id, x, y) {
+    // Three construction paths:
+    //
+    //   { kind }                — toolbox drop / CreateNode. Pulls the
+    //                             unit-1 source from the catalog.
+    //   { source }              — combined-geometry path (boolean ops,
+    //                             custom paths). `source` is itself a
+    //                             unit-1 PathGeometry; the caller is
+    //                             responsible for normalizing.
+    //   { source, kind }        — catalog-derived but pre-extracted by
+    //                             the caller (Load with cached d-string).
+    //
+    // In every case the node holds `_source` (a unit-1 PathGeometry)
+    // as the source of truth. The visible `Geometry` DP is computed by
+    // scaling `_source` to (Width, Height); resize rebuilds it from
+    // the same source — no information loss across repeated resizes.
+    constructor(id, x, y, options) {
         super();
         this._set_property_value_by_name('Id', id);
         this._set_property_value_by_name('X',  x);
         this._set_property_value_by_name('Y',  y);
-        // Allocate the per-shape Pen here rather than as the DP default
-        // so each ShapeNodeVM owns a distinct Pen instance. PenEditor's
-        // broadcast pipeline copies property VALUES across selected
-        // shapes; this keeps the underlying Pen identities separate so
-        // edits to one shape never leak to another via a shared ref.
         this._set_property_value_by_name('Stroke', new Pen(STROKE_BRUSH, 1.5));
+
+        const opts = options ?? {};
+        if (opts.width  !== undefined) this._set_property_value_by_name('Width',  opts.width);
+        if (opts.height !== undefined) this._set_property_value_by_name('Height', opts.height);
+
+        if (opts.source !== undefined)
+        {
+            this._source = opts.source;
+            if (opts.kind !== undefined) this._set_property_value_by_name('Kind', opts.kind);
+        }
+        else if (opts.kind !== undefined && SHAPE_CATALOG_MAP.has(opts.kind))
+        {
+            this._set_property_value_by_name('Kind', opts.kind);
+            this._source = SHAPE_CATALOG_MAP.get(opts.kind).unit();
+        }
+        else
+        {
+            throw new Error(`ShapeNodeVM: needs either a known kind or a source PathGeometry (got kind=${opts.kind})`);
+        }
+
+        this._set_property_value_by_name('Geometry',
+            scaleGeometry(this._source, this.Width, this.Height));
+        // Rebuild on size changes — the alignment / resize-adorner
+        // paths write Width / Height directly on selected nodes.
+        this._add_property_changed_listener_by_name('Width',  () => this._rebuildGeometry());
+        this._add_property_changed_listener_by_name('Height', () => this._rebuildGeometry());
+
         // Group back-ref. undefined ≡ "top-level node" (not inside any
         // GroupVM). View-invisible structural metadata, so plain field.
         this.Parent = undefined;
     }
 
     get Id()          { return this._get_property_value_by_name('Id'); }
-    get Kind()        { return this.constructor.Kind; }
+    get Kind()        { return this._get_property_value_by_name('Kind'); }
     get X()           { return this._get_property_value_by_name('X'); }
     set X(v)          { this._set_property_value_by_name('X', v); }
     get Y()           { return this._get_property_value_by_name('Y'); }
@@ -101,49 +161,14 @@ export class ShapeNodeVM extends Model
     set Stroke(v)     { this._set_property_value_by_name('Stroke', v); }
     get LabelText()   { return this._get_property_value_by_name('LabelText'); }
     set LabelText(v)  { this._set_property_value_by_name('LabelText', v); }
+    get Geometry()    { return this._get_property_value_by_name('Geometry'); }
+
+    _rebuildGeometry() {
+        if (this._source === undefined) return;
+        this._set_property_value_by_name('Geometry',
+            scaleGeometry(this._source, this.Width, this.Height));
+    }
 }
-
-// ── Per-Kind ShapeNodeVM subclasses ─────────────────────────────────
-//
-// Each subclass exists ONLY as a DataType discriminator — the matching
-// `DataTemplate [DataType=<Kind>ShapeVM]` in diagram.mu paints the
-// kind-specific chrome. Behaviour-wise they're identical to the base.
-
-export class RectangleShapeVM     extends ShapeNodeVM { static Kind = 'rectangle';     }
-export class EllipseShapeVM       extends ShapeNodeVM { static Kind = 'ellipse';       }
-export class SquircleShapeVM      extends ShapeNodeVM { static Kind = 'squircle';      }
-export class SlantedShapeVM       extends ShapeNodeVM { static Kind = 'slanted';       }
-export class PillShapeVM          extends ShapeNodeVM { static Kind = 'pill';          }
-export class DiamondShapeVM       extends ShapeNodeVM { static Kind = 'diamond';       }
-export class PentagonShapeVM      extends ShapeNodeVM { static Kind = 'pentagon';      }
-export class GemShapeVM           extends ShapeNodeVM { static Kind = 'gem';           }
-export class ArchShapeVM          extends ShapeNodeVM { static Kind = 'arch';          }
-export class SemicircleShapeVM    extends ShapeNodeVM { static Kind = 'semicircle';    }
-export class TriangleShapeVM      extends ShapeNodeVM { static Kind = 'triangle';      }
-export class ArrowShapeVM         extends ShapeNodeVM { static Kind = 'arrow';         }
-export class FanShapeVM           extends ShapeNodeVM { static Kind = 'fan';           }
-export class ClamshellShapeVM     extends ShapeNodeVM { static Kind = 'clamshell';     }
-export class FourCookieShapeVM    extends ShapeNodeVM { static Kind = '4-cookie';      }
-export class SixCookieShapeVM     extends ShapeNodeVM { static Kind = '6-cookie';      }
-export class SevenCookieShapeVM   extends ShapeNodeVM { static Kind = '7-cookie';      }
-export class NineCookieShapeVM    extends ShapeNodeVM { static Kind = '9-cookie';      }
-export class TwelveCookieShapeVM  extends ShapeNodeVM { static Kind = '12-cookie';     }
-export class FourLeafCloverShapeVM  extends ShapeNodeVM { static Kind = '4-leaf-clover'; }
-export class EightLeafCloverShapeVM extends ShapeNodeVM { static Kind = '8-leaf-clover'; }
-export class SunnyShapeVM         extends ShapeNodeVM { static Kind = 'sunny';         }
-export class VerySunnyShapeVM     extends ShapeNodeVM { static Kind = 'very-sunny';    }
-export class BurstShapeVM         extends ShapeNodeVM { static Kind = 'burst';         }
-export class SoftBurstShapeVM     extends ShapeNodeVM { static Kind = 'soft-burst';    }
-export class BoomShapeVM          extends ShapeNodeVM { static Kind = 'boom';          }
-export class SoftBoomShapeVM      extends ShapeNodeVM { static Kind = 'soft-boom';     }
-export class FlowerShapeVM        extends ShapeNodeVM { static Kind = 'flower';        }
-export class PuffyShapeVM         extends ShapeNodeVM { static Kind = 'puffy';         }
-export class PuffyDiamondShapeVM  extends ShapeNodeVM { static Kind = 'puffy-diamond'; }
-export class GhostishShapeVM      extends ShapeNodeVM { static Kind = 'ghostish';      }
-export class BunShapeVM           extends ShapeNodeVM { static Kind = 'bun';           }
-export class HeartShapeVM         extends ShapeNodeVM { static Kind = 'heart';         }
-export class PixelCircleShapeVM   extends ShapeNodeVM { static Kind = 'pixel-circle';  }
-export class PixelTriangleShapeVM extends ShapeNodeVM { static Kind = 'pixel-triangle';}
 
 // ── GroupVM ─────────────────────────────────────────────────────────
 //
@@ -391,52 +416,16 @@ export function topLevelOf(entity)
     return cur;
 }
 
-// kind → class lookup, drives CreateNode + Load-from-serialized.
-const KIND_TO_CLASS = {
-    'rectangle':      RectangleShapeVM,
-    'ellipse':        EllipseShapeVM,
-    'squircle':       SquircleShapeVM,
-    'slanted':        SlantedShapeVM,
-    'pill':           PillShapeVM,
-    'diamond':        DiamondShapeVM,
-    'pentagon':       PentagonShapeVM,
-    'gem':            GemShapeVM,
-    'arch':           ArchShapeVM,
-    'semicircle':     SemicircleShapeVM,
-    'triangle':       TriangleShapeVM,
-    'arrow':          ArrowShapeVM,
-    'fan':            FanShapeVM,
-    'clamshell':      ClamshellShapeVM,
-    '4-cookie':       FourCookieShapeVM,
-    '6-cookie':       SixCookieShapeVM,
-    '7-cookie':       SevenCookieShapeVM,
-    '9-cookie':       NineCookieShapeVM,
-    '12-cookie':      TwelveCookieShapeVM,
-    '4-leaf-clover':  FourLeafCloverShapeVM,
-    '8-leaf-clover':  EightLeafCloverShapeVM,
-    'sunny':          SunnyShapeVM,
-    'very-sunny':     VerySunnyShapeVM,
-    'burst':          BurstShapeVM,
-    'soft-burst':     SoftBurstShapeVM,
-    'boom':           BoomShapeVM,
-    'soft-boom':      SoftBoomShapeVM,
-    'flower':         FlowerShapeVM,
-    'puffy':          PuffyShapeVM,
-    'puffy-diamond':  PuffyDiamondShapeVM,
-    'ghostish':       GhostishShapeVM,
-    'bun':            BunShapeVM,
-    'heart':          HeartShapeVM,
-    'pixel-circle':   PixelCircleShapeVM,
-    'pixel-triangle': PixelTriangleShapeVM,
-};
+// kind → catalog entry lookup, drives CreateNode + Load-from-serialized.
+// SHAPE_CATALOG_MAP lives in shape-catalog.mjs and is keyed by the same
+// strings the toolbox / Save format use.
 
 // ── ToolboxShapeVM ──────────────────────────────────────────────────
 //
-// One per tile. PreviewNode is a fresh kind-typed ShapeNodeVM the tile
-// renders through a ContentControl — the per-Kind DataTemplate paints
-// the actual shape at the preview's Width / Height (48×48 by default).
-// LabelText on the preview is empty so the picture is glyph-only; the
-// tile renders the Label TextBlock separately, below the picture.
+// One per tile. PreviewNode is a fresh ShapeNodeVM sized to 48×48 that
+// the tile renders through the single canvas DataTemplate. LabelText
+// on the preview is empty so the picture is glyph-only; the tile
+// renders the Label TextBlock separately, below the picture.
 
 export class ToolboxShapeVM extends Model
 {
@@ -449,10 +438,11 @@ export class ToolboxShapeVM extends Model
 
     constructor(kind, label) {
         super();
-        const Cls = KIND_TO_CLASS[kind];
-        const preview = Cls !== undefined ? new Cls('preview', 0, 0) : new ShapeNodeVM('preview', 0, 0);
-        preview.Width  = PREVIEW_SIZE;
-        preview.Height = PREVIEW_SIZE;
+        const preview = new ShapeNodeVM('preview', 0, 0, {
+            kind,
+            width:  PREVIEW_SIZE,
+            height: PREVIEW_SIZE,
+        });
         preview.FillBrush = FILL_PREVIEW;
         this._set_property_value_by_name('Kind',        kind);
         this._set_property_value_by_name('Label',       label);
@@ -468,47 +458,6 @@ export class ToolboxShapeVM extends Model
     get PreviewNode()       { return this._get_property_value_by_name('PreviewNode'); }
     get BeginKindDragData() { return this._get_property_value_by_name('BeginKindDragData'); }
 }
-
-// Toolbox catalogue — order matches the shape-library demo's grid so
-// the rail reads in the same M3 sequence (base → architectural →
-// cookies → clovers → radial waves → puffies → glyphs → pixel art).
-const TOOLBOX_DEFS = [
-    ['rectangle',      'Rectangle'],
-    ['ellipse',        'Ellipse'],
-    ['squircle',       'Squircle'],
-    ['slanted',        'Slanted'],
-    ['pill',           'Pill'],
-    ['diamond',        'Diamond'],
-    ['pentagon',       'Pentagon'],
-    ['gem',            'Gem'],
-    ['arch',           'Arch'],
-    ['semicircle',     'Semicircle'],
-    ['triangle',       'Triangle'],
-    ['arrow',          'Arrow'],
-    ['fan',            'Fan'],
-    ['clamshell',      'Clamshell'],
-    ['4-cookie',       '4-Cookie'],
-    ['6-cookie',       '6-Cookie'],
-    ['7-cookie',       '7-Cookie'],
-    ['9-cookie',       '9-Cookie'],
-    ['12-cookie',      '12-Cookie'],
-    ['4-leaf-clover',  '4-Leaf Clover'],
-    ['8-leaf-clover',  '8-Leaf Clover'],
-    ['sunny',          'Sunny'],
-    ['very-sunny',     'Very Sunny'],
-    ['burst',          'Burst'],
-    ['soft-burst',     'Soft Burst'],
-    ['boom',           'Boom'],
-    ['soft-boom',      'Soft Boom'],
-    ['flower',         'Flower'],
-    ['puffy',          'Puffy'],
-    ['puffy-diamond',  'Puffy Diamond'],
-    ['ghostish',       'Ghost-ish'],
-    ['bun',            'Bun'],
-    ['heart',          'Heart'],
-    ['pixel-circle',   'Pixel Circle'],
-    ['pixel-triangle', 'Pixel Triangle'],
-];
 
 // ── DiagramVM ───────────────────────────────────────────────────────
 
@@ -529,6 +478,10 @@ export class DiagramVM extends Model
         Model.RegisterProperty(DiagramVM, 'DistributeVerticalCommand',   undefined, MetaData.None);
         Model.RegisterProperty(DiagramVM, 'GroupCommand',                undefined, MetaData.None);
         Model.RegisterProperty(DiagramVM, 'UngroupCommand',              undefined, MetaData.None);
+        Model.RegisterProperty(DiagramVM, 'CombineUnionCommand',         undefined, MetaData.None);
+        Model.RegisterProperty(DiagramVM, 'CombineIntersectCommand',     undefined, MetaData.None);
+        Model.RegisterProperty(DiagramVM, 'CombineSubtractCommand',      undefined, MetaData.None);
+        Model.RegisterProperty(DiagramVM, 'CombineExcludeCommand',       undefined, MetaData.None);
         // Selection bounding rect — union bbox of every entity with
         // IsSelected=true, recomputed on selection / geometry changes by
         // _updateSelectionBounds. SelectionCount lets the adorner overlay
@@ -576,13 +529,17 @@ export class DiagramVM extends Model
         // tree depth is encoded in Parent links, not in collection shape.
         this._set_property_value_by_name('Nodes', new ObservableCollection());
         this._set_property_value_by_name('ToolboxShapes',
-            TOOLBOX_DEFS.map(([kind, label]) => new ToolboxShapeVM(kind, label)));
+            SHAPE_CATALOG.map(e => new ToolboxShapeVM(e.kind, e.label)));
         this._nextId = 1;
 
         this._set_property_value_by_name('SaveCommand',
-            new RelayCommand(() => this.Save()));
+            new RelayCommand(() => this.Save(), undefined,
+                { Text: 'Save',
+                  Description: 'Serialize the current canvas to local storage.' }));
         this._set_property_value_by_name('LoadCommand',
-            new RelayCommand(() => this.Load()));
+            new RelayCommand(() => this.Load(), undefined,
+                { Text: 'Load',
+                  Description: 'Restore the most recently saved canvas.' }));
 
         // ── Alignment + distribute commands ─────────────────────────
         // Align needs ≥ 2 selected nodes; Distribute needs ≥ 3 (the
@@ -591,19 +548,33 @@ export class DiagramVM extends Model
         // extremes). The CanExecute guards return back to the bound
         // Buttons, which surface them as enabled / disabled chrome.
         this._set_property_value_by_name('AlignLeftCommand',
-            new RelayCommand(() => this.AlignLeft(),  () => this._countSelected() >= 2));
+            new RelayCommand(() => this.AlignLeft(),  () => this._countSelected() >= 2,
+                { Text: 'Align Left',
+                  Description: 'Align selected shapes to the left edge of the leftmost shape.' }));
         this._set_property_value_by_name('AlignRightCommand',
-            new RelayCommand(() => this.AlignRight(), () => this._countSelected() >= 2));
+            new RelayCommand(() => this.AlignRight(), () => this._countSelected() >= 2,
+                { Text: 'Align Right',
+                  Description: 'Align selected shapes to the right edge of the rightmost shape.' }));
         this._set_property_value_by_name('AlignTopCommand',
-            new RelayCommand(() => this.AlignTop(),   () => this._countSelected() >= 2));
+            new RelayCommand(() => this.AlignTop(),   () => this._countSelected() >= 2,
+                { Text: 'Align Top',
+                  Description: 'Align selected shapes to the top edge of the topmost shape.' }));
         this._set_property_value_by_name('AlignMiddleCommand',
-            new RelayCommand(() => this.AlignMiddle(),() => this._countSelected() >= 2));
+            new RelayCommand(() => this.AlignMiddle(),() => this._countSelected() >= 2,
+                { Text: 'Align Middle',
+                  Description: 'Center selected shapes vertically on a shared horizontal axis.' }));
         this._set_property_value_by_name('AlignCenterCommand',
-            new RelayCommand(() => this.AlignCenter(),() => this._countSelected() >= 2));
+            new RelayCommand(() => this.AlignCenter(),() => this._countSelected() >= 2,
+                { Text: 'Align Center',
+                  Description: 'Center selected shapes horizontally on a shared vertical axis.' }));
         this._set_property_value_by_name('DistributeHorizontalCommand',
-            new RelayCommand(() => this.DistributeHorizontal(), () => this._countSelected() >= 3));
+            new RelayCommand(() => this.DistributeHorizontal(), () => this._countSelected() >= 3,
+                { Text: 'Distribute Horizontally',
+                  Description: 'Space three or more shapes evenly between the leftmost and rightmost.' }));
         this._set_property_value_by_name('DistributeVerticalCommand',
-            new RelayCommand(() => this.DistributeVertical(),   () => this._countSelected() >= 3));
+            new RelayCommand(() => this.DistributeVertical(),   () => this._countSelected() >= 3,
+                { Text: 'Distribute Vertically',
+                  Description: 'Space three or more shapes evenly between the topmost and bottommost.' }));
 
         // ── Group / Ungroup commands ────────────────────────────────
         // Group needs ≥ 2 selected TOP-LEVEL entities (anything that
@@ -611,9 +582,36 @@ export class DiagramVM extends Model
         // selected top-level GroupVM. CanExecute is re-evaluated by
         // the same selection-listener pipeline as the align commands.
         this._set_property_value_by_name('GroupCommand',
-            new RelayCommand(() => this.Group(),   () => this._selectedTopLevel().length >= 2));
+            new RelayCommand(() => this.Group(),   () => this._selectedTopLevel().length >= 2,
+                { Text: 'Group',
+                  Description: 'Bundle the selected shapes into a single group that moves and resizes together.' }));
         this._set_property_value_by_name('UngroupCommand',
-            new RelayCommand(() => this.Ungroup(), () => this._selectedTopLevelGroups().length >= 1));
+            new RelayCommand(() => this.Ungroup(), () => this._selectedTopLevelGroups().length >= 1,
+                { Text: 'Ungroup',
+                  Description: 'Dissolve the selected groups back into their member shapes.' }));
+
+        // ── Combine (boolean ops) ──────────────────────────────────
+        // PowerPoint's Merge-Shapes counterpart. Needs ≥ 2 selected
+        // LEAVES — groups don't combine as a unit yet (the kernel
+        // operates per-leaf and we'd need a normalization pass to
+        // collapse the group bbox into a single PathGeometry first).
+        const canCombine = () => this._formatLeaves().length >= 2;
+        this._set_property_value_by_name('CombineUnionCommand',
+            new RelayCommand(() => this.CombineSelection(GeometryCombineMode.Union),     canCombine,
+                { Text: 'Union',
+                  Description: 'Merge the selected shapes into a single shape covering the union of their areas.' }));
+        this._set_property_value_by_name('CombineIntersectCommand',
+            new RelayCommand(() => this.CombineSelection(GeometryCombineMode.Intersect), canCombine,
+                { Text: 'Intersect',
+                  Description: 'Keep only the overlapping region of the selected shapes.' }));
+        this._set_property_value_by_name('CombineSubtractCommand',
+            new RelayCommand(() => this.CombineSelection(GeometryCombineMode.Exclude),   canCombine,
+                { Text: 'Subtract',
+                  Description: 'Cut the additional shapes out of the first selected shape.' }));
+        this._set_property_value_by_name('CombineExcludeCommand',
+            new RelayCommand(() => this.CombineSelection(GeometryCombineMode.Xor),       canCombine,
+                { Text: 'Exclude',
+                  Description: 'Keep the non-overlapping regions of the selected shapes.' }));
 
         // Selection-change tracking — each node's IsSelected change
         // (driven from the bootstrap's selection bridge mirroring
@@ -639,6 +637,10 @@ export class DiagramVM extends Model
     get Nodes()                       { return this._get_property_value_by_name('Nodes'); }
     get GroupCommand()                { return this._get_property_value_by_name('GroupCommand'); }
     get UngroupCommand()              { return this._get_property_value_by_name('UngroupCommand'); }
+    get CombineUnionCommand()         { return this._get_property_value_by_name('CombineUnionCommand'); }
+    get CombineIntersectCommand()     { return this._get_property_value_by_name('CombineIntersectCommand'); }
+    get CombineSubtractCommand()      { return this._get_property_value_by_name('CombineSubtractCommand'); }
+    get CombineExcludeCommand()       { return this._get_property_value_by_name('CombineExcludeCommand'); }
     get ToolboxShapes()               { return this._get_property_value_by_name('ToolboxShapes'); }
     get Status()                      { return this._get_property_value_by_name('Status'); }
     set Status(v)                     { this._set_property_value_by_name('Status', v); }
@@ -664,10 +666,9 @@ export class DiagramVM extends Model
     set FormatStroke(v)               { this._set_property_value_by_name('FormatStroke', v); }
 
     CreateNode(kind, x, y) {
-        const Cls = KIND_TO_CLASS[kind];
-        if (Cls === undefined) return null;
+        if (!SHAPE_CATALOG_MAP.has(kind)) return null;
         const id = 'n' + this._nextId++;
-        const node = new Cls(id, x, y);
+        const node = new ShapeNodeVM(id, x, y, { kind });
         this.Nodes.Add(node);
         return node;
     }
@@ -715,11 +716,28 @@ export class DiagramVM extends Model
     }
 
     serialize() {
+        // Per-node record carries position, size, and the SVG
+        // d-string of the unit-1 SOURCE PathGeometry (figure coords
+        // pre-normalized to [0,1]×[0,1] — same form the catalog
+        // produces, same form a combined-geometry source takes).
+        // `kind` is a hint that lets Load skip d-string parsing when
+        // the catalog recognizes it. Groups aren't persisted yet —
+        // only the leaf ShapeNodeVMs.
         const nodes = [];
         const items = this.Nodes;
         for (let i = 0; i < items.Count; i++) {
             const v = items.Get(i);
-            nodes.push({ id: v.Id, kind: v.Kind, x: v.X, y: v.Y });
+            if (!(v instanceof ShapeNodeVM)) continue;
+            const d = v._source !== undefined ? pathGeometryToSvgD(v._source) : '';
+            nodes.push({
+                id:   v.Id,
+                kind: v.Kind,
+                x:    v.X,
+                y:    v.Y,
+                w:    v.Width,
+                h:    v.Height,
+                d,
+            });
         }
         return { nodes, nextId: this._nextId };
     }
@@ -729,7 +747,33 @@ export class DiagramVM extends Model
         const snapshot = [];
         for (let i = 0; i < this.Nodes.Count; i++) snapshot.push(this.Nodes.Get(i));
         for (const node of snapshot) this.removeNode(node);
-        for (const n of payload.nodes ?? []) this.CreateNode(n.kind, n.x, n.y);
+        for (const n of payload.nodes ?? []) {
+            const id = n.id ?? ('n' + this._nextId++);
+            // Prefer catalog when kind is known — guarantees the
+            // shape stays in lock-step with library updates. Fall
+            // back to the saved unit-1 d-string for combined
+            // geometries or unrecognized kinds.
+            let node;
+            if (n.kind !== undefined && SHAPE_CATALOG_MAP.has(n.kind)) {
+                node = new ShapeNodeVM(id, n.x ?? 0, n.y ?? 0, {
+                    kind:   n.kind,
+                    width:  n.w,
+                    height: n.h,
+                });
+            }
+            else if (typeof n.d === 'string' && n.d.length > 0) {
+                node = new ShapeNodeVM(id, n.x ?? 0, n.y ?? 0, {
+                    source: pathGeometryFromSvgD(n.d),
+                    kind:   n.kind,
+                    width:  n.w,
+                    height: n.h,
+                });
+            }
+            else {
+                continue;
+            }
+            this.Nodes.Add(node);
+        }
     }
 
     // ── Align / Distribute ────────────────────────────────────────
@@ -1115,6 +1159,10 @@ export class DiagramVM extends Model
         this.DistributeVerticalCommand?.RaiseCanExecuteChanged();
         this.GroupCommand?.RaiseCanExecuteChanged();
         this.UngroupCommand?.RaiseCanExecuteChanged();
+        this.CombineUnionCommand?.RaiseCanExecuteChanged();
+        this.CombineIntersectCommand?.RaiseCanExecuteChanged();
+        this.CombineSubtractCommand?.RaiseCanExecuteChanged();
+        this.CombineExcludeCommand?.RaiseCanExecuteChanged();
     }
 
     // ── Group / Ungroup ───────────────────────────────────────────────
@@ -1210,6 +1258,59 @@ export class DiagramVM extends Model
         }
         this._raiseAllCanExecute();
         this.Status = `Ungrouped ${count} group${count === 1 ? '' : 's'}.`;
+    }
+
+    // ── Combine (boolean ops) ─────────────────────────────────────────
+    //
+    // PowerPoint's Merge-Shapes counterpart. Takes the currently-
+    // selected leaves (groups expand to their leaf members via
+    // `_formatLeaves`), feeds them through `mergeShapes` (translate
+    // into diagram-space → reduce-left over `combine` kernel →
+    // normalize to unit-1), and replaces the inputs with a single
+    // result node carrying the unit-1 source on its `_source` field.
+    //
+    // Properties of the result node:
+    //   * X / Y / W / H  — bbox of the combined geometry in diagram
+    //                       space.
+    //   * Source         — combined unit-1 PathGeometry. Kind is
+    //                       implicitly '' (not a catalog shape).
+    //   * FillBrush      — first leaf's brush ref. The brush itself
+    //                       isn't cloned (FillEditor swaps wholesale,
+    //                       so sharing a brush ref is safe).
+    //   * Stroke         — fresh Pen cloned from the first leaf's,
+    //                       since PenEditor mutates in place.
+    //
+    // Empty result (intersect of disjoint shapes, exclude that cancels
+    // everything) → status message, no node insertion.
+    CombineSelection(mode) {
+        const leaves = this._formatLeaves();
+        if (leaves.length < 2) return;
+        const merged = mergeShapes(leaves, mode);
+        if (merged === undefined) {
+            this.Status = 'Combine produced an empty geometry.';
+            return;
+        }
+        const template = leaves[0];
+        const id = 'n' + this._nextId++;
+        const node = new ShapeNodeVM(id, merged.x, merged.y, {
+            source: merged.source,
+            width:  merged.w,
+            height: merged.h,
+        });
+        node.FillBrush = template.FillBrush;
+        node.Stroke    = clonePen(template.Stroke);
+
+        // Remove the input nodes. They might be members of groups —
+        // detach from the group bookkeeping first so the group's
+        // bounds recompute correctly.
+        for (const leaf of leaves) {
+            if (leaf.Parent !== undefined) leaf.Parent._removeMember(leaf);
+            this.removeNode(leaf);
+        }
+        this.Nodes.Add(node);
+        node.IsSelected = true;
+        this._raiseAllCanExecute();
+        this.Status = `Combined ${leaves.length} shapes (${combineModeName(mode)}).`;
     }
 
     // ── Selection resize ──────────────────────────────────────────────
@@ -1330,6 +1431,19 @@ export class DiagramVM extends Model
 
     EndSelectionResize() {
         this._resizeSnapshot = undefined;
+    }
+}
+
+// Human-readable label for status-line feedback. The numeric enum
+// matches the WPF / Skia ordering: 0=Union, 1=Intersect, 2=Xor,
+// 3=Exclude (= asymmetric A − B).
+function combineModeName(mode) {
+    switch (mode) {
+        case GeometryCombineMode.Union:     return 'Union';
+        case GeometryCombineMode.Intersect: return 'Intersect';
+        case GeometryCombineMode.Xor:       return 'Exclude';
+        case GeometryCombineMode.Exclude:   return 'Subtract';
+        default: return String(mode);
     }
 }
 

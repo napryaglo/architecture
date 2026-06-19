@@ -1,6 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { Rect, Size, Visual } from '../../runtime/index.js';
+import { resolveKey } from '../../runtime/model-internals.js';
 import { Dock, DockPanel } from '../panels/dock-panel.js';
 
 class FixedSizeLeaf extends Visual
@@ -155,6 +156,6 @@ describe('DockPanel', () => {
     test('DockPanel.Dock is stored on the child under DockPanel namespace', () => {
         const leaf = new FixedSizeLeaf(new Size(10, 10));
         DockPanel.SetDock(leaf, Dock.Right);
-        assert.equal(leaf._get_property_value_by_name(DockPanel, 'Dock'), Dock.Right);
+        assert.equal(leaf.get_property_value(resolveKey(leaf, DockPanel, 'Dock')), Dock.Right);
     });
 });

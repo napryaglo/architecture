@@ -15,6 +15,7 @@ import {
     Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
+import { resolveKey } from '../../runtime/model-internals.js';
 import { SolidColorBrush } from '../drawing/brush.js';
 import { SolidColorBrushAnimation } from '../drawing/solid-color-brush-animation.js';
 
@@ -105,7 +106,7 @@ describe('SolidColorBrushAnimation — DynamicResource scheme-transition integra
         static {
             Model.RegisterProperty(BrushHost, 'Background', undefined, MetaData.None);
         }
-        public get Background(): unknown { return this._get_property_value_by_name('Background'); }
+        public get Background(): unknown { return this.get_property_value(resolveKey(this, undefined, 'Background')); }
         public set Background(v: unknown) { this._set_property_value_by_name('Background', v); }
         protected override MeasureOverride(_a: Size): Size { return Size.Zero; }
         protected override RenderOverride(_dc: DrawingContext): void { }

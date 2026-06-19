@@ -1,10 +1,11 @@
 import {
     MetaData,
     Model,
-    Thickness,
+    Visibility,
     Visual,
     type PropertyDescriptor,
 } from '../runtime/index.js';
+import { resolveKey } from '../runtime/model-internals.js';
 import {
     Brush,
     DashStyle,
@@ -15,7 +16,6 @@ import {
 import { TemplatedControl } from '../basic/templated-control.js';
 import { Slider } from '../basic/slider.js';
 import { TextBlock } from '../basic/text-block.js';
-import { StackPanel } from '../basic/panels/stack-panel.js';
 import { BrushPicker } from './brush-picker.js';
 import { ComboBox } from './list/combo-box.js';
 
@@ -109,12 +109,10 @@ export class PenEditor extends TemplatedControl
     private _joinCombo:       ComboBox    | undefined;
     private _miterSlider:     Slider      | undefined;
     private _miterRead:       TextBlock   | undefined;
-    private _miterRow:        StackPanel  | undefined;
-    // Cached resting margin/padding for PART_MiterRow so the
-    // visibility toggle (LineJoin = Miter ↔ Miter ≠ Miter) can
-    // restore the row when Join flips back. Without a real
-    // Visibility DP we simulate the toggle via these.
-    private _miterRowMargin:  unknown;
+    // Miter row's label + editor are toggled together; with both cells
+    // in the row Visibility=Collapsed, the Grid's Auto-sized row height
+    // contracts to 0 and the row visually disappears.
+    private _miterLabel:      TextBlock   | undefined;
     private _partListeners: Array<() => void> = [];
 
     constructor()
@@ -140,11 +138,7 @@ export class PenEditor extends TemplatedControl
         this._joinCombo       = this.GetTemplateChild('PART_Join')             as ComboBox    | undefined;
         this._miterSlider     = this.GetTemplateChild('PART_MiterLimit')       as Slider      | undefined;
         this._miterRead       = this.GetTemplateChild('PART_MiterReadout')     as TextBlock   | undefined;
-        this._miterRow        = this.GetTemplateChild('PART_MiterRow')         as StackPanel  | undefined;
-        if (this._miterRow !== undefined)
-        {
-            this._miterRowMargin = this._miterRow.Margin;
-        }
+        this._miterLabel      = this.GetTemplateChild('PART_MiterLabel')       as TextBlock   | undefined;
 
         // Items population for the comboboxes. ComboBox.Items defaults
         // to undefined; setting an array here lets the picker drive its
@@ -166,9 +160,10 @@ export class PenEditor extends TemplatedControl
                 try { this.Brush = bp.Brush; } finally { this._syncing = false; }
                 this.pushToPen('Brush');
             };
-            bp._add_property_changed_listener_by_name('Brush', handler);
+            const key = resolveKey(bp, undefined, 'Brush');
+            bp.AddPropertyChangedListener(key, handler);
             this._partListeners.push(() => {
-                bp._remove_property_changed_listener_by_name('Brush', handler);
+                bp.RemovePropertyChangedListener(key, handler);
             });
         }
 
@@ -191,9 +186,10 @@ export class PenEditor extends TemplatedControl
                 try { pushMirror(slider.Value); } finally { this._syncing = false; }
                 pushPen();
             };
-            slider._add_property_changed_listener_by_name('Value', handler);
+            const key = resolveKey(slider, undefined, 'Value');
+            slider.AddPropertyChangedListener(key, handler);
             this._partListeners.push(() => {
-                slider._remove_property_changed_listener_by_name('Value', handler);
+                slider.RemovePropertyChangedListener(key, handler);
             });
         };
 
@@ -230,9 +226,10 @@ export class PenEditor extends TemplatedControl
                 try { pushMirror(sel.Value); } finally { this._syncing = false; }
                 pushPen();
             };
-            combo._add_property_changed_listener_by_name('SelectedItem', handler);
+            const key = resolveKey(combo, undefined, 'SelectedItem');
+            combo.AddPropertyChangedListener(key, handler);
             this._partListeners.push(() => {
-                combo._remove_property_changed_listener_by_name('SelectedItem', handler);
+                combo.RemovePropertyChangedListener(key, handler);
             });
         };
 
@@ -277,32 +274,18 @@ export class PenEditor extends TemplatedControl
         } finally { this._syncing = false; }
     }
 
-    // Fake Visibility=Collapsed by zeroing the PART_MiterRow's
-    // contribution to the parent layout. There's no Visibility DP yet;
-    // setting Margin to a -large value would clip but not unmeasure.
-    // Instead we ZERO the visual children themselves — clearing the
-    // panel removes them from the visual tree entirely, restoring on
-    // un-collapse rebuilds them lazily. Cheap and correct.
+    // MiterLimit is only meaningful when Join = Miter; flip BOTH the
+    // miter row's label and editor to Collapsed otherwise. With both
+    // children of an Auto-sized Grid row hidden, the row's max-child
+    // height is 0 and the row contracts away — no manual margin
+    // caching, no leftover gap.
     private refreshMiterRowVisibility(): void
     {
-        const row = this._miterRow;
-        if (row === undefined) return;
-        const showing = this.LineJoin === LineJoin.Miter;
-        // Fake the collapse with Height=0; restoring sets it back to
-        // NaN so layout auto-sizes the row from its content. Margin is
-        // similarly cleared on collapse — but the Margin DP can't hold
-        // undefined (Visual.Measure reads `margin.Horizontal`), so we
-        // zero it instead.
-        if (showing)
-        {
-            row.set_property_value(Visual.HeightKey, Number.NaN);
-            row.set_property_value(Visual.MarginKey, this._miterRowMargin);
-        }
-        else
-        {
-            row.set_property_value(Visual.HeightKey, 0);
-            row.set_property_value(Visual.MarginKey, Thickness.Zero);
-        }
+        const vis = this.LineJoin === LineJoin.Miter
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        if (this._miterLabel  !== undefined) this._miterLabel.Visibility  = vis;
+        if (this._miterSlider !== undefined) this._miterSlider.Visibility = vis;
     }
 
     protected override OnPropertyChanged(
@@ -421,9 +404,10 @@ export class PenEditor extends TemplatedControl
                 try { apply(); }
                 finally { this._syncing = false; }
             };
-            pen._add_property_changed_listener_by_name(prop, handler);
+            const key = resolveKey(pen, undefined, prop);
+            pen.AddPropertyChangedListener(key, handler);
             this._penListeners.push(() => {
-                pen._remove_property_changed_listener_by_name(prop, handler);
+                pen.RemovePropertyChangedListener(key, handler);
             });
         };
         wire('Brush',      () => { this.Brush      = pen.Brush; });

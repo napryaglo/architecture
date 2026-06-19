@@ -1363,7 +1363,7 @@ resources MuralFramework {
                      [ Text                = "✓",
                        FontFamily          = @LabelSmallFont,
                        FontWeight          = @TypefaceWeightBold,
-                       FontSize             = 14,
+                       FontSize             = @LabelLargeSize,
                        Foreground           = @OnPrimary,
                        HorizontalAlignment  = Center,
                        VerticalAlignment    = Center,
@@ -1589,8 +1589,8 @@ resources MuralFramework {
                     BorderThickness = (1, 0, 0, 0),
                     BorderBrush     = @PrimaryContainer ] {
                 TextBlock [Text="▾",
-                           FontSize    = 14,
-                           FontWeight  = Bold,
+                           FontSize    = @LabelLargeSize,
+                           FontWeight  = @TypefaceWeightBold,
                            Foreground  = @OnPrimary,
                            HorizontalAlignment = Center,
                            VerticalAlignment   = Center]
@@ -1812,32 +1812,6 @@ resources MuralFramework {
     Style [TargetType=Badge] {
         Template = @DefaultNumericBadge;
         when ( Variant = Dot ) { Template = @DefaultDotBadge; }
-    }
-
-    // ── Tooltip: M3 Plain tooltip ──────────────────────────────────
-    // Single-line opaque tooltip — @InverseSurface fill (M3's spec
-    // calls for a dark surface that inverts against the host theme
-    // so the tooltip stays legible regardless of background) with
-    // @InverseOnSurface ink for the label. ExtraSmall corner radius
-    // matches the spec.
-    Template x:key="DefaultTooltip" [TargetType=Tooltip] {
-        Border x:name="PART_Tooltip"
-              [ Background      = @InverseSurface,
-                BorderBrush     = #00000000,
-                BorderThickness = (0),
-                CornerRadius    = @ShapeExtraSmall,
-                Padding         = (@Spacing2, @Spacing1, @Spacing2, @Spacing1) ] {
-            TextBlock [ Text                 = $Text,
-                        Foreground           = @InverseOnSurface,
-                        FontFamily           = @BodySmallFont,
-                        FontWeight           = @BodySmallWeight,
-                        FontSize              = @BodySmallSize,
-                        LineHeight            = @BodySmallLineHeight,
-                        LetterSpacing         = @BodySmallTracking ]
-        }
-    }
-    Style [TargetType=Tooltip] {
-        Template = @DefaultTooltip;
     }
 
     // ── ProgressIndicator: M3 Linear progress ──────────────────────
@@ -2237,14 +2211,14 @@ resources MuralFramework {
             // tinted to @OnPrimary so the icons stay legible on the top
             // app bar; hosts hanging the ThemeSelector on a different
             // surface should re-template and pick their own Foreground.
-            TextBlock [Text = "Aa", Foreground = @OnPrimary, FontSize = 14,
+            TextBlock [Style = @LabelLarge, Text = "Aa", Foreground = @OnPrimary,
                        VerticalAlignment = Center, Margin = (4,0,4,0)]
             Border x:name="PART_ThemeComboWrap"
                   [Width = 0, MinWidth = 0, Opacity = 0, Padding = (4,0,4,0)] {
                 ComboBox x:name="PART_ThemeCombo" [Width = 140, ThemeManager.Density = Compact]
             }
 
-            TextBlock [Text = "◐", Foreground = @OnPrimary, FontSize = 14,
+            TextBlock [Style = @LabelLarge, Text = "◐", Foreground = @OnPrimary,
                        VerticalAlignment = Center, Margin = (4,0,4,0)]
             Border x:name="PART_SchemeComboWrap"
                   [Width = 0, MinWidth = 0, Opacity = 0, Padding = (4,0,4,0)] {
@@ -2314,7 +2288,7 @@ resources MuralFramework {
                             Margin        = (0, 0, @Spacing3, 0) ]
                 TextBlock [ Text          = "▾",
                             Foreground    = @OnSurfaceVariant,
-                            FontSize      = 14,
+                            FontSize      = @LabelLargeSize,
                             VerticalAlignment = Center ]
             }
         }
@@ -2489,7 +2463,7 @@ resources MuralFramework {
                             Margin        = (0, 0, @Spacing3, 0) ]
                 TextBlock [ Text          = "▾",
                             Foreground    = @OnSurfaceVariant,
-                            FontSize      = 14,
+                            FontSize      = @LabelLargeSize,
                             VerticalAlignment = Center ]
             }
         }
@@ -2529,27 +2503,27 @@ resources MuralFramework {
                                          CornerRadius = @ShapeExtraSmall,
                                          Padding = (10, 4, 10, 4),
                                          Margin = (0, 0, 4, 0) ] {
-                            TextBlock [Text="Solid", Foreground=@OnSecondaryContainer, FontSize=12]
+                            TextBlock [Text="Solid", Foreground=@OnSecondaryContainer, Style=@LabelMedium]
                         }
                         ClickableBorder x:name="PART_TabLinear"
                                        [ Background = @Surface,
                                          CornerRadius = @ShapeExtraSmall,
                                          Padding = (10, 4, 10, 4),
                                          Margin = (0, 0, 4, 0) ] {
-                            TextBlock [Text="Linear", Foreground=@OnSurface, FontSize=12]
+                            TextBlock [Text="Linear", Foreground=@OnSurface, Style=@LabelMedium]
                         }
                         ClickableBorder x:name="PART_TabRadial"
                                        [ Background = @Surface,
                                          CornerRadius = @ShapeExtraSmall,
                                          Padding = (10, 4, 10, 4),
                                          Margin = (0, 0, 4, 0) ] {
-                            TextBlock [Text="Radial", Foreground=@OnSurface, FontSize=12]
+                            TextBlock [Text="Radial", Foreground=@OnSurface, Style=@LabelMedium]
                         }
                         ClickableBorder x:name="PART_TabPattern"
                                        [ Background = @Surface,
                                          CornerRadius = @ShapeExtraSmall,
                                          Padding = (10, 4, 10, 4) ] {
-                            TextBlock [Text="Pattern", Foreground=@OnSurface, FontSize=12]
+                            TextBlock [Text="Pattern", Foreground=@OnSurface, Style=@LabelMedium]
                         }
                     }
                     // ── Solid body ───────────────────────────────
@@ -2580,36 +2554,36 @@ resources MuralFramework {
                                          CornerRadius = @ShapeExtraSmall,
                                          Padding = (10, 4, 10, 4),
                                          Margin = (0, 0, 4, 0) ] {
-                            TextBlock [Text="Solid", Foreground=@OnSurface, FontSize=12]
+                            TextBlock [Text="Solid", Foreground=@OnSurface, Style=@LabelMedium]
                         }
                         ClickableBorder x:name="PART_TabLinear"
                                        [ Background = @SecondaryContainer,
                                          CornerRadius = @ShapeExtraSmall,
                                          Padding = (10, 4, 10, 4),
                                          Margin = (0, 0, 4, 0) ] {
-                            TextBlock [Text="Linear", Foreground=@OnSecondaryContainer, FontSize=12]
+                            TextBlock [Text="Linear", Foreground=@OnSecondaryContainer, Style=@LabelMedium]
                         }
                         ClickableBorder x:name="PART_TabRadial"
                                        [ Background = @Surface,
                                          CornerRadius = @ShapeExtraSmall,
                                          Padding = (10, 4, 10, 4),
                                          Margin = (0, 0, 4, 0) ] {
-                            TextBlock [Text="Radial", Foreground=@OnSurface, FontSize=12]
+                            TextBlock [Text="Radial", Foreground=@OnSurface, Style=@LabelMedium]
                         }
                         ClickableBorder x:name="PART_TabPattern"
                                        [ Background = @Surface,
                                          CornerRadius = @ShapeExtraSmall,
                                          Padding = (10, 4, 10, 4) ] {
-                            TextBlock [Text="Pattern", Foreground=@OnSurface, FontSize=12]
+                            TextBlock [Text="Pattern", Foreground=@OnSurface, Style=@LabelMedium]
                         }
                     }
                     StackPanel [Orientation=Vertical, Margin=(0, 4, 0, 0)] {
-                        TextBlock [Text="Start colour", FontSize=11, Foreground=@OnSurfaceVariant, Margin=(0,0,0,2)]
+                        TextBlock [Text="Start colour", Style=@LabelSmall, Foreground=@OnSurfaceVariant, Margin=(0,0,0,2)]
                         ColorPicker x:name="PART_LinearStart"
-                        TextBlock [Text="End colour", FontSize=11, Foreground=@OnSurfaceVariant, Margin=(0,8,0,2)]
+                        TextBlock [Text="End colour", Style=@LabelSmall, Foreground=@OnSurfaceVariant, Margin=(0,8,0,2)]
                         ColorPicker x:name="PART_LinearEnd"
                         StackPanel [Orientation=Horizontal, Margin=(0,10,0,0)] {
-                            TextBlock [Text="Angle", Width=48, FontSize=11, Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
+                            TextBlock [Text="Angle", Width=48, Style=@LabelSmall, Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
                             Slider x:name="PART_LinearAngle"
                                    [Width=240, Minimum=-180, Maximum=180, SmallChange=1, LargeChange=15]
                         }
@@ -2637,36 +2611,36 @@ resources MuralFramework {
                     StackPanel [Orientation=Horizontal, Margin=(0, 0, 0, 10)] {
                         ClickableBorder x:name="PART_TabSolid"
                                        [ Background = @Surface, CornerRadius = @ShapeExtraSmall, Padding = (10, 4, 10, 4), Margin = (0, 0, 4, 0) ] {
-                            TextBlock [Text="Solid", Foreground=@OnSurface, FontSize=12]
+                            TextBlock [Text="Solid", Foreground=@OnSurface, Style=@LabelMedium]
                         }
                         ClickableBorder x:name="PART_TabLinear"
                                        [ Background = @Surface, CornerRadius = @ShapeExtraSmall, Padding = (10, 4, 10, 4), Margin = (0, 0, 4, 0) ] {
-                            TextBlock [Text="Linear", Foreground=@OnSurface, FontSize=12]
+                            TextBlock [Text="Linear", Foreground=@OnSurface, Style=@LabelMedium]
                         }
                         ClickableBorder x:name="PART_TabRadial"
                                        [ Background = @SecondaryContainer, CornerRadius = @ShapeExtraSmall, Padding = (10, 4, 10, 4), Margin = (0, 0, 4, 0) ] {
-                            TextBlock [Text="Radial", Foreground=@OnSecondaryContainer, FontSize=12]
+                            TextBlock [Text="Radial", Foreground=@OnSecondaryContainer, Style=@LabelMedium]
                         }
                         ClickableBorder x:name="PART_TabPattern"
                                        [ Background = @Surface, CornerRadius = @ShapeExtraSmall, Padding = (10, 4, 10, 4) ] {
-                            TextBlock [Text="Pattern", Foreground=@OnSurface, FontSize=12]
+                            TextBlock [Text="Pattern", Foreground=@OnSurface, Style=@LabelMedium]
                         }
                     }
                     StackPanel [Orientation=Vertical, Margin=(0, 4, 0, 0)] {
-                        TextBlock [Text="Inner colour", FontSize=11, Foreground=@OnSurfaceVariant, Margin=(0,0,0,2)]
+                        TextBlock [Text="Inner colour", Style=@LabelSmall, Foreground=@OnSurfaceVariant, Margin=(0,0,0,2)]
                         ColorPicker x:name="PART_RadialInner"
-                        TextBlock [Text="Outer colour", FontSize=11, Foreground=@OnSurfaceVariant, Margin=(0,8,0,2)]
+                        TextBlock [Text="Outer colour", Style=@LabelSmall, Foreground=@OnSurfaceVariant, Margin=(0,8,0,2)]
                         ColorPicker x:name="PART_RadialOuter"
                         StackPanel [Orientation=Horizontal, Margin=(0,10,0,0)] {
-                            TextBlock [Text="Cx %",   Width=48, FontSize=11, Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
+                            TextBlock [Text="Cx %",   Width=48, Style=@LabelSmall, Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
                             Slider x:name="PART_RadialCenterX" [Width=240, Minimum=0, Maximum=100, SmallChange=1, LargeChange=10]
                         }
                         StackPanel [Orientation=Horizontal, Margin=(0,4,0,0)] {
-                            TextBlock [Text="Cy %",   Width=48, FontSize=11, Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
+                            TextBlock [Text="Cy %",   Width=48, Style=@LabelSmall, Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
                             Slider x:name="PART_RadialCenterY" [Width=240, Minimum=0, Maximum=100, SmallChange=1, LargeChange=10]
                         }
                         StackPanel [Orientation=Horizontal, Margin=(0,4,0,0)] {
-                            TextBlock [Text="Radius %", Width=48, FontSize=11, Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
+                            TextBlock [Text="Radius %", Width=48, Style=@LabelSmall, Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
                             Slider x:name="PART_RadialRadius"  [Width=240, Minimum=1, Maximum=100, SmallChange=1, LargeChange=10]
                         }
                     }
@@ -2695,40 +2669,40 @@ resources MuralFramework {
                     StackPanel [Orientation=Horizontal, Margin=(0, 0, 0, 10)] {
                         ClickableBorder x:name="PART_TabSolid"
                                        [ Background = @Surface, CornerRadius = @ShapeExtraSmall, Padding = (10, 4, 10, 4), Margin = (0, 0, 4, 0) ] {
-                            TextBlock [Text="Solid", Foreground=@OnSurface, FontSize=12]
+                            TextBlock [Text="Solid", Foreground=@OnSurface, Style=@LabelMedium]
                         }
                         ClickableBorder x:name="PART_TabLinear"
                                        [ Background = @Surface, CornerRadius = @ShapeExtraSmall, Padding = (10, 4, 10, 4), Margin = (0, 0, 4, 0) ] {
-                            TextBlock [Text="Linear", Foreground=@OnSurface, FontSize=12]
+                            TextBlock [Text="Linear", Foreground=@OnSurface, Style=@LabelMedium]
                         }
                         ClickableBorder x:name="PART_TabRadial"
                                        [ Background = @Surface, CornerRadius = @ShapeExtraSmall, Padding = (10, 4, 10, 4), Margin = (0, 0, 4, 0) ] {
-                            TextBlock [Text="Radial", Foreground=@OnSurface, FontSize=12]
+                            TextBlock [Text="Radial", Foreground=@OnSurface, Style=@LabelMedium]
                         }
                         ClickableBorder x:name="PART_TabPattern"
                                        [ Background = @SecondaryContainer, CornerRadius = @ShapeExtraSmall, Padding = (10, 4, 10, 4) ] {
-                            TextBlock [Text="Pattern", Foreground=@OnSecondaryContainer, FontSize=12]
+                            TextBlock [Text="Pattern", Foreground=@OnSecondaryContainer, Style=@LabelMedium]
                         }
                     }
                     StackPanel [Orientation=Vertical, Margin=(0, 4, 0, 0)] {
                         StackPanel [Orientation=Horizontal, Margin=(0,0,0,8)] {
-                            TextBlock [Text="Kind", Width=64, FontSize=11, Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
+                            TextBlock [Text="Kind", Width=64, Style=@LabelSmall, Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
                             ComboBox x:name="PART_PatternKind" [Width=232]
                         }
-                        TextBlock [Text="Foreground", FontSize=11, Foreground=@OnSurfaceVariant, Margin=(0,0,0,2)]
+                        TextBlock [Text="Foreground", Style=@LabelSmall, Foreground=@OnSurfaceVariant, Margin=(0,0,0,2)]
                         ColorPicker x:name="PART_PatternForeground"
-                        TextBlock [Text="Background", FontSize=11, Foreground=@OnSurfaceVariant, Margin=(0,8,0,2)]
+                        TextBlock [Text="Background", Style=@LabelSmall, Foreground=@OnSurfaceVariant, Margin=(0,8,0,2)]
                         ColorPicker x:name="PART_PatternBackground"
                         StackPanel [Orientation=Horizontal, Margin=(0,10,0,0)] {
-                            TextBlock [Text="Size",  Width=64, FontSize=11, Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
+                            TextBlock [Text="Size",  Width=64, Style=@LabelSmall, Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
                             Slider x:name="PART_PatternSize"   [Width=232, Minimum=2, Maximum=64, SmallChange=1, LargeChange=4]
                         }
                         StackPanel [Orientation=Horizontal, Margin=(0,4,0,0)] {
-                            TextBlock [Text="Angle", Width=64, FontSize=11, Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
+                            TextBlock [Text="Angle", Width=64, Style=@LabelSmall, Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
                             Slider x:name="PART_PatternAngle"  [Width=232, Minimum=0,  Maximum=180, SmallChange=1, LargeChange=15]
                         }
                         StackPanel [Orientation=Horizontal, Margin=(0,4,0,0)] {
-                            TextBlock [Text="Stroke", Width=64, FontSize=11, Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
+                            TextBlock [Text="Stroke", Width=64, Style=@LabelSmall, Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
                             Slider x:name="PART_PatternStroke" [Width=232, Minimum=0.5,Maximum=8,   SmallChange=0.5, LargeChange=1]
                         }
                     }
@@ -2760,50 +2734,108 @@ resources MuralFramework {
     // it out when the editor's Join isn't Miter.
     Template x:key="DefaultPenEditor" [TargetType=PenEditor] {
         StackPanel [Orientation=Vertical] {
-            // Brush
-            StackPanel [Orientation=Vertical, Margin=(0,0,0,@Spacing3)] {
-                TextBlock [Text="Brush", FontSize=11, FontWeight=Bold, Foreground=@OnSurface, Margin=(0,0,0,2)]
+            // Section header — kept inside the editor so the
+            // ShapeFormatControl template stays a flat pair of editors
+            // and Fill/Line read with identical chrome.
+            TextBlock [Style=@TitleSmall, Text="Line",
+                       Foreground=@OnSurface, Margin=(0,0,0,@Spacing3)]
+            // Two-column property grid — left column Auto-sized to the
+            // widest label, right column takes the rest. Each editor row
+            // is its own RowDefinition. The Miter limit row's label +
+            // editor are separately named so PenEditor.ts can flip both
+            // to Visibility=Collapsed when LineJoin ≠ Miter; with both
+            // cells in the row Collapsed, the Auto-sized row height
+            // contracts to 0 and the row visually disappears.
+            //
+            // MaxWidth caps the Star column when the host is unbounded
+            // (e.g., inside a ScrollViewer that measures with Infinity).
+            // Without it the Star track inflates to Infinity and child
+            // rects emit NaN/Infinity into the SVG output.
+            Grid [MaxWidth=300] {
+                ColumnDefinitions {
+                    ColumnDefinition [Width=GridLength.Auto]
+                    ColumnDefinition [Width=GridLength.Star]
+                }
+                RowDefinitions {
+                    RowDefinition [Height=GridLength.Auto]
+                    RowDefinition [Height=GridLength.Auto]
+                    RowDefinition [Height=GridLength.Auto]
+                    RowDefinition [Height=GridLength.Auto]
+                    RowDefinition [Height=GridLength.Auto]
+                    RowDefinition [Height=GridLength.Auto]
+                }
+                // Brush
+                TextBlock [Grid.Row=0, Grid.Column=0,
+                           Style=@LabelSmall, Text="Brush",
+                           Foreground=@OnSurface,
+                           VerticalAlignment=Center,
+                           Margin=(0,0,@Spacing3,@Spacing3)]
                 BrushPicker x:name="PART_BrushPicker"
-            }
-            // Thickness (px)
-            StackPanel [Orientation=Vertical, Margin=(0,0,0,@Spacing3)] {
-                TextBlock [Text="Thickness", FontSize=11, FontWeight=Bold, Foreground=@OnSurface, Margin=(0,0,0,2)]
-                StackPanel [Orientation=Horizontal] {
-                    Slider x:name="PART_Thickness"
-                           [Width=200, Minimum=0, Maximum=24, SmallChange=0.5, LargeChange=2]
-                    TextBlock x:name="PART_ThicknessReadout"
-                              [Text="1 px", FontSize=12, Foreground=@OnSurfaceVariant,
-                               VerticalAlignment=Center, Margin=(8,0,0,0)]
-                }
-            }
-            // DashStyle — Items + SelectedItem populated by
-            // PenEditor.adoptTemplateParts (see DASH_OPTIONS there).
-            // DisplayMemberPath = "Label" so the dropdown shows the
-            // human strings; the editor reads .Value back.
-            StackPanel [Orientation=Vertical, Margin=(0,0,0,@Spacing3)] {
-                TextBlock [Text="Dash", FontSize=11, FontWeight=Bold, Foreground=@OnSurface, Margin=(0,0,0,2)]
-                ComboBox x:name="PART_Dash" [Width=260, DisplayMemberPath="Label"]
-            }
-            StackPanel [Orientation=Vertical, Margin=(0,0,0,@Spacing3)] {
-                TextBlock [Text="Cap", FontSize=11, FontWeight=Bold, Foreground=@OnSurface, Margin=(0,0,0,2)]
-                ComboBox x:name="PART_Cap"  [Width=260, DisplayMemberPath="Label"]
-            }
-            StackPanel [Orientation=Vertical, Margin=(0,0,0,@Spacing3)] {
-                TextBlock [Text="Join", FontSize=11, FontWeight=Bold, Foreground=@OnSurface, Margin=(0,0,0,2)]
-                ComboBox x:name="PART_Join" [Width=260, DisplayMemberPath="Label"]
-            }
-            // MiterLimit (only meaningful when Join=Miter — the
-            // visibility shape is "row is laid out but height
-            // collapses". Hidden until proper Visibility DP lands.)
-            StackPanel x:name="PART_MiterRow" [Orientation=Vertical, Margin=(0,0,0,@Spacing3)] {
-                TextBlock [Text="Miter limit", FontSize=11, FontWeight=Bold, Foreground=@OnSurface, Margin=(0,0,0,2)]
-                StackPanel [Orientation=Horizontal] {
-                    Slider x:name="PART_MiterLimit"
-                           [Width=200, Minimum=1, Maximum=20, SmallChange=0.5, LargeChange=2]
-                    TextBlock x:name="PART_MiterReadout"
-                              [Text="10", FontSize=12, Foreground=@OnSurfaceVariant,
-                               VerticalAlignment=Center, Margin=(8,0,0,0)]
-                }
+                            [Grid.Row=0, Grid.Column=1,
+                             Margin=(0,0,0,@Spacing3)]
+                // Thickness — narrow numeric SpinEdit, kept compact
+                // (MaxWidth=120) so the editor cell stays consistent
+                // with the Fill section's transparency input.
+                TextBlock [Grid.Row=1, Grid.Column=0,
+                           Style=@LabelSmall, Text="Thickness",
+                           Foreground=@OnSurface,
+                           VerticalAlignment=Center,
+                           Margin=(0,0,@Spacing3,@Spacing3)]
+                SpinEdit x:name="PART_Thickness"
+                         [Grid.Row=1, Grid.Column=1,
+                          HorizontalAlignment=Left, MaxWidth=120, Width=120,
+                          Minimum=0, Maximum=24, SmallChange=0.5, LargeChange=2,
+                          DecimalPlaces=1,
+                          Margin=(0,0,0,@Spacing3)]
+                // DashStyle — Items + SelectedItem populated by
+                // PenEditor.adoptTemplateParts (see DASH_OPTIONS there).
+                // DisplayMemberPath = "Label" so the dropdown shows the
+                // human strings; the editor reads .Value back.
+                TextBlock [Grid.Row=2, Grid.Column=0,
+                           Style=@LabelSmall, Text="Dash",
+                           Foreground=@OnSurface,
+                           VerticalAlignment=Center,
+                           Margin=(0,0,@Spacing3,@Spacing3)]
+                ComboBox x:name="PART_Dash"
+                         [Grid.Row=2, Grid.Column=1,
+                          TextBlock.FontSize=@BodySmallSize, DisplayMemberPath="Label",
+                          Margin=(0,0,0,@Spacing3)]
+                // Cap
+                TextBlock [Grid.Row=3, Grid.Column=0,
+                           Style=@LabelSmall, Text="Cap",
+                           Foreground=@OnSurface,
+                           VerticalAlignment=Center,
+                           Margin=(0,0,@Spacing3,@Spacing3)]
+                ComboBox x:name="PART_Cap"
+                         [Grid.Row=3, Grid.Column=1,
+                          TextBlock.FontSize=@BodySmallSize, DisplayMemberPath="Label",
+                          Margin=(0,0,0,@Spacing3)]
+                // Join
+                TextBlock [Grid.Row=4, Grid.Column=0,
+                           Style=@LabelSmall, Text="Join",
+                           Foreground=@OnSurface,
+                           VerticalAlignment=Center,
+                           Margin=(0,0,@Spacing3,@Spacing3)]
+                ComboBox x:name="PART_Join"
+                         [Grid.Row=4, Grid.Column=1,
+                          TextBlock.FontSize=@BodySmallSize, DisplayMemberPath="Label",
+                          Margin=(0,0,0,@Spacing3)]
+                // Miter limit — only meaningful when LineJoin=Miter.
+                // PenEditor.refreshMiterRowVisibility toggles
+                // PART_MiterLabel + PART_MiterLimit in lock-step;
+                // when both children of an Auto-sized row are Collapsed
+                // the row's DesiredSize collapses to zero.
+                TextBlock x:name="PART_MiterLabel"
+                          [Grid.Row=5, Grid.Column=0,
+                           Style=@LabelSmall, Text="Miter limit",
+                           Foreground=@OnSurface,
+                           VerticalAlignment=Center,
+                           Margin=(0,0,@Spacing3,0)]
+                SpinEdit x:name="PART_MiterLimit"
+                         [Grid.Row=5, Grid.Column=1,
+                          HorizontalAlignment=Left, MaxWidth=120, Width=120,
+                          Minimum=1, Maximum=20, SmallChange=0.5, LargeChange=2,
+                          DecimalPlaces=1]
             }
         }
     }
@@ -2820,20 +2852,33 @@ resources MuralFramework {
     // the active-tab highlight rides through Style triggers below.
 
     Template x:key="DefaultFillEditor" [TargetType=FillEditor] {
-        StackPanel [Orientation=Vertical] {
+        StackPanel x:name="PART_FillSection" [Orientation=Vertical] {
+            // Section header — kept inside the editor so the
+            // ShapeFormatControl template stays a flat pair of editors.
+            // The header + variant tab row are ALWAYS visible (so the
+            // user can switch back to a brush after picking No fill);
+            // only the body slot + transparency row collapse on
+            // Variant=None. Whole-section collapse for the "no shape
+            // selected" state lives on PART_Editors in
+            // ShapeFormatControl, one level up.
+            TextBlock [Style=@TitleSmall, Text="Fill",
+                       Foreground=@OnSurface, Margin=(0,0,0,@Spacing3)]
             // ── Variant tabs ────────────────────────────────────
             // ClickableBorder for each of the six variants. Default
             // background is @Surface; the Style triggers below flip
-            // the active one to @SecondaryContainer.
-            WrapPanel [Orientation=Horizontal, Margin=(0,0,0,@Spacing4)] {
+            // the active one to @SecondaryContainer. UniformGrid 3×2
+            // lays them in two rows regardless of pane width.
+            UniformGrid [Columns=3, Margin=(0,0,0,@Spacing4)] {
                 ClickableBorder x:name="PART_TabNone"
                                [ Background = @Surface,
                                  BorderBrush = @OutlineVariant,
                                  BorderThickness = (1),
                                  CornerRadius = @ShapeExtraSmall,
                                  Padding = (12, 6, 12, 6),
-                                 Margin = (0, 0, 4, 4) ] {
-                    TextBlock [Text="No fill", Foreground=@OnSurface, FontSize=12]
+                                 Margin = (0, 0, 4, 4),
+                                 HorizontalAlignment = Stretch ] {
+                    TextBlock [Text="No fill", Foreground=@OnSurface, Style=@LabelMedium,
+                               HorizontalAlignment=Center]
                 }
                 ClickableBorder x:name="PART_TabSolid"
                                [ Background = @Surface,
@@ -2841,8 +2886,10 @@ resources MuralFramework {
                                  BorderThickness = (1),
                                  CornerRadius = @ShapeExtraSmall,
                                  Padding = (12, 6, 12, 6),
-                                 Margin = (0, 0, 4, 4) ] {
-                    TextBlock [Text="Solid", Foreground=@OnSurface, FontSize=12]
+                                 Margin = (0, 0, 4, 4),
+                                 HorizontalAlignment = Stretch ] {
+                    TextBlock [Text="Solid", Foreground=@OnSurface, Style=@LabelMedium,
+                               HorizontalAlignment=Center]
                 }
                 ClickableBorder x:name="PART_TabLinear"
                                [ Background = @Surface,
@@ -2850,8 +2897,10 @@ resources MuralFramework {
                                  BorderThickness = (1),
                                  CornerRadius = @ShapeExtraSmall,
                                  Padding = (12, 6, 12, 6),
-                                 Margin = (0, 0, 4, 4) ] {
-                    TextBlock [Text="Linear", Foreground=@OnSurface, FontSize=12]
+                                 Margin = (0, 0, 4, 4),
+                                 HorizontalAlignment = Stretch ] {
+                    TextBlock [Text="Linear", Foreground=@OnSurface, Style=@LabelMedium,
+                               HorizontalAlignment=Center]
                 }
                 ClickableBorder x:name="PART_TabRadial"
                                [ Background = @Surface,
@@ -2859,8 +2908,10 @@ resources MuralFramework {
                                  BorderThickness = (1),
                                  CornerRadius = @ShapeExtraSmall,
                                  Padding = (12, 6, 12, 6),
-                                 Margin = (0, 0, 4, 4) ] {
-                    TextBlock [Text="Radial", Foreground=@OnSurface, FontSize=12]
+                                 Margin = (0, 0, 4, 4),
+                                 HorizontalAlignment = Stretch ] {
+                    TextBlock [Text="Radial", Foreground=@OnSurface, Style=@LabelMedium,
+                               HorizontalAlignment=Center]
                 }
                 ClickableBorder x:name="PART_TabPattern"
                                [ Background = @Surface,
@@ -2868,8 +2919,10 @@ resources MuralFramework {
                                  BorderThickness = (1),
                                  CornerRadius = @ShapeExtraSmall,
                                  Padding = (12, 6, 12, 6),
-                                 Margin = (0, 0, 4, 4) ] {
-                    TextBlock [Text="Pattern", Foreground=@OnSurface, FontSize=12]
+                                 Margin = (0, 0, 4, 4),
+                                 HorizontalAlignment = Stretch ] {
+                    TextBlock [Text="Pattern", Foreground=@OnSurface, Style=@LabelMedium,
+                               HorizontalAlignment=Center]
                 }
                 ClickableBorder x:name="PART_TabPicture"
                                [ Background = @Surface,
@@ -2877,8 +2930,10 @@ resources MuralFramework {
                                  BorderThickness = (1),
                                  CornerRadius = @ShapeExtraSmall,
                                  Padding = (12, 6, 12, 6),
-                                 Margin = (0, 0, 4, 4) ] {
-                    TextBlock [Text="Picture", Foreground=@OnSurface, FontSize=12]
+                                 Margin = (0, 0, 4, 4),
+                                 HorizontalAlignment = Stretch ] {
+                    TextBlock [Text="Picture", Foreground=@OnSurface, Style=@LabelMedium,
+                               HorizontalAlignment=Center]
                 }
             }
 
@@ -2886,23 +2941,41 @@ resources MuralFramework {
             // FillEditor.applyBodyTemplate() materialises the Style-
             // picked BodyTemplate here. Border gives a stable single-
             // child container without any visible chrome of its own.
-            Border x:name="PART_BodyHost" [Margin=(0,0,0,@Spacing4)]
+            // MaxWidth caps the slot so the per-variant 2-column Grids
+            // below don't inflate their Star tracks to Infinity when
+            // the editor lives inside an unbounded host (ScrollViewer).
+            Border x:name="PART_BodyHost" [MaxWidth=300, Margin=(0,0,0,@Spacing4)]
 
             // ── Opacity row ─────────────────────────────────────
-            // Visible for every non-None variant; collapsed to
-            // Height=0 by FillEditor.refreshOpacityRowVisibility when
-            // Variant=None.
-            StackPanel x:name="PART_OpacityRow" [Orientation=Vertical] {
-                TextBlock [Text="Transparency",
-                           FontSize=11, FontWeight=Bold,
-                           Foreground=@OnSurface, Margin=(0,0,0,2)]
-                StackPanel [Orientation=Horizontal] {
-                    Slider x:name="PART_OpacitySlider"
-                           [Width=240, Minimum=0, Maximum=100, SmallChange=1, LargeChange=10]
-                    TextBlock x:name="PART_OpacityReadout"
-                              [Text="100%", FontSize=12, Foreground=@OnSurfaceVariant,
-                               VerticalAlignment=Center, Margin=(8,0,0,0)]
+            // Visible for every non-None variant; collapsed by
+            // FillEditor.refreshOpacityRowVisibility when Variant=None
+            // (alongside PART_BodyHost — the tabs above stay visible
+            // so the user can switch back to a brush).
+            // SpinEdit replaces the old slider+readout pair (request #3).
+            // Wrapped in its own 2-column Grid so the Transparency
+            // label aligns with the labels in the body grid above.
+            Grid x:name="PART_OpacityRow" [MaxWidth=300] {
+                ColumnDefinitions {
+                    ColumnDefinition [Width=GridLength.Auto]
+                    ColumnDefinition [Width=GridLength.Star]
                 }
+                // Explicit Auto row — without it the Grid defaults to a
+                // 1* row that absorbs the unbounded available height
+                // from the surrounding vertical StackPanel and yields
+                // Infinity rect dimensions.
+                RowDefinitions {
+                    RowDefinition [Height=GridLength.Auto]
+                }
+                TextBlock [Grid.Column=0,
+                           Style=@LabelSmall, Text="Transparency",
+                           Foreground=@OnSurface,
+                           VerticalAlignment=Center,
+                           Margin=(0,0,@Spacing3,0)]
+                SpinEdit x:name="PART_OpacityEdit"
+                         [Grid.Column=1,
+                          HorizontalAlignment=Left, MaxWidth=120, Width=120,
+                          Minimum=0, Maximum=100, SmallChange=1, LargeChange=10,
+                          DecimalPlaces=0]
             }
         }
 
@@ -2919,119 +2992,254 @@ resources MuralFramework {
     // bindings inside resolve to the FillEditor's mirror DPs. The body
     // template's root visual gets slotted into PART_BodyHost.
 
+    // None body — empty. Variant=None collapses PART_BodyHost via
+    // FillEditor.refreshOpacityRowVisibility, so the body content
+    // never paints in this state; an empty Border keeps
+    // applyBodyTemplate's Apply() path well-formed.
     Template x:key="FillEditorBodyNone" [TargetType=FillEditor] {
-        TextBlock [Text="No fill — the shape's Fill is cleared.",
-                   FontSize=12, Foreground=@OnSurfaceVariant]
+        Border [Height=0]
     }
 
+    // Each body template uses a 2-column Grid — Auto-sized label column
+    // on the left, Star-sized editor column on the right. Editor cells
+    // inherit Stretch alignment from the Grid cell so ColorPickers /
+    // Sliders / ComboBoxes fill the available width.
+
     Template x:key="FillEditorBodySolid" [TargetType=FillEditor] {
-        StackPanel [Orientation=Vertical] {
-            TextBlock [Text="Colour", FontSize=11, FontWeight=Bold,
-                       Foreground=@OnSurface, Margin=(0,0,0,2)]
-            ColorPicker x:name="PART_SolidColor" [Variant=RGB]
+        Grid {
+            ColumnDefinitions {
+                ColumnDefinition [Width=GridLength.Auto]
+                ColumnDefinition [Width=GridLength.Star]
+            }
+            // Explicit Auto row — without it the Grid defaults to a
+            // single 1* row, which absorbs any unbounded available
+            // height the host hands in (e.g. ScrollViewer's Infinity
+            // measure) and propagates Infinity into child rect heights.
+            RowDefinitions {
+                RowDefinition [Height=GridLength.Auto]
+            }
+            TextBlock [Grid.Column=0,
+                       Style=@LabelSmall, Text="Colour",
+                       Foreground=@OnSurface,
+                       VerticalAlignment=Center,
+                       Margin=(0,0,@Spacing3,0)]
+            ColorPicker x:name="PART_SolidColor"
+                        [Grid.Column=1, Variant=RGB]
         }
     }
 
     Template x:key="FillEditorBodyLinear" [TargetType=FillEditor] {
-        StackPanel [Orientation=Vertical] {
-            TextBlock [Text="Start colour", FontSize=11,
-                       Foreground=@OnSurfaceVariant, Margin=(0,0,0,2)]
-            ColorPicker x:name="PART_LinearStart"
-            TextBlock [Text="End colour", FontSize=11,
-                       Foreground=@OnSurfaceVariant, Margin=(0,8,0,2)]
-            ColorPicker x:name="PART_LinearEnd"
-            StackPanel [Orientation=Horizontal, Margin=(0,10,0,0)] {
-                TextBlock [Text="Angle", Width=56, FontSize=11,
-                           Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
-                Slider x:name="PART_LinearAngle"
-                       [Width=240, Minimum=-180, Maximum=180,
-                        SmallChange=1, LargeChange=15]
+        Grid {
+            ColumnDefinitions {
+                ColumnDefinition [Width=GridLength.Auto]
+                ColumnDefinition [Width=GridLength.Star]
             }
+            RowDefinitions {
+                RowDefinition [Height=GridLength.Auto]
+                RowDefinition [Height=GridLength.Auto]
+                RowDefinition [Height=GridLength.Auto]
+            }
+            TextBlock [Grid.Row=0, Grid.Column=0,
+                       Style=@LabelSmall, Text="Start colour",
+                       Foreground=@OnSurfaceVariant,
+                       VerticalAlignment=Center,
+                       Margin=(0,0,@Spacing3,@Spacing2)]
+            ColorPicker x:name="PART_LinearStart"
+                        [Grid.Row=0, Grid.Column=1,
+                         Margin=(0,0,0,@Spacing2)]
+            TextBlock [Grid.Row=1, Grid.Column=0,
+                       Style=@LabelSmall, Text="End colour",
+                       Foreground=@OnSurfaceVariant,
+                       VerticalAlignment=Center,
+                       Margin=(0,0,@Spacing3,@Spacing2)]
+            ColorPicker x:name="PART_LinearEnd"
+                        [Grid.Row=1, Grid.Column=1,
+                         Margin=(0,0,0,@Spacing2)]
+            TextBlock [Grid.Row=2, Grid.Column=0,
+                       Style=@LabelSmall, Text="Angle",
+                       Foreground=@OnSurfaceVariant,
+                       VerticalAlignment=Center,
+                       Margin=(0,0,@Spacing3,0)]
+            Slider x:name="PART_LinearAngle"
+                   [Grid.Row=2, Grid.Column=1,
+                    Minimum=-180, Maximum=180,
+                    SmallChange=1, LargeChange=15]
         }
     }
 
     Template x:key="FillEditorBodyRadial" [TargetType=FillEditor] {
-        StackPanel [Orientation=Vertical] {
-            TextBlock [Text="Inner colour", FontSize=11,
-                       Foreground=@OnSurfaceVariant, Margin=(0,0,0,2)]
+        Grid {
+            ColumnDefinitions {
+                ColumnDefinition [Width=GridLength.Auto]
+                ColumnDefinition [Width=GridLength.Star]
+            }
+            RowDefinitions {
+                RowDefinition [Height=GridLength.Auto]
+                RowDefinition [Height=GridLength.Auto]
+                RowDefinition [Height=GridLength.Auto]
+                RowDefinition [Height=GridLength.Auto]
+                RowDefinition [Height=GridLength.Auto]
+            }
+            TextBlock [Grid.Row=0, Grid.Column=0,
+                       Style=@LabelSmall, Text="Inner colour",
+                       Foreground=@OnSurfaceVariant,
+                       VerticalAlignment=Center,
+                       Margin=(0,0,@Spacing3,@Spacing2)]
             ColorPicker x:name="PART_RadialInner"
-            TextBlock [Text="Outer colour", FontSize=11,
-                       Foreground=@OnSurfaceVariant, Margin=(0,8,0,2)]
+                        [Grid.Row=0, Grid.Column=1,
+                         Margin=(0,0,0,@Spacing2)]
+            TextBlock [Grid.Row=1, Grid.Column=0,
+                       Style=@LabelSmall, Text="Outer colour",
+                       Foreground=@OnSurfaceVariant,
+                       VerticalAlignment=Center,
+                       Margin=(0,0,@Spacing3,@Spacing2)]
             ColorPicker x:name="PART_RadialOuter"
-            StackPanel [Orientation=Horizontal, Margin=(0,10,0,0)] {
-                TextBlock [Text="Cx %", Width=56, FontSize=11,
-                           Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
-                Slider x:name="PART_RadialCenterX"
-                       [Width=240, Minimum=0, Maximum=100,
-                        SmallChange=1, LargeChange=10]
-            }
-            StackPanel [Orientation=Horizontal, Margin=(0,4,0,0)] {
-                TextBlock [Text="Cy %", Width=56, FontSize=11,
-                           Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
-                Slider x:name="PART_RadialCenterY"
-                       [Width=240, Minimum=0, Maximum=100,
-                        SmallChange=1, LargeChange=10]
-            }
-            StackPanel [Orientation=Horizontal, Margin=(0,4,0,0)] {
-                TextBlock [Text="Radius %", Width=56, FontSize=11,
-                           Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
-                Slider x:name="PART_RadialRadius"
-                       [Width=240, Minimum=1, Maximum=100,
-                        SmallChange=1, LargeChange=10]
-            }
+                        [Grid.Row=1, Grid.Column=1,
+                         Margin=(0,0,0,@Spacing2)]
+            TextBlock [Grid.Row=2, Grid.Column=0,
+                       Style=@LabelSmall, Text="Cx %",
+                       Foreground=@OnSurfaceVariant,
+                       VerticalAlignment=Center,
+                       Margin=(0,0,@Spacing3,@Spacing2)]
+            Slider x:name="PART_RadialCenterX"
+                   [Grid.Row=2, Grid.Column=1,
+                    Minimum=0, Maximum=100,
+                    SmallChange=1, LargeChange=10,
+                    Margin=(0,0,0,@Spacing2)]
+            TextBlock [Grid.Row=3, Grid.Column=0,
+                       Style=@LabelSmall, Text="Cy %",
+                       Foreground=@OnSurfaceVariant,
+                       VerticalAlignment=Center,
+                       Margin=(0,0,@Spacing3,@Spacing2)]
+            Slider x:name="PART_RadialCenterY"
+                   [Grid.Row=3, Grid.Column=1,
+                    Minimum=0, Maximum=100,
+                    SmallChange=1, LargeChange=10,
+                    Margin=(0,0,0,@Spacing2)]
+            TextBlock [Grid.Row=4, Grid.Column=0,
+                       Style=@LabelSmall, Text="Radius %",
+                       Foreground=@OnSurfaceVariant,
+                       VerticalAlignment=Center,
+                       Margin=(0,0,@Spacing3,0)]
+            Slider x:name="PART_RadialRadius"
+                   [Grid.Row=4, Grid.Column=1,
+                    Minimum=1, Maximum=100,
+                    SmallChange=1, LargeChange=10]
         }
     }
 
     Template x:key="FillEditorBodyPattern" [TargetType=FillEditor] {
-        StackPanel [Orientation=Vertical] {
-            StackPanel [Orientation=Horizontal, Margin=(0,0,0,8)] {
-                TextBlock [Text="Kind", Width=72, FontSize=11,
-                           Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
-                ComboBox x:name="PART_PatternKind" [Width=224]
+        Grid {
+            ColumnDefinitions {
+                ColumnDefinition [Width=GridLength.Auto]
+                ColumnDefinition [Width=GridLength.Star]
             }
-            TextBlock [Text="Foreground", FontSize=11,
-                       Foreground=@OnSurfaceVariant, Margin=(0,0,0,2)]
+            RowDefinitions {
+                RowDefinition [Height=GridLength.Auto]
+                RowDefinition [Height=GridLength.Auto]
+                RowDefinition [Height=GridLength.Auto]
+                RowDefinition [Height=GridLength.Auto]
+                RowDefinition [Height=GridLength.Auto]
+                RowDefinition [Height=GridLength.Auto]
+            }
+            TextBlock [Grid.Row=0, Grid.Column=0,
+                       Style=@LabelSmall, Text="Kind",
+                       Foreground=@OnSurfaceVariant,
+                       VerticalAlignment=Center,
+                       Margin=(0,0,@Spacing3,@Spacing2)]
+            ComboBox x:name="PART_PatternKind"
+                     [Grid.Row=0, Grid.Column=1,
+                      TextBlock.FontSize=@BodySmallSize,
+                      Margin=(0,0,0,@Spacing2)]
+            TextBlock [Grid.Row=1, Grid.Column=0,
+                       Style=@LabelSmall, Text="Foreground",
+                       Foreground=@OnSurfaceVariant,
+                       VerticalAlignment=Center,
+                       Margin=(0,0,@Spacing3,@Spacing2)]
             ColorPicker x:name="PART_PatternForeground"
-            TextBlock [Text="Background", FontSize=11,
-                       Foreground=@OnSurfaceVariant, Margin=(0,8,0,2)]
+                        [Grid.Row=1, Grid.Column=1,
+                         Margin=(0,0,0,@Spacing2)]
+            TextBlock [Grid.Row=2, Grid.Column=0,
+                       Style=@LabelSmall, Text="Background",
+                       Foreground=@OnSurfaceVariant,
+                       VerticalAlignment=Center,
+                       Margin=(0,0,@Spacing3,@Spacing2)]
             ColorPicker x:name="PART_PatternBackground"
-            StackPanel [Orientation=Horizontal, Margin=(0,10,0,0)] {
-                TextBlock [Text="Size", Width=72, FontSize=11,
-                           Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
-                Slider x:name="PART_PatternSize"
-                       [Width=224, Minimum=2, Maximum=64,
-                        SmallChange=1, LargeChange=4]
-            }
-            StackPanel [Orientation=Horizontal, Margin=(0,4,0,0)] {
-                TextBlock [Text="Angle", Width=72, FontSize=11,
-                           Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
-                Slider x:name="PART_PatternAngle"
-                       [Width=224, Minimum=0, Maximum=180,
-                        SmallChange=1, LargeChange=15]
-            }
-            StackPanel [Orientation=Horizontal, Margin=(0,4,0,0)] {
-                TextBlock [Text="Stroke", Width=72, FontSize=11,
-                           Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
-                Slider x:name="PART_PatternStroke"
-                       [Width=224, Minimum=0.5, Maximum=8,
-                        SmallChange=0.5, LargeChange=1]
-            }
+                        [Grid.Row=2, Grid.Column=1,
+                         Margin=(0,0,0,@Spacing2)]
+            TextBlock [Grid.Row=3, Grid.Column=0,
+                       Style=@LabelSmall, Text="Size",
+                       Foreground=@OnSurfaceVariant,
+                       VerticalAlignment=Center,
+                       Margin=(0,0,@Spacing3,@Spacing2)]
+            Slider x:name="PART_PatternSize"
+                   [Grid.Row=3, Grid.Column=1,
+                    Minimum=2, Maximum=64,
+                    SmallChange=1, LargeChange=4,
+                    Margin=(0,0,0,@Spacing2)]
+            TextBlock [Grid.Row=4, Grid.Column=0,
+                       Style=@LabelSmall, Text="Angle",
+                       Foreground=@OnSurfaceVariant,
+                       VerticalAlignment=Center,
+                       Margin=(0,0,@Spacing3,@Spacing2)]
+            Slider x:name="PART_PatternAngle"
+                   [Grid.Row=4, Grid.Column=1,
+                    Minimum=0, Maximum=180,
+                    SmallChange=1, LargeChange=15,
+                    Margin=(0,0,0,@Spacing2)]
+            TextBlock [Grid.Row=5, Grid.Column=0,
+                       Style=@LabelSmall, Text="Stroke",
+                       Foreground=@OnSurfaceVariant,
+                       VerticalAlignment=Center,
+                       Margin=(0,0,@Spacing3,0)]
+            Slider x:name="PART_PatternStroke"
+                   [Grid.Row=5, Grid.Column=1,
+                    Minimum=0.5, Maximum=8,
+                    SmallChange=0.5, LargeChange=1]
         }
     }
 
     Template x:key="FillEditorBodyPicture" [TargetType=FillEditor] {
+        // StackPanel wraps the label/editor Grid AND the full-width
+        // helper paragraph. The paragraph is NOT inside the Grid: a
+        // wrapping TextBlock with Grid.ColumnSpan=2 measures with
+        // Infinity in the Auto pass and dumps its unwrapped intrinsic
+        // width into the Auto column (Stars aren't pre-resolved at that
+        // phase — see grid.ts), which collapses the Star column and
+        // hides the TextBox / ComboBox. As an outside sibling the
+        // paragraph just inherits the StackPanel's width with no Grid
+        // interaction.
         StackPanel [Orientation=Vertical] {
-            TextBlock [Text="Image URL", FontSize=11,
-                       Foreground=@OnSurfaceVariant, Margin=(0,0,0,2)]
-            TextBox x:name="PART_PictureUri" [Width=296]
-            StackPanel [Orientation=Horizontal, Margin=(0,10,0,0)] {
-                TextBlock [Text="Stretch", Width=72, FontSize=11,
-                           Foreground=@OnSurfaceVariant, VerticalAlignment=Center]
-                ComboBox x:name="PART_PictureStretch" [Width=224]
+            Grid {
+                ColumnDefinitions {
+                    ColumnDefinition [Width=GridLength.Auto]
+                    ColumnDefinition [Width=GridLength.Star]
+                }
+                RowDefinitions {
+                    RowDefinition [Height=GridLength.Auto]
+                    RowDefinition [Height=GridLength.Auto]
+                }
+                TextBlock [Grid.Row=0, Grid.Column=0,
+                           Style=@LabelSmall, Text="Image URL",
+                           Foreground=@OnSurfaceVariant,
+                           VerticalAlignment=Center,
+                           Margin=(0,0,@Spacing3,@Spacing2)]
+                TextBox x:name="PART_PictureUri"
+                        [Grid.Row=0, Grid.Column=1,
+                         Margin=(0,0,0,@Spacing2)]
+                TextBlock [Grid.Row=1, Grid.Column=0,
+                           Style=@LabelSmall, Text="Stretch",
+                           Foreground=@OnSurfaceVariant,
+                           VerticalAlignment=Center,
+                           Margin=(0,0,@Spacing3,0)]
+                ComboBox x:name="PART_PictureStretch"
+                         [Grid.Row=1, Grid.Column=1,
+                          TextBlock.FontSize=@BodySmallSize]
             }
-            TextBlock [Text="Paste an absolute URL or a workspace-relative path. Uniform stretch keeps aspect; Fill stretches independently; UniformToFill crops to bbox.",
-                       FontSize=11, Foreground=@OnSurfaceVariant,
-                       TextWrapping=Wrap, Margin=(0,8,0,0)]
+            TextBlock [Style=@LabelSmall,
+                       Text="Paste an absolute URL or a workspace-relative path. Uniform stretch keeps aspect; Fill stretches independently; UniformToFill crops to bbox.",
+                       Foreground=@OnSurfaceVariant,
+                       TextWrapping=Wrap, Margin=(0,@Spacing2,0,0)]
         }
     }
 
@@ -3053,18 +3261,106 @@ resources MuralFramework {
     // Fill wholesale on every edit (TemplateBinding is OneWay, so the
     // editor's writes wouldn't surface), and the manual wiring keeps
     // the two editors symmetric.
+    // Section headers ("Fill", "Line") moved INTO each editor's template
+    // so the Fill section can collapse as a whole when Variant=None.
+    // The wrapper stacks the two editors and ALSO carries an empty-state
+    // placeholder shown when both Fill and Stroke are undefined (the
+    // diagrammer's "no shape selected" signal). ShapeFormatControl.ts
+    // toggles PART_Editors / PART_EmptyMessage heights on every Fill or
+    // Stroke change.
     Template x:key="DefaultShapeFormatControl" [TargetType=ShapeFormatControl] {
         StackPanel [Orientation=Vertical] {
-            TextBlock [Text="Fill", FontSize=13, FontWeight=Bold,
-                       Foreground=@OnSurface, Margin=(0,0,0,@Spacing3)]
-            FillEditor x:name="PART_FillEditor"
-            TextBlock [Text="Line", FontSize=13, FontWeight=Bold,
-                       Foreground=@OnSurface, Margin=(0,@Spacing4,0,@Spacing3)]
-            PenEditor x:name="PART_PenEditor"
+            TextBlock x:name="PART_EmptyMessage"
+                      [Style=@BodySmall,
+                       Text="Select a shape to format its fill and outline.",
+                       Foreground=@OnSurfaceVariant,
+                       TextWrapping=Wrap,
+                       HorizontalAlignment=Stretch,
+                       Margin=(0,@Spacing4,0,0)]
+            StackPanel x:name="PART_Editors" [Orientation=Vertical] {
+                FillEditor x:name="PART_FillEditor"
+                PenEditor  x:name="PART_PenEditor" [Margin=(0,@Spacing4,0,0)]
+            }
         }
     }
 
     Style [TargetType=ShapeFormatControl] {
         Template = @DefaultShapeFormatControl;
+    }
+
+    // ── Tooltip — M3 plain/rich surface ────────────────────────────
+    // The Tooltip is a ContentControl: its Content goes through a
+    // ContentPresenter that handles strings (auto-TextBlock), VMs
+    // (DataTemplate dispatch), and Visuals (slotted directly). Consumers
+    // pick the shape by what they hand to ToolTipService.ToolTip — the
+    // control itself stays one chrome.
+    //
+    // Default Visibility=Collapsed so a freshly-constructed Tooltip
+    // doesn't paint until ToolTipService flips it Visible at show time.
+    // ToolTipService keeps a single pooled instance; updating Content
+    // and Visibility on the pooled instance is cheaper than allocating
+    // chrome on every hover.
+    //
+    // Foreground=@InverseOnSurface on the Style so a string Content
+    // (which ContentPresenter wraps in a TextBlock with no explicit
+    // Foreground) inherits the correct ink for the @InverseSurface
+    // background.
+    Template x:key="DefaultTooltip" [TargetType=Tooltip] {
+        Border [Background=@InverseSurface,
+                CornerRadius=@ShapeExtraSmall,
+                Padding=(@Spacing2, @Spacing1, @Spacing2, @Spacing1),
+                MinHeight=24, MaxWidth=320,
+                Effect=@Elevation2]{
+            StackPanel [Orientation=Vertical] {
+                ContentPresenter [Content=$Content]
+                // Shortcut hint — M3 LabelSmall, 70% opacity for
+                // secondary emphasis. Foreground inherits
+                // @InverseOnSurface from the Tooltip Style.
+                TextBlock x:name="PART_Shortcut"
+                          [Style=@LabelSmall, Text=$Shortcut,
+                           Opacity=0.7,
+                           Margin=(0,2,0,0)]
+            }
+        }
+        when ( Shortcut = "" ) { PART_Shortcut.Visibility = Collapsed; }
+    }
+
+    // Tooltip Style — sets the M3 BodySmall atoms as the inherited
+    // type scale so a plain-string Content (wrapped in an unstyled
+    // TextBlock by ContentPresenter) renders at plain-tooltip metrics.
+    // Rich-content templates (e.g., [DataType=CommandBase] below)
+    // override these on a per-row basis with TitleSmall / BodySmall.
+    Style [TargetType=Tooltip] {
+        Template      = @DefaultTooltip;
+        Visibility    = Collapsed;
+        Foreground    = @InverseOnSurface;
+        FontFamily    = @BodySmallFont;
+        FontWeight    = @BodySmallWeight;
+        FontSize      = @BodySmallSize;
+        LineHeight    = @BodySmallLineHeight;
+        LetterSpacing = @BodySmallTracking;
+    }
+
+    // CommandBase implicit DataTemplate. Resolved by ContentPresenter
+    // when a Tooltip's Content is a CommandBase (RoutedCommand /
+    // RelayCommand / consumer subclass). Renders the command's display
+    // metadata using M3 rich-tooltip typography — TitleSmall for the
+    // subhead (Text) and BodySmall for the supporting paragraph
+    // (Description). The surrounding Tooltip chrome layers the shortcut
+    // row on top (populated via Tooltip.Shortcut by ToolTipService).
+    //
+    // An empty Description binds an empty Text on the second TextBlock
+    // — it consumes ~0 height and reads as a normal vertical gap.
+    // A future Visibility-binding-from-empty-string converter would
+    // collapse the row entirely; not worth shipping until the Visibility
+    // DP grows a built-in "hide when empty string" helper.
+    DataTemplate [DataType=CommandBase] {
+        StackPanel [Orientation=Vertical] {
+            TextBlock [Style=@TitleSmall, Text=$Text, TextWrapping=Wrap]
+            TextBlock [Style=@BodySmall,  Text=$Description,
+                       TextWrapping=Wrap,
+                       Opacity=0.7,
+                       Margin=(0,2,0,0)]
+        }
     }
 }

@@ -69,6 +69,13 @@
         "default":     "./dist/basic/surface.js"
       }
     },
+    "./basic/*.js": {
+      "types": "./dist/basic/*.d.ts",
+      "import": {
+        "development": "./src/basic/*.ts",
+        "default":     "./dist/basic/*.js"
+      }
+    },
     "./compiler": {
       "types": "./dist/compiler/index.d.ts",
       "import": {

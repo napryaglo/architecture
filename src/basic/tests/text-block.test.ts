@@ -18,6 +18,7 @@ import {
     SolidColorBrush,
     SvgDrawingContext,
 } from '../../visual-engine/index.js';
+import { resolveKey } from '../../runtime/model-internals.js';
 import { Border, TextAlignment, TextBlock, TextWrapping } from '../index.js';
 
 // Captures DrawText calls so tests can assert exactly what TextBlock's
@@ -135,7 +136,7 @@ describe('TextBlock inheritance — ancestor sets a font property, descendant pi
         outer._set_property_value_by_name(TextBlock, 'FontSize', 24);
 
         assert.equal(inner.FontSize, 24);
-        assert.equal(inner._get_value_source_by_name('FontSize'), PropertyValueSource.InheritedValue);
+        assert.equal(inner.GetValueSource(resolveKey(inner, undefined, 'FontSize')), PropertyValueSource.InheritedValue);
     });
 
     test('a local override on the TextBlock shadows the inherited value', () => {
@@ -317,7 +318,7 @@ describe('TextBlock LetterSpacing (M3 tracking)', () => {
         outer._set_property_value_by_name(TextBlock, 'LetterSpacing', 0.25);
 
         assert.equal(inner.LetterSpacing, 0.25);
-        assert.equal(inner._get_value_source_by_name('LetterSpacing'), PropertyValueSource.InheritedValue);
+        assert.equal(inner.GetValueSource(resolveKey(inner, undefined, 'LetterSpacing')), PropertyValueSource.InheritedValue);
     });
 
     test('LetterSpacing emits letter-spacing on SVG <text> when non-zero', () => {

@@ -11,6 +11,7 @@ import {
     DynamicResource,
     Size,
 } from '../../../runtime/index.js';
+import { resolveKey } from '../../../runtime/model-internals.js';
 import { SolidColorBrush } from '../../../visual-engine/index.js';
 import { SetTheme, CurrentTheme, ToggleTheme } from '../index.js';
 
@@ -24,7 +25,7 @@ class BrushTarget extends Visual
     }
     public get Brush(): SolidColorBrush | undefined
     {
-        return this._get_property_value_by_name('Brush') as SolidColorBrush | undefined;
+        return this.get_property_value(resolveKey(this, undefined, 'Brush')) as SolidColorBrush | undefined;
     }
     public set Brush(v: SolidColorBrush | undefined)
     {

@@ -21,6 +21,38 @@
   use time means the surface theme wasn't registered — fix the bundle
   wiring, don't paper over with a string lookup.
 
+## Cross-class internals
+
+Tool of last resort. Reach for the architectural fix first: promote the
+method to real `public` API, restructure the caller into the class
+hierarchy so `protected` is enough, or inject the capability through a
+collaborator. Only if all three are genuinely impossible does the
+internals-access escape hatch apply.
+
+- **If you must reach in, declare an interface and cast through it.**
+  Bracket access (`Other['_method']`) bypasses the typechecker and
+  silently breaks on rename. A named interface gives the call typed
+  shape and turns each access site into something greppable.
+
+- **Example pattern** ([input-manager.ts:583-590](src/framework/input-manager.ts#L583-L590)):
+  ```ts
+  interface VisualWithDp {
+      _set_property_value_by_name(name: string, value: unknown): void;
+  }
+  function setIsMouseOver(v: Visual, value: boolean): void {
+      (v as unknown as VisualWithDp)._set_property_value_by_name('IsMouseOver', value);
+  }
+  ```
+  The cast is the cost of using the hatch — visible, greppable, easy to
+  audit out later.
+
+- **Share within mural, never export from the package.** Multiple
+  internal modules MAY import the same interface — better than each
+  re-declaring a slightly-different shape. What's forbidden is the
+  interface reaching mural's published API: not in any barrel
+  re-export, not under any [package.json](package.json) `exports`
+  entry. Library consumers must not see it.
+
 ## MVVM
 
 Apply to `*-vm.mjs` files under `demo/demos/`. Not framework, controls,

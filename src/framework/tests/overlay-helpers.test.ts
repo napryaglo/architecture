@@ -11,6 +11,7 @@ import { Border } from '../../basic/border.js';
 import { TextBlock } from '../../basic/text-block.js';
 import { InputManager } from '../input-manager.js';
 import { Tooltip } from '../tooltip.js';
+import { TooltipPopupHost } from '../tooltip-service.js';
 import { Snackbar } from '../snackbar.js';
 import { Dialog } from '../dialog.js';
 import {
@@ -44,7 +45,7 @@ describe('attachTooltip', () => {
         target.Flush();
 
         const tooltip = new Tooltip();
-        tooltip.Text = 'hi';
+        tooltip.Content = 'hi';
 
         const detach = attachTooltip(host, tooltip, 10);
         try {
@@ -55,11 +56,18 @@ describe('attachTooltip', () => {
             await new Promise<void>(r => setTimeout(r, 30));
             const overlay = target.OverlayRoot as Border | undefined;
             assert.ok(overlay !== undefined, 'overlay layer mounted');
-            // OverlayLayer is a Panel — the tooltip should appear among
-            // its children.
+            // ToolTipService mounts a TooltipPopupHost (the positioner)
+            // onto the OverlayLayer; the pooled Tooltip rides as a child
+            // of the host. The host's lone child should be a Tooltip
+            // whose Content is the Visual we supplied.
             const overlayChildren = (overlay as unknown as { Children: { Get(i: number): unknown; Count: number } }).Children;
-            assert.equal(overlayChildren.Count, 1, 'one tooltip attached');
-            assert.equal(overlayChildren.Get(0), tooltip, 'mounted child IS the tooltip');
+            assert.equal(overlayChildren.Count, 1, 'one positioner attached');
+            const host0 = overlayChildren.Get(0);
+            assert.ok(host0 instanceof TooltipPopupHost, 'mounted child IS the positioner host');
+            const hostChildren = (host0 as unknown as { Children: { Get(i: number): unknown; Count: number } }).Children;
+            assert.ok(hostChildren.Get(0) instanceof Tooltip, 'positioner hosts the pooled Tooltip');
+            assert.equal((hostChildren.Get(0) as Tooltip).Content, tooltip,
+                'pooled Tooltip\'s Content is the Visual we asked the helper to show');
         } finally {
             detach();
         }

@@ -165,7 +165,9 @@ export {
     type GridResizeBehavior,
 } from './grid-splitter.js';
 export { Splitter } from './splitter.js';
+export { ClickableBorder } from './clickable-border.js';
+export { ClickAwayScrim } from './click-away-scrim.js';
 
 // Drawer / Menu / ContextMenu / Surface-control helpers (ScrimSurface,
-// TemporaryOverlayHost, ClickableBorder, ClickAwayScrim, …) live in
+// TemporaryOverlayHost, …) live in
 // `@visualisation-sub/mural/framework` alongside their owning controls.

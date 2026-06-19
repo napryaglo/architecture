@@ -176,6 +176,37 @@ resources DiagramDemo {
                                    [Variant=Standard, Command=$UngroupCommand]{
                             Icon[Source=@ungroup, Foreground=@OnSurfaceVariant]
                         }
+                        // Boolean ops — PowerPoint's Merge-Shapes
+                        // counterpart. The selection is fed through
+                        // the Skia-derived `combine` kernel; result
+                        // replaces the inputs as a single new node.
+                        // Placeholder TextBlock glyphs (∪ ∩ − ⊕) until
+                        // dedicated icons land.
+                        IconButton x:name="btnCombineUnion"
+                                   [Variant=Standard,
+                                    Command=$CombineUnionCommand,
+                                    Margin=(8,0,0,0)]{
+                            TextBlock[Text="∪", FontSize=16, FontWeight=Bold,
+                                      Foreground=@OnSurfaceVariant]
+                        }
+                        IconButton x:name="btnCombineIntersect"
+                                   [Variant=Standard,
+                                    Command=$CombineIntersectCommand]{
+                            TextBlock[Text="∩", FontSize=16, FontWeight=Bold,
+                                      Foreground=@OnSurfaceVariant]
+                        }
+                        IconButton x:name="btnCombineSubtract"
+                                   [Variant=Standard,
+                                    Command=$CombineSubtractCommand]{
+                            TextBlock[Text="−", FontSize=16, FontWeight=Bold,
+                                      Foreground=@OnSurfaceVariant]
+                        }
+                        IconButton x:name="btnCombineExclude"
+                                   [Variant=Standard,
+                                    Command=$CombineExcludeCommand]{
+                            TextBlock[Text="⊕", FontSize=16, FontWeight=Bold,
+                                      Foreground=@OnSurfaceVariant]
+                        }
                     }
                 }
 

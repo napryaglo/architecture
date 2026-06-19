@@ -1,6 +1,8 @@
 import { Binding, BindingMode } from './binding.js';
 import { MetaData } from '../metadata.js';
 import { Model } from '../model.js';
+import type { PropertyKey } from '../model.js';
+import { resolveKey } from '../model-internals.js';
 import type { PropertyChangeCallback } from './effective-value.js';
 import type { Visual } from '../../visual-engine/visual.js';
 
@@ -32,15 +34,16 @@ class AncestorBindingImpl extends Binding
 {
     private readonly watcher:  AncestorWatcher;
     private readonly ancestor: Visual | undefined;
-    private readonly property: string;
     private readonly callback: PropertyChangeCallback | undefined;
+    // Resolved at construction once the ancestor is found; used by both
+    // the change-listener subscription and the dispose-time removal.
+    private readonly key:      PropertyKey<unknown> | undefined;
 
     constructor(start: Visual, ancestorType: Function, property: string, level: number)
     {
         const watcher = new AncestorWatcher();
         super(watcher, 'Value', BindingMode.OneWay);
         this.watcher  = watcher;
-        this.property = property;
 
         // Walk parents.
         let current: Visual | undefined = start.GetVisualParent();
@@ -66,25 +69,31 @@ class AncestorBindingImpl extends Binding
             // No matching ancestor — watcher stays at undefined. Consumer
             // can rely on the outer Binding's fallbackValue.
             this.callback = undefined;
+            this.key      = undefined;
             return;
         }
 
-        // Subscribe to the property on the resolved ancestor and seed
-        // the watcher with the current value.
+        // Resolve the key once and seed the watcher with the current
+        // value. Subscription installs against the same key the
+        // dispose-time removal will use.
+        const key = resolveKey(found, undefined, property);
+        this.key      = key;
         this.callback = () =>
         {
-            this.watcher.Value = found._get_property_value_by_name(property);
+            this.watcher.Value = found.get_property_value(key);
         };
-        found._add_property_changed_listener_by_name(property, this.callback);
-        this.watcher.Value = found._get_property_value_by_name(property);
+        found.AddPropertyChangedListener(key, this.callback);
+        this.watcher.Value = found.get_property_value(key);
     }
 
     public override dispose(): void
     {
         super.dispose();
-        if (this.ancestor !== undefined && this.callback !== undefined)
+        if (this.ancestor !== undefined
+            && this.callback !== undefined
+            && this.key !== undefined)
         {
-            this.ancestor._remove_property_changed_listener_by_name(this.property, this.callback);
+            this.ancestor.RemovePropertyChangedListener(this.key, this.callback);
         }
     }
 }

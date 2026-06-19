@@ -20,6 +20,7 @@ import {
     ThicknessAnimationUsingKeyFrames,
     Visual,
 } from '../index.js';
+import { resolveKey } from '../model-internals.js';
 
 class AnimTest extends Visual
 {
@@ -28,11 +29,11 @@ class AnimTest extends Visual
         Model.RegisterProperty(AnimTest, 'Color',     Color.Black,      MetaData.None);
         Model.RegisterProperty(AnimTest, 'Thickness', new Thickness(0), MetaData.None);
     }
-    public get Number(): number { return this._get_property_value_by_name('Number'); }
+    public get Number(): number { return this.get_property_value(resolveKey(this, undefined, 'Number')); }
     public set Number(v: number) { this._set_property_value_by_name('Number', v); }
-    public get Color(): Color { return this._get_property_value_by_name('Color'); }
+    public get Color(): Color { return this.get_property_value(resolveKey(this, undefined, 'Color')); }
     public set Color(v: Color) { this._set_property_value_by_name('Color', v); }
-    public get Thickness(): Thickness { return this._get_property_value_by_name('Thickness'); }
+    public get Thickness(): Thickness { return this.get_property_value(resolveKey(this, undefined, 'Thickness')); }
     public set Thickness(v: Thickness) { this._set_property_value_by_name('Thickness', v); }
 }
 

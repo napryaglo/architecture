@@ -601,7 +601,7 @@ export class ThemeManager
 
     // Static getters/setters mirror the WPF attached-property API
     // (e.g. `DockPanel.GetDock`). Convenient for code that wants typed
-    // reads without going through `_get_property_value_by_name`.
+    // reads without going through the by-name surface.
 
     public static GetDensity(v: Visual): Density { return v.get_property_value(ThemeManager.DensityKey); }
     public static SetDensity(v: Visual, value: Density): void { v.set_property_value(ThemeManager.DensityKey, value); }

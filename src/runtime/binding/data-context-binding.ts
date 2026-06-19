@@ -1,6 +1,8 @@
 import { Binding } from './binding.js';
 import { MetaData } from '../metadata.js';
 import { Model } from '../model.js';
+import type { PropertyKey } from '../model.js';
+import { resolveKey } from '../model-internals.js';
 import type { PropertyChangeCallback } from './effective-value.js';
 import type { Visual } from '../../visual-engine/visual.js';
 
@@ -47,10 +49,15 @@ class DataContextBindingImpl extends Binding
     private readonly dcCallback: PropertyChangeCallback;
 
     // The Model we're currently subscribed to for property changes on
-    // the first path segment, and the callback we registered. Cleared
-    // on each refresh so we can detach cleanly.
-    private currentSource:    Model | undefined;
-    private sourceCallback:   PropertyChangeCallback | undefined;
+    // the first path segment, the callback we registered, and the key
+    // we registered it under. Cleared on each refresh so we can detach
+    // cleanly without re-resolving the descriptor.
+    private currentSource:     Model | undefined;
+    private sourceCallback:    PropertyChangeCallback | undefined;
+    private currentSourceKey:  PropertyKey<unknown> | undefined;
+    // Cached at construction — `'DataContext'` resolves on every Visual,
+    // and the binding listens to it for its entire lifetime.
+    private readonly dataContextKey: PropertyKey<unknown>;
 
     constructor(target: Visual, path: string)
     {
@@ -64,16 +71,17 @@ class DataContextBindingImpl extends Binding
         this.watcher = watcher;
         this.target  = target;
         this.pathStr = path;
+        this.dataContextKey = resolveKey(target, undefined, 'DataContext');
 
         this.dcCallback = () => this.refresh();
-        target._add_property_changed_listener_by_name('DataContext', this.dcCallback);
+        target.AddPropertyChangedListener(this.dataContextKey, this.dcCallback);
         this.refresh();
     }
 
     public override dispose(): void
     {
         super.dispose();
-        this.target._remove_property_changed_listener_by_name('DataContext', this.dcCallback);
+        this.target.RemovePropertyChangedListener(this.dataContextKey, this.dcCallback);
         this.unsubscribeSource();
     }
 
@@ -104,7 +112,7 @@ class DataContextBindingImpl extends Binding
             const seg = segments[i]!;
             if (cur instanceof Model)
             {
-                cur = cur._get_property_value_by_name(seg);
+                cur = cur.get_property_value(resolveKey(cur, undefined, seg));
             }
             else if (cur !== null && typeof cur === 'object')
             {
@@ -119,7 +127,7 @@ class DataContextBindingImpl extends Binding
         const lastSeg = segments[segments.length - 1]!;
         if (cur instanceof Model)
         {
-            cur._set_property_value_by_name(lastSeg, value);
+            cur.set_property_value(resolveKey(cur, undefined, lastSeg), value);
         }
         else if (cur !== null && typeof cur === 'object')
         {
@@ -130,13 +138,15 @@ class DataContextBindingImpl extends Binding
 
     private unsubscribeSource(): void
     {
-        if (this.currentSource !== undefined && this.sourceCallback !== undefined)
+        if (this.currentSource !== undefined
+            && this.sourceCallback !== undefined
+            && this.currentSourceKey !== undefined)
         {
-            this.currentSource._remove_property_changed_listener_by_name(
-                this.firstSegment(), this.sourceCallback);
+            this.currentSource.RemovePropertyChangedListener(this.currentSourceKey, this.sourceCallback);
         }
-        this.currentSource  = undefined;
-        this.sourceCallback = undefined;
+        this.currentSource     = undefined;
+        this.sourceCallback    = undefined;
+        this.currentSourceKey  = undefined;
     }
 
     private firstSegment(): string
@@ -173,9 +183,11 @@ class DataContextBindingImpl extends Binding
         const first = this.firstSegment();
         if (dc instanceof Model && Model.HasProperty(dc.constructor, first))
         {
-            this.currentSource  = dc;
-            this.sourceCallback = () => { this.watcher.Value = this.walkPath(dc); };
-            dc._add_property_changed_listener_by_name(first, this.sourceCallback);
+            const key = resolveKey(dc, undefined, first);
+            this.currentSource    = dc;
+            this.currentSourceKey = key;
+            this.sourceCallback   = () => { this.watcher.Value = this.walkPath(dc); };
+            dc.AddPropertyChangedListener(key, this.sourceCallback);
         }
         this.watcher.Value = this.walkPath(dc);
     }
@@ -195,7 +207,7 @@ class DataContextBindingImpl extends Binding
             if (cur instanceof Model)
             {
                 if (!Model.HasProperty(cur.constructor, seg)) return undefined;
-                cur = cur._get_property_value_by_name(seg);
+                cur = cur.get_property_value(resolveKey(cur, undefined, seg));
             }
             else if (typeof cur === 'object')
             {

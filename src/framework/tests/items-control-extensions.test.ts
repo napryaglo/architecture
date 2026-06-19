@@ -11,6 +11,7 @@ import {
     Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
+import { resolveKey } from '../../runtime/model-internals.js';
 import { DataTemplate, HierarchicalDataTemplate, type ItemTemplateSelector } from '../../basic/index.js';
 import { ItemsControl } from '@visualisation-sub/mural/framework';
 
@@ -22,7 +23,7 @@ class Leaf extends Visual
         Model.RegisterProperty(Leaf, 'Tag', 'plain', MetaData.None);
     }
     constructor(public readonly source: unknown) { super(); }
-    public get Tag(): string { return this._get_property_value_by_name('Tag'); }
+    public get Tag(): string { return this.get_property_value(resolveKey(this, undefined, 'Tag')); }
     protected override MeasureOverride(_a: Size): Size { return new Size(10, 10); }
     protected override RenderOverride(_dc: DrawingContext): void { }
 }

@@ -5,6 +5,7 @@ import {
     Visual,
     type PropertyDescriptor,
 } from '../runtime/index.js';
+import { resolveKey } from '../runtime/model-internals.js';
 import {
     Brush,
     Color,
@@ -21,7 +22,7 @@ import { ControlTemplate } from '../basic/templates/control-template.js';
 import { Border } from '../basic/border.js';
 import type { PresentationTarget } from '../visual-engine/index.js';
 import { MenuPopupHost } from './menu/menu-strip.js';
-import { ClickAwayScrim } from './list/combo-box.js';
+import { ClickAwayScrim } from '../basic/click-away-scrim.js';
 import { ColorPicker } from './color-picker.js';
 import { Slider } from '../basic/slider.js';
 import { ComboBox } from './list/combo-box.js';
@@ -482,9 +483,10 @@ export class BrushPicker extends TemplatedControl
                 this.Brush = this.buildBrushForVariant();
                 this.updatePreviewBrush();
             };
-            cp._add_property_changed_listener_by_name('Color', handler);
+            const key = resolveKey(cp, undefined, 'Color');
+            cp.AddPropertyChangedListener(key, handler);
             this._popupListeners.push(() => {
-                cp._remove_property_changed_listener_by_name('Color', handler);
+                cp.RemovePropertyChangedListener(key, handler);
             });
         };
         wireColor('PART_SolidColor',         () => this.SolidColor,         c => { this.SolidColor         = c; });
@@ -516,9 +518,10 @@ export class BrushPicker extends TemplatedControl
                 this.Brush = this.buildBrushForVariant();
                 this.updatePreviewBrush();
             };
-            s._add_property_changed_listener_by_name('Value', handler);
+            const key = resolveKey(s, undefined, 'Value');
+            s.AddPropertyChangedListener(key, handler);
             this._popupListeners.push(() => {
-                s._remove_property_changed_listener_by_name('Value', handler);
+                s.RemovePropertyChangedListener(key, handler);
             });
         };
         wireSlider('PART_LinearAngle',   () => this.LinearAngle,    v => { this.LinearAngle   = v; });
@@ -558,9 +561,10 @@ export class BrushPicker extends TemplatedControl
                 this.Brush = this.buildBrushForVariant();
                 this.updatePreviewBrush();
             };
-            kindCombo._add_property_changed_listener_by_name('SelectedItem', handler);
+            const key = resolveKey(kindCombo, undefined, 'SelectedItem');
+            kindCombo.AddPropertyChangedListener(key, handler);
             this._popupListeners.push(() => {
-                kindCombo._remove_property_changed_listener_by_name('SelectedItem', handler);
+                kindCombo.RemovePropertyChangedListener(key, handler);
             });
         }
     }

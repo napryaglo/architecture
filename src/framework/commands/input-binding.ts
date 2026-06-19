@@ -78,13 +78,37 @@ export class KeyBinding extends InputBinding
      *  "don't care" stays expressible. */
     public Modifiers: Partial<ModifierKeys>;
 
-    constructor(key: string, modifiers: Partial<ModifierKeys>, command?: ICommand, target?: Visual)
+    // Human-readable gesture text — what a tooltip / menu writes next to
+    // a command bound through this KeyBinding. Computed from Key +
+    // Modifiers when not supplied explicitly. The framework looks this
+    // up at tooltip render time via
+    // `CommandManager.FindShortcutForCommand(cmd, anchor)`, so commands
+    // never need to carry their own shortcut metadata.
+    private _displayStringOverride: string | undefined;
+    public get DisplayString(): string
+    {
+        return this._displayStringOverride
+            ?? formatKeyGesture(this.Key, this.Modifiers);
+    }
+    public set DisplayString(v: string | undefined)
+    {
+        this._displayStringOverride = v;
+    }
+
+    constructor(
+        key:       string,
+        modifiers: Partial<ModifierKeys>,
+        command?:  ICommand,
+        target?:   Visual,
+        displayString?: string,
+    )
     {
         super();
         this.Key       = key;
         this.Modifiers = modifiers;
-        if (command !== undefined) this.Command       = command;
-        if (target  !== undefined) this.CommandTarget = target;
+        if (command       !== undefined) this.Command                = command;
+        if (target        !== undefined) this.CommandTarget          = target;
+        if (displayString !== undefined) this._displayStringOverride = displayString;
     }
 
     public override MatchesKey(args: KeyEventArgs): boolean
@@ -99,6 +123,25 @@ export class KeyBinding extends InputBinding
     }
 
     public override MatchesPointer(_args: PointerEventArgs): boolean { return false; }
+}
+
+// Compose a human-readable gesture string from a key + modifiers.
+// Matches the formatting WPF / Windows menu chrome uses: modifier order
+// is Ctrl, Alt, Shift, Meta (the WPF accelerator parser's canonical
+// order), keys joined with '+'. Single-letter keys are upper-cased.
+//
+// Exported so KeyGesture (see RoutedCommand.InputGestures advisory list)
+// and any future binding subclass can share a single formatter — keeps
+// "Ctrl+S" rendered identically wherever it surfaces.
+export function formatKeyGesture(key: string, m: Partial<ModifierKeys>): string
+{
+    const parts: string[] = [];
+    if (m.Control) parts.push('Ctrl');
+    if (m.Alt)     parts.push('Alt');
+    if (m.Shift)   parts.push('Shift');
+    if (m.Meta)    parts.push('Meta');
+    parts.push(key.length === 1 ? key.toUpperCase() : key);
+    return parts.join('+');
 }
 
 function keysEqual(a: string, b: string): boolean

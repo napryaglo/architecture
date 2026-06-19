@@ -7,11 +7,12 @@ import {
     Size,
     Visual,
     type DrawingContext,
-    type PointerEventArgs,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
 import { PresentationTarget } from '../../visual-engine/index.js';
 import { Border } from '../../basic/border.js';
+import { ClickableBorder } from '../../basic/clickable-border.js';
+import { ClickAwayScrim } from '../../basic/click-away-scrim.js';
 import { ItemsControl } from '../items-control.js';
 import { Selector } from './selector.js';
 import { StackPanel } from '../../basic/panels/stack-panel.js';
@@ -112,52 +113,6 @@ function displayString(item: unknown): string
     return String(item);
 }
 
-// Border subclass that fires a click callback on PointerUp when the
-// press originated locally and the pointer is still inside — the
-// same release-mode semantics as Button. Used for both the ComboBox's
-// selection box and each item row. Exported so the compiled-`.mu`
-// template can name it; not part of the public package surface (see
-// SplitRow comment).
-export class ClickableBorder extends Border
-{
-    public onClick: (() => void) | undefined;
-    private _pressOriginatedHere = false;
-
-    // IsPressed lifecycle — Button / ListBoxItem / ClickableRow parity.
-    // Drives the M3 state-layer ladder for every consumer that hosts
-    // a ClickableBorder in its template (ComboBoxItem rows, ComboBox
-    // selection box, SpinEdit's PART_Up / PART_Down, …) without each
-    // having to re-implement the press tracking. IsPressed clears
-    // BEFORE the click callback fires so handlers reading it see the
-    // post-release state.
-    protected override OnPointerDown(_args: PointerEventArgs): void
-    {
-        this._pressOriginatedHere = true;
-        this.set_property_value(Visual.IsPressedKey, true);
-    }
-
-    protected override OnPointerUp(_args: PointerEventArgs): void
-    {
-        const fire = this._pressOriginatedHere && this.IsMouseOver;
-        this._pressOriginatedHere = false;
-        this.set_property_value(Visual.IsPressedKey, false);
-        if (fire) this.onClick?.();
-    }
-
-    protected override OnPointerLeave(_args: PointerEventArgs): void
-    {
-        this.set_property_value(Visual.IsPressedKey, false);
-    }
-
-    protected override OnPointerEnter(_args: PointerEventArgs): void
-    {
-        if (this._pressOriginatedHere)
-        {
-            this.set_property_value(Visual.IsPressedKey, true);
-        }
-    }
-}
-
 // ComboBoxItem — popup row container. Carries an `IsSelected` DP so a
 // default Style can drive the hover / selected chrome via standard
 // triggers, instead of the historical refreshItemHighlights writing
@@ -191,36 +146,6 @@ export class ComboBoxItem extends ClickableBorder
 
     public get IsSelected():  boolean { return this.get_property_value(ComboBoxItem.IsSelectedKey); }
     public set IsSelected(v: boolean) { this.set_property_value(ComboBoxItem.IsSelectedKey, v); }
-}
-
-// Invisible outside-click absorber. Same press-here-release-here gate
-// as the Drawer scrim; fully transparent so the painted popup remains
-// visually unobscured. Both Down and Up are marked Handled so click-
-// outside-popup never reaches an underlying visual in the main tree.
-// Exported for the compiled-`.mu` template (not public API).
-export class ClickAwayScrim extends Border
-{
-    public onClick: (() => void) | undefined;
-    private _pressOriginatedHere = false;
-
-    protected override OnPointerDown(args: PointerEventArgs): void
-    {
-        this._pressOriginatedHere = true;
-        args.Handled = true;
-    }
-
-    protected override OnPointerUp(args: PointerEventArgs): void
-    {
-        const fire = this._pressOriginatedHere && this.IsMouseOver;
-        this._pressOriginatedHere = false;
-        args.Handled = true;
-        if (fire) this.onClick?.();
-    }
-
-    protected override OnPointerLeave(_args: PointerEventArgs): void
-    {
-        this._pressOriginatedHere = false;
-    }
 }
 
 // Sum a Visual's ArrangedRect chain up to the surface root. Returns the

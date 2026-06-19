@@ -1,6 +1,8 @@
 import { Binding, BindingMode } from './binding.js';
 import { MetaData } from '../metadata.js';
 import { Model } from '../model.js';
+import type { PropertyKey } from '../model.js';
+import { resolveKey } from '../model-internals.js';
 import type { PropertyChangeCallback } from './effective-value.js';
 import type { Visual } from '../../visual-engine/visual.js';
 
@@ -44,9 +46,12 @@ class MultiTemplateBindingImpl extends Binding
 {
     private readonly watcher:         MultiTemplatedParentWatcher;
     private readonly templatedParent: Visual;
-    private readonly properties:      readonly string[];
     private readonly combine:         (...values: unknown[]) => unknown;
     private readonly callback:        PropertyChangeCallback;
+    // Resolved per source property at construction; listener add (in
+    // ctor) and remove (in dispose) both use these cached keys. Saves a
+    // class-hierarchy walk per property change.
+    private readonly keys:            readonly PropertyKey<unknown>[];
 
     constructor(
         templatedParent: Visual,
@@ -58,16 +63,16 @@ class MultiTemplateBindingImpl extends Binding
         super(watcher, 'Value', BindingMode.OneWay);
         this.watcher         = watcher;
         this.templatedParent = templatedParent;
-        this.properties      = properties;
         this.combine         = converter;
+        this.keys            = properties.map(p => resolveKey(templatedParent, undefined, p));
 
         // Single shared callback for every watched property — the
         // converter re-reads all N values on each fire, so we don't
         // need per-property routing. Saves N closures per binding.
         this.callback = () => this.recompute();
-        for (const p of properties)
+        for (const key of this.keys)
         {
-            templatedParent._add_property_changed_listener_by_name(p, this.callback);
+            templatedParent.AddPropertyChangedListener(key, this.callback);
         }
         // Initial value — same eager-fill pattern TemplateBinding uses
         // so consumers see the converted result before the first source
@@ -77,17 +82,16 @@ class MultiTemplateBindingImpl extends Binding
 
     private recompute(): void
     {
-        const values = this.properties.map(p =>
-            this.templatedParent._get_property_value_by_name(p));
+        const values = this.keys.map(k => this.templatedParent.get_property_value(k));
         this.watcher.Value = this.combine(...values);
     }
 
     public override dispose(): void
     {
         super.dispose();
-        for (const p of this.properties)
+        for (const key of this.keys)
         {
-            this.templatedParent._remove_property_changed_listener_by_name(p, this.callback);
+            this.templatedParent.RemovePropertyChangedListener(key, this.callback);
         }
     }
 }

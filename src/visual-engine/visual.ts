@@ -1,5 +1,7 @@
 import type { Brush } from './drawing/brush.js';
 import { Model } from '../runtime/model.js';
+import type { PropertyKey } from '../runtime/model.js';
+import { findDescriptor, peekPropertyBag, propertyValues, resolveKey } from '../runtime/model-internals.js';
 import type { PropertyDescriptor } from '../runtime/property-descriptor.js';
 import { PropertyValueSource } from '../runtime/binding/effective-value.js';
 import { MetaData, affectsArrange, affectsMeasure, affectsRender, inherits } from '../runtime/metadata.js';
@@ -71,6 +73,33 @@ export enum VerticalAlignment
     Center  = 'center',
     Bottom  = 'bottom',
     Stretch = 'stretch',
+}
+
+// WPF-parity Visibility. Controls whether a Visual is rendered, takes
+// part in hit-testing, AND occupies layout space:
+//
+//   * Visible   — measured, arranged, rendered, hit-tested. Default.
+//   * Hidden    — measured + arranged normally (still occupies its slot
+//                 in the parent), NOT rendered, NOT hit-tested. Used to
+//                 reserve space without painting (placeholder spacers).
+//   * Collapsed — DesiredSize forced to Zero, arrange skipped, NOT
+//                 rendered, NOT hit-tested. The visual takes NO space —
+//                 siblings flow as if it weren't in the tree. This is
+//                 what consumers want when toggling sections on/off.
+//
+// String values mirror member names so .mu parsers can write
+// `[Visibility=Collapsed]` literally without a separate enum mapping.
+//
+// Layout impact is enforced inside Visual.Measure / Visual.Arrange.
+// Render suppression is enforced both inside Visual.Render (so headless
+// targets honour it) and at the SVG-renderer walk (which also sets
+// pointer-events=none so the dispatcher's hit-test source-finding skips
+// the subtree — no separate gate in routed-event.ts).
+export enum Visibility
+{
+    Visible   = 'Visible',
+    Hidden    = 'Hidden',
+    Collapsed = 'Collapsed',
 }
 
 // What a Visual sees of its host. Concrete implementation lives in the
@@ -346,6 +375,19 @@ export class Visual extends Model
     // MetaData.Render so flips repaint without further wiring.
     public static readonly IsHitTestVisibleKey = Model.RegisterProperty<boolean>(Visual, 'IsHitTestVisible', true, MetaData.Render);
 
+    // WPF-parity Visibility (see the enum's doc for the three semantics).
+    // Measure | Arrange | Render — a Visible↔Collapsed flip changes the
+    // DesiredSize the parent reads (need re-measure), a Visible↔Hidden
+    // flip keeps DesiredSize but changes paint + hit-test output. The
+    // single Render flag handles the paint refresh on both transitions;
+    // Measure | Arrange ensure the parent re-lays out around a newly
+    // (un)collapsed child. Default Visible matches WPF and is what every
+    // existing visual already assumes — switching the default later
+    // would silently break every consumer that never sets the DP.
+    public static readonly VisibilityKey = Model.RegisterProperty<Visibility>(
+        Visual, 'Visibility', Visibility.Visible,
+        MetaData.Measure | MetaData.Arrange | MetaData.Render);
+
     // Precise-shape hit testing (§19.2.7). When set, the target consults
     // Geometry.Contains(localPoint) after the browser-side
     // elementsFromPoint pick — if the geometry rejects the point, the
@@ -453,8 +495,8 @@ export class Visual extends Model
     public get AllowDrop():  boolean { return this.get_property_value(Visual.AllowDropKey); }
     public set AllowDrop(v:  boolean) { this.set_property_value(Visual.AllowDropKey, v); }
     // Framework-written mirror of "this Visual is the current drag
-    // receiver". Read-only contract — flips via _set_property_value_by_name
-    // from the InputManager's drag-session driver.
+    // receiver". Read-only contract — flips via the InputManager's
+    // drag-session driver through the typed-key write path.
     public get IsDragOver(): boolean { return this.get_property_value(Visual.IsDragOverKey); }
 
     // Hit-test opt-out. WPF parity — IsHitTestVisible=false renders
@@ -462,6 +504,12 @@ export class Visual extends Model
     // hit-testing.
     public get IsHitTestVisible():  boolean { return this.get_property_value(Visual.IsHitTestVisibleKey); }
     public set IsHitTestVisible(v: boolean) { this.set_property_value(Visual.IsHitTestVisibleKey, v); }
+
+    // WPF Visibility — see the enum's doc. Hidden keeps the layout slot
+    // but skips paint + hit; Collapsed forces zero DesiredSize so the
+    // slot itself disappears. Default Visible.
+    public get Visibility():  Visibility { return this.get_property_value(Visual.VisibilityKey); }
+    public set Visibility(v: Visibility) { this.set_property_value(Visual.VisibilityKey, v); }
 
     // Precise-shape hit testing — see HitTestGeometryKey.
     public get HitTestGeometry():  Geometry | undefined { return this.get_property_value(Visual.HitTestGeometryKey); }
@@ -1201,7 +1249,7 @@ export class Visual extends Model
     //   * any other value   — pushed to the tier directly.
     private apply_setter(setter: Setter, tier: 'style' | 'trigger'): void
     {
-        const descriptor = Model['find_descriptor'](setter.owner, setter.property);
+        const descriptor = findDescriptor(setter.owner, setter.property);
         if (descriptor === undefined) return;
         const evd = this.ensure_effective_value_for(descriptor);
 
@@ -1233,7 +1281,7 @@ export class Visual extends Model
                 try
                 {
                     if (tier === 'style') evd.SetStyleValue(v);
-                    else                  evd.SetTriggerValue(v);
+                    else                  evd.SetTriggerValue(setter, v);
                 }
                 finally
                 {
@@ -1285,7 +1333,7 @@ export class Visual extends Model
         else
         {
             if (tier === 'style') evd.SetStyleValue(value);
-            else                  evd.SetTriggerValue(value);
+            else                  evd.SetTriggerValue(setter, value);
         }
     }
 
@@ -1294,10 +1342,10 @@ export class Visual extends Model
     // bookkeeping entry.
     private unapply_setter(setter: Setter, tier: 'style' | 'trigger'): void
     {
-        const descriptor = Model['find_descriptor'](setter.owner, setter.property);
+        const descriptor = findDescriptor(setter.owner, setter.property);
         if (descriptor === undefined) return;
         const key = Model.compose_key(descriptor.RootOwner, descriptor.Name);
-        const evd = this['property_values'].get(key);
+        const evd = propertyValues(this).get(key);
         // CRITICAL ORDER: detach the TwoWay writeback listener BEFORE
         // clearing the slot. ClearStyleValue / ClearTriggerValue fire
         // OnPropertyChange when the cleared slot was the active source
@@ -1323,7 +1371,7 @@ export class Visual extends Model
         if (evd !== undefined)
         {
             if (tier === 'style') evd.ClearStyleValue();
-            else                  evd.ClearTriggerValue();
+            else                  evd.ClearTriggerValue(setter);
         }
         if (binding !== undefined)
         {
@@ -1640,12 +1688,13 @@ export class Visual extends Model
     // evaluation so an already-matching trigger activates immediately.
     private install_trigger(trigger: PropertyTrigger): void
     {
-        const onChange = (): void => { this.evaluate_trigger(trigger); };
-        this._add_property_changed_listener_by_name(trigger.propertyOwner, trigger.propertyName, onChange);
+        const key = resolveKey(this, trigger.propertyOwner, trigger.propertyName);
+        const onChange = (): void => { this.evaluate_trigger(trigger, key); };
+        this.AddPropertyChangedListener(key, onChange);
         this._triggerSubscriptions.set(trigger, () => {
-            this._remove_property_changed_listener_by_name(trigger.propertyOwner, trigger.propertyName, onChange);
+            this.RemovePropertyChangedListener(key, onChange);
         });
-        this.evaluate_trigger(trigger, /*isInitialEvaluation*/ true);
+        this.evaluate_trigger(trigger, key, /*isInitialEvaluation*/ true);
     }
 
     private uninstall_trigger(trigger: PropertyTrigger | MultiTrigger | DataTrigger | MultiDataTrigger): void
@@ -1669,25 +1718,27 @@ export class Visual extends Model
     // stops matching.
     private install_multi_trigger(trigger: MultiTrigger): void
     {
-        const onChange = (): void => { this.evaluate_multi_trigger(trigger); };
+        const keys = trigger.conditions.map(cond =>
+            resolveKey(this, cond.propertyOwner, cond.propertyName));
+        const onChange = (): void => { this.evaluate_multi_trigger(trigger, keys); };
         const unsubs: Array<() => void> = [];
-        for (const cond of trigger.conditions)
+        for (const key of keys)
         {
-            this._add_property_changed_listener_by_name(cond.propertyOwner, cond.propertyName, onChange);
-            unsubs.push(() =>
-            {
-                this._remove_property_changed_listener_by_name(
-                    cond.propertyOwner, cond.propertyName, onChange);
-            });
+            this.AddPropertyChangedListener(key, onChange);
+            unsubs.push(() => { this.RemovePropertyChangedListener(key, onChange); });
         }
         this._triggerSubscriptions.set(trigger, () => { for (const u of unsubs) u(); });
-        this.evaluate_multi_trigger(trigger, /*isInitialEvaluation*/ true);
+        this.evaluate_multi_trigger(trigger, keys, /*isInitialEvaluation*/ true);
     }
 
-    private evaluate_multi_trigger(trigger: MultiTrigger, isInitialEvaluation: boolean = false): void
+    private evaluate_multi_trigger(
+        trigger: MultiTrigger,
+        keys: ReadonlyArray<PropertyKey<unknown>>,
+        isInitialEvaluation: boolean = false,
+    ): void
     {
-        const allMatch = trigger.conditions.every(cond =>
-            this._get_property_value_by_name(cond.propertyOwner, cond.propertyName) === cond.value);
+        const allMatch = trigger.conditions.every((cond, i) =>
+            this.get_property_value(keys[i]!) === cond.value);
         const wasActive = this._activeTriggers.has(trigger);
         if (allMatch && !wasActive)
         {
@@ -1826,9 +1877,13 @@ export class Visual extends Model
     // value; flip activation state accordingly. Apply its setters
     // on activation; clear them on deactivation. === equality only
     // (WPF parity for PropertyTrigger).
-    private evaluate_trigger(trigger: PropertyTrigger, isInitialEvaluation: boolean = false): void
+    private evaluate_trigger(
+        trigger: PropertyTrigger,
+        key: PropertyKey<unknown>,
+        isInitialEvaluation: boolean = false,
+    ): void
     {
-        const current = this._get_property_value_by_name(trigger.propertyOwner, trigger.propertyName);
+        const current = this.get_property_value(key);
         const matched = current === trigger.value;
         const wasActive = this._activeTriggers.has(trigger);
         if (matched && !wasActive)
@@ -2359,6 +2414,19 @@ export class Visual extends Model
         if (this._isMeasureValid && this._previousAvailableSize.Equals(availableSize)) return;
         this._previousAvailableSize = availableSize;
 
+        // Visibility=Collapsed forces DesiredSize=Zero so the parent's
+        // layout treats this visual as taking no space at all. Hidden
+        // falls through and measures normally (it keeps its layout slot).
+        // WPF parity. Margin / Min-Max / MeasureOverride are all skipped
+        // — there's no content to size when the visual is collapsed.
+        if (this.Visibility === Visibility.Collapsed)
+        {
+            this._desiredSize    = Size.Zero;
+            this._isMeasureValid = true;
+            this._isArrangeValid = false;
+            return;
+        }
+
         // Subtract Margin first — that space belongs to the gap between
         // this Visual and its parent's slot edge, not to this Visual's
         // own content. MeasureOverride sees only the inner budget.
@@ -2434,6 +2502,21 @@ export class Visual extends Model
                 ? finalRect.Size
                 : this._previousAvailableSize;
             this.Measure(available);
+        }
+
+        // Visibility=Collapsed — DesiredSize is already Zero from Measure;
+        // pin the arranged rect to a degenerate point at the slot origin
+        // (so hit-test math doesn't trip on a stale rect) and skip
+        // ArrangeOverride entirely. There are no children to arrange and
+        // no own rendering — the renderer will skip this subtree too.
+        // Hidden falls through and arranges normally so the slot stays
+        // reserved.
+        if (this.Visibility === Visibility.Collapsed)
+        {
+            this._arrangedRect   = new Rect(finalRect.X, finalRect.Y, 0, 0);
+            this._renderSize     = Size.Zero;
+            this._isArrangeValid = true;
+            return;
         }
 
         // Subtract Margin from the parent-given slot before computing
@@ -2573,8 +2656,15 @@ export class Visual extends Model
     // Visual is render-dirty. Delegates to RenderOverride.
     //
     // Do not override directly — override RenderOverride.
+    //
+    // Visibility gate: Hidden and Collapsed both suppress painting (WPF
+    // parity). The headless target's tree walk also skips visualChildren
+    // for non-Visible visuals; the SVG renderer's walk sets display=none
+    // on the outer <g> (which CSS-cascades to descendants) and
+    // pointer-events=none so the dispatcher's source-finding ignores it.
     public Render(dc: DrawingContext): void
     {
+        if (this.Visibility !== Visibility.Visible) return;
         this.RenderOverride(dc);
     }
 
@@ -2757,7 +2847,7 @@ export class Visual extends Model
             // Capture the effective value just before the write — picks
             // up an in-flight Animated value when one's active.
             const composed = Model.compose_key(descriptor.RootOwner, descriptor.Name);
-            const evd = this['property_values'].get(composed);
+            const evd = propertyValues(this).get(composed);
             const old_effective = evd !== undefined ? evd.value : descriptor.DefaultValue;
             applyImplicitTransition(this, descriptor.Name, old_effective, new_value, t);
             return;
@@ -2870,7 +2960,7 @@ export class Visual extends Model
         {
             const next = cursor._logicalParent ?? cursor._templatedParent;
             if (next === undefined) return undefined;
-            const evd = next['property_values'].get(key);
+            const evd = propertyValues(next).get(key);
             if (evd !== undefined && evd.Source !== PropertyValueSource.Default)
             {
                 return evd.value;
@@ -2897,11 +2987,11 @@ export class Visual extends Model
         const value = this.walk_inherited(key);
         if (value !== undefined)
         {
-            this['ensure_effective_value_for'](descriptor).SetInheritedValue(value);
+            this.ensure_effective_value_for(descriptor).SetInheritedValue(value);
         }
         else
         {
-            this['property_values'].get(key)?.ClearInherited();
+            propertyValues(this).get(key)?.ClearInherited();
         }
     }
 
@@ -2985,7 +3075,7 @@ export class Visual extends Model
         let current: Function | null = klass;
         while (current !== null && current !== Function.prototype)
         {
-            const bag = Model['peek_property_bag'](current);
+            const bag = peekPropertyBag(current);
             if (bag !== undefined)
             {
                 for (const desc of bag.values())

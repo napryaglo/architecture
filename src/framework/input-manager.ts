@@ -22,6 +22,8 @@ import {
 } from '../visual-engine/routed-event.js';
 import { DragDrop, DragDropEffects, DragSession, type DragDropOptions } from '../visual-engine/drag-drop.js';
 import type { Visual } from '../visual-engine/visual.js';
+import type { PropertyKey } from '../runtime/model.js';
+import { resolveKey } from '../runtime/model-internals.js';
 import { CommandManager } from './commands/command-manager.js';
 
 // Owns the per-target pointer state and turns raw pointer hits into
@@ -573,48 +575,50 @@ export class InputManager
 
 // ── DP write helpers ───────────────────────────────────────────────
 
-// IsMouseOver and IsPressed are DPs registered on Visual itself.
-// These helpers are duck-typed so this module doesn't need to import
-// Visual (which already imports things that would cycle). At runtime
-// `_set_property_value_by_name` is Model's framework-internal string-
-// keyed setter (the public typed-key surface lives on the same Model,
-// just not reachable through a string at this seam); the property
-// names are exactly the strings registered in visual.ts.
-interface VisualWithDp
-{
-    _set_property_value_by_name(name: string, value: unknown): void;
-}
+// IsMouseOver / IsPressed / IsFocused / IsDragOver / Focusable are DPs
+// registered on Visual. This module can't value-import Visual (the
+// import chain through routed-event.ts cycles back here), so it resolves
+// the keys at first-use via `resolveKey` against a passed-in Visual
+// instance, then caches them at module scope. The keys carry the
+// underlying PropertyDescriptor — identity is per-descriptor, so the
+// first resolution sticks regardless of which Visual subclass triggered
+// it.
+let mouseOverKey: PropertyKey<unknown> | undefined;
+let pressedKey:   PropertyKey<unknown> | undefined;
+let focusedKey:   PropertyKey<unknown> | undefined;
+let dragOverKey:  PropertyKey<unknown> | undefined;
+let focusableKey: PropertyKey<unknown> | undefined;
 
 function setIsMouseOver(v: Visual, value: boolean): void
 {
-    (v as unknown as VisualWithDp)._set_property_value_by_name('IsMouseOver', value);
+    mouseOverKey ??= resolveKey(v, undefined, 'IsMouseOver');
+    v.set_property_value(mouseOverKey, value);
 }
 
 function setIsPressed(v: Visual, value: boolean): void
 {
-    (v as unknown as VisualWithDp)._set_property_value_by_name('IsPressed', value);
+    pressedKey ??= resolveKey(v, undefined, 'IsPressed');
+    v.set_property_value(pressedKey, value);
 }
 
 function setIsFocused(v: Visual, value: boolean): void
 {
-    (v as unknown as VisualWithDp)._set_property_value_by_name('IsFocused', value);
+    focusedKey ??= resolveKey(v, undefined, 'IsFocused');
+    v.set_property_value(focusedKey, value);
 }
-
-// Read the Focusable DP without importing Visual (would cycle through
-// to routed-event.ts via the type alias). Same duck-typed read pattern
-// as the setters above.
-interface VisualWithReadDp { _get_property_value_by_name(name: string): unknown }
 
 function isFocusable(v: Visual): boolean
 {
-    return (v as unknown as VisualWithReadDp)._get_property_value_by_name('Focusable') === true;
+    focusableKey ??= resolveKey(v, undefined, 'Focusable');
+    return v.get_property_value(focusableKey) === true;
 }
 
 // IsDragOver is the drag-specific mirror of IsMouseOver; same DP-write
 // shape, framework-only write surface.
 function setIsDragOver(v: Visual, value: boolean): void
 {
-    (v as unknown as VisualWithDp)._set_property_value_by_name('IsDragOver', value);
+    dragOverKey ??= resolveKey(v, undefined, 'IsDragOver');
+    v.set_property_value(dragOverKey, value);
 }
 
 // Walk up the visual parent chain from `start` looking for the nearest

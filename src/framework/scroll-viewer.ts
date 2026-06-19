@@ -713,8 +713,8 @@ export class ScrollViewer extends ContentControl
         {
             // IsScrolled is a derived read-only DP: true when EITHER
             // offset is non-zero. We push the new value through
-            // `_set_property_value_by_name` (the read-only DP's setter
-            // route) so any subscriber — Style triggers, TopAppBar's
+            // `set_property_value_with_key` (the read-only DP's privileged
+            // setter) so any subscriber — Style triggers, TopAppBar's
             // scroll-tint listener — sees the flip immediately.
             const next = this.HorizontalOffset !== 0 || this.VerticalOffset !== 0;
             if (next !== this.IsScrolled)

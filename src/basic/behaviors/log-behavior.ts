@@ -3,8 +3,10 @@ import {
     MetaData,
     Model,
     type PropertyChangeCallback,
+    type PropertyKey,
     type Visual,
 } from '../../runtime/index.js';
+import { resolveKey } from '../../runtime/model-internals.js';
 
 // LogBehavior — debugging aid that prints a `console.log` line every
 // time the host Visual's named DP changes. Authored from markup:
@@ -45,14 +47,14 @@ export class LogBehavior extends Behavior
 
     private _host:     Visual | undefined;
     private _callback: PropertyChangeCallback | undefined;
-    private _propertyName: string | undefined;
+    private _key:      PropertyKey<unknown> | undefined;
 
     public override OnAttached(visual: Visual): void
     {
         const prop = this.Property;
         if (prop === undefined || prop.length === 0) return;
-        this._host         = visual;
-        this._propertyName = prop;
+        this._host = visual;
+        this._key  = resolveKey(visual, undefined, prop);
         const tag       = this.Tag !== undefined ? `${this.Tag} ` : '';
         const className = visual.constructor.name;
         const cb: PropertyChangeCallback = (_m, _name, oldValue, newValue) =>
@@ -66,20 +68,20 @@ export class LogBehavior extends Behavior
             );
         };
         this._callback = cb;
-        visual._add_property_changed_listener_by_name(prop, cb);
+        visual.AddPropertyChangedListener(this._key, cb);
     }
 
     public override OnDetached(_visual: Visual): void
     {
         if (this._host !== undefined
             && this._callback !== undefined
-            && this._propertyName !== undefined)
+            && this._key !== undefined)
         {
-            this._host._remove_property_changed_listener_by_name(this._propertyName, this._callback);
+            this._host.RemovePropertyChangedListener(this._key, this._callback);
         }
-        this._host         = undefined;
-        this._callback     = undefined;
-        this._propertyName = undefined;
+        this._host     = undefined;
+        this._callback = undefined;
+        this._key      = undefined;
     }
 }
 

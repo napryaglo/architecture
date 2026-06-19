@@ -1,3 +1,6 @@
+import { Model } from './model.js';
+import { MetaData } from './metadata.js';
+
 // ICommand — the MVVM command contract that WPF popularised. Mural's
 // shape mirrors System.Windows.Input.ICommand:
 //
@@ -47,59 +50,132 @@ export interface ICommand
     RemoveCanExecuteChangedListener(listener: () => void): void;
 }
 
+// Initialisation bag for `CommandBase` subclasses. All optional — the
+// command works without any of them set, but consumers (tooltips,
+// menus, toolbars) read these to render display chrome.
+export interface CommandMetadataInit
+{
+    /** Primary display name — "Save", "Copy". The default Tooltip
+     *  DataTemplate's first line. */
+    Text?:        string;
+    /** Secondary description — "Save the current document". The
+     *  default Tooltip's second line. Empty by default. */
+    Description?: string;
+    /** Optional icon — anything ContentPresenter can paint (Visual /
+     *  Model VM / string). Used by toolbars and rich tooltips. */
+    Icon?:        unknown;
+}
+
+// CommandBase — abstract Model that every shipped command (RelayCommand,
+// RoutedCommand, and consumer subclasses) extends. Carries the bindable
+// display metadata used by tooltips, menus, and toolbars. Implements
+// ICommand so it slots into any ICommandSource consumer.
+//
+// Crucially, CommandBase does NOT carry input-gesture / shortcut data.
+// Gestures belong on the binding that maps them to the command
+// (KeyBinding lives in `Visual.InputBindings`); the tooltip's lookup
+// helper resolves "what shortcut is bound to THIS command in the
+// anchor's tree?" at render time. Commands stay portable across hosts
+// without dragging a hardcoded "Ctrl+S" along — and the same command
+// can carry different shortcuts in different windows / platforms /
+// keymaps.
+export abstract class CommandBase extends Model implements ICommand
+{
+    public static readonly TextKey        = Model.RegisterProperty<string>(
+        CommandBase, 'Text',        '',        MetaData.None);
+    public static readonly DescriptionKey = Model.RegisterProperty<string>(
+        CommandBase, 'Description', '',        MetaData.None);
+    public static readonly IconKey        = Model.RegisterProperty<unknown>(
+        CommandBase, 'Icon',        undefined, MetaData.None);
+
+    public get Text():        string  { return this.get_property_value(CommandBase.TextKey); }
+    public set Text(v:        string) { this.set_property_value(CommandBase.TextKey, v); }
+    public get Description(): string  { return this.get_property_value(CommandBase.DescriptionKey); }
+    public set Description(v: string) { this.set_property_value(CommandBase.DescriptionKey, v); }
+    public get Icon():        unknown { return this.get_property_value(CommandBase.IconKey); }
+    public set Icon(v:        unknown){ this.set_property_value(CommandBase.IconKey, v); }
+
+    private readonly _listeners: Set<() => void> = new Set();
+
+    constructor(meta?: CommandMetadataInit)
+    {
+        super();
+        if (meta !== undefined)
+        {
+            if (meta.Text        !== undefined) this.Text        = meta.Text;
+            if (meta.Description !== undefined) this.Description = meta.Description;
+            if (meta.Icon        !== undefined) this.Icon        = meta.Icon;
+        }
+    }
+
+    public abstract Execute(parameter?: unknown): void;
+    public abstract CanExecute(parameter?: unknown): boolean;
+
+    public AddCanExecuteChangedListener(listener: () => void): void
+    {
+        this._listeners.add(listener);
+    }
+
+    public RemoveCanExecuteChangedListener(listener: () => void): void
+    {
+        this._listeners.delete(listener);
+    }
+
+    // Subclass hook — current listener count. RoutedCommand consults
+    // this when toggling its `CommandManager.RequerySuggested`
+    // subscription so the global pulse isn't held open by a command
+    // with zero subscribers.
+    protected _listenerCount(): number
+    {
+        return this._listeners.size;
+    }
+
+    // Notify subscribers that CanExecute may have transitioned. Snapshot
+    // the listener set first so a subscriber that detaches itself from
+    // within its callback doesn't perturb the iteration.
+    public RaiseCanExecuteChanged(): void
+    {
+        const snap = [...this._listeners];
+        for (const cb of snap) cb();
+    }
+}
+
 // ── RelayCommand ────────────────────────────────────────────────────
 
-// A drop-in ICommand implementation backed by a pair of callbacks.
-// Equivalent to WPF / MVVM Toolkit's `RelayCommand`: the view model
-// supplies the action (and optionally a guard); the command class
-// handles the listener bookkeeping and CanExecuteChanged plumbing.
+// A drop-in CommandBase backed by a pair of callbacks. Equivalent to
+// WPF / MVVM Toolkit's `RelayCommand`: the view model supplies the
+// action (and optionally a guard); the command class handles the
+// listener bookkeeping. The optional `metadata` bag lets the VM declare
+// Text / Description / Icon at construction so tooltips and menus
+// render correctly without extra wiring.
 //
 // View models with imperative re-evaluation needs (e.g., "selection
 // changed, recompute") call `RaiseCanExecuteChanged()` to notify
 // subscribers — Buttons / MenuItems re-query CanExecute and refresh
 // their enabled state.
-export class RelayCommand implements ICommand
+export class RelayCommand extends CommandBase
 {
-    private readonly listeners: Set<() => void> = new Set();
     private readonly execute:    (parameter?: unknown) => void;
     private readonly canExecute: ((parameter?: unknown) => boolean) | undefined;
 
     constructor(
-        execute:    (parameter?: unknown) => void,
+        execute:     (parameter?: unknown) => void,
         canExecute?: (parameter?: unknown) => boolean,
+        metadata?:   CommandMetadataInit,
     )
     {
+        super(metadata);
         this.execute    = execute;
         this.canExecute = canExecute;
     }
 
-    public Execute(parameter?: unknown): void
+    public override Execute(parameter?: unknown): void
     {
         this.execute(parameter);
     }
 
-    public CanExecute(parameter?: unknown): boolean
+    public override CanExecute(parameter?: unknown): boolean
     {
         return this.canExecute === undefined ? true : this.canExecute(parameter);
-    }
-
-    public AddCanExecuteChangedListener(listener: () => void): void
-    {
-        this.listeners.add(listener);
-    }
-
-    public RemoveCanExecuteChangedListener(listener: () => void): void
-    {
-        this.listeners.delete(listener);
-    }
-
-    // Notify subscribers that CanExecute may have transitioned. Snapshot
-    // the listener set first so a subscriber that detaches itself from
-    // within its callback doesn't perturb the iteration. Same pattern
-    // as Button's click-handler snapshot.
-    public RaiseCanExecuteChanged(): void
-    {
-        const snap = [...this.listeners];
-        for (const cb of snap) cb();
     }
 }

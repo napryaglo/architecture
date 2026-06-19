@@ -13,7 +13,7 @@ import {
 import { HeadlessTarget } from '../../visual-engine/index.js';
 import { SpinEdit } from '../spin-edit.js';
 import { TextBox } from '../text-box.js';
-import { ClickableBorder } from '../combo-box.js';
+import { ClickableBorder } from '../clickable-border.js';
 
 function pointer(overrides: Partial<PointerEventInit> = {}): PointerEventInit
 {

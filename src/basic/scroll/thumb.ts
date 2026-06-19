@@ -9,6 +9,7 @@ import {
     type KeyEventArgs,
     type PointerEventArgs,
 } from '../../runtime/index.js';
+import { resolveKey } from '../../runtime/model-internals.js';
 import { Border } from '../border.js';
 
 // Thumb — WPF System.Windows.Controls.Primitives.Thumb analog. A
@@ -103,8 +104,9 @@ export class Thumb extends Visual
         // Background tracks the active theme via DynamicResource —
         // a theme switch re-resolves @OutlineVariant against the new
         // dictionary and re-paints without an imperative refresh.
-        this._border._set_property_value_by_name(
-            'Background', DynamicResource(this._border, 'OutlineVariant'),
+        this._border.set_property_value(
+            resolveKey(this._border, undefined, 'Background'),
+            DynamicResource(this._border, 'OutlineVariant'),
         );
         this.AttachVisual(this._border);
     }

@@ -16,13 +16,14 @@ import {
     StopStoryboardAction,
     Visual,
 } from '../index.js';
+import { resolveKey } from '../model-internals.js';
 
 class NamedTest extends Visual
 {
     static {
         Model.RegisterProperty(NamedTest, 'Width', 0, MetaData.None);
     }
-    public get Width(): number { return this._get_property_value_by_name('Width'); }
+    public get Width(): number { return this.get_property_value(resolveKey(this, undefined, 'Width')); }
     public set Width(v: number) { this._set_property_value_by_name('Width', v); }
 }
 

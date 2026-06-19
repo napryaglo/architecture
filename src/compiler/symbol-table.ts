@@ -43,6 +43,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['MultiDataTrigger',    '@visualisation-sub/mural/runtime'],
     ['HorizontalAlignment', '@visualisation-sub/mural/runtime'],
     ['VerticalAlignment',   '@visualisation-sub/mural/runtime'],
+    ['Visibility',          '@visualisation-sub/mural/runtime'],
     ['Point',               '@visualisation-sub/mural/runtime'],
     ['Size',                '@visualisation-sub/mural/runtime'],
     ['Rect',                '@visualisation-sub/mural/runtime'],
@@ -213,8 +214,8 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     // analyzer accepts them when an in-tree template is opened — the
     // build-control-templates script overrides these entries with
     // direct relative file paths at compile time.
-    ['ClickableBorder',         '@visualisation-sub/mural/framework/list/combo-box.js'],
-    ['ClickAwayScrim',          '@visualisation-sub/mural/framework/list/combo-box.js'],
+    ['ClickableBorder',         '@visualisation-sub/mural/basic/clickable-border.js'],
+    ['ClickAwayScrim',          '@visualisation-sub/mural/basic/click-away-scrim.js'],
     ['SplitRow',                '@visualisation-sub/mural/framework/list/combo-box.js'],
     ['ComboBoxPopupHost',       '@visualisation-sub/mural/framework/list/combo-box.js'],
     ['ComboBoxItem',            '@visualisation-sub/mural/framework/list/combo-box.js'],
@@ -256,6 +257,14 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['Badge',                   '@visualisation-sub/mural/framework/badge.js'],
     ['BadgeVariant',            '@visualisation-sub/mural/framework/badge.js'],
     ['Tooltip',                 '@visualisation-sub/mural/framework/tooltip.js'],
+    ['TooltipPopupHost',        '@visualisation-sub/mural/framework/tooltip-service.js'],
+    ['ToolTipService',          '@visualisation-sub/mural/framework/tooltip-service.js'],
+    ['PlacementMode',           '@visualisation-sub/mural/framework/tooltip-service.js'],
+    // Commands — referenced in markup as DataTemplate DataType targets
+    // (the default rich-tooltip template dispatches on CommandBase).
+    ['CommandBase',             '@visualisation-sub/mural/runtime'],
+    ['RelayCommand',            '@visualisation-sub/mural/runtime'],
+    ['RoutedCommand',           '@visualisation-sub/mural/framework/commands/routed-command.js'],
     ['ProgressIndicator',       '@visualisation-sub/mural/framework/progress-indicator.js'],
     ['ProgressIndicatorVariant','@visualisation-sub/mural/framework/progress-indicator.js'],
     ['Banner',                  '@visualisation-sub/mural/framework/banner.js'],
@@ -338,6 +347,8 @@ export const DEFAULT_SYMBOLS: SymbolMap = new Map(ENTRIES);
 export const ENUM_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<string, ReadonlySet<string>>([
     ['HorizontalAlignment',   new Set(['Left', 'Center', 'Right', 'Stretch'])],
     ['VerticalAlignment',     new Set(['Top', 'Center', 'Bottom', 'Stretch'])],
+    ['Visibility',            new Set(['Visible', 'Hidden', 'Collapsed'])],
+    ['PlacementMode',         new Set(['Bottom', 'Top', 'Left', 'Right', 'Center', 'Mouse'])],
     ['FontWeight',            new Set(['Normal', 'Medium', 'Bold'])],
     ['FontStyle',             new Set(['Normal', 'Italic'])],
     ['Stretch',               new Set(['None', 'Fill', 'Uniform', 'UniformToFill'])],

@@ -1,6 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { Color, MetaData, Model, Rect, Size, Thickness, Visual, type DrawingContext } from '../../runtime/index.js';
+import { resolveKey } from '../../runtime/model-internals.js';
 import { SolidColorBrush } from '../../visual-engine/index.js';
 import { Border, ContentPresenter, ControlTemplate, TemplateBinding } from '../../basic/index.js';
 import { ContentControl } from '@visualisation-sub/mural/framework';
@@ -30,7 +31,7 @@ class Leaf extends Visual
 
     constructor(private box: Size = new Size(10, 10)) { super(); }
 
-    public get Tint(): string { return this._get_property_value_by_name('Tint'); }
+    public get Tint(): string { return this.get_property_value(resolveKey(this, undefined, 'Tint')); }
     public set Tint(value: string) { this._set_property_value_by_name('Tint', value); }
 
     protected override MeasureOverride(_a: Size): Size { return this.box; }
@@ -437,8 +438,8 @@ describe('ContentControl + ControlTemplate', () => {
         // Has() calls would find.
         const a = new Leaf();
         const b = new Leaf();
-        a._add_property_changed_listener_by_name('Tint', () => {});  // keep `a` referenced
-        b._add_property_changed_listener_by_name('Tint', () => {});
+        a.AddPropertyChangedListener(resolveKey(a, undefined, 'Tint'), () => {});  // keep `a` referenced
+        b.AddPropertyChangedListener(resolveKey(b, undefined, 'Tint'), () => {});
         // TryFindResource walks past `a` (which has no logical parent),
         // returns undefined. No allocation should have happened.
         assert.equal(a.TryFindResource('K'), undefined);

@@ -12,6 +12,7 @@ import {
     Thickness,
     Visual,
 } from '../index.js';
+import { resolveKey } from '../model-internals.js';
 
 // Lightweight Visual subclass with three differently-typed DPs so the
 // type-dispatch path is exercised end-to-end. The number DP is what most
@@ -26,13 +27,13 @@ class TransitionTest extends Visual
         // String DP — used to verify "unanimatable type → snap" fallthrough.
         Model.RegisterProperty(TransitionTest, 'Label',     '',               MetaData.None);
     }
-    public get Number():    number    { return this._get_property_value_by_name('Number'); }
+    public get Number():    number    { return this.get_property_value(resolveKey(this, undefined, 'Number')); }
     public set Number(v:    number)   { this._set_property_value_by_name('Number', v); }
-    public get Color():     Color     { return this._get_property_value_by_name('Color'); }
+    public get Color():     Color     { return this.get_property_value(resolveKey(this, undefined, 'Color')); }
     public set Color(v:     Color)    { this._set_property_value_by_name('Color', v); }
-    public get Thickness(): Thickness { return this._get_property_value_by_name('Thickness'); }
+    public get Thickness(): Thickness { return this.get_property_value(resolveKey(this, undefined, 'Thickness')); }
     public set Thickness(v: Thickness) { this._set_property_value_by_name('Thickness', v); }
-    public get Label():     string    { return this._get_property_value_by_name('Label'); }
+    public get Label():     string    { return this.get_property_value(resolveKey(this, undefined, 'Label')); }
     public set Label(v:     string)   { this._set_property_value_by_name('Label', v); }
 }
 
@@ -69,9 +70,7 @@ describe('Visual.Transitions — collection plumbing', () => {
         // Direct DP read returns undefined when nothing has touched
         // Transitions yet — zero-cost when no transitions are used.
         assert.equal(
-            (v as unknown as {
-                _get_property_value_by_name(n: string): unknown;
-            })._get_property_value_by_name('Transitions'),
+            v.get_property_value(resolveKey(v, undefined, 'Transitions')),
             undefined,
         );
         // Getter promotes the slot to an empty collection.

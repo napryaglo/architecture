@@ -9,6 +9,7 @@ import {
     type DrawingContext,
 } from '../../runtime/index.js';
 import { TriggerAction } from '../../runtime/index.js';
+import { resolveKey } from '../../runtime/model-internals.js';
 import {
     DataTemplate,
     TargetedSetter,
@@ -35,9 +36,9 @@ class Tile extends Visual
         Model.RegisterProperty(Tile, 'Tint', 'plain',  MetaData.None);
         Model.RegisterProperty(Tile, 'Bias', 0,        MetaData.None);
     }
-    public get Tint(): string { return this._get_property_value_by_name('Tint'); }
+    public get Tint(): string { return this.get_property_value(resolveKey(this, undefined, 'Tint')); }
     public set Tint(v: string) { this._set_property_value_by_name('Tint', v); }
-    public get Bias(): number { return this._get_property_value_by_name('Bias'); }
+    public get Bias(): number { return this.get_property_value(resolveKey(this, undefined, 'Bias')); }
     public set Bias(v: number) { this._set_property_value_by_name('Bias', v); }
     protected override MeasureOverride(_a: Size): Size { return Size.Zero; }
     protected override RenderOverride(_dc: DrawingContext): void { }
@@ -47,7 +48,7 @@ class Tile extends Visual
 class ItemVM extends Model
 {
     static { Model.RegisterProperty(ItemVM, 'IsSelected', false, MetaData.None); }
-    public get IsSelected(): boolean { return this._get_property_value_by_name('IsSelected'); }
+    public get IsSelected(): boolean { return this.get_property_value(resolveKey(this, undefined, 'IsSelected')); }
     public set IsSelected(v: boolean) { this._set_property_value_by_name('IsSelected', v); }
 }
 
@@ -223,9 +224,9 @@ describe('DataTemplate.Triggers — TemplateMultiDataTrigger', () => {
                 Model.RegisterProperty(MultiVM, 'IsSelected', false, MetaData.None);
                 Model.RegisterProperty(MultiVM, 'Score',       0,    MetaData.None);
             }
-            public get IsSelected(): boolean { return this._get_property_value_by_name('IsSelected'); }
+            public get IsSelected(): boolean { return this.get_property_value(resolveKey(this, undefined, 'IsSelected')); }
             public set IsSelected(v: boolean) { this._set_property_value_by_name('IsSelected', v); }
-            public get Score(): number { return this._get_property_value_by_name('Score'); }
+            public get Score(): number { return this.get_property_value(resolveKey(this, undefined, 'Score')); }
             public set Score(v: number) { this._set_property_value_by_name('Score', v); }
         }
         const vm = new MultiVM();

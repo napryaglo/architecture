@@ -6,6 +6,7 @@ import {
     Visual,
     type PropertyDescriptor,
 } from '../runtime/index.js';
+import { resolveKey } from '../runtime/model-internals.js';
 import {
     Color,
     GradientStop,
@@ -21,7 +22,7 @@ import { TextBox } from '../basic/text-box.js';
 import { TemplatedControl } from '../basic/templated-control.js';
 import { ControlTemplate } from '../basic/templates/control-template.js';
 import { MenuPopupHost } from './menu/menu-strip.js';
-import { ClickAwayScrim } from './list/combo-box.js';
+import { ClickAwayScrim } from '../basic/click-away-scrim.js';
 
 // Material 3 swatch palette — 10 colours × 3 tones each. Tuned by hand
 // against the M3 reference tonal palette (tones 80 / 60 / 40 for the
@@ -466,9 +467,10 @@ export class ColorPicker extends TemplatedControl
                 if (this._syncing) return;
                 apply();
             };
-            part._add_property_changed_listener_by_name(prop, handler);
+            const key = resolveKey(part, undefined, prop);
+            part.AddPropertyChangedListener(key, handler);
             this._popupListeners.push(() => {
-                part._remove_property_changed_listener_by_name(prop, handler);
+                part.RemovePropertyChangedListener(key, handler);
             });
         };
 

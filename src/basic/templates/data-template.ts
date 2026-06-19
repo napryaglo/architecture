@@ -8,6 +8,7 @@ import {
     type TriggerAction,
     type Visual,
 } from '../../runtime/index.js';
+import { resolveKey } from '../../runtime/model-internals.js';
 import { registerNamedVisuals } from './control-template.js';
 
 // Factory signature for a DataTemplate. Constructs a fresh visual
@@ -184,8 +185,9 @@ export class TemplatePropertyTrigger
         const enterActions = this.enterActions;
         const exitActions  = this.exitActions;
         const actionTarget = templatedParent ?? root;
+        const key = resolveKey(source, this.propertyOwner, this.propertyName);
         const evaluate = (): void => {
-            const current = source._get_property_value_by_name(this.propertyOwner, this.propertyName);
+            const current = source.get_property_value(key);
             const matched = current === this.value;
             if (matched && !active)
             {
@@ -207,8 +209,7 @@ export class TemplatePropertyTrigger
             }
             initial = false;
         };
-        source._add_property_changed_listener_by_name(
-            this.propertyOwner, this.propertyName, evaluate);
+        source.AddPropertyChangedListener(key, evaluate);
         evaluate();
     }
 }
@@ -390,13 +391,27 @@ export class HierarchicalDataTemplate extends DataTemplate
 // dictionaries recursively). Returns undefined when no Application is
 // current OR when no matching template is registered. Used by
 // ContentControl + PageView + ListBox to auto-resolve a template for
-// non-Visual Content based on the data's runtime class. Identity match
-// — `klass === content.constructor`.
+// non-Visual Content based on the data's runtime class.
+//
+// Match policy mirrors WPF: walk the prototype chain from most specific
+// to most general, returning the first hit. A `[DataType=RelayCommand]`
+// template wins over `[DataType=CommandBase]` for a RelayCommand
+// instance; a CommandBase template still catches arbitrary
+// CommandBase subclasses that don't have their own entry. Stops once
+// the chain reaches Object — DataTemplates keyed by `Object` (or root
+// Model) would be ambiguous and aren't allowed.
 export function findDataTemplateForType(klass: Function): DataTemplate | undefined
 {
     const app = Application.current;
     if (app === null) return undefined;
-    return walkResourcesForDataTemplate(app.Resources, klass);
+    let cursor: Function = klass;
+    while (typeof cursor === 'function' && cursor !== Object)
+    {
+        const hit = walkResourcesForDataTemplate(app.Resources, cursor);
+        if (hit !== undefined) return hit;
+        cursor = Object.getPrototypeOf(cursor);
+    }
+    return undefined;
 }
 
 function walkResourcesForDataTemplate(rd: ResourceDictionary, klass: Function): DataTemplate | undefined

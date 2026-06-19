@@ -21,6 +21,7 @@ export {
     Panel,
     HorizontalAlignment,
     VerticalAlignment,
+    Visibility,
     type VisualHost,
 } from './visual.js';
 export { Adorner, AdornerLayer, AdornerDecorator, DragGhostAdorner } from './adorner.js';
