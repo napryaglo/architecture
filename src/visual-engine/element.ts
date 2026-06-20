@@ -103,6 +103,15 @@ export class Element extends Visual
     // itself — hence MetaData.None.
     public static readonly TagKey = Model.RegisterProperty<unknown>(Element, 'Tag', undefined, MetaData.None);
 
+    // Ambient data root for bindings. Inherits down the logical tree so
+    // a binding written as `$Path` on a descendant resolves against the
+    // nearest ancestor's DataContext. No measure / arrange / render
+    // impact — pure data plumbing — hence the inherits-only flag.
+    // IsAnimationProhibited: a DataContext swap is a coherent identity
+    // change, not a value to tween; animating it would silently break
+    // every binding rooted in it.
+    public static readonly DataContextKey = Model.RegisterProperty<unknown>(Element, 'DataContext', undefined, MetaData.Inherits | MetaData.IsAnimationProhibited);
+
     // ── Style / Resources / apply_setter ──────────────────────────────
 
     // Per-instance ResourceDictionary, lazy-created on first access.
@@ -231,6 +240,12 @@ export class Element extends Visual
     // stub pair (§ Phase B / B5.1) with real DP-backed access.
     public override get Tag(): unknown { return this.get_property_value(Element.TagKey); }
     public override set Tag(value: unknown) { this.set_property_value(Element.TagKey, value); }
+
+    // Ambient data root for descendants' bindings. Inherits down the
+    // logical tree (§ B4.4). Overrides Visual's no-op stub pair
+    // (§ Phase B / B5.2) with real DP-backed access.
+    public override get DataContext(): unknown { return this.get_property_value(Element.DataContextKey); }
+    public override set DataContext(value: unknown) { this.set_property_value(Element.DataContextKey, value); }
 
     // Pick which Style should be driving the StyleValue tier. Priority
     // matches WPF: explicit Style > implicit (user-side

@@ -288,11 +288,9 @@ export class Visual extends Model
     // changes re-render.
     public static readonly ClipKey = Model.RegisterProperty<unknown>(Visual, 'Clip', undefined, MetaData.Render);
 
-    // Ambient data root for bindings. Inherits down the logical tree so
-    // a binding written as `$Path` on a descendant resolves against the
-    // nearest ancestor's DataContext. No measure / arrange / render
-    // impact — pure data plumbing — hence the inherits-only flag.
-    public static readonly DataContextKey = Model.RegisterProperty<unknown>(Visual, 'DataContext', undefined, MetaData.Inherits | MetaData.IsAnimationProhibited);
+    // DataContext DP + accessor moved to `Element` (§ Phase B / B5.2) —
+    // FE-tier ambient-data root. The DP fires inheritance through the
+    // logical tree, which itself lives on Element (§ B4.4).
 
     // Disabled-state surface. WPF parity: a disabled Visual swallows
     // pointer / keyboard input across its entire subtree, and templates
@@ -643,8 +641,16 @@ export class Visual extends Model
         return sb;
     }
 
-    public get DataContext(): unknown { return this.get_property_value(Visual.DataContextKey); }
-    public set DataContext(value: unknown) { this.set_property_value(Visual.DataContextKey, value); }
+    /** Stub accessor pair; Element re-declares as a real
+     *  `DataContext: unknown` pair backed by `Element.DataContextKey`
+     *  (§ Phase B / B5.2). Plain Visuals own no ambient data root —
+     *  reads return undefined, writes silently no-op. Bindings that
+     *  consult DataContext (`DataContextBinding`, `MultiBinding`)
+     *  resolve the DP by name against the dynamic class; on a plain
+     *  Visual the resolution throws, which mirrors the practice (no
+     *  binding subsystem talks to a raw Visual). */
+    public get DataContext(): unknown { return undefined; }
+    public set DataContext(_v: unknown) { /* plain Visual: no-op */ }
 
     public get IsEnabled(): boolean { return this.get_property_value(Visual.IsEnabledKey); }
     public set IsEnabled(value: boolean) { this.set_property_value(Visual.IsEnabledKey, value); }

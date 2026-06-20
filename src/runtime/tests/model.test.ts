@@ -4882,8 +4882,8 @@ describe('IsNotDataBindable / IsAnimationProhibited gates', () => {
         assert.equal(target.get_property_value(resolveKey(target, undefined, 'collection')), list);
     });
 
-    test('Visual.DataContext is IsAnimationProhibited by default', () => {
-        const v = new Visual();
+    test('Element.DataContext is IsAnimationProhibited by default', () => {
+        const v = new Element();
         const vm = { name: 'whatever' };
         v.DataContext = vm;
         assert.equal(v.DataContext, vm);
