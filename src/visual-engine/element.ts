@@ -551,6 +551,102 @@ export class Element extends Visual
         }
     }
 
+    // ── Overlay children (logical-owner-side wiring) ─────────────────
+    //
+    // Elements that THIS Element owns as overlay-mounted children —
+    // popups, dropdowns, drag previews, tooltips. Distinct from visual
+    // children (which paint as descendants in the visualParent's slot)
+    // and from standard logical children: an overlay child has its
+    // VISUAL parent set to the host's OverlayLayer but its LOGICAL
+    // parent set to this Element (so resource / DataContext /
+    // inheritable-DP cascades flow from the owning control, not from
+    // the overlay layer — see § 18.10). Populated by
+    // `AttachOverlayChild`, cleared by `DetachOverlayChild`. Walked
+    // alongside `logicalChildren` by the inheritance / style /
+    // dynamic-resource subtree cascades.
+    private _overlayChildren: Visual[] | undefined;
+
+    // Cascade-iteration helper (§ 1.5). Yields every direct subtree
+    // root that should receive a subtree-wide refresh — logical
+    // children for the main tree, plus any overlay children. Override
+    // of Visual's empty generator so cascades that walk overlay roots
+    // (Style / Resources / DynamicResource subtree refresh) see them.
+    protected override *allLogicalDescendantSubtreeRoots(): IterableIterator<Visual>
+    {
+        for (const c of this.logicalChildren) yield c;
+        if (this._overlayChildren !== undefined)
+        {
+            for (const c of this._overlayChildren) yield c;
+        }
+    }
+
+    // Companion helper for hot-path cascades that already use the
+    // `propagate_*_to_logical_children` virtual quartet. Calling this
+    // immediately after the propagate_* call covers the overlay branch
+    // without re-traversing the main logical tree.
+    protected override forEachOverlayChild(fn: (child: Visual) => void): void
+    {
+        if (this._overlayChildren === undefined) return;
+        for (const c of this._overlayChildren) fn(c);
+    }
+
+    /** Public-but-not-for-consumer-use. Attaches `child` as an
+     *  overlay-mounted logical child of this Element: visual hop
+     *  into the host's OverlayLayer; logical hop sets `child`'s
+     *  logicalParent to this. Symmetric with AddChild / RemoveChild
+     *  for the in-tree case. Throws if this Element has no host
+     *  target yet — the visual hop can't resolve without one. */
+    public override AttachOverlayChild(child: Visual): void
+    {
+        const t = this['target'] as ReturnType<Visual['FindAncestorPresentationTarget']>;
+        if (t === undefined)
+        {
+            throw new Error(
+                'Element.AttachOverlayChild: this Element is not attached to a presentation target — '
+                + 'wait until the owner is mounted before attaching overlay children.',
+            );
+        }
+        // Logical hop is idempotent — controls that re-mount their
+        // popup across a host-target swap tear down the visual hop
+        // directly via `oldTarget.DetachOverlay` and then call
+        // AttachOverlayChild again. The logical relationship persists;
+        // only the visual hop flips.
+        const alreadyOwned = this._overlayChildren?.includes(child) === true;
+        if (!alreadyOwned)
+        {
+            if (this._overlayChildren === undefined) this._overlayChildren = [];
+            this._overlayChildren.push(child);
+            // Logical hop: child._logicalParent = this; runs the
+            // inheritance / style / DynamicResource refreshes through
+            // child's subtree. Reaches AttachLogical (still on Visual
+            // pre-B4.2) via the inherited protected method.
+            this['AttachLogical'](child);
+        }
+        // Visual hop: the host materialises its OverlayLayer (if not
+        // yet present) and adds the child as a VISUAL-only panel
+        // child.
+        t.AttachOverlay(child);
+    }
+
+    public override DetachOverlayChild(child: Visual): void
+    {
+        const t = this['target'] as ReturnType<Visual['FindAncestorPresentationTarget']>;
+        // Visual hop first so the renderer drops the child before its
+        // logical owner releases inheritance state.
+        if (t !== undefined) t.DetachOverlay(child);
+        if (this._overlayChildren !== undefined)
+        {
+            const i = this._overlayChildren.indexOf(child);
+            if (i >= 0) this._overlayChildren.splice(i, 1);
+        }
+        // Detach the logical hop only if it still points here — the
+        // child may have been re-parented externally (rare). Reaches
+        // DetachLogical (still on Visual pre-B4.2) via the inherited
+        // protected method.
+        const back = child as unknown as { _logicalParent: Visual | undefined };
+        if (back._logicalParent === this) this['DetachLogical'](child);
+    }
+
     // ── Lifecycle listeners ───────────────────────────────────────────
     //
     // Loaded — fires exactly once when this Element first attaches to

@@ -672,18 +672,12 @@ export class Visual extends Model
     private _visualParent:  Visual | undefined;
     private _logicalParent: Visual | undefined;
     private _target: VisualHost | undefined;
-    // Visuals that THIS Visual owns as overlay-mounted children — popups,
-    // dropdowns, drag previews, tooltips. Distinct from visual children
-    // (which paint as descendants in the visualParent's slot) and from
-    // standard logical children: an overlay child has its VISUAL parent
-    // set to the host's OverlayLayer (so the renderer paints it above
-    // the main Content tree) but its LOGICAL parent set to this Visual
-    // (so resource / DataContext / inheritable-DP cascades flow from the
-    // owning control, not from the overlay layer — see § 18.10 in the
-    // backlog history). Populated by `AttachOverlayChild`; cleared by
-    // `DetachOverlayChild`. Walked by the inheritance / style /
-    // dynamic-resource subtree cascades alongside `logicalChildren`.
-    private _overlayChildren: Visual[] | undefined;
+    // _overlayChildren collection + AttachOverlayChild / DetachOverlayChild
+    // / forEachOverlayChild / allLogicalDescendantSubtreeRoots all live
+    // on `Element` (§ Phase B / B4.1). Visual exposes no-op virtual
+    // stubs below so the inheritance / style cascades' `forEachOverlay`
+    // dispatch still typechecks on a Visual-typed receiver — plain
+    // Visuals carry no overlay collection.
     // Set true when InvalidateVisual fires while _target is undefined
     // (the Visual is detached — typically sitting in a recycle pool
     // between Rebind and re-attach). On re-attach SetTarget invalidates
@@ -1183,36 +1177,19 @@ export class Visual extends Model
     public get visualChildren(): readonly Visual[]  { return []; }
     public get logicalChildren(): readonly Visual[] { return []; }
 
-    // Cascade-iteration helper (§ 1.5). Yields every direct subtree
-    // root that should receive a subtree-wide refresh — logical
-    // children for the main tree, plus any overlay children
-    // (popups / dropdowns / tooltips whose visual parent is the
-    // OverlayLayer but whose LOGICAL parent is this Visual). Five
-    // sites used to inline the (logicalChildren + overlayChildren)
-    // duplication; centralizing it here means the overlay-inclusion
-    // rule lives in one place — when (not if) it changes the
-    // five-site lock-step becomes one edit.
-    protected *allLogicalDescendantSubtreeRoots(): IterableIterator<Visual>
-    {
-        for (const c of this.logicalChildren) yield c;
-        if (this._overlayChildren !== undefined)
-        {
-            for (const c of this._overlayChildren) yield c;
-        }
-    }
+    /** @internal — § Phase B / B4.1. Visual-tier empty generator;
+     *  Element overrides to yield logical children + overlay
+     *  children. Used by Style / DynamicResource subtree cascades
+     *  that need to walk both branches. Plain Visuals own no
+     *  overlay collection, so the empty default is correct. */
+    protected *allLogicalDescendantSubtreeRoots(): IterableIterator<Visual> { }
 
-    // Companion helper for hot-path cascades that already use the
-    // `propagate_*_to_logical_children` virtual quartet (which Single /
-    // Panel override for zero-alloc iteration). Calling this immediately
-    // after the propagate_* call covers the overlay branch without
-    // re-traversing the main logical tree. Once the propagate_*
-    // quartet collapses into a single `forEachLogicalChild` virtual
-    // (§ 1.15), this helper merges with that one.
-    protected forEachOverlayChild(fn: (child: Visual) => void): void
-    {
-        if (this._overlayChildren === undefined) return;
-        for (const c of this._overlayChildren) fn(c);
-    }
+    /** @internal — § Phase B / B4.1. Visual-tier no-op virtual;
+     *  Element overrides to iterate `_overlayChildren`. The
+     *  inheritance fan-out (Visual.OnPropertyChanged) and B2-era
+     *  subtree cascades call this on `this` and on each child —
+     *  plain Visuals fall through with zero work. */
+    protected forEachOverlayChild(_fn: (child: Visual) => void): void { }
 
     // VISUAL-tree wiring only: sets the child's visual parent and
     // cascades the host (renderer needs both). Does NOT touch the
@@ -1328,77 +1305,31 @@ export class Visual extends Model
 
     // ── Overlay children — logical-owner-side wiring ─────────────────
     //
-    // A popup / dropdown / tooltip whose visual parent is the host's
-    // OverlayLayer but whose logical parent is THIS Visual. The visual
-    // hop is what the renderer walks (so the popup paints above the
-    // main Content); the logical hop is what resource / DataContext /
-    // inheritable-DP cascades walk (so theme tokens, scheme overrides,
-    // and inherited DPs flow from the owning control rather than from
-    // the overlay layer). Without this split, every overlay-mounted
-    // popup resolves resources through OverlayLayer → PresentationTarget,
-    // never reaching a subtree `Scheme=@Foo` override on the owner's
-    // ancestor — the gap tracked at § 18.10.
-    //
-    // Caller pattern:
-    //     this.AttachOverlayChild(this._popup);   // on open
-    //     this.DetachOverlayChild(this._popup);   // on close
-    //
-    // Symmetric with AddChild / RemoveChild for the in-tree case. Throws
-    // if this Visual has no host target yet — the visual hop can't
-    // resolve without one.
-    public AttachOverlayChild(child: Visual): void
+    // AttachOverlayChild / DetachOverlayChild moved to `Element`
+    // (§ Phase B / B4.1) alongside the `_overlayChildren` collection
+    // and the iteration helpers. Visual exposes no-op stubs below so
+    // consumers with a Visual-typed reference still typecheck — plain
+    // Visuals carry no overlay collection.
+
+    /** @internal — § Phase B / B4.1. Visual-tier stub; Element
+     *  overrides to attach `child` as an overlay-mounted logical
+     *  child (visual hop into the host's OverlayLayer, logical hop
+     *  sets child's logicalParent to this Element). Throws on a
+     *  plain Visual — overlay children need FE-tier state. */
+    public AttachOverlayChild(_child: Visual): void
     {
-        const t = this._target;
-        if (t === undefined)
-        {
-            throw new Error(
-                'Visual.AttachOverlayChild: this Visual is not attached to a presentation target — '
-                + 'wait until the owner is mounted before attaching overlay children.',
-            );
-        }
-        // Logical hop is idempotent — controls that re-mount their popup
-        // across a host-target swap (MenuButton, MenuItem submenu) tear
-        // down the visual hop directly via `oldTarget.DetachOverlay` and
-        // then call AttachOverlayChild again. The logical relationship
-        // (popup ⊂ this owner) persists across the swap; only the visual
-        // hop flips between overlay layers. Skip the AttachLogical when
-        // the child is already in our _overlayChildren collection, but
-        // always execute the visual hop so the new target's OverlayLayer
-        // picks up the popup.
-        const alreadyOwned = this._overlayChildren?.includes(child) === true;
-        if (!alreadyOwned)
-        {
-            if (this._overlayChildren === undefined) this._overlayChildren = [];
-            this._overlayChildren.push(child);
-            // Logical hop: child._logicalParent = this; runs the
-            // inheritance / style / DynamicResource refreshes through
-            // child's subtree.
-            this.AttachLogical(child);
-        }
-        // Visual hop: the host materialises its OverlayLayer (if not yet
-        // present) and adds the child as a VISUAL-only panel child — no
-        // logical wiring on the OverlayLayer side, so the OverlayLayer
-        // doesn't claim ownership of inheritance cascades.
-        t.AttachOverlay(child);
+        throw new Error(
+            'Visual.AttachOverlayChild: this Visual does not own an overlay collection. '
+            + 'AttachOverlayChild is FE-tier — call it on an Element-derived host.',
+        );
     }
 
-    public DetachOverlayChild(child: Visual): void
-    {
-        const t = this._target;
-        // Visual hop first so the renderer drops the child before its
-        // logical owner releases inheritance state — same teardown
-        // ordering Panel.RemoveChild uses (RemoveVisualChild → DetachLogical).
-        if (t !== undefined) t.DetachOverlay(child);
-        if (this._overlayChildren !== undefined)
-        {
-            const i = this._overlayChildren.indexOf(child);
-            if (i >= 0) this._overlayChildren.splice(i, 1);
-        }
-        // Detach the logical hop only if it still points here — the
-        // child may have been re-parented externally (rare, but cheap
-        // to guard).
-        if (child._logicalParent === this) this.DetachLogical(child);
-    }
+    /** @internal — § Phase B / B4.1. Visual-tier stub; Element
+     *  overrides to detach `child` from the overlay collection.
+     *  Plain Visuals carry no overlay state, so the call is a
+     *  silent no-op (matches the AttachOverlayChild error path's
+     *  intent: a plain Visual never had an overlay child to detach). */
+    public DetachOverlayChild(_child: Visual): void { }
 
     // Convenience for the common case where a child belongs to BOTH
     // trees with the same parent — every user-supplied child of a
