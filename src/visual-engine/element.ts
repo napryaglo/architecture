@@ -112,6 +112,24 @@ export class Element extends Visual
     // every binding rooted in it.
     public static readonly DataContextKey = Model.RegisterProperty<unknown>(Element, 'DataContext', undefined, MetaData.Inherits | MetaData.IsAnimationProhibited);
 
+    // Disabled-state surface. WPF parity: a disabled Element swallows
+    // pointer / keyboard input across its entire subtree, and templates
+    // can observe `when (not IsEnabled)` to dim the chrome. Inherited
+    // downward — setting it on a control disables every descendant.
+    // Default `true` so untouched Elements stay interactive.
+    //
+    // Input gating lives in the routed-event dispatcher
+    // (routed-event.ts): dispatchPointer / dispatchPointerDirect /
+    // dispatchKey skip tunnels/bubbles when any ancestor (or the source
+    // itself) reports IsEnabled=false. The dispatcher walks the visual
+    // chain (which is `Visual[]`, not `Element[]`); Visual exposes a
+    // no-op `IsEnabled` accessor stub returning the default `true` so
+    // plain (non-Element) Visuals pass the gate naturally. Enter / Leave
+    // still update IsMouseOver on enabled ancestors so hover chrome on
+    // a disabled descendant's surrounding container behaves naturally.
+    public static readonly IsEnabledKey = Model.RegisterProperty<boolean>(
+        Element, 'IsEnabled', true, MetaData.Inherits | MetaData.IsAnimationProhibited);
+
     // ── Style / Resources / apply_setter ──────────────────────────────
 
     // Per-instance ResourceDictionary, lazy-created on first access.
@@ -246,6 +264,13 @@ export class Element extends Visual
     // (§ Phase B / B5.2) with real DP-backed access.
     public override get DataContext(): unknown { return this.get_property_value(Element.DataContextKey); }
     public override set DataContext(value: unknown) { this.set_property_value(Element.DataContextKey, value); }
+
+    // Disabled-state surface. WPF parity, inherits down the logical
+    // tree (§ B4.4). Overrides Visual's `true`-returning stub pair
+    // (§ Phase B / B5.3) with real DP-backed access — only an Element
+    // can actually be disabled.
+    public override get IsEnabled(): boolean { return this.get_property_value(Element.IsEnabledKey); }
+    public override set IsEnabled(value: boolean) { this.set_property_value(Element.IsEnabledKey, value); }
 
     // Pick which Style should be driving the StyleValue tier. Priority
     // matches WPF: explicit Style > implicit (user-side

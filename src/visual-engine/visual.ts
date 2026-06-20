@@ -292,22 +292,9 @@ export class Visual extends Model
     // FE-tier ambient-data root. The DP fires inheritance through the
     // logical tree, which itself lives on Element (§ B4.4).
 
-    // Disabled-state surface. WPF parity: a disabled Visual swallows
-    // pointer / keyboard input across its entire subtree, and templates
-    // can observe `when (not IsEnabled)` to dim the chrome. Inherited
-    // downward — setting it on a control disables every descendant —
-    // matching WPF's FrameworkElement.IsEnabled (which uses CoreEnabled
-    // AND the inherited Inherited value). Default `true` so untouched
-    // visuals stay interactive.
-    //
-    // Input gating lives in the routed-event dispatcher
-    // (input/routed-event.ts): dispatchPointer / dispatchPointerDirect
-    // / dispatchKey skip tunnels/bubbles when any ancestor (or the
-    // source itself) reports IsEnabled=false. Enter/Leave still update
-    // IsMouseOver on enabled ancestors so hover chrome on a disabled
-    // descendant's surrounding container behaves naturally.
-    public static readonly IsEnabledKey = Model.RegisterProperty<boolean>(
-        Visual, 'IsEnabled', true, MetaData.Inherits | MetaData.IsAnimationProhibited);
+    // IsEnabled DP + accessor moved to `Element` (§ Phase B / B5.3) —
+    // FE-tier inheritable input-gate. Plain Visuals always pass the
+    // routed-event disabled-state gate via the stub accessor below.
 
     // Input state flags. Maintained by the InputManager + per-control
     // press chrome (Button / ClickableBorder), not by user code.
@@ -652,8 +639,16 @@ export class Visual extends Model
     public get DataContext(): unknown { return undefined; }
     public set DataContext(_v: unknown) { /* plain Visual: no-op */ }
 
-    public get IsEnabled(): boolean { return this.get_property_value(Visual.IsEnabledKey); }
-    public set IsEnabled(value: boolean) { this.set_property_value(Visual.IsEnabledKey, value); }
+    /** Stub accessor pair; Element re-declares as a real
+     *  `IsEnabled: boolean` pair backed by `Element.IsEnabledKey`
+     *  (§ Phase B / B5.3). Plain Visuals are always enabled — the stub
+     *  returns the registered default `true` so the routed-event
+     *  disabled-state walker `routeSuppressedByDisabled` lets them
+     *  through without an Element instanceof check. Writes silently
+     *  no-op on plain Visuals (no input dispatch ever targets one in
+     *  practice). */
+    public get IsEnabled(): boolean { return true; }
+    public set IsEnabled(_v: boolean) { /* plain Visual: no-op */ }
 
     /** Stub accessor pair; Element re-declares as a real `Tag: unknown`
      *  pair backed by `Element.TagKey` (§ Phase B / B5.1). Selector +

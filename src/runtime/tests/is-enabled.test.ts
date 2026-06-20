@@ -55,7 +55,7 @@ function pointerInit(): PointerEventInit
     };
 }
 
-describe('Visual.IsEnabled', () => {
+describe('Element.IsEnabled', () => {
 
     test('defaults to true', () => {
         const v = new Counter();
