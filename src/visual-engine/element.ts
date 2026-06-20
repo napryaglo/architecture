@@ -96,6 +96,13 @@ export class Element extends Visual
         Element, 'DefaultStyleKey', undefined, MetaData.None,
     );
 
+    // Generic consumer-side handle, mirroring WPF's FrameworkElement.Tag.
+    // Common use: bind a domain object to an Element so a click handler
+    // / selection listener can recover the consumer's data without an
+    // external WeakMap. Pure storage — never read by the framework
+    // itself — hence MetaData.None.
+    public static readonly TagKey = Model.RegisterProperty<unknown>(Element, 'Tag', undefined, MetaData.None);
+
     // ── Style / Resources / apply_setter ──────────────────────────────
 
     // Per-instance ResourceDictionary, lazy-created on first access.
@@ -216,6 +223,14 @@ export class Element extends Visual
     {
         return this.get_property_value(Element.DefaultStyleKeyKey);
     }
+
+    // Generic consumer-side handle. The framework never reads Tag;
+    // consumers attach arbitrary data (a domain object, a routing key,
+    // an action delegate) so click / selection handlers can recover it
+    // without an out-of-band map. WPF parity. Overrides Visual's no-op
+    // stub pair (§ Phase B / B5.1) with real DP-backed access.
+    public override get Tag(): unknown { return this.get_property_value(Element.TagKey); }
+    public override set Tag(value: unknown) { this.set_property_value(Element.TagKey, value); }
 
     // Pick which Style should be driving the StyleValue tier. Priority
     // matches WPF: explicit Style > implicit (user-side

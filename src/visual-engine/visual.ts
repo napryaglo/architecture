@@ -449,12 +449,8 @@ export class Visual extends Model
     // assert state without reaching into the InputManager.
     public static readonly IsFocusedKey = Model.RegisterReadOnlyProperty<boolean>(Visual, 'IsFocused', false, MetaData.None);
 
-    // Generic consumer-side handle, mirroring WPF's FrameworkElement.Tag.
-    // Common use: bind a domain object to a Visual so a click handler /
-    // selection listener can recover the consumer's data without an
-    // external WeakMap. Pure storage — never read by the framework
-    // itself — hence MetaData.None.
-    public static readonly TagKey = Model.RegisterProperty<unknown>(Visual, 'Tag', undefined, MetaData.None);
+    // Tag DP + Tag accessor moved to `Element` (§ Phase B / B5.1) —
+    // FE-tier consumer handle, no place on a raw render-only Visual.
 
     // Input state — read-only mirrors of the DPs. Both flags are set
     // exclusively by the InputManager during pointer dispatch.
@@ -653,12 +649,15 @@ export class Visual extends Model
     public get IsEnabled(): boolean { return this.get_property_value(Visual.IsEnabledKey); }
     public set IsEnabled(value: boolean) { this.set_property_value(Visual.IsEnabledKey, value); }
 
-    // Generic consumer-side handle. The framework never reads Tag;
-    // consumers attach arbitrary data (a domain object, a routing key,
-    // an action delegate) so click / selection handlers can recover it
-    // without an out-of-band map. WPF parity.
-    public get Tag(): unknown { return this.get_property_value(Visual.TagKey); }
-    public set Tag(value: unknown) { this.set_property_value(Visual.TagKey, value); }
+    /** Stub accessor pair; Element re-declares as a real `Tag: unknown`
+     *  pair backed by `Element.TagKey` (§ Phase B / B5.1). Selector +
+     *  list-control machinery types its containers as `Visual` but in
+     *  practice always receives Elements; the stub keeps those call
+     *  sites typechecking when the container is a plain (non-Element)
+     *  Visual — reads return undefined, writes silently no-op. Mirrors
+     *  the `Name` accessor stub above (B4.6). */
+    public get Tag(): unknown { return undefined; }
+    public set Tag(_v: unknown) { /* plain Visual: no-op */ }
 
     // Two parent pointers: visual (renderer / hit-testing / target
     // propagation) and logical (property inheritance / future named-
