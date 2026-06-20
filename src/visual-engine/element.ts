@@ -566,6 +566,36 @@ export class Element extends Visual
         }
     }
 
+    // ── Templated-parent back-pointer (§ Phase B / B4.5) ─────────────
+
+    // The control whose ControlTemplate generated this Element, or
+    // undefined for Elements the consumer authored directly. Set by
+    // the template-apply pipeline on every node in a template's
+    // generated subtree. Read by TemplateBinding, walk_inherited
+    // (template internals fall back here to reach the templated
+    // control's logical ancestry), and ResourceResolver.
+    private _templatedParent: Visual | undefined;
+
+    public override get templatedParent(): Visual | undefined
+    {
+        return this._templatedParent;
+    }
+
+    public override SetTemplatedParent(p: Visual | undefined): void
+    {
+        const changed = this._templatedParent !== p;
+        this._templatedParent = p;
+        // Re-fire DynamicResource bindings attached to this Element.
+        // Bindings constructed inside a ControlTemplate factory walk
+        // the ancestor chain at construction time — when the element
+        // had no templated parent yet — and would otherwise hold an
+        // empty resolution chain. Stamping the templated parent
+        // expands the chain (templatedParent fallback now reaches the
+        // owning Application's Resources via the templated control's
+        // ancestors), so the binding needs a chance to re-resolve.
+        if (changed) this._fire_dynamic_resource_listeners();
+    }
+
     // ── Logical-tree parent (FE-tier inheritance + resource chain) ────
 
     // Parent in the LOGICAL tree — what property inheritance and
@@ -609,14 +639,13 @@ export class Element extends Visual
         // template internals inherit from the consumer's authored
         // ancestry, with the templated control as the bridge.
         //
-        // `_templatedParent` still lives on Visual until B4.5; bracket-
-        // access keeps the cross-class read typed against the friend
-        // interface the move sequence already uses.
+        // `_logicalParent` (B4.2) and `_templatedParent` (B4.5) are
+        // both Element-private fields. The cursor walks Element
+        // ancestors and accesses them directly.
         let cursor: Element = this;
         while (true)
         {
-            const tp = (cursor as unknown as { _templatedParent: Visual | undefined })._templatedParent;
-            const next = cursor._logicalParent ?? tp;
+            const next = cursor._logicalParent ?? cursor._templatedParent;
             if (next === undefined) return undefined;
             const evd = propertyValues(next).get(key);
             if (evd !== undefined && evd.Source !== PropertyValueSource.Default)

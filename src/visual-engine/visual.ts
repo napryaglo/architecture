@@ -705,13 +705,9 @@ export class Visual extends Model
     // from the prior binding leaks through.
     private _renderInvalidatedWhileDetached: boolean = false;
 
-    // The control whose ControlTemplate generated this Visual, or
-    // undefined for Visuals authored by the consumer. Set by the
-    // template-apply pipeline (Controls/control-template.ts) on every
-    // node in the template's generated subtree. Read by TemplateBinding
-    // and by walk_inherited (template internals fall back through here
-    // to reach the templated control's logical ancestry).
-    private _templatedParent: Visual | undefined;
+    // _templatedParent moved to Element (§ Phase B / B4.5) alongside
+    // the templatedParent getter + SetTemplatedParent. Visual exposes
+    // no-op stubs below so Visual-typed call sites still typecheck.
 
     // Optional x:Name-equivalent — a stable identifier used by
     // FindName to look this Visual up later. Set freely by consumers
@@ -871,14 +867,12 @@ export class Visual extends Model
         return undefined;
     }
 
-    // The control whose ControlTemplate generated this Visual, or
-    // undefined for Visuals the consumer authored directly. Read by
-    // TemplateBinding (future) and by debugging / tree-walking code
-    // that needs to attribute a generated visual back to its owning
-    // control. Not part of either tree's ancestor walk.
+    /** @internal — § Phase B / B4.5. Visual-tier no-op virtual;
+     *  Element overrides to expose its `_templatedParent` field.
+     *  Plain Visuals own no templated-parent back-pointer. */
     public get templatedParent(): Visual | undefined
     {
-        return this._templatedParent;
+        return undefined;
     }
 
     // The PresentationTarget hosting this Visual's tree, or undefined
@@ -896,28 +890,13 @@ export class Visual extends Model
         return this._target;
     }
 
-    // Set by the template-apply pipeline (Controls/control-template.ts)
-    // when stamping every node in a template's generated subtree.
-    // Public-but-not-for-consumer-use: only the template machinery
-    // should call this, but it can't be protected because the
-    // machinery lives outside the Visual hierarchy.
-    public SetTemplatedParent(p: Visual | undefined): void
-    {
-        const changed = this._templatedParent !== p;
-        this._templatedParent = p;
-        // Re-fire DynamicResource bindings attached to this Visual.
-        // Bindings constructed inside a ControlTemplate factory walk
-        // the ancestor chain at construction time — when the visual
-        // had no templated parent yet — and would otherwise hold an
-        // empty resolution chain. Stamping the templated parent
-        // expands the chain (templatedParent fallback now reaches the
-        // owning Application's Resources via the templated control's
-        // ancestors), so the binding needs a chance to re-resolve
-        // against the now-accessible token dictionary. The check
-        // against `changed` keeps the no-op write a no-op so repeated
-        // template applies don't churn resource lookups.
-        if (changed) this._fire_dynamic_resource_listeners();
-    }
+    /** @internal — § Phase B / B4.5. Visual-tier no-op stub; Element
+     *  overrides to actually store `p` in its `_templatedParent`
+     *  field and fire DynamicResource re-wire on edge. The template
+     *  walker types its cursor as Visual, so the stub keeps the
+     *  call site typechecking when the walker hits a plain (non-
+     *  Element) node. */
+    public SetTemplatedParent(_p: Visual | undefined): void { }
 
     // The NameScope this Visual owns, or undefined. Read for FindName
     // boundary detection. Set by ControlTemplate.Apply (one per
