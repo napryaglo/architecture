@@ -44,6 +44,19 @@ export const KNOWN_ROUTED_EVENTS = new Set([
     'DragEnter', 'DragLeave', 'DragOver', 'Drop',
 ]);
 
+// Friend-interface for cross-class internal access to Element's
+// logical-tree backing fields. Per CLAUDE.md cross-class internals
+// pattern — `_logicalParent` lives on Element (§ Phase B / B4.2) but
+// Visual-tier code (AttachLogical / DetachLogical / walk_inherited /
+// FindName) still walks the chain pre-B4.3-B4.6. Cast through this
+// named interface rather than bracket-accessing the field. Mural-
+// internal: never re-exported.
+interface ElementLogicalChain
+{
+    _logicalParent:   Visual | undefined;
+    _templatedParent: Visual | undefined;
+}
+
 // Snapshot-then-iterate helper used by every per-instance listener
 // fan-out — routed events, Loaded, Unloaded, DynamicResource
 // re-wire. Without the snapshot, a listener that registers /
@@ -669,8 +682,13 @@ export class Visual extends Model
     // template-generated visual subtree (Phase 2 work). Default Attach
     // sets both; AttachVisual / AttachLogical exist for template code
     // to wire them independently.
+    // `_logicalParent` lives on `Element` (§ Phase B / B4.2). Visual
+    // exposes `logicalParent` / `GetLogicalParent` / `SetLogicalParent`
+    // as virtual stubs (default undefined / no-op) so Visual-typed call
+    // sites still typecheck — plain Visuals own no logical-tree state.
+    // AttachLogical / DetachLogical / walk_inherited reach Element's
+    // backing field via the `_LogicalParentHost` friend interface.
     private _visualParent:  Visual | undefined;
-    private _logicalParent: Visual | undefined;
     private _target: VisualHost | undefined;
     // _overlayChildren collection + AttachOverlayChild / DetachOverlayChild
     // / forEachOverlayChild / allLogicalDescendantSubtreeRoots all live
@@ -834,24 +852,24 @@ export class Visual extends Model
         return this._visualParent;
     }
 
-    // Parent in the LOGICAL tree — what property inheritance and
-    // (future) named-element / resource lookup walk. Set by
-    // AttachLogical / cleared by DetachLogical. For Visuals added
-    // through Attach (i.e. every non-template-internal child today)
-    // logicalParent === visualParent.
+    /** @internal — § Phase B / B4.2. Visual-tier no-op virtual; Element
+     *  overrides to expose its `_logicalParent` field. Subclass code
+     *  walking up the logical chain should use this protected getter
+     *  rather than reaching into the field directly. */
     protected get logicalParent(): Visual | undefined
     {
-        return this._logicalParent;
+        return undefined;
     }
 
-    // Public companion to the protected `logicalParent` getter. Used by
-    // controls that walk the logical ancestry to find an owning host —
-    // e.g. a TreeViewItem locating its containing TreeView for selection
-    // updates. Symmetric with GetVisualParent; subclass code should still
-    // use the protected getter.
+    /** Public companion to the protected `logicalParent` getter. Used
+     *  by controls that walk the logical ancestry to find an owning
+     *  host — e.g. a TreeViewItem locating its containing TreeView for
+     *  selection updates. Symmetric with GetVisualParent; subclass code
+     *  should use the protected getter. Visual-tier stub returns
+     *  undefined; Element overrides to return its `_logicalParent`. */
     public GetLogicalParent(): Visual | undefined
     {
-        return this._logicalParent;
+        return undefined;
     }
 
     // The control whose ControlTemplate generated this Visual, or
@@ -937,7 +955,8 @@ export class Visual extends Model
             {
                 return cursor._nameScope.Find(name);
             }
-            cursor = cursor._logicalParent ?? cursor._templatedParent;
+            const back = cursor as unknown as ElementLogicalChain;
+            cursor = back._logicalParent ?? back._templatedParent;
         }
         return undefined;
     }
@@ -1110,10 +1129,13 @@ export class Visual extends Model
      *  listener sets. § Phase B. */
     protected on_attach_edge(): void { }
 
-    protected SetLogicalParent(p: Visual | undefined): void
-    {
-        this._logicalParent = p;
-    }
+    /** @internal — § Phase B / B4.2. Visual-tier no-op virtual;
+     *  Element overrides to actually store `p` in its
+     *  `_logicalParent` field. AttachLogical / DetachLogical (still
+     *  on Visual until B4.3) call this on `child` — Element
+     *  children store; plain Visual children silently no-op (they
+     *  carry no logical-tree state). */
+    protected SetLogicalParent(_p: Visual | undefined): void { }
 
     // Sets this Visual's host back-pointer and cascades it down the
     // VISUAL subtree via propagate_target_to_visual_children. The host
@@ -1234,7 +1256,8 @@ export class Visual extends Model
         {
             throw new Error('A Visual cannot be its own logical child.');
         }
-        if (child._logicalParent !== undefined)
+        const childBack = child as unknown as ElementLogicalChain;
+        if (childBack._logicalParent !== undefined)
         {
             throw new Error('Visual already has a logical parent; detach it from the current parent first.');
         }
@@ -1265,7 +1288,8 @@ export class Visual extends Model
 
     protected DetachLogical(child: Visual): void
     {
-        if (child._logicalParent !== this)
+        const childBack = child as unknown as ElementLogicalChain;
+        if (childBack._logicalParent !== this)
         {
             throw new Error('Cannot detach a Visual that is not a logical child of this.');
         }
@@ -1955,7 +1979,8 @@ export class Visual extends Model
         let cursor: Visual = this;
         while (true)
         {
-            const next = cursor._logicalParent ?? cursor._templatedParent;
+            const back = cursor as unknown as ElementLogicalChain;
+            const next = back._logicalParent ?? back._templatedParent;
             if (next === undefined) return undefined;
             const evd = propertyValues(next).get(key);
             if (evd !== undefined && evd.Source !== PropertyValueSource.Default)

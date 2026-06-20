@@ -551,6 +551,34 @@ export class Element extends Visual
         }
     }
 
+    // ── Logical-tree parent (FE-tier inheritance + resource chain) ────
+
+    // Parent in the LOGICAL tree — what property inheritance and
+    // resource lookup walk. Set by AttachLogical (still on Visual
+    // pre-B4.3), cleared by DetachLogical. For Elements added through
+    // the normal `Attach` helper, logicalParent === visualParent. Only
+    // the field lives here; AttachLogical / DetachLogical themselves
+    // move in B4.3 alongside the inheritance / style cascades that
+    // their wiring fires. Typed `Visual | undefined` to match the
+    // friend-interface shape Visual code uses to read it through
+    // `ElementLogicalChain`.
+    private _logicalParent: Visual | undefined;
+
+    protected override get logicalParent(): Visual | undefined
+    {
+        return this._logicalParent;
+    }
+
+    public override GetLogicalParent(): Visual | undefined
+    {
+        return this._logicalParent;
+    }
+
+    protected override SetLogicalParent(p: Visual | undefined): void
+    {
+        this._logicalParent = p;
+    }
+
     // ── Overlay children (logical-owner-side wiring) ─────────────────
     //
     // Elements that THIS Element owns as overlay-mounted children —
