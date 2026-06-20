@@ -1,5 +1,7 @@
 import { Visual, safeFire } from './visual.js';
 import { Model } from '../runtime/model.js';
+import { propertyValues } from '../runtime/model-internals.js';
+import { PropertyValueSource } from '../runtime/binding/effective-value.js';
 import { MetaData, inherits } from '../runtime/metadata.js';
 import { ObservableCollection, type IReadOnlyObservableCollection } from '../runtime/observable-collection.js';
 import { ResourceDictionary, type ResourceKey } from '../runtime/resource-dictionary.js';
@@ -389,10 +391,23 @@ export class Element extends Visual
     {
         super.OnPropertyChanged(descriptor, old_value, new_value);
         if (descriptor.Name === 'Style') this.refresh_active_style();
-        if (inherits(descriptor.MetaData)
-            && ResourceResolver.IsAmbientResourceTriggerDp(descriptor))
+        if (inherits(descriptor.MetaData))
         {
-            this._fire_dynamic_resource_listeners();
+            // Cascade the new inherited value to every logical /
+            // overlay descendant. The cascade dispatches through
+            // Element's `_refresh_inherited` override on each
+            // descendant; plain Visual descendants no-op via Visual's
+            // stub.
+            this.propagate_inheritance_for_logical_children(descriptor);
+            this.forEachOverlayChild(c => c._refresh_inherited(descriptor));
+            // Ambient resource triggers (§ 17.1) — ThemeManager
+            // registers Scheme / Theme as ambient-resource-trigger
+            // DPs. When one of those values cascades to this Element,
+            // every DynamicResource binding rooted here re-resolves.
+            if (ResourceResolver.IsAmbientResourceTriggerDp(descriptor))
+            {
+                this._fire_dynamic_resource_listeners();
+            }
         }
     }
 
@@ -577,6 +592,90 @@ export class Element extends Visual
     protected override SetLogicalParent(p: Visual | undefined): void
     {
         this._logicalParent = p;
+    }
+
+    // ── Property-value inheritance (§ Phase B / B4.4) ─────────────────
+
+    private walk_inherited(key: string): unknown | undefined
+    {
+        // Inheritance follows the LOGICAL tree — DataContext, font
+        // properties, etc. flow through "where the consumer wrote
+        // this", not "where the template put it visually". For all
+        // non-templated trees the logical and visual parents are the
+        // same instance, so behavior matches the pre-split codebase.
+        //
+        // For template-generated Elements (templatedParent set), the
+        // top of the logical chain hops onto the templated control —
+        // template internals inherit from the consumer's authored
+        // ancestry, with the templated control as the bridge.
+        //
+        // `_templatedParent` still lives on Visual until B4.5; bracket-
+        // access keeps the cross-class read typed against the friend
+        // interface the move sequence already uses.
+        let cursor: Element = this;
+        while (true)
+        {
+            const tp = (cursor as unknown as { _templatedParent: Visual | undefined })._templatedParent;
+            const next = cursor._logicalParent ?? tp;
+            if (next === undefined) return undefined;
+            const evd = propertyValues(next).get(key);
+            if (evd !== undefined && evd.Source !== PropertyValueSource.Default)
+            {
+                return evd.value;
+            }
+            // The cursor walks Element ancestors. Plain Visual parents
+            // (rare; production has none) would terminate the walk —
+            // their EVD bag would still be inspectable above, but their
+            // `_logicalParent` is Visual's no-op stub returning
+            // undefined, so the next iteration would exit.
+            if (!(next instanceof Element)) return undefined;
+            cursor = next;
+        }
+    }
+
+    /** @internal — § 1.10. Override of Visual's no-op stub. Re-
+     *  resolves the inherited value for the given descriptor on this
+     *  Element; the subtree cascade runs through the logical +
+     *  overlay subtree via the propagate_inheritance_* virtuals. */
+    public override _refresh_inherited(descriptor: PropertyDescriptor): void
+    {
+        if (!inherits(descriptor.MetaData)) return;
+        const key = Model.compose_key(descriptor.RootOwner, descriptor.Name);
+        const value = this.walk_inherited(key);
+        if (value !== undefined)
+        {
+            this['ensure_effective_value_for'](descriptor).SetInheritedValue(value);
+        }
+        else
+        {
+            propertyValues(this).get(key)?.ClearInherited();
+        }
+    }
+
+    /** @internal — § 1.10. Override of Visual's no-op stub. Refresh
+     *  every inheritable DP on this Element and cascade through the
+     *  logical + overlay subtree. Fired when the ancestor chain
+     *  restructures. */
+    public override _refresh_inheritance_subtree(): void
+    {
+        for (const descriptor of Visual._collect_inheritable_descriptors(this.constructor))
+        {
+            this._refresh_inherited(descriptor);
+        }
+        this.propagate_inheritance_to_logical_children();
+        // Overlay children participate alongside logical children —
+        // they're the same logical tree from the popup's perspective.
+        this.forEachOverlayChild(c => c._refresh_inheritance_subtree());
+    }
+
+    protected propagate_inheritance_to_logical_children(): void
+    {
+        this.forEachLogicalChild(c => c._refresh_inheritance_subtree());
+    }
+
+    protected propagate_inheritance_for_logical_children(descriptor: PropertyDescriptor): void
+    {
+        this.forEachLogicalChild(c => c._refresh_inherited(descriptor));
     }
 
     // ── Logical-tree attach / detach (§ Phase B / B4.3) ──────────────

@@ -2,7 +2,6 @@ import type { Brush } from './drawing/brush.js';
 import { Model } from '../runtime/model.js';
 import { peekPropertyBag, propertyValues } from '../runtime/model-internals.js';
 import type { PropertyDescriptor } from '../runtime/property-descriptor.js';
-import { PropertyValueSource } from '../runtime/binding/effective-value.js';
 import { MetaData, affectsArrange, affectsMeasure, affectsRender, inherits } from '../runtime/metadata.js';
 
 import { NameScope } from './namescope.js';
@@ -1829,18 +1828,11 @@ export class Visual extends Model
         if (affectsMeasure(meta)) this.InvalidateMeasure();
         if (affectsArrange(meta)) this.InvalidateArrange();
         if (affectsRender(meta))  this.InvalidateVisual();
-        if (inherits(meta))
-        {
-            this.propagate_inheritance_for_logical_children(descriptor);
-            // Overlay children participate in the same inheritance
-            // cascade as logical children — see _overlayChildren comment.
-            this.forEachOverlayChild(c => c._refresh_inherited(descriptor));
-        }
-        // Style writes + the ambient-resource-trigger DP fan-out (§ 17.1
-        // — ThemeManager-registered Scheme / Theme inherited DPs) are
-        // FE-tier and live on Element's OnPropertyChanged override
-        // (§ Phase B / B3). Visual itself has neither Style nor
-        // DynamicResource listener state.
+        // Inheritance cascade, Style writes, and the ambient-resource-
+        // trigger DP fan-out (§ 17.1) are FE-tier and all live on
+        // Element's OnPropertyChanged override (§ Phase B / B2-B4).
+        // Visual itself has neither Style nor a logical tree to
+        // cascade through.
 
         // RenderTransform DP changed — rebind the inner-property
         // invalidator so an Angle / ScaleX / TransformGroup.Children
@@ -1888,94 +1880,29 @@ export class Visual extends Model
     }
 
     // ------------------------------------------------------------------
-    // Property value inheritance
+    // Property value inheritance — FE-tier, lives on Element
     // ------------------------------------------------------------------
+    //
+    // `walk_inherited`, `_refresh_inherited`, `_refresh_inheritance_subtree`,
+    // and the two `propagate_inheritance_*` virtuals all live on
+    // `Element` (§ Phase B / B4.4). Visual exposes the two public
+    // hooks below as no-op virtuals so AttachLogical / DetachLogical
+    // and the propagate cascades that dispatch through
+    // `c._refresh_inherited(...)` / `c._refresh_inheritance_subtree()`
+    // typecheck and silently skip non-Element descendants. Same
+    // pattern as `_refresh_styles_subtree` / `_unsubscribe_styles_subtree`
+    // (B2) and `_refresh_dynamic_resources_subtree` (B3).
 
-    private walk_inherited(key: string): any | undefined
-    {
-        // Inheritance follows the LOGICAL tree — DataContext, font
-        // properties, etc. flow through "where the consumer wrote
-        // this", not "where the template put it visually". For all
-        // non-templated trees the logical and visual parents are the
-        // same instance, so behavior matches the pre-split codebase.
-        //
-        // For template-generated Visuals (templatedParent set), the
-        // top of the logical chain hops onto the templated control —
-        // template internals inherit from the consumer's authored
-        // ancestry, with the templated control as the bridge. WPF
-        // does the same: a Border inside a Button's template inherits
-        // Foreground from the Button, then from the Button's logical
-        // ancestors.
-        let cursor: Visual = this;
-        while (true)
-        {
-            const back = cursor as unknown as ElementLogicalChain;
-            const next = back._logicalParent ?? back._templatedParent;
-            if (next === undefined) return undefined;
-            const evd = propertyValues(next).get(key);
-            if (evd !== undefined && evd.Source !== PropertyValueSource.Default)
-            {
-                return evd.value;
-            }
-            cursor = next;
-        }
-    }
+    /** @internal — § Phase B / B4.4. Visual-tier no-op virtual;
+     *  Element overrides to walk every inheritable DP on `this` and
+     *  re-resolve its value against the current logical-ancestor
+     *  chain. */
+    public _refresh_inheritance_subtree(): void { }
 
-    // Re-resolves the inherited value for `descriptor` against the
-    // current logical-ancestor chain and updates this Visual's EVD
-    // cache. Runs unconditionally — even when a higher-priority source
-    // (LocalValue / Binding / Trigger / Style / …) is currently the
-    // active source — because the cached InheritedValue slot has to
-    // stay fresh for the eventual fall-through when that higher source
-    // clears. SetInheritedValue / ClearInherited internally suppress
-    // the source flip and change-notification when shadowed, so this
-    // method's `walk + push` is cheap when no descendant cascade is
-    // warranted.
-    /** @internal — § 1.10. Re-resolve the inherited value for the
-     *  given descriptor on this Visual; cascade by recursing into
-     *  Single / Panel children via their propagate_* overrides. */
-    public _refresh_inherited(descriptor: PropertyDescriptor): void
-    {
-        if (!inherits(descriptor.MetaData)) return;
-
-        const key = Model.compose_key(descriptor.RootOwner, descriptor.Name);
-        const value = this.walk_inherited(key);
-        if (value !== undefined)
-        {
-            this.ensure_effective_value_for(descriptor).SetInheritedValue(value);
-        }
-        else
-        {
-            propertyValues(this).get(key)?.ClearInherited();
-        }
-    }
-
-    /** @internal — § 1.10. Refresh every inheritable DP on this
-     *  Visual and cascade through the logical + overlay subtree.
-     *  Fired when the ancestor chain restructures. */
-    public _refresh_inheritance_subtree(): void
-    {
-        for (const descriptor of Visual.collect_inheritable_descriptors(this.constructor))
-        {
-            this._refresh_inherited(descriptor);
-        }
-        this.propagate_inheritance_to_logical_children();
-        // Overlay children participate alongside logical children — they're
-        // the SAME logical tree from the popup's perspective, just hosted
-        // visually by the OverlayLayer instead of by a Panel in the main
-        // Content tree.
-        this.forEachOverlayChild(c => c._refresh_inheritance_subtree());
-    }
-
-    protected propagate_inheritance_to_logical_children(): void
-    {
-        this.forEachLogicalChild(c => c._refresh_inheritance_subtree());
-    }
-
-    protected propagate_inheritance_for_logical_children(descriptor: PropertyDescriptor): void
-    {
-        this.forEachLogicalChild(c => c._refresh_inherited(descriptor));
-    }
+    /** @internal — § Phase B / B4.4. Visual-tier no-op virtual;
+     *  Element overrides to re-resolve a single inheritable DP's
+     *  value on `this` from the current logical-ancestor chain. */
+    public _refresh_inherited(_descriptor: PropertyDescriptor): void { }
 
     /** Iteration virtual — Single/Panel override. Default empty for
      *  leaf Visuals (the renderer doesn't recurse through children
@@ -2009,7 +1936,11 @@ export class Visual extends Model
      *  templated-parent chain — plain Visuals no-op. */
     public _fire_dynamic_resource_listeners(): void { }
 
-    private static collect_inheritable_descriptors(klass: Function): PropertyDescriptor[]
+    /** @internal — § Phase B / B4.4. Public-with-underscore so
+     *  Element's `_refresh_inheritance_subtree` can reach this
+     *  static walker without bracket-access. The set is computed
+     *  from the property registry, not from per-instance state. */
+    public static _collect_inheritable_descriptors(klass: Function): PropertyDescriptor[]
     {
         // The dedup key is `${RootOwner.name}.${Name}` — same composite
         // key the per-instance value store uses, so cross-class
