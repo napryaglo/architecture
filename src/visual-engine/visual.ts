@@ -1250,67 +1250,9 @@ export class Visual extends Model
     // logical content into a templated control (the child's visual
     // parent is set separately by the ContentPresenter / ItemsPresenter
     // doing the visual slotting).
-    protected AttachLogical(child: Visual): void
-    {
-        if (child === this)
-        {
-            throw new Error('A Visual cannot be its own logical child.');
-        }
-        const childBack = child as unknown as ElementLogicalChain;
-        if (childBack._logicalParent !== undefined)
-        {
-            throw new Error('Visual already has a logical parent; detach it from the current parent first.');
-        }
-        child.SetLogicalParent(this);
-        child._refresh_inheritance_subtree();
-        // Style lookups run AFTER inheritance refresh — the resource
-        // chain now reflects the child's new ancestry, so the
-        // type-keyed Style lookup (implicit via constructor + theme
-        // via DefaultStyleKey) sees what the consumer would see at
-        // this position in the tree. Cascades through the ENTIRE
-        // subtree because descendants' ancestor chain just grew above
-        // them too (bottom-up construction is common: a Border with
-        // `resources: { style[TargetType=Button] }` gets its inner
-        // Buttons built and AddChild'd before the Border itself is
-        // attached anywhere; the Buttons resolved an empty chain at
-        // their original AddChild and only see the Border's style
-        // when their chain extends up to it on THIS attach). The
-        // cascade itself is FE-tier (`Element._refresh_styles_subtree`);
-        // plain Visual children no-op via Visual's stub override.
-        child._refresh_styles_subtree();
-        // DynamicResource bindings cached their ancestor-chain
-        // subscriptions at construction. Reparenting grew (or shrank)
-        // that chain — re-walk so any new ancestor's Resources dict
-        // becomes observable, and so a fresh active theme lookup runs
-        // for every bound DP across the subtree.
-        child._refresh_dynamic_resources_subtree();
-    }
-
-    protected DetachLogical(child: Visual): void
-    {
-        const childBack = child as unknown as ElementLogicalChain;
-        if (childBack._logicalParent !== this)
-        {
-            throw new Error('Cannot detach a Visual that is not a logical child of this.');
-        }
-        // Tear down ancestor-resource subscriptions FIRST (whole
-        // subtree) so a mutation on the now-detached chain doesn't
-        // fire resolve_implicit_style / resolve_theme_style through
-        // stale subs. Plain Visuals no-op via the Visual-level stub.
-        child._unsubscribe_styles_subtree();
-        child.SetLogicalParent(undefined);
-        child._refresh_inheritance_subtree();
-        // No ancestor chain anymore — re-resolve drops any inherited
-        // implicit or theme style across the subtree. Explicit Style
-        // stays active because refresh_active_style prefers Style over
-        // _implicitStyle / _themeStyle.
-        child._refresh_styles_subtree();
-        // DynamicResource bindings re-walk their ancestor chain — the
-        // detached subtree's bindings drop ancestor subscriptions and
-        // fall back to Application-only resolution (still valid for
-        // theme tokens).
-        child._refresh_dynamic_resources_subtree();
-    }
+    // AttachLogical / DetachLogical moved to Element (§ Phase B / B4.3)
+    // alongside the `_logicalParent` field and the inheritance / style
+    // / DynamicResource subtree cascades they fire.
 
     /** @internal — § Phase B. Visual-tier no-op virtual; `Element`
      *  overrides to walk this Element + every logical / overlay
@@ -1355,22 +1297,10 @@ export class Visual extends Model
      *  intent: a plain Visual never had an overlay child to detach). */
     public DetachOverlayChild(_child: Visual): void { }
 
-    // Convenience for the common case where a child belongs to BOTH
-    // trees with the same parent — every user-supplied child of a
-    // non-templated Panel or Single goes through here. Templated
-    // controls (Phase 2) call AttachVisual and AttachLogical
-    // independently when the trees diverge.
-    protected Attach(child: Visual): void
-    {
-        this.AttachVisual(child);
-        this.AttachLogical(child);
-    }
-
-    protected Detach(child: Visual): void
-    {
-        this.DetachLogical(child);
-        this.DetachVisual(child);
-    }
+    // `Attach` / `Detach` convenience helpers moved to Element
+    // (§ Phase B / B4.3) — they call AttachLogical / DetachLogical
+    // alongside AttachVisual / DetachVisual, and the logical-tree
+    // half is FE-tier.
 
     // ------------------------------------------------------------------
     // Layout / Render lifecycle

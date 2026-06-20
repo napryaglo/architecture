@@ -579,6 +579,93 @@ export class Element extends Visual
         this._logicalParent = p;
     }
 
+    // ── Logical-tree attach / detach (§ Phase B / B4.3) ──────────────
+
+    // Convenience for the common case where a child belongs to BOTH
+    // trees with the same parent — every user-supplied child of a
+    // non-templated Panel or Single goes through here. Templated
+    // controls call AttachVisual and AttachLogical independently when
+    // the trees diverge. AttachVisual lives on Visual (visual-tree
+    // hop) and is inherited; AttachLogical lives here (FE-tier).
+    protected Attach(child: Visual): void
+    {
+        this.AttachVisual(child);
+        this.AttachLogical(child);
+    }
+
+    protected Detach(child: Visual): void
+    {
+        this.DetachLogical(child);
+        this.DetachVisual(child);
+    }
+
+    // LOGICAL-tree wiring only: sets the child's logical parent and
+    // refreshes property-value inheritance for the new ancestry. Use
+    // directly from templating code when slotting consumer-supplied
+    // logical content into a templated control (the child's visual
+    // parent is set separately by the ContentPresenter /
+    // ItemsPresenter doing the visual slotting). Accepts `Visual`
+    // because callers' references are Visual-typed; non-Element
+    // children silently no-op for the logical-tree state writes
+    // (`SetLogicalParent` is a Visual-tier no-op stub on plain
+    // Visuals — B4.2) and skip the cascade calls (also Visual stubs).
+    protected AttachLogical(child: Visual): void
+    {
+        if (child === this)
+        {
+            throw new Error('An Element cannot be its own logical child.');
+        }
+        // Plain Visuals carry no logical-tree state — the
+        // SetLogicalParent / inheritance / style / DynamicResource
+        // cascades are all FE-tier. Skip silently for non-Element
+        // children; the AttachVisual hop in `Attach()` still runs.
+        if (!(child instanceof Element)) return;
+        // The Element overrides of GetLogicalParent (B4.2) return the
+        // actual parent; the check catches Element children that
+        // already have a parent.
+        if (child.GetLogicalParent() !== undefined)
+        {
+            throw new Error('Element already has a logical parent; detach it from the current parent first.');
+        }
+        child.SetLogicalParent(this);
+        child._refresh_inheritance_subtree();
+        // Style lookups run AFTER inheritance refresh — the resource
+        // chain now reflects the child's new ancestry, so the
+        // type-keyed Style lookup (implicit via constructor + theme
+        // via DefaultStyleKey) sees what the consumer would see at
+        // this position in the tree.
+        child._refresh_styles_subtree();
+        // DynamicResource bindings cached their ancestor-chain
+        // subscriptions at construction. Reparenting grew (or shrank)
+        // that chain — re-walk so any new ancestor's Resources dict
+        // becomes observable.
+        child._refresh_dynamic_resources_subtree();
+    }
+
+    protected DetachLogical(child: Visual): void
+    {
+        // Mirrors AttachLogical: plain Visuals carry no logical-tree
+        // state, so DetachLogical is a no-op for them. The DetachVisual
+        // hop in `Detach()` still tears down the visual side.
+        if (!(child instanceof Element)) return;
+        if (child.GetLogicalParent() !== this)
+        {
+            throw new Error('Cannot detach an Element that is not a logical child of this.');
+        }
+        // Tear down ancestor-resource subscriptions FIRST (whole
+        // subtree) so a mutation on the now-detached chain doesn't
+        // fire resolve_implicit_style / resolve_theme_style through
+        // stale subs.
+        child._unsubscribe_styles_subtree();
+        child.SetLogicalParent(undefined);
+        child._refresh_inheritance_subtree();
+        // No ancestor chain anymore — re-resolve drops any inherited
+        // implicit or theme style across the subtree.
+        child._refresh_styles_subtree();
+        // DynamicResource bindings re-walk their ancestor chain.
+        child._refresh_dynamic_resources_subtree();
+    }
+
     // ── Overlay children (logical-owner-side wiring) ─────────────────
     //
     // Elements that THIS Element owns as overlay-mounted children —
@@ -646,9 +733,8 @@ export class Element extends Visual
             this._overlayChildren.push(child);
             // Logical hop: child._logicalParent = this; runs the
             // inheritance / style / DynamicResource refreshes through
-            // child's subtree. Reaches AttachLogical (still on Visual
-            // pre-B4.2) via the inherited protected method.
-            this['AttachLogical'](child);
+            // child's subtree.
+            this.AttachLogical(child);
         }
         // Visual hop: the host materialises its OverlayLayer (if not
         // yet present) and adds the child as a VISUAL-only panel
@@ -668,11 +754,8 @@ export class Element extends Visual
             if (i >= 0) this._overlayChildren.splice(i, 1);
         }
         // Detach the logical hop only if it still points here — the
-        // child may have been re-parented externally (rare). Reaches
-        // DetachLogical (still on Visual pre-B4.2) via the inherited
-        // protected method.
-        const back = child as unknown as { _logicalParent: Visual | undefined };
-        if (back._logicalParent === this) this['DetachLogical'](child);
+        // child may have been re-parented externally (rare).
+        if (child.GetLogicalParent() === this) this.DetachLogical(child);
     }
 
     // ── Lifecycle listeners ───────────────────────────────────────────
