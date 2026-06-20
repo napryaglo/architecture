@@ -2,6 +2,17 @@ import type { Storyboard } from '../visual-engine/animation/storyboard.js';
 import type { Visual } from '../visual-engine/visual.js';
 import type { Behavior } from '../visual-engine/behavior.js';
 
+// Friend-interface for the Behaviors surface on Element. Behaviors
+// live on Element after Phase B but `Visual` (the type-erased target
+// in TriggerAction.Invoke) is what gets passed in by the trigger
+// machinery — every shipped control extends Element so the cast
+// resolves in practice. Per CLAUDE.md cross-class internals pattern.
+interface ElementWithBehaviors
+{
+    AddBehavior:    (behavior: Behavior) => void;
+    RemoveBehavior: (behavior: Behavior) => void;
+}
+
 // Imperative side of declarative trigger actions. A TriggerAction is the
 // thing an EventTrigger fires when its routed event lands; the most
 // common (and only ship-supported v1) action is BeginStoryboardAction
@@ -183,15 +194,20 @@ export class AttachBehaviorAction extends TriggerAction
 
     public override Invoke(target: Visual): void
     {
+        // Behaviors live on Element after Phase B; AttachBehaviorAction
+        // is only meaningful on an Element subclass (every shipped
+        // control extends Element). Cast pulls the typed surface back
+        // at the boundary.
+        const elementTarget = target as unknown as ElementWithBehaviors;
         const existing = this.attached.get(target);
         if (existing !== undefined)
         {
             // Re-entry without an intervening exit — drop the old
             // attachment cleanly before installing the new one.
-            target.RemoveBehavior(existing);
+            elementTarget.RemoveBehavior(existing);
         }
         const beh = this.Factory();
-        target.AddBehavior(beh);
+        elementTarget.AddBehavior(beh);
         this.attached.set(target, beh);
     }
 
@@ -203,7 +219,7 @@ export class AttachBehaviorAction extends TriggerAction
     {
         const beh = this.attached.get(target);
         if (beh === undefined) return;
-        target.RemoveBehavior(beh);
+        (target as unknown as ElementWithBehaviors).RemoveBehavior(beh);
         this.attached.delete(target);
     }
 }

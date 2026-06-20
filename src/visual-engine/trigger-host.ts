@@ -10,6 +10,7 @@ import {
 import type { EventTrigger } from '../runtime/event-trigger.js';
 import type { Visual } from './visual.js';
 import { KNOWN_ROUTED_EVENTS } from './visual.js';
+import type { Element } from './element.js';
 
 // Click-specific duck-typing surface for the Button family. Button
 // (in `framework/button.ts`) exposes its OWN Click protocol because
@@ -220,27 +221,31 @@ export class TriggerHost
 
         if (trigger.RoutedEvent === 'Loaded')
         {
-            // Loaded — fires once when this Visual first attaches to a
-            // target. `AddLoadedListener` already handles the "already
-            // loaded → fire synchronously" edge so we don't replicate
-            // the IF here.
+            // Loaded — fires once when this Element first attaches to a
+            // target. Lifecycle listener API lives on Element after
+            // Phase B; the target Visual was passed in by Visual's
+            // _install_event_trigger trampoline whose receiver is
+            // always an Element subclass in practice (every shipped
+            // control extends Element). The cast pulls the typed
+            // surface back without a friend-interface declaration.
+            const elementTarget = target as Element;
             const handler = (): void => fire(undefined);
-            target.AddLoadedListener(handler);
+            elementTarget.AddLoadedListener(handler);
             (this._eventTriggerSubscriptions ??= new Map()).set(trigger, () => {
-                target.RemoveLoadedListener(handler);
+                elementTarget.RemoveLoadedListener(handler);
             });
             return;
         }
 
         if (trigger.RoutedEvent === 'Unloaded')
         {
-            // Unloaded fires on EVERY detach edge (not one-shot,
-            // matching fire_unloaded_listeners contract). Re-attach +
-            // detach cycles fire on each detach.
+            // Unloaded fires on EVERY detach edge (not one-shot).
+            // Same Element-cast pattern as the Loaded branch.
+            const elementTarget = target as Element;
             const handler = (): void => fire(undefined);
-            target.AddUnloadedListener(handler);
+            elementTarget.AddUnloadedListener(handler);
             (this._eventTriggerSubscriptions ??= new Map()).set(trigger, () => {
-                target.RemoveUnloadedListener(handler);
+                elementTarget.RemoveUnloadedListener(handler);
             });
             return;
         }

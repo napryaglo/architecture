@@ -9,7 +9,6 @@ import { NameScope } from './namescope.js';
 import { ObservableCollection } from '../runtime/observable-collection.js';
 import { ResourceDictionary, type ResourceKey } from '../runtime/resource-dictionary.js';
 import { Application } from '../runtime/application.js';
-import type { Behavior } from './behavior.js';
 import { Setter, Style, PropertyTrigger, MultiTrigger, DataTrigger, MultiDataTrigger } from '../runtime/style.js';
 import { Point, Rect, Size, Thickness } from './primitives.js';
 import type { DrawingContext } from './drawing-context.js';
@@ -60,7 +59,9 @@ export const KNOWN_ROUTED_EVENTS = new Set([
 // the registration takes effect on the NEXT fire. Same pattern that
 // used to be inlined four times (§ 1.16). Accepts iterables so both
 // Set<Fn> and Array<Fn> sites share the same helper.
-function safeFire<A extends unknown[]>(
+/** @internal — shared with Element (§ Phase B) for its lifecycle
+ *  listener fan-outs. Library-internal; not re-exported. */
+export function safeFire<A extends unknown[]>(
     listeners: Iterable<(...args: A) => void> | undefined,
     ...args: A
 ): void
@@ -876,24 +877,9 @@ export class Visual extends Model
         }
     };
 
-    // Loaded-listeners — fire exactly once when this Visual first
-    // attaches to a target. Adding a listener AFTER the Visual is
-    // already loaded fires it synchronously (matches the React
-    // useEffect mount-listener shape — a registered listener never
-    // misses the load event).
-    //
-    // § 1.11 — the symmetric per-attach pair lives on `_attachedListeners`
-    // below. Behaviors wiring (setUp, tearDown) wants Attached + Detached
-    // (every attach + every detach); WPF-parity consumers wanting
-    // FrameworkElement.Loaded once-only stay on Loaded + Unloaded.
-    // Detached is wired as an alias to Unloaded — same edges, kept
-    // separate listener storage so authors can read their intent
-    // off the wiring (`AddDetachedListener` signals "I want
-    // Attached/Detached symmetry" without forcing the existing
-    // Unloaded callers to migrate).
-    private _loadedListeners: Set<() => void> | undefined;
-    private _hasFiredLoaded: boolean = false;
-    private _attachedListeners: Set<() => void> | undefined;
+    // Lifecycle listeners (Loaded / Attached / Unloaded / Detached)
+    // and the Behaviors subsystem live on `Element` — see § Phase B
+    // (and § 1.11 for the Attached/Detached symmetric pair design).
 
     // Layout state cache. Updated by Measure / Arrange runs; read by the
     // renderer and by parents during their own MeasureOverride /
@@ -1286,149 +1272,11 @@ export class Visual extends Model
         safeFire(this._routedListeners?.get(eventName), args);
     }
 
-    public AddLoadedListener(listener: () => void): void
-    {
-        if (this._loadedListeners === undefined) this._loadedListeners = new Set();
-        this._loadedListeners.add(listener);
-        // Already loaded — fire synchronously so consumers attaching
-        // after mount still see the load edge.
-        if (this._hasFiredLoaded) listener();
-    }
-
-    public RemoveLoadedListener(listener: () => void): void
-    {
-        this._loadedListeners?.delete(listener);
-    }
-
-    /** § 1.11 — Per-attach edge listener. Fires every time this
-     *  Visual's visualParent transitions from undefined to defined,
-     *  including re-attaches after a detach (recycled containers,
-     *  popups mounted+unmounted across hover edges). Symmetric with
-     *  `AddUnloadedListener` / `AddDetachedListener`. If the Visual
-     *  is already attached at registration time, the listener fires
-     *  synchronously so consumers don't miss the current edge. */
-    public AddAttachedListener(listener: () => void): void
-    {
-        (this._attachedListeners ??= new Set()).add(listener);
-        if (this._target !== undefined) listener();
-    }
-
-    public RemoveAttachedListener(listener: () => void): void
-    {
-        this._attachedListeners?.delete(listener);
-    }
-
-    // ── Unloaded listeners ────────────────────────────────────────────
-    //
-    // Symmetric API for the "visualParent transitioned from defined to
-    // undefined" edge — i.e., the Visual has been removed from its
-    // parent. Unlike Loaded (which is fire-once per instance to match
-    // FrameworkElement.Loaded), Unloaded fires on EVERY detach: a
-    // Visual that's added → removed → added → removed gets two
-    // Unloaded fires. The asymmetry is pragmatic — behaviors that need
-    // to release a resource on detach should run their cleanup each
-    // time the Visual leaves the tree, not just the first time.
-    //
-    // "Detach" here means visualParent changed from defined to
-    // undefined ON THIS Visual specifically — it does NOT cascade down
-    // a subtree. A panel being removed from its grandparent fires
-    // Unloaded on the panel itself, NOT on its children (whose
-    // visualParents still point inside the detached subtree). If you
-    // need teardown for a deep descendant, register an unloaded
-    // listener on the descendant itself.
-    private _unloadedListeners: Set<() => void> | undefined;
-
-    public AddUnloadedListener(listener: () => void): void
-    {
-        if (this._unloadedListeners === undefined) this._unloadedListeners = new Set();
-        this._unloadedListeners.add(listener);
-    }
-
-    public RemoveUnloadedListener(listener: () => void): void
-    {
-        this._unloadedListeners?.delete(listener);
-    }
-
-    /** § 1.11 — Symmetric companion to `AddAttachedListener`. Wired
-     *  as an alias to `AddUnloadedListener` — same per-detach edges,
-     *  separate name so authors picking the per-attach / per-detach
-     *  pair signal their intent at the wiring site. WPF-parity
-     *  consumers (Loaded + Unloaded) stay on the existing methods. */
-    public AddDetachedListener(listener: () => void): void
-    {
-        this.AddUnloadedListener(listener);
-    }
-
-    public RemoveDetachedListener(listener: () => void): void
-    {
-        this.RemoveUnloadedListener(listener);
-    }
-
-    private fire_unloaded_listeners(): void
-    {
-        safeFire(this._unloadedListeners);
-    }
-
-    // ── Behavior attachment ────────────────────────────────────────────
-    //
-    // Behaviors are markup-attachable wiring objects (see
-    // src/runtime/behavior.ts). The compiler emits per-visual
-    // `<visual>.AddBehavior(<behavior>)` after constructing the behavior
-    // and applying its DP setters, so by the time OnAttached fires the
-    // behavior's per-instance properties are already populated.
-    //
-    // The visual holds a reference to every attached behavior so it
-    // can survive GC alongside the visual itself; that matches the
-    // behavior's natural lifetime — it's wired up to listen on the
-    // visual it was attached to, so as long as the visual is alive the
-    // behavior should be too.
-    private _behaviors: Behavior[] | undefined;
-    // Per-behavior unload listener — kept so `RemoveBehavior` can pull
-    // the listener back off `AddUnloadedListener` and fire `OnDetached`
-    // exactly once on imperative removal (vs. the unload edge firing
-    // it later anyway).
-    private _behaviorUnloadListeners: Map<Behavior, () => void> | undefined;
-
-    public AddBehavior(behavior: Behavior): void
-    {
-        (this._behaviors ??= []).push(behavior);
-        // Auto-wire OnDetached via the Unloaded listener so behaviors
-        // get a teardown edge without their author writing the
-        // subscription themselves. Each detach fires OnDetached again
-        // (matching the underlying Unloaded semantics) — a behavior
-        // that needs once-only teardown should track that itself.
-        const onUnloaded = (): void => { behavior.OnDetached(this); };
-        this.AddUnloadedListener(onUnloaded);
-        (this._behaviorUnloadListeners ??= new Map()).set(behavior, onUnloaded);
-        behavior.OnAttached(this);
-    }
-
-    // Imperative companion to AddBehavior — used by triggered-behavior
-    // actions (style triggers with a Behaviors block) and any consumer
-    // that needs to drop a behavior before the Visual is unloaded.
-    // Fires `OnDetached` once and unsubscribes the unload listener so
-    // a later Unloaded edge doesn't fire `OnDetached` a second time.
-    // No-op when `behavior` is not currently attached.
-    public RemoveBehavior(behavior: Behavior): void
-    {
-        if (this._behaviors === undefined) return;
-        const idx = this._behaviors.indexOf(behavior);
-        if (idx < 0) return;
-        this._behaviors.splice(idx, 1);
-
-        const onUnloaded = this._behaviorUnloadListeners?.get(behavior);
-        if (onUnloaded !== undefined)
-        {
-            this.RemoveUnloadedListener(onUnloaded);
-            this._behaviorUnloadListeners!.delete(behavior);
-        }
-        behavior.OnDetached(this);
-    }
-
-    public get Behaviors(): readonly Behavior[]
-    {
-        return this._behaviors ?? [];
-    }
+    // Lifecycle listener public API (AddLoaded / AddAttached /
+    // AddUnloaded / AddDetached and their Remove counterparts) and
+    // the Behavior attachment surface (AddBehavior / RemoveBehavior /
+    // Behaviors) live on `Element`. See [./element.ts](./element.ts)
+    // (§ Phase B).
 
     // CommandBindings / InputBindings live on Control (the templated-
     // control base in `@visualisation-sub/mural/framework`). Routed
@@ -1629,16 +1477,29 @@ export class Visual extends Model
     {
         const wasAttached = this._visualParent !== undefined;
         this._visualParent = p;
-        // Fire Unloaded on the defined → undefined transition.
-        // Behaviors that registered via Visual.AddBehavior install an
-        // unloaded listener at attach time so their OnDetached fires
-        // here. Re-attach + detach cycles fire on each detach (not
-        // one-shot like Loaded — see fire_unloaded_listeners contract).
+        // Fire the FE-tier detach hook on the defined → undefined
+        // transition. Element overrides `on_detach_edge` to fire its
+        // Unloaded / Detached listeners (which is where Behaviors hook
+        // their teardown via Visual.AddBehavior → AddUnloadedListener).
+        // Re-attach + detach cycles fire on each detach (not
+        // one-shot like Loaded — see Element.fire_unloaded_listeners
+        // contract).
         if (wasAttached && p === undefined)
         {
-            this.fire_unloaded_listeners();
+            this.on_detach_edge();
         }
     }
+
+    /** Visual-tier hook fired on the defined → undefined `visualParent`
+     *  transition. Empty on Visual; Element overrides to fan out to
+     *  its Unloaded / Detached listener sets. § Phase B. */
+    protected on_detach_edge(): void { }
+
+    /** Visual-tier hook fired on the undefined → defined `_target`
+     *  transition (the FE-tier "I am now mounted" edge). Empty on
+     *  Visual; Element overrides to fan out to its Loaded / Attached
+     *  listener sets. § Phase B. */
+    protected on_attach_edge(): void { }
 
     protected SetLogicalParent(p: Visual | undefined): void
     {
@@ -1672,28 +1533,14 @@ export class Visual extends Model
             this._renderInvalidatedWhileDetached = false;
             target.OnRenderInvalidated(this);
         }
-        // Fire Loaded listeners on the undefined → defined transition.
-        // One-shot: subsequent re-attach (detach + attach) doesn't
-        // re-fire — Loaded matches WPF FrameworkElement.Loaded which
-        // is also fire-once-per-instance.
-        if (!wasLoaded && target !== undefined && !this._hasFiredLoaded)
-        {
-            this._hasFiredLoaded = true;
-            this.fire_loaded_listeners();
-        }
-        // § 1.11 — Attached fires on EVERY attach edge (not one-shot),
-        // matching `Unloaded`'s every-detach symmetry. A behavior
-        // wired with (Attached, Unloaded/Detached) sees both edges of
-        // every recycle cycle.
+        // Delegate the FE-tier "Loaded once + Attached every-edge"
+        // fan-out to Element's override of `on_attach_edge`. Visual
+        // itself is render-tier only — the lifecycle listener state
+        // lives on Element (§ Phase B).
         if (!wasLoaded && target !== undefined)
         {
-            safeFire(this._attachedListeners);
+            this.on_attach_edge();
         }
-    }
-
-    private fire_loaded_listeners(): void
-    {
-        safeFire(this._loadedListeners);
     }
 
     // § 1.15 — the four propagate_* virtuals now have one-line

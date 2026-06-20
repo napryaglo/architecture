@@ -6,6 +6,7 @@ import {
     Application,
     BeginStoryboardAction,
     DoubleAnimation,
+    Element,
     EventTrigger,
     ManualClock,
     MetaData,
@@ -27,10 +28,10 @@ function freshClock(): ManualClock
     return c;
 }
 
-// Lightweight Visual subclass with a bool DP so we can flip a trigger
-// without dragging in a control. The base Visual / Model machinery is
+// Lightweight Element subclass with a bool DP so we can flip a trigger
+// without dragging in a control. The base Element / Model machinery is
 // what we're actually exercising.
-class TriggerTest extends Visual
+class TriggerTest extends Element
 {
     static {
         Model.RegisterProperty(TriggerTest, 'Active', false, MetaData.None);
