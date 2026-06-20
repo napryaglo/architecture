@@ -1,12 +1,12 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { Rect, Size, Visual } from '../../runtime/index.js';
+import { Rect, Size, Element, Visual } from '../../runtime/index.js';
 import { resolveKey } from '../../runtime/model-internals.js';
 import { Canvas } from '../panels/canvas.js';
 
 // Minimal leaf — MeasureOverride returns a fixed box so DesiredSize is
 // predictable in the assertions below.
-class FixedSizeLeaf extends Visual
+class FixedSizeLeaf extends Element
 {
     constructor(private box: Size) { super(); }
 

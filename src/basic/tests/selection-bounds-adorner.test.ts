@@ -6,6 +6,7 @@ import {
     AdornerDecorator,
     Rect,
     Size,
+    Element,
     Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
@@ -17,7 +18,7 @@ import {
     type VerticalAnchor,
 } from '../selection-bounds-adorner.js';
 
-class TestVisual extends Visual
+class TestVisual extends Element
 {
     constructor()
     {

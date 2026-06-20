@@ -16,6 +16,7 @@ import {
     StoryboardState,
     ThicknessAnimation,
     Thickness,
+    Element,
     Visual,
     interpolateColor,
     interpolateNumber,
@@ -26,7 +27,7 @@ import { resolveKey } from '../model-internals.js';
 // Lightweight Visual subclass with a numeric DP for the EVD-precedence
 // tests. Stand-in for "any DP on any Visual" so the animation slot
 // behaviour is testable without dragging in a concrete control.
-class AnimTest extends Visual
+class AnimTest extends Element
 {
     static {
         Model.RegisterProperty(AnimTest, 'Number',    0,              MetaData.None);
@@ -521,7 +522,7 @@ describe('AnimationManager', () => {
 describe('EVD animation slot — coerce integration', () => {
     // Local class with a coerce callback so the AnimTest fixture stays
     // un-coerced for the precedence tests above.
-    class Capped extends Visual
+    class Capped extends Element
     {
         static {
             Model.RegisterProperty(

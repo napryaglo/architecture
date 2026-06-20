@@ -9,6 +9,7 @@ import {
     Application,
     Rect,
     Size,
+    Element,
     Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
@@ -16,7 +17,7 @@ import { Border } from '../border.js';
 import { ScrollContentPresenter } from '../scroll/scroll-content-presenter.js';
 import { ScrollViewer } from '../../framework/scroll-viewer.js';
 
-class FixedSquare extends Visual
+class FixedSquare extends Element
 {
     constructor(side: number)
     {

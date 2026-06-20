@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { initTestApp } from '../../basic/tests/test-app.js';
 
 import {
+    Element,
     Visual,
     Panel,
     Application,
@@ -18,7 +19,7 @@ import { InputManager } from '../index.js';
 // event, (b) in which order, and (c) under which dispatch strategy
 // (tunnel vs bubble). Used throughout the test file in lieu of
 // per-test mocks.
-class Probe extends Visual
+class Probe extends Element
 {
     public readonly log: Array<{
         strategy: 'tunnel' | 'bubble';

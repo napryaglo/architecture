@@ -1,7 +1,7 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { ObservableCollection, Visual } from '../../runtime/index.js';
+import { ObservableCollection, Element, Visual } from '../../runtime/index.js';
 import { DataTemplate } from '../templates/data-template.js';
 import { ItemsControl } from '../../framework/items-control.js';
 import { StackPanel } from '../panels/stack-panel.js';
@@ -14,7 +14,7 @@ import {
 
 // Minimal Visual leaf used as a container; the DataTemplate stamps
 // these for each test item.
-class Leaf extends Visual
+class Leaf extends Element
 {
     constructor(public readonly label: string) { super(); }
 }

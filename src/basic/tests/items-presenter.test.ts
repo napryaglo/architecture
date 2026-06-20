@@ -5,6 +5,7 @@ import {
     Panel,
     Size,
     Thickness,
+    Element,
     Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
@@ -17,7 +18,7 @@ import {
 } from '../index.js';
 import { ItemsControl } from '@visualisation-sub/mural/framework';
 
-class Leaf extends Visual
+class Leaf extends Element
 {
     constructor(public readonly source: unknown) { super(); }
     protected override MeasureOverride(_a: Size): Size { return new Size(10, 10); }

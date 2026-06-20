@@ -5,13 +5,14 @@ import {
     Panel,
     Rect,
     Size,
+    Element,
     Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
 import { DataTemplate, Orientation, VirtualizingStackPanel } from '../index.js';
 import { ItemsControl } from '@visualisation-sub/mural/framework';
 
-class Leaf extends Visual
+class Leaf extends Element
 {
     constructor(public readonly source: unknown) { super(); }
     // Match the panel's ItemHeight (20) so the new variable-size
@@ -189,7 +190,7 @@ describe('VirtualizingStackPanel — realization based on Viewport', () => {
 
 describe('VirtualizingStackPanel — variable item heights', () => {
     // Custom container whose measured height varies by source index.
-    class VarLeaf extends Visual
+    class VarLeaf extends Element
     {
         constructor(public readonly source: unknown) { super(); }
         protected override MeasureOverride(_a: Size): Size

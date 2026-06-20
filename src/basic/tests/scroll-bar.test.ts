@@ -2,7 +2,7 @@ import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from './test-app.js';
 
-import { Application, NoModifiers, PointerButton, Rect, Size, Visual, type PointerEventInit } from '../../runtime/index.js';
+import { Application, NoModifiers, PointerButton, Rect, Size, Element, Visual, type PointerEventInit } from '../../runtime/index.js';
 import { InputManager } from '../../framework/index.js';;
 import { Orientation } from '../panels/stack-panel.js';
 import { ScrollBar } from '../scroll/scroll-bar.js';
@@ -197,7 +197,7 @@ describe('InputManager — pointer capture', () => {
     test('Move events route to the captured visual even when hit-test misses', () => {
         const im = new InputManager();
         // Two unrelated visuals; one captures, the other becomes the hit.
-        class StubVisual extends Visual {
+        class StubVisual extends Element {
             public moves = 0;
             protected override OnPointerMove(): void { this.moves++; }
         }
@@ -213,7 +213,7 @@ describe('InputManager — pointer capture', () => {
 
     test('PointerUp auto-releases the capture', () => {
         const im = new InputManager();
-        class StubVisual extends Visual { }
+        class StubVisual extends Element { }
         const captor = new StubVisual();
         im.CapturePointer(captor);
         assert.equal(im.GetCapturedVisual(), captor);
@@ -224,7 +224,7 @@ describe('InputManager — pointer capture', () => {
 
     test('PointerEventArgs.CapturePointer captures via the arg sink', () => {
         const im = new InputManager();
-        class CaptorVisual extends Visual {
+        class CaptorVisual extends Element {
             public received = 0;
             protected override OnPointerDown(args: import('../../runtime/index.js').PointerEventArgs): void {
                 this.received++;

@@ -6,6 +6,7 @@ import {
     Panel,
     PointerButton,
     PointerEventArgs,
+    Element,
     Visual,
     dispatchKey,
     dispatchPointer,
@@ -17,7 +18,7 @@ import {
 // Concrete Visual for the route-walker fixtures. Counts each handler
 // firing so a test can assert "the dispatch fired N times" against the
 // before / after states of the IsEnabled gate.
-class Counter extends Visual
+class Counter extends Element
 {
     public down = 0; public up = 0; public move = 0;
     public enter = 0; public leave = 0;

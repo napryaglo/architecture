@@ -7,6 +7,7 @@ import {
     Setter,
     Size,
     Style,
+    Element,
     Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
@@ -16,7 +17,7 @@ import { ItemsControl } from '@visualisation-sub/mural/framework';
 
 // Tiny container with a registered DP so the per-item style picker
 // has somewhere visible to land.
-class Leaf extends Visual
+class Leaf extends Element
 {
     static {
         Model.RegisterProperty(Leaf, 'Tag', 'plain', MetaData.None);

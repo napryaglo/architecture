@@ -1,10 +1,10 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { Panel, Size, Visual, type DrawingContext } from '../../runtime/index.js';
+import { Panel, Size, Element, Visual, type DrawingContext } from '../../runtime/index.js';
 import { DataTemplate } from '../index.js';
 import { ItemsControl } from '@visualisation-sub/mural/framework';
 
-class Leaf extends Visual
+class Leaf extends Element
 {
     constructor(public readonly source: unknown) { super(); }
     protected override MeasureOverride(_a: Size): Size { return new Size(10, 10); }

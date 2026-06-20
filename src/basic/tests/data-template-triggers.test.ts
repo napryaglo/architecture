@@ -5,6 +5,7 @@ import {
     Model,
     NameScope,
     Size,
+    Element,
     Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
@@ -30,7 +31,7 @@ class CounterAction extends TriggerAction
 // Minimal Visual used as the template root — exposes Tint + Bias so a
 // trigger has properties to flip and to watch. RenderOverride no-ops
 // because these tests assert state, not paint output.
-class Tile extends Visual
+class Tile extends Element
 {
     static {
         Model.RegisterProperty(Tile, 'Tint', 'plain',  MetaData.None);
@@ -110,7 +111,7 @@ describe('DataTemplate.Triggers — TargetName routes setter to a named descenda
         // Composite root with a named "chrome" child. The trigger
         // setter targets "chrome", so its Tint flips but the root's
         // stays untouched.
-        class Panel extends Visual
+        class Panel extends Element
         {
             public chrome: Tile;
             constructor()

@@ -9,6 +9,7 @@ import {
     Rect,
     Size,
     Validation,
+    Element,
     Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
@@ -22,7 +23,7 @@ const ERROR = {
     errorContent: 'bad',
 };
 
-class TestVisual extends Visual
+class TestVisual extends Element
 {
     constructor()
     {

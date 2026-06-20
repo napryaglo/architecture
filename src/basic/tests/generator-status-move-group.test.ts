@@ -1,7 +1,7 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { ObservableCollection, Visual } from '../../runtime/index.js';
+import { ObservableCollection, Element, Visual } from '../../runtime/index.js';
 import { CollectionView, GroupDescription } from '../collections/collection-view.js';
 import { CollectionViewGroup } from '../collections/collection-view-group.js';
 import { DataTemplate } from '../templates/data-template.js';
@@ -16,7 +16,7 @@ import {
 import { ItemsControl } from '../../framework/items-control.js';
 import { StackPanel } from '../panels/stack-panel.js';
 
-class Leaf extends Visual
+class Leaf extends Element
 {
     constructor(public readonly label: string) { super(); }
 }

@@ -10,6 +10,7 @@ import {
     Size,
     Theme,
     ThemeManager,
+    Element,
     Visual,
     type DrawingContext,
     type MountableTarget,
@@ -19,7 +20,7 @@ import { resolveKey } from '../model-internals.js';
 // Tiny Visual used as a stand-in for the application's root and as a
 // resource-walk leaf. Plain Visual is abstract; this satisfies it
 // minimally.
-class TestLeaf extends Visual
+class TestLeaf extends Element
 {
     static {
         Model.RegisterProperty(TestLeaf, 'Brush', undefined, MetaData.None);

@@ -8,6 +8,7 @@ import {
     DragDrop,
     DragDropEffects,
     Size,
+    Element,
     Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
@@ -46,7 +47,7 @@ function makeDom(): { dom: JSDOM; host: HTMLElement; document: Document }
 // drag source — gives the renderer something to stamp with
 // VISUAL_BACKREF so the ghost-clone path has a real outer <g> to
 // snapshot. Sized 20x20 so it shows up at any layout pass.
-class TestSquare extends Visual
+class TestSquare extends Element
 {
     protected override MeasureOverride(_a: Size): Size { return new Size(20, 20); }
     protected override RenderOverride(dc: DrawingContext): void

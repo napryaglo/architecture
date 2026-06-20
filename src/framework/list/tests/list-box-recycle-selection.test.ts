@@ -2,7 +2,7 @@ import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from '../../../basic/tests/test-app.js';
 
-import { Application, Color, Setter, Style, Visual } from '../../../runtime/index.js';
+import { Application, Color, Setter, Style, Element, Visual } from '../../../runtime/index.js';
 import { ListBox, ListBoxItem } from '../list-box.js';
 import { Border } from '../../../basic/border.js';
 import { ContentPresenter } from '../../../basic/templates/content-presenter.js';
@@ -195,7 +195,7 @@ describe('ListBox selection survives container recycle by data identity', () => 
             public OnArrangeInvalidated(_v: Visual): void {}
         }
         const target = new StubTarget();
-        const leaf = new (class extends Visual {
+        const leaf = new (class extends Element {
             protected override MeasureOverride(_a: never): never { return undefined as never; }
         })();
         // Attach to the stub target first.

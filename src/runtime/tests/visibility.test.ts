@@ -5,13 +5,14 @@ import {
     Rect,
     Size,
     Visibility,
+    Element,
     Visual,
     type DrawingContext,
 } from '../index.js';
 
 // Concrete leaf Visual with a fixed DesiredSize and a render counter so a
 // test can assert how Visibility gates Measure / Arrange / Render.
-class FixedSizeLeaf extends Visual
+class FixedSizeLeaf extends Element
 {
     public renders = 0;
 

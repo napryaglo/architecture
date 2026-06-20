@@ -6,6 +6,7 @@ import {
     Model,
     Panel,
     Size,
+    Element,
     Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
@@ -18,7 +19,7 @@ import {
 // Leaf Visual whose MeasureOverride returns a caller-supplied size and
 // whose RenderOverride paints a fixed-color rectangle. Used to drive the
 // layout/render pipeline without depending on the higher-level controls.
-class TestLeaf extends Visual
+class TestLeaf extends Element
 {
     constructor(private box: Size, private readonly color: Color = Color.Red)
     {
@@ -81,7 +82,7 @@ function freshClassWithProp(meta: MetaData, defaultValue: unknown = 0): {
     name: string;
 }
 {
-    class Subject extends Visual {}
+    class Subject extends Element {}
     const name = 'p_' + Math.random().toString(36).slice(2, 8);
     Model.RegisterProperty(Subject, name, defaultValue, meta);
     return { Klass: Subject, name };
@@ -277,7 +278,7 @@ describe('PresentationTarget.Flush — convergence loop', () => {
     // the shape that cross-Visual coupling produces (SharedSizeGroup,
     // adorner-driven re-measure, etc.). Used to verify Flush iterates
     // until the sibling chain settles.
-    class CoupledLeaf extends Visual
+    class CoupledLeaf extends Element
     {
         public sibling: CoupledLeaf | undefined;
         public measureCount = 0;
@@ -301,7 +302,7 @@ describe('PresentationTarget.Flush — convergence loop', () => {
         const b = new CoupledLeaf(new Size(20, 20));
         a.sibling = b;   // a's first measure invalidates b
         // Mount under a simple container that measures both children.
-        class Panel2 extends Visual {
+        class Panel2 extends Element {
             private kids: Visual[] = [];
             public override get visualChildren(): readonly Visual[] { return this.kids; }
             protected override MeasureOverride(av: Size): Size {
@@ -339,7 +340,7 @@ describe('PresentationTarget.Flush — convergence loop', () => {
         // Two leaves that re-invalidate EACH OTHER on every measure —
         // an infinite ping-pong. The cap should make Flush return
         // after `maxIterations` passes regardless.
-        class Pingpong extends Visual {
+        class Pingpong extends Element {
             public partner: Pingpong | undefined;
             public measureCount = 0;
             protected override MeasureOverride(_a: Size): Size {
@@ -351,7 +352,7 @@ describe('PresentationTarget.Flush — convergence loop', () => {
         const x = new Pingpong();
         const y = new Pingpong();
         x.partner = y; y.partner = x;
-        class Wrap extends Visual {
+        class Wrap extends Element {
             private kids: Visual[] = [];
             public override get visualChildren(): readonly Visual[] { return this.kids; }
             protected override MeasureOverride(av: Size): Size {

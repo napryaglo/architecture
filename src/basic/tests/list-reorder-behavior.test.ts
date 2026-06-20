@@ -9,6 +9,7 @@ import {
     ObservableCollection,
     Rect,
     Size,
+    Element,
     Visual,
 } from '../../runtime/index.js';
 import { Canvas } from '../panels/canvas.js';
@@ -19,7 +20,7 @@ import { VirtualizingWrapPanel } from '../panels/virtualisation/virtualizing-wra
 
 // Stand-in row visual whose ArrangedRect we can stamp directly so the
 // reorder math has predictable container midpoints to compare against.
-class StubRow extends Visual
+class StubRow extends Element
 {
     public stampRect(r: Rect): void { this['_arrangedRect'] = r; }
     protected override MeasureOverride(_a: Size): Size { return Size.Zero; }
@@ -134,7 +135,7 @@ function snapshot<T>(c: ObservableCollection<T>): T[] {
 // behavior's cursor-to-cell and adorner-placement math has to use cell
 // strides (cell + spacing), not raw ItemWidth / ItemHeight.
 describe('ListReorderBehavior — VirtualizingWrapPanel with spacing', () => {
-    class Cell extends Visual {
+    class Cell extends Element {
         protected override MeasureOverride(_a: Size): Size { return new Size(100, 100); }
     }
 
@@ -236,7 +237,7 @@ describe('ListReorderBehavior — VirtualizingWrapPanel with spacing', () => {
         });
         (ic as unknown as { _target: typeof target })._target = target;
         const beh = new ListReorderBehavior();
-        beh.InsertionAdornerTemplate = new DataTemplate(() => new (class extends Visual {
+        beh.InsertionAdornerTemplate = new DataTemplate(() => new (class extends Element {
             protected override MeasureOverride(_a: Size): Size { return new Size(0, 0); }
         })());
         ic.AddBehavior(beh);
@@ -294,7 +295,7 @@ describe('ListReorderBehavior — insertion-line adorner (8.5)', () => {
 
     function lineTemplate(): DataTemplate {
         return new DataTemplate(() => {
-            const line = new (class extends Visual {
+            const line = new (class extends Element {
                 protected override MeasureOverride(_a: Size): Size { return new Size(0, 2); }
             })();
             return line;

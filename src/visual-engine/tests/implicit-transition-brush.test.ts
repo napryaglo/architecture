@@ -9,6 +9,7 @@ import {
     MetaData,
     Model,
     PropertyTransition,
+    Element,
     Visual,
 } from '../../runtime/index.js';
 import { resolveKey } from '../../runtime/model-internals.js';
@@ -21,7 +22,7 @@ import '../drawing/solid-color-brush-animation.js';
 
 // Lightweight Visual subclass with one Brush-typed DP. The DP itself
 // lives in runtime — only the value type sits in visual-engine.
-class BrushVisualTest extends Visual
+class BrushVisualTest extends Element
 {
     static {
         Model.RegisterProperty(BrushVisualTest, 'Brush',

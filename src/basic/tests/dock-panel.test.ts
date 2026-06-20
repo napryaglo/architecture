@@ -1,10 +1,10 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { Rect, Size, Visual } from '../../runtime/index.js';
+import { Rect, Size, Element, Visual } from '../../runtime/index.js';
 import { resolveKey } from '../../runtime/model-internals.js';
 import { Dock, DockPanel } from '../panels/dock-panel.js';
 
-class FixedSizeLeaf extends Visual
+class FixedSizeLeaf extends Element
 {
     constructor(private box: Size) { super(); }
 

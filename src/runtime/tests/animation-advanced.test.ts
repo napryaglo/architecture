@@ -18,11 +18,12 @@ import {
     StoryboardState,
     Thickness,
     ThicknessAnimationUsingKeyFrames,
+    Element,
     Visual,
 } from '../index.js';
 import { resolveKey } from '../model-internals.js';
 
-class AnimTest extends Visual
+class AnimTest extends Element
 {
     static {
         Model.RegisterProperty(AnimTest, 'Number',    0,                MetaData.None);

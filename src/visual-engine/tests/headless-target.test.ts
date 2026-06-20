@@ -5,6 +5,7 @@ import {
     Rect,
     Single,
     Size,
+    Element,
     Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
@@ -18,7 +19,7 @@ import {
 // its OWN coordinate space. Used in tests that verify HeadlessTarget
 // pushes the right translate so a child rendered "at (0,0)" lands at
 // the parent's arranged offset.
-class PaintRect extends Visual
+class PaintRect extends Element
 {
     constructor(private readonly box: Size, private readonly color: Color) { super(); }
 

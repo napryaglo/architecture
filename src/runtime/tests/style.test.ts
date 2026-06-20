@@ -18,6 +18,7 @@ import {
     Size,
     Style,
     TriggerAction,
+    Element,
     Visual,
     type DataTriggerCondition,
     type DrawingContext,
@@ -30,7 +31,7 @@ import { resolveKey } from '../model-internals.js';
 // styled value shadows an inherited one. Padding is a non-inheritable
 // number so we can verify cross-class setters and basic shadowing
 // against an inherited value.
-class Widget extends Visual
+class Widget extends Element
 {
     static {
         Model.RegisterProperty(Widget, 'Tint',  'default', MetaData.Inherits);
@@ -326,7 +327,7 @@ describe('Style — interaction with Binding (Binding shadows Style)', () => {
 
 describe('Style — TargetType validation', () => {
     test('applying a Style whose TargetType is not an ancestor of the target throws', () => {
-        class Other extends Visual { }
+        class Other extends Element { }
         const w = new Widget();
         const wrong = new Style(Other, [new Setter(Widget, 'Bias', 1)]);
         assert.throws(() => { w.Style = wrong; }, /TargetType 'Other' does not match target 'Widget'/);
@@ -759,7 +760,7 @@ describe('Style — DataTrigger', () => {
         // same Trigger-tier slot. PropertyTrigger drives Bias;
         // DataTrigger drives Tint. Both must install and evaluate
         // correctly without disturbing each other.
-        class Surface extends Visual
+        class Surface extends Element
         {
             static {
                 Model.RegisterProperty(Surface, 'Mode',   'cold',    MetaData.None);

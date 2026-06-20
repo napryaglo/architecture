@@ -6,6 +6,7 @@ import {
     CornerRadius,
     MetaData,
     Model,
+    Element,
     Visual,
     type DrawingContext,
     DynamicResource,
@@ -18,7 +19,7 @@ import { SetTheme, CurrentTheme, ToggleTheme } from '../index.js';
 // Plain Visual subclass with a writable Brush DP — Material tokens are
 // SolidColorBrush instances, so this proves the lookup wires up
 // correctly when bound through `DynamicResource`.
-class BrushTarget extends Visual
+class BrushTarget extends Element
 {
     static {
         Model.RegisterProperty(BrushTarget, 'Brush', undefined, MetaData.None);

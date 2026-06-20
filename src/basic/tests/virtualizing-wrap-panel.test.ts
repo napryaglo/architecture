@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
     Rect,
     Size,
+    Element,
     Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
@@ -12,7 +13,7 @@ import { ItemsControl } from '@visualisation-sub/mural/framework';
 // Leaf container that just consumes its slot — gives the panel something
 // concrete to Measure/Arrange so RealizedIndices and ArrangedRects mean
 // what we expect them to.
-class Leaf extends Visual
+class Leaf extends Element
 {
     constructor(public readonly source: unknown) { super(); }
     protected override MeasureOverride(_a: Size): Size { return new Size(100, 100); }

@@ -11,6 +11,7 @@ import {
     PropertyTransition,
     Rect,
     Size,
+    Element,
     Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
@@ -20,7 +21,7 @@ import { ItemsControl, ScrollViewer } from '@visualisation-sub/mural/framework';
 
 // Fixed-size leaf that paints a colored rect — useful as ScrollViewer
 // content for measuring extent.
-class FixedRect extends Visual
+class FixedRect extends Element
 {
     constructor(private box: Size, private color: Color = Color.Red) { super(); }
     protected override MeasureOverride(_a: Size): Size { return this.box; }
@@ -280,7 +281,7 @@ describe('ScrollViewer — auto-scroll near edges during drag (8.4)', () => {
         // shrink the effective viewport — keeps the test coordinates clean.
         sv.IsAutoHideScrollBars = true;
         // Inflate content so the viewport has scrollable extent.
-        sv.Content = new (class extends Visual {
+        sv.Content = new (class extends Element {
             protected override MeasureOverride(_a: Size): Size { return new Size(500, 500); }
         })();
         sv.Measure(new Size(100, 100));

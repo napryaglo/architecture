@@ -8,6 +8,7 @@ import {
     Application,
     Rect,
     Size,
+    Element,
     Visual,
     type DrawingContext,
 } from '../index.js';
@@ -16,7 +17,7 @@ import { Canvas } from '../../basic/panels/canvas.js';
 
 // Concrete leaf for placement/size assertions. Reports the size given
 // to its constructor and paints nothing.
-class FixedSquare extends Visual
+class FixedSquare extends Element
 {
     constructor(side: number)
     {

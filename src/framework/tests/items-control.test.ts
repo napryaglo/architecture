@@ -6,6 +6,7 @@ import {
     ObservableCollection,
     Panel,
     Size,
+    Element,
     Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
@@ -30,7 +31,7 @@ function logicalParentOf(v: Visual | undefined): Visual | undefined
 // each container represents. The Tint property exists to verify
 // inheritance flows from the ItemsControl (logical parent of each
 // container) down to the container.
-class ItemLeaf extends Visual
+class ItemLeaf extends Element
 {
     static {
         Model.RegisterProperty(ItemLeaf, 'Tint', 'default', MetaData.Inherits);

@@ -2,7 +2,7 @@ import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from './test-app.js';
 
-import { Application, NoModifiers, PointerButton, Rect, Size, Visual, type DrawingContext, type PointerEventInit } from '../../runtime/index.js';
+import { Application, NoModifiers, PointerButton, Rect, Size, Element, Visual, type DrawingContext, type PointerEventInit } from '../../runtime/index.js';
 import { InputManager } from '../../framework/index.js';;
 import { Border } from '../border.js';
 import { DockPanel } from '../panels/dock-panel.js';
@@ -24,7 +24,7 @@ function pointer(overrides: Partial<PointerEventInit> = {}): PointerEventInit
     };
 }
 
-class FixedSize extends Visual
+class FixedSize extends Element
 {
     constructor(w: number, h: number)
     {

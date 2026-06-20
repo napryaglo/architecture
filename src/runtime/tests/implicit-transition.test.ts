@@ -10,6 +10,7 @@ import {
     Model,
     PropertyTransition,
     Thickness,
+    Element,
     Visual,
 } from '../index.js';
 import { resolveKey } from '../model-internals.js';
@@ -18,7 +19,7 @@ import { resolveKey } from '../model-internals.js';
 // type-dispatch path is exercised end-to-end. The number DP is what most
 // real-world use cases need (Height / Width / FontSize); Color +
 // Thickness round out the supported interpolators.
-class TransitionTest extends Visual
+class TransitionTest extends Element
 {
     static {
         Model.RegisterProperty(TransitionTest, 'Number',    0,                MetaData.None);

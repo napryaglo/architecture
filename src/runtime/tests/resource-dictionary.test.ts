@@ -12,6 +12,7 @@ import {
     ResourceDictionary,
     Size,
     ThemeManager,
+    Element,
     Visual,
     registerSchemeTransitionAnimator,
     type DrawingContext,
@@ -20,7 +21,7 @@ import { resolveKey } from '../model-internals.js';
 
 // Tiny Visual with one MetaData.None property used as a DynamicResource
 // target. Plain Visual doesn't expose anything settable, so we wrap.
-class TargetLeaf extends Visual
+class TargetLeaf extends Element
 {
     static {
         Model.RegisterProperty(TargetLeaf, 'Brush', undefined, MetaData.None);

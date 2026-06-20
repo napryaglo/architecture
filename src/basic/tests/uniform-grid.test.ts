@@ -1,9 +1,9 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { Rect, Size, Visual } from '../../runtime/index.js';
+import { Rect, Size, Element, Visual } from '../../runtime/index.js';
 import { UniformGrid } from '../panels/uniform-grid.js';
 
-class FixedSizeLeaf extends Visual
+class FixedSizeLeaf extends Element
 {
     constructor(private box: Size) { super(); }
     protected override MeasureOverride(_a: Size): Size { return this.box; }
@@ -148,7 +148,7 @@ describe('UniformGrid — measure', () => {
         // measures against (availW/cols, availH/rows) and arranges into
         // that cell.
         let observed: Size | undefined;
-        class Probe extends Visual {
+        class Probe extends Element {
             protected override MeasureOverride(a: Size): Size {
                 observed = a;
                 return new Size(0, 0);

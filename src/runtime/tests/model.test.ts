@@ -13,6 +13,7 @@ import {
     PropertyValueSource,
     Model,
     PropertyKey,
+    Element,
     Visual,
     Single,
     Panel,
@@ -1255,7 +1256,7 @@ describe('MetaData flag enum', () => {
 // to count fires per phase, so we can assert which Invalidate method
 // each kind of property change routes to.
 describe('Visual invalidation routing', () => {
-    class TestVisual extends Visual
+    class TestVisual extends Element
     {
         measure_fires = 0;
         arrange_fires = 0;
@@ -3105,7 +3106,7 @@ describe('VisualHost back-pointer (target) on Visual', () => {
     });
 
     test('InvalidateVisual on an attached Visual routes to target.OnRenderInvalidated', () => {
-        class Renderer extends Visual
+        class Renderer extends Element
         {
             static {
                 Model.RegisterProperty(Renderer, 'flag', false, MetaData.Render);
@@ -3122,7 +3123,7 @@ describe('VisualHost back-pointer (target) on Visual', () => {
     });
 
     test('InvalidateVisual on a detached Visual is silent (no error)', () => {
-        class Renderer extends Visual
+        class Renderer extends Element
         {
             static {
                 Model.RegisterProperty(Renderer, 'flag', false, MetaData.Render);
@@ -3134,7 +3135,7 @@ describe('VisualHost back-pointer (target) on Visual', () => {
     });
 
     test('a Render-flagged property on a deeply-nested Visual still routes to host', () => {
-        class Leaf extends Visual
+        class Leaf extends Element
         {
             static {
                 Model.RegisterProperty(Leaf, 'flag', false, MetaData.Render);
@@ -3154,7 +3155,7 @@ describe('VisualHost back-pointer (target) on Visual', () => {
     });
 
     test('a Measure+Arrange property routes to both host queues with the right Visual', () => {
-        class Box extends Visual
+        class Box extends Element
         {
             static {
                 Model.RegisterProperty(Box, 'size', 0, MetaData.Measure | MetaData.Arrange);
@@ -3180,7 +3181,7 @@ describe('Visual layout lifecycle (Measure / Arrange / Render)', () => {
     // the last availableSize / finalSize / dc seen. Configurable
     // DesiredSize lets tests assert the cache reflects whatever
     // MeasureOverride returned.
-    class LaidOutVisual extends Visual
+    class LaidOutVisual extends Element
     {
         public measure_calls = 0;
         public arrange_calls = 0;
@@ -3781,7 +3782,7 @@ describe('Visual layout lifecycle (Measure / Arrange / Render)', () => {
         // Verifies the layered concerns compose correctly: Border uses
         // BorderThickness + Padding for the child slot, then the child's
         // Margin further insets the rendered area.
-        class FixedSize extends Visual {
+        class FixedSize extends Element {
             constructor(private readonly box: Size) { super(); }
             protected override MeasureOverride(_a: Size): Size { return this.box; }
         }
@@ -4520,7 +4521,7 @@ describe('MultiBinding / PriorityBinding — child Binding form', () => {
         // This test confirms the overloaded signature didn't break it.
         // We use the simplest possible case — a fixed Visual subclass
         // with a DataContext — to verify the dispatch path.
-        class Host extends Visual {
+        class Host extends Element {
             static { Model.RegisterProperty(Host, 'sum', 0, MetaData.None); }
         }
         const host = new Host();
@@ -4614,7 +4615,7 @@ describe('AncestorBinding — FindAncestor RelativeSource', () => {
         class Outer extends Panel {
             static { Model.RegisterProperty(Outer, 'Title', 'outer-title', MetaData.None); }
         }
-        class Inner extends Visual {
+        class Inner extends Element {
             static { Model.RegisterProperty(Inner, 'echo', '', MetaData.None); }
         }
         const outer = new Outer();
@@ -4636,7 +4637,7 @@ describe('AncestorBinding — FindAncestor RelativeSource', () => {
             static { Model.RegisterProperty(Outer, 'Tag', 'A', MetaData.None); }
         }
         class Middle extends Panel {}
-        class Inner extends Visual {
+        class Inner extends Element {
             static { Model.RegisterProperty(Inner, 'echo', '', MetaData.None); }
         }
         const outer = new Outer();
@@ -4654,7 +4655,7 @@ describe('AncestorBinding — FindAncestor RelativeSource', () => {
             static { Model.RegisterProperty(Grand, 'Tag', 'GRAND', MetaData.None); }
         }
         class Parent extends Grand {}  // also matches Grand
-        class Inner extends Visual {
+        class Inner extends Element {
             static { Model.RegisterProperty(Inner, 'echo', '', MetaData.None); }
         }
         const grand = new Grand();
@@ -4674,7 +4675,7 @@ describe('AncestorBinding — FindAncestor RelativeSource', () => {
     test('Missing ancestor resolves to undefined', () => {
         class NotAnAncestor extends Panel {}
         class Outer extends Panel {}
-        class Inner extends Visual {
+        class Inner extends Element {
             static { Model.RegisterProperty(Inner, 'echo', 'INITIAL', MetaData.None); }
         }
         const outer = new Outer();
@@ -4692,7 +4693,7 @@ describe('AncestorBinding — FindAncestor RelativeSource', () => {
         class Outer extends Panel {
             static { Model.RegisterProperty(Outer, 'Title', 'first', MetaData.None); }
         }
-        class Inner extends Visual {
+        class Inner extends Element {
             static { Model.RegisterProperty(Inner, 'echo', '', MetaData.None); }
         }
         const outer = new Outer();

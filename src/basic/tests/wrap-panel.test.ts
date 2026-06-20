@@ -1,10 +1,10 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { Rect, Size, Visual } from '../../runtime/index.js';
+import { Rect, Size, Element, Visual } from '../../runtime/index.js';
 import { Orientation } from '../panels/stack-panel.js';
 import { WrapPanel } from '../panels/wrap-panel.js';
 
-class FixedSizeLeaf extends Visual
+class FixedSizeLeaf extends Element
 {
     constructor(private box: Size) { super(); }
     protected override MeasureOverride(_a: Size): Size { return this.box; }

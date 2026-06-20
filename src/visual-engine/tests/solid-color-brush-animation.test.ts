@@ -12,6 +12,7 @@ import {
     Panel,
     Size,
     ThemeManager,
+    Element,
     Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
@@ -101,7 +102,7 @@ describe('SolidColorBrushAnimation', () => {
 // bound through DynamicResource, swaps the resource value, and asserts
 // that the consumer sees interpolated SolidColorBrushes per clock tick.
 describe('SolidColorBrushAnimation — DynamicResource scheme-transition integration', () => {
-    class BrushHost extends Visual
+    class BrushHost extends Element
     {
         static {
             Model.RegisterProperty(BrushHost, 'Background', undefined, MetaData.None);

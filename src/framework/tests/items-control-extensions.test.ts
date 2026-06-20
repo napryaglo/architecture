@@ -8,6 +8,7 @@ import {
     Setter,
     Size,
     Style,
+    Element,
     Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
@@ -17,7 +18,7 @@ import { ItemsControl } from '@visualisation-sub/mural/framework';
 
 // Tiny container — registered DP `Tag` lets ItemContainerStyle drive a
 // visible value the test can assert on.
-class Leaf extends Visual
+class Leaf extends Element
 {
     static {
         Model.RegisterProperty(Leaf, 'Tag', 'plain', MetaData.None);

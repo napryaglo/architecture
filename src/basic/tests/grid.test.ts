@@ -1,13 +1,13 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { Rect, Size, Visual } from '../../runtime/index.js';
+import { Rect, Size, Element, Visual } from '../../runtime/index.js';
 import { HeadlessTarget } from '../../visual-engine/index.js';
 import { ColumnDefinition, Grid, GridLength, RowDefinition } from '../panels/grid.js';
 import { StackPanel } from '../panels/stack-panel.js';
 
 // Fixed-size leaf — reports a deterministic DesiredSize regardless of
 // the parent's available size. Used to assert Grid's allocation math.
-class FixedSizeLeaf extends Visual
+class FixedSizeLeaf extends Element
 {
     constructor(private box: Size) { super(); }
     protected override MeasureOverride(_a: Size): Size { return this.box; }

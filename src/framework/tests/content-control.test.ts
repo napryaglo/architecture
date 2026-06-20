@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { Color, MetaData, Model, Rect, Size, Thickness, Visual, type DrawingContext } from '../../runtime/index.js';
+import { Color, MetaData, Model, Rect, Size, Thickness, Element, Visual, type DrawingContext } from '../../runtime/index.js';
 import { resolveKey } from '../../runtime/model-internals.js';
 import { SolidColorBrush } from '../../visual-engine/index.js';
 import { Border, ContentPresenter, ControlTemplate, TemplateBinding } from '../../basic/index.js';
@@ -22,7 +22,7 @@ function logicalParentOf(v: Visual | undefined): Visual | undefined
 // A minimal leaf Visual used as Content — just a fixed-size box so
 // Measure / Arrange assertions are predictable. Property registration
 // covers the inheritance flow test below.
-class Leaf extends Visual
+class Leaf extends Element
 {
     static {
         // Inheritable property — proves walk_inherited rides logical, not visual.

@@ -14,11 +14,12 @@ import {
     Storyboard,
     StoryboardState,
     StopStoryboardAction,
+    Element,
     Visual,
 } from '../index.js';
 import { resolveKey } from '../model-internals.js';
 
-class NamedTest extends Visual
+class NamedTest extends Element
 {
     static {
         Model.RegisterProperty(NamedTest, 'Width', 0, MetaData.None);

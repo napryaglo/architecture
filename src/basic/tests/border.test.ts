@@ -6,6 +6,7 @@ import {
     Rect,
     Size,
     Thickness,
+    Element,
     Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
@@ -14,7 +15,7 @@ import { Border } from '../index.js';
 
 // Tiny Visual stand-in for Border's child slot — reports a configurable
 // DesiredSize so Border's measure math is testable in isolation.
-class FixedSize extends Visual
+class FixedSize extends Element
 {
     constructor(private readonly desired: Size) { super(); }
     protected override MeasureOverride(_availableSize: Size): Size { return this.desired; }
