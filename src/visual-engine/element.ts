@@ -3,6 +3,7 @@ import { Model } from '../runtime/model.js';
 import { propertyValues } from '../runtime/model-internals.js';
 import { PropertyValueSource } from '../runtime/binding/effective-value.js';
 import { MetaData, inherits } from '../runtime/metadata.js';
+import { NameScope } from './namescope.js';
 import { ObservableCollection, type IReadOnlyObservableCollection } from '../runtime/observable-collection.js';
 import { ResourceDictionary, type ResourceKey } from '../runtime/resource-dictionary.js';
 import { Application } from '../runtime/application.js';
@@ -564,6 +565,59 @@ export class Element extends Visual
         {
             c._unsubscribe_styles_subtree();
         }
+    }
+
+    // ── Name + NameScope + FindName (§ Phase B / B4.6) ────────────────
+
+    // Optional x:Name-equivalent — a stable identifier used by
+    // FindName to look this Element up later. Backed by `_name`
+    // because Visual exposes Name as a no-op accessor pair; a TS
+    // subclass overrides accessors with accessors.
+    private _name: string | undefined;
+    public override get Name(): string | undefined { return this._name; }
+    public override set Name(v: string | undefined) { this._name = v; }
+
+    // Per-instance NameScope attached to this Element. When set,
+    // this Element is the boundary for FindName lookups from any
+    // logical descendant — the walk stops here and resolves in this
+    // scope. ControlTemplate.Apply attaches a fresh NameScope to the
+    // template root so each template instance gets its own name
+    // space (PART_Background in two Button templates don't collide).
+    private _nameScope: NameScope | undefined;
+
+    public override get nameScope(): NameScope | undefined
+    {
+        return this._nameScope;
+    }
+
+    public override SetNameScope(scope: NameScope | undefined): void
+    {
+        this._nameScope = scope;
+    }
+
+    // Resolves an x:Name to a Visual within the nearest enclosing
+    // NameScope. Walks up logical ancestors (with templatedParent
+    // fallback for template internals — same path as walk_inherited)
+    // until it hits the first Element carrying a NameScope, then
+    // resolves in that scope. Returns undefined when no ancestor
+    // carries a scope, or when the name isn't registered in the
+    // scope that's found.
+    public override FindName(name: string): Visual | undefined
+    {
+        let cursor: Element | undefined = this;
+        while (cursor !== undefined)
+        {
+            if (cursor._nameScope !== undefined)
+            {
+                return cursor._nameScope.Find(name);
+            }
+            const next: Visual | undefined = cursor._logicalParent ?? cursor._templatedParent;
+            // The cursor walks Element ancestors. A plain-Visual parent
+            // (rare; production has none) terminates the walk — it owns
+            // no NameScope and no further logical/templated parent.
+            cursor = next instanceof Element ? next : undefined;
+        }
+        return undefined;
     }
 
     // ── Templated-parent back-pointer (§ Phase B / B4.5) ─────────────

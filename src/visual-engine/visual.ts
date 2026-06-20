@@ -43,19 +43,6 @@ export const KNOWN_ROUTED_EVENTS = new Set([
     'DragEnter', 'DragLeave', 'DragOver', 'Drop',
 ]);
 
-// Friend-interface for cross-class internal access to Element's
-// logical-tree backing fields. Per CLAUDE.md cross-class internals
-// pattern — `_logicalParent` lives on Element (§ Phase B / B4.2) but
-// Visual-tier code (AttachLogical / DetachLogical / walk_inherited /
-// FindName) still walks the chain pre-B4.3-B4.6. Cast through this
-// named interface rather than bracket-accessing the field. Mural-
-// internal: never re-exported.
-interface ElementLogicalChain
-{
-    _logicalParent:   Visual | undefined;
-    _templatedParent: Visual | undefined;
-}
-
 // Snapshot-then-iterate helper used by every per-instance listener
 // fan-out — routed events, Loaded, Unloaded, DynamicResource
 // re-wire. Without the snapshot, a listener that registers /
@@ -709,21 +696,11 @@ export class Visual extends Model
     // the templatedParent getter + SetTemplatedParent. Visual exposes
     // no-op stubs below so Visual-typed call sites still typecheck.
 
-    // Optional x:Name-equivalent — a stable identifier used by
-    // FindName to look this Visual up later. Set freely by consumers
-    // or by template factories; registration in a NameScope is
-    // automatic when the Visual is later added to a tree under a
-    // NameScope-bearing ancestor (template Apply auto-registers
-    // every named Visual in the template's instance NameScope).
-    public Name: string | undefined;
-
-    // Per-instance NameScope attached to this Visual. When set, this
-    // Visual is the boundary for FindName lookups from any logical
-    // descendant — the walk stops here and resolves in this scope.
-    // ControlTemplate.Apply attaches a fresh NameScope to the
-    // template root so each template instance gets its own name
-    // space (PART_Background in two Button templates don't collide).
-    private _nameScope: NameScope | undefined;
+    // `Name`, `_nameScope`, the `nameScope` getter, `SetNameScope`,
+    // and `FindName` all live on `Element` (§ Phase B / B4.6).
+    // Visual exposes Name as a no-op accessor pair so consumers with
+    // a Visual-typed reference still typecheck — Element overrides
+    // with a real backing field.
 
     // Resources / Style / implicit + theme Style / StyleApplicator /
     // ResourceResolver / subscriptions — all FE-tier and now live on
@@ -898,46 +875,30 @@ export class Visual extends Model
      *  Element) node. */
     public SetTemplatedParent(_p: Visual | undefined): void { }
 
-    // The NameScope this Visual owns, or undefined. Read for FindName
-    // boundary detection. Set by ControlTemplate.Apply (one per
-    // template instance) and by future Window/PresentationTarget-level
-    // scope creation. Public-but-not-for-consumer-use, same convention
-    // as SetTemplatedParent.
-    public get nameScope(): NameScope | undefined
-    {
-        return this._nameScope;
-    }
+    /** @internal — § Phase B / B4.6. Visual-tier no-op virtual;
+     *  Element overrides to expose its per-instance NameScope. */
+    public get nameScope(): NameScope | undefined { return undefined; }
 
-    public SetNameScope(scope: NameScope | undefined): void
-    {
-        this._nameScope = scope;
-    }
+    /** @internal — § Phase B / B4.6. Visual-tier no-op stub; Element
+     *  overrides to attach a NameScope to itself as a FindName
+     *  boundary. The template walker types its cursor as Visual, so
+     *  this stub keeps the call site typechecking when the walker
+     *  hits a plain (non-Element) node. */
+    public SetNameScope(_scope: NameScope | undefined): void { }
 
-    // Resolves an x:Name to a Visual within the nearest enclosing
-    // NameScope. Walks up logical ancestors (with templatedParent
-    // fallback for template internals — same path as walk_inherited)
-    // until it hits the first Visual carrying a NameScope, then
-    // resolves in that scope.
-    //
-    // Returns undefined when no ancestor carries a scope, or when the
-    // name isn't registered in the scope that's found. WPF semantics:
-    // names are scoped, so the same name can exist in multiple
-    // templates without collision — each lookup resolves only within
-    // its own enclosing scope.
-    public FindName(name: string): Visual | undefined
-    {
-        let cursor: Visual | undefined = this;
-        while (cursor !== undefined)
-        {
-            if (cursor._nameScope !== undefined)
-            {
-                return cursor._nameScope.Find(name);
-            }
-            const back = cursor as unknown as ElementLogicalChain;
-            cursor = back._logicalParent ?? back._templatedParent;
-        }
-        return undefined;
-    }
+    /** Stub field; Element re-declares as a real `Name: string |
+     *  undefined` accessor pair backed by a private `_name`. Plain
+     *  Visuals return undefined and silently swallow writes. */
+    public get Name(): string | undefined { return undefined; }
+    public set Name(_v: string | undefined) { /* plain Visual: no-op */ }
+
+    /** @internal — § Phase B / B4.6. Visual-tier no-op virtual;
+     *  Element overrides to walk the logical chain (with
+     *  templatedParent fallback) until it hits the first ancestor
+     *  carrying a NameScope, then resolves `name` against it.
+     *  Plain Visuals own no NameScope, so they always return
+     *  undefined. */
+    public FindName(_name: string): Visual | undefined { return undefined; }
 
     // Resources / Style / DefaultStyleKey / TryFindResource /
     // FindResource — all FE-tier, now on `Element`. See
