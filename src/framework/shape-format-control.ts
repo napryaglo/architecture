@@ -2,8 +2,7 @@ import {
     MetaData,
     Model,
     Visibility,
-    Visual,
-    type PropertyDescriptor,
+    Element, type PropertyDescriptor,
 } from '../runtime/index.js';
 import { resolveKey } from '../runtime/model-internals.js';
 import { Brush, Pen } from '../visual-engine/index.js';
@@ -51,7 +50,7 @@ export class ShapeFormatControl extends TemplatedControl
     public set Stroke(v: Pen | undefined)   { this.set_property_value(ShapeFormatControl.StrokeKey, v); }
 
     static {
-        Model.OverrideMetadata(ShapeFormatControl, Visual.DefaultStyleKeyKey, { default_value: ShapeFormatControl });
+        Model.OverrideMetadata(ShapeFormatControl, Element.DefaultStyleKeyKey, { default_value: ShapeFormatControl });
     }
 
     private _syncing = false;

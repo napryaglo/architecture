@@ -1,7 +1,7 @@
 import {
     MetaData,
     Model,
-    Visual,
+    Element, Visual,
     type PointerEventArgs,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
@@ -71,7 +71,7 @@ export class ContextMenu extends ItemsControl
     {
         // Theme-style lookup key for the default Style — pulled in by
         // applyDefaultStyle() in the ctor.
-        Model.OverrideMetadata(ContextMenu, Visual.DefaultStyleKeyKey, { default_value: ContextMenu });
+        Model.OverrideMetadata(ContextMenu, Element.DefaultStyleKeyKey, { default_value: ContextMenu });
     }
 
     constructor()

@@ -1,7 +1,7 @@
 import {
     MetaData,
     Model,
-    Visual,
+    Element, Visual,
     type PointerEventArgs,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
@@ -53,7 +53,7 @@ export class NavigationItem extends ContentControl
     static
     {
         Model.OverrideMetadata(
-            NavigationItem, Visual.DefaultStyleKeyKey,
+            NavigationItem, Element.DefaultStyleKeyKey,
             { default_value: NavigationItem },
         );
     }

@@ -16,8 +16,7 @@ import type {
     PropertyChangeCallback,
 } from '../runtime/binding/effective-value.js';
 import type { EventTrigger } from '../runtime/event-trigger.js';
-import type { Visual } from './visual.js';
-import type { ElementCtor } from './element.js';
+import type { Element, ElementCtor } from './element.js';
 
 // Per-setter TwoWay / OneWayToSource writeback bookkeeping. Replaces
 // the Symbol-keyed slot the previous design hung off the Binding —
@@ -82,7 +81,7 @@ export class StyleApplicator
     private _styleSetterWriteback:   Map<Setter, WritebackEntry> | undefined;
     private _triggerSetterWriteback: Map<Setter, WritebackEntry> | undefined;
 
-    constructor(private readonly _target: Visual) {}
+    constructor(private readonly _target: Element) {}
 
     /** The Style currently driving the StyleValue tier on this
      *  Element. `undefined` when none has been applied (or all three
@@ -191,7 +190,7 @@ export class StyleApplicator
         if (desired !== undefined
             && !(this._target instanceof (desired.TargetType as ElementCtor)))
         {
-            const actual = (this._target as Visual).constructor.name;
+            const actual = (this._target as Element).constructor.name;
             throw new Error(
                 `Style.TargetType '${desired.TargetType.name}' does not match target '${actual}'.`,
             );

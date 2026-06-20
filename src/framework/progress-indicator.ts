@@ -1,4 +1,4 @@
-import { MetaData, Model, Visual, type PropertyDescriptor } from '../runtime/index.js';
+import { MetaData, Model, Element, type PropertyDescriptor } from '../runtime/index.js';
 import { Arc } from '../basic/shapes/arc.js';
 import { Border } from '../basic/border.js';
 import { TemplatedControl } from '../basic/templated-control.js';
@@ -57,7 +57,7 @@ export class ProgressIndicator extends TemplatedControl
 
     static {
         Model.OverrideMetadata(
-            ProgressIndicator, Visual.DefaultStyleKeyKey,
+            ProgressIndicator, Element.DefaultStyleKeyKey,
             { default_value: ProgressIndicator });
     }
 

@@ -1,4 +1,4 @@
-import { MetaData, Model, Visual } from '../runtime/index.js';
+import { MetaData, Model, Element } from '../runtime/index.js';
 import { Control } from './control.js';
 import { Orientation } from '../basic/panels/stack-panel.js';
 
@@ -26,7 +26,7 @@ export class Divider extends Control
 
     static {
         Model.OverrideMetadata(
-            Divider, Visual.DefaultStyleKeyKey,
+            Divider, Element.DefaultStyleKeyKey,
             { default_value: Divider });
     }
 }

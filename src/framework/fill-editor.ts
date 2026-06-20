@@ -4,7 +4,7 @@ import {
     Panel,
     Point,
     Visibility,
-    Visual,
+    Element, Visual,
     type PropertyDescriptor,
 } from '../runtime/index.js';
 import { resolveKey } from '../runtime/model-internals.js';
@@ -146,7 +146,7 @@ export class FillEditor extends TemplatedControl
     public set PictureStretch(v: Stretch){ this.set_property_value(FillEditor.PictureStretchKey, v); }
 
     static {
-        Model.OverrideMetadata(FillEditor, Visual.DefaultStyleKeyKey, { default_value: FillEditor });
+        Model.OverrideMetadata(FillEditor, Element.DefaultStyleKeyKey, { default_value: FillEditor });
     }
 
     private _syncing = false;

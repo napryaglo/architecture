@@ -1,6 +1,6 @@
 import {
     Model,
-    Visual,
+    Element, Visual,
 } from '../../runtime/index.js';
 import { findDataTemplateForType } from '../../basic/templates/data-template.js';
 import { Selector } from '../list/selector.js';
@@ -49,7 +49,7 @@ export class NavigationBar extends Selector
     static
     {
         Model.OverrideMetadata(
-            NavigationBar, Visual.DefaultStyleKeyKey,
+            NavigationBar, Element.DefaultStyleKeyKey,
             { default_value: NavigationBar },
         );
     }

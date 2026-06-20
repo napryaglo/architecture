@@ -3,7 +3,7 @@ import {
     MetaData,
     Model,
     Thickness,
-    Visual,
+    Element, Visual,
     type PropertyDescriptor,
 } from '../runtime/index.js';
 import { resolveKey } from '../runtime/model-internals.js';
@@ -38,7 +38,7 @@ export class PageView extends TemplatedControl
     public static readonly ContentKey  = Model.RegisterProperty<Visual | Model | undefined>(PageView, 'Content',  undefined, MetaData.Measure);
 
     static {
-        Model.OverrideMetadata(PageView, Visual.DefaultStyleKeyKey, { default_value: PageView });
+        Model.OverrideMetadata(PageView, Element.DefaultStyleKeyKey, { default_value: PageView });
     }
 
     // Template parts — resolved from the compiled `page-view.template.mu`

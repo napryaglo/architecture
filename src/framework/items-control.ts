@@ -1,4 +1,5 @@
 import {
+    Element,
     MetaData,
     Model,
     ObservableCollection,
@@ -827,15 +828,19 @@ export class ItemsControl extends Control
 
     private applyContainerStyle(container: Visual, style: Style): void
     {
-        // The container is a plain Visual; Visual.Style takes the
-        // current Style. Apply checks TargetType compatibility and
-        // throws on mismatch — caller's responsibility to match.
-        container.Style = style;
+        // Style is FE-tier (`Element` — see [./element.ts](../visual-engine/element.ts)
+        // § Phase B). Containers that aren't Elements can't carry a
+        // Style; silently skip rather than throwing — matches the WPF
+        // "Setter on unstyleable target" semantics and tolerates
+        // non-Element container types (currently none in production).
+        // Apply checks TargetType compatibility and throws on mismatch
+        // — caller's responsibility to match.
+        if (container instanceof Element) container.Style = style;
     }
 
     private clearContainerStyle(container: Visual): void
     {
-        if (container.Style !== undefined)
+        if (container instanceof Element && container.Style !== undefined)
         {
             container.Style = undefined;
         }

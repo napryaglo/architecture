@@ -1,4 +1,4 @@
-import { MetaData, Model, Visual } from '../runtime/index.js';
+import { MetaData, Model, Element } from '../runtime/index.js';
 import { Control } from './control.js';
 
 // M3 Badge — small visual flag, either a 6dp dot (no count) or a pill
@@ -44,7 +44,7 @@ export class Badge extends Control
 
     static {
         Model.OverrideMetadata(
-            Badge, Visual.DefaultStyleKeyKey,
+            Badge, Element.DefaultStyleKeyKey,
             { default_value: Badge });
     }
 }

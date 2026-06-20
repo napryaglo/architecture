@@ -7,9 +7,7 @@ import { MetaData, affectsArrange, affectsMeasure, affectsRender, inherits } fro
 
 import { NameScope } from './namescope.js';
 import { ObservableCollection } from '../runtime/observable-collection.js';
-import { ResourceDictionary, type ResourceKey } from '../runtime/resource-dictionary.js';
-import { Application } from '../runtime/application.js';
-import { Setter, Style, PropertyTrigger, MultiTrigger, DataTrigger, MultiDataTrigger } from '../runtime/style.js';
+import { PropertyTrigger, MultiTrigger, DataTrigger, MultiDataTrigger } from '../runtime/style.js';
 import { Point, Rect, Size, Thickness } from './primitives.js';
 import type { DrawingContext } from './drawing-context.js';
 import type { TextMeasurer } from './text-measurer.js';
@@ -30,7 +28,6 @@ import { DragDrop, DragDropEffects, type DataObject, type DragPreviewKind } from
 import type { Effect } from './drawing/effect.js';
 import type { Transform } from './drawing/transform.js';
 import type { Geometry } from './geometry/geometry.js';
-import { StyleApplicator } from './style-applicator.js';
 import { TriggerHost } from './trigger-host.js';
 import { ResourceResolver } from './resource-resolver.js';
 
@@ -211,14 +208,11 @@ export class Visual extends Model
     // WPF FrameworkElement.Margin.
     public static readonly MarginKey = Model.RegisterProperty<Thickness>(Visual, 'Margin', Thickness.Zero, MetaData.Measure);
 
-    // Style isn't inherited (each Visual carries its own); changing
-    // it can affect Measure/Arrange/Render via whichever setters
-    // it contains, but the Style property itself doesn't need a
-    // metadata flag — the underlying property changes from
-    // SetStyleValue fire their own invalidation per their own
-    // metadata. MetaData.None keeps OnPropertyChanged from doing
-    // redundant work.
-    public static readonly StyleKey = Model.RegisterProperty<Style | undefined>(Visual, 'Style', undefined, MetaData.None);
+    // StyleKey (and the Style getter/setter) live on `Element`
+    // (FrameworkElement tier — see [./element.ts](./element.ts) § Phase
+    // B). A raw `Visual` doesn't carry a Style — the resource lookup,
+    // implicit / theme resolution, and SetterFactory machinery are all
+    // FE-tier concerns.
 
     // Effect — a renderer-side post-process applied to the Visual's
     // painted output. Concrete effect classes live in visual-engine
@@ -287,32 +281,10 @@ export class Visual extends Model
     // by combining the two; pure visual fades flip just Opacity.
     public static readonly OpacityKey = Model.RegisterProperty<number>(Visual, 'Opacity', 1, MetaData.Render);
 
-    // Type-keyed lookup for the theme-supplied default Style. Read-only
-    // at the instance level (no public per-instance writes); subclasses
-    // opt in by overriding metadata in their static init:
-    //
-    //     class Button extends ContentControl {
-    //         static {
-    //             Model.OverrideMetadata(Button, Visual.DefaultStyleKeyKey,
-    //                 { default_value: Button });
-    //         }
-    //     }
-    //
-    // The value is a class function used as a key into the resource
-    // chain. resolve_theme_style runs TryFindResource(DefaultStyleKey)
-    // and applies the matching Style on a fallback slot below the user
-    // ImplicitStyle. A subclass that doesn't override DefaultStyleKey
-    // inherits its base's value, so MyFancyButton renders with Button's
-    // theme chrome until it opts into its own. Default is undefined —
-    // a Visual whose DefaultStyleKey is undefined skips theme lookup.
-    //
-    // Key is public so subclasses can pass it to Model.OverrideMetadata;
-    // the read-only gate on set_property_value / by-name paths still
-    // prevents per-instance writes (set_property_value_with_key is the
-    // documented framework-internal escape hatch).
-    public static readonly DefaultStyleKeyKey = Model.RegisterReadOnlyProperty<Function | undefined>(
-        Visual, 'DefaultStyleKey', undefined, MetaData.None,
-    );
+    // DefaultStyleKeyKey lives on `Element` (FE tier) alongside Style /
+    // Resources. Subclasses opting into theme styles override metadata
+    // via `Model.OverrideMetadata(MyControl, Element.DefaultStyleKeyKey,
+    // { default_value: MyControl })`.
 
     // Optional clip geometry applied to this Visual and its visual
     // subtree at render time. Typed as `unknown` here so the runtime
@@ -750,52 +722,10 @@ export class Visual extends Model
     // space (PART_Background in two Button templates don't collide).
     private _nameScope: NameScope | undefined;
 
-    // Per-instance ResourceDictionary, lazy-created on first access.
-    // Read directly (not through the public Resources getter) by
-    // TryFindResource so an ancestor walk doesn't accidentally allocate
-    // empty dicts on every node it passes through.
-    private _resources: ResourceDictionary | undefined;
-
-    // The Style currently driving the StyleValue slot lives on
-    // `StyleApplicator` (§ 1.7) — `_styleApplicator?.ActiveStyle`.
-    // The applicator is lazy: undefined for Visuals that never opt
-    // into Style.
-    private _styleApplicator: StyleApplicator | undefined;
-
-    // The implicit style discovered by walking the logical chain at
-    // AttachLogical and looking up `this.constructor` in the resource
-    // dictionaries. Cached so DetachLogical knows what to unapply, and
-    // so Style = undefined can re-promote it to active. Only populated
-    // for Visuals whose ancestor chain contains a matching Style; left
-    // undefined otherwise.
-    private _implicitStyle: Style | undefined;
-
-    // The theme style discovered by looking up `this.DefaultStyleKey`
-    // in the same logical-chain walk as `_implicitStyle`. Sits below
-    // `_implicitStyle` in `refresh_active_style`, so a user-side
-    // `Style [TargetType=Button]` in app or element resources always
-    // shadows the theme's `[TargetType=Button]` entry — which lives in
-    // a merged theme dictionary lower in the resolver chain. Only
-    // populated when DefaultStyleKey is set; left undefined otherwise.
-    private _themeStyle: Style | undefined;
-
-    // Subscriptions on ancestor ResourceDictionaries that, when fired,
-    // re-trigger resolve_implicit_style AND resolve_theme_style — both
-    // sources watch the same chain so they share one subscription list.
-    // Wired at AttachLogical for every dict found in the current
-    // ancestor chain; torn down at DetachLogical or when
-    // _refresh_styles_subtree rebuilds them after a tree mutation.
-    // Lazy collections — § 1.2. Visuals that never opt into Style,
-    // Triggers, or DynamicResource (Border / TextBlock / etc. in plain
-    // content roles) pay no allocation. Write sites use the `??=`
-    // shape to materialize on first touch; read sites use `?.` or
-    // explicit `=== undefined` guards. For a 1000-item virtualized
-    // ListBox that's seven empty collections × 1000 containers
-    // reclaimed.
-    private _styleSubscriptions: Array<() => void> | undefined;
-
-    // Per-setter bindings + writeback bookkeeping live on
-    // `StyleApplicator` (§ 1.7) — moved out of Visual.
+    // Resources / Style / implicit + theme Style / StyleApplicator /
+    // ResourceResolver / subscriptions — all FE-tier and now live on
+    // `Element` (§ Phase B). Visual itself doesn't carry resource
+    // lookup or style cascades.
 
     // Trigger install / evaluation / teardown machinery lives on
     // `TriggerHost` (§ 1.8). Lazy: undefined for Visuals that never
@@ -1023,90 +953,9 @@ export class Visual extends Model
         return undefined;
     }
 
-    // Lazy-created per-instance ResourceDictionary. Touching this
-    // getter allocates an empty dict on first access — fine for
-    // writers (`v.Resources.Set('Brush', …)`) but reads should go
-    // through TryFindResource / FindResource, which check the
-    // backing field directly and don't allocate at every walk step.
-    //
-    // First-access cascade (§ 12.1). Descendants whose DynamicResource
-    // bindings were built BEFORE this point cached the (empty)
-    // ancestor chain — they didn't subscribe here because there was
-    // nothing to subscribe to. Without the cascade, a subsequent
-    // `Set` would `notify()` into a dictionary nobody's listening on.
-    // Re-walking dynamic-resource + style subscriptions across THIS
-    // visual's subtree pulls every reachable binding back through
-    // `_subscribe_dynamic_resource`, so the freshly-created dict
-    // joins their wired ancestor chains. Same shape for implicit
-    // Style + theme Style — the next `Set` of a `[TargetType=X]`
-    // entry has to land in the descendants' resolved style.
-    //
-    // Cost: a single subtree walk per Visual per first access.
-    // Visuals whose Resources field stays untouched pay nothing
-    // (the lazy path never runs). Re-access after first allocation
-    // skips the cascade because `_resources` is already defined.
-    public get Resources(): ResourceDictionary
-    {
-        if (this._resources === undefined)
-        {
-            const dict = new ResourceDictionary();
-            this._resources = dict;
-            // § 1.12 — the subtree cascades that used to fire here on
-            // first allocation are now deferred to actual change events
-            // on the new dict. Subscribing once means a Set / Add /
-            // Remove that mutates the empty dict fires
-            // `_refresh_styles_subtree` + `_refresh_dynamic_resources_subtree`
-            // on the same edge a Set on an existing dict already
-            // triggers via the consumer-installed style subscriptions
-            // (see `subscribe_styles`). Net effect: descendants pick up
-            // any newly-added resources at the moment a value lands,
-            // not at the unrelated moment the dict was lazy-allocated.
-            // A pure-read consumer (`v.Resources.Has(key)`,
-            // `v.Resources.Count`, a debugger inspecting the slot)
-            // pays only the allocation, not the tree walk.
-            dict.Subscribe(() => {
-                this._refresh_styles_subtree();
-                this._refresh_dynamic_resources_subtree();
-            });
-        }
-        return this._resources;
-    }
-
-    // Logical-ancestor lookup for a resource key. Same walk pattern as
-    // FindName / walk_inherited (logical parent, with templatedParent
-    // fallback) — so template internals find resources defined on the
-    // templated control or on the consumer's surrounding tree. Each
-    // ancestor's dictionary is queried via Resolve so MergedDictionaries
-    // are included; closer ancestors shadow farther ones. Returns
-    // undefined when no ancestor's composition contains the key.
-    public TryFindResource(key: ResourceKey): unknown | undefined
-    {
-        return (this._resourceResolver ??= new ResourceResolver(this)).TryFindResource(key);
-    }
-
-    // Resource-lookup machinery + ThemeManager-facing ambient-token
-    // hook live on `ResourceResolver` (§ 1.9). Visual retains a lazy
-    // `_resourceResolver` field; Visuals that never trigger a
-    // TryFindResource pay no allocation.
-    private _resourceResolver: ResourceResolver | undefined;
-
-    // Explicit style for this Visual. When set, takes priority over any
-    // implicit (TargetType-keyed) style discovered in the ancestor
-    // resource chain. Setting it to undefined re-promotes the implicit
-    // style (if one was found at AttachLogical).
-    //
-    // Style setters apply to the StyleValue priority tier in EVD —
-    // they sit below LocalValue / Binding / Animated / Coerced, so
-    // an explicit set or binding always shadows the styled value, but
-    // above InheritedValue / Default.
-    public get Style(): Style | undefined { return this.get_property_value(Visual.StyleKey); }
-    public set Style(value: Style | undefined)
-    {
-        const old = this.Style;
-        if (old === value) return;
-        this.set_property_value(Visual.StyleKey, value);
-        this.refresh_active_style();
-    }
+    // Resources / Style / DefaultStyleKey / TryFindResource /
+    // FindResource — all FE-tier, now on `Element`. See
+    // [./element.ts](./element.ts) § Phase B for the move + rationale.
 
     // Visual Effect (DropShadow, MaterialElevation, …). Set this to
     // attach a renderer-side post-process. The renderer reads
@@ -1137,59 +986,11 @@ export class Visual extends Model
     public get Opacity(): number       { return this.get_property_value(Visual.OpacityKey); }
     public set Opacity(value: number)  { this.set_property_value(Visual.OpacityKey, value); }
 
-    // Read-only at the instance level. Subclasses override the default
-    // value via Model.OverrideMetadata at type-init; see the docstring
-    // on DefaultStyleKeyKey. Returns undefined for any Visual whose
-    // class (or any base) hasn't opted in.
-    public get DefaultStyleKey(): Function | undefined
-    {
-        return this.get_property_value(Visual.DefaultStyleKeyKey);
-    }
-
-    // Pick which Style should be driving the StyleValue tier. Priority
-    // matches WPF: explicit Style > implicit (user-side
-    // [TargetType=X] walked from the live tree, exact-match by
-    // constructor) > theme (DefaultStyleKey-keyed, lives in merged
-    // theme dictionaries). Delegates the diff-swap of setters +
-    // triggers to `StyleApplicator` (§ 1.7); the applicator is
-    // created lazily on first touch so Visuals that never opt into
-    // Style pay zero allocation.
-    private refresh_active_style(): void
-    {
-        const desired = this.Style ?? this._implicitStyle ?? this._themeStyle;
-        if (desired === this._styleApplicator?.ActiveStyle) return;
-        (this._styleApplicator ??= new StyleApplicator(this)).RefreshActiveStyle(desired);
-    }
-
-    // § 1.7 trampolines — apply_setter / unapply_setter now live on
-    // StyleApplicator. Visual keeps thin wrappers so the trigger
-    // install / uninstall machinery (still on Visual until § 1.8)
-    // continues calling them without knowing about the applicator.
-    private apply_setter(setter: Setter, tier: 'style' | 'trigger'): void
-    {
-        (this._styleApplicator ??= new StyleApplicator(this)).ApplySetter(setter, tier);
-    }
-
-    private unapply_setter(setter: Setter, tier: 'style' | 'trigger'): void
-    {
-        this._styleApplicator?.UnapplySetter(setter, tier);
-    }
-
-    // Public hooks used by DataTemplate triggers — they let a trigger
-    // wired up at the template root apply/clear setters on a named
-    // descendant ('TargetName' in WPF) at the Trigger priority tier,
-    // exactly the way a Style-installed PropertyTrigger/DataTrigger
-    // would but with the styled visual and the setter target being two
-    // different Visuals. The setter machinery itself doesn't care about
-    // the split; it just operates on `this`.
-    public ApplyTriggerSetter(setter: Setter): void
-    {
-        this.apply_setter(setter, 'trigger');
-    }
-    public ClearTriggerSetter(setter: Setter): void
-    {
-        this.unapply_setter(setter, 'trigger');
-    }
+    // DefaultStyleKey getter, refresh_active_style, apply_setter
+    // trampolines, and ApplyTriggerSetter / ClearTriggerSetter all
+    // live on `Element` (§ Phase B). DataTemplate's per-target trigger
+    // wiring types its `target` as `Element` so the public
+    // ApplyTriggerSetter surface is reachable from a typed reference.
 
     // Wire the EventTrigger's RoutedEvent to a dispatch that invokes
     // every Action on each fire. Cleanly dispatches by event NAME so a
@@ -1347,124 +1148,11 @@ export class Visual extends Model
         (this._triggerHost ??= new TriggerHost(this)).InstallMultiDataTrigger(trigger);
     }
 
-    // Looks up an implicit Style keyed by this Visual's constructor in
-    // the ancestor resource chain. Called from AttachLogical (newly in
-    // a tree, may have an implicit Style above), from DetachLogical
-    // (no chain anymore, implicit clears), and from the ancestor-
-    // resource subscriptions wired by subscribe_styles (a dictionary
-    // change might add / remove the implicit style).
-    private resolve_implicit_style(): void
-    {
-        // Function-keyed entries in the resource chain may be Styles
-        // (user-side `[TargetType=X]`) OR ControlTemplates (the bundled
-        // controls theme's `[TargetType=X]` Templates). The implicit-Style
-        // path takes Styles only — guard with `instanceof Style` so a
-        // ControlTemplate registered under the same key doesn't get
-        // mis-applied here (the control's constructor reads the
-        // template directly via Application.ResolveDefaultResource).
-        const raw = this.TryFindResource(this.constructor);
-        const found = raw instanceof Style ? raw : undefined;
-        if (found === this._implicitStyle) return;
-        this._implicitStyle = found;
-        this.refresh_active_style();
-    }
-
-    // Theme-style counterpart of resolve_implicit_style. Looks up
-    // `this.DefaultStyleKey` (a class function picked by metadata
-    // override) in the same ancestor resource chain. A Visual whose
-    // DefaultStyleKey is undefined (the default) skips the lookup —
-    // theme styling is opt-in per subclass. In practice the matching
-    // entry lives in a merged theme dictionary on Application.Resources;
-    // user-side [TargetType=X] entries closer in the chain hit
-    // resolve_implicit_style first and shadow what we find here.
-    private resolve_theme_style(): void
-    {
-        const key = this.DefaultStyleKey;
-        const raw = key !== undefined ? this.TryFindResource(key) : undefined;
-        // Same instanceof guard as resolve_implicit_style — Function
-        // keys are shared with ControlTemplate registrations, so skip
-        // anything that isn't a Style.
-        const found = raw instanceof Style ? raw : undefined;
-        if (found === this._themeStyle) return;
-        this._themeStyle = found;
-        this.refresh_active_style();
-    }
-
-    // Eagerly resolve the default Style and apply it. Convention for
-    // templated controls: call this at the end of the subclass
-    // constructor. The framework would otherwise only resolve styles
-    // on AttachLogical (via _refresh_styles_subtree) — fine for tree-
-    // mounted controls, but standalone tests / unmounted instances
-    // would have a missing Template (and the visualChildren / Measure
-    // contracts would observe an un-templated control). Calling this
-    // is the WPF parity for the EnsureTemplate hook that runs lazily
-    // in MeasureCore there; mural runs it eagerly at construction so
-    // unattached visualChildren reads still see the default chrome.
-    //
-    // Idempotent: re-resolving the same Style is a no-op
-    // (resolve_*_style short-circuits on identity match). Safe to call
-    // multiple times during composition (e.g. when a subclass needs
-    // the Template to be populated before its own ctor finishes).
-    protected applyDefaultStyle(): void
-    {
-        this.resolve_implicit_style();
-        this.resolve_theme_style();
-    }
-
-    // Subscribe to every ResourceDictionary in the ancestor chain so
-    // changes to any of them re-resolve BOTH the implicit and theme
-    // styles. Wired at AttachLogical; tree mutations rebuild via
-    // _refresh_styles_subtree. Implicit and theme share one subscription
-    // list because they consult the same chain — splitting would
-    // double the subscribers on every dict for no benefit.
-    private subscribe_styles(): void
-    {
-        this.unsubscribe_styles();
-        const onChange = (): void =>
-        {
-            this.resolve_implicit_style();
-            this.resolve_theme_style();
-        };
-        let cursor: Visual | undefined = this;
-        while (cursor !== undefined)
-        {
-            const r = cursor._resources;
-            if (r !== undefined)
-            {
-                (this._styleSubscriptions ??= []).push(r.Subscribe(onChange));
-            }
-            cursor = cursor._logicalParent ?? cursor._templatedParent;
-        }
-        // Mirror the Application-level fallback in TryFindResource —
-        // theme / implicit-style changes on the app's root dict must
-        // trigger re-resolution here too.
-        const appRd = Application.current?.Resources;
-        if (appRd !== undefined)
-        {
-            (this._styleSubscriptions ??= []).push(appRd.Subscribe(onChange));
-        }
-    }
-
-    private unsubscribe_styles(): void
-    {
-        if (this._styleSubscriptions === undefined) return;
-        for (const unsub of this._styleSubscriptions) unsub();
-        this._styleSubscriptions = undefined;
-    }
-
-    // Throws when the resource isn't found anywhere up the chain — use
-    // when the caller treats absence as a programming error. For
-    // optional lookups use TryFindResource.
-    public FindResource(key: ResourceKey): unknown
-    {
-        const v = this.TryFindResource(key);
-        if (v === undefined)
-        {
-            const desc = typeof key === 'string' ? `'${key}'` : `[${(key as Function).name}]`;
-            throw new Error(`Visual.FindResource: resource ${desc} not found in any logical ancestor.`);
-        }
-        return v;
-    }
+    // Implicit / theme style resolution (resolve_implicit_style,
+    // resolve_theme_style), applyDefaultStyle, subscribe_styles /
+    // unsubscribe_styles, and FindResource all live on `Element`
+    // (§ Phase B). Visual proper has no style cascade — those are
+    // FrameworkElement-tier concerns.
 
     // The VisualHost (PresentationTarget) that owns this Visual's tree,
     // or undefined when the Visual is unattached.
@@ -1659,7 +1347,9 @@ export class Visual extends Model
         // Buttons built and AddChild'd before the Border itself is
         // attached anywhere; the Buttons resolved an empty chain at
         // their original AddChild and only see the Border's style
-        // when their chain extends up to it on THIS attach).
+        // when their chain extends up to it on THIS attach). The
+        // cascade itself is FE-tier (`Element._refresh_styles_subtree`);
+        // plain Visual children no-op via Visual's stub override.
         child._refresh_styles_subtree();
         // DynamicResource bindings cached their ancestor-chain
         // subscriptions at construction. Reparenting grew (or shrank)
@@ -1678,7 +1368,7 @@ export class Visual extends Model
         // Tear down ancestor-resource subscriptions FIRST (whole
         // subtree) so a mutation on the now-detached chain doesn't
         // fire resolve_implicit_style / resolve_theme_style through
-        // stale subs.
+        // stale subs. Plain Visuals no-op via the Visual-level stub.
         child._unsubscribe_styles_subtree();
         child.SetLogicalParent(undefined);
         child._refresh_inheritance_subtree();
@@ -1694,38 +1384,20 @@ export class Visual extends Model
         child._refresh_dynamic_resources_subtree();
     }
 
-    // Cascades unsubscribe → resolve → subscribe through THIS visual
-    // and every logical descendant. Used by AttachLogical / DetachLogical
-    // to re-propagate implicit and theme style lookups when the
-    // ancestor chain changes at any level above the subtree (which
-    // invalidates every descendant's chain, not just the
-    // directly-attached child).
-    /** @internal — § 1.10. Public-with-underscore so collaborators
-     *  on sibling Visuals can call it without a bracket-access cast.
-     *  Walks this Visual and every logical / overlay descendant,
-     *  re-resolving implicit + theme styles and re-subscribing to
-     *  ancestor ResourceDictionary changes. */
-    public _refresh_styles_subtree(): void
-    {
-        this.unsubscribe_styles();
-        this.resolve_implicit_style();
-        this.resolve_theme_style();
-        this.subscribe_styles();
-        for (const c of this.allLogicalDescendantSubtreeRoots()) c._refresh_styles_subtree();
-    }
+    /** @internal — § Phase B. Visual-tier no-op virtual; `Element`
+     *  overrides to walk this Element + every logical / overlay
+     *  descendant, re-resolving implicit + theme styles and re-
+     *  subscribing to ancestor ResourceDictionary changes.
+     *  AttachLogical / DetachLogical call this on every child without
+     *  branching on Element-ness — plain Visuals fall through here
+     *  and pay zero work. Same pattern as `on_attach_edge` /
+     *  `on_detach_edge` for the Loaded / Unloaded fan-out. */
+    public _refresh_styles_subtree(): void { }
 
-    // Cascades unsubscribe through THIS visual and every logical
-    // descendant. Called before a subtree detach so subs torn down
-    // FIRST can't fire through the still-attached ancestor chain.
-    /** @internal — § 1.10. See `_refresh_styles_subtree`. Tears down
-     *  ancestor ResourceDictionary subscriptions across the subtree
-     *  before a detach so they can't fire through the still-attached
-     *  chain. */
-    public _unsubscribe_styles_subtree(): void
-    {
-        this.unsubscribe_styles();
-        for (const c of this.allLogicalDescendantSubtreeRoots()) c._unsubscribe_styles_subtree();
-    }
+    /** @internal — § Phase B. Visual-tier no-op virtual; `Element`
+     *  overrides to tear down ancestor ResourceDictionary
+     *  subscriptions across its subtree before a detach. */
+    public _unsubscribe_styles_subtree(): void { }
 
     // ── Overlay children — logical-owner-side wiring ─────────────────
     //
@@ -2362,13 +2034,11 @@ export class Visual extends Model
                 this.fire_dynamic_resource_listeners();
             }
         }
-        // The public Style setter calls refresh_active_style after
-        // writing — but anyone using set_property_value("Style", …)
-        // (the compiler-emitted code path, runtime-installed bindings)
-        // bypasses that. Detect the Style property here and re-run the
-        // resolver so the new Style's setters / triggers install no
-        // matter how the property is written.
-        if (descriptor.Name === 'Style') this.refresh_active_style();
+        // Style writes go through Element's OnPropertyChanged override
+        // (which re-runs `refresh_active_style` for low-level
+        // `set_property_value("Style", …)` paths that bypass the
+        // public setter). Visual itself has no Style — § Phase B.
+
         // RenderTransform DP changed — rebind the inner-property
         // invalidator so an Angle / ScaleX / TransformGroup.Children
         // change on the new Transform value flags THIS Visual render-

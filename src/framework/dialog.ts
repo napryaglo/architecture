@@ -1,4 +1,4 @@
-import { MetaData, Model, Visual } from '../runtime/index.js';
+import { MetaData, Model, Element, Visual } from '../runtime/index.js';
 import { ContentControl } from './content-control.js';
 
 // M3 Dialog — modal surface with title + content + actions, anchored
@@ -35,7 +35,7 @@ export class Dialog extends ContentControl
 
     static {
         Model.OverrideMetadata(
-            Dialog, Visual.DefaultStyleKeyKey,
+            Dialog, Element.DefaultStyleKeyKey,
             { default_value: Dialog });
     }
 }

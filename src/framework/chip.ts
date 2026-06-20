@@ -1,7 +1,7 @@
 import {
     MetaData,
     Model,
-    Visual,
+    Element, Visual,
     type PropertyDescriptor,
 } from '../runtime/index.js';
 import { Border } from '../basic/border.js';
@@ -76,7 +76,7 @@ export class Chip extends ToggleButton
 
     static {
         Model.OverrideMetadata(
-            Chip, Visual.DefaultStyleKeyKey,
+            Chip, Element.DefaultStyleKeyKey,
             { default_value: Chip });
     }
 

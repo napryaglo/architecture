@@ -6,7 +6,7 @@ import {
     PropertyDescriptor,
     Rect,
     Size,
-    Visual,
+    Element, Visual,
     type DrawingContext,
     type KeyEventArgs,
 } from '../runtime/index.js';
@@ -76,7 +76,7 @@ export class Splitter extends Thumb
         Splitter, 'PreviewBrush', undefined, MetaData.None);
 
     static {
-        Model.OverrideMetadata(Splitter, Visual.DefaultStyleKeyKey, { default_value: Splitter });
+        Model.OverrideMetadata(Splitter, Element.DefaultStyleKeyKey, { default_value: Splitter });
     }
 
     private _resizeTarget: Visual | undefined;

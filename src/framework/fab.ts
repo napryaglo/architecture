@@ -1,4 +1,4 @@
-import { MetaData, Model, Visual } from '../runtime/index.js';
+import { MetaData, Model, Element } from '../runtime/index.js';
 import { Button } from './button.js';
 
 // Material 3 FloatingActionButton size variants.
@@ -65,7 +65,7 @@ export class FloatingActionButton extends Button
         // keyed by the FloatingActionButton class function.
         Model.OverrideMetadata(
             FloatingActionButton,
-            Visual.DefaultStyleKeyKey,
+            Element.DefaultStyleKeyKey,
             { default_value: FloatingActionButton },
         );
     }

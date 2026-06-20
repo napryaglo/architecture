@@ -3,7 +3,7 @@ import {
     Model,
     Point,
     Thickness,
-    Visual,
+    Element, Visual,
     type PropertyDescriptor,
 } from '../runtime/index.js';
 import { resolveKey } from '../runtime/model-internals.js';
@@ -160,7 +160,7 @@ export class ColorPicker extends TemplatedControl
     public get SwatchBrush():    SolidColorBrush | undefined { return this.get_property_value(ColorPicker.SwatchBrushKey); }
 
     static {
-        Model.OverrideMetadata(ColorPicker, Visual.DefaultStyleKeyKey, { default_value: ColorPicker });
+        Model.OverrideMetadata(ColorPicker, Element.DefaultStyleKeyKey, { default_value: ColorPicker });
     }
 
     private _trigger:    Border | undefined;

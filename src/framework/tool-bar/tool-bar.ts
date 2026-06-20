@@ -5,7 +5,7 @@ import {
     Panel,
     Rect,
     Size,
-    Visual,
+    Element, Visual,
     type DrawingContext,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
@@ -82,7 +82,7 @@ export class ToolBar extends ItemsControl
         // `Style [TargetType=ToolBar]` in framework.resources.mu wires
         // both `Template` (inline chrome with chevron + ItemsPresenter)
         // and `PopupTemplate` (overlay popup with overflow ItemsControl).
-        Model.OverrideMetadata(ToolBar, Visual.DefaultStyleKeyKey, { default_value: ToolBar });
+        Model.OverrideMetadata(ToolBar, Element.DefaultStyleKeyKey, { default_value: ToolBar });
     }
     private static readonly _HasOverflowItemsPriv = Model.RegisterReadOnlyProperty<boolean>(
         ToolBar, 'HasOverflowItems', false, MetaData.None,

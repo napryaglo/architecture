@@ -1,6 +1,7 @@
 import {
     Application,
     DataContextBinding,
+    Element,
     EventTrigger,
     NameScope,
     ResourceDictionary,
@@ -124,19 +125,22 @@ export class TargetedSetter extends Setter
     }
 }
 
-// Resolves each TargetedSetter's `targetName` to a Visual under `root`.
-// Setters whose target can't be resolved are silently dropped — keeps
-// authoring mistakes from blowing up Apply, mirroring WPF's "Setter is
-// ignored" semantics for a missing TargetName.
+// Resolves each TargetedSetter's `targetName` to an Element under `root`.
+// Setters whose target can't be resolved — or whose target isn't an
+// Element (so it can't carry trigger-tier setters) — are silently
+// dropped, mirroring WPF's "Setter is ignored" semantics for a missing
+// TargetName. `ApplyTriggerSetter` / `ClearTriggerSetter` are FE-tier
+// hooks on `Element` (§ Phase B), so a non-Element target couldn't be
+// driven anyway.
 function resolveTargets(
     root: Visual, setters: readonly TargetedSetter[],
-): Array<{ target: Visual; setter: TargetedSetter }>
+): Array<{ target: Element; setter: TargetedSetter }>
 {
-    const out: Array<{ target: Visual; setter: TargetedSetter }> = [];
+    const out: Array<{ target: Element; setter: TargetedSetter }> = [];
     for (const s of setters)
     {
         const target = s.targetName === undefined ? root : root.FindName(s.targetName);
-        if (target !== undefined) out.push({ target, setter: s });
+        if (target instanceof Element) out.push({ target, setter: s });
     }
     return out;
 }

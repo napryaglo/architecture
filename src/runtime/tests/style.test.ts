@@ -58,14 +58,14 @@ class TestPanel extends Panel { }
 class ThemedWidget extends Widget
 {
     static {
-        Model.OverrideMetadata(ThemedWidget, Visual.DefaultStyleKeyKey, { default_value: ThemedWidget });
+        Model.OverrideMetadata(ThemedWidget, Element.DefaultStyleKeyKey, { default_value: ThemedWidget });
     }
 }
 class ChildOfThemed extends ThemedWidget { }
 class OwnThemedChild extends ThemedWidget
 {
     static {
-        Model.OverrideMetadata(OwnThemedChild, Visual.DefaultStyleKeyKey, { default_value: OwnThemedChild });
+        Model.OverrideMetadata(OwnThemedChild, Element.DefaultStyleKeyKey, { default_value: OwnThemedChild });
     }
 }
 

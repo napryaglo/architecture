@@ -1,7 +1,7 @@
 import {
     MetaData,
     Model,
-    Visual,
+    Element, Visual,
     type PointerEventArgs,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
@@ -72,7 +72,7 @@ function displayString(item: unknown): string
 export class ListBox extends Selector
 {
     static {
-        Model.OverrideMetadata(ListBox, Visual.DefaultStyleKeyKey, { default_value: ListBox });
+        Model.OverrideMetadata(ListBox, Element.DefaultStyleKeyKey, { default_value: ListBox });
     }
 
     // Cached after first template apply — the lookup walks the
@@ -316,7 +316,7 @@ export class ListBoxItem extends ContentControl
     public static readonly IsThreeLineKey = ListBoxItem._IsThreeLinePriv;
 
     static {
-        Model.OverrideMetadata(ListBoxItem, Visual.DefaultStyleKeyKey, { default_value: ListBoxItem });
+        Model.OverrideMetadata(ListBoxItem, Element.DefaultStyleKeyKey, { default_value: ListBoxItem });
     }
 
     private _pressOriginatedHere = false;

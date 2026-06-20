@@ -3,7 +3,7 @@ import {
     Model,
     Rect,
     Size,
-    Visual,
+    Element, Visual,
     type KeyEventArgs,
     type ModifierKeys,
     type PointerEventArgs,
@@ -207,7 +207,7 @@ export class TreeView extends Selector
         MetaData.None | MetaData.BindsTwoWayByDefault);
 
     static {
-        Model.OverrideMetadata(TreeView, Visual.DefaultStyleKeyKey, { default_value: TreeView });
+        Model.OverrideMetadata(TreeView, Element.DefaultStyleKeyKey, { default_value: TreeView });
     }
 
     // Guard for the SelectedDataItem ↔ SelectedItem feedback loop. Set
@@ -583,7 +583,7 @@ export class TreeViewItem extends ItemsControl
     public static readonly IsThreeLineKey = TreeViewItem._IsThreeLinePriv;
 
     static {
-        Model.OverrideMetadata(TreeViewItem, Visual.DefaultStyleKeyKey, { default_value: TreeViewItem });
+        Model.OverrideMetadata(TreeViewItem, Element.DefaultStyleKeyKey, { default_value: TreeViewItem });
     }
 
     // Guards the IsSelected attached↔instance mirror against recursion.

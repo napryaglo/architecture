@@ -5,7 +5,6 @@ import {
     Model,
     Point,
     Size,
-    Visual,
     type DrawingContext,
     type TextMetrics,
 } from '../runtime/index.js';
@@ -63,7 +62,7 @@ export class TextBlock extends Element
         // active theme tokens via DynamicResource so a theme switch
         // re-tints every untemplated TextBlock without consumers having
         // to set Foreground=@OnSurface on every instance.
-        Model.OverrideMetadata(TextBlock, Visual.DefaultStyleKeyKey, { default_value: TextBlock });
+        Model.OverrideMetadata(TextBlock, Element.DefaultStyleKeyKey, { default_value: TextBlock });
     }
 
     // Each of these changes the painted glyph stream, so both Measure

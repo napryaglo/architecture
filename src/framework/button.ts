@@ -1,7 +1,7 @@
 import {
     MetaData,
     Model,
-    Visual,
+    Element, Visual,
     type ICommand,
     type KeyEventArgs,
     type PointerEventArgs,
@@ -109,7 +109,7 @@ export class Button extends ContentControl implements ICommandSource
     {
         // Theme-style lookup key — Button instances resolve their
         // default Style via TryFindResource(Button) on attach.
-        Model.OverrideMetadata(Button, Visual.DefaultStyleKeyKey, { default_value: Button });
+        Model.OverrideMetadata(Button, Element.DefaultStyleKeyKey, { default_value: Button });
         // Ensures the consolidated controls theme — which holds the
         // Button ControlTemplate keyed by the Button class function —
         // is registered with Application exactly once.

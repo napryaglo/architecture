@@ -2,8 +2,7 @@ import {
     MetaData,
     Model,
     Visibility,
-    Visual,
-    type PropertyDescriptor,
+    Element, type PropertyDescriptor,
 } from '../runtime/index.js';
 import { resolveKey } from '../runtime/model-internals.js';
 import {
@@ -93,7 +92,7 @@ export class PenEditor extends TemplatedControl
     public set MiterLimit(v: number)   { this.set_property_value(PenEditor.MiterLimitKey, v); }
 
     static {
-        Model.OverrideMetadata(PenEditor, Visual.DefaultStyleKeyKey, { default_value: PenEditor });
+        Model.OverrideMetadata(PenEditor, Element.DefaultStyleKeyKey, { default_value: PenEditor });
     }
 
     private _syncing = false;

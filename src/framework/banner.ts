@@ -1,4 +1,4 @@
-import { MetaData, Model, Visual } from '../runtime/index.js';
+import { MetaData, Model, Element, Visual } from '../runtime/index.js';
 import { ContentControl } from './content-control.js';
 
 // M3 Banner — in-flow alert / message strip with a leading icon and an
@@ -37,7 +37,7 @@ export class Banner extends ContentControl
 
     static {
         Model.OverrideMetadata(
-            Banner, Visual.DefaultStyleKeyKey,
+            Banner, Element.DefaultStyleKeyKey,
             { default_value: Banner });
     }
 }

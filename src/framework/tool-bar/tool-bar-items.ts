@@ -91,7 +91,7 @@ export class ToolBarButton extends Button
         // Without this override, applyDefaultStyle would walk up to
         // Button's key and pick up the pill chrome, defeating the
         // connected-bar look.
-        Model.OverrideMetadata(ToolBarButton, Visual.DefaultStyleKeyKey, { default_value: ToolBarButton });
+        Model.OverrideMetadata(ToolBarButton, Element.DefaultStyleKeyKey, { default_value: ToolBarButton });
         // Surface theme owns the default Style; this registers the
         // bundle's factory with Application on first ToolBarButton load.
     }
@@ -153,7 +153,7 @@ export class ToolBarToggleButton extends ToggleButton
 
     static
     {
-        Model.OverrideMetadata(ToolBarToggleButton, Visual.DefaultStyleKeyKey, { default_value: ToolBarToggleButton });
+        Model.OverrideMetadata(ToolBarToggleButton, Element.DefaultStyleKeyKey, { default_value: ToolBarToggleButton });
     }
 
     public get Icon():  Visual | undefined { return this.get_property_value(ToolBarToggleButton.IconKey); }
@@ -205,7 +205,7 @@ export class ToolBarSeparator extends Element
         // DynamicResource so the divider tints follow the active theme
         // palette without an imperative `?? Theme.fieldBorder` fallback
         // in RenderOverride.
-        Model.OverrideMetadata(ToolBarSeparator, Visual.DefaultStyleKeyKey, { default_value: ToolBarSeparator });
+        Model.OverrideMetadata(ToolBarSeparator, Element.DefaultStyleKeyKey, { default_value: ToolBarSeparator });
     }
 
     constructor()

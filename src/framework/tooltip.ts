@@ -1,4 +1,4 @@
-import { MetaData, Visual } from '../runtime/index.js';
+import { MetaData, Element } from '../runtime/index.js';
 import { Model } from '../runtime/model.js';
 import { ContentControl } from './content-control.js';
 
@@ -43,7 +43,7 @@ export class Tooltip extends ContentControl
         // Theme-style lookup key — Tooltip instances resolve their
         // default Style via TryFindResource(Tooltip) on attach.
         Model.OverrideMetadata(
-            Tooltip, Visual.DefaultStyleKeyKey,
+            Tooltip, Element.DefaultStyleKeyKey,
             { default_value: Tooltip });
     }
 

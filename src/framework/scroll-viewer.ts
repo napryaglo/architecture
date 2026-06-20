@@ -5,7 +5,7 @@ import {
     PropertyTransition,
     Rect,
     Size,
-    Visual,
+    Element, Visual,
     type DragEventArgs,
     type DragSession,
     type EasingFunction,
@@ -170,7 +170,7 @@ export class ScrollViewer extends ContentControl
     public static readonly IsScrolledKey = ScrollViewer._IsScrolledPriv;
 
     static {
-        Model.OverrideMetadata(ScrollViewer, Visual.DefaultStyleKeyKey, { default_value: ScrollViewer });
+        Model.OverrideMetadata(ScrollViewer, Element.DefaultStyleKeyKey, { default_value: ScrollViewer });
     }
 
     // ── Template parts ──────────────────────────────────────────────

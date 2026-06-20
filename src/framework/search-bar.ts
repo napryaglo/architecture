@@ -1,4 +1,4 @@
-import { MetaData, Model, Visual, type PropertyDescriptor } from '../runtime/index.js';
+import { MetaData, Model, Element, Visual, type PropertyDescriptor } from '../runtime/index.js';
 import { TextBox } from '../basic/text-box.js';
 import { Border } from '../basic/border.js';
 
@@ -34,7 +34,7 @@ export class SearchBar extends TextBox
 
     static {
         Model.OverrideMetadata(
-            SearchBar, Visual.DefaultStyleKeyKey,
+            SearchBar, Element.DefaultStyleKeyKey,
             { default_value: SearchBar });
     }
 

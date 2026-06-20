@@ -1,4 +1,4 @@
-import { MetaData, Model, Visual } from '../runtime/index.js';
+import { MetaData, Model, Element, Visual } from '../runtime/index.js';
 import { ContentControl } from './content-control.js';
 
 // M3 Snackbar — transient single-line message that floats at the
@@ -29,7 +29,7 @@ export class Snackbar extends ContentControl
 
     static {
         Model.OverrideMetadata(
-            Snackbar, Visual.DefaultStyleKeyKey,
+            Snackbar, Element.DefaultStyleKeyKey,
             { default_value: Snackbar });
     }
 }

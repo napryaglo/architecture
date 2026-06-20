@@ -4,7 +4,7 @@ import {
     Panel,
     Rect,
     Size,
-    Visual,
+    Element, Visual,
     type PointerEventArgs,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
@@ -120,7 +120,7 @@ export class ScrollBar extends TemplatedControl
     public  static readonly IsFadedKey      = ScrollBar._IsFadedPriv;
 
     static {
-        Model.OverrideMetadata(ScrollBar, Visual.DefaultStyleKeyKey, { default_value: ScrollBar });
+        Model.OverrideMetadata(ScrollBar, Element.DefaultStyleKeyKey, { default_value: ScrollBar });
     }
 
     // ── Template parts ──────────────────────────────────────────────

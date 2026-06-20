@@ -1,4 +1,4 @@
-import { MetaData, Model, Visual } from '../runtime/index.js';
+import { MetaData, Model, Element, Visual } from '../runtime/index.js';
 import { ToggleButton } from './toggle-button.js';
 
 // M3 Switch — a binary toggle styled as a track with a sliding thumb.
@@ -21,7 +21,7 @@ export class Switch extends ToggleButton
 {
     static {
         Model.OverrideMetadata(
-            Switch, Visual.DefaultStyleKeyKey,
+            Switch, Element.DefaultStyleKeyKey,
             { default_value: Switch });
     }
 

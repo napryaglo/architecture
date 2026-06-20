@@ -5,7 +5,7 @@ import {
     Panel,
     Rect,
     Size,
-    Visual,
+    Element, Visual,
     type DrawingContext,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
@@ -131,7 +131,7 @@ export class ComboBoxItem extends ClickableBorder
         ComboBoxItem, 'IsSelected', false, MetaData.None);
 
     static {
-        Model.OverrideMetadata(ComboBoxItem, Visual.DefaultStyleKeyKey, { default_value: ComboBoxItem });
+        Model.OverrideMetadata(ComboBoxItem, Element.DefaultStyleKeyKey, { default_value: ComboBoxItem });
     }
 
     constructor()
@@ -365,7 +365,7 @@ export class ComboBox extends Selector
     public  static readonly HasSelectionKey   = ComboBox._HasSelectionPriv;
 
     static {
-        Model.OverrideMetadata(ComboBox, Visual.DefaultStyleKeyKey, { default_value: ComboBox });
+        Model.OverrideMetadata(ComboBox, Element.DefaultStyleKeyKey, { default_value: ComboBox });
         // Registers the consolidated controls theme exactly once so
         // DefaultComboBoxSelection / DefaultComboBoxPopup resolve via
         // Application.ResolveDefaultResource during construction.

@@ -1,7 +1,7 @@
 import {
     MetaData,
     Model,
-    Visual,
+    Element, Visual,
     type PropertyDescriptor,
 } from '../runtime/index.js';
 import { ToggleButton } from './toggle-button.js';
@@ -43,7 +43,7 @@ export class RadioButton extends ToggleButton
 
     static {
         Model.OverrideMetadata(
-            RadioButton, Visual.DefaultStyleKeyKey,
+            RadioButton, Element.DefaultStyleKeyKey,
             { default_value: RadioButton });
         // 20 × 20 dp default — M3 spec for the radio target.
         Model.OverrideMetadata(RadioButton, Visual.WidthKey,  { default_value: 20 });

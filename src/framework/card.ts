@@ -1,4 +1,4 @@
-import { MetaData, Model, Visual } from '../runtime/index.js';
+import { MetaData, Model, Element, Visual } from '../runtime/index.js';
 import { ContentControl } from './content-control.js';
 
 // Material 3 Card variants. Each variant ships its own ControlTemplate
@@ -64,7 +64,7 @@ export class Card extends ContentControl
         // Card instances resolve their own default Style — the theme
         // dictionary holds Style[TargetType=Card] keyed by the Card
         // class function.
-        Model.OverrideMetadata(Card, Visual.DefaultStyleKeyKey, { default_value: Card });
+        Model.OverrideMetadata(Card, Element.DefaultStyleKeyKey, { default_value: Card });
     }
 
     constructor(content?: Visual)

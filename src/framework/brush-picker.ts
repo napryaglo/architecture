@@ -2,7 +2,7 @@ import {
     MetaData,
     Model,
     Point,
-    Visual,
+    Element, Visual,
     type PropertyDescriptor,
 } from '../runtime/index.js';
 import { resolveKey } from '../runtime/model-internals.js';
@@ -143,7 +143,7 @@ export class BrushPicker extends TemplatedControl
     public set PatternStroke(v:     number){ this.set_property_value(BrushPicker.PatternStrokeKey, v); }
 
     static {
-        Model.OverrideMetadata(BrushPicker, Visual.DefaultStyleKeyKey, { default_value: BrushPicker });
+        Model.OverrideMetadata(BrushPicker, Element.DefaultStyleKeyKey, { default_value: BrushPicker });
     }
 
     private _trigger:    Border | undefined;

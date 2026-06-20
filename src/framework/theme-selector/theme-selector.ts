@@ -4,8 +4,7 @@ import {
     Scheme,
     Theme,
     ThemeManager,
-    Visual,
-} from '../../runtime/index.js';
+    Element, } from '../../runtime/index.js';
 import { ContentControl } from '../content-control.js';
 import { ComboBox } from '../list/combo-box.js';
 
@@ -25,7 +24,7 @@ import { ComboBox } from '../list/combo-box.js';
 // `when ( IsMouseOver or PART_xxxCombo.IsDropDownOpen )` triggers in
 // the default template. The control itself owns no open/closed DPs:
 // hover state lives on the standard `IsMouseOver` already exposed by
-// every Visual, and dropdown state lives on the inner ComboBoxes.
+// every and dropdown state lives on the inner ComboBoxes.
 //
 // External theme changes (AutoScheme firing, another module calling
 // ActivateTheme directly) feed back through ThemeManager.Activated so
@@ -55,7 +54,7 @@ export class ThemeSelector extends ContentControl
 
     static
     {
-        Model.OverrideMetadata(ThemeSelector, Visual.DefaultStyleKeyKey, { default_value: ThemeSelector });
+        Model.OverrideMetadata(ThemeSelector, Element.DefaultStyleKeyKey, { default_value: ThemeSelector });
     }
 
     // ── Template parts ────────────────────────────────────────────────

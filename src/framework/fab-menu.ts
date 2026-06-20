@@ -6,7 +6,7 @@ import {
     Point,
     Storyboard,
     Thickness,
-    Visual,
+    Element, Visual,
     type PropertyDescriptor,
 } from '../runtime/index.js';
 import type { PresentationTarget } from '../visual-engine/index.js';
@@ -105,7 +105,7 @@ export class FabMenu extends FloatingActionButton
     private _rotationStoryboard: Storyboard | undefined;
 
     static {
-        Model.OverrideMetadata(FabMenu, Visual.DefaultStyleKeyKey,
+        Model.OverrideMetadata(FabMenu, Element.DefaultStyleKeyKey,
             { default_value: FabMenu });
     }
 

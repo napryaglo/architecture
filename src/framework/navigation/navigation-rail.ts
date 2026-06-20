@@ -1,7 +1,7 @@
 import {
     MetaData,
     Model,
-    Visual,
+    Element, Visual,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
 import { ContentPresenter } from '../../basic/templates/content-presenter.js';
@@ -79,7 +79,7 @@ export class NavigationRail extends Selector
     static
     {
         Model.OverrideMetadata(
-            NavigationRail, Visual.DefaultStyleKeyKey,
+            NavigationRail, Element.DefaultStyleKeyKey,
             { default_value: NavigationRail },
         );
     }

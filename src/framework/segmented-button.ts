@@ -1,7 +1,7 @@
 import {
     MetaData,
     Model,
-    Visual,
+    Element, Visual,
     type PointerEventArgs,
     type PropertyDescriptor,
 } from '../runtime/index.js';
@@ -29,7 +29,7 @@ import { Selector, SelectionMode } from './list/selector.js';
 export class SegmentedButton extends Selector
 {
     static {
-        Model.OverrideMetadata(SegmentedButton, Visual.DefaultStyleKeyKey,
+        Model.OverrideMetadata(SegmentedButton, Element.DefaultStyleKeyKey,
             { default_value: SegmentedButton });
         // SelectionMode = Single matches M3's "single-select segmented
         // button" variant. The "multi-select" variant just flips this
@@ -158,7 +158,7 @@ export class SegmentedItem extends ContentControl
     public static readonly PositionKey = SegmentedItem._PositionPriv;
 
     static {
-        Model.OverrideMetadata(SegmentedItem, Visual.DefaultStyleKeyKey,
+        Model.OverrideMetadata(SegmentedItem, Element.DefaultStyleKeyKey,
             { default_value: SegmentedItem });
     }
 

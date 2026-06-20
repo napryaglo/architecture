@@ -62,7 +62,7 @@ export class MenuStrip extends ItemsControl
 
     static
     {
-        Model.OverrideMetadata(MenuStrip, Visual.DefaultStyleKeyKey, { default_value: MenuStrip });
+        Model.OverrideMetadata(MenuStrip, Element.DefaultStyleKeyKey, { default_value: MenuStrip });
     }
 
     constructor()
@@ -219,7 +219,7 @@ export class MenuItem extends ItemsControl
         //                    materialised into the ItemsPresenter)
         //   * RowTemplate  = DefaultMenuItemRow      (inline row chrome
         //                    with state triggers; applied imperatively)
-        Model.OverrideMetadata(MenuItem, Visual.DefaultStyleKeyKey, { default_value: MenuItem });
+        Model.OverrideMetadata(MenuItem, Element.DefaultStyleKeyKey, { default_value: MenuItem });
     }
 
     constructor()
@@ -755,7 +755,7 @@ export class MenuSeparator extends Element
         // The Style supplies Height / MinWidth / LineBrush via
         // DynamicResource so the line tints flip with the theme
         // palette without consumers having to set LineBrush.
-        Model.OverrideMetadata(MenuSeparator, Visual.DefaultStyleKeyKey, { default_value: MenuSeparator });
+        Model.OverrideMetadata(MenuSeparator, Element.DefaultStyleKeyKey, { default_value: MenuSeparator });
     }
 
     constructor()
@@ -882,7 +882,7 @@ export class MenuButton extends ItemsControl
         // block. Surface theme is kept apart from the main controls
         // theme to avoid the `extends Button` TDZ cycle (see
         // default-resources.ts).
-        Model.OverrideMetadata(MenuButton, Visual.DefaultStyleKeyKey, { default_value: MenuButton });
+        Model.OverrideMetadata(MenuButton, Element.DefaultStyleKeyKey, { default_value: MenuButton });
     }
 
     constructor()

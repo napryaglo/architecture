@@ -1,4 +1,4 @@
-import { MetaData, Model, Visual } from '../runtime/index.js';
+import { MetaData, Model, Element, Visual } from '../runtime/index.js';
 import { ContentControl } from './content-control.js';
 import { Selector } from './list/selector.js';
 
@@ -23,7 +23,7 @@ export class TabControl extends Selector
 {
     static {
         Model.OverrideMetadata(
-            TabControl, Visual.DefaultStyleKeyKey,
+            TabControl, Element.DefaultStyleKeyKey,
             { default_value: TabControl });
     }
 
@@ -69,7 +69,7 @@ export class TabItem extends ContentControl
 
     static {
         Model.OverrideMetadata(
-            TabItem, Visual.DefaultStyleKeyKey,
+            TabItem, Element.DefaultStyleKeyKey,
             { default_value: TabItem });
     }
 

@@ -3,7 +3,7 @@ import {
     Model,
     Thickness,
     VerticalAlignment,
-    Visual,
+    Element, Visual,
     type KeyEventArgs,
 } from '../runtime/index.js';
 import { ClickableBorder } from './clickable-border.js';
@@ -92,7 +92,7 @@ export class SpinEdit extends TemplatedControl
     public  static readonly IsEditHoveredKey  = SpinEdit._IsEditHoveredPriv;
 
     static {
-        Model.OverrideMetadata(SpinEdit, Visual.DefaultStyleKeyKey, { default_value: SpinEdit });
+        Model.OverrideMetadata(SpinEdit, Element.DefaultStyleKeyKey, { default_value: SpinEdit });
     }
 
     // Template parts — all resolved from DefaultSpinEdit in the

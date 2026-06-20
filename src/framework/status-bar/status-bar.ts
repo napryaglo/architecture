@@ -28,7 +28,7 @@ export class StatusBar extends ItemsControl
         // Theme lookup uses StatusBar as the key — the default Style
         // `Style [TargetType=StatusBar]` in framework.resources.mu wires
         // the chrome Template plus the DockPanel ItemsPanel.
-        Model.OverrideMetadata(StatusBar, Visual.DefaultStyleKeyKey, { default_value: StatusBar });
+        Model.OverrideMetadata(StatusBar, Element.DefaultStyleKeyKey, { default_value: StatusBar });
     }
 
     // Accept StatusBarItem + StatusBarSeparator directly as
@@ -92,7 +92,7 @@ export class StatusBarItem extends ContentControl
     {
         // Type-keyed default Style lookup — registered in
         // framework.resources.mu under `Style [TargetType=StatusBarItem]`.
-        Model.OverrideMetadata(StatusBarItem, Visual.DefaultStyleKeyKey, { default_value: StatusBarItem });
+        Model.OverrideMetadata(StatusBarItem, Element.DefaultStyleKeyKey, { default_value: StatusBarItem });
     }
 }
 
@@ -111,7 +111,7 @@ export class StatusBarSeparator extends Element
         // Type-keyed default Style — supplies Width / MinHeight /
         // LineBrush via DynamicResource so the line tints follow the
         // active theme palette.
-        Model.OverrideMetadata(StatusBarSeparator, Visual.DefaultStyleKeyKey, { default_value: StatusBarSeparator });
+        Model.OverrideMetadata(StatusBarSeparator, Element.DefaultStyleKeyKey, { default_value: StatusBarSeparator });
     }
 
     constructor()

@@ -2,7 +2,7 @@ import {
     MetaData,
     Model,
     ObservableCollection,
-    Visual,
+    Element, Visual,
     type CollectionChange,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
@@ -117,7 +117,7 @@ export class TopAppBar extends TemplatedControl
     static
     {
         Model.OverrideMetadata(
-            TopAppBar, Visual.DefaultStyleKeyKey,
+            TopAppBar, Element.DefaultStyleKeyKey,
             { default_value: TopAppBar },
         );
     }

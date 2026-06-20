@@ -8,7 +8,7 @@ import {
     Rect,
     Size,
     VerticalAlignment,
-    Visual,
+    Element, Visual,
     type DrawingContext,
     type KeyEventArgs,
 } from '../runtime/index.js';
@@ -94,7 +94,7 @@ export class GridSplitter extends Thumb
         GridSplitter, 'PreviewBrush', undefined, MetaData.None);
 
     static {
-        Model.OverrideMetadata(GridSplitter, Visual.DefaultStyleKeyKey, { default_value: GridSplitter });
+        Model.OverrideMetadata(GridSplitter, Element.DefaultStyleKeyKey, { default_value: GridSplitter });
     }
 
     // Snapshot taken on DragStarted so the drag stays consistent even

@@ -6,7 +6,7 @@ import {
     Panel,
     Rect,
     Size,
-    Visual,
+    Element, Visual,
     type DrawingContext,
     type PointerEventArgs,
     type PropertyDescriptor,
@@ -198,7 +198,7 @@ export class Drawer extends Control
     public static readonly ContentKey    = Model.RegisterProperty<Visual | undefined>(Drawer, 'Content',   undefined,                MetaData.Measure);
 
     static {
-        Model.OverrideMetadata(Drawer, Visual.DefaultStyleKeyKey, { default_value: Drawer });
+        Model.OverrideMetadata(Drawer, Element.DefaultStyleKeyKey, { default_value: Drawer });
         // Registers the consolidated controls theme exactly once so
         // DefaultDrawerPane / DefaultDrawerOverlay resolve via
         // Application.ResolveDefaultResource during construction.

@@ -1,8 +1,7 @@
 import {
     MetaData,
     Model,
-    Visual,
-    type PointerEventArgs,
+    Element, type PointerEventArgs,
 } from '../runtime/index.js';
 import { IconButton } from './icon-button.js';
 
@@ -40,7 +39,7 @@ export class IconButtonToggle extends IconButton
         // theme, not the parent IconButton style.
         Model.OverrideMetadata(
             IconButtonToggle,
-            Visual.DefaultStyleKeyKey,
+            Element.DefaultStyleKeyKey,
             { default_value: IconButtonToggle },
         );
     }

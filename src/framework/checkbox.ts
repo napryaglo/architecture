@@ -1,4 +1,4 @@
-import { Model, Visual } from '../runtime/index.js';
+import { Model, Element, Visual } from '../runtime/index.js';
 import { ToggleButton } from './toggle-button.js';
 
 // M3 Checkbox — 18 × 18 dp square toggle.
@@ -17,7 +17,7 @@ export class Checkbox extends ToggleButton
 {
     static {
         Model.OverrideMetadata(
-            Checkbox, Visual.DefaultStyleKeyKey,
+            Checkbox, Element.DefaultStyleKeyKey,
             { default_value: Checkbox });
         // 18 × 18 dp default size — M3 spec for the checkable square.
         // Overrides Visual's NaN default so an in-flow Checkbox ships

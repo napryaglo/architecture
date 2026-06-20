@@ -38,11 +38,22 @@ class ResourceWatcher extends Model
 // that didn't have one) WON'T re-wire subscriptions automatically —
 // a known limitation of this first-cut implementation, called out so
 // callers know to re-create the binding if they reshape the tree.
-// Lightweight duck-test for "is this object a Visual". Avoids importing
-// the Visual class concretely (would create a runtime circular import).
-// A Visual exposes TryFindResource AND _subscribe_dynamic_resource —
-// both are needed by the wiring path below.
-function isVisualHost(host: object): host is Visual
+// Friend-interface for the FE-tier hooks the DynamicResource binding
+// reaches into on a Visual host. Avoids a runtime-circular import of
+// the concrete `Element` class from runtime/. `TryFindResource` and
+// `_subscribe_dynamic_resource` both live on Element (§ Phase B) but
+// the duck-test stays correct because the only Visuals that carry the
+// machinery ARE Elements.
+interface VisualResourceHost
+{
+    TryFindResource(key: string): unknown | undefined;
+    _subscribe_dynamic_resource(cb: () => void): () => void;
+}
+
+// Lightweight duck-test for "is this object a Visual that owns the
+// resource-host machinery". A non-Element Visual returns false here
+// and the binding falls back to Application-level resolution.
+function isVisualHost(host: object): host is Visual & VisualResourceHost
 {
     return typeof (host as { TryFindResource?: unknown }).TryFindResource === 'function';
 }

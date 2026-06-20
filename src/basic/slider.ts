@@ -4,7 +4,7 @@ import {
     Panel,
     Rect,
     Size,
-    Visual,
+    Element, Visual,
     type KeyEventArgs,
     type PointerEventArgs,
     type PropertyDescriptor,
@@ -129,7 +129,7 @@ export class Slider extends TemplatedControl
     public  static readonly IsDraggingKey  = Slider._IsDraggingPriv;
 
     static {
-        Model.OverrideMetadata(Slider, Visual.DefaultStyleKeyKey, { default_value: Slider });
+        Model.OverrideMetadata(Slider, Element.DefaultStyleKeyKey, { default_value: Slider });
     }
 
     // ── Template parts ─────────────────────────────────────────────

@@ -1,4 +1,4 @@
-import { MetaData, Model, Visual } from '../runtime/index.js';
+import { MetaData, Model, Element } from '../runtime/index.js';
 import { ContentControl } from './content-control.js';
 
 // M3 Bottom Sheet — surface that rises from the bottom edge, used to
@@ -26,7 +26,7 @@ export class BottomSheet extends ContentControl
 {
     static {
         Model.OverrideMetadata(
-            BottomSheet, Visual.DefaultStyleKeyKey,
+            BottomSheet, Element.DefaultStyleKeyKey,
             { default_value: BottomSheet });
     }
 }

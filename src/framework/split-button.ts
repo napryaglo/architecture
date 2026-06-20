@@ -1,7 +1,7 @@
 import {
     MetaData,
     Model,
-    Visual,
+    Element, Visual,
     type PointerEventArgs,
     type PropertyDescriptor,
 } from '../runtime/index.js';
@@ -75,7 +75,7 @@ export class SplitButton extends ContentControl
     public set PopupTemplate(v:    ControlTemplate | undefined) { this.set_property_value(SplitButton.PopupTemplateKey, v); }
 
     static {
-        Model.OverrideMetadata(SplitButton, Visual.DefaultStyleKeyKey,
+        Model.OverrideMetadata(SplitButton, Element.DefaultStyleKeyKey,
             { default_value: SplitButton });
     }
 

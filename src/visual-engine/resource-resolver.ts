@@ -2,6 +2,7 @@ import { Application } from '../runtime/application.js';
 import type { PropertyDescriptor } from '../runtime/property-descriptor.js';
 import type { ResourceDictionary, ResourceKey } from '../runtime/resource-dictionary.js';
 import type { Visual } from './visual.js';
+import type { Element } from './element.js';
 import type { StyleApplicator } from './style-applicator.js';
 
 // Friend-interface for ResourceResolver to walk the target's
@@ -91,7 +92,7 @@ export class ResourceResolver
         return ResourceResolver._ambientResourceTriggerDps.has(descriptor);
     }
 
-    constructor(private readonly _target: Visual) {}
+    constructor(private readonly _target: Element) {}
 
     /** Walk the four-tier precedence chain. Returns the first
      *  matching value, or `undefined` if no tier resolves the key.
