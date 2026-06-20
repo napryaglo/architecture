@@ -96,12 +96,17 @@ export class DataTemplate
         for (const t of this.Triggers)          t.AttachTo(root);
         for (const t of this.DataTriggers)      t.AttachTo(root);
         for (const t of this.MultiDataTriggers) t.AttachTo(root);
-        // Routed-event triggers attach to the template root — Visual's
+        // Routed-event triggers attach to the template root —
         // AddEventTrigger walks the per-event subscription pathway
-        // (e.g. `Click` → Button.AddClickHandler). Unrecognised routed
-        // events warn instead of throwing, so a misnamed event in a
-        // template doesn't blow up the whole subtree's render.
-        for (const t of this.EventTriggers) root.AddEventTrigger(t);
+        // (e.g. `Click` → Button.AddClickHandler). The hook is FE-tier
+        // (§ Phase B / B3); non-Element roots silently skip event-
+        // trigger wiring. Unrecognised routed events warn instead of
+        // throwing, so a misnamed event in a template doesn't blow up
+        // the whole subtree's render.
+        if (root instanceof Element)
+        {
+            for (const t of this.EventTriggers) root.AddEventTrigger(t);
+        }
         return root;
     }
 }

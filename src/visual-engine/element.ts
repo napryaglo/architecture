@@ -1,12 +1,15 @@
 import { Visual, safeFire } from './visual.js';
 import { Model } from '../runtime/model.js';
-import { MetaData } from '../runtime/metadata.js';
+import { MetaData, inherits } from '../runtime/metadata.js';
 import { ObservableCollection, type IReadOnlyObservableCollection } from '../runtime/observable-collection.js';
 import { ResourceDictionary, type ResourceKey } from '../runtime/resource-dictionary.js';
 import { Application } from '../runtime/application.js';
 import { Setter, Style } from '../runtime/style.js';
 import type { PropertyDescriptor } from '../runtime/property-descriptor.js';
+import type { PropertyTrigger, MultiTrigger, DataTrigger, MultiDataTrigger } from '../runtime/style.js';
+import type { EventTrigger } from '../runtime/event-trigger.js';
 import { StyleApplicator } from './style-applicator.js';
+import { TriggerHost } from './trigger-host.js';
 import { ResourceResolver } from './resource-resolver.js';
 import type { Behavior } from './behavior.js';
 
@@ -373,7 +376,10 @@ export class Element extends Visual
     // (compiler-emitted paths, runtime-installed bindings) bypass the
     // public Style setter and miss its `refresh_active_style` call.
     // Catch them here so the new Style's setters / triggers install
-    // no matter how the property is written. Other DP changes
+    // no matter how the property is written. Also fans out the
+    // ambient-resource-trigger DP cascade (§ 17.1 — ThemeManager-
+    // registered Scheme / Theme inherited DPs) so DynamicResource
+    // bindings re-resolve against the new scheme. Other DP changes
     // delegate to the base Visual override.
     protected override OnPropertyChanged(
         descriptor: PropertyDescriptor,
@@ -383,6 +389,134 @@ export class Element extends Visual
     {
         super.OnPropertyChanged(descriptor, old_value, new_value);
         if (descriptor.Name === 'Style') this.refresh_active_style();
+        if (inherits(descriptor.MetaData)
+            && ResourceResolver.IsAmbientResourceTriggerDp(descriptor))
+        {
+            this._fire_dynamic_resource_listeners();
+        }
+    }
+
+    // ── Triggers (Property / Multi / Data / MultiData / Event) ───────
+
+    // Trigger install / evaluation / teardown machinery lives on
+    // `TriggerHost` (§ 1.8). Lazy — Elements that never opt into
+    // Style / Triggers pay zero cost.
+    private _triggerHost: TriggerHost | undefined;
+
+    // Public hook to wire a stand-alone EventTrigger onto an
+    // Element. Templated controls install their own EventTriggers
+    // through the Style cascade; this surface is for consumers
+    // wiring an EventTrigger directly (rare but documented).
+    public AddEventTrigger(trigger: EventTrigger): void
+    {
+        this._install_event_trigger(trigger);
+    }
+
+    public RemoveEventTrigger(trigger: EventTrigger): void
+    {
+        this._uninstall_event_trigger(trigger);
+    }
+
+    /** @internal — § 1.8 trampoline. The install machinery lives on
+     *  `TriggerHost`. Called from `StyleApplicator.RefreshActiveStyle`
+     *  and from public `AddEventTrigger`. Lazy-creates the host on
+     *  first touch. */
+    public _install_event_trigger(trigger: EventTrigger): void
+    {
+        (this._triggerHost ??= new TriggerHost(this)).InstallEventTrigger(trigger);
+    }
+
+    /** @internal — § 1.8 trampoline. */
+    public _uninstall_event_trigger(trigger: EventTrigger): void
+    {
+        this._triggerHost?.UninstallEventTrigger(trigger);
+    }
+
+    /** @internal — § 1.8 trampoline. */
+    public _install_trigger(trigger: PropertyTrigger): void
+    {
+        (this._triggerHost ??= new TriggerHost(this)).InstallTrigger(trigger);
+    }
+
+    /** @internal — § 1.8 trampoline. */
+    public _uninstall_trigger(trigger: PropertyTrigger | MultiTrigger | DataTrigger | MultiDataTrigger): void
+    {
+        this._triggerHost?.UninstallTrigger(trigger);
+    }
+
+    /** @internal — § 1.8 trampoline. */
+    public _install_multi_trigger(trigger: MultiTrigger): void
+    {
+        (this._triggerHost ??= new TriggerHost(this)).InstallMultiTrigger(trigger);
+    }
+
+    /** @internal — § 1.8 trampoline. */
+    public _install_data_trigger(trigger: DataTrigger): void
+    {
+        (this._triggerHost ??= new TriggerHost(this)).InstallDataTrigger(trigger);
+    }
+
+    /** @internal — § 1.8 trampoline. */
+    public _install_multi_data_trigger(trigger: MultiDataTrigger): void
+    {
+        (this._triggerHost ??= new TriggerHost(this)).InstallMultiDataTrigger(trigger);
+    }
+
+    // ── DynamicResource re-wire support ──────────────────────────────
+    //
+    // DynamicResource bindings cache their ancestor-chain subscriptions
+    // at construction. Reparenting changes the chain (new ancestors
+    // visible, old ones gone), so the binding has to re-walk. Each
+    // binding registers a re-wire callback via _subscribe_dynamic_resource;
+    // AttachLogical / DetachLogical fire them across the subtree.
+    private _dynamic_resource_listeners: Array<() => void> | undefined;
+
+    /** @internal — DynamicResourceBinding only. Subscribes a callback
+     *  that fires when this Element's ancestor chain may have changed.
+     *  Returns an unsubscribe thunk. */
+    public _subscribe_dynamic_resource(listener: () => void): () => void
+    {
+        (this._dynamic_resource_listeners ??= []).push(listener);
+        return (): void =>
+        {
+            if (this._dynamic_resource_listeners === undefined) return;
+            const i = this._dynamic_resource_listeners.indexOf(listener);
+            if (i >= 0) this._dynamic_resource_listeners.splice(i, 1);
+        };
+    }
+
+    /** @internal — override of Visual's no-op stub. Fired on the
+     *  per-visual edge from `Visual.SetTemplatedParent` so a
+     *  freshly-stamped template node's DynamicResource bindings see
+     *  the new templated-parent chain. Also called locally from
+     *  `_refresh_dynamic_resources_subtree` for the subtree cascade
+     *  and from `OnPropertyChanged` for the ambient-resource-trigger
+     *  cascade. */
+    public override _fire_dynamic_resource_listeners(): void
+    {
+        safeFire(this._dynamic_resource_listeners);
+    }
+
+    /** @internal — § 1.10. Override of Visual's no-op stub. Re-walks
+     *  every DynamicResource binding rooted in this subtree so cached
+     *  ancestor-chain subscriptions pick up the new chain after a
+     *  reparent / theme override. Plain Visual descendants no-op
+     *  themselves via the base stub. */
+    public override _refresh_dynamic_resources_subtree(): void
+    {
+        this._fire_dynamic_resource_listeners();
+        this.propagate_dynamic_resources_to_logical_children();
+        // Overlay children's DynamicResource bindings cached against the
+        // OLD chain (before this Element joined / left its ancestor's
+        // tree). Re-walking through the popup's subtree re-resolves
+        // every `@Token` lookup so theme tokens flip when the owner's
+        // chain changes.
+        this.forEachOverlayChild(c => c._refresh_dynamic_resources_subtree());
+    }
+
+    protected propagate_dynamic_resources_to_logical_children(): void
+    {
+        this.forEachLogicalChild(c => c._refresh_dynamic_resources_subtree());
     }
 
     /** @internal — § 1.10. Override of Visual's no-op stub. Walks

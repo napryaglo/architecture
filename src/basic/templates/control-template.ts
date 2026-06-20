@@ -1,4 +1,4 @@
-import { Binding, BindingMode, NameScope, type BindingOptions, type EventTrigger, type Visual } from '../../runtime/index.js';
+import { Binding, BindingMode, Element, NameScope, type BindingOptions, type EventTrigger, type Visual } from '../../runtime/index.js';
 import { ContentPresenter } from './content-presenter.js';
 import type { TemplatePropertyTrigger } from './data-template.js';
 
@@ -110,8 +110,14 @@ export class ControlTemplate
         // same path as DataTemplate.EventTriggers. The freshly-built
         // root carries its own per-instance subscription so two
         // templated controls authored from the same ControlTemplate
-        // never share listener state.
-        for (const t of this.eventTriggers) root.AddEventTrigger(t);
+        // never share listener state. AddEventTrigger is FE-tier
+        // (§ Phase B / B3) — non-Element roots silently skip event-
+        // trigger wiring; in production every templated root is an
+        // Element subclass.
+        if (root instanceof Element)
+        {
+            for (const t of this.eventTriggers) root.AddEventTrigger(t);
+        }
 
         const contentPresenter = findFirstContentPresenter(root);
         return { root, contentPresenter };

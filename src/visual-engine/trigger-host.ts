@@ -7,24 +7,9 @@ import {
     DataTrigger,
     MultiDataTrigger,
 } from '../runtime/style.js';
-import type { Setter } from '../runtime/style.js';
 import type { EventTrigger } from '../runtime/event-trigger.js';
-import type { Visual } from './visual.js';
 import { KNOWN_ROUTED_EVENTS } from './visual.js';
 import type { Element } from './element.js';
-
-// Friend-interface for the Element-side trigger-setter hooks.
-// `target` is typed `Visual` (any Visual instance can carry a
-// TriggerHost), but in practice triggers are installed only via the
-// Style cascade — which fires only on Elements. The cast through
-// this interface lets the call site reach `ApplyTriggerSetter` /
-// `ClearTriggerSetter` (FE-tier methods on Element) without
-// relaxing the constructor typing. Mural-internal: never re-exported.
-interface ElementTriggerSetterHost
-{
-    ApplyTriggerSetter(setter: Setter): void;
-    ClearTriggerSetter(setter: Setter): void;
-}
 
 // Click-specific duck-typing surface for the Button family. Button
 // (in `framework/button.ts`) exposes its OWN Click protocol because
@@ -74,7 +59,7 @@ export class TriggerHost
     // identity wouldn't collide here.
     private _eventTriggerSubscriptions: Map<EventTrigger, () => void> | undefined;
 
-    constructor(private readonly _target: Visual) {}
+    constructor(private readonly _target: Element) {}
 
     /** Subscribe to the trigger's watched property and run an initial
      *  evaluation so an already-matching trigger activates
@@ -177,7 +162,7 @@ export class TriggerHost
         this._triggerSubscriptions?.delete(trigger);
         if (this._activeTriggers?.has(trigger) === true)
         {
-            const target = this._target as unknown as ElementTriggerSetterHost;
+            const target = this._target;
             for (const setter of trigger.setters)
             {
                 target.ClearTriggerSetter(setter);
@@ -315,13 +300,12 @@ export class TriggerHost
     ): void
     {
         const target = this._target;
-        const setterHost = target as unknown as ElementTriggerSetterHost;
         const wasActive = this._activeTriggers?.has(trigger) === true;
         if (matched && !wasActive)
         {
             for (const setter of trigger.setters)
             {
-                setterHost.ApplyTriggerSetter(setter);
+                target.ApplyTriggerSetter(setter);
             }
             (this._activeTriggers ??= new Set()).add(trigger);
             if (!isInitialEvaluation)
@@ -333,7 +317,7 @@ export class TriggerHost
         {
             for (const setter of trigger.setters)
             {
-                setterHost.ClearTriggerSetter(setter);
+                target.ClearTriggerSetter(setter);
             }
             this._activeTriggers?.delete(trigger);
             if (!isInitialEvaluation)
