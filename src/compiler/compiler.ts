@@ -94,6 +94,60 @@ import {
     type SlotInfo,
 } from './symbol-table.js';
 import type { SourceSpan } from './tokens.js';
+import { Model } from '../runtime/model.js';
+import { findDescriptor } from '../runtime/model-internals.js';
+
+// Namespace imports — give the compiler a direct handle on every
+// framework class so emitSetDP can resolve a class name to its
+// Function value even when the class doesn't register its own DPs
+// (Model.find_class only knows classes that registered something).
+import * as RuntimeNS  from '../runtime/index.js';
+import * as BasicNS    from '../basic/index.js';
+import * as EngineNS   from '../visual-engine/index.js';
+import * as FrameNS    from '../framework/index.js';
+import * as SurfaceNS  from '../framework/surface.js';
+import * as MaterialNS from '../resources/material/index.js';
+
+const FRAMEWORK_BUNDLES: readonly Record<string, unknown>[] = [
+    RuntimeNS as Record<string, unknown>,
+    BasicNS    as Record<string, unknown>,
+    EngineNS   as Record<string, unknown>,
+    FrameNS    as Record<string, unknown>,
+    SurfaceNS  as Record<string, unknown>,
+    MaterialNS as Record<string, unknown>,
+];
+
+// Resolve a class name to its Function value. Searches the framework
+// bundles first (so subclasses without own DPs — e.g. Ellipse extends
+// Shape — are reachable); falls back to Model.find_class which knows
+// every class that ever registered a DP (the test-defined-inline path).
+function resolveClassByName(name: string): Function | undefined
+{
+    for (const bundle of FRAMEWORK_BUNDLES)
+    {
+        const v = bundle[name];
+        if (typeof v === 'function') return v;
+    }
+    return Model.find_class(name);
+}
+
+// Walks `klass`'s constructor [[Prototype]] chain — the static-field
+// inheritance chain — looking for `ancestor`. Returns true when
+// `ancestor === klass` or `ancestor` is reachable via `class … extends`.
+// Used to decide whether the compiler can name the markup class
+// directly (static-field inheritance hands the inherited Key off) or
+// must name the registering class (cross-class inheritable DPs cross
+// sibling chains, where static-field inheritance doesn't reach).
+function isStaticAncestor(klass: Function, ancestor: Function): boolean
+{
+    let cur: Function | null = klass;
+    while (cur !== null && cur !== Function.prototype)
+    {
+        if (cur === ancestor) return true;
+        cur = Object.getPrototypeOf(cur) as Function | null;
+    }
+    return false;
+}
 
 // Lifted to top level so callers can `instanceof EmitError` without
 // importing the Compiler class.
@@ -2205,8 +2259,8 @@ export class Compiler
                     // typed Style can observe an ambient inherited DP
                     // that doesn't live on the target's own class chain.
                     // Without this, the PropertyTrigger emits the Style
-                    // target as the owner and resolve_descriptor_explicit
-                    // throws "Property 'Density' not found on owner
+                    // target as the owner and resolveKey throws
+                    // "Property 'Density' not found in owner
                     // 'ComboBoxItem'" at applyDefaultStyle time. PART-
                     // source forms (`PART_Foo.IsMouseOver`) aren't
                     // meaningful in a Style — there's no template-local
@@ -2413,14 +2467,12 @@ export class Compiler
                 const text = elem.body.chunks
                     .map(c => c.kind === 'text-chunk' ? c.text : '')
                     .join('');
-                this.line(
-                    `${v}._set_property_value_by_name(${JSON.stringify(slot.name)}, ${JSON.stringify(text)});`);
+                this.emitSetDP(v, undefined, elem.name, slot.name, JSON.stringify(text), elem.body.span);
             }
             else
             {
                 const expr = this.compileMixedTextBody(elem.body, { targetExpr: v });
-                this.line(
-                    `${v}._set_property_value_by_name(${JSON.stringify(slot.name)}, ${expr});`);
+                this.emitSetDP(v, undefined, elem.name, slot.name, expr, elem.body.span);
             }
         }
         return v;
@@ -2655,7 +2707,64 @@ export class Compiler
         return [item];
     }
 
-    private compileAttribute(targetVar: string, _parentClass: string, attr: Attribute): void
+    // Emit a typed-key DP write. Resolves the property's registering
+    // class via Model.find_class + findDescriptor at compile time and
+    // emits `target.set_property_value(Owner.PropKey, value)` against
+    // the convention that every DP is exposed as `${Owner}.${Name}Key`.
+    //
+    // `ownerClassName` is set when the markup used the two-part
+    // attached-property form `Owner.Prop`; for the single-name form,
+    // pass undefined and `targetClassName` is used for the lookup
+    // (which walks the prototype chain to find the descriptor).
+    //
+    // Static-field inheritance: when the registering class sits in
+    // `targetClass`'s constructor [[Prototype]] chain (i.e. `targetClass
+    // extends RegisteringClass`), JS resolves `targetClass.PropKey` to
+    // the inherited static — so the emit can name the markup class
+    // directly instead of leaking the (possibly internal) base. For
+    // cross-class inheritable DPs (target is unrelated to the registering
+    // class — e.g. `Foreground` on a `Border`), the emit must name the
+    // registering class because static-field inheritance doesn't reach
+    // across siblings.
+    private emitSetDP(
+        targetVar:        string,
+        ownerClassName:   string | undefined,
+        targetClassName:  string,
+        propName:         string,
+        valueExpr:        string,
+        span:             SourceSpan,
+    ): void
+    {
+        const lookupClassName = ownerClassName ?? targetClassName;
+        const lookupClass = resolveClassByName(lookupClassName);
+        if (lookupClass === undefined)
+        {
+            throw new EmitError(
+                `Cannot resolve class '${lookupClassName}' for property '${propName}'. `
+                + `The class must be registered (typically via a side-effect import in compiler.ts) `
+                + `before compile() runs.`,
+                span);
+        }
+        const descriptor = findDescriptor(lookupClass, propName);
+        if (descriptor === undefined)
+        {
+            throw new EmitError(
+                `Property '${propName}' not registered on class '${lookupClassName}' or any ancestor.`,
+                span);
+        }
+        const rootOwner   = descriptor.RootOwner;
+        // Prefer the markup class name (works via JS static inheritance
+        // when the lookup class is a descendant of RootOwner). Falls back
+        // to the registering class for the cross-class inheritable case.
+        const emitClass   = isStaticAncestor(lookupClass, rootOwner)
+            ? lookupClassName
+            : rootOwner.name;
+        this.ensureImport(emitClass);
+        this.line(
+            `${targetVar}.set_property_value(${emitClass}.${propName}Key, ${valueExpr});`);
+    }
+
+    private compileAttribute(targetVar: string, parentClass: string, attr: Attribute): void
     {
         if (attr.kind === 'positional-attr')
         {
@@ -2667,13 +2776,11 @@ export class Compiler
         {
             const ownerType = attr.path.parts[0]!;
             const propName  = attr.path.parts[1]!;
-            this.ensureImport(ownerType);
             const valueExpr = this.compileValue(attr.value, {
                 propertyName: propName,
                 targetExpr:   targetVar,
             });
-            this.line(
-                `${targetVar}._set_property_value_by_name(${ownerType}, ${JSON.stringify(propName)}, ${valueExpr});`);
+            this.emitSetDP(targetVar, ownerType, parentClass, propName, valueExpr, attr.span);
             return;
         }
         const propName = attr.path.parts[0]!;
@@ -2681,8 +2788,7 @@ export class Compiler
             propertyName: propName,
             targetExpr:   targetVar,
         });
-        this.line(
-            `${targetVar}._set_property_value_by_name(${JSON.stringify(propName)}, ${valueExpr});`);
+        this.emitSetDP(targetVar, undefined, parentClass, propName, valueExpr, attr.span);
     }
 
     private compileElementBody(parentVar: string, parentClass: string, body: StructuredBody): void
@@ -2707,8 +2813,7 @@ export class Compiler
                     && item.value.kind === 'resource-form')
                 {
                     const tmplVar = this.compileInlineTemplateValue(item.value);
-                    this.line(
-                        `${parentVar}._set_property_value_by_name(${JSON.stringify(item.name)}, ${tmplVar});`);
+                    this.emitSetDP(parentVar, undefined, parentClass, item.name, tmplVar, item.span);
                     continue;
                 }
                 // Non-resources slot — set as a regular property.
@@ -2723,8 +2828,7 @@ export class Compiler
                     propertyName: item.name,
                     targetExpr:   parentVar,
                 });
-                this.line(
-                    `${parentVar}._set_property_value_by_name(${JSON.stringify(item.name)}, ${expr});`);
+                this.emitSetDP(parentVar, undefined, parentClass, item.name, expr, item.span);
                 continue;
             }
             if (item.kind === 'element')

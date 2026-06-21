@@ -22,26 +22,26 @@ export class TopAppBarVM extends Model
     static MediumVariantKey        = Model.RegisterProperty(TopAppBarVM, 'MediumVariant',        TopAppBarVariant.Medium,        MetaData.None);
     static LargeVariantKey         = Model.RegisterProperty(TopAppBarVM, 'LargeVariant',         TopAppBarVariant.Large,         MetaData.None);
 
-    get NavClicks()      { return this._get_property_value_by_name('NavClicks'); }
-    set NavClicks(v)     { this._set_property_value_by_name('NavClicks', v); }
-    get SearchClicks()   { return this._get_property_value_by_name('SearchClicks'); }
-    set SearchClicks(v)  { this._set_property_value_by_name('SearchClicks', v); }
-    get MoreClicks()     { return this._get_property_value_by_name('MoreClicks'); }
-    set MoreClicks(v)    { this._set_property_value_by_name('MoreClicks', v); }
+    get NavClicks()      { return this.get_property_value(TopAppBarVM.NavClicksKey); }
+    set NavClicks(v)     { this.set_property_value(TopAppBarVM.NavClicksKey, v); }
+    get SearchClicks()   { return this.get_property_value(TopAppBarVM.SearchClicksKey); }
+    set SearchClicks(v)  { this.set_property_value(TopAppBarVM.SearchClicksKey, v); }
+    get MoreClicks()     { return this.get_property_value(TopAppBarVM.MoreClicksKey); }
+    set MoreClicks(v)    { this.set_property_value(TopAppBarVM.MoreClicksKey, v); }
 
-    get NavCommand()     { return this._get_property_value_by_name('NavCommand'); }
-    get SearchCommand()  { return this._get_property_value_by_name('SearchCommand'); }
-    get MoreCommand()    { return this._get_property_value_by_name('MoreCommand'); }
+    get NavCommand()     { return this.get_property_value(TopAppBarVM.NavCommandKey); }
+    get SearchCommand()  { return this.get_property_value(TopAppBarVM.SearchCommandKey); }
+    get MoreCommand()    { return this.get_property_value(TopAppBarVM.MoreCommandKey); }
 
-    get SmallVariant()         { return this._get_property_value_by_name('SmallVariant'); }
-    get CenterAlignedVariant() { return this._get_property_value_by_name('CenterAlignedVariant'); }
-    get MediumVariant()        { return this._get_property_value_by_name('MediumVariant'); }
-    get LargeVariant()         { return this._get_property_value_by_name('LargeVariant'); }
+    get SmallVariant()         { return this.get_property_value(TopAppBarVM.SmallVariantKey); }
+    get CenterAlignedVariant() { return this.get_property_value(TopAppBarVM.CenterAlignedVariantKey); }
+    get MediumVariant()        { return this.get_property_value(TopAppBarVM.MediumVariantKey); }
+    get LargeVariant()         { return this.get_property_value(TopAppBarVM.LargeVariantKey); }
 
     constructor() {
         super();
-        this._set_property_value_by_name('NavCommand',    new RelayCommand(() => { this.NavClicks    += 1; }));
-        this._set_property_value_by_name('SearchCommand', new RelayCommand(() => { this.SearchClicks += 1; }));
-        this._set_property_value_by_name('MoreCommand',   new RelayCommand(() => { this.MoreClicks   += 1; }));
+        this.set_property_value(TopAppBarVM.NavCommandKey,    new RelayCommand(() => { this.NavClicks    += 1; }));
+        this.set_property_value(TopAppBarVM.SearchCommandKey, new RelayCommand(() => { this.SearchClicks += 1; }));
+        this.set_property_value(TopAppBarVM.MoreCommandKey,   new RelayCommand(() => { this.MoreClicks   += 1; }));
     }
 }

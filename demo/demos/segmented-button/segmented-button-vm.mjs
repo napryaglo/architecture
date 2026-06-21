@@ -19,18 +19,18 @@ export class SegmentedButtonVM extends Model
 
     static SelectedFormatsLabelKey = Model.RegisterProperty(SegmentedButtonVM, 'SelectedFormatsLabel', '', MetaData.None);
 
-    get Timeframes()              { return this._get_property_value_by_name('Timeframes'); }
-    set Timeframes(v)             { this._set_property_value_by_name('Timeframes', v); }
-    get SelectedTimeframe()       { return this._get_property_value_by_name('SelectedTimeframe'); }
-    set SelectedTimeframe(v)      { this._set_property_value_by_name('SelectedTimeframe', v); }
+    get Timeframes()              { return this.get_property_value(SegmentedButtonVM.TimeframesKey); }
+    set Timeframes(v)             { this.set_property_value(SegmentedButtonVM.TimeframesKey, v); }
+    get SelectedTimeframe()       { return this.get_property_value(SegmentedButtonVM.SelectedTimeframeKey); }
+    set SelectedTimeframe(v)      { this.set_property_value(SegmentedButtonVM.SelectedTimeframeKey, v); }
 
-    get FormatChoices()           { return this._get_property_value_by_name('FormatChoices'); }
-    set FormatChoices(v)          { this._set_property_value_by_name('FormatChoices', v); }
-    get SelectedFormats()         { return this._get_property_value_by_name('SelectedFormats'); }
-    set SelectedFormats(v)        { this._set_property_value_by_name('SelectedFormats', v); }
+    get FormatChoices()           { return this.get_property_value(SegmentedButtonVM.FormatChoicesKey); }
+    set FormatChoices(v)          { this.set_property_value(SegmentedButtonVM.FormatChoicesKey, v); }
+    get SelectedFormats()         { return this.get_property_value(SegmentedButtonVM.SelectedFormatsKey); }
+    set SelectedFormats(v)        { this.set_property_value(SegmentedButtonVM.SelectedFormatsKey, v); }
 
-    get SelectedFormatsLabel()    { return this._get_property_value_by_name('SelectedFormatsLabel'); }
-    set SelectedFormatsLabel(v)   { this._set_property_value_by_name('SelectedFormatsLabel', v); }
+    get SelectedFormatsLabel()    { return this.get_property_value(SegmentedButtonVM.SelectedFormatsLabelKey); }
+    set SelectedFormatsLabel(v)   { this.set_property_value(SegmentedButtonVM.SelectedFormatsLabelKey, v); }
 
     constructor() {
         super();

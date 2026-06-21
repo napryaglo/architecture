@@ -52,16 +52,34 @@ const ERROR_REGISTRY: WeakMap<Model, Map<object, readonly ValidationError[]>> = 
 // `Validation.SetErrors`) can write. Public read access works through
 // the usual attached-property surface (`target.get_property_value(
 // Validation, 'HasError')`).
-export class Validation extends Model
+//
+// Validation does NOT `extends Model`: the class is a static namespace
+// for two attached-DP keys plus the SetErrors / GetErrors helpers,
+// never instantiated. Extending Model used to trip a TDZ cycle in
+// single-file test runs (`model.ts → binding/effective-value.ts →
+// binding/validation.ts → model.ts`) — `class Validation extends
+// Model` evaluated before model.ts finished initializing the Model
+// class binding. The keys are now lazy-initialized through getters so
+// the `Model.RegisterReadOnlyProperty(...)` call runs on first
+// access, by which time Model is fully defined.
+export class Validation
 {
-    public static readonly HasErrorKey: PropertyKey<boolean>
-        = Model.RegisterReadOnlyProperty<boolean>(
+    private static _hasErrorKey: PropertyKey<boolean> | undefined;
+    private static _errorsKey: PropertyKey<readonly ValidationError[]> | undefined;
+
+    public static get HasErrorKey(): PropertyKey<boolean>
+    {
+        return this._hasErrorKey ??= Model.RegisterReadOnlyProperty<boolean>(
             Validation, 'HasError', false, MetaData.None,
         );
-    public static readonly ErrorsKey: PropertyKey<readonly ValidationError[]>
-        = Model.RegisterReadOnlyProperty<readonly ValidationError[]>(
+    }
+
+    public static get ErrorsKey(): PropertyKey<readonly ValidationError[]>
+    {
+        return this._errorsKey ??= Model.RegisterReadOnlyProperty<readonly ValidationError[]>(
             Validation, 'Errors', EMPTY_ERRORS, MetaData.None,
         );
+    }
 
     // Replace the error list for `source` on `target`. Empty list
     // removes the source's contribution entirely. After updating, the

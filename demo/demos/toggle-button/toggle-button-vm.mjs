@@ -12,12 +12,12 @@ export class ToggleButtonVM extends Model
     static IsUnderlineKey = Model.RegisterProperty(ToggleButtonVM, 'IsUnderline', false, MetaData.None);
     static PreviewTextKey = Model.RegisterProperty(ToggleButtonVM, 'PreviewText', 'Hello, mural!', MetaData.None);
 
-    get IsBold()       { return this._get_property_value_by_name('IsBold'); }
-    set IsBold(v)      { this._set_property_value_by_name('IsBold', v); }
-    get IsItalic()     { return this._get_property_value_by_name('IsItalic'); }
-    set IsItalic(v)    { this._set_property_value_by_name('IsItalic', v); }
-    get IsUnderline()  { return this._get_property_value_by_name('IsUnderline'); }
-    set IsUnderline(v) { this._set_property_value_by_name('IsUnderline', v); }
-    get PreviewText()  { return this._get_property_value_by_name('PreviewText'); }
-    set PreviewText(v) { this._set_property_value_by_name('PreviewText', v); }
+    get IsBold()       { return this.get_property_value(ToggleButtonVM.IsBoldKey); }
+    set IsBold(v)      { this.set_property_value(ToggleButtonVM.IsBoldKey, v); }
+    get IsItalic()     { return this.get_property_value(ToggleButtonVM.IsItalicKey); }
+    set IsItalic(v)    { this.set_property_value(ToggleButtonVM.IsItalicKey, v); }
+    get IsUnderline()  { return this.get_property_value(ToggleButtonVM.IsUnderlineKey); }
+    set IsUnderline(v) { this.set_property_value(ToggleButtonVM.IsUnderlineKey, v); }
+    get PreviewText()  { return this.get_property_value(ToggleButtonVM.PreviewTextKey); }
+    set PreviewText(v) { this.set_property_value(ToggleButtonVM.PreviewTextKey, v); }
 }

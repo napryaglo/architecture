@@ -16,14 +16,14 @@ import { register } from '../../platform/registry.mjs';
 
 function attachBehaviors(view, vm) {
     const wires = [
-        ['SurfacePreview', 'SurfaceHex'],
-        ['AccentPreview',  'AccentHex'],
-        ['InkPreview',     'InkHex'],
-        ['OverlayPreview', 'OverlayHex'],
+        ['SurfacePreview', 'SurfaceHex', ColorPickerVM.SurfaceHexKey],
+        ['AccentPreview',  'AccentHex',  ColorPickerVM.AccentHexKey],
+        ['InkPreview',     'InkHex',     ColorPickerVM.InkHexKey],
+        ['OverlayPreview', 'OverlayHex', ColorPickerVM.OverlayHexKey],
     ];
 
     const cleanups = [];
-    for (const [partName, hexProp] of wires) {
+    for (const [partName, hexProp, key] of wires) {
         const preview = view.FindName(partName);
         if (!(preview instanceof Border)) continue;
 
@@ -33,8 +33,8 @@ function attachBehaviors(view, vm) {
             } catch { /* partial hex during typing */ }
         };
         apply();
-        vm._add_property_changed_listener_by_name(hexProp, apply);
-        cleanups.push(() => vm._remove_property_changed_listener_by_name(hexProp, apply));
+        vm.AddPropertyChangedListener(key, apply);
+        cleanups.push(() => vm.RemovePropertyChangedListener(key, apply));
     }
 
     return function detach() {

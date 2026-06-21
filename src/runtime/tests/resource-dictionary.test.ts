@@ -15,6 +15,7 @@ import {
     Element,
     Visual,
     registerSchemeTransitionAnimator,
+    _clearAllSchemeTransitionAnimators,
     type DrawingContext,
 } from '../index.js';
 import { resolveKey } from '../model-internals.js';
@@ -27,7 +28,7 @@ class TargetLeaf extends Element
         Model.RegisterProperty(TargetLeaf, 'Brush', undefined, MetaData.None);
     }
     public get Brush(): unknown { return this.get_property_value(resolveKey(this, undefined, 'Brush')); }
-    public set Brush(v: unknown) { this._set_property_value_by_name('Brush', v); }
+    public set Brush(v: unknown) { this.set_property_value(resolveKey(this, undefined, 'Brush'), v); }
     protected override MeasureOverride(_a: Size): Size { return Size.Zero; }
     protected override RenderOverride(_dc: DrawingContext): void { }
 }
@@ -231,7 +232,7 @@ describe('DynamicResource', () => {
         const leaf = new TargetLeaf();
         root.AddChild(leaf);
 
-        leaf._set_property_value_by_name('Brush', DynamicResource(leaf, 'Brush'));
+        leaf.set_property_value(resolveKey(leaf, undefined, 'Brush'), DynamicResource(leaf, 'Brush'));
         assert.equal(leaf.Brush, 'gold');
     });
 
@@ -242,7 +243,7 @@ describe('DynamicResource', () => {
         const leaf = new TargetLeaf();
         root.AddChild(leaf);
 
-        leaf._set_property_value_by_name('Brush', DynamicResource(leaf, 'Brush'));
+        leaf.set_property_value(resolveKey(leaf, undefined, 'Brush'), DynamicResource(leaf, 'Brush'));
         assert.equal(leaf.Brush, 'gold');
 
         root.Resources.Set('Brush', 'silver');
@@ -258,7 +259,7 @@ describe('DynamicResource', () => {
         const leaf = new TargetLeaf();
         root.AddChild(leaf);
 
-        leaf._set_property_value_by_name('Brush', DynamicResource(leaf, 'Brush'));
+        leaf.set_property_value(resolveKey(leaf, undefined, 'Brush'), DynamicResource(leaf, 'Brush'));
         assert.equal(leaf.Brush, 'theme-blue');
 
         theme.Set('Brush', 'theme-red');
@@ -278,7 +279,7 @@ describe('DynamicResource', () => {
         const leaf = new TargetLeaf();
         root.AddChild(leaf);
 
-        leaf._set_property_value_by_name('Brush', DynamicResource(leaf, 'Brush'));
+        leaf.set_property_value(resolveKey(leaf, undefined, 'Brush'), DynamicResource(leaf, 'Brush'));
         assert.equal(leaf.Brush, undefined);
 
         const theme = new ResourceDictionary();
@@ -301,7 +302,7 @@ describe('DynamicResource', () => {
 
         const leaf = new TargetLeaf();
         oldRoot.AddChild(leaf);
-        leaf._set_property_value_by_name('Brush', DynamicResource(leaf, 'Brush'));
+        leaf.set_property_value(resolveKey(leaf, undefined, 'Brush'), DynamicResource(leaf, 'Brush'));
         assert.equal(leaf.Brush, 'from-old-root');
 
         // Move the leaf to a different ancestor chain.
@@ -333,7 +334,7 @@ describe('DynamicResource', () => {
         const leaf = new TargetLeaf();
         mid.AddChild(leaf);
 
-        leaf._set_property_value_by_name('Brush', DynamicResource(leaf, 'Brush'));
+        leaf.set_property_value(resolveKey(leaf, undefined, 'Brush'), DynamicResource(leaf, 'Brush'));
         assert.equal(leaf.Brush, undefined,
             'no ancestor with the key yet');
 
@@ -349,8 +350,8 @@ describe('DynamicResource', () => {
         const leaf = new TargetLeaf();
         root.AddChild(leaf);
 
-        leaf._set_property_value_by_name('Brush', DynamicResource(leaf, 'Brush'));
-        leaf._set_property_value_by_name('Brush', 'manual');
+        leaf.set_property_value(resolveKey(leaf, undefined, 'Brush'), DynamicResource(leaf, 'Brush'));
+        leaf.set_property_value(resolveKey(leaf, undefined, 'Brush'), 'manual');
         assert.equal(leaf.Brush, 'manual');
 
         // After replacement, the old subscription is disposed —
@@ -369,7 +370,7 @@ describe('DynamicResource', () => {
         const leaf = new TargetLeaf();
         inner.AddChild(leaf);
 
-        leaf._set_property_value_by_name('Brush', DynamicResource(leaf, 'Brush'));
+        leaf.set_property_value(resolveKey(leaf, undefined, 'Brush'), DynamicResource(leaf, 'Brush'));
         assert.equal(leaf.Brush, 'inner');
     });
 });
@@ -440,9 +441,14 @@ describe('DynamicResource — scheme-transition animation', () => {
         AnimationManager.ResetForTests();
         ThemeManager._resetForTesting();
         Application.current = null;
-        // Drop any factory a prior test installed so suites run in
-        // isolation regardless of import order.
-        registerSchemeTransitionAnimator(undefined);
+        // Drop any factory a prior test installed AND the per-type
+        // secondaries that `scheme-transition-animators.ts` registers
+        // as module side-effects (number / Thickness / CornerRadius).
+        // Without clearing the secondaries, "no factory" / "factory
+        // returns undefined" tests still hit the leaked number
+        // secondary for their number→number value pairs and animate
+        // instead of snapping.
+        _clearAllSchemeTransitionAnimators();
     }
 
     function numberAnimatorFactory(
@@ -469,7 +475,7 @@ describe('DynamicResource — scheme-transition animation', () => {
         root.Resources.Set('Brush', 10);
         const leaf = new TargetLeaf();
         root.AddChild(leaf);
-        leaf._set_property_value_by_name('Brush', DynamicResource(leaf, 'Brush'));
+        leaf.set_property_value(resolveKey(leaf, undefined, 'Brush'), DynamicResource(leaf, 'Brush'));
 
         root.Resources.Set('Brush', 20);
         assert.equal(leaf.Brush, 20, 'no SchemeTransition → snap');
@@ -485,7 +491,7 @@ describe('DynamicResource — scheme-transition animation', () => {
         root.Resources.Set('Brush', 10);
         const leaf = new TargetLeaf();
         root.AddChild(leaf);
-        leaf._set_property_value_by_name('Brush', DynamicResource(leaf, 'Brush'));
+        leaf.set_property_value(resolveKey(leaf, undefined, 'Brush'), DynamicResource(leaf, 'Brush'));
 
         root.Resources.Set('Brush', 20);
         assert.equal(leaf.Brush, 20, 'no factory → snap');
@@ -502,7 +508,7 @@ describe('DynamicResource — scheme-transition animation', () => {
         root.Resources.Set('Brush', 10);
         const leaf = new TargetLeaf();
         root.AddChild(leaf);
-        leaf._set_property_value_by_name('Brush', DynamicResource(leaf, 'Brush'));
+        leaf.set_property_value(resolveKey(leaf, undefined, 'Brush'), DynamicResource(leaf, 'Brush'));
 
         root.Resources.Set('Brush', 20);
         assert.equal(leaf.Brush, 20, 'tokens=none short-circuits the factory');
@@ -521,7 +527,7 @@ describe('DynamicResource — scheme-transition animation', () => {
         root.Resources.Set('Brush', 10);
         const leaf = new TargetLeaf();
         root.AddChild(leaf);
-        leaf._set_property_value_by_name('Brush', DynamicResource(leaf, 'Brush'));
+        leaf.set_property_value(resolveKey(leaf, undefined, 'Brush'), DynamicResource(leaf, 'Brush'));
 
         root.Resources.Set('Brush', 20);
         assert.equal(leaf.Brush, 20, 'factory returned undefined → snap');
@@ -538,7 +544,7 @@ describe('DynamicResource — scheme-transition animation', () => {
         root.Resources.Set('Brush', 7);
         const leaf = new TargetLeaf();
         root.AddChild(leaf);
-        leaf._set_property_value_by_name('Brush', DynamicResource(leaf, 'Brush'));
+        leaf.set_property_value(resolveKey(leaf, undefined, 'Brush'), DynamicResource(leaf, 'Brush'));
         assert.equal(leaf.Brush, 7, 'first resolve is a snap regardless of policy');
         reset();
     });
@@ -553,7 +559,7 @@ describe('DynamicResource — scheme-transition animation', () => {
         root.Resources.Set('Brush', 10);
         const leaf = new TargetLeaf();
         root.AddChild(leaf);
-        leaf._set_property_value_by_name('Brush', DynamicResource(leaf, 'Brush'));
+        leaf.set_property_value(resolveKey(leaf, undefined, 'Brush'), DynamicResource(leaf, 'Brush'));
         assert.equal(leaf.Brush, 10);
 
         // Trigger the swap — animation begins at t=0 with animated slot
@@ -583,7 +589,7 @@ describe('DynamicResource — scheme-transition animation', () => {
         root.Resources.Set('Brush', 0);
         const leaf = new TargetLeaf();
         root.AddChild(leaf);
-        leaf._set_property_value_by_name('Brush', DynamicResource(leaf, 'Brush'));
+        leaf.set_property_value(resolveKey(leaf, undefined, 'Brush'), DynamicResource(leaf, 'Brush'));
 
         root.Resources.Set('Brush', 100);
         clock.Tick(50);
@@ -620,7 +626,7 @@ describe('DynamicResource — scheme-transition animation', () => {
         root.Resources.Set('Brush', 10);
         const leaf = new TargetLeaf();
         root.AddChild(leaf);
-        leaf._set_property_value_by_name('Brush', DynamicResource(leaf, 'Brush'));
+        leaf.set_property_value(resolveKey(leaf, undefined, 'Brush'), DynamicResource(leaf, 'Brush'));
 
         root.Resources.Set('Brush', 20);
         assert.equal(leaf.Brush, 20, 'a11y override snaps');
@@ -639,7 +645,7 @@ describe('DynamicResource — scheme-transition animation', () => {
         root.Resources.Set('Brush', 0);
         const leaf = new TargetLeaf();
         root.AddChild(leaf);
-        leaf._set_property_value_by_name('Brush', DynamicResource(leaf, 'Brush'));
+        leaf.set_property_value(resolveKey(leaf, undefined, 'Brush'), DynamicResource(leaf, 'Brush'));
 
         root.Resources.Set('Brush', 100);
         clock.Tick(50);
@@ -648,7 +654,7 @@ describe('DynamicResource — scheme-transition animation', () => {
 
         // Replace the binding with a direct local write. The previous
         // binding's dispose stops the storyboard.
-        leaf._set_property_value_by_name('Brush', 999);
+        leaf.set_property_value(resolveKey(leaf, undefined, 'Brush'), 999);
         assert.equal(AnimationManager.Instance.ActiveCount, 0,
             'disposing the binding cancels the storyboard');
         assert.equal(leaf.Brush, 999);

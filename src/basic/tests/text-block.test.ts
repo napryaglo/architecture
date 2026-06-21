@@ -133,7 +133,7 @@ describe('TextBlock inheritance — ancestor sets a font property, descendant pi
         // Set FontSize through cross-class explicit owner — outer is a
         // Border, not a TextBlock, but the inheritance machinery cascades
         // any MetaData.Inherits property through composite-key lookup.
-        outer._set_property_value_by_name(TextBlock, 'FontSize', 24);
+        outer.set_property_value(resolveKey(outer, TextBlock, 'FontSize'), 24);
 
         assert.equal(inner.FontSize, 24);
         assert.equal(inner.GetValueSource(resolveKey(inner, undefined, 'FontSize')), PropertyValueSource.InheritedValue);
@@ -142,7 +142,7 @@ describe('TextBlock inheritance — ancestor sets a font property, descendant pi
     test('a local override on the TextBlock shadows the inherited value', () => {
         const inner = new TextBlock('Hi');
         const outer = new Border(inner);
-        outer._set_property_value_by_name(TextBlock, 'FontSize', 24);
+        outer.set_property_value(resolveKey(outer, TextBlock, 'FontSize'), 24);
         inner.FontSize = 11;
         assert.equal(inner.FontSize, 11);
     });
@@ -315,7 +315,7 @@ describe('TextBlock LetterSpacing (M3 tracking)', () => {
     test('LetterSpacing is MetaData.Inherits — cascades from a Border ancestor', () => {
         const inner = new TextBlock('Hi');
         const outer = new Border(inner);
-        outer._set_property_value_by_name(TextBlock, 'LetterSpacing', 0.25);
+        outer.set_property_value(resolveKey(outer, TextBlock, 'LetterSpacing'), 0.25);
 
         assert.equal(inner.LetterSpacing, 0.25);
         assert.equal(inner.GetValueSource(resolveKey(inner, undefined, 'LetterSpacing')), PropertyValueSource.InheritedValue);

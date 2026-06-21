@@ -802,10 +802,10 @@ export class ItemsControl extends Control
             case 'ItemsPanel':
                 // Tear down the current panel + attach the new one.
                 // Routed through OnPropertyChanged so a markup write
-                // (`_set_property_value_by_name('ItemsPanel', …)`)
-                // or a binding push produces the same effect as the
-                // JS setter. Identity guard mirrors the prior setter's
-                // early-out.
+                // (`set_property_value(ItemsControl.ItemsPanelKey, …)`
+                // emitted from `.mu`) or a binding push produces the
+                // same effect as the JS setter. Identity guard mirrors
+                // the prior setter's early-out.
                 if (oldValue === newValue) return;
                 this.teardownItemsPanel();
                 if (newValue !== undefined)
@@ -1237,8 +1237,9 @@ export class ItemsControl extends Control
     public set ItemsPanel(value: ItemsPanelTemplate | ItemsPanelFactory | undefined)
     {
         // Side effect (panel teardown + materialize + attach) is in
-        // OnPropertyChanged so markup writes (`_set_property_value_by_name`)
-        // and binding pushes produce the same effect as this JS setter.
+        // OnPropertyChanged so markup writes (compiler-emitted typed-key
+        // sets) and binding pushes produce the same effect as this JS
+        // setter.
         this.set_property_value(ItemsControl.ItemsPanelKey, value);
     }
 

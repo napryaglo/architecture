@@ -61,6 +61,20 @@ const STROKE_BRUSH = brush('#1976d2');
 export const NODE_DEFAULT_SIZE = 80;
 export const PREVIEW_SIZE      = 48;
 
+// Lookup from the by-name Pen property identifiers used by
+// _attachFormatStrokeListeners / _detachFormatStrokeListeners to the
+// typed Key handles exposed by the Pen class. Centralized so the
+// listener attach / detach code can subscribe through the typed-key
+// API without sprouting a switch per call site.
+const PEN_PROP_KEYS = {
+    Brush:      Pen.BrushKey,
+    Thickness:  Pen.ThicknessKey,
+    DashStyle:  Pen.DashStyleKey,
+    LineCap:    Pen.LineCapKey,
+    LineJoin:   Pen.LineJoinKey,
+    MiterLimit: Pen.MiterLimitKey,
+};
+
 // ── ShapeNodeVM ──────────────────────────────────────────────────────
 //
 // Single class — no per-Kind subclasses. `Kind` is metadata (catalog
@@ -107,23 +121,23 @@ export class ShapeNodeVM extends Model
     // the same source — no information loss across repeated resizes.
     constructor(id, x, y, options) {
         super();
-        this._set_property_value_by_name('Id', id);
-        this._set_property_value_by_name('X',  x);
-        this._set_property_value_by_name('Y',  y);
-        this._set_property_value_by_name('Stroke', new Pen(STROKE_BRUSH, 1.5));
+        this.set_property_value(ShapeNodeVM.IdKey, id);
+        this.set_property_value(ShapeNodeVM.XKey,  x);
+        this.set_property_value(ShapeNodeVM.YKey,  y);
+        this.set_property_value(ShapeNodeVM.StrokeKey, new Pen(STROKE_BRUSH, 1.5));
 
         const opts = options ?? {};
-        if (opts.width  !== undefined) this._set_property_value_by_name('Width',  opts.width);
-        if (opts.height !== undefined) this._set_property_value_by_name('Height', opts.height);
+        if (opts.width  !== undefined) this.set_property_value(ShapeNodeVM.WidthKey,  opts.width);
+        if (opts.height !== undefined) this.set_property_value(ShapeNodeVM.HeightKey, opts.height);
 
         if (opts.source !== undefined)
         {
             this._source = opts.source;
-            if (opts.kind !== undefined) this._set_property_value_by_name('Kind', opts.kind);
+            if (opts.kind !== undefined) this.set_property_value(ShapeNodeVM.KindKey, opts.kind);
         }
         else if (opts.kind !== undefined && SHAPE_CATALOG_MAP.has(opts.kind))
         {
-            this._set_property_value_by_name('Kind', opts.kind);
+            this.set_property_value(ShapeNodeVM.KindKey, opts.kind);
             this._source = SHAPE_CATALOG_MAP.get(opts.kind).unit();
         }
         else
@@ -131,41 +145,44 @@ export class ShapeNodeVM extends Model
             throw new Error(`ShapeNodeVM: needs either a known kind or a source PathGeometry (got kind=${opts.kind})`);
         }
 
-        this._set_property_value_by_name('Geometry',
+        this.set_property_value(ShapeNodeVM.GeometryKey,
             scaleGeometry(this._source, this.Width, this.Height));
         // Rebuild on size changes — the alignment / resize-adorner
         // paths write Width / Height directly on selected nodes.
-        this._add_property_changed_listener_by_name('Width',  () => this._rebuildGeometry());
-        this._add_property_changed_listener_by_name('Height', () => this._rebuildGeometry());
+        this.AddPropertyChangedListener(ShapeNodeVM.WidthKey,  () => this._rebuildGeometry());
+        this.AddPropertyChangedListener(ShapeNodeVM.HeightKey, () => this._rebuildGeometry());
 
         // Group back-ref. undefined ≡ "top-level node" (not inside any
         // GroupVM). View-invisible structural metadata, so plain field.
         this.Parent = undefined;
     }
 
-    get Id()          { return this._get_property_value_by_name('Id'); }
-    get Kind()        { return this._get_property_value_by_name('Kind'); }
-    get X()           { return this._get_property_value_by_name('X'); }
-    set X(v)          { this._set_property_value_by_name('X', v); }
-    get Y()           { return this._get_property_value_by_name('Y'); }
-    set Y(v)          { this._set_property_value_by_name('Y', v); }
-    get Width()       { return this._get_property_value_by_name('Width'); }
-    set Width(v)      { this._set_property_value_by_name('Width', v); }
-    get Height()      { return this._get_property_value_by_name('Height'); }
-    set Height(v)     { this._set_property_value_by_name('Height', v); }
-    get IsSelected()  { return this._get_property_value_by_name('IsSelected'); }
-    set IsSelected(v) { this._set_property_value_by_name('IsSelected', v); }
-    get FillBrush()   { return this._get_property_value_by_name('FillBrush'); }
-    set FillBrush(v)  { this._set_property_value_by_name('FillBrush', v); }
-    get Stroke()      { return this._get_property_value_by_name('Stroke'); }
-    set Stroke(v)     { this._set_property_value_by_name('Stroke', v); }
-    get LabelText()   { return this._get_property_value_by_name('LabelText'); }
-    set LabelText(v)  { this._set_property_value_by_name('LabelText', v); }
-    get Geometry()    { return this._get_property_value_by_name('Geometry'); }
+    get Id()          { return this.get_property_value(ShapeNodeVM.IdKey); }
+    set Id(v)         { this.set_property_value(ShapeNodeVM.IdKey, v); }
+    get Kind()        { return this.get_property_value(ShapeNodeVM.KindKey); }
+    set Kind(v)       { this.set_property_value(ShapeNodeVM.KindKey, v); }
+    get X()           { return this.get_property_value(ShapeNodeVM.XKey); }
+    set X(v)          { this.set_property_value(ShapeNodeVM.XKey, v); }
+    get Y()           { return this.get_property_value(ShapeNodeVM.YKey); }
+    set Y(v)          { this.set_property_value(ShapeNodeVM.YKey, v); }
+    get Width()       { return this.get_property_value(ShapeNodeVM.WidthKey); }
+    set Width(v)      { this.set_property_value(ShapeNodeVM.WidthKey, v); }
+    get Height()      { return this.get_property_value(ShapeNodeVM.HeightKey); }
+    set Height(v)     { this.set_property_value(ShapeNodeVM.HeightKey, v); }
+    get IsSelected()  { return this.get_property_value(ShapeNodeVM.IsSelectedKey); }
+    set IsSelected(v) { this.set_property_value(ShapeNodeVM.IsSelectedKey, v); }
+    get FillBrush()   { return this.get_property_value(ShapeNodeVM.FillBrushKey); }
+    set FillBrush(v)  { this.set_property_value(ShapeNodeVM.FillBrushKey, v); }
+    get Stroke()      { return this.get_property_value(ShapeNodeVM.StrokeKey); }
+    set Stroke(v)     { this.set_property_value(ShapeNodeVM.StrokeKey, v); }
+    get LabelText()   { return this.get_property_value(ShapeNodeVM.LabelTextKey); }
+    set LabelText(v)  { this.set_property_value(ShapeNodeVM.LabelTextKey, v); }
+    get Geometry()    { return this.get_property_value(ShapeNodeVM.GeometryKey); }
+    set Geometry(v)   { this.set_property_value(ShapeNodeVM.GeometryKey, v); }
 
     _rebuildGeometry() {
         if (this._source === undefined) return;
-        this._set_property_value_by_name('Geometry',
+        this.set_property_value(ShapeNodeVM.GeometryKey,
             scaleGeometry(this._source, this.Width, this.Height));
     }
 }
@@ -232,12 +249,12 @@ export class GroupVM extends Model
     }
 
     get Members()      { return this._members; }
-    get IsSelected()   { return this._get_property_value_by_name('IsSelected'); }
-    set IsSelected(v)  { this._set_property_value_by_name('IsSelected', v); }
-    get X()            { return this._get_property_value_by_name('X'); }
-    get Y()            { return this._get_property_value_by_name('Y'); }
-    get Width()        { return this._get_property_value_by_name('Width'); }
-    get Height()       { return this._get_property_value_by_name('Height'); }
+    get IsSelected()   { return this.get_property_value(GroupVM.IsSelectedKey); }
+    set IsSelected(v)  { this.set_property_value(GroupVM.IsSelectedKey, v); }
+    get X()            { return this.get_property_value(GroupVM.XKey); }
+    get Y()            { return this.get_property_value(GroupVM.YKey); }
+    get Width()        { return this.get_property_value(GroupVM.WidthKey); }
+    get Height()       { return this.get_property_value(GroupVM.HeightKey); }
 
     // Writing X / Y shifts every member by the delta — the group moves
     // as a rigid unit (Visio / PowerPoint parity for align + distribute).
@@ -249,7 +266,7 @@ export class GroupVM extends Model
     // out of scope for this code path).
     set X(v)
     {
-        const cur = this._get_property_value_by_name('X');
+        const cur = this.get_property_value(GroupVM.XKey);
         const dx  = v - cur;
         if (dx === 0) return;
         this._shiftBy(dx, 0);
@@ -257,7 +274,7 @@ export class GroupVM extends Model
 
     set Y(v)
     {
-        const cur = this._get_property_value_by_name('Y');
+        const cur = this.get_property_value(GroupVM.YKey);
         const dy  = v - cur;
         if (dy === 0) return;
         this._shiftBy(0, dy);
@@ -354,10 +371,10 @@ export class GroupVM extends Model
     {
         if (this._members.Count === 0)
         {
-            this._set_property_value_by_name('X', 0);
-            this._set_property_value_by_name('Y', 0);
-            this._set_property_value_by_name('Width', 0);
-            this._set_property_value_by_name('Height', 0);
+            this.set_property_value(GroupVM.XKey, 0);
+            this.set_property_value(GroupVM.YKey, 0);
+            this.set_property_value(GroupVM.WidthKey, 0);
+            this.set_property_value(GroupVM.HeightKey, 0);
             return;
         }
         let minX = Number.POSITIVE_INFINITY, minY = Number.POSITIVE_INFINITY;
@@ -371,10 +388,10 @@ export class GroupVM extends Model
             if (x + w > maxX) maxX = x + w;
             if (y + h > maxY) maxY = y + h;
         }
-        this._set_property_value_by_name('X',      minX);
-        this._set_property_value_by_name('Y',      minY);
-        this._set_property_value_by_name('Width',  maxX - minX);
-        this._set_property_value_by_name('Height', maxY - minY);
+        this.set_property_value(GroupVM.XKey,      minX);
+        this.set_property_value(GroupVM.YKey,      minY);
+        this.set_property_value(GroupVM.WidthKey,  maxX - minX);
+        this.set_property_value(GroupVM.HeightKey, maxY - minY);
     }
 
     // Recursively enumerate every leaf ShapeNodeVM contained (transitively).
@@ -429,12 +446,10 @@ export function topLevelOf(entity)
 
 export class ToolboxShapeVM extends Model
 {
-    static {
-        Model.RegisterProperty(ToolboxShapeVM, 'Kind',              '',        MetaData.None);
-        Model.RegisterProperty(ToolboxShapeVM, 'Label',             '',        MetaData.None);
-        Model.RegisterProperty(ToolboxShapeVM, 'PreviewNode',       undefined, MetaData.None);
-        Model.RegisterProperty(ToolboxShapeVM, 'BeginKindDragData', undefined, MetaData.None);
-    }
+    static KindKey              = Model.RegisterProperty(ToolboxShapeVM, 'Kind',              '',        MetaData.None);
+    static LabelKey             = Model.RegisterProperty(ToolboxShapeVM, 'Label',             '',        MetaData.None);
+    static PreviewNodeKey       = Model.RegisterProperty(ToolboxShapeVM, 'PreviewNode',       undefined, MetaData.None);
+    static BeginKindDragDataKey = Model.RegisterProperty(ToolboxShapeVM, 'BeginKindDragData', undefined, MetaData.None);
 
     constructor(kind, label) {
         super();
@@ -444,77 +459,79 @@ export class ToolboxShapeVM extends Model
             height: PREVIEW_SIZE,
         });
         preview.FillBrush = FILL_PREVIEW;
-        this._set_property_value_by_name('Kind',        kind);
-        this._set_property_value_by_name('Label',       label);
-        this._set_property_value_by_name('PreviewNode', preview);
-        this._set_property_value_by_name('BeginKindDragData', () => ({
+        this.set_property_value(ToolboxShapeVM.KindKey,        kind);
+        this.set_property_value(ToolboxShapeVM.LabelKey,       label);
+        this.set_property_value(ToolboxShapeVM.PreviewNodeKey, preview);
+        this.set_property_value(ToolboxShapeVM.BeginKindDragDataKey, () => ({
             data: new DataObject().Set('mural/node-kind', this.Kind),
             effects: DragDropEffects.Copy,
         }));
     }
 
-    get Kind()              { return this._get_property_value_by_name('Kind'); }
-    get Label()             { return this._get_property_value_by_name('Label'); }
-    get PreviewNode()       { return this._get_property_value_by_name('PreviewNode'); }
-    get BeginKindDragData() { return this._get_property_value_by_name('BeginKindDragData'); }
+    get Kind()               { return this.get_property_value(ToolboxShapeVM.KindKey); }
+    set Kind(v)              { this.set_property_value(ToolboxShapeVM.KindKey, v); }
+    get Label()              { return this.get_property_value(ToolboxShapeVM.LabelKey); }
+    set Label(v)             { this.set_property_value(ToolboxShapeVM.LabelKey, v); }
+    get PreviewNode()        { return this.get_property_value(ToolboxShapeVM.PreviewNodeKey); }
+    set PreviewNode(v)       { this.set_property_value(ToolboxShapeVM.PreviewNodeKey, v); }
+    get BeginKindDragData()  { return this.get_property_value(ToolboxShapeVM.BeginKindDragDataKey); }
+    set BeginKindDragData(v) { this.set_property_value(ToolboxShapeVM.BeginKindDragDataKey, v); }
 }
 
 // ── DiagramVM ───────────────────────────────────────────────────────
 
 export class DiagramVM extends Model
 {
-    static {
-        Model.RegisterProperty(DiagramVM, 'Nodes',         undefined,                          MetaData.None);
-        Model.RegisterProperty(DiagramVM, 'ToolboxShapes', undefined,                          MetaData.None);
-        Model.RegisterProperty(DiagramVM, 'Status',        'drag a shape from the toolbox →', MetaData.None);
-        Model.RegisterProperty(DiagramVM, 'SaveCommand',   undefined,                          MetaData.None);
-        Model.RegisterProperty(DiagramVM, 'LoadCommand',   undefined,                          MetaData.None);
-        Model.RegisterProperty(DiagramVM, 'AlignLeftCommand',            undefined, MetaData.None);
-        Model.RegisterProperty(DiagramVM, 'AlignRightCommand',           undefined, MetaData.None);
-        Model.RegisterProperty(DiagramVM, 'AlignTopCommand',             undefined, MetaData.None);
-        Model.RegisterProperty(DiagramVM, 'AlignMiddleCommand',          undefined, MetaData.None);
-        Model.RegisterProperty(DiagramVM, 'AlignCenterCommand',          undefined, MetaData.None);
-        Model.RegisterProperty(DiagramVM, 'DistributeHorizontalCommand', undefined, MetaData.None);
-        Model.RegisterProperty(DiagramVM, 'DistributeVerticalCommand',   undefined, MetaData.None);
-        Model.RegisterProperty(DiagramVM, 'GroupCommand',                undefined, MetaData.None);
-        Model.RegisterProperty(DiagramVM, 'UngroupCommand',              undefined, MetaData.None);
-        Model.RegisterProperty(DiagramVM, 'CombineUnionCommand',         undefined, MetaData.None);
-        Model.RegisterProperty(DiagramVM, 'CombineIntersectCommand',     undefined, MetaData.None);
-        Model.RegisterProperty(DiagramVM, 'CombineSubtractCommand',      undefined, MetaData.None);
-        Model.RegisterProperty(DiagramVM, 'CombineExcludeCommand',       undefined, MetaData.None);
-        // Selection bounding rect — union bbox of every entity with
-        // IsSelected=true, recomputed on selection / geometry changes by
-        // _updateSelectionBounds. SelectionCount lets the adorner overlay
-        // toggle Visibility purely from a binding-friendly numeric DP.
-        // The resize-adorner behavior binds its bbox border and uses
-        // these to position its 8 handles — keys captured as static
-        // properties so the behavior can subscribe via
-        // AddPropertyChangedListener.
-        DiagramVM.SelectionXKey      = Model.RegisterProperty(DiagramVM, 'SelectionX',      0, MetaData.None);
-        DiagramVM.SelectionYKey      = Model.RegisterProperty(DiagramVM, 'SelectionY',      0, MetaData.None);
-        DiagramVM.SelectionWidthKey  = Model.RegisterProperty(DiagramVM, 'SelectionWidth',  0, MetaData.None);
-        DiagramVM.SelectionHeightKey = Model.RegisterProperty(DiagramVM, 'SelectionHeight', 0, MetaData.None);
-        DiagramVM.SelectionCountKey  = Model.RegisterProperty(DiagramVM, 'SelectionCount',  0, MetaData.None);
-        // §19.3 — list of AlignmentGuide records currently displayed
-        // by AlignmentGuidesAdorner. Mutated by align-edges-behavior
-        // on every PointerMove during a node drag, cleared on
-        // PointerUp. Plain array (not ObservableCollection) — the
-        // adorner re-arranges on PropertyChanged of the whole DP, no
-        // per-element notification needed.
-        DiagramVM.AlignmentGuidesKey = Model.RegisterProperty(DiagramVM, 'AlignmentGuides', [], MetaData.None);
-        // FormatFill / FormatStroke — bound by the right-side
-        // ShapeFormatControl. Selection-change seeds them from the
-        // first selected leaf; user edits on them are broadcast to
-        // every selected leaf via _broadcastFill /
-        // _broadcastStrokeProp. FormatStroke holds an EDITOR-OWNED Pen
-        // cloned from the first leaf's Stroke — broadcasting copies
-        // its property values onto each selected leaf's own Pen,
-        // preserving per-shape Pen identity (so a later selection of
-        // one shape doesn't accidentally edit the others through a
-        // shared ref).
-        DiagramVM.FormatFillKey   = Model.RegisterProperty(DiagramVM, 'FormatFill',   undefined, MetaData.None);
-        DiagramVM.FormatStrokeKey = Model.RegisterProperty(DiagramVM, 'FormatStroke', undefined, MetaData.None);
-    }
+    static NodesKey                       = Model.RegisterProperty(DiagramVM, 'Nodes',         undefined,                          MetaData.None);
+    static ToolboxShapesKey               = Model.RegisterProperty(DiagramVM, 'ToolboxShapes', undefined,                          MetaData.None);
+    static StatusKey                      = Model.RegisterProperty(DiagramVM, 'Status',        'drag a shape from the toolbox →', MetaData.None);
+    static SaveCommandKey                 = Model.RegisterProperty(DiagramVM, 'SaveCommand',   undefined,                          MetaData.None);
+    static LoadCommandKey                 = Model.RegisterProperty(DiagramVM, 'LoadCommand',   undefined,                          MetaData.None);
+    static AlignLeftCommandKey            = Model.RegisterProperty(DiagramVM, 'AlignLeftCommand',            undefined, MetaData.None);
+    static AlignRightCommandKey           = Model.RegisterProperty(DiagramVM, 'AlignRightCommand',           undefined, MetaData.None);
+    static AlignTopCommandKey             = Model.RegisterProperty(DiagramVM, 'AlignTopCommand',             undefined, MetaData.None);
+    static AlignMiddleCommandKey          = Model.RegisterProperty(DiagramVM, 'AlignMiddleCommand',          undefined, MetaData.None);
+    static AlignCenterCommandKey          = Model.RegisterProperty(DiagramVM, 'AlignCenterCommand',          undefined, MetaData.None);
+    static DistributeHorizontalCommandKey = Model.RegisterProperty(DiagramVM, 'DistributeHorizontalCommand', undefined, MetaData.None);
+    static DistributeVerticalCommandKey   = Model.RegisterProperty(DiagramVM, 'DistributeVerticalCommand',   undefined, MetaData.None);
+    static GroupCommandKey                = Model.RegisterProperty(DiagramVM, 'GroupCommand',                undefined, MetaData.None);
+    static UngroupCommandKey              = Model.RegisterProperty(DiagramVM, 'UngroupCommand',              undefined, MetaData.None);
+    static CombineUnionCommandKey         = Model.RegisterProperty(DiagramVM, 'CombineUnionCommand',         undefined, MetaData.None);
+    static CombineIntersectCommandKey     = Model.RegisterProperty(DiagramVM, 'CombineIntersectCommand',     undefined, MetaData.None);
+    static CombineSubtractCommandKey      = Model.RegisterProperty(DiagramVM, 'CombineSubtractCommand',      undefined, MetaData.None);
+    static CombineExcludeCommandKey       = Model.RegisterProperty(DiagramVM, 'CombineExcludeCommand',       undefined, MetaData.None);
+    // Selection bounding rect — union bbox of every entity with
+    // IsSelected=true, recomputed on selection / geometry changes by
+    // _updateSelectionBounds. SelectionCount lets the adorner overlay
+    // toggle Visibility purely from a binding-friendly numeric DP.
+    // The resize-adorner behavior binds its bbox border and uses
+    // these to position its 8 handles — keys captured as static
+    // properties so the behavior can subscribe via
+    // AddPropertyChangedListener.
+    static SelectionXKey      = Model.RegisterProperty(DiagramVM, 'SelectionX',      0, MetaData.None);
+    static SelectionYKey      = Model.RegisterProperty(DiagramVM, 'SelectionY',      0, MetaData.None);
+    static SelectionWidthKey  = Model.RegisterProperty(DiagramVM, 'SelectionWidth',  0, MetaData.None);
+    static SelectionHeightKey = Model.RegisterProperty(DiagramVM, 'SelectionHeight', 0, MetaData.None);
+    static SelectionCountKey  = Model.RegisterProperty(DiagramVM, 'SelectionCount',  0, MetaData.None);
+    // §19.3 — list of AlignmentGuide records currently displayed
+    // by AlignmentGuidesAdorner. Mutated by align-edges-behavior
+    // on every PointerMove during a node drag, cleared on
+    // PointerUp. Plain array (not ObservableCollection) — the
+    // adorner re-arranges on PropertyChanged of the whole DP, no
+    // per-element notification needed.
+    static AlignmentGuidesKey = Model.RegisterProperty(DiagramVM, 'AlignmentGuides', [], MetaData.None);
+    // FormatFill / FormatStroke — bound by the right-side
+    // ShapeFormatControl. Selection-change seeds them from the
+    // first selected leaf; user edits on them are broadcast to
+    // every selected leaf via _broadcastFill /
+    // _broadcastStrokeProp. FormatStroke holds an EDITOR-OWNED Pen
+    // cloned from the first leaf's Stroke — broadcasting copies
+    // its property values onto each selected leaf's own Pen,
+    // preserving per-shape Pen identity (so a later selection of
+    // one shape doesn't accidentally edit the others through a
+    // shared ref).
+    static FormatFillKey   = Model.RegisterProperty(DiagramVM, 'FormatFill',   undefined, MetaData.None);
+    static FormatStrokeKey = Model.RegisterProperty(DiagramVM, 'FormatStroke', undefined, MetaData.None);
 
     constructor(storage) {
         super();
@@ -527,16 +544,16 @@ export class DiagramVM extends Model
         // list so the Diagram's ItemsControl reaches every visual entity
         // with one binding. Nested groups also live here at top level —
         // tree depth is encoded in Parent links, not in collection shape.
-        this._set_property_value_by_name('Nodes', new ObservableCollection());
-        this._set_property_value_by_name('ToolboxShapes',
+        this.set_property_value(DiagramVM.NodesKey, new ObservableCollection());
+        this.set_property_value(DiagramVM.ToolboxShapesKey,
             SHAPE_CATALOG.map(e => new ToolboxShapeVM(e.kind, e.label)));
         this._nextId = 1;
 
-        this._set_property_value_by_name('SaveCommand',
+        this.set_property_value(DiagramVM.SaveCommandKey,
             new RelayCommand(() => this.Save(), undefined,
                 { Text: 'Save',
                   Description: 'Serialize the current canvas to local storage.' }));
-        this._set_property_value_by_name('LoadCommand',
+        this.set_property_value(DiagramVM.LoadCommandKey,
             new RelayCommand(() => this.Load(), undefined,
                 { Text: 'Load',
                   Description: 'Restore the most recently saved canvas.' }));
@@ -547,31 +564,31 @@ export class DiagramVM extends Model
         // distributing 3+ spaces the inner shapes evenly between the
         // extremes). The CanExecute guards return back to the bound
         // Buttons, which surface them as enabled / disabled chrome.
-        this._set_property_value_by_name('AlignLeftCommand',
+        this.set_property_value(DiagramVM.AlignLeftCommandKey,
             new RelayCommand(() => this.AlignLeft(),  () => this._countSelected() >= 2,
                 { Text: 'Align Left',
                   Description: 'Align selected shapes to the left edge of the leftmost shape.' }));
-        this._set_property_value_by_name('AlignRightCommand',
+        this.set_property_value(DiagramVM.AlignRightCommandKey,
             new RelayCommand(() => this.AlignRight(), () => this._countSelected() >= 2,
                 { Text: 'Align Right',
                   Description: 'Align selected shapes to the right edge of the rightmost shape.' }));
-        this._set_property_value_by_name('AlignTopCommand',
+        this.set_property_value(DiagramVM.AlignTopCommandKey,
             new RelayCommand(() => this.AlignTop(),   () => this._countSelected() >= 2,
                 { Text: 'Align Top',
                   Description: 'Align selected shapes to the top edge of the topmost shape.' }));
-        this._set_property_value_by_name('AlignMiddleCommand',
+        this.set_property_value(DiagramVM.AlignMiddleCommandKey,
             new RelayCommand(() => this.AlignMiddle(),() => this._countSelected() >= 2,
                 { Text: 'Align Middle',
                   Description: 'Center selected shapes vertically on a shared horizontal axis.' }));
-        this._set_property_value_by_name('AlignCenterCommand',
+        this.set_property_value(DiagramVM.AlignCenterCommandKey,
             new RelayCommand(() => this.AlignCenter(),() => this._countSelected() >= 2,
                 { Text: 'Align Center',
                   Description: 'Center selected shapes horizontally on a shared vertical axis.' }));
-        this._set_property_value_by_name('DistributeHorizontalCommand',
+        this.set_property_value(DiagramVM.DistributeHorizontalCommandKey,
             new RelayCommand(() => this.DistributeHorizontal(), () => this._countSelected() >= 3,
                 { Text: 'Distribute Horizontally',
                   Description: 'Space three or more shapes evenly between the leftmost and rightmost.' }));
-        this._set_property_value_by_name('DistributeVerticalCommand',
+        this.set_property_value(DiagramVM.DistributeVerticalCommandKey,
             new RelayCommand(() => this.DistributeVertical(),   () => this._countSelected() >= 3,
                 { Text: 'Distribute Vertically',
                   Description: 'Space three or more shapes evenly between the topmost and bottommost.' }));
@@ -581,11 +598,11 @@ export class DiagramVM extends Model
         // could become the new group's members). Ungroup needs ≥ 1
         // selected top-level GroupVM. CanExecute is re-evaluated by
         // the same selection-listener pipeline as the align commands.
-        this._set_property_value_by_name('GroupCommand',
+        this.set_property_value(DiagramVM.GroupCommandKey,
             new RelayCommand(() => this.Group(),   () => this._selectedTopLevel().length >= 2,
                 { Text: 'Group',
                   Description: 'Bundle the selected shapes into a single group that moves and resizes together.' }));
-        this._set_property_value_by_name('UngroupCommand',
+        this.set_property_value(DiagramVM.UngroupCommandKey,
             new RelayCommand(() => this.Ungroup(), () => this._selectedTopLevelGroups().length >= 1,
                 { Text: 'Ungroup',
                   Description: 'Dissolve the selected groups back into their member shapes.' }));
@@ -596,19 +613,19 @@ export class DiagramVM extends Model
         // operates per-leaf and we'd need a normalization pass to
         // collapse the group bbox into a single PathGeometry first).
         const canCombine = () => this._formatLeaves().length >= 2;
-        this._set_property_value_by_name('CombineUnionCommand',
+        this.set_property_value(DiagramVM.CombineUnionCommandKey,
             new RelayCommand(() => this.CombineSelection(GeometryCombineMode.Union),     canCombine,
                 { Text: 'Union',
                   Description: 'Merge the selected shapes into a single shape covering the union of their areas.' }));
-        this._set_property_value_by_name('CombineIntersectCommand',
+        this.set_property_value(DiagramVM.CombineIntersectCommandKey,
             new RelayCommand(() => this.CombineSelection(GeometryCombineMode.Intersect), canCombine,
                 { Text: 'Intersect',
                   Description: 'Keep only the overlapping region of the selected shapes.' }));
-        this._set_property_value_by_name('CombineSubtractCommand',
+        this.set_property_value(DiagramVM.CombineSubtractCommandKey,
             new RelayCommand(() => this.CombineSelection(GeometryCombineMode.Exclude),   canCombine,
                 { Text: 'Subtract',
                   Description: 'Cut the additional shapes out of the first selected shape.' }));
-        this._set_property_value_by_name('CombineExcludeCommand',
+        this.set_property_value(DiagramVM.CombineExcludeCommandKey,
             new RelayCommand(() => this.CombineSelection(GeometryCombineMode.Xor),       canCombine,
                 { Text: 'Exclude',
                   Description: 'Keep the non-overlapping regions of the selected shapes.' }));
@@ -630,40 +647,40 @@ export class DiagramVM extends Model
         // with the first one's on every click).
         this._seedingFormat = false;
         this._formatStrokeListeners = [];
-        this._add_property_changed_listener_by_name('FormatFill',   () => this._broadcastFill());
-        this._add_property_changed_listener_by_name('FormatStroke', () => this._onFormatStrokeChanged());
+        this.AddPropertyChangedListener(DiagramVM.FormatFillKey,   () => this._broadcastFill());
+        this.AddPropertyChangedListener(DiagramVM.FormatStrokeKey, () => this._onFormatStrokeChanged());
     }
 
-    get Nodes()                       { return this._get_property_value_by_name('Nodes'); }
-    get GroupCommand()                { return this._get_property_value_by_name('GroupCommand'); }
-    get UngroupCommand()              { return this._get_property_value_by_name('UngroupCommand'); }
-    get CombineUnionCommand()         { return this._get_property_value_by_name('CombineUnionCommand'); }
-    get CombineIntersectCommand()     { return this._get_property_value_by_name('CombineIntersectCommand'); }
-    get CombineSubtractCommand()      { return this._get_property_value_by_name('CombineSubtractCommand'); }
-    get CombineExcludeCommand()       { return this._get_property_value_by_name('CombineExcludeCommand'); }
-    get ToolboxShapes()               { return this._get_property_value_by_name('ToolboxShapes'); }
-    get Status()                      { return this._get_property_value_by_name('Status'); }
-    set Status(v)                     { this._set_property_value_by_name('Status', v); }
-    get SaveCommand()                 { return this._get_property_value_by_name('SaveCommand'); }
-    get LoadCommand()                 { return this._get_property_value_by_name('LoadCommand'); }
-    get AlignLeftCommand()            { return this._get_property_value_by_name('AlignLeftCommand'); }
-    get AlignRightCommand()           { return this._get_property_value_by_name('AlignRightCommand'); }
-    get AlignTopCommand()             { return this._get_property_value_by_name('AlignTopCommand'); }
-    get AlignMiddleCommand()          { return this._get_property_value_by_name('AlignMiddleCommand'); }
-    get AlignCenterCommand()          { return this._get_property_value_by_name('AlignCenterCommand'); }
-    get DistributeHorizontalCommand() { return this._get_property_value_by_name('DistributeHorizontalCommand'); }
-    get DistributeVerticalCommand()   { return this._get_property_value_by_name('DistributeVerticalCommand'); }
-    get SelectionX()                  { return this._get_property_value_by_name('SelectionX'); }
-    get SelectionY()                  { return this._get_property_value_by_name('SelectionY'); }
-    get SelectionWidth()              { return this._get_property_value_by_name('SelectionWidth'); }
-    get SelectionHeight()             { return this._get_property_value_by_name('SelectionHeight'); }
-    get SelectionCount()              { return this._get_property_value_by_name('SelectionCount'); }
-    get AlignmentGuides()             { return this._get_property_value_by_name('AlignmentGuides'); }
-    set AlignmentGuides(value)        { this._set_property_value_by_name('AlignmentGuides', value); }
-    get FormatFill()                  { return this._get_property_value_by_name('FormatFill'); }
-    set FormatFill(v)                 { this._set_property_value_by_name('FormatFill', v); }
-    get FormatStroke()                { return this._get_property_value_by_name('FormatStroke'); }
-    set FormatStroke(v)               { this._set_property_value_by_name('FormatStroke', v); }
+    get Nodes()                       { return this.get_property_value(DiagramVM.NodesKey); }
+    get GroupCommand()                { return this.get_property_value(DiagramVM.GroupCommandKey); }
+    get UngroupCommand()              { return this.get_property_value(DiagramVM.UngroupCommandKey); }
+    get CombineUnionCommand()         { return this.get_property_value(DiagramVM.CombineUnionCommandKey); }
+    get CombineIntersectCommand()     { return this.get_property_value(DiagramVM.CombineIntersectCommandKey); }
+    get CombineSubtractCommand()      { return this.get_property_value(DiagramVM.CombineSubtractCommandKey); }
+    get CombineExcludeCommand()       { return this.get_property_value(DiagramVM.CombineExcludeCommandKey); }
+    get ToolboxShapes()               { return this.get_property_value(DiagramVM.ToolboxShapesKey); }
+    get Status()                      { return this.get_property_value(DiagramVM.StatusKey); }
+    set Status(v)                     { this.set_property_value(DiagramVM.StatusKey, v); }
+    get SaveCommand()                 { return this.get_property_value(DiagramVM.SaveCommandKey); }
+    get LoadCommand()                 { return this.get_property_value(DiagramVM.LoadCommandKey); }
+    get AlignLeftCommand()            { return this.get_property_value(DiagramVM.AlignLeftCommandKey); }
+    get AlignRightCommand()           { return this.get_property_value(DiagramVM.AlignRightCommandKey); }
+    get AlignTopCommand()             { return this.get_property_value(DiagramVM.AlignTopCommandKey); }
+    get AlignMiddleCommand()          { return this.get_property_value(DiagramVM.AlignMiddleCommandKey); }
+    get AlignCenterCommand()          { return this.get_property_value(DiagramVM.AlignCenterCommandKey); }
+    get DistributeHorizontalCommand() { return this.get_property_value(DiagramVM.DistributeHorizontalCommandKey); }
+    get DistributeVerticalCommand()   { return this.get_property_value(DiagramVM.DistributeVerticalCommandKey); }
+    get SelectionX()                  { return this.get_property_value(DiagramVM.SelectionXKey); }
+    get SelectionY()                  { return this.get_property_value(DiagramVM.SelectionYKey); }
+    get SelectionWidth()              { return this.get_property_value(DiagramVM.SelectionWidthKey); }
+    get SelectionHeight()             { return this.get_property_value(DiagramVM.SelectionHeightKey); }
+    get SelectionCount()              { return this.get_property_value(DiagramVM.SelectionCountKey); }
+    get AlignmentGuides()             { return this.get_property_value(DiagramVM.AlignmentGuidesKey); }
+    set AlignmentGuides(value)        { this.set_property_value(DiagramVM.AlignmentGuidesKey, value); }
+    get FormatFill()                  { return this.get_property_value(DiagramVM.FormatFillKey); }
+    set FormatFill(v)                 { this.set_property_value(DiagramVM.FormatFillKey, v); }
+    get FormatStroke()                { return this.get_property_value(DiagramVM.FormatStrokeKey); }
+    set FormatStroke(v)               { this.set_property_value(DiagramVM.FormatStrokeKey, v); }
 
     CreateNode(kind, x, y) {
         if (!SHAPE_CATALOG_MAP.has(kind)) return null;
@@ -1000,18 +1017,18 @@ export class DiagramVM extends Model
             if (n.Y + n.Height > maxY) maxY = n.Y + n.Height;
         }
         if (count === 0) {
-            this._set_property_value_by_name('SelectionX',      0);
-            this._set_property_value_by_name('SelectionY',      0);
-            this._set_property_value_by_name('SelectionWidth',  0);
-            this._set_property_value_by_name('SelectionHeight', 0);
-            this._set_property_value_by_name('SelectionCount',  0);
+            this.set_property_value(DiagramVM.SelectionXKey,      0);
+            this.set_property_value(DiagramVM.SelectionYKey,      0);
+            this.set_property_value(DiagramVM.SelectionWidthKey,  0);
+            this.set_property_value(DiagramVM.SelectionHeightKey, 0);
+            this.set_property_value(DiagramVM.SelectionCountKey,  0);
             return;
         }
-        this._set_property_value_by_name('SelectionX',      minX);
-        this._set_property_value_by_name('SelectionY',      minY);
-        this._set_property_value_by_name('SelectionWidth',  maxX - minX);
-        this._set_property_value_by_name('SelectionHeight', maxY - minY);
-        this._set_property_value_by_name('SelectionCount',  count);
+        this.set_property_value(DiagramVM.SelectionXKey,      minX);
+        this.set_property_value(DiagramVM.SelectionYKey,      minY);
+        this.set_property_value(DiagramVM.SelectionWidthKey,  maxX - minX);
+        this.set_property_value(DiagramVM.SelectionHeightKey, maxY - minY);
+        this.set_property_value(DiagramVM.SelectionCountKey,  count);
     }
 
     // ── ShapeFormatControl: seed + broadcast ──────────────────────────
@@ -1064,16 +1081,16 @@ export class DiagramVM extends Model
         this._seedingFormat = true;
         try {
             if (leaves.length === 0) {
-                this._set_property_value_by_name('FormatFill',   undefined);
-                this._set_property_value_by_name('FormatStroke', undefined);
+                this.set_property_value(DiagramVM.FormatFillKey,   undefined);
+                this.set_property_value(DiagramVM.FormatStrokeKey, undefined);
                 return;
             }
             const first = leaves[0];
-            this._set_property_value_by_name('FormatFill', first.FillBrush);
+            this.set_property_value(DiagramVM.FormatFillKey, first.FillBrush);
             // Clone the pen for the editor — keeps per-shape Pen
             // identity intact (see class doc above). The clone's
             // property changes feed _broadcastStrokeProp.
-            this._set_property_value_by_name('FormatStroke', clonePen(first.Stroke));
+            this.set_property_value(DiagramVM.FormatStrokeKey, clonePen(first.Stroke));
         } finally {
             this._seedingFormat = false;
         }
@@ -1104,7 +1121,7 @@ export class DiagramVM extends Model
     _attachFormatStrokeListeners(pen) {
         const watch = (prop) => {
             const h = () => this._broadcastStrokeProp(prop);
-            pen._add_property_changed_listener_by_name(prop, h);
+            pen.AddPropertyChangedListener(PEN_PROP_KEYS[prop], h);
             this._formatStrokeListeners.push({ pen, prop, h });
         };
         watch('Brush');
@@ -1117,7 +1134,7 @@ export class DiagramVM extends Model
 
     _detachFormatStrokeListeners() {
         for (const e of this._formatStrokeListeners) {
-            e.pen._remove_property_changed_listener_by_name(e.prop, e.h);
+            e.pen.RemovePropertyChangedListener(PEN_PROP_KEYS[e.prop], e.h);
         }
         this._formatStrokeListeners = [];
     }

@@ -1,22 +1,51 @@
 import { Model } from '../runtime/model.js';
 import type { PropertyDescriptor } from '../runtime/property-descriptor.js';
 import { findDescriptor, propertyValues } from '../runtime/model-internals.js';
+import { inherits } from '../runtime/metadata.js';
+
+// Resolve a Setter's (owner, property) → PropertyDescriptor with a
+// cross-class fallback for inheritable DPs. A Setter inside a
+// `Style [TargetType=Tooltip] { Foreground = … }` carries
+// `owner=Tooltip` because the markup-implicit owner is the target
+// type, but `Foreground` is registered on TextBlock with `Inherits`.
+// The standard prototype-chain walk in `findDescriptor` misses it
+// because TextBlock isn't in Tooltip's chain — the setter would
+// silently no-op, leaving the tooltip's chrome with default
+// (inherited-from-elsewhere) Foreground on a dark @InverseSurface
+// background. This helper takes a second pass through the global
+// inheritable-DP registry on a name match.
+//
+// Compiler-emitted explicit-owner setters
+// (`Setter(TextBlock, 'Foreground', …)` for `_border.Foreground = …`
+// shorthand on a non-TextBlock owner) take the fast path through
+// `findDescriptor` and never reach the fallback. The fallback only
+// catches the `[TargetType=Foo] { CrossClassProp = … }` markup path
+// where the target-type-implicit owner has no such DP.
+function resolveSetterDescriptor(setter: Setter): PropertyDescriptor | undefined
+{
+    const desc = findDescriptor(setter.owner, setter.property);
+    if (desc !== undefined) return desc;
+    for (const candidate of Model._getInheritableDescriptors())
+    {
+        if (candidate.Name === setter.property && inherits(candidate.MetaData))
+        {
+            return candidate;
+        }
+    }
+    return undefined;
+}
 import { Binding, BindingMode } from '../runtime/binding/binding.js';
 import {
     Setter,
     SetterFactory,
     Style,
-    type PropertyTrigger,
-    type MultiTrigger,
-    type DataTrigger,
-    type MultiDataTrigger,
 } from '../runtime/style.js';
 import type {
     EffectiveValueDescriptor,
     PropertyChangeCallback,
 } from '../runtime/binding/effective-value.js';
-import type { EventTrigger } from '../runtime/event-trigger.js';
 import type { Element, ElementCtor } from './element.js';
+import type { ITriggerHost } from './trigger-host.js';
 
 // Per-setter TwoWay / OneWayToSource writeback bookkeeping. Replaces
 // the Symbol-keyed slot the previous design hung off the Binding —
@@ -29,24 +58,6 @@ interface WritebackEntry
 {
     readonly evd:      EffectiveValueDescriptor;
     readonly listener: PropertyChangeCallback;
-}
-
-// Friend-interface for the trigger install / uninstall methods that
-// `StyleApplicator.RefreshActiveStyle` calls back into on the target
-// `Visual`. Per CLAUDE.md cross-class internals pattern — the methods
-// are conceptually internal to the (Visual, StyleApplicator) pair,
-// so we declare a named interface and cast through it rather than
-// promoting them to `public _xxx` on Visual's surface. Mural-internal:
-// never re-exported from any barrel.
-interface TriggerInstallHost
-{
-    _install_trigger:            (t: PropertyTrigger)   => void;
-    _install_multi_trigger:      (t: MultiTrigger)      => void;
-    _install_data_trigger:       (t: DataTrigger)       => void;
-    _install_multi_data_trigger: (t: MultiDataTrigger)  => void;
-    _install_event_trigger:      (t: EventTrigger)      => void;
-    _uninstall_trigger:          (t: PropertyTrigger | MultiTrigger | DataTrigger | MultiDataTrigger) => void;
-    _uninstall_event_trigger:    (t: EventTrigger)      => void;
 }
 
 // Friend-interface for the EVD ensure-helper on Visual that
@@ -143,7 +154,10 @@ export class StyleApplicator
             this.ApplySetter(nextSetter, 'style');
         }
 
-        const host = this._target as unknown as TriggerInstallHost;
+        // Element implements `ITriggerHost`; address it directly
+        // through that surface so the trigger machinery isn't coupled
+        // to a private trampoline shape.
+        const host: ITriggerHost = this._target;
 
         // Triggers: install / uninstall on identity-mismatch only. The
         // resolved arrays come from the chain walk, so a trigger that
@@ -153,36 +167,36 @@ export class StyleApplicator
         const nextTriggers = desired?.ResolveTriggers()  ?? [];
         const prevTriggerSet = new Set(prevTriggers);
         const nextTriggerSet = new Set(nextTriggers);
-        for (const t of prevTriggers) if (!nextTriggerSet.has(t)) host._uninstall_trigger(t);
-        for (const t of nextTriggers) if (!prevTriggerSet.has(t)) host._install_trigger(t);
+        for (const t of prevTriggers) if (!nextTriggerSet.has(t)) host.UninstallTrigger(t);
+        for (const t of nextTriggers) if (!prevTriggerSet.has(t)) host.InstallTrigger(t);
 
         const prevMulti = previous?.ResolveMultiTriggers() ?? [];
         const nextMulti = desired?.ResolveMultiTriggers()  ?? [];
         const prevMultiSet = new Set(prevMulti);
         const nextMultiSet = new Set(nextMulti);
-        for (const t of prevMulti) if (!nextMultiSet.has(t)) host._uninstall_trigger(t);
-        for (const t of nextMulti) if (!prevMultiSet.has(t)) host._install_multi_trigger(t);
+        for (const t of prevMulti) if (!nextMultiSet.has(t)) host.UninstallTrigger(t);
+        for (const t of nextMulti) if (!prevMultiSet.has(t)) host.InstallMultiTrigger(t);
 
         const prevData = previous?.ResolveDataTriggers() ?? [];
         const nextData = desired?.ResolveDataTriggers()  ?? [];
         const prevDataSet = new Set(prevData);
         const nextDataSet = new Set(nextData);
-        for (const t of prevData) if (!nextDataSet.has(t)) host._uninstall_trigger(t);
-        for (const t of nextData) if (!prevDataSet.has(t)) host._install_data_trigger(t);
+        for (const t of prevData) if (!nextDataSet.has(t)) host.UninstallTrigger(t);
+        for (const t of nextData) if (!prevDataSet.has(t)) host.InstallDataTrigger(t);
 
         const prevMultiData = previous?.ResolveMultiDataTriggers() ?? [];
         const nextMultiData = desired?.ResolveMultiDataTriggers()  ?? [];
         const prevMultiDataSet = new Set(prevMultiData);
         const nextMultiDataSet = new Set(nextMultiData);
-        for (const t of prevMultiData) if (!nextMultiDataSet.has(t)) host._uninstall_trigger(t);
-        for (const t of nextMultiData) if (!prevMultiDataSet.has(t)) host._install_multi_data_trigger(t);
+        for (const t of prevMultiData) if (!nextMultiDataSet.has(t)) host.UninstallTrigger(t);
+        for (const t of nextMultiData) if (!prevMultiDataSet.has(t)) host.InstallMultiDataTrigger(t);
 
         const prevEvt = previous?.ResolveEventTriggers() ?? [];
         const nextEvt = desired?.ResolveEventTriggers()  ?? [];
         const prevEvtSet = new Set(prevEvt);
         const nextEvtSet = new Set(nextEvt);
-        for (const t of prevEvt) if (!nextEvtSet.has(t)) host._uninstall_event_trigger(t);
-        for (const t of nextEvt) if (!prevEvtSet.has(t)) host._install_event_trigger(t);
+        for (const t of prevEvt) if (!nextEvtSet.has(t)) host.UninstallEventTrigger(t);
+        for (const t of nextEvt) if (!prevEvtSet.has(t)) host.InstallEventTrigger(t);
 
         // TargetType-mismatch guard. Validates that the target Visual
         // is an instance of the Style's declared TargetType — applying
@@ -212,7 +226,7 @@ export class StyleApplicator
      *    * any other value   — pushed to the tier directly. */
     public ApplySetter(setter: Setter, tier: 'style' | 'trigger'): void
     {
-        const descriptor = findDescriptor(setter.owner, setter.property);
+        const descriptor = resolveSetterDescriptor(setter);
         if (descriptor === undefined) return;
         const target = this._target;
         const evd = (target as unknown as EnsureEvdHost).ensure_effective_value_for(descriptor);
@@ -321,7 +335,7 @@ export class StyleApplicator
      *  swap / container teardown. */
     public UnapplySetter(setter: Setter, tier: 'style' | 'trigger'): void
     {
-        const descriptor = findDescriptor(setter.owner, setter.property);
+        const descriptor = resolveSetterDescriptor(setter);
         if (descriptor === undefined) return;
         const target = this._target;
         const key = Model.compose_key(descriptor.RootOwner, descriptor.Name);

@@ -38,9 +38,9 @@ class Tile extends Element
         Model.RegisterProperty(Tile, 'Bias', 0,        MetaData.None);
     }
     public get Tint(): string { return this.get_property_value(resolveKey(this, undefined, 'Tint')); }
-    public set Tint(v: string) { this._set_property_value_by_name('Tint', v); }
+    public set Tint(v: string) { this.set_property_value(resolveKey(this, undefined, 'Tint'), v); }
     public get Bias(): number { return this.get_property_value(resolveKey(this, undefined, 'Bias')); }
-    public set Bias(v: number) { this._set_property_value_by_name('Bias', v); }
+    public set Bias(v: number) { this.set_property_value(resolveKey(this, undefined, 'Bias'), v); }
     protected override MeasureOverride(_a: Size): Size { return Size.Zero; }
     protected override RenderOverride(_dc: DrawingContext): void { }
 }
@@ -50,7 +50,7 @@ class ItemVM extends Model
 {
     static { Model.RegisterProperty(ItemVM, 'IsSelected', false, MetaData.None); }
     public get IsSelected(): boolean { return this.get_property_value(resolveKey(this, undefined, 'IsSelected')); }
-    public set IsSelected(v: boolean) { this._set_property_value_by_name('IsSelected', v); }
+    public set IsSelected(v: boolean) { this.set_property_value(resolveKey(this, undefined, 'IsSelected'), v); }
 }
 
 describe('DataTemplate.Triggers — TemplateDataTrigger on template root', () => {
@@ -226,9 +226,9 @@ describe('DataTemplate.Triggers — TemplateMultiDataTrigger', () => {
                 Model.RegisterProperty(MultiVM, 'Score',       0,    MetaData.None);
             }
             public get IsSelected(): boolean { return this.get_property_value(resolveKey(this, undefined, 'IsSelected')); }
-            public set IsSelected(v: boolean) { this._set_property_value_by_name('IsSelected', v); }
+            public set IsSelected(v: boolean) { this.set_property_value(resolveKey(this, undefined, 'IsSelected'), v); }
             public get Score(): number { return this.get_property_value(resolveKey(this, undefined, 'Score')); }
-            public set Score(v: number) { this._set_property_value_by_name('Score', v); }
+            public set Score(v: number) { this.set_property_value(resolveKey(this, undefined, 'Score'), v); }
         }
         const vm = new MultiVM();
         const root = tmpl.Apply(vm) as Tile;

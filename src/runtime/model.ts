@@ -388,17 +388,14 @@ export class Model
     // a compile error and threads the value type through the accessor
     // signature so no `as T` cast is needed.
     //
-    // The one surviving string-keyed accessor (`_set_property_value_by_name`)
-    // is intentionally framework-internal — leading underscore signals
-    // "not the recommended consumer pattern." It exists so the µ-mural
-    // compiler can emit a uniform write target for every markup property
-    // assignment. Every other by-name accessor (read, listener add/remove,
-    // animated set/clear, value-source query, clear-value) has moved into
-    // [./model-internals.ts](./model-internals.ts) as `resolveKey + typed-key API`:
-    // the binding pipeline, Style.Setter / Trigger machinery, animation
-    // timelines, and trigger evaluators resolve the name once and reuse
-    // the resulting `PropertyKey` so per-fire work stays at descriptor-
-    // map lookup cost.
+    // There is no by-name accessor on `Model`. The µ-mural compiler
+    // resolves every markup property write to a typed key at compile
+    // time (`compileAttribute` in `src/compiler/compiler.ts` queries
+    // `Model.find_class` + `findDescriptor` and emits `Owner.PropKey`).
+    // Framework-internal hot paths (binding, Style.Setter / Trigger,
+    // animation, trigger evaluators) resolve names through
+    // [./model-internals.ts](./model-internals.ts)'s `resolveKey`
+    // helper at install time and cache the resulting `PropertyKey`.
     // ------------------------------------------------------------------
 
     // Typed-key public API ---------------------------------------------
@@ -528,38 +525,6 @@ export class Model
         this.set_via_descriptor(key.descriptor, value);
     }
 
-    // Framework-internal string-keyed write surface --------------------
-    //
-    // `_set_property_value_by_name` is the SOLE surviving by-name
-    // accessor on `Model`. It exists as the compiler-emit target —
-    // markup-compiled templates produce `target._set_property_value_by_name(name, value)`
-    // calls for every `Prop="value"` setter, so this method has to be
-    // reachable from user-compiled code. The other by-name overloads
-    // (add/remove listener, get value, clear, animated set/clear, get
-    // value source) were retired in favor of the
-    // [./model-internals.ts](./model-internals.ts) `resolveKey` factor:
-    // internal callers resolve the name once to a `PropertyKey`, then
-    // use the typed-key API (`set_property_value`, `get_property_value`,
-    // `AddPropertyChangedListener`, `SetAnimatedValue`, …) directly.
-    // Hot-loop sites cache the resolved key instead of re-walking the
-    // class hierarchy on every fire.
-    //
-    // Read-only DPs throw the same way they do via `set_property_value` —
-    // the by-name path doesn't grant the read-only-bypass capability that
-    // `set_property_value_with_key` carries.
-
-    public _set_property_value_by_name(property: string, value: any): void;
-    public _set_property_value_by_name(owner: Function, property: string, value: any): void;
-    public _set_property_value_by_name(arg1: any, arg2: any, arg3?: any): void
-    {
-        const descriptor = (typeof arg1 === 'string')
-            ? this.resolve_descriptor_implicit(arg1)
-            : this.resolve_descriptor_explicit(arg1, arg2);
-        this.require_writable(descriptor);
-        const value = (typeof arg1 === 'string') ? arg2 : arg3;
-        this.set_via_descriptor(descriptor, value);
-    }
-
     private clear_via_descriptor(descriptor: PropertyDescriptor): void
     {
         const key = Model.compose_key(descriptor.RootOwner, descriptor.Name);
@@ -611,26 +576,6 @@ export class Model
         const def = descriptor.DefaultValue;
         const coerce = descriptor.CoerceValue;
         return coerce !== undefined ? coerce(this, def) : def;
-    }
-
-    private resolve_descriptor_implicit(property: string): PropertyDescriptor
-    {
-        const descriptor = Model.find_descriptor(this.constructor, property);
-        if (descriptor === undefined)
-        {
-            throw new Error(`Property '${property}' not found in model '${this.constructor.name}'`);
-        }
-        return descriptor;
-    }
-
-    private resolve_descriptor_explicit(owner: Function, property: string): PropertyDescriptor
-    {
-        const descriptor = Model.find_descriptor(owner, property);
-        if (descriptor === undefined)
-        {
-            throw new Error(`Property '${property}' not found on owner '${owner.name}'`);
-        }
-        return descriptor;
     }
 
     private set_via_descriptor(descriptor: PropertyDescriptor, value: any): void

@@ -38,9 +38,9 @@ class Widget extends Element
         Model.RegisterProperty(Widget, 'Bias',  0,         MetaData.None);
     }
     public get Tint(): string { return this.get_property_value(resolveKey(this, undefined, 'Tint')); }
-    public set Tint(v: string) { this._set_property_value_by_name('Tint', v); }
+    public set Tint(v: string) { this.set_property_value(resolveKey(this, undefined, 'Tint'), v); }
     public get Bias(): number { return this.get_property_value(resolveKey(this, undefined, 'Bias')); }
-    public set Bias(v: number) { this._set_property_value_by_name('Bias', v); }
+    public set Bias(v: number) { this.set_property_value(resolveKey(this, undefined, 'Bias'), v); }
     protected override MeasureOverride(_a: Size): Size { return Size.Zero; }
     protected override RenderOverride(_dc: DrawingContext): void { }
 }
@@ -188,13 +188,13 @@ describe('Style — explicit application on Visual.Style', () => {
 
     test('StyleValue shadows InheritedValue', () => {
         const parent = new Widget();
-        parent._set_property_value_by_name(Widget, 'Tint', 'inherited-tint');
+        parent.set_property_value(resolveKey(parent, Widget, 'Tint'), 'inherited-tint');
         const child = new Widget();
         const root = new TestPanel();
         root.AddChild(parent);
         // Place child under parent so it inherits.
         const wrapper = new TestPanel();
-        parent._set_property_value_by_name(Widget, 'Tint', 'inherited-tint');
+        parent.set_property_value(resolveKey(parent, Widget, 'Tint'), 'inherited-tint');
         wrapper.AddChild(child);
         parent['property_values'];  // touch to silence type lint
         // Apply style on child — should win over the inherited value.
@@ -303,7 +303,7 @@ describe('Style — interaction with Binding (Binding shadows Style)', () => {
         class Src extends Model {
             static { Model.RegisterProperty(Src, 'V', 999, MetaData.None); }
             public get V(): number { return this.get_property_value(resolveKey(this, undefined, 'V')); }
-            public set V(v: number) { this._set_property_value_by_name('V', v); }
+            public set V(v: number) { this.set_property_value(resolveKey(this, undefined, 'V'), v); }
         }
 
         const src = new Src();
@@ -311,7 +311,7 @@ describe('Style — interaction with Binding (Binding shadows Style)', () => {
         w.Style = new Style(Widget, [new Setter(Widget, 'Bias', 5)]);
         assert.equal(w.Bias, 5);
 
-        w._set_property_value_by_name('Bias', new Binding(src, 'V'));
+        w.set_property_value(resolveKey(w, undefined, 'Bias'), new Binding(src, 'V'));
         assert.equal(w.Bias, 999);
         assert.equal(w.GetValueSource(resolveKey(w, undefined, 'Bias')), PropertyValueSource.Binding);
 
@@ -374,7 +374,7 @@ describe('Style — Setter.value supports Binding (via SetterFactory)', () => {
         class Src extends Model {
             static { Model.RegisterProperty(Src, 'V', 42, MetaData.None); }
             public get V(): number { return this.get_property_value(resolveKey(this, undefined, 'V')); }
-            public set V(v: number) { this._set_property_value_by_name('V', v); }
+            public set V(v: number) { this.set_property_value(resolveKey(this, undefined, 'V'), v); }
         }
         const src = new Src();
         const w = new Widget();
@@ -391,7 +391,7 @@ describe('Style — Setter.value supports Binding (via SetterFactory)', () => {
         class Src extends Model {
             static { Model.RegisterProperty(Src, 'V', 0, MetaData.None); }
             public get V(): number { return this.get_property_value(resolveKey(this, undefined, 'V')); }
-            public set V(v: number) { this._set_property_value_by_name('V', v); }
+            public set V(v: number) { this.set_property_value(resolveKey(this, undefined, 'V'), v); }
         }
         const src = new Src();
         const w = new Widget();
@@ -413,7 +413,7 @@ describe('Style — Setter.value supports Binding (via SetterFactory)', () => {
         class Src extends Model {
             static { Model.RegisterProperty(Src, 'V', 1, MetaData.None); }
             public get V(): number { return this.get_property_value(resolveKey(this, undefined, 'V')); }
-            public set V(v: number) { this._set_property_value_by_name('V', v); }
+            public set V(v: number) { this.set_property_value(resolveKey(this, undefined, 'V'), v); }
         }
         const src = new Src();
         const style = new Style(Widget, [
@@ -436,7 +436,7 @@ describe('Style — Setter.value supports Binding (via SetterFactory)', () => {
         class Src extends Model {
             static { Model.RegisterProperty(Src, 'V', 1, MetaData.None); }
             public get V(): number { return this.get_property_value(resolveKey(this, undefined, 'V')); }
-            public set V(v: number) { this._set_property_value_by_name('V', v); }
+            public set V(v: number) { this.set_property_value(resolveKey(this, undefined, 'V'), v); }
         }
         const src = new Src();
         const w = new Widget();
@@ -619,8 +619,9 @@ describe('Style — PropertyTrigger', () => {
     test('Trigger shadows LocalValue when active; cached local re-surfaces when trigger deactivates', () => {
         // Mural's priority order is Trigger > Binding > Local (vs.
         // WPF's Local > Trigger). Template factories write LocalValue
-        // via the per-part `_set_property_value_by_name` calls, and
-        // template / style triggers express state-driven overrides —
+        // via the per-part `set_property_value` calls the compiler
+        // emits, and template / style triggers express state-driven
+        // overrides —
         // so triggers MUST be able to override local writes for the
         // common `when ( IsMouseOver / IsChecked ) { … }` pattern to
         // be visible. See effective-value.ts header comment for the
@@ -690,9 +691,9 @@ class ItemVM extends Model
         Model.RegisterProperty(ItemVM, 'Score',      0,     MetaData.None);
     }
     public get IsSelected(): boolean { return this.get_property_value(resolveKey(this, undefined, 'IsSelected')); }
-    public set IsSelected(v: boolean) { this._set_property_value_by_name('IsSelected', v); }
+    public set IsSelected(v: boolean) { this.set_property_value(resolveKey(this, undefined, 'IsSelected'), v); }
     public get Score(): number { return this.get_property_value(resolveKey(this, undefined, 'Score')); }
-    public set Score(v: number) { this._set_property_value_by_name('Score', v); }
+    public set Score(v: number) { this.set_property_value(resolveKey(this, undefined, 'Score'), v); }
 }
 
 describe('Style — DataTrigger', () => {
@@ -768,7 +769,7 @@ describe('Style — DataTrigger', () => {
                 Model.RegisterProperty(Surface, 'Fill',    'none',   MetaData.None);
             }
             public get Mode():    string { return this.get_property_value(resolveKey(this, undefined, 'Mode')); }
-            public set Mode(v:    string)        { this._set_property_value_by_name('Mode', v); }
+            public set Mode(v:    string)        { this.set_property_value(resolveKey(this, undefined, 'Mode'), v); }
             public get Outline(): string { return this.get_property_value(resolveKey(this, undefined, 'Outline')); }
             public get Fill():    string { return this.get_property_value(resolveKey(this, undefined, 'Fill')); }
             protected override MeasureOverride(_a: Size): Size { return Size.Zero; }
@@ -1110,7 +1111,7 @@ describe('Style — DefaultStyleKey + theme style', () => {
     test('DefaultStyleKey is read-only on the public surface', () => {
         const w = new Widget();
         assert.throws(
-            () => w._set_property_value_by_name('DefaultStyleKey', Widget),
+            () => w.set_property_value(resolveKey(w, undefined, 'DefaultStyleKey'), Widget),
             /read-only/,
         );
     });

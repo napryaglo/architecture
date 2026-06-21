@@ -49,6 +49,8 @@ export {
     DragSession,
     type DragDropOptions,
     type DragPreviewKind,
+    type DragStartCallback,
+    type DragStartSpec,
 } from './drag-drop.js';
 export {
     DragEventArgs,

@@ -117,9 +117,7 @@ class MultiBindingImpl extends Binding
             // Subscribe to the first segment for this path if the
             // current DataContext is a Model. Mutations to deeper
             // segments aren't picked up — matching DataContextBinding.
-            // resolveKey throws when the first segment isn't a DP on
-            // dc — same behavior the legacy `_add_property_changed_listener_by_name`
-            // had via its `resolve_descriptor_implicit` throw.
+            // resolveKey throws when the first segment isn't a DP on dc.
             if (dc instanceof Model)
             {
                 const first = firstSegment(path);

@@ -21,29 +21,29 @@ export class SplitButtonVM extends Model
     static ScheduleSendCommandKey = Model.RegisterProperty(SplitButtonVM, 'ScheduleSendCommand', null, MetaData.None);
     static SaveDraftCommandKey    = Model.RegisterProperty(SplitButtonVM, 'SaveDraftCommand',    null, MetaData.None);
 
-    get SendCount()       { return this._get_property_value_by_name('SendCount'); }
-    set SendCount(v)      { this._set_property_value_by_name('SendCount', v); }
-    get MenuActionTaken() { return this._get_property_value_by_name('MenuActionTaken'); }
-    set MenuActionTaken(v){ this._set_property_value_by_name('MenuActionTaken', v); }
-    get IsOpen()          { return this._get_property_value_by_name('IsOpen'); }
-    set IsOpen(v)         { this._set_property_value_by_name('IsOpen', v); }
-    get MenuPopup()       { return this._get_property_value_by_name('MenuPopup'); }
-    set MenuPopup(v)      { this._set_property_value_by_name('MenuPopup', v); }
+    get SendCount()       { return this.get_property_value(SplitButtonVM.SendCountKey); }
+    set SendCount(v)      { this.set_property_value(SplitButtonVM.SendCountKey, v); }
+    get MenuActionTaken() { return this.get_property_value(SplitButtonVM.MenuActionTakenKey); }
+    set MenuActionTaken(v){ this.set_property_value(SplitButtonVM.MenuActionTakenKey, v); }
+    get IsOpen()          { return this.get_property_value(SplitButtonVM.IsOpenKey); }
+    set IsOpen(v)         { this.set_property_value(SplitButtonVM.IsOpenKey, v); }
+    get MenuPopup()       { return this.get_property_value(SplitButtonVM.MenuPopupKey); }
+    set MenuPopup(v)      { this.set_property_value(SplitButtonVM.MenuPopupKey, v); }
 
-    get SendCommand()         { return this._get_property_value_by_name('SendCommand'); }
-    get SendNowCommand()      { return this._get_property_value_by_name('SendNowCommand'); }
-    get ScheduleSendCommand() { return this._get_property_value_by_name('ScheduleSendCommand'); }
-    get SaveDraftCommand()    { return this._get_property_value_by_name('SaveDraftCommand'); }
+    get SendCommand()         { return this.get_property_value(SplitButtonVM.SendCommandKey); }
+    get SendNowCommand()      { return this.get_property_value(SplitButtonVM.SendNowCommandKey); }
+    get ScheduleSendCommand() { return this.get_property_value(SplitButtonVM.ScheduleSendCommandKey); }
+    get SaveDraftCommand()    { return this.get_property_value(SplitButtonVM.SaveDraftCommandKey); }
 
     constructor() {
         super();
-        this._set_property_value_by_name('SendCommand',
+        this.set_property_value(SplitButtonVM.SendCommandKey,
             new RelayCommand(() => { this.SendCount += 1; }));
-        this._set_property_value_by_name('SendNowCommand',
+        this.set_property_value(SplitButtonVM.SendNowCommandKey,
             new RelayCommand(() => { this.MenuActionTaken = 'Send now';      this.IsOpen = false; }));
-        this._set_property_value_by_name('ScheduleSendCommand',
+        this.set_property_value(SplitButtonVM.ScheduleSendCommandKey,
             new RelayCommand(() => { this.MenuActionTaken = 'Schedule send'; this.IsOpen = false; }));
-        this._set_property_value_by_name('SaveDraftCommand',
+        this.set_property_value(SplitButtonVM.SaveDraftCommandKey,
             new RelayCommand(() => { this.MenuActionTaken = 'Save draft';    this.IsOpen = false; }));
     }
 }

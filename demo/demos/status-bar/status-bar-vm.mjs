@@ -19,27 +19,25 @@ import {
 
 export class StatusBarVM extends Model
 {
-    static {
-        Model.RegisterProperty(StatusBarVM, 'StatusText',        'Ready', MetaData.None);
-        Model.RegisterProperty(StatusBarVM, 'IsModified',        false,   MetaData.None);
-        Model.RegisterProperty(StatusBarVM, 'ItemCount',         0,       MetaData.None);
-        Model.RegisterProperty(StatusBarVM, 'LastAction',        '—',     MetaData.None);
-        Model.RegisterProperty(StatusBarVM, 'AddItemCommand',    undefined, MetaData.None);
-        Model.RegisterProperty(StatusBarVM, 'RemoveItemCommand', undefined, MetaData.None);
-        Model.RegisterProperty(StatusBarVM, 'SaveCommand',       undefined, MetaData.None);
-    }
+    static StatusTextKey        = Model.RegisterProperty(StatusBarVM, 'StatusText',        'Ready', MetaData.None);
+    static IsModifiedKey        = Model.RegisterProperty(StatusBarVM, 'IsModified',        false,   MetaData.None);
+    static ItemCountKey         = Model.RegisterProperty(StatusBarVM, 'ItemCount',         0,       MetaData.None);
+    static LastActionKey        = Model.RegisterProperty(StatusBarVM, 'LastAction',        '—',     MetaData.None);
+    static AddItemCommandKey    = Model.RegisterProperty(StatusBarVM, 'AddItemCommand',    undefined, MetaData.None);
+    static RemoveItemCommandKey = Model.RegisterProperty(StatusBarVM, 'RemoveItemCommand', undefined, MetaData.None);
+    static SaveCommandKey       = Model.RegisterProperty(StatusBarVM, 'SaveCommand',       undefined, MetaData.None);
 
-    get StatusText()        { return this._get_property_value_by_name('StatusText'); }
-    set StatusText(v)       { this._set_property_value_by_name('StatusText', v); }
-    get IsModified()        { return this._get_property_value_by_name('IsModified'); }
-    set IsModified(v)       { this._set_property_value_by_name('IsModified', v); }
-    get ItemCount()         { return this._get_property_value_by_name('ItemCount'); }
-    set ItemCount(v)        { this._set_property_value_by_name('ItemCount', v); }
-    get LastAction()        { return this._get_property_value_by_name('LastAction'); }
-    set LastAction(v)       { this._set_property_value_by_name('LastAction', v); }
-    get AddItemCommand()    { return this._get_property_value_by_name('AddItemCommand'); }
-    get RemoveItemCommand() { return this._get_property_value_by_name('RemoveItemCommand'); }
-    get SaveCommand()       { return this._get_property_value_by_name('SaveCommand'); }
+    get StatusText()        { return this.get_property_value(StatusBarVM.StatusTextKey); }
+    set StatusText(v)       { this.set_property_value(StatusBarVM.StatusTextKey, v); }
+    get IsModified()        { return this.get_property_value(StatusBarVM.IsModifiedKey); }
+    set IsModified(v)       { this.set_property_value(StatusBarVM.IsModifiedKey, v); }
+    get ItemCount()         { return this.get_property_value(StatusBarVM.ItemCountKey); }
+    set ItemCount(v)        { this.set_property_value(StatusBarVM.ItemCountKey, v); }
+    get LastAction()        { return this.get_property_value(StatusBarVM.LastActionKey); }
+    set LastAction(v)       { this.set_property_value(StatusBarVM.LastActionKey, v); }
+    get AddItemCommand()    { return this.get_property_value(StatusBarVM.AddItemCommandKey); }
+    get RemoveItemCommand() { return this.get_property_value(StatusBarVM.RemoveItemCommandKey); }
+    get SaveCommand()       { return this.get_property_value(StatusBarVM.SaveCommandKey); }
 
     constructor()
     {
@@ -56,21 +54,21 @@ export class StatusBarVM extends Model
             // Selection-gated: only when there's something to remove.
             () => this.ItemCount > 0,
         );
-        this._set_property_value_by_name('AddItemCommand', new RelayCommand(() => {
+        this.set_property_value(StatusBarVM.AddItemCommandKey, new RelayCommand(() => {
             this.ItemCount  = this.ItemCount + 1;
             this.IsModified = true;
             this.StatusText = 'Item added';
             this.LastAction = 'Add';
         }));
-        this._set_property_value_by_name('RemoveItemCommand', removeCmd);
-        this._set_property_value_by_name('SaveCommand', new RelayCommand(() => {
+        this.set_property_value(StatusBarVM.RemoveItemCommandKey, removeCmd);
+        this.set_property_value(StatusBarVM.SaveCommandKey, new RelayCommand(() => {
             this.IsModified = false;
             this.StatusText = 'Saved';
             this.LastAction = 'Save';
         }));
         // Refresh Remove's CanExecute whenever the count changes so its
         // chrome dims / undims live.
-        this._add_property_changed_listener_by_name('ItemCount', () => {
+        this.AddPropertyChangedListener(StatusBarVM.ItemCountKey, () => {
             removeCmd.RaiseCanExecuteChanged();
         });
     }

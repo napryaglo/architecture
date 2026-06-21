@@ -225,6 +225,33 @@ export interface DragDropOptions
     ghostCursorOffset?: { x: number; y: number };
 }
 
+// Return shape for a declarative-drag source's OnDragStart callback.
+// Mirrors the imperative `DragDrop.DoDragDrop` argument list — the
+// framework hands `data` / `effects` / `preview` straight to it, then
+// wires `onFeedback` / `onContinueQuery` onto the freshly-started
+// session before handing control back to the InputManager (backlog
+// 8.3 source-side hooks).
+export interface DragStartSpec
+{
+    data: DataObject;
+    effects: DragDropEffects;
+    preview?: DragPreviewKind;
+    // GiveFeedback hook — fires whenever the OS-level drag-over cursor
+    // effect changes. Lets a declarative source swap a per-effect
+    // cursor / ghost tint without imperatively reaching into the
+    // session post-start.
+    onFeedback?: (effect: DragDropEffects) => void;
+    // QueryContinueDrag hook — return false to cancel the drag mid-
+    // flight (e.g. Esc pressed, source visibility revoked).
+    onContinueQuery?: () => boolean;
+}
+
+// Callback shape installed on `Visual.OnDragStart`. The framework
+// invokes it when the IsDraggable latch has crossed
+// `DragDrop.DragThreshold` pixels. Return `null` to skip the drag
+// (e.g. precondition not met); return a `DragStartSpec` to launch it.
+export type DragStartCallback = (source: Visual) => DragStartSpec | null;
+
 // Static entry point. The instance method `args.BeginDragDrop(...)`
 // (added in Task 11) wraps this so authors don't have to import the
 // class.

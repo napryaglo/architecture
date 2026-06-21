@@ -85,7 +85,7 @@ export class CommandsVM extends DiagramVM
     // unregistered plain fields are invisible. Register every command
     // CommandsVM owns as a DP. The Align*Command names that DiagramVM
     // already registers are inherited; we override the VALUE in the
-    // constructor via _set_property_value_by_name, not the DP itself.
+    // constructor through DiagramVM's typed keys, not the DP itself.
     static HasSelectionKey       = Model.RegisterProperty(CommandsVM, 'HasSelection',       false,     MetaData.None);
     static CutCommandKey         = Model.RegisterProperty(CommandsVM, 'CutCommand',         undefined, MetaData.None);
     static CopyCommandKey        = Model.RegisterProperty(CommandsVM, 'CopyCommand',        undefined, MetaData.None);
@@ -100,8 +100,9 @@ export class CommandsVM extends DiagramVM
     constructor(storage) {
         super(storage);
 
-        const set = (name, value) => this._set_property_value_by_name(name, value);
-        const setStatus = (msg) => set('Status', msg);
+        // setStatus is a tiny helper around the DiagramVM-inherited
+        // Status DP — keeps the call sites below readable.
+        const setStatus = (msg) => this.set_property_value(DiagramVM.StatusKey, msg);
         const selected = () => {
             const out = [];
             const nodes = this.Nodes;
@@ -114,32 +115,32 @@ export class CommandsVM extends DiagramVM
         const hasSel = () => this.HasSelection;
 
         // ── Edit commands (selection-gated) ───────────────────────────
-        set('CutCommand', new RelayCommand(() => {
+        this.set_property_value(CommandsVM.CutCommandKey, new RelayCommand(() => {
             const s = selected();
             this._clipboard = s.map((n) => ({ kind: n.Kind, x: n.X, y: n.Y }));
             this.DeleteNodes(s);
             setStatus(`Cut ${s.length} node${s.length === 1 ? '' : 's'}.`);
         }, hasSel));
-        set('CopyCommand', new RelayCommand(() => {
+        this.set_property_value(CommandsVM.CopyCommandKey, new RelayCommand(() => {
             const s = selected();
             this._clipboard = s.map((n) => ({ kind: n.Kind, x: n.X, y: n.Y }));
             setStatus(`Copied ${s.length} node${s.length === 1 ? '' : 's'}.`);
         }, hasSel));
-        set('PasteCommand', new RelayCommand(() => {
+        this.set_property_value(CommandsVM.PasteCommandKey, new RelayCommand(() => {
             const c = this._clipboard ?? [];
             for (const e of c) this.CreateNode(e.kind, e.x + 20, e.y + 20);
             setStatus(`Pasted ${c.length} node${c.length === 1 ? '' : 's'}.`);
         }, () => Array.isArray(this._clipboard) && this._clipboard.length > 0));
-        set('DeleteCommand', new RelayCommand(() => this.DeleteNodes(selected()), hasSel));
-        set('DuplicateCommand', new RelayCommand(() => {
+        this.set_property_value(CommandsVM.DeleteCommandKey, new RelayCommand(() => this.DeleteNodes(selected()), hasSel));
+        this.set_property_value(CommandsVM.DuplicateCommandKey, new RelayCommand(() => {
             const s = selected();
             for (const n of s) this.CreateNode(n.Kind, n.X + 24, n.Y + 24);
             setStatus(`Duplicated ${s.length} node${s.length === 1 ? '' : 's'}.`);
         }, hasSel));
-        set('SelectAllCommand', new RelayCommand(() => {
+        this.set_property_value(CommandsVM.SelectAllCommandKey, new RelayCommand(() => {
             const nodes = this.Nodes;
             for (let i = 0; i < nodes.Count; i++) nodes.Get(i).IsSelected = true;
-            set('HasSelection', nodes.Count > 0);
+            this.set_property_value(CommandsVM.HasSelectionKey, nodes.Count > 0);
             this._raiseGated();
             setStatus(`Selected ${nodes.Count} node${nodes.Count === 1 ? '' : 's'}.`);
         }));
@@ -149,18 +150,18 @@ export class CommandsVM extends DiagramVM
         // edge for AlignRight. Y-axis follows the same shape. The
         // DiagramVM-inherited Align* DPs already exist with their own
         // values; assigning via `this.X = …` would hit the prototype
-        // getter (no setter) and throw. _set_property_value_by_name
-        // pushes our flavour into the same DP slot.
-        set('AlignLeftCommand',   new RelayCommand(() => this._align('left'),   hasSel));
-        set('AlignCenterCommand', new RelayCommand(() => this._align('center'), hasSel));
-        set('AlignRightCommand',  new RelayCommand(() => this._align('right'),  hasSel));
-        set('AlignTopCommand',    new RelayCommand(() => this._align('top'),    hasSel));
-        set('AlignMiddleCommand', new RelayCommand(() => this._align('middle'), hasSel));
-        set('AlignBottomCommand', new RelayCommand(() => this._align('bottom'), hasSel));
+        // getter (no setter) and throw. Going through the parent's typed
+        // keys lets us push our flavour into the same DP slot.
+        this.set_property_value(DiagramVM.AlignLeftCommandKey,   new RelayCommand(() => this._align('left'),   hasSel));
+        this.set_property_value(DiagramVM.AlignCenterCommandKey, new RelayCommand(() => this._align('center'), hasSel));
+        this.set_property_value(DiagramVM.AlignRightCommandKey,  new RelayCommand(() => this._align('right'),  hasSel));
+        this.set_property_value(DiagramVM.AlignTopCommandKey,    new RelayCommand(() => this._align('top'),    hasSel));
+        this.set_property_value(DiagramVM.AlignMiddleCommandKey, new RelayCommand(() => this._align('middle'), hasSel));
+        this.set_property_value(CommandsVM.AlignBottomCommandKey, new RelayCommand(() => this._align('bottom'), hasSel));
 
         // ── Stubs for surfaces that don't need real behaviour ─────────
-        set('UndoCommand', new RelayCommand(() => setStatus('Undo — no-op stub.')));
-        set('RedoCommand', new RelayCommand(() => setStatus('Redo — no-op stub.')));
+        this.set_property_value(CommandsVM.UndoCommandKey, new RelayCommand(() => setStatus('Undo — no-op stub.')));
+        this.set_property_value(CommandsVM.RedoCommandKey, new RelayCommand(() => setStatus('Redo — no-op stub.')));
 
         this._clipboard = [];
     }
@@ -179,16 +180,17 @@ export class CommandsVM extends DiagramVM
         return node;
     }
 
-    get HasSelection()       { return this._get_property_value_by_name('HasSelection'); }
-    get CutCommand()         { return this._get_property_value_by_name('CutCommand'); }
-    get CopyCommand()        { return this._get_property_value_by_name('CopyCommand'); }
-    get PasteCommand()       { return this._get_property_value_by_name('PasteCommand'); }
-    get DeleteCommand()      { return this._get_property_value_by_name('DeleteCommand'); }
-    get DuplicateCommand()   { return this._get_property_value_by_name('DuplicateCommand'); }
-    get SelectAllCommand()   { return this._get_property_value_by_name('SelectAllCommand'); }
-    get AlignBottomCommand() { return this._get_property_value_by_name('AlignBottomCommand'); }
-    get UndoCommand()        { return this._get_property_value_by_name('UndoCommand'); }
-    get RedoCommand()        { return this._get_property_value_by_name('RedoCommand'); }
+    get HasSelection()       { return this.get_property_value(CommandsVM.HasSelectionKey); }
+    set HasSelection(v)      { this.set_property_value(CommandsVM.HasSelectionKey, v); }
+    get CutCommand()         { return this.get_property_value(CommandsVM.CutCommandKey); }
+    get CopyCommand()        { return this.get_property_value(CommandsVM.CopyCommandKey); }
+    get PasteCommand()       { return this.get_property_value(CommandsVM.PasteCommandKey); }
+    get DeleteCommand()      { return this.get_property_value(CommandsVM.DeleteCommandKey); }
+    get DuplicateCommand()   { return this.get_property_value(CommandsVM.DuplicateCommandKey); }
+    get SelectAllCommand()   { return this.get_property_value(CommandsVM.SelectAllCommandKey); }
+    get AlignBottomCommand() { return this.get_property_value(CommandsVM.AlignBottomCommandKey); }
+    get UndoCommand()        { return this.get_property_value(CommandsVM.UndoCommandKey); }
+    get RedoCommand()        { return this.get_property_value(CommandsVM.RedoCommandKey); }
 
     /** Bootstrap calls this when the Diagram's SelectionChanged fires.
      *  Flipping HasSelection re-pulses CanExecuteChanged on every
@@ -196,7 +198,7 @@ export class CommandsVM extends DiagramVM
      *  refreshes in lockstep. */
     PublishSelectionState(hasSelection) {
         if (this.HasSelection === hasSelection) return;
-        this._set_property_value_by_name('HasSelection', hasSelection);
+        this.set_property_value(CommandsVM.HasSelectionKey, hasSelection);
         this._raiseGated();
     }
 
@@ -228,6 +230,6 @@ export class CommandsVM extends DiagramVM
             case 'bottom': { const max = Math.max(...sel.map((n) => n.Y + NODE_H)); for (const n of sel) n.Y = max - NODE_H; break; }
             case 'middle': { const avg = sel.reduce((s, n) => s + n.Y + NODE_H / 2, 0) / sel.length; for (const n of sel) n.Y = avg - NODE_H / 2; break; }
         }
-        this._set_property_value_by_name('Status', `Align ${mode}: ${sel.length} node${sel.length === 1 ? '' : 's'}.`);
+        this.set_property_value(DiagramVM.StatusKey, `Align ${mode}: ${sel.length} node${sel.length === 1 ? '' : 's'}.`);
     }
 }

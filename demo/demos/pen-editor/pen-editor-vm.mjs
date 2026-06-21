@@ -17,52 +17,50 @@ import {
 
 export class PenEditorDemoVM extends Model
 {
-    static {
-        Model.RegisterProperty(PenEditorDemoVM, 'Pen',          undefined, MetaData.None);
-        Model.RegisterProperty(PenEditorDemoVM, 'BrushSummary', '',        MetaData.None);
-        Model.RegisterProperty(PenEditorDemoVM, 'ThicknessReadout', '',    MetaData.None);
-        Model.RegisterProperty(PenEditorDemoVM, 'DashReadout',  '',        MetaData.None);
-        Model.RegisterProperty(PenEditorDemoVM, 'CapReadout',   '',        MetaData.None);
-        Model.RegisterProperty(PenEditorDemoVM, 'JoinReadout',  '',        MetaData.None);
-        Model.RegisterProperty(PenEditorDemoVM, 'MiterReadout', '',        MetaData.None);
-    }
+    static PenKey              = Model.RegisterProperty(PenEditorDemoVM, 'Pen',              undefined, MetaData.None);
+    static BrushSummaryKey     = Model.RegisterProperty(PenEditorDemoVM, 'BrushSummary',     '',        MetaData.None);
+    static ThicknessReadoutKey = Model.RegisterProperty(PenEditorDemoVM, 'ThicknessReadout', '',        MetaData.None);
+    static DashReadoutKey      = Model.RegisterProperty(PenEditorDemoVM, 'DashReadout',      '',        MetaData.None);
+    static CapReadoutKey       = Model.RegisterProperty(PenEditorDemoVM, 'CapReadout',       '',        MetaData.None);
+    static JoinReadoutKey      = Model.RegisterProperty(PenEditorDemoVM, 'JoinReadout',      '',        MetaData.None);
+    static MiterReadoutKey     = Model.RegisterProperty(PenEditorDemoVM, 'MiterReadout',     '',        MetaData.None);
 
     constructor() {
         super();
         const pen = new Pen(new SolidColorBrush(Color.FromHex('#f59e0b')), 4);
-        this._set_property_value_by_name('Pen', pen);
+        this.set_property_value(PenEditorDemoVM.PenKey, pen);
         this._installPenWatchers(pen);
         this._refreshReadouts();
     }
 
-    get Pen()             { return this._get_property_value_by_name('Pen'); }
-    get BrushSummary()    { return this._get_property_value_by_name('BrushSummary'); }
-    get ThicknessReadout(){ return this._get_property_value_by_name('ThicknessReadout'); }
-    get DashReadout()     { return this._get_property_value_by_name('DashReadout'); }
-    get CapReadout()      { return this._get_property_value_by_name('CapReadout'); }
-    get JoinReadout()     { return this._get_property_value_by_name('JoinReadout'); }
-    get MiterReadout()    { return this._get_property_value_by_name('MiterReadout'); }
+    get Pen()             { return this.get_property_value(PenEditorDemoVM.PenKey); }
+    set Pen(v)            { this.set_property_value(PenEditorDemoVM.PenKey, v); }
+    get BrushSummary()    { return this.get_property_value(PenEditorDemoVM.BrushSummaryKey); }
+    get ThicknessReadout(){ return this.get_property_value(PenEditorDemoVM.ThicknessReadoutKey); }
+    get DashReadout()     { return this.get_property_value(PenEditorDemoVM.DashReadoutKey); }
+    get CapReadout()      { return this.get_property_value(PenEditorDemoVM.CapReadoutKey); }
+    get JoinReadout()     { return this.get_property_value(PenEditorDemoVM.JoinReadoutKey); }
+    get MiterReadout()    { return this.get_property_value(PenEditorDemoVM.MiterReadoutKey); }
 
     // Subscribe to every property on the bound Pen so the status
     // strings track live edits. Plain field for the unsubscribe thunks
     // — view-invisible state, fine to live off the DP surface.
     _installPenWatchers(pen) {
         const refresh = () => this._refreshReadouts();
-        for (const prop of ['Brush', 'Thickness', 'DashStyle', 'LineCap', 'LineJoin', 'MiterLimit']) {
-            pen._add_property_changed_listener_by_name(prop, refresh);
+        for (const key of [Pen.BrushKey, Pen.ThicknessKey, Pen.DashStyleKey, Pen.LineCapKey, Pen.LineJoinKey, Pen.MiterLimitKey]) {
+            pen.AddPropertyChangedListener(key, refresh);
         }
     }
 
     _refreshReadouts() {
         const pen = this.Pen;
         if (pen === undefined) return;
-        const set = (name, value) => this._set_property_value_by_name(name, value);
-        set('BrushSummary',    describeBrush(pen.Brush));
-        set('ThicknessReadout', `Thickness ${formatNum(pen.Thickness)} px`);
-        set('DashReadout',      `Dash ${describeDash(pen.DashStyle)}`);
-        set('CapReadout',       `Cap ${pen.LineCap}`);
-        set('JoinReadout',      `Join ${pen.LineJoin}`);
-        set('MiterReadout',     `Miter limit ${formatNum(pen.MiterLimit)}`);
+        this.set_property_value(PenEditorDemoVM.BrushSummaryKey,     describeBrush(pen.Brush));
+        this.set_property_value(PenEditorDemoVM.ThicknessReadoutKey, `Thickness ${formatNum(pen.Thickness)} px`);
+        this.set_property_value(PenEditorDemoVM.DashReadoutKey,      `Dash ${describeDash(pen.DashStyle)}`);
+        this.set_property_value(PenEditorDemoVM.CapReadoutKey,       `Cap ${pen.LineCap}`);
+        this.set_property_value(PenEditorDemoVM.JoinReadoutKey,      `Join ${pen.LineJoin}`);
+        this.set_property_value(PenEditorDemoVM.MiterReadoutKey,     `Miter limit ${formatNum(pen.MiterLimit)}`);
     }
 }
 

@@ -118,14 +118,14 @@ Lowers to (illustrative — variable names will differ):
 
 ```js
 const _listBox = new ListBox();
-_listBox._set_property_value_by_name("ItemsSource", DataContextBinding(_listBox, "LeftItems"));
+_listBox.set_property_value(ItemsControl.ItemsSourceKey, DataContextBinding(_listBox, "LeftItems"));
 
 const _tooltipBehavior = new TooltipBehavior();
-_tooltipBehavior._set_property_value_by_name("Text", "left column");
+_tooltipBehavior.set_property_value(TooltipBehavior.TextKey, "left column");
 _listBox.AddBehavior(_tooltipBehavior);
 
 const _listReorderBehavior = new ListReorderBehavior();
-_listReorderBehavior._set_property_value_by_name("FromIndexFormat", "mural/reorder/idx");
+_listReorderBehavior.set_property_value(ListReorderBehavior.FromIndexFormatKey, "mural/reorder/idx");
 _listBox.AddBehavior(_listReorderBehavior);
 ```
 

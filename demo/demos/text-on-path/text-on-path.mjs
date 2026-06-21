@@ -126,28 +126,24 @@ function attachBehaviors(view, vm) {
     // Listen to every relevant DP — explicit per-property listeners
     // rather than a blanket OnPropertyChanged override (per CLAUDE.md
     // memory rule about VM purity; bootstrap reads DPs as a consumer).
-    const handlers = {
-        Text:          updateGlyphs,
-        PathKey:       updateBoth,
-        FontSize:      updateGlyphs,
-        SideOffset:    updateGlyphs,
-        IsFontLoaded:  updateGlyphs,
-        ShowPath:      updatePath,
-        ShowGlyphs:    updateGlyphs,
-        PathColorHex:  updatePathColor,
-        GlyphColorHex: updateGlyphColor,
-    };
-    for (const name of Object.keys(handlers)) {
-        vm._add_property_changed_listener_by_name(name, handlers[name]);
-    }
+    const subs = [
+        [TextOnPathVM.TextKey,          updateGlyphs],
+        [TextOnPathVM.PathKeyKey,       updateBoth],
+        [TextOnPathVM.FontSizeKey,      updateGlyphs],
+        [TextOnPathVM.SideOffsetKey,    updateGlyphs],
+        [TextOnPathVM.IsFontLoadedKey,  updateGlyphs],
+        [TextOnPathVM.ShowPathKey,      updatePath],
+        [TextOnPathVM.ShowGlyphsKey,    updateGlyphs],
+        [TextOnPathVM.PathColorHexKey,  updatePathColor],
+        [TextOnPathVM.GlyphColorHexKey, updateGlyphColor],
+    ];
+    for (const [key, h] of subs) vm.AddPropertyChangedListener(key, h);
 
     // Initial paint.
     updateBoth();
 
     return function detach() {
-        for (const name of Object.keys(handlers)) {
-            vm._remove_property_changed_listener_by_name(name, handlers[name]);
-        }
+        for (const [key, h] of subs) vm.RemovePropertyChangedListener(key, h);
         canvas.RemoveChild(pathView);
         canvas.RemoveChild(glyphView);
     };

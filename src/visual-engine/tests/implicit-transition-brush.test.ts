@@ -29,7 +29,7 @@ class BrushVisualTest extends Element
             new SolidColorBrush(Color.Black), MetaData.None);
     }
     public get Brush():  SolidColorBrush { return this.get_property_value(resolveKey(this, undefined, 'Brush')); }
-    public set Brush(v: SolidColorBrush) { this._set_property_value_by_name('Brush', v); }
+    public set Brush(v: SolidColorBrush) { this.set_property_value(resolveKey(this, undefined, 'Brush'), v); }
 }
 
 function freshClock(): ManualClock

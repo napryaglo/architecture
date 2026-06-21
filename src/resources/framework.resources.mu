@@ -2271,7 +2271,12 @@ resources MuralFramework {
                          BorderThickness = (1),
                          CornerRadius    = @ShapeExtraSmall,
                          Padding         = (@Spacing3, @Spacing2, @Spacing3, @Spacing2) ] {
-            StackPanel [Orientation=Horizontal] {
+            // HorizontalAlignment=Left makes the StackPanel shrink-wrap
+            // to its children's measured width inside the Border. Stops
+            // a stretched parent from arranging the StackPanel at a
+            // width that disagrees with the Border's wrap rect (which
+            // is what was pushing the chevron outside the stroke).
+            StackPanel [Orientation=Horizontal, HorizontalAlignment=Left] {
                 Border [ Width        = 22,
                          Height       = 18,
                          CornerRadius = 3,
@@ -3314,10 +3319,14 @@ resources MuralFramework {
             StackPanel [Orientation=Vertical] {
                 ContentPresenter [Content=$Content]
                 // Shortcut hint — M3 LabelSmall, 70% opacity for
-                // secondary emphasis. Foreground inherits
-                // @InverseOnSurface from the Tooltip Style.
+                // secondary emphasis. Foreground is set explicitly
+                // because the default TextBlock Style (basic.mu)
+                // sets Foreground=@OnSurface at higher precedence
+                // than the @InverseOnSurface that would otherwise
+                // inherit from the Tooltip.
                 TextBlock x:name="PART_Shortcut"
                           [Style=@LabelSmall, Text=$Shortcut,
+                           Foreground=@InverseOnSurface,
                            Opacity=0.7,
                            Margin=(0,2,0,0)]
             }
@@ -3356,8 +3365,15 @@ resources MuralFramework {
     // DP grows a built-in "hide when empty string" helper.
     DataTemplate [DataType=CommandBase] {
         StackPanel [Orientation=Vertical] {
-            TextBlock [Style=@TitleSmall, Text=$Text, TextWrapping=Wrap]
+            // Foreground is pinned to @InverseOnSurface because the
+            // default Style [TargetType=TextBlock] (basic.mu) sets
+            // Foreground=@OnSurface at higher DP precedence than the
+            // value that would otherwise inherit from the Tooltip.
+            TextBlock [Style=@TitleSmall, Text=$Text,
+                       Foreground=@InverseOnSurface,
+                       TextWrapping=Wrap]
             TextBlock [Style=@BodySmall,  Text=$Description,
+                       Foreground=@InverseOnSurface,
                        TextWrapping=Wrap,
                        Opacity=0.7,
                        Margin=(0,2,0,0)]

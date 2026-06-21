@@ -19,7 +19,7 @@ export class MenuVM extends Model
 
     constructor() {
         super();
-        const setStatus = (msg) => this._set_property_value_by_name('Status', msg);
+        const setStatus = (msg) => this.set_property_value(MenuVM.StatusKey, msg);
         this.NewCommand    = new RelayCommand(() => setStatus('New — empty document.'));
         this.OpenCommand   = new RelayCommand(() => setStatus('Open — read from disk.'));
         this.SaveCommand   = new RelayCommand(() => setStatus('Save — written to disk.'));
@@ -40,10 +40,10 @@ export class MenuVM extends Model
         });
     }
 
-    get Status()       { return this._get_property_value_by_name('Status'); }
-    set Status(v)      { this._set_property_value_by_name('Status', v); }
-    get ShowGrid()     { return this._get_property_value_by_name('ShowGrid'); }
-    set ShowGrid(v)    { this._set_property_value_by_name('ShowGrid', v); }
-    get SnapToGrid()   { return this._get_property_value_by_name('SnapToGrid'); }
-    set SnapToGrid(v)  { this._set_property_value_by_name('SnapToGrid', v); }
+    get Status()       { return this.get_property_value(MenuVM.StatusKey); }
+    set Status(v)      { this.set_property_value(MenuVM.StatusKey, v); }
+    get ShowGrid()     { return this.get_property_value(MenuVM.ShowGridKey); }
+    set ShowGrid(v)    { this.set_property_value(MenuVM.ShowGridKey, v); }
+    get SnapToGrid()   { return this.get_property_value(MenuVM.SnapToGridKey); }
+    set SnapToGrid(v)  { this.set_property_value(MenuVM.SnapToGridKey, v); }
 }

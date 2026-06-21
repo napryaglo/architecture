@@ -108,7 +108,7 @@ describe('SolidColorBrushAnimation — DynamicResource scheme-transition integra
             Model.RegisterProperty(BrushHost, 'Background', undefined, MetaData.None);
         }
         public get Background(): unknown { return this.get_property_value(resolveKey(this, undefined, 'Background')); }
-        public set Background(v: unknown) { this._set_property_value_by_name('Background', v); }
+        public set Background(v: unknown) { this.set_property_value(resolveKey(this, undefined, 'Background'), v); }
         protected override MeasureOverride(_a: Size): Size { return Size.Zero; }
         protected override RenderOverride(_dc: DrawingContext): void { }
     }
@@ -136,7 +136,7 @@ describe('SolidColorBrushAnimation — DynamicResource scheme-transition integra
 
         const host = new BrushHost();
         root.AddChild(host);
-        host._set_property_value_by_name('Background', DynamicResource(host, 'Brush'));
+        host.set_property_value(resolveKey(host, undefined, 'Background'), DynamicResource(host, 'Brush'));
         assert.ok(host.Background instanceof SolidColorBrush);
         assert.equal((host.Background as SolidColorBrush).Color.R, 255);
 
@@ -177,7 +177,7 @@ describe('SolidColorBrushAnimation — DynamicResource scheme-transition integra
 
         const host = new BrushHost();
         root.AddChild(host);
-        host._set_property_value_by_name('Background', DynamicResource(host, 'Brush'));
+        host.set_property_value(resolveKey(host, undefined, 'Background'), DynamicResource(host, 'Brush'));
 
         // Replace the brush with a plain number — the factory rejects
         // the pair and the binding snaps.

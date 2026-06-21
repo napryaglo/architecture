@@ -323,7 +323,7 @@ describe('ItemsControl', () => {
         const ic = new TestIC();
         ic.ItemsPanel   = () => new TestPanel();
         ic.ItemTemplate = makeTemplate();
-        ic._set_property_value_by_name(ItemLeaf, 'Tint', 'mint');
+        ic.set_property_value(resolveKey(ic, ItemLeaf, 'Tint'), 'mint');
         ic.Items        = ['a', 'b', 'c'];
 
         for (const c of ic.logicalChildren)
@@ -332,7 +332,7 @@ describe('ItemsControl', () => {
         }
 
         // Changing the value after mount also propagates.
-        ic._set_property_value_by_name(ItemLeaf, 'Tint', 'rose');
+        ic.set_property_value(resolveKey(ic, ItemLeaf, 'Tint'), 'rose');
         for (const c of ic.logicalChildren)
         {
             assert.equal((c as ItemLeaf).Tint, 'rose');

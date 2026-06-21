@@ -89,14 +89,16 @@ when that sibling changes — no explicit `CoerceValue(dp)` call needed:
 
 ```ts
 // Value clamps to whatever Ceiling currently is.
-Model.RegisterProperty(Range, 'Ceiling', 100, MetaData.None);
-Model.RegisterProperty(Range, 'Value', 0, MetaData.None,
-    (m, v) => Math.min(v as number, m._get_property_value_by_name('Ceiling')));
+class Range extends Model {
+    static CeilingKey = Model.RegisterProperty(Range, 'Ceiling', 100, MetaData.None);
+    static ValueKey   = Model.RegisterProperty(Range, 'Value',   0,   MetaData.None,
+        (m, v) => Math.min(v as number, (m as Range).get_property_value(Range.CeilingKey)));
+}
 
 const r = new Range();
-r._set_property_value_by_name('Value',   80);  // reads as 80
-r._set_property_value_by_name('Ceiling', 50);  // Value re-coerces → 50
-r._set_property_value_by_name('Ceiling', 200); // raw 80 re-emerges
+r.set_property_value(Range.ValueKey,   80);  // reads as 80
+r.set_property_value(Range.CeilingKey, 50);  // Value re-coerces → 50
+r.set_property_value(Range.CeilingKey, 200); // raw 80 re-emerges
 ```
 
 `GetValueSource` returns `CoercedValue` when a coerce callback is
@@ -261,10 +263,10 @@ arrays get the same behavior via a Proxy wrapper minted on first read
 (`observe_array(arr)` returns the same proxy on repeated calls). The
 caveat for plain arrays: only mutations routed through the proxy
 notify. The proxy is what the binding returns and what
-`view._get_property_value_by_name(...)` resolves to when the property
-holds the binding; mutating the underlying raw array directly bypasses
-the trap and won't push. For guaranteed reactivity regardless of how
-the collection is held, use `ObservableCollection<T>`.
+`view.get_property_value(SomeKey)` resolves to when the property holds
+the binding; mutating the underlying raw array directly bypasses the
+trap and won't push. For guaranteed reactivity regardless of how the
+collection is held, use `ObservableCollection<T>`.
 
 #### Collection-as-leaf pulses
 

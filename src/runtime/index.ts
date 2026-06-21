@@ -109,6 +109,8 @@ export {
     type DragEventHandlers,
     type DragEventInit,
     type DragPreviewKind,
+    type DragStartCallback,
+    type DragStartSpec,
     type FocusEventHandlers,
     type KeyEventInit,
     type KeyboardEventHandlers,

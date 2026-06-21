@@ -21,7 +21,7 @@ import { Storyboard } from './animation/storyboard.js';
 import type { AnimationTimeline } from './animation/timeline.js';
 import { applyImplicitTransition } from './animation/implicit-transition-engine.js';
 import { PropertyTransition } from './animation/property-transition.js';
-import { DragDrop, DragDropEffects, type DataObject, type DragPreviewKind } from './drag-drop.js';
+import { DragDrop, type DragStartCallback } from './drag-drop.js';
 import type { Effect } from './drawing/effect.js';
 import type { Transform } from './drawing/transform.js';
 import type { Geometry } from './geometry/geometry.js';
@@ -401,23 +401,10 @@ export class Visual extends Model
     public static readonly IsDraggableKey = Model.RegisterProperty<boolean>(
         Visual, 'IsDraggable', false, MetaData.None);
 
-    public static readonly OnDragStartKey = Model.RegisterProperty<
-        ((source: Visual) =>
-            {
-                data: DataObject;
-                effects: DragDropEffects;
-                preview?: DragPreviewKind;
-                // Optional source-side hooks (backlog 8.3). When
-                // returned, the framework wires them onto the
-                // freshly-started DragSession before DoDragDrop hands
-                // control back to the InputManager. Lets a declarative
-                // drag source attach GiveFeedback / QueryContinueDrag
-                // without imperatively reaching into the session.
-                onFeedback?:      (effect: DragDropEffects) => void;
-                onContinueQuery?: () => boolean;
-            } | null
-        ) | undefined
-    >(Visual, 'OnDragStart', undefined, MetaData.None);
+    // Declarative drag-source callback. See `DragStartCallback` /
+    // `DragStartSpec` in drag-drop.ts for the return-shape contract.
+    public static readonly OnDragStartKey = Model.RegisterProperty<DragStartCallback | undefined>(
+        Visual, 'OnDragStart', undefined, MetaData.None);
 
     // Focusable — opt-in for keyboard focus. Default false so a random
     // Border / TextBlock / Panel never accidentally swallows keys;
@@ -559,30 +546,14 @@ export class Visual extends Model
     public get IsDraggable(): boolean { return this.get_property_value(Visual.IsDraggableKey); }
     public set IsDraggable(v: boolean) { this.set_property_value(Visual.IsDraggableKey, v); }
 
-    public get OnDragStart():
-        ((source: Visual) =>
-            {
-                data: DataObject;
-                effects: DragDropEffects;
-                preview?: DragPreviewKind;
-                onFeedback?:      (effect: DragDropEffects) => void;
-                onContinueQuery?: () => boolean;
-            } | null
-        ) | undefined
+    public get OnDragStart(): DragStartCallback | undefined
     {
         return this.get_property_value(Visual.OnDragStartKey);
     }
-    public set OnDragStart(
-        v: ((source: Visual) =>
-            {
-                data: DataObject;
-                effects: DragDropEffects;
-                preview?: DragPreviewKind;
-                onFeedback?:      (effect: DragDropEffects) => void;
-                onContinueQuery?: () => boolean;
-            } | null
-        ) | undefined,
-    ) { this.set_property_value(Visual.OnDragStartKey, v); }
+    public set OnDragStart(v: DragStartCallback | undefined)
+    {
+        this.set_property_value(Visual.OnDragStartKey, v);
+    }
 
     // Opt-in for keyboard focus. Controls that handle keyboard input
     // (TextBox, Button) flip this on in their constructor; everything

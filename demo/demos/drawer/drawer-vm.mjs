@@ -15,29 +15,27 @@ import { Drawer, DrawerVariant } from '@visualisation-sub/mural/framework';
 
 export class DrawerVM extends Model
 {
-    static {
-        Model.RegisterProperty(DrawerVM, 'NavOpen',      false,     MetaData.None);
-        Model.RegisterProperty(DrawerVM, 'OptionsOpen',  false,     MetaData.None);
-        Model.RegisterProperty(DrawerVM, 'ToggleNav',    undefined, MetaData.None);
-        Model.RegisterProperty(DrawerVM, 'OpenOptions',  undefined, MetaData.None);
-        Model.RegisterProperty(DrawerVM, 'CloseOptions', undefined, MetaData.None);
-    }
+    static NavOpenKey      = Model.RegisterProperty(DrawerVM, 'NavOpen',      false,     MetaData.None);
+    static OptionsOpenKey  = Model.RegisterProperty(DrawerVM, 'OptionsOpen',  false,     MetaData.None);
+    static ToggleNavKey    = Model.RegisterProperty(DrawerVM, 'ToggleNav',    undefined, MetaData.None);
+    static OpenOptionsKey  = Model.RegisterProperty(DrawerVM, 'OpenOptions',  undefined, MetaData.None);
+    static CloseOptionsKey = Model.RegisterProperty(DrawerVM, 'CloseOptions', undefined, MetaData.None);
 
-    get NavOpen()      { return this._get_property_value_by_name('NavOpen'); }
-    set NavOpen(v)     { this._set_property_value_by_name('NavOpen', v); }
-    get OptionsOpen()  { return this._get_property_value_by_name('OptionsOpen'); }
-    set OptionsOpen(v) { this._set_property_value_by_name('OptionsOpen', v); }
-    get ToggleNav()    { return this._get_property_value_by_name('ToggleNav'); }
-    get OpenOptions()  { return this._get_property_value_by_name('OpenOptions'); }
-    get CloseOptions() { return this._get_property_value_by_name('CloseOptions'); }
+    get NavOpen()      { return this.get_property_value(DrawerVM.NavOpenKey); }
+    set NavOpen(v)     { this.set_property_value(DrawerVM.NavOpenKey, v); }
+    get OptionsOpen()  { return this.get_property_value(DrawerVM.OptionsOpenKey); }
+    set OptionsOpen(v) { this.set_property_value(DrawerVM.OptionsOpenKey, v); }
+    get ToggleNav()    { return this.get_property_value(DrawerVM.ToggleNavKey); }
+    get OpenOptions()  { return this.get_property_value(DrawerVM.OpenOptionsKey); }
+    get CloseOptions() { return this.get_property_value(DrawerVM.CloseOptionsKey); }
 
     constructor() {
         super();
-        this._set_property_value_by_name('ToggleNav',
+        this.set_property_value(DrawerVM.ToggleNavKey,
             new RelayCommand(() => { this.NavOpen = !this.NavOpen; }));
-        this._set_property_value_by_name('OpenOptions',
+        this.set_property_value(DrawerVM.OpenOptionsKey,
             new RelayCommand(() => { this.OptionsOpen = true; }));
-        this._set_property_value_by_name('CloseOptions',
+        this.set_property_value(DrawerVM.CloseOptionsKey,
             new RelayCommand(() => { this.OptionsOpen = false; }));
     }
 

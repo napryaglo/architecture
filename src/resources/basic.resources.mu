@@ -45,8 +45,8 @@ resources MuralBasic {
     //
     // Explicit Foreground/FontSize/etc. setters on individual TextBlocks
     // still win because the .mu's `[Foreground=...]` writes go through
-    // _set_property_value_by_name at the Local tier, which outranks the
-    // Style tier.
+    // set_property_value at the Local tier, which outranks the Style
+    // tier.
     Style [TargetType=TextBlock] {
         Foreground = @OnSurface;
         FontFamily = @FontFamily;

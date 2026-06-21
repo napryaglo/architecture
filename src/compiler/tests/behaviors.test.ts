@@ -64,7 +64,7 @@ describe('compile — Behaviors block', () => {
         assert.match(js, /new StubBehavior\(\)/);
         assert.match(
             js,
-            /\._set_property_value_by_name\("Label", "hello"\);/,
+            /\.set_property_value\(\w+\.LabelKey, "hello"\);/,
         );
         // The behavior var is attached to the parent Border via
         // AddBehavior — emitted right after the behavior's setters.

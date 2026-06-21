@@ -21,15 +21,13 @@ export const PLAYFIELD_H = BOUNDS_H;
 
 export class BouncingBallVM extends Model
 {
-    static {
-        // X / Y are the top-left of the ball's bounding box, in
-        // playfield-local pixel coordinates. The view binds Ellipse's
-        // Canvas.Left / Canvas.Top straight to them, so a single Step
-        // call moves the ball on screen via the binding.
-        Model.RegisterProperty(BouncingBallVM, 'X',        0,        MetaData.None);
-        Model.RegisterProperty(BouncingBallVM, 'Y',        0,        MetaData.None);
-        Model.RegisterProperty(BouncingBallVM, 'Diameter', DIAMETER, MetaData.None);
-    }
+    // X / Y are the top-left of the ball's bounding box, in
+    // playfield-local pixel coordinates. The view binds Ellipse's
+    // Canvas.Left / Canvas.Top straight to them, so a single Step
+    // call moves the ball on screen via the binding.
+    static XKey        = Model.RegisterProperty(BouncingBallVM, 'X',        0,        MetaData.None);
+    static YKey        = Model.RegisterProperty(BouncingBallVM, 'Y',        0,        MetaData.None);
+    static DiameterKey = Model.RegisterProperty(BouncingBallVM, 'Diameter', DIAMETER, MetaData.None);
 
     constructor() {
         super();
@@ -42,13 +40,16 @@ export class BouncingBallVM extends Model
 
         // Seed the ball roughly centred so the first frame doesn't draw
         // it clipped against the corner.
-        this._set_property_value_by_name('X', (BOUNDS_W - DIAMETER) / 2);
-        this._set_property_value_by_name('Y', (BOUNDS_H - DIAMETER) / 3);
+        this.set_property_value(BouncingBallVM.XKey, (BOUNDS_W - DIAMETER) / 2);
+        this.set_property_value(BouncingBallVM.YKey, (BOUNDS_H - DIAMETER) / 3);
     }
 
-    get X()        { return this._get_property_value_by_name('X'); }
-    get Y()        { return this._get_property_value_by_name('Y'); }
-    get Diameter() { return this._get_property_value_by_name('Diameter'); }
+    get X()        { return this.get_property_value(BouncingBallVM.XKey); }
+    set X(v)       { this.set_property_value(BouncingBallVM.XKey, v); }
+    get Y()        { return this.get_property_value(BouncingBallVM.YKey); }
+    set Y(v)       { this.set_property_value(BouncingBallVM.YKey, v); }
+    get Diameter() { return this.get_property_value(BouncingBallVM.DiameterKey); }
+    set Diameter(v){ this.set_property_value(BouncingBallVM.DiameterKey, v); }
 
     // Integrate position by velocity * dt, then reflect off any wall
     // the ball has crossed. Reflection uses the "mirror back" trick —
@@ -69,7 +70,7 @@ export class BouncingBallVM extends Model
         if (ny < 0)         { ny = -ny;                 this._vy = -this._vy; }
         else if (ny > bottom){ ny = 2 * bottom - ny;    this._vy = -this._vy; }
 
-        this._set_property_value_by_name('X', nx);
-        this._set_property_value_by_name('Y', ny);
+        this.set_property_value(BouncingBallVM.XKey, nx);
+        this.set_property_value(BouncingBallVM.YKey, ny);
     }
 }

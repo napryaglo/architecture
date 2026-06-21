@@ -170,7 +170,14 @@ export class TextBlock extends Element
 
     protected override MeasureOverride(availableSize: Size): Size
     {
-        const text = this.Text;
+        // Defensive coercion of undefined → '' for the case where a
+        // binding pushes undefined through (typical: ContentControl's
+        // DataTemplate binds Text to a source property that's
+        // momentarily undefined during a content swap). The DP itself
+        // is typed `string`, but the binding pipeline can deliver
+        // undefined transiently — and the measurer's Array.from(text)
+        // throws on undefined.
+        const text = this.Text ?? '';
         if (text === '')
         {
             this._lines = [];

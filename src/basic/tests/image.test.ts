@@ -149,7 +149,7 @@ describe('SvgDrawingContext.DrawImage emits <image>', () => {
     test('Stretch.Fill emits preserveAspectRatio="none"', () => {
         const src = new BitmapImage('x');
         const img = new Image(src);
-        img.Stretch = Stretch.Background;
+        img.Stretch = Stretch.Fill;
         img.Measure(new Size(50, 50));
         img.Arrange(new Rect(0, 0, 50, 50));
         const dc = new SvgDrawingContext();

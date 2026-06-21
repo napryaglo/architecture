@@ -25,7 +25,7 @@ class NamedTest extends Element
         Model.RegisterProperty(NamedTest, 'Width', 0, MetaData.None);
     }
     public get Width(): number { return this.get_property_value(resolveKey(this, undefined, 'Width')); }
-    public set Width(v: number) { this._set_property_value_by_name('Width', v); }
+    public set Width(v: number) { this.set_property_value(resolveKey(this, undefined, 'Width'), v); }
 }
 
 function freshClock(): ManualClock

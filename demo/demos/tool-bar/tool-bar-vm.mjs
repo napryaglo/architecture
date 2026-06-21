@@ -22,7 +22,7 @@ export class ToolBarVM extends Model
 
     constructor() {
         super();
-        const setStatus = (msg) => this._set_property_value_by_name('Status', msg);
+        const setStatus = (msg) => this.set_property_value(ToolBarVM.StatusKey, msg);
         this.SaveCommand   = new RelayCommand(() => setStatus('Save — saved.'));
         this.CutCommand    = new RelayCommand(() => setStatus('Cut.'));
         this.CopyCommand   = new RelayCommand(() => setStatus('Copy.'));
@@ -40,8 +40,8 @@ export class ToolBarVM extends Model
         });
     }
 
-    get Status()        { return this._get_property_value_by_name('Status'); }
-    set Status(v)       { this._set_property_value_by_name('Status', v); }
-    get HasSelection()  { return this._get_property_value_by_name('HasSelection'); }
-    set HasSelection(v) { this._set_property_value_by_name('HasSelection', v); }
+    get Status()        { return this.get_property_value(ToolBarVM.StatusKey); }
+    set Status(v)       { this.set_property_value(ToolBarVM.StatusKey, v); }
+    get HasSelection()  { return this.get_property_value(ToolBarVM.HasSelectionKey); }
+    set HasSelection(v) { this.set_property_value(ToolBarVM.HasSelectionKey, v); }
 }

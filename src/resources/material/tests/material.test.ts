@@ -30,7 +30,7 @@ class BrushTarget extends Element
     }
     public set Brush(v: SolidColorBrush | undefined)
     {
-        this._set_property_value_by_name('Brush', v);
+        this.set_property_value(resolveKey(this, undefined, 'Brush'), v);
     }
     protected override MeasureOverride(_a: Size): Size { return Size.Zero; }
     protected override RenderOverride(_dc: DrawingContext): void { }
@@ -120,8 +120,8 @@ describe('Material — DynamicResource binding into a token', () => {
         // The DynamicResource binding subscribes to
         // Application.current.Resources directly, so the host doesn't
         // need to be tree-attached for theme swaps to propagate.
-        target._set_property_value_by_name(
-            'Brush',
+        target.set_property_value(
+            resolveKey(target, undefined, 'Brush'),
             DynamicResource(target, 'Primary'));
 
         const light = target.Brush;

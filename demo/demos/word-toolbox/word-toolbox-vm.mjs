@@ -32,28 +32,26 @@ const LIST_SEED_COUNT = 2000;
 
 export class WordVM extends Model
 {
-    static {
-        Model.RegisterProperty(WordVM, 'Word',          '',        MetaData.None);
-        Model.RegisterProperty(WordVM, 'BeginDragData', undefined, MetaData.None);
-    }
+    static WordKey          = Model.RegisterProperty(WordVM, 'Word',          '',        MetaData.None);
+    static BeginDragDataKey = Model.RegisterProperty(WordVM, 'BeginDragData', undefined, MetaData.None);
 
     constructor(word) {
         super();
-        this._set_property_value_by_name('Word', word);
+        this.set_property_value(WordVM.WordKey, word);
     }
 
-    get Word()          { return this._get_property_value_by_name('Word'); }
-    get BeginDragData() { return this._get_property_value_by_name('BeginDragData'); }
+    get Word()           { return this.get_property_value(WordVM.WordKey); }
+    set Word(v)          { this.set_property_value(WordVM.WordKey, v); }
+    get BeginDragData()  { return this.get_property_value(WordVM.BeginDragDataKey); }
+    set BeginDragData(v) { this.set_property_value(WordVM.BeginDragDataKey, v); }
 }
 
 export class WordToolboxVM extends Model
 {
-    static {
-        Model.RegisterProperty(WordToolboxVM, 'ToolboxWords', undefined, MetaData.None);
-        Model.RegisterProperty(WordToolboxVM, 'ListBoxWords', undefined, MetaData.None);
-        // Tiny status string — counts only, no per-item details.
-        Model.RegisterProperty(WordToolboxVM, 'Status',       '',        MetaData.None);
-    }
+    static ToolboxWordsKey = Model.RegisterProperty(WordToolboxVM, 'ToolboxWords', undefined, MetaData.None);
+    static ListBoxWordsKey = Model.RegisterProperty(WordToolboxVM, 'ListBoxWords', undefined, MetaData.None);
+    // Tiny status string — counts only, no per-item details.
+    static StatusKey       = Model.RegisterProperty(WordToolboxVM, 'Status',       '',        MetaData.None);
 
     constructor() {
         super();
@@ -64,13 +62,13 @@ export class WordToolboxVM extends Model
         const toolbox = new ObservableCollection();
         for (const w of TOOLBOX_WORDS) {
             const vm = new WordVM(w);
-            vm._set_property_value_by_name('BeginDragData', () => ({
+            vm.set_property_value(WordVM.BeginDragDataKey, () => ({
                 data:    new DataObject().Set(FMT_WORD_COPY, w),
                 effects: DragDropEffects.Copy,
             }));
             toolbox.Add(vm);
         }
-        this._set_property_value_by_name('ToolboxWords', toolbox);
+        this.set_property_value(WordToolboxVM.ToolboxWordsKey, toolbox);
 
         // Listbox seed — large, mutable. Reorder uses indices, so
         // each tile's BeginDragData reads its current index from the
@@ -79,20 +77,23 @@ export class WordToolboxVM extends Model
         const list = new ObservableCollection();
         for (const entry of buildListBoxSeed(LIST_SEED_COUNT)) {
             const vm = new WordVM(entry.Word);
-            vm._set_property_value_by_name('BeginDragData', () => ({
+            vm.set_property_value(WordVM.BeginDragDataKey, () => ({
                 data:    new DataObject().Set(FMT_FROM_INDEX, this._indexOf(vm)),
                 effects: DragDropEffects.Move,
             }));
             list.Add(vm);
         }
-        this._set_property_value_by_name('ListBoxWords', list);
+        this.set_property_value(WordToolboxVM.ListBoxWordsKey, list);
 
         this._refreshStatus();
     }
 
-    get ToolboxWords() { return this._get_property_value_by_name('ToolboxWords'); }
-    get ListBoxWords() { return this._get_property_value_by_name('ListBoxWords'); }
-    get Status()       { return this._get_property_value_by_name('Status'); }
+    get ToolboxWords()  { return this.get_property_value(WordToolboxVM.ToolboxWordsKey); }
+    set ToolboxWords(v) { this.set_property_value(WordToolboxVM.ToolboxWordsKey, v); }
+    get ListBoxWords()  { return this.get_property_value(WordToolboxVM.ListBoxWordsKey); }
+    set ListBoxWords(v) { this.set_property_value(WordToolboxVM.ListBoxWordsKey, v); }
+    get Status()        { return this.get_property_value(WordToolboxVM.StatusKey); }
+    set Status(v)       { this.set_property_value(WordToolboxVM.StatusKey, v); }
 
     // Called by the toolbox-copy drop receiver attached in the
     // bootstrap. Appends a fresh WordVM for `word` with a reorder-
@@ -100,7 +101,7 @@ export class WordToolboxVM extends Model
     OnWordCopied(word) {
         const list = this.ListBoxWords;
         const vm = new WordVM(word);
-        vm._set_property_value_by_name('BeginDragData', () => ({
+        vm.set_property_value(WordVM.BeginDragDataKey, () => ({
             data:    new DataObject().Set(FMT_FROM_INDEX, this._indexOf(vm)),
             effects: DragDropEffects.Move,
         }));
@@ -118,8 +119,8 @@ export class WordToolboxVM extends Model
 
     _refreshStatus() {
         const list = this.ListBoxWords;
-        this._set_property_value_by_name(
-            'Status',
+        this.set_property_value(
+            WordToolboxVM.StatusKey,
             `Toolbox: ${this.ToolboxWords.Count} words · ListBox: ${list.Count} tiles`,
         );
     }

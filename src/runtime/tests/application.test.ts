@@ -26,7 +26,7 @@ class TestLeaf extends Element
         Model.RegisterProperty(TestLeaf, 'Brush', undefined, MetaData.None);
     }
     public get Brush(): unknown { return this.get_property_value(resolveKey(this, undefined, 'Brush')); }
-    public set Brush(v: unknown) { this._set_property_value_by_name('Brush', v); }
+    public set Brush(v: unknown) { this.set_property_value(resolveKey(this, undefined, 'Brush'), v); }
     protected override MeasureOverride(_a: Size): Size { return Size.Zero; }
     protected override RenderOverride(_dc: DrawingContext): void { }
 }

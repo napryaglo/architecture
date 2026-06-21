@@ -113,10 +113,12 @@ export class FabMenu extends FloatingActionButton
     {
         super();
         // Click toggles IsOpen instead of firing a Command. Inherits the
-        // Button click protocol but replaces the OnClick semantic.
-        this.AddRoutedEventListener('Click', (() => {
+        // Button click protocol — Click isn't a routed event (it's a
+        // post-press-edge synthesis on Button), so register via the
+        // Button-specific AddClickHandler.
+        this.AddClickHandler(() => {
             this.IsOpen = !this.IsOpen;
-        }) as (a: unknown) => void);
+        });
     }
 
     protected override OnPropertyChanged(

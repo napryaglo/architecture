@@ -15,6 +15,7 @@ import {
     SolidColorBrush,
     SvgDrawingContext,
 } from '../index.js';
+import { resolveKey } from '../../runtime/model-internals.js';
 
 // Leaf Visual whose MeasureOverride returns a caller-supplied size and
 // whose RenderOverride paints a fixed-color rectangle. Used to drive the
@@ -94,7 +95,7 @@ describe('PresentationTarget invalidation queue', () => {
         const root = new Klass();
         const t = makeTarget(root, 100, 100);
 
-        root._set_property_value_by_name(name, 42);
+        root.set_property_value(resolveKey(root, undefined, name), 42);
 
         const sets = dirty(t);
         assert.ok(sets.measure.has(root));
@@ -110,7 +111,7 @@ describe('PresentationTarget invalidation queue', () => {
         const root = new Klass();
         const t = makeTarget(root, 100, 100);
 
-        root._set_property_value_by_name(name, 1);
+        root.set_property_value(resolveKey(root, undefined, name), 1);
 
         const sets = dirty(t);
         assert.equal(sets.measure.size, 0);
@@ -123,7 +124,7 @@ describe('PresentationTarget invalidation queue', () => {
         const root = new Klass();
         const t = makeTarget(root, 100, 100);
 
-        root._set_property_value_by_name(name, 1);
+        root.set_property_value(resolveKey(root, undefined, name), 1);
 
         const sets = dirty(t);
         assert.equal(sets.measure.size, 0);
@@ -136,9 +137,9 @@ describe('PresentationTarget invalidation queue', () => {
         const root = new Klass();
         const t = makeTarget(root, 100, 100);
 
-        root._set_property_value_by_name(name, 1);
-        root._set_property_value_by_name(name, 2);
-        root._set_property_value_by_name(name, 3);
+        root.set_property_value(resolveKey(root, undefined, name), 1);
+        root.set_property_value(resolveKey(root, undefined, name), 2);
+        root.set_property_value(resolveKey(root, undefined, name), 3);
 
         assert.equal(dirty(t).render.size, 1);
     });
@@ -150,7 +151,7 @@ describe('PresentationTarget invalidation queue', () => {
         const root = new Klass();
         const t = makeTarget(root, 100, 100);
 
-        root._set_property_value_by_name(name, 7);
+        root.set_property_value(resolveKey(root, undefined, name), 7);
 
         const sets = dirty(t);
         assert.ok(sets.measure.has(root));
@@ -168,7 +169,7 @@ describe('PresentationTarget microtask coalescing', () => {
         const baseFlush = t.Flush.bind(t);
         t.Flush = () => { flushCount++; baseFlush(); };
 
-        for (let i = 0; i < 10; i++) root._set_property_value_by_name(name, i);
+        for (let i = 0; i < 10; i++) root.set_property_value(resolveKey(root, undefined, name), i);
 
         // Microtask hasn't fired yet — still inside this task.
         assert.equal(flushCount, 0);
@@ -189,12 +190,12 @@ describe('PresentationTarget microtask coalescing', () => {
         const baseFlush = t.Flush.bind(t);
         t.Flush = () => { flushCount++; baseFlush(); };
 
-        root._set_property_value_by_name(name, 1);
+        root.set_property_value(resolveKey(root, undefined, name), 1);
         await Promise.resolve();
         assert.equal(flushCount, 1);
 
         // Second batch in a fresh task.
-        root._set_property_value_by_name(name, 2);
+        root.set_property_value(resolveKey(root, undefined, name), 2);
         await Promise.resolve();
         assert.equal(flushCount, 2);
     });
@@ -209,7 +210,7 @@ describe('PresentationTarget microtask coalescing', () => {
         const root = new Klass();
         const t = makeTarget(root, 100, 100);
 
-        root._set_property_value_by_name(name, 1);
+        root.set_property_value(resolveKey(root, undefined, name), 1);
         assert.ok(t.HasPendingLayout);
         t.Flush();
         assert.equal(t.HasPendingLayout, false);
@@ -249,7 +250,7 @@ describe('PresentationTarget.Flush — layout drain semantics', () => {
         const root = new Klass();
         const t = makeTarget(root, 100, 100);
 
-        root._set_property_value_by_name(name, 1);
+        root.set_property_value(resolveKey(root, undefined, name), 1);
         const sets = dirty(t);
         assert.equal(sets.measure.size, 1);
         assert.equal(sets.render.size, 1);
@@ -406,7 +407,7 @@ describe('HeadlessTarget.Render now drains Flush() and clears renderDirty', () =
         const root = new Klass();
         const t = makeTarget(root, 100, 100);
 
-        root._set_property_value_by_name(name, 1);
+        root.set_property_value(resolveKey(root, undefined, name), 1);
         assert.ok(t.HasPendingRender);
 
         t.Render(new SvgDrawingContext());

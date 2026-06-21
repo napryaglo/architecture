@@ -23,42 +23,40 @@ let _nextId = 1;
 
 export class RowVM extends Model
 {
-    static {
-        Model.RegisterProperty(RowVM, 'Id',            '',         MetaData.None);
-        Model.RegisterProperty(RowVM, 'Label',         '',         MetaData.None);
-        Model.RegisterProperty(RowVM, 'BeginDragData', undefined,  MetaData.None);
-    }
+    static IdKey            = Model.RegisterProperty(RowVM, 'Id',            '',         MetaData.None);
+    static LabelKey         = Model.RegisterProperty(RowVM, 'Label',         '',         MetaData.None);
+    static BeginDragDataKey = Model.RegisterProperty(RowVM, 'BeginDragData', undefined,  MetaData.None);
 
     constructor(label, indexInList) {
         super();
         const id = 'r' + (_nextId++);
-        this._set_property_value_by_name('Id',    id);
-        this._set_property_value_by_name('Label', label);
+        this.set_property_value(RowVM.IdKey,    id);
+        this.set_property_value(RowVM.LabelKey, label);
         // The closure captures the host VM so source-side hooks can
         // update its status fields.
         this._indexInList = indexInList;
     }
 
-    get Id()            { return this._get_property_value_by_name('Id'); }
-    get Label()         { return this._get_property_value_by_name('Label'); }
-    get BeginDragData() { return this._get_property_value_by_name('BeginDragData'); }
+    get Id()             { return this.get_property_value(RowVM.IdKey); }
+    get Label()          { return this.get_property_value(RowVM.LabelKey); }
+    get BeginDragData()  { return this.get_property_value(RowVM.BeginDragDataKey); }
+    set BeginDragData(v) { this.set_property_value(RowVM.BeginDragDataKey, v); }
 }
 
 // Per-file row in the OS-drop receiver's bound collection. Pure data —
 // the view templates render Name / Size.
 export class DroppedFileVM extends Model
 {
-    static {
-        Model.RegisterProperty(DroppedFileVM, 'Name', '', MetaData.None);
-        Model.RegisterProperty(DroppedFileVM, 'Size', '', MetaData.None);
-    }
+    static NameKey = Model.RegisterProperty(DroppedFileVM, 'Name', '', MetaData.None);
+    static SizeKey = Model.RegisterProperty(DroppedFileVM, 'Size', '', MetaData.None);
+
     constructor(name, sizeBytes) {
         super();
-        this._set_property_value_by_name('Name', name);
-        this._set_property_value_by_name('Size', formatSize(sizeBytes));
+        this.set_property_value(DroppedFileVM.NameKey, name);
+        this.set_property_value(DroppedFileVM.SizeKey, formatSize(sizeBytes));
     }
-    get Name() { return this._get_property_value_by_name('Name'); }
-    get Size() { return this._get_property_value_by_name('Size'); }
+    get Name() { return this.get_property_value(DroppedFileVM.NameKey); }
+    get Size() { return this.get_property_value(DroppedFileVM.SizeKey); }
 }
 
 function formatSize(bytes) {
@@ -70,16 +68,14 @@ function formatSize(bytes) {
 
 export class DragDropExtendedVM extends Model
 {
-    static {
-        Model.RegisterProperty(DragDropExtendedVM, 'Rows',         undefined, MetaData.None);
-        Model.RegisterProperty(DragDropExtendedVM, 'DroppedFiles', undefined, MetaData.None);
-        // Status strings driven by source-side hooks (8.3) and by the
-        // file-drop receiver. Plain DPs so triggers / bindings can
-        // observe them.
-        Model.RegisterProperty(DragDropExtendedVM, 'LastEffect',   '—',       MetaData.None);
-        Model.RegisterProperty(DragDropExtendedVM, 'ShiftHint',    'Hold Shift to cancel the drag.', MetaData.None);
-        Model.RegisterProperty(DragDropExtendedVM, 'FileStatus',   'Drag OS files here.',            MetaData.None);
-    }
+    static RowsKey         = Model.RegisterProperty(DragDropExtendedVM, 'Rows',         undefined, MetaData.None);
+    static DroppedFilesKey = Model.RegisterProperty(DragDropExtendedVM, 'DroppedFiles', undefined, MetaData.None);
+    // Status strings driven by source-side hooks (8.3) and by the
+    // file-drop receiver. Plain DPs so triggers / bindings can
+    // observe them.
+    static LastEffectKey   = Model.RegisterProperty(DragDropExtendedVM, 'LastEffect',   '—',       MetaData.None);
+    static ShiftHintKey    = Model.RegisterProperty(DragDropExtendedVM, 'ShiftHint',    'Hold Shift to cancel the drag.', MetaData.None);
+    static FileStatusKey   = Model.RegisterProperty(DragDropExtendedVM, 'FileStatus',   'Drag OS files here.',            MetaData.None);
 
     constructor() {
         super();
@@ -95,8 +91,8 @@ export class DragDropExtendedVM extends Model
             'Cantaloupe', 'Dragonfruit',
         ];
         for (let i = 0; i < labels.length; i++) rows.Add(new RowVM(labels[i], i));
-        this._set_property_value_by_name('Rows', rows);
-        this._set_property_value_by_name('DroppedFiles', new ObservableCollection());
+        this.set_property_value(DragDropExtendedVM.RowsKey, rows);
+        this.set_property_value(DragDropExtendedVM.DroppedFilesKey, new ObservableCollection());
 
         // BeginDragData is installed on each row in a second pass so
         // the closure captures `this` (the host VM) — the source-side
@@ -104,7 +100,7 @@ export class DragDropExtendedVM extends Model
         // row.
         for (let i = 0; i < rows.Count; i++) {
             const row = rows.Get(i);
-            row._set_property_value_by_name('BeginDragData', () => {
+            row.set_property_value(RowVM.BeginDragDataKey, () => {
                 const idx = this._indexOf(row);
                 return {
                     data:    new DataObject().Set(FMT_FROM_INDEX, idx),
@@ -113,7 +109,7 @@ export class DragDropExtendedVM extends Model
                     // bubbles to the status bar so the demo surfaces
                     // what the OS cursor would be doing.
                     onFeedback: (effect) => {
-                        this._set_property_value_by_name('LastEffect', effectName(effect));
+                        this.set_property_value(DragDropExtendedVM.LastEffectKey, effectName(effect));
                     },
                     // 8.3 — continue hook. Returning false cancels the
                     // drag. Polled by the framework every move sample.
@@ -127,12 +123,14 @@ export class DragDropExtendedVM extends Model
         }
     }
 
-    get Rows()         { return this._get_property_value_by_name('Rows'); }
-    get DroppedFiles() { return this._get_property_value_by_name('DroppedFiles'); }
-    get LastEffect()   { return this._get_property_value_by_name('LastEffect'); }
-    get ShiftHint()    { return this._get_property_value_by_name('ShiftHint'); }
-    get FileStatus()   { return this._get_property_value_by_name('FileStatus'); }
-    set FileStatus(v)  { this._set_property_value_by_name('FileStatus', v); }
+    get Rows()         { return this.get_property_value(DragDropExtendedVM.RowsKey); }
+    get DroppedFiles() { return this.get_property_value(DragDropExtendedVM.DroppedFilesKey); }
+    get LastEffect()   { return this.get_property_value(DragDropExtendedVM.LastEffectKey); }
+    set LastEffect(v)  { this.set_property_value(DragDropExtendedVM.LastEffectKey, v); }
+    get ShiftHint()    { return this.get_property_value(DragDropExtendedVM.ShiftHintKey); }
+    set ShiftHint(v)   { this.set_property_value(DragDropExtendedVM.ShiftHintKey, v); }
+    get FileStatus()   { return this.get_property_value(DragDropExtendedVM.FileStatusKey); }
+    set FileStatus(v)  { this.set_property_value(DragDropExtendedVM.FileStatusKey, v); }
 
     // Set by the bootstrap's window-level keydown / keyup listener.
     // Read by the per-row OnContinueQuery callback (8.3).
@@ -147,8 +145,8 @@ export class DragDropExtendedVM extends Model
     OnFileDropped(name, sizeBytes) {
         const file = new DroppedFileVM(name, sizeBytes);
         this.DroppedFiles.Add(file);
-        this._set_property_value_by_name(
-            'FileStatus',
+        this.set_property_value(
+            DragDropExtendedVM.FileStatusKey,
             `Dropped "${name}" (${formatSize(sizeBytes)}). Total: ${this.DroppedFiles.Count}.`,
         );
     }

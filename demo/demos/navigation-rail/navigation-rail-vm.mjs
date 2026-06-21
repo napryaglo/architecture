@@ -9,19 +9,19 @@ export class NavigationRailVM extends Model
     static SelectedItemKey  = Model.RegisterProperty(NavigationRailVM, 'SelectedItem',  'Home',              MetaData.None);
     static ActiveLabelKey   = Model.RegisterProperty(NavigationRailVM, 'ActiveLabel',   'Home',              MetaData.None);
 
-    get Destinations() { return this._get_property_value_by_name('Destinations'); }
-    get SelectedItem()  { return this._get_property_value_by_name('SelectedItem'); }
-    set SelectedItem(v) { this._set_property_value_by_name('SelectedItem', v); }
-    get ActiveLabel()   { return this._get_property_value_by_name('ActiveLabel'); }
-    set ActiveLabel(v)  { this._set_property_value_by_name('ActiveLabel', v); }
+    get Destinations() { return this.get_property_value(NavigationRailVM.DestinationsKey); }
+    get SelectedItem()  { return this.get_property_value(NavigationRailVM.SelectedItemKey); }
+    set SelectedItem(v) { this.set_property_value(NavigationRailVM.SelectedItemKey, v); }
+    get ActiveLabel()   { return this.get_property_value(NavigationRailVM.ActiveLabelKey); }
+    set ActiveLabel(v)  { this.set_property_value(NavigationRailVM.ActiveLabelKey, v); }
 
     constructor() {
         super();
         const destinations = new ObservableCollection([
             'Home', 'Search', 'Library', 'Settings',
         ]);
-        this._set_property_value_by_name('Destinations', destinations);
-        this._add_property_changed_listener_by_name('SelectedItem', () => {
+        this.set_property_value(NavigationRailVM.DestinationsKey, destinations);
+        this.AddPropertyChangedListener(NavigationRailVM.SelectedItemKey, () => {
             this.ActiveLabel = this.SelectedItem ?? '';
         });
     }

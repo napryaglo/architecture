@@ -13,21 +13,21 @@ export class CardVM extends Model
     static ElevatedActionCommandKey = Model.RegisterProperty(CardVM, 'ElevatedActionCommand', null, MetaData.None);
     static OutlinedActionCommandKey = Model.RegisterProperty(CardVM, 'OutlinedActionCommand', null, MetaData.None);
 
-    get FilledActions()    { return this._get_property_value_by_name('FilledActions'); }
-    set FilledActions(v)   { this._set_property_value_by_name('FilledActions', v); }
-    get ElevatedActions()  { return this._get_property_value_by_name('ElevatedActions'); }
-    set ElevatedActions(v) { this._set_property_value_by_name('ElevatedActions', v); }
-    get OutlinedActions()  { return this._get_property_value_by_name('OutlinedActions'); }
-    set OutlinedActions(v) { this._set_property_value_by_name('OutlinedActions', v); }
+    get FilledActions()    { return this.get_property_value(CardVM.FilledActionsKey); }
+    set FilledActions(v)   { this.set_property_value(CardVM.FilledActionsKey, v); }
+    get ElevatedActions()  { return this.get_property_value(CardVM.ElevatedActionsKey); }
+    set ElevatedActions(v) { this.set_property_value(CardVM.ElevatedActionsKey, v); }
+    get OutlinedActions()  { return this.get_property_value(CardVM.OutlinedActionsKey); }
+    set OutlinedActions(v) { this.set_property_value(CardVM.OutlinedActionsKey, v); }
 
-    get FilledActionCommand()   { return this._get_property_value_by_name('FilledActionCommand'); }
-    get ElevatedActionCommand() { return this._get_property_value_by_name('ElevatedActionCommand'); }
-    get OutlinedActionCommand() { return this._get_property_value_by_name('OutlinedActionCommand'); }
+    get FilledActionCommand()   { return this.get_property_value(CardVM.FilledActionCommandKey); }
+    get ElevatedActionCommand() { return this.get_property_value(CardVM.ElevatedActionCommandKey); }
+    get OutlinedActionCommand() { return this.get_property_value(CardVM.OutlinedActionCommandKey); }
 
     constructor() {
         super();
-        this._set_property_value_by_name('FilledActionCommand',   new RelayCommand(() => { this.FilledActions   += 1; }));
-        this._set_property_value_by_name('ElevatedActionCommand', new RelayCommand(() => { this.ElevatedActions += 1; }));
-        this._set_property_value_by_name('OutlinedActionCommand', new RelayCommand(() => { this.OutlinedActions += 1; }));
+        this.set_property_value(CardVM.FilledActionCommandKey,   new RelayCommand(() => { this.FilledActions   += 1; }));
+        this.set_property_value(CardVM.ElevatedActionCommandKey, new RelayCommand(() => { this.ElevatedActions += 1; }));
+        this.set_property_value(CardVM.OutlinedActionCommandKey, new RelayCommand(() => { this.OutlinedActions += 1; }));
     }
 }

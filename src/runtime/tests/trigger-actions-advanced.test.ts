@@ -38,9 +38,9 @@ class TriggerTest extends Element
         Model.RegisterProperty(TriggerTest, 'Width',  0,     MetaData.Arrange);
     }
     public get Active(): boolean { return this.get_property_value(resolveKey(this, undefined, 'Active')); }
-    public set Active(v: boolean) { this._set_property_value_by_name('Active', v); }
+    public set Active(v: boolean) { this.set_property_value(resolveKey(this, undefined, 'Active'), v); }
     public get Width(): number { return this.get_property_value(resolveKey(this, undefined, 'Width')); }
-    public set Width(v: number) { this._set_property_value_by_name('Width', v); }
+    public set Width(v: number) { this.set_property_value(resolveKey(this, undefined, 'Width'), v); }
 }
 
 // ── PropertyTrigger enter / exit actions ──────────────────────────────

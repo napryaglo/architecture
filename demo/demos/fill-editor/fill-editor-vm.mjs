@@ -12,35 +12,35 @@ import {
 
 export class FillEditorDemoVM extends Model
 {
-    static {
-        Model.RegisterProperty(FillEditorDemoVM, 'Fill',        undefined, MetaData.None);
-        Model.RegisterProperty(FillEditorDemoVM, 'OutlinePen',  undefined, MetaData.None);
-        Model.RegisterProperty(FillEditorDemoVM, 'FillSummary', '',        MetaData.None);
-    }
+    static FillKey        = Model.RegisterProperty(FillEditorDemoVM, 'Fill',        undefined, MetaData.None);
+    static OutlinePenKey  = Model.RegisterProperty(FillEditorDemoVM, 'OutlinePen',  undefined, MetaData.None);
+    static FillSummaryKey = Model.RegisterProperty(FillEditorDemoVM, 'FillSummary', '',        MetaData.None);
 
     constructor() {
         super();
-        this._set_property_value_by_name('Fill',       new SolidColorBrush(Color.FromHex('#1976d2')));
-        this._set_property_value_by_name('OutlinePen', new Pen(new SolidColorBrush(Color.FromHex('#0f172a')), 1.5));
+        this.set_property_value(FillEditorDemoVM.FillKey,       new SolidColorBrush(Color.FromHex('#1976d2')));
+        this.set_property_value(FillEditorDemoVM.OutlinePenKey, new Pen(new SolidColorBrush(Color.FromHex('#0f172a')), 1.5));
         this._installFillWatcher();
         this._refreshSummary();
     }
 
-    get Fill()        { return this._get_property_value_by_name('Fill'); }
-    get OutlinePen()  { return this._get_property_value_by_name('OutlinePen'); }
-    get FillSummary() { return this._get_property_value_by_name('FillSummary'); }
+    get Fill()        { return this.get_property_value(FillEditorDemoVM.FillKey); }
+    set Fill(v)       { this.set_property_value(FillEditorDemoVM.FillKey, v); }
+    get OutlinePen()  { return this.get_property_value(FillEditorDemoVM.OutlinePenKey); }
+    set OutlinePen(v) { this.set_property_value(FillEditorDemoVM.OutlinePenKey, v); }
+    get FillSummary() { return this.get_property_value(FillEditorDemoVM.FillSummaryKey); }
 
     _installFillWatcher() {
         // Listen for Fill DP changes — when the editor swaps the brush
         // we re-summarise. We don't subscribe to brush-internal
         // properties; the editor builds a NEW Brush on every gesture
         // (variant swap, color edit) so a Fill listener is enough.
-        this._add_property_changed_listener_by_name('Fill', () => this._refreshSummary());
+        this.AddPropertyChangedListener(FillEditorDemoVM.FillKey, () => this._refreshSummary());
     }
 
     _refreshSummary() {
         const b = this.Fill;
-        this._set_property_value_by_name('FillSummary', describe(b));
+        this.set_property_value(FillEditorDemoVM.FillSummaryKey, describe(b));
     }
 }
 

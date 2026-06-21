@@ -32,7 +32,7 @@ class Leaf extends Element
     constructor(private box: Size = new Size(10, 10)) { super(); }
 
     public get Tint(): string { return this.get_property_value(resolveKey(this, undefined, 'Tint')); }
-    public set Tint(value: string) { this._set_property_value_by_name('Tint', value); }
+    public set Tint(value: string) { this.set_property_value(resolveKey(this, undefined, 'Tint'), value); }
 
     protected override MeasureOverride(_a: Size): Size { return this.box; }
     protected override RenderOverride(_dc: DrawingContext): void { }
@@ -101,7 +101,7 @@ describe('ContentControl + ControlTemplate', () => {
         const leaf = new Leaf();
         cc.Content = leaf;
 
-        cc._set_property_value_by_name(Leaf, 'Tint', 'crimson');
+        cc.set_property_value(resolveKey(cc, Leaf, 'Tint'), 'crimson');
         assert.equal(leaf.Tint, 'crimson');
     });
 
@@ -196,7 +196,7 @@ describe('ContentControl + ControlTemplate', () => {
         // the ContentControl where Tint is set.
         const template = new ControlTemplate(_tp => new Leaf());
         const cc = new ContentControl();
-        cc._set_property_value_by_name(Leaf, 'Tint', 'royalblue');
+        cc.set_property_value(resolveKey(cc, Leaf, 'Tint'), 'royalblue');
         cc.Template = template;
 
         const inner = cc.visualChildren[0] as Leaf;
@@ -213,7 +213,7 @@ describe('ContentControl + ControlTemplate', () => {
         const inner = cc.visualChildren[0] as Leaf;
         assert.equal(inner.Tint, 'default');  // no value set yet
 
-        cc._set_property_value_by_name(Leaf, 'Tint', 'crimson');
+        cc.set_property_value(resolveKey(cc, Leaf, 'Tint'), 'crimson');
         assert.equal(inner.Tint, 'crimson');
     });
 
@@ -229,7 +229,7 @@ describe('ContentControl + ControlTemplate', () => {
         });
         const cc = new ContentControl();
         cc.Template = template;
-        cc._set_property_value_by_name(Leaf, 'Tint', 'amber');
+        cc.set_property_value(resolveKey(cc, Leaf, 'Tint'), 'amber');
 
         const border = cc.visualChildren[0] as Border;
         const nestedLeaf = border.child as Leaf;
@@ -351,7 +351,7 @@ describe('ContentControl + ControlTemplate', () => {
 
         const template = new ControlTemplate(tp => {
             const b = new Border();
-            b._set_property_value_by_name('Background', TemplateBinding(tp, 'Background'));
+            b.set_property_value(resolveKey(b, undefined, 'Background'), TemplateBinding(tp, 'Background'));
             b.BorderThickness = new Thickness(1);
             return b;
         });
@@ -360,14 +360,14 @@ describe('ContentControl + ControlTemplate', () => {
         cc.Template = template;
 
         const blue = new SolidColorBrush(Color.Blue);
-        cc._set_property_value_by_name('Background', blue);
+        cc.set_property_value(resolveKey(cc, undefined, 'Background'), blue);
 
         const border = cc.visualChildren[0] as Border;
         assert.equal(border.Background, blue);
 
         // Changing the source pushes the new value to the bound target.
         const red = new SolidColorBrush(Color.Red);
-        cc._set_property_value_by_name('Background', red);
+        cc.set_property_value(resolveKey(cc, undefined, 'Background'), red);
         assert.equal(border.Background, red);
     });
 

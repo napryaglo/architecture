@@ -29,56 +29,52 @@ import { instantiateDemo } from './registry.mjs';
 
 export class DemoVM extends Model
 {
-    static {
-        Model.RegisterProperty(DemoVM, 'Id',         '', MetaData.None);
-        Model.RegisterProperty(DemoVM, 'Label',      '', MetaData.None);
-        Model.RegisterProperty(DemoVM, 'Title',      '', MetaData.None);
-        Model.RegisterProperty(DemoVM, 'Subtitle',   '', MetaData.None);
-    }
+    static IdKey       = Model.RegisterProperty(DemoVM, 'Id',       '', MetaData.None);
+    static LabelKey    = Model.RegisterProperty(DemoVM, 'Label',    '', MetaData.None);
+    static TitleKey    = Model.RegisterProperty(DemoVM, 'Title',    '', MetaData.None);
+    static SubtitleKey = Model.RegisterProperty(DemoVM, 'Subtitle', '', MetaData.None);
 
     constructor(def) {
         super();
-        this._set_property_value_by_name('Id',       def.id);
-        this._set_property_value_by_name('Label',    def.title);
-        this._set_property_value_by_name('Title',    def.title);
-        this._set_property_value_by_name('Subtitle', def.subtitle ?? '');
+        this.set_property_value(DemoVM.IdKey,       def.id);
+        this.set_property_value(DemoVM.LabelKey,    def.title);
+        this.set_property_value(DemoVM.TitleKey,    def.title);
+        this.set_property_value(DemoVM.SubtitleKey, def.subtitle ?? '');
         // Carry the raw registry definition for instantiateDemo lookup —
         // the Visual is built lazily from this on first activation.
         this.Definition = def;
     }
 
-    get Id()       { return this._get_property_value_by_name('Id'); }
-    get Label()    { return this._get_property_value_by_name('Label'); }
-    get Title()    { return this._get_property_value_by_name('Title'); }
-    get Subtitle() { return this._get_property_value_by_name('Subtitle'); }
+    get Id()       { return this.get_property_value(DemoVM.IdKey); }
+    get Label()    { return this.get_property_value(DemoVM.LabelKey); }
+    get Title()    { return this.get_property_value(DemoVM.TitleKey); }
+    get Subtitle() { return this.get_property_value(DemoVM.SubtitleKey); }
 }
 
 export class GroupVM extends Model
 {
-    static {
-        Model.RegisterProperty(GroupVM, 'Label', '', MetaData.None);
-        // Glyph that the NavigationRail-side NavigationItem can reach
-        // for if a future migration switches the rail from the
-        // declarative authoring path in platform.mu (icons baked into
-        // each NavigationItem child) over to a data-driven path
-        // (Items=$Groups). Today nothing reads IconGlyph; the
-        // GROUP_ICONS map below still feeds it so the field stays
-        // populated.
-        Model.RegisterProperty(GroupVM, 'IconGlyph', '•', MetaData.None);
-    }
+    static LabelKey = Model.RegisterProperty(GroupVM, 'Label', '', MetaData.None);
+    // Glyph that the NavigationRail-side NavigationItem can reach
+    // for if a future migration switches the rail from the
+    // declarative authoring path in platform.mu (icons baked into
+    // each NavigationItem child) over to a data-driven path
+    // (Items=$Groups). Today nothing reads IconGlyph; the
+    // GROUP_ICONS map below still feeds it so the field stays
+    // populated.
+    static IconGlyphKey = Model.RegisterProperty(GroupVM, 'IconGlyph', '•', MetaData.None);
 
     constructor(name, iconGlyph) {
         super();
-        this._set_property_value_by_name('Label', name);
-        this._set_property_value_by_name('IconGlyph', iconGlyph ?? '•');
+        this.set_property_value(GroupVM.LabelKey, name);
+        this.set_property_value(GroupVM.IconGlyphKey, iconGlyph ?? '•');
         // Mutable collection so demos can be added incrementally as the
         // registry is built. ObservableCollection so downstream
         // ItemsControl pipelines pick up insertions reactively.
         this.Demos = new ObservableCollection();
     }
 
-    get Label()     { return this._get_property_value_by_name('Label'); }
-    get IconGlyph() { return this._get_property_value_by_name('IconGlyph'); }
+    get Label()     { return this.get_property_value(GroupVM.LabelKey); }
+    get IconGlyph() { return this.get_property_value(GroupVM.IconGlyphKey); }
 }
 
 // Default glyph per group name. Kept here (not in platform.mu) so the
@@ -95,34 +91,32 @@ const GROUP_ICONS = {
 
 export class PlatformVM extends Model
 {
-    static {
-        // Groups   — the registry projected into GroupVMs. Drives the
-        //            NavigationRail's ItemsSource.
-        // SelectedGroup — TwoWay-bound to NavigationRail.SelectedDataItem.
-        //            When it changes, the demo-list below the rail
-        //            switches its ItemsSource and the previously-active
-        //            demo within the new group (or its first demo)
-        //            becomes SelectedDemo.
-        // CurrentDemos — derived; the Demos collection of SelectedGroup
-        //            (or empty when no group is selected). The demo
-        //            list in platform.mu binds against this.
-        // SelectedDemo — TwoWay-bound to the demo-list's
-        //            SelectedDataItem. Drives Title / Subtitle / Content.
-        Model.RegisterProperty(PlatformVM, 'Groups',             undefined, MetaData.None);
-        // SelectedGroupIndex — TwoWay-bound to the NavigationRail's
-        // SelectedIndex. Drives SelectedGroup via the OnPropertyChanged
-        // route below. An index instead of a SelectedDataItem binding
-        // because the rail's NavigationItems are authored declaratively
-        // in markup (icon glyphs are baked in per item) rather than
-        // data-driven, so SelectedIndex is the cleanest seam.
-        Model.RegisterProperty(PlatformVM, 'SelectedGroupIndex', 0,         MetaData.None);
-        Model.RegisterProperty(PlatformVM, 'SelectedGroup',      undefined, MetaData.None);
-        Model.RegisterProperty(PlatformVM, 'CurrentDemos',       undefined, MetaData.None);
-        Model.RegisterProperty(PlatformVM, 'SelectedDemo',       undefined, MetaData.None);
-        Model.RegisterProperty(PlatformVM, 'Title',         '',        MetaData.None);
-        Model.RegisterProperty(PlatformVM, 'Subtitle',      '',        MetaData.None);
-        Model.RegisterProperty(PlatformVM, 'Content',       undefined, MetaData.None);
-    }
+    // Groups   — the registry projected into GroupVMs. Drives the
+    //            NavigationRail's ItemsSource.
+    // SelectedGroup — TwoWay-bound to NavigationRail.SelectedDataItem.
+    //            When it changes, the demo-list below the rail
+    //            switches its ItemsSource and the previously-active
+    //            demo within the new group (or its first demo)
+    //            becomes SelectedDemo.
+    // CurrentDemos — derived; the Demos collection of SelectedGroup
+    //            (or empty when no group is selected). The demo
+    //            list in platform.mu binds against this.
+    // SelectedDemo — TwoWay-bound to the demo-list's
+    //            SelectedDataItem. Drives Title / Subtitle / Content.
+    static GroupsKey             = Model.RegisterProperty(PlatformVM, 'Groups',             undefined, MetaData.None);
+    // SelectedGroupIndex — TwoWay-bound to the NavigationRail's
+    // SelectedIndex. Drives SelectedGroup via the OnPropertyChanged
+    // route below. An index instead of a SelectedDataItem binding
+    // because the rail's NavigationItems are authored declaratively
+    // in markup (icon glyphs are baked in per item) rather than
+    // data-driven, so SelectedIndex is the cleanest seam.
+    static SelectedGroupIndexKey = Model.RegisterProperty(PlatformVM, 'SelectedGroupIndex', 0,         MetaData.None);
+    static SelectedGroupKey      = Model.RegisterProperty(PlatformVM, 'SelectedGroup',      undefined, MetaData.None);
+    static CurrentDemosKey       = Model.RegisterProperty(PlatformVM, 'CurrentDemos',       undefined, MetaData.None);
+    static SelectedDemoKey       = Model.RegisterProperty(PlatformVM, 'SelectedDemo',       undefined, MetaData.None);
+    static TitleKey              = Model.RegisterProperty(PlatformVM, 'Title',              '',        MetaData.None);
+    static SubtitleKey           = Model.RegisterProperty(PlatformVM, 'Subtitle',           '',        MetaData.None);
+    static ContentKey            = Model.RegisterProperty(PlatformVM, 'Content',            undefined, MetaData.None);
 
     constructor(defs) {
         super();
@@ -137,7 +131,7 @@ export class PlatformVM extends Model
             }
             g.Demos.Add(new DemoVM(def));
         }
-        this._set_property_value_by_name('Groups', groups);
+        this.set_property_value(PlatformVM.GroupsKey, groups);
 
         // Per-group "last-active demo" cache. When the user re-selects
         // a group they've visited before, we re-surface their last
@@ -153,17 +147,17 @@ export class PlatformVM extends Model
         this._syncSelectedGroupFromIndex();
     }
 
-    get Groups()              { return this._get_property_value_by_name('Groups'); }
-    get SelectedGroupIndex()  { return this._get_property_value_by_name('SelectedGroupIndex'); }
-    set SelectedGroupIndex(v) { this._set_property_value_by_name('SelectedGroupIndex', v); }
-    get SelectedGroup()       { return this._get_property_value_by_name('SelectedGroup'); }
-    set SelectedGroup(v)      { this._set_property_value_by_name('SelectedGroup', v); }
-    get CurrentDemos()        { return this._get_property_value_by_name('CurrentDemos'); }
-    get SelectedDemo() { return this._get_property_value_by_name('SelectedDemo'); }
-    set SelectedDemo(v){ this._set_property_value_by_name('SelectedDemo', v); }
-    get Title()        { return this._get_property_value_by_name('Title'); }
-    get Subtitle()     { return this._get_property_value_by_name('Subtitle'); }
-    get Content()      { return this._get_property_value_by_name('Content'); }
+    get Groups()              { return this.get_property_value(PlatformVM.GroupsKey); }
+    get SelectedGroupIndex()  { return this.get_property_value(PlatformVM.SelectedGroupIndexKey); }
+    set SelectedGroupIndex(v) { this.set_property_value(PlatformVM.SelectedGroupIndexKey, v); }
+    get SelectedGroup()       { return this.get_property_value(PlatformVM.SelectedGroupKey); }
+    set SelectedGroup(v)      { this.set_property_value(PlatformVM.SelectedGroupKey, v); }
+    get CurrentDemos()        { return this.get_property_value(PlatformVM.CurrentDemosKey); }
+    get SelectedDemo() { return this.get_property_value(PlatformVM.SelectedDemoKey); }
+    set SelectedDemo(v){ this.set_property_value(PlatformVM.SelectedDemoKey, v); }
+    get Title()        { return this.get_property_value(PlatformVM.TitleKey); }
+    get Subtitle()     { return this.get_property_value(PlatformVM.SubtitleKey); }
+    get Content()      { return this.get_property_value(PlatformVM.ContentKey); }
 
     _syncSelectedGroupFromIndex() {
         const groups = this.Groups;
@@ -171,7 +165,7 @@ export class PlatformVM extends Model
         const idx = this.SelectedGroupIndex ?? 0;
         const grp = groups.Get(idx);
         if (grp !== this.SelectedGroup) {
-            this._set_property_value_by_name('SelectedGroup', grp);
+            this.set_property_value(PlatformVM.SelectedGroupKey, grp);
         }
     }
 
@@ -186,10 +180,10 @@ export class PlatformVM extends Model
             // demo on first visit).
             const grp = newValue instanceof GroupVM ? newValue : undefined;
             const demos = grp?.Demos;
-            this._set_property_value_by_name('CurrentDemos', demos);
+            this.set_property_value(PlatformVM.CurrentDemosKey, demos);
             const remembered = grp !== undefined ? this._lastDemoByGroup.get(grp) : undefined;
             const target = remembered ?? (demos !== undefined ? demos.Get(0) : undefined);
-            this._set_property_value_by_name('SelectedDemo', target);
+            this.set_property_value(PlatformVM.SelectedDemoKey, target);
         }
         if (descriptor.Name === 'SelectedDemo') {
             // Cache so a future re-select of the owning group restores
@@ -200,14 +194,14 @@ export class PlatformVM extends Model
                 if (owningGroup !== undefined) {
                     this._lastDemoByGroup.set(owningGroup, sel);
                 }
-                this._set_property_value_by_name('Title',    sel.Title);
-                this._set_property_value_by_name('Subtitle', sel.Subtitle);
+                this.set_property_value(PlatformVM.TitleKey,    sel.Title);
+                this.set_property_value(PlatformVM.SubtitleKey, sel.Subtitle);
                 const root = instantiateDemo(sel.Id);
-                this._set_property_value_by_name('Content', root);
+                this.set_property_value(PlatformVM.ContentKey,  root);
             } else {
-                this._set_property_value_by_name('Title',    '');
-                this._set_property_value_by_name('Subtitle', '');
-                this._set_property_value_by_name('Content',  undefined);
+                this.set_property_value(PlatformVM.TitleKey,    '');
+                this.set_property_value(PlatformVM.SubtitleKey, '');
+                this.set_property_value(PlatformVM.ContentKey,  undefined);
             }
         }
     }

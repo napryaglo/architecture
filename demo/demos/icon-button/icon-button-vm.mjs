@@ -21,34 +21,34 @@ export class IconButtonVM extends Model
     static ClickOutlinedCommandKey = Model.RegisterProperty(IconButtonVM, 'ClickOutlinedCommand', null, MetaData.None);
     static ClickStandardCommandKey = Model.RegisterProperty(IconButtonVM, 'ClickStandardCommand', null, MetaData.None);
 
-    get FilledClicks()   { return this._get_property_value_by_name('FilledClicks'); }
-    set FilledClicks(v)  { this._set_property_value_by_name('FilledClicks', v); }
-    get TonalClicks()    { return this._get_property_value_by_name('TonalClicks'); }
-    set TonalClicks(v)   { this._set_property_value_by_name('TonalClicks', v); }
-    get OutlinedClicks() { return this._get_property_value_by_name('OutlinedClicks'); }
-    set OutlinedClicks(v){ this._set_property_value_by_name('OutlinedClicks', v); }
-    get StandardClicks() { return this._get_property_value_by_name('StandardClicks'); }
-    set StandardClicks(v){ this._set_property_value_by_name('StandardClicks', v); }
+    get FilledClicks()   { return this.get_property_value(IconButtonVM.FilledClicksKey); }
+    set FilledClicks(v)  { this.set_property_value(IconButtonVM.FilledClicksKey, v); }
+    get TonalClicks()    { return this.get_property_value(IconButtonVM.TonalClicksKey); }
+    set TonalClicks(v)   { this.set_property_value(IconButtonVM.TonalClicksKey, v); }
+    get OutlinedClicks() { return this.get_property_value(IconButtonVM.OutlinedClicksKey); }
+    set OutlinedClicks(v){ this.set_property_value(IconButtonVM.OutlinedClicksKey, v); }
+    get StandardClicks() { return this.get_property_value(IconButtonVM.StandardClicksKey); }
+    set StandardClicks(v){ this.set_property_value(IconButtonVM.StandardClicksKey, v); }
 
-    get FilledChecked()    { return this._get_property_value_by_name('FilledChecked'); }
-    set FilledChecked(v)   { this._set_property_value_by_name('FilledChecked', v); }
-    get TonalChecked()     { return this._get_property_value_by_name('TonalChecked'); }
-    set TonalChecked(v)    { this._set_property_value_by_name('TonalChecked', v); }
-    get OutlinedChecked()  { return this._get_property_value_by_name('OutlinedChecked'); }
-    set OutlinedChecked(v) { this._set_property_value_by_name('OutlinedChecked', v); }
-    get StandardChecked()  { return this._get_property_value_by_name('StandardChecked'); }
-    set StandardChecked(v) { this._set_property_value_by_name('StandardChecked', v); }
+    get FilledChecked()    { return this.get_property_value(IconButtonVM.FilledCheckedKey); }
+    set FilledChecked(v)   { this.set_property_value(IconButtonVM.FilledCheckedKey, v); }
+    get TonalChecked()     { return this.get_property_value(IconButtonVM.TonalCheckedKey); }
+    set TonalChecked(v)    { this.set_property_value(IconButtonVM.TonalCheckedKey, v); }
+    get OutlinedChecked()  { return this.get_property_value(IconButtonVM.OutlinedCheckedKey); }
+    set OutlinedChecked(v) { this.set_property_value(IconButtonVM.OutlinedCheckedKey, v); }
+    get StandardChecked()  { return this.get_property_value(IconButtonVM.StandardCheckedKey); }
+    set StandardChecked(v) { this.set_property_value(IconButtonVM.StandardCheckedKey, v); }
 
-    get ClickFilledCommand()   { return this._get_property_value_by_name('ClickFilledCommand'); }
-    get ClickTonalCommand()    { return this._get_property_value_by_name('ClickTonalCommand'); }
-    get ClickOutlinedCommand() { return this._get_property_value_by_name('ClickOutlinedCommand'); }
-    get ClickStandardCommand() { return this._get_property_value_by_name('ClickStandardCommand'); }
+    get ClickFilledCommand()   { return this.get_property_value(IconButtonVM.ClickFilledCommandKey); }
+    get ClickTonalCommand()    { return this.get_property_value(IconButtonVM.ClickTonalCommandKey); }
+    get ClickOutlinedCommand() { return this.get_property_value(IconButtonVM.ClickOutlinedCommandKey); }
+    get ClickStandardCommand() { return this.get_property_value(IconButtonVM.ClickStandardCommandKey); }
 
     constructor() {
         super();
-        this._set_property_value_by_name('ClickFilledCommand',   new RelayCommand(() => { this.FilledClicks   += 1; }));
-        this._set_property_value_by_name('ClickTonalCommand',    new RelayCommand(() => { this.TonalClicks    += 1; }));
-        this._set_property_value_by_name('ClickOutlinedCommand', new RelayCommand(() => { this.OutlinedClicks += 1; }));
-        this._set_property_value_by_name('ClickStandardCommand', new RelayCommand(() => { this.StandardClicks += 1; }));
+        this.set_property_value(IconButtonVM.ClickFilledCommandKey,   new RelayCommand(() => { this.FilledClicks   += 1; }));
+        this.set_property_value(IconButtonVM.ClickTonalCommandKey,    new RelayCommand(() => { this.TonalClicks    += 1; }));
+        this.set_property_value(IconButtonVM.ClickOutlinedCommandKey, new RelayCommand(() => { this.OutlinedClicks += 1; }));
+        this.set_property_value(IconButtonVM.ClickStandardCommandKey, new RelayCommand(() => { this.StandardClicks += 1; }));
     }
 }

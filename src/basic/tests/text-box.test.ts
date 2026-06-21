@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { initTestApp } from './test-app.js';
 
 import { Application, NoModifiers, Panel, PointerButton, Visual, type FocusEventArgs, type KeyEventArgs, type KeyEventInit, type ModifierKeys, type PointerEventInit } from '../../runtime/index.js';
+import { resolveKey } from '../../runtime/model-internals.js';
 import { InputManager } from '../../framework/index.js';;
 import { HeadlessTarget } from '../../visual-engine/index.js';
 import { TextBox, type ClipboardSink } from '../text-box.js';
@@ -563,7 +564,7 @@ describe('TextBox — soft-wrap overflow handling', () => {
         // Flip to NoWrap — same content shouldn't break visually.
         // Import value via a separate top-level import would be cleaner;
         // use a direct DP write to avoid the import dance in the test.
-        tb._set_property_value_by_name('TextWrapping', 'NoWrap');
+        tb.set_property_value(resolveKey(tb, undefined, 'TextWrapping'), 'NoWrap');
         (tb as unknown as { target: { Flush: () => void } }).target.Flush();
 
         const flatCount = editorOf(tb).Lines.length;

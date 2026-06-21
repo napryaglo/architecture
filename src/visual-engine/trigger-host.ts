@@ -23,6 +23,26 @@ interface ClickEventSource
     RemoveClickHandler?: (h: (args: unknown) => void) => void;
 }
 
+// The trigger install / uninstall contract — five Install* + two
+// Uninstall* methods that own a trigger's subscription lifetime on
+// some target. Implemented by `TriggerHost` (the actual machinery)
+// and by `Element` (which forwards to a lazily-allocated host so an
+// Element that never opts into Style / Triggers pays zero
+// allocation). `StyleApplicator.RefreshActiveStyle` calls into this
+// surface during a Style swap to diff-install / -uninstall triggers
+// — accepting `ITriggerHost` rather than the concrete `Element` lets
+// the applicator stay structural about who hosts the triggers.
+export interface ITriggerHost
+{
+    InstallTrigger(trigger: PropertyTrigger): void;
+    InstallMultiTrigger(trigger: MultiTrigger): void;
+    InstallDataTrigger(trigger: DataTrigger): void;
+    InstallMultiDataTrigger(trigger: MultiDataTrigger): void;
+    InstallEventTrigger(trigger: EventTrigger): void;
+    UninstallTrigger(trigger: PropertyTrigger | MultiTrigger | DataTrigger | MultiDataTrigger): void;
+    UninstallEventTrigger(trigger: EventTrigger): void;
+}
+
 // TriggerHost — § 1.8. The per-Element collaborator that owns the
 // trigger installation, evaluation, and teardown machinery. Pulls
 // the five `install_*` / two `uninstall_*` methods out of Visual,
@@ -39,7 +59,7 @@ interface ClickEventSource
 // `ApplyTriggerSetter` / `ClearTriggerSetter` hooks, which trampoline
 // back through the applicator. The two collaborators share the
 // trigger-setter surface but otherwise don't know about each other.
-export class TriggerHost
+export class TriggerHost implements ITriggerHost
 {
     // Currently-matched triggers. A trigger is added on its watched
     // property matching the trigger's value; removed when the value

@@ -15,15 +15,22 @@ import { MetaData, Model, Size, Visual } from '@visualisation-sub/mural/runtime'
 import { Pen } from '@visualisation-sub/mural/visual-engine';
 
 export class GeometryView extends Visual {
-    static {
-        Model.RegisterProperty(GeometryView, 'Geometry', undefined, MetaData.Render);
-        Model.RegisterProperty(GeometryView, 'StrokeWidth', 1, MetaData.Render);
-    }
+    static GeometryKey    = Model.RegisterProperty(GeometryView, 'Geometry',    undefined, MetaData.Render);
+    static StrokeWidthKey = Model.RegisterProperty(GeometryView, 'StrokeWidth', 1,         MetaData.Render);
+    // Fill / Stroke are MetaData.Render — re-render whenever the brush
+    // identity changes so an updated SolidColorBrush from the bootstrap's
+    // PathColorHex / GlyphColorHex listeners actually repaints the canvas.
+    static FillKey        = Model.RegisterProperty(GeometryView, 'Fill',        undefined, MetaData.Render);
+    static StrokeKey      = Model.RegisterProperty(GeometryView, 'Stroke',      undefined, MetaData.Render);
 
-    get Geometry()       { return this._get_property_value_by_name('Geometry'); }
-    set Geometry(v)      { this._set_property_value_by_name('Geometry', v); }
-    get StrokeWidth()    { return this._get_property_value_by_name('StrokeWidth'); }
-    set StrokeWidth(v)   { this._set_property_value_by_name('StrokeWidth', v); }
+    get Geometry()       { return this.get_property_value(GeometryView.GeometryKey); }
+    set Geometry(v)      { this.set_property_value(GeometryView.GeometryKey, v); }
+    get StrokeWidth()    { return this.get_property_value(GeometryView.StrokeWidthKey); }
+    set StrokeWidth(v)   { this.set_property_value(GeometryView.StrokeWidthKey, v); }
+    get Fill()           { return this.get_property_value(GeometryView.FillKey); }
+    set Fill(v)          { this.set_property_value(GeometryView.FillKey, v); }
+    get Stroke()         { return this.get_property_value(GeometryView.StrokeKey); }
+    set Stroke(v)        { this.set_property_value(GeometryView.StrokeKey, v); }
 
     MeasureOverride(_) { return new Size(0, 0); }
     ArrangeOverride(finalSize) { return finalSize; }

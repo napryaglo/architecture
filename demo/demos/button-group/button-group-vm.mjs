@@ -17,29 +17,29 @@ export class ButtonGroupVM extends Model
     static CopyCommandKey  = Model.RegisterProperty(ButtonGroupVM, 'CopyCommand',  null, MetaData.None);
     static PasteCommandKey = Model.RegisterProperty(ButtonGroupVM, 'PasteCommand', null, MetaData.None);
 
-    get UndoClicks()  { return this._get_property_value_by_name('UndoClicks'); }
-    set UndoClicks(v) { this._set_property_value_by_name('UndoClicks', v); }
-    get RedoClicks()  { return this._get_property_value_by_name('RedoClicks'); }
-    set RedoClicks(v) { this._set_property_value_by_name('RedoClicks', v); }
-    get CutClicks()   { return this._get_property_value_by_name('CutClicks'); }
-    set CutClicks(v)  { this._set_property_value_by_name('CutClicks', v); }
-    get CopyClicks()  { return this._get_property_value_by_name('CopyClicks'); }
-    set CopyClicks(v) { this._set_property_value_by_name('CopyClicks', v); }
-    get PasteClicks() { return this._get_property_value_by_name('PasteClicks'); }
-    set PasteClicks(v){ this._set_property_value_by_name('PasteClicks', v); }
+    get UndoClicks()  { return this.get_property_value(ButtonGroupVM.UndoClicksKey); }
+    set UndoClicks(v) { this.set_property_value(ButtonGroupVM.UndoClicksKey, v); }
+    get RedoClicks()  { return this.get_property_value(ButtonGroupVM.RedoClicksKey); }
+    set RedoClicks(v) { this.set_property_value(ButtonGroupVM.RedoClicksKey, v); }
+    get CutClicks()   { return this.get_property_value(ButtonGroupVM.CutClicksKey); }
+    set CutClicks(v)  { this.set_property_value(ButtonGroupVM.CutClicksKey, v); }
+    get CopyClicks()  { return this.get_property_value(ButtonGroupVM.CopyClicksKey); }
+    set CopyClicks(v) { this.set_property_value(ButtonGroupVM.CopyClicksKey, v); }
+    get PasteClicks() { return this.get_property_value(ButtonGroupVM.PasteClicksKey); }
+    set PasteClicks(v){ this.set_property_value(ButtonGroupVM.PasteClicksKey, v); }
 
-    get UndoCommand()  { return this._get_property_value_by_name('UndoCommand'); }
-    get RedoCommand()  { return this._get_property_value_by_name('RedoCommand'); }
-    get CutCommand()   { return this._get_property_value_by_name('CutCommand'); }
-    get CopyCommand()  { return this._get_property_value_by_name('CopyCommand'); }
-    get PasteCommand() { return this._get_property_value_by_name('PasteCommand'); }
+    get UndoCommand()  { return this.get_property_value(ButtonGroupVM.UndoCommandKey); }
+    get RedoCommand()  { return this.get_property_value(ButtonGroupVM.RedoCommandKey); }
+    get CutCommand()   { return this.get_property_value(ButtonGroupVM.CutCommandKey); }
+    get CopyCommand()  { return this.get_property_value(ButtonGroupVM.CopyCommandKey); }
+    get PasteCommand() { return this.get_property_value(ButtonGroupVM.PasteCommandKey); }
 
     constructor() {
         super();
-        this._set_property_value_by_name('UndoCommand',  new RelayCommand(() => { this.UndoClicks  += 1; }));
-        this._set_property_value_by_name('RedoCommand',  new RelayCommand(() => { this.RedoClicks  += 1; }));
-        this._set_property_value_by_name('CutCommand',   new RelayCommand(() => { this.CutClicks   += 1; }));
-        this._set_property_value_by_name('CopyCommand',  new RelayCommand(() => { this.CopyClicks  += 1; }));
-        this._set_property_value_by_name('PasteCommand', new RelayCommand(() => { this.PasteClicks += 1; }));
+        this.set_property_value(ButtonGroupVM.UndoCommandKey,  new RelayCommand(() => { this.UndoClicks  += 1; }));
+        this.set_property_value(ButtonGroupVM.RedoCommandKey,  new RelayCommand(() => { this.RedoClicks  += 1; }));
+        this.set_property_value(ButtonGroupVM.CutCommandKey,   new RelayCommand(() => { this.CutClicks   += 1; }));
+        this.set_property_value(ButtonGroupVM.CopyCommandKey,  new RelayCommand(() => { this.CopyClicks  += 1; }));
+        this.set_property_value(ButtonGroupVM.PasteCommandKey, new RelayCommand(() => { this.PasteClicks += 1; }));
     }
 }

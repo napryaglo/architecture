@@ -18,29 +18,29 @@ export class FabVM extends Model
     static ClickExtendedCommandKey = Model.RegisterProperty(FabVM, 'ClickExtendedCommand', null, MetaData.None);
     static ClickComposeCommandKey  = Model.RegisterProperty(FabVM, 'ClickComposeCommand',  null, MetaData.None);
 
-    get SmallClicks()    { return this._get_property_value_by_name('SmallClicks'); }
-    set SmallClicks(v)   { this._set_property_value_by_name('SmallClicks', v); }
-    get DefaultClicks()  { return this._get_property_value_by_name('DefaultClicks'); }
-    set DefaultClicks(v) { this._set_property_value_by_name('DefaultClicks', v); }
-    get LargeClicks()    { return this._get_property_value_by_name('LargeClicks'); }
-    set LargeClicks(v)   { this._set_property_value_by_name('LargeClicks', v); }
-    get ExtendedClicks() { return this._get_property_value_by_name('ExtendedClicks'); }
-    set ExtendedClicks(v){ this._set_property_value_by_name('ExtendedClicks', v); }
-    get ComposeClicks()  { return this._get_property_value_by_name('ComposeClicks'); }
-    set ComposeClicks(v) { this._set_property_value_by_name('ComposeClicks', v); }
+    get SmallClicks()    { return this.get_property_value(FabVM.SmallClicksKey); }
+    set SmallClicks(v)   { this.set_property_value(FabVM.SmallClicksKey, v); }
+    get DefaultClicks()  { return this.get_property_value(FabVM.DefaultClicksKey); }
+    set DefaultClicks(v) { this.set_property_value(FabVM.DefaultClicksKey, v); }
+    get LargeClicks()    { return this.get_property_value(FabVM.LargeClicksKey); }
+    set LargeClicks(v)   { this.set_property_value(FabVM.LargeClicksKey, v); }
+    get ExtendedClicks() { return this.get_property_value(FabVM.ExtendedClicksKey); }
+    set ExtendedClicks(v){ this.set_property_value(FabVM.ExtendedClicksKey, v); }
+    get ComposeClicks()  { return this.get_property_value(FabVM.ComposeClicksKey); }
+    set ComposeClicks(v) { this.set_property_value(FabVM.ComposeClicksKey, v); }
 
-    get ClickSmallCommand()    { return this._get_property_value_by_name('ClickSmallCommand'); }
-    get ClickDefaultCommand()  { return this._get_property_value_by_name('ClickDefaultCommand'); }
-    get ClickLargeCommand()    { return this._get_property_value_by_name('ClickLargeCommand'); }
-    get ClickExtendedCommand() { return this._get_property_value_by_name('ClickExtendedCommand'); }
-    get ClickComposeCommand()  { return this._get_property_value_by_name('ClickComposeCommand'); }
+    get ClickSmallCommand()    { return this.get_property_value(FabVM.ClickSmallCommandKey); }
+    get ClickDefaultCommand()  { return this.get_property_value(FabVM.ClickDefaultCommandKey); }
+    get ClickLargeCommand()    { return this.get_property_value(FabVM.ClickLargeCommandKey); }
+    get ClickExtendedCommand() { return this.get_property_value(FabVM.ClickExtendedCommandKey); }
+    get ClickComposeCommand()  { return this.get_property_value(FabVM.ClickComposeCommandKey); }
 
     constructor() {
         super();
-        this._set_property_value_by_name('ClickSmallCommand',    new RelayCommand(() => { this.SmallClicks    += 1; }));
-        this._set_property_value_by_name('ClickDefaultCommand',  new RelayCommand(() => { this.DefaultClicks  += 1; }));
-        this._set_property_value_by_name('ClickLargeCommand',    new RelayCommand(() => { this.LargeClicks    += 1; }));
-        this._set_property_value_by_name('ClickExtendedCommand', new RelayCommand(() => { this.ExtendedClicks += 1; }));
-        this._set_property_value_by_name('ClickComposeCommand',  new RelayCommand(() => { this.ComposeClicks  += 1; }));
+        this.set_property_value(FabVM.ClickSmallCommandKey,    new RelayCommand(() => { this.SmallClicks    += 1; }));
+        this.set_property_value(FabVM.ClickDefaultCommandKey,  new RelayCommand(() => { this.DefaultClicks  += 1; }));
+        this.set_property_value(FabVM.ClickLargeCommandKey,    new RelayCommand(() => { this.LargeClicks    += 1; }));
+        this.set_property_value(FabVM.ClickExtendedCommandKey, new RelayCommand(() => { this.ExtendedClicks += 1; }));
+        this.set_property_value(FabVM.ClickComposeCommandKey,  new RelayCommand(() => { this.ComposeClicks  += 1; }));
     }
 }

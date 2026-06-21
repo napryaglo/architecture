@@ -22,50 +22,50 @@ import { PATHS } from './paths.mjs';
 // Each picker row exposes Key + Label as DPs so the binding pipeline
 // can read them through the standard property path syntax in the .mu.
 class PathOption extends Model {
-    static {
-        Model.RegisterProperty(PathOption, 'Key',   '', MetaData.None);
-        Model.RegisterProperty(PathOption, 'Label', '', MetaData.None);
-    }
+    static KeyKey   = Model.RegisterProperty(PathOption, 'Key',   '', MetaData.None);
+    static LabelKey = Model.RegisterProperty(PathOption, 'Label', '', MetaData.None);
+
     constructor(key, label) {
         super();
-        this._set_property_value_by_name('Key',   key);
-        this._set_property_value_by_name('Label', label);
+        this.set_property_value(PathOption.KeyKey,   key);
+        this.set_property_value(PathOption.LabelKey, label);
     }
-    get Key()    { return this._get_property_value_by_name('Key'); }
-    get Label()  { return this._get_property_value_by_name('Label'); }
+    get Key()    { return this.get_property_value(PathOption.KeyKey); }
+    get Label()  { return this.get_property_value(PathOption.LabelKey); }
 }
 
 export class TextOnPathVM extends Model {
-    static {
-        Model.RegisterProperty(TextOnPathVM, 'Text',         'Text running along a curve — try a different path', MetaData.None);
-        Model.RegisterProperty(TextOnPathVM, 'PathKey',      'wave', MetaData.None);
-        Model.RegisterProperty(TextOnPathVM, 'FontSize',     28,     MetaData.None);
-        Model.RegisterProperty(TextOnPathVM, 'SideOffset',   0,      MetaData.None);
-        Model.RegisterProperty(TextOnPathVM, 'IsFontLoaded', false,  MetaData.None);
-        Model.RegisterProperty(TextOnPathVM, 'Status',       'Loading font…', MetaData.None);
-        Model.RegisterProperty(TextOnPathVM, 'Paths',        new ObservableCollection(), MetaData.None);
-        Model.RegisterProperty(TextOnPathVM, 'SelectedPathOption', undefined, MetaData.None);
-        Model.RegisterProperty(TextOnPathVM, 'ShowPath',     true,  MetaData.None);
-        Model.RegisterProperty(TextOnPathVM, 'ShowGlyphs',   true,  MetaData.None);
-        Model.RegisterProperty(TextOnPathVM, 'TogglePathCommand',   undefined, MetaData.None);
-        Model.RegisterProperty(TextOnPathVM, 'ToggleGlyphsCommand', undefined, MetaData.None);
-        Model.RegisterProperty(TextOnPathVM, 'PathColorHex',   '#94a3b8', MetaData.None);
-        Model.RegisterProperty(TextOnPathVM, 'GlyphColorHex',  '#0f172a', MetaData.None);
-    }
+    static TextKey               = Model.RegisterProperty(TextOnPathVM, 'Text',               'Text running along a curve — try a different path', MetaData.None);
+    static PathKeyKey            = Model.RegisterProperty(TextOnPathVM, 'PathKey',            'wave',          MetaData.None);
+    static FontSizeKey           = Model.RegisterProperty(TextOnPathVM, 'FontSize',           28,              MetaData.None);
+    static SideOffsetKey         = Model.RegisterProperty(TextOnPathVM, 'SideOffset',         0,               MetaData.None);
+    static IsFontLoadedKey       = Model.RegisterProperty(TextOnPathVM, 'IsFontLoaded',       false,           MetaData.None);
+    static StatusKey             = Model.RegisterProperty(TextOnPathVM, 'Status',             'Loading font…', MetaData.None);
+    static PathsKey              = Model.RegisterProperty(TextOnPathVM, 'Paths',              undefined,       MetaData.None);
+    static SelectedPathOptionKey = Model.RegisterProperty(TextOnPathVM, 'SelectedPathOption', undefined,       MetaData.None);
+    static ShowPathKey           = Model.RegisterProperty(TextOnPathVM, 'ShowPath',           true,            MetaData.None);
+    static ShowGlyphsKey         = Model.RegisterProperty(TextOnPathVM, 'ShowGlyphs',         true,            MetaData.None);
+    static TogglePathCommandKey  = Model.RegisterProperty(TextOnPathVM, 'TogglePathCommand',  undefined,       MetaData.None);
+    static ToggleGlyphsCommandKey= Model.RegisterProperty(TextOnPathVM, 'ToggleGlyphsCommand',undefined,       MetaData.None);
+    static PathColorHexKey       = Model.RegisterProperty(TextOnPathVM, 'PathColorHex',       '#94a3b8',       MetaData.None);
+    static GlyphColorHexKey      = Model.RegisterProperty(TextOnPathVM, 'GlyphColorHex',      '#0f172a',       MetaData.None);
 
     constructor() {
         super();
-        const opts = this._get_property_value_by_name('Paths');
+        // Paths collection — instantiated per-VM so Add / Remove on it
+        // doesn't leak across re-mounts.
+        const opts = new ObservableCollection();
         for (const p of PATHS) opts.Add(new PathOption(p.key, p.label));
+        this.set_property_value(TextOnPathVM.PathsKey, opts);
         // Default selection — first entry (`wave`).
-        this._set_property_value_by_name('SelectedPathOption', opts.Get(0));
+        this.set_property_value(TextOnPathVM.SelectedPathOptionKey, opts.Get(0));
 
         // Two-way bridge — when the picker assigns a new
         // SelectedPathOption, mirror its Key onto PathKey so the
         // behavior's PathKey listener wakes up.
-        this._add_property_changed_listener_by_name('SelectedPathOption', (_m, _p, _o, n) => {
+        this.AddPropertyChangedListener(TextOnPathVM.SelectedPathOptionKey, (_m, _p, _o, n) => {
             if (n !== undefined) {
-                this._set_property_value_by_name('PathKey', n.Key);
+                this.set_property_value(TextOnPathVM.PathKeyKey, n.Key);
             }
         });
 
@@ -74,37 +74,39 @@ export class TextOnPathVM extends Model {
         // binding gymnastics for the boolean DPs. They must live on DPs
         // — DataContextBinding only reads registered properties on a
         // Model context.
-        this._set_property_value_by_name('TogglePathCommand', new RelayCommand(
-            () => this._set_property_value_by_name('ShowPath',   !this.ShowPath),
+        this.set_property_value(TextOnPathVM.TogglePathCommandKey, new RelayCommand(
+            () => { this.ShowPath = !this.ShowPath; },
             () => true,
         ));
-        this._set_property_value_by_name('ToggleGlyphsCommand', new RelayCommand(
-            () => this._set_property_value_by_name('ShowGlyphs', !this.ShowGlyphs),
+        this.set_property_value(TextOnPathVM.ToggleGlyphsCommandKey, new RelayCommand(
+            () => { this.ShowGlyphs = !this.ShowGlyphs; },
             () => true,
         ));
     }
 
-    get Text()              { return this._get_property_value_by_name('Text'); }
-    set Text(v)             { this._set_property_value_by_name('Text', v); }
-    get PathKey()           { return this._get_property_value_by_name('PathKey'); }
-    set PathKey(v)          { this._set_property_value_by_name('PathKey', v); }
-    get FontSize()          { return this._get_property_value_by_name('FontSize'); }
-    set FontSize(v)         { this._set_property_value_by_name('FontSize', v); }
-    get SideOffset()        { return this._get_property_value_by_name('SideOffset'); }
-    set SideOffset(v)       { this._set_property_value_by_name('SideOffset', v); }
-    get IsFontLoaded()      { return this._get_property_value_by_name('IsFontLoaded'); }
-    set IsFontLoaded(v)     { this._set_property_value_by_name('IsFontLoaded', v); }
-    get Status()            { return this._get_property_value_by_name('Status'); }
-    set Status(v)           { this._set_property_value_by_name('Status', v); }
-    get Paths()             { return this._get_property_value_by_name('Paths'); }
-    get SelectedPathOption(){ return this._get_property_value_by_name('SelectedPathOption'); }
-    set SelectedPathOption(v){ this._set_property_value_by_name('SelectedPathOption', v); }
-    get ShowPath()          { return this._get_property_value_by_name('ShowPath'); }
-    get ShowGlyphs()        { return this._get_property_value_by_name('ShowGlyphs'); }
-    get TogglePathCommand()   { return this._get_property_value_by_name('TogglePathCommand'); }
-    get ToggleGlyphsCommand() { return this._get_property_value_by_name('ToggleGlyphsCommand'); }
-    get PathColorHex()        { return this._get_property_value_by_name('PathColorHex'); }
-    set PathColorHex(v)       { this._set_property_value_by_name('PathColorHex', v); }
-    get GlyphColorHex()       { return this._get_property_value_by_name('GlyphColorHex'); }
-    set GlyphColorHex(v)      { this._set_property_value_by_name('GlyphColorHex', v); }
+    get Text()                { return this.get_property_value(TextOnPathVM.TextKey); }
+    set Text(v)               { this.set_property_value(TextOnPathVM.TextKey, v); }
+    get PathKey()             { return this.get_property_value(TextOnPathVM.PathKeyKey); }
+    set PathKey(v)            { this.set_property_value(TextOnPathVM.PathKeyKey, v); }
+    get FontSize()            { return this.get_property_value(TextOnPathVM.FontSizeKey); }
+    set FontSize(v)           { this.set_property_value(TextOnPathVM.FontSizeKey, v); }
+    get SideOffset()          { return this.get_property_value(TextOnPathVM.SideOffsetKey); }
+    set SideOffset(v)         { this.set_property_value(TextOnPathVM.SideOffsetKey, v); }
+    get IsFontLoaded()        { return this.get_property_value(TextOnPathVM.IsFontLoadedKey); }
+    set IsFontLoaded(v)       { this.set_property_value(TextOnPathVM.IsFontLoadedKey, v); }
+    get Status()              { return this.get_property_value(TextOnPathVM.StatusKey); }
+    set Status(v)             { this.set_property_value(TextOnPathVM.StatusKey, v); }
+    get Paths()               { return this.get_property_value(TextOnPathVM.PathsKey); }
+    get SelectedPathOption()  { return this.get_property_value(TextOnPathVM.SelectedPathOptionKey); }
+    set SelectedPathOption(v) { this.set_property_value(TextOnPathVM.SelectedPathOptionKey, v); }
+    get ShowPath()            { return this.get_property_value(TextOnPathVM.ShowPathKey); }
+    set ShowPath(v)           { this.set_property_value(TextOnPathVM.ShowPathKey, v); }
+    get ShowGlyphs()          { return this.get_property_value(TextOnPathVM.ShowGlyphsKey); }
+    set ShowGlyphs(v)         { this.set_property_value(TextOnPathVM.ShowGlyphsKey, v); }
+    get TogglePathCommand()   { return this.get_property_value(TextOnPathVM.TogglePathCommandKey); }
+    get ToggleGlyphsCommand() { return this.get_property_value(TextOnPathVM.ToggleGlyphsCommandKey); }
+    get PathColorHex()        { return this.get_property_value(TextOnPathVM.PathColorHexKey); }
+    set PathColorHex(v)       { this.set_property_value(TextOnPathVM.PathColorHexKey, v); }
+    get GlyphColorHex()       { return this.get_property_value(TextOnPathVM.GlyphColorHexKey); }
+    set GlyphColorHex(v)      { this.set_property_value(TextOnPathVM.GlyphColorHexKey, v); }
 }

@@ -17,29 +17,29 @@ export class FabMenuVM extends Model
     static UploadCommandKey  = Model.RegisterProperty(FabMenuVM, 'UploadCommand',  null, MetaData.None);
     static ShareCommandKey   = Model.RegisterProperty(FabMenuVM, 'ShareCommand',   null, MetaData.None);
 
-    get IsOpen()         { return this._get_property_value_by_name('IsOpen'); }
-    set IsOpen(v)        { this._set_property_value_by_name('IsOpen', v); }
-    get Items()          { return this._get_property_value_by_name('Items'); }
-    set Items(v)         { this._set_property_value_by_name('Items', v); }
+    get IsOpen()         { return this.get_property_value(FabMenuVM.IsOpenKey); }
+    set IsOpen(v)        { this.set_property_value(FabMenuVM.IsOpenKey, v); }
+    get Items()          { return this.get_property_value(FabMenuVM.ItemsKey); }
+    set Items(v)         { this.set_property_value(FabMenuVM.ItemsKey, v); }
 
-    get CreateClicks()   { return this._get_property_value_by_name('CreateClicks'); }
-    set CreateClicks(v)  { this._set_property_value_by_name('CreateClicks', v); }
-    get UploadClicks()   { return this._get_property_value_by_name('UploadClicks'); }
-    set UploadClicks(v)  { this._set_property_value_by_name('UploadClicks', v); }
-    get ShareClicks()    { return this._get_property_value_by_name('ShareClicks'); }
-    set ShareClicks(v)   { this._set_property_value_by_name('ShareClicks', v); }
+    get CreateClicks()   { return this.get_property_value(FabMenuVM.CreateClicksKey); }
+    set CreateClicks(v)  { this.set_property_value(FabMenuVM.CreateClicksKey, v); }
+    get UploadClicks()   { return this.get_property_value(FabMenuVM.UploadClicksKey); }
+    set UploadClicks(v)  { this.set_property_value(FabMenuVM.UploadClicksKey, v); }
+    get ShareClicks()    { return this.get_property_value(FabMenuVM.ShareClicksKey); }
+    set ShareClicks(v)   { this.set_property_value(FabMenuVM.ShareClicksKey, v); }
 
-    get CreateCommand()  { return this._get_property_value_by_name('CreateCommand'); }
-    get UploadCommand()  { return this._get_property_value_by_name('UploadCommand'); }
-    get ShareCommand()   { return this._get_property_value_by_name('ShareCommand'); }
+    get CreateCommand()  { return this.get_property_value(FabMenuVM.CreateCommandKey); }
+    get UploadCommand()  { return this.get_property_value(FabMenuVM.UploadCommandKey); }
+    get ShareCommand()   { return this.get_property_value(FabMenuVM.ShareCommandKey); }
 
     constructor() {
         super();
-        this._set_property_value_by_name('CreateCommand',
+        this.set_property_value(FabMenuVM.CreateCommandKey,
             new RelayCommand(() => { this.CreateClicks += 1; this.IsOpen = false; }));
-        this._set_property_value_by_name('UploadCommand',
+        this.set_property_value(FabMenuVM.UploadCommandKey,
             new RelayCommand(() => { this.UploadClicks += 1; this.IsOpen = false; }));
-        this._set_property_value_by_name('ShareCommand',
+        this.set_property_value(FabMenuVM.ShareCommandKey,
             new RelayCommand(() => { this.ShareClicks  += 1; this.IsOpen = false; }));
     }
 }

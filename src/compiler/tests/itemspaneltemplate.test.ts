@@ -55,7 +55,7 @@ resources Test {
 }
 `);
         assert.match(body, /new ItemsPanelTemplate\(\(\) => \{/);
-        assert.match(body, /_set_property_value_by_name\("ItemsPanel",\s*_tmpl/);
+        assert.match(body, /\.set_property_value\(\w+\.ItemsPanelKey,\s*_tmpl/);
         // No x:key registration for the inline form.
         assert.doesNotMatch(body, /\.Set\([^)]*WrapLayout/);
     });
@@ -75,6 +75,6 @@ resources Test {
 }
 `);
         assert.match(body, /new DataTemplate\(\(_data\) => \{[\s\S]*new TextBlock/);
-        assert.match(body, /_set_property_value_by_name\("ItemTemplate",\s*_tmpl/);
+        assert.match(body, /\.set_property_value\(\w+\.ItemTemplateKey,\s*_tmpl/);
     });
 });

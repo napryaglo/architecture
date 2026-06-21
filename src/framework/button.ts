@@ -340,12 +340,17 @@ export class Button extends ContentControl implements ICommandSource
     // user gets a rich tooltip (Text + Description + shortcut row)
     // without writing anything beyond `Button [Command=$SaveCommand]`.
     //
-    // Auto-derive is gated three ways:
+    // Auto-derive is gated four ways:
     //   1. New value must be a CommandBase — plain ICommand impls don't
     //      carry Text/Description, so there's nothing to display.
-    //   2. The button must not already carry an explicit ToolTip — an
+    //   2. At least one of Text / Description must be non-empty — a
+    //      command with no display metadata would render an empty
+    //      tooltip surface on hover (chrome with two zero-content
+    //      TextBlocks). Most demo RelayCommands omit the metadata, so
+    //      gating here keeps the auto-tooltip out of their way.
+    //   3. The button must not already carry an explicit ToolTip — an
     //      author-supplied tooltip always wins.
-    //   3. If the OLD command was the same CommandBase we auto-set, we
+    //   4. If the OLD command was the same CommandBase we auto-set, we
     //      clear it before setting the new value so a Command swap from
     //      A → undefined cleanly retracts the auto-tooltip.
     private _autoTooltipCommand: CommandBase | undefined;
@@ -366,6 +371,11 @@ export class Button extends ContentControl implements ICommandSource
             this._autoTooltipCommand = undefined;
         }
         if (!(newCmd instanceof CommandBase)) return;
+        // Skip if the command has no display metadata — both Text and
+        // Description empty means the rich-tooltip template would stamp
+        // an empty surface; the chrome would still appear on hover with
+        // no visible text, which reads as "broken tooltip".
+        if ((newCmd.Text ?? '') === '' && (newCmd.Description ?? '') === '') return;
         // Don't overwrite an explicit ToolTip the author already set.
         if (ToolTipService.GetToolTip(this) !== undefined) return;
         ToolTipService.SetToolTip(this, newCmd);

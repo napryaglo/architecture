@@ -35,11 +35,11 @@ class AnimTest extends Element
         Model.RegisterProperty(AnimTest, 'Thickness', new Thickness(0), MetaData.None);
     }
     public get Number(): number { return this.get_property_value(resolveKey(this, undefined, 'Number')); }
-    public set Number(v: number) { this._set_property_value_by_name('Number', v); }
+    public set Number(v: number) { this.set_property_value(resolveKey(this, undefined, 'Number'), v); }
     public get Color(): Color { return this.get_property_value(resolveKey(this, undefined, 'Color')); }
-    public set Color(v: Color) { this._set_property_value_by_name('Color', v); }
+    public set Color(v: Color) { this.set_property_value(resolveKey(this, undefined, 'Color'), v); }
     public get Thickness(): Thickness { return this.get_property_value(resolveKey(this, undefined, 'Thickness')); }
-    public set Thickness(v: Thickness) { this._set_property_value_by_name('Thickness', v); }
+    public set Thickness(v: Thickness) { this.set_property_value(resolveKey(this, undefined, 'Thickness'), v); }
 }
 
 // Install a fresh ManualClock on the AnimationManager singleton before
@@ -531,7 +531,7 @@ describe('EVD animation slot — coerce integration', () => {
             );
         }
         public get Value(): number { return this.get_property_value(resolveKey(this, undefined, 'Value')); }
-        public set Value(v: number) { this._set_property_value_by_name('Value', v); }
+        public set Value(v: number) { this.set_property_value(resolveKey(this, undefined, 'Value'), v); }
     }
 
     test('SetAnimatedValue past the ceiling reads back as the coerced (clamped) value', () => {

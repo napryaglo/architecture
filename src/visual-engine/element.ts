@@ -12,7 +12,7 @@ import type { PropertyDescriptor } from '../runtime/property-descriptor.js';
 import type { PropertyTrigger, MultiTrigger, DataTrigger, MultiDataTrigger } from '../runtime/style.js';
 import type { EventTrigger } from '../runtime/event-trigger.js';
 import { StyleApplicator } from './style-applicator.js';
-import { TriggerHost } from './trigger-host.js';
+import { TriggerHost, type ITriggerHost } from './trigger-host.js';
 import { ResourceResolver } from './resource-resolver.js';
 import type { Behavior } from './behavior.js';
 
@@ -56,7 +56,7 @@ interface VisualAncestorAccess
     _templatedParent: Visual | undefined;
 }
 
-export class Element extends Visual
+export class Element extends Visual implements ITriggerHost
 {
     // ── FrameworkElement-tier DPs ─────────────────────────────────────
 
@@ -477,60 +477,63 @@ export class Element extends Visual
     // Public hook to wire a stand-alone EventTrigger onto an
     // Element. Templated controls install their own EventTriggers
     // through the Style cascade; this surface is for consumers
-    // wiring an EventTrigger directly (rare but documented).
+    // wiring an EventTrigger directly (rare but documented). Thin
+    // aliases for `InstallEventTrigger` / `UninstallEventTrigger`
+    // (the `ITriggerHost` surface) — kept for the conventional
+    // Add/Remove naming that consumer call sites read with.
     public AddEventTrigger(trigger: EventTrigger): void
     {
-        this._install_event_trigger(trigger);
+        this.InstallEventTrigger(trigger);
     }
 
     public RemoveEventTrigger(trigger: EventTrigger): void
     {
-        this._uninstall_event_trigger(trigger);
+        this.UninstallEventTrigger(trigger);
     }
 
-    /** @internal — § 1.8 trampoline. The install machinery lives on
-     *  `TriggerHost`. Called from `StyleApplicator.RefreshActiveStyle`
-     *  and from public `AddEventTrigger`. Lazy-creates the host on
-     *  first touch. */
-    public _install_event_trigger(trigger: EventTrigger): void
-    {
-        (this._triggerHost ??= new TriggerHost(this)).InstallEventTrigger(trigger);
-    }
+    // ── ITriggerHost implementation ──────────────────────────────────
+    //
+    // Element formally implements `ITriggerHost` by forwarding to a
+    // lazily-allocated `TriggerHost`. The seven methods below match
+    // the interface signature one-for-one; an Element that never has
+    // a trigger installed never allocates a TriggerHost. Called from
+    // `StyleApplicator.RefreshActiveStyle` (via the `ITriggerHost`
+    // typed reference) during a Style swap and from the public
+    // `AddEventTrigger` / `RemoveEventTrigger` consumer surface above.
 
-    /** @internal — § 1.8 trampoline. */
-    public _uninstall_event_trigger(trigger: EventTrigger): void
-    {
-        this._triggerHost?.UninstallEventTrigger(trigger);
-    }
-
-    /** @internal — § 1.8 trampoline. */
-    public _install_trigger(trigger: PropertyTrigger): void
+    public InstallTrigger(trigger: PropertyTrigger): void
     {
         (this._triggerHost ??= new TriggerHost(this)).InstallTrigger(trigger);
     }
 
-    /** @internal — § 1.8 trampoline. */
-    public _uninstall_trigger(trigger: PropertyTrigger | MultiTrigger | DataTrigger | MultiDataTrigger): void
-    {
-        this._triggerHost?.UninstallTrigger(trigger);
-    }
-
-    /** @internal — § 1.8 trampoline. */
-    public _install_multi_trigger(trigger: MultiTrigger): void
+    public InstallMultiTrigger(trigger: MultiTrigger): void
     {
         (this._triggerHost ??= new TriggerHost(this)).InstallMultiTrigger(trigger);
     }
 
-    /** @internal — § 1.8 trampoline. */
-    public _install_data_trigger(trigger: DataTrigger): void
+    public InstallDataTrigger(trigger: DataTrigger): void
     {
         (this._triggerHost ??= new TriggerHost(this)).InstallDataTrigger(trigger);
     }
 
-    /** @internal — § 1.8 trampoline. */
-    public _install_multi_data_trigger(trigger: MultiDataTrigger): void
+    public InstallMultiDataTrigger(trigger: MultiDataTrigger): void
     {
         (this._triggerHost ??= new TriggerHost(this)).InstallMultiDataTrigger(trigger);
+    }
+
+    public InstallEventTrigger(trigger: EventTrigger): void
+    {
+        (this._triggerHost ??= new TriggerHost(this)).InstallEventTrigger(trigger);
+    }
+
+    public UninstallTrigger(trigger: PropertyTrigger | MultiTrigger | DataTrigger | MultiDataTrigger): void
+    {
+        this._triggerHost?.UninstallTrigger(trigger);
+    }
+
+    public UninstallEventTrigger(trigger: EventTrigger): void
+    {
+        this._triggerHost?.UninstallEventTrigger(trigger);
     }
 
     // ── DynamicResource re-wire support ──────────────────────────────

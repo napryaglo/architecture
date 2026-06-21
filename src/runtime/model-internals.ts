@@ -42,7 +42,15 @@ interface ModelInternal
     property_values: Map<string, EffectiveValueDescriptor>;
 }
 
-const ModelStatic: ModelStaticInternal = Model as unknown as ModelStaticInternal;
+// Cast applied per call rather than once at module top — `Model` is
+// not yet initialized when this module is evaluated through the cycle
+// `model.ts → binding/binding.ts → model-internals.ts → model.ts`.
+// The cast is type-only; at runtime `ModelStatic()` simply returns the
+// fully-initialized `Model` class function.
+function ModelStatic(): ModelStaticInternal
+{
+    return Model as unknown as ModelStaticInternal;
+}
 
 // ── Name → PropertyKey resolution ────────────────────────────────────
 
@@ -68,7 +76,7 @@ export function resolveKey(
 ): PropertyKey<unknown>
 {
     const klass = owner ?? model.constructor;
-    const descriptor = ModelStatic.find_descriptor(klass, property);
+    const descriptor = ModelStatic().find_descriptor(klass, property);
     if (descriptor === undefined)
     {
         const ctx = owner === undefined
@@ -94,7 +102,7 @@ export function findDescriptor(
     property: string,
 ): PropertyDescriptor | undefined
 {
-    return ModelStatic.find_descriptor(klass, property);
+    return ModelStatic().find_descriptor(klass, property);
 }
 
 // Return the descriptor bag registered directly on `klass` (excluding
@@ -109,7 +117,7 @@ export function peekPropertyBag(
     klass: Function,
 ): Map<string, PropertyDescriptor> | undefined
 {
-    return ModelStatic.peek_property_bag(klass);
+    return ModelStatic().peek_property_bag(klass);
 }
 
 // The per-instance value store keyed by composite

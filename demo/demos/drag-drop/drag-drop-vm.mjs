@@ -23,41 +23,37 @@ let _nextId = 1;
 
 export class ItemVM extends Model
 {
-    static {
-        Model.RegisterProperty(ItemVM, 'Id',            '',         MetaData.None);
-        Model.RegisterProperty(ItemVM, 'Label',         '',         MetaData.None);
-        // Bound from .mu via OnDragStart=$BeginDragData on the
-        // ListBoxItem container. Returns the drag payload at trip
-        // time. Stored as a DP so the binding pipeline pushes the
-        // value to the framework's OnDragStart slot.
-        Model.RegisterProperty(ItemVM, 'BeginDragData', undefined,  MetaData.None);
-    }
+    static IdKey            = Model.RegisterProperty(ItemVM, 'Id',            '',         MetaData.None);
+    static LabelKey         = Model.RegisterProperty(ItemVM, 'Label',         '',         MetaData.None);
+    // Bound from .mu via OnDragStart=$BeginDragData on the
+    // ListBoxItem container. Returns the drag payload at trip
+    // time. Stored as a DP so the binding pipeline pushes the
+    // value to the framework's OnDragStart slot.
+    static BeginDragDataKey = Model.RegisterProperty(ItemVM, 'BeginDragData', undefined,  MetaData.None);
 
     constructor(label) {
         super();
         const id = 'i' + (_nextId++);
-        this._set_property_value_by_name('Id',    id);
-        this._set_property_value_by_name('Label', label);
+        this.set_property_value(ItemVM.IdKey,    id);
+        this.set_property_value(ItemVM.LabelKey, label);
         // Arrow function — `this` stays bound when the framework
         // invokes it via the IsDraggable latch.
-        this._set_property_value_by_name('BeginDragData', () => ({
+        this.set_property_value(ItemVM.BeginDragDataKey, () => ({
             data:    new DataObject().Set(FMT_ITEM, this.Id),
             effects: DragDropEffects.Move,
         }));
     }
 
-    get Id()            { return this._get_property_value_by_name('Id'); }
-    get Label()         { return this._get_property_value_by_name('Label'); }
-    get BeginDragData() { return this._get_property_value_by_name('BeginDragData'); }
+    get Id()            { return this.get_property_value(ItemVM.IdKey); }
+    get Label()         { return this.get_property_value(ItemVM.LabelKey); }
+    get BeginDragData() { return this.get_property_value(ItemVM.BeginDragDataKey); }
 }
 
 export class DragDropVM extends Model
 {
-    static {
-        Model.RegisterProperty(DragDropVM, 'LeftItems',  undefined,                       MetaData.None);
-        Model.RegisterProperty(DragDropVM, 'RightItems', undefined,                       MetaData.None);
-        Model.RegisterProperty(DragDropVM, 'Status',     'Drag items between the lists.', MetaData.None);
-    }
+    static LeftItemsKey  = Model.RegisterProperty(DragDropVM, 'LeftItems',  undefined,                       MetaData.None);
+    static RightItemsKey = Model.RegisterProperty(DragDropVM, 'RightItems', undefined,                       MetaData.None);
+    static StatusKey     = Model.RegisterProperty(DragDropVM, 'Status',     'Drag items between the lists.', MetaData.None);
 
     constructor() {
         super();
@@ -65,14 +61,14 @@ export class DragDropVM extends Model
         const right = new ObservableCollection();
         for (const label of ['Apple', 'Banana', 'Cherry', 'Date'])      left.Add(new ItemVM(label));
         for (const label of ['Eggplant', 'Fig', 'Grape'])               right.Add(new ItemVM(label));
-        this._set_property_value_by_name('LeftItems',  left);
-        this._set_property_value_by_name('RightItems', right);
+        this.set_property_value(DragDropVM.LeftItemsKey,  left);
+        this.set_property_value(DragDropVM.RightItemsKey, right);
     }
 
-    get LeftItems()  { return this._get_property_value_by_name('LeftItems'); }
-    get RightItems() { return this._get_property_value_by_name('RightItems'); }
-    get Status()     { return this._get_property_value_by_name('Status'); }
-    set Status(v)    { this._set_property_value_by_name('Status', v); }
+    get LeftItems()  { return this.get_property_value(DragDropVM.LeftItemsKey); }
+    get RightItems() { return this.get_property_value(DragDropVM.RightItemsKey); }
+    get Status()     { return this.get_property_value(DragDropVM.StatusKey); }
+    set Status(v)    { this.set_property_value(DragDropVM.StatusKey, v); }
 
     // Move an item to the left list. No-op when the item is already
     // there (the drop behavior screens this case in DragOver and

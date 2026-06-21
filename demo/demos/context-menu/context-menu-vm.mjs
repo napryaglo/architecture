@@ -14,7 +14,7 @@ export class ContextMenuVM extends Model
 
     constructor() {
         super();
-        const setStatus = (msg) => this._set_property_value_by_name('Status', msg);
+        const setStatus = (msg) => this.set_property_value(ContextMenuVM.StatusKey, msg);
         // Three sets of commands keyed by panel colour. The data flows
         // through CommandParameter so the same VM method can format
         // distinct status messages per source.
@@ -23,6 +23,6 @@ export class ContextMenuVM extends Model
         this.BlueCommand   = new RelayCommand((label) => setStatus(`Blue panel  — ${label}.`));
     }
 
-    get Status()  { return this._get_property_value_by_name('Status'); }
-    set Status(v) { this._set_property_value_by_name('Status', v); }
+    get Status()  { return this.get_property_value(ContextMenuVM.StatusKey); }
+    set Status(v) { this.set_property_value(ContextMenuVM.StatusKey, v); }
 }
