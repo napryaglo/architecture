@@ -1,7 +1,7 @@
 import { SegmentedButtonVM } from "./segmented-button-vm.mjs";
 import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@visualisation-sub/mural/basic";
+import { SegmentedButton } from "@visualisation-sub/mural/framework/button-groups/segmented-button.js";
 import { SelectionMode } from "@visualisation-sub/mural/framework/list/list-box.js";
-import { SegmentedButton } from "@visualisation-sub/mural/framework/segmented-button.js";
 import { DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
 import { FontWeight } from "@visualisation-sub/mural/visual-engine";
 

@@ -5,7 +5,7 @@ import { RelayCommand } from '../../runtime/index.js';
 import { Border } from '../../basic/border.js';
 import { TextBlock } from '../../basic/text-block.js';
 import { HeadlessTarget } from '../../visual-engine/index.js';
-import { SplitButton } from '../split-button.js';
+import { SplitButton } from '../button-groups/split-button.js';
 
 describe('SplitButton defaults', () => {
 

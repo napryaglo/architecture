@@ -6,7 +6,7 @@ import {
     Size,
     Visual,
     type PointerEventArgs,
-} from '../runtime/index.js';
+} from '../../runtime/index.js';
 
 function nowMs(): number { return Date.now(); }
 

@@ -6,7 +6,7 @@ import {
     SegmentedButton,
     SegmentedItem,
     SegmentedPosition,
-} from '../segmented-button.js';
+} from '../button-groups/segmented-button.js';
 import { SelectionMode, Selector } from '../list/selector.js';
 import { TextBlock } from '../../basic/text-block.js';
 

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { initTestApp } from '../../basic/tests/test-app.js';
 import { Size, Rect } from '../../runtime/index.js';
 import { Border } from '../../basic/border.js';
-import { ButtonGroup } from '../button-group.js';
+import { ButtonGroup } from '../button-groups/button-group.js';
 
 describe('ButtonGroup defaults', () => {
 

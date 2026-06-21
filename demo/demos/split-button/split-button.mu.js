@@ -1,6 +1,6 @@
 import { SplitButtonVM } from "./split-button-vm.mjs";
 import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@visualisation-sub/mural/basic";
-import { SplitButton } from "@visualisation-sub/mural/framework/split-button.js";
+import { SplitButton } from "@visualisation-sub/mural/framework/button-groups/split-button.js";
 import { DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
 import { FontWeight } from "@visualisation-sub/mural/visual-engine";
 

@@ -52,9 +52,9 @@ export {
     SegmentedButton,
     SegmentedItem,
     SegmentedPosition,
-} from './segmented-button.js';
-export { ButtonGroup } from './button-group.js';
-export { SplitButton } from './split-button.js';
+} from './button-groups/segmented-button.js';
+export { ButtonGroup } from './button-groups/button-group.js';
+export { SplitButton } from './button-groups/split-button.js';
 export { FabMenu } from './fab-menu.js';
 export { TabControl, TabItem } from './tabs.js';
 export { SearchBar } from './search-bar.js';
