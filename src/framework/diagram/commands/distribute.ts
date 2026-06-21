@@ -12,8 +12,8 @@
 // AlignXxx already provides; distributing 1 is meaningless.
 
 export interface DistributeTarget {
-    X:      number;
-    Y:      number;
+    Left:   number;
+    Top:    number;
     Width:  number;
     Height: number;
 }
@@ -21,33 +21,33 @@ export interface DistributeTarget {
 export function distributeHorizontal(items: readonly DistributeTarget[]): void
 {
     if (items.length < 3) return;
-    const sorted = [...items].sort((a, b) => a.X - b.X);
-    const leftmost  = sorted[0];
-    const rightmost = sorted[sorted.length - 1];
-    const totalSpan = (rightmost.X + rightmost.Width) - leftmost.X;
+    const sorted = [...items].sort((a, b) => a.Left - b.Left);
+    const leftmost  = sorted[0]!;
+    const rightmost = sorted[sorted.length - 1]!;
+    const totalSpan = (rightmost.Left + rightmost.Width) - leftmost.Left;
     const widthSum  = sorted.reduce((acc, n) => acc + n.Width, 0);
     const gap       = (totalSpan - widthSum) / (sorted.length - 1);
-    let cursor = leftmost.X + leftmost.Width + gap;
+    let cursor = leftmost.Left + leftmost.Width + gap;
     for (let i = 1; i < sorted.length - 1; i++)
     {
-        sorted[i].X = cursor;
-        cursor += sorted[i].Width + gap;
+        sorted[i]!.Left = cursor;
+        cursor += sorted[i]!.Width + gap;
     }
 }
 
 export function distributeVertical(items: readonly DistributeTarget[]): void
 {
     if (items.length < 3) return;
-    const sorted = [...items].sort((a, b) => a.Y - b.Y);
-    const topmost    = sorted[0];
-    const bottommost = sorted[sorted.length - 1];
-    const totalSpan = (bottommost.Y + bottommost.Height) - topmost.Y;
+    const sorted = [...items].sort((a, b) => a.Top - b.Top);
+    const topmost    = sorted[0]!;
+    const bottommost = sorted[sorted.length - 1]!;
+    const totalSpan = (bottommost.Top + bottommost.Height) - topmost.Top;
     const heightSum = sorted.reduce((acc, n) => acc + n.Height, 0);
     const gap       = (totalSpan - heightSum) / (sorted.length - 1);
-    let cursor = topmost.Y + topmost.Height + gap;
+    let cursor = topmost.Top + topmost.Height + gap;
     for (let i = 1; i < sorted.length - 1; i++)
     {
-        sorted[i].Y = cursor;
-        cursor += sorted[i].Height + gap;
+        sorted[i]!.Top = cursor;
+        cursor += sorted[i]!.Height + gap;
     }
 }

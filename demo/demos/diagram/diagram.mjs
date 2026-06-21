@@ -141,14 +141,26 @@ function attachDiagramBehaviors(view, vm) {
             vm.set_property_value(VM[vmKey], nodes.get_property_value(Diagram_[diagKey]));
         }
         // TWO-way bridge for the format mirror — initial Diagram→VM
-        // sync + bidirectional listeners. The DP machinery dedups
-        // writes so the listener pair doesn't loop.
+        // sync + bidirectional listeners. Local-tier writes always fire
+        // OnPropertyChange (no equal-value dedup in the EVD's set-value
+        // path), so naked listener-into-write recursion would loop. A
+        // per-bridge `propagating` flag short-circuits the inverse
+        // listener while a side-effect write is in flight.
         const bridge = (diagKey, vmKey) => {
             vm.set_property_value(VM[vmKey], nodes.get_property_value(Diagram_[diagKey]));
-            nodes.AddPropertyChangedListener(Diagram_[diagKey], () =>
-                vm.set_property_value(VM[vmKey], nodes.get_property_value(Diagram_[diagKey])));
-            vm.AddPropertyChangedListener(VM[vmKey], () =>
-                nodes.set_property_value(Diagram_[diagKey], vm.get_property_value(VM[vmKey])));
+            let propagating = false;
+            nodes.AddPropertyChangedListener(Diagram_[diagKey], () => {
+                if (propagating) return;
+                propagating = true;
+                try { vm.set_property_value(VM[vmKey], nodes.get_property_value(Diagram_[diagKey])); }
+                finally { propagating = false; }
+            });
+            vm.AddPropertyChangedListener(VM[vmKey], () => {
+                if (propagating) return;
+                propagating = true;
+                try { nodes.set_property_value(Diagram_[diagKey], vm.get_property_value(VM[vmKey])); }
+                finally { propagating = false; }
+            });
         };
         bridge('SelectionFormatFillKey',   'SelectionFormatFillKey');
         bridge('SelectionFormatStrokeKey', 'SelectionFormatStrokeKey');

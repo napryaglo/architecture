@@ -90,7 +90,7 @@ function rectFromFigure(figure: Figure): Rect
     const ar = figure.ArrangedRect;
     const w = ar?.Width  ?? 0;
     const h = ar?.Height ?? 0;
-    return new Rect(figure.X, figure.Y, w, h);
+    return new Rect(figure.Left, figure.Top, w, h);
 }
 
 // Walk Diagram's items, look up each one's container via the
@@ -109,7 +109,7 @@ function collectOtherRects(diagram: Diagram, excludedFigure: Figure): Rect[]
         if (!(container instanceof Figure)) continue;
         const rect = container.ArrangedRect;
         if (rect === undefined || rect.Width <= 0) continue;
-        out.push(new Rect(container.X, container.Y, rect.Width, rect.Height));
+        out.push(new Rect(container.Left, container.Top, rect.Width, rect.Height));
     }
     return out;
 }

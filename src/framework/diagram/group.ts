@@ -16,16 +16,16 @@ import { ControlTemplate } from '../../basic/templates/control-template.js';
 // data-side contract is duck-typed:
 //
 //   * `DataContext.Members` — collection of member entries, each exposing
-//     `X` / `Y` / `Width` / `Height` as DPs on a `Model`.
+//     `Left` / `Top` / `Width` / `Height` as DPs on a `Model`.
 //
-// Group exposes its own `X` / `Y` / `Width` / `Height` as READ-ONLY DPs
-// derived from the union bbox of its Members. They re-derive whenever
+// Group exposes its own `Left` / `Top` / `Width` / `Height` as READ-ONLY
+// DPs derived from the union bbox of its Members. They re-derive whenever
 // (a) any member's geometry DP changes, or (b) the Members collection
 // itself mutates (when it's an ObservableCollection — plain arrays
 // don't notify, so the consumer reattaches via a DataContext flip).
 //
-// `Translate(dx, dy)` shifts every member's `X` / `Y` by the delta in
-// lock-step. The internal `_shiftSuppressed` gate prevents per-member
+// `Translate(dx, dy)` shifts every member's `Left` / `Top` by the delta
+// in lock-step. The internal `_shiftSuppressed` gate prevents per-member
 // PropertyChanged cascades from re-running the bbox math during the
 // shift — a single recompute fires after every member has moved.
 //
@@ -34,13 +34,13 @@ import { ControlTemplate } from '../../basic/templates/control-template.js';
 // Group's `Translate` is the underlying primitive any drag handler invokes.
 export class Group extends ContentControl
 {
-    public static readonly XKey      = Model.RegisterReadOnlyProperty<number>(
-        Group, 'X',      0, MetaData.Arrange);
-    public static readonly YKey      = Model.RegisterReadOnlyProperty<number>(
-        Group, 'Y',      0, MetaData.Arrange);
-    public static readonly WidthKey  = Model.RegisterReadOnlyProperty<number>(
+    public static readonly LeftKey            = Model.RegisterReadOnlyProperty<number>(
+        Group, 'Left',   0, MetaData.Arrange);
+    public static readonly TopKey             = Model.RegisterReadOnlyProperty<number>(
+        Group, 'Top',    0, MetaData.Arrange);
+    public static override readonly WidthKey  = Model.RegisterReadOnlyProperty<number>(
         Group, 'Width',  0, MetaData.Measure);
-    public static readonly HeightKey = Model.RegisterReadOnlyProperty<number>(
+    public static override readonly HeightKey = Model.RegisterReadOnlyProperty<number>(
         Group, 'Height', 0, MetaData.Measure);
 
     // Per-member detach thunks, keyed by member identity. The collection
@@ -63,10 +63,10 @@ export class Group extends ContentControl
         this.Template = new ControlTemplate(() => new ContentPresenter());
     }
 
-    public get X():      number { return this.get_property_value(Group.XKey); }
-    public get Y():      number { return this.get_property_value(Group.YKey); }
-    public get Width():  number { return this.get_property_value(Group.WidthKey); }
-    public get Height(): number { return this.get_property_value(Group.HeightKey); }
+    public get Left():            number { return this.get_property_value(Group.LeftKey); }
+    public get Top():             number { return this.get_property_value(Group.TopKey); }
+    public override get Width():  number { return this.get_property_value(Group.WidthKey); }
+    public override get Height(): number { return this.get_property_value(Group.HeightKey); }
 
     // Shift every member by (dx, dy) in lock-step. Suppresses the
     // per-member bbox recompute cascade and fires one final recompute
@@ -82,9 +82,9 @@ export class Group extends ContentControl
         {
             for (const m of members)
             {
-                const mm = m as { X: number; Y: number };
-                if (dx !== 0) mm.X = mm.X + dx;
-                if (dy !== 0) mm.Y = mm.Y + dy;
+                const mm = m as unknown as { Left: number; Top: number };
+                if (dx !== 0) mm.Left = mm.Left + dx;
+                if (dy !== 0) mm.Top  = mm.Top  + dy;
             }
         }
         finally
@@ -192,8 +192,9 @@ export class Group extends ContentControl
         if (change.kind !== 'moved') this._recomputeBounds();
     }
 
-    // Attach a PropertyChangedListener for each of X / Y / Width / Height
-    // on a single member. Returns a detach thunk that removes all four.
+    // Attach a PropertyChangedListener for each of Left / Top / Width /
+    // Height on a single member. Returns a detach thunk that removes all
+    // four.
     //
     // Uses `resolveKey` instead of the by-name accessor family — that
     // surface was retired in the typed-key migration (see
@@ -202,23 +203,23 @@ export class Group extends ContentControl
     // reused for the listener add + remove pair.
     private _listenMember(m: Model): () => void
     {
-        const xKey = resolveKey(m, undefined, 'X');
-        const yKey = resolveKey(m, undefined, 'Y');
-        const wKey = resolveKey(m, undefined, 'Width');
-        const hKey = resolveKey(m, undefined, 'Height');
+        const leftKey = resolveKey(m, undefined, 'Left');
+        const topKey  = resolveKey(m, undefined, 'Top');
+        const wKey    = resolveKey(m, undefined, 'Width');
+        const hKey    = resolveKey(m, undefined, 'Height');
         const handler = (): void => {
             if (this._shiftSuppressed) return;
             this._recomputeBounds();
         };
-        m.AddPropertyChangedListener(xKey, handler);
-        m.AddPropertyChangedListener(yKey, handler);
-        m.AddPropertyChangedListener(wKey, handler);
-        m.AddPropertyChangedListener(hKey, handler);
+        m.AddPropertyChangedListener(leftKey, handler);
+        m.AddPropertyChangedListener(topKey,  handler);
+        m.AddPropertyChangedListener(wKey,    handler);
+        m.AddPropertyChangedListener(hKey,    handler);
         return (): void => {
-            m.RemovePropertyChangedListener(xKey, handler);
-            m.RemovePropertyChangedListener(yKey, handler);
-            m.RemovePropertyChangedListener(wKey, handler);
-            m.RemovePropertyChangedListener(hKey, handler);
+            m.RemovePropertyChangedListener(leftKey, handler);
+            m.RemovePropertyChangedListener(topKey,  handler);
+            m.RemovePropertyChangedListener(wKey,    handler);
+            m.RemovePropertyChangedListener(hKey,    handler);
         };
     }
 
@@ -227,28 +228,28 @@ export class Group extends ContentControl
         const members = this._currentMembers();
         if (members.length === 0)
         {
-            this.set_property_value_with_key(Group.XKey,      0);
-            this.set_property_value_with_key(Group.YKey,      0);
+            this.set_property_value_with_key(Group.LeftKey,   0);
+            this.set_property_value_with_key(Group.TopKey,    0);
             this.set_property_value_with_key(Group.WidthKey,  0);
             this.set_property_value_with_key(Group.HeightKey, 0);
             return;
         }
-        let minX = Number.POSITIVE_INFINITY;
-        let minY = Number.POSITIVE_INFINITY;
-        let maxX = Number.NEGATIVE_INFINITY;
-        let maxY = Number.NEGATIVE_INFINITY;
+        let minLeft = Number.POSITIVE_INFINITY;
+        let minTop  = Number.POSITIVE_INFINITY;
+        let maxRight  = Number.NEGATIVE_INFINITY;
+        let maxBottom = Number.NEGATIVE_INFINITY;
         for (const m of members)
         {
-            const mm = m as { X: number; Y: number; Width: number; Height: number };
-            if (mm.X < minX) minX = mm.X;
-            if (mm.Y < minY) minY = mm.Y;
-            if (mm.X + mm.Width  > maxX) maxX = mm.X + mm.Width;
-            if (mm.Y + mm.Height > maxY) maxY = mm.Y + mm.Height;
+            const mm = m as unknown as { Left: number; Top: number; Width: number; Height: number };
+            if (mm.Left < minLeft) minLeft = mm.Left;
+            if (mm.Top  < minTop)  minTop  = mm.Top;
+            if (mm.Left + mm.Width  > maxRight)  maxRight  = mm.Left + mm.Width;
+            if (mm.Top  + mm.Height > maxBottom) maxBottom = mm.Top  + mm.Height;
         }
-        this.set_property_value_with_key(Group.XKey,      minX);
-        this.set_property_value_with_key(Group.YKey,      minY);
-        this.set_property_value_with_key(Group.WidthKey,  maxX - minX);
-        this.set_property_value_with_key(Group.HeightKey, maxY - minY);
+        this.set_property_value_with_key(Group.LeftKey,   minLeft);
+        this.set_property_value_with_key(Group.TopKey,    minTop);
+        this.set_property_value_with_key(Group.WidthKey,  maxRight  - minLeft);
+        this.set_property_value_with_key(Group.HeightKey, maxBottom - minTop);
     }
 
     private _currentMembers(): Model[] {

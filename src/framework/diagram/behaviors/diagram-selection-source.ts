@@ -11,7 +11,7 @@ import type { Diagram } from '../diagram.js';
 // IFigure items into the SelectionSource contract that
 // SelectionBoundsAdorner expects.
 //
-// Bounds + Count → routed straight from Diagram.SelectionX/Y/Width/
+// Bounds + Count → routed straight from Diagram.SelectionLeft/Top/Width/
 // Height/Count (read-only DPs driven by SelectionBoundsTracker).
 //
 // beginResize / applyResize / endResize → snapshot each selected
@@ -21,7 +21,7 @@ import type { Diagram } from '../diagram.js';
 // as Group's Translate.
 //
 // IGroup handling: the v1 path treats every selected item uniformly
-// — if a group's X / Y / Width / Height are READ-ONLY (the standard
+// — if a group's Left / Top / Width / Height are READ-ONLY (the standard
 // shape per spec § 3.3), the writes throw and the source skips that
 // entity with a warning. A later phase can add per-group leaf-scaling
 // math (the demo's DiagramVM.ApplySelectionResize does this) but it
@@ -30,12 +30,12 @@ import type { Diagram } from '../diagram.js';
 const MIN_DIMENSION = 8;
 
 interface FigureSnapshot {
-    item:   Model;
-    xKey:   PropertyKey<unknown>;
-    yKey:   PropertyKey<unknown>;
-    wKey:   PropertyKey<unknown>;
-    hKey:   PropertyKey<unknown>;
-    x: number; y: number; w: number; h: number;
+    item:    Model;
+    leftKey: PropertyKey<unknown>;
+    topKey:  PropertyKey<unknown>;
+    wKey:    PropertyKey<unknown>;
+    hKey:    PropertyKey<unknown>;
+    left: number; top: number; w: number; h: number;
     // True iff every geometry DP is read-only — skip this entry in
     // applyResize (we can't write through). Groups land here.
     isReadOnly: boolean;
@@ -59,8 +59,8 @@ export class DiagramSelectionSource implements SelectionSource
     public get Bounds(): Rect
     {
         return new Rect(
-            this._diagram.SelectionX,
-            this._diagram.SelectionY,
+            this._diagram.SelectionLeft,
+            this._diagram.SelectionTop,
             this._diagram.SelectionWidth,
             this._diagram.SelectionHeight,
         );
@@ -72,8 +72,8 @@ export class DiagramSelectionSource implements SelectionSource
     {
         const Diagram = this._diagram.constructor as typeof import('../diagram.js').Diagram;
         const keys = [
-            Diagram.SelectionXKey,
-            Diagram.SelectionYKey,
+            Diagram.SelectionLeftKey,
+            Diagram.SelectionTopKey,
             Diagram.SelectionWidthKey,
             Diagram.SelectionHeightKey,
             Diagram.SelectionCountKey,
@@ -91,22 +91,22 @@ export class DiagramSelectionSource implements SelectionSource
         {
             if (!(item instanceof Model)) continue;
             const klass = item.constructor as Function;
-            const xDesc = findDescriptor(klass, 'X');
-            const yDesc = findDescriptor(klass, 'Y');
-            const wDesc = findDescriptor(klass, 'Width');
-            const hDesc = findDescriptor(klass, 'Height');
-            if (xDesc === undefined || yDesc === undefined || wDesc === undefined || hDesc === undefined) continue;
+            const leftDesc = findDescriptor(klass, 'Left');
+            const topDesc  = findDescriptor(klass, 'Top');
+            const wDesc    = findDescriptor(klass, 'Width');
+            const hDesc    = findDescriptor(klass, 'Height');
+            if (leftDesc === undefined || topDesc === undefined || wDesc === undefined || hDesc === undefined) continue;
             const isReadOnly = wDesc.IsReadOnly === true || hDesc.IsReadOnly === true;
             snaps.push({
                 item,
-                xKey: resolveKey(item, undefined, 'X'),
-                yKey: resolveKey(item, undefined, 'Y'),
-                wKey: resolveKey(item, undefined, 'Width'),
-                hKey: resolveKey(item, undefined, 'Height'),
-                x: (item as unknown as { X: number }).X,
-                y: (item as unknown as { Y: number }).Y,
-                w: (item as unknown as { Width: number }).Width,
-                h: (item as unknown as { Height: number }).Height,
+                leftKey: resolveKey(item, undefined, 'Left'),
+                topKey:  resolveKey(item, undefined, 'Top'),
+                wKey:    resolveKey(item, undefined, 'Width'),
+                hKey:    resolveKey(item, undefined, 'Height'),
+                left: (item as unknown as { Left: number }).Left,
+                top:  (item as unknown as { Top:  number }).Top,
+                w:    (item as unknown as { Width:  number }).Width,
+                h:    (item as unknown as { Height: number }).Height,
                 isReadOnly,
             });
         }
@@ -127,15 +127,15 @@ export class DiagramSelectionSource implements SelectionSource
             // and apply custom resize semantics if needed.
             if (s.isReadOnly) continue;
 
-            const newW = Math.max(MIN_DIMENSION, s.w + dw);
-            const newH = Math.max(MIN_DIMENSION, s.h + dh);
-            const newX = (xAnchor === 'right')  ? s.x + s.w - newW : s.x;
-            const newY = (yAnchor === 'bottom') ? s.y + s.h - newH : s.y;
+            const newW    = Math.max(MIN_DIMENSION, s.w + dw);
+            const newH    = Math.max(MIN_DIMENSION, s.h + dh);
+            const newLeft = (xAnchor === 'right')  ? s.left + s.w - newW : s.left;
+            const newTop  = (yAnchor === 'bottom') ? s.top  + s.h - newH : s.top;
 
-            s.item.set_property_value_with_key(s.xKey, newX);
-            s.item.set_property_value_with_key(s.yKey, newY);
-            s.item.set_property_value_with_key(s.wKey, newW);
-            s.item.set_property_value_with_key(s.hKey, newH);
+            s.item.set_property_value_with_key(s.leftKey, newLeft);
+            s.item.set_property_value_with_key(s.topKey,  newTop);
+            s.item.set_property_value_with_key(s.wKey,    newW);
+            s.item.set_property_value_with_key(s.hKey,    newH);
         }
     }
 

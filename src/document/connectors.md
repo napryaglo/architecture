@@ -51,7 +51,7 @@ the doc follows from them.
 ```
 src/framework/diagram/
   diagram.ts                       (modify — add Connectors + ConnectorTemplate DPs, switch ItemsPanel to layered)
-  diagram-node.ts                  (modify — notify on X/Y/Width/Height change so routes re-run)
+  figure.ts                        (modify — notify on Left/Top/Width/Height change so routes re-run)
   diagram-layers-panel.ts          (NEW — 3-layer Panel: connectors / nodes / adorners)
   connector.ts                     (NEW — Connector extends Shape)
   connector-endpoint.ts            (NEW — ConnectorEndpoint value-type Model)
@@ -809,25 +809,25 @@ leak in v1 and revisit when a long-session demo surfaces the cost.
 
 ### 7.2. Source / target node reactivity — coupling
 
-The Connector subscribes to its source / target node's `X` / `Y` /
+The Connector subscribes to its source / target node's `Left` / `Top` /
 `ArrangedRect` via PropertyChangedListener. This couples Connector
-to the node-VM property shape (assumes `XKey` / `YKey` exist on
+to the node-VM property shape (assumes `LeftKey` / `TopKey` exist on
 whatever Model the endpoint references). Three options:
 
-  - **(a) Direct subscription on `'X'` / `'Y'` strings.** Simplest.
+  - **(a) Direct subscription on `'Left'` / `'Top'` strings.** Simplest.
     Connector hardcodes those names; any node-VM that uses different
-    coords doesn't trigger re-routes. Works today because
-    `DiagramNode` already defines `XKey` / `YKey`.
+    coords doesn't trigger re-routes. Works today because `Figure`
+    already defines `LeftKey` / `TopKey`.
   - **(b) `INodeWithBounds` interface.** Connector duck-types on a
     `Bounds: Rect` getter + `OnBoundsChanged` event. Node-VMs that
     don't implement it don't get re-routes. Cleaner contract, more
     boilerplate.
-  - **(c) Diagram-coordinated.** Diagram listens for all DiagramNode
-    moves and tells affected connectors to re-route. Connector never
+  - **(c) Diagram-coordinated.** Diagram listens for all Figure moves
+    and tells affected connectors to re-route. Connector never
     subscribes directly. Lowest coupling, most indirection.
 
-Recommendation: start with (a). Lift to (b) if a non-DiagramNode
-"node" surfaces.
+Recommendation: start with (a). Lift to (b) if a non-Figure "node"
+surfaces.
 
 ### 7.3. Unified selection — nodes + connectors in one Selector?
 
@@ -986,7 +986,7 @@ computed under. Invalidate when any of those change:
     PropertyChangedListener channel as `PortResolver`'s arc-length
     cache (§ 7.1).
   - `ArrangedRect` change → invalidate, but only when `Width` /
-    `Height` change. A pure translation (X / Y move with no resize)
+    `Height` change. A pure translation (Left / Top move with no resize)
     doesn't change shape-local port positions; the existing
     diagram-host conversion happens downstream in `PortResolver` and
     re-runs naturally on every route compute.

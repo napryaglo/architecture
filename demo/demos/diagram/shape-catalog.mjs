@@ -381,7 +381,7 @@ export function mergeShapes(nodes, mode)
     // Project each input into diagram space — the kernel treats
     // figures as-is so the relative positions must be encoded in the
     // coords themselves.
-    const projected = nodes.map(n => translateGeometry(n.Geometry, n.X, n.Y));
+    const projected = nodes.map(n => translateGeometry(n.Geometry, n.Left, n.Top));
     if (projected.some(g => g === undefined)) return undefined;
     let acc = projected[0];
     for (let i = 1; i < projected.length; i++)

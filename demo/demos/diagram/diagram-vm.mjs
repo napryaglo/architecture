@@ -10,8 +10,8 @@
 // without re-extracting the path.
 //
 // Surface:
-//   * ShapeNodeVM    — single class. DPs: Id, Kind (catalog key), X, Y,
-//                      Width, Height, IsSelected, FillBrush, Stroke,
+//   * ShapeNodeVM    — single class. DPs: Id, Kind (catalog key), Left,
+//                      Top, Width, Height, IsSelected, FillBrush, Stroke,
 //                      LabelText, Geometry. Width / Height changes
 //                      rebuild Geometry via the catalog's
 //                      buildNodeGeometry helper.
@@ -72,8 +72,8 @@ export class ShapeNodeVM extends Model
 {
     static IdKey         = Model.RegisterProperty(ShapeNodeVM, 'Id',         undefined,         MetaData.None);
     static KindKey       = Model.RegisterProperty(ShapeNodeVM, 'Kind',       '',                MetaData.None);
-    static XKey          = Model.RegisterProperty(ShapeNodeVM, 'X',          0,                 MetaData.None);
-    static YKey          = Model.RegisterProperty(ShapeNodeVM, 'Y',          0,                 MetaData.None);
+    static LeftKey       = Model.RegisterProperty(ShapeNodeVM, 'Left',       0,                 MetaData.None);
+    static TopKey        = Model.RegisterProperty(ShapeNodeVM, 'Top',        0,                 MetaData.None);
     static WidthKey      = Model.RegisterProperty(ShapeNodeVM, 'Width',      NODE_DEFAULT_SIZE, MetaData.None);
     static HeightKey     = Model.RegisterProperty(ShapeNodeVM, 'Height',     NODE_DEFAULT_SIZE, MetaData.None);
     static IsSelectedKey = Model.RegisterProperty(ShapeNodeVM, 'IsSelected', false,             MetaData.None);
@@ -105,11 +105,11 @@ export class ShapeNodeVM extends Model
     // as the source of truth. The visible `Geometry` DP is computed by
     // scaling `_source` to (Width, Height); resize rebuilds it from
     // the same source — no information loss across repeated resizes.
-    constructor(id, x, y, options) {
+    constructor(id, left, top, options) {
         super();
         this.set_property_value(ShapeNodeVM.IdKey, id);
-        this.set_property_value(ShapeNodeVM.XKey,  x);
-        this.set_property_value(ShapeNodeVM.YKey,  y);
+        this.set_property_value(ShapeNodeVM.LeftKey, left);
+        this.set_property_value(ShapeNodeVM.TopKey,  top);
         this.set_property_value(ShapeNodeVM.StrokeKey, new Pen(STROKE_BRUSH, 1.5));
 
         const opts = options ?? {};
@@ -147,10 +147,10 @@ export class ShapeNodeVM extends Model
     set Id(v)         { this.set_property_value(ShapeNodeVM.IdKey, v); }
     get Kind()        { return this.get_property_value(ShapeNodeVM.KindKey); }
     set Kind(v)       { this.set_property_value(ShapeNodeVM.KindKey, v); }
-    get X()           { return this.get_property_value(ShapeNodeVM.XKey); }
-    set X(v)          { this.set_property_value(ShapeNodeVM.XKey, v); }
-    get Y()           { return this.get_property_value(ShapeNodeVM.YKey); }
-    set Y(v)          { this.set_property_value(ShapeNodeVM.YKey, v); }
+    get Left()        { return this.get_property_value(ShapeNodeVM.LeftKey); }
+    set Left(v)       { this.set_property_value(ShapeNodeVM.LeftKey, v); }
+    get Top()         { return this.get_property_value(ShapeNodeVM.TopKey); }
+    set Top(v)        { this.set_property_value(ShapeNodeVM.TopKey, v); }
     get Width()       { return this.get_property_value(ShapeNodeVM.WidthKey); }
     set Width(v)      { this.set_property_value(ShapeNodeVM.WidthKey, v); }
     get Height()      { return this.get_property_value(ShapeNodeVM.HeightKey); }
@@ -177,14 +177,15 @@ export class ShapeNodeVM extends Model
 //
 // First-class group entity (option C from the brainstorm). Holds an
 // observable list of `Members` — each member is either a `ShapeNodeVM`
-// (leaf) or another `GroupVM` (nested). Exposes the same X / Y / Width /
-// Height shape as ShapeNodeVM so recursive bbox math on nested groups
-// can read `.X / .Y / .Width / .Height` regardless of member type.
+// (leaf) or another `GroupVM` (nested). Exposes the same Left / Top /
+// Width / Height shape as ShapeNodeVM so recursive bbox math on nested
+// groups can read `.Left / .Top / .Width / .Height` regardless of member
+// type.
 //
-// X / Y / Width / Height are COMPUTED from the union bbox of members.
+// Left / Top / Width / Height are COMPUTED from the union bbox of members.
 // They're real DPs (so they fire change notifications and a binding on
 // the bbox-adorner picks them up live). Width / Height are read-only —
-// driven by `_recomputeBounds` only. X / Y ALSO accept writes from
+// driven by `_recomputeBounds` only. Left / Top ALSO accept writes from
 // alignment / distribute commands: the setter translates the assignment
 // into a rigid shift of every member by the delta, then re-runs
 // `_recomputeBounds` once. Nested groups recurse through the same
@@ -202,8 +203,8 @@ export class ShapeNodeVM extends Model
 export class GroupVM extends Model
 {
     static IsSelectedKey = Model.RegisterProperty(GroupVM, 'IsSelected', false, MetaData.None);
-    static XKey          = Model.RegisterProperty(GroupVM, 'X',          0,     MetaData.None);
-    static YKey          = Model.RegisterProperty(GroupVM, 'Y',          0,     MetaData.None);
+    static LeftKey       = Model.RegisterProperty(GroupVM, 'Left',       0,     MetaData.None);
+    static TopKey        = Model.RegisterProperty(GroupVM, 'Top',        0,     MetaData.None);
     static WidthKey      = Model.RegisterProperty(GroupVM, 'Width',      0,     MetaData.None);
     static HeightKey     = Model.RegisterProperty(GroupVM, 'Height',     0,     MetaData.None);
 
@@ -237,40 +238,41 @@ export class GroupVM extends Model
     get Members()      { return this._members; }
     get IsSelected()   { return this.get_property_value(GroupVM.IsSelectedKey); }
     set IsSelected(v)  { this.set_property_value(GroupVM.IsSelectedKey, v); }
-    get X()            { return this.get_property_value(GroupVM.XKey); }
-    get Y()            { return this.get_property_value(GroupVM.YKey); }
+    get Left()         { return this.get_property_value(GroupVM.LeftKey); }
+    get Top()          { return this.get_property_value(GroupVM.TopKey); }
     get Width()        { return this.get_property_value(GroupVM.WidthKey); }
     get Height()       { return this.get_property_value(GroupVM.HeightKey); }
 
-    // Writing X / Y shifts every member by the delta — the group moves
-    // as a rigid unit (Visio / PowerPoint parity for align + distribute).
-    // Each member's X / Y setter then propagates: leaves write through to
-    // the DP, nested groups recurse with the same shift semantics. The
-    // bbox follows automatically through _recomputeBounds. Width and
-    // Height stay read-only — alignment never writes them, and resizing
-    // a group is a different gesture (would require scaling members,
-    // out of scope for this code path).
-    set X(v)
+    // Writing Left / Top shifts every member by the delta — the group
+    // moves as a rigid unit (Visio / PowerPoint parity for align +
+    // distribute). Each member's Left / Top setter then propagates:
+    // leaves write through to the DP, nested groups recurse with the
+    // same shift semantics. The bbox follows automatically through
+    // _recomputeBounds. Width and Height stay read-only — alignment
+    // never writes them, and resizing a group is a different gesture
+    // (would require scaling members, out of scope for this code path).
+    set Left(v)
     {
-        const cur = this.get_property_value(GroupVM.XKey);
+        const cur = this.get_property_value(GroupVM.LeftKey);
         const dx  = v - cur;
         if (dx === 0) return;
         this._shiftBy(dx, 0);
     }
 
-    set Y(v)
+    set Top(v)
     {
-        const cur = this.get_property_value(GroupVM.YKey);
+        const cur = this.get_property_value(GroupVM.TopKey);
         const dy  = v - cur;
         if (dy === 0) return;
         this._shiftBy(0, dy);
     }
 
-    // Translate every member by (dx, dy). The per-member X / Y change
-    // listener (_listenMember handler) would re-run _recomputeBounds for
-    // each member-write — partial state, transient wrong bbox, cascade
-    // up to enclosing groups N times. Suppress those during the shift
-    // and fire one final _recomputeBounds when every member has moved.
+    // Translate every member by (dx, dy). The per-member Left / Top
+    // change listener (_listenMember handler) would re-run
+    // _recomputeBounds for each member-write — partial state, transient
+    // wrong bbox, cascade up to enclosing groups N times. Suppress those
+    // during the shift and fire one final _recomputeBounds when every
+    // member has moved.
     _shiftBy(dx, dy)
     {
         this._shiftSuppressed = true;
@@ -279,8 +281,8 @@ export class GroupVM extends Model
             for (let i = 0; i < this._members.Count; i++)
             {
                 const m = this._members.Get(i);
-                if (dx !== 0) m.X = m.X + dx;
-                if (dy !== 0) m.Y = m.Y + dy;
+                if (dx !== 0) m.Left = m.Left + dx;
+                if (dy !== 0) m.Top  = m.Top  + dy;
             }
         }
         finally
@@ -317,29 +319,29 @@ export class GroupVM extends Model
         // GroupVM, but the Key objects differ. Pick the right Key based
         // on the member's class.
         const isGroup = m instanceof GroupVM;
-        const xKey = isGroup ? GroupVM.XKey      : ShapeNodeVM.XKey;
-        const yKey = isGroup ? GroupVM.YKey      : ShapeNodeVM.YKey;
-        const wKey = isGroup ? GroupVM.WidthKey  : ShapeNodeVM.WidthKey;
-        const hKey = isGroup ? GroupVM.HeightKey : ShapeNodeVM.HeightKey;
+        const leftKey = isGroup ? GroupVM.LeftKey   : ShapeNodeVM.LeftKey;
+        const topKey  = isGroup ? GroupVM.TopKey    : ShapeNodeVM.TopKey;
+        const wKey    = isGroup ? GroupVM.WidthKey  : ShapeNodeVM.WidthKey;
+        const hKey    = isGroup ? GroupVM.HeightKey : ShapeNodeVM.HeightKey;
         const handler = () => {
             if (this._shiftSuppressed) return;
             this._recomputeBounds();
         };
-        m.AddPropertyChangedListener(xKey, handler);
-        m.AddPropertyChangedListener(yKey, handler);
-        m.AddPropertyChangedListener(wKey, handler);
-        m.AddPropertyChangedListener(hKey, handler);
-        this._memberListeners.set(m, { handler, xKey, yKey, wKey, hKey });
+        m.AddPropertyChangedListener(leftKey, handler);
+        m.AddPropertyChangedListener(topKey,  handler);
+        m.AddPropertyChangedListener(wKey,    handler);
+        m.AddPropertyChangedListener(hKey,    handler);
+        this._memberListeners.set(m, { handler, leftKey, topKey, wKey, hKey });
     }
 
     _unlistenMember(m)
     {
         const entry = this._memberListeners.get(m);
         if (entry === undefined) return;
-        m.RemovePropertyChangedListener(entry.xKey, entry.handler);
-        m.RemovePropertyChangedListener(entry.yKey, entry.handler);
-        m.RemovePropertyChangedListener(entry.wKey, entry.handler);
-        m.RemovePropertyChangedListener(entry.hKey, entry.handler);
+        m.RemovePropertyChangedListener(entry.leftKey, entry.handler);
+        m.RemovePropertyChangedListener(entry.topKey,  entry.handler);
+        m.RemovePropertyChangedListener(entry.wKey,    entry.handler);
+        m.RemovePropertyChangedListener(entry.hKey,    entry.handler);
         this._memberListeners.delete(m);
     }
 
@@ -357,27 +359,27 @@ export class GroupVM extends Model
     {
         if (this._members.Count === 0)
         {
-            this.set_property_value(GroupVM.XKey, 0);
-            this.set_property_value(GroupVM.YKey, 0);
-            this.set_property_value(GroupVM.WidthKey, 0);
+            this.set_property_value(GroupVM.LeftKey,   0);
+            this.set_property_value(GroupVM.TopKey,    0);
+            this.set_property_value(GroupVM.WidthKey,  0);
             this.set_property_value(GroupVM.HeightKey, 0);
             return;
         }
-        let minX = Number.POSITIVE_INFINITY, minY = Number.POSITIVE_INFINITY;
-        let maxX = Number.NEGATIVE_INFINITY, maxY = Number.NEGATIVE_INFINITY;
+        let minLeft = Number.POSITIVE_INFINITY, minTop = Number.POSITIVE_INFINITY;
+        let maxRight = Number.NEGATIVE_INFINITY, maxBottom = Number.NEGATIVE_INFINITY;
         for (let i = 0; i < this._members.Count; i++)
         {
             const m = this._members.Get(i);
-            const x = m.X, y = m.Y, w = m.Width, h = m.Height;
-            if (x < minX) minX = x;
-            if (y < minY) minY = y;
-            if (x + w > maxX) maxX = x + w;
-            if (y + h > maxY) maxY = y + h;
+            const left = m.Left, top = m.Top, w = m.Width, h = m.Height;
+            if (left < minLeft) minLeft = left;
+            if (top  < minTop)  minTop  = top;
+            if (left + w > maxRight)  maxRight  = left + w;
+            if (top  + h > maxBottom) maxBottom = top  + h;
         }
-        this.set_property_value(GroupVM.XKey,      minX);
-        this.set_property_value(GroupVM.YKey,      minY);
-        this.set_property_value(GroupVM.WidthKey,  maxX - minX);
-        this.set_property_value(GroupVM.HeightKey, maxY - minY);
+        this.set_property_value(GroupVM.LeftKey,   minLeft);
+        this.set_property_value(GroupVM.TopKey,    minTop);
+        this.set_property_value(GroupVM.WidthKey,  maxRight  - minLeft);
+        this.set_property_value(GroupVM.HeightKey, maxBottom - minTop);
     }
 
     // Recursively enumerate every leaf ShapeNodeVM contained (transitively).
@@ -634,8 +636,8 @@ export class DiagramVM extends Model
             nodes.push({
                 id:   v.Id,
                 kind: v.Kind,
-                x:    v.X,
-                y:    v.Y,
+                left: v.Left,
+                top:  v.Top,
                 w:    v.Width,
                 h:    v.Height,
                 d,
@@ -657,14 +659,14 @@ export class DiagramVM extends Model
             // geometries or unrecognized kinds.
             let node;
             if (n.kind !== undefined && SHAPE_CATALOG_MAP.has(n.kind)) {
-                node = new ShapeNodeVM(id, n.x ?? 0, n.y ?? 0, {
+                node = new ShapeNodeVM(id, n.left ?? 0, n.top ?? 0, {
                     kind:   n.kind,
                     width:  n.w,
                     height: n.h,
                 });
             }
             else if (typeof n.d === 'string' && n.d.length > 0) {
-                node = new ShapeNodeVM(id, n.x ?? 0, n.y ?? 0, {
+                node = new ShapeNodeVM(id, n.left ?? 0, n.top ?? 0, {
                     source: pathGeometryFromSvgD(n.d),
                     kind:   n.kind,
                     width:  n.w,

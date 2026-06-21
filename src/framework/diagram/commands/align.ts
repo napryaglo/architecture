@@ -1,7 +1,8 @@
-// Pure alignment math — operates on any objects exposing { X, Y, Width,
-// Height } as writable number properties. The diagrammer's IFigure
-// interface (src/framework/diagram/contracts/i-figure.ts when it lands)
-// is the canonical contract; consumers can pass any duck-typed array.
+// Pure alignment math — operates on any objects exposing { Left, Top,
+// Width, Height } as writable number properties. The diagrammer's
+// IFigure interface (src/framework/diagram/contracts/i-figure.ts when
+// it lands) is the canonical contract; consumers can pass any duck-typed
+// array.
 //
 // All five functions:
 //   * require ≥ 2 items (PowerPoint / Visio parity — 1-item alignment
@@ -19,8 +20,8 @@
 // from the selection bbox's midpoint.
 
 export interface AlignTarget {
-    X:      number;
-    Y:      number;
+    Left:   number;
+    Top:    number;
     Width:  number;
     Height: number;
 }
@@ -28,24 +29,24 @@ export interface AlignTarget {
 export function alignLeft(items: readonly AlignTarget[]): void
 {
     if (items.length < 2) return;
-    const minX = Math.min(...items.map(n => n.X));
-    for (const n of items) n.X = minX;
+    const minLeft = Math.min(...items.map(n => n.Left));
+    for (const n of items) n.Left = minLeft;
 }
 
 export function alignRight(items: readonly AlignTarget[]): void
 {
     if (items.length < 2) return;
     // Right-edge alignment: every shape's right edge lines up with the
-    // selection's max right edge. Each shape's new X = sharedRight - width.
-    const sharedRight = Math.max(...items.map(n => n.X + n.Width));
-    for (const n of items) n.X = sharedRight - n.Width;
+    // selection's max right edge. Each shape's new Left = sharedRight - width.
+    const sharedRight = Math.max(...items.map(n => n.Left + n.Width));
+    for (const n of items) n.Left = sharedRight - n.Width;
 }
 
 export function alignTop(items: readonly AlignTarget[]): void
 {
     if (items.length < 2) return;
-    const minY = Math.min(...items.map(n => n.Y));
-    for (const n of items) n.Y = minY;
+    const minTop = Math.min(...items.map(n => n.Top));
+    for (const n of items) n.Top = minTop;
 }
 
 // "Middle" = horizontal middle line (vertical centres aligned on a
@@ -53,10 +54,10 @@ export function alignTop(items: readonly AlignTarget[]): void
 export function alignMiddle(items: readonly AlignTarget[]): void
 {
     if (items.length < 2) return;
-    const top    = Math.min(...items.map(n => n.Y));
-    const bottom = Math.max(...items.map(n => n.Y + n.Height));
+    const top    = Math.min(...items.map(n => n.Top));
+    const bottom = Math.max(...items.map(n => n.Top + n.Height));
     const midY   = (top + bottom) / 2;
-    for (const n of items) n.Y = midY - n.Height / 2;
+    for (const n of items) n.Top = midY - n.Height / 2;
 }
 
 // "Center" = vertical centre line (horizontal centres aligned on a
@@ -64,8 +65,8 @@ export function alignMiddle(items: readonly AlignTarget[]): void
 export function alignCenter(items: readonly AlignTarget[]): void
 {
     if (items.length < 2) return;
-    const left  = Math.min(...items.map(n => n.X));
-    const right = Math.max(...items.map(n => n.X + n.Width));
+    const left  = Math.min(...items.map(n => n.Left));
+    const right = Math.max(...items.map(n => n.Left + n.Width));
     const midX  = (left + right) / 2;
-    for (const n of items) n.X = midX - n.Width / 2;
+    for (const n of items) n.Left = midX - n.Width / 2;
 }

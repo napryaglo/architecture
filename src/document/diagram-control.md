@@ -69,7 +69,7 @@ src/framework/diagram/
     top-level-of.ts                (NEW — Parent-walk helper, moved from diagram-vm.mjs)
   collaborators/
     diagram-commands.ts            (NEW — 14 command implementations + CanExecute predicates)
-    selection-bounds-tracker.ts    (NEW — derives SelectionX/Y/Width/Height/Count from SelectedItems)
+    selection-bounds-tracker.ts    (NEW — derives SelectionLeft/Top/Width/Height/Count from SelectedItems)
     format-mirror.ts               (NEW — seeds FormatFill/Stroke from selection, broadcasts edits)
   commands/
     align.ts                       (NEW — pure functions: alignLeft(items), alignRight(items), ...)
@@ -154,12 +154,12 @@ The refactor renames it and adds two small things:
 // src/framework/diagram/figure.ts
 export class Figure extends ContentControl
 {
-    // X / Y / drag-to-move / group-drag / scroll-aware — all
+    // Left / Top / drag-to-move / group-drag / scroll-aware — all
     // present today. No behavior change.
-    public static readonly XKey = Model.RegisterProperty<number>(
-        Figure, 'X', 0, MetaData.Arrange | MetaData.BindsTwoWayByDefault);
-    public static readonly YKey = Model.RegisterProperty<number>(
-        Figure, 'Y', 0, MetaData.Arrange | MetaData.BindsTwoWayByDefault);
+    public static readonly LeftKey = Model.RegisterProperty<number>(
+        Figure, 'Left', 0, MetaData.Arrange | MetaData.BindsTwoWayByDefault);
+    public static readonly TopKey = Model.RegisterProperty<number>(
+        Figure, 'Top', 0, MetaData.Arrange | MetaData.BindsTwoWayByDefault);
 
     // Width / Height are INHERITED from Visual (visual.ts:191-192,
     // default NaN). No need to register them on Figure — the existing
@@ -189,17 +189,17 @@ en bloc when dragged. Modeled on the ListBox grouping primitive (`GroupItem`).
 // src/framework/diagram/group.ts
 export class Group extends ContentControl
 {
-    // X / Y / Width / Height are READ-ONLY-from-outside on a Group —
-    // they're derived from the union bbox of Members and propagated
-    // outward. Writes go through Members manipulation, not direct
-    // DP writes.
-    public static readonly XKey      = Model.RegisterReadOnlyProperty<number>(Group, 'X',      0, MetaData.Arrange);
-    public static readonly YKey      = Model.RegisterReadOnlyProperty<number>(Group, 'Y',      0, MetaData.Arrange);
+    // Left / Top / Width / Height are READ-ONLY-from-outside on a Group
+    // — they're derived from the union bbox of Members and propagated
+    // outward. Writes go through Members manipulation, not direct DP
+    // writes.
+    public static readonly LeftKey   = Model.RegisterReadOnlyProperty<number>(Group, 'Left',   0, MetaData.Arrange);
+    public static readonly TopKey    = Model.RegisterReadOnlyProperty<number>(Group, 'Top',    0, MetaData.Arrange);
     public static readonly WidthKey  = Model.RegisterReadOnlyProperty<number>(Group, 'Width',  0, MetaData.Measure);
     public static readonly HeightKey = Model.RegisterReadOnlyProperty<number>(Group, 'Height', 0, MetaData.Measure);
 
     // Drag-to-move on a Group writes the delta to every member's
-    // X / Y. Implemented in OnPointerMove via the same Visio /
+    // Left / Top. Implemented in OnPointerMove via the same Visio /
     // PowerPoint rigid-translate semantics today's GroupVM uses.
     // Members inherit the press capture; per-member drag listeners
     // don't fire while the Group's gesture is active.
@@ -236,8 +236,8 @@ export class Diagram extends Selector {
     // ---- From this refactor: selection bounds ---------------------
     // Derived. Read-only-from-outside. SelectionBoundsTracker owns
     // the recompute when SelectedItems / member positions change.
-    public static readonly SelectionXKey      = Model.RegisterReadOnlyProperty<number>(Diagram, 'SelectionX',      0, MetaData.None);
-    public static readonly SelectionYKey      = Model.RegisterReadOnlyProperty<number>(Diagram, 'SelectionY',      0, MetaData.None);
+    public static readonly SelectionLeftKey   = Model.RegisterReadOnlyProperty<number>(Diagram, 'SelectionLeft',   0, MetaData.None);
+    public static readonly SelectionTopKey    = Model.RegisterReadOnlyProperty<number>(Diagram, 'SelectionTop',    0, MetaData.None);
     public static readonly SelectionWidthKey  = Model.RegisterReadOnlyProperty<number>(Diagram, 'SelectionWidth',  0, MetaData.None);
     public static readonly SelectionHeightKey = Model.RegisterReadOnlyProperty<number>(Diagram, 'SelectionHeight', 0, MetaData.None);
     public static readonly SelectionCountKey  = Model.RegisterReadOnlyProperty<number>(Diagram, 'SelectionCount',  0, MetaData.None);
@@ -329,8 +329,8 @@ etc., extracted from the kitchen-sink VM into pure helpers.
 ### 3.6 `SelectionBoundsTracker` collaborator
 
 Subscribes to `Diagram.SelectionChanged` and to each selected item's
-`X` / `Y` / `Width` / `Height` PropertyChanged. Recomputes
-`(SelectionX, Y, Width, Height, Count)` and pushes to the Diagram's
+`Left` / `Top` / `Width` / `Height` PropertyChanged. Recomputes
+`(SelectionLeft, Top, Width, Height, Count)` and pushes to the Diagram's
 read-only DPs via the privileged-set hatch.
 
 ```ts
@@ -349,9 +349,9 @@ export class SelectionBoundsTracker {
         // Attach to current selection's geometry DPs
         for (const item of this.diagram.SelectedItems) {
             if (!isIFigure(item)) continue;
-            // X / Y / Width / Height — recompute on any change
+            // Left / Top / Width / Height — recompute on any change
             const recompute = () => this.recomputeBounds();
-            const k1 = (item as Model).AddPropertyChangedListener('X', recompute);
+            const k1 = (item as Model).AddPropertyChangedListener('Left', recompute);
             // ... etc., bundle into a single detach thunk per item
             this.memberListeners.set(item, () => { k1(); /* ... */ });
         }
@@ -364,17 +364,17 @@ export class SelectionBoundsTracker {
             this.diagram._setSelectionBounds(0, 0, 0, 0, 0);
             return;
         }
-        const minX = Math.min(...items.map(i => i.X));
-        const minY = Math.min(...items.map(i => i.Y));
-        const maxX = Math.max(...items.map(i => i.X + i.Width));
-        const maxY = Math.max(...items.map(i => i.Y + i.Height));
-        this.diagram._setSelectionBounds(minX, minY, maxX - minX, maxY - minY, items.length);
+        const minLeft = Math.min(...items.map(i => i.Left));
+        const minTop  = Math.min(...items.map(i => i.Top));
+        const maxRight  = Math.max(...items.map(i => i.Left + i.Width));
+        const maxBottom = Math.max(...items.map(i => i.Top  + i.Height));
+        this.diagram._setSelectionBounds(minLeft, minTop, maxRight - minLeft, maxBottom - minTop, items.length);
     }
 }
 ```
 
 `isIFigure(x)` is a duck-type guard: returns true iff `x` has all five
-of `X` / `Y` / `Width` / `Height` / `IsSelected` as DPs (or own
+of `Left` / `Top` / `Width` / `Height` / `IsSelected` as DPs (or own
 properties on Model).
 
 ### 3.7 `FormatMirror` collaborator
@@ -441,7 +441,7 @@ Both adorners promote essentially as-is, just with the demo-side
 DPs on Diagram":
 
 - **`SelectionResizeAdorner`** — 8-handle bbox resize. Reads
-  `Diagram.SelectionX/Y/Width/Height` for bbox position; writes back
+  `Diagram.SelectionLeft/Top/Width/Height` for bbox position; writes back
   via `Diagram.SelectionResizeCommand` (which delegates to a per-item
   resize on the selected IFigures). Auto-mounted into the SCP's
   `AdornerLayer` when `SelectionResizeEnabled = true`.
@@ -462,7 +462,7 @@ demo bootstrap. Phase N deletes the old VMs.
 |---|---|---|---|
 | **A** | Rename `DiagramNode` → `Figure` + file `diagram-node.ts` → `figure.ts`. Re-export `DiagramNode` alias for back-compat. (Width/Height NOT added — Visual already provides them; spec correction noted in § 3.2.) | Untouched (uses alias) | All `framework/diagram/tests/*` pass + diagram demo runs visually |
 | **B** | New `Group` control with bbox-derive + rigid translate. No demo use yet. | Untouched | `group.test.ts` — synthetic 3-member Group, drag, bbox follows |
-| **C** | `SelectionBoundsTracker` collaborator + `SelectionX/Y/Width/Height/Count` DPs on Diagram | Untouched | `selection-bounds.test.ts`: synthetic 3-node selection, assert bbox math |
+| **C** | `SelectionBoundsTracker` collaborator + `SelectionLeft/Top/Width/Height/Count` DPs on Diagram | Untouched | `selection-bounds.test.ts`: synthetic 3-node selection, assert bbox math |
 | **D** | `commands/align.ts` pure helpers + `Diagram.AlignLeft/Right/Top/Middle/CenterCommand` DPs + `DiagramCommands` collaborator skeleton | Untouched (`DiagramVM.AlignLeftCommand` still runs) | `align-commands.test.ts`: 3-node fixtures × 5 alignments |
 | **E** | `commands/distribute.ts` + `Diagram.DistributeHorizontal/Vertical` DPs | Untouched | `distribute-commands.test.ts` |
 | **F** | `commands/group-ops.ts` + `Diagram.Group/UngroupCommand` DPs | Untouched | `group-ops.test.ts`: synthetic group/ungroup; nested-group invariants |

@@ -21,19 +21,19 @@ import { SelectionMode } from '../list/list-box.js';
 import { DiagramSelectionSource } from '../diagram/behaviors/diagram-selection-source.js';
 
 class FigureVM extends Model {
-    public static readonly XKey      = Model.RegisterProperty<number>(FigureVM, 'X',      0,  MetaData.None);
-    public static readonly YKey      = Model.RegisterProperty<number>(FigureVM, 'Y',      0,  MetaData.None);
+    public static readonly LeftKey   = Model.RegisterProperty<number>(FigureVM, 'Left',   0,  MetaData.None);
+    public static readonly TopKey    = Model.RegisterProperty<number>(FigureVM, 'Top',    0,  MetaData.None);
     public static readonly WidthKey  = Model.RegisterProperty<number>(FigureVM, 'Width',  10, MetaData.None);
     public static readonly HeightKey = Model.RegisterProperty<number>(FigureVM, 'Height', 10, MetaData.None);
-    constructor(x: number, y: number, w: number = 10, h: number = 10) {
+    constructor(left: number, top: number, w: number = 10, h: number = 10) {
         super();
-        this.set_property_value(FigureVM.XKey,      x);
-        this.set_property_value(FigureVM.YKey,      y);
+        this.set_property_value(FigureVM.LeftKey,   left);
+        this.set_property_value(FigureVM.TopKey,    top);
         this.set_property_value(FigureVM.WidthKey,  w);
         this.set_property_value(FigureVM.HeightKey, h);
     }
-    public get X():      number  { return this.get_property_value(FigureVM.XKey); }
-    public get Y():      number  { return this.get_property_value(FigureVM.YKey); }
+    public get Left():   number  { return this.get_property_value(FigureVM.LeftKey); }
+    public get Top():    number  { return this.get_property_value(FigureVM.TopKey); }
     public get Width():  number  { return this.get_property_value(FigureVM.WidthKey); }
     public get Height(): number  { return this.get_property_value(FigureVM.HeightKey); }
 }
@@ -53,8 +53,8 @@ function setup(items: FigureVM[]): { diagram: Diagram } {
     diagram.SelectionMode = SelectionMode.Extended;
     diagram.ItemsPanel    = new ItemsPanelTemplate(() => new Canvas());
     const style = new Style(Figure, [
-        new Setter(Figure, 'X', new SetterFactory((t: Visual) => DataContextBinding(t, 'X'))),
-        new Setter(Figure, 'Y', new SetterFactory((t: Visual) => DataContextBinding(t, 'Y'))),
+        new Setter(Figure, 'Left', new SetterFactory((t: Visual) => DataContextBinding(t, 'Left'))),
+        new Setter(Figure, 'Top',  new SetterFactory((t: Visual) => DataContextBinding(t, 'Top'))),
     ], undefined, [], []);
     diagram.ItemContainerStyle = style;
     diagram.ItemsSource = coll;
@@ -150,14 +150,14 @@ describe('DiagramSelectionSource — direct resize semantics', () => {
         src.applyResize(5, 0, 'left', 'none');
         src.endResize();
 
-        // Each item gets a uniform +5 width delta; X anchored (left → X unchanged).
-        assert.equal(a.X, 0);
+        // Each item gets a uniform +5 width delta; Left anchored (left → Left unchanged).
+        assert.equal(a.Left, 0);
         assert.equal(a.Width, 15);
-        assert.equal(b.X, 0);
+        assert.equal(b.Left, 0);
         assert.equal(b.Width, 15);
     });
 
-    test('applyResize honors right anchor by sliding X with width', () => {
+    test('applyResize honors right anchor by sliding Left with width', () => {
         const a = new FigureVM(20, 0, 10, 10);   // right edge = 30
         const { diagram } = setup([a]);
         selectMany(diagram, [a]);
@@ -167,8 +167,8 @@ describe('DiagramSelectionSource — direct resize semantics', () => {
         src.applyResize(5, 0, 'right', 'none');
         src.endResize();
 
-        // newW = 15. xAnchor=right → newX = snap.x + snap.w − newW = 20 + 10 − 15 = 15.
-        assert.equal(a.X,     15);
+        // newW = 15. xAnchor=right → newLeft = snap.left + snap.w − newW = 20 + 10 − 15 = 15.
+        assert.equal(a.Left,  15);
         assert.equal(a.Width, 15);
     });
 

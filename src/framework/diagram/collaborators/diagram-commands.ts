@@ -188,8 +188,8 @@ export class DiagramCommands
     {
         if (!(item instanceof Model)) return false;
         const klass = item.constructor as Function;
-        return findDescriptor(klass, 'X')      !== undefined
-            && findDescriptor(klass, 'Y')      !== undefined
+        return findDescriptor(klass, 'Left')   !== undefined
+            && findDescriptor(klass, 'Top')    !== undefined
             && findDescriptor(klass, 'Width')  !== undefined
             && findDescriptor(klass, 'Height') !== undefined;
     }

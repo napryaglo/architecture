@@ -17,13 +17,14 @@ import { Selector } from '../list/selector.js';
 // inside the diagrammer's ItemsControl (see Diagram). Figure owns
 // two things internally so the demo bootstrap doesn't need a behavior:
 //
-//   * Position — X / Y DPs flagged BindsTwoWayByDefault so a `$X` /
-//     `$Y` binding in the container Style threads through to the data
-//     context (the node VM). Changes to X / Y mirror onto this control's
-//     own Canvas.Left / Canvas.Top, so a parent Canvas places it.
+//   * Position — Left / Top DPs flagged BindsTwoWayByDefault so a
+//     `$Left` / `$Top` binding in the container Style threads through
+//     to the data context (the node VM). Changes to Left / Top mirror
+//     onto this control's own Canvas.Left / Canvas.Top, so a parent
+//     Canvas places it.
 //
 //   * Drag-to-move — OnPointerDown captures the pointer and stores the
-//     press offset; OnPointerMove writes back to X / Y; OnPointerUp
+//     press offset; OnPointerMove writes back to Left / Top; OnPointerUp
 //     releases capture. Capture means the drag survives the cursor
 //     leaving the node's hit area, so no per-canvas listener wiring is
 //     needed. The handler also distinguishes click-vs-drag: any move
@@ -42,13 +43,13 @@ import { Selector } from '../list/selector.js';
 // the content (selection rings, drop shadows, …) can replace Template.
 export class Figure extends ContentControl
 {
-    public static readonly XKey = Model.RegisterProperty<number>(
-        Figure, 'X', 0, MetaData.Arrange | MetaData.BindsTwoWayByDefault);
-    public static readonly YKey = Model.RegisterProperty<number>(
-        Figure, 'Y', 0, MetaData.Arrange | MetaData.BindsTwoWayByDefault);
+    public static readonly LeftKey = Model.RegisterProperty<number>(
+        Figure, 'Left', 0, MetaData.Arrange | MetaData.BindsTwoWayByDefault);
+    public static readonly TopKey = Model.RegisterProperty<number>(
+        Figure, 'Top', 0, MetaData.Arrange | MetaData.BindsTwoWayByDefault);
 
     // Below CLICK_THRESHOLD_PX of movement the gesture stays in
-    // "click" mode (no X / Y writes happen and OnPointerUp routes
+    // "click" mode (no Left / Top writes happen and OnPointerUp routes
     // through Selector.HandleContainerClick). Cross the threshold
     // once and the gesture commits to drag mode for the rest of the
     // session — even if the cursor wobbles back inside the threshold,
@@ -77,7 +78,7 @@ export class Figure extends ContentControl
 
     // Group-drag partners — snapshotted at PointerDown when `this` is
     // part of the enclosing Selector's multi-selection. PointerMove
-    // applies the same X / Y delta to each partner so the whole
+    // applies the same Left / Top delta to each partner so the whole
     // selection translates together (PowerPoint / Figma convention).
     // undefined when the press wasn't on a selected container — that
     // case drags only `this` and leaves the existing selection alone.
@@ -99,10 +100,10 @@ export class Figure extends ContentControl
         Canvas.SetTop (this, 0);
     }
 
-    public get X(): number       { return this.get_property_value(Figure.XKey); }
-    public set X(value: number)  { this.set_property_value(Figure.XKey, value); }
-    public get Y(): number       { return this.get_property_value(Figure.YKey); }
-    public set Y(value: number)  { this.set_property_value(Figure.YKey, value); }
+    public get Left(): number       { return this.get_property_value(Figure.LeftKey); }
+    public set Left(value: number)  { this.set_property_value(Figure.LeftKey, value); }
+    public get Top(): number        { return this.get_property_value(Figure.TopKey); }
+    public set Top(value: number)   { this.set_property_value(Figure.TopKey, value); }
 
     protected override OnPropertyChanged(
         descriptor: PropertyDescriptor,
@@ -111,17 +112,22 @@ export class Figure extends ContentControl
     ): void
     {
         super.OnPropertyChanged(descriptor, oldValue, newValue);
-        // Mirror X / Y onto Canvas.Left / Canvas.Top so the enclosing
+        // Mirror Left / Top onto Canvas.Left / Canvas.Top so the enclosing
         // Canvas re-positions us on its next Arrange pass. MetaData.Arrange
         // on the DP triggers an InvalidateArrange on this Visual; the
         // Canvas's own Arrange re-reads the attached properties and
         // re-places its children, so position changes propagate without
         // any per-child Canvas subscription.
-        if (descriptor.Name === 'X' && typeof newValue === 'number')
+        //
+        // Match by descriptor identity (not by `Name`) since both Figure's
+        // own Left/Top DPs and the Canvas.Left/Canvas.Top attached props
+        // share the names — comparing strings would loop infinitely as
+        // each Canvas.Set re-fires OnPropertyChanged with the same name.
+        if (descriptor === Figure.LeftKey.descriptor && typeof newValue === 'number')
         {
             Canvas.SetLeft(this, newValue);
         }
-        else if (descriptor.Name === 'Y' && typeof newValue === 'number')
+        else if (descriptor === Figure.TopKey.descriptor && typeof newValue === 'number')
         {
             Canvas.SetTop(this, newValue);
         }
@@ -131,15 +137,15 @@ export class Figure extends ContentControl
     {
         if (args.Handled) return;
         // Press offset = where inside the node the cursor landed. Stored
-        // in host (canvas) coordinates against the node's current X / Y
-        // — moving the node is then "wherever the cursor goes, subtract
-        // the grab offset to place the top-left."
+        // in host (canvas) coordinates against the node's current Left /
+        // Top — moving the node is then "wherever the cursor goes,
+        // subtract the grab offset to place the top-left."
         this._dragging    = true;
         this._moved       = false;
         this._pressHostX  = args.HostX;
         this._pressHostY  = args.HostY;
-        this._grabOffsetX = args.HostX - this.X;
-        this._grabOffsetY = args.HostY - this.Y;
+        this._grabOffsetX = args.HostX - this.Left;
+        this._grabOffsetY = args.HostY - this.Top;
         // Snapshot the enclosing ScrollViewer (if any) + its press-time
         // offsets — auto-scroll pulses + scroll-delta compensation in
         // OnPointerMove read these.
@@ -158,7 +164,7 @@ export class Figure extends ContentControl
         // peel partners off mid-translation. `this` is excluded from
         // the partner list and moved separately in OnPointerMove —
         // keeps the delta-from-cursor formula honest (it reads / writes
-        // `this.X` / `this.Y` directly).
+        // `this.Left` / `this.Top` directly).
         this._dragPartners = undefined;
         const selector = Selector.FromContainer<Selector>(
             this, (v: Visual): v is Selector => v instanceof Selector);
@@ -237,10 +243,10 @@ export class Figure extends ContentControl
         // Snapshot pre-move position — partners get ONE net delta per
         // pointer-move event, after any cascade-driven re-corrections
         // below have settled.
-        const preMoveX = this.X;
-        const preMoveY = this.Y;
+        const preMoveLeft = this.Left;
+        const preMoveTop  = this.Top;
 
-        // First pass: write this.X / this.Y using the current effective
+        // First pass: write this.Left / this.Top using the current effective
         // scroll offset.
         this.moveSelfToCursor(args.HostX, args.HostY, sv);
 
@@ -250,7 +256,7 @@ export class Figure extends ContentControl
         // pass. The canvas-origin-in-host shifts; the position we just
         // wrote now lands a screen-pixel off the cursor by the clamp
         // delta. The fix: force a layout flush, re-read effective
-        // offsets, re-compute the target X / Y, write again. Iterate
+        // offsets, re-compute the target Left / Top, write again. Iterate
         // until offsets stop changing (or a safety cap is hit — a
         // cyclic shrink/grow scenario shouldn't exist but cap anyway).
         const host = this.FindAncestorPresentationTarget() as
@@ -274,22 +280,22 @@ export class Figure extends ContentControl
         // Group-drag delta: every partner shifts by the NET vector this
         // ended up moving (initial + any cascade corrections). Applying
         // partners AFTER the converge loop keeps them in lockstep with
-        // the final this.X / this.Y rather than the pre-correction
+        // the final this.Left / this.Top rather than the pre-correction
         // intermediate.
-        const netDx = this.X - preMoveX;
-        const netDy = this.Y - preMoveY;
+        const netDx = this.Left - preMoveLeft;
+        const netDy = this.Top  - preMoveTop;
         if (this._dragPartners !== undefined && (netDx !== 0 || netDy !== 0))
         {
             for (const partner of this._dragPartners)
             {
-                partner.X = partner.X + netDx;
-                partner.Y = partner.Y + netDy;
+                partner.Left = partner.Left + netDx;
+                partner.Top  = partner.Top  + netDy;
                 // Same Local-tier teardown as the self-move below —
                 // each partner needs Local cleared so subsequent Align
                 // / Distribute writes reach the container through the
                 // Style binding without Local shadowing.
-                partner.ClearValue(Figure.XKey);
-                partner.ClearValue(Figure.YKey);
+                partner.ClearValue(Figure.LeftKey);
+                partner.ClearValue(Figure.TopKey);
             }
         }
 
@@ -303,9 +309,9 @@ export class Figure extends ContentControl
 
     // Single self-move sub-step used by OnPointerMove. Reads the
     // ScrollViewer's EFFECTIVE (post-clamp) offsets so a shrink-driven
-    // canvas-origin shift gets compensated correctly. Writes X / Y and
-    // clears the Local tier — same Local-tier teardown rationale as the
-    // partner-move path above (so later Style-tier writes from
+    // canvas-origin shift gets compensated correctly. Writes Left / Top
+    // and clears the Local tier — same Local-tier teardown rationale as
+    // the partner-move path above (so later Style-tier writes from
     // Align / Distribute commands reach the container without Local
     // shadowing).
     private moveSelfToCursor(hostX: number, hostY: number, sv: ScrollViewer | undefined): void
@@ -314,14 +320,14 @@ export class Figure extends ContentControl
         const effY = sv?.effectiveVerticalOffset()   ?? 0;
         const scrollDx = sv !== undefined ? effX - this._pressScrollOffsetX : 0;
         const scrollDy = sv !== undefined ? effY - this._pressScrollOffsetY : 0;
-        let candidateX = hostX - this._grabOffsetX + scrollDx;
-        let candidateY = hostY - this._grabOffsetY + scrollDy;
+        let candidateLeft = hostX - this._grabOffsetX + scrollDx;
+        let candidateTop  = hostY - this._grabOffsetY + scrollDy;
         // §19.3 — apply the enclosing Diagram's PositionSnap callback
         // before writing. The callback returns a snapped rect; we
-        // honour its X / Y but keep the candidate's Width / Height
-        // (snap is positional, not dimensional). Imports the Diagram
-        // class lazily to avoid the diagram.ts → diagram-node.ts
-        // cycle visible to TS.
+        // honour its X / Y (the rect's top-left in canvas coords) but
+        // keep the candidate's Width / Height (snap is positional, not
+        // dimensional). Imports the Diagram class lazily to avoid the
+        // diagram.ts → figure.ts cycle visible to TS.
         const ar = this.ArrangedRect;
         const w = ar?.Width  ?? 0;
         const h = ar?.Height ?? 0;
@@ -330,14 +336,14 @@ export class Figure extends ContentControl
         const snap = (selector as unknown as { PositionSnap?: (r: Rect) => Rect } | undefined)?.PositionSnap;
         if (snap !== undefined)
         {
-            const snapped = snap(new Rect(candidateX, candidateY, w, h));
-            candidateX = snapped.X;
-            candidateY = snapped.Y;
+            const snapped = snap(new Rect(candidateLeft, candidateTop, w, h));
+            candidateLeft = snapped.X;
+            candidateTop  = snapped.Y;
         }
-        this.X = candidateX;
-        this.Y = candidateY;
-        this.ClearValue(Figure.XKey);
-        this.ClearValue(Figure.YKey);
+        this.Left = candidateLeft;
+        this.Top  = candidateTop;
+        this.ClearValue(Figure.LeftKey);
+        this.ClearValue(Figure.TopKey);
     }
 
     protected override OnPointerUp(args: PointerEventArgs): void

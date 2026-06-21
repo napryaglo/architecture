@@ -29,8 +29,8 @@ resources CommandsDemo {
 
     // ── Per-node container style (drag-to-move + selection click) ───
     Style x:key="CommandsNodeStyle" [TargetType=Figure] {
-        X = $X;
-        Y = $Y;
+        Left = $Left;
+        Top  = $Top;
     }
 
     // ── Shared Canvas ItemsPanel ────────────────────────────────────

@@ -23,8 +23,8 @@ export class DiagramDemo extends ResourceDictionary {
     }
     static Clone() {
         const t = new DiagramDemo(_gate_DiagramDemo);
-        const _setter0 = new Setter(Figure, "X", new SetterFactory((_t) => DataContextBinding(_t, "X")));
-        const _setter1 = new Setter(Figure, "Y", new SetterFactory((_t) => DataContextBinding(_t, "Y")));
+        const _setter0 = new Setter(Figure, "Left", new SetterFactory((_t) => DataContextBinding(_t, "Left")));
+        const _setter1 = new Setter(Figure, "Top", new SetterFactory((_t) => DataContextBinding(_t, "Top")));
         const _style2 = new Style(Figure, [_setter0, _setter1], undefined, [], []);
         t.Set("DiagramNodeStyle", _style2);
         const _tmpl3 = new ItemsPanelTemplate(() => {

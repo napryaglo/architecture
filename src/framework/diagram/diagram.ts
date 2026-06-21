@@ -62,7 +62,7 @@ export type DiagramPositionSnap = (rect: Rect) => Rect;
 //
 // Pair with `ItemsPanel = ItemsPanelTemplate { Canvas }` so the
 // Figure containers are placed on a Canvas that honours their
-// Canvas.Left / Canvas.Top — Figure mirrors its own X / Y onto
+// Canvas.Left / Canvas.Top — Figure mirrors its own Left / Top onto
 // those attached properties so a parent Canvas places it.
 export class Diagram extends Selector
 {
@@ -78,10 +78,10 @@ export class Diagram extends Selector
     // (see collaborators/selection-bounds-tracker.ts). Consumers can bind
     // their resize-adorner / status-bar / inspector chrome to these DPs
     // without subscribing to per-item geometry themselves.
-    public static readonly SelectionXKey      = Model.RegisterReadOnlyProperty<number>(
-        Diagram, 'SelectionX',      0, MetaData.None);
-    public static readonly SelectionYKey      = Model.RegisterReadOnlyProperty<number>(
-        Diagram, 'SelectionY',      0, MetaData.None);
+    public static readonly SelectionLeftKey   = Model.RegisterReadOnlyProperty<number>(
+        Diagram, 'SelectionLeft',   0, MetaData.None);
+    public static readonly SelectionTopKey    = Model.RegisterReadOnlyProperty<number>(
+        Diagram, 'SelectionTop',    0, MetaData.None);
     public static readonly SelectionWidthKey  = Model.RegisterReadOnlyProperty<number>(
         Diagram, 'SelectionWidth',  0, MetaData.None);
     public static readonly SelectionHeightKey = Model.RegisterReadOnlyProperty<number>(
@@ -171,8 +171,8 @@ export class Diagram extends Selector
     public get PositionSnap():  DiagramPositionSnap | undefined { return this.get_property_value(Diagram.PositionSnapKey); }
     public set PositionSnap(v: DiagramPositionSnap | undefined) { this.set_property_value(Diagram.PositionSnapKey, v); }
 
-    public get SelectionX():      number { return this.get_property_value(Diagram.SelectionXKey); }
-    public get SelectionY():      number { return this.get_property_value(Diagram.SelectionYKey); }
+    public get SelectionLeft():   number { return this.get_property_value(Diagram.SelectionLeftKey); }
+    public get SelectionTop():    number { return this.get_property_value(Diagram.SelectionTopKey); }
     public get SelectionWidth():  number { return this.get_property_value(Diagram.SelectionWidthKey); }
     public get SelectionHeight(): number { return this.get_property_value(Diagram.SelectionHeightKey); }
     public get SelectionCount():  number { return this.get_property_value(Diagram.SelectionCountKey); }
@@ -258,15 +258,6 @@ export class Diagram extends Selector
         for (const l of [...this._itemDroppedListeners]) l(args);
     }
 
-    // Collaborators — internal, no public surface. Eagerly constructed
-    // so the Diagram is fully-equipped from the moment the constructor
-    // returns. Order matters: DiagramCommands needs the Command DPs
-    // registered (above), and SelectionBoundsTracker doesn't depend on
-    // anyone — both subscribe to SelectionChanged independently.
-    private readonly _selectionBoundsTracker: SelectionBoundsTracker;
-    private readonly _diagramCommands:        DiagramCommands;
-    private readonly _formatMirror:           FormatMirror;
-
     // Alignment-guides attach state. `_alignmentGuidesDetach` holds the
     // behavior's detach thunk when active; undefined when disabled.
     // `_alignmentGuidesAdorner` is the mounted adorner instance when
@@ -287,9 +278,18 @@ export class Diagram extends Selector
     constructor()
     {
         super();
-        this._diagramCommands        = new DiagramCommands(this);
-        this._selectionBoundsTracker = new SelectionBoundsTracker(this);
-        this._formatMirror           = new FormatMirror(this);
+        // Collaborators — internal, no public surface. Eagerly
+        // constructed so the Diagram is fully-equipped from the moment
+        // the constructor returns. Order matters: DiagramCommands needs
+        // the Command DPs registered (above), and SelectionBoundsTracker
+        // doesn't depend on anyone — both subscribe to SelectionChanged
+        // independently. Lifetime is anchored through their listener
+        // closures (each collaborator subscribes to a Diagram event with
+        // a closure capturing `this`, so the Diagram's listener Set
+        // retains the collaborator without needing a field reference).
+        new DiagramCommands(this);
+        new SelectionBoundsTracker(this);
+        new FormatMirror(this);
     }
 
     protected override OnPropertyChanged(
@@ -396,8 +396,8 @@ export class Diagram extends Selector
     //
     // Step size: 1 dp plain, 10 dp with Shift (matches the canonical
     // "snap-to-grid"-ish increment in every drawing tool). Each
-    // selected Figure's X / Y bumps directly; the BindsTwoWayByDefault
-    // contract on Figure.X / Y back-propagates the new position to
+    // selected Figure's Left / Top bumps directly; the BindsTwoWayByDefault
+    // contract on Figure.Left / Top back-propagates the new position to
     // the bound item VM through ItemContainerStyle, so the data layer
     // sees the move without the Diagram reaching into item shape.
     //
@@ -418,8 +418,8 @@ export class Diagram extends Selector
             {
                 if (container instanceof Figure)
                 {
-                    container.X = container.X + dx;
-                    container.Y = container.Y + dy;
+                    container.Left = container.Left + dx;
+                    container.Top  = container.Top  + dy;
                 }
             }
             args.Handled = true;
@@ -445,8 +445,8 @@ export class Diagram extends Selector
     // Wire a freshly-created OR recycled Figure to its data row.
     // Mirrors ListBox.bindContainer: the container subclass owns the
     // DataContext setup so ItemContainerStyle bindings on the container
-    // (`X = $X`, `Y = $Y`, …) resolve against the per-item Model rather
-    // than against whatever the surrounding inheritance chain exposes.
+    // (`Left = $Left`, `Top = $Top`, …) resolve against the per-item Model
+    // rather than against whatever the surrounding inheritance chain exposes.
     // ContentControl's own DataContext is NOT set by Content assignment —
     // that's a WPF parity decision (a ContentControl's outer bindings see
     // the outer scope). For container-shaped subclasses like Figure

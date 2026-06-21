@@ -19,27 +19,27 @@ import { Diagram } from '../diagram/diagram.js';
 import { Figure } from '../diagram/figure.js';
 import { SelectionMode } from '../list/list-box.js';
 
-// Demo-shaped VM with X/Y/IsSelected. Mirrors the shape ShapeNodeVM
+// Demo-shaped VM with Left/Top/IsSelected. Mirrors the shape ShapeNodeVM
 // publishes in the diagram demo so the test exercises the real
 // container/style binding chain.
 class TestNodeVM extends Model
 {
     public static readonly IdKey         = Model.RegisterProperty<string>(TestNodeVM, 'Id',         '',    MetaData.None);
-    public static readonly XKey          = Model.RegisterProperty<number>(TestNodeVM, 'X',          0,     MetaData.None);
-    public static readonly YKey          = Model.RegisterProperty<number>(TestNodeVM, 'Y',          0,     MetaData.None);
+    public static readonly LeftKey       = Model.RegisterProperty<number>(TestNodeVM, 'Left',       0,     MetaData.None);
+    public static readonly TopKey        = Model.RegisterProperty<number>(TestNodeVM, 'Top',        0,     MetaData.None);
     public static readonly IsSelectedKey = Model.RegisterProperty<boolean>(TestNodeVM, 'IsSelected', false, MetaData.None);
-    constructor(id: string, x: number, y: number)
+    constructor(id: string, left: number, top: number)
     {
         super();
-        this.set_property_value(TestNodeVM.IdKey, id);
-        this.set_property_value(TestNodeVM.XKey,  x);
-        this.set_property_value(TestNodeVM.YKey,  y);
+        this.set_property_value(TestNodeVM.IdKey,   id);
+        this.set_property_value(TestNodeVM.LeftKey, left);
+        this.set_property_value(TestNodeVM.TopKey,  top);
     }
     public get Id(): string         { return this.get_property_value(TestNodeVM.IdKey); }
-    public get X():  number         { return this.get_property_value(TestNodeVM.XKey); }
-    public set X(v: number)         { this.set_property_value(TestNodeVM.XKey, v); }
-    public get Y():  number         { return this.get_property_value(TestNodeVM.YKey); }
-    public set Y(v: number)         { this.set_property_value(TestNodeVM.YKey, v); }
+    public get Left(): number       { return this.get_property_value(TestNodeVM.LeftKey); }
+    public set Left(v: number)      { this.set_property_value(TestNodeVM.LeftKey, v); }
+    public get Top():  number       { return this.get_property_value(TestNodeVM.TopKey); }
+    public set Top(v: number)       { this.set_property_value(TestNodeVM.TopKey, v); }
 }
 
 class FakeTarget implements MountableTarget
@@ -57,8 +57,8 @@ function setup() {
     diagram.SelectionMode = SelectionMode.Extended;
     diagram.ItemsPanel    = new ItemsPanelTemplate(() => new Canvas());
     const style = new Style(Figure, [
-        new Setter(Figure, 'X', new SetterFactory((t: Visual) => DataContextBinding(t, 'X'))),
-        new Setter(Figure, 'Y', new SetterFactory((t: Visual) => DataContextBinding(t, 'Y'))),
+        new Setter(Figure, 'Left', new SetterFactory((t: Visual) => DataContextBinding(t, 'Left'))),
+        new Setter(Figure, 'Top',  new SetterFactory((t: Visual) => DataContextBinding(t, 'Top'))),
     ], undefined, [], []);
     diagram.ItemContainerStyle = style;
     diagram.ItemsSource = items;
@@ -98,19 +98,19 @@ describe('CollectionView incremental forwarding (no Filter/Sort/Group)', () => {
         }
     });
 
-    test('Add preserves user-written X/Y on existing containers across N adds', () => {
+    test('Add preserves user-written Left/Top on existing containers across N adds', () => {
         const { diagram, items } = setup();
         const seeded: TestNodeVM[] = [];
-        const targets: { x: number; y: number }[] = [];
+        const targets: { left: number; top: number }[] = [];
         for (let i = 0; i < 5; i++)
         {
             const vm = new TestNodeVM('s' + i, 100, 100);
             seeded.push(vm);
             items.Add(vm);
-            const t = { x: 200 + i * 50, y: 100 + i * 30 };
+            const t = { left: 200 + i * 50, top: 100 + i * 30 };
             targets.push(t);
             const c = cont(diagram, vm);
-            c.X = t.x; c.Y = t.y;
+            c.Left = t.left; c.Top = t.top;
         }
         for (let i = 0; i < 5; i++)
         {
@@ -118,10 +118,10 @@ describe('CollectionView incremental forwarding (no Filter/Sort/Group)', () => {
             for (let j = 0; j < seeded.length; j++)
             {
                 const c = cont(diagram, seeded[j]);
-                assert.equal(c.X, targets[j].x, `seeded[${j}].X after Add f${i}`);
-                assert.equal(c.Y, targets[j].y, `seeded[${j}].Y after Add f${i}`);
-                assert.equal(seeded[j].X, targets[j].x, `seeded[${j}].VM.X after Add f${i}`);
-                assert.equal(seeded[j].Y, targets[j].y, `seeded[${j}].VM.Y after Add f${i}`);
+                assert.equal(c.Left, targets[j].left, `seeded[${j}].Left after Add f${i}`);
+                assert.equal(c.Top,  targets[j].top,  `seeded[${j}].Top after Add f${i}`);
+                assert.equal(seeded[j].Left, targets[j].left, `seeded[${j}].VM.Left after Add f${i}`);
+                assert.equal(seeded[j].Top,  targets[j].top,  `seeded[${j}].VM.Top after Add f${i}`);
             }
         }
     });

@@ -29,25 +29,25 @@ import {
 // is opaque to the framework (combine() is called consumer-side); a
 // non-undefined value is enough for isGeometricItem to return true.
 class FigureWithGeometryVM extends Model {
-    public static readonly XKey         = Model.RegisterProperty<number>(FigureWithGeometryVM, 'X',        0,  MetaData.None);
-    public static readonly YKey         = Model.RegisterProperty<number>(FigureWithGeometryVM, 'Y',        0,  MetaData.None);
+    public static readonly LeftKey      = Model.RegisterProperty<number>(FigureWithGeometryVM, 'Left',     0,  MetaData.None);
+    public static readonly TopKey       = Model.RegisterProperty<number>(FigureWithGeometryVM, 'Top',      0,  MetaData.None);
     public static readonly WidthKey     = Model.RegisterProperty<number>(FigureWithGeometryVM, 'Width',   10, MetaData.None);
     public static readonly HeightKey    = Model.RegisterProperty<number>(FigureWithGeometryVM, 'Height',  10, MetaData.None);
     // Use a non-DP plain field for Geometry — the duck-type check looks
     // at the property, not the descriptor table. Real consumers can
     // use a DP if they want notifications; not required by the contract.
     public Geometry: unknown;
-    constructor(x: number, y: number, geometry: unknown) {
+    constructor(left: number, top: number, geometry: unknown) {
         super();
-        this.set_property_value(FigureWithGeometryVM.XKey, x);
-        this.set_property_value(FigureWithGeometryVM.YKey, y);
+        this.set_property_value(FigureWithGeometryVM.LeftKey, left);
+        this.set_property_value(FigureWithGeometryVM.TopKey,  top);
         this.Geometry = geometry;
     }
 }
 
 class FigureWithoutGeometryVM extends Model {
-    public static readonly XKey      = Model.RegisterProperty<number>(FigureWithoutGeometryVM, 'X',      0,  MetaData.None);
-    public static readonly YKey      = Model.RegisterProperty<number>(FigureWithoutGeometryVM, 'Y',      0,  MetaData.None);
+    public static readonly LeftKey   = Model.RegisterProperty<number>(FigureWithoutGeometryVM, 'Left',   0,  MetaData.None);
+    public static readonly TopKey    = Model.RegisterProperty<number>(FigureWithoutGeometryVM, 'Top',    0,  MetaData.None);
     public static readonly WidthKey  = Model.RegisterProperty<number>(FigureWithoutGeometryVM, 'Width',  10, MetaData.None);
     public static readonly HeightKey = Model.RegisterProperty<number>(FigureWithoutGeometryVM, 'Height', 10, MetaData.None);
 }
@@ -67,8 +67,8 @@ function setup(items: Model[]): { diagram: Diagram } {
     diagram.SelectionMode = SelectionMode.Extended;
     diagram.ItemsPanel    = new ItemsPanelTemplate(() => new Canvas());
     const style = new Style(Figure, [
-        new Setter(Figure, 'X', new SetterFactory((t: Visual) => DataContextBinding(t, 'X'))),
-        new Setter(Figure, 'Y', new SetterFactory((t: Visual) => DataContextBinding(t, 'Y'))),
+        new Setter(Figure, 'Left', new SetterFactory((t: Visual) => DataContextBinding(t, 'Left'))),
+        new Setter(Figure, 'Top',  new SetterFactory((t: Visual) => DataContextBinding(t, 'Top'))),
     ], undefined, [], []);
     diagram.ItemContainerStyle = style;
     diagram.ItemsSource = coll;

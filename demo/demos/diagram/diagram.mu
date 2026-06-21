@@ -29,8 +29,8 @@ resources DiagramDemo {
 
     // ── Per-node container style ────────────────────────────────────
     Style x:key="DiagramNodeStyle" [TargetType=Figure] {
-        X = $X;
-        Y = $Y;
+        Left = $Left;
+        Top  = $Top;
     }
 
     // ── Shared Canvas ItemsPanel ────────────────────────────────────

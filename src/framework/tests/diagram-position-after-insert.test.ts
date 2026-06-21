@@ -21,24 +21,24 @@ import { Figure } from '../diagram/figure.js';
 import { SelectionMode } from '../list/list-box.js';
 
 // Minimal node VM — mirrors the diagram demo's ShapeNodeVM shape with
-// X / Y / IsSelected DPs.
+// Left / Top / IsSelected DPs.
 class TestNodeVM extends Model
 {
     public static readonly IdKey   = Model.RegisterProperty<string>(TestNodeVM, 'Id',   '',    MetaData.None);
-    public static readonly XKey    = Model.RegisterProperty<number>(TestNodeVM, 'X',    0,     MetaData.None);
-    public static readonly YKey    = Model.RegisterProperty<number>(TestNodeVM, 'Y',    0,     MetaData.None);
+    public static readonly LeftKey = Model.RegisterProperty<number>(TestNodeVM, 'Left', 0,     MetaData.None);
+    public static readonly TopKey  = Model.RegisterProperty<number>(TestNodeVM, 'Top',  0,     MetaData.None);
     public static readonly SizeKey = Model.RegisterProperty<number>(TestNodeVM, 'Size', 80,    MetaData.None);
-    constructor(id: string, x: number, y: number)
+    constructor(id: string, left: number, top: number)
     {
         super();
         this.set_property_value(TestNodeVM.IdKey, id);
-        this.set_property_value(TestNodeVM.XKey, x);
-        this.set_property_value(TestNodeVM.YKey, y);
+        this.set_property_value(TestNodeVM.LeftKey, left);
+        this.set_property_value(TestNodeVM.TopKey,  top);
     }
-    public get X(): number  { return this.get_property_value(TestNodeVM.XKey); }
-    public set X(v: number) { this.set_property_value(TestNodeVM.XKey, v); }
-    public get Y(): number  { return this.get_property_value(TestNodeVM.YKey); }
-    public set Y(v: number) { this.set_property_value(TestNodeVM.YKey, v); }
+    public get Left(): number   { return this.get_property_value(TestNodeVM.LeftKey); }
+    public set Left(v: number)  { this.set_property_value(TestNodeVM.LeftKey, v); }
+    public get Top():  number   { return this.get_property_value(TestNodeVM.TopKey); }
+    public set Top(v: number)   { this.set_property_value(TestNodeVM.TopKey, v); }
 }
 
 class FakeTarget implements MountableTarget
@@ -48,13 +48,13 @@ class FakeTarget implements MountableTarget
     public GetFocusedVisual(): Visual | undefined { return undefined; }
 }
 
-describe('Diagram — existing container X/Y persistence after a new item is inserted', () => {
+describe('Diagram — existing container Left/Top persistence after a new item is inserted', () => {
     beforeEach(() => {
         Application.current = null;
         new Application();
     });
 
-    test('moving Figure.X (TwoWay binding) survives a subsequent ObservableCollection.Add', () => {
+    test('moving Figure.Left (TwoWay binding) survives a subsequent ObservableCollection.Add', () => {
         const items = new ObservableCollection<TestNodeVM>();
         const a = new TestNodeVM('a', 100, 100);
         items.Add(a);
@@ -63,11 +63,11 @@ describe('Diagram — existing container X/Y persistence after a new item is ins
         diagram.SelectionMode = SelectionMode.Extended;
         diagram.ItemsPanel    = new ItemsPanelTemplate(() => new Canvas());
 
-        // ItemContainerStyle wires the X / Y bindings the same way the
+        // ItemContainerStyle wires the Left / Top bindings the same way the
         // demo's FigureStyle does.
         const style = new Style(Figure, [
-            new Setter(Figure, 'X', new SetterFactory((t: Visual) => DataContextBinding(t, 'X'))),
-            new Setter(Figure, 'Y', new SetterFactory((t: Visual) => DataContextBinding(t, 'Y'))),
+            new Setter(Figure, 'Left', new SetterFactory((t: Visual) => DataContextBinding(t, 'Left'))),
+            new Setter(Figure, 'Top',  new SetterFactory((t: Visual) => DataContextBinding(t, 'Top'))),
         ], undefined, [], []);
         diagram.ItemContainerStyle = style;
 
@@ -86,22 +86,22 @@ describe('Diagram — existing container X/Y persistence after a new item is ins
             ._generator.ContainerFromItem(a) as Figure | undefined;
         assert.ok(containerA instanceof Figure, 'A container should have realized for item a');
 
-        // Simulate a drag: write a new X / Y onto the container.
-        containerA.X = 300;
-        containerA.Y = 220;
+        // Simulate a drag: write a new Left / Top onto the container.
+        containerA.Left = 300;
+        containerA.Top  = 220;
 
         // TwoWay binding should have pushed the values to the VM.
-        assert.equal(a.X, 300, 'container.X push should have updated VM.X via TwoWay binding');
-        assert.equal(a.Y, 220, 'container.Y push should have updated VM.Y via TwoWay binding');
+        assert.equal(a.Left, 300, 'container.Left push should have updated VM.Left via TwoWay binding');
+        assert.equal(a.Top,  220, 'container.Top push should have updated VM.Top via TwoWay binding');
 
         // Now insert a new item — same as a toolbox drop.
         const b = new TestNodeVM('b', 50, 50);
         items.Add(b);
 
         // The previously-moved container MUST stay at (300, 220).
-        assert.equal(containerA.X, 300, 'container A.X must not snap back after a sibling is inserted');
-        assert.equal(containerA.Y, 220, 'container A.Y must not snap back after a sibling is inserted');
-        assert.equal(a.X, 300, 'VM A.X must not be reset by the insert');
-        assert.equal(a.Y, 220, 'VM A.Y must not be reset by the insert');
+        assert.equal(containerA.Left, 300, 'container A.Left must not snap back after a sibling is inserted');
+        assert.equal(containerA.Top,  220, 'container A.Top must not snap back after a sibling is inserted');
+        assert.equal(a.Left, 300, 'VM A.Left must not be reset by the insert');
+        assert.equal(a.Top,  220, 'VM A.Top must not be reset by the insert');
     });
 });

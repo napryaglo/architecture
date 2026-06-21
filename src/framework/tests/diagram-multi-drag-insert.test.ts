@@ -22,21 +22,21 @@ import { SelectionMode } from '../list/list-box.js';
 class TestNodeVM extends Model
 {
     public static readonly IdKey         = Model.RegisterProperty<string>(TestNodeVM, 'Id',         '',    MetaData.None);
-    public static readonly XKey          = Model.RegisterProperty<number>(TestNodeVM, 'X',          0,     MetaData.None);
-    public static readonly YKey          = Model.RegisterProperty<number>(TestNodeVM, 'Y',          0,     MetaData.None);
+    public static readonly LeftKey       = Model.RegisterProperty<number>(TestNodeVM, 'Left',       0,     MetaData.None);
+    public static readonly TopKey        = Model.RegisterProperty<number>(TestNodeVM, 'Top',        0,     MetaData.None);
     public static readonly IsSelectedKey = Model.RegisterProperty<boolean>(TestNodeVM, 'IsSelected', false, MetaData.None);
-    constructor(id: string, x: number, y: number)
+    constructor(id: string, left: number, top: number)
     {
         super();
         this.set_property_value(TestNodeVM.IdKey, id);
-        this.set_property_value(TestNodeVM.XKey, x);
-        this.set_property_value(TestNodeVM.YKey, y);
+        this.set_property_value(TestNodeVM.LeftKey, left);
+        this.set_property_value(TestNodeVM.TopKey,  top);
     }
-    public get Id(): string         { return this.get_property_value(TestNodeVM.IdKey); }
-    public get X():  number         { return this.get_property_value(TestNodeVM.XKey); }
-    public set X(v: number)         { this.set_property_value(TestNodeVM.XKey, v); }
-    public get Y():  number         { return this.get_property_value(TestNodeVM.YKey); }
-    public set Y(v: number)         { this.set_property_value(TestNodeVM.YKey, v); }
+    public get Id(): string           { return this.get_property_value(TestNodeVM.IdKey); }
+    public get Left():  number        { return this.get_property_value(TestNodeVM.LeftKey); }
+    public set Left(v: number)        { this.set_property_value(TestNodeVM.LeftKey, v); }
+    public get Top():   number        { return this.get_property_value(TestNodeVM.TopKey); }
+    public set Top(v: number)         { this.set_property_value(TestNodeVM.TopKey, v); }
     public get IsSelected(): boolean  { return this.get_property_value(TestNodeVM.IsSelectedKey); }
     public set IsSelected(v: boolean) { this.set_property_value(TestNodeVM.IsSelectedKey, v); }
 }
@@ -59,8 +59,8 @@ function makeDiagram(): { diagram: Diagram; surface: Border; items: ObservableCo
     diagram.SelectionMode = SelectionMode.Extended;
     diagram.ItemsPanel    = new ItemsPanelTemplate(() => new Canvas());
     const style = new Style(Figure, [
-        new Setter(Figure, 'X', new SetterFactory((t: Visual) => DataContextBinding(t, 'X'))),
-        new Setter(Figure, 'Y', new SetterFactory((t: Visual) => DataContextBinding(t, 'Y'))),
+        new Setter(Figure, 'Left', new SetterFactory((t: Visual) => DataContextBinding(t, 'Left'))),
+        new Setter(Figure, 'Top',  new SetterFactory((t: Visual) => DataContextBinding(t, 'Top'))),
     ], undefined, [], []);
     diagram.ItemContainerStyle = style;
     diagram.ItemsSource = items;
@@ -110,17 +110,17 @@ describe('Diagram — multi-drag + multi-insert position persistence', () => {
 
         // Drag each one to a unique position.
         const targets = [
-            { x: 200, y: 250 },
-            { x: 320, y: 110 },
-            { x:  80, y: 380 },
-            { x: 500, y: 200 },
-            { x: 410, y: 340 },
+            { left: 200, top: 250 },
+            { left: 320, top: 110 },
+            { left:  80, top: 380 },
+            { left: 500, top: 200 },
+            { left: 410, top: 340 },
         ];
         for (let i = 0; i < seeded.length; i++)
         {
             const c = container(diagram, seeded[i]);
-            c.X = targets[i].x;
-            c.Y = targets[i].y;
+            c.Left = targets[i].left;
+            c.Top  = targets[i].top;
         }
 
         // Now simulate the toolbox drop: select a fresh inserted item.
@@ -139,10 +139,10 @@ describe('Diagram — multi-drag + multi-insert position persistence', () => {
         for (let i = 0; i < seeded.length; i++)
         {
             const c = container(diagram, seeded[i]);
-            assert.equal(c.X,  targets[i].x, `seeded[${i}].container.X should still be ${targets[i].x} but was ${c.X}`);
-            assert.equal(c.Y,  targets[i].y, `seeded[${i}].container.Y should still be ${targets[i].y} but was ${c.Y}`);
-            assert.equal(seeded[i].X, targets[i].x, `seeded[${i}].VM.X should still be ${targets[i].x} but was ${seeded[i].X}`);
-            assert.equal(seeded[i].Y, targets[i].y, `seeded[${i}].VM.Y should still be ${targets[i].y} but was ${seeded[i].Y}`);
+            assert.equal(c.Left, targets[i].left, `seeded[${i}].container.Left should still be ${targets[i].left} but was ${c.Left}`);
+            assert.equal(c.Top,  targets[i].top,  `seeded[${i}].container.Top should still be ${targets[i].top} but was ${c.Top}`);
+            assert.equal(seeded[i].Left, targets[i].left, `seeded[${i}].VM.Left should still be ${targets[i].left} but was ${seeded[i].Left}`);
+            assert.equal(seeded[i].Top,  targets[i].top,  `seeded[${i}].VM.Top should still be ${targets[i].top} but was ${seeded[i].Top}`);
         }
     });
 
@@ -155,9 +155,9 @@ describe('Diagram — multi-drag + multi-insert position persistence', () => {
 
         // Drag a to (200, 200).
         const cA = container(diagram, a);
-        cA.X = 200; cA.Y = 200;
-        assert.equal(a.X, 200);
-        assert.equal(a.Y, 200);
+        cA.Left = 200; cA.Top = 200;
+        assert.equal(a.Left, 200);
+        assert.equal(a.Top,  200);
 
         // Insert b.
         const b = new TestNodeVM('b', 50, 50);
@@ -165,14 +165,14 @@ describe('Diagram — multi-drag + multi-insert position persistence', () => {
         diagram.SelectedItem = b;
         relayout(surface);
         // a must not snap back.
-        assert.equal(container(diagram, a).X, 200, 'a.X after b insert');
-        assert.equal(container(diagram, a).Y, 200, 'a.Y after b insert');
+        assert.equal(container(diagram, a).Left, 200, 'a.Left after b insert');
+        assert.equal(container(diagram, a).Top,  200, 'a.Top after b insert');
 
         // Drag b to (300, 300).
         const cB = container(diagram, b);
-        cB.X = 300; cB.Y = 300;
-        assert.equal(b.X, 300);
-        assert.equal(b.Y, 300);
+        cB.Left = 300; cB.Top = 300;
+        assert.equal(b.Left, 300);
+        assert.equal(b.Top,  300);
 
         // Insert c.
         const c = new TestNodeVM('c', 60, 60);
@@ -180,30 +180,30 @@ describe('Diagram — multi-drag + multi-insert position persistence', () => {
         diagram.SelectedItem = c;
         relayout(surface);
         // a and b must persist.
-        assert.equal(container(diagram, a).X, 200, 'a.X after c insert');
-        assert.equal(container(diagram, b).X, 300, 'b.X after c insert');
+        assert.equal(container(diagram, a).Left, 200, 'a.Left after c insert');
+        assert.equal(container(diagram, b).Left, 300, 'b.Left after c insert');
 
         // Drag c to (400, 400).
         const cC = container(diagram, c);
-        cC.X = 400; cC.Y = 400;
-        assert.equal(c.X, 400);
-        assert.equal(c.Y, 400);
+        cC.Left = 400; cC.Top = 400;
+        assert.equal(c.Left, 400);
+        assert.equal(c.Top,  400);
 
         // Drag a again to (250, 250). Re-fetch container — Refresh
         // discards the prior Figure instance.
         const cA2 = container(diagram, a);
-        cA2.X = 250; cA2.Y = 250;
-        assert.equal(a.X, 250);
-        assert.equal(a.Y, 250);
+        cA2.Left = 250; cA2.Top = 250;
+        assert.equal(a.Left, 250);
+        assert.equal(a.Top,  250);
 
         // Insert d.
         const d = new TestNodeVM('d', 70, 70);
         items.Add(d);
         diagram.SelectedItem = d;
         relayout(surface);
-        assert.equal(container(diagram, a).X, 250, 'a.X after d insert');
-        assert.equal(container(diagram, b).X, 300, 'b.X after d insert');
-        assert.equal(container(diagram, c).X, 400, 'c.X after d insert');
+        assert.equal(container(diagram, a).Left, 250, 'a.Left after d insert');
+        assert.equal(container(diagram, b).Left, 300, 'b.Left after d insert');
+        assert.equal(container(diagram, c).Left, 400, 'c.Left after d insert');
     });
 
     test('drag → selection-replace mid-cycle does not snap previously-moved nodes', () => {
@@ -218,9 +218,9 @@ describe('Diagram — multi-drag + multi-insert position persistence', () => {
         const cA = container(diagram, a);
         const cB = container(diagram, b);
         const cC = container(diagram, c);
-        cA.X = 200; cA.Y = 200;
-        cB.X = 300; cB.Y = 300;
-        cC.X = 400; cC.Y = 400;
+        cA.Left = 200; cA.Top = 200;
+        cB.Left = 300; cB.Top = 300;
+        cC.Left = 400; cC.Top = 400;
 
         // Mimic the drop's selector mutation that the canvas-drop-behavior performs.
         diagram.SelectedItem = a;
@@ -228,8 +228,8 @@ describe('Diagram — multi-drag + multi-insert position persistence', () => {
         diagram.SelectedItem = c;
         diagram.SelectedItem = undefined;
 
-        assert.equal(cA.X, 200, 'a.X after selection churn');
-        assert.equal(cB.X, 300, 'b.X after selection churn');
-        assert.equal(cC.X, 400, 'c.X after selection churn');
+        assert.equal(cA.Left, 200, 'a.Left after selection churn');
+        assert.equal(cB.Left, 300, 'b.Left after selection churn');
+        assert.equal(cC.Left, 400, 'c.Left after selection churn');
     });
 });

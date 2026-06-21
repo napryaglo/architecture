@@ -27,8 +27,8 @@ import { flattenToLeaves } from '../diagram/commands/group-ops.js';
 // own Pen so FormatMirror can verify per-shape Pen identity is preserved
 // during broadcast.
 class FormattableVM extends Model {
-    public static readonly XKey         = Model.RegisterProperty<number>(FormattableVM, 'X',         0,  MetaData.None);
-    public static readonly YKey         = Model.RegisterProperty<number>(FormattableVM, 'Y',         0,  MetaData.None);
+    public static readonly LeftKey      = Model.RegisterProperty<number>(FormattableVM, 'Left',      0,  MetaData.None);
+    public static readonly TopKey       = Model.RegisterProperty<number>(FormattableVM, 'Top',       0,  MetaData.None);
     public static readonly WidthKey     = Model.RegisterProperty<number>(FormattableVM, 'Width',    10, MetaData.None);
     public static readonly HeightKey    = Model.RegisterProperty<number>(FormattableVM, 'Height',   10, MetaData.None);
     public static readonly FillBrushKey = Model.RegisterProperty<SolidColorBrush | undefined>(FormattableVM, 'FillBrush', undefined, MetaData.None);
@@ -49,8 +49,8 @@ class FormattableVM extends Model {
 // IGroup-shaped VM containing FormattableVM members. Used to verify
 // flattenToLeaves walks Members.
 class GroupOfFormattablesVM extends Model {
-    public static readonly XKey      = Model.RegisterProperty<number>(GroupOfFormattablesVM, 'X',      0,  MetaData.None);
-    public static readonly YKey      = Model.RegisterProperty<number>(GroupOfFormattablesVM, 'Y',      0,  MetaData.None);
+    public static readonly LeftKey   = Model.RegisterProperty<number>(GroupOfFormattablesVM, 'Left',   0,  MetaData.None);
+    public static readonly TopKey    = Model.RegisterProperty<number>(GroupOfFormattablesVM, 'Top',    0,  MetaData.None);
     public static readonly WidthKey  = Model.RegisterProperty<number>(GroupOfFormattablesVM, 'Width',  10, MetaData.None);
     public static readonly HeightKey = Model.RegisterProperty<number>(GroupOfFormattablesVM, 'Height', 10, MetaData.None);
     public Members: FormattableVM[];
@@ -86,8 +86,8 @@ function setup(items: Model[]): { diagram: Diagram } {
     diagram.SelectionMode = SelectionMode.Extended;
     diagram.ItemsPanel    = new ItemsPanelTemplate(() => new Canvas());
     const style = new Style(Figure, [
-        new Setter(Figure, 'X', new SetterFactory((t: Visual) => DataContextBinding(t, 'X'))),
-        new Setter(Figure, 'Y', new SetterFactory((t: Visual) => DataContextBinding(t, 'Y'))),
+        new Setter(Figure, 'Left', new SetterFactory((t: Visual) => DataContextBinding(t, 'Left'))),
+        new Setter(Figure, 'Top',  new SetterFactory((t: Visual) => DataContextBinding(t, 'Top'))),
     ], undefined, [], []);
     diagram.ItemContainerStyle = style;
     diagram.ItemsSource = coll;

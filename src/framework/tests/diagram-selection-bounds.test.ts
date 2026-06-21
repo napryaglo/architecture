@@ -19,29 +19,29 @@ import { Diagram } from '../diagram/diagram.js';
 import { Figure } from '../diagram/figure.js';
 import { SelectionMode } from '../list/list-box.js';
 
-// IFigure-shaped synthetic data class — Model with X/Y/Width/Height DPs.
-// SelectionBoundsTracker duck-types on these via findDescriptor; any Model
-// with these four DPs registered satisfies the contract.
+// IFigure-shaped synthetic data class — Model with Left/Top/Width/Height
+// DPs. SelectionBoundsTracker duck-types on these via findDescriptor; any
+// Model with these four DPs registered satisfies the contract.
 class FigureVM extends Model
 {
-    public static readonly XKey      = Model.RegisterProperty<number>(FigureVM, 'X',      0,  MetaData.None);
-    public static readonly YKey      = Model.RegisterProperty<number>(FigureVM, 'Y',      0,  MetaData.None);
+    public static readonly LeftKey   = Model.RegisterProperty<number>(FigureVM, 'Left',   0,  MetaData.None);
+    public static readonly TopKey    = Model.RegisterProperty<number>(FigureVM, 'Top',    0,  MetaData.None);
     public static readonly WidthKey  = Model.RegisterProperty<number>(FigureVM, 'Width',  10, MetaData.None);
     public static readonly HeightKey = Model.RegisterProperty<number>(FigureVM, 'Height', 10, MetaData.None);
 
-    constructor(x: number, y: number, w: number = 10, h: number = 10)
+    constructor(left: number, top: number, w: number = 10, h: number = 10)
     {
         super();
-        this.set_property_value(FigureVM.XKey,      x);
-        this.set_property_value(FigureVM.YKey,      y);
+        this.set_property_value(FigureVM.LeftKey,   left);
+        this.set_property_value(FigureVM.TopKey,    top);
         this.set_property_value(FigureVM.WidthKey,  w);
         this.set_property_value(FigureVM.HeightKey, h);
     }
 
-    public get X():      number  { return this.get_property_value(FigureVM.XKey); }
-    public set X(v: number)      { this.set_property_value(FigureVM.XKey, v); }
-    public get Y():      number  { return this.get_property_value(FigureVM.YKey); }
-    public set Y(v: number)      { this.set_property_value(FigureVM.YKey, v); }
+    public get Left():   number  { return this.get_property_value(FigureVM.LeftKey); }
+    public set Left(v: number)   { this.set_property_value(FigureVM.LeftKey, v); }
+    public get Top():    number  { return this.get_property_value(FigureVM.TopKey); }
+    public set Top(v: number)    { this.set_property_value(FigureVM.TopKey, v); }
     public get Width():  number  { return this.get_property_value(FigureVM.WidthKey); }
     public set Width(v: number)  { this.set_property_value(FigureVM.WidthKey, v); }
     public get Height(): number  { return this.get_property_value(FigureVM.HeightKey); }
@@ -63,8 +63,8 @@ function setup(items: FigureVM[]): { diagram: Diagram; coll: ObservableCollectio
     diagram.SelectionMode = SelectionMode.Extended;
     diagram.ItemsPanel    = new ItemsPanelTemplate(() => new Canvas());
     const style = new Style(Figure, [
-        new Setter(Figure, 'X', new SetterFactory((t: Visual) => DataContextBinding(t, 'X'))),
-        new Setter(Figure, 'Y', new SetterFactory((t: Visual) => DataContextBinding(t, 'Y'))),
+        new Setter(Figure, 'Left', new SetterFactory((t: Visual) => DataContextBinding(t, 'Left'))),
+        new Setter(Figure, 'Top',  new SetterFactory((t: Visual) => DataContextBinding(t, 'Top'))),
     ], undefined, [], []);
     diagram.ItemContainerStyle = style;
     diagram.ItemsSource = coll;
@@ -99,8 +99,8 @@ describe('Diagram — selection bounds tracker', () => {
 
     test('empty selection yields (0, 0, 0, 0) bounds and Count = 0', () => {
         const { diagram } = setup([new FigureVM(10, 10), new FigureVM(50, 50)]);
-        assert.equal(diagram.SelectionX,      0);
-        assert.equal(diagram.SelectionY,      0);
+        assert.equal(diagram.SelectionLeft,   0);
+        assert.equal(diagram.SelectionTop,    0);
         assert.equal(diagram.SelectionWidth,  0);
         assert.equal(diagram.SelectionHeight, 0);
         assert.equal(diagram.SelectionCount,  0);
@@ -114,8 +114,8 @@ describe('Diagram — selection bounds tracker', () => {
 
         selectMany(diagram, [a, b, c]);
 
-        assert.equal(diagram.SelectionX,       5);
-        assert.equal(diagram.SelectionY,      15);
+        assert.equal(diagram.SelectionLeft,    5);
+        assert.equal(diagram.SelectionTop,    15);
         assert.equal(diagram.SelectionWidth,  50);
         assert.equal(diagram.SelectionHeight, 43);
         assert.equal(diagram.SelectionCount,   3);
@@ -132,13 +132,13 @@ describe('Diagram — selection bounds tracker', () => {
 
         // Switch to a different selection (plain click on `c` replaces).
         selectMany(diagram, [c]);
-        assert.equal(diagram.SelectionX,      0);
-        assert.equal(diagram.SelectionY,     50);
+        assert.equal(diagram.SelectionLeft,   0);
+        assert.equal(diagram.SelectionTop,   50);
         assert.equal(diagram.SelectionWidth, 10);
         assert.equal(diagram.SelectionCount,  1);
 
-        a.X = 999;
-        assert.equal(diagram.SelectionX, 0, 'unselected `a` move must not affect bounds');
+        a.Left = 999;
+        assert.equal(diagram.SelectionLeft, 0, 'unselected `a` move must not affect bounds');
     });
 
     test('moving a selected item recomputes bounds live', () => {
@@ -148,8 +148,8 @@ describe('Diagram — selection bounds tracker', () => {
         selectMany(diagram, [a, b]);
         assert.equal(diagram.SelectionWidth, 30);
 
-        a.X = -10;
-        assert.equal(diagram.SelectionX,     -10);
+        a.Left = -10;
+        assert.equal(diagram.SelectionLeft,  -10);
         assert.equal(diagram.SelectionWidth,  40);
     });
 
@@ -173,8 +173,8 @@ describe('Diagram — selection bounds tracker', () => {
         assert.equal(diagram.SelectionCount, 1);
 
         diagram.ClearSelection();
-        assert.equal(diagram.SelectionX,      0);
-        assert.equal(diagram.SelectionY,      0);
+        assert.equal(diagram.SelectionLeft,   0);
+        assert.equal(diagram.SelectionTop,    0);
         assert.equal(diagram.SelectionWidth,  0);
         assert.equal(diagram.SelectionHeight, 0);
         assert.equal(diagram.SelectionCount,  0);

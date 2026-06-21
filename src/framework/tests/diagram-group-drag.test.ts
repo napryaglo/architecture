@@ -25,20 +25,20 @@ import { SelectionMode } from '../list/list-box.js';
 
 class NodeVM extends Model
 {
-    public static readonly IdKey = Model.RegisterProperty<string>(NodeVM, 'Id', '', MetaData.None);
-    public static readonly XKey  = Model.RegisterProperty<number>(NodeVM, 'X',  0,  MetaData.None);
-    public static readonly YKey  = Model.RegisterProperty<number>(NodeVM, 'Y',  0,  MetaData.None);
-    constructor(id: string, x: number, y: number) {
+    public static readonly IdKey   = Model.RegisterProperty<string>(NodeVM, 'Id',   '', MetaData.None);
+    public static readonly LeftKey = Model.RegisterProperty<number>(NodeVM, 'Left', 0,  MetaData.None);
+    public static readonly TopKey  = Model.RegisterProperty<number>(NodeVM, 'Top',  0,  MetaData.None);
+    constructor(id: string, left: number, top: number) {
         super();
-        this.set_property_value(NodeVM.IdKey, id);
-        this.set_property_value(NodeVM.XKey,  x);
-        this.set_property_value(NodeVM.YKey,  y);
+        this.set_property_value(NodeVM.IdKey,   id);
+        this.set_property_value(NodeVM.LeftKey, left);
+        this.set_property_value(NodeVM.TopKey,  top);
     }
-    public get Id(): string  { return this.get_property_value(NodeVM.IdKey); }
-    public get X():  number  { return this.get_property_value(NodeVM.XKey); }
-    public set X(v: number)  { this.set_property_value(NodeVM.XKey, v); }
-    public get Y():  number  { return this.get_property_value(NodeVM.YKey); }
-    public set Y(v: number)  { this.set_property_value(NodeVM.YKey, v); }
+    public get Id(): string   { return this.get_property_value(NodeVM.IdKey); }
+    public get Left(): number { return this.get_property_value(NodeVM.LeftKey); }
+    public set Left(v: number){ this.set_property_value(NodeVM.LeftKey, v); }
+    public get Top():  number { return this.get_property_value(NodeVM.TopKey); }
+    public set Top(v: number) { this.set_property_value(NodeVM.TopKey, v); }
 }
 
 class FakeTarget implements MountableTarget {
@@ -69,8 +69,8 @@ function setup() {
     diagram.SelectionMode = SelectionMode.Extended;
     diagram.ItemsPanel    = new ItemsPanelTemplate(() => new Canvas());
     const style = new Style(Figure, [
-        new Setter(Figure, 'X', new SetterFactory((t: Visual) => DataContextBinding(t, 'X'))),
-        new Setter(Figure, 'Y', new SetterFactory((t: Visual) => DataContextBinding(t, 'Y'))),
+        new Setter(Figure, 'Left', new SetterFactory((t: Visual) => DataContextBinding(t, 'Left'))),
+        new Setter(Figure, 'Top',  new SetterFactory((t: Visual) => DataContextBinding(t, 'Top'))),
     ], undefined, [], []);
     diagram.ItemContainerStyle = style;
     diagram.ItemsSource = items;
@@ -122,19 +122,19 @@ describe('Diagram — group drag', () => {
         im.InjectPointerMove(cA, pointerInit({ HostX: 200, HostY: 200 }));
         im.InjectPointerMove(cA, pointerInit({ HostX: 250, HostY: 220 }));
 
-        // A's container.X = 250 - 50 (grabOffsetX = 150-100) = 200. Y similarly.
-        assert.equal(cA.X, 200, 'A.X after drag');
-        assert.equal(cA.Y, 170, 'A.Y after drag');
+        // A's container.Left = 250 - 50 (grabOffsetX = 150-100) = 200. Top similarly.
+        assert.equal(cA.Left, 200, 'A.Left after drag');
+        assert.equal(cA.Top,  170, 'A.Top after drag');
         // B / C shifted by the same vector: (+100, +70).
-        assert.equal(cB.X, 400, 'B.X after group drag');
-        assert.equal(cB.Y, 270, 'B.Y after group drag');
-        assert.equal(cC.X, 600, 'C.X after group drag');
-        assert.equal(cC.Y, 420, 'C.Y after group drag');
+        assert.equal(cB.Left, 400, 'B.Left after group drag');
+        assert.equal(cB.Top,  270, 'B.Top after group drag');
+        assert.equal(cC.Left, 600, 'C.Left after group drag');
+        assert.equal(cC.Top,  420, 'C.Top after group drag');
 
         // VMs mirror.
-        assert.equal(a.X, 200); assert.equal(a.Y, 170);
-        assert.equal(b.X, 400); assert.equal(b.Y, 270);
-        assert.equal(c.X, 600); assert.equal(c.Y, 420);
+        assert.equal(a.Left, 200); assert.equal(a.Top, 170);
+        assert.equal(b.Left, 400); assert.equal(b.Top, 270);
+        assert.equal(c.Left, 600); assert.equal(c.Top, 420);
 
         im.InjectPointerUp(cA, pointerInit({ HostX: 250, HostY: 220 }));
     });
@@ -161,11 +161,11 @@ describe('Diagram — group drag', () => {
         im.InjectPointerMove(cC, pointerInit({ HostX: 700, HostY: 500 }));
 
         // C followed the cursor.
-        assert.equal(cC.X, 650, 'C.X after solo drag (700 - 50 grab)');
-        assert.equal(cC.Y, 450, 'C.Y after solo drag (500 - 50 grab)');
+        assert.equal(cC.Left, 650, 'C.Left after solo drag (700 - 50 grab)');
+        assert.equal(cC.Top,  450, 'C.Top after solo drag (500 - 50 grab)');
         // A and B untouched — selection's identity was different.
-        assert.equal(cA.X, 100); assert.equal(cA.Y, 100);
-        assert.equal(cB.X, 300); assert.equal(cB.Y, 200);
+        assert.equal(cA.Left, 100); assert.equal(cA.Top, 100);
+        assert.equal(cB.Left, 300); assert.equal(cB.Top, 200);
 
         im.InjectPointerUp(cC, pointerInit({ HostX: 700, HostY: 500 }));
     });
@@ -196,9 +196,9 @@ describe('Diagram — group drag', () => {
 
         im.InjectPointerMove(cA, pointerInit({ HostX: 250, HostY: 220 }));
 
-        assert.equal(cA.X, 200, 'A.X after drag');
-        assert.equal(cB.X, 400, 'B.X after drag (partner from press time)');
-        assert.equal(cC.X, 500, 'C.X unchanged — added to selection mid-drag, not a partner');
+        assert.equal(cA.Left, 200, 'A.Left after drag');
+        assert.equal(cB.Left, 400, 'B.Left after drag (partner from press time)');
+        assert.equal(cC.Left, 500, 'C.Left unchanged — added to selection mid-drag, not a partner');
 
         im.InjectPointerUp(cA, pointerInit({ HostX: 250, HostY: 220 }));
     });

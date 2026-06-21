@@ -21,19 +21,19 @@ import { Figure } from '../diagram/figure.js';
 import { SelectionMode } from '../list/list-box.js';
 
 class FigureVM extends Model {
-    public static readonly XKey      = Model.RegisterProperty<number>(FigureVM, 'X',      0,  MetaData.None);
-    public static readonly YKey      = Model.RegisterProperty<number>(FigureVM, 'Y',      0,  MetaData.None);
+    public static readonly LeftKey   = Model.RegisterProperty<number>(FigureVM, 'Left',   0,  MetaData.None);
+    public static readonly TopKey    = Model.RegisterProperty<number>(FigureVM, 'Top',    0,  MetaData.None);
     public static readonly WidthKey  = Model.RegisterProperty<number>(FigureVM, 'Width',  10, MetaData.None);
     public static readonly HeightKey = Model.RegisterProperty<number>(FigureVM, 'Height', 10, MetaData.None);
-    constructor(x: number, y: number, w: number = 10, h: number = 10) {
+    constructor(left: number, top: number, w: number = 10, h: number = 10) {
         super();
-        this.set_property_value(FigureVM.XKey,      x);
-        this.set_property_value(FigureVM.YKey,      y);
+        this.set_property_value(FigureVM.LeftKey,   left);
+        this.set_property_value(FigureVM.TopKey,    top);
         this.set_property_value(FigureVM.WidthKey,  w);
         this.set_property_value(FigureVM.HeightKey, h);
     }
-    public get X():     number { return this.get_property_value(FigureVM.XKey); }
-    public get Y():     number { return this.get_property_value(FigureVM.YKey); }
+    public get Left():   number { return this.get_property_value(FigureVM.LeftKey); }
+    public get Top():    number { return this.get_property_value(FigureVM.TopKey); }
 }
 
 class FakeTarget implements MountableTarget {
@@ -51,8 +51,8 @@ function setup(items: FigureVM[]): { diagram: Diagram } {
     diagram.SelectionMode = SelectionMode.Extended;
     diagram.ItemsPanel    = new ItemsPanelTemplate(() => new Canvas());
     const style = new Style(Figure, [
-        new Setter(Figure, 'X', new SetterFactory((t: Visual) => DataContextBinding(t, 'X'))),
-        new Setter(Figure, 'Y', new SetterFactory((t: Visual) => DataContextBinding(t, 'Y'))),
+        new Setter(Figure, 'Left', new SetterFactory((t: Visual) => DataContextBinding(t, 'Left'))),
+        new Setter(Figure, 'Top',  new SetterFactory((t: Visual) => DataContextBinding(t, 'Top'))),
     ], undefined, [], []);
     diagram.ItemContainerStyle = style;
     diagram.ItemsSource = coll;

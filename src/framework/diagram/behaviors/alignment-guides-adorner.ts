@@ -74,8 +74,8 @@ export class AlignmentGuidesAdorner extends Adorner
         const used = Math.min(guides.length, this._pool.length);
         for (let i = 0; i < used; i++)
         {
-            const g = guides[i];
-            const v = this._pool[i];
+            const g = guides[i]!;
+            const v = this._pool[i]!;
             if (g.axis === 'x')
             {
                 // Vertical line at x = position
@@ -91,7 +91,7 @@ export class AlignmentGuidesAdorner extends Adorner
         // or affect bounding-rect math.
         for (let i = used; i < this._pool.length; i++)
         {
-            this._pool[i].Arrange(new Rect(HIDE_OFFSCREEN, HIDE_OFFSCREEN, 0, 0));
+            this._pool[i]!.Arrange(new Rect(HIDE_OFFSCREEN, HIDE_OFFSCREEN, 0, 0));
         }
         return finalSize;
     }

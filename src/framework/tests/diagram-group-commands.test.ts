@@ -28,8 +28,8 @@ import {
 // ── Pure-helper tests ───────────────────────────────────────────────
 
 class LeafVM extends Model {
-    public static readonly XKey      = Model.RegisterProperty<number>(LeafVM, 'X',      0,  MetaData.None);
-    public static readonly YKey      = Model.RegisterProperty<number>(LeafVM, 'Y',      0,  MetaData.None);
+    public static readonly LeftKey   = Model.RegisterProperty<number>(LeafVM, 'Left',   0,  MetaData.None);
+    public static readonly TopKey    = Model.RegisterProperty<number>(LeafVM, 'Top',    0,  MetaData.None);
     public static readonly WidthKey  = Model.RegisterProperty<number>(LeafVM, 'Width',  10, MetaData.None);
     public static readonly HeightKey = Model.RegisterProperty<number>(LeafVM, 'Height', 10, MetaData.None);
     public Parent: GroupMockVM | undefined;
@@ -38,8 +38,8 @@ class LeafVM extends Model {
 // Mock group VM: has Members + Parent. Treated as group-shaped by
 // isGroupShape because it exposes `Members`.
 class GroupMockVM extends Model {
-    public static readonly XKey      = Model.RegisterProperty<number>(GroupMockVM, 'X',      0,  MetaData.None);
-    public static readonly YKey      = Model.RegisterProperty<number>(GroupMockVM, 'Y',      0,  MetaData.None);
+    public static readonly LeftKey   = Model.RegisterProperty<number>(GroupMockVM, 'Left',   0,  MetaData.None);
+    public static readonly TopKey    = Model.RegisterProperty<number>(GroupMockVM, 'Top',    0,  MetaData.None);
     public static readonly WidthKey  = Model.RegisterProperty<number>(GroupMockVM, 'Width',  10, MetaData.None);
     public static readonly HeightKey = Model.RegisterProperty<number>(GroupMockVM, 'Height', 10, MetaData.None);
     public Members: LeafVM[];
@@ -112,8 +112,8 @@ function setup(items: Model[]): { diagram: Diagram } {
     diagram.SelectionMode = SelectionMode.Extended;
     diagram.ItemsPanel    = new ItemsPanelTemplate(() => new Canvas());
     const style = new Style(Figure, [
-        new Setter(Figure, 'X', new SetterFactory((t: Visual) => DataContextBinding(t, 'X'))),
-        new Setter(Figure, 'Y', new SetterFactory((t: Visual) => DataContextBinding(t, 'Y'))),
+        new Setter(Figure, 'Left', new SetterFactory((t: Visual) => DataContextBinding(t, 'Left'))),
+        new Setter(Figure, 'Top',  new SetterFactory((t: Visual) => DataContextBinding(t, 'Top'))),
     ], undefined, [], []);
     diagram.ItemContainerStyle = style;
     diagram.ItemsSource = coll;

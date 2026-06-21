@@ -117,24 +117,24 @@ export class CommandsVM extends DiagramVM
         // ── Edit commands (selection-gated) ───────────────────────────
         this.set_property_value(CommandsVM.CutCommandKey, new RelayCommand(() => {
             const s = selected();
-            this._clipboard = s.map((n) => ({ kind: n.Kind, x: n.X, y: n.Y }));
+            this._clipboard = s.map((n) => ({ kind: n.Kind, left: n.Left, top: n.Top }));
             this.DeleteNodes(s);
             setStatus(`Cut ${s.length} node${s.length === 1 ? '' : 's'}.`);
         }, hasSel));
         this.set_property_value(CommandsVM.CopyCommandKey, new RelayCommand(() => {
             const s = selected();
-            this._clipboard = s.map((n) => ({ kind: n.Kind, x: n.X, y: n.Y }));
+            this._clipboard = s.map((n) => ({ kind: n.Kind, left: n.Left, top: n.Top }));
             setStatus(`Copied ${s.length} node${s.length === 1 ? '' : 's'}.`);
         }, hasSel));
         this.set_property_value(CommandsVM.PasteCommandKey, new RelayCommand(() => {
             const c = this._clipboard ?? [];
-            for (const e of c) this.CreateNode(e.kind, e.x + 20, e.y + 20);
+            for (const e of c) this.CreateNode(e.kind, e.left + 20, e.top + 20);
             setStatus(`Pasted ${c.length} node${c.length === 1 ? '' : 's'}.`);
         }, () => Array.isArray(this._clipboard) && this._clipboard.length > 0));
         this.set_property_value(CommandsVM.DeleteCommandKey, new RelayCommand(() => this.DeleteNodes(selected()), hasSel));
         this.set_property_value(CommandsVM.DuplicateCommandKey, new RelayCommand(() => {
             const s = selected();
-            for (const n of s) this.CreateNode(n.Kind, n.X + 24, n.Y + 24);
+            for (const n of s) this.CreateNode(n.Kind, n.Left + 24, n.Top + 24);
             setStatus(`Duplicated ${s.length} node${s.length === 1 ? '' : 's'}.`);
         }, hasSel));
         this.set_property_value(CommandsVM.SelectAllCommandKey, new RelayCommand(() => {
@@ -171,11 +171,11 @@ export class CommandsVM extends DiagramVM
     // kinds) doesn't carry the commands demo's 'rect' / 'ellipse' /
     // 'note' kinds. Override so vm.CreateNode('rect', …) materialises
     // the local RectNodeVM rather than null-returning.
-    CreateNode(kind, x, y) {
+    CreateNode(kind, left, top) {
         const Cls = CMD_KIND_TO_CLASS[kind];
         if (Cls === undefined) return null;
         const id = 'n' + this._nextId++;
-        const node = new Cls(id, x, y);
+        const node = new Cls(id, left, top);
         this.Nodes.Add(node);
         return node;
     }
@@ -225,12 +225,12 @@ export class CommandsVM extends DiagramVM
         }
         if (sel.length === 0) return;
         switch (mode) {
-            case 'left':   { const min = Math.min(...sel.map((n) => n.X)); for (const n of sel) n.X = min; break; }
-            case 'right':  { const max = Math.max(...sel.map((n) => n.X + NODE_W)); for (const n of sel) n.X = max - NODE_W; break; }
-            case 'center': { const avg = sel.reduce((s, n) => s + n.X + NODE_W / 2, 0) / sel.length; for (const n of sel) n.X = avg - NODE_W / 2; break; }
-            case 'top':    { const min = Math.min(...sel.map((n) => n.Y)); for (const n of sel) n.Y = min; break; }
-            case 'bottom': { const max = Math.max(...sel.map((n) => n.Y + NODE_H)); for (const n of sel) n.Y = max - NODE_H; break; }
-            case 'middle': { const avg = sel.reduce((s, n) => s + n.Y + NODE_H / 2, 0) / sel.length; for (const n of sel) n.Y = avg - NODE_H / 2; break; }
+            case 'left':   { const min = Math.min(...sel.map((n) => n.Left));               for (const n of sel) n.Left = min;               break; }
+            case 'right':  { const max = Math.max(...sel.map((n) => n.Left + NODE_W));      for (const n of sel) n.Left = max - NODE_W;      break; }
+            case 'center': { const avg = sel.reduce((s, n) => s + n.Left + NODE_W / 2, 0) / sel.length; for (const n of sel) n.Left = avg - NODE_W / 2; break; }
+            case 'top':    { const min = Math.min(...sel.map((n) => n.Top));                for (const n of sel) n.Top  = min;               break; }
+            case 'bottom': { const max = Math.max(...sel.map((n) => n.Top + NODE_H));       for (const n of sel) n.Top  = max - NODE_H;      break; }
+            case 'middle': { const avg = sel.reduce((s, n) => s + n.Top + NODE_H / 2, 0) / sel.length; for (const n of sel) n.Top  = avg - NODE_H / 2; break; }
         }
         this.set_property_value(DiagramVM.StatusKey, `Align ${mode}: ${sel.length} node${sel.length === 1 ? '' : 's'}.`);
     }

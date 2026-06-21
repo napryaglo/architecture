@@ -27,47 +27,47 @@ import {
 
 // ── Pure-math tests ─────────────────────────────────────────────────
 
-function mkTarget(x: number, y: number, w: number, h: number): DistributeTarget {
-    return { X: x, Y: y, Width: w, Height: h };
+function mkTarget(left: number, top: number, w: number, h: number): DistributeTarget {
+    return { Left: left, Top: top, Width: w, Height: h };
 }
 
 describe('commands/distribute.ts — pure helpers', () => {
 
     test('distributeHorizontal — 3 same-width shapes get equal gaps', () => {
-        // Bbox: leftmost X=0 width=10, rightmost X=80 width=10 → totalSpan=90,
+        // Bbox: leftmost Left=0 width=10, rightmost Left=80 width=10 → totalSpan=90,
         // widthSum=30, gap = (90 - 30) / 2 = 30.
         // Middle shape lands at 0+10+30=40.
         const a = mkTarget( 0, 0, 10, 10);
-        const b = mkTarget(20, 0, 10, 10);  // any starting X — gets repositioned
+        const b = mkTarget(20, 0, 10, 10);  // any starting Left — gets repositioned
         const c = mkTarget(80, 0, 10, 10);
         distributeHorizontal([a, b, c]);
-        assert.equal(a.X,  0);
-        assert.equal(b.X, 40);
-        assert.equal(c.X, 80);
+        assert.equal(a.Left,  0);
+        assert.equal(b.Left, 40);
+        assert.equal(c.Left, 80);
     });
 
     test('distributeHorizontal — variable widths produce equal edge-gaps', () => {
-        // a: 10 wide, c: 20 wide. Bbox: X=0..100. totalSpan=100. widthSum =
+        // a: 10 wide, c: 20 wide. Bbox: Left=0..100. totalSpan=100. widthSum =
         // 10 + b.Width + 20. With b.Width=20: widthSum=50, gap=(100-50)/2 = 25.
         // Middle (b) lands at 0+10+25=35.
         const a = mkTarget(  0, 0, 10, 10);
         const b = mkTarget( 50, 0, 20, 10);
         const c = mkTarget( 80, 0, 20, 10);
         distributeHorizontal([a, b, c]);
-        assert.equal(a.X,  0);
-        assert.equal(b.X, 35);
-        assert.equal(c.X, 80);
+        assert.equal(a.Left,  0);
+        assert.equal(b.Left, 35);
+        assert.equal(c.Left, 80);
     });
 
     test('distributeHorizontal — input order does not affect result', () => {
-        // Same 3 shapes, scrambled. Sort-by-X internally → identical result.
+        // Same 3 shapes, scrambled. Sort-by-Left internally → identical result.
         const a = mkTarget( 0, 0, 10, 10);
         const b = mkTarget(80, 0, 10, 10);
         const c = mkTarget(20, 0, 10, 10);
         distributeHorizontal([b, c, a]);   // scrambled order
-        assert.equal(a.X,  0);
-        assert.equal(c.X, 40);   // c is the middle by sort (X=20→40)
-        assert.equal(b.X, 80);
+        assert.equal(a.Left,  0);
+        assert.equal(c.Left, 40);   // c is the middle by sort (Left=20→40)
+        assert.equal(b.Left, 80);
     });
 
     test('distributeVertical — 3 same-height shapes get equal gaps', () => {
@@ -75,9 +75,9 @@ describe('commands/distribute.ts — pure helpers', () => {
         const b = mkTarget(0, 30, 10, 10);
         const c = mkTarget(0, 80, 10, 10);
         distributeVertical([a, b, c]);
-        assert.equal(a.Y,  0);
-        assert.equal(b.Y, 40);
-        assert.equal(c.Y, 80);
+        assert.equal(a.Top,  0);
+        assert.equal(b.Top, 40);
+        assert.equal(c.Top, 80);
     });
 
     test('distribute helpers no-op on < 3 items', () => {
@@ -96,21 +96,21 @@ describe('commands/distribute.ts — pure helpers', () => {
 // ── Diagram integration ─────────────────────────────────────────────
 
 class FigureVM extends Model {
-    public static readonly XKey      = Model.RegisterProperty<number>(FigureVM, 'X',      0,  MetaData.None);
-    public static readonly YKey      = Model.RegisterProperty<number>(FigureVM, 'Y',      0,  MetaData.None);
+    public static readonly LeftKey   = Model.RegisterProperty<number>(FigureVM, 'Left',   0,  MetaData.None);
+    public static readonly TopKey    = Model.RegisterProperty<number>(FigureVM, 'Top',    0,  MetaData.None);
     public static readonly WidthKey  = Model.RegisterProperty<number>(FigureVM, 'Width',  10, MetaData.None);
     public static readonly HeightKey = Model.RegisterProperty<number>(FigureVM, 'Height', 10, MetaData.None);
-    constructor(x: number, y: number, w: number = 10, h: number = 10) {
+    constructor(left: number, top: number, w: number = 10, h: number = 10) {
         super();
-        this.set_property_value(FigureVM.XKey,      x);
-        this.set_property_value(FigureVM.YKey,      y);
+        this.set_property_value(FigureVM.LeftKey,   left);
+        this.set_property_value(FigureVM.TopKey,    top);
         this.set_property_value(FigureVM.WidthKey,  w);
         this.set_property_value(FigureVM.HeightKey, h);
     }
-    public get X():      number  { return this.get_property_value(FigureVM.XKey); }
-    public set X(v: number)      { this.set_property_value(FigureVM.XKey, v); }
-    public get Y():      number  { return this.get_property_value(FigureVM.YKey); }
-    public set Y(v: number)      { this.set_property_value(FigureVM.YKey, v); }
+    public get Left():   number  { return this.get_property_value(FigureVM.LeftKey); }
+    public set Left(v: number)   { this.set_property_value(FigureVM.LeftKey, v); }
+    public get Top():    number  { return this.get_property_value(FigureVM.TopKey); }
+    public set Top(v: number)    { this.set_property_value(FigureVM.TopKey, v); }
     public get Width():  number  { return this.get_property_value(FigureVM.WidthKey); }
     public get Height(): number  { return this.get_property_value(FigureVM.HeightKey); }
 }
@@ -130,8 +130,8 @@ function setup(items: FigureVM[]): { diagram: Diagram } {
     diagram.SelectionMode = SelectionMode.Extended;
     diagram.ItemsPanel    = new ItemsPanelTemplate(() => new Canvas());
     const style = new Style(Figure, [
-        new Setter(Figure, 'X', new SetterFactory((t: Visual) => DataContextBinding(t, 'X'))),
-        new Setter(Figure, 'Y', new SetterFactory((t: Visual) => DataContextBinding(t, 'Y'))),
+        new Setter(Figure, 'Left', new SetterFactory((t: Visual) => DataContextBinding(t, 'Left'))),
+        new Setter(Figure, 'Top',  new SetterFactory((t: Visual) => DataContextBinding(t, 'Top'))),
     ], undefined, [], []);
     diagram.ItemContainerStyle = style;
     diagram.ItemsSource = coll;
@@ -195,8 +195,8 @@ describe('Diagram — DiagramCommands.DistributeXxx', () => {
         selectMany(diagram, [a, b, c]);
         diagram.DistributeHorizontalCommand?.Execute();
         // gap = (90 - 30) / 2 = 30 → b lands at 0+10+30 = 40
-        assert.equal(a.X,  0);
-        assert.equal(b.X, 40);
-        assert.equal(c.X, 80);
+        assert.equal(a.Left,  0);
+        assert.equal(b.Left, 40);
+        assert.equal(c.Left, 80);
     });
 });

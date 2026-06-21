@@ -30,20 +30,20 @@ import {
 
 // ── Pure-math tests — exercise the helpers directly ─────────────────
 
-function mkTarget(x: number, y: number, w: number, h: number): AlignTarget {
-    return { X: x, Y: y, Width: w, Height: h };
+function mkTarget(left: number, top: number, w: number, h: number): AlignTarget {
+    return { Left: left, Top: top, Width: w, Height: h };
 }
 
 describe('commands/align.ts — pure helpers', () => {
 
-    test('alignLeft pulls every shape to the leftmost X', () => {
+    test('alignLeft pulls every shape to the leftmost Left', () => {
         const a = mkTarget(10, 0, 20, 20);
         const b = mkTarget(50, 0, 30, 20);
         const c = mkTarget( 5, 0, 15, 20);
         alignLeft([a, b, c]);
-        assert.equal(a.X, 5);
-        assert.equal(b.X, 5);
-        assert.equal(c.X, 5);
+        assert.equal(a.Left, 5);
+        assert.equal(b.Left, 5);
+        assert.equal(c.Left, 5);
     });
 
     test('alignRight pulls every shape\'s right edge to the rightmost edge', () => {
@@ -51,42 +51,42 @@ describe('commands/align.ts — pure helpers', () => {
         const b = mkTarget(20, 0, 30, 20);   // right=50   ← max
         const c = mkTarget(5,  0, 15, 20);   // right=20
         alignRight([a, b, c]);
-        // sharedRight=50; new X = 50 - width
-        assert.equal(a.X, 40);
-        assert.equal(b.X, 20);
-        assert.equal(c.X, 35);
+        // sharedRight=50; new Left = 50 - width
+        assert.equal(a.Left, 40);
+        assert.equal(b.Left, 20);
+        assert.equal(c.Left, 35);
     });
 
-    test('alignTop pulls every shape to the topmost Y', () => {
+    test('alignTop pulls every shape to the topmost Top', () => {
         const a = mkTarget(0, 30, 10, 10);
         const b = mkTarget(0,  5, 10, 10);
         const c = mkTarget(0, 50, 10, 10);
         alignTop([a, b, c]);
-        assert.equal(a.Y, 5);
-        assert.equal(b.Y, 5);
-        assert.equal(c.Y, 5);
+        assert.equal(a.Top, 5);
+        assert.equal(b.Top, 5);
+        assert.equal(c.Top, 5);
     });
 
     test('alignMiddle centres every shape vertically on the bbox midline', () => {
-        // Bbox: top=0, bottom=60  →  midY=30. Each shape's new Y = 30 - H/2.
+        // Bbox: top=0, bottom=60  →  midY=30. Each shape's new Top = 30 - H/2.
         const a = mkTarget(0,  0, 10, 10);   // bottom=10
         const b = mkTarget(0, 50, 10, 10);   // bottom=60
         const c = mkTarget(0, 20, 10, 20);   // bottom=40
         alignMiddle([a, b, c]);
-        assert.equal(a.Y, 25);    // 30 - 10/2 = 25
-        assert.equal(b.Y, 25);
-        assert.equal(c.Y, 20);    // 30 - 20/2 = 20
+        assert.equal(a.Top, 25);    // 30 - 10/2 = 25
+        assert.equal(b.Top, 25);
+        assert.equal(c.Top, 20);    // 30 - 20/2 = 20
     });
 
     test('alignCenter centres every shape horizontally on the bbox midline', () => {
-        // Bbox: left=0, right=60  →  midX=30. Each shape's new X = 30 - W/2.
+        // Bbox: left=0, right=60  →  midX=30. Each shape's new Left = 30 - W/2.
         const a = mkTarget( 0, 0, 10, 10);   // right=10
         const b = mkTarget(50, 0, 10, 10);   // right=60
         const c = mkTarget(20, 0, 20, 10);   // right=40
         alignCenter([a, b, c]);
-        assert.equal(a.X, 25);
-        assert.equal(b.X, 25);
-        assert.equal(c.X, 20);
+        assert.equal(a.Left, 25);
+        assert.equal(b.Left, 25);
+        assert.equal(c.Left, 20);
     });
 
     test('all align helpers are no-ops on < 2 items', () => {
@@ -105,23 +105,23 @@ describe('commands/align.ts — pure helpers', () => {
 
 class FigureVM extends Model
 {
-    public static readonly XKey      = Model.RegisterProperty<number>(FigureVM, 'X',      0,  MetaData.None);
-    public static readonly YKey      = Model.RegisterProperty<number>(FigureVM, 'Y',      0,  MetaData.None);
+    public static readonly LeftKey   = Model.RegisterProperty<number>(FigureVM, 'Left',   0,  MetaData.None);
+    public static readonly TopKey    = Model.RegisterProperty<number>(FigureVM, 'Top',    0,  MetaData.None);
     public static readonly WidthKey  = Model.RegisterProperty<number>(FigureVM, 'Width',  10, MetaData.None);
     public static readonly HeightKey = Model.RegisterProperty<number>(FigureVM, 'Height', 10, MetaData.None);
 
-    constructor(x: number, y: number, w: number = 10, h: number = 10)
+    constructor(left: number, top: number, w: number = 10, h: number = 10)
     {
         super();
-        this.set_property_value(FigureVM.XKey,      x);
-        this.set_property_value(FigureVM.YKey,      y);
+        this.set_property_value(FigureVM.LeftKey,   left);
+        this.set_property_value(FigureVM.TopKey,    top);
         this.set_property_value(FigureVM.WidthKey,  w);
         this.set_property_value(FigureVM.HeightKey, h);
     }
-    public get X():      number  { return this.get_property_value(FigureVM.XKey); }
-    public set X(v: number)      { this.set_property_value(FigureVM.XKey, v); }
-    public get Y():      number  { return this.get_property_value(FigureVM.YKey); }
-    public set Y(v: number)      { this.set_property_value(FigureVM.YKey, v); }
+    public get Left():   number  { return this.get_property_value(FigureVM.LeftKey); }
+    public set Left(v: number)   { this.set_property_value(FigureVM.LeftKey, v); }
+    public get Top():    number  { return this.get_property_value(FigureVM.TopKey); }
+    public set Top(v: number)    { this.set_property_value(FigureVM.TopKey, v); }
     public get Width():  number  { return this.get_property_value(FigureVM.WidthKey); }
     public get Height(): number  { return this.get_property_value(FigureVM.HeightKey); }
 }
@@ -141,8 +141,8 @@ function setup(items: FigureVM[]): { diagram: Diagram } {
     diagram.SelectionMode = SelectionMode.Extended;
     diagram.ItemsPanel    = new ItemsPanelTemplate(() => new Canvas());
     const style = new Style(Figure, [
-        new Setter(Figure, 'X', new SetterFactory((t: Visual) => DataContextBinding(t, 'X'))),
-        new Setter(Figure, 'Y', new SetterFactory((t: Visual) => DataContextBinding(t, 'Y'))),
+        new Setter(Figure, 'Left', new SetterFactory((t: Visual) => DataContextBinding(t, 'Left'))),
+        new Setter(Figure, 'Top',  new SetterFactory((t: Visual) => DataContextBinding(t, 'Top'))),
     ], undefined, [], []);
     diagram.ItemContainerStyle = style;
     diagram.ItemsSource = coll;
@@ -206,8 +206,8 @@ describe('Diagram — DiagramCommands.AlignXxx (defaults from collaborator)', ()
         const { diagram } = setup([a, b]);
         selectMany(diagram, [a, b]);
         diagram.AlignLeftCommand?.Execute();
-        assert.equal(a.X, 10);
-        assert.equal(b.X, 10);
+        assert.equal(a.Left, 10);
+        assert.equal(b.Left, 10);
     });
 
     test('Execute is gated by CanExecute internally (no mutation on too-small selection)', () => {
@@ -215,8 +215,8 @@ describe('Diagram — DiagramCommands.AlignXxx (defaults from collaborator)', ()
         const { diagram } = setup([a]);
         selectMany(diagram, [a]);
         diagram.AlignLeftCommand?.Execute();
-        // alignLeft no-ops for length < 2 — a.X stays 10
-        assert.equal(a.X, 10);
+        // alignLeft no-ops for length < 2 — a.Left stays 10
+        assert.equal(a.Left, 10);
     });
 
     test('Consumer override wins over the default', () => {
@@ -231,8 +231,8 @@ describe('Diagram — DiagramCommands.AlignXxx (defaults from collaborator)', ()
         diagram.AlignLeftCommand?.Execute();
         assert.equal(overrideCalled, true);
         // Original positions unchanged — the custom command doesn't mutate.
-        assert.equal(a.X, 0);
-        assert.equal(b.X, 50);
+        assert.equal(a.Left, 0);
+        assert.equal(b.Left, 50);
     });
 
     test('SelectionChanged fans out RaiseCanExecuteChanged to every command', () => {

@@ -25,8 +25,8 @@ import {
 import { SelectionMode } from '../list/list-box.js';
 
 class ItemVM extends Model {
-    public static readonly XKey      = Model.RegisterProperty<number>(ItemVM, 'X',      0,  MetaData.None);
-    public static readonly YKey      = Model.RegisterProperty<number>(ItemVM, 'Y',      0,  MetaData.None);
+    public static readonly LeftKey   = Model.RegisterProperty<number>(ItemVM, 'Left',   0,  MetaData.None);
+    public static readonly TopKey    = Model.RegisterProperty<number>(ItemVM, 'Top',    0,  MetaData.None);
     public static readonly WidthKey  = Model.RegisterProperty<number>(ItemVM, 'Width',  10, MetaData.None);
     public static readonly HeightKey = Model.RegisterProperty<number>(ItemVM, 'Height', 10, MetaData.None);
 }

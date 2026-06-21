@@ -134,6 +134,12 @@ export {
 } from './list/tree-view.js';
 
 // ── Diagram ─────────────────────────────────────────────────────────
-export { Diagram } from './diagram/diagram.js';
+export {
+    Diagram,
+    attachCanvasDropBehavior,
+    TOOLBOX_NODE_KIND_FORMAT,
+    type ItemDroppedArgs,
+    type ItemDroppedListener,
+} from './diagram/diagram.js';
 export { Figure } from './diagram/figure.js';
 export { Group } from './diagram/group.js';

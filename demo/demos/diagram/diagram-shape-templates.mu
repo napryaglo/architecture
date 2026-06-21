@@ -39,9 +39,9 @@ resources DiagramShapeTemplates {
     }
 
     // Group bbox chrome. The GroupVM sits in DiagramVM.Nodes alongside
-    // shapes; its container's X / Y come from the same DiagramNodeStyle
-    // (bound to $X / $Y, which on a GroupVM are the COMPUTED bbox top-
-    // left). The container auto-sizes to this Border, which paints at
+    // shapes; its container's Left / Top come from the same DiagramNodeStyle
+    // (bound to $Left / $Top, which on a GroupVM are the COMPUTED bbox
+    // top-left). The container auto-sizes to this Border, which paints at
     // $Width × $Height (the COMPUTED bbox size).
     //
     // BorderBrush is transparent (#00000000) by default so the chrome

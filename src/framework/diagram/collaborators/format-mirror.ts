@@ -1,4 +1,4 @@
-import { Model } from '../../../runtime/index.js';
+import { Model, type PropertyKey } from '../../../runtime/index.js';
 import {
     Brush,
     Pen,
@@ -38,13 +38,18 @@ import { flattenToLeaves } from '../commands/group-ops.js';
 interface IFillableItem { FillBrush: Brush | undefined; }
 interface IStrokableItem { Stroke:    Pen   | undefined; }
 
-const PEN_KEYS = [
-    Pen.BrushKey,
-    Pen.ThicknessKey,
-    Pen.DashStyleKey,
-    Pen.LineCapKey,
-    Pen.LineJoinKey,
-    Pen.MiterLimitKey,
+// Heterogeneous-typed array of Pen DP keys. Each entry is a
+// `PropertyKey<T>` for a different `T`; the broadcast loops treat them
+// uniformly as `PropertyKey<unknown>` so the set/get pair compiles
+// without per-key narrowing (the runtime DP system carries the actual
+// type identity in the key.descriptor — no behavioral change).
+const PEN_KEYS: PropertyKey<unknown>[] = [
+    Pen.BrushKey       as PropertyKey<unknown>,
+    Pen.ThicknessKey   as PropertyKey<unknown>,
+    Pen.DashStyleKey   as PropertyKey<unknown>,
+    Pen.LineCapKey     as PropertyKey<unknown>,
+    Pen.LineJoinKey    as PropertyKey<unknown>,
+    Pen.MiterLimitKey  as PropertyKey<unknown>,
 ];
 
 export class FormatMirror
@@ -53,7 +58,7 @@ export class FormatMirror
 
     // Per-pen-property listeners attached to the current FormatStroke
     // instance. Detach + reattach on every FormatStroke DP change.
-    private readonly _strokeListeners: Array<{ key: typeof Pen.BrushKey; handler: () => void }> = [];
+    private readonly _strokeListeners: Array<{ key: PropertyKey<unknown>; handler: () => void }> = [];
     private _attachedPen: Pen | undefined = undefined;
 
     private _seedingFormat = false;
@@ -147,7 +152,7 @@ export class FormatMirror
         this._attachedPen = undefined;
     }
 
-    private _broadcastStrokeProp(key: typeof Pen.BrushKey): void
+    private _broadcastStrokeProp(key: PropertyKey<unknown>): void
     {
         if (this._seedingFormat) return;
         const editorPen = this._diagram.SelectionFormatStroke;
