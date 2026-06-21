@@ -1,6 +1,14 @@
-import { MetaData, Model, Rect, type KeyEventArgs, type Visual } from '../../runtime/index.js';
+import {
+    MetaData,
+    Model,
+    Rect,
+    type KeyEventArgs,
+    type RelayCommand,
+    type Visual,
+} from '../../runtime/index.js';
 import { Figure } from './figure.js';
 import { Selector } from '../list/selector.js';
+import { DiagramCommands } from './collaborators/diagram-commands.js';
 import { SelectionBoundsTracker } from './collaborators/selection-bounds-tracker.js';
 
 // §19.3 follow-up — position snap callback. Consumers (e.g., the
@@ -54,6 +62,22 @@ export class Diagram extends Selector
     public static readonly SelectionCountKey  = Model.RegisterReadOnlyProperty<number>(
         Diagram, 'SelectionCount',  0, MetaData.None);
 
+    // Align commands — RelayCommand-typed DPs. DiagramCommands installs
+    // default impls at construction; consumers override by writing their
+    // own RelayCommand to the DP. Each command's CanExecute returns
+    // false for selections < 2 IFigure-shaped items. RaiseCanExecuteChanged
+    // is fanned out on every SelectionChanged by DiagramCommands.
+    public static readonly AlignLeftCommandKey   = Model.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'AlignLeftCommand',   undefined, MetaData.None);
+    public static readonly AlignRightCommandKey  = Model.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'AlignRightCommand',  undefined, MetaData.None);
+    public static readonly AlignTopCommandKey    = Model.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'AlignTopCommand',    undefined, MetaData.None);
+    public static readonly AlignMiddleCommandKey = Model.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'AlignMiddleCommand', undefined, MetaData.None);
+    public static readonly AlignCenterCommandKey = Model.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'AlignCenterCommand', undefined, MetaData.None);
+
     public get PositionSnap():  DiagramPositionSnap | undefined { return this.get_property_value(Diagram.PositionSnapKey); }
     public set PositionSnap(v: DiagramPositionSnap | undefined) { this.set_property_value(Diagram.PositionSnapKey, v); }
 
@@ -63,14 +87,24 @@ export class Diagram extends Selector
     public get SelectionHeight(): number { return this.get_property_value(Diagram.SelectionHeightKey); }
     public get SelectionCount():  number { return this.get_property_value(Diagram.SelectionCountKey); }
 
-    // Collaborators — internal, no public surface. SelectionBoundsTracker
-    // owns the recompute pipeline for the 5 SelectionX/Y/Width/Height/Count
-    // DPs above; later phases add DiagramCommands + FormatMirror here.
+    public get AlignLeftCommand():   RelayCommand | undefined { return this.get_property_value(Diagram.AlignLeftCommandKey); }
+    public get AlignRightCommand():  RelayCommand | undefined { return this.get_property_value(Diagram.AlignRightCommandKey); }
+    public get AlignTopCommand():    RelayCommand | undefined { return this.get_property_value(Diagram.AlignTopCommandKey); }
+    public get AlignMiddleCommand(): RelayCommand | undefined { return this.get_property_value(Diagram.AlignMiddleCommandKey); }
+    public get AlignCenterCommand(): RelayCommand | undefined { return this.get_property_value(Diagram.AlignCenterCommandKey); }
+
+    // Collaborators — internal, no public surface. Eagerly constructed
+    // so the Diagram is fully-equipped from the moment the constructor
+    // returns. Order matters: DiagramCommands needs the Command DPs
+    // registered (above), and SelectionBoundsTracker doesn't depend on
+    // anyone — both subscribe to SelectionChanged independently.
     private readonly _selectionBoundsTracker: SelectionBoundsTracker;
+    private readonly _diagramCommands:        DiagramCommands;
 
     constructor()
     {
         super();
+        this._diagramCommands        = new DiagramCommands(this);
         this._selectionBoundsTracker = new SelectionBoundsTracker(this);
     }
 
