@@ -17,6 +17,10 @@ import {
     distributeHorizontal,
     distributeVertical,
 } from '../commands/distribute.js';
+import {
+    selectedTopLevel,
+    selectedTopLevelGroups,
+} from '../commands/group-ops.js';
 
 // Internal collaborator owned by Diagram. Owns the default RelayCommand
 // instances installed onto Diagram's Command DPs at construction time.
@@ -47,6 +51,7 @@ export class DiagramCommands
         this._diagram = diagram;
         this._installAlignCommands();
         this._installDistributeCommands();
+        this._installGroupCommands();
         diagram.AddSelectionChangedListener(() => this._raiseCanExecuteAll());
     }
 
@@ -83,6 +88,25 @@ export class DiagramCommands
         this._install(Diagram.DistributeVerticalCommandKey, 'DistributeVertical',
             new RelayCommand(() => distributeVertical(this._collectSelected()), canDistribute,
                 { Text: 'Distribute Vertically',   Description: 'Space three or more shapes evenly between the topmost and bottommost.' }));
+    }
+
+    private _installGroupCommands(): void
+    {
+        const Diagram = this._diagram.constructor as typeof import('../diagram.js').Diagram;
+
+        const canGroup   = (): boolean => selectedTopLevel(this._diagram.SelectedItems).length >= 2;
+        const canUngroup = (): boolean => selectedTopLevelGroups(this._diagram.SelectedItems).length >= 1;
+
+        this._install(Diagram.GroupCommandKey, 'Group',
+            new RelayCommand(
+                () => this._diagram._fireGroupRequested({ Items: selectedTopLevel(this._diagram.SelectedItems) }),
+                canGroup,
+                { Text: 'Group', Description: 'Wrap the current top-level selection in a new group.' }));
+        this._install(Diagram.UngroupCommandKey, 'Ungroup',
+            new RelayCommand(
+                () => this._diagram._fireUngroupRequested({ Groups: selectedTopLevelGroups(this._diagram.SelectedItems) }),
+                canUngroup,
+                { Text: 'Ungroup', Description: 'Dissolve the currently-selected group(s), re-parenting their members to the surrounding scope.' }));
     }
 
     private _install(key: import('../../../runtime/index.js').PropertyKey<RelayCommand | undefined>, name: string, command: RelayCommand): void

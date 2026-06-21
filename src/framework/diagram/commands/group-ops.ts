@@ -1,0 +1,80 @@
+import { Model } from '../../../runtime/index.js';
+
+// Group / Ungroup commands fire framework events on Diagram (consumer
+// subscribes via Diagram.AddGroupRequestedListener / AddUngroupRequestedListener).
+// The framework does NOT mutate the consumer's data collection — Diagram
+// has no knowledge of where the items live or how to materialize a group.
+//
+// The consumer's listener typically:
+//   * GroupRequested  → creates a new IGroup instance, re-parents Items
+//                       to it, adds the new group to its collection
+//   * UngroupRequested → re-parents each Group's Members back to their
+//                       grandparent, removes the Group from its collection
+//
+// Pure helpers in this file: identify the top-level subset of a
+// selection (used by CanExecute gating) and detect group-shape entities.
+
+// Walk Parent links up to the root. Same algorithm as the demo's
+// topLevelOf — returns the entity itself when Parent is absent.
+// Used to elevate clicked leaves to their outermost containing group.
+function topLevelOf(entity: Model): Model
+{
+    let cur: { Parent?: unknown } = entity as unknown as { Parent?: unknown };
+    while (cur.Parent !== undefined)
+    {
+        cur = cur.Parent as { Parent?: unknown };
+    }
+    return cur as unknown as Model;
+}
+
+// Reduce a selection (potentially mixing nested members + their group
+// ancestors) to the SET of outermost ancestors. De-duplicated so
+// selecting both a group and its members yields just the group once.
+// Group / Ungroup operate on this set, never on nested members
+// directly — matches Visio / PowerPoint semantics where selecting
+// inside a group operates on the group as a unit.
+export function selectedTopLevel(selectedItems: readonly unknown[]): Model[]
+{
+    const out = new Set<Model>();
+    for (const item of selectedItems)
+    {
+        if (item instanceof Model) out.add(topLevelOf(item));
+    }
+    return [...out];
+}
+
+// Filter the top-level set to entries that look like a group. The
+// duck-type contract is `Members` present (any value — collection
+// shape; Group has it via DataContext semantics, GroupVM has it
+// directly as `_members`). Consumers' group VM classes are duck-
+// typed; the framework does no `instanceof` check.
+export function selectedTopLevelGroups(selectedItems: readonly unknown[]): Model[]
+{
+    return selectedTopLevel(selectedItems).filter(isGroupShape);
+}
+
+export function isGroupShape(item: unknown): item is Model
+{
+    if (!(item instanceof Model)) return false;
+    return 'Members' in (item as object);
+}
+
+// Event args for the Diagram's GroupRequested / UngroupRequested
+// events. Plain readonly records — no class hierarchy needed.
+//
+// GroupRequested.Items: the top-level set the consumer should wrap
+// in a new group. UngroupRequested.Groups: the top-level group set
+// the consumer should dissolve.
+
+export interface GroupRequestedArgs
+{
+    readonly Items: readonly Model[];
+}
+
+export interface UngroupRequestedArgs
+{
+    readonly Groups: readonly Model[];
+}
+
+export type GroupRequestedListener   = (args: GroupRequestedArgs)   => void;
+export type UngroupRequestedListener = (args: UngroupRequestedArgs) => void;

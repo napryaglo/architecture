@@ -10,6 +10,12 @@ import { Figure } from './figure.js';
 import { Selector } from '../list/selector.js';
 import { DiagramCommands } from './collaborators/diagram-commands.js';
 import { SelectionBoundsTracker } from './collaborators/selection-bounds-tracker.js';
+import {
+    type GroupRequestedArgs,
+    type UngroupRequestedArgs,
+    type GroupRequestedListener,
+    type UngroupRequestedListener,
+} from './commands/group-ops.js';
 
 // §19.3 follow-up — position snap callback. Consumers (e.g., the
 // diagram demo's align-edges behavior) set this DP to a pure function
@@ -85,6 +91,20 @@ export class Diagram extends Selector
     public static readonly DistributeVerticalCommandKey   = Model.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'DistributeVerticalCommand',   undefined, MetaData.None);
 
+    // Group / Ungroup commands — events-based mutation contract. The
+    // command itself does not touch the consumer's data collection.
+    // Execute fires the corresponding event on Diagram; the consumer's
+    // subscriber wraps / dissolves and updates its own VM tree.
+    //
+    // CanExecute gates:
+    //   * GroupCommand   — ≥ 2 top-level entries in SelectedItems
+    //   * UngroupCommand — ≥ 1 group-shaped (duck-typed on `Members`)
+    //                      top-level entry in SelectedItems
+    public static readonly GroupCommandKey   = Model.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'GroupCommand',   undefined, MetaData.None);
+    public static readonly UngroupCommandKey = Model.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'UngroupCommand', undefined, MetaData.None);
+
     public get PositionSnap():  DiagramPositionSnap | undefined { return this.get_property_value(Diagram.PositionSnapKey); }
     public set PositionSnap(v: DiagramPositionSnap | undefined) { this.set_property_value(Diagram.PositionSnapKey, v); }
 
@@ -102,6 +122,38 @@ export class Diagram extends Selector
 
     public get DistributeHorizontalCommand(): RelayCommand | undefined { return this.get_property_value(Diagram.DistributeHorizontalCommandKey); }
     public get DistributeVerticalCommand():   RelayCommand | undefined { return this.get_property_value(Diagram.DistributeVerticalCommandKey); }
+
+    public get GroupCommand():   RelayCommand | undefined { return this.get_property_value(Diagram.GroupCommandKey); }
+    public get UngroupCommand(): RelayCommand | undefined { return this.get_property_value(Diagram.UngroupCommandKey); }
+
+    // Subscriber-pattern event API for Group / Ungroup requests. Same
+    // shape as Selector.AddSelectionChangedListener. The framework's
+    // KNOWN_ROUTED_EVENTS Set is reserved for input events that bubble;
+    // these are control-specific domain events that don't need the
+    // routing pipeline.
+    private readonly _groupRequestedListeners:   Set<GroupRequestedListener>   = new Set();
+    private readonly _ungroupRequestedListeners: Set<UngroupRequestedListener> = new Set();
+
+    public AddGroupRequestedListener   (listener: GroupRequestedListener):   void { this._groupRequestedListeners.add(listener); }
+    public RemoveGroupRequestedListener(listener: GroupRequestedListener):   void { this._groupRequestedListeners.delete(listener); }
+    public AddUngroupRequestedListener   (listener: UngroupRequestedListener): void { this._ungroupRequestedListeners.add(listener); }
+    public RemoveUngroupRequestedListener(listener: UngroupRequestedListener): void { this._ungroupRequestedListeners.delete(listener); }
+
+    // Internal fire helpers — invoked by DiagramCommands when the
+    // corresponding RelayCommand's Execute runs. Snapshot-then-iterate
+    // so a listener that registers / unregisters mid-fire doesn't
+    // mutate the Set under iteration.
+    /** @internal */
+    public _fireGroupRequested(args: GroupRequestedArgs): void
+    {
+        for (const l of [...this._groupRequestedListeners]) l(args);
+    }
+
+    /** @internal */
+    public _fireUngroupRequested(args: UngroupRequestedArgs): void
+    {
+        for (const l of [...this._ungroupRequestedListeners]) l(args);
+    }
 
     // Collaborators — internal, no public surface. Eagerly constructed
     // so the Diagram is fully-equipped from the moment the constructor
