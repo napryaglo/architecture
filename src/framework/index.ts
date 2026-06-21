@@ -47,7 +47,7 @@ export { ToggleButton } from './toggle-button.js';
 export { Switch } from './switch.js';
 export { Checkbox } from './checkbox.js';
 export { RadioButton } from './radio-button.js';
-export { Chip, ChipVariant } from './chip.js';
+export { Chip, ChipVariant } from './markers/chip.js';
 export {
     SegmentedButton,
     SegmentedItem,
@@ -58,8 +58,8 @@ export { SplitButton } from './button-groups/split-button.js';
 export { FabMenu } from './fab-menu.js';
 export { TabControl, TabItem } from './tabs.js';
 export { SearchBar } from './search-bar.js';
-export { Divider } from './divider.js';
-export { Badge, BadgeVariant } from './badge.js';
+export { Divider } from './markers/divider.js';
+export { Badge, BadgeVariant } from './markers/badge.js';
 export { Tooltip } from './tooltip.js';
 export {
     PlacementMode,

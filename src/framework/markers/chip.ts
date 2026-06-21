@@ -3,9 +3,9 @@ import {
     Model,
     Element, Visual,
     type PropertyDescriptor,
-} from '../runtime/index.js';
-import { Border } from '../basic/border.js';
-import { ToggleButton } from './toggle-button.js';
+} from '../../runtime/index.js';
+import { Border } from '../../basic/border.js';
+import { ToggleButton } from '../toggle-button.js';
 
 // M3 Chip — small interactive surface for compact attribute, filter,
 // input, or suggestion affordances.

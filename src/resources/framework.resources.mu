@@ -27,6 +27,7 @@ resources MuralFramework {
     // header. New families: drop a .template.mu next to the .ts
     // files and add one import here.
     import ButtonGroups from "../framework/button-groups/button-groups.template.mu.js"
+    import Markers      from "../framework/markers/markers.template.mu.js"
 
     // ── ContentControl: bare-bones content host ────────────────────
     // ContentControl is the base for Button, ToggleButton, IconButton,
@@ -1434,79 +1435,11 @@ resources MuralFramework {
         Template = @DefaultRadioButton;
     }
 
-    // ── Chip: M3 compact attribute / filter / input / suggestion ───
-    // 32dp tall pill chrome with leading + trailing slots and a
-    // ContentPresenter for the label. Kind-aware triggers tint the
-    // chrome per variant:
-    //   * Assist     — outlined surface, neutral OnSurface label.
-    //   * Filter     — outlined surface at rest; flips to filled
-    //                  @SecondaryContainer when IsChecked (the
-    //                  selectable filter affordance).
-    //   * Input      — outlined surface; trailing slot conventionally
-    //                  carries a remove icon (consumer-supplied).
-    //   * Suggestion — outlined surface; same chrome as Assist, the
-    //                  semantic difference is consumer-side.
-    //
-    // The Kind variants all share base chrome — the variant-specific
-    // triggers below override only the bits that differ. Filter is the
-    // only variant that observes IsChecked at the template level; the
-    // other variants ignore it entirely (the consumer can still toggle
-    // IsChecked programmatically through ToggleButton, no chrome
-    // change).
-    Template x:key="DefaultChip" [TargetType=Chip] {
-        Border x:name="PART_Chip"
-              [ Background      = @Surface,
-                BorderBrush     = @OutlineVariant,
-                BorderThickness = (1),
-                CornerRadius    = @ShapeSmall,
-                Padding         = (@Spacing3, @Spacing1, @Spacing3, @Spacing1),
-                Height          = 32 ] {
-            DockPanel [LastChildFill=true] {
-                Border x:name="PART_LeadingSlot"
-                      [ DockPanel.Dock     = Left,
-                        VerticalAlignment   = Center,
-                        BorderThickness     = (0),
-                        Margin              = (0, 0, @Spacing1, 0) ]
-                Border x:name="PART_TrailingSlot"
-                      [ DockPanel.Dock     = Right,
-                        VerticalAlignment   = Center,
-                        BorderThickness     = (0),
-                        Margin              = (@Spacing1, 0, 0, 0) ]
-                ContentPresenter [ VerticalAlignment = Center ]
-            }
-        }
-        // Filter — selected fills with @SecondaryContainer; the
-        // outline reads as the M3 "input" indicator. The derived
-        // IsFilterSelected DP combines Kind=Filter and IsChecked
-        // because ControlTemplate triggers don't compose multi-term
-        // conjuncts; the class recomputes it on every Kind / IsChecked
-        // edge.
-        when ( IsFilterSelected ) {
-            PART_Chip.Background     = @SecondaryContainer;
-            PART_Chip.BorderBrush    = @SecondaryContainer;
-        }
-
-        // State-layer ladder — translucent OnSurface overlays over
-        // whatever variant background is currently active. Ordered
-        // BEFORE the Filter-selected trigger so a hovered selected
-        // filter chip stays in its @SecondaryContainer tint (the
-        // state-layer overlay would otherwise wash it back to neutral).
-        when ( IsMouseOver )       { PART_Chip.Background = @StateHoverOverlay; }
-        when ( IsFocused )         { PART_Chip.Background = @StateFocusOverlay; }
-        when ( IsPressed )         { PART_Chip.Background = @StatePressOverlay; }
-        when ( IsEnabled = false ) { PART_Chip.Opacity    = @DisabledContentOpacity; }
-    }
-    Style [TargetType=Chip] {
-        Template = @DefaultChip;
-        Foreground = @OnSurface;
-        FontFamily = @LabelLargeFont;
-        FontWeight = @LabelLargeWeight;
-        FontSize   = @LabelLargeSize;
-    }
+    // ── Chip ────────────────────────────────────────────────────────
+    // Promoted to src/framework/markers/markers.template.mu.
 
     // ── SegmentedButton / SegmentedItem / SplitButton ───────────────
-    // Promoted to src/framework/button-groups/button-groups.template.mu;
-    // imported at the top of this dictionary.
+    // Promoted to src/framework/button-groups/button-groups.template.mu.
 
     // ── TabControl: M3 horizontal tab strip + content area ────────
     // ItemsPresenter on top renders each TabItem's header surface;
@@ -1614,67 +1547,8 @@ resources MuralFramework {
         when ( IsFocused )         { PART_Border.Background = @SurfaceContainerHighest; }
         when ( IsEnabled = false ) { PART_Border.Opacity    = @DisabledContentOpacity; }
     }
-    // ── Divider: M3 1dp rule, horizontal or vertical ───────────────
-    // Two templates — one per Orientation — because mural's CornerRadius
-    // / BorderThickness DPs are uniform across the control instance, so
-    // a single template with a trigger that just flips Orientation
-    // would still produce a 1dp box around the rule rather than a 1dp
-    // line. The Style picks the matching template based on Orientation.
-    Template x:key="DefaultHorizontalDivider" [TargetType=Divider] {
-        Border x:name="PART_Rule"
-              [ Background          = @OutlineVariant,
-                Height              = 1,
-                HorizontalAlignment = Stretch,
-                BorderThickness     = (0) ]
-    }
-    Template x:key="DefaultVerticalDivider" [TargetType=Divider] {
-        Border x:name="PART_Rule"
-              [ Background        = @OutlineVariant,
-                Width             = 1,
-                VerticalAlignment = Stretch,
-                BorderThickness   = (0) ]
-    }
-    Style [TargetType=Divider] {
-        Template = @DefaultHorizontalDivider;
-        when ( Orientation = Vertical ) { Template = @DefaultVerticalDivider; }
-    }
-
-    // ── Badge: M3 dot / numeric flag ───────────────────────────────
-    // Two templates — one per Variant. Variant=Dot ships a 6×6dp
-    // filled circle; Variant=Numeric ships a pill carrying the Count
-    // bound via a $-binding. Both use @Error / @OnError per the M3
-    // spec; consumers wanting a non-error tint re-template.
-    Template x:key="DefaultDotBadge" [TargetType=Badge] {
-        Border x:name="PART_Dot"
-              [ Background      = @Error,
-                CornerRadius    = @ShapeFull,
-                BorderThickness = (0),
-                Width           = 6,
-                Height          = 6 ]
-    }
-    Template x:key="DefaultNumericBadge" [TargetType=Badge] {
-        Border x:name="PART_Pill"
-              [ Background      = @Error,
-                CornerRadius    = @ShapeFull,
-                BorderThickness = (0),
-                Padding         = (@Spacing1, @Spacing0, @Spacing1, @Spacing0),
-                MinWidth        = 16,
-                Height          = 16 ] {
-            TextBlock [ Text                 = $Count,
-                        Foreground           = @OnError,
-                        FontFamily           = @LabelSmallFont,
-                        FontWeight           = @LabelSmallWeight,
-                        FontSize              = @LabelSmallSize,
-                        LineHeight            = @LabelSmallLineHeight,
-                        LetterSpacing         = @LabelSmallTracking,
-                        HorizontalAlignment   = Center,
-                        VerticalAlignment     = Center ]
-        }
-    }
-    Style [TargetType=Badge] {
-        Template = @DefaultNumericBadge;
-        when ( Variant = Dot ) { Template = @DefaultDotBadge; }
-    }
+    // ── Divider / Badge ─────────────────────────────────────────────
+    // Promoted to src/framework/markers/markers.template.mu.
 
     // ── ProgressIndicator: M3 Linear progress ──────────────────────
     // Determinate Linear progress — 4dp track + fill ride above one

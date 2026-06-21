@@ -1,5 +1,5 @@
-import { MetaData, Model, Element } from '../runtime/index.js';
-import { Control } from './control.js';
+import { MetaData, Model, Element } from '../../runtime/index.js';
+import { Control } from '../control.js';
 
 // M3 Badge — small visual flag, either a 6dp dot (no count) or a pill
 // carrying a numeric label.
