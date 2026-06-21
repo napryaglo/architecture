@@ -146,17 +146,17 @@ export class CommandsVM extends DiagramVM
         }));
 
         // ── Alignment commands ────────────────────────────────────────
-        // X-axis: LEFT edge for AlignLeft, CENTRE for AlignCenter, RIGHT
-        // edge for AlignRight. Y-axis follows the same shape. The
-        // DiagramVM-inherited Align* DPs already exist with their own
-        // values; assigning via `this.X = …` would hit the prototype
-        // getter (no setter) and throw. Going through the parent's typed
-        // keys lets us push our flavour into the same DP slot.
-        this.set_property_value(DiagramVM.AlignLeftCommandKey,   new RelayCommand(() => this._align('left'),   hasSel));
-        this.set_property_value(DiagramVM.AlignCenterCommandKey, new RelayCommand(() => this._align('center'), hasSel));
-        this.set_property_value(DiagramVM.AlignRightCommandKey,  new RelayCommand(() => this._align('right'),  hasSel));
-        this.set_property_value(DiagramVM.AlignTopCommandKey,    new RelayCommand(() => this._align('top'),    hasSel));
-        this.set_property_value(DiagramVM.AlignMiddleCommandKey, new RelayCommand(() => this._align('middle'), hasSel));
+        // AlignLeft / Right / Top / Middle / Center moved to the framework
+        // Diagram control (Phase D of the diagram-control refactor). The
+        // commands demo no longer overrides them — the framework's own
+        // RelayCommands run, gated by `>= 2 IFigure-shaped items in
+        // SelectedItems`. The proxy DPs on DiagramVM get populated from
+        // the framework Diagram by the bootstrap at view-mount.
+        //
+        // AlignBottom stays here — the framework's align surface doesn't
+        // include it (Top + Middle + bbox-relative-bottom-via-Middle
+        // covers the common cases; demo needed the explicit bottom-edge
+        // gesture for its toolbar parity with AlignTop).
         this.set_property_value(CommandsVM.AlignBottomCommandKey, new RelayCommand(() => this._align('bottom'), hasSel));
 
         // ── Stubs for surfaces that don't need real behaviour ─────────
@@ -203,11 +203,13 @@ export class CommandsVM extends DiagramVM
     }
 
     _raiseGated() {
+        // Only commands owned by CommandsVM — the inherited Align*
+        // DPs are populated by the framework Diagram and the framework
+        // raises their CanExecuteChanged on its own SelectionChanged
+        // listener.
         for (const name of [
             'CutCommand', 'CopyCommand', 'DeleteCommand',
-            'DuplicateCommand', 'AlignLeftCommand', 'AlignCenterCommand',
-            'AlignRightCommand', 'AlignTopCommand', 'AlignMiddleCommand',
-            'AlignBottomCommand',
+            'DuplicateCommand', 'AlignBottomCommand',
         ]) {
             this[name].RaiseCanExecuteChanged();
         }

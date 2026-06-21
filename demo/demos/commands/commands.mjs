@@ -49,6 +49,27 @@ function attachBehaviors(view, vm) {
     const nodes = view.FindName('nodes');
     if (!(nodes instanceof Diagram)) throw new Error('commands.mu missing x:name="nodes" Diagram');
 
+    // Same framework-command proxy wire-up as the diagram demo. The
+    // commands demo's markup binds to $AlignLeftCommand etc. on the VM
+    // (inherited proxy DPs from DiagramVM, set by this block to point
+    // at the framework Diagram control's own RelayCommand instances).
+    // See diagram.mjs for the explanation of why proxies are needed.
+    {
+        const Diagram_ = Diagram;
+        const VM       = vm.constructor;
+        const COMMANDS = [
+            'AlignLeftCommandKey', 'AlignRightCommandKey', 'AlignTopCommandKey',
+            'AlignMiddleCommandKey', 'AlignCenterCommandKey',
+            'DistributeHorizontalCommandKey', 'DistributeVerticalCommandKey',
+            'GroupCommandKey', 'UngroupCommandKey',
+            'CombineUnionCommandKey', 'CombineIntersectCommandKey',
+            'CombineSubtractCommandKey', 'CombineExcludeCommandKey',
+        ];
+        for (const key of COMMANDS) {
+            vm.set_property_value(VM[key], nodes.get_property_value(Diagram_[key]));
+        }
+    }
+
     const detachSelectionBridge = attachSelectionBridge(nodes, vm);
 
     // Keyboard: Delete / Backspace removes selected nodes.
