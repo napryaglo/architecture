@@ -1,5 +1,5 @@
-import { MetaData, Model, Element, Visual } from '../runtime/index.js';
-import { ContentControl } from './content-control.js';
+import { MetaData, Model, Element, Visual } from '../../runtime/index.js';
+import { ContentControl } from '../content-control.js';
 
 // M3 Banner — in-flow alert / message strip with a leading icon and an
 // optional trailing action row.

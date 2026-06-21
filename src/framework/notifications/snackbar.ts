@@ -1,5 +1,5 @@
-import { MetaData, Model, Element, Visual } from '../runtime/index.js';
-import { ContentControl } from './content-control.js';
+import { MetaData, Model, Element, Visual } from '../../runtime/index.js';
+import { ContentControl } from '../content-control.js';
 
 // M3 Snackbar — transient single-line message that floats at the
 // bottom of the surface for a few seconds.

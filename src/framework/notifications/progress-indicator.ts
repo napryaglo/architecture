@@ -1,7 +1,7 @@
-import { MetaData, Model, Element, type PropertyDescriptor } from '../runtime/index.js';
-import { Arc } from '../basic/shapes/arc.js';
-import { Border } from '../basic/border.js';
-import { TemplatedControl } from '../basic/templated-control.js';
+import { MetaData, Model, Element, type PropertyDescriptor } from '../../runtime/index.js';
+import { Arc } from '../../basic/shapes/arc.js';
+import { Border } from '../../basic/border.js';
+import { TemplatedControl } from '../../basic/templated-control.js';
 
 // M3 Progress Indicator — feedback for an in-flight operation. Two
 // variants per the M3 spec:

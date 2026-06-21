@@ -66,9 +66,9 @@ export {
     ToolTipService,
     TooltipPopupHost,
 } from './tooltip-service.js';
-export { ProgressIndicator, ProgressIndicatorVariant } from './progress-indicator.js';
-export { Banner } from './banner.js';
-export { Snackbar } from './snackbar.js';
+export { ProgressIndicator, ProgressIndicatorVariant } from './notifications/progress-indicator.js';
+export { Banner } from './notifications/banner.js';
+export { Snackbar } from './notifications/snackbar.js';
 export { Dialog } from './dialog.js';
 export { BottomSheet } from './bottom-sheet.js';
 export { attachTooltip, showSnackbar, showDialog } from './overlay-helpers.js';
