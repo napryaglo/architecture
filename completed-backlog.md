@@ -626,6 +626,44 @@ Closure of the eight-phase Skia pathops port + the surrounding geometry / diagra
 
 ---
 
+## 20. `Visual` → `Element` split + downstream cleanups (shipped)
+
+The 3300-line [src/visual-engine/visual.ts](src/visual-engine/visual.ts) accreted ~10 distinct subsystems behind a single class because `FrameworkElement` had been rolled into `Visual` — DataContext, Style, Resources, Triggers, Template all sat there. The 2-tier split re-introduces the missing layer: `Visual` keeps render + input + layout *machinery*; a new `Element extends Visual` owns the FrameworkElement-tier app surface (dimension DPs, Margin/Alignment, DataContext, Style, Resources, Triggers, FindName/NameScope, IsEnabled, Tag, ResourceDictionary, Behaviors). `MeasureCore` / `ArrangeCore` is the seam — subclass authors still override `MeasureOverride` / `ArrangeOverride` unchanged. Net effect: `Visual` ≈ 1500 lines (render + input + layout lifecycle); `Element` ≈ 1500 lines; `Model` has zero `_xxx_by_name` accessors on its public surface; `StyleApplicator` / `TriggerHost` / `ResourceResolver` are independent collaborators each in their own file.
+
+~~1.1. **Introduce the `Element` layer between `Visual` and `Control`.**~~ ✅ Done — landed across `4fbe8e1` (Element scaffolding: empty subclass + extends migration), `4a49021` (Phase A: remaining `extends Visual` → `extends Element`), `6137c9d` (44 test fixtures migrated), and Phase B1-B5.3 (the structural moves below). `Control` continues to extend `Element`; `Single`, `Panel`, `Shape` migrated up. `Visual` stands ready as the explicit escape hatch for future render-only constructs.
+
+~~1.2. **Lazy-allocate the seven eagerly-created collections.**~~ ✅ Done (`a621039`). `_styleSetterBindings`, `_triggerSetterBindings`, `_activeTriggers`, `_triggerSubscriptions`, `_eventTriggerSubscriptions`, `_styleSubscriptions`, `_dynamic_resource_listeners` all lazy-initialized.
+
+~~1.3. **Collapse the four `evaluate_*_trigger` methods into one transition primitive.**~~ ✅ Done (`8d54cee`). `apply_trigger_transition(trigger, matched, isInitial)` extracted; each `install_*` supplies its own match-evaluator closure.
+
+~~1.4. **Fix `SETTER_WRITEBACK` symbol-stash on the Binding.**~~ ✅ Done (`c170603`, paired with 1.7). Writeback metadata now lives in `Map<Setter, { evd, listener }>` parallel to the existing setter-binding maps; symbol and the two `as unknown as { [SETTER_WRITEBACK]?: ... }` casts gone.
+
+~~1.5. **Generator for `(logicalChildren + overlayChildren)` cascade loops.**~~ ✅ Done (`ba6cc90`). Five duplicated cascade sites collapsed to single `for` loops over `*allLogicalDescendantSubtreeRoots()`.
+
+~~1.6. **Retire the `_xxx_by_name` family from `Model`'s public surface.**~~ ✅ Done — landed across `040f42d` (initial framework-internal migration to `resolveKey + typed-key API`) and `0024222` (final removal of `_set_property_value_by_name` + 3 siblings). The compiler's `compileAttribute` / `compileElementBody` / `compileElement` resolve every markup property write at compile time via `Model.find_class` + `findDescriptor` and emit `target.set_property_value(Owner.PropKey, value)`. New `emitSetDP` helper centralizes 6 emit sites; `resolveClassByName` searches FRAMEWORK_BUNDLES (runtime, basic, visual-engine, framework, surface, material) before falling back to `Model.find_class` so classes without their own DPs (Ellipse, MenuItem) still resolve; `isStaticAncestor` picks markup class over registering class when the static-field inheritance chain agrees. All 40 demo VMs, ~20 test files, and src/document/*.md examples migrated to typed-key statics + accessor pattern.
+
+~~1.7. **Extract `StyleApplicator` collaborator on `Element`.**~~ ✅ Done (`c170603`). `refresh_active_style`, `apply_setter`, `unapply_setter`, both setter-binding maps, the writeback Map all live on the dedicated collaborator; `Element` retains a single `_styleApplicator` field.
+
+~~1.8. **Extract `TriggerHost` collaborator on `Element`.**~~ ✅ Done (`6d7651f`). All five `install_*` / `uninstall_*` methods, the `apply_trigger_transition` primitive, `_activeTriggers`, `_triggerSubscriptions`, `_eventTriggerSubscriptions` moved into the collaborator.
+
+~~1.9. **Extract `ResourceResolver` collaborator + retire ThemeManager hooks.**~~ ✅ Done (`8707d11`). ThemeManager registers its strategy when constructing the resolver instead of mutating process-global static slots; cyclic import direction resolved at the `Element` seam.
+
+~~1.10. **`ElementCtor` type alias + consistent `@internal` discipline.**~~ ✅ Done (`50b48dc`). `ElementCtor` type retires `Function`-typed class refs; bracket-access bypasses promoted to `public _xxx` with `@internal` JSDoc.
+
+~~1.11. **`Loaded` vs `Unloaded` asymmetry — symmetric `Attached` / `Detached` pair.**~~ ✅ Done (`b9f568d`). New symmetric pair lives alongside `Loaded` / `Unloaded`; WPF-parity `Loaded` (fire-once) preserved.
+
+~~1.12. **Defer `Resources` cascade to first actual change.**~~ ✅ Done (`2259492`). Touching the `Resources` getter no longer runs `refresh_styles_subtree` + `refresh_dynamic_resources_subtree`; the cascade fires on first mutation instead.
+
+~~1.13. **Enforce read-only contract on `IsMouseOver` / `IsPressed` / `IsFocused` / `IsDragOver`.**~~ ✅ Done (`d71069e`). DPs promoted to `RegisterReadOnlyProperty`; `WithKey` trio on `Model` promoted to `protected`; typed `@internal` `_setIsMouseOver(value)` etc. wrappers for InputManager.
+
+~~1.14. **Replace `OnBeforeBaseValueWrite` virtual with event subscription.**~~ ✅ Done (`0fa58a4`). EVD emits `OnBaseValueWriteRequest`; the implicit-transition engine subscribes instead of overriding a pre-write hook.
+
+~~1.15. **Collapse `propagate_*` virtual quartet.**~~ ✅ Done (`dfd5828`). Four virtuals collapsed to one-line bodies over `forEachVisualChild(fn)` / `forEachLogicalChild(fn)`.
+
+~~1.16. **Small paper cuts.**~~ ✅ Done (`869a951`). `safeFire(set, ...args)` extraction, routed-event name validation at registration time, `EnsureTransitions()` to replace the side-effecting `Transitions` getter.
+
+---
+
 ## Architectural notes (for orientation)
 
 - **`Visual` class — the visual-tree layer above `Model`.** `Model` is now a pure property/binding store. `Visual extends Model` adds: the parent link (`Attach`/`Detach`), the `MarkMeasureDirty`/`Arrange`/`Render` hooks, and an `OnPropertyChanged` override that consults the property's MetaData flags to fire those hooks and to cascade `Inherits` properties down the visual tree. Plain `Model` instances are pure storage — they participate in cross-class properties and bindings but not in the visual tree or in property value inheritance. `Single` and `Panel` extend `Visual`. This split anticipates the visualization engine: only `Visual` and its descendants will plug into the layout/render pipeline (5.4).
