@@ -29,6 +29,8 @@ import {
 import { AlignmentGuidesAdorner } from './behaviors/alignment-guides-adorner.js';
 import { SelectionBoundsAdorner } from '../../basic/index.js';
 import { DiagramSelectionSource } from './behaviors/diagram-selection-source.js';
+import { Brush, Pen } from '../../visual-engine/index.js';
+import { FormatMirror } from './collaborators/format-mirror.js';
 
 // §19.3 follow-up — position snap callback. Consumers (e.g., the
 // diagram demo's align-edges behavior) set this DP to a pure function
@@ -150,6 +152,16 @@ export class Diagram extends Selector
     public static readonly SelectionResizeEnabledKey = Model.RegisterProperty<boolean>(
         Diagram, 'SelectionResizeEnabled', false, MetaData.None);
 
+    // Multi-target format mirror DPs — driven by FormatMirror. Seeded
+    // from the first leaf in SelectedItems on every SelectionChanged;
+    // edits to these DPs broadcast to every leaf in the flattened
+    // selection. Duck-types on FillBrush / Stroke properties; items
+    // without those (Groups, text-only labels) skip the broadcast.
+    public static readonly SelectionFormatFillKey   = Model.RegisterProperty<Brush | undefined>(
+        Diagram, 'SelectionFormatFill',   undefined, MetaData.None);
+    public static readonly SelectionFormatStrokeKey = Model.RegisterProperty<Pen   | undefined>(
+        Diagram, 'SelectionFormatStroke', undefined, MetaData.None);
+
     public get PositionSnap():  DiagramPositionSnap | undefined { return this.get_property_value(Diagram.PositionSnapKey); }
     public set PositionSnap(v: DiagramPositionSnap | undefined) { this.set_property_value(Diagram.PositionSnapKey, v); }
 
@@ -180,6 +192,10 @@ export class Diagram extends Selector
     public set AlignmentGuidesEnabled(v: boolean) { this.set_property_value(Diagram.AlignmentGuidesEnabledKey, v); }
     public get SelectionResizeEnabled():  boolean { return this.get_property_value(Diagram.SelectionResizeEnabledKey); }
     public set SelectionResizeEnabled(v: boolean) { this.set_property_value(Diagram.SelectionResizeEnabledKey, v); }
+    public get SelectionFormatFill():    Brush | undefined { return this.get_property_value(Diagram.SelectionFormatFillKey); }
+    public set SelectionFormatFill(v:    Brush | undefined) { this.set_property_value(Diagram.SelectionFormatFillKey, v); }
+    public get SelectionFormatStroke():  Pen   | undefined { return this.get_property_value(Diagram.SelectionFormatStrokeKey); }
+    public set SelectionFormatStroke(v:  Pen   | undefined) { this.set_property_value(Diagram.SelectionFormatStrokeKey, v); }
     public get AlignmentGuides(): readonly AlignmentGuide[] { return this.get_property_value(Diagram.AlignmentGuidesKey); }
     /** @internal — used by AlignmentGuidesBehavior to drive the read-only DP. */
     public _setAlignmentGuides(guides: readonly AlignmentGuide[]): void
@@ -233,6 +249,7 @@ export class Diagram extends Selector
     // anyone — both subscribe to SelectionChanged independently.
     private readonly _selectionBoundsTracker: SelectionBoundsTracker;
     private readonly _diagramCommands:        DiagramCommands;
+    private readonly _formatMirror:           FormatMirror;
 
     // Alignment-guides attach state. `_alignmentGuidesDetach` holds the
     // behavior's detach thunk when active; undefined when disabled.
@@ -256,6 +273,7 @@ export class Diagram extends Selector
         super();
         this._diagramCommands        = new DiagramCommands(this);
         this._selectionBoundsTracker = new SelectionBoundsTracker(this);
+        this._formatMirror           = new FormatMirror(this);
     }
 
     protected override OnPropertyChanged(

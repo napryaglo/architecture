@@ -59,6 +59,49 @@ export function isGroupShape(item: unknown): item is Model
     return 'Members' in (item as object);
 }
 
+// Recursively walk Members on every selected group-shaped item, returning
+// the flat list of LEAF entries (anything not group-shaped). Used by
+// FormatMirror to broadcast fill/stroke into every leaf transitively
+// inside any selected group, without the consumer needing a separate
+// "expand groups" pass.
+//
+// De-duped — a selection containing both a group and one of its members
+// emits the member only once. Iteration over `Members` is duck-typed:
+// supports both `ObservableCollection` (Count + Get) and plain
+// `Iterable<unknown>`.
+export function flattenToLeaves(selectedItems: readonly unknown[]): Model[]
+{
+    const seen = new Set<Model>();
+    const out:  Model[] = [];
+    const visit = (entity: unknown): void => {
+        if (!(entity instanceof Model)) return;
+        if (isGroupShape(entity))
+        {
+            const members = (entity as unknown as { Members: unknown }).Members;
+            iterateMembers(members, visit);
+            return;
+        }
+        if (!seen.has(entity)) { seen.add(entity); out.push(entity); }
+    };
+    for (const item of selectedItems) visit(item);
+    return out;
+}
+
+function iterateMembers(members: unknown, fn: (m: unknown) => void): void
+{
+    const indexable = members as { Count?: number; Get?(i: number): unknown };
+    if (typeof indexable.Count === 'number' && typeof indexable.Get === 'function')
+    {
+        for (let i = 0; i < indexable.Count; i++) fn(indexable.Get(i));
+        return;
+    }
+    const iterable = members as Iterable<unknown>;
+    if (typeof (iterable as { [Symbol.iterator]?: unknown })[Symbol.iterator] === 'function')
+    {
+        for (const m of iterable) fn(m);
+    }
+}
+
 // Event args for the Diagram's GroupRequested / UngroupRequested
 // events. Plain readonly records — no class hierarchy needed.
 //
