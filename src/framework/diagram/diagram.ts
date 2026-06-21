@@ -27,6 +27,8 @@ import {
     type AlignmentGuide,
 } from './behaviors/alignment-guides-behavior.js';
 import { AlignmentGuidesAdorner } from './behaviors/alignment-guides-adorner.js';
+import { SelectionBoundsAdorner } from '../../basic/index.js';
+import { DiagramSelectionSource } from './behaviors/diagram-selection-source.js';
 
 // §19.3 follow-up — position snap callback. Consumers (e.g., the
 // diagram demo's align-edges behavior) set this DP to a pure function
@@ -141,6 +143,13 @@ export class Diagram extends Selector
     public static readonly AlignmentGuidesKey = Model.RegisterReadOnlyProperty<readonly AlignmentGuide[]>(
         Diagram, 'AlignmentGuides', Object.freeze([]) as readonly AlignmentGuide[], MetaData.None);
 
+    // Selection-resize opt-in. Default off. When flipped true, a
+    // SelectionBoundsAdorner mounts in the ItemsPanel's AdornerLayer
+    // and drives resize gestures through DiagramSelectionSource (which
+    // duck-types Width / Height writes through resolveKey).
+    public static readonly SelectionResizeEnabledKey = Model.RegisterProperty<boolean>(
+        Diagram, 'SelectionResizeEnabled', false, MetaData.None);
+
     public get PositionSnap():  DiagramPositionSnap | undefined { return this.get_property_value(Diagram.PositionSnapKey); }
     public set PositionSnap(v: DiagramPositionSnap | undefined) { this.set_property_value(Diagram.PositionSnapKey, v); }
 
@@ -169,6 +178,8 @@ export class Diagram extends Selector
 
     public get AlignmentGuidesEnabled():  boolean { return this.get_property_value(Diagram.AlignmentGuidesEnabledKey); }
     public set AlignmentGuidesEnabled(v: boolean) { this.set_property_value(Diagram.AlignmentGuidesEnabledKey, v); }
+    public get SelectionResizeEnabled():  boolean { return this.get_property_value(Diagram.SelectionResizeEnabledKey); }
+    public set SelectionResizeEnabled(v: boolean) { this.set_property_value(Diagram.SelectionResizeEnabledKey, v); }
     public get AlignmentGuides(): readonly AlignmentGuide[] { return this.get_property_value(Diagram.AlignmentGuidesKey); }
     /** @internal — used by AlignmentGuidesBehavior to drive the read-only DP. */
     public _setAlignmentGuides(guides: readonly AlignmentGuide[]): void
@@ -233,6 +244,13 @@ export class Diagram extends Selector
     private _alignmentGuidesDetach:  (() => void) | undefined = undefined;
     private _alignmentGuidesAdorner: AlignmentGuidesAdorner | undefined = undefined;
 
+    // Selection-resize state — adorner instance + the source that
+    // drives its resize semantics. undefined when SelectionResizeEnabled
+    // is false; queueMicrotask-deferred mount handles the case where
+    // the DP flips before ItemsPanel materializes.
+    private _selectionResizeAdorner: SelectionBoundsAdorner | undefined = undefined;
+    private _selectionResizeSource:  DiagramSelectionSource | undefined = undefined;
+
     constructor()
     {
         super();
@@ -251,6 +269,11 @@ export class Diagram extends Selector
         {
             if (newValue === true) this._attachAlignmentGuides();
             else                   this._detachAlignmentGuides();
+        }
+        else if (descriptor.Name === 'SelectionResizeEnabled')
+        {
+            if (newValue === true) this._attachSelectionResize();
+            else                   this._detachSelectionResize();
         }
     }
 
@@ -291,6 +314,37 @@ export class Diagram extends Selector
         const adorner = new AlignmentGuidesAdorner(panel, this);
         layer.Add(adorner);
         this._alignmentGuidesAdorner = adorner;
+    }
+
+    private _attachSelectionResize(): void
+    {
+        if (this._selectionResizeSource !== undefined) return;
+        this._selectionResizeSource = new DiagramSelectionSource(this);
+        queueMicrotask(() => this._mountSelectionResizeAdorner());
+    }
+
+    private _detachSelectionResize(): void
+    {
+        if (this._selectionResizeAdorner !== undefined)
+        {
+            const layer = AdornerLayer.GetAdornerLayer(this._selectionResizeAdorner.AdornedElement);
+            layer?.Remove(this._selectionResizeAdorner);
+            this._selectionResizeAdorner = undefined;
+        }
+        this._selectionResizeSource = undefined;
+    }
+
+    private _mountSelectionResizeAdorner(): void
+    {
+        if (this._selectionResizeAdorner !== undefined) return;
+        if (this._selectionResizeSource  === undefined) return;
+        const panel = this.ItemsPanelInstance;
+        if (panel === undefined) return;
+        const layer = AdornerLayer.GetAdornerLayer(panel);
+        if (layer === undefined) return;
+        const adorner = new SelectionBoundsAdorner(panel, this._selectionResizeSource);
+        layer.Add(adorner);
+        this._selectionResizeAdorner = adorner;
     }
 
     public override GetContainerForItemOverride(item: unknown): Visual
