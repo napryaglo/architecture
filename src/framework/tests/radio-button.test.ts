@@ -1,7 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from '../../basic/tests/test-app.js';
-import { RadioButton } from '../radio-button.js';
+import { RadioButton } from '../toggles/radio-button.js';
 import { StackPanel } from '../../basic/panels/stack-panel.js';
 
 // RadioButton's chrome is just template + ToggleButton wiring (covered

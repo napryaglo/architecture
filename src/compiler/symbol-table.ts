@@ -240,9 +240,9 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     // M3 Switch — capitalised `Switch` is fine in JS (only the
     // lowercase `switch` keyword is reserved), so the class and the
     // markup symbol both spell it `Switch`.
-    ['Switch',                  '@visualisation-sub/mural/framework/switch.js'],
-    ['Checkbox',                '@visualisation-sub/mural/framework/checkbox.js'],
-    ['RadioButton',             '@visualisation-sub/mural/framework/radio-button.js'],
+    ['Switch',                  '@visualisation-sub/mural/framework/toggles/switch.js'],
+    ['Checkbox',                '@visualisation-sub/mural/framework/toggles/checkbox.js'],
+    ['RadioButton',             '@visualisation-sub/mural/framework/toggles/radio-button.js'],
     ['Chip',                    '@visualisation-sub/mural/framework/markers/chip.js'],
     ['ChipVariant',             '@visualisation-sub/mural/framework/markers/chip.js'],
     ['SegmentedButton',         '@visualisation-sub/mural/framework/button-groups/segmented-button.js'],

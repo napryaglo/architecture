@@ -3,8 +3,8 @@ import {
     Model,
     Element, Visual,
     type PropertyDescriptor,
-} from '../runtime/index.js';
-import { ToggleButton } from './toggle-button.js';
+} from '../../runtime/index.js';
+import { ToggleButton } from '../toggle-button.js';
 
 // M3 RadioButton — 20 × 20 dp circular toggle, mutually exclusive
 // across siblings sharing the same `GroupName`.

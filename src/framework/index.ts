@@ -44,9 +44,9 @@ export { NavigationItem } from './navigation/navigation-item.js';
 export { NavigationRail } from './navigation/navigation-rail.js';
 export { NavigationBar }  from './navigation/navigation-bar.js';
 export { ToggleButton } from './toggle-button.js';
-export { Switch } from './switch.js';
-export { Checkbox } from './checkbox.js';
-export { RadioButton } from './radio-button.js';
+export { Switch } from './toggles/switch.js';
+export { Checkbox } from './toggles/checkbox.js';
+export { RadioButton } from './toggles/radio-button.js';
 export { Chip, ChipVariant } from './markers/chip.js';
 export {
     SegmentedButton,
