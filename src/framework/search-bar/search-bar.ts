@@ -1,6 +1,6 @@
-import { MetaData, Model, Element, Visual, type PropertyDescriptor } from '../runtime/index.js';
-import { TextBox } from '../basic/text-box.js';
-import { Border } from '../basic/border.js';
+import { MetaData, Model, Element, Visual, type PropertyDescriptor } from '../../runtime/index.js';
+import { TextBox } from '../../basic/text-box.js';
+import { Border } from '../../basic/border.js';
 
 // M3 SearchBar — text-field with a leading search icon and an optional
 // trailing slot (typically a clear button, voice-input glyph, or

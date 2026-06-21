@@ -253,7 +253,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['FabMenu',                 '@visualisation-sub/mural/framework/fab-menu.js'],
     ['TabControl',              '@visualisation-sub/mural/framework/tabs/tabs.js'],
     ['TabItem',                 '@visualisation-sub/mural/framework/tabs/tabs.js'],
-    ['SearchBar',               '@visualisation-sub/mural/framework/search-bar.js'],
+    ['SearchBar',               '@visualisation-sub/mural/framework/search-bar/search-bar.js'],
     ['Divider',                 '@visualisation-sub/mural/framework/markers/divider.js'],
     ['Badge',                   '@visualisation-sub/mural/framework/markers/badge.js'],
     ['BadgeVariant',            '@visualisation-sub/mural/framework/markers/badge.js'],

@@ -57,7 +57,7 @@ export { ButtonGroup } from './button-groups/button-group.js';
 export { SplitButton } from './button-groups/split-button.js';
 export { FabMenu } from './fab-menu.js';
 export { TabControl, TabItem } from './tabs/tabs.js';
-export { SearchBar } from './search-bar.js';
+export { SearchBar } from './search-bar/search-bar.js';
 export { Divider } from './markers/divider.js';
 export { Badge, BadgeVariant } from './markers/badge.js';
 export { Tooltip } from './tooltips/tooltip.js';
