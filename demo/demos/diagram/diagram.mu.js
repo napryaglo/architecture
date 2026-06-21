@@ -331,8 +331,8 @@ export class DiagramDemo extends ResourceDictionary {
             const _scrollViewer64 = new ScrollViewer();
             _scrollViewer64.set_property_value(ScrollViewer.IsAutoHideScrollBarsKey, false);
             const _shapeFormatControl65 = new ShapeFormatControl();
-            _shapeFormatControl65.set_property_value(ShapeFormatControl.FillKey, DataContextBinding(_shapeFormatControl65, "FormatFill"));
-            _shapeFormatControl65.set_property_value(ShapeFormatControl.StrokeKey, DataContextBinding(_shapeFormatControl65, "FormatStroke"));
+            _shapeFormatControl65.set_property_value(ShapeFormatControl.FillKey, DataContextBinding(_shapeFormatControl65, "SelectionFormatFill"));
+            _shapeFormatControl65.set_property_value(ShapeFormatControl.StrokeKey, DataContextBinding(_shapeFormatControl65, "SelectionFormatStroke"));
             _scrollViewer64.Content = _shapeFormatControl65;
             _dockPanel62.AddChild(_scrollViewer64);
             _border61.SetChild(_dockPanel62);
@@ -355,6 +355,8 @@ export class DiagramDemo extends ResourceDictionary {
             _diagram69.set_property_value(Diagram.ItemContainerStyleKey, _style2);
             _diagram69.set_property_value(Diagram.SelectionModeKey, SelectionMode.Extended);
             _diagram69.set_property_value(Diagram.AllowMarqueeSelectionKey, true);
+            _diagram69.set_property_value(Diagram.AlignmentGuidesEnabledKey, true);
+            _diagram69.set_property_value(Diagram.SelectionResizeEnabledKey, true);
             _diagram69.set_property_value(Diagram.FocusableKey, true);
             _scrollViewer68.Content = _diagram69;
             _border67.SetChild(_scrollViewer68);

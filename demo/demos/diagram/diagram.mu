@@ -289,8 +289,8 @@ resources DiagramDemo {
                                   Foreground=@OnSurfaceVariant,
                                   Margin=(0,0,0,8)]
                         ScrollViewer [IsAutoHideScrollBars=false]{
-                            ShapeFormatControl [Fill=$FormatFill,
-                                                Stroke=$FormatStroke]
+                            ShapeFormatControl [Fill=$SelectionFormatFill,
+                                                Stroke=$SelectionFormatStroke]
                         }
                     }
                 }
@@ -328,6 +328,8 @@ resources DiagramDemo {
                                 ItemContainerStyle = @DiagramNodeStyle,
                                 SelectionMode = Extended,
                                 AllowMarqueeSelection = true,
+                                AlignmentGuidesEnabled = true,
+                                SelectionResizeEnabled = true,
                                 Focusable = true]
                     }
                 }

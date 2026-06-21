@@ -5,31 +5,35 @@
 //   * One view-init step: wire the diagram's drop receiver so toolbox
 //     tiles materialize new nodes when dropped.
 //   * KeyDown listener on the view root → Delete removes ALL currently
-//     selected nodes (multi-select via the Selector's SelectedItems).
+//     selected nodes; Ctrl+G / Ctrl+Shift+G drive Group / Ungroup
+//     through the framework's command DPs.
 //   * Selection bridge: Diagram is a Selector, so SelectionChanged
 //     fires on click / Ctrl-click / Shift-click / marquee. The bridge
 //     reflects Selector.SelectedItems onto each NodeVM.IsSelected so
-//     the existing data-template triggers (`when($IsSelected) { … }`)
-//     keep driving per-shape chrome without any template changes.
+//     the existing data-template triggers (`when($IsSelected)`) keep
+//     driving per-shape chrome without any template changes.
+//   * Framework-event handlers: GroupRequested / UngroupRequested /
+//     CombineRequested / ItemDropped — fire on the Diagram, this file
+//     dispatches them to the VM's mutation methods. The framework
+//     supplies the gating + the routed-event piping; the demo
+//     supplies the data-side mutation.
 //
-// What used to live here that's GONE:
-//   * surface.AddRoutedEventListener('PointerDown', …) that cleared
-//     selection on background click — the marquee behavior now does
-//     this declaratively (plain click on empty area runs ClearSelection).
-//   * vm.Select / vm.SelectNodeCommand / vm.ClearSelectionCommand —
-//     selection state lives on the Selector now; the VM stays
-//     data-only + Save/Load commands.
+// What's GONE (now framework-provided — see
+// src/document/diagram-control.md):
+//   * AlignmentGuidesAdorner + align-edges-behavior — framework
+//     drives both when Diagram.AlignmentGuidesEnabled = true (set in
+//     diagram.mu).
+//   * SelectionResizeAdorner — framework mounts it via
+//     SelectionResizeEnabled = true (in diagram.mu).
+//   * canvas-drop-behavior.mjs — promoted to
+//     framework/diagram/behaviors/canvas-drop-behavior.ts; this file
+//     re-imports it from the public framework barrel.
 
 import { Application } from '@visualisation-sub/mural/runtime';
-import { AdornerLayer } from '@visualisation-sub/mural/visual-engine';
-import { Diagram } from '@visualisation-sub/mural/framework';
+import { Diagram, attachCanvasDropBehavior } from '@visualisation-sub/mural/framework';
 import { DiagramDemo } from './diagram.mu.js';
 import { DiagramShapeTemplates } from './diagram-shape-templates.mu.js';
-import { DiagramVM, GroupVM, NodeVM, topLevelOf } from './diagram-vm.mjs';
-import { attachCanvasDropBehavior } from './behaviors/canvas-drop-behavior.mjs';
-import { attachAlignEdges } from './behaviors/align-edges-behavior.mjs';
-import { SelectionResizeAdorner } from './selection-resize-adorner.mjs';
-import { AlignmentGuidesAdorner } from './alignment-guides-adorner.mjs';
+import { DiagramVM, GroupVM, ShapeNodeVM, topLevelOf } from './diagram-vm.mjs';
 import { register } from '../../platform/registry.mjs';
 import Icons from '../../assets/icons.mjs';
 
@@ -41,36 +45,21 @@ const LocalStorageService = {
 let resourcesMerged = false;
 let vmInstance;
 
-// Mirror Selector.SelectedItems onto NodeVM.IsSelected + GroupVM.IsSelected
-// so the per-shape `when($IsSelected)` triggers (orange chrome) fire on
-// selected top-level leaves, AND the GroupVM bbox template (dashed border)
-// fires on selected top-level groups.
+// Mirror Selector.SelectedItems onto ShapeNodeVM.IsSelected +
+// GroupVM.IsSelected so the per-shape `when($IsSelected)` triggers
+// (orange chrome) fire on selected top-level leaves, AND the GroupVM
+// bbox template (dashed border) fires on selected top-level groups.
 //
-// "Elevation" rule (Visio / PowerPoint parity): clicking ANY entity walks
-// the Parent chain to the outermost ancestor, and ONLY that entity gets
-// IsSelected=true. If the top-level is a GroupVM, its members (leaves and
-// sub-groups) stay IsSelected=false — the group bbox stands in for any
-// per-member chrome. If the top-level is a leaf, only it gets IsSelected.
-//
-// Reconcile against ACTUAL IsSelected state per node, not memoized
-// "what we set last time". DiagramVM.Group() flips group.IsSelected
-// directly (Selector.SelectedItems doesn't change post-grouping, so the
-// bridge can't see the new group through the SelectionChanged callback).
-// If we memoized prev, the new group would never enter the bridge's
-// tracked set, so a later click on empty canvas would clear nothing.
-// Walking vm.Nodes here is O(N) per sync, fine at the scales the
-// diagrammer demo operates on.
+// "Elevation" rule (Visio / PowerPoint parity): clicking ANY entity
+// walks the Parent chain to the outermost ancestor, and ONLY that
+// entity gets IsSelected=true.
 function attachSelectionBridge(diagram, vm) {
     const sync = () => {
         const nextLeaves = new Set();
         const nextGroups = new Set();
         for (const item of diagram.SelectedItems)
         {
-            // SelectedItems carries both NodeVMs and GroupVMs (the
-            // group bbox container is in the same Nodes collection).
-            // Clicking either elevates to the top-level ancestor; only
-            // THAT entity's IsSelected lights up.
-            if (!(item instanceof NodeVM || item instanceof GroupVM)) continue;
+            if (!(item instanceof ShapeNodeVM || item instanceof GroupVM)) continue;
             const root = topLevelOf(item);
             if (root instanceof GroupVM)
             {
@@ -81,11 +70,6 @@ function attachSelectionBridge(diagram, vm) {
                 nextLeaves.add(item);
             }
         }
-        // Reconcile every node's IsSelected against the desired set.
-        // Flipping only when the value actually changes keeps the
-        // listener cascade quiet on unchanged rows (each IsSelected
-        // setter fires the VM's _watchSelection handler → re-evaluates
-        // toolbar CanExecute + selection bbox).
         const nodes = vm.Nodes;
         for (let i = 0; i < nodes.Count; i++)
         {
@@ -99,10 +83,6 @@ function attachSelectionBridge(diagram, vm) {
     diagram.AddSelectionChangedListener(sync);
     return function detach() {
         diagram.RemoveSelectionChangedListener(sync);
-        // Best-effort cleanup so a re-mount doesn't start with stale
-        // chrome — clear every node's IsSelected. Walk vm.Nodes since
-        // that's the canonical entity list (Selector.SelectedItems is
-        // a subset).
         const nodes = vm.Nodes;
         for (let i = 0; i < nodes.Count; i++)
         {
@@ -118,86 +98,107 @@ function attachDiagramBehaviors(view, vm) {
     if (surface === undefined) throw new Error('diagram.mu missing x:name="surface"');
     if (!(nodes instanceof Diagram)) throw new Error('diagram.mu missing x:name="nodes" Diagram');
 
-    // Toolbox → diagram drop receiver.
+    // ── Framework-command proxy wiring ────────────────────────────────
     //
-    // Routing target is the surface Border (the outer chrome that
-    // wraps the ScrollViewer + its scrollbars). Attaching directly to
-    // the Diagram missed drops near the right edge — the vertical
-    // scrollbar consumed routed drag events there, and because the
-    // scrollbar lives inside the ScrollViewer's chrome (not inside
-    // the Diagram), those events never bubble through the Diagram.
-    // Surface Border sits above both subtrees, so every drop in the
-    // canvas region bubbles through.
+    // The markup binds buttons + the format pane to DiagramVM DPs
+    // ($AlignLeftCommand, $SelectionFormatFill, etc.). The actual
+    // command implementations live on the framework Diagram control
+    // (post-Phase L of the diagram-control refactor). This block
+    // forwards values across:
     //
-    // The fourth argument pins the coordinate origin to the Diagram
-    // (its ItemsPanel ≡ canvas-local space). Without that, dropping
-    // on the surface would translate against the surface's host
-    // position — wrong frame for Canvas.Left / Canvas.Top units.
-    const detachCanvasDrop = attachCanvasDropBehavior(surface, vm, nodes, nodes);
+    //   * commands — one-way (Diagram → VM). RelayCommand instances
+    //     don't change post-construction, so a one-shot copy suffices.
+    //   * SelectionFormatFill / SelectionFormatStroke — TWO-way: the
+    //     framework's FormatMirror re-seeds from the selection (Diagram
+    //     → VM) AND the format-pane edits write through the VM proxy
+    //     onto the Diagram (VM → Diagram) so FormatMirror broadcasts
+    //     to every selected leaf.
+    //
+    // (A future compiler 2-pass scan would let the markup reference
+    // `$nodes.AlignLeftCommand` directly, dropping this proxy. The
+    // compiler currently resolves x:name in document order; the
+    // toolbar IconButtons compile before the Diagram declaration, so
+    // ElementName resolution misses.)
+    {
+        const Diagram_ = Diagram;
+        const VM       = vm.constructor;
+        const COMMANDS = [
+            ['AlignLeftCommandKey',            'AlignLeftCommandKey'],
+            ['AlignRightCommandKey',           'AlignRightCommandKey'],
+            ['AlignTopCommandKey',             'AlignTopCommandKey'],
+            ['AlignMiddleCommandKey',          'AlignMiddleCommandKey'],
+            ['AlignCenterCommandKey',          'AlignCenterCommandKey'],
+            ['DistributeHorizontalCommandKey', 'DistributeHorizontalCommandKey'],
+            ['DistributeVerticalCommandKey',   'DistributeVerticalCommandKey'],
+            ['GroupCommandKey',                'GroupCommandKey'],
+            ['UngroupCommandKey',              'UngroupCommandKey'],
+            ['CombineUnionCommandKey',         'CombineUnionCommandKey'],
+            ['CombineIntersectCommandKey',     'CombineIntersectCommandKey'],
+            ['CombineSubtractCommandKey',      'CombineSubtractCommandKey'],
+            ['CombineExcludeCommandKey',       'CombineExcludeCommandKey'],
+        ];
+        for (const [diagKey, vmKey] of COMMANDS) {
+            vm.set_property_value(VM[vmKey], nodes.get_property_value(Diagram_[diagKey]));
+        }
+        // TWO-way bridge for the format mirror — initial Diagram→VM
+        // sync + bidirectional listeners. The DP machinery dedups
+        // writes so the listener pair doesn't loop.
+        const bridge = (diagKey, vmKey) => {
+            vm.set_property_value(VM[vmKey], nodes.get_property_value(Diagram_[diagKey]));
+            nodes.AddPropertyChangedListener(Diagram_[diagKey], () =>
+                vm.set_property_value(VM[vmKey], nodes.get_property_value(Diagram_[diagKey])));
+            vm.AddPropertyChangedListener(VM[vmKey], () =>
+                nodes.set_property_value(Diagram_[diagKey], vm.get_property_value(VM[vmKey])));
+        };
+        bridge('SelectionFormatFillKey',   'SelectionFormatFillKey');
+        bridge('SelectionFormatStrokeKey', 'SelectionFormatStrokeKey');
+    }
+
+    // Toolbox drop receiver — attached to the surface Border so drops
+    // near the right edge (on the scrollbar) still register. The
+    // Diagram receives ItemDropped events with canvas-local Position
+    // + the raw DataObject; this file unpacks the kind format and
+    // delegates to vm.CreateNode.
+    const detachCanvasDrop = attachCanvasDropBehavior(surface, nodes);
+    const onItemDropped = (args) => {
+        const kind = args.Data.Get('mural/node-kind');
+        if (kind === undefined) return;
+        // Center the dropped node on the cursor — CreateNode places the
+        // top-left at (x, y), so subtract half the default node size.
+        const NODE_W = 130, NODE_H = 60;
+        const node = vm.CreateNode(kind, args.Position.X - NODE_W / 2, args.Position.Y - NODE_H / 2);
+        if (node !== null) {
+            nodes.SelectedItem = node;
+            vm.Status = `Placed ${kind}. ${vm.Nodes.Count} nodes.`;
+        }
+    };
+    nodes.AddItemDroppedListener(onItemDropped);
 
     // Selection → data bridge — so `when($IsSelected)` template
-    // triggers fire on click / marquee / Ctrl- / Shift-click without
-    // any per-shape DataTemplate edits.
+    // triggers fire on click / marquee / Ctrl- / Shift-click.
     const detachSelectionBridge = attachSelectionBridge(nodes, vm);
 
-    // Resize adorner — single Adorner Visual hosted in the SCP's inner
-    // AdornerLayer. Riding the layer means the handles scroll with the
-    // canvas automatically (the SCP translates the layer along with its
-    // content). Adorned element is the Diagram's ItemsPanelInstance, so
-    // the adorner's layer-local frame matches canvas-local coords —
-    // bbox / handle Arrange writes land at the same positions as
-    // DiagramNode containers. The lookup is deferred to a microtask so
-    // the items panel has materialized from the template by then.
-    let detachResizeAdorner = () => {};
-    let detachAlignmentGuidesAdorner = () => {};
-    queueMicrotask(() => {
-        const itemsPanel = nodes.ItemsPanelInstance;
-        if (itemsPanel === undefined) {
-            console.warn('SelectionResizeAdorner: Diagram.ItemsPanelInstance is undefined; adorner skipped.');
-            return;
-        }
-        const layer = AdornerLayer.GetAdornerLayer(itemsPanel);
-        if (layer === undefined) {
-            console.warn('SelectionResizeAdorner: no AdornerLayer in scope; adorner skipped.');
-            return;
-        }
-        const adorner = new SelectionResizeAdorner(itemsPanel, vm);
-        layer.Add(adorner);
-        detachResizeAdorner = () => {
-            layer.Remove(adorner);
-            adorner.Dispose();
-        };
-        // §19.3 — alignment guides overlay sits in the same layer so it
-        // scrolls with the canvas. Painted ABOVE the resize handles in
-        // z-order (added second) — guides need to read clearly across
-        // the diagram surface.
-        const guidesAdorner = new AlignmentGuidesAdorner(itemsPanel, vm);
-        layer.Add(guidesAdorner);
-        detachAlignmentGuidesAdorner = () => {
-            layer.Remove(guidesAdorner);
-            guidesAdorner.Dispose();
-        };
-    });
-
-    // Align-edges behavior — computes alignment guides during node
-    // drag and writes vm.AlignmentGuides for the adorner to paint.
-    const detachAlignEdges = attachAlignEdges(nodes, vm);
+    // Framework event handlers — Group / Ungroup / Combine fire from
+    // the Diagram's RelayCommands; this demo's data-side mutation
+    // methods do the actual collection updates. The VM's methods
+    // already inspect their own selection state (vm._selectedTopLevel
+    // / _formatLeaves), so the event args are advisory — useful for
+    // demos that need finer control, but here the existing methods
+    // suffice.
+    const onGroupRequested   = () => vm.Group();
+    const onUngroupRequested = () => vm.Ungroup();
+    const onCombineRequested = (args) => vm.CombineSelection(args.Mode);
+    nodes.AddGroupRequestedListener(onGroupRequested);
+    nodes.AddUngroupRequestedListener(onUngroupRequested);
+    nodes.AddCombineRequestedListener(onCombineRequested);
 
     // Focus capture — Diagram.Focusable=true (set in diagram.mu) opts
-    // the surface into the keyboard-focus pipeline; the listener below
-    // takes focus on every PointerDown so a click anywhere on the
-    // diagram (node, empty space, marquee start) routes subsequent
-    // keystrokes to it. Without focus, the KeyDown handlers below would
-    // never fire — Routed events flow from the focused Visual upward,
-    // and nothing else in this view-tree opts in.
+    // the surface into the keyboard-focus pipeline; take focus on
+    // every PointerDown so keystrokes route through the diagram.
     nodes.AddRoutedEventListener('PointerDown', () => nodes.Focus());
 
-    // Keyboard route — Delete / Backspace removes every selected node.
-    // Arrow-key nudging is owned by the Diagram control itself (see
-    // Diagram.OnKeyDown override in src/framework/diagram/diagram.ts).
-    // Snapshot SelectedItems FIRST because the ObservableCollection
-    // mutations re-enter the Selector's recycle hook and shrink the
-    // live set under our iteration.
+    // Keyboard — Delete removes selected; Ctrl+G / Ctrl+Shift+G fire
+    // the framework's GroupCommand / UngroupCommand respectively.
     view.AddRoutedEventListener('KeyDown', (args) => {
         if (args?.Key === 'Delete' || args?.Key === 'Backspace')
         {
@@ -207,23 +208,16 @@ function attachDiagramBehaviors(view, vm) {
             args.Handled = true;
             return;
         }
-        // Ctrl+G / Ctrl+Shift+G — Group / Ungroup (Visio + PowerPoint
-        // parity). Going through the ICommand surface so CanExecute
-        // gating is honored (no-op when fewer than 2 top-level items
-        // are selected for Group, or no top-level group selected for
-        // Ungroup).
         if ((args?.Key === 'g' || args?.Key === 'G') && args.Modifiers?.Control)
         {
-            const cmd = args.Modifiers.Shift ? vm.UngroupCommand : vm.GroupCommand;
+            const cmd = args.Modifiers.Shift ? nodes.UngroupCommand : nodes.GroupCommand;
             if (cmd?.CanExecute(null)) cmd.Execute(null);
             args.Handled = true;
             return;
         }
     });
 
-    // Seed a few nodes so the demo isn't empty on open. Picks one from
-    // each shape family so the canvas surface shows the variety the
-    // toolbox catalogue exposes.
+    // Seed a few nodes so the demo isn't empty on open.
     queueMicrotask(() => {
         vm.CreateNode('rectangle',     60, 60);
         vm.CreateNode('ellipse',      220, 60);
@@ -231,18 +225,16 @@ function attachDiagramBehaviors(view, vm) {
         vm.CreateNode('flower',       220, 200);
         vm.CreateNode('heart',        380, 60);
         vm.Status = `Ready. ${vm.Nodes.Count} nodes. Drag a shape from the toolbox →`;
-        // Initial focus — so arrow keys work BEFORE the user clicks the
-        // surface. Deferred to the microtask so the view's mount path is
-        // complete (Focus() no-ops on an unattached Visual).
         nodes.Focus();
     });
 
     return function detachAll() {
         detachCanvasDrop();
         detachSelectionBridge();
-        detachResizeAdorner();
-        detachAlignmentGuidesAdorner();
-        detachAlignEdges();
+        nodes.RemoveItemDroppedListener(onItemDropped);
+        nodes.RemoveGroupRequestedListener(onGroupRequested);
+        nodes.RemoveUngroupRequestedListener(onUngroupRequested);
+        nodes.RemoveCombineRequestedListener(onCombineRequested);
     };
 }
 
