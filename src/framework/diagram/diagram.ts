@@ -1,6 +1,7 @@
 import { MetaData, Model, Rect, type KeyEventArgs, type Visual } from '../../runtime/index.js';
 import { Figure } from './figure.js';
 import { Selector } from '../list/selector.js';
+import { SelectionBoundsTracker } from './collaborators/selection-bounds-tracker.js';
 
 // §19.3 follow-up — position snap callback. Consumers (e.g., the
 // diagram demo's align-edges behavior) set this DP to a pure function
@@ -37,8 +38,41 @@ export class Diagram extends Selector
     public static readonly PositionSnapKey = Model.RegisterProperty<DiagramPositionSnap | undefined>(
         Diagram, 'PositionSnap', undefined, MetaData.None);
 
+    // Selection-bounds DPs — read-only, derived from the union bbox of
+    // every IFigure-shaped item in SelectedItems by SelectionBoundsTracker
+    // (see collaborators/selection-bounds-tracker.ts). Consumers can bind
+    // their resize-adorner / status-bar / inspector chrome to these DPs
+    // without subscribing to per-item geometry themselves.
+    public static readonly SelectionXKey      = Model.RegisterReadOnlyProperty<number>(
+        Diagram, 'SelectionX',      0, MetaData.None);
+    public static readonly SelectionYKey      = Model.RegisterReadOnlyProperty<number>(
+        Diagram, 'SelectionY',      0, MetaData.None);
+    public static readonly SelectionWidthKey  = Model.RegisterReadOnlyProperty<number>(
+        Diagram, 'SelectionWidth',  0, MetaData.None);
+    public static readonly SelectionHeightKey = Model.RegisterReadOnlyProperty<number>(
+        Diagram, 'SelectionHeight', 0, MetaData.None);
+    public static readonly SelectionCountKey  = Model.RegisterReadOnlyProperty<number>(
+        Diagram, 'SelectionCount',  0, MetaData.None);
+
     public get PositionSnap():  DiagramPositionSnap | undefined { return this.get_property_value(Diagram.PositionSnapKey); }
     public set PositionSnap(v: DiagramPositionSnap | undefined) { this.set_property_value(Diagram.PositionSnapKey, v); }
+
+    public get SelectionX():      number { return this.get_property_value(Diagram.SelectionXKey); }
+    public get SelectionY():      number { return this.get_property_value(Diagram.SelectionYKey); }
+    public get SelectionWidth():  number { return this.get_property_value(Diagram.SelectionWidthKey); }
+    public get SelectionHeight(): number { return this.get_property_value(Diagram.SelectionHeightKey); }
+    public get SelectionCount():  number { return this.get_property_value(Diagram.SelectionCountKey); }
+
+    // Collaborators — internal, no public surface. SelectionBoundsTracker
+    // owns the recompute pipeline for the 5 SelectionX/Y/Width/Height/Count
+    // DPs above; later phases add DiagramCommands + FormatMirror here.
+    private readonly _selectionBoundsTracker: SelectionBoundsTracker;
+
+    constructor()
+    {
+        super();
+        this._selectionBoundsTracker = new SelectionBoundsTracker(this);
+    }
 
     public override GetContainerForItemOverride(item: unknown): Visual
     {
