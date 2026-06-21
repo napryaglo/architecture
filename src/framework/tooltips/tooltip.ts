@@ -1,6 +1,6 @@
-import { MetaData, Element } from '../runtime/index.js';
-import { Model } from '../runtime/model.js';
-import { ContentControl } from './content-control.js';
+import { MetaData, Element } from '../../runtime/index.js';
+import { Model } from '../../runtime/model.js';
+import { ContentControl } from '../content-control.js';
 
 // M3 Tooltip — short overlay surface describing an interactive element.
 //

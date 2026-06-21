@@ -60,12 +60,12 @@ export { TabControl, TabItem } from './tabs/tabs.js';
 export { SearchBar } from './search-bar.js';
 export { Divider } from './markers/divider.js';
 export { Badge, BadgeVariant } from './markers/badge.js';
-export { Tooltip } from './tooltip.js';
+export { Tooltip } from './tooltips/tooltip.js';
 export {
     PlacementMode,
     ToolTipService,
     TooltipPopupHost,
-} from './tooltip-service.js';
+} from './tooltips/tooltip-service.js';
 export { ProgressIndicator, ProgressIndicatorVariant } from './notifications/progress-indicator.js';
 export { Banner } from './notifications/banner.js';
 export { Snackbar } from './notifications/snackbar.js';

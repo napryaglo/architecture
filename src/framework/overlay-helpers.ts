@@ -4,7 +4,7 @@ import {
     type KeyEventArgs,
 } from '../runtime/index.js';
 import type { PresentationTarget } from '../visual-engine/index.js';
-import { ToolTipService } from './tooltip-service.js';
+import { ToolTipService } from './tooltips/tooltip-service.js';
 
 // Overlay-mount helpers — shared by Tooltip, Snackbar, Dialog.
 //

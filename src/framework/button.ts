@@ -12,7 +12,7 @@ import {
     type ICommandSource,
 } from '../framework/commands/command-source.js';
 import { ContentControl } from './content-control.js';
-import { ToolTipService } from './tooltip-service.js';
+import { ToolTipService } from './tooltips/tooltip-service.js';
 import { CommandBase } from '../runtime/index.js';
 
 // When the Click event fires. WPF parity: Release is the default

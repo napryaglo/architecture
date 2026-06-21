@@ -257,10 +257,10 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['Divider',                 '@visualisation-sub/mural/framework/markers/divider.js'],
     ['Badge',                   '@visualisation-sub/mural/framework/markers/badge.js'],
     ['BadgeVariant',            '@visualisation-sub/mural/framework/markers/badge.js'],
-    ['Tooltip',                 '@visualisation-sub/mural/framework/tooltip.js'],
-    ['TooltipPopupHost',        '@visualisation-sub/mural/framework/tooltip-service.js'],
-    ['ToolTipService',          '@visualisation-sub/mural/framework/tooltip-service.js'],
-    ['PlacementMode',           '@visualisation-sub/mural/framework/tooltip-service.js'],
+    ['Tooltip',                 '@visualisation-sub/mural/framework/tooltips/tooltip.js'],
+    ['TooltipPopupHost',        '@visualisation-sub/mural/framework/tooltips/tooltip-service.js'],
+    ['ToolTipService',          '@visualisation-sub/mural/framework/tooltips/tooltip-service.js'],
+    ['PlacementMode',           '@visualisation-sub/mural/framework/tooltips/tooltip-service.js'],
     // Commands — referenced in markup as DataTemplate DataType targets
     // (the default rich-tooltip template dispatches on CommandBase).
     ['CommandBase',             '@visualisation-sub/mural/runtime'],

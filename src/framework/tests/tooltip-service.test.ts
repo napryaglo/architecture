@@ -10,12 +10,12 @@ import { HeadlessTarget } from '../../visual-engine/index.js';
 import { Border } from '../../basic/border.js';
 import { TextBlock } from '../../basic/text-block.js';
 import { InputManager } from '../input-manager.js';
-import { Tooltip } from '../tooltip.js';
+import { Tooltip } from '../tooltips/tooltip.js';
 import {
     PlacementMode,
     ToolTipService,
     TooltipPopupHost,
-} from '../tooltip-service.js';
+} from '../tooltips/tooltip-service.js';
 
 function pointer(overrides: Partial<PointerEventInit> = {}): PointerEventInit
 {

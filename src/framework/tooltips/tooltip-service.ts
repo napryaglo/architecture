@@ -7,9 +7,9 @@ import {
     Visual,
     type ICommand,
     type PointerEventArgs,
-} from '../runtime/index.js';
-import { Rect, Size } from '../visual-engine/primitives.js';
-import { CommandManager } from './commands/command-manager.js';
+} from '../../runtime/index.js';
+import { Rect, Size } from '../../visual-engine/primitives.js';
+import { CommandManager } from '../commands/command-manager.js';
 import { Tooltip } from './tooltip.js';
 
 // Placement of a Tooltip relative to its anchor. The service picks one
