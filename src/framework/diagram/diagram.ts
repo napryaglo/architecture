@@ -16,6 +16,10 @@ import {
     type GroupRequestedListener,
     type UngroupRequestedListener,
 } from './commands/group-ops.js';
+import {
+    type CombineRequestedArgs,
+    type CombineRequestedListener,
+} from './commands/combine.js';
 
 // §19.3 follow-up — position snap callback. Consumers (e.g., the
 // diagram demo's align-edges behavior) set this DP to a pure function
@@ -105,6 +109,21 @@ export class Diagram extends Selector
     public static readonly UngroupCommandKey = Model.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'UngroupCommand', undefined, MetaData.None);
 
+    // Combine commands — one per GeometryCombineMode. Same event-based
+    // mutation contract as Group / Ungroup: Execute fires CombineRequested
+    // with the corresponding Mode, consumer wraps the merge result + does
+    // the collection mutation. The framework's `combine()` helper (from
+    // src/visual-engine/geometry/combine.ts) is what consumers typically
+    // invoke to fold-merge the input geometries.
+    public static readonly CombineUnionCommandKey     = Model.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'CombineUnionCommand',     undefined, MetaData.None);
+    public static readonly CombineIntersectCommandKey = Model.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'CombineIntersectCommand', undefined, MetaData.None);
+    public static readonly CombineSubtractCommandKey  = Model.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'CombineSubtractCommand',  undefined, MetaData.None);
+    public static readonly CombineExcludeCommandKey   = Model.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'CombineExcludeCommand',   undefined, MetaData.None);
+
     public get PositionSnap():  DiagramPositionSnap | undefined { return this.get_property_value(Diagram.PositionSnapKey); }
     public set PositionSnap(v: DiagramPositionSnap | undefined) { this.set_property_value(Diagram.PositionSnapKey, v); }
 
@@ -126,6 +145,11 @@ export class Diagram extends Selector
     public get GroupCommand():   RelayCommand | undefined { return this.get_property_value(Diagram.GroupCommandKey); }
     public get UngroupCommand(): RelayCommand | undefined { return this.get_property_value(Diagram.UngroupCommandKey); }
 
+    public get CombineUnionCommand():     RelayCommand | undefined { return this.get_property_value(Diagram.CombineUnionCommandKey); }
+    public get CombineIntersectCommand(): RelayCommand | undefined { return this.get_property_value(Diagram.CombineIntersectCommandKey); }
+    public get CombineSubtractCommand():  RelayCommand | undefined { return this.get_property_value(Diagram.CombineSubtractCommandKey); }
+    public get CombineExcludeCommand():   RelayCommand | undefined { return this.get_property_value(Diagram.CombineExcludeCommandKey); }
+
     // Subscriber-pattern event API for Group / Ungroup requests. Same
     // shape as Selector.AddSelectionChangedListener. The framework's
     // KNOWN_ROUTED_EVENTS Set is reserved for input events that bubble;
@@ -138,6 +162,10 @@ export class Diagram extends Selector
     public RemoveGroupRequestedListener(listener: GroupRequestedListener):   void { this._groupRequestedListeners.delete(listener); }
     public AddUngroupRequestedListener   (listener: UngroupRequestedListener): void { this._ungroupRequestedListeners.add(listener); }
     public RemoveUngroupRequestedListener(listener: UngroupRequestedListener): void { this._ungroupRequestedListeners.delete(listener); }
+
+    private readonly _combineRequestedListeners: Set<CombineRequestedListener> = new Set();
+    public AddCombineRequestedListener   (listener: CombineRequestedListener): void { this._combineRequestedListeners.add(listener); }
+    public RemoveCombineRequestedListener(listener: CombineRequestedListener): void { this._combineRequestedListeners.delete(listener); }
 
     // Internal fire helpers — invoked by DiagramCommands when the
     // corresponding RelayCommand's Execute runs. Snapshot-then-iterate
@@ -153,6 +181,12 @@ export class Diagram extends Selector
     public _fireUngroupRequested(args: UngroupRequestedArgs): void
     {
         for (const l of [...this._ungroupRequestedListeners]) l(args);
+    }
+
+    /** @internal */
+    public _fireCombineRequested(args: CombineRequestedArgs): void
+    {
+        for (const l of [...this._combineRequestedListeners]) l(args);
     }
 
     // Collaborators — internal, no public surface. Eagerly constructed

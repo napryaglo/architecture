@@ -21,6 +21,11 @@ import {
     selectedTopLevel,
     selectedTopLevelGroups,
 } from '../commands/group-ops.js';
+import {
+    GeometryCombineMode,
+    isGeometricItem,
+    type IGeometricItem,
+} from '../commands/combine.js';
 
 // Internal collaborator owned by Diagram. Owns the default RelayCommand
 // instances installed onto Diagram's Command DPs at construction time.
@@ -52,6 +57,7 @@ export class DiagramCommands
         this._installAlignCommands();
         this._installDistributeCommands();
         this._installGroupCommands();
+        this._installCombineCommands();
         diagram.AddSelectionChangedListener(() => this._raiseCanExecuteAll());
     }
 
@@ -107,6 +113,45 @@ export class DiagramCommands
                 () => this._diagram._fireUngroupRequested({ Groups: selectedTopLevelGroups(this._diagram.SelectedItems) }),
                 canUngroup,
                 { Text: 'Ungroup', Description: 'Dissolve the currently-selected group(s), re-parenting their members to the surrounding scope.' }));
+    }
+
+    private _installCombineCommands(): void
+    {
+        const Diagram = this._diagram.constructor as typeof import('../diagram.js').Diagram;
+
+        // Combine needs ≥ 2 selected items that EACH have a Geometry —
+        // the merge op needs something to fold. Items without Geometry
+        // (text-only labels, etc.) are silently excluded.
+        const canCombine = (): boolean => this._collectCombinable().length >= 2;
+
+        const fireCombine = (mode: GeometryCombineMode): (() => void) => () =>
+            this._diagram._fireCombineRequested({
+                Items: this._collectCombinable(),
+                Mode:  mode,
+            });
+
+        this._install(Diagram.CombineUnionCommandKey, 'CombineUnion',
+            new RelayCommand(fireCombine(GeometryCombineMode.Union), canCombine,
+                { Text: 'Combine — Union',     Description: 'Merge the selected shapes into a single union.' }));
+        this._install(Diagram.CombineIntersectCommandKey, 'CombineIntersect',
+            new RelayCommand(fireCombine(GeometryCombineMode.Intersect), canCombine,
+                { Text: 'Combine — Intersect', Description: 'Keep only the overlapping area of the selected shapes.' }));
+        this._install(Diagram.CombineSubtractCommandKey, 'CombineSubtract',
+            new RelayCommand(fireCombine(GeometryCombineMode.Exclude), canCombine,
+                { Text: 'Combine — Subtract',  Description: 'Subtract subsequent shapes from the first.' }));
+        this._install(Diagram.CombineExcludeCommandKey, 'CombineExclude',
+            new RelayCommand(fireCombine(GeometryCombineMode.Xor), canCombine,
+                { Text: 'Combine — Exclude',   Description: 'Keep only the non-overlapping areas (XOR).' }));
+    }
+
+    private _collectCombinable(): (import('../../../runtime/index.js').Model & IGeometricItem)[]
+    {
+        const out: (import('../../../runtime/index.js').Model & IGeometricItem)[] = [];
+        for (const item of this._diagram.SelectedItems)
+        {
+            if (isGeometricItem(item)) out.push(item);
+        }
+        return out;
     }
 
     private _install(key: import('../../../runtime/index.js').PropertyKey<RelayCommand | undefined>, name: string, command: RelayCommand): void
