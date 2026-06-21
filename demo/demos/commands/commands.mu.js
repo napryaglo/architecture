@@ -1,7 +1,7 @@
 import { CommandsVM, EllipseNodeVM, NoteNodeVM, RectNodeVM } from "./commands-vm.mjs";
 import { Border, Canvas, DataTemplate, Dock, DockPanel, Ellipse, ItemsPanelTemplate, Orientation, StackPanel, TargetedSetter, TemplateDataTrigger, TextBlock } from "@visualisation-sub/mural/basic";
-import { DiagramNode } from "@visualisation-sub/mural/framework/diagram/diagram-node.js";
 import { Diagram } from "@visualisation-sub/mural/framework/diagram/diagram.js";
+import { DiagramNode } from "@visualisation-sub/mural/framework/diagram/figure.js";
 import { SelectionMode } from "@visualisation-sub/mural/framework/list/list-box.js";
 import { ContextMenu, ContextMenuService, MenuButton, MenuItem, MenuSeparator, ToolBar, ToolBarButton, ToolBarSeparator } from "@visualisation-sub/mural/framework/surface.js";
 import { Color, DataContextBinding, DynamicResource, HorizontalAlignment, NameScope, ResourceDictionary, Setter, SetterFactory, Style, Thickness, VerticalAlignment } from "@visualisation-sub/mural/runtime";

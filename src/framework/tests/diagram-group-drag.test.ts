@@ -19,7 +19,7 @@ import {
 import type { PointerEventInit } from '../../runtime/index.js';
 import { Border, Canvas, ItemsPanelTemplate } from '../../basic/index.js';
 import { Diagram } from '../diagram/diagram.js';
-import { DiagramNode } from '../diagram/diagram-node.js';
+import { DiagramNode } from '../diagram/figure.js';
 import { InputManager } from '../index.js';
 import { SelectionMode } from '../list/list-box.js';
 

@@ -14,7 +14,7 @@ import { ScrollViewer } from '../scroll-viewer.js';
 import { Selector } from '../list/selector.js';
 
 // A movable, content-hosting control intended as the container shape
-// inside the diagrammer's ItemsControl (see Diagram). DiagramNode owns
+// inside the diagrammer's ItemsControl (see Diagram). Figure owns
 // two things internally so the demo bootstrap doesn't need a behavior:
 //
 //   * Position — X / Y DPs flagged BindsTwoWayByDefault so a `$X` /
@@ -35,17 +35,17 @@ import { Selector } from '../list/selector.js';
 //     selection, modifier modes, SelectionChanged batching).
 //
 // Default Template: a single ContentPresenter. ContentControl's content
-// resolution does the rest — when DiagramNode.Content is set to a Model
+// resolution does the rest — when Figure.Content is set to a Model
 // (the per-item NodeVM data), ContentControl looks up the matching
 // [DataType=…] DataTemplate via Application resources and slots the
 // produced Visual into the presenter. Consumers who want chrome around
 // the content (selection rings, drop shadows, …) can replace Template.
-export class DiagramNode extends ContentControl
+export class Figure extends ContentControl
 {
     public static readonly XKey = Model.RegisterProperty<number>(
-        DiagramNode, 'X', 0, MetaData.Arrange | MetaData.BindsTwoWayByDefault);
+        Figure, 'X', 0, MetaData.Arrange | MetaData.BindsTwoWayByDefault);
     public static readonly YKey = Model.RegisterProperty<number>(
-        DiagramNode, 'Y', 0, MetaData.Arrange | MetaData.BindsTwoWayByDefault);
+        Figure, 'Y', 0, MetaData.Arrange | MetaData.BindsTwoWayByDefault);
 
     // Below CLICK_THRESHOLD_PX of movement the gesture stays in
     // "click" mode (no X / Y writes happen and OnPointerUp routes
@@ -81,7 +81,7 @@ export class DiagramNode extends ContentControl
     // selection translates together (PowerPoint / Figma convention).
     // undefined when the press wasn't on a selected container — that
     // case drags only `this` and leaves the existing selection alone.
-    private _dragPartners: DiagramNode[] | undefined;
+    private _dragPartners: Figure[] | undefined;
 
     constructor()
     {
@@ -92,17 +92,17 @@ export class DiagramNode extends ContentControl
         // shape chrome by `Content.constructor` identity.
         this.Template = new ControlTemplate(() => new ContentPresenter());
         // Seed Canvas.Left / Canvas.Top from the registered defaults so
-        // a freshly-constructed DiagramNode placed into a Canvas without
+        // a freshly-constructed Figure placed into a Canvas without
         // any binding lands at (0,0) instead of inheriting whatever the
         // attached-property defaults happen to be on the parent path.
         Canvas.SetLeft(this, 0);
         Canvas.SetTop (this, 0);
     }
 
-    public get X(): number       { return this.get_property_value(DiagramNode.XKey); }
-    public set X(value: number)  { this.set_property_value(DiagramNode.XKey, value); }
-    public get Y(): number       { return this.get_property_value(DiagramNode.YKey); }
-    public set Y(value: number)  { this.set_property_value(DiagramNode.YKey, value); }
+    public get X(): number       { return this.get_property_value(Figure.XKey); }
+    public set X(value: number)  { this.set_property_value(Figure.XKey, value); }
+    public get Y(): number       { return this.get_property_value(Figure.YKey); }
+    public set Y(value: number)  { this.set_property_value(Figure.YKey, value); }
 
     protected override OnPropertyChanged(
         descriptor: PropertyDescriptor,
@@ -143,7 +143,7 @@ export class DiagramNode extends ContentControl
         // Snapshot the enclosing ScrollViewer (if any) + its press-time
         // offsets — auto-scroll pulses + scroll-delta compensation in
         // OnPointerMove read these.
-        this._dragScrollViewer   = DiagramNode.findScrollViewer(this);
+        this._dragScrollViewer   = Figure.findScrollViewer(this);
         // Snapshot the EFFECTIVE (clamped) offsets, not the raw DP values.
         // The raw HorizontalOffset / VerticalOffset DPs are never auto-
         // clamped on assignment (raw stays queryable so two-way bindings
@@ -162,7 +162,7 @@ export class DiagramNode extends ContentControl
         this._dragPartners = undefined;
         const selector = Selector.FromContainer<Selector>(
             this, (v: Visual): v is Selector => v instanceof Selector);
-        const partners: DiagramNode[] = [];
+        const partners: Figure[] = [];
         // Selection-based partners — if `this` is selected, every other
         // selected container drags along with it (PowerPoint multi-select
         // semantics). Drag from a NON-selected node ignores the existing
@@ -171,7 +171,7 @@ export class DiagramNode extends ContentControl
         {
             for (const c of selector.SelectedContainers)
             {
-                if (c !== this && c instanceof DiagramNode) partners.push(c);
+                if (c !== this && c instanceof Figure) partners.push(c);
             }
         }
         // Group-membership partners — if the bound data exposes a
@@ -201,12 +201,12 @@ export class DiagramNode extends ContentControl
                 let root: { Parent?: unknown } = dc;
                 while (root.Parent !== undefined) root = root.Parent as { Parent?: unknown };
                 const leaves: unknown[] = [];
-                DiagramNode.collectHierarchicalLeaves(root, leaves);
+                Figure.collectHierarchicalLeaves(root, leaves);
                 for (const leaf of leaves)
                 {
                     if (leaf === dc) continue;
                     const container = selector.Generator.ContainerFromItem(leaf);
-                    if (container instanceof DiagramNode && container !== this
+                    if (container instanceof Figure && container !== this
                         && !partners.includes(container))
                     {
                         partners.push(container);
@@ -229,7 +229,7 @@ export class DiagramNode extends ContentControl
         {
             const dx = args.HostX - this._pressHostX;
             const dy = args.HostY - this._pressHostY;
-            if (Math.hypot(dx, dy) < DiagramNode.CLICK_THRESHOLD_PX) return;
+            if (Math.hypot(dx, dy) < Figure.CLICK_THRESHOLD_PX) return;
             this._moved = true;
         }
         const sv = this._dragScrollViewer;
@@ -288,8 +288,8 @@ export class DiagramNode extends ContentControl
                 // each partner needs Local cleared so subsequent Align
                 // / Distribute writes reach the container through the
                 // Style binding without Local shadowing.
-                partner.ClearValue(DiagramNode.XKey);
-                partner.ClearValue(DiagramNode.YKey);
+                partner.ClearValue(Figure.XKey);
+                partner.ClearValue(Figure.YKey);
             }
         }
 
@@ -336,8 +336,8 @@ export class DiagramNode extends ContentControl
         }
         this.X = candidateX;
         this.Y = candidateY;
-        this.ClearValue(DiagramNode.XKey);
-        this.ClearValue(DiagramNode.YKey);
+        this.ClearValue(Figure.XKey);
+        this.ClearValue(Figure.YKey);
     }
 
     protected override OnPointerUp(args: PointerEventArgs): void
@@ -379,7 +379,7 @@ export class DiagramNode extends ContentControl
         {
             for (let i = 0; i < members.Count; i++)
             {
-                DiagramNode.collectHierarchicalLeaves(members.Get(i), out);
+                Figure.collectHierarchicalLeaves(members.Get(i), out);
             }
             return;
         }
@@ -401,3 +401,8 @@ export class DiagramNode extends ContentControl
         return undefined;
     }
 }
+
+// Back-compat alias — `DiagramNode` was this class's pre-refactor name.
+// Removed in Phase N of the diagram-control refactor (see
+// [src/document/diagram-control.md § 4](../../document/diagram-control.md)).
+export { Figure as DiagramNode };

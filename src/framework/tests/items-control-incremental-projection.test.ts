@@ -16,7 +16,7 @@ import {
 } from '../../runtime/index.js';
 import { Border, Canvas, ItemsPanelTemplate } from '../../basic/index.js';
 import { Diagram } from '../diagram/diagram.js';
-import { DiagramNode } from '../diagram/diagram-node.js';
+import { DiagramNode } from '../diagram/figure.js';
 import { SelectionMode } from '../list/list-box.js';
 
 // Demo-shaped VM with X/Y/IsSelected. Mirrors the shape ShapeNodeVM

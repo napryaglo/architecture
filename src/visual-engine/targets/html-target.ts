@@ -402,7 +402,7 @@ export class HtmlTarget extends PresentationTarget
         // Bridge mural's pointer capture to the browser's native
         // setPointerCapture so a captured drag survives the cursor
         // leaving the host element's bounds. Without this, a drag
-        // (a DiagramNode reposition, a Thumb pull, …) would lose
+        // (a Figure reposition, a Thumb pull, …) would lose
         // pointermove events the moment the cursor wanders into
         // chrome / outside the document; the InputManager's internal
         // capture map only redirects events that DO arrive. Wrap

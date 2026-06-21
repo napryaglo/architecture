@@ -274,7 +274,7 @@ export class StyleApplicator
             // Target → source writeback (TwoWay / OneWayToSource only).
             // Without this branch, a Style-installed binding behaves as
             // OneWay regardless of mode: writes on the target (a user's
-            // drag on DiagramNode.X, a TextBox typing into its bound VM
+            // drag on Figure.X, a TextBox typing into its bound VM
             // property) update the local slot but never reach the source,
             // and the next source-driven push (triggered by any layout-
             // affecting change) snaps the target back to the original

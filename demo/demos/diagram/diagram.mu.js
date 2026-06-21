@@ -3,8 +3,8 @@ import { Border, DataTemplate, Dock, DockPanel, Icon, ItemsPanelTemplate, Orient
 import { ShapeFormatControl } from "@visualisation-sub/mural/framework";
 import { Button, ButtonVariant } from "@visualisation-sub/mural/framework/button.js";
 import { ContentControl } from "@visualisation-sub/mural/framework/content-control.js";
-import { DiagramNode } from "@visualisation-sub/mural/framework/diagram/diagram-node.js";
 import { Diagram } from "@visualisation-sub/mural/framework/diagram/diagram.js";
+import { DiagramNode } from "@visualisation-sub/mural/framework/diagram/figure.js";
 import { IconButton } from "@visualisation-sub/mural/framework/icon-button.js";
 import { ItemsControl } from "@visualisation-sub/mural/framework/items-control.js";
 import { SelectionMode } from "@visualisation-sub/mural/framework/list/list-box.js";
