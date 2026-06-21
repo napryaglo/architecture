@@ -13,6 +13,10 @@ import {
     alignCenter,
     type AlignTarget,
 } from '../commands/align.js';
+import {
+    distributeHorizontal,
+    distributeVertical,
+} from '../commands/distribute.js';
 
 // Internal collaborator owned by Diagram. Owns the default RelayCommand
 // instances installed onto Diagram's Command DPs at construction time.
@@ -42,6 +46,7 @@ export class DiagramCommands
     {
         this._diagram = diagram;
         this._installAlignCommands();
+        this._installDistributeCommands();
         diagram.AddSelectionChangedListener(() => this._raiseCanExecuteAll());
     }
 
@@ -65,6 +70,19 @@ export class DiagramCommands
         this._install(Diagram.AlignCenterCommandKey, 'AlignCenter',
             new RelayCommand(() => alignCenter(this._collectSelected()), canAlign,
                 { Text: 'Align Center', Description: 'Center selected shapes horizontally on a shared vertical axis.' }));
+    }
+
+    private _installDistributeCommands(): void
+    {
+        const canDistribute = (): boolean => this._collectSelected().length >= 3;
+        const Diagram = this._diagram.constructor as typeof import('../diagram.js').Diagram;
+
+        this._install(Diagram.DistributeHorizontalCommandKey, 'DistributeHorizontal',
+            new RelayCommand(() => distributeHorizontal(this._collectSelected()), canDistribute,
+                { Text: 'Distribute Horizontally', Description: 'Space three or more shapes evenly between the leftmost and rightmost.' }));
+        this._install(Diagram.DistributeVerticalCommandKey, 'DistributeVertical',
+            new RelayCommand(() => distributeVertical(this._collectSelected()), canDistribute,
+                { Text: 'Distribute Vertically',   Description: 'Space three or more shapes evenly between the topmost and bottommost.' }));
     }
 
     private _install(key: import('../../../runtime/index.js').PropertyKey<RelayCommand | undefined>, name: string, command: RelayCommand): void

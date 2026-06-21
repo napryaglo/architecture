@@ -78,6 +78,13 @@ export class Diagram extends Selector
     public static readonly AlignCenterCommandKey = Model.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'AlignCenterCommand', undefined, MetaData.None);
 
+    // Distribute commands — same shape as the align surface. CanExecute
+    // requires ≥ 3 IFigure-shaped selected items (alignment-only fits 2).
+    public static readonly DistributeHorizontalCommandKey = Model.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'DistributeHorizontalCommand', undefined, MetaData.None);
+    public static readonly DistributeVerticalCommandKey   = Model.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'DistributeVerticalCommand',   undefined, MetaData.None);
+
     public get PositionSnap():  DiagramPositionSnap | undefined { return this.get_property_value(Diagram.PositionSnapKey); }
     public set PositionSnap(v: DiagramPositionSnap | undefined) { this.set_property_value(Diagram.PositionSnapKey, v); }
 
@@ -92,6 +99,9 @@ export class Diagram extends Selector
     public get AlignTopCommand():    RelayCommand | undefined { return this.get_property_value(Diagram.AlignTopCommandKey); }
     public get AlignMiddleCommand(): RelayCommand | undefined { return this.get_property_value(Diagram.AlignMiddleCommandKey); }
     public get AlignCenterCommand(): RelayCommand | undefined { return this.get_property_value(Diagram.AlignCenterCommandKey); }
+
+    public get DistributeHorizontalCommand(): RelayCommand | undefined { return this.get_property_value(Diagram.DistributeHorizontalCommandKey); }
+    public get DistributeVerticalCommand():   RelayCommand | undefined { return this.get_property_value(Diagram.DistributeVerticalCommandKey); }
 
     // Collaborators — internal, no public surface. Eagerly constructed
     // so the Diagram is fully-equipped from the moment the constructor
