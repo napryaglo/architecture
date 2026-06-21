@@ -28,6 +28,7 @@ resources MuralFramework {
     // files and add one import here.
     import ButtonGroups from "../framework/button-groups/button-groups.template.mu.js"
     import Markers      from "../framework/markers/markers.template.mu.js"
+    import Tabs         from "../framework/tabs/tabs.template.mu.js"
     import Toggles      from "../framework/toggles/toggles.template.mu.js"
 
     // ── ContentControl: bare-bones content host ────────────────────
@@ -1303,72 +1304,8 @@ resources MuralFramework {
     // ── SegmentedButton / SegmentedItem / SplitButton ───────────────
     // Promoted to src/framework/button-groups/button-groups.template.mu.
 
-    // ── TabControl: M3 horizontal tab strip + content area ────────
-    // ItemsPresenter on top renders each TabItem's header surface;
-    // ContentPresenter below shows the selected TabItem's Content.
-    // Selection comes from the Selector base (TabControl extends
-    // Selector); the content area binds to SelectedItem so any data-
-    // driven swap reflects automatically.
-    //
-    // The active-indicator line — the 2dp @Primary underline that
-    // tracks under the selected tab in M3 spec — is rendered per
-    // TabItem (DefaultTabItem template below) rather than as a
-    // separately-animated indicator. The simpler shape skips the
-    // cross-tab animation but keeps the spec affordance.
-    ItemsPanelTemplate x:key="DefaultTabControlPanel" {
-        StackPanel [Orientation = Horizontal]
-    }
-    Template x:key="DefaultTabControl" [TargetType=TabControl] {
-        Border x:name="PART_Border"
-              [ Background      = @Surface,
-                BorderBrush     = @OutlineVariant,
-                BorderThickness = (0,0,0,1) ] {
-            DockPanel [LastChildFill=true] {
-                ItemsPresenter x:name="PART_ItemsPresenter"
-                              [ DockPanel.Dock = Top ]
-                ContentPresenter x:name="PART_ContentSlot"
-                                [ Content = $SelectedItem ]
-            }
-        }
-    }
-    Style [TargetType=TabControl] {
-        Template   = @DefaultTabControl;
-        ItemsPanel = @DefaultTabControlPanel;
-    }
-
-    // ── TabItem: M3 tab header ─────────────────────────────────────
-    // 48dp tall header surface — Label centred, 2dp active-indicator
-    // line at the bottom edge that's transparent until IsSelected.
-    // State-layer overlays fire on hover / focus / press over the
-    // resting @Surface background.
-    Template x:key="DefaultTabItem" [TargetType=TabItem] {
-        Border x:name="PART_Tab"
-              [ Background      = #00000000,
-                BorderBrush     = #00000000,
-                BorderThickness = (0,0,0,2),
-                Padding         = (@Spacing4, @Spacing2, @Spacing4, @Spacing2),
-                Height          = 48 ] {
-            TextBlock x:name="PART_Label"
-                     [ Text                 = $Header,
-                       Foreground           = @OnSurfaceVariant,
-                       FontFamily           = @TitleSmallFont,
-                       FontWeight           = @TitleSmallWeight,
-                       FontSize             = @TitleSmallSize,
-                       LineHeight           = @TitleSmallLineHeight,
-                       LetterSpacing        = @TitleSmallTracking,
-                       HorizontalAlignment  = Center,
-                       VerticalAlignment    = Center ]
-        }
-        when ( IsSelected )        { PART_Tab.BorderBrush = @Primary;
-                                     PART_Label.Foreground = @Primary; }
-        when ( IsMouseOver )       { PART_Tab.Background = @StateHoverOverlay; }
-        when ( IsFocused )         { PART_Tab.Background = @StateFocusOverlay; }
-        when ( IsPressed )         { PART_Tab.Background = @StatePressOverlay; }
-        when ( IsEnabled = false ) { PART_Tab.Opacity    = @DisabledContentOpacity; }
-    }
-    Style [TargetType=TabItem] {
-        Template = @DefaultTabItem;
-    }
+    // ── TabControl / TabItem ────────────────────────────────────────
+    // Promoted to src/framework/tabs/tabs.template.mu.
 
     // ── SearchBar: M3 search-field wrapper around TextBox ──────────
     // Same DockPanel anatomy as ListBoxItem (leading | content | trailing)
