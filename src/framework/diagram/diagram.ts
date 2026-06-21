@@ -3,9 +3,11 @@ import {
     Model,
     Rect,
     type KeyEventArgs,
+    type PropertyDescriptor,
     type RelayCommand,
     type Visual,
 } from '../../runtime/index.js';
+import { AdornerLayer } from '../../visual-engine/index.js';
 import { Figure } from './figure.js';
 import { Selector } from '../list/selector.js';
 import { DiagramCommands } from './collaborators/diagram-commands.js';
@@ -20,6 +22,11 @@ import {
     type CombineRequestedArgs,
     type CombineRequestedListener,
 } from './commands/combine.js';
+import {
+    attachAlignmentGuides,
+    type AlignmentGuide,
+} from './behaviors/alignment-guides-behavior.js';
+import { AlignmentGuidesAdorner } from './behaviors/alignment-guides-adorner.js';
 
 // §19.3 follow-up — position snap callback. Consumers (e.g., the
 // diagram demo's align-edges behavior) set this DP to a pure function
@@ -124,6 +131,16 @@ export class Diagram extends Selector
     public static readonly CombineExcludeCommandKey   = Model.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'CombineExcludeCommand',   undefined, MetaData.None);
 
+    // Alignment-guides opt-in. Default off; consumers flip true to
+    // enable both the behavior (snap-on-drag + guide-list computation)
+    // and the adorner (paints dashed guide lines).
+    public static readonly AlignmentGuidesEnabledKey = Model.RegisterProperty<boolean>(
+        Diagram, 'AlignmentGuidesEnabled', false, MetaData.None);
+    // Read-only — driven by AlignmentGuidesBehavior. Adorner subscribes
+    // here; consumers can also bind for custom guide visualization.
+    public static readonly AlignmentGuidesKey = Model.RegisterReadOnlyProperty<readonly AlignmentGuide[]>(
+        Diagram, 'AlignmentGuides', Object.freeze([]) as readonly AlignmentGuide[], MetaData.None);
+
     public get PositionSnap():  DiagramPositionSnap | undefined { return this.get_property_value(Diagram.PositionSnapKey); }
     public set PositionSnap(v: DiagramPositionSnap | undefined) { this.set_property_value(Diagram.PositionSnapKey, v); }
 
@@ -149,6 +166,15 @@ export class Diagram extends Selector
     public get CombineIntersectCommand(): RelayCommand | undefined { return this.get_property_value(Diagram.CombineIntersectCommandKey); }
     public get CombineSubtractCommand():  RelayCommand | undefined { return this.get_property_value(Diagram.CombineSubtractCommandKey); }
     public get CombineExcludeCommand():   RelayCommand | undefined { return this.get_property_value(Diagram.CombineExcludeCommandKey); }
+
+    public get AlignmentGuidesEnabled():  boolean { return this.get_property_value(Diagram.AlignmentGuidesEnabledKey); }
+    public set AlignmentGuidesEnabled(v: boolean) { this.set_property_value(Diagram.AlignmentGuidesEnabledKey, v); }
+    public get AlignmentGuides(): readonly AlignmentGuide[] { return this.get_property_value(Diagram.AlignmentGuidesKey); }
+    /** @internal — used by AlignmentGuidesBehavior to drive the read-only DP. */
+    public _setAlignmentGuides(guides: readonly AlignmentGuide[]): void
+    {
+        this.set_property_value_with_key(Diagram.AlignmentGuidesKey, guides);
+    }
 
     // Subscriber-pattern event API for Group / Ungroup requests. Same
     // shape as Selector.AddSelectionChangedListener. The framework's
@@ -197,11 +223,74 @@ export class Diagram extends Selector
     private readonly _selectionBoundsTracker: SelectionBoundsTracker;
     private readonly _diagramCommands:        DiagramCommands;
 
+    // Alignment-guides attach state. `_alignmentGuidesDetach` holds the
+    // behavior's detach thunk when active; undefined when disabled.
+    // `_alignmentGuidesAdorner` is the mounted adorner instance when
+    // present; undefined when disabled OR when the ItemsPanel doesn't
+    // have an AdornerLayer yet (the adorner mount is deferred via
+    // queueMicrotask to handle the common case of consumers setting
+    // the DP before the layout pass has materialized the ItemsPanel).
+    private _alignmentGuidesDetach:  (() => void) | undefined = undefined;
+    private _alignmentGuidesAdorner: AlignmentGuidesAdorner | undefined = undefined;
+
     constructor()
     {
         super();
         this._diagramCommands        = new DiagramCommands(this);
         this._selectionBoundsTracker = new SelectionBoundsTracker(this);
+    }
+
+    protected override OnPropertyChanged(
+        descriptor: PropertyDescriptor,
+        oldValue:   unknown,
+        newValue:   unknown,
+    ): void
+    {
+        super.OnPropertyChanged(descriptor, oldValue, newValue);
+        if (descriptor.Name === 'AlignmentGuidesEnabled')
+        {
+            if (newValue === true) this._attachAlignmentGuides();
+            else                   this._detachAlignmentGuides();
+        }
+    }
+
+    private _attachAlignmentGuides(): void
+    {
+        if (this._alignmentGuidesDetach !== undefined) return;
+        this._alignmentGuidesDetach = attachAlignmentGuides(this);
+        // Adorner mount needs the ItemsPanel's AdornerLayer, which only
+        // exists after first layout. Defer to next microtask; if the
+        // layer still isn't reachable then, no-op (consumer can re-flip
+        // the DP after mount, or set it AFTER initial layout).
+        queueMicrotask(() => this._mountAlignmentGuidesAdorner());
+    }
+
+    private _detachAlignmentGuides(): void
+    {
+        if (this._alignmentGuidesDetach !== undefined)
+        {
+            this._alignmentGuidesDetach();
+            this._alignmentGuidesDetach = undefined;
+        }
+        if (this._alignmentGuidesAdorner !== undefined)
+        {
+            const layer = AdornerLayer.GetAdornerLayer(this._alignmentGuidesAdorner.AdornedElement);
+            layer?.Remove(this._alignmentGuidesAdorner);
+            this._alignmentGuidesAdorner.Dispose();
+            this._alignmentGuidesAdorner = undefined;
+        }
+    }
+
+    private _mountAlignmentGuidesAdorner(): void
+    {
+        if (this._alignmentGuidesAdorner !== undefined) return;
+        const panel = this.ItemsPanelInstance;
+        if (panel === undefined) return;   // layout hasn't materialized yet
+        const layer = AdornerLayer.GetAdornerLayer(panel);
+        if (layer === undefined) return;   // no AdornerLayer in scope
+        const adorner = new AlignmentGuidesAdorner(panel, this);
+        layer.Add(adorner);
+        this._alignmentGuidesAdorner = adorner;
     }
 
     public override GetContainerForItemOverride(item: unknown): Visual
