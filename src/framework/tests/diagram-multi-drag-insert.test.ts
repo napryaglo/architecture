@@ -16,7 +16,7 @@ import {
 } from '../../runtime/index.js';
 import { Border, Canvas, ItemsPanelTemplate } from '../../basic/index.js';
 import { Diagram } from '../diagram/diagram.js';
-import { DiagramNode } from '../diagram/figure.js';
+import { Figure } from '../diagram/figure.js';
 import { SelectionMode } from '../list/list-box.js';
 
 class TestNodeVM extends Model
@@ -58,9 +58,9 @@ function makeDiagram(): { diagram: Diagram; surface: Border; items: ObservableCo
     const diagram = new Diagram();
     diagram.SelectionMode = SelectionMode.Extended;
     diagram.ItemsPanel    = new ItemsPanelTemplate(() => new Canvas());
-    const style = new Style(DiagramNode, [
-        new Setter(DiagramNode, 'X', new SetterFactory((t: Visual) => DataContextBinding(t, 'X'))),
-        new Setter(DiagramNode, 'Y', new SetterFactory((t: Visual) => DataContextBinding(t, 'Y'))),
+    const style = new Style(Figure, [
+        new Setter(Figure, 'X', new SetterFactory((t: Visual) => DataContextBinding(t, 'X'))),
+        new Setter(Figure, 'Y', new SetterFactory((t: Visual) => DataContextBinding(t, 'Y'))),
     ], undefined, [], []);
     diagram.ItemContainerStyle = style;
     diagram.ItemsSource = items;
@@ -80,11 +80,11 @@ function relayout(surface: Border): void
     (surface as Visual).Arrange({ X: 0, Y: 0, Width: 800, Height: 600 } as any);
 }
 
-function container(diagram: Diagram, item: unknown): DiagramNode
+function container(diagram: Diagram, item: unknown): Figure
 {
     const gen = (diagram as unknown as { _generator: InternalGen })._generator;
     const c   = gen.ContainerFromItem(item);
-    assert.ok(c instanceof DiagramNode, 'container should be DiagramNode');
+    assert.ok(c instanceof Figure, 'container should be Figure');
     return c;
 }
 
@@ -190,7 +190,7 @@ describe('Diagram — multi-drag + multi-insert position persistence', () => {
         assert.equal(c.Y, 400);
 
         // Drag a again to (250, 250). Re-fetch container — Refresh
-        // discards the prior DiagramNode instance.
+        // discards the prior Figure instance.
         const cA2 = container(diagram, a);
         cA2.X = 250; cA2.Y = 250;
         assert.equal(a.X, 250);

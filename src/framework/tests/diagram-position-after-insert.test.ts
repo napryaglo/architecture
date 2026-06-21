@@ -17,7 +17,7 @@ import {
 } from '../../runtime/index.js';
 import { Border, Canvas, ItemsPanelTemplate } from '../../basic/index.js';
 import { Diagram } from '../diagram/diagram.js';
-import { DiagramNode } from '../diagram/figure.js';
+import { Figure } from '../diagram/figure.js';
 import { SelectionMode } from '../list/list-box.js';
 
 // Minimal node VM — mirrors the diagram demo's ShapeNodeVM shape with
@@ -54,7 +54,7 @@ describe('Diagram — existing container X/Y persistence after a new item is ins
         new Application();
     });
 
-    test('moving DiagramNode.X (TwoWay binding) survives a subsequent ObservableCollection.Add', () => {
+    test('moving Figure.X (TwoWay binding) survives a subsequent ObservableCollection.Add', () => {
         const items = new ObservableCollection<TestNodeVM>();
         const a = new TestNodeVM('a', 100, 100);
         items.Add(a);
@@ -64,10 +64,10 @@ describe('Diagram — existing container X/Y persistence after a new item is ins
         diagram.ItemsPanel    = new ItemsPanelTemplate(() => new Canvas());
 
         // ItemContainerStyle wires the X / Y bindings the same way the
-        // demo's DiagramNodeStyle does.
-        const style = new Style(DiagramNode, [
-            new Setter(DiagramNode, 'X', new SetterFactory((t: Visual) => DataContextBinding(t, 'X'))),
-            new Setter(DiagramNode, 'Y', new SetterFactory((t: Visual) => DataContextBinding(t, 'Y'))),
+        // demo's FigureStyle does.
+        const style = new Style(Figure, [
+            new Setter(Figure, 'X', new SetterFactory((t: Visual) => DataContextBinding(t, 'X'))),
+            new Setter(Figure, 'Y', new SetterFactory((t: Visual) => DataContextBinding(t, 'Y'))),
         ], undefined, [], []);
         diagram.ItemContainerStyle = style;
 
@@ -81,10 +81,10 @@ describe('Diagram — existing container X/Y persistence after a new item is ins
         (surface as Visual).Measure(new Size(800, 600));
         (surface as Visual).Arrange({ X: 0, Y: 0, Width: 800, Height: 600 } as any);
 
-        // Find the realized DiagramNode for `a`.
+        // Find the realized Figure for `a`.
         const containerA = (diagram as unknown as { _generator: { ContainerFromItem(item: unknown): Visual | undefined } })
-            ._generator.ContainerFromItem(a) as DiagramNode | undefined;
-        assert.ok(containerA instanceof DiagramNode, 'A container should have realized for item a');
+            ._generator.ContainerFromItem(a) as Figure | undefined;
+        assert.ok(containerA instanceof Figure, 'A container should have realized for item a');
 
         // Simulate a drag: write a new X / Y onto the container.
         containerA.X = 300;

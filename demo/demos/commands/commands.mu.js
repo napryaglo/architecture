@@ -1,7 +1,7 @@
 import { CommandsVM, EllipseNodeVM, NoteNodeVM, RectNodeVM } from "./commands-vm.mjs";
 import { Border, Canvas, DataTemplate, Dock, DockPanel, Ellipse, ItemsPanelTemplate, Orientation, StackPanel, TargetedSetter, TemplateDataTrigger, TextBlock } from "@visualisation-sub/mural/basic";
 import { Diagram } from "@visualisation-sub/mural/framework/diagram/diagram.js";
-import { DiagramNode } from "@visualisation-sub/mural/framework/diagram/figure.js";
+import { Figure } from "@visualisation-sub/mural/framework/diagram/figure.js";
 import { SelectionMode } from "@visualisation-sub/mural/framework/list/list-box.js";
 import { ContextMenu, ContextMenuService, MenuButton, MenuItem, MenuSeparator, ToolBar, ToolBarButton, ToolBarSeparator } from "@visualisation-sub/mural/framework/surface.js";
 import { Color, DataContextBinding, DynamicResource, HorizontalAlignment, NameScope, ResourceDictionary, Setter, SetterFactory, Style, Thickness, VerticalAlignment } from "@visualisation-sub/mural/runtime";
@@ -18,9 +18,9 @@ export class CommandsDemo extends ResourceDictionary {
     }
     static Clone() {
         const t = new CommandsDemo(_gate_CommandsDemo);
-        const _setter0 = new Setter(DiagramNode, "X", new SetterFactory((_t) => DataContextBinding(_t, "X")));
-        const _setter1 = new Setter(DiagramNode, "Y", new SetterFactory((_t) => DataContextBinding(_t, "Y")));
-        const _style2 = new Style(DiagramNode, [_setter0, _setter1], undefined, [], []);
+        const _setter0 = new Setter(Figure, "X", new SetterFactory((_t) => DataContextBinding(_t, "X")));
+        const _setter1 = new Setter(Figure, "Y", new SetterFactory((_t) => DataContextBinding(_t, "Y")));
+        const _style2 = new Style(Figure, [_setter0, _setter1], undefined, [], []);
         t.Set("CommandsNodeStyle", _style2);
         const _tmpl3 = new ItemsPanelTemplate(() => {
             const _canvas4 = new Canvas();

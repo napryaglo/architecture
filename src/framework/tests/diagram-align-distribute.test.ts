@@ -16,7 +16,7 @@ import {
 } from '../../runtime/index.js';
 import { Border, Canvas, ItemsPanelTemplate } from '../../basic/index.js';
 import { Diagram } from '../diagram/diagram.js';
-import { DiagramNode } from '../diagram/figure.js';
+import { Figure } from '../diagram/figure.js';
 import { SelectionMode } from '../list/list-box.js';
 
 // Stand-in for the demo's ShapeNodeVM. Carries X / Y / Width / Height /
@@ -63,9 +63,9 @@ function setup() {
     const diagram = new Diagram();
     diagram.SelectionMode = SelectionMode.Extended;
     diagram.ItemsPanel    = new ItemsPanelTemplate(() => new Canvas());
-    const style = new Style(DiagramNode, [
-        new Setter(DiagramNode, 'X', new SetterFactory((t: Visual) => DataContextBinding(t, 'X'))),
-        new Setter(DiagramNode, 'Y', new SetterFactory((t: Visual) => DataContextBinding(t, 'Y'))),
+    const style = new Style(Figure, [
+        new Setter(Figure, 'X', new SetterFactory((t: Visual) => DataContextBinding(t, 'X'))),
+        new Setter(Figure, 'Y', new SetterFactory((t: Visual) => DataContextBinding(t, 'Y'))),
     ], undefined, [], []);
     diagram.ItemContainerStyle = style;
     diagram.ItemsSource = items;
@@ -78,10 +78,10 @@ function setup() {
     return { diagram, surface, items };
 }
 
-function cont(diagram: Diagram, item: unknown): DiagramNode {
+function cont(diagram: Diagram, item: unknown): Figure {
     const gen = (diagram as unknown as { _generator: { ContainerFromItem(item: unknown): Visual | undefined } })._generator;
     const c = gen.ContainerFromItem(item);
-    assert.ok(c instanceof DiagramNode, 'container should be DiagramNode');
+    assert.ok(c instanceof Figure, 'container should be Figure');
     return c;
 }
 
@@ -239,13 +239,13 @@ describe('Diagram — alignment moves dragged containers (architectural fix)', (
         const a = new NodeVM('a', 100, 100);
         items.Add(a);
 
-        // Simulate a user drag — the same path DiagramNode.OnPointerMove
+        // Simulate a user drag — the same path Figure.OnPointerMove
         // exercises: write Local, then ClearValue (which is what the
         // architectural fix added).
         const cA = cont(diagram, a);
         cA.X = 250; cA.Y = 175;
-        cA.ClearValue(DiagramNode.XKey);
-        cA.ClearValue(DiagramNode.YKey);
+        cA.ClearValue(Figure.XKey);
+        cA.ClearValue(Figure.YKey);
 
         // Writeback should have made it to the VM, AND with Local
         // cleared the Style tier becomes effective.
@@ -274,8 +274,8 @@ describe('Diagram — alignment moves dragged containers (architectural fix)', (
             const ctr = cont(diagram, vm);
             ctr.X = vm.X + 10;
             ctr.Y = vm.Y + 5;
-            ctr.ClearValue(DiagramNode.XKey);
-            ctr.ClearValue(DiagramNode.YKey);
+            ctr.ClearValue(Figure.XKey);
+            ctr.ClearValue(Figure.YKey);
         }
         assert.equal(a.X, 110); assert.equal(b.X, 260); assert.equal(c.X, 70);
 

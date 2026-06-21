@@ -28,7 +28,7 @@ import ToolboxShapeVM         from "./diagram-vm.mjs"
 resources DiagramDemo {
 
     // ── Per-node container style ────────────────────────────────────
-    Style x:key="DiagramNodeStyle" [TargetType=DiagramNode] {
+    Style x:key="DiagramNodeStyle" [TargetType=Figure] {
         X = $X;
         Y = $Y;
     }

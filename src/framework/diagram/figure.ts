@@ -401,8 +401,3 @@ export class Figure extends ContentControl
         return undefined;
     }
 }
-
-// Back-compat alias — `DiagramNode` was this class's pre-refactor name.
-// Removed in Phase N of the diagram-control refactor (see
-// [src/document/diagram-control.md § 4](../../document/diagram-control.md)).
-export { Figure as DiagramNode };

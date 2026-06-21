@@ -4,7 +4,7 @@ import { ShapeFormatControl } from "@visualisation-sub/mural/framework";
 import { Button, ButtonVariant } from "@visualisation-sub/mural/framework/button.js";
 import { ContentControl } from "@visualisation-sub/mural/framework/content-control.js";
 import { Diagram } from "@visualisation-sub/mural/framework/diagram/diagram.js";
-import { DiagramNode } from "@visualisation-sub/mural/framework/diagram/figure.js";
+import { Figure } from "@visualisation-sub/mural/framework/diagram/figure.js";
 import { IconButton } from "@visualisation-sub/mural/framework/icon-button.js";
 import { ItemsControl } from "@visualisation-sub/mural/framework/items-control.js";
 import { SelectionMode } from "@visualisation-sub/mural/framework/list/list-box.js";
@@ -23,9 +23,9 @@ export class DiagramDemo extends ResourceDictionary {
     }
     static Clone() {
         const t = new DiagramDemo(_gate_DiagramDemo);
-        const _setter0 = new Setter(DiagramNode, "X", new SetterFactory((_t) => DataContextBinding(_t, "X")));
-        const _setter1 = new Setter(DiagramNode, "Y", new SetterFactory((_t) => DataContextBinding(_t, "Y")));
-        const _style2 = new Style(DiagramNode, [_setter0, _setter1], undefined, [], []);
+        const _setter0 = new Setter(Figure, "X", new SetterFactory((_t) => DataContextBinding(_t, "X")));
+        const _setter1 = new Setter(Figure, "Y", new SetterFactory((_t) => DataContextBinding(_t, "Y")));
+        const _style2 = new Style(Figure, [_setter0, _setter1], undefined, [], []);
         t.Set("DiagramNodeStyle", _style2);
         const _tmpl3 = new ItemsPanelTemplate(() => {
             const _paginatedCanvas4 = new PaginatedCanvas();

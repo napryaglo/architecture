@@ -16,7 +16,7 @@ import {
 } from '../../runtime/index.js';
 import { Border, Canvas, ItemsPanelTemplate } from '../../basic/index.js';
 import { Diagram } from '../diagram/diagram.js';
-import { DiagramNode } from '../diagram/figure.js';
+import { Figure } from '../diagram/figure.js';
 import { SelectionMode } from '../list/list-box.js';
 
 // Demo-shaped VM with X/Y/IsSelected. Mirrors the shape ShapeNodeVM
@@ -56,9 +56,9 @@ function setup() {
     const diagram = new Diagram();
     diagram.SelectionMode = SelectionMode.Extended;
     diagram.ItemsPanel    = new ItemsPanelTemplate(() => new Canvas());
-    const style = new Style(DiagramNode, [
-        new Setter(DiagramNode, 'X', new SetterFactory((t: Visual) => DataContextBinding(t, 'X'))),
-        new Setter(DiagramNode, 'Y', new SetterFactory((t: Visual) => DataContextBinding(t, 'Y'))),
+    const style = new Style(Figure, [
+        new Setter(Figure, 'X', new SetterFactory((t: Visual) => DataContextBinding(t, 'X'))),
+        new Setter(Figure, 'Y', new SetterFactory((t: Visual) => DataContextBinding(t, 'Y'))),
     ], undefined, [], []);
     diagram.ItemContainerStyle = style;
     diagram.ItemsSource = items;
@@ -71,10 +71,10 @@ function setup() {
     return { diagram, surface, items };
 }
 
-function cont(diagram: Diagram, item: unknown): DiagramNode {
+function cont(diagram: Diagram, item: unknown): Figure {
     const gen = (diagram as unknown as { _generator: { ContainerFromItem(item: unknown): Visual | undefined } })._generator;
     const c = gen.ContainerFromItem(item);
-    assert.ok(c instanceof DiagramNode, 'container should be DiagramNode');
+    assert.ok(c instanceof Figure, 'container should be Figure');
     return c;
 }
 
