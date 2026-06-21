@@ -136,3 +136,4 @@ export {
 // ── Diagram ─────────────────────────────────────────────────────────
 export { Diagram } from './diagram/diagram.js';
 export { Figure, DiagramNode } from './diagram/figure.js';
+export { Group } from './diagram/group.js';
