@@ -31,6 +31,12 @@ import { SelectionBoundsAdorner } from '../../basic/index.js';
 import { DiagramSelectionSource } from './behaviors/diagram-selection-source.js';
 import { Brush, Pen } from '../../visual-engine/index.js';
 import { FormatMirror } from './collaborators/format-mirror.js';
+import type {
+    ItemDroppedArgs,
+    ItemDroppedListener,
+} from './behaviors/canvas-drop-behavior.js';
+export { attachCanvasDropBehavior, TOOLBOX_NODE_KIND_FORMAT } from './behaviors/canvas-drop-behavior.js';
+export type { ItemDroppedArgs, ItemDroppedListener } from './behaviors/canvas-drop-behavior.js';
 
 // §19.3 follow-up — position snap callback. Consumers (e.g., the
 // diagram demo's align-edges behavior) set this DP to a pure function
@@ -220,6 +226,10 @@ export class Diagram extends Selector
     public AddCombineRequestedListener   (listener: CombineRequestedListener): void { this._combineRequestedListeners.add(listener); }
     public RemoveCombineRequestedListener(listener: CombineRequestedListener): void { this._combineRequestedListeners.delete(listener); }
 
+    private readonly _itemDroppedListeners: Set<ItemDroppedListener> = new Set();
+    public AddItemDroppedListener   (listener: ItemDroppedListener): void { this._itemDroppedListeners.add(listener); }
+    public RemoveItemDroppedListener(listener: ItemDroppedListener): void { this._itemDroppedListeners.delete(listener); }
+
     // Internal fire helpers — invoked by DiagramCommands when the
     // corresponding RelayCommand's Execute runs. Snapshot-then-iterate
     // so a listener that registers / unregisters mid-fire doesn't
@@ -240,6 +250,12 @@ export class Diagram extends Selector
     public _fireCombineRequested(args: CombineRequestedArgs): void
     {
         for (const l of [...this._combineRequestedListeners]) l(args);
+    }
+
+    /** @internal */
+    public _fireItemDropped(args: ItemDroppedArgs): void
+    {
+        for (const l of [...this._itemDroppedListeners]) l(args);
     }
 
     // Collaborators — internal, no public surface. Eagerly constructed
