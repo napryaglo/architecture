@@ -1,14 +1,13 @@
 import {
-    MetaData,
-    Model,
     Rect,
     Size,
     Visual,
     type DrawingContext,
+    type PropertyDescriptor,
 } from '../../runtime/index.js';
 import { CollectionViewGroup } from '../../basic/collections/collection-view-group.js';
 import { _registerGroupItemCtor } from '../base/items-control.js';
-import { ItemsControl } from '../base/items-control.js';
+import { HeaderedItemsControl } from '../base/headered-items-control.js';
 import { StackPanel } from '../../basic/panels/stack-panel.js';
 
 // One row in a grouped ItemsControl — wraps a CollectionViewGroup and
@@ -32,13 +31,15 @@ import { StackPanel } from '../../basic/panels/stack-panel.js';
 // the same Items/ItemsSource/ItemTemplate/AlternationCount machinery
 // as a top-level ItemsControl — including a nested generator session
 // when leaves are realized.
-export class GroupItem extends ItemsControl
+export class GroupItem extends HeaderedItemsControl
 {
-    // Header content (typically a Visual produced by the parent
-    // ItemsControl's GroupStyle.HeaderTemplate). When undefined, no
-    // header row is rendered.
-    public static readonly HeaderKey = Model.RegisterProperty<Visual | undefined>(
-        GroupItem, 'Header', undefined, MetaData.Measure | MetaData.Render);
+    // Header DP comes from HeaderedItemsControl (typed `unknown` so it
+    // accepts the Visual produced by the parent ItemsControl's
+    // GroupStyle.HeaderTemplate, a raw string, or any other shape). When
+    // undefined, no header row is rendered. The outer-stack management
+    // below reacts in OnPropertyChanged so the visual list stays in sync
+    // regardless of how the Header DP was written (direct set, binding
+    // push, Style setter).
 
     private readonly _outerStack: StackPanel = new StackPanel();
     private _headerVisual: Visual | undefined;
@@ -53,21 +54,30 @@ export class GroupItem extends ItemsControl
         this.AttachVisual(this._outerStack);
     }
 
-    public get Header(): Visual | undefined { return this.get_property_value(GroupItem.HeaderKey); }
-    public set Header(value: Visual | undefined)
+    protected override OnPropertyChanged(
+        descriptor: PropertyDescriptor,
+        oldValue: unknown,
+        newValue: unknown,
+    ): void
     {
-        const old = this.Header;
-        if (old === value) return;
-        this.set_property_value(GroupItem.HeaderKey, value);
-        if (old !== undefined)
+        super.OnPropertyChanged(descriptor, oldValue, newValue);
+        if (descriptor === HeaderedItemsControl.HeaderKey.descriptor)
         {
-            this._outerStack.RemoveChild(old);
-        }
-        this._headerVisual = value;
-        if (value !== undefined)
-        {
-            // Header sits ABOVE the inner items panel — insert at 0.
-            this._outerStack.InsertChild(0, value);
+            // Detach the previous header visual (if any) before slotting
+            // the new one. Non-Visual values (e.g. a string set via
+            // markup before GroupStyle.HeaderTemplate has materialised a
+            // Visual) are skipped silently — the slot stays empty until
+            // the consumer supplies a Visual.
+            if (oldValue instanceof Visual)
+            {
+                this._outerStack.RemoveChild(oldValue);
+            }
+            this._headerVisual = newValue instanceof Visual ? newValue : undefined;
+            if (this._headerVisual !== undefined)
+            {
+                // Header sits ABOVE the inner items panel — insert at 0.
+                this._outerStack.InsertChild(0, this._headerVisual);
+            }
         }
     }
 

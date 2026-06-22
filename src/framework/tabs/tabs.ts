@@ -1,5 +1,5 @@
 import { MetaData, Model, Element, Visual } from '../../runtime/index.js';
-import { ContentControl } from '../base/content-control.js';
+import { HeaderedContentControl } from '../base/headered-content-control.js';
 import { Selector } from '../list/selector.js';
 
 // M3 Tabs — horizontal header strip with mutually-exclusive selection.
@@ -59,11 +59,12 @@ export class TabControl extends Selector
 // pane shown when this tab is selected. Mirrors ListBoxItem's mirror
 // pattern for IsSelected so template triggers (`when (IsSelected)`)
 // fire on the instance DP under Selector-driven selection updates.
-export class TabItem extends ContentControl
+// Header lives on HeaderedContentControl as `unknown`; TabItem's
+// default template binds the strip label TextBlock to it and expects
+// a string at runtime (consumers may also bind a VM + HeaderTemplate
+// for richer chrome — same pattern WPF uses).
+export class TabItem extends HeaderedContentControl
 {
-    public static readonly HeaderKey = Model.RegisterProperty<string>(
-        TabItem, 'Header', '', MetaData.Render);
-
     public static readonly IsSelectedKey = Model.RegisterProperty<boolean>(
         TabItem, 'IsSelected', false, MetaData.Render);
 
@@ -72,9 +73,6 @@ export class TabItem extends ContentControl
             TabItem, Element.DefaultStyleKeyKey,
             { default_value: TabItem });
     }
-
-    public get Header(): string { return this.get_property_value(TabItem.HeaderKey); }
-    public set Header(v: string) { this.set_property_value(TabItem.HeaderKey, v); }
 
     public get IsSelected(): boolean { return Selector.GetIsSelected(this); }
     public set IsSelected(v: boolean) { Selector.SetIsSelected(this, v); }

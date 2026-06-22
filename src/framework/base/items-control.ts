@@ -65,7 +65,11 @@ export type ItemContainerStyleSelector =
 export interface GroupedContainer extends Visual
 {
     BindGroup(group: CollectionViewGroup): void;
-    Header: Visual | undefined;
+    // `unknown` to match HeaderedItemsControl's broadened Header type;
+    // GroupedContainer implementers (typically GroupItem) skip non-
+    // Visual values at the render seam (the bbox can't host a plain
+    // string the way a TextBlock can).
+    Header: unknown;
     ItemTemplate: DataTemplate | undefined;
     ItemsPanel: unknown;
 }

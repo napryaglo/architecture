@@ -12,6 +12,7 @@ import {
 import { RectangleGeometry } from '../../visual-engine/index.js';
 import { Border } from '../../basic/border.js';
 import { HierarchicalDataTemplate } from '../../basic/templates/data-template.js';
+import { HeaderedItemsControl } from '../base/headered-items-control.js';
 import { ItemsControl } from '../base/items-control.js';
 import { ScrollViewer } from '../surfaces/scroll-viewer.js';
 import { Selector, SelectionMode } from './selector.js';
@@ -550,9 +551,8 @@ export class TreeView extends Selector
 //     │    └─ inner row: spacer + chevron + label
 //     └─ ItemsPresenter → CollapsibleStack (items panel)
 //          └─ child TreeViewItems
-export class TreeViewItem extends ItemsControl
+export class TreeViewItem extends HeaderedItemsControl
 {
-    public static readonly HeaderKey     = Model.RegisterProperty<string>( TreeViewItem, 'Header',     '',    MetaData.Measure | MetaData.Render);
     public static readonly IsExpandedKey = Model.RegisterProperty<boolean>(TreeViewItem, 'IsExpanded', false, MetaData.Measure | MetaData.Arrange);
     // Instance-level IsSelected mirror — kept for triggers /
     // refreshRowBackground listeners. Source of truth is
@@ -658,9 +658,6 @@ export class TreeViewItem extends ItemsControl
 
         this.refreshChevron();
     }
-
-    public get Header(): string { return this.get_property_value(TreeViewItem.HeaderKey); }
-    public set Header(v: string) { this.set_property_value(TreeViewItem.HeaderKey, v); }
 
     public get IsExpanded(): boolean { return this.get_property_value(TreeViewItem.IsExpandedKey); }
     public set IsExpanded(v: boolean) { this.set_property_value(TreeViewItem.IsExpandedKey, v); }

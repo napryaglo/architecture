@@ -12,12 +12,14 @@ export { Control } from './base/control.js';
 
 // ── Templated-control bases + standalone controls ───────────────────
 export { ContentControl } from './base/content-control.js';
+export { HeaderedContentControl } from './base/headered-content-control.js';
 export {
     ItemsControl,
     type GroupStyleSelector,
     type ItemContainerStyleSelector,
     type ItemTemplateSelector,
 } from './base/items-control.js';
+export { HeaderedItemsControl } from './base/headered-items-control.js';
 export {
     Button,
     ButtonVariant,

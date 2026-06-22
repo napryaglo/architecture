@@ -15,6 +15,7 @@ import { PresentationTarget } from '../../visual-engine/index.js';
 import { Border } from '../../basic/border.js';
 import { ContentPresenter } from '../../basic/templates/content-presenter.js';
 import { ControlTemplate } from '../../basic/templates/control-template.js';
+import { HeaderedItemsControl } from '../base/headered-items-control.js';
 import { ItemsControl } from '../base/items-control.js';
 import { Orientation, StackPanel } from '../../basic/panels/stack-panel.js';
 import { TextBlock } from '../../basic/text-block.js';
@@ -136,9 +137,8 @@ export class MenuStrip extends ItemsControl
 // the parent popup machinery close the whole chain after click. It's
 // fired from PreClick (before Command runs) so the parent has a chance
 // to teardown before any Command-launched dialog steals focus.
-export class MenuItem extends ItemsControl
+export class MenuItem extends HeaderedItemsControl
 {
-    public static readonly HeaderKey            = Model.RegisterProperty<string | undefined>(MenuItem, 'Header',            undefined, MetaData.Measure | MetaData.Render);
     public static readonly IconKey              = Model.RegisterProperty<Visual | undefined>(MenuItem, 'Icon',              undefined, MetaData.Measure);
     public static readonly InputGestureTextKey  = Model.RegisterProperty<string | undefined>(MenuItem, 'InputGestureText',  undefined, MetaData.Measure | MetaData.Render);
     public static readonly IsCheckableKey       = Model.RegisterProperty<boolean>(           MenuItem, 'IsCheckable',       false,     MetaData.Render);
@@ -155,9 +155,6 @@ export class MenuItem extends ItemsControl
     public static readonly RowTemplateKey       = Model.RegisterProperty<ControlTemplate | undefined>(
         MenuItem, 'RowTemplate', undefined, MetaData.Measure,
     );
-
-    public get Header():           string | undefined { return this.get_property_value(MenuItem.HeaderKey); }
-    public set Header(v:           string | undefined) { this.set_property_value(MenuItem.HeaderKey, v); }
 
     public get Icon():             Visual | undefined { return this.get_property_value(MenuItem.IconKey); }
     public set Icon(v:             Visual | undefined) { this.set_property_value(MenuItem.IconKey, v); }
@@ -354,9 +351,13 @@ export class MenuItem extends ItemsControl
     public refreshRow(): void
     {
         // Header text — empty string when undefined to keep TextBlock happy.
+        // Header lives on HeaderedItemsControl typed `unknown` (WPF
+        // parity); the menu row's TextBlock needs a string, so coerce
+        // via String() and treat undefined / null as empty.
         if (this._rowLabel !== undefined)
         {
-            this._rowLabel.Text = this.Header ?? '';
+            const h = this.Header;
+            this._rowLabel.Text = h === undefined || h === null ? '' : String(h);
         }
         // Gesture column — auto-hide when empty by zeroing Width.
         if (this._gestureLabel !== undefined)
@@ -694,7 +695,8 @@ export class MenuItem extends ItemsControl
         for (let off = 1; off <= siblings.length; off++)
         {
             const cand = siblings[(start + off) % siblings.length]!;
-            const head = (cand.Header ?? '').trim();
+            const rawHead = cand.Header;
+            const head = (rawHead === undefined || rawHead === null ? '' : String(rawHead)).trim();
             if (head.length > 0 && head[0]!.toUpperCase() === upperLetter)
             {
                 args.SetFocus(cand);
@@ -832,11 +834,10 @@ export class MenuSeparator extends Element
 //
 // visualChildren returns [trigger] always; the popup root is kept as
 // a private field, mounted/unmounted by mountPopup / unmountPopup.
-export class MenuButton extends ItemsControl
+export class MenuButton extends HeaderedItemsControl
 {
     public static readonly IsOpenKey          = Model.RegisterProperty<boolean>(           MenuButton, 'IsOpen', false,     MetaData.None);
     public static readonly IconKey            = Model.RegisterProperty<Visual | undefined>(MenuButton, 'Icon',   undefined, MetaData.Measure);
-    public static readonly HeaderKey          = Model.RegisterProperty<string | undefined>(MenuButton, 'Header', undefined, MetaData.Measure | MetaData.Render);
     // TriggerTemplate — the inline visible Button chrome. MenuButton's
     // primary Template (ItemsControl-inherited) is the popup chrome,
     // so the trigger has to live in a second template DP that the
@@ -850,9 +851,6 @@ export class MenuButton extends ItemsControl
 
     public get Icon():    Visual | undefined { return this.get_property_value(MenuButton.IconKey); }
     public set Icon(v:    Visual | undefined) { this.set_property_value(MenuButton.IconKey, v); }
-
-    public get Header():  string | undefined { return this.get_property_value(MenuButton.HeaderKey); }
-    public set Header(v:  string | undefined) { this.set_property_value(MenuButton.HeaderKey, v); }
 
     public get TriggerTemplate():  ControlTemplate | undefined { return this.get_property_value(MenuButton.TriggerTemplateKey); }
     public set TriggerTemplate(v: ControlTemplate | undefined) { this.set_property_value(MenuButton.TriggerTemplateKey, v); }
