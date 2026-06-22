@@ -8,8 +8,8 @@ import {
     type DrawingContext,
 } from '../../runtime/index.js';
 import { Brush } from '../../visual-engine/index.js';
-import { ContentControl } from '../content-control.js';
-import { ItemsControl } from '../items-control.js';
+import { ContentControl } from '../base/content-control.js';
+import { ItemsControl } from '../base/items-control.js';
 
 // StatusBar — bottom-of-window strip of status cells. ItemsControl
 // whose containers are StatusBarItems and whose default ItemsPanel is a

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import { Application, MultiTemplateBinding, Visual } from '../index.js';
 import { Border } from '../../basic/border.js';
-import { ContentControl } from '../../framework/content-control.js';
+import { ContentControl } from '../../framework/base/content-control.js';
 import { ControlTemplate } from '../../basic/templates/control-template.js';
 import { ContentPresenter } from '../../basic/templates/content-presenter.js';
 import { HeadlessTarget } from '../../visual-engine/index.js';

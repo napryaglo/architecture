@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import { ObservableCollection, Element, Visual } from '../../runtime/index.js';
 import { DataTemplate } from '../templates/data-template.js';
-import { ItemsControl } from '../../framework/items-control.js';
+import { ItemsControl } from '../../framework/base/items-control.js';
 import { StackPanel } from '../panels/stack-panel.js';
 import {
     GeneratorDirection,

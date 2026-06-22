@@ -1,12 +1,12 @@
 import { DiagramVM, ToolboxShapeVM } from "./diagram-vm.mjs";
 import { Border, DataTemplate, Dock, DockPanel, Icon, ItemsPanelTemplate, Orientation, PaginatedCanvas, Splitter, StackPanel, TextBlock, TextWrapping, UniformGrid } from "@visualisation-sub/mural/basic";
 import { ShapeFormatControl } from "@visualisation-sub/mural/framework";
+import { ContentControl } from "@visualisation-sub/mural/framework/base/content-control.js";
+import { ItemsControl } from "@visualisation-sub/mural/framework/base/items-control.js";
 import { Button, ButtonVariant } from "@visualisation-sub/mural/framework/buttons/button.js";
 import { IconButton } from "@visualisation-sub/mural/framework/buttons/icon-button.js";
-import { ContentControl } from "@visualisation-sub/mural/framework/content-control.js";
 import { Diagram } from "@visualisation-sub/mural/framework/diagram/diagram.js";
 import { Figure } from "@visualisation-sub/mural/framework/diagram/figure.js";
-import { ItemsControl } from "@visualisation-sub/mural/framework/items-control.js";
 import { SelectionMode } from "@visualisation-sub/mural/framework/list/list-box.js";
 import { ScrollViewer } from "@visualisation-sub/mural/framework/surfaces/scroll-viewer.js";
 import { DataContextBinding, DynamicResource, HorizontalAlignment, NameScope, ResourceDictionary, Setter, SetterFactory, Style, Thickness, VerticalAlignment } from "@visualisation-sub/mural/runtime";

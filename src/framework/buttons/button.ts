@@ -11,7 +11,7 @@ import {
     CommandSourceHelper,
     type ICommandSource,
 } from '../commands/command-source.js';
-import { ContentControl } from '../content-control.js';
+import { ContentControl } from '../base/content-control.js';
 import { ToolTipService } from '../tooltips/tooltip-service.js';
 import { CommandBase } from '../../runtime/index.js';
 

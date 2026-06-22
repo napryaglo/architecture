@@ -1,6 +1,6 @@
 import type { Visual } from '../../visual-engine/visual.js';
 import type { ICommand } from '../../runtime/command.js';
-import { Control } from '../control.js';
+import { Control } from '../base/control.js';
 import type { RoutedCommand } from './routed-command.js';
 import { KeyBinding, type InputBinding } from './input-binding.js';
 import {

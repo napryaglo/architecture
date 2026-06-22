@@ -1,5 +1,5 @@
 import { Visual } from '../../runtime/index.js';
-import type { ItemsControl } from '../../framework/items-control.js';
+import type { ItemsControl } from '../../framework/base/items-control.js';
 
 // ── WPF-parity supporting types ─────────────────────────────────────
 

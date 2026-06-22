@@ -7,7 +7,7 @@ import {
     type Visual,
 } from '../../runtime/index.js';
 import { Canvas } from '../../basic/panels/canvas.js';
-import { ContentControl } from '../content-control.js';
+import { ContentControl } from '../base/content-control.js';
 import { ContentPresenter } from '../../basic/templates/content-presenter.js';
 import { ControlTemplate } from '../../basic/templates/control-template.js';
 import { ScrollViewer } from '../surfaces/scroll-viewer.js';

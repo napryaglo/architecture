@@ -7,7 +7,7 @@ import {
 } from '../../runtime/index.js';
 import { Border } from '../../basic/border.js';
 import { TextBlock } from '../../basic/text-block.js';
-import { ContentControl } from '../content-control.js';
+import { ContentControl } from '../base/content-control.js';
 import { Selector, SelectionMode } from '../list/selector.js';
 
 // M3 Segmented button — row of 2-5 connected segments that share a

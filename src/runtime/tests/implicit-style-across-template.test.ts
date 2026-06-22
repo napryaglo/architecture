@@ -8,7 +8,7 @@ import {
     Style,
 } from '../index.js';
 import { Border } from '../../basic/border.js';
-import { ContentControl } from '../../framework/content-control.js';
+import { ContentControl } from '../../framework/base/content-control.js';
 import { ControlTemplate } from '../../basic/templates/control-template.js';
 import { ContentPresenter } from '../../basic/templates/content-presenter.js';
 import { HeadlessTarget, SolidColorBrush } from '../../visual-engine/index.js';

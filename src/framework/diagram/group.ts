@@ -5,7 +5,7 @@ import {
     type CollectionChange,
 } from '../../runtime/index.js';
 import { resolveKey } from '../../runtime/model-internals.js';
-import { ContentControl } from '../content-control.js';
+import { ContentControl } from '../base/content-control.js';
 import { ContentPresenter } from '../../basic/templates/content-presenter.js';
 import { ControlTemplate } from '../../basic/templates/control-template.js';
 

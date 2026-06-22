@@ -15,7 +15,7 @@ import { PresentationTarget } from '../../visual-engine/index.js';
 import { Border } from '../../basic/border.js';
 import { ContentPresenter } from '../../basic/templates/content-presenter.js';
 import { ControlTemplate } from '../../basic/templates/control-template.js';
-import { ItemsControl } from '../items-control.js';
+import { ItemsControl } from '../base/items-control.js';
 import { Orientation, StackPanel } from '../../basic/panels/stack-panel.js';
 import { TextBlock } from '../../basic/text-block.js';
 import { Brush } from '../../visual-engine/index.js';

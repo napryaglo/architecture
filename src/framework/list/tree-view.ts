@@ -12,7 +12,7 @@ import {
 import { RectangleGeometry } from '../../visual-engine/index.js';
 import { Border } from '../../basic/border.js';
 import { HierarchicalDataTemplate } from '../../basic/templates/data-template.js';
-import { ItemsControl } from '../items-control.js';
+import { ItemsControl } from '../base/items-control.js';
 import { ScrollViewer } from '../surfaces/scroll-viewer.js';
 import { Selector, SelectionMode } from './selector.js';
 import { StackPanel } from '../../basic/panels/stack-panel.js';

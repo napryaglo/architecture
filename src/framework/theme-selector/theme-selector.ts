@@ -5,7 +5,7 @@ import {
     Theme,
     ThemeManager,
     Element, } from '../../runtime/index.js';
-import { ContentControl } from '../content-control.js';
+import { ContentControl } from '../base/content-control.js';
 import { ComboBox } from '../list/combo-box.js';
 
 // ThemeSelector — chrome control for picking the active Theme + Scheme

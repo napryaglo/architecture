@@ -12,7 +12,7 @@ import {
     type PropertyDescriptor,
 } from '../../runtime/index.js';
 import { PresentationTarget, SolidColorBrush, type Brush } from '../../visual-engine/index.js';
-import { Control } from '../control.js';
+import { Control } from '../base/control.js';
 import { Border } from '../../basic/border.js';
 import { ContentPresenter } from '../../basic/templates/content-presenter.js';
 import { Dock } from '../../basic/panels/dock-panel.js';

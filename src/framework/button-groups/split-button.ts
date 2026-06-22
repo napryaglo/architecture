@@ -9,7 +9,7 @@ import type { ICommand } from '../../runtime/index.js';
 import type { PresentationTarget } from '../../visual-engine/index.js';
 import { Border } from '../../basic/border.js';
 import { ControlTemplate } from '../../basic/templates/control-template.js';
-import { ContentControl } from '../content-control.js';
+import { ContentControl } from '../base/content-control.js';
 import { MenuPopupHost } from '../menu/menu-strip.js';
 import { ClickAwayScrim } from '../../basic/click-away-scrim.js';
 

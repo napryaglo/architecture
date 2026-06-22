@@ -4,7 +4,7 @@ import {
     type CollectionChangeListener,
     type IReadOnlyObservableCollection,
 } from '../../runtime/index.js';
-import { _registerCollectionViewCtor } from '../../framework/items-control.js';
+import { _registerCollectionViewCtor } from '../../framework/base/items-control.js';
 
 // Direction of a single SortDescription's ordering. WPF spells these
 // 'Ascending' / 'Descending'; using literal strings keeps the runtime

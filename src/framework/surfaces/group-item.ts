@@ -7,8 +7,8 @@ import {
     type DrawingContext,
 } from '../../runtime/index.js';
 import { CollectionViewGroup } from '../../basic/collections/collection-view-group.js';
-import { _registerGroupItemCtor } from '../items-control.js';
-import { ItemsControl } from '../items-control.js';
+import { _registerGroupItemCtor } from '../base/items-control.js';
+import { ItemsControl } from '../base/items-control.js';
 import { StackPanel } from '../../basic/panels/stack-panel.js';
 
 // One row in a grouped ItemsControl — wraps a CollectionViewGroup and

@@ -13,7 +13,7 @@ import { PresentationTarget } from '../../visual-engine/index.js';
 import { Border } from '../../basic/border.js';
 import { ClickableBorder } from '../../basic/clickable-border.js';
 import { ClickAwayScrim } from '../../basic/click-away-scrim.js';
-import { ItemsControl } from '../items-control.js';
+import { ItemsControl } from '../base/items-control.js';
 import { Selector } from './selector.js';
 import { StackPanel } from '../../basic/panels/stack-panel.js';
 import { TextBlock } from '../../basic/text-block.js';

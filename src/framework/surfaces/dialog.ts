@@ -1,5 +1,5 @@
 import { MetaData, Model, Element, Visual } from '../../runtime/index.js';
-import { ContentControl } from '../content-control.js';
+import { ContentControl } from '../base/content-control.js';
 
 // M3 Dialog — modal surface with title + content + actions, anchored
 // over a scrim that absorbs outside clicks.

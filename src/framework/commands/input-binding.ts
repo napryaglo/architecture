@@ -1,5 +1,5 @@
 import type { Visual } from '../../visual-engine/visual.js';
-import { Control } from '../control.js';
+import { Control } from '../base/control.js';
 import type { ICommand } from '../../runtime/command.js';
 import {
     _setInputBindingDispatcher,

@@ -5,7 +5,7 @@ import {
     Rect,
     type CollectionChange,
 } from '../../../runtime/index.js';
-import type { ItemsControl } from '../../../framework/items-control.js';
+import type { ItemsControl } from '../../../framework/base/items-control.js';
 
 // Marker base class for panels that manage their own container
 // realization rather than receiving them upfront from ItemsControl.

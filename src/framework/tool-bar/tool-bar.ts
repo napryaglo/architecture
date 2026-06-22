@@ -19,11 +19,11 @@ import { PresentationTarget } from '../../visual-engine/index.js';
 import { Border } from '../../basic/border.js';
 import { Button } from '../buttons/button.js';
 import { ClickAwayScrim } from '../../basic/click-away-scrim.js';
-import { ContentControl } from '../content-control.js';
+import { ContentControl } from '../base/content-control.js';
 import { ContentPresenter } from '../../basic/templates/content-presenter.js';
 import { ControlTemplate } from '../../basic/templates/control-template.js';
 import { Dock, DockPanel } from '../../basic/panels/dock-panel.js';
-import { ItemsControl } from '../items-control.js';
+import { ItemsControl } from '../base/items-control.js';
 import { StackPanel } from '../../basic/panels/stack-panel.js';
 
 // ToolBar — horizontal command strip. Items overflow into a popup when

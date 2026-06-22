@@ -1,6 +1,6 @@
-import { Element } from '../runtime/index.js';
-import type { CommandBinding } from './commands/command-binding.js';
-import type { InputBinding } from './commands/input-binding.js';
+import { Element } from '../../runtime/index.js';
+import type { CommandBinding } from '../commands/command-binding.js';
+import type { InputBinding } from '../commands/input-binding.js';
 
 // Control — base class for templated controls. WPF parity: the
 // equivalent of `System.Windows.Controls.Control`, sitting between

@@ -5,7 +5,7 @@ import {
     type PointerEventArgs,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
-import { ContentControl } from '../content-control.js';
+import { ContentControl } from '../base/content-control.js';
 import { Border } from '../../basic/border.js';
 import { findDataTemplateForType } from '../../basic/templates/data-template.js';
 import { Selector } from './selector.js';

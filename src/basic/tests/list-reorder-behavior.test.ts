@@ -14,7 +14,7 @@ import {
 } from '../../runtime/index.js';
 import { Canvas } from '../panels/canvas.js';
 import { DataTemplate } from '../templates/data-template.js';
-import { ItemsControl } from '../../framework/items-control.js';
+import { ItemsControl } from '../../framework/base/items-control.js';
 import { ListReorderBehavior } from '../behaviors/list-reorder-behavior.js';
 import { VirtualizingWrapPanel } from '../panels/virtualisation/virtualizing-wrap-panel.js';
 

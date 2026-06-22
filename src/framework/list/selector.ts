@@ -6,7 +6,7 @@ import {
     type ModifierKeys,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
-import { ItemsControl } from '../items-control.js';
+import { ItemsControl } from '../base/items-control.js';
 import { attachMarqueeSelection } from '../../basic/behaviors/marquee-selection-behavior.js';
 
 // WPF SelectionMode enum, promoted from ListBox so any multi-select-

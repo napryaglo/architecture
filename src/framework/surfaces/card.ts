@@ -1,5 +1,5 @@
 import { MetaData, Model, Element, Visual } from '../../runtime/index.js';
-import { ContentControl } from '../content-control.js';
+import { ContentControl } from '../base/content-control.js';
 
 // Material 3 Card variants. Each variant ships its own ControlTemplate
 // in basic.resources.mu; the default Card Style picks the template that

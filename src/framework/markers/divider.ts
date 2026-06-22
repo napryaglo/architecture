@@ -1,5 +1,5 @@
 import { MetaData, Model, Element } from '../../runtime/index.js';
-import { Control } from '../control.js';
+import { Control } from '../base/control.js';
 import { Orientation } from '../../basic/panels/stack-panel.js';
 
 // M3 Divider — 1dp rule that separates sibling content along either

@@ -8,16 +8,16 @@
 //   * (Forthcoming as `mv` proceeds) Menu, ToolBar, Diagram, list
 //     controls — promoted from the basic primitives layer.
 
-export { Control } from './control.js';
+export { Control } from './base/control.js';
 
 // ── Templated-control bases + standalone controls ───────────────────
-export { ContentControl } from './content-control.js';
+export { ContentControl } from './base/content-control.js';
 export {
     ItemsControl,
     type GroupStyleSelector,
     type ItemContainerStyleSelector,
     type ItemTemplateSelector,
-} from './items-control.js';
+} from './base/items-control.js';
 export {
     Button,
     ButtonVariant,

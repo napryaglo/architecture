@@ -13,7 +13,7 @@ import {
     ItemsChangedAction,
     type ItemsChangedArgs,
 } from '../collections/item-container-generator.js';
-import { ItemsControl } from '../../framework/items-control.js';
+import { ItemsControl } from '../../framework/base/items-control.js';
 import { StackPanel } from '../panels/stack-panel.js';
 
 class Leaf extends Element

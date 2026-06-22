@@ -1,5 +1,5 @@
 import { MetaData, Model, Element, Visual } from '../../runtime/index.js';
-import { ContentControl } from '../content-control.js';
+import { ContentControl } from '../base/content-control.js';
 import { Selector } from '../list/selector.js';
 
 // M3 Tabs — horizontal header strip with mutually-exclusive selection.

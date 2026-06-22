@@ -15,7 +15,7 @@ import { DragDropEffects } from '../../runtime/index.js';
 import type { PresentationTarget } from '../../visual-engine/index.js';
 import { Canvas } from '../panels/canvas.js';
 import { DataTemplate } from '../templates/data-template.js';
-import { ItemsControl } from '../../framework/items-control.js';
+import { ItemsControl } from '../../framework/base/items-control.js';
 import { VirtualizingWrapPanel } from '../panels/virtualisation/virtualizing-wrap-panel.js';
 import { WrapPanel } from '../panels/wrap-panel.js';
 
