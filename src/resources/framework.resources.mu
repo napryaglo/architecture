@@ -29,6 +29,7 @@ resources MuralFramework {
     import Buttons       from "../framework/buttons/buttons.template.mu.js"
     import ButtonGroups  from "../framework/button-groups/button-groups.template.mu.js"
     import Formatting    from "../framework/formatting/formatting.template.mu.js"
+    import Lists         from "../framework/list/list.template.mu.js"
     import Markers       from "../framework/markers/markers.template.mu.js"
     import Menus         from "../framework/menu/menu.template.mu.js"
     import Notifications from "../framework/notifications/notifications.template.mu.js"
