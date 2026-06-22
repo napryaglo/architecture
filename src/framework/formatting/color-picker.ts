@@ -5,24 +5,24 @@ import {
     Thickness,
     Element, Visual,
     type PropertyDescriptor,
-} from '../runtime/index.js';
-import { resolveKey } from '../runtime/model-internals.js';
+} from '../../runtime/index.js';
+import { resolveKey } from '../../runtime/model-internals.js';
 import {
     Color,
     GradientStop,
     LinearGradientBrush,
     SolidColorBrush,
-} from '../visual-engine/index.js';
-import type { PresentationTarget, PointerEventArgs } from '../visual-engine/index.js';
-import { Border } from '../basic/border.js';
-import { Canvas } from '../basic/panels/canvas.js';
-import { WrapPanel } from '../basic/panels/wrap-panel.js';
-import { Slider } from '../basic/slider.js';
-import { TextBox } from '../basic/text-box.js';
-import { TemplatedControl } from '../basic/templated-control.js';
-import { ControlTemplate } from '../basic/templates/control-template.js';
-import { MenuPopupHost } from './menu/menu-strip.js';
-import { ClickAwayScrim } from '../basic/click-away-scrim.js';
+} from '../../visual-engine/index.js';
+import type { PresentationTarget, PointerEventArgs } from '../../visual-engine/index.js';
+import { Border } from '../../basic/border.js';
+import { Canvas } from '../../basic/panels/canvas.js';
+import { WrapPanel } from '../../basic/panels/wrap-panel.js';
+import { Slider } from '../../basic/slider.js';
+import { TextBox } from '../../basic/text-box.js';
+import { TemplatedControl } from '../../basic/templated-control.js';
+import { ControlTemplate } from '../../basic/templates/control-template.js';
+import { MenuPopupHost } from '../menu/menu-strip.js';
+import { ClickAwayScrim } from '../../basic/click-away-scrim.js';
 
 // Material 3 swatch palette — 10 colours × 3 tones each. Tuned by hand
 // against the M3 reference tonal palette (tones 80 / 60 / 40 for the

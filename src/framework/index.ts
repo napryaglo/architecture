@@ -34,11 +34,11 @@ export {
     MATERIAL_PALETTE,
     hsvToRgb,
     rgbToHsv,
-} from './color-picker.js';
-export { BrushPicker, BrushPickerVariant } from './brush-picker.js';
-export { PenEditor } from './pen-editor.js';
-export { FillEditor, FillEditorVariant } from './fill-editor.js';
-export { ShapeFormatControl } from './shape-format-control.js';
+} from './formatting/color-picker.js';
+export { BrushPicker, BrushPickerVariant } from './formatting/brush-picker.js';
+export { PenEditor } from './formatting/pen-editor.js';
+export { FillEditor, FillEditorVariant } from './formatting/fill-editor.js';
+export { ShapeFormatControl } from './formatting/shape-format-control.js';
 export { TopAppBar, TopAppBarVariant } from './top-app-bar/top-app-bar.js';
 export { NavigationItem } from './navigation/navigation-item.js';
 export { NavigationRail } from './navigation/navigation-rail.js';

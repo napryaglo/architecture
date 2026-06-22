@@ -3,20 +3,20 @@ import {
     Model,
     Visibility,
     Element, type PropertyDescriptor,
-} from '../runtime/index.js';
-import { resolveKey } from '../runtime/model-internals.js';
+} from '../../runtime/index.js';
+import { resolveKey } from '../../runtime/model-internals.js';
 import {
     Brush,
     DashStyle,
     LineCap,
     LineJoin,
     Pen,
-} from '../visual-engine/index.js';
-import { TemplatedControl } from '../basic/templated-control.js';
-import { Slider } from '../basic/slider.js';
-import { TextBlock } from '../basic/text-block.js';
+} from '../../visual-engine/index.js';
+import { TemplatedControl } from '../../basic/templated-control.js';
+import { Slider } from '../../basic/slider.js';
+import { TextBlock } from '../../basic/text-block.js';
 import { BrushPicker } from './brush-picker.js';
-import { ComboBox } from './list/combo-box.js';
+import { ComboBox } from '../list/combo-box.js';
 
 // Label/value record fed into PART_Dash / PART_Cap / PART_Join. The
 // ComboBox uses DisplayMemberPath="Label" so the dropdown reads as

@@ -4,8 +4,8 @@ import {
     Point,
     Element, Visual,
     type PropertyDescriptor,
-} from '../runtime/index.js';
-import { resolveKey } from '../runtime/model-internals.js';
+} from '../../runtime/index.js';
+import { resolveKey } from '../../runtime/model-internals.js';
 import {
     Brush,
     Color,
@@ -16,16 +16,16 @@ import {
     PatternKind,
     RadialGradientBrush,
     SolidColorBrush,
-} from '../visual-engine/index.js';
-import { TemplatedControl } from '../basic/templated-control.js';
-import { ControlTemplate } from '../basic/templates/control-template.js';
-import { Border } from '../basic/border.js';
-import type { PresentationTarget } from '../visual-engine/index.js';
-import { MenuPopupHost } from './menu/menu-strip.js';
-import { ClickAwayScrim } from '../basic/click-away-scrim.js';
+} from '../../visual-engine/index.js';
+import { TemplatedControl } from '../../basic/templated-control.js';
+import { ControlTemplate } from '../../basic/templates/control-template.js';
+import { Border } from '../../basic/border.js';
+import type { PresentationTarget } from '../../visual-engine/index.js';
+import { MenuPopupHost } from '../menu/menu-strip.js';
+import { ClickAwayScrim } from '../../basic/click-away-scrim.js';
 import { ColorPicker } from './color-picker.js';
-import { Slider } from '../basic/slider.js';
-import { ComboBox } from './list/combo-box.js';
+import { Slider } from '../../basic/slider.js';
+import { ComboBox } from '../list/combo-box.js';
 
 // Brush-shape discriminator. Drives which sub-editor the popup shows
 // and which concrete Brush subclass the picker emits on its `Brush` DP.

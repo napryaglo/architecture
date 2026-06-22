@@ -3,12 +3,12 @@ import {
     Model,
     Visibility,
     Element, type PropertyDescriptor,
-} from '../runtime/index.js';
-import { resolveKey } from '../runtime/model-internals.js';
-import { Brush, Pen } from '../visual-engine/index.js';
-import { TemplatedControl } from '../basic/templated-control.js';
-import { StackPanel } from '../basic/panels/stack-panel.js';
-import { TextBlock } from '../basic/text-block.js';
+} from '../../runtime/index.js';
+import { resolveKey } from '../../runtime/model-internals.js';
+import { Brush, Pen } from '../../visual-engine/index.js';
+import { TemplatedControl } from '../../basic/templated-control.js';
+import { StackPanel } from '../../basic/panels/stack-panel.js';
+import { TextBlock } from '../../basic/text-block.js';
 import { FillEditor } from './fill-editor.js';
 import { PenEditor } from './pen-editor.js';
 

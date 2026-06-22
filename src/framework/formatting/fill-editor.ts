@@ -6,8 +6,8 @@ import {
     Visibility,
     Element, Visual,
     type PropertyDescriptor,
-} from '../runtime/index.js';
-import { resolveKey } from '../runtime/model-internals.js';
+} from '../../runtime/index.js';
+import { resolveKey } from '../../runtime/model-internals.js';
 import {
     AlignmentX,
     AlignmentY,
@@ -22,15 +22,15 @@ import {
     RadialGradientBrush,
     SolidColorBrush,
     Stretch,
-} from '../visual-engine/index.js';
-import { TemplatedControl } from '../basic/templated-control.js';
-import { ControlTemplate } from '../basic/templates/control-template.js';
-import { Border } from '../basic/border.js';
-import { Slider } from '../basic/slider.js';
-import { SpinEdit } from '../basic/spin-edit.js';
-import { TextBox } from '../basic/text-box.js';
+} from '../../visual-engine/index.js';
+import { TemplatedControl } from '../../basic/templated-control.js';
+import { ControlTemplate } from '../../basic/templates/control-template.js';
+import { Border } from '../../basic/border.js';
+import { Slider } from '../../basic/slider.js';
+import { SpinEdit } from '../../basic/spin-edit.js';
+import { TextBox } from '../../basic/text-box.js';
 import { ColorPicker } from './color-picker.js';
-import { ComboBox } from './list/combo-box.js';
+import { ComboBox } from '../list/combo-box.js';
 
 // PowerPoint-style Fill panel variants.
 //
