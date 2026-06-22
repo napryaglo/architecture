@@ -1,12 +1,13 @@
 import {
+    Element,
     MetaData,
     Model,
     ObservableCollection,
     type CollectionChange,
+    type PropertyDescriptor,
 } from '../../runtime/index.js';
+import { Canvas } from '../../basic/index.js';
 import { ContentControl } from '../base/content-control.js';
-import { ContentPresenter } from '../../basic/templates/content-presenter.js';
-import { ControlTemplate } from '../../basic/templates/control-template.js';
 import { Figure } from './figure.js';
 
 // First-class group entity for the framework Diagram. A Group sits in
@@ -37,6 +38,10 @@ import { Figure } from './figure.js';
 // structural metadata, so a plain field (per CLAUDE.md MVVM rules).
 export class Group extends ContentControl
 {
+    static {
+        Model.OverrideMetadata(Group, Element.DefaultStyleKeyKey, { default_value: Group });
+    }
+
     public static readonly LeftKey   = Model.RegisterProperty<number>(
         Group, 'Left',   0, MetaData.Arrange);
     public static readonly TopKey    = Model.RegisterProperty<number>(
@@ -65,11 +70,22 @@ export class Group extends ContentControl
     constructor(initialMembers?: readonly (Figure | Group)[])
     {
         super();
-        // Minimal default template — a single ContentPresenter so
-        // consumers can override via Style / ControlTemplate. The
-        // dashed-border-on-selection chrome typically rides a Style
-        // trigger against `when($IsSelected)`.
-        this.Template = new ControlTemplate(() => new ContentPresenter());
+        // Default Template flows from the bundled diagram theme entry
+        // under TargetType=Group (see diagram.template.mu): a Border
+        // sized to this Group's Width / Height, transparent at rest and
+        // outlined when IsSelected fires.
+        this.applyDefaultStyle();
+        // The Group is purely a bbox-chrome host — clicks should reach
+        // the member Figures painted on top (or fall through to the
+        // Diagram canvas when the user presses in empty bbox space).
+        // The Group's own outer carries a mural-hit pad with pointer-
+        // events:all by default; combined with the Visio convention of
+        // a transparent bbox interior, that pad would otherwise swallow
+        // every press inside the union and prevent group-drag via a
+        // member press. The Border template child sets IsHitTestVisible
+        // =false for the same reason; doing it here on the Group itself
+        // covers the outer `<g>`'s mural-hit pad.
+        this.IsHitTestVisible = false;
 
         this.Members.Subscribe(change => this._handleMembersChange(change));
         if (initialMembers !== undefined)
@@ -81,6 +97,28 @@ export class Group extends ContentControl
                 m.Parent = this;
                 this.Members.Add(m);
             }
+        }
+    }
+
+    // Mirror Left / Top onto Canvas.Left / Canvas.Top so the enclosing
+    // Canvas ItemsPanel re-positions the Group chrome on its next Arrange
+    // pass. Same pattern Figure uses (see figure.ts) — without it the
+    // bbox border renders at panel-local (0, 0) regardless of where the
+    // members actually live.
+    protected override OnPropertyChanged(
+        descriptor: PropertyDescriptor,
+        oldValue:   unknown,
+        newValue:   unknown,
+    ): void
+    {
+        super.OnPropertyChanged(descriptor, oldValue, newValue);
+        if (descriptor === Group.LeftKey.descriptor && typeof newValue === 'number')
+        {
+            Canvas.SetLeft(this, newValue);
+        }
+        else if (descriptor === Group.TopKey.descriptor && typeof newValue === 'number')
+        {
+            Canvas.SetTop(this, newValue);
         }
     }
 

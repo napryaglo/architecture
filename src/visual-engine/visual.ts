@@ -714,6 +714,12 @@ export class Visual extends Model
             pointerId: args.PointerId,
             armed: true,
         };
+        // Capture so subsequent PointerMoves keep firing on THIS visual
+        // even when the cursor leaves the source bbox before crossing the
+        // drag threshold. Without capture, a tile-sized source loses move
+        // events the moment the user slides 5px past its edge and the
+        // threshold (4px) is never observed on the original target.
+        args.CapturePointer(this);
     };
     private readonly _onDragLatchPointerMove = (raw: unknown): void => {
         const args = raw as PointerEventArgs;

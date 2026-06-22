@@ -211,28 +211,39 @@ resources DiagramDemo {
                          Orientation=Vertical,
                          ReverseDirection=true]
 
-                // Drawing area — the framework Diagram fills the
-                // surface Border directly. Its ItemsSource is bound to
-                // Document.Nodes (the flat collection of Figure +
-                // Group instances). Items are Visuals themselves, so
+                // Drawing area — the framework Diagram's default
+                // Template already includes a ScrollViewer wrapping the
+                // ItemsPresenter, so no enclosing Border / ScrollViewer
+                // is needed here. ItemsSource is bound to Document.Nodes
+                // (the flat collection of Figure + Group instances);
+                // items are Visuals themselves so
                 // GetContainerForItemOverride returns each item
-                // unchanged — no wrapping container.
-                Border x:name="surface"
-                {
-                    ScrollViewer [IsAutoHideScrollBars=false]{
-                        Diagram x:name="nodes"
-                               [ItemsSource = $Nodes,
-                                ItemsPanel = @DiagramCanvasPanel,
-                                SelectionMode = Extended,
-                                AllowMarqueeSelection = true,
-                                AlignmentGuidesEnabled = true,
-                                SelectionResizeEnabled = true,
-                                ReflectSelectionToItems = true,
-                                DropReceiver = $surface,
-                                Mutator = $Self,
-                                Focusable = true]
-                    }
-                }
+                // unchanged.
+                //
+                //   DropReceiver = $Self   — relative-source-self
+                //     binding: resolves to THIS Diagram (the Visual
+                //     where the binding is authored), NOT to
+                //     DataContext.Self. The Diagram-internal
+                //     ScrollViewer is on the bubble path of every
+                //     canvas drop, so the Diagram is the right
+                //     receiver.
+                //   Mutator        — NOT bound in markup. The Diagram
+                //     auto-wires Mutator from DataContext when the DC
+                //     structurally implements DiagramMutator (Group /
+                //     Ungroup / CombineSelection / DeleteNodes /
+                //     CreateNode all defined). DiagramDocument satisfies
+                //     that surface, so the doc becomes the structural
+                //     mutator without an extra binding line.
+                Diagram x:name="nodes"
+                       [ItemsSource = $Nodes,
+                        ItemsPanel = @DiagramCanvasPanel,
+                        SelectionMode = Extended,
+                        AllowMarqueeSelection = true,
+                        AlignmentGuidesEnabled = true,
+                        SelectionResizeEnabled = true,
+                        ReflectSelectionToItems = true,
+                        DropReceiver = $Self,
+                        Focusable = true]
             }
         }
     }

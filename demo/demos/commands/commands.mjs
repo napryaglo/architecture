@@ -1,14 +1,16 @@
-﻿// commands demo bootstrap â€” wires the Diagram-side selection bridge
-// (Selector.SelectedItems â†’ NodeVM.IsSelected + CommandsVM.HasSelection)
-// and seeds the canvas with a few starter nodes.
+// commands demo bootstrap — wires the framework Diagram's selection
+// state through to the VM (CommandsVM.HasSelection drives the gated
+// commands' CanExecute) and seeds the canvas with a few starter
+// Figures.
 //
-// Same selection-bridge pattern as the diagram demo: the VM doesn't
-// reach into the view tree; the bootstrap subscribes to the Diagram's
-// SelectionChanged event and updates VM state in lockstep.
+// Items are framework Figures themselves now; `ReflectSelectionToItems`
+// on the Diagram does the IsSelected mirroring the old bridge used to do
+// in JS. This bootstrap just publishes the aggregate HasSelection state
+// to the VM.
 import { Application } from '@visualisation-sub/mural/runtime';
 import { Diagram } from '@visualisation-sub/mural/framework';
 import { CommandsDemo } from './commands.mu.js';
-import { CommandsVM, NodeVM } from './commands-vm.mjs';
+import { CommandsVM } from './commands-vm.mjs';
 import { register } from '../../platform/registry.mjs';
 
 const LocalStorageService = {
@@ -19,41 +21,14 @@ const LocalStorageService = {
 let resourcesMerged = false;
 let vmInstance;
 
-// Mirror Selector.SelectedItems onto each NodeVM.IsSelected AND publish
-// the aggregate HasSelection state to the VM so selection-gated
-// commands re-evaluate.
-function attachSelectionBridge(diagram, vm) {
-    let prev = new Set();
-    const sync = () => {
-        const next = new Set();
-        for (const item of diagram.SelectedItems) next.add(item);
-        for (const n of prev) {
-            if (!next.has(n) && n instanceof NodeVM) n.IsSelected = false;
-        }
-        for (const n of next) {
-            if (!prev.has(n) && n instanceof NodeVM) n.IsSelected = true;
-        }
-        prev = next;
-        vm.PublishSelectionState(next.size > 0);
-    };
-    diagram.AddSelectionChangedListener(sync);
-    return function detach() {
-        diagram.RemoveSelectionChangedListener(sync);
-        for (const n of prev) if (n instanceof NodeVM) n.IsSelected = false;
-        prev = new Set();
-        vm.PublishSelectionState(false);
-    };
-}
-
 function attachBehaviors(view, vm) {
     const nodes = view.FindName('nodes');
     if (!(nodes instanceof Diagram)) throw new Error('commands.mu missing x:name="nodes" Diagram');
 
     // Same framework-command proxy wire-up as the diagram demo. The
-    // commands demo's markup binds to $AlignLeftCommand etc. on the VM
-    // (inherited proxy DPs from DiagramVM, set by this block to point
-    // at the framework Diagram control's own RelayCommand instances).
-    // See diagram.mjs for the explanation of why proxies are needed.
+    // commands demo's markup binds to $AlignLeftCommand etc. on the VM;
+    // each proxy DP is populated from the framework Diagram's own
+    // RelayCommand instance here.
     {
         const Diagram_ = Diagram;
         const VM       = vm.constructor;
@@ -70,7 +45,13 @@ function attachBehaviors(view, vm) {
         }
     }
 
-    const detachSelectionBridge = attachSelectionBridge(nodes, vm);
+    // SelectionChanged → publish HasSelection. ReflectSelectionToItems
+    // on the Diagram (set in markup) already mirrors selection onto
+    // each Figure.IsSelected — the Style triggers fire off that.
+    const onSelectionChanged = () => {
+        vm.PublishSelectionState(nodes.SelectedItems.length > 0);
+    };
+    nodes.AddSelectionChangedListener(onSelectionChanged);
 
     // Keyboard: Delete / Backspace removes selected nodes.
     view.AddRoutedEventListener('KeyDown', (args) => {
@@ -91,7 +72,8 @@ function attachBehaviors(view, vm) {
     });
 
     return function detachAll() {
-        detachSelectionBridge();
+        nodes.RemoveSelectionChangedListener(onSelectionChanged);
+        vm.PublishSelectionState(false);
     };
 }
 

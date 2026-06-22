@@ -1,18 +1,16 @@
 import {
+    Element,
     MetaData,
     Model,
     Rect,
+    Visual,
     type PointerEventArgs,
     type PropertyDescriptor,
-    type Visual,
 } from '../../runtime/index.js';
 import { Brush, type PathGeometry, Pen, SolidColorBrush } from '../../visual-engine/index.js';
 import { Color } from '../../runtime/index.js';
 import { Canvas } from '../../basic/panels/canvas.js';
-import { Shape } from '../../basic/shapes/shape.js';
-import { TextBlock } from '../../basic/text-block.js';
 import { ContentControl } from '../base/content-control.js';
-import { ControlTemplate } from '../../basic/templates/control-template.js';
 import { ScrollViewer } from '../surfaces/scroll-viewer.js';
 import { Selector } from '../list/selector.js';
 import { SHAPE_CATALOG_MAP, scaleGeometry } from './shape-catalog.js';
@@ -72,6 +70,10 @@ export interface FigureFromSourceOptions
 
 export class Figure extends ContentControl
 {
+    static {
+        Model.OverrideMetadata(Figure, Element.DefaultStyleKeyKey, { default_value: Figure });
+    }
+
     public static readonly LeftKey = Model.RegisterProperty<number>(
         Figure, 'Left', 0, MetaData.Arrange | MetaData.BindsTwoWayByDefault);
     public static readonly TopKey = Model.RegisterProperty<number>(
@@ -177,6 +179,23 @@ export class Figure extends ContentControl
         this._rebuildGeometry();
     }
 
+    /** Subclass-friendly catalog wiring. Sets the Kind DP and the unit-1
+     *  source geometry by looking up `kind` in the shape catalog, then
+     *  rebuilds the visible Geometry against the current Width / Height.
+     *  Throws when the kind isn't in the catalog — symmetric with
+     *  Figure.fromKind. Use from a subclass ctor when the per-kind Fill /
+     *  LabelText defaults ride on `OverrideMetadata` and the constructor
+     *  only needs to point the figure at its catalog geometry. */
+    public ApplyCatalogKind(kind: string): void
+    {
+        const entry = SHAPE_CATALOG_MAP.get(kind);
+        if (entry === undefined)
+        {
+            throw new Error(`Figure.ApplyCatalogKind: unknown kind '${kind}'`);
+        }
+        this._setKindFromCatalog(kind, entry.unit());
+    }
+
     /** @internal — exposes the unit-1 source for serialize() consumers. */
     public _getSource(): PathGeometry | undefined { return this._source; }
 
@@ -234,12 +253,12 @@ export class Figure extends ContentControl
         // attached-property defaults happen to be on the parent path.
         Canvas.SetLeft(this, 0);
         Canvas.SetTop (this, 0);
-        // Default template — paints the shape via a Shape primitive bound
-        // to this Figure's Geometry / Fill / Stroke, with a TextBlock
-        // overlay carrying LabelText. Built imperatively here rather
-        // than in markup so the framework Diagram is fully usable
-        // without a backing template dictionary.
-        this.Template = new ControlTemplate(() => Figure._buildDefaultVisual(this));
+        // Default Template flows from the bundled diagram theme entry
+        // under TargetType=Figure (see diagram.template.mu): a Canvas
+        // hosting a Shape primitive template-bound to this Figure's
+        // Geometry / Fill / Stroke / Width / Height, plus a TextBlock
+        // template-bound to LabelText.
+        this.applyDefaultStyle();
     }
 
     public get Left(): number       { return this.get_property_value(Figure.LeftKey); }
@@ -261,50 +280,6 @@ export class Figure extends ContentControl
     public set Id(value: string | undefined)   { this.set_property_value(Figure.IdKey, value); }
     public get IsSelected(): boolean           { return this.get_property_value(Figure.IsSelectedKey); }
     public set IsSelected(value: boolean)      { this.set_property_value(Figure.IsSelectedKey, value); }
-
-    // Build the default visual subtree — a Shape primitive carrying the
-    // Figure's Geometry / Fill / Stroke, plus an optional centered
-    // TextBlock overlay for LabelText. Imperative TemplateBindings
-    // because ControlTemplate factories run before the framework's
-    // resource-merged template dictionary is reachable (Figure ships in
-    // the same module as Diagram and is used inside the Diagram demo
-    // bundle bootstrap, so we can't depend on a resources lookup).
-    private static _buildDefaultVisual(self: Figure): Visual
-    {
-        const canvas = new Canvas();
-        const shape = new Shape();
-        // Hard binding — read from `self` directly. The Figure instance
-        // is captured at template-factory time and never changes for
-        // this template invocation.
-        const syncShape = (): void => {
-            shape.Geometry = self.Geometry;
-            shape.Fill     = self.Fill;
-            shape.Stroke   = self.Stroke;
-            shape.Width    = self.Width;
-            shape.Height   = self.Height;
-        };
-        syncShape();
-        self.AddPropertyChangedListener(Figure.GeometryKey, syncShape);
-        self.AddPropertyChangedListener(Figure.FillKey,     syncShape);
-        self.AddPropertyChangedListener(Figure.StrokeKey,   syncShape);
-        self.AddPropertyChangedListener(Figure.WidthKey,    syncShape);
-        self.AddPropertyChangedListener(Figure.HeightKey,   syncShape);
-
-        const label = new TextBlock();
-        const syncLabel = (): void => {
-            label.Text   = self.LabelText;
-            label.Width  = self.Width;
-            label.Height = self.Height;
-        };
-        syncLabel();
-        self.AddPropertyChangedListener(Figure.LabelTextKey, syncLabel);
-        self.AddPropertyChangedListener(Figure.WidthKey,     syncLabel);
-        self.AddPropertyChangedListener(Figure.HeightKey,    syncLabel);
-
-        canvas.AddChild(shape);
-        canvas.AddChild(label);
-        return canvas;
-    }
 
     private _rebuildGeometry(): void
     {
@@ -409,24 +384,42 @@ export class Figure extends ContentControl
         // GroupVM.
         if (selector !== undefined)
         {
-            const dc = this.DataContext as { Parent?: unknown } | undefined;
-            if (dc !== undefined)
+            // Items-are-Figures: the Figure IS the data entity, so the
+            // Parent chain lives directly on `this` (a `Parent: Group |
+            // undefined` field set by DiagramDocument.Group when the
+            // figure is wrapped). The earlier shape read `this.DataContext`,
+            // which the framework Diagram no longer sets when items are
+            // already Figure instances — so the partner block silently
+            // never ran and a member's drag moved it solo.
+            //
+            // Fallback to DataContext keeps the duck-type contract intact
+            // for the legacy ItemsSource-of-VMs path (Diagram.bindContainer
+            // sets DataContext when wrapping a non-Figure Model).
+            const entity = (this as unknown as { Parent?: unknown }).Parent !== undefined
+                ? (this as unknown as { Parent?: unknown })
+                : this.DataContext as { Parent?: unknown } | undefined;
+            if (entity !== undefined)
             {
-                // Walk up to the outermost ancestor. For a leaf NodeVM
-                // with no Parent, root === dc and collectHierarchicalLeaves
-                // returns just [dc] — the loop body then degenerates to a
-                // no-op (we skip self). For a leaf inside a group, root is
-                // the top-level group and the loop adds every other leaf.
-                // For a group container itself (no Parent, has Members),
-                // root === dc, leaves are the members, the loop adds them.
-                let root: { Parent?: unknown } = dc;
+                // Walk up to the outermost ancestor. For a leaf with no
+                // Parent, root === entity and collectHierarchicalLeaves
+                // returns just [entity] — the loop body then degenerates
+                // to a no-op (we skip self). For a leaf inside a group,
+                // root is the top-level group and the loop adds every
+                // other leaf.
+                let root: { Parent?: unknown } = entity;
                 while (root.Parent !== undefined) root = root.Parent as { Parent?: unknown };
                 const leaves: unknown[] = [];
                 Figure.collectHierarchicalLeaves(root, leaves);
                 for (const leaf of leaves)
                 {
-                    if (leaf === dc) continue;
-                    const container = selector.Generator.ContainerFromItem(leaf);
+                    if (leaf === this) continue;
+                    // Items-are-Figures: the leaf already IS its container.
+                    // Fall back to the Generator lookup for legacy VM-as-
+                    // items consumers, where leaf is a data row and the
+                    // container is a wrapping Figure.
+                    const container = leaf instanceof Figure
+                        ? leaf
+                        : selector.Generator.ContainerFromItem(leaf);
                     if (container instanceof Figure && container !== this
                         && !partners.includes(container))
                     {
@@ -505,12 +498,6 @@ export class Figure extends ContentControl
             {
                 partner.Left = partner.Left + netDx;
                 partner.Top  = partner.Top  + netDy;
-                // Same Local-tier teardown as the self-move below —
-                // each partner needs Local cleared so subsequent Align
-                // / Distribute writes reach the container through the
-                // Style binding without Local shadowing.
-                partner.ClearValue(Figure.LeftKey);
-                partner.ClearValue(Figure.TopKey);
             }
         }
 
@@ -525,10 +512,9 @@ export class Figure extends ContentControl
     // Single self-move sub-step used by OnPointerMove. Reads the
     // ScrollViewer's EFFECTIVE (post-clamp) offsets so a shrink-driven
     // canvas-origin shift gets compensated correctly. Writes Left / Top
-    // and clears the Local tier — same Local-tier teardown rationale as
-    // the partner-move path above (so later Style-tier writes from
-    // Align / Distribute commands reach the container without Local
-    // shadowing).
+    // at the Local tier — the Figure IS the data now (no Style binding
+    // sitting underneath), so the write stays at Local and the value
+    // sticks for the next Arrange pass.
     private moveSelfToCursor(hostX: number, hostY: number, sv: ScrollViewer | undefined): void
     {
         const effX = sv?.effectiveHorizontalOffset() ?? 0;
@@ -557,8 +543,6 @@ export class Figure extends ContentControl
         }
         this.Left = candidateLeft;
         this.Top  = candidateTop;
-        this.ClearValue(Figure.LeftKey);
-        this.ClearValue(Figure.TopKey);
     }
 
     protected override OnPointerUp(args: PointerEventArgs): void
@@ -579,7 +563,24 @@ export class Figure extends ContentControl
         {
             const selector = Selector.FromContainer<Selector>(
                 this, (v: Visual): v is Selector => v instanceof Selector);
-            selector?.HandleContainerClick(this, args.Modifiers);
+            // Visio / PowerPoint-style: clicking a member of a Group
+            // selects the outermost Group, not the leaf. Walk up the
+            // Parent chain to find the top-level entity (a Figure with
+            // no Parent, or a Group with no Parent). The Selector takes
+            // it as the selected container; SelectionBoundsAdorner /
+            // SelectionResize wire bounds around the group bbox, and
+            // ALL members move together when the user starts dragging
+            // (group-drag partners in OnPointerDown collect siblings
+            // anyway, but the selection-bounds adorner needs the Group
+            // as a SelectedItems entry to draw around the union).
+            let target: Visual = this;
+            let parent: unknown = (this as unknown as { Parent?: unknown }).Parent;
+            while (parent instanceof Visual)
+            {
+                target = parent;
+                parent = (parent as unknown as { Parent?: unknown }).Parent;
+            }
+            selector?.HandleContainerClick(target, args.Modifiers);
         }
         args.Handled = true;
     }

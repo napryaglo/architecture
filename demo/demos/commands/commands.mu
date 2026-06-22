@@ -1,9 +1,10 @@
-// VM references — every [DataType=…] below must be backed by an
-// import so the compiler emits a real Function key, not a string.
+// VM references — every [DataType=…] / [TargetType=…] below must be
+// backed by an import so the compiler emits a real Function key, not a
+// string.
 import CommandsVM    from "./commands-vm.mjs"
-import RectNodeVM    from "./commands-vm.mjs"
-import EllipseNodeVM from "./commands-vm.mjs"
-import NoteNodeVM    from "./commands-vm.mjs"
+import RectFigure    from "./commands-vm.mjs"
+import EllipseFigure from "./commands-vm.mjs"
+import NoteFigure    from "./commands-vm.mjs"
 
 // commands.mu — integration showcase: ToolBar + MenuButton + ContextMenu
 // over a Diagram of selectable / movable nodes.
@@ -11,12 +12,15 @@ import NoteNodeVM    from "./commands-vm.mjs"
 //   * Top strip: a hamburger MenuButton (File + Edit groups) and a
 //     ToolBar with icon-only buttons (Save / Cut / Copy / Paste /
 //     Delete / Duplicate + AlignLeft / AlignCenter / AlignRight).
-//   * Body: a Diagram populated with three pre-seeded shapes. Click /
+//   * Body: a Diagram populated with three pre-seeded Figures. Click /
 //     Ctrl-click / Shift-click / marquee selects; Delete removes
 //     selected; the alignment commands operate on the selected
 //     subset.
-//   * Each node carries an attached ContextMenu — right-click the
-//     node for Cut / Copy / Duplicate / Delete in-place.
+//   * Each node carries an attached ContextMenu (via a TargetType-keyed
+//     Style on each Figure subclass) — right-click the node for Cut /
+//     Copy / Duplicate / Delete in-place. The Styles auto-BasedOn the
+//     framework Figure default Template, so the catalog-driven Shape
+//     chrome still renders.
 //
 // Selection-gated commands (Cut / Copy / Delete / Duplicate / Align*)
 // dim across all three surfaces in lockstep because they share the
@@ -27,21 +31,12 @@ import NoteNodeVM    from "./commands-vm.mjs"
 
 resources CommandsDemo {
 
-    // ── Per-node container style (drag-to-move + selection click) ───
-    Style x:key="CommandsNodeStyle" [TargetType=Figure] {
-        Left = $Left;
-        Top  = $Top;
-    }
-
     // ── Shared Canvas ItemsPanel ────────────────────────────────────
     ItemsPanelTemplate x:key="CommandsCanvasPanel" { Canvas }
 
-    // ── Chrome styles per shape kind ────────────────────────────────
-    Style x:key="CommandsRectChromeStyle"    [TargetType=Border]  { BorderBrush = @Primary; }
-    Style x:key="CommandsNoteChromeStyle"    [TargetType=Border]  { BorderBrush = #a16207; }
-    Style x:key="CommandsEllipseChromeStyle" [TargetType=Ellipse] { Stroke      = @CommandsEllipseRestPen; }
-    Pen   x:key="CommandsEllipseRestPen"     [Brush=#15803d, Thickness=1.5]
-    Pen   x:key="CommandsEllipseSelectedPen" [Brush=#f97316, Thickness=1.5]
+    // Selection-state Pen — every kind swaps Stroke to this on
+    // IsSelected. Shared across the three Figure subclasses.
+    Pen x:key="CommandsSelectedPen" [Brush=#f97316, Thickness=2]
 
     // ── Shared per-node ContextMenu ─────────────────────────────────
     ContextMenu x:key="NodeContextMenu" {
@@ -52,52 +47,23 @@ resources CommandsDemo {
         MenuItem[Header="Delete",    InputGestureText="Del",    Command=$DeleteCommand]
     }
 
-    // ── Per-shape DataTemplates ──────────────────────────────────────
-    DataTemplate [DataType=RectNodeVM] {
-        Border x:name="chrome"
-              [Style=@CommandsRectChromeStyle,
-               Width=130, Height=60,
-               Background=$FillBrush,
-               BorderThickness=(1.5), CornerRadius=4,
-               ContextMenuService.ContextMenu=@NodeContextMenu]{
-            TextBlock [Text=$LabelText, FontSize=13,
-                       Foreground=@OnSurface,
-                       HorizontalAlignment=Center,
-                       VerticalAlignment=Center]
-        }
-        when( $IsSelected ){ chrome.BorderBrush = #f97316; }
+    // ── Per-kind Styles — ContextMenu attached + selection chrome ──
+    // Each Style auto-BasedOn's the framework Figure default Template
+    // (Application.ResolveDefaultResource walks the prototype chain
+    // from the subclass to Figure to find the theme entry). So the
+    // catalog-rendered Shape stays intact; only ContextMenu and the
+    // selection-state Stroke ride on top.
+    Style [TargetType=RectFigure] {
+        ContextMenuService.ContextMenu = @NodeContextMenu;
+        when ( IsSelected ) { Stroke = @CommandsSelectedPen; }
     }
-
-    DataTemplate [DataType=EllipseNodeVM] {
-        Canvas x:root [Width=130, Height=60,
-                       ContextMenuService.ContextMenu=@NodeContextMenu]{
-            Ellipse x:name="chrome"
-                   [Style=@CommandsEllipseChromeStyle,
-                    Width=130, Height=60,
-                    Fill=$FillBrush]
-            TextBlock [Canvas.Left=0, Canvas.Top=0,
-                       Width=130, Height=60,
-                       Text=$LabelText, FontSize=13,
-                       Foreground=@OnSurface,
-                       HorizontalAlignment=Center,
-                       VerticalAlignment=Center]
-        }
-        when( $IsSelected ){ chrome.Stroke = @CommandsEllipseSelectedPen; }
+    Style [TargetType=EllipseFigure] {
+        ContextMenuService.ContextMenu = @NodeContextMenu;
+        when ( IsSelected ) { Stroke = @CommandsSelectedPen; }
     }
-
-    DataTemplate [DataType=NoteNodeVM] {
-        Border x:name="chrome"
-              [Style=@CommandsNoteChromeStyle,
-               Width=130, Height=60,
-               Background=$FillBrush,
-               BorderThickness=(1.5), CornerRadius=2,
-               ContextMenuService.ContextMenu=@NodeContextMenu]{
-            TextBlock [Text=$LabelText, FontSize=13,
-                       Foreground=@OnSurface,
-                       HorizontalAlignment=Center,
-                       VerticalAlignment=Center]
-        }
-        when( $IsSelected ){ chrome.BorderBrush = #f97316; }
+    Style [TargetType=NoteFigure] {
+        ContextMenuService.ContextMenu = @NodeContextMenu;
+        when ( IsSelected ) { Stroke = @CommandsSelectedPen; }
     }
 
     // ── Demo shell ──────────────────────────────────────────────────
@@ -130,7 +96,7 @@ resources CommandsDemo {
                             MenuItem[Header="Paste",  InputGestureText="Ctrl+V", Command=$PasteCommand]
                             MenuItem[Header="Delete", InputGestureText="Del",    Command=$DeleteCommand]
                             MenuSeparator
-                            MenuItem[Header="Duplicate", InputGestureText="Ctrl+D", Command=$DuplicateCommand]
+                            MenuItem[Header="Duplicate",  InputGestureText="Ctrl+D", Command=$DuplicateCommand]
                             MenuItem[Header="Select All", InputGestureText="Ctrl+A", Command=$SelectAllCommand]
                             MenuSeparator
                             MenuItem[Header="Undo", InputGestureText="Ctrl+Z", Command=$UndoCommand]
@@ -168,15 +134,20 @@ resources CommandsDemo {
                     }
                 }
 
-                // Canvas — fills remaining space
-                Border x:name="surface" [Background=@SurfaceContainerLow]{
-                    Diagram x:name="nodes"
-                           [ItemsSource = $Nodes,
-                            ItemsPanel = @CommandsCanvasPanel,
-                            ItemContainerStyle = @CommandsNodeStyle,
-                            SelectionMode = Extended,
-                            AllowMarqueeSelection = true]
-                }
+                // Canvas — the Diagram's default Template already wraps
+                // an ItemsPresenter in a ScrollViewer, so no enclosing
+                // Border / ScrollViewer is needed here. Items are
+                // Figures themselves (RectFigure / EllipseFigure /
+                // NoteFigure); ReflectSelectionToItems pushes the
+                // marquee / Ctrl-click selection state onto each item's
+                // IsSelected DP so the Style triggers fire.
+                Diagram x:name="nodes"
+                       [ItemsSource = $Nodes,
+                        ItemsPanel  = @CommandsCanvasPanel,
+                        SelectionMode = Extended,
+                        AllowMarqueeSelection = true,
+                        ReflectSelectionToItems = true,
+                        Focusable = true]
             }
         }
     }

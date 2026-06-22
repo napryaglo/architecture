@@ -215,6 +215,7 @@ export class ScrollContentPresenter extends ContentPresenter
         const host = this.host;
         const scrollInfo = resolveScrollInfo(content);
         let contentRect: Rect;
+        let adornerClipRect: Rect;
         if (scrollInfo !== undefined)
         {
             // Delegate mode: the panel only realizes containers whose
@@ -229,7 +230,8 @@ export class ScrollContentPresenter extends ContentPresenter
             // arranged viewport rect (in the content's own local
             // space, which starts at (0, 0) here since we arrange the
             // content at (0, 0)).
-            contentRect = new Rect(0, 0, finalSize.Width, finalSize.Height);
+            contentRect     = new Rect(0, 0, finalSize.Width, finalSize.Height);
+            adornerClipRect = contentRect;
             content.Arrange(contentRect);
             content.Clip = new RectangleGeometry(contentRect);
         }
@@ -243,16 +245,26 @@ export class ScrollContentPresenter extends ContentPresenter
             // a translate of -(offset).
             const offX = host !== undefined ? host['effectiveHorizontalOffset']() : 0;
             const offY = host !== undefined ? host['effectiveVerticalOffset']()   : 0;
-            contentRect = new Rect(-offX, -offY, this._extentWidth, this._extentHeight);
+            contentRect     = new Rect(-offX, -offY, this._extentWidth, this._extentHeight);
+            adornerClipRect = new Rect(offX, offY, finalSize.Width, finalSize.Height);
             content.Arrange(contentRect);
-            content.Clip = new RectangleGeometry(new Rect(offX, offY, finalSize.Width, finalSize.Height));
+            content.Clip = new RectangleGeometry(adornerClipRect);
         }
         // Arrange the AdornerLayer at the same rect as the content so
         // adorners inside share its scroll-translate frame — host-coord
         // ancestor walks from any adorned element under the SCP land at
         // the same point whether they go through the content tree or
         // through the adorner-layer tree.
+        //
+        // Clip the AdornerLayer to the SAME viewport rect as the content.
+        // Without this clip, adorners (e.g. selection-resize handles on
+        // a shape near the canvas top edge) extend OUTSIDE the viewport
+        // into surrounding chrome (the toolbar above the SCP, sibling
+        // panels left / right of it). Their hit-pads stay live there —
+        // a tiny handle landing on the bottom edge of a sibling toolbar
+        // intercepts clicks meant for buttons in that toolbar.
         this._adornerLayer.Arrange(contentRect);
+        this._adornerLayer.Clip = new RectangleGeometry(adornerClipRect);
         return finalSize;
     }
 }

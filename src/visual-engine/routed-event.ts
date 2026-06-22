@@ -619,6 +619,18 @@ export function dispatchPointer(args: PointerEventArgs): void
     for (let i = route.length - 1; i >= 0; i--)
     {
         const v = route[i]!;
+        // Skip non-hit-testable visuals in the route. Browser's
+        // pointer-events:none excludes a visual from elementsFromPoint
+        // hits, but a descendant with its own explicit pointer-events
+        // (own hit pad) still bubbles UP through the non-hit-testable
+        // ancestor. That ancestor must stay invisible to routed events
+        // — its own OnPreview/On handler must not fire, its routed
+        // listeners must not fire, and its InputBindings must not
+        // match. Otherwise a Figure used as a toolbox preview (with
+        // IsHitTestVisible=false) still consumes PointerDown for its
+        // own canvas drag-to-move logic and the enclosing tile's drag
+        // latch never sees the event.
+        if (!(v as unknown as { IsHitTestVisible: boolean }).IsHitTestVisible) continue;
         args.Visual = v;
         const handler = (v as unknown as PointerEventHandlers)[previewName] as (a: PointerEventArgs) => void;
         handler.call(v, args);
@@ -629,6 +641,7 @@ export function dispatchPointer(args: PointerEventArgs): void
     args.Strategy = 'bubble';
     for (const v of route)
     {
+        if (!(v as unknown as { IsHitTestVisible: boolean }).IsHitTestVisible) continue;
         args.Visual = v;
         const handler = (v as unknown as PointerEventHandlers)[bubbleName] as (a: PointerEventArgs) => void;
         handler.call(v, args);

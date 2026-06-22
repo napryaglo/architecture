@@ -76,6 +76,21 @@ export class TooltipPopupHost extends Panel
     public pointerX:  number = 0;
     public pointerY:  number = 0;
 
+    constructor()
+    {
+        super();
+        // The host is a positioning container — it ARRANGES the tooltip
+        // anywhere within the overlay surface, but its own hit pad must
+        // NOT capture clicks. The host sits on the OverlayLayer on top
+        // of everything; a hit-testable full-surface pad would swallow
+        // every click that lands outside the tooltip child, including
+        // clicks on the very anchor whose PointerDown is supposed to
+        // dismiss the tooltip. Visibility=Collapsed (set by `dismiss`)
+        // gates rendering separately, so even a stale-but-hidden host
+        // can't snatch input from underneath.
+        this.IsHitTestVisible = false;
+    }
+
     protected override MeasureOverride(availableSize: Size): Size
     {
         for (const c of this.visualChildren) c.Measure(availableSize);

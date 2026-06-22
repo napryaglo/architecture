@@ -74,6 +74,20 @@ class DataContextBindingImpl extends Binding
         this.dataContextKey = resolveKey(target, undefined, 'DataContext');
 
         this.dcCallback = () => this.refresh();
+        // `$Self` short-circuits to "the Visual where the binding is
+        // authored". It's a control-self relative source, not a path
+        // walk — WPF's `{Binding RelativeSource={RelativeSource Self}}`
+        // semantic. The target identity is fixed for the binding's
+        // lifetime, so we set watcher.Value once and skip the
+        // DataContext subscription entirely. Without this short-circuit,
+        // `$Self` would walk `DataContext.Self` and fail unless the
+        // current DataContext has a registered `Self` DP — a footgun
+        // that's bitten the diagram demo before.
+        if (path === 'Self')
+        {
+            this.watcher.Value = target;
+            return;
+        }
         target.AddPropertyChangedListener(this.dataContextKey, this.dcCallback);
         this.refresh();
     }

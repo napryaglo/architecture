@@ -44,6 +44,15 @@ export class OverlayLayer extends Panel
         // this is what shrinks the layer's ArrangedRect to 0×0.
         this.HorizontalAlignment = HorizontalAlignment.Left;
         this.VerticalAlignment   = VerticalAlignment.Top;
+        // The layer is a positioning container — never a hit target itself.
+        // When non-empty its ArrangedRect spans the full surface, and the
+        // renderer-emitted `<rect class="mural-hit">` would otherwise carry
+        // `pointer-events: all`, swallowing every click that lands on the
+        // overlay surface OUTSIDE any popup child. Popups (ToolTip,
+        // ContextMenu, Drawer) keep their own explicit `pointer-events`
+        // via their own outers, so children that ARE hit-testable still
+        // receive events; only the layer's own pad falls out of the walk.
+        this.IsHitTestVisible = false;
     }
 
     // Overlay-layer children are VISUAL-only — their logical parent is

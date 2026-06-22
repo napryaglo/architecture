@@ -173,12 +173,35 @@ export class DiagramCommands
 
     private _collectSelected(): AlignTarget[]
     {
+        // Walk each selected entity to its top-level ancestor before
+        // adding to the align/distribute target list. Without this,
+        // marquee-selecting across a group picks the leaf Figures
+        // directly — and then alignCenter / alignLeft / distribute
+        // operate on each member individually, collapsing the group's
+        // internal spacing onto a shared axis. Walking up to the
+        // outermost Group preserves the group as a single rigid entity
+        // whose Left/Top setter translates every member together.
+        //
+        // Dedupe via a Set: two selected members of the same group
+        // resolve to the same top-level Group, but we only align it
+        // once.
+        const seen = new Set<Model>();
         const out: AlignTarget[] = [];
         for (const item of this._diagram.SelectedItems)
         {
-            if (this._isFigureShape(item))
+            if (!(item instanceof Model)) continue;
+            let top: Model = item;
+            for (;;)
             {
-                out.push(item as unknown as AlignTarget);
+                const parent = (top as unknown as { Parent?: unknown }).Parent;
+                if (!(parent instanceof Model)) break;
+                top = parent as Model;
+            }
+            if (seen.has(top)) continue;
+            seen.add(top);
+            if (this._isFigureShape(top))
+            {
+                out.push(top as unknown as AlignTarget);
             }
         }
         return out;

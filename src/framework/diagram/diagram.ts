@@ -1,4 +1,5 @@
 import {
+    Element,
     MetaData,
     Model,
     Rect,
@@ -78,6 +79,10 @@ export type DiagramPositionSnap = (rect: Rect) => Rect;
 // those attached properties so a parent Canvas places it.
 export class Diagram extends Selector
 {
+    static {
+        Model.OverrideMetadata(Diagram, Element.DefaultStyleKeyKey, { default_value: Diagram });
+    }
+
     // §19.3 — `PositionSnap` callback. Default `undefined` = no snap,
     // identity behavior. When set, Figure.OnPointerMove calls it
     // with the cursor-derived candidate rect and uses the returned
@@ -339,9 +344,23 @@ export class Diagram extends Selector
     private _dropReceiverDetach:  (() => void) | undefined = undefined;
     private _mutatorDetach:       (() => void) | undefined = undefined;
 
+    // Tracks a Mutator value that THIS Diagram installed via
+    // DataContext-auto-wire (see _autoWireMutator). When the consumer
+    // overrides Mutator explicitly, this clears so the override stays
+    // sticky across DataContext swaps.
+    private _autoWiredMutator:    DiagramMutator | undefined = undefined;
+
     constructor()
     {
         super();
+        // Default Template flows from the bundled diagram theme entry
+        // under TargetType=Diagram (see diagram.template.mu): a
+        // ScrollViewer wrapping an ItemsPresenter. Folding the scroll
+        // shell into the template means the Diagram itself is on the
+        // bubble path of canvas drops — `DropReceiver = $Self`
+        // (relative-source-self, i.e. the Diagram instance) works
+        // without an enclosing Border.
+        this.applyDefaultStyle();
         // Collaborators — internal, no public surface. Eagerly
         // constructed so the Diagram is fully-equipped from the moment
         // the constructor returns.
@@ -383,8 +402,66 @@ export class Diagram extends Selector
         }
         else if (descriptor.Name === 'Mutator')
         {
+            // Consumer-driven Mutator write — if it doesn't match the
+            // value we auto-wired, the consumer has taken over and our
+            // tracking slot needs to release so a later DataContext swap
+            // doesn't clear their explicit pick.
+            if (this._autoWiredMutator !== undefined
+                && newValue !== this._autoWiredMutator)
+            {
+                this._autoWiredMutator = undefined;
+            }
             this._reattachMutator(newValue as DiagramMutator | undefined);
         }
+        else if (descriptor.Name === 'DataContext')
+        {
+            this._autoWireMutatorFromDataContext(newValue);
+        }
+    }
+
+    // Auto-wire convenience: when a Diagram receives a DataContext that
+    // structurally implements DiagramMutator AND no explicit Mutator
+    // has been written, install the DataContext itself as the Mutator.
+    // Lets a DiagramDocument-shaped VM serve as both the data root and
+    // the mutator without an extra binding in markup. WPF parity with
+    // ItemsControl's "Source defaults to DataContext" idiom.
+    //
+    // Edge cases:
+    //   * Consumer set Mutator explicitly → respected (we never clobber
+    //     a value we didn't install).
+    //   * DataContext swaps to a non-mutator value → withdraw the
+    //     auto-wire so the stale instance doesn't keep handling events.
+    //   * Both old and new DC are mutators → fresh wire to the new one.
+    private _autoWireMutatorFromDataContext(dc: unknown): void
+    {
+        // Withdraw the previous auto-wire before considering the new
+        // DC. If the consumer set Mutator manually in the meantime,
+        // _autoWiredMutator was already cleared in the Mutator-DP
+        // branch above, so this guard's `=== Mutator` check stays
+        // accurate.
+        if (this._autoWiredMutator !== undefined
+            && this.Mutator === this._autoWiredMutator)
+        {
+            this._autoWiredMutator = undefined;
+            this.Mutator           = undefined;
+        }
+        if (this.Mutator !== undefined) return;
+        if (Diagram._isDiagramMutator(dc))
+        {
+            this._autoWiredMutator = dc;
+            this.Mutator           = dc;
+        }
+    }
+
+    private static _isDiagramMutator(value: unknown): value is DiagramMutator
+    {
+        if (typeof value !== 'object' || value === null) return false;
+        const v = value as Record<string, unknown>;
+        return typeof v.Group            === 'function'
+            && typeof v.Ungroup          === 'function'
+            && typeof v.CombineSelection === 'function'
+            && typeof v.DeleteNodes      === 'function'
+            && typeof v.CreateNode       === 'function';
     }
 
     private _reattachDropReceiver(receiver: Visual | undefined): void

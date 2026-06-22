@@ -55,6 +55,13 @@ export class ToolboxShape extends Model
             height: previewSize,
         });
         preview.Fill = options?.previewFill ?? PREVIEW_FILL;
+        // The preview is decorative chrome inside the tile, not an
+        // interactive Figure on a canvas. Without this, Figure's
+        // OnPointerDown captures the pointer for canvas drag-to-move and
+        // marks the event Handled — pressing on the picture eats the
+        // event before the enclosing tile-Border's drag latch sees it,
+        // so the toolbox-drag only works when the user clicks the label.
+        preview.IsHitTestVisible = false;
         this.set_property_value(ToolboxShape.KindKey,        kind);
         this.set_property_value(ToolboxShape.LabelKey,       label);
         this.set_property_value(ToolboxShape.PreviewNodeKey, preview);

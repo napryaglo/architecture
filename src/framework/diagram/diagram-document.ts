@@ -46,10 +46,11 @@ const STORAGE_KEY = 'mural-diagram-state-v1';
 // methods (Group / Ungroup / Combine / Delete / Place) the framework
 // Diagram routes its gesture events to.
 //
-// DiagramDocument IS a `DiagramMutator` structurally — bind it on a
-// `Diagram[Mutator=$Self]` in markup and the Diagram's
-// GroupRequested / UngroupRequested / CombineRequested /
-// DeleteRequested / ItemDropped events route directly here.
+// DiagramDocument IS a `DiagramMutator` structurally — set it as the
+// Diagram's DataContext and the Diagram auto-wires Mutator off the
+// DC (no explicit `Mutator=…` binding needed). GroupRequested /
+// UngroupRequested / CombineRequested / DeleteRequested / ItemDropped
+// then route directly here.
 //
 // Customise by subclassing (override CreateNode for custom Figure
 // shapes, override ToolboxShapes default to expose a different
@@ -101,10 +102,6 @@ export class DiagramDocument extends Model implements DiagramMutator
     public set Storage(v: DiagramStorage | undefined)                { this.set_property_value(DiagramDocument.StorageKey, v); }
     public get SaveCommand():   RelayCommand | undefined             { return this.get_property_value(DiagramDocument.SaveCommandKey); }
     public get LoadCommand():   RelayCommand | undefined             { return this.get_property_value(DiagramDocument.LoadCommandKey); }
-
-    /** Bind through `<DiagramDocument>.Self` to surface the document
-     *  itself as a Mutator without an extra binding-source convention. */
-    public get Self(): DiagramDocument { return this; }
 
     // ── Mutation API (DiagramMutator surface) ──────────────────────
 
