@@ -23,7 +23,7 @@ import { SelectionMode } from '../list/list-box.js';
 import { flattenToLeaves } from '../diagram/commands/group-ops.js';
 
 // IFillableItem + IStrokableItem: a single VM that satisfies both.
-// FillBrush is a Brush DP; Stroke is a Pen DP. Each instance gets its
+// Fill is a Brush DP; Stroke is a Pen DP. Each instance gets its
 // own Pen so FormatMirror can verify per-shape Pen identity is preserved
 // during broadcast.
 class FormattableVM extends Model {
@@ -31,17 +31,17 @@ class FormattableVM extends Model {
     public static readonly TopKey       = Model.RegisterProperty<number>(FormattableVM, 'Top',       0,  MetaData.None);
     public static readonly WidthKey     = Model.RegisterProperty<number>(FormattableVM, 'Width',    10, MetaData.None);
     public static readonly HeightKey    = Model.RegisterProperty<number>(FormattableVM, 'Height',   10, MetaData.None);
-    public static readonly FillBrushKey = Model.RegisterProperty<SolidColorBrush | undefined>(FormattableVM, 'FillBrush', undefined, MetaData.None);
+    public static readonly FillKey = Model.RegisterProperty<SolidColorBrush | undefined>(FormattableVM, 'Fill', undefined, MetaData.None);
     public static readonly StrokeKey    = Model.RegisterProperty<Pen | undefined>(FormattableVM, 'Stroke',    undefined, MetaData.None);
     constructor(fill: SolidColorBrush, stroke: Pen) {
         super();
         this.set_property_value(FormattableVM.WidthKey,  10);
         this.set_property_value(FormattableVM.HeightKey, 10);
-        this.set_property_value(FormattableVM.FillBrushKey, fill);
+        this.set_property_value(FormattableVM.FillKey, fill);
         this.set_property_value(FormattableVM.StrokeKey,    stroke);
     }
-    public get FillBrush(): SolidColorBrush | undefined { return this.get_property_value(FormattableVM.FillBrushKey); }
-    public set FillBrush(v: SolidColorBrush | undefined) { this.set_property_value(FormattableVM.FillBrushKey, v); }
+    public get Fill(): SolidColorBrush | undefined { return this.get_property_value(FormattableVM.FillKey); }
+    public set Fill(v: SolidColorBrush | undefined) { this.set_property_value(FormattableVM.FillKey, v); }
     public get Stroke():    Pen | undefined { return this.get_property_value(FormattableVM.StrokeKey); }
     public set Stroke(v:    Pen | undefined) { this.set_property_value(FormattableVM.StrokeKey, v); }
 }
@@ -163,7 +163,7 @@ describe('Diagram — FormatMirror', () => {
         selectMany(diagram, [a, b]);
 
         assert.equal(diagram.SelectionFormatFill, red,
-            'FormatFill seeded from first leaf\'s FillBrush by reference');
+            'FormatFill seeded from first leaf\'s Fill by reference');
         const stroke = diagram.SelectionFormatStroke;
         assert.ok(stroke instanceof Pen);
         // Pen is CLONED on seed — same property values, distinct instance.
@@ -180,8 +180,8 @@ describe('Diagram — FormatMirror', () => {
 
         diagram.SelectionFormatFill = green;
 
-        assert.equal(a.FillBrush, green);
-        assert.equal(b.FillBrush, green);
+        assert.equal(a.Fill, green);
+        assert.equal(b.Fill, green);
     });
 
     test('FormatStroke per-property edit broadcasts to every leaf\'s Pen in place', () => {
@@ -213,8 +213,8 @@ describe('Diagram — FormatMirror', () => {
 
         diagram.SelectionFormatFill = blue;
 
-        assert.equal(a.FillBrush, blue, 'group member a got the fill');
-        assert.equal(b.FillBrush, blue, 'group member b got the fill');
+        assert.equal(a.Fill, blue, 'group member a got the fill');
+        assert.equal(b.Fill, blue, 'group member b got the fill');
     });
 
     test('clearing selection resets FormatFill / FormatStroke to undefined', () => {

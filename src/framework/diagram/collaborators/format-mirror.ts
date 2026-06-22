@@ -13,8 +13,8 @@ import { flattenToLeaves } from '../commands/group-ops.js';
 //
 // Two duck-typed contracts on selected items (entirely independent —
 // an item may satisfy both, either, or neither):
-//   * IFillableItem    { FillBrush: Brush | undefined }
-//   * IStrokableItem   { Stroke:    Pen   | undefined }
+//   * IFillableItem    { Fill:   Brush | undefined }
+//   * IStrokableItem   { Stroke: Pen   | undefined }
 //
 // Items without the property are skipped silently — keeps the
 // collaborator from caring about Group / text-only / unknown VM
@@ -35,8 +35,8 @@ import { flattenToLeaves } from '../commands/group-ops.js';
 // firing during a seed-driven write — a fresh selection shouldn't
 // replay the first leaf's values onto every OTHER leaf.
 
-interface IFillableItem { FillBrush: Brush | undefined; }
-interface IStrokableItem { Stroke:    Pen   | undefined; }
+interface IFillableItem { Fill:   Brush | undefined; }
+interface IStrokableItem { Stroke: Pen   | undefined; }
 
 // Heterogeneous-typed array of Pen DP keys. Each entry is a
 // `PropertyKey<T>` for a different `T`; the broadcast loops treat them
@@ -91,7 +91,7 @@ export class FormatMirror
                 return;
             }
             const first = leaves[0];
-            const firstFill = (first as unknown as Partial<IFillableItem>).FillBrush;
+            const firstFill = (first as unknown as Partial<IFillableItem>).Fill;
             this._diagram.set_property_value(Diagram.SelectionFormatFillKey, firstFill);
             const firstStroke = (first as unknown as Partial<IStrokableItem>).Stroke;
             // Clone the pen so the editor doesn't mutate the first leaf's
@@ -112,9 +112,9 @@ export class FormatMirror
         const brush = this._diagram.SelectionFormatFill;
         for (const leaf of this._leaves())
         {
-            if ('FillBrush' in (leaf as object))
+            if ('Fill' in (leaf as object))
             {
-                (leaf as unknown as IFillableItem).FillBrush = brush;
+                (leaf as unknown as IFillableItem).Fill = brush;
             }
         }
     }

@@ -389,7 +389,7 @@ side is Pen-shaped — broadcast COPIES the Pen's property values onto
 each member's own Pen (preserving per-item Pen identity, per the
 demo's existing comment at `diagram-vm.mjs:524-535`).
 
-Duck-types on a `IFillable { FillBrush: Brush }` / `IStrokable {
+Duck-types on a `IFillable { Fill: Brush }` / `IStrokable {
 Stroke: Pen }` interface so consumers whose VMs don't have a
 fill/stroke skip the broadcast silently.
 

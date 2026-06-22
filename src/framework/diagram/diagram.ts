@@ -208,8 +208,8 @@ export class Diagram extends Selector
     // Multi-target format mirror DPs — driven by FormatMirror. Seeded
     // from the first leaf in SelectedItems on every SelectionChanged;
     // edits to these DPs broadcast to every leaf in the flattened
-    // selection. Duck-types on FillBrush / Stroke properties; items
-    // without those (Groups, text-only labels) skip the broadcast.
+    // selection. Duck-types on Fill / Stroke properties; items without
+    // those (Groups, text-only labels) skip the broadcast.
     public static readonly SelectionFormatFillKey   = Model.RegisterProperty<Brush | undefined>(
         Diagram, 'SelectionFormatFill',   undefined, MetaData.None);
     public static readonly SelectionFormatStrokeKey = Model.RegisterProperty<Pen   | undefined>(
