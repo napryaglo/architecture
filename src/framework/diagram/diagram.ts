@@ -10,6 +10,7 @@ import {
 } from '../../runtime/index.js';
 import { AdornerLayer } from '../../visual-engine/index.js';
 import { Figure } from './figure.js';
+import { Group } from './group.js';
 import { Selector } from '../list/selector.js';
 import { DiagramCommands } from './collaborators/diagram-commands.js';
 import { SelectionBoundsTracker } from './collaborators/selection-bounds-tracker.js';
@@ -343,13 +344,7 @@ export class Diagram extends Selector
         super();
         // Collaborators — internal, no public surface. Eagerly
         // constructed so the Diagram is fully-equipped from the moment
-        // the constructor returns. Order matters: DiagramCommands needs
-        // the Command DPs registered (above), and SelectionBoundsTracker
-        // doesn't depend on anyone — both subscribe to SelectionChanged
-        // independently. Lifetime is anchored through their listener
-        // closures (each collaborator subscribes to a Diagram event with
-        // a closure capturing `this`, so the Diagram's listener Set
-        // retains the collaborator without needing a field reference).
+        // the constructor returns.
         new DiagramCommands(this);
         new SelectionBoundsTracker(this);
         new FormatMirror(this);
@@ -490,6 +485,13 @@ export class Diagram extends Selector
 
     public override GetContainerForItemOverride(item: unknown): Visual
     {
+        // Items in the framework Diagram ARE Figures / Groups — the data
+        // and the visual are the same Visual instance. So the item is
+        // its own container; no wrapping needed.
+        if (item instanceof Figure || item instanceof Group) return item;
+        // Fallback for non-Figure/Group items — wrap in a fresh Figure
+        // (preserves the old WPF-style data-container split for consumers
+        // that bind a VM collection to ItemsSource).
         const node = new Figure();
         this.bindContainer(node, item);
         return node;

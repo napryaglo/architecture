@@ -6,12 +6,17 @@ import {
     type PropertyDescriptor,
     type Visual,
 } from '../../runtime/index.js';
+import { Brush, type PathGeometry, Pen, SolidColorBrush } from '../../visual-engine/index.js';
+import { Color } from '../../runtime/index.js';
 import { Canvas } from '../../basic/panels/canvas.js';
+import { Shape } from '../../basic/shapes/shape.js';
+import { TextBlock } from '../../basic/text-block.js';
 import { ContentControl } from '../base/content-control.js';
-import { ContentPresenter } from '../../basic/templates/content-presenter.js';
 import { ControlTemplate } from '../../basic/templates/control-template.js';
 import { ScrollViewer } from '../surfaces/scroll-viewer.js';
 import { Selector } from '../list/selector.js';
+import { SHAPE_CATALOG_MAP, scaleGeometry } from './shape-catalog.js';
+import type { Group } from './group.js';
 
 // A movable, content-hosting control intended as the container shape
 // inside the diagrammer's ItemsControl (see Diagram). Figure owns
@@ -41,12 +46,139 @@ import { Selector } from '../list/selector.js';
 // [DataType=…] DataTemplate via Application resources and slots the
 // produced Visual into the presenter. Consumers who want chrome around
 // the content (selection rings, drop shadows, …) can replace Template.
+// Default size for a freshly-constructed Figure — matches the historical
+// 80×80 dp the demo used. Overridable on a per-instance basis via the
+// fromKind / fromSource factories.
+export const FIGURE_DEFAULT_SIZE = 80;
+
+// Default brushes for a fresh Figure. Tuned to read on @Surface in both
+// Material light / dark schemes. Consumers replace by assignment.
+const DEFAULT_FILL   = new SolidColorBrush(Color.FromHex('#bfdbfe'));
+const DEFAULT_STROKE = new Pen(new SolidColorBrush(Color.FromHex('#1976d2')), 1.5);
+
+export interface FigureFromKindOptions
+{
+    readonly width?:  number;
+    readonly height?: number;
+}
+
+export interface FigureFromSourceOptions
+{
+    readonly width?:  number;
+    readonly height?: number;
+    /** Optional kind label for serialization round-trip. */
+    readonly kind?:   string;
+}
+
 export class Figure extends ContentControl
 {
     public static readonly LeftKey = Model.RegisterProperty<number>(
         Figure, 'Left', 0, MetaData.Arrange | MetaData.BindsTwoWayByDefault);
     public static readonly TopKey = Model.RegisterProperty<number>(
         Figure, 'Top', 0, MetaData.Arrange | MetaData.BindsTwoWayByDefault);
+
+    // Catalog key — populated when the figure was constructed via
+    // fromKind() or when a catalog-known kind was passed to fromSource().
+    // Empty string for combined-geometry figures (boolean ops).
+    public static readonly KindKey = Model.RegisterProperty<string>(
+        Figure, 'Kind', '', MetaData.None);
+
+    // The rendered PathGeometry — built from the catalog (kind-based) or
+    // parsed from a saved unit-1 source. Resize rebuilds it via
+    // scaleGeometry against the cached _source.
+    public static readonly GeometryKey = Model.RegisterProperty<PathGeometry | undefined>(
+        Figure, 'Geometry', undefined, MetaData.None);
+
+    // Fill brush + stroke pen. Per-instance Pen (PenEditor mutates in
+    // place, so sharing across figures would leak edits).
+    public static readonly FillKey = Model.RegisterProperty<Brush | undefined>(
+        Figure, 'Fill', DEFAULT_FILL, MetaData.None);
+    public static readonly StrokeKey = Model.RegisterProperty<Pen | undefined>(
+        Figure, 'Stroke', undefined, MetaData.None);
+
+    // Optional caption painted on top of the shape via the default
+    // template. Empty by default.
+    public static readonly LabelTextKey = Model.RegisterProperty<string>(
+        Figure, 'LabelText', '', MetaData.None);
+
+    // Stable identifier — used by serialize / deserialize and by external
+    // consumers that need to refer back to a specific figure after Load.
+    public static readonly IdKey = Model.RegisterProperty<string | undefined>(
+        Figure, 'Id', undefined, MetaData.None);
+
+    // Selection state — duck-typed by SelectionReflector when the
+    // owning Diagram has ReflectSelectionToItems=true.
+    public static readonly IsSelectedKey = Model.RegisterProperty<boolean>(
+        Figure, 'IsSelected', false, MetaData.None);
+
+    // Unit-1 source path for this figure. Cached source-of-truth; resize
+    // rebuilds the visible Geometry by scaling this. Combined-geometry
+    // figures store the merge result here. View-invisible structural
+    // state, so a plain field instead of a DP.
+    private _source: PathGeometry | undefined = undefined;
+
+    // Group back-reference. undefined ≡ "top-level". Set by Group when a
+    // Figure is added to its Members. Typed via a type-only import to
+    // break the figure ↔ group module cycle at runtime; structurally
+    // the field is always a Group instance.
+    public Parent: Group | undefined = undefined;
+
+    // ── Static factories ─────────────────────────────────────────────
+    //
+    // Three construction paths mirror the historical ShapeNodeVM:
+    //
+    //   * fromKind(kind, …)      — toolbox drop / CreateNode. Pulls the
+    //                              unit-1 source from the catalog.
+    //   * fromSource(source, …)  — combined-geometry path (boolean ops,
+    //                              custom paths). Caller is responsible
+    //                              for normalizing `source` to unit-1.
+    //   * fromSource(source, { kind })
+    //                            — catalog-derived but pre-extracted by
+    //                              the caller (Load with cached d-string).
+    //
+    // In every case the Figure holds `_source` (a unit-1 PathGeometry)
+    // as the source of truth. The visible `Geometry` DP is the scaled
+    // copy at (Width, Height).
+
+    public static fromKind(kind: string, left: number, top: number, options?: FigureFromKindOptions): Figure
+    {
+        const entry = SHAPE_CATALOG_MAP.get(kind);
+        if (entry === undefined)
+        {
+            throw new Error(`Figure.fromKind: unknown kind '${kind}'`);
+        }
+        const f = new Figure();
+        f.Left = left;
+        f.Top  = top;
+        f.Width  = options?.width  ?? FIGURE_DEFAULT_SIZE;
+        f.Height = options?.height ?? FIGURE_DEFAULT_SIZE;
+        f._setKindFromCatalog(kind, entry.unit());
+        return f;
+    }
+
+    public static fromSource(source: PathGeometry, left: number, top: number, options?: FigureFromSourceOptions): Figure
+    {
+        const f = new Figure();
+        f.Left = left;
+        f.Top  = top;
+        f.Width  = options?.width  ?? FIGURE_DEFAULT_SIZE;
+        f.Height = options?.height ?? FIGURE_DEFAULT_SIZE;
+        f._source = source;
+        if (options?.kind !== undefined) f.set_property_value(Figure.KindKey, options.kind);
+        f._rebuildGeometry();
+        return f;
+    }
+
+    /** @internal — used by fromKind and by Load paths that have a cached source. */
+    public _setKindFromCatalog(kind: string, source: PathGeometry): void
+    {
+        this.set_property_value(Figure.KindKey, kind);
+        this._source = source;
+        this._rebuildGeometry();
+    }
+
+    /** @internal — exposes the unit-1 source for serialize() consumers. */
+    public _getSource(): PathGeometry | undefined { return this._source; }
 
     // Below CLICK_THRESHOLD_PX of movement the gesture stays in
     // "click" mode (no Left / Top writes happen and OnPointerUp routes
@@ -87,23 +219,98 @@ export class Figure extends ContentControl
     constructor()
     {
         super();
-        // Minimal default template — a single ContentPresenter. The
-        // ContentControl base routes Content into this presenter; the
-        // ContentPresenter's implicit DataTemplate fallback resolves
-        // shape chrome by `Content.constructor` identity.
-        this.Template = new ControlTemplate(() => new ContentPresenter());
+        // Per-instance Stroke. The default DP value can't be shared
+        // because PenEditor mutates Pens in place — each Figure needs
+        // its own. Cloning the DEFAULT_STROKE here keeps the visual
+        // default consistent without leaking edits across instances.
+        this.set_property_value(Figure.StrokeKey, new Pen(DEFAULT_STROKE.Brush, DEFAULT_STROKE.Thickness));
+        // Default size — gives a freshly-constructed Figure a visible
+        // footprint even before fromKind / fromSource has run.
+        if (Number.isNaN(this.Width))  this.Width  = FIGURE_DEFAULT_SIZE;
+        if (Number.isNaN(this.Height)) this.Height = FIGURE_DEFAULT_SIZE;
         // Seed Canvas.Left / Canvas.Top from the registered defaults so
         // a freshly-constructed Figure placed into a Canvas without
         // any binding lands at (0,0) instead of inheriting whatever the
         // attached-property defaults happen to be on the parent path.
         Canvas.SetLeft(this, 0);
         Canvas.SetTop (this, 0);
+        // Default template — paints the shape via a Shape primitive bound
+        // to this Figure's Geometry / Fill / Stroke, with a TextBlock
+        // overlay carrying LabelText. Built imperatively here rather
+        // than in markup so the framework Diagram is fully usable
+        // without a backing template dictionary.
+        this.Template = new ControlTemplate(() => Figure._buildDefaultVisual(this));
     }
 
     public get Left(): number       { return this.get_property_value(Figure.LeftKey); }
     public set Left(value: number)  { this.set_property_value(Figure.LeftKey, value); }
     public get Top(): number        { return this.get_property_value(Figure.TopKey); }
     public set Top(value: number)   { this.set_property_value(Figure.TopKey, value); }
+
+    public get Kind(): string                  { return this.get_property_value(Figure.KindKey); }
+    public set Kind(value: string)             { this.set_property_value(Figure.KindKey, value); }
+    public get Geometry(): PathGeometry | undefined  { return this.get_property_value(Figure.GeometryKey); }
+    public set Geometry(value: PathGeometry | undefined) { this.set_property_value(Figure.GeometryKey, value); }
+    public get Fill(): Brush | undefined       { return this.get_property_value(Figure.FillKey); }
+    public set Fill(value: Brush | undefined)  { this.set_property_value(Figure.FillKey, value); }
+    public get Stroke(): Pen | undefined       { return this.get_property_value(Figure.StrokeKey); }
+    public set Stroke(value: Pen | undefined)  { this.set_property_value(Figure.StrokeKey, value); }
+    public get LabelText(): string             { return this.get_property_value(Figure.LabelTextKey); }
+    public set LabelText(value: string)        { this.set_property_value(Figure.LabelTextKey, value); }
+    public get Id(): string | undefined        { return this.get_property_value(Figure.IdKey); }
+    public set Id(value: string | undefined)   { this.set_property_value(Figure.IdKey, value); }
+    public get IsSelected(): boolean           { return this.get_property_value(Figure.IsSelectedKey); }
+    public set IsSelected(value: boolean)      { this.set_property_value(Figure.IsSelectedKey, value); }
+
+    // Build the default visual subtree — a Shape primitive carrying the
+    // Figure's Geometry / Fill / Stroke, plus an optional centered
+    // TextBlock overlay for LabelText. Imperative TemplateBindings
+    // because ControlTemplate factories run before the framework's
+    // resource-merged template dictionary is reachable (Figure ships in
+    // the same module as Diagram and is used inside the Diagram demo
+    // bundle bootstrap, so we can't depend on a resources lookup).
+    private static _buildDefaultVisual(self: Figure): Visual
+    {
+        const canvas = new Canvas();
+        const shape = new Shape();
+        // Hard binding — read from `self` directly. The Figure instance
+        // is captured at template-factory time and never changes for
+        // this template invocation.
+        const syncShape = (): void => {
+            shape.Geometry = self.Geometry;
+            shape.Fill     = self.Fill;
+            shape.Stroke   = self.Stroke;
+            shape.Width    = self.Width;
+            shape.Height   = self.Height;
+        };
+        syncShape();
+        self.AddPropertyChangedListener(Figure.GeometryKey, syncShape);
+        self.AddPropertyChangedListener(Figure.FillKey,     syncShape);
+        self.AddPropertyChangedListener(Figure.StrokeKey,   syncShape);
+        self.AddPropertyChangedListener(Figure.WidthKey,    syncShape);
+        self.AddPropertyChangedListener(Figure.HeightKey,   syncShape);
+
+        const label = new TextBlock();
+        const syncLabel = (): void => {
+            label.Text   = self.LabelText;
+            label.Width  = self.Width;
+            label.Height = self.Height;
+        };
+        syncLabel();
+        self.AddPropertyChangedListener(Figure.LabelTextKey, syncLabel);
+        self.AddPropertyChangedListener(Figure.WidthKey,     syncLabel);
+        self.AddPropertyChangedListener(Figure.HeightKey,    syncLabel);
+
+        canvas.AddChild(shape);
+        canvas.AddChild(label);
+        return canvas;
+    }
+
+    private _rebuildGeometry(): void
+    {
+        if (this._source === undefined) return;
+        this.set_property_value(Figure.GeometryKey, scaleGeometry(this._source, this.Width, this.Height));
+    }
 
     protected override OnPropertyChanged(
         descriptor: PropertyDescriptor,
@@ -130,6 +337,14 @@ export class Figure extends ContentControl
         else if (descriptor === Figure.TopKey.descriptor && typeof newValue === 'number')
         {
             Canvas.SetTop(this, newValue);
+        }
+        // Resize rebuilds the rendered Geometry from the cached unit-1
+        // source. Skipped when _source is undefined (a freshly-constructed
+        // Figure without a kind/source assignment yet).
+        else if ((descriptor.Name === 'Width' || descriptor.Name === 'Height')
+                 && this._source !== undefined)
+        {
+            this._rebuildGeometry();
         }
     }
 

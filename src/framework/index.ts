@@ -141,8 +141,26 @@ export {
     type ItemDroppedArgs,
     type ItemDroppedListener,
 } from './diagram/diagram.js';
+export {
+    DiagramDocument,
+    type DiagramStorage,
+} from './diagram/diagram-document.js';
 export { Figure } from './diagram/figure.js';
 export { Group } from './diagram/group.js';
+export { ToolboxShape, TOOLBOX_PREVIEW_SIZE } from './diagram/toolbox-shape.js';
+export {
+    SHAPE_CATALOG,
+    SHAPE_CATALOG_MAP,
+    GeometryCombineMode,
+    buildNodeGeometry,
+    scaleGeometry,
+    translateGeometry,
+    normalizeToUnit,
+    mergeShapes,
+    type ShapeCatalogEntry,
+    type NormalizedGeometry,
+    type CombinableShape,
+} from './diagram/shape-catalog.js';
 export {
     attachStandardDiagramMutations,
     type DiagramMutator,

@@ -1,17 +1,15 @@
 // diagram demo bootstrap — node-only scene with marquee multi-select.
 //
-// All interaction logic lives in the framework Diagram control. The
-// bootstrap is data-only: resources are merged once, the VM is
-// constructed with a storage service, and the platform mounts the view
-// from the registered DataTemplate. The markup wires the Diagram's
-// declarative DPs (DropReceiver, Mutator, ReflectSelectionToItems,
-// AlignmentGuidesEnabled, SelectionResizeEnabled, …) so view-mount
-// callbacks aren't needed.
+// Every data class lives in the framework now: DiagramDocument owns
+// the Nodes / ToolboxShapes / Status / Save+Load + the structural
+// mutation methods, Figure / Group are the canvas items themselves
+// (visuals + data fused), and ToolboxShape is the toolbox-tile
+// model. The demo just creates a Document, plugs in localStorage,
+// seeds a few Figures, and returns it for the platform to mount.
 
 import { Application } from '@visualisation-sub/mural/runtime';
+import { DiagramDocument } from '@visualisation-sub/mural/framework';
 import { DiagramDemo } from './diagram.mu.js';
-import { DiagramShapeTemplates } from './diagram-shape-templates.mu.js';
-import { DiagramVM } from './diagram-vm.mjs';
 import { register } from '../../platform/registry.mjs';
 import Icons from '../../assets/icons.mjs';
 
@@ -21,7 +19,7 @@ const LocalStorageService = {
 };
 
 let resourcesMerged = false;
-let vmInstance;
+let docInstance;
 
 register({
     id:       'diagram',
@@ -31,11 +29,19 @@ register({
     factory: () => {
         if (!resourcesMerged) {
             Application.current?.Resources.AddMergedDictionary(DiagramDemo.Clone());
-            Application.current?.Resources.AddMergedDictionary(DiagramShapeTemplates.Clone());
             Application.current?.Resources.AddMergedDictionary(Icons);
             resourcesMerged = true;
         }
-        if (vmInstance === undefined) vmInstance = new DiagramVM(LocalStorageService);
-        return vmInstance;
+        if (docInstance === undefined) {
+            docInstance = new DiagramDocument(LocalStorageService);
+            // Seed a few nodes so the demo doesn't open empty.
+            docInstance.CreateNode('rectangle',     60,  60);
+            docInstance.CreateNode('ellipse',      220,  60);
+            docInstance.CreateNode('squircle',      60, 200);
+            docInstance.CreateNode('flower',       220, 200);
+            docInstance.CreateNode('heart',        380,  60);
+            docInstance.Status = `Ready. ${docInstance.Nodes.Count} nodes. Drag a shape from the toolbox →`;
+        }
+        return docInstance;
     },
 });

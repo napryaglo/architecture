@@ -1,50 +1,42 @@
 import type { Diagram } from '../diagram.js';
 import type { CombineRequestedArgs } from '../commands/combine.js';
 import type { DeleteRequestedArgs } from '../commands/delete-ops.js';
+import type { GroupRequestedArgs, UngroupRequestedArgs } from '../commands/group-ops.js';
 import type { ItemDroppedArgs } from './canvas-drop-behavior.js';
 import { TOOLBOX_NODE_KIND_FORMAT } from './canvas-drop-behavior.js';
 import type { GeometryCombineMode } from '../commands/combine.js';
 
-// Standard wiring between a Diagram's gesture events and a consumer VM
-// that owns the data collection. The framework's command surface is
-// deliberately event-based — Diagram doesn't know where the items live,
-// nor how to wrap or dissolve a group — so consumers normally subscribe
-// to GroupRequested / UngroupRequested / CombineRequested / DeleteRequested
-// / ItemDropped and translate each into a method on their VM. That
-// wiring is identical across almost every Diagram-shaped demo, so this
-// helper ships it once and the bootstrap shrinks to one call.
+// Standard wiring between a Diagram's gesture events and a mutator that
+// owns the data collection. Subscribes to Group / Ungroup / Combine /
+// Delete / ItemDropped and forwards each to the matching method on
+// `mutator`, passing the args' Items / Groups / Mode through so the
+// mutator doesn't need to read selection state off the Diagram.
 //
-// The `mutator` interface duck-types onto the VM directly — pass the
-// VM itself when its method names match. The helper makes no field /
-// method calls outside this interface, so a VM that uses different
-// names plugs in through a thin adapter.
-//
-// `Position` from ItemDropped is the cursor's CANVAS-LOCAL coordinate.
-// CreateNode takes a TOP-LEFT coordinate, so the helper subtracts a
-// half-default-size offset (matches the user's expectation that a
-// dropped tile lands centered on the cursor). Override via
-// `NodeDropOffset` when the consumer's default node size differs.
+// The `mutator` interface duck-types onto framework's DiagramDocument
+// directly — pass a DiagramDocument instance and everything wires up.
+// Consumers with a custom data shape implement the same surface.
 
 export interface DiagramMutator
 {
-    /** Called from the framework's GroupRequested listener. */
-    Group(): void;
+    /** Wrap `items` in a new group. `items` is the top-level selection
+     *  snapshot as captured by GroupRequestedArgs.Items. */
+    Group(items: readonly unknown[]): void;
 
-    /** Called from the framework's UngroupRequested listener. */
-    Ungroup(): void;
+    /** Dissolve every group-shaped entry in `items`. */
+    Ungroup(items: readonly unknown[]): void;
 
-    /** Called with the merge mode the user picked (Union / Intersect / Subtract / Exclude). */
-    CombineSelection(mode: GeometryCombineMode): void;
+    /** Combine `items` via the selected mode. */
+    CombineSelection(items: readonly unknown[], mode: GeometryCombineMode): void;
 
-    /** Called with the SelectedItems snapshot at the moment the user pressed Delete. */
+    /** Remove every entry in `items` from the data collection. */
     DeleteNodes(items: readonly unknown[]): void;
 
     /**
-     * Called from the framework's ItemDropped listener with the canvas-
-     * local TOP-LEFT coordinate after the cursor-centering offset.
-     * Returns the created entity (or null / undefined when the kind is
-     * unrecognized); the helper sets it as the Diagram's SelectedItem
-     * when present so a fresh drop lands already-selected.
+     * Materialize a new node of the named catalog kind at the given
+     * canvas-local top-left coordinate. Return the created entity
+     * (or null / undefined when the kind is unrecognized); the helper
+     * sets it as the Diagram's SelectedItem when present so a fresh
+     * drop lands already-selected.
      */
     CreateNode(kind: string, x: number, y: number): unknown | null | undefined;
 
@@ -62,9 +54,9 @@ export function attachStandardDiagramMutations(diagram: Diagram, mutator: Diagra
 {
     const offset = mutator.NodeDropOffset ?? DEFAULT_OFFSET;
 
-    const onGroup    = (): void => mutator.Group();
-    const onUngroup  = (): void => mutator.Ungroup();
-    const onCombine  = (args: CombineRequestedArgs): void => mutator.CombineSelection(args.Mode);
+    const onGroup    = (args: GroupRequestedArgs):   void => mutator.Group(args.Items);
+    const onUngroup  = (args: UngroupRequestedArgs): void => mutator.Ungroup(args.Groups);
+    const onCombine  = (args: CombineRequestedArgs): void => mutator.CombineSelection(args.Items, args.Mode);
     const onDelete   = (args: DeleteRequestedArgs):  void => mutator.DeleteNodes(args.Items);
     const onDropped  = (args: ItemDroppedArgs):      void => {
         const kind = args.Data.Get(TOOLBOX_NODE_KIND_FORMAT);

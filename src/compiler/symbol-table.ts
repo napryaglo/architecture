@@ -133,6 +133,8 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['Figure',                  '@visualisation-sub/mural/framework/diagram/figure.js'],
     ['Group',                   '@visualisation-sub/mural/framework/diagram/group.js'],
     ['Diagram',                 '@visualisation-sub/mural/framework/diagram/diagram.js'],
+    ['ToolboxShape',            '@visualisation-sub/mural/framework/diagram/toolbox-shape.js'],
+    ['DiagramDocument',         '@visualisation-sub/mural/framework/diagram/diagram-document.js'],
     ['Grid',                    '@visualisation-sub/mural/basic'],
     ['GridLength',              '@visualisation-sub/mural/basic'],
     ['ColumnDefinition',        '@visualisation-sub/mural/basic'],
