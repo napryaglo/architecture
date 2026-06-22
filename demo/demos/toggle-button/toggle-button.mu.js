@@ -17,7 +17,8 @@ export class ToggleButtonDemo extends ResourceDictionary {
         const t = new ToggleButtonDemo(_gate_ToggleButtonDemo);
         const _tmpl0 = (() => {
             const _factory = (_templatedParent) => {
-                const _border1 = new Border();
+                let _border1;
+                _border1 = new Border();
                 _border1.Name = "PART_Border";
                 _border1.set_property_value(Border.BackgroundKey, DynamicResource(_border1, "Surface"));
                 _border1.set_property_value(Border.BorderBrushKey, DynamicResource(_border1, "Outline"));

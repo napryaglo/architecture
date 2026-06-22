@@ -3,6 +3,7 @@ import {
     Model,
     Rect,
     type KeyEventArgs,
+    type PointerEventArgs,
     type PropertyDescriptor,
     type RelayCommand,
     type Visual,
@@ -12,6 +13,7 @@ import { Figure } from './figure.js';
 import { Selector } from '../list/selector.js';
 import { DiagramCommands } from './collaborators/diagram-commands.js';
 import { SelectionBoundsTracker } from './collaborators/selection-bounds-tracker.js';
+import { SelectionReflector } from './collaborators/selection-reflector.js';
 import {
     type GroupRequestedArgs,
     type UngroupRequestedArgs,
@@ -23,6 +25,14 @@ import {
     type CombineRequestedListener,
 } from './commands/combine.js';
 import {
+    type DeleteRequestedArgs,
+    type DeleteRequestedListener,
+} from './commands/delete-ops.js';
+import {
+    attachStandardDiagramMutations,
+    type DiagramMutator,
+} from './behaviors/attach-standard-mutations.js';
+import {
     attachAlignmentGuides,
     type AlignmentGuide,
 } from './behaviors/alignment-guides-behavior.js';
@@ -31,9 +41,10 @@ import { SelectionBoundsAdorner } from '../../basic/index.js';
 import { DiagramSelectionSource } from './behaviors/diagram-selection-source.js';
 import { Brush, Pen } from '../../visual-engine/index.js';
 import { FormatMirror } from './collaborators/format-mirror.js';
-import type {
-    ItemDroppedArgs,
-    ItemDroppedListener,
+import {
+    attachCanvasDropBehavior,
+    type ItemDroppedArgs,
+    type ItemDroppedListener,
 } from './behaviors/canvas-drop-behavior.js';
 export { attachCanvasDropBehavior, TOOLBOX_NODE_KIND_FORMAT } from './behaviors/canvas-drop-behavior.js';
 export type { ItemDroppedArgs, ItemDroppedListener } from './behaviors/canvas-drop-behavior.js';
@@ -158,6 +169,36 @@ export class Diagram extends Selector
     public static readonly SelectionResizeEnabledKey = Model.RegisterProperty<boolean>(
         Diagram, 'SelectionResizeEnabled', false, MetaData.None);
 
+    // Drop receiver — when set, Diagram attaches its canvas-drop
+    // behavior to this Visual (typically the surrounding Border or
+    // ScrollViewer). Bound declaratively from markup so the consumer
+    // doesn't have to call attachCanvasDropBehavior from a view-mount
+    // callback. Setting to undefined detaches.
+    //
+    // The receiver MUST be on the bubble path of every legitimate drop
+    // location — a naive Diagram receiver misses drops on the
+    // scrollbar (which lives outside Diagram's visual subtree), so the
+    // typical wiring is `DropReceiver = $surface` against an enclosing
+    // Border / ScrollViewer.
+    public static readonly DropReceiverKey = Model.RegisterProperty<Visual | undefined>(
+        Diagram, 'DropReceiver', undefined, MetaData.None);
+
+    // Mutation adapter — when set, Diagram subscribes its gesture
+    // events (GroupRequested / UngroupRequested / CombineRequested /
+    // DeleteRequested / ItemDropped) to the corresponding methods on
+    // the adapter. Internalises the wiring that consumers used to do
+    // by hand in their bootstrap. See attach-standard-mutations.ts.
+    public static readonly MutatorKey = Model.RegisterProperty<DiagramMutator | undefined>(
+        Diagram, 'Mutator', undefined, MetaData.None);
+
+    // Selection-reflection opt-in. When true, SelectionReflector mirrors
+    // SelectedItems onto each item's `IsSelected` DP (duck-typed via
+    // findDescriptor — items without IsSelected are skipped). Off by
+    // default so plain Selector consumers without an IsSelected
+    // convention pay nothing.
+    public static readonly ReflectSelectionToItemsKey = Model.RegisterProperty<boolean>(
+        Diagram, 'ReflectSelectionToItems', false, MetaData.None);
+
     // Multi-target format mirror DPs — driven by FormatMirror. Seeded
     // from the first leaf in SelectedItems on every SelectionChanged;
     // edits to these DPs broadcast to every leaf in the flattened
@@ -198,6 +239,12 @@ export class Diagram extends Selector
     public set AlignmentGuidesEnabled(v: boolean) { this.set_property_value(Diagram.AlignmentGuidesEnabledKey, v); }
     public get SelectionResizeEnabled():  boolean { return this.get_property_value(Diagram.SelectionResizeEnabledKey); }
     public set SelectionResizeEnabled(v: boolean) { this.set_property_value(Diagram.SelectionResizeEnabledKey, v); }
+    public get ReflectSelectionToItems():  boolean { return this.get_property_value(Diagram.ReflectSelectionToItemsKey); }
+    public set ReflectSelectionToItems(v: boolean) { this.set_property_value(Diagram.ReflectSelectionToItemsKey, v); }
+    public get DropReceiver():  Visual | undefined { return this.get_property_value(Diagram.DropReceiverKey); }
+    public set DropReceiver(v: Visual | undefined) { this.set_property_value(Diagram.DropReceiverKey, v); }
+    public get Mutator():  DiagramMutator | undefined { return this.get_property_value(Diagram.MutatorKey); }
+    public set Mutator(v: DiagramMutator | undefined) { this.set_property_value(Diagram.MutatorKey, v); }
     public get SelectionFormatFill():    Brush | undefined { return this.get_property_value(Diagram.SelectionFormatFillKey); }
     public set SelectionFormatFill(v:    Brush | undefined) { this.set_property_value(Diagram.SelectionFormatFillKey, v); }
     public get SelectionFormatStroke():  Pen   | undefined { return this.get_property_value(Diagram.SelectionFormatStrokeKey); }
@@ -230,6 +277,10 @@ export class Diagram extends Selector
     public AddItemDroppedListener   (listener: ItemDroppedListener): void { this._itemDroppedListeners.add(listener); }
     public RemoveItemDroppedListener(listener: ItemDroppedListener): void { this._itemDroppedListeners.delete(listener); }
 
+    private readonly _deleteRequestedListeners: Set<DeleteRequestedListener> = new Set();
+    public AddDeleteRequestedListener   (listener: DeleteRequestedListener): void { this._deleteRequestedListeners.add(listener); }
+    public RemoveDeleteRequestedListener(listener: DeleteRequestedListener): void { this._deleteRequestedListeners.delete(listener); }
+
     // Internal fire helpers — invoked by DiagramCommands when the
     // corresponding RelayCommand's Execute runs. Snapshot-then-iterate
     // so a listener that registers / unregisters mid-fire doesn't
@@ -258,6 +309,12 @@ export class Diagram extends Selector
         for (const l of [...this._itemDroppedListeners]) l(args);
     }
 
+    /** @internal */
+    public _fireDeleteRequested(args: DeleteRequestedArgs): void
+    {
+        for (const l of [...this._deleteRequestedListeners]) l(args);
+    }
+
     // Alignment-guides attach state. `_alignmentGuidesDetach` holds the
     // behavior's detach thunk when active; undefined when disabled.
     // `_alignmentGuidesAdorner` is the mounted adorner instance when
@@ -275,6 +332,12 @@ export class Diagram extends Selector
     private _selectionResizeAdorner: SelectionBoundsAdorner | undefined = undefined;
     private _selectionResizeSource:  DiagramSelectionSource | undefined = undefined;
 
+    // Drop-receiver / Mutator attach state — detach thunks for whichever
+    // receiver / mutator is currently wired. Swapped out on DP change so
+    // the previous wiring releases its listeners.
+    private _dropReceiverDetach:  (() => void) | undefined = undefined;
+    private _mutatorDetach:       (() => void) | undefined = undefined;
+
     constructor()
     {
         super();
@@ -290,6 +353,16 @@ export class Diagram extends Selector
         new DiagramCommands(this);
         new SelectionBoundsTracker(this);
         new FormatMirror(this);
+        new SelectionReflector(this);
+    }
+
+    // PointerDown anywhere on the Diagram surface takes keyboard focus
+    // so subsequent Delete / Ctrl+G / arrow-key shortcuts route to this
+    // Diagram. No-op when Focusable=false (the Visual.Focus contract).
+    protected override OnPointerDown(args: PointerEventArgs): void
+    {
+        super.OnPointerDown(args);
+        this.Focus();
     }
 
     protected override OnPropertyChanged(
@@ -308,6 +381,40 @@ export class Diagram extends Selector
         {
             if (newValue === true) this._attachSelectionResize();
             else                   this._detachSelectionResize();
+        }
+        else if (descriptor.Name === 'DropReceiver')
+        {
+            this._reattachDropReceiver(newValue as Visual | undefined);
+        }
+        else if (descriptor.Name === 'Mutator')
+        {
+            this._reattachMutator(newValue as DiagramMutator | undefined);
+        }
+    }
+
+    private _reattachDropReceiver(receiver: Visual | undefined): void
+    {
+        if (this._dropReceiverDetach !== undefined)
+        {
+            this._dropReceiverDetach();
+            this._dropReceiverDetach = undefined;
+        }
+        if (receiver !== undefined)
+        {
+            this._dropReceiverDetach = attachCanvasDropBehavior(receiver, this);
+        }
+    }
+
+    private _reattachMutator(mutator: DiagramMutator | undefined): void
+    {
+        if (this._mutatorDetach !== undefined)
+        {
+            this._mutatorDetach();
+            this._mutatorDetach = undefined;
+        }
+        if (mutator !== undefined)
+        {
+            this._mutatorDetach = attachStandardDiagramMutations(this, mutator);
         }
     }
 
@@ -422,6 +529,27 @@ export class Diagram extends Selector
                     container.Top  = container.Top  + dy;
                 }
             }
+            args.Handled = true;
+            return;
+        }
+        // Delete / Backspace — fire DeleteRequested with a SelectedItems
+        // snapshot. Same event-based mutation contract as Group /
+        // Ungroup / Combine: framework knows what the user asked to
+        // remove, consumer's listener owns the collection mutation.
+        if ((key === 'Delete' || key === 'Backspace') && this.SelectedItems.length > 0)
+        {
+            this._fireDeleteRequested({ Items: [...this.SelectedItems] });
+            args.Handled = true;
+            return;
+        }
+        // Ctrl+G / Ctrl+Shift+G — fire the framework's Group / Ungroup
+        // commands. CanExecute gating naturally guards (the command
+        // returns false for empty / under-shaped selections), so a
+        // gate-failed press is a silent no-op.
+        if ((key === 'g' || key === 'G') && (args.Modifiers.Control || args.Modifiers.Meta))
+        {
+            const cmd = args.Modifiers.Shift ? this.UngroupCommand : this.GroupCommand;
+            if (cmd !== undefined && cmd.CanExecute(undefined)) cmd.Execute(undefined);
             args.Handled = true;
             return;
         }

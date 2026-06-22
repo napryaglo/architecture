@@ -131,33 +131,33 @@ resources DiagramDemo {
                        Padding=(8,4,8,4)]{
                     StackPanel[Orientation=Horizontal]{
                         IconButton x:name="btnAlignLeft"
-                                   [Variant=Standard, Command=$AlignLeftCommand]{
+                                   [Variant=Standard, Command=$nodes.AlignLeftCommand]{
                             Icon[Source=@alignLeft, Foreground=@OnSurfaceVariant]
                         }
                         IconButton x:name="btnAlignRight"
-                                   [Variant=Standard, Command=$AlignRightCommand]{
+                                   [Variant=Standard, Command=$nodes.AlignRightCommand]{
                             Icon[Source=@alignRight, Foreground=@OnSurfaceVariant]
                         }
                         IconButton x:name="btnAlignTop"
-                                   [Variant=Standard, Command=$AlignTopCommand,
+                                   [Variant=Standard, Command=$nodes.AlignTopCommand,
                                     Margin=(8,0,0,0)]{
                             Icon[Source=@alignTop, Foreground=@OnSurfaceVariant]
                         }
                         IconButton x:name="btnAlignMiddle"
-                                   [Variant=Standard, Command=$AlignMiddleCommand]{
+                                   [Variant=Standard, Command=$nodes.AlignMiddleCommand]{
                             Icon[Source=@alignMiddle, Foreground=@OnSurfaceVariant]
                         }
                         IconButton x:name="btnAlignCenter"
-                                   [Variant=Standard, Command=$AlignCenterCommand]{
+                                   [Variant=Standard, Command=$nodes.AlignCenterCommand]{
                             Icon[Source=@alignCenter, Foreground=@OnSurfaceVariant]
                         }
                         IconButton x:name="btnDistH"
-                                   [Variant=Standard, Command=$DistributeHorizontalCommand,
+                                   [Variant=Standard, Command=$nodes.DistributeHorizontalCommand,
                                     Margin=(8,0,0,0)]{
                             Icon[Source=@distributeHorizontal, Foreground=@OnSurfaceVariant]
                         }
                         IconButton x:name="btnDistV"
-                                   [Variant=Standard, Command=$DistributeVerticalCommand]{
+                                   [Variant=Standard, Command=$nodes.DistributeVerticalCommand]{
                             Icon[Source=@distributeVertical, Foreground=@OnSurfaceVariant]
                         }
                         // Ctrl+G / Ctrl+Shift+G also wired via the
@@ -168,12 +168,12 @@ resources DiagramDemo {
                         // (Group needs ≥ 2 top-level entities; Ungroup
                         // needs ≥ 1 selected top-level group).
                         IconButton x:name="btnGroup"
-                                   [Variant=Standard, Command=$GroupCommand,
+                                   [Variant=Standard, Command=$nodes.GroupCommand,
                                     Margin=(8,0,0,0)]{
                             Icon[Source=@group, Foreground=@OnSurfaceVariant]
                         }
                         IconButton x:name="btnUngroup"
-                                   [Variant=Standard, Command=$UngroupCommand]{
+                                   [Variant=Standard, Command=$nodes.UngroupCommand]{
                             Icon[Source=@ungroup, Foreground=@OnSurfaceVariant]
                         }
                         // Boolean ops — PowerPoint's Merge-Shapes
@@ -184,26 +184,26 @@ resources DiagramDemo {
                         // dedicated icons land.
                         IconButton x:name="btnCombineUnion"
                                    [Variant=Standard,
-                                    Command=$CombineUnionCommand,
+                                    Command=$nodes.CombineUnionCommand,
                                     Margin=(8,0,0,0)]{
                             TextBlock[Text="∪", FontSize=16, FontWeight=Bold,
                                       Foreground=@OnSurfaceVariant]
                         }
                         IconButton x:name="btnCombineIntersect"
                                    [Variant=Standard,
-                                    Command=$CombineIntersectCommand]{
+                                    Command=$nodes.CombineIntersectCommand]{
                             TextBlock[Text="∩", FontSize=16, FontWeight=Bold,
                                       Foreground=@OnSurfaceVariant]
                         }
                         IconButton x:name="btnCombineSubtract"
                                    [Variant=Standard,
-                                    Command=$CombineSubtractCommand]{
+                                    Command=$nodes.CombineSubtractCommand]{
                             TextBlock[Text="−", FontSize=16, FontWeight=Bold,
                                       Foreground=@OnSurfaceVariant]
                         }
                         IconButton x:name="btnCombineExclude"
                                    [Variant=Standard,
-                                    Command=$CombineExcludeCommand]{
+                                    Command=$nodes.CombineExcludeCommand]{
                             TextBlock[Text="⊕", FontSize=16, FontWeight=Bold,
                                       Foreground=@OnSurfaceVariant]
                         }
@@ -289,8 +289,8 @@ resources DiagramDemo {
                                   Foreground=@OnSurfaceVariant,
                                   Margin=(0,0,0,8)]
                         ScrollViewer [IsAutoHideScrollBars=false]{
-                            ShapeFormatControl [Fill=$SelectionFormatFill,
-                                                Stroke=$SelectionFormatStroke]
+                            ShapeFormatControl [Fill=$nodes.SelectionFormatFill,
+                                                Stroke=$nodes.SelectionFormatStroke]
                         }
                     }
                 }
@@ -330,6 +330,9 @@ resources DiagramDemo {
                                 AllowMarqueeSelection = true,
                                 AlignmentGuidesEnabled = true,
                                 SelectionResizeEnabled = true,
+                                ReflectSelectionToItems = true,
+                                DropReceiver = $surface,
+                                Mutator = $Self,
                                 Focusable = true]
                     }
                 }

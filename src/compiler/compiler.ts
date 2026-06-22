@@ -1219,8 +1219,12 @@ export class Compiler
         this.templateNameOwners = new Map<string, string>();
         this.templateNameVars   = new Map<string, string>();
         this.inTemplateBody = true;
+        // Pre-walk body for x:names so forward x:name refs work — see
+        // collectTemplateXNames + emitPreallocatedXNameLets.
+        this.collectTemplateXNames(rootElement);
         this.line(`const _factory = (_templatedParent) => {`);
         this.indent += 4;
+        this.emitPreallocatedXNameLets();
         const rootVar = this.compileElement(rootElement);
         this.line(`return ${rootVar};`);
         this.indent -= 4;
@@ -1431,12 +1435,17 @@ export class Compiler
         // a ReferenceError when the variable isn't in scope.
         this.inTemplateBody    = true;
         this.nameScopeOwnerVar = undefined;
+        // Pre-walk the body to allocate vars for every x:named element
+        // so forward x:name references compile against a lexically-
+        // visible `let` declared at the top of the factory body.
+        this.collectTemplateXNames(rootElement);
         if (triggers.length === 0 && eventTriggers.length === 0)
         {
             // Trigger-free path: preserve the historical 2-arg emit
             // shape so existing snapshot tests keep matching.
             this.line(`const ${tmplVar} = new DataTemplate((_data) => {`);
             this.indent += 4;
+            this.emitPreallocatedXNameLets();
             const rootVar = this.compileElement(rootElement);
             this.line(`return ${rootVar};`);
             this.indent -= 4;
@@ -1456,6 +1465,7 @@ export class Compiler
             this.indent += 4;
             this.line(`const _factory = (_data) => {`);
             this.indent += 4;
+            this.emitPreallocatedXNameLets();
             const rootVar = this.compileElement(rootElement);
             this.line(`return ${rootVar};`);
             this.indent -= 4;
@@ -2431,8 +2441,43 @@ export class Compiler
         }
 
         this.ensureImport(elem.name);
-        const v = this.fresh(this.varHint(elem.name));
-        this.line(`const ${v} = new ${elem.name}();`);
+
+        // x:named elements in the current template scope reuse the var
+        // pre-allocated by collectTemplateXNames — the `let` was emitted
+        // at the top of the factory body so forward x:name refs can
+        // lexically capture it. Initialize via assignment (no `const`)
+        // so the hoisted binding picks up the new value.
+        let v: string;
+        let preallocated = false;
+        const xName = this.findXAttr(elem.xAttrs, 'name');
+        if (xName !== null
+            && xName.value !== null && xName.value.kind === 'string'
+            && this.templateNameVars !== undefined)
+        {
+            const nameStr = xName.value.value as string;
+            const pre = this.templateNameVars.get(nameStr);
+            if (pre !== undefined)
+            {
+                v = pre;
+                preallocated = true;
+            }
+            else
+            {
+                v = this.fresh(this.varHint(elem.name));
+            }
+        }
+        else
+        {
+            v = this.fresh(this.varHint(elem.name));
+        }
+        if (preallocated)
+        {
+            this.line(`${v} = new ${elem.name}();`);
+        }
+        else
+        {
+            this.line(`const ${v} = new ${elem.name}();`);
+        }
 
         // ── x:* meta attributes ────────────────────────────────────
         // Handle these BEFORE the body compiles so the NameScope is
@@ -3122,24 +3167,23 @@ export class Compiler
                     this.ensureImport('ElementNameBinding');
                     const sourceVar = this.templateNameVars.get(head)!;
                     const restPath  = val.path.slice(1).join('.');
-                    if (restPath.length === 0)
-                    {
-                        // `$foo` alone — author wants the element
-                        // itself, not a property of it. Bindings need a
-                        // path; emit a single-segment lookup against the
-                        // element under a sentinel key would be
-                        // surprising, so reject with a clear message.
-                        throw new EmitError(
-                            `'$${head}' references the named element '${head}' but has no property path. ` +
-                            `Use '$${head}.<Property>' to bind to one of its properties.`,
-                            val.span);
-                    }
+                    // `$foo` alone — author wants the element itself,
+                    // not one of its properties. ElementNameBinding
+                    // with an empty path returns the source Visual
+                    // directly (no per-segment walk, no DP subscription).
+                    // Useful for DropReceiver / Mutator-style DPs where
+                    // the value IS the named visual.
                     // Style-setter wrap (ctx.targetExpr undefined) and
                     // direct-target attribute (defined) both resolve
                     // the source the same way: the source is a fixed
                     // Visual captured at factory time, so there's no
                     // per-target re-binding to wrap in a SetterFactory.
-                    return `ElementNameBinding(${sourceVar}, ${JSON.stringify(restPath)})`;
+                    // The source is passed as a THUNK so the binding
+                    // works whether the named element is declared
+                    // BEFORE (backward ref — thunk resolves immediately)
+                    // or AFTER (forward ref — thunk's first call returns
+                    // undefined; binding retries on the next microtask).
+                    return `ElementNameBinding(() => ${sourceVar}, ${JSON.stringify(restPath)})`;
                 }
                 this.ensureImport('DataContextBinding');
                 const pathStr = val.path.join('.');
@@ -3619,6 +3663,64 @@ export class Compiler
     // ResourceDictionary, x:root assignment to `rd.Root`) is handled
     // separately by compileResourceElement; this method covers the
     // tree-walk-time concerns shared by every element.
+    // Pre-walks a template body's element subtree and pre-allocates a
+    // JS var name for every x:name'd element. Used by template-body
+    // compilation to emit `let _border0, _btn1, …;` at the top of the
+    // factory closure so x:name references later in the body can lexically
+    // capture the var even when the named element is constructed AFTER
+    // the binding installs (forward x:name ref). ElementNameBinding then
+    // captures via thunk and re-tries on the next microtask if the var is
+    // still undefined at install time.
+    //
+    // Recurses into structured bodies only (slot-assigns, resource-forms,
+    // nested template forms are out of scope — they don't share the
+    // surrounding name table). Expands macro invocations so x:names
+    // declared inside macro bodies are reachable from the same scope.
+    private collectTemplateXNames(elem: ElementNode): void
+    {
+        if (this.templateNameVars === undefined) return;
+
+        const macro = this.macros.get(elem.name);
+        if (macro !== undefined)
+        {
+            const expanded = this.expandMacro(elem, macro);
+            this.collectTemplateXNames(expanded);
+            return;
+        }
+
+        const xName = this.findXAttr(elem.xAttrs, 'name');
+        if (xName !== null && xName.value !== null && xName.value.kind === 'string')
+        {
+            const nameStr = xName.value.value as string;
+            if (!this.templateNameVars.has(nameStr))
+            {
+                const v = this.fresh(this.varHint(elem.name));
+                this.templateNameVars.set(nameStr, v);
+                if (this.templateNameOwners !== undefined) this.templateNameOwners.set(nameStr, elem.name);
+                if (this.templateNameScope  !== undefined) this.templateNameScope.add(nameStr);
+            }
+        }
+
+        if (elem.body !== null && elem.body.kind === 'structured-body')
+        {
+            for (const item of elem.body.items)
+            {
+                if (item.kind === 'element') this.collectTemplateXNames(item);
+            }
+        }
+    }
+
+    // Emit `let _v0, _v1, …;` at the current position for every var the
+    // pre-walk reserved. Idempotent — emits nothing when no x:names were
+    // collected.
+    private emitPreallocatedXNameLets(): void
+    {
+        if (this.templateNameVars === undefined) return;
+        const vars = [...this.templateNameVars.values()];
+        if (vars.length === 0) return;
+        this.line(`let ${vars.join(', ')};`);
+    }
+
     private applyXAttrs(v: string, elem: ElementNode): void
     {
         const xRoot = this.findXAttr(elem.xAttrs, 'root');

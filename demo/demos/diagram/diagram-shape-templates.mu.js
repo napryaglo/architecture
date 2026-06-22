@@ -15,18 +15,19 @@ export class DiagramShapeTemplates extends ResourceDictionary {
     static Clone() {
         const t = new DiagramShapeTemplates(_gate_DiagramShapeTemplates);
         const _tmpl0 = new DataTemplate((_data) => {
-            const _canvas1 = new Canvas();
-            _canvas1.SetNameScope(new NameScope());
-            _canvas1.set_property_value(Canvas.WidthKey, DataContextBinding(_canvas1, "Width"));
-            _canvas1.set_property_value(Canvas.HeightKey, DataContextBinding(_canvas1, "Height"));
-            const _shape2 = new Shape();
-            _shape2.Name = "chrome";
-            _shape2.set_property_value(Shape.WidthKey, DataContextBinding(_shape2, "Width"));
-            _shape2.set_property_value(Shape.HeightKey, DataContextBinding(_shape2, "Height"));
-            _shape2.set_property_value(Shape.FillKey, DataContextBinding(_shape2, "FillBrush"));
-            _shape2.set_property_value(Shape.StrokeKey, DataContextBinding(_shape2, "Stroke"));
-            _shape2.set_property_value(Shape.GeometryKey, DataContextBinding(_shape2, "Geometry"));
-            _canvas1.AddChild(_shape2);
+            let _shape1;
+            const _canvas2 = new Canvas();
+            _canvas2.SetNameScope(new NameScope());
+            _canvas2.set_property_value(Canvas.WidthKey, DataContextBinding(_canvas2, "Width"));
+            _canvas2.set_property_value(Canvas.HeightKey, DataContextBinding(_canvas2, "Height"));
+            _shape1 = new Shape();
+            _shape1.Name = "chrome";
+            _shape1.set_property_value(Shape.WidthKey, DataContextBinding(_shape1, "Width"));
+            _shape1.set_property_value(Shape.HeightKey, DataContextBinding(_shape1, "Height"));
+            _shape1.set_property_value(Shape.FillKey, DataContextBinding(_shape1, "FillBrush"));
+            _shape1.set_property_value(Shape.StrokeKey, DataContextBinding(_shape1, "Stroke"));
+            _shape1.set_property_value(Shape.GeometryKey, DataContextBinding(_shape1, "Geometry"));
+            _canvas2.AddChild(_shape1);
             const _textBlock3 = new TextBlock();
             _textBlock3.set_property_value(Canvas.LeftKey, 0);
             _textBlock3.set_property_value(Canvas.TopKey, 0);
@@ -37,13 +38,14 @@ export class DiagramShapeTemplates extends ResourceDictionary {
             _textBlock3.set_property_value(TextBlock.ForegroundKey, DynamicResource(_textBlock3, "OnSurface"));
             _textBlock3.set_property_value(TextBlock.HorizontalAlignmentKey, HorizontalAlignment.Center);
             _textBlock3.set_property_value(TextBlock.VerticalAlignmentKey, VerticalAlignment.Center);
-            _canvas1.AddChild(_textBlock3);
-            return _canvas1;
+            _canvas2.AddChild(_textBlock3);
+            return _canvas2;
         }, ShapeNodeVM);
         t.Set(ShapeNodeVM, _tmpl0);
         const _tmpl4 = (() => {
             const _factory = (_data) => {
-                const _border5 = new Border();
+                let _border5;
+                _border5 = new Border();
                 _border5.Name = "bbox";
                 _border5.set_property_value(Border.WidthKey, DataContextBinding(_border5, "Width"));
                 _border5.set_property_value(Border.HeightKey, DataContextBinding(_border5, "Height"));

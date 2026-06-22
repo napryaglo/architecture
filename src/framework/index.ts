@@ -143,3 +143,7 @@ export {
 } from './diagram/diagram.js';
 export { Figure } from './diagram/figure.js';
 export { Group } from './diagram/group.js';
+export {
+    attachStandardDiagramMutations,
+    type DiagramMutator,
+} from './diagram/behaviors/attach-standard-mutations.js';

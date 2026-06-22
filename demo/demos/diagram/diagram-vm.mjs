@@ -476,33 +476,6 @@ export class DiagramVM extends Model
     static SaveCommandKey                 = Model.RegisterProperty(DiagramVM, 'SaveCommand',   undefined,                          MetaData.None);
     static LoadCommandKey                 = Model.RegisterProperty(DiagramVM, 'LoadCommand',   undefined,                          MetaData.None);
 
-    // Phase L of the diagram-control refactor: the Align / Distribute /
-    // Group / Ungroup / Combine commands + the SelectionFormatFill /
-    // SelectionFormatStroke editor mirrors moved to the framework
-    // Diagram control. The DPs below are forwarding proxies — the
-    // bootstrap populates them from the framework Diagram instance at
-    // view-mount time (see diagram.mjs's `wireFrameworkProxies`). The
-    // markup binds `$AlignLeftCommand` etc. through these proxies, no
-    // change to the binding paths. (A future compiler 2-pass scan could
-    // let the markup reference the named Diagram element directly via
-    // `$nodes.AlignLeftCommand`, dropping the proxy layer — out of scope
-    // for Phase L.)
-    static AlignLeftCommandKey            = Model.RegisterProperty(DiagramVM, 'AlignLeftCommand',            undefined, MetaData.None);
-    static AlignRightCommandKey           = Model.RegisterProperty(DiagramVM, 'AlignRightCommand',           undefined, MetaData.None);
-    static AlignTopCommandKey             = Model.RegisterProperty(DiagramVM, 'AlignTopCommand',             undefined, MetaData.None);
-    static AlignMiddleCommandKey          = Model.RegisterProperty(DiagramVM, 'AlignMiddleCommand',          undefined, MetaData.None);
-    static AlignCenterCommandKey          = Model.RegisterProperty(DiagramVM, 'AlignCenterCommand',          undefined, MetaData.None);
-    static DistributeHorizontalCommandKey = Model.RegisterProperty(DiagramVM, 'DistributeHorizontalCommand', undefined, MetaData.None);
-    static DistributeVerticalCommandKey   = Model.RegisterProperty(DiagramVM, 'DistributeVerticalCommand',   undefined, MetaData.None);
-    static GroupCommandKey                = Model.RegisterProperty(DiagramVM, 'GroupCommand',                undefined, MetaData.None);
-    static UngroupCommandKey              = Model.RegisterProperty(DiagramVM, 'UngroupCommand',              undefined, MetaData.None);
-    static CombineUnionCommandKey         = Model.RegisterProperty(DiagramVM, 'CombineUnionCommand',         undefined, MetaData.None);
-    static CombineIntersectCommandKey     = Model.RegisterProperty(DiagramVM, 'CombineIntersectCommand',     undefined, MetaData.None);
-    static CombineSubtractCommandKey      = Model.RegisterProperty(DiagramVM, 'CombineSubtractCommand',      undefined, MetaData.None);
-    static CombineExcludeCommandKey       = Model.RegisterProperty(DiagramVM, 'CombineExcludeCommand',       undefined, MetaData.None);
-    static SelectionFormatFillKey         = Model.RegisterProperty(DiagramVM, 'SelectionFormatFill',         undefined, MetaData.None);
-    static SelectionFormatStrokeKey       = Model.RegisterProperty(DiagramVM, 'SelectionFormatStroke',       undefined, MetaData.None);
-
     constructor(storage) {
         super();
         this._storage = storage;
@@ -528,6 +501,15 @@ export class DiagramVM extends Model
                 { Text: 'Load',
                   Description: 'Restore the most recently saved canvas.' }));
 
+        // Seed the canvas so the demo doesn't open empty. CreateNode
+        // sets Status to "Placed …" as a side effect; restamp the
+        // ready-message after seeding so the user sees that instead.
+        this.CreateNode('rectangle',     60, 60);
+        this.CreateNode('ellipse',      220, 60);
+        this.CreateNode('squircle',      60, 200);
+        this.CreateNode('flower',       220, 200);
+        this.CreateNode('heart',        380, 60);
+        this.Status = `Ready. ${this.Nodes.Count} nodes. Drag a shape from the toolbox →`;
     }
 
     get Nodes()         { return this.get_property_value(DiagramVM.NodesKey); }
@@ -537,37 +519,13 @@ export class DiagramVM extends Model
     get SaveCommand()   { return this.get_property_value(DiagramVM.SaveCommandKey); }
     get LoadCommand()   { return this.get_property_value(DiagramVM.LoadCommandKey); }
 
-    // Framework-command proxies — bootstrap fills these at view-mount.
-    get AlignLeftCommand()            { return this.get_property_value(DiagramVM.AlignLeftCommandKey); }
-    set AlignLeftCommand(v)           { this.set_property_value(DiagramVM.AlignLeftCommandKey, v); }
-    get AlignRightCommand()           { return this.get_property_value(DiagramVM.AlignRightCommandKey); }
-    set AlignRightCommand(v)          { this.set_property_value(DiagramVM.AlignRightCommandKey, v); }
-    get AlignTopCommand()             { return this.get_property_value(DiagramVM.AlignTopCommandKey); }
-    set AlignTopCommand(v)            { this.set_property_value(DiagramVM.AlignTopCommandKey, v); }
-    get AlignMiddleCommand()          { return this.get_property_value(DiagramVM.AlignMiddleCommandKey); }
-    set AlignMiddleCommand(v)         { this.set_property_value(DiagramVM.AlignMiddleCommandKey, v); }
-    get AlignCenterCommand()          { return this.get_property_value(DiagramVM.AlignCenterCommandKey); }
-    set AlignCenterCommand(v)         { this.set_property_value(DiagramVM.AlignCenterCommandKey, v); }
-    get DistributeHorizontalCommand() { return this.get_property_value(DiagramVM.DistributeHorizontalCommandKey); }
-    set DistributeHorizontalCommand(v){ this.set_property_value(DiagramVM.DistributeHorizontalCommandKey, v); }
-    get DistributeVerticalCommand()   { return this.get_property_value(DiagramVM.DistributeVerticalCommandKey); }
-    set DistributeVerticalCommand(v)  { this.set_property_value(DiagramVM.DistributeVerticalCommandKey, v); }
-    get GroupCommand()                { return this.get_property_value(DiagramVM.GroupCommandKey); }
-    set GroupCommand(v)               { this.set_property_value(DiagramVM.GroupCommandKey, v); }
-    get UngroupCommand()              { return this.get_property_value(DiagramVM.UngroupCommandKey); }
-    set UngroupCommand(v)             { this.set_property_value(DiagramVM.UngroupCommandKey, v); }
-    get CombineUnionCommand()         { return this.get_property_value(DiagramVM.CombineUnionCommandKey); }
-    set CombineUnionCommand(v)        { this.set_property_value(DiagramVM.CombineUnionCommandKey, v); }
-    get CombineIntersectCommand()     { return this.get_property_value(DiagramVM.CombineIntersectCommandKey); }
-    set CombineIntersectCommand(v)    { this.set_property_value(DiagramVM.CombineIntersectCommandKey, v); }
-    get CombineSubtractCommand()      { return this.get_property_value(DiagramVM.CombineSubtractCommandKey); }
-    set CombineSubtractCommand(v)     { this.set_property_value(DiagramVM.CombineSubtractCommandKey, v); }
-    get CombineExcludeCommand()       { return this.get_property_value(DiagramVM.CombineExcludeCommandKey); }
-    set CombineExcludeCommand(v)      { this.set_property_value(DiagramVM.CombineExcludeCommandKey, v); }
-    get SelectionFormatFill()         { return this.get_property_value(DiagramVM.SelectionFormatFillKey); }
-    set SelectionFormatFill(v)        { this.set_property_value(DiagramVM.SelectionFormatFillKey, v); }
-    get SelectionFormatStroke()       { return this.get_property_value(DiagramVM.SelectionFormatStrokeKey); }
-    set SelectionFormatStroke(v)      { this.set_property_value(DiagramVM.SelectionFormatStrokeKey, v); }
+    // Plain getter returning the VM itself — bound from markup as
+    // `Diagram[Mutator=$Self]` so the framework Diagram subscribes its
+    // gesture events (Group / Ungroup / Combine / Delete / ItemDropped)
+    // to the matching methods on this VM. The DiagramVM IS a
+    // DiagramMutator structurally; this getter just lets the markup
+    // reach `this` without a `Self`-by-DataContext convention.
+    get Self() { return this; }
 
     CreateNode(kind, x, y) {
         if (!SHAPE_CATALOG_MAP.has(kind)) return null;

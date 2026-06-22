@@ -378,11 +378,12 @@ describe('compile — DataTemplate triggers', () => {
             }
         `);
         // The TextBlock's Foreground binds to the chrome's Background
-        // via ElementNameBinding(<chrome var>, "Background"), NOT via
-        // DataContextBinding.
+        // via ElementNameBinding wrapping a thunk that captures the
+        // chrome var, NOT via DataContextBinding. The thunk shape
+        // supports forward x:name references in the same template body.
         assert.match(
             js,
-            /ElementNameBinding\(_border\d+, "Background"\)/,
+            /ElementNameBinding\(\(\) => _border\d+, "Background"\)/,
         );
         assert.doesNotMatch(
             js,
@@ -395,23 +396,22 @@ describe('compile — DataTemplate triggers', () => {
         );
     });
 
-    test('`$name` without a trailing path is a clear error', () => {
-        assert.throws(
-            () => emitted(`
-                import FooVM from "./foo-vm.mjs"
-                resources Test {
-                    DataTemplate x:key="T" [DataType=FooVM] {
-                        Border x:root {
-                            Border x:name="chrome"
-                            TextBlock [Foreground=$chrome]
-                        }
+    test('`$name` without a trailing path binds to the named element itself', () => {
+        // Empty-path ElementNameBinding — the binding's value IS the
+        // source Visual. Used by markup-driven Diagram.DropReceiver /
+        // Mutator wiring (`DropReceiver = $surface`).
+        const js = emitted(`
+            import FooVM from "./foo-vm.mjs"
+            resources Test {
+                DataTemplate x:key="T" [DataType=FooVM] {
+                    Border x:root {
+                        Border x:name="chrome"
+                        TextBlock [Tag=$chrome]
                     }
                 }
-            `),
-            (e: Error) =>
-                e.message.includes('chrome') &&
-                e.message.includes('no property path'),
-        );
+            }
+        `);
+        assert.match(js, /ElementNameBinding\(\(\) => _border\d+, ""\)/);
     });
 
     test('`Name.Property = value` resolves to a TargetedSetter when Name is an x:name', () => {
