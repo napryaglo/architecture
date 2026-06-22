@@ -5,7 +5,7 @@ import { initTestApp } from '../../basic/tests/test-app.js';
 import { Border } from '../../basic/border.js';
 import { StackPanel } from '../../basic/panels/stack-panel.js';
 import { TextBlock } from '../../basic/text-block.js';
-import { ScrollViewer } from '../scroll-viewer.js';
+import { ScrollViewer } from '../surfaces/scroll-viewer.js';
 import { TopAppBar, TopAppBarVariant } from '../top-app-bar/top-app-bar.js';
 
 describe('TopAppBar — Variant DP', () => {

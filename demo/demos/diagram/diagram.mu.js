@@ -8,7 +8,7 @@ import { Figure } from "@visualisation-sub/mural/framework/diagram/figure.js";
 import { IconButton } from "@visualisation-sub/mural/framework/icon-button.js";
 import { ItemsControl } from "@visualisation-sub/mural/framework/items-control.js";
 import { SelectionMode } from "@visualisation-sub/mural/framework/list/list-box.js";
-import { ScrollViewer } from "@visualisation-sub/mural/framework/scroll-viewer.js";
+import { ScrollViewer } from "@visualisation-sub/mural/framework/surfaces/scroll-viewer.js";
 import { DataContextBinding, DynamicResource, HorizontalAlignment, NameScope, ResourceDictionary, Setter, SetterFactory, Style, Thickness, VerticalAlignment } from "@visualisation-sub/mural/runtime";
 import { FontWeight } from "@visualisation-sub/mural/visual-engine";
 

@@ -11,12 +11,12 @@ import {
     type EasingFunction,
     type PropertyDescriptor,
     type WheelEventArgs,
-} from '../runtime/index.js';
-import { Easings } from '../visual-engine/animation/easing.js';
-import { ContentControl } from './content-control.js';
-import { ScrollBar } from '../basic/scroll/scroll-bar.js';
-import { ScrollContentPresenter } from '../basic/scroll/scroll-content-presenter.js';
-import { Orientation } from '../basic/panels/stack-panel.js';
+} from '../../runtime/index.js';
+import { Easings } from '../../visual-engine/animation/easing.js';
+import { ContentControl } from '../content-control.js';
+import { ScrollBar } from '../../basic/scroll/scroll-bar.js';
+import { ScrollContentPresenter } from '../../basic/scroll/scroll-content-presenter.js';
+import { Orientation } from '../../basic/panels/stack-panel.js';
 
 // Reserved cross-axis space for an active scrollbar. Mirrors the
 // ScrollBar control's own SCROLLBAR_THICKNESS constant — kept locally

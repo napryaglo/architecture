@@ -11,7 +11,7 @@ import { Border } from '../../basic/border.js';
 import { StackPanel } from '../../basic/panels/stack-panel.js';
 import { TemplatedControl } from '../../basic/templated-control.js';
 import { TextBlock } from '../../basic/text-block.js';
-import { ScrollViewer } from '../scroll-viewer.js';
+import { ScrollViewer } from '../surfaces/scroll-viewer.js';
 
 // Material 3 Top App Bar size variants. Each ships its own
 // ControlTemplate in framework.resources.mu; the default Style picks

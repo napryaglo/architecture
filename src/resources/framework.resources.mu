@@ -30,6 +30,7 @@ resources MuralFramework {
     import Markers       from "../framework/markers/markers.template.mu.js"
     import Notifications from "../framework/notifications/notifications.template.mu.js"
     import SearchBars    from "../framework/search-bar/search-bar.template.mu.js"
+    import Surfaces      from "../framework/surfaces/surfaces.template.mu.js"
     import Tabs          from "../framework/tabs/tabs.template.mu.js"
     import Toggles       from "../framework/toggles/toggles.template.mu.js"
     import Tooltips      from "../framework/tooltips/tooltips.template.mu.js"
@@ -828,91 +829,8 @@ resources MuralFramework {
         when ( Size = Extended ) { Template = @DefaultFabExtended; }
     }
 
-    // ── Card: M3 content container ─────────────────────────────────
-    // Three variants — Filled / Elevated / Outlined. Each ships a
-    // PART_Border container with the variant's resting chrome and a
-    // PART_StateLayer overlay that composites @StateHoverOverlay /
-    // @StatePressOverlay on hover / press. All three share the same
-    // @ShapeMedium corner radius and the same 16dp content padding;
-    // they differ in Background, BorderThickness, and resting Effect.
-    //
-    // Hover behaviour (all variants): elevation bumps one level above
-    // the resting value (Filled / Outlined go Level0 → Level1, Elevated
-    // goes Level1 → Level2) and the state layer composites a translucent
-    // @OnSurface tint over the container. Press composites the slightly
-    // stronger @StatePressOverlay and lowers Effect back to the resting
-    // value — the M3 "press = recession" cue.
-    //
-    // IsMouseOver / IsPressed flip generically through InputManager's
-    // hit-target write path (no Click protocol required), so Card gets
-    // the press / hover state from any pointer interaction without
-    // having to extend Button.
-
-    // Filled — @SurfaceContainerHighest, no border, no resting Effect.
-    Template x:key="DefaultFilledCard" [TargetType=Card] {
-        Border x:name="PART_Border"
-              [ Background     = @SurfaceContainerHighest,
-                BorderThickness = (0),
-                CornerRadius   = @ShapeMedium ] {
-            Border x:name="PART_StateLayer"
-                  [ Background   = #00000000,
-                    CornerRadius = @ShapeMedium,
-                    Padding      = (16,16,16,16) ] {
-                ContentPresenter
-            }
-        }
-        when ( IsMouseOver )  { PART_StateLayer.Background = @StateHoverOverlay;
-                                PART_Border.Effect          = @ElevationLevel1; }
-        when ( IsPressed   )  { PART_StateLayer.Background = @StatePressOverlay; }
-    }
-
-    // Elevated — @SurfaceContainerLow, no border, resting Level1.
-    Template x:key="DefaultElevatedCard" [TargetType=Card] {
-        Border x:name="PART_Border"
-              [ Background     = @SurfaceContainerLow,
-                BorderThickness = (0),
-                CornerRadius   = @ShapeMedium,
-                Effect         = @ElevationLevel1 ] {
-            Border x:name="PART_StateLayer"
-                  [ Background   = #00000000,
-                    CornerRadius = @ShapeMedium,
-                    Padding      = (16,16,16,16) ] {
-                ContentPresenter
-            }
-        }
-        when ( IsMouseOver )  { PART_StateLayer.Background = @StateHoverOverlay;
-                                PART_Border.Effect          = @ElevationLevel2; }
-        when ( IsPressed   )  { PART_StateLayer.Background = @StatePressOverlay;
-                                PART_Border.Effect          = @ElevationLevel1; }
-    }
-
-    // Outlined — @Surface, 1-DIP @Outline border, no resting Effect.
-    Template x:key="DefaultOutlinedCard" [TargetType=Card] {
-        Border x:name="PART_Border"
-              [ Background     = @Surface,
-                BorderBrush    = @Outline,
-                BorderThickness = (1),
-                CornerRadius   = @ShapeMedium ] {
-            Border x:name="PART_StateLayer"
-                  [ Background   = #00000000,
-                    CornerRadius = @ShapeMedium,
-                    Padding      = (15,15,15,15) ] {
-                ContentPresenter
-            }
-        }
-        when ( IsMouseOver )                          { PART_StateLayer.Background  = @StateHoverOverlay;
-                                                        PART_Border.Effect           = @ElevationLevel1; }
-        when ( IsPressed   )                          { PART_StateLayer.Background  = @StatePressOverlay; }
-        when ( ThemeManager.PrefersContrast = More )  { PART_Border.BorderThickness = (2); }
-    }
-
-    // Default Style — picks Template by Variant. Filled is the baseline
-    // (the Setter); Elevated / Outlined each ride their own trigger.
-    Style [TargetType=Card] {
-        Template = @DefaultFilledCard;
-        when ( Variant = Elevated ) { Template = @DefaultElevatedCard; }
-        when ( Variant = Outlined ) { Template = @DefaultOutlinedCard; }
-    }
+    // ── Card ───────────────────────────────────────────────────────
+    // Promoted to src/framework/surfaces/surfaces.template.mu.
 
     // ── TopAppBar: M3 screen-header strip ──────────────────────────
     // Four variants — Small / CenterAligned / Medium / Large. Single
@@ -1318,64 +1236,8 @@ resources MuralFramework {
     // ── ProgressIndicator / Banner / Snackbar ───────────────────────
     // Promoted to src/framework/notifications/notifications.template.mu.
 
-    // ── Dialog: M3 modal dialog ────────────────────────────────────
-    // ExtraLarge corner radius (M3 spec) + Elevation3 + @Surface
-    // resting background. Title + Content + Actions stack vertically.
-    // The modal scrim is OUTSIDE the dialog template — Dialog mounts
-    // onto the PresentationTarget's OverlayLayer and that surface
-    // owns the scrim. The dialog template just paints the floating
-    // surface itself.
-    Template x:key="DefaultDialog" [TargetType=Dialog] {
-        Border x:name="PART_Dialog"
-              [ Background      = @Surface,
-                BorderBrush     = #00000000,
-                BorderThickness = (0),
-                CornerRadius    = @ShapeExtraLarge,
-                Effect          = @Elevation3,
-                Padding         = (@Spacing6, @Spacing6, @Spacing6, @Spacing6) ] {
-            DockPanel [LastChildFill=true] {
-                TextBlock x:name="PART_Title"
-                         [ DockPanel.Dock = Top,
-                           Text                  = $Title,
-                           Foreground            = @OnSurface,
-                           FontFamily            = @HeadlineSmallFont,
-                           FontWeight            = @HeadlineSmallWeight,
-                           FontSize               = @HeadlineSmallSize,
-                           LineHeight             = @HeadlineSmallLineHeight,
-                           LetterSpacing          = @HeadlineSmallTracking,
-                           Margin                 = (0, 0, 0, @Spacing4) ]
-                ContentPresenter [ DockPanel.Dock = Bottom,
-                                   Content         = $Actions,
-                                   HorizontalAlignment = Right,
-                                   Margin              = (0, @Spacing4, 0, 0) ]
-                ContentPresenter
-            }
-        }
-    }
-    Style [TargetType=Dialog] {
-        Template = @DefaultDialog;
-    }
-
-    // ── BottomSheet: M3 bottom-anchored sheet ──────────────────────
-    // M3 spec: top corners rounded at ExtraLarge (28dp), bottom edges
-    // square so the sheet sits flush against the screen edge. The
-    // asymmetric corners ride the (TL, TR, BR, BL) CornerRadius tuple
-    // — the compiler routes tuples in a CornerRadius= position to
-    // `new CornerRadius(...)` rather than the default Thickness shape.
-    Template x:key="DefaultBottomSheet" [TargetType=BottomSheet] {
-        Border x:name="PART_Sheet"
-              [ Background      = @Surface,
-                BorderBrush     = #00000000,
-                BorderThickness = (0),
-                CornerRadius    = (@ShapeExtraLarge, @ShapeExtraLarge, 0, 0),
-                Effect          = @Elevation1,
-                Padding         = (@Spacing4, @Spacing4, @Spacing4, @Spacing4) ] {
-            ContentPresenter
-        }
-    }
-    Style [TargetType=BottomSheet] {
-        Template = @DefaultBottomSheet;
-    }
+    // ── Dialog / BottomSheet ───────────────────────────────────────
+    // Promoted to src/framework/surfaces/surfaces.template.mu.
 
     // ── ToolBarToggleButton: connected-bar chrome ──────────────────
     // Same shape as ToolBarButton but with an IsChecked trigger on top —

@@ -10,7 +10,7 @@ import { Border } from '../../basic/border.js';
 import { findDataTemplateForType } from '../../basic/templates/data-template.js';
 import { Selector } from './selector.js';
 import { Orientation, StackPanel } from '../../basic/panels/stack-panel.js';
-import { ScrollViewer } from '../scroll-viewer.js';
+import { ScrollViewer } from '../surfaces/scroll-viewer.js';
 import { TextBlock } from '../../basic/text-block.js';
 
 // SelectionMode is now owned by Selector and re-exported here so

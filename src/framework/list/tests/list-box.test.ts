@@ -7,7 +7,7 @@ import { InputManager } from '../../../framework/index.js';;
 import { HeadlessTarget } from '../../../visual-engine/index.js';
 import { ItemsPresenter } from '../../../basic/templates/items-presenter.js';
 import { ListBox, ListBoxItem, SelectionMode } from '../list-box.js';
-import { ScrollViewer } from '../../../framework/scroll-viewer.js';
+import { ScrollViewer } from '../../../framework/surfaces/scroll-viewer.js';
 import { StackPanel } from '../../../basic/panels/stack-panel.js';
 import { TextBlock } from '../../../basic/text-block.js';
 

@@ -10,7 +10,7 @@ import { RectangleGeometry } from '../../visual-engine/index.js';
 import { ContentPresenter } from '../templates/content-presenter.js';
 import { ItemsControl } from '../../framework/items-control.js';
 import { ItemsPresenter } from '../templates/items-presenter.js';
-import type { ScrollViewer } from '../../framework/scroll-viewer.js';
+import type { ScrollViewer } from '../../framework/surfaces/scroll-viewer.js';
 import { VirtualizingPanel } from '../panels/virtualisation/virtualizing-panel.js';
 
 // The presentation surface a ScrollViewer's default template wraps its

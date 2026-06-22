@@ -10,7 +10,7 @@ import { Canvas } from '../../basic/panels/canvas.js';
 import { ContentControl } from '../content-control.js';
 import { ContentPresenter } from '../../basic/templates/content-presenter.js';
 import { ControlTemplate } from '../../basic/templates/control-template.js';
-import { ScrollViewer } from '../scroll-viewer.js';
+import { ScrollViewer } from '../surfaces/scroll-viewer.js';
 import { Selector } from '../list/selector.js';
 
 // A movable, content-hosting control intended as the container shape

@@ -333,52 +333,9 @@ resources MuralBasic {
         when ( ThemeManager.Pointer = Coarse )      { Padding = (@Spacing4, @Spacing3, @Spacing4, @Spacing3); }
     }
 
-    // ── Drawer (in-flow pane) ───────────────────────────────────────
-    // Shared by Permanent / Persistent / Temporary variants. The
-    // Temporary variant re-parents this same pane onto the overlay
-    // host (see DefaultDrawerOverlay) — no duplicate pane is built.
-    // Drawer has TWO templates (pane + overlay) — both keyed; the
-    // ctor reads them explicitly.
-    //
-    // M3 spec deltas closed by this template:
-    //   * Background: @SurfaceContainerLow (M3 Standard / Modal).
-    //   * Padding:    (0,12,0,0) — M3's 12dp top inset baked in.
-    //   * Elevation:  @ElevationLevel1 when Variant=Temporary (M3 Modal
-    //                 floats over content with a shadow ramp; Permanent
-    //                 / Persistent stay at Level0 per M3 Standard /
-    //                 Dismissible).
-    //
-    // M3 spec deltas NOT yet closed (documented gap):
-    //   * Trailing-edge corner radius (M3 Modal has @ShapeLargeEnd on
-    //     the trailing corners — 16dp on the edge furthest from the
-    //     screen edge). Needs Anchor-aware corner-radius computation
-    //     mural's template DSL doesn't support yet.
-    Template x:key="DefaultDrawerPane"[TargetType=Drawer]{
-        Border x:name="PART_Pane"
-              [ Background      = @SurfaceContainerLow,
-                BorderBrush     = @OutlineVariant,
-                BorderThickness = (1),
-                Padding         = (@Spacing0, @Spacing3, @Spacing0, @Spacing0) ]{
-            ContentPresenter
-        }
-        when ( Variant = Temporary ) { PART_Pane.Effect = @ElevationLevel1; }
-        // Disabled — dim the entire drawer pane. Drawer doesn't have
-        // hover / focus / press semantics (it's a container, not an
-        // interactive surface), so the state ladder collapses to
-        // resting + disabled at the template level.
-        when ( IsEnabled = false ) { PART_Pane.Opacity = @DisabledContentOpacity; }
-    }
-
-    // ── Drawer (overlay host for the Temporary variant) ─────────────
-    // Applied lazily — only when a Temporary Drawer first transitions
-    // to IsOpen=true. The pane is NOT a child of this template; Drawer
-    // AddVisualChilds it after Apply so the same pane instance can flip
-    // between in-flow and overlay hosting without being rebuilt.
-    Template x:key="DefaultDrawerOverlay"[TargetType=Drawer]{
-        TemporaryOverlayHost x:name="PART_OverlayHost"{
-            ScrimSurface x:name="PART_Scrim" [ BorderThickness = (0) ]
-        }
-    }
+    // ── Drawer ──────────────────────────────────────────────────────
+    // Promoted to src/framework/surfaces/surfaces.template.mu
+    // (folded into MuralFramework, which loads alongside MuralBasic).
 
     // ── TreeView (chrome) ───────────────────────────────────────────
     // ItemsControl-derived: a ScrollViewer hosting an ItemsPresenter
@@ -916,25 +873,8 @@ resources MuralBasic {
     }
 
     // ── ScrollViewer ────────────────────────────────────────────────
-    // ScrollViewerLayout is a custom panel that hands its
-    // ArrangeOverride back to the host ScrollViewer (which carries the
-    // gutter / placement math). PART_ContentSite is the
-    // ScrollContentPresenter (extends ContentPresenter, so consumer
-    // Content lands here automatically via the template's first-
-    // ContentPresenter slot resolution). PART_VerticalScrollBar /
-    // PART_HorizontalScrollBar are the default scrollbars — re-template
-    // to swap them or move their position; the host fishes them out by
-    // PART name.
-    Template x:key="DefaultScrollViewer" [TargetType=ScrollViewer]{
-        ScrollViewerLayout x:name="PART_Layout"{
-            ScrollContentPresenter x:name="PART_ContentSite"
-            ScrollBar x:name="PART_VerticalScrollBar"
-            ScrollBar x:name="PART_HorizontalScrollBar"
-        }
-    }
-    Style [TargetType=ScrollViewer] {
-        Template = @DefaultScrollViewer;
-    }
+    // Promoted to src/framework/surfaces/surfaces.template.mu
+    // (folded into MuralFramework, which loads alongside MuralBasic).
 
     // ── ScrollBar ───────────────────────────────────────────────────
     // Material-flavoured flat track with a rounded thumb. The cross-

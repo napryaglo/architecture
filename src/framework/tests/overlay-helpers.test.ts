@@ -10,10 +10,10 @@ import { HeadlessTarget } from '../../visual-engine/index.js';
 import { Border } from '../../basic/border.js';
 import { TextBlock } from '../../basic/text-block.js';
 import { InputManager } from '../input-manager.js';
-import { Tooltip } from '../tooltip.js';
-import { TooltipPopupHost } from '../tooltip-service.js';
-import { Snackbar } from '../snackbar.js';
-import { Dialog } from '../dialog.js';
+import { Tooltip } from '../tooltips/tooltip.js';
+import { TooltipPopupHost } from '../tooltips/tooltip-service.js';
+import { Snackbar } from '../notifications/snackbar.js';
+import { Dialog } from '../surfaces/dialog.js';
 import {
     attachTooltip,
     showSnackbar,

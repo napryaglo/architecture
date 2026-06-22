@@ -6,7 +6,7 @@ import { Application, NoModifiers, PointerButton, Rect, Size, type PointerEventI
 import { InputManager } from '../../../framework/index.js';;
 import { HeadlessTarget } from '../../../visual-engine/index.js';
 import { ItemsPresenter } from '../../../basic/templates/items-presenter.js';
-import { ScrollViewer } from '../../../framework/scroll-viewer.js';
+import { ScrollViewer } from '../../../framework/surfaces/scroll-viewer.js';
 import { StackPanel } from '../../../basic/panels/stack-panel.js';
 import { CollapsibleStack, TreeView, TreeViewItem } from '../tree-view.js';
 

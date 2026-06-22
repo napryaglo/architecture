@@ -1,5 +1,5 @@
-import { MetaData, Model, Element } from '../runtime/index.js';
-import { ContentControl } from './content-control.js';
+import { MetaData, Model, Element } from '../../runtime/index.js';
+import { ContentControl } from '../content-control.js';
 
 // M3 Bottom Sheet — surface that rises from the bottom edge, used to
 // expose secondary content or a confirmation flow.

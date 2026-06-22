@@ -5,11 +5,11 @@ import {
     Size,
     Visual,
     type DrawingContext,
-} from '../runtime/index.js';
-import { CollectionViewGroup } from '../basic/collections/collection-view-group.js';
-import { _registerGroupItemCtor } from './items-control.js';
-import { ItemsControl } from './items-control.js';
-import { StackPanel } from '../basic/panels/stack-panel.js';
+} from '../../runtime/index.js';
+import { CollectionViewGroup } from '../../basic/collections/collection-view-group.js';
+import { _registerGroupItemCtor } from '../items-control.js';
+import { ItemsControl } from '../items-control.js';
+import { StackPanel } from '../../basic/panels/stack-panel.js';
 
 // One row in a grouped ItemsControl — wraps a CollectionViewGroup and
 // hosts its leaf items as the inner items panel. Mirrors WPF's

@@ -27,7 +27,7 @@ export {
 export { IconButton } from './icon-button.js';
 export { IconButtonToggle } from './icon-button-toggle.js';
 export { FloatingActionButton, FabSize } from './fab.js';
-export { Card, CardVariant } from './card.js';
+export { Card, CardVariant } from './surfaces/card.js';
 export {
     ColorPicker,
     ColorPickerVariant,
@@ -69,12 +69,12 @@ export {
 export { ProgressIndicator, ProgressIndicatorVariant } from './notifications/progress-indicator.js';
 export { Banner } from './notifications/banner.js';
 export { Snackbar } from './notifications/snackbar.js';
-export { Dialog } from './dialog.js';
-export { BottomSheet } from './bottom-sheet.js';
+export { Dialog } from './surfaces/dialog.js';
+export { BottomSheet } from './surfaces/bottom-sheet.js';
 export { attachTooltip, showSnackbar, showDialog } from './overlay-helpers.js';
-export { Drawer, DrawerVariant, ScrimSurface, TemporaryOverlayHost } from './drawer.js';
-export { ScrollViewer, ScrollViewerLayout } from './scroll-viewer.js';
-export { GroupItem } from './group-item.js';
+export { Drawer, DrawerVariant, ScrimSurface, TemporaryOverlayHost } from './surfaces/drawer.js';
+export { ScrollViewer, ScrollViewerLayout } from './surfaces/scroll-viewer.js';
+export { GroupItem } from './surfaces/group-item.js';
 
 // ── Input management ────────────────────────────────────────────────
 export { InputManager } from './input-manager.js';

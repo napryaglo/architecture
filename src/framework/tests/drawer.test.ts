@@ -7,7 +7,7 @@ import { InputManager } from '../../framework/index.js';;
 import { HeadlessTarget } from '../../visual-engine/index.js';
 import { Border } from '../../basic/border.js';
 import { Dock, DockPanel } from '../../basic/panels/dock-panel.js';
-import { Drawer, DrawerVariant } from '../drawer.js';
+import { Drawer, DrawerVariant } from '../surfaces/drawer.js';
 import { TextBlock } from '../../basic/text-block.js';
 
 function pointer(overrides: Partial<PointerEventInit> = {}): PointerEventInit

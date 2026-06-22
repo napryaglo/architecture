@@ -3,7 +3,7 @@ import { Border, ContentPresenter, ControlTemplate, DataTemplate, Dock, DockPane
 import { ItemsControl } from "@visualisation-sub/mural/framework/items-control.js";
 import { ListBox, ListBoxItem, SelectionMode } from "@visualisation-sub/mural/framework/list/list-box.js";
 import { MarqueeBoundsPolicy } from "@visualisation-sub/mural/framework/list/selector.js";
-import { ScrollViewer } from "@visualisation-sub/mural/framework/scroll-viewer.js";
+import { ScrollViewer } from "@visualisation-sub/mural/framework/surfaces/scroll-viewer.js";
 import { Color, DataContextBinding, DynamicResource, HorizontalAlignment, NameScope, ResourceDictionary, Setter, SetterFactory, Style, Thickness, VerticalAlignment } from "@visualisation-sub/mural/runtime";
 import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
 

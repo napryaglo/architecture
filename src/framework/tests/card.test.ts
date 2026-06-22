@@ -5,7 +5,7 @@ import { initTestApp } from '../../basic/tests/test-app.js';
 import { Border } from '../../basic/border.js';
 import { ContentPresenter } from '../../basic/templates/content-presenter.js';
 import { TextBlock } from '../../basic/text-block.js';
-import { Card, CardVariant } from '../card.js';
+import { Card, CardVariant } from '../surfaces/card.js';
 
 describe('Card — Variant DP', () => {
     beforeEach(() => { initTestApp(); });

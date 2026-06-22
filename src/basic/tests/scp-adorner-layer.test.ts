@@ -15,7 +15,7 @@ import {
 } from '../../runtime/index.js';
 import { Border } from '../border.js';
 import { ScrollContentPresenter } from '../scroll/scroll-content-presenter.js';
-import { ScrollViewer } from '../../framework/scroll-viewer.js';
+import { ScrollViewer } from '../../framework/surfaces/scroll-viewer.js';
 
 class FixedSquare extends Element
 {

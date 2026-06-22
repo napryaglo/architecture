@@ -5,7 +5,7 @@ import { ObservableCollection, Element, Visual } from '../../runtime/index.js';
 import { CollectionView, GroupDescription } from '../collections/collection-view.js';
 import { CollectionViewGroup } from '../collections/collection-view-group.js';
 import { DataTemplate } from '../templates/data-template.js';
-import { GroupItem } from '../../framework/group-item.js';
+import { GroupItem } from '../../framework/surfaces/group-item.js';
 import { GroupStyle } from '../collections/group-style.js';
 import {
     GeneratorPosition,
