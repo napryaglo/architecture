@@ -1,5 +1,5 @@
 import { MetaData, Model, Element, Visual } from '../../runtime/index.js';
-import { ToggleButton } from '../toggle-button.js';
+import { ToggleButton } from '../buttons/toggle-button.js';
 
 // M3 Switch — a binary toggle styled as a track with a sliding thumb.
 //

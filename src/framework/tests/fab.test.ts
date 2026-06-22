@@ -5,7 +5,7 @@ import { initTestApp } from '../../basic/tests/test-app.js';
 import { Border } from '../../basic/border.js';
 import { ContentPresenter } from '../../basic/templates/content-presenter.js';
 import { TextBlock } from '../../basic/text-block.js';
-import { FabSize, FloatingActionButton } from '../fab.js';
+import { FabSize, FloatingActionButton } from '../buttons/fab.js';
 
 describe('FloatingActionButton — Size DP', () => {
     beforeEach(() => { initTestApp(); });

@@ -2,7 +2,7 @@ import {
     MetaData,
     Model,
     type PointerEventArgs,
-} from '../runtime/index.js';
+} from '../../runtime/index.js';
 import { Button } from './button.js';
 
 // ToggleButton — Button that tracks an `IsChecked` state, flipping it

@@ -8,12 +8,12 @@ import {
     Thickness,
     Element, Visual,
     type PropertyDescriptor,
-} from '../runtime/index.js';
-import type { PresentationTarget } from '../visual-engine/index.js';
-import { RotateTransform } from '../visual-engine/index.js';
-import { Border } from '../basic/border.js';
-import { StackPanel, Orientation } from '../basic/panels/stack-panel.js';
-import { TextBlock } from '../basic/text-block.js';
+} from '../../runtime/index.js';
+import type { PresentationTarget } from '../../visual-engine/index.js';
+import { RotateTransform } from '../../visual-engine/index.js';
+import { Border } from '../../basic/border.js';
+import { StackPanel, Orientation } from '../../basic/panels/stack-panel.js';
+import { TextBlock } from '../../basic/text-block.js';
 import { FloatingActionButton } from './fab.js';
 
 // M3 FAB Menu — a primary FAB that, on press, reveals a vertical stack

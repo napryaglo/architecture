@@ -1,7 +1,7 @@
 import { ButtonGroupVM } from "./button-group-vm.mjs";
 import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@visualisation-sub/mural/basic";
 import { ButtonGroup } from "@visualisation-sub/mural/framework/button-groups/button-group.js";
-import { Button, ButtonVariant } from "@visualisation-sub/mural/framework/button.js";
+import { Button, ButtonVariant } from "@visualisation-sub/mural/framework/buttons/button.js";
 import { DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
 import { FontWeight } from "@visualisation-sub/mural/visual-engine";
 

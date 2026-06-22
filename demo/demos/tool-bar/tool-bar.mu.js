@@ -1,7 +1,7 @@
 import { ToolBarVM } from "./tool-bar-vm.mjs";
 import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@visualisation-sub/mural/basic";
+import { ToggleButton } from "@visualisation-sub/mural/framework/buttons/toggle-button.js";
 import { ToolBar, ToolBarButton, ToolBarSeparator } from "@visualisation-sub/mural/framework/surface.js";
-import { ToggleButton } from "@visualisation-sub/mural/framework/toggle-button.js";
 import { DataContextBinding, DynamicResource, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
 import { FontWeight } from "@visualisation-sub/mural/visual-engine";
 

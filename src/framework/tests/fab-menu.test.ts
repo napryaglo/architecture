@@ -5,7 +5,7 @@ import { ObservableCollection } from '../../runtime/index.js';
 import { Border } from '../../basic/border.js';
 import { TextBlock } from '../../basic/text-block.js';
 import { HeadlessTarget } from '../../visual-engine/index.js';
-import { FabMenu } from '../fab-menu.js';
+import { FabMenu } from '../buttons/fab-menu.js';
 
 describe('FabMenu defaults', () => {
 

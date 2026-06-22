@@ -72,11 +72,11 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
 
     // ── basic controls ──────────────────────────────────────────────
     ['Border',                  '@visualisation-sub/mural/basic'],
-    ['Button',                  '@visualisation-sub/mural/framework/button.js'],
-    ['IconButton',              '@visualisation-sub/mural/framework/icon-button.js'],
-    ['IconButtonToggle',        '@visualisation-sub/mural/framework/icon-button-toggle.js'],
-    ['FloatingActionButton',    '@visualisation-sub/mural/framework/fab.js'],
-    ['FabSize',                 '@visualisation-sub/mural/framework/fab.js'],
+    ['Button',                  '@visualisation-sub/mural/framework/buttons/button.js'],
+    ['IconButton',              '@visualisation-sub/mural/framework/buttons/icon-button.js'],
+    ['IconButtonToggle',        '@visualisation-sub/mural/framework/buttons/icon-button-toggle.js'],
+    ['FloatingActionButton',    '@visualisation-sub/mural/framework/buttons/fab.js'],
+    ['FabSize',                 '@visualisation-sub/mural/framework/buttons/fab.js'],
     ['Card',                    '@visualisation-sub/mural/framework/surfaces/card.js'],
     ['CardVariant',             '@visualisation-sub/mural/framework/surfaces/card.js'],
     ['TopAppBar',               '@visualisation-sub/mural/framework/top-app-bar/top-app-bar.js'],
@@ -84,8 +84,8 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['NavigationItem',          '@visualisation-sub/mural/framework/navigation/navigation-item.js'],
     ['NavigationRail',          '@visualisation-sub/mural/framework/navigation/navigation-rail.js'],
     ['NavigationBar',           '@visualisation-sub/mural/framework/navigation/navigation-bar.js'],
-    ['ClickMode',               '@visualisation-sub/mural/framework/button.js'],
-    ['ButtonVariant',           '@visualisation-sub/mural/framework/button.js'],
+    ['ClickMode',               '@visualisation-sub/mural/framework/buttons/button.js'],
+    ['ButtonVariant',           '@visualisation-sub/mural/framework/buttons/button.js'],
     ['TextBlock',               '@visualisation-sub/mural/basic'],
     ['Canvas',                  '@visualisation-sub/mural/basic'],
     ['PaginatedCanvas',         '@visualisation-sub/mural/basic'],
@@ -236,7 +236,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     // These extend Button / Visual and live in a separate barrel
     // (`./surface.js`) to avoid a TDZ cycle through the main basic
     // barrel during Button's default-style theme cascade.
-    ['ToggleButton',            '@visualisation-sub/mural/framework/toggle-button.js'],
+    ['ToggleButton',            '@visualisation-sub/mural/framework/buttons/toggle-button.js'],
     // M3 Switch — capitalised `Switch` is fine in JS (only the
     // lowercase `switch` keyword is reserved), so the class and the
     // markup symbol both spell it `Switch`.
@@ -250,7 +250,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['SegmentedPosition',       '@visualisation-sub/mural/framework/button-groups/segmented-button.js'],
     ['ButtonGroup',             '@visualisation-sub/mural/framework/button-groups/button-group.js'],
     ['SplitButton',             '@visualisation-sub/mural/framework/button-groups/split-button.js'],
-    ['FabMenu',                 '@visualisation-sub/mural/framework/fab-menu.js'],
+    ['FabMenu',                 '@visualisation-sub/mural/framework/buttons/fab-menu.js'],
     ['TabControl',              '@visualisation-sub/mural/framework/tabs/tabs.js'],
     ['TabItem',                 '@visualisation-sub/mural/framework/tabs/tabs.js'],
     ['SearchBar',               '@visualisation-sub/mural/framework/search-bar/search-bar.js'],

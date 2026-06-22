@@ -1,6 +1,6 @@
 import { AnimationDeclarativeVM } from "./animation-declarative-vm.mjs";
 import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@visualisation-sub/mural/basic";
-import { Button } from "@visualisation-sub/mural/framework/button.js";
+import { Button } from "@visualisation-sub/mural/framework/buttons/button.js";
 import { BeginStoryboardAction, DoubleAnimation, DynamicResource, EventTrigger, ResourceDictionary, Storyboard, Style, Thickness } from "@visualisation-sub/mural/runtime";
 import { FontWeight } from "@visualisation-sub/mural/visual-engine";
 

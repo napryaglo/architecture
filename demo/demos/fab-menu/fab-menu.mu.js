@@ -1,6 +1,6 @@
 import { FabMenuVM } from "./fab-menu-vm.mjs";
 import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@visualisation-sub/mural/basic";
-import { FabMenu } from "@visualisation-sub/mural/framework/fab-menu.js";
+import { FabMenu } from "@visualisation-sub/mural/framework/buttons/fab-menu.js";
 import { DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
 import { FontWeight } from "@visualisation-sub/mural/visual-engine";
 

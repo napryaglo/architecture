@@ -1,4 +1,4 @@
-import { Model, Element } from '../runtime/index.js';
+import { Model, Element } from '../../runtime/index.js';
 import { Button } from './button.js';
 
 // M3 Icon Button — square 40×40 button whose Content is a glyph

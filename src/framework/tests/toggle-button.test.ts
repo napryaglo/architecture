@@ -4,7 +4,7 @@ import { initTestApp } from '../../basic/tests/test-app.js';
 
 import { Application, NoModifiers, PointerButton, RelayCommand, type PointerEventInit } from '../../runtime/index.js';
 import { InputManager } from '../../framework/index.js';;
-import { ToggleButton } from '../toggle-button.js';
+import { ToggleButton } from '../buttons/toggle-button.js';
 import { Panel } from '../../runtime/index.js';
 
 class Root extends Panel {}

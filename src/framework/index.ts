@@ -23,10 +23,10 @@ export {
     ButtonVariant,
     ClickMode,
     type ClickHandler,
-} from './button.js';
-export { IconButton } from './icon-button.js';
-export { IconButtonToggle } from './icon-button-toggle.js';
-export { FloatingActionButton, FabSize } from './fab.js';
+} from './buttons/button.js';
+export { IconButton } from './buttons/icon-button.js';
+export { IconButtonToggle } from './buttons/icon-button-toggle.js';
+export { FloatingActionButton, FabSize } from './buttons/fab.js';
 export { Card, CardVariant } from './surfaces/card.js';
 export {
     ColorPicker,
@@ -43,7 +43,7 @@ export { TopAppBar, TopAppBarVariant } from './top-app-bar/top-app-bar.js';
 export { NavigationItem } from './navigation/navigation-item.js';
 export { NavigationRail } from './navigation/navigation-rail.js';
 export { NavigationBar }  from './navigation/navigation-bar.js';
-export { ToggleButton } from './toggle-button.js';
+export { ToggleButton } from './buttons/toggle-button.js';
 export { Switch } from './toggles/switch.js';
 export { Checkbox } from './toggles/checkbox.js';
 export { RadioButton } from './toggles/radio-button.js';
@@ -55,7 +55,7 @@ export {
 } from './button-groups/segmented-button.js';
 export { ButtonGroup } from './button-groups/button-group.js';
 export { SplitButton } from './button-groups/split-button.js';
-export { FabMenu } from './fab-menu.js';
+export { FabMenu } from './buttons/fab-menu.js';
 export { TabControl, TabItem } from './tabs/tabs.js';
 export { SearchBar } from './search-bar/search-bar.js';
 export { Divider } from './markers/divider.js';

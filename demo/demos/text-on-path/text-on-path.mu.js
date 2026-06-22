@@ -1,7 +1,7 @@
 import { TextOnPathVM } from "./text-on-path-vm.mjs";
 import { Border, Canvas, DataTemplate, Dock, DockPanel, Orientation, Slider, StackPanel, TextBlock, TextBox, TextWrapping } from "@visualisation-sub/mural/basic";
 import { ColorPicker } from "@visualisation-sub/mural/framework";
-import { Button } from "@visualisation-sub/mural/framework/button.js";
+import { Button } from "@visualisation-sub/mural/framework/buttons/button.js";
 import { ComboBox } from "@visualisation-sub/mural/framework/list/combo-box.js";
 import { DataContextBinding, DynamicResource, NameScope, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
 import { FontWeight } from "@visualisation-sub/mural/visual-engine";

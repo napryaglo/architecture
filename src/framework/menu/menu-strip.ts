@@ -20,7 +20,7 @@ import { Orientation, StackPanel } from '../../basic/panels/stack-panel.js';
 import { TextBlock } from '../../basic/text-block.js';
 import { Brush } from '../../visual-engine/index.js';
 import { ClickAwayScrim } from '../tool-bar/tool-bar.js';
-import { Button } from '../button.js';
+import { Button } from '../buttons/button.js';
 import type { ICommand } from '../../runtime/command.js';
 
 // ─────────────────────────────────────────────────────────────────────

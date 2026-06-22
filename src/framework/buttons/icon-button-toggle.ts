@@ -2,7 +2,7 @@ import {
     MetaData,
     Model,
     Element, type PointerEventArgs,
-} from '../runtime/index.js';
+} from '../../runtime/index.js';
 import { IconButton } from './icon-button.js';
 
 // M3 Icon Button Toggle — an `IconButton` whose chrome flips between an

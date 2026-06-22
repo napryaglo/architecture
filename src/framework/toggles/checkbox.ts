@@ -1,5 +1,5 @@
 import { Model, Element, Visual } from '../../runtime/index.js';
-import { ToggleButton } from '../toggle-button.js';
+import { ToggleButton } from '../buttons/toggle-button.js';
 
 // M3 Checkbox — 18 × 18 dp square toggle.
 //

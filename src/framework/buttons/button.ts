@@ -6,14 +6,14 @@ import {
     type KeyEventArgs,
     type PointerEventArgs,
     type PropertyDescriptor,
-} from '../runtime/index.js';
+} from '../../runtime/index.js';
 import {
     CommandSourceHelper,
     type ICommandSource,
-} from '../framework/commands/command-source.js';
-import { ContentControl } from './content-control.js';
-import { ToolTipService } from './tooltips/tooltip-service.js';
-import { CommandBase } from '../runtime/index.js';
+} from '../commands/command-source.js';
+import { ContentControl } from '../content-control.js';
+import { ToolTipService } from '../tooltips/tooltip-service.js';
+import { CommandBase } from '../../runtime/index.js';
 
 // When the Click event fires. WPF parity: Release is the default
 // (visible press feedback, fire on PointerUp inside bounds), Press

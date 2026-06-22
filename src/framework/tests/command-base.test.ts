@@ -12,7 +12,7 @@ import {
 } from '../../runtime/index.js';
 import { HeadlessTarget } from '../../visual-engine/index.js';
 import { Border } from '../../basic/border.js';
-import { Button } from '../button.js';
+import { Button } from '../buttons/button.js';
 import { InputManager } from '../input-manager.js';
 import { CommandManager } from '../commands/command-manager.js';
 import { KeyBinding } from '../commands/input-binding.js';

@@ -5,7 +5,7 @@
 // Consumers wanting these types import explicitly from
 // `@visualisation-sub/mural/framework/surface.js`.
 
-export { ToggleButton } from './toggle-button.js';
+export { ToggleButton } from './buttons/toggle-button.js';
 export {
     ToolBar,
     ToolBarPanel,

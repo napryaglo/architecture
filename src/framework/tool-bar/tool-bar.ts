@@ -17,7 +17,7 @@ import {
 } from './tool-bar-items.js';
 import { PresentationTarget } from '../../visual-engine/index.js';
 import { Border } from '../../basic/border.js';
-import { Button } from '../button.js';
+import { Button } from '../buttons/button.js';
 import { ClickAwayScrim } from '../../basic/click-away-scrim.js';
 import { ContentControl } from '../content-control.js';
 import { ContentPresenter } from '../../basic/templates/content-presenter.js';

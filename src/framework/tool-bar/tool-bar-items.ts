@@ -10,10 +10,10 @@ import {
     type PropertyDescriptor,
 } from '../../runtime/index.js';
 import { Brush } from '../../visual-engine/index.js';
-import { Button } from '../button.js';
+import { Button } from '../buttons/button.js';
 import { Orientation, StackPanel } from '../../basic/panels/stack-panel.js';
 import { TextBlock } from '../../basic/text-block.js';
-import { ToggleButton } from '../toggle-button.js';
+import { ToggleButton } from '../buttons/toggle-button.js';
 
 // Where a button sits inside the inline ToolBar strip's connected-bar
 // chrome. ToolBar's panel updates the Position DP on each inline

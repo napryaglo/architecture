@@ -1,4 +1,4 @@
-import { MetaData, Model, Element } from '../runtime/index.js';
+import { MetaData, Model, Element } from '../../runtime/index.js';
 import { Button } from './button.js';
 
 // Material 3 FloatingActionButton size variants.
