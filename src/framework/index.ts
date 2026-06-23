@@ -167,3 +167,18 @@ export {
     attachStandardDiagramMutations,
     type DiagramMutator,
 } from './diagram/behaviors/attach-standard-mutations.js';
+export { Connector, AnchorClip } from './diagram/connector.js';
+export { ConnectorEndpoint, type ConnectorEndpointInit } from './diagram/connector-endpoint.js';
+export { Port, PortSide, PortCoordSpace, PortResolver, type PortInit, type IPortHost } from './diagram/port.js';
+export { ConnectorEnd, RoutingMode, type ResolvedAnchor, type RouteSpec, type IRouter, type ResolvedPortSide } from './diagram/routing/router.js';
+export {
+    ConnectorCreateBehavior,
+    attachConnectorCreate,
+    type ConnectorCreatedArgs,
+    type ConnectorCreatedListener,
+} from './diagram/behaviors/connector-create-behavior.js';
+export {
+    ConnectorEditAdorner,
+    attachConnectorEditAdorner,
+} from './diagram/behaviors/connector-edit-adorner.js';
+export { DiagramLayer, DiagramLayersPanel } from './diagram/diagram-layers-panel.js';

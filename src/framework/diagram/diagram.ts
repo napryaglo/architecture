@@ -57,6 +57,10 @@ import type {
     ConnectorCreatedArgs,
     ConnectorCreatedListener,
 } from './behaviors/connector-create-behavior.js';
+import {
+    attachConnectorInteractions,
+    type ConnectorInteractionsHandlers,
+} from './behaviors/connector-interactions-behavior.js';
 import type { Connector } from './connector.js';
 
 // §19.3 follow-up — position snap callback. Consumers (e.g., the
@@ -199,6 +203,16 @@ export class Diagram extends Selector
     public static readonly SelectionResizeEnabledKey = Model.RegisterProperty<boolean>(
         Diagram, 'SelectionResizeEnabled', false, MetaData.None);
 
+    // Connector-interactions opt-in. Default off. When flipped true, the
+    // framework mounts a PortHandlesAdorner (port dots on Figure hover)
+    // and an EditHandlesAdorner (endpoint + waypoint dots on selected
+    // connectors), and wires Diagram-level pointer events into
+    // ConnectorCreateBehavior + ConnectorEditAdorner state machines.
+    // The DP is the consumer-facing toggle; the framework owns every
+    // line of plumbing inside.
+    public static readonly ConnectorInteractionsEnabledKey = Model.RegisterProperty<boolean>(
+        Diagram, 'ConnectorInteractionsEnabled', false, MetaData.None);
+
     // Drop receiver — when set, Diagram attaches its canvas-drop
     // behavior to this Visual (typically the surrounding Border or
     // ScrollViewer). Bound declaratively from markup so the consumer
@@ -274,6 +288,8 @@ export class Diagram extends Selector
     public set AlignmentGuidesEnabled(v: boolean) { this.set_property_value(Diagram.AlignmentGuidesEnabledKey, v); }
     public get SelectionResizeEnabled():  boolean { return this.get_property_value(Diagram.SelectionResizeEnabledKey); }
     public set SelectionResizeEnabled(v: boolean) { this.set_property_value(Diagram.SelectionResizeEnabledKey, v); }
+    public get ConnectorInteractionsEnabled():  boolean { return this.get_property_value(Diagram.ConnectorInteractionsEnabledKey); }
+    public set ConnectorInteractionsEnabled(v: boolean) { this.set_property_value(Diagram.ConnectorInteractionsEnabledKey, v); }
     public get ReflectSelectionToItems():  boolean { return this.get_property_value(Diagram.ReflectSelectionToItemsKey); }
     public set ReflectSelectionToItems(v: boolean) { this.set_property_value(Diagram.ReflectSelectionToItemsKey, v); }
     public get DropReceiver():  Visual | undefined { return this.get_property_value(Diagram.DropReceiverKey); }
@@ -377,6 +393,26 @@ export class Diagram extends Selector
     private _selectionResizeAdorner: SelectionBoundsAdorner | undefined = undefined;
     private _selectionResizeSource:  DiagramSelectionSource | undefined = undefined;
 
+    // Connector-interactions detach thunk — set when the behavior is
+    // attached, called + cleared on detach. The behavior owns its own
+    // adorner mount / unmount internally; one slot here is enough.
+    private _connectorInteractionsDetach: (() => void) | undefined = undefined;
+
+    // Connector-interactions preview-pointer interceptor. Figure's
+    // OnPointerDown / Move / Up all set args.Handled = true, which
+    // short-circuits the bubble route walk before any Diagram-level
+    // routed listener fires. The connector-interactions behavior
+    // installs here so its handler runs in the TUNNEL phase (root →
+    // target, before the descendant Figure consumes the event). The
+    // four methods mirror the framework's pointer virtual conventions.
+    private _connectorInteractionsHandlers: ConnectorInteractionsHandlers | undefined = undefined;
+    /** @internal — used by attachConnectorInteractions in the framework's
+     *  connector-interactions behavior. Not exposed publicly. */
+    public _setConnectorInteractionsHandlers(h: ConnectorInteractionsHandlers | undefined): void
+    {
+        this._connectorInteractionsHandlers = h;
+    }
+
     // Drop-receiver / Mutator attach state — detach thunks for whichever
     // receiver / mutator is currently wired. Swapped out on DP change so
     // the previous wiring releases its listeners.
@@ -442,6 +478,34 @@ export class Diagram extends Selector
         this.Focus();
     }
 
+    // Preview-phase pointer overrides delegate to the connector-
+    // interactions interceptor when one is installed. Fire BEFORE
+    // descendant Figures consume the event by setting args.Handled,
+    // which is the only reliable point to intercept gestures that
+    // start on a Figure's bounding rect (port-handle clicks that ride
+    // above the figure visual; figure-body clicks that pre-handle
+    // before a Diagram-level bubble listener could ever run).
+    protected override OnPreviewPointerDown(args: PointerEventArgs): void
+    {
+        super.OnPreviewPointerDown(args);
+        this._connectorInteractionsHandlers?.OnPreviewPointerDown(args);
+    }
+    protected override OnPreviewPointerMove(args: PointerEventArgs): void
+    {
+        super.OnPreviewPointerMove(args);
+        this._connectorInteractionsHandlers?.OnPreviewPointerMove(args);
+    }
+    protected override OnPreviewPointerUp(args: PointerEventArgs): void
+    {
+        super.OnPreviewPointerUp(args);
+        this._connectorInteractionsHandlers?.OnPreviewPointerUp(args);
+    }
+    protected override OnPointerLeave(args: PointerEventArgs): void
+    {
+        super.OnPointerLeave(args);
+        this._connectorInteractionsHandlers?.OnPointerLeave(args);
+    }
+
     protected override OnPropertyChanged(
         descriptor: PropertyDescriptor,
         oldValue:   unknown,
@@ -458,6 +522,11 @@ export class Diagram extends Selector
         {
             if (newValue === true) this._attachSelectionResize();
             else                   this._detachSelectionResize();
+        }
+        else if (descriptor.Name === 'ConnectorInteractionsEnabled')
+        {
+            if (newValue === true) this._attachConnectorInteractions();
+            else                   this._detachConnectorInteractions();
         }
         else if (descriptor.Name === 'DropReceiver')
         {
@@ -616,6 +685,21 @@ export class Diagram extends Selector
             this._selectionResizeAdorner = undefined;
         }
         this._selectionResizeSource = undefined;
+    }
+
+    private _attachConnectorInteractions(): void
+    {
+        if (this._connectorInteractionsDetach !== undefined) return;
+        this._connectorInteractionsDetach = attachConnectorInteractions(this);
+    }
+
+    private _detachConnectorInteractions(): void
+    {
+        if (this._connectorInteractionsDetach !== undefined)
+        {
+            this._connectorInteractionsDetach();
+            this._connectorInteractionsDetach = undefined;
+        }
     }
 
     private _mountSelectionResizeAdorner(): void

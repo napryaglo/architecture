@@ -236,11 +236,13 @@ resources DiagramDemo {
                 //     mutator without an extra binding line.
                 Diagram x:name="nodes"
                        [ItemsSource = $Nodes,
+                        Connectors = $Connectors,
                         ItemsPanel = @DiagramCanvasPanel,
                         SelectionMode = Extended,
                         AllowMarqueeSelection = true,
                         AlignmentGuidesEnabled = true,
                         SelectionResizeEnabled = true,
+                        ConnectorInteractionsEnabled = true,
                         ReflectSelectionToItems = true,
                         DropReceiver = $Self,
                         Focusable = true]

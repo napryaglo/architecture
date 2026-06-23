@@ -326,11 +326,13 @@ export class DiagramDemo extends ResourceDictionary {
             _diagram10 = new Diagram();
             _diagram10.Name = "nodes";
             _diagram10.set_property_value(Diagram.ItemsSourceKey, DataContextBinding(_diagram10, "Nodes"));
+            _diagram10.set_property_value(Diagram.ConnectorsKey, DataContextBinding(_diagram10, "Connectors"));
             _diagram10.set_property_value(Diagram.ItemsPanelKey, _tmpl0);
             _diagram10.set_property_value(Diagram.SelectionModeKey, SelectionMode.Extended);
             _diagram10.set_property_value(Diagram.AllowMarqueeSelectionKey, true);
             _diagram10.set_property_value(Diagram.AlignmentGuidesEnabledKey, true);
             _diagram10.set_property_value(Diagram.SelectionResizeEnabledKey, true);
+            _diagram10.set_property_value(Diagram.ConnectorInteractionsEnabledKey, true);
             _diagram10.set_property_value(Diagram.ReflectSelectionToItemsKey, true);
             _diagram10.set_property_value(Diagram.DropReceiverKey, DataContextBinding(_diagram10, "Self"));
             _diagram10.set_property_value(Diagram.FocusableKey, true);

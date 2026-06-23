@@ -7,8 +7,11 @@ import {
 import { resolveKey } from '../../runtime/model-internals.js';
 import {
     type Geometry,
+    Color,
+    Pen,
     Point,
     RotateTransform,
+    SolidColorBrush,
     type Visual,
 } from '../../visual-engine/index.js';
 import { Shape } from '../../basic/shapes/shape.js';
@@ -34,6 +37,22 @@ import {
     polylineToPathGeometry,
     shortenPolyline,
 } from './caps/cap-inset.js';
+
+// Self-register the three default routers so a consumer that imports a
+// Connector — or anything that transitively imports Connector — gets
+// a working RouterRegistry without an explicit side-effect import per
+// routing mode. Tests that explicitly import a single router still
+// work; the register() calls are idempotent (Map.set). Consumers wanting
+// a fully custom routing surface can call RouterRegistry.register again
+// after this module loads to override.
+import './routing/straight-router.js';
+import './routing/orthogonal-router.js';
+import './routing/bezier-router.js';
+
+// Per-instance Stroke seed. Cloned in the ctor so PenEditor's in-place
+// mutation can't leak across instances — same convention as
+// [figure.ts:58](./figure.ts#L58)'s DEFAULT_STROKE.
+const DEFAULT_STROKE = new Pen(new SolidColorBrush(Color.FromHex('#475569')), 1.5);
 
 // How the geometric-clip fallback (resolution path 5 of § 3.2) treats
 // the host's footprint. Bbox is fast — clip against ArrangedRect.
@@ -122,6 +141,16 @@ export class Connector extends Shape
     public get SourceCapInstance(): Visual | undefined { return this._sourceCapInstance; }
     public get TargetCapInstance(): Visual | undefined { return this._targetCapInstance; }
 
+    // Last resolved anchors from _scheduleRecompute. Edit-mode handle
+    // adorners read these to position endpoint dots in canvas-host
+    // coords without redoing the 5-path resolution dance themselves.
+    // undefined when either endpoint is missing (Geometry is also
+    // undefined in that state, so nothing to adorn).
+    private _currentSrcAnchor: ResolvedAnchor | undefined = undefined;
+    private _currentTgtAnchor: ResolvedAnchor | undefined = undefined;
+    public get CurrentSourceAnchor(): ResolvedAnchor | undefined { return this._currentSrcAnchor; }
+    public get CurrentTargetAnchor(): ResolvedAnchor | undefined { return this._currentTgtAnchor; }
+
     // Tracked previous endpoint references so OnPropertyChanged can
     // detach listeners from the OLD endpoint before re-attaching to
     // the NEW one. _trackedSourceNode / _trackedTargetNode play the
@@ -143,6 +172,19 @@ export class Connector extends Shape
     };
     private readonly _onSourceNodeMoved = (): void => { this._scheduleRecompute(); };
     private readonly _onTargetNodeMoved = (): void => { this._scheduleRecompute(); };
+
+    constructor()
+    {
+        super();
+        // Per-instance default Stroke. Connector inherits Shape's
+        // Stroke=undefined default — DrawGeometry treats that as "paint
+        // nothing", which makes every freshly-constructed connector
+        // invisible. Same per-instance allocation pattern as Figure so
+        // PenEditor's in-place mutation can't leak across connectors.
+        this.set_property_value(
+            Connector.StrokeKey,
+            new Pen(DEFAULT_STROKE.Brush, DEFAULT_STROKE.Thickness));
+    }
 
     protected override OnPropertyChanged(
         descriptor: PropertyDescriptor,
@@ -284,6 +326,8 @@ export class Connector extends Shape
         if (src === undefined || tgt === undefined)
         {
             this.Geometry = undefined;
+            this._currentSrcAnchor = undefined;
+            this._currentTgtAnchor = undefined;
             return;
         }
         const waypoints = this.Waypoints ?? EMPTY_WAYPOINTS;
@@ -295,6 +339,8 @@ export class Connector extends Shape
         const tgtApprox = endpointApproxAnchor(tgt);
         const srcAnchor = resolveEndpoint(src, tgtApprox, waypoints, true,  this.AnchorClip);
         const tgtAnchor = resolveEndpoint(tgt, srcAnchor, waypoints, false, this.AnchorClip);
+        this._currentSrcAnchor = srcAnchor;
+        this._currentTgtAnchor = tgtAnchor;
 
         const router = RouterRegistry.resolve(this.RoutingMode);
         const sourceRect = nodeRect(src.Node) ?? Rect.Zero;
