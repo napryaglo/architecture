@@ -21,8 +21,10 @@ These were resolved through the brainstorming pass; everything else in
 the doc follows from them.
 
 1. **Anchor model** — *both* ports + auto. A connector's endpoint
-   names a node and *optionally* a port. If the port name resolves
-   against the node's `Ports` collection, use it. Otherwise auto-anchor.
+   names an item (a [Figure](../framework/diagram/figure.ts), or any
+   Model in the duck-typed lookup) and *optionally* a port. If the port
+   name resolves against the item's `Ports` collection, use it.
+   Otherwise auto-anchor.
 2. **Routing flavor** — *pluggable per-connector*. Built-ins ship for
    `Straight`, `Orthogonal`, `Bezier`. Custom routers register through
    a `RouterRegistry`.
@@ -34,25 +36,55 @@ the doc follows from them.
    demo. The diagram demo is the first consumer, not the owner.
 5. **Port location** — *both* bbox + outline. A port declares its
    coordinate space (`Bbox` 0..1 local, or `Outline` arc-length
-   parameter against `Node.Geometry`). Bbox default; outline opt-in
+   parameter against `Figure.Geometry`). Bbox default; outline opt-in
    for shapes that need precision.
 6. **Custom routers + custom connectors + custom caps** — all
    extensible. Routers via `RouterRegistry`. Connector subclasses via
    `Diagram.ConnectorTemplate: DataTemplate`. Caps via per-end
    `SourceCapTemplate` / `TargetCapTemplate: DataTemplate`.
-7. **Port distribution** — `IPortProvider` strategy. Each Shape
-   subclass declares a `DefaultPortProvider` static; the consumer can
-   override per-instance via `NodeVM.PortProvider`. Built-ins for
+7. **Port distribution** — `IPortProvider` strategy. Defaults map from
+   `Figure.Kind` to a provider via a framework-owned table; the consumer
+   can override per-instance via `Figure.PortProvider`. Built-ins for
    rectangular / radial / outline-walking / polygon-vertex topologies;
    `CustomPortProvider(fn)` is the escape hatch. See § 3.8.
+
+## 1a. Architectural premise — items-are-Figures
+
+The framework Diagram landed an *items-are-Figures* shift (commit
+5dc53a3): items in `Diagram.ItemsSource` ARE `Figure` instances; the
+container and the data row are the same Visual. There is no separate
+`NodeVM` layer. Every "node" reference downstream in this doc means a
+`Figure` (or any Model that fits the duck-typed shape — endpoint
+resolution types `Source.Node` as `Model`, not as `Figure`, so a
+non-Figure item Model still works if the consumer wires the position +
+geometry getters).
+
+Consequences for the design:
+
+  - **Port host = Figure.** `PortProvider` / `ExplicitPorts` DPs live on
+    `Figure`, not on a fictional NodeVM. § 3.8 sketches the additions.
+  - **Source / target reactivity hooks Figure's `Left` / `Top`.** These
+    DPs already exist with `MetaData.Arrange | BindsTwoWayByDefault`
+    ([figure.ts:77-80](../framework/diagram/figure.ts#L77-L80)), so
+    § 7.2 option (a) (subscribe on `'Left'` / `'Top'` strings) lands
+    directly with no Figure changes.
+  - **Default-provider lookup uses `Figure.Kind`, not a `Shape`-class
+    static.** Coupling provider defaults to `Shape` subclasses would
+    drag the diagram framework into [src/basic/shapes/](../basic/shapes/) —
+    a layering violation. A framework-owned `Map<string, IPortProvider>`
+    keyed on `Kind` keeps the catalog diagram-agnostic.
+  - **Demo VM is now framework-owned.** The diagram demo's old
+    `diagram-vm.mjs` was migrated into
+    [DiagramDocument](../framework/diagram/diagram-document.ts) (commit
+    1751e65). Step 13 of § 9 extends `DiagramDocument`, not a demo file.
 
 ## 2. Module layout
 
 ```
 src/framework/diagram/
   diagram.ts                       (modify — add Connectors + ConnectorTemplate DPs, switch ItemsPanel to layered)
-  figure.ts                        (modify — notify on Left/Top/Width/Height change so routes re-run)
-  diagram-layers-panel.ts          (NEW — 3-layer Panel: connectors / nodes / adorners)
+  figure.ts                        (modify — add PortProvider / ExplicitPorts DPs; notify on Left/Top/Width/Height so routes re-run)
+  diagram-layers-panel.ts          (NEW — 2-layer Panel: connectors / figures. Adorners use the existing AdornerLayer)
   connector.ts                     (NEW — Connector extends Shape)
   connector-endpoint.ts            (NEW — ConnectorEndpoint value-type Model)
   port.ts                          (NEW — Port + PortResolver)
@@ -63,6 +95,7 @@ src/framework/diagram/
     outline-ports.ts               (NEW)
     vertex-ports.ts                (NEW)
     custom-port-provider.ts        (NEW — wraps a callback)
+    default-port-providers.ts      (NEW — Map<Figure.Kind, IPortProvider> + resolveDefaultPortProvider helper)
   routing/
     router.ts                      (NEW — IRouter + RouteSpec + RouterRegistry)
     straight-router.ts             (NEW)
@@ -102,7 +135,7 @@ file of its primary consumer; an `index.ts` barrel re-exports.
 // port.ts
 export enum PortCoordSpace {
     Bbox    = 'Bbox',     // X / Y in shape-local 0..1 bbox space
-    Outline = 'Outline',  // OutlineT arc-length parameter against Node.Geometry
+    Outline = 'Outline',  // OutlineT arc-length parameter against the bound item's Geometry
 }
 
 export enum PortSide {
@@ -119,7 +152,7 @@ export type ResolvedPortSide = Exclude<PortSide, PortSide.Auto>;
 // connector.ts
 export enum AnchorClip {
     Bbox     = 'Bbox',      // clip centroid line against ArrangedRect (fast)
-    Geometry = 'Geometry',  // clip against Node.Geometry via §19 (precise)
+    Geometry = 'Geometry',  // clip against the bound item's Geometry via §19 (precise)
 }
 
 export enum ConnectorEnd {
@@ -130,9 +163,11 @@ export enum ConnectorEnd {
 // diagram-layers-panel.ts
 export enum DiagramLayer {
     Connectors = 'Connectors',
-    Nodes      = 'Nodes',
-    Adorners   = 'Adorners',
+    Figures    = 'Figures',
 }
+// Adorners (selection rings, edit handles, drag-create ghost,
+// port-discovery overlay) ride on the framework's existing AdornerLayer
+// — no enum entry needed. See § 3.7.
 ```
 
 `RoutingMode` is open-ended (custom routers register through
@@ -156,7 +191,7 @@ so custom registered names compile.
 
 ### 3.1 `Port`
 
-Lives on the node's VM as part of a `Ports` collection. Coordinate
+Lives on the Figure as part of a `Ports` collection. Coordinate
 space is per-port so a single shape can mix bbox-snapped ports and
 outline-walked ports.
 
@@ -230,22 +265,38 @@ re-flatten. Cache key uses the Geometry's reference identity; the
 cache invalidates when the node's `Geometry` DP fires
 PropertyChanged — see open question § 7.1.
 
-The node's VM holds ports under whatever DP / property the consumer
-declares. The framework discovers them through a small interface:
+The Figure exposes its ports through a small interface:
 
 ```ts
 interface IPortHost { readonly Ports: readonly Port[] | undefined; }
 ```
 
 `PortResolver` duck-types on the presence of a `Ports` getter rather
-than requiring an inheritance relationship — node VMs stay free to
-inherit from whatever base they want.
+than requiring an inheritance relationship — items that don't extend
+Figure (e.g. consumer-authored Model subclasses that still want to
+participate as endpoint targets) work as long as they expose `Ports`.
+
+**Construction ergonomics.** `Port` is a `Model` so observers can react
+to mutations, but providers / consumers author them with a typed
+init-object constructor:
+
+```ts
+// Sets NameKey, CoordSpaceKey, XKey, YKey, OutlineTKey, SideKey from
+// the corresponding object fields — anything omitted stays at the DP
+// default. Equivalent to constructing the Port and calling
+// set_property_value for each entry.
+new Port({ Side: PortSide.S, X: 0.25 });
+new Port({ Name: 'in', CoordSpace: PortCoordSpace.Outline, OutlineT: 0.10, Side: PortSide.N });
+```
 
 ### 3.2 `ConnectorEndpoint`
 
-One end of a connector. Either bound to a node (with an optional port
-name) or free-floating (used during a drag-create / re-anchor drag,
-and for un-attached connectors authored in markup).
+One end of a connector. Either bound to an item Model (in the framework
+Diagram this is a [Figure](../framework/diagram/figure.ts), but the DP
+types as `Model` so non-Figure items work as long as they expose
+position + geometry) with an optional port reference, or free-floating
+(used during a drag-create / re-anchor drag, and for un-attached
+connectors authored in markup).
 
 ```ts
 class ConnectorEndpoint extends Model {
@@ -385,7 +436,8 @@ class Connector extends Shape {
 }
 ```
 
-Internal pipeline, run in `MeasureOverride`:
+Internal pipeline, run reactively on any input change (see "Reactivity
+hooks" below):
 
 1. Resolve `Source` and `Target` endpoints via `ConnectorEndpoint`
    resolution → two `ResolvedAnchor`s.
@@ -396,20 +448,40 @@ Internal pipeline, run in `MeasureOverride`:
    stops short so a filled cap doesn't get poked through). See § 3.6.
 5. Write the shortened geometry to the inherited `Shape.Geometry` DP.
 6. Compute `HitTestGeometry` by widening the route by ~6 px via the
-   §19 `widen()` helper (hit zone larger than the visible stroke so
-   thin lines stay clickable).
+   `widen()` helper at
+   [src/visual-engine/geometry/widen.ts](../visual-engine/geometry/widen.ts)
+   (hit zone larger than the visible stroke so thin lines stay
+   clickable).
 
 Cap visuals materialize as overlay children of the connector, each
 positioned at its endpoint with `RenderTransform = RotateTransform(
 router.tangentAt(spec, end))`. Re-instantiated when the cap template
-DP changes; re-positioned every measure.
+DP changes; re-positioned every re-route.
 
-Reactivity to source / target node moves: when `Source.Node` or
-`Target.Node` is set, the Connector subscribes to that node's `X` /
-`Y` / `ArrangedRect` PropertyChanged via typed listeners. Each fire
-calls `InvalidateMeasure()`. Subscription is per-endpoint and
-re-wires when the endpoint's `Node` DP changes. See open question
-§ 7.2.
+**Why not `MeasureOverride`.** `Shape.MeasureOverride` returns
+`Size.Zero` ([shape.ts:47](../basic/shapes/shape.ts#L47)) — Shape has no
+intrinsic size; the route compute can't ride the measure pass because
+the measure pass doesn't run on a position-only invalidation. Instead,
+the connector overrides `OnPropertyChanged` for `Source` / `Target` /
+`Waypoints` / `RoutingMode` / `AnchorClip` and schedules a route
+recompute (rAF-coalesced per § 7.4 recommendation). Cap template
+changes route through the same scheduler.
+
+**Placement.** The Connector lives in the connectors layer's Canvas at
+`Canvas.Left = 0, Canvas.Top = 0`. Its routed `Geometry` carries
+diagram-host (absolute) coordinates per § 5 — no translation applied
+at paint time. Same convention as the alignment-guides adorner.
+
+**Reactivity to source / target moves.** When `Source.Node` or
+`Target.Node` is set to a Figure, the Connector subscribes to that
+Figure's `'Left'` / `'Top'` PropertyChanged via typed listeners. Each
+fire reschedules a route recompute. Subscription is per-endpoint and
+re-wires when the endpoint's `Node` DP changes. Hardcoded `'Left'` /
+`'Top'` strings work because Figure defines those DPs with
+`MetaData.Arrange | BindsTwoWayByDefault`
+([figure.ts:77-80](../framework/diagram/figure.ts#L77-L80)). See open
+question § 7.2 for the future-proofing path if non-Figure "items"
+surface.
 
 ### 3.5 `Diagram` changes
 
@@ -434,11 +506,13 @@ events and materializes one Visual per entry via
 that produces `Connector`. Identical mechanic to `ItemTemplate` →
 `ContentPresenter` → DataTemplate dispatch elsewhere in the framework.
 
-Selection is unified — both nodes and connectors live in the
+Selection is unified — both Figures and Connectors live in the
 Selector's `_selectedContainers`. Marquee selects whichever
-containers fall inside the rect. `Delete` / `Backspace` removes
-the selected items, leaving it to the consumer's callback to update
-the underlying VM collections. See open question § 7.3.
+containers fall inside the rect. `Delete` / `Backspace` fires the
+existing `Diagram.DeleteRequested` event
+([diagram.ts:286-322](../framework/diagram/diagram.ts#L286-L322)),
+leaving it to the consumer's listener to update the underlying VM
+collections. See open question § 7.3.
 
 ### 3.6 Caps + `Connector.CapInset`
 
@@ -480,25 +554,29 @@ Default for `TargetCapTemplate` is `@ArrowCap`. Default for
 
 ### 3.7 `DiagramLayersPanel`
 
-A 3-layer Canvas-shaped Panel. Replaces the bare Canvas that's the
+A 2-layer Canvas-shaped Panel. Replaces the bare Canvas that's the
 Diagram's current ItemsPanel.
 
-| Layer | Z | Hosts                                                           |
-|-------|---|-----------------------------------------------------------------|
-| 0     | 0 | Connector visuals (under all nodes).                            |
-| 1     | 1 | DiagramNode containers (today's behavior).                      |
-| 2     | 2 | Adorners: selection rings, edit handles, alignment guides, drag-create ghost, port-discovery overlays. |
+| Layer | Z | Hosts                                            |
+|-------|---|--------------------------------------------------|
+| 0     | 0 | Connector visuals (under all figures).           |
+| 1     | 1 | Figure containers (today's behavior).            |
 
 Each layer is itself a `Canvas` so children honor `Canvas.Left` /
 `Canvas.Top`. Layer routing happens via an attached property:
 `DiagramLayersPanel.Layer: DiagramLayer` on each child Visual (see
 § 3.0 for the enum).
 
-This puts adorners above everything else (drag handles always
-clickable), keeps connectors visually behind nodes (typical
-diagram-tool look), and gives marquee / autoscroll a single panel to
-hit-test against. See open question § 7.6 for the z-bump on selected
-nodes.
+Adorners (selection rings, edit handles, alignment guides, drag-create
+ghost, port-discovery overlays) ride on the framework's existing
+`AdornerLayer` overlay
+([diagram.ts:497-560](../framework/diagram/diagram.ts#L497-L560) shows
+how alignment-guides + selection-resize mount today). The AdornerLayer
+renders above the ItemsPanel by construction, so a 2-layer panel
+gives the same z-order as the original 3-layer sketch with one less
+mechanism. Connectors visually behind figures (typical diagram-tool
+look); single panel to marquee / autoscroll against. See open question
+§ 7.6 for the z-order around drag.
 
 ### 3.8 Port distribution — `IPortProvider`
 
@@ -506,11 +584,11 @@ Where ports land on a shape is a function of the shape's *topology*,
 not its identity. A small set of strategies covers the common
 topologies; consumers register more via `CustomPortProvider`. Mirrors
 the `IRouter` / `RouterRegistry` pattern but per-instance (the
-provider lives on the NodeVM as a DP, not in a global registry,
-because a single node's distribution can vary independently of any
-other node using the same Shape).
+provider lives on the Figure as a DP, not in a global registry,
+because a single Figure's distribution can vary independently of any
+other Figure of the same `Kind`).
 
-Two distinct port-population modes coexist on a NodeVM, addressing
+Two distinct port-population modes coexist on a Figure, addressing
 genuinely different use cases:
 
 - **Explicit ports** — consumer hand-lists `Port` instances with
@@ -533,18 +611,24 @@ interface IPortProvider {
     GetPorts(host: IPortHost): readonly Port[];
 }
 
-class NodeVM extends Model {
+// Two new DPs added to the existing Figure class (figure.ts). Figure
+// already has Left / Top / Width / Height / Kind / Geometry / Fill / Stroke
+// / LabelText / Id / IsSelected — the additions slot in alongside.
+class Figure extends ContentControl {
+    // ... existing DPs unchanged ...
+
     static PortProviderKey  = Model.RegisterProperty<IPortProvider | undefined>(
-        NodeVM, 'PortProvider', undefined, MetaData.None);
+        Figure, 'PortProvider', undefined, MetaData.None);
     static ExplicitPortsKey = Model.RegisterProperty<readonly Port[] | undefined>(
-        NodeVM, 'ExplicitPorts', undefined, MetaData.None);
+        Figure, 'ExplicitPorts', undefined, MetaData.None);
 
     // Unified read surface — providers feed the same downstream
     // PortResolver as explicit ports. ExplicitPorts wins when set;
     // see open question § 7.13 on whether the two modes should merge.
     get Ports(): readonly Port[] {
         return this.ExplicitPorts
-            ?? this.PortProvider?.GetPorts(this)
+            ?? (this.PortProvider ?? resolveDefaultPortProvider(this))
+                   .GetPorts(this)
             ?? EMPTY_PORTS;
     }
 }
@@ -603,38 +687,40 @@ the Heart example below). All five built-in providers emit anonymous
 ports; only `CustomPortProvider` outputs can carry names if the
 authoring callback assigns them.
 
-**Shape → provider mapping.** Each `Shape` subclass declares its
-natural default via a static field; consumers override per-instance
-through `NodeVM.PortProvider`.
+**Kind → provider mapping.** Defaults live in a framework-owned
+`Map<Figure.Kind, IPortProvider>`; consumers override per-instance
+through `Figure.PortProvider`. Keeping the table out of
+[src/basic/shapes/](../basic/shapes/) keeps the catalog
+diagram-agnostic (the catalog otherwise has zero connector-aware code).
 
 ```ts
-class Rectangle extends Shape {
-    public static readonly DefaultPortProvider: IPortProvider
-        = new BoundingBoxPorts({ portsPerSide: 1 });
-}
-class Ellipse extends Shape {
-    public static readonly DefaultPortProvider: IPortProvider
-        = new RadialPorts({ count: 4 });
-}
-class Triangle extends Shape {
-    public static readonly DefaultPortProvider: IPortProvider
-        = new VertexPorts({ includeMidpoints: false });
-}
-class Heart extends Shape {
-    public static readonly DefaultPortProvider: IPortProvider
-        = new CustomPortProvider(host => [
-            new Port({ Name: 'top-left',  CoordSpace: PortCoordSpace.Outline, OutlineT: 0.10, Side: PortSide.N }),
-            new Port({ Name: 'top-right', CoordSpace: PortCoordSpace.Outline, OutlineT: 0.40, Side: PortSide.N }),
-            new Port({ Name: 'bottom',    CoordSpace: PortCoordSpace.Outline, OutlineT: 0.75, Side: PortSide.S }),
-            // ...
-        ]);
+// src/framework/diagram/port-providers/default-port-providers.ts
+
+const DEFAULT_PORT_PROVIDERS: ReadonlyMap<string, IPortProvider> = new Map([
+    ['rectangle', new BoundingBoxPorts({ portsPerSide: 1 })],
+    ['ellipse',   new RadialPorts({ count: 4 })],
+    ['triangle',  new VertexPorts({ includeMidpoints: false })],
+    ['heart',     new CustomPortProvider(host => [
+        new Port({ Name: 'top-left',  CoordSpace: PortCoordSpace.Outline, OutlineT: 0.10, Side: PortSide.N }),
+        new Port({ Name: 'top-right', CoordSpace: PortCoordSpace.Outline, OutlineT: 0.40, Side: PortSide.N }),
+        new Port({ Name: 'bottom',    CoordSpace: PortCoordSpace.Outline, OutlineT: 0.75, Side: PortSide.S }),
+        // ...
+    ])],
+    // ... one entry per catalog kind that has a non-default topology ...
+]);
+
+const FALLBACK_PROVIDER: IPortProvider = new BoundingBoxPorts({ portsPerSide: 1 });
+
+export function resolveDefaultPortProvider(figure: Figure): IPortProvider {
+    return DEFAULT_PORT_PROVIDERS.get(figure.Kind) ?? FALLBACK_PROVIDER;
 }
 ```
 
-A small `resolveDefaultPortProvider(shape: Shape): IPortProvider`
-helper walks up the class chain reading `DefaultPortProvider` so
-subclasses inherit unless they redeclare. NodeVMs that don't set
-`PortProvider` route through this helper.
+Figures that don't set `PortProvider` route through `resolveDefault…`
+inside the `Ports` getter (see the sketch above). Combined-geometry
+figures (boolean-op results) have `Kind = ''` and fall through to the
+fallback provider; consumers can attach an explicit `PortProvider` if
+the merged shape needs custom port topology.
 
 **Side derivation works generically.** When a provider emits a port
 with `Side = PortSide.Auto`, the resolver derives the cardinal: bbox
@@ -643,12 +729,12 @@ outward normal at `OutlineT` (perpendicular to the outline tangent,
 pointing away from centroid) and quantizes to the dominant axis. No
 per-shape code; works for every Shape that has a Geometry.
 
-**Cache lifecycle.** `GetPorts()` results cache on the NodeVM keyed
+**Cache lifecycle.** `GetPorts()` results cache on the Figure keyed
 by `(provider identity, ArrangedRect dimensions, Geometry identity)`.
-Cache invalidates when the NodeVM's `PortProvider`, `ArrangedRect`,
-or the underlying shape's `Geometry` change. Shares the invalidation
-channel with `PortResolver`'s arc-length cache (§ 7.1) so a single
-geometry change clears both layers.
+Cache invalidates when the Figure's `PortProvider`, `ArrangedRect`,
+or `Geometry` DPs change. Shares the invalidation channel with
+`PortResolver`'s arc-length cache (§ 7.1) so a single geometry change
+clears both layers.
 
 See open questions § 7.11 (static vs dynamic port count under
 connector demand), § 7.12 (cache invalidation pre-conditions), §
@@ -658,14 +744,14 @@ connector demand), § 7.12 (cache invalidation pre-conditions), §
 
 ### 4.1 Drag-create
 
-`ConnectorCreateBehavior` attaches to each Layer 1 node. Watches for
-`PointerDown` on the node's body OR on a visible port (when port
+`ConnectorCreateBehavior` attaches to each Figure container. Watches
+for `PointerDown` on the Figure's body OR on a visible port (when port
 discovery is active).
 
 ```text
-PointerDown over source node (or port)
+PointerDown over source Figure (or port)
   → Diagram materializes a transient Connector with
-      Source = { Node: sourceVM, <port-ref if a port was hit> }
+      Source = { Node: sourceFigure, <port-ref if a port was hit> }
       Target = { FreePoint: cursorDiagramCoords }
     where <port-ref> is:
       - PortName: <name>                          if the hit port had Name set
@@ -679,11 +765,13 @@ PointerMove
     for Straight / Orthogonal; Bezier needs the open question § 7.4
     "throttle?" answered first)
 
-PointerUp over target node (or port)
-  → behavior clears Target.FreePoint, sets Target.Node = targetVM
+PointerUp over target Figure (or port)
+  → behavior clears Target.FreePoint, sets Target.Node = targetFigure
     (+ the same <port-ref> shape as above if a port was hit)
-  → invokes Diagram.OnConnectorCreated callback so the consumer can
-    push the connector into their VM-side collection
+  → fires Diagram.ConnectorCreated event so the consumer can push
+    the connector into their VM-side collection (same event-based
+    contract as the existing Group / Combine / Delete events on
+    Diagram — [diagram.ts:265-289](../framework/diagram/diagram.ts#L265-L289))
   → the transient connector is removed; the consumer's add triggers
     a fresh non-transient one through the Connectors collection
 
@@ -708,8 +796,8 @@ PointerDown on an endpoint handle
 PointerMove
   → update FreePoint
 
-PointerUp over a target node (or port)
-  → set Node = targetVM; write the appropriate port-ref shape
+PointerUp over a target Figure (or port)
+  → set Node = targetFigure; write the appropriate port-ref shape
     (PortName or PortSide+PortIndex, per § 4.1's port-ref rules);
     clear FreePoint
   → re-anchored
@@ -732,24 +820,27 @@ they're polyline vertices. For Bezier, they're spline knots.
 
 ### 4.4 Delete
 
-`Diagram.OnKeyDown` already nudges nodes on arrow keys. Adds:
-`Delete` / `Backspace` → fire `Diagram.OnDeleteRequested(selectedItems)`
-callback. Consumer removes from their VM-side `ItemsSource` and
-`Connectors` collections. Framework doesn't mutate consumer
-collections directly.
+`Diagram.OnKeyDown` already handles `Delete` / `Backspace` and fires the
+`DeleteRequested` event with a `SelectedItems` snapshot
+([diagram.ts:618-622](../framework/diagram/diagram.ts#L618-L622)).
+Once connectors land in the same selection (per § 7.3), the snapshot
+covers them too without further changes. The existing consumer
+listener owns the collection mutation across both `ItemsSource` and
+`Connectors`; framework doesn't mutate consumer collections directly.
 
 ## 5. Coordinate spaces (pin once, test once)
 
 - **Diagram-host coords.** What `Canvas.Left` / `Canvas.Top` on a
-  DiagramNode are. What `DiagramNode.X` / `Y` mirror to. What
-  `ConnectorEndpoint.FreePoint` is in. What the router consumes and
-  produces.
+  Figure are. What `Figure.Left` / `Top` mirror to
+  ([figure.ts:308-315](../framework/diagram/figure.ts#L308-L315) is the
+  current mirror). What `ConnectorEndpoint.FreePoint` is in. What the
+  router consumes and produces.
 - **Shape-local bbox coords.** What `Port.X` / `Y` are in (bbox mode),
-  normalized 0..1. `PortResolver` scales by the node's `ArrangedRect`
+  normalized 0..1. `PortResolver` scales by the Figure's `ArrangedRect`
   to get diagram-host coords.
 - **Shape-local outline arc-length.** What `Port.OutlineT` is in,
   parameter 0..1 around the perimeter. `PortResolver` flattens
-  `Node.Geometry` and walks to get diagram-host coords.
+  `Figure.Geometry` and walks to get diagram-host coords.
 
 All three pinned by tests at the three-way boundary in
 `port-bbox.test.ts` / `port-outline.test.ts`.
@@ -773,8 +864,8 @@ from known router inputs.
   the catalog (numerical, tolerance ~0.5 px). Cache hit verified by
   instrumenting flatten count.
 - `connector.test.ts` — full pipeline: ConnectorEndpoint → resolution
-  → routing → geometry. Node-move reactivity: bump source `X`, assert
-  Geometry changes. All five resolution paths from § 3.2 pinned:
+  → routing → geometry. Source-move reactivity: bump source `Left`,
+  assert Geometry changes. All five resolution paths from § 3.2 pinned:
   FreePoint, named lookup, positional `(PortSide, PortIndex)` lookup,
   positional-lookup-out-of-range fallthrough to auto-pick, no-ports
   fallthrough to geometric clip. Index derivation tested under
@@ -795,9 +886,9 @@ Numbered for cross-reference.
 
 ### 7.1. Outline-mode port cache invalidation
 
-When a shape's `Node.Geometry` DP changes (animated morphing shape,
+When a Figure's `Geometry` DP changes (animated morphing shape,
 theme-driven shape swap, a `RowTemplate`-driven catalog rebuild),
-every outline-mode `Port` resolved against that shape needs to
+every outline-mode `Port` resolved against that Figure needs to
 re-resolve, and every Connector touching those ports needs to
 re-route. The `PortResolver` cache keys on the Geometry's reference
 identity, so a *new* Geometry is a cache miss — fine. But the cache
@@ -807,45 +898,48 @@ entries with periodic sweep, (b) explicit `PortResolver.invalidate(
 geometry)` API the host calls on Geometry change, or (c) accept the
 leak in v1 and revisit when a long-session demo surfaces the cost.
 
-### 7.2. Source / target node reactivity — coupling
+### 7.2. Source / target reactivity — coupling
 
-The Connector subscribes to its source / target node's `Left` / `Top` /
-`ArrangedRect` via PropertyChangedListener. This couples Connector
-to the node-VM property shape (assumes `LeftKey` / `TopKey` exist on
-whatever Model the endpoint references). Three options:
+The Connector subscribes to its source / target Figure's `Left` /
+`Top` / `ArrangedRect` via PropertyChangedListener. This couples
+Connector to the Figure property shape (assumes `LeftKey` / `TopKey`
+exist on whatever Model the endpoint references). Three options:
 
   - **(a) Direct subscription on `'Left'` / `'Top'` strings.** Simplest.
-    Connector hardcodes those names; any node-VM that uses different
-    coords doesn't trigger re-routes. Works today because `Figure`
-    already defines `LeftKey` / `TopKey`.
-  - **(b) `INodeWithBounds` interface.** Connector duck-types on a
-    `Bounds: Rect` getter + `OnBoundsChanged` event. Node-VMs that
-    don't implement it don't get re-routes. Cleaner contract, more
-    boilerplate.
+    Connector hardcodes those names; any item Model that uses different
+    coords doesn't trigger re-routes. Works directly because
+    [Figure](../framework/diagram/figure.ts) defines `LeftKey` / `TopKey`
+    with `MetaData.Arrange | BindsTwoWayByDefault`
+    ([figure.ts:77-80](../framework/diagram/figure.ts#L77-L80)).
+  - **(b) `IPositionedItem` interface.** Connector duck-types on a
+    `Bounds: Rect` getter + `OnBoundsChanged` event. Items that don't
+    implement it don't get re-routes. Cleaner contract, more boilerplate.
   - **(c) Diagram-coordinated.** Diagram listens for all Figure moves
     and tells affected connectors to re-route. Connector never
     subscribes directly. Lowest coupling, most indirection.
 
-Recommendation: start with (a). Lift to (b) if a non-Figure "node"
-surfaces.
+Recommendation: start with (a). Items-are-Figures (§ 1a) makes (a)
+the natural fit today; lift to (b) if a non-Figure item Model ever
+surfaces as an endpoint target.
 
 ### 7.3. Unified selection — nodes + connectors in one Selector?
 
-Today `Selector._selectedContainers` is a `Set<Visual>` of
-DiagramNode containers. Extending it to also hold Connector visuals
-is mechanically easy but semantically loaded:
+Today `Selector._selectedContainers` is a `Set<Visual>` of Figure
+containers. Extending it to also hold Connector visuals is mechanically
+easy but semantically loaded:
 
   - `Selector.SelectedItem` / `SelectedItems` currently exposes the
-    *items* (NodeVMs), not the containers. Connectors are not items
-    — they're a parallel collection. What does `SelectedItems`
-    expose when the selection mixes nodes and connectors?
+    *items* (which under items-are-Figures ARE the Figures themselves).
+    Connectors are not items in `ItemsSource` — they're a parallel
+    collection. What does `SelectedItems` expose when the selection
+    mixes Figures and connectors?
   - `Selector.SelectionChanged` fires with added / removed `items`.
     Mixed-kind events need a kind discriminator or a split API.
 
 Options: (i) extend `Selector` with a `KindResolver` callback that
 maps a container to its source item collection — `SelectedItems`
 returns a heterogenous mix. (ii) Subclass `Selector` for Diagram
-into a `MultiKindSelector` that exposes `SelectedNodes` and
+into a `MultiKindSelector` that exposes `SelectedFigures` and
 `SelectedConnectors` separately. (iii) Keep two completely separate
 selection states on Diagram and let the consumer query both.
 
@@ -891,16 +985,17 @@ from?
 Recommendation: (c). Default lights up port locations for free;
 demos that want stylized port glyphs override.
 
-### 7.6. Z-bump for selected node during drag
+### 7.6. Z-order for selected Figure during drag
 
-A node being dragged ideally renders *above* its connecting lines so
+A Figure being dragged ideally renders *above* its connecting lines so
 the selection ring isn't occluded. `DiagramLayersPanel` puts
-connectors at layer 0 and nodes at layer 1, so a node is already
-above connectors. But if the selection adorner is at layer 2 and the
-node is at layer 1, the connector at layer 0 can hide a
-connector-attaching glyph that the node's content paints itself.
-Probably fine — but worth eyeballing once with a real demo before
-locking the z-order.
+connectors at layer 0 and Figures at layer 1, so a Figure is already
+above connectors. Selection adorners ride the existing AdornerLayer
+overlay (above both layers), so the selection ring sits over the
+connector lines naturally. Probably fine — but worth eyeballing once
+with a real demo before locking the z-order, especially for
+connector-attaching glyphs that a Figure's own content paints (those
+land inside layer 1 with the Figure, not on the AdornerLayer).
 
 ### 7.7. Cap inset with dashed strokes
 
@@ -972,17 +1067,17 @@ edge / arc. Worth pinning in a test fixture.
 
 ### 7.12. When does `IPortProvider.GetPorts()` actually run?
 
-Provider results depend on `Node.ArrangedRect` (always — for scaling
-local coords to diagram-host coords) and on `Node.Geometry` (for
+Provider results depend on `Figure.ArrangedRect` (always — for scaling
+local coords to diagram-host coords) and on `Figure.Geometry` (for
 outline-mode providers). Per-frame re-computation is wasteful; never
 re-computing breaks when the inputs change.
 
-Cache strategy: NodeVM stores last-computed `Ports[]` plus the
+Cache strategy: Figure stores last-computed `Ports[]` plus the
 `(provider identity, ArrangedRect, Geometry identity)` key it was
 computed under. Invalidate when any of those change:
 
   - `PortProvider` DP change → invalidate.
-  - `Geometry` DP change on the shape → invalidate. Reuses the same
+  - `Geometry` DP change on the Figure → invalidate. Reuses the same
     PropertyChangedListener channel as `PortResolver`'s arc-length
     cache (§ 7.1).
   - `ArrangedRect` change → invalidate, but only when `Width` /
@@ -992,13 +1087,13 @@ computed under. Invalidate when any of those change:
     re-runs naturally on every route compute.
 
 The arrange-cache invalidation is the subtle one. A naive
-`OnArrangeChanged → invalidate` invalidates on every node drag,
+`OnArrangeChanged → invalidate` invalidates on every Figure drag,
 defeating the cache for the common case. Need to compare prior vs
 current `Width` / `Height` and skip on translate-only changes.
 
-### 7.13. Mix `ExplicitPorts` + `PortProvider` in the same shape?
+### 7.13. Mix `ExplicitPorts` + `PortProvider` on the same Figure?
 
-A node with 2 semantic named ports ("in", "out") plus 6 decorative
+A Figure with 2 semantic named ports ("in", "out") plus 6 decorative
 landing points generated by a provider. Today's sketch:
 `ExplicitPorts ?? PortProvider` — one wins, the other is ignored. Two
 ways to lift it:
@@ -1047,12 +1142,12 @@ dependency order. Each row produces something useful + testable.
 | 3 | `bezier-router.ts` | `bezier-router.test.ts` passes |
 | 4 | `port.ts` + `PortResolver` (bbox mode only) | `port-bbox.test.ts` passes |
 | 5 | `port.ts` outline-mode + arc-length cache | `port-outline.test.ts` passes |
-| 5.5 | `port-providers/` directory + 5 built-in providers + `DefaultPortProvider` static on each Shape subclass | `port-providers.test.ts` passes; bbox + radial + outline + vertex + custom each pinned |
+| 5.5 | `port-providers/` directory + 5 built-in providers + `default-port-providers.ts` (kind→provider table + `resolveDefaultPortProvider` helper) + `Figure.PortProvider` / `Figure.ExplicitPorts` DPs | `port-providers.test.ts` passes; bbox + radial + outline + vertex + custom each pinned |
 | 6 | `connector-endpoint.ts` + `connector.ts` skeleton (no caps, no edit) | `connector.test.ts` passes for static routes |
 | 7 | `caps/cap-inset.ts` + cap pipeline in Connector + default cap templates in framework.resources.mu | `cap-inset.test.ts` passes |
-| 8 | `diagram-layers-panel.ts` + Diagram changes (`Connectors` + `ConnectorTemplate` DPs, layered ItemsPanel) | diagram demo renders a hand-authored connector |
-| 9 | Node-reactivity wiring on Connector — re-route on source/target move | demo-side smoke: drag a node, watch the connector follow |
+| 8 | `diagram-layers-panel.ts` (2-layer) + Diagram changes (`Connectors` + `ConnectorTemplate` DPs, layered ItemsPanel) | diagram demo renders a hand-authored connector |
+| 9 | Source/target-reactivity wiring on Connector — re-route on Figure `Left`/`Top` move | demo-side smoke: drag a Figure, watch the connector follow |
 | 10 | `connector-create-behavior.ts` — drag-create gesture | `connector-create.test.ts` passes |
 | 11 | `connector-edit-adorner.ts` — endpoint + waypoint editing | `connector-edit.test.ts` passes |
-| 12 | Unified selection on Diagram (per § 7.3 recommendation) + Delete key | demo-side smoke: marquee + Delete clears mixed selection |
-| 13 | Diagram demo: extend `diagram-vm.mjs` with an edges collection; wire connectors; ship as the first consumer | demo build green + manual exercise |
+| 12 | Unified selection on Diagram (per § 7.3 recommendation) — connectors join Selector's `_selectedContainers` so the existing `DeleteRequested` event covers them | demo-side smoke: marquee + Delete clears mixed selection |
+| 13 | [DiagramDocument](../framework/diagram/diagram-document.ts) (now framework-owned per § 1a — no demo-side VM file): add a `Connectors` collection + serialize/deserialize hooks; the diagram demo picks it up automatically through its DataContext | demo build green + manual exercise |

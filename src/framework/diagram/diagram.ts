@@ -2,6 +2,7 @@ import {
     Element,
     MetaData,
     Model,
+    type ObservableCollection,
     Rect,
     type KeyEventArgs,
     type PointerEventArgs,
@@ -9,11 +10,13 @@ import {
     type RelayCommand,
     type Visual,
 } from '../../runtime/index.js';
+import type { DataTemplate } from '../../basic/templates/data-template.js';
 import { AdornerLayer } from '../../visual-engine/index.js';
 import { Figure } from './figure.js';
 import { Group } from './group.js';
 import { Selector } from '../list/selector.js';
 import { DiagramCommands } from './collaborators/diagram-commands.js';
+import { DiagramConnectorsMaterializer } from './collaborators/diagram-connectors-materializer.js';
 import { SelectionBoundsTracker } from './collaborators/selection-bounds-tracker.js';
 import { SelectionReflector } from './collaborators/selection-reflector.js';
 import {
@@ -50,6 +53,11 @@ import {
 } from './behaviors/canvas-drop-behavior.js';
 export { attachCanvasDropBehavior, TOOLBOX_NODE_KIND_FORMAT } from './behaviors/canvas-drop-behavior.js';
 export type { ItemDroppedArgs, ItemDroppedListener } from './behaviors/canvas-drop-behavior.js';
+import type {
+    ConnectorCreatedArgs,
+    ConnectorCreatedListener,
+} from './behaviors/connector-create-behavior.js';
+import type { Connector } from './connector.js';
 
 // §19.3 follow-up — position snap callback. Consumers (e.g., the
 // diagram demo's align-edges behavior) set this DP to a pure function
@@ -158,6 +166,22 @@ export class Diagram extends Selector
     public static readonly CombineExcludeCommandKey   = Model.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'CombineExcludeCommand',   undefined, MetaData.None);
 
+    // ── Connectors collection + template ──────────────────────────
+    //
+    // `Connectors` is a parallel collection to ItemsSource. Items in
+    // Connectors aren't list items — they're a second selectable
+    // population on the same canvas. The DiagramConnectorsMaterializer
+    // collaborator (constructed below) listens to collection events
+    // and materializes one Visual per entry via ConnectorTemplate (or
+    // the built-in default = `new Connector()`), parenting each into
+    // the DiagramLayersPanel's connectors layer when the ItemsPanel
+    // is layered. See § 3.5 of
+    // [src/document/connectors.md](../../document/connectors.md).
+    public static readonly ConnectorsKey = Model.RegisterProperty<ObservableCollection<Model> | undefined>(
+        Diagram, 'Connectors', undefined, MetaData.None);
+    public static readonly ConnectorTemplateKey = Model.RegisterProperty<DataTemplate | undefined>(
+        Diagram, 'ConnectorTemplate', undefined, MetaData.None);
+
     // Alignment-guides opt-in. Default off; consumers flip true to
     // enable both the behavior (snap-on-drag + guide-list computation)
     // and the adorner (paints dashed guide lines).
@@ -241,6 +265,11 @@ export class Diagram extends Selector
     public get CombineSubtractCommand():  RelayCommand | undefined { return this.get_property_value(Diagram.CombineSubtractCommandKey); }
     public get CombineExcludeCommand():   RelayCommand | undefined { return this.get_property_value(Diagram.CombineExcludeCommandKey); }
 
+    public get Connectors(): ObservableCollection<Model> | undefined { return this.get_property_value(Diagram.ConnectorsKey); }
+    public set Connectors(v: ObservableCollection<Model> | undefined) { this.set_property_value(Diagram.ConnectorsKey, v); }
+    public get ConnectorTemplate(): DataTemplate | undefined { return this.get_property_value(Diagram.ConnectorTemplateKey); }
+    public set ConnectorTemplate(v: DataTemplate | undefined) { this.set_property_value(Diagram.ConnectorTemplateKey, v); }
+
     public get AlignmentGuidesEnabled():  boolean { return this.get_property_value(Diagram.AlignmentGuidesEnabledKey); }
     public set AlignmentGuidesEnabled(v: boolean) { this.set_property_value(Diagram.AlignmentGuidesEnabledKey, v); }
     public get SelectionResizeEnabled():  boolean { return this.get_property_value(Diagram.SelectionResizeEnabledKey); }
@@ -287,6 +316,10 @@ export class Diagram extends Selector
     public AddDeleteRequestedListener   (listener: DeleteRequestedListener): void { this._deleteRequestedListeners.add(listener); }
     public RemoveDeleteRequestedListener(listener: DeleteRequestedListener): void { this._deleteRequestedListeners.delete(listener); }
 
+    private readonly _connectorCreatedListeners: Set<ConnectorCreatedListener> = new Set();
+    public AddConnectorCreatedListener   (listener: ConnectorCreatedListener): void { this._connectorCreatedListeners.add(listener); }
+    public RemoveConnectorCreatedListener(listener: ConnectorCreatedListener): void { this._connectorCreatedListeners.delete(listener); }
+
     // Internal fire helpers — invoked by DiagramCommands when the
     // corresponding RelayCommand's Execute runs. Snapshot-then-iterate
     // so a listener that registers / unregisters mid-fire doesn't
@@ -321,6 +354,12 @@ export class Diagram extends Selector
         for (const l of [...this._deleteRequestedListeners]) l(args);
     }
 
+    /** @internal */
+    public _fireConnectorCreated(args: ConnectorCreatedArgs): void
+    {
+        for (const l of [...this._connectorCreatedListeners]) l(args);
+    }
+
     // Alignment-guides attach state. `_alignmentGuidesDetach` holds the
     // behavior's detach thunk when active; undefined when disabled.
     // `_alignmentGuidesAdorner` is the mounted adorner instance when
@@ -350,6 +389,29 @@ export class Diagram extends Selector
     // sticky across DataContext swaps.
     private _autoWiredMutator:    DiagramMutator | undefined = undefined;
 
+    // Connectors materializer collaborator. Held as a field so the
+    // OnPropertyChanged handler for the Connectors / ConnectorTemplate
+    // DPs can forward the change.
+    private readonly _connectorsMaterializer: DiagramConnectorsMaterializer;
+
+    /** @internal — testing hook for the materialized item → Visual map. */
+    public _getConnectorsMaterializerForTesting(): DiagramConnectorsMaterializer { return this._connectorsMaterializer; }
+
+    // Connector-selection track (§ 12 of
+    // [src/document/connectors.md](../../document/connectors.md), per
+    // the § 7.3 recommendation). Kept separate from the inherited
+    // Selector._selectedContainers (which holds Figure containers) so
+    // SelectedItem / SelectedItems stay typed as the ItemsSource
+    // population — mixed-kind selections instead go through
+    // SelectedConnectors + the existing SelectedItems channel.
+    private readonly _selectedConnectors: Set<Connector> = new Set();
+
+    public SelectConnector(c: Connector):      void    { this._selectedConnectors.add(c); }
+    public DeselectConnector(c: Connector):    void    { this._selectedConnectors.delete(c); }
+    public ClearConnectorSelection():          void    { this._selectedConnectors.clear(); }
+    public IsConnectorSelected(c: Connector):  boolean { return this._selectedConnectors.has(c); }
+    public get SelectedConnectors():           readonly Connector[] { return [...this._selectedConnectors]; }
+
     constructor()
     {
         super();
@@ -368,6 +430,7 @@ export class Diagram extends Selector
         new SelectionBoundsTracker(this);
         new FormatMirror(this);
         new SelectionReflector(this);
+        this._connectorsMaterializer = new DiagramConnectorsMaterializer(this);
     }
 
     // PointerDown anywhere on the Diagram surface takes keyboard focus
@@ -416,6 +479,14 @@ export class Diagram extends Selector
         else if (descriptor.Name === 'DataContext')
         {
             this._autoWireMutatorFromDataContext(newValue);
+        }
+        else if (descriptor === Diagram.ConnectorsKey.descriptor)
+        {
+            this._connectorsMaterializer._onConnectorsCollectionChanged();
+        }
+        else if (descriptor === Diagram.ConnectorTemplateKey.descriptor)
+        {
+            this._connectorsMaterializer._onTemplateChanged();
         }
     }
 
@@ -611,13 +682,20 @@ export class Diagram extends Selector
             args.Handled = true;
             return;
         }
-        // Delete / Backspace — fire DeleteRequested with a SelectedItems
-        // snapshot. Same event-based mutation contract as Group /
-        // Ungroup / Combine: framework knows what the user asked to
-        // remove, consumer's listener owns the collection mutation.
-        if ((key === 'Delete' || key === 'Backspace') && this.SelectedItems.length > 0)
+        // Delete / Backspace — fire DeleteRequested with a snapshot
+        // of both the items selection AND the connectors selection.
+        // Same event-based mutation contract as Group / Ungroup /
+        // Combine: framework knows what the user asked to remove,
+        // consumer's listener owns the collection mutation (both
+        // ItemsSource and Connectors). Fires when either channel has
+        // entries — mixed-kind selections deliver both snapshots.
+        if ((key === 'Delete' || key === 'Backspace')
+            && (this.SelectedItems.length > 0 || this._selectedConnectors.size > 0))
         {
-            this._fireDeleteRequested({ Items: [...this.SelectedItems] });
+            this._fireDeleteRequested({
+                Items:      [...this.SelectedItems],
+                Connectors: [...this._selectedConnectors],
+            });
             args.Handled = true;
             return;
         }

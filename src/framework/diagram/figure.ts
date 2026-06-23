@@ -15,6 +15,9 @@ import { ScrollViewer } from '../surfaces/scroll-viewer.js';
 import { Selector } from '../list/selector.js';
 import { SHAPE_CATALOG_MAP, scaleGeometry } from './shape-catalog.js';
 import type { Group } from './group.js';
+import type { Port } from './port.js';
+import type { IPortProvider } from './port-providers/port-provider.js';
+import { resolveDefaultPortProvider } from './port-providers/default-port-providers.js';
 
 // A movable, content-hosting control intended as the container shape
 // inside the diagrammer's ItemsControl (see Diagram). Figure owns
@@ -112,6 +115,25 @@ export class Figure extends ContentControl
     // owning Diagram has ReflectSelectionToItems=true.
     public static readonly IsSelectedKey = Model.RegisterProperty<boolean>(
         Figure, 'IsSelected', false, MetaData.None);
+
+    // Per-Figure port-provider override. When set, the `Ports` getter
+    // routes through this provider's GetPorts() instead of the
+    // framework's kind→provider default table — used for shapes that
+    // need a non-default topology for a specific instance (a
+    // workflow-style node on a generic rectangle, etc.). Leaving it
+    // undefined falls through to resolveDefaultPortProvider() per § 3.8
+    // of [src/document/connectors.md](../../document/connectors.md).
+    public static readonly PortProviderKey = Model.RegisterProperty<IPortProvider | undefined>(
+        Figure, 'PortProvider', undefined, MetaData.None);
+
+    // Explicit hand-listed Ports. When set, wins over BOTH PortProvider
+    // and the kind→provider default — used for shapes whose ports
+    // carry semantic data-model meaning (workflow "in" / "out", schema
+    // entities). The two-DP shape mirrors the § 3.8 sketch; the
+    // ExplicitPorts ?? PortProvider precedence is intentional per
+    // § 7.13 (lifting to a concat strategy is the v2 follow-up).
+    public static readonly ExplicitPortsKey = Model.RegisterProperty<readonly Port[] | undefined>(
+        Figure, 'ExplicitPorts', undefined, MetaData.None);
 
     // Unit-1 source path for this figure. Cached source-of-truth; resize
     // rebuilds the visible Geometry by scaling this. Combined-geometry
@@ -280,6 +302,25 @@ export class Figure extends ContentControl
     public set Id(value: string | undefined)   { this.set_property_value(Figure.IdKey, value); }
     public get IsSelected(): boolean           { return this.get_property_value(Figure.IsSelectedKey); }
     public set IsSelected(value: boolean)      { this.set_property_value(Figure.IsSelectedKey, value); }
+
+    public get PortProvider(): IPortProvider | undefined { return this.get_property_value(Figure.PortProviderKey); }
+    public set PortProvider(value: IPortProvider | undefined) { this.set_property_value(Figure.PortProviderKey, value); }
+    public get ExplicitPorts(): readonly Port[] | undefined { return this.get_property_value(Figure.ExplicitPortsKey); }
+    public set ExplicitPorts(value: readonly Port[] | undefined) { this.set_property_value(Figure.ExplicitPortsKey, value); }
+
+    // Unified port read surface — explicit list wins; otherwise
+    // delegate to the per-Figure provider; otherwise the framework's
+    // kind→provider default. § 7.13 of
+    // [src/document/connectors.md](../../document/connectors.md) tracks
+    // the open question on lifting "either-or" to a concat-with-name-collision
+    // strategy; v1 ships with the simple precedence below.
+    public get Ports(): readonly Port[]
+    {
+        const explicit = this.ExplicitPorts;
+        if (explicit !== undefined) return explicit;
+        const provider = this.PortProvider ?? resolveDefaultPortProvider(this);
+        return provider.GetPorts(this);
+    }
 
     private _rebuildGeometry(): void
     {

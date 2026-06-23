@@ -4,13 +4,15 @@ import {
     ObservableCollection,
     RelayCommand,
 } from '../../runtime/index.js';
-import { pathGeometryFromSvgD, pathGeometryToSvgD } from '../../visual-engine/index.js';
+import { pathGeometryFromSvgD, pathGeometryToSvgD, Point } from '../../visual-engine/index.js';
 import { Figure } from './figure.js';
 import { Group } from './group.js';
 import { ToolboxShape } from './toolbox-shape.js';
 import { SHAPE_CATALOG, SHAPE_CATALOG_MAP, mergeShapes } from './shape-catalog.js';
 import { GeometryCombineMode } from './commands/combine.js';
 import type { DiagramMutator } from './behaviors/attach-standard-mutations.js';
+import { Connector } from './connector.js';
+import { ConnectorEndpoint } from './connector-endpoint.js';
 
 // Minimal storage contract Diagram.Save / Load wire against. Subset of
 // the Web Storage API (localStorage / sessionStorage). Demos plug in
@@ -32,10 +34,27 @@ interface SerializedNode
     readonly d:    string;
 }
 
+interface SerializedConnectorEndpoint
+{
+    readonly nodeId?:   string;
+    readonly portName?: string;
+    readonly freeX?:    number;
+    readonly freeY?:    number;
+}
+
+interface SerializedConnector
+{
+    readonly source:      SerializedConnectorEndpoint;
+    readonly target:      SerializedConnectorEndpoint;
+    readonly waypoints?:  ReadonlyArray<{ readonly x: number; readonly y: number }>;
+    readonly routingMode?: string;
+}
+
 interface SerializedDiagram
 {
-    readonly nodes:  readonly SerializedNode[];
-    readonly nextId: number;
+    readonly nodes:       readonly SerializedNode[];
+    readonly connectors?: readonly SerializedConnector[];
+    readonly nextId:      number;
 }
 
 const STORAGE_KEY = 'mural-diagram-state-v1';
@@ -60,6 +79,8 @@ export class DiagramDocument extends Model implements DiagramMutator
 {
     public static readonly NodesKey         = Model.RegisterProperty<ObservableCollection<Figure | Group>>(
         DiagramDocument, 'Nodes',         undefined as unknown as ObservableCollection<Figure | Group>, MetaData.None);
+    public static readonly ConnectorsKey    = Model.RegisterProperty<ObservableCollection<Connector>>(
+        DiagramDocument, 'Connectors',    undefined as unknown as ObservableCollection<Connector>, MetaData.None);
     public static readonly ToolboxShapesKey = Model.RegisterProperty<ObservableCollection<ToolboxShape>>(
         DiagramDocument, 'ToolboxShapes', undefined as unknown as ObservableCollection<ToolboxShape>, MetaData.None);
     public static readonly StatusKey        = Model.RegisterProperty<string>(
@@ -77,6 +98,7 @@ export class DiagramDocument extends Model implements DiagramMutator
     {
         super();
         this.set_property_value(DiagramDocument.NodesKey,         new ObservableCollection<Figure | Group>());
+        this.set_property_value(DiagramDocument.ConnectorsKey,    new ObservableCollection<Connector>());
         this.set_property_value(DiagramDocument.StorageKey,       storage);
         const toolbox = new ObservableCollection<ToolboxShape>();
         for (const e of SHAPE_CATALOG) toolbox.Add(new ToolboxShape(e.kind, e.label));
@@ -95,6 +117,7 @@ export class DiagramDocument extends Model implements DiagramMutator
     }
 
     public get Nodes():         ObservableCollection<Figure | Group> { return this.get_property_value(DiagramDocument.NodesKey); }
+    public get Connectors():    ObservableCollection<Connector>      { return this.get_property_value(DiagramDocument.ConnectorsKey); }
     public get ToolboxShapes(): ObservableCollection<ToolboxShape>   { return this.get_property_value(DiagramDocument.ToolboxShapesKey); }
     public get Status():        string                               { return this.get_property_value(DiagramDocument.StatusKey); }
     public set Status(v: string)                                     { this.set_property_value(DiagramDocument.StatusKey, v); }
@@ -129,9 +152,64 @@ export class DiagramDocument extends Model implements DiagramMutator
             this.Nodes.RemoveAt(idx);
             removed++;
         }
+        // Cascade: drop any connector whose endpoint references a
+        // removed node. Without this, a Figure deletion leaves the
+        // connector pointing at a detached Visual.
         if (removed > 0)
         {
-            this.Status = `Deleted ${removed} node${removed === 1 ? '' : 's'}. ${this.Nodes.Count} remain.`;
+            const orphaned: Connector[] = [];
+            for (let i = 0; i < this.Connectors.Count; i++)
+            {
+                const c = this.Connectors.Get(i)!;
+                const sn = c.Source?.Node, tn = c.Target?.Node;
+                if ((sn !== undefined && items.includes(sn))
+                 || (tn !== undefined && items.includes(tn)))
+                {
+                    orphaned.push(c);
+                }
+            }
+            for (const o of orphaned)
+            {
+                const idx = this.Connectors.IndexOf(o);
+                if (idx >= 0) this.Connectors.RemoveAt(idx);
+            }
+            const orphanSuffix = orphaned.length > 0
+                ? ` + ${orphaned.length} orphaned connector${orphaned.length === 1 ? '' : 's'}`
+                : '';
+            this.Status = `Deleted ${removed} node${removed === 1 ? '' : 's'}${orphanSuffix}. `
+                        + `${this.Nodes.Count} remain.`;
+        }
+    }
+
+    public CreateConnector(source: ConnectorEndpoint, target: ConnectorEndpoint): Connector | null
+    {
+        // items-are-Connectors convention. The materializer in
+        // [collaborators/diagram-connectors-materializer.ts] recognizes
+        // a Connector entry as already-a-Visual and skips template
+        // application, so the freshly-constructed instance below IS
+        // what renders on the diagram.
+        const c = new Connector();
+        c.Source = source;
+        c.Target = target;
+        this.Connectors.Add(c);
+        this.Status = `Added connector. ${this.Connectors.Count} connectors total.`;
+        return c;
+    }
+
+    public DeleteConnectors(connectors: readonly Connector[]): void
+    {
+        if (connectors.length === 0) return;
+        let removed = 0;
+        for (const c of connectors)
+        {
+            const idx = this.Connectors.IndexOf(c);
+            if (idx < 0) continue;
+            this.Connectors.RemoveAt(idx);
+            removed++;
+        }
+        if (removed > 0)
+        {
+            this.Status = `Deleted ${removed} connector${removed === 1 ? '' : 's'}. ${this.Connectors.Count} remain.`;
         }
     }
 
@@ -291,12 +369,32 @@ export class DiagramDocument extends Model implements DiagramMutator
                 d,
             });
         }
-        return { nodes, nextId: this._nextId };
+        const connectors: SerializedConnector[] = [];
+        for (let i = 0; i < this.Connectors.Count; i++)
+        {
+            const c = this.Connectors.Get(i)!;
+            const src = c.Source, tgt = c.Target;
+            if (src === undefined || tgt === undefined) continue;   // half-set connectors are not persisted
+            connectors.push({
+                source:      serializeEndpoint(src),
+                target:      serializeEndpoint(tgt),
+                waypoints:   c.Waypoints !== undefined && c.Waypoints.length > 0
+                    ? c.Waypoints.map(p => ({ x: p.X, y: p.Y }))
+                    : undefined,
+                routingMode: c.RoutingMode,
+            });
+        }
+        return { nodes, connectors, nextId: this._nextId };
     }
 
     private _deserialize(payload: SerializedDiagram): void
     {
         this.Nodes.Clear();
+        this.Connectors.Clear();
+
+        // Round-trip nodes first so connectors can resolve their
+        // endpoint nodeIds against the freshly-rehydrated Nodes set.
+        const byId = new Map<string, Figure>();
         for (const n of payload.nodes ?? [])
         {
             const id = n.id !== '' ? n.id : 'n' + this._nextId++;
@@ -319,6 +417,19 @@ export class DiagramDocument extends Model implements DiagramMutator
             }
             fig.Id = id;
             this.Nodes.Add(fig);
+            byId.set(id, fig);
+        }
+        for (const sc of payload.connectors ?? [])
+        {
+            const c = new Connector();
+            if (typeof sc.routingMode === 'string') c.RoutingMode = sc.routingMode;
+            c.Source = rehydrateEndpoint(sc.source, byId);
+            c.Target = rehydrateEndpoint(sc.target, byId);
+            if (sc.waypoints !== undefined && sc.waypoints.length > 0)
+            {
+                c.Waypoints = sc.waypoints.map(p => new Point(p.x, p.y));
+            }
+            this.Connectors.Add(c);
         }
         if (typeof payload.nextId === 'number') this._nextId = Math.max(this._nextId, payload.nextId);
     }
@@ -341,6 +452,48 @@ export class DiagramDocument extends Model implements DiagramMutator
         }
         return [...out];
     }
+}
+
+function serializeEndpoint(ep: ConnectorEndpoint): SerializedConnectorEndpoint
+{
+    const node = ep.Node;
+    if (node instanceof Figure && node.Id !== undefined && node.Id !== '')
+    {
+        const out: SerializedConnectorEndpoint = { nodeId: node.Id };
+        if (ep.PortName !== undefined) return { ...out, portName: ep.PortName };
+        return out;
+    }
+    const fp = ep.FreePoint;
+    if (fp !== undefined) return { freeX: fp.X, freeY: fp.Y };
+    // Endpoint without a usable anchor — serialize as empty; rehydrate
+    // will produce a default endpoint with FreePoint(0,0).
+    return {};
+}
+
+function rehydrateEndpoint(
+    s: SerializedConnectorEndpoint,
+    byId: ReadonlyMap<string, Figure>,
+): ConnectorEndpoint
+{
+    if (s.nodeId !== undefined)
+    {
+        const node = byId.get(s.nodeId);
+        if (node !== undefined)
+        {
+            return new ConnectorEndpoint({
+                Node:     node,
+                PortName: s.portName,
+            });
+        }
+        // Dangling reference — fall through to FreePoint(0,0) so the
+        // connector still materializes (without crashing) and the
+        // consumer can observe the orphan.
+    }
+    if (typeof s.freeX === 'number' && typeof s.freeY === 'number')
+    {
+        return new ConnectorEndpoint({ FreePoint: new Point(s.freeX, s.freeY) });
+    }
+    return new ConnectorEndpoint({ FreePoint: new Point(0, 0) });
 }
 
 function combineModeName(mode: GeometryCombineMode): string

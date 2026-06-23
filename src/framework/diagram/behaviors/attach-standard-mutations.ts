@@ -5,6 +5,9 @@ import type { GroupRequestedArgs, UngroupRequestedArgs } from '../commands/group
 import type { ItemDroppedArgs } from './canvas-drop-behavior.js';
 import { TOOLBOX_NODE_KIND_FORMAT } from './canvas-drop-behavior.js';
 import type { GeometryCombineMode } from '../commands/combine.js';
+import type { Connector } from '../connector.js';
+import type { ConnectorEndpoint } from '../connector-endpoint.js';
+import type { ConnectorCreatedArgs } from './connector-create-behavior.js';
 
 // Standard wiring between a Diagram's gesture events and a mutator that
 // owns the data collection. Subscribes to Group / Ungroup / Combine /
@@ -31,6 +34,13 @@ export interface DiagramMutator
     /** Remove every entry in `items` from the data collection. */
     DeleteNodes(items: readonly unknown[]): void;
 
+    /** Remove every entry in `connectors` from the data collection.
+     *  Optional: mutators that don't carry a connectors collection
+     *  (the legacy node-only diagram) simply omit this method, and
+     *  the attach helper skips the connector branch of DeleteRequested
+     *  when it's missing. */
+    DeleteConnectors?(connectors: readonly Connector[]): void;
+
     /**
      * Materialize a new node of the named catalog kind at the given
      * canvas-local top-left coordinate. Return the created entity
@@ -39,6 +49,11 @@ export interface DiagramMutator
      * drop lands already-selected.
      */
     CreateNode(kind: string, x: number, y: number): unknown | null | undefined;
+
+    /** Materialize a new Connector with the proposed Source / Target
+     *  endpoints from a drag-create gesture. Optional, same reasoning
+     *  as DeleteConnectors. */
+    CreateConnector?(source: ConnectorEndpoint, target: ConnectorEndpoint): Connector | null | undefined;
 
     /**
      * Half-default-size, subtracted from cursor.x / y to map the cursor
@@ -57,7 +72,13 @@ export function attachStandardDiagramMutations(diagram: Diagram, mutator: Diagra
     const onGroup    = (args: GroupRequestedArgs):   void => mutator.Group(args.Items);
     const onUngroup  = (args: UngroupRequestedArgs): void => mutator.Ungroup(args.Groups);
     const onCombine  = (args: CombineRequestedArgs): void => mutator.CombineSelection(args.Items, args.Mode);
-    const onDelete   = (args: DeleteRequestedArgs):  void => mutator.DeleteNodes(args.Items);
+    const onDelete   = (args: DeleteRequestedArgs):  void => {
+        mutator.DeleteNodes(args.Items);
+        if (mutator.DeleteConnectors !== undefined && args.Connectors.length > 0)
+        {
+            mutator.DeleteConnectors(args.Connectors);
+        }
+    };
     const onDropped  = (args: ItemDroppedArgs):      void => {
         const kind = args.Data.Get(TOOLBOX_NODE_KIND_FORMAT);
         if (typeof kind !== 'string') return;
@@ -67,12 +88,19 @@ export function attachStandardDiagramMutations(diagram: Diagram, mutator: Diagra
             diagram.SelectedItem = node;
         }
     };
+    const onConnectorCreated = (args: ConnectorCreatedArgs): void => {
+        if (mutator.CreateConnector !== undefined)
+        {
+            mutator.CreateConnector(args.Source, args.Target);
+        }
+    };
 
     diagram.AddGroupRequestedListener(onGroup);
     diagram.AddUngroupRequestedListener(onUngroup);
     diagram.AddCombineRequestedListener(onCombine);
     diagram.AddDeleteRequestedListener(onDelete);
     diagram.AddItemDroppedListener(onDropped);
+    diagram.AddConnectorCreatedListener(onConnectorCreated);
 
     return (): void => {
         diagram.RemoveGroupRequestedListener(onGroup);
@@ -80,5 +108,6 @@ export function attachStandardDiagramMutations(diagram: Diagram, mutator: Diagra
         diagram.RemoveCombineRequestedListener(onCombine);
         diagram.RemoveDeleteRequestedListener(onDelete);
         diagram.RemoveItemDroppedListener(onDropped);
+        diagram.RemoveConnectorCreatedListener(onConnectorCreated);
     };
 }
