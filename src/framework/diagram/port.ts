@@ -129,6 +129,43 @@ export class PortResolver
             case PortCoordSpace.Outline: return resolveOutline(port, host);
         }
     }
+
+    // Inverse of resolution path 3 (PortSide + PortIndex). Given an
+    // anonymous port (Name = ''), compute the (side, index) pair that
+    // identifies it positionally inside `ports` — the same locator
+    // shape ConnectorEndpoint stores in its PortSide / PortIndex DPs.
+    // A named port should normally be addressed by PortName instead;
+    // locate() still returns the positional pair if asked, so callers
+    // can use it as a uniform fallback when names aren't available.
+    //
+    // Returns undefined when the port isn't in `ports` or when the
+    // resolved side is Auto (defensive — the resolver always collapses
+    // Auto into a cardinal before emitting). Matches `lookupPositional`
+    // in [connector.ts](./connector.ts) — both bucket by resolved side
+    // and sort by primary axis (X for N/S, Y for E/W).
+    public static locate(
+        ports: readonly Port[],
+        host:  IPortHost,
+        port:  Port,
+    ): { side: ResolvedPortSide; index: number } | undefined
+    {
+        const a = PortResolver.resolve(port, host);
+        // The resolver always collapses Auto into a cardinal before
+        // emitting, so a.side is already ResolvedPortSide at this point.
+        const sideCardinal = a.side;
+        const bucket: { port: Port; primary: number }[] = [];
+        for (const p of ports)
+        {
+            const pa = PortResolver.resolve(p, host);
+            if (pa.side !== sideCardinal) continue;
+            const primary = (sideCardinal === PortSide.N || sideCardinal === PortSide.S) ? pa.x : pa.y;
+            bucket.push({ port: p, primary });
+        }
+        bucket.sort((u, v) => u.primary - v.primary);
+        const idx = bucket.findIndex(e => e.port === port);
+        if (idx < 0) return undefined;
+        return { side: sideCardinal, index: idx };
+    }
 }
 
 function resolveBbox(port: Port, host: IPortHost): ResolvedAnchor

@@ -103,20 +103,28 @@ describe('OrthogonalRouter — structural sweep over all 16 side combinations', 
 });
 
 describe('OrthogonalRouter — pinned canonical shapes', () => {
-    test('mixed axis E→S: L-shape with corner at (target.X, source.Y)', () => {
+    test('mixed axis E→S: target S enters from south (§ 10.2), 3-corner detour', () => {
+        // Per § 10.2 last segment must enter target S going north
+        // (target's outward = +Y). The router loops east past source,
+        // south past target Y, then east to target X, then north into
+        // the south face. Stubs at (s.X+20, s.Y) and (t.X, t.Y+20).
         const geo = router.compute(SPEC({
             sourceAnchor: ANCHOR(0,   0,  PortSide.E),
             targetAnchor: ANCHOR(100, 50, PortSide.S),
         }));
-        expectPoints(geo, [[0, 0], [100, 0], [100, 50]]);
+        expectPoints(geo, [[0, 0], [20, 0], [20, 70], [100, 70], [100, 50]]);
     });
 
-    test('mixed axis N→W: L-shape with corner at (source.X, target.Y)', () => {
+    test('mixed axis N→W: source N exits north (§ 10.2), 3-corner detour', () => {
+        // Per § 10.2 first segment must leave source N going north
+        // (source's outward = -Y). The router stubs north past source,
+        // west past target X, then south to target Y, then east into
+        // the west face.
         const geo = router.compute(SPEC({
             sourceAnchor: ANCHOR(50, 0,   PortSide.N),
             targetAnchor: ANCHOR(0,  100, PortSide.W),
         }));
-        expectPoints(geo, [[50, 0], [50, 100], [0, 100]]);
+        expectPoints(geo, [[50, 0], [50, -20], [-20, -20], [-20, 100], [0, 100]]);
     });
 
     test('both X-axis facing inward (E→W, s.X<t.X): Z with midX = average', () => {
@@ -193,36 +201,200 @@ describe('OrthogonalRouter — pinned canonical shapes', () => {
     });
 });
 
+// The perpendicular-beam intersection optimization: when the source's
+// outward ray and the target's outward ray meet on both forward halves,
+// the route is a single corner at that intersection — no stub, no
+// staircase, both adjacent segments collinear with the port axes.
+describe('OrthogonalRouter — perpendicular-beam intersection optimization', () => {
+    // ── Cases that were already 3-point under stub-Manhattan ─────
+    // (L1-friendly mixed-axis quadrants where stub collapse landed
+    //  on the intersection coincidentally). Same final polyline, but
+    //  pinning the exact corner verifies the optimization picks the
+    //  port-aligned intersection rather than a stub-shifted variant.
+
+    test('E→N happy quadrant: corner at (Tx, Sy), no stubs', () => {
+        const geo = router.compute(SPEC({
+            sourceAnchor: ANCHOR(0,   0,   PortSide.E),
+            targetAnchor: ANCHOR(100, 100, PortSide.N),
+        }));
+        // Target down-right of source — both forward rays meet at
+        // (Tx, Sy) = (100, 0). Source E goes east to the corner; the
+        // last leg enters the N-facing port heading south, which is
+        // "into" the port (the OPPOSITE of N's outward, as required).
+        expectPoints(geo, [[0, 0], [100, 0], [100, 100]]);
+    });
+
+    test('E→S happy quadrant: corner at (Tx, Sy), no stubs', () => {
+        const geo = router.compute(SPEC({
+            sourceAnchor: ANCHOR(0,   0,   PortSide.E),
+            targetAnchor: ANCHOR(100, 100, PortSide.S),
+        }));
+        // Source E (Tx>Sx ✓), Target S needs corner Sy below source Y
+        //   (tParam = (Sy-Ty)*tVec.y = (0-100)*1 = -100, FAILS).
+        // So this DOES NOT optimize — falls through to the existing
+        // 5-point E→S detour. Pin the existing shape to flag any
+        // accidental change.
+        expectPoints(geo, [[0, 0], [20, 0], [20, 120], [100, 120], [100, 100]]);
+    });
+
+    // ── Cases that were 5-point under stub-Manhattan (S→W, N→E with
+    //    target up-left, etc.). The optimization reduces these to a
+    //    clean 3-point L.
+
+    test('S→W down-right: 3-point L (was 5-point staircase)', () => {
+        const geo = router.compute(SPEC({
+            sourceAnchor: ANCHOR(0,   0,   PortSide.S),
+            targetAnchor: ANCHOR(100, 100, PortSide.W),
+        }));
+        // Source vertical (S, sVec=(0,1)), target horizontal (W,
+        // tVec=(-1,0)). Corner = (Sx, Ty) = (0, 100).
+        //   sParam = (Ty-Sy)*sVec.y = 100*1 = 100 > 0 ✓
+        //   tParam = (Sx-Tx)*tVec.x = (-100)*(-1) = 100 > 0 ✓
+        // First segment south from source, last segment east into the
+        // west-facing port.
+        expectPoints(geo, [[0, 0], [0, 100], [100, 100]]);
+    });
+
+    test('N→E up-left: 3-point L (was 5-point staircase)', () => {
+        // Source N at (50, 100); target E at (10, 50). The intersection
+        // sits at (50, 50) on the forward halves of both beams.
+        const geo = router.compute(SPEC({
+            sourceAnchor: ANCHOR(50, 100, PortSide.N),
+            targetAnchor: ANCHOR(10, 50,  PortSide.E),
+        }));
+        expectPoints(geo, [[50, 100], [50, 50], [10, 50]]);
+    });
+
+    test('S→E down-left: 3-point L', () => {
+        const geo = router.compute(SPEC({
+            sourceAnchor: ANCHOR(100, 0,   PortSide.S),
+            targetAnchor: ANCHOR(0,   100, PortSide.E),
+        }));
+        // Source S sVec=(0,1), target E tVec=(1,0). Corner=(Sx,Ty)=(100,100).
+        //   sParam = (Ty-Sy)*sVec.y = 100*1 = 100 ✓
+        //   tParam = (Sx-Tx)*tVec.x = 100*1 = 100 ✓
+        expectPoints(geo, [[100, 0], [100, 100], [0, 100]]);
+    });
+
+    test('N→W up-right: 3-point L', () => {
+        const geo = router.compute(SPEC({
+            sourceAnchor: ANCHOR(0,   100, PortSide.N),
+            targetAnchor: ANCHOR(100, 0,   PortSide.W),
+        }));
+        // Source N sVec=(0,-1), target W tVec=(-1,0). Corner=(Sx,Ty)=(0,0).
+        //   sParam = (Ty-Sy)*sVec.y = (-100)*(-1) = 100 ✓
+        //   tParam = (Sx-Tx)*tVec.x = (-100)*(-1) = 100 ✓
+        expectPoints(geo, [[0, 100], [0, 0], [100, 0]]);
+    });
+
+    // ── Fallback cases: intersection exists geometrically but on a
+    //    backward ray of at least one beam → no optimization, current
+    //    stub-Manhattan behavior preserved.
+
+    test('E→N wrong-quadrant (target behind source-X): falls back to stub-Manhattan', () => {
+        // Target to the LEFT of source while source faces east → source's
+        // forward ray never reaches the target's X. Fallback emits the
+        // existing L2 corner at (sStub.X, tStub.Y) → 5 points.
+        const geo = router.compute(SPEC({
+            sourceAnchor: ANCHOR(100, 100, PortSide.E),
+            targetAnchor: ANCHOR(0,   0,   PortSide.N),
+        }));
+        // Path: (100,100) → (120,100) → (120,-20) → (0,-20) → (0,0)
+        expectPoints(geo, [[100, 100], [120, 100], [120, -20], [0, -20], [0, 0]]);
+    });
+
+    test('source = target degenerate (same axis): falls back', () => {
+        // Same axis → optimization returns undefined → fallback path.
+        const geo = router.compute(SPEC({
+            sourceAnchor: ANCHOR(42, 42, PortSide.E),
+            targetAnchor: ANCHOR(42, 42, PortSide.E),
+        }));
+        expectPoints(geo, [[42, 42], [42, 42]]);
+    });
+
+    // ── Degenerate corner cases: corner coincides with source or
+    //    target (sParam === 0 or tParam === 0) → optimization rejects
+    //    so the perpendicularity invariant on the OTHER end stays
+    //    honored.
+
+    test('corner === source (target on source outward axis): no optimization', () => {
+        // Source E at (0,0), target N at (0,100). The "intersection"
+        // sits at (0,0) — source itself, sParam=0. Optimization rejects;
+        // fallback produces the spec-correct route.
+        const geo = router.compute(SPEC({
+            sourceAnchor: ANCHOR(0, 0,   PortSide.E),
+            targetAnchor: ANCHOR(0, 100, PortSide.N),
+        }));
+        const pts = pointsOf(geo);
+        assert.ok(pts.length >= 3, 'must bend at least once when source X = target X but sides perpendicular');
+        // First segment leaves east (collinear with source outward ray):
+        // y unchanged on the s → next step.
+        assert.equal(pts[0]!.X, 0);
+        assert.equal(pts[0]!.Y, 0);
+        assert.equal(pts[1]!.Y, 0, 'first segment must be horizontal (source E)');
+        assertOrthogonal(geo);
+    });
+
+    test('corner === target (source on target outward axis): no optimization', () => {
+        // Symmetric: target E at (100,0), source N at (100,100). The
+        // intersection lands on target, tParam=0. Optimization rejects.
+        const geo = router.compute(SPEC({
+            sourceAnchor: ANCHOR(100, 100, PortSide.N),
+            targetAnchor: ANCHOR(100, 0,   PortSide.E),
+        }));
+        const pts = pointsOf(geo);
+        assert.ok(pts.length >= 3);
+        // Last segment must enter target horizontally (E outward).
+        const lastA = pts[pts.length - 2]!;
+        const lastB = pts[pts.length - 1]!;
+        assert.equal(lastA.Y, lastB.Y, 'last segment must be horizontal (target E)');
+        assertOrthogonal(geo);
+    });
+
+    // ── Parallel beams (same-axis pairs): optimization returns
+    //    undefined uniformly; existing Z / detour shapes preserved.
+
+    test('parallel beams E→W aligned: optimization returns undefined → existing Z', () => {
+        const geo = router.compute(SPEC({
+            sourceAnchor: ANCHOR(0,   0,  PortSide.E),
+            targetAnchor: ANCHOR(100, 50, PortSide.W),
+        }));
+        // Existing pinned shape from "both X-axis facing inward".
+        expectPoints(geo, [[0, 0], [50, 0], [50, 50], [100, 50]]);
+    });
+});
+
 describe('OrthogonalRouter — reverse-direction (impossible Z) cases', () => {
-    test('E→W with s.X > t.X falls back to source-side detour (target side gets violated, V1)', () => {
-        // Source EAST of target while source faces east. Source wants
-        // midX > s.X=100; target wants midX < t.X=0. Impossible.
-        // chooseMidX: avg=50, sOK=50>100 ✗ → detour east → max(100,0)+20=120.
+    test('E→W with s.X > t.X uses 4-corner Z-horizontal bridge (§ 10.2 both ends honored)', () => {
+        // Source EAST of target while source faces east. Both port-side
+        // outward rays point in incompatible directions for a straight
+        // bridge along X; the router stubs both ports outward and bridges
+        // on the perpendicular Y axis at midY = avg(s.Y, t.Y).
         const geo = router.compute(SPEC({
             sourceAnchor: ANCHOR(100, 0,  PortSide.E),
             targetAnchor: ANCHOR(0,   50, PortSide.W),
         }));
-        expectPoints(geo, [[100, 0], [120, 0], [120, 50], [0, 50]]);
+        expectPoints(geo, [[100, 0], [120, 0], [120, 25], [-20, 25], [-20, 50], [0, 50]]);
     });
 
-    test('W→E with s.X < t.X falls back to source-side detour west', () => {
-        // chooseMidX: avg=50, sOK=50<0 ✗ → detour west → min(0,100)-20=-20.
+    test('W→E with s.X < t.X uses 4-corner Z-horizontal bridge', () => {
         const geo = router.compute(SPEC({
             sourceAnchor: ANCHOR(0,   0,  PortSide.W),
             targetAnchor: ANCHOR(100, 50, PortSide.E),
         }));
-        expectPoints(geo, [[0, 0], [-20, 0], [-20, 50], [100, 50]]);
+        expectPoints(geo, [[0, 0], [-20, 0], [-20, 25], [120, 25], [120, 50], [100, 50]]);
     });
 
-    test('N→S with s.Y < t.Y (source above target with both facing away) detours north', () => {
-        // Source N exits upward, target S receives from below. Source
-        // ABOVE target (smaller Y) means both face away from each other.
-        // chooseMidY: avg=50, sOK=50<0 ✗ → detour north → min(0,100)-20=-20.
+    test('N→S with s.Y < t.Y uses 4-corner Z-vertical bridge', () => {
+        // Source N exits upward (-Y), target S enters from south (-Y).
+        // Source ABOVE target (smaller Y) puts the outward rays facing
+        // away from each other; bridge on the perpendicular X axis at
+        // midX = avg(s.X, t.X).
         const geo = router.compute(SPEC({
             sourceAnchor: ANCHOR(0,  0,   PortSide.N),
             targetAnchor: ANCHOR(50, 100, PortSide.S),
         }));
-        expectPoints(geo, [[0, 0], [0, -20], [50, -20], [50, 100]]);
+        expectPoints(geo, [[0, 0], [0, -20], [25, -20], [25, 120], [50, 120], [50, 100]]);
     });
 });
 
@@ -281,13 +453,16 @@ describe('OrthogonalRouter — degenerate source = target', () => {
 });
 
 describe('OrthogonalRouter — tangentAt', () => {
-    test('L-shape E→S: source tangent East, target tangent South', () => {
+    test('E→S detour: source tangent East, target tangent North (entering S face from below)', () => {
+        // Per § 10.2 the last segment goes from (100, 70) UP to (100, 50)
+        // so the cap sits at the south face of target and points
+        // into it (north, -π/2). Source's first segment still goes east.
         const spec = SPEC({
             sourceAnchor: ANCHOR(0,   0,  PortSide.E),
             targetAnchor: ANCHOR(100, 50, PortSide.S),
         });
         assert.equal(router.tangentAt(spec, ConnectorEnd.Source), 0);
-        assert.equal(router.tangentAt(spec, ConnectorEnd.Target), Math.PI / 2);
+        assert.equal(router.tangentAt(spec, ConnectorEnd.Target), -Math.PI / 2);
     });
 
     test('Z-shape E→W (canonical): both ends tangent East', () => {

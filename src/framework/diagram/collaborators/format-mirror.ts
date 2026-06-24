@@ -68,6 +68,13 @@ export class FormatMirror
         this._diagram = diagram;
         const Diagram = diagram.constructor as typeof import('../diagram.js').Diagram;
         diagram.AddSelectionChangedListener(() => this._seedFromSelection());
+        // Connector selection rides the same format channel — the
+        // user can click a connector's hover halo, the editor seeds
+        // from the connector's Pen, and per-property edits broadcast
+        // back. § "Clicking the adorner clears figure selection" is
+        // honored upstream by the hover-halo behavior, so the seed
+        // here only ever picks from ONE population at a time.
+        diagram.AddConnectorSelectionChangedListener(() => this._seedFromSelection());
         diagram.AddPropertyChangedListener(Diagram.SelectionFormatFillKey,   () => this._broadcastFill());
         diagram.AddPropertyChangedListener(Diagram.SelectionFormatStrokeKey, () => this._onFormatStrokeChanged());
     }
@@ -77,26 +84,45 @@ export class FormatMirror
         return flattenToLeaves(this._diagram.SelectedItems);
     }
 
+    // Selected connectors flattened to IStrokableItem targets. Connectors
+    // don't nest (no group analog), so the array is the selection list
+    // verbatim. Pulled out as a method to mirror _leaves() — broadcast
+    // helpers iterate both.
+    private _strokeTargetsFromConnectors(): Model[]
+    {
+        return [...this._diagram.SelectedConnectors] as unknown as Model[];
+    }
+
     private _seedFromSelection(): void
     {
         const Diagram = this._diagram.constructor as typeof import('../diagram.js').Diagram;
         const leaves = this._leaves();
+        const connectors = this._strokeTargetsFromConnectors();
         this._seedingFormat = true;
         try
         {
-            if (leaves.length === 0)
+            if (leaves.length === 0 && connectors.length === 0)
             {
                 this._diagram.set_property_value(Diagram.SelectionFormatFillKey,   undefined);
                 this._diagram.set_property_value(Diagram.SelectionFormatStrokeKey, undefined);
                 return;
             }
-            const first = leaves[0];
-            const firstFill = (first as unknown as Partial<IFillableItem>).Fill;
+            // Figure leaves win when both populations are non-empty —
+            // mirrors the broadcast preference (figures own Fill, both
+            // own Stroke). The hover-halo behavior clears figure
+            // selection on connector pick, so the mixed-population case
+            // only arises if a caller bypasses the halo.
+            const firstStrokable: Model | undefined =
+                leaves.length > 0 ? leaves[0] : connectors[0];
+            const firstFill = leaves.length > 0
+                ? (leaves[0] as unknown as Partial<IFillableItem>).Fill
+                : undefined;
             this._diagram.set_property_value(Diagram.SelectionFormatFillKey, firstFill);
-            const firstStroke = (first as unknown as Partial<IStrokableItem>).Stroke;
-            // Clone the pen so the editor doesn't mutate the first leaf's
-            // Pen by-reference — broadcast back copies properties onto
-            // each leaf's OWN Pen, preserving per-leaf identity.
+            const firstStroke = (firstStrokable as unknown as Partial<IStrokableItem>).Stroke;
+            // Clone the pen so the editor doesn't mutate the first
+            // target's Pen by-reference — broadcast back copies
+            // properties onto each target's OWN Pen, preserving per-
+            // target identity.
             this._diagram.set_property_value(Diagram.SelectionFormatStrokeKey,
                 firstStroke !== undefined ? clonePen(firstStroke) : undefined);
         }
@@ -158,10 +184,8 @@ export class FormatMirror
         const editorPen = this._diagram.SelectionFormatStroke;
         if (editorPen === undefined) return;
         const value = editorPen.get_property_value(key);
-        for (const leaf of this._leaves())
+        for (const target of this._strokeTargets())
         {
-            const target = (leaf as unknown as Partial<IStrokableItem>).Stroke;
-            if (target === undefined) continue;
             target.set_property_value(key, value);
         }
     }
@@ -170,15 +194,32 @@ export class FormatMirror
     {
         const editorPen = this._diagram.SelectionFormatStroke;
         if (editorPen === undefined) return;
-        for (const leaf of this._leaves())
+        for (const target of this._strokeTargets())
         {
-            const target = (leaf as unknown as Partial<IStrokableItem>).Stroke;
-            if (target === undefined) continue;
             for (const key of PEN_KEYS)
             {
                 target.set_property_value(key, editorPen.get_property_value(key));
             }
         }
+    }
+
+    // Union of figure-leaf pens and selected-connector pens. Each entry
+    // is the Pen instance owned by the target (NOT the editor pen) — we
+    // mutate its DPs in place so the target's identity survives broadcast.
+    private _strokeTargets(): Pen[]
+    {
+        const out: Pen[] = [];
+        for (const leaf of this._leaves())
+        {
+            const pen = (leaf as unknown as Partial<IStrokableItem>).Stroke;
+            if (pen !== undefined) out.push(pen);
+        }
+        for (const conn of this._strokeTargetsFromConnectors())
+        {
+            const pen = (conn as unknown as Partial<IStrokableItem>).Stroke;
+            if (pen !== undefined) out.push(pen);
+        }
+        return out;
     }
 }
 

@@ -1151,3 +1151,134 @@ dependency order. Each row produces something useful + testable.
 | 11 | `connector-edit-adorner.ts` — endpoint + waypoint editing | `connector-edit.test.ts` passes |
 | 12 | Unified selection on Diagram (per § 7.3 recommendation) — connectors join Selector's `_selectedContainers` so the existing `DeleteRequested` event covers them | demo-side smoke: marquee + Delete clears mixed selection |
 | 13 | [DiagramDocument](../framework/diagram/diagram-document.ts) (now framework-owned per § 1a — no demo-side VM file): add a `Connectors` collection + serialize/deserialize hooks; the diagram demo picks it up automatically through its DataContext | demo build green + manual exercise |
+
+## 10. Routing ground rules
+
+Drafted incrementally. Each rule is a load-bearing statement the router
++ adorner code must honor; collected here so they're greppable and
+testable from one place.
+
+### 10.1 Terminology
+
+- **Connected pair** — the two shapes joined by one connector. The
+  connector has a *source* end and a *target* end; each end resolves
+  to a shape (a `Figure`, or any item Model that satisfies the
+  endpoint duck-type). The (source shape, target shape) tuple, taken
+  together with the connector that joins them, is the connected pair.
+  Used throughout the rest of § 10 when a rule talks about behavior
+  that depends on the relationship between the two shapes rather than
+  one shape in isolation.
+
+- **Segment** — one piece of the connector's geometry between two
+  consecutive pivot points. The connector is a sequence of segments
+  running source port → waypoint₀ → waypoint₁ → … → waypoint_{n-1} →
+  target port. A connector with *n* waypoints has *n + 1* segments.
+  Geometry-neutral: a segment is a straight line for `RoutingMode.
+  Straight`, an axis-aligned line for `RoutingMode.Orthogonal`, a
+  cubic for `RoutingMode.Bezier`.
+
+- **Adjacent segments** — the connector's first and last segments:
+  the one leaving the source port, and the one entering the target
+  port. With zero waypoints there is a single segment that is *both*
+  adjacent segments. These two segments are special-cased in routing
+  rules that depend on the port's side (direction of exit / entry).
+
+### 10.2 Adjacent segments are perpendicular to their port's side
+
+Both adjacent segments are collinear with the *outward ray* of their
+respective port's side. The outward ray points away from the shape
+along the cardinal axis the side names. Concretely, when the connector
+has at least one waypoint, the first waypoint (`wp[0]`) sits at some
+positive distance from the *source* port along the source-side outward
+ray, and the last waypoint (`wp[last]`) sits at some positive distance
+from the *target* port along the target-side outward ray:
+
+| Port side at end | Outward direction | Adjacent-waypoint position constraint |
+|------------------|-------------------|---------------------------------------|
+| W                | `-X`              | `wp.X < port.X` AND `wp.Y == port.Y`  |
+| E                | `+X`              | `wp.X > port.X` AND `wp.Y == port.Y`  |
+| N                | `-Y`              | `wp.X == port.X` AND `wp.Y < port.Y`  |
+| S                | `+Y`              | `wp.X == port.X` AND `wp.Y > port.Y`  |
+
+(`port` is the source port for `wp[0]` and the target port for
+`wp[last]`; both are diagram-host coordinates. Y is screen-down-positive
+per § 5.)
+
+Consequence: the connector leaves the source shape strictly
+perpendicular to the source side, and enters the target shape strictly
+perpendicular to the target side, regardless of routing mode (Straight
+/ Orthogonal / Bezier). A waypoint that broke either invariant would
+force the matching adjacent segment to re-cross the shape body or veer
+off the advertised face — both visually wrong, and incompatible with
+the side-bar UX from § 3.7 / the demo.
+
+**Zero-waypoint degenerate case.** When the connector has no waypoints
+the single segment is *both* adjacent segments, so it must satisfy
+both perpendicularity constraints at once. That's only geometrically
+possible when source-side and target-side outward rays are
+*colinear and opposing* (e.g. source E port at `(100, 50)`, target W
+port at `(300, 50)` — the horizontal line through both is perpendicular
+to both sides). Outside this trivial alignment, the router MUST insert
+waypoints to honor the invariant; zero-waypoint connectors are the
+exception, not the default.
+
+Invariant in two contexts:
+
+  - **Router placement.** When a router emits a default first or last
+    waypoint (e.g. Orthogonal computing an L / Z), it places that
+    waypoint on the corresponding outward ray.
+  - **Interactive waypoint edits.** Dragging `wp[0]` or `wp[last]`
+    (`ConnectorEditAdorner`, § 4.3) clamps to the outward ray — the
+    user drags along the ray's free axis only; the perpendicular axis
+    is pinned to the matching port. (UX detail — open whether an off-ray
+    drag is rejected, clamped, or triggers a side reassignment.)
+
+### 10.3 Drag-time waypoint count tracks the cursor path
+
+During a gesture that pins one end of the connector to a port while
+the other end follows the cursor (drag-create per § 4.1, endpoint
+re-anchor per § 4.2), the route is recomputed on every cursor move.
+Each recompute MUST satisfy the perpendicularity invariant at the
+pinned end (§ 10.2).
+
+The waypoint count is *not fixed* — it grows as needed so that
+perpendicularity holds for whatever cursor position the gesture
+produces. Concretely, when the cursor changes direction such that the
+current bend layout can no longer route from the pinned port to the
+cursor while keeping the first segment on the outward ray, the route
+inserts additional waypoints. There is no upper bound — a drag whose
+trajectory keeps reversing produces more bends.
+
+Example trace (source `E` port at `(100, 50)`, drag-create gesture
+tracking cursor):
+
+| Cursor position | Route                                                     | Waypoint count |
+|-----------------|-----------------------------------------------------------|----------------|
+| `(200, 50)`     | source → cursor                                           | 0 (degenerate § 10.2) |
+| `(200, 200)`    | source → `(200, 50)` → cursor                             | 1              |
+| `(50, 200)`     | source → `(150, 50)` → `(150, 200)` → cursor              | 2              |
+
+(Exact bend positions are router-discretion; § 10.3 only mandates the
+*count* grows as the cursor demands.)
+
+**Same machinery applies on figure move.** When a non-drag re-route
+fires because a source / target Figure moved (§ 7.2), the route
+recomputes under the same perpendicularity invariant — the router can
+add or drop intermediate bends to keep it satisfied. The drag case is
+the same logic, polled per pointer move instead of per Figure move.
+
+**Where the drag-time bends live: router-internal.**
+`Connector.Waypoints` holds only user-authored bends. The router
+computes any additional perpendicular-preserving bends on the fly per
+route compute and emits them as `PathGeometry` segments; they never
+land in any DP. The drag gesture writes `Target.FreePoint` (or
+`Source.FreePoint`) per pointer move and lets the router recompute —
+nothing mutates `Waypoints`. Matches today's
+[ConnectorCreateBehavior.UpdateCursor](../framework/diagram/behaviors/connector-create-behavior.ts)
++ [OrthogonalRouter.computePoints](../framework/diagram/routing/orthogonal-router.ts).
+
+Consequence: `ConnectorEditAdorner` (§ 4.3) renders handles only for
+points in `Connector.Waypoints` — i.e. only for user-added bends. The
+router-emitted L / Z corners are not draggable as waypoints; they
+recompute implicitly as endpoints move. Promoting router corners to
+draggable waypoints requires re-opening this decision.

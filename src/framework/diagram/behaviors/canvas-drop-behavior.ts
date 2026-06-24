@@ -58,26 +58,14 @@ export function attachCanvasDropBehavior(receiver: Visual, diagram: Diagram): ()
         return { x, y };
     };
 
-    // Duck-type for ScrollViewer — it's the only Visual that publishes
-    // numeric HorizontalOffset / VerticalOffset DPs.
-    const findScrollViewerOffsets = (): { x: number; y: number } => {
-        const panel = diagram.ItemsPanelInstance;
-        if (panel === undefined) return { x: 0, y: 0 };
-        let cur: Visual | undefined = panel.GetVisualParent();
-        while (cur !== undefined)
-        {
-            const ox = (cur as unknown as { HorizontalOffset?: unknown }).HorizontalOffset;
-            const oy = (cur as unknown as { VerticalOffset?:   unknown }).VerticalOffset;
-            if (typeof ox === 'number' && typeof oy === 'number') return { x: ox, y: oy };
-            cur = cur.GetVisualParent();
-        }
-        return { x: 0, y: 0 };
-    };
-
+    // The SCP arranges its content (ItemsPresenter) at (-offX, -offY) in
+    // clip-and-translate mode, so the scroll offset is already in the
+    // ArrangedRect chain that panelHost() sums. Adding HorizontalOffset
+    // again would double-count — see the matching note in
+    // connector-interactions-behavior.ts.
     const localPosition = (args: DragEventArgs): Point => {
-        const o   = panelHost();
-        const off = findScrollViewerOffsets();
-        return new Point(args.HostX - o.x + off.x, args.HostY - o.y + off.y);
+        const o = panelHost();
+        return new Point(args.HostX - o.x, args.HostY - o.y);
     };
 
     const onDragOver = (args: DragEventArgs): void => {

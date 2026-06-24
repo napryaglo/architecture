@@ -262,3 +262,164 @@ describe('Diagram — Delete with mixed selection fires DeleteRequested with bot
         assert.equal(captured!.Connectors.length, 1);
     });
 });
+
+// ── Multi-select / ConnectorSelectionChanged ─────────────────────────
+
+describe('Diagram — connector multi-select', () => {
+    function pushConnector(diagram: Diagram, c: Connector): void
+    {
+        let col = diagram.Connectors;
+        if (col === undefined)
+        {
+            col = new ObservableCollection<Model>([]);
+            diagram.Connectors = col;
+        }
+        col.Add(c);
+    }
+
+    test('SelectConnector fires ConnectorSelectionChanged exactly once on first add', () => {
+        const { diagram } = setup([]);
+        const c = makeConnector();
+        let fired = 0;
+        diagram.AddConnectorSelectionChangedListener(() => { fired++; });
+        diagram.SelectConnector(c);
+        assert.equal(fired, 1);
+    });
+
+    test('SelectConnector is idempotent — re-selecting already-selected does not fire', () => {
+        const { diagram } = setup([]);
+        const c = makeConnector();
+        diagram.SelectConnector(c);
+        let fired = 0;
+        diagram.AddConnectorSelectionChangedListener(() => { fired++; });
+        diagram.SelectConnector(c);
+        assert.equal(fired, 0);
+    });
+
+    test('DeselectConnector fires only when the entry was selected', () => {
+        const { diagram } = setup([]);
+        const a = makeConnector();
+        const b = makeConnector();
+        diagram.SelectConnector(a);
+        let fired = 0;
+        diagram.AddConnectorSelectionChangedListener(() => { fired++; });
+        diagram.DeselectConnector(b);  // not selected — no fire
+        assert.equal(fired, 0);
+        diagram.DeselectConnector(a);  // was selected — fires
+        assert.equal(fired, 1);
+    });
+
+    test('ClearConnectorSelection is idempotent on empty', () => {
+        const { diagram } = setup([]);
+        let fired = 0;
+        diagram.AddConnectorSelectionChangedListener(() => { fired++; });
+        diagram.ClearConnectorSelection();
+        assert.equal(fired, 0);
+    });
+
+    test('SelectConnectorRange picks inclusive slice in Connectors index order', () => {
+        const { diagram } = setup([]);
+        const a = makeConnector();
+        const b = makeConnector();
+        const c = makeConnector();
+        const d = makeConnector();
+        pushConnector(diagram, a);
+        pushConnector(diagram, b);
+        pushConnector(diagram, c);
+        pushConnector(diagram, d);
+
+        diagram.SelectConnectorRange(b, d);
+        const sel = diagram.SelectedConnectors;
+        assert.equal(sel.length, 3);
+        assert.ok(sel.includes(b) && sel.includes(c) && sel.includes(d));
+        assert.ok(!sel.includes(a));
+    });
+
+    test('SelectConnectorRange order-independent: from > to swaps endpoints', () => {
+        const { diagram } = setup([]);
+        const a = makeConnector();
+        const b = makeConnector();
+        const c = makeConnector();
+        pushConnector(diagram, a);
+        pushConnector(diagram, b);
+        pushConnector(diagram, c);
+
+        diagram.SelectConnectorRange(c, a);
+        assert.equal(diagram.SelectedConnectors.length, 3);
+    });
+
+    test('SelectConnectorRange replaces — entries outside the slice are deselected', () => {
+        const { diagram } = setup([]);
+        const a = makeConnector();
+        const b = makeConnector();
+        const c = makeConnector();
+        const d = makeConnector();
+        pushConnector(diagram, a);
+        pushConnector(diagram, b);
+        pushConnector(diagram, c);
+        pushConnector(diagram, d);
+
+        diagram.SelectConnector(a);
+        diagram.SelectConnectorRange(c, d);
+        const sel = diagram.SelectedConnectors;
+        assert.equal(sel.length, 2);
+        assert.ok(sel.includes(c) && sel.includes(d));
+        assert.ok(!sel.includes(a));
+    });
+
+    test('SelectConnectorRange fires ConnectorSelectionChanged exactly once for the diff', () => {
+        const { diagram } = setup([]);
+        const a = makeConnector();
+        const b = makeConnector();
+        const c = makeConnector();
+        pushConnector(diagram, a);
+        pushConnector(diagram, b);
+        pushConnector(diagram, c);
+
+        let fired = 0;
+        diagram.AddConnectorSelectionChangedListener(() => { fired++; });
+        diagram.SelectConnectorRange(a, c);
+        assert.equal(fired, 1);
+    });
+
+    test('SelectConnectorRange — already-matching selection emits no event', () => {
+        const { diagram } = setup([]);
+        const a = makeConnector();
+        const b = makeConnector();
+        pushConnector(diagram, a);
+        pushConnector(diagram, b);
+        diagram.SelectConnectorRange(a, b);
+
+        let fired = 0;
+        diagram.AddConnectorSelectionChangedListener(() => { fired++; });
+        diagram.SelectConnectorRange(a, b);
+        assert.equal(fired, 0);
+    });
+
+    test('SelectConnectorRange — endpoint missing from Connectors is a no-op', () => {
+        const { diagram } = setup([]);
+        const a = makeConnector();
+        const b = makeConnector();
+        const orphan = makeConnector();
+        pushConnector(diagram, a);
+        pushConnector(diagram, b);
+
+        let fired = 0;
+        diagram.AddConnectorSelectionChangedListener(() => { fired++; });
+        diagram.SelectConnectorRange(a, orphan);
+        assert.equal(fired, 0);
+        assert.equal(diagram.SelectedConnectors.length, 0);
+    });
+
+    test('SelectConnectorRange — undefined Connectors collection is a no-op', () => {
+        const { diagram } = setup([]);
+        const a = makeConnector();
+        const b = makeConnector();
+        // Don't push — Connectors stays undefined
+        let fired = 0;
+        diagram.AddConnectorSelectionChangedListener(() => { fired++; });
+        diagram.SelectConnectorRange(a, b);
+        assert.equal(fired, 0);
+        assert.equal(diagram.SelectedConnectors.length, 0);
+    });
+});

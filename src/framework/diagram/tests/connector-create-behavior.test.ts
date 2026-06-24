@@ -1,8 +1,8 @@
-// Step 10 / § 9 of [src/document/connectors.md](../../../document/connectors.md):
-// pins the ConnectorCreateBehavior state machine + Diagram.ConnectorCreated
-// event surface. Pointer wiring (PointerDown trigger on Figure, cursor
-// coordinate translation) is the consumer's responsibility; the state
-// machine here is what they call into.
+// ConnectorCreateBehavior state-machine tests. The behavior now speaks
+// side-anchored endpoints (Node + PortSide) — the named-port shape
+// stayed in the framework for consumers with custom port catalogs, but
+// the drag-create gesture itself works side-to-side. See
+// connector-interactions-behavior.ts for the side-bar UI that drives it.
 
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -18,7 +18,7 @@ import { Connector } from '../connector.js';
 import { ConnectorEndpoint } from '../connector-endpoint.js';
 import { Diagram } from '../diagram.js';
 import { Figure } from '../figure.js';
-import { Port, PortSide } from '../port.js';
+import { PortSide } from '../port.js';
 import { RoutingMode } from '../routing/router.js';
 // Side-effect imports — registers the routers used by the transient
 // Connector's recompute.
@@ -46,45 +46,35 @@ function fig(left: number, top: number): Figure
 // ── Begin → transient state ──────────────────────────────────────────
 
 describe('ConnectorCreateBehavior — BeginCreate', () => {
-    test('materializes a transient Connector with Source.Node = sourceFigure', () => {
+    test('materializes a transient with side-anchored Source', () => {
         const d = newDiagram();
         const behavior = new ConnectorCreateBehavior(d);
         const f = fig(100, 100);
         assert.equal(behavior.IsActive, false);
-        behavior.BeginCreate(f, undefined, new Point(300, 200));
+        behavior.BeginCreate(f, PortSide.E, new Point(300, 200));
 
         assert.equal(behavior.IsActive, true);
         const t = behavior.TransientConnector!;
         assert.ok(t instanceof Connector);
         assert.equal(t.Source!.Node, f);
-        assert.equal(t.Source!.PortName, undefined);    // no port hit
+        assert.equal(t.Source!.PortSide, PortSide.E);
+        assert.equal(t.Source!.PortName, undefined);
+        assert.equal(t.Source!.PortIndex, undefined);
         assert.equal(t.Target!.Node, undefined);
         assert.equal(t.Target!.FreePoint!.X, 300);
         assert.equal(t.Target!.FreePoint!.Y, 200);
         assert.equal(t.RoutingMode, RoutingMode.Orthogonal);
     });
 
-    test('named-port hit on source records PortName on the transient endpoint', () => {
+    test('different cardinal sides round-trip onto Source.PortSide', () => {
         const d = newDiagram();
         const behavior = new ConnectorCreateBehavior(d);
         const f = fig(100, 100);
-        const namedPort = new Port({ Name: 'out', Side: PortSide.E, X: 1, Y: 0.5 });
-        behavior.BeginCreate(f, namedPort, new Point(300, 200));
-        assert.equal(behavior.TransientConnector!.Source!.PortName, 'out');
-    });
-
-    test('anonymous-port hit (Name = "") falls back to a bare Node endpoint', () => {
-        // Per § 4.1 / V1: positional addressing (Side, Index) on
-        // anonymous ports is deferred; the endpoint stays a plain Node
-        // ref and the connector's path-4 auto-pick at resolution time
-        // lands on the closest port.
-        const d = newDiagram();
-        const behavior = new ConnectorCreateBehavior(d);
-        const f = fig(100, 100);
-        const anon = new Port({ Side: PortSide.N, X: 0.5, Y: 0 });
-        behavior.BeginCreate(f, anon, new Point(300, 200));
-        assert.equal(behavior.TransientConnector!.Source!.PortName, undefined);
-        assert.equal(behavior.TransientConnector!.Source!.Node, f);
+        for (const side of [PortSide.N, PortSide.S, PortSide.E, PortSide.W])
+        {
+            behavior.BeginCreate(f, side, new Point(300, 200));
+            assert.equal(behavior.TransientConnector!.Source!.PortSide, side);
+        }
     });
 
     test('a second BeginCreate preempts an unreleased gesture', () => {
@@ -92,13 +82,14 @@ describe('ConnectorCreateBehavior — BeginCreate', () => {
         const behavior = new ConnectorCreateBehavior(d);
         const a = fig(100, 100);
         const b = fig(300, 100);
-        behavior.BeginCreate(a, undefined, new Point(200, 200));
+        behavior.BeginCreate(a, PortSide.E, new Point(200, 200));
         const firstTransient = behavior.TransientConnector!;
 
-        behavior.BeginCreate(b, undefined, new Point(400, 200));
+        behavior.BeginCreate(b, PortSide.W, new Point(400, 200));
         const secondTransient = behavior.TransientConnector!;
         assert.notEqual(firstTransient, secondTransient);
         assert.equal(secondTransient.Source!.Node, b);
+        assert.equal(secondTransient.Source!.PortSide, PortSide.W);
     });
 });
 
@@ -109,7 +100,7 @@ describe('ConnectorCreateBehavior — UpdateCursor', () => {
         const d = newDiagram();
         const behavior = new ConnectorCreateBehavior(d);
         const f = fig(100, 100);
-        behavior.BeginCreate(f, undefined, new Point(300, 200));
+        behavior.BeginCreate(f, PortSide.E, new Point(300, 200));
         behavior.UpdateCursor(new Point(400, 250));
         const fp = behavior.TransientConnector!.Target!.FreePoint!;
         assert.equal(fp.X, 400);
@@ -127,7 +118,7 @@ describe('ConnectorCreateBehavior — UpdateCursor', () => {
 // ── EndCreate fires Diagram.ConnectorCreated ─────────────────────────
 
 describe('ConnectorCreateBehavior — EndCreate', () => {
-    test('fires Diagram.ConnectorCreated with Source / Target endpoints + tears down transient', () => {
+    test('fires Diagram.ConnectorCreated with side-anchored Source / Target', () => {
         const d = newDiagram();
         const behavior = new ConnectorCreateBehavior(d);
         const src = fig(100, 100);
@@ -136,33 +127,16 @@ describe('ConnectorCreateBehavior — EndCreate', () => {
         const captured: ConnectorCreatedArgs[] = [];
         d.AddConnectorCreatedListener(args => captured.push(args));
 
-        behavior.BeginCreate(src, undefined, new Point(200, 200));
-        behavior.EndCreate(tgt, undefined);
+        behavior.BeginCreate(src, PortSide.E, new Point(200, 200));
+        behavior.EndCreate(tgt, PortSide.W);
 
         assert.equal(captured.length, 1);
         assert.equal(captured[0]!.Source.Node, src);
+        assert.equal(captured[0]!.Source.PortSide, PortSide.E);
         assert.equal(captured[0]!.Target.Node, tgt);
+        assert.equal(captured[0]!.Target.PortSide, PortSide.W);
         assert.equal(behavior.IsActive, false);
         assert.equal(behavior.TransientConnector, undefined);
-    });
-
-    test('port-ref shape carries through on EndCreate (named ports on both ends)', () => {
-        const d = newDiagram();
-        const behavior = new ConnectorCreateBehavior(d);
-        const src = fig(100, 100);
-        const tgt = fig(400, 100);
-        const srcPort = new Port({ Name: 'out', Side: PortSide.E, X: 1, Y: 0.5 });
-        const tgtPort = new Port({ Name: 'in',  Side: PortSide.W, X: 0, Y: 0.5 });
-
-        let captured: ConnectorCreatedArgs | undefined;
-        d.AddConnectorCreatedListener(args => { captured = args; });
-
-        behavior.BeginCreate(src, srcPort, new Point(200, 200));
-        behavior.EndCreate(tgt, tgtPort);
-
-        assert.ok(captured !== undefined);
-        assert.equal(captured!.Source.PortName, 'out');
-        assert.equal(captured!.Target.PortName, 'in');
     });
 
     test('the event-bag Source/Target ARE freshly-constructed endpoints, not the transient', () => {
@@ -175,13 +149,12 @@ describe('ConnectorCreateBehavior — EndCreate', () => {
         const src = fig(100, 100);
         const tgt = fig(400, 100);
 
-        let transientSource: ConnectorEndpoint | undefined;
-        behavior.BeginCreate(src, undefined, new Point(200, 200));
-        transientSource = behavior.TransientConnector!.Source;
+        behavior.BeginCreate(src, PortSide.E, new Point(200, 200));
+        const transientSource = behavior.TransientConnector!.Source;
 
         let captured: ConnectorCreatedArgs | undefined;
         d.AddConnectorCreatedListener(args => { captured = args; });
-        behavior.EndCreate(tgt, undefined);
+        behavior.EndCreate(tgt, PortSide.W);
 
         assert.ok(captured !== undefined);
         assert.notEqual(captured!.Source, transientSource);
@@ -195,7 +168,7 @@ describe('ConnectorCreateBehavior — EndCreate', () => {
 
         let fired = false;
         d.AddConnectorCreatedListener(() => { fired = true; });
-        behavior.EndCreate(f, undefined);
+        behavior.EndCreate(f, PortSide.E);
         assert.equal(fired, false);
     });
 });
@@ -210,7 +183,7 @@ describe('ConnectorCreateBehavior — Abort', () => {
 
         let fired = false;
         d.AddConnectorCreatedListener(() => { fired = true; });
-        behavior.BeginCreate(f, undefined, new Point(200, 200));
+        behavior.BeginCreate(f, PortSide.E, new Point(200, 200));
         behavior.Abort();
         assert.equal(behavior.IsActive, false);
         assert.equal(behavior.TransientConnector, undefined);
@@ -223,6 +196,63 @@ describe('ConnectorCreateBehavior — Abort', () => {
         behavior.Abort();
         assert.equal(behavior.IsActive, false);
     });
+
+    test('Abort unregisters the transient source endpoint from the figure side', () => {
+        // The transient created in BeginCreate registers its Source on
+        // the source figure's side list. Without explicit cleanup, the
+        // transient's endpoint stays in the registry after Abort —
+        // visible as a phantom port marker on the SideBarsAdorner with
+        // no real connector behind it. _cleanup must clear t.Source so
+        // the connector's _reregisterSourceSide path unregisters it.
+        const d = newDiagram();
+        const behavior = new ConnectorCreateBehavior(d);
+        const f = fig(100, 100);
+
+        assert.equal(f.GetSideEndpointCount(PortSide.E), 0);
+        behavior.BeginCreate(f, PortSide.E, new Point(200, 200));
+        assert.equal(f.GetSideEndpointCount(PortSide.E), 1);
+        behavior.Abort();
+        assert.equal(f.GetSideEndpointCount(PortSide.E), 0,
+            'transient source endpoint must be unregistered on Abort');
+    });
+});
+
+// ── Side-registry leak repro (the "2 markers, 1 connector" bug) ──────
+
+describe('ConnectorCreateBehavior — side-registry hygiene across gestures', () => {
+    test('EndCreate releases the transient source side-slot (post-gesture count stays at 1)', () => {
+        const d = newDiagram();
+        const behavior = new ConnectorCreateBehavior(d);
+        const src = fig(100, 100);
+        const tgt = fig(400, 100);
+
+        // Capture the ConnectorCreated event so we can materialize the
+        // new connector exactly like the demo does — the new
+        // connector's source endpoint will then claim its own slot,
+        // and the transient's slot from BeginCreate must NOT linger.
+        const created: ConnectorCreatedArgs[] = [];
+        d.AddConnectorCreatedListener(args => created.push(args));
+
+        behavior.BeginCreate(src, PortSide.E, new Point(200, 140));
+        assert.equal(src.GetSideEndpointCount(PortSide.E), 1, 'transient claims a slot');
+
+        behavior.EndCreate(tgt, PortSide.W);
+        // Transient's slot released by _cleanup.
+        assert.equal(src.GetSideEndpointCount(PortSide.E), 0,
+            'transient slot must be released before the listener materializes the real connector');
+
+        // Materialize the real connector through the listener-supplied
+        // endpoints — same shape as the demo's CreateConnector path.
+        assert.equal(created.length, 1);
+        const c = new Connector();
+        c.RoutingMode = RoutingMode.Orthogonal;
+        c.Source = created[0]!.Source;
+        c.Target = created[0]!.Target;
+
+        // Now exactly ONE endpoint is on each side. Marker count = 1.
+        assert.equal(src.GetSideEndpointCount(PortSide.E), 1);
+        assert.equal(tgt.GetSideEndpointCount(PortSide.W), 1);
+    });
 });
 
 // ── attachConnectorCreate convenience ────────────────────────────────
@@ -232,7 +262,7 @@ describe('attachConnectorCreate', () => {
         const d = newDiagram();
         const { behavior, detach } = attachConnectorCreate(d);
         const f = fig(100, 100);
-        behavior.BeginCreate(f, undefined, new Point(200, 200));
+        behavior.BeginCreate(f, PortSide.E, new Point(200, 200));
         assert.equal(behavior.IsActive, true);
         detach();
         assert.equal(behavior.IsActive, false);

@@ -3,7 +3,7 @@ import type { Diagram } from '../diagram.js';
 import { Connector } from '../connector.js';
 import { ConnectorEndpoint } from '../connector-endpoint.js';
 import type { Figure } from '../figure.js';
-import type { Port } from '../port.js';
+import type { ResolvedPortSide } from '../port.js';
 import { RoutingMode } from '../routing/router.js';
 
 // Fired when the drag-create gesture lands on a target Figure
@@ -40,8 +40,8 @@ export class ConnectorCreateBehavior
 {
     private readonly _diagram: Diagram;
     private _transientConnector: Connector | undefined = undefined;
-    private _sourceFigure:       Figure    | undefined = undefined;
-    private _sourcePort:         Port      | undefined = undefined;
+    private _sourceFigure:       Figure           | undefined = undefined;
+    private _sourceSide:         ResolvedPortSide | undefined = undefined;
 
     constructor(diagram: Diagram)
     {
@@ -51,19 +51,20 @@ export class ConnectorCreateBehavior
     public get IsActive(): boolean { return this._transientConnector !== undefined; }
     public get TransientConnector(): Connector | undefined { return this._transientConnector; }
 
-    // Start a drag-create gesture. If a gesture is already in flight
-    // the previous transient is silently dropped — the same convention
-    // as a second drag-start preempting a previous unreleased drag.
-    public BeginCreate(sourceFigure: Figure, sourcePort: Port | undefined, cursor: Point): void
+    // Start a drag-create gesture from `sourceSide` of `sourceFigure`.
+    // If a gesture is already in flight the previous transient is
+    // silently dropped — same convention as a second drag-start
+    // preempting a previous unreleased drag.
+    public BeginCreate(sourceFigure: Figure, sourceSide: ResolvedPortSide, cursor: Point): void
     {
         if (this._transientConnector !== undefined) this.Abort();
 
         this._sourceFigure = sourceFigure;
-        this._sourcePort   = sourcePort;
+        this._sourceSide   = sourceSide;
 
         const transient = new Connector();
         transient.RoutingMode = RoutingMode.Orthogonal;
-        transient.Source = makeHitEndpoint(sourceFigure, sourcePort);
+        transient.Source = makeSideEndpoint(sourceFigure, sourceSide);
         transient.Target = new ConnectorEndpoint({ FreePoint: cursor });
         this._transientConnector = transient;
     }
@@ -81,16 +82,18 @@ export class ConnectorCreateBehavior
         tgt.FreePoint = cursor;
     }
 
-    // Close the gesture on a Figure target. Drops the transient,
+    // Close the gesture on a Figure target. Drops the transient and
     // fires ConnectorCreated with proposed Source / Target endpoints
-    // shaped per § 4.1's port-ref rules. The consumer's listener owns
-    // the next step (insert into the Connectors collection).
-    public EndCreate(targetFigure: Figure, targetPort: Port | undefined): void
+    // shaped as side-anchors. The consumer's listener owns the next
+    // step (insert into the Connectors collection).
+    public EndCreate(targetFigure: Figure, targetSide: ResolvedPortSide): void
     {
-        if (this._transientConnector === undefined || this._sourceFigure === undefined) return;
+        if (this._transientConnector === undefined
+            || this._sourceFigure === undefined
+            || this._sourceSide === undefined) return;
 
-        const source = makeHitEndpoint(this._sourceFigure, this._sourcePort);
-        const target = makeHitEndpoint(targetFigure,        targetPort);
+        const source = makeSideEndpoint(this._sourceFigure, this._sourceSide);
+        const target = makeSideEndpoint(targetFigure,       targetSide);
         this._cleanup();
         this._diagram._fireConnectorCreated({ Source: source, Target: target });
     }
@@ -105,24 +108,35 @@ export class ConnectorCreateBehavior
 
     private _cleanup(): void
     {
+        // Clear the transient's endpoint references so Connector.OnProperty
+        // Changed → _reregister*Side unregisters them from the source
+        // figure's side-endpoint list. Without this the transient's
+        // source endpoint stays registered forever (the side-endpoint
+        // map holds a strong reference to it, which transitively holds
+        // the dropped transient connector + its endpoint), inflating
+        // the side-slot count on every gesture. Visible as ghost port
+        // markers on the SideBarsAdorner where no real connector
+        // actually attaches.
+        const t = this._transientConnector;
+        if (t !== undefined)
+        {
+            t.Source = undefined;
+            t.Target = undefined;
+        }
         this._transientConnector = undefined;
         this._sourceFigure       = undefined;
-        this._sourcePort         = undefined;
+        this._sourceSide         = undefined;
     }
 }
 
-// Port-ref rules per § 4.1: named port → PortName; anonymous
-// (Name = '') OR no port hit → bare Node (positional addressing is
-// V2 — anonymous-port shape connectors fall back to path-4 auto-pick
-// at resolution time, which lands on the closest port to the other
-// endpoint).
-function makeHitEndpoint(figure: Figure, port: Port | undefined): ConnectorEndpoint
+// Side-anchored endpoint constructor. The slot index on the side is
+// not assigned here — Figure's side-endpoint registration (invoked
+// when the Connector's Source / Target DPs settle) assigns slots
+// dynamically, and PortResolver's side-slot path picks the position
+// off the figure's current slot list at every resolve.
+function makeSideEndpoint(figure: Figure, side: ResolvedPortSide): ConnectorEndpoint
 {
-    if (port === undefined || port.Name === '')
-    {
-        return new ConnectorEndpoint({ Node: figure });
-    }
-    return new ConnectorEndpoint({ Node: figure, PortName: port.Name });
+    return new ConnectorEndpoint({ Node: figure, PortSide: side });
 }
 
 // Convenience attach function mirroring the canvas-drop / mutator

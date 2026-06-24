@@ -442,11 +442,90 @@ export class Diagram extends Selector
     // SelectedConnectors + the existing SelectedItems channel.
     private readonly _selectedConnectors: Set<Connector> = new Set();
 
-    public SelectConnector(c: Connector):      void    { this._selectedConnectors.add(c); }
-    public DeselectConnector(c: Connector):    void    { this._selectedConnectors.delete(c); }
-    public ClearConnectorSelection():          void    { this._selectedConnectors.clear(); }
+    // Subscriber list for ConnectorSelectionChanged. Mirrors the figure-
+    // side SelectionChanged channel inherited from Selector, but kept as
+    // a separate event because Selector's API is typed against the
+    // ItemsSource population (figures) and the connector track lives in
+    // its own Set above. FormatMirror subscribes here so editing a Pen
+    // in the shared editor reaches selected connectors the same way it
+    // reaches selected figures.
+    private readonly _connectorSelectionChangedListeners: Set<() => void> = new Set();
+
+    public AddConnectorSelectionChangedListener   (listener: () => void): void { this._connectorSelectionChangedListeners.add(listener); }
+    public RemoveConnectorSelectionChangedListener(listener: () => void): void { this._connectorSelectionChangedListeners.delete(listener); }
+
+    private _fireConnectorSelectionChanged(): void
+    {
+        for (const l of [...this._connectorSelectionChangedListeners]) l();
+    }
+
+    public SelectConnector(c: Connector): void
+    {
+        if (this._selectedConnectors.has(c)) return;
+        this._selectedConnectors.add(c);
+        this._fireConnectorSelectionChanged();
+    }
+    public DeselectConnector(c: Connector): void
+    {
+        if (!this._selectedConnectors.delete(c)) return;
+        this._fireConnectorSelectionChanged();
+    }
+    public ClearConnectorSelection(): void
+    {
+        if (this._selectedConnectors.size === 0) return;
+        this._selectedConnectors.clear();
+        this._fireConnectorSelectionChanged();
+    }
     public IsConnectorSelected(c: Connector):  boolean { return this._selectedConnectors.has(c); }
     public get SelectedConnectors():           readonly Connector[] { return [...this._selectedConnectors]; }
+
+    // Range-select the inclusive slice of Connectors between `from` and
+    // `to` in Diagram.Connectors index order. Diff-applied so unchanged
+    // entries don't churn the ConnectorSelectionChanged event. Mirrors
+    // Selector.selectContainerRange (used by Shift+click on figures);
+    // shared editor wiring (FormatMirror) reacts to the resulting
+    // ConnectorSelectionChanged exactly once at the end of the apply,
+    // not per-entry. Either endpoint missing from Connectors → no-op
+    // (same forgiving contract as Selector — a stale anchor doesn't
+    // throw).
+    public SelectConnectorRange(from: Connector, to: Connector): void
+    {
+        const live = this.Connectors;
+        if (live === undefined) return;
+        let fromIdx = -1, toIdx = -1;
+        const arr: Connector[] = [];
+        for (let i = 0; i < live.Count; i++)
+        {
+            const c = live.Get(i) as Connector | undefined;
+            if (c === undefined) continue;
+            arr.push(c);
+            if (c === from) fromIdx = arr.length - 1;
+            if (c === to)   toIdx   = arr.length - 1;
+        }
+        if (fromIdx < 0 || toIdx < 0) return;
+        const lo = Math.min(fromIdx, toIdx);
+        const hi = Math.max(fromIdx, toIdx);
+        const next = new Set<Connector>();
+        for (let i = lo; i <= hi; i++) next.add(arr[i]!);
+        let changed = false;
+        for (const existing of [...this._selectedConnectors])
+        {
+            if (!next.has(existing))
+            {
+                this._selectedConnectors.delete(existing);
+                changed = true;
+            }
+        }
+        for (const c of next)
+        {
+            if (!this._selectedConnectors.has(c))
+            {
+                this._selectedConnectors.add(c);
+                changed = true;
+            }
+        }
+        if (changed) this._fireConnectorSelectionChanged();
+    }
 
     constructor()
     {

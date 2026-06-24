@@ -18,6 +18,7 @@ import { Shape } from '../../basic/shapes/shape.js';
 import { Canvas } from '../../basic/panels/canvas.js';
 import { DataTemplate } from '../../basic/templates/data-template.js';
 import { ConnectorEndpoint } from './connector-endpoint.js';
+import { Figure } from './figure.js';
 import {
     type IPortHost,
     Port,
@@ -160,18 +161,45 @@ export class Connector extends Shape
     private _trackedSourceNode: Model | undefined = undefined;
     private _trackedTargetNode: Model | undefined = undefined;
 
+    // Side-anchored endpoint registration on the host Figure. When an
+    // endpoint settles on (Figure F, PortSide S) with no PortName /
+    // PortIndex / FreePoint set, the connector registers it in F's
+    // side-endpoint list so its slot index participates in the
+    // distribution rule. Subsequent endpoint changes re-register; teardown
+    // (Source/Target swap, ctor cleanup) unregisters.
+    private _trackedSourceFigure: Figure | undefined = undefined;
+    private _trackedSourceSide:   ResolvedPortSide | undefined = undefined;
+    private _trackedTargetFigure: Figure | undefined = undefined;
+    private _trackedTargetSide:   ResolvedPortSide | undefined = undefined;
+
+    // Re-entry guard. _scheduleRecompute writes to ep.PortSide during
+    // the bake step (bare-Node endpoint legacy path), which fires
+    // OnPropertyChanged → _on*EndpointInputChanged → _scheduleRecompute
+    // RECURSIVELY. Without the guard, the nested call would resolve +
+    // route with the freshly-baked side (correct, centered via path 3a)
+    // and assign Geometry — and then the outer call would continue with
+    // its STALE pre-bake anchors and clobber that Geometry with the
+    // off-center first-pass route. The guard skips nested calls; the
+    // outer call detects the bake and re-resolves locally to keep the
+    // recompute coherent.
+    private _recomputing: boolean = false;
+
     // Bound callbacks — required for symmetric Add/Remove on the
     // Model PropertyChangedListener API.
     private readonly _onSourceEndpointInputChanged = (): void => {
         this._reattachSourceNodeListener();
+        this._reregisterSourceSide();
         this._scheduleRecompute();
     };
     private readonly _onTargetEndpointInputChanged = (): void => {
         this._reattachTargetNodeListener();
+        this._reregisterTargetSide();
         this._scheduleRecompute();
     };
     private readonly _onSourceNodeMoved = (): void => { this._scheduleRecompute(); };
     private readonly _onTargetNodeMoved = (): void => { this._scheduleRecompute(); };
+    private readonly _onSourceSideRebalance = (): void => { this._scheduleRecompute(); };
+    private readonly _onTargetSideRebalance = (): void => { this._scheduleRecompute(); };
 
     constructor()
     {
@@ -195,11 +223,24 @@ export class Connector extends Shape
         super.OnPropertyChanged(descriptor, oldValue, newValue);
         if (descriptor === Connector.SourceKey.descriptor)
         {
+            // Reregister BEFORE reattach. _reregisterSourceSide unregisters
+            // via this._trackedSource (the OLD endpoint instance, set by
+            // the prior _reattachSourceEndpoint); _reattachSourceEndpoint
+            // then updates _trackedSource to the NEW instance. Swapping
+            // the order would have _reregisterSourceSide call
+            // _unregisterSideEndpoint with the NEW endpoint, which the
+            // side list doesn't know about (no-op), leaving the OLD
+            // endpoint stuck in the registry and starving the rebalance
+            // fan-out — sibling connectors on the same side wouldn't
+            // shift when this connector's endpoint is reassigned to
+            // a FreePoint, breaking the dynamic-port rebalance promise.
+            this._reregisterSourceSide();
             this._reattachSourceEndpoint();
             this._scheduleRecompute();
         }
         else if (descriptor === Connector.TargetKey.descriptor)
         {
+            this._reregisterTargetSide();
             this._reattachTargetEndpoint();
             this._scheduleRecompute();
         }
@@ -316,10 +357,74 @@ export class Connector extends Shape
         }
     }
 
+    // Side-endpoint registration: the endpoint registers with its host
+    // Figure's side list iff it's pinned to (Figure, ResolvedPortSide)
+    // with no PortName / PortIndex / FreePoint set (path 3a's gate).
+    // Any input change re-checks the gate and re-attaches.
+    private _reregisterSourceSide(): void
+    {
+        if (this._trackedSourceFigure !== undefined && this._trackedSourceSide !== undefined && this._trackedSource !== undefined)
+        {
+            this._trackedSourceFigure._unregisterSideEndpoint(this._trackedSourceSide, this._trackedSource);
+        }
+        this._trackedSourceFigure = undefined;
+        this._trackedSourceSide   = undefined;
+        const ep = this.Source;
+        if (ep === undefined) return;
+        const slot = endpointSideSlot(ep);
+        if (slot === undefined) return;
+        const [figure, side] = slot;
+        this._trackedSourceFigure = figure;
+        this._trackedSourceSide   = side;
+        figure._registerSideEndpoint(side, ep, this._onSourceSideRebalance, this);
+    }
+
+    private _reregisterTargetSide(): void
+    {
+        if (this._trackedTargetFigure !== undefined && this._trackedTargetSide !== undefined && this._trackedTarget !== undefined)
+        {
+            this._trackedTargetFigure._unregisterSideEndpoint(this._trackedTargetSide, this._trackedTarget);
+        }
+        this._trackedTargetFigure = undefined;
+        this._trackedTargetSide   = undefined;
+        const ep = this.Target;
+        if (ep === undefined) return;
+        const slot = endpointSideSlot(ep);
+        if (slot === undefined) return;
+        const [figure, side] = slot;
+        this._trackedTargetFigure = figure;
+        this._trackedTargetSide   = side;
+        figure._registerSideEndpoint(side, ep, this._onTargetSideRebalance, this);
+    }
+
     // Synchronous recompute — § 7.4 ("throttle?") is a separate
     // open question. V1 ships sync; rAF-coalescing lands when the
     // first interactive demo flags a measurable cost.
     private _scheduleRecompute(): void
+    {
+        // Re-entry guard. Bake (below) writes ep.PortSide, which fires
+        // OnPropertyChanged → _on*EndpointInputChanged → _scheduleRecompute
+        // recursively. If we let that nested call run, it would route
+        // with the freshly-baked side (correct) and assign Geometry,
+        // then the OUTER call would continue, route with its stale
+        // pre-bake anchors, and clobber the correct Geometry. The guard
+        // suppresses the nested re-entry; the outer call re-resolves
+        // locally after bake to pick up the new sides. _reregister*Side
+        // / _reattach*NodeListener still run from the listener — they're
+        // not gated, only the Geometry recompute is.
+        if (this._recomputing) return;
+        this._recomputing = true;
+        try
+        {
+            this._scheduleRecomputeBody();
+        }
+        finally
+        {
+            this._recomputing = false;
+        }
+    }
+
+    private _scheduleRecomputeBody(): void
     {
         const src = this.Source;
         const tgt = this.Target;
@@ -332,13 +437,25 @@ export class Connector extends Shape
         }
         const waypoints = this.Waypoints ?? EMPTY_WAYPOINTS;
 
-        // Two-pass anchor resolve. Source first with target's approx
-        // position (centroid or FreePoint); target second with source's
-        // resolved anchor. Path-4 closest-port lookups read the
-        // OTHER endpoint's position from the second argument.
-        const tgtApprox = endpointApproxAnchor(tgt);
-        const srcAnchor = resolveEndpoint(src, tgtApprox, waypoints, true,  this.AnchorClip);
-        const tgtAnchor = resolveEndpoint(tgt, srcAnchor, waypoints, false, this.AnchorClip);
+        let srcAnchor: ResolvedAnchor;
+        let tgtAnchor: ResolvedAnchor;
+        ({ srcAnchor, tgtAnchor } = this._resolveAnchors(src, tgt, waypoints));
+
+        // Auto-bake PortSide for legacy bare-{Node} endpoints (no port
+        // refs, no FreePoint, no PortSide). The resolved anchor's `side`
+        // becomes the endpoint's pinned side; subsequent resolves go
+        // through path 3a and join the side-slot distribution. When
+        // either bake fires, re-resolve in-line — the first-pass anchor
+        // came from path 4 / 5 (closest port or bbox-centroid geometric
+        // clip) and would otherwise stick as an off-center end on a
+        // connector the demo wired up as `new ConnectorEndpoint({ Node })`
+        // without an explicit PortSide.
+        const srcBaked = bakeSideIfBare(src, srcAnchor.side);
+        const tgtBaked = bakeSideIfBare(tgt, tgtAnchor.side);
+        if (srcBaked || tgtBaked)
+        {
+            ({ srcAnchor, tgtAnchor } = this._resolveAnchors(src, tgt, waypoints));
+        }
         this._currentSrcAnchor = srcAnchor;
         this._currentTgtAnchor = tgtAnchor;
 
@@ -387,6 +504,58 @@ export class Connector extends Shape
         // target = last-segment-into-target direction.
         placeCap(this._sourceCapInstance, srcAnchor, router.tangentAt(spec, ConnectorEnd.Source));
         placeCap(this._targetCapInstance, tgtAnchor, router.tangentAt(spec, ConnectorEnd.Target));
+
+        // Side-intersection optimization. Now that this connector's
+        // Geometry is current, ask each side it's anchored to whether
+        // a slot swap between its registered connectors would clear up
+        // a crossing. Figure._optimizeSideIntersections is guarded
+        // against re-entry: when the optimizer's swap fires
+        // _fireSideRebalance, every connector on the side calls back
+        // into this method, but the figure's `_optimizing` flag short-
+        // circuits the recursive optimize calls. Same flag covers the
+        // figure-move trigger (move → connector re-route → this point)
+        // and the registration trigger (register → _fireSideRebalance
+        // → connector recompute → this point).
+        if (this._trackedSourceFigure !== undefined && this._trackedSourceSide !== undefined)
+        {
+            this._trackedSourceFigure._optimizeSideIntersections(this._trackedSourceSide);
+        }
+        if (this._trackedTargetFigure !== undefined && this._trackedTargetSide !== undefined)
+        {
+            this._trackedTargetFigure._optimizeSideIntersections(this._trackedTargetSide);
+        }
+    }
+
+    // Two-pass anchor resolve. The pass with the Node-pinned endpoint
+    // runs FIRST so the FreePoint endpoint's deriveFreeSide sees a real
+    // side from the other end (per § 10.2 + § 10.3's perpendicular-
+    // respecting derivation). When both endpoints are free or both are
+    // Node, default to source-first. Pulled out as a helper so the
+    // recompute can call it twice — once for the initial route, again
+    // after bake to pick up the freshly-pinned PortSide.
+    private _resolveAnchors(
+        src: ConnectorEndpoint,
+        tgt: ConnectorEndpoint,
+        waypoints: readonly Point[],
+    ): { srcAnchor: ResolvedAnchor; tgtAnchor: ResolvedAnchor }
+    {
+        const srcIsFree = src.Node === undefined;
+        const tgtIsFree = tgt.Node === undefined;
+        let srcAnchor: ResolvedAnchor;
+        let tgtAnchor: ResolvedAnchor;
+        if (srcIsFree && !tgtIsFree)
+        {
+            const srcApprox = endpointApproxAnchor(src);
+            tgtAnchor = resolveEndpoint(tgt, srcApprox, waypoints, false, this.AnchorClip, false);
+            srcAnchor = resolveEndpoint(src, tgtAnchor, waypoints, true,  this.AnchorClip, true);
+        }
+        else
+        {
+            const tgtApprox = endpointApproxAnchor(tgt);
+            srcAnchor = resolveEndpoint(src, tgtApprox, waypoints, true,  this.AnchorClip, false);
+            tgtAnchor = resolveEndpoint(tgt, srcAnchor, waypoints, false, this.AnchorClip, !srcIsFree);
+        }
+        return { srcAnchor, tgtAnchor };
     }
 }
 
@@ -427,11 +596,12 @@ const EMPTY_WAYPOINTS: readonly Point[] = Object.freeze([]) as readonly Point[];
 // ── Endpoint resolution (§ 3.2 paths 1–5) ────────────────────────────
 
 function resolveEndpoint(
-    ep:         ConnectorEndpoint,
+    ep:          ConnectorEndpoint,
     otherAnchor: ResolvedAnchor,
-    waypoints:  readonly Point[],
-    isSource:   boolean,
-    anchorClip: AnchorClip,
+    waypoints:   readonly Point[],
+    isSource:    boolean,
+    anchorClip:  AnchorClip,
+    otherIsReal: boolean,
 ): ResolvedAnchor
 {
     // Path 1 — free-floating.
@@ -441,7 +611,7 @@ function resolveEndpoint(
         return {
             x:    fp.X,
             y:    fp.Y,
-            side: deriveFreeSide({ x: fp.X, y: fp.Y }, otherAnchor, waypoints, isSource),
+            side: deriveFreeSide({ x: fp.X, y: fp.Y }, otherAnchor, waypoints, isSource, otherIsReal),
         };
     }
 
@@ -455,13 +625,24 @@ function resolveEndpoint(
         if (named !== undefined) return PortResolver.resolve(named, host);
     }
 
-    // Path 3 — positional lookup (PortSide, PortIndex).
+    // Path 3 — positional lookup (PortSide, PortIndex) against the
+    // static provider's port list. Used by consumers that addressed a
+    // specific provider-emitted port via its index in a side bucket.
     if (ep.PortSide !== undefined && ep.PortIndex !== undefined && ports.length > 0)
     {
         const positional = lookupPositional(ports, host, ep.PortSide, ep.PortIndex);
         if (positional !== undefined) return PortResolver.resolve(positional, host);
         // Out-of-range → fall through to path 4.
     }
+
+    // Path 3a — side-slot dynamic distribution. When endpoint is pinned
+    // to (Figure, PortSide) with no static-port reference (no PortName,
+    // no PortIndex, no FreePoint), the figure's side-endpoint registry
+    // assigns a slot index; the position is (slot+1)/(count+1) along
+    // the side. This is the path side-bar gestures land on; existing
+    // connectors registered with the figure participate in distribution.
+    const sideSlotAnchor = tryResolveSideSlot(ep);
+    if (sideSlotAnchor !== undefined) return sideSlotAnchor;
 
     // Path 4 — auto-pick closest port to the OTHER endpoint.
     if (ports.length > 0)
@@ -474,33 +655,174 @@ function resolveEndpoint(
     return geometricClip(host.ArrangedRect, otherAnchor, anchorClip);
 }
 
+// Path 3a gate. Returns a resolved anchor when the endpoint qualifies
+// for side-slot resolution: Node is a Figure registered in the
+// side-endpoint registry, PortSide is set, and no PortName / PortIndex /
+// FreePoint competes. Otherwise undefined — the caller falls through to
+// path 4. The slot info (index + count) comes from Figure.GetSideSlot,
+// which Connector keeps in sync via _reregister*Side.
+//
+// Distribution rule — DYNAMIC slot positions sized to the live connector
+// count on the side. Each side hosts exactly `count` slots, distributed
+// at t = (i + 1) / (count + 1). The formula yields:
+//   * odd count  — one slot lands exactly at t = 0.5 (centered).
+//   * even count — slots straddle the center symmetrically (no slot at
+//                  t = 0.5).
+// Cross-connector reactivity is wired through Figure._fireSideRebalance:
+// adding or removing a connector on a side fires every existing
+// endpoint's rebalance callback (Connector._on*SideRebalance →
+// _scheduleRecompute), so the rest of the connectors on the side shift
+// to their new t and the orthogonal router re-runs (including the
+// perpendicular-beam intersection optimization) with the updated anchors.
+//
+// Static Port instances declared on the figure (via ExplicitPorts or a
+// PortProvider) deliberately DO NOT capture this path — they're for the
+// named / positional addressing in Path 2 / 3. Side-only resolution is
+// purely dynamic so the centered / symmetric guarantee holds regardless
+// of what the designer happened to bake into Ports.
+function tryResolveSideSlot(ep: ConnectorEndpoint): ResolvedAnchor | undefined
+{
+    const slot = endpointSideSlot(ep);
+    if (slot === undefined) return undefined;
+    const [figure, side] = slot;
+    const info = figure.GetSideSlot(ep, side);
+    if (info === undefined) return undefined;
+    // Use nodeRect so figures without a live Arrange pass (early ctor /
+    // tests) still pick up positions from Left / Top / Width / Height.
+    // Figure.ArrangedRect defaults to Rect.Zero, which would collapse
+    // every slot onto the origin and silently break unit-test fixtures.
+    const r = nodeRect(figure);
+    if (r === undefined || r.Width === 0 || r.Height === 0) return undefined;
+    const t = (info.index + 1) / (info.count + 1);
+    switch (side)
+    {
+        case PortSide.N: return { x: r.X + t * r.Width,  y: r.Y,                side };
+        case PortSide.S: return { x: r.X + t * r.Width,  y: r.Y + r.Height,     side };
+        case PortSide.E: return { x: r.X + r.Width,      y: r.Y + t * r.Height, side };
+        case PortSide.W: return { x: r.X,                y: r.Y + t * r.Height, side };
+    }
+}
+
+// Endpoint qualifies for the side-anchored registry when its Node is a
+// Figure, its PortSide is a cardinal (not Auto), and no competing port
+// reference (PortName / PortIndex) or FreePoint is set. Same gate used
+// by Connector's `_reregister*Side` registration and by path 3a.
+function endpointSideSlot(ep: ConnectorEndpoint): [Figure, ResolvedPortSide] | undefined
+{
+    if (!(ep.Node instanceof Figure)) return undefined;
+    if (ep.PortName  !== undefined) return undefined;
+    if (ep.PortIndex !== undefined) return undefined;
+    if (ep.FreePoint !== undefined) return undefined;
+    const side = ep.PortSide;
+    if (side === undefined || side === PortSide.Auto) return undefined;
+    return [ep.Node, side];
+}
+
+// Bake PortSide into a legacy bare-{Node} endpoint so it joins the
+// side-slot distribution on the next resolve. The check mirrors
+// endpointSideSlot's gate minus the PortSide test — we only bake if no
+// side is set yet, otherwise the assignment would no-op and risk
+// triggering an unnecessary OnPropertyChanged loop (set_property_value
+// short-circuits on equal values, but the equality check happens after
+// any user-installed converters; cheaper to skip altogether).
+//
+// Returns true iff the gate matched and PortSide was actually written.
+// The caller uses this to decide whether to re-resolve anchors inside
+// the same _scheduleRecompute call (the side just baked turns the
+// endpoint from "bare → path 4/5 off-center" into "side-anchored →
+// path 3a side-center"; without a re-resolve the outer call would route
+// against stale anchors).
+function bakeSideIfBare(ep: ConnectorEndpoint, side: ResolvedPortSide): boolean
+{
+    if (!(ep.Node instanceof Figure)) return false;
+    if (ep.PortName  !== undefined) return false;
+    if (ep.PortIndex !== undefined) return false;
+    if (ep.FreePoint !== undefined) return false;
+    if (ep.PortSide  !== undefined && ep.PortSide !== PortSide.Auto) return false;
+    ep.PortSide = side;
+    return true;
+}
+
 function deriveFreeSide(
-    myPos:     { x: number; y: number },
-    other:     ResolvedAnchor,
-    waypoints: readonly Point[],
-    isSource:  boolean,
+    myPos:       { x: number; y: number },
+    other:       ResolvedAnchor,
+    waypoints:   readonly Point[],
+    isSource:    boolean,
+    otherIsReal: boolean,
 ): ResolvedPortSide
 {
     // Waypoint-aware: read direction from the adjacent waypoint when
-    // one exists. Else read direction toward the OTHER endpoint (and
-    // for the target end, flip so the resulting side faces back along
-    // the inbound line per § 3.4's tangent contract).
-    let dx: number, dy: number;
+    // one exists. The first / last segments around the waypoint dominate
+    // the visible side semantics; the OTHER endpoint's resolved side
+    // doesn't matter for derivation in this branch.
     if (waypoints.length > 0)
     {
         const wp = isSource ? waypoints[0]! : waypoints[waypoints.length - 1]!;
-        if (isSource) { dx = wp.X - myPos.x;   dy = wp.Y - myPos.y;   }
-        else          { dx = myPos.x - wp.X;   dy = myPos.y - wp.Y;   }
+        const dx = isSource ? wp.X - myPos.x : myPos.x - wp.X;
+        const dy = isSource ? wp.Y - myPos.y : myPos.y - wp.Y;
+        return dominantSide(dx, dy);
     }
-    else
+
+    // Real-other path: the other endpoint has a pinned side
+    // (Node-resolved). Pick our side to produce the minimum-corner
+    // perpendicular-preserving route per § 10.2 + § 10.3.
+    if (otherIsReal)
     {
-        const toward = { dx: other.x - myPos.x, dy: other.y - myPos.y };
-        if (isSource) { dx = toward.dx;  dy = toward.dy;  }
-        else          { dx = -toward.dx; dy = -toward.dy; }
+        return pickFreeSideForRoute(other.side, { x: other.x, y: other.y }, myPos);
     }
+
+    // Both endpoints free (Case C): no real side anywhere. Fall back to
+    // the geometric "toward the other end" derivation. Mostly used for
+    // hand-authored free-floating Orthogonal connectors; gives a
+    // reasonable side without needing a third reference point.
+    const dx = isSource ? other.x - myPos.x : myPos.x - other.x;
+    const dy = isSource ? other.y - myPos.y : myPos.y - other.y;
+    return dominantSide(dx, dy);
+}
+
+function dominantSide(dx: number, dy: number): ResolvedPortSide
+{
     if (dx === 0 && dy === 0) return PortSide.E;
     if (Math.abs(dx) >= Math.abs(dy)) return dx >= 0 ? PortSide.E : PortSide.W;
     return dy >= 0 ? PortSide.S : PortSide.N;
+}
+
+// Pick the free endpoint's side relative to the pinned other endpoint
+// such that an orthogonal route honoring both perpendicularity
+// invariants (§ 10.2) has the minimum corner count. The derived side
+// determines what the router treats as the free end's outward direction:
+//
+//   * Free in the pinned end's outward half-plane — L-shape (1 corner)
+//     or straight line (0 corners) works. Pick the cardinal that puts
+//     the L's last leg perpendicular to the pinned side.
+//   * Free at or behind the pinned outward direction — needs a U-shape
+//     (2 corners). Pick the SAME side as the pinned end so the route
+//     overshoots and comes back in matching direction.
+function pickFreeSideForRoute(
+    pinnedSide: ResolvedPortSide,
+    pinnedPos:  { x: number; y: number },
+    freePos:    { x: number; y: number },
+): ResolvedPortSide
+{
+    const dx = freePos.x - pinnedPos.x;
+    const dy = freePos.y - pinnedPos.y;
+    if (pinnedSide === PortSide.E || pinnedSide === PortSide.W)
+    {
+        const outward = pinnedSide === PortSide.E ? 1 : -1;
+        if (dx * outward > 0)
+        {
+            if (dy === 0) return pinnedSide === PortSide.E ? PortSide.W : PortSide.E;
+            return dy > 0 ? PortSide.N : PortSide.S;
+        }
+        return pinnedSide;
+    }
+    const outward = pinnedSide === PortSide.S ? 1 : -1;
+    if (dy * outward > 0)
+    {
+        if (dx === 0) return pinnedSide === PortSide.N ? PortSide.S : PortSide.N;
+        return dx > 0 ? PortSide.W : PortSide.E;
+    }
+    return pinnedSide;
 }
 
 // Bucket ports by their RESOLVED side, sort each bucket by primary
@@ -610,12 +932,23 @@ function geometricClip(
 function nodeRect(node: Model | undefined): Rect | undefined
 {
     if (node === undefined) return undefined;
+    // Prefer Left / Top / Width / Height (always fresh on the next DP
+    // tick) over ArrangedRect, which only updates on the next Arrange
+    // pass. Without this order, alignment commands and other batch
+    // Left / Top mutations recompute the route using the *previous*
+    // ArrangedRect — connectors would render at the figure's old
+    // position until something else triggers a re-arrange.
+    const obj = node as unknown as { Left?: number; Top?: number; Width?: number; Height?: number };
+    if (typeof obj.Left === 'number' && typeof obj.Top === 'number'
+        && typeof obj.Width === 'number' && !Number.isNaN(obj.Width)
+        && typeof obj.Height === 'number' && !Number.isNaN(obj.Height))
+    {
+        return new Rect(obj.Left, obj.Top, obj.Width, obj.Height);
+    }
+    // Non-Figure item Models without Left / Top fall back to
+    // ArrangedRect (computed by their presenter).
     const ar = (node as unknown as { ArrangedRect?: Rect }).ArrangedRect;
     if (ar !== undefined && ar.Width > 0 && ar.Height > 0) return ar;
-    // Layout-not-yet-run fallback: synthesize from Left / Top /
-    // Width / Height. Matches Figure's contract — Width / Height are
-    // pre-layout truth on Figures.
-    const obj = node as unknown as { Left?: number; Top?: number; Width?: number; Height?: number };
     if (typeof obj.Left === 'number' && typeof obj.Top === 'number')
     {
         const w = (typeof obj.Width  === 'number' && !Number.isNaN(obj.Width))  ? obj.Width  : 0;

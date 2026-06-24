@@ -2,7 +2,7 @@ import { Point } from '../../../visual-engine/index.js';
 import type { Connector } from '../connector.js';
 import { ConnectorEndpoint } from '../connector-endpoint.js';
 import type { Figure } from '../figure.js';
-import { type Port, type PortSide } from '../port.js';
+import { type PortSide, type ResolvedPortSide } from '../port.js';
 import { ConnectorEnd } from '../routing/router.js';
 
 // Snapshot of a ConnectorEndpoint's 5 DPs taken at the start of a
@@ -124,7 +124,7 @@ export class ConnectorEditAdorner
         }
     }
 
-    public EndDragOverTarget(targetFigure: Figure, targetPort: Port | undefined): void
+    public EndDragOverTarget(targetFigure: Figure, targetSide: ResolvedPortSide): void
     {
         if (this._state.kind !== 'endpoint') return;
         const ep = endpointOf(this._state.connector, this._state.end);
@@ -134,13 +134,10 @@ export class ConnectorEditAdorner
             return;
         }
         ep.FreePoint = undefined;
+        ep.PortName  = undefined;
+        ep.PortIndex = undefined;
         ep.Node      = targetFigure;
-        if (targetPort !== undefined && targetPort.Name !== '')
-        {
-            ep.PortName = targetPort.Name;
-        }
-        // Anonymous ports + no-port-hit leave the endpoint with just
-        // Node set; path-4 auto-pick handles the rest.
+        ep.PortSide  = targetSide;
         this._state = { kind: 'idle' };
     }
 

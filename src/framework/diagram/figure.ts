@@ -7,7 +7,7 @@ import {
     type PointerEventArgs,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
-import { Brush, type PathGeometry, Pen, SolidColorBrush } from '../../visual-engine/index.js';
+import { Brush, type Geometry, type PathGeometry, Pen, SolidColorBrush } from '../../visual-engine/index.js';
 import { Color } from '../../runtime/index.js';
 import { Canvas } from '../../basic/panels/canvas.js';
 import { ContentControl } from '../base/content-control.js';
@@ -15,9 +15,10 @@ import { ScrollViewer } from '../surfaces/scroll-viewer.js';
 import { Selector } from '../list/selector.js';
 import { SHAPE_CATALOG_MAP, scaleGeometry } from './shape-catalog.js';
 import type { Group } from './group.js';
-import type { Port } from './port.js';
+import type { Port, ResolvedPortSide } from './port.js';
 import type { IPortProvider } from './port-providers/port-provider.js';
 import { resolveDefaultPortProvider } from './port-providers/default-port-providers.js';
+import type { ConnectorEndpoint } from './connector-endpoint.js';
 
 // A movable, content-hosting control intended as the container shape
 // inside the diagrammer's ItemsControl (see Diagram). Figure owns
@@ -320,6 +321,183 @@ export class Figure extends ContentControl
         if (explicit !== undefined) return explicit;
         const provider = this.PortProvider ?? resolveDefaultPortProvider(this);
         return provider.GetPorts(this);
+    }
+
+    // ── Side-anchored endpoint registry ──────────────────────────────
+    //
+    // Per-side lists of ConnectorEndpoints whose Node references THIS
+    // Figure and whose PortSide pins them to that side. The framework's
+    // side-slot resolver (path 3a in connector.ts's resolveEndpoint)
+    // reads these lists to compute each endpoint's position along its
+    // side via the even-distribution rule:
+    //
+    //   slot N of M endpoints on a side sits at fractional offset
+    //   (N + 1) / (M + 1) along the side's length
+    //
+    // — symmetric around the side's centre, with the centre slot
+    // occupied for odd M and left empty for even M (e.g. M=2 →
+    // 1/3, 2/3; M=3 → 1/4, 1/2, 3/4).
+    //
+    // Connectors register their endpoints with `_registerSideEndpoint`
+    // when an endpoint settles on a (this Figure, side) pair and
+    // unregister via `_unregisterSideEndpoint` when it moves off, gets
+    // freed, or the connector is torn down. The rebalance callback is
+    // invoked for every endpoint on a side whenever the list changes,
+    // so connectors re-resolve and re-render at the new slot positions.
+    private readonly _sideEndpoints: Map<ResolvedPortSide, ConnectorEndpoint[]> = new Map();
+    private readonly _sideRebalanceCallbacks: Map<ConnectorEndpoint, () => void> = new Map();
+    // Endpoint → owning Connector (duck-typed). The side-intersection
+    // optimizer reads the owner's Geometry to detect crossings between
+    // pairs of connectors on the same side; storing the back-reference
+    // here avoids a quadratic scan through diagram.Connectors at every
+    // optimize pass.
+    private readonly _sideEndpointOwners: Map<ConnectorEndpoint, ISideAnchoredConnector> = new Map();
+    // Re-entry guard for _optimizeSideIntersections. The optimizer calls
+    // _fireSideRebalance to re-route after each swap; the re-route
+    // cascades back through Connector recompute paths that themselves
+    // call _optimizeSideIntersections. Without the guard the optimizer
+    // recurses indefinitely.
+    private _optimizing: boolean = false;
+
+    /** @internal — called by Connector when an endpoint settles on this Figure + side. */
+    public _registerSideEndpoint(
+        side: ResolvedPortSide,
+        endpoint: ConnectorEndpoint,
+        onRebalance: () => void,
+        owner?: ISideAnchoredConnector,
+    ): void
+    {
+        let list = this._sideEndpoints.get(side);
+        if (list === undefined) { list = []; this._sideEndpoints.set(side, list); }
+        if (list.includes(endpoint)) return;
+        list.push(endpoint);
+        this._sideRebalanceCallbacks.set(endpoint, onRebalance);
+        if (owner !== undefined) this._sideEndpointOwners.set(endpoint, owner);
+        this._fireSideRebalance(side);
+    }
+
+    /** @internal — called by Connector when an endpoint moves off / clears. */
+    public _unregisterSideEndpoint(side: ResolvedPortSide, endpoint: ConnectorEndpoint): void
+    {
+        const list = this._sideEndpoints.get(side);
+        if (list === undefined) return;
+        const idx = list.indexOf(endpoint);
+        if (idx < 0) return;
+        list.splice(idx, 1);
+        this._sideRebalanceCallbacks.delete(endpoint);
+        this._sideEndpointOwners.delete(endpoint);
+        this._fireSideRebalance(side);
+    }
+
+    /** Slot index + total count for `endpoint` on `side`, or undefined
+     *  if the endpoint isn't registered on that side. The slot index is
+     *  insertion-order based, which keeps positions stable across
+     *  unrelated additions to OTHER sides. */
+    public GetSideSlot(
+        endpoint: ConnectorEndpoint,
+        side: ResolvedPortSide,
+    ): { index: number; count: number } | undefined
+    {
+        const list = this._sideEndpoints.get(side);
+        if (list === undefined) return undefined;
+        const idx = list.indexOf(endpoint);
+        if (idx < 0) return undefined;
+        return { index: idx, count: list.length };
+    }
+
+    /** Number of side-anchored endpoints currently registered on `side`.
+     *  The dynamic-port distribution lays this many slots along the side
+     *  via `t = (i + 1) / (count + 1)`; the SideBarsAdorner uses this
+     *  count to paint a port-marker dot per slot. */
+    public GetSideEndpointCount(side: ResolvedPortSide): number
+    {
+        return this._sideEndpoints.get(side)?.length ?? 0;
+    }
+
+    private _fireSideRebalance(side: ResolvedPortSide): void
+    {
+        const list = this._sideEndpoints.get(side);
+        if (list === undefined) return;
+        // Snapshot — listener may unregister mid-fire (a rebalance can
+        // cascade through a Connector that detaches its previous side).
+        for (const ep of [...list])
+        {
+            this._sideRebalanceCallbacks.get(ep)?.();
+        }
+        // Notify external observers (the SideBarsAdorner port-marker
+        // overlay) that the side-endpoint count for at least one side
+        // changed. Connectors react via the per-endpoint rebalance
+        // callbacks above; this channel is for visual indicators that
+        // need to redraw without owning a connector endpoint themselves.
+        for (const l of [...this._sideEndpointsChangedListeners]) l();
+    }
+
+    private readonly _sideEndpointsChangedListeners: Set<() => void> = new Set();
+    public AddSideEndpointsChangedListener   (listener: () => void): void { this._sideEndpointsChangedListeners.add(listener); }
+    public RemoveSideEndpointsChangedListener(listener: () => void): void { this._sideEndpointsChangedListeners.delete(listener); }
+
+    /** @internal — greedy pairwise swap pass that re-orders the side's
+     *  endpoint list to eliminate intersections between connectors that
+     *  both attach to `side`. Triggered by Connector._scheduleRecompute
+     *  after every recompute (registration changes AND figure moves both
+     *  reach this entry point). Bounded iteration so an unbreakable
+     *  intersection topology (e.g., a waypoint pinning the route through
+     *  another connector's path) doesn't loop forever. */
+    public _optimizeSideIntersections(side: ResolvedPortSide): void
+    {
+        if (this._optimizing) return;
+        const list = this._sideEndpoints.get(side);
+        if (list === undefined || list.length < 2) return;
+        const owners: ISideAnchoredConnector[] = [];
+        for (const ep of list)
+        {
+            const o = this._sideEndpointOwners.get(ep);
+            if (o === undefined) return;  // mixed-ownership side — skip
+            owners.push(o);
+        }
+        this._optimizing = true;
+        try
+        {
+            let improved = true;
+            let iter = 0;
+            // Per-iteration cap: a full pairwise sweep already restores
+            // invariants for typical N ≤ 4. The outer cap of 4 iterations
+            // gives the algorithm room to converge if a swap that helped
+            // pair (i, j) accidentally breaks pair (i, k); rarely needed
+            // in practice but bounds worst-case work.
+            while (improved && iter++ < 4)
+            {
+                improved = false;
+                for (let i = 0; i < list.length - 1; i++)
+                {
+                    for (let j = i + 1; j < list.length; j++)
+                    {
+                        if (!connectorsCross(owners[i]!, owners[j]!)) continue;
+                        // Try the swap. _fireSideRebalance re-routes
+                        // every endpoint on the side at the new slot
+                        // positions.
+                        [list[i], list[j]] = [list[j]!, list[i]!];
+                        [owners[i], owners[j]] = [owners[j]!, owners[i]!];
+                        this._fireSideRebalance(side);
+                        if (connectorsCross(owners[i]!, owners[j]!))
+                        {
+                            // Didn't help — revert.
+                            [list[i], list[j]] = [list[j]!, list[i]!];
+                            [owners[i], owners[j]] = [owners[j]!, owners[i]!];
+                            this._fireSideRebalance(side);
+                        }
+                        else
+                        {
+                            improved = true;
+                        }
+                    }
+                }
+            }
+        }
+        finally
+        {
+            this._optimizing = false;
+        }
     }
 
     private _rebuildGeometry(): void
@@ -664,3 +842,95 @@ export class Figure extends ContentControl
         return undefined;
     }
 }
+
+// Duck-typed shape of a Connector for the side-intersection optimizer.
+// Avoids a hard import of Connector into figure.ts (Connector already
+// imports Figure — the reverse would close the cycle). The optimizer
+// only needs the resolved Geometry to extract a polyline; anything
+// else stays out of the contract.
+export interface ISideAnchoredConnector
+{
+    readonly Geometry: Geometry | undefined;
+}
+
+// Polyline-vs-polyline crossing detector for the side optimizer. Walks
+// each PathFigure of both connectors' Geometry, pairwise-checks every
+// segment for a proper crossing (no shared endpoint counts as crossing,
+// matching the "do they visually intersect mid-route" question the
+// user is solving). Returns false on undefined Geometry — a connector
+// with no resolved route can't intersect anything.
+function connectorsCross(a: ISideAnchoredConnector, b: ISideAnchoredConnector): boolean
+{
+    const polyA = polylineOf(a.Geometry);
+    const polyB = polylineOf(b.Geometry);
+    if (polyA.length < 2 || polyB.length < 2) return false;
+    for (let i = 0; i < polyA.length - 1; i++)
+    {
+        for (let j = 0; j < polyB.length - 1; j++)
+        {
+            if (segmentsProperlyCross(
+                polyA[i]!.x, polyA[i]!.y, polyA[i + 1]!.x, polyA[i + 1]!.y,
+                polyB[j]!.x, polyB[j]!.y, polyB[j + 1]!.x, polyB[j + 1]!.y,
+            )) return true;
+        }
+    }
+    return false;
+}
+
+// Extract a flat sequence of points from a PathGeometry. The orthogonal
+// router emits one PathFigure with LineSegment children; bezier emits
+// PathFigure with BezierSegment children (we treat the segment's anchor
+// endpoint as the polyline vertex — adequate for the crossing question
+// since adjacent bezier arcs share endpoints with their neighbours).
+function polylineOf(geo: Geometry | undefined): readonly { x: number; y: number }[]
+{
+    if (geo === undefined) return [];
+    // Duck-type the PathGeometry interface — avoids importing the
+    // concrete class while staying type-checked at use sites below.
+    const pg = geo as unknown as Partial<PathGeometry>;
+    if (pg.Figures === undefined) return [];
+    const out: { x: number; y: number }[] = [];
+    for (const fig of pg.Figures)
+    {
+        out.push({ x: fig.StartPoint.X, y: fig.StartPoint.Y });
+        for (const seg of fig.Segments)
+        {
+            // LineSegment exposes .Point; BezierSegment exposes
+            // .Point3 (the arc endpoint). Tolerate either via duck
+            // typing.
+            const p = (seg as unknown as { Point?: { X: number; Y: number }; Point3?: { X: number; Y: number } });
+            const tip = p.Point ?? p.Point3;
+            if (tip !== undefined) out.push({ x: tip.X, y: tip.Y });
+        }
+    }
+    return out;
+}
+
+// Classic 2D "proper" segment-segment crossing — returns true iff the
+// segments share a single point that is strictly interior to BOTH (no
+// shared endpoint, no collinear overlap). The cross-product orientation
+// check is faster than computing intersection coordinates and avoids
+// the floating-point edge case where two segments touch at exactly one
+// endpoint (which doesn't visually read as a "crossing").
+function segmentsProperlyCross(
+    ax: number, ay: number, bx: number, by: number,
+    cx: number, cy: number, dx: number, dy: number,
+): boolean
+{
+    const o1 = orient(ax, ay, bx, by, cx, cy);
+    const o2 = orient(ax, ay, bx, by, dx, dy);
+    const o3 = orient(cx, cy, dx, dy, ax, ay);
+    const o4 = orient(cx, cy, dx, dy, bx, by);
+    // Both orientation pairs must differ in sign (strict crossing).
+    // Zero on either side means a shared endpoint or collinear case —
+    // not a proper crossing.
+    return (o1 > 0) !== (o2 > 0)
+        && (o3 > 0) !== (o4 > 0)
+        && o1 !== 0 && o2 !== 0 && o3 !== 0 && o4 !== 0;
+}
+
+function orient(ax: number, ay: number, bx: number, by: number, cx: number, cy: number): number
+{
+    return (bx - ax) * (cy - ay) - (by - ay) * (cx - ax);
+}
+

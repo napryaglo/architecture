@@ -79,8 +79,10 @@ export class InputManager
     // branch — so consumers can't strand a locked cursor by forgetting
     // to clear it. WPF parity for the common case (Mouse.OverrideCursor
     // wrapped in try/finally around a captured drag); the bridge to the
-    // host's actual cursor surface (document.body.style.cursor on
-    // HtmlTarget) is symmetric with _captureBridge.
+    // host's actual cursor surface (the host element's inline cursor
+    // style on HtmlTarget — beats any CSS rule on the host or its
+    // ancestors, including the common `#app { cursor: default }`
+    // pattern) is symmetric with _captureBridge.
     private _lockedCursor: string | undefined;
     private _cursorBridge: ((cursor: string | undefined) => void) | undefined;
 
@@ -267,10 +269,11 @@ export class InputManager
         return this.pointerCaptures.get(pointerId);
     }
 
-    // Install the host's cursor surface. HtmlTarget wires this to
-    // `document.body.style.cursor`; native targets would route to the
-    // OS cursor API. Same shape as SetCaptureBridge — InputManager
-    // tracks the state, bridge translates to host-side mechanics.
+    // Install the host's cursor surface. HtmlTarget wires this to the
+    // host element's inline cursor style; native targets would route
+    // to the OS cursor API. Same shape as SetCaptureBridge —
+    // InputManager tracks the state, bridge translates to host-side
+    // mechanics.
     public SetCursorBridge(
         bridge: ((cursor: string | undefined) => void) | undefined,
     ): void {

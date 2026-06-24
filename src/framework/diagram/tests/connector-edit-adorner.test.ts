@@ -16,7 +16,7 @@ import {
 import { Connector } from '../connector.js';
 import { ConnectorEndpoint } from '../connector-endpoint.js';
 import { Figure } from '../figure.js';
-import { Port, PortSide } from '../port.js';
+import { PortSide } from '../port.js';
 import { ConnectorEnd, RoutingMode } from '../routing/router.js';
 import '../routing/straight-router.js';
 import '../routing/orthogonal-router.js';
@@ -84,40 +84,36 @@ describe('ConnectorEditAdorner — endpoint drag (re-anchor)', () => {
         assert.equal(c.Target!.FreePoint!.Y, 25);
     });
 
-    test('EndDragOverTarget anchors to the target Figure + clears FreePoint', () => {
+    test('EndDragOverTarget anchors to (target, side) + clears FreePoint / clears stale port refs', () => {
         newApplication();
         const target = fig(200, 100);
         const c = makeConnector();
+        // Pre-existing PortName / PortIndex on the endpoint must clear
+        // when re-anchored via side drag — otherwise the resolver's
+        // path-2 / path-3 would beat the new side-slot resolution.
+        c.Target = new ConnectorEndpoint({ Node: target, PortName: 'stale', PortIndex: 5 });
         const adorner = new ConnectorEditAdorner();
         adorner.BeginEndpointDrag(c, ConnectorEnd.Target, new Point(150, 0));
-        adorner.EndDragOverTarget(target, undefined);
+        adorner.EndDragOverTarget(target, PortSide.W);
         assert.equal(c.Target!.Node, target);
+        assert.equal(c.Target!.PortSide, PortSide.W);
+        assert.equal(c.Target!.PortName, undefined);
+        assert.equal(c.Target!.PortIndex, undefined);
         assert.equal(c.Target!.FreePoint, undefined);
         assert.equal(adorner.IsActive, false);
     });
 
-    test('EndDragOverTarget with a named port records PortName', () => {
+    test('EndDragOverTarget records each cardinal side correctly', () => {
         newApplication();
-        const target = fig(200, 100);
-        const c = makeConnector();
-        const adorner = new ConnectorEditAdorner();
-        adorner.BeginEndpointDrag(c, ConnectorEnd.Target, new Point(150, 0));
-        const namedPort = new Port({ Name: 'in', Side: PortSide.W, X: 0, Y: 0.5 });
-        adorner.EndDragOverTarget(target, namedPort);
-        assert.equal(c.Target!.PortName, 'in');
-        assert.equal(c.Target!.Node, target);
-    });
-
-    test('EndDragOverTarget with an anonymous port (Name = "") leaves PortName undefined', () => {
-        newApplication();
-        const target = fig(200, 100);
-        const c = makeConnector();
-        const adorner = new ConnectorEditAdorner();
-        adorner.BeginEndpointDrag(c, ConnectorEnd.Target, new Point(150, 0));
-        const anonPort = new Port({ Side: PortSide.N, X: 0.5, Y: 0 });
-        adorner.EndDragOverTarget(target, anonPort);
-        assert.equal(c.Target!.PortName, undefined);
-        assert.equal(c.Target!.Node, target);
+        for (const side of [PortSide.N, PortSide.S, PortSide.E, PortSide.W])
+        {
+            const target = fig(200, 100);
+            const c = makeConnector();
+            const adorner = new ConnectorEditAdorner();
+            adorner.BeginEndpointDrag(c, ConnectorEnd.Target, new Point(150, 0));
+            adorner.EndDragOverTarget(target, side);
+            assert.equal(c.Target!.PortSide, side);
+        }
     });
 
     test('EndDragOverEmpty restores the endpoint from snapshot', () => {

@@ -185,6 +185,256 @@ describe('Connector resolution path 3 → 4 fallthrough — index out of range',
     });
 });
 
+// ── Path 3a — side-slot dynamic distribution ─────────────────────────
+
+describe('Connector resolution path 3a — dynamic side-slot distribution', () => {
+    test('single connector on side: slot 0 of 1 = bbox edge midpoint (centered)', () => {
+        // Odd count (N=1) → t = (0+1)/(1+1) = 0.5. Connector anchors
+        // at the dead center of the side. Designer-intent ports (none
+        // here) deliberately don't pre-empt this — the side-only
+        // resolution is purely dynamic.
+        const fig = makeFigure(100, 100, 80, 80, []);
+        const c = new Connector();
+        c.RoutingMode = RoutingMode.Straight;
+        c.Source = new ConnectorEndpoint({ Node: fig, PortSide: PortSide.E });
+        c.Target = new ConnectorEndpoint({ FreePoint: new Point(500, 140) });
+        const start = startOf(c);
+        assert.equal(start.X, 180);
+        assert.equal(start.Y, 140);   // figure.Top (100) + 0.5 * 80
+    });
+
+    test('odd count (N=3) places one slot at the side center', () => {
+        // t values: 1/4, 2/4 (= 0.5, centered), 3/4 → Y = 120, 140, 160.
+        // Positions are read AFTER all three are created so each
+        // connector's geometry reflects the final N=3 distribution
+        // (mid-loop pushes would capture pre-rebalance values).
+        const fig = makeFigure(100, 100, 80, 80, []);
+        const cs: Connector[] = [];
+        for (let i = 0; i < 3; i++)
+        {
+            const c = new Connector();
+            c.RoutingMode = RoutingMode.Straight;
+            c.Source = new ConnectorEndpoint({ Node: fig, PortSide: PortSide.E });
+            c.Target = new ConnectorEndpoint({ FreePoint: new Point(500, 140) });
+            cs.push(c);
+        }
+        const ys = cs.map(c => startOf(c).Y);
+        assert.deepEqual(ys, [120, 140, 160]);
+        assert.ok(ys.includes(140), 'odd count must include the side center');
+    });
+
+    test('even count (N=2) is symmetric around the center with no slot at the center', () => {
+        // t values: 1/3, 2/3 → Y = 100 + (1/3)*80 ≈ 126.66, 153.33.
+        // Center (Y=140) NOT in the slot list.
+        const fig = makeFigure(100, 100, 80, 80, []);
+        const cs: Connector[] = [];
+        for (let i = 0; i < 2; i++)
+        {
+            const c = new Connector();
+            c.RoutingMode = RoutingMode.Straight;
+            c.Source = new ConnectorEndpoint({ Node: fig, PortSide: PortSide.E });
+            c.Target = new ConnectorEndpoint({ FreePoint: new Point(500, 140) });
+            cs.push(c);
+        }
+        const ys = cs.map(c => startOf(c).Y);
+        const center = 140;
+        assert.ok(Math.abs((ys[0]! - center) + (ys[1]! - center)) < 1e-9,
+            `expected symmetry around ${center}, got ${ys}`);
+        assert.ok(!ys.some(y => Math.abs(y - center) < 1e-9),
+            'even count must leave the center empty');
+    });
+
+    test('even count (N=4) is symmetric around the center with no slot at the center', () => {
+        const fig = makeFigure(100, 100, 80, 80, []);
+        const cs: Connector[] = [];
+        for (let i = 0; i < 4; i++)
+        {
+            const c = new Connector();
+            c.RoutingMode = RoutingMode.Straight;
+            c.Source = new ConnectorEndpoint({ Node: fig, PortSide: PortSide.E });
+            c.Target = new ConnectorEndpoint({ FreePoint: new Point(500, 140) });
+            cs.push(c);
+        }
+        const ys = cs.map(c => startOf(c).Y);
+        const center = 140;
+        const offsetSum = ys.reduce((acc, y) => acc + (y - center), 0);
+        assert.ok(Math.abs(offsetSum) < 1e-9, `expected symmetry, got ${ys}`);
+        assert.ok(!ys.some(y => Math.abs(y - center) < 1e-9),
+            'even count must leave the center empty');
+    });
+
+    test('static ports on the side do NOT capture path 3a — bbox distribution still wins', () => {
+        // Figure declares an off-center port on E, but the endpoint
+        // uses PortSide-only (no name, no index). Path 3a stays on
+        // the dynamic bbox distribution; the centered slot wins.
+        // The static port stays addressable via Path 2 (PortName) /
+        // Path 3 (PortSide + PortIndex) for callers that want it.
+        const fig = makeFigure(100, 100, 80, 80, [
+            new Port({ Side: PortSide.E, X: 1, Y: 0.25 }),   // off-center
+        ]);
+        const c = new Connector();
+        c.RoutingMode = RoutingMode.Straight;
+        c.Source = new ConnectorEndpoint({ Node: fig, PortSide: PortSide.E });
+        c.Target = new ConnectorEndpoint({ FreePoint: new Point(500, 140) });
+        const start = startOf(c);
+        assert.equal(start.X, 180);
+        assert.equal(start.Y, 140);   // bbox center, not the off-center port
+    });
+
+    test('adding a second side-anchored connector rebalances the first', () => {
+        // When a new endpoint joins side E, the existing connector
+        // must shift from t=0.5 to t=1/3 — Figure._fireSideRebalance
+        // fans the rebalance through every endpoint on the side, and
+        // each Connector._scheduleRecompute re-resolves and re-routes
+        // (the orthogonal router's beam-intersection optimization runs
+        // again with the updated anchors).
+        const fig = makeFigure(100, 100, 80, 80, []);
+        const c1 = new Connector();
+        c1.RoutingMode = RoutingMode.Straight;
+        c1.Source = new ConnectorEndpoint({ Node: fig, PortSide: PortSide.E });
+        c1.Target = new ConnectorEndpoint({ FreePoint: new Point(500, 140) });
+        // Single connector on side: c1 at slot 0 of 1 → Y = 140.
+        assert.equal(startOf(c1).Y, 140);
+
+        const c2 = new Connector();
+        c2.RoutingMode = RoutingMode.Straight;
+        c2.Source = new ConnectorEndpoint({ Node: fig, PortSide: PortSide.E });
+        c2.Target = new ConnectorEndpoint({ FreePoint: new Point(500, 200) });
+
+        // After c2 joins, both connectors must occupy slots 0 and 1 of 2.
+        // c1's Y reflects the new distribution — proof the rebalance
+        // callback fired and c1's anchor re-resolved.
+        const y1 = startOf(c1).Y;
+        const y2 = startOf(c2).Y;
+        assert.notEqual(y1, 140, 'c1 must have shifted off the center after c2 joined');
+        // Symmetric around the center.
+        assert.ok(Math.abs((y1 - 140) + (y2 - 140)) < 1e-9,
+            `expected symmetry around 140, got [${y1}, ${y2}]`);
+    });
+
+    test('bare-Node endpoint (no PortSide) lands at the baked side center, not path-5 off-center', () => {
+        // Reproduces the demo wiring `new ConnectorEndpoint({ Node })`
+        // with no PortSide. The bake step inside _scheduleRecompute
+        // sets PortSide based on the first-pass resolved side, then
+        // re-resolves locally so the route uses the side-center anchor
+        // from path 3a — not the pre-bake off-center anchor from path 5
+        // (which the recursive _scheduleRecompute used to clobber).
+        const src = makeFigure(0,   100, 80, 80, []);   // square at left
+        const tgt = makeFigure(200, 100, 80, 80, []);   // figure at right
+        const c = new Connector();
+        c.RoutingMode = RoutingMode.Straight;
+        c.Source = new ConnectorEndpoint({ Node: src });
+        c.Target = new ConnectorEndpoint({ Node: tgt });
+        const start = startOf(c);
+        // Source's E side center: (80, 140). Target's W side center: (200, 140).
+        // First segment leaves source at (80, 140); the test pins the
+        // start point.
+        assert.equal(start.X, 80);
+        assert.equal(start.Y, 140);
+        // Side gets baked.
+        assert.equal((c.Source as ConnectorEndpoint).PortSide, PortSide.E);
+        assert.equal((c.Target as ConnectorEndpoint).PortSide, PortSide.W);
+    });
+
+    test('side-intersection optimizer: swaps slot order to avoid two connectors crossing', () => {
+        // Source figure F with two connectors leaving its E side. T1
+        // is up-right, T2 is down-right. Creating the connectors in
+        // CROSSING order (c1 → T2 first, c2 → T1 second) would put
+        // c1 at slot 0 (top of E) heading to T2 (down) and c2 at
+        // slot 1 (bottom) heading to T1 (up) — the two lines cross.
+        // The optimizer swaps c1 ↔ c2 slot indices so c1 (→ T2) lands
+        // at the BOTTOM slot and c2 (→ T1) at the TOP slot. After
+        // swap each connector runs straight to its target, no crossing.
+        const F  = makeFigure(100, 100, 80, 80, []);
+        const T1 = makeFigure(300, 50,  80, 80, []);
+        const T2 = makeFigure(300, 200, 80, 80, []);
+
+        const c1 = new Connector();
+        c1.RoutingMode = RoutingMode.Straight;
+        c1.Source = new ConnectorEndpoint({ Node: F,  PortSide: PortSide.E });
+        c1.Target = new ConnectorEndpoint({ Node: T2, PortSide: PortSide.W });
+
+        const c2 = new Connector();
+        c2.RoutingMode = RoutingMode.Straight;
+        c2.Source = new ConnectorEndpoint({ Node: F,  PortSide: PortSide.E });
+        c2.Target = new ConnectorEndpoint({ Node: T1, PortSide: PortSide.W });
+
+        // After optimization: c1 (→ T2, the lower target) should sit
+        // at the LOWER slot index 1, c2 (→ T1, the upper target) at
+        // the UPPER slot index 0.
+        const slot1 = F.GetSideSlot(c1.Source as ConnectorEndpoint, PortSide.E);
+        const slot2 = F.GetSideSlot(c2.Source as ConnectorEndpoint, PortSide.E);
+        assert.ok(slot1 !== undefined && slot2 !== undefined);
+        assert.equal(slot1!.index, 1, 'c1 (→ lower target T2) must end at the lower slot');
+        assert.equal(slot2!.index, 0, 'c2 (→ upper target T1) must end at the upper slot');
+
+        // And the resulting source Y positions match.
+        const c1Y = startOf(c1).Y;
+        const c2Y = startOf(c2).Y;
+        assert.ok(c1Y > c2Y, `expected c1 below c2 on side E, got c1.Y=${c1Y} c2.Y=${c2Y}`);
+    });
+
+    test('side-intersection optimizer: does not disturb a clean (non-crossing) setup', () => {
+        // Create the connectors in the NATURAL non-crossing order — c1
+        // → T1 (upper) first, c2 → T2 (lower) second. Insertion-order
+        // already places c1 at top slot 0 and c2 at bottom slot 1. The
+        // optimizer must detect no crossing and leave the slots alone.
+        const F  = makeFigure(100, 100, 80, 80, []);
+        const T1 = makeFigure(300, 50,  80, 80, []);
+        const T2 = makeFigure(300, 200, 80, 80, []);
+
+        const c1 = new Connector();
+        c1.RoutingMode = RoutingMode.Straight;
+        c1.Source = new ConnectorEndpoint({ Node: F,  PortSide: PortSide.E });
+        c1.Target = new ConnectorEndpoint({ Node: T1, PortSide: PortSide.W });
+
+        const c2 = new Connector();
+        c2.RoutingMode = RoutingMode.Straight;
+        c2.Source = new ConnectorEndpoint({ Node: F,  PortSide: PortSide.E });
+        c2.Target = new ConnectorEndpoint({ Node: T2, PortSide: PortSide.W });
+
+        const slot1 = F.GetSideSlot(c1.Source as ConnectorEndpoint, PortSide.E);
+        const slot2 = F.GetSideSlot(c2.Source as ConnectorEndpoint, PortSide.E);
+        assert.equal(slot1!.index, 0, 'c1 stays at insertion-order slot 0 (no swap needed)');
+        assert.equal(slot2!.index, 1, 'c2 stays at insertion-order slot 1 (no swap needed)');
+    });
+
+    test('removing a side-anchored connector rebalances the rest', () => {
+        // Start with three on E (slots at Y = 120, 140, 160). Drop
+        // c2 by re-pinning its endpoint to a FreePoint, leaving c1
+        // and c3. They should re-center at the N=2 symmetric pair.
+        const fig = makeFigure(100, 100, 80, 80, []);
+        const c1 = new Connector();
+        c1.RoutingMode = RoutingMode.Straight;
+        c1.Source = new ConnectorEndpoint({ Node: fig, PortSide: PortSide.E });
+        c1.Target = new ConnectorEndpoint({ FreePoint: new Point(500, 100) });
+        const c2 = new Connector();
+        c2.RoutingMode = RoutingMode.Straight;
+        c2.Source = new ConnectorEndpoint({ Node: fig, PortSide: PortSide.E });
+        c2.Target = new ConnectorEndpoint({ FreePoint: new Point(500, 140) });
+        const c3 = new Connector();
+        c3.RoutingMode = RoutingMode.Straight;
+        c3.Source = new ConnectorEndpoint({ Node: fig, PortSide: PortSide.E });
+        c3.Target = new ConnectorEndpoint({ FreePoint: new Point(500, 200) });
+
+        // N=3 baseline.
+        assert.equal(startOf(c1).Y, 120);
+        assert.equal(startOf(c2).Y, 140);
+        assert.equal(startOf(c3).Y, 160);
+
+        // Unregister c2 by reassigning its source to a FreePoint.
+        c2.Source = new ConnectorEndpoint({ FreePoint: new Point(50, 50) });
+
+        // c1 and c3 must rebalance to the N=2 symmetric pair.
+        const y1 = startOf(c1).Y;
+        const y3 = startOf(c3).Y;
+        assert.ok(Math.abs((y1 - 140) + (y3 - 140)) < 1e-9,
+            `expected symmetry around 140 after rebalance, got [${y1}, ${y3}]`);
+        assert.notEqual(y1, 120);   // shifted from the old slot 0 of 3
+        assert.notEqual(y3, 160);   // shifted from the old slot 2 of 3
+    });
+});
+
 // ── Path 4 — auto-pick closest ───────────────────────────────────────
 
 describe('Connector resolution path 4 — closest-port auto-pick', () => {
@@ -210,23 +460,27 @@ describe('Connector resolution path 4 — closest-port auto-pick', () => {
 // ── Path 5 — geometric clip (bbox) ───────────────────────────────────
 
 describe('Connector resolution path 5 — bbox geometric clip', () => {
-    test('empty ExplicitPorts triggers bbox clip from centroid toward other', () => {
-        // ExplicitPorts = [] makes Figure.Ports return an empty array,
-        // skipping paths 2-4. Default Figure.Kind = '' falls through
-        // the kind→provider table to the BoundingBox fallback BUT
-        // explicit empty wins per Figure.Ports precedence.
+    test('bbox clip determines the side, bake re-routes through path 3a center', () => {
+        // ExplicitPorts = [] skips paths 2-4. The first-pass resolve
+        // hits path 5: centroid (140, 140) → target (500, 200), exit
+        // through the right edge → side = E.
+        //
+        // bakeSideIfBare pins PortSide = E. The same recompute then
+        // re-resolves through path 3a (slot 0 of 1 on the E side) and
+        // routes from the side-center anchor (180, 140) — NOT the
+        // pre-bake off-center clip point (180, 146.66). The path-5
+        // clip remains reachable as the bake's side-picking signal,
+        // but no longer drives the final anchor.
         const fig = makeFigure(100, 100, 80, 80, []);
         const c = new Connector();
         c.RoutingMode = RoutingMode.Straight;
         c.AnchorClip  = AnchorClip.Bbox;
         c.Source = new ConnectorEndpoint({ Node: fig });
         c.Target = new ConnectorEndpoint({ FreePoint: new Point(500, 200) });
-        // Centroid (140, 140). Line to (500, 200): dx=360, dy=60.
-        // Exit through right edge x=180 (t = 40/360 ≈ 0.111).
-        // y = 140 + (1/9) * 60 = 146.666...
         const start = startOf(c);
         assert.equal(start.X, 180);
-        assert.ok(Math.abs(start.Y - 146.6666666) < 1e-6);
+        assert.equal(start.Y, 140);
+        assert.equal((c.Source as ConnectorEndpoint).PortSide, PortSide.E);
     });
 
     test('AnchorClip.Geometry throws (v1 limitation)', () => {

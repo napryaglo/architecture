@@ -91,9 +91,20 @@ resources Diagrams {
     // canvas — including drops on the scrollbar — so the typical
     // wiring becomes `DropReceiver = $Self` (no enclosing-Border
     // dance the older imperative templates needed).
+    //
+    // AdornerDecorator wraps the ItemsPresenter so adorners (side
+    // bars, connector edit handles, selection-resize handles) ride
+    // an AdornerLayer that's sized to the FULL canvas extent rather
+    // than the SCP's viewport-clipped overlay layer. The SCP's outer
+    // content clip still trims anything past the viewport, but
+    // adorner positioning and reactivity happen in canvas-local
+    // coords — which keeps side bars on figures past page 1
+    // reachable after scrolling.
     Template x:key="DefaultDiagram" [TargetType=Diagram]{
         ScrollViewer x:name="PART_Scroll" [ IsAutoHideScrollBars = false ]{
-            ItemsPresenter
+            AdornerDecorator {
+                ItemsPresenter
+            }
         }
     }
     Style [TargetType=Diagram] {

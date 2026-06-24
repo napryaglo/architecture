@@ -151,6 +151,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['Selector',                '@visualisation-sub/mural/framework/list/selector.js'],
     ['ItemContainerGenerator',  '@visualisation-sub/mural/basic'],
     ['ItemsPresenter',          '@visualisation-sub/mural/basic'],
+    ['AdornerDecorator',        '@visualisation-sub/mural/basic'],
     ['HierarchicalDataTemplate','@visualisation-sub/mural/basic'],
     ['ItemsPanelTemplate',      '@visualisation-sub/mural/basic'],
     ['CollectionView',          '@visualisation-sub/mural/basic'],
