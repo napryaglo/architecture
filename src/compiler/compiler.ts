@@ -25,6 +25,9 @@ import type {
     ThemeBlock,
     SetterItem,
     SlotAssign,
+    MemberBlock,
+    ServicesBlock,
+    ServiceConfigEntry,
     StringBody,
     StructuredBody,
     TriggerActionNode,
@@ -1023,8 +1026,13 @@ export class Compiler
                 this.compileResourcesSlot(`${appVar}.Resources`, item);
                 continue;
             }
+            if (item.kind === 'services-block')
+            {
+                this.compileServicesBlock(`${appVar}.Services`, item);
+                continue;
+            }
             throw new EmitError(
-                `Application: only the 'resources:' slot is supported in v0 ` +
+                `Application: only the 'resources:' and '.services:' blocks are supported ` +
                 `(got ${item.kind === 'slot-assign' ? `'${item.name}:'` : item.kind})`,
                 item.kind === 'slot-assign' ? item.span : elem.span);
         }
@@ -3035,6 +3043,19 @@ export class Compiler
                 this.emitSetDP(parentVar, undefined, parentClass, item.name, expr, item.span);
                 continue;
             }
+            if (item.kind === 'member-block')
+            {
+                this.compileMemberBlock(parentVar, item);
+                continue;
+            }
+            if (item.kind === 'services-block')
+            {
+                // `.services:` on a non-Application element targets that
+                // element's own `Services` provider (e.g. a scope-owning
+                // host). Runtime-errors if the element exposes none.
+                this.compileServicesBlock(`${parentVar}.Services`, item);
+                continue;
+            }
             if (item.kind === 'element')
             {
                 // `Behaviors { … }` block — not a default-slot child;
@@ -3133,6 +3154,186 @@ export class Compiler
     // sibling of compileBehaviorsBlock; differs in that the inner
     // elements aren't Behaviors (no AddBehavior contract) — they're
     // regular collection items.
+    // Lowers a `.Member: { … }` dotted aggregate-property block. The
+    // generic form appends each element entry to the surrounding
+    // element's `Member` collection (an ObservableCollection DP) via
+    // `.Add(child)` — the same shape as `compilePropertyCollectionBlock`,
+    // but reached through the dotted member syntax rather than a bespoke
+    // keyword. Named members will branch here for custom lowering (the
+    // `services` member lands in a follow-up).
+    // Lowers a `.services: { … }` block against a `Services` provider
+    // (`providerExpr`, e.g. `app.Services`). Each entry registers an
+    // implementation under a token; see ServiceEntry for the grammar.
+    //
+    // Token resolution is done at RUNTIME via `ServiceProvider.tokenFor`
+    // (impl's static `Key` ?? the class itself) rather than at compile
+    // time, so app-defined service classes the compiler can't load still
+    // register under the same token `addInstance` / code registration use.
+    private compileServicesBlock(providerExpr: string, block: ServicesBlock): void
+    {
+        // The factory parameter — the RESOLVING scope. Every service ctor
+        // takes the provider (the IServiceProvider contract), so
+        // construction is uniformly `new Impl(p)`: the service resolves its
+        // own collaborators from `p`. Registration is always LAZY (deferred
+        // to first resolve), so every sibling in this block is registered
+        // before any ctor runs — a service may depend on a later sibling
+        // without an ordering hazard.
+        const FP = 'p';
+        for (const e of block.entries)
+        {
+            this.ensureImport(e.impl);
+            this.ensureImport('ServiceProvider');
+
+            // Token expression — always through `tokenFor` (explicit
+            // `-> Token` or the impl itself), so registration and
+            // `$service(Token)` consumption agree: a token class with a
+            // static `Key` registers/resolves under that Key, a token
+            // constant passes through unchanged.
+            const tokenSym  = e.token ?? e.impl;
+            if (e.token !== undefined) this.ensureImport(e.token);
+            const tokenExpr = `ServiceProvider.tokenFor(${tokenSym})`;
+
+            // Bare entry → a one-liner `(p) => new Impl(p)`. An inline-config
+            // block → a constructing arrow that seeds/injects each property
+            // through its JS setter before returning the instance.
+            let factory: string;
+            if (e.config !== undefined && e.config.length > 0)
+            {
+                const assigns = e.config
+                    .map((c) => `_s.${c.name} = ${this.compileServiceConfigValue(FP, c)};`)
+                    .join(' ');
+                factory = `(${FP}) => { const _s = new ${e.impl}(${FP}); ${assigns} return _s; }`;
+            }
+            else
+            {
+                factory = `(${FP}) => new ${e.impl}(${FP})`;
+            }
+            const lifetime = e.lifetime ?? 'singleton';
+            if (lifetime === 'scoped')
+            {
+                this.line(`${providerExpr}.registerScoped(${tokenExpr}, ${factory});`);
+            }
+            else if (lifetime === 'transient')
+            {
+                this.line(`${providerExpr}.registerTransient(${tokenExpr}, ${factory});`);
+            }
+            else
+            {
+                this.line(`${providerExpr}.register(${tokenExpr}, ${factory}, 'singleton');`);
+            }
+        }
+    }
+
+    // One inline-config value for a `.services:` entry. A `$service(Token)`
+    // value is resolved EAGERLY from the factory's provider (explicit
+    // property injection) — NOT a reactive ServiceBinding; the service is
+    // wired once at construction. An optional dotted tail reads a property of
+    // the resolved service (`$service(IDoc).Title`). Everything else is a
+    // literal compiled in a target-less context. Reactive/contextual value
+    // forms (DataContext `$path`, `@resource`, `$Self`) have no meaning at
+    // factory time and are rejected.
+    private compileServiceConfigValue(providerParam: string, c: ServiceConfigEntry): string
+    {
+        const v = c.value;
+        if (v.kind === 'binding')
+        {
+            if (v.source !== 'service')
+            {
+                throw new EmitError(
+                    `service config '${c.name}': only literals or $service(Token) are `
+                    + `allowed (no DataContext / $Self bindings — there is no target here).`,
+                    c.span);
+            }
+            this.ensureImport('ServiceProvider');
+            this.ensureImport(v.serviceToken!);
+            const resolved = `${providerParam}.getRequired(ServiceProvider.tokenFor(${v.serviceToken}))`;
+            // `$service(Token)` → the service itself; `$service(Token).a.b` →
+            // an eager read of that property path off the resolved service.
+            return v.path.length > 0 ? `${resolved}.${v.path.join('.')}` : resolved;
+        }
+        if (v.kind === 'static-resource' || v.kind === 'dynamic-resource')
+        {
+            throw new EmitError(
+                `service config '${c.name}': @resource values need a target visual `
+                + `and aren't available at service-construction time.`,
+                c.span);
+        }
+        return this.compileValue(v, {});
+    }
+
+    // `.Member: { … }` fills a complex aggregate property by one of two
+    // strategies, chosen by the body's shape:
+    //
+    //   * LIST — bare elements (no `x:key`) append to `target.Member` via
+    //     `.Add(child)` (the ObservableCollection contract). The original
+    //     form; reproduces the bespoke `ColumnDefinitions { … }` lowering.
+    //   * DICTIONARY — KEYED entries (`@Key = value`, or an element/resource
+    //     carrying `x:key="K"`) set into `target.Member` via `.Set(key,
+    //     value)` (the ResourceDictionary-shaped contract). The same keyed
+    //     surface `resources:` uses, behind the general `.Member:` syntax —
+    //     so a dictionary-shaped DP can be authored without a bespoke
+    //     keyword.
+    //
+    // The two are mutually exclusive: a body is a dictionary as soon as ONE
+    // keyed entry appears, and then every entry must be keyed.
+    private compileMemberBlock(parentVar: string, block: MemberBlock): void
+    {
+        const accessor = `${parentVar}.${block.name}`;
+        if (this.isDictionaryMemberBody(block.body))
+        {
+            for (const item of block.body.items)
+            {
+                if (item.kind === 'key-value-resource')
+                {
+                    const expr = this.compileValue(item.value, {});
+                    this.line(`${accessor}.Set(${JSON.stringify(item.key)}, ${expr});`);
+                    continue;
+                }
+                if (item.kind === 'element')
+                {
+                    const keyAttr = this.findXAttr(item.xAttrs, 'key');
+                    if (keyAttr === null || keyAttr.value === null || keyAttr.value.kind !== 'string')
+                    {
+                        throw new EmitError(
+                            `.${block.name}: this dictionary block mixes keyed and unkeyed `
+                            + `entries — every entry needs an x:key once any does.`,
+                            item.span);
+                    }
+                    const childVar = this.compileElement(item);
+                    this.line(`${accessor}.Set(${JSON.stringify(keyAttr.value.value)}, ${childVar});`);
+                    continue;
+                }
+                throw new EmitError(
+                    `.${block.name}: dictionary block accepts @key=value or x:key'd `
+                    + `elements (got ${item.kind})`,
+                    'span' in item ? item.span : block.span);
+            }
+            return;
+        }
+
+        // List strategy — bare elements appended in order.
+        for (const child of block.body.items)
+        {
+            if (child.kind !== 'element')
+            {
+                throw new EmitError(
+                    `.${block.name}: block only accepts element entries (got ${child.kind})`,
+                    'span' in child ? child.span : block.span);
+            }
+            const childVar = this.compileElement(child);
+            this.line(`${accessor}.Add(${childVar});`);
+        }
+    }
+
+    // A `.Member:` body is a DICTIONARY (keyed) the moment any entry carries
+    // a key: a `@Key = value` primitive, or an element with `x:key`.
+    private isDictionaryMemberBody(body: StructuredBody): boolean
+    {
+        return body.items.some(it =>
+            it.kind === 'key-value-resource'
+            || (it.kind === 'element' && this.findXAttr(it.xAttrs, 'key') !== null));
+    }
+
     private compilePropertyCollectionBlock(
         parentVar: string,
         propertyName: string,
@@ -3334,6 +3535,29 @@ export class Compiler
                     }
                     this.ensureImport('SetterFactory');
                     return `new SetterFactory((_t) => SelfBinding(_t, ${owner}, ${JSON.stringify(prop)}${convArg}))`;
+                }
+                // Service source `$service(Token).path` — a fixed-source
+                // binding against the service resolved from the ambient
+                // provider. Token is derived via tokenFor (mirrors how the
+                // `.services:` block registers), so `$service(StatusService)`
+                // resolves the same instance `StatusService` registered.
+                // Target-independent (like ElementName), so no targetExpr
+                // branch / SetterFactory wrap is needed.
+                if (val.source === 'service')
+                {
+                    this.ensureImport('ServiceBinding');
+                    this.ensureImport('ServiceProvider');
+                    this.ensureImport(val.serviceToken!);
+                    const tokenExpr = `ServiceProvider.tokenFor(${val.serviceToken})`;
+                    const pathStr   = val.path.join('.');
+                    // Target-aware: the binding reads the target's inherited
+                    // ServiceScope to find the nearest published provider.
+                    if (ctx.targetExpr !== undefined)
+                    {
+                        return `ServiceBinding(${ctx.targetExpr}, ${tokenExpr}, ${JSON.stringify(pathStr)}${convArg})`;
+                    }
+                    this.ensureImport('SetterFactory');
+                    return `new SetterFactory((_t) => ServiceBinding(_t, ${tokenExpr}, ${JSON.stringify(pathStr)}${convArg}))`;
                 }
                 // ElementName-style binding — when the first path
                 // segment matches an x:name declared earlier in the

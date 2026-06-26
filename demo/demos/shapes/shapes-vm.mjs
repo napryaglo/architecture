@@ -4,8 +4,6 @@
 // DataTemplate keyed on a DataType, and DataType matching needs an
 // instance of *something*.
 import { Model } from '@visualisation-sub/mural/runtime';
-
-export class ShapesVM extends Model
-{
+export class ShapesVM extends Model {
     constructor() { super(); }
 }

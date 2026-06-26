@@ -44,6 +44,10 @@ import type {
     SetterList,
     SizeValue,
     SlotAssign,
+    MemberBlock,
+    ServicesBlock,
+    ServiceEntry,
+    ServiceConfigEntry,
     StaticResourceValue,
     StringBody,
     StringBodyChunk,
@@ -1394,6 +1398,13 @@ export class Parser
             };
         }
 
+        // `.Member: { … }` — a dotted member-block (aggregate property).
+        // A single leading Dot; `..`-prefixed forms belong elsewhere.
+        if (tk.kind === TokenKind.Dot && this.peek(1).kind !== TokenKind.Dot)
+        {
+            return this.parseMemberBlock();
+        }
+
         if (tk.kind === TokenKind.Ident)
         {
             switch (tk.value)
@@ -1418,6 +1429,124 @@ export class Parser
 
         throw new ParseError(
             `unexpected token '${tk.value}' in body`, tk.span);
+    }
+
+    // `.Member: { … }` — a dotted aggregate-property block. The generic
+    // form's body is an element list (each entry appended to the
+    // surrounding element's `Member` collection by the emitter). The
+    // `services` member is the one named exception: its body is a list of
+    // DI registrations parsed by the service-entry grammar, not elements.
+    private parseMemberBlock(): MemberBlock | ServicesBlock
+    {
+        const dot  = this.expect(TokenKind.Dot);
+        const name = this.expect(TokenKind.Ident).value;
+        this.expect(TokenKind.Colon);
+        this.expect(TokenKind.LBrace);
+        // `.services:` is the one named member with bespoke entry grammar;
+        // everything else is a generic element list.
+        if (name === 'services')
+        {
+            return this.parseServicesBlock(dot.span.start);
+        }
+        const body = this.parseStructuredBody();
+        this.expect(TokenKind.RBrace);
+        const end = this.lastEnd();
+        return {
+            kind: 'member-block',
+            name,
+            body,
+            span: this.span(dot.span.start, end),
+        };
+    }
+
+    // `.services: { entry* }` body — called with the opening brace already
+    // consumed; consumes through the closing brace.
+    private parseServicesBlock(start: SourceLocation): ServicesBlock
+    {
+        const entries: ServiceEntry[] = [];
+        while (this.peek().kind !== TokenKind.RBrace
+            && this.peek().kind !== TokenKind.EOF)
+        {
+            entries.push(this.parseServiceEntry());
+        }
+        this.expect(TokenKind.RBrace);
+        return {
+            kind: 'services-block',
+            entries,
+            span: this.span(start, this.lastEnd()),
+        };
+    }
+
+    // One DI registration: `[lifetime] Impl [ -> Token ]`.
+    private parseServiceEntry(): ServiceEntry
+    {
+        const startTok = this.peek();
+
+        // Lifetime keyword only when it's followed by another ident (the
+        // impl) — so a service class literally named `Scoped` standing
+        // alone still reads as the impl.
+        let lifetime: ServiceEntry['lifetime'];
+        const head = this.peek();
+        if (head.kind === TokenKind.Ident
+            && (head.value === 'singleton' || head.value === 'scoped' || head.value === 'transient')
+            && this.peek(1).kind === TokenKind.Ident)
+        {
+            lifetime = this.consume().value as ServiceEntry['lifetime'];
+        }
+
+        const implTok = this.expect(TokenKind.Ident);
+        const impl    = implTok.value;
+
+        // Constructor-dependency lists were removed: every service ctor
+        // takes the provider (the IServiceProvider contract) and resolves
+        // its own collaborators. Catch the old `Impl(Dep, …)` form with a
+        // pointed message rather than a bare "unexpected token".
+        if (this.peek().kind === TokenKind.LParen)
+        {
+            throw new ParseError(
+                `service '${impl}': constructor-dependency syntax 'Impl(...)' was `
+                + `removed. A service receives the provider and resolves its own `
+                + `dependencies (e.g. this.Provider.getRequired(Dep.Key)).`,
+                this.peek().span);
+        }
+
+        // Optional inline-config block: `{ prop: value … }` — seed DPs with
+        // literals and/or inject services via `$service(Token)`.
+        let config: ServiceConfigEntry[] | undefined;
+        if (this.peek().kind === TokenKind.LBrace)
+        {
+            this.consume();
+            config = [];
+            while (this.peek().kind !== TokenKind.RBrace
+                && this.peek().kind !== TokenKind.EOF)
+            {
+                const propTok = this.expect(TokenKind.Ident);
+                this.expect(TokenKind.Colon);
+                const value = this.parseValue();
+                config.push({
+                    name:  propTok.value,
+                    value,
+                    span:  this.span(propTok.span.start, this.lastEnd()),
+                });
+            }
+            this.expect(TokenKind.RBrace);
+        }
+
+        // Optional explicit token: `-> Token`.
+        let token: string | undefined;
+        if (this.peek().kind === TokenKind.Arrow)
+        {
+            this.consume();
+            token = this.expect(TokenKind.Ident).value;
+        }
+
+        return {
+            lifetime,
+            impl,
+            config,
+            token,
+            span: this.span(startTok.span.start, this.lastEnd()),
+        };
     }
 
     private parseSlotAssign(): SlotAssign
@@ -1657,6 +1786,35 @@ export class Parser
                 path: [],
                 source: 'self',
                 attached: { owner, property },
+                converters: converters.length > 0 ? converters : undefined,
+                span: this.span(dollar.span.start, this.lastEnd()),
+            };
+        }
+
+        // Service source `$service(Token).path` — resolves a service from
+        // the ambient provider and binds the trailing DP path against it.
+        // Reserved head `service` followed by `(Token)`; a service class
+        // (or VM) literally named `service` would have to be reached via
+        // DataContext, which is fine — `service` isn't a sensible property.
+        if (this.peek().kind === TokenKind.Ident && this.peek().value === 'service'
+            && this.peek(1).kind === TokenKind.LParen)
+        {
+            this.consume();                       // 'service'
+            this.consume();                       // '('
+            const token = this.expect(TokenKind.Ident).value;
+            this.expect(TokenKind.RParen);        // ')'
+            const path: string[] = [];
+            while (this.peek().kind === TokenKind.Dot)
+            {
+                this.consume();
+                path.push(this.expect(TokenKind.Ident).value);
+            }
+            const converters = this.parseConverterChain();
+            return {
+                kind: 'binding',
+                path,
+                source: 'service',
+                serviceToken: token,
                 converters: converters.length > 0 ? converters : undefined,
                 span: this.span(dollar.span.start, this.lastEnd()),
             };

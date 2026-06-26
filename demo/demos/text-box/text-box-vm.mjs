@@ -4,5 +4,5 @@
 // platform's ContentControl auto-resolves the template by matching
 // TextBoxVM.constructor.name against the template's DataType.
 import { Model } from '@visualisation-sub/mural/runtime';
-
-export class TextBoxVM extends Model { }
+export class TextBoxVM extends Model {
+}

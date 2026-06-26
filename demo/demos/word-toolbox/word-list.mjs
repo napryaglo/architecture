@@ -8,7 +8,6 @@
 // PRNG so the rendered grid is stable across page reloads — useful
 // for hot-reload testing during demo development and for taking
 // matched screenshots.
-
 export const TOOLBOX_WORDS = [
     'apple', 'arrow', 'atlas', 'badge', 'balloon', 'basket', 'beach', 'beaver',
     'bell', 'berry', 'bird', 'block', 'blossom', 'bottle', 'branch', 'breeze',
@@ -25,7 +24,6 @@ export const TOOLBOX_WORDS = [
     'sunrise', 'thicket', 'thistle', 'tide', 'tulip', 'twig', 'valley',
     'vortex', 'willow', 'zephyr',
 ];
-
 // Deterministic small LCG so we get a stable shuffle without
 // depending on Math.random's per-page state. The constants are the
 // classic Numerical-Recipes ones; we only need cheap uniform-ish
@@ -37,12 +35,6 @@ function lcg(seed) {
         return s;
     };
 }
-
-// Build a listbox seed: `count` words, drawn from the same pool as
-// the toolbox plus a small suffix pool so the listbox shows variety.
-// Each entry is a {Word} object so VM-side property reads stay
-// consistent whether an entry came from the seed or was dragged in
-// from the toolbox.
 export function buildListBoxSeed(count) {
     const pool = TOOLBOX_WORDS;
     const rng = lcg(0xc0ffee);

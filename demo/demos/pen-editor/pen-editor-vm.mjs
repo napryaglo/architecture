@@ -7,24 +7,16 @@
 // without binding to a Pen-typed property tree. A property-change
 // listener installed on the Pen rebuilds these mirror DPs on every
 // mutation.
-
 import { MetaData, Model } from '@visualisation-sub/mural/runtime';
-import {
-    Color,
-    Pen,
-    SolidColorBrush,
-} from '@visualisation-sub/mural/visual-engine';
-
-export class PenEditorDemoVM extends Model
-{
-    static PenKey              = Model.RegisterProperty(PenEditorDemoVM, 'Pen',              undefined, MetaData.None);
-    static BrushSummaryKey     = Model.RegisterProperty(PenEditorDemoVM, 'BrushSummary',     '',        MetaData.None);
-    static ThicknessReadoutKey = Model.RegisterProperty(PenEditorDemoVM, 'ThicknessReadout', '',        MetaData.None);
-    static DashReadoutKey      = Model.RegisterProperty(PenEditorDemoVM, 'DashReadout',      '',        MetaData.None);
-    static CapReadoutKey       = Model.RegisterProperty(PenEditorDemoVM, 'CapReadout',       '',        MetaData.None);
-    static JoinReadoutKey      = Model.RegisterProperty(PenEditorDemoVM, 'JoinReadout',      '',        MetaData.None);
-    static MiterReadoutKey     = Model.RegisterProperty(PenEditorDemoVM, 'MiterReadout',     '',        MetaData.None);
-
+import { Color, Pen, SolidColorBrush, } from '@visualisation-sub/mural/visual-engine';
+export class PenEditorDemoVM extends Model {
+    static PenKey = Model.RegisterProperty(PenEditorDemoVM, 'Pen', undefined, MetaData.None);
+    static BrushSummaryKey = Model.RegisterProperty(PenEditorDemoVM, 'BrushSummary', '', MetaData.None);
+    static ThicknessReadoutKey = Model.RegisterProperty(PenEditorDemoVM, 'ThicknessReadout', '', MetaData.None);
+    static DashReadoutKey = Model.RegisterProperty(PenEditorDemoVM, 'DashReadout', '', MetaData.None);
+    static CapReadoutKey = Model.RegisterProperty(PenEditorDemoVM, 'CapReadout', '', MetaData.None);
+    static JoinReadoutKey = Model.RegisterProperty(PenEditorDemoVM, 'JoinReadout', '', MetaData.None);
+    static MiterReadoutKey = Model.RegisterProperty(PenEditorDemoVM, 'MiterReadout', '', MetaData.None);
     constructor() {
         super();
         const pen = new Pen(new SolidColorBrush(Color.FromHex('#f59e0b')), 4);
@@ -32,16 +24,14 @@ export class PenEditorDemoVM extends Model
         this._installPenWatchers(pen);
         this._refreshReadouts();
     }
-
-    get Pen()             { return this.get_property_value(PenEditorDemoVM.PenKey); }
-    set Pen(v)            { this.set_property_value(PenEditorDemoVM.PenKey, v); }
-    get BrushSummary()    { return this.get_property_value(PenEditorDemoVM.BrushSummaryKey); }
-    get ThicknessReadout(){ return this.get_property_value(PenEditorDemoVM.ThicknessReadoutKey); }
-    get DashReadout()     { return this.get_property_value(PenEditorDemoVM.DashReadoutKey); }
-    get CapReadout()      { return this.get_property_value(PenEditorDemoVM.CapReadoutKey); }
-    get JoinReadout()     { return this.get_property_value(PenEditorDemoVM.JoinReadoutKey); }
-    get MiterReadout()    { return this.get_property_value(PenEditorDemoVM.MiterReadoutKey); }
-
+    get Pen() { return this.get_property_value(PenEditorDemoVM.PenKey); }
+    set Pen(v) { this.set_property_value(PenEditorDemoVM.PenKey, v); }
+    get BrushSummary() { return this.get_property_value(PenEditorDemoVM.BrushSummaryKey); }
+    get ThicknessReadout() { return this.get_property_value(PenEditorDemoVM.ThicknessReadoutKey); }
+    get DashReadout() { return this.get_property_value(PenEditorDemoVM.DashReadoutKey); }
+    get CapReadout() { return this.get_property_value(PenEditorDemoVM.CapReadoutKey); }
+    get JoinReadout() { return this.get_property_value(PenEditorDemoVM.JoinReadoutKey); }
+    get MiterReadout() { return this.get_property_value(PenEditorDemoVM.MiterReadoutKey); }
     // Subscribe to every property on the bound Pen so the status
     // strings track live edits. Plain field for the unsubscribe thunks
     // — view-invisible state, fine to live off the DP surface.
@@ -51,43 +41,54 @@ export class PenEditorDemoVM extends Model
             pen.AddPropertyChangedListener(key, refresh);
         }
     }
-
     _refreshReadouts() {
         const pen = this.Pen;
-        if (pen === undefined) return;
-        this.set_property_value(PenEditorDemoVM.BrushSummaryKey,     describeBrush(pen.Brush));
+        if (pen === undefined)
+            return;
+        this.set_property_value(PenEditorDemoVM.BrushSummaryKey, describeBrush(pen.Brush));
         this.set_property_value(PenEditorDemoVM.ThicknessReadoutKey, `Thickness ${formatNum(pen.Thickness)} px`);
-        this.set_property_value(PenEditorDemoVM.DashReadoutKey,      `Dash ${describeDash(pen.DashStyle)}`);
-        this.set_property_value(PenEditorDemoVM.CapReadoutKey,       `Cap ${pen.LineCap}`);
-        this.set_property_value(PenEditorDemoVM.JoinReadoutKey,      `Join ${pen.LineJoin}`);
-        this.set_property_value(PenEditorDemoVM.MiterReadoutKey,     `Miter limit ${formatNum(pen.MiterLimit)}`);
+        this.set_property_value(PenEditorDemoVM.DashReadoutKey, `Dash ${describeDash(pen.DashStyle)}`);
+        this.set_property_value(PenEditorDemoVM.CapReadoutKey, `Cap ${pen.LineCap}`);
+        this.set_property_value(PenEditorDemoVM.JoinReadoutKey, `Join ${pen.LineJoin}`);
+        this.set_property_value(PenEditorDemoVM.MiterReadoutKey, `Miter limit ${formatNum(pen.MiterLimit)}`);
     }
 }
-
 function formatNum(value) {
-    if (Math.abs(value - Math.round(value)) < 1e-6) return String(Math.round(value));
+    if (Math.abs(value - Math.round(value)) < 1e-6)
+        return String(Math.round(value));
     return value.toFixed(1);
 }
-
 function describeBrush(brush) {
-    if (brush === undefined) return 'Brush: (none)';
+    if (brush === undefined)
+        return 'Brush: (none)';
     const name = brush.constructor?.name ?? 'Brush';
-    if (name === 'SolidColorBrush' && brush.Color?.ToHex) return `Brush: Solid ${brush.Color.ToHex()}`;
-    if (name === 'LinearGradientBrush')                  return `Brush: Linear (${brush.GradientStops?.length ?? 0} stops)`;
-    if (name === 'RadialGradientBrush')                  return `Brush: Radial (${brush.GradientStops?.length ?? 0} stops)`;
-    if (name === 'PatternBrush')                         return `Brush: Pattern ${brush.Kind}`;
+    // Duck-typed subtype reads — base Brush lacks these; cast to the shape.
+    const b = brush;
+    if (name === 'SolidColorBrush' && b.Color?.ToHex)
+        return `Brush: Solid ${b.Color.ToHex()}`;
+    if (name === 'LinearGradientBrush')
+        return `Brush: Linear (${b.GradientStops?.length ?? 0} stops)`;
+    if (name === 'RadialGradientBrush')
+        return `Brush: Radial (${b.GradientStops?.length ?? 0} stops)`;
+    if (name === 'PatternBrush')
+        return `Brush: Pattern ${b.Kind}`;
     return `Brush: ${name}`;
 }
-
 function describeDash(dash) {
-    if (dash === undefined || dash.Dashes === undefined) return 'Solid';
+    if (dash === undefined || dash.Dashes === undefined)
+        return 'Solid';
     const d = dash.Dashes;
-    if (d.length === 0) return 'Solid';
+    if (d.length === 0)
+        return 'Solid';
     // Pin against the known presets so labels match the editor dropdown.
     const equals = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
-    if (equals(d, [2, 2]))             return 'Dash';
-    if (equals(d, [0, 2]))             return 'Dot';
-    if (equals(d, [2, 2, 0, 2]))       return 'Dash-Dot';
-    if (equals(d, [2, 2, 0, 2, 0, 2])) return 'Dash-Dot-Dot';
+    if (equals(d, [2, 2]))
+        return 'Dash';
+    if (equals(d, [0, 2]))
+        return 'Dot';
+    if (equals(d, [2, 2, 0, 2]))
+        return 'Dash-Dot';
+    if (equals(d, [2, 2, 0, 2, 0, 2]))
+        return 'Dash-Dot-Dot';
     return `Custom [${d.join(', ')}]`;
 }

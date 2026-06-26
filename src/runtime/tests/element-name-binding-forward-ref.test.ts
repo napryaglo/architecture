@@ -98,4 +98,31 @@ describe('ElementNameBinding — TwoWay writeback during the forward-ref window'
 
         assert.equal(src.Y, 'overwritten', 'latest forward-ref-window write wins on flush');
     });
+
+    // The forward-ref flush only fills in when the SOURCE is empty. When the
+    // source already has a value, it is authoritative on initial resolution
+    // (WPF source-wins-on-load): a value the target buffered during the
+    // window — typically a control's transient DEFAULT, e.g. a list's
+    // `undefined` selection or a rail's `-1` sentinel — is DISCARDED, pulled
+    // over by the source. This is what keeps a TwoWay `$service` binding from
+    // clobbering a freshly-constructed service's initialized value.
+    test('a live source wins over a target default buffered during the window', async () =>
+    {
+        const src = new Src();
+        src.Y = 'source-value';      // source is authoritative
+        const tgt = new Tgt();
+        let resolved = false;
+        tgt.set_property_value(Tgt.XKey,
+            ElementNameBinding(() => (resolved ? src : undefined) as unknown as Visual | undefined, 'Y'));
+
+        // The target settles at its default during the forward-ref window.
+        tgt.X = 'target-default';
+
+        resolved = true;
+        await tick();
+        await tick();
+
+        assert.equal(src.Y, 'source-value', 'source not clobbered by the buffered target default');
+        assert.equal(tgt.X, 'source-value', 'target pulled the authoritative source value');
+    });
 });

@@ -247,12 +247,72 @@ export interface StructuredBody
 export type BodyItem =
     | ElementNode
     | SlotAssign
+    | MemberBlock
+    | ServicesBlock
     | KeyValueResource
     | ResourceForm
     | DefForm
     | IncludeForm
     | GlyphsForm
     | MacroHoleBodyItem;
+
+// `.Member: { … }` — a dotted member-block that fills a complex aggregate
+// property of the surrounding element. The general form's body is a list
+// of element entries appended to `target.<name>` (an ObservableCollection
+// DP). Named members carry bespoke lowering — `services` reads its body
+// as DI registrations against `Application.Services` (see the parser's
+// service-entry grammar) rather than as plain elements. The leading dot
+// distinguishes a member-block from a scalar slot-assign (`name:`) and
+// from a child element.
+export interface MemberBlock
+{
+    kind:    'member-block';
+    name:    string;
+    // Generic member-blocks carry an element list. (The `services` member
+    // is the named exception — it parses to a `ServicesBlock`, not here.)
+    body:    StructuredBody;
+    span:    SourceSpan;
+}
+
+// `.services: { … }` — the named member-block with bespoke DI lowering.
+// Each entry registers an implementation against a token in the
+// surrounding scope's `Services` provider. Entry grammar:
+//   [lifetime] Impl [ { prop: value … } ] [ -> Token ]
+// where `lifetime` ∈ { singleton, scoped, transient } (absent ⇒
+// singleton), and `-> Token` registers `Impl` under a token different from
+// itself (absent ⇒ token derived from `Impl` via `ServiceProvider.tokenFor`).
+// Every entry lowers to a lazy factory `(p) => new Impl(p)`: the service
+// ctor receives the provider (the IServiceProvider contract) and resolves
+// its own dependencies — there is no constructor-dependency list in markup.
+//
+// The optional `{ … }` inline-config block seeds the freshly-constructed
+// instance: each `prop: value` assigns through the service's JS setter. A
+// value is either a literal (string / number / colour / tuple …) — seeding
+// non-default state without a subclass — or `$service(Token)`, EAGERLY
+// resolved from the factory's provider (explicit property injection, since
+// mural has no reflection/auto-wiring).
+export interface ServiceConfigEntry
+{
+    name:  string;               // service property (assigned via its setter)
+    value: ValueNode;            // literal, or a `$service(Token)` binding
+    span:  SourceSpan;
+}
+
+export interface ServiceEntry
+{
+    lifetime?: 'singleton' | 'scoped' | 'transient';
+    impl:      string;           // implementation class symbol
+    config?:   readonly ServiceConfigEntry[];   // inline-config seed/inject
+    token?:    string;           // explicit registration token symbol
+    span:      SourceSpan;
+}
+
+export interface ServicesBlock
+{
+    kind:    'services-block';
+    entries: readonly ServiceEntry[];
+    span:    SourceSpan;
+}
 
 // `include "<path>" [as <key>]` — compile-time inclusion of an external
 // file into the enclosing resource dictionary. The path resolves relative
@@ -607,7 +667,7 @@ export interface ListValue   { kind: 'list';    values: ValueNode[]; span: Sourc
 // property — typically an inherited attached property like
 // `TextBlock.Foreground`. For the self form `source` is 'self', `attached`
 // names the owner type + property, and `path` is empty.
-export interface BindingValue          { kind: 'binding';            path: string[];   source?: 'self'; attached?: { owner: string; property: string }; converters?: string[]; span: SourceSpan; }
+export interface BindingValue          { kind: 'binding';            path: string[];   source?: 'self' | 'service'; serviceToken?: string; attached?: { owner: string; property: string }; converters?: string[]; span: SourceSpan; }
 export interface TemplateBindingValue  { kind: 'template-binding';   name: string;     span: SourceSpan; }
 // `@Key` → key='Key', dynamic=false.  `@@Key` → dynamic=true.
 export interface StaticResourceValue   { kind: 'static-resource';    key: string;      span: SourceSpan; }

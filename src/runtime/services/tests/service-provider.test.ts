@@ -1,7 +1,12 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { ServiceProvider, ServiceKey } from '../service-provider.js';
+import {
+    ServiceProvider,
+    ServiceKey,
+    type IServiceProvider,
+    type IServiceContainer,
+} from '../service-provider.js';
 
 // An interface-shaped contract keyed by a typed token (no runtime class).
 interface Clock { now(): number; }
@@ -19,6 +24,26 @@ class Counter
 
 describe('ServiceProvider — registration + resolution', () => {
 
+    test('implements both halves: compose via IServiceContainer, resolve via IServiceProvider', () => {
+        // The same object satisfies both contracts; a collaborator can ask
+        // for only the half it needs. Compose through the container view…
+        const sp = new ServiceProvider();
+        const container: IServiceContainer = sp;
+        const clock: Clock = { now: () => 7 };
+        const chained = container.registerInstance(ClockKey, clock).register(Counter, () => new Counter());
+        assert.equal(chained, sp, 'registration returns the container for chaining');
+
+        // …then resolve through the provider view (no register* reachable here).
+        const provider: IServiceProvider = sp;
+        assert.equal(provider.getRequired(ClockKey).now(), 7);
+        assert.ok(provider.get(Counter) instanceof Counter);
+        assert.ok(provider.has(ClockKey));
+
+        // createScope() via the container contract yields another container.
+        const scope: IServiceContainer = container.createScope();
+        assert.ok(scope !== container);
+    });
+
     test('registerInstance round-trips through get / getRequired', () => {
         const sp = new ServiceProvider();
         const clock: Clock = { now: () => 42 };
@@ -27,6 +52,26 @@ describe('ServiceProvider — registration + resolution', () => {
         assert.equal(sp.get(ClockKey), clock);
         assert.equal(sp.getRequired(ClockKey), clock);
         assert.equal(sp.getRequired(ClockKey).now(), 42);
+    });
+
+    test('addInstance derives the token from the instance constructor', () => {
+        const sp = new ServiceProvider();
+        // No static Key → the class itself is the token.
+        const c = new Counter();
+        sp.addInstance(c);
+        assert.equal(sp.get(Counter), c);
+        assert.equal(ServiceProvider.tokenFor(Counter), Counter);
+    });
+
+    test('addInstance honours a static Key, incl. inherited (subclass shadows base token)', () => {
+        class Keyed { static readonly Key = new ServiceKey('Keyed'); }
+        class SubKeyed extends Keyed { }
+        const sp = new ServiceProvider();
+        const sub = new SubKeyed();
+        sp.addInstance(sub);
+        // Registered under the inherited Key, not the subclass.
+        assert.equal(sp.get(Keyed.Key), sub);
+        assert.equal(ServiceProvider.tokenFor(SubKeyed), Keyed.Key);
     });
 
     test('get returns undefined / getRequired throws for an unregistered token', () => {

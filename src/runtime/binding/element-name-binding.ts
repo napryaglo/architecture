@@ -4,6 +4,8 @@ import { MetaData } from '../metadata.js';
 import { Model } from '../model.js';
 import type { PropertyKey } from '../model.js';
 import { resolveKey } from '../model-internals.js';
+import { Application } from '../application.js';
+import type { ServiceToken } from '../services/service-provider.js';
 import type { Visual } from '../../visual-engine/visual.js';
 
 // Watcher Model — same shape as DataContextWatcher: a Model with a
@@ -30,13 +32,18 @@ class ElementNameWatcher extends Model
 // Mode is left unset so EVD.ResolveDefaultMode upgrades it to TwoWay
 // when the target DP declares BindsTwoWayByDefault — matches the
 // DataContextBinding policy for consistency.
-class ElementNameBindingImpl extends Binding
+// Shared impl for bindings whose source is FIXED (resolved once, never
+// re-resolved on a DataContext change): ElementName (an x:name'd Visual)
+// and Service (resolved from the ambient ServiceProvider). The source is
+// any `Model` — a Visual IS a Model, and a ServiceBase service IS a
+// Model, so both ride the same path-walk + property-change machinery.
+class FixedSourceBinding extends Binding
 {
     private readonly watcher:     ElementNameWatcher;
-    private readonly sourceThunk: () => Visual | undefined;
+    private readonly sourceThunk: () => Model | undefined;
     private readonly pathStr:     string;
 
-    private nameSource:     Visual | undefined;
+    private nameSource:     Model | undefined;
     private sourceCallback: PropertyChangeCallback | undefined;
     private disposed = false;
     // A TwoWay writeback that arrived BEFORE the forward-ref source
@@ -46,7 +53,22 @@ class ElementNameBindingImpl extends Binding
     // distinguishable from "nothing pending".
     private pendingWrite:   { value: unknown } | undefined;
 
-    constructor(source: Visual | (() => Visual | undefined), path: string, converter?: ValueConverter)
+    // Optional "the source may move" watch: a property on some Model whose
+    // change means the thunk could now resolve a DIFFERENT source. The
+    // ElementName case is genuinely fixed (an x:name'd element never moves),
+    // so it passes none. The Service case watches the target's inherited
+    // `ServiceScope` — re-parenting the subtree under a different provider
+    // must rebind to that provider's service. See reresolve().
+    private rebindTarget:   Model | undefined;
+    private rebindKey:      PropertyKey<unknown> | undefined;
+    private rebindCallback: PropertyChangeCallback | undefined;
+
+    constructor(
+        source:    Model | (() => Model | undefined),
+        path:      string,
+        converter?: ValueConverter,
+        rebind?:   { target: Model; property: string },
+    )
     {
         const watcher = new ElementNameWatcher();
         // Converter (from `$node.path << conv`) rides in opts — apply_transform
@@ -56,6 +78,43 @@ class ElementNameBindingImpl extends Binding
         this.sourceThunk = typeof source === 'function' ? source : () => source;
         this.pathStr     = path;
         this.activate();
+
+        // Subscribe to the rebind-trigger property AFTER the first activate
+        // so the initial resolution path (incl. forward-ref retry) owns the
+        // first value; subsequent changes re-resolve through reresolve().
+        if (rebind !== undefined && Model.HasProperty(rebind.target.constructor, rebind.property))
+        {
+            const key = resolveKey(rebind.target, undefined, rebind.property);
+            this.rebindTarget   = rebind.target;
+            this.rebindKey      = key;
+            this.rebindCallback = () => this.reresolve();
+            rebind.target.AddPropertyChangedListener(key, this.rebindCallback);
+        }
+    }
+
+    // The rebind trigger fired (e.g. the target's ServiceScope changed). Re-
+    // run the thunk; if it now yields a DIFFERENT source, detach the old
+    // subscription, attach to the new source and pull its value. If the
+    // source is unchanged, just re-walk in case its value moved. A change to
+    // `undefined` (subtree detached from any provider) clears the value.
+    private reresolve(): void
+    {
+        if (this.disposed) return;
+        const src = this.sourceThunk();
+        if (src === this.nameSource)
+        {
+            if (src !== undefined) this.watcher.Value = this.walkPath(src);
+            return;
+        }
+        this.unsubscribeSource();
+        this.nameSource = src;
+        if (src === undefined)
+        {
+            this.watcher.Value = undefined;
+            return;
+        }
+        this.subscribeSource();
+        this.watcher.Value = this.walkPath(src);
     }
 
     // Resolve the source. Backward x:name references (declared earlier
@@ -77,18 +136,30 @@ class ElementNameBindingImpl extends Binding
         }
         this.nameSource = src;
         this.subscribeSource();
-        if (this.pendingWrite !== undefined)
+        const sourceValue = this.walkPath(src);
+        if (this.pendingWrite !== undefined && sourceValue === undefined)
         {
-            // A TwoWay writeback landed during the forward-ref window. The
-            // buffered value is the target's intent — push it to the source
-            // now rather than pulling the source's current value over it.
+            // A TwoWay writeback landed during the forward-ref window AND the
+            // source has no value of its own to offer (e.g. ElementName
+            // forward-ref to a still-empty element). The buffered value is
+            // the target's intent — push it to the source now.
             const pending = this.pendingWrite;
             this.pendingWrite = undefined;
             this.set_value(pending.value);
         }
         else
         {
-            this.watcher.Value = this.walkPath(src);
+            // Source is authoritative on initial load (WPF semantics): pull
+            // source→target, discarding any value the target buffered during
+            // the forward-ref window. That buffered write is typically the
+            // target control's transient DEFAULT (a list's `undefined`
+            // selection, a rail's `-1` "no selection" sentinel) that fired
+            // before the source resolved — flushing it would clobber a live
+            // source value, which is exactly the TwoWay `$service` initial-
+            // sync hazard. When the source genuinely has nothing (above), the
+            // buffered write still wins.
+            this.pendingWrite = undefined;
+            this.watcher.Value = sourceValue;
         }
     }
 
@@ -97,6 +168,13 @@ class ElementNameBindingImpl extends Binding
         this.disposed = true;
         super.dispose();
         this.unsubscribeSource();
+        if (this.rebindTarget !== undefined && this.rebindKey !== undefined && this.rebindCallback !== undefined)
+        {
+            this.rebindTarget.RemovePropertyChangedListener(this.rebindKey, this.rebindCallback);
+            this.rebindTarget   = undefined;
+            this.rebindKey      = undefined;
+            this.rebindCallback = undefined;
+        }
     }
 
     // TwoWay writeback: when the target DP is mutated, push the new
@@ -236,5 +314,56 @@ class ElementNameBindingImpl extends Binding
 // factory's synchronous run has populated the var.
 export function ElementNameBinding(source: Visual | (() => Visual | undefined), path: string, converter?: ValueConverter): Binding
 {
-    return new ElementNameBindingImpl(source, path, converter);
+    return new FixedSourceBinding(source, path, converter);
 }
+
+// Public factory for `$service(Token).path` bindings. The source is the
+// service resolved from the ambient provider (`Application.current.Services`)
+// for `token` — an app-level singleton in practice. Like ElementName, the
+// source is fixed and target-independent, so no target arg and no
+// SetterFactory wrap: the same binding works in a direct attribute and a
+// Style setter.
+//
+// The thunk + the impl's forward-ref retry cover the install-before-ready
+// window: a binding materialised before the service is registered (or
+// before Application.current is set) resolves to `undefined` and re-tries
+// on the next microtask. An empty path surfaces the service object itself
+// (`DataContext=$service(StatusService)`); a non-empty path binds reactively
+// to the service's DP (`Text=$service(StatusService).Text`).
+//
+// Scope reactivity: the binding watches the target's inherited
+// `ServiceScope` and re-resolves when it changes, so re-parenting the
+// subtree under a different provider rebinds to that provider's service
+// (not just the install-before-parent forward-ref window).
+export function ServiceBinding(target: Model, token: ServiceToken<unknown>, path: string, converter?: ValueConverter): Binding
+{
+    return new FixedSourceBinding(
+        () => {
+            // Resolve the provider from the nearest ancestor that published
+            // a `ServiceScope` (inherited DP, read by name to keep the
+            // runtime free of an Element value-dependency), falling back to
+            // the app root. The thunk re-reads on each forward-ref retry,
+            // so a binding that materialises before its host parents it
+            // (ServiceScope still undefined) resolves once the scope
+            // inherits in. Provided the service is registered in that scope
+            // and NOT also at the root, the pre-parent attempt resolves to
+            // undefined and the retry lands on the scoped instance.
+            const scope = readServiceScope(target) ?? Application.current?.Services;
+            return scope?.get(token) as Model | undefined;
+        },
+        path, converter,
+        // Re-resolve whenever the target's inherited ServiceScope changes.
+        { target, property: 'ServiceScope' });
+}
+
+// Reads the target's inherited `ServiceScope` by name — structurally, so
+// the runtime binding layer needn't import the Element class that owns the
+// DP. Returns a provider-shaped value (anything with `get`) or undefined.
+function readServiceScope(target: Model): Provider | undefined
+{
+    if (!Model.HasProperty(target.constructor, 'ServiceScope')) return undefined;
+    const v = target.get_property_value(resolveKey(target, undefined, 'ServiceScope'));
+    return (v !== undefined && typeof (v as Provider).get === 'function') ? v as Provider : undefined;
+}
+
+interface Provider { get(token: ServiceToken<unknown>): unknown; }

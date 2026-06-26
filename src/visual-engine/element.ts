@@ -112,6 +112,18 @@ export class Element extends Visual implements ITriggerHost
     // every binding rooted in it.
     public static readonly DataContextKey = Model.RegisterProperty<unknown>(Element, 'DataContext', undefined, MetaData.Inherits | MetaData.IsAnimationProhibited);
 
+    // Ambient service provider for `$service(Token)` bindings. Inherits
+    // down the tree the same way DataContext does, so a descendant's
+    // `$service()` resolves against the nearest ancestor that published a
+    // scope (e.g. a shell publishing its per-instance DI scope). Undefined
+    // by default — ServiceBinding falls back to Application.current.Services
+    // (the app root) when no ancestor set one. Pure data plumbing, no
+    // layout/render impact; animation-prohibited for the same identity-
+    // swap reason as DataContext. Typed `unknown` to keep Element free of a
+    // runtime dependency on the ServiceProvider class (the runtime layer);
+    // ServiceBinding reads it by name and treats it structurally.
+    public static readonly ServiceScopeKey = Model.RegisterProperty<unknown>(Element, 'ServiceScope', undefined, MetaData.Inherits | MetaData.IsAnimationProhibited);
+
     // Disabled-state surface. WPF parity: a disabled Element swallows
     // pointer / keyboard input across its entire subtree, and templates
     // can observe `when (not IsEnabled)` to dim the chrome. Inherited
@@ -264,6 +276,12 @@ export class Element extends Visual implements ITriggerHost
     // (§ Phase B / B5.2) with real DP-backed access.
     public override get DataContext(): unknown { return this.get_property_value(Element.DataContextKey); }
     public override set DataContext(value: unknown) { this.set_property_value(Element.DataContextKey, value); }
+
+    // Ambient service provider for descendants' `$service(…)` bindings.
+    // Inherits downward; a host (e.g. a shell) publishes its DI scope here
+    // so the subtree resolves scoped services.
+    public get ServiceScope(): unknown { return this.get_property_value(Element.ServiceScopeKey); }
+    public set ServiceScope(value: unknown) { this.set_property_value(Element.ServiceScopeKey, value); }
 
     // Disabled-state surface. WPF parity, inherits down the logical
     // tree (§ B4.4). Overrides Visual's `true`-returning stub pair

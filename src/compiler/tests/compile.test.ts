@@ -848,10 +848,10 @@ describe('compile — deferred & errored features', () => {
         );
     });
 
-    test('Application body slot other than resources is rejected', () => {
+    test('Application body slot other than resources / services is rejected', () => {
         assert.throws(
             () => emitted(`Application{ Border x:root{} }`),
-            /only the 'resources:' slot/,
+            /only the 'resources:' and '\.services:' blocks are supported/,
         );
     });
 

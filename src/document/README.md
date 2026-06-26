@@ -94,6 +94,12 @@ Start with whichever doc matches what you're trying to do.
 - **[behaviors.md](behaviors.md)** — `Behavior` abstract base,
   `Visual.AddBehavior`, markup `Behaviors { … }` block, the
   `ListReorderBehavior` reference behavior.
+- **[services-and-di.md](services-and-di.md)** — the dependency-injection
+  container (`ServiceProvider` + `IServiceProvider` / `IServiceContainer`),
+  `ServiceBase` services-as-view-models, lifetimes & scopes, the markup
+  `.services:` composition block (with inline-config seeding / injection),
+  `$service(Token)` consumption bindings, the general `.Member:` list /
+  dictionary block, and shell scope integration.
 - **[marquee-selection.md](marquee-selection.md)** — Explorer-style
   rubber-band multi-select on any `Selector`. `AllowMarqueeSelection` /
   `MarqueeBoundsPolicy` DPs, modifier modes, click-on-empty-space

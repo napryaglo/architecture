@@ -106,8 +106,10 @@
   "scripts": {
     "build:templates": "tsx src/tooling/build-control-templates.ts",
     "build:demos": "tsx src/tooling/build-demo-templates.ts",
-    "build": "npm run build:templates && npm run build:demos && tsc -p tsconfig.build.json",
+    "build:demos:ts": "tsc -p demo/tsconfig.json",
+    "build": "npm run build:templates && npm run build:demos && tsc -p tsconfig.build.json && npm run build:demos:ts",
     "typecheck": "tsc --noEmit",
+    "typecheck:demos": "tsc -p demo/tsconfig.json --noEmit",
     "pretest": "npm run build:templates",
     "test": "tsx --conditions=development --test \"src/**/*.test.ts\"",
     "demo:border": "tsx src/Controls/tests/border-render.ts",

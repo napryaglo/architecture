@@ -8,26 +8,28 @@
 // method, accepting Copy effect during DragOver so the OS cursor
 // renders the right glyph. Optionally accepts text/plain and
 // text/uri-list drops too — useful for cross-window text/url drags.
-
 import { DragDropEffects } from '@visualisation-sub/mural/runtime';
-
 export function attachOsFileDrop(visual, vm) {
     visual.AllowDrop = true;
-
-    const onDragOver = (args) => {
+    const onDragOver = (raw) => {
+        // Routed-event listeners are typed `(args: unknown)`; narrow once.
+        const args = raw;
         // Source === undefined → OS-level (the framework synthesizes the
         // session with no in-tree origin). Bail otherwise so this
         // behavior doesn't intercept in-app drags.
-        if (args.Session?.Source !== undefined) return;
+        if (args.Session?.Source !== undefined)
+            return;
         // Accept any OS-level drag that carries files OR plain text.
         if (args.Data.Has('Files') || args.Data.Has('text/plain') || args.Data.Has('text/uri-list')) {
             args.Effect = DragDropEffects.Copy;
         }
     };
-
-    const onDrop = (args) => {
-        if (args.Session?.Source !== undefined) return;
-        // FileList — iterate as a real array.
+    const onDrop = (raw) => {
+        const args = raw;
+        if (args.Session?.Source !== undefined)
+            return;
+        // FileList — iterate as a real array. The HtmlTarget stores the
+        // raw DataTransfer FileList under the synthetic 'Files' key.
         const files = args.Data.Get('Files');
         if (files !== undefined) {
             for (let i = 0; i < files.length; i++) {
@@ -54,13 +56,11 @@ export function attachOsFileDrop(visual, vm) {
             vm.OnFileDropped(`text: ${text.slice(0, 64)}`, text.length);
         }
     };
-
     visual.AddRoutedEventListener('DragOver', onDragOver);
-    visual.AddRoutedEventListener('Drop',     onDrop);
-
+    visual.AddRoutedEventListener('Drop', onDrop);
     return function detach() {
         visual.AllowDrop = false;
         visual.RemoveRoutedEventListener('DragOver', onDragOver);
-        visual.RemoveRoutedEventListener('Drop',     onDrop);
+        visual.RemoveRoutedEventListener('Drop', onDrop);
     };
 }

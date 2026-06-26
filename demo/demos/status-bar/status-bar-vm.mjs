@@ -10,52 +10,40 @@
 // markup-side `$AddItemCommand` etc. resolve via DataContextBinding,
 // which only walks registered DPs on Models. CounterVM uses the same
 // shape for the same reason.
-
-import {
-    MetaData,
-    Model,
-    RelayCommand,
-} from '@visualisation-sub/mural/runtime';
-
-export class StatusBarVM extends Model
-{
-    static StatusTextKey        = Model.RegisterProperty(StatusBarVM, 'StatusText',        'Ready', MetaData.None);
-    static IsModifiedKey        = Model.RegisterProperty(StatusBarVM, 'IsModified',        false,   MetaData.None);
-    static ItemCountKey         = Model.RegisterProperty(StatusBarVM, 'ItemCount',         0,       MetaData.None);
-    static LastActionKey        = Model.RegisterProperty(StatusBarVM, 'LastAction',        '—',     MetaData.None);
-    static AddItemCommandKey    = Model.RegisterProperty(StatusBarVM, 'AddItemCommand',    undefined, MetaData.None);
+import { MetaData, Model, RelayCommand, } from '@visualisation-sub/mural/runtime';
+export class StatusBarVM extends Model {
+    static StatusTextKey = Model.RegisterProperty(StatusBarVM, 'StatusText', 'Ready', MetaData.None);
+    static IsModifiedKey = Model.RegisterProperty(StatusBarVM, 'IsModified', false, MetaData.None);
+    static ItemCountKey = Model.RegisterProperty(StatusBarVM, 'ItemCount', 0, MetaData.None);
+    static LastActionKey = Model.RegisterProperty(StatusBarVM, 'LastAction', '—', MetaData.None);
+    static AddItemCommandKey = Model.RegisterProperty(StatusBarVM, 'AddItemCommand', undefined, MetaData.None);
     static RemoveItemCommandKey = Model.RegisterProperty(StatusBarVM, 'RemoveItemCommand', undefined, MetaData.None);
-    static SaveCommandKey       = Model.RegisterProperty(StatusBarVM, 'SaveCommand',       undefined, MetaData.None);
-
-    get StatusText()        { return this.get_property_value(StatusBarVM.StatusTextKey); }
-    set StatusText(v)       { this.set_property_value(StatusBarVM.StatusTextKey, v); }
-    get IsModified()        { return this.get_property_value(StatusBarVM.IsModifiedKey); }
-    set IsModified(v)       { this.set_property_value(StatusBarVM.IsModifiedKey, v); }
-    get ItemCount()         { return this.get_property_value(StatusBarVM.ItemCountKey); }
-    set ItemCount(v)        { this.set_property_value(StatusBarVM.ItemCountKey, v); }
-    get LastAction()        { return this.get_property_value(StatusBarVM.LastActionKey); }
-    set LastAction(v)       { this.set_property_value(StatusBarVM.LastActionKey, v); }
-    get AddItemCommand()    { return this.get_property_value(StatusBarVM.AddItemCommandKey); }
+    static SaveCommandKey = Model.RegisterProperty(StatusBarVM, 'SaveCommand', undefined, MetaData.None);
+    get StatusText() { return this.get_property_value(StatusBarVM.StatusTextKey); }
+    set StatusText(v) { this.set_property_value(StatusBarVM.StatusTextKey, v); }
+    get IsModified() { return this.get_property_value(StatusBarVM.IsModifiedKey); }
+    set IsModified(v) { this.set_property_value(StatusBarVM.IsModifiedKey, v); }
+    get ItemCount() { return this.get_property_value(StatusBarVM.ItemCountKey); }
+    set ItemCount(v) { this.set_property_value(StatusBarVM.ItemCountKey, v); }
+    get LastAction() { return this.get_property_value(StatusBarVM.LastActionKey); }
+    set LastAction(v) { this.set_property_value(StatusBarVM.LastActionKey, v); }
+    get AddItemCommand() { return this.get_property_value(StatusBarVM.AddItemCommandKey); }
     get RemoveItemCommand() { return this.get_property_value(StatusBarVM.RemoveItemCommandKey); }
-    get SaveCommand()       { return this.get_property_value(StatusBarVM.SaveCommandKey); }
-
-    constructor()
-    {
+    get SaveCommand() { return this.get_property_value(StatusBarVM.SaveCommandKey); }
+    constructor() {
         super();
         // Three demo actions that mutate the status strip in different
         // ways so the user can see each cell react independently.
-        const removeCmd = new RelayCommand(
-            () => {
-                this.ItemCount  = Math.max(0, this.ItemCount - 1);
-                this.IsModified = this.ItemCount > 0;
-                this.StatusText = this.ItemCount === 0 ? 'Cleared' : 'Item removed';
-                this.LastAction = 'Remove';
-            },
-            // Selection-gated: only when there's something to remove.
-            () => this.ItemCount > 0,
-        );
+        const removeCmd = new RelayCommand(() => {
+            this.ItemCount = Math.max(0, this.ItemCount - 1);
+            this.IsModified = this.ItemCount > 0;
+            this.StatusText = this.ItemCount === 0 ? 'Cleared' : 'Item removed';
+            this.LastAction = 'Remove';
+        }, 
+        // Selection-gated: only when there's something to remove.
+        () => this.ItemCount > 0);
         this.set_property_value(StatusBarVM.AddItemCommandKey, new RelayCommand(() => {
-            this.ItemCount  = this.ItemCount + 1;
+            this.ItemCount = this.ItemCount + 1;
             this.IsModified = true;
             this.StatusText = 'Item added';
             this.LastAction = 'Add';

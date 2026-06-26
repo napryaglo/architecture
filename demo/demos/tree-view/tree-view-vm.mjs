@@ -8,10 +8,6 @@
 import { Model } from '@visualisation-sub/mural/runtime';
 import { HierarchicalDataTemplate } from '@visualisation-sub/mural/basic';
 import { TreeView, TreeViewItem } from '@visualisation-sub/mural/framework';
-
-// A small file-tree-shaped data set. Each node has Name (consumed by
-// TreeViewItem.Header via the displayString Label/Name/Text
-// convention) and optional `children`.
 const FS = {
     Name: 'project',
     children: [
@@ -47,32 +43,27 @@ const FS = {
         { Name: 'package.json' },
     ],
 };
-
-export class TreeViewVM extends Model
-{
+export class TreeViewVM extends Model {
     OnViewMounted(view) {
         const tv = view.FindName('bound');
-        if (!(tv instanceof TreeView)) throw new Error('tree-view.mu missing x:name="bound" TreeView');
-
+        if (!(tv instanceof TreeView))
+            throw new Error('tree-view.mu missing x:name="bound" TreeView');
         // The template's `factory` argument is required by DataTemplate
         // but currently unused for TreeView containers — Header is set
         // from the data via the Label/Name/Text convention, and the row
         // chrome comes from DefaultTreeViewItem. Pass a placeholder TVI
         // so HierarchicalDataTemplate construction stays valid.
-        const tpl = new HierarchicalDataTemplate(
-            (_data) => new TreeViewItem(),
-            (data)  => (data && typeof data === 'object' ? data.children : undefined),
-            // itemTemplate omitted → recursive: every level uses the same
-            // HierarchicalDataTemplate.
-        );
-
+        const tpl = new HierarchicalDataTemplate((_data) => new TreeViewItem(), 
+        // The selector receives untyped item data from the DataTemplate
+        // pipeline; narrow it to the local FsNode shape to read children.
+        (data) => (data && typeof data === 'object' ? data.children : undefined));
         tv.ItemTemplate = tpl;
-        tv.ItemsSource  = [FS];
-
+        tv.ItemsSource = [FS];
         // First-load convenience: expand the root so the tree isn't a
         // single line on open. The container is realized synchronously
         // when ItemsSource fires the inserted change.
         const root = tv.RootItems[0];
-        if (root !== undefined) root.IsExpanded = true;
+        if (root !== undefined)
+            root.IsExpanded = true;
     }
 }

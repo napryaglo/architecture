@@ -66,6 +66,10 @@ export class Lexer
         // be recognised before single `<` (LAngle, which opens a size
         // literal); a size never starts with `<<`, so this is unambiguous.
         if (c === '<' && c2 === '<') return this.consumeFixed(TokenKind.LessLess,     2, start);
+        // `->` — services token-from-impl operator (`Impl -> Token`). Must
+        // beat the `-`/digit negative-number path below; `->` is never a
+        // number, so recognising it here is unambiguous.
+        if (c === '-' && c2 === '>') return this.consumeFixed(TokenKind.Arrow,        2, start);
 
         // ── Scope-extension prefix (x:Ident) ──
         if (c === 'x' && c2 === ':' && this.isLetter(this.source[this.pos + 2]))

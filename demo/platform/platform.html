@@ -72,13 +72,13 @@
     <pre id="status"></pre>
 
     <script type="module">
-        // The shell — fully MVVM. PlatformVM holds the registered
-        // demos plus the ItemTemplate / ItemContainerStyle / Title /
-        // Subtitle / Content / SelectedDemo properties. platform.mu
-        // binds every TreeView and PageView slot through DataContext.
-        // No tree-walking, no selection-listener wiring, no FindName:
-        // the only thing the host JS does is build the VM and hand it
-        // to the root as DataContext.
+        // The shell is driven by a DI-composed navigation model:
+        // platform.mu's `.services:` block registers DemoNavigationService
+        // into the shell scope, and the region content binds it through
+        // `$service(NavigationService)`. The service self-populates from
+        // the demo registry, so the host JS builds NO view-model and seeds
+        // NO DataContext — it only mounts the shell and registers the
+        // app-level storage service. No tree-walking, no FindName.
         import { app }                                 from './platform.mu.js';
         import { HtmlTarget }                          from '@visualisation-sub/mural/visual-engine';
         // Service composition root: register the app's services on the
@@ -168,9 +168,6 @@
         import '../demos/pen-editor/pen-editor.mjs';
         import '../demos/fill-editor/fill-editor.mjs';
 
-        import { allDemos }   from './registry.mjs';
-        import { PlatformVM } from './platform-vm.mjs';
-
         const status = document.getElementById('status');
         try {
             // Wait for Material Symbols Outlined to load BEFORE mounting.
@@ -191,17 +188,13 @@
             // the on-page status — better than mounting with broken text.
             await document.fonts.load('24px "Material Symbols Outlined"');
 
-            // initialize(target, { dataContext }) mounts the root onto
-            // the HtmlTarget and seeds the PlatformVM in one call —
-            // replaces the old `new HtmlTarget(...).Show(app.Root);
-            // app.Root.DataContext = ...` pair. The .mu IIFE already
-            // ran initialize for theme activation; the second call
-            // here picks up the target + dataContext branches and
-            // skips theme (theme is idempotent).
-            app.initialize(
-                new HtmlTarget(document.getElementById('app')),
-                { dataContext: new PlatformVM(allDemos()) },
-            );
+            // initialize(target) mounts the root onto the HtmlTarget. No
+            // dataContext: the navigation model is the `.services:`-composed
+            // DemoNavigationService, resolved by the region `$service`
+            // bindings from the shell scope. The .mu IIFE already ran
+            // initialize for theme activation; this second call picks up the
+            // target branch and skips theme (theme is idempotent).
+            app.initialize(new HtmlTarget(document.getElementById('app')));
         } catch (e) {
             status.textContent = 'Error: ' + (e?.message ?? String(e));
             console.error(e);

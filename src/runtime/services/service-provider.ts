@@ -44,6 +44,40 @@ export type ServiceToken<T> = ServiceKey<T> | ServiceConstructor<T>;
 // is handed (the owner for singletons, the resolving scope otherwise).
 export type ServiceFactory<T> = (provider: ServiceProvider) => T;
 
+// The consumer-facing slice of the container — resolve only. This is the
+// contract every service constructor receives (`new Impl(provider)`): a
+// service resolves its own collaborators but cannot re-register or spawn
+// scopes through it. ServiceProvider implements it; the narrow type keeps
+// service code from reaching back into container mutation.
+export interface IServiceProvider
+{
+    get<T>(token: ServiceToken<T>): T | undefined;
+    getRequired<T>(token: ServiceToken<T>): T;
+    has(token: ServiceToken<unknown>): boolean;
+}
+
+// The composition-facing slice of the container — register + lifecycle.
+// This is the surface used to BUILD a provider: register implementations
+// against tokens, derive a child scope, tear a scope down. Orthogonal to
+// IServiceProvider's resolve surface — ServiceProvider implements BOTH, so
+// the same object both composes and resolves, but a collaborator can ask
+// for just the half it needs. Registration methods return IServiceContainer
+// so calls chain (`c.register(a, …).registerInstance(b, …)`).
+export interface IServiceContainer
+{
+    register<T>(token: ServiceToken<T>, factory: ServiceFactory<T>, lifetime?: ServiceLifetime): IServiceContainer;
+    registerInstance<T>(token: ServiceToken<T>, instance: T): IServiceContainer;
+    registerScoped<T>(token: ServiceToken<T>, factory: ServiceFactory<T>): IServiceContainer;
+    registerTransient<T>(token: ServiceToken<T>, factory: ServiceFactory<T>): IServiceContainer;
+    addInstance<T extends object>(instance: T): IServiceContainer;
+    // A child scope — itself a full container (register scoped overrides) and
+    // provider (resolve). The concrete return is a ServiceProvider, so a
+    // caller holding the class keeps both halves.
+    createScope(): IServiceContainer;
+    // Tear down THIS scope: Dispose() every instance it owns, then clear.
+    dispose(): void;
+}
+
 export type ServiceLifetime = 'singleton' | 'transient' | 'scoped';
 
 interface Registration
@@ -52,7 +86,7 @@ interface Registration
     factory:  ServiceFactory<unknown>;
 }
 
-export class ServiceProvider
+export class ServiceProvider implements IServiceProvider, IServiceContainer
 {
     // token identity → registration / cached instance. Kept on each
     // provider so a child can both shadow registrations and own its own
@@ -85,6 +119,32 @@ export class ServiceProvider
     public registerInstance<T>(token: ServiceToken<T>, instance: T): this
     {
         return this.register(token, () => instance, 'singleton');
+    }
+
+    // Register an already-built instance under a token DERIVED from the
+    // instance — its constructor's static `Key` (the ServiceBase
+    // convention) when present, else the constructor itself as a
+    // class-token. The eager-singleton form the `.services:` markup block
+    // lowers a bare entry (`StatusService`) to; equivalent to
+    // `registerInstance(StatusService.Key ?? StatusService, instance)`.
+    // A subclass that inherits its base's static `Key` registers under
+    // that base token (so `addInstance(new SpyNav())` shadows the
+    // NavigationService registration), matching the scoped-override path.
+    public addInstance<T extends object>(instance: T): this
+    {
+        return this.registerInstance(
+            ServiceProvider.tokenFor(instance.constructor as Function) as ServiceToken<T>,
+            instance);
+    }
+
+    // The token a service class registers under by convention: its static
+    // `Key` (ServiceBase) when defined, else the class itself
+    // (class-as-token). Shared by addInstance and the compiler's
+    // `.services:` lowering so markup and code agree on the token.
+    public static tokenFor(ctor: Function): ServiceToken<unknown>
+    {
+        const key = (ctor as { Key?: unknown }).Key;
+        return (key ?? ctor) as ServiceToken<unknown>;
     }
 
     public registerTransient<T>(token: ServiceToken<T>, factory: ServiceFactory<T>): this
@@ -164,6 +224,21 @@ export class ServiceProvider
         return new ServiceProvider(this);
     }
 
+    // Dispose this scope: call Dispose() on every instance THIS provider
+    // owns (its own cache — scoped services plus singletons registered
+    // here), then clear the cache. Does NOT touch the parent chain or any
+    // child scopes — dispose the scope you created. Idempotent: a second
+    // call finds an empty cache. Structural Disposable check keeps the
+    // container decoupled from ServiceBase / Model.
+    public dispose(): void
+    {
+        for (const inst of this._cache.values())
+        {
+            if (isDisposable(inst)) inst.Dispose();
+        }
+        this._cache.clear();
+    }
+
     // Walk the parent chain to find the registration and the provider
     // that owns it (needed for singleton caching at the owner).
     private findOwner(token: ServiceToken<unknown>): { reg: Registration; owner: ServiceProvider } | undefined
@@ -175,6 +250,14 @@ export class ServiceProvider
         }
         return undefined;
     }
+}
+
+// Anything carrying a Dispose() method — ServiceBase implements it, but
+// the check is structural so the container needn't import it.
+interface Disposable { Dispose(): void; }
+function isDisposable(v: unknown): v is Disposable
+{
+    return typeof (v as Partial<Disposable> | null)?.Dispose === 'function';
 }
 
 function describeToken(token: ServiceToken<unknown>): string

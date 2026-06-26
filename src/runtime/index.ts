@@ -28,6 +28,7 @@ export {
     DynamicResource,
     EffectiveValueDescriptor,
     ElementNameBinding,
+    ServiceBinding,
     MultiBinding,
     MultiTemplateBinding,
     PriorityBinding,
@@ -70,11 +71,14 @@ export {
 export {
     ServiceProvider,
     ServiceKey,
+    type IServiceProvider,
+    type IServiceContainer,
     type ServiceConstructor,
     type ServiceToken,
     type ServiceFactory,
     type ServiceLifetime,
 } from './services/service-provider.js';
+export { ServiceBase } from './services/service-base.js';
 // InputManager moved to `@visualisation-sub/mural/framework`.
 // RoutedCommand / CommandBinding / CommandManager / InputBinding /
 // KeyBinding / MouseBinding / ICommandSource + CommandSourceHelper /

@@ -25,6 +25,7 @@ resources MuralFramework {
     import Navigation    from "../framework/navigation/navigation.template.mu.js"
     import Notifications from "../framework/notifications/notifications.template.mu.js"
     import SearchBars    from "../framework/search-bar/search-bar.template.mu.js"
+    import Shells        from "../framework/shell/shell.template.mu.js"
     import StatusBars    from "../framework/status-bar/status-bar.template.mu.js"
     import Surfaces      from "../framework/surfaces/surfaces.template.mu.js"
     import Tabs          from "../framework/tabs/tabs.template.mu.js"

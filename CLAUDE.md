@@ -55,8 +55,16 @@ internals-access escape hatch apply.
 
 ## MVVM
 
-Apply to `*-vm.mjs` files under `demo/demos/`. Not framework, controls,
-or behaviors.
+Apply to `*-vm.mts` files under `demo/demos/` (any remaining `*-vm.mjs`
+too). Not framework, controls, or behaviors.
+
+Demo logic (view-models, services, behaviors, helpers) is authored in
+**TypeScript** as `.mts` and compiled in place to `.mjs` by
+`npm run build:demos:ts` (config: [demo/tsconfig.json](demo/tsconfig.json),
+which type-checks against the library's published `dist/**/*.d.ts`). The
+emitted `.mjs` is what the browser / `.mu` / bootstrap load — keep import
+specifiers pointing at `.mjs`. Thin bootstrap `*.mjs` entry files stay
+plain JS. Run `npm run typecheck:demos` to check demos without a full build.
 
 - **No view-tree reads.** No `view.FindName`, `visualChildren[N]`,
   `Generator.ContainerFromItem`, `templatedParent`. View publishes state
@@ -90,7 +98,7 @@ silently break a rule.
 Third leg of MVVM (V / VM / B). Absorb view-layer concerns that don't
 fit markup triggers or bindings.
 
-- **Location.** Demo-local: `demo/demos/<demo>/behaviors/*-behavior.mjs`.
+- **Location.** Demo-local: `demo/demos/<demo>/behaviors/*-behavior.mts`.
   Promote to `src/Basic/behaviors/` only when ≥ 2 demos need it.
 - **Shape.** Export `attachThing(visual, vmOrConfig)` returning a
   mandatory `detach` thunk.

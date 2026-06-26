@@ -20,92 +20,77 @@
 // label). The framework's auto-BasedOn machinery splices the Figure
 // theme Style underneath the demo's subclass styles, so Template flows
 // from the framework while the demo's setters / triggers add chrome.
-
-import {
-    MetaData,
-    Model,
-    Color,
-    RelayCommand,
-} from '@visualisation-sub/mural/runtime';
+import { MetaData, Model, Color, RelayCommand, } from '@visualisation-sub/mural/runtime';
 import { SolidColorBrush } from '@visualisation-sub/mural/visual-engine';
 import { Figure } from '@visualisation-sub/mural/framework';
 import { DiagramDocument } from '@visualisation-sub/mural/framework';
-
 const NODE_W = 130;
 const NODE_H = 60;
-
 const brush = (hex) => new SolidColorBrush(Color.FromHex(hex));
-const BG_RECT    = brush('#bfdbfe');
+const BG_RECT = brush('#bfdbfe');
 const BG_ELLIPSE = brush('#bbf7d0');
-const BG_NOTE    = brush('#fde68a');
-
+const BG_NOTE = brush('#fde68a');
 // Per-kind Figure subclasses — pure TargetType discriminators with
 // default Fill / LabelText overrides so each kind drops onto the canvas
 // pre-coloured. The catalog kind ('rectangle' / 'ellipse') drives the
 // geometry; the subclass only carries per-instance defaults and an
 // implicit `Style[TargetType=*Figure]` hook for ContextMenu chrome.
-
 export class RectFigure extends Figure {
     static DemoKind = 'rect';
     static {
-        Model.OverrideMetadata(RectFigure, Figure.FillKey,      { default_value: BG_RECT });
+        Model.OverrideMetadata(RectFigure, Figure.FillKey, { default_value: BG_RECT });
         Model.OverrideMetadata(RectFigure, Figure.LabelTextKey, { default_value: 'Rectangle' });
     }
     constructor(id, left, top) {
         super();
-        this.Id     = id;
-        this.Left   = left;
-        this.Top    = top;
-        this.Width  = NODE_W;
+        this.Id = id;
+        this.Left = left;
+        this.Top = top;
+        this.Width = NODE_W;
         this.Height = NODE_H;
         this.ApplyCatalogKind('rectangle');
     }
 }
-
 export class EllipseFigure extends Figure {
     static DemoKind = 'ellipse';
     static {
-        Model.OverrideMetadata(EllipseFigure, Figure.FillKey,      { default_value: BG_ELLIPSE });
+        Model.OverrideMetadata(EllipseFigure, Figure.FillKey, { default_value: BG_ELLIPSE });
         Model.OverrideMetadata(EllipseFigure, Figure.LabelTextKey, { default_value: 'Ellipse' });
     }
     constructor(id, left, top) {
         super();
-        this.Id     = id;
-        this.Left   = left;
-        this.Top    = top;
-        this.Width  = NODE_W;
+        this.Id = id;
+        this.Left = left;
+        this.Top = top;
+        this.Width = NODE_W;
         this.Height = NODE_H;
         this.ApplyCatalogKind('ellipse');
     }
 }
-
 export class NoteFigure extends Figure {
     static DemoKind = 'note';
     static {
-        Model.OverrideMetadata(NoteFigure, Figure.FillKey,      { default_value: BG_NOTE });
+        Model.OverrideMetadata(NoteFigure, Figure.FillKey, { default_value: BG_NOTE });
         Model.OverrideMetadata(NoteFigure, Figure.LabelTextKey, { default_value: 'Note' });
     }
     constructor(id, left, top) {
         super();
-        this.Id     = id;
-        this.Left   = left;
-        this.Top    = top;
-        this.Width  = NODE_W;
+        this.Id = id;
+        this.Left = left;
+        this.Top = top;
+        this.Width = NODE_W;
         this.Height = NODE_H;
         // Notes reuse the rectangle path — flat sticky-note silhouette,
         // distinguished by Fill + Label rather than geometry.
         this.ApplyCatalogKind('rectangle');
     }
 }
-
 const CMD_KIND_TO_CLASS = {
-    rect:    RectFigure,
+    rect: RectFigure,
     ellipse: EllipseFigure,
-    note:    NoteFigure,
+    note: NoteFigure,
 };
-
-export class CommandsVM extends DiagramDocument
-{
+export class CommandsVM extends DiagramDocument {
     // All command surfaces in commands.mu bind via $-syntax
     // (DataContextBinding), which resolves through Model.HasProperty —
     // unregistered plain fields are invisible. Register every command
@@ -115,50 +100,52 @@ export class CommandsVM extends DiagramDocument
     // are populated by the bootstrap from the framework Diagram control's
     // own RelayCommand instances (CommandsVM owns the proxy DPs so the
     // menu / toolbar markup can bind them through `$AlignLeftCommand`).
-    static HasSelectionKey       = Model.RegisterProperty(CommandsVM, 'HasSelection',       false,     MetaData.None);
-    static CutCommandKey         = Model.RegisterProperty(CommandsVM, 'CutCommand',         undefined, MetaData.None);
-    static CopyCommandKey        = Model.RegisterProperty(CommandsVM, 'CopyCommand',        undefined, MetaData.None);
-    static PasteCommandKey       = Model.RegisterProperty(CommandsVM, 'PasteCommand',       undefined, MetaData.None);
-    static DeleteCommandKey      = Model.RegisterProperty(CommandsVM, 'DeleteCommand',      undefined, MetaData.None);
-    static DuplicateCommandKey   = Model.RegisterProperty(CommandsVM, 'DuplicateCommand',   undefined, MetaData.None);
-    static SelectAllCommandKey   = Model.RegisterProperty(CommandsVM, 'SelectAllCommand',   undefined, MetaData.None);
+    static HasSelectionKey = Model.RegisterProperty(CommandsVM, 'HasSelection', false, MetaData.None);
+    static CutCommandKey = Model.RegisterProperty(CommandsVM, 'CutCommand', undefined, MetaData.None);
+    static CopyCommandKey = Model.RegisterProperty(CommandsVM, 'CopyCommand', undefined, MetaData.None);
+    static PasteCommandKey = Model.RegisterProperty(CommandsVM, 'PasteCommand', undefined, MetaData.None);
+    static DeleteCommandKey = Model.RegisterProperty(CommandsVM, 'DeleteCommand', undefined, MetaData.None);
+    static DuplicateCommandKey = Model.RegisterProperty(CommandsVM, 'DuplicateCommand', undefined, MetaData.None);
+    static SelectAllCommandKey = Model.RegisterProperty(CommandsVM, 'SelectAllCommand', undefined, MetaData.None);
     static AlignBottomCommandKey = Model.RegisterProperty(CommandsVM, 'AlignBottomCommand', undefined, MetaData.None);
-    static UndoCommandKey        = Model.RegisterProperty(CommandsVM, 'UndoCommand',        undefined, MetaData.None);
-    static RedoCommandKey        = Model.RegisterProperty(CommandsVM, 'RedoCommand',        undefined, MetaData.None);
-
+    static UndoCommandKey = Model.RegisterProperty(CommandsVM, 'UndoCommand', undefined, MetaData.None);
+    static RedoCommandKey = Model.RegisterProperty(CommandsVM, 'RedoCommand', undefined, MetaData.None);
     // Proxy DPs for the framework Diagram's command surface — the
     // bootstrap (commands.mjs) copies the Diagram's own RelayCommand
     // instances into these so the menu / toolbar bindings reach them
     // via `$AlignLeftCommand` etc.
-    static AlignLeftCommandKey            = Model.RegisterProperty(CommandsVM, 'AlignLeftCommand',            undefined, MetaData.None);
-    static AlignRightCommandKey           = Model.RegisterProperty(CommandsVM, 'AlignRightCommand',           undefined, MetaData.None);
-    static AlignTopCommandKey             = Model.RegisterProperty(CommandsVM, 'AlignTopCommand',             undefined, MetaData.None);
-    static AlignMiddleCommandKey          = Model.RegisterProperty(CommandsVM, 'AlignMiddleCommand',          undefined, MetaData.None);
-    static AlignCenterCommandKey          = Model.RegisterProperty(CommandsVM, 'AlignCenterCommand',          undefined, MetaData.None);
+    static AlignLeftCommandKey = Model.RegisterProperty(CommandsVM, 'AlignLeftCommand', undefined, MetaData.None);
+    static AlignRightCommandKey = Model.RegisterProperty(CommandsVM, 'AlignRightCommand', undefined, MetaData.None);
+    static AlignTopCommandKey = Model.RegisterProperty(CommandsVM, 'AlignTopCommand', undefined, MetaData.None);
+    static AlignMiddleCommandKey = Model.RegisterProperty(CommandsVM, 'AlignMiddleCommand', undefined, MetaData.None);
+    static AlignCenterCommandKey = Model.RegisterProperty(CommandsVM, 'AlignCenterCommand', undefined, MetaData.None);
     static DistributeHorizontalCommandKey = Model.RegisterProperty(CommandsVM, 'DistributeHorizontalCommand', undefined, MetaData.None);
-    static DistributeVerticalCommandKey   = Model.RegisterProperty(CommandsVM, 'DistributeVerticalCommand',   undefined, MetaData.None);
-    static GroupCommandKey                = Model.RegisterProperty(CommandsVM, 'GroupCommand',                undefined, MetaData.None);
-    static UngroupCommandKey              = Model.RegisterProperty(CommandsVM, 'UngroupCommand',              undefined, MetaData.None);
-    static CombineUnionCommandKey         = Model.RegisterProperty(CommandsVM, 'CombineUnionCommand',         undefined, MetaData.None);
-    static CombineIntersectCommandKey     = Model.RegisterProperty(CommandsVM, 'CombineIntersectCommand',     undefined, MetaData.None);
-    static CombineSubtractCommandKey      = Model.RegisterProperty(CommandsVM, 'CombineSubtractCommand',      undefined, MetaData.None);
-    static CombineExcludeCommandKey       = Model.RegisterProperty(CommandsVM, 'CombineExcludeCommand',       undefined, MetaData.None);
-
+    static DistributeVerticalCommandKey = Model.RegisterProperty(CommandsVM, 'DistributeVerticalCommand', undefined, MetaData.None);
+    static GroupCommandKey = Model.RegisterProperty(CommandsVM, 'GroupCommand', undefined, MetaData.None);
+    static UngroupCommandKey = Model.RegisterProperty(CommandsVM, 'UngroupCommand', undefined, MetaData.None);
+    static CombineUnionCommandKey = Model.RegisterProperty(CommandsVM, 'CombineUnionCommand', undefined, MetaData.None);
+    static CombineIntersectCommandKey = Model.RegisterProperty(CommandsVM, 'CombineIntersectCommand', undefined, MetaData.None);
+    static CombineSubtractCommandKey = Model.RegisterProperty(CommandsVM, 'CombineSubtractCommand', undefined, MetaData.None);
+    static CombineExcludeCommandKey = Model.RegisterProperty(CommandsVM, 'CombineExcludeCommand', undefined, MetaData.None);
+    // Cut/Copy stash replayed by Paste. Plain field — view-invisible state.
+    _clipboard = [];
     constructor(storage) {
         super(storage);
-
         const setStatus = (msg) => this.set_property_value(DiagramDocument.StatusKey, msg);
         const selected = () => {
             const out = [];
             const nodes = this.Nodes;
             for (let i = 0; i < nodes.Count; i++) {
                 const v = nodes.Get(i);
-                if (v.IsSelected) out.push(v);
+                // This demo only ever creates Figure subclasses via CreateNode,
+                // so every selected node is a Figure (carries Left/Top setters
+                // + DemoKind). Narrow the Figure|Group element to Figure.
+                if (v !== undefined && v.IsSelected)
+                    out.push(v);
             }
             return out;
         };
         const hasSel = () => this.HasSelection;
-
         // ── Edit commands (selection-gated) ───────────────────────────
         this.set_property_value(CommandsVM.CutCommandKey, new RelayCommand(() => {
             const s = selected();
@@ -173,23 +160,28 @@ export class CommandsVM extends DiagramDocument
         }, hasSel));
         this.set_property_value(CommandsVM.PasteCommandKey, new RelayCommand(() => {
             const c = this._clipboard ?? [];
-            for (const e of c) this.CreateNode(e.kind, e.left + 20, e.top + 20);
+            for (const e of c)
+                this.CreateNode(e.kind, e.left + 20, e.top + 20);
             setStatus(`Pasted ${c.length} node${c.length === 1 ? '' : 's'}.`);
         }, () => Array.isArray(this._clipboard) && this._clipboard.length > 0));
         this.set_property_value(CommandsVM.DeleteCommandKey, new RelayCommand(() => this.DeleteNodes(selected()), hasSel));
         this.set_property_value(CommandsVM.DuplicateCommandKey, new RelayCommand(() => {
             const s = selected();
-            for (const n of s) this.CreateNode(n.constructor.DemoKind, n.Left + 24, n.Top + 24);
+            for (const n of s)
+                this.CreateNode(n.constructor.DemoKind, n.Left + 24, n.Top + 24);
             setStatus(`Duplicated ${s.length} node${s.length === 1 ? '' : 's'}.`);
         }, hasSel));
         this.set_property_value(CommandsVM.SelectAllCommandKey, new RelayCommand(() => {
             const nodes = this.Nodes;
-            for (let i = 0; i < nodes.Count; i++) nodes.Get(i).IsSelected = true;
+            for (let i = 0; i < nodes.Count; i++) {
+                const v = nodes.Get(i);
+                if (v !== undefined)
+                    v.IsSelected = true;
+            }
             this.set_property_value(CommandsVM.HasSelectionKey, nodes.Count > 0);
             this._raiseGated();
             setStatus(`Selected ${nodes.Count} node${nodes.Count === 1 ? '' : 's'}.`);
         }));
-
         // ── Alignment commands ────────────────────────────────────────
         // AlignLeft / Right / Top / Middle / Center proxy to the framework
         // Diagram's own RelayCommands (filled in by the bootstrap). The
@@ -198,14 +190,11 @@ export class CommandsVM extends DiagramDocument
         // Middle covers the common cases; demo needed the explicit
         // bottom-edge gesture for its toolbar parity).
         this.set_property_value(CommandsVM.AlignBottomCommandKey, new RelayCommand(() => this._align('bottom'), hasSel));
-
         // ── Stubs ────────────────────────────────────────────────────
         this.set_property_value(CommandsVM.UndoCommandKey, new RelayCommand(() => setStatus('Undo — no-op stub.')));
         this.set_property_value(CommandsVM.RedoCommandKey, new RelayCommand(() => setStatus('Redo — no-op stub.')));
-
         this._clipboard = [];
     }
-
     // Commands-local kind map — 'rect' / 'ellipse' / 'note' map to the
     // per-kind Figure subclasses defined above. Overrides the inherited
     // DiagramDocument.CreateNode (which routes through Figure.fromKind
@@ -213,60 +202,96 @@ export class CommandsVM extends DiagramDocument
     // — 'rectangle' / 'ellipse' / …). Returns null for unknown kinds.
     CreateNode(kind, left, top) {
         const Cls = CMD_KIND_TO_CLASS[kind];
-        if (Cls === undefined) return null;
+        if (Cls === undefined)
+            return null;
+        // `_nextId` is the base DiagramDocument's private id counter; reach in
+        // through a named interface (cross-class internal — see CLAUDE.md).
         const id = 'n' + this._nextId++;
         const fig = new Cls(id, left, top);
         this.Nodes.Add(fig);
         return fig;
     }
-
-    get HasSelection()       { return this.get_property_value(CommandsVM.HasSelectionKey); }
-    set HasSelection(v)      { this.set_property_value(CommandsVM.HasSelectionKey, v); }
-    get CutCommand()         { return this.get_property_value(CommandsVM.CutCommandKey); }
-    get CopyCommand()        { return this.get_property_value(CommandsVM.CopyCommandKey); }
-    get PasteCommand()       { return this.get_property_value(CommandsVM.PasteCommandKey); }
-    get DeleteCommand()      { return this.get_property_value(CommandsVM.DeleteCommandKey); }
-    get DuplicateCommand()   { return this.get_property_value(CommandsVM.DuplicateCommandKey); }
-    get SelectAllCommand()   { return this.get_property_value(CommandsVM.SelectAllCommandKey); }
+    get HasSelection() { return this.get_property_value(CommandsVM.HasSelectionKey); }
+    set HasSelection(v) { this.set_property_value(CommandsVM.HasSelectionKey, v); }
+    get CutCommand() { return this.get_property_value(CommandsVM.CutCommandKey); }
+    get CopyCommand() { return this.get_property_value(CommandsVM.CopyCommandKey); }
+    get PasteCommand() { return this.get_property_value(CommandsVM.PasteCommandKey); }
+    get DeleteCommand() { return this.get_property_value(CommandsVM.DeleteCommandKey); }
+    get DuplicateCommand() { return this.get_property_value(CommandsVM.DuplicateCommandKey); }
+    get SelectAllCommand() { return this.get_property_value(CommandsVM.SelectAllCommandKey); }
     get AlignBottomCommand() { return this.get_property_value(CommandsVM.AlignBottomCommandKey); }
-    get UndoCommand()        { return this.get_property_value(CommandsVM.UndoCommandKey); }
-    get RedoCommand()        { return this.get_property_value(CommandsVM.RedoCommandKey); }
-
+    get UndoCommand() { return this.get_property_value(CommandsVM.UndoCommandKey); }
+    get RedoCommand() { return this.get_property_value(CommandsVM.RedoCommandKey); }
     /** Bootstrap calls this when the Diagram's SelectionChanged fires.
      *  Flipping HasSelection re-pulses CanExecuteChanged on every
      *  selection-gated command so toolbar / menu / context-menu chrome
      *  refreshes in lockstep. */
     PublishSelectionState(hasSelection) {
-        if (this.HasSelection === hasSelection) return;
+        if (this.HasSelection === hasSelection)
+            return;
         this.set_property_value(CommandsVM.HasSelectionKey, hasSelection);
         this._raiseGated();
     }
-
     _raiseGated() {
         for (const name of [
             'CutCommand', 'CopyCommand', 'DeleteCommand',
             'DuplicateCommand', 'AlignBottomCommand',
         ]) {
+            // Dynamic getter access over a name list — bridge to the
+            // RelayCommand-valued getters via an index signature.
             this[name].RaiseCanExecuteChanged();
         }
-        this.PasteCommand.RaiseCanExecuteChanged();
+        this.PasteCommand?.RaiseCanExecuteChanged();
     }
-
     _align(mode) {
         const sel = [];
         const nodes = this.Nodes;
         for (let i = 0; i < nodes.Count; i++) {
             const v = nodes.Get(i);
-            if (v.IsSelected) sel.push(v);
+            // Demo nodes are all Figures (see selected()); narrow for Left/Top
+            // writes below.
+            if (v !== undefined && v.IsSelected)
+                sel.push(v);
         }
-        if (sel.length === 0) return;
+        if (sel.length === 0)
+            return;
         switch (mode) {
-            case 'left':   { const min = Math.min(...sel.map((n) => n.Left));               for (const n of sel) n.Left = min;               break; }
-            case 'right':  { const max = Math.max(...sel.map((n) => n.Left + NODE_W));      for (const n of sel) n.Left = max - NODE_W;      break; }
-            case 'center': { const avg = sel.reduce((s, n) => s + n.Left + NODE_W / 2, 0) / sel.length; for (const n of sel) n.Left = avg - NODE_W / 2; break; }
-            case 'top':    { const min = Math.min(...sel.map((n) => n.Top));                for (const n of sel) n.Top  = min;               break; }
-            case 'bottom': { const max = Math.max(...sel.map((n) => n.Top + NODE_H));       for (const n of sel) n.Top  = max - NODE_H;      break; }
-            case 'middle': { const avg = sel.reduce((s, n) => s + n.Top + NODE_H / 2, 0) / sel.length; for (const n of sel) n.Top  = avg - NODE_H / 2; break; }
+            case 'left': {
+                const min = Math.min(...sel.map((n) => n.Left));
+                for (const n of sel)
+                    n.Left = min;
+                break;
+            }
+            case 'right': {
+                const max = Math.max(...sel.map((n) => n.Left + NODE_W));
+                for (const n of sel)
+                    n.Left = max - NODE_W;
+                break;
+            }
+            case 'center': {
+                const avg = sel.reduce((s, n) => s + n.Left + NODE_W / 2, 0) / sel.length;
+                for (const n of sel)
+                    n.Left = avg - NODE_W / 2;
+                break;
+            }
+            case 'top': {
+                const min = Math.min(...sel.map((n) => n.Top));
+                for (const n of sel)
+                    n.Top = min;
+                break;
+            }
+            case 'bottom': {
+                const max = Math.max(...sel.map((n) => n.Top + NODE_H));
+                for (const n of sel)
+                    n.Top = max - NODE_H;
+                break;
+            }
+            case 'middle': {
+                const avg = sel.reduce((s, n) => s + n.Top + NODE_H / 2, 0) / sel.length;
+                for (const n of sel)
+                    n.Top = avg - NODE_H / 2;
+                break;
+            }
         }
         this.set_property_value(DiagramDocument.StatusKey, `Align ${mode}: ${sel.length} node${sel.length === 1 ? '' : 's'}.`);
     }
