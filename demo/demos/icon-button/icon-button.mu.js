@@ -3,7 +3,7 @@ import { Border, DataTemplate, Dock, DockPanel, Orientation, Shape, StackPanel, 
 import { ButtonVariant } from "@visualisation-sub/mural/framework/buttons/button.js";
 import { IconButtonToggle } from "@visualisation-sub/mural/framework/buttons/icon-button-toggle.js";
 import { IconButton } from "@visualisation-sub/mural/framework/buttons/icon-button.js";
-import { DataContextBinding, DynamicResource, ResourceDictionary, SelfBinding, Thickness } from "@visualisation-sub/mural/runtime";
+import { DataContextBinding, DynamicResource, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
 import { FontWeight, LineSegment, PathFigure, PathGeometry, Point, QuadraticBezierSegment } from "@visualisation-sub/mural/visual-engine";
 
 
@@ -59,7 +59,6 @@ export class IconButtonDemo extends ResourceDictionary {
             _iconButton8.set_property_value(IconButton.CommandKey, DataContextBinding(_iconButton8, "ClickFilledCommand"));
             const _shape9 = new Shape();
             _shape9.set_property_value(Shape.GeometryKey, DynamicResource(_shape9, "check"));
-            _shape9.set_property_value(Shape.FillKey, SelfBinding(_shape9, TextBlock, "Foreground"));
             _shape9.set_property_value(Shape.WidthKey, 20);
             _shape9.set_property_value(Shape.HeightKey, 20);
             _iconButton8.Content = _shape9;
@@ -69,7 +68,6 @@ export class IconButtonDemo extends ResourceDictionary {
             _iconButton10.set_property_value(IconButton.CommandKey, DataContextBinding(_iconButton10, "ClickTonalCommand"));
             const _shape11 = new Shape();
             _shape11.set_property_value(Shape.GeometryKey, DynamicResource(_shape11, "star"));
-            _shape11.set_property_value(Shape.FillKey, SelfBinding(_shape11, TextBlock, "Foreground"));
             _shape11.set_property_value(Shape.WidthKey, 20);
             _shape11.set_property_value(Shape.HeightKey, 20);
             _iconButton10.Content = _shape11;
@@ -79,7 +77,6 @@ export class IconButtonDemo extends ResourceDictionary {
             _iconButton12.set_property_value(IconButton.CommandKey, DataContextBinding(_iconButton12, "ClickOutlinedCommand"));
             const _shape13 = new Shape();
             _shape13.set_property_value(Shape.GeometryKey, DynamicResource(_shape13, "north_east"));
-            _shape13.set_property_value(Shape.FillKey, SelfBinding(_shape13, TextBlock, "Foreground"));
             _shape13.set_property_value(Shape.WidthKey, 20);
             _shape13.set_property_value(Shape.HeightKey, 20);
             _iconButton12.Content = _shape13;
@@ -89,7 +86,6 @@ export class IconButtonDemo extends ResourceDictionary {
             _iconButton14.set_property_value(IconButton.CommandKey, DataContextBinding(_iconButton14, "ClickStandardCommand"));
             const _shape15 = new Shape();
             _shape15.set_property_value(Shape.GeometryKey, DynamicResource(_shape15, "more_horiz"));
-            _shape15.set_property_value(Shape.FillKey, SelfBinding(_shape15, TextBlock, "Foreground"));
             _shape15.set_property_value(Shape.WidthKey, 20);
             _shape15.set_property_value(Shape.HeightKey, 20);
             _iconButton14.Content = _shape15;
@@ -153,13 +149,11 @@ export class IconButtonDemo extends ResourceDictionary {
             const _stackPanel26 = new StackPanel();
             _stackPanel26.set_property_value(StackPanel.OrientationKey, Orientation.Horizontal);
             _stackPanel26.set_property_value(StackPanel.MarginKey, new Thickness(0, 0, 0, 8));
-            _stackPanel26.set_property_value(TextBlock.ForegroundKey, DynamicResource(_stackPanel26, "OnSurface"));
             const _iconButtonToggle27 = new IconButtonToggle();
             _iconButtonToggle27.set_property_value(IconButtonToggle.VariantKey, ButtonVariant.Filled);
             _iconButtonToggle27.set_property_value(IconButtonToggle.IsCheckedKey, DataContextBinding(_iconButtonToggle27, "FilledChecked"));
             const _shape28 = new Shape();
             _shape28.set_property_value(Shape.GeometryKey, DynamicResource(_shape28, "favorite"));
-            _shape28.set_property_value(Shape.FillKey, SelfBinding(_shape28, TextBlock, "Foreground"));
             _shape28.set_property_value(Shape.WidthKey, 20);
             _shape28.set_property_value(Shape.HeightKey, 20);
             _iconButtonToggle27.Content = _shape28;
@@ -169,7 +163,6 @@ export class IconButtonDemo extends ResourceDictionary {
             _iconButtonToggle29.set_property_value(IconButtonToggle.IsCheckedKey, DataContextBinding(_iconButtonToggle29, "TonalChecked"));
             const _shape30 = new Shape();
             _shape30.set_property_value(Shape.GeometryKey, DynamicResource(_shape30, "star"));
-            _shape30.set_property_value(Shape.FillKey, SelfBinding(_shape30, TextBlock, "Foreground"));
             _shape30.set_property_value(Shape.WidthKey, 20);
             _shape30.set_property_value(Shape.HeightKey, 20);
             _iconButtonToggle29.Content = _shape30;
@@ -179,7 +172,6 @@ export class IconButtonDemo extends ResourceDictionary {
             _iconButtonToggle31.set_property_value(IconButtonToggle.IsCheckedKey, DataContextBinding(_iconButtonToggle31, "OutlinedChecked"));
             const _shape32 = new Shape();
             _shape32.set_property_value(Shape.GeometryKey, DynamicResource(_shape32, "notifications"));
-            _shape32.set_property_value(Shape.FillKey, SelfBinding(_shape32, TextBlock, "Foreground"));
             _shape32.set_property_value(Shape.WidthKey, 20);
             _shape32.set_property_value(Shape.HeightKey, 20);
             _iconButtonToggle31.Content = _shape32;
@@ -189,7 +181,6 @@ export class IconButtonDemo extends ResourceDictionary {
             _iconButtonToggle33.set_property_value(IconButtonToggle.IsCheckedKey, DataContextBinding(_iconButtonToggle33, "StandardChecked"));
             const _shape34 = new Shape();
             _shape34.set_property_value(Shape.GeometryKey, DynamicResource(_shape34, "dark_mode"));
-            _shape34.set_property_value(Shape.FillKey, SelfBinding(_shape34, TextBlock, "Foreground"));
             _shape34.set_property_value(Shape.WidthKey, 20);
             _shape34.set_property_value(Shape.HeightKey, 20);
             _iconButtonToggle33.Content = _shape34;

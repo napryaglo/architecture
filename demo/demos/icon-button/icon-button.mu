@@ -24,10 +24,11 @@ resources IconButtonDemo {
     // build time (the `glyphs` keyword → one PathGeometry resource per
     // entry, addressed by M3 glyph name). The buttons below paint these
     // through Shape[Geometry=@name], so the glyph is true vector geometry
-    // scaled to fit its slot — no font line-box centring quirks. Each
-    // Shape's Fill = $Self.(TextBlock.Foreground): the glyph inherits the
-    // chrome's foreground ink the template sets per variant, so it tracks
-    // the IconButtonToggle checked-state ink flip live.
+    // scaled to fit its slot — no font line-box centring quirks. The
+    // Shapes set no Fill: a Shape with Fill AND Stroke unset paints with
+    // the inherited TextBlock.Foreground, so each glyph picks up the
+    // chrome's foreground ink the template sets per variant and tracks the
+    // IconButtonToggle checked-state ink flip live — no explicit binding.
     glyphs "../../assets/material-symbols-outlined.ttf" {
         check  star  north_east  more_horiz
         favorite  notifications  dark_mode
@@ -54,16 +55,16 @@ resources IconButtonDemo {
 
                     StackPanel[Orientation=Horizontal, Margin=(0,0,0,8)]{
                         IconButton[Variant=Filled,   Command=$ClickFilledCommand]{
-                            Shape[Geometry=@check,      Fill=$Self.(TextBlock.Foreground), Width=20, Height=20]
+                            Shape[Geometry=@check,      Width=20, Height=20]
                         }
                         IconButton[Variant=Tonal,    Command=$ClickTonalCommand]{
-                            Shape[Geometry=@star,       Fill=$Self.(TextBlock.Foreground), Width=20, Height=20]
+                            Shape[Geometry=@star,       Width=20, Height=20]
                         }
                         IconButton[Variant=Outlined, Command=$ClickOutlinedCommand]{
-                            Shape[Geometry=@north_east, Fill=$Self.(TextBlock.Foreground), Width=20, Height=20]
+                            Shape[Geometry=@north_east, Width=20, Height=20]
                         }
                         IconButton[Variant=Standard, Command=$ClickStandardCommand]{
-                            Shape[Geometry=@more_horiz, Fill=$Self.(TextBlock.Foreground), Width=20, Height=20]
+                            Shape[Geometry=@more_horiz, Width=20, Height=20]
                         }
                     }
 
@@ -84,18 +85,18 @@ resources IconButtonDemo {
                               FontWeight=Bold, FontSize=14,
                               Foreground=@OnSurface, Margin=(0,0,0,12)]
 
-                    StackPanel[Orientation=Horizontal, Margin=(0,0,0,8), TextBlock.Foreground=@OnSurface]{
+                    StackPanel[Orientation=Horizontal, Margin=(0,0,0,8)]{
                         IconButtonToggle[Variant=Filled,   IsChecked=$FilledChecked]{
-                            Shape[Geometry=@favorite,      Fill=$Self.(TextBlock.Foreground), Width=20, Height=20]
+                            Shape[Geometry=@favorite,      Width=20, Height=20]
                         }
                         IconButtonToggle[Variant=Tonal,    IsChecked=$TonalChecked]{
-                            Shape[Geometry=@star,          Fill=$Self.(TextBlock.Foreground), Width=20, Height=20]
+                            Shape[Geometry=@star,          Width=20, Height=20]
                         }
                         IconButtonToggle[Variant=Outlined, IsChecked=$OutlinedChecked]{
-                            Shape[Geometry=@notifications, Fill=$Self.(TextBlock.Foreground), Width=20, Height=20]
+                            Shape[Geometry=@notifications, Width=20, Height=20]
                         }
                         IconButtonToggle[Variant=Standard, IsChecked=$StandardChecked]{
-                            Shape[Geometry=@dark_mode,     Fill=$Self.(TextBlock.Foreground), Width=20, Height=20]
+                            Shape[Geometry=@dark_mode,     Width=20, Height=20]
                         }
                     }
 
