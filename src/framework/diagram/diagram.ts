@@ -14,6 +14,8 @@ import type { DataTemplate } from '../../basic/templates/data-template.js';
 import { AdornerLayer } from '../../visual-engine/index.js';
 import { Figure } from './figure.js';
 import { Group } from './group.js';
+import { connectorCapOptions } from './caps/connector-cap-options.js';
+import type { CapOption } from '../formatting/cap-option.js';
 import { Selector } from '../list/selector.js';
 import { DiagramCommands } from './collaborators/diagram-commands.js';
 import { DiagramConnectorsMaterializer } from './collaborators/diagram-connectors-materializer.js';
@@ -89,6 +91,8 @@ export type DiagramPositionSnap = (rect: Rect) => Rect;
 // Figure containers are placed on a Canvas that honours their
 // Canvas.Left / Canvas.Top — Figure mirrors its own Left / Top onto
 // those attached properties so a parent Canvas places it.
+const EMPTY_CAP_OPTIONS: readonly CapOption[] = Object.freeze([]) as readonly CapOption[];
+
 export class Diagram extends Selector
 {
     static {
@@ -253,6 +257,19 @@ export class Diagram extends Selector
     public static readonly SelectionFormatStrokeKey = Model.RegisterProperty<Pen   | undefined>(
         Diagram, 'SelectionFormatStroke', undefined, MetaData.None);
 
+    // Connector end-cap format channel. FormatMirror seeds these from the
+    // first selected connector and broadcasts edits onto every selected
+    // connector's Source/TargetCapTemplate. SelectionIsConnector is the
+    // editor's "show the cap section" signal — true when the selection is
+    // (entirely) connectors. The VALUE is the cap DataTemplate (undefined
+    // = no cap at that end).
+    public static readonly SelectionFormatSourceCapKey = Model.RegisterProperty<DataTemplate | undefined>(
+        Diagram, 'SelectionFormatSourceCap', undefined, MetaData.None);
+    public static readonly SelectionFormatTargetCapKey = Model.RegisterProperty<DataTemplate | undefined>(
+        Diagram, 'SelectionFormatTargetCap', undefined, MetaData.None);
+    public static readonly SelectionIsConnectorKey = Model.RegisterProperty<boolean>(
+        Diagram, 'SelectionIsConnector', false, MetaData.None);
+
     public get PositionSnap():  DiagramPositionSnap | undefined { return this.get_property_value(Diagram.PositionSnapKey); }
     public set PositionSnap(v: DiagramPositionSnap | undefined) { this.set_property_value(Diagram.PositionSnapKey, v); }
 
@@ -300,6 +317,23 @@ export class Diagram extends Selector
     public set SelectionFormatFill(v:    Brush | undefined) { this.set_property_value(Diagram.SelectionFormatFillKey, v); }
     public get SelectionFormatStroke():  Pen   | undefined { return this.get_property_value(Diagram.SelectionFormatStrokeKey); }
     public set SelectionFormatStroke(v:  Pen   | undefined) { this.set_property_value(Diagram.SelectionFormatStrokeKey, v); }
+    public get SelectionFormatSourceCap(): DataTemplate | undefined { return this.get_property_value(Diagram.SelectionFormatSourceCapKey); }
+    public set SelectionFormatSourceCap(v: DataTemplate | undefined) { this.set_property_value(Diagram.SelectionFormatSourceCapKey, v); }
+    public get SelectionFormatTargetCap(): DataTemplate | undefined { return this.get_property_value(Diagram.SelectionFormatTargetCapKey); }
+    public set SelectionFormatTargetCap(v: DataTemplate | undefined) { this.set_property_value(Diagram.SelectionFormatTargetCapKey, v); }
+    public get SelectionIsConnector():   boolean { return this.get_property_value(Diagram.SelectionIsConnectorKey); }
+    public set SelectionIsConnector(v:   boolean) { this.set_property_value(Diagram.SelectionIsConnectorKey, v); }
+
+    // Standard connector-cap dropdown list for a ShapeFormatControl's
+    // CapOptions DP. A real DP (not a plain getter) so a markup binding
+    // `CapOptions=$diagram.ConnectorCapOptions` resolves — ElementName /
+    // DataContext bindings only walk registered properties. Populated in
+    // the ctor; each option resolves its cap template lazily, so building
+    // the list before the cap catalog is registered is fine. Convenience
+    // only — the editor itself is cap-agnostic.
+    public static readonly ConnectorCapOptionsKey = Model.RegisterProperty<readonly CapOption[]>(
+        Diagram, 'ConnectorCapOptions', EMPTY_CAP_OPTIONS, MetaData.None);
+    public get ConnectorCapOptions(): readonly CapOption[] { return this.get_property_value(Diagram.ConnectorCapOptionsKey); }
     public get AlignmentGuides(): readonly AlignmentGuide[] { return this.get_property_value(Diagram.AlignmentGuidesKey); }
     /** @internal — used by AlignmentGuidesBehavior to drive the read-only DP. */
     public _setAlignmentGuides(guides: readonly AlignmentGuide[]): void
@@ -546,6 +580,10 @@ export class Diagram extends Selector
         new FormatMirror(this);
         new SelectionReflector(this);
         this._connectorsMaterializer = new DiagramConnectorsMaterializer(this);
+        // Seed the cap dropdown catalog. Safe here despite the cap
+        // resources not being registered yet — each option resolves its
+        // template lazily on read (see connectorCapOptions / CapOption).
+        this.set_property_value(Diagram.ConnectorCapOptionsKey, connectorCapOptions());
     }
 
     // PointerDown anywhere on the Diagram surface takes keyboard focus

@@ -1,11 +1,22 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from '../../basic/tests/test-app.js';
-import { ObservableCollection } from '../../runtime/index.js';
+import { ObservableCollection, type Visual } from '../../runtime/index.js';
 import { Border } from '../../basic/border.js';
+import { Canvas } from '../../basic/panels/canvas.js';
+import { ClickAwayScrim } from '../../basic/click-away-scrim.js';
 import { TextBlock } from '../../basic/text-block.js';
 import { HeadlessTarget } from '../../visual-engine/index.js';
 import { FabMenu } from '../buttons/fab-menu.js';
+
+// Reach the single positioning host the FAB attaches to the OverlayLayer,
+// then its [scrim, menu] children.
+interface ChildHost { Children: { Count: number; Get(i: number): Visual }; }
+function overlayHost(target: HeadlessTarget): ChildHost
+{
+    const overlay = target.OverlayRoot as unknown as ChildHost;
+    return overlay.Children.Get(0) as unknown as ChildHost;
+}
 
 describe('FabMenu defaults', () => {
 
@@ -23,24 +34,109 @@ describe('FabMenu defaults', () => {
 
 describe('FabMenu open/close lifecycle', () => {
 
-    test('IsOpen → true mounts a scrim + items host on the OverlayLayer', () => {
+    test('IsOpen → true mounts a single positioning host (scrim + items) on the OverlayLayer', () => {
         initTestApp();
         const fm = new FabMenu();
         const items = new ObservableCollection<unknown>();
         items.Add(new Border());
         items.Add(new Border());
-        fm.Items = items as unknown as ObservableCollection<import('../../runtime/index.js').Visual>;
+        fm.Items = items as unknown as ObservableCollection<Visual>;
         const target = new HeadlessTarget(400, 400);
         target.Content = fm;
         target.Flush();
 
         assert.equal(target.OverlayRoot, undefined);
         fm.IsOpen = true;
-        const overlay = target.OverlayRoot as Border | undefined;
+        const overlay = target.OverlayRoot as unknown as { Children: { Count: number } } | undefined;
         assert.ok(overlay !== undefined, 'overlay layer mounted');
-        // Scrim + menu host = 2 children on the OverlayLayer.
-        const overlayChildren = (overlay as unknown as { Children: { Count: number } }).Children;
-        assert.equal(overlayChildren.Count, 2);
+        // ONE overlay child — the positioning host. Bare scrim + stack
+        // attached directly would each be arranged at the full surface
+        // slot and stack the items from (0,0).
+        assert.equal(overlay!.Children.Count, 1);
+        const host = overlayHost(target);
+        // The host owns [scrim, menu].
+        assert.equal(host.Children.Count, 2);
+        assert.ok(host.Children.Get(0) instanceof ClickAwayScrim, 'child 0 is the dismissal scrim');
+    });
+
+    test('menu stack is positioned above the FAB, not pinned to the surface origin', () => {
+        initTestApp();
+        const fm = new FabMenu();
+        const a = new Border(); a.Width = 56; a.Height = 56;
+        const b = new Border(); b.Width = 56; b.Height = 56;
+        const items = new ObservableCollection<unknown>();
+        items.Add(a);
+        items.Add(b);
+        fm.Items = items as unknown as ObservableCollection<Visual>;
+
+        // Place the FAB well away from the origin so the old (0,0) bug is
+        // visible: a menu pinned to the top-left would be far from here.
+        const canvas = new Canvas();
+        Canvas.SetLeft(fm as unknown as Visual, 120);
+        Canvas.SetTop(fm as unknown as Visual, 240);
+        canvas.AddChild(fm as unknown as Visual);
+        const target = new HeadlessTarget(400, 400);
+        target.Content = canvas;
+        target.Flush();
+
+        fm.IsOpen = true;
+        target.Flush();   // run layout so the overlay host arranges
+
+        const host = overlayHost(target);
+        const menu = host.Children.Get(1);
+        const ar  = menu.ArrangedRect;
+        const fab = (fm as unknown as Visual).ArrangedRect;   // (120, 240, w, h)
+        assert.equal(fab.X, 120);
+        assert.equal(fab.Y, 240);
+
+        // Menu bottom sits exactly `Gap` (12) above the FAB top — above,
+        // not at the surface origin.
+        assert.ok(Math.abs((ar.Y + ar.Height) - (fab.Y - 12)) < 1,
+            `menu bottom should be gap above the FAB top; got Y=${ar.Y} H=${ar.Height}`);
+        // Horizontally centred on the FAB, NOT pinned to x=0.
+        assert.ok(ar.X > 0, 'menu is not pinned to the left edge (the (0,0) bug)');
+        assert.ok(Math.abs((ar.X + ar.Width / 2) - (fab.X + fab.Width / 2)) < 1,
+            'menu is horizontally centred on the FAB');
+    });
+
+    test('reopen after close works — items are released from the old stack on teardown', async () => {
+        initTestApp();
+        const fm = new FabMenu();
+        fm.StaggerMs  = 10;
+        fm.DurationMs = 100;
+        const a = new Border();
+        const items = new ObservableCollection<unknown>();
+        items.Add(a);
+        fm.Items = items as unknown as ObservableCollection<Visual>;
+        const target = new HeadlessTarget(400, 400);
+        target.Content = fm;
+        target.Flush();
+
+        // open → close → wait for teardown → open again must NOT throw
+        // (AttachVisual rejects a still-parented child).
+        fm.IsOpen = true;
+        fm.IsOpen = false;
+        await new Promise<void>(r => setTimeout(r, 300));
+        assert.doesNotThrow(() => { fm.IsOpen = true; });
+        const host = overlayHost(target);
+        assert.equal(host.Children.Count, 2, 'menu re-mounted on reopen');
+    });
+
+    test('clicking the scrim (outside the menu) dismisses', () => {
+        initTestApp();
+        const fm = new FabMenu();
+        const items = new ObservableCollection<unknown>();
+        items.Add(new Border());
+        fm.Items = items as unknown as ObservableCollection<Visual>;
+        const target = new HeadlessTarget(400, 400);
+        target.Content = fm;
+        target.Flush();
+
+        fm.IsOpen = true;
+        const scrim = overlayHost(target).Children.Get(0) as unknown as ClickAwayScrim;
+        assert.ok(scrim instanceof ClickAwayScrim);
+        scrim.onClick?.();
+        assert.equal(fm.IsOpen, false, 'an outside click clears IsOpen');
     });
 
     test('Items start with Opacity=0 + slide-down Margin on open (storyboard reveals from there)', () => {

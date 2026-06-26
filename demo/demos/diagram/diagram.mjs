@@ -11,7 +11,7 @@ import { Application } from '@visualisation-sub/mural/runtime';
 import { ConnectorEndpoint, DiagramDocument } from '@visualisation-sub/mural/framework';
 import { DiagramDemo } from './diagram.mu.js';
 import { register } from '../../platform/registry.mjs';
-import Icons from '../../assets/icons.mjs';
+import { Icons } from '../../assets/icons.mu.js';
 
 const LocalStorageService = {
     GetItem(key)        { return window.localStorage.getItem(key); },
@@ -29,7 +29,7 @@ register({
     factory: () => {
         if (!resourcesMerged) {
             Application.current?.Resources.AddMergedDictionary(DiagramDemo.Clone());
-            Application.current?.Resources.AddMergedDictionary(Icons);
+            Application.current?.Resources.AddMergedDictionary(Icons.Clone());
             resourcesMerged = true;
         }
         if (docInstance === undefined) {

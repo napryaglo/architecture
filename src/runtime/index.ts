@@ -22,6 +22,7 @@ export {
     AncestorBinding,
     Binding,
     BindingMode,
+    composeConverters,
     DataContextBinding,
     DynamicResource,
     EffectiveValueDescriptor,

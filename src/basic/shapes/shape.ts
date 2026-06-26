@@ -2,6 +2,8 @@ import { Element, MetaData, Model, Size, type DrawingContext, type PropertyDescr
 import type { PropertyKey } from '../../runtime/index.js';
 import { resolveKey } from '../../runtime/model-internals.js';
 import { Brush, Geometry, Pen } from '../../visual-engine/index.js';
+import { MatrixTransform } from '../../visual-engine/drawing/transform.js';
+import { Matrix } from '../../visual-engine/primitives.js';
 
 // One-line rendering primitive: hand it a Geometry, a Fill, and a
 // Stroke, get back exactly what a DrawingContext call would paint —
@@ -95,9 +97,57 @@ export class Shape extends Element
     {
         const g = this.Geometry;
         if (g === undefined) return;
+        // Fit a SHARED geometry into this Shape's slot. Icons resolve a
+        // single Geometry instance from a ResourceDictionary (authored in
+        // a fixed box, e.g. 24×24) that many Shapes paint at different
+        // sizes; we scale to fit by pushing a transform FRAME rather than
+        // mutating the shared geometry. No fit when the slot already
+        // matches the geometry (the common case — authored at its used
+        // size) or when the slot is degenerate: Connector paints its route
+        // in absolute canvas coordinates at Size.Zero and must NOT scale.
+        const fit = this.fitTransform(g);
+        if (fit !== undefined)
+        {
+            dc.PushTransform(fit);
+            dc.DrawGeometry(this.Fill, this.Stroke, g);
+            dc.Pop();
+            return;
+        }
         // One call. The DC takes the same (brush, pen, geometry) shape
         // the Shape DPs are modelled on — no per-render synthesis needed.
         dc.DrawGeometry(this.Fill, this.Stroke, g);
+    }
+
+    // Uniform-scale + center transform mapping the geometry's bounds into
+    // the render slot, or undefined when no scaling is wanted. Mirrors the
+    // viewBox→slot math the Icon control uses, but driven off the
+    // geometry's own bounds (its implicit viewBox) so a plain
+    // `Shape [Geometry=@homeIcon]` scales with no extra DP.
+    private fitTransform(g: Geometry): MatrixTransform | undefined
+    {
+        const size = this.RenderSize;
+        // Degenerate slot → paint as authored. Guards Connector (Size.Zero
+        // route in absolute coords) and any unsized Shape.
+        if (!(size.Width > 0) || !(size.Height > 0)
+            || !Number.isFinite(size.Width) || !Number.isFinite(size.Height))
+        {
+            return undefined;
+        }
+        const b = g.GetBounds();
+        if (!(b.Width > 0) || !(b.Height > 0)) return undefined;
+        // Already aligned to the slot at 1:1 → nothing to do (icon authored
+        // at exactly its used size; a Figure shape sized to its geometry).
+        const EPS = 1e-3;
+        if (Math.abs(b.X) < EPS && Math.abs(b.Y) < EPS
+            && Math.abs(b.Width  - size.Width)  < EPS
+            && Math.abs(b.Height - size.Height) < EPS)
+        {
+            return undefined;
+        }
+        const s    = Math.min(size.Width / b.Width, size.Height / b.Height);
+        const offX = (size.Width  - b.Width  * s) / 2 - b.X * s;
+        const offY = (size.Height - b.Height * s) / 2 - b.Y * s;
+        return new MatrixTransform(new Matrix(s, 0, 0, s, offX, offY));
     }
 }
 

@@ -539,6 +539,36 @@ export interface BindingOptions
     validationRules?: readonly ValidationRule[];
 }
 
+// Compose a converter CHAIN left-to-right for the `$path << a << b`
+// syntax: `convert` runs a, then b, … (each feeding the next); on TwoWay
+// writeback `convertBack` runs them in REVERSE, skipping any link that
+// has no convertBack (that stage passes through, matching a single
+// converter's pass-through contract). A single converter is returned
+// as-is so its own convertBack presence is preserved; an empty chain is
+// the identity converter.
+export function composeConverters(converters: readonly ValueConverter[]): ValueConverter
+{
+    if (converters.length === 1) return converters[0]!;
+    return {
+        convert(value: any): any
+        {
+            let out = value;
+            for (const c of converters) out = c.convert(out);
+            return out;
+        },
+        convertBack(value: any): any
+        {
+            let out = value;
+            for (let i = converters.length - 1; i >= 0; i--)
+            {
+                const back = converters[i]!.convertBack;
+                if (back !== undefined) out = back(out);
+            }
+            return out;
+        },
+    };
+}
+
 // Composes two converters: outer(inner(value)) for convert; for
 // convertBack, only the inner one applies (outer is treated as one-way,
 // since StringFormat composition uses this and string formatting is
@@ -721,9 +751,18 @@ export class Binding
         {
             return false;
         }
-        const back = this.converter?.convertBack !== undefined
+        return this.path.set_value(this.source, this.applyConvertBack(value));
+    }
+
+    // Run a writeback value through the converter's `convertBack` (or pass
+    // it through when absent). Subclass bindings whose real source differs
+    // from the base watcher (DataContext / ElementName write to the VM /
+    // named element, not `watcher.Value`) call this so that source gets the
+    // back-converted value — matching what the base wrote to the watcher.
+    protected applyConvertBack(value: any): any
+    {
+        return this.converter?.convertBack !== undefined
             ? this.converter.convertBack(value)
             : value;
-        return this.path.set_value(this.source, back);
     }
 }

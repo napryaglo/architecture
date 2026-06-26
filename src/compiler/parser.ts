@@ -20,6 +20,7 @@ import type {
     DataTemplateBody,
     Document,
     DefForm,
+    IncludeForm,
     DynamicResourceValue,
     ElementNode,
     EventTriggerGroup,
@@ -242,6 +243,25 @@ export class Parser
             source,
             span: this.span(start, end),
         };
+    }
+
+    // `include "<path>" [as <key>]` — a resource-dictionary body item that
+    // splices an external file in at compile time. `as <key>` is only
+    // meaningful for a single-file path; a glob keys each match by
+    // basename (enforced in the emit pass, which knows how many files the
+    // resolver matched).
+    private parseIncludeForm(): IncludeForm
+    {
+        const start = this.expectIdent('include').span.start;
+        const path  = this.expect(TokenKind.String).value;
+        let key: string | undefined;
+        if (this.peek().kind === TokenKind.Ident && this.peek().value === 'as')
+        {
+            this.consume();
+            key = this.expect(TokenKind.Ident).value;
+        }
+        const end = this.lastEnd();
+        return { kind: 'include-form', path, key, span: this.span(start, end) };
     }
 
     // `theme Identifier { import …; tokens { … }; …body… }`
@@ -1346,6 +1366,7 @@ export class Parser
                 case 'HierarchicalDataTemplate':
                 case 'ItemsPanelTemplate': return this.parseResourceForm();
                 case 'def':          return this.parseDefForm();
+                case 'include':      return this.parseIncludeForm();
                 default:
                     // SlotAssign vs Element disambiguation.
                     if (this.peek(1).kind === TokenKind.Colon)
@@ -1580,7 +1601,20 @@ export class Parser
             this.consume();
             path.push(this.expect(TokenKind.Ident).value);
         }
-        return { kind: 'binding', path, span: this.span(dollar.span.start, this.lastEnd()) };
+        // Optional converter chain: `<< conv1 << conv2 …`. Each is an
+        // imported ValueConverter symbol; they compose left-to-right.
+        const converters: string[] = [];
+        while (this.peek().kind === TokenKind.LessLess)
+        {
+            this.consume();
+            converters.push(this.expect(TokenKind.Ident).value);
+        }
+        return {
+            kind: 'binding',
+            path,
+            converters: converters.length > 0 ? converters : undefined,
+            span: this.span(dollar.span.start, this.lastEnd()),
+        };
     }
 
     private parseTemplateBinding(): TemplateBindingValue

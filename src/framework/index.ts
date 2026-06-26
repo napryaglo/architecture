@@ -41,6 +41,7 @@ export { BrushPicker, BrushPickerVariant } from './formatting/brush-picker.js';
 export { PenEditor } from './formatting/pen-editor.js';
 export { FillEditor, FillEditorVariant } from './formatting/fill-editor.js';
 export { ShapeFormatControl } from './formatting/shape-format-control.js';
+export { CapOption } from './formatting/cap-option.js';
 export { TopAppBar, TopAppBarVariant } from './top-app-bar/top-app-bar.js';
 export { NavigationItem } from './navigation/navigation-item.js';
 export { NavigationRail } from './navigation/navigation-rail.js';
@@ -168,6 +169,7 @@ export {
     type DiagramMutator,
 } from './diagram/behaviors/attach-standard-mutations.js';
 export { Connector, AnchorClip } from './diagram/connector.js';
+export { connectorCapOptions } from './diagram/caps/connector-cap-options.js';
 export { ConnectorEndpoint, type ConnectorEndpointInit } from './diagram/connector-endpoint.js';
 export { Port, PortSide, PortCoordSpace, PortResolver, type PortInit, type IPortHost } from './diagram/port.js';
 export { ConnectorEnd, RoutingMode, type ResolvedAnchor, type RouteSpec, type IRouter, type ResolvedPortSide } from './diagram/routing/router.js';

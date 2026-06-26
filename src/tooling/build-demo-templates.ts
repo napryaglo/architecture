@@ -4,6 +4,7 @@ import { join, dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { compile, EmitError } from '../compiler/compile.js';
 import { ParseError } from '../compiler/parser.js';
+import { makeIncludeResolver } from './include-resolver.js';
 
 // Compiles every `.mu` file under the demo tree into a sibling
 // `.mu.js` file. Run via `npm run build:demos` (chained into
@@ -46,7 +47,8 @@ export function buildDemoTemplates(opts: BuildOptions): number
     for (const input of inputs)
     {
         const source  = readFileSync(input, 'utf8');
-        const result  = compile(source);
+        // `include` paths resolve relative to the .mu file's own directory.
+        const result  = compile(source, { include: makeIncludeResolver(dirname(input)) });
         const outPath = input.replace(/\.mu$/, '.mu.js');
         writeFileSync(outPath, result.js, 'utf8');
         process.stdout.write(

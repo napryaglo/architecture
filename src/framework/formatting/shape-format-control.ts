@@ -9,8 +9,13 @@ import { Brush, Pen } from '../../visual-engine/index.js';
 import { TemplatedControl } from '../../basic/templated-control.js';
 import { StackPanel } from '../../basic/panels/stack-panel.js';
 import { TextBlock } from '../../basic/text-block.js';
+import { type DataTemplate } from '../../basic/templates/data-template.js';
+import { ComboBox } from '../list/combo-box.js';
+import { CapOption } from './cap-option.js';
 import { FillEditor } from './fill-editor.js';
 import { PenEditor } from './pen-editor.js';
+
+const EMPTY_CAP_OPTIONS: readonly CapOption[] = Object.freeze([]) as readonly CapOption[];
 
 // PowerPoint-style "Format Shape" pane — one column that combines the
 // existing FillEditor (PowerPoint's "Fill" pane) and PenEditor
@@ -44,10 +49,37 @@ export class ShapeFormatControl extends TemplatedControl
         ShapeFormatControl, 'Stroke', undefined,
         MetaData.None | MetaData.BindsTwoWayByDefault);
 
+    // Connector end-cap I/O. Two-way like Fill/Stroke so a consumer's
+    // mirror DP (e.g. Diagram.SelectionFormatSourceCap) round-trips a cap
+    // chosen in the dropdown back onto the selected connector(s). The
+    // VALUE is the DataTemplate to apply at that end (undefined = "None").
+    // The dropdown rows come from CapOptions; ShowCaps gates the whole
+    // cap section so it only appears for a connector selection. The
+    // formatting layer stays domain-agnostic — the consumer supplies the
+    // catalog via CapOptions (see the diagram layer's connectorCapOptions()).
+    public static readonly SourceCapTemplateKey = Model.RegisterProperty<DataTemplate | undefined>(
+        ShapeFormatControl, 'SourceCapTemplate', undefined,
+        MetaData.None | MetaData.BindsTwoWayByDefault);
+    public static readonly TargetCapTemplateKey = Model.RegisterProperty<DataTemplate | undefined>(
+        ShapeFormatControl, 'TargetCapTemplate', undefined,
+        MetaData.None | MetaData.BindsTwoWayByDefault);
+    public static readonly ShowCapsKey = Model.RegisterProperty<boolean>(
+        ShapeFormatControl, 'ShowCaps', false, MetaData.None);
+    public static readonly CapOptionsKey = Model.RegisterProperty<readonly CapOption[]>(
+        ShapeFormatControl, 'CapOptions', EMPTY_CAP_OPTIONS, MetaData.None);
+
     public get Fill():   Brush | undefined  { return this.get_property_value(ShapeFormatControl.FillKey); }
     public set Fill(v:   Brush | undefined) { this.set_property_value(ShapeFormatControl.FillKey, v); }
     public get Stroke(): Pen | undefined    { return this.get_property_value(ShapeFormatControl.StrokeKey); }
     public set Stroke(v: Pen | undefined)   { this.set_property_value(ShapeFormatControl.StrokeKey, v); }
+    public get SourceCapTemplate(): DataTemplate | undefined { return this.get_property_value(ShapeFormatControl.SourceCapTemplateKey); }
+    public set SourceCapTemplate(v: DataTemplate | undefined) { this.set_property_value(ShapeFormatControl.SourceCapTemplateKey, v); }
+    public get TargetCapTemplate(): DataTemplate | undefined { return this.get_property_value(ShapeFormatControl.TargetCapTemplateKey); }
+    public set TargetCapTemplate(v: DataTemplate | undefined) { this.set_property_value(ShapeFormatControl.TargetCapTemplateKey, v); }
+    public get ShowCaps():   boolean                 { return this.get_property_value(ShapeFormatControl.ShowCapsKey); }
+    public set ShowCaps(v:   boolean)                { this.set_property_value(ShapeFormatControl.ShowCapsKey, v); }
+    public get CapOptions(): readonly CapOption[]    { return this.get_property_value(ShapeFormatControl.CapOptionsKey); }
+    public set CapOptions(v: readonly CapOption[])   { this.set_property_value(ShapeFormatControl.CapOptionsKey, v); }
 
     static {
         Model.OverrideMetadata(ShapeFormatControl, Element.DefaultStyleKeyKey, { default_value: ShapeFormatControl });
@@ -63,6 +95,11 @@ export class ShapeFormatControl extends TemplatedControl
     // flows in.
     private _editors:        StackPanel | undefined;
     private _emptyMessage:   TextBlock  | undefined;
+    // Connector cap section. PART_CapSection collapses unless ShowCaps;
+    // the two combos pick the per-end cap template from CapOptions.
+    private _capSection:     StackPanel | undefined;
+    private _sourceCapCombo: ComboBox   | undefined;
+    private _targetCapCombo: ComboBox   | undefined;
     private _partListeners: Array<() => void> = [];
 
     constructor()
@@ -78,7 +115,12 @@ export class ShapeFormatControl extends TemplatedControl
         this._penEditor  = this.GetTemplateChild('PART_PenEditor')  as PenEditor  | undefined;
         this._editors      = this.GetTemplateChild('PART_Editors')      as StackPanel | undefined;
         this._emptyMessage = this.GetTemplateChild('PART_EmptyMessage') as TextBlock  | undefined;
+        this._capSection     = this.GetTemplateChild('PART_CapSection')   as StackPanel | undefined;
+        this._sourceCapCombo = this.GetTemplateChild('PART_SourceCap')    as ComboBox   | undefined;
+        this._targetCapCombo = this.GetTemplateChild('PART_TargetCap')    as ComboBox   | undefined;
         this.refreshEmptyState();
+        this.refreshCapVisibility();
+        this.wireCapCombos();
 
         if (this._fillEditor !== undefined)
         {
@@ -133,6 +175,17 @@ export class ShapeFormatControl extends TemplatedControl
         {
             this.refreshEmptyState();
         }
+        // Cap-section DPs. ShowCaps + CapOptions refresh regardless of the
+        // _syncing guard (they're consumer-driven structural changes, not
+        // editor echoes).
+        if (descriptor.Name === 'ShowCaps')
+        {
+            this.refreshCapVisibility();
+        }
+        else if (descriptor.Name === 'CapOptions')
+        {
+            this.populateCapCombos();
+        }
         if (this._syncing) return;
         // External writes (consumer set Fill / Stroke) → push the new
         // value into the matching editor under _syncing so the
@@ -146,6 +199,12 @@ export class ShapeFormatControl extends TemplatedControl
                     break;
                 case 'Stroke':
                     if (this._penEditor !== undefined)  this._penEditor.Pen   = newValue as Pen   | undefined;
+                    break;
+                case 'SourceCapTemplate':
+                    this.selectCapOption(this._sourceCapCombo, newValue as DataTemplate | undefined);
+                    break;
+                case 'TargetCapTemplate':
+                    this.selectCapOption(this._targetCapCombo, newValue as DataTemplate | undefined);
                     break;
             }
         } finally { this._syncing = false; }
@@ -170,5 +229,91 @@ export class ShapeFormatControl extends TemplatedControl
         {
             msg.Visibility = empty ? Visibility.Visible : Visibility.Collapsed;
         }
+    }
+
+    // ShowCaps gates the whole cap section — it only makes sense for a
+    // connector selection, which the consumer signals via ShowCaps.
+    private refreshCapVisibility(): void
+    {
+        const section = this._capSection;
+        if (section !== undefined)
+        {
+            section.Visibility = this.ShowCaps ? Visibility.Visible : Visibility.Collapsed;
+        }
+    }
+
+    // Populate both cap combos from CapOptions and two-way wire each
+    // combo's SelectedItem to the matching cap-template DP. Re-run when
+    // CapOptions changes (the consumer typically sets it once, but a late
+    // assignment must still populate the dropdowns).
+    private wireCapCombos(): void
+    {
+        this.populateCapCombos();
+        this.wireCapCombo(this._sourceCapCombo,
+            () => this.SourceCapTemplate,
+            v  => { this.SourceCapTemplate = v; });
+        this.wireCapCombo(this._targetCapCombo,
+            () => this.TargetCapTemplate,
+            v  => { this.TargetCapTemplate = v; });
+    }
+
+    private populateCapCombos(): void
+    {
+        const options = this.CapOptions as readonly CapOption[] as unknown[];
+        // CRITICAL: set Items under the _syncing guard. Assigning combo.Items
+        // makes the ComboBox re-evaluate its selection and fire a SelectedItem
+        // change — which is NOT a user pick. If the cap-template handler treats
+        // it as one and writes it back through the TwoWay cap binding while that
+        // binding's source is still an unresolved forward reference (the demo's
+        // `$nodes.SelectionFormatTargetCap`, where the Diagram is constructed
+        // later in the markup), the writeback fails and effective-value.ts
+        // DISPOSES the binding — permanently. A later genuine pick then writes
+        // only locally and never reaches the diagram, so the connector's caps
+        // never update. Guarding population makes the handler bail on the
+        // spurious change and keeps the binding alive for real selections.
+        const wasSyncing = this._syncing;
+        this._syncing = true;
+        try
+        {
+            if (this._sourceCapCombo !== undefined) this._sourceCapCombo.Items = options;
+            if (this._targetCapCombo !== undefined) this._targetCapCombo.Items = options;
+        }
+        finally { this._syncing = wasSyncing; }
+        // Re-seed each combo's selection against the current DP value now
+        // that the item set is known.
+        this.selectCapOption(this._sourceCapCombo, this.SourceCapTemplate);
+        this.selectCapOption(this._targetCapCombo, this.TargetCapTemplate);
+    }
+
+    private wireCapCombo(
+        combo: ComboBox | undefined,
+        get:   () => DataTemplate | undefined,
+        set:   (v: DataTemplate | undefined) => void,
+    ): void
+    {
+        if (combo === undefined) return;
+        this.selectCapOption(combo, get());
+        const handler = (): void => {
+            if (this._syncing) return;
+            const sel = combo.SelectedItem as CapOption | undefined;
+            this._syncing = true;
+            try { set(sel !== undefined ? sel.Template : undefined); } finally { this._syncing = false; }
+        };
+        const key = resolveKey(combo, undefined, 'SelectedItem');
+        combo.AddPropertyChangedListener(key, handler);
+        this._partListeners.push(() => combo.RemovePropertyChangedListener(key, handler));
+    }
+
+    // Select the option whose Template IS the given template (identity —
+    // the catalog hands out the same @-keyed DataTemplate instance the
+    // connector already holds, so reference equality matches). undefined
+    // maps to the "None" option (Template === undefined).
+    private selectCapOption(combo: ComboBox | undefined, tpl: DataTemplate | undefined): void
+    {
+        if (combo === undefined) return;
+        const opts = (combo.Items ?? []) as CapOption[];
+        const found = opts.find(o => o.Template === tpl);
+        this._syncing = true;
+        try { combo.SelectedItem = found; } finally { this._syncing = false; }
     }
 }

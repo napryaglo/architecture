@@ -1,4 +1,5 @@
 import {
+    Element,
     MetaData,
     Model,
     Rect,
@@ -18,6 +19,7 @@ import { Shape } from '../../basic/shapes/shape.js';
 import { Canvas } from '../../basic/panels/canvas.js';
 import { DataTemplate } from '../../basic/templates/data-template.js';
 import { ConnectorEndpoint } from './connector-endpoint.js';
+import { ConnectorCapDataContext } from './caps/connector-cap-data-context.js';
 import { Figure } from './figure.js';
 import {
     type IPortHost,
@@ -79,6 +81,15 @@ export enum AnchorClip
 // [src/document/connectors.md](../../document/connectors.md).
 export class Connector extends Shape
 {
+    // Route applyDefaultStyle() to Style[TargetType=Connector] (the
+    // DefaultConnector entry in diagram.template.mu, which sets the
+    // default TargetCapTemplate=@ArrowCap). Without this the ctor's
+    // applyDefaultStyle() resolves nothing and connectors get no default
+    // cap. Same pattern as Figure ([figure.ts:77-79](./figure.ts#L77)).
+    static {
+        Model.OverrideMetadata(Connector, Element.DefaultStyleKeyKey, { default_value: Connector });
+    }
+
     public static readonly SourceKey      = Model.RegisterProperty<ConnectorEndpoint | undefined>(
         Connector, 'Source',      undefined,             MetaData.None);
     public static readonly TargetKey      = Model.RegisterProperty<ConnectorEndpoint | undefined>(
@@ -141,6 +152,27 @@ export class Connector extends Shape
     private _targetCapInstance: Visual | undefined = undefined;
     public get SourceCapInstance(): Visual | undefined { return this._sourceCapInstance; }
     public get TargetCapInstance(): Visual | undefined { return this._targetCapInstance; }
+
+    // Per-end cap DataContexts — the paint surface a cap template binds
+    // ($Brush / $Pen) so the cap tracks THIS connector's Stroke. Created
+    // lazily the first time an end gets a cap; kept synced from Stroke by
+    // _resyncCapContexts (on cap creation + on every Stroke change). The
+    // same context instance lives for the connector's lifetime so the
+    // cap's bindings stay live across re-routes. Exposed for tests to
+    // assert the cap colour follows the connector.
+    private _sourceCapContext: ConnectorCapDataContext | undefined = undefined;
+    private _targetCapContext: ConnectorCapDataContext | undefined = undefined;
+    public get SourceCapContext(): ConnectorCapDataContext | undefined { return this._sourceCapContext; }
+    public get TargetCapContext(): ConnectorCapDataContext | undefined { return this._targetCapContext; }
+
+    // Tracked Pen whose `Brush` we listen on. A Stroke reference swap
+    // re-points this; an in-place pen.Brush REFERENCE swap (PenEditor
+    // assigning a new brush onto the same Pen) fires _onCapStrokeBrushChanged
+    // → re-sync so filled caps (bound to $Brush) recolour too. In-place
+    // brush-COLOUR mutation needs nothing here: the cap's Fill IS that
+    // same brush instance, and Shape's own fill listener repaints it.
+    private _trackedCapPen: Pen | undefined = undefined;
+    private readonly _onCapStrokeBrushChanged = (): void => { this._resyncCapContexts(); };
 
     // Last resolved anchors from _scheduleRecompute. Edit-mode handle
     // adorners read these to position endpoint dots in canvas-host
@@ -212,6 +244,23 @@ export class Connector extends Shape
         this.set_property_value(
             Connector.StrokeKey,
             new Pen(DEFAULT_STROKE.Brush, DEFAULT_STROKE.Thickness));
+
+        // Default Style lands TargetCapTemplate=@ArrowCap (and any future
+        // Connector chrome). Called AFTER the per-instance Stroke so the
+        // cap context — created when the Style applies the cap template —
+        // seeds from the right pen. Same per-instance-Pen-then-Style order
+        // Figure uses ([figure.ts:268-284](./figure.ts#L268)).
+        //
+        // The default Stroke stays an imperative per-instance clone above
+        // rather than a Style setter ON PURPOSE: a markup setter would
+        // hand every connector the SAME Pen instance, and PenEditor's
+        // in-place mutation would then leak across connectors. Figure
+        // seeds its Stroke the same way for the same reason.
+        //
+        // No-ops when no framework theme is registered (bare unit-test
+        // `new Connector()`), so test connectors stay cap-less until a
+        // template is set explicitly.
+        this.applyDefaultStyle();
     }
 
     protected override OnPropertyChanged(
@@ -252,13 +301,73 @@ export class Connector extends Shape
         }
         else if (descriptor === Connector.SourceCapTemplateKey.descriptor)
         {
-            this._sourceCapInstance = instantiateCap(this.SourceCapTemplate);
+            if (this.SourceCapTemplate !== undefined && this._sourceCapContext === undefined)
+            {
+                this._sourceCapContext = new ConnectorCapDataContext();
+            }
+            this._resyncCapContexts();
+            this._sourceCapInstance = instantiateCap(this.SourceCapTemplate, this._sourceCapContext);
             this._scheduleRecompute();
         }
         else if (descriptor === Connector.TargetCapTemplateKey.descriptor)
         {
-            this._targetCapInstance = instantiateCap(this.TargetCapTemplate);
+            if (this.TargetCapTemplate !== undefined && this._targetCapContext === undefined)
+            {
+                this._targetCapContext = new ConnectorCapDataContext();
+            }
+            this._resyncCapContexts();
+            this._targetCapInstance = instantiateCap(this.TargetCapTemplate, this._targetCapContext);
             this._scheduleRecompute();
+        }
+        else if (descriptor === Connector.StrokeKey.descriptor)
+        {
+            // Stroke reference swap: re-point the pen.Brush listener and
+            // push the new colour / Pen into both cap contexts so caps
+            // recolour with the connector. (Shape's super handler already
+            // re-subscribed Stroke for the connector's OWN repaint.)
+            this._reattachCapStrokeBrushListener();
+            this._resyncCapContexts();
+        }
+    }
+
+    // Push the current Stroke's Brush + Pen into whichever cap contexts
+    // exist. Idempotent — safe to call on cap creation and on every
+    // Stroke change. set_property_value short-circuits equal values, so
+    // a no-op resync won't churn the caps' bindings.
+    private _resyncCapContexts(): void
+    {
+        const pen   = this.Stroke;
+        const brush = pen?.Brush;
+        if (this._sourceCapContext !== undefined)
+        {
+            this._sourceCapContext.Pen   = pen;
+            this._sourceCapContext.Brush = brush;
+        }
+        if (this._targetCapContext !== undefined)
+        {
+            this._targetCapContext.Pen   = pen;
+            this._targetCapContext.Brush = brush;
+        }
+    }
+
+    // (Re)subscribe to the current Stroke Pen's `Brush` property so a
+    // PenEditor that swaps the brush reference onto the same Pen still
+    // recolours filled caps (bound to $Brush). Detaches from the prior
+    // Pen first; symmetric with the Shape-level Stroke subscription.
+    private _reattachCapStrokeBrushListener(): void
+    {
+        const prev = this._trackedCapPen;
+        if (prev !== undefined)
+        {
+            prev.RemovePropertyChangedListener(
+                resolveKey(prev, undefined, 'Brush'), this._onCapStrokeBrushChanged);
+        }
+        const pen = this.Stroke;
+        this._trackedCapPen = pen;
+        if (pen !== undefined)
+        {
+            pen.AddPropertyChangedListener(
+                resolveKey(pen, undefined, 'Brush'), this._onCapStrokeBrushChanged);
         }
     }
 
@@ -502,8 +611,8 @@ export class Connector extends Shape
         // the per-end tangent. Cap orientation contract from
         // [routing/router.ts] tangentAt: source = first-segment direction,
         // target = last-segment-into-target direction.
-        placeCap(this._sourceCapInstance, srcAnchor, router.tangentAt(spec, ConnectorEnd.Source));
-        placeCap(this._targetCapInstance, tgtAnchor, router.tangentAt(spec, ConnectorEnd.Target));
+        placeCap(this._sourceCapInstance, srcAnchor, router.tangentAt(spec, ConnectorEnd.Source), ConnectorEnd.Source);
+        placeCap(this._targetCapInstance, tgtAnchor, router.tangentAt(spec, ConnectorEnd.Target), ConnectorEnd.Target);
 
         // Side-intersection optimization. Now that this connector's
         // Geometry is current, ask each side it's anchored to whether
@@ -559,17 +668,24 @@ export class Connector extends Shape
     }
 }
 
-function instantiateCap(template: DataTemplate | undefined): Visual | undefined
+function instantiateCap(
+    template: DataTemplate | undefined,
+    context:  ConnectorCapDataContext | undefined,
+): Visual | undefined
 {
     if (template === undefined) return undefined;
-    // V1: cap DataContext is undefined — caps in the default catalog
-    // are static (no per-instance bindings). ConnectorCapDataContext
-    // lands when the first dynamic cap (data-driven colors / sizes)
-    // surfaces. § 3.6 of [src/document/connectors.md](../../document/connectors.md).
-    return template.Apply(undefined);
+    // The cap's paint binds against this context ($Brush / $Pen) so it
+    // tracks the owning connector's Stroke. DataTemplate.Apply doesn't
+    // set DataContext (the factory's DataContextBindings read the
+    // inherited value), so we set it on the materialized root here. Caps
+    // with no bindings simply ignore it. § 3.6 of
+    // [src/document/connectors.md](../../document/connectors.md).
+    const root = template.Apply(undefined);
+    if (context !== undefined) root.DataContext = context;
+    return root;
 }
 
-function placeCap(cap: Visual | undefined, anchor: ResolvedAnchor, tangentRadians: number): void
+function placeCap(cap: Visual | undefined, anchor: ResolvedAnchor, tangentRadians: number, end: ConnectorEnd): void
 {
     if (cap === undefined) return;
     Canvas.SetLeft(cap, anchor.x);
@@ -579,7 +695,17 @@ function placeCap(cap: Visual | undefined, anchor: ResolvedAnchor, tangentRadian
     // — the matrix builder converts to radians internally). Reuse the
     // existing transform when present so a re-route doesn't churn
     // a fresh allocation per tick.
-    const degrees = (tangentRadians * 180) / Math.PI;
+    //
+    // tangentAt returns the source→target TRAVEL direction at both ends
+    // ([routing/router.ts] § tangentAt). Caps are authored once, hot-point
+    // at local origin with the body trailing into −X (i.e. pointing along
+    // +X = travel). At the target that already points the cap INTO the
+    // node — correct. At the source the raw travel tangent would point the
+    // cap toward the target (into the line); a source cap conventionally
+    // points outward, back at its own node. So flip the source by 180° —
+    // one shared template then reads correctly at both ends.
+    const flip    = end === ConnectorEnd.Source ? 180 : 0;
+    const degrees = (tangentRadians * 180) / Math.PI + flip;
     const existing = cap.RenderTransform;
     if (existing instanceof RotateTransform)
     {

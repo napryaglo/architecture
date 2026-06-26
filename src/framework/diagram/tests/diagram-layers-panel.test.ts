@@ -11,16 +11,21 @@ import {
     MetaData,
     Model,
     ObservableCollection,
+    Size,
     Visual,
 } from '../../../runtime/index.js';
-import { Border } from '../../../basic/border.js';
+import { Border, ItemsPanelTemplate } from '../../../basic/index.js';
 import { DataTemplate } from '../../../basic/templates/data-template.js';
+import { Point } from '../../../visual-engine/index.js';
 import { Connector } from '../connector.js';
+import { ConnectorEndpoint } from '../connector-endpoint.js';
 import {
     DiagramLayer,
     DiagramLayersPanel,
 } from '../diagram-layers-panel.js';
 import { Diagram } from '../diagram.js';
+import { RoutingMode } from '../routing/router.js';
+import '../routing/straight-router.js';
 
 // ── DiagramLayersPanel — layer routing ───────────────────────────────
 
@@ -198,6 +203,111 @@ describe('Diagram.Connectors — collection mutation', () => {
         assert.equal(m.MaterializedVisuals.size, 2);
         d.Connectors = undefined;
         assert.equal(m.MaterializedVisuals.size, 0);
+    });
+});
+
+// ── Cap visuals mount into the connectors layer ──────────────────────
+
+// Minimal cap template: a Border carrying a CapInset, standing in for a
+// catalog @…Cap. The materializer only needs a materialized Visual to
+// mount; the catalog Path is exercised by cap-inset.test.ts.
+function capTemplate(inset: number): DataTemplate
+{
+    return new DataTemplate(() => {
+        const root = new Border();
+        Connector.SetCapInset(root, inset);
+        return root;
+    });
+}
+
+// Full-layout fixture: a Diagram whose ItemsPanel is a DiagramLayersPanel,
+// measured/arranged so ItemsPanelInstance is live and the materializer
+// mounts into the real connectors layer.
+function layeredDiagram(): Diagram
+{
+    Application.current = null;
+    new Application();
+    const d = new Diagram();
+    d.ItemsPanel = new ItemsPanelTemplate(() => new DiagramLayersPanel());
+    const surface = new Border();
+    (surface as unknown as { Child: Visual }).Child = d;
+    (surface as Visual).Measure(new Size(800, 600));
+    (surface as Visual).Arrange({ X: 0, Y: 0, Width: 800, Height: 600 } as never);
+    return d;
+}
+
+function connectorsPanel(d: Diagram): DiagramLayersPanel
+{
+    const panel = d.ItemsPanelInstance;
+    assert.ok(panel instanceof DiagramLayersPanel, 'ItemsPanelInstance is a DiagramLayersPanel');
+    return panel;
+}
+
+function straightConnectorWithTargetCap(inset: number): Connector
+{
+    const c = new Connector();
+    c.RoutingMode = RoutingMode.Straight;
+    c.Source = new ConnectorEndpoint({ FreePoint: new Point(0,   0) });
+    c.Target = new ConnectorEndpoint({ FreePoint: new Point(100, 0) });
+    c.TargetCapTemplate = capTemplate(inset);
+    return c;
+}
+
+describe('Diagram.Connectors — cap visuals mount into the connectors layer', () => {
+    test("a connector's target cap visual lands in the connectors layer", () => {
+        const d = layeredDiagram();
+        const panel = connectorsPanel(d);
+        const c = straightConnectorWithTargetCap(8);
+        d.Connectors = new ObservableCollection<Model>([c]);
+
+        // Both the connector line AND its cap are in the connectors layer.
+        assert.notEqual(panel.ConnectorsLayer.Children.IndexOf(c), -1);
+        assert.notEqual(panel.ConnectorsLayer.Children.IndexOf(c.TargetCapInstance!), -1);
+        // The cap is tagged for the connectors layer.
+        assert.equal(DiagramLayersPanel.GetLayer(c.TargetCapInstance!), DiagramLayer.Connectors);
+    });
+
+    test('flipping the cap template swaps the mounted cap visual', () => {
+        const d = layeredDiagram();
+        const panel = connectorsPanel(d);
+        const c = straightConnectorWithTargetCap(8);
+        d.Connectors = new ObservableCollection<Model>([c]);
+        const firstCap = c.TargetCapInstance!;
+        assert.notEqual(panel.ConnectorsLayer.Children.IndexOf(firstCap), -1);
+
+        c.TargetCapTemplate = capTemplate(12);
+        const secondCap = c.TargetCapInstance!;
+        assert.notEqual(secondCap, firstCap);
+        // Old cap unmounted, new cap mounted.
+        assert.equal(panel.ConnectorsLayer.Children.IndexOf(firstCap), -1);
+        assert.notEqual(panel.ConnectorsLayer.Children.IndexOf(secondCap), -1);
+    });
+
+    test('clearing the cap template unmounts the cap visual', () => {
+        const d = layeredDiagram();
+        const panel = connectorsPanel(d);
+        const c = straightConnectorWithTargetCap(8);
+        d.Connectors = new ObservableCollection<Model>([c]);
+        const cap = c.TargetCapInstance!;
+        assert.notEqual(panel.ConnectorsLayer.Children.IndexOf(cap), -1);
+
+        c.TargetCapTemplate = undefined;
+        assert.equal(c.TargetCapInstance, undefined);
+        assert.equal(panel.ConnectorsLayer.Children.IndexOf(cap), -1);
+    });
+
+    test('removing the connector unmounts its cap too', () => {
+        const d = layeredDiagram();
+        const panel = connectorsPanel(d);
+        const c = straightConnectorWithTargetCap(8);
+        const items = new ObservableCollection<Model>([c]);
+        d.Connectors = items;
+        const cap = c.TargetCapInstance!;
+        assert.notEqual(panel.ConnectorsLayer.Children.IndexOf(cap), -1);
+
+        items.Remove(c);
+        assert.equal(panel.ConnectorsLayer.Children.IndexOf(cap), -1);
+        assert.equal(panel.ConnectorsLayer.Children.IndexOf(c), -1);
     });
 });
 

@@ -22,6 +22,7 @@ export { Canvas } from './panels/canvas.js';
 export { PaginatedCanvas } from './panels/paginated-canvas.js';
 export { Ellipse } from './shapes/ellipse.js';
 export { Shape } from './shapes/shape.js';
+export { Path } from './shapes/path.js';
 export { Arc } from './shapes/arc.js';
 export { Image } from './image.js';
 export {

@@ -10,6 +10,7 @@ import type {
     StopStoryboardNode,
     ColorValue,
     DefForm,
+    IncludeForm,
     Document,
     ElementNode,
     EventTriggerGroup,
@@ -164,12 +165,36 @@ export class EmitError extends Error
     }
 }
 
+// Resolves an `include "<path>" [as <key>]` directive at compile time.
+// The compiler is deliberately agnostic about WHAT a file becomes: it
+// hands the resolver the verbatim path (relative to the .mu file) plus any
+// explicit `as` key, and the resolver — provided by the build host, which
+// owns filesystem access and per-extension policy — returns the resource
+// entries to emit and the imports their JS references. A single path may
+// resolve to many entries (a glob), each keyed by basename unless `as`
+// overrode a one-file include.
+export interface IncludeResolution
+{
+    /** Resource entries to `Set` into the dictionary, in order. */
+    entries:  ReadonlyArray<{ key: string; valueJs: string }>;
+    /** Named imports the entries' `valueJs` reference, grouped by module. */
+    imports?: ReadonlyArray<{ module: string; names: readonly string[] }>;
+}
+
+export type IncludeResolver = (
+    path: string,
+    ctx: { key: string | undefined },
+) => IncludeResolution;
+
 export interface CompilerOptions
 {
     /** Override or augment the default name → module map. */
     symbols?: SymbolMap;
     /** Override or augment the default per-control slot info. */
     slots?:   ReadonlyMap<string, SlotInfo>;
+    /** Resolves `include` directives. Absent → `include` is a compile
+     *  error (text-only callers / tests don't get filesystem access). */
+    include?: IncludeResolver;
 }
 
 export interface CompilerOutput
@@ -251,6 +276,7 @@ export class Compiler
 {
     private readonly symbols: SymbolMap;
     private readonly slots:   ReadonlyMap<string, SlotInfo>;
+    private readonly include: IncludeResolver | undefined;
     private readonly imports: Map<string, Set<string>> = new Map();
     private readonly lines:   string[] = [];
     // Macros collected during Compile() — keyed by macro name. Lookup
@@ -317,6 +343,7 @@ export class Compiler
         // compiled by another Compiler instance.
         this.symbols = new Map(opts.symbols ?? DEFAULT_SYMBOLS);
         this.slots   = opts.slots ?? DEFAULT_SLOT_INFO;
+        this.include = opts.include;
     }
 
     public Compile(doc: Document): CompilerOutput
@@ -1018,12 +1045,85 @@ export class Compiler
                 case 'element':
                     this.compileResourceElement(rdVar, item);
                     continue;
+                case 'include-form':
+                    this.compileInclude(rdVar, item);
+                    continue;
                 default:
                     throw new EmitError(
                         `resources: ${item.kind} is not allowed here`,
                         'span' in item ? item.span : body.span);
             }
         }
+    }
+
+    // `include "<path>" [as <key>]` → ask the injected resolver what the
+    // file(s) become, emit one `rd.Set(key, value)` per entry, and pull in
+    // the imports their JS references. Resolution (filesystem, globbing,
+    // extension dispatch) lives in the host-supplied resolver; the compiler
+    // only splices the result.
+    private compileInclude(rdVar: string, form: IncludeForm): void
+    {
+        if (this.include === undefined)
+        {
+            throw new EmitError(
+                `'include' needs a file resolver, but none was configured for this compile `
+                + `(text-only callers can't read files). Run through the build pipeline.`,
+                form.span);
+        }
+        let res: IncludeResolution;
+        try
+        {
+            res = this.include(form.path, { key: form.key });
+        }
+        catch (e)
+        {
+            throw new EmitError(
+                `include "${form.path}": ${(e as Error).message}`, form.span);
+        }
+        if (form.key !== undefined && res.entries.length > 1)
+        {
+            throw new EmitError(
+                `include "${form.path}" as ${form.key}: 'as' names a single resource, but `
+                + `the path matched ${res.entries.length} files — drop 'as' to key each by basename.`,
+                form.span);
+        }
+        for (const imp of res.imports ?? [])
+        {
+            this.addModuleImports(imp.module, imp.names);
+        }
+        for (const entry of res.entries)
+        {
+            this.line(`${rdVar}.Set(${JSON.stringify(entry.key)}, ${entry.valueJs});`);
+        }
+    }
+
+    // Lower a `$path << conv1 << conv2` converter chain to the converter
+    // argument for a binding factory. Each converter is an imported
+    // ValueConverter symbol (resolved through ensureImport — a user
+    // `import` clause or a built-in); a single one is passed as-is, a
+    // chain composes left-to-right via composeConverters. Returns
+    // undefined for a plain (converter-free) binding.
+    private converterExpr(converters: readonly string[] | undefined): string | undefined
+    {
+        if (converters === undefined || converters.length === 0) return undefined;
+        for (const c of converters) this.ensureImport(c);
+        if (converters.length === 1) return converters[0]!;
+        this.ensureImport('composeConverters');
+        return `composeConverters([${converters.join(', ')}])`;
+    }
+
+    // Add raw named imports for a module WITHOUT going through the
+    // symbol-table (ensureImport). Used by `include`, whose resolver
+    // supplies module + names directly for generated expressions.
+    private addModuleImports(module: string, names: readonly string[]): void
+    {
+        let s = this.imports.get(module);
+        if (s === undefined)
+        {
+            s = new Set();
+            this.imports.set(module, s);
+        }
+        for (const name of names) s.add(name);
     }
 
     private compileKeyValueResource(rdVar: string, kv: KeyValueResource): void
@@ -3151,6 +3251,12 @@ export class Compiler
                 return `new SetterFactory((_t) => DynamicResource(_t, ${JSON.stringify(val.key)}))`;
             case 'binding':
             {
+                // Optional `$path << conv1 << conv2` converter chain. Each
+                // is an imported ValueConverter symbol; >1 composes
+                // left-to-right via composeConverters. Threaded as the
+                // trailing factory arg for both binding flavors.
+                const convExpr = this.converterExpr(val.converters);
+                const convArg  = convExpr !== undefined ? `, ${convExpr}` : '';
                 // ElementName-style binding — when the first path
                 // segment matches an x:name declared earlier in the
                 // current template scope, the source is that named
@@ -3183,20 +3289,20 @@ export class Compiler
                     // BEFORE (backward ref — thunk resolves immediately)
                     // or AFTER (forward ref — thunk's first call returns
                     // undefined; binding retries on the next microtask).
-                    return `ElementNameBinding(() => ${sourceVar}, ${JSON.stringify(restPath)})`;
+                    return `ElementNameBinding(() => ${sourceVar}, ${JSON.stringify(restPath)}${convArg})`;
                 }
                 this.ensureImport('DataContextBinding');
                 const pathStr = val.path.join('.');
                 if (ctx.targetExpr !== undefined)
                 {
-                    return `DataContextBinding(${ctx.targetExpr}, ${JSON.stringify(pathStr)})`;
+                    return `DataContextBinding(${ctx.targetExpr}, ${JSON.stringify(pathStr)}${convArg})`;
                 }
                 // Style-setter context — target unknown until apply
                 // time. Wrap so each target instantiation gets a fresh
                 // binding (each one subscribes to its own target's
                 // DataContext events).
                 this.ensureImport('SetterFactory');
-                return `new SetterFactory((_t) => DataContextBinding(_t, ${JSON.stringify(pathStr)}))`;
+                return `new SetterFactory((_t) => DataContextBinding(_t, ${JSON.stringify(pathStr)}${convArg}))`;
             }
             case 'template-binding':
             {

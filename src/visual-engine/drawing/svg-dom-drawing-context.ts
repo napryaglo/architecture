@@ -13,7 +13,7 @@ import {
     SolidColorBrush,
 } from './brush.js';
 import { DashStyle, LineCap, LineJoin, type Pen } from './pen.js';
-import { EllipseGeometry, LineGeometry, PathGeometry, RectangleGeometry, type Geometry } from '../geometry/geometry.js';
+import { EllipseGeometry, GeometryGroup, LineGeometry, PathGeometry, RectangleGeometry, type Geometry } from '../geometry/geometry.js';
 import { pathGeometryToSvgD } from '../geometry/path-to-svg.js';
 import { Transform } from './transform.js';
 import { FontStyle, FontWeight, type FormattedText } from '../text/formatted-text.js';
@@ -437,6 +437,16 @@ export class SvgDomDrawingContext implements DrawingContext
             applyFill  (p, brush, this);
             applyStroke(p, pen, this);
             this.current().appendChild(p);
+        }
+        else if (geometry instanceof GeometryGroup)
+        {
+            // Emit each child as its own SVG shape under the group's
+            // (already-pushed) transform. Children carry their own
+            // transforms, handled by the recursive DrawGeometry call.
+            for (const child of geometry.Children)
+            {
+                this.DrawGeometry(brush, pen, child);
+            }
         }
         else
         {

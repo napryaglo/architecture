@@ -63,8 +63,9 @@ resources DiagramDemo {
                        Background=@Primary]{
                     StackPanel[Orientation=Horizontal,
                                Margin=(16,0,0,0)]{
-                        Icon[Source=@home, Foreground=@OnPrimary,
-                             VerticalAlignment=Center]
+                        Shape[Geometry=@home, Fill=@OnPrimary,
+                              Width=24, Height=24,
+                              VerticalAlignment=Center]
                         TextBlock[Text="Diagrammer",
                                   FontSize=15, FontWeight=Bold,
                                   Foreground=@OnPrimary,
@@ -90,34 +91,34 @@ resources DiagramDemo {
                        Padding=(8,4,8,4)]{
                     StackPanel[Orientation=Horizontal]{
                         IconButton [Variant=Standard, Command=$nodes.AlignLeftCommand]{
-                            Icon[Source=@alignLeft, Foreground=@OnSurfaceVariant]
+                            Shape[Geometry=@alignLeft, Fill=@OnSurfaceVariant, Width=20, Height=20]
                         }
                         IconButton [Variant=Standard, Command=$nodes.AlignRightCommand]{
-                            Icon[Source=@alignRight, Foreground=@OnSurfaceVariant]
+                            Shape[Geometry=@alignRight, Fill=@OnSurfaceVariant, Width=20, Height=20]
                         }
                         IconButton [Variant=Standard, Command=$nodes.AlignTopCommand,
                                     Margin=(8,0,0,0)]{
-                            Icon[Source=@alignTop, Foreground=@OnSurfaceVariant]
+                            Shape[Geometry=@alignTop, Fill=@OnSurfaceVariant, Width=20, Height=20]
                         }
                         IconButton [Variant=Standard, Command=$nodes.AlignMiddleCommand]{
-                            Icon[Source=@alignMiddle, Foreground=@OnSurfaceVariant]
+                            Shape[Geometry=@alignMiddle, Fill=@OnSurfaceVariant, Width=20, Height=20]
                         }
                         IconButton [Variant=Standard, Command=$nodes.AlignCenterCommand]{
-                            Icon[Source=@alignCenter, Foreground=@OnSurfaceVariant]
+                            Shape[Geometry=@alignCenter, Fill=@OnSurfaceVariant, Width=20, Height=20]
                         }
                         IconButton [Variant=Standard, Command=$nodes.DistributeHorizontalCommand,
                                     Margin=(8,0,0,0)]{
-                            Icon[Source=@distributeHorizontal, Foreground=@OnSurfaceVariant]
+                            Shape[Geometry=@distributeHorizontal, Fill=@OnSurfaceVariant, Width=20, Height=20]
                         }
                         IconButton [Variant=Standard, Command=$nodes.DistributeVerticalCommand]{
-                            Icon[Source=@distributeVertical, Foreground=@OnSurfaceVariant]
+                            Shape[Geometry=@distributeVertical, Fill=@OnSurfaceVariant, Width=20, Height=20]
                         }
                         IconButton [Variant=Standard, Command=$nodes.GroupCommand,
                                     Margin=(8,0,0,0)]{
-                            Icon[Source=@group, Foreground=@OnSurfaceVariant]
+                            Shape[Geometry=@group, Fill=@OnSurfaceVariant, Width=20, Height=20]
                         }
                         IconButton [Variant=Standard, Command=$nodes.UngroupCommand]{
-                            Icon[Source=@ungroup, Foreground=@OnSurfaceVariant]
+                            Shape[Geometry=@ungroup, Fill=@OnSurfaceVariant, Width=20, Height=20]
                         }
                         IconButton [Variant=Standard,
                                     Command=$nodes.CombineUnionCommand,
@@ -203,7 +204,11 @@ resources DiagramDemo {
                                   Margin=(0,0,0,8)]
                         ScrollViewer [IsAutoHideScrollBars=false]{
                             ShapeFormatControl [Fill=$nodes.SelectionFormatFill,
-                                                Stroke=$nodes.SelectionFormatStroke]
+                                                Stroke=$nodes.SelectionFormatStroke,
+                                                SourceCapTemplate=$nodes.SelectionFormatSourceCap,
+                                                TargetCapTemplate=$nodes.SelectionFormatTargetCap,
+                                                ShowCaps=$nodes.SelectionIsConnector,
+                                                CapOptions=$nodes.ConnectorCapOptions]
                         }
                     }
                 }

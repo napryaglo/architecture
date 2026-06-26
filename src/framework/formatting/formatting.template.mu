@@ -1022,6 +1022,21 @@ resources Formatting {
     // diagrammer's "no shape selected" signal). ShapeFormatControl.ts
     // toggles PART_Editors / PART_EmptyMessage heights on every Fill or
     // Stroke change.
+    // Cap dropdown row: a small glyph silhouette (filled OR stroked per
+    // option) + the option label. Generic — renders any CapOption; the
+    // diagram layer supplies connector-cap values. The glyph Path is
+    // layout-free, so a fixed-size Border reserves the row's icon slot.
+    DataTemplate x:key="CapOptionTemplate" [DataType=CapOption] {
+        StackPanel [Orientation=Horizontal] {
+            Border [Width=24, Height=14, VerticalAlignment=Center,
+                    Margin=(0,0,@Spacing2,0)] {
+                Path [Data=$Glyph, Fill=$GlyphFill, Stroke=$GlyphStroke]
+            }
+            TextBlock [Text=$Label, Style=@BodySmall,
+                       Foreground=@OnSurface, VerticalAlignment=Center]
+        }
+    }
+
     Template x:key="DefaultShapeFormatControl" [TargetType=ShapeFormatControl] {
         StackPanel [Orientation=Vertical] {
             TextBlock x:name="PART_EmptyMessage"
@@ -1034,6 +1049,46 @@ resources Formatting {
             StackPanel x:name="PART_Editors" [Orientation=Vertical] {
                 FillEditor x:name="PART_FillEditor"
                 PenEditor  x:name="PART_PenEditor" [Margin=(0,@Spacing4,0,0)]
+            }
+            // Connector end-caps — ShapeFormatControl.ts collapses this
+            // whole section unless ShowCaps (a connector is selected).
+            // Both combos share @CapOptionTemplate for the glyph preview
+            // and DisplayMemberPath="Label" for the collapsed selection box.
+            StackPanel x:name="PART_CapSection"
+                       [Orientation=Vertical, Margin=(0,@Spacing4,0,0)] {
+                TextBlock [Style=@TitleSmall, Text="Connector ends",
+                           Foreground=@OnSurface, Margin=(0,0,0,@Spacing3)]
+                Grid [MaxWidth=300] {
+                    ColumnDefinitions {
+                        ColumnDefinition [Width=GridLength.Auto]
+                        ColumnDefinition [Width=GridLength.Star]
+                    }
+                    RowDefinitions {
+                        RowDefinition [Height=GridLength.Auto]
+                        RowDefinition [Height=GridLength.Auto]
+                    }
+                    TextBlock [Grid.Row=0, Grid.Column=0,
+                               Style=@LabelSmall, Text="Start",
+                               Foreground=@OnSurface,
+                               VerticalAlignment=Center,
+                               Margin=(0,0,@Spacing3,@Spacing3)]
+                    ComboBox x:name="PART_SourceCap"
+                             [Grid.Row=0, Grid.Column=1,
+                              ItemTemplate=@CapOptionTemplate,
+                              DisplayMemberPath="Label",
+                              TextBlock.FontSize=@BodySmallSize,
+                              Margin=(0,0,0,@Spacing3)]
+                    TextBlock [Grid.Row=1, Grid.Column=0,
+                               Style=@LabelSmall, Text="End",
+                               Foreground=@OnSurface,
+                               VerticalAlignment=Center,
+                               Margin=(0,0,@Spacing3,0)]
+                    ComboBox x:name="PART_TargetCap"
+                             [Grid.Row=1, Grid.Column=1,
+                              ItemTemplate=@CapOptionTemplate,
+                              DisplayMemberPath="Label",
+                              TextBlock.FontSize=@BodySmallSize]
+                }
             }
         }
     }

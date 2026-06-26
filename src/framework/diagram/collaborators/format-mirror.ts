@@ -3,7 +3,9 @@ import {
     Brush,
     Pen,
 } from '../../../visual-engine/index.js';
+import { type DataTemplate } from '../../../basic/templates/data-template.js';
 import type { Diagram } from '../diagram.js';
+import type { Connector } from '../connector.js';
 import { flattenToLeaves } from '../commands/group-ops.js';
 
 // Internal collaborator owned by Diagram. Mirrors a single editor-owned
@@ -77,6 +79,10 @@ export class FormatMirror
         diagram.AddConnectorSelectionChangedListener(() => this._seedFromSelection());
         diagram.AddPropertyChangedListener(Diagram.SelectionFormatFillKey,   () => this._broadcastFill());
         diagram.AddPropertyChangedListener(Diagram.SelectionFormatStrokeKey, () => this._onFormatStrokeChanged());
+        // Cap channel — same seed/broadcast shape as Fill/Stroke, but
+        // targets only selected connectors' Source/TargetCapTemplate DPs.
+        diagram.AddPropertyChangedListener(Diagram.SelectionFormatSourceCapKey, () => this._broadcastCap('Source'));
+        diagram.AddPropertyChangedListener(Diagram.SelectionFormatTargetCapKey, () => this._broadcastCap('Target'));
     }
 
     private _leaves(): Model[]
@@ -101,6 +107,20 @@ export class FormatMirror
         this._seedingFormat = true;
         try
         {
+            // Cap channel + the "show caps" signal. A connector-only
+            // selection drives the cap section; the first connector seeds
+            // both end dropdowns. Done first so the early-return below
+            // (no formattable target at all) still leaves these coherent
+            // (no connectors → undefined caps, IsConnector false).
+            const selConnectors = this._diagram.SelectedConnectors;
+            const firstConn: Connector | undefined = selConnectors[0];
+            this._diagram.set_property_value(Diagram.SelectionIsConnectorKey,
+                selConnectors.length > 0 && leaves.length === 0);
+            this._diagram.set_property_value(Diagram.SelectionFormatSourceCapKey,
+                firstConn !== undefined ? firstConn.SourceCapTemplate : undefined);
+            this._diagram.set_property_value(Diagram.SelectionFormatTargetCapKey,
+                firstConn !== undefined ? firstConn.TargetCapTemplate : undefined);
+
             if (leaves.length === 0 && connectors.length === 0)
             {
                 this._diagram.set_property_value(Diagram.SelectionFormatFillKey,   undefined);
@@ -129,6 +149,23 @@ export class FormatMirror
         finally
         {
             this._seedingFormat = false;
+        }
+    }
+
+    // Broadcast the chosen cap template onto every selected connector's
+    // matching end. Gated by _seedingFormat so a fresh selection's seed
+    // (which writes the cap DPs) doesn't replay the first connector's caps
+    // onto the others.
+    private _broadcastCap(end: 'Source' | 'Target'): void
+    {
+        if (this._seedingFormat) return;
+        const tpl: DataTemplate | undefined = end === 'Source'
+            ? this._diagram.SelectionFormatSourceCap
+            : this._diagram.SelectionFormatTargetCap;
+        for (const conn of this._diagram.SelectedConnectors)
+        {
+            if (end === 'Source') conn.SourceCapTemplate = tpl;
+            else                  conn.TargetCapTemplate = tpl;
         }
     }
 

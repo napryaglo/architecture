@@ -3,7 +3,10 @@ import {
     MetaData,
     Model,
     ObservableCollection,
+    Panel,
     Point,
+    Rect,
+    Size,
     Storyboard,
     Thickness,
     Element, Visual,
@@ -11,7 +14,7 @@ import {
 } from '../../runtime/index.js';
 import type { PresentationTarget } from '../../visual-engine/index.js';
 import { RotateTransform } from '../../visual-engine/index.js';
-import { Border } from '../../basic/border.js';
+import { ClickAwayScrim } from '../../basic/click-away-scrim.js';
 import { StackPanel, Orientation } from '../../basic/panels/stack-panel.js';
 import { TextBlock } from '../../basic/text-block.js';
 import { FloatingActionButton } from './fab.js';
@@ -91,7 +94,13 @@ export class FabMenu extends FloatingActionButton
     public set RotationDurationMs(v: number) { this.set_property_value(FabMenu.RotationDurationMsKey, v); }
 
     private _menuHost:    StackPanel | undefined;
-    private _scrim:       Border     | undefined;
+    private _scrim:       ClickAwayScrim | undefined;
+    // Single overlay child: a positioning host that fills the surface,
+    // arranges the scrim edge-to-edge, and places the item stack ABOVE
+    // the FAB. The OverlayLayer arranges every overlay child at the full
+    // surface slot, so a bare StackPanel attached directly would stack
+    // its items from (0,0) — see FabMenuHost.
+    private _host:        FabMenuHost | undefined;
     private _mounted = false;
     private _openStoryboard:  Storyboard | undefined;
     // Persistent TextBlock holding the FAB icon glyph + its
@@ -148,16 +157,18 @@ export class FabMenu extends FloatingActionButton
         const items = this.Items;
         if (t === undefined || items === undefined || items.Count === 0) return;
 
-        // Scrim: catches outside clicks → clears IsOpen.
-        this._scrim = new Border();
-        this._scrim.AddRoutedEventListener('PointerDown', (() => {
-            this.IsOpen = false;
-        }) as (a: unknown) => void);
+        // Scrim: a hit-testable transparent absorber that catches any
+        // click OUTSIDE the menu → clears IsOpen. A plain Border doesn't
+        // reliably absorb a click over its transparent area (and so the
+        // menu could never be dismissed — the "stays forever" symptom);
+        // ClickAwayScrim is the shared popup dismissal surface used by
+        // ComboBox / ContextMenu / pickers.
+        this._scrim = new ClickAwayScrim();
+        this._scrim.onClick = (): void => { this.IsOpen = false; };
 
-        // Menu host: vertical StackPanel of the consumer's items. We
-        // attach to the OverlayLayer so it floats above the FAB. The
-        // items start hidden (Opacity=0, Margin pushed below); the
-        // reveal Storyboard animates them in.
+        // Menu host: vertical StackPanel of the consumer's items. The
+        // items start hidden (Opacity=0, Margin pushed below); the reveal
+        // Storyboard animates them in.
         this._menuHost = new StackPanel();
         this._menuHost.Orientation = Orientation.Vertical;
         const hiddenOffset = this.HiddenOffset;
@@ -170,11 +181,20 @@ export class FabMenu extends FloatingActionButton
             this._menuHost.AddChild(v);
         }
 
+        // Positioning host: fills the overlay slot, arranges the scrim
+        // edge-to-edge and the item stack anchored ABOVE this FAB. Without
+        // it the StackPanel would be arranged at the full slot and stack
+        // its items from the top-left (0,0) of the surface.
+        this._host = new FabMenuHost();
+        this._host.anchor = this;
+        this._host.menu   = this._menuHost;
+        this._host.AddChild(this._scrim);
+        this._host.AddChild(this._menuHost);
+
         // AttachOverlayChild: visual hop → target's OverlayLayer; logical
         // hop → THIS FabMenu so items inherit resources / DataContext /
         // inheritable DPs from us, not from the OverlayLayer.
-        this.AttachOverlayChild(this._scrim);
-        this.AttachOverlayChild(this._menuHost);
+        this.AttachOverlayChild(this._host);
 
         // Reveal Storyboard — per-item fade-in + slide-up, staggered.
         // Bottom item starts first so the menu reads as "growing toward
@@ -238,8 +258,22 @@ export class FabMenu extends FloatingActionButton
 
     private detachMenuChrome(): void
     {
-        if (this._menuHost !== undefined) this.DetachOverlayChild(this._menuHost);
-        if (this._scrim    !== undefined) this.DetachOverlayChild(this._scrim);
+        // Release the consumer's item Visuals from the menu stack first.
+        // They're re-added to a FRESH stack on the next open, and
+        // AttachVisual throws on a child that still has a visual parent —
+        // so leaving them parented here would break reopening.
+        const menu  = this._menuHost;
+        const items = this.Items;
+        if (menu !== undefined && items !== undefined)
+        {
+            for (let i = 0; i < items.Count; i++)
+            {
+                const v = items.Get(i);
+                if (v !== undefined) menu.RemoveChild(v);
+            }
+        }
+        if (this._host !== undefined) this.DetachOverlayChild(this._host);
+        this._host     = undefined;
         this._menuHost = undefined;
         this._scrim    = undefined;
         this._mounted  = false;
@@ -318,4 +352,76 @@ function targetOf(host: Visual): PresentationTarget | undefined
 {
     const back = host as unknown as { ['target']?: PresentationTarget };
     return back['target'];
+}
+
+// Sum a Visual's ArrangedRect chain up to the surface root — the visual's
+// absolute position in target-surface coordinates. Same walk ComboBox's
+// popup host uses to anchor its dropdown.
+function absoluteOrigin(v: Visual): { x: number; y: number }
+{
+    let x = 0;
+    let y = 0;
+    let cur: Visual | undefined = v;
+    while (cur !== undefined)
+    {
+        x += cur.ArrangedRect.X;
+        y += cur.ArrangedRect.Y;
+        cur = cur.GetVisualParent();
+    }
+    return { x, y };
+}
+
+// Overlay positioning host for the FAB menu. The OverlayLayer arranges
+// every overlay child at the full surface slot (0,0,W,H); this host
+// consumes that slot and re-positions its two children inside it:
+//   * the scrim (child 0) fills the slot edge-to-edge so any outside
+//     click is caught;
+//   * the item stack (child 1) is anchored ABOVE the FAB — horizontally
+//     centred on it, its bottom edge `Gap` above the FAB's top — and
+//     clamped to stay on-surface.
+//
+// Re-reads the FAB's absolute origin on every arrange so a layout shift
+// (resize, scroll) repositions an open menu automatically. Mirrors
+// ComboBoxPopupHost. Module-private — no markup references it.
+class FabMenuHost extends Panel
+{
+    public anchor: Visual | undefined;   // the FAB this menu belongs to
+    public menu:   Visual | undefined;   // the item StackPanel (child 1)
+    // Space between the FAB's top edge and the menu's bottom edge.
+    public Gap = 12;
+
+    protected override MeasureOverride(availableSize: Size): Size
+    {
+        for (const c of this.visualChildren) c.Measure(availableSize);
+        const w = Number.isFinite(availableSize.Width)  ? availableSize.Width  : 0;
+        const h = Number.isFinite(availableSize.Height) ? availableSize.Height : 0;
+        return new Size(w, h);
+    }
+
+    protected override ArrangeOverride(finalSize: Size): Size
+    {
+        const children = this.visualChildren;
+        // Scrim (child 0 by attach order) fills the whole overlay slot.
+        children[0]?.Arrange(new Rect(0, 0, finalSize.Width, finalSize.Height));
+
+        const menu   = this.menu;
+        const anchor = this.anchor;
+        if (menu === undefined || anchor === undefined) return finalSize;
+
+        const origin = absoluteOrigin(anchor);
+        const fab    = anchor.ArrangedRect;
+        const mw     = menu.DesiredSize.Width;
+        const mh     = menu.DesiredSize.Height;
+
+        // Centre the stack on the FAB horizontally; place it above the FAB.
+        let mx = origin.x + (fab.Width - mw) / 2;
+        let my = origin.y - mh - this.Gap;
+        // Clamp on-surface so the menu never spills off the top/edges.
+        if (mx + mw > finalSize.Width) mx = Math.max(0, finalSize.Width - mw);
+        if (mx < 0) mx = 0;
+        if (my < 0) my = 0;
+
+        menu.Arrange(new Rect(mx, my, mw, mh));
+        return finalSize;
+    }
 }

@@ -18,6 +18,7 @@ export {
 export {
     Binding,
     BindingMode,
+    composeConverters,
     type BindingOptions,
     type ValueConverter,
 } from './binding.js';

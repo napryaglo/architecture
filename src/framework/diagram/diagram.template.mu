@@ -79,6 +79,22 @@ resources Diagrams {
         Template = @DefaultGroup;
     }
 
+    // ── Connector: default end-cap ─────────────────────────────────
+    //
+    // Connectors carry an open arrowhead at the target end out of the
+    // box (Visio / draw.io convention); the source end stays bare. Both
+    // are overridable per-instance via Source/TargetCapTemplate. The
+    // @ArrowCap template lives in the sibling Caps dictionary — both are
+    // merged into MuralFramework, so the cross-dictionary @ref resolves
+    // at runtime the same way @Primary (a theme colour) does here.
+    //
+    // No Stroke setter: Connector seeds a per-instance default Pen in its
+    // ctor so PenEditor's in-place edits can't leak across connectors —
+    // a shared Style-setter Pen would reintroduce that leak.
+    Style [TargetType=Connector] {
+        TargetCapTemplate = @ArrowCap;
+    }
+
     // ── Diagram: ItemsControl-derived workspace ────────────────────
     //
     // Mirrors ListBox / TreeView: a ScrollViewer hosting an

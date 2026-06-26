@@ -115,14 +115,31 @@ describe('SvgDrawingContext.DrawGeometry', () => {
         assert.match(out, /d="M 0 0 L 10 0 A 10 10 0 0 1 20 10 Z"/);
     });
 
-    test('GeometryGroup still throws clearly — lowering deferred', () => {
-        // PathGeometry now lowers to <path>; the remaining unsupported
-        // geometry that should throw clearly is GeometryGroup
-        // (deferred until a consumer needs CSG-style composition).
+    test('GeometryGroup emits each child as its own shape', () => {
+        // Icon geometries (toolbar align/group/search icons) are
+        // GeometryGroups of rects / ellipses / lines. The group lowers
+        // by emitting each child with the group's brush + pen.
         const dc = new SvgDrawingContext();
-        assert.throws(
-            () => dc.DrawGeometry(undefined, undefined, new GeometryGroup()),
-            /GeometryGroup not implemented/,
+        dc.DrawGeometry(
+            new SolidColorBrush(Color.Red), undefined,
+            new GeometryGroup([
+                new RectangleGeometry(new Rect(0, 0, 10, 10)),
+                new EllipseGeometry(new Point(20, 20), 5, 5),
+            ]),
         );
+        const out = dc.ToFragment();
+        assert.ok(out.includes('<rect '),    'group child rect emitted');
+        assert.ok(out.includes('<ellipse '), 'group child ellipse emitted');
+        assert.ok(out.includes('width="10"'));
+        assert.ok(out.includes('cx="20"'));
+        // Brush propagates to every child.
+        assert.equal((out.match(/fill="rgb\(255,0,0\)"/g) ?? []).length, 2,
+            'both children inherit the group brush');
+    });
+
+    test('empty GeometryGroup emits nothing (no throw)', () => {
+        const dc = new SvgDrawingContext();
+        dc.DrawGeometry(undefined, undefined, new GeometryGroup());
+        assert.equal(dc.ToFragment(), '');
     });
 });

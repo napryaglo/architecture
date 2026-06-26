@@ -250,7 +250,26 @@ export type BodyItem =
     | KeyValueResource
     | ResourceForm
     | DefForm
+    | IncludeForm
     | MacroHoleBodyItem;
+
+// `include "<path>" [as <key>]` — compile-time inclusion of an external
+// file into the enclosing resource dictionary. The path resolves relative
+// to the .mu file. A glob (`icons/*.svg`) pulls every match in, keyed by
+// basename; a single file may carry an explicit `as <key>`. WHAT each
+// file becomes (e.g. .svg → a Geometry resource) is decided by the
+// compiler's injected include resolver, dispatching on extension — the
+// parser only captures the directive.
+export interface IncludeForm
+{
+    kind: 'include-form';
+    /** The path / glob exactly as written, relative to the .mu file. */
+    path: string;
+    /** Explicit resource key from `as <key>` (single-file only); else the
+     *  key is derived from each matched file's basename. */
+    key?: string;
+    span: SourceSpan;
+}
 
 // `#1` (or `#bg`, …) appearing as a body item — only meaningful inside
 // a `def` body, where it's replaced at expansion time with the items
@@ -552,7 +571,11 @@ export interface TupleValue  { kind: 'tuple';   values: ValueNode[]; span: Sourc
 export interface SizeValue   { kind: 'size';    width: ValueNode;
                                                 height: ValueNode;   span: SourceSpan; }
 export interface ListValue   { kind: 'list';    values: ValueNode[]; span: SourceSpan; }
-export interface BindingValue          { kind: 'binding';            path: string[];   span: SourceSpan; }
+// `$path` or `$node.path`, optionally piped through one or more
+// converters: `$path << conv1 << conv2`. `converters` lists the imported
+// ValueConverter symbol names in left-to-right application order (compose
+// as `convN(... conv1(value))`); empty/absent → a plain binding.
+export interface BindingValue          { kind: 'binding';            path: string[];   converters?: string[]; span: SourceSpan; }
 export interface TemplateBindingValue  { kind: 'template-binding';   name: string;     span: SourceSpan; }
 // `@Key` → key='Key', dynamic=false.  `@@Key` → dynamic=true.
 export interface StaticResourceValue   { kind: 'static-resource';    key: string;      span: SourceSpan; }

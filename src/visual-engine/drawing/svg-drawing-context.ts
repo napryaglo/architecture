@@ -2,7 +2,7 @@ import type { Point, Rect } from '../primitives.js';
 import type { DrawingContext } from '../../runtime/index.js';
 import { Brush, SolidColorBrush } from './brush.js';
 import { DashStyle, LineCap, type Pen } from './pen.js';
-import { EllipseGeometry, LineGeometry, PathGeometry, RectangleGeometry, type Geometry } from '../geometry/geometry.js';
+import { EllipseGeometry, GeometryGroup, LineGeometry, PathGeometry, RectangleGeometry, type Geometry } from '../geometry/geometry.js';
 import { pathGeometryToSvgD } from '../geometry/path-to-svg.js';
 import { Transform } from './transform.js';
 import { FontStyle, FontWeight, type FormattedText } from '../text/formatted-text.js';
@@ -135,11 +135,18 @@ export class SvgDrawingContext implements DrawingContext
             attrs.push(...strokeAttrs(pen));
             this.output.push(`<path ${attrs.join(' ')} />`);
         }
+        else if (geometry instanceof GeometryGroup)
+        {
+            // Emit each child as its own SVG shape under the group's
+            // (already-pushed) transform. Children carry their own
+            // transforms, handled by the recursive DrawGeometry call.
+            for (const child of geometry.Children)
+            {
+                this.DrawGeometry(brush, pen, child);
+            }
+        }
         else
         {
-            // GeometryGroup — lower to <path d="…"> by concatenation
-            // when a concrete user needs it. Throw loudly until then so
-            // a silent miss doesn't ship an empty SVG.
             if (wrap) this.Pop();
             throw new Error(`SvgDrawingContext.DrawGeometry: ${geometry.constructor.name} not implemented yet.`);
         }

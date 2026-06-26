@@ -36,6 +36,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['DynamicResource',     '@visualisation-sub/mural/runtime'],
     ['DataContextBinding',  '@visualisation-sub/mural/runtime'],
     ['ElementNameBinding',  '@visualisation-sub/mural/runtime'],
+    ['composeConverters',   '@visualisation-sub/mural/runtime'],
     ['MultiBinding',        '@visualisation-sub/mural/runtime'],
     ['TemplateBinding',     '@visualisation-sub/mural/runtime'],
     ['MultiTrigger',        '@visualisation-sub/mural/runtime'],
@@ -91,6 +92,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['PaginatedCanvas',         '@visualisation-sub/mural/basic'],
     ['Ellipse',                 '@visualisation-sub/mural/basic'],
     ['Shape',                   '@visualisation-sub/mural/basic'],
+    ['Path',                    '@visualisation-sub/mural/basic'],
     ['Image',                   '@visualisation-sub/mural/basic'],
     ['Icon',                    '@visualisation-sub/mural/basic'],
     ['Line',                    '@visualisation-sub/mural/basic'],
@@ -117,6 +119,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['FillEditor',              '@visualisation-sub/mural/framework'],
     ['FillEditorVariant',       '@visualisation-sub/mural/framework'],
     ['ShapeFormatControl',      '@visualisation-sub/mural/framework'],
+    ['CapOption',               '@visualisation-sub/mural/framework'],
     ['PageView',                '@visualisation-sub/mural/basic'],
 
     // Runtime types that the emitter may reference even when the
@@ -133,6 +136,11 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['Figure',                  '@visualisation-sub/mural/framework/diagram/figure.js'],
     ['Group',                   '@visualisation-sub/mural/framework/diagram/group.js'],
     ['Diagram',                 '@visualisation-sub/mural/framework/diagram/diagram.js'],
+    // Connector — markup references it for the `Connector.CapInset`
+    // attached property on cap templates. ConnectorCapDataContext is the
+    // DataType those cap DataTemplates bind against ($Brush / $Pen).
+    ['Connector',               '@visualisation-sub/mural/framework/diagram/connector.js'],
+    ['ConnectorCapDataContext', '@visualisation-sub/mural/framework/diagram/caps/connector-cap-data-context.js'],
     ['ToolboxShape',            '@visualisation-sub/mural/framework/diagram/toolbox-shape.js'],
     ['DiagramDocument',         '@visualisation-sub/mural/framework/diagram/diagram-document.js'],
     ['Grid',                    '@visualisation-sub/mural/basic'],

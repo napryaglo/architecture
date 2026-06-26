@@ -1,4 +1,4 @@
-import { Binding } from './binding.js';
+import { Binding, type ValueConverter } from './binding.js';
 import type { PropertyChangeCallback } from './effective-value.js';
 import { MetaData } from '../metadata.js';
 import { Model } from '../model.js';
@@ -39,11 +39,19 @@ class ElementNameBindingImpl extends Binding
     private nameSource:     Visual | undefined;
     private sourceCallback: PropertyChangeCallback | undefined;
     private disposed = false;
+    // A TwoWay writeback that arrived BEFORE the forward-ref source
+    // resolved. Buffered (not dropped, not disposed) and flushed to the
+    // source by activate() once it resolves. Wrapped in an object so a
+    // buffered write of `undefined` (e.g. clearing a value) is
+    // distinguishable from "nothing pending".
+    private pendingWrite:   { value: unknown } | undefined;
 
-    constructor(source: Visual | (() => Visual | undefined), path: string)
+    constructor(source: Visual | (() => Visual | undefined), path: string, converter?: ValueConverter)
     {
         const watcher = new ElementNameWatcher();
-        super(watcher, 'Value');
+        // Converter (from `$node.path << conv`) rides in opts — apply_transform
+        // runs it source→target, convertBack on writeback.
+        super(watcher, 'Value', undefined, converter !== undefined ? { converter } : undefined);
         this.watcher     = watcher;
         this.sourceThunk = typeof source === 'function' ? source : () => source;
         this.pathStr     = path;
@@ -69,7 +77,19 @@ class ElementNameBindingImpl extends Binding
         }
         this.nameSource = src;
         this.subscribeSource();
-        this.watcher.Value = this.walkPath(src);
+        if (this.pendingWrite !== undefined)
+        {
+            // A TwoWay writeback landed during the forward-ref window. The
+            // buffered value is the target's intent — push it to the source
+            // now rather than pulling the source's current value over it.
+            const pending = this.pendingWrite;
+            this.pendingWrite = undefined;
+            this.set_value(pending.value);
+        }
+        else
+        {
+            this.watcher.Value = this.walkPath(src);
+        }
     }
 
     public override dispose(): void
@@ -81,14 +101,29 @@ class ElementNameBindingImpl extends Binding
 
     // TwoWay writeback: when the target DP is mutated, push the new
     // value back to the source Visual via the path. WPF parity with
-    // ElementName + Path TwoWay. Returns true when the path resolved
-    // and the leaf write went through. No-op (returns false) when the
-    // source hasn't resolved yet — a TwoWay write in that window would
-    // have nowhere to land.
+    // ElementName + Path TwoWay. Returns true when the write was accepted.
+    //
+    // Forward-ref window: when the source is a not-yet-constructed
+    // x:name'd element (the thunk still resolves to undefined), the write
+    // has nowhere to land YET — but returning false makes the consumer
+    // EVD treat the path as unwritable and permanently DISPOSE this
+    // binding (effective-value.ts), severing a binding whose source was
+    // merely declared later in the same markup. Instead, keep the value
+    // on the watcher (so the target reflects it) and BUFFER it; activate()
+    // flushes it to the source once resolved. Return true so the binding
+    // survives.
     public override set_value(value: unknown): boolean
     {
-        if (this.nameSource === undefined) return false;
+        if (this.nameSource === undefined)
+        {
+            if (!super.set_value(value)) return false;
+            this.pendingWrite = { value };
+            return true;
+        }
         if (!super.set_value(value)) return false;
+        // A fresh write supersedes any value still buffered from the
+        // forward-ref window.
+        this.pendingWrite = undefined;
         const segments = this.pathStr.split('.');
         let cur: unknown = this.nameSource;
         for (let i = 0; i < segments.length - 1; i++)
@@ -108,14 +143,17 @@ class ElementNameBindingImpl extends Binding
             }
             if (cur === undefined || cur === null) return true;
         }
+        // Back-convert for the real element write (the base already wrote
+        // the back-converted value to the watcher). No-op when no convertBack.
+        const back = this.applyConvertBack(value);
         const lastSeg = segments[segments.length - 1]!;
         if (cur instanceof Model)
         {
-            cur.set_property_value(resolveKey(cur, undefined, lastSeg), value);
+            cur.set_property_value(resolveKey(cur, undefined, lastSeg), back);
         }
         else if (cur !== null && typeof cur === 'object')
         {
-            (cur as Record<string, unknown>)[lastSeg] = value;
+            (cur as Record<string, unknown>)[lastSeg] = back;
         }
         return true;
     }
@@ -196,7 +234,7 @@ class ElementNameBindingImpl extends Binding
 // Visual reference would be `undefined` at binding install time. The
 // thunk defers resolution to the next microtask, by which point the
 // factory's synchronous run has populated the var.
-export function ElementNameBinding(source: Visual | (() => Visual | undefined), path: string): Binding
+export function ElementNameBinding(source: Visual | (() => Visual | undefined), path: string, converter?: ValueConverter): Binding
 {
-    return new ElementNameBindingImpl(source, path);
+    return new ElementNameBindingImpl(source, path, converter);
 }

@@ -1,4 +1,4 @@
-import { Binding } from './binding.js';
+import { Binding, type ValueConverter } from './binding.js';
 import { MetaData } from '../metadata.js';
 import { Model } from '../model.js';
 import type { PropertyKey } from '../model.js';
@@ -59,15 +59,17 @@ class DataContextBindingImpl extends Binding
     // and the binding listens to it for its entire lifetime.
     private readonly dataContextKey: PropertyKey<unknown>;
 
-    constructor(target: Visual, path: string)
+    constructor(target: Visual, path: string, converter?: ValueConverter)
     {
         const watcher = new DataContextWatcher();
         // Mode is left unset so the EVD's ResolveDefaultMode hook can
         // upgrade it to TwoWay when the target DP declares
         // BindsTwoWayByDefault (e.g., TreeView.SelectedDataItem). For
         // every other DP the binding stays OneWay (the default mode
-        // when the EVD doesn't flip it).
-        super(watcher, 'Value');
+        // when the EVD doesn't flip it). A converter (from `$path << conv`)
+        // rides in opts so apply_transform runs it source→target and
+        // convertBack runs it on writeback.
+        super(watcher, 'Value', undefined, converter !== undefined ? { converter } : undefined);
         this.watcher = watcher;
         this.target  = target;
         this.pathStr = path;
@@ -138,14 +140,17 @@ class DataContextBindingImpl extends Binding
             }
             if (cur === undefined || cur === null) return true;
         }
+        // Back-convert for the real VM write (the base already wrote the
+        // back-converted value to the watcher). No-op when no convertBack.
+        const back = this.applyConvertBack(value);
         const lastSeg = segments[segments.length - 1]!;
         if (cur instanceof Model)
         {
-            cur.set_property_value(resolveKey(cur, undefined, lastSeg), value);
+            cur.set_property_value(resolveKey(cur, undefined, lastSeg), back);
         }
         else if (cur !== null && typeof cur === 'object')
         {
-            (cur as Record<string, unknown>)[lastSeg] = value;
+            (cur as Record<string, unknown>)[lastSeg] = back;
         }
         return true;
     }
@@ -246,7 +251,7 @@ class DataContextBindingImpl extends Binding
 // SetterFactory so each application gets its own per-target binding:
 //   new Setter(Border, 'Background',
 //              new SetterFactory(t => DataContextBinding(t, 'AccentBrush')));
-export function DataContextBinding(target: Visual, path: string): Binding
+export function DataContextBinding(target: Visual, path: string, converter?: ValueConverter): Binding
 {
-    return new DataContextBindingImpl(target, path);
+    return new DataContextBindingImpl(target, path, converter);
 }

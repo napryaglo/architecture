@@ -62,6 +62,10 @@ export class Lexer
         if (c === '$' && c2 === '(') return this.consumeFixed(TokenKind.DollarParen,  2, start);
         if (c === ')' && c2 === '$') return this.consumeFixed(TokenKind.ParenDollar,  2, start);
         if (c === '@' && c2 === '@') return this.consumeFixed(TokenKind.AtAt,         2, start);
+        // `<<` — the binding-converter operator (`$path << converter`). Must
+        // be recognised before single `<` (LAngle, which opens a size
+        // literal); a size never starts with `<<`, so this is unambiguous.
+        if (c === '<' && c2 === '<') return this.consumeFixed(TokenKind.LessLess,     2, start);
 
         // ── Scope-extension prefix (x:Ident) ──
         if (c === 'x' && c2 === ':' && this.isLetter(this.source[this.pos + 2]))

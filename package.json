@@ -106,7 +106,6 @@
   "scripts": {
     "build:templates": "tsx src/tooling/build-control-templates.ts",
     "build:demos": "tsx src/tooling/build-demo-templates.ts",
-    "build:icons": "tsx src/tooling/build-icons.ts demo/assets/icons demo/assets/icons.mjs",
     "build": "npm run build:templates && npm run build:demos && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "pretest": "npm run build:templates",

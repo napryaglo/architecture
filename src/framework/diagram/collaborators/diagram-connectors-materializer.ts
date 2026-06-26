@@ -23,6 +23,13 @@ export class DiagramConnectorsMaterializer
     private readonly _visuals: Map<Model, Visual> = new Map();
     private _collectionUnsub: (() => void) | undefined = undefined;
 
+    // Per-connector cap bookkeeping. `_mountedCaps` is the set of cap
+    // visuals currently in the connectors layer for a given item;
+    // `_capUnsubs` detaches the cap-template DP listeners that keep that
+    // set in sync when a connector's Source/TargetCapTemplate flips.
+    private readonly _mountedCaps: Map<Model, Visual[]> = new Map();
+    private readonly _capUnsubs:   Map<Model, () => void> = new Map();
+
     constructor(diagram: Diagram)
     {
         this._diagram = diagram;
@@ -67,9 +74,11 @@ export class DiagramConnectorsMaterializer
      *  visuals once the panel is ready). */
     public _mountPending(): void
     {
-        for (const visual of this._visuals.values())
+        for (const [item, visual] of this._visuals)
         {
             this._mount(visual);
+            // Caps couldn't mount while the panel was absent; sync now.
+            if (visual instanceof Connector) this._syncCaps(item, visual);
         }
     }
 
@@ -102,6 +111,85 @@ export class DiagramConnectorsMaterializer
         const visual = this._instantiate(item);
         this._visuals.set(item, visual);
         this._mount(visual);
+        this._wireCaps(item, visual);
+    }
+
+    // Mount the connector's cap visuals as siblings in the connectors
+    // layer and keep that set live. Caps carry absolute diagram-host
+    // coordinates via Canvas.Left/Top (placeCap) — the same space the
+    // connector line paints in — so a plain sibling-in-the-Canvas mount
+    // positions and rotates them correctly. The connector creates /
+    // replaces its cap instances reactively (default cap in the ctor,
+    // swaps when Source/TargetCapTemplate flips); we re-sync on those DP
+    // changes. The connector's own OnPropertyChanged runs BEFORE this
+    // listener (internal callback precedes user listeners), so the
+    // *CapInstance getters already hold the fresh visuals here.
+    private _wireCaps(item: Model, visual: Visual): void
+    {
+        if (!(visual instanceof Connector)) return;
+        const connector = visual;
+        const onCaps = (): void => this._syncCaps(item, connector);
+        connector.AddPropertyChangedListener(Connector.SourceCapTemplateKey, onCaps);
+        connector.AddPropertyChangedListener(Connector.TargetCapTemplateKey, onCaps);
+        this._capUnsubs.set(item, () => {
+            connector.RemovePropertyChangedListener(Connector.SourceCapTemplateKey, onCaps);
+            connector.RemovePropertyChangedListener(Connector.TargetCapTemplateKey, onCaps);
+        });
+        this._syncCaps(item, connector);
+    }
+
+    private _syncCaps(item: Model, connector: Connector): void
+    {
+        const panel = this._diagram.ItemsPanelInstance;
+        if (panel === undefined) return;          // wait for layout (_mountPending re-runs)
+
+        const desired: Visual[] = [];
+        const src = connector.SourceCapInstance;
+        const tgt = connector.TargetCapInstance;
+        if (src !== undefined) desired.push(src);
+        if (tgt !== undefined) desired.push(tgt);
+
+        const prev = this._mountedCaps.get(item) ?? [];
+        for (const cap of prev)
+        {
+            if (!desired.includes(cap)) this._unmountCap(cap);
+        }
+        for (const cap of desired)
+        {
+            if (prev.includes(cap)) continue;
+            // Route to the connectors layer (behind figures), same as the
+            // connector line itself.
+            DiagramLayersPanel.SetLayer(cap, DiagramLayer.Connectors);
+            this._mountCap(cap);
+        }
+        if (desired.length === 0) this._mountedCaps.delete(item);
+        else this._mountedCaps.set(item, desired);
+    }
+
+    private _mountCap(cap: Visual): void
+    {
+        const panel = this._diagram.ItemsPanelInstance;
+        if (panel === undefined) return;
+        if (panel instanceof DiagramLayersPanel)
+        {
+            if (panel.ConnectorsLayer.Children.IndexOf(cap) !== -1) return;
+            panel.AddChild(cap);
+            return;
+        }
+        if ((panel as { Children?: { IndexOf?(v: Visual): number } }).Children?.IndexOf?.(cap) !== -1) return;
+        (panel as { AddChild?(v: Visual): void }).AddChild?.(cap);
+    }
+
+    private _unmountCap(cap: Visual): void
+    {
+        const panel = this._diagram.ItemsPanelInstance;
+        if (panel === undefined) return;
+        if (panel instanceof DiagramLayersPanel)
+        {
+            panel.RemoveChild(cap);
+            return;
+        }
+        (panel as { RemoveChild?(v: Visual): void }).RemoveChild?.(cap);
     }
 
     private _instantiate(item: Model): Visual
@@ -151,8 +239,23 @@ export class DiagramConnectorsMaterializer
     {
         const visual = this._visuals.get(item);
         if (visual === undefined) return;
+        this._teardownCaps(item);
         this._unmount(visual);
         this._visuals.delete(item);
+    }
+
+    // Detach the cap-template listeners and unmount any cap visuals this
+    // item had in the connectors layer.
+    private _teardownCaps(item: Model): void
+    {
+        this._capUnsubs.get(item)?.();
+        this._capUnsubs.delete(item);
+        const caps = this._mountedCaps.get(item);
+        if (caps !== undefined)
+        {
+            for (const cap of caps) this._unmountCap(cap);
+            this._mountedCaps.delete(item);
+        }
     }
 
     private _unmount(visual: Visual): void
@@ -169,6 +272,7 @@ export class DiagramConnectorsMaterializer
 
     private _clearAll(): void
     {
+        for (const item of this._visuals.keys()) this._teardownCaps(item);
         for (const visual of this._visuals.values()) this._unmount(visual);
         this._visuals.clear();
     }

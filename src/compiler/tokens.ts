@@ -23,6 +23,7 @@ export enum TokenKind
     RParen      = 'RParen',        // )
     LAngle      = 'LAngle',        // <
     RAngle      = 'RAngle',        // >
+    LessLess    = 'LessLess',      // <<  — binding-converter operator
     Comma       = 'Comma',         // ,
     Equals      = 'Equals',        // =
     Colon       = 'Colon',         // :

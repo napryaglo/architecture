@@ -5,15 +5,18 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 
+import { DataContextBinding } from '../../../runtime/index.js';
 import {
     Color,
     PathGeometry,
+    Pen,
     Point,
     RotateTransform,
     SolidColorBrush,
     type Visual,
 } from '../../../visual-engine/index.js';
 import { Border } from '../../../basic/border.js';
+import { Path } from '../../../basic/shapes/path.js';
 import { Canvas } from '../../../basic/panels/canvas.js';
 import { DataTemplate } from '../../../basic/templates/data-template.js';
 import { ConnectorEndpoint } from '../connector-endpoint.js';
@@ -218,7 +221,7 @@ describe('Connector — inset shortens the painted line by exactly CapInset', ()
 });
 
 describe('Connector — cap rotation matches tangentAt', () => {
-    test('east-pointing straight route: source cap RenderTransform.Angle = 0°', () => {
+    test('east-pointing straight route: source cap RenderTransform.Angle = 180° (outward flip)', () => {
         const c = new Connector();
         c.RoutingMode = RoutingMode.Straight;
         c.Source = new ConnectorEndpoint({ FreePoint: new Point(0,   0) });
@@ -227,7 +230,9 @@ describe('Connector — cap rotation matches tangentAt', () => {
 
         const t = c.SourceCapInstance!.RenderTransform;
         assert.ok(t instanceof RotateTransform);
-        assert.equal((t as RotateTransform).Angle, 0);
+        // Travel tangent at source = 0° (east); placeCap flips the source
+        // cap 180° so it points outward (back at the source node).
+        assert.equal((t as RotateTransform).Angle, 180);
     });
 
     test('south-pointing straight route: target cap angle = 90°', () => {
@@ -242,7 +247,7 @@ describe('Connector — cap rotation matches tangentAt', () => {
         assert.equal(t.Angle, 90);
     });
 
-    test('NE diagonal route: source cap angle ≈ 45°', () => {
+    test('NE diagonal route: source cap angle ≈ 225° (45° travel + 180° outward flip)', () => {
         const c = new Connector();
         c.RoutingMode = RoutingMode.Straight;
         c.Source = new ConnectorEndpoint({ FreePoint: new Point(0,   0)   });
@@ -250,8 +255,8 @@ describe('Connector — cap rotation matches tangentAt', () => {
         c.SourceCapTemplate = capTemplate(0);
 
         const t = c.SourceCapInstance!.RenderTransform as RotateTransform;
-        // atan2(100, 100) = π/4 rad = 45°.
-        assert.ok(Math.abs(t.Angle - 45) < 1e-9, `expected ~45°, got ${t.Angle}`);
+        // atan2(100, 100) = π/4 rad = 45° travel; +180° source flip = 225°.
+        assert.ok(Math.abs(t.Angle - 225) < 1e-9, `expected ~225°, got ${t.Angle}`);
     });
 });
 
@@ -280,6 +285,107 @@ describe('Connector — cap position via Canvas.Left / Top', () => {
         src.FreePoint = new Point(25, 30);
         assert.equal(Canvas.GetLeft(c.SourceCapInstance!), 25);
         assert.equal(Canvas.GetTop(c.SourceCapInstance!),  30);
+    });
+});
+
+describe('Connector — cap colour context tracks the connector Stroke', () => {
+    function straightConnectorWithSourceCap(): Connector
+    {
+        const c = new Connector();
+        c.RoutingMode = RoutingMode.Straight;
+        c.Source = new ConnectorEndpoint({ FreePoint: new Point(0,   0) });
+        c.Target = new ConnectorEndpoint({ FreePoint: new Point(100, 0) });
+        c.SourceCapTemplate = capTemplate(0);
+        return c;
+    }
+
+    test('cap context is created and seeded from the connector Stroke', () => {
+        const c = straightConnectorWithSourceCap();
+        const ctx = c.SourceCapContext;
+        assert.ok(ctx !== undefined, 'context exists once a cap is set');
+        // Connector seeds a default Stroke (#475569) in its ctor.
+        assert.equal(ctx!.Pen, c.Stroke);
+        assert.equal(ctx!.Brush, c.Stroke!.Brush);
+    });
+
+    test('the cap visual receives the context as its DataContext', () => {
+        const c = straightConnectorWithSourceCap();
+        assert.equal(c.SourceCapInstance!.DataContext, c.SourceCapContext);
+    });
+
+    test('swapping the connector Stroke pushes the new Pen + Brush into the context', () => {
+        const c = straightConnectorWithSourceCap();
+        const newPen = new Pen(new SolidColorBrush(Color.FromHex('#ff0000')), 3);
+        c.Stroke = newPen;
+        assert.equal(c.SourceCapContext!.Pen, newPen);
+        assert.equal(c.SourceCapContext!.Brush, newPen.Brush);
+    });
+
+    test('swapping the Brush in place on the same Pen recolours the context', () => {
+        const c = straightConnectorWithSourceCap();
+        const redBrush = new SolidColorBrush(Color.FromHex('#ff0000'));
+        // Mutate the existing Pen's Brush reference (PenEditor-style),
+        // without swapping the Pen itself.
+        c.Stroke!.Brush = redBrush;
+        assert.equal(c.SourceCapContext!.Brush, redBrush);
+    });
+});
+
+// Mirrors exactly what the .mu compiler emits for a catalog cap entry
+// (see build/framework/diagram/caps/caps.template.mu.js): a Path whose
+// paint is a DataContextBinding against $Pen / $Brush, plus the
+// Connector.CapInset attached property. The factory does NOT set
+// DataContext — instantiateCap does, the same as the runtime path.
+function markupLikeCap(opts: { paint: 'fill' | 'stroke'; data: string; inset: number }): DataTemplate
+{
+    return new DataTemplate(() => {
+        const p = new Path();
+        p.Data = opts.data;
+        if (opts.paint === 'fill') p.set_property_value(Path.FillKey,   DataContextBinding(p, 'Brush'));
+        else                       p.set_property_value(Path.StrokeKey, DataContextBinding(p, 'Pen'));
+        Connector.SetCapInset(p, opts.inset);
+        return p;
+    });
+}
+
+describe('Connector — markup-style cap paint resolves through the DataContext binding', () => {
+    function straightConnector(): Connector
+    {
+        const c = new Connector();
+        c.RoutingMode = RoutingMode.Straight;
+        c.Source = new ConnectorEndpoint({ FreePoint: new Point(0,   0) });
+        c.Target = new ConnectorEndpoint({ FreePoint: new Point(100, 0) });
+        return c;
+    }
+
+    test('open cap Stroke=$Pen resolves to the connector Pen', () => {
+        const c = straightConnector();
+        c.TargetCapTemplate = markupLikeCap({ paint: 'stroke', data: 'M -12,-6 L 0,0 L -12,6', inset: 0 });
+        const cap = c.TargetCapInstance as Path;
+        assert.equal(cap.Stroke, c.Stroke);
+    });
+
+    test('filled cap Fill=$Brush resolves to the connector Brush, and tracks a recolour', () => {
+        const c = straightConnector();
+        c.TargetCapTemplate = markupLikeCap({ paint: 'fill', data: 'M 0,0 L -12,-6 L -12,6 Z', inset: 12 });
+        const cap = c.TargetCapInstance as Path;
+        assert.equal(cap.Fill, c.Stroke!.Brush);
+
+        // In-place recolour (PenEditor swapping the brush on the same Pen)
+        // flows ctx.Brush → the cap's $Brush binding re-resolves.
+        const red = new SolidColorBrush(Color.FromHex('#ff0000'));
+        c.Stroke!.Brush = red;
+        assert.equal(cap.Fill, red);
+    });
+
+    test('filled cap inset still shortens the route (attached prop survives markup path)', () => {
+        const c = straightConnector();
+        c.TargetCapTemplate = markupLikeCap({ paint: 'fill', data: 'M 0,0 L -12,-6 L -12,6 Z', inset: 12 });
+        // 100-unit east route, target inset 12 → tail stops at x=88.
+        const g = c.Geometry as PathGeometry;
+        const segs = g.Figures[0]!.Segments;
+        const last = segs[segs.length - 1] as { Point: Point };
+        assert.equal(last.Point.X, 88);
     });
 });
 
