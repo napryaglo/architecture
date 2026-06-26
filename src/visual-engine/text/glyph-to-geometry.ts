@@ -22,6 +22,7 @@ import {
     CubicBezierSegment,
     LineSegment,
     PathFigure,
+    PathGeometry,
     type PathSegment,
     QuadraticBezierSegment,
 } from '../geometry/geometry.js';
@@ -120,4 +121,59 @@ export function glyphToFigures(
     flush(false);
     void pen;
     return { figures, advance };
+}
+
+// Build a full PathGeometry for a run of text in a single resolved
+// opentype.Font, laid out left-to-right with pairwise kerning. The
+// glyph outlines are Y-flipped to mural's Y-down space and scaled to
+// `fontSize`; the run's baseline sits at y = 0 with the first glyph's
+// origin at x = 0.
+//
+// We walk `charToGlyph` per character rather than opentype.js's full
+// layout (font.getPath / getAdvanceWidth), which throws on modern
+// fonts whose GSUB tables use lookup formats the library doesn't
+// implement. Tradeoff: no ligatures / contextual alternates — callers
+// that need an icon-font glyph must pass its raw codepoint character,
+// not a ligature name. Shared by FontMetricsMeasurer.BuildGeometry and
+// the basic GlyphGeometryConverter so both stay byte-for-byte in sync.
+// Build a PathGeometry for a single already-resolved glyph (e.g. one
+// looked up by name via font.nameToGlyphIndex, bypassing charToGlyph).
+// The outline is Y-flipped to mural's Y-down space and scaled so the
+// font's em maps to `emSize`; the glyph origin sits at (0, 0). Pass
+// `font.unitsPerEm` as emSize to keep raw font-unit coordinates.
+export function glyphOutlineToGeometry(
+    glyph: opentype.Glyph,
+    emSize: number,
+    unitsPerEm: number,
+): PathGeometry
+{
+    const scale = emSize / unitsPerEm;
+    return new PathGeometry(glyphToFigures(glyph, scale, 0, 0).figures);
+}
+
+export function fontGlyphRunToGeometry(
+    font: opentype.Font,
+    text: string,
+    fontSize: number,
+): PathGeometry
+{
+    if (text === '') return new PathGeometry([]);
+
+    const scale = fontSize / font.unitsPerEm;
+    const figures: PathFigure[] = [];
+    let cursor = 0;
+    let prev: opentype.Glyph | undefined;
+    for (const ch of Array.from(text))
+    {
+        const glyph = font.charToGlyph(ch);
+        if (prev !== undefined)
+        {
+            cursor += font.getKerningValue(prev, glyph) * scale;
+        }
+        const lowering = glyphToFigures(glyph, scale, cursor, 0);
+        for (const f of lowering.figures) figures.push(f);
+        cursor += lowering.advance;
+        prev = glyph;
+    }
+    return new PathGeometry(figures);
 }

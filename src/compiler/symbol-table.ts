@@ -36,6 +36,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['DynamicResource',     '@visualisation-sub/mural/runtime'],
     ['DataContextBinding',  '@visualisation-sub/mural/runtime'],
     ['ElementNameBinding',  '@visualisation-sub/mural/runtime'],
+    ['SelfBinding',         '@visualisation-sub/mural/runtime'],
     ['composeConverters',   '@visualisation-sub/mural/runtime'],
     ['MultiBinding',        '@visualisation-sub/mural/runtime'],
     ['TemplateBinding',     '@visualisation-sub/mural/runtime'],

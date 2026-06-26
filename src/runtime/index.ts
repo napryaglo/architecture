@@ -20,6 +20,7 @@ export {
 } from './property-descriptor.js';
 export {
     AncestorBinding,
+    SelfBinding,
     Binding,
     BindingMode,
     composeConverters,

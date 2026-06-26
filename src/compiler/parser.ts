@@ -21,6 +21,8 @@ import type {
     Document,
     DefForm,
     IncludeForm,
+    GlyphsForm,
+    GlyphEntry,
     DynamicResourceValue,
     ElementNode,
     EventTriggerGroup,
@@ -262,6 +264,42 @@ export class Parser
         }
         const end = this.lastEnd();
         return { kind: 'include-form', path, key, span: this.span(start, end) };
+    }
+
+    // `glyphs "<font>" { <key> | <key> = "<cp>" … }` — a resource-dictionary
+    // body item that bakes font-glyph outlines in at compile time, one
+    // PathGeometry resource per entry. A bare `key` is looked up by glyph
+    // name; `key = "<cp>"` takes the glyph from the string's first
+    // codepoint. HOW a font becomes geometry is the resolver's job (emit
+    // pass); the parser just captures font + entries.
+    private parseGlyphsForm(): GlyphsForm
+    {
+        const start = this.expectIdent('glyphs').span.start;
+        const font  = this.expect(TokenKind.String).value;
+        this.expect(TokenKind.LBrace);
+
+        const entries: GlyphEntry[] = [];
+        while (
+            this.peek().kind !== TokenKind.RBrace
+            && this.peek().kind !== TokenKind.EOF
+        )
+        {
+            const keyTok = this.expect(TokenKind.Ident);
+            let codepoint: string | undefined;
+            if (this.peek().kind === TokenKind.Equals)
+            {
+                this.consume();
+                codepoint = this.expect(TokenKind.String).value;
+            }
+            entries.push({
+                key: keyTok.value,
+                codepoint,
+                span: this.span(keyTok.span.start, this.lastEnd()),
+            });
+        }
+        this.expect(TokenKind.RBrace);
+        const end = this.lastEnd();
+        return { kind: 'glyphs-form', font, entries, span: this.span(start, end) };
     }
 
     // `theme Identifier { import …; tokens { … }; …body… }`
@@ -1367,6 +1405,7 @@ export class Parser
                 case 'ItemsPanelTemplate': return this.parseResourceForm();
                 case 'def':          return this.parseDefForm();
                 case 'include':      return this.parseIncludeForm();
+                case 'glyphs':       return this.parseGlyphsForm();
                 default:
                     // SlotAssign vs Element disambiguation.
                     if (this.peek(1).kind === TokenKind.Colon)
@@ -1594,6 +1633,35 @@ export class Parser
     private parseBindingPath(): BindingValue
     {
         const dollar = this.expect(TokenKind.Dollar);
+
+        // Relative source `$Self.(Owner.Prop)` — binds to the TARGET
+        // element's own property (typically an inherited attached
+        // property, e.g. `$Self.(TextBlock.Foreground)`). Recognised only
+        // by the `.(` attached-path follow — bare `$Self` (and `$Self.x`)
+        // keep their existing meaning (a self-reference / DataContext
+        // path, e.g. `DropReceiver = $Self`).
+        if (this.peek().kind === TokenKind.Ident && this.peek().value === 'Self'
+            && this.peek(1).kind === TokenKind.Dot
+            && this.peek(2).kind === TokenKind.LParen)
+        {
+            this.consume();                       // 'Self'
+            this.consume();                       // '.'
+            this.consume();                       // '('
+            const owner = this.expect(TokenKind.Ident).value;
+            this.expect(TokenKind.Dot);
+            const property = this.expect(TokenKind.Ident).value;
+            this.expect(TokenKind.RParen);        // ')'
+            const converters = this.parseConverterChain();
+            return {
+                kind: 'binding',
+                path: [],
+                source: 'self',
+                attached: { owner, property },
+                converters: converters.length > 0 ? converters : undefined,
+                span: this.span(dollar.span.start, this.lastEnd()),
+            };
+        }
+
         const path: string[] = [];
         path.push(this.expect(TokenKind.Ident).value);
         while (this.peek().kind === TokenKind.Dot)
@@ -1601,20 +1669,26 @@ export class Parser
             this.consume();
             path.push(this.expect(TokenKind.Ident).value);
         }
-        // Optional converter chain: `<< conv1 << conv2 …`. Each is an
-        // imported ValueConverter symbol; they compose left-to-right.
-        const converters: string[] = [];
-        while (this.peek().kind === TokenKind.LessLess)
-        {
-            this.consume();
-            converters.push(this.expect(TokenKind.Ident).value);
-        }
+        const converters = this.parseConverterChain();
         return {
             kind: 'binding',
             path,
             converters: converters.length > 0 ? converters : undefined,
             span: this.span(dollar.span.start, this.lastEnd()),
         };
+    }
+
+    // Optional converter chain: `<< conv1 << conv2 …`. Each is an
+    // imported ValueConverter symbol; they compose left-to-right.
+    private parseConverterChain(): string[]
+    {
+        const converters: string[] = [];
+        while (this.peek().kind === TokenKind.LessLess)
+        {
+            this.consume();
+            converters.push(this.expect(TokenKind.Ident).value);
+        }
+        return converters;
     }
 
     private parseTemplateBinding(): TemplateBindingValue

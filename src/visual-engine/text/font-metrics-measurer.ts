@@ -4,8 +4,8 @@ import type {
     TextMetrics,
 } from '../../runtime/index.js';
 import { ApproximateTextMeasurer } from '../../runtime/index.js';
-import { PathFigure, PathGeometry } from '../geometry/geometry.js';
-import { glyphToFigures } from './glyph-to-geometry.js';
+import { PathGeometry } from '../geometry/geometry.js';
+import { fontGlyphRunToGeometry } from './glyph-to-geometry.js';
 
 // TextMeasurer backed by opentype.js. Parses real TTF/OTF/WOFF font
 // files and computes per-glyph advance widths + kerning, plus ascent /
@@ -115,23 +115,7 @@ export class FontMetricsMeasurer implements TextMeasurer
         const font = this.resolveFont(fontFamily, fontWeight, fontStyle);
         if (font === undefined) return new PathGeometry([]);
 
-        const scale = fontSize / font.unitsPerEm;
-        const figures: PathFigure[] = [];
-        let cursor = 0;
-        let prev: opentype.Glyph | undefined;
-        for (const ch of Array.from(text))
-        {
-            const glyph = font.charToGlyph(ch);
-            if (prev !== undefined)
-            {
-                cursor += font.getKerningValue(prev, glyph) * scale;
-            }
-            const lowering = glyphToFigures(glyph, scale, cursor, 0);
-            for (const f of lowering.figures) figures.push(f);
-            cursor += lowering.advance;
-            prev = glyph;
-        }
-        return new PathGeometry(figures);
+        return fontGlyphRunToGeometry(font, text, fontSize);
     }
 
     // Sum per-glyph advance widths plus pairwise kerning. We don't use

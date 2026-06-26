@@ -60,6 +60,16 @@ export function svgToGeometryJs(svgText: string): GeometryResourceJs
     return { valueJs, names: [...used].sort() };
 }
 
+// Serialize a single already-built Geometry to a construction expression
+// plus the visual-engine names it references. Shared with the font-glyph
+// resolver, which hands in a PathGeometry from glyphOutlineToGeometry.
+export function geometryToJs(g: Geometry): GeometryResourceJs
+{
+    const used = new Set<string>();
+    const valueJs = emitGeometry(g, used);
+    return { valueJs, names: [...used].sort() };
+}
+
 function emitGeometry(g: Geometry, used: Set<string>): string
 {
     if (g instanceof PathGeometry)

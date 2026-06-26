@@ -12,3 +12,4 @@ export {
     type LoadedGoogleFont,
 } from './google-font-loader.js';
 export { textOnPath, type TextOnPathOptions } from './text-on-path.js';
+export { glyphToFigures, fontGlyphRunToGeometry, glyphOutlineToGeometry } from './glyph-to-geometry.js';

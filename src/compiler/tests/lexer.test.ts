@@ -58,6 +58,28 @@ describe('Lexer — atoms', () => {
         ]);
     });
 
+    test('string \\uXXXX escape decodes to the codepoint char', () => {
+        assert.deepEqual(tokenize('"\\ue1a7"'), [
+            [TokenKind.String, String.fromCodePoint(0xe1a7)],
+            [TokenKind.EOF, ''],
+        ]);
+    });
+
+    test('string \\u{X…} braced escape (astral codepoint)', () => {
+        assert.deepEqual(tokenize('"\\u{1f600}!"'), [
+            [TokenKind.String, String.fromCodePoint(0x1f600) + '!'],
+            [TokenKind.EOF, ''],
+        ]);
+    });
+
+    test('malformed \\u escape passes through literally', () => {
+        // Too few hex digits → no decode; the lexer stays lenient.
+        assert.deepEqual(tokenize('"\\uzz"'), [
+            [TokenKind.String, 'uzz'],
+            [TokenKind.EOF, ''],
+        ]);
+    });
+
     test('# body — hex colour', () => {
         assert.deepEqual(tokenize('#0d47a1'), [
             [TokenKind.HashBody, '0d47a1'],

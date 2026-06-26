@@ -32,6 +32,7 @@ export { DataContextBinding } from './data-context-binding.js';
 export { ElementNameBinding } from './element-name-binding.js';
 export { MultiBinding, PriorityBinding } from './multi-binding.js';
 export { AncestorBinding } from './ancestor-binding.js';
+export { SelfBinding } from './self-binding.js';
 export { TemplateBinding } from './template-binding.js';
 export { MultiTemplateBinding } from './multi-template-binding.js';
 export { DynamicResource } from './dynamic-resource.js';

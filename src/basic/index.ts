@@ -120,7 +120,13 @@ export {
 export { ListReorderBehavior } from './behaviors/list-reorder-behavior.js';
 export { LogBehavior } from './behaviors/log-behavior.js';
 export { attachMarqueeSelection } from './behaviors/marquee-selection-behavior.js';
-export { AlternationConverter } from './alternation-converter.js';
+export { AlternationConverter } from './converters/index.js';
+export {
+    GlyphGeometryConverter,
+    fontGlyphSource,
+    type GlyphGeometrySource,
+    type GlyphGeometryOptions,
+} from './converters/index.js';
 export {
     ItemsPanelTemplate,
     type ItemsPanelFactory,

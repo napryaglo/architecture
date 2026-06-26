@@ -11,6 +11,7 @@ import type {
     ColorValue,
     DefForm,
     IncludeForm,
+    GlyphsForm,
     Document,
     ElementNode,
     EventTriggerGroup,
@@ -186,6 +187,17 @@ export type IncludeResolver = (
     ctx: { key: string | undefined },
 ) => IncludeResolution;
 
+// Resolves a `glyphs "<font>" { … }` block. Given the font path and the
+// parsed entries (each a resource key plus either an explicit codepoint
+// or — absent one — a glyph name to look up), returns the same
+// IncludeResolution shape: one `{ key, valueJs }` per entry plus the
+// imports their JS references. Font parsing + outline → geometry lives
+// in the host-supplied resolver; the compiler only splices the result.
+export type GlyphResolver = (
+    font: string,
+    entries: ReadonlyArray<{ key: string; name?: string; codepoint?: string }>,
+) => IncludeResolution;
+
 export interface CompilerOptions
 {
     /** Override or augment the default name → module map. */
@@ -195,6 +207,9 @@ export interface CompilerOptions
     /** Resolves `include` directives. Absent → `include` is a compile
      *  error (text-only callers / tests don't get filesystem access). */
     include?: IncludeResolver;
+    /** Resolves `glyphs` blocks. Absent → `glyphs` is a compile error
+     *  (text-only callers can't read font files). */
+    glyphs?:  GlyphResolver;
 }
 
 export interface CompilerOutput
@@ -277,6 +292,7 @@ export class Compiler
     private readonly symbols: SymbolMap;
     private readonly slots:   ReadonlyMap<string, SlotInfo>;
     private readonly include: IncludeResolver | undefined;
+    private readonly glyphs:  GlyphResolver | undefined;
     private readonly imports: Map<string, Set<string>> = new Map();
     private readonly lines:   string[] = [];
     // Macros collected during Compile() — keyed by macro name. Lookup
@@ -344,6 +360,7 @@ export class Compiler
         this.symbols = new Map(opts.symbols ?? DEFAULT_SYMBOLS);
         this.slots   = opts.slots ?? DEFAULT_SLOT_INFO;
         this.include = opts.include;
+        this.glyphs  = opts.glyphs;
     }
 
     public Compile(doc: Document): CompilerOutput
@@ -1048,6 +1065,9 @@ export class Compiler
                 case 'include-form':
                     this.compileInclude(rdVar, item);
                     continue;
+                case 'glyphs-form':
+                    this.compileGlyphs(rdVar, item);
+                    continue;
                 default:
                     throw new EmitError(
                         `resources: ${item.kind} is not allowed here`,
@@ -1086,6 +1106,45 @@ export class Compiler
                 `include "${form.path}" as ${form.key}: 'as' names a single resource, but `
                 + `the path matched ${res.entries.length} files — drop 'as' to key each by basename.`,
                 form.span);
+        }
+        for (const imp of res.imports ?? [])
+        {
+            this.addModuleImports(imp.module, imp.names);
+        }
+        for (const entry of res.entries)
+        {
+            this.line(`${rdVar}.Set(${JSON.stringify(entry.key)}, ${entry.valueJs});`);
+        }
+    }
+
+    // `glyphs "<font>" { … }` → ask the injected resolver to turn each
+    // entry into a geometry resource, emit one `rd.Set(key, value)` per
+    // entry, and pull in the imports the geometry JS references. Font
+    // parsing + outline extraction live in the resolver; the compiler
+    // only splices the result. Mirrors compileInclude.
+    private compileGlyphs(rdVar: string, form: GlyphsForm): void
+    {
+        if (this.glyphs === undefined)
+        {
+            throw new EmitError(
+                `'glyphs' needs a font resolver, but none was configured for this compile `
+                + `(text-only callers can't read font files). Run through the build pipeline.`,
+                form.span);
+        }
+        // Empty codepoint → look up by name (the key); else by codepoint.
+        const entries = form.entries.map(e => e.codepoint !== undefined
+            ? { key: e.key, codepoint: e.codepoint }
+            : { key: e.key, name: e.key });
+
+        let res: IncludeResolution;
+        try
+        {
+            res = this.glyphs(form.font, entries);
+        }
+        catch (e)
+        {
+            throw new EmitError(
+                `glyphs "${form.font}": ${(e as Error).message}`, form.span);
         }
         for (const imp of res.imports ?? [])
         {
@@ -3257,6 +3316,25 @@ export class Compiler
                 // trailing factory arg for both binding flavors.
                 const convExpr = this.converterExpr(val.converters);
                 const convArg  = convExpr !== undefined ? `, ${convExpr}` : '';
+                // Relative source `$Self.(Owner.Prop)` — binds to the
+                // target element's OWN property, typically an inherited
+                // attached property (e.g. `$Self.(TextBlock.Foreground)`,
+                // letting a Shape paint its Fill from the inherited ink).
+                // `owner` is emitted as a real class reference (imported via
+                // the symbol table), never a string proxy.
+                if (val.source === 'self')
+                {
+                    this.ensureImport('SelfBinding');
+                    const owner = val.attached!.owner;
+                    const prop  = val.attached!.property;
+                    this.ensureImport(owner);
+                    if (ctx.targetExpr !== undefined)
+                    {
+                        return `SelfBinding(${ctx.targetExpr}, ${owner}, ${JSON.stringify(prop)}${convArg})`;
+                    }
+                    this.ensureImport('SetterFactory');
+                    return `new SetterFactory((_t) => SelfBinding(_t, ${owner}, ${JSON.stringify(prop)}${convArg}))`;
+                }
                 // ElementName-style binding — when the first path
                 // segment matches an x:name declared earlier in the
                 // current template scope, the source is that named

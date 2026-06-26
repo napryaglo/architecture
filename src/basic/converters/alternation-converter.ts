@@ -1,4 +1,4 @@
-import type { ValueConverter } from '../runtime/index.js';
+import type { ValueConverter } from '../../runtime/index.js';
 
 // Converter that picks a value from a list by AlternationIndex
 // (or any integer input). Mirrors WPF's

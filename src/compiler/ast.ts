@@ -251,6 +251,7 @@ export type BodyItem =
     | ResourceForm
     | DefForm
     | IncludeForm
+    | GlyphsForm
     | MacroHoleBodyItem;
 
 // `include "<path>" [as <key>]` — compile-time inclusion of an external
@@ -268,6 +269,32 @@ export interface IncludeForm
     /** Explicit resource key from `as <key>` (single-file only); else the
      *  key is derived from each matched file's basename. */
     key?: string;
+    span: SourceSpan;
+}
+
+// `glyphs "<font>" { home  bolt = "<cp>"  … }` — compile-time inclusion
+// of font-glyph outlines into the enclosing resource dictionary, one
+// PathGeometry resource per entry. Each entry's `key` ident is the
+// resource key; absent `codepoint`, it doubles as the glyph NAME to
+// look up (font `post` table); with `= "<cp>"` the glyph is taken from
+// that string's first codepoint. HOW a font file becomes geometry is
+// decided by the compiler's injected glyph resolver — the parser only
+// captures the directive. Sibling of IncludeForm (.svg → geometry).
+export interface GlyphsForm
+{
+    kind: 'glyphs-form';
+    /** Font file path exactly as written, relative to the .mu file. */
+    font: string;
+    entries: GlyphEntry[];
+    span: SourceSpan;
+}
+
+export interface GlyphEntry
+{
+    /** Resource key; also the glyph name when `codepoint` is absent. */
+    key: string;
+    /** Explicit codepoint string from `= "<cp>"`; else look up by `key`. */
+    codepoint?: string;
     span: SourceSpan;
 }
 
@@ -575,7 +602,12 @@ export interface ListValue   { kind: 'list';    values: ValueNode[]; span: Sourc
 // converters: `$path << conv1 << conv2`. `converters` lists the imported
 // ValueConverter symbol names in left-to-right application order (compose
 // as `convN(... conv1(value))`); empty/absent → a plain binding.
-export interface BindingValue          { kind: 'binding';            path: string[];   converters?: string[]; span: SourceSpan; }
+// `$path` / `$node.path` (DataContext / ElementName), or the relative
+// source `$Self.(Owner.Prop)` which binds to the TARGET element's own
+// property — typically an inherited attached property like
+// `TextBlock.Foreground`. For the self form `source` is 'self', `attached`
+// names the owner type + property, and `path` is empty.
+export interface BindingValue          { kind: 'binding';            path: string[];   source?: 'self'; attached?: { owner: string; property: string }; converters?: string[]; span: SourceSpan; }
 export interface TemplateBindingValue  { kind: 'template-binding';   name: string;     span: SourceSpan; }
 // `@Key` → key='Key', dynamic=false.  `@@Key` → dynamic=true.
 export interface StaticResourceValue   { kind: 'static-resource';    key: string;      span: SourceSpan; }

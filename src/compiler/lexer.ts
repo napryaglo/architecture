@@ -356,6 +356,60 @@ export class Lexer
         return this.isLetter(c) || this.isDigit(c);
     }
 
+    private isHex(c: string | undefined): boolean
+    {
+        if (c === undefined) return false;
+        const code = c.charCodeAt(0);
+        return (code >= 48 && code <= 57)   // 0-9
+            || (code >= 65 && code <= 70)   // A-F
+            || (code >= 97 && code <= 102); // a-f
+    }
+
+    // Decode a `\u` escape whose `u` has just been consumed (pos sits at
+    // the char after `u`). Handles `\uXXXX` (exactly 4 hex) and
+    // `\u{X…}` (1+ hex). Lenient like the rest of the lexer: a malformed
+    // escape passes through as the literal text it consumed, so the
+    // parser — not the lexer — owns diagnostics.
+    private lexUnicodeEscape(): string
+    {
+        if (this.source[this.pos] === '{')
+        {
+            this.advance();   // past '{'
+            let hex = '';
+            while (this.pos < this.length && this.source[this.pos] !== '}')
+            {
+                hex += this.source[this.pos];
+                this.advance();
+            }
+            const closed = this.source[this.pos] === '}';
+            if (closed) this.advance();   // past '}'
+            const code = parseInt(hex, 16);
+            if (hex.length === 0 || !this.isAllHex(hex) || Number.isNaN(code) || code > 0x10ffff)
+            {
+                return 'u{' + hex + (closed ? '}' : '');
+            }
+            return String.fromCodePoint(code);
+        }
+        // `\uXXXX` — exactly four hex digits.
+        let hex = '';
+        for (let i = 0; i < 4 && this.isHex(this.source[this.pos]); i++)
+        {
+            hex += this.source[this.pos];
+            this.advance();
+        }
+        if (hex.length !== 4)
+        {
+            return 'u' + hex;   // malformed — pass through literally
+        }
+        return String.fromCodePoint(parseInt(hex, 16));
+    }
+
+    private isAllHex(s: string): boolean
+    {
+        for (const ch of s) if (!this.isHex(ch)) return false;
+        return s.length > 0;
+    }
+
     // [A-Za-z_][A-Za-z0-9_]* — underscores allowed (matches the XAML
     // PART_Border naming convention used throughout the bundled
     // ControlTemplates and surfaces in trigger setter LHS like
@@ -415,6 +469,12 @@ export class Lexer
             {
                 this.advance();
                 const esc = this.source[this.pos];
+                if (esc === 'u')
+                {
+                    this.advance();   // past 'u'
+                    out += this.lexUnicodeEscape();
+                    continue;
+                }
                 if (esc !== undefined)
                 {
                     // Honour the common escapes; others pass through literally.
