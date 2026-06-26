@@ -76,8 +76,33 @@ export class ContentPresenter extends Element
         if (content !== undefined)
         {
             this.AttachVisual(content);
+            // Pick up values inherited through the VISUAL tree (e.g. a
+            // host ControlTemplate's `TextBlock.Foreground` on a
+            // PART_Border) the moment the content is slotted — the
+            // content hangs off us visually but off the ContentControl
+            // logically, so the logical inheritance refresh alone leaves
+            // template-set styling unresolved. Paired with
+            // Element.walk_inherited's visual-tree fallback.
+            content._refresh_inheritance_subtree();
         }
         this.InvalidateMeasure();
+    }
+
+    // Bridge property-value inheritance to the slotted content. The
+    // content is our VISUAL child but NOT a logical child
+    // (logicalChildren is []), so the normal logical cascade would stop
+    // here. Forward inherited-property refreshes to it so values set
+    // inside the host ControlTemplate stay reactive on the content.
+    protected override propagate_inheritance_for_logical_children(descriptor: PropertyDescriptor): void
+    {
+        super.propagate_inheritance_for_logical_children(descriptor);
+        this._content?._refresh_inherited(descriptor);
+    }
+
+    protected override propagate_inheritance_to_logical_children(): void
+    {
+        super.propagate_inheritance_to_logical_children();
+        this._content?._refresh_inheritance_subtree();
     }
 
     // Cascade host (`target`) to the slotted content. ContentPresenter's

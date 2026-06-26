@@ -758,7 +758,7 @@ export class Element extends Visual implements ITriggerHost
         while (true)
         {
             const next = cursor._logicalParent ?? cursor._templatedParent;
-            if (next === undefined) return undefined;
+            if (next === undefined) break;
             const evd = propertyValues(next).get(key);
             if (evd !== undefined && evd.Source !== PropertyValueSource.Default)
             {
@@ -769,9 +769,49 @@ export class Element extends Visual implements ITriggerHost
             // their EVD bag would still be inspectable above, but their
             // `_logicalParent` is Visual's no-op stub returning
             // undefined, so the next iteration would exit.
-            if (!(next instanceof Element)) return undefined;
+            if (!(next instanceof Element)) break;
             cursor = next;
         }
+
+        // VISUAL-tree fallback. Slotted content (a ContentControl's
+        // Content, an item container's child) hangs off the presenter
+        // VISUALLY but off the control LOGICALLY — so a value set inside
+        // a ControlTemplate (e.g. `TextBlock.Foreground` on a PART_Border)
+        // never reaches it through the logical walk above. Walk the visual
+        // ancestors to pick those up, matching WPF's visual-tree
+        // inheritance for text styling. Logical resolution always wins
+        // (checked first), so nothing already-resolving changes; this only
+        // fills in keys the authored/logical chain left at Default.
+        //
+        // DataContext is EXCLUDED: it must follow the authored/logical
+        // context (the control / data item), never the template's visual
+        // placement — that invariant is why the two-tree split exists.
+        if (key !== Element.dataContextComposedKey())
+        {
+            let v: Visual | undefined = this.GetVisualParent();
+            while (v !== undefined)
+            {
+                if (v instanceof Element)
+                {
+                    const evd = propertyValues(v).get(key);
+                    if (evd !== undefined && evd.Source !== PropertyValueSource.Default)
+                    {
+                        return evd.value;
+                    }
+                }
+                v = v.GetVisualParent();
+            }
+        }
+        return undefined;
+    }
+
+    // Composed key for Element.DataContext, computed lazily (the static
+    // can't reference `Element` during its own class initialization).
+    private static _dataContextComposedKey: string | undefined;
+    private static dataContextComposedKey(): string
+    {
+        return (Element._dataContextComposedKey ??=
+            Model.compose_key(Element, 'DataContext'));
     }
 
     /** @internal — § 1.10. Override of Visual's no-op stub. Re-
@@ -835,8 +875,16 @@ export class Element extends Visual implements ITriggerHost
 
     protected Detach(child: Visual): void
     {
-        this.DetachLogical(child);
+        // Sever the VISUAL link before the logical one. DetachLogical
+        // refreshes property inheritance, and walk_inherited now consults
+        // the visual-parent chain as a fallback (so template-set styling
+        // reaches slotted content) — so the visual parent must already be
+        // gone, or a child being removed would transiently re-inherit from
+        // its old parent through that fallback and cache a stale value.
+        // DetachVisual only clears the visual parent + target, so it has no
+        // dependency on the logical side being intact.
         this.DetachVisual(child);
+        this.DetachLogical(child);
     }
 
     // LOGICAL-tree wiring only: sets the child's logical parent and
