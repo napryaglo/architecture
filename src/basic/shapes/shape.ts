@@ -4,6 +4,7 @@ import { resolveKey } from '../../runtime/model-internals.js';
 import { Brush, Geometry, Pen } from '../../visual-engine/index.js';
 import { MatrixTransform } from '../../visual-engine/drawing/transform.js';
 import { Matrix } from '../../visual-engine/primitives.js';
+import { TextBlock } from '../text-block.js';
 
 // One-line rendering primitive: hand it a Geometry, a Fill, and a
 // Stroke, get back exactly what a DrawingContext call would paint —
@@ -13,7 +14,10 @@ import { Matrix } from '../../visual-engine/primitives.js';
 //   * Geometry — the shape (RectangleGeometry, EllipseGeometry,
 //     PathGeometry, LineGeometry, …). Undefined renders nothing.
 //   * Fill     — the interior brush. Undefined means no fill (matches
-//     SVG `fill="none"` / DC's brush=undefined contract).
+//     SVG `fill="none"` / DC's brush=undefined contract) — UNLESS Stroke
+//     is also unset, in which case the Shape paints with the inherited
+//     TextBlock.Foreground so a bare `Shape [Geometry=@icon]` follows the
+//     surrounding text ink with no explicit Fill (see effectiveFill).
 //   * Stroke   — the full Pen: Brush + Thickness + DashStyle +
 //     LineCap + LineJoin + MiterLimit. Undefined means no stroke.
 //
@@ -105,17 +109,41 @@ export class Shape extends Element
         // matches the geometry (the common case — authored at its used
         // size) or when the slot is degenerate: Connector paints its route
         // in absolute canvas coordinates at Size.Zero and must NOT scale.
+        const fill = this.effectiveFill();
         const fit = this.fitTransform(g);
         if (fit !== undefined)
         {
             dc.PushTransform(fit);
-            dc.DrawGeometry(this.Fill, this.Stroke, g);
+            dc.DrawGeometry(fill, this.Stroke, g);
             dc.Pop();
             return;
         }
         // One call. The DC takes the same (brush, pen, geometry) shape
         // the Shape DPs are modelled on — no per-render synthesis needed.
-        dc.DrawGeometry(this.Fill, this.Stroke, g);
+        dc.DrawGeometry(fill, this.Stroke, g);
+    }
+
+    // Effective interior brush for painting. When BOTH Fill and Stroke
+    // are unset, the Shape paints with the inherited TextBlock.Foreground
+    // — so a bare `Shape [Geometry=@icon]` follows the surrounding text
+    // ink the way an icon glyph should, with no explicit Fill binding.
+    // Precedence: an explicit Fill always wins; a stroke-only Shape
+    // (Stroke set, Fill unset) keeps fill="none" rather than acquiring a
+    // surprise interior. Foreground is MetaData.Render | Inherits, so a
+    // change to the inherited ink re-invalidates this Shape automatically
+    // through the base property pipeline — no extra subscription needed.
+    //
+    // Computed at render time (not pushed onto the Fill DP) so the
+    // fallback never fights an explicit Fill binding and leaves Fill
+    // reading as authored. Concrete catalog subclasses that override
+    // RenderOverride paint `this.Fill` directly and opt out of this
+    // fallback; they may call effectiveFill() to opt in.
+    protected effectiveFill(): Brush | undefined
+    {
+        const fill = this.Fill;
+        if (fill !== undefined) return fill;
+        if (this.Stroke !== undefined) return undefined;
+        return this.get_property_value(TextBlock.ForegroundKey);
     }
 
     // Uniform-scale + center transform mapping the geometry's bounds into
