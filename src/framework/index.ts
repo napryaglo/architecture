@@ -146,6 +146,7 @@ export {
 } from './diagram/diagram.js';
 export {
     DiagramDocument,
+    DiagramStorageKey,
     type DiagramStorage,
 } from './diagram/diagram-document.js';
 export { Figure } from './diagram/figure.js';

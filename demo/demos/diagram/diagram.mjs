@@ -8,15 +8,10 @@
 // seeds a few Figures, and returns it for the platform to mount.
 
 import { Application } from '@visualisation-sub/mural/runtime';
-import { ConnectorEndpoint, DiagramDocument } from '@visualisation-sub/mural/framework';
+import { ConnectorEndpoint, DiagramDocument, DiagramStorageKey } from '@visualisation-sub/mural/framework';
 import { DiagramDemo } from './diagram.mu.js';
 import { register } from '../../platform/registry.mjs';
 import { Icons } from '../../assets/icons.mu.js';
-
-const LocalStorageService = {
-    GetItem(key)        { return window.localStorage.getItem(key); },
-    SetItem(key, value) { window.localStorage.setItem(key, value); },
-};
 
 let resourcesMerged = false;
 let docInstance;
@@ -33,7 +28,10 @@ register({
             resourcesMerged = true;
         }
         if (docInstance === undefined) {
-            docInstance = new DiagramDocument(LocalStorageService);
+            // Storage comes from the app's service provider (registered
+            // at the platform composition root). Optional: if no backend
+            // is registered the document just runs without persistence.
+            docInstance = new DiagramDocument(Application.current?.Services.get(DiagramStorageKey));
             // Seed a few nodes so the demo doesn't open empty.
             const rect    = docInstance.CreateNode('rectangle',     60,  60);
             const ellipse = docInstance.CreateNode('ellipse',      220,  60);

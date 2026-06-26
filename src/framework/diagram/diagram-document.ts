@@ -3,6 +3,7 @@ import {
     Model,
     ObservableCollection,
     RelayCommand,
+    ServiceKey,
 } from '../../runtime/index.js';
 import { pathGeometryFromSvgD, pathGeometryToSvgD, Point } from '../../visual-engine/index.js';
 import { Figure } from './figure.js';
@@ -22,6 +23,14 @@ export interface DiagramStorage
     GetItem(key: string): string | null;
     SetItem(key: string, value: string): void;
 }
+
+// Service token for the diagram persistence backend. The composition
+// root (the app/platform bootstrap) registers a concrete DiagramStorage
+// implementation against this on Application.current.Services; demo
+// factories resolve it to inject into a DiagramDocument instead of each
+// hand-rolling its own localStorage object. A real exported token, not
+// a string.
+export const DiagramStorageKey = new ServiceKey<DiagramStorage>('DiagramStorage');
 
 interface SerializedNode
 {

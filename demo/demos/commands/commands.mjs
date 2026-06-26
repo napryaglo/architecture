@@ -8,15 +8,10 @@
 // in JS. This bootstrap just publishes the aggregate HasSelection state
 // to the VM.
 import { Application } from '@visualisation-sub/mural/runtime';
-import { Diagram } from '@visualisation-sub/mural/framework';
+import { Diagram, DiagramStorageKey } from '@visualisation-sub/mural/framework';
 import { CommandsDemo } from './commands.mu.js';
 import { CommandsVM } from './commands-vm.mjs';
 import { register } from '../../platform/registry.mjs';
-
-const LocalStorageService = {
-    GetItem(key)        { return window.localStorage.getItem(key); },
-    SetItem(key, value) { window.localStorage.setItem(key, value); },
-};
 
 let resourcesMerged = false;
 let vmInstance;
@@ -87,7 +82,7 @@ register({
             Application.current?.Resources.AddMergedDictionary(CommandsDemo.Clone());
             resourcesMerged = true;
         }
-        if (vmInstance === undefined) vmInstance = new CommandsVM(LocalStorageService);
+        if (vmInstance === undefined) vmInstance = new CommandsVM(Application.current?.Services.get(DiagramStorageKey));
         vmInstance.OnViewMounted = (view) => attachBehaviors(view, vmInstance);
         return vmInstance;
     },

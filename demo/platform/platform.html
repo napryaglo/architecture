@@ -81,6 +81,16 @@
         // to the root as DataContext.
         import { app }                                 from './platform.mu.js';
         import { HtmlTarget }                          from '@visualisation-sub/mural/visual-engine';
+        // Service composition root: register the app's services on the
+        // ambient provider ONCE here; demo factories resolve them (no
+        // more copy-pasted localStorage objects per demo). The .mu IIFE
+        // already constructed `app`, so Application.current.Services is
+        // live. DiagramStorageKey is the framework's storage token.
+        import { DiagramStorageKey }                   from '@visualisation-sub/mural/framework';
+        app.Services.registerInstance(DiagramStorageKey, {
+            GetItem(key)        { return window.localStorage.getItem(key); },
+            SetItem(key, value) { window.localStorage.setItem(key, value); },
+        });
         // ThemeManager.Activated fires whenever the active scheme
         // swaps — the in-app ThemeSelector control drives the swap;
         // we just mirror the current scheme name onto <html> via
