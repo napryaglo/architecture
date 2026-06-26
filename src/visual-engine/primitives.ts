@@ -260,6 +260,29 @@ export class Color
         return new Color(this.R, this.G, this.B, a);
     }
 
+    // Channel-wise linear blend a→b at t∈[0,1] (clamped). Blends ALL four
+    // channels including alpha; callers that must preserve a channel
+    // (e.g. Lighten keeping the source alpha) re-apply it after. The
+    // foundation the color modifiers build on: Lighten = Lerp(c,White,t),
+    // Darken = Lerp(c,Black,t), Mix(c,other,t) = Lerp(c,other,t).
+    public static Lerp(a: Color, b: Color, t: number): Color
+    {
+        const u = t < 0 ? 0 : t > 1 ? 1 : t;
+        const mix = (x: number, y: number): number => x + (y - x) * u;
+        return new Color(mix(a.R, b.R), mix(a.G, b.G), mix(a.B, b.B), mix(a.A, b.A));
+    }
+
+    // Shift saturation by `delta` (∈ roughly -1..+1) in HSL space, hue and
+    // lightness preserved, alpha carried through unchanged. delta>0
+    // saturates, delta<0 desaturates; the result S clamps to 0..1.
+    public AdjustSaturation(delta: number): Color
+    {
+        const [h, s, l] = rgbToHsl(this.R, this.G, this.B);
+        const s2 = Math.max(0, Math.min(1, s + delta));
+        const [r, g, b] = hslToRgb(h, s2, l);
+        return new Color(r, g, b, this.A);
+    }
+
     // Emits the most compact CSS color form for the channel values:
     // 'rgb(r,g,b)' when fully opaque, 'rgba(r,g,b,a)' otherwise.
     public ToCss(): string
@@ -297,6 +320,46 @@ export class Color
     {
         return this.ToCss();
     }
+}
+
+// RGB (0..255) → HSL with h∈[0,1), s,l∈[0,1]. Standard conversion; used
+// by Color.AdjustSaturation. Kept module-private — the public surface is
+// the Color methods, not the raw triplet math.
+function rgbToHsl(R: number, G: number, B: number): [number, number, number]
+{
+    const r = R / 255, g = G / 255, b = B / 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    const l = (max + min) / 2;
+    const d = max - min;
+    if (d === 0) return [0, 0, l];
+    const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    let h: number;
+    if (max === r)      h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+    else if (max === g) h = ((b - r) / d + 2) / 6;
+    else                h = ((r - g) / d + 4) / 6;
+    return [h, s, l];
+}
+
+// HSL (h∈[0,1), s,l∈[0,1]) → RGB (0..255). Inverse of rgbToHsl.
+function hslToRgb(h: number, s: number, l: number): [number, number, number]
+{
+    if (s === 0)
+    {
+        const v = l * 255;
+        return [v, v, v];
+    }
+    const hue = (p: number, q: number, t: number): number => {
+        let tt = t;
+        if (tt < 0) tt += 1;
+        if (tt > 1) tt -= 1;
+        if (tt < 1 / 6) return p + (q - p) * 6 * tt;
+        if (tt < 1 / 2) return q;
+        if (tt < 2 / 3) return p + (q - p) * (2 / 3 - tt) * 6;
+        return p;
+    };
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    return [hue(p, q, h + 1 / 3) * 255, hue(p, q, h) * 255, hue(p, q, h - 1 / 3) * 255];
 }
 
 // 2D affine transform. Storage matches WPF's row-vector convention:

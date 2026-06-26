@@ -643,6 +643,7 @@ export type ValueNode =
     | MacroHoleValue
     | InlineExprValue
     | FlagValue
+    | ModifiedValue
     | ElementNode;
 
 export interface NumberValue { kind: 'number';  raw: string;        span: SourceSpan; }
@@ -667,7 +668,20 @@ export interface ListValue   { kind: 'list';    values: ValueNode[]; span: Sourc
 // property — typically an inherited attached property like
 // `TextBlock.Foreground`. For the self form `source` is 'self', `attached`
 // names the owner type + property, and `path` is empty.
-export interface BindingValue          { kind: 'binding';            path: string[];   source?: 'self' | 'service'; serviceToken?: string; attached?: { owner: string; property: string }; converters?: string[]; span: SourceSpan; }
+export interface BindingValue          { kind: 'binding';            path: string[];   source?: 'self' | 'service'; serviceToken?: string; attached?: { owner: string; property: string }; converters?: ConverterRef[]; span: SourceSpan; }
+// One link in a `<< conv` chain. A bare converter (`<< Foo`) has no args;
+// a parameterized one (`<< Lighten(0.5)`) carries its argument values. The
+// emitter renders `Foo` vs `Lighten(0.5)` accordingly. `name` resolves to
+// an imported ValueConverter (bare) or a converter-FACTORY (when args are
+// present — e.g. a color modifier).
+export interface ConverterRef          { name: string; args: ValueNode[]; span: SourceSpan; }
+// A value piped through a converter chain in a NON-binding position:
+// `#0d47a1 << Lighten(0.5)`, `@PrimaryColor << Darken(0.2)`. Bindings
+// carry their own `converters` inline (threaded into the binding factory
+// so they stay reactive); this wrapper covers the static bases (color
+// literal, static resource, static member ref), which the emitter folds
+// to a constant by applying the chain once at instantiation.
+export interface ModifiedValue         { kind: 'modified'; base: ValueNode; converters: ConverterRef[]; span: SourceSpan; }
 export interface TemplateBindingValue  { kind: 'template-binding';   name: string;     span: SourceSpan; }
 // `@Key` → key='Key', dynamic=false.  `@@Key` → dynamic=true.
 export interface StaticResourceValue   { kind: 'static-resource';    key: string;      span: SourceSpan; }

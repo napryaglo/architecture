@@ -11,6 +11,7 @@ import type {
     AttrPath,
     BeginStoryboardNode,
     BindingValue,
+    ConverterRef,
     InvokeCommandNode,
     PauseStoryboardNode,
     ResumeStoryboardNode,
@@ -1615,6 +1616,23 @@ export class Parser
 
     private parseValue(): ValueNode
     {
+        const base = this.parsePrimaryValue();
+        // A `<<` here means a converter chain piped onto a NON-binding
+        // base (e.g. `#0d47a1 << Lighten(0.5)`, `@Primary << Darken(0.2)`).
+        // Bindings consume their own chain inside parsePrimaryValue (it's
+        // threaded into the binding factory to stay reactive), so by the
+        // time control returns here a binding base never has a trailing
+        // `<<`. Wrap everything else in a ModifiedValue.
+        if (this.peek().kind === TokenKind.LessLess)
+        {
+            const converters = this.parseConverterChain();
+            return { kind: 'modified', base, converters, span: this.span(base.span.start, this.lastEnd()) };
+        }
+        return base;
+    }
+
+    private parsePrimaryValue(): ValueNode
+    {
         const tk = this.peek();
         switch (tk.kind)
         {
@@ -1836,15 +1854,33 @@ export class Parser
         };
     }
 
-    // Optional converter chain: `<< conv1 << conv2 …`. Each is an
-    // imported ValueConverter symbol; they compose left-to-right.
-    private parseConverterChain(): string[]
+    // Optional converter chain: `<< conv1 << conv2 …`. Each link is an
+    // imported ValueConverter symbol, either bare (`<< Upper`) or called
+    // with arguments (`<< Lighten(0.5)`, `<< Mix(#ff0000, 0.25)`) — the
+    // call form names a converter FACTORY. They compose left-to-right.
+    private parseConverterChain(): ConverterRef[]
     {
-        const converters: string[] = [];
+        const converters: ConverterRef[] = [];
         while (this.peek().kind === TokenKind.LessLess)
         {
             this.consume();
-            converters.push(this.expect(TokenKind.Ident).value);
+            const id = this.expect(TokenKind.Ident);
+            const args: ValueNode[] = [];
+            if (this.peek().kind === TokenKind.LParen)
+            {
+                this.consume();
+                if (this.peek().kind !== TokenKind.RParen)
+                {
+                    for (;;)
+                    {
+                        args.push(this.parseValue());
+                        if (this.peek().kind === TokenKind.Comma) { this.consume(); continue; }
+                        break;
+                    }
+                }
+                this.expect(TokenKind.RParen);
+            }
+            converters.push({ name: id.value, args, span: this.span(id.span.start, this.lastEnd()) });
         }
         return converters;
     }

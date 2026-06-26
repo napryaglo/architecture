@@ -97,4 +97,59 @@ describe('compile — .Member: dotted aggregate-property blocks', () => {
             } }
         `), /mixes keyed and unkeyed entries/);
     });
+
+    // ── §25 fold: the dictionary `.Member:` shares `resources:`' full
+    // entry router, so it accepts resource-forms (Style/Template/…) with
+    // implicit type-keys — not just @key=value and x:key'd elements.
+    test('.Resources: accepts a Style resource-form (implicit type-key)', () => {
+        const js = compile(`
+            Application{ resources: {
+                Border x:root {
+                    .Resources: {
+                        Style [TargetType=Border] { Background = #ffffff; }
+                    }
+                }
+            } }
+        `).js;
+        // The Style is built and keyed implicitly by its TargetType class
+        // (a real Function reference), routed into the Border's Resources.
+        assert.match(js, /new Style\(Border, /);
+        assert.match(js, /_border\d+\.Resources\.Set\(Border, /);
+    });
+
+    test('a generic dictionary .Member: also accepts resource-forms', () => {
+        const js = compile(`
+            Application{ resources: {
+                Border x:root {
+                    .Palette: {
+                        @Bg = #000000
+                        DataTemplate x:key="row" [DataType=Border] { TextBlock }
+                    }
+                }
+            } }
+        `).js;
+        assert.match(js, /_border\d+\.Palette\.Set\("Bg", /);
+        assert.match(js, /_border\d+\.Palette\.Set\("row", /);
+    });
+
+    test('.Resources: lowers the same as the resources: keyword', () => {
+        const viaMember = compile(`
+            Application{ resources: {
+                Border x:root { .Resources: { @Accent = #ff0000 } }
+            } }
+        `).js;
+        const viaKeyword = compile(`
+            Application{ resources: {
+                Border x:root { resources: { @Accent = #ff0000 } }
+            } }
+        `).js;
+        // Both route @Accent into the Border's Resources dictionary. The
+        // keyword binds a local handle first (`const _rd = b.Resources`),
+        // the member form sets through the accessor — different receiver
+        // var, identical Set call against the same dictionary value.
+        assert.match(viaMember,  /\.Set\("Accent", new SolidColorBrush\(Color\.FromHex\('#ff0000'\)\)\)/);
+        assert.match(viaKeyword, /\.Set\("Accent", new SolidColorBrush\(Color\.FromHex\('#ff0000'\)\)\)/);
+        assert.match(viaMember,  /_border\d+\.Resources\.Set\("Accent", /);
+        assert.match(viaKeyword, /= _border\d+\.Resources;/);
+    });
 });

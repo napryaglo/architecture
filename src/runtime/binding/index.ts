@@ -36,3 +36,11 @@ export { SelfBinding } from './self-binding.js';
 export { TemplateBinding } from './template-binding.js';
 export { MultiTemplateBinding } from './multi-template-binding.js';
 export { DynamicResource } from './dynamic-resource.js';
+export {
+    Lighten,
+    Darken,
+    Mix,
+    Saturate,
+    Desaturate,
+    Alpha,
+} from './color-modifiers.js';

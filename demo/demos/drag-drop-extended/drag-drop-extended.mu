@@ -16,7 +16,7 @@ import ListReorderBehavior from "@visualisation-sub/mural/basic"
 // The reorderable list is a plain ItemsControl with a StackPanel
 // ItemsPanel so the reorder behavior's container-midpoint math has a
 // vertical layout to walk. The ListReorderBehavior installs from the
-// row-level Behaviors{} block — declarative attach inside the same
+// row-level `.Behaviors:` block — declarative attach inside the same
 // element that hosts the list.
 
 resources DragDropExtendedDemo {
@@ -106,7 +106,7 @@ resources DragDropExtendedDemo {
                                          [ItemsSource=$Rows,
                                           ItemsPanel=@ReorderListPanel]
                             {
-                                Behaviors {
+                                .Behaviors: {
                                     ListReorderBehavior x:name="reorder"
                                         [FromIndexFormat="mural/reorder/from-index"]
                                 }

@@ -116,6 +116,62 @@ describe('compile — Behaviors block', () => {
     });
 });
 
+describe('compile — .Behaviors: colon-section form', () => {
+    test('.Behaviors: lowers to AddBehavior, same as the braces form', () => {
+        const js = emitted(`
+            Application{ resources: {
+                Border x:root [Padding=(8)] {
+                    .Behaviors: {
+                        StubBehavior [Label="hello"]
+                    }
+                }
+            } }
+        `);
+        assert.match(js, /new StubBehavior\(\)/);
+        assert.match(js, /\.set_property_value\(\w+\.LabelKey, "hello"\);/);
+        assert.match(js, /_border\d+\.AddBehavior\(_stubBehavior\d+\);/);
+    });
+
+    test('.Behaviors: emits the same AddBehavior as the braces form', () => {
+        const colon = emitted(`
+            Application{ resources: {
+                Border x:root { .Behaviors: { StubBehavior [Label="x"] } }
+            } }
+        `);
+        const braces = emitted(`
+            Application{ resources: {
+                Border x:root { Behaviors { StubBehavior [Label="x"] } }
+            } }
+        `);
+        assert.match(colon,  /_border\d+\.AddBehavior\(_stubBehavior\d+\);/);
+        assert.match(braces, /_border\d+\.AddBehavior\(_stubBehavior\d+\);/);
+    });
+
+    test('.Behaviors: coexists with the default-slot child', () => {
+        const js = emitted(`
+            Application{ resources: {
+                Border x:root {
+                    .Behaviors: { StubBehavior [Label="b"] }
+                    TextBlock x:name="inside" {Hello}
+                }
+            } }
+        `);
+        assert.match(js, /\.SetChild\(_textBlock\d+\)/);
+        assert.match(js, /_border\d+\.AddBehavior\(_stubBehavior\d+\);/);
+    });
+
+    test('a non-element entry in .Behaviors: is rejected', () => {
+        assert.throws(
+            () => emitted(`
+                Application{ resources: {
+                    Border x:root { .Behaviors: { @Nope = #fff } }
+                } }
+            `),
+            /only accepts Behavior element entries/,
+        );
+    });
+});
+
 describe('instantiate — Behaviors end-to-end', () => {
     beforeEach(() => { Application.current = null; });
 

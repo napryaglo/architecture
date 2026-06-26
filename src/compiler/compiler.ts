@@ -4,6 +4,8 @@ import type {
     AttrPath,
     BeginStoryboardNode,
     BodyItem,
+    ConverterRef,
+    ModifiedValue,
     InvokeCommandNode,
     PauseStoryboardNode,
     ResumeStoryboardNode,
@@ -1170,13 +1172,25 @@ export class Compiler
     // `import` clause or a built-in); a single one is passed as-is, a
     // chain composes left-to-right via composeConverters. Returns
     // undefined for a plain (converter-free) binding.
-    private converterExpr(converters: readonly string[] | undefined): string | undefined
+    private converterExpr(converters: readonly ConverterRef[] | undefined): string | undefined
     {
         if (converters === undefined || converters.length === 0) return undefined;
-        for (const c of converters) this.ensureImport(c);
-        if (converters.length === 1) return converters[0]!;
+        const exprs = converters.map(c => this.compileConverterRef(c));
+        if (exprs.length === 1) return exprs[0]!;
         this.ensureImport('composeConverters');
-        return `composeConverters([${converters.join(', ')}])`;
+        return `composeConverters([${exprs.join(', ')}])`;
+    }
+
+    // Render one `<< conv` link. A bare converter (`<< Upper`) emits the
+    // imported symbol as-is; a called one (`<< Lighten(0.5)`) emits the
+    // factory invocation with its compiled args (so `Mix(#ff0000, 0.25)`
+    // becomes `Mix(new SolidColorBrush(Color.FromHex('#ff0000')), 0.25)`).
+    private compileConverterRef(c: ConverterRef): string
+    {
+        this.ensureImport(c.name);
+        if (c.args.length === 0) return c.name;
+        const args = c.args.map(a => this.compileValue(a, {}));
+        return `${c.name}(${args.join(', ')})`;
     }
 
     // Add raw named imports for a module WITHOUT going through the
@@ -3134,6 +3148,15 @@ export class Compiler
             }
             return;
         }
+        this.emitBehaviorAttachments(parentVar, body);
+    }
+
+    // Shared lowering for both the `Behaviors { … }` braces form and the
+    // `.Behaviors: { … }` member-section form: each child element is a
+    // Behavior instance, constructed + populated, then attached to the
+    // parent via AddBehavior.
+    private emitBehaviorAttachments(parentVar: string, body: StructuredBody): void
+    {
         for (const child of body.items)
         {
             if (child.kind !== 'element')
@@ -3278,36 +3301,45 @@ export class Compiler
     // keyed entry appears, and then every entry must be keyed.
     private compileMemberBlock(parentVar: string, block: MemberBlock): void
     {
+        // `.Behaviors:` — the colon-section spelling of the `Behaviors { … }`
+        // block, conformed to the `.services:` / `.Resources:` syntax. Same
+        // class-based lowering (each entry → AddBehavior); the braces form
+        // stays as a back-compat alias.
+        if (block.name === 'Behaviors')
+        {
+            this.emitBehaviorAttachments(parentVar, block.body);
+            return;
+        }
         const accessor = `${parentVar}.${block.name}`;
         if (this.isDictionaryMemberBody(block.body))
         {
+            // Dictionary strategy — the SAME keyed surface `resources:`
+            // populates. Delegated to `compileResourcesBody` (§25 fold) so a
+            // `.Member:` dictionary handles EVERY resource entry kind
+            // identically to a `resources:` block: `@Key = value`, x:key'd
+            // (or x:root) elements, Style / Template / DataTemplate
+            // resource-forms (with implicit type-keys), `include`, `glyphs`.
+            // The accessor is passed straight through as the dictionary
+            // expression, so the emit stays `parent.Member.Set(key, value)`
+            // (one getter read per entry, matching the prior behavior).
+            //
+            // Guard the one case the generic router phrases less helpfully:
+            // a BARE element (no x:key / x:root) mixed into a keyed block.
+            // Resource-forms are exempt — a `Style [TargetType=…]` keys
+            // itself implicitly by its target type.
             for (const item of block.body.items)
             {
-                if (item.kind === 'key-value-resource')
+                if (item.kind === 'element'
+                    && this.findXAttr(item.xAttrs, 'key')  === null
+                    && this.findXAttr(item.xAttrs, 'root') === null)
                 {
-                    const expr = this.compileValue(item.value, {});
-                    this.line(`${accessor}.Set(${JSON.stringify(item.key)}, ${expr});`);
-                    continue;
+                    throw new EmitError(
+                        `.${block.name}: this dictionary block mixes keyed and unkeyed `
+                        + `entries — every element needs an x:key once any entry is keyed.`,
+                        item.span);
                 }
-                if (item.kind === 'element')
-                {
-                    const keyAttr = this.findXAttr(item.xAttrs, 'key');
-                    if (keyAttr === null || keyAttr.value === null || keyAttr.value.kind !== 'string')
-                    {
-                        throw new EmitError(
-                            `.${block.name}: this dictionary block mixes keyed and unkeyed `
-                            + `entries — every entry needs an x:key once any does.`,
-                            item.span);
-                    }
-                    const childVar = this.compileElement(item);
-                    this.line(`${accessor}.Set(${JSON.stringify(keyAttr.value.value)}, ${childVar});`);
-                    continue;
-                }
-                throw new EmitError(
-                    `.${block.name}: dictionary block accepts @key=value or x:key'd `
-                    + `elements (got ${item.kind})`,
-                    'span' in item ? item.span : block.span);
             }
+            this.compileResourcesBody(accessor, block.body);
             return;
         }
 
@@ -3326,11 +3358,16 @@ export class Compiler
     }
 
     // A `.Member:` body is a DICTIONARY (keyed) the moment any entry carries
-    // a key: a `@Key = value` primitive, or an element with `x:key`.
+    // — or implies — a key: a `@Key = value` primitive, an element with
+    // `x:key`, or a resource-form / `include` / `glyphs` entry (all of which
+    // are inherently keyed dictionary contributions, never list children).
     private isDictionaryMemberBody(body: StructuredBody): boolean
     {
         return body.items.some(it =>
             it.kind === 'key-value-resource'
+            || it.kind === 'resource-form'
+            || it.kind === 'include-form'
+            || it.kind === 'glyphs-form'
             || (it.kind === 'element' && this.findXAttr(it.xAttrs, 'key') !== null));
     }
 
@@ -3435,6 +3472,8 @@ export class Compiler
                 return this.compileIdentValue(val, ctx);
             case 'color':
                 return this.compileColorValue(val);
+            case 'modified':
+                return this.compileModifiedValue(val, ctx);
             case 'element':
                 return this.compileElementValue(val);
             case 'tuple':
@@ -3775,6 +3814,53 @@ export class Compiler
         // etc.). Unknown names throw at runtime when accessed.
         const cap = raw[0]!.toUpperCase() + raw.slice(1);
         return `new SolidColorBrush(Color.${cap})`;
+    }
+
+    // `base << conv …` in a NON-binding position. The base determines
+    // whether the chain folds to a constant or stays reactive:
+    //   * color literal / named-member ident → static, so apply the chain
+    //     once at instantiation: `Lighten(0.5).convert(<base>)`.
+    //   * `@key` / `@@key` resource → reactive; thread the chain into the
+    //     DynamicResource binding so it re-applies on every re-resolve
+    //     (theme swap, dictionary mutation). A LOCAL `@key` (declared in
+    //     the same dictionary) resolves to a concrete var, so it folds.
+    // Bindings (`$path << conv`) never reach here — they carry their own
+    // converter chain inline (see the 'binding' case).
+    private compileModifiedValue(val: ModifiedValue, ctx: ValueCtx): string
+    {
+        const conv = this.converterExpr(val.converters)!;   // chain is non-empty
+        const base = val.base;
+        switch (base.kind)
+        {
+            case 'color':
+            case 'ident':
+            {
+                const baseExpr = this.compileValue(base, {});
+                return `${conv}.convert(${baseExpr})`;
+            }
+            case 'static-resource':
+            case 'dynamic-resource':
+            {
+                const key = JSON.stringify(base.key);
+                if (base.kind === 'static-resource')
+                {
+                    const localVar = this.localResourceVars?.get(base.key);
+                    if (localVar !== undefined) return `${conv}.convert(${localVar})`;
+                }
+                this.ensureImport('DynamicResource');
+                if (ctx.targetExpr !== undefined)
+                {
+                    return `DynamicResource(${ctx.targetExpr}, ${key}, ${conv})`;
+                }
+                this.ensureImport('SetterFactory');
+                return `new SetterFactory((_t) => DynamicResource(_t, ${key}, ${conv}))`;
+            }
+            default:
+                throw new EmitError(
+                    `'<<' modifiers apply to a color literal, a named color, ` +
+                    `or an @resource — not a ${base.kind} value`,
+                    val.span);
+        }
     }
 
     private compileTupleValue(tuple: TupleValue, ctx: ValueCtx): string

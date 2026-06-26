@@ -40,6 +40,15 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['ServiceBinding',      '@visualisation-sub/mural/runtime'],
     ['SelfBinding',         '@visualisation-sub/mural/runtime'],
     ['composeConverters',   '@visualisation-sub/mural/runtime'],
+    // Built-in color modifiers — converter factories usable on the `<<`
+    // pipe (`#0d47a1 << Lighten(0.5)`). User-defined modifiers follow the
+    // same shape and are pulled in with a `.mu` import clause instead.
+    ['Lighten',             '@visualisation-sub/mural/runtime'],
+    ['Darken',              '@visualisation-sub/mural/runtime'],
+    ['Mix',                 '@visualisation-sub/mural/runtime'],
+    ['Saturate',            '@visualisation-sub/mural/runtime'],
+    ['Desaturate',          '@visualisation-sub/mural/runtime'],
+    ['Alpha',               '@visualisation-sub/mural/runtime'],
     ['MultiBinding',        '@visualisation-sub/mural/runtime'],
     ['TemplateBinding',     '@visualisation-sub/mural/runtime'],
     ['MultiTrigger',        '@visualisation-sub/mural/runtime'],

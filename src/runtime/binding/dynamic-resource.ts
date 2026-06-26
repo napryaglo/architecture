@@ -1,6 +1,7 @@
 import { FillBehavior, Storyboard } from '../../visual-engine/animation/index.js';
 import { Application } from '../application.js';
 import { Binding, BindingMode } from './binding.js';
+import type { ValueConverter } from './binding.js';
 import { MetaData } from '../metadata.js';
 import { Model } from '../model.js';
 import { getSchemeTransitionAnimator, ThemeManager } from '../../visual-engine/theme/index.js';
@@ -71,10 +72,11 @@ class DynamicResourceBinding extends Binding
     // the animated slot.
     private activeStoryboard: Storyboard | undefined;
 
-    constructor(host: Visual | Model, key: string)
+    constructor(host: Visual | Model, key: string, converter?: ValueConverter)
     {
         const watcher = new ResourceWatcher();
-        super(watcher, 'Value', BindingMode.OneWay);
+        super(watcher, 'Value', BindingMode.OneWay,
+            converter !== undefined ? { converter } : undefined);
         this.watcher = watcher;
         this.subscriptions = [];
         this.host = host;
@@ -252,7 +254,11 @@ class DynamicResourceBinding extends Binding
 //     be observed. The common case of consuming resources from a
 //     fixed ancestor (Application / Window / templated control) is
 //     fully supported.
-export function DynamicResource(host: Visual | Model, key: string): Binding
+// An optional `converter` lets a resource reference carry a value
+// transform that re-applies on every re-resolve (theme swap, dictionary
+// mutation) — this is what backs `@PrimaryColor << Darken(0.2)` in `.mu`:
+// the modifier stays reactive rather than folding to a constant.
+export function DynamicResource(host: Visual | Model, key: string, converter?: ValueConverter): Binding
 {
-    return new DynamicResourceBinding(host, key);
+    return new DynamicResourceBinding(host, key, converter);
 }

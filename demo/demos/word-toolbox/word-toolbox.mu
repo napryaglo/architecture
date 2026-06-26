@@ -182,7 +182,7 @@ resources WordToolboxDemo {
                                      SelectionMode=Extended,
                                      MarqueeBoundsPolicy=Contained,
                                      AllowMarqueeSelection=true] {
-                                Behaviors {
+                                .Behaviors: {
                                     ListReorderBehavior x:name="reorder"
                                         [FromIndexFormat="mural/reorder/from-index"]
                                 }
