@@ -67,6 +67,14 @@ export {
     type AutoSchemeInitOptions,
     type MountableTarget,
 } from './application.js';
+export {
+    ServiceProvider,
+    ServiceKey,
+    type ServiceConstructor,
+    type ServiceToken,
+    type ServiceFactory,
+    type ServiceLifetime,
+} from './services/service-provider.js';
 // InputManager moved to `@visualisation-sub/mural/framework`.
 // RoutedCommand / CommandBinding / CommandManager / InputBinding /
 // KeyBinding / MouseBinding / ICommandSource + CommandSourceHelper /

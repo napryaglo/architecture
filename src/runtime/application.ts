@@ -1,4 +1,5 @@
 import { ResourceDictionary, type ResourceKey } from './resource-dictionary.js';
+import { ServiceProvider } from './services/service-provider.js';
 import type { Visual } from '../visual-engine/visual.js';
 
 /** Theme class accepted by Application.initialize. Any subclass of
@@ -98,6 +99,19 @@ export class Application
     public static current: Application | null = null;
 
     public readonly Resources: ResourceDictionary = new ResourceDictionary();
+
+    // App-wide service composition root. Lazily created so apps that
+    // never touch services pay nothing. The bootstrap registers
+    // implementations here (storage, clock, navigation, …); demo
+    // factories resolve from it to inject deps into VMs, keeping the VMs
+    // themselves pure. Framework code and Behaviors may pull directly.
+    // Per-view overrides layer on via `Services.createScope()`.
+    private _services: ServiceProvider | undefined;
+
+    public get Services(): ServiceProvider
+    {
+        return this._services ??= new ServiceProvider();
+    }
 
     constructor()
     {

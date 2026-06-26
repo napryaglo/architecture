@@ -12,6 +12,7 @@ import {
     ThemeManager,
     Element,
     Visual,
+    ServiceKey,
     type DrawingContext,
     type MountableTarget,
 } from '../index.js';
@@ -531,5 +532,29 @@ describe('Application.initialize — autoScheme (OS prefers-color-scheme)', () =
         } finally {
             if (prior !== undefined) g.matchMedia = prior;
         }
+    });
+});
+
+describe('Application.Services', () => {
+
+    test('exposes a lazily-created ServiceProvider, stable across reads', () => {
+        const app = new Application();
+        assert.equal(app.Services, app.Services, 'same provider instance on repeat reads');
+    });
+
+    test('services registered on the ambient provider resolve from Application.current', () => {
+        const app = new Application();
+        const Key = new ServiceKey<{ id: string }>('Probe');
+        app.Services.registerInstance(Key, { id: 'wired' });
+        assert.equal(Application.current!.Services.getRequired(Key).id, 'wired');
+    });
+
+    test('each Application owns an independent provider', () => {
+        const Key = new ServiceKey<number>('N');
+        const a = new Application();
+        a.Services.registerInstance(Key, 1);
+        const b = new Application();
+        assert.equal(a.Services.get(Key), 1);
+        assert.equal(b.Services.get(Key), undefined, 'b has its own empty provider');
     });
 });

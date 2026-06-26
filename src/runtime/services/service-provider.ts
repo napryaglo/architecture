@@ -1,0 +1,184 @@
+// Application-services composition. A small, explicit DI container:
+// register service implementations against tokens, resolve them by
+// token, compose deps through factories, and layer per-scope overrides
+// via child providers. No reflection / decorators / auto-wiring — TS
+// has no runtime type metadata, so factories name their own deps. This
+// keeps wiring greppable and the no-string-type-proxies rule intact
+// (tokens are real objects, never strings).
+//
+// Three lifetimes (mirroring the .NET container vocabulary):
+//   * singleton — one instance, cached at the provider where it was
+//     REGISTERED, shared by that provider and every scope beneath it.
+//   * transient — a fresh instance on every resolve; never cached.
+//   * scoped    — one instance per resolving scope (per provider in the
+//     parent/child chain); each createScope() gets its own.
+//
+// Resolution walks the parent chain to find a registration, then
+// applies the lifetime caching rule. Child providers may shadow a
+// parent's registration (Angular-style hierarchical injectors).
+
+// A typed token for interface-shaped contracts that have no runtime
+// class to key by (e.g. the DiagramStorage duck-type). The generic is
+// phantom — it threads the resolved type through register/get so call
+// sites stay type-safe at zero runtime cost. A real exported object,
+// never a string.
+export class ServiceKey<T>
+{
+    // Phantom marker — never read at runtime; exists only so TypeScript
+    // can carry T from the token to register()/get() call sites.
+    declare readonly __service_type__: T;
+
+    constructor(public readonly description: string) { }
+
+    public toString(): string { return `ServiceKey(${this.description})`; }
+}
+
+// A class reference usable directly as a token: the class is both the
+// key and (typically) the resolved type. Abstract or concrete.
+export type ServiceConstructor<T> = abstract new (...args: never[]) => T;
+
+// Either token form — both are object identities, so they key a Map.
+export type ServiceToken<T> = ServiceKey<T> | ServiceConstructor<T>;
+
+// Builds a service, resolving its own dependencies from the provider it
+// is handed (the owner for singletons, the resolving scope otherwise).
+export type ServiceFactory<T> = (provider: ServiceProvider) => T;
+
+export type ServiceLifetime = 'singleton' | 'transient' | 'scoped';
+
+interface Registration
+{
+    lifetime: ServiceLifetime;
+    factory:  ServiceFactory<unknown>;
+}
+
+export class ServiceProvider
+{
+    // token identity → registration / cached instance. Kept on each
+    // provider so a child can both shadow registrations and own its own
+    // scoped/singleton instances.
+    private readonly _registrations = new Map<object, Registration>();
+    private readonly _cache         = new Map<object, unknown>();
+    private readonly _parent:        ServiceProvider | undefined;
+
+    constructor(parent?: ServiceProvider)
+    {
+        this._parent = parent;
+    }
+
+    // ── Registration ────────────────────────────────────────────────
+
+    // Register a factory under a token. Default lifetime is singleton
+    // (the common case for app services). Returns `this` for chaining.
+    public register<T>(
+        token:     ServiceToken<T>,
+        factory:   ServiceFactory<T>,
+        lifetime:  ServiceLifetime = 'singleton',
+    ): this
+    {
+        this._registrations.set(token, { lifetime, factory: factory as ServiceFactory<unknown> });
+        return this;
+    }
+
+    // Register an already-built instance (eager singleton). The same
+    // object is returned for every resolve at this provider and below.
+    public registerInstance<T>(token: ServiceToken<T>, instance: T): this
+    {
+        return this.register(token, () => instance, 'singleton');
+    }
+
+    public registerTransient<T>(token: ServiceToken<T>, factory: ServiceFactory<T>): this
+    {
+        return this.register(token, factory, 'transient');
+    }
+
+    public registerScoped<T>(token: ServiceToken<T>, factory: ServiceFactory<T>): this
+    {
+        return this.register(token, factory, 'scoped');
+    }
+
+    // ── Resolution ──────────────────────────────────────────────────
+
+    // Resolve a service, or undefined when no registration is reachable.
+    public get<T>(token: ServiceToken<T>): T | undefined
+    {
+        const found = this.findOwner(token);
+        if (found === undefined) return undefined;
+        const { reg, owner } = found;
+
+        switch (reg.lifetime)
+        {
+            case 'transient':
+                // Fresh every time; deps resolve from the requesting
+                // scope; nothing cached.
+                return reg.factory(this) as T;
+
+            case 'singleton':
+            {
+                // One instance, cached at the owner (provider where
+                // registered) so the whole subtree shares it. Deps
+                // resolve from the owner — a root singleton must not
+                // capture a child scope's instance.
+                if (owner._cache.has(token)) return owner._cache.get(token) as T;
+                const inst = reg.factory(owner);
+                owner._cache.set(token, inst);
+                return inst as T;
+            }
+
+            case 'scoped':
+            {
+                // One instance per resolving scope (this provider). Deps
+                // resolve from this scope, so a chain of scoped services
+                // all land in the same scope.
+                if (this._cache.has(token)) return this._cache.get(token) as T;
+                const inst = reg.factory(this);
+                this._cache.set(token, inst);
+                return inst as T;
+            }
+        }
+    }
+
+    // Resolve a service or throw — for required dependencies where a
+    // missing registration is a composition bug, not an optional miss.
+    public getRequired<T>(token: ServiceToken<T>): T
+    {
+        const value = this.get(token);
+        if (value === undefined)
+        {
+            throw new Error(`ServiceProvider: no service registered for ${describeToken(token)}.`);
+        }
+        return value;
+    }
+
+    // True when the token resolves anywhere in this provider's chain.
+    public has(token: ServiceToken<unknown>): boolean
+    {
+        return this.findOwner(token) !== undefined;
+    }
+
+    // A child scope: resolves locally first, then falls back to this
+    // provider. May shadow registrations and owns its own scoped /
+    // locally-registered singleton instances.
+    public createScope(): ServiceProvider
+    {
+        return new ServiceProvider(this);
+    }
+
+    // Walk the parent chain to find the registration and the provider
+    // that owns it (needed for singleton caching at the owner).
+    private findOwner(token: ServiceToken<unknown>): { reg: Registration; owner: ServiceProvider } | undefined
+    {
+        for (let cur: ServiceProvider | undefined = this; cur !== undefined; cur = cur._parent)
+        {
+            const reg = cur._registrations.get(token);
+            if (reg !== undefined) return { reg, owner: cur };
+        }
+        return undefined;
+    }
+}
+
+function describeToken(token: ServiceToken<unknown>): string
+{
+    if (token instanceof ServiceKey) return token.toString();
+    return (token as { name?: string }).name ?? 'anonymous service';
+}
