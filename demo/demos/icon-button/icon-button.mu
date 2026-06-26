@@ -20,6 +20,19 @@ import IconButtonVM from "./icon-button-vm.mjs"
 
 resources IconButtonDemo {
 
+    // Icon geometries baked from the Material Symbols Outlined font at
+    // build time (the `glyphs` keyword → one PathGeometry resource per
+    // entry, addressed by M3 glyph name). The buttons below paint these
+    // through Shape[Geometry=@name], so the glyph is true vector geometry
+    // scaled to fit its slot — no font line-box centring quirks. Each
+    // Shape's Fill = $Self.(TextBlock.Foreground): the glyph inherits the
+    // chrome's foreground ink the template sets per variant, so it tracks
+    // the IconButtonToggle checked-state ink flip live.
+    glyphs "../../assets/material-symbols-outlined.ttf" {
+        check  star  north_east  more_horiz
+        favorite  notifications  dark_mode
+    }
+
     DataTemplate x:key="IconButtonTemplate" [DataType=IconButtonVM] {
         Border [Background=@Surface, BorderBrush=@OutlineVariant,
                 BorderThickness=(1)]{
@@ -40,17 +53,17 @@ resources IconButtonDemo {
                               Foreground=@OnSurface, Margin=(0,0,0,12)]
 
                     StackPanel[Orientation=Horizontal, Margin=(0,0,0,8)]{
-                        IconButton[Variant=Filled,   Command=$ClickFilledCommand,   Margin=(0,0,16,0)]{
-                            TextBlock[Text="✓", FontSize=18]
+                        IconButton[Variant=Filled,   Command=$ClickFilledCommand]{
+                            Shape[Geometry=@check,      Fill=$Self.(TextBlock.Foreground), Width=20, Height=20]
                         }
-                        IconButton[Variant=Tonal,    Command=$ClickTonalCommand,    Margin=(0,0,16,0)]{
-                            TextBlock[Text="★", FontSize=18]
+                        IconButton[Variant=Tonal,    Command=$ClickTonalCommand]{
+                            Shape[Geometry=@star,       Fill=$Self.(TextBlock.Foreground), Width=20, Height=20]
                         }
-                        IconButton[Variant=Outlined, Command=$ClickOutlinedCommand, Margin=(0,0,16,0)]{
-                            TextBlock[Text="↗", FontSize=18]
+                        IconButton[Variant=Outlined, Command=$ClickOutlinedCommand]{
+                            Shape[Geometry=@north_east, Fill=$Self.(TextBlock.Foreground), Width=20, Height=20]
                         }
                         IconButton[Variant=Standard, Command=$ClickStandardCommand]{
-                            TextBlock[Text="⋯", FontSize=18]
+                            Shape[Geometry=@more_horiz, Fill=$Self.(TextBlock.Foreground), Width=20, Height=20]
                         }
                     }
 
@@ -71,18 +84,18 @@ resources IconButtonDemo {
                               FontWeight=Bold, FontSize=14,
                               Foreground=@OnSurface, Margin=(0,0,0,12)]
 
-                    StackPanel[Orientation=Horizontal, Margin=(0,0,0,8)]{
-                        IconButtonToggle[Variant=Filled,   IsChecked=$FilledChecked,   Margin=(0,0,16,0)]{
-                            TextBlock[Text="♥", FontSize=18]
+                    StackPanel[Orientation=Horizontal, Margin=(0,0,0,8), TextBlock.Foreground=@OnSurface]{
+                        IconButtonToggle[Variant=Filled,   IsChecked=$FilledChecked]{
+                            Shape[Geometry=@favorite,      Fill=$Self.(TextBlock.Foreground), Width=20, Height=20]
                         }
-                        IconButtonToggle[Variant=Tonal,    IsChecked=$TonalChecked,    Margin=(0,0,16,0)]{
-                            TextBlock[Text="☆", FontSize=18]
+                        IconButtonToggle[Variant=Tonal,    IsChecked=$TonalChecked]{
+                            Shape[Geometry=@star,          Fill=$Self.(TextBlock.Foreground), Width=20, Height=20]
                         }
-                        IconButtonToggle[Variant=Outlined, IsChecked=$OutlinedChecked, Margin=(0,0,16,0)]{
-                            TextBlock[Text="🔔", FontSize=18]
+                        IconButtonToggle[Variant=Outlined, IsChecked=$OutlinedChecked]{
+                            Shape[Geometry=@notifications, Fill=$Self.(TextBlock.Foreground), Width=20, Height=20]
                         }
                         IconButtonToggle[Variant=Standard, IsChecked=$StandardChecked]{
-                            TextBlock[Text="🌙", FontSize=18]
+                            Shape[Geometry=@dark_mode,     Fill=$Self.(TextBlock.Foreground), Width=20, Height=20]
                         }
                     }
 
