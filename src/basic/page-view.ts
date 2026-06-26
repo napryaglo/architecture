@@ -98,6 +98,19 @@ export class PageView extends TemplatedControl
     // produced by applying the matching DataTemplate.
     private _resolvedContent: Visual | undefined;
 
+    // Memoised DataTemplate output, keyed by Model identity. Navigating
+    // away from a Model-content demo only unslots its view (DetachVisual)
+    // — it does NOT logically detach the persistent Visuals the Model may
+    // own (the diagram's fused Figures, toolbox PreviewNodes). Re-running
+    // tpl.Apply on nav-back would build a fresh tree that re-attaches
+    // those still-parented Visuals → "Element already has a logical
+    // parent". Caching the resolved view by Model identity makes nav-back
+    // reuse the SAME intact tree (nothing inside is rebuilt or
+    // re-attached), realising the platform's "nav-back resurfaces the
+    // same state" contract. WeakMap so the view is collectible with its
+    // Model.
+    private readonly _resolvedByModel = new WeakMap<object, Visual>();
+
     public get Content(): Visual | Model | undefined { return this.get_property_value(PageView.ContentKey); }
     public set Content(value: Visual | Model | undefined)
     {
@@ -131,29 +144,41 @@ export class PageView extends TemplatedControl
         }
         else if (newValue instanceof Model)
         {
-            // Auto-resolve a DataTemplate by class identity. The produced
-            // Visual hosts the data through its DataContext so
-            // $-bindings inside the template resolve naturally.
-            const tpl = findDataTemplateForType(newValue.constructor);
-            if (tpl !== undefined)
-            {
-                const v = tpl.Apply(newValue);
-                v.DataContext = newValue;
-                // Optional VM hook: when the data exposes an
-                // `OnViewMounted` function, hand the freshly-built
-                // visual to it so VM-driven imperative setup
-                // (FindName, click handlers, animation wiring) can run
-                // once per resolution.
-                const hook = (newValue as unknown as { OnViewMounted?: (v: Visual) => void }).OnViewMounted;
-                if (typeof hook === 'function') hook.call(newValue, v);
-                this._resolvedContent = v;
-            }
+            this._resolvedContent = this.resolveModelView(newValue);
         }
 
         if (this._resolvedContent !== undefined)
         {
             this._contentPresenter.SetContent(this._resolvedContent);
         }
+    }
+
+    // Resolve the Visual for a Model Content — auto-pick a DataTemplate
+    // by class identity, host the data through DataContext so $-bindings
+    // resolve naturally, then memoise by Model identity. A cache hit
+    // (nav-back to the same demo) returns the SAME tree built last time
+    // rather than re-applying the template; that re-application is what
+    // re-attaches the Model's persistent Visuals and throws. The
+    // OnViewMounted hook fires only on the first (building) resolution,
+    // matching its "once per resolution" contract.
+    private resolveModelView(model: Model): Visual | undefined
+    {
+        const cached = this._resolvedByModel.get(model);
+        if (cached !== undefined) return cached;
+
+        const tpl = findDataTemplateForType(model.constructor);
+        if (tpl === undefined) return undefined;
+
+        const v = tpl.Apply(model);
+        v.DataContext = model;
+        // Optional VM hook: when the data exposes an `OnViewMounted`
+        // function, hand the freshly-built visual to it so VM-driven
+        // imperative setup (FindName, click handlers, animation wiring)
+        // can run once per resolution.
+        const hook = (model as unknown as { OnViewMounted?: (v: Visual) => void }).OnViewMounted;
+        if (typeof hook === 'function') hook.call(model, v);
+        this._resolvedByModel.set(model, v);
+        return v;
     }
 
     // visualChildren / propagate_target_to_visual_children /
