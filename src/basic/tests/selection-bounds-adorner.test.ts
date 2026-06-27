@@ -14,8 +14,8 @@ import { Border } from '../border.js';
 import {
     SelectionBoundsAdorner,
     type SelectionSource,
-    type HorizontalAnchor,
-    type VerticalAnchor,
+    HorizontalAnchor,
+    VerticalAnchor,
 } from '../selection-bounds-adorner.js';
 
 class TestVisual extends Element

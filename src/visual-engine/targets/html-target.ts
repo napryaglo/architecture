@@ -1,4 +1,7 @@
-import type { Visual } from '../../runtime/index.js';
+// `Element as MuralElement` — this file uses the DOM's global `Element`
+// heavily (setAttribute, elementsFromPoint, …), so the framework's
+// Element is aliased to avoid shadowing it.
+import type { Visual, Element as MuralElement } from '../../runtime/index.js';
 import {
     AdornerLayer,
     AnimationManager,
@@ -13,8 +16,10 @@ import {
     type KeyEventInit,
     type PointerEventInit,
     type WheelEventInit,
-    type WheelDeltaMode,
+    WheelDeltaMode,
     type ModifierKeys,
+    toModifierKeys,
+    keyFromDom,
 } from '../../runtime/index.js';
 import { CanvasTextMeasurer } from '../text/canvas-text-measurer.js';
 import { PresentationTarget } from './presentation-target.js';
@@ -27,7 +32,11 @@ import { Point } from '../primitives.js';
 // any painted node without importing the renderer.
 export { VISUAL_BACKREF };
 
-interface BackrefHost { [VISUAL_BACKREF]?: Visual; }
+// The backref the renderer stamps on each outer <g> always references
+// an Element (every painted node is an Element), so the hit-test read
+// side recovers an Element directly — no cast at the InputManager
+// boundary.
+interface BackrefHost { [VISUAL_BACKREF]?: MuralElement; }
 
 // §19.2.7 — when the candidate Visual has a HitTestGeometry, the
 // browser-pick is double-checked against the geometry. The element
@@ -85,12 +94,12 @@ const DOUBLE_CLICK_TOLERANCE_PX = 4;
 
 function extractModifiers(e: MouseEvent | KeyboardEvent | WheelEvent): ModifierKeys
 {
-    return {
-        Shift:   e.shiftKey,
-        Control: e.ctrlKey,
-        Alt:     e.altKey,
-        Meta:    e.metaKey,
-    };
+    return toModifierKeys({
+        shift:   e.shiftKey,
+        control: e.ctrlKey,
+        alt:     e.altKey,
+        meta:    e.metaKey,
+    });
 }
 
 function normalisePointerType(t: string): PointerEventInit['PointerType']
@@ -105,9 +114,9 @@ function normalisePointerType(t: string): PointerEventInit['PointerType']
 // 'pixel' to avoid undefined behaviour on exotic devices.
 function wheelDeltaMode(m: number): WheelDeltaMode
 {
-    if (m === 1) return 'line';
-    if (m === 2) return 'page';
-    return 'pixel';
+    if (m === 1) return WheelDeltaMode.Line;
+    if (m === 2) return WheelDeltaMode.Page;
+    return WheelDeltaMode.Pixel;
 }
 
 // "Printable" = produces a single character ready to insert into the
@@ -130,9 +139,29 @@ function isPrintableKey(e: KeyboardEvent): boolean
 // inside the host element (SVG node tree for <=10k visible elements,
 // Canvas commands for everything else). `devicePixelRatio` lets tests
 // override the default `window.devicePixelRatio`.
+export enum RenderBackend
+{
+    Svg    = 'svg',
+    Canvas = 'canvas',
+}
+
+enum PointerPhase
+{
+    Move  = 'move',
+    Down  = 'down',
+    Up    = 'up',
+    Leave = 'leave',
+}
+
+enum KeyPhase
+{
+    Down = 'down',
+    Up   = 'up',
+}
+
 export interface HtmlTargetOptions
 {
-    backend?: 'svg' | 'canvas';
+    backend?: RenderBackend;
     devicePixelRatio?: number;
 }
 
@@ -239,7 +268,7 @@ export class HtmlTarget extends PresentationTarget
     {
         super();
         this.host = host;
-        this.options = { backend: 'svg', ...options };
+        this.options = { backend: RenderBackend.Svg, ...options };
 
         this.DeviceScale = options.devicePixelRatio ?? window.devicePixelRatio ?? 1;
 
@@ -263,7 +292,7 @@ export class HtmlTarget extends PresentationTarget
             this.Height = rect.height;
         }
 
-        if (this.options.backend === 'svg')
+        if (this.options.backend === RenderBackend.Svg)
         {
             this.surface = document.createElementNS(SVG_NS, 'svg');
             this.surface.style.display = 'block';
@@ -348,13 +377,13 @@ export class HtmlTarget extends PresentationTarget
         // surface) keeps the listener set stable across re-renders
         // that swap the surface — and it makes leave detection work
         // for the whole content area instead of just the SVG node.
-        this.onPointerMove  = (e) => this.handlePointer('move',  e);
-        this.onPointerDown  = (e) => this.handlePointer('down',  e);
-        this.onPointerUp    = (e) => this.handlePointer('up',    e);
-        this.onPointerLeave = (e) => this.handlePointer('leave', e);
+        this.onPointerMove  = (e) => this.handlePointer(PointerPhase.Move,  e);
+        this.onPointerDown  = (e) => this.handlePointer(PointerPhase.Down,  e);
+        this.onPointerUp    = (e) => this.handlePointer(PointerPhase.Up,    e);
+        this.onPointerLeave = (e) => this.handlePointer(PointerPhase.Leave, e);
         this.onPointerWheel = (e) => this.handleWheel(e);
-        this.onKeyDown      = (e) => this.handleKey('down', e);
-        this.onKeyUp        = (e) => this.handleKey('up',   e);
+        this.onKeyDown      = (e) => this.handleKey(KeyPhase.Down, e);
+        this.onKeyUp        = (e) => this.handleKey(KeyPhase.Up, e);
         this.onDragKeyDown = (e: KeyboardEvent) => {
             if (this.InputManager.IsDragActive && e.key === 'Escape')
             {
@@ -553,7 +582,7 @@ export class HtmlTarget extends PresentationTarget
     // On rejection we fall through to the next ancestor — letting a
     // pointer slip "through" the AABB corners of an Expressive shape
     // to whatever sits behind it.
-    public override HitTest(hostX: number, hostY: number): Visual | undefined
+    public override HitTest(hostX: number, hostY: number): MuralElement | undefined
     {
         const rect = this.host.getBoundingClientRect();
         const clientX = rect.left + hostX;
@@ -957,7 +986,7 @@ export class HtmlTarget extends PresentationTarget
     }
 
     private handlePointer(
-        phase: 'move' | 'down' | 'up' | 'leave',
+        phase: PointerPhase,
         e: PointerEvent,
     ): void
     {
@@ -965,15 +994,15 @@ export class HtmlTarget extends PresentationTarget
         // Double-click detection — only meaningful for the `down`
         // phase. We classify BEFORE building the init record so the
         // flag flows straight through.
-        const isDoubleClick = phase === 'down' && this.classifyDoubleClick(e, hostX, hostY);
+        const isDoubleClick = phase === PointerPhase.Down && this.classifyDoubleClick(e, hostX, hostY);
         const init = pointerInit(e, hostX, hostY, isDoubleClick);
-        if (phase === 'leave')
+        if (phase === PointerPhase.Leave)
         {
             this.InputManager.InjectPointerLeave(init);
             return;
         }
         const hit = this.HitTest(hostX, hostY);
-        if (phase === 'down')
+        if (phase === PointerPhase.Down)
         {
             // Transfer DOM focus to the host so subsequent keydown /
             // keyup events fire on it (and reach our host-level
@@ -996,7 +1025,7 @@ export class HtmlTarget extends PresentationTarget
             }
             return;
         }
-        if (phase === 'up')
+        if (phase === PointerPhase.Up)
         {
             const wasActive = this.InputManager.IsDragActive;
             this.InputManager.InjectPointerUp(hit ?? null, init);
@@ -1058,19 +1087,20 @@ export class HtmlTarget extends PresentationTarget
     // Space / arrow keys, tab navigation when AcceptsTab is true, and
     // the like, without globally swallowing every key on a focused
     // mural surface.
-    private handleKey(phase: 'down' | 'up', e: KeyboardEvent): void
+    private handleKey(phase: KeyPhase, e: KeyboardEvent): void
     {
         const init: KeyEventInit = {
-            Key:       e.key,
+            Key:       keyFromDom(e.code, e.key),
+            KeyText:   e.key,
             Code:      e.code,
             Modifiers: extractModifiers(e),
             IsRepeat:  e.repeat,
         };
-        let handled = phase === 'down'
+        let handled = phase === KeyPhase.Down
             ? this.InputManager.InjectKeyDown(init)
             : this.InputManager.InjectKeyUp(init);
 
-        if (phase === 'down' && isPrintableKey(e))
+        if (phase === KeyPhase.Down && isPrintableKey(e))
         {
             // Synthesise the TextInput pass for normal typing. IME
             // composition would normally route through compositionend /
@@ -1257,7 +1287,7 @@ export class HtmlTarget extends PresentationTarget
     // PointerEvent handlers above — both end up calling the same
     // PresentationTarget.HitTest. Extracted as a helper so the OS
     // drag handlers don't duplicate the rect-to-hit translation.
-    private hitVisualAt(hostX: number, hostY: number): import('../../runtime/index.js').Visual | undefined
+    private hitVisualAt(hostX: number, hostY: number): MuralElement | undefined
     {
         // Delegate to the inherited PresentationTarget.HitTest (overridden
         // above in this class), which walks the elementsFromPoint stack

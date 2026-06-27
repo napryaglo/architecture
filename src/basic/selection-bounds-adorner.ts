@@ -36,8 +36,18 @@ import type { PointerEventArgs } from '../visual-engine/routed-event.js';
 
 // Which side of the bbox stays pinned during a resize. NW/SE drags
 // keep the OPPOSITE corner anchored. Edge handles zero one axis.
-export type HorizontalAnchor = 'left' | 'right' | 'none';
-export type VerticalAnchor   = 'top'  | 'bottom' | 'none';
+export enum HorizontalAnchor
+{
+    Left  = 'left',
+    Right = 'right',
+    None  = 'none',
+}
+export enum VerticalAnchor
+{
+    Top    = 'top',
+    Bottom = 'bottom',
+    None   = 'none',
+}
 
 // ── SelectionSource interface ───────────────────────────────────
 
@@ -95,14 +105,14 @@ interface HandleSpec
 }
 
 const HANDLE_SPEC: readonly HandleSpec[] = [
-    { name: 'NW', dwDir: -1, dhDir: -1, xAnchor: 'right',  yAnchor: 'bottom', cursor: 'nwse-resize', anchorPoint: (x, y, _w, _h) => [x,       y      ] },
-    { name: 'N',  dwDir:  0, dhDir: -1, xAnchor: 'none',   yAnchor: 'bottom', cursor: 'ns-resize',   anchorPoint: (x, y, w,  _h) => [x + w/2, y      ] },
-    { name: 'NE', dwDir:  1, dhDir: -1, xAnchor: 'left',   yAnchor: 'bottom', cursor: 'nesw-resize', anchorPoint: (x, y, w,  _h) => [x + w,   y      ] },
-    { name: 'W',  dwDir: -1, dhDir:  0, xAnchor: 'right',  yAnchor: 'none',   cursor: 'ew-resize',   anchorPoint: (x, y, _w, h ) => [x,       y + h/2] },
-    { name: 'E',  dwDir:  1, dhDir:  0, xAnchor: 'left',   yAnchor: 'none',   cursor: 'ew-resize',   anchorPoint: (x, y, w,  h ) => [x + w,   y + h/2] },
-    { name: 'SW', dwDir: -1, dhDir:  1, xAnchor: 'right',  yAnchor: 'top',    cursor: 'nesw-resize', anchorPoint: (x, y, _w, h ) => [x,       y + h  ] },
-    { name: 'S',  dwDir:  0, dhDir:  1, xAnchor: 'none',   yAnchor: 'top',    cursor: 'ns-resize',   anchorPoint: (x, y, w,  h ) => [x + w/2, y + h  ] },
-    { name: 'SE', dwDir:  1, dhDir:  1, xAnchor: 'left',   yAnchor: 'top',    cursor: 'nwse-resize', anchorPoint: (x, y, w,  h ) => [x + w,   y + h  ] },
+    { name: 'NW', dwDir: -1, dhDir: -1, xAnchor: HorizontalAnchor.Right,  yAnchor: VerticalAnchor.Bottom, cursor: 'nwse-resize', anchorPoint: (x, y, _w, _h) => [x,       y      ] },
+    { name: 'N',  dwDir:  0, dhDir: -1, xAnchor: HorizontalAnchor.None,   yAnchor: VerticalAnchor.Bottom, cursor: 'ns-resize',   anchorPoint: (x, y, w,  _h) => [x + w/2, y      ] },
+    { name: 'NE', dwDir:  1, dhDir: -1, xAnchor: HorizontalAnchor.Left,   yAnchor: VerticalAnchor.Bottom, cursor: 'nesw-resize', anchorPoint: (x, y, w,  _h) => [x + w,   y      ] },
+    { name: 'W',  dwDir: -1, dhDir:  0, xAnchor: HorizontalAnchor.Right,  yAnchor: VerticalAnchor.None,   cursor: 'ew-resize',   anchorPoint: (x, y, _w, h ) => [x,       y + h/2] },
+    { name: 'E',  dwDir:  1, dhDir:  0, xAnchor: HorizontalAnchor.Left,   yAnchor: VerticalAnchor.None,   cursor: 'ew-resize',   anchorPoint: (x, y, w,  h ) => [x + w,   y + h/2] },
+    { name: 'SW', dwDir: -1, dhDir:  1, xAnchor: HorizontalAnchor.Right,  yAnchor: VerticalAnchor.Top,    cursor: 'nesw-resize', anchorPoint: (x, y, _w, h ) => [x,       y + h  ] },
+    { name: 'S',  dwDir:  0, dhDir:  1, xAnchor: HorizontalAnchor.None,   yAnchor: VerticalAnchor.Top,    cursor: 'ns-resize',   anchorPoint: (x, y, w,  h ) => [x + w/2, y + h  ] },
+    { name: 'SE', dwDir:  1, dhDir:  1, xAnchor: HorizontalAnchor.Left,   yAnchor: VerticalAnchor.Top,    cursor: 'nwse-resize', anchorPoint: (x, y, w,  h ) => [x + w,   y + h  ] },
 ];
 
 export class SelectionBoundsAdorner extends Adorner

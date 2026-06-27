@@ -2,7 +2,7 @@ import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from '../../../basic/tests/test-app.js';
 
-import { Application, NoModifiers, Panel, PointerButton, Rect, RelayCommand, Size, type KeyEventInit, type PointerEventInit } from '../../../runtime/index.js';
+import { Application, Key, NoModifiers, Panel, PointerButton, Rect, RelayCommand, Size, type KeyEventInit, type PointerEventInit } from '../../../runtime/index.js';
 import { InputManager } from '../../../framework/index.js';;
 import { MenuButton, MenuItem, MenuSeparator, MenuStrip } from '../menu-strip.js';
 
@@ -120,10 +120,10 @@ describe('MenuButton', () => {
     });
 });
 
-function keyEvent(key: string, overrides: Partial<KeyEventInit> = {}): KeyEventInit
+function keyEvent(key: Key, keyText: string = key, overrides: Partial<KeyEventInit> = {}): KeyEventInit
 {
     return {
-        Key: key, Code: key,
+        Key: key, KeyText: keyText, Code: key,
         Modifiers: NoModifiers,
         IsRepeat: false,
         ...overrides,
@@ -143,9 +143,9 @@ describe('MenuItem — keyboard navigation', () => {
         mi.IsCheckable = true;
         const im = new InputManager();
         im.SetFocus(mi);
-        im.InjectKeyDown(keyEvent('Enter'));
+        im.InjectKeyDown(keyEvent(Key.Return));
         assert.equal(mi.IsChecked, true);
-        im.InjectKeyDown(keyEvent('Enter'));
+        im.InjectKeyDown(keyEvent(Key.Return));
         assert.equal(mi.IsChecked, false);
     });
 
@@ -157,7 +157,7 @@ describe('MenuItem — keyboard navigation', () => {
         mi._onActivated = (): void => { activated++; };
         const im = new InputManager();
         im.SetFocus(mi);
-        im.InjectKeyDown(keyEvent('Enter'));
+        im.InjectKeyDown(keyEvent(Key.Return));
         assert.equal(executed, 1);
         assert.equal(activated, 1);
     });
@@ -170,12 +170,12 @@ describe('MenuItem — keyboard navigation', () => {
         popup.Items = [a, b, c];
         const im = new InputManager();
         im.SetFocus(a);
-        im.InjectKeyDown(keyEvent('ArrowDown'));
+        im.InjectKeyDown(keyEvent(Key.Down));
         assert.equal(b.IsFocused, true);
-        im.InjectKeyDown(keyEvent('ArrowDown'));
+        im.InjectKeyDown(keyEvent(Key.Down));
         assert.equal(c.IsFocused, true);
         // Wraps.
-        im.InjectKeyDown(keyEvent('ArrowDown'));
+        im.InjectKeyDown(keyEvent(Key.Down));
         assert.equal(a.IsFocused, true);
     });
 
@@ -186,7 +186,7 @@ describe('MenuItem — keyboard navigation', () => {
         popup.Items = [a, b];
         const im = new InputManager();
         im.SetFocus(a);
-        im.InjectKeyDown(keyEvent('ArrowUp'));
+        im.InjectKeyDown(keyEvent(Key.Up));
         assert.equal(b.IsFocused, true, 'wraps from first → last');
     });
 
@@ -198,11 +198,11 @@ describe('MenuItem — keyboard navigation', () => {
         popup.Items = [a, b, c];
         const im = new InputManager();
         im.SetFocus(a);
-        im.InjectKeyDown(keyEvent('c'));
+        im.InjectKeyDown(keyEvent(Key.C, 'c'));
         assert.equal(c.IsFocused, true);
         // Re-pressing the same letter from C wraps back to A (since C
         // is the only C-prefix; the walk starts AFTER self).
-        im.InjectKeyDown(keyEvent('b'));
+        im.InjectKeyDown(keyEvent(Key.B, 'b'));
         assert.equal(b.IsFocused, true);
     });
 
@@ -213,7 +213,7 @@ describe('MenuItem — keyboard navigation', () => {
         strip.Items = [file, edit];
         const im = new InputManager();
         im.SetFocus(file);
-        im.InjectKeyDown(keyEvent('ArrowRight'));
+        im.InjectKeyDown(keyEvent(Key.Right));
         assert.equal(edit.IsFocused, true);
 
         // Vertical-popup item with a submenu: Right opens it.
@@ -224,7 +224,7 @@ describe('MenuItem — keyboard navigation', () => {
         popup.Items  = [parent];
         const im2 = new InputManager();
         im2.SetFocus(parent);
-        im2.InjectKeyDown(keyEvent('ArrowRight'));
+        im2.InjectKeyDown(keyEvent(Key.Right));
         assert.equal(parent.IsSubmenuOpen, true);
     });
 
@@ -236,7 +236,7 @@ describe('MenuItem — keyboard navigation', () => {
         strip.Items = [file];
         const im = new InputManager();
         im.SetFocus(file);
-        im.InjectKeyDown(keyEvent('ArrowDown'));
+        im.InjectKeyDown(keyEvent(Key.Down));
         assert.equal(file.IsSubmenuOpen, true);
     });
 
@@ -247,7 +247,7 @@ describe('MenuItem — keyboard navigation', () => {
         mi.IsSubmenuOpen = true;
         const im = new InputManager();
         im.SetFocus(mi);
-        im.InjectKeyDown(keyEvent('Escape'));
+        im.InjectKeyDown(keyEvent(Key.Escape));
         assert.equal(mi.IsSubmenuOpen, false);
     });
 });

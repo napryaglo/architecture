@@ -16,7 +16,7 @@ export {
     type ColorAnimationProps,
     type DoubleAnimationProps,
     type ThicknessAnimationProps,
-    type TimelinePhase,
+    TimelinePhase,
     AnimationTimeline,
     ColorAnimation,
     DoubleAnimation,

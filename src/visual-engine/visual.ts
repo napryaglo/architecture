@@ -9,19 +9,11 @@ import { ObservableCollection } from '../runtime/observable-collection.js';
 import { Point, Rect, Size, Thickness } from './primitives.js';
 import type { DrawingContext } from './drawing-context.js';
 import type { TextMeasurer } from './text-measurer.js';
-import type {
-    PointerEventArgs,
-    WheelEventArgs,
-    KeyEventArgs,
-    TextInputEventArgs,
-    FocusEventArgs,
-    DragEventArgs,
-} from './routed-event.js';
 import { Storyboard } from './animation/storyboard.js';
 import type { AnimationTimeline } from './animation/timeline.js';
 import { applyImplicitTransition } from './animation/implicit-transition-engine.js';
 import { PropertyTransition } from './animation/property-transition.js';
-import { DragDrop, type DragStartCallback } from './drag-drop.js';
+import type { DragStartCallback } from './drag-drop.js';
 import type { Effect } from './drawing/effect.js';
 import type { Transform } from './drawing/transform.js';
 import type { Geometry } from './geometry/geometry.js';
@@ -38,8 +30,14 @@ import type { Geometry } from './geometry/geometry.js';
 export const KNOWN_ROUTED_EVENTS = new Set([
     'PointerDown', 'PointerUp', 'PointerMove', 'PointerWheel',
     'PointerEnter', 'PointerLeave',
-    'KeyDown', 'KeyUp', 'TextInput',
+    'MouseLeftButtonDown', 'MouseLeftButtonUp',
+    'MouseRightButtonDown', 'MouseRightButtonUp',
+    'PreviewGotMouseCapture', 'GotMouseCapture',
+    'PreviewLostMouseCapture', 'LostMouseCapture',
+    'KeyDown', 'KeyUp', 'TextInput', 'QueryCursor',
     'GotFocus', 'LostFocus',
+    'PreviewGotKeyboardFocus', 'GotKeyboardFocus',
+    'PreviewLostKeyboardFocus', 'LostKeyboardFocus',
     'DragEnter', 'DragLeave', 'DragOver', 'Drop',
 ]);
 
@@ -296,16 +294,12 @@ export class Visual extends Model
     // FE-tier inheritable input-gate. Plain Visuals always pass the
     // routed-event disabled-state gate via the stub accessor below.
 
-    // Input state flags. Maintained by the InputManager + per-control
-    // press chrome (Button / ClickableBorder), not by user code.
-    // Promoted to `RegisterReadOnlyProperty` in § 1.13 — the
-    // "read-only by convention" comment that lived here is now an
-    // enforced invariant: external `set_property_value` writes throw.
-    // Maintainers route their writes through the typed `_setIsXxx`
-    // @internal methods below (which use the privileged
-    // `set_property_value_with_key` path under the hood).
-    public static readonly IsMouseOverKey = Model.RegisterReadOnlyProperty<boolean>(Visual, 'IsMouseOver', false, MetaData.None);
-    public static readonly IsPressedKey   = Model.RegisterReadOnlyProperty<boolean>(Visual, 'IsPressed',   false, MetaData.None);
+    // Input-state flags (IsMouseOver / IsPressed / IsFocused /
+    // IsDragOver), the drop-target / hit-test / focus DPs (AllowDrop /
+    // IsHitTestVisible / Focusable), and the declarative drag-source DPs
+    // (IsDraggable / OnDragStart) all moved to `Element` (§ Phase B /
+    // input) — the whole input surface is FE-tier. Visual exposes no-op
+    // accessor stubs below so a Visual-typed reference still typechecks.
 
     // Implicit per-DP transition specs — CSS-`transition`-style. When a
     // DP whose name matches a PropertyTransition.Property changes on
@@ -326,30 +320,6 @@ export class Visual extends Model
     public static readonly TransitionsKey = Model.RegisterProperty<ObservableCollection<PropertyTransition> | undefined>(
         Visual, 'Transitions', undefined, MetaData.None);
 
-    // Drop-target flags. Maintained by the InputManager during drag
-    // dispatch, in lock-step with IsMouseOver during normal hover.
-    // AllowDrop is consumer-set (defaults to false so a random Visual
-    // never accidentally accepts drops); IsDragOver is framework-written
-    // and behaves like IsMouseOver — public read, no public setter
-    // (Style triggers like `when{ IsDragOver }` read it).
-    public static readonly AllowDropKey  = Model.RegisterProperty<boolean>(Visual, 'AllowDrop',  false, MetaData.None);
-    // IsDragOver — read-only as of § 1.13; InputManager writes
-    // through `_setIsDragOver`. See IsMouseOver / IsPressed for the
-    // pattern.
-    public static readonly IsDragOverKey = Model.RegisterReadOnlyProperty<boolean>(Visual, 'IsDragOver', false, MetaData.None);
-
-    // Hit-test opt-out (WPF parity — UIElement.IsHitTestVisible). When
-    // false, this visual AND its visual subtree are transparent to the
-    // hit-test pipeline: pointer events fall through to whatever sits
-    // below. Pure-decoration adorners (insertion lines, validation
-    // chrome, drag ghosts) flip this off so they don't intercept clicks
-    // meant for the controls they decorate. Default true — opt-out
-    // model matches WPF.
-    //
-    // Renderer side: a false value emits `pointer-events="none"` on
-    // the outer <g>, which CSS-cascades to every descendant element.
-    // MetaData.Render so flips repaint without further wiring.
-    public static readonly IsHitTestVisibleKey = Model.RegisterProperty<boolean>(Visual, 'IsHitTestVisible', true, MetaData.Render);
 
     // WPF-parity Visibility (see the enum's doc for the three semantics).
     // Measure | Arrange | Render — a Visible↔Collapsed flip changes the
@@ -392,59 +362,15 @@ export class Visual extends Model
     public static readonly CursorKey = Model.RegisterProperty<string | undefined>(
         Visual, 'Cursor', undefined, MetaData.Render);
 
-    // Declarative drag source. When IsDraggable = true the framework
-    // installs a PointerDown / Move / Up latch that calls OnDragStart
-    // after the pointer travels > DragDrop.DragThreshold pixels. The
-    // callback returns either null (cancel) or
-    // { data, effects, preview? } which the framework feeds straight
-    // into DragDrop.DoDragDrop. Spec § 6.
-    public static readonly IsDraggableKey = Model.RegisterProperty<boolean>(
-        Visual, 'IsDraggable', false, MetaData.None);
-
-    // Declarative drag-source callback. See `DragStartCallback` /
-    // `DragStartSpec` in drag-drop.ts for the return-shape contract.
-    public static readonly OnDragStartKey = Model.RegisterProperty<DragStartCallback | undefined>(
-        Visual, 'OnDragStart', undefined, MetaData.None);
-
-    // Focusable — opt-in for keyboard focus. Default false so a random
-    // Border / TextBlock / Panel never accidentally swallows keys;
-    // controls that handle keyboard input (TextBox, Button) set this to
-    // true. The InputManager refuses to focus a Visual whose Focusable
-    // is false.
-    public static readonly FocusableKey = Model.RegisterProperty<boolean>(Visual, 'Focusable', false, MetaData.None);
-
-    // IsFocused — true when this Visual is the InputManager's current
-    // focused target. Read-only from consumer code; setting it directly
-    // does NOT actually take focus (use Focus() for that). The flag is
-    // here so Style triggers can branch on it
-    // (`when{ IsFocused }{ BorderBrush = #1976d2 }`) and so tests can
-    // assert state without reaching into the InputManager.
-    public static readonly IsFocusedKey = Model.RegisterReadOnlyProperty<boolean>(Visual, 'IsFocused', false, MetaData.None);
-
     // Tag DP + Tag accessor moved to `Element` (§ Phase B / B5.1) —
     // FE-tier consumer handle, no place on a raw render-only Visual.
 
-    // Input state — read-only mirrors of the DPs. Both flags are set
-    // exclusively by the InputManager during pointer dispatch.
-    public get IsMouseOver(): boolean { return this.get_property_value(Visual.IsMouseOverKey); }
-    public get IsPressed():   boolean { return this.get_property_value(Visual.IsPressedKey); }
-
-    /** @internal — InputManager only. Typed writeback for the
-     *  read-only `IsMouseOver` DP (§ 1.13). Routes through
-     *  `set_property_value_with_key` — the registered class's
-     *  privileged write — so the read-only contract holds for
-     *  external callers. */
-    public _setIsMouseOver(value: boolean): void
-    {
-        this.set_property_value_with_key(Visual.IsMouseOverKey, value);
-    }
-
-    /** @internal — Button / ClickableBorder / InputManager only.
-     *  Typed writeback for the read-only `IsPressed` DP (§ 1.13). */
-    public _setIsPressed(value: boolean): void
-    {
-        this.set_property_value_with_key(Visual.IsPressedKey, value);
-    }
+    /** Stub accessors; Element re-declares as real DPs (§ Phase B /
+     *  input). Plain Visuals carry no input state — reads return the
+     *  registered default `false`. The InputManager only ever writes
+     *  input state on Elements, so no `_setIsXxx` stub is needed. */
+    public get IsMouseOver(): boolean { return false; }
+    public get IsPressed():   boolean { return false; }
 
     // Read-only getter — returns `undefined` when no transitions
     // collection has been allocated. Bindings / consumers wanting the
@@ -488,43 +414,18 @@ export class Visual extends Model
         }
         return t;
     }
-    // True when the InputManager has this Visual as its current focused
-    // target. Read-only contract enforced via `RegisterReadOnlyProperty`
-    // (§ 1.13); use `Focus()` / `Blur()` to change, or the @internal
-    // `_setIsFocused` from InputManager.
-    public get IsFocused():   boolean { return this.get_property_value(Visual.IsFocusedKey); }
-
-    /** @internal — InputManager only. Typed writeback for the
-     *  read-only `IsFocused` DP (§ 1.13). */
-    public _setIsFocused(value: boolean): void
-    {
-        this.set_property_value_with_key(Visual.IsFocusedKey, value);
-    }
-
-    // Drop-target opt-in. The InputManager's drag dispatcher walks the
-    // visual ancestor chain from the pointer-hit Visual until it finds
-    // one with AllowDrop=true (`findAllowDropAncestor`); that Visual
-    // becomes the drag receiver.
-    public get AllowDrop():  boolean { return this.get_property_value(Visual.AllowDropKey); }
-    public set AllowDrop(v:  boolean) { this.set_property_value(Visual.AllowDropKey, v); }
-    // Framework-written mirror of "this Visual is the current drag
-    // receiver". Read-only contract enforced via
-    // `RegisterReadOnlyProperty` (§ 1.13) — InputManager writes
-    // through `_setIsDragOver` below.
-    public get IsDragOver(): boolean { return this.get_property_value(Visual.IsDragOverKey); }
-
-    /** @internal — InputManager only. Typed writeback for the
-     *  read-only `IsDragOver` DP (§ 1.13). */
-    public _setIsDragOver(value: boolean): void
-    {
-        this.set_property_value_with_key(Visual.IsDragOverKey, value);
-    }
-
-    // Hit-test opt-out. WPF parity — IsHitTestVisible=false renders
-    // this Visual (and every descendant) transparent to pointer-event
-    // hit-testing.
-    public get IsHitTestVisible():  boolean { return this.get_property_value(Visual.IsHitTestVisibleKey); }
-    public set IsHitTestVisible(v: boolean) { this.set_property_value(Visual.IsHitTestVisibleKey, v); }
+    /** Stub accessors; Element re-declares the input DPs (§ Phase B /
+     *  input). IsFocused / IsDragOver are read-only framework state and
+     *  return their default `false`; AllowDrop reads `false` and swallows
+     *  writes; IsHitTestVisible reads the default `true` and swallows
+     *  writes. A real instance is always an Element, so these stubs only
+     *  satisfy Visual-typed call sites — they're never the live path. */
+    public get IsFocused(): boolean { return false; }
+    public get AllowDrop(): boolean { return false; }
+    public set AllowDrop(_v: boolean) { /* plain Visual: no-op */ }
+    public get IsDragOver(): boolean { return false; }
+    public get IsHitTestVisible(): boolean { return true; }
+    public set IsHitTestVisible(_v: boolean) { /* plain Visual: no-op */ }
 
     // WPF Visibility — see the enum's doc. Hidden keeps the layout slot
     // but skips paint + hit; Collapsed forces zero DesiredSize so the
@@ -539,50 +440,20 @@ export class Visual extends Model
     public get Cursor():  string | undefined { return this.get_property_value(Visual.CursorKey); }
     public set Cursor(v: string | undefined) { this.set_property_value(Visual.CursorKey, v); }
 
-    // Declarative drag source. Set IsDraggable=true and supply an
-    // OnDragStart callback; the framework calls the callback once the
-    // pointer has moved past DragDrop.DragThreshold and starts a drag.
-    // See `_onDragLatch*` listeners installed in OnPropertyChanged.
-    public get IsDraggable(): boolean { return this.get_property_value(Visual.IsDraggableKey); }
-    public set IsDraggable(v: boolean) { this.set_property_value(Visual.IsDraggableKey, v); }
-
-    public get OnDragStart(): DragStartCallback | undefined
-    {
-        return this.get_property_value(Visual.OnDragStartKey);
-    }
-    public set OnDragStart(v: DragStartCallback | undefined)
-    {
-        this.set_property_value(Visual.OnDragStartKey, v);
-    }
-
-    // Opt-in for keyboard focus. Controls that handle keyboard input
-    // (TextBox, Button) flip this on in their constructor; everything
-    // else stays unfocusable. Settable by consumers when they want to
-    // make a custom hit-target focusable (e.g. a custom widget hosting
-    // a keyboard handler).
-    public get Focusable(): boolean { return this.get_property_value(Visual.FocusableKey); }
-    public set Focusable(v: boolean) { this.set_property_value(Visual.FocusableKey, v); }
-
-    // Take keyboard focus on this Visual. Delegates to the host's
-    // InputManager via the optional `SetFocus` method on VisualHost.
-    // No-op when the Visual is unattached, when Focusable is false, or
-    // when the host doesn't implement SetFocus (tests that mock
-    // VisualHost without the focus surface).
-    public Focus(): void
-    {
-        if (!this.Focusable) return;
-        this._target?.SetFocus?.(this);
-    }
-
-    // Clear focus from this Visual. No-op when this isn't the currently
-    // focused Visual — Blur() always asks for "no focus", which the
-    // InputManager applies only if we're actually the focused target.
-    public Blur(): void
-    {
-        if (this._target?.SetFocus === undefined) return;
-        if (this._target.GetFocusedVisual?.() !== this) return;
-        this._target.SetFocus(undefined);
-    }
+    /** Stub accessors; Element re-declares the declarative-drag-source
+     *  DPs (IsDraggable / OnDragStart), the Focusable DP, and real
+     *  Focus() / Blur() (§ Phase B / input). Plain Visuals are never
+     *  draggable or focusable — reads return defaults, writes no-op, and
+     *  Focus() / Blur() do nothing. A real instance is always an Element,
+     *  so these only satisfy Visual-typed call sites. */
+    public get IsDraggable(): boolean { return false; }
+    public set IsDraggable(_v: boolean) { /* plain Visual: no-op */ }
+    public get OnDragStart(): DragStartCallback | undefined { return undefined; }
+    public set OnDragStart(_v: DragStartCallback | undefined) { /* plain Visual: no-op */ }
+    public get Focusable(): boolean { return false; }
+    public set Focusable(_v: boolean) { /* plain Visual: no-op */ }
+    public Focus(): void { /* plain Visual: not focusable */ }
+    public Blur(): void { /* plain Visual: never focused */ }
 
     /** Animate the given property to the timeline's To value. Implicit
      *  Storyboard wrap — equivalent to `new Storyboard(); sb.Add(this,
@@ -682,23 +553,9 @@ export class Visual extends Model
     // `_triggerHost` field + the install / uninstall trampolines live
     // on `Element` (§ Phase B / B3). A raw Visual carries no triggers.
 
-    // Per-event-name instance listener registry. Used by the routed-
-    // event dispatcher to invoke per-Visual listeners alongside the
-    // virtual handlers (OnPointerDown, OnKeyDown, etc.). EventTriggers
-    // for PointerDown / PointerUp / KeyDown / etc. plug into this so
-    // each Visual instance gets its own action invocation when the
-    // event reaches it in the bubble phase. Lazy-allocated — most
-    // Visuals never register a routed listener so the empty Map allo
-    // stays cheap.
-    private _routedListeners: Map<string, Set<(args: unknown) => void>> | undefined;
-
-    // Declarative drag-source latch state. When IsDraggable=true the
-    // ctor installs PointerDown/Move/Up listeners; the latch captures
-    // the down position and arms; on a subsequent move past the
-    // threshold it calls OnDragStart and DoDragDrop.
-    private _draggableInstalled = false;
-    private _draggableLatch:
-        { downX: number; downY: number; pointerId: number; armed: boolean } | null = null;
+    // The per-instance routed-listener registry moved to `Element`
+    // (§ Phase B / input) — see the AddRoutedEventListener /
+    // FireRoutedListeners stubs below.
 
     // Bound closure installed on a RenderTransform's _setRenderInvalidator
     // hook (see Transform). Captured once per Visual so install / clear
@@ -707,61 +564,8 @@ export class Visual extends Model
     // fire this and flag the Visual render-dirty.
     private readonly _renderTransformInvalidator = (): void => this.InvalidateVisual();
 
-    private readonly _onDragLatchPointerDown = (raw: unknown): void => {
-        const args = raw as PointerEventArgs;
-        this._draggableLatch = {
-            downX: args.HostX, downY: args.HostY,
-            pointerId: args.PointerId,
-            armed: true,
-        };
-        // Capture so subsequent PointerMoves keep firing on THIS visual
-        // even when the cursor leaves the source bbox before crossing the
-        // drag threshold. Without capture, a tile-sized source loses move
-        // events the moment the user slides 5px past its edge and the
-        // threshold (4px) is never observed on the original target.
-        args.CapturePointer(this);
-    };
-    private readonly _onDragLatchPointerMove = (raw: unknown): void => {
-        const args = raw as PointerEventArgs;
-        const latch = this._draggableLatch;
-        if (latch === null || !latch.armed || latch.pointerId !== args.PointerId) return;
-        const dx = args.HostX - latch.downX;
-        const dy = args.HostY - latch.downY;
-        if (Math.hypot(dx, dy) < DragDrop.DragThreshold) return;
-        // Threshold reached — invoke OnDragStart and start the drag.
-        // Disarm before the callback so a re-entrant move that fires
-        // synchronously can't double-start.
-        latch.armed = false;
-        const start = this.OnDragStart;
-        if (start === undefined) return;
-        const r = start(this);
-        if (r === null) return;
-        // Press-relative offset within the source: how far the press
-        // landed from the source's host-coord top-left. The HtmlTarget
-        // subtracts this from each move sample so the cursor stays
-        // anchored at the press point inside the ghost — without it, a
-        // wide source (a stretched ItemsControl ContentPresenter) shows
-        // the centered tile far from the cursor.
-        let srcX = 0, srcY = 0;
-        for (let cur: Visual | undefined = this; cur !== undefined; cur = cur.GetVisualParent())
-        {
-            srcX += cur.ArrangedRect.X;
-            srcY += cur.ArrangedRect.Y;
-        }
-        const ghostCursorOffset = { x: latch.downX - srcX, y: latch.downY - srcY };
-        const session = DragDrop.DoDragDrop(this, r.data, r.effects, { preview: r.preview, ghostCursorOffset });
-        // Wire any optional source-side hooks (8.3) onto the freshly
-        // started session before the InputManager polls and picks it up.
-        if (r.onFeedback      !== undefined) session.OnFeedback(r.onFeedback);
-        if (r.onContinueQuery !== undefined) session.OnContinueQuery(r.onContinueQuery);
-    };
-    private readonly _onDragLatchPointerUp = (raw: unknown): void => {
-        const args = raw as PointerEventArgs;
-        if (this._draggableLatch?.pointerId === args.PointerId)
-        {
-            this._draggableLatch = null;
-        }
-    };
+    // The declarative drag-source latch (IsDraggable / OnDragStart +
+    // _onDragLatch* listeners) moved to `Element` (§ Phase B / input).
 
     // Lifecycle listeners (Loaded / Attached / Unloaded / Detached)
     // and the Behaviors subsystem live on `Element` — see § Phase B
@@ -920,50 +724,17 @@ export class Visual extends Model
     // `_uninstall_*` trampolines live on `Element` (§ Phase B / B3) —
     // triggers are FE-tier, installed through the Style cascade.
 
-    // ── Per-instance routed listener registry ──────────────────────────
+    // ── Per-instance routed listener registry — stubs ──────────────────
     //
-    // Routed events that pass through dispatchPointer / dispatchKey /
-    // dispatchFocus invoke per-Visual virtuals (OnPointerDown, etc.) on
-    // each node along the route. They ALSO invoke FireRoutedListeners
-    // here so per-instance EventTriggers / consumer-attached listeners
-    // get the same hooks subclasses do — but without forcing subclass
-    // overrides to call `super` to keep listeners working.
-    public AddRoutedEventListener(eventName: string, listener: (args: unknown) => void): void
-    {
-        // § 1.16 — validate at registration so a typo
-        // (`'PointreDown'`) fails loudly instead of subscribing to a
-        // name that will never fire. The check is throw-on-unknown,
-        // matching `AttachVisual`'s policy for invalid wiring;
-        // FireRoutedListeners stays free of the per-fire check.
-        if (!KNOWN_ROUTED_EVENTS.has(eventName))
-        {
-            throw new Error(
-                `Visual.AddRoutedEventListener: unknown routed event '${eventName}'. `
-                + `Known names: ${Array.from(KNOWN_ROUTED_EVENTS).join(', ')}.`,
-            );
-        }
-        if (this._routedListeners === undefined) this._routedListeners = new Map();
-        let set = this._routedListeners.get(eventName);
-        if (set === undefined)
-        {
-            set = new Set();
-            this._routedListeners.set(eventName, set);
-        }
-        set.add(listener);
-    }
-
-    public RemoveRoutedEventListener(eventName: string, listener: (args: unknown) => void): void
-    {
-        this._routedListeners?.get(eventName)?.delete(listener);
-    }
-
-    // Called by the routed-event dispatcher's bubble loop. No-op when
-    // no listeners are registered (the common case — most Visuals
-    // never register).
-    public FireRoutedListeners(eventName: string, args: unknown): void
-    {
-        safeFire(this._routedListeners?.get(eventName), args);
-    }
+    // The real registry lives on `Element` (§ Phase B / input): routed
+    // events invoke per-Element virtuals (OnPointerDown, etc.) on each
+    // route node, then FireRoutedListeners so per-instance EventTriggers
+    // / consumer-attached listeners run. Visual exposes no-op stubs so a
+    // Visual-typed reference still typechecks; a real instance is always
+    // an Element, so these stubs are never the live path.
+    public AddRoutedEventListener(_eventName: string, _listener: (args: unknown) => void): void { }
+    public RemoveRoutedEventListener(_eventName: string, _listener: (args: unknown) => void): void { }
+    public FireRoutedListeners(_eventName: string, _args: unknown): void { }
 
     // Lifecycle listener public API (AddLoaded / AddAttached /
     // AddUnloaded / AddDetached and their Remove counterparts) and
@@ -1554,77 +1325,14 @@ export class Visual extends Model
     protected RenderOverride(_dc: DrawingContext): void { }
 
     // ------------------------------------------------------------------
-    // Input handlers
+    // Input handlers — moved to Element
     // ------------------------------------------------------------------
     //
-    // Routed-event virtuals. The dispatcher (`dispatchPointer` in
-    // routed-event.ts) walks the visual tree twice per event — tunnel
-    // root → target calling `OnPreview*`, then bubble target → root
-    // calling `On*`. Subclasses override the pair they care about; the
-    // base no-op lets every Visual participate in the tree walk
-    // without forcing trivial overrides.
-    //
-    // Setting `args.Handled = true` from any handler stops the
-    // remainder of BOTH passes for that event. The dispatcher rewrites
-    // `args.Visual` before each call so a handler can branch on it,
-    // and sets `args.Strategy` to `'tunnel'` or `'bubble'` so a
-    // shared implementation can pick its side.
-    //
-    // These methods are intentionally not abstract: most Visuals don't
-    // care about pointer events, and forcing every subclass to opt
-    // into the dispatch interface would explode the override surface.
-    //
-    // Enter / Leave are direct routed events (WPF semantics) and have
-    // no Preview counterpart — they fire on the visual that gained /
-    // lost mouse-over only, never on ancestors. IsMouseOver propagation
-    // up the ancestor chain happens via the InputManager regardless.
-
-    protected OnPointerEnter       (_args: PointerEventArgs): void { }
-    protected OnPointerLeave       (_args: PointerEventArgs): void { }
-    protected OnPreviewPointerMove (_args: PointerEventArgs): void { }
-    protected OnPointerMove        (_args: PointerEventArgs): void { }
-    protected OnPreviewPointerDown (_args: PointerEventArgs): void { }
-    protected OnPointerDown        (_args: PointerEventArgs): void { }
-    protected OnPreviewPointerUp   (_args: PointerEventArgs): void { }
-    protected OnPointerUp          (_args: PointerEventArgs): void { }
-    protected OnPreviewPointerWheel(_args: WheelEventArgs): void { }
-    protected OnPointerWheel       (_args: WheelEventArgs): void { }
-
-    // Keyboard virtuals — dispatched by InputManager.InjectKeyDown /
-    // InjectKeyUp / InjectTextInput when this Visual is the currently
-    // focused target (or an ancestor of it for the tunnel / bubble
-    // passes). Same Preview / bubble pair pattern as the pointer
-    // virtuals; setting args.Handled = true short-circuits both passes.
-    // TextInput is a separate event so a handler can subscribe only to
-    // "textual" input without seeing every arrow / function key.
-    protected OnPreviewKeyDown   (_args: KeyEventArgs): void { }
-    protected OnKeyDown          (_args: KeyEventArgs): void { }
-    protected OnPreviewKeyUp     (_args: KeyEventArgs): void { }
-    protected OnKeyUp            (_args: KeyEventArgs): void { }
-    protected OnPreviewTextInput (_args: TextInputEventArgs): void { }
-    protected OnTextInput        (_args: TextInputEventArgs): void { }
-
-    // Focus virtuals — fired by InputManager.SetFocus on the Visual that
-    // lost focus and the Visual that gained it. Bubble only (no Preview);
-    // the IsFocused DP write happens BEFORE the dispatch so handlers see
-    // the post-change state.
-    protected OnGotFocus  (_args: FocusEventArgs): void { }
-    protected OnLostFocus (_args: FocusEventArgs): void { }
-
-    // Drag-event virtuals. Default no-ops; subclasses (and consumer
-    // Visuals via AddRoutedEventListener) override these. See
-    // dispatchDrag in routed-event.ts for ordering — tunnel + bubble,
-    // same shape as the pointer pair. Receivers are gated by AllowDrop;
-    // the InputManager only invokes dispatchDrag against an ancestor
-    // with AllowDrop=true (findAllowDropAncestor).
-    protected OnPreviewDragEnter(_args: DragEventArgs): void { }
-    protected OnDragEnter       (_args: DragEventArgs): void { }
-    protected OnPreviewDragLeave(_args: DragEventArgs): void { }
-    protected OnDragLeave       (_args: DragEventArgs): void { }
-    protected OnPreviewDragOver (_args: DragEventArgs): void { }
-    protected OnDragOver        (_args: DragEventArgs): void { }
-    protected OnPreviewDrop     (_args: DragEventArgs): void { }
-    protected OnDrop            (_args: DragEventArgs): void { }
+    // The routed-event virtuals (OnPointerDown / OnPreview* / OnKeyDown /
+    // OnDrop / …) live on `Element` (§ Phase B / input). They're
+    // protected and only ever invoked by the routed-event dispatcher on
+    // Element route nodes, so Visual carries no stubs — every node that
+    // participates in routing is an Element.
 
     // ------------------------------------------------------------------
     // Invalidation API
@@ -1771,29 +1479,8 @@ export class Visual extends Model
                 newT._setRenderInvalidator(this._renderTransformInvalidator);
             }
         }
-        // Install / uninstall the declarative drag-source latch as
-        // IsDraggable flips. Listening on PointerDown/Move/Up rather
-        // than overriding the virtuals means subclass overrides of
-        // OnPointerDown etc. are untouched — both run.
-        if (descriptor.Name === 'IsDraggable')
-        {
-            const nowDraggable = new_value === true;
-            if (nowDraggable && !this._draggableInstalled)
-            {
-                this.AddRoutedEventListener('PointerDown', this._onDragLatchPointerDown);
-                this.AddRoutedEventListener('PointerMove', this._onDragLatchPointerMove);
-                this.AddRoutedEventListener('PointerUp',   this._onDragLatchPointerUp);
-                this._draggableInstalled = true;
-            }
-            else if (!nowDraggable && this._draggableInstalled)
-            {
-                this.RemoveRoutedEventListener('PointerDown', this._onDragLatchPointerDown);
-                this.RemoveRoutedEventListener('PointerMove', this._onDragLatchPointerMove);
-                this.RemoveRoutedEventListener('PointerUp',   this._onDragLatchPointerUp);
-                this._draggableInstalled = false;
-                this._draggableLatch = null;
-            }
-        }
+        // The declarative drag-source latch (IsDraggable flips) is wired
+        // in Element.OnPropertyChanged (§ Phase B / input).
     }
 
     // ------------------------------------------------------------------

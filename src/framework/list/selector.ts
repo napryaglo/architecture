@@ -2,8 +2,11 @@ import {
     MetaData,
     Model,
     Visual,
+    Element,
     type KeyEventArgs,
-    type ModifierKeys,
+    Key,
+    ModifierKeys,
+    hasModifier,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
 import { ItemsControl } from '../base/items-control.js';
@@ -301,12 +304,12 @@ export class Selector extends ItemsControl
         }
         else // Extended
         {
-            const shiftActive = modifiers.Shift && this._anchor !== undefined;
+            const shiftActive = hasModifier(modifiers, ModifierKeys.Shift) && this._anchor !== undefined;
             if (shiftActive)
             {
                 this.selectContainerRange(this._anchor!, container);
             }
-            else if (modifiers.Control)
+            else if (hasModifier(modifiers, ModifierKeys.Control))
             {
                 this.toggleContainerSelected(container);
                 this._anchor = container;
@@ -416,8 +419,8 @@ export class Selector extends ItemsControl
         if (args.Handled) return;
 
         // Ctrl+A: select all (Multiple / Extended only).
-        if ((args.Modifiers.Control || args.Modifiers.Meta)
-            && (args.Key === 'a' || args.Key === 'A'))
+        if ((hasModifier(args.Modifiers, ModifierKeys.Control) || hasModifier(args.Modifiers, ModifierKeys.Windows))
+            && args.Key === Key.A)
         {
             if (this.SelectionMode !== SelectionMode.Single)
             {
@@ -448,34 +451,33 @@ export class Selector extends ItemsControl
         let target: Visual | undefined;
         switch (args.Key)
         {
-            case 'ArrowDown':
+            case Key.Down:
                 target = focusedIdx < 0
                     ? order[0]
                     : order[Math.min(focusedIdx + 1, order.length - 1)];
                 break;
-            case 'ArrowUp':
+            case Key.Up:
                 target = focusedIdx < 0
                     ? order[order.length - 1]
                     : order[Math.max(focusedIdx - 1, 0)];
                 break;
-            case 'Home':
+            case Key.Home:
                 target = order[0];
                 break;
-            case 'End':
+            case Key.End:
                 target = order[order.length - 1];
                 break;
-            case 'PageDown':
+            case Key.PageDown:
                 target = focusedIdx < 0
                     ? order[Math.min(viewportCount - 1, order.length - 1)]
                     : order[Math.min(focusedIdx + viewportCount, order.length - 1)];
                 break;
-            case 'PageUp':
+            case Key.PageUp:
                 target = focusedIdx < 0
                     ? order[0]
                     : order[Math.max(focusedIdx - viewportCount, 0)];
                 break;
-            case ' ':
-            case 'Spacebar':
+            case Key.Space:
                 if (this._focusedContainer !== undefined
                     && this.SelectionMode !== SelectionMode.Single)
                 {
@@ -494,8 +496,8 @@ export class Selector extends ItemsControl
 
         // Apply selection based on mode + modifiers, then move focus.
         const mode = this.SelectionMode;
-        const shift = args.Modifiers.Shift;
-        const ctrl  = args.Modifiers.Control || args.Modifiers.Meta;
+        const shift = hasModifier(args.Modifiers, ModifierKeys.Shift);
+        const ctrl  = hasModifier(args.Modifiers, ModifierKeys.Control) || hasModifier(args.Modifiers, ModifierKeys.Windows);
 
         if (mode === SelectionMode.Single || (!shift && !ctrl))
         {
@@ -523,7 +525,9 @@ export class Selector extends ItemsControl
         // touching selection. Anchor stays put.
 
         this._focusedContainer = target;
-        args.SetFocus(target);
+        // Containers are always Elements; Selector types its container
+        // surface as Visual, so narrow at the focus-sink boundary.
+        args.SetFocus(target as Element);
         this.bringContainerIntoView(target);
         args.Handled = true;
     }

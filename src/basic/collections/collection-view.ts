@@ -9,7 +9,11 @@ import { _registerCollectionViewCtor } from '../../framework/base/items-control.
 // Direction of a single SortDescription's ordering. WPF spells these
 // 'Ascending' / 'Descending'; using literal strings keeps the runtime
 // surface friendly to .mu authoring (no enum import required).
-export type SortDirection = 'asc' | 'desc';
+export enum SortDirection
+{
+    Asc  = 'asc',
+    Desc = 'desc',
+}
 
 // Key selector + direction. The key function returns whatever value
 // should drive the comparison — typically a primitive (string / number /
@@ -20,7 +24,7 @@ export class SortDescription
 {
     constructor(
         public readonly key: (item: unknown) => unknown,
-        public readonly direction: SortDirection = 'asc',
+        public readonly direction: SortDirection = SortDirection.Asc,
     ) {}
 }
 
@@ -267,7 +271,7 @@ export class CollectionView implements IReadOnlyObservableCollection<unknown>
             const ka = desc.key(a);
             const kb = desc.key(b);
             let cmp = compareValues(ka, kb);
-            if (desc.direction === 'desc') cmp = -cmp;
+            if (desc.direction === SortDirection.Desc) cmp = -cmp;
             if (cmp !== 0) return cmp;
         }
         return 0;
@@ -430,7 +434,7 @@ export class CollectionView implements IReadOnlyObservableCollection<unknown>
                 const ka = keyFor(a, i);
                 const kb = keyFor(b, i);
                 let cmp = compareValues(ka, kb);
-                if (desc.direction === 'desc') cmp = -cmp;
+                if (desc.direction === SortDirection.Desc) cmp = -cmp;
                 if (cmp !== 0) return cmp;
             }
             return 0;

@@ -13,8 +13,8 @@ export { ValidationErrorAdorner } from './validation-error-adorner.js';
 export {
     SelectionBoundsAdorner,
     type SelectionSource,
-    type HorizontalAnchor,
-    type VerticalAnchor,
+    HorizontalAnchor,
+    VerticalAnchor,
 } from './selection-bounds-adorner.js';
 export { Border } from './border.js';
 export { TextBlock, TextAlignment, TextWrapping } from './text-block.js';
@@ -97,7 +97,7 @@ export {
     GridLength,
     ColumnDefinition,
     RowDefinition,
-    type GridUnitType,
+    GridUnitType,
 } from './panels/grid.js';
 export { ContentPresenter } from './templates/content-presenter.js';
 export {
@@ -140,7 +140,7 @@ export {
     CollectionViewGroup,
     SortDescription,
     GroupDescription,
-    type SortDirection,
+    SortDirection,
     type FilterPredicate,
     type CurrentChangedListener,
 } from './collections/collection-view.js';
@@ -168,7 +168,7 @@ export {
 } from './scroll/thumb.js';
 export {
     GridSplitter,
-    type GridResizeDirection,
+    GridResizeDirection,
     type GridResizeBehavior,
 } from './grid-splitter.js';
 export { Splitter } from './splitter.js';

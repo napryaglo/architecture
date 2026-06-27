@@ -1,10 +1,11 @@
+import { ModifierKeys, toModifierKeys } from '../../runtime/index.js';
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
     Application,
-    KeyEventArgs,
-    MetaData,
+    Key,
+    KeyEventArgs,    MetaData,
     Model,
     ObservableCollection,
     RelayCommand,
@@ -97,8 +98,8 @@ function selectMany(diagram: Diagram, items: unknown[]): void {
     for (let i = 0; i < items.length; i++) {
         const c = cont(diagram, items[i]);
         const mods = i === 0
-            ? { Control: false, Shift: false, Alt: false, Meta: false }
-            : { Control: true,  Shift: false, Alt: false, Meta: false };
+            ? ModifierKeys.None
+            : ModifierKeys.Control;
         diagram.HandleContainerClick(c, mods);
     }
 }
@@ -157,12 +158,13 @@ describe('Diagram — SelectionReflector (ReflectSelectionToItems)', () => {
 // `protected` is a TypeScript-only annotation; reach through `any` for
 // direct OnKeyDown invocation in tests. Mirrors patterns elsewhere in
 // the framework test suite.
-function dispatchKeyDown(diagram: Diagram, key: string, mods: { Control?: boolean; Shift?: boolean; Meta?: boolean }): KeyEventArgs {
+function dispatchKeyDown(diagram: Diagram, key: Key, mods: { Control?: boolean; Shift?: boolean; Meta?: boolean }): KeyEventArgs {
     const args = new KeyEventArgs('KeyDown', diagram, {
         Key:       key,
+        KeyText:       key,
         Code:      key,
-        Modifiers: { Control: !!mods.Control, Shift: !!mods.Shift, Alt: false, Meta: !!mods.Meta },
-        Repeat:    false,
+        Modifiers: toModifierKeys({ control: !!mods.Control, shift: !!mods.Shift, meta: !!mods.Meta }),
+        IsRepeat:    false,
     });
     (diagram as unknown as { OnKeyDown(a: KeyEventArgs): void }).OnKeyDown(args);
     return args;
@@ -177,7 +179,7 @@ describe('Diagram — keyboard shortcuts (Delete / Ctrl+G / Ctrl+Shift+G)', () =
         diagram.AddDeleteRequestedListener(args => fired.push(args.Items));
         selectMany(diagram, [a, b]);
 
-        const args = dispatchKeyDown(diagram, 'Delete', {});
+        const args = dispatchKeyDown(diagram, Key.Delete, {});
 
         assert.equal(fired.length, 1);
         assert.equal(fired[0].length, 2);
@@ -193,7 +195,7 @@ describe('Diagram — keyboard shortcuts (Delete / Ctrl+G / Ctrl+Shift+G)', () =
         diagram.AddDeleteRequestedListener(() => { fired++; });
         selectMany(diagram, [a]);
 
-        dispatchKeyDown(diagram, 'Backspace', {});
+        dispatchKeyDown(diagram, Key.Back, {});
         assert.equal(fired, 1);
     });
 
@@ -203,7 +205,7 @@ describe('Diagram — keyboard shortcuts (Delete / Ctrl+G / Ctrl+Shift+G)', () =
         let fired = 0;
         diagram.AddDeleteRequestedListener(() => { fired++; });
 
-        const args = dispatchKeyDown(diagram, 'Delete', {});
+        const args = dispatchKeyDown(diagram, Key.Delete, {});
         assert.equal(fired, 0);
         assert.equal(args.Handled, false);
     });
@@ -217,7 +219,7 @@ describe('Diagram — keyboard shortcuts (Delete / Ctrl+G / Ctrl+Shift+G)', () =
         const probe = new RelayCommand(() => { fired++; }, () => true);
         diagram.set_property_value(Diagram.GroupCommandKey, probe);
 
-        dispatchKeyDown(diagram, 'g', { Control: true });
+        dispatchKeyDown(diagram, Key.G, { Control: true });
         assert.equal(fired, 1, 'Ctrl+G executed the GroupCommand');
         assert.ok(original instanceof RelayCommand, 'original GroupCommand was present');
     });
@@ -231,7 +233,7 @@ describe('Diagram — keyboard shortcuts (Delete / Ctrl+G / Ctrl+Shift+G)', () =
         const probe = new RelayCommand(() => { fired++; }, () => true);
         diagram.set_property_value(Diagram.UngroupCommandKey, probe);
 
-        dispatchKeyDown(diagram, 'G', { Control: true, Shift: true });
+        dispatchKeyDown(diagram, Key.G, { Control: true, Shift: true });
         assert.equal(fired, 1);
     });
 
@@ -243,7 +245,7 @@ describe('Diagram — keyboard shortcuts (Delete / Ctrl+G / Ctrl+Shift+G)', () =
         const probe = new RelayCommand(() => { fired++; }, () => false);
         diagram.set_property_value(Diagram.GroupCommandKey, probe);
 
-        const args = dispatchKeyDown(diagram, 'g', { Control: true });
+        const args = dispatchKeyDown(diagram, Key.G, { Control: true });
         assert.equal(fired, 0);
         assert.equal(args.Handled, true, 'still consumed — bubble would steal it');
     });

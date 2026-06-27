@@ -13,10 +13,21 @@ import { Rect } from '../visual-engine/primitives.js';
 // behavior (`attachAlignEdges`) is the consumer.
 
 // Which edge of a rectangle a guide line passes through:
-//   * 'min'  — left edge (X axis) or top edge (Y axis)
-//   * 'mid'  — horizontal/vertical center line
-//   * 'max'  — right edge (X axis) or bottom edge (Y axis)
-export type EdgeKind = 'min' | 'mid' | 'max';
+//   * EdgeKind.Min  — left edge (X axis) or top edge (Y axis)
+//   * EdgeKind.Mid  — horizontal/vertical center line
+//   * EdgeKind.Max  — right edge (X axis) or bottom edge (Y axis)
+export enum EdgeKind
+{
+    Min = 'min',
+    Mid = 'mid',
+    Max = 'max',
+}
+
+export enum AlignmentAxis
+{
+    X = 'x',
+    Y = 'y',
+}
 
 export interface AlignmentGuide
 {
@@ -24,7 +35,7 @@ export interface AlignmentGuide
     // VERTICAL line at the named position; a 'y' guide is a horizontal
     // line. Consumers visualise it as a line extending across the
     // diagram surface at the guide's `position` coordinate.
-    axis: 'x' | 'y';
+    axis: AlignmentAxis;
 
     // The coordinate value where the guide line should be drawn. In
     // the diagram's content-coordinate space (canvas coords).
@@ -55,18 +66,18 @@ export interface AlignmentOptions
 }
 
 const DEFAULT_TOLERANCE = 5;
-const DEFAULT_EDGES: readonly EdgeKind[] = ['min', 'mid', 'max'];
+const DEFAULT_EDGES: readonly EdgeKind[] = [EdgeKind.Min, EdgeKind.Mid, EdgeKind.Max];
 
-function edgeCoord(rect: Rect, axis: 'x' | 'y', edge: EdgeKind): number
+function edgeCoord(rect: Rect, axis: AlignmentAxis, edge: EdgeKind): number
 {
-    if (axis === 'x')
+    if (axis === AlignmentAxis.X)
     {
-        if (edge === 'min') return rect.X;
-        if (edge === 'max') return rect.X + rect.Width;
+        if (edge === EdgeKind.Min) return rect.X;
+        if (edge === EdgeKind.Max) return rect.X + rect.Width;
         return rect.X + rect.Width / 2;
     }
-    if (edge === 'min') return rect.Y;
-    if (edge === 'max') return rect.Y + rect.Height;
+    if (edge === EdgeKind.Min) return rect.Y;
+    if (edge === EdgeKind.Max) return rect.Y + rect.Height;
     return rect.Y + rect.Height / 2;
 }
 
@@ -87,7 +98,7 @@ export function findAlignmentGuides(
     let bestDx: number | undefined = undefined;
     let bestDy: number | undefined = undefined;
 
-    for (const axis of ['x', 'y'] as const)
+    for (const axis of [AlignmentAxis.X, AlignmentAxis.Y] as const)
     {
         for (const me of edges)
         {
@@ -100,7 +111,7 @@ export function findAlignmentGuides(
                     const d  = oc - mc;
                     if (Math.abs(d) > tolerance) continue;
                     guides.push({ axis, position: oc, movingEdge: me, otherEdge: oe, otherRect: other });
-                    if (axis === 'x')
+                    if (axis === AlignmentAxis.X)
                     {
                         if (bestDx === undefined || Math.abs(d) < Math.abs(bestDx)) bestDx = d;
                     }

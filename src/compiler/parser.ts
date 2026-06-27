@@ -67,6 +67,12 @@ import type {
 } from './ast.js';
 
 // Errors carry the source span so callers can render line:col diagnostics.
+export enum MacroArgMode
+{
+    Named      = 'named',
+    Positional = 'positional',
+}
+
 export class ParseError extends Error
 {
     public readonly span: SourceSpan;
@@ -1244,12 +1250,12 @@ export class Parser
     {
         const out: Attribute[] = [];
         if (this.peek().kind === TokenKind.RBracket) return out;
-        let mode: 'named' | 'positional' | null = null;
+        let mode: MacroArgMode | null = null;
         for (;;)
         {
             const a = this.parseAttr();
             const isPositional = a.kind === 'positional-attr';
-            const thisMode: 'named' | 'positional' = isPositional ? 'positional' : 'named';
+            const thisMode: MacroArgMode = isPositional ? MacroArgMode.Positional : MacroArgMode.Named;
             if (mode === null) mode = thisMode;
             else if (mode !== thisMode)
             {

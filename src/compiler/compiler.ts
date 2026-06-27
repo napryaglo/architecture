@@ -156,6 +156,25 @@ function isStaticAncestor(klass: Function, ancestor: Function): boolean
     return false;
 }
 
+// Collection-block properties whose runtime target is a plain array
+// (mutated via `.push`) rather than an ObservableCollection (`.Add`).
+// Control.InputBindings / .CommandBindings are lazily-allocated arrays.
+const ARRAY_COLLECTION_PROPERTIES: ReadonlySet<string> = new Set([
+    'InputBindings',
+    'CommandBindings',
+]);
+
+// True when `cls` is a Model/DP subclass — its instances carry the
+// dependency-property machinery (`set_property_value` on the prototype).
+// Plain value-object classes used in markup (KeyBinding, MouseBinding,
+// CommandBinding) return false, so the emitter falls back to a direct
+// field assignment for their attributes instead of a DP write.
+function isDependencyObjectClass(cls: Function): boolean
+{
+    const proto = (cls as { prototype?: { set_property_value?: unknown } }).prototype;
+    return typeof proto?.set_property_value === 'function';
+}
+
 // Lifted to top level so callers can `instanceof EmitError` without
 // importing the Compiler class.
 export class EmitError extends Error
@@ -217,6 +236,13 @@ export interface CompilerOptions
     glyphs?:  GlyphResolver;
 }
 
+export enum ExportName
+{
+    App    = 'app',
+    Create = 'create',
+    None   = '',
+}
+
 export interface CompilerOutput
 {
     /** JS source. For `'fragment'` / `'application'` this is the BODY of
@@ -234,7 +260,7 @@ export interface CompilerOutput
     isApplication:    boolean;
     /** Suggested export name. For `'resources'` there is no single export,
      *  so this carries the empty string; callers should branch on `kind`. */
-    exportName:       'app' | 'create' | '';
+    exportName:       ExportName;
     /** For `kind === 'resources'`: one entry per `resources NAME { … }`
      *  block AND per `theme NAME { … }` block (themes ride the same
      *  ResourceDictionary subclass shape). Empty / absent for the
@@ -497,7 +523,7 @@ export class Compiler
                 imports:          this.imports,
                 kind:             'resources',
                 isApplication:    false,
-                exportName:       '',
+                exportName:       ExportName.None,
                 resourcesBlocks:  metas,
                 themeNames:       themeBlocks.map(b => b.name),
                 schemeNames:      schemeBlocks.map(b => b.name),
@@ -561,7 +587,7 @@ export class Compiler
             imports:       this.imports,
             kind:          isApp ? 'application' : 'fragment',
             isApplication: isApp,
-            exportName:    isApp ? 'app' : 'create',
+            exportName:    isApp ? ExportName.App : ExportName.Create,
         };
     }
 
@@ -2974,6 +3000,18 @@ export class Compiler
         const descriptor = findDescriptor(lookupClass, propName);
         if (descriptor === undefined)
         {
+            // Plain value-object classes (KeyBinding / MouseBinding /
+            // CommandBinding) aren't Model/DP subclasses — they carry
+            // ordinary fields, so a DP write would fail. Emit a direct
+            // field assignment instead. Restricted to the single-name
+            // attribute form (attached `Owner.Prop` syntax only applies to
+            // DP classes). A *Model* class with an unknown property is a
+            // genuine authoring error and still throws.
+            if (ownerClassName === undefined && !isDependencyObjectClass(lookupClass))
+            {
+                this.line(`${targetVar}.${propName} = ${valueExpr};`);
+                return;
+            }
             throw new EmitError(
                 `Property '${propName}' not registered on class '${lookupClassName}' or any ancestor.`,
                 span);
@@ -3098,6 +3136,15 @@ export class Compiler
                 // code that TypeErrors at runtime — appropriate for an
                 // authoring mistake the symbol-table couldn't catch.
                 if (item.name === 'ColumnDefinitions' || item.name === 'RowDefinitions')
+                {
+                    this.compilePropertyCollectionBlock(parentVar, item.name, item);
+                    continue;
+                }
+                // InputBindings { KeyBinding[…] / MouseBinding[…] } and
+                // CommandBindings { CommandBinding[…] } — per-instance
+                // gesture / command tables on a Control. Each inner element
+                // is appended to the (array-backed) collection.
+                if (item.name === 'InputBindings' || item.name === 'CommandBindings')
                 {
                     this.compilePropertyCollectionBlock(parentVar, item.name, item);
                     continue;
@@ -3398,12 +3445,15 @@ export class Compiler
         // § 1.16 — `Transitions` getter is now pure (returns | undefined);
         // the mutator path goes through `EnsureTransitions()`. Special-
         // case the emit so a `Transitions { … }` block lazy-allocates
-        // the collection. Other collection-block properties
-        // (CommandBindings / InputBindings on Control, …) still use
-        // their getter directly.
+        // the collection.
         const accessor = propertyName === 'Transitions'
             ? `${parentVar}.EnsureTransitions()`
             : `${parentVar}.${propertyName}`;
+        // Most collection-block targets are ObservableCollections (`.Add`).
+        // `InputBindings` / `CommandBindings` on Control are plain arrays
+        // (their lazily-allocated getter returns `InputBinding[]` /
+        // `CommandBinding[]`, mutated in place), so they append via `.push`.
+        const append = ARRAY_COLLECTION_PROPERTIES.has(propertyName) ? 'push' : 'Add';
         for (const child of body.items)
         {
             if (child.kind !== 'element')
@@ -3413,7 +3463,7 @@ export class Compiler
                     'span' in child ? child.span : body.span);
             }
             const childVar = this.compileElement(child);
-            this.line(`${accessor}.Add(${childVar});`);
+            this.line(`${accessor}.${append}(${childVar});`);
         }
     }
 

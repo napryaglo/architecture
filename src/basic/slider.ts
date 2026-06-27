@@ -6,6 +6,7 @@ import {
     Size,
     Element, Visual,
     type KeyEventArgs,
+    Key,
     type PointerEventArgs,
     type PropertyDescriptor,
 } from '../runtime/index.js';
@@ -387,25 +388,25 @@ export class Slider extends TemplatedControl
         switch (args.Key)
         {
             // Lower-value direction: ArrowLeft anywhere, ArrowDown anywhere.
-            case 'ArrowLeft':
-            case 'ArrowDown':
+            case Key.Left:
+            case Key.Down:
                 this.setClampedValue(this.clampedValue() - small);
                 args.Handled = true; return;
             // Higher-value direction.
-            case 'ArrowRight':
-            case 'ArrowUp':
+            case Key.Right:
+            case Key.Up:
                 this.setClampedValue(this.clampedValue() + small);
                 args.Handled = true; return;
-            case 'PageDown':
+            case Key.PageDown:
                 this.setClampedValue(this.clampedValue() - large);
                 args.Handled = true; return;
-            case 'PageUp':
+            case Key.PageUp:
                 this.setClampedValue(this.clampedValue() + large);
                 args.Handled = true; return;
-            case 'Home':
+            case Key.Home:
                 this.setClampedValue(this.Minimum);
                 args.Handled = true; return;
-            case 'End':
+            case Key.End:
                 this.setClampedValue(this.Maximum);
                 args.Handled = true; return;
         }

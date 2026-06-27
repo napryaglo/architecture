@@ -1,21 +1,22 @@
+import { ModifierKeys, toModifierKeys } from '../../../runtime/index.js';
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { Application, NoModifiers, PointerButton, RelayCommand, Visual, type KeyEventInit, type PointerEventInit } from '../../../runtime/index.js';
+import { Application, Key, NoModifiers, PointerButton, RelayCommand, Visual, type KeyEventInit, type PointerEventInit } from '../../../runtime/index.js';
 import { Control, InputManager } from '../../../framework/index.js';;
 import {
     CommandBinding,
     CommandManager,
     KeyBinding,
     MouseBinding,
-    MouseGesture,
+    MouseAction,
     RoutedCommand,
 } from '../../index.js';;
 
 function key(overrides: Partial<KeyEventInit> = {}): KeyEventInit
 {
     return {
-        Key: 'A', Code: 'KeyA',
+        Key: Key.A, KeyText: 'a', Code: 'KeyA',
         Modifiers: NoModifiers,
         IsRepeat: false,
         ...overrides,
@@ -59,11 +60,11 @@ describe('KeyBinding — markup-declared shortcuts', () => {
         const root = new FocusableRoot();
         let fired = 0;
         const cmd = new RelayCommand(() => { fired++; });
-        root.InputBindings.push(new KeyBinding('S', { Control: true }, cmd));
+        root.InputBindings.push(new KeyBinding(Key.S, ModifierKeys.Control, cmd));
 
         const im = new InputManager();
         im.SetFocus(root);
-        im.InjectKeyDown(key({ Key: 'S', Code: 'KeyS', Modifiers: { ...NoModifiers, Control: true } }));
+        im.InjectKeyDown(key({ Key: Key.S, Code: 'KeyS', Modifiers: ModifierKeys.Control }));
         assert.equal(fired, 1);
     });
 
@@ -71,53 +72,54 @@ describe('KeyBinding — markup-declared shortcuts', () => {
         const root = new FocusableRoot();
         let fired = 0;
         const cmd = new RelayCommand(() => { fired++; });
-        root.InputBindings.push(new KeyBinding('S', { Control: true }, cmd));
+        root.InputBindings.push(new KeyBinding(Key.S, ModifierKeys.Control, cmd));
 
         const im = new InputManager();
         im.SetFocus(root);
         // Wrong key — modifiers match but Key doesn't.
-        im.InjectKeyDown(key({ Key: 'X', Modifiers: { ...NoModifiers, Control: true } }));
+        im.InjectKeyDown(key({ Key: Key.X, Modifiers: ModifierKeys.Control }));
         // Wrong modifier — Key matches but Control not down.
-        im.InjectKeyDown(key({ Key: 'S', Code: 'KeyS' }));
+        im.InjectKeyDown(key({ Key: Key.S, Code: 'KeyS' }));
         assert.equal(fired, 0);
     });
 
-    test('Modifier "don\'t care" only constrains the specified modifiers', () => {
-        // Modifiers: { Control: true } — Shift unspecified, so both
-        // Ctrl+S and Ctrl+Shift+S match.
+    test('Modifiers match exactly (WPF semantics): extra modifiers do NOT match', () => {
+        // Modifiers=Control fires on Ctrl+S only — Ctrl+Shift+S has an
+        // extra modifier and is NOT a match (exact-match parity with WPF
+        // KeyGesture; the pre-parity build allowed per-modifier
+        // "don't care").
         const root = new FocusableRoot();
         let fired = 0;
-        root.InputBindings.push(new KeyBinding('S', { Control: true }, new RelayCommand(() => { fired++; })));
+        root.InputBindings.push(new KeyBinding(Key.S, ModifierKeys.Control, new RelayCommand(() => { fired++; })));
 
         const im = new InputManager();
         im.SetFocus(root);
-        im.InjectKeyDown(key({ Key: 'S', Modifiers: { ...NoModifiers, Control: true } }));
-        im.InjectKeyDown(key({ Key: 'S', Modifiers: { ...NoModifiers, Control: true, Shift: true } }));
-        assert.equal(fired, 2);
+        im.InjectKeyDown(key({ Key: Key.S, Modifiers: ModifierKeys.Control }));
+        im.InjectKeyDown(key({ Key: Key.S, Modifiers: (ModifierKeys.Control | ModifierKeys.Shift) }));
+        assert.equal(fired, 1);
     });
 
-    test('Modifier "must NOT be down" is enforceable with explicit false', () => {
-        // Modifiers: { Control: true, Shift: false } — Ctrl+S yes,
-        // Ctrl+Shift+S no.
+    test('A bare key binding (Modifiers=None) does NOT fire when a modifier is held', () => {
+        // Modifiers=None — plain S yes, Ctrl+S no.
         const root = new FocusableRoot();
         let fired = 0;
-        root.InputBindings.push(new KeyBinding('S', { Control: true, Shift: false }, new RelayCommand(() => { fired++; })));
+        root.InputBindings.push(new KeyBinding(Key.S, ModifierKeys.None, new RelayCommand(() => { fired++; })));
 
         const im = new InputManager();
         im.SetFocus(root);
-        im.InjectKeyDown(key({ Key: 'S', Modifiers: { ...NoModifiers, Control: true } }));
-        im.InjectKeyDown(key({ Key: 'S', Modifiers: { ...NoModifiers, Control: true, Shift: true } }));
+        im.InjectKeyDown(key({ Key: Key.S, Modifiers: ModifierKeys.None }));
+        im.InjectKeyDown(key({ Key: Key.S, Modifiers: ModifierKeys.Control }));
         assert.equal(fired, 1);
     });
 
     test('Case-insensitive match on single-character keys', () => {
         const root = new FocusableRoot();
         let fired = 0;
-        root.InputBindings.push(new KeyBinding('s', { Control: true }, new RelayCommand(() => { fired++; })));
+        root.InputBindings.push(new KeyBinding(Key.S, ModifierKeys.Control, new RelayCommand(() => { fired++; })));
 
         const im = new InputManager();
         im.SetFocus(root);
-        im.InjectKeyDown(key({ Key: 'S', Modifiers: { ...NoModifiers, Control: true } }));
+        im.InjectKeyDown(key({ Key: Key.S, Modifiers: ModifierKeys.Control }));
         assert.equal(fired, 1);
     });
 
@@ -127,14 +129,14 @@ describe('KeyBinding — markup-declared shortcuts', () => {
         outer.AddChild(inner);
 
         const log: string[] = [];
-        outer.InputBindings.push(new KeyBinding('S', { Control: true },
+        outer.InputBindings.push(new KeyBinding(Key.S, ModifierKeys.Control,
             new RelayCommand(() => { log.push('outer'); })));
-        inner.InputBindings.push(new KeyBinding('S', { Control: true },
+        inner.InputBindings.push(new KeyBinding(Key.S, ModifierKeys.Control,
             new RelayCommand(() => { log.push('inner'); })));
 
         const im = new InputManager();
         im.SetFocus(inner);
-        im.InjectKeyDown(key({ Key: 'S', Modifiers: { ...NoModifiers, Control: true } }));
+        im.InjectKeyDown(key({ Key: Key.S, Modifiers: ModifierKeys.Control }));
         assert.deepEqual(log, ['inner']);
     });
 
@@ -145,57 +147,58 @@ describe('KeyBinding — markup-declared shortcuts', () => {
         root.CommandBindings.push(new CommandBinding(cmd, {
             executed: (_s, args) => { executed++; args.Handled = true; },
         }));
-        root.InputBindings.push(new KeyBinding('S', { Control: true }, cmd));
+        root.InputBindings.push(new KeyBinding(Key.S, ModifierKeys.Control, cmd));
 
         const im = new InputManager();
         im.SetFocus(root);
-        im.InjectKeyDown(key({ Key: 'S', Modifiers: { ...NoModifiers, Control: true } }));
+        im.InjectKeyDown(key({ Key: Key.S, Modifiers: ModifierKeys.Control }));
         assert.equal(executed, 1);
     });
 
     test('Class-level InputBinding fires for every instance', () => {
         let fired = 0;
         CommandManager.RegisterClassInputBinding(FocusableRoot,
-            new KeyBinding('S', { Control: true }, new RelayCommand(() => { fired++; })));
+            new KeyBinding(Key.S, ModifierKeys.Control, new RelayCommand(() => { fired++; })));
 
         const a = new FocusableRoot();
         const b = new FocusableRoot();
         const im = new InputManager();
         im.SetFocus(a);
-        im.InjectKeyDown(key({ Key: 'S', Modifiers: { ...NoModifiers, Control: true } }));
+        im.InjectKeyDown(key({ Key: Key.S, Modifiers: ModifierKeys.Control }));
         im.SetFocus(b);
-        im.InjectKeyDown(key({ Key: 'S', Modifiers: { ...NoModifiers, Control: true } }));
+        im.InjectKeyDown(key({ Key: Key.S, Modifiers: ModifierKeys.Control }));
         assert.equal(fired, 2);
     });
 
     test('KeyUp does NOT fire KeyBindings (KeyDown only)', () => {
         const root = new FocusableRoot();
         let fired = 0;
-        root.InputBindings.push(new KeyBinding('S', { Control: true }, new RelayCommand(() => { fired++; })));
+        root.InputBindings.push(new KeyBinding(Key.S, ModifierKeys.Control, new RelayCommand(() => { fired++; })));
 
         const im = new InputManager();
         im.SetFocus(root);
-        im.InjectKeyUp(key({ Key: 'S', Modifiers: { ...NoModifiers, Control: true } }));
+        im.InjectKeyUp(key({ Key: Key.S, Modifiers: ModifierKeys.Control }));
         assert.equal(fired, 0);
     });
 
     test('Multiple KeyBindings on one Visual — first matching wins', () => {
         const root = new FocusableRoot();
         const log: string[] = [];
-        root.InputBindings.push(new KeyBinding('A', {}, new RelayCommand(() => { log.push('plain'); })));
-        root.InputBindings.push(new KeyBinding('A', { Control: true }, new RelayCommand(() => { log.push('ctrl'); })));
+        // Two bindings for the SAME exact gesture (Ctrl+A); the first
+        // registered wins and stops further consultation.
+        root.InputBindings.push(new KeyBinding(Key.A, ModifierKeys.Control, new RelayCommand(() => { log.push('first'); })));
+        root.InputBindings.push(new KeyBinding(Key.A, ModifierKeys.Control, new RelayCommand(() => { log.push('second'); })));
 
         const im = new InputManager();
         im.SetFocus(root);
-        im.InjectKeyDown(key({ Key: 'A', Modifiers: { ...NoModifiers, Control: true } }));
-        // 'plain' has Control unspecified — it matches Ctrl+A and fires first.
-        assert.deepEqual(log, ['plain']);
+        im.InjectKeyDown(key({ Key: Key.A, Modifiers: ModifierKeys.Control }));
+        assert.deepEqual(log, ['first']);
     });
 
     test('MouseBinding(LeftClick) fires on a single primary PointerDown', () => {
         const root = new FocusableRoot();
         let fired = 0;
-        root.InputBindings.push(new MouseBinding(MouseGesture.LeftClick, {},
+        root.InputBindings.push(new MouseBinding(MouseAction.LeftClick, ModifierKeys.None,
             new RelayCommand(() => { fired++; })));
 
         const im = new InputManager();
@@ -206,7 +209,7 @@ describe('KeyBinding — markup-declared shortcuts', () => {
     test('MouseBinding(LeftDoubleClick) only fires when IsDoubleClick=true', () => {
         const root = new FocusableRoot();
         let fired = 0;
-        root.InputBindings.push(new MouseBinding(MouseGesture.LeftDoubleClick, {},
+        root.InputBindings.push(new MouseBinding(MouseAction.LeftDoubleClick, ModifierKeys.None,
             new RelayCommand(() => { fired++; })));
 
         const im = new InputManager();
@@ -225,9 +228,9 @@ describe('KeyBinding — markup-declared shortcuts', () => {
         // visual list LeftDoubleClick FIRST.
         const root = new FocusableRoot();
         const log: string[] = [];
-        root.InputBindings.push(new MouseBinding(MouseGesture.LeftDoubleClick, {},
+        root.InputBindings.push(new MouseBinding(MouseAction.LeftDoubleClick, ModifierKeys.None,
             new RelayCommand(() => { log.push('double'); })));
-        root.InputBindings.push(new MouseBinding(MouseGesture.LeftClick, {},
+        root.InputBindings.push(new MouseBinding(MouseAction.LeftClick, ModifierKeys.None,
             new RelayCommand(() => { log.push('single'); })));
 
         const im = new InputManager();
@@ -253,13 +256,13 @@ describe('KeyBinding — markup-declared shortcuts', () => {
         subtree.CommandBindings.push(new CommandBinding(cmd, {
             executed: (sender, args) => { firedOn = sender; args.Handled = true; },
         }));
-        const binding = new KeyBinding('K', {}, cmd);
+        const binding = new KeyBinding(Key.K, ModifierKeys.None, cmd);
         binding.CommandTarget = subtree;
         root.InputBindings.push(binding);
 
         const im = new InputManager();
         im.SetFocus(root);
-        im.InjectKeyDown(key({ Key: 'K' }));
+        im.InjectKeyDown(key({ Key: Key.K }));
         assert.equal(firedOn, subtree);
     });
 });

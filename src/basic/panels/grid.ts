@@ -24,7 +24,7 @@ import { registryFor } from './shared-size-group.js';
 //
 //   * Pixel (`new GridLength(120)`)         — exact size in pixels.
 //   * Auto  (`GridLength.Auto`)              — derived from child desired sizes.
-//   * Star  (`new GridLength(1, 'star')`)    — splits leftover space
+//   * Star  (`new GridLength(1, GridUnitType.Star)`)    — splits leftover space
 //     proportionally with other Star tracks.
 //
 // Children declare their cell via the `Grid.Row` / `Grid.Column`
@@ -71,38 +71,43 @@ import { registryFor } from './shared-size-group.js';
 //     Auto over-request would otherwise zero every Star). See § 14.1 +
 //     § 14.2 in completed-backlog.md.
 
-export type GridUnitType = 'pixel' | 'auto' | 'star';
+export enum GridUnitType
+{
+    Pixel = 'pixel',
+    Auto  = 'auto',
+    Star  = 'star',
+}
 
 // GridLength — value type representing one track's sizing rule.
 // `value` carries pixel size (Pixel) or star weight (Star); for Auto
 // the value is ignored.
 export class GridLength
 {
-    public static readonly Auto: GridLength = new GridLength(0, 'auto');
+    public static readonly Auto: GridLength = new GridLength(0, GridUnitType.Auto);
     // `*` — proportional fill. Single-star (weight=1) is the markup
     // default; consumers wanting heavier weights still construct
-    // `new GridLength(2, 'star')` etc. in JS. The static lets `.mu`
+    // `new GridLength(2, GridUnitType.Star)` etc. in JS. The static lets `.mu`
     // templates write `Width=GridLength.Star` without inline construction.
-    public static readonly Star: GridLength = new GridLength(1, 'star');
+    public static readonly Star: GridLength = new GridLength(1, GridUnitType.Star);
 
     public constructor(
         public readonly Value: number,
-        public readonly UnitType: GridUnitType = 'pixel',
+        public readonly UnitType: GridUnitType = GridUnitType.Pixel,
     ) {}
 
-    public get IsPixel(): boolean { return this.UnitType === 'pixel'; }
-    public get IsAuto():  boolean { return this.UnitType === 'auto'; }
-    public get IsStar():  boolean { return this.UnitType === 'star'; }
+    public get IsPixel(): boolean { return this.UnitType === GridUnitType.Pixel; }
+    public get IsAuto():  boolean { return this.UnitType === GridUnitType.Auto; }
+    public get IsStar():  boolean { return this.UnitType === GridUnitType.Star; }
 }
 
 class TrackDefinition extends Model
 {
     public static readonly WidthKey = Model.RegisterProperty<GridLength>(
-        TrackDefinition, 'Width',  new GridLength(1, 'star'),
+        TrackDefinition, 'Width',  new GridLength(1, GridUnitType.Star),
         MetaData.Measure | MetaData.Arrange);
 
     public static readonly HeightKey = Model.RegisterProperty<GridLength>(
-        TrackDefinition, 'Height', new GridLength(1, 'star'),
+        TrackDefinition, 'Height', new GridLength(1, GridUnitType.Star),
         MetaData.Measure | MetaData.Arrange);
 }
 
@@ -352,11 +357,11 @@ export class Grid extends Panel
         // inside distributeAcrossAuto.
         for (let i = 0; i < nCols; i++)
         {
-            if (colKind[i] === 'auto' && widths[i]! < colMin[i]!) widths[i] = colMin[i]!;
+            if (colKind[i] === GridUnitType.Auto && widths[i]! < colMin[i]!) widths[i] = colMin[i]!;
         }
         for (let i = 0; i < nRows; i++)
         {
-            if (rowKind[i] === 'auto' && heights[i]! < rowMin[i]!) heights[i] = rowMin[i]!;
+            if (rowKind[i] === GridUnitType.Auto && heights[i]! < rowMin[i]!) heights[i] = rowMin[i]!;
         }
 
         // Pass 2.5 — SharedSizeGroup integration. For each Auto track
@@ -498,14 +503,14 @@ export class Grid extends Panel
 function oneStar(): ColumnDefinition
 {
     const cd = new ColumnDefinition();
-    cd.Width = new GridLength(1, 'star');
+    cd.Width = new GridLength(1, GridUnitType.Star);
     return cd;
 }
 
 function oneStarRow(): RowDefinition
 {
     const rd = new RowDefinition();
-    rd.Height = new GridLength(1, 'star');
+    rd.Height = new GridLength(1, GridUnitType.Star);
     return rd;
 }
 
@@ -530,8 +535,8 @@ function childTouchesAuto(
     const r0 = clamp(Grid.GetRow(child),    0, nRows - 1);
     const cs = Math.max(1, Math.min(Grid.GetColumnSpan(child), nCols - c0));
     const rs = Math.max(1, Math.min(Grid.GetRowSpan(child),    nRows - r0));
-    for (let i = 0; i < cs; i++) if (colKind[c0 + i] === 'auto') return true;
-    for (let i = 0; i < rs; i++) if (rowKind[r0 + i] === 'auto') return true;
+    for (let i = 0; i < cs; i++) if (colKind[c0 + i] === GridUnitType.Auto) return true;
+    for (let i = 0; i < rs; i++) if (rowKind[r0 + i] === GridUnitType.Auto) return true;
     return false;
 }
 
@@ -577,14 +582,14 @@ function shrinkAutosToReserveStarMinimums(
     for (let i = 0; i < n; i++)
     {
         const k = kinds[i];
-        if (k === 'pixel') pixelSum += sizes[i]!;
-        else if (k === 'auto')
+        if (k === GridUnitType.Pixel) pixelSum += sizes[i]!;
+        else if (k === GridUnitType.Auto)
         {
             autoSum += sizes[i]!;
             availableShrinkage += Math.max(0, sizes[i]! - autoMins[i]!);
             hasAutos = true;
         }
-        else if (k === 'star' && starWeights[i]! > 0)
+        else if (k === GridUnitType.Star && starWeights[i]! > 0)
         {
             // Star tracks haven't been resolved yet at this pass — sizes[i]
             // is still 0 for stars. The minimum the star will need is the
@@ -616,7 +621,7 @@ function shrinkAutosToReserveStarMinimums(
         // see a smaller-than-otherwise reserved sum.
         for (let i = 0; i < n; i++)
         {
-            if (kinds[i] === 'auto') sizes[i] = autoMins[i]!;
+            if (kinds[i] === GridUnitType.Auto) sizes[i] = autoMins[i]!;
         }
         return;
     }
@@ -625,7 +630,7 @@ function shrinkAutosToReserveStarMinimums(
     // `reduction` weighted by its (currentAuto - autoMin) headroom.
     for (let i = 0; i < n; i++)
     {
-        if (kinds[i] !== 'auto') continue;
+        if (kinds[i] !== GridUnitType.Auto) continue;
         const headroom = Math.max(0, sizes[i]! - autoMins[i]!);
         if (headroom <= 0) continue;
         const share = reduction * (headroom / availableShrinkage);
@@ -655,8 +660,8 @@ function distributeAcrossAuto(
     for (let i = 0; i < span; i++)
     {
         const k = kinds[start + i];
-        if (k === 'auto')        autoCount++;
-        else if (k === 'pixel')  preResolved += sizes[start + i]!;
+        if (k === GridUnitType.Auto)        autoCount++;
+        else if (k === GridUnitType.Pixel)  preResolved += sizes[start + i]!;
         // Star tracks aren't yet resolved at this phase — don't subtract.
     }
     if (autoCount === 0) return;
@@ -664,7 +669,7 @@ function distributeAcrossAuto(
     const perAuto   = remainder / autoCount;
     for (let i = 0; i < span; i++)
     {
-        if (kinds[start + i] === 'auto')
+        if (kinds[start + i] === GridUnitType.Auto)
         {
             const raised = Math.max(sizes[start + i]!, perAuto);
             sizes[start + i] = clamp(raised, mins[start + i]!, maxes[start + i]!);
@@ -706,7 +711,7 @@ function distributeStars(
     const liveStarWeight = new Array<number>(n).fill(0);
     for (let i = 0; i < n; i++)
     {
-        if (kinds[i] !== 'star')
+        if (kinds[i] !== GridUnitType.Star)
         {
             lockedSize[i] = sizes[i]!;
             isLocked[i]   = true;
@@ -730,7 +735,7 @@ function distributeStars(
             // unlocked star tracks with no weight) into sizes.
             for (let i = 0; i < n; i++)
             {
-                if (kinds[i] === 'star')
+                if (kinds[i] === GridUnitType.Star)
                 {
                     sizes[i] = isLocked[i] ? lockedSize[i]! : 0;
                 }
@@ -826,7 +831,7 @@ function applySharedSize(
     const groupTracks = new Map<string, number[]>();
     for (let i = 0; i < kinds.length; i++)
     {
-        if (kinds[i] !== 'auto') continue;
+        if (kinds[i] !== GridUnitType.Auto) continue;
         const def = defs[i]!;
         const name = horizontal
             ? (def as ColumnDefinition).SharedSizeGroup

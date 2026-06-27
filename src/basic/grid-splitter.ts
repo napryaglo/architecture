@@ -11,9 +11,10 @@ import {
     Element, Visual,
     type DrawingContext,
     type KeyEventArgs,
+    Key,
 } from '../runtime/index.js';
 import { Brush } from '../visual-engine/index.js';
-import { Grid, GridLength } from './panels/grid.js';
+import { Grid, GridLength, GridUnitType } from './panels/grid.js';
 import { Thumb, type DragDeltaEventArgs, type DragStartedEventArgs, type DragCompletedEventArgs } from './scroll/thumb.js';
 
 // ResizeDirection — WPF parity:
@@ -22,7 +23,12 @@ import { Thumb, type DragDeltaEventArgs, type DragStartedEventArgs, type DragCom
 //             ActualHeight at the moment the drag starts.
 //   Columns — resize the adjacent column tracks; drag is on the X axis.
 //   Rows    — resize the adjacent row tracks; drag is on the Y axis.
-export type GridResizeDirection = 'Auto' | 'Columns' | 'Rows';
+export enum GridResizeDirection
+{
+    Auto    = 'Auto',
+    Columns = 'Columns',
+    Rows    = 'Rows',
+}
 
 // ResizeBehavior — which two tracks the splitter actually resizes.
 // WPF parity:
@@ -38,11 +44,28 @@ export type GridResizeDirection = 'Auto' | 'Columns' | 'Rows';
 //                          Left/Top      → PreviousAndCurrent
 //                          Right/Bottom  → CurrentAndNext
 //                          Center/Stretch → PreviousAndNext
-export type GridResizeBehavior =
-    | 'BasedOnAlignment'
-    | 'CurrentAndNext'
-    | 'PreviousAndCurrent'
-    | 'PreviousAndNext';
+export enum GridResizeBehavior
+{
+    BasedOnAlignment   = 'BasedOnAlignment',
+    CurrentAndNext     = 'CurrentAndNext',
+    PreviousAndCurrent = 'PreviousAndCurrent',
+    PreviousAndNext    = 'PreviousAndNext',
+}
+
+// Which Grid axis a splitter resizes (the concrete resolution of
+// GridResizeDirection.Auto).
+export enum GridAxis
+{
+    Columns = 'Columns',
+    Rows    = 'Rows',
+}
+
+// Which of the two adjacent tracks a resize computation is solving for.
+enum AdjacentTrack
+{
+    A = 'A',
+    B = 'B',
+}
 
 // Default brush for the drag-preview adorner — Material Primary so
 // the line tints with the active theme. Consumers pin a specific
@@ -76,10 +99,10 @@ export type GridResizeBehavior =
 export class GridSplitter extends Thumb
 {
     public static readonly ResizeDirectionKey = Model.RegisterProperty<GridResizeDirection>(
-        GridSplitter, 'ResizeDirection', 'Auto', MetaData.Render);
+        GridSplitter, 'ResizeDirection', GridResizeDirection.Auto, MetaData.Render);
 
     public static readonly ResizeBehaviorKey = Model.RegisterProperty<GridResizeBehavior>(
-        GridSplitter, 'ResizeBehavior', 'BasedOnAlignment', MetaData.None);
+        GridSplitter, 'ResizeBehavior', GridResizeBehavior.BasedOnAlignment, MetaData.None);
 
     public static readonly ShowsPreviewKey = Model.RegisterProperty<boolean>(
         GridSplitter, 'ShowsPreview', false, MetaData.None);
@@ -99,7 +122,7 @@ export class GridSplitter extends Thumb
 
     // Snapshot taken on DragStarted so the drag stays consistent even
     // if the layout shifts mid-drag. WPF takes the same snapshot.
-    private _axis: 'Columns' | 'Rows' = 'Columns';
+    private _axis: GridAxis = GridAxis.Columns;
     private _grid: Grid | undefined;
     // Resolved adjacent track indices (after BasedOnAlignment lookup).
     private _trackA = -1;
@@ -257,7 +280,7 @@ export class GridSplitter extends Thumb
 
     // ── Snapshot + track resolution ───────────────────────────────
 
-    private takeSnapshot(): { axis: 'Columns' | 'Rows' } | undefined
+    private takeSnapshot(): { axis: GridAxis } | undefined
     {
         const grid = this.findOwningGrid();
         if (grid === undefined) return undefined;
@@ -309,17 +332,17 @@ export class GridSplitter extends Thumb
         return undefined;
     }
 
-    private resolveAxis(): 'Columns' | 'Rows'
+    private resolveAxis(): GridAxis
     {
         const dir = this.ResizeDirection;
-        if (dir === 'Columns') return 'Columns';
-        if (dir === 'Rows')    return 'Rows';
+        if (dir === GridResizeDirection.Columns) return GridAxis.Columns;
+        if (dir === GridResizeDirection.Rows)    return GridAxis.Rows;
         // Auto — pick from arranged aspect at this moment.
         const r = this.ArrangedRect;
-        return r.Height >= r.Width ? 'Columns' : 'Rows';
+        return r.Height >= r.Width ? GridAxis.Columns : GridAxis.Rows;
     }
 
-    private resolveTrackIndices(grid: Grid, axis: 'Columns' | 'Rows'): [number, number]
+    private resolveTrackIndices(grid: Grid, axis: GridAxis): [number, number]
     {
         const behavior = this.ResizeBehavior;
         const idx = axis === 'Columns' ? Grid.GetColumn(this) : Grid.GetRow(this);
@@ -343,24 +366,24 @@ export class GridSplitter extends Thumb
         }
     }
 
-    private resolveAlignmentBehavior(axis: 'Columns' | 'Rows'): Exclude<GridResizeBehavior, 'BasedOnAlignment'>
+    private resolveAlignmentBehavior(axis: GridAxis): Exclude<GridResizeBehavior, GridResizeBehavior.BasedOnAlignment>
     {
         if (axis === 'Columns')
         {
             switch (this.HorizontalAlignment)
             {
-                case HorizontalAlignment.Left:  return 'PreviousAndCurrent';
-                case HorizontalAlignment.Right: return 'CurrentAndNext';
-                default:                         return 'PreviousAndNext';
+                case HorizontalAlignment.Left:  return GridResizeBehavior.PreviousAndCurrent;
+                case HorizontalAlignment.Right: return GridResizeBehavior.CurrentAndNext;
+                default:                         return GridResizeBehavior.PreviousAndNext;
             }
         }
         else
         {
             switch (this.VerticalAlignment)
             {
-                case VerticalAlignment.Top:    return 'PreviousAndCurrent';
-                case VerticalAlignment.Bottom: return 'CurrentAndNext';
-                default:                        return 'PreviousAndNext';
+                case VerticalAlignment.Top:    return GridResizeBehavior.PreviousAndCurrent;
+                case VerticalAlignment.Bottom: return GridResizeBehavior.CurrentAndNext;
+                default:                        return GridResizeBehavior.PreviousAndNext;
             }
         }
     }
@@ -396,8 +419,8 @@ export class GridSplitter extends Thumb
         // Resolve target unit type pair.
         const lenA = this._startLenA!;
         const lenB = this._startLenB!;
-        const newLenA = computeNewLength(lenA, lenB, clampedA, clampedB, /* which */ 'A');
-        const newLenB = computeNewLength(lenA, lenB, clampedA, clampedB, /* which */ 'B');
+        const newLenA = computeNewLength(lenA, lenB, clampedA, clampedB, /* which */ AdjacentTrack.A);
+        const newLenB = computeNewLength(lenA, lenB, clampedA, clampedB, /* which */ AdjacentTrack.B);
         if (this._axis === 'Columns')
         {
             grid.ColumnDefinitions.Get(this._trackA)!.Width = newLenA;
@@ -430,14 +453,14 @@ export class GridSplitter extends Thumb
         // Map arrow direction to (axis, delta). Arrows that don't match
         // the splitter's resolved axis are silently ignored (Left/Right
         // on a row splitter, Up/Down on a column splitter).
-        let arrowAxis: 'Columns' | 'Rows';
+        let arrowAxis: GridAxis;
         let delta: number;
         switch (args.Key)
         {
-            case 'ArrowLeft':  arrowAxis = 'Columns'; delta = -inc; break;
-            case 'ArrowRight': arrowAxis = 'Columns'; delta =  inc; break;
-            case 'ArrowUp':    arrowAxis = 'Rows';    delta = -inc; break;
-            case 'ArrowDown':  arrowAxis = 'Rows';    delta =  inc; break;
+            case Key.Left:  arrowAxis = GridAxis.Columns; delta = -inc; break;
+            case Key.Right: arrowAxis = GridAxis.Columns; delta =  inc; break;
+            case Key.Up:    arrowAxis = GridAxis.Rows;    delta = -inc; break;
+            case Key.Down:  arrowAxis = GridAxis.Rows;    delta =  inc; break;
             default: return;
         }
         // Snapshot using the resolved axis, then bail if the arrow's
@@ -461,20 +484,20 @@ export class GridSplitter extends Thumb
 function computeNewLength(
     lenA: GridLength, lenB: GridLength,
     newA: number, newB: number,
-    which: 'A' | 'B',
+    which: AdjacentTrack,
 ): GridLength
 {
-    const both = (kind: 'pixel' | 'star' | 'auto'): boolean =>
+    const both = (kind: GridUnitType): boolean =>
         lenA.UnitType === kind && lenB.UnitType === kind;
-    if (both('star'))
+    if (both(GridUnitType.Star))
     {
         const total = newA + newB;
-        if (total <= 0) return new GridLength(0, 'star');
+        if (total <= 0) return new GridLength(0, GridUnitType.Star);
         const starSum = lenA.Value + lenB.Value;
         const ratio = which === 'A' ? newA / total : newB / total;
-        return new GridLength(starSum * ratio, 'star');
+        return new GridLength(starSum * ratio, GridUnitType.Star);
     }
-    return new GridLength(which === 'A' ? newA : newB, 'pixel');
+    return new GridLength(which === 'A' ? newA : newB, GridUnitType.Pixel);
 }
 
 // ── Preview adorner ───────────────────────────────────────────────
@@ -491,10 +514,10 @@ function computeNewLength(
 class GridSplitterPreviewAdorner extends Adorner
 {
     private _delta = 0;
-    private readonly _axis: 'Columns' | 'Rows';
+    private readonly _axis: GridAxis;
     private readonly _brush: Brush;
 
-    constructor(splitter: GridSplitter, axis: 'Columns' | 'Rows', brush: Brush)
+    constructor(splitter: GridSplitter, axis: GridAxis, brush: Brush)
     {
         super(splitter);
         this._axis = axis;

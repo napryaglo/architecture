@@ -10,7 +10,7 @@ import type { PresentationTarget } from '../../visual-engine/index.js';
 import { Border } from '../../basic/border.js';
 import { ControlTemplate } from '../../basic/templates/control-template.js';
 import { ContentControl } from '../base/content-control.js';
-import { MenuPopupHost } from '../menu/menu-strip.js';
+import { MenuPopupHost, MenuAnchorSide } from '../menu/menu-strip.js';
 import { ClickAwayScrim } from '../../basic/click-away-scrim.js';
 
 // M3 Split button — a primary action + an adjacent chevron trigger
@@ -202,7 +202,7 @@ export class SplitButton extends ContentControl
         // hangs under the SplitButton. Fall back to the SplitButton itself
         // if the primary part hasn't materialised (test paths).
         host.anchor     = this._primary ?? this;
-        host.anchorSide = 'below';
+        host.anchorSide = MenuAnchorSide.Below;
         host.popup      = body;
         // Scrim sits between anchor and popup body in MenuPopupHost's
         // children; arrange logic gives it the full surface slot so an

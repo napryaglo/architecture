@@ -5,6 +5,7 @@ import {
     NoModifiers,
     PointerButton,
     PointerEventArgs,
+    QueryCursorEventArgs,
     TextInputEventArgs,
     WheelEventArgs,
     type DragEventInit,
@@ -15,15 +16,21 @@ import {
     buildRoute,
     dispatchDrag,
     dispatchFocus,
+    dispatchKeyboardFocus,
     dispatchKey,
+    dispatchQueryCursor,
     dispatchPointer,
     dispatchPointerDirect,
     dispatchTextInput,
 } from '../visual-engine/routed-event.js';
 import { DragDrop, DragDropEffects, DragSession, type DragDropOptions } from '../visual-engine/drag-drop.js';
-import type { Visual } from '../visual-engine/visual.js';
-import type { PropertyKey } from '../runtime/model.js';
-import { resolveKey } from '../runtime/model-internals.js';
+import type { Element } from '../visual-engine/element.js';
+import { Mouse } from '../visual-engine/input/mouse.js';
+import { Keyboard } from '../visual-engine/input/keyboard.js';
+import { CaptureMode, FocusNavigationDirection } from '../visual-engine/input/input-enums.js';
+import { Key } from '../visual-engine/input/key.js';
+import { hasModifier, ModifierKeys } from '../visual-engine/routed-event.js';
+import { KeyboardNavigation, TraversalRequest } from '../visual-engine/input/keyboard-navigation.js';
 import { CommandManager } from './commands/command-manager.js';
 
 // Owns the per-target pointer state and turns raw pointer hits into
@@ -60,7 +67,7 @@ export class InputManager
     // Most-recent hover route (leaf-first), or empty when the pointer
     // is outside the target. Used to diff against the new route on
     // every move.
-    private hoverRoute: Visual[] = [];
+    private hoverRoute: Element[] = [];
 
     // Visual on which the active primary-button press began. Tracked
     // so PointerUp can clear IsPressed regardless of where the pointer
@@ -70,7 +77,7 @@ export class InputManager
     // Keyed off pointer ID so multi-touch presses on different visuals
     // can coexist; for v1 every browser pointer event with the same
     // pointerId shares a press target.
-    private pressTargets: Map<number, Visual> = new Map();
+    private pressTargets: Map<number, Element> = new Map();
 
     // Drag-time global cursor override. Set via CapturePointer's
     // optional cursor argument (or the standalone Lock/Unlock helpers
@@ -96,14 +103,14 @@ export class InputManager
     // Hover state (IsMouseOver / Enter / Leave) is NOT redirected —
     // hover follows the actual hit so visual feedback stays accurate
     // even during a capture.
-    private pointerCaptures: Map<number, Visual> = new Map();
+    private pointerCaptures: Map<number, Element> = new Map();
 
     // Currently-focused Visual — the keyboard event source. At most one
     // per target. Set by SetFocus (from Visual.Focus() / args.SetFocus()
     // / host-side click-to-focus) and cleared by SetFocus(undefined).
     // Maintained in lock-step with the IsFocused DP on each Visual so
     // Style triggers / read-back via tb.IsFocused stay coherent.
-    private focusedVisual: Visual | undefined;
+    private focusedVisual: Element | undefined;
 
     // Active drag session, or null when no drag is in flight. Mutates
     // the InjectPointerMove / InjectPointerUp paths: while non-null,
@@ -113,7 +120,7 @@ export class InputManager
     private _dragOptions: DragDropOptions   = {};
     // Last receiver that handled DragEnter/Over for the current session.
     // null means the cursor isn't currently over any AllowDrop ancestor.
-    private _currentDragReceiver: Visual | null = null;
+    private _currentDragReceiver: Element | null = null;
     // Last Effect returned by the current receiver's DragOver. Read on
     // PointerUp to decide whether Drop fires.
     private _currentDragEffect: DragDropEffects = DragDropEffects.None;
@@ -123,8 +130,9 @@ export class InputManager
     // Pointer moved to a new (or null) Visual at the given host
     // coords. `hit === null` means the pointer left the host element
     // entirely.
-    public InjectPointerMove(hit: Visual | null, init: PointerEventInit): void
+    public InjectPointerMove(hit: Element | null, init: PointerEventInit): void
     {
+        this.syncMouseDevice(hit, init);
         // Drag session intercepts pointer moves — the route walker
         // routes through dispatchDrag against the AllowDrop ancestor
         // chain instead of the normal pointer pipeline. Hover is also
@@ -144,6 +152,15 @@ export class InputManager
 
         dispatchPointer(new PointerEventArgs('PointerMove', dispatchTarget, init, this, this));
 
+        // QueryCursor — let handlers under the pointer pick the cursor.
+        // Suppressed while a capture has locked a drag cursor (that
+        // override wins for the drag's duration).
+        if (this._lockedCursor === undefined && hit !== null)
+        {
+            const cursor = dispatchQueryCursor(new QueryCursorEventArgs(hit, init));
+            this._cursorBridge?.(cursor);
+        }
+
         // A PointerMove handler may have called DragDrop.DoDragDrop —
         // the declarative IsDraggable latch does exactly this once the
         // pointer crosses the threshold. Pick up the pending session
@@ -154,12 +171,14 @@ export class InputManager
 
     public InjectPointerLeave(init: PointerEventInit): void
     {
+        this.syncMouseDevice(null, init);
         // Pointer left the host entirely — collapse the chain.
         this.updateHoverChain(null, init);
     }
 
-    public InjectPointerDown(hit: Visual, init: PointerEventInit): void
+    public InjectPointerDown(hit: Element, init: PointerEventInit): void
     {
+        this.syncMouseDevice(hit, init);
         // Make sure hover state is current before the down event —
         // a fast tap can race ahead of a move event.
         this.updateHoverChain(hit, init);
@@ -167,6 +186,7 @@ export class InputManager
         this.pressTargets.set(init.PointerId, hit);
         setIsPressed(hit, true);
         dispatchPointer(new PointerEventArgs('PointerDown', hit, init, this, this));
+        this.raiseButtonSpecific(hit, init, true);
 
         // A handler may have called DragDrop.DoDragDrop synchronously —
         // pick up the pending session so subsequent moves drive the
@@ -174,8 +194,9 @@ export class InputManager
         this.PickUpPendingDragSession();
     }
 
-    public InjectPointerUp(hit: Visual | null, init: PointerEventInit): void
+    public InjectPointerUp(hit: Element | null, init: PointerEventInit): void
     {
+        this.syncMouseDevice(hit, init);
         // Drag session intercepts: PointerUp ends the drag, fires Drop
         // (if Effect != None) and resolves the session.
         if (this._dragSession !== null) { this.DriveDragUp(hit, init); return; }
@@ -195,6 +216,7 @@ export class InputManager
         if (dispatchTarget !== undefined)
         {
             dispatchPointer(new PointerEventArgs('PointerUp', dispatchTarget, init, this, this));
+            this.raiseButtonSpecific(dispatchTarget, init, false);
         }
 
         // Capture auto-releases on PointerUp — matches DOM
@@ -205,14 +227,18 @@ export class InputManager
         {
             this.pointerCaptures.delete(init.PointerId);
             this._captureBridge?.(undefined, init.PointerId);
+            Mouse.PrimaryDevice._setCaptured(undefined, CaptureMode.None);
             this.setLockedCursor(undefined);
+            this.raiseCaptureEvent(captured, init.PointerId, false);
         }
 
         if (hit !== null) this.updateHoverChain(hit, init);
     }
 
-    public InjectPointerWheel(hit: Visual | null, init: WheelEventInit): void
+    public InjectPointerWheel(hit: Element | null, init: WheelEventInit): void
     {
+        Mouse.PrimaryDevice._attach(this);
+        if (hit !== null) Mouse.PrimaryDevice._setDirectlyOver(hit);
         if (hit === null) return;
         dispatchPointer(new WheelEventArgs(hit, init, this, this));
     }
@@ -229,10 +255,10 @@ export class InputManager
     // call `host.setPointerCapture(pointerId)` so the browser keeps
     // delivering events to the host element regardless of cursor
     // position — symmetric for release.
-    private _captureBridge: ((target: Visual | undefined, pointerId: number) => void) | undefined;
+    private _captureBridge: ((target: Element | undefined, pointerId: number) => void) | undefined;
 
     public SetCaptureBridge(
-        bridge: ((target: Visual | undefined, pointerId: number) => void) | undefined,
+        bridge: ((target: Element | undefined, pointerId: number) => void) | undefined,
     ): void {
         this._captureBridge = bridge;
     }
@@ -250,21 +276,28 @@ export class InputManager
     // the user actually clicks: browsers fall back to the default
     // cursor unless something at host level overrides it). Auto-cleared
     // by ReleasePointerCapture and by the PointerUp auto-release path.
-    public CapturePointer(visual: Visual, pointerId: number = 0, cursor?: string): void
+    public CapturePointer(visual: Element, pointerId: number = 0, cursor?: string): void
     {
+        const prev = this.pointerCaptures.get(pointerId);
         this.pointerCaptures.set(pointerId, visual);
         this._captureBridge?.(visual, pointerId);
+        Mouse.PrimaryDevice._setCaptured(visual, CaptureMode.Element);
         if (cursor !== undefined) this.setLockedCursor(cursor);
+        if (prev !== undefined && prev !== visual) this.raiseCaptureEvent(prev, pointerId, false);
+        if (prev !== visual) this.raiseCaptureEvent(visual, pointerId, true);
     }
 
     public ReleasePointerCapture(pointerId: number = 0): void
     {
+        const prev = this.pointerCaptures.get(pointerId);
         this.pointerCaptures.delete(pointerId);
         this._captureBridge?.(undefined, pointerId);
+        Mouse.PrimaryDevice._setCaptured(undefined, CaptureMode.None);
         this.setLockedCursor(undefined);
+        if (prev !== undefined) this.raiseCaptureEvent(prev, pointerId, false);
     }
 
-    public GetCapturedVisual(pointerId: number = 0): Visual | undefined
+    public GetCapturedVisual(pointerId: number = 0): Element | undefined
     {
         return this.pointerCaptures.get(pointerId);
     }
@@ -291,7 +324,7 @@ export class InputManager
 
     // ── Focus ──────────────────────────────────────────────────────
 
-    public GetFocusedVisual(): Visual | undefined
+    public GetFocusedVisual(): Element | undefined
     {
         return this.focusedVisual;
     }
@@ -307,23 +340,26 @@ export class InputManager
     //   3. Set IsFocused on the new focused Visual.
     //   4. Dispatch GotFocus on the new Visual (bubble pass).
     // DP writes BEFORE dispatch so handlers see the post-change state.
-    public SetFocus(visual: Visual | undefined): void
+    public SetFocus(visual: Element | undefined): void
     {
         if (visual === this.focusedVisual) return;
         if (visual !== undefined && !isFocusable(visual)) return;
 
         const old = this.focusedVisual;
         this.focusedVisual = visual;
+        Keyboard.PrimaryDevice._setFocused(visual);
 
         if (old !== undefined)
         {
             setIsFocused(old, false);
             dispatchFocus(new FocusEventArgs('LostFocus', old));
+            dispatchKeyboardFocus(new FocusEventArgs('LostKeyboardFocus', old));
         }
         if (visual !== undefined)
         {
             setIsFocused(visual, true);
             dispatchFocus(new FocusEventArgs('GotFocus', visual));
+            dispatchKeyboardFocus(new FocusEventArgs('GotKeyboardFocus', visual));
         }
 
         // Publish to CommandManager so RoutedCommand.Execute (the bare
@@ -347,15 +383,37 @@ export class InputManager
     // to a target, or when no handler claimed the key.
     public InjectKeyDown(init: KeyEventInit): boolean
     {
+        Keyboard.PrimaryDevice._setModifiers(init.Modifiers);
+        Keyboard.PrimaryDevice._setKeyState(init.Key, true);
         const target = this.focusedVisual;
-        if (target === undefined) return false;
+        if (target === undefined)
+        {
+            // Tab with nothing focused still enters the surface (focuses
+            // the first / last tab stop). Needs a root to traverse from;
+            // skip when there's no focus AND no way to locate a root.
+            return false;
+        }
         const args = new KeyEventArgs('KeyDown', target, init, this);
         dispatchKey(args);
-        return args.Handled;
+        if (args.Handled) return true;
+
+        // Unhandled Tab → keyboard navigation (WPF parity). Shift+Tab
+        // moves backward. Returns true so the host preventDefaults the
+        // browser's own tab traversal.
+        if (init.Key === Key.Tab)
+        {
+            const dir = hasModifier(init.Modifiers, ModifierKeys.Shift)
+                ? FocusNavigationDirection.Previous
+                : FocusNavigationDirection.Next;
+            return KeyboardNavigation.MoveFocus(new TraversalRequest(dir), target);
+        }
+        return false;
     }
 
     public InjectKeyUp(init: KeyEventInit): boolean
     {
+        Keyboard.PrimaryDevice._setModifiers(init.Modifiers);
+        Keyboard.PrimaryDevice._setKeyState(init.Key, false);
         const target = this.focusedVisual;
         if (target === undefined) return false;
         const args = new KeyEventArgs('KeyUp', target, init, this);
@@ -387,7 +445,7 @@ export class InputManager
 
     public get CurrentDragOptions(): DragDropOptions { return this._dragOptions; }
 
-    public get CurrentDragReceiver(): Visual | null { return this._currentDragReceiver; }
+    public get CurrentDragReceiver(): Element | null { return this._currentDragReceiver; }
 
     public get CurrentDragEffect(): DragDropEffects { return this._currentDragEffect; }
 
@@ -431,7 +489,7 @@ export class InputManager
     // hit-tested it via the existing PresentationTarget.HitTest path.
     // The drag dispatcher walks UP from `hit` looking for AllowDrop=true;
     // the first such ancestor becomes the current receiver.
-    public DriveDragMove(hit: Visual | null, init: PointerEventInit): void
+    public DriveDragMove(hit: Element | null, init: PointerEventInit): void
     {
         const session = this._dragSession;
         if (session === null) return;
@@ -472,7 +530,7 @@ export class InputManager
     // Called by the host adapter on `pointerup` while a drag is active.
     // Fires Drop if the receiver's last DragOver set a non-None effect,
     // then resolves the session and clears state.
-    public DriveDragUp(hit: Visual | null, init: PointerEventInit): void
+    public DriveDragUp(hit: Element | null, init: PointerEventInit): void
     {
         const session = this._dragSession;
         if (session === null) return;
@@ -517,10 +575,57 @@ export class InputManager
 
     // ── Internals ──────────────────────────────────────────────────
 
+    // Raise the WPF button-specific routed event (MouseLeftButtonDown /
+    // Up, MouseRightButtonDown / Up) that corresponds to the changed
+    // button on this PointerDown / PointerUp. Fired AFTER the generic
+    // pointer event, with its own fresh tunnel + bubble passes. Middle /
+    // X-buttons have no button-specific routed event in WPF — they go
+    // through the generic PointerDown / Up only.
+    private raiseButtonSpecific(target: Element, init: PointerEventInit, down: boolean): void
+    {
+        if (init.Button === PointerButton.Primary)
+        {
+            const kind = down ? 'MouseLeftButtonDown' : 'MouseLeftButtonUp';
+            dispatchPointer(new PointerEventArgs(kind, target, init, this, this));
+        }
+        else if (init.Button === PointerButton.Secondary)
+        {
+            const kind = down ? 'MouseRightButtonDown' : 'MouseRightButtonUp';
+            dispatchPointer(new PointerEventArgs(kind, target, init, this, this));
+        }
+    }
+
+    // Raise GotMouseCapture / LostMouseCapture on `target`. Reuses the
+    // pointer tunnel+bubble walk with a synthetic init sampled from the
+    // current MouseDevice position (capture changes aren't tied to a
+    // specific pointer-move event).
+    private raiseCaptureEvent(target: Element, pointerId: number, got: boolean): void
+    {
+        const p = Mouse.PrimaryDevice.GetPosition();
+        const init: PointerEventInit = {
+            HostX: p.X, HostY: p.Y,
+            Button: PointerButton.None, Buttons: 0,
+            Modifiers: Mouse.PrimaryDevice.Modifiers,
+            PointerId: pointerId, Pressure: 0,
+            PointerType: 'mouse',
+        };
+        dispatchPointer(new PointerEventArgs(got ? 'GotMouseCapture' : 'LostMouseCapture', target, init, this, this));
+    }
+
+    // Refresh the global MouseDevice from a raw pointer event: register
+    // this manager as the capture sink, update position / modifiers /
+    // button states, and record the element directly under the cursor.
+    private syncMouseDevice(hit: Element | null, init: PointerEventInit): void
+    {
+        Mouse.PrimaryDevice._attach(this);
+        Mouse.PrimaryDevice._updateFromPointer(init);
+        Mouse.PrimaryDevice._setDirectlyOver(hit ?? undefined);
+    }
+
     // Swap the current drag receiver. Fires DragLeave on the old one,
     // DragEnter on the new one, and writes IsDragOver in lock-step.
     // No-op when nothing changes.
-    private applyReceiverChange(next: Visual | null, init: PointerEventInit): void
+    private applyReceiverChange(next: Element | null, init: PointerEventInit): void
     {
         const session = this._dragSession;
         if (session === null) return;
@@ -547,7 +652,7 @@ export class InputManager
     // IsMouseOver in lock-step. Visuals that stay in the route (the
     // common-ancestor prefix shared between old and new routes) are
     // left untouched — no DP write, no Enter/Leave fire.
-    private updateHoverChain(hit: Visual | null, init: PointerEventInit): void
+    private updateHoverChain(hit: Element | null, init: PointerEventInit): void
     {
         const newRoute = hit === null ? [] : buildRoute(hit);
         const oldSet   = new Set(this.hoverRoute);
@@ -578,40 +683,35 @@ export class InputManager
 
 // ── DP write helpers ───────────────────────────────────────────────
 
-// IsMouseOver / IsPressed / IsFocused / IsDragOver / Focusable are DPs
-// registered on Visual. This module can't value-import Visual (the
-// IsMouseOver / IsPressed / IsFocused / IsDragOver are read-only DPs
-// (§ 1.13); InputManager writes through the typed `_setIsXxx`
-// @internal methods on Visual which route through the privileged
-// `set_property_value_with_key` path. The lazy `focusableKey` is
-// still resolved on first use because `Focusable` is a normal
-// writable DP and InputManager only reads it.
-let focusableKey: PropertyKey<unknown> | undefined;
-
-function setIsMouseOver(v: Visual, value: boolean): void
+// IsMouseOver / IsPressed / IsFocused / IsDragOver are read-only DPs on
+// Element (§ Phase B / input); InputManager writes through the typed
+// `_setIsXxx` @internal methods, which route through the privileged
+// `set_property_value_with_key` path. Focusable / AllowDrop are normal
+// public accessors InputManager only reads. Thin wrappers kept for the
+// readable call sites in the dispatch body.
+function setIsMouseOver(v: Element, value: boolean): void
 {
     v._setIsMouseOver(value);
 }
 
-function setIsPressed(v: Visual, value: boolean): void
+function setIsPressed(v: Element, value: boolean): void
 {
     v._setIsPressed(value);
 }
 
-function setIsFocused(v: Visual, value: boolean): void
+function setIsFocused(v: Element, value: boolean): void
 {
     v._setIsFocused(value);
 }
 
-function isFocusable(v: Visual): boolean
+function isFocusable(v: Element): boolean
 {
-    focusableKey ??= resolveKey(v, undefined, 'Focusable');
-    return v.get_property_value(focusableKey) === true;
+    return v.Focusable === true;
 }
 
 // IsDragOver is the drag-specific mirror of IsMouseOver; same DP-write
 // shape, framework-only write surface.
-function setIsDragOver(v: Visual, value: boolean): void
+function setIsDragOver(v: Element, value: boolean): void
 {
     v._setIsDragOver(value);
 }
@@ -619,19 +719,15 @@ function setIsDragOver(v: Visual, value: boolean): void
 // Walk up the visual parent chain from `start` looking for the nearest
 // ancestor (including `start` itself) with AllowDrop=true. Returns null
 // if no ancestor qualifies. Mirrors WPF's receiver hit-test gate.
-interface VisualWithAllowDrop
+// GetVisualParent returns `Visual | undefined`; every concrete node is
+// an Element, so the cast is sound.
+function findAllowDropAncestor(start: Element): Element | null
 {
-    AllowDrop: boolean;
-    GetVisualParent(): Visual | undefined;
-}
-function findAllowDropAncestor(start: Visual): Visual | null
-{
-    let cur: Visual | undefined = start;
+    let cur: Element | undefined = start;
     while (cur !== undefined)
     {
-        const v = cur as unknown as VisualWithAllowDrop;
-        if (v.AllowDrop === true) return cur;
-        cur = v.GetVisualParent();
+        if (cur.AllowDrop === true) return cur;
+        cur = cur.GetVisualParent() as Element | undefined;
     }
     return null;
 }

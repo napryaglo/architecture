@@ -1,11 +1,12 @@
+import { ModifierKeys, toModifierKeys } from '../../runtime/index.js';
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from './test-app.js';
 
 import {
     Application,
-    NoModifiers,
-    PointerButton,
+    Key,
+    NoModifiers,    PointerButton,
     type KeyEventInit,
     type ModifierKeys,
     type PointerEventInit,
@@ -30,12 +31,13 @@ function pointer(overrides: Partial<PointerEventInit> = {}): PointerEventInit
     };
 }
 
-function key(k: string, mods: Partial<ModifierKeys> = {}, code?: string): KeyEventInit
+function key(k: Key, mods: Partial<ModifierKeys> = {}, code?: string): KeyEventInit
 {
     return {
         Key:       k,
+        KeyText:       k,
         Code:      code ?? k,
-        Modifiers: { ...NoModifiers, ...mods },
+        Modifiers: toModifierKeys({ shift: mods.Shift, control: mods.Control, alt: mods.Alt, meta: mods.Meta }),
         IsRepeat:  false,
     };
 }
@@ -161,7 +163,7 @@ describe('SpinEdit — keyboard', () => {
         sp.Value = 5;
         target.InputManager.SetFocus(inner);
 
-        const handled = target.InputManager.InjectKeyDown(key('ArrowUp'));
+        const handled = target.InputManager.InjectKeyDown(key(Key.Up));
         assert.equal(handled, true, 'SpinEdit should mark ArrowUp Handled in preview');
         assert.equal(sp.Value, 6);
     });
@@ -171,7 +173,7 @@ describe('SpinEdit — keyboard', () => {
         sp.Value = 5;
         target.InputManager.SetFocus(inner);
 
-        target.InputManager.InjectKeyDown(key('ArrowDown'));
+        target.InputManager.InjectKeyDown(key(Key.Down));
         assert.equal(sp.Value, 4);
     });
 
@@ -181,10 +183,10 @@ describe('SpinEdit — keyboard', () => {
         sp.Value       = 100;
         target.InputManager.SetFocus(inner);
 
-        target.InputManager.InjectKeyDown(key('PageUp'));
+        target.InputManager.InjectKeyDown(key(Key.PageUp));
         assert.equal(sp.Value, 125);
 
-        target.InputManager.InjectKeyDown(key('PageDown'));
+        target.InputManager.InjectKeyDown(key(Key.PageDown));
         assert.equal(sp.Value, 100);
     });
 
@@ -195,7 +197,7 @@ describe('SpinEdit — keyboard', () => {
         // Make sure inner's CaretIndex isn't touched — TextBox's own
         // ArrowUp moves to text edge; SpinEdit intercepts before that.
         const caretBefore = inner.CaretIndex;
-        target.InputManager.InjectKeyDown(key('ArrowUp'));
+        target.InputManager.InjectKeyDown(key(Key.Up));
         assert.equal(inner.CaretIndex, caretBefore);
     });
 
@@ -205,7 +207,7 @@ describe('SpinEdit — keyboard', () => {
         sp.IsReadOnly = true;
         target.InputManager.SetFocus(inner);
 
-        const handled = target.InputManager.InjectKeyDown(key('ArrowUp'));
+        const handled = target.InputManager.InjectKeyDown(key(Key.Up));
         // Still Handled — we don't want ArrowUp to leak through and
         // step the TextBox's caret even in read-only mode.
         assert.equal(handled, true);
@@ -221,7 +223,7 @@ describe('SpinEdit — Text commit', () => {
         target.InputManager.SetFocus(inner);
         inner.Text = '42';
 
-        const handled = target.InputManager.InjectKeyDown(key('Enter'));
+        const handled = target.InputManager.InjectKeyDown(key(Key.Return));
         assert.equal(handled, true);
         assert.equal(sp.Value,   42);
         assert.equal(inner.Text, '42');
@@ -243,7 +245,7 @@ describe('SpinEdit — Text commit', () => {
         target.InputManager.SetFocus(inner);
         inner.Text = 'not a number';
 
-        target.InputManager.InjectKeyDown(key('Enter'));
+        target.InputManager.InjectKeyDown(key(Key.Return));
         assert.equal(sp.Value,   5);
         assert.equal(inner.Text, '5');
     });
@@ -255,12 +257,12 @@ describe('SpinEdit — Text commit', () => {
         target.InputManager.SetFocus(inner);
 
         inner.Text = '999';
-        target.InputManager.InjectKeyDown(key('Enter'));
+        target.InputManager.InjectKeyDown(key(Key.Return));
         assert.equal(sp.Value,   100);
         assert.equal(inner.Text, '100');
 
         inner.Text = '-50';
-        target.InputManager.InjectKeyDown(key('Enter'));
+        target.InputManager.InjectKeyDown(key(Key.Return));
         assert.equal(sp.Value,   0);
         assert.equal(inner.Text, '0');
     });
@@ -271,12 +273,12 @@ describe('SpinEdit — Text commit', () => {
         target.InputManager.SetFocus(inner);
 
         inner.Text = 'Infinity';
-        target.InputManager.InjectKeyDown(key('Enter'));
+        target.InputManager.InjectKeyDown(key(Key.Return));
         assert.equal(sp.Value,   7,   'Infinity must not commit');
         assert.equal(inner.Text, '7');
 
         inner.Text = 'NaN';
-        target.InputManager.InjectKeyDown(key('Enter'));
+        target.InputManager.InjectKeyDown(key(Key.Return));
         assert.equal(sp.Value,   7);
         assert.equal(inner.Text, '7');
     });
@@ -287,7 +289,7 @@ describe('SpinEdit — Text commit', () => {
         target.InputManager.SetFocus(inner);
 
         inner.Text = '';
-        target.InputManager.InjectKeyDown(key('Enter'));
+        target.InputManager.InjectKeyDown(key(Key.Return));
         assert.equal(sp.Value,   3);
         assert.equal(inner.Text, '3');
     });
@@ -312,7 +314,7 @@ describe('SpinEdit — DecimalPlaces formatting + rounding', () => {
         target.InputManager.SetFocus(inner);
 
         inner.Text = '1.999';
-        target.InputManager.InjectKeyDown(key('Enter'));
+        target.InputManager.InjectKeyDown(key(Key.Return));
         assert.equal(sp.Value, 2, '1.999 with DP=0 rounds to 2 before commit');
         assert.equal(inner.Text, '2');
     });
@@ -327,7 +329,7 @@ describe('SpinEdit — DecimalPlaces formatting + rounding', () => {
         // display must clean up to "2" (not "2.0") so SpinEdit doesn't
         // leak the user's intermediate text after blur.
         inner.Text = '2.0';
-        target.InputManager.InjectKeyDown(key('Enter'));
+        target.InputManager.InjectKeyDown(key(Key.Return));
         assert.equal(sp.Value,   2);
         assert.equal(inner.Text, '2');
     });

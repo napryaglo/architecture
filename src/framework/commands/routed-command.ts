@@ -1,5 +1,6 @@
 import { CommandBase, type CommandMetadataInit } from '../../runtime/command.js';
 import type { ModifierKeys } from '../../visual-engine/routed-event.js';
+import type { Key } from '../../visual-engine/input/key.js';
 import { formatKeyGesture } from './input-binding.js';
 
 // RoutedCommand — identity-only ICommand. Mirrors WPF's RoutedCommand:
@@ -59,11 +60,11 @@ export interface InputGesture
 // (Visual.InputBindings or CommandManager.RegisterClassInputBinding).
 export class KeyGesture implements InputGesture
 {
-    public readonly Key:       string;
+    public readonly Key:       Key;
     public readonly Modifiers: ModifierKeys;
     public readonly DisplayString: string;
 
-    constructor(key: string, modifiers: ModifierKeys, display?: string)
+    constructor(key: Key, modifiers: ModifierKeys, display?: string)
     {
         this.Key           = key;
         this.Modifiers     = modifiers;

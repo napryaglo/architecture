@@ -5,10 +5,13 @@ import {
     type ObservableCollection,
     Rect,
     type KeyEventArgs,
+    Key,
     type PointerEventArgs,
     type PropertyDescriptor,
     type RelayCommand,
     type Visual,
+    hasModifier,
+    ModifierKeys,
 } from '../../runtime/index.js';
 import type { DataTemplate } from '../../basic/templates/data-template.js';
 import { AdornerLayer } from '../../visual-engine/index.js';
@@ -865,13 +868,13 @@ export class Diagram extends Selector
     protected override OnKeyDown(args: KeyEventArgs): void
     {
         const key = args.Key;
-        const isArrow = key === 'ArrowLeft' || key === 'ArrowRight'
-                     || key === 'ArrowUp'   || key === 'ArrowDown';
+        const isArrow = key === Key.Left || key === Key.Right
+                     || key === Key.Up   || key === Key.Down;
         if (isArrow && this._selectedContainers.size > 0)
         {
-            const step = args.Modifiers.Shift ? 10 : 1;
-            const dx = key === 'ArrowLeft' ? -step : key === 'ArrowRight' ? step : 0;
-            const dy = key === 'ArrowUp'   ? -step : key === 'ArrowDown'  ? step : 0;
+            const step = hasModifier(args.Modifiers, ModifierKeys.Shift) ? 10 : 1;
+            const dx = key === Key.Left ? -step : key === Key.Right ? step : 0;
+            const dy = key === Key.Up   ? -step : key === Key.Down  ? step : 0;
             for (const container of this._selectedContainers)
             {
                 if (container instanceof Figure)
@@ -890,7 +893,7 @@ export class Diagram extends Selector
         // consumer's listener owns the collection mutation (both
         // ItemsSource and Connectors). Fires when either channel has
         // entries — mixed-kind selections deliver both snapshots.
-        if ((key === 'Delete' || key === 'Backspace')
+        if ((key === Key.Delete || key === Key.Back)
             && (this.SelectedItems.length > 0 || this._selectedConnectors.size > 0))
         {
             this._fireDeleteRequested({
@@ -904,9 +907,9 @@ export class Diagram extends Selector
         // commands. CanExecute gating naturally guards (the command
         // returns false for empty / under-shaped selections), so a
         // gate-failed press is a silent no-op.
-        if ((key === 'g' || key === 'G') && (args.Modifiers.Control || args.Modifiers.Meta))
+        if (key === Key.G && (hasModifier(args.Modifiers, ModifierKeys.Control) || hasModifier(args.Modifiers, ModifierKeys.Windows)))
         {
-            const cmd = args.Modifiers.Shift ? this.UngroupCommand : this.GroupCommand;
+            const cmd = hasModifier(args.Modifiers, ModifierKeys.Shift) ? this.UngroupCommand : this.GroupCommand;
             if (cmd !== undefined && cmd.CanExecute(undefined)) cmd.Execute(undefined);
             args.Handled = true;
             return;

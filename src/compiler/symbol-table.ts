@@ -298,6 +298,18 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['CommandBase',             '@visualisation-sub/mural/runtime'],
     ['RelayCommand',            '@visualisation-sub/mural/runtime'],
     ['RoutedCommand',           '@visualisation-sub/mural/framework/commands/routed-command.js'],
+    // Input bindings — `Visual.InputBindings { KeyBinding[…] }` /
+    // `CommandBindings { CommandBinding[…] }` markup authoring.
+    ['KeyBinding',              '@visualisation-sub/mural/framework/commands/input-binding.js'],
+    ['MouseBinding',           '@visualisation-sub/mural/framework/commands/input-binding.js'],
+    ['MouseAction',            '@visualisation-sub/mural/framework/commands/input-binding.js'],
+    ['CommandBinding',         '@visualisation-sub/mural/framework/commands/command-binding.js'],
+    // WPF-parity input enums (Key / ModifierKeys / MouseButton) re-exported
+    // from the runtime barrel; usable in KeyBinding[Key=…, Modifiers=…]
+    // and in `when (…)` triggers.
+    ['Key',                    '@visualisation-sub/mural/runtime'],
+    ['ModifierKeys',           '@visualisation-sub/mural/runtime'],
+    ['MouseButton',            '@visualisation-sub/mural/runtime'],
     ['ProgressIndicator',       '@visualisation-sub/mural/framework/notifications/progress-indicator.js'],
     ['ProgressIndicatorVariant','@visualisation-sub/mural/framework/notifications/progress-indicator.js'],
     ['Banner',                  '@visualisation-sub/mural/framework/notifications/banner.js'],
@@ -424,6 +436,35 @@ export const ENUM_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<st
     ['Pointer',               new Set(['Fine', 'Coarse'])],
     ['PrefersContrast',       new Set(['Normal', 'More'])],
     ['PreferredScheme',       new Set(['NoPreference', 'Light', 'Dark'])],
+    // WPF-parity input enums (KeyBinding[Key=…, Modifiers=…],
+    // MouseBinding[Gesture=…]). ModifierKeys is a [Flags] enum — markup
+    // authors a single member today (`Modifiers=Control`); multi-modifier
+    // combination syntax is a separate follow-up.
+    ['Key', new Set([
+        'None', 'Cancel', 'Back', 'Tab', 'Clear', 'Return', 'Pause',
+        'CapsLock', 'Escape', 'Space', 'PageUp', 'PageDown', 'End', 'Home',
+        'Left', 'Up', 'Right', 'Down', 'Select', 'Print', 'Execute',
+        'PrintScreen', 'Insert', 'Delete', 'Help', 'D0', 'D1', 'D2', 'D3',
+        'D4', 'D5', 'D6', 'D7', 'D8', 'D9', 'A', 'B', 'C', 'D', 'E', 'F',
+        'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
+        'U', 'V', 'W', 'X', 'Y', 'Z', 'LWin', 'RWin', 'Apps', 'Sleep',
+        'NumPad0', 'NumPad1', 'NumPad2', 'NumPad3', 'NumPad4', 'NumPad5',
+        'NumPad6', 'NumPad7', 'NumPad8', 'NumPad9', 'Multiply', 'Add',
+        'Separator', 'Subtract', 'Decimal', 'Divide', 'F1', 'F2', 'F3', 'F4',
+        'F5', 'F6', 'F7', 'F8', 'F9', 'F10', 'F11', 'F12', 'F13', 'F14',
+        'F15', 'F16', 'F17', 'F18', 'F19', 'F20', 'F21', 'F22', 'F23', 'F24',
+        'NumLock', 'Scroll', 'LeftShift', 'RightShift', 'LeftCtrl',
+        'RightCtrl', 'LeftAlt', 'RightAlt', 'BrowserBack', 'BrowserForward',
+        'BrowserRefresh', 'BrowserStop', 'BrowserSearch', 'BrowserFavorites',
+        'BrowserHome', 'VolumeMute', 'VolumeDown', 'VolumeUp',
+        'MediaNextTrack', 'MediaPreviousTrack', 'MediaStop',
+        'MediaPlayPause', 'Oem1', 'OemPlus', 'OemComma', 'OemMinus',
+        'OemPeriod', 'Oem2', 'Oem3', 'Oem4', 'Oem5', 'Oem6', 'Oem7',
+        'Unknown',
+    ])],
+    ['ModifierKeys',          new Set(['None', 'Alt', 'Control', 'Shift', 'Windows'])],
+    ['MouseAction',           new Set(['LeftClick', 'RightClick', 'MiddleClick', 'LeftDoubleClick', 'RightDoubleClick', 'MiddleDoubleClick'])],
+    ['MouseButton',           new Set(['Left', 'Middle', 'Right', 'XButton1', 'XButton2'])],
 ]);
 
 // Type → set of valid static-member names exposed for use in DOTTED
@@ -491,6 +532,11 @@ export const PROPERTY_TO_ENUM: ReadonlyMap<string, readonly string[]> = new Map<
     ['Pivot',    ['FanPivot']],
     ['Base',     ['PuffyBase']],
     ['Source',   ['PixelSource']],
+    // KeyBinding.Modifiers / MouseBinding.Modifiers → ModifierKeys;
+    // MouseBinding.Gesture → MouseAction. (KeyBinding.Key resolves via the
+    // property-name == enum-class-name path, like HorizontalAlignment.)
+    ['Modifiers', ['ModifierKeys']],
+    ['Gesture',   ['MouseAction']],
 ]);
 
 // Meta-attr names whose RHS is a type reference (compiled as a bare

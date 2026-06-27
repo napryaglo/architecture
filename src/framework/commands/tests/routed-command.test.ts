@@ -1,3 +1,4 @@
+import { Key, ModifierKeys } from '../../../runtime/index.js';
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 
@@ -14,7 +15,7 @@ describe('RoutedCommand — identity + ICommand contract', () => {
     beforeEach(() => { CommandManager._resetForTests(); });
 
     test('Name / OwnerType / InputGestures populate from constructor args', () => {
-        const cmd = new RoutedCommand('Save', RoutedCommand, [new KeyGesture('S', { ...NoModifiers, Control: true })]);
+        const cmd = new RoutedCommand('Save', RoutedCommand, [new KeyGesture(Key.S, ModifierKeys.Control)]);
         assert.equal(cmd.Name, 'Save');
         assert.equal(cmd.OwnerType, RoutedCommand);
         assert.equal(cmd.InputGestures.length, 1);
@@ -27,7 +28,7 @@ describe('RoutedCommand — identity + ICommand contract', () => {
     });
 
     test('KeyGesture.DisplayString formats modifiers in canonical order', () => {
-        const g = new KeyGesture('S', { Control: true, Shift: true, Alt: false, Meta: false });
+        const g = new KeyGesture(Key.S, (ModifierKeys.Control | ModifierKeys.Shift));
         assert.equal(g.DisplayString, 'Ctrl+Shift+S');
     });
 

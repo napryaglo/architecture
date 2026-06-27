@@ -8,8 +8,11 @@ import {
     Visual,
     type DrawingContext,
     type KeyEventArgs,
+    Key,
     type PointerEventArgs,
     type PropertyDescriptor,
+    hasModifier,
+    ModifierKeys,
 } from '../../runtime/index.js';
 import { PresentationTarget } from '../../visual-engine/index.js';
 import { Border } from '../../basic/border.js';
@@ -468,7 +471,7 @@ export class MenuItem extends HeaderedItemsControl
         // (ContextMenu, MenuButton, MenuItem, anonymous wrappers) →
         // vertical context.
         if (this._rowRoot !== undefined) this._popupHost.anchor = this._rowRoot;
-        this._popupHost.anchorSide = this.isTopLevelInMenuStrip() ? 'below' : 'right';
+        this._popupHost.anchorSide = this.isTopLevelInMenuStrip() ? MenuAnchorSide.Below : MenuAnchorSide.Right;
         // AttachOverlayChild: visual hop → target's OverlayLayer; logical
         // hop → THIS MenuItem so the submenu inherits resources /
         // DataContext / inheritable DPs from the row that opened it.
@@ -560,7 +563,7 @@ export class MenuItem extends HeaderedItemsControl
         const k = args.Key;
         const inStrip = this.isTopLevelInMenuStrip();
 
-        if (k === 'ArrowDown')
+        if (k === Key.Down)
         {
             if (inStrip)
             {
@@ -577,13 +580,13 @@ export class MenuItem extends HeaderedItemsControl
             args.Handled = true;
             return;
         }
-        if (k === 'ArrowUp')
+        if (k === Key.Up)
         {
             if (!inStrip) this.focusSibling(args, -1);
             args.Handled = true;
             return;
         }
-        if (k === 'ArrowRight')
+        if (k === Key.Right)
         {
             if (inStrip)
             {
@@ -597,7 +600,7 @@ export class MenuItem extends HeaderedItemsControl
             args.Handled = true;
             return;
         }
-        if (k === 'ArrowLeft')
+        if (k === Key.Left)
         {
             if (inStrip)
             {
@@ -620,13 +623,13 @@ export class MenuItem extends HeaderedItemsControl
             args.Handled = true;
             return;
         }
-        if (k === 'Enter' || k === ' ')
+        if (k === Key.Return || k === Key.Space)
         {
             this.activate();
             args.Handled = true;
             return;
         }
-        if (k === 'Escape')
+        if (k === Key.Escape)
         {
             if (this.IsSubmenuOpen) this.IsSubmenuOpen = false;
             const parentMI = this.findParentMenuItem();
@@ -645,13 +648,19 @@ export class MenuItem extends HeaderedItemsControl
             args.Handled = true;
             return;
         }
-        // Letter accelerator — single printable character, no modifiers.
-        if (k.length === 1 && /[A-Za-z0-9]/.test(k))
+        // Letter accelerator — keyed off the TYPED character (KeyText),
+        // not the virtual key, so it tracks the user's actual layout and
+        // matches the Header text it's compared against. Single printable
+        // alphanumeric, no command modifiers.
+        const typed = args.KeyText;
+        if (typed.length === 1 && /[A-Za-z0-9]/.test(typed))
         {
-            const noMods = !args.Modifiers.Control && !args.Modifiers.Alt && !args.Modifiers.Meta;
+            const noMods = !hasModifier(args.Modifiers, ModifierKeys.Control)
+                && !hasModifier(args.Modifiers, ModifierKeys.Alt)
+                && !hasModifier(args.Modifiers, ModifierKeys.Windows);
             if (noMods)
             {
-                this.focusSiblingByLetter(args, k.toUpperCase());
+                this.focusSiblingByLetter(args, typed.toUpperCase());
                 args.Handled = true;
             }
         }
@@ -1069,6 +1078,12 @@ export class MenuButton extends HeaderedItemsControl
 // Popup overlay host shared by MenuButton + ContextMenu. Anchors a
 // popup body at either the trigger button (MenuButton) or a fixed
 // host-coords point (ContextMenu).
+export enum MenuAnchorSide
+{
+    Below = 'below',
+    Right = 'right',
+}
+
 export class MenuPopupHost extends Panel
 {
     /** Anchor for popup positioning. When set, the popup is laid out
@@ -1082,7 +1097,7 @@ export class MenuPopupHost extends Panel
      *     top-right. The conventional submenu-fly-out position for
      *     MenuItems nested inside a vertical popup (ContextMenu /
      *     MenuButton popup body / another MenuItem's submenu). */
-    public anchorSide: 'below' | 'right' = 'below';
+    public anchorSide: MenuAnchorSide = MenuAnchorSide.Below;
     /** Fixed-point anchor for ContextMenu (host-coordinates). When set
      *  AND `anchor` is unset, the popup top-left lands at this point. */
     public fixedPoint: { x: number; y: number } | undefined;
@@ -1112,7 +1127,7 @@ export class MenuPopupHost extends Panel
         {
             const origin = absoluteOriginOf(this.anchor);
             const ar     = this.anchor.ArrangedRect;
-            if (this.anchorSide === 'right')
+            if (this.anchorSide === MenuAnchorSide.Right)
             {
                 // Submenu fly-out: top-left of popup at top-right of
                 // the anchor row.

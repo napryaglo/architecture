@@ -78,7 +78,12 @@ export interface IServiceContainer
     dispose(): void;
 }
 
-export type ServiceLifetime = 'singleton' | 'transient' | 'scoped';
+export enum ServiceLifetime
+{
+    Singleton = 'singleton',
+    Transient = 'transient',
+    Scoped    = 'scoped',
+}
 
 interface Registration
 {
@@ -107,7 +112,7 @@ export class ServiceProvider implements IServiceProvider, IServiceContainer
     public register<T>(
         token:     ServiceToken<T>,
         factory:   ServiceFactory<T>,
-        lifetime:  ServiceLifetime = 'singleton',
+        lifetime:  ServiceLifetime = ServiceLifetime.Singleton,
     ): this
     {
         this._registrations.set(token, { lifetime, factory: factory as ServiceFactory<unknown> });
@@ -118,7 +123,7 @@ export class ServiceProvider implements IServiceProvider, IServiceContainer
     // object is returned for every resolve at this provider and below.
     public registerInstance<T>(token: ServiceToken<T>, instance: T): this
     {
-        return this.register(token, () => instance, 'singleton');
+        return this.register(token, () => instance, ServiceLifetime.Singleton);
     }
 
     // Register an already-built instance under a token DERIVED from the
@@ -149,12 +154,12 @@ export class ServiceProvider implements IServiceProvider, IServiceContainer
 
     public registerTransient<T>(token: ServiceToken<T>, factory: ServiceFactory<T>): this
     {
-        return this.register(token, factory, 'transient');
+        return this.register(token, factory, ServiceLifetime.Transient);
     }
 
     public registerScoped<T>(token: ServiceToken<T>, factory: ServiceFactory<T>): this
     {
-        return this.register(token, factory, 'scoped');
+        return this.register(token, factory, ServiceLifetime.Scoped);
     }
 
     // ── Resolution ──────────────────────────────────────────────────
@@ -168,12 +173,12 @@ export class ServiceProvider implements IServiceProvider, IServiceContainer
 
         switch (reg.lifetime)
         {
-            case 'transient':
+            case ServiceLifetime.Transient:
                 // Fresh every time; deps resolve from the requesting
                 // scope; nothing cached.
                 return reg.factory(this) as T;
 
-            case 'singleton':
+            case ServiceLifetime.Singleton:
             {
                 // One instance, cached at the owner (provider where
                 // registered) so the whole subtree shares it. Deps
@@ -185,7 +190,7 @@ export class ServiceProvider implements IServiceProvider, IServiceContainer
                 return inst as T;
             }
 
-            case 'scoped':
+            case ServiceLifetime.Scoped:
             {
                 // One instance per resolving scope (this provider). Deps
                 // resolve from this scope, so a chain of scoped services

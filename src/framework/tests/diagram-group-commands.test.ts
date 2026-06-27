@@ -1,3 +1,4 @@
+import { ModifierKeys } from '../../runtime/index.js';
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
@@ -137,8 +138,8 @@ function selectMany(diagram: Diagram, items: unknown[]): void {
     for (let i = 0; i < items.length; i++) {
         const c = cont(diagram, items[i]);
         const mods = i === 0
-            ? { Control: false, Shift: false, Alt: false, Meta: false }
-            : { Control: true,  Shift: false, Alt: false, Meta: false };
+            ? ModifierKeys.None
+            : ModifierKeys.Control;
         diagram.HandleContainerClick(c, mods);
     }
 }

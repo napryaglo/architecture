@@ -4,6 +4,7 @@ import {
     Element, Visual,
     type ICommand,
     type KeyEventArgs,
+    Key,
     type PointerEventArgs,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
@@ -237,7 +238,7 @@ export class Button extends ContentControl implements ICommandSource
     // user-visible behavior is consistent across activation modes.
     protected override OnKeyDown(args: KeyEventArgs): void
     {
-        if (args.Key !== ' ' && args.Key !== 'Enter') return;
+        if (args.Key !== Key.Space && args.Key !== Key.Return) return;
         args.Handled = true;
         // Match WPF: pressing Space/Enter flips IsPressed for the press
         // chrome. The matching OnKeyUp (or focus loss) clears it.
@@ -253,7 +254,7 @@ export class Button extends ContentControl implements ICommandSource
 
     protected override OnKeyUp(args: KeyEventArgs): void
     {
-        if (args.Key !== ' ' && args.Key !== 'Enter') return;
+        if (args.Key !== Key.Space && args.Key !== Key.Return) return;
         this._setIsPressed(false);
     }
 

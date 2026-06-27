@@ -21,7 +21,7 @@ import { TemplatedControl } from '../../basic/templated-control.js';
 import { ControlTemplate } from '../../basic/templates/control-template.js';
 import { Border } from '../../basic/border.js';
 import type { PresentationTarget } from '../../visual-engine/index.js';
-import { MenuPopupHost } from '../menu/menu-strip.js';
+import { MenuPopupHost, MenuAnchorSide } from '../menu/menu-strip.js';
 import { ClickAwayScrim } from '../../basic/click-away-scrim.js';
 import { ColorPicker } from './color-picker.js';
 import { Slider } from '../../basic/slider.js';
@@ -398,7 +398,7 @@ export class BrushPicker extends TemplatedControl
         if (scrim !== undefined) scrim.onClick = (): void => { this.IsDropDownOpen = false; };
 
         host.anchor     = this._trigger ?? this;
-        host.anchorSide = 'below';
+        host.anchorSide = MenuAnchorSide.Below;
         const body = host.FindName('PART_PopupBody') as Visual | undefined;
         if (body !== undefined) host.popup = body;
 
@@ -428,7 +428,7 @@ export class BrushPicker extends TemplatedControl
     private adoptPopupParts(host: MenuPopupHost): void
     {
         const wireTab = (partName: string, target: BrushPickerVariant): void => {
-            const tab = host.FindName(partName) as Visual | undefined;
+            const tab = host.FindName(partName) as Element | undefined;
             if (tab === undefined) return;
             let pressed = false;
             const onDown = ((): void => {

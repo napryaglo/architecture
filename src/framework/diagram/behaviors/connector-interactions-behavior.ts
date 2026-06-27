@@ -8,6 +8,8 @@ import {
     type PointerEventArgs,
     type ObservableCollection,
     type Model,
+    hasModifier,
+    ModifierKeys,
 } from '../../../runtime/index.js';
 import {
     Adorner,
@@ -147,6 +149,18 @@ const WAYPOINT_CURSOR = 'move';
 // PointerDown classifier can read what was clicked. WeakMap-keyed so
 // detaching the adorner garbage-collects entries without manual cleanup.
 
+enum ConnectorGesture
+{
+    Create = 'create',
+    Edit   = 'edit',
+}
+
+enum ConnectorEditKind
+{
+    Endpoint = 'endpoint',
+    Waypoint = 'waypoint',
+}
+
 type HandleTag =
     | { readonly kind: 'side';     readonly figure: Figure; readonly side: ResolvedPortSide }
     | { readonly kind: 'endpoint'; readonly connector: Connector; readonly end: ConnectorEnd }
@@ -159,9 +173,9 @@ interface SharedState
 {
     hoveredFigure:    Figure    | undefined;
     hoveredConnector: Connector | undefined;
-    activeGesture:    'create' | 'edit' | undefined;
+    activeGesture:    ConnectorGesture | undefined;
     activePointerId:  number   | undefined;
-    editKind:         'endpoint' | 'waypoint' | undefined;
+    editKind:         ConnectorEditKind | undefined;
 }
 
 // ── SideBarsAdorner ──────────────────────────────────────────────
@@ -852,7 +866,7 @@ export function attachConnectorInteractions(diagram: Diagram): () => void
             {
                 (panel as unknown as { AddChild?(v: Visual): void }).AddChild?.(transient);
             }
-            state.activeGesture   = 'create';
+            state.activeGesture   = ConnectorGesture.Create;
             state.activePointerId = args.PointerId;
             args.CapturePointer(diagram, SIDE_CURSOR);
             args.Handled = true;
@@ -861,9 +875,9 @@ export function attachConnectorInteractions(diagram: Diagram): () => void
         if (tag.kind === 'endpoint')
         {
             editAdorner.BeginEndpointDrag(tag.connector, tag.end, cursor);
-            state.activeGesture   = 'edit';
+            state.activeGesture   = ConnectorGesture.Edit;
             state.activePointerId = args.PointerId;
-            state.editKind        = 'endpoint';
+            state.editKind        = ConnectorEditKind.Endpoint;
             args.CapturePointer(diagram, ENDPOINT_CURSOR);
             args.Handled = true;
             editAdornerVisual?.InvalidateArrange();
@@ -872,9 +886,9 @@ export function attachConnectorInteractions(diagram: Diagram): () => void
         if (tag.kind === 'waypoint')
         {
             editAdorner.BeginWaypointDrag(tag.connector, tag.index);
-            state.activeGesture   = 'edit';
+            state.activeGesture   = ConnectorGesture.Edit;
             state.activePointerId = args.PointerId;
-            state.editKind        = 'waypoint';
+            state.editKind        = ConnectorEditKind.Waypoint;
             args.CapturePointer(diagram, WAYPOINT_CURSOR);
             args.Handled = true;
             editAdornerVisual?.InvalidateArrange();
@@ -923,8 +937,8 @@ export function attachConnectorInteractions(diagram: Diagram): () => void
         // on a connector body, a figure body, or empty canvas space.
 
         const mods    = args.Modifiers;
-        const ctrl    = mods?.Control === true || mods?.Meta === true;
-        const shift   = mods?.Shift   === true;
+        const ctrl    = hasModifier(mods, ModifierKeys.Control) || hasModifier(mods, ModifierKeys.Windows);
+        const shift   = hasModifier(mods, ModifierKeys.Shift);
 
         // Connector body click → SelectionMode-aware multi-select that
         // mirrors Selector.HandleContainerClick for figures, with one
@@ -1039,11 +1053,11 @@ export function attachConnectorInteractions(diagram: Diagram): () => void
         mountAdornersIfReady();
         const cursor = localPosition(args, diagram);
 
-        if (state.activeGesture === 'create' && args.PointerId === state.activePointerId)
+        if (state.activeGesture === ConnectorGesture.Create && args.PointerId === state.activePointerId)
         {
             createBehavior.UpdateCursor(cursor);
         }
-        else if (state.activeGesture === 'edit' && args.PointerId === state.activePointerId)
+        else if (state.activeGesture === ConnectorGesture.Edit && args.PointerId === state.activePointerId)
         {
             editAdorner.UpdateCursor(cursor);
             editAdornerVisual?.InvalidateArrange();
@@ -1095,7 +1109,7 @@ export function attachConnectorInteractions(diagram: Diagram): () => void
         if (args.PointerId !== state.activePointerId) return;
         const cursor = localPosition(args, diagram);
 
-        if (state.activeGesture === 'create')
+        if (state.activeGesture === ConnectorGesture.Create)
         {
             const transient = createBehavior.TransientConnector;
             const panel = diagram.ItemsPanelInstance;
@@ -1113,9 +1127,9 @@ export function attachConnectorInteractions(diagram: Diagram): () => void
                 createBehavior.Abort();
             }
         }
-        else if (state.activeGesture === 'edit')
+        else if (state.activeGesture === ConnectorGesture.Edit)
         {
-            if (state.editKind === 'endpoint')
+            if (state.editKind === ConnectorEditKind.Endpoint)
             {
                 const target = findFigureAtCanvasPoint(diagram, cursor);
                 if (target !== undefined)
@@ -1127,7 +1141,7 @@ export function attachConnectorInteractions(diagram: Diagram): () => void
                     editAdorner.EndDragOverEmpty();
                 }
             }
-            else if (state.editKind === 'waypoint')
+            else if (state.editKind === ConnectorEditKind.Waypoint)
             {
                 editAdorner.EndDragOverEmpty();
             }

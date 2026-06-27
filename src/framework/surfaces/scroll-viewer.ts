@@ -6,6 +6,9 @@ import {
     Rect,
     Size,
     Element, Visual,
+    WheelDeltaMode,
+    hasModifier,
+    ModifierKeys,
     type DragEventArgs,
     type DragSession,
     type EasingFunction,
@@ -470,13 +473,13 @@ export class ScrollViewer extends ContentControl
     // ScrollViewer (if any), matching browser nested-scroll semantics.
     protected override OnPointerWheel(args: WheelEventArgs): void
     {
-        const scale = args.DeltaMode === 'line' ? 16
-                    : args.DeltaMode === 'page' ? this.ViewportHeight
+        const scale = args.DeltaMode === WheelDeltaMode.Line ? 16
+                    : args.DeltaMode === WheelDeltaMode.Page ? this.ViewportHeight
                     : 1;
         const dy = args.DeltaY * scale;
         const dx = args.DeltaX * scale;
 
-        const horizontal = args.Modifiers.Shift && dy !== 0 && dx === 0;
+        const horizontal = hasModifier(args.Modifiers, ModifierKeys.Shift) && dy !== 0 && dx === 0;
         if (horizontal)
         {
             const nextX = clamp(this.HorizontalOffset + dy, 0, this.ScrollableWidth);

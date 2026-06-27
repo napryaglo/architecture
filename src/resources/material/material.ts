@@ -29,14 +29,18 @@ import { MaterialDark }  from '../../../build/resources/material/dark.mu.js';
 
 // ── Backward-compatibility aliases ────────────────────────────────────
 
-export type MaterialThemeName = 'light' | 'dark';
+export enum MaterialThemeName
+{
+    Light = 'light',
+    Dark  = 'dark',
+}
 
 /** Legacy alias kept for tests and demos that pre-date
  *  `Application.initialize`. New code should pass class references to
  *  `app.initialize({ theme: Material, scheme: MaterialLight })`. */
 export function SetTheme(theme: MaterialThemeName): void
 {
-    const scheme: typeof Scheme = theme === 'light' ? MaterialLight : MaterialDark;
+    const scheme: typeof Scheme = theme === MaterialThemeName.Light ? MaterialLight : MaterialDark;
     Material.Activate(scheme);
 }
 
@@ -44,14 +48,14 @@ export function CurrentTheme(): MaterialThemeName | undefined
 {
     const s = ThemeManager.ActiveScheme;
     if (s === undefined) return undefined;
-    if (s.name === 'MaterialLight') return 'light';
-    if (s.name === 'MaterialDark')  return 'dark';
+    if (s.name === 'MaterialLight') return MaterialThemeName.Light;
+    if (s.name === 'MaterialDark')  return MaterialThemeName.Dark;
     return undefined;
 }
 
 export function ToggleTheme(): MaterialThemeName
 {
-    const next: MaterialThemeName = CurrentTheme() === 'light' ? 'dark' : 'light';
+    const next: MaterialThemeName = CurrentTheme() === MaterialThemeName.Light ? MaterialThemeName.Dark : MaterialThemeName.Light;
     SetTheme(next);
     return next;
 }

@@ -20,7 +20,12 @@ export enum FillBehavior
 
 // Where a timeline sits relative to storyboard-elapsed time `t`. Drives
 // the Storyboard's per-tick "evaluate / hold / release" routing.
-export type TimelinePhase = 'before' | 'running' | 'after';
+export enum TimelinePhase
+{
+    Before  = 'before',
+    Running = 'running',
+    After   = 'after',
+}
 
 // Shared shape of all timeline constructor props. Subclasses extend
 // this with From / To. Using a Partial-style options bag lets authoring
@@ -54,7 +59,7 @@ export abstract class AnimationTimeline
     public Duration:     number         = 1000;
 
     /** Delay relative to the owning Storyboard's Begin time. The timeline
-     *  reports phase 'before' until storyboard-elapsed ≥ BeginTime. */
+     *  reports phase TimelinePhase.Before until storyboard-elapsed ≥ BeginTime. */
     public BeginTime:    number         = 0;
 
     /** What happens at storyboard-elapsed ≥ BeginTime + Duration. See
@@ -67,7 +72,7 @@ export abstract class AnimationTimeline
     public Easing:       EasingFunction = Easings.Linear;
 
     /** Number of iterations. 1 = play once (default), Infinity = loop
-     *  forever (the storyboard never reaches the 'after' phase and
+     *  forever (the storyboard never reaches the TimelinePhase.After phase and
      *  never fires Completed). Fractional values are allowed (1.5 plays
      *  the back half of a second iteration); the final progress is
      *  computed against whatever phase of the partial iteration the
@@ -86,13 +91,13 @@ export abstract class AnimationTimeline
 
     public StateAt(t: number): TimelinePhase
     {
-        if (t < this.BeginTime) return 'before';
+        if (t < this.BeginTime) return TimelinePhase.Before;
         const iterDuration = this.AutoReverse ? this.Duration * 2 : this.Duration;
         const totalActive  = iterDuration * this.RepeatBehavior;
-        // RepeatBehavior=Infinity → totalActive=Infinity, never 'after'.
-        if (!Number.isFinite(totalActive)) return 'running';
-        if (t >= this.BeginTime + totalActive) return 'after';
-        return 'running';
+        // RepeatBehavior=Infinity → totalActive=Infinity, never TimelinePhase.After.
+        if (!Number.isFinite(totalActive)) return TimelinePhase.Running;
+        if (t >= this.BeginTime + totalActive) return TimelinePhase.After;
+        return TimelinePhase.Running;
     }
 
     /** Normalised progress at storyboard-elapsed `t`. Returned value is

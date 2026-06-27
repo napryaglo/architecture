@@ -2,7 +2,7 @@ import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from './test-app.js';
 
-import { Application, NoModifiers, PointerButton, Rect, Size, Element, Visual, type DrawingContext, type PointerEventInit } from '../../runtime/index.js';
+import { Application, Key, NoModifiers, PointerButton, Rect, Size, Element, Visual, type DrawingContext, type PointerEventInit } from '../../runtime/index.js';
 import { InputManager } from '../../framework/index.js';;
 import { Border } from '../border.js';
 import { DockPanel } from '../panels/dock-panel.js';
@@ -175,7 +175,7 @@ describe('Splitter — keyboard nudges', () => {
 
         const im = new InputManager();
         im.SetFocus(splitter);
-        im.InjectKeyDown({ Key: 'ArrowRight', Code: 'ArrowRight', Modifiers: NoModifiers, IsRepeat: false });
+        im.InjectKeyDown({ Key: Key.Right, KeyText: 'ArrowRight', Code: 'ArrowRight', Modifiers: NoModifiers, IsRepeat: false });
 
         assert.equal(prev.Width, 105);
     });
@@ -195,7 +195,7 @@ describe('Splitter — keyboard nudges', () => {
 
         const im = new InputManager();
         im.SetFocus(splitter);
-        im.InjectKeyDown({ Key: 'ArrowUp', Code: 'ArrowUp', Modifiers: NoModifiers, IsRepeat: false });
+        im.InjectKeyDown({ Key: Key.Up, KeyText: 'ArrowUp', Code: 'ArrowUp', Modifiers: NoModifiers, IsRepeat: false });
 
         assert.equal(prev.Width, 100, 'wrong-axis arrow ignored');
     });

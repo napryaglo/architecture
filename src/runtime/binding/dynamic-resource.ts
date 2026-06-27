@@ -4,7 +4,7 @@ import { Binding, BindingMode } from './binding.js';
 import type { ValueConverter } from './binding.js';
 import { MetaData } from '../metadata.js';
 import { Model } from '../model.js';
-import { getSchemeTransitionAnimator, ThemeManager } from '../../visual-engine/theme/index.js';
+import { getSchemeTransitionAnimator, SchemeTransitionTokens, ThemeManager } from '../../visual-engine/theme/index.js';
 import type { Visual } from '../../visual-engine/visual.js';
 
 // Internal Model that holds the most-recent resolved value of a
@@ -182,7 +182,7 @@ class DynamicResourceBinding extends Binding
         const transition = ThemeManager.EffectiveSchemeTransition;
         const factory    = getSchemeTransitionAnimator();
         if (transition !== undefined
-            && transition.tokens !== 'none'
+            && transition.tokens !== SchemeTransitionTokens.None
             && factory    !== undefined
             && oldValue   !== undefined)
         {

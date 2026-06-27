@@ -1,5 +1,5 @@
 import { Parser } from './parser.js';
-import { Compiler, EmitError, type CompilerOptions, type CompilerOutput } from './compiler.js';
+import { Compiler, EmitError, ExportName, type CompilerOptions, type CompilerOutput } from './compiler.js';
 import { DEFAULT_SLOT_INFO } from './symbol-table.js';
 
 // Public compiler entry points. The internal pipeline is the same for
@@ -37,7 +37,7 @@ export interface CompileResult
     isApplication: boolean;
     /** Suggested export name. Empty string for `'resources'` files (which
      *  carry one or more named class exports — branch on `kind`). */
-    exportName: 'app' | 'create' | '';
+    exportName: ExportName;
     /** Module → symbol set. Same data the imports header was built from
      *  — exposed for tooling that wants to introspect or post-process. */
     imports: Map<string, Set<string>>;

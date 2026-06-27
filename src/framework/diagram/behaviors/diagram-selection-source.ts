@@ -4,7 +4,7 @@ import {
     type PropertyKey,
 } from '../../../runtime/index.js';
 import { findDescriptor, resolveKey } from '../../../runtime/model-internals.js';
-import type { SelectionSource } from '../../../basic/index.js';
+import { HorizontalAnchor, VerticalAnchor, type SelectionSource } from '../../../basic/index.js';
 import type { Diagram } from '../diagram.js';
 
 // Adapter from Diagram's selection-bounds DPs (Phase C) + selected
@@ -115,8 +115,8 @@ export class DiagramSelectionSource implements SelectionSource
 
     public applyResize(
         dw: number, dh: number,
-        xAnchor: 'left' | 'right' | 'none',
-        yAnchor: 'top'  | 'bottom' | 'none',
+        xAnchor: HorizontalAnchor,
+        yAnchor: VerticalAnchor,
     ): void
     {
         if (this._snapshot === undefined) return;
@@ -129,8 +129,8 @@ export class DiagramSelectionSource implements SelectionSource
 
             const newW    = Math.max(MIN_DIMENSION, s.w + dw);
             const newH    = Math.max(MIN_DIMENSION, s.h + dh);
-            const newLeft = (xAnchor === 'right')  ? s.left + s.w - newW : s.left;
-            const newTop  = (yAnchor === 'bottom') ? s.top  + s.h - newH : s.top;
+            const newLeft = (xAnchor === HorizontalAnchor.Right)  ? s.left + s.w - newW : s.left;
+            const newTop  = (yAnchor === VerticalAnchor.Bottom) ? s.top  + s.h - newH : s.top;
 
             s.item.set_property_value_with_key(s.leftKey, newLeft);
             s.item.set_property_value_with_key(s.topKey,  newTop);

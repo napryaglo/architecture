@@ -1,3 +1,4 @@
+import { ModifierKeys, toModifierKeys } from '../../runtime/index.js';
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from '../../basic/tests/test-app.js';
@@ -50,8 +51,8 @@ describe('Diagram — Distribute on Figure items (new arch, with framework theme
     function selectAll(diagram: Diagram, items: readonly unknown[]): void {
         items.forEach((item, i) => {
             const mods = i === 0
-                ? { Control: false, Shift: false, Alt: false, Meta: false }
-                : { Control: true,  Shift: false, Alt: false, Meta: false };
+                ? ModifierKeys.None
+                : ModifierKeys.Control;
             diagram.HandleContainerClick(item as Visual, mods);
         });
     }
@@ -259,7 +260,7 @@ describe('Diagram — Distribute on Figure items (new arch, with framework theme
         const argsDown = {
             Kind: 'PointerDown' as const, Source: a, Visual: a,
             HostX: 150, HostY: 150, PointerId: 0,
-            Modifiers: { Control: false, Shift: false, Alt: false, Meta: false },
+            Modifiers: ModifierKeys.None,
             Handled: false,
             CapturePointer: () => {},
             ReleasePointerCapture: () => {},
@@ -299,11 +300,11 @@ describe('Diagram — Distribute on Figure items (new arch, with framework theme
         // Selection that mimics a marquee dragging across the canvas:
         // it picks the LEAVES of the group, not the Group itself.
         diagram.HandleContainerClick(standalone as unknown as Visual,
-            { Control: false, Shift: false, Alt: false, Meta: false });
+            ModifierKeys.None);
         diagram.HandleContainerClick(m1 as unknown as Visual,
-            { Control: true,  Shift: false, Alt: false, Meta: false });
+            ModifierKeys.Control);
         diagram.HandleContainerClick(m2 as unknown as Visual,
-            { Control: true,  Shift: false, Alt: false, Meta: false });
+            ModifierKeys.Control);
 
         diagram.AlignCenterCommand?.Execute();
         layout(surface);

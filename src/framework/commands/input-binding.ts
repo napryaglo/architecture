@@ -1,12 +1,14 @@
-import type { Visual } from '../../visual-engine/visual.js';
+import type { Element } from '../../visual-engine/element.js';
 import { Control } from '../base/control.js';
 import type { ICommand } from '../../runtime/command.js';
 import {
     _setInputBindingDispatcher,
+    hasModifier,
+    ModifierKeys,
     type KeyEventArgs,
     type PointerEventArgs,
-    type ModifierKeys,
 } from '../../visual-engine/routed-event.js';
+import { Key } from '../../visual-engine/input/key.js';
 import { RoutedCommand } from './routed-command.js';
 import { CommandManager } from './command-manager.js';
 
@@ -44,8 +46,8 @@ export abstract class InputBinding
     public CommandParameter: unknown;
 
     /** Optional explicit target for a RoutedCommand. When undefined the
-     *  binding's HOST Visual is the dispatch target. */
-    public CommandTarget: Visual | undefined;
+     *  binding's HOST Element is the dispatch target. */
+    public CommandTarget: Element | undefined;
 
     /** Sub-class hook: does the supplied routed-event args satisfy this
      *  binding's gesture? */
@@ -53,30 +55,25 @@ export abstract class InputBinding
     public abstract MatchesPointer(args: PointerEventArgs): boolean;
 }
 
-// KeyBinding — a (Key, Modifiers) → Command mapping. `Key` matches
-// against DOM KeyboardEvent.key — the LOGICAL character the press
-// produces (case-insensitive for ASCII letters). Modifiers are the four
-// standard ones; an undefined slot means "don't care" while a defined
-// boolean is an exact match requirement.
+// KeyBinding — a (Key, Modifiers) → Command mapping. `Key` is the
+// WPF-style virtual `Key` enum, compared by identity against
+// `KeyEventArgs.Key`. The enum already collapses Shift-case (`Key.S`
+// regardless of whether Shift produced 'S' or 's'); authors who require
+// Shift add `Modifiers=Shift`. Modifiers match exactly (WPF semantics).
 //
-// `Key` examples: 'S', 's', 'F4', 'ArrowUp', 'Enter', 'Escape', ' '
-// (space). Single-letter keys are compared case-insensitively so
-// declaring `Key=S` matches whether or not Shift is also active —
-// authors who care about the Shift case put `Shift=true` in Modifiers.
+// `Key` examples: `Key.S`, `Key.F4`, `Key.Up`, `Key.Return`,
+// `Key.Escape`, `Key.Space`.
 export class KeyBinding extends InputBinding
 {
-    /** The logical key. Compared against KeyEventArgs.Key. Single-char
-     *  alphabetics are matched case-insensitively. */
-    public Key: string;
+    /** The virtual key this binding fires on. Compared by identity
+     *  against `KeyEventArgs.Key`. */
+    public Key: Key;
 
-    /** Modifier requirements. An omitted modifier (undefined) is "don't
-     *  care"; a defined boolean is an exact-match requirement (Shift =
-     *  true means Shift MUST be down; Shift = false means Shift MUST
-     *  NOT be down). The four-modifier `ModifierKeys` shape from
-     *  routed-event.ts is the convenient form when all four are
-     *  specified; the binding stores the partial shape internally so
-     *  "don't care" stays expressible. */
-    public Modifiers: Partial<ModifierKeys>;
+    /** Required modifier set (exact match, WPF semantics). Default
+     *  `ModifierKeys.None`. The pressed modifiers must equal this for the
+     *  gesture to fire — `Modifiers=Control` matches Ctrl+key only, not
+     *  Ctrl+Shift+key. */
+    public Modifiers: ModifierKeys;
 
     // Human-readable gesture text — what a tooltip / menu writes next to
     // a command bound through this KeyBinding. Computed from Key +
@@ -96,10 +93,10 @@ export class KeyBinding extends InputBinding
     }
 
     constructor(
-        key:       string,
-        modifiers: Partial<ModifierKeys>,
+        key:       Key,
+        modifiers: ModifierKeys = ModifierKeys.None,
         command?:  ICommand,
-        target?:   Visual,
+        target?:   Element,
         displayString?: string,
     )
     {
@@ -117,7 +114,7 @@ export class KeyBinding extends InputBinding
         // gesture in WPF either. Distinguished from MouseBinding by the
         // event Kind on the args.
         if (args.Kind !== 'KeyDown') return false;
-        if (!keysEqual(args.Key, this.Key)) return false;
+        if (args.Key !== this.Key) return false;
         if (!modifiersMatch(args.Modifiers, this.Modifiers)) return false;
         return true;
     }
@@ -133,36 +130,47 @@ export class KeyBinding extends InputBinding
 // Exported so KeyGesture (see RoutedCommand.InputGestures advisory list)
 // and any future binding subclass can share a single formatter — keeps
 // "Ctrl+S" rendered identically wherever it surfaces.
-export function formatKeyGesture(key: string, m: Partial<ModifierKeys>): string
+export function formatKeyGesture(key: Key, m: ModifierKeys): string
 {
     const parts: string[] = [];
-    if (m.Control) parts.push('Ctrl');
-    if (m.Alt)     parts.push('Alt');
-    if (m.Shift)   parts.push('Shift');
-    if (m.Meta)    parts.push('Meta');
-    parts.push(key.length === 1 ? key.toUpperCase() : key);
+    if (hasModifier(m, ModifierKeys.Control)) parts.push('Ctrl');
+    if (hasModifier(m, ModifierKeys.Alt))     parts.push('Alt');
+    if (hasModifier(m, ModifierKeys.Shift))   parts.push('Shift');
+    if (hasModifier(m, ModifierKeys.Windows)) parts.push('Windows');
+    parts.push(keyLabel(key));
     return parts.join('+');
 }
 
-function keysEqual(a: string, b: string): boolean
+// Human-readable token for a single `Key` in a gesture string. Most keys
+// render as their enum value; a few get the conventional menu-chrome
+// spelling (digit rows, Enter/Backspace, common punctuation OEM keys).
+function keyLabel(key: Key): string
 {
-    if (a === b) return true;
-    // ASCII case-insensitive match for single-character keys. Multi-
-    // character key names ('ArrowUp', 'F4', …) must match exactly.
-    if (a.length === 1 && b.length === 1)
+    if (/^D[0-9]$/.test(key)) return key.slice(1);            // D5 → 5
+    switch (key)
     {
-        return a.toLowerCase() === b.toLowerCase();
+        case Key.Return:    return 'Enter';
+        case Key.Back:      return 'Backspace';
+        case Key.Escape:    return 'Esc';
+        case Key.Space:     return 'Space';
+        case Key.OemPlus:   return '+';
+        case Key.OemMinus:  return '-';
+        case Key.OemComma:  return ',';
+        case Key.OemPeriod: return '.';
+        default:            return key;
     }
-    return false;
 }
 
-function modifiersMatch(actual: ModifierKeys, expected: Partial<ModifierKeys>): boolean
+// Exact modifier match (WPF KeyGesture / MouseAction semantics): the
+// pressed modifier set must equal the binding's declared set. `Key=S`
+// with no Modifiers fires only when no modifier is held; require
+// `Modifiers=Control` for Ctrl+S, `Modifiers=Control,Shift` for
+// Ctrl+Shift+S. (The pre-parity build allowed per-modifier "don't
+// care"; exact match matches WPF and composes cleanly with the Key
+// enum.)
+function modifiersMatch(actual: ModifierKeys, expected: ModifierKeys): boolean
 {
-    if (expected.Shift   !== undefined && expected.Shift   !== actual.Shift)   return false;
-    if (expected.Control !== undefined && expected.Control !== actual.Control) return false;
-    if (expected.Alt     !== undefined && expected.Alt     !== actual.Alt)     return false;
-    if (expected.Meta    !== undefined && expected.Meta    !== actual.Meta)    return false;
-    return true;
+    return actual === expected;
 }
 
 // MouseBinding — gesture-on-pointer mapping. Only a small set of
@@ -170,7 +178,7 @@ function modifiersMatch(actual: ModifierKeys, expected: Partial<ModifierKeys>): 
 // LeftDoubleClick, RightDoubleClick, MiddleDoubleClick }. WPF has more
 // (chorded buttons, drag-from), but those add little when authors can
 // fall back to PointerDown handlers for the unusual cases.
-export enum MouseGesture
+export enum MouseAction
 {
     LeftClick         = 'LeftClick',
     RightClick        = 'RightClick',
@@ -182,16 +190,16 @@ export enum MouseGesture
 
 export class MouseBinding extends InputBinding
 {
-    /** Pointer gesture (button + click count). Modifier overlay is the
-     *  same partial-match shape as KeyBinding. */
-    public Gesture:   MouseGesture;
-    public Modifiers: Partial<ModifierKeys>;
+    /** Pointer gesture (button + click count). Modifiers are an exact
+     *  match, same as KeyBinding. */
+    public Gesture:   MouseAction;
+    public Modifiers: ModifierKeys;
 
     constructor(
-        gesture: MouseGesture,
-        modifiers: Partial<ModifierKeys> = {},
+        gesture: MouseAction,
+        modifiers: ModifierKeys = ModifierKeys.None,
         command?: ICommand,
-        target?: Visual,
+        target?: Element,
     )
     {
         super();
@@ -219,12 +227,12 @@ export class MouseBinding extends InputBinding
         let requireDouble = false;
         switch (this.Gesture)
         {
-            case MouseGesture.LeftClick:         buttonOk = args.Button === /*Primary*/   0; break;
-            case MouseGesture.MiddleClick:       buttonOk = args.Button === /*Middle*/    1; break;
-            case MouseGesture.RightClick:        buttonOk = args.Button === /*Secondary*/ 2; break;
-            case MouseGesture.LeftDoubleClick:   buttonOk = args.Button === /*Primary*/   0; requireDouble = true; break;
-            case MouseGesture.MiddleDoubleClick: buttonOk = args.Button === /*Middle*/    1; requireDouble = true; break;
-            case MouseGesture.RightDoubleClick:  buttonOk = args.Button === /*Secondary*/ 2; requireDouble = true; break;
+            case MouseAction.LeftClick:         buttonOk = args.Button === /*Primary*/   0; break;
+            case MouseAction.MiddleClick:       buttonOk = args.Button === /*Middle*/    1; break;
+            case MouseAction.RightClick:        buttonOk = args.Button === /*Secondary*/ 2; break;
+            case MouseAction.LeftDoubleClick:   buttonOk = args.Button === /*Primary*/   0; requireDouble = true; break;
+            case MouseAction.MiddleDoubleClick: buttonOk = args.Button === /*Middle*/    1; requireDouble = true; break;
+            case MouseAction.RightDoubleClick:  buttonOk = args.Button === /*Secondary*/ 2; requireDouble = true; break;
             default:                             buttonOk = false; break;
         }
         if (!buttonOk) return false;
@@ -243,7 +251,7 @@ export class MouseBinding extends InputBinding
 // Returns true if a binding fired (the args.Handled flag is set on
 // match).
 export function _tryFireInputBindingsForVisual(
-    host: Visual,
+    host: Element,
     args: KeyEventArgs | PointerEventArgs,
 ): boolean
 {
@@ -278,7 +286,7 @@ function matchesBinding(b: InputBinding, args: KeyEventArgs | PointerEventArgs):
 
 function fireBinding(
     b: InputBinding,
-    host: Visual,
+    host: Element,
     args: KeyEventArgs | PointerEventArgs,
 ): boolean
 {

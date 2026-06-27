@@ -1,3 +1,4 @@
+import { ModifierKeys, toModifierKeys } from '../../../runtime/index.js';
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from '../../../basic/tests/test-app.js';
@@ -18,7 +19,7 @@ function pointer(mods: Partial<ModifierKeys> = {}): PointerEventInit
         HostY:       0,
         Button:      PointerButton.Primary,
         Buttons:     1,
-        Modifiers:   { ...NoModifiers, ...mods },
+        Modifiers:   toModifierKeys({ shift: mods.Shift, control: mods.Control, alt: mods.Alt, meta: mods.Meta }),
         PointerId:   0,
         Pressure:    0,
         PointerType: 'mouse',

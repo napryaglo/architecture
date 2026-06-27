@@ -11,7 +11,7 @@ export {
     SetTheme,
     CurrentTheme,
     ToggleTheme,
-    type MaterialThemeName,
+    MaterialThemeName,
 } from './material.js';
 export {
     DynamicSchemeVariant,

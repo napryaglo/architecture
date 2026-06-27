@@ -2,6 +2,7 @@ import {
     Visual,
     type FocusEventArgs,
     type KeyEventArgs,
+    Key,
 } from '../runtime/index.js';
 import type { PresentationTarget } from '../visual-engine/index.js';
 import { ToolTipService } from './tooltips/tooltip-service.js';
@@ -169,7 +170,7 @@ export function showDialog<T = unknown>(
 
     function onKeyDown(args: KeyEventArgs): void
     {
-        if (args.Key === 'Escape')
+        if (args.Key === Key.Escape)
         {
             args.Handled = true;
             close(cancelValue);

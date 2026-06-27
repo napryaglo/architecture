@@ -170,7 +170,7 @@ export class ScrollBar extends TemplatedControl
         // declaratively from the DefaultScrollBar template's
         // `when(PART_Thumb.IsMouseOver)` trigger — no imperative brush
         // refresh.
-        this._thumb.AddPropertyChangedListener(Visual.IsMouseOverKey, () => {
+        this._thumb.AddPropertyChangedListener(Element.IsMouseOverKey, () => {
             if (this._thumb.IsMouseOver) this.pulseActivity();
         });
         // Auto-hide reaction to programmatic scroll. The Value DP

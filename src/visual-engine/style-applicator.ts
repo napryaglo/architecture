@@ -84,6 +84,12 @@ interface EnsureEvdHost
 // and will call back into `StyleApplicator.ApplySetter` /
 // `UnapplySetter` for trigger-tier setter writes the way the install
 // methods do today.
+export enum SetterTier
+{
+    Style   = 'style',
+    Trigger = 'trigger',
+}
+
 export class StyleApplicator
 {
     private _activeStyle:            Style                       | undefined;
@@ -146,12 +152,12 @@ export class StyleApplicator
         for (const [name, prevSetter] of prevSetters)
         {
             if (nextSetters.get(name) === prevSetter) continue;
-            this.UnapplySetter(prevSetter, 'style');
+            this.UnapplySetter(prevSetter, SetterTier.Style);
         }
         for (const [name, nextSetter] of nextSetters)
         {
             if (prevSetters.get(name) === nextSetter) continue;
-            this.ApplySetter(nextSetter, 'style');
+            this.ApplySetter(nextSetter, SetterTier.Style);
         }
 
         // Element implements `ITriggerHost`; address it directly
@@ -224,7 +230,7 @@ export class StyleApplicator
      *                          a writeback listener tracked via the
      *                          per-tier writeback map.
      *    * any other value   — pushed to the tier directly. */
-    public ApplySetter(setter: Setter, tier: 'style' | 'trigger'): void
+    public ApplySetter(setter: Setter, tier: SetterTier): void
     {
         const descriptor = resolveSetterDescriptor(setter);
         if (descriptor === undefined) return;
@@ -258,7 +264,7 @@ export class StyleApplicator
                 suppressTargetListener = true;
                 try
                 {
-                    if (tier === 'style') evd.SetStyleValue(v);
+                    if (tier === SetterTier.Style) evd.SetStyleValue(v);
                     else                  evd.SetTriggerValue(setter, v);
                 }
                 finally
@@ -300,7 +306,7 @@ export class StyleApplicator
                 evd.AddChangeListener(targetListener);
             }
 
-            const bindings = tier === 'style'
+            const bindings = tier === SetterTier.Style
                 ? (this._styleSetterBindings   ??= new Map())
                 : (this._triggerSetterBindings ??= new Map());
             bindings.set(setter, binding);
@@ -311,7 +317,7 @@ export class StyleApplicator
             // makes the per-tier storage explicit.
             if (targetListener !== undefined)
             {
-                const writeback = tier === 'style'
+                const writeback = tier === SetterTier.Style
                     ? (this._styleSetterWriteback   ??= new Map())
                     : (this._triggerSetterWriteback ??= new Map());
                 writeback.set(setter, { evd, listener: targetListener });
@@ -319,7 +325,7 @@ export class StyleApplicator
         }
         else
         {
-            if (tier === 'style') evd.SetStyleValue(value);
+            if (tier === SetterTier.Style) evd.SetStyleValue(value);
             else                  evd.SetTriggerValue(setter, value);
         }
     }
@@ -333,15 +339,15 @@ export class StyleApplicator
      *  fall-through value (typically the descriptor's default) back
      *  to the source VM, destroying genuine VM state on every Style
      *  swap / container teardown. */
-    public UnapplySetter(setter: Setter, tier: 'style' | 'trigger'): void
+    public UnapplySetter(setter: Setter, tier: SetterTier): void
     {
         const descriptor = resolveSetterDescriptor(setter);
         if (descriptor === undefined) return;
         const target = this._target;
         const key = Model.compose_key(descriptor.RootOwner, descriptor.Name);
         const evd = propertyValues(target).get(key);
-        const bindings  = tier === 'style' ? this._styleSetterBindings   : this._triggerSetterBindings;
-        const writeback = tier === 'style' ? this._styleSetterWriteback  : this._triggerSetterWriteback;
+        const bindings  = tier === SetterTier.Style ? this._styleSetterBindings   : this._triggerSetterBindings;
+        const writeback = tier === SetterTier.Style ? this._styleSetterWriteback  : this._triggerSetterWriteback;
         const binding = bindings?.get(setter);
         if (binding !== undefined)
         {
@@ -354,7 +360,7 @@ export class StyleApplicator
         }
         if (evd !== undefined)
         {
-            if (tier === 'style') evd.ClearStyleValue();
+            if (tier === SetterTier.Style) evd.ClearStyleValue();
             else                  evd.ClearTriggerValue(setter);
         }
         if (binding !== undefined)

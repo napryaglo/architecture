@@ -63,6 +63,11 @@ Start with whichever doc matches what you're trying to do.
   `DrawGeometry` / `DrawText` / `PushTransform` / `PushClip` / `Pop`),
   brushes (`SolidColorBrush`, gradients, `ImageBrush`), `Pen`, `Geometry`,
   `Transform`, geometric primitives.
+- **[color-routines.md](color-routines.md)** — inline color in `.mu`: `#hex`
+  / `#name` literals, the `Color` runtime type (`FromHex` / `Lerp` /
+  `AdjustSaturation` / `WithAlpha`), and the `<<` color-modifier pipe
+  (`Lighten` / `Darken` / `Mix` / `Saturate` / `Desaturate` / `Alpha`), with
+  static-fold vs. reactive `@resource` lowering and custom modifiers.
 - **[targets.md](targets.md)** — `PresentationTarget` hierarchy
   (`HtmlTarget` / `FileTarget` / `HeadlessTarget`), `SvgDrawingContext`.
 - **[text-measurement.md](text-measurement.md)** — `TextMeasurer` interface,

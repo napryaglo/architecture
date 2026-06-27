@@ -1,3 +1,4 @@
+import { ModifierKeys, toModifierKeys } from '../../runtime/index.js';
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from './test-app.js';
@@ -26,9 +27,9 @@ function pointer(overrides: Partial<PointerEventInit> = {}): PointerEventInit
     };
 }
 
-function mods(overrides: Partial<ModifierKeys> = {}): ModifierKeys
+function mods(overrides: { Shift?: boolean; Control?: boolean; Alt?: boolean; Meta?: boolean } = {}): ModifierKeys
 {
-    return { ...NoModifiers, ...overrides };
+    return toModifierKeys({ shift: overrides.Shift, control: overrides.Control, alt: overrides.Alt, meta: overrides.Meta });
 }
 
 // Build a ListBox with three rows of fixed height that align to the

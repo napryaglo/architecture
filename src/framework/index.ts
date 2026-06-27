@@ -107,7 +107,7 @@ export {
     InputBinding,
     KeyBinding,
     MouseBinding,
-    MouseGesture,
+    MouseAction,
 } from './commands/input-binding.js';
 export {
     CommandSourceHelper,

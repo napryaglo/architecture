@@ -1,3 +1,4 @@
+import { ModifierKeys, toModifierKeys } from '../../../runtime/index.js';
 // Step 12 / § 9 of [src/document/connectors.md](../../../document/connectors.md):
 // pins the two-channel selection API per § 7.3 — SelectConnector /
 // DeselectConnector / IsConnectorSelected / SelectedConnectors live
@@ -9,8 +10,8 @@ import assert from 'node:assert/strict';
 
 import {
     Application,
-    KeyEventArgs,
-    MetaData,
+    Key,
+    KeyEventArgs,    MetaData,
     Model,
     ObservableCollection,
     SetterFactory,
@@ -89,16 +90,17 @@ function selectFigure(diagram: Diagram, item: LeafVM): void
 {
     const container = diagram.Generator.ContainerFromItem(item);
     if (container === undefined) throw new Error('no container for item');
-    diagram.HandleContainerClick(container, { Control: true, Shift: false, Alt: false, Meta: false });
+    diagram.HandleContainerClick(container, ModifierKeys.Control);
 }
 
-function dispatchKeyDown(diagram: Diagram, key: string): KeyEventArgs
+function dispatchKeyDown(diagram: Diagram, key: Key): KeyEventArgs
 {
     const args = new KeyEventArgs('KeyDown', diagram, {
         Key:       key,
+        KeyText:       key,
         Code:      key,
-        Modifiers: { Control: false, Shift: false, Alt: false, Meta: false },
-        Repeat:    false,
+        Modifiers: ModifierKeys.None,
+        IsRepeat:    false,
     });
     (diagram as unknown as { OnKeyDown(a: KeyEventArgs): void }).OnKeyDown(args);
     return args;
@@ -177,7 +179,7 @@ describe('Diagram — Delete with mixed selection fires DeleteRequested with bot
         diagram.AddDeleteRequestedListener(args => captured.push(args));
         selectFigure(diagram, a);
 
-        dispatchKeyDown(diagram, 'Delete');
+        dispatchKeyDown(diagram, Key.Delete);
         assert.equal(captured.length, 1);
         assert.equal(captured[0]!.Items.length, 1);
         assert.equal(captured[0]!.Items[0], a);
@@ -191,7 +193,7 @@ describe('Diagram — Delete with mixed selection fires DeleteRequested with bot
         const conn = makeConnector();
         diagram.SelectConnector(conn);
 
-        const args = dispatchKeyDown(diagram, 'Delete');
+        const args = dispatchKeyDown(diagram, Key.Delete);
         assert.equal(captured.length, 1);
         assert.equal(captured[0]!.Items.length, 0);
         assert.equal(captured[0]!.Connectors.length, 1);
@@ -212,7 +214,7 @@ describe('Diagram — Delete with mixed selection fires DeleteRequested with bot
         diagram.SelectConnector(conn1);
         diagram.SelectConnector(conn2);
 
-        dispatchKeyDown(diagram, 'Delete');
+        dispatchKeyDown(diagram, Key.Delete);
         assert.ok(captured !== undefined);
         assert.equal(captured!.Items.length, 2);
         assert.equal(captured!.Connectors.length, 2);
@@ -224,7 +226,7 @@ describe('Diagram — Delete with mixed selection fires DeleteRequested with bot
         const { diagram } = setup([]);
         let fired = 0;
         diagram.AddDeleteRequestedListener(() => { fired++; });
-        const args = dispatchKeyDown(diagram, 'Delete');
+        const args = dispatchKeyDown(diagram, Key.Delete);
         assert.equal(fired, 0);
         assert.equal(args.Handled, false);
     });
@@ -235,7 +237,7 @@ describe('Diagram — Delete with mixed selection fires DeleteRequested with bot
         diagram.AddDeleteRequestedListener(args => { captured = args; });
         diagram.SelectConnector(makeConnector());
 
-        dispatchKeyDown(diagram, 'Backspace');
+        dispatchKeyDown(diagram, Key.Back);
         assert.ok(captured !== undefined);
         assert.equal(captured!.Connectors.length, 1);
     });
@@ -256,7 +258,7 @@ describe('Diagram — Delete with mixed selection fires DeleteRequested with bot
         selectFigure(diagram, a);
         diagram.SelectConnector(conn);
 
-        dispatchKeyDown(diagram, 'Delete');
+        dispatchKeyDown(diagram, Key.Delete);
         assert.ok(captured !== undefined);
         assert.equal(captured!.Items.length, 1);
         assert.equal(captured!.Connectors.length, 1);

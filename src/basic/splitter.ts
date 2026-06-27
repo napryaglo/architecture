@@ -9,6 +9,7 @@ import {
     Element, Visual,
     type DrawingContext,
     type KeyEventArgs,
+    Key,
 } from '../runtime/index.js';
 import { Brush } from '../visual-engine/index.js';
 import { Orientation } from './panels/stack-panel.js';
@@ -257,10 +258,10 @@ export class Splitter extends Thumb
         let delta: number;
         switch (args.Key)
         {
-            case 'ArrowLeft':  if (!isVertical) return; delta = -inc; break;
-            case 'ArrowRight': if (!isVertical) return; delta =  inc; break;
-            case 'ArrowUp':    if (isVertical)  return; delta = -inc; break;
-            case 'ArrowDown':  if (isVertical)  return; delta =  inc; break;
+            case Key.Left:  if (!isVertical) return; delta = -inc; break;
+            case Key.Right: if (!isVertical) return; delta =  inc; break;
+            case Key.Up:    if (isVertical)  return; delta = -inc; break;
+            case Key.Down:  if (isVertical)  return; delta =  inc; break;
             default: return;
         }
         const target = this.findPreviousSibling();

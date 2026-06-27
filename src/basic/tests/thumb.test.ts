@@ -2,7 +2,7 @@ import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from './test-app.js';
 
-import { Application, NoModifiers, PointerButton, Rect, Size, type KeyEventInit, type PointerEventInit } from '../../runtime/index.js';
+import { Application, Key, NoModifiers, PointerButton, Rect, Size, type KeyEventInit, type PointerEventInit } from '../../runtime/index.js';
 import { InputManager } from '../../framework/index.js';;
 import { Thumb } from '../scroll/thumb.js';
 
@@ -21,10 +21,11 @@ function pointer(overrides: Partial<PointerEventInit> = {}): PointerEventInit
     };
 }
 
-function key(k: string): KeyEventInit
+function key(k: Key): KeyEventInit
 {
     return {
         Key:       k,
+        KeyText:       k,
         Code:      k,
         Modifiers: NoModifiers,
         IsRepeat:  false,
@@ -137,7 +138,7 @@ describe('Thumb — drag lifecycle', () => {
         // through its own focusedVisual store, so set it explicitly so
         // InjectKeyDown has a routing target.
         im.SetFocus(t);
-        im.InjectKeyDown(key('Escape'));
+        im.InjectKeyDown(key(Key.Escape));
         assert.equal(t.IsDragging, false);
         assert.ok(completed);
         assert.equal(completed!.canceled, true);

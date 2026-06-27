@@ -1,8 +1,9 @@
+import { ModifierKeys, toModifierKeys } from '../../runtime/index.js';
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from './test-app.js';
 
-import { Application, NoModifiers, Panel, PointerButton, Visual, type FocusEventArgs, type KeyEventArgs, type KeyEventInit, type ModifierKeys, type PointerEventInit } from '../../runtime/index.js';
+import { Application, Key, NoModifiers, Panel, PointerButton, Visual, type FocusEventArgs, type KeyEventArgs, type KeyEventInit, type ModifierKeys, type PointerEventInit } from '../../runtime/index.js';
 import { resolveKey } from '../../runtime/model-internals.js';
 import { InputManager } from '../../framework/index.js';;
 import { HeadlessTarget } from '../../visual-engine/index.js';
@@ -23,12 +24,13 @@ function pointer(overrides: Partial<PointerEventInit> = {}): PointerEventInit
     };
 }
 
-function key(k: string, mods: Partial<ModifierKeys> = {}, code?: string): KeyEventInit
+function key(k: Key, mods: Partial<ModifierKeys> = {}, code?: string): KeyEventInit
 {
     return {
         Key:       k,
+        KeyText:       k,
         Code:      code ?? k,
-        Modifiers: { ...NoModifiers, ...mods },
+        Modifiers: toModifierKeys({ shift: mods.Shift, control: mods.Control, alt: mods.Alt, meta: mods.Meta }),
         IsRepeat:  false,
     };
 }
@@ -137,7 +139,7 @@ describe('Focus model — runtime plumbing', () => {
 
     test('InjectKeyDown with no focused visual is a no-op', () => {
         const im = new InputManager();
-        const ok = im.InjectKeyDown(key('a'));
+        const ok = im.InjectKeyDown(key(Key.A));
         assert.equal(ok, false);
     });
 
@@ -196,12 +198,12 @@ describe('TextBox — text input', () => {
         im.SetFocus(tb);
 
         // Default: Enter is not absorbed, no newline inserted.
-        const beforeHandled = im.InjectKeyDown(key('Enter'));
+        const beforeHandled = im.InjectKeyDown(key(Key.Return));
         assert.equal(beforeHandled, false);
         assert.equal(tb.Text, 'abc');
 
         tb.AcceptsReturn = true;
-        const afterHandled = im.InjectKeyDown(key('Enter'));
+        const afterHandled = im.InjectKeyDown(key(Key.Return));
         assert.equal(afterHandled, true);
         assert.equal(tb.Text, 'ab\nc');
         assert.equal(tb.CaretIndex, 3);
@@ -215,7 +217,7 @@ describe('TextBox — editing keys', () => {
         const { tb, im } = fixture('hello');
         tb.Select(3, 0);                   // caret between 'l' and 'l'
         im.SetFocus(tb);
-        im.InjectKeyDown(key('Backspace'));
+        im.InjectKeyDown(key(Key.Back));
         assert.equal(tb.Text, 'helo');
         assert.equal(tb.CaretIndex, 2);
     });
@@ -224,7 +226,7 @@ describe('TextBox — editing keys', () => {
         const { tb, im } = fixture('hello world');
         tb.Select(5, 6);                   // ' world'
         im.SetFocus(tb);
-        im.InjectKeyDown(key('Backspace'));
+        im.InjectKeyDown(key(Key.Back));
         assert.equal(tb.Text, 'hello');
         assert.equal(tb.CaretIndex, 5);
     });
@@ -233,7 +235,7 @@ describe('TextBox — editing keys', () => {
         const { tb, im } = fixture('hello');
         tb.Select(0, 0);
         im.SetFocus(tb);
-        im.InjectKeyDown(key('Delete'));
+        im.InjectKeyDown(key(Key.Delete));
         assert.equal(tb.Text, 'ello');
         assert.equal(tb.CaretIndex, 0);
     });
@@ -242,7 +244,7 @@ describe('TextBox — editing keys', () => {
         const { tb, im } = fixture('abc');
         tb.Select(0, 0);
         im.SetFocus(tb);
-        im.InjectKeyDown(key('Backspace'));
+        im.InjectKeyDown(key(Key.Back));
         assert.equal(tb.Text, 'abc');
     });
 });
@@ -255,10 +257,10 @@ describe('TextBox — navigation', () => {
         tb.Select(2, 0);
         im.SetFocus(tb);
 
-        im.InjectKeyDown(key('ArrowLeft'));
+        im.InjectKeyDown(key(Key.Left));
         assert.equal(tb.CaretIndex, 1);
 
-        im.InjectKeyDown(key('ArrowRight'));
+        im.InjectKeyDown(key(Key.Right));
         assert.equal(tb.CaretIndex, 2);
     });
 
@@ -267,12 +269,12 @@ describe('TextBox — navigation', () => {
         tb.Select(1, 0);
         im.SetFocus(tb);
 
-        im.InjectKeyDown(key('ArrowRight', { Shift: true }));
+        im.InjectKeyDown(key(Key.Right, { Shift: true }));
         assert.equal(tb.SelectionStart,  1);
         assert.equal(tb.SelectionLength, 1);
         assert.equal(tb.CaretIndex,      2);
 
-        im.InjectKeyDown(key('ArrowRight', { Shift: true }));
+        im.InjectKeyDown(key(Key.Right, { Shift: true }));
         assert.equal(tb.SelectionLength, 2);
         assert.equal(tb.CaretIndex,      3);
     });
@@ -283,7 +285,7 @@ describe('TextBox — navigation', () => {
         im.SetFocus(tb);
         target.Flush();                    // ensure editor lines are measured
 
-        im.InjectKeyDown(key('ArrowDown'));
+        im.InjectKeyDown(key(Key.Down));
         // Expected: line 1 col 3 → index 5 + 1 + 3 = 9 ('s', 'e', 'c', |, 'o', ...)
         const { line, col } = lineColOf(tb, tb.CaretIndex);
         assert.equal(line, 1);
@@ -295,10 +297,10 @@ describe('TextBox — navigation', () => {
         tb.Select(0, 0);
         im.SetFocus(tb);
 
-        im.InjectKeyDown(key('ArrowRight', { Control: true }));
+        im.InjectKeyDown(key(Key.Right, { Control: true }));
         assert.equal(tb.CaretIndex, 5);     // after 'hello'
 
-        im.InjectKeyDown(key('ArrowRight', { Control: true }));
+        im.InjectKeyDown(key(Key.Right, { Control: true }));
         assert.equal(tb.CaretIndex, 11);    // after 'world'
     });
 
@@ -308,11 +310,11 @@ describe('TextBox — navigation', () => {
         im.SetFocus(tb);
         target.Flush();
 
-        im.InjectKeyDown(key('Home'));
+        im.InjectKeyDown(key(Key.Home));
         // line 1, col 0 = index 6
         assert.equal(tb.CaretIndex, 6);
 
-        im.InjectKeyDown(key('End'));
+        im.InjectKeyDown(key(Key.End));
         // line 1, col 5 = index 11
         assert.equal(tb.CaretIndex, 11);
     });
@@ -321,14 +323,14 @@ describe('TextBox — navigation', () => {
         const { tb, im } = fixture('abc\ndef\nghi');
         tb.Select(0, 0);
         im.SetFocus(tb);
-        im.InjectKeyDown(key('End', { Control: true }));
+        im.InjectKeyDown(key(Key.End, { Control: true }));
         assert.equal(tb.CaretIndex, 11);
     });
 
     test('Ctrl+A selects everything', () => {
         const { tb, im } = fixture('hello world');
         im.SetFocus(tb);
-        im.InjectKeyDown(key('a', { Control: true }));
+        im.InjectKeyDown(key(Key.A, { Control: true }));
         assert.equal(tb.SelectionStart,  0);
         assert.equal(tb.SelectionLength, 11);
     });
@@ -363,7 +365,7 @@ describe('TextBox — mouse positioning', () => {
 
         // Shift+click left — keeps anchor at 5, moves caret left,
         // produces non-empty selection.
-        im.InjectPointerDown(tb, pointer({ HostX: 12, HostY: 12, Modifiers: { ...NoModifiers, Shift: true } }));
+        im.InjectPointerDown(tb, pointer({ HostX: 12, HostY: 12, Modifiers: ModifierKeys.Shift }));
         assert.ok(tb.SelectionLength > 0, `expected non-empty selection after shift-click, got ${tb.SelectionLength}`);
         assert.equal(tb.SelectionStart + tb.SelectionLength, 5);
     });
@@ -380,7 +382,7 @@ describe('TextBox — clipboard', () => {
             const { tb, im } = fixture('hello world');
             tb.Select(6, 5);                // 'world'
             im.SetFocus(tb);
-            im.InjectKeyDown(key('c', { Control: true }));
+            im.InjectKeyDown(key(Key.C, { Control: true }));
             // Promise resolves on the microtask — flush and re-check.
             await Promise.resolve();
             assert.equal(cb.Buffer, 'world');
@@ -398,7 +400,7 @@ describe('TextBox — clipboard', () => {
             const { tb, im } = fixture('alpha beta gamma');
             tb.Select(6, 4);                // 'beta'
             im.SetFocus(tb);
-            im.InjectKeyDown(key('x', { Control: true }));
+            im.InjectKeyDown(key(Key.X, { Control: true }));
             // The clipboard write is async; the model mutation is sync.
             assert.equal(tb.Text, 'alpha  gamma');
             await Promise.resolve();
@@ -416,7 +418,7 @@ describe('TextBox — clipboard', () => {
             const { tb, im } = fixture('ab');
             tb.Select(1, 0);                // caret between 'a' and 'b'
             im.SetFocus(tb);
-            im.InjectKeyDown(key('v', { Control: true }));
+            im.InjectKeyDown(key(Key.V, { Control: true }));
             // Read completes on the microtask; wait for paste to settle.
             await Promise.resolve();
             await Promise.resolve();
@@ -479,7 +481,7 @@ describe('TextBox — caret + selection re-render plumbing', () => {
         const renderDirty = (target as unknown as { renderDirty: Set<Visual> }).renderDirty;
         renderDirty.clear();
 
-        im.InjectKeyDown(key('ArrowRight'));
+        im.InjectKeyDown(key(Key.Right));
         assert.ok(renderDirty.has(editor),
             'expected the editor to be marked render-dirty after caret movement');
     });

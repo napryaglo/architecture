@@ -245,6 +245,13 @@ export interface AutoSchemeOptions
 // `registerSchemeTransitionAnimator`; DynamicResource consults the
 // factory on each resolved-value change and Begins a Storyboard on
 // its watcher when a timeline is produced.
+export enum SchemeTransitionTokens
+{
+    All         = 'all',
+    BrushesOnly = 'brushes-only',
+    None        = 'none',
+}
+
 export interface SchemeTransition
 {
     /** Animation length in milliseconds. */
@@ -255,7 +262,7 @@ export interface SchemeTransition
     /** Which token types to animate. `'brushes-only'` is the default
      *  and only fully-supported value today. `'none'` skips the
      *  factory call entirely — every swap snaps. */
-    tokens?:  'all' | 'brushes-only' | 'none';
+    tokens?:  SchemeTransitionTokens;
 }
 
 // Builder that produces a timeline for a single resolved-value change.

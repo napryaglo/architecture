@@ -1,11 +1,12 @@
+import { ModifierKeys, toModifierKeys } from '../../../runtime/index.js';
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from '../../../basic/tests/test-app.js';
 
 import {
     KeyEventArgs,
-    NoModifiers,
-    Visual,
+    Key,
+    NoModifiers,    Visual,
     type ModifierKeys,
 } from '../../../runtime/index.js';
 import { Border } from '../../../basic/border.js';
@@ -22,11 +23,10 @@ class TestSelector extends Selector
 {
     constructor() { super(); }
     public AddTestChild(c: Visual): void { this.AttachContainer(c); }
-    public TriggerKey(key: string, mods: Partial<ModifierKeys> = {}): boolean
+    public TriggerKey(key: Key, mods: Partial<ModifierKeys> = {}): boolean
     {
         const args = new KeyEventArgs('KeyDown', this, {
-            Key: key, Code: key,
-            Modifiers: { ...NoModifiers, ...mods },
+            Key: key, KeyText: key, Code: key,            Modifiers: toModifierKeys({ shift: mods.Shift, control: mods.Control, alt: mods.Alt, meta: mods.Meta }),
             IsRepeat: false,
         });
         (this as unknown as { OnKeyDown(a: KeyEventArgs): void }).OnKeyDown(args);
@@ -77,7 +77,7 @@ describe('§ 10.8 — Selector keyboard navigation', () => {
 
     test('ArrowDown with no prior focus selects the first container', () => {
         const { selector, children } = makeSelector(5);
-        assert.equal(selector.TriggerKey('ArrowDown'), true);
+        assert.equal(selector.TriggerKey(Key.Down), true);
         assert.equal(selector.FocusedContainer, children[0]);
         assert.equal(selector.SelectedItem, children[0]);
     });
@@ -85,7 +85,7 @@ describe('§ 10.8 — Selector keyboard navigation', () => {
     test('ArrowDown advances focus + selection by one container', () => {
         const { selector, children } = makeSelector(5);
         selector.SetFocused(children[1]);
-        selector.TriggerKey('ArrowDown');
+        selector.TriggerKey(Key.Down);
         assert.equal(selector.FocusedContainer, children[2]);
         assert.equal(selector.SelectedItem, children[2]);
     });
@@ -93,21 +93,21 @@ describe('§ 10.8 — Selector keyboard navigation', () => {
     test('ArrowDown at the end stays on the last container', () => {
         const { selector, children } = makeSelector(3);
         selector.SetFocused(children[2]);
-        selector.TriggerKey('ArrowDown');
+        selector.TriggerKey(Key.Down);
         assert.equal(selector.FocusedContainer, children[2]);
     });
 
     test('ArrowUp at the start stays on the first container', () => {
         const { selector, children } = makeSelector(3);
         selector.SetFocused(children[0]);
-        selector.TriggerKey('ArrowUp');
+        selector.TriggerKey(Key.Up);
         assert.equal(selector.FocusedContainer, children[0]);
     });
 
     test('Home jumps to the first container', () => {
         const { selector, children } = makeSelector(5);
         selector.SetFocused(children[3]);
-        selector.TriggerKey('Home');
+        selector.TriggerKey(Key.Home);
         assert.equal(selector.FocusedContainer, children[0]);
         assert.equal(selector.SelectedItem, children[0]);
     });
@@ -115,7 +115,7 @@ describe('§ 10.8 — Selector keyboard navigation', () => {
     test('End jumps to the last container', () => {
         const { selector, children } = makeSelector(5);
         selector.SetFocused(children[0]);
-        selector.TriggerKey('End');
+        selector.TriggerKey(Key.End);
         assert.equal(selector.FocusedContainer, children[4]);
         assert.equal(selector.SelectedItem, children[4]);
     });
@@ -123,14 +123,14 @@ describe('§ 10.8 — Selector keyboard navigation', () => {
     test('PageDown advances by viewport count (default 10) clamped at end', () => {
         const { selector, children } = makeSelector(5);
         selector.SetFocused(children[0]);
-        selector.TriggerKey('PageDown');
+        selector.TriggerKey(Key.PageDown);
         assert.equal(selector.FocusedContainer, children[4]);
     });
 
     test('PageUp retreats by viewport count clamped at start', () => {
         const { selector, children } = makeSelector(5);
         selector.SetFocused(children[3]);
-        selector.TriggerKey('PageUp');
+        selector.TriggerKey(Key.PageUp);
         assert.equal(selector.FocusedContainer, children[0]);
     });
 
@@ -138,7 +138,7 @@ describe('§ 10.8 — Selector keyboard navigation', () => {
         const { selector, children } = makeSelector(5);
         selector.SetFocused(children[1]);
         selector.SetAnchor(children[1]);
-        selector.TriggerKey('ArrowDown', { Shift: true });
+        selector.TriggerKey(Key.Down, { Shift: true });
         assert.equal(selector.FocusedContainer, children[2]);
         const picked = selector.SelectedItems as readonly Visual[];
         assert.deepEqual(picked, [children[1], children[2]]);
@@ -148,7 +148,7 @@ describe('§ 10.8 — Selector keyboard navigation', () => {
         const { selector, children } = makeSelector(5);
         selector.SetFocused(children[1]);
         selector.SetAnchor(children[1]);
-        selector.TriggerKey('End', { Shift: true });
+        selector.TriggerKey(Key.End, { Shift: true });
         const picked = selector.SelectedItems as readonly Visual[];
         assert.deepEqual(picked, [children[1], children[2], children[3], children[4]]);
     });
@@ -160,7 +160,7 @@ describe('§ 10.8 — Selector keyboard navigation', () => {
         // Pre-seed a selection so we can verify it doesn't change.
         (selector as unknown as { setSelectedContainers(c: readonly Visual[]): void })
             .setSelectedContainers([children[1]]);
-        selector.TriggerKey('ArrowDown', { Control: true });
+        selector.TriggerKey(Key.Down, { Control: true });
         assert.equal(selector.FocusedContainer, children[2]);
         const picked = selector.SelectedItems as readonly Visual[];
         assert.deepEqual(picked, [children[1]],
@@ -170,24 +170,24 @@ describe('§ 10.8 — Selector keyboard navigation', () => {
     test('Space toggles selection of focused container (Multiple mode)', () => {
         const { selector, children } = makeSelector(3, SelectionMode.Multiple);
         selector.SetFocused(children[1]);
-        selector.TriggerKey(' ');
+        selector.TriggerKey(Key.Space);
         const after1 = selector.SelectedItems as readonly Visual[];
         assert.deepEqual(after1, [children[1]]);
-        selector.TriggerKey(' ');
+        selector.TriggerKey(Key.Space);
         const after2 = selector.SelectedItems as readonly Visual[];
         assert.deepEqual(after2, []);
     });
 
     test('Ctrl+A selects all containers (Extended mode)', () => {
         const { selector, children } = makeSelector(4);
-        selector.TriggerKey('A', { Control: true });
+        selector.TriggerKey(Key.A, { Control: true });
         const picked = selector.SelectedItems as readonly Visual[];
         assert.deepEqual(picked, children);
     });
 
     test('Ctrl+A is a no-op in Single mode', () => {
         const { selector, children } = makeSelector(4, SelectionMode.Single);
-        selector.TriggerKey('A', { Control: true });
+        selector.TriggerKey(Key.A, { Control: true });
         const picked = selector.SelectedItems as readonly Visual[];
         assert.deepEqual(picked, []);
         void children;
@@ -196,7 +196,7 @@ describe('§ 10.8 — Selector keyboard navigation', () => {
     test('Single mode: Shift+ArrowDown still single-selects (no extension)', () => {
         const { selector, children } = makeSelector(5, SelectionMode.Single);
         selector.SetFocused(children[1]);
-        selector.TriggerKey('ArrowDown', { Shift: true });
+        selector.TriggerKey(Key.Down, { Shift: true });
         const picked = selector.SelectedItems as readonly Visual[];
         assert.deepEqual(picked, [children[2]],
             'Single mode collapses Shift+Arrow to a plain single-select');
@@ -205,14 +205,14 @@ describe('§ 10.8 — Selector keyboard navigation', () => {
     test('Unhandled keys (Tab, Escape) leave Handled=false', () => {
         const { selector, children } = makeSelector(3);
         selector.SetFocused(children[0]);
-        assert.equal(selector.TriggerKey('Tab'),    false);
-        assert.equal(selector.TriggerKey('Escape'), false);
+        assert.equal(selector.TriggerKey(Key.Tab),    false);
+        assert.equal(selector.TriggerKey(Key.Escape), false);
     });
 
     test('Empty selector ignores arrow keys cleanly', () => {
         const s = new TestSelector();
         // No children — arrow key should be a no-op without throwing.
-        assert.doesNotThrow(() => s.TriggerKey('ArrowDown'));
+        assert.doesNotThrow(() => s.TriggerKey(Key.Down));
         assert.equal(s.FocusedContainer, undefined);
     });
 
@@ -220,7 +220,7 @@ describe('§ 10.8 — Selector keyboard navigation', () => {
         const { selector, children } = makeSelector(5);
         selector.HandleContainerClick(children[2], NoModifiers);
         assert.equal(selector.FocusedContainer, children[2]);
-        selector.TriggerKey('ArrowDown');
+        selector.TriggerKey(Key.Down);
         assert.equal(selector.FocusedContainer, children[3]);
     });
 });
@@ -233,11 +233,10 @@ describe('§ 10.8 — TreeView Left/Right expand-collapse', () => {
 
     beforeEach(() => { initTestApp(); });
 
-    function triggerKeyOnTree(tree: TreeView, key: string): boolean
+    function triggerKeyOnTree(tree: TreeView, key: Key): boolean
     {
         const args = new KeyEventArgs('KeyDown', tree, {
-            Key: key, Code: key,
-            Modifiers: NoModifiers,
+            Key: key, KeyText: key, Code: key,            Modifiers: NoModifiers,
             IsRepeat: false,
         });
         (tree as unknown as { OnKeyDown(a: KeyEventArgs): void }).OnKeyDown(args);
@@ -258,7 +257,7 @@ describe('§ 10.8 — TreeView Left/Right expand-collapse', () => {
         parent.IsExpanded = false;
 
         setFocused(tree, parent);
-        const handled = triggerKeyOnTree(tree, 'ArrowRight');
+        const handled = triggerKeyOnTree(tree, Key.Right);
 
         assert.equal(handled, true);
         assert.equal(parent.IsExpanded, true);
@@ -273,7 +272,7 @@ describe('§ 10.8 — TreeView Left/Right expand-collapse', () => {
         parent.IsExpanded = true;
 
         setFocused(tree, parent);
-        const handled = triggerKeyOnTree(tree, 'ArrowLeft');
+        const handled = triggerKeyOnTree(tree, Key.Left);
 
         assert.equal(handled, true);
         assert.equal(parent.IsExpanded, false);
@@ -285,7 +284,7 @@ describe('§ 10.8 — TreeView Left/Right expand-collapse', () => {
         tree.AddChild(leaf);
 
         setFocused(tree, leaf);
-        const handled = triggerKeyOnTree(tree, 'ArrowLeft');
+        const handled = triggerKeyOnTree(tree, Key.Left);
 
         // Leaf with no parent: no expand/collapse, no parent to climb
         // to, so the key falls through to base Selector which doesn't
@@ -303,7 +302,7 @@ describe('§ 10.8 — TreeView Left/Right expand-collapse', () => {
         parent.IsExpanded = true;
 
         setFocused(tree, parent);
-        const handled = triggerKeyOnTree(tree, 'ArrowRight');
+        const handled = triggerKeyOnTree(tree, Key.Right);
 
         assert.equal(handled, true,
             'ArrowRight on expanded node is consumed (parity with Explorer / VS Code)');

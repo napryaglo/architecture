@@ -3,8 +3,9 @@ import {
     Model,
     Thickness,
     VerticalAlignment,
-    Element, Visual,
+    Element,
     type KeyEventArgs,
+    Key,
 } from '../runtime/index.js';
 import { ClickableBorder } from './clickable-border.js';
 import { TemplatedControl } from './templated-control.js';
@@ -67,6 +68,12 @@ import { TextBox } from './text-box.js';
 // look). The inner TextBox's own Border is flipped to zero thickness
 // at construction so the user sees one outline, not two concentric
 // outlines.
+enum SpinStep
+{
+    Small = 'small',
+    Large = 'large',
+}
+
 export class SpinEdit extends TemplatedControl
 {
     public static readonly ValueKey         = Model.RegisterProperty<number>( SpinEdit, 'Value',         0,                  MetaData.None);
@@ -150,11 +157,11 @@ export class SpinEdit extends TemplatedControl
         // becomes 3 → 4, not stale-value + 1.)
         this._upButton.onClick   = (): void => {
             this.commitText();
-            this.step(+1, 'small');
+            this.step(+1, SpinStep.Small);
         };
         this._downButton.onClick = (): void => {
             this.commitText();
-            this.step(-1, 'small');
+            this.step(-1, SpinStep.Small);
         };
 
         // ── Inner TextBox focus / hover forwarded as own DPs ───────
@@ -171,8 +178,8 @@ export class SpinEdit extends TemplatedControl
         {
             this.set_property_value_with_key(SpinEdit._IsEditHoveredPriv, this._textBox.IsMouseOver);
         };
-        this._textBox.AddPropertyChangedListener(Visual.IsFocusedKey,   forwardFocus);
-        this._textBox.AddPropertyChangedListener(Visual.IsMouseOverKey, forwardHover);
+        this._textBox.AddPropertyChangedListener(Element.IsFocusedKey,   forwardFocus);
+        this._textBox.AddPropertyChangedListener(Element.IsMouseOverKey, forwardHover);
         forwardFocus();
         forwardHover();
 
@@ -187,7 +194,7 @@ export class SpinEdit extends TemplatedControl
         // Blur commits whatever the user typed. The listener gets
         // (model, property, oldVal, newVal); we care only about
         // false→true transitions of IsFocused going OUT.
-        this._textBox.AddPropertyChangedListener(Visual.IsFocusedKey,
+        this._textBox.AddPropertyChangedListener(Element.IsFocusedKey,
             (_m, _p, _ov, nv) => {
                 if (nv === false) this.commitText();
             });
@@ -240,19 +247,19 @@ export class SpinEdit extends TemplatedControl
         if (args.Handled) return;
         switch (args.Key)
         {
-            case 'ArrowUp':
-                if (!this.IsReadOnly) { this.commitText(); this.step(+1, 'small'); }
+            case Key.Up:
+                if (!this.IsReadOnly) { this.commitText(); this.step(+1, SpinStep.Small); }
                 args.Handled = true; return;
-            case 'ArrowDown':
-                if (!this.IsReadOnly) { this.commitText(); this.step(-1, 'small'); }
+            case Key.Down:
+                if (!this.IsReadOnly) { this.commitText(); this.step(-1, SpinStep.Small); }
                 args.Handled = true; return;
-            case 'PageUp':
-                if (!this.IsReadOnly) { this.commitText(); this.step(+1, 'large'); }
+            case Key.PageUp:
+                if (!this.IsReadOnly) { this.commitText(); this.step(+1, SpinStep.Large); }
                 args.Handled = true; return;
-            case 'PageDown':
-                if (!this.IsReadOnly) { this.commitText(); this.step(-1, 'large'); }
+            case Key.PageDown:
+                if (!this.IsReadOnly) { this.commitText(); this.step(-1, SpinStep.Large); }
                 args.Handled = true; return;
-            case 'Enter':
+            case Key.Return:
                 this.commitText();
                 args.Handled = true; return;
         }
@@ -260,10 +267,10 @@ export class SpinEdit extends TemplatedControl
 
     // ── Internals ──────────────────────────────────────────────────
 
-    private step(direction: -1 | 1, mode: 'small' | 'large'): void
+    private step(direction: -1 | 1, mode: SpinStep): void
     {
         if (this.IsReadOnly) return;
-        const delta = mode === 'large' ? this.LargeChange : this.SmallChange;
+        const delta = mode === SpinStep.Large ? this.LargeChange : this.SmallChange;
         this.Value = this.Value + direction * delta;
     }
 

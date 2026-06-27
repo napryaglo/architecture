@@ -21,6 +21,31 @@
   use time means the surface theme wasn't registered — fix the bundle
   wiring, don't paper over with a string lookup.
 
+## Enums over string-literal unions
+
+- **A fixed set of named string values MUST be a TypeScript `enum`, never a
+  string-literal union type and never bare string literals at use sites.**
+  `Strategy: 'tunnel' | 'bubble'` → `enum RoutingStrategy { Tunnel = 'tunnel',
+  Bubble = 'bubble' }` and `Strategy: RoutingStrategy`. This covers every
+  option / mode / strategy / lifetime / variant / kind type. No
+  `type X = 'a' | 'b'`, no `param: 'a' | 'b'`, no `x === 'a'` against a raw
+  literal — reference `X.A`.
+
+- **Enum shape.** Members are PascalCase. Give explicit string values (usually
+  the old literal: `Tunnel = 'tunnel'`) so the wire form is stable and
+  debuggable, and so an existing string-keyed call site keeps working during
+  migration. The enum lives next to the API that consumes it.
+
+- **Markup-facing enums** (authors write the member in `.mu`) must also be
+  registered in the compiler's `ENUM_MEMBERS` + `DEFAULT_SYMBOLS`
+  ([symbol-table.ts](src/compiler/symbol-table.ts)) — same as
+  `HorizontalAlignment`, `Orientation`, etc. Internal-only enums don't need
+  that wiring.
+
+- This is the value-level sibling of the no-string-type-proxies rule (type
+  references are real class `Function` values; option values are real enum
+  members) — strings never stand in for either.
+
 ## Cross-class internals
 
 Tool of last resort. Reach for the architectural fix first: promote the

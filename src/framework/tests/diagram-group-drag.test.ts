@@ -1,3 +1,4 @@
+import { ModifierKeys } from '../../runtime/index.js';
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 
@@ -109,8 +110,8 @@ describe('Diagram — group drag', () => {
 
         // Extended selection: all three are part of the active selection.
         diagram.SelectedItem = a;
-        diagram.HandleContainerClick(cB, { Control: true, Shift: false, Alt: false, Meta: false });
-        diagram.HandleContainerClick(cC, { Control: true, Shift: false, Alt: false, Meta: false });
+        diagram.HandleContainerClick(cB, ModifierKeys.Control);
+        diagram.HandleContainerClick(cC, ModifierKeys.Control);
         assert.equal(diagram.SelectedItems.length, 3, 'three items selected');
 
         // Press on A at (150, 150) — inside A's hit area (A is at 100,100).
@@ -152,7 +153,7 @@ describe('Diagram — group drag', () => {
 
         // Select only A + B. C is NOT in the selection.
         diagram.SelectedItem = a;
-        diagram.HandleContainerClick(cB, { Control: true, Shift: false, Alt: false, Meta: false });
+        diagram.HandleContainerClick(cB, ModifierKeys.Control);
 
         // Press on C — unselected — and drag.
         const im = new InputManager();
@@ -183,7 +184,7 @@ describe('Diagram — group drag', () => {
 
         // Select A + B (C not selected at press time).
         diagram.SelectedItem = a;
-        diagram.HandleContainerClick(cB, { Control: true, Shift: false, Alt: false, Meta: false });
+        diagram.HandleContainerClick(cB, ModifierKeys.Control);
 
         const im = new InputManager();
         im.InjectPointerDown(cA, pointerInit({ HostX: 150, HostY: 150 }));
@@ -192,7 +193,7 @@ describe('Diagram — group drag', () => {
         // Mid-drag selection mutation — toggle C in. Partner set was
         // already snapshotted at press time, so C must NOT move with
         // the rest of the drag.
-        diagram.HandleContainerClick(cC, { Control: true, Shift: false, Alt: false, Meta: false });
+        diagram.HandleContainerClick(cC, ModifierKeys.Control);
 
         im.InjectPointerMove(cA, pointerInit({ HostX: 250, HostY: 220 }));
 

@@ -1,8 +1,9 @@
+import { ModifierKeys, toModifierKeys } from '../../runtime/index.js';
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from './test-app.js';
 
-import { Application, NoModifiers, PointerButton, Rect, Size, type KeyEventInit, type ModifierKeys, type PointerEventInit } from '../../runtime/index.js';
+import { Application, Key, NoModifiers, PointerButton, Rect, Size, type KeyEventInit, type ModifierKeys, type PointerEventInit } from '../../runtime/index.js';
 import { InputManager } from '../../framework/index.js';;
 import { HeadlessTarget } from '../../visual-engine/index.js';
 import { Slider } from '../slider.js';
@@ -23,12 +24,13 @@ function pointer(overrides: Partial<PointerEventInit> = {}): PointerEventInit
     };
 }
 
-function key(k: string, mods: Partial<ModifierKeys> = {}, code?: string): KeyEventInit
+function key(k: Key, mods: Partial<ModifierKeys> = {}, code?: string): KeyEventInit
 {
     return {
         Key:       k,
+        KeyText:       k,
         Code:      code ?? k,
-        Modifiers: { ...NoModifiers, ...mods },
+        Modifiers: toModifierKeys({ shift: mods.Shift, control: mods.Control, alt: mods.Alt, meta: mods.Meta }),
         IsRepeat:  false,
     };
 }
@@ -202,46 +204,46 @@ describe('Slider — keyboard', () => {
     test('ArrowRight / ArrowUp increase Value by SmallChange', () => {
         const { sl, im } = focused();
         sl.Value = 50;
-        im.InjectKeyDown(key('ArrowRight'));
+        im.InjectKeyDown(key(Key.Right));
         assert.equal(sl.Value, 51);
-        im.InjectKeyDown(key('ArrowUp'));
+        im.InjectKeyDown(key(Key.Up));
         assert.equal(sl.Value, 52);
     });
 
     test('ArrowLeft / ArrowDown decrease Value by SmallChange', () => {
         const { sl, im } = focused();
         sl.Value = 50;
-        im.InjectKeyDown(key('ArrowLeft'));
+        im.InjectKeyDown(key(Key.Left));
         assert.equal(sl.Value, 49);
-        im.InjectKeyDown(key('ArrowDown'));
+        im.InjectKeyDown(key(Key.Down));
         assert.equal(sl.Value, 48);
     });
 
     test('PageUp / PageDown use LargeChange', () => {
         const { sl, im } = focused();
         sl.Value = 50;
-        im.InjectKeyDown(key('PageUp'));
+        im.InjectKeyDown(key(Key.PageUp));
         assert.equal(sl.Value, 60);
-        im.InjectKeyDown(key('PageDown'));
+        im.InjectKeyDown(key(Key.PageDown));
         assert.equal(sl.Value, 50);
     });
 
     test('Home and End snap to Min / Max', () => {
         const { sl, im } = focused();
         sl.Value = 50;
-        im.InjectKeyDown(key('Home'));
+        im.InjectKeyDown(key(Key.Home));
         assert.equal(sl.Value, 0);
-        im.InjectKeyDown(key('End'));
+        im.InjectKeyDown(key(Key.End));
         assert.equal(sl.Value, 100);
     });
 
     test('Keyboard increments clamp at Min / Max', () => {
         const { sl, im } = focused();
         sl.Value = 100;
-        im.InjectKeyDown(key('ArrowRight'));
+        im.InjectKeyDown(key(Key.Right));
         assert.equal(sl.Value, 100, 'ArrowRight at Max is a no-op');
         sl.Value = 0;
-        im.InjectKeyDown(key('ArrowLeft'));
+        im.InjectKeyDown(key(Key.Left));
         assert.equal(sl.Value, 0, 'ArrowLeft at Min is a no-op');
     });
 });

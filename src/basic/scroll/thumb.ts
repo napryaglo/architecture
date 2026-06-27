@@ -8,6 +8,7 @@ import {
     Visual,
     type DrawingContext,
     type KeyEventArgs,
+    Key,
     type PointerEventArgs,
 } from '../../runtime/index.js';
 import { resolveKey } from '../../runtime/model-internals.js';
@@ -210,7 +211,7 @@ export class Thumb extends Element
     // hosts roll back any optimistic write through Canceled=true).
     protected override OnKeyDown(args: KeyEventArgs): void
     {
-        if (this.IsDragging && args.Key === 'Escape')
+        if (this.IsDragging && args.Key === Key.Escape)
         {
             this.CancelDrag();
             args.Handled = true;

@@ -7,5 +7,5 @@
 export { PresentationTarget } from './presentation-target.js';
 export { OverlayLayer } from './overlay-layer.js';
 export { HtmlTarget, type HtmlTargetOptions } from './html-target.js';
-export { FileTarget, type FileTargetOptions, type FileTargetFormat } from './file-target.js';
+export { FileTarget, type FileTargetOptions, FileTargetFormat } from './file-target.js';
 export { HeadlessTarget } from './headless-target.js';

@@ -13,6 +13,7 @@ export {
     _clearAllSchemeTransitionAnimators,
     getSchemeTransitionAnimator,
     registerSchemeTransitionAnimator,
+    SchemeTransitionTokens,
     type ActivateThemeOptions,
     type AutoSchemeOptions,
     type SchemeOptions,

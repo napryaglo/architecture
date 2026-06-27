@@ -5,6 +5,7 @@ import {
     Size,
     Element, Visual,
     type KeyEventArgs,
+    Key,
     type ModifierKeys,
     type PointerEventArgs,
     type PropertyDescriptor,
@@ -268,7 +269,7 @@ export class TreeView extends Selector
         const focused = this.FocusedContainer;
         if (focused instanceof TreeViewItem)
         {
-            if (args.Key === 'ArrowRight')
+            if (args.Key === Key.Right)
             {
                 if (!focused.IsExpanded && this.hasTreeViewChildren(focused))
                 {
@@ -284,7 +285,7 @@ export class TreeView extends Selector
                 args.Handled = true;
                 return;
             }
-            else if (args.Key === 'ArrowLeft')
+            else if (args.Key === Key.Left)
             {
                 if (focused.IsExpanded)
                 {

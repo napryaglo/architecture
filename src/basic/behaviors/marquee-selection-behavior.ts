@@ -7,6 +7,8 @@ import {
     Visual,
     type DrawingContext,
     type PointerEventArgs,
+    hasModifier,
+    ModifierKeys,
 } from '../../runtime/index.js';
 import { Pen, SolidColorBrush } from '../../visual-engine/index.js';
 import { MarqueeBoundsPolicy, SelectionMode, Selector } from '../../framework/list/selector.js';
@@ -216,11 +218,18 @@ function isContainerClick(source: Visual, selector: Selector): boolean
 // rect, modifier mode, and the snapshot taken at PointerDown. Returns
 // an array of containers in their `containerOrderForRange` order so
 // callers can feed it back into the Selector via setSelectedContainers.
+enum MarqueeMode
+{
+    Replace = 'replace',
+    Add     = 'add',
+    Extend  = 'extend',
+}
+
 function computeMarqueeSelection(
     selector: Selector,
     marquee:  Rect,
     snapshot: ReadonlySet<Visual>,
-    mode:     'replace' | 'add' | 'extend',
+    mode:     MarqueeMode,
     policy:   MarqueeBoundsPolicy,
     panel:    Visual,
 ): Visual[]
@@ -237,7 +246,7 @@ function computeMarqueeSelection(
             : rectsIntersect(marquee, r);
         if (included) hit.add(c);
     }
-    const next = mode === 'replace'
+    const next = mode === MarqueeMode.Replace
         ? hit
         : new Set([...snapshot, ...hit]);
     // Preserve container order so the primary-row mirror picks the
@@ -252,7 +261,7 @@ export function attachMarqueeSelection(selector: Selector): () => void
     let active:   boolean = false;        // drag past threshold — adorner visible
     let startHostX: number = 0;
     let startHostY: number = 0;
-    let mode: 'replace' | 'add' | 'extend' = 'replace';
+    let mode: MarqueeMode = MarqueeMode.Replace;
     let snapshot: Set<Visual> = new Set();
     let adorner: MarqueeAdorner | undefined;
     let layer:   AdornerLayer    | undefined;
@@ -290,9 +299,9 @@ export function attachMarqueeSelection(selector: Selector): () => void
 
         startHostX = args.HostX;
         startHostY = args.HostY;
-        mode = args.Modifiers.Control ? 'add'
-             : args.Modifiers.Shift   ? 'extend'
-             : 'replace';
+        mode = hasModifier(args.Modifiers, ModifierKeys.Control) ? MarqueeMode.Add
+             : hasModifier(args.Modifiers, ModifierKeys.Shift)   ? MarqueeMode.Extend
+             : MarqueeMode.Replace;
         // Snapshot the current selection — used by add / extend mode to
         // overlay the rect's contents. Replace mode discards it and
         // (when the drag commits OR the click misses) clears.
@@ -331,7 +340,7 @@ export function attachMarqueeSelection(selector: Selector): () => void
                 adorner = new MarqueeAdorner(panel);
                 layer.Add(adorner);
             }
-            if (mode === 'replace')
+            if (mode === MarqueeMode.Replace)
             {
                 // Clear without firing per-row events — BeginUpdate
                 // coalesces. The intermediate clear is invisible to
@@ -410,7 +419,7 @@ export function attachMarqueeSelection(selector: Selector): () => void
     {
         if (!armed) return;
         const wasActive = active;
-        const wasReplace = mode === 'replace';
+        const wasReplace = mode === MarqueeMode.Replace;
         args.ReleasePointerCapture();
         // Stop any autoscroll left running on the wrapping ScrollViewer
         // (§ 10.7). Safe to call when no autoscroll was active.

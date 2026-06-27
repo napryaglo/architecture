@@ -97,8 +97,8 @@ export class StatusBarItem extends ContentControl
 }
 
 // StatusBarSeparator — vertical 1px divider between cells. Same
-// imperative-paint shape as MenuSeparator: extends Visual directly
-// so the StatusBar's DockPanel can host it without ItemsControl's
+// imperative-paint shape as MenuSeparator: an Element leaf so the
+// StatusBar's DockPanel can host it without ItemsControl's
 // container-wrap pass.
 export class StatusBarSeparator extends Element
 {

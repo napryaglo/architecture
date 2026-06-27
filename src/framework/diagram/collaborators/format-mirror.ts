@@ -54,6 +54,12 @@ const PEN_KEYS: PropertyKey<unknown>[] = [
     Pen.MiterLimitKey  as PropertyKey<unknown>,
 ];
 
+export enum ConnectorEnd
+{
+    Source = 'Source',
+    Target = 'Target',
+}
+
 export class FormatMirror
 {
     private readonly _diagram: Diagram;
@@ -81,8 +87,8 @@ export class FormatMirror
         diagram.AddPropertyChangedListener(Diagram.SelectionFormatStrokeKey, () => this._onFormatStrokeChanged());
         // Cap channel — same seed/broadcast shape as Fill/Stroke, but
         // targets only selected connectors' Source/TargetCapTemplate DPs.
-        diagram.AddPropertyChangedListener(Diagram.SelectionFormatSourceCapKey, () => this._broadcastCap('Source'));
-        diagram.AddPropertyChangedListener(Diagram.SelectionFormatTargetCapKey, () => this._broadcastCap('Target'));
+        diagram.AddPropertyChangedListener(Diagram.SelectionFormatSourceCapKey, () => this._broadcastCap(ConnectorEnd.Source));
+        diagram.AddPropertyChangedListener(Diagram.SelectionFormatTargetCapKey, () => this._broadcastCap(ConnectorEnd.Target));
     }
 
     private _leaves(): Model[]
@@ -156,15 +162,15 @@ export class FormatMirror
     // matching end. Gated by _seedingFormat so a fresh selection's seed
     // (which writes the cap DPs) doesn't replay the first connector's caps
     // onto the others.
-    private _broadcastCap(end: 'Source' | 'Target'): void
+    private _broadcastCap(end: ConnectorEnd): void
     {
         if (this._seedingFormat) return;
-        const tpl: DataTemplate | undefined = end === 'Source'
+        const tpl: DataTemplate | undefined = end === ConnectorEnd.Source
             ? this._diagram.SelectionFormatSourceCap
             : this._diagram.SelectionFormatTargetCap;
         for (const conn of this._diagram.SelectedConnectors)
         {
-            if (end === 'Source') conn.SourceCapTemplate = tpl;
+            if (end === ConnectorEnd.Source) conn.SourceCapTemplate = tpl;
             else                  conn.TargetCapTemplate = tpl;
         }
     }

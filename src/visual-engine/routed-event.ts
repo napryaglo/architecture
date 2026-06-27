@@ -1,4 +1,5 @@
-import type { Visual } from './visual.js';
+import type { Element } from './element.js';
+import { Key } from './input/key.js';
 import { DragDrop, DragDropEffects, type DataObject, type DragDropOptions, type DragSession } from './drag-drop.js';
 
 // Routed-event infrastructure.
@@ -33,11 +34,33 @@ export type RoutedEventKind =
     | 'PointerDown'
     | 'PointerUp'
     | 'PointerWheel'
+    // Button-specific mouse events (WPF parity). Derived by the
+    // InputManager from a PointerDown / PointerUp whose Button is the
+    // primary / secondary button; raised AFTER the generic event, with
+    // their own tunnel (Preview) + bubble passes.
+    | 'MouseLeftButtonDown'
+    | 'MouseLeftButtonUp'
+    | 'MouseRightButtonDown'
+    | 'MouseRightButtonUp'
+    // Mouse-capture events (WPF parity). Raised by the InputManager when
+    // an element gains / loses pointer capture; tunnel (Preview) + bubble.
+    | 'PreviewGotMouseCapture'
+    | 'GotMouseCapture'
+    | 'PreviewLostMouseCapture'
+    | 'LostMouseCapture'
     | 'KeyDown'
     | 'KeyUp'
     | 'TextInput'
+    | 'QueryCursor'
     | 'GotFocus'
     | 'LostFocus'
+    // Keyboard-focus events (WPF parity). Distinct from the logical
+    // GotFocus / LostFocus (bubble only): these tunnel (Preview) + bubble
+    // and track the keyboard-focused element specifically.
+    | 'PreviewGotKeyboardFocus'
+    | 'GotKeyboardFocus'
+    | 'PreviewLostKeyboardFocus'
+    | 'LostKeyboardFocus'
     | 'DragEnter'
     | 'DragLeave'
     | 'DragOver'
@@ -53,22 +76,38 @@ export type RoutedEventKind =
 // `Strategy` records which pass is currently in flight so handlers
 // can branch (rare, but matches WPF and is useful when the same On*
 // implementation services both Preview and main events).
+
+// Which dispatch pass is in flight. Set on the args so a handler sharing one
+// `On*` body across the Preview (tunnel) and main (bubble) routes can branch.
+export enum RoutingStrategy
+{
+    Tunnel = 'tunnel',
+    Bubble = 'bubble',
+    /** Fires only on the source element — no tunnel, no bubble. WPF's
+     *  RoutingStrategy.Direct (MouseEnter / MouseLeave, GotFocus /
+     *  LostFocus are Direct in WPF; mural keeps focus on the bubble
+     *  route, but Enter / Leave are genuinely Direct). */
+    Direct = 'direct',
+}
+
 export class RoutedEventArgs
 {
     public readonly Kind: RoutedEventKind;
-    /** The leaf Visual the dispatcher resolved as the event target. */
-    public readonly Source: Visual;
-    /** The Visual currently receiving the event during dispatch. The
-     *  walker rewrites this on each hop. */
-    public Visual: Visual;
+    /** The leaf Element the dispatcher resolved as the event target. */
+    public readonly Source: Element;
+    /** The Element currently receiving the event during dispatch. The
+     *  walker rewrites this on each hop. (Named `Visual` for the
+     *  consumer-facing `args.Visual` API; typed `Element` since every
+     *  routed node is an Element.) */
+    public Visual: Element;
     /** Set to `true` by any handler to stop further dispatch on both
      *  the tunnel and bubble passes for this event. */
     public Handled: boolean = false;
     /** Discriminates the in-flight pass for handlers that share a
      *  single `On*` body across Preview and bubble. */
-    public Strategy: 'tunnel' | 'bubble' = 'bubble';
+    public Strategy: RoutingStrategy = RoutingStrategy.Bubble;
 
-    constructor(kind: RoutedEventKind, source: Visual)
+    constructor(kind: RoutedEventKind, source: Element)
     {
         this.Kind   = kind;
         this.Source = source;
@@ -93,20 +132,45 @@ export enum PointerButton
     X2       = 4,
 }
 
-// Modifier mask matching the four standard keyboard modifiers; carried
-// on every PointerEventArgs so handlers don't need a separate Keyboard
-// query at handler time.
-export interface ModifierKeys
+// WPF System.Windows.Input.ModifierKeys — [Flags]. Carried on every
+// PointerEventArgs / KeyEventArgs so handlers don't need a separate
+// Keyboard query at handler time. Numeric so modifiers compose with
+// bitwise OR and test with `hasModifier`. `Windows` is the WPF name for
+// the OS/Command key (DOM metaKey).
+export enum ModifierKeys
 {
-    Shift:   boolean;
-    Control: boolean;
-    Alt:     boolean;
-    Meta:    boolean;
+    None    = 0,
+    Alt     = 1 << 0,
+    Control = 1 << 1,
+    Shift   = 1 << 2,
+    Windows = 1 << 3,
 }
 
-export const NoModifiers: ModifierKeys = Object.freeze({
-    Shift: false, Control: false, Alt: false, Meta: false,
-});
+// `NoModifiers` retained as the canonical "nothing pressed" value
+// (alias of ModifierKeys.None) so existing call sites keep reading.
+export const NoModifiers: ModifierKeys = ModifierKeys.None;
+
+// True when `mask` carries `flag`. The idiomatic read for the flags
+// enum — replaces the old `modifiers.Shift` struct access.
+export function hasModifier(mask: ModifierKeys, flag: ModifierKeys): boolean
+{
+    return (mask & flag) !== 0;
+}
+
+// Build a ModifierKeys mask from individual booleans. `meta` maps to
+// `Windows` (DOM metaKey ≡ WPF Windows/Command). Convenience for host
+// adapters building args from a DOM event and for tests.
+export function toModifierKeys(
+    parts: { shift?: boolean; control?: boolean; alt?: boolean; meta?: boolean },
+): ModifierKeys
+{
+    let m = ModifierKeys.None;
+    if (parts.shift)   m |= ModifierKeys.Shift;
+    if (parts.control) m |= ModifierKeys.Control;
+    if (parts.alt)     m |= ModifierKeys.Alt;
+    if (parts.meta)    m |= ModifierKeys.Windows;
+    return m;
+}
 
 export interface PointerEventInit
 {
@@ -148,7 +212,7 @@ export interface PointerEventInit
 // already imports this file).
 export interface PointerCaptureSink
 {
-    CapturePointer(visual: Visual, pointerId?: number, cursor?: string): void;
+    CapturePointer(visual: Element, pointerId?: number, cursor?: string): void;
     ReleasePointerCapture(pointerId?: number): void;
 }
 
@@ -159,8 +223,8 @@ export interface PointerCaptureSink
 // `args.SetFocus(this)` ergonomically.
 export interface FocusSink
 {
-    SetFocus(visual: Visual | undefined): void;
-    GetFocusedVisual(): Visual | undefined;
+    SetFocus(visual: Element | undefined): void;
+    GetFocusedVisual(): Element | undefined;
 }
 
 // Concrete args type for the six pointer events. Carries everything a
@@ -189,7 +253,7 @@ export class PointerEventArgs extends RoutedEventArgs
 
     constructor(
         kind: RoutedEventKind,
-        source: Visual,
+        source: Element,
         init: PointerEventInit,
         captureSink?: PointerCaptureSink,
         focusSink?:   FocusSink,
@@ -220,7 +284,7 @@ export class PointerEventArgs extends RoutedEventArgs
     // override the OS reverts to its default the moment the user
     // actually presses the button or the pointer leaves the source
     // visual. Auto-cleared with the capture.
-    public CapturePointer(target?: Visual, cursor?: string): void
+    public CapturePointer(target?: Element, cursor?: string): void
     {
         this._captureSink?.CapturePointer(target ?? this.Source, this.PointerId, cursor);
     }
@@ -235,7 +299,7 @@ export class PointerEventArgs extends RoutedEventArgs
     // to focus itself); pass `undefined` to clear focus. No-op when the
     // args were constructed without a focus sink (tests that don't
     // exercise focus).
-    public SetFocus(target?: Visual): void
+    public SetFocus(target?: Element): void
     {
         this._focusSink?.SetFocus(target ?? this.Source);
     }
@@ -261,7 +325,12 @@ export class PointerEventArgs extends RoutedEventArgs
 //   * 'line'  — DeltaX/Y are in scroll lines (older mice on some OSes)
 //   * 'page'  — DeltaX/Y are in pages (rare; Page Up / Page Down emulators)
 // Handlers that need raw pixels apply a small multiplier based on this.
-export type WheelDeltaMode = 'pixel' | 'line' | 'page';
+export enum WheelDeltaMode
+{
+    Pixel = 'pixel',
+    Line  = 'line',
+    Page  = 'page',
+}
 
 export interface WheelEventInit extends PointerEventInit
 {
@@ -283,7 +352,7 @@ export class WheelEventArgs extends PointerEventArgs
     public readonly DeltaMode: WheelDeltaMode;
 
     constructor(
-        source: Visual,
+        source: Element,
         init: WheelEventInit,
         captureSink?: PointerCaptureSink,
         focusSink?:   FocusSink,
@@ -299,17 +368,22 @@ export class WheelEventArgs extends PointerEventArgs
 
 // ── Keyboard events ────────────────────────────────────────────────
 
-// Raw key + modifier state for a single keydown / keyup. `Key` mirrors
-// DOM KeyboardEvent.key — the logical character produced by the press
-// (e.g. 'a', 'A', 'Shift', 'Enter', 'ArrowLeft'). `Code` mirrors
-// KeyboardEvent.code — the physical key on the keyboard (e.g. 'KeyA',
-// 'ShiftLeft', 'Enter'), invariant of the active keyboard layout. Most
-// handlers want `Key`; keyboard-layout-sensitive controls (game input,
-// Cmd-bindings on macOS where ⌘ + Z must hit the physical 'Z' regardless
-// of layout) reach for `Code`.
+// Raw key + modifier state for a single keydown / keyup.
+//
+//   * `Key` — the WPF-style virtual `Key` enum (layout-independent
+//     identity, e.g. `Key.S`, `Key.Left`, `Key.Return`). This is what
+//     command handlers compare against. The host derives it from the DOM
+//     event via `keyFromDom(code, key)`.
+//   * `KeyText` — the LOGICAL character the press produced (DOM
+//     KeyboardEvent.key: 'a', 'A', 'Enter', 'ArrowLeft'). Text-entry and
+//     letter-accelerator handlers want this, not the virtual key.
+//   * `Code` — the PHYSICAL key (DOM KeyboardEvent.code: 'KeyA',
+//     'ShiftLeft', 'Enter'), invariant of the active layout. For
+//     layout-sensitive controls (game input, ⌘+Z hitting physical Z).
 export interface KeyEventInit
 {
-    Key:       string;
+    Key:       Key;
+    KeyText:   string;
     Code:      string;
     Modifiers: ModifierKeys;
     /** True when the platform reports this as an auto-repeat
@@ -320,7 +394,8 @@ export interface KeyEventInit
 
 export class KeyEventArgs extends RoutedEventArgs
 {
-    public readonly Key:       string;
+    public readonly Key:       Key;
+    public readonly KeyText:   string;
     public readonly Code:      string;
     public readonly Modifiers: ModifierKeys;
     public readonly IsRepeat:  boolean;
@@ -333,10 +408,11 @@ export class KeyEventArgs extends RoutedEventArgs
     // events from tests that don't drive focus leave it undefined.
     private readonly _focusSink: FocusSink | undefined;
 
-    constructor(kind: 'KeyDown' | 'KeyUp', source: Visual, init: KeyEventInit, focusSink?: FocusSink)
+    constructor(kind: 'KeyDown' | 'KeyUp', source: Element, init: KeyEventInit, focusSink?: FocusSink)
     {
         super(kind, source);
         this.Key       = init.Key;
+        this.KeyText   = init.KeyText;
         this.Code      = init.Code;
         this.Modifiers = init.Modifiers;
         this.IsRepeat  = init.IsRepeat;
@@ -346,7 +422,7 @@ export class KeyEventArgs extends RoutedEventArgs
     /** Transfer keyboard focus to `target` (or to `args.Source` when
      *  omitted). Silent no-op when the dispatcher didn't supply a
      *  focus sink (synthetic test events without an InputManager). */
-    public SetFocus(target?: Visual): void
+    public SetFocus(target?: Element): void
     {
         this._focusSink?.SetFocus(target ?? this.Source);
     }
@@ -367,11 +443,41 @@ export class TextInputEventArgs extends RoutedEventArgs
 {
     public readonly Text: string;
 
-    constructor(source: Visual, init: TextInputEventInit)
+    constructor(source: Element, init: TextInputEventInit)
     {
         super('TextInput', source);
         this.Text = init.Text;
     }
+}
+
+// ── QueryCursor ────────────────────────────────────────────────────
+
+// Raised on each pointer move, bubbling target → root, so a handler can
+// choose the cursor for the element under the pointer (WPF's QueryCursor).
+// A handler sets `Cursor` to a CSS cursor keyword and marks `Handled` to
+// claim it; the innermost handler wins (bubble stops on Handled). The
+// resolved cursor is applied to the host by the InputManager.
+export class QueryCursorEventArgs extends RoutedEventArgs
+{
+    public readonly HostX:     number;
+    public readonly HostY:     number;
+    public readonly Modifiers: ModifierKeys;
+    /** CSS cursor keyword chosen by a handler ('pointer', 'text',
+     *  'ew-resize', …). Undefined leaves the host default. */
+    public Cursor: string | undefined;
+
+    constructor(source: Element, init: PointerEventInit)
+    {
+        super('QueryCursor', source);
+        this.HostX     = init.HostX;
+        this.HostY     = init.HostY;
+        this.Modifiers = init.Modifiers;
+    }
+}
+
+export interface QueryCursorEventHandlers
+{
+    OnQueryCursor(args: QueryCursorEventArgs): void;
 }
 
 // ── Focus events ───────────────────────────────────────────────────
@@ -381,7 +487,12 @@ export class TextInputEventArgs extends RoutedEventArgs
 // Source is the Visual whose IsFocused flipped.
 export class FocusEventArgs extends RoutedEventArgs
 {
-    constructor(kind: 'GotFocus' | 'LostFocus', source: Visual)
+    constructor(
+        kind: 'GotFocus' | 'LostFocus'
+            | 'PreviewGotKeyboardFocus' | 'GotKeyboardFocus'
+            | 'PreviewLostKeyboardFocus' | 'LostKeyboardFocus',
+        source: Element,
+    )
     {
         super(kind, source);
     }
@@ -420,7 +531,7 @@ export class DragEventArgs extends RoutedEventArgs
 
     constructor(
         kind: 'DragEnter' | 'DragLeave' | 'DragOver' | 'Drop',
-        source: Visual,
+        source: Element,
         init: DragEventInit,
     )
     {
@@ -456,6 +567,18 @@ export interface PointerEventHandlers
     OnPointerUp          (args: PointerEventArgs): void;
     OnPreviewPointerWheel(args: WheelEventArgs): void;
     OnPointerWheel       (args: WheelEventArgs): void;
+    OnPreviewMouseLeftButtonDown (args: PointerEventArgs): void;
+    OnMouseLeftButtonDown        (args: PointerEventArgs): void;
+    OnPreviewMouseLeftButtonUp   (args: PointerEventArgs): void;
+    OnMouseLeftButtonUp          (args: PointerEventArgs): void;
+    OnPreviewMouseRightButtonDown(args: PointerEventArgs): void;
+    OnMouseRightButtonDown       (args: PointerEventArgs): void;
+    OnPreviewMouseRightButtonUp  (args: PointerEventArgs): void;
+    OnMouseRightButtonUp         (args: PointerEventArgs): void;
+    OnPreviewGotMouseCapture     (args: PointerEventArgs): void;
+    OnGotMouseCapture            (args: PointerEventArgs): void;
+    OnPreviewLostMouseCapture    (args: PointerEventArgs): void;
+    OnLostMouseCapture           (args: PointerEventArgs): void;
 }
 
 export interface KeyboardEventHandlers
@@ -472,6 +595,10 @@ export interface FocusEventHandlers
 {
     OnGotFocus  (args: FocusEventArgs): void;
     OnLostFocus (args: FocusEventArgs): void;
+    OnPreviewGotKeyboardFocus  (args: FocusEventArgs): void;
+    OnGotKeyboardFocus         (args: FocusEventArgs): void;
+    OnPreviewLostKeyboardFocus (args: FocusEventArgs): void;
+    OnLostKeyboardFocus        (args: FocusEventArgs): void;
 }
 
 // Method-name tables consumed by the dispatcher. Indexed by event kind
@@ -491,13 +618,23 @@ export interface FocusEventHandlers
 // lookup. Listing the four explicitly is more maintainable than
 // `Exclude<RoutedEventKind, …>` once non-pointer kinds joined the
 // union.
-type PointerTunnelBubbleKind = 'PointerMove' | 'PointerDown' | 'PointerUp' | 'PointerWheel';
+type PointerTunnelBubbleKind =
+    | 'PointerMove' | 'PointerDown' | 'PointerUp' | 'PointerWheel'
+    | 'MouseLeftButtonDown'  | 'MouseLeftButtonUp'
+    | 'MouseRightButtonDown' | 'MouseRightButtonUp'
+    | 'GotMouseCapture' | 'LostMouseCapture';
 
 export const POINTER_PREVIEW_HANDLERS: Readonly<Record<PointerTunnelBubbleKind, keyof PointerEventHandlers>> = {
     PointerMove:  'OnPreviewPointerMove',
     PointerDown:  'OnPreviewPointerDown',
     PointerUp:    'OnPreviewPointerUp',
     PointerWheel: 'OnPreviewPointerWheel',
+    MouseLeftButtonDown:  'OnPreviewMouseLeftButtonDown',
+    MouseLeftButtonUp:    'OnPreviewMouseLeftButtonUp',
+    MouseRightButtonDown: 'OnPreviewMouseRightButtonDown',
+    MouseRightButtonUp:   'OnPreviewMouseRightButtonUp',
+    GotMouseCapture:      'OnPreviewGotMouseCapture',
+    LostMouseCapture:     'OnPreviewLostMouseCapture',
 } as const;
 
 export const POINTER_BUBBLE_HANDLERS: Readonly<Record<PointerTunnelBubbleKind, keyof PointerEventHandlers>> = {
@@ -505,6 +642,12 @@ export const POINTER_BUBBLE_HANDLERS: Readonly<Record<PointerTunnelBubbleKind, k
     PointerDown:  'OnPointerDown',
     PointerUp:    'OnPointerUp',
     PointerWheel: 'OnPointerWheel',
+    MouseLeftButtonDown:  'OnMouseLeftButtonDown',
+    MouseLeftButtonUp:    'OnMouseLeftButtonUp',
+    MouseRightButtonDown: 'OnMouseRightButtonDown',
+    MouseRightButtonUp:   'OnMouseRightButtonUp',
+    GotMouseCapture:      'OnGotMouseCapture',
+    LostMouseCapture:     'OnLostMouseCapture',
 } as const;
 
 export const POINTER_DIRECT_HANDLERS: Readonly<Record<'PointerEnter' | 'PointerLeave', keyof PointerEventHandlers>> = {
@@ -544,49 +687,39 @@ export const DRAG_BUBBLE_HANDLERS: Readonly<Record<DragTunnelBubbleKind, keyof D
 
 // ── Dispatcher ──────────────────────────────────────────────────────
 
-// Build the visual-tree route from a leaf Visual up to the root.
+// Build the visual-tree route from a leaf Element up to the root.
 // Index 0 is the leaf (Source); the last entry has no visual parent.
 // Used by the dispatcher in both directions: reversed for the tunnel
 // pass, in-order for the bubble pass.
-export function buildRoute(source: Visual): Visual[]
+//
+// `GetVisualParent` is a public companion to Visual's protected
+// `visualParent` getter; it returns `Visual | undefined`, but every
+// concrete tree node is an Element (Element is the only instantiable
+// Visual subclass), so the cast to `Element` is sound.
+export function buildRoute(source: Element): Element[]
 {
-    const out: Visual[] = [source];
-    // The walker needs the visual parent chain. Visual exposes
-    // `visualParent` as `protected`, but the dispatcher lives outside
-    // the class. The runtime uses a public companion `GetVisualParent`
-    // (added in the Visual edit below) to keep the chain readable from
-    // anywhere without weakening the OO surface.
-    let cur: Visual | undefined = (source as VisualWithParentAccessor).GetVisualParent();
+    const out: Element[] = [source];
+    let cur = source.GetVisualParent() as Element | undefined;
     while (cur !== undefined)
     {
         out.push(cur);
-        cur = (cur as VisualWithParentAccessor).GetVisualParent();
+        cur = cur.GetVisualParent() as Element | undefined;
     }
     return out;
 }
 
-// Local structural type so this file doesn't import the full Visual
-// class (which would cycle). The runtime adds `GetVisualParent` to
-// Visual; the dispatcher only relies on that one method (plus the
-// IsEnabled read for disabled-state input gating below).
-interface VisualWithParentAccessor
-{
-    GetVisualParent(): Visual | undefined;
-    readonly IsEnabled: boolean;
-}
-
-// Disabled-state gate. WPF parity: a disabled Visual swallows input
+// Disabled-state gate. WPF parity: a disabled Element swallows input
 // across its entire subtree, including Enter / Leave (so IsMouseOver
 // stays false on disabled rows — the `when (not IsEnabled)` trigger
 // then wins outright without trigger-ordering surgery against hover).
 // Walks the route once; bails the dispatch if any node on the chain
 // from source to root reports IsEnabled=false. Used by every dispatch*
 // function below.
-function routeSuppressedByDisabled(route: readonly Visual[]): boolean
+function routeSuppressedByDisabled(route: readonly Element[]): boolean
 {
     for (const v of route)
     {
-        if ((v as VisualWithParentAccessor).IsEnabled === false) return true;
+        if (v.IsEnabled === false) return true;
     }
     return false;
 }
@@ -602,20 +735,20 @@ function routeSuppressedByDisabled(route: readonly Visual[]): boolean
 // to `'tunnel'` / `'bubble'` so a shared handler body can branch.
 export function dispatchPointer(args: PointerEventArgs): void
 {
-    if (args.Kind !== 'PointerMove' && args.Kind !== 'PointerDown'
-        && args.Kind !== 'PointerUp' && args.Kind !== 'PointerWheel')
+    if (!(args.Kind in POINTER_BUBBLE_HANDLERS))
     {
         throw new Error(
             `dispatchPointer: ${args.Kind} is not a tunnel/bubble pointer event` +
             ' — use dispatchPointerDirect / dispatchKey / dispatchTextInput / dispatchFocus instead');
     }
+    const kind        = args.Kind as PointerTunnelBubbleKind;
     const route       = buildRoute(args.Source);
     if (routeSuppressedByDisabled(route)) return;
-    const previewName = POINTER_PREVIEW_HANDLERS[args.Kind];
-    const bubbleName  = POINTER_BUBBLE_HANDLERS [args.Kind];
+    const previewName = POINTER_PREVIEW_HANDLERS[kind];
+    const bubbleName  = POINTER_BUBBLE_HANDLERS [kind];
 
     // Tunnel: root → target.
-    args.Strategy = 'tunnel';
+    args.Strategy = RoutingStrategy.Tunnel;
     for (let i = route.length - 1; i >= 0; i--)
     {
         const v = route[i]!;
@@ -630,7 +763,7 @@ export function dispatchPointer(args: PointerEventArgs): void
         // IsHitTestVisible=false) still consumes PointerDown for its
         // own canvas drag-to-move logic and the enclosing tile's drag
         // latch never sees the event.
-        if (!(v as unknown as { IsHitTestVisible: boolean }).IsHitTestVisible) continue;
+        if (!v.IsHitTestVisible) continue;
         args.Visual = v;
         const handler = (v as unknown as PointerEventHandlers)[previewName] as (a: PointerEventArgs) => void;
         handler.call(v, args);
@@ -638,10 +771,10 @@ export function dispatchPointer(args: PointerEventArgs): void
     }
 
     // Bubble: target → root.
-    args.Strategy = 'bubble';
+    args.Strategy = RoutingStrategy.Bubble;
     for (const v of route)
     {
-        if (!(v as unknown as { IsHitTestVisible: boolean }).IsHitTestVisible) continue;
+        if (!v.IsHitTestVisible) continue;
         args.Visual = v;
         const handler = (v as unknown as PointerEventHandlers)[bubbleName] as (a: PointerEventArgs) => void;
         handler.call(v, args);
@@ -681,7 +814,7 @@ export function dispatchPointerDirect(args: PointerEventArgs): void
     // a disabled row, which would let a hover trigger fight the
     // disabled-state opacity dim.
     if (routeSuppressedByDisabled(buildRoute(args.Source))) return;
-    args.Strategy = 'bubble';   // single hop — "bubble" by convention
+    args.Strategy = RoutingStrategy.Direct;   // fires on the source only
     args.Visual   = args.Source;
     const name    = POINTER_DIRECT_HANDLERS[args.Kind];
     const handler = (args.Source as unknown as PointerEventHandlers)[name] as (a: PointerEventArgs) => void;
@@ -689,20 +822,14 @@ export function dispatchPointerDirect(args: PointerEventArgs): void
     fireRoutedListeners(args.Source, args.Kind, args);
 }
 
-// Fire per-Visual instance listeners for the bubble-phase event. The
+// Fire per-Element instance listeners for the bubble-phase event. The
 // dispatcher calls this on each node after invoking the virtual so
 // declarative EventTriggers (PointerDown / KeyDown / GotFocus / …)
 // fire alongside subclass-defined virtuals — without forcing those
 // subclasses to call `super.OnPointerDown` to keep listeners alive.
-// Duck-typed against the optional FireRoutedListeners method so this
-// module doesn't import Visual (and create a cycle).
-interface RoutedListenerHost
+function fireRoutedListeners(v: Element, eventName: string, args: unknown): void
 {
-    FireRoutedListeners?(eventName: string, args: unknown): void;
-}
-function fireRoutedListeners(v: Visual, eventName: string, args: unknown): void
-{
-    (v as RoutedListenerHost).FireRoutedListeners?.(eventName, args);
+    v.FireRoutedListeners(eventName, args);
 }
 
 // ── Keyboard dispatch ──────────────────────────────────────────────
@@ -719,7 +846,7 @@ export function dispatchKey(args: KeyEventArgs): void
     const previewName = args.Kind === 'KeyDown' ? 'OnPreviewKeyDown' : 'OnPreviewKeyUp';
     const bubbleName  = args.Kind === 'KeyDown' ? 'OnKeyDown'        : 'OnKeyUp';
 
-    args.Strategy = 'tunnel';
+    args.Strategy = RoutingStrategy.Tunnel;
     for (let i = route.length - 1; i >= 0; i--)
     {
         const v = route[i]!;
@@ -729,7 +856,7 @@ export function dispatchKey(args: KeyEventArgs): void
         if (args.Handled) return;
     }
 
-    args.Strategy = 'bubble';
+    args.Strategy = RoutingStrategy.Bubble;
     for (const v of route)
     {
         args.Visual = v;
@@ -760,16 +887,16 @@ export function dispatchKey(args: KeyEventArgs): void
 // (PointerDown path) — input-binding.ts's matchesBinding dispatches
 // on which fields are present.
 let _inputBindingDispatcher:
-    ((v: Visual, args: KeyEventArgs | PointerEventArgs) => void) | undefined;
+    ((v: Element, args: KeyEventArgs | PointerEventArgs) => void) | undefined;
 
 export function _setInputBindingDispatcher(
-    fn: (v: Visual, args: KeyEventArgs | PointerEventArgs) => void,
+    fn: (v: Element, args: KeyEventArgs | PointerEventArgs) => void,
 ): void
 {
     _inputBindingDispatcher = fn;
 }
 
-function tryFireInputBindings(v: Visual, args: KeyEventArgs | PointerEventArgs): void
+function tryFireInputBindings(v: Element, args: KeyEventArgs | PointerEventArgs): void
 {
     _inputBindingDispatcher?.(v, args);
 }
@@ -782,7 +909,7 @@ export function dispatchTextInput(args: TextInputEventArgs): void
     const route = buildRoute(args.Source);
     if (routeSuppressedByDisabled(route)) return;
 
-    args.Strategy = 'tunnel';
+    args.Strategy = RoutingStrategy.Tunnel;
     for (let i = route.length - 1; i >= 0; i--)
     {
         const v = route[i]!;
@@ -791,7 +918,7 @@ export function dispatchTextInput(args: TextInputEventArgs): void
         if (args.Handled) return;
     }
 
-    args.Strategy = 'bubble';
+    args.Strategy = RoutingStrategy.Bubble;
     for (const v of route)
     {
         args.Visual = v;
@@ -810,7 +937,7 @@ export function dispatchTextInput(args: TextInputEventArgs): void
 export function dispatchFocus(args: FocusEventArgs): void
 {
     const route = buildRoute(args.Source);
-    args.Strategy = 'bubble';
+    args.Strategy = RoutingStrategy.Bubble;
     const name = args.Kind === 'GotFocus' ? 'OnGotFocus' : 'OnLostFocus';
     for (const v of route)
     {
@@ -821,6 +948,71 @@ export function dispatchFocus(args: FocusEventArgs): void
         fireRoutedListeners(v, args.Kind, args);
         if (args.Handled) return;
     }
+}
+
+// Tunnel-then-bubble dispatch for the keyboard-focus events
+// (Preview)GotKeyboardFocus / (Preview)LostKeyboardFocus. Symmetric with
+// dispatchPointer's two-pass walk; matches WPF where keyboard-focus
+// events tunnel then bubble (unlike the bubble-only GotFocus/LostFocus).
+export function dispatchKeyboardFocus(args: FocusEventArgs): void
+{
+    const isGot = args.Kind === 'GotKeyboardFocus';
+    const isLost = args.Kind === 'LostKeyboardFocus';
+    if (!isGot && !isLost)
+    {
+        throw new Error(
+            `dispatchKeyboardFocus: ${args.Kind} is not GotKeyboardFocus / LostKeyboardFocus`);
+    }
+    const previewKind = isGot ? 'PreviewGotKeyboardFocus' : 'PreviewLostKeyboardFocus';
+    const previewName = isGot ? 'OnPreviewGotKeyboardFocus' : 'OnPreviewLostKeyboardFocus';
+    const bubbleName  = isGot ? 'OnGotKeyboardFocus'        : 'OnLostKeyboardFocus';
+    const route = buildRoute(args.Source);
+
+    // Tunnel: root → target, firing the Preview virtual + its listeners.
+    args.Strategy = RoutingStrategy.Tunnel;
+    for (let i = route.length - 1; i >= 0; i--)
+    {
+        const v = route[i]!;
+        args.Visual = v;
+        const handler = (v as unknown as FocusEventHandlers)[previewName] as (a: FocusEventArgs) => void;
+        handler.call(v, args);
+        if (args.Handled) return;
+        fireRoutedListeners(v, previewKind, args);
+        if (args.Handled) return;
+    }
+
+    // Bubble: target → root.
+    args.Strategy = RoutingStrategy.Bubble;
+    for (const v of route)
+    {
+        args.Visual = v;
+        const handler = (v as unknown as FocusEventHandlers)[bubbleName] as (a: FocusEventArgs) => void;
+        handler.call(v, args);
+        if (args.Handled) return;
+        fireRoutedListeners(v, args.Kind, args);
+        if (args.Handled) return;
+    }
+}
+
+// Bubble dispatch for QueryCursor. Walks target → root; the first
+// handler to mark Handled fixes the cursor. Returns the resolved CSS
+// cursor keyword (or undefined when no handler claimed one). The
+// InputManager applies the result to the host surface.
+export function dispatchQueryCursor(args: QueryCursorEventArgs): string | undefined
+{
+    const route = buildRoute(args.Source);
+    if (routeSuppressedByDisabled(route)) return undefined;
+    args.Strategy = RoutingStrategy.Bubble;
+    for (const v of route)
+    {
+        if (!v.IsHitTestVisible) continue;
+        args.Visual = v;
+        (v as unknown as QueryCursorEventHandlers).OnQueryCursor.call(v, args);
+        if (args.Handled) return args.Cursor;
+        fireRoutedListeners(v, 'QueryCursor', args);
+        if (args.Handled) return args.Cursor;
+    }
+    return args.Cursor;
 }
 
 // Tunnel-then-bubble dispatch for DragEnter / DragLeave / DragOver /
@@ -840,7 +1032,7 @@ export function dispatchDrag(args: DragEventArgs): void
     const previewName = DRAG_PREVIEW_HANDLERS[args.Kind];
     const bubbleName  = DRAG_BUBBLE_HANDLERS [args.Kind];
 
-    args.Strategy = 'tunnel';
+    args.Strategy = RoutingStrategy.Tunnel;
     for (let i = route.length - 1; i >= 0; i--)
     {
         const v = route[i]!;
@@ -850,7 +1042,7 @@ export function dispatchDrag(args: DragEventArgs): void
         if (args.Handled) return;
     }
 
-    args.Strategy = 'bubble';
+    args.Strategy = RoutingStrategy.Bubble;
     for (const v of route)
     {
         args.Visual = v;

@@ -1,5 +1,6 @@
 import { KeyGesture, RoutedCommand } from './routed-command.js';
-import type { ModifierKeys } from '../../visual-engine/routed-event.js';
+import { ModifierKeys, toModifierKeys } from '../../visual-engine/routed-event.js';
+import { Key } from '../../visual-engine/input/key.js';
 
 // Named-command libraries — the standard catalogue of WPF-equivalent
 // RoutedCommand singletons. These are IDENTITY ONLY: each command is
@@ -16,14 +17,9 @@ import type { ModifierKeys } from '../../visual-engine/routed-event.js';
 // in their root Visual's InputBindings, or registers the binding at
 // the control-class level via CommandManager.RegisterClassInputBinding.
 
-function mod(m: Partial<ModifierKeys>): ModifierKeys
+function mod(m: { Shift?: boolean; Control?: boolean; Alt?: boolean; Meta?: boolean }): ModifierKeys
 {
-    return {
-        Shift:   m.Shift   ?? false,
-        Control: m.Control ?? false,
-        Alt:     m.Alt     ?? false,
-        Meta:    m.Meta    ?? false,
-    };
+    return toModifierKeys({ shift: m.Shift, control: m.Control, alt: m.Alt, meta: m.Meta });
 }
 
 // ── ApplicationCommands ────────────────────────────────────────────
@@ -32,30 +28,30 @@ function mod(m: Partial<ModifierKeys>): ModifierKeys
 // Names match WPF.
 export class ApplicationCommands
 {
-    public static readonly New        = new RoutedCommand('New',        ApplicationCommands, [new KeyGesture('N', mod({ Control: true }))]);
-    public static readonly Open       = new RoutedCommand('Open',       ApplicationCommands, [new KeyGesture('O', mod({ Control: true }))]);
-    public static readonly Save       = new RoutedCommand('Save',       ApplicationCommands, [new KeyGesture('S', mod({ Control: true }))]);
-    public static readonly SaveAs     = new RoutedCommand('SaveAs',     ApplicationCommands, [new KeyGesture('S', mod({ Control: true, Shift: true }))]);
-    public static readonly Close      = new RoutedCommand('Close',      ApplicationCommands, [new KeyGesture('F4', mod({ Control: true }))]);
-    public static readonly Print      = new RoutedCommand('Print',      ApplicationCommands, [new KeyGesture('P', mod({ Control: true }))]);
-    public static readonly PrintPreview = new RoutedCommand('PrintPreview', ApplicationCommands, [new KeyGesture('F2', mod({ Control: true }))]);
+    public static readonly New        = new RoutedCommand('New',        ApplicationCommands, [new KeyGesture(Key.N, mod({ Control: true }))]);
+    public static readonly Open       = new RoutedCommand('Open',       ApplicationCommands, [new KeyGesture(Key.O, mod({ Control: true }))]);
+    public static readonly Save       = new RoutedCommand('Save',       ApplicationCommands, [new KeyGesture(Key.S, mod({ Control: true }))]);
+    public static readonly SaveAs     = new RoutedCommand('SaveAs',     ApplicationCommands, [new KeyGesture(Key.S, mod({ Control: true, Shift: true }))]);
+    public static readonly Close      = new RoutedCommand('Close',      ApplicationCommands, [new KeyGesture(Key.F4, mod({ Control: true }))]);
+    public static readonly Print      = new RoutedCommand('Print',      ApplicationCommands, [new KeyGesture(Key.P, mod({ Control: true }))]);
+    public static readonly PrintPreview = new RoutedCommand('PrintPreview', ApplicationCommands, [new KeyGesture(Key.F2, mod({ Control: true }))]);
 
-    public static readonly Undo       = new RoutedCommand('Undo',       ApplicationCommands, [new KeyGesture('Z', mod({ Control: true }))]);
-    public static readonly Redo       = new RoutedCommand('Redo',       ApplicationCommands, [new KeyGesture('Y', mod({ Control: true }))]);
+    public static readonly Undo       = new RoutedCommand('Undo',       ApplicationCommands, [new KeyGesture(Key.Z, mod({ Control: true }))]);
+    public static readonly Redo       = new RoutedCommand('Redo',       ApplicationCommands, [new KeyGesture(Key.Y, mod({ Control: true }))]);
 
-    public static readonly Cut        = new RoutedCommand('Cut',        ApplicationCommands, [new KeyGesture('X', mod({ Control: true }))]);
-    public static readonly Copy       = new RoutedCommand('Copy',       ApplicationCommands, [new KeyGesture('C', mod({ Control: true }))]);
-    public static readonly Paste      = new RoutedCommand('Paste',      ApplicationCommands, [new KeyGesture('V', mod({ Control: true }))]);
-    public static readonly Delete     = new RoutedCommand('Delete',     ApplicationCommands, [new KeyGesture('Delete', mod({}))]);
+    public static readonly Cut        = new RoutedCommand('Cut',        ApplicationCommands, [new KeyGesture(Key.X, mod({ Control: true }))]);
+    public static readonly Copy       = new RoutedCommand('Copy',       ApplicationCommands, [new KeyGesture(Key.C, mod({ Control: true }))]);
+    public static readonly Paste      = new RoutedCommand('Paste',      ApplicationCommands, [new KeyGesture(Key.V, mod({ Control: true }))]);
+    public static readonly Delete     = new RoutedCommand('Delete',     ApplicationCommands, [new KeyGesture(Key.Delete, mod({}))]);
 
-    public static readonly Find       = new RoutedCommand('Find',       ApplicationCommands, [new KeyGesture('F', mod({ Control: true }))]);
-    public static readonly Replace    = new RoutedCommand('Replace',    ApplicationCommands, [new KeyGesture('H', mod({ Control: true }))]);
-    public static readonly SelectAll  = new RoutedCommand('SelectAll',  ApplicationCommands, [new KeyGesture('A', mod({ Control: true }))]);
+    public static readonly Find       = new RoutedCommand('Find',       ApplicationCommands, [new KeyGesture(Key.F, mod({ Control: true }))]);
+    public static readonly Replace    = new RoutedCommand('Replace',    ApplicationCommands, [new KeyGesture(Key.H, mod({ Control: true }))]);
+    public static readonly SelectAll  = new RoutedCommand('SelectAll',  ApplicationCommands, [new KeyGesture(Key.A, mod({ Control: true }))]);
 
-    public static readonly Help       = new RoutedCommand('Help',       ApplicationCommands, [new KeyGesture('F1', mod({}))]);
-    public static readonly Properties = new RoutedCommand('Properties', ApplicationCommands, [new KeyGesture('F4', mod({}))]);
+    public static readonly Help       = new RoutedCommand('Help',       ApplicationCommands, [new KeyGesture(Key.F1, mod({}))]);
+    public static readonly Properties = new RoutedCommand('Properties', ApplicationCommands, [new KeyGesture(Key.F4, mod({}))]);
     public static readonly Stop       = new RoutedCommand('Stop',       ApplicationCommands);
-    public static readonly ContextMenu = new RoutedCommand('ContextMenu', ApplicationCommands, [new KeyGesture('F10', mod({ Shift: true }))]);
+    public static readonly ContextMenu = new RoutedCommand('ContextMenu', ApplicationCommands, [new KeyGesture(Key.F10, mod({ Shift: true }))]);
     public static readonly CorrectionList = new RoutedCommand('CorrectionList', ApplicationCommands);
     public static readonly NotACommand   = new RoutedCommand('NotACommand', ApplicationCommands);
 }
@@ -69,36 +65,36 @@ export class ApplicationCommands
 // paragraph commands stay listed but unwired).
 export class EditingCommands
 {
-    public static readonly Delete          = new RoutedCommand('Delete',          EditingCommands, [new KeyGesture('Delete',    mod({}))]);
-    public static readonly Backspace       = new RoutedCommand('Backspace',       EditingCommands, [new KeyGesture('Backspace', mod({}))]);
-    public static readonly DeleteNextWord  = new RoutedCommand('DeleteNextWord',  EditingCommands, [new KeyGesture('Delete',    mod({ Control: true }))]);
-    public static readonly DeletePreviousWord = new RoutedCommand('DeletePreviousWord', EditingCommands, [new KeyGesture('Backspace', mod({ Control: true }))]);
+    public static readonly Delete          = new RoutedCommand('Delete',          EditingCommands, [new KeyGesture(Key.Delete,    mod({}))]);
+    public static readonly Backspace       = new RoutedCommand('Backspace',       EditingCommands, [new KeyGesture(Key.Back, mod({}))]);
+    public static readonly DeleteNextWord  = new RoutedCommand('DeleteNextWord',  EditingCommands, [new KeyGesture(Key.Delete,    mod({ Control: true }))]);
+    public static readonly DeletePreviousWord = new RoutedCommand('DeletePreviousWord', EditingCommands, [new KeyGesture(Key.Back, mod({ Control: true }))]);
 
-    public static readonly EnterParagraphBreak = new RoutedCommand('EnterParagraphBreak', EditingCommands, [new KeyGesture('Enter', mod({}))]);
-    public static readonly EnterLineBreak      = new RoutedCommand('EnterLineBreak',      EditingCommands, [new KeyGesture('Enter', mod({ Shift: true }))]);
-    public static readonly TabForward          = new RoutedCommand('TabForward',          EditingCommands, [new KeyGesture('Tab',   mod({}))]);
-    public static readonly TabBackward         = new RoutedCommand('TabBackward',         EditingCommands, [new KeyGesture('Tab',   mod({ Shift: true }))]);
+    public static readonly EnterParagraphBreak = new RoutedCommand('EnterParagraphBreak', EditingCommands, [new KeyGesture(Key.Return, mod({}))]);
+    public static readonly EnterLineBreak      = new RoutedCommand('EnterLineBreak',      EditingCommands, [new KeyGesture(Key.Return, mod({ Shift: true }))]);
+    public static readonly TabForward          = new RoutedCommand('TabForward',          EditingCommands, [new KeyGesture(Key.Tab,   mod({}))]);
+    public static readonly TabBackward         = new RoutedCommand('TabBackward',         EditingCommands, [new KeyGesture(Key.Tab,   mod({ Shift: true }))]);
 
-    public static readonly MoveLeftByCharacter  = new RoutedCommand('MoveLeftByCharacter',  EditingCommands, [new KeyGesture('ArrowLeft',  mod({}))]);
-    public static readonly MoveRightByCharacter = new RoutedCommand('MoveRightByCharacter', EditingCommands, [new KeyGesture('ArrowRight', mod({}))]);
-    public static readonly MoveUpByLine         = new RoutedCommand('MoveUpByLine',         EditingCommands, [new KeyGesture('ArrowUp',    mod({}))]);
-    public static readonly MoveDownByLine       = new RoutedCommand('MoveDownByLine',       EditingCommands, [new KeyGesture('ArrowDown',  mod({}))]);
-    public static readonly MoveLeftByWord       = new RoutedCommand('MoveLeftByWord',       EditingCommands, [new KeyGesture('ArrowLeft',  mod({ Control: true }))]);
-    public static readonly MoveRightByWord      = new RoutedCommand('MoveRightByWord',      EditingCommands, [new KeyGesture('ArrowRight', mod({ Control: true }))]);
+    public static readonly MoveLeftByCharacter  = new RoutedCommand('MoveLeftByCharacter',  EditingCommands, [new KeyGesture(Key.Left,  mod({}))]);
+    public static readonly MoveRightByCharacter = new RoutedCommand('MoveRightByCharacter', EditingCommands, [new KeyGesture(Key.Right, mod({}))]);
+    public static readonly MoveUpByLine         = new RoutedCommand('MoveUpByLine',         EditingCommands, [new KeyGesture(Key.Up,    mod({}))]);
+    public static readonly MoveDownByLine       = new RoutedCommand('MoveDownByLine',       EditingCommands, [new KeyGesture(Key.Down,  mod({}))]);
+    public static readonly MoveLeftByWord       = new RoutedCommand('MoveLeftByWord',       EditingCommands, [new KeyGesture(Key.Left,  mod({ Control: true }))]);
+    public static readonly MoveRightByWord      = new RoutedCommand('MoveRightByWord',      EditingCommands, [new KeyGesture(Key.Right, mod({ Control: true }))]);
 
-    public static readonly MoveToLineStart      = new RoutedCommand('MoveToLineStart',      EditingCommands, [new KeyGesture('Home', mod({}))]);
-    public static readonly MoveToLineEnd        = new RoutedCommand('MoveToLineEnd',        EditingCommands, [new KeyGesture('End',  mod({}))]);
-    public static readonly MoveToDocumentStart  = new RoutedCommand('MoveToDocumentStart',  EditingCommands, [new KeyGesture('Home', mod({ Control: true }))]);
-    public static readonly MoveToDocumentEnd    = new RoutedCommand('MoveToDocumentEnd',    EditingCommands, [new KeyGesture('End',  mod({ Control: true }))]);
+    public static readonly MoveToLineStart      = new RoutedCommand('MoveToLineStart',      EditingCommands, [new KeyGesture(Key.Home, mod({}))]);
+    public static readonly MoveToLineEnd        = new RoutedCommand('MoveToLineEnd',        EditingCommands, [new KeyGesture(Key.End,  mod({}))]);
+    public static readonly MoveToDocumentStart  = new RoutedCommand('MoveToDocumentStart',  EditingCommands, [new KeyGesture(Key.Home, mod({ Control: true }))]);
+    public static readonly MoveToDocumentEnd    = new RoutedCommand('MoveToDocumentEnd',    EditingCommands, [new KeyGesture(Key.End,  mod({ Control: true }))]);
 
-    public static readonly SelectLeftByCharacter  = new RoutedCommand('SelectLeftByCharacter',  EditingCommands, [new KeyGesture('ArrowLeft',  mod({ Shift: true }))]);
-    public static readonly SelectRightByCharacter = new RoutedCommand('SelectRightByCharacter', EditingCommands, [new KeyGesture('ArrowRight', mod({ Shift: true }))]);
-    public static readonly SelectUpByLine         = new RoutedCommand('SelectUpByLine',         EditingCommands, [new KeyGesture('ArrowUp',    mod({ Shift: true }))]);
-    public static readonly SelectDownByLine       = new RoutedCommand('SelectDownByLine',       EditingCommands, [new KeyGesture('ArrowDown',  mod({ Shift: true }))]);
-    public static readonly SelectLeftByWord       = new RoutedCommand('SelectLeftByWord',       EditingCommands, [new KeyGesture('ArrowLeft',  mod({ Control: true, Shift: true }))]);
-    public static readonly SelectRightByWord      = new RoutedCommand('SelectRightByWord',      EditingCommands, [new KeyGesture('ArrowRight', mod({ Control: true, Shift: true }))]);
-    public static readonly SelectToLineStart      = new RoutedCommand('SelectToLineStart',      EditingCommands, [new KeyGesture('Home',       mod({ Shift: true }))]);
-    public static readonly SelectToLineEnd        = new RoutedCommand('SelectToLineEnd',        EditingCommands, [new KeyGesture('End',        mod({ Shift: true }))]);
+    public static readonly SelectLeftByCharacter  = new RoutedCommand('SelectLeftByCharacter',  EditingCommands, [new KeyGesture(Key.Left,  mod({ Shift: true }))]);
+    public static readonly SelectRightByCharacter = new RoutedCommand('SelectRightByCharacter', EditingCommands, [new KeyGesture(Key.Right, mod({ Shift: true }))]);
+    public static readonly SelectUpByLine         = new RoutedCommand('SelectUpByLine',         EditingCommands, [new KeyGesture(Key.Up,    mod({ Shift: true }))]);
+    public static readonly SelectDownByLine       = new RoutedCommand('SelectDownByLine',       EditingCommands, [new KeyGesture(Key.Down,  mod({ Shift: true }))]);
+    public static readonly SelectLeftByWord       = new RoutedCommand('SelectLeftByWord',       EditingCommands, [new KeyGesture(Key.Left,  mod({ Control: true, Shift: true }))]);
+    public static readonly SelectRightByWord      = new RoutedCommand('SelectRightByWord',      EditingCommands, [new KeyGesture(Key.Right, mod({ Control: true, Shift: true }))]);
+    public static readonly SelectToLineStart      = new RoutedCommand('SelectToLineStart',      EditingCommands, [new KeyGesture(Key.Home,       mod({ Shift: true }))]);
+    public static readonly SelectToLineEnd        = new RoutedCommand('SelectToLineEnd',        EditingCommands, [new KeyGesture(Key.End,        mod({ Shift: true }))]);
 }
 
 // ── NavigationCommands ────────────────────────────────────────────
@@ -109,13 +105,13 @@ export class EditingCommands
 // behaviour fits their navigation model.
 export class NavigationCommands
 {
-    public static readonly BrowseBack    = new RoutedCommand('BrowseBack',    NavigationCommands, [new KeyGesture('ArrowLeft',  mod({ Alt: true }))]);
-    public static readonly BrowseForward = new RoutedCommand('BrowseForward', NavigationCommands, [new KeyGesture('ArrowRight', mod({ Alt: true }))]);
-    public static readonly BrowseHome    = new RoutedCommand('BrowseHome',    NavigationCommands, [new KeyGesture('Home',       mod({ Alt: true }))]);
-    public static readonly BrowseStop    = new RoutedCommand('BrowseStop',    NavigationCommands, [new KeyGesture('Escape',     mod({}))]);
-    public static readonly Refresh       = new RoutedCommand('Refresh',       NavigationCommands, [new KeyGesture('F5',         mod({}))]);
-    public static readonly Favorites     = new RoutedCommand('Favorites',     NavigationCommands, [new KeyGesture('I',          mod({ Control: true }))]);
-    public static readonly Search        = new RoutedCommand('Search',        NavigationCommands, [new KeyGesture('E',          mod({ Control: true }))]);
+    public static readonly BrowseBack    = new RoutedCommand('BrowseBack',    NavigationCommands, [new KeyGesture(Key.Left,  mod({ Alt: true }))]);
+    public static readonly BrowseForward = new RoutedCommand('BrowseForward', NavigationCommands, [new KeyGesture(Key.Right, mod({ Alt: true }))]);
+    public static readonly BrowseHome    = new RoutedCommand('BrowseHome',    NavigationCommands, [new KeyGesture(Key.Home,       mod({ Alt: true }))]);
+    public static readonly BrowseStop    = new RoutedCommand('BrowseStop',    NavigationCommands, [new KeyGesture(Key.Escape,     mod({}))]);
+    public static readonly Refresh       = new RoutedCommand('Refresh',       NavigationCommands, [new KeyGesture(Key.F5,         mod({}))]);
+    public static readonly Favorites     = new RoutedCommand('Favorites',     NavigationCommands, [new KeyGesture(Key.I,          mod({ Control: true }))]);
+    public static readonly Search        = new RoutedCommand('Search',        NavigationCommands, [new KeyGesture(Key.E,          mod({ Control: true }))]);
 
     public static readonly NextPage      = new RoutedCommand('NextPage',      NavigationCommands);
     public static readonly PreviousPage  = new RoutedCommand('PreviousPage',  NavigationCommands);
@@ -123,8 +119,8 @@ export class NavigationCommands
     public static readonly LastPage      = new RoutedCommand('LastPage',      NavigationCommands);
     public static readonly GoToPage      = new RoutedCommand('GoToPage',      NavigationCommands);
     public static readonly Zoom          = new RoutedCommand('Zoom',          NavigationCommands);
-    public static readonly IncreaseZoom  = new RoutedCommand('IncreaseZoom',  NavigationCommands, [new KeyGesture('+', mod({ Control: true }))]);
-    public static readonly DecreaseZoom  = new RoutedCommand('DecreaseZoom',  NavigationCommands, [new KeyGesture('-', mod({ Control: true }))]);
+    public static readonly IncreaseZoom  = new RoutedCommand('IncreaseZoom',  NavigationCommands, [new KeyGesture(Key.OemPlus, mod({ Control: true }))]);
+    public static readonly DecreaseZoom  = new RoutedCommand('DecreaseZoom',  NavigationCommands, [new KeyGesture(Key.OemMinus, mod({ Control: true }))]);
 }
 
 // ── MediaCommands ──────────────────────────────────────────────────

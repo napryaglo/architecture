@@ -2,8 +2,8 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
     KeyEventArgs,
-    NoModifiers,
-    Panel,
+    Key,
+    NoModifiers,    Panel,
     PointerButton,
     PointerEventArgs,
     Element,
@@ -146,7 +146,7 @@ describe('Routed-event dispatch gating on IsEnabled', () => {
         const { leaf } = buildTree();
         leaf.IsEnabled = false;
         const args = new KeyEventArgs('KeyDown', leaf, {
-            Key: 'Enter', Code: 'Enter', Modifiers: NoModifiers, Repeat: false,
+            Key: Key.Return, KeyText: 'Enter', Code: 'Enter', Modifiers: NoModifiers, IsRepeat: false,
         });
         dispatchKey(args);
         assert.equal(leaf.keyDown, 0, 'disabled source — KeyDown swallowed');

@@ -1,7 +1,7 @@
 import { APPROXIMATE_TEXT_MEASURER, MetaData, Model } from '../../runtime/index.js';
 import { InputManager } from '../../framework/input-manager.js';
 import { Rect, Size } from '../primitives.js';
-import type { TextMeasurer, Visual, VisualHost } from '../../runtime/index.js';
+import type { TextMeasurer, Visual, Element, VisualHost } from '../../runtime/index.js';
 import type { Brush } from '../drawing/brush.js';
 import { OverlayLayer } from './overlay-layer.js';
 
@@ -415,12 +415,12 @@ export abstract class PresentationTarget extends Model implements VisualHost
     // VisualHost's optional focus surface.
     public readonly InputManager: InputManager = new InputManager();
 
-    public SetFocus(visual: Visual | undefined): void
+    public SetFocus(visual: Element | undefined): void
     {
         this.InputManager.SetFocus(visual);
     }
 
-    public GetFocusedVisual(): Visual | undefined
+    public GetFocusedVisual(): Element | undefined
     {
         return this.InputManager.GetFocusedVisual();
     }

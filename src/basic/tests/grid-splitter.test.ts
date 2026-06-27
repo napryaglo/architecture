@@ -2,7 +2,7 @@ import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from './test-app.js';
 
-import { Application, HorizontalAlignment, NoModifiers, PointerButton, Rect, Size, VerticalAlignment, type PointerEventInit } from '../../runtime/index.js';
+import { Application, HorizontalAlignment, Key, NoModifiers, PointerButton, Rect, Size, VerticalAlignment, type PointerEventInit } from '../../runtime/index.js';
 import { InputManager } from '../../framework/index.js';;
 import {
     ColumnDefinition,
@@ -251,7 +251,7 @@ describe('GridSplitter — ShowsPreview defers commit', () => {
         im.InjectPointerDown(splitter, pointer({ HostX: 104, HostY: 50 }));
         im.InjectPointerMove(splitter, pointer({ HostX: 124, HostY: 50 }));
         im.SetFocus(splitter);
-        im.InjectKeyDown({ Key: 'Escape', Code: 'Escape', Modifiers: NoModifiers, IsRepeat: false });
+        im.InjectKeyDown({ Key: Key.Escape, KeyText: 'Escape', Code: 'Escape', Modifiers: NoModifiers, IsRepeat: false });
 
         grid.Measure(new Size(208, 100));
         grid.Arrange(new Rect(0, 0, 208, 100));
@@ -272,7 +272,7 @@ describe('GridSplitter — keyboard nudges', () => {
 
         const im = new InputManager();
         im.SetFocus(splitter);
-        im.InjectKeyDown({ Key: 'ArrowRight', Code: 'ArrowRight', Modifiers: NoModifiers, IsRepeat: false });
+        im.InjectKeyDown({ Key: Key.Right, KeyText: 'ArrowRight', Code: 'ArrowRight', Modifiers: NoModifiers, IsRepeat: false });
 
         grid.Measure(new Size(208, 100));
         grid.Arrange(new Rect(0, 0, 208, 100));
@@ -285,7 +285,7 @@ describe('GridSplitter — keyboard nudges', () => {
 
         const im = new InputManager();
         im.SetFocus(splitter);
-        im.InjectKeyDown({ Key: 'ArrowUp', Code: 'ArrowUp', Modifiers: NoModifiers, IsRepeat: false });
+        im.InjectKeyDown({ Key: Key.Up, KeyText: 'ArrowUp', Code: 'ArrowUp', Modifiers: NoModifiers, IsRepeat: false });
 
         // Vertical arrow on a horizontal-resize splitter doesn't change anything.
         assert.equal(grid.GetColumnWidth(0), 100);

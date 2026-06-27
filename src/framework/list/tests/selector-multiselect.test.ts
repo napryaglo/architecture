@@ -1,3 +1,4 @@
+import { ModifierKeys, toModifierKeys } from '../../../runtime/index.js';
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from '../../../basic/tests/test-app.js';
@@ -37,9 +38,9 @@ class TestSelector extends Selector
     }
 }
 
-function modifiers(extras: Partial<ModifierKeys> = {}): ModifierKeys
+function modifiers(extras: { Shift?: boolean; Control?: boolean; Alt?: boolean; Meta?: boolean } = {}): ModifierKeys
 {
-    return { ...NoModifiers, ...extras };
+    return toModifierKeys({ shift: extras.Shift, control: extras.Control, alt: extras.Alt, meta: extras.Meta });
 }
 
 describe('Selector — defaults', () => {

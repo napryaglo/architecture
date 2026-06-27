@@ -21,7 +21,7 @@ import { Slider } from '../../basic/slider.js';
 import { TextBox } from '../../basic/text-box.js';
 import { TemplatedControl } from '../../basic/templated-control.js';
 import { ControlTemplate } from '../../basic/templates/control-template.js';
-import { MenuPopupHost } from '../menu/menu-strip.js';
+import { MenuPopupHost, MenuAnchorSide } from '../menu/menu-strip.js';
 import { ClickAwayScrim } from '../../basic/click-away-scrim.js';
 
 // Material 3 swatch palette — 10 colours × 3 tones each. Tuned by hand
@@ -413,7 +413,7 @@ export class ColorPicker extends TemplatedControl
         if (scrim !== undefined) scrim.onClick = (): void => { this.IsDropDownOpen = false; };
 
         host.anchor     = this._trigger ?? this;
-        host.anchorSide = 'below';
+        host.anchorSide = MenuAnchorSide.Below;
         const body = host.FindName('PART_PopupBody') as Visual | undefined;
         if (body !== undefined) host.popup = body;
 

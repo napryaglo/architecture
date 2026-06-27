@@ -5,7 +5,12 @@ import { PresentationTarget } from './presentation-target.js';
 // renderer internally — `svg` is direct serialization, `png` needs a
 // raster pass through CanvasRenderer, `pdf` needs a pdf library
 // (jsPDF / pdfkit / similar — choice deferred). Scaffold only.
-export type FileTargetFormat = 'svg' | 'png' | 'pdf';
+export enum FileTargetFormat
+{
+    Svg = 'svg',
+    Png = 'png',
+    Pdf = 'pdf',
+}
 
 export interface FileTargetOptions
 {

@@ -59,29 +59,53 @@ export {
     NoModifiers,
     PointerButton,
     PointerEventArgs,
+    QueryCursorEventArgs,
     RoutedEventArgs,
     TextInputEventArgs,
     WheelEventArgs,
     buildRoute,
     dispatchDrag,
     dispatchFocus,
+    dispatchKeyboardFocus,
     dispatchKey,
     dispatchPointer,
     dispatchPointerDirect,
+    dispatchQueryCursor,
     dispatchTextInput,
     type DragEventHandlers,
     type DragEventInit,
     type FocusEventHandlers,
     type KeyEventInit,
     type KeyboardEventHandlers,
-    type ModifierKeys,
+    type QueryCursorEventHandlers,
+    ModifierKeys,
+    hasModifier,
+    toModifierKeys,
     type PointerEventHandlers,
     type PointerEventInit,
     type RoutedEventKind,
     type TextInputEventInit,
-    type WheelDeltaMode,
+    WheelDeltaMode,
     type WheelEventInit,
 } from './routed-event.js';
+
+// Input enums (WPF parity).
+export { Key, keyFromDom } from './input/key.js';
+export {
+    MouseButton,
+    MouseButtonState,
+    KeyStates,
+    CaptureMode,
+    FocusNavigationDirection,
+    KeyboardNavigationMode,
+    mouseButtonFromPointer,
+} from './input/input-enums.js';
+
+// Device façades (WPF Mouse / Keyboard / FocusManager parity).
+export { Mouse, MouseDevice } from './input/mouse.js';
+export { Keyboard, KeyboardDevice } from './input/keyboard.js';
+export { FocusManager } from './input/focus-manager.js';
+export { KeyboardNavigation, TraversalRequest } from './input/keyboard-navigation.js';
 
 // Animation subsystem.
 export {
@@ -130,7 +154,7 @@ export {
     type Interpolator,
     type ThicknessAnimationProps,
     type ThicknessAnimationUsingKeyFramesProps,
-    type TimelinePhase,
+    TimelinePhase,
 } from './animation/index.js';
 
 // Themes.

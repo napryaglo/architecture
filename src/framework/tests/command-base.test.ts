@@ -1,10 +1,11 @@
+import { ModifierKeys, toModifierKeys } from '../../runtime/index.js';
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from '../../basic/tests/test-app.js';
 import {
     CommandBase,
-    KeyEventArgs,
-    NoModifiers,
+    Key,
+    KeyEventArgs,    NoModifiers,
     PointerButton,
     RelayCommand,
     dispatchKey,
@@ -21,8 +22,8 @@ import {
     PlacementMode,
     ToolTipService,
     TooltipPopupHost,
-} from '../tooltip-service.js';
-import { Tooltip } from '../tooltip.js';
+} from '../tooltips/tooltip-service.js';
+import { Tooltip } from '../tooltips/tooltip.js';
 
 function pointer(overrides: Partial<PointerEventInit> = {}): PointerEventInit
 {
@@ -84,24 +85,24 @@ describe('CommandBase metadata', () => {
 describe('KeyBinding.DisplayString', () => {
 
     test('falls back to a formatted gesture when not explicitly set', () => {
-        const b = new KeyBinding('S', { Control: true });
+        const b = new KeyBinding(Key.S, ModifierKeys.Control);
         assert.equal(b.DisplayString, 'Ctrl+S');
     });
 
     test('order is Ctrl → Alt → Shift → Meta', () => {
-        const b = new KeyBinding('S', { Control: true, Alt: true, Shift: true });
+        const b = new KeyBinding(Key.S, (ModifierKeys.Control | ModifierKeys.Alt | ModifierKeys.Shift));
         assert.equal(b.DisplayString, 'Ctrl+Alt+Shift+S');
     });
 
     test('explicit override wins over the computed string', () => {
-        const b = new KeyBinding('Z', { Control: true }, undefined, undefined, '⌘Z');
+        const b = new KeyBinding(Key.Z, ModifierKeys.Control, undefined, undefined, '⌘Z');
         assert.equal(b.DisplayString, '⌘Z');
     });
 
     test('single-char keys are upper-cased; multi-char names pass through', () => {
-        assert.equal(new KeyBinding('a', {}).DisplayString,           'A');
-        assert.equal(new KeyBinding('ArrowUp', {}).DisplayString,     'ArrowUp');
-        assert.equal(new KeyBinding('F4', {}).DisplayString,          'F4');
+        assert.equal(new KeyBinding(Key.A, ModifierKeys.None).DisplayString,           'A');
+        assert.equal(new KeyBinding(Key.Up, ModifierKeys.None).DisplayString,     'Up');
+        assert.equal(new KeyBinding(Key.F4, ModifierKeys.None).DisplayString,          'F4');
     });
 });
 
@@ -111,7 +112,7 @@ describe('CommandManager.FindShortcutForCommand', () => {
         initTestApp();
         const cmd  = new RelayCommand(() => undefined, undefined, { Text: 'Save' });
         const btn  = new Button();
-        btn.InputBindings.push(new KeyBinding('S', { Control: true }, cmd));
+        btn.InputBindings.push(new KeyBinding(Key.S, ModifierKeys.Control, cmd));
         const target = new HeadlessTarget(200, 100);
         target.Content = btn;
         target.Flush();
@@ -133,7 +134,7 @@ describe('CommandManager.FindShortcutForCommand', () => {
         // so we use a Button as the carrier).
         const outerCarrier = new Button();
         outerCarrier.Content = inner;
-        outerCarrier.InputBindings.push(new KeyBinding('F4', {}, cmd));
+        outerCarrier.InputBindings.push(new KeyBinding(Key.F4, ModifierKeys.None, cmd));
         const target = new HeadlessTarget(200, 100);
         target.Content = outerCarrier;
         target.Flush();
@@ -173,7 +174,7 @@ describe('Button keyboard activation', () => {
         target.Flush();
 
         const args = new KeyEventArgs('KeyDown', btn, {
-            Key: ' ', Code: 'Space', Modifiers: NoModifiers, Repeat: false,
+            Key: Key.Space, KeyText: ' ', Code: 'Space', Modifiers: NoModifiers, IsRepeat: false,
         });
         dispatchKey(args);
 
@@ -192,7 +193,7 @@ describe('Button keyboard activation', () => {
         target.Flush();
 
         const args = new KeyEventArgs('KeyDown', btn, {
-            Key: 'Enter', Code: 'Enter', Modifiers: NoModifiers, Repeat: false,
+            Key: Key.Return, KeyText: 'Enter', Code: 'Enter', Modifiers: NoModifiers, IsRepeat: false,
         });
         dispatchKey(args);
 
@@ -210,7 +211,7 @@ describe('Button keyboard activation', () => {
         target.Flush();
 
         const args = new KeyEventArgs('KeyDown', btn, {
-            Key: 'a', Code: 'KeyA', Modifiers: NoModifiers, Repeat: false,
+            Key: Key.A, KeyText: 'a', Code: 'KeyA', Modifiers: NoModifiers, IsRepeat: false,
         });
         dispatchKey(args);
 
@@ -231,7 +232,7 @@ describe('Button keyboard activation', () => {
         target.Flush();
 
         const args = new KeyEventArgs('KeyDown', btn, {
-            Key: ' ', Code: 'Space', Modifiers: NoModifiers, Repeat: false,
+            Key: Key.Space, KeyText: ' ', Code: 'Space', Modifiers: NoModifiers, IsRepeat: false,
         });
         dispatchKey(args);
 
@@ -304,7 +305,7 @@ describe('ToolTipService.show populates Shortcut', () => {
         // shortcut-resolution slice.
         const btn = new Button();
         btn.Width = 60; btn.Height = 30;
-        btn.InputBindings.push(new KeyBinding('S', { Control: true }, cmd));
+        btn.InputBindings.push(new KeyBinding(Key.S, ModifierKeys.Control, cmd));
         const target = new HeadlessTarget(300, 200);
         target.Content = btn;
         target.Flush();
