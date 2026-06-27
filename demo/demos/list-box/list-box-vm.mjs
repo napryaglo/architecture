@@ -9,7 +9,7 @@
 // OnViewMounted. CollectionView subscription + toggle state live on
 // the VM so the demo data and behavior travel with the model.
 import { Model } from '@visualisation-sub/mural/runtime';
-import { SortDescription, TextBlock } from '@visualisation-sub/mural/basic';
+import { SortDescription, SortDirection, TextBlock } from '@visualisation-sub/mural/basic';
 import { Button } from '@visualisation-sub/mural/framework';
 import { ListBox, ListBoxItem, } from '@visualisation-sub/mural/framework';
 const PEOPLE = [
@@ -52,8 +52,8 @@ export class ListBoxVM extends Model {
             throw new Error('ItemsSource should have created a View');
         // SortDescription / Filter receive untyped projected items; narrow
         // each to the LabelledPerson shape the source was mapped into.
-        const sortAsc = new SortDescription((d) => d.name, 'asc');
-        const sortDesc = new SortDescription((d) => d.name, 'desc');
+        const sortAsc = new SortDescription((d) => d.name, SortDirection.Asc);
+        const sortDesc = new SortDescription((d) => d.name, SortDirection.Desc);
         const engFilter = (d) => d.role === 'eng';
         let sortState = 'off';
         let filterState = 'off';
