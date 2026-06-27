@@ -16,6 +16,14 @@
 //               session — counter values, drawer open state, etc).
 const _all = [];
 const _cache = new Map(); // id → instantiated root Visual
+const _listeners = new Set();
+// Subscribe to demo registrations. Returns an unsubscribe thunk. Listeners
+// fire only for demos registered AFTER subscribing — pair with allDemos()
+// for the already-registered snapshot.
+export function onDemoRegistered(listener) {
+    _listeners.add(listener);
+    return () => { _listeners.delete(listener); };
+}
 export function register(def) {
     if (def === null || typeof def !== 'object') {
         throw new Error('register(def): expected a definition object');
@@ -33,6 +41,8 @@ export function register(def) {
         throw new Error(`demo def: '${id}' already registered`);
     }
     _all.push(def);
+    for (const l of _listeners)
+        l(def);
 }
 // Sorted view: group first, then title — matches how the tree renders
 // them.

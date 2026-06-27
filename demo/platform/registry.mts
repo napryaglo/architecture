@@ -31,6 +31,23 @@ export interface DemoDefinition {
 const _all: DemoDefinition[] = [];
 const _cache = new Map<string, Visual>();   // id → instantiated root Visual
 
+// A listener notified each time a demo registers. The navigation model is
+// often materialized by the view tree BEFORE every demo module's import
+// side effect has run (the shell's `$service` bindings resolve the
+// singleton during view construction). Rather than depend on import order,
+// the model snapshots the current registry AND subscribes here, so demos
+// that register late still populate the navigation list.
+export type RegistrationListener = (def: DemoDefinition) => void;
+const _listeners = new Set<RegistrationListener>();
+
+// Subscribe to demo registrations. Returns an unsubscribe thunk. Listeners
+// fire only for demos registered AFTER subscribing — pair with allDemos()
+// for the already-registered snapshot.
+export function onDemoRegistered(listener: RegistrationListener): () => void {
+    _listeners.add(listener);
+    return () => { _listeners.delete(listener); };
+}
+
 export function register(def: DemoDefinition): void {
     if (def === null || typeof def !== 'object') {
         throw new Error('register(def): expected a definition object');
@@ -44,6 +61,7 @@ export function register(def: DemoDefinition): void {
         throw new Error(`demo def: '${id}' already registered`);
     }
     _all.push(def);
+    for (const l of _listeners) l(def);
 }
 
 // Sorted view: group first, then title — matches how the tree renders

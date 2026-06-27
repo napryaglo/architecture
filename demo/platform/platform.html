@@ -79,6 +79,54 @@
         // the demo registry, so the host JS builds NO view-model and seeds
         // NO DataContext — it only mounts the shell and registers the
         // app-level storage service. No tree-walking, no FindName.
+        //
+        // Demo modules self-register on import (each calls `register(...)`
+        // at top level — the import side effect enrolls it). These run
+        // BEFORE platform.mu.js so the registry is fully populated by the
+        // time the shell's `$service` bindings materialize the navigation
+        // model during view construction. (The model also subscribes to
+        // late registrations via registry.onDemoRegistered, so order is no
+        // longer load-bearing — but keeping demos first preserves the
+        // simplest, fully-synchronous population path.)
+        import '../demos/dashboard/dashboard.mjs';
+        import '../demos/diagram/diagram.mjs';
+        import '../demos/commands/commands.mjs';
+        import '../demos/toggle-button/toggle-button.mjs';
+        import '../demos/icon-button/icon-button.mjs';
+        import '../demos/fab/fab.mjs';
+        import '../demos/card/card.mjs';
+        import '../demos/top-app-bar/top-app-bar.mjs';
+        import '../demos/navigation-rail/navigation-rail.mjs';
+        import '../demos/tool-bar/tool-bar.mjs';
+        import '../demos/status-bar/status-bar.mjs';
+        import '../demos/menu/menu.mjs';
+        import '../demos/context-menu/context-menu.mjs';
+        import '../demos/counter/counter.mjs';
+        import '../demos/drawer/drawer.mjs';
+        import '../demos/tree-view/tree-view.mjs';
+        import '../demos/list-box/list-box.mjs';
+        import '../demos/text-box/text-box.mjs';
+        import '../demos/spin-edit/spin-edit.mjs';
+        import '../demos/slider/slider.mjs';
+        import '../demos/splitter/splitter.mjs';
+        import '../demos/animation/animation.mjs';
+        import '../demos/animation-declarative/animation-declarative.mjs';
+        import '../demos/animation-triggers/animation-triggers.mjs';
+        import '../demos/animation-named/animation-named.mjs';
+        import '../demos/drag-drop/drag-drop.mjs';
+        import '../demos/drag-drop-extended/drag-drop-extended.mjs';
+        import '../demos/word-toolbox/word-toolbox.mjs';
+        import '../demos/bouncing-ball/bouncing-ball.mjs';
+        import '../demos/shapes/shapes.mjs';
+        import '../demos/segmented-button/segmented-button.mjs';
+        import '../demos/button-group/button-group.mjs';
+        import '../demos/split-button/split-button.mjs';
+        import '../demos/fab-menu/fab-menu.mjs';
+        import '../demos/text-on-path/text-on-path.mjs';
+        import '../demos/color-picker/color-picker.mjs';
+        import '../demos/pen-editor/pen-editor.mjs';
+        import '../demos/fill-editor/fill-editor.mjs';
+
         import { app }                                 from './platform.mu.js';
         import { HtmlTarget }                          from '@visualisation-sub/mural/visual-engine';
         // Service composition root: register the app's services on the
@@ -125,48 +173,6 @@
         };
         applyHostChrome();
         ThemeManager.AddActivatedListener(applyHostChrome);
-
-        // Demo modules self-register on import. Each module calls
-        // `register(...)` at top level — the side effect of importing
-        // is enough to enroll the demo with the platform's registry.
-        import '../demos/dashboard/dashboard.mjs';
-        import '../demos/diagram/diagram.mjs';
-        import '../demos/commands/commands.mjs';
-        import '../demos/toggle-button/toggle-button.mjs';
-        import '../demos/icon-button/icon-button.mjs';
-        import '../demos/fab/fab.mjs';
-        import '../demos/card/card.mjs';
-        import '../demos/top-app-bar/top-app-bar.mjs';
-        import '../demos/navigation-rail/navigation-rail.mjs';
-        import '../demos/tool-bar/tool-bar.mjs';
-        import '../demos/status-bar/status-bar.mjs';
-        import '../demos/menu/menu.mjs';
-        import '../demos/context-menu/context-menu.mjs';
-        import '../demos/counter/counter.mjs';
-        import '../demos/drawer/drawer.mjs';
-        import '../demos/tree-view/tree-view.mjs';
-        import '../demos/list-box/list-box.mjs';
-        import '../demos/text-box/text-box.mjs';
-        import '../demos/spin-edit/spin-edit.mjs';
-        import '../demos/slider/slider.mjs';
-        import '../demos/splitter/splitter.mjs';
-        import '../demos/animation/animation.mjs';
-        import '../demos/animation-declarative/animation-declarative.mjs';
-        import '../demos/animation-triggers/animation-triggers.mjs';
-        import '../demos/animation-named/animation-named.mjs';
-        import '../demos/drag-drop/drag-drop.mjs';
-        import '../demos/drag-drop-extended/drag-drop-extended.mjs';
-        import '../demos/word-toolbox/word-toolbox.mjs';
-        import '../demos/bouncing-ball/bouncing-ball.mjs';
-        import '../demos/shapes/shapes.mjs';
-        import '../demos/segmented-button/segmented-button.mjs';
-        import '../demos/button-group/button-group.mjs';
-        import '../demos/split-button/split-button.mjs';
-        import '../demos/fab-menu/fab-menu.mjs';
-        import '../demos/text-on-path/text-on-path.mjs';
-        import '../demos/color-picker/color-picker.mjs';
-        import '../demos/pen-editor/pen-editor.mjs';
-        import '../demos/fill-editor/fill-editor.mjs';
 
         const status = document.getElementById('status');
         try {

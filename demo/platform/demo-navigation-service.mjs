@@ -27,7 +27,17 @@
 //     └─ Content             the demo's root Visual (built lazily, cached)
 import { MetaData, Model, ObservableCollection, } from '@visualisation-sub/mural/runtime';
 import { NavigationService } from '@visualisation-sub/mural/framework/shell/services/navigation-service.js';
-import { allDemos, instantiateDemo } from './registry.mjs';
+import { allDemos, instantiateDemo, onDemoRegistered } from './registry.mjs';
+// Insert `item` into `coll` at the position that keeps it sorted by `cmp`
+// (stable: ties land after existing equal entries). Used to slot demos /
+// groups into their alphabetical place whether they arrive in the initial
+// snapshot or stream in from a late registration.
+function insertSorted(coll, item, cmp) {
+    let i = 0;
+    while (i < coll.Count && cmp(coll.Get(i), item) <= 0)
+        i++;
+    coll.Insert(i, item);
+}
 // Display-string convention shared with the list's item rendering: the
 // `Label` field is preferred, so a single template renders demo rows
 // uniformly.
@@ -94,28 +104,66 @@ export class DemoNavigationService extends NavigationService {
     // Per-group "last-active demo" cache: re-selecting a visited group
     // restores the demo the user left it on. Keyed by GroupVM identity.
     _lastDemoByGroup = new Map();
+    // Group lookup by name, so a streamed-in demo finds its existing group.
+    _groupsByName = new Map();
+    // Registry subscription, dropped on dispose.
+    _unsubscribeRegistry;
     constructor(provider) {
         // The provider is the shell scope this service was registered in;
         // we forward it to satisfy the ServiceBase(provider) contract. This
         // service has no injected deps — it reads the registry directly.
         super(provider);
-        const groups = new ObservableCollection();
-        const byName = new Map();
-        for (const def of allDemos()) {
-            let g = byName.get(def.group);
-            if (g === undefined) {
-                g = new GroupVM(def.group, GROUP_ICONS[def.group]);
-                byName.set(def.group, g);
-                groups.Add(g);
-            }
-            g.Demos.Add(new DemoVM(def));
-        }
-        this.set_property_value(DemoNavigationService.GroupsKey, groups);
+        this.set_property_value(DemoNavigationService.GroupsKey, new ObservableCollection());
+        // Snapshot whatever has registered so far, THEN keep listening: the
+        // shell's `$service` bindings resolve (and so construct) this
+        // singleton during view materialization, which can run before every
+        // demo module's import side effect. Subscribing makes the navigation
+        // list import-order independent — late registrations slot in
+        // reactively. See registry.onDemoRegistered.
+        for (const def of allDemos())
+            this._addDemo(def);
+        this._unsubscribeRegistry = onDemoRegistered(def => this._addDemo(def));
         // Auto-select the first group + its first demo so the platform never
         // shows an empty state. The OnPropertyChanged routes below cascade:
         // SelectedGroupIndex → SelectedGroup → Items → SelectedItem →
         // Title / Subtitle / Content.
         this._syncSelectedGroupFromIndex();
+    }
+    // Slot one demo into the navigation tree: find-or-create its group (in
+    // sorted position) and insert the demo (in sorted position) within it.
+    // Drives selection when this is the first demo to arrive, or when it
+    // lands in the already-selected-but-empty group — so a demo that
+    // registers after the group was selected still surfaces.
+    _addDemo(def) {
+        const groups = this.Groups;
+        if (groups === undefined)
+            return;
+        let g = this._groupsByName.get(def.group);
+        const isNewGroup = g === undefined;
+        if (g === undefined) {
+            g = new GroupVM(def.group, GROUP_ICONS[def.group]);
+            this._groupsByName.set(def.group, g);
+            insertSorted(groups, g, (a, b) => a.Label.localeCompare(b.Label));
+        }
+        insertSorted(g.Demos, new DemoVM(def), (a, b) => a.Title.localeCompare(b.Title));
+        if (isNewGroup) {
+            // A sorted insert can shift which group occupies the selected
+            // index, so keep SelectedGroup pinned to groups[SelectedGroupIndex]
+            // (the rail-bound seam). In the normal path every demo is present
+            // in the initial snapshot in sorted order, so index 0 never moves
+            // and this is a no-op after the first group; in the late-
+            // registration path it tracks the index as groups stream in.
+            this._syncSelectedGroupFromIndex();
+        }
+        else if (g === this.SelectedGroup && this.SelectedItem === undefined) {
+            // A demo streamed into the selected (previously empty) group —
+            // surface its first entry.
+            this.SelectedItem = g.Demos.Get(0);
+        }
+    }
+    Dispose() {
+        this._unsubscribeRegistry();
+        super.Dispose();
     }
     get Groups() { return this.get_property_value(DemoNavigationService.GroupsKey); }
     get SelectedGroupIndex() { return this.get_property_value(DemoNavigationService.SelectedGroupIndexKey); }
