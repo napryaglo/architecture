@@ -26,6 +26,9 @@ import {
 import { DragDrop, DragDropEffects, DragSession, type DragDropOptions } from '../visual-engine/drag-drop.js';
 import type { Element } from '../visual-engine/element.js';
 import { Mouse } from '../visual-engine/input/mouse.js';
+import { Stylus } from '../visual-engine/input/stylus.js';
+import { Touch } from '../visual-engine/input/touch.js';
+import { ManipulationCoordinator } from '../visual-engine/input/manipulation.js';
 import { Keyboard } from '../visual-engine/input/keyboard.js';
 import { CaptureMode, FocusNavigationDirection } from '../visual-engine/input/input-enums.js';
 import { Key } from '../visual-engine/input/key.js';
@@ -125,6 +128,10 @@ export class InputManager
     // PointerUp to decide whether Drop fires.
     private _currentDragEffect: DragDropEffects = DragDropEffects.None;
 
+    // Touch-manipulation state machine (pan / pinch / rotate + inertia).
+    // Fed by driveManipulation from the touch-contact lifecycle.
+    private readonly _manipulation = new ManipulationCoordinator();
+
     // ── Public entry points ────────────────────────────────────────
 
     // Pointer moved to a new (or null) Visual at the given host
@@ -151,6 +158,7 @@ export class InputManager
         if (dispatchTarget === null || dispatchTarget === undefined) return;
 
         dispatchPointer(new PointerEventArgs('PointerMove', dispatchTarget, init, this, this));
+        this.raiseStylusTouch(dispatchTarget, init, 'Move');
 
         // QueryCursor — let handlers under the pointer pick the cursor.
         // Suppressed while a capture has locked a drag cursor (that
@@ -187,6 +195,7 @@ export class InputManager
         setIsPressed(hit, true);
         dispatchPointer(new PointerEventArgs('PointerDown', hit, init, this, this));
         this.raiseButtonSpecific(hit, init, true);
+        this.raiseStylusTouch(hit, init, 'Down');
 
         // A handler may have called DragDrop.DoDragDrop synchronously —
         // pick up the pending session so subsequent moves drive the
@@ -217,6 +226,7 @@ export class InputManager
         {
             dispatchPointer(new PointerEventArgs('PointerUp', dispatchTarget, init, this, this));
             this.raiseButtonSpecific(dispatchTarget, init, false);
+            this.raiseStylusTouch(dispatchTarget, init, 'Up');
         }
 
         // Capture auto-releases on PointerUp — matches DOM
@@ -595,6 +605,53 @@ export class InputManager
         }
     }
 
+    // Promote a pointer event to its stylus / touch counterpart when the
+    // PointerType identifies a pen / touch contact, updating the matching
+    // device. Fired after the generic pointer event with its own tunnel +
+    // bubble passes (WPF promotes Stylus → Mouse; mural raises both).
+    private raiseStylusTouch(target: Element, init: PointerEventInit, kind: 'Down' | 'Up' | 'Move'): void
+    {
+        if (init.PointerType === 'pen')
+        {
+            const inContact = kind === 'Down' || (kind === 'Move' && init.Buttons !== 0);
+            Stylus.PrimaryDevice._attach(this);
+            Stylus.PrimaryDevice._updateFromPointer(init, inContact);
+            Stylus.PrimaryDevice._setDirectlyOver(target);
+            const name = kind === 'Down' ? 'StylusDown' : kind === 'Up' ? 'StylusUp' : 'StylusMove';
+            dispatchPointer(new PointerEventArgs(name, target, init, this, this));
+        }
+        else if (init.PointerType === 'touch')
+        {
+            Touch.PrimaryDevice._attach(this);
+            Touch.PrimaryDevice._updateFromPointer(init);
+            Touch.PrimaryDevice._setDirectlyOver(target);
+            const name = kind === 'Down' ? 'TouchDown' : kind === 'Up' ? 'TouchUp' : 'TouchMove';
+            dispatchPointer(new PointerEventArgs(name, target, init, this, this));
+            this.driveManipulation(target, init, kind);
+        }
+    }
+
+    // Feed a touch contact's lifecycle into the ManipulationCoordinator.
+    // The manipulation container is the nearest ancestor (incl. target)
+    // with IsManipulationEnabled=true; nothing happens without one.
+    private driveManipulation(target: Element, init: PointerEventInit, kind: 'Down' | 'Up' | 'Move'): void
+    {
+        if (kind === 'Down')
+        {
+            const container = findManipulationContainer(target);
+            if (container === undefined) return;
+            this._manipulation.contactDown(container, init.PointerId, init.HostX, init.HostY);
+        }
+        else if (kind === 'Move')
+        {
+            this._manipulation.contactMove(init.PointerId, init.HostX, init.HostY);
+        }
+        else
+        {
+            this._manipulation.contactUp(init.PointerId);
+        }
+    }
+
     // Raise GotMouseCapture / LostMouseCapture on `target`. Reuses the
     // pointer tunnel+bubble walk with a synthetic init sampled from the
     // current MouseDevice position (capture changes aren't tied to a
@@ -721,6 +778,19 @@ function setIsDragOver(v: Element, value: boolean): void
 // if no ancestor qualifies. Mirrors WPF's receiver hit-test gate.
 // GetVisualParent returns `Visual | undefined`; every concrete node is
 // an Element, so the cast is sound.
+// Nearest ancestor (including `start`) with IsManipulationEnabled=true,
+// or undefined. The manipulation container that touch contacts drive.
+function findManipulationContainer(start: Element): Element | undefined
+{
+    let cur: Element | undefined = start;
+    while (cur !== undefined)
+    {
+        if (cur.IsManipulationEnabled === true) return cur;
+        cur = cur.GetVisualParent() as Element | undefined;
+    }
+    return undefined;
+}
+
 function findAllowDropAncestor(start: Element): Element | null
 {
     let cur: Element | undefined = start;

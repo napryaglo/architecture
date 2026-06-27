@@ -48,6 +48,25 @@ export type RoutedEventKind =
     | 'GotMouseCapture'
     | 'PreviewLostMouseCapture'
     | 'LostMouseCapture'
+    // Stylus events (WPF parity). Promoted by the InputManager from a
+    // pointer event whose PointerType is 'pen'; tunnel (Preview) + bubble.
+    // Carry PointerEventArgs (Pressure / PointerType already present).
+    | 'PreviewStylusDown' | 'StylusDown'
+    | 'PreviewStylusUp'   | 'StylusUp'
+    | 'PreviewStylusMove' | 'StylusMove'
+    // Touch events (WPF parity). Promoted from a pointer event whose
+    // PointerType is 'touch'; tunnel (Preview) + bubble. PointerId
+    // distinguishes simultaneous contacts.
+    | 'PreviewTouchDown' | 'TouchDown'
+    | 'PreviewTouchUp'   | 'TouchUp'
+    | 'PreviewTouchMove' | 'TouchMove'
+    // Manipulation events (WPF parity). Raised by the ManipulationCoordinator
+    // from touch contacts on an IsManipulationEnabled element; bubble only.
+    | 'ManipulationStarting'
+    | 'ManipulationStarted'
+    | 'ManipulationDelta'
+    | 'ManipulationInertiaStarting'
+    | 'ManipulationCompleted'
     | 'KeyDown'
     | 'KeyUp'
     | 'TextInput'
@@ -579,6 +598,18 @@ export interface PointerEventHandlers
     OnGotMouseCapture            (args: PointerEventArgs): void;
     OnPreviewLostMouseCapture    (args: PointerEventArgs): void;
     OnLostMouseCapture           (args: PointerEventArgs): void;
+    OnPreviewStylusDown (args: PointerEventArgs): void;
+    OnStylusDown        (args: PointerEventArgs): void;
+    OnPreviewStylusUp   (args: PointerEventArgs): void;
+    OnStylusUp          (args: PointerEventArgs): void;
+    OnPreviewStylusMove (args: PointerEventArgs): void;
+    OnStylusMove        (args: PointerEventArgs): void;
+    OnPreviewTouchDown  (args: PointerEventArgs): void;
+    OnTouchDown         (args: PointerEventArgs): void;
+    OnPreviewTouchUp    (args: PointerEventArgs): void;
+    OnTouchUp           (args: PointerEventArgs): void;
+    OnPreviewTouchMove  (args: PointerEventArgs): void;
+    OnTouchMove         (args: PointerEventArgs): void;
 }
 
 export interface KeyboardEventHandlers
@@ -622,7 +653,9 @@ type PointerTunnelBubbleKind =
     | 'PointerMove' | 'PointerDown' | 'PointerUp' | 'PointerWheel'
     | 'MouseLeftButtonDown'  | 'MouseLeftButtonUp'
     | 'MouseRightButtonDown' | 'MouseRightButtonUp'
-    | 'GotMouseCapture' | 'LostMouseCapture';
+    | 'GotMouseCapture' | 'LostMouseCapture'
+    | 'StylusDown' | 'StylusUp' | 'StylusMove'
+    | 'TouchDown'  | 'TouchUp'  | 'TouchMove';
 
 export const POINTER_PREVIEW_HANDLERS: Readonly<Record<PointerTunnelBubbleKind, keyof PointerEventHandlers>> = {
     PointerMove:  'OnPreviewPointerMove',
@@ -635,6 +668,8 @@ export const POINTER_PREVIEW_HANDLERS: Readonly<Record<PointerTunnelBubbleKind, 
     MouseRightButtonUp:   'OnPreviewMouseRightButtonUp',
     GotMouseCapture:      'OnPreviewGotMouseCapture',
     LostMouseCapture:     'OnPreviewLostMouseCapture',
+    StylusDown: 'OnPreviewStylusDown', StylusUp: 'OnPreviewStylusUp', StylusMove: 'OnPreviewStylusMove',
+    TouchDown:  'OnPreviewTouchDown',  TouchUp:  'OnPreviewTouchUp',  TouchMove:  'OnPreviewTouchMove',
 } as const;
 
 export const POINTER_BUBBLE_HANDLERS: Readonly<Record<PointerTunnelBubbleKind, keyof PointerEventHandlers>> = {
@@ -648,6 +683,8 @@ export const POINTER_BUBBLE_HANDLERS: Readonly<Record<PointerTunnelBubbleKind, k
     MouseRightButtonUp:   'OnMouseRightButtonUp',
     GotMouseCapture:      'OnGotMouseCapture',
     LostMouseCapture:     'OnLostMouseCapture',
+    StylusDown: 'OnStylusDown', StylusUp: 'OnStylusUp', StylusMove: 'OnStylusMove',
+    TouchDown:  'OnTouchDown',  TouchUp:  'OnTouchUp',  TouchMove:  'OnTouchMove',
 } as const;
 
 export const POINTER_DIRECT_HANDLERS: Readonly<Record<'PointerEnter' | 'PointerLeave', keyof PointerEventHandlers>> = {

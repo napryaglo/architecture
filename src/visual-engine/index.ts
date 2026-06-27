@@ -104,8 +104,24 @@ export {
 // Device façades (WPF Mouse / Keyboard / FocusManager parity).
 export { Mouse, MouseDevice } from './input/mouse.js';
 export { Keyboard, KeyboardDevice } from './input/keyboard.js';
+export { Stylus, StylusDevice } from './input/stylus.js';
+export { Touch, TouchDevice } from './input/touch.js';
 export { FocusManager } from './input/focus-manager.js';
 export { KeyboardNavigation, TraversalRequest } from './input/keyboard-navigation.js';
+export {
+    ManipulationModes,
+    ManipulationDelta,
+    ManipulationVelocities,
+    ManipulationProcessor,
+    ManipulationCoordinator,
+    ManipulationStartingEventArgs,
+    ManipulationStartedEventArgs,
+    ManipulationDeltaEventArgs,
+    ManipulationInertiaStartingEventArgs,
+    ManipulationCompletedEventArgs,
+    dispatchManipulation,
+    type ManipulationEventHandlers,
+} from './input/manipulation.js';
 
 // Animation subsystem.
 export {

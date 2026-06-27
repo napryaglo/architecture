@@ -9,6 +9,13 @@ import type {
     FocusEventArgs,
     DragEventArgs,
 } from './routed-event.js';
+import type {
+    ManipulationStartingEventArgs,
+    ManipulationStartedEventArgs,
+    ManipulationDeltaEventArgs,
+    ManipulationInertiaStartingEventArgs,
+    ManipulationCompletedEventArgs,
+} from './input/manipulation.js';
 import { DragDrop, type DragStartCallback } from './drag-drop.js';
 import { propertyValues } from '../runtime/model-internals.js';
 import { PropertyValueSource } from '../runtime/binding/effective-value.js';
@@ -1316,6 +1323,11 @@ export class Element extends Visual implements ITriggerHost
     public static readonly IsTabStopKey = Model.RegisterProperty<boolean>(Element, 'IsTabStop', true, MetaData.None);
     public static readonly TabIndexKey  = Model.RegisterProperty<number>(Element, 'TabIndex', Number.POSITIVE_INFINITY, MetaData.None);
 
+    // Touch-manipulation opt-in (WPF parity). When true, touch contacts
+    // on this element drive Manipulation* routed events (pan / pinch /
+    // rotate + inertia) via the InputManager's ManipulationCoordinator.
+    public static readonly IsManipulationEnabledKey = Model.RegisterProperty<boolean>(Element, 'IsManipulationEnabled', false, MetaData.None);
+
     // Declarative drag source. When IsDraggable = true the framework
     // installs a PointerDown / Move / Up latch (see _onDragLatch* below)
     // that calls OnDragStart after the pointer travels >
@@ -1389,6 +1401,10 @@ export class Element extends Visual implements ITriggerHost
     public set IsTabStop(v: boolean) { this.set_property_value(Element.IsTabStopKey, v); }
     public get TabIndex(): number { return this.get_property_value(Element.TabIndexKey); }
     public set TabIndex(v: number) { this.set_property_value(Element.TabIndexKey, v); }
+
+    // Touch-manipulation opt-in — see IsManipulationEnabledKey.
+    public get IsManipulationEnabled(): boolean { return this.get_property_value(Element.IsManipulationEnabledKey); }
+    public set IsManipulationEnabled(v: boolean) { this.set_property_value(Element.IsManipulationEnabledKey, v); }
 
     public override get IsDraggable(): boolean { return this.get_property_value(Element.IsDraggableKey); }
     public override set IsDraggable(v: boolean) { this.set_property_value(Element.IsDraggableKey, v); }
@@ -1507,6 +1523,30 @@ export class Element extends Visual implements ITriggerHost
     protected OnGotMouseCapture         (_args: PointerEventArgs): void { }
     protected OnPreviewLostMouseCapture (_args: PointerEventArgs): void { }
     protected OnLostMouseCapture        (_args: PointerEventArgs): void { }
+
+    // Stylus virtuals (WPF parity). Promoted from pen pointer events.
+    protected OnPreviewStylusDown (_args: PointerEventArgs): void { }
+    protected OnStylusDown        (_args: PointerEventArgs): void { }
+    protected OnPreviewStylusUp   (_args: PointerEventArgs): void { }
+    protected OnStylusUp          (_args: PointerEventArgs): void { }
+    protected OnPreviewStylusMove (_args: PointerEventArgs): void { }
+    protected OnStylusMove        (_args: PointerEventArgs): void { }
+
+    // Touch virtuals (WPF parity). Promoted from touch pointer events.
+    protected OnPreviewTouchDown (_args: PointerEventArgs): void { }
+    protected OnTouchDown        (_args: PointerEventArgs): void { }
+    protected OnPreviewTouchUp   (_args: PointerEventArgs): void { }
+    protected OnTouchUp          (_args: PointerEventArgs): void { }
+    protected OnPreviewTouchMove (_args: PointerEventArgs): void { }
+    protected OnTouchMove        (_args: PointerEventArgs): void { }
+
+    // Manipulation virtuals (WPF parity). Bubble; raised by the
+    // ManipulationCoordinator on the IsManipulationEnabled container.
+    protected OnManipulationStarting        (_args: ManipulationStartingEventArgs): void { }
+    protected OnManipulationStarted         (_args: ManipulationStartedEventArgs): void { }
+    protected OnManipulationDelta           (_args: ManipulationDeltaEventArgs): void { }
+    protected OnManipulationInertiaStarting (_args: ManipulationInertiaStartingEventArgs): void { }
+    protected OnManipulationCompleted       (_args: ManipulationCompletedEventArgs): void { }
 
     // Keyboard virtuals — dispatched by InputManager.InjectKeyDown /
     // InjectKeyUp / InjectTextInput when this Element is the focused
