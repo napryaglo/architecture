@@ -1,8 +1,8 @@
 // Bootstrap for the color-picker demo.
 //
-// Three ColorPickers ride on VM hex DPs; a thin behaviour walks each
-// linked preview Border and writes a fresh SolidColorBrush as the hex
-// changes. Partial hex strings (e.g. mid-typing) throw inside
+// Four Office-style ColorPickers ride on VM hex DPs; a thin behaviour
+// walks each linked preview Border and writes a fresh SolidColorBrush as
+// the hex changes. Partial hex strings (e.g. mid-typing) throw inside
 // Color.FromHex — we swallow those so the preview stays at its last
 // good value until a full hex lands.
 
@@ -49,7 +49,7 @@ register({
     id:       'color-picker',
     group:    'Demos',
     title:    'Color picker',
-    subtitle: 'ComboBox-style picker — palette + HSV sliders + hex round-trip.',
+    subtitle: 'Office-style picker — theme colors + tints, standard colors, recents, More Colors dialog.',
     factory: () => {
         if (!resourcesMerged) {
             Application.current?.Resources.AddMergedDictionary(ColorPickerDemo.Clone());

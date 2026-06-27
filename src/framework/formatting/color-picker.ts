@@ -3,7 +3,7 @@ import {
     Model,
     Point,
     Thickness,
-    Element, Visual,
+    Element, Visual, Visibility,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
 import { resolveKey } from '../../runtime/model-internals.js';
@@ -15,6 +15,7 @@ import {
 } from '../../visual-engine/index.js';
 import type { PresentationTarget, PointerEventArgs } from '../../visual-engine/index.js';
 import { Border } from '../../basic/border.js';
+import { ClickableBorder } from '../../basic/clickable-border.js';
 import { Canvas } from '../../basic/panels/canvas.js';
 import { WrapPanel } from '../../basic/panels/wrap-panel.js';
 import { Slider } from '../../basic/slider.js';
@@ -24,11 +25,10 @@ import { ControlTemplate } from '../../basic/templates/control-template.js';
 import { MenuPopupHost, MenuAnchorSide } from '../menu/menu-strip.js';
 import { ClickAwayScrim } from '../../basic/click-away-scrim.js';
 
-// Material 3 swatch palette — 10 colours × 3 tones each. Tuned by hand
-// against the M3 reference tonal palette (tones 80 / 60 / 40 for the
-// "container / base / on-container" feel) so the grid reads as a
-// sensible "pick a colour" surface without dragging the full M3
-// generator at runtime.
+// Material 3 swatch palette — retained as a public export for consumers
+// that referenced it. The Office-style dropdown no longer uses it: theme
+// colours come from the active scheme (authored in the popup template via
+// `@token << Lighten/Darken`) and standard colours are a fixed row.
 export const MATERIAL_PALETTE: readonly string[] = Object.freeze([
     '#ffebee', '#ffcdd2', '#ef5350', // red
     '#fce4ec', '#f8bbd0', '#ec407a', // pink
@@ -85,33 +85,46 @@ export function rgbToHsv(r: number, g: number, b: number): { h: number; s: numbe
     return { h, s, v };
 }
 
-// Two popup variants — HSV (the default) carries hue / saturation /
-// brightness sliders; RGB carries red / green / blue / alpha sliders.
-// The default Style flips PopupTemplate via a trigger on this enum, so
-// consumers opt in with `[Variant=RGB]` in markup or `picker.Variant =
-// ColorPickerVariant.RGB` in TS — same shape Button uses for its
-// Filled / Tonal / Outlined family.
+// Retained for source/markup compatibility — existing `[Variant=RGB]`
+// authoring (brush-picker / fill-editor embeddings) still compiles. The
+// Office dropdown is now the single popup; the advanced RGB/HSV editor
+// moved into the "More Colors…" dialog, so Variant no longer swaps the
+// dropdown template.
 export enum ColorPickerVariant
 {
     HSV = 'HSV',
     RGB = 'RGB',
 }
 
-// ComboBox-style colour picker. Closed: a small swatch + the hex label
-// inside a clickable border. Open: a popup with a palette grid, the
-// variant-appropriate slider trio (HSV) or quad (RGB+alpha) and a hex
-// text input — all kept in sync via the
-// Color/ColorHex/Hue/Saturation/Brightness/Red/Green/Blue/Alpha DPs.
+// Session-shared "recent colours" — Office surfaces the colours picked
+// this session across every picker. Module-level (not per-instance) so a
+// colour chosen in one picker shows up in the next one's Recent row.
+// Most-recent-first, de-duplicated, capped.
+const RECENT_COLORS: string[] = [];
+const RECENT_MAX = 10;
+function recordRecent(hex: string): void
+{
+    const existing = RECENT_COLORS.indexOf(hex);
+    if (existing !== -1) RECENT_COLORS.splice(existing, 1);
+    RECENT_COLORS.unshift(hex);
+    if (RECENT_COLORS.length > RECENT_MAX) RECENT_COLORS.length = RECENT_MAX;
+}
+
+// Subtle 1px border shared by the programmatically-built recent swatches.
+const SWATCH_BORDER = new SolidColorBrush(new Color(0, 0, 0, 40));
+
+// Office-style colour picker. Closed: a small swatch + the hex label
+// inside a clickable border. Open: a dropdown with a No-Color entry, a
+// Theme-Colors grid (base row + tint/shade rows derived from the active
+// scheme), a Standard-Colors row, a session Recent-Colors row, and a
+// "More Colors…" entry that opens the advanced editor dialog (2D HS box +
+// brightness rail + RGB/alpha sliders + hex).
 //
-// Source-of-truth contract: the four sliders + hex input each bind to
-// their own DP via TemplatedParent ($Hue, $Saturation, $Brightness,
-// $ColorHex). When the user edits ANY of them, OnPropertyChanged here
-// recomputes Color and pushes the derived values back to the rest of
-// the DPs. A guarded _syncing flag breaks the feedback loop so the
-// re-push doesn't cascade indefinitely.
-//
-// Hex parse failures (partial typing) are swallowed — the slider /
-// palette state stays put until a fully valid hex string lands.
+// Source-of-truth contract: Color is the bound value. The dialog's
+// sliders + hex input each drive their channel DPs; OnPropertyChanged
+// here recomputes Color and pushes derived values back to the rest of the
+// DPs, with a guarded _syncing flag breaking the feedback loop. Swatch
+// clicks in the dropdown commit a colour directly (and record a recent).
 export class ColorPicker extends TemplatedControl
 {
     public static readonly ColorKey      = Model.RegisterProperty<Color>(  ColorPicker, 'Color',      Color.Black,            MetaData.None | MetaData.BindsTwoWayByDefault);
@@ -125,7 +138,9 @@ export class ColorPicker extends TemplatedControl
     public static readonly AlphaKey      = Model.RegisterProperty<number>( ColorPicker, 'Alpha',      255,                    MetaData.None);
     public static readonly VariantKey    = Model.RegisterProperty<ColorPickerVariant>(ColorPicker, 'Variant', ColorPickerVariant.HSV, MetaData.None);
     public static readonly IsDropDownOpenKey = Model.RegisterProperty<boolean>(ColorPicker, 'IsDropDownOpen', false,          MetaData.None);
+    public static readonly IsMoreColorsOpenKey = Model.RegisterProperty<boolean>(ColorPicker, 'IsMoreColorsOpen', false,      MetaData.None);
     public static readonly PopupTemplateKey  = Model.RegisterProperty<ControlTemplate | undefined>(ColorPicker, 'PopupTemplate', undefined, MetaData.None);
+    public static readonly MoreColorsTemplateKey = Model.RegisterProperty<ControlTemplate | undefined>(ColorPicker, 'MoreColorsTemplate', undefined, MetaData.None);
     // Per-instance default — the DP system shares its `default_value`
     // across every registered control, so we slot a fresh
     // SolidColorBrush in the ctor BEFORE applyDefaultStyle so the
@@ -155,8 +170,12 @@ export class ColorPicker extends TemplatedControl
     public set Variant(v:    ColorPickerVariant){ this.set_property_value(ColorPicker.VariantKey, v); }
     public get IsDropDownOpen(): boolean { return this.get_property_value(ColorPicker.IsDropDownOpenKey); }
     public set IsDropDownOpen(v: boolean){ this.set_property_value(ColorPicker.IsDropDownOpenKey, v); }
+    public get IsMoreColorsOpen(): boolean { return this.get_property_value(ColorPicker.IsMoreColorsOpenKey); }
+    public set IsMoreColorsOpen(v: boolean){ this.set_property_value(ColorPicker.IsMoreColorsOpenKey, v); }
     public get PopupTemplate():  ControlTemplate | undefined { return this.get_property_value(ColorPicker.PopupTemplateKey); }
     public set PopupTemplate(v:  ControlTemplate | undefined){ this.set_property_value(ColorPicker.PopupTemplateKey, v); }
+    public get MoreColorsTemplate(): ControlTemplate | undefined { return this.get_property_value(ColorPicker.MoreColorsTemplateKey); }
+    public set MoreColorsTemplate(v: ControlTemplate | undefined){ this.set_property_value(ColorPicker.MoreColorsTemplateKey, v); }
     public get SwatchBrush():    SolidColorBrush | undefined { return this.get_property_value(ColorPicker.SwatchBrushKey); }
 
     static {
@@ -164,33 +183,36 @@ export class ColorPicker extends TemplatedControl
     }
 
     private _trigger:    Border | undefined;
-    private _popupHost:  MenuPopupHost  | undefined;
-    private _mounted = false;
-    private _triggerPressed = false;
     private _syncing = false;
-    private _swatches: Border[] = [];
-    // Popup edit parts — only present while the popup is mounted. Each
-    // slider / textbox is two-way-wired by mountPopup; cleanup runs in
-    // unmountPopup so a re-open binds a fresh template instance. Only
-    // one variant's slider set is populated per mount.
-    private _hSlider:    Slider  | undefined;  // HSV: hue
-    private _sSlider:    Slider  | undefined;  // HSV: saturation
-    private _vSlider:    Slider  | undefined;  // HSV: brightness / value
-    private _rSlider:    Slider  | undefined;  // RGB: red
-    private _gSlider:    Slider  | undefined;  // RGB: green
-    private _blueSlider: Slider  | undefined;  // RGB: blue
-    private _aSlider:    Slider  | undefined;  // RGB: alpha
+
+    // Dropdown (Office menu) state.
+    private _dropdownHost:    MenuPopupHost | undefined;
+    private _dropdownMounted = false;
+    private _dropdownListeners: Array<() => void> = [];
+
+    // More Colors… dialog state. Snapshot taken on open so Cancel (or a
+    // click-away) can restore the colour the user started from.
+    private _moreHost:    MenuPopupHost | undefined;
+    private _moreMounted = false;
+    private _moreSnapshot: Color | undefined;
+    private _moreListeners: Array<() => void> = [];
+
+    // Dialog edit parts — only present while the More Colors dialog is
+    // mounted. Wired by adoptDialogEditParts; cleared in unmountMoreColors.
+    private _rSlider:    Slider  | undefined;
+    private _gSlider:    Slider  | undefined;
+    private _blueSlider: Slider  | undefined;
+    private _aSlider:    Slider  | undefined;
     private _hexInput:   TextBox | undefined;
-    // 2D gradient box (RGB variant) parts. The box's hue + saturation
-    // fill brushes are static (built once at mount); the rail's fill
-    // brush is rebuilt whenever Hue or Saturation moves.
+    // 2D gradient box parts. The box's hue + saturation fill brushes are
+    // static (built once at mount); the rail's fill brush is rebuilt
+    // whenever Hue or Saturation moves.
     private _hsBox:        Canvas | undefined;
     private _hsBoxOverlay: Border | undefined;
     private _hsBoxCursor:  Border | undefined;
     private _vRail:        Canvas | undefined;
     private _vRailFill:    Border | undefined;
     private _vRailCursor:  Border | undefined;
-    private _popupListeners: Array<() => void> = [];
 
     constructor()
     {
@@ -200,31 +222,20 @@ export class ColorPicker extends TemplatedControl
         this.set_property_value(ColorPicker.SwatchBrushKey, new SolidColorBrush(Color.Black));
         this.applyDefaultStyle();
         // Seed the derived DPs from the initial Color value so the
-        // popup widgets land in sync the first time it's opened.
+        // dialog widgets land in sync the first time it's opened.
         this.syncFromColor();
         this.adoptTemplateParts();
     }
 
     private adoptTemplateParts(): void
     {
+        // PART_SelectionTrigger is a ClickableBorder, which owns its own
+        // press-state ladder + release semantics; we only need its click.
         this._trigger = this.GetTemplateChild('PART_SelectionTrigger') as Border | undefined;
-        if (this._trigger !== undefined)
+        const trigger = this._trigger;
+        if (trigger instanceof ClickableBorder)
         {
-            const t = this._trigger;
-            t.AddRoutedEventListener('PointerDown', (() => {
-                this._triggerPressed = true;
-                t._setIsPressed(true);
-            }) as (a: unknown) => void);
-            t.AddRoutedEventListener('PointerUp', (() => {
-                const fire = this._triggerPressed;
-                this._triggerPressed = false;
-                t._setIsPressed(false);
-                if (fire) this.IsDropDownOpen = !this.IsDropDownOpen;
-            }) as (a: unknown) => void);
-            t.AddRoutedEventListener('PointerLeave', (() => {
-                this._triggerPressed = false;
-                t._setIsPressed(false);
-            }) as (a: unknown) => void);
+            trigger.onClick = (): void => { this.IsDropDownOpen = !this.IsDropDownOpen; };
         }
     }
 
@@ -247,16 +258,13 @@ export class ColorPicker extends TemplatedControl
             case 'Green':
             case 'Blue':
             case 'Alpha':           this.onRgbaChanged();                   break;
-            case 'Variant':
-                // The Style trigger handles the PopupTemplate swap; if the
-                // popup happens to be open during the swap we unmount the
-                // current chrome so the new template materialises fresh
-                // next open.
-                if (this._mounted) { this.unmountPopup(); this.IsDropDownOpen = false; }
-                break;
             case 'IsDropDownOpen':
-                if (newValue === true) this.mountPopup();
-                else                    this.unmountPopup();
+                if (newValue === true) this.mountDropdown();
+                else                    this.unmountDropdown();
+                break;
+            case 'IsMoreColorsOpen':
+                if (newValue === true) this.mountMoreColors();
+                else                    this.unmountMoreColors();
                 break;
         }
     }
@@ -276,7 +284,7 @@ export class ColorPicker extends TemplatedControl
             this.Alpha      = c.A;
             this.ColorHex   = c.ToHex();
             this.set_property_value(ColorPicker.SwatchBrushKey, new SolidColorBrush(c));
-            this.pushAllToPopup();
+            this.pushAllToDialog();
             this.refreshGradientBox();
         } finally { this._syncing = false; }
     }
@@ -323,7 +331,7 @@ export class ColorPicker extends TemplatedControl
             this.set_property_value(ColorPicker.SwatchBrushKey, new SolidColorBrush(c));
             this.pushHexToInput();
             this.refreshGradientBox();
-            // HSV sliders ARE the source; no need to push back to them.
+            // HSV is the source for this edit; no need to push back to it.
         } finally { this._syncing = false; }
     }
 
@@ -346,39 +354,33 @@ export class ColorPicker extends TemplatedControl
         } finally { this._syncing = false; }
     }
 
-    // Programmatic writes into the popup-edit parts. Each guarded write
-    // happens within an _syncing window, so the corresponding listener
-    // on the part bails before it tries to write back into the picker.
-    // The slider refs are variant-specific — only one trio (or quad) is
-    // populated at a time depending on which popup template mounted.
+    // Programmatic writes into the dialog's edit parts. Each guarded write
+    // happens within a _syncing window, so the corresponding listener on
+    // the part bails before it tries to write back into the picker.
     private pushChannelsToSliders(): void
     {
-        if (!this._mounted) return;
-        if (this._hSlider !== undefined) this._hSlider.Value = this.Hue;
-        if (this._sSlider !== undefined) this._sSlider.Value = this.Saturation;
-        if (this._vSlider !== undefined) this._vSlider.Value = this.Brightness;
-        if (this._rSlider !== undefined) this._rSlider.Value = this.Red;
-        if (this._gSlider !== undefined) this._gSlider.Value = this.Green;
+        if (!this._moreMounted) return;
+        if (this._rSlider    !== undefined) this._rSlider.Value    = this.Red;
+        if (this._gSlider    !== undefined) this._gSlider.Value    = this.Green;
         if (this._blueSlider !== undefined) this._blueSlider.Value = this.Blue;
-        if (this._aSlider !== undefined) this._aSlider.Value = this.Alpha;
+        if (this._aSlider    !== undefined) this._aSlider.Value    = this.Alpha;
     }
 
     private pushHexToInput(): void
     {
-        if (!this._mounted) return;
+        if (!this._moreMounted) return;
         if (this._hexInput !== undefined) this._hexInput.Text = this.ColorHex;
     }
 
-    private pushAllToPopup(): void
+    private pushAllToDialog(): void
     {
         this.pushChannelsToSliders();
         this.pushHexToInput();
     }
 
-    // Initial seed — called from the ctor BEFORE the popup template is
-    // mounted, so we mirror the starting Color value across the derived
-    // DPs without going through the property-change handlers (which
-    // bail on _syncing).
+    // Initial seed — called from the ctor BEFORE any popup is mounted, so
+    // we mirror the starting Color value across the derived DPs without
+    // going through the property-change handlers (which bail on _syncing).
     private syncFromColor(): void
     {
         const c = this.Color;
@@ -397,9 +399,11 @@ export class ColorPicker extends TemplatedControl
         } finally { this._syncing = false; }
     }
 
-    private mountPopup(): void
+    // ── Office dropdown ────────────────────────────────────────────────
+
+    private mountDropdown(): void
     {
-        if (this._mounted) return;
+        if (this._dropdownMounted) return;
         const t = targetOf(this);
         if (t === undefined) return;
         const tpl = this.PopupTemplate;
@@ -408,8 +412,6 @@ export class ColorPicker extends TemplatedControl
         const inst = tpl.Apply(this);
         const host = inst.root as MenuPopupHost;
         const scrim = host.FindName('PART_Scrim') as ClickAwayScrim | undefined;
-        const palette = host.FindName('PART_PaletteContainer') as WrapPanel | undefined;
-        if (palette !== undefined) this.populatePalette(palette);
         if (scrim !== undefined) scrim.onClick = (): void => { this.IsDropDownOpen = false; };
 
         host.anchor     = this._trigger ?? this;
@@ -417,39 +419,165 @@ export class ColorPicker extends TemplatedControl
         const body = host.FindName('PART_PopupBody') as Visual | undefined;
         if (body !== undefined) host.popup = body;
 
-        this._popupHost = host;
-        this._mounted = true;
-        this.adoptPopupEditParts(host);
+        this._dropdownHost = host;
+        this._dropdownMounted = true;
+        this.wireDropdownParts(host);
         this.AttachOverlayChild(host);
     }
 
-    // Bind the popup's edit parts in both directions. mountPopup sets
-    // _mounted BEFORE this runs so the initial seed writes (which fire
-    // the slider / textbox listeners) bail through the _syncing guard
-    // without ricocheting back into the picker.
-    private adoptPopupEditParts(host: MenuPopupHost): void
+    private wireDropdownParts(host: MenuPopupHost): void
     {
-        // Variant-specific sliders. The HSV template names them PART_H /
-        // PART_S / PART_V; the RGB template names them PART_R / PART_G /
-        // PART_B / PART_A. Whichever set the active template carries
-        // resolves; the other set stays undefined.
-        this._hSlider    = host.FindName('PART_HSlider')    as Slider  | undefined;
-        this._sSlider    = host.FindName('PART_SSlider')    as Slider  | undefined;
-        this._vSlider    = host.FindName('PART_VSlider')    as Slider  | undefined;
-        this._rSlider    = host.FindName('PART_RSlider')    as Slider  | undefined;
-        this._gSlider    = host.FindName('PART_GSlider')    as Slider  | undefined;
-        this._blueSlider = host.FindName('PART_BSlider')    as Slider  | undefined;
-        this._aSlider    = host.FindName('PART_ASlider')    as Slider  | undefined;
-        this._hexInput   = host.FindName('PART_HexInput')   as TextBox | undefined;
+        // Theme + standard swatches: each ClickableBorder commits its own
+        // resolved Background colour. Reading the brush at click time keeps
+        // the theme grid live — a scheme swap repaints the swatch and the
+        // next click yields the new colour.
+        const swatches: ClickableBorder[] = [];
+        const themeGrid   = host.FindName('PART_ThemeGrid')   as Visual | undefined;
+        const standardRow = host.FindName('PART_StandardRow') as Visual | undefined;
+        if (themeGrid   !== undefined) collectSwatches(themeGrid, swatches);
+        if (standardRow !== undefined) collectSwatches(standardRow, swatches);
+        for (const sw of swatches)
+        {
+            sw.onClick = (): void => {
+                const c = colorOfSwatch(sw);
+                if (c !== undefined) this.commitColor(c);
+            };
+            this._dropdownListeners.push(() => { sw.onClick = undefined; });
+        }
+
+        // No Color — clears to a transparent sentinel.
+        const noColor = host.FindName('PART_NoColor') as ClickableBorder | undefined;
+        if (noColor !== undefined)
+        {
+            noColor.onClick = (): void => { this.commitNoColor(); };
+            this._dropdownListeners.push(() => { noColor.onClick = undefined; });
+        }
+
+        // More Colors… — close the dropdown and open the editor dialog.
+        const more = host.FindName('PART_MoreColors') as ClickableBorder | undefined;
+        if (more !== undefined)
+        {
+            more.onClick = (): void => {
+                this.IsDropDownOpen = false;
+                this.IsMoreColorsOpen = true;
+            };
+            this._dropdownListeners.push(() => { more.onClick = undefined; });
+        }
+
+        // Recent colours — populated from the session-shared list; the
+        // whole section collapses when there's nothing to show.
+        const section = host.FindName('PART_RecentSection') as Visual | undefined;
+        const row     = host.FindName('PART_RecentRow') as WrapPanel | undefined;
+        this.populateRecents(section, row);
+    }
+
+    private unmountDropdown(): void
+    {
+        if (!this._dropdownMounted) return;
+        if (this._dropdownHost !== undefined) this.DetachOverlayChild(this._dropdownHost);
+        for (const dispose of this._dropdownListeners) dispose();
+        this._dropdownListeners = [];
+        this._dropdownHost    = undefined;
+        this._dropdownMounted = false;
+    }
+
+    // Build the recent-colour swatches into PART_RecentRow. Collapses the
+    // surrounding section when the list is empty so the dropdown doesn't
+    // carry a dangling header.
+    private populateRecents(section: Visual | undefined, row: WrapPanel | undefined): void
+    {
+        if (row === undefined) return;
+        for (const child of [...row.visualChildren]) row.RemoveChild(child);
+        for (const hex of RECENT_COLORS)
+        {
+            const sw = new ClickableBorder();
+            sw.Width  = 22;
+            sw.Height = 16;
+            sw.CornerRadius = 2;
+            sw.BorderBrush  = SWATCH_BORDER;
+            sw.BorderThickness = new Thickness(1);
+            sw.Margin = new Thickness(0, 0, 2, 2);
+            sw.Background = new SolidColorBrush(Color.FromHex(hex));
+            sw.onClick = (): void => { this.commitColor(Color.FromHex(hex)); };
+            row.AddChild(sw);
+        }
+        if (section !== undefined)
+        {
+            section.Visibility = RECENT_COLORS.length === 0
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+        }
+    }
+
+    // Commit a chosen colour: set it, record a recent, and close the
+    // dropdown (Office dismisses the menu on a swatch pick).
+    private commitColor(c: Color): void
+    {
+        this.Color = c;
+        recordRecent(c.ToHex());
+        this.IsDropDownOpen = false;
+    }
+
+    // "No Color" → transparent sentinel (alpha 0). Most fill consumers
+    // treat a fully-transparent brush as "no fill". The editing alpha is
+    // restored to fully-opaque so a subsequent channel edit (RGB / HSV /
+    // hex / swatch) yields an opaque colour rather than inheriting the
+    // sentinel's zero alpha — Office revives opacity when you paint a
+    // colour after "No Fill". Alpha stays user-controlled only via the
+    // dialog's alpha slider (or an 8-digit hex).
+    private commitNoColor(): void
+    {
+        this.Color = Color.Transparent;
+        this._syncing = true;
+        try { this.Alpha = 255; } finally { this._syncing = false; }
+        this.IsDropDownOpen = false;
+    }
+
+    // ── More Colors… dialog ────────────────────────────────────────────
+
+    private mountMoreColors(): void
+    {
+        if (this._moreMounted) return;
+        const t = targetOf(this);
+        if (t === undefined) return;
+        const tpl = this.MoreColorsTemplate;
+        if (tpl === undefined) return;
+
+        this._moreSnapshot = this.Color;
+
+        const inst = tpl.Apply(this);
+        const host = inst.root as MenuPopupHost;
+        // Click-away cancels (restores the snapshot), matching Office's
+        // modal-dialog dismissal.
+        const scrim = host.FindName('PART_Scrim') as ClickAwayScrim | undefined;
+        if (scrim !== undefined) scrim.onClick = (): void => { this.cancelMoreColors(); };
+
+        host.anchor     = this._trigger ?? this;
+        host.anchorSide = MenuAnchorSide.Below;
+        const body = host.FindName('PART_PopupBody') as Visual | undefined;
+        if (body !== undefined) host.popup = body;
+
+        this._moreHost = host;
+        this._moreMounted = true;
+        this.adoptDialogEditParts(host);
+        this.AttachOverlayChild(host);
+    }
+
+    // Bind the dialog's edit parts in both directions. _moreMounted is set
+    // BEFORE this runs so the initial seed writes (which fire the slider /
+    // textbox listeners) bail through the _syncing guard.
+    private adoptDialogEditParts(host: MenuPopupHost): void
+    {
+        this._rSlider    = host.FindName('PART_RSlider')  as Slider  | undefined;
+        this._gSlider    = host.FindName('PART_GSlider')  as Slider  | undefined;
+        this._blueSlider = host.FindName('PART_BSlider')  as Slider  | undefined;
+        this._aSlider    = host.FindName('PART_ASlider')  as Slider  | undefined;
+        this._hexInput   = host.FindName('PART_HexInput') as TextBox | undefined;
 
         // Seed initial values — guarded so the resulting Value-change
-        // listeners (we add right after) don't re-write the same value
-        // back into the picker DPs during mount.
+        // listeners don't re-write the same value back into the picker.
         this._syncing = true;
         try {
-            if (this._hSlider    !== undefined) this._hSlider.Value    = this.Hue;
-            if (this._sSlider    !== undefined) this._sSlider.Value    = this.Saturation;
-            if (this._vSlider    !== undefined) this._vSlider.Value    = this.Brightness;
             if (this._rSlider    !== undefined) this._rSlider.Value    = this.Red;
             if (this._gSlider    !== undefined) this._gSlider.Value    = this.Green;
             if (this._blueSlider !== undefined) this._blueSlider.Value = this.Blue;
@@ -469,22 +597,45 @@ export class ColorPicker extends TemplatedControl
             };
             const key = resolveKey(part, undefined, prop);
             part.AddPropertyChangedListener(key, handler);
-            this._popupListeners.push(() => {
+            this._moreListeners.push(() => {
                 part.RemovePropertyChangedListener(key, handler);
             });
         };
 
-        wire(this._hSlider,    'Value', () => { this.Hue        = this._hSlider!.Value; });
-        wire(this._sSlider,    'Value', () => { this.Saturation = this._sSlider!.Value; });
-        wire(this._vSlider,    'Value', () => { this.Brightness = this._vSlider!.Value; });
-        wire(this._rSlider,    'Value', () => { this.Red        = this._rSlider!.Value; });
-        wire(this._gSlider,    'Value', () => { this.Green      = this._gSlider!.Value; });
-        wire(this._blueSlider, 'Value', () => { this.Blue       = this._blueSlider!.Value; });
-        wire(this._aSlider,    'Value', () => { this.Alpha      = this._aSlider!.Value; });
-        wire(this._hexInput,   'Text',  () => { this.ColorHex   = this._hexInput!.Text; });
+        wire(this._rSlider,    'Value', () => { this.Red      = this._rSlider!.Value; });
+        wire(this._gSlider,    'Value', () => { this.Green    = this._gSlider!.Value; });
+        wire(this._blueSlider, 'Value', () => { this.Blue     = this._blueSlider!.Value; });
+        wire(this._aSlider,    'Value', () => { this.Alpha    = this._aSlider!.Value; });
+        wire(this._hexInput,   'Text',  () => { this.ColorHex = this._hexInput!.Text; });
 
-        // 2D gradient box + brightness rail — RGB variant only.
+        // 2D gradient box + brightness rail.
         this.adoptGradientBoxParts(host);
+
+        // OK / Cancel.
+        const ok = host.FindName('PART_MoreOk') as ClickableBorder | undefined;
+        if (ok !== undefined)
+        {
+            ok.onClick = (): void => { this.commitMoreColors(); };
+            this._moreListeners.push(() => { ok.onClick = undefined; });
+        }
+        const cancel = host.FindName('PART_MoreCancel') as ClickableBorder | undefined;
+        if (cancel !== undefined)
+        {
+            cancel.onClick = (): void => { this.cancelMoreColors(); };
+            this._moreListeners.push(() => { cancel.onClick = undefined; });
+        }
+    }
+
+    private commitMoreColors(): void
+    {
+        recordRecent(this.Color.ToHex());
+        this.IsMoreColorsOpen = false;
+    }
+
+    private cancelMoreColors(): void
+    {
+        if (this._moreSnapshot !== undefined) this.Color = this._moreSnapshot;
+        this.IsMoreColorsOpen = false;
     }
 
     // Wire the Office-style 2D hue/saturation box and the vertical
@@ -501,7 +652,7 @@ export class ColorPicker extends TemplatedControl
         this._vRailFill    = host.FindName('PART_VRailFill')    as Border | undefined;
         this._vRailCursor  = host.FindName('PART_VRailCursor')  as Border | undefined;
 
-        if (hsBoxHue !== undefined)        hsBoxHue.Background        = buildHueRainbowBrush();
+        if (hsBoxHue !== undefined)           hsBoxHue.Background           = buildHueRainbowBrush();
         if (this._hsBoxOverlay !== undefined) this._hsBoxOverlay.Background = buildWhiteOverlayBrush();
 
         this.refreshGradientBox();
@@ -540,7 +691,7 @@ export class ColorPicker extends TemplatedControl
         box.AddRoutedEventListener('PointerDown', onDown as (a: unknown) => void);
         box.AddRoutedEventListener('PointerMove', onMovePointer as (a: unknown) => void);
         box.AddRoutedEventListener('PointerUp',   onUp as (a: unknown) => void);
-        this._popupListeners.push(() => {
+        this._moreListeners.push(() => {
             box.RemoveRoutedEventListener('PointerDown', onDown as (a: unknown) => void);
             box.RemoveRoutedEventListener('PointerMove', onMovePointer as (a: unknown) => void);
             box.RemoveRoutedEventListener('PointerUp',   onUp as (a: unknown) => void);
@@ -575,7 +726,7 @@ export class ColorPicker extends TemplatedControl
         rail.AddRoutedEventListener('PointerDown', onDown as (a: unknown) => void);
         rail.AddRoutedEventListener('PointerMove', onMove as (a: unknown) => void);
         rail.AddRoutedEventListener('PointerUp',   onUp as (a: unknown) => void);
-        this._popupListeners.push(() => {
+        this._moreListeners.push(() => {
             rail.RemoveRoutedEventListener('PointerDown', onDown as (a: unknown) => void);
             rail.RemoveRoutedEventListener('PointerMove', onMove as (a: unknown) => void);
             rail.RemoveRoutedEventListener('PointerUp',   onUp as (a: unknown) => void);
@@ -599,7 +750,7 @@ export class ColorPicker extends TemplatedControl
     // whenever Hue / Saturation / Brightness move, regardless of source.
     private refreshGradientBox(): void
     {
-        if (!this._mounted) return;
+        if (!this._moreMounted) return;
         if (this._hsBox !== undefined && this._hsBoxCursor !== undefined)
         {
             const w = this._hsBox.Width  ?? 220;
@@ -624,22 +775,12 @@ export class ColorPicker extends TemplatedControl
         }
     }
 
-    private unmountPopup(): void
+    private unmountMoreColors(): void
     {
-        if (!this._mounted) return;
-        const root = this._popupHost;
-        if (root !== undefined) this.DetachOverlayChild(root);
-        for (const dispose of this._popupListeners) dispose();
-        this._popupListeners = [];
-        // Drop swatch click handlers so the next mount rebuilds fresh.
-        for (const s of this._swatches)
-        {
-            (s as unknown as { onClick?: (() => void) | undefined }).onClick = undefined;
-        }
-        this._swatches      = [];
-        this._hSlider       = undefined;
-        this._sSlider       = undefined;
-        this._vSlider       = undefined;
+        if (!this._moreMounted) return;
+        if (this._moreHost !== undefined) this.DetachOverlayChild(this._moreHost);
+        for (const dispose of this._moreListeners) dispose();
+        this._moreListeners = [];
         this._rSlider       = undefined;
         this._gSlider       = undefined;
         this._blueSlider    = undefined;
@@ -651,32 +792,9 @@ export class ColorPicker extends TemplatedControl
         this._vRail         = undefined;
         this._vRailFill     = undefined;
         this._vRailCursor   = undefined;
-        this._popupHost     = undefined;
-        this._mounted       = false;
-    }
-
-    private populatePalette(container: WrapPanel): void
-    {
-        // Clear any prior swatches (fresh build per mount).
-        for (const child of [...container.visualChildren])
-        {
-            container.RemoveChild(child);
-        }
-        this._swatches = [];
-        for (const hex of MATERIAL_PALETTE)
-        {
-            const swatch = new Border();
-            swatch.Width  = 22;
-            swatch.Height = 22;
-            swatch.Margin = new Thickness(2);
-            swatch.CornerRadius = 4;
-            swatch.Background = new SolidColorBrush(Color.FromHex(hex));
-            swatch.AddRoutedEventListener('PointerUp', (() => {
-                this.Color = Color.FromHex(hex);
-            }) as (a: unknown) => void);
-            container.AddChild(swatch);
-            this._swatches.push(swatch);
-        }
+        this._moreHost      = undefined;
+        this._moreMounted   = false;
+        this._moreSnapshot  = undefined;
     }
 }
 
@@ -684,6 +802,26 @@ function targetOf(host: Visual): PresentationTarget | undefined
 {
     const back = host as unknown as { ['target']?: PresentationTarget };
     return back['target'];
+}
+
+// Depth-first collect of swatch ClickableBorders under a container. Grid
+// swatches are leaves (no children), so we don't recurse into a matched
+// ClickableBorder.
+function collectSwatches(root: Visual, out: ClickableBorder[]): void
+{
+    for (const child of root.visualChildren)
+    {
+        if (child instanceof ClickableBorder) out.push(child);
+        else collectSwatches(child, out);
+    }
+}
+
+// The resolved colour a swatch paints, or undefined when its Background
+// isn't a solid colour (e.g. a token that resolved to a non-solid brush).
+function colorOfSwatch(sw: Border): Color | undefined
+{
+    const bg = sw.Background;
+    return bg instanceof SolidColorBrush ? bg.Color : undefined;
 }
 
 function clamp01(v: number): number

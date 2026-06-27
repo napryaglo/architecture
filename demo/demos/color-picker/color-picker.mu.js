@@ -1,6 +1,6 @@
 import { ColorPickerVM } from "./color-picker-vm.mjs";
 import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock, TextWrapping } from "@visualisation-sub/mural/basic";
-import { ColorPicker, ColorPickerVariant } from "@visualisation-sub/mural/framework";
+import { ColorPicker } from "@visualisation-sub/mural/framework";
 import { DataContextBinding, DynamicResource, NameScope, ResourceDictionary, Thickness, VerticalAlignment } from "@visualisation-sub/mural/runtime";
 import { FontWeight } from "@visualisation-sub/mural/visual-engine";
 
@@ -28,13 +28,13 @@ export class ColorPickerDemo extends ResourceDictionary {
             const _stackPanel8 = new StackPanel();
             _stackPanel8.set_property_value(StackPanel.OrientationKey, Orientation.Vertical);
             const _textBlock9 = new TextBlock();
-            _textBlock9.set_property_value(TextBlock.TextKey, "ComboBox-style color picker");
+            _textBlock9.set_property_value(TextBlock.TextKey, "Office-style color picker");
             _textBlock9.set_property_value(TextBlock.FontSizeKey, 18);
             _textBlock9.set_property_value(TextBlock.FontWeightKey, FontWeight.Bold);
             _textBlock9.set_property_value(TextBlock.ForegroundKey, DynamicResource(_textBlock9, "OnPrimary"));
             _stackPanel8.AddChild(_textBlock9);
             const _textBlock10 = new TextBlock();
-            _textBlock10.set_property_value(TextBlock.TextKey, "Material 3 palette + HSV sliders + hex round-trip.");
+            _textBlock10.set_property_value(TextBlock.TextKey, "Theme colors + tints, standard colors, recents, and a More Colors… dialog.");
             _textBlock10.set_property_value(TextBlock.FontSizeKey, 12);
             _textBlock10.set_property_value(TextBlock.ForegroundKey, DynamicResource(_textBlock10, "OnPrimary"));
             _textBlock10.set_property_value(TextBlock.MarginKey, new Thickness(0, 4, 0, 0));
@@ -47,7 +47,7 @@ export class ColorPickerDemo extends ResourceDictionary {
             _textBlock11.set_property_value(TextBlock.FontSizeKey, 11);
             _textBlock11.set_property_value(TextBlock.ForegroundKey, DynamicResource(_textBlock11, "OnSurfaceVariant"));
             _textBlock11.set_property_value(TextBlock.TextWrappingKey, TextWrapping.Wrap);
-            _textBlock11.set_property_value(TextBlock.TextKey, "Three HSV pickers above, one RGB+alpha picker below. The RGB popup carries red / green / blue / alpha sliders (0..255). Hex grows to eight digits when alpha < 255. Each picker feeds a preview swatch via SolidColorBrush(Color.FromHex(...)).");
+            _textBlock11.set_property_value(TextBlock.TextKey, "Each picker drops down the Office menu: a No-Color entry, a Theme-Colors grid (base row + lighter/darker tint-shade rows that track the active scheme), a fixed Standard-Colors row, a session Recent-Colors row, and More Colors… which opens the 2D hue/saturation box + brightness rail + R/G/B/A sliders + hex (with OK / Cancel). Each picker feeds a preview swatch via SolidColorBrush(Color.FromHex(...)).");
             _dockPanel6.AddChild(_textBlock11);
             const _border12 = new Border();
             _border12.set_property_value(Border.BackgroundKey, DynamicResource(_border12, "SurfaceContainerLow"));
@@ -141,7 +141,7 @@ export class ColorPickerDemo extends ResourceDictionary {
             _stackPanel27.set_property_value(StackPanel.OrientationKey, Orientation.Vertical);
             _stackPanel27.set_property_value(StackPanel.MarginKey, new Thickness(0, 0, 24, 0));
             const _textBlock28 = new TextBlock();
-            _textBlock28.set_property_value(TextBlock.TextKey, "Overlay (RGB + alpha)");
+            _textBlock28.set_property_value(TextBlock.TextKey, "Overlay (alpha via More Colors…)");
             _textBlock28.set_property_value(TextBlock.FontSizeKey, 11);
             _textBlock28.set_property_value(TextBlock.FontWeightKey, FontWeight.Bold);
             _textBlock28.set_property_value(TextBlock.ForegroundKey, DynamicResource(_textBlock28, "OnSurface"));
@@ -149,7 +149,6 @@ export class ColorPickerDemo extends ResourceDictionary {
             _stackPanel27.AddChild(_textBlock28);
             const _colorPicker29 = new ColorPicker();
             _colorPicker29.set_property_value(ColorPicker.ColorHexKey, DataContextBinding(_colorPicker29, "OverlayHex"));
-            _colorPicker29.set_property_value(ColorPicker.VariantKey, ColorPickerVariant.RGB);
             _stackPanel27.AddChild(_colorPicker29);
             _stackPanel26.AddChild(_stackPanel27);
             _border4 = new Border();
