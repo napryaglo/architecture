@@ -310,6 +310,11 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['Key',                    '@visualisation-sub/mural/runtime'],
     ['ModifierKeys',           '@visualisation-sub/mural/runtime'],
     ['MouseButton',            '@visualisation-sub/mural/runtime'],
+    // Focus scopes + keyboard navigation — attached properties usable in
+    // markup (FocusManager.IsFocusScope=true, KeyboardNavigation.TabNavigation=Cycle).
+    ['FocusManager',           '@visualisation-sub/mural/runtime'],
+    ['KeyboardNavigation',     '@visualisation-sub/mural/runtime'],
+    ['KeyboardNavigationMode', '@visualisation-sub/mural/runtime'],
     ['ProgressIndicator',       '@visualisation-sub/mural/framework/notifications/progress-indicator.js'],
     ['ProgressIndicatorVariant','@visualisation-sub/mural/framework/notifications/progress-indicator.js'],
     ['Banner',                  '@visualisation-sub/mural/framework/notifications/banner.js'],
@@ -465,6 +470,7 @@ export const ENUM_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<st
     ['ModifierKeys',          new Set(['None', 'Alt', 'Control', 'Shift', 'Windows'])],
     ['MouseAction',           new Set(['LeftClick', 'RightClick', 'MiddleClick', 'LeftDoubleClick', 'RightDoubleClick', 'MiddleDoubleClick'])],
     ['MouseButton',           new Set(['Left', 'Middle', 'Right', 'XButton1', 'XButton2'])],
+    ['KeyboardNavigationMode', new Set(['Continue', 'Once', 'Cycle', 'None', 'Contained', 'Local'])],
 ]);
 
 // Type → set of valid static-member names exposed for use in DOTTED
@@ -537,6 +543,7 @@ export const PROPERTY_TO_ENUM: ReadonlyMap<string, readonly string[]> = new Map<
     // property-name == enum-class-name path, like HorizontalAlignment.)
     ['Modifiers', ['ModifierKeys']],
     ['Gesture',   ['MouseAction']],
+    ['TabNavigation', ['KeyboardNavigationMode']],
 ]);
 
 // Meta-attr names whose RHS is a type reference (compiled as a bare

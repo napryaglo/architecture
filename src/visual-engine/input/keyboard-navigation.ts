@@ -15,8 +15,10 @@
 //     Slider, TreeView, … — already own arrow keys); use the MoveFocus
 //     API to drive directional moves from a control or behavior.
 
+import { Model } from '../../runtime/model.js';
+import { MetaData } from '../../runtime/metadata.js';
 import type { Element } from '../element.js';
-import { FocusNavigationDirection } from './input-enums.js';
+import { FocusNavigationDirection, KeyboardNavigationMode } from './input-enums.js';
 import { Keyboard } from './keyboard.js';
 
 // A focus-move request — direction only, mirroring WPF's TraversalRequest.
@@ -33,6 +35,26 @@ interface Rect { x: number; y: number; w: number; h: number; }
 
 export class KeyboardNavigation
 {
+    // Attached: per-container Tab-traversal mode (WPF parity).
+    //   Continue  — flat traversal in/out of the container (default).
+    //   None      — the container's descendants are skipped by Tab.
+    //   Once      — Tab enters the container once (its first stop), then
+    //               leaves; the rest of the container is skipped.
+    //   Cycle     — Tab wraps within the container (never leaves via Tab).
+    //   Contained — Tab is clamped to the container (stops at the ends).
+    //   Local     — TabIndex is scoped per container (local ordering).
+    public static readonly TabNavigationKey = Model.RegisterAttachedProperty<KeyboardNavigationMode>(
+        KeyboardNavigation, 'TabNavigation', KeyboardNavigationMode.Continue, MetaData.None);
+
+    public static GetTabNavigation(el: Element): KeyboardNavigationMode
+    {
+        return el.get_property_value(KeyboardNavigation.TabNavigationKey);
+    }
+    public static SetTabNavigation(el: Element, mode: KeyboardNavigationMode): void
+    {
+        el.set_property_value(KeyboardNavigation.TabNavigationKey, mode);
+    }
+
     // Move keyboard focus per `request`, starting from `from` (defaults to
     // the current keyboard-focused element). Returns true when focus
     // actually moved. The new element is focused through its Focus()
@@ -67,11 +89,62 @@ export class KeyboardNavigation
             case FocusNavigationDirection.Last:  return stops[stops.length - 1];
             case FocusNavigationDirection.Next:
             case FocusNavigationDirection.Previous:
-                return linearMove(stops, from, direction === FocusNavigationDirection.Next);
+                return tabMove(root, from, direction === FocusNavigationDirection.Next);
             default:
                 return directionalMove(stops, from, direction);
         }
     }
+}
+
+// Next / previous tab stop honouring per-container TabNavigation modes.
+// When `from` sits inside a Cycle / Contained container the move is scoped
+// to that container (wrap vs clamp at the ends); otherwise it walks the
+// whole hierarchical order and wraps at the root (the default surface
+// behaviour).
+function tabMove(root: Element, from: Element | undefined, forward: boolean): Element | undefined
+{
+    if (from !== undefined)
+    {
+        const scope = navScopeOf(from);
+        if (scope !== undefined)
+        {
+            const mode = tabNav(scope);
+            const sStops: Element[] = [];
+            appendStops(scope, sStops);
+            const idx = sStops.indexOf(from);
+            if (idx !== -1)
+            {
+                const n = sStops.length;
+                const nextIdx = forward ? idx + 1 : idx - 1;
+                if (nextIdx >= 0 && nextIdx < n) return sStops[nextIdx];
+                // Boundary of the scope.
+                if (mode === KeyboardNavigationMode.Cycle) return sStops[forward ? 0 : n - 1];
+                if (mode === KeyboardNavigationMode.Contained) return from; // clamp → no move
+            }
+        }
+    }
+    const stops: Element[] = [];
+    appendStops(root, stops);
+    return linearMove(stops, from, forward);
+}
+
+// Nearest ANCESTOR of `from` whose TabNavigation confines traversal
+// (Cycle / Contained), or undefined.
+function navScopeOf(from: Element): Element | undefined
+{
+    let cur = from.GetVisualParent() as Element | undefined;
+    while (cur !== undefined)
+    {
+        const m = tabNav(cur);
+        if (m === KeyboardNavigationMode.Cycle || m === KeyboardNavigationMode.Contained) return cur;
+        cur = cur.GetVisualParent() as Element | undefined;
+    }
+    return undefined;
+}
+
+function tabNav(el: Element): KeyboardNavigationMode
+{
+    return el.get_property_value(KeyboardNavigation.TabNavigationKey);
 }
 
 // Topmost visual ancestor of `el` (the navigation root).
@@ -83,31 +156,60 @@ function rootOf(el: Element): Element
     return cur;
 }
 
-// All tab stops under `root` (focusable + IsTabStop + enabled + hit-test
-// visible), in visual-tree document order, then stable-sorted by
-// TabIndex (ascending; +Infinity default sorts last).
+// All tab stops under `root` in hierarchical tab order: at each level the
+// children are ordered by TabIndex (ascending; +Infinity default sorts
+// last), then their subtrees are appended depth-first. Sorting PER LEVEL
+// gives WPF's container-local TabIndex semantics (KeyboardNavigationMode
+// .Local) and the natural order for .Continue. Per-container modes
+// (None / Once) prune the walk; Cycle / Contained affect movement, not
+// collection (see tabMove).
 function tabStops(root: Element): Element[]
 {
     const out: Element[] = [];
-    collect(root, out);
-    // Stable sort by TabIndex — Array.prototype.sort is stable in modern
-    // engines, so equal TabIndex keeps document order.
-    return out
-        .map((el, i) => ({ el, i, t: el.TabIndex }))
-        .sort((a, b) => (a.t - b.t) || (a.i - b.i))
-        .map(e => e.el);
+    appendStops(root, out);
+    return out;
 }
 
-function collect(el: Element, out: Element[]): void
+function appendStops(el: Element, out: Element[]): void
 {
-    if (isTabStop(el)) out.push(el);
-    // Skip the subtree of a disabled / collapsed ancestor — its
-    // descendants can't take focus either.
+    // A disabled subtree can't take focus at all.
     if (el.IsEnabled === false) return;
-    for (const child of el.visualChildren)
+
+    const mode = tabNav(el);
+    if (mode === KeyboardNavigationMode.None)
     {
-        collect(child as Element, out);
+        // The container itself may be a stop, but its descendants are not
+        // reachable by Tab.
+        if (isTabStop(el)) out.push(el);
+        return;
     }
+
+    if (isTabStop(el)) out.push(el);
+
+    const kids = sortedChildren(el);
+    if (mode === KeyboardNavigationMode.Once)
+    {
+        // Enter the container only once: keep just the first child subtree
+        // that contributes a stop.
+        for (const k of kids)
+        {
+            const before = out.length;
+            appendStops(k, out);
+            if (out.length > before) break;
+        }
+        return;
+    }
+
+    for (const k of kids) appendStops(k, out);
+}
+
+// Children ordered by TabIndex, ties broken by document (visual) order.
+function sortedChildren(el: Element): Element[]
+{
+    return [...el.visualChildren]
+        .map((c, i) => ({ c: c as Element, i, t: (c as Element).TabIndex }))
+        .sort((a, b) => (a.t - b.t) || (a.i - b.i))
+        .map(x => x.c);
 }
 
 function isTabStop(el: Element): boolean

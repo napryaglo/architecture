@@ -30,6 +30,7 @@ import { Stylus } from '../visual-engine/input/stylus.js';
 import { Touch } from '../visual-engine/input/touch.js';
 import { ManipulationCoordinator } from '../visual-engine/input/manipulation.js';
 import { Keyboard } from '../visual-engine/input/keyboard.js';
+import { FocusManager } from '../visual-engine/input/focus-manager.js';
 import { CaptureMode, FocusNavigationDirection } from '../visual-engine/input/input-enums.js';
 import { Key } from '../visual-engine/input/key.js';
 import { hasModifier, ModifierKeys } from '../visual-engine/routed-event.js';
@@ -358,6 +359,7 @@ export class InputManager
         const old = this.focusedVisual;
         this.focusedVisual = visual;
         Keyboard.PrimaryDevice._setFocused(visual);
+        FocusManager._recordLogicalFocus(visual);
 
         if (old !== undefined)
         {
