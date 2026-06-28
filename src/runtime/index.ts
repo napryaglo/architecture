@@ -177,6 +177,20 @@ export {
     ManipulationInertiaStartingEventArgs,
     ManipulationCompletedEventArgs,
     type ManipulationEventHandlers,
+    // Font subsystem — value classes + central registry. Re-exported here
+    // (riding the existing visual-engine barrel edge to avoid a new import
+    // cycle) so markup-emitted code and MVVM consumers reach them through
+    // `@visualisation-sub/mural/runtime`.
+    FontFamily,
+    Typeface,
+    FontWeight,
+    FontStyle,
+    FontManager,
+    RegisteredFont,
+    FontSourceKind,
+    type FontSource,
+    type FontRegistration,
+    type FontConsumer,
 } from '../visual-engine/index.js';
 export {
     Style,

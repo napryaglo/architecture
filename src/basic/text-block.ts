@@ -8,7 +8,7 @@ import {
     type DrawingContext,
     type TextMetrics,
 } from '../runtime/index.js';
-import { Brush, FontStyle, FontWeight, FormattedText } from '../visual-engine/index.js';
+import { Brush, FontFamily, FontStyle, FontWeight, FormattedText } from '../visual-engine/index.js';
 import { DEFAULT_FONT_FAMILY, Theme } from './theme.js';
 
 // Mirrors WPF's TextWrapping enum. NoWrap (default) keeps the historic
@@ -73,7 +73,7 @@ export class TextBlock extends Element
     // re-layout but the on-screen text would stay stale until something
     // else dirtied this visual.
     public static readonly TextKey         = Model.RegisterProperty<string>(    TextBlock, 'Text',       '',                  MetaData.Measure | MetaData.Render);
-    public static readonly FontFamilyKey   = Model.RegisterProperty<string>(    TextBlock, 'FontFamily', DEFAULT_FONT_FAMILY, MetaData.Measure | MetaData.Render | MetaData.Inherits);
+    public static readonly FontFamilyKey   = Model.RegisterProperty<FontFamily>(TextBlock, 'FontFamily', new FontFamily(DEFAULT_FONT_FAMILY), MetaData.Measure | MetaData.Render | MetaData.Inherits);
     public static readonly FontSizeKey     = Model.RegisterProperty<number>(    TextBlock, 'FontSize',   14,                  MetaData.Measure | MetaData.Render | MetaData.Inherits);
     public static readonly FontWeightKey   = Model.RegisterProperty<FontWeight>(TextBlock, 'FontWeight', FontWeight.Normal,   MetaData.Measure | MetaData.Render | MetaData.Inherits);
     public static readonly FontStyleKey    = Model.RegisterProperty<FontStyle>( TextBlock, 'FontStyle',  FontStyle.Normal,    MetaData.Measure | MetaData.Render | MetaData.Inherits);
@@ -131,8 +131,13 @@ export class TextBlock extends Element
     public get Text(): string { return this.get_property_value(TextBlock.TextKey); }
     public set Text(value: string) { this.set_property_value(TextBlock.TextKey, value); }
 
-    public get FontFamily(): string { return this.get_property_value(TextBlock.FontFamilyKey); }
-    public set FontFamily(value: string) { this.set_property_value(TextBlock.FontFamilyKey, value); }
+    // FontFamily DP — typed FontFamily but tolerant of string-valued
+    // theme tokens (`@FontFamily` / `@BodyLargeFont` resolve to CSS
+    // strings via DynamicResource). The getter normalizes either form to
+    // a FontFamily (WPF's TypeConverter behaviour); the setter coerces so
+    // `tb.FontFamily = "Inter"` works programmatically too.
+    public get FontFamily(): FontFamily { return FontFamily.from(this.get_property_value(TextBlock.FontFamilyKey)); }
+    public set FontFamily(value: FontFamily | string) { this.set_property_value(TextBlock.FontFamilyKey, FontFamily.from(value)); }
 
     public get FontSize(): number { return this.get_property_value(TextBlock.FontSizeKey); }
     public set FontSize(value: number) { this.set_property_value(TextBlock.FontSizeKey, value); }
@@ -196,7 +201,7 @@ export class TextBlock extends Element
             || !Number.isFinite(availableSize.Width))
         {
             const metrics = measurer.Measure(
-                text, this.FontFamily, this.FontSize, this.FontWeight, this.FontStyle);
+                text, this.FontFamily.Source, this.FontSize, this.FontWeight, this.FontStyle);
             this._lines = [{ text, metrics }];
             // Effective height honours an explicit LineHeight — a 14pt
             // typography token paired with `LineHeight=20` (M3 BodyMedium)
@@ -212,7 +217,7 @@ export class TextBlock extends Element
         // splitting is out of scope for v0).
         const lines: Array<{ text: string; metrics: TextMetrics }> = [];
         const measureLine = (s: string): TextMetrics => measurer.Measure(
-            s, this.FontFamily, this.FontSize, this.FontWeight, this.FontStyle);
+            s, this.FontFamily.Source, this.FontSize, this.FontWeight, this.FontStyle);
         let current = '';
         let currentMetrics: TextMetrics | undefined;
         const flush = (): void => {
@@ -277,7 +282,7 @@ export class TextBlock extends Element
             if (text === '') return;
             const formatted = new FormattedText(
                 text,
-                this.FontFamily,
+                this.FontFamily.Source,
                 this.FontSize,
                 fg,
                 this.FontWeight,
@@ -314,7 +319,7 @@ export class TextBlock extends Element
             const line = this._lines[i]!;
             const formatted = new FormattedText(
                 line.text,
-                this.FontFamily,
+                this.FontFamily.Source,
                 this.FontSize,
                 fg,
                 this.FontWeight,

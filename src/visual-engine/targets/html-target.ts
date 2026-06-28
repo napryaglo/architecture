@@ -22,6 +22,7 @@ import {
     keyFromDom,
 } from '../../runtime/index.js';
 import { CanvasTextMeasurer } from '../text/canvas-text-measurer.js';
+import { FontManager, FontSourceKind, type RegisteredFont } from '../text/index.js';
 import { PresentationTarget } from './presentation-target.js';
 import { SvgRenderer, VISUAL_BACKREF } from '../drawing/svg-renderer.js';
 import { Point } from '../primitives.js';
@@ -496,6 +497,10 @@ export class HtmlTarget extends PresentationTarget
         try
         {
             this.TextMeasurer = new CanvasTextMeasurer(this.host.ownerDocument ?? document);
+            // The base ctor already pushed any pre-registered fonts into
+            // the ApproximateTextMeasurer (a no-op there). Re-push them so
+            // the freshly-installed CanvasTextMeasurer also has them.
+            this.ReloadFontsIntoMeasurer();
         }
         catch
         {
@@ -521,6 +526,35 @@ export class HtmlTarget extends PresentationTarget
     // (super.Flush() resolves Measure / Arrange), then the renderer
     // walks the tree to paint everything that's render- or arrange-
     // dirty. Both Sets are cleared by the renderer after the walk.
+    // Render-side font embedding. Registers the face with the live
+    // document via the FontFace API so the SVG renderer's `font-family`
+    // references actually resolve to the custom font. A URL source loads
+    // by URL (browser dedups the fetch with our metrics fetch); a buffer
+    // source loads from the bytes we already have. Idempotent-ish: adding
+    // an equal FontFace twice is cheap and the set dedups by identity.
+    protected override EmbedFontForRender(font: RegisteredFont, buffer: ArrayBuffer): void
+    {
+        const doc = this.host.ownerDocument ?? document;
+        // `document.fonts` (FontFaceSet) is the standard surface; guard
+        // for environments (older jsdom) that lack it.
+        const fontSet = (doc as Document & { fonts?: FontFaceSet }).fonts;
+        if (fontSet === undefined || typeof FontFace === 'undefined') return;
+        try
+        {
+            const url = FontManager.Current.SourceUrl(font);
+            const src = font.Source.kind === FontSourceKind.Url && url !== undefined
+                ? `url(${JSON.stringify(url)})`
+                : buffer;
+            const face = new FontFace(font.Family, src as string | BufferSource, {
+                weight: font.Weight,
+                style:  font.Style,
+            });
+            fontSet.add(face);
+            void face.load();
+        }
+        catch { /* malformed font / unsupported environment — skip embed */ }
+    }
+
     public override Flush(): void
     {
         super.Flush();
@@ -550,6 +584,7 @@ export class HtmlTarget extends PresentationTarget
         this.host.removeEventListener('blur',          this.onDragBlur      as EventListener);
         this.renderer.Dispose();
         this.surface.remove();
+        this.DisposeFonts();
     }
 
     // Drag cancellation poll. Called by the cancellation listeners and

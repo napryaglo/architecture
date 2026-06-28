@@ -4,6 +4,7 @@ import { Rect, Size } from '../primitives.js';
 import type { TextMeasurer, Visual, Element, VisualHost } from '../../runtime/index.js';
 import type { Brush } from '../drawing/brush.js';
 import { OverlayLayer } from './overlay-layer.js';
+import { FontManager, type FontConsumer, type RegisteredFont } from '../text/index.js';
 
 // Abstract base for the scene-description-plus-host-bridge classes
 // (HtmlTarget, FileTarget, …). Follows the WPF
@@ -54,7 +55,7 @@ import { OverlayLayer } from './overlay-layer.js';
 // y-down, DIPs. DeviceScale multiplies DIPs to get device pixels for
 // raster output (defaults to 1; HtmlTarget typically reads
 // window.devicePixelRatio at construction and assigns it).
-export abstract class PresentationTarget extends Model implements VisualHost
+export abstract class PresentationTarget extends Model implements VisualHost, FontConsumer
 {
     // NaN = "auto" — the axis sizes to Content.DesiredSize at Render
     // time. Any finite number = fixed mode for that axis.
@@ -73,12 +74,60 @@ export abstract class PresentationTarget extends Model implements VisualHost
     // Visual + render walk.
     private _overlayRoot: OverlayLayer | undefined;
 
+    // Unsubscribe thunk for this target's FontManager subscription.
+    private readonly _fontUnsubscribe: () => void;
+
     protected constructor(width?: number, height?: number, content?: Visual)
     {
         super();
         if (width   !== undefined) this.Width = width;
         if (height  !== undefined) this.Height = height;
         if (content !== undefined) this.Content = content;
+        // Receive every font the FontManager knows about now or later —
+        // load each into our TextMeasurer (metrics) and let concrete
+        // targets embed it for rendering. Replays existing registrations.
+        this._fontUnsubscribe = FontManager.Current.Subscribe(this);
+    }
+
+    // FontConsumer — a font was registered (or replayed on subscribe).
+    // Load its bytes into the current measurer so text using it gets real
+    // metrics, then hand it to the render-side embed hook. Errors (bad
+    // URL, unparseable font) are swallowed so one broken font can't break
+    // layout of everything else.
+    public ReceiveFont(font: RegisteredFont): void
+    {
+        void FontManager.Current.LoadBuffer(font).then(buf =>
+        {
+            this.TextMeasurer.LoadFont(font.Family, buf, font.Weight, font.Style);
+            this.EmbedFontForRender(font, buf);
+            // Newly-available metrics can change measured sizes — nudge a
+            // relayout of the current content so text reflows.
+            this.Content?.InvalidateMeasure();
+        }).catch(() => { /* unreachable font — leave fallback metrics */ });
+    }
+
+    // Render-side embedding hook. Base targets (headless / SVG-string) do
+    // nothing — they emit `font-family` verbatim and rely on the consumer
+    // having the font. HtmlTarget overrides this to register the face with
+    // the live document (FontFace API) so custom fonts actually paint.
+    protected EmbedFontForRender(_font: RegisteredFont, _buffer: ArrayBuffer): void
+    {
+        /* no-op in the base target */
+    }
+
+    // Re-push every registered font into the current measurer. Concrete
+    // targets call this after swapping their TextMeasurer (e.g. HtmlTarget
+    // installing a CanvasTextMeasurer post-attach) so fonts loaded before
+    // the swap are present in the new measurer too.
+    protected ReloadFontsIntoMeasurer(): void
+    {
+        for (const font of FontManager.Current.Faces) this.ReceiveFont(font);
+    }
+
+    /** Drop this target's font subscription (teardown / tests). */
+    public DisposeFonts(): void
+    {
+        this._fontUnsubscribe();
     }
 
     // User-set width. NaN (the default) means the width is resolved

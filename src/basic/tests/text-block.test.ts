@@ -40,7 +40,7 @@ describe('TextBlock defaults', () => {
     test('a fresh TextBlock has empty Text, system-ui font, size 14, normal weight/style, no Foreground', () => {
         const t = new TextBlock();
         assert.equal(t.Text, '');
-        assert.equal(t.FontFamily, 'system-ui, sans-serif');
+        assert.equal(t.FontFamily.Source, 'system-ui, sans-serif');
         assert.equal(t.FontSize, 14);
         assert.equal(t.FontWeight, FontWeight.Normal);
         assert.equal(t.FontStyle,  FontStyle.Normal);

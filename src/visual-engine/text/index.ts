@@ -2,6 +2,15 @@
 // TextMeasurer implementations (Canvas 2D, opentype font metrics, SVG
 // element fallback), and the Google Fonts loader.
 export { FormattedText, FontWeight, FontStyle } from './formatted-text.js';
+export { FontFamily, Typeface } from './font-family.js';
+export {
+    FontManager,
+    RegisteredFont,
+    FontSourceKind,
+    type FontSource,
+    type FontRegistration,
+    type FontConsumer,
+} from './font-manager.js';
 export { FontMetricsMeasurer } from './font-metrics-measurer.js';
 export { CanvasTextMeasurer } from './canvas-text-measurer.js';
 export { SvgTextMeasurer } from './svg-text-measurer.js';

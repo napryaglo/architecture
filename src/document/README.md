@@ -73,6 +73,10 @@ Start with whichever doc matches what you're trying to do.
 - **[text-measurement.md](text-measurement.md)** — `TextMeasurer` interface,
   `ApproximateTextMeasurer`, `FontMetricsMeasurer` (opentype.js),
   Google Fonts loader.
+- **[fonts.md](fonts.md)** — the font system: `FontFamily` / `Typeface`
+  value classes, the `FontManager` registry (register → measure + render +
+  glyphs), `@font-face` embedding, the markup `fonts { … }` block, and
+  `glyphs @Family` unification.
 
 ### Application architecture
 - **[resources.md](resources.md)** — `ResourceDictionary`,

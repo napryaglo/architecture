@@ -254,6 +254,7 @@ export type BodyItem =
     | DefForm
     | IncludeForm
     | GlyphsForm
+    | FontsForm
     | MacroHoleBodyItem;
 
 // `.Member: { … }` — a dotted member-block that fills a complex aggregate
@@ -343,8 +344,14 @@ export interface IncludeForm
 export interface GlyphsForm
 {
     kind: 'glyphs-form';
-    /** Font file path exactly as written, relative to the .mu file. */
+    /** Font file path exactly as written, relative to the .mu file. Empty
+     *  when the font is named by family via `fontFamily` (`glyphs @Inter`)
+     *  — the compiler resolves the path from a preceding `fonts` block. */
     font: string;
+    /** Family name from `glyphs @<family> { … }` — references a font
+     *  registered by an earlier `fonts { … }` block in the same
+     *  dictionary. Mutually exclusive with a non-empty `font` path. */
+    fontFamily?: string;
     entries: GlyphEntry[];
     span: SourceSpan;
 }
@@ -355,6 +362,35 @@ export interface GlyphEntry
     key: string;
     /** Explicit codepoint string from `= "<cp>"`; else look up by `key`. */
     codepoint?: string;
+    span: SourceSpan;
+}
+
+// `fonts { Inter from "<path>" [Weight=Bold, Style=Italic]  … }` — a
+// resource-dictionary body item that registers font faces with the
+// runtime FontManager (so they load for metrics AND embed for rendering)
+// and, per family, publishes a `@<family>` FontFamily resource for
+// `FontFamily=@Inter` references. Each entry is one face (one weight/
+// style of a family) backed by a path fetched at runtime; no compile-time
+// font reading is needed for registration (cf. `glyphs`, which bakes
+// geometry and does read the file). A family declared here is also
+// referenceable by `glyphs @<family> { … }`.
+export interface FontsForm
+{
+    kind: 'fonts-form';
+    entries: FontEntry[];
+    span: SourceSpan;
+}
+
+export interface FontEntry
+{
+    /** Family name registered + published as `@<family>`. */
+    family: string;
+    /** Source path exactly as written, relative to the .mu file. */
+    source: string;
+    /** FontWeight member name (`Bold`, `Medium`, …); absent ⇒ Normal. */
+    weight?: string;
+    /** FontStyle member name (`Italic`); absent ⇒ Normal. */
+    style?: string;
     span: SourceSpan;
 }
 

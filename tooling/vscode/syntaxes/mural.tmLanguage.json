@@ -96,7 +96,7 @@
             "patterns": [
                 {
                     "name": "keyword.control.mural",
-                    "match": "\\b(style|template|datatemplate|def|resources|import|from|when)\\b"
+                    "match": "\\b(style|template|datatemplate|def|resources|import|from|when|glyphs|include|fonts)\\b"
                 },
                 {
                     "name": "keyword.operator.logical.mural",

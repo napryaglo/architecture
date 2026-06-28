@@ -14,6 +14,7 @@ import type {
     DefForm,
     IncludeForm,
     GlyphsForm,
+    FontsForm,
     Document,
     ElementNode,
     EventTriggerGroup,
@@ -330,6 +331,10 @@ export class Compiler
     // happens in compileElement before normal class-name dispatch, so
     // macros shadow controls of the same name.
     private macros: Map<string, DefForm> = new Map();
+    // Family → source path declared by a `fonts { … }` block, so a later
+    // `glyphs @<family> { … }` in the same compilation resolves the font
+    // file from the family name instead of repeating the path.
+    private fontPaths: Map<string, string> = new Map();
     private varCounter = 0;
     // Variable name of the element that owns the active NameScope —
     // populated when an element carries `x:root` and consumed by every
@@ -1104,6 +1109,9 @@ export class Compiler
                 case 'glyphs-form':
                     this.compileGlyphs(rdVar, item);
                     continue;
+                case 'fonts-form':
+                    this.compileFonts(rdVar, item);
+                    continue;
                 default:
                     throw new EmitError(
                         `resources: ${item.kind} is not allowed here`,
@@ -1167,6 +1175,23 @@ export class Compiler
                 + `(text-only callers can't read font files). Run through the build pipeline.`,
                 form.span);
         }
+        // Resolve the font source: a literal path, or a family reference
+        // (`glyphs @Inter`) to a font registered by an earlier `fonts`
+        // block in the same compilation.
+        let fontPath = form.font;
+        if (form.fontFamily !== undefined)
+        {
+            const declared = this.fontPaths.get(form.fontFamily);
+            if (declared === undefined)
+            {
+                throw new EmitError(
+                    `glyphs @${form.fontFamily}: no font family '${form.fontFamily}' is `
+                    + `declared by a 'fonts { … }' block earlier in this dictionary.`,
+                    form.span);
+            }
+            fontPath = declared;
+        }
+
         // Empty codepoint → look up by name (the key); else by codepoint.
         const entries = form.entries.map(e => e.codepoint !== undefined
             ? { key: e.key, codepoint: e.codepoint }
@@ -1175,12 +1200,12 @@ export class Compiler
         let res: IncludeResolution;
         try
         {
-            res = this.glyphs(form.font, entries);
+            res = this.glyphs(fontPath, entries);
         }
         catch (e)
         {
             throw new EmitError(
-                `glyphs "${form.font}": ${(e as Error).message}`, form.span);
+                `glyphs "${fontPath}": ${(e as Error).message}`, form.span);
         }
         for (const imp of res.imports ?? [])
         {
@@ -1190,6 +1215,74 @@ export class Compiler
         {
             this.line(`${rdVar}.Set(${JSON.stringify(entry.key)}, ${entry.valueJs});`);
         }
+    }
+
+    // `fonts { Family from "<path>" [Weight=…, Style=…]  … }` → register
+    // each face with the runtime FontManager (loaded for metrics, embedded
+    // for rendering by every target) and publish one `@<family>` FontFamily
+    // resource per family for `FontFamily=@Family` references. Unlike
+    // `glyphs`, no compile-time font reading is needed — the path is
+    // emitted as a runtime-resolved URL (`new URL(path, import.meta.url)`).
+    // Each declared family's path is also recorded so a later
+    // `glyphs @<family> { … }` in the same dictionary can resolve it.
+    private compileFonts(rdVar: string, form: FontsForm): void
+    {
+        const families = new Set<string>();
+        for (const e of form.entries)
+        {
+            // Record the family → source path for `glyphs @family`. First
+            // source per family wins (the upright/normal face is the
+            // conventional outline source).
+            if (!this.fontPaths.has(e.family)) this.fontPaths.set(e.family, e.source);
+
+            const optsParts: string[] = [];
+            const weight = this.fontEnumMember('FontWeight', e.weight,
+                ['Normal', 'Medium', 'Bold'], e.span);
+            const style  = this.fontEnumMember('FontStyle', e.style,
+                ['Normal', 'Italic'], e.span);
+            if (weight !== undefined) optsParts.push(`weight: ${weight}`);
+            if (style  !== undefined) optsParts.push(`style: ${style}`);
+            const opts = optsParts.length > 0 ? `, { ${optsParts.join(', ')} }` : '';
+
+            this.ensureImport('FontManager');
+            this.ensureImport('FontSourceKind');
+            const url = `new URL(${JSON.stringify(e.source)}, import.meta.url).href`;
+            this.line(
+                `FontManager.Current.Register(${JSON.stringify(e.family)}, `
+                + `{ kind: FontSourceKind.Url, url: ${url} }${opts});`);
+            families.add(e.family);
+        }
+
+        // One FontFamily resource per family so `@<family>` resolves to a
+        // typed FontFamily value (the FontFamily DP getter also accepts a
+        // plain string, but publishing the value object is cleaner).
+        if (families.size > 0) this.ensureImport('FontFamily');
+        for (const fam of families)
+        {
+            this.line(`${rdVar}.Set(${JSON.stringify(fam)}, new FontFamily(${JSON.stringify(fam)}));`);
+        }
+    }
+
+    // Validate a `fonts` Weight/Style member against the enum's members and
+    // return the qualified reference (`FontWeight.Bold`), or undefined when
+    // the attribute was omitted. Imports the enum lazily.
+    private fontEnumMember(
+        enumName: string,
+        member: string | undefined,
+        allowed: readonly string[],
+        span: SourceSpan,
+    ): string | undefined
+    {
+        if (member === undefined) return undefined;
+        if (!allowed.includes(member))
+        {
+            throw new EmitError(
+                `fonts: ${enumName === 'FontWeight' ? 'Weight' : 'Style'}=${member} `
+                + `is not a ${enumName} member (${allowed.join(' | ')})`,
+                span);
+        }
+        this.ensureImport(enumName);
+        return `${enumName}.${member}`;
     }
 
     // Lower a `$path << conv1 << conv2` converter chain to the converter
@@ -3415,6 +3508,7 @@ export class Compiler
             || it.kind === 'resource-form'
             || it.kind === 'include-form'
             || it.kind === 'glyphs-form'
+            || it.kind === 'fonts-form'
             || (it.kind === 'element' && this.findXAttr(it.xAttrs, 'key') !== null));
     }
 

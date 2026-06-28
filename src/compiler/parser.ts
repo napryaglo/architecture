@@ -24,6 +24,8 @@ import type {
     IncludeForm,
     GlyphsForm,
     GlyphEntry,
+    FontsForm,
+    FontEntry,
     DynamicResourceValue,
     ElementNode,
     EventTriggerGroup,
@@ -286,7 +288,19 @@ export class Parser
     private parseGlyphsForm(): GlyphsForm
     {
         const start = this.expectIdent('glyphs').span.start;
-        const font  = this.expect(TokenKind.String).value;
+        // Font source is either a literal path (`glyphs "x.ttf"`) or a
+        // family reference to a preceding `fonts` block (`glyphs @Inter`).
+        let font = '';
+        let fontFamily: string | undefined;
+        if (this.peek().kind === TokenKind.At)
+        {
+            this.consume();
+            fontFamily = this.expect(TokenKind.Ident).value;
+        }
+        else
+        {
+            font = this.expect(TokenKind.String).value;
+        }
         this.expect(TokenKind.LBrace);
 
         const entries: GlyphEntry[] = [];
@@ -310,7 +324,63 @@ export class Parser
         }
         this.expect(TokenKind.RBrace);
         const end = this.lastEnd();
-        return { kind: 'glyphs-form', font, entries, span: this.span(start, end) };
+        return { kind: 'glyphs-form', font, fontFamily, entries, span: this.span(start, end) };
+    }
+
+    // `fonts { Family from "<path>" [Weight=Bold, Style=Italic]  … }` — a
+    // resource-dictionary body item that registers font faces with the
+    // runtime FontManager and publishes a `@<family>` FontFamily resource.
+    // Each entry: a family ident, the `from` keyword, a source-path string,
+    // and an optional `[Weight=…, Style=…]` attribute block (members of
+    // FontWeight / FontStyle). The path is fetched at runtime — the parser
+    // captures it verbatim; no compile-time font reading happens here.
+    private parseFontsForm(): FontsForm
+    {
+        const start = this.expectIdent('fonts').span.start;
+        this.expect(TokenKind.LBrace);
+
+        const entries: FontEntry[] = [];
+        while (
+            this.peek().kind !== TokenKind.RBrace
+            && this.peek().kind !== TokenKind.EOF
+        )
+        {
+            const familyTok = this.expect(TokenKind.Ident);
+            this.expectIdent('from');
+            const source = this.expect(TokenKind.String).value;
+
+            let weight: string | undefined;
+            let style:  string | undefined;
+            if (this.peek().kind === TokenKind.LBracket)
+            {
+                this.consume();
+                while (this.peek().kind !== TokenKind.RBracket
+                    && this.peek().kind !== TokenKind.EOF)
+                {
+                    const nameTok = this.expect(TokenKind.Ident);
+                    this.expect(TokenKind.Equals);
+                    const valTok = this.expect(TokenKind.Ident);
+                    if (nameTok.value === 'Weight')      weight = valTok.value;
+                    else if (nameTok.value === 'Style')  style  = valTok.value;
+                    else throw new ParseError(
+                        `fonts: unknown attribute '${nameTok.value}' — expected Weight or Style`,
+                        nameTok.span);
+                    if (this.peek().kind === TokenKind.Comma) this.consume();
+                }
+                this.expect(TokenKind.RBracket);
+            }
+
+            entries.push({
+                family: familyTok.value,
+                source,
+                weight,
+                style,
+                span: this.span(familyTok.span.start, this.lastEnd()),
+            });
+        }
+        this.expect(TokenKind.RBrace);
+        const end = this.lastEnd();
+        return { kind: 'fonts-form', entries, span: this.span(start, end) };
     }
 
     // `theme Identifier { import …; tokens { … }; …body… }`
@@ -1424,6 +1494,7 @@ export class Parser
                 case 'def':          return this.parseDefForm();
                 case 'include':      return this.parseIncludeForm();
                 case 'glyphs':       return this.parseGlyphsForm();
+                case 'fonts':        return this.parseFontsForm();
                 default:
                     // SlotAssign vs Element disambiguation.
                     if (this.peek(1).kind === TokenKind.Colon)
