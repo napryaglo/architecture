@@ -26,6 +26,9 @@ import {
     type ElementNode,
     type KeyValueResource,
     type ResourceForm,
+    type ResourcesBlock,
+    type ThemeBlock,
+    type SchemeBlock,
     type SourceSpan,
     type ValueNode,
     type Attribute,
@@ -116,6 +119,37 @@ export function getCached(uri: string): DocAnalysis | undefined
     return cache.get(uri);
 }
 
+// Parse-only resource extraction for files that aren't open in the editor
+// (the workspace index calls this for every .mu it scans). Deliberately
+// skips the compile() semantic pass — running the full emitter across the
+// whole workspace would be far too costly, and the resource index only
+// needs the declaration spans the AST already carries. Returns an empty
+// list when the file doesn't parse.
+export function collectResources(text: string): ResourceDef[]
+{
+    let ast: Document;
+    try
+    {
+        ast = new Parser(text).ParseDocument();
+    }
+    catch
+    {
+        return [];
+    }
+    const scratch: DocAnalysis = {
+        version: -1,
+        text,
+        ast,
+        parseError: null,
+        emitError:  null,
+        resources:  new Map(),
+        elements:   [],
+        resourceForms: [],
+    };
+    walk(ast, scratch);
+    return [...scratch.resources.values()];
+}
+
 export function invalidate(uri: string): void
 {
     cache.delete(uri);
@@ -189,10 +223,41 @@ function walk(node: unknown, out: DocAnalysis): void
             walk((node as Document).forms, out);
             return;
 
+        // Named top-level dictionary/theme/scheme blocks. Every real demo
+        // and theme wraps its `@key`s and styles/templates inside one of
+        // these, so the index would be empty without descending here.
+        case 'resources-block':
+            walk((node as ResourcesBlock).body, out);
+            return;
+
+        case 'theme-block':
+            walk((node as ThemeBlock).body, out);
+            return;
+
+        case 'scheme-block':
+            walk((node as SchemeBlock).body, out);
+            return;
+
         case 'element':
         {
             const el = node as ElementNode;
             out.elements.push(el);
+            // A keyed element (`ColorScheme x:key="BrandColors" [ … ]`) is a
+            // value-object resource — referenceable via `@BrandColors` just
+            // like a `@key = …` entry. (x:name is an element name, not a
+            // dictionary key, so only x:key is recorded.)
+            const xKey = el.xAttrs.find(a => a.name === 'key');
+            if (xKey !== undefined
+                && xKey.value !== null
+                && xKey.value.kind === 'string')
+            {
+                recordResource(out, {
+                    key:      xKey.value.value,
+                    keySpan:  xKey.span,
+                    fullSpan: el.span,
+                    kind:     'value',
+                });
+            }
             walk(el.xAttrs, out);
             walk(el.attrs,  out);
             walk(el.body,   out);

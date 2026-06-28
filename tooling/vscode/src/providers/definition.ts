@@ -3,6 +3,13 @@
 //   `@primary`   → the `@primary = …` line
 //   `@@theme`    → the `@theme = …` line (dynamic refs resolve to same target)
 //
+// Resolution is workspace-wide: a same-file declaration wins (jump
+// straight there), otherwise we consult the workspace index, which holds
+// every `@key` declared across every `.mu` — theme schemes, shared
+// dictionaries, sibling demos. A key declared in several files (e.g.
+// @Primary in both light.mu and dark.mu) returns every location so the
+// editor offers the list.
+//
 // Style/template references via `Background = "DangerButton"` aren't
 // covered yet (no syntax to distinguish a string from a key reference);
 // once we add `=>StyleKey` or similar this provider extends naturally.
@@ -20,8 +27,13 @@ import {
     analyze,
     type DocAnalysis,
 } from '../analyzer.js';
+import { WorkspaceIndex } from '../workspace-index.js';
 
-export function definition(doc: TextDocument, pos: Position): Location | null
+export function definition(
+    doc: TextDocument,
+    pos: Position,
+    index: WorkspaceIndex,
+): Location | Location[] | null
 {
     const analysis = analyze(doc);
     const offset   = doc.offsetAt(pos);
@@ -29,10 +41,15 @@ export function definition(doc: TextDocument, pos: Position): Location | null
     const refKey = referenceAt(analysis.text, offset);
     if (refKey === null) return null;
 
-    const def = analysis.resources.get(refKey);
-    if (def === undefined) return null;
+    // Same-file declaration wins — most specific, no ambiguity.
+    const local = analysis.resources.get(refKey);
+    if (local !== undefined) return target(doc.uri, local.keySpan);
 
-    return target(doc.uri, def.keySpan);
+    // Otherwise resolve across the workspace.
+    const hits = index.lookup(refKey);
+    if (hits.length === 0) return null;
+    if (hits.length === 1) return target(hits[0]!.uri, hits[0]!.keySpan);
+    return hits.map(h => target(h.uri, h.keySpan));
 }
 
 // Extract the resource-key under the cursor. Returns the bare key (no
