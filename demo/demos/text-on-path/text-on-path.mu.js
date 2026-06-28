@@ -4,7 +4,7 @@ import { ColorPicker } from "@visualisation-sub/mural/framework";
 import { Button } from "@visualisation-sub/mural/framework/buttons/button.js";
 import { ComboBox } from "@visualisation-sub/mural/framework/list/combo-box.js";
 import { DataContextBinding, DynamicResource, NameScope, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
-import { FontWeight } from "@visualisation-sub/mural/visual-engine";
+import { FontFamily, FontManager, FontSourceKind, FontWeight } from "@visualisation-sub/mural/visual-engine";
 
 
 const _gate_TextOnPathDemo = Symbol("TextOnPathDemo.ctor");
@@ -17,6 +17,8 @@ export class TextOnPathDemo extends ResourceDictionary {
     }
     static Clone() {
         const t = new TextOnPathDemo(_gate_TextOnPathDemo);
+        FontManager.Current.Register("Roboto", { kind: FontSourceKind.Url, url: new URL("https://cdn.jsdelivr.net/gh/opentypejs/opentype.js@master/test/fonts/Roboto-Black.ttf", import.meta.url).href });
+        t.Set("Roboto", new FontFamily("Roboto"));
         const _tmpl0 = new DataTemplate((_data) => {
             let _canvas1;
             const _border2 = new Border();

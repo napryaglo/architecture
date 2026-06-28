@@ -16,6 +16,18 @@ import TextOnPathVM from "./text-on-path-vm.mjs"
 
 resources TextOnPathDemo {
 
+    // Demo font declared in markup (resource management is mural-only).
+    // The runtime FontManager fetches this once — loading it into every
+    // target's measurer and embedding it for rendering. The bootstrap
+    // pulls the SAME buffer back from the FontManager to feed its own
+    // opentype FontMetricsMeasurer for glyph-outline extraction (the
+    // textOnPath pipeline needs vector outlines, which the target's
+    // Canvas measurer can't provide). An absolute URL is registered
+    // verbatim; `from "..."` accepts any path or URL.
+    fonts {
+        Roboto from "https://cdn.jsdelivr.net/gh/opentypejs/opentype.js@master/test/fonts/Roboto-Black.ttf"
+    }
+
     DataTemplate x:key="TextOnPathTemplate" [DataType=TextOnPathVM] {
         Border x:root [Background=@Surface] {
             DockPanel {

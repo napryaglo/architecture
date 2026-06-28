@@ -19,7 +19,7 @@
 // the scales the demo operates on and recomputing fits the
 // "everything else is bound, watch what happens" feel of the demo.
 
-import { Application } from '@visualisation-sub/mural/runtime';
+import { Application, FontManager } from '@visualisation-sub/mural/runtime';
 import { Canvas } from '@visualisation-sub/mural/basic';
 import {
     Color,
@@ -34,13 +34,13 @@ import { GeometryView } from './geometry-view.mjs';
 import { getPath } from './paths.mjs';
 import { register } from '../../platform/registry.mjs';
 
-// Font we ship the demo against. Direct TTF fetch from jsdelivr —
-// `loadGoogleFontInto` routes through the CSS-API + UA-spoof path
-// that's started returning WOFF2 for some families, which opentype.js
-// can't parse. jsdelivr serves the opentype.js project's own test TTF
-// unmodified, which sidesteps the format gymnastics entirely.
+// Font family the demo renders against. The font itself is DECLARED in
+// text-on-path.mu's `fonts { Roboto from "…" }` block (resource
+// management is mural-only) — the runtime FontManager owns the fetch.
+// Here we just pull the same loaded buffer back to feed our opentype
+// FontMetricsMeasurer, which textOnPath needs for glyph-outline
+// extraction (the target's Canvas measurer gives metrics, not outlines).
 const FONT_FAMILY = 'Roboto';
-const FONT_URL    = 'https://cdn.jsdelivr.net/gh/opentypejs/opentype.js@master/test/fonts/Roboto-Black.ttf';
 
 // Module-level singleton — load once, reuse across re-activations.
 const fontMeasurer = new FontMetricsMeasurer();
@@ -48,11 +48,13 @@ let   fontReadyPromise;
 
 function ensureFontLoaded(vm) {
     if (fontReadyPromise !== undefined) return fontReadyPromise;
-    fontReadyPromise = fetch(FONT_URL)
-        .then(r => {
-            if (!r.ok) throw new Error(`Font fetch ${FONT_URL} returned ${r.status}`);
-            return r.arrayBuffer();
-        })
+    const face = FontManager.Current.Faces.find(f => f.Family === FONT_FAMILY);
+    if (face === undefined) {
+        vm.Status = `Font '${FONT_FAMILY}' not registered — check the fonts block in text-on-path.mu.`;
+        fontReadyPromise = Promise.resolve();
+        return fontReadyPromise;
+    }
+    fontReadyPromise = FontManager.Current.LoadBuffer(face)
         .then(buf => {
             fontMeasurer.LoadFont(FONT_FAMILY, buf, 'normal', 'normal');
             vm.IsFontLoaded = true;
