@@ -371,14 +371,16 @@ class SideBarsAdorner extends Adorner
 class EditHandlesAdorner extends Adorner
 {
     private readonly _diagram: Diagram;
+    private readonly _state:   SharedState;
     private readonly _epPool:  Border[] = [];
     private readonly _wpPool:  Border[] = [];
     private readonly _segPool: Border[] = [];
 
-    constructor(adornedElement: Visual, diagram: Diagram, onHandleDown: HandleDownCallback)
+    constructor(adornedElement: Visual, diagram: Diagram, state: SharedState, onHandleDown: HandleDownCallback)
     {
         super(adornedElement);
         this._diagram = diagram;
+        this._state   = state;
         // Adorner pad transparent — same rationale as PortHandlesAdorner.
         // Handle Borders below keep their own explicit hit pads.
         this.IsHitTestVisible = false;
@@ -466,26 +468,24 @@ class EditHandlesAdorner extends Adorner
                     WP_HANDLE_SIZE, WP_HANDLE_SIZE));
             }
 
-            // Mid-segment pads — one per segment of the RENDERED route
-            // (source → bends → target), so they appear on the L/Z corners
-            // an Orthogonal route computes from zero user waypoints, not
-            // only on user-authored waypoint pairs. Centered on the
-            // segment; cursor advertises the perpendicular travel axis
-            // (ns for a horizontal segment, ew for a vertical).
-            const route = conn.CurrentRoutePoints ?? [];
-            for (let i = 0; i + 1 < route.length && segUsed < this._segPool.length; i++)
-            {
-                const a = route[i]!;
-                const b = route[i + 1]!;
-                const v = this._segPool[segUsed++]!;
-                HANDLE_TAGS.set(v, { kind: 'segment', connector: conn, index: i });
-                v.Cursor = segmentIsHorizontal(a, b) ? SEG_CURSOR_H : SEG_CURSOR_V;
-                v.Arrange(new Rect(
-                    (a.X + b.X) / 2 - SEG_HANDLE_SIZE / 2,
-                    (a.Y + b.Y) / 2 - SEG_HANDLE_SIZE / 2,
-                    SEG_HANDLE_SIZE, SEG_HANDLE_SIZE));
-            }
+            segUsed = this._placeSegmentPads(conn, segUsed);
         }
+
+        // Mid-segment pads ALSO show for the hovered (not-selected)
+        // connector, alongside its halo — so a segment can be grabbed
+        // straight from hover without selecting first. (Endpoint /
+        // waypoint dots stay selection-only.) Skip if the hovered
+        // connector is already in the selected loop above.
+        const hovered = this._state.hoveredConnector;
+        if (hovered !== undefined
+            && collectionContains(live, hovered)
+            && !this._diagram.IsConnectorSelected(hovered)
+            && hovered.CurrentSourceAnchor !== undefined
+            && hovered.CurrentTargetAnchor !== undefined)
+        {
+            segUsed = this._placeSegmentPads(hovered, segUsed);
+        }
+
         for (let i = epUsed; i < this._epPool.length; i++)
         {
             const v = this._epPool[i]!;
@@ -505,6 +505,31 @@ class EditHandlesAdorner extends Adorner
             v.Arrange(new Rect(HIDE_OFFSCREEN, HIDE_OFFSCREEN, 0, 0));
         }
         return finalSize;
+    }
+
+    // Place a mid-segment pad at the midpoint of every segment of the
+    // connector's RENDERED route (source → bends → target) — so they
+    // appear on the L/Z corners an Orthogonal route computes from zero
+    // user waypoints, not only on user-authored waypoint pairs. The
+    // per-handle cursor advertises the perpendicular travel axis (ns for a
+    // horizontal segment, ew for a vertical). Returns the advanced pool
+    // cursor. Shared by the selected loop and the hovered-connector pass.
+    private _placeSegmentPads(conn: Connector, segUsed: number): number
+    {
+        const route = conn.CurrentRoutePoints ?? [];
+        for (let i = 0; i + 1 < route.length && segUsed < this._segPool.length; i++)
+        {
+            const a = route[i]!;
+            const b = route[i + 1]!;
+            const v = this._segPool[segUsed++]!;
+            HANDLE_TAGS.set(v, { kind: 'segment', connector: conn, index: i });
+            v.Cursor = segmentIsHorizontal(a, b) ? SEG_CURSOR_H : SEG_CURSOR_V;
+            v.Arrange(new Rect(
+                (a.X + b.X) / 2 - SEG_HANDLE_SIZE / 2,
+                (a.Y + b.Y) / 2 - SEG_HANDLE_SIZE / 2,
+                SEG_HANDLE_SIZE, SEG_HANDLE_SIZE));
+        }
+        return segUsed;
     }
 }
 
@@ -930,6 +955,9 @@ export function attachConnectorInteractions(diagram: Diagram): () => void
             }
         }
         haloAdornerVisual?.InvalidateArrange();
+        // The hovered connector's segment pads live in the edit adorner;
+        // re-arrange it too so they track the route as figures move.
+        editAdornerVisual?.InvalidateArrange();
     };
     const syncHoverConnectorSubscription = (next: Connector | undefined): void => {
         if (subscribedHoverConnector === next) return;
@@ -1077,7 +1105,7 @@ export function attachConnectorInteractions(diagram: Diagram): () => void
         const panel = diagram.ItemsPanelInstance;
         if (panel === undefined) return;
         const sideA = new SideBarsAdorner(panel, state, onHandleDown);
-        const editA = new EditHandlesAdorner(panel, diagram, onHandleDown);
+        const editA = new EditHandlesAdorner(panel, diagram, state, onHandleDown);
         // Halo mounts BEFORE EditHandles so the endpoint / waypoint dots
         // paint on top of the halo when both are visible mid-transition.
         // In steady state they're mutually exclusive (halo only on
@@ -1277,6 +1305,16 @@ export function attachConnectorInteractions(diagram: Diagram): () => void
         if (state.activeGesture === undefined && fig === undefined)
         {
             conn = findConnectorAncestor(args.Source);
+            // The segment pads shown with the halo are hit-test-visible, so
+            // reaching for one makes the PAD the event source — which has no
+            // Connector ancestor and would otherwise clear the hover and
+            // hide the pad mid-reach. Resolve the pad back to its connector
+            // so the hover (halo + pads) stays put while the cursor is on it.
+            if (conn === undefined)
+            {
+                const tag = args.Source instanceof Visual ? HANDLE_TAGS.get(args.Source) : undefined;
+                if (tag !== undefined && tag.kind === 'segment') conn = tag.connector;
+            }
             // Suppress halo on already-selected connectors — the
             // EditHandlesAdorner endpoint / waypoint dots already
             // signal "selected"; stacking a halo on top would read
@@ -1288,6 +1326,9 @@ export function attachConnectorInteractions(diagram: Diagram): () => void
             state.hoveredConnector = conn;
             syncHoverConnectorSubscription(conn);
             haloAdornerVisual?.InvalidateArrange();
+            // Segment pads show with the halo (hovered connector), so the
+            // edit adorner re-arranges on every hover swap too.
+            editAdornerVisual?.InvalidateArrange();
         }
     };
 
@@ -1357,6 +1398,7 @@ export function attachConnectorInteractions(diagram: Diagram): () => void
             state.hoveredConnector = undefined;
             syncHoverConnectorSubscription(undefined);
             haloAdornerVisual?.InvalidateArrange();
+            editAdornerVisual?.InvalidateArrange();   // hide the hover segment pads
         }
     };
 
