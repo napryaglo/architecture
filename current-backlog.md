@@ -194,3 +194,13 @@ Shipped — see [completed-backlog.md § 25](completed-backlog.md). The dictiona
 
 Shipped — see [completed-backlog.md § 26](completed-backlog.md). The class-based behaviors block gained the colon-section spelling `.Behaviors: { … }` (braces form kept as an alias); syntax-conformance only, function-attach behaviors remain a future gap.
 
+---
+
+## 27. Resource management is mural-only — migrate demo composition out of `.mjs`
+
+**Rule (user, 2026-06-28):** all resource management AND referencing belongs in `.mu` — no `.mjs`/TS resource composition. Forbidden in bootstraps: `Application.Resources.AddMergedDictionary(...)`, `Resources.Set(key, value)`, registering value resources imperatively. Do it in markup instead: `dictionaries: [A, B]` to merge dictionaries, `import` to pull one in, `include "glob"` for compile-time splice, and keyed entries (`@Key = …`, `Type x:key="…"`, value-object resources) inside a `resources { }` block. If markup can't express something, the missing capability IS the bug — add it, don't fall back to JS.
+
+**Done (proof of pattern):** `ColorScheme` is now a markup-authorable value resource — no-arg ctor + PascalCase settable `Name`/`Colors`/`Tints`/`Shades` (the `Colors` setter unwraps the `SolidColorBrush`es a colour literal lowers to), registered in the compiler `DEFAULT_SYMBOLS`. No grammar change was needed: a `ColorScheme x:key="…" [Name=…, Colors=[#a,#b,…]]` resource lowers through the existing value-object element + plain-field path + `[ … ]` list literal. The color-picker demo authors `@BrandColors` in `color-picker.mu`; the old `.mjs` `Resources.Set('BrandColors', new ColorScheme(…))` is gone.
+
+**Open — the broad migration:** every demo `.mjs` factory still merges its dictionary imperatively (`Application.current?.Resources.AddMergedDictionary(DemoDict.Clone())`, ~40 demos), and the platform composes services in `platform.html` (`app.Services.registerInstance(DiagramStorageKey, …)`). Move these into markup: merge each demo's dictionary from the demo's own `.mu` (via `dictionaries:` / `import`) rather than the factory, and author the platform's service composition in `platform.mu`'s `.services:` block. This touches the demo-loading model (factories currently merge lazily on first activation) and the platform composition root — a single cross-cutting pass, not a per-demo edit. Pairs with § 24 (`.services:` DSL) and § 25 (`.Member:` dictionary fold).
+

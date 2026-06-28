@@ -3,7 +3,7 @@ import {
     Model,
     Point,
     Thickness,
-    Element, Visual, Visibility,
+    Element, Visual, Visibility, VerticalAlignment,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
 import { resolveKey } from '../../runtime/model-internals.js';
@@ -17,9 +17,12 @@ import type { PresentationTarget, PointerEventArgs } from '../../visual-engine/i
 import { Border } from '../../basic/border.js';
 import { ClickableBorder } from '../../basic/clickable-border.js';
 import { Canvas } from '../../basic/panels/canvas.js';
+import { StackPanel, Orientation } from '../../basic/panels/stack-panel.js';
 import { WrapPanel } from '../../basic/panels/wrap-panel.js';
+import { ColorScheme, OFFICE_COLOR_SCHEMES } from './color-scheme.js';
 import { Slider } from '../../basic/slider.js';
 import { TextBox } from '../../basic/text-box.js';
+import { TextBlock } from '../../basic/text-block.js';
 import { TemplatedControl } from '../../basic/templated-control.js';
 import { ControlTemplate } from '../../basic/templates/control-template.js';
 import { MenuPopupHost, MenuAnchorSide } from '../menu/menu-strip.js';
@@ -112,6 +115,8 @@ function recordRecent(hex: string): void
 
 // Subtle 1px border shared by the programmatically-built recent swatches.
 const SWATCH_BORDER = new SolidColorBrush(new Color(0, 0, 0, 40));
+// Accent border marking the active scheme row in the gallery.
+const ACCENT_BORDER = new SolidColorBrush(Color.FromHex('#4472C4'));
 
 // Office-style colour picker. Closed: a small swatch + the hex label
 // inside a clickable border. Open: a dropdown with a No-Color entry, a
@@ -141,6 +146,13 @@ export class ColorPicker extends TemplatedControl
     public static readonly IsMoreColorsOpenKey = Model.RegisterProperty<boolean>(ColorPicker, 'IsMoreColorsOpen', false,      MetaData.None);
     public static readonly PopupTemplateKey  = Model.RegisterProperty<ControlTemplate | undefined>(ColorPicker, 'PopupTemplate', undefined, MetaData.None);
     public static readonly MoreColorsTemplateKey = Model.RegisterProperty<ControlTemplate | undefined>(ColorPicker, 'MoreColorsTemplate', undefined, MetaData.None);
+    // The predefined base-colour set the Theme-Colors grid is built from
+    // (one column per base colour, plus its tint/shade rows). Defaults to
+    // ColorScheme.Default (the Office palette); set per-picker or share one
+    // via a keyed resource (`[ColorScheme=@AppColors]`).
+    public static readonly ColorSchemeKey = Model.RegisterProperty<ColorScheme>(ColorPicker, 'ColorScheme', ColorScheme.Default, MetaData.None);
+    public static readonly IsSchemeGalleryOpenKey = Model.RegisterProperty<boolean>(ColorPicker, 'IsSchemeGalleryOpen', false, MetaData.None);
+    public static readonly SchemeGalleryTemplateKey = Model.RegisterProperty<ControlTemplate | undefined>(ColorPicker, 'SchemeGalleryTemplate', undefined, MetaData.None);
     // Per-instance default — the DP system shares its `default_value`
     // across every registered control, so we slot a fresh
     // SolidColorBrush in the ctor BEFORE applyDefaultStyle so the
@@ -176,6 +188,12 @@ export class ColorPicker extends TemplatedControl
     public set PopupTemplate(v:  ControlTemplate | undefined){ this.set_property_value(ColorPicker.PopupTemplateKey, v); }
     public get MoreColorsTemplate(): ControlTemplate | undefined { return this.get_property_value(ColorPicker.MoreColorsTemplateKey); }
     public set MoreColorsTemplate(v: ControlTemplate | undefined){ this.set_property_value(ColorPicker.MoreColorsTemplateKey, v); }
+    public get ColorScheme():    ColorScheme { return this.get_property_value(ColorPicker.ColorSchemeKey); }
+    public set ColorScheme(v:    ColorScheme){ this.set_property_value(ColorPicker.ColorSchemeKey, v); }
+    public get IsSchemeGalleryOpen(): boolean { return this.get_property_value(ColorPicker.IsSchemeGalleryOpenKey); }
+    public set IsSchemeGalleryOpen(v: boolean){ this.set_property_value(ColorPicker.IsSchemeGalleryOpenKey, v); }
+    public get SchemeGalleryTemplate(): ControlTemplate | undefined { return this.get_property_value(ColorPicker.SchemeGalleryTemplateKey); }
+    public set SchemeGalleryTemplate(v: ControlTemplate | undefined){ this.set_property_value(ColorPicker.SchemeGalleryTemplateKey, v); }
     public get SwatchBrush():    SolidColorBrush | undefined { return this.get_property_value(ColorPicker.SwatchBrushKey); }
 
     static {
@@ -189,6 +207,13 @@ export class ColorPicker extends TemplatedControl
     private _dropdownHost:    MenuPopupHost | undefined;
     private _dropdownMounted = false;
     private _dropdownListeners: Array<() => void> = [];
+    private _themeGrid:       StackPanel | undefined;  // theme-colours container, rebuilt from ColorScheme
+    private _schemeNameLabel: TextBlock  | undefined;  // dropdown's scheme-button caption
+
+    // Scheme gallery (Office "Colors" list) state.
+    private _galleryHost:    MenuPopupHost | undefined;
+    private _galleryMounted = false;
+    private _galleryListeners: Array<() => void> = [];
 
     // More Colors… dialog state. Snapshot taken on open so Cancel (or a
     // click-away) can restore the colour the user started from.
@@ -265,6 +290,22 @@ export class ColorPicker extends TemplatedControl
             case 'IsMoreColorsOpen':
                 if (newValue === true) this.mountMoreColors();
                 else                    this.unmountMoreColors();
+                break;
+            case 'ColorScheme':
+                // Rebuild the theme grid + refresh the scheme caption if the
+                // dropdown is open.
+                if (this._dropdownMounted && this._themeGrid !== undefined)
+                {
+                    this.buildThemeGrid(this._themeGrid);
+                }
+                if (this._schemeNameLabel !== undefined)
+                {
+                    this._schemeNameLabel.Text = (newValue as ColorScheme).Name;
+                }
+                break;
+            case 'IsSchemeGalleryOpen':
+                if (newValue === true) this.mountSchemeGallery();
+                else                    this.unmountSchemeGallery();
                 break;
         }
     }
@@ -427,14 +468,29 @@ export class ColorPicker extends TemplatedControl
 
     private wireDropdownParts(host: MenuPopupHost): void
     {
-        // Theme + standard swatches: each ClickableBorder commits its own
-        // resolved Background colour. Reading the brush at click time keeps
-        // the theme grid live — a scheme swap repaints the swatch and the
-        // next click yields the new colour.
-        const swatches: ClickableBorder[] = [];
-        const themeGrid   = host.FindName('PART_ThemeGrid')   as Visual | undefined;
+        // Theme grid: built from the ColorScheme (one column per base
+        // colour + its tint/shade rows). Standard row: fixed swatches
+        // authored in markup. Both commit the swatch's own colour.
+        // Scheme button: caption shows the active scheme; clicking opens the
+        // Office "Colors" gallery.
+        const schemeButton = host.FindName('PART_SchemeButton') as ClickableBorder | undefined;
+        this._schemeNameLabel = host.FindName('PART_SchemeName') as TextBlock | undefined;
+        if (this._schemeNameLabel !== undefined) this._schemeNameLabel.Text = this.ColorScheme.Name;
+        if (schemeButton !== undefined)
+        {
+            schemeButton.onClick = (): void => {
+                this.IsDropDownOpen = false;
+                this.IsSchemeGalleryOpen = true;
+            };
+            this._dropdownListeners.push(() => { schemeButton.onClick = undefined; });
+        }
+
+        const themeGrid = host.FindName('PART_ThemeGrid') as StackPanel | undefined;
+        this._themeGrid = themeGrid;
+        if (themeGrid !== undefined) this.buildThemeGrid(themeGrid);
+
         const standardRow = host.FindName('PART_StandardRow') as Visual | undefined;
-        if (themeGrid   !== undefined) collectSwatches(themeGrid, swatches);
+        const swatches: ClickableBorder[] = [];
         if (standardRow !== undefined) collectSwatches(standardRow, swatches);
         for (const sw of swatches)
         {
@@ -471,14 +527,141 @@ export class ColorPicker extends TemplatedControl
         this.populateRecents(section, row);
     }
 
+    // Build the Theme-Colors grid from the ColorScheme: one column per
+    // base colour, a base row plus one row per tint then per shade. Swatch
+    // width is derived from the column count so the rows fill the popup's
+    // content width regardless of how many colours the scheme carries.
+    private buildThemeGrid(grid: StackPanel): void
+    {
+        for (const child of [...grid.visualChildren]) grid.RemoveChild(child);
+
+        const scheme = this.ColorScheme;
+        const n = scheme.Colors.length;
+        const gap = 2;
+        // Popup body Width 268 − padding (@Spacing3 ×2) − border (1 ×2).
+        const content = 242;
+        const w = Math.max(10, Math.min(28, Math.floor((content - (n - 1) * gap) / n)));
+
+        for (let row = 0; row < scheme.RowCount; row++)
+        {
+            const rowPanel = new StackPanel();
+            rowPanel.Orientation = Orientation.Horizontal;
+            // Gap below the base row separates it from the tint/shade ladder.
+            if (row === 0) rowPanel.Margin = new Thickness(0, 0, 0, 8);
+            for (let col = 0; col < n; col++)
+            {
+                const color = scheme.ColorAt(col, row);
+                const sw = new ClickableBorder();
+                sw.Width  = w;
+                sw.Height = row === 0 ? 16 : 14;
+                if (row === 0) sw.CornerRadius = 2;
+                sw.BorderBrush     = SWATCH_BORDER;
+                sw.BorderThickness = new Thickness(1);
+                sw.Margin = new Thickness(0, 0, col === n - 1 ? 0 : gap, 0);
+                sw.Background = new SolidColorBrush(color);
+                sw.onClick = (): void => { this.commitColor(color); };
+                rowPanel.AddChild(sw);
+            }
+            grid.AddChild(rowPanel);
+        }
+    }
+
     private unmountDropdown(): void
     {
         if (!this._dropdownMounted) return;
         if (this._dropdownHost !== undefined) this.DetachOverlayChild(this._dropdownHost);
         for (const dispose of this._dropdownListeners) dispose();
         this._dropdownListeners = [];
-        this._dropdownHost    = undefined;
-        this._dropdownMounted = false;
+        this._themeGrid        = undefined;
+        this._schemeNameLabel  = undefined;
+        this._dropdownHost     = undefined;
+        this._dropdownMounted  = false;
+    }
+
+    // ── Scheme gallery (Office "Colors") ───────────────────────────────
+
+    private mountSchemeGallery(): void
+    {
+        if (this._galleryMounted) return;
+        const t = targetOf(this);
+        if (t === undefined) return;
+        const tpl = this.SchemeGalleryTemplate;
+        if (tpl === undefined) return;
+
+        const inst = tpl.Apply(this);
+        const host = inst.root as MenuPopupHost;
+        const scrim = host.FindName('PART_Scrim') as ClickAwayScrim | undefined;
+        if (scrim !== undefined) scrim.onClick = (): void => { this.IsSchemeGalleryOpen = false; };
+
+        host.anchor     = this._trigger ?? this;
+        host.anchorSide = MenuAnchorSide.Below;
+        const body = host.FindName('PART_PopupBody') as Visual | undefined;
+        if (body !== undefined) host.popup = body;
+
+        const list = host.FindName('PART_SchemeList') as StackPanel | undefined;
+        if (list !== undefined) this.buildSchemeList(list);
+
+        this._galleryHost = host;
+        this._galleryMounted = true;
+        this.AttachOverlayChild(host);
+    }
+
+    // One selectable row per built-in scheme: a mini preview strip of the
+    // scheme's base colours + its name; the active scheme is marked. Picking
+    // one applies it and returns to the dropdown so the new grid is visible.
+    private buildSchemeList(list: StackPanel): void
+    {
+        for (const child of [...list.visualChildren]) list.RemoveChild(child);
+        const current = this.ColorScheme;
+        for (const scheme of OFFICE_COLOR_SCHEMES)
+        {
+            const row = new ClickableBorder();
+            row.CornerRadius    = 4;
+            row.BorderThickness = new Thickness(1);
+            row.BorderBrush     = scheme === current ? ACCENT_BORDER : SWATCH_BORDER;
+            row.Padding = new Thickness(4);
+            row.Margin  = new Thickness(0, 0, 0, 2);
+
+            const rowContent = new StackPanel();
+            rowContent.Orientation = Orientation.Horizontal;
+
+            const preview = new StackPanel();
+            preview.Orientation = Orientation.Horizontal;
+            preview.Margin = new Thickness(0, 0, 8, 0);
+            for (const color of scheme.Colors)
+            {
+                const chip = new Border();
+                chip.Width  = 11;
+                chip.Height = 16;
+                chip.BorderBrush     = SWATCH_BORDER;
+                chip.BorderThickness = new Thickness(1);
+                chip.Background = new SolidColorBrush(color);
+                preview.AddChild(chip);
+            }
+            rowContent.AddChild(preview);
+
+            const label = new TextBlock(scheme.Name);
+            label.VerticalAlignment = VerticalAlignment.Center;
+            rowContent.AddChild(label);
+
+            row.SetChild(rowContent);
+            row.onClick = (): void => {
+                this.ColorScheme = scheme;
+                this.IsSchemeGalleryOpen = false;
+                this.IsDropDownOpen = true;   // back to the dropdown, new grid
+            };
+            list.AddChild(row);
+        }
+    }
+
+    private unmountSchemeGallery(): void
+    {
+        if (!this._galleryMounted) return;
+        if (this._galleryHost !== undefined) this.DetachOverlayChild(this._galleryHost);
+        for (const dispose of this._galleryListeners) dispose();
+        this._galleryListeners = [];
+        this._galleryHost    = undefined;
+        this._galleryMounted = false;
     }
 
     // Build the recent-colour swatches into PART_RecentRow. Collapses the

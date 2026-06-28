@@ -37,6 +37,7 @@ export {
     hsvToRgb,
     rgbToHsv,
 } from './formatting/color-picker.js';
+export { ColorScheme, type ColorSchemeOptions, OFFICE_COLOR_SCHEMES } from './formatting/color-scheme.js';
 export { BrushPicker, BrushPickerVariant } from './formatting/brush-picker.js';
 export { PenEditor } from './formatting/pen-editor.js';
 export { FillEditor, FillEditorVariant } from './formatting/fill-editor.js';

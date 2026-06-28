@@ -112,6 +112,33 @@ live:
 So `@Primary << Darken(0.2)` automatically re-darkens when the theme switches
 light↔dark; `#0d47a1 << Darken(0.2)` is baked at build time.
 
+### Allowed bases (applies to any converter, not just color modifiers)
+
+The four rows above are the **only** valid left-hand bases for `<<`: a color
+literal, a named/`ident` value, an `@resource`, or a `$binding`. Any other
+literal base — in particular a **bare string literal** — is rejected at compile
+time (`compileModifiedValue` in `src/compiler/compiler.ts`):
+
+```
+"" << glyph_geo
+// error: '<<' modifiers apply to a color literal, a named color,
+//        or an @resource — not a string value
+```
+
+This matters for non-color converters like
+[`GlyphGeometryConverter`](../basic/converters/glyph-geometry-converter.ts): you
+can't pipe a constant string straight into one. To run a converter over a fixed
+value, give it a reactive base instead:
+
+- **Wrap the value in an `@resource`** — `@resource` is an allowed base, so
+  `@IconChar << glyph_geo` (with `@IconChar = ""`) lowers to
+  `DynamicResource(target, "IconChar", glyph_geo)`, resolves the key to the
+  string, then applies the converter.
+- **Bind it** — `$Icon << glyph_geo` when the value comes from data.
+
+For a glyph that's known at build time, prefer the compile-time `glyphs` keyword
+(bakes the outline into a resource `PathGeometry`) over the converter entirely.
+
 ### The brush ↔ color boundary
 
 Modifiers operate on `Color`, but a brush property carries a `SolidColorBrush`.

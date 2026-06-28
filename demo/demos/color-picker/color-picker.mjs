@@ -52,6 +52,9 @@ register({
     subtitle: 'Office-style picker — theme colors + tints, standard colors, recents, More Colors dialog.',
     factory: () => {
         if (!resourcesMerged) {
+            // BrandColors (the @BrandColors ColorScheme) is authored as a
+            // markup resource inside ColorPickerDemo — no JS resource
+            // registration. Merging the dictionary makes it resolvable.
             Application.current?.Resources.AddMergedDictionary(ColorPickerDemo.Clone());
             resourcesMerged = true;
         }
