@@ -285,6 +285,79 @@ describe('ConnectorEditAdorner — gesture preemption + idle no-ops', () => {
     });
 });
 
+// ── Segment drag — perpendicular slide of a waypoint-to-waypoint segment ─
+
+describe('ConnectorEditAdorner — segment drag (perpendicular slide)', () => {
+    // Waypoints forming an axis-aligned route: a horizontal segment
+    // (W0→W1) then a vertical one (W1→W2).
+    function wpConnector(): Connector
+    {
+        const c = makeConnector();
+        c.Waypoints = [new Point(40, 30), new Point(120, 30), new Point(120, 90)];
+        return c;
+    }
+
+    test('a horizontal segment moves only vertically — both waypoints take cursor.Y, keep X', () => {
+        newApplication();
+        const c = wpConnector();
+        const adorner = new ConnectorEditAdorner();
+        adorner.BeginSegmentDrag(c, 0);                 // W0→W1 is horizontal
+        assert.equal(adorner.IsActive, true);
+        adorner.UpdateCursor(new Point(999, 75));        // X ignored, Y drives
+        const wps = c.Waypoints!;
+        assert.equal(wps[0]!.X, 40,  'W0 keeps its X');
+        assert.equal(wps[1]!.X, 120, 'W1 keeps its X');
+        assert.equal(wps[0]!.Y, 75,  'W0 snaps to cursor Y');
+        assert.equal(wps[1]!.Y, 75,  'W1 snaps to cursor Y');
+    });
+
+    test('a vertical segment moves only horizontally — both waypoints take cursor.X, keep Y', () => {
+        newApplication();
+        const c = wpConnector();
+        const adorner = new ConnectorEditAdorner();
+        adorner.BeginSegmentDrag(c, 1);                 // W1→W2 is vertical
+        adorner.UpdateCursor(new Point(160, 999));       // Y ignored, X drives
+        const wps = c.Waypoints!;
+        assert.equal(wps[1]!.Y, 30, 'W1 keeps its Y');
+        assert.equal(wps[2]!.Y, 90, 'W2 keeps its Y');
+        assert.equal(wps[1]!.X, 160, 'W1 snaps to cursor X');
+        assert.equal(wps[2]!.X, 160, 'W2 snaps to cursor X');
+    });
+
+    test('Abort restores the pre-drag waypoints', () => {
+        newApplication();
+        const c = wpConnector();
+        const before = c.Waypoints!.map(p => ({ X: p.X, Y: p.Y }));
+        const adorner = new ConnectorEditAdorner();
+        adorner.BeginSegmentDrag(c, 0);
+        adorner.UpdateCursor(new Point(0, 200));
+        adorner.Abort();
+        const after = c.Waypoints!;
+        assert.deepEqual(after.map(p => ({ X: p.X, Y: p.Y })), before);
+        assert.equal(adorner.IsActive, false);
+    });
+
+    test('EndDragOverEmpty commits the moved segment', () => {
+        newApplication();
+        const c = wpConnector();
+        const adorner = new ConnectorEditAdorner();
+        adorner.BeginSegmentDrag(c, 0);
+        adorner.UpdateCursor(new Point(0, 55));
+        adorner.EndDragOverEmpty();
+        assert.equal(adorner.IsActive, false);
+        assert.equal(c.Waypoints![0]!.Y, 55, 'committed Y persists');
+        assert.equal(c.Waypoints![1]!.Y, 55);
+    });
+
+    test('BeginSegmentDrag on an out-of-range segment index is a no-op', () => {
+        newApplication();
+        const c = wpConnector();
+        const adorner = new ConnectorEditAdorner();
+        adorner.BeginSegmentDrag(c, 2);   // index 2 → needs Waypoints[3], absent
+        assert.equal(adorner.IsActive, false);
+    });
+});
+
 // ── attachConnectorEditAdorner convenience ───────────────────────────
 
 describe('attachConnectorEditAdorner', () => {

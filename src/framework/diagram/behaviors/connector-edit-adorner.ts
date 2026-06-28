@@ -24,7 +24,13 @@ type Model = ConnectorEndpoint['Node'];
 type DragState =
     | { readonly kind: 'idle' }
     | { readonly kind: 'endpoint'; readonly connector: Connector; readonly end: ConnectorEnd; readonly snapshot: EndpointSnapshot }
-    | { readonly kind: 'waypoint'; readonly connector: Connector; readonly index: number; readonly snapshot: readonly Point[] };
+    | { readonly kind: 'waypoint'; readonly connector: Connector; readonly index: number; readonly snapshot: readonly Point[] }
+    // Mid-segment drag: the segment between Waypoints[index] and
+    // Waypoints[index+1] moves as a rigid bar PERPENDICULAR to itself.
+    // `horizontal` is the segment's orientation (it lies along X), so a
+    // horizontal segment moves vertically (cursor.Y drives both waypoints'
+    // Y) and a vertical one moves horizontally (cursor.X drives both X).
+    | { readonly kind: 'segment'; readonly connector: Connector; readonly index: number; readonly horizontal: boolean; readonly snapshot: readonly Point[] };
 
 // State machine for edit-mode connector gestures per § 4.2 + § 4.3 of
 // [src/document/connectors.md](../../../document/connectors.md).
@@ -94,6 +100,27 @@ export class ConnectorEditAdorner
         };
     }
 
+    /** Begin dragging the segment between Waypoints[index] and
+     *  Waypoints[index+1]. The segment translates perpendicular to its
+     *  own orientation — a horizontal segment up/down, a vertical one
+     *  left/right — so the two waypoints move together and the segment
+     *  stays axis-aligned. Orientation is locked at grab time (dominant
+     *  axis of the segment vector) so a near-degenerate drag can't flip
+     *  it mid-gesture. */
+    public BeginSegmentDrag(connector: Connector, segmentIndex: number): void
+    {
+        if (this._state.kind !== 'idle') this.Abort();
+        const wps = connector.Waypoints;
+        if (wps === undefined || segmentIndex < 0 || segmentIndex + 1 >= wps.length) return;
+        this._state = {
+            kind: 'segment',
+            connector,
+            index: segmentIndex,
+            horizontal: segmentIsHorizontal(wps[segmentIndex]!, wps[segmentIndex + 1]!),
+            snapshot: wps.slice(),
+        };
+    }
+
     public InsertWaypointAndDrag(connector: Connector, insertIndex: number, point: Point): void
     {
         if (this._state.kind !== 'idle') this.Abort();
@@ -120,6 +147,32 @@ export class ConnectorEditAdorner
             const wps = this._state.connector.Waypoints ?? [];
             const next: Point[] = wps.slice();
             next[this._state.index] = cursor;
+            this._state.connector.Waypoints = next;
+            return;
+        }
+        if (this._state.kind === 'segment')
+        {
+            const { index, horizontal } = this._state;
+            const wps = this._state.connector.Waypoints ?? [];
+            if (index + 1 >= wps.length) return;
+            const a = wps[index]!;
+            const b = wps[index + 1]!;
+            const next: Point[] = wps.slice();
+            // Perpendicular translation: a horizontal segment keeps each
+            // waypoint's X and snaps both Y to the cursor; a vertical one
+            // keeps each Y and snaps both X. The constrained axis is read
+            // from the live waypoints so the segment stays put on that
+            // axis while the free axis tracks the cursor.
+            if (horizontal)
+            {
+                next[index]     = new Point(a.X, cursor.Y);
+                next[index + 1] = new Point(b.X, cursor.Y);
+            }
+            else
+            {
+                next[index]     = new Point(cursor.X, a.Y);
+                next[index + 1] = new Point(cursor.X, b.Y);
+            }
             this._state.connector.Waypoints = next;
         }
     }
@@ -151,9 +204,9 @@ export class ConnectorEditAdorner
             this._state = { kind: 'idle' };
             return;
         }
-        if (this._state.kind === 'waypoint')
+        if (this._state.kind === 'waypoint' || this._state.kind === 'segment')
         {
-            // Commit: waypoint stays at last cursor position.
+            // Commit: the waypoint(s) stay at their last position.
             this._state = { kind: 'idle' };
         }
     }
@@ -165,7 +218,7 @@ export class ConnectorEditAdorner
             const ep = endpointOf(this._state.connector, this._state.end);
             if (ep !== undefined) applyEndpointSnapshot(ep, this._state.snapshot);
         }
-        else if (this._state.kind === 'waypoint')
+        else if (this._state.kind === 'waypoint' || this._state.kind === 'segment')
         {
             this._state.connector.Waypoints = this._state.snapshot;
         }
@@ -179,6 +232,17 @@ export class ConnectorEditAdorner
         const next: Point[] = wps.filter((_, i) => i !== waypointIndex);
         connector.Waypoints = next;
     }
+}
+
+// A segment counts as horizontal when it spans more along X than Y — for a
+// clean orthogonal route that's exact (dy === 0), and the dominant-axis
+// tie-break keeps a near-axis-aligned segment from picking the wrong drag
+// direction. Equal spans (including a degenerate zero-length segment)
+// resolve to horizontal. Shared with the adorner's handle placement +
+// cursor so the visual and the gesture always agree on orientation.
+export function segmentIsHorizontal(a: Point, b: Point): boolean
+{
+    return Math.abs(b.X - a.X) >= Math.abs(b.Y - a.Y);
 }
 
 function endpointOf(c: Connector, end: ConnectorEnd): ConnectorEndpoint | undefined

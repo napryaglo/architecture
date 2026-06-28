@@ -24,7 +24,7 @@ import { Border, Shape } from '../../../basic/index.js';
 import { SelectionMode } from '../../list/list-box.js';
 import { Connector } from '../connector.js';
 import { ConnectorCreateBehavior } from './connector-create-behavior.js';
-import { ConnectorEditAdorner } from './connector-edit-adorner.js';
+import { ConnectorEditAdorner, segmentIsHorizontal } from './connector-edit-adorner.js';
 import { Figure } from '../figure.js';
 import { PortSide, type ResolvedPortSide } from '../port.js';
 import { ConnectorEnd } from '../routing/router.js';
@@ -61,6 +61,10 @@ const SIDE_BAR_THICKNESS = 3;
 const SIDE_BAR_INSET_RATIO = 0.05;
 const EP_HANDLE_SIZE     = 11;
 const WP_HANDLE_SIZE     = 9;
+// Mid-segment drag handle — square pad centered on a waypoint-to-waypoint
+// segment. Slightly smaller than a waypoint dot so it reads as secondary
+// to the corner waypoints it sits between.
+const SEG_HANDLE_SIZE    = 9;
 // Port marker — small circle drawn at each dynamic-slot position on a
 // hovered figure's side. Pure visual indicator (not hit-testable); the
 // side bar behind it owns the click. Sized small enough to read as
@@ -71,6 +75,10 @@ const PORT_MARKER_SIZE = 7;
 const POOL_SIDES = 4;
 const POOL_EPS   = 8;
 const POOL_WPS   = 16;
+// Mid-segment handles: at most (waypoints − 1) per connector. Sized to
+// match the waypoint pool so a densely-waypointed selection never runs
+// short of segment pads before it runs short of waypoint dots.
+const POOL_SEGS  = 16;
 // Per-side port-marker capacity. Each side rarely has more than a few
 // connectors in practice; cap at 8 so the pool stays small while still
 // supporting busy hubs (4 sides × 8 = 32 markers worst case).
@@ -89,6 +97,10 @@ const FIGURE_PROXIMITY = 24;
 const SIDE_FILL = new SolidColorBrush(Color.FromHex('#ff9800'));
 const EP_FILL   = new SolidColorBrush(Color.FromHex('#ff5722'));
 const WP_FILL   = new SolidColorBrush(Color.FromHex('#ff9800'));
+// Segment handles use a distinct blue so the "grab to slide the whole
+// segment" affordance reads differently from the orange "move this one
+// point" waypoint dots.
+const SEG_FILL  = new SolidColorBrush(Color.FromHex('#2196f3'));
 // Port markers are the same orange the side bar uses — they read as
 // "this slot belongs to the side bar above me" without needing a
 // second color in the palette.
@@ -144,6 +156,11 @@ const CONNECTOR_CURSOR = `url("data:image/svg+xml,${encodeURIComponent(CONNECTOR
 const SIDE_CURSOR     = CONNECTOR_CURSOR;
 const ENDPOINT_CURSOR = CONNECTOR_CURSOR;
 const WAYPOINT_CURSOR = 'move';
+// A segment moves perpendicular to itself, so the cursor advertises the
+// one axis it can travel: a horizontal segment slides up/down (ns-resize),
+// a vertical one slides left/right (ew-resize).
+const SEG_CURSOR_H    = 'ns-resize';
+const SEG_CURSOR_V    = 'ew-resize';
 
 // ── Handle tagging via WeakMap ───────────────────────────────────
 // Each handle visual gets a tag describing (kind + payload) so the
@@ -160,12 +177,16 @@ enum ConnectorEditKind
 {
     Endpoint = 'endpoint',
     Waypoint = 'waypoint',
+    Segment  = 'segment',
 }
 
 type HandleTag =
     | { readonly kind: 'side';     readonly figure: Figure; readonly side: ResolvedPortSide }
     | { readonly kind: 'endpoint'; readonly connector: Connector; readonly end: ConnectorEnd }
-    | { readonly kind: 'waypoint'; readonly connector: Connector; readonly index: number };
+    | { readonly kind: 'waypoint'; readonly connector: Connector; readonly index: number }
+    // Mid-segment drag handle for the segment between Waypoints[index]
+    // and Waypoints[index+1].
+    | { readonly kind: 'segment';  readonly connector: Connector; readonly index: number };
 
 const HANDLE_TAGS: WeakMap<Visual, HandleTag> = new WeakMap();
 
@@ -349,8 +370,9 @@ class SideBarsAdorner extends Adorner
 class EditHandlesAdorner extends Adorner
 {
     private readonly _diagram: Diagram;
-    private readonly _epPool: Border[] = [];
-    private readonly _wpPool: Border[] = [];
+    private readonly _epPool:  Border[] = [];
+    private readonly _wpPool:  Border[] = [];
+    private readonly _segPool: Border[] = [];
 
     constructor(adornedElement: Visual, diagram: Diagram, onHandleDown: HandleDownCallback)
     {
@@ -373,15 +395,31 @@ class EditHandlesAdorner extends Adorner
             this.AttachVisual(v);
             this._wpPool.push(v);
         }
+        // Square (no CornerRadius) so the segment pads read as bars, not
+        // points. The per-handle cursor is assigned at arrange time from
+        // the segment orientation, so the ctor seeds a neutral one.
+        for (let i = 0; i < POOL_SEGS; i++)
+        {
+            const v = makeBar(SEG_FILL, SEG_CURSOR_H);
+            v.Width  = SEG_HANDLE_SIZE;
+            v.Height = SEG_HANDLE_SIZE;
+            wireHandle(v, onHandleDown);
+            this.AttachVisual(v);
+            this._segPool.push(v);
+        }
     }
 
-    public override get visualChildren(): Visual[] { return [...this._epPool, ...this._wpPool]; }
+    public override get visualChildren(): Visual[]
+    {
+        return [...this._epPool, ...this._wpPool, ...this._segPool];
+    }
 
     public override MeasureOverride(_avail: Size): Size
     {
         const big = new Size(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY);
-        for (const v of this._epPool) v.Measure(big);
-        for (const v of this._wpPool) v.Measure(big);
+        for (const v of this._epPool)  v.Measure(big);
+        for (const v of this._wpPool)  v.Measure(big);
+        for (const v of this._segPool) v.Measure(big);
         return Size.Zero;
     }
 
@@ -389,7 +427,7 @@ class EditHandlesAdorner extends Adorner
     {
         const selected = this._diagram.SelectedConnectors;
         const live = this._diagram.Connectors;
-        let epUsed = 0, wpUsed = 0;
+        let epUsed = 0, wpUsed = 0, segUsed = 0;
         for (const conn of selected)
         {
             if (!collectionContains(live, conn)) continue;
@@ -426,6 +464,22 @@ class EditHandlesAdorner extends Adorner
                     p.Y - WP_HANDLE_SIZE / 2,
                     WP_HANDLE_SIZE, WP_HANDLE_SIZE));
             }
+
+            // Mid-segment pads — one per waypoint-to-waypoint segment,
+            // centered on the segment. Cursor advertises the perpendicular
+            // travel axis (ns for a horizontal segment, ew for a vertical).
+            for (let i = 0; i + 1 < wps.length && segUsed < this._segPool.length; i++)
+            {
+                const a = wps[i]!;
+                const b = wps[i + 1]!;
+                const v = this._segPool[segUsed++]!;
+                HANDLE_TAGS.set(v, { kind: 'segment', connector: conn, index: i });
+                v.Cursor = segmentIsHorizontal(a, b) ? SEG_CURSOR_H : SEG_CURSOR_V;
+                v.Arrange(new Rect(
+                    (a.X + b.X) / 2 - SEG_HANDLE_SIZE / 2,
+                    (a.Y + b.Y) / 2 - SEG_HANDLE_SIZE / 2,
+                    SEG_HANDLE_SIZE, SEG_HANDLE_SIZE));
+            }
         }
         for (let i = epUsed; i < this._epPool.length; i++)
         {
@@ -436,6 +490,12 @@ class EditHandlesAdorner extends Adorner
         for (let i = wpUsed; i < this._wpPool.length; i++)
         {
             const v = this._wpPool[i]!;
+            HANDLE_TAGS.delete(v);
+            v.Arrange(new Rect(HIDE_OFFSCREEN, HIDE_OFFSCREEN, 0, 0));
+        }
+        for (let i = segUsed; i < this._segPool.length; i++)
+        {
+            const v = this._segPool[i]!;
             HANDLE_TAGS.delete(v);
             v.Arrange(new Rect(HIDE_OFFSCREEN, HIDE_OFFSCREEN, 0, 0));
         }
@@ -936,6 +996,23 @@ export function attachConnectorInteractions(diagram: Diagram): () => void
             editAdornerVisual?.InvalidateArrange();
             return;
         }
+        if (tag.kind === 'segment')
+        {
+            editAdorner.BeginSegmentDrag(tag.connector, tag.index);
+            state.activeGesture   = ConnectorGesture.Edit;
+            state.activePointerId = args.PointerId;
+            state.editKind        = ConnectorEditKind.Segment;
+            // Capture with the perpendicular-travel cursor so the pointer
+            // keeps the ns/ew affordance for the whole drag.
+            const wps = tag.connector.Waypoints;
+            const horizontal = wps !== undefined && tag.index + 1 < wps.length
+                ? segmentIsHorizontal(wps[tag.index]!, wps[tag.index + 1]!)
+                : true;
+            args.CapturePointer(diagram, horizontal ? SEG_CURSOR_H : SEG_CURSOR_V);
+            args.Handled = true;
+            editAdornerVisual?.InvalidateArrange();
+            return;
+        }
     };
 
     const mountAdornersIfReady = (): void => {
@@ -1194,7 +1271,8 @@ export function attachConnectorInteractions(diagram: Diagram): () => void
                     editAdorner.EndDragOverEmpty();
                 }
             }
-            else if (state.editKind === ConnectorEditKind.Waypoint)
+            else if (state.editKind === ConnectorEditKind.Waypoint
+                  || state.editKind === ConnectorEditKind.Segment)
             {
                 editAdorner.EndDragOverEmpty();
             }
