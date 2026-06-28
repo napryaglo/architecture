@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { compile, EmitError, type CompileResult } from '../compiler/compile.js';
 import { ParseError } from '../compiler/parser.js';
 import { DEFAULT_SLOT_INFO, type SlotInfo } from '../compiler/symbol-table.js';
+import { makeIncludeResolver } from './include-resolver.js';
+import { makeGlyphResolver } from './font-glyph-geometry.js';
 
 // Compiles every `*.mu` file under the framework source trees
 // (src/resources, src/basic, src/framework) into a matching
@@ -254,7 +256,15 @@ export function buildControlTemplates(opts: BuildOptions): number
         // `@visualisation-sub/mural/basic`. The emitted `.mu.js`
         // resolves that self-reference via the package's `exports`
         // field at load time, the same as any consumer template would.
-        const out      = compile(source, { slots });
+        // `include` (SVG → Geometry) and `glyphs` (font outline →
+        // Geometry) resolve relative to the .mu file's directory — same
+        // wiring the demo build uses, so the framework's own root resource
+        // dictionaries can carry shared shape geometries (e.g. chevrons).
+        const out      = compile(source, {
+            slots,
+            include: makeIncludeResolver(dirname(input)),
+            glyphs:  makeGlyphResolver(dirname(input)),
+        });
         // Mirror the input's path under outDir so framework subfolders
         // (menu/, tool-bar/, …) keep their structure. `relative` strips
         // the sourceDir prefix; `dirname` carries the trailing

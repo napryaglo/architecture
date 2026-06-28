@@ -13,7 +13,7 @@ import {
     Size,
 } from '../../../runtime/index.js';
 import { resolveKey } from '../../../runtime/model-internals.js';
-import { SolidColorBrush } from '../../../visual-engine/index.js';
+import { PathGeometry, SolidColorBrush } from '../../../visual-engine/index.js';
 import { SetTheme, CurrentTheme, ToggleTheme } from '../index.js';
 
 // Plain Visual subclass with a writable Brush DP — Material tokens are
@@ -87,6 +87,16 @@ describe('Material — palette registration', () => {
         // min(width, height) / 2 at paint time.
         assert.equal(Application.current!.Resources.Resolve('ShapeFull'),
                      CornerRadius.Full);
+    });
+
+    test('shared chevron geometries resolve to PathGeometry from the root dictionary', () => {
+        SetTheme('light');
+        const down = Application.current!.Resources.Resolve('ChevronDown');
+        const up   = Application.current!.Resources.Resolve('ChevronUp');
+        assert.ok(down instanceof PathGeometry, 'ChevronDown resolves to a PathGeometry');
+        assert.ok(up   instanceof PathGeometry, 'ChevronUp resolves to a PathGeometry');
+        // Open V (not a closed figure) — stroked, not filled.
+        assert.equal(down.Figures[0]!.IsClosed, false, 'chevron is an open polyline');
     });
 
     test('CurrentTheme reports the active palette name after SetTheme', () => {
