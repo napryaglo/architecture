@@ -516,6 +516,50 @@ export class Diagram extends Selector
     public IsConnectorSelected(c: Connector):  boolean { return this._selectedConnectors.has(c); }
     public get SelectedConnectors():           readonly Connector[] { return [...this._selectedConnectors]; }
 
+    // Live subscription to the Connectors collection that keeps the
+    // connector selection honest: a connector removed from Connectors
+    // (the consumer's DeleteRequested listener mutating the collection)
+    // must not linger in _selectedConnectors, or FormatMirror would keep
+    // pushing Pen edits to a dead connector and the edit adorner would
+    // keep painting its handles. Re-armed whenever the Connectors DP is
+    // swapped (see OnPropertyChanged).
+    private _connectorsPruneUnsub: (() => void) | undefined = undefined;
+
+    private _resubscribeConnectorsForSelectionPrune(): void
+    {
+        this._connectorsPruneUnsub?.();
+        this._connectorsPruneUnsub = undefined;
+        const collection = this.Connectors;
+        // Any change (item removed, collection cleared, or the whole DP
+        // swapped) reconciles selection against what's currently present.
+        this._pruneSelectionToCurrentConnectors();
+        if (collection !== undefined)
+        {
+            this._connectorsPruneUnsub = collection.Subscribe(() => this._pruneSelectionToCurrentConnectors());
+        }
+    }
+
+    private _pruneSelectionToCurrentConnectors(): void
+    {
+        if (this._selectedConnectors.size === 0) return;
+        const collection = this.Connectors;
+        const present = new Set<Model>();
+        if (collection !== undefined)
+        {
+            for (let i = 0; i < collection.Count; i++) present.add(collection.Get(i)!);
+        }
+        let changed = false;
+        for (const c of [...this._selectedConnectors])
+        {
+            if (!present.has(c as unknown as Model))
+            {
+                this._selectedConnectors.delete(c);
+                changed = true;
+            }
+        }
+        if (changed) this._fireConnectorSelectionChanged();
+    }
+
     // Range-select the inclusive slice of Connectors between `from` and
     // `to` in Diagram.Connectors index order. Diff-applied so unchanged
     // entries don't churn the ConnectorSelectionChanged event. Mirrors
@@ -672,6 +716,7 @@ export class Diagram extends Selector
         else if (descriptor === Diagram.ConnectorsKey.descriptor)
         {
             this._connectorsMaterializer._onConnectorsCollectionChanged();
+            this._resubscribeConnectorsForSelectionPrune();
         }
         else if (descriptor === Diagram.ConnectorTemplateKey.descriptor)
         {

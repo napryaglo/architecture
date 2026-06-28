@@ -169,6 +169,63 @@ describe('Diagram — connector-selection API', () => {
     });
 });
 
+// ── Selection prunes when a connector leaves Connectors ──────────────
+
+describe('Diagram — connector selection prunes on removal from Connectors', () => {
+    test('removing a selected connector drops it from SelectedConnectors + fires once', () => {
+        const { diagram } = setup([]);
+        const a = makeConnector();
+        const b = makeConnector();
+        const coll = new ObservableCollection<Model>([a, b]);
+        diagram.Connectors = coll;
+        diagram.SelectConnector(a);
+        diagram.SelectConnector(b);
+
+        let fires = 0;
+        diagram.AddConnectorSelectionChangedListener(() => fires++);
+
+        coll.Remove(a);
+
+        assert.equal(diagram.IsConnectorSelected(a), false, 'removed connector pruned');
+        assert.equal(diagram.IsConnectorSelected(b), true,  'survivor stays selected');
+        assert.equal(diagram.SelectedConnectors.length, 1);
+        assert.equal(fires, 1, 'ConnectorSelectionChanged fired exactly once');
+    });
+
+    test('clearing the Connectors collection wipes the connector selection', () => {
+        const { diagram } = setup([]);
+        const a = makeConnector();
+        const coll = new ObservableCollection<Model>([a]);
+        diagram.Connectors = coll;
+        diagram.SelectConnector(a);
+        coll.Clear();
+        assert.equal(diagram.SelectedConnectors.length, 0);
+    });
+
+    test('removing an UNSELECTED connector does not fire ConnectorSelectionChanged', () => {
+        const { diagram } = setup([]);
+        const a = makeConnector();
+        const b = makeConnector();
+        const coll = new ObservableCollection<Model>([a, b]);
+        diagram.Connectors = coll;
+        diagram.SelectConnector(a);
+        let fires = 0;
+        diagram.AddConnectorSelectionChangedListener(() => fires++);
+        coll.Remove(b);                       // b was never selected
+        assert.equal(fires, 0);
+        assert.equal(diagram.IsConnectorSelected(a), true);
+    });
+
+    test('swapping the Connectors DP prunes selection absent from the new collection', () => {
+        const { diagram } = setup([]);
+        const a = makeConnector();
+        diagram.Connectors = new ObservableCollection<Model>([a]);
+        diagram.SelectConnector(a);
+        diagram.Connectors = new ObservableCollection<Model>([]);   // a gone
+        assert.equal(diagram.IsConnectorSelected(a), false);
+    });
+});
+
 // ── Delete delivers both arrays ──────────────────────────────────────
 
 describe('Diagram — Delete with mixed selection fires DeleteRequested with both arrays', () => {

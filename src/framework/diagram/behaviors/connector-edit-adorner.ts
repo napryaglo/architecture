@@ -81,6 +81,14 @@ export class ConnectorEditAdorner
 
     public get IsActive(): boolean { return this._state.kind !== 'idle'; }
 
+    /** The connector the in-flight gesture targets, or undefined when
+     *  idle. Lets the owner abort a drag whose connector was deleted
+     *  out from under it. */
+    public get ActiveConnector(): Connector | undefined
+    {
+        return this._state.kind === 'idle' ? undefined : this._state.connector;
+    }
+
     public BeginEndpointDrag(connector: Connector, end: ConnectorEnd, cursor: Point): void
     {
         if (this._state.kind !== 'idle') this.Abort();

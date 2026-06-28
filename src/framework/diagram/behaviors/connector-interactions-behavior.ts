@@ -8,6 +8,7 @@ import {
     type DrawingContext,
     type PointerEventArgs,
     type ObservableCollection,
+    type CollectionChange,
     type Model,
     hasModifier,
     ModifierKeys,
@@ -955,6 +956,52 @@ export function attachConnectorInteractions(diagram: Diagram): () => void
         }
     };
 
+    // Keep the adorners in sync with the Connectors collection: when a
+    // connector is removed (the consumer's DeleteRequested listener
+    // mutating Connectors), every adorner referencing it must drop — its
+    // hover halo, its edit handles, and any in-flight edit drag. Diagram
+    // already prunes the SELECTION on removal; this clears the view-side
+    // state the adorners hold and repaints them.
+    let subscribedConnectors: ObservableCollection<Model> | undefined = undefined;
+    let connectorsUnsub: (() => void) | undefined = undefined;
+    const onConnectorsChanged = (change: CollectionChange<Model>): void => {
+        let gone: Set<Model> | 'all' | undefined;
+        if      (change.kind === 'cleared')  gone = 'all';
+        else if (change.kind === 'removed')  gone = new Set<Model>(change.items);
+        else if (change.kind === 'replaced') gone = new Set<Model>([change.oldItem]);
+        else                                 return;   // inserted / moved — no removal
+        const isGone = (c: Connector | undefined): boolean =>
+            c !== undefined && (gone === 'all' || gone.has(c as unknown as Model));
+
+        // Stale hover halo on a removed connector.
+        if (isGone(state.hoveredConnector))
+        {
+            state.hoveredConnector = undefined;
+            syncHoverConnectorSubscription(undefined);
+        }
+        // An edit drag whose connector vanished mid-gesture.
+        if (state.activeGesture === ConnectorGesture.Edit && isGone(editAdorner.ActiveConnector))
+        {
+            editAdorner.Abort();
+            state.activeGesture   = undefined;
+            state.activePointerId = undefined;
+            state.editKind        = undefined;
+        }
+        // Repaint: edit handles for removed connectors arrange away
+        // (ArrangeOverride skips connectors no longer in SelectedConnectors
+        // / Connectors), and the halo clears.
+        haloAdornerVisual?.InvalidateArrange();
+        editAdornerVisual?.InvalidateArrange();
+    };
+    const syncConnectorsSubscription = (): void => {
+        const coll = diagram.Connectors;
+        if (coll === subscribedConnectors) return;
+        connectorsUnsub?.();
+        connectorsUnsub = undefined;
+        subscribedConnectors = coll;
+        if (coll !== undefined) connectorsUnsub = coll.Subscribe(onConnectorsChanged);
+    };
+
     // Per-handle PointerDown callback. Fired directly by each handle
     // Border's own bubble-phase listener (wired in wireHandle), so it
     // dodges Figure.OnPointerDown's Handled short-circuit — the handle
@@ -1023,6 +1070,9 @@ export function attachConnectorInteractions(diagram: Diagram): () => void
     };
 
     const mountAdornersIfReady = (): void => {
+        // Idempotent — re-arms if the Connectors DP was swapped. Runs on
+        // the mount microtask and on every pointer event (both call here).
+        syncConnectorsSubscription();
         if (mountedPanel !== undefined) return;
         const panel = diagram.ItemsPanelInstance;
         if (panel === undefined) return;
@@ -1329,6 +1379,9 @@ export function attachConnectorInteractions(diagram: Diagram): () => void
 
         createBehavior.Abort();
         editAdorner.Abort();
+        connectorsUnsub?.();
+        connectorsUnsub = undefined;
+        subscribedConnectors = undefined;
         syncHoverSubscription(undefined);
         syncHoverConnectorSubscription(undefined);
 
