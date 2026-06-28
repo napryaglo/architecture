@@ -508,17 +508,21 @@ class EditHandlesAdorner extends Adorner
         return finalSize;
     }
 
-    // Place a mid-segment pad at the midpoint of every segment of the
-    // connector's RENDERED route (source → bends → target) — so they
-    // appear on the L/Z corners an Orthogonal route computes from zero
-    // user waypoints, not only on user-authored waypoint pairs. The
-    // per-handle cursor advertises the perpendicular travel axis (ns for a
-    // horizontal segment, ew for a vertical). Returns the advanced pool
-    // cursor. Shared by the selected loop and the hovered-connector pass.
+    // Place a mid-segment pad at the midpoint of every INTERIOR segment of
+    // the connector's RENDERED route (source → bends → target). The two
+    // port-adjacent segments (first + last) are skipped: a port is NOT a
+    // waypoint, so one end of those segments is pinned and they can't slide
+    // as a rigid bar — only segments whose BOTH endpoints are real route
+    // bends get a pad. (A bare L route — source → corner → target — is all
+    // port-adjacent, so it gets no pad; a Z route gets one on its middle
+    // segment.) The per-handle cursor advertises the perpendicular travel
+    // axis (ns for a horizontal segment, ew for a vertical). Returns the
+    // advanced pool cursor. Shared by the selected loop and the hovered pass.
     private _placeSegmentPads(conn: Connector, segUsed: number): number
     {
         const route = conn.CurrentRoutePoints ?? [];
-        for (let i = 0; i + 1 < route.length && segUsed < this._segPool.length; i++)
+        // Interior segments only: index i in [1, route.length - 3].
+        for (let i = 1; i + 1 < route.length - 1 && segUsed < this._segPool.length; i++)
         {
             const a = route[i]!;
             const b = route[i + 1]!;
