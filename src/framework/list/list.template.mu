@@ -23,7 +23,7 @@ resources Lists {
                         BorderThickness = (1),
                         CornerRadius    = @ShapeExtraSmall,
                         Padding         = (@Spacing4, @Spacing2, @Spacing4, @Spacing2),
-                        Height          = @ListRowHeightComfortable ]{
+                        Height          = @ListRowHeightRegular ]{
             SplitRow{
                 TextBlock x:name="PART_SelectionText"
                           [ Foreground         = @OnSurfaceVariant,
@@ -64,9 +64,9 @@ resources Lists {
         // toolbars, the ThemeSelector pick row) shrinks automatically
         // without touching individual call sites.
         when ( ThemeManager.Density = Compact )     { PART_SelectionBox.Padding = (@Spacing3, @Spacing1, @Spacing3, @Spacing1);
-                                                      PART_SelectionBox.Height  = @ListRowHeightRegular; }
+                                                      PART_SelectionBox.Height  = @ListRowHeightCompact; }
         when ( ThemeManager.Density = Comfortable ) { PART_SelectionBox.Padding = (@Spacing4, @Spacing3, @Spacing4, @Spacing3);
-                                                      PART_SelectionBox.Height  = @ListRowHeightTouch; }
+                                                      PART_SelectionBox.Height  = @ListRowHeightComfortable; }
 
         // Coarse pointer (touch) — widen vertically for touch.
         when ( ThemeManager.Pointer = Coarse ) { PART_SelectionBox.Padding = (@Spacing4, @Spacing3, @Spacing4, @Spacing3);
