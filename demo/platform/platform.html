@@ -144,7 +144,7 @@
         // we just mirror the current scheme name onto <html> via
         // `data-theme="dark"` so the host page body chrome flips in
         // lockstep with Material.
-        import { ThemeManager }
+        import { ThemeManager, Density }
             from '@visualisation-sub/mural/runtime';
         // Material scheme classes for the OS-preference wiring below.
         // Passed as class refs (no string proxies); Application.initialize
@@ -164,6 +164,14 @@
             theme:      Material,
             autoScheme: { light: MaterialLight, dark: MaterialDark },
         });
+
+        // Run the whole demo at Compact density. ThemeManager.Density is an
+        // inherited attached property on the app root (Resources.Root, set
+        // when platform.mu.js loaded above), so this one write cascades to
+        // every control and drives their `when (ThemeManager.Density =
+        // Compact)` template triggers. Set before mount so the first layout
+        // is already compact.
+        ThemeManager.Density = Density.Compact;
 
         const applyHostChrome = () => {
             const scheme = ThemeManager.ActiveScheme;
