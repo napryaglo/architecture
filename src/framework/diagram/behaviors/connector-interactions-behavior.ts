@@ -5,6 +5,7 @@ import {
     Rect,
     Size,
     Visual,
+    type DrawingContext,
     type PointerEventArgs,
     type ObservableCollection,
     type Model,
@@ -430,6 +431,28 @@ class EditHandlesAdorner extends Adorner
     }
 }
 
+// Shape that paints a Connector's route Geometry VERBATIM — no fit-to-
+// slot scaling. The base Shape uniform-scales a 2-D geometry to fill a
+// non-degenerate arrange slot (the icon-in-a-box path); a connector route
+// is authored in absolute canvas coordinates and must render 1:1. Relying
+// on the base's degenerate-slot short-circuit (arrange at Size.Zero) is
+// fragile here: the SVG renderer re-emits a visual's own primitives on a
+// SIZE change, so a halo that stays 0×0 across the hidden→shown transition
+// never repaints. Painting verbatim lets the adorner arrange the halo at
+// the layer's real extent — restoring normal size-change repaint tracking
+// — while never scaling the route.
+// Exported for the hover-halo regression test only — NOT part of the
+// package's public surface (no barrel re-exports this module).
+export class HaloShape extends Shape
+{
+    protected override RenderOverride(dc: DrawingContext): void
+    {
+        const g = this.Geometry;
+        if (g === undefined) return;
+        dc.DrawGeometry(this.Fill, this.Stroke, g);
+    }
+}
+
 // ── HoverHaloAdorner ─────────────────────────────────────────────
 // Single Shape that mirrors the geometry of the currently-hovered
 // (and not-yet-selected) connector. Painted with the @Primary accent
@@ -448,7 +471,7 @@ class EditHandlesAdorner extends Adorner
 class HoverHaloAdorner extends Adorner
 {
     private readonly _state: SharedState;
-    private readonly _halo:  Shape;
+    private readonly _halo:  HaloShape;
 
     constructor(adornedElement: Visual, state: SharedState)
     {
@@ -458,7 +481,7 @@ class HoverHaloAdorner extends Adorner
         // See header comment for why.
         this.IsHitTestVisible = false;
 
-        const halo = new Shape();
+        const halo = new HaloShape();
         halo.IsHitTestVisible = false;
         // No Fill — the halo is a stroked outline; Fill would paint
         // the closed path interior of a multi-segment connector as
@@ -495,19 +518,16 @@ class HoverHaloAdorner extends Adorner
         // catches that and re-runs this arrange.
         this._halo.Geometry = conn.Geometry;
         this._halo.Stroke   = makeHaloPen(conn);
-        // Arrange at the origin with a ZERO size — exactly how the
-        // Connector arranges itself. Two things matter here:
-        //   * Offset (0,0) puts the halo's render origin on the same
-        //     canvas-local frame the connector route is authored in, so
-        //     the absolute-coordinate Geometry lands in the right place.
-        //   * A DEGENERATE (zero) slot makes Shape.fitTransform short-
-        //     circuit (it only fits into a non-degenerate slot), so the
-        //     route paints 1:1 in its own coordinates. A non-zero slot
-        //     would instead uniform-scale the geometry's bounds to fill
-        //     the slot — fine for axis-aligned routes (zero-area bounds
-        //     skip the fit) but, for a waypoint route with real 2-D
-        //     bounds, it blew the halo up to the full adorner layer.
-        this._halo.Arrange(new Rect(0, 0, 0, 0));
+        // Arrange spanning the full adorner-layer extent so the halo's
+        // Geometry coordinates (absolute canvas space) land in the same
+        // canvas-local frame the connector renders into (offset 0,0). The
+        // slot size is deliberately non-degenerate so the SVG renderer's
+        // size-change repaint tracking fires on the hidden→shown
+        // transition; HaloShape paints the route verbatim, so the slot
+        // size never scales the geometry (the old plain-Shape halo
+        // uniform-scaled a waypoint route to fill this slot — the blow-up
+        // bug this adorner now avoids).
+        this._halo.Arrange(new Rect(0, 0, finalSize.Width, finalSize.Height));
         return finalSize;
     }
 }

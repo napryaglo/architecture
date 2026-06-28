@@ -1,21 +1,29 @@
 // Regression for the connector hover-halo coordinate bug.
 //
 // HoverHaloAdorner paints the hovered connector's route by handing the
-// connector's own Geometry to a plain Shape. The connector renders its
-// route in ABSOLUTE canvas coordinates and is arranged at Size.Zero, so
-// Shape.fitTransform short-circuits (degenerate slot) and the route paints
-// 1:1. The halo must do the same. It previously arranged the halo Shape at
-// the full adorner-layer extent — a non-degenerate slot — so for a route
-// with real 2-D bounds (a connector WITH waypoints) Shape.fitTransform
-// uniform-scaled the geometry up to fill the whole layer: the halo painted
-// huge and off-position (correct shape, wrong size/place). Axis-aligned
-// routes have zero-area bounds and dodged the fit, which is why only
-// waypoint connectors showed the bug.
+// connector's own Geometry to a Shape. The connector renders its route in
+// ABSOLUTE canvas coordinates, so the halo must paint that geometry 1:1 —
+// no fit-to-slot scaling.
 //
-// These tests pin the contract on a real waypoint route: at a degenerate
-// slot no fit transform is pushed; at a non-zero slot one IS (the old
-// behaviour) — proving the geometry is genuinely 2-D and the slot choice
-// is what matters.
+// The original halo was a PLAIN Shape arranged at the full adorner-layer
+// extent. The base Shape uniform-scales a 2-D geometry to fill a non-
+// degenerate slot, so for a route with real 2-D bounds (a connector WITH
+// waypoints) it blew the halo up to fill the whole layer (correct shape,
+// wrong size/place). Axis-aligned routes have zero-area bounds and dodged
+// the fit, which is why only waypoint connectors showed the bug.
+//
+// A first fix arranged the plain Shape at Size.Zero (relying on Shape's
+// degenerate-slot short-circuit). That paints verbatim in isolation but
+// regressed live: the SVG renderer re-emits a visual's own primitives on a
+// SIZE change, and a halo that stays 0×0 across the hidden→shown
+// transition never repaints — so the halo stopped appearing entirely.
+//
+// The shipped fix is HaloShape: a Shape subclass that paints its Geometry
+// verbatim regardless of slot. The adorner arranges it at the full layer
+// extent (non-degenerate, so size-change repaint tracking fires) and the
+// route is NEVER scaled. These tests pin both: HaloShape paints 1:1 at a
+// full-layer slot, while a plain Shape at the same slot fit-scales (the
+// old bug).
 
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -30,6 +38,7 @@ import {
 import type { Brush, Pen } from '../../../visual-engine/index.js';
 import type { Transform } from '../../../visual-engine/drawing/transform.js';
 import { Shape } from '../../../basic/shapes/shape.js';
+import { HaloShape } from '../behaviors/connector-interactions-behavior.js';
 import { Connector } from '../connector.js';
 import { ConnectorEndpoint } from '../connector-endpoint.js';
 import { RoutingMode } from '../routing/router.js';
@@ -65,11 +74,15 @@ function waypointConnector(): Connector
     return c;
 }
 
-// Mirror HoverHaloAdorner's render path: a plain Shape painting the
-// connector's Geometry, measured unbounded, arranged at the given slot.
-function renderHalo(c: Connector, slot: Rect): CapturingContext
+// Render `ShapeCtor` painting the connector's Geometry, measured
+// unbounded, arranged at the given slot.
+function renderHalo(
+    ShapeCtor: new () => Shape,
+    c:         Connector,
+    slot:      Rect,
+): CapturingContext
 {
-    const halo = new Shape();
+    const halo = new ShapeCtor();
     halo.Geometry = c.Geometry;
     halo.Measure(new Size(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY));
     halo.Arrange(slot);
@@ -88,19 +101,19 @@ describe('connector hover halo — paints route verbatim, never fit-scaled', () 
         assert.ok(b.Width > 0 && b.Height > 0, 'bounds span both axes');
     });
 
-    test('halo at Size.Zero (the fix) paints the route 1:1 — no fit transform', () => {
+    test('HaloShape paints the route 1:1 at a full-layer slot — no fit transform', () => {
         newApplication();
         const c = waypointConnector();
-        const dc = renderHalo(c, new Rect(0, 0, 0, 0));
-        assert.equal(dc.transforms.length, 0, 'no scaling for a degenerate slot');
+        const dc = renderHalo(HaloShape, c, new Rect(0, 0, 800, 600));
+        assert.equal(dc.transforms.length, 0, 'HaloShape never fit-scales, regardless of slot');
         assert.equal(dc.geoms.length, 1);
         assert.equal(dc.geoms[0], c.Geometry, 'same geometry instance, painted as-authored');
     });
 
-    test('halo at a full-layer slot WOULD fit-scale the same route (the old bug)', () => {
+    test('a plain Shape at the same full-layer slot WOULD fit-scale the route (the old bug)', () => {
         newApplication();
         const c = waypointConnector();
-        const dc = renderHalo(c, new Rect(0, 0, 800, 600));
-        assert.equal(dc.transforms.length, 1, 'non-degenerate slot scales 2-D geometry to fill it');
+        const dc = renderHalo(Shape, c, new Rect(0, 0, 800, 600));
+        assert.equal(dc.transforms.length, 1, 'base Shape scales 2-D geometry to fill a non-degenerate slot');
     });
 });
