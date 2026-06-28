@@ -36,19 +36,37 @@
 resources MuralBasic {
 
     // ── TextBlock: default text contract ───────────────────────────
-    // Binds Foreground / FontFamily to the active theme so a scheme
-    // switch (light ↔ dark) re-tints every untemplated TextBlock
-    // without per-instance Foreground=@OnSurface noise. FontSize /
-    // FontWeight / LineHeight pin to the M3 BodyMedium baseline
-    // (consumers opt into other type-scale tokens via Style=@TitleLarge
-    // etc. from the Typography dictionary).
+    // Binds FontFamily / FontSize / FontWeight / LineHeight to the M3
+    // BodyMedium baseline (consumers opt into other type-scale tokens via
+    // Style=@TitleLarge etc. from the Typography dictionary).
     //
-    // Explicit Foreground/FontSize/etc. setters on individual TextBlocks
-    // still win because the .mu's `[Foreground=...]` writes go through
-    // set_property_value at the Local tier, which outranks the Style
-    // tier.
+    // Foreground is DELIBERATELY NOT set here. A Style-tier Foreground
+    // outranks the Inherited tier (precedence: … > Style > Inherited >
+    // Default) AND, because implicit styles punch through template
+    // boundaries, it lands on a control's SLOTTED content too — defeating
+    // the template's intent to colour that content. A Filled Button sets
+    // `TextBlock.Foreground = @OnPrimary` on PART_Border expecting it to
+    // inherit into the content TextBlock; a Style-tier @OnSurface on that
+    // TextBlock won instead and painted near-white text on the light
+    // Primary container in dark mode.
+    //
+    // Instead, body-text colour is the TextBlock's own DEFAULT: with
+    // Foreground left at the inherited/unset tier, a control template's
+    // nearer cascade (PART_Border's @OnPrimary, an Inherited value) flows
+    // into the slotted content and wins; for plain text with nothing to
+    // inherit, TextBlock.Render resolves the active theme's @OnSurface as
+    // a render-time fallback (`?? Theme.ink`), so it shows the right
+    // colour for the current scheme on every paint. NB: seeding
+    // `TextBlock.Foreground` on a logical-ancestor root does NOT work —
+    // mural resolves inheritance logical-chain-first, so a root value
+    // shadows the template's visual-chain cascade.
+    //
+    // This default is NOT live-reactive on a scheme switch (it re-resolves
+    // only when the TextBlock repaints). Want a plain TextBlock to re-tint
+    // the instant the theme changes? Bind it: `[Foreground=@OnSurface]` —
+    // a DynamicResource, reactive, and Local-tier so it also wins over any
+    // template cascade.
     Style [TargetType=TextBlock] {
-        Foreground = @OnSurface;
         FontFamily = @FontFamily;
         FontSize   = 14;
         FontWeight = Normal;
