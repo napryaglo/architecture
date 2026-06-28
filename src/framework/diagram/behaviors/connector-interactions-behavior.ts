@@ -89,11 +89,12 @@ const HIDE_OFFSCREEN = -10000;
 
 // Proximity buffer for figure hover + drop-target detection. Cursor
 // within this many DIPs of a figure's bbox edge counts as "near" the
-// figure: port handles show, and a release lands a connector on it.
-// Hover-show and drop-pick share the same threshold so visual feedback
-// and commit semantics stay in lockstep — what lights up is what gets
-// connected.
-const FIGURE_PROXIMITY = 24;
+// figure: side bars / port handles show, and a release lands a connector
+// on it. Hover-show and drop-pick share the same threshold so visual
+// feedback and commit semantics stay in lockstep — what lights up is what
+// gets connected. Tight (8 DIPs) so the side adorners only react when the
+// cursor is genuinely close to an edge, not from across the gap.
+const FIGURE_PROXIMITY = 8;
 
 const SIDE_FILL = new SolidColorBrush(Color.FromHex('#ff9800'));
 const EP_FILL   = new SolidColorBrush(Color.FromHex('#ff5722'));
