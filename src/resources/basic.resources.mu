@@ -38,14 +38,15 @@ resources MuralBasic {
     // ── Shared shape geometries ────────────────────────────────────
     // Chevron up / down as reusable Geometry resources (the SVG sources
     // in ./shapes are converted to Geometry at COMPILE TIME by `include`).
-    // Paint is dropped, so a Shape strokes them with a theme brush — e.g.
-    // a dropdown / spinner / expander glyph:
+    // Filled closed shapes (the Material expand_more / expand_less thick
+    // V), so a Shape paints them with a theme brush via Fill — e.g. a
+    // dropdown / spinner / expander glyph:
     //
-    //   Shape [Geometry=@ChevronDown, Stroke=@OnSurfaceVariant,
-    //          StrokeThickness=2, Width=12, Height=12]
+    //   Shape [Geometry=@ChevronDown, Fill=@OnSurfaceVariant,
+    //          Width=12, Height=12]
     //
-    // The Shape uniform-scales the geometry into its slot. Authored once
-    // here so every control shares one chevron shape instead of a
+    // The Shape uniform-scales the 24×24 geometry into its slot. Authored
+    // once here so every control shares one chevron shape instead of a
     // per-template "▾" / "▴" text glyph (font-dependent, doesn't tint or
     // scale cleanly).
     include "shapes/chevron-down.svg" as ChevronDown
@@ -269,13 +270,11 @@ resources MuralBasic {
                                        [ BorderThickness = (0),
                                          Padding         = (0,2,0,2),
                                          Height          = 14 ]{
-                            TextBlock x:name="PART_UpGlyph"
-                                       [ Text                = "▴",
-                                         FontFamily          = @BodySmallFont,
-                                         FontWeight          = @BodySmallWeight,
-                                         FontSize            = @BodySmallSize,
-                                         LineHeight          = @BodySmallLineHeight,
-                                         Foreground          = @OnSurfaceVariant,
+                            Shape x:name="PART_UpGlyph"
+                                       [ Geometry            = @ChevronUp,
+                                         Fill                = @OnSurfaceVariant,
+                                         Width               = 10,
+                                         Height              = 10,
                                          HorizontalAlignment = Center,
                                          VerticalAlignment   = Center ]
                         }
@@ -283,13 +282,11 @@ resources MuralBasic {
                                        [ BorderThickness = (0),
                                          Padding         = (0,2,0,2),
                                          Height          = 14 ]{
-                            TextBlock x:name="PART_DownGlyph"
-                                       [ Text                = "▾",
-                                         FontFamily          = @BodySmallFont,
-                                         FontWeight          = @BodySmallWeight,
-                                         FontSize            = @BodySmallSize,
-                                         LineHeight          = @BodySmallLineHeight,
-                                         Foreground          = @OnSurfaceVariant,
+                            Shape x:name="PART_DownGlyph"
+                                       [ Geometry            = @ChevronDown,
+                                         Fill                = @OnSurfaceVariant,
+                                         Width               = 10,
+                                         Height              = 10,
                                          HorizontalAlignment = Center,
                                          VerticalAlignment   = Center ]
                         }

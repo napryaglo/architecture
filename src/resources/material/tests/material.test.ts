@@ -95,8 +95,8 @@ describe('Material — palette registration', () => {
         const up   = Application.current!.Resources.Resolve('ChevronUp');
         assert.ok(down instanceof PathGeometry, 'ChevronDown resolves to a PathGeometry');
         assert.ok(up   instanceof PathGeometry, 'ChevronUp resolves to a PathGeometry');
-        // Open V (not a closed figure) — stroked, not filled.
-        assert.equal(down.Figures[0]!.IsClosed, false, 'chevron is an open polyline');
+        // Filled closed thick-V (Material expand_more/less) — painted via Fill.
+        assert.equal(down.Figures[0]!.IsClosed, true, 'chevron is a closed filled shape');
     });
 
     test('CurrentTheme reports the active palette name after SetTheme', () => {
