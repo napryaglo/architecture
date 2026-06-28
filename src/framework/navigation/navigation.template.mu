@@ -110,6 +110,17 @@ resources Navigation {
     // comparisons today.
     Style [TargetType=NavigationItem] {
         Template = @DefaultNavigationItem;
+        // Reactive ink for the SLOTTED icon. The consumer's icon Visual
+        // (a Material-Symbols TextBlock) carries no Foreground of its own,
+        // so it would otherwise fall back to the non-reactive render-time
+        // default and freeze on the scheme active at first paint. Setting
+        // TextBlock.Foreground on the templated parent (DynamicResource,
+        // reactive) cascades into the icon — @OnSurfaceVariant at rest,
+        // @OnSecondaryContainer on the active pill, mirroring the M3 icon
+        // roles. PART_LabelText sets its own Foreground (Local tier) so
+        // this cascade reaches only the icon, not the label.
+        TextBlock.Foreground = @OnSurfaceVariant;
+        when ( IsSelected ) { TextBlock.Foreground = @OnSecondaryContainer; }
     }
 
     // ── NavigationRail: vertical destination strip ─────────────────
