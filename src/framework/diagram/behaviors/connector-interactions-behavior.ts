@@ -173,6 +173,11 @@ const HANDLE_TAGS: WeakMap<Visual, HandleTag> = new WeakMap();
 interface SharedState
 {
     hoveredFigure:    Figure    | undefined;
+    // The single side of the hovered figure nearest the cursor — the
+    // only side bar the SideBarsAdorner shows. Recomputed on pointer
+    // move (pickSideOfFigure) so the highlighted edge follows the
+    // cursor around the figure. Undefined when no figure is hovered.
+    hoverSide:        ResolvedPortSide | undefined;
     hoveredConnector: Connector | undefined;
     activeGesture:    ConnectorGesture | undefined;
     activePointerId:  number   | undefined;
@@ -238,7 +243,9 @@ class SideBarsAdorner extends Adorner
     public override ArrangeOverride(finalSize: Size): Size
     {
         const fig = this._state.hoveredFigure;
-        if (fig === undefined)
+        // Only the side nearest the cursor is shown (see SharedState.hoverSide).
+        const activeSide = this._state.hoverSide;
+        if (fig === undefined || activeSide === undefined)
         {
             this._hideAll();
             return finalSize;
@@ -266,10 +273,19 @@ class SideBarsAdorner extends Adorner
         const inY    = height * SIDE_BAR_INSET_RATIO;
         const barW   = width  - 2 * inX;
         const barH   = height - 2 * inY;
+        // Show the bar for the active side only; park the other three
+        // offscreen and drop their handle tags so a stray hit can't start
+        // a gesture against a hidden side.
         for (let i = 0; i < SideBarsAdorner._SIDES.length; i++)
         {
             const side = SideBarsAdorner._SIDES[i]!;
             const v = this._pool[i]!;
+            if (side !== activeSide)
+            {
+                HANDLE_TAGS.delete(v);
+                v.Arrange(new Rect(HIDE_OFFSCREEN, HIDE_OFFSCREEN, 0, 0));
+                continue;
+            }
             HANDLE_TAGS.set(v, { kind: 'side', figure: fig, side });
             switch (side)
             {
@@ -284,33 +300,29 @@ class SideBarsAdorner extends Adorner
             }
         }
 
-        // Port markers — one dot per dynamic-slot position on each
-        // side. Slot i (zero-based) of N total sits at
-        //   t = (i + 1) / (N + 1)
-        // along the side (the same formula Path 3a uses in
-        // [connector.ts](../connector.ts) — kept in lockstep so the
-        // markers always match where connectors actually land).
+        // Port markers — one dot per dynamic-slot position, for the
+        // ACTIVE side only (the other sides aren't shown). Slot i
+        // (zero-based) of N total sits at t = (i + 1) / (N + 1) along the
+        // side — the same formula Path 3a uses in
+        // [connector.ts](../connector.ts), kept in lockstep so the
+        // markers always match where connectors actually land.
         const m = PORT_MARKER_SIZE;
         const mHalf = m / 2;
         let portIdx = 0;
-        for (const side of SideBarsAdorner._SIDES)
+        const count = Math.min(fig.GetSideEndpointCount(activeSide), POOL_PORTS_PER_SIDE);
+        for (let i = 0; i < count && portIdx < this._portPool.length; i++)
         {
-            const count = Math.min(fig.GetSideEndpointCount(side), POOL_PORTS_PER_SIDE);
-            for (let i = 0; i < count; i++)
+            const u = (i + 1) / (count + 1);
+            let cx: number, cy: number;
+            switch (activeSide)
             {
-                if (portIdx >= this._portPool.length) break;
-                const u = (i + 1) / (count + 1);
-                let cx: number, cy: number;
-                switch (side)
-                {
-                    case PortSide.N: cx = left + u * width;          cy = top;                  break;
-                    case PortSide.S: cx = left + u * width;          cy = top + height;         break;
-                    case PortSide.E: cx = left + width;              cy = top + u * height;     break;
-                    case PortSide.W: cx = left;                      cy = top + u * height;     break;
-                }
-                this._portPool[portIdx]!.Arrange(new Rect(cx - mHalf, cy - mHalf, m, m));
-                portIdx++;
+                case PortSide.N: cx = left + u * width;          cy = top;                  break;
+                case PortSide.S: cx = left + u * width;          cy = top + height;         break;
+                case PortSide.E: cx = left + width;              cy = top + u * height;     break;
+                case PortSide.W: cx = left;                      cy = top + u * height;     break;
             }
+            this._portPool[portIdx]!.Arrange(new Rect(cx - mHalf, cy - mHalf, m, m));
+            portIdx++;
         }
         for (let i = portIdx; i < this._portPool.length; i++)
         {
@@ -762,6 +774,7 @@ export function attachConnectorInteractions(diagram: Diagram): () => void
 {
     const state: SharedState = {
         hoveredFigure:    undefined,
+        hoverSide:        undefined,
         hoveredConnector: undefined,
         activeGesture:    undefined,
         activePointerId:  undefined,
@@ -1099,11 +1112,22 @@ export function attachConnectorInteractions(diagram: Diagram): () => void
         // target on EndCreate / EndDragOverTarget still uses cursor →
         // findFigureAtCanvasPoint + getPortAtCanvasPoint, so hover-show
         // and drop-pick stay in lockstep.
-        const fig = findFigureAtCanvasPoint(diagram, cursor);
-        if (fig !== state.hoveredFigure)
+        const fig  = findFigureAtCanvasPoint(diagram, cursor);
+        // Only the side nearest the cursor is shown — recompute it on
+        // every move so the highlighted edge tracks the pointer around
+        // the figure. Re-arrange when EITHER the figure or the chosen
+        // side changes (the side flips as the cursor crosses the figure's
+        // diagonals); re-subscribe only when the figure itself changes.
+        const side = fig !== undefined ? pickSideOfFigure(fig, cursor) : undefined;
+        const figChanged = fig !== state.hoveredFigure;
+        if (figChanged)
         {
             state.hoveredFigure = fig;
             syncHoverSubscription(fig);
+        }
+        if (figChanged || side !== state.hoverSide)
+        {
+            state.hoverSide = side;
             sideAdornerVisual?.InvalidateArrange();
         }
 
@@ -1189,6 +1213,7 @@ export function attachConnectorInteractions(diagram: Diagram): () => void
         if (state.hoveredFigure !== undefined)
         {
             state.hoveredFigure = undefined;
+            state.hoverSide     = undefined;
             syncHoverSubscription(undefined);
             sideAdornerVisual?.InvalidateArrange();
         }
