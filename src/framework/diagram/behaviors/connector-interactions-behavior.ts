@@ -495,10 +495,19 @@ class HoverHaloAdorner extends Adorner
         // catches that and re-runs this arrange.
         this._halo.Geometry = conn.Geometry;
         this._halo.Stroke   = makeHaloPen(conn);
-        // Arrange spans the full adorner-layer extent so the halo's
-        // Geometry coordinates land in the same canvas-local frame
-        // the connector itself renders into.
-        this._halo.Arrange(new Rect(0, 0, finalSize.Width, finalSize.Height));
+        // Arrange at the origin with a ZERO size — exactly how the
+        // Connector arranges itself. Two things matter here:
+        //   * Offset (0,0) puts the halo's render origin on the same
+        //     canvas-local frame the connector route is authored in, so
+        //     the absolute-coordinate Geometry lands in the right place.
+        //   * A DEGENERATE (zero) slot makes Shape.fitTransform short-
+        //     circuit (it only fits into a non-degenerate slot), so the
+        //     route paints 1:1 in its own coordinates. A non-zero slot
+        //     would instead uniform-scale the geometry's bounds to fill
+        //     the slot — fine for axis-aligned routes (zero-area bounds
+        //     skip the fit) but, for a waypoint route with real 2-D
+        //     bounds, it blew the halo up to the full adorner layer.
+        this._halo.Arrange(new Rect(0, 0, 0, 0));
         return finalSize;
     }
 }
