@@ -465,13 +465,17 @@ class EditHandlesAdorner extends Adorner
                     WP_HANDLE_SIZE, WP_HANDLE_SIZE));
             }
 
-            // Mid-segment pads — one per waypoint-to-waypoint segment,
-            // centered on the segment. Cursor advertises the perpendicular
-            // travel axis (ns for a horizontal segment, ew for a vertical).
-            for (let i = 0; i + 1 < wps.length && segUsed < this._segPool.length; i++)
+            // Mid-segment pads — one per segment of the RENDERED route
+            // (source → bends → target), so they appear on the L/Z corners
+            // an Orthogonal route computes from zero user waypoints, not
+            // only on user-authored waypoint pairs. Centered on the
+            // segment; cursor advertises the perpendicular travel axis
+            // (ns for a horizontal segment, ew for a vertical).
+            const route = conn.CurrentRoutePoints ?? [];
+            for (let i = 0; i + 1 < route.length && segUsed < this._segPool.length; i++)
             {
-                const a = wps[i]!;
-                const b = wps[i + 1]!;
+                const a = route[i]!;
+                const b = route[i + 1]!;
                 const v = this._segPool[segUsed++]!;
                 HANDLE_TAGS.set(v, { kind: 'segment', connector: conn, index: i });
                 v.Cursor = segmentIsHorizontal(a, b) ? SEG_CURSOR_H : SEG_CURSOR_V;
@@ -998,16 +1002,19 @@ export function attachConnectorInteractions(diagram: Diagram): () => void
         }
         if (tag.kind === 'segment')
         {
+            // Orientation comes from the rendered route the handle was
+            // placed against — read BEFORE BeginSegmentDrag materializes
+            // the route into Waypoints and shifts segment indices.
+            const route = tag.connector.CurrentRoutePoints;
+            const horizontal = route !== undefined && tag.index + 1 < route.length
+                ? segmentIsHorizontal(route[tag.index]!, route[tag.index + 1]!)
+                : true;
             editAdorner.BeginSegmentDrag(tag.connector, tag.index);
             state.activeGesture   = ConnectorGesture.Edit;
             state.activePointerId = args.PointerId;
             state.editKind        = ConnectorEditKind.Segment;
             // Capture with the perpendicular-travel cursor so the pointer
             // keeps the ns/ew affordance for the whole drag.
-            const wps = tag.connector.Waypoints;
-            const horizontal = wps !== undefined && tag.index + 1 < wps.length
-                ? segmentIsHorizontal(wps[tag.index]!, wps[tag.index + 1]!)
-                : true;
             args.CapturePointer(diagram, horizontal ? SEG_CURSOR_H : SEG_CURSOR_V);
             args.Handled = true;
             editAdornerVisual?.InvalidateArrange();

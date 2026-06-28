@@ -197,6 +197,18 @@ export class Connector extends Shape
     public get CurrentSourceAnchor(): ResolvedAnchor | undefined { return this._currentSrcAnchor; }
     public get CurrentTargetAnchor(): ResolvedAnchor | undefined { return this._currentTgtAnchor; }
 
+    // The full rendered route as a point polyline — source anchor, every
+    // bend the router emitted (including the L/Z corners an Orthogonal
+    // route computes from ZERO user waypoints), then the target anchor.
+    // This is the route the user actually SEES, so the edit adorner places
+    // mid-segment drag handles against it rather than against Waypoints
+    // (which only holds user-authored bends — usually none). Taken from
+    // the UNCAPPED route geometry so the corners sit on the port outward
+    // rays (cap inset only shortens the two end tips). undefined when the
+    // route isn't a polyline (Bezier) or either endpoint is missing.
+    private _currentRoutePoints: readonly Point[] | undefined = undefined;
+    public get CurrentRoutePoints(): readonly Point[] | undefined { return this._currentRoutePoints; }
+
     // Tracked previous endpoint references so OnPropertyChanged can
     // detach listeners from the OLD endpoint before re-attaching to
     // the NEW one. _trackedSourceNode / _trackedTargetNode play the
@@ -555,6 +567,7 @@ export class Connector extends Shape
             this.Geometry = undefined;
             this._currentSrcAnchor = undefined;
             this._currentTgtAnchor = undefined;
+            this._currentRoutePoints = undefined;
             return;
         }
         const waypoints = this.Waypoints ?? EMPTY_WAYPOINTS;
@@ -592,6 +605,12 @@ export class Connector extends Shape
             waypoints,
         };
         const routeGeom = router.compute(spec);
+
+        // Snapshot the rendered route as a polyline for the edit adorner's
+        // mid-segment handles (undefined for Bezier — not a polyline).
+        // Uncapped: the corners stay on the port outward rays so the
+        // adorner's materialize-into-Waypoints round-trips cleanly.
+        this._currentRoutePoints = pathGeometryToPolyline(routeGeom);
 
         // Cap insets — only applied to line-polyline routes (Straight +
         // Orthogonal). Bezier output stays untouched; caps overlap the

@@ -285,11 +285,20 @@ describe('ConnectorEditAdorner — gesture preemption + idle no-ops', () => {
     });
 });
 
-// ── Segment drag — perpendicular slide of a waypoint-to-waypoint segment ─
+// ── Segment drag — perpendicular slide of a RENDERED-route segment ───
+//
+// BeginSegmentDrag indexes the rendered route (source → bends → target),
+// not Waypoints. With Straight routing the route is exactly
+// [source, ...waypoints, target], so a connector with waypoints
+// (40,30),(120,30),(120,90) and FreePoint endpoints (0,0)/(100,0) renders
+// as route indices:
+//   0: (0,0)→(40,30)     source-adjacent (diagonal)
+//   1: (40,30)→(120,30)  interior, horizontal
+//   2: (120,30)→(120,90) interior, vertical
+//   3: (120,90)→(100,0)  target-adjacent (diagonal)
 
 describe('ConnectorEditAdorner — segment drag (perpendicular slide)', () => {
-    // Waypoints forming an axis-aligned route: a horizontal segment
-    // (W0→W1) then a vertical one (W1→W2).
+    // Route with two clean interior segments (one H, one V) between bends.
     function wpConnector(): Connector
     {
         const c = makeConnector();
@@ -297,39 +306,89 @@ describe('ConnectorEditAdorner — segment drag (perpendicular slide)', () => {
         return c;
     }
 
-    test('a horizontal segment moves only vertically — both waypoints take cursor.Y, keep X', () => {
+    test('an interior horizontal segment moves only vertically — both ends take cursor.Y, keep X', () => {
         newApplication();
         const c = wpConnector();
         const adorner = new ConnectorEditAdorner();
-        adorner.BeginSegmentDrag(c, 0);                 // W0→W1 is horizontal
+        adorner.BeginSegmentDrag(c, 1);                  // route seg 1 = (40,30)→(120,30)
         assert.equal(adorner.IsActive, true);
         adorner.UpdateCursor(new Point(999, 75));        // X ignored, Y drives
         const wps = c.Waypoints!;
-        assert.equal(wps[0]!.X, 40,  'W0 keeps its X');
-        assert.equal(wps[1]!.X, 120, 'W1 keeps its X');
-        assert.equal(wps[0]!.Y, 75,  'W0 snaps to cursor Y');
-        assert.equal(wps[1]!.Y, 75,  'W1 snaps to cursor Y');
+        assert.equal(wps[0]!.X, 40,  'left end keeps its X');
+        assert.equal(wps[1]!.X, 120, 'right end keeps its X');
+        assert.equal(wps[0]!.Y, 75,  'left end snaps to cursor Y');
+        assert.equal(wps[1]!.Y, 75,  'right end snaps to cursor Y');
+        assert.equal(wps[2]!.Y, 90,  'the next bend is untouched');
     });
 
-    test('a vertical segment moves only horizontally — both waypoints take cursor.X, keep Y', () => {
+    test('an interior vertical segment moves only horizontally — both ends take cursor.X, keep Y', () => {
         newApplication();
         const c = wpConnector();
         const adorner = new ConnectorEditAdorner();
-        adorner.BeginSegmentDrag(c, 1);                 // W1→W2 is vertical
+        adorner.BeginSegmentDrag(c, 2);                  // route seg 2 = (120,30)→(120,90)
         adorner.UpdateCursor(new Point(160, 999));       // Y ignored, X drives
         const wps = c.Waypoints!;
-        assert.equal(wps[1]!.Y, 30, 'W1 keeps its Y');
-        assert.equal(wps[2]!.Y, 90, 'W2 keeps its Y');
-        assert.equal(wps[1]!.X, 160, 'W1 snaps to cursor X');
-        assert.equal(wps[2]!.X, 160, 'W2 snaps to cursor X');
+        assert.equal(wps[1]!.Y, 30, 'top end keeps its Y');
+        assert.equal(wps[2]!.Y, 90, 'bottom end keeps its Y');
+        assert.equal(wps[1]!.X, 160, 'top end snaps to cursor X');
+        assert.equal(wps[2]!.X, 160, 'bottom end snaps to cursor X');
+        assert.equal(wps[0]!.X, 40,  'the prior bend is untouched');
     });
 
-    test('Abort restores the pre-drag waypoints', () => {
+    // A source-adjacent axis-aligned segment: the port can't move, so the
+    // gesture inserts a FIXED jog anchor (kept at the port's level) plus a
+    // moving twin, then slides the segment + jog.
+    function adjacentConnector(): Connector
+    {
+        const c = makeConnector();
+        c.Source = new ConnectorEndpoint({ FreePoint: new Point(0, 0) });
+        c.Target = new ConnectorEndpoint({ FreePoint: new Point(60, 80) });
+        c.Waypoints = [new Point(60, 0)];
+        return c;   // route: (0,0)→(60,0)→(60,80)
+    }
+
+    test('a source-adjacent horizontal segment inserts a jog rooted at the port, then slides', () => {
+        newApplication();
+        const c = adjacentConnector();
+        const adorner = new ConnectorEditAdorner();
+        adorner.BeginSegmentDrag(c, 0);                  // route seg 0 = source(0,0)→(60,0)
+        adorner.UpdateCursor(new Point(999, -30));        // horizontal seg → Y drives
+        const wps = c.Waypoints!;
+        // [fixedAnchor, movingNear, movingFar]
+        assert.equal(wps.length, 3, 'one jog anchor + moving twin + far end');
+        assert.deepEqual({ X: wps[0]!.X, Y: wps[0]!.Y }, { X: 26, Y: 0 },
+            'fixed jog anchor stays at the port level (Y=0)');
+        assert.equal(wps[1]!.Y, -30, 'moving near end slid to cursor Y');
+        assert.equal(wps[2]!.Y, -30, 'moving far end slid to cursor Y');
+        assert.equal(wps[2]!.X, 60,  'far end keeps its X');
+        assert.equal(c.Source!.FreePoint!.X, 0, 'source port stays pinned');
+        assert.equal(c.Source!.FreePoint!.Y, 0);
+    });
+
+    test('a target-adjacent vertical segment inserts a jog rooted at the target, then slides', () => {
+        newApplication();
+        const c = adjacentConnector();
+        const adorner = new ConnectorEditAdorner();
+        adorner.BeginSegmentDrag(c, 1);                  // route seg 1 = (60,0)→target(60,80)
+        adorner.UpdateCursor(new Point(90, 999));         // vertical seg → X drives
+        const wps = c.Waypoints!;
+        // [movingNear, movingFar, fixedAnchor]
+        assert.equal(wps.length, 3);
+        assert.equal(wps[0]!.X, 90, 'moving near end slid to cursor X');
+        assert.equal(wps[1]!.X, 90, 'moving far end slid to cursor X');
+        assert.equal(wps[0]!.Y, 0,  'near end keeps its Y');
+        assert.deepEqual({ X: wps[2]!.X, Y: wps[2]!.Y }, { X: 60, Y: 54 },
+            'fixed jog anchor stays on the target column (X=60)');
+        assert.equal(c.Target!.FreePoint!.X, 60, 'target port stays pinned');
+        assert.equal(c.Target!.FreePoint!.Y, 80);
+    });
+
+    test('Abort restores the pre-drag waypoints (un-materializes the route)', () => {
         newApplication();
         const c = wpConnector();
         const before = c.Waypoints!.map(p => ({ X: p.X, Y: p.Y }));
         const adorner = new ConnectorEditAdorner();
-        adorner.BeginSegmentDrag(c, 0);
+        adorner.BeginSegmentDrag(c, 1);
         adorner.UpdateCursor(new Point(0, 200));
         adorner.Abort();
         const after = c.Waypoints!;
@@ -341,7 +400,7 @@ describe('ConnectorEditAdorner — segment drag (perpendicular slide)', () => {
         newApplication();
         const c = wpConnector();
         const adorner = new ConnectorEditAdorner();
-        adorner.BeginSegmentDrag(c, 0);
+        adorner.BeginSegmentDrag(c, 1);
         adorner.UpdateCursor(new Point(0, 55));
         adorner.EndDragOverEmpty();
         assert.equal(adorner.IsActive, false);
@@ -349,11 +408,25 @@ describe('ConnectorEditAdorner — segment drag (perpendicular slide)', () => {
         assert.equal(c.Waypoints![1]!.Y, 55);
     });
 
+    test('a grab released with no move sheds the coincident jog anchor on commit', () => {
+        newApplication();
+        const c = adjacentConnector();
+        const adorner = new ConnectorEditAdorner();
+        adorner.BeginSegmentDrag(c, 0);                  // inserts a coincident [(26,0),(26,0),...]
+        adorner.EndDragOverEmpty();                       // no UpdateCursor → degenerate jog
+        const wps = c.Waypoints!;
+        for (let i = 1; i < wps.length; i++)
+        {
+            assert.ok(!(wps[i]!.X === wps[i - 1]!.X && wps[i]!.Y === wps[i - 1]!.Y),
+                'no coincident adjacent waypoints survive commit');
+        }
+    });
+
     test('BeginSegmentDrag on an out-of-range segment index is a no-op', () => {
         newApplication();
-        const c = wpConnector();
+        const c = wpConnector();        // route has 5 points → segments 0..3
         const adorner = new ConnectorEditAdorner();
-        adorner.BeginSegmentDrag(c, 2);   // index 2 → needs Waypoints[3], absent
+        adorner.BeginSegmentDrag(c, 4); // segment 4 needs route[5], absent
         assert.equal(adorner.IsActive, false);
     });
 });
