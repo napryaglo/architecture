@@ -253,8 +253,28 @@ export class Connector extends Shape
         this._reregisterTargetSide();
         this._scheduleRecompute();
     };
-    private readonly _onSourceNodeMoved = (): void => { this._scheduleRecompute(); };
-    private readonly _onTargetNodeMoved = (): void => { this._scheduleRecompute(); };
+    private readonly _onSourceNodeMoved = (): void => { this._onAttachedNodeMoved(); };
+    private readonly _onTargetNodeMoved = (): void => { this._onAttachedNodeMoved(); };
+
+    // An attached figure moved (Left / Top changed). Waypoints are absolute
+    // canvas coordinates, so they don't follow the figure — a manually
+    // routed / segment-dragged bend would be left stranded and the router
+    // would bend the new route awkwardly around it. Clear them so the
+    // route is recomputed clean to the figure's new position. Clearing the
+    // Waypoints DP itself schedules the recompute; with no waypoints to
+    // clear, recompute directly for the endpoint move.
+    private _onAttachedNodeMoved(): void
+    {
+        const wps = this.Waypoints;
+        if (wps !== undefined && wps.length > 0)
+        {
+            this.Waypoints = undefined;   // OnPropertyChanged(WaypointsKey) → _scheduleRecompute
+        }
+        else
+        {
+            this._scheduleRecompute();
+        }
+    }
     private readonly _onSourceSideRebalance = (): void => { this._scheduleRecompute(); };
     private readonly _onTargetSideRebalance = (): void => { this._scheduleRecompute(); };
 

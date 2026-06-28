@@ -552,6 +552,34 @@ describe('Connector reactivity — source / target node moves', () => {
         figA.Left = 999;
         assert.equal(startOf(c).X, afterSwap);
     });
+
+    test('moving an attached figure clears the connector waypoints (re-route clean)', () => {
+        const src = makeFigure(100, 100, 80, 80, []);
+        const tgt = makeFigure(400, 100, 80, 80, []);
+        const c = new Connector();
+        c.RoutingMode = RoutingMode.Orthogonal;
+        c.Source = new ConnectorEndpoint({ Node: src, PortSide: PortSide.E });
+        c.Target = new ConnectorEndpoint({ Node: tgt, PortSide: PortSide.W });
+        c.Waypoints = [new Point(250, 100), new Point(250, 300)];
+        assert.equal(c.Waypoints!.length, 2, 'waypoints set before the move');
+
+        src.Left = 150;                       // move the source figure
+        assert.equal(c.Waypoints, undefined, 'waypoints cleared on figure move');
+        assert.ok(c.Geometry !== undefined, 're-routed clean to the new position');
+    });
+
+    test('moving the TARGET figure also clears the waypoints', () => {
+        const src = makeFigure(100, 100, 80, 80, []);
+        const tgt = makeFigure(400, 100, 80, 80, []);
+        const c = new Connector();
+        c.RoutingMode = RoutingMode.Orthogonal;
+        c.Source = new ConnectorEndpoint({ Node: src, PortSide: PortSide.E });
+        c.Target = new ConnectorEndpoint({ Node: tgt, PortSide: PortSide.W });
+        c.Waypoints = [new Point(250, 100)];
+
+        tgt.Top = 250;
+        assert.equal(c.Waypoints, undefined, 'waypoints cleared when the target figure moves');
+    });
 });
 
 // ── Routing mode dispatch ────────────────────────────────────────────
