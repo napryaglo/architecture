@@ -1010,18 +1010,30 @@ export class ThemeManager
         // root is still its visual child, but those controls detach it
         // in their ctor for overlay mounting. Easiest win: don't churn
         // what didn't change.
-        const sameTheme = ThemeManager._activeTheme === theme && ThemeManager._activeApp === app;
-        if (!sameTheme && ThemeManager._activeApp !== undefined)
+        const prevApp      = ThemeManager._activeApp;
+        const sameApp      = prevApp === app;
+        const sameTheme    = ThemeManager._activeTheme === theme && sameApp;
+        const oldTokenDict = ThemeManager._activeTokenDict;
+
+        // Theme STRUCTURAL dictionaries (ControlTemplates, default
+        // Styles, DataTemplates) change only when the theme (or app)
+        // changed. Token VALUES live in the scheme token dict handled
+        // below — a scheme-only swap leaves these untouched.
+        if (!sameTheme && prevApp !== undefined)
         {
             for (const d of ThemeManager._activeDictionaries)
             {
-                ThemeManager._activeApp.Resources.RemoveMergedDictionary(d);
+                prevApp.Resources.RemoveMergedDictionary(d);
             }
             ThemeManager._activeDictionaries = [];
         }
-        if (ThemeManager._activeApp !== undefined && ThemeManager._activeTokenDict !== undefined)
+
+        // Cross-app reactivation: the old token dict lives in the OLD
+        // app's Resources, so remove it there now (the add-before-remove
+        // optimization below only helps within a single dictionary).
+        if (!sameApp && prevApp !== undefined && oldTokenDict !== undefined)
         {
-            ThemeManager._activeApp.Resources.RemoveMergedDictionary(ThemeManager._activeTokenDict);
+            prevApp.Resources.RemoveMergedDictionary(oldTokenDict);
         }
         ThemeManager._activeTokenDict = undefined;
 
@@ -1041,12 +1053,27 @@ export class ThemeManager
             ThemeManager._activeDictionaries = dictionaryRefs;
         }
 
-        // Merge scheme token dict (always — schemes change on every
-        // activate that isn't a (theme, scheme, app) no-op).
+        // Token dict — ADD-BEFORE-REMOVE within the same app. Merge the
+        // NEW token dict first: `Resolve` walks merged dicts last-added
+        // wins, so every token immediately resolves to its new value
+        // while the old token dict is still present. Only THEN drop the
+        // old dict — at which point no token's resolved value changes, so
+        // the removal's notify is a no-op for every consumer.
+        //
+        // Paired with DynamicResource's per-key SubscribeKey this yields:
+        // a token identical across the two schemes fires ZERO binding
+        // refreshes; a token that changed fires each consumer exactly
+        // ONCE. The previous remove-then-add fired twice per consumer
+        // (old → undefined → new) and momentarily flashed `undefined`
+        // through every bound slot mid-swap.
         const tokenDict = new ResourceDictionary();
         const mergedTokens = ThemeManager.resolveBasedOn(scheme);
         for (const [k, v] of mergedTokens) tokenDict.Set(k, v);
         app.Resources.AddMergedDictionary(tokenDict);
+        if (sameApp && oldTokenDict !== undefined)
+        {
+            app.Resources.RemoveMergedDictionary(oldTokenDict);
+        }
 
         ThemeManager._activeTheme     = theme;
         ThemeManager._activeScheme    = scheme;

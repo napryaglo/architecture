@@ -133,8 +133,29 @@ class DynamicResourceBinding extends Binding
         // (resource-block instances like Pen / Brush) have no visual
         // tree, so the ancestor walk is skipped and only Application's
         // Resources subscription drives re-resolution.
+        // Per-KEY subscription (SubscribeKey), not coarse Subscribe. A
+        // theme bundle's token dict carries 200+ keys; the coarse
+        // Subscribe fired this binding's refresh() on EVERY mutation of
+        // any dictionary on the chain — so an unrelated `Set`, or a
+        // scheme swap that touched tokens this binding doesn't consume,
+        // still cost a full TryFindResource walk per binding. SubscribeKey
+        // memoizes each dictionary's own Resolve(key) and only signals
+        // when THAT dictionary's resolution of our key actually changes.
+        //
+        // Correctness: SubscribeKey filters the SIGNAL only. The
+        // authoritative value is still the full ancestor-chain
+        // TryFindResource done in refresh(), gated by its own
+        // oldValue === newValue check. Per-dict memoization can only
+        // suppress a notification when that dict's resolution of the key
+        // is unchanged — it can never hide a real change to the
+        // chain-resolved value, because any dict that contributes the
+        // effective value fires when its contribution changes, and a
+        // shadowing change (a nearer dict starting/stopping to define the
+        // key) flips that dict's own Resolve(key) too.
         type VisualBack = {
-            ['_resources']: { Subscribe(l: () => void): () => void } | undefined;
+            ['_resources']: {
+                SubscribeKey(key: string, l: () => void): () => void;
+            } | undefined;
             ['_logicalParent']: Visual | undefined;
             ['_templatedParent']: Visual | undefined;
         };
@@ -147,7 +168,7 @@ class DynamicResourceBinding extends Binding
                 const dict = back['_resources'];
                 if (dict !== undefined)
                 {
-                    this.subscriptions.push(dict.Subscribe(() => this.refresh()));
+                    this.subscriptions.push(dict.SubscribeKey(this.key, () => this.refresh()));
                 }
                 cursor = back['_logicalParent'] ?? back['_templatedParent'];
             }
@@ -155,7 +176,7 @@ class DynamicResourceBinding extends Binding
         const app = Application.current;
         if (app !== undefined && app !== null)
         {
-            this.subscriptions.push(app.Resources.Subscribe(() => this.refresh()));
+            this.subscriptions.push(app.Resources.SubscribeKey(this.key, () => this.refresh()));
         }
     }
 
