@@ -1,7 +1,7 @@
 import { Element, MetaData, Model, Size, type DrawingContext, type PropertyDescriptor } from '../../runtime/index.js';
 import type { PropertyKey } from '../../runtime/index.js';
 import { resolveKey } from '../../runtime/model-internals.js';
-import { Brush, Geometry, Pen } from '../../visual-engine/index.js';
+import { Brush, Color, Geometry, LineCap, LineJoin, Pen, SolidColorBrush } from '../../visual-engine/index.js';
 import { MatrixTransform } from '../../visual-engine/drawing/transform.js';
 import { Matrix } from '../../visual-engine/primitives.js';
 import { TextBlock } from '../text-block.js';
@@ -41,6 +41,19 @@ export class Shape extends Element
     public static readonly StrokeKey   = Model.RegisterProperty<Pen      | undefined>(
         Shape, 'Stroke',   undefined, MetaData.Render);
 
+    // Width of an INVISIBLE hit band painted UNDER the visible content
+    // (0 = off, the default — existing shapes are unaffected). A thin
+    // geometry — a Connector route, a hairline Stroke, an icon outline —
+    // is otherwise only hittable on its ~1px painted path, which makes it
+    // painful to hover / click. A non-zero value draws the same geometry
+    // with a transparent stroke of this width before the visible paint; a
+    // transparent stroke is still a "painted" area for SVG `visiblePainted`
+    // hit-testing (only `none` is excluded), so the band catches pointer
+    // events while staying invisible. The band rides the SAME fit transform
+    // as the visible content, so it tracks scaled icons too.
+    public static readonly HitTestStrokeWidthKey = Model.RegisterProperty<number>(
+        Shape, 'HitTestStrokeWidth', 0, MetaData.Render);
+
     public get Geometry(): Geometry | undefined { return this.get_property_value(Shape.GeometryKey); }
     public set Geometry(value: Geometry | undefined) { this.set_property_value(Shape.GeometryKey, value); }
 
@@ -49,6 +62,9 @@ export class Shape extends Element
 
     public get Stroke(): Pen | undefined { return this.get_property_value(Shape.StrokeKey); }
     public set Stroke(value: Pen | undefined) { this.set_property_value(Shape.StrokeKey, value); }
+
+    public get HitTestStrokeWidth(): number { return this.get_property_value(Shape.HitTestStrokeWidthKey); }
+    public set HitTestStrokeWidth(value: number) { this.set_property_value(Shape.HitTestStrokeWidthKey, value); }
 
     protected override MeasureOverride(_availableSize: Size): Size
     {
@@ -111,16 +127,17 @@ export class Shape extends Element
         // in absolute canvas coordinates at Size.Zero and must NOT scale.
         const fill = this.effectiveFill();
         const fit = this.fitTransform(g);
-        if (fit !== undefined)
-        {
-            dc.PushTransform(fit);
-            dc.DrawGeometry(fill, this.Stroke, g);
-            dc.Pop();
-            return;
-        }
+        if (fit !== undefined) dc.PushTransform(fit);
+        // Invisible hit band first (when enabled) so the visible stroke
+        // paints on top of it. Same geometry + fit frame, so the band
+        // tracks the route / icon exactly; transparent paint keeps it
+        // unseen but hittable (see HitTestStrokeWidthKey).
+        const hitW = this.HitTestStrokeWidth;
+        if (hitW > 0) dc.DrawGeometry(undefined, hitBandPen(hitW), g);
         // One call. The DC takes the same (brush, pen, geometry) shape
         // the Shape DPs are modelled on — no per-render synthesis needed.
         dc.DrawGeometry(fill, this.Stroke, g);
+        if (fit !== undefined) dc.Pop();
     }
 
     // Effective interior brush for painting. When BOTH Fill and Stroke
@@ -177,6 +194,26 @@ export class Shape extends Element
         const offY = (size.Height - b.Height * s) / 2 - b.Y * s;
         return new MatrixTransform(new Matrix(s, 0, 0, s, offX, offY));
     }
+}
+
+// Fully-transparent paint shared by every hit band — the band carries no
+// per-instance colour, only width. Alpha 0 keeps it invisible; SVG
+// `visiblePainted` still hit-tests it because the stroke paint is a value
+// other than `none`.
+const HIT_BAND_BRUSH = new SolidColorBrush(new Color(0, 0, 0, 0));
+
+// Pen for the invisible hit band. Round cap + join keep the band
+// continuous around corners (no gaps at a connector's waypoints). Built
+// per render (cheap, only when HitTestStrokeWidth > 0) rather than cached
+// per-width — mirrors the connector halo's makeHaloPen.
+function hitBandPen(width: number): Pen
+{
+    const p = new Pen();
+    p.Brush    = HIT_BAND_BRUSH;
+    p.Thickness = width;
+    p.LineCap  = LineCap.Round;
+    p.LineJoin = LineJoin.Round;
+    return p;
 }
 
 // Subscribe `cb` to every relevant property on `target`. Returns a

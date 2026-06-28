@@ -79,6 +79,13 @@ export enum AnchorClip
 // the source / target nodes' position changes, not from the measure
 // pass. See "Why not MeasureOverride" in § 3.4 of
 // [src/document/connectors.md](../../document/connectors.md).
+// Default width of the invisible pointer hit band around a connector
+// route (see Shape.HitTestStrokeWidth). ~14px gives a ±7px tolerance —
+// comfortable for mouse and forgiving enough for coarse pointers without
+// swallowing clicks meant for nearby figures (figures paint on top, so
+// they win the elementsFromPoint pick where they overlap).
+const CONNECTOR_HIT_WIDTH = 14;
+
 export class Connector extends Shape
 {
     // Route applyDefaultStyle() to Style[TargetType=Connector] (the
@@ -88,6 +95,12 @@ export class Connector extends Shape
     // cap. Same pattern as Figure ([figure.ts:77-79](./figure.ts#L77)).
     static {
         Model.OverrideMetadata(Connector, Element.DefaultStyleKeyKey, { default_value: Connector });
+        // A connector route paints as a ~1-2px line but is far easier to
+        // hover / click with a forgiving target. Default the inherited
+        // Shape hit band to a comfortable width so pointer hits land
+        // within ~CONNECTOR_HIT_WIDTH/2 px of the route; consumers can
+        // override per-connector via HitTestStrokeWidth.
+        Model.OverrideMetadata(Connector, Shape.HitTestStrokeWidthKey, { default_value: CONNECTOR_HIT_WIDTH });
     }
 
     public static readonly SourceKey      = Model.RegisterProperty<ConnectorEndpoint | undefined>(

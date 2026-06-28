@@ -36,6 +36,7 @@ import {
     type DrawingContext,
 } from '../../../runtime/index.js';
 import type { Brush, Pen } from '../../../visual-engine/index.js';
+import { SolidColorBrush } from '../../../visual-engine/index.js';
 import type { Transform } from '../../../visual-engine/drawing/transform.js';
 import { Shape } from '../../../basic/shapes/shape.js';
 import { HaloShape } from '../behaviors/connector-interactions-behavior.js';
@@ -46,9 +47,10 @@ import '../routing/straight-router.js';
 
 class CapturingContext implements DrawingContext
 {
-    public transforms: Transform[] = [];
-    public geoms:      unknown[]    = [];
-    DrawGeometry(_b: Brush | undefined, _p: Pen | undefined, g: unknown): void { this.geoms.push(g); }
+    public transforms: Transform[]              = [];
+    public geoms:      unknown[]                 = [];
+    public pens:       (Pen | undefined)[]       = [];
+    DrawGeometry(_b: Brush | undefined, p: Pen | undefined, g: unknown): void { this.geoms.push(g); this.pens.push(p); }
     DrawRectangle(): void { throw new Error('not used'); }
     DrawText():      void { throw new Error('not used'); }
     PushTransform(t: Transform): void { this.transforms.push(t); }
@@ -115,5 +117,39 @@ describe('connector hover halo — paints route verbatim, never fit-scaled', () 
         const c = waypointConnector();
         const dc = renderHalo(Shape, c, new Rect(0, 0, 800, 600));
         assert.equal(dc.transforms.length, 1, 'base Shape scales 2-D geometry to fill a non-degenerate slot');
+    });
+});
+
+describe('connector hit band — forgiving pointer target', () => {
+
+    test('a Connector ships a non-zero HitTestStrokeWidth by default', () => {
+        newApplication();
+        assert.ok(waypointConnector().HitTestStrokeWidth > 0, 'connectors are hard to hit on a 1px line — band is on by default');
+    });
+
+    test('rendering a connector emits an invisible wide hit band under the visible route', () => {
+        newApplication();
+        const c = waypointConnector();
+        const dc = new CapturingContext();
+        c.Render(dc);
+        // Two passes: the transparent hit band first, then the visible route.
+        assert.equal(dc.geoms.length, 2, 'hit band + visible route');
+        const bandPen = dc.pens[0];
+        assert.ok(bandPen !== undefined, 'band carries a pen');
+        assert.equal(bandPen.Thickness, c.HitTestStrokeWidth, 'band width = HitTestStrokeWidth');
+        const brush = bandPen.Brush;
+        assert.ok(brush instanceof SolidColorBrush, 'band stroke is a solid colour');
+        assert.equal(brush.Color.A, 0, 'band is fully transparent — invisible but still hittable');
+        assert.equal(dc.geoms[0], c.Geometry, 'band paints the route geometry');
+        assert.equal(dc.geoms[1], c.Geometry, 'visible pass paints the same route geometry');
+    });
+
+    test('HitTestStrokeWidth = 0 paints only the visible route (no band)', () => {
+        newApplication();
+        const c = waypointConnector();
+        c.HitTestStrokeWidth = 0;
+        const dc = new CapturingContext();
+        c.Render(dc);
+        assert.equal(dc.geoms.length, 1, 'no band when the width is zero');
     });
 });
