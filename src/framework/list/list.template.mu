@@ -398,5 +398,17 @@ resources Lists {
     }
     Style [TargetType=ListBoxItem] {
         Template = @DefaultListBoxItem;
+        // Reactive headline ink. A string item is wrapped in a bare
+        // TextBlock with no Foreground of its own (ListBox.PrepareContainer),
+        // so it would otherwise paint via the non-reactive render-time
+        // fallback and freeze on the scheme active at first paint — the
+        // list stays the old colour after a theme switch until a re-render
+        // (e.g. a selection change) happens to repaint it. Setting
+        // TextBlock.Foreground here (DynamicResource, reactive) cascades
+        // into PART_HeadlineSlot content; PART_SupportingText keeps its own
+        // @OnSurfaceVariant (Local tier). @OnSecondaryContainer on select
+        // matches the M3 ink on the @SecondaryContainer selected-row pill.
+        TextBlock.Foreground = @OnSurface;
+        when ( IsSelected ) { TextBlock.Foreground = @OnSecondaryContainer; }
     }
 }
