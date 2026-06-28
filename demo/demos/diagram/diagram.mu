@@ -7,6 +7,24 @@
 
 resources DiagramDemo {
 
+    // ── Boolean-combine glyphs ──────────────────────────────────────
+    //
+    // The Group/Combine toolbar's set-operation icons are baked from the
+    // Material Symbols font into PathGeometry resources at COMPILE TIME
+    // (the `glyphs` keyword → one PathGeometry per entry, keyed by glyph
+    // name). The IconButtons paint true vector geometry with a theme
+    // brush — `Shape[Geometry=@join, Fill=@OnSurfaceVariant]` — instead
+    // of font-dependent TextBlock math symbols (∪ ∩ − ⊕). The Venn-style
+    // join glyphs map onto the boolean ops:
+    //
+    //   union     → @join        (both circles)
+    //   intersect → @join_inner  (overlap only)
+    //   subtract  → @join_left   (left minus overlap)
+    //   exclude   → @difference  (both minus overlap)
+    glyphs "../../assets/material-symbols-outlined.ttf" {
+        join  join_inner  join_left  difference
+    }
+
     // ── Shared Canvas ItemsPanel ────────────────────────────────────
     //
     // Canvas.MeasureOverride returns the union bounding box of its
@@ -123,20 +141,16 @@ resources DiagramDemo {
                         IconButton [Variant=Standard,
                                     Command=$nodes.CombineUnionCommand,
                                     Margin=(8,0,0,0)]{
-                            TextBlock[Text="∪", FontSize=16, FontWeight=Bold,
-                                      Foreground=@OnSurfaceVariant]
+                            Shape[Geometry=@join, Fill=@OnSurfaceVariant, Width=20, Height=20]
                         }
                         IconButton [Variant=Standard, Command=$nodes.CombineIntersectCommand]{
-                            TextBlock[Text="∩", FontSize=16, FontWeight=Bold,
-                                      Foreground=@OnSurfaceVariant]
+                            Shape[Geometry=@join_inner, Fill=@OnSurfaceVariant, Width=20, Height=20]
                         }
                         IconButton [Variant=Standard, Command=$nodes.CombineSubtractCommand]{
-                            TextBlock[Text="−", FontSize=16, FontWeight=Bold,
-                                      Foreground=@OnSurfaceVariant]
+                            Shape[Geometry=@join_left, Fill=@OnSurfaceVariant, Width=20, Height=20]
                         }
                         IconButton [Variant=Standard, Command=$nodes.CombineExcludeCommand]{
-                            TextBlock[Text="⊕", FontSize=16, FontWeight=Bold,
-                                      Foreground=@OnSurfaceVariant]
+                            Shape[Geometry=@difference, Fill=@OnSurfaceVariant, Width=20, Height=20]
                         }
                     }
                 }
