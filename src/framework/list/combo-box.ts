@@ -267,6 +267,10 @@ export class ComboBoxItemList extends ItemsControl
         // visual rides through the Style.
         const row   = new ComboBoxItem();
         const label = new TextBlock(displayString(item));
+        // Match the closed selection box's font so the dropdown row reads
+        // at the same size as what it'll show once picked (see
+        // ComboBox._applyValueFontTo / the value-font forwarding).
+        this.combo?._applyValueFontTo(label);
         row.SetChild(label);
         return row;
     }
@@ -438,6 +442,36 @@ export class ComboBox extends Selector
         this.AttachVisual(this._selectionBox);
 
         this.refreshSelectionText();
+
+        // Value-font forwarding. The closed selection text (PART_SelectionText)
+        // sets a Local FontSize in the template, and the dropdown rows live in
+        // a re-parented overlay popup the ComboBox's inherited font never
+        // reaches — so neither honours a plain inherited `TextBlock.FontSize`
+        // override. Forward it explicitly: a `TextBlock.FontSize=…` set on the
+        // ComboBox pushes onto the selection text (Local, beats the template's
+        // own Local size), and the rows copy that same font — so the closed
+        // box and the open list always match, controlled by one property.
+        this.AddPropertyChangedListener(TextBlock.FontSizeKey, () => this._forwardValueFont());
+    }
+
+    /** @internal — copy the closed selection's effective font onto a popup
+     *  row label so the dropdown always matches the selection box. Called by
+     *  ComboBoxItemList as it builds each row. */
+    public _applyValueFontTo(label: TextBlock): void
+    {
+        label.FontFamily = this._selectionText.FontFamily;
+        label.FontSize   = this._selectionText.FontSize;
+        label.FontWeight = this._selectionText.FontWeight;
+    }
+
+    private _forwardValueFont(): void
+    {
+        this._selectionText.FontSize = this.get_property_value(TextBlock.FontSizeKey) as number;
+        for (const row of this._popupList.logicalChildren)
+        {
+            const label = (row as ComboBoxItem).child;
+            if (label instanceof TextBlock) this._applyValueFontTo(label);
+        }
     }
 
     // Items / SelectedItem / SelectedIndex / SelectedValue / SelectedValuePath

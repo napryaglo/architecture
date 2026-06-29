@@ -10,6 +10,7 @@ import {
 import { ClickableBorder } from './clickable-border.js';
 import { TemplatedControl } from './templated-control.js';
 import { TextBox } from './text-box.js';
+import { TextBlock } from './text-block.js';
 
 // Resource-dictionary key — matches the `x:key` literal in
 // controls.template.mu's DefaultSpinEdit entry.
@@ -149,6 +150,16 @@ export class SpinEdit extends TemplatedControl
         // centred vertically — text reads as centred in the field
         // regardless of how much taller the chrome is than the line.
         this._textBox.VerticalAlignment = VerticalAlignment.Center;
+
+        // Value-font forwarding. The inner TextBox's default Style pins its
+        // FontSize (M3 Body Large) at the Style tier, which out-ranks a plain
+        // inherited `TextBlock.FontSize` set on the SpinEdit. Forward it
+        // explicitly (Local on the inner TextBox) so a `TextBlock.FontSize=…`
+        // on the SpinEdit actually resizes the value text. No-ops until the
+        // consumer sets one — the TextBox's own Style default stands.
+        this.AddPropertyChangedListener(TextBlock.FontSizeKey, () => {
+            this._textBox.FontSize = this.get_property_value(TextBlock.FontSizeKey) as number;
+        });
 
         // ── Spin buttons ───────────────────────────────────────────
         // Commit the in-progress typed text first so the increment

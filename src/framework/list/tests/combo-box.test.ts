@@ -194,6 +194,44 @@ describe('ComboBox — popup behaviour', () => {
             'committing a selection should close the dropdown');
     });
 
+    test('value-font forwarding: TextBlock.FontSize drives selection + dropdown rows', () => {
+        const cb = new ComboBox();
+        cb.set_property_value(TextBlock.FontSizeKey, 12);   // M3 "value font" override
+        cb.Items = ['Apple', 'Pear'];
+        const target = mountInTarget(cb);
+        cb.IsDropDownOpen = true;
+        target.Flush();
+
+        const selBox  = cb.visualChildren[0] as unknown as { FindName(n: string): Visual | undefined };
+        const selText = selBox.FindName('PART_SelectionText') as TextBlock;
+        assert.equal(selText.FontSize, 12, 'closed selection text honours the override');
+
+        const rows = popupItems(target);
+        assert.equal(rows.length, 2);
+        for (const row of rows)
+        {
+            const label = row.visualChildren[0] as TextBlock;
+            assert.equal(label.FontSize, 12, 'each dropdown row matches the selection');
+        }
+    });
+
+    test('dropdown rows match the selection font by default (consistency fix)', () => {
+        const cb = new ComboBox();
+        cb.Items = ['Apple', 'Pear'];
+        const target = mountInTarget(cb);
+        cb.IsDropDownOpen = true;
+        target.Flush();
+
+        const selBox  = cb.visualChildren[0] as unknown as { FindName(n: string): Visual | undefined };
+        const selText = selBox.FindName('PART_SelectionText') as TextBlock;
+        const rows = popupItems(target);
+        for (const row of rows)
+        {
+            const label = row.visualChildren[0] as TextBlock;
+            assert.equal(label.FontSize, selText.FontSize, 'row size == selection size');
+        }
+    });
+
     test('Clicking the click-away scrim dismisses the dropdown', () => {
         const cb = new ComboBox();
         cb.Items = ['Apple', 'Pear'];

@@ -14,6 +14,7 @@ import {
 import { HeadlessTarget } from '../../visual-engine/index.js';
 import { SpinEdit } from '../spin-edit.js';
 import { TextBox } from '../text-box.js';
+import { TextBlock } from '../text-block.js';
 import { ClickableBorder } from '../clickable-border.js';
 
 function pointer(overrides: Partial<PointerEventInit> = {}): PointerEventInit
@@ -70,6 +71,29 @@ function fixture(): {
     const down  = (sp as unknown as { _downButton: ClickableBorder })._downButton;
     return { sp, target, inner, up, down };
 }
+
+describe('SpinEdit — value font forwarding', () => {
+    beforeEach(() => { initTestApp(); });
+
+    test('TextBlock.FontSize on the SpinEdit forwards to the inner TextBox', () => {
+        const sp = new SpinEdit();
+        sp.set_property_value(TextBlock.FontSizeKey, 12);
+        const target = new HeadlessTarget(200, 60);
+        target.Content = sp;
+        target.Flush();
+        const inner = (sp as unknown as { _textBox: TextBox })._textBox;
+        assert.equal(inner.FontSize, 12, 'inner editor honours the override');
+    });
+
+    test('without an override the inner TextBox keeps its Style default (not 12)', () => {
+        const sp = new SpinEdit();
+        const target = new HeadlessTarget(200, 60);
+        target.Content = sp;
+        target.Flush();
+        const inner = (sp as unknown as { _textBox: TextBox })._textBox;
+        assert.notEqual(inner.FontSize, 12, 'no forward when unset — TextBox Style stands');
+    });
+});
 
 describe('SpinEdit — defaults', () => {
     beforeEach(() => { initTestApp(); });

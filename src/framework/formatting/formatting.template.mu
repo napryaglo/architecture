@@ -645,6 +645,7 @@ resources Formatting {
                            Margin=(0,0,@Spacing3,@Spacing3)]
                 SpinEdit x:name="PART_Thickness"
                          [Grid.Row=1, Grid.Column=1,
+                          TextBlock.FontSize=@BodySmallSize,
                           HorizontalAlignment=Left, MaxWidth=120, Width=120,
                           Minimum=0, Maximum=24, SmallChange=0.5, LargeChange=2,
                           DecimalPlaces=1,
@@ -695,6 +696,7 @@ resources Formatting {
                            Margin=(0,0,@Spacing3,0)]
                 SpinEdit x:name="PART_MiterLimit"
                          [Grid.Row=5, Grid.Column=1,
+                          TextBlock.FontSize=@BodySmallSize,
                           HorizontalAlignment=Left, MaxWidth=120, Width=120,
                           Minimum=1, Maximum=20, SmallChange=0.5, LargeChange=2,
                           DecimalPlaces=1]
