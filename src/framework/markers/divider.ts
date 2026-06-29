@@ -1,5 +1,5 @@
 import { MetaData, Model, Element } from '../../runtime/index.js';
-import { Control } from '../base/control.js';
+import { TemplatedControl } from '../../basic/templated-control.js';
 import { Orientation } from '../../basic/panels/stack-panel.js';
 
 // M3 Divider — 1dp rule that separates sibling content along either
@@ -9,13 +9,15 @@ import { Orientation } from '../../basic/panels/stack-panel.js';
 // Background=@OutlineVariant]` pattern (called out in
 // docs/m3-modernization-plan.md A.4) so consumers get a proper
 // control + a named token surface for the inset / colour. Reading
-// down from Control rather than Border because the Divider doesn't
-// host slotted Content; it paints a flat rule and that's it.
+// down from TemplatedControl (not ContentControl) because the Divider
+// projects a ControlTemplate but hosts no slotted Content; it paints a
+// flat rule and that's it. (Control alone has no template-instance
+// machinery, so a Divider based on it never materializes its rule.)
 //
 // Orientation = Horizontal (default) draws a 1dp tall rule that
 // stretches across the parent's width; Vertical draws a 1dp wide
 // rule that stretches across the parent's height.
-export class Divider extends Control
+export class Divider extends TemplatedControl
 {
     public static readonly OrientationKey = Model.RegisterProperty<Orientation>(
         Divider, 'Orientation', Orientation.Horizontal,
@@ -23,6 +25,14 @@ export class Divider extends Control
 
     public get Orientation(): Orientation { return this.get_property_value(Divider.OrientationKey); }
     public set Orientation(v: Orientation) { this.set_property_value(Divider.OrientationKey, v); }
+
+    constructor()
+    {
+        super();
+        // Resolve + apply the default Style so the PART_Rule Border
+        // template materializes (TemplatedControl measures/arranges it).
+        this.applyDefaultStyle();
+    }
 
     static {
         Model.OverrideMetadata(

@@ -6,10 +6,6 @@
 
 resources Formatting {
 
-    // Shared 1-DIP divider pen — drawn by the horizontal Line separators
-    // that sit under each section header (Fill / Line / Connector ends).
-    Pen x:key="SeparatorPen" [Brush=@OutlineVariant, Thickness=1]
-
     // ── ColorPicker: closed chrome ─────────────────────────────────
     // A ComboBox-style trigger: rounded outlined border housing a small
     // swatch (Background bound to the templated parent's SwatchBrush),
@@ -620,8 +616,7 @@ resources Formatting {
             // and Fill/Line read with identical chrome.
             TextBlock [Style=@TitleSmall, Text="Line",
                        Foreground=@OnSurface, Margin=(0,0,0,@Spacing2)]
-            Line [Orientation=Horizontal, Stroke=@SeparatorPen,
-                  Margin=(0,0,0,@Spacing3)]
+            Divider [Margin=(0,0,0,@Spacing3)]
             // Stroke brush — the SAME tabbed variant editor the Fill
             // section uses (Solid / gradient / pattern / …), inline rather
             // than a dropdown. Header="" suppresses its own "Fill" title
@@ -750,9 +745,7 @@ resources Formatting {
             // Header divider — FillEditor.ts collapses this in lock-step
             // with PART_Header (so the embedded Header="" brush editor in
             // the Line section shows neither title nor rule).
-            Line x:name="PART_HeaderRule"
-                 [Orientation=Horizontal, Stroke=@SeparatorPen,
-                  Margin=(0,0,0,@Spacing3)]
+            Divider x:name="PART_HeaderRule" [Margin=(0,0,0,@Spacing3)]
             // ── Variant tabs ────────────────────────────────────
             // ClickableBorder for each of the six variants. Default
             // background is @Surface; the Style triggers below flip
@@ -1195,8 +1188,7 @@ resources Formatting {
                        [Orientation=Vertical, Margin=(0,@Spacing4,0,0)] {
                 TextBlock [Style=@TitleSmall, Text="Connector ends",
                            Foreground=@OnSurface, Margin=(0,0,0,@Spacing2)]
-                Line [Orientation=Horizontal, Stroke=@SeparatorPen,
-                      Margin=(0,0,0,@Spacing3)]
+                Divider [Margin=(0,0,0,@Spacing3)]
                 Grid [MaxWidth=300] {
                     ColumnDefinitions {
                         ColumnDefinition [Width=GridLength.Auto]
