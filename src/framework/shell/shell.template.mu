@@ -35,13 +35,15 @@ resources Shells {
     // unused region simply collapses.
     Template x:key="DefaultEditorShell" [TargetType=EditorShell] {
         Border [Background=@Surface] {
-            DockPanel [LastChildFill=true] {
-                Border     x:name="PART_HeaderHost"   [DockPanel.Dock=Top]
-                StackPanel x:name="PART_CommandHost"  [DockPanel.Dock=Top,    Orientation=Vertical]
-                Border     x:name="PART_StatusHost"   [DockPanel.Dock=Bottom]
-                Border     x:name="PART_NavHost"      [DockPanel.Dock=Left]
-                Border     x:name="PART_InspectorHost" [DockPanel.Dock=Right]
-                Border     x:name="PART_ContentHost"
+            AdornerDecorator {
+                DockPanel [LastChildFill=true] {
+                    Border     x:name="PART_HeaderHost"   [DockPanel.Dock=Top]
+                    StackPanel x:name="PART_CommandHost"  [DockPanel.Dock=Top,    Orientation=Vertical]
+                    Border     x:name="PART_StatusHost"   [DockPanel.Dock=Bottom]
+                    Border     x:name="PART_NavHost"      [DockPanel.Dock=Left]
+                    Border     x:name="PART_InspectorHost" [DockPanel.Dock=Right]
+                    Border     x:name="PART_ContentHost"
+                }
             }
         }
     }
