@@ -15,7 +15,6 @@ import {
 import { Control } from './control.js';
 import { CollectionViewGroup } from '../../basic/collections/collection-view-group.js';
 import { ContentPresenter } from '../../basic/templates/content-presenter.js';
-import { ControlTemplate, type TemplateInstance } from '../../basic/templates/control-template.js';
 import { DataTemplate } from '../../basic/templates/data-template.js';
 import { TextBlock } from '../../basic/text-block.js';
 import { GroupStyle } from '../../basic/collections/group-style.js';
@@ -156,7 +155,8 @@ export class ItemsControl extends Control
     public static readonly ItemContainerStyleKey         = Model.RegisterProperty<Style | undefined>(                                                             ItemsControl, 'ItemContainerStyle',         undefined, MetaData.Measure);
     public static readonly ItemContainerStyleSelectorKey = Model.RegisterProperty<ItemContainerStyleSelector | undefined>(                                        ItemsControl, 'ItemContainerStyleSelector', undefined, MetaData.Measure);
     public static readonly ItemsPanelKey                 = Model.RegisterProperty<ItemsPanelTemplate | ItemsPanelFactory | undefined>(                            ItemsControl, 'ItemsPanel',                 undefined, MetaData.Measure);
-    public static readonly TemplateKey                   = Model.RegisterProperty<ControlTemplate | undefined>(                                                   ItemsControl, 'Template',                   undefined, MetaData.Measure);
+    // Template DP is inherited from Control (the optional chrome wrapper
+    // that hosts the items panel inside an ItemsPresenter).
     // AlternationCount = 0 → AlternationIndex unused (every container
     // gets 0). >0 → AlternationIndex cycles 0..N-1 across containers in
     // items order. WPF parity.
@@ -246,12 +246,11 @@ export class ItemsControl extends Control
     // subscription so we can tear them down independently.
     private _groupDescSubscription: (() => void) | undefined;
 
-    // When a ControlTemplate is applied, this holds the apply result:
-    // root + presenter for surrounding chrome. The items panel ends
-    // up as a visual child of the ItemsPresenter inside (when one is
-    // present); without a template the panel is a direct visual
-    // child of the ItemsControl.
-    private _templateInstance: TemplateInstance | undefined;
+    // _templateInstance (the applied ControlTemplate's root + presenter
+    // for surrounding chrome) is inherited from Control as a protected
+    // field. The items panel ends up as a visual child of the
+    // ItemsPresenter inside it (when one is present); without a template
+    // the panel is a direct visual child of the ItemsControl.
     private _itemsPresenter: ItemsPresenter | undefined;
     // Generated containers, in the same order as their corresponding
     // items (for non-virtualizing scenarios). Source of truth for
@@ -817,10 +816,9 @@ export class ItemsControl extends Control
                     this.materializeItemsPanel(newValue as ItemsPanelTemplate | ItemsPanelFactory);
                 }
                 return;
-            case 'Template':
-                if (oldValue === newValue) return;
-                this.rebuildTemplate();
-                return;
+            // 'Template' is handled by Control.OnPropertyChanged (super),
+            // which calls this.rebuildTemplate() — ItemsControl's override
+            // re-hosts the items panel inside the new ItemsPresenter.
         }
     }
 
@@ -1142,28 +1140,11 @@ export class ItemsControl extends Control
         this.rebuildContainers();
     }
 
-    public get Template(): ControlTemplate | undefined
-    {
-        return this.get_property_value(ItemsControl.TemplateKey);
-    }
-
-    // Optional ControlTemplate that wraps the items panel in
-    // surrounding chrome (header, footer, scroll viewer, etc.). The
-    // template must contain an ItemsPresenter — when applied, the
-    // items panel is slotted into that presenter rather than parented
-    // directly under this ItemsControl. Without a Template the panel
-    // is hosted directly (legacy behavior).
-    //
-    // Re-templating preserves the items panel instance and its
-    // realized containers: the panel is moved from the old presenter
-    // (or direct slot) into the new presenter.
-    public set Template(value: ControlTemplate | undefined)
-    {
-        // Side effect (template teardown + re-apply, panel re-host) is
-        // in OnPropertyChanged so markup writes and binding pushes
-        // produce the same effect as this JS setter.
-        this.set_property_value(ItemsControl.TemplateKey, value);
-    }
+    // Template get/set are inherited from Control. ItemsControl's own
+    // rebuildTemplate override re-hosts the items panel inside the new
+    // template's ItemsPresenter (preserving the panel instance and its
+    // realized containers across the swap); without a Template the panel
+    // is hosted directly under this ItemsControl.
 
     public get ItemsPanel(): ItemsPanelTemplate | ItemsPanelFactory | undefined
     {
@@ -1177,7 +1158,7 @@ export class ItemsControl extends Control
     // directly) and re-parented under the new presenter (or restored
     // as a direct child if the new template has no ItemsPresenter or
     // there's no new Template at all).
-    private rebuildTemplate(): void
+    protected override rebuildTemplate(): void
     {
         const panel = this._itemsPanel;
 
