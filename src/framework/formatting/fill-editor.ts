@@ -159,6 +159,7 @@ export class FillEditor extends TemplatedControl
 
     private _syncing = false;
     private _headerText: TextBlock | undefined;
+    private _headerRule: Visual    | undefined;
     private _tabSolid:   Border    | undefined;
     private _tabNone:    Border    | undefined;
     private _tabLinear:  Border    | undefined;
@@ -275,12 +276,18 @@ export class FillEditor extends TemplatedControl
         if (this._headerText === undefined) return;
         const header = this.Header;
         this._headerText.Text       = header;
-        this._headerText.Visibility = header.length > 0 ? Visibility.Visible : Visibility.Collapsed;
+        const vis = header.length > 0 ? Visibility.Visible : Visibility.Collapsed;
+        this._headerText.Visibility = vis;
+        // The header rule tracks the header: an embedded editor reusing
+        // this template with Header="" (the Line section's stroke brush)
+        // shows neither the title nor the divider under it.
+        if (this._headerRule !== undefined) this._headerRule.Visibility = vis;
     }
 
     private adoptTemplateParts(): void
     {
         this._headerText = this.GetTemplateChild('PART_Header')     as TextBlock | undefined;
+        this._headerRule = this.GetTemplateChild('PART_HeaderRule') as Visual    | undefined;
         this.refreshHeader();
         this._tabNone    = this.GetTemplateChild('PART_TabNone')    as Border | undefined;
         this._tabSolid   = this.GetTemplateChild('PART_TabSolid')   as Border | undefined;
