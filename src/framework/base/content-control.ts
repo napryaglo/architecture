@@ -172,26 +172,9 @@ export class ContentControl extends Control
         return c instanceof Visual ? [c] : [];
     }
 
-    // Inheritance propagation: refresh the Content slot AND the
-    // template-internal subtree. The template root isn't a logical
-    // child of this control (its logicalParent stays undefined), but
-    // its walk_inherited falls through templatedParent → us, so it
-    // needs to know about value changes too. Pushing the refresh into
-    // its subtree triggers per-node _refresh_inherited, which re-reads
-    // through the templatedParent fallback.
-    protected override propagate_inheritance_to_logical_children(): void
-    {
-        const c = this.Content;
-        if (c instanceof Visual) c['_refresh_inheritance_subtree']();
-        this._templateInstance?.root['_refresh_inheritance_subtree']();
-    }
-
-    protected override propagate_inheritance_for_logical_children(descriptor: PropertyDescriptor): void
-    {
-        const c = this.Content;
-        if (c instanceof Visual) c['_refresh_inherited'](descriptor);
-        this._templateInstance?.root['_refresh_inherited'](descriptor);
-    }
+    // Inheritance into both the Content slot (a logical child) and the
+    // template root (a visual child) is handled generically by
+    // Element.forEachInheritanceChild — no per-control bridge.
 
     // Target propagation rides the VISUAL tree, so it cascades through
     // the template root (which is the control's visual child after

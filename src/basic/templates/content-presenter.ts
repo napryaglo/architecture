@@ -88,22 +88,10 @@ export class ContentPresenter extends Element
         this.InvalidateMeasure();
     }
 
-    // Bridge property-value inheritance to the slotted content. The
-    // content is our VISUAL child but NOT a logical child
-    // (logicalChildren is []), so the normal logical cascade would stop
-    // here. Forward inherited-property refreshes to it so values set
-    // inside the host ControlTemplate stay reactive on the content.
-    protected override propagate_inheritance_for_logical_children(descriptor: PropertyDescriptor): void
-    {
-        super.propagate_inheritance_for_logical_children(descriptor);
-        this._content?._refresh_inherited(descriptor);
-    }
-
-    protected override propagate_inheritance_to_logical_children(): void
-    {
-        super.propagate_inheritance_to_logical_children();
-        this._content?._refresh_inheritance_subtree();
-    }
+    // The slotted content is our VISUAL child (visualChildren = [_content]),
+    // so Element.forEachInheritanceChild reaches it generically — values
+    // set inside the host ControlTemplate stay reactive on the content
+    // with no per-presenter bridge.
 
     // Cascade host (`target`) to the slotted content. ContentPresenter's
     // _content is its only visual child, but Visual's default

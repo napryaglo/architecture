@@ -191,17 +191,9 @@ export class PageView extends TemplatedControl
         return c instanceof Visual ? [c] : [];
     }
 
-    protected override propagate_inheritance_to_logical_children(): void
-    {
-        const c = this.Content;
-        if (c instanceof Visual) c['_refresh_inheritance_subtree']();
-    }
-
-    protected override propagate_inheritance_for_logical_children(d: PropertyDescriptor): void
-    {
-        const c = this.Content;
-        if (c instanceof Visual) c['_refresh_inherited'](d);
-    }
+    // Inheritance into Content (a logical child) and the template root
+    // (a visual child, via TemplatedControl) is handled generically by
+    // Element.forEachInheritanceChild.
 
     protected override OnPropertyChanged(
         descriptor: PropertyDescriptor,

@@ -1331,26 +1331,9 @@ export class ItemsControl extends Control
         return this._containers;
     }
 
-    // Inheritance propagation across logical children (the
-    // containers), AND through to the items panel as a template-
-    // internal visual (same pattern as ContentControl + template root).
-    protected override propagate_inheritance_to_logical_children(): void
-    {
-        for (const c of this._containers)
-        {
-            c['_refresh_inheritance_subtree']();
-        }
-        this._itemsPanel?.['_refresh_inheritance_subtree']();
-    }
-
-    protected override propagate_inheritance_for_logical_children(descriptor: PropertyDescriptor): void
-    {
-        for (const c of this._containers)
-        {
-            c['_refresh_inherited'](descriptor);
-        }
-        this._itemsPanel?.['_refresh_inherited'](descriptor);
-    }
+    // Inheritance into the containers (logical children) and the items
+    // panel / template root (visual children) is handled generically by
+    // Element.forEachInheritanceChild — no per-control bridge.
 
     // Target propagation rides the visual tree, so it hops to either
     // the template root (which contains the items panel as a

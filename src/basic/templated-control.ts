@@ -118,40 +118,10 @@ export class TemplatedControl extends Element
         if (r !== undefined) (r as unknown as { SetTarget(t: unknown): void }).SetTarget(this['target']);
     }
 
-    // ── Inheritance bridge into the template subtree ──────────────────
-    //
-    // The template root is attached as a VISUAL child (AttachVisual), so
-    // the base value-inheritance cascade — which walks logical + overlay
-    // children — never reaches it. Without this bridge a value inherited
-    // by the control (TextBlock.Foreground, FontSize, ThemeManager.Density,
-    // …) flows to the control but stops there: the template parts beneath
-    // it keep the default. Re-dispatch the cascade onto the template root,
-    // whose OnPropertyChanged then carries it down its own logical subtree
-    // — including parts that are themselves nested templated controls
-    // (each re-bridges through this same override).
-    //
-    // DataContext is deliberately excluded, matching the framework's
-    // "inherit everything but DataContext into template-placed content"
-    // rule: a template part resolves DataContext through its
-    // templatedParent bridge in walk_inherited, never the value cascade.
-    protected override propagate_inheritance_for_logical_children(descriptor: PropertyDescriptor): void
-    {
-        super.propagate_inheritance_for_logical_children(descriptor);
-        if (descriptor.Name === 'DataContext') return;
-        this._templateInstance?.root._refresh_inherited(descriptor);
-    }
-
-    protected override propagate_inheritance_to_logical_children(): void
-    {
-        super.propagate_inheritance_to_logical_children();
-        const r = this._templateInstance?.root;
-        if (r === undefined) return;
-        for (const descriptor of Visual._collect_inheritable_descriptors(r.constructor))
-        {
-            if (descriptor.Name === 'DataContext') continue;
-            r._refresh_inherited(descriptor);
-        }
-    }
+    // Inheritance into the template subtree is handled generically by
+    // Element.forEachInheritanceChild — the template root is a visual
+    // child of this control, so the unified cascade reaches it (and every
+    // nested templated part) without a per-control bridge.
 
     protected override MeasureOverride(availableSize: Size): Size
     {

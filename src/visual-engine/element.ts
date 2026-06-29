@@ -487,7 +487,7 @@ export class Element extends Visual implements ITriggerHost
             // Element's `_refresh_inherited` override on each
             // descendant; plain Visual descendants no-op via Visual's
             // stub.
-            this.propagate_inheritance_for_logical_children(descriptor);
+            this.propagate_inheritance_for_children(descriptor);
             this.forEachOverlayChild(c => c._refresh_inherited(descriptor));
             // Ambient resource triggers (§ 17.1) — ThemeManager
             // registers Scheme / Theme as ambient-resource-trigger
@@ -900,20 +900,47 @@ export class Element extends Visual implements ITriggerHost
         {
             this._refresh_inherited(descriptor);
         }
-        this.propagate_inheritance_to_logical_children();
+        this.propagate_inheritance_to_children();
         // Overlay children participate alongside logical children —
         // they're the same logical tree from the popup's perspective.
         this.forEachOverlayChild(c => c._refresh_inheritance_subtree());
     }
 
-    protected propagate_inheritance_to_logical_children(): void
+    // Children that participate in property-value inheritance from this
+    // node — the UNION of logical children and visual children, deduped
+    // by identity. Logical children are the authored content model;
+    // visual-only children are template-placed parts (a templated
+    // control's root, a ContentPresenter's slotted content, an items
+    // panel) that hang off `this` visually but never became logical
+    // children. Both must observe an inherited-value change, so the
+    // cascade fans out to both HERE, in one place — no per-control
+    // override.
+    //
+    // DataContext is deliberately NOT special-cased: it propagates to
+    // every child, and each child re-resolves it through walk_inherited,
+    // which routes DataContext via the logical / templatedParent chain
+    // only (the visual-parent fallback still excludes it). So pushing the
+    // refresh to a visual-only child never lets DataContext leak across
+    // raw visual nesting — the read side keeps that invariant.
+    protected forEachInheritanceChild(fn: (child: Element) => void): void
     {
-        this.forEachLogicalChild(c => c._refresh_inheritance_subtree());
+        const seen = new Set<Visual>();
+        const visit = (c: Visual): void =>
+        {
+            if (c instanceof Element && !seen.has(c)) { seen.add(c); fn(c); }
+        };
+        for (const c of this.logicalChildren) visit(c);
+        for (const c of this.visualChildren)  visit(c);
     }
 
-    protected propagate_inheritance_for_logical_children(descriptor: PropertyDescriptor): void
+    protected propagate_inheritance_to_children(): void
     {
-        this.forEachLogicalChild(c => c._refresh_inherited(descriptor));
+        this.forEachInheritanceChild(c => c._refresh_inheritance_subtree());
+    }
+
+    protected propagate_inheritance_for_children(descriptor: PropertyDescriptor): void
+    {
+        this.forEachInheritanceChild(c => c._refresh_inherited(descriptor));
     }
 
     // ── Logical-tree attach / detach (§ Phase B / B4.3) ──────────────

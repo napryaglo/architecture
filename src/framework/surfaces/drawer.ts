@@ -341,15 +341,8 @@ export class Drawer extends Control
         return c !== undefined ? [c] : [];
     }
 
-    protected override propagate_inheritance_to_logical_children(): void
-    {
-        this.Content?.['_refresh_inheritance_subtree']();
-    }
-
-    protected override propagate_inheritance_for_logical_children(descriptor: PropertyDescriptor): void
-    {
-        this.Content?.['_refresh_inherited'](descriptor);
-    }
+    // Inheritance into Content (a logical child) and the pane (a visual
+    // child) is handled generically by Element.forEachInheritanceChild.
 
     // Target propagation hooks the lifecycle moments where the Drawer
     // enters / leaves a tree:
