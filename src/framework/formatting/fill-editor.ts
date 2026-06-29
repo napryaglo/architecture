@@ -29,6 +29,7 @@ import { Border } from '../../basic/border.js';
 import { Slider } from '../../basic/slider.js';
 import { SpinEdit } from '../../basic/spin-edit.js';
 import { TextBox } from '../../basic/text-box.js';
+import { TextBlock } from '../../basic/text-block.js';
 import { ColorPicker } from './color-picker.js';
 import { ComboBox } from '../list/combo-box.js';
 
@@ -71,6 +72,11 @@ export class FillEditor extends TemplatedControl
     public static readonly FillKey    = Model.RegisterProperty<Brush | undefined>(FillEditor, 'Fill',    undefined,                MetaData.None | MetaData.BindsTwoWayByDefault);
     public static readonly VariantKey = Model.RegisterProperty<FillEditorVariant>(FillEditor, 'Variant', FillEditorVariant.Solid,  MetaData.None);
     public static readonly FillOpacityKey = Model.RegisterProperty<number>(       FillEditor, 'FillOpacity', 100,                  MetaData.None);
+    // Section header text shown above the variant tabs. Defaults to "Fill";
+    // set to "" to suppress the header entirely (e.g. when the editor is
+    // embedded under another section's title, like the Line section reusing
+    // this tabbed editor for its stroke brush).
+    public static readonly HeaderKey = Model.RegisterProperty<string>(           FillEditor, 'Header',      'Fill',                MetaData.None);
     // Style trigger picks the variant body and writes it here.
     public static readonly BodyTemplateKey = Model.RegisterProperty<ControlTemplate | undefined>(FillEditor, 'BodyTemplate', undefined, MetaData.None);
 
@@ -107,6 +113,8 @@ export class FillEditor extends TemplatedControl
     public set Variant(v: FillEditorVariant) { this.set_property_value(FillEditor.VariantKey, v); }
     public get FillOpacity(): number         { return this.get_property_value(FillEditor.FillOpacityKey); }
     public set FillOpacity(v: number)        { this.set_property_value(FillEditor.FillOpacityKey, v); }
+    public get Header(): string              { return this.get_property_value(FillEditor.HeaderKey); }
+    public set Header(v: string)             { this.set_property_value(FillEditor.HeaderKey, v); }
     public get BodyTemplate(): ControlTemplate | undefined  { return this.get_property_value(FillEditor.BodyTemplateKey); }
     public set BodyTemplate(v: ControlTemplate | undefined) { this.set_property_value(FillEditor.BodyTemplateKey, v); }
 
@@ -150,6 +158,7 @@ export class FillEditor extends TemplatedControl
     }
 
     private _syncing = false;
+    private _headerText: TextBlock | undefined;
     private _tabSolid:   Border    | undefined;
     private _tabNone:    Border    | undefined;
     private _tabLinear:  Border    | undefined;
@@ -215,6 +224,11 @@ export class FillEditor extends TemplatedControl
             this.applyBodyTemplate();
             return;
         }
+        if (name === 'Header')
+        {
+            this.refreshHeader();
+            return;
+        }
         if (name === 'Fill')
         {
             if (this._syncing) return;
@@ -252,8 +266,22 @@ export class FillEditor extends TemplatedControl
         finally { this._syncing = false; }
     }
 
+    // Apply the Header DP to PART_Header: set its text and collapse the
+    // row entirely when Header is empty (so an embedded editor reusing
+    // this template — the Line section's stroke brush — doesn't show a
+    // second section title under the owning "Line" header).
+    private refreshHeader(): void
+    {
+        if (this._headerText === undefined) return;
+        const header = this.Header;
+        this._headerText.Text       = header;
+        this._headerText.Visibility = header.length > 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
     private adoptTemplateParts(): void
     {
+        this._headerText = this.GetTemplateChild('PART_Header')     as TextBlock | undefined;
+        this.refreshHeader();
         this._tabNone    = this.GetTemplateChild('PART_TabNone')    as Border | undefined;
         this._tabSolid   = this.GetTemplateChild('PART_TabSolid')   as Border | undefined;
         this._tabLinear  = this.GetTemplateChild('PART_TabLinear')  as Border | undefined;

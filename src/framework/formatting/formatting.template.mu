@@ -601,6 +601,13 @@ resources Formatting {
             // and Fill/Line read with identical chrome.
             TextBlock [Style=@TitleSmall, Text="Line",
                        Foreground=@OnSurface, Margin=(0,0,0,@Spacing3)]
+            // Stroke brush — the SAME tabbed variant editor the Fill
+            // section uses (Solid / gradient / pattern / …), inline rather
+            // than a dropdown. Header="" suppresses its own "Fill" title
+            // since the "Line" header above already names the section.
+            // PenEditor.ts two-way-wires PART_BrushEditor.Fill ↔ Brush.
+            FillEditor x:name="PART_BrushEditor"
+                       [ Header = "", Margin = (0,0,0,@Spacing4) ]
             // Two-column property grid — left column Auto-sized to the
             // widest label, right column takes the rest. Each editor row
             // is its own RowDefinition. The Miter limit row's label +
@@ -624,27 +631,18 @@ resources Formatting {
                     RowDefinition [Height=GridLength.Auto]
                     RowDefinition [Height=GridLength.Auto]
                     RowDefinition [Height=GridLength.Auto]
-                    RowDefinition [Height=GridLength.Auto]
                 }
-                // Brush
-                TextBlock [Grid.Row=0, Grid.Column=0,
-                           Style=@LabelSmall, Text="Brush",
-                           Foreground=@OnSurface,
-                           VerticalAlignment=Center,
-                           Margin=(0,0,@Spacing3,@Spacing3)]
-                BrushPicker x:name="PART_BrushPicker"
-                            [Grid.Row=0, Grid.Column=1,
-                             Margin=(0,0,0,@Spacing3)]
                 // Thickness — narrow numeric SpinEdit, kept compact
                 // (MaxWidth=120) so the editor cell stays consistent
-                // with the Fill section's transparency input.
-                TextBlock [Grid.Row=1, Grid.Column=0,
+                // with the Fill section's transparency input. (The stroke
+                // brush moved out of this grid into PART_BrushEditor above.)
+                TextBlock [Grid.Row=0, Grid.Column=0,
                            Style=@LabelSmall, Text="Thickness",
                            Foreground=@OnSurface,
                            VerticalAlignment=Center,
                            Margin=(0,0,@Spacing3,@Spacing3)]
                 SpinEdit x:name="PART_Thickness"
-                         [Grid.Row=1, Grid.Column=1,
+                         [Grid.Row=0, Grid.Column=1,
                           TextBlock.FontSize=@BodySmallSize,
                           HorizontalAlignment=Left, MaxWidth=120, Width=120,
                           Minimum=0, Maximum=24, SmallChange=0.5, LargeChange=2,
@@ -654,33 +652,33 @@ resources Formatting {
                 // PenEditor.adoptTemplateParts (see DASH_OPTIONS there).
                 // DisplayMemberPath = "Label" so the dropdown shows the
                 // human strings; the editor reads .Value back.
-                TextBlock [Grid.Row=2, Grid.Column=0,
+                TextBlock [Grid.Row=1, Grid.Column=0,
                            Style=@LabelSmall, Text="Dash",
                            Foreground=@OnSurface,
                            VerticalAlignment=Center,
                            Margin=(0,0,@Spacing3,@Spacing3)]
                 ComboBox x:name="PART_Dash"
-                         [Grid.Row=2, Grid.Column=1,
+                         [Grid.Row=1, Grid.Column=1,
                           TextBlock.FontSize=@BodySmallSize, DisplayMemberPath="Label",
                           Margin=(0,0,0,@Spacing3)]
                 // Cap
-                TextBlock [Grid.Row=3, Grid.Column=0,
+                TextBlock [Grid.Row=2, Grid.Column=0,
                            Style=@LabelSmall, Text="Cap",
                            Foreground=@OnSurface,
                            VerticalAlignment=Center,
                            Margin=(0,0,@Spacing3,@Spacing3)]
                 ComboBox x:name="PART_Cap"
-                         [Grid.Row=3, Grid.Column=1,
+                         [Grid.Row=2, Grid.Column=1,
                           TextBlock.FontSize=@BodySmallSize, DisplayMemberPath="Label",
                           Margin=(0,0,0,@Spacing3)]
                 // Join
-                TextBlock [Grid.Row=4, Grid.Column=0,
+                TextBlock [Grid.Row=3, Grid.Column=0,
                            Style=@LabelSmall, Text="Join",
                            Foreground=@OnSurface,
                            VerticalAlignment=Center,
                            Margin=(0,0,@Spacing3,@Spacing3)]
                 ComboBox x:name="PART_Join"
-                         [Grid.Row=4, Grid.Column=1,
+                         [Grid.Row=3, Grid.Column=1,
                           TextBlock.FontSize=@BodySmallSize, DisplayMemberPath="Label",
                           Margin=(0,0,0,@Spacing3)]
                 // Miter limit — only meaningful when LineJoin=Miter.
@@ -689,13 +687,13 @@ resources Formatting {
                 // when both children of an Auto-sized row are Collapsed
                 // the row's DesiredSize collapses to zero.
                 TextBlock x:name="PART_MiterLabel"
-                          [Grid.Row=5, Grid.Column=0,
+                          [Grid.Row=4, Grid.Column=0,
                            Style=@LabelSmall, Text="Miter limit",
                            Foreground=@OnSurface,
                            VerticalAlignment=Center,
                            Margin=(0,0,@Spacing3,0)]
                 SpinEdit x:name="PART_MiterLimit"
-                         [Grid.Row=5, Grid.Column=1,
+                         [Grid.Row=4, Grid.Column=1,
                           TextBlock.FontSize=@BodySmallSize,
                           HorizontalAlignment=Left, MaxWidth=120, Width=120,
                           Minimum=1, Maximum=20, SmallChange=0.5, LargeChange=2,
@@ -725,7 +723,8 @@ resources Formatting {
             // Variant=None. Whole-section collapse for the "no shape
             // selected" state lives on PART_Editors in
             // ShapeFormatControl, one level up.
-            TextBlock [Style=@TitleSmall, Text="Fill",
+            TextBlock x:name="PART_Header"
+                      [Style=@TitleSmall, Text="Fill",
                        Foreground=@OnSurface, Margin=(0,0,0,@Spacing3)]
             // ── Variant tabs ────────────────────────────────────
             // ClickableBorder for each of the six variants. Default

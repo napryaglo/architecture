@@ -15,7 +15,7 @@ import {
 import { TemplatedControl } from '../../basic/templated-control.js';
 import { Slider } from '../../basic/slider.js';
 import { TextBlock } from '../../basic/text-block.js';
-import { BrushPicker } from './brush-picker.js';
+import { FillEditor } from './fill-editor.js';
 import { ComboBox } from '../list/combo-box.js';
 
 // Label/value record fed into PART_Dash / PART_Cap / PART_Join. The
@@ -48,10 +48,11 @@ const JOIN_OPTIONS: ReadonlyArray<OptionItem<LineJoin>> = Object.freeze([
     { Label: 'Bevel', Value: LineJoin.Bevel },
 ]);
 
-// Inline-expanded Pen editor, PowerPoint-style. One column of labelled
-// rows: brush (via BrushPicker), thickness slider, dash dropdown, cap
-// dropdown, join dropdown, miter-limit slider (visibility-gated on
-// Join = Miter).
+// Inline-expanded Pen editor, PowerPoint-style. The stroke brush is
+// edited by an embedded FillEditor (PART_BrushEditor) — the SAME tabbed
+// variant editor the Fill section uses — followed by a labelled grid:
+// thickness, dash dropdown, cap dropdown, join dropdown, miter-limit
+// (visibility-gated on Join = Miter).
 //
 // Source-of-truth contract: `Pen` is the I/O DP. Every sub-editor DP
 // (Brush / Thickness / DashStyle / LineCap / LineJoin / MiterLimit) is
@@ -100,7 +101,7 @@ export class PenEditor extends TemplatedControl
     // changes. Re-installed in seedFromPen so a Pen swap detaches the
     // listener from the prior Pen and attaches a fresh one.
     private _penListeners: Array<() => void> = [];
-    private _brushPicker:     BrushPicker | undefined;
+    private _brushEditor:     FillEditor  | undefined;
     private _thicknessSlider: Slider      | undefined;
     private _thicknessRead:   TextBlock   | undefined;
     private _dashCombo:       ComboBox    | undefined;
@@ -129,7 +130,7 @@ export class PenEditor extends TemplatedControl
 
     private adoptTemplateParts(): void
     {
-        this._brushPicker     = this.GetTemplateChild('PART_BrushPicker')      as BrushPicker | undefined;
+        this._brushEditor     = this.GetTemplateChild('PART_BrushEditor')      as FillEditor  | undefined;
         this._thicknessSlider = this.GetTemplateChild('PART_Thickness')        as Slider      | undefined;
         this._thicknessRead   = this.GetTemplateChild('PART_ThicknessReadout') as TextBlock   | undefined;
         this._dashCombo       = this.GetTemplateChild('PART_Dash')             as ComboBox    | undefined;
@@ -147,22 +148,23 @@ export class PenEditor extends TemplatedControl
         if (this._capCombo  !== undefined) this._capCombo.Items  = CAP_OPTIONS  as ReadonlyArray<unknown> as unknown[];
         if (this._joinCombo !== undefined) this._joinCombo.Items = JOIN_OPTIONS as ReadonlyArray<unknown> as unknown[];
 
-        // BrushPicker: two-way wire to PenEditor.Brush.
-        if (this._brushPicker !== undefined)
+        // Stroke brush editor: the same tabbed FillEditor the Fill section
+        // uses, two-way wired to PenEditor.Brush (its Fill DP IS the brush).
+        if (this._brushEditor !== undefined)
         {
-            const bp = this._brushPicker;
+            const fe = this._brushEditor;
             this._syncing = true;
-            try { bp.Brush = this.Brush; } finally { this._syncing = false; }
+            try { fe.Fill = this.Brush; } finally { this._syncing = false; }
             const handler = (): void => {
                 if (this._syncing) return;
                 this._syncing = true;
-                try { this.Brush = bp.Brush; } finally { this._syncing = false; }
+                try { this.Brush = fe.Fill; } finally { this._syncing = false; }
                 this.pushToPen('Brush');
             };
-            const key = resolveKey(bp, undefined, 'Brush');
-            bp.AddPropertyChangedListener(key, handler);
+            const key = resolveKey(fe, undefined, 'Fill');
+            fe.AddPropertyChangedListener(key, handler);
             this._partListeners.push(() => {
-                bp.RemovePropertyChangedListener(key, handler);
+                fe.RemovePropertyChangedListener(key, handler);
             });
         }
 
@@ -345,7 +347,7 @@ export class PenEditor extends TemplatedControl
             switch (name)
             {
                 case 'Brush':
-                    if (this._brushPicker !== undefined) this._brushPicker.Brush = this.Brush;
+                    if (this._brushEditor !== undefined) this._brushEditor.Fill = this.Brush;
                     break;
                 case 'Thickness':
                     if (this._thicknessSlider !== undefined) this._thicknessSlider.Value = this.Thickness;
