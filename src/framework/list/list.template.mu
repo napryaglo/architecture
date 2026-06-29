@@ -62,10 +62,14 @@ resources Lists {
         // a ComboBox under a `Density = Compact` ancestor (chrome bars,
         // toolbars, the ThemeSelector pick row) shrinks automatically
         // without touching individual call sites.
+        // Chevron tracks density too: Compact = 40% smaller, Comfortable
+        // = 20% bigger than the 12dp regular glyph.
         when ( ThemeManager.Density = Compact )     { PART_SelectionBox.Padding = (@Spacing3, @Spacing1, @Spacing3, @Spacing1);
-                                                      PART_SelectionBox.Height  = @ListRowHeightCompact; }
+                                                      PART_SelectionBox.Height  = @ListRowHeightCompact;
+                                                      PART_Chevron.Width = 7.2; PART_Chevron.Height = 7.2; }
         when ( ThemeManager.Density = Comfortable ) { PART_SelectionBox.Padding = (@Spacing4, @Spacing3, @Spacing4, @Spacing3);
-                                                      PART_SelectionBox.Height  = @ListRowHeightComfortable; }
+                                                      PART_SelectionBox.Height  = @ListRowHeightComfortable;
+                                                      PART_Chevron.Width = 14.4; PART_Chevron.Height = 14.4; }
 
         // Coarse pointer (touch) — widen vertically for touch.
         when ( ThemeManager.Pointer = Coarse ) { PART_SelectionBox.Padding = (@Spacing4, @Spacing3, @Spacing4, @Spacing3);

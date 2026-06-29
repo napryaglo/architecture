@@ -41,7 +41,8 @@ resources Formatting {
                             FontSize      = @BodyMediumSize,
                             VerticalAlignment = Center,
                             Margin        = (0, 0, @Spacing3, 0) ]
-                Shape [ Geometry          = @ChevronDown,
+                Shape x:name="PART_Chevron"
+                      [ Geometry          = @ChevronDown,
                         Fill              = @OnSurfaceVariant,
                         Width             = 10,
                         Height            = 10,
@@ -55,9 +56,12 @@ resources Formatting {
 
         // Density ladder — same Padding shape the TextBox / SpinEdit use,
         // so the closed colour dropdown tracks the height of the numeric
-        // fields it sits beside in the editor body grids.
-        when ( ThemeManager.Density = Compact )     { PART_SelectionTrigger.Padding = (@Spacing3, @Spacing1, @Spacing3, @Spacing1); }
-        when ( ThemeManager.Density = Comfortable ) { PART_SelectionTrigger.Padding = (@Spacing3, @Spacing3, @Spacing3, @Spacing3); }
+        // fields it sits beside. The chevron scales too: Compact = 40%
+        // smaller, Comfortable = 20% bigger than the 10dp regular glyph.
+        when ( ThemeManager.Density = Compact )     { PART_SelectionTrigger.Padding = (@Spacing3, @Spacing1, @Spacing3, @Spacing1);
+                                                      PART_Chevron.Width = 6;  PART_Chevron.Height = 6; }
+        when ( ThemeManager.Density = Comfortable ) { PART_SelectionTrigger.Padding = (@Spacing3, @Spacing3, @Spacing3, @Spacing3);
+                                                      PART_Chevron.Width = 12; PART_Chevron.Height = 12; }
     }
 
     // ── ColorPicker: Office-style dropdown ──────────────────────────
@@ -331,7 +335,8 @@ resources Formatting {
                             FontSize      = @BodyMediumSize,
                             VerticalAlignment = Center,
                             Margin        = (0, 0, @Spacing3, 0) ]
-                Shape [ Geometry          = @ChevronDown,
+                Shape x:name="PART_Chevron"
+                      [ Geometry          = @ChevronDown,
                         Fill              = @OnSurfaceVariant,
                         Width             = 10,
                         Height            = 10,
@@ -348,9 +353,12 @@ resources Formatting {
 
         // Density ladder — mirror the TextBox / SpinEdit / ColorPicker
         // padding shape so the closed brush dropdown matches sibling
-        // field heights across densities.
-        when ( ThemeManager.Density = Compact )     { PART_SelectionTrigger.Padding = (@Spacing3, @Spacing1, @Spacing3, @Spacing1); }
-        when ( ThemeManager.Density = Comfortable ) { PART_SelectionTrigger.Padding = (@Spacing3, @Spacing3, @Spacing3, @Spacing3); }
+        // field heights, and scale the chevron the same way (Compact 40%
+        // smaller, Comfortable 20% bigger than the 10dp regular glyph).
+        when ( ThemeManager.Density = Compact )     { PART_SelectionTrigger.Padding = (@Spacing3, @Spacing1, @Spacing3, @Spacing1);
+                                                      PART_Chevron.Width = 6;  PART_Chevron.Height = 6; }
+        when ( ThemeManager.Density = Comfortable ) { PART_SelectionTrigger.Padding = (@Spacing3, @Spacing3, @Spacing3, @Spacing3);
+                                                      PART_Chevron.Width = 12; PART_Chevron.Height = 12; }
     }
 
     // ── BrushPicker: shared popup chrome helper ────────────────────

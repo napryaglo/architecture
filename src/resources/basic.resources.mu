@@ -315,10 +315,17 @@ resources MuralBasic {
         when ( PART_Down.IsPressed )   { PART_Down.Background = @StatePressOverlay; }
 
         // Coarse pointer (touch) — widen the button column so the
-        // arrows are easier to hit. Density is left alone because the
-        // inner TextBox carries its own density geometry; SpinEdit's
-        // overall height tracks the TextBox.
+        // arrows are easier to hit. The field's padding/height density is
+        // left to the inner TextBox; SpinEdit's overall height tracks it.
         when ( ThemeManager.Pointer = Coarse ) { PART_ButtonColumn.Width = 28; }
+
+        // Spinner glyphs track density: Compact = 40% smaller, Comfortable
+        // = 20% bigger than the 10dp regular arrows (12 still clears the
+        // 14dp arrow button, so the column geometry is untouched).
+        when ( ThemeManager.Density = Compact )     { PART_UpGlyph.Width = 6;  PART_UpGlyph.Height = 6;
+                                                      PART_DownGlyph.Width = 6;  PART_DownGlyph.Height = 6; }
+        when ( ThemeManager.Density = Comfortable ) { PART_UpGlyph.Width = 12; PART_UpGlyph.Height = 12;
+                                                      PART_DownGlyph.Width = 12; PART_DownGlyph.Height = 12; }
     }
     Style [TargetType=SpinEdit] {
         Template = @DefaultSpinEdit;
