@@ -242,7 +242,12 @@ interface PatchedProto
     OnPreviewPointerDown(args: PointerEventArgs): void;
 }
 
-const proto = Visual.prototype as unknown as PatchedProto;
+// Patch Element.prototype, NOT Visual.prototype: the routed-event virtuals
+// (OnPreviewPointerDown et al.) are defined on Element, and the dispatcher
+// invokes them on the route's Element nodes. A patch on Visual.prototype is
+// shadowed by Element's own no-op override and never runs — which silently
+// broke right-click → ContextMenu for every control.
+const proto = Element.prototype as unknown as PatchedProto;
 if (proto._ContextMenuPatchInstalled !== true)
 {
     proto._ContextMenuPatchInstalled = true;
