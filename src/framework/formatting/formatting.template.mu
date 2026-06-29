@@ -52,6 +52,12 @@ resources Formatting {
         when ( PART_SelectionTrigger.IsMouseOver ) { PART_SelectionTrigger.Background = @StateHoverOverlay; }
         when ( PART_SelectionTrigger.IsPressed   ) { PART_SelectionTrigger.Background = @StatePressOverlay; }
         when ( IsDropDownOpen )                     { PART_SelectionTrigger.BorderBrush = @Primary; }
+
+        // Density ladder — same Padding shape the TextBox / SpinEdit use,
+        // so the closed colour dropdown tracks the height of the numeric
+        // fields it sits beside in the editor body grids.
+        when ( ThemeManager.Density = Compact )     { PART_SelectionTrigger.Padding = (@Spacing3, @Spacing1, @Spacing3, @Spacing1); }
+        when ( ThemeManager.Density = Comfortable ) { PART_SelectionTrigger.Padding = (@Spacing3, @Spacing3, @Spacing3, @Spacing3); }
     }
 
     // ── ColorPicker: Office-style dropdown ──────────────────────────
@@ -339,6 +345,12 @@ resources Formatting {
         when ( Variant = Linear  ) { PART_VariantLabel.Text = "Linear gradient"; }
         when ( Variant = Radial  ) { PART_VariantLabel.Text = "Radial gradient"; }
         when ( Variant = Pattern ) { PART_VariantLabel.Text = "Pattern";         }
+
+        // Density ladder — mirror the TextBox / SpinEdit / ColorPicker
+        // padding shape so the closed brush dropdown matches sibling
+        // field heights across densities.
+        when ( ThemeManager.Density = Compact )     { PART_SelectionTrigger.Padding = (@Spacing3, @Spacing1, @Spacing3, @Spacing1); }
+        when ( ThemeManager.Density = Comfortable ) { PART_SelectionTrigger.Padding = (@Spacing3, @Spacing3, @Spacing3, @Spacing3); }
     }
 
     // ── BrushPicker: shared popup chrome helper ────────────────────
