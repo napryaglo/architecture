@@ -32,13 +32,12 @@ resources Lists {
                             FontSize           = @BodyLargeSize,
                             LineHeight         = @BodyLargeLineHeight,
                             LetterSpacing      = @BodyLargeTracking ]
-                TextBlock x:name="PART_Chevron"
-                          [ Foreground         = @OnSurface,
-                            FontFamily         = @BodyMediumFont,
-                            FontWeight         = @BodyMediumWeight,
-                            FontSize           = @BodyMediumSize,
-                            LineHeight         = @BodyMediumLineHeight,
-                            Text               = "▾" ]
+                Shape x:name="PART_Chevron"
+                          [ Geometry           = @ChevronDown,
+                            Fill               = @OnSurface,
+                            Width              = 12,
+                            Height             = 12,
+                            VerticalAlignment  = Center ]
             }
         }
         // HasSelection swaps PART_SelectionText.Foreground from
