@@ -314,18 +314,23 @@ resources MuralBasic {
         when ( PART_Down.IsFocused )   { PART_Down.Background = @StateFocusOverlay; }
         when ( PART_Down.IsPressed )   { PART_Down.Background = @StatePressOverlay; }
 
-        // Coarse pointer (touch) — widen the button column so the
-        // arrows are easier to hit. The field's padding/height density is
-        // left to the inner TextBox; SpinEdit's overall height tracks it.
-        when ( ThemeManager.Pointer = Coarse ) { PART_ButtonColumn.Width = 28; }
-
-        // Spinner glyphs track density: Compact = 40% smaller, Comfortable
-        // = 20% bigger than the 10dp regular arrows (12 still clears the
-        // 14dp arrow button, so the column geometry is untouched).
-        when ( ThemeManager.Density = Compact )     { PART_UpGlyph.Width = 6;  PART_UpGlyph.Height = 6;
+        // Spinner geometry tracks density: Compact narrows the button
+        // column and shrinks the arrows 40%; Comfortable widens it and
+        // grows them 20%. The arrows still span the field height (so no
+        // gap), but the whole spinner reads tighter / looser. Declared
+        // BEFORE the Coarse trigger so a touch pointer (which wants a
+        // bigger hit target) still wins the column width when both apply.
+        when ( ThemeManager.Density = Compact )     { PART_ButtonColumn.Width = 12;
+                                                      PART_UpGlyph.Width = 6;  PART_UpGlyph.Height = 6;
                                                       PART_DownGlyph.Width = 6;  PART_DownGlyph.Height = 6; }
-        when ( ThemeManager.Density = Comfortable ) { PART_UpGlyph.Width = 12; PART_UpGlyph.Height = 12;
+        when ( ThemeManager.Density = Comfortable ) { PART_ButtonColumn.Width = 22;
+                                                      PART_UpGlyph.Width = 12; PART_UpGlyph.Height = 12;
                                                       PART_DownGlyph.Width = 12; PART_DownGlyph.Height = 12; }
+
+        // Coarse pointer (touch) — widen the button column so the arrows
+        // are easier to hit. The field's padding/height density is left to
+        // the inner TextBox. Last so it outranks the density width above.
+        when ( ThemeManager.Pointer = Coarse ) { PART_ButtonColumn.Width = 28; }
     }
     Style [TargetType=SpinEdit] {
         Template = @DefaultSpinEdit;
