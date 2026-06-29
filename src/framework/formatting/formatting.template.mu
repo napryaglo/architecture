@@ -839,6 +839,7 @@ resources Formatting {
                            Margin=(0,0,@Spacing3,0)]
                 SpinEdit x:name="PART_OpacityEdit"
                          [Grid.Column=1,
+                          TextBlock.FontSize=@BodySmallSize,
                           HorizontalAlignment=Left, MaxWidth=120, Width=120,
                           Minimum=0, Maximum=100, SmallChange=1, LargeChange=10,
                           DecimalPlaces=0]
