@@ -14,17 +14,18 @@ resources Formatting {
     // PART_SelectionTrigger; on release the picker flips IsDropDownOpen
     // and mountPopup spins up the overlay popup chrome below.
     Template x:key="DefaultColorPicker" [TargetType=ColorPicker]{
+        // HorizontalAlignment=Left shrink-wraps the whole trigger to its
+        // content even when the control sits in a Star/Stretch grid cell
+        // (the editor-body grids place ColorPickers in a Star column).
+        // Without it the outlined border stretched full-width while the
+        // swatch/label/chevron clustered on the left.
         ClickableBorder x:name="PART_SelectionTrigger"
                        [ Background      = @Surface,
                          BorderBrush     = @Outline,
                          BorderThickness = (1),
                          CornerRadius    = @ShapeExtraSmall,
+                         HorizontalAlignment = Left,
                          Padding         = (@Spacing3, @Spacing2, @Spacing3, @Spacing2) ] {
-            // HorizontalAlignment=Left makes the StackPanel shrink-wrap
-            // to its children's measured width inside the Border. Stops
-            // a stretched parent from arranging the StackPanel at a
-            // width that disagrees with the Border's wrap rect (which
-            // is what was pushing the chevron outside the stroke).
             StackPanel [Orientation=Horizontal, HorizontalAlignment=Left] {
                 Border [ Width        = 22,
                          Height       = 18,
@@ -40,10 +41,11 @@ resources Formatting {
                             FontSize      = @BodyMediumSize,
                             VerticalAlignment = Center,
                             Margin        = (0, 0, @Spacing3, 0) ]
-                TextBlock [ Text          = "▾",
-                            Foreground    = @OnSurfaceVariant,
-                            FontSize      = @LabelLargeSize,
-                            VerticalAlignment = Center ]
+                Shape [ Geometry          = @ChevronDown,
+                        Fill              = @OnSurfaceVariant,
+                        Width             = 10,
+                        Height            = 10,
+                        VerticalAlignment = Center ]
             }
         }
 
@@ -109,8 +111,8 @@ resources Formatting {
                                        VerticalAlignment=Center, Margin=(0, 0, @Spacing1, 0)]
                             TextBlock x:name="PART_SchemeName" [Text="Office", Foreground=@OnSurface,
                                        FontSize=@BodyMediumSize, VerticalAlignment=Center]
-                            TextBlock [Text="▾", Foreground=@OnSurfaceVariant, FontSize=@LabelLargeSize,
-                                       VerticalAlignment=Center, Margin=(@Spacing1, 0, 0, 0)]
+                            Shape [Geometry=@ChevronDown, Fill=@OnSurfaceVariant, Width=10, Height=10,
+                                   VerticalAlignment=Center, Margin=(@Spacing1, 0, 0, 0)]
                         }
                     }
 
@@ -323,10 +325,11 @@ resources Formatting {
                             FontSize      = @BodyMediumSize,
                             VerticalAlignment = Center,
                             Margin        = (0, 0, @Spacing3, 0) ]
-                TextBlock [ Text          = "▾",
-                            Foreground    = @OnSurfaceVariant,
-                            FontSize      = @LabelLargeSize,
-                            VerticalAlignment = Center ]
+                Shape [ Geometry          = @ChevronDown,
+                        Fill              = @OnSurfaceVariant,
+                        Width             = 10,
+                        Height            = 10,
+                        VerticalAlignment = Center ]
             }
         }
 
