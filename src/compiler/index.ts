@@ -3,11 +3,13 @@
 // `Compiler` and lower-level pieces are exported for tooling / tests.
 
 export { compile, instantiate, EmitError, type CompileResult } from './compile.js';
+export { format, type FormatOptions } from './format.js';
 export { Compiler, type CompilerOptions, type CompilerOutput } from './compiler.js';
 export { Lexer } from './lexer.js';
 export { Parser, ParseError } from './parser.js';
 export {
     TokenKind,
+    type Comment,
     type Token,
     type SourceLocation,
     type SourceSpan,

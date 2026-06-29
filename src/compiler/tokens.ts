@@ -71,6 +71,20 @@ export interface SourceSpan
     end:   SourceLocation;
 }
 
+// A comment captured by the lexer. Trivia is invisible to the parser /
+// compiler (skipStructuralTrivia still consumes it), but the lexer now
+// ALSO records each comment here so the formatter can re-emit it. Only
+// comments seen in STRUCTURAL mode are captured — a `//` inside a
+// string-typed body is literal text, never a comment, and text mode
+// doesn't run skipStructuralTrivia. `text` is the verbatim source
+// including the `//` or `/* */` delimiters.
+export interface Comment
+{
+    kind: 'line' | 'block';
+    text: string;
+    span: SourceSpan;
+}
+
 export interface Token
 {
     kind:  TokenKind;

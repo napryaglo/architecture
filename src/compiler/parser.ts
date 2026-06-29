@@ -1,6 +1,7 @@
 import { Lexer } from './lexer.js';
 import {
     TokenKind,
+    type Comment,
     type SourceLocation,
     type SourceSpan,
     type Token,
@@ -168,6 +169,14 @@ export class Parser
     }
 
     // ── Public entry ────────────────────────────────────────────────
+
+    // Comments captured during the parse, in source order. Empty unless
+    // the source carried `//` / `/* */` comments. Read by the formatter
+    // after ParseDocument(); the compiler never consults it.
+    public get comments(): readonly Comment[]
+    {
+        return this.lexer.comments;
+    }
 
     public ParseDocument(): Document
     {

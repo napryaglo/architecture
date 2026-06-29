@@ -46,6 +46,7 @@ import { hover }          from './providers/hover.js';
 import { definition }     from './providers/definition.js';
 import { documentSymbols } from './providers/document-symbols.js';
 import { workspaceSymbols } from './providers/workspace-symbols.js';
+import { formatting }       from './providers/formatting.js';
 
 const connection = createConnection(ProposedFeatures.all);
 const documents  = new TextDocuments(TextDocument);
@@ -85,6 +86,7 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
             definitionProvider:       true,
             documentSymbolProvider:   true,
             workspaceSymbolProvider:  true,
+            documentFormattingProvider: true,
         },
     };
 });
@@ -187,6 +189,12 @@ connection.onDocumentSymbol(params => {
 
 connection.onWorkspaceSymbol(params => {
     return workspaceSymbols(params.query, workspaceIndex);
+});
+
+connection.onDocumentFormatting(params => {
+    const doc = documents.get(params.textDocument.uri);
+    if (doc === undefined) return [];
+    return formatting(doc);
 });
 
 // ── Boot ────────────────────────────────────────────────────────────

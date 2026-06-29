@@ -1,5 +1,6 @@
 import {
     TokenKind,
+    type Comment,
     type SourceLocation,
     type Token,
 } from './tokens.js';
@@ -31,6 +32,11 @@ export class Lexer
     private column: number;
     private readonly source: string;
     private readonly length: number;
+
+    // Comments seen in structural mode, in source order. Invisible to the
+    // parser/compiler; consumed by the formatter to re-emit them. Always
+    // empty unless source contains comments.
+    public readonly comments: Comment[] = [];
 
     constructor(source: string)
     {
@@ -312,18 +318,26 @@ export class Lexer
                 continue;
             }
 
-            // Comments — `//` line and `/* */` block.
+            // Comments — `//` line and `/* */` block. Captured into
+            // `comments` (verbatim, with delimiters) for the formatter.
             if (c === '/' && this.source[this.pos + 1] === '/')
             {
+                const start = this.location();
                 this.advance(); this.advance();
                 while (this.pos < this.length && this.source[this.pos] !== '\n')
                 {
                     this.advance();
                 }
+                this.comments.push({
+                    kind: 'line',
+                    text: this.source.slice(start.offset, this.pos),
+                    span: { start, end: this.location() },
+                });
                 continue;
             }
             if (c === '/' && this.source[this.pos + 1] === '*')
             {
+                const start = this.location();
                 this.advance(); this.advance();
                 while (this.pos < this.length)
                 {
@@ -334,6 +348,11 @@ export class Lexer
                     }
                     this.advance();
                 }
+                this.comments.push({
+                    kind: 'block',
+                    text: this.source.slice(start.offset, this.pos),
+                    span: { start, end: this.location() },
+                });
                 continue;
             }
 

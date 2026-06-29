@@ -104,6 +104,8 @@
     "access": "public"
   },
   "scripts": {
+    "format": "tsx src/tooling/format-mu.ts",
+    "format:check": "tsx src/tooling/format-mu.ts --check",
     "build:templates": "tsx src/tooling/build-control-templates.ts",
     "build:demos": "tsx src/tooling/build-demo-templates.ts",
     "build:demos:ts": "tsc -p demo/tsconfig.json",
