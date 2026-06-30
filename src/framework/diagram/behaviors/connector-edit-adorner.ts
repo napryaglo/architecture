@@ -44,6 +44,16 @@ type DragState =
           readonly keepA: number;
           readonly keepB: number;
           readonly snapshot: readonly Point[];
+      }
+    // Port-slot reorder: dragging the segment that LEAVES a side-anchored
+    // port slides the connector among its siblings on that port. No
+    // waypoints — the slot index follows the cursor and the figure
+    // rebalances. `slots` holds the affected end(s) (a straight port-to-
+    // port segment touches both) with their pre-drag index for Abort.
+    | {
+          readonly kind: 'portreorder';
+          readonly connector: Connector;
+          readonly slots: readonly { readonly end: ConnectorEnd; readonly fromIndex: number }[];
       };
 
 // State machine for edit-mode connector gestures per § 4.2 + § 4.3 of
@@ -146,6 +156,28 @@ export class ConnectorEditAdorner
 
         const i = segmentIndex;
         const n = route.length - 1;          // route[n] === target anchor
+
+        // Position-based port-slot reorder takes precedence over the
+        // waypoint slide when the grabbed segment leaves a side-anchored
+        // port: that segment runs perpendicular to the port's slot axis,
+        // so dragging it reorders the connector among its siblings instead
+        // of bending the route. A straight port-to-port segment (single
+        // segment, both ends anchored) reorders both ends together.
+        const reorderSlots: { end: ConnectorEnd; fromIndex: number }[] = [];
+        if (i === 0 && connector.IsPortAnchored(ConnectorEnd.Source))
+        {
+            reorderSlots.push({ end: ConnectorEnd.Source, fromIndex: connector.GetPortSlotIndex(ConnectorEnd.Source) ?? 0 });
+        }
+        if (i + 1 === n && connector.IsPortAnchored(ConnectorEnd.Target))
+        {
+            reorderSlots.push({ end: ConnectorEnd.Target, fromIndex: connector.GetPortSlotIndex(ConnectorEnd.Target) ?? 0 });
+        }
+        if (reorderSlots.length > 0)
+        {
+            this._state = { kind: 'portreorder', connector, slots: reorderSlots };
+            return;
+        }
+
         const near = route[i]!;
         const far  = route[i + 1]!;
         const horizontal = segmentIsHorizontal(near, far);
@@ -219,6 +251,11 @@ export class ConnectorEditAdorner
 
     public UpdateCursor(cursor: Point): void
     {
+        if (this._state.kind === 'portreorder')
+        {
+            for (const s of this._state.slots) this._state.connector.ReorderPortSlot(s.end, cursor);
+            return;
+        }
         if (this._state.kind === 'endpoint')
         {
             const ep = endpointOf(this._state.connector, this._state.end);
@@ -259,6 +296,12 @@ export class ConnectorEditAdorner
 
     public EndDragOverTarget(targetFigure: Figure, targetSide: ResolvedPortSide): void
     {
+        if (this._state.kind === 'portreorder')
+        {
+            // Slot already committed during the drag — nothing to re-anchor.
+            this._state = { kind: 'idle' };
+            return;
+        }
         if (this._state.kind !== 'endpoint') return;
         const ep = endpointOf(this._state.connector, this._state.end);
         if (ep === undefined)
@@ -276,6 +319,12 @@ export class ConnectorEditAdorner
 
     public EndDragOverEmpty(): void
     {
+        if (this._state.kind === 'portreorder')
+        {
+            // Commit: the slot was reassigned live during the drag.
+            this._state = { kind: 'idle' };
+            return;
+        }
         if (this._state.kind === 'endpoint')
         {
             // Restore snapshot.
@@ -312,6 +361,10 @@ export class ConnectorEditAdorner
         else if (this._state.kind === 'waypoint' || this._state.kind === 'segment')
         {
             this._state.connector.Waypoints = this._state.snapshot;
+        }
+        else if (this._state.kind === 'portreorder')
+        {
+            for (const s of this._state.slots) this._state.connector.MovePortSlotToIndex(s.end, s.fromIndex);
         }
         this._state = { kind: 'idle' };
     }

@@ -7,7 +7,7 @@ import {
     type PointerEventArgs,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
-import { Brush, type Geometry, type PathGeometry, Pen, SolidColorBrush } from '../../visual-engine/index.js';
+import { Brush, type Geometry, type PathGeometry, type Point, Pen, SolidColorBrush } from '../../visual-engine/index.js';
 import { Color } from '../../runtime/index.js';
 import { Canvas } from '../../basic/panels/canvas.js';
 import { ContentControl } from '../base/content-control.js';
@@ -15,7 +15,7 @@ import { ScrollViewer } from '../surfaces/scroll-viewer.js';
 import { Selector } from '../list/selector.js';
 import { SHAPE_CATALOG_MAP, scaleGeometry } from './shape-catalog.js';
 import type { Group } from './group.js';
-import type { Port, ResolvedPortSide } from './port.js';
+import { PortSide, type Port, type ResolvedPortSide } from './port.js';
 import type { IPortProvider } from './port-providers/port-provider.js';
 import { resolveDefaultPortProvider } from './port-providers/default-port-providers.js';
 import type { ConnectorEndpoint } from './connector-endpoint.js';
@@ -412,6 +412,57 @@ export class Figure extends ContentControl
     public GetSideEndpointCount(side: ResolvedPortSide): number
     {
         return this._sideEndpoints.get(side)?.length ?? 0;
+    }
+
+    /** Slot index whose dynamic position is nearest `cursor` along the
+     *  side's distribution axis (Y for E/W, X for N/S), inverting the
+     *  same Left/Top/Width/Height slot layout the resolver lays out in
+     *  [connector.ts]'s tryResolveSideSlot. Returns undefined when the
+     *  side is empty or the figure is unsized. */
+    public SlotIndexForPosition(side: ResolvedPortSide, cursor: Point): number | undefined
+    {
+        const list = this._sideEndpoints.get(side);
+        if (list === undefined || list.length === 0) return undefined;
+        const count = list.length;
+        const vertical = side === PortSide.E || side === PortSide.W;   // distributes along Y
+        const start = vertical ? this.Top    : this.Left;
+        const len   = vertical ? this.Height : this.Width;
+        if (len <= 0) return undefined;
+        const pos = vertical ? cursor.Y : cursor.X;
+        // slotCenter(i) = start + (i + 1) / (count + 1) * len  →  invert for i.
+        let idx = Math.round((pos - start) / len * (count + 1) - 1);
+        if (idx < 0) idx = 0;
+        if (idx > count - 1) idx = count - 1;
+        return idx;
+    }
+
+    /** Move `endpoint` to slot `toIndex` on `side`, firing a rebalance so
+     *  every connector on the side re-routes at its new slot. The index is
+     *  clamped to the list; a no-op move (same index) skips the rebalance.
+     *  Backs the position-based segment-drag reorder + its abort restore. */
+    public MoveSideEndpoint(side: ResolvedPortSide, endpoint: ConnectorEndpoint, toIndex: number): void
+    {
+        const list = this._sideEndpoints.get(side);
+        if (list === undefined) return;
+        const from = list.indexOf(endpoint);
+        if (from < 0) return;
+        let to = toIndex;
+        if (to < 0) to = 0;
+        if (to > list.length - 1) to = list.length - 1;
+        if (to === from) return;
+        list.splice(from, 1);
+        list.splice(to, 0, endpoint);
+        this._fireSideRebalance(side);
+    }
+
+    /** Reorder `endpoint` on `side` to the slot nearest `cursor` —
+     *  SlotIndexForPosition + MoveSideEndpoint. No-op when the side is
+     *  empty or the figure is unsized. */
+    public ReorderSideEndpoint(side: ResolvedPortSide, endpoint: ConnectorEndpoint, cursor: Point): void
+    {
+        const idx = this.SlotIndexForPosition(side, cursor);
+        if (idx === undefined) return;
+        this.MoveSideEndpoint(side, endpoint, idx);
     }
 
     private _fireSideRebalance(side: ResolvedPortSide): void

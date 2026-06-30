@@ -551,6 +551,139 @@ export class Connector extends Shape
         figure._registerSideEndpoint(side, ep, this._onTargetSideRebalance, this);
     }
 
+    // Release every host subscription this connector holds — both
+    // side-endpoint registrations, the endpoint-input listeners, the
+    // node-move (Left / Top) listeners, and the cap-stroke listener —
+    // WITHOUT clearing Source / Target, so the model stays intact for a
+    // later undo / re-add. Dropping the side registrations fires each
+    // host's rebalance, so the connectors that SHARE a side re-space to
+    // the new (smaller) slot count — the dynamic-port redistribution the
+    // diagram's removal paths (DiagramDocument.DeleteConnectors + the
+    // figure-delete cascade) rely on. Idempotent: every branch is guarded
+    // by its tracked reference and clears it, so a second call is a no-op.
+    //
+    // Named DetachFromHosts (not Detach) to stay clear of Element.Detach,
+    // which is the visual-tree child-removal primitive.
+    public DetachFromHosts(): void
+    {
+        if (this._trackedSourceFigure !== undefined && this._trackedSourceSide !== undefined && this._trackedSource !== undefined)
+        {
+            this._trackedSourceFigure._unregisterSideEndpoint(this._trackedSourceSide, this._trackedSource);
+        }
+        this._trackedSourceFigure = undefined;
+        this._trackedSourceSide   = undefined;
+        if (this._trackedTargetFigure !== undefined && this._trackedTargetSide !== undefined && this._trackedTarget !== undefined)
+        {
+            this._trackedTargetFigure._unregisterSideEndpoint(this._trackedTargetSide, this._trackedTarget);
+        }
+        this._trackedTargetFigure = undefined;
+        this._trackedTargetSide   = undefined;
+
+        const src = this._trackedSource;
+        if (src !== undefined)
+        {
+            src.RemovePropertyChangedListener(ConnectorEndpoint.NodeKey,      this._onSourceEndpointInputChanged);
+            src.RemovePropertyChangedListener(ConnectorEndpoint.FreePointKey, this._onSourceEndpointInputChanged);
+            src.RemovePropertyChangedListener(ConnectorEndpoint.PortNameKey,  this._onSourceEndpointInputChanged);
+            src.RemovePropertyChangedListener(ConnectorEndpoint.PortSideKey,  this._onSourceEndpointInputChanged);
+            src.RemovePropertyChangedListener(ConnectorEndpoint.PortIndexKey, this._onSourceEndpointInputChanged);
+        }
+        this._trackedSource = undefined;
+        const tgt = this._trackedTarget;
+        if (tgt !== undefined)
+        {
+            tgt.RemovePropertyChangedListener(ConnectorEndpoint.NodeKey,      this._onTargetEndpointInputChanged);
+            tgt.RemovePropertyChangedListener(ConnectorEndpoint.FreePointKey, this._onTargetEndpointInputChanged);
+            tgt.RemovePropertyChangedListener(ConnectorEndpoint.PortNameKey,  this._onTargetEndpointInputChanged);
+            tgt.RemovePropertyChangedListener(ConnectorEndpoint.PortSideKey,  this._onTargetEndpointInputChanged);
+            tgt.RemovePropertyChangedListener(ConnectorEndpoint.PortIndexKey, this._onTargetEndpointInputChanged);
+        }
+        this._trackedTarget = undefined;
+
+        const sn = this._trackedSourceNode;
+        if (sn !== undefined && Model.HasProperty(sn.constructor, 'Left'))
+        {
+            sn.RemovePropertyChangedListener(resolveKey(sn, undefined, 'Left'), this._onSourceNodeMoved);
+            sn.RemovePropertyChangedListener(resolveKey(sn, undefined, 'Top'),  this._onSourceNodeMoved);
+        }
+        this._trackedSourceNode = undefined;
+        const tn = this._trackedTargetNode;
+        if (tn !== undefined && Model.HasProperty(tn.constructor, 'Left'))
+        {
+            tn.RemovePropertyChangedListener(resolveKey(tn, undefined, 'Left'), this._onTargetNodeMoved);
+            tn.RemovePropertyChangedListener(resolveKey(tn, undefined, 'Top'),  this._onTargetNodeMoved);
+        }
+        this._trackedTargetNode = undefined;
+
+        const pen = this._trackedCapPen;
+        if (pen !== undefined)
+        {
+            pen.RemovePropertyChangedListener(resolveKey(pen, undefined, 'Brush'), this._onCapStrokeBrushChanged);
+        }
+        this._trackedCapPen = undefined;
+    }
+
+    // ── Port-slot reorder (position-based, driven by a segment drag) ──
+    // Dragging the route segment that LEAVES a side-anchored port slides
+    // this connector among its siblings on that port. The port-adjacent
+    // segment runs perpendicular to the port's slot axis, so the
+    // perpendicular drag maps straight onto a slot position; the figure
+    // rebalances and the siblings redistribute. These four methods expose
+    // the (otherwise private) per-end host registration to the edit
+    // adorner that owns the gesture.
+
+    /** True when `end` is currently anchored to a figure side slot — the
+     *  dynamic-port case the segment-drag reorder acts on. */
+    public IsPortAnchored(end: ConnectorEnd): boolean
+    {
+        return end === ConnectorEnd.Source
+            ? this._trackedSourceFigure !== undefined && this._trackedSourceSide !== undefined && this._trackedSource !== undefined
+            : this._trackedTargetFigure !== undefined && this._trackedTargetSide !== undefined && this._trackedTarget !== undefined;
+    }
+
+    /** Current slot index of `end` on its host side, or undefined when the
+     *  end isn't side-anchored. */
+    public GetPortSlotIndex(end: ConnectorEnd): number | undefined
+    {
+        if (end === ConnectorEnd.Source)
+        {
+            if (this._trackedSourceFigure === undefined || this._trackedSourceSide === undefined || this._trackedSource === undefined) return undefined;
+            return this._trackedSourceFigure.GetSideSlot(this._trackedSource, this._trackedSourceSide)?.index;
+        }
+        if (this._trackedTargetFigure === undefined || this._trackedTargetSide === undefined || this._trackedTarget === undefined) return undefined;
+        return this._trackedTargetFigure.GetSideSlot(this._trackedTarget, this._trackedTargetSide)?.index;
+    }
+
+    /** Reorder `end`'s slot among its port siblings to the one nearest
+     *  `cursor` (diagram-host coords). No-op when `end` isn't
+     *  side-anchored. */
+    public ReorderPortSlot(end: ConnectorEnd, cursor: Point): void
+    {
+        if (end === ConnectorEnd.Source)
+        {
+            if (this._trackedSourceFigure !== undefined && this._trackedSourceSide !== undefined && this._trackedSource !== undefined)
+                this._trackedSourceFigure.ReorderSideEndpoint(this._trackedSourceSide, this._trackedSource, cursor);
+            return;
+        }
+        if (this._trackedTargetFigure !== undefined && this._trackedTargetSide !== undefined && this._trackedTarget !== undefined)
+            this._trackedTargetFigure.ReorderSideEndpoint(this._trackedTargetSide, this._trackedTarget, cursor);
+    }
+
+    /** Move `end`'s slot to an explicit index — used by the gesture's
+     *  abort path to restore the pre-drag order. No-op when `end` isn't
+     *  side-anchored. */
+    public MovePortSlotToIndex(end: ConnectorEnd, index: number): void
+    {
+        if (end === ConnectorEnd.Source)
+        {
+            if (this._trackedSourceFigure !== undefined && this._trackedSourceSide !== undefined && this._trackedSource !== undefined)
+                this._trackedSourceFigure.MoveSideEndpoint(this._trackedSourceSide, this._trackedSource, index);
+            return;
+        }
+        if (this._trackedTargetFigure !== undefined && this._trackedTargetSide !== undefined && this._trackedTarget !== undefined)
+            this._trackedTargetFigure.MoveSideEndpoint(this._trackedTargetSide, this._trackedTarget, index);
+    }
+
     // Synchronous recompute — § 7.4 ("throttle?") is a separate
     // open question. V1 ships sync; rAF-coalescing lands when the
     // first interactive demo flags a measurable cost.

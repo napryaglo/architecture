@@ -14,6 +14,7 @@ import { ConnectorEndpoint } from '../connector-endpoint.js';
 import { Diagram } from '../diagram.js';
 import { DiagramDocument, type DiagramStorage } from '../diagram-document.js';
 import { Figure } from '../figure.js';
+import { PortSide } from '../port.js';
 import { RoutingMode } from '../routing/router.js';
 import { attachStandardDiagramMutations } from '../behaviors/attach-standard-mutations.js';
 import '../routing/straight-router.js';
@@ -71,6 +72,30 @@ describe('DiagramDocument — CreateConnector / DeleteConnectors', () => {
         doc.DeleteConnectors([a]);
         assert.equal(doc.Connectors.Count, 1);
         assert.equal(doc.Connectors.Get(0), b);
+    });
+
+    test('DeleteConnectors unregisters the deleted endpoint so siblings redistribute', () => {
+        const doc = newDoc();
+        const hub = doc.CreateNode('rectangle',   0, 100)! as Figure;
+        const t1  = doc.CreateNode('rectangle', 300,  20)! as Figure;
+        const t2  = doc.CreateNode('rectangle', 300, 100)! as Figure;
+        const t3  = doc.CreateNode('rectangle', 300, 180)! as Figure;
+
+        const share = (tgt: Figure): Connector => doc.CreateConnector(
+            new ConnectorEndpoint({ Node: hub, PortSide: PortSide.E }),
+            new ConnectorEndpoint({ Node: tgt, PortSide: PortSide.W }))!;
+        const c1 = share(t1);
+        share(t2);
+        share(t3);
+
+        // Three connectors share hub's East side → three dynamic slots.
+        assert.equal(hub.GetSideEndpointCount(PortSide.E), 3);
+
+        doc.DeleteConnectors([c1]);
+
+        // The deleted connector must drop out of the side registry so the
+        // remaining two re-space across two slots.
+        assert.equal(hub.GetSideEndpointCount(PortSide.E), 2);
     });
 });
 

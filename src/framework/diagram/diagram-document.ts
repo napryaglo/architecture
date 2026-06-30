@@ -181,6 +181,9 @@ export class DiagramDocument extends Model implements DiagramMutator
             {
                 const idx = this.Connectors.IndexOf(o);
                 if (idx >= 0) this.Connectors.RemoveAt(idx);
+                // Release the connector's host subscriptions so the siblings
+                // that share a side rebalance to the smaller slot count.
+                o.DetachFromHosts();
             }
             const orphanSuffix = orphaned.length > 0
                 ? ` + ${orphaned.length} orphaned connector${orphaned.length === 1 ? '' : 's'}`
@@ -214,6 +217,9 @@ export class DiagramDocument extends Model implements DiagramMutator
             const idx = this.Connectors.IndexOf(c);
             if (idx < 0) continue;
             this.Connectors.RemoveAt(idx);
+            // Release the connector's host subscriptions so the siblings
+            // that share a side rebalance to the smaller slot count.
+            c.DetachFromHosts();
             removed++;
         }
         if (removed > 0)

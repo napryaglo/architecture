@@ -431,6 +431,65 @@ describe('ConnectorEditAdorner — segment drag (perpendicular slide)', () => {
     });
 });
 
+// ── Port-slot reorder via segment drag (position-based) ──────────────
+
+describe('ConnectorEditAdorner — port-slot reorder via segment drag', () => {
+    function sideFig(left: number, top: number): Figure
+    {
+        const f = new Figure();
+        f.Left = left; f.Top = top; f.Width = 80; f.Height = 80;
+        f.ExplicitPorts = [];
+        return f;
+    }
+    function sideConn(hub: Figure, tgt: Figure): Connector
+    {
+        const c = new Connector();
+        c.RoutingMode = RoutingMode.Orthogonal;
+        c.Source = new ConnectorEndpoint({ Node: hub, PortSide: PortSide.E });
+        c.Target = new ConnectorEndpoint({ Node: tgt, PortSide: PortSide.W });
+        return c;
+    }
+    const idxOf = (hub: Figure, c: Connector): number | undefined =>
+        hub.GetSideSlot(c.Source!, PortSide.E)?.index;
+
+    test('dragging the port-adjacent segment down past a sibling swaps their slots', () => {
+        newApplication();
+        const hub = sideFig(0, 0);
+        const c1 = sideConn(hub, sideFig(300, -40));   // slot 0 (upper)
+        const c2 = sideConn(hub, sideFig(300, 160));   // slot 1 (lower)
+        assert.equal(idxOf(hub, c1), 0);
+        assert.equal(idxOf(hub, c2), 1);
+
+        // Grab c1's source-adjacent (port) segment and drag it to the
+        // lower slot — orthogonal routes here never transversally cross, so
+        // the old anti-cross optimizer left them put. Position-based reorder
+        // moves c1 to the slot under the cursor and c2 fills the gap.
+        const adorner = new ConnectorEditAdorner();
+        adorner.BeginSegmentDrag(c1, 0);
+        adorner.UpdateCursor(new Point(120, 65));       // Y=65 → lower slot
+        adorner.EndDragOverEmpty();
+
+        assert.equal(idxOf(hub, c1), 1, 'c1 reordered to the lower slot');
+        assert.equal(idxOf(hub, c2), 0, 'c2 shifted to the upper slot');
+    });
+
+    test('Abort restores the pre-drag slot order', () => {
+        newApplication();
+        const hub = sideFig(0, 0);
+        const c1 = sideConn(hub, sideFig(300, -40));
+        const c2 = sideConn(hub, sideFig(300, 160));
+
+        const adorner = new ConnectorEditAdorner();
+        adorner.BeginSegmentDrag(c1, 0);
+        adorner.UpdateCursor(new Point(120, 65));        // moves c1 to slot 1
+        assert.equal(idxOf(hub, c1), 1);
+        adorner.Abort();
+
+        assert.equal(idxOf(hub, c1), 0, 'c1 restored to its original slot');
+        assert.equal(idxOf(hub, c2), 1);
+    });
+});
+
 // ── attachConnectorEditAdorner convenience ───────────────────────────
 
 describe('attachConnectorEditAdorner', () => {
