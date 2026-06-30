@@ -1,0 +1,6 @@
+{
+  "[mural]": {
+    "editor.defaultFormatter": "visualisation-sub.mural-vscode",
+    "editor.formatOnSave": true
+  }
+}
