@@ -19,6 +19,7 @@ import { PortSide, type Port, type ResolvedPortSide } from './port.js';
 import type { IPortProvider } from './port-providers/port-provider.js';
 import { resolveDefaultPortProvider } from './port-providers/default-port-providers.js';
 import type { ConnectorEndpoint } from './connector-endpoint.js';
+import type { RigidConnectorDragHost, RigidConnectorDragSession } from './rigid-connector-drag.js';
 
 // A movable, content-hosting control intended as the container shape
 // inside the diagrammer's ItemsControl (see Diagram). Figure owns
@@ -257,6 +258,13 @@ export class Figure extends ContentControl
     // undefined when the press wasn't on a selected container — that
     // case drags only `this` and leaves the existing selection alone.
     private _dragPartners: Figure[] | undefined;
+
+    // Rigid-translate session for the connectors INTERNAL to a multi-drag
+    // (both endpoints among the moving figures). Opened at PointerDown
+    // against the enclosing Diagram, fed the net delta each PointerMove,
+    // closed at PointerUp. undefined when no internal connector carries
+    // user waypoints (nothing to preserve). See [rigid-connector-drag.ts].
+    private _rigidConnectors: RigidConnectorDragSession | undefined;
 
     constructor()
     {
@@ -703,6 +711,23 @@ export class Figure extends ContentControl
         args.Handled = true;
     }
 
+    // Open the rigid-translate session for connectors internal to the
+    // moving set (both endpoints among these figures) so their hand-bent
+    // waypoints slide with the selection instead of being cleared by the
+    // per-figure reroute. Deferred to the drag-threshold crossing (not
+    // PointerDown) so a plain click never scans the connector list. The
+    // enclosing Selector IS the Diagram (the connector store); duck-type it
+    // to the host interface to avoid the diagram → figure import cycle
+    // (same pattern as PositionSnap).
+    private beginRigidConnectorDrag(): void
+    {
+        const movingSet = new Set<Model>([this, ...(this._dragPartners ?? [])]);
+        const selector = Selector.FromContainer<Selector>(
+            this, (v: Visual): v is Selector => v instanceof Selector);
+        const dragHost = selector as unknown as Partial<RigidConnectorDragHost> | undefined;
+        this._rigidConnectors = dragHost?.BeginRigidConnectorDrag?.(movingSet);
+    }
+
     protected override OnPointerMove(args: PointerEventArgs): void
     {
         if (!this._dragging) return;
@@ -715,6 +740,9 @@ export class Figure extends ContentControl
             const dy = args.HostY - this._pressHostY;
             if (Math.hypot(dx, dy) < Figure.CLICK_THRESHOLD_PX) return;
             this._moved = true;
+            // The gesture is now a drag — snapshot the internal connectors
+            // before the first position write clears their waypoints.
+            this.beginRigidConnectorDrag();
         }
         const sv = this._dragScrollViewer;
 
@@ -771,6 +799,16 @@ export class Figure extends ContentControl
             }
         }
 
+        // Slide the internal connectors' waypoints by the same net delta.
+        // Runs AFTER self + partners moved (whose Left/Top writes cleared
+        // those waypoints) and re-lays them at snapshot + running total —
+        // overwriting the clear within this synchronous tick, so the route
+        // never paints in its torn-down state.
+        if (this._rigidConnectors !== undefined && (netDx !== 0 || netDy !== 0))
+        {
+            this._rigidConnectors.Translate(netDx, netDy);
+        }
+
         // Edge auto-scroll — the SV starts / continues / stops a tick
         // timer based on cursor proximity to its viewport edges. The
         // pulse re-evaluates on every move; the timer keeps scrolling
@@ -823,6 +861,10 @@ export class Figure extends ContentControl
         this._moved    = false;
         // Drop the press-time partner snapshot — gesture is over.
         this._dragPartners = undefined;
+        // Close the rigid-translate session — waypoints already sit at their
+        // final translated positions.
+        this._rigidConnectors?.End();
+        this._rigidConnectors = undefined;
         // Stop any auto-scroll tick we kicked off, regardless of whether
         // the gesture was a drag or a click — StopEdgeAutoScroll is a
         // no-op when no timer is active.

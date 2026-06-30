@@ -49,7 +49,7 @@ import {
 import { AlignmentGuidesAdorner } from './behaviors/alignment-guides-adorner.js';
 import { SelectionBoundsAdorner } from '../../basic/index.js';
 import { DiagramSelectionSource } from './behaviors/diagram-selection-source.js';
-import { Brush, Pen } from '../../visual-engine/index.js';
+import { Brush, Pen, Point } from '../../visual-engine/index.js';
 import { FormatMirror } from './collaborators/format-mirror.js';
 import {
     attachCanvasDropBehavior,
@@ -66,7 +66,8 @@ import {
     attachConnectorInteractions,
     type ConnectorInteractionsHandlers,
 } from './behaviors/connector-interactions-behavior.js';
-import type { Connector } from './connector.js';
+import { Connector } from './connector.js';
+import type { RigidConnectorDragHost, RigidConnectorDragSession } from './rigid-connector-drag.js';
 
 // §19.3 follow-up — position snap callback. Consumers (e.g., the
 // diagram demo's align-edges behavior) set this DP to a pure function
@@ -96,7 +97,7 @@ export type DiagramPositionSnap = (rect: Rect) => Rect;
 // those attached properties so a parent Canvas places it.
 const EMPTY_CAP_OPTIONS: readonly CapOption[] = Object.freeze([]) as readonly CapOption[];
 
-export class Diagram extends Selector
+export class Diagram extends Selector implements RigidConnectorDragHost
 {
     static {
         Model.OverrideMetadata(Diagram, Element.DefaultStyleKeyKey, { default_value: Diagram });
@@ -301,6 +302,46 @@ export class Diagram extends Selector
 
     public get Connectors(): ObservableCollection<Model> | undefined { return this.get_property_value(Diagram.ConnectorsKey); }
     public set Connectors(v: ObservableCollection<Model> | undefined) { this.set_property_value(Diagram.ConnectorsKey, v); }
+
+    /** @see RigidConnectorDragHost — drives the internal-connector rigid
+     *  translate for a multi-selection drag. Snapshots every connector
+     *  whose BOTH endpoint nodes are in `movingSet` AND that carries user
+     *  waypoints; a boundary connector (one end in the set) is left to its
+     *  normal per-figure reroute, and a pure auto-routed internal one
+     *  already translation-invariantly recomputes, so neither is tracked. */
+    public BeginRigidConnectorDrag(movingSet: ReadonlySet<Model>): RigidConnectorDragSession | undefined
+    {
+        const connectors = this.Connectors;
+        if (connectors === undefined) return undefined;
+        const tracked: { connector: Connector; snapshot: readonly Point[] }[] = [];
+        for (let i = 0; i < connectors.Count; i++)
+        {
+            const c = connectors.Get(i);
+            if (!(c instanceof Connector)) continue;
+            const wps = c.Waypoints;
+            if (wps === undefined || wps.length === 0) continue;   // nothing to preserve
+            const sn = c.Source?.Node;
+            const tn = c.Target?.Node;
+            if (sn === undefined || tn === undefined) continue;
+            if (!movingSet.has(sn) || !movingSet.has(tn)) continue; // internal only
+            tracked.push({ connector: c, snapshot: wps.slice() });
+        }
+        if (tracked.length === 0) return undefined;
+
+        let totalDx = 0;
+        let totalDy = 0;
+        return {
+            Translate: (dx: number, dy: number): void => {
+                totalDx += dx;
+                totalDy += dy;
+                for (const t of tracked)
+                {
+                    t.connector.Waypoints = t.snapshot.map(p => new Point(p.X + totalDx, p.Y + totalDy));
+                }
+            },
+            End: (): void => { tracked.length = 0; },
+        };
+    }
     public get ConnectorTemplate(): DataTemplate | undefined { return this.get_property_value(Diagram.ConnectorTemplateKey); }
     public set ConnectorTemplate(v: DataTemplate | undefined) { this.set_property_value(Diagram.ConnectorTemplateKey, v); }
 
