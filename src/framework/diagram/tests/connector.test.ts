@@ -399,6 +399,122 @@ describe('Connector resolution path 3a — dynamic side-slot distribution', () =
         assert.equal(slot2!.index, 1, 'c2 stays at insertion-order slot 1 (no swap needed)');
     });
 
+    test('side-intersection optimizer: swaps to break a COLLINEAR overlap (no transversal crossing)', () => {
+        // F's E side at x = 220. Two targets sit on that SAME vertical line
+        // (T1 above via its S-side anchor, T2 below via its N-side anchor),
+        // so both connectors run as vertical segments on x = 220 — they
+        // can stack on top of each other but never cross transversally.
+        //
+        // Built in the stacking order: c1 → T2 (below) takes upper slot 0,
+        // c2 → T1 (above) takes lower slot 1. c1 then spans Y≈[127,280] and
+        // c2 spans Y≈[80,153] on x=220 — a positive-length collinear overlap
+        // that segmentsProperlyCross can't see. Only the overlap predicate
+        // fires the swap; the old crossing-only optimizer left this stacked.
+        const F  = makeFigure(140, 100, 80, 80, []);     // E side x = 220
+        const T1 = makeFigure(180, 0,   80, 80, []);     // S-side anchor (220, 80)
+        const T2 = makeFigure(180, 280, 80, 80, []);     // N-side anchor (220, 280)
+
+        const c1 = new Connector();
+        c1.RoutingMode = RoutingMode.Straight;
+        c1.Source = new ConnectorEndpoint({ Node: F,  PortSide: PortSide.E });
+        c1.Target = new ConnectorEndpoint({ Node: T2, PortSide: PortSide.N });
+
+        const c2 = new Connector();
+        c2.RoutingMode = RoutingMode.Straight;
+        c2.Source = new ConnectorEndpoint({ Node: F,  PortSide: PortSide.E });
+        c2.Target = new ConnectorEndpoint({ Node: T1, PortSide: PortSide.S });
+
+        // After overlap-driven optimization c1 (→ lower target T2) lands at
+        // the lower slot 1 and c2 (→ upper target T1) at the upper slot 0,
+        // so the two vertical runs no longer share span.
+        const slot1 = F.GetSideSlot(c1.Source as ConnectorEndpoint, PortSide.E);
+        const slot2 = F.GetSideSlot(c2.Source as ConnectorEndpoint, PortSide.E);
+        assert.equal(slot1!.index, 1, 'c1 (→ lower target) moved to the lower slot to clear the overlap');
+        assert.equal(slot2!.index, 0, 'c2 (→ upper target) moved to the upper slot');
+        assert.ok(startOf(c1).Y > startOf(c2).Y,
+            `expected c1 below c2 after the un-stacking swap, got c1.Y=${startOf(c1).Y} c2.Y=${startOf(c2).Y}`);
+    });
+
+    test('orthogonal lane stagger: two connectors sharing a side route on DISTINCT vertical lanes', () => {
+        // The screenshot case: a target H with two connectors entering its
+        // E side from sources below. Both run a long vertical up the E-stub
+        // lane — without staggering they'd sit on the SAME x and stack. The
+        // side-slot index feeds the router's stub offset, so slot 0 keeps
+        // the base lane and slot 1 fans out by LANE_GAP.
+        const H  = makeFigure(60, 0,   100, 100, []);   // E side x = 160
+        const S1 = makeFigure(60, 260, 100, 60,  []);
+        const S2 = makeFigure(60, 340, 100, 60,  []);
+
+        const c1 = new Connector();                      // default Orthogonal
+        c1.Source = new ConnectorEndpoint({ Node: S1, PortSide: PortSide.E });
+        c1.Target = new ConnectorEndpoint({ Node: H,  PortSide: PortSide.E });
+
+        const c2 = new Connector();
+        c2.Source = new ConnectorEndpoint({ Node: S2, PortSide: PortSide.E });
+        c2.Target = new ConnectorEndpoint({ Node: H,  PortSide: PortSide.E });
+
+        // The dominant vertical run of each route — the long E-stub lane.
+        const laneX = (c: Connector): number => {
+            const pts = (c.Geometry as PathGeometry).Figures[0]!;
+            const verts: Point[] = [pts.StartPoint,
+                ...pts.Segments.map(s => (s as unknown as { Point: Point }).Point)];
+            let best = 0, bestLen = -1;
+            for (let i = 1; i < verts.length; i++)
+            {
+                if (verts[i]!.X === verts[i - 1]!.X)               // vertical segment
+                {
+                    const len = Math.abs(verts[i]!.Y - verts[i - 1]!.Y);
+                    if (len > bestLen) { bestLen = len; best = verts[i]!.X; }
+                }
+            }
+            return best;
+        };
+
+        const x1 = laneX(c1);
+        const x2 = laneX(c2);
+        assert.notEqual(x1, x2,
+            `the two vertical lanes must not coincide (both at x=${x1})`);
+        assert.ok(Math.abs(x1 - x2) >= 10,
+            `lanes should be separated by at least LANE_GAP, got |${x1} - ${x2}|`);
+    });
+
+    test('orthogonal lane stagger + reorder: three connectors into a shared side route WITHOUT crossings', () => {
+        // The reported screenshot: three connectors enter H's E side from
+        // three sources below. Direction-aware lane offsets (top slot →
+        // outermost lane when the other end is below) nest the routes, and
+        // the side optimizer settles the slot order — together they leave
+        // the three routes crossing-free, not just un-stacked.
+        const H = makeFigure(60, 0, 100, 100, []);          // E side x = 160
+        const cs = [260, 320, 380].map(top => {
+            const S = makeFigure(60, top, 100, 50, []);
+            const c = new Connector();                       // default Orthogonal
+            c.Source = new ConnectorEndpoint({ Node: S, PortSide: PortSide.E });
+            c.Target = new ConnectorEndpoint({ Node: H, PortSide: PortSide.E });
+            return c;
+        });
+
+        const vertsOf = (c: Connector): Point[] => {
+            const f = (c.Geometry as PathGeometry).Figures[0]!;
+            return [f.StartPoint, ...f.Segments.map(s => (s as unknown as { Point: Point }).Point)];
+        };
+        const orient = (a: Point, b: Point, p: Point): number =>
+            (b.X - a.X) * (p.Y - a.Y) - (b.Y - a.Y) * (p.X - a.X);
+        const cross = (p: Point[], q: Point[]): boolean => {
+            for (let i = 1; i < p.length; i++) for (let j = 1; j < q.length; j++) {
+                const a = p[i - 1]!, b = p[i]!, c = q[j - 1]!, d = q[j]!;
+                const o1 = orient(a, b, c), o2 = orient(a, b, d);
+                const o3 = orient(c, d, a), o4 = orient(c, d, b);
+                if ((o1 > 0) !== (o2 > 0) && (o3 > 0) !== (o4 > 0) && o1 && o2 && o3 && o4) return true;
+            }
+            return false;
+        };
+
+        for (let i = 0; i < cs.length; i++)
+            for (let j = i + 1; j < cs.length; j++)
+                assert.ok(!cross(vertsOf(cs[i]!), vertsOf(cs[j]!)),
+                    `connectors ${i + 1} and ${j + 1} must not cross after the reorder pass`);
+    });
+
     test('removing a side-anchored connector rebalances the rest', () => {
         // Start with three on E (slots at Y = 120, 140, 160). Drop
         // c2 by re-pinning its endpoint to a FreePoint, leaving c1

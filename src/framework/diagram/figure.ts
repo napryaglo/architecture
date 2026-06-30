@@ -531,14 +531,14 @@ export class Figure extends ContentControl
                 {
                     for (let j = i + 1; j < list.length; j++)
                     {
-                        if (!connectorsCross(owners[i]!, owners[j]!)) continue;
+                        if (!connectorsConflict(owners[i]!, owners[j]!)) continue;
                         // Try the swap. _fireSideRebalance re-routes
                         // every endpoint on the side at the new slot
                         // positions.
                         [list[i], list[j]] = [list[j]!, list[i]!];
                         [owners[i], owners[j]] = [owners[j]!, owners[i]!];
                         this._fireSideRebalance(side);
-                        if (connectorsCross(owners[i]!, owners[j]!))
+                        if (connectorsConflict(owners[i]!, owners[j]!))
                         {
                             // Didn't help — revert.
                             [list[i], list[j]] = [list[j]!, list[i]!];
@@ -952,7 +952,39 @@ export interface ISideAnchoredConnector
 // matching the "do they visually intersect mid-route" question the
 // user is solving). Returns false on undefined Geometry — a connector
 // with no resolved route can't intersect anything.
+// Two connectors "conflict" on a shared side when their routes either
+// cross transversally OR run collinearly on top of each other. The side
+// optimizer treats both as a swap trigger — a crossing reads as an X, an
+// overlap reads as a single stacked line hiding a second route; both are
+// fixed by reordering the slots so the routes fan out cleanly.
+function connectorsConflict(a: ISideAnchoredConnector, b: ISideAnchoredConnector): boolean
+{
+    return connectorsCross(a, b) || connectorsOverlap(a, b);
+}
+
 function connectorsCross(a: ISideAnchoredConnector, b: ISideAnchoredConnector): boolean
+{
+    return anySegmentPair(a, b, segmentsProperlyCross);
+}
+
+// Collinear-overlap sibling of connectorsCross — true iff any segment of A
+// shares a positive-length collinear span with any segment of B (the two
+// routes paint over each other). segmentsProperlyCross explicitly excludes
+// this case (its `o !== 0` guards), so it needs its own predicate.
+function connectorsOverlap(a: ISideAnchoredConnector, b: ISideAnchoredConnector): boolean
+{
+    return anySegmentPair(a, b, segmentsOverlap);
+}
+
+// Shared driver: run `pred` over every (A-segment, B-segment) pair and
+// short-circuit on the first hit. Both crossing and overlap walk the two
+// polylines identically — only the per-pair predicate differs.
+function anySegmentPair(
+    a: ISideAnchoredConnector,
+    b: ISideAnchoredConnector,
+    pred: (ax: number, ay: number, bx: number, by: number,
+           cx: number, cy: number, dx: number, dy: number) => boolean,
+): boolean
 {
     const polyA = polylineOf(a.Geometry);
     const polyB = polylineOf(b.Geometry);
@@ -961,7 +993,7 @@ function connectorsCross(a: ISideAnchoredConnector, b: ISideAnchoredConnector): 
     {
         for (let j = 0; j < polyB.length - 1; j++)
         {
-            if (segmentsProperlyCross(
+            if (pred(
                 polyA[i]!.x, polyA[i]!.y, polyA[i + 1]!.x, polyA[i + 1]!.y,
                 polyB[j]!.x, polyB[j]!.y, polyB[j + 1]!.x, polyB[j + 1]!.y,
             )) return true;
@@ -1025,5 +1057,39 @@ function segmentsProperlyCross(
 function orient(ax: number, ay: number, bx: number, by: number, cx: number, cy: number): number
 {
     return (bx - ax) * (cy - ay) - (by - ay) * (cx - ax);
+}
+
+// True iff segment AB and segment CD are COLLINEAR and their overlap along
+// that shared line has strictly positive length (i.e. they paint over one
+// another, not merely touch at an endpoint). Complements
+// segmentsProperlyCross, which rejects the collinear case outright.
+//
+//   1. Both endpoints of CD must lie on the infinite line through AB
+//      (orientation ≈ 0), and both segments must be non-degenerate.
+//   2. Project all four points onto AB's dominant axis (X for a mostly-
+//      horizontal segment, Y for a mostly-vertical one — robust when one
+//      axis span is zero, as it is for axis-aligned orthogonal routes) and
+//      test the 1-D intervals for a positive-length intersection.
+function segmentsOverlap(
+    ax: number, ay: number, bx: number, by: number,
+    cx: number, cy: number, dx: number, dy: number,
+): boolean
+{
+    const EPS = 1e-6;
+    const abx = bx - ax;
+    const aby = by - ay;
+    // Degenerate segments (a point) can't overlap a span.
+    if (Math.abs(abx) < EPS && Math.abs(aby) < EPS) return false;
+    if (Math.abs(dx - cx) < EPS && Math.abs(dy - cy) < EPS) return false;
+    // C and D must both sit on line AB → all four collinear.
+    if (Math.abs(orient(ax, ay, bx, by, cx, cy)) > EPS) return false;
+    if (Math.abs(orient(ax, ay, bx, by, dx, dy)) > EPS) return false;
+    // Project onto the dominant axis and intersect the intervals.
+    const useX = Math.abs(abx) >= Math.abs(aby);
+    const a1 = useX ? ax : ay, b1 = useX ? bx : by;
+    const c1 = useX ? cx : cy, d1 = useX ? dx : dy;
+    const lo = Math.max(Math.min(a1, b1), Math.min(c1, d1));
+    const hi = Math.min(Math.max(a1, b1), Math.max(c1, d1));
+    return hi - lo > EPS;
 }
 

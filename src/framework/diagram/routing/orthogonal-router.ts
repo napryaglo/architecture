@@ -47,6 +47,13 @@ import {
 
 const ORTHOGONAL_STUB = 20;
 
+// Per-slot stub extension. A side-anchored endpoint at slot index i pushes
+// its perpendicular stub out by i × LANE_GAP beyond the base stub, so two
+// connectors sharing a side (or a source/target column) settle their
+// parallel runs onto distinct lanes instead of painting over each other.
+// Small enough to stay visually tidy, large enough to separate strokes.
+const LANE_GAP = 10;
+
 class OrthogonalRouter implements IRouter
 {
     public compute(spec: RouteSpec): PathGeometry
@@ -82,8 +89,8 @@ function computePoints(spec: RouteSpec): Point[]
     const sSide = spec.sourceAnchor.side;
     const tSide = spec.targetAnchor.side;
 
-    const sStub = stubPoint(s, sSide);
-    const tStub = stubPoint(t, tSide);
+    const sStub = stubPoint(s, sSide, spec.sourceAnchor.laneOffset ?? 0);
+    const tStub = stubPoint(t, tSide, spec.targetAnchor.laneOffset ?? 0);
 
     if (spec.waypoints.length === 0)
     {
@@ -358,10 +365,11 @@ function sideVector(side: ResolvedPortSide): { x: number; y: number }
     }
 }
 
-function stubPoint(p: Point, side: ResolvedPortSide): Point
+function stubPoint(p: Point, side: ResolvedPortSide, laneOffset: number): Point
 {
     const v = sideVector(side);
-    return new Point(p.X + v.x * ORTHOGONAL_STUB, p.Y + v.y * ORTHOGONAL_STUB);
+    const reach = ORTHOGONAL_STUB + laneOffset * LANE_GAP;
+    return new Point(p.X + v.x * reach, p.Y + v.y * reach);
 }
 
 // Intersection of the source's and target's outward beams on their

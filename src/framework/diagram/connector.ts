@@ -996,7 +996,7 @@ function resolveEndpoint(
     // assigns a slot index; the position is (slot+1)/(count+1) along
     // the side. This is the path side-bar gestures land on; existing
     // connectors registered with the figure participate in distribution.
-    const sideSlotAnchor = tryResolveSideSlot(ep);
+    const sideSlotAnchor = tryResolveSideSlot(ep, otherAnchor);
     if (sideSlotAnchor !== undefined) return sideSlotAnchor;
 
     // Path 4 — auto-pick closest port to the OTHER endpoint.
@@ -1035,7 +1035,10 @@ function resolveEndpoint(
 // named / positional addressing in Path 2 / 3. Side-only resolution is
 // purely dynamic so the centered / symmetric guarantee holds regardless
 // of what the designer happened to bake into Ports.
-function tryResolveSideSlot(ep: ConnectorEndpoint): ResolvedAnchor | undefined
+function tryResolveSideSlot(
+    ep: ConnectorEndpoint,
+    otherAnchor: ResolvedAnchor,
+): ResolvedAnchor | undefined
 {
     const slot = endpointSideSlot(ep);
     if (slot === undefined) return undefined;
@@ -1049,13 +1052,41 @@ function tryResolveSideSlot(ep: ConnectorEndpoint): ResolvedAnchor | undefined
     const r = nodeRect(figure);
     if (r === undefined || r.Width === 0 || r.Height === 0) return undefined;
     const t = (info.index + 1) / (info.count + 1);
-    switch (side)
-    {
-        case PortSide.N: return { x: r.X + t * r.Width,  y: r.Y,                side };
-        case PortSide.S: return { x: r.X + t * r.Width,  y: r.Y + r.Height,     side };
-        case PortSide.E: return { x: r.X + r.Width,      y: r.Y + t * r.Height, side };
-        case PortSide.W: return { x: r.X,                y: r.Y + t * r.Height, side };
-    }
+    const x = side === PortSide.E ? r.X + r.Width
+            : side === PortSide.W ? r.X
+            : r.X + t * r.Width;
+    const y = side === PortSide.S ? r.Y + r.Height
+            : side === PortSide.N ? r.Y
+            : r.Y + t * r.Height;
+    return { x, y, side, laneOffset: laneOffsetFor(side, info.index, info.count, x, y, otherAnchor) };
+}
+
+// Orthogonal lane offset for a side-anchored slot. Connectors sharing a
+// side fan their perpendicular stubs out by offset × gap so parallel runs
+// don't stack — but the ORDER of the fan must nest with the routes or the
+// inner connectors' verticals get crossed by the outer ones' approaches.
+//
+// The nesting direction depends on which way the route leaves toward the
+// other endpoint. For an E/W side the runs are vertical, so the deciding
+// axis is Y: when the other end sits BELOW the slot the lanes must DECREASE
+// with slot index (top slot → outermost lane); when it sits above, they
+// INCREASE. N/S sides are the same argument with the X axis. A single slot
+// (count 1) always stays on the base lane (offset 0).
+function laneOffsetFor(
+    side: ResolvedPortSide,
+    index: number,
+    count: number,
+    slotX: number,
+    slotY: number,
+    otherAnchor: ResolvedAnchor,
+): number
+{
+    if (count <= 1) return 0;
+    const horizontalSide = side === PortSide.E || side === PortSide.W;
+    const otherIsPast = horizontalSide
+        ? otherAnchor.y > slotY     // other endpoint below this slot
+        : otherAnchor.x > slotX;    // other endpoint right of this slot
+    return otherIsPast ? (count - 1 - index) : index;
 }
 
 // Endpoint qualifies for the side-anchored registry when its Node is a

@@ -38,6 +38,14 @@ export interface ResolvedAnchor
     x:    number;
     y:    number;
     side: ResolvedPortSide;
+    // Lane index for orthogonal stub staggering. Side-anchored endpoints
+    // carry their slot index here so the orthogonal router can push each
+    // connector's perpendicular stub out by `laneOffset × gap`, fanning
+    // co-located parallel runs into distinct lanes instead of stacking
+    // them on one shared line. 0 / undefined = the base stub (single
+    // connector on the side, or a router that ignores lanes). Only the
+    // orthogonal router reads it; straight / bezier are unaffected.
+    laneOffset?: number;
 }
 
 // Input contract for every IRouter call. Carries everything a router
