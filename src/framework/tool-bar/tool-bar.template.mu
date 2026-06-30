@@ -7,7 +7,6 @@
 // clause in src/resources/framework.resources.mu.
 
 resources ToolBars {
-
     // ── ToolBarButton: connected-bar chrome ────────────────────────
     // A ToolBarButton lives inside a ToolBar's inline strip alongside
     // peer buttons and ToolBarSeparators. The strip is meant to read as
@@ -31,12 +30,12 @@ resources ToolBars {
     // glyph); a ToolBarButton with `ShowText=true` carries enough room
     // for the label via the inner StackPanel's margin (set by
     // rebuildContent in tool-bar-items.ts).
-    Template x:key="DefaultToolBarButton" [TargetType=ToolBarButton] {
+    Template x:key="DefaultToolBarButton" [TargetType = ToolBarButton] {
         Border x:name="PART_Border"
-              [ Background      = @SurfaceContainerHigh,
-                BorderThickness = (0),
-                CornerRadius    = 0,
-                Padding         = (12,8,12,8) ] {
+            [ Background      = @SurfaceContainerHigh,
+              BorderThickness = (0),
+              CornerRadius    = 0,
+              Padding         = (12,8,12,8) ] {
             ContentPresenter
         }
         // Opaque steps on the M3 SurfaceContainer ladder — going UP
@@ -50,19 +49,19 @@ resources ToolBars {
         // look LESS opaque than rest. MenuItem rows can use the
         // overlays because they're transparent at rest — see the
         // comment on DefaultMenuItemRow.
-        when ( IsMouseOver )           { PART_Border.Background   = @SurfaceContainerHighest; }
-        when ( IsPressed )             { PART_Border.Background   = @SurfaceContainer; }
-        when ( Position = Only  )      { PART_Border.CornerRadius = CornerRadius.Full; }
-        when ( Position = First )      { PART_Border.CornerRadius = CornerRadius.LeftRounded; }
-        when ( Position = Last  )      { PART_Border.CornerRadius = CornerRadius.RightRounded; }
+        when ( IsMouseOver ) { PART_Border.Background = @SurfaceContainerHighest; }
+        when ( IsPressed ) { PART_Border.Background = @SurfaceContainer; }
+        when ( Position = Only ) { PART_Border.CornerRadius = CornerRadius.Full; }
+        when ( Position = First ) { PART_Border.CornerRadius = CornerRadius.LeftRounded; }
+        when ( Position = Last ) { PART_Border.CornerRadius = CornerRadius.RightRounded; }
         // Adaptive layout — tighter in Compact, larger touch target
         // on coarse-pointer devices.
-        when ( ThemeManager.Density = Compact )     { PART_Border.Padding = (8,4,8,4); }
+        when ( ThemeManager.Density = Compact ) { PART_Border.Padding = (8,4,8,4); }
         when ( ThemeManager.Density = Comfortable ) { PART_Border.Padding = (16,10,16,10); }
-        when ( ThemeManager.Pointer = Coarse )      { PART_Border.Padding = (16,14,16,14); }
+        when ( ThemeManager.Pointer = Coarse ) { PART_Border.Padding = (16,14,16,14); }
     }
 
-    Style [TargetType=ToolBarButton] {
+    Style [TargetType = ToolBarButton] {
         Template = @DefaultToolBarButton;
     }
 
@@ -72,12 +71,12 @@ resources ToolBars {
     // toggle (Bold, Italic, …) stays visible against the surrounding
     // square buttons. The position triggers ride on top of IsChecked
     // because they target a different DP (CornerRadius vs Background).
-    Template x:key="DefaultToolBarToggleButton" [TargetType=ToolBarToggleButton] {
+    Template x:key="DefaultToolBarToggleButton" [TargetType = ToolBarToggleButton] {
         Border x:name="PART_Border"
-              [ Background      = @SurfaceContainerHigh,
-                BorderThickness = (0),
-                CornerRadius    = 0,
-                Padding         = (12,8,12,8) ] {
+            [ Background      = @SurfaceContainerHigh,
+              BorderThickness = (0),
+              CornerRadius    = 0,
+              Padding         = (12,8,12,8) ] {
             ContentPresenter
         }
         // Same SurfaceContainer-ladder pattern as DefaultToolBarButton
@@ -86,21 +85,21 @@ resources ToolBars {
         // @SecondaryContainer setter outranks hover / press when the
         // toggle is checked — matches the "checked beats hover" intent
         // the previous template carried.
-        when ( IsMouseOver )       { PART_Border.Background  = @SurfaceContainerHighest; }
-        when ( IsPressed )         { PART_Border.Background  = @SurfaceContainer; }
-        when ( IsChecked )         { PART_Border.Background  = @SecondaryContainer; }
-        when ( Position = Only  )  { PART_Border.CornerRadius = CornerRadius.Full; }
-        when ( Position = First )  { PART_Border.CornerRadius = CornerRadius.LeftRounded; }
-        when ( Position = Last  )  { PART_Border.CornerRadius = CornerRadius.RightRounded; }
+        when ( IsMouseOver ) { PART_Border.Background = @SurfaceContainerHighest; }
+        when ( IsPressed ) { PART_Border.Background = @SurfaceContainer; }
+        when ( IsChecked ) { PART_Border.Background = @SecondaryContainer; }
+        when ( Position = Only ) { PART_Border.CornerRadius = CornerRadius.Full; }
+        when ( Position = First ) { PART_Border.CornerRadius = CornerRadius.LeftRounded; }
+        when ( Position = Last ) { PART_Border.CornerRadius = CornerRadius.RightRounded; }
         // Adaptive layout (§ 17.7) — match DefaultToolBarButton's
         // density / pointer triggers so the connected-bar group stays
         // visually consistent when one button is a toggle.
-        when ( ThemeManager.Density = Compact )      { PART_Border.Padding = (8,4,8,4); }
-        when ( ThemeManager.Density = Comfortable )  { PART_Border.Padding = (16,10,16,10); }
-        when ( ThemeManager.Pointer = Coarse )       { PART_Border.Padding = (16,14,16,14); }
+        when ( ThemeManager.Density = Compact ) { PART_Border.Padding = (8,4,8,4); }
+        when ( ThemeManager.Density = Comfortable ) { PART_Border.Padding = (16,10,16,10); }
+        when ( ThemeManager.Pointer = Coarse ) { PART_Border.Padding = (16,14,16,14); }
     }
 
-    Style [TargetType=ToolBarToggleButton] {
+    Style [TargetType = ToolBarToggleButton] {
         Template = @DefaultToolBarToggleButton;
     }
 
@@ -110,8 +109,8 @@ resources ToolBars {
     // the active theme. Same shape MenuSeparator / StatusBarSeparator
     // use — the imperative `LineBrush ?? Theme.fieldBorder` fallback
     // is gone now that the DP default rides through DynamicResource.
-    Style [TargetType=ToolBarSeparator] {
-        Width     = 9;
+    Style [TargetType = ToolBarSeparator] {
+        Width = 9;
         MinHeight = 16;
         LineBrush = @Outline;
     }
@@ -126,15 +125,15 @@ resources ToolBars {
     // chrome from the basic theme). Its width is toggled between
     // Number.NaN (auto) and 0 by ToolBar.applyChevronVisibility based
     // on whether any items have overflowed.
-    Template x:key="DefaultToolBar" [TargetType=ToolBar] {
+    Template x:key="DefaultToolBar" [TargetType = ToolBar] {
         Border x:name="PART_Border"
-              [ Background      = @Surface,
-                BorderBrush     = @Outline,
-                BorderThickness = (1),
-                Padding         = (4) ] {
-            DockPanel x:name="PART_Layout" [LastChildFill=true] {
-                Button x:name="PART_Chevron" [DockPanel.Dock=Right] {
-                    TextBlock [Text="⋯"]
+            [ Background      = @Surface,
+              BorderBrush     = @Outline,
+              BorderThickness = (1),
+              Padding         = (4) ] {
+            DockPanel x:name="PART_Layout" [ LastChildFill = true ] {
+                Button x:name="PART_Chevron" [ DockPanel.Dock = Right ] {
+                    TextBlock [ Text = "⋯" ]
                 }
                 ItemsPresenter x:name="PART_ItemsPresenter"
             }
@@ -147,14 +146,14 @@ resources ToolBars {
     // ItemsControl bound to ToolBar._overflowedItems (the items that
     // moved off the inline strip because they wouldn't fit).
     // PART_PopupHost.anchor is wired to the chevron in ToolBar's ctor.
-    Template x:key="DefaultToolBarPopup" [TargetType=ToolBar] {
+    Template x:key="DefaultToolBarPopup" [TargetType = ToolBar] {
         ToolBarPopupHost x:name="PART_PopupHost" {
-            ClickAwayScrim x:name="PART_Scrim" [BorderThickness=(0)]
+            ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
             Border x:name="PART_PopupContainer"
-                  [ Background      = @SurfaceContainerHigh,
-                    BorderBrush     = @OutlineVariant,
-                    BorderThickness = (1),
-                    Padding         = (4) ] {
+                [ Background      = @SurfaceContainerHigh,
+                  BorderBrush     = @OutlineVariant,
+                  BorderThickness = (1),
+                  Padding         = (4) ] {
                 ToolBarOverflowItemsControl x:name="PART_PopupList"
             }
         }
@@ -164,9 +163,8 @@ resources ToolBars {
         when ( ThemeManager.PrefersContrast = More ) { PART_PopupContainer.BorderThickness = (2); }
     }
 
-    Style [TargetType=ToolBar] {
-        Template      = @DefaultToolBar;
+    Style [TargetType = ToolBar] {
+        Template = @DefaultToolBar;
         PopupTemplate = @DefaultToolBarPopup;
     }
-
 }

@@ -7,7 +7,6 @@
 // clause in src/resources/framework.resources.mu.
 
 resources Notifications {
-
     // ── ProgressIndicator: M3 Linear progress ──────────────────────
     // Determinate Linear progress — 4dp track + fill ride above one
     // another with a CornerRadius=2 ramp (matches Slider track and M3
@@ -18,18 +17,18 @@ resources Notifications {
     // declaratively, so this v0 template ships a fixed-width fill that
     // the consumer scales via a class-level handler; the binding
     // pipeline lands when the converter syntax does.
-    Template x:key="DefaultLinearProgressIndicator" [TargetType=ProgressIndicator] {
+    Template x:key="DefaultLinearProgressIndicator" [TargetType = ProgressIndicator] {
         Border x:name="PART_Track"
-              [ Background      = @SurfaceContainerHighest,
-                CornerRadius    = 2,
-                BorderThickness = (0),
-                Height          = 4 ] {
+            [ Background      = @SurfaceContainerHighest,
+              CornerRadius    = 2,
+              BorderThickness = (0),
+              Height          = 4 ] {
             Border x:name="PART_Fill"
-                  [ Background          = @Primary,
-                    CornerRadius        = 2,
-                    BorderThickness     = (0),
-                    HorizontalAlignment = Left,
-                    Height              = 4 ]
+                [ Background          = @Primary,
+                  CornerRadius        = 2,
+                  BorderThickness     = (0),
+                  HorizontalAlignment = Left,
+                  Height              = 4 ]
         }
         when ( IsEnabled = false ) { PART_Track.Opacity = @DisabledContentOpacity; }
     }
@@ -47,15 +46,15 @@ resources Notifications {
     // declare reusable Pen resources rather than `Stroke + StrokeThickness`
     // pairs. Brushes resolve through DynamicResource, so theme switches
     // re-tint the Pens automatically.
-    Pen x:key="ProgressTrackPen" [Brush=@SurfaceContainerHighest, Thickness=4]
-    Pen x:key="ProgressFillPen"  [Brush=@Primary,                 Thickness=4]
+    Pen x:key="ProgressTrackPen" [ Brush = @SurfaceContainerHighest, Thickness = 4 ]
+    Pen x:key="ProgressFillPen" [ Brush = @Primary, Thickness = 4 ]
 
-    Template x:key="DefaultCircularProgressIndicator" [TargetType=ProgressIndicator] {
+    Template x:key="DefaultCircularProgressIndicator" [TargetType = ProgressIndicator] {
         Border x:name="PART_OuterFrame"
-              [ Background      = #00000000,
-                BorderThickness = (0),
-                Width           = 40,
-                Height          = 40 ] {
+            [ Background      = #00000000,
+              BorderThickness = (0),
+              Width           = 40,
+              Height          = 40 ] {
             // Two overlapping Arc Visuals — track underneath, fill on
             // top. Both start at -90° (top of the circle) so any
             // sweep reads "filling clockwise from 12 o'clock", the
@@ -75,7 +74,7 @@ resources Notifications {
         }
         when ( IsEnabled = false ) { PART_OuterFrame.Opacity = @DisabledContentOpacity; }
     }
-    Style [TargetType=ProgressIndicator] {
+    Style [TargetType = ProgressIndicator] {
         Template = @DefaultLinearProgressIndicator;
         when ( Variant = Circular ) { Template = @DefaultCircularProgressIndicator; }
     }
@@ -88,32 +87,34 @@ resources Notifications {
     // ContentPresenter binding directly via $Leading). M3 spec uses
     // @Surface as the resting fill with no border by default; the
     // trailing actions row anchors right.
-    Template x:key="DefaultBanner" [TargetType=Banner] {
+    Template x:key="DefaultBanner" [TargetType = Banner] {
         Border x:name="PART_Banner"
-              [ Background      = @Surface,
-                BorderBrush     = @OutlineVariant,
-                BorderThickness = (0, 0, 0, 1),
-                Padding         = (@Spacing4, @Spacing3, @Spacing4, @Spacing3) ] {
-            DockPanel [LastChildFill=true] {
-                ContentPresenter [ DockPanel.Dock     = Left,
-                                   Content             = $Leading,
-                                   VerticalAlignment   = Center,
-                                   Margin              = (0, 0, @Spacing3, 0) ]
-                ContentPresenter [ DockPanel.Dock     = Right,
-                                   Content             = $Actions,
-                                   VerticalAlignment   = Center,
-                                   Margin              = (@Spacing3, 0, 0, 0) ]
+            [ Background      = @Surface,
+              BorderBrush     = @OutlineVariant,
+              BorderThickness = (0,0,0,1),
+              Padding         = (@Spacing4,@Spacing3,@Spacing4,@Spacing3) ] {
+            DockPanel [ LastChildFill = true ] {
+                ContentPresenter
+                    [ DockPanel.Dock    = Left,
+                      Content           = $Leading,
+                      VerticalAlignment = Center,
+                      Margin            = (0,0,@Spacing3,0) ]
+                ContentPresenter
+                    [ DockPanel.Dock    = Right,
+                      Content           = $Actions,
+                      VerticalAlignment = Center,
+                      Margin            = (@Spacing3,0,0,0) ]
                 ContentPresenter [ VerticalAlignment = Center ]
             }
         }
     }
-    Style [TargetType=Banner] {
-        Template      = @DefaultBanner;
-        Foreground    = @OnSurface;
-        FontFamily    = @BodyMediumFont;
-        FontWeight    = @BodyMediumWeight;
-        FontSize      = @BodyMediumSize;
-        LineHeight    = @BodyMediumLineHeight;
+    Style [TargetType = Banner] {
+        Template = @DefaultBanner;
+        Foreground = @OnSurface;
+        FontFamily = @BodyMediumFont;
+        FontWeight = @BodyMediumWeight;
+        FontSize = @BodyMediumSize;
+        LineHeight = @BodyMediumLineHeight;
         LetterSpacing = @BodyMediumTracking;
     }
 
@@ -121,30 +122,31 @@ resources Notifications {
     // @InverseSurface fill, @InverseOnSurface ink (M3 inverts the
     // snackbar against host theme so it stays legible regardless of
     // backdrop). ExtraSmall corner radius matches the spec.
-    Template x:key="DefaultSnackbar" [TargetType=Snackbar] {
+    Template x:key="DefaultSnackbar" [TargetType = Snackbar] {
         Border x:name="PART_Snackbar"
-              [ Background      = @InverseSurface,
-                BorderBrush     = #00000000,
-                BorderThickness = (0),
-                CornerRadius    = @ShapeExtraSmall,
-                Effect          = @Elevation3,
-                Padding         = (@Spacing4, @Spacing3, @Spacing2, @Spacing3) ] {
-            DockPanel [LastChildFill=true] {
-                ContentPresenter [ DockPanel.Dock     = Right,
-                                   Content             = $Actions,
-                                   VerticalAlignment   = Center,
-                                   Margin              = (@Spacing4, 0, 0, 0) ]
+            [ Background      = @InverseSurface,
+              BorderBrush     = #00000000,
+              BorderThickness = (0),
+              CornerRadius    = @ShapeExtraSmall,
+              Effect          = @Elevation3,
+              Padding         = (@Spacing4,@Spacing3,@Spacing2,@Spacing3) ] {
+            DockPanel [ LastChildFill = true ] {
+                ContentPresenter
+                    [ DockPanel.Dock    = Right,
+                      Content           = $Actions,
+                      VerticalAlignment = Center,
+                      Margin            = (@Spacing4,0,0,0) ]
                 ContentPresenter [ VerticalAlignment = Center ]
             }
         }
     }
-    Style [TargetType=Snackbar] {
-        Template      = @DefaultSnackbar;
-        Foreground    = @InverseOnSurface;
-        FontFamily    = @BodyMediumFont;
-        FontWeight    = @BodyMediumWeight;
-        FontSize      = @BodyMediumSize;
-        LineHeight    = @BodyMediumLineHeight;
+    Style [TargetType = Snackbar] {
+        Template = @DefaultSnackbar;
+        Foreground = @InverseOnSurface;
+        FontFamily = @BodyMediumFont;
+        FontWeight = @BodyMediumWeight;
+        FontSize = @BodyMediumSize;
+        LineHeight = @BodyMediumLineHeight;
         LetterSpacing = @BodyMediumTracking;
     }
 }

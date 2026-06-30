@@ -11,7 +11,6 @@
 // clause in src/resources/framework.resources.mu.
 
 resources Surfaces {
-
     // ── Card: M3 content container ─────────────────────────────────
     // Three variants — Filled / Elevated / Outlined. Each ships a
     // PART_Border container with the variant's resting chrome and a
@@ -33,66 +32,74 @@ resources Surfaces {
     // having to extend Button.
 
     // Filled — @SurfaceContainerHighest, no border, no resting Effect.
-    Template x:key="DefaultFilledCard" [TargetType=Card] {
+    Template x:key="DefaultFilledCard" [TargetType = Card] {
         Border x:name="PART_Border"
-              [ Background     = @SurfaceContainerHighest,
-                BorderThickness = (0),
-                CornerRadius   = @ShapeMedium ] {
+            [ Background      = @SurfaceContainerHighest,
+              BorderThickness = (0),
+              CornerRadius    = @ShapeMedium ] {
             Border x:name="PART_StateLayer"
-                  [ Background   = #00000000,
-                    CornerRadius = @ShapeMedium,
-                    Padding      = (16,16,16,16) ] {
+                [ Background   = #00000000,
+                  CornerRadius = @ShapeMedium,
+                  Padding      = (16,16,16,16) ] {
                 ContentPresenter
             }
         }
-        when ( IsMouseOver )  { PART_StateLayer.Background = @StateHoverOverlay;
-                                PART_Border.Effect          = @ElevationLevel1; }
-        when ( IsPressed   )  { PART_StateLayer.Background = @StatePressOverlay; }
+        when ( IsMouseOver ) {
+            PART_StateLayer.Background = @StateHoverOverlay;
+            PART_Border.Effect = @ElevationLevel1;
+        }
+        when ( IsPressed ) { PART_StateLayer.Background = @StatePressOverlay; }
     }
 
     // Elevated — @SurfaceContainerLow, no border, resting Level1.
-    Template x:key="DefaultElevatedCard" [TargetType=Card] {
+    Template x:key="DefaultElevatedCard" [TargetType = Card] {
         Border x:name="PART_Border"
-              [ Background     = @SurfaceContainerLow,
-                BorderThickness = (0),
-                CornerRadius   = @ShapeMedium,
-                Effect         = @ElevationLevel1 ] {
+            [ Background      = @SurfaceContainerLow,
+              BorderThickness = (0),
+              CornerRadius    = @ShapeMedium,
+              Effect          = @ElevationLevel1 ] {
             Border x:name="PART_StateLayer"
-                  [ Background   = #00000000,
-                    CornerRadius = @ShapeMedium,
-                    Padding      = (16,16,16,16) ] {
+                [ Background   = #00000000,
+                  CornerRadius = @ShapeMedium,
+                  Padding      = (16,16,16,16) ] {
                 ContentPresenter
             }
         }
-        when ( IsMouseOver )  { PART_StateLayer.Background = @StateHoverOverlay;
-                                PART_Border.Effect          = @ElevationLevel2; }
-        when ( IsPressed   )  { PART_StateLayer.Background = @StatePressOverlay;
-                                PART_Border.Effect          = @ElevationLevel1; }
+        when ( IsMouseOver ) {
+            PART_StateLayer.Background = @StateHoverOverlay;
+            PART_Border.Effect = @ElevationLevel2;
+        }
+        when ( IsPressed ) {
+            PART_StateLayer.Background = @StatePressOverlay;
+            PART_Border.Effect = @ElevationLevel1;
+        }
     }
 
     // Outlined — @Surface, 1-DIP @Outline border, no resting Effect.
-    Template x:key="DefaultOutlinedCard" [TargetType=Card] {
+    Template x:key="DefaultOutlinedCard" [TargetType = Card] {
         Border x:name="PART_Border"
-              [ Background     = @Surface,
-                BorderBrush    = @Outline,
-                BorderThickness = (1),
-                CornerRadius   = @ShapeMedium ] {
+            [ Background      = @Surface,
+              BorderBrush     = @Outline,
+              BorderThickness = (1),
+              CornerRadius    = @ShapeMedium ] {
             Border x:name="PART_StateLayer"
-                  [ Background   = #00000000,
-                    CornerRadius = @ShapeMedium,
-                    Padding      = (15,15,15,15) ] {
+                [ Background   = #00000000,
+                  CornerRadius = @ShapeMedium,
+                  Padding      = (15,15,15,15) ] {
                 ContentPresenter
             }
         }
-        when ( IsMouseOver )                          { PART_StateLayer.Background  = @StateHoverOverlay;
-                                                        PART_Border.Effect           = @ElevationLevel1; }
-        when ( IsPressed   )                          { PART_StateLayer.Background  = @StatePressOverlay; }
-        when ( ThemeManager.PrefersContrast = More )  { PART_Border.BorderThickness = (2); }
+        when ( IsMouseOver ) {
+            PART_StateLayer.Background = @StateHoverOverlay;
+            PART_Border.Effect = @ElevationLevel1;
+        }
+        when ( IsPressed ) { PART_StateLayer.Background = @StatePressOverlay; }
+        when ( ThemeManager.PrefersContrast = More ) { PART_Border.BorderThickness = (2); }
     }
 
     // Default Style — picks Template by Variant. Filled is the baseline
     // (the Setter); Elevated / Outlined each ride their own trigger.
-    Style [TargetType=Card] {
+    Style [TargetType = Card] {
         Template = @DefaultFilledCard;
         when ( Variant = Elevated ) { Template = @DefaultElevatedCard; }
         when ( Variant = Outlined ) { Template = @DefaultOutlinedCard; }
@@ -108,14 +115,14 @@ resources Surfaces {
     // PART_HorizontalScrollBar are the default scrollbars — re-template
     // to swap them or move their position; the host fishes them out by
     // PART name.
-    Template x:key="DefaultScrollViewer" [TargetType=ScrollViewer]{
-        ScrollViewerLayout x:name="PART_Layout"{
+    Template x:key="DefaultScrollViewer" [TargetType = ScrollViewer] {
+        ScrollViewerLayout x:name="PART_Layout" {
             ScrollContentPresenter x:name="PART_ContentSite"
             ScrollBar x:name="PART_VerticalScrollBar"
             ScrollBar x:name="PART_HorizontalScrollBar"
         }
     }
-    Style [TargetType=ScrollViewer] {
+    Style [TargetType = ScrollViewer] {
         Template = @DefaultScrollViewer;
     }
 
@@ -139,12 +146,12 @@ resources Surfaces {
     //     the trailing corners — 16dp on the edge furthest from the
     //     screen edge). Needs Anchor-aware corner-radius computation
     //     mural's template DSL doesn't support yet.
-    Template x:key="DefaultDrawerPane"[TargetType=Drawer]{
+    Template x:key="DefaultDrawerPane" [TargetType = Drawer] {
         Border x:name="PART_Pane"
-              [ Background      = @SurfaceContainerLow,
-                BorderBrush     = @OutlineVariant,
-                BorderThickness = (1),
-                Padding         = (@Spacing0, @Spacing3, @Spacing0, @Spacing0) ]{
+            [ Background      = @SurfaceContainerLow,
+              BorderBrush     = @OutlineVariant,
+              BorderThickness = (1),
+              Padding         = (@Spacing0,@Spacing3,@Spacing0,@Spacing0) ] {
             ContentPresenter
         }
         when ( Variant = Temporary ) { PART_Pane.Effect = @ElevationLevel1; }
@@ -160,8 +167,8 @@ resources Surfaces {
     // to IsOpen=true. The pane is NOT a child of this template; Drawer
     // AddVisualChilds it after Apply so the same pane instance can flip
     // between in-flow and overlay hosting without being rebuilt.
-    Template x:key="DefaultDrawerOverlay"[TargetType=Drawer]{
-        TemporaryOverlayHost x:name="PART_OverlayHost"{
+    Template x:key="DefaultDrawerOverlay" [TargetType = Drawer] {
+        TemporaryOverlayHost x:name="PART_OverlayHost" {
             ScrimSurface x:name="PART_Scrim" [ BorderThickness = (0) ]
         }
     }
@@ -173,34 +180,35 @@ resources Surfaces {
     // onto the PresentationTarget's OverlayLayer and that surface
     // owns the scrim. The dialog template just paints the floating
     // surface itself.
-    Template x:key="DefaultDialog" [TargetType=Dialog] {
+    Template x:key="DefaultDialog" [TargetType = Dialog] {
         Border x:name="PART_Dialog"
-              [ Background      = @Surface,
-                BorderBrush     = #00000000,
-                BorderThickness = (0),
-                CornerRadius    = @ShapeExtraLarge,
-                Effect          = @Elevation3,
-                Padding         = (@Spacing6, @Spacing6, @Spacing6, @Spacing6) ] {
-            DockPanel [LastChildFill=true] {
+            [ Background      = @Surface,
+              BorderBrush     = #00000000,
+              BorderThickness = (0),
+              CornerRadius    = @ShapeExtraLarge,
+              Effect          = @Elevation3,
+              Padding         = (@Spacing6,@Spacing6,@Spacing6,@Spacing6) ] {
+            DockPanel [ LastChildFill = true ] {
                 TextBlock x:name="PART_Title"
-                         [ DockPanel.Dock = Top,
-                           Text                  = $Title,
-                           Foreground            = @OnSurface,
-                           FontFamily            = @HeadlineSmallFont,
-                           FontWeight            = @HeadlineSmallWeight,
-                           FontSize               = @HeadlineSmallSize,
-                           LineHeight             = @HeadlineSmallLineHeight,
-                           LetterSpacing          = @HeadlineSmallTracking,
-                           Margin                 = (0, 0, 0, @Spacing4) ]
-                ContentPresenter [ DockPanel.Dock = Bottom,
-                                   Content         = $Actions,
-                                   HorizontalAlignment = Right,
-                                   Margin              = (0, @Spacing4, 0, 0) ]
+                    [ DockPanel.Dock = Top,
+                      Text           = $Title,
+                      Foreground     = @OnSurface,
+                      FontFamily     = @HeadlineSmallFont,
+                      FontWeight     = @HeadlineSmallWeight,
+                      FontSize       = @HeadlineSmallSize,
+                      LineHeight     = @HeadlineSmallLineHeight,
+                      LetterSpacing  = @HeadlineSmallTracking,
+                      Margin         = (0,0,0,@Spacing4) ]
+                ContentPresenter
+                    [ DockPanel.Dock      = Bottom,
+                      Content             = $Actions,
+                      HorizontalAlignment = Right,
+                      Margin              = (0,@Spacing4,0,0) ]
                 ContentPresenter
             }
         }
     }
-    Style [TargetType=Dialog] {
+    Style [TargetType = Dialog] {
         Template = @DefaultDialog;
     }
 
@@ -210,18 +218,18 @@ resources Surfaces {
     // asymmetric corners ride the (TL, TR, BR, BL) CornerRadius tuple
     // — the compiler routes tuples in a CornerRadius= position to
     // `new CornerRadius(...)` rather than the default Thickness shape.
-    Template x:key="DefaultBottomSheet" [TargetType=BottomSheet] {
+    Template x:key="DefaultBottomSheet" [TargetType = BottomSheet] {
         Border x:name="PART_Sheet"
-              [ Background      = @Surface,
-                BorderBrush     = #00000000,
-                BorderThickness = (0),
-                CornerRadius    = (@ShapeExtraLarge, @ShapeExtraLarge, 0, 0),
-                Effect          = @Elevation1,
-                Padding         = (@Spacing4, @Spacing4, @Spacing4, @Spacing4) ] {
+            [ Background      = @Surface,
+              BorderBrush     = #00000000,
+              BorderThickness = (0),
+              CornerRadius    = (@ShapeExtraLarge,@ShapeExtraLarge,0,0),
+              Effect          = @Elevation1,
+              Padding         = (@Spacing4,@Spacing4,@Spacing4,@Spacing4) ] {
             ContentPresenter
         }
     }
-    Style [TargetType=BottomSheet] {
+    Style [TargetType = BottomSheet] {
         Template = @DefaultBottomSheet;
     }
 }

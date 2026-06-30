@@ -9,7 +9,6 @@
 // clause in src/resources/framework.resources.mu.
 
 resources Diagrams {
-
     // ── Figure: per-item shape host ────────────────────────────────
     //
     // Template = Canvas { Shape + TextBlock }. The Shape primitive
@@ -27,21 +26,18 @@ resources Diagrams {
     // shape painted is the Figure's own, not the wrapped value; the
     // unused Content there is a known wart inherited from earlier
     // iterations and not in scope for this template.
-    Template x:key="DefaultFigure" [TargetType=Figure]{
+    Template x:key="DefaultFigure" [TargetType = Figure] {
         Canvas {
             Shape x:name="PART_Shape"
-                  [ Geometry = $$Geometry,
-                    Fill     = $$Fill,
-                    Stroke   = $$Stroke,
-                    Width    = $$Width,
-                    Height   = $$Height ]
-            TextBlock x:name="PART_Label"
-                      [ Text   = $$LabelText,
-                        Width  = $$Width,
-                        Height = $$Height ]
+                [ Geometry = $$Geometry,
+                  Fill     = $$Fill,
+                  Stroke   = $$Stroke,
+                  Width    = $$Width,
+                  Height   = $$Height ]
+            TextBlock x:name="PART_Label" [ Text = $$LabelText, Width = $$Width, Height = $$Height ]
         }
     }
-    Style [TargetType=Figure] {
+    Style [TargetType = Figure] {
         Template = @DefaultFigure;
     }
 
@@ -58,7 +54,7 @@ resources Diagrams {
     // Selected: a 1-DIP @Primary outline rounds the bbox. Width /
     // Height template-bind so the Border tracks the union-bbox extent
     // Group._recomputeBounds writes onto WidthKey / HeightKey.
-    Template x:key="DefaultGroup" [TargetType=Group]{
+    Template x:key="DefaultGroup" [TargetType = Group] {
         // IsHitTestVisible=false on the chrome Border. The bbox is
         // purely visual decoration — its `<rect class="mural-hit">`
         // would otherwise carry pointer-events:all and swallow clicks
@@ -67,15 +63,15 @@ resources Diagrams {
         // under the cursor (Figure.OnPointerDown then elevates the
         // Selector to the enclosing Group via the Parent chain).
         Border x:name="PART_Border"
-              [ Background        = #00000000,
-                BorderBrush       = @Primary,
-                BorderThickness   = (0),
-                Width             = $$Width,
-                Height            = $$Height,
-                IsHitTestVisible  = false ]
+            [ Background       = #00000000,
+              BorderBrush      = @Primary,
+              BorderThickness  = (0),
+              Width            = $$Width,
+              Height           = $$Height,
+              IsHitTestVisible = false ]
         when ( IsSelected ) { PART_Border.BorderThickness = (1); }
     }
-    Style [TargetType=Group] {
+    Style [TargetType = Group] {
         Template = @DefaultGroup;
     }
 
@@ -91,7 +87,7 @@ resources Diagrams {
     // No Stroke setter: Connector seeds a per-instance default Pen in its
     // ctor so PenEditor's in-place edits can't leak across connectors —
     // a shared Style-setter Pen would reintroduce that leak.
-    Style [TargetType=Connector] {
+    Style [TargetType = Connector] {
         TargetCapTemplate = @ArrowCap;
     }
 
@@ -116,14 +112,14 @@ resources Diagrams {
     // adorner positioning and reactivity happen in canvas-local
     // coords — which keeps side bars on figures past page 1
     // reachable after scrolling.
-    Template x:key="DefaultDiagram" [TargetType=Diagram]{
-        ScrollViewer x:name="PART_Scroll" [ IsAutoHideScrollBars = false ]{
+    Template x:key="DefaultDiagram" [TargetType = Diagram] {
+        ScrollViewer x:name="PART_Scroll" [ IsAutoHideScrollBars = false ] {
             AdornerDecorator {
                 ItemsPresenter
             }
         }
     }
-    Style [TargetType=Diagram] {
+    Style [TargetType = Diagram] {
         Template = @DefaultDiagram;
     }
 }

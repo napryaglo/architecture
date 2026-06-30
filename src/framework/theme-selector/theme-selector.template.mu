@@ -5,7 +5,6 @@
 // clause in src/resources/framework.resources.mu.
 
 resources ThemeSelectors {
-
     // ── ThemeSelector (theme + scheme picker) ──────────────────────
     // Two icon-toggle + ComboBox pairs in a horizontal row. Each icon
     // is a Text-variant Button (no chrome — paints just the glyph);
@@ -25,24 +24,38 @@ resources ThemeSelectors {
     // listeners. Items + SelectedItem on both ComboBoxes are written
     // imperatively from syncFromThemeManager — the bound list is
     // derived from ThemeManager state, not authored declaratively.
-    Template x:key="DefaultThemeSelector" [TargetType=ThemeSelector] {
-        StackPanel x:name="PART_Layout" [Orientation = Horizontal] {
+    Template x:key="DefaultThemeSelector" [TargetType = ThemeSelector] {
+        StackPanel x:name="PART_Layout" [ Orientation = Horizontal ] {
             // Always-visible icon affordances. TextBlock Foreground is
             // tinted to @OnPrimary so the icons stay legible on the top
             // app bar; hosts hanging the ThemeSelector on a different
             // surface should re-template and pick their own Foreground.
-            TextBlock [Style = @LabelLarge, Text = "Aa", Foreground = @OnPrimary,
-                       VerticalAlignment = Center, Margin = (4,0,4,0)]
+            TextBlock
+                [ Style             = @LabelLarge,
+                  Text              = "Aa",
+                  Foreground        = @OnPrimary,
+                  VerticalAlignment = Center,
+                  Margin            = (4,0,4,0) ]
             Border x:name="PART_ThemeComboWrap"
-                  [Width = 0, MinWidth = 0, Opacity = 0, Padding = (4,0,4,0)] {
-                ComboBox x:name="PART_ThemeCombo" [Width = 140, ThemeManager.Density = Compact]
+                [ Width    = 0,
+                  MinWidth = 0,
+                  Opacity  = 0,
+                  Padding  = (4,0,4,0) ] {
+                ComboBox x:name="PART_ThemeCombo" [ Width = 140, ThemeManager.Density = Compact ]
             }
 
-            TextBlock [Style = @LabelLarge, Text = "◐", Foreground = @OnPrimary,
-                       VerticalAlignment = Center, Margin = (4,0,4,0)]
+            TextBlock
+                [ Style             = @LabelLarge,
+                  Text              = "◐",
+                  Foreground        = @OnPrimary,
+                  VerticalAlignment = Center,
+                  Margin            = (4,0,4,0) ]
             Border x:name="PART_SchemeComboWrap"
-                  [Width = 0, MinWidth = 0, Opacity = 0, Padding = (4,0,4,0)] {
-                ComboBox x:name="PART_SchemeCombo" [Width = 140, ThemeManager.Density = Compact]
+                [ Width    = 0,
+                  MinWidth = 0,
+                  Opacity  = 0,
+                  Padding  = (4,0,4,0) ] {
+                ComboBox x:name="PART_SchemeCombo" [ Width = 140, ThemeManager.Density = Compact ]
             }
         }
 
@@ -63,17 +76,25 @@ resources ThemeSelectors {
         // single-term `when()` conditions today, so we duplicate the
         // body across two triggers rather than spelling `IsMouseOver or
         // PART_xxxCombo.IsDropDownOpen`.
-        when ( IsMouseOver )                  { PART_ThemeComboWrap.Width   = 148;
-                                                 PART_ThemeComboWrap.Opacity = 1; }
-        when ( PART_ThemeCombo.IsDropDownOpen ){ PART_ThemeComboWrap.Width   = 148;
-                                                 PART_ThemeComboWrap.Opacity = 1; }
-        when ( IsMouseOver )                  { PART_SchemeComboWrap.Width   = 148;
-                                                 PART_SchemeComboWrap.Opacity = 1; }
-        when ( PART_SchemeCombo.IsDropDownOpen ){ PART_SchemeComboWrap.Width   = 148;
-                                                  PART_SchemeComboWrap.Opacity = 1; }
+        when ( IsMouseOver ) {
+            PART_ThemeComboWrap.Width = 148;
+            PART_ThemeComboWrap.Opacity = 1;
+        }
+        when ( PART_ThemeCombo.IsDropDownOpen ) {
+            PART_ThemeComboWrap.Width = 148;
+            PART_ThemeComboWrap.Opacity = 1;
+        }
+        when ( IsMouseOver ) {
+            PART_SchemeComboWrap.Width = 148;
+            PART_SchemeComboWrap.Opacity = 1;
+        }
+        when ( PART_SchemeCombo.IsDropDownOpen ) {
+            PART_SchemeComboWrap.Width = 148;
+            PART_SchemeComboWrap.Opacity = 1;
+        }
     }
 
-    Style [TargetType=ThemeSelector] {
+    Style [TargetType = ThemeSelector] {
         Template = @DefaultThemeSelector;
     }
 }

@@ -24,44 +24,39 @@
 // in src/resources/framework.resources.mu.
 
 resources Caps {
-
     // Open arrow — two stroke legs meeting at the tip, no fill. Sits on
     // the line, so no inset.
-    DataTemplate x:key="ArrowCap" [DataType=ConnectorCapDataContext] {
-        Path [ Data   = "M -12,-6 L 0,0 L -12,6",
-               Stroke = $Pen,
-               Connector.CapInset = 0 ]
+    DataTemplate x:key="ArrowCap" [DataType = ConnectorCapDataContext] {
+        Path [ Data = "M -12,-6 L 0,0 L -12,6", Stroke = $Pen, Connector.CapInset = 0 ]
     }
 
     // Filled triangle — point at the endpoint, flat back 12 units in.
     // Inset 12 keeps the line from poking through the flat back.
-    DataTemplate x:key="FilledArrowCap" [DataType=ConnectorCapDataContext] {
-        Path [ Data = "M 0,0 L -12,-6 L -12,6 Z",
-               Fill = $Brush,
-               Connector.CapInset = 12 ]
+    DataTemplate x:key="FilledArrowCap" [DataType = ConnectorCapDataContext] {
+        Path [ Data = "M 0,0 L -12,-6 L -12,6 Z", Fill = $Brush, Connector.CapInset = 12 ]
     }
 
     // Open (stroked) circle centred on the endpoint, radius 6. The line
     // runs to the centre under the disc edge — inset 0.
-    DataTemplate x:key="OpenCircleCap" [DataType=ConnectorCapDataContext] {
-        Path [ Data   = "M -6,0 A 6,6 0 1,0 6,0 A 6,6 0 1,0 -6,0 Z",
-               Stroke = $Pen,
-               Connector.CapInset = 0 ]
+    DataTemplate x:key="OpenCircleCap" [DataType = ConnectorCapDataContext] {
+        Path
+            [ Data               = "M -6,0 A 6,6 0 1,0 6,0 A 6,6 0 1,0 -6,0 Z",
+              Stroke             = $Pen,
+              Connector.CapInset = 0 ]
     }
 
     // Filled disc centred on the endpoint, radius 6. Inset 6 (= radius)
     // stops the line at the disc's near edge.
-    DataTemplate x:key="FilledCircleCap" [DataType=ConnectorCapDataContext] {
-        Path [ Data = "M -6,0 A 6,6 0 1,0 6,0 A 6,6 0 1,0 -6,0 Z",
-               Fill = $Brush,
-               Connector.CapInset = 6 ]
+    DataTemplate x:key="FilledCircleCap" [DataType = ConnectorCapDataContext] {
+        Path
+            [ Data               = "M -6,0 A 6,6 0 1,0 6,0 A 6,6 0 1,0 -6,0 Z",
+              Fill               = $Brush,
+              Connector.CapInset = 6 ]
     }
 
     // Filled rhombus — near point at the endpoint, far point 16 units in,
     // side points at ±5. Inset 8 stops the line at the rhombus centre.
-    DataTemplate x:key="DiamondCap" [DataType=ConnectorCapDataContext] {
-        Path [ Data = "M 0,0 L -8,-5 L -16,0 L -8,5 Z",
-               Fill = $Brush,
-               Connector.CapInset = 8 ]
+    DataTemplate x:key="DiamondCap" [DataType = ConnectorCapDataContext] {
+        Path [ Data = "M 0,0 L -8,-5 L -16,0 L -8,5 Z", Fill = $Brush, Connector.CapInset = 8 ]
     }
 }

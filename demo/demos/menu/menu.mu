@@ -14,54 +14,76 @@ import MenuVM from "./menu-vm.mjs"
 //   * MenuSeparator    — horizontal divider between groups.
 
 resources MenuDemo {
-
-    DataTemplate x:key="MenuTemplate" [DataType=MenuVM] {
-        Border [Background=@Surface, BorderBrush=@OutlineVariant,
-                BorderThickness=(1)]{
-
-            DockPanel{
+    DataTemplate x:key="MenuTemplate" [DataType = MenuVM] {
+        Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
+            DockPanel {
                 // Header
-                Border[DockPanel.Dock=Top,
-                       Background=@Primary, Padding=(16,12,16,12)]{
-                    TextBlock[Text="MenuButton — hamburger fly-out with checkable items and gesture text.",
-                              FontSize=15, FontWeight=Bold,
-                              Foreground=@OnPrimary]
+                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (16,12,16,12) ] {
+                    TextBlock
+                        [ Text       = "MenuButton — hamburger fly-out with checkable items and gesture text.",
+                          FontSize   = 15,
+                          FontWeight = Bold,
+                          Foreground = @OnPrimary ]
                 }
 
                 // Body
-                StackPanel[Orientation=Vertical, Margin=(16,16,16,16)]{
+                StackPanel [ Orientation = Vertical, Margin = (16,16,16,16) ] {
+                    TextBlock
+                        [ Text       = "Click the button to open the menu:",
+                          FontSize   = 12,
+                          Foreground = @OnSurfaceVariant,
+                          Margin     = (0,0,0,8) ]
 
-                    TextBlock[Text="Click the button to open the menu:",
-                              FontSize=12, Foreground=@OnSurfaceVariant,
-                              Margin=(0,0,0,8)]
-
-                    MenuButton[Header="☰  File"]{
-                        MenuItem[Header="New",      InputGestureText="Ctrl+N",
-                                 Command=$NewCommand]
-                        MenuItem[Header="Open…",    InputGestureText="Ctrl+O",
-                                 Command=$OpenCommand]
+                    MenuButton [ Header = "☰  File" ] {
+                        MenuItem
+                            [ Header           = "New",
+                              InputGestureText = "Ctrl+N",
+                              Command          = $NewCommand ]
+                        MenuItem
+                            [ Header           = "Open…",
+                              InputGestureText = "Ctrl+O",
+                              Command          = $OpenCommand ]
                         MenuSeparator
-                        MenuItem[Header="Save",     InputGestureText="Ctrl+S",
-                                 Command=$SaveCommand]
-                        MenuItem[Header="Save As…", InputGestureText="Ctrl+Shift+S",
-                                 Command=$SaveAsCommand]
+                        MenuItem
+                            [ Header           = "Save",
+                              InputGestureText = "Ctrl+S",
+                              Command          = $SaveCommand ]
+                        MenuItem
+                            [ Header           = "Save As…",
+                              InputGestureText = "Ctrl+Shift+S",
+                              Command          = $SaveAsCommand ]
                         MenuSeparator
-                        MenuItem[Header="Close",    InputGestureText="Ctrl+F4",
-                                 Command=$CloseCommand]
+                        MenuItem
+                            [ Header           = "Close",
+                              InputGestureText = "Ctrl+F4",
+                              Command          = $CloseCommand ]
                         MenuSeparator
-                        MenuItem[Header="Undo",     InputGestureText="Ctrl+Z",
-                                 Command=$UndoCommand]
-                        MenuItem[Header="Redo",     InputGestureText="Ctrl+Y",
-                                 Command=$RedoCommand]
+                        MenuItem
+                            [ Header           = "Undo",
+                              InputGestureText = "Ctrl+Z",
+                              Command          = $UndoCommand ]
+                        MenuItem
+                            [ Header           = "Redo",
+                              InputGestureText = "Ctrl+Y",
+                              Command          = $RedoCommand ]
                         MenuSeparator
-                        MenuItem[Header="Show Grid",    IsCheckable=true,
-                                 IsChecked=$ShowGrid,    Command=$ShowGridCommand]
-                        MenuItem[Header="Snap to Grid", IsCheckable=true,
-                                 IsChecked=$SnapToGrid,  Command=$SnapToGridCommand]
+                        MenuItem
+                            [ Header      = "Show Grid",
+                              IsCheckable = true,
+                              IsChecked   = $ShowGrid,
+                              Command     = $ShowGridCommand ]
+                        MenuItem
+                            [ Header      = "Snap to Grid",
+                              IsCheckable = true,
+                              IsChecked   = $SnapToGrid,
+                              Command     = $SnapToGridCommand ]
                     }
 
-                    TextBlock[Text=$Status, FontSize=13,
-                              Foreground=@OnSurface, Margin=(0,16,0,0)]
+                    TextBlock
+                        [ Text       = $Status,
+                          FontSize   = 13,
+                          Foreground = @OnSurface,
+                          Margin     = (0,16,0,0) ]
                 }
             }
         }

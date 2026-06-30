@@ -28,53 +28,51 @@ import AnimationNamedVM from "./animation-named-vm.mjs"
 // scopes to this demo only.
 
 resources AnimationNamedDemo {
-    DataTemplate x:key="AnimationNamedTemplate" [DataType=AnimationNamedVM] {
-        Border [Background=@Surface, BorderBrush=@OutlineVariant,
-                BorderThickness=(1)]{
+    DataTemplate x:key="AnimationNamedTemplate" [DataType = AnimationNamedVM] {
+        Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             resources: {
-                Style[TargetType=Button]{
+                Style [TargetType = Button] {
                     on Loaded {
-                        BeginStoryboard [Name="loop"] {
-                            DoubleAnimation[TargetProperty=Width,
-                                            From=80, To=240,
-                                            Duration=800,
-                                            AutoReverse=true,
-                                            RepeatBehavior=Infinity]
-                        }
+                        BeginStoryboard [Name="loop"] { DoubleAnimation [TargetProperty = Width, From = 80, To = 240, Duration = 800, AutoReverse = true, RepeatBehavior = Infinity] }
                     }
-                    when( IsMouseOver ){
-                        on enter { PauseStoryboard  [Name="loop"] }
-                        on exit  { ResumeStoryboard [Name="loop"] }
+                    when ( IsMouseOver ) {
+                        on enter { PauseStoryboard [Name="loop"] }
+                        on exit { ResumeStoryboard [Name="loop"] }
                     }
                     on Click { StopStoryboard [Name="loop"] }
                 }
             }
-            DockPanel{
-                Border[DockPanel.Dock=Top,
-                       Background=@Primary, Padding=(16,12,16,12)]{
-                    TextBlock[Text="Named storyboards — Begin / Pause / Resume / Stop",
-                              FontSize=15, FontWeight=Bold,
-                              Foreground=@OnPrimary]
+            DockPanel {
+                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (16,12,16,12) ] {
+                    TextBlock
+                        [ Text       = "Named storyboards — Begin / Pause / Resume / Stop",
+                          FontSize   = 15,
+                          FontWeight = Bold,
+                          Foreground = @OnPrimary ]
                 }
 
-                StackPanel[Orientation=Vertical, Margin=(20,24,20,20)]{
-                    TextBlock[Text="Each button starts a looping Width animation on Loaded. Hover pauses; un-hover resumes; click stops for good.",
-                              FontSize=12, Foreground=@OnSurfaceVariant,
-                              Margin=(0,0,0,16)]
-                    StackPanel[Orientation=Vertical]{
-                        Button [Height=28, Margin=(0,0,0,8)]{
-                            TextBlock[Text="Loop A"]
+                StackPanel [ Orientation = Vertical, Margin = (20,24,20,20) ] {
+                    TextBlock
+                        [ Text       = "Each button starts a looping Width animation on Loaded. Hover pauses; un-hover resumes; click stops for good.",
+                          FontSize   = 12,
+                          Foreground = @OnSurfaceVariant,
+                          Margin     = (0,0,0,16) ]
+                    StackPanel [ Orientation = Vertical ] {
+                        Button [ Height = 28, Margin = (0,0,0,8) ] {
+                            TextBlock [ Text = "Loop A" ]
                         }
-                        Button [Height=28, Margin=(0,0,0,8)]{
-                            TextBlock[Text="Loop B"]
+                        Button [ Height = 28, Margin = (0,0,0,8) ] {
+                            TextBlock [ Text = "Loop B" ]
                         }
-                        Button [Height=28, Margin=(0,0,0,8)]{
-                            TextBlock[Text="Loop C"]
+                        Button [ Height = 28, Margin = (0,0,0,8) ] {
+                            TextBlock [ Text = "Loop C" ]
                         }
                     }
-                    TextBlock[Text="The named registry is per-Visual — pausing Loop A doesn't pause Loop B or C.",
-                              FontSize=11, Foreground=@OnSurfaceVariant,
-                              Margin=(0,16,0,0)]
+                    TextBlock
+                        [ Text       = "The named registry is per-Visual — pausing Loop A doesn't pause Loop B or C.",
+                          FontSize   = 11,
+                          Foreground = @OnSurfaceVariant,
+                          Margin     = (0,16,0,0) ]
                 }
             }
         }

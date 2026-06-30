@@ -8,7 +8,6 @@
 // clause in src/resources/framework.resources.mu.
 
 resources Menus {
-
     // ── MenuButton: trigger button ─────────────────────────────────
     // The visible inline part of a MenuButton — a Button with a header
     // text label. MenuButton's ctor wires Click on PART_Trigger to flip
@@ -19,16 +18,16 @@ resources Menus {
     // through Button's default Style transitively — no audit work
     // duplicated here. PART_HeaderText is the only knob the trigger
     // template owns; LabelLarge is the M3 menu-button label role.
-    Template x:key="DefaultMenuButtonTrigger" [TargetType=MenuButton]{
-        Button x:name="PART_Trigger"{
-            StackPanel x:name="PART_TriggerStack" [Orientation = Horizontal]{
+    Template x:key="DefaultMenuButtonTrigger" [TargetType = MenuButton] {
+        Button x:name="PART_Trigger" {
+            StackPanel x:name="PART_TriggerStack" [ Orientation = Horizontal ] {
                 TextBlock x:name="PART_HeaderText"
-                         [ Foreground          = @OnPrimary,
-                           FontFamily          = @LabelLargeFont,
-                           FontWeight          = @LabelLargeWeight,
-                           FontSize             = @LabelLargeSize,
-                           LineHeight           = @LabelLargeLineHeight,
-                           LetterSpacing        = @LabelLargeTracking ]
+                    [ Foreground    = @OnPrimary,
+                      FontFamily    = @LabelLargeFont,
+                      FontWeight    = @LabelLargeWeight,
+                      FontSize      = @LabelLargeSize,
+                      LineHeight    = @LabelLargeLineHeight,
+                      LetterSpacing = @LabelLargeTracking ]
             }
         }
     }
@@ -46,16 +45,16 @@ resources Menus {
     // resulting templateRoot from itself so the only in-tree child is
     // the trigger Button; mountPopup() re-attaches it onto the
     // OverlayLayer when IsOpen flips true.
-    Template x:key="DefaultMenuButtonPopup" [TargetType=MenuButton]{
-        MenuPopupHost x:name="PART_PopupHost"{
-            ClickAwayScrim x:name="PART_Scrim" [BorderThickness = (0)]
+    Template x:key="DefaultMenuButtonPopup" [TargetType = MenuButton] {
+        MenuPopupHost x:name="PART_PopupHost" {
+            ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
             Border x:name="PART_PopupContainer"
-                  [Background      = @SurfaceContainerHigh,
-                   BorderBrush     = @OutlineVariant,
-                   BorderThickness = (1),
-                   CornerRadius    = @ShapeExtraSmall,
-                   Effect          = @Elevation2,
-                   Padding         = (0)]{
+                [ Background      = @SurfaceContainerHigh,
+                  BorderBrush     = @OutlineVariant,
+                  BorderThickness = (1),
+                  CornerRadius    = @ShapeExtraSmall,
+                  Effect          = @Elevation2,
+                  Padding         = (0) ] {
                 ItemsPresenter
             }
         }
@@ -79,12 +78,12 @@ resources Menus {
     //                       ItemsPresenter has to host items inside
     //                       the popup, not inline.
     //   * ItemsPanel      — vertical stack for the materialised rows
-    Style [TargetType=MenuButton] {
+    Style [TargetType = MenuButton] {
         HorizontalAlignment = Left;
-        VerticalAlignment   = Top;
-        Template            = @DefaultMenuButtonPopup;
-        TriggerTemplate     = @DefaultMenuButtonTrigger;
-        ItemsPanel          = @DefaultMenuItemsPanel;
+        VerticalAlignment = Top;
+        Template = @DefaultMenuButtonPopup;
+        TriggerTemplate = @DefaultMenuButtonTrigger;
+        ItemsPanel = @DefaultMenuItemsPanel;
     }
 
     // ── ContextMenu: popup overlay ─────────────────────────────────
@@ -95,16 +94,16 @@ resources Menus {
     // PresentationTarget's OverlayLayer, this template subtree renders.
     // The ItemsPresenter slots in ContextMenu's ItemsPanel, which
     // materialises the MenuItem rows.
-    Template x:key="DefaultContextMenuPopup" [TargetType=ContextMenu]{
-        MenuPopupHost x:name="PART_PopupHost"{
-            ClickAwayScrim x:name="PART_Scrim" [BorderThickness = (0)]
+    Template x:key="DefaultContextMenuPopup" [TargetType = ContextMenu] {
+        MenuPopupHost x:name="PART_PopupHost" {
+            ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
             Border x:name="PART_PopupContainer"
-                  [Background      = @SurfaceContainerHigh,
-                   BorderBrush     = @OutlineVariant,
-                   BorderThickness = (1),
-                   CornerRadius    = @ShapeExtraSmall,
-                   Effect          = @Elevation2,
-                   Padding         = (0)]{
+                [ Background      = @SurfaceContainerHigh,
+                  BorderBrush     = @OutlineVariant,
+                  BorderThickness = (1),
+                  CornerRadius    = @ShapeExtraSmall,
+                  Effect          = @Elevation2,
+                  Padding         = (0) ] {
                 ItemsPresenter
             }
         }
@@ -117,8 +116,8 @@ resources Menus {
     // ── ContextMenu: default Style ─────────────────────────────────
     // Wires the popup template + the vertical-stack ItemsPanel that
     // materialises into the template's ItemsPresenter slot.
-    Style [TargetType=ContextMenu] {
-        Template   = @DefaultContextMenuPopup;
+    Style [TargetType = ContextMenu] {
+        Template = @DefaultContextMenuPopup;
         ItemsPanel = @DefaultMenuItemsPanel;
     }
 
@@ -128,7 +127,7 @@ resources Menus {
     // popup ControlTemplate; this just provides the StackPanel that
     // materialises into the ItemsPresenter slot.
     ItemsPanelTemplate x:key="DefaultMenuItemsPanel" {
-        StackPanel [Orientation = Vertical]
+        StackPanel [ Orientation = Vertical ]
     }
 
     // ── MenuSeparator: chrome tokens ───────────────────────────────
@@ -136,9 +135,9 @@ resources Menus {
     // the Style just tunes the default size and LineBrush so the
     // default visual flips with the theme palette without forcing
     // each consumer to set LineBrush explicitly.
-    Style [TargetType=MenuSeparator] {
-        Height    = 9;
-        MinWidth  = 16;
+    Style [TargetType = MenuSeparator] {
+        Height = 9;
+        MinWidth = 16;
         LineBrush = @OutlineVariant;
     }
 
@@ -167,52 +166,56 @@ resources Menus {
     // resolveSurfaceTemplate + Apply(this)) and attached as
     // visualChildren[0]. MenuItem's primary ControlTemplate (the one
     // ItemsControl wires) is the submenu popup chrome below.
-    Template x:key="DefaultMenuItemRow" [TargetType=MenuItem] {
-        Border x:name="PART_Row"
-              [ Padding = (@Spacing2, @Spacing1, @Spacing2, @Spacing1) ] {
-            StackPanel [Orientation = Horizontal] {
+    Template x:key="DefaultMenuItemRow" [TargetType = MenuItem] {
+        Border x:name="PART_Row" [ Padding = (@Spacing2,@Spacing1,@Spacing2,@Spacing1) ] {
+            StackPanel [ Orientation = Horizontal ] {
                 // Icon column reserves 24dp for an M3-spec leading
                 // icon. Width / MinWidth stay inline as a column-grid
                 // constant — the M3 menu spec calls for a 24dp icon
                 // slot specifically (not a generic spacing token).
-                Border    x:name="PART_Icon"    [Width = 24, MinWidth = 24]
+                Border x:name="PART_Icon" [ Width = 24, MinWidth = 24 ]
                 TextBlock x:name="PART_Label"
-                         [ Margin              = (@Spacing2, 0, @Spacing4, 0),
-                           MinWidth            = 80,
-                           Foreground          = @OnSurface,
-                           FontFamily          = @LabelLargeFont,
-                           FontWeight          = @LabelLargeWeight,
-                           FontSize            = @LabelLargeSize,
-                           LineHeight          = @LabelLargeLineHeight,
-                           LetterSpacing       = @LabelLargeTracking ]
+                    [ Margin        = (@Spacing2,0,@Spacing4,0),
+                      MinWidth      = 80,
+                      Foreground    = @OnSurface,
+                      FontFamily    = @LabelLargeFont,
+                      FontWeight    = @LabelLargeWeight,
+                      FontSize      = @LabelLargeSize,
+                      LineHeight    = @LabelLargeLineHeight,
+                      LetterSpacing = @LabelLargeTracking ]
                 TextBlock x:name="PART_Gesture"
-                         [ Margin              = (0, 0, @Spacing4, 0),
-                           Foreground          = @OnSurfaceVariant,
-                           FontFamily          = @LabelMediumFont,
-                           FontWeight          = @LabelMediumWeight,
-                           FontSize            = @LabelMediumSize,
-                           LineHeight          = @LabelMediumLineHeight,
-                           LetterSpacing       = @LabelMediumTracking ]
-                TextBlock x:name="PART_Chevron" [Width = 12,
-                                                 Foreground = @OnSurfaceVariant]
+                    [ Margin        = (0,0,@Spacing4,0),
+                      Foreground    = @OnSurfaceVariant,
+                      FontFamily    = @LabelMediumFont,
+                      FontWeight    = @LabelMediumWeight,
+                      FontSize      = @LabelMediumSize,
+                      LineHeight    = @LabelMediumLineHeight,
+                      LetterSpacing = @LabelMediumTracking ]
+                TextBlock x:name="PART_Chevron" [ Width = 12, Foreground = @OnSurfaceVariant ]
             }
         }
         // M3 state-layer tokens — semi-transparent OnSurface tints over
         // whatever surface the popup chrome paints. Using a solid token
         // like @SurfaceContainerHigh here would be invisible — the
         // ContextMenu / MenuButton popup chrome IS @SurfaceContainerHigh.
-        when ( IsMouseOver )       { PART_Row.Background = @StateHoverOverlay; }
-        when ( IsFocused )         { PART_Row.Background = @StateFocusOverlay; }
-        when ( IsPressed )         { PART_Row.Background = @StatePressOverlay; }
-        when ( IsChecked )         { PART_Row.Background = @SecondaryContainer; }
-        when ( IsSubmenuOpen )     { PART_Row.Background = @SecondaryContainer; }
-        when ( IsEnabled = false ) { PART_Row.Opacity    = @DisabledContentOpacity; }
+        when ( IsMouseOver ) { PART_Row.Background = @StateHoverOverlay; }
+        when ( IsFocused ) { PART_Row.Background = @StateFocusOverlay; }
+        when ( IsPressed ) { PART_Row.Background = @StatePressOverlay; }
+        when ( IsChecked ) { PART_Row.Background = @SecondaryContainer; }
+        when ( IsSubmenuOpen ) { PART_Row.Background = @SecondaryContainer; }
+        when ( IsEnabled = false ) { PART_Row.Opacity = @DisabledContentOpacity; }
 
         // M3 density variants — tighter Padding on Compact, looser on
         // Comfortable. Matches the same shape ListBoxItem / ComboBox use.
-        when ( ThemeManager.Density = Compact )     { PART_Row.Padding = (@Spacing2, @Spacing0, @Spacing2, @Spacing0); }
-        when ( ThemeManager.Density = Comfortable ) { PART_Row.Padding = (@Spacing2, @Spacing2, @Spacing2, @Spacing2); }
-        when ( ThemeManager.Pointer = Coarse )      { PART_Row.Padding = (@Spacing3, @Spacing3, @Spacing3, @Spacing3); }
+        when ( ThemeManager.Density = Compact ) {
+            PART_Row.Padding = (@Spacing2,@Spacing0,@Spacing2,@Spacing0);
+        }
+        when ( ThemeManager.Density = Comfortable ) {
+            PART_Row.Padding = (@Spacing2,@Spacing2,@Spacing2,@Spacing2);
+        }
+        when ( ThemeManager.Pointer = Coarse ) {
+            PART_Row.Padding = (@Spacing3,@Spacing3,@Spacing3,@Spacing3);
+        }
     }
 
     // ── MenuItem: submenu popup chrome ─────────────────────────────
@@ -226,16 +229,16 @@ resources Menus {
     // This is MenuItem's ItemsControl.Template — wired in the Style
     // below. MenuItem's ctor DETACHES the templateRoot from itself so
     // it can be mounted on the overlay without dual-parent errors.
-    Template x:key="DefaultMenuItemSubmenu" [TargetType=MenuItem] {
-        MenuPopupHost x:name="PART_PopupHost"{
-            ClickAwayScrim x:name="PART_Scrim" [BorderThickness = (0)]
+    Template x:key="DefaultMenuItemSubmenu" [TargetType = MenuItem] {
+        MenuPopupHost x:name="PART_PopupHost" {
+            ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
             Border x:name="PART_PopupContainer"
-                  [Background      = @SurfaceContainerHigh,
-                   BorderBrush     = @OutlineVariant,
-                   BorderThickness = (1),
-                   CornerRadius    = @ShapeExtraSmall,
-                   Effect          = @Elevation2,
-                   Padding         = (0)]{
+                [ Background      = @SurfaceContainerHigh,
+                  BorderBrush     = @OutlineVariant,
+                  BorderThickness = (1),
+                  CornerRadius    = @ShapeExtraSmall,
+                  Effect          = @Elevation2,
+                  Padding         = (0) ] {
                 ItemsPresenter
             }
         }
@@ -245,10 +248,10 @@ resources Menus {
         when ( ThemeManager.PrefersContrast = More ) { PART_PopupContainer.BorderThickness = (2); }
     }
 
-    Style [TargetType=MenuItem] {
-        Template     = @DefaultMenuItemSubmenu;
-        ItemsPanel   = @DefaultMenuItemsPanel;
-        RowTemplate  = @DefaultMenuItemRow;
+    Style [TargetType = MenuItem] {
+        Template = @DefaultMenuItemSubmenu;
+        ItemsPanel = @DefaultMenuItemsPanel;
+        RowTemplate = @DefaultMenuItemRow;
     }
 
     // ── MenuStripItem: stripped row chrome ─────────────────────────
@@ -258,35 +261,38 @@ resources Menus {
     // submenu popup mechanic (defined by MenuItem's primary Template)
     // still applies, so clicking a top-level item opens its submenu
     // popup below.
-    Template x:key="DefaultMenuStripItemRow" [TargetType=MenuItem] {
-        Border x:name="PART_Row"
-              [ Padding = (@Spacing3, @Spacing1, @Spacing3, @Spacing1) ] {
-            StackPanel [Orientation = Horizontal] {
-                Border    x:name="PART_Icon"    [Width = 0, MinWidth = 0]
+    Template x:key="DefaultMenuStripItemRow" [TargetType = MenuItem] {
+        Border x:name="PART_Row" [ Padding = (@Spacing3,@Spacing1,@Spacing3,@Spacing1) ] {
+            StackPanel [ Orientation = Horizontal ] {
+                Border x:name="PART_Icon" [ Width = 0, MinWidth = 0 ]
                 TextBlock x:name="PART_Label"
-                         [ MinWidth            = 0,
-                           Foreground          = @OnSurface,
-                           FontFamily          = @LabelLargeFont,
-                           FontWeight          = @LabelLargeWeight,
-                           FontSize            = @LabelLargeSize,
-                           LineHeight          = @LabelLargeLineHeight,
-                           LetterSpacing       = @LabelLargeTracking ]
-                TextBlock x:name="PART_Gesture" [Width = 0,
-                                                 Foreground = @OnSurfaceVariant]
-                TextBlock x:name="PART_Chevron" [Width = 0,
-                                                 Foreground = @OnSurfaceVariant]
+                    [ MinWidth      = 0,
+                      Foreground    = @OnSurface,
+                      FontFamily    = @LabelLargeFont,
+                      FontWeight    = @LabelLargeWeight,
+                      FontSize      = @LabelLargeSize,
+                      LineHeight    = @LabelLargeLineHeight,
+                      LetterSpacing = @LabelLargeTracking ]
+                TextBlock x:name="PART_Gesture" [ Width = 0, Foreground = @OnSurfaceVariant ]
+                TextBlock x:name="PART_Chevron" [ Width = 0, Foreground = @OnSurfaceVariant ]
             }
         }
         // State-layer tokens — see DefaultMenuItemRow above for why.
-        when ( IsMouseOver )       { PART_Row.Background = @StateHoverOverlay; }
-        when ( IsFocused )         { PART_Row.Background = @StateFocusOverlay; }
-        when ( IsPressed )         { PART_Row.Background = @StatePressOverlay; }
-        when ( IsSubmenuOpen )     { PART_Row.Background = @SecondaryContainer; }
-        when ( IsEnabled = false ) { PART_Row.Opacity    = @DisabledContentOpacity; }
+        when ( IsMouseOver ) { PART_Row.Background = @StateHoverOverlay; }
+        when ( IsFocused ) { PART_Row.Background = @StateFocusOverlay; }
+        when ( IsPressed ) { PART_Row.Background = @StatePressOverlay; }
+        when ( IsSubmenuOpen ) { PART_Row.Background = @SecondaryContainer; }
+        when ( IsEnabled = false ) { PART_Row.Opacity = @DisabledContentOpacity; }
 
-        when ( ThemeManager.Density = Compact )     { PART_Row.Padding = (@Spacing3, @Spacing0, @Spacing3, @Spacing0); }
-        when ( ThemeManager.Density = Comfortable ) { PART_Row.Padding = (@Spacing3, @Spacing2, @Spacing3, @Spacing2); }
-        when ( ThemeManager.Pointer = Coarse )      { PART_Row.Padding = (@Spacing4, @Spacing3, @Spacing4, @Spacing3); }
+        when ( ThemeManager.Density = Compact ) {
+            PART_Row.Padding = (@Spacing3,@Spacing0,@Spacing3,@Spacing0);
+        }
+        when ( ThemeManager.Density = Comfortable ) {
+            PART_Row.Padding = (@Spacing3,@Spacing2,@Spacing3,@Spacing2);
+        }
+        when ( ThemeManager.Pointer = Coarse ) {
+            PART_Row.Padding = (@Spacing4,@Spacing3,@Spacing4,@Spacing3);
+        }
     }
 
     // Style for MenuStrip top-level rows — applied via
@@ -294,18 +300,18 @@ resources Menus {
     // the stripped chrome. The ItemContainerStyle factory is in
     // surface-resources; this Style is keyed (not implicit-by-type)
     // to keep nested MenuItems on their default row.
-    Style x:key="MenuStripItemStyle" [TargetType=MenuItem] {
+    Style x:key="MenuStripItemStyle" [TargetType = MenuItem] {
         RowTemplate = @DefaultMenuStripItemRow;
     }
 
     // ── MenuStrip: horizontal panel default ────────────────────────
     ItemsPanelTemplate x:key="DefaultMenuStripPanel" {
-        StackPanel [Orientation = Horizontal]
+        StackPanel [ Orientation = Horizontal ]
     }
-    Style [TargetType=MenuStrip] {
-        Background         = @SurfaceContainerLow;
-        Padding            = (4,2,4,2);
-        ItemsPanel         = @DefaultMenuStripPanel;
+    Style [TargetType = MenuStrip] {
+        Background = @SurfaceContainerLow;
+        Padding = (4,2,4,2);
+        ItemsPanel = @DefaultMenuStripPanel;
         ItemContainerStyle = @MenuStripItemStyle;
     }
 }

@@ -12,44 +12,68 @@ import SplitButtonVM from "./split-button-vm.mjs"
 // chrome) while SplitButton's class still owns the mount lifecycle.
 
 resources SplitButtonDemo {
-
-    DataTemplate x:key="SplitButtonTemplate" [DataType=SplitButtonVM] {
-        Border [Background=@Surface, BorderBrush=@OutlineVariant, BorderThickness=(1)]{
-            DockPanel{
-                Border [DockPanel.Dock=Top,
-                        Background=@Primary, Padding=(16,12,16,12)]{
-                    TextBlock [Text="SplitButton — M3 dual-target chrome. Primary fires Command; chevron toggles a dropdown.",
-                               FontSize=15, FontWeight=Bold,
-                               Foreground=@OnPrimary]
+    DataTemplate x:key="SplitButtonTemplate" [DataType = SplitButtonVM] {
+        Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
+            DockPanel {
+                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (16,12,16,12) ] {
+                    TextBlock
+                        [ Text       = "SplitButton — M3 dual-target chrome. Primary fires Command; chevron toggles a dropdown.",
+                          FontSize   = 15,
+                          FontWeight = Bold,
+                          Foreground = @OnPrimary ]
                 }
 
-                StackPanel [Orientation=Vertical, Margin=(24,24,24,24)]{
+                StackPanel [ Orientation = Vertical, Margin = (24,24,24,24) ] {
+                    TextBlock
+                        [ Text       = "Send email",
+                          FontWeight = Bold,
+                          FontSize   = 14,
+                          Foreground = @OnSurface,
+                          Margin     = (0,0,0,12) ]
 
-                    TextBlock [Text="Send email",
-                               FontWeight=Bold, FontSize=14,
-                               Foreground=@OnSurface, Margin=(0,0,0,12)]
-
-                    SplitButton [ Command     = $SendCommand,
-                                  IsOpen      = $IsOpen,
-                                  MenuContent = $MenuPopup,
-                                  HorizontalAlignment = Left,
-                                  Margin              = (0,0,0,24) ] {
-                        TextBlock [Text="Send"]
+                    SplitButton
+                        [ Command             = $SendCommand,
+                          IsOpen              = $IsOpen,
+                          MenuContent         = $MenuPopup,
+                          HorizontalAlignment = Left,
+                          Margin              = (0,0,0,24) ] {
+                        TextBlock [ Text = "Send" ]
                     }
 
                     // Read-outs so the user can verify both halves of
                     // the control are firing through to the VM.
-                    StackPanel [Orientation=Horizontal, Margin=(0,0,0,4)]{
-                        TextBlock [Text="Primary clicks: ", FontSize=12, Foreground=@OnSurfaceVariant]
-                        TextBlock [Text=$SendCount,         FontSize=12, FontWeight=Bold, Foreground=@OnSurface]
+                    StackPanel [ Orientation = Horizontal, Margin = (0,0,0,4) ] {
+                        TextBlock
+                            [ Text       = "Primary clicks: ",
+                              FontSize   = 12,
+                              Foreground = @OnSurfaceVariant ]
+                        TextBlock
+                            [ Text       = $SendCount,
+                              FontSize   = 12,
+                              FontWeight = Bold,
+                              Foreground = @OnSurface ]
                     }
-                    StackPanel [Orientation=Horizontal, Margin=(0,0,0,4)]{
-                        TextBlock [Text="Last menu action: ", FontSize=12, Foreground=@OnSurfaceVariant]
-                        TextBlock [Text=$MenuActionTaken,     FontSize=12, FontWeight=Bold, Foreground=@OnSurface]
+                    StackPanel [ Orientation = Horizontal, Margin = (0,0,0,4) ] {
+                        TextBlock
+                            [ Text       = "Last menu action: ",
+                              FontSize   = 12,
+                              Foreground = @OnSurfaceVariant ]
+                        TextBlock
+                            [ Text       = $MenuActionTaken,
+                              FontSize   = 12,
+                              FontWeight = Bold,
+                              Foreground = @OnSurface ]
                     }
-                    StackPanel [Orientation=Horizontal]{
-                        TextBlock [Text="IsOpen: ", FontSize=12, Foreground=@OnSurfaceVariant]
-                        TextBlock [Text=$IsOpen,    FontSize=12, FontWeight=Bold, Foreground=@OnSurface]
+                    StackPanel [ Orientation = Horizontal ] {
+                        TextBlock
+                            [ Text       = "IsOpen: ",
+                              FontSize   = 12,
+                              Foreground = @OnSurfaceVariant ]
+                        TextBlock
+                            [ Text       = $IsOpen,
+                              FontSize   = 12,
+                              FontWeight = Bold,
+                              Foreground = @OnSurface ]
                     }
                 }
             }

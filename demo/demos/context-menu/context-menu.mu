@@ -11,75 +11,96 @@ import ContextMenuVM from "./context-menu-vm.mjs"
 // per-panel status string.
 
 resources ContextMenuDemo {
-
     // One ContextMenu per panel, keyed so the panels can reference
     // them through the attached property. Items differ across the
     // three menus to make it clear that route-walking found the
     // right ancestor.
     ContextMenu x:key="RedMenu" {
-        MenuItem[Header="Red — Cut",    Command=$RedCommand, CommandParameter="Cut"]
-        MenuItem[Header="Red — Copy",   Command=$RedCommand, CommandParameter="Copy"]
+        MenuItem [ Header = "Red — Cut", Command = $RedCommand, CommandParameter = "Cut" ]
+        MenuItem [ Header = "Red — Copy", Command = $RedCommand, CommandParameter = "Copy" ]
         MenuSeparator
-        MenuItem[Header="Red — Delete", Command=$RedCommand, CommandParameter="Delete"]
+        MenuItem [ Header = "Red — Delete", Command = $RedCommand, CommandParameter = "Delete" ]
     }
     ContextMenu x:key="GreenMenu" {
-        MenuItem[Header="Green — Inspect",   Command=$GreenCommand, CommandParameter="Inspect"]
-        MenuItem[Header="Green — Highlight", Command=$GreenCommand, CommandParameter="Highlight"]
+        MenuItem
+            [ Header           = "Green — Inspect",
+              Command          = $GreenCommand,
+              CommandParameter = "Inspect" ]
+        MenuItem
+            [ Header           = "Green — Highlight",
+              Command          = $GreenCommand,
+              CommandParameter = "Highlight" ]
         MenuSeparator
-        MenuItem[Header="Green — Rename", Command=$GreenCommand, CommandParameter="Rename"]
+        MenuItem [ Header = "Green — Rename", Command = $GreenCommand, CommandParameter = "Rename" ]
     }
     ContextMenu x:key="BlueMenu" {
-        MenuItem[Header="Blue — Open",     Command=$BlueCommand, CommandParameter="Open"]
-        MenuItem[Header="Blue — Bookmark", Command=$BlueCommand, CommandParameter="Bookmark"]
+        MenuItem [ Header = "Blue — Open", Command = $BlueCommand, CommandParameter = "Open" ]
+        MenuItem
+            [ Header           = "Blue — Bookmark",
+              Command          = $BlueCommand,
+              CommandParameter = "Bookmark" ]
         MenuSeparator
-        MenuItem[Header="Blue — Share",    Command=$BlueCommand, CommandParameter="Share"]
+        MenuItem [ Header = "Blue — Share", Command = $BlueCommand, CommandParameter = "Share" ]
     }
 
-    DataTemplate x:key="ContextMenuTemplate" [DataType=ContextMenuVM] {
-        Border [Background=@Surface, BorderBrush=@OutlineVariant,
-                BorderThickness=(1)]{
-
-            DockPanel{
+    DataTemplate x:key="ContextMenuTemplate" [DataType = ContextMenuVM] {
+        Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
+            DockPanel {
                 // Header
-                Border[DockPanel.Dock=Top,
-                       Background=@Primary, Padding=(16,12,16,12)]{
-                    TextBlock[Text="ContextMenu — right-click any panel; the nearest ancestor's menu opens at the cursor.",
-                              FontSize=15, FontWeight=Bold,
-                              Foreground=@OnPrimary]
+                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (16,12,16,12) ] {
+                    TextBlock
+                        [ Text       = "ContextMenu — right-click any panel; the nearest ancestor's menu opens at the cursor.",
+                          FontSize   = 15,
+                          FontWeight = Bold,
+                          Foreground = @OnPrimary ]
                 }
 
-                StackPanel[Orientation=Vertical, Margin=(16,16,16,16)]{
-                    StackPanel[Orientation=Horizontal, Margin=(0,0,0,16)]{
-                        Border[Background=#ef4444, Width=180, Height=120,
-                               Margin=(0,0,12,0),
-                               ContextMenuService.ContextMenu=@RedMenu]{
-                            TextBlock[Text="Right-click me",
-                                      Foreground=@OnPrimary, FontSize=14,
-                                      FontWeight=Bold,
-                                      HorizontalAlignment=Center,
-                                      VerticalAlignment=Center]
+                StackPanel [ Orientation = Vertical, Margin = (16,16,16,16) ] {
+                    StackPanel [ Orientation = Horizontal, Margin = (0,0,0,16) ] {
+                        Border
+                            [ Background                     = #ef4444,
+                              Width                          = 180,
+                              Height                         = 120,
+                              Margin                         = (0,0,12,0),
+                              ContextMenuService.ContextMenu = @RedMenu ] {
+                            TextBlock
+                                [ Text                = "Right-click me",
+                                  Foreground          = @OnPrimary,
+                                  FontSize            = 14,
+                                  FontWeight          = Bold,
+                                  HorizontalAlignment = Center,
+                                  VerticalAlignment   = Center ]
                         }
-                        Border[Background=#22c55e, Width=180, Height=120,
-                               Margin=(0,0,12,0),
-                               ContextMenuService.ContextMenu=@GreenMenu]{
-                            TextBlock[Text="Right-click me",
-                                      Foreground=@OnPrimary, FontSize=14,
-                                      FontWeight=Bold,
-                                      HorizontalAlignment=Center,
-                                      VerticalAlignment=Center]
+                        Border
+                            [ Background                     = #22c55e,
+                              Width                          = 180,
+                              Height                         = 120,
+                              Margin                         = (0,0,12,0),
+                              ContextMenuService.ContextMenu = @GreenMenu ] {
+                            TextBlock
+                                [ Text                = "Right-click me",
+                                  Foreground          = @OnPrimary,
+                                  FontSize            = 14,
+                                  FontWeight          = Bold,
+                                  HorizontalAlignment = Center,
+                                  VerticalAlignment   = Center ]
                         }
-                        Border[Background=#3b82f6, Width=180, Height=120,
-                               ContextMenuService.ContextMenu=@BlueMenu]{
-                            TextBlock[Text="Right-click me",
-                                      Foreground=@OnPrimary, FontSize=14,
-                                      FontWeight=Bold,
-                                      HorizontalAlignment=Center,
-                                      VerticalAlignment=Center]
+                        Border
+                            [ Background                     = #3b82f6,
+                              Width                          = 180,
+                              Height                         = 120,
+                              ContextMenuService.ContextMenu = @BlueMenu ] {
+                            TextBlock
+                                [ Text                = "Right-click me",
+                                  Foreground          = @OnPrimary,
+                                  FontSize            = 14,
+                                  FontWeight          = Bold,
+                                  HorizontalAlignment = Center,
+                                  VerticalAlignment   = Center ]
                         }
                     }
 
-                    TextBlock[Text=$Status, FontSize=13,
-                              Foreground=@OnSurface]
+                    TextBlock [ Text = $Status, FontSize = 13, Foreground = @OnSurface ]
                 }
             }
         }

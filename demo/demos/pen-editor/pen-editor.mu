@@ -12,51 +12,85 @@ import PenEditorDemoVM from "./pen-editor-vm.mjs"
 //     mirror DPs.
 
 resources PenEditorDemo {
-
-    DataTemplate x:key="PenEditorTemplate" [DataType=PenEditorDemoVM] {
-        Border x:root [Background=@Surface] {
+    DataTemplate x:key="PenEditorTemplate" [DataType = PenEditorDemoVM] {
+        Border x:root [ Background = @Surface ] {
             DockPanel {
                 // ── Header ────────────────────────────────────────
-                Border [DockPanel.Dock=Top, Background=@Primary, Padding=(20,14,20,14)] {
-                    StackPanel [Orientation=Vertical] {
-                        TextBlock [Text="PowerPoint-style Pen editor",
-                                   FontSize=18, FontWeight=Bold,
-                                   Foreground=@OnPrimary]
-                        TextBlock [Text="Inline panel: brush + thickness + dash + cap + join + miter. Edits push live onto the preview Pen.",
-                                   FontSize=12, Foreground=@OnPrimary,
-                                   Margin=(0,4,0,0)]
+                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (20,14,20,14) ] {
+                    StackPanel [ Orientation = Vertical ] {
+                        TextBlock
+                            [ Text       = "PowerPoint-style Pen editor",
+                              FontSize   = 18,
+                              FontWeight = Bold,
+                              Foreground = @OnPrimary ]
+                        TextBlock
+                            [ Text       = "Inline panel: brush + thickness + dash + cap + join + miter. Edits push live onto the preview Pen.",
+                              FontSize   = 12,
+                              Foreground = @OnPrimary,
+                              Margin     = (0,4,0,0) ]
                     }
                 }
 
                 // ── Status strip ──────────────────────────────────
-                Border [DockPanel.Dock=Bottom,
-                        Background=@SurfaceContainerLow,
-                        BorderBrush=@OutlineVariant,
-                        BorderThickness=(0,1,0,0),
-                        Padding=(20,10,20,10)] {
-                    StackPanel [Orientation=Horizontal] {
-                        TextBlock [Text=$BrushSummary,     FontSize=11, Foreground=@OnSurfaceVariant, Margin=(0,0,16,0)]
-                        TextBlock [Text=$ThicknessReadout, FontSize=11, Foreground=@OnSurfaceVariant, Margin=(0,0,16,0)]
-                        TextBlock [Text=$DashReadout,      FontSize=11, Foreground=@OnSurfaceVariant, Margin=(0,0,16,0)]
-                        TextBlock [Text=$CapReadout,       FontSize=11, Foreground=@OnSurfaceVariant, Margin=(0,0,16,0)]
-                        TextBlock [Text=$JoinReadout,      FontSize=11, Foreground=@OnSurfaceVariant, Margin=(0,0,16,0)]
-                        TextBlock [Text=$MiterReadout,     FontSize=11, Foreground=@OnSurfaceVariant]
+                Border
+                    [ DockPanel.Dock  = Bottom,
+                      Background      = @SurfaceContainerLow,
+                      BorderBrush     = @OutlineVariant,
+                      BorderThickness = (0,1,0,0),
+                      Padding         = (20,10,20,10) ] {
+                    StackPanel [ Orientation = Horizontal ] {
+                        TextBlock
+                            [ Text       = $BrushSummary,
+                              FontSize   = 11,
+                              Foreground = @OnSurfaceVariant,
+                              Margin     = (0,0,16,0) ]
+                        TextBlock
+                            [ Text       = $ThicknessReadout,
+                              FontSize   = 11,
+                              Foreground = @OnSurfaceVariant,
+                              Margin     = (0,0,16,0) ]
+                        TextBlock
+                            [ Text       = $DashReadout,
+                              FontSize   = 11,
+                              Foreground = @OnSurfaceVariant,
+                              Margin     = (0,0,16,0) ]
+                        TextBlock
+                            [ Text       = $CapReadout,
+                              FontSize   = 11,
+                              Foreground = @OnSurfaceVariant,
+                              Margin     = (0,0,16,0) ]
+                        TextBlock
+                            [ Text       = $JoinReadout,
+                              FontSize   = 11,
+                              Foreground = @OnSurfaceVariant,
+                              Margin     = (0,0,16,0) ]
+                        TextBlock
+                            [ Text       = $MiterReadout,
+                              FontSize   = 11,
+                              Foreground = @OnSurfaceVariant ]
                     }
                 }
 
                 // ── Body ──────────────────────────────────────────
-                Border [Background=@SurfaceContainerLowest, Padding=(20,20,20,20)] {
-                    StackPanel [Orientation=Horizontal] {
+                Border [ Background = @SurfaceContainerLowest, Padding = (20,20,20,20) ] {
+                    StackPanel [ Orientation = Horizontal ] {
                         // Left column — the editor.
-                        Border [Width=320, Padding=(16,16,16,16),
-                                Background=@SurfaceContainerLow,
-                                BorderBrush=@OutlineVariant,
-                                BorderThickness=(1),
-                                CornerRadius=8,
-                                Margin=(0,0,20,0)] {
-                            StackPanel [Orientation=Vertical] {
-                                TextBlock [Text="Pen", FontSize=14, FontWeight=Bold, Foreground=@OnSurface, Margin=(0,0,0,12)]
-                                PenEditor [Pen=$Pen]
+                        Border
+                            [ Width           = 320,
+                              Padding         = (16,16,16,16),
+                              Background      = @SurfaceContainerLow,
+                              BorderBrush     = @OutlineVariant,
+                              BorderThickness = (1),
+                              CornerRadius    = 8,
+                              Margin          = (0,0,20,0) ] {
+                            StackPanel [ Orientation = Vertical ] {
+                                TextBlock
+                                    [ Text       = "Pen",
+                                      FontSize   = 14,
+                                      FontWeight = Bold,
+                                      Foreground = @OnSurface,
+                                      Margin     = (0,0,0,12) ]
+                                PenEditor [ Pen = $Pen ]
                             }
                         }
 
@@ -65,13 +99,15 @@ resources PenEditorDemo {
                         // Stroke; a translucent Fill so the stroke
                         // reads against the background tint, not
                         // against a solid blob.
-                        Border [Width=520, Height=420, Padding=(20),
-                                Background=@SurfaceContainer,
-                                BorderBrush=@OutlineVariant,
-                                BorderThickness=(1),
-                                CornerRadius=8] {
-                            Ellipse [Width=480, Height=380,
-                                     Stroke=$Pen]
+                        Border
+                            [ Width           = 520,
+                              Height          = 420,
+                              Padding         = (20),
+                              Background      = @SurfaceContainer,
+                              BorderBrush     = @OutlineVariant,
+                              BorderThickness = (1),
+                              CornerRadius    = 8 ] {
+                            Ellipse [ Width = 480, Height = 380, Stroke = $Pen ]
                         }
                     }
                 }

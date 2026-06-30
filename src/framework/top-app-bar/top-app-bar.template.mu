@@ -6,7 +6,6 @@
 // clause in src/resources/framework.resources.mu.
 
 resources TopAppBars {
-
     // ── TopAppBar: M3 screen-header strip ──────────────────────────
     // Four variants — Small / CenterAligned / Medium / Large. Single
     // row (64dp) for Small + CenterAligned; two-row layouts (112dp /
@@ -33,39 +32,37 @@ resources TopAppBars {
     // Small — single row, leading-aligned title. 3-column Grid layout
     // (Auto / * / Auto) — nav and actions take their natural width,
     // the title column fills the remaining space.
-    Template x:key="DefaultSmallTopAppBar" [TargetType=TopAppBar] {
-        Border x:name="PART_Border"
-              [ Background = @Surface,
-                Height     = 64 ] {
+    Template x:key="DefaultSmallTopAppBar" [TargetType = TopAppBar] {
+        Border x:name="PART_Border" [ Background = @Surface, Height = 64 ] {
             Grid {
                 ColumnDefinitions {
-                    ColumnDefinition [Width=GridLength.Auto]
-                    ColumnDefinition [Width=GridLength.Star]
-                    ColumnDefinition [Width=GridLength.Auto]
+                    ColumnDefinition [ Width = GridLength.Auto ]
+                    ColumnDefinition [ Width = GridLength.Star ]
+                    ColumnDefinition [ Width = GridLength.Auto ]
                 }
                 Border x:name="PART_NavSlot"
-                      [ Grid.Column         = 0,
-                        Width               = 48,
-                        Height              = 48,
-                        Margin              = (4,8,4,8),
-                        VerticalAlignment   = Center,
-                        HorizontalAlignment = Center ]
+                    [ Grid.Column         = 0,
+                      Width               = 48,
+                      Height              = 48,
+                      Margin              = (4,8,4,8),
+                      VerticalAlignment   = Center,
+                      HorizontalAlignment = Center ]
                 TextBlock x:name="PART_TitleText"
-                         [ Grid.Column         = 1,
-                           FontFamily          = @TitleLargeFont,
-                           FontWeight          = @TitleLargeWeight,
-                           FontSize            = @TitleLargeSize,
-                           LineHeight          = @TitleLargeLineHeight,
-                           LetterSpacing       = @TitleLargeTracking,
-                           Foreground          = @OnSurface,
-                           VerticalAlignment   = Center,
-                           HorizontalAlignment = Left,
-                           Margin              = (12,0,12,0) ]
+                    [ Grid.Column         = 1,
+                      FontFamily          = @TitleLargeFont,
+                      FontWeight          = @TitleLargeWeight,
+                      FontSize            = @TitleLargeSize,
+                      LineHeight          = @TitleLargeLineHeight,
+                      LetterSpacing       = @TitleLargeTracking,
+                      Foreground          = @OnSurface,
+                      VerticalAlignment   = Center,
+                      HorizontalAlignment = Left,
+                      Margin              = (12,0,12,0) ]
                 StackPanel x:name="PART_ActionsStack"
-                          [ Grid.Column      = 2,
-                            Orientation       = Horizontal,
-                            VerticalAlignment = Center,
-                            Margin            = (4,8,4,8) ]
+                    [ Grid.Column       = 2,
+                      Orientation       = Horizontal,
+                      VerticalAlignment = Center,
+                      Margin            = (4,8,4,8) ]
             }
         }
         // M3 scroll-tint — when the bound ScrollSource flips IsScrolled
@@ -87,40 +84,38 @@ resources TopAppBars {
     // DockPanel slot rather than the absolute centre) because the .mu
     // compiler didn't accept `ColumnDefinitions { … }` collection-child
     // syntax — that limitation is now lifted.
-    Template x:key="DefaultCenterAlignedTopAppBar" [TargetType=TopAppBar] {
-        Border x:name="PART_Border"
-              [ Background = @Surface,
-                Height     = 64 ] {
+    Template x:key="DefaultCenterAlignedTopAppBar" [TargetType = TopAppBar] {
+        Border x:name="PART_Border" [ Background = @Surface, Height = 64 ] {
             Grid {
                 ColumnDefinitions {
-                    ColumnDefinition [Width=GridLength.Star]
-                    ColumnDefinition [Width=GridLength.Auto]
-                    ColumnDefinition [Width=GridLength.Star]
+                    ColumnDefinition [ Width = GridLength.Star ]
+                    ColumnDefinition [ Width = GridLength.Auto ]
+                    ColumnDefinition [ Width = GridLength.Star ]
                 }
                 Border x:name="PART_NavSlot"
-                      [ Grid.Column         = 0,
-                        Width               = 48,
-                        Height              = 48,
-                        Margin              = (4,8,4,8),
-                        VerticalAlignment   = Center,
-                        HorizontalAlignment = Left ]
+                    [ Grid.Column         = 0,
+                      Width               = 48,
+                      Height              = 48,
+                      Margin              = (4,8,4,8),
+                      VerticalAlignment   = Center,
+                      HorizontalAlignment = Left ]
                 TextBlock x:name="PART_TitleText"
-                         [ Grid.Column         = 1,
-                           FontFamily          = @TitleLargeFont,
-                           FontWeight          = @TitleLargeWeight,
-                           FontSize            = @TitleLargeSize,
-                           LineHeight          = @TitleLargeLineHeight,
-                           LetterSpacing       = @TitleLargeTracking,
-                           Foreground          = @OnSurface,
-                           VerticalAlignment   = Center,
-                           HorizontalAlignment = Center,
-                           Margin              = (12,0,12,0) ]
+                    [ Grid.Column         = 1,
+                      FontFamily          = @TitleLargeFont,
+                      FontWeight          = @TitleLargeWeight,
+                      FontSize            = @TitleLargeSize,
+                      LineHeight          = @TitleLargeLineHeight,
+                      LetterSpacing       = @TitleLargeTracking,
+                      Foreground          = @OnSurface,
+                      VerticalAlignment   = Center,
+                      HorizontalAlignment = Center,
+                      Margin              = (12,0,12,0) ]
                 StackPanel x:name="PART_ActionsStack"
-                          [ Grid.Column      = 2,
-                            Orientation       = Horizontal,
-                            VerticalAlignment = Center,
-                            HorizontalAlignment = Right,
-                            Margin            = (4,8,4,8) ]
+                    [ Grid.Column         = 2,
+                      Orientation         = Horizontal,
+                      VerticalAlignment   = Center,
+                      HorizontalAlignment = Right,
+                      Margin              = (4,8,4,8) ]
             }
         }
         when ( IsScrolled ) { PART_Border.Background = @SurfaceContainer; }
@@ -128,38 +123,36 @@ resources TopAppBars {
 
     // Medium — two-row, 112dp tall. Row 1 (64dp) carries nav + actions;
     // Row 2 carries the larger title bottom-aligned.
-    Template x:key="DefaultMediumTopAppBar" [TargetType=TopAppBar] {
-        Border x:name="PART_Border"
-              [ Background = @Surface,
-                Height     = 112 ] {
-            DockPanel [LastChildFill=true] {
-                DockPanel [DockPanel.Dock=Top, Height=64, LastChildFill=true] {
+    Template x:key="DefaultMediumTopAppBar" [TargetType = TopAppBar] {
+        Border x:name="PART_Border" [ Background = @Surface, Height = 112 ] {
+            DockPanel [ LastChildFill = true ] {
+                DockPanel [ DockPanel.Dock = Top, Height = 64, LastChildFill = true ] {
                     Border x:name="PART_NavSlot"
-                          [ DockPanel.Dock      = Left,
-                            Width               = 48,
-                            Height              = 48,
-                            Margin              = (4,8,4,8),
-                            VerticalAlignment   = Center,
-                            HorizontalAlignment = Center ]
+                        [ DockPanel.Dock      = Left,
+                          Width               = 48,
+                          Height              = 48,
+                          Margin              = (4,8,4,8),
+                          VerticalAlignment   = Center,
+                          HorizontalAlignment = Center ]
                     StackPanel x:name="PART_ActionsStack"
-                              [ DockPanel.Dock    = Right,
-                                Orientation       = Horizontal,
-                                VerticalAlignment = Center,
-                                Margin            = (4,8,4,8) ]
+                        [ DockPanel.Dock    = Right,
+                          Orientation       = Horizontal,
+                          VerticalAlignment = Center,
+                          Margin            = (4,8,4,8) ]
                     // Empty filler — DockPanel needs a last child to
                     // satisfy LastChildFill. The title is in row 2.
-                    Border [Background = #00000000]
+                    Border [ Background = #00000000 ]
                 }
-                Border [Padding=(16,0,16,16)] {
+                Border [ Padding = (16,0,16,16) ] {
                     TextBlock x:name="PART_TitleText"
-                             [ FontFamily          = @HeadlineSmallFont,
-                               FontWeight          = @HeadlineSmallWeight,
-                               FontSize            = @HeadlineSmallSize,
-                               LineHeight          = @HeadlineSmallLineHeight,
-                               LetterSpacing       = @HeadlineSmallTracking,
-                               Foreground          = @OnSurface,
-                               VerticalAlignment   = Bottom,
-                               HorizontalAlignment = Left ]
+                        [ FontFamily          = @HeadlineSmallFont,
+                          FontWeight          = @HeadlineSmallWeight,
+                          FontSize            = @HeadlineSmallSize,
+                          LineHeight          = @HeadlineSmallLineHeight,
+                          LetterSpacing       = @HeadlineSmallTracking,
+                          Foreground          = @OnSurface,
+                          VerticalAlignment   = Bottom,
+                          HorizontalAlignment = Left ]
                 }
             }
         }
@@ -168,36 +161,34 @@ resources TopAppBars {
 
     // Large — two-row, 152dp tall. Same shape as Medium with a taller
     // title row and HeadlineMedium typography on the title.
-    Template x:key="DefaultLargeTopAppBar" [TargetType=TopAppBar] {
-        Border x:name="PART_Border"
-              [ Background = @Surface,
-                Height     = 152 ] {
-            DockPanel [LastChildFill=true] {
-                DockPanel [DockPanel.Dock=Top, Height=64, LastChildFill=true] {
+    Template x:key="DefaultLargeTopAppBar" [TargetType = TopAppBar] {
+        Border x:name="PART_Border" [ Background = @Surface, Height = 152 ] {
+            DockPanel [ LastChildFill = true ] {
+                DockPanel [ DockPanel.Dock = Top, Height = 64, LastChildFill = true ] {
                     Border x:name="PART_NavSlot"
-                          [ DockPanel.Dock      = Left,
-                            Width               = 48,
-                            Height              = 48,
-                            Margin              = (4,8,4,8),
-                            VerticalAlignment   = Center,
-                            HorizontalAlignment = Center ]
+                        [ DockPanel.Dock      = Left,
+                          Width               = 48,
+                          Height              = 48,
+                          Margin              = (4,8,4,8),
+                          VerticalAlignment   = Center,
+                          HorizontalAlignment = Center ]
                     StackPanel x:name="PART_ActionsStack"
-                              [ DockPanel.Dock    = Right,
-                                Orientation       = Horizontal,
-                                VerticalAlignment = Center,
-                                Margin            = (4,8,4,8) ]
-                    Border [Background = #00000000]
+                        [ DockPanel.Dock    = Right,
+                          Orientation       = Horizontal,
+                          VerticalAlignment = Center,
+                          Margin            = (4,8,4,8) ]
+                    Border [ Background = #00000000 ]
                 }
-                Border [Padding=(16,0,16,20)] {
+                Border [ Padding = (16,0,16,20) ] {
                     TextBlock x:name="PART_TitleText"
-                             [ FontFamily          = @HeadlineMediumFont,
-                               FontWeight          = @HeadlineMediumWeight,
-                               FontSize            = @HeadlineMediumSize,
-                               LineHeight          = @HeadlineMediumLineHeight,
-                               LetterSpacing       = @HeadlineMediumTracking,
-                               Foreground          = @OnSurface,
-                               VerticalAlignment   = Bottom,
-                               HorizontalAlignment = Left ]
+                        [ FontFamily          = @HeadlineMediumFont,
+                          FontWeight          = @HeadlineMediumWeight,
+                          FontSize            = @HeadlineMediumSize,
+                          LineHeight          = @HeadlineMediumLineHeight,
+                          LetterSpacing       = @HeadlineMediumTracking,
+                          Foreground          = @OnSurface,
+                          VerticalAlignment   = Bottom,
+                          HorizontalAlignment = Left ]
                 }
             }
         }
@@ -218,10 +209,10 @@ resources TopAppBars {
     // (Small). Driving EffectiveVariant as the trigger key sidesteps
     // that constraint because only one Variant trigger matches the
     // current EffectiveVariant at a time.
-    Style [TargetType=TopAppBar] {
+    Style [TargetType = TopAppBar] {
         Template = @DefaultSmallTopAppBar;
         when ( EffectiveVariant = CenterAligned ) { Template = @DefaultCenterAlignedTopAppBar; }
-        when ( EffectiveVariant = Medium        ) { Template = @DefaultMediumTopAppBar; }
-        when ( EffectiveVariant = Large         ) { Template = @DefaultLargeTopAppBar; }
+        when ( EffectiveVariant = Medium ) { Template = @DefaultMediumTopAppBar; }
+        when ( EffectiveVariant = Large ) { Template = @DefaultLargeTopAppBar; }
     }
 }

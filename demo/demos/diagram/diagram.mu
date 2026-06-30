@@ -6,7 +6,6 @@
 // CreateNode method through the Mutator wiring.
 
 resources DiagramDemo {
-
     // ── Boolean-combine glyphs ──────────────────────────────────────
     //
     // The Group/Combine toolbar's set-operation icons are baked from the
@@ -22,7 +21,10 @@ resources DiagramDemo {
     //   subtract  → @join_left   (left minus overlap)
     //   exclude   → @difference  (both minus overlap)
     glyphs "../../assets/material-symbols-outlined.ttf" {
-        join  join_inner  join_left  difference
+        join
+        join_inner
+        join_left
+        difference
     }
 
     // ── Shared Canvas ItemsPanel ────────────────────────────────────
@@ -36,16 +38,14 @@ resources DiagramDemo {
     // the Canvas itself, the new DesiredSize bubbles up to the
     // ScrollViewer, and a new scrollbar thumb extent is published in
     // the same layout pass.
-    ItemsPanelTemplate x:key="DiagramCanvasPanel"
-    {
-        PaginatedCanvas [PageWidth=800, PageHeight=600]
+    ItemsPanelTemplate x:key="DiagramCanvasPanel" {
+        PaginatedCanvas [ PageWidth = 800, PageHeight = 600 ]
     }
 
     // ── Toolbox ItemsPanel — 2-column UniformGrid so 35 tiles fit in
     // a reasonable vertical footprint inside the 200-wide rail.
-    ItemsPanelTemplate x:key="DiagramToolboxPanel"
-    {
-        UniformGrid [Columns=2]
+    ItemsPanelTemplate x:key="DiagramToolboxPanel" {
+        UniformGrid [ Columns = 2 ]
     }
 
     // ── Toolbox tile template ───────────────────────────────────────
@@ -54,46 +54,61 @@ resources DiagramDemo {
     // ToolboxShape's PreviewNode (a per-Kind Figure sized 48×48).
     // ContentControl's Visual-content path slots the Figure directly
     // (no DataTemplate dispatch) and the Figure renders itself.
-    DataTemplate x:key="DiagramTileTemplate" [DataType=ToolboxShape] {
-        Border x:root [IsDraggable=true, OnDragStart=$BeginKindDragData,
-                       Background=@Surface, BorderBrush=@OutlineVariant,
-                       BorderThickness=(1), CornerRadius=4,
-                       Padding=(4,8,4,8), Margin=(2,0,2,4)]{
-            StackPanel [Orientation=Vertical, HorizontalAlignment=Center]{
-                ContentControl [Content=$PreviewNode,
-                                Width=48, Height=48,
-                                HorizontalAlignment=Center]
-                TextBlock [Text=$Label, FontSize=10,
-                           Foreground=@OnSurface, Margin=(0,4,0,0),
-                           HorizontalAlignment=Center]
+    DataTemplate x:key="DiagramTileTemplate" [DataType = ToolboxShape] {
+        Border x:root
+            [ IsDraggable     = true,
+              OnDragStart     = $BeginKindDragData,
+              Background      = @Surface,
+              BorderBrush     = @OutlineVariant,
+              BorderThickness = (1),
+              CornerRadius    = 4,
+              Padding         = (4,8,4,8),
+              Margin          = (2,0,2,4) ] {
+            StackPanel [ Orientation = Vertical, HorizontalAlignment = Center ] {
+                ContentControl
+                    [ Content             = $PreviewNode,
+                      Width               = 48,
+                      Height              = 48,
+                      HorizontalAlignment = Center ]
+                TextBlock
+                    [ Text                = $Label,
+                      FontSize            = 10,
+                      Foreground          = @OnSurface,
+                      Margin              = (0,4,0,0),
+                      HorizontalAlignment = Center ]
             }
         }
     }
 
     // ── Diagram workspace ──────────────────────────────────────────
-    DataTemplate x:key="DiagramTemplate" [DataType=DiagramDocument] {
-        Border x:root [Background=@Surface, BorderBrush=@OutlineVariant,
-                       BorderThickness=(1)]{
+    DataTemplate x:key="DiagramTemplate" [DataType = DiagramDocument] {
+        Border x:root
+            [ Background      = @Surface,
+              BorderBrush     = @OutlineVariant,
+              BorderThickness = (1) ] {
             DockPanel {
-
                 // Header strip.
-                Border[DockPanel.Dock=Top, Height=44,
-                       Background=@Primary]{
-                    StackPanel[Orientation=Horizontal,
-                               Margin=(16,0,0,0)]{
-                        Shape[Geometry=@home, Fill=@OnPrimary,
-                              Width=24, Height=24,
-                              VerticalAlignment=Center]
-                        TextBlock[Text="Diagrammer",
-                                  FontSize=15, FontWeight=Bold,
-                                  Foreground=@OnPrimary,
-                                  VerticalAlignment=Center,
-                                  Margin=(8,0,0,0)]
-                        TextBlock[Text=$Status,
-                                  FontSize=12,
-                                  Foreground=@OnPrimary,
-                                  VerticalAlignment=Center,
-                                  Margin=(20,0,0,0)]
+                Border [ DockPanel.Dock = Top, Height = 44, Background = @Primary ] {
+                    StackPanel [ Orientation = Horizontal, Margin = (16,0,0,0) ] {
+                        Shape
+                            [ Geometry          = @home,
+                              Fill              = @OnPrimary,
+                              Width             = 24,
+                              Height            = 24,
+                              VerticalAlignment = Center ]
+                        TextBlock
+                            [ Text              = "Diagrammer",
+                              FontSize          = 15,
+                              FontWeight        = Bold,
+                              Foreground        = @OnPrimary,
+                              VerticalAlignment = Center,
+                              Margin            = (8,0,0,0) ]
+                        TextBlock
+                            [ Text              = $Status,
+                              FontSize          = 12,
+                              Foreground        = @OnPrimary,
+                              VerticalAlignment = Center,
+                              Margin            = (20,0,0,0) ]
                     }
                 }
 
@@ -102,101 +117,165 @@ resources DiagramDemo {
                 // RelayCommands via the named `nodes` x:name forward
                 // reference (compiler 2-pass scan resolves it before
                 // the Diagram element is constructed in markup).
-                Border[DockPanel.Dock=Top, Height=48,
-                       Background=@SurfaceContainer,
-                       BorderBrush=@OutlineVariant,
-                       BorderThickness=(0,0,0,1),
-                       Padding=(8,4,8,4)]{
-                    StackPanel[Orientation=Horizontal]{
-                        IconButton [Variant=Standard, Command=$nodes.AlignLeftCommand]{
-                            Shape[Geometry=@alignLeft, Fill=@OnSurfaceVariant, Width=20, Height=20]
+                Border
+                    [ DockPanel.Dock  = Top,
+                      Height          = 48,
+                      Background      = @SurfaceContainer,
+                      BorderBrush     = @OutlineVariant,
+                      BorderThickness = (0,0,0,1),
+                      Padding         = (8,4,8,4) ] {
+                    StackPanel [ Orientation = Horizontal ] {
+                        IconButton [ Variant = Standard, Command = $nodes.AlignLeftCommand ] {
+                            Shape
+                                [ Geometry = @alignLeft,
+                                  Fill     = @OnSurfaceVariant,
+                                  Width    = 20,
+                                  Height   = 20 ]
                         }
-                        IconButton [Variant=Standard, Command=$nodes.AlignRightCommand]{
-                            Shape[Geometry=@alignRight, Fill=@OnSurfaceVariant, Width=20, Height=20]
+                        IconButton [ Variant = Standard, Command = $nodes.AlignRightCommand ] {
+                            Shape
+                                [ Geometry = @alignRight,
+                                  Fill     = @OnSurfaceVariant,
+                                  Width    = 20,
+                                  Height   = 20 ]
                         }
-                        IconButton [Variant=Standard, Command=$nodes.AlignTopCommand,
-                                    Margin=(8,0,0,0)]{
-                            Shape[Geometry=@alignTop, Fill=@OnSurfaceVariant, Width=20, Height=20]
+                        IconButton
+                            [ Variant = Standard,
+                              Command = $nodes.AlignTopCommand,
+                              Margin  = (8,0,0,0) ] {
+                            Shape
+                                [ Geometry = @alignTop,
+                                  Fill     = @OnSurfaceVariant,
+                                  Width    = 20,
+                                  Height   = 20 ]
                         }
-                        IconButton [Variant=Standard, Command=$nodes.AlignMiddleCommand]{
-                            Shape[Geometry=@alignMiddle, Fill=@OnSurfaceVariant, Width=20, Height=20]
+                        IconButton [ Variant = Standard, Command = $nodes.AlignMiddleCommand ] {
+                            Shape
+                                [ Geometry = @alignMiddle,
+                                  Fill     = @OnSurfaceVariant,
+                                  Width    = 20,
+                                  Height   = 20 ]
                         }
-                        IconButton [Variant=Standard, Command=$nodes.AlignCenterCommand]{
-                            Shape[Geometry=@alignCenter, Fill=@OnSurfaceVariant, Width=20, Height=20]
+                        IconButton [ Variant = Standard, Command = $nodes.AlignCenterCommand ] {
+                            Shape
+                                [ Geometry = @alignCenter,
+                                  Fill     = @OnSurfaceVariant,
+                                  Width    = 20,
+                                  Height   = 20 ]
                         }
-                        IconButton [Variant=Standard, Command=$nodes.DistributeHorizontalCommand,
-                                    Margin=(8,0,0,0)]{
-                            Shape[Geometry=@distributeHorizontal, Fill=@OnSurfaceVariant, Width=20, Height=20]
+                        IconButton
+                            [ Variant = Standard,
+                              Command = $nodes.DistributeHorizontalCommand,
+                              Margin  = (8,0,0,0) ] {
+                            Shape
+                                [ Geometry = @distributeHorizontal,
+                                  Fill     = @OnSurfaceVariant,
+                                  Width    = 20,
+                                  Height   = 20 ]
                         }
-                        IconButton [Variant=Standard, Command=$nodes.DistributeVerticalCommand]{
-                            Shape[Geometry=@distributeVertical, Fill=@OnSurfaceVariant, Width=20, Height=20]
+                        IconButton
+                            [ Variant = Standard,
+                              Command = $nodes.DistributeVerticalCommand ] {
+                            Shape
+                                [ Geometry = @distributeVertical,
+                                  Fill     = @OnSurfaceVariant,
+                                  Width    = 20,
+                                  Height   = 20 ]
                         }
-                        IconButton [Variant=Standard, Command=$nodes.GroupCommand,
-                                    Margin=(8,0,0,0)]{
-                            Shape[Geometry=@group, Fill=@OnSurfaceVariant, Width=20, Height=20]
+                        IconButton
+                            [ Variant = Standard,
+                              Command = $nodes.GroupCommand,
+                              Margin  = (8,0,0,0) ] {
+                            Shape
+                                [ Geometry = @group,
+                                  Fill     = @OnSurfaceVariant,
+                                  Width    = 20,
+                                  Height   = 20 ]
                         }
-                        IconButton [Variant=Standard, Command=$nodes.UngroupCommand]{
-                            Shape[Geometry=@ungroup, Fill=@OnSurfaceVariant, Width=20, Height=20]
+                        IconButton [ Variant = Standard, Command = $nodes.UngroupCommand ] {
+                            Shape
+                                [ Geometry = @ungroup,
+                                  Fill     = @OnSurfaceVariant,
+                                  Width    = 20,
+                                  Height   = 20 ]
                         }
-                        IconButton [Variant=Standard,
-                                    Command=$nodes.CombineUnionCommand,
-                                    Margin=(8,0,0,0)]{
-                            Shape[Geometry=@join, Fill=@OnSurfaceVariant, Width=20, Height=20]
+                        IconButton
+                            [ Variant = Standard,
+                              Command = $nodes.CombineUnionCommand,
+                              Margin  = (8,0,0,0) ] {
+                            Shape
+                                [ Geometry = @join,
+                                  Fill     = @OnSurfaceVariant,
+                                  Width    = 20,
+                                  Height   = 20 ]
                         }
-                        IconButton [Variant=Standard, Command=$nodes.CombineIntersectCommand]{
-                            Shape[Geometry=@join_inner, Fill=@OnSurfaceVariant, Width=20, Height=20]
+                        IconButton [ Variant = Standard, Command = $nodes.CombineIntersectCommand ] {
+                            Shape
+                                [ Geometry = @join_inner,
+                                  Fill     = @OnSurfaceVariant,
+                                  Width    = 20,
+                                  Height   = 20 ]
                         }
-                        IconButton [Variant=Standard, Command=$nodes.CombineSubtractCommand]{
-                            Shape[Geometry=@join_left, Fill=@OnSurfaceVariant, Width=20, Height=20]
+                        IconButton [ Variant = Standard, Command = $nodes.CombineSubtractCommand ] {
+                            Shape
+                                [ Geometry = @join_left,
+                                  Fill     = @OnSurfaceVariant,
+                                  Width    = 20,
+                                  Height   = 20 ]
                         }
-                        IconButton [Variant=Standard, Command=$nodes.CombineExcludeCommand]{
-                            Shape[Geometry=@difference, Fill=@OnSurfaceVariant, Width=20, Height=20]
+                        IconButton [ Variant = Standard, Command = $nodes.CombineExcludeCommand ] {
+                            Shape
+                                [ Geometry = @difference,
+                                  Fill     = @OnSurfaceVariant,
+                                  Width    = 20,
+                                  Height   = 20 ]
                         }
                     }
                 }
 
                 // Toolbox strip — Document.ToolboxShapes drives an
                 // ItemsControl bound through DiagramTileTemplate.
-                Border[DockPanel.Dock=Left, Width=200,
-                       Background=@SurfaceContainerLow,
-                       BorderBrush=@OutlineVariant,
-                       BorderThickness=(0,0,1,0),
-                       Padding=(8)]{
-                    DockPanel{
-                        TextBlock[DockPanel.Dock=Top, Text="Shapes",
-                                  FontSize=11, FontWeight=Bold,
-                                  Foreground=@OnSurfaceVariant,
-                                  Margin=(2,0,0,8)]
-                        StackPanel[DockPanel.Dock=Bottom]{
-                            TextBlock[Text="Document",
-                                      FontSize=11, FontWeight=Bold,
-                                      Foreground=@OnSurfaceVariant,
-                                      Margin=(2,12,0,8)]
-                            StackPanel[Orientation=Horizontal,
-                                       Margin=(0,0,0,8)]{
-                                Button [Command=$SaveCommand,
-                                        Margin=(0,0,4,0)]{
-                                    TextBlock[Text="Save", FontSize=11]
+                Border
+                    [ DockPanel.Dock  = Left,
+                      Width           = 200,
+                      Background      = @SurfaceContainerLow,
+                      BorderBrush     = @OutlineVariant,
+                      BorderThickness = (0,0,1,0),
+                      Padding         = (8) ] {
+                    DockPanel {
+                        TextBlock
+                            [ DockPanel.Dock = Top,
+                              Text           = "Shapes",
+                              FontSize       = 11,
+                              FontWeight     = Bold,
+                              Foreground     = @OnSurfaceVariant,
+                              Margin         = (2,0,0,8) ]
+                        StackPanel [ DockPanel.Dock = Bottom ] {
+                            TextBlock
+                                [ Text       = "Document",
+                                  FontSize   = 11,
+                                  FontWeight = Bold,
+                                  Foreground = @OnSurfaceVariant,
+                                  Margin     = (2,12,0,8) ]
+                            StackPanel [ Orientation = Horizontal, Margin = (0,0,0,8) ] {
+                                Button [ Command = $SaveCommand, Margin = (0,0,4,0) ] {
+                                    TextBlock [ Text = "Save", FontSize = 11 ]
                                 }
-                                Button [Command=$LoadCommand]{
-                                    TextBlock[Text="Load", FontSize=11]
+                                Button [ Command = $LoadCommand ] {
+                                    TextBlock [ Text = "Load", FontSize = 11 ]
                                 }
                             }
-                            TextBlock[Text="Drag a shape onto the canvas to
-                                            place it. Click a node to
-                                            select; Ctrl-click to toggle;
-                                            Shift-click to range-extend.
-                                            Drag-rectangle on empty space
-                                            for marquee. Click empty space
-                                            to clear. Delete removes every
-                                            selected node.",
-                                      TextWrapping=Wrap,
-                                      FontSize=10, Foreground=@OnSurfaceVariant,
-                                      Margin=(2,4,2,0)]
+                            TextBlock
+                                [ Text         = "Drag a shape onto the canvas to\n                                            place it. Click a node to\n                                            select; Ctrl-click to toggle;\n                                            Shift-click to range-extend.\n                                            Drag-rectangle on empty space\n                                            for marquee. Click empty space\n                                            to clear. Delete removes every\n                                            selected node.",
+                                  TextWrapping = Wrap,
+                                  FontSize     = 10,
+                                  Foreground   = @OnSurfaceVariant,
+                                  Margin       = (2,4,2,0) ]
                         }
-                        ScrollViewer [IsAutoHideScrollBars=false]{
-                            ItemsControl [ItemsSource=$ToolboxShapes,
-                                          ItemsPanel=@DiagramToolboxPanel]
+                        ScrollViewer [ IsAutoHideScrollBars = false ] {
+                            ItemsControl
+                                [ ItemsSource = $ToolboxShapes,
+                                  ItemsPanel  = @DiagramToolboxPanel ]
                         }
                     }
                 }
@@ -206,29 +285,37 @@ resources DiagramDemo {
                 // (the FormatMirror collaborator seeds these from the
                 // first selected leaf and broadcasts edits onto every
                 // selected leaf).
-                Border [DockPanel.Dock=Right, Width=320,
-                        Background=@SurfaceContainerLow,
-                        BorderBrush=@OutlineVariant,
-                        BorderThickness=(1,0,0,0),
-                        Padding=(12)]{
-                    DockPanel{
-                        TextBlock[DockPanel.Dock=Top, Text="Format Shape",
-                                  FontSize=12, FontWeight=Bold,
-                                  Foreground=@OnSurfaceVariant,
-                                  Margin=(0,0,0,8)]
-                        ScrollViewer [IsAutoHideScrollBars=false]{
-                            ShapeFormatControl [Fill=$nodes.SelectionFormatFill,
-                                                Stroke=$nodes.SelectionFormatStroke,
-                                                SourceCapTemplate=$nodes.SelectionFormatSourceCap,
-                                                TargetCapTemplate=$nodes.SelectionFormatTargetCap,
-                                                ShowCaps=$nodes.SelectionIsConnector,
-                                                CapOptions=$nodes.ConnectorCapOptions]
+                Border
+                    [ DockPanel.Dock  = Right,
+                      Width           = 320,
+                      Background      = @SurfaceContainerLow,
+                      BorderBrush     = @OutlineVariant,
+                      BorderThickness = (1,0,0,0),
+                      Padding         = (12) ] {
+                    DockPanel {
+                        TextBlock
+                            [ DockPanel.Dock = Top,
+                              Text           = "Format Shape",
+                              FontSize       = 12,
+                              FontWeight     = Bold,
+                              Foreground     = @OnSurfaceVariant,
+                              Margin         = (0,0,0,8) ]
+                        ScrollViewer [ IsAutoHideScrollBars = false ] {
+                            ShapeFormatControl
+                                [ Fill              = $nodes.SelectionFormatFill,
+                                  Stroke            = $nodes.SelectionFormatStroke,
+                                  SourceCapTemplate = $nodes.SelectionFormatSourceCap,
+                                  TargetCapTemplate = $nodes.SelectionFormatTargetCap,
+                                  ShowCaps          = $nodes.SelectionIsConnector,
+                                  CapOptions        = $nodes.ConnectorCapOptions ]
                         }
                     }
                 }
-                Splitter[DockPanel.Dock=Right, Width=6,
-                         Orientation=Vertical,
-                         ReverseDirection=true]
+                Splitter
+                    [ DockPanel.Dock   = Right,
+                      Width            = 6,
+                      Orientation      = Vertical,
+                      ReverseDirection = true ]
 
                 // Drawing area — the framework Diagram's default
                 // Template already includes a ScrollViewer wrapping the
@@ -254,17 +341,17 @@ resources DiagramDemo {
                 //     that surface, so the doc becomes the structural
                 //     mutator without an extra binding line.
                 Diagram x:name="nodes"
-                       [ItemsSource = $Nodes,
-                        Connectors = $Connectors,
-                        ItemsPanel = @DiagramCanvasPanel,
-                        SelectionMode = Extended,
-                        AllowMarqueeSelection = true,
-                        AlignmentGuidesEnabled = true,
-                        SelectionResizeEnabled = true,
-                        ConnectorInteractionsEnabled = true,
-                        ReflectSelectionToItems = true,
-                        DropReceiver = $Self,
-                        Focusable = true]
+                    [ ItemsSource                  = $Nodes,
+                      Connectors                   = $Connectors,
+                      ItemsPanel                   = @DiagramCanvasPanel,
+                      SelectionMode                = Extended,
+                      AllowMarqueeSelection        = true,
+                      AlignmentGuidesEnabled       = true,
+                      SelectionResizeEnabled       = true,
+                      ConnectorInteractionsEnabled = true,
+                      ReflectSelectionToItems      = true,
+                      DropReceiver                 = $Self,
+                      Focusable                    = true ]
             }
         }
     }

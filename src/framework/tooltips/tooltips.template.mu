@@ -10,7 +10,6 @@
 // clause in src/resources/framework.resources.mu.
 
 resources Tooltips {
-
     // ── Tooltip — M3 plain/rich surface ────────────────────────────
     // The Tooltip is a ContentControl: its Content goes through a
     // ContentPresenter that handles strings (auto-TextBlock), VMs
@@ -28,14 +27,16 @@ resources Tooltips {
     // (which ContentPresenter wraps in a TextBlock with no explicit
     // Foreground) inherits the correct ink for the @InverseSurface
     // background.
-    Template x:key="DefaultTooltip" [TargetType=Tooltip] {
-        Border [Background=@InverseSurface,
-                CornerRadius=@ShapeExtraSmall,
-                Padding=(@Spacing2, @Spacing1, @Spacing2, @Spacing1),
-                MinHeight=24, MaxWidth=320,
-                Effect=@Elevation2]{
-            StackPanel [Orientation=Vertical] {
-                ContentPresenter [Content=$Content]
+    Template x:key="DefaultTooltip" [TargetType = Tooltip] {
+        Border
+            [ Background   = @InverseSurface,
+              CornerRadius = @ShapeExtraSmall,
+              Padding      = (@Spacing2,@Spacing1,@Spacing2,@Spacing1),
+              MinHeight    = 24,
+              MaxWidth     = 320,
+              Effect       = @Elevation2 ] {
+            StackPanel [ Orientation = Vertical ] {
+                ContentPresenter [ Content = $Content ]
                 // Shortcut hint — M3 LabelSmall, 70% opacity for
                 // secondary emphasis. Foreground is set explicitly
                 // because the default TextBlock Style (basic.mu)
@@ -43,10 +44,11 @@ resources Tooltips {
                 // than the @InverseOnSurface that would otherwise
                 // inherit from the Tooltip.
                 TextBlock x:name="PART_Shortcut"
-                          [Style=@LabelSmall, Text=$Shortcut,
-                           Foreground=@InverseOnSurface,
-                           Opacity=0.7,
-                           Margin=(0,2,0,0)]
+                    [ Style      = @LabelSmall,
+                      Text       = $Shortcut,
+                      Foreground = @InverseOnSurface,
+                      Opacity    = 0.7,
+                      Margin     = (0,2,0,0) ]
             }
         }
         when ( Shortcut = "" ) { PART_Shortcut.Visibility = Collapsed; }
@@ -57,14 +59,14 @@ resources Tooltips {
     // TextBlock by ContentPresenter) renders at plain-tooltip metrics.
     // Rich-content templates (e.g., [DataType=CommandBase] below)
     // override these on a per-row basis with TitleSmall / BodySmall.
-    Style [TargetType=Tooltip] {
-        Template      = @DefaultTooltip;
-        Visibility    = Collapsed;
-        Foreground    = @InverseOnSurface;
-        FontFamily    = @BodySmallFont;
-        FontWeight    = @BodySmallWeight;
-        FontSize      = @BodySmallSize;
-        LineHeight    = @BodySmallLineHeight;
+    Style [TargetType = Tooltip] {
+        Template = @DefaultTooltip;
+        Visibility = Collapsed;
+        Foreground = @InverseOnSurface;
+        FontFamily = @BodySmallFont;
+        FontWeight = @BodySmallWeight;
+        FontSize = @BodySmallSize;
+        LineHeight = @BodySmallLineHeight;
         LetterSpacing = @BodySmallTracking;
     }
 
@@ -81,20 +83,24 @@ resources Tooltips {
     // A future Visibility-binding-from-empty-string converter would
     // collapse the row entirely; not worth shipping until the Visibility
     // DP grows a built-in "hide when empty string" helper.
-    DataTemplate [DataType=CommandBase] {
-        StackPanel [Orientation=Vertical] {
+    DataTemplate [DataType = CommandBase] {
+        StackPanel [ Orientation = Vertical ] {
             // Foreground is pinned to @InverseOnSurface because the
             // default Style [TargetType=TextBlock] (basic.mu) sets
             // Foreground=@OnSurface at higher DP precedence than the
             // value that would otherwise inherit from the Tooltip.
-            TextBlock [Style=@TitleSmall, Text=$Text,
-                       Foreground=@InverseOnSurface,
-                       TextWrapping=Wrap]
-            TextBlock [Style=@BodySmall,  Text=$Description,
-                       Foreground=@InverseOnSurface,
-                       TextWrapping=Wrap,
-                       Opacity=0.7,
-                       Margin=(0,2,0,0)]
+            TextBlock
+                [ Style        = @TitleSmall,
+                  Text         = $Text,
+                  Foreground   = @InverseOnSurface,
+                  TextWrapping = Wrap ]
+            TextBlock
+                [ Style        = @BodySmall,
+                  Text         = $Description,
+                  Foreground   = @InverseOnSurface,
+                  TextWrapping = Wrap,
+                  Opacity      = 0.7,
+                  Margin       = (0,2,0,0) ]
         }
     }
 }

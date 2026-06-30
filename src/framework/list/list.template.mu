@@ -8,7 +8,6 @@
 // clause in src/resources/framework.resources.mu.
 
 resources Lists {
-
     // ── ComboBox (in-flow selection box) ────────────────────────────
     // MUI Outlined Select look. PART_SelectionBox receives the open /
     // close toggle click; PART_SelectionText carries the selected item
@@ -16,35 +15,35 @@ resources Lists {
     // ComboBox has TWO templates (selection + popup); they can't both
     // ride one default Style, so each is keyed and ComboBox.ctor reads
     // them by key explicitly.
-    Template x:key="DefaultComboBoxSelection"[TargetType=ComboBox]{
+    Template x:key="DefaultComboBoxSelection" [TargetType = ComboBox] {
         ClickableBorder x:name="PART_SelectionBox"
-                      [ Background      = @Surface,
-                        BorderBrush     = @Outline,
-                        BorderThickness = (1),
-                        CornerRadius    = @ShapeExtraSmall,
-                        Padding         = (@Spacing4, @Spacing2, @Spacing4, @Spacing2),
-                        Height          = @ListRowHeightRegular ]{
-            SplitRow{
+            [ Background      = @Surface,
+              BorderBrush     = @Outline,
+              BorderThickness = (1),
+              CornerRadius    = @ShapeExtraSmall,
+              Padding         = (@Spacing4,@Spacing2,@Spacing4,@Spacing2),
+              Height          = @ListRowHeightRegular ] {
+            SplitRow {
                 TextBlock x:name="PART_SelectionText"
-                          [ Foreground         = @OnSurfaceVariant,
-                            FontFamily         = @BodyLargeFont,
-                            FontWeight         = @BodyLargeWeight,
-                            FontSize           = @BodyLargeSize,
-                            LineHeight         = @BodyLargeLineHeight,
-                            LetterSpacing      = @BodyLargeTracking ]
+                    [ Foreground    = @OnSurfaceVariant,
+                      FontFamily    = @BodyLargeFont,
+                      FontWeight    = @BodyLargeWeight,
+                      FontSize      = @BodyLargeSize,
+                      LineHeight    = @BodyLargeLineHeight,
+                      LetterSpacing = @BodyLargeTracking ]
                 Shape x:name="PART_Chevron"
-                          [ Geometry           = @ChevronDown,
-                            Fill               = @OnSurface,
-                            Width              = 12,
-                            Height             = 12,
-                            VerticalAlignment  = Center ]
+                    [ Geometry          = @ChevronDown,
+                      Fill              = @OnSurface,
+                      Width             = 12,
+                      Height            = 12,
+                      VerticalAlignment = Center ]
             }
         }
         // HasSelection swaps PART_SelectionText.Foreground from
         // @OnSurfaceVariant (placeholder tint) to @OnSurface (selected
         // item tint). IsDropDownOpen swaps PART_SelectionBox.BorderBrush
         // from @Outline (resting) to @Primary (open).
-        when ( HasSelection )   { PART_SelectionText.Foreground = @OnSurface; }
+        when ( HasSelection ) { PART_SelectionText.Foreground = @OnSurface; }
         when ( IsDropDownOpen ) { PART_SelectionBox.BorderBrush = @Primary; }
 
         // State-layer ladder — translucent OnSurface tints composite
@@ -52,10 +51,12 @@ resources Lists {
         // overlays mirror the Button family's transparent-at-rest
         // pattern (the selection box is a clickable surface; it earns
         // the same chrome). Disabled dims the entire selection box.
-        when ( PART_SelectionBox.IsMouseOver ) { PART_SelectionBox.Background = @StateHoverOverlay; }
-        when ( PART_SelectionBox.IsFocused )   { PART_SelectionBox.Background = @StateFocusOverlay; }
-        when ( PART_SelectionBox.IsPressed )   { PART_SelectionBox.Background = @StatePressOverlay; }
-        when ( IsEnabled = false )             { PART_SelectionBox.Opacity   = @DisabledContentOpacity; }
+        when ( PART_SelectionBox.IsMouseOver ) {
+            PART_SelectionBox.Background = @StateHoverOverlay;
+        }
+        when ( PART_SelectionBox.IsFocused ) { PART_SelectionBox.Background = @StateFocusOverlay; }
+        when ( PART_SelectionBox.IsPressed ) { PART_SelectionBox.Background = @StatePressOverlay; }
+        when ( IsEnabled = false ) { PART_SelectionBox.Opacity = @DisabledContentOpacity; }
 
         // M3 density variants — tighter cell on Compact, looser on
         // Comfortable. Density is an inherited attached DP, so dropping
@@ -64,16 +65,24 @@ resources Lists {
         // without touching individual call sites.
         // Chevron tracks density too: Compact = 40% smaller, Comfortable
         // = 20% bigger than the 12dp regular glyph.
-        when ( ThemeManager.Density = Compact )     { PART_SelectionBox.Padding = (@Spacing3, @Spacing1, @Spacing3, @Spacing1);
-                                                      PART_SelectionBox.Height  = @ListRowHeightCompact;
-                                                      PART_Chevron.Width = 7.2; PART_Chevron.Height = 7.2; }
-        when ( ThemeManager.Density = Comfortable ) { PART_SelectionBox.Padding = (@Spacing4, @Spacing3, @Spacing4, @Spacing3);
-                                                      PART_SelectionBox.Height  = @ListRowHeightComfortable;
-                                                      PART_Chevron.Width = 14.4; PART_Chevron.Height = 14.4; }
+        when ( ThemeManager.Density = Compact ) {
+            PART_SelectionBox.Padding = (@Spacing3,@Spacing1,@Spacing3,@Spacing1);
+            PART_SelectionBox.Height = @ListRowHeightCompact;
+            PART_Chevron.Width = 7.2;
+            PART_Chevron.Height = 7.2;
+        }
+        when ( ThemeManager.Density = Comfortable ) {
+            PART_SelectionBox.Padding = (@Spacing4,@Spacing3,@Spacing4,@Spacing3);
+            PART_SelectionBox.Height = @ListRowHeightComfortable;
+            PART_Chevron.Width = 14.4;
+            PART_Chevron.Height = 14.4;
+        }
 
         // Coarse pointer (touch) — widen vertically for touch.
-        when ( ThemeManager.Pointer = Coarse ) { PART_SelectionBox.Padding = (@Spacing4, @Spacing3, @Spacing4, @Spacing3);
-                                                 PART_SelectionBox.Height  = @ListRowHeightTouch; }
+        when ( ThemeManager.Pointer = Coarse ) {
+            PART_SelectionBox.Padding = (@Spacing4,@Spacing3,@Spacing4,@Spacing3);
+            PART_SelectionBox.Height = @ListRowHeightTouch;
+        }
     }
 
     // ── ComboBox (overlay popup host) ───────────────────────────────
@@ -84,16 +93,16 @@ resources Lists {
     // subclass) that turns the ComboBox.Items array into one
     // ClickableBorder row per item via its own GetContainerForItem /
     // PrepareContainerForItem hooks.
-    Template x:key="DefaultComboBoxPopup"[TargetType=ComboBox]{
-        ComboBoxPopupHost x:name="PART_PopupHost"{
+    Template x:key="DefaultComboBoxPopup" [TargetType = ComboBox] {
+        ComboBoxPopupHost x:name="PART_PopupHost" {
             ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
             Border x:name="PART_Popup"
-                  [ Background      = @SurfaceContainerHigh,
-                    BorderBrush     = @OutlineVariant,
-                    BorderThickness = (1),
-                    CornerRadius    = @ShapeExtraSmall,
-                    Effect          = @Elevation2,
-                    Padding         = (@Spacing0, @Spacing1, @Spacing0, @Spacing1) ]{
+                [ Background      = @SurfaceContainerHigh,
+                  BorderBrush     = @OutlineVariant,
+                  BorderThickness = (1),
+                  CornerRadius    = @ShapeExtraSmall,
+                  Effect          = @Elevation2,
+                  Padding         = (@Spacing0,@Spacing1,@Spacing0,@Spacing1) ] {
                 ComboBoxItemList x:name="PART_PopupList"
             }
         }
@@ -126,20 +135,26 @@ resources Lists {
     // Font tokens reach the rendered label through inheritance — the
     // ComboBoxItemList host or any TextBlock authored inside an item's
     // Content carries its own typography role.
-    Style [TargetType=ComboBoxItem] {
-        Background      = #00000000;
+    Style [TargetType = ComboBoxItem] {
+        Background = #00000000;
         BorderThickness = (0);
-        Padding         = (@Spacing4, @Spacing2, @Spacing4, @Spacing2);
-        when ( IsMouseOver )       { Background = @StateHoverOverlay; }
-        when ( IsFocused )         { Background = @StateFocusOverlay; }
-        when ( IsPressed )         { Background = @StatePressOverlay; }
-        when ( IsSelected )        { Background = @SecondaryContainer; }
-        when ( IsEnabled = false ) { Opacity    = @DisabledContentOpacity; }
+        Padding = (@Spacing4,@Spacing2,@Spacing4,@Spacing2);
+        when ( IsMouseOver ) { Background = @StateHoverOverlay; }
+        when ( IsFocused ) { Background = @StateFocusOverlay; }
+        when ( IsPressed ) { Background = @StatePressOverlay; }
+        when ( IsSelected ) { Background = @SecondaryContainer; }
+        when ( IsEnabled = false ) { Opacity = @DisabledContentOpacity; }
 
         // Density variants — mirror the rest of the list family.
-        when ( ThemeManager.Density = Compact )     { Padding = (@Spacing3, @Spacing1, @Spacing3, @Spacing1); }
-        when ( ThemeManager.Density = Comfortable ) { Padding = (@Spacing4, @Spacing3, @Spacing4, @Spacing3); }
-        when ( ThemeManager.Pointer = Coarse )      { Padding = (@Spacing4, @Spacing3, @Spacing4, @Spacing3); }
+        when ( ThemeManager.Density = Compact ) {
+            Padding = (@Spacing3,@Spacing1,@Spacing3,@Spacing1);
+        }
+        when ( ThemeManager.Density = Comfortable ) {
+            Padding = (@Spacing4,@Spacing3,@Spacing4,@Spacing3);
+        }
+        when ( ThemeManager.Pointer = Coarse ) {
+            Padding = (@Spacing4,@Spacing3,@Spacing4,@Spacing3);
+        }
     }
 
     // ── Drawer ──────────────────────────────────────────────────────
@@ -150,12 +165,12 @@ resources Lists {
     // ItemsControl-derived: a ScrollViewer hosting an ItemsPresenter
     // where TreeView.ItemsPanel slots a vertical StackPanel containing
     // the root TreeViewItem rows.
-    Template x:key="DefaultTreeView" [TargetType=TreeView]{
-        ScrollViewer x:name="PART_Scroll"{
+    Template x:key="DefaultTreeView" [TargetType = TreeView] {
+        ScrollViewer x:name="PART_Scroll" {
             ItemsPresenter
         }
     }
-    Style [TargetType=TreeView] {
+    Style [TargetType = TreeView] {
         Template = @DefaultTreeView;
     }
 
@@ -165,68 +180,67 @@ resources Lists {
     // ItemsPanel slots a CollapsibleStack containing the sub-rows.
     // The CollapsibleStack is toggled by the IsExpanded DP so closed
     // subtrees clip to zero size (and zero hit-area).
-    Template x:key="DefaultTreeViewItem" [TargetType=TreeViewItem]{
-        StackPanel x:name="PART_OuterStack" [ Orientation = Vertical ]{
+    Template x:key="DefaultTreeViewItem" [TargetType = TreeViewItem] {
+        StackPanel x:name="PART_OuterStack" [ Orientation = Vertical ] {
             ClickableRow x:name="PART_Row"
-                        [ BorderThickness = (0),
-                          Padding         = (@Spacing2, @Spacing1, @Spacing2, @Spacing1),
-                          Height          = @ListRowHeightRegular ]{
+                [ BorderThickness = (0),
+                  Padding         = (@Spacing2,@Spacing1,@Spacing2,@Spacing1),
+                  Height          = @ListRowHeightRegular ] {
                 // Anatomy layout: PART_Spacer (depth indent) and the
                 // chevron anchor on the left; PART_TrailingSlot anchors
                 // on the right; PART_LeadingSlot + the center vertical
                 // stack fill in between. DockPanel keeps the trailing
                 // slot pinned even when SupportingText adds a second line.
-                DockPanel x:name="PART_RowInner" [LastChildFill=true] {
+                DockPanel x:name="PART_RowInner" [ LastChildFill = true ] {
                     Border x:name="PART_Spacer"
-                          [ DockPanel.Dock     = Left,
-                            Width               = 0,
-                            BorderThickness     = (0) ]
+                        [ DockPanel.Dock  = Left,
+                          Width           = 0,
+                          BorderThickness = (0) ]
                     // Chevron column is intrinsic to the tree-row shape
                     // (no M3 spec equivalent — TreeView isn't an M3
                     // component). Width=20 stays inline as a
                     // hierarchy-specific layout constant rather than
                     // being lifted to a spacing token.
                     ChevronTarget x:name="PART_Chevron"
-                                  [ DockPanel.Dock     = Left,
-                                    Width               = 20,
-                                    BorderThickness     = (0) ]{
+                        [ DockPanel.Dock  = Left,
+                          Width           = 20,
+                          BorderThickness = (0) ] {
                         TextBlock x:name="PART_ChevronText"
-                                  [ Foreground         = @OnSurfaceVariant,
-                                    FontFamily         = @BodySmallFont,
-                                    FontWeight         = @BodySmallWeight,
-                                    FontSize           = @BodySmallSize,
-                                    LineHeight         = @BodySmallLineHeight,
-                                    LetterSpacing      = @BodySmallTracking,
-                                    VerticalAlignment  = Center,
-                                    Text               = "▸" ]
+                            [ Foreground        = @OnSurfaceVariant,
+                              FontFamily        = @BodySmallFont,
+                              FontWeight        = @BodySmallWeight,
+                              FontSize          = @BodySmallSize,
+                              LineHeight        = @BodySmallLineHeight,
+                              LetterSpacing     = @BodySmallTracking,
+                              VerticalAlignment = Center,
+                              Text              = "▸" ]
                     }
                     // Leading slot — class-managed Border (not a
                     // ContentPresenter). Empty Border has Size.Zero, so
                     // the slot collapses when Leading is undefined.
                     Border x:name="PART_LeadingSlot"
-                          [ DockPanel.Dock     = Left,
-                            VerticalAlignment   = Center,
-                            BorderThickness     = (0) ]
+                        [ DockPanel.Dock    = Left,
+                          VerticalAlignment = Center,
+                          BorderThickness   = (0) ]
                     Border x:name="PART_TrailingSlot"
-                          [ DockPanel.Dock     = Right,
-                            VerticalAlignment   = Center,
-                            BorderThickness     = (0) ]
-                    StackPanel [ Orientation         = Vertical,
-                                 VerticalAlignment   = Center ] {
+                        [ DockPanel.Dock    = Right,
+                          VerticalAlignment = Center,
+                          BorderThickness   = (0) ]
+                    StackPanel [ Orientation = Vertical, VerticalAlignment = Center ] {
                         TextBlock x:name="PART_Label"
-                                  [ Foreground         = @OnSurface,
-                                    FontFamily         = @BodyMediumFont,
-                                    FontWeight         = @BodyMediumWeight,
-                                    FontSize            = @BodyMediumSize,
-                                    LineHeight          = @BodyMediumLineHeight,
-                                    LetterSpacing       = @BodyMediumTracking ]
+                            [ Foreground    = @OnSurface,
+                              FontFamily    = @BodyMediumFont,
+                              FontWeight    = @BodyMediumWeight,
+                              FontSize      = @BodyMediumSize,
+                              LineHeight    = @BodyMediumLineHeight,
+                              LetterSpacing = @BodyMediumTracking ]
                         TextBlock x:name="PART_SupportingText"
-                                  [ Foreground         = @OnSurfaceVariant,
-                                    FontFamily         = @BodySmallFont,
-                                    FontWeight         = @BodySmallWeight,
-                                    FontSize            = @BodySmallSize,
-                                    LineHeight          = @BodySmallLineHeight,
-                                    LetterSpacing       = @BodySmallTracking ]
+                            [ Foreground    = @OnSurfaceVariant,
+                              FontFamily    = @BodySmallFont,
+                              FontWeight    = @BodySmallWeight,
+                              FontSize      = @BodySmallSize,
+                              LineHeight    = @BodySmallLineHeight,
+                              LetterSpacing = @BodySmallTracking ]
                     }
                 }
             }
@@ -242,23 +256,29 @@ resources Lists {
         // @SecondaryContainer and is ordered LAST so it outranks any
         // state-layer overlay still matching at the same trigger tier.
         when ( PART_Row.IsMouseOver ) { PART_Row.Background = @StateHoverOverlay; }
-        when ( PART_Row.IsFocused )   { PART_Row.Background = @StateFocusOverlay; }
-        when ( PART_Row.IsPressed )   { PART_Row.Background = @StatePressOverlay; }
-        when ( IsSelected )           { PART_Row.Background = @SecondaryContainer; }
-        when ( IsEnabled = false )    { PART_Row.Opacity    = @DisabledContentOpacity; }
+        when ( PART_Row.IsFocused ) { PART_Row.Background = @StateFocusOverlay; }
+        when ( PART_Row.IsPressed ) { PART_Row.Background = @StatePressOverlay; }
+        when ( IsSelected ) { PART_Row.Background = @SecondaryContainer; }
+        when ( IsEnabled = false ) { PART_Row.Opacity = @DisabledContentOpacity; }
 
         // Density variants — mirror ListBoxItem's ladder so a TreeView
         // and a sibling ListBox under the same Density ancestor read at
         // matching row heights.
-        when ( ThemeManager.Density = Compact )     { PART_Row.Padding = (@Spacing2, @Spacing0, @Spacing2, @Spacing0);
-                                                      PART_Row.Height  = @ListRowHeightCompact; }
-        when ( ThemeManager.Density = Comfortable ) { PART_Row.Padding = (@Spacing2, @Spacing2, @Spacing2, @Spacing2);
-                                                      PART_Row.Height  = @ListRowHeightComfortable; }
+        when ( ThemeManager.Density = Compact ) {
+            PART_Row.Padding = (@Spacing2,@Spacing0,@Spacing2,@Spacing0);
+            PART_Row.Height = @ListRowHeightCompact;
+        }
+        when ( ThemeManager.Density = Comfortable ) {
+            PART_Row.Padding = (@Spacing2,@Spacing2,@Spacing2,@Spacing2);
+            PART_Row.Height = @ListRowHeightComfortable;
+        }
 
         // Coarse pointer (touch) — widen to a 48dp touch target per the
         // M3 accessibility guidance. Independent of Density.
-        when ( ThemeManager.Pointer = Coarse ) { PART_Row.Padding = (@Spacing3, @Spacing3, @Spacing3, @Spacing3);
-                                                 PART_Row.Height  = @ListRowHeightTouch; }
+        when ( ThemeManager.Pointer = Coarse ) {
+            PART_Row.Padding = (@Spacing3,@Spacing3,@Spacing3,@Spacing3);
+            PART_Row.Height = @ListRowHeightTouch;
+        }
 
         // Two-line / three-line variants — driven by SupportingText
         // through the derived HasSupportingText / IsThreeLine DPs
@@ -267,9 +287,9 @@ resources Lists {
         // baseline; IsThreeLine ordered LAST so its 88dp height
         // outranks the 64dp 2-line variant when both match.
         when ( HasSupportingText ) { PART_Row.Height = @ListRowHeightTwoLine; }
-        when ( IsThreeLine )       { PART_Row.Height = @ListRowHeightThreeLine; }
+        when ( IsThreeLine ) { PART_Row.Height = @ListRowHeightThreeLine; }
     }
-    Style [TargetType=TreeViewItem] {
+    Style [TargetType = TreeViewItem] {
         Template = @DefaultTreeViewItem;
     }
 
@@ -280,12 +300,12 @@ resources Lists {
     // GetContainerForItemOverride, which wraps each data item in a
     // ListBoxItem (and passes already-ListBoxItem items through
     // unchanged so declarative markup keeps working).
-    Template x:key="DefaultListBox" [TargetType=ListBox]{
-        ScrollViewer x:name="PART_Scroll"{
+    Template x:key="DefaultListBox" [TargetType = ListBox] {
+        ScrollViewer x:name="PART_Scroll" {
             ItemsPresenter
         }
     }
-    Style [TargetType=ListBox] {
+    Style [TargetType = ListBox] {
         Template = @DefaultListBox;
     }
 
@@ -306,11 +326,11 @@ resources Lists {
     // Density + Pointer triggers ride below the state layer because they
     // target Padding / Height, not Background — no ordering interaction
     // with the colour ladder above.
-    Template x:key="DefaultListBoxItem" [TargetType=ListBoxItem]{
+    Template x:key="DefaultListBoxItem" [TargetType = ListBoxItem] {
         Border x:name="PART_Border"
-              [ BorderThickness = (0),
-                Padding         = (@Spacing2, @Spacing1, @Spacing2, @Spacing1),
-                Height          = @ListRowHeightRegular ]{
+            [ BorderThickness = (0),
+              Padding         = (@Spacing2,@Spacing1,@Spacing2,@Spacing1),
+              Height          = @ListRowHeightRegular ] {
             // M3 list-row anatomy: leading slot | headline+supporting | trailing slot.
             // DockPanel — Leading docks left, Trailing right, the
             // Headline / SupportingText stack fills the centre. Grid
@@ -334,35 +354,33 @@ resources Lists {
             // Size.Zero, and an empty TextBlock measures to Size.Zero
             // too — so the 1-line baseline reads identically to the
             // pre-anatomy row.
-            DockPanel [LastChildFill=true] {
+            DockPanel [ LastChildFill = true ] {
                 Border x:name="PART_LeadingSlot"
-                      [ DockPanel.Dock     = Left,
-                        VerticalAlignment   = Center,
-                        BorderThickness     = (0) ]
+                    [ DockPanel.Dock    = Left,
+                      VerticalAlignment = Center,
+                      BorderThickness   = (0) ]
                 Border x:name="PART_TrailingSlot"
-                      [ DockPanel.Dock     = Right,
-                        VerticalAlignment   = Center,
-                        BorderThickness     = (0) ]
-                StackPanel [ Orientation         = Vertical,
-                             VerticalAlignment   = Center ] {
-                    ContentPresenter x:name="PART_HeadlineSlot"
-                                    [ HorizontalAlignment = Stretch ]
+                    [ DockPanel.Dock    = Right,
+                      VerticalAlignment = Center,
+                      BorderThickness   = (0) ]
+                StackPanel [ Orientation = Vertical, VerticalAlignment = Center ] {
+                    ContentPresenter x:name="PART_HeadlineSlot" [ HorizontalAlignment = Stretch ]
                     TextBlock x:name="PART_SupportingText"
-                             [ Foreground         = @OnSurfaceVariant,
-                               FontFamily         = @BodySmallFont,
-                               FontWeight         = @BodySmallWeight,
-                               FontSize            = @BodySmallSize,
-                               LineHeight          = @BodySmallLineHeight,
-                               LetterSpacing       = @BodySmallTracking ]
+                        [ Foreground    = @OnSurfaceVariant,
+                          FontFamily    = @BodySmallFont,
+                          FontWeight    = @BodySmallWeight,
+                          FontSize      = @BodySmallSize,
+                          LineHeight    = @BodySmallLineHeight,
+                          LetterSpacing = @BodySmallTracking ]
                 }
             }
         }
         // State-layer ladder. M3 tokens — translucent OnSurface tints at
         // the 8% / 12% opacities the spec calls out.
         when ( IsMouseOver ) { PART_Border.Background = @StateHoverOverlay; }
-        when ( IsFocused )   { PART_Border.Background = @StateFocusOverlay; }
-        when ( IsPressed )   { PART_Border.Background = @StatePressOverlay; }
-        when ( IsSelected )  { PART_Border.Background = @SecondaryContainer; }
+        when ( IsFocused ) { PART_Border.Background = @StateFocusOverlay; }
+        when ( IsPressed ) { PART_Border.Background = @StatePressOverlay; }
+        when ( IsSelected ) { PART_Border.Background = @SecondaryContainer; }
         // Disabled — dim the entire row at the M3 content-opacity (38%).
         // dispatchPointer / dispatchKey already gate input on a disabled
         // subtree (see visual-engine/routed-event.ts), so the visual
@@ -378,16 +396,22 @@ resources Lists {
         // conservative for in-flow lists; the comfortable variant climbs
         // to the M3-standard 48dp so a Comfortable ancestor (e.g. a
         // touch-mode chrome bar) doesn't read as cramped.
-        when ( ThemeManager.Density = Compact )     { PART_Border.Padding = (@Spacing2, @Spacing0, @Spacing2, @Spacing0);
-                                                      PART_Border.Height  = @ListRowHeightCompact; }
-        when ( ThemeManager.Density = Comfortable ) { PART_Border.Padding = (@Spacing2, @Spacing2, @Spacing2, @Spacing2);
-                                                      PART_Border.Height  = @ListRowHeightComfortable; }
+        when ( ThemeManager.Density = Compact ) {
+            PART_Border.Padding = (@Spacing2,@Spacing0,@Spacing2,@Spacing0);
+            PART_Border.Height = @ListRowHeightCompact;
+        }
+        when ( ThemeManager.Density = Comfortable ) {
+            PART_Border.Padding = (@Spacing2,@Spacing2,@Spacing2,@Spacing2);
+            PART_Border.Height = @ListRowHeightComfortable;
+        }
 
         // Coarse pointer (touch) — widen to a 48dp touch target per the
         // M3 accessibility guidance. Independent of Density; coarse
         // input always upgrades the row regardless of density preference.
-        when ( ThemeManager.Pointer = Coarse ) { PART_Border.Padding = (@Spacing3, @Spacing3, @Spacing3, @Spacing3);
-                                                 PART_Border.Height  = @ListRowHeightTouch; }
+        when ( ThemeManager.Pointer = Coarse ) {
+            PART_Border.Padding = (@Spacing3,@Spacing3,@Spacing3,@Spacing3);
+            PART_Border.Height = @ListRowHeightTouch;
+        }
 
         // Two-line / three-line row variants — derived from the
         // SupportingText DP by ListBoxItem.OnPropertyChanged.
@@ -397,9 +421,9 @@ resources Lists {
         // preference). IsThreeLine triggers when SupportingText
         // contains a newline.
         when ( HasSupportingText ) { PART_Border.Height = @ListRowHeightTwoLine; }
-        when ( IsThreeLine )       { PART_Border.Height = @ListRowHeightThreeLine; }
+        when ( IsThreeLine ) { PART_Border.Height = @ListRowHeightThreeLine; }
     }
-    Style [TargetType=ListBoxItem] {
+    Style [TargetType = ListBoxItem] {
         Template = @DefaultListBoxItem;
         // Reactive headline ink. A string item is wrapped in a bare
         // TextBlock with no Foreground of its own (ListBox.PrepareContainer),

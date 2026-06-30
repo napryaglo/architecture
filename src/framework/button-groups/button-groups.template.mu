@@ -8,7 +8,6 @@
 // in MuralFramework's keyed table.
 
 resources ButtonGroups {
-
     // ── SegmentedButton: M3 connected-segment selection row ──────────
     // Items panel is a horizontal StackPanel; per-segment chrome lives
     // on DefaultSegmentedItem. SegmentedButton itself is a thin shell
@@ -16,14 +15,14 @@ resources ButtonGroups {
     // template since each segment's corners depend on Position
     // (Single / Start / Middle / End), which SegmentedButton stamps
     // onto each container after items change.
-    Template x:key="DefaultSegmentedButton" [TargetType=SegmentedButton] {
+    Template x:key="DefaultSegmentedButton" [TargetType = SegmentedButton] {
         ItemsPresenter
     }
     ItemsPanelTemplate x:key="DefaultSegmentedButtonPanel" {
-        StackPanel [Orientation=Horizontal]
+        StackPanel [ Orientation = Horizontal ]
     }
-    Style [TargetType=SegmentedButton] {
-        Template   = @DefaultSegmentedButton;
+    Style [TargetType = SegmentedButton] {
+        Template = @DefaultSegmentedButton;
         ItemsPanel = @DefaultSegmentedButtonPanel;
     }
 
@@ -39,43 +38,51 @@ resources ButtonGroups {
     // the same fill for both single- and multi-select segmented
     // variants. State-layer ladder (hover / focus / press) overlays
     // @SecondaryContainer on the selected case and @Surface otherwise.
-    Template x:key="DefaultSegmentedItem" [TargetType=SegmentedItem] {
+    Template x:key="DefaultSegmentedItem" [TargetType = SegmentedItem] {
         Border x:name="PART_Border"
-              [ Background      = @Surface,
-                BorderBrush     = @Outline,
-                BorderThickness = (1, 1, 0, 1),
-                CornerRadius    = (0),
-                Padding         = (@Spacing3, @Spacing1, @Spacing3, @Spacing1),
-                Height          = 40 ] {
-            ContentPresenter [VerticalAlignment=Center, HorizontalAlignment=Center]
+            [ Background      = @Surface,
+              BorderBrush     = @Outline,
+              BorderThickness = (1,1,0,1),
+              CornerRadius    = (0),
+              Padding         = (@Spacing3,@Spacing1,@Spacing3,@Spacing1),
+              Height          = 40 ] {
+            ContentPresenter [ VerticalAlignment = Center, HorizontalAlignment = Center ]
         }
 
         // ── Position triggers — corner / border shape ────────────────
-        when ( Position = Single ) { PART_Border.CornerRadius    = @ShapeFull;
-                                     PART_Border.BorderThickness = (1, 1, 1, 1); }
-        when ( Position = Start )  { PART_Border.CornerRadius    = (@ShapeFull, 0, 0, @ShapeFull);
-                                     PART_Border.BorderThickness = (1, 1, 0, 1); }
-        when ( Position = Middle ) { PART_Border.CornerRadius    = (0);
-                                     PART_Border.BorderThickness = (1, 1, 0, 1); }
-        when ( Position = End )    { PART_Border.CornerRadius    = (0, @ShapeFull, @ShapeFull, 0);
-                                     PART_Border.BorderThickness = (1, 1, 1, 1); }
+        when ( Position = Single ) {
+            PART_Border.CornerRadius = @ShapeFull;
+            PART_Border.BorderThickness = (1,1,1,1);
+        }
+        when ( Position = Start ) {
+            PART_Border.CornerRadius = (@ShapeFull,0,0,@ShapeFull);
+            PART_Border.BorderThickness = (1,1,0,1);
+        }
+        when ( Position = Middle ) {
+            PART_Border.CornerRadius = (0);
+            PART_Border.BorderThickness = (1,1,0,1);
+        }
+        when ( Position = End ) {
+            PART_Border.CornerRadius = (0,@ShapeFull,@ShapeFull,0);
+            PART_Border.BorderThickness = (1,1,1,1);
+        }
 
         // ── Selection chrome ────────────────────────────────────────
         when ( IsSelected ) { PART_Border.Background = @SecondaryContainer; }
 
         // ── State layers (ordered after Position + Selected so the
         // pressed/hover tint overlays whichever resting fill applied) ──
-        when ( IsMouseOver )       { PART_Border.Background = @StateHoverOverlay; }
-        when ( IsFocused )         { PART_Border.Background = @StateFocusOverlay; }
-        when ( IsPressed )         { PART_Border.Background = @StatePressOverlay; }
-        when ( IsEnabled = false ) { PART_Border.Opacity    = @DisabledContentOpacity; }
+        when ( IsMouseOver ) { PART_Border.Background = @StateHoverOverlay; }
+        when ( IsFocused ) { PART_Border.Background = @StateFocusOverlay; }
+        when ( IsPressed ) { PART_Border.Background = @StatePressOverlay; }
+        when ( IsEnabled = false ) { PART_Border.Opacity = @DisabledContentOpacity; }
     }
-    Style [TargetType=SegmentedItem] {
-        Template   = @DefaultSegmentedItem;
+    Style [TargetType = SegmentedItem] {
+        Template = @DefaultSegmentedItem;
         Foreground = @OnSurface;
         FontFamily = @LabelLargeFont;
         FontWeight = @LabelLargeWeight;
-        FontSize   = @LabelLargeSize;
+        FontSize = @LabelLargeSize;
     }
 
     // ── SplitButton: primary action + chevron menu trigger ──────────
@@ -87,41 +94,51 @@ resources ButtonGroups {
     // Corner-radius split: the primary half rounds left only, the
     // chevron half rounds right only, so the row reads as a single
     // capsule.
-    Template x:key="DefaultSplitButton" [TargetType=SplitButton] {
-        StackPanel [Orientation=Horizontal] {
+    Template x:key="DefaultSplitButton" [TargetType = SplitButton] {
+        StackPanel [ Orientation = Horizontal ] {
             Border x:name="PART_PrimaryButton"
-                  [ Background      = @Primary,
-                    CornerRadius    = (@ShapeFull, 0, 0, @ShapeFull),
-                    Padding         = (@Spacing4, @Spacing2, @Spacing4, @Spacing2),
-                    BorderThickness = (0) ] {
-                ContentPresenter [HorizontalAlignment=Center,
-                                  VerticalAlignment=Center]
+                [ Background      = @Primary,
+                  CornerRadius    = (@ShapeFull,0,0,@ShapeFull),
+                  Padding         = (@Spacing4,@Spacing2,@Spacing4,@Spacing2),
+                  BorderThickness = (0) ] {
+                ContentPresenter [ HorizontalAlignment = Center, VerticalAlignment = Center ]
             }
             Border x:name="PART_TriggerButton"
-                  [ Background      = @Primary,
-                    CornerRadius    = (0, @ShapeFull, @ShapeFull, 0),
-                    Padding         = (@Spacing2, @Spacing2, @Spacing2, @Spacing2),
-                    BorderThickness = (1, 0, 0, 0),
-                    BorderBrush     = @PrimaryContainer ] {
-                TextBlock [Text="▾",
-                           FontSize    = @LabelLargeSize,
-                           FontWeight  = @TypefaceWeightBold,
-                           Foreground  = @OnPrimary,
-                           HorizontalAlignment = Center,
-                           VerticalAlignment   = Center]
+                [ Background      = @Primary,
+                  CornerRadius    = (0,@ShapeFull,@ShapeFull,0),
+                  Padding         = (@Spacing2,@Spacing2,@Spacing2,@Spacing2),
+                  BorderThickness = (1,0,0,0),
+                  BorderBrush     = @PrimaryContainer ] {
+                TextBlock
+                    [ Text                = "▾",
+                      FontSize            = @LabelLargeSize,
+                      FontWeight          = @TypefaceWeightBold,
+                      Foreground          = @OnPrimary,
+                      HorizontalAlignment = Center,
+                      VerticalAlignment   = Center ]
             }
         }
 
         // State-layer ladder — both halves track hover / press
         // independently. M3 spec: hover overlays at 8%, press at 12%.
-        when ( PART_PrimaryButton.IsMouseOver ) { PART_PrimaryButton.Background = @StateHoverOverlay; }
-        when ( PART_PrimaryButton.IsPressed )   { PART_PrimaryButton.Background = @StatePressOverlay; }
-        when ( PART_TriggerButton.IsMouseOver ) { PART_TriggerButton.Background = @StateHoverOverlay; }
-        when ( PART_TriggerButton.IsPressed )   { PART_TriggerButton.Background = @StatePressOverlay; }
+        when ( PART_PrimaryButton.IsMouseOver ) {
+            PART_PrimaryButton.Background = @StateHoverOverlay;
+        }
+        when ( PART_PrimaryButton.IsPressed ) {
+            PART_PrimaryButton.Background = @StatePressOverlay;
+        }
+        when ( PART_TriggerButton.IsMouseOver ) {
+            PART_TriggerButton.Background = @StateHoverOverlay;
+        }
+        when ( PART_TriggerButton.IsPressed ) {
+            PART_TriggerButton.Background = @StatePressOverlay;
+        }
 
         // Disabled — dim both halves at the M3 content-opacity (38%).
-        when ( IsEnabled = false ) { PART_PrimaryButton.Opacity = @DisabledContentOpacity;
-                                     PART_TriggerButton.Opacity = @DisabledContentOpacity; }
+        when ( IsEnabled = false ) {
+            PART_PrimaryButton.Opacity = @DisabledContentOpacity;
+            PART_TriggerButton.Opacity = @DisabledContentOpacity;
+        }
     }
     // Popup chrome — instantiated by SplitButton's mountPopup with the
     // SplitButton as templatedParent. Same shape as MenuButton / ContextMenu:
@@ -136,28 +153,28 @@ resources ButtonGroups {
     // Brushes / shape / elevation come from M3 tokens so the popup tracks
     // theme changes through the DynamicResource path the rest of the
     // framework uses — no JS-side resource lookups in the demo bootstrap.
-    Template x:key="DefaultSplitButtonPopup" [TargetType=SplitButton] {
-        MenuPopupHost x:name="PART_PopupHost"{
-            ClickAwayScrim x:name="PART_Scrim" [BorderThickness = (0)]
+    Template x:key="DefaultSplitButtonPopup" [TargetType = SplitButton] {
+        MenuPopupHost x:name="PART_PopupHost" {
+            ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
             Border x:name="PART_PopupBody"
-                  [ Background      = @SurfaceContainerHigh,
-                    BorderBrush     = @OutlineVariant,
-                    BorderThickness = (1),
-                    CornerRadius    = @ShapeExtraSmall,
-                    Effect          = @Elevation2,
-                    Padding         = (4) ]
+                [ Background      = @SurfaceContainerHigh,
+                  BorderBrush     = @OutlineVariant,
+                  BorderThickness = (1),
+                  CornerRadius    = @ShapeExtraSmall,
+                  Effect          = @Elevation2,
+                  Padding         = (4) ]
         }
 
         // High-contrast popup chrome — see DefaultMenuButtonPopup for
         // the rationale.
         when ( ThemeManager.PrefersContrast = More ) { PART_PopupBody.BorderThickness = (2); }
     }
-    Style [TargetType=SplitButton] {
-        Template      = @DefaultSplitButton;
+    Style [TargetType = SplitButton] {
+        Template = @DefaultSplitButton;
         PopupTemplate = @DefaultSplitButtonPopup;
-        Foreground    = @OnPrimary;
-        FontFamily    = @LabelLargeFont;
-        FontWeight    = @LabelLargeWeight;
-        FontSize      = @LabelLargeSize;
+        Foreground = @OnPrimary;
+        FontFamily = @LabelLargeFont;
+        FontWeight = @LabelLargeWeight;
+        FontSize = @LabelLargeSize;
     }
 }

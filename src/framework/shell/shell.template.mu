@@ -19,7 +19,6 @@
 // in src/resources/framework.resources.mu.
 
 resources Shells {
-
     // ── EditorShell — full editing chrome ──────────────────────────
     // Region → DockPanel edge (Content fills the remainder):
     //   Header     → Top      (PART_HeaderHost,    single)
@@ -33,21 +32,23 @@ resources Shells {
     // and PART_ContentHost is last so LastChildFill hands it the
     // remaining rectangle. The hosts ship empty and zero-size — an
     // unused region simply collapses.
-    Template x:key="DefaultEditorShell" [TargetType=EditorShell] {
-        Border [Background=@Surface] {
+    Template x:key="DefaultEditorShell" [TargetType = EditorShell] {
+        Border [ Background = @Surface ] {
             AdornerDecorator {
-                DockPanel [LastChildFill=true] {
-                    Border     x:name="PART_HeaderHost"   [DockPanel.Dock=Top]
-                    StackPanel x:name="PART_CommandHost"  [DockPanel.Dock=Top,    Orientation=Vertical]
-                    Border     x:name="PART_StatusHost"   [DockPanel.Dock=Bottom]
-                    Border     x:name="PART_NavHost"      [DockPanel.Dock=Left]
-                    Border     x:name="PART_InspectorHost" [DockPanel.Dock=Right]
-                    Border     x:name="PART_ContentHost"
+                DockPanel [ LastChildFill = true ] {
+                    Border x:name="PART_HeaderHost" [ DockPanel.Dock = Top ]
+                    StackPanel x:name="PART_CommandHost"
+                        [ DockPanel.Dock = Top,
+                          Orientation    = Vertical ]
+                    Border x:name="PART_StatusHost" [ DockPanel.Dock = Bottom ]
+                    Border x:name="PART_NavHost" [ DockPanel.Dock = Left ]
+                    Border x:name="PART_InspectorHost" [ DockPanel.Dock = Right ]
+                    Border x:name="PART_ContentHost"
                 }
             }
         }
     }
-    Style [TargetType=EditorShell] {
+    Style [TargetType = EditorShell] {
         Template = @DefaultEditorShell;
     }
 
@@ -57,16 +58,16 @@ resources Shells {
     //   Header     → Top   (PART_HeaderHost, single)
     //   Navigation → Left  (PART_NavHost,    single, stretches)
     //   Content    → fill  (PART_ContentHost, single)
-    Template x:key="DefaultViewerShell" [TargetType=ViewerShell] {
-        Border [Background=@Surface] {
-            DockPanel [LastChildFill=true] {
-                Border x:name="PART_HeaderHost" [DockPanel.Dock=Top]
-                Border x:name="PART_NavHost"    [DockPanel.Dock=Left]
+    Template x:key="DefaultViewerShell" [TargetType = ViewerShell] {
+        Border [ Background = @Surface ] {
+            DockPanel [ LastChildFill = true ] {
+                Border x:name="PART_HeaderHost" [ DockPanel.Dock = Top ]
+                Border x:name="PART_NavHost" [ DockPanel.Dock = Left ]
                 Border x:name="PART_ContentHost"
             }
         }
     }
-    Style [TargetType=ViewerShell] {
+    Style [TargetType = ViewerShell] {
         Template = @DefaultViewerShell;
     }
 }

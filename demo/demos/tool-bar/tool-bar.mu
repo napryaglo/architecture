@@ -16,57 +16,64 @@ import ToolBarVM from "./tool-bar-vm.mjs"
 // overflow" mechanism before this demo can showcase that path safely.
 
 resources ToolBarDemo {
-
-    DataTemplate x:key="ToolBarTemplate" [DataType=ToolBarVM] {
-        Border [Background=@Surface, BorderBrush=@OutlineVariant,
-                BorderThickness=(1)]{
-
-            DockPanel{
+    DataTemplate x:key="ToolBarTemplate" [DataType = ToolBarVM] {
+        Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
+            DockPanel {
                 // Header
-                Border[DockPanel.Dock=Top,
-                       Background=@Primary, Padding=(16,12,16,12)]{
-                    TextBlock[Text="ToolBar — Button rows, separators, and command binding.",
-                              FontSize=15, FontWeight=Bold,
-                              Foreground=@OnPrimary]
+                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (16,12,16,12) ] {
+                    TextBlock
+                        [ Text       = "ToolBar — Button rows, separators, and command binding.",
+                          FontSize   = 15,
+                          FontWeight = Bold,
+                          Foreground = @OnPrimary ]
                 }
 
                 // Body
-                StackPanel[Orientation=Vertical, Margin=(16,16,16,16)]{
-
-                    TextBlock[Text="A row of command buttons separated into groups:",
-                              FontSize=12, FontWeight=Bold,
-                              Margin=(0,0,0,8)]
+                StackPanel [ Orientation = Vertical, Margin = (16,16,16,16) ] {
+                    TextBlock
+                        [ Text       = "A row of command buttons separated into groups:",
+                          FontSize   = 12,
+                          FontWeight = Bold,
+                          Margin     = (0,0,0,8) ]
 
                     ToolBar {
-                        ToolBarButton[Command=$SaveCommand]{
-                            TextBlock[Text="💾"]
+                        ToolBarButton [ Command = $SaveCommand ] {
+                            TextBlock [ Text = "💾" ]
                         }
                         ToolBarSeparator
-                        ToolBarButton[Command=$CutCommand]{
-                            TextBlock[Text="✂"]
+                        ToolBarButton [ Command = $CutCommand ] {
+                            TextBlock [ Text = "✂" ]
                         }
-                        ToolBarButton[Command=$CopyCommand]{
-                            TextBlock[Text="📋"]
+                        ToolBarButton [ Command = $CopyCommand ] {
+                            TextBlock [ Text = "📋" ]
                         }
-                        ToolBarButton[Command=$DeleteCommand]{
-                            TextBlock[Text="🗑"]
+                        ToolBarButton [ Command = $DeleteCommand ] {
+                            TextBlock [ Text = "🗑" ]
                         }
                     }
 
-                    TextBlock[Text=$Status, FontSize=13,
-                              Foreground=@OnSurface, Margin=(0,16,0,4)]
+                    TextBlock
+                        [ Text       = $Status,
+                          FontSize   = 13,
+                          Foreground = @OnSurface,
+                          Margin     = (0,16,0,4) ]
 
-                    StackPanel[Orientation=Horizontal, Margin=(0,8,0,0)]{
-                        TextBlock[Text="Selection state:",
-                                  FontSize=12, Foreground=@OnSurfaceVariant,
-                                  Margin=(0,8,8,0)]
-                        ToggleButton[IsChecked=$HasSelection,
-                                     Command=$ToggleSelectionCommand]{
-                            TextBlock[Text="HasSelection"]
+                    StackPanel [ Orientation = Horizontal, Margin = (0,8,0,0) ] {
+                        TextBlock
+                            [ Text       = "Selection state:",
+                              FontSize   = 12,
+                              Foreground = @OnSurfaceVariant,
+                              Margin     = (0,8,8,0) ]
+                        ToggleButton
+                            [ IsChecked = $HasSelection,
+                              Command   = $ToggleSelectionCommand ] {
+                            TextBlock [ Text = "HasSelection" ]
                         }
-                        TextBlock[Text="  (Delete is selection-gated — toggle to ungate.)",
-                                  FontSize=11, Foreground=@OnSurfaceVariant,
-                                  Margin=(8,8,0,0)]
+                        TextBlock
+                            [ Text       = "  (Delete is selection-gated — toggle to ungate.)",
+                              FontSize   = 11,
+                              Foreground = @OnSurfaceVariant,
+                              Margin     = (8,8,0,0) ]
                     }
                 }
             }

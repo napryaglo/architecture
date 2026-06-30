@@ -34,7 +34,6 @@
 // control's ctor reads each by string key explicitly.
 
 resources MuralBasic {
-
     // ── Shared shape geometries ────────────────────────────────────
     // Chevron up / down as reusable Geometry resources (the SVG sources
     // in ./shapes are converted to Geometry at COMPILE TIME by `include`).
@@ -50,7 +49,7 @@ resources MuralBasic {
     // per-template "▾" / "▴" text glyph (font-dependent, doesn't tint or
     // scale cleanly).
     include "shapes/chevron-down.svg" as ChevronDown
-    include "shapes/chevron-up.svg"   as ChevronUp
+    include "shapes/chevron-up.svg" as ChevronUp
 
     // ── TextBlock: default text contract ───────────────────────────
     // Binds FontFamily / FontSize / FontWeight / LineHeight to the M3
@@ -83,9 +82,9 @@ resources MuralBasic {
     // the instant the theme changes? Bind it: `[Foreground=@OnSurface]` —
     // a DynamicResource, reactive, and Local-tier so it also wins over any
     // template cascade.
-    Style [TargetType=TextBlock] {
+    Style [TargetType = TextBlock] {
         FontFamily = @FontFamily;
-        FontSize   = 14;
+        FontSize = 14;
         FontWeight = Normal;
         LineHeight = 20;
     }
@@ -104,26 +103,26 @@ resources MuralBasic {
     // PageView TS code adds it to PART_HeaderStack on demand when the
     // Subtitle DP is non-empty (keeps an empty Subtitle from reserving
     // a row).
-    Template x:key="DefaultPageView" [TargetType=PageView]{
-        DockPanel x:name="PART_Dock"{
-            Border x:name="PART_Header" [ DockPanel.Dock = Top,
-                                          Padding        = (20,16,20,12) ]{
-                StackPanel x:name="PART_HeaderStack" [ Orientation = Vertical ]{
+    Template x:key="DefaultPageView" [TargetType = PageView] {
+        DockPanel x:name="PART_Dock" {
+            Border x:name="PART_Header" [ DockPanel.Dock = Top, Padding = (20,16,20,12) ] {
+                StackPanel x:name="PART_HeaderStack" [ Orientation = Vertical ] {
                     TextBlock x:name="PART_TitleText"
-                              [ Foreground = @OnSurface,
-                                Style      = @TitleLarge ]
+                        [ Foreground = @OnSurface,
+                          Style      = @TitleLarge ]
                 }
             }
-            Border x:name="PART_Divider" [ DockPanel.Dock  = Top,
-                                           Background      = @OutlineVariant,
-                                           BorderThickness = (0),
-                                           Height          = 1 ]
-            Border x:name="PART_ContentHost" [ Padding = (0) ]{
+            Border x:name="PART_Divider"
+                [ DockPanel.Dock  = Top,
+                  Background      = @OutlineVariant,
+                  BorderThickness = (0),
+                  Height          = 1 ]
+            Border x:name="PART_ContentHost" [ Padding = (0) ] {
                 ContentPresenter
             }
         }
     }
-    Style [TargetType=PageView] {
+    Style [TargetType = PageView] {
         Template = @DefaultPageView;
     }
 
@@ -140,14 +139,14 @@ resources MuralBasic {
     // pointer-down lands focus rather than registering a transient
     // press tint — so the five-state ladder collapses to
     // rest / hover / focused / disabled here.
-    Template x:key="DefaultOutlinedTextBox" [TargetType=TextBox]{
+    Template x:key="DefaultOutlinedTextBox" [TargetType = TextBox] {
         Border x:name="PART_Border"
-              [ Background      = @Surface,
-                BorderBrush     = @Outline,
-                BorderThickness = (1),
-                CornerRadius    = @ShapeExtraSmall,
-                Padding         = (@Spacing3, @Spacing2, @Spacing3, @Spacing2) ]{
-            ScrollViewer x:name="PART_Scroll"{
+            [ Background      = @Surface,
+              BorderBrush     = @Outline,
+              BorderThickness = (1),
+              CornerRadius    = @ShapeExtraSmall,
+              Padding         = (@Spacing3,@Spacing2,@Spacing3,@Spacing2) ] {
+            ScrollViewer x:name="PART_Scroll" {
                 TextEditorSurface x:name="PART_Editor"
             }
         }
@@ -155,18 +154,24 @@ resources MuralBasic {
         // before focused so focused wins the trigger tier when both
         // match. Both ride through DynamicResource so theme switches
         // re-tint live.
-        when ( IsMouseOver )       { PART_Border.BorderBrush = @OnSurface; }
-        when ( IsFocused )         { PART_Border.BorderBrush = @Primary; }
-        when ( IsEnabled = false ) { PART_Border.Opacity     = @DisabledContentOpacity; }
+        when ( IsMouseOver ) { PART_Border.BorderBrush = @OnSurface; }
+        when ( IsFocused ) { PART_Border.BorderBrush = @Primary; }
+        when ( IsEnabled = false ) { PART_Border.Opacity = @DisabledContentOpacity; }
 
         // M3 density variants — tighter Padding on Compact, looser on
         // Comfortable. Width / Height are consumer-set (TextBox is
         // sized by its layout context); Padding is the only knob we
         // tune here, matching the same shape ComboBox / ListBoxItem
         // use under Density triggers.
-        when ( ThemeManager.Density = Compact )     { PART_Border.Padding = (@Spacing2, @Spacing1, @Spacing2, @Spacing1); }
-        when ( ThemeManager.Density = Comfortable ) { PART_Border.Padding = (@Spacing4, @Spacing3, @Spacing4, @Spacing3); }
-        when ( ThemeManager.Pointer = Coarse )      { PART_Border.Padding = (@Spacing4, @Spacing3, @Spacing4, @Spacing3); }
+        when ( ThemeManager.Density = Compact ) {
+            PART_Border.Padding = (@Spacing2,@Spacing1,@Spacing2,@Spacing1);
+        }
+        when ( ThemeManager.Density = Comfortable ) {
+            PART_Border.Padding = (@Spacing4,@Spacing3,@Spacing4,@Spacing3);
+        }
+        when ( ThemeManager.Pointer = Coarse ) {
+            PART_Border.Padding = (@Spacing4,@Spacing3,@Spacing4,@Spacing3);
+        }
     }
 
     // ── TextBox: Filled variant (M3 spec default) ──────────────────
@@ -179,14 +184,14 @@ resources MuralBasic {
     // square — the M3 Filled spec calls for the field to sit flush
     // against its bottom underline. The compiler routes
     // CornerRadius= tuples to `new CornerRadius(...)`.
-    Template x:key="DefaultFilledTextBox" [TargetType=TextBox]{
+    Template x:key="DefaultFilledTextBox" [TargetType = TextBox] {
         Border x:name="PART_Border"
-              [ Background      = @SurfaceContainerHigh,
-                BorderBrush     = @OnSurfaceVariant,
-                BorderThickness = (0,0,0,1),
-                CornerRadius    = (@ShapeExtraSmall, @ShapeExtraSmall, 0, 0),
-                Padding         = (@Spacing3, @Spacing2, @Spacing3, @Spacing2) ]{
-            ScrollViewer x:name="PART_Scroll"{
+            [ Background      = @SurfaceContainerHigh,
+              BorderBrush     = @OnSurfaceVariant,
+              BorderThickness = (0,0,0,1),
+              CornerRadius    = (@ShapeExtraSmall,@ShapeExtraSmall,0,0),
+              Padding         = (@Spacing3,@Spacing2,@Spacing3,@Spacing2) ] {
+            ScrollViewer x:name="PART_Scroll" {
                 TextEditorSurface x:name="PART_Editor"
             }
         }
@@ -194,40 +199,48 @@ resources MuralBasic {
         // hover-state container token); focus thickens the bottom rule
         // to 2dp and re-tints to @Primary, matching the M3 active-
         // indicator pattern. Disabled dims the whole row.
-        when ( IsMouseOver )       { PART_Border.Background      = @SurfaceContainerHighest; }
-        when ( IsFocused )         { PART_Border.BorderBrush     = @Primary;
-                                     PART_Border.BorderThickness = (0,0,0,2); }
-        when ( IsEnabled = false ) { PART_Border.Opacity         = @DisabledContentOpacity; }
+        when ( IsMouseOver ) { PART_Border.Background = @SurfaceContainerHighest; }
+        when ( IsFocused ) {
+            PART_Border.BorderBrush = @Primary;
+            PART_Border.BorderThickness = (0,0,0,2);
+        }
+        when ( IsEnabled = false ) { PART_Border.Opacity = @DisabledContentOpacity; }
 
-        when ( ThemeManager.Density = Compact )     { PART_Border.Padding = (@Spacing2, @Spacing1, @Spacing2, @Spacing1); }
-        when ( ThemeManager.Density = Comfortable ) { PART_Border.Padding = (@Spacing4, @Spacing3, @Spacing4, @Spacing3); }
-        when ( ThemeManager.Pointer = Coarse )      { PART_Border.Padding = (@Spacing4, @Spacing3, @Spacing4, @Spacing3); }
+        when ( ThemeManager.Density = Compact ) {
+            PART_Border.Padding = (@Spacing2,@Spacing1,@Spacing2,@Spacing1);
+        }
+        when ( ThemeManager.Density = Comfortable ) {
+            PART_Border.Padding = (@Spacing4,@Spacing3,@Spacing4,@Spacing3);
+        }
+        when ( ThemeManager.Pointer = Coarse ) {
+            PART_Border.Padding = (@Spacing4,@Spacing3,@Spacing4,@Spacing3);
+        }
     }
 
-    Style [TargetType=TextBox] {
+    Style [TargetType = TextBox] {
         // Outlined is mural's default (see TextBox.VariantKey comment
         // for why we deviate from M3's Filled default). The trigger
         // below swaps to the Filled template when the consumer sets
         // Variant = Filled — same shape Button / Card / IconButton
         // use to wire their variant ladders.
-        Template       = @DefaultOutlinedTextBox;
+        Template = @DefaultOutlinedTextBox;
         when ( Variant = Filled ) { Template = @DefaultFilledTextBox; }
         // Foreground / SelectionBrush / CaretBrush defaults flow
         // through DynamicResource so theme switches re-tint live.
         // TextEditorSurface picks them up at render time off the
         // owning TextBox (PART_Editor.textBox); consumer overrides at
         // the Local tier still win.
-        Foreground     = @OnSurface;
+        Foreground = @OnSurface;
         SelectionBrush = @SecondaryContainer;
-        CaretBrush     = @OnSurface;
+        CaretBrush = @OnSurface;
         // M3 typography — Body Large is the spec role for text-field
         // input content. The atom set rides through inheritance so
         // PART_Editor and any consumer-injected text picks them up.
-        FontFamily     = @BodyLargeFont;
-        FontWeight     = @BodyLargeWeight;
-        FontSize       = @BodyLargeSize;
-        LineHeight     = @BodyLargeLineHeight;
-        LetterSpacing  = @BodyLargeTracking;
+        FontFamily = @BodyLargeFont;
+        FontWeight = @BodyLargeWeight;
+        FontSize = @BodyLargeSize;
+        LineHeight = @BodyLargeLineHeight;
+        LetterSpacing = @BodyLargeTracking;
     }
 
     // ── SpinEdit ────────────────────────────────────────────────────
@@ -241,19 +254,19 @@ resources MuralBasic {
     // PART_ButtonColumn carries a left-edge divider; PART_Up / PART_Down
     // are click targets whose onClick callbacks the TS layer binds to
     // step the value by SmallChange.
-    Template x:key="DefaultSpinEdit" [TargetType=SpinEdit]{
+    Template x:key="DefaultSpinEdit" [TargetType = SpinEdit] {
         Border x:name="PART_Border"
-              [ Background      = @Surface,
-                BorderBrush     = @Outline,
-                BorderThickness = (1),
-                CornerRadius    = @ShapeExtraSmall ]{
+            [ Background      = @Surface,
+              BorderBrush     = @Outline,
+              BorderThickness = (1),
+              CornerRadius    = @ShapeExtraSmall ] {
             // SpinEdit isn't focusable itself; IsEditFocused /
             // IsEditHovered mirror the INNER TextBox's state via DPs
             // forwarded in SpinEdit's ctor. Hover tints the outline
             // toward OnSurface; focus paints it Primary (the Material
             // Outlined "active field" look). Default falls through to
             // the @Outline already on the Border.
-            DockPanel{
+            DockPanel {
                 // Button column geometry: 18dp wide and 14dp tall per
                 // arrow are mural-specific tight geometry — no M3
                 // spec to anchor to (M3 has no spinner control). The
@@ -261,34 +274,34 @@ resources MuralBasic {
                 // spacing token; the surrounding state-layer chrome and
                 // density triggers below carry the M3-relevant work.
                 Border x:name="PART_ButtonColumn"
-                      [ DockPanel.Dock  = Right,
-                        Width           = 18,
-                        BorderBrush     = @OutlineVariant,
-                        BorderThickness = (1,0,0,0) ]{
-                    StackPanel [ Orientation = Vertical ]{
+                    [ DockPanel.Dock  = Right,
+                      Width           = 18,
+                      BorderBrush     = @OutlineVariant,
+                      BorderThickness = (1,0,0,0) ] {
+                    StackPanel [ Orientation = Vertical ] {
                         ClickableBorder x:name="PART_Up"
-                                       [ BorderThickness = (0),
-                                         Padding         = (0,2,0,2),
-                                         Height          = 14 ]{
+                            [ BorderThickness = (0),
+                              Padding         = (0,2,0,2),
+                              Height          = 14 ] {
                             Shape x:name="PART_UpGlyph"
-                                       [ Geometry            = @ChevronUp,
-                                         Fill                = @OnSurfaceVariant,
-                                         Width               = 10,
-                                         Height              = 10,
-                                         HorizontalAlignment = Center,
-                                         VerticalAlignment   = Center ]
+                                [ Geometry            = @ChevronUp,
+                                  Fill                = @OnSurfaceVariant,
+                                  Width               = 10,
+                                  Height              = 10,
+                                  HorizontalAlignment = Center,
+                                  VerticalAlignment   = Center ]
                         }
                         ClickableBorder x:name="PART_Down"
-                                       [ BorderThickness = (0),
-                                         Padding         = (0,2,0,2),
-                                         Height          = 14 ]{
+                            [ BorderThickness = (0),
+                              Padding         = (0,2,0,2),
+                              Height          = 14 ] {
                             Shape x:name="PART_DownGlyph"
-                                       [ Geometry            = @ChevronDown,
-                                         Fill                = @OnSurfaceVariant,
-                                         Width               = 10,
-                                         Height              = 10,
-                                         HorizontalAlignment = Center,
-                                         VerticalAlignment   = Center ]
+                                [ Geometry            = @ChevronDown,
+                                  Fill                = @OnSurfaceVariant,
+                                  Width               = 10,
+                                  Height              = 10,
+                                  HorizontalAlignment = Center,
+                                  VerticalAlignment   = Center ]
                         }
                     }
                 }
@@ -297,9 +310,9 @@ resources MuralBasic {
         }
         // Outer-border outline ladder — IsEditFocused outranks
         // IsEditHovered (focus is the dominant state when both match).
-        when ( IsEditHovered )     { PART_Border.BorderBrush = @OnSurface; }
-        when ( IsEditFocused )     { PART_Border.BorderBrush = @Primary; }
-        when ( IsEnabled = false ) { PART_Border.Opacity     = @DisabledContentOpacity; }
+        when ( IsEditHovered ) { PART_Border.BorderBrush = @OnSurface; }
+        when ( IsEditFocused ) { PART_Border.BorderBrush = @Primary; }
+        when ( IsEnabled = false ) { PART_Border.Opacity = @DisabledContentOpacity; }
 
         // Up / Down state-layer chrome — translucent OnSurface tints
         // over the @Surface backdrop. ClickableBorder writes IsPressed
@@ -308,11 +321,11 @@ resources MuralBasic {
         // IsPressed sources its own row so a hover on PART_Up doesn't
         // light PART_Down (and vice versa).
         when ( PART_Up.IsMouseOver ) { PART_Up.Background = @StateHoverOverlay; }
-        when ( PART_Up.IsFocused )   { PART_Up.Background = @StateFocusOverlay; }
-        when ( PART_Up.IsPressed )   { PART_Up.Background = @StatePressOverlay; }
+        when ( PART_Up.IsFocused ) { PART_Up.Background = @StateFocusOverlay; }
+        when ( PART_Up.IsPressed ) { PART_Up.Background = @StatePressOverlay; }
         when ( PART_Down.IsMouseOver ) { PART_Down.Background = @StateHoverOverlay; }
-        when ( PART_Down.IsFocused )   { PART_Down.Background = @StateFocusOverlay; }
-        when ( PART_Down.IsPressed )   { PART_Down.Background = @StatePressOverlay; }
+        when ( PART_Down.IsFocused ) { PART_Down.Background = @StateFocusOverlay; }
+        when ( PART_Down.IsPressed ) { PART_Down.Background = @StatePressOverlay; }
 
         // Spinner geometry tracks density: Compact narrows the button
         // column and shrinks the arrows 40%; Comfortable widens it and
@@ -320,19 +333,27 @@ resources MuralBasic {
         // gap), but the whole spinner reads tighter / looser. Declared
         // BEFORE the Coarse trigger so a touch pointer (which wants a
         // bigger hit target) still wins the column width when both apply.
-        when ( ThemeManager.Density = Compact )     { PART_ButtonColumn.Width = 12;
-                                                      PART_UpGlyph.Width = 6;  PART_UpGlyph.Height = 6;
-                                                      PART_DownGlyph.Width = 6;  PART_DownGlyph.Height = 6; }
-        when ( ThemeManager.Density = Comfortable ) { PART_ButtonColumn.Width = 22;
-                                                      PART_UpGlyph.Width = 12; PART_UpGlyph.Height = 12;
-                                                      PART_DownGlyph.Width = 12; PART_DownGlyph.Height = 12; }
+        when ( ThemeManager.Density = Compact ) {
+            PART_ButtonColumn.Width = 12;
+            PART_UpGlyph.Width = 6;
+            PART_UpGlyph.Height = 6;
+            PART_DownGlyph.Width = 6;
+            PART_DownGlyph.Height = 6;
+        }
+        when ( ThemeManager.Density = Comfortable ) {
+            PART_ButtonColumn.Width = 22;
+            PART_UpGlyph.Width = 12;
+            PART_UpGlyph.Height = 12;
+            PART_DownGlyph.Width = 12;
+            PART_DownGlyph.Height = 12;
+        }
 
         // Coarse pointer (touch) — widen the button column so the arrows
         // are easier to hit. The field's padding/height density is left to
         // the inner TextBox. Last so it outranks the density width above.
         when ( ThemeManager.Pointer = Coarse ) { PART_ButtonColumn.Width = 28; }
     }
-    Style [TargetType=SpinEdit] {
+    Style [TargetType = SpinEdit] {
         Template = @DefaultSpinEdit;
     }
 
@@ -353,20 +374,20 @@ resources MuralBasic {
     // SliderLayout now sizes the thumb as a 4dp × 16dp vertical pill
     // along the drag axis (was 16 × 16 square). Track grew 4 → 16dp
     // to match. The geometric constants live in src/basic/slider.ts.
-    Template x:key="DefaultSlider" [TargetType=Slider]{
-        SliderLayout x:name="PART_Layout"{
+    Template x:key="DefaultSlider" [TargetType = Slider] {
+        SliderLayout x:name="PART_Layout" {
             Border x:name="PART_Track"
-                  [ Background      = @SurfaceContainerHighest,
-                    CornerRadius    = 2,
-                    BorderThickness = (0) ]
+                [ Background      = @SurfaceContainerHighest,
+                  CornerRadius    = 2,
+                  BorderThickness = (0) ]
             Border x:name="PART_Fill"
-                  [ Background      = @Primary,
-                    CornerRadius    = 2,
-                    BorderThickness = (0) ]
+                [ Background      = @Primary,
+                  CornerRadius    = 2,
+                  BorderThickness = (0) ]
             Border x:name="PART_Thumb"
-                  [ Background      = @Primary,
-                    CornerRadius    = @ShapeFull,
-                    BorderThickness = (0) ]
+                [ Background      = @Primary,
+                  CornerRadius    = @ShapeFull,
+                  BorderThickness = (0) ]
         }
         // Thumb state chrome. Hover sources from PART_Thumb's
         // IsMouseOver; focus sources from the templated parent's
@@ -376,11 +397,11 @@ resources MuralBasic {
         // LAST so its setter outranks hover when both match. Disabled
         // dims both track and thumb at the M3 content opacity.
         when ( PART_Thumb.IsMouseOver ) { PART_Thumb.Background = @PrimaryHover; }
-        when ( IsFocused )              { PART_Thumb.Background = @PrimaryHover; }
-        when ( IsDragging )             { PART_Thumb.Background = @PrimaryPress; }
-        when ( IsEnabled = false )      { PART_Layout.Opacity   = @DisabledContentOpacity; }
+        when ( IsFocused ) { PART_Thumb.Background = @PrimaryHover; }
+        when ( IsDragging ) { PART_Thumb.Background = @PrimaryPress; }
+        when ( IsEnabled = false ) { PART_Layout.Opacity = @DisabledContentOpacity; }
     }
-    Style [TargetType=Slider] {
+    Style [TargetType = Slider] {
         Template = @DefaultSlider;
     }
 
@@ -392,30 +413,30 @@ resources MuralBasic {
     // Material-flavoured flat track with a rounded thumb. The cross-
     // axis size (SCROLLBAR_THICKNESS) is pinned by the ScrollBar's
     // MeasureOverride; this template just paints the parts.
-    Template x:key="DefaultScrollBar" [TargetType=ScrollBar]{
-        ScrollBarLayout x:name="PART_Layout"{
+    Template x:key="DefaultScrollBar" [TargetType = ScrollBar] {
+        ScrollBarLayout x:name="PART_Layout" {
             Border x:name="PART_Track"
-                  [ Background      = @SurfaceContainerLow,
-                    CornerRadius    = @ShapeExtraSmall,
-                    BorderThickness = (0) ]
+                [ Background      = @SurfaceContainerLow,
+                  CornerRadius    = @ShapeExtraSmall,
+                  BorderThickness = (0) ]
             Border x:name="PART_Thumb"
-                  [ Background      = @OutlineVariant,
-                    CornerRadius    = @ShapeExtraSmall,
-                    BorderThickness = (0) ]
+                [ Background      = @OutlineVariant,
+                  CornerRadius    = @ShapeExtraSmall,
+                  BorderThickness = (0) ]
         }
         // Thumb tint: hover → @Outline (slightly darker), drag →
         // @OnSurfaceVariant (darkest). Drag declared LAST so it wins
         // over hover at the trigger tier when both match.
         when ( PART_Thumb.IsMouseOver ) { PART_Thumb.Background = @Outline; }
-        when ( IsDragging )             { PART_Thumb.Background = @OnSurfaceVariant; }
+        when ( IsDragging ) { PART_Thumb.Background = @OnSurfaceVariant; }
         // Auto-hide resting state: fade the template layout root to
         // Opacity=0 so both track and thumb disappear without disturbing
         // layout / hit-test geometry. pulseActivity restores Opacity by
         // flipping IsFaded back to false (default value of 1 takes over
         // again).
-        when ( IsFaded )                { PART_Layout.Opacity = 0; }
+        when ( IsFaded ) { PART_Layout.Opacity = 0; }
     }
-    Style [TargetType=ScrollBar] {
+    Style [TargetType = ScrollBar] {
         Template = @DefaultScrollBar;
     }
 
@@ -435,15 +456,15 @@ resources MuralBasic {
     // outranks IsMouseOver when both match (the dragged thumb stays
     // tinted with the press-state @OnSurface even while the pointer
     // is over it).
-    Template x:key="DefaultThumb" [TargetType=Thumb]{
+    Template x:key="DefaultThumb" [TargetType = Thumb] {
         Border x:name="PART_Border"
-              [ Background      = @OutlineVariant,
-                CornerRadius    = 2,
-                BorderThickness = (0) ]
+            [ Background      = @OutlineVariant,
+              CornerRadius    = 2,
+              BorderThickness = (0) ]
         when ( IsMouseOver ) { PART_Border.Background = @Outline; }
-        when ( IsDragging )  { PART_Border.Background = @OnSurfaceVariant; }
+        when ( IsDragging ) { PART_Border.Background = @OnSurfaceVariant; }
     }
-    Style [TargetType=Thumb] {
+    Style [TargetType = Thumb] {
         Template = @DefaultThumb;
     }
 
@@ -453,14 +474,14 @@ resources MuralBasic {
     // soft neutral as Thumb; the GridSplitter sets its own resize
     // Cursor at runtime depending on ResizeDirection so the user gets
     // the right affordance on hover.
-    Template x:key="DefaultGridSplitter" [TargetType=GridSplitter]{
+    Template x:key="DefaultGridSplitter" [TargetType = GridSplitter] {
         Border x:name="PART_Border"
-              [ Background      = @OutlineVariant,
-                CornerRadius    = 0,
-                BorderThickness = (0) ]
+            [ Background      = @OutlineVariant,
+              CornerRadius    = 0,
+              BorderThickness = (0) ]
     }
-    Style [TargetType=GridSplitter] {
-        Template     = @DefaultGridSplitter;
+    Style [TargetType = GridSplitter] {
+        Template = @DefaultGridSplitter;
         // PreviewBrush rides the active theme via DynamicResource so a
         // theme switch re-tints the drag-preview adorner live. Consumer
         // overrides at the Local tier still win.
@@ -471,14 +492,14 @@ resources MuralBasic {
     // Standalone orientation-aware splitter for non-Grid containers.
     // Same chrome as GridSplitter; the orientation determines the
     // resize axis.
-    Template x:key="DefaultSplitter" [TargetType=Splitter]{
+    Template x:key="DefaultSplitter" [TargetType = Splitter] {
         Border x:name="PART_Border"
-              [ Background      = @OutlineVariant,
-                CornerRadius    = 0,
-                BorderThickness = (0) ]
+            [ Background      = @OutlineVariant,
+              CornerRadius    = 0,
+              BorderThickness = (0) ]
     }
-    Style [TargetType=Splitter] {
-        Template     = @DefaultSplitter;
+    Style [TargetType = Splitter] {
+        Template = @DefaultSplitter;
         // PreviewBrush rides the active theme via DynamicResource so a
         // theme switch re-tints the drag-preview adorner live. Consumer
         // overrides at the Local tier still win (Style setter sits at

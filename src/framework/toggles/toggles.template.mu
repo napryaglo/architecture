@@ -9,7 +9,6 @@
 // every entry below into MuralFramework's keyed table at Clone() time.
 
 resources Toggles {
-
     // ── Switch: M3 binary toggle (track + sliding thumb) ───────────
     // 52 × 32 dp pill track with a thumb that slides between the left
     // and right edges as IsChecked flips. The Margin-based positioning
@@ -27,12 +26,12 @@ resources Toggles {
     // bumps to 28dp (M3 "pressed" handle) but that requires the same
     // Margin trick as IsChecked — folded into the IsPressed trigger
     // below.
-    Template x:key="DefaultSwitch" [TargetType=Switch] {
+    Template x:key="DefaultSwitch" [TargetType = Switch] {
         Border x:name="PART_Track"
-              [ Background      = @SurfaceContainerHighest,
-                BorderBrush     = @Outline,
-                BorderThickness = (2),
-                CornerRadius    = @ShapeFull ] {
+            [ Background      = @SurfaceContainerHighest,
+              BorderBrush     = @Outline,
+              BorderThickness = (2),
+              CornerRadius    = @ShapeFull ] {
             // Thumb is a circle (ShapeFull) inside an absolutely-sized
             // 32dp track. Margin (Left, Top, Right, Bottom) anchors it
             // to the left edge with a 4dp inset top/bottom — the
@@ -40,33 +39,37 @@ resources Toggles {
             // height, 16dp Width fixed below). The IsChecked trigger
             // shifts to right-anchored + 24dp width.
             Border x:name="PART_Thumb"
-                  [ Background          = @Outline,
-                    CornerRadius        = @ShapeFull,
-                    BorderThickness     = (0),
-                    Width               = 16,
-                    Height              = 16,
-                    VerticalAlignment   = Center,
-                    HorizontalAlignment = Left,
-                    Margin              = (8, 0, 0, 0) ]
+                [ Background          = @Outline,
+                  CornerRadius        = @ShapeFull,
+                  BorderThickness     = (0),
+                  Width               = 16,
+                  Height              = 16,
+                  VerticalAlignment   = Center,
+                  HorizontalAlignment = Left,
+                  Margin              = (8,0,0,0) ]
         }
         // IsChecked — track + thumb both flip palette; the thumb grows
         // and re-anchors to the right edge.
-        when ( IsChecked ) { PART_Track.Background    = @Primary;
-                             PART_Track.BorderBrush   = @Primary;
-                             PART_Thumb.Background    = @OnPrimary;
-                             PART_Thumb.Width         = 24;
-                             PART_Thumb.Height        = 24;
-                             PART_Thumb.Margin        = (24, 0, 0, 0); }
+        when ( IsChecked ) {
+            PART_Track.Background = @Primary;
+            PART_Track.BorderBrush = @Primary;
+            PART_Thumb.Background = @OnPrimary;
+            PART_Thumb.Width = 24;
+            PART_Thumb.Height = 24;
+            PART_Thumb.Margin = (24,0,0,0);
+        }
         // State-layer ladder. Hover / focus / press tint the thumb at
         // the Primary state-layer opacities so the affordance reads
         // even when the track is unchecked.
-        when ( IsMouseOver )       { PART_Thumb.Background = @OnSurface; }
-        when ( IsFocused )         { PART_Thumb.Background = @OnSurface; }
-        when ( IsPressed )         { PART_Thumb.Width      = 28;
-                                     PART_Thumb.Height     = 28; }
-        when ( IsEnabled = false ) { PART_Track.Opacity    = @DisabledContentOpacity; }
+        when ( IsMouseOver ) { PART_Thumb.Background = @OnSurface; }
+        when ( IsFocused ) { PART_Thumb.Background = @OnSurface; }
+        when ( IsPressed ) {
+            PART_Thumb.Width = 28;
+            PART_Thumb.Height = 28;
+        }
+        when ( IsEnabled = false ) { PART_Track.Opacity = @DisabledContentOpacity; }
     }
-    Style [TargetType=Switch] {
+    Style [TargetType = Switch] {
         Template = @DefaultSwitch;
     }
 
@@ -81,35 +84,37 @@ resources Toggles {
     //
     // No tri-state (indeterminate) chrome — see Checkbox.ts for the
     // why-deferred rationale.
-    Template x:key="DefaultCheckbox" [TargetType=Checkbox] {
+    Template x:key="DefaultCheckbox" [TargetType = Checkbox] {
         Border x:name="PART_Box"
-              [ Background      = #00000000,
-                BorderBrush     = @OnSurfaceVariant,
-                BorderThickness = (2),
-                CornerRadius    = @ShapeExtraSmall ] {
+            [ Background      = #00000000,
+              BorderBrush     = @OnSurfaceVariant,
+              BorderThickness = (2),
+              CornerRadius    = @ShapeExtraSmall ] {
             TextBlock x:name="PART_Mark"
-                     [ Text                = "✓",
-                       FontFamily          = @LabelSmallFont,
-                       FontWeight          = @TypefaceWeightBold,
-                       FontSize             = @LabelLargeSize,
-                       Foreground           = @OnPrimary,
-                       HorizontalAlignment  = Center,
-                       VerticalAlignment    = Center,
-                       Opacity              = 0 ]
+                [ Text                = "✓",
+                  FontFamily          = @LabelSmallFont,
+                  FontWeight          = @TypefaceWeightBold,
+                  FontSize            = @LabelLargeSize,
+                  Foreground          = @OnPrimary,
+                  HorizontalAlignment = Center,
+                  VerticalAlignment   = Center,
+                  Opacity             = 0 ]
         }
         // IsChecked — fill the box and reveal the glyph.
-        when ( IsChecked )         { PART_Box.Background     = @Primary;
-                                     PART_Box.BorderBrush    = @Primary;
-                                     PART_Mark.Opacity       = 1; }
+        when ( IsChecked ) {
+            PART_Box.Background = @Primary;
+            PART_Box.BorderBrush = @Primary;
+            PART_Mark.Opacity = 1;
+        }
         // State-layer ladder. Hover / focus / press tint the box's
         // border (unchecked path) or pump the fill toward a press
         // tint (checked path). Disabled dims the whole control.
-        when ( IsMouseOver )       { PART_Box.BorderBrush    = @OnSurface; }
-        when ( IsFocused )         { PART_Box.BorderBrush    = @Primary; }
-        when ( IsPressed )         { PART_Box.BorderBrush    = @Primary; }
-        when ( IsEnabled = false ) { PART_Box.Opacity        = @DisabledContentOpacity; }
+        when ( IsMouseOver ) { PART_Box.BorderBrush = @OnSurface; }
+        when ( IsFocused ) { PART_Box.BorderBrush = @Primary; }
+        when ( IsPressed ) { PART_Box.BorderBrush = @Primary; }
+        when ( IsEnabled = false ) { PART_Box.Opacity = @DisabledContentOpacity; }
     }
-    Style [TargetType=Checkbox] {
+    Style [TargetType = Checkbox] {
         Template = @DefaultCheckbox;
     }
 
@@ -125,30 +130,32 @@ resources Toggles {
     // and any sibling sharing that name in the same visual tree
     // automatically clears when this one is checked. See radio-
     // button.ts for the walker.
-    Template x:key="DefaultRadioButton" [TargetType=RadioButton] {
+    Template x:key="DefaultRadioButton" [TargetType = RadioButton] {
         Border x:name="PART_Ring"
-              [ Background      = #00000000,
-                BorderBrush     = @OnSurfaceVariant,
-                BorderThickness = (2),
-                CornerRadius    = @ShapeFull ] {
+            [ Background      = #00000000,
+              BorderBrush     = @OnSurfaceVariant,
+              BorderThickness = (2),
+              CornerRadius    = @ShapeFull ] {
             Border x:name="PART_Dot"
-                  [ Background          = @Primary,
-                    CornerRadius        = @ShapeFull,
-                    BorderThickness     = (0),
-                    Width               = 10,
-                    Height              = 10,
-                    HorizontalAlignment = Center,
-                    VerticalAlignment   = Center,
-                    Opacity             = 0 ]
+                [ Background          = @Primary,
+                  CornerRadius        = @ShapeFull,
+                  BorderThickness     = (0),
+                  Width               = 10,
+                  Height              = 10,
+                  HorizontalAlignment = Center,
+                  VerticalAlignment   = Center,
+                  Opacity             = 0 ]
         }
-        when ( IsChecked )         { PART_Ring.BorderBrush = @Primary;
-                                     PART_Dot.Opacity      = 1; }
-        when ( IsMouseOver )       { PART_Ring.BorderBrush = @OnSurface; }
-        when ( IsFocused )         { PART_Ring.BorderBrush = @Primary; }
-        when ( IsPressed )         { PART_Ring.BorderBrush = @Primary; }
-        when ( IsEnabled = false ) { PART_Ring.Opacity     = @DisabledContentOpacity; }
+        when ( IsChecked ) {
+            PART_Ring.BorderBrush = @Primary;
+            PART_Dot.Opacity = 1;
+        }
+        when ( IsMouseOver ) { PART_Ring.BorderBrush = @OnSurface; }
+        when ( IsFocused ) { PART_Ring.BorderBrush = @Primary; }
+        when ( IsPressed ) { PART_Ring.BorderBrush = @Primary; }
+        when ( IsEnabled = false ) { PART_Ring.Opacity = @DisabledContentOpacity; }
     }
-    Style [TargetType=RadioButton] {
+    Style [TargetType = RadioButton] {
         Template = @DefaultRadioButton;
     }
 }

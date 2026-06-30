@@ -7,7 +7,6 @@
 // in MuralFramework's keyed table.
 
 resources Markers {
-
     // ── Chip: M3 compact attribute / filter / input / suggestion ───
     // 32dp tall pill chrome with leading + trailing slots and a
     // ContentPresenter for the label. Kind-aware triggers tint the
@@ -27,25 +26,25 @@ resources Markers {
     // other variants ignore it entirely (the consumer can still toggle
     // IsChecked programmatically through ToggleButton, no chrome
     // change).
-    Template x:key="DefaultChip" [TargetType=Chip] {
+    Template x:key="DefaultChip" [TargetType = Chip] {
         Border x:name="PART_Chip"
-              [ Background      = @Surface,
-                BorderBrush     = @OutlineVariant,
-                BorderThickness = (1),
-                CornerRadius    = @ShapeSmall,
-                Padding         = (@Spacing3, @Spacing1, @Spacing3, @Spacing1),
-                Height          = 32 ] {
-            DockPanel [LastChildFill=true] {
+            [ Background      = @Surface,
+              BorderBrush     = @OutlineVariant,
+              BorderThickness = (1),
+              CornerRadius    = @ShapeSmall,
+              Padding         = (@Spacing3,@Spacing1,@Spacing3,@Spacing1),
+              Height          = 32 ] {
+            DockPanel [ LastChildFill = true ] {
                 Border x:name="PART_LeadingSlot"
-                      [ DockPanel.Dock     = Left,
-                        VerticalAlignment   = Center,
-                        BorderThickness     = (0),
-                        Margin              = (0, 0, @Spacing1, 0) ]
+                    [ DockPanel.Dock    = Left,
+                      VerticalAlignment = Center,
+                      BorderThickness   = (0),
+                      Margin            = (0,0,@Spacing1,0) ]
                 Border x:name="PART_TrailingSlot"
-                      [ DockPanel.Dock     = Right,
-                        VerticalAlignment   = Center,
-                        BorderThickness     = (0),
-                        Margin              = (@Spacing1, 0, 0, 0) ]
+                    [ DockPanel.Dock    = Right,
+                      VerticalAlignment = Center,
+                      BorderThickness   = (0),
+                      Margin            = (@Spacing1,0,0,0) ]
                 ContentPresenter [ VerticalAlignment = Center ]
             }
         }
@@ -56,8 +55,8 @@ resources Markers {
         // conjuncts; the class recomputes it on every Kind / IsChecked
         // edge.
         when ( IsFilterSelected ) {
-            PART_Chip.Background     = @SecondaryContainer;
-            PART_Chip.BorderBrush    = @SecondaryContainer;
+            PART_Chip.Background = @SecondaryContainer;
+            PART_Chip.BorderBrush = @SecondaryContainer;
         }
 
         // State-layer ladder — translucent OnSurface overlays over
@@ -65,17 +64,17 @@ resources Markers {
         // BEFORE the Filter-selected trigger so a hovered selected
         // filter chip stays in its @SecondaryContainer tint (the
         // state-layer overlay would otherwise wash it back to neutral).
-        when ( IsMouseOver )       { PART_Chip.Background = @StateHoverOverlay; }
-        when ( IsFocused )         { PART_Chip.Background = @StateFocusOverlay; }
-        when ( IsPressed )         { PART_Chip.Background = @StatePressOverlay; }
-        when ( IsEnabled = false ) { PART_Chip.Opacity    = @DisabledContentOpacity; }
+        when ( IsMouseOver ) { PART_Chip.Background = @StateHoverOverlay; }
+        when ( IsFocused ) { PART_Chip.Background = @StateFocusOverlay; }
+        when ( IsPressed ) { PART_Chip.Background = @StatePressOverlay; }
+        when ( IsEnabled = false ) { PART_Chip.Opacity = @DisabledContentOpacity; }
     }
-    Style [TargetType=Chip] {
+    Style [TargetType = Chip] {
         Template = @DefaultChip;
         Foreground = @OnSurface;
         FontFamily = @LabelLargeFont;
         FontWeight = @LabelLargeWeight;
-        FontSize   = @LabelLargeSize;
+        FontSize = @LabelLargeSize;
     }
 
     // ── Divider: M3 1dp rule, horizontal or vertical ───────────────
@@ -84,21 +83,21 @@ resources Markers {
     // a single template with a trigger that just flips Orientation
     // would still produce a 1dp box around the rule rather than a 1dp
     // line. The Style picks the matching template based on Orientation.
-    Template x:key="DefaultHorizontalDivider" [TargetType=Divider] {
+    Template x:key="DefaultHorizontalDivider" [TargetType = Divider] {
         Border x:name="PART_Rule"
-              [ Background          = @OutlineVariant,
-                Height              = 1,
-                HorizontalAlignment = Stretch,
-                BorderThickness     = (0) ]
+            [ Background          = @OutlineVariant,
+              Height              = 1,
+              HorizontalAlignment = Stretch,
+              BorderThickness     = (0) ]
     }
-    Template x:key="DefaultVerticalDivider" [TargetType=Divider] {
+    Template x:key="DefaultVerticalDivider" [TargetType = Divider] {
         Border x:name="PART_Rule"
-              [ Background        = @OutlineVariant,
-                Width             = 1,
-                VerticalAlignment = Stretch,
-                BorderThickness   = (0) ]
+            [ Background        = @OutlineVariant,
+              Width             = 1,
+              VerticalAlignment = Stretch,
+              BorderThickness   = (0) ]
     }
-    Style [TargetType=Divider] {
+    Style [TargetType = Divider] {
         Template = @DefaultHorizontalDivider;
         when ( Orientation = Vertical ) { Template = @DefaultVerticalDivider; }
     }
@@ -108,34 +107,35 @@ resources Markers {
     // filled circle; Variant=Numeric ships a pill carrying the Count
     // bound via a $-binding. Both use @Error / @OnError per the M3
     // spec; consumers wanting a non-error tint re-template.
-    Template x:key="DefaultDotBadge" [TargetType=Badge] {
+    Template x:key="DefaultDotBadge" [TargetType = Badge] {
         Border x:name="PART_Dot"
-              [ Background      = @Error,
-                CornerRadius    = @ShapeFull,
-                BorderThickness = (0),
-                Width           = 6,
-                Height          = 6 ]
+            [ Background      = @Error,
+              CornerRadius    = @ShapeFull,
+              BorderThickness = (0),
+              Width           = 6,
+              Height          = 6 ]
     }
-    Template x:key="DefaultNumericBadge" [TargetType=Badge] {
+    Template x:key="DefaultNumericBadge" [TargetType = Badge] {
         Border x:name="PART_Pill"
-              [ Background      = @Error,
-                CornerRadius    = @ShapeFull,
-                BorderThickness = (0),
-                Padding         = (@Spacing1, @Spacing0, @Spacing1, @Spacing0),
-                MinWidth        = 16,
-                Height          = 16 ] {
-            TextBlock [ Text                 = $Count,
-                        Foreground           = @OnError,
-                        FontFamily           = @LabelSmallFont,
-                        FontWeight           = @LabelSmallWeight,
-                        FontSize              = @LabelSmallSize,
-                        LineHeight            = @LabelSmallLineHeight,
-                        LetterSpacing         = @LabelSmallTracking,
-                        HorizontalAlignment   = Center,
-                        VerticalAlignment     = Center ]
+            [ Background      = @Error,
+              CornerRadius    = @ShapeFull,
+              BorderThickness = (0),
+              Padding         = (@Spacing1,@Spacing0,@Spacing1,@Spacing0),
+              MinWidth        = 16,
+              Height          = 16 ] {
+            TextBlock
+                [ Text                = $Count,
+                  Foreground          = @OnError,
+                  FontFamily          = @LabelSmallFont,
+                  FontWeight          = @LabelSmallWeight,
+                  FontSize            = @LabelSmallSize,
+                  LineHeight          = @LabelSmallLineHeight,
+                  LetterSpacing       = @LabelSmallTracking,
+                  HorizontalAlignment = Center,
+                  VerticalAlignment   = Center ]
         }
     }
-    Style [TargetType=Badge] {
+    Style [TargetType = Badge] {
         Template = @DefaultNumericBadge;
         when ( Variant = Dot ) { Template = @DefaultDotBadge; }
     }

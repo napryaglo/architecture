@@ -7,7 +7,6 @@
 // clause in src/resources/framework.resources.mu.
 
 resources Bases {
-
     // ── ContentControl: bare-bones content host ────────────────────
     // ContentControl is the base for Button, ToggleButton, IconButton,
     // FAB, Card, … — each of those installs its own default Style via
@@ -21,10 +20,10 @@ resources Bases {
     // The minimal default: a single ContentPresenter that hosts the
     // resolved Content visual. Matches WPF's bare ContentControl. Any
     // derived class with its own Style overrides this without conflict.
-    Template x:key="DefaultContentControlTemplate" [TargetType=ContentControl] {
+    Template x:key="DefaultContentControlTemplate" [TargetType = ContentControl] {
         ContentPresenter
     }
-    Style [TargetType=ContentControl] {
+    Style [TargetType = ContentControl] {
         Template = @DefaultContentControlTemplate;
     }
 }

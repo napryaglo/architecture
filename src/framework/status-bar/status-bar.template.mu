@@ -5,18 +5,18 @@
 // clause in src/resources/framework.resources.mu.
 
 resources StatusBars {
-
     // ── StatusBar: bottom strip ────────────────────────────────────
     // ItemsControl wrapping each item in a StatusBarItem. The default
     // ItemsPanel is a DockPanel with LastChildFill=true so authors can
     // dock left/right cells via `DockPanel.Dock` on each item and put a
     // stretchy middle one last. Chrome is a single Border on top of
     // @SurfaceContainerLow.
-    Template x:key="DefaultStatusBar" [TargetType=StatusBar] {
-        Border [ Background      = @SurfaceContainerLow,
-                 BorderBrush     = @OutlineVariant,
-                 BorderThickness = (0,1,0,0),
-                 Padding         = (4,2,4,2) ] {
+    Template x:key="DefaultStatusBar" [TargetType = StatusBar] {
+        Border
+            [ Background      = @SurfaceContainerLow,
+              BorderBrush     = @OutlineVariant,
+              BorderThickness = (0,1,0,0),
+              Padding         = (4,2,4,2) ] {
             ItemsPresenter
         }
     }
@@ -26,11 +26,11 @@ resources StatusBars {
     // StatusBarItem in markup pins it to the corresponding edge; the
     // last un-docked cell fills the residue.
     ItemsPanelTemplate x:key="DefaultStatusBarPanel" {
-        DockPanel [LastChildFill = true]
+        DockPanel [ LastChildFill = true ]
     }
 
-    Style [TargetType=StatusBar] {
-        Template   = @DefaultStatusBar;
+    Style [TargetType = StatusBar] {
+        Template = @DefaultStatusBar;
         ItemsPanel = @DefaultStatusBarPanel;
     }
 
@@ -45,12 +45,12 @@ resources StatusBars {
     // Consumers set Foreground / FontSize on the TextBlock they place
     // inside the Content (bound to @OnSurfaceVariant so theme switches
     // re-tint).
-    Template x:key="DefaultStatusBarItem" [TargetType=StatusBarItem] {
+    Template x:key="DefaultStatusBarItem" [TargetType = StatusBarItem] {
         Border [ Padding = (8,2,8,2) ] {
             ContentPresenter
         }
     }
-    Style [TargetType=StatusBarItem] {
+    Style [TargetType = StatusBarItem] {
         Template = @DefaultStatusBarItem;
     }
 
@@ -58,8 +58,8 @@ resources StatusBars {
     // 1-px line painted by the class's RenderOverride. The Style
     // supplies Width / MinHeight / LineBrush so the divider tints
     // follow the active theme.
-    Style [TargetType=StatusBarSeparator] {
-        Width     = 9;
+    Style [TargetType = StatusBarSeparator] {
+        Width = 9;
         MinHeight = 16;
         LineBrush = @OutlineVariant;
     }

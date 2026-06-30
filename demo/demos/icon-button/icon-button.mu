@@ -19,7 +19,6 @@ import IconButtonVM from "./icon-button-vm.mjs"
 //     trigger.
 
 resources IconButtonDemo {
-
     // Icon geometries baked from the Material Symbols Outlined font at
     // build time (the `glyphs` keyword → one PathGeometry resource per
     // entry, addressed by M3 glyph name). The buttons below paint these
@@ -30,86 +29,152 @@ resources IconButtonDemo {
     // chrome's foreground ink the template sets per variant and tracks the
     // IconButtonToggle checked-state ink flip live — no explicit binding.
     glyphs "../../assets/material-symbols-outlined.ttf" {
-        check  star  north_east  more_horiz
-        favorite  notifications  dark_mode
+        check
+        star
+        north_east
+        more_horiz
+        favorite
+        notifications
+        dark_mode
     }
 
-    DataTemplate x:key="IconButtonTemplate" [DataType=IconButtonVM] {
-        Border [Background=@Surface, BorderBrush=@OutlineVariant,
-                BorderThickness=(1)]{
-            DockPanel{
+    DataTemplate x:key="IconButtonTemplate" [DataType = IconButtonVM] {
+        Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
+            DockPanel {
                 // Header strip
-                Border[DockPanel.Dock=Top,
-                       Background=@Primary, Padding=(16,12,16,12)]{
-                    TextBlock[Text="IconButton — M3's compact square button. Four variants drive the chrome via Button.Variant.",
-                              FontSize=15, FontWeight=Bold,
-                              Foreground=@OnPrimary]
+                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (16,12,16,12) ] {
+                    TextBlock
+                        [ Text       = "IconButton — M3's compact square button. Four variants drive the chrome via Button.Variant.",
+                          FontSize   = 15,
+                          FontWeight = Bold,
+                          Foreground = @OnPrimary ]
                 }
 
-                StackPanel[Orientation=Vertical, Margin=(24,24,24,24)]{
-
+                StackPanel [ Orientation = Vertical, Margin = (24,24,24,24) ] {
                     // ── Row 1: IconButton (non-toggle) ────────────────
-                    TextBlock[Text="IconButton — Variant: Filled / Tonal / Outlined / Standard",
-                              FontWeight=Bold, FontSize=14,
-                              Foreground=@OnSurface, Margin=(0,0,0,12)]
+                    TextBlock
+                        [ Text       = "IconButton — Variant: Filled / Tonal / Outlined / Standard",
+                          FontWeight = Bold,
+                          FontSize   = 14,
+                          Foreground = @OnSurface,
+                          Margin     = (0,0,0,12) ]
 
-                    StackPanel[Orientation=Horizontal, Margin=(0,0,0,8)]{
-                        IconButton[Variant=Filled,   Command=$ClickFilledCommand]{
-                            Shape[Geometry=@check,      Width=20, Height=20]
+                    StackPanel [ Orientation = Horizontal, Margin = (0,0,0,8) ] {
+                        IconButton [ Variant = Filled, Command = $ClickFilledCommand ] {
+                            Shape [ Geometry = @check, Width = 20, Height = 20 ]
                         }
-                        IconButton[Variant=Tonal,    Command=$ClickTonalCommand]{
-                            Shape[Geometry=@star,       Width=20, Height=20]
+                        IconButton [ Variant = Tonal, Command = $ClickTonalCommand ] {
+                            Shape [ Geometry = @star, Width = 20, Height = 20 ]
                         }
-                        IconButton[Variant=Outlined, Command=$ClickOutlinedCommand]{
-                            Shape[Geometry=@north_east, Width=20, Height=20]
+                        IconButton [ Variant = Outlined, Command = $ClickOutlinedCommand ] {
+                            Shape [ Geometry = @north_east, Width = 20, Height = 20 ]
                         }
-                        IconButton[Variant=Standard, Command=$ClickStandardCommand]{
-                            Shape[Geometry=@more_horiz, Width=20, Height=20]
+                        IconButton [ Variant = Standard, Command = $ClickStandardCommand ] {
+                            Shape [ Geometry = @more_horiz, Width = 20, Height = 20 ]
                         }
                     }
 
                     // Click-count read-out
-                    StackPanel[Orientation=Horizontal, Margin=(0,0,0,24)]{
-                        TextBlock[Text="Clicks — Filled: ", FontSize=12, Foreground=@OnSurfaceVariant]
-                        TextBlock[Text=$FilledClicks,        FontSize=12, FontWeight=Bold, Foreground=@OnSurface]
-                        TextBlock[Text="  Tonal: ",          FontSize=12, Foreground=@OnSurfaceVariant]
-                        TextBlock[Text=$TonalClicks,         FontSize=12, FontWeight=Bold, Foreground=@OnSurface]
-                        TextBlock[Text="  Outlined: ",       FontSize=12, Foreground=@OnSurfaceVariant]
-                        TextBlock[Text=$OutlinedClicks,      FontSize=12, FontWeight=Bold, Foreground=@OnSurface]
-                        TextBlock[Text="  Standard: ",       FontSize=12, Foreground=@OnSurfaceVariant]
-                        TextBlock[Text=$StandardClicks,      FontSize=12, FontWeight=Bold, Foreground=@OnSurface]
+                    StackPanel [ Orientation = Horizontal, Margin = (0,0,0,24) ] {
+                        TextBlock
+                            [ Text       = "Clicks — Filled: ",
+                              FontSize   = 12,
+                              Foreground = @OnSurfaceVariant ]
+                        TextBlock
+                            [ Text       = $FilledClicks,
+                              FontSize   = 12,
+                              FontWeight = Bold,
+                              Foreground = @OnSurface ]
+                        TextBlock
+                            [ Text       = "  Tonal: ",
+                              FontSize   = 12,
+                              Foreground = @OnSurfaceVariant ]
+                        TextBlock
+                            [ Text       = $TonalClicks,
+                              FontSize   = 12,
+                              FontWeight = Bold,
+                              Foreground = @OnSurface ]
+                        TextBlock
+                            [ Text       = "  Outlined: ",
+                              FontSize   = 12,
+                              Foreground = @OnSurfaceVariant ]
+                        TextBlock
+                            [ Text       = $OutlinedClicks,
+                              FontSize   = 12,
+                              FontWeight = Bold,
+                              Foreground = @OnSurface ]
+                        TextBlock
+                            [ Text       = "  Standard: ",
+                              FontSize   = 12,
+                              Foreground = @OnSurfaceVariant ]
+                        TextBlock
+                            [ Text       = $StandardClicks,
+                              FontSize   = 12,
+                              FontWeight = Bold,
+                              Foreground = @OnSurface ]
                     }
 
                     // ── Row 2: IconButtonToggle ───────────────────────
-                    TextBlock[Text="IconButtonToggle — same Variant set; IsChecked flips Background + glyph ink.",
-                              FontWeight=Bold, FontSize=14,
-                              Foreground=@OnSurface, Margin=(0,0,0,12)]
+                    TextBlock
+                        [ Text       = "IconButtonToggle — same Variant set; IsChecked flips Background + glyph ink.",
+                          FontWeight = Bold,
+                          FontSize   = 14,
+                          Foreground = @OnSurface,
+                          Margin     = (0,0,0,12) ]
 
-                    StackPanel[Orientation=Horizontal, Margin=(0,0,0,8)]{
-                        IconButtonToggle[Variant=Filled,   IsChecked=$FilledChecked]{
-                            Shape[Geometry=@favorite,      Width=20, Height=20]
+                    StackPanel [ Orientation = Horizontal, Margin = (0,0,0,8) ] {
+                        IconButtonToggle [ Variant = Filled, IsChecked = $FilledChecked ] {
+                            Shape [ Geometry = @favorite, Width = 20, Height = 20 ]
                         }
-                        IconButtonToggle[Variant=Tonal,    IsChecked=$TonalChecked]{
-                            Shape[Geometry=@star,          Width=20, Height=20]
+                        IconButtonToggle [ Variant = Tonal, IsChecked = $TonalChecked ] {
+                            Shape [ Geometry = @star, Width = 20, Height = 20 ]
                         }
-                        IconButtonToggle[Variant=Outlined, IsChecked=$OutlinedChecked]{
-                            Shape[Geometry=@notifications, Width=20, Height=20]
+                        IconButtonToggle [ Variant = Outlined, IsChecked = $OutlinedChecked ] {
+                            Shape [ Geometry = @notifications, Width = 20, Height = 20 ]
                         }
-                        IconButtonToggle[Variant=Standard, IsChecked=$StandardChecked]{
-                            Shape[Geometry=@dark_mode,     Width=20, Height=20]
+                        IconButtonToggle [ Variant = Standard, IsChecked = $StandardChecked ] {
+                            Shape [ Geometry = @dark_mode, Width = 20, Height = 20 ]
                         }
                     }
 
                     // Toggle-state read-out
-                    StackPanel[Orientation=Horizontal]{
-                        TextBlock[Text="Checked — Filled: ", FontSize=12, Foreground=@OnSurfaceVariant]
-                        TextBlock[Text=$FilledChecked,        FontSize=12, FontWeight=Bold, Foreground=@OnSurface]
-                        TextBlock[Text="  Tonal: ",           FontSize=12, Foreground=@OnSurfaceVariant]
-                        TextBlock[Text=$TonalChecked,         FontSize=12, FontWeight=Bold, Foreground=@OnSurface]
-                        TextBlock[Text="  Outlined: ",        FontSize=12, Foreground=@OnSurfaceVariant]
-                        TextBlock[Text=$OutlinedChecked,      FontSize=12, FontWeight=Bold, Foreground=@OnSurface]
-                        TextBlock[Text="  Standard: ",        FontSize=12, Foreground=@OnSurfaceVariant]
-                        TextBlock[Text=$StandardChecked,      FontSize=12, FontWeight=Bold, Foreground=@OnSurface]
+                    StackPanel [ Orientation = Horizontal ] {
+                        TextBlock
+                            [ Text       = "Checked — Filled: ",
+                              FontSize   = 12,
+                              Foreground = @OnSurfaceVariant ]
+                        TextBlock
+                            [ Text       = $FilledChecked,
+                              FontSize   = 12,
+                              FontWeight = Bold,
+                              Foreground = @OnSurface ]
+                        TextBlock
+                            [ Text       = "  Tonal: ",
+                              FontSize   = 12,
+                              Foreground = @OnSurfaceVariant ]
+                        TextBlock
+                            [ Text       = $TonalChecked,
+                              FontSize   = 12,
+                              FontWeight = Bold,
+                              Foreground = @OnSurface ]
+                        TextBlock
+                            [ Text       = "  Outlined: ",
+                              FontSize   = 12,
+                              Foreground = @OnSurfaceVariant ]
+                        TextBlock
+                            [ Text       = $OutlinedChecked,
+                              FontSize   = 12,
+                              FontWeight = Bold,
+                              Foreground = @OnSurface ]
+                        TextBlock
+                            [ Text       = "  Standard: ",
+                              FontSize   = 12,
+                              Foreground = @OnSurfaceVariant ]
+                        TextBlock
+                            [ Text       = $StandardChecked,
+                              FontSize   = 12,
+                              FontWeight = Bold,
+                              Foreground = @OnSurface ]
                     }
                 }
             }

@@ -8,19 +8,23 @@ import BouncingBallVM from "./bouncing-ball-vm.mjs"
 // passive render of (X, Y) over time.
 
 resources BouncingBallDemo {
+    Pen x:key="BallPen" [ Brush = #f59e0b, Thickness = 1.5 ]
 
-    Pen x:key="BallPen" [Brush=#f59e0b, Thickness=1.5]
-
-    DataTemplate x:key="BouncingBallTemplate" [DataType=BouncingBallVM] {
-        Border x:root [Background=@InverseSurface,
-                       BorderBrush=@Outline,
-                       BorderThickness=(1),
-                       Width=640, Height=360]{
+    DataTemplate x:key="BouncingBallTemplate" [DataType = BouncingBallVM] {
+        Border x:root
+            [ Background      = @InverseSurface,
+              BorderBrush     = @Outline,
+              BorderThickness = (1),
+              Width           = 640,
+              Height          = 360 ] {
             Canvas x:name="playArea" {
-                Ellipse [Canvas.Left=$X, Canvas.Top=$Y,
-                         Width=$Diameter, Height=$Diameter,
-                         Fill=#fbbf24,
-                         Stroke=@BallPen]
+                Ellipse
+                    [ Canvas.Left = $X,
+                      Canvas.Top  = $Y,
+                      Width       = $Diameter,
+                      Height      = $Diameter,
+                      Fill        = #fbbf24,
+                      Stroke      = @BallPen ]
             }
         }
     }
