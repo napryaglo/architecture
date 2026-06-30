@@ -273,6 +273,13 @@ export class Diagram extends Selector implements RigidConnectorDragHost
         Diagram, 'SelectionFormatTargetCap', undefined, MetaData.None);
     public static readonly SelectionIsConnectorKey = Model.RegisterProperty<boolean>(
         Diagram, 'SelectionIsConnector', false, MetaData.None);
+    // Per-end cap size multipliers. FormatMirror seeds these from the first
+    // selected connector's Source/TargetCapScale and broadcasts edits onto
+    // every selected connector. 1 = the cap template's authored size.
+    public static readonly SelectionFormatSourceCapScaleKey = Model.RegisterProperty<number>(
+        Diagram, 'SelectionFormatSourceCapScale', 1, MetaData.None);
+    public static readonly SelectionFormatTargetCapScaleKey = Model.RegisterProperty<number>(
+        Diagram, 'SelectionFormatTargetCapScale', 1, MetaData.None);
 
     public get PositionSnap():  DiagramPositionSnap | undefined { return this.get_property_value(Diagram.PositionSnapKey); }
     public set PositionSnap(v: DiagramPositionSnap | undefined) { this.set_property_value(Diagram.PositionSnapKey, v); }
@@ -367,6 +374,10 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     public set SelectionFormatTargetCap(v: DataTemplate | undefined) { this.set_property_value(Diagram.SelectionFormatTargetCapKey, v); }
     public get SelectionIsConnector():   boolean { return this.get_property_value(Diagram.SelectionIsConnectorKey); }
     public set SelectionIsConnector(v:   boolean) { this.set_property_value(Diagram.SelectionIsConnectorKey, v); }
+    public get SelectionFormatSourceCapScale(): number { return this.get_property_value(Diagram.SelectionFormatSourceCapScaleKey); }
+    public set SelectionFormatSourceCapScale(v: number) { this.set_property_value(Diagram.SelectionFormatSourceCapScaleKey, v); }
+    public get SelectionFormatTargetCapScale(): number { return this.get_property_value(Diagram.SelectionFormatTargetCapScaleKey); }
+    public set SelectionFormatTargetCapScale(v: number) { this.set_property_value(Diagram.SelectionFormatTargetCapScaleKey, v); }
 
     // Standard connector-cap dropdown list for a ShapeFormatControl's
     // CapOptions DP. A real DP (not a plain getter) so a markup binding

@@ -339,6 +339,8 @@ export class DiagramDemo extends ResourceDictionary {
             _shapeFormatControl63.set_property_value(ShapeFormatControl.StrokeKey, ElementNameBinding(() => _diagram10, "SelectionFormatStroke"));
             _shapeFormatControl63.set_property_value(ShapeFormatControl.SourceCapTemplateKey, ElementNameBinding(() => _diagram10, "SelectionFormatSourceCap"));
             _shapeFormatControl63.set_property_value(ShapeFormatControl.TargetCapTemplateKey, ElementNameBinding(() => _diagram10, "SelectionFormatTargetCap"));
+            _shapeFormatControl63.set_property_value(ShapeFormatControl.SourceCapScaleKey, ElementNameBinding(() => _diagram10, "SelectionFormatSourceCapScale"));
+            _shapeFormatControl63.set_property_value(ShapeFormatControl.TargetCapScaleKey, ElementNameBinding(() => _diagram10, "SelectionFormatTargetCapScale"));
             _shapeFormatControl63.set_property_value(ShapeFormatControl.ShowCapsKey, ElementNameBinding(() => _diagram10, "SelectionIsConnector"));
             _shapeFormatControl63.set_property_value(ShapeFormatControl.CapOptionsKey, ElementNameBinding(() => _diagram10, "ConnectorCapOptions"));
             _scrollViewer62.Content = _shapeFormatControl63;

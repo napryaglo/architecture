@@ -1716,6 +1716,8 @@ resources Formatting {
                     RowDefinitions {
                         RowDefinition [ Height = GridLength.Auto ]
                         RowDefinition [ Height = GridLength.Auto ]
+                        RowDefinition [ Height = GridLength.Auto ]
+                        RowDefinition [ Height = GridLength.Auto ]
                     }
                     TextBlock
                         [ Grid.Row          = 0,
@@ -1736,16 +1738,54 @@ resources Formatting {
                         [ Grid.Row          = 1,
                           Grid.Column       = 0,
                           Style             = @LabelSmall,
+                          Text              = "Start size",
+                          Foreground        = @OnSurfaceVariant,
+                          VerticalAlignment = Center,
+                          Margin            = (0,0,@Spacing3,@Spacing3) ]
+                    SliderSpinEdit x:name="PART_SourceCapScale"
+                        [ Grid.Row           = 1,
+                          Grid.Column        = 1,
+                          TextBlock.FontSize = @BodySmallSize,
+                          Minimum            = 0.5,
+                          Maximum            = 1.5,
+                          SmallChange        = 0.1,
+                          LargeChange        = 0.5,
+                          DecimalPlaces      = 1,
+                          Unit               = "×",
+                          Margin             = (0,0,0,@Spacing3) ]
+                    TextBlock
+                        [ Grid.Row          = 2,
+                          Grid.Column       = 0,
+                          Style             = @LabelSmall,
                           Text              = "End",
                           Foreground        = @OnSurface,
                           VerticalAlignment = Center,
-                          Margin            = (0,0,@Spacing3,0) ]
+                          Margin            = (0,0,@Spacing3,@Spacing3) ]
                     ComboBox x:name="PART_TargetCap"
-                        [ Grid.Row           = 1,
+                        [ Grid.Row           = 2,
                           Grid.Column        = 1,
                           ItemTemplate       = @CapOptionTemplate,
                           DisplayMemberPath  = "Label",
-                          TextBlock.FontSize = @BodySmallSize ]
+                          TextBlock.FontSize = @BodySmallSize,
+                          Margin             = (0,0,0,@Spacing3) ]
+                    TextBlock
+                        [ Grid.Row          = 3,
+                          Grid.Column       = 0,
+                          Style             = @LabelSmall,
+                          Text              = "End size",
+                          Foreground        = @OnSurfaceVariant,
+                          VerticalAlignment = Center,
+                          Margin            = (0,0,@Spacing3,0) ]
+                    SliderSpinEdit x:name="PART_TargetCapScale"
+                        [ Grid.Row           = 3,
+                          Grid.Column        = 1,
+                          TextBlock.FontSize = @BodySmallSize,
+                          Minimum            = 0.5,
+                          Maximum            = 1.5,
+                          SmallChange        = 0.1,
+                          LargeChange        = 0.5,
+                          DecimalPlaces      = 1,
+                          Unit               = "×" ]
                 }
             }
         }

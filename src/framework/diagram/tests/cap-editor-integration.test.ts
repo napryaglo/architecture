@@ -10,6 +10,7 @@ import { ObservableCollection, Model, Size, ElementNameBinding, type Visual } fr
 import { Border, PaginatedCanvas, ItemsPanelTemplate } from '../../../basic/index.js';
 import { Point } from '../../../visual-engine/index.js';
 import { ComboBox } from '../../list/combo-box.js';
+import { SliderSpinEdit } from '../../../basic/slider-spin-edit.js';
 import { ShapeFormatControl } from '../../formatting/shape-format-control.js';
 import { CapOption } from '../../formatting/cap-option.js';
 import { connectorCapOptions } from '../caps/connector-cap-options.js';
@@ -35,14 +36,21 @@ describe('connectorCapOptions — resolves real catalog templates under the them
     });
 });
 
-describe('Connector default Style — applies @ArrowCap', () => {
-    test('a freshly-constructed connector gets the catalog ArrowCap as its target cap', () => {
+describe('Connector default Style — applies @FilledArrowCap at 0.8×', () => {
+    test('a freshly-constructed connector gets the catalog Filled Arrow as its target cap', () => {
         initTestApp();
         const c = new Connector();
         assert.ok(c.TargetCapTemplate !== undefined, 'default target cap applied via Style');
-        const arrow = connectorCapOptions().find(o => o.Label === 'Arrow');
-        assert.equal(c.TargetCapTemplate, arrow!.Template, 'default cap IS the catalog ArrowCap');
+        const filled = connectorCapOptions().find(o => o.Label === 'Filled Arrow');
+        assert.equal(c.TargetCapTemplate, filled!.Template, 'default cap IS the catalog Filled Arrow');
         assert.equal(c.SourceCapTemplate, undefined, 'source end stays bare by default');
+    });
+
+    test('default end size is 0.8× on both ends', () => {
+        initTestApp();
+        const c = new Connector();
+        assert.equal(c.SourceCapScale, 0.8);
+        assert.equal(c.TargetCapScale, 0.8);
     });
 });
 
@@ -151,5 +159,30 @@ describe('ShapeFormatControl cap combobox — drives the connector end to end', 
             'binding survived the spurious population — user pick wrote back to the diagram');
         assert.equal(c.TargetCapTemplate, items[diamondIndex]!.Template,
             'broadcast reached the selected connector');
+    });
+
+    test('the PART_SourceCapScale SliderSpinEdit drives the connector cap size end to end', () => {
+        initTestApp();
+        const d = mountedDiagram();
+        const c = connector();
+        c.SourceCapTemplate = connectorCapOptions().find(o => o.Label === 'Filled Arrow')!.Template;
+        d.Connectors = new ObservableCollection<Model>([c]);
+        d.SelectConnector(c);
+
+        const sfc = new ShapeFormatControl();
+        sfc.set_property_value(ShapeFormatControl.SourceCapScaleKey,
+            ElementNameBinding(d, 'SelectionFormatSourceCapScale'));
+        sfc.set_property_value(ShapeFormatControl.ShowCapsKey,
+            ElementNameBinding(d, 'SelectionIsConnector'));
+
+        const edit = sfc.GetTemplateChild('PART_SourceCapScale') as SliderSpinEdit | undefined;
+        assert.ok(edit !== undefined, 'PART_SourceCapScale exists in the template');
+        // Seeded from the connector's default scale (0.8, from the Style).
+        assert.equal(edit!.Value, 0.8);
+
+        // A user drag/type to 1.5× must flow edit → SFC → Diagram → connector.
+        edit!.Value = 1.5;
+        assert.equal(d.SelectionFormatSourceCapScale, 1.5, 'diagram scale DP updated');
+        assert.equal(c.SourceCapScale, 1.5, 'connector cap scale updated');
     });
 });

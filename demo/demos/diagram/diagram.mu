@@ -306,6 +306,8 @@ resources DiagramDemo {
                                   Stroke            = $nodes.SelectionFormatStroke,
                                   SourceCapTemplate = $nodes.SelectionFormatSourceCap,
                                   TargetCapTemplate = $nodes.SelectionFormatTargetCap,
+                                  SourceCapScale    = $nodes.SelectionFormatSourceCapScale,
+                                  TargetCapScale    = $nodes.SelectionFormatTargetCapScale,
                                   ShowCaps          = $nodes.SelectionIsConnector,
                                   CapOptions        = $nodes.ConnectorCapOptions ]
                         }

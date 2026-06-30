@@ -77,18 +77,26 @@ resources Diagrams {
 
     // ── Connector: default end-cap ─────────────────────────────────
     //
-    // Connectors carry an open arrowhead at the target end out of the
+    // Connectors carry a filled arrowhead at the target end out of the
     // box (Visio / draw.io convention); the source end stays bare. Both
     // are overridable per-instance via Source/TargetCapTemplate. The
-    // @ArrowCap template lives in the sibling Caps dictionary — both are
-    // merged into MuralFramework, so the cross-dictionary @ref resolves
+    // @FilledArrowCap template lives in the sibling Caps dictionary — both
+    // are merged into MuralFramework, so the cross-dictionary @ref resolves
     // at runtime the same way @Primary (a theme colour) does here.
+    //
+    // Default end size is 0.8× the cap template's authored size — a touch
+    // sleeker than the full-size glyph. Both ends carry the default so a
+    // cap added to either end starts at the same size; it's overridable
+    // per-instance via Source/TargetCapScale (the formatting pane's
+    // Start/End size sliders, 0.5×–1.5×).
     //
     // No Stroke setter: Connector seeds a per-instance default Pen in its
     // ctor so PenEditor's in-place edits can't leak across connectors —
     // a shared Style-setter Pen would reintroduce that leak.
     Style [TargetType = Connector] {
-        TargetCapTemplate = @ArrowCap;
+        TargetCapTemplate = @FilledArrowCap;
+        SourceCapScale    = 0.8;
+        TargetCapScale    = 0.8;
     }
 
     // ── Diagram: ItemsControl-derived workspace ────────────────────

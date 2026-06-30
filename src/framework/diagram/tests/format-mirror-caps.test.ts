@@ -195,6 +195,49 @@ describe('ShapeFormatControl cap DP — TwoWay writeback to Diagram + broadcast'
     });
 });
 
+describe('FormatMirror — cap-size channel seeds + broadcasts', () => {
+    test('selecting a connector seeds both scale DPs from it', () => {
+        const d = newDiagram();
+        const c = connector(capTemplate(), capTemplate());
+        c.SourceCapScale = 0.5;
+        c.TargetCapScale = 1.5;
+        d.SelectConnector(c);
+        assert.equal(d.SelectionFormatSourceCapScale, 0.5);
+        assert.equal(d.SelectionFormatTargetCapScale, 1.5);
+    });
+
+    test('a connector with default scale seeds 1', () => {
+        const d = newDiagram();
+        d.SelectConnector(connector());
+        assert.equal(d.SelectionFormatSourceCapScale, 1);
+        assert.equal(d.SelectionFormatTargetCapScale, 1);
+    });
+
+    test('setting a scale DP broadcasts onto every selected connector', () => {
+        const d = newDiagram();
+        const a = connector();
+        const b = connector();
+        d.SelectConnector(a);
+        d.SelectConnector(b);
+
+        d.SelectionFormatTargetCapScale = 1.3;
+        assert.equal(a.TargetCapScale, 1.3);
+        assert.equal(b.TargetCapScale, 1.3);
+    });
+
+    test('seeding does NOT replay the first connector scale onto the others', () => {
+        const d = newDiagram();
+        const a = connector();
+        a.SourceCapScale = 0.5;
+        const b = connector();
+        b.SourceCapScale = 1.2;
+        d.SelectConnector(a);
+        d.SelectConnector(b);
+        // seed picks `a` (0.5) but must not overwrite `b`'s own 1.2.
+        assert.equal(b.SourceCapScale, 1.2);
+    });
+});
+
 // Sanity: a figure-only selection must NOT light up the cap section.
 describe('FormatMirror — non-connector selection leaves caps off', () => {
     test('SelectionIsConnector stays false with no connector selected', () => {

@@ -89,6 +89,10 @@ export class FormatMirror
         // targets only selected connectors' Source/TargetCapTemplate DPs.
         diagram.AddPropertyChangedListener(Diagram.SelectionFormatSourceCapKey, () => this._broadcastCap(ConnectorEnd.Source));
         diagram.AddPropertyChangedListener(Diagram.SelectionFormatTargetCapKey, () => this._broadcastCap(ConnectorEnd.Target));
+        // Per-end cap size rides the same seed/broadcast shape as the cap
+        // templates, targeting each selected connector's Source/TargetCapScale.
+        diagram.AddPropertyChangedListener(Diagram.SelectionFormatSourceCapScaleKey, () => this._broadcastCapScale(ConnectorEnd.Source));
+        diagram.AddPropertyChangedListener(Diagram.SelectionFormatTargetCapScaleKey, () => this._broadcastCapScale(ConnectorEnd.Target));
     }
 
     private _leaves(): Model[]
@@ -126,6 +130,10 @@ export class FormatMirror
                 firstConn !== undefined ? firstConn.SourceCapTemplate : undefined);
             this._diagram.set_property_value(Diagram.SelectionFormatTargetCapKey,
                 firstConn !== undefined ? firstConn.TargetCapTemplate : undefined);
+            this._diagram.set_property_value(Diagram.SelectionFormatSourceCapScaleKey,
+                firstConn !== undefined ? firstConn.SourceCapScale : 1);
+            this._diagram.set_property_value(Diagram.SelectionFormatTargetCapScaleKey,
+                firstConn !== undefined ? firstConn.TargetCapScale : 1);
 
             if (leaves.length === 0 && connectors.length === 0)
             {
@@ -172,6 +180,21 @@ export class FormatMirror
         {
             if (end === ConnectorEnd.Source) conn.SourceCapTemplate = tpl;
             else                  conn.TargetCapTemplate = tpl;
+        }
+    }
+
+    // Broadcast the chosen cap size onto every selected connector's matching
+    // end. Gated by _seedingFormat like _broadcastCap.
+    private _broadcastCapScale(end: ConnectorEnd): void
+    {
+        if (this._seedingFormat) return;
+        const scale: number = end === ConnectorEnd.Source
+            ? this._diagram.SelectionFormatSourceCapScale
+            : this._diagram.SelectionFormatTargetCapScale;
+        for (const conn of this._diagram.SelectedConnectors)
+        {
+            if (end === ConnectorEnd.Source) conn.SourceCapScale = scale;
+            else                  conn.TargetCapScale = scale;
         }
     }
 

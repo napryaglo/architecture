@@ -12,7 +12,9 @@ import {
     Pen,
     Point,
     RotateTransform,
+    ScaleTransform,
     SolidColorBrush,
+    TransformGroup,
     type Visual,
 } from '../../visual-engine/index.js';
 import { Shape } from '../../basic/shapes/shape.js';
@@ -125,6 +127,18 @@ export class Connector extends Shape
     public static readonly TargetCapTemplateKey = Model.RegisterProperty<DataTemplate | undefined>(
         Connector, 'TargetCapTemplate', undefined, MetaData.None);
 
+    // Per-end cap size multipliers. 1 = the cap template's authored size;
+    // the formatting UI lets the user scale a cap between 0.5× and 1.5×.
+    // The factor scales BOTH the cap visual (a ScaleTransform composed
+    // with the orientation RotateTransform about the hot-point origin) and
+    // the CapInset used to shorten the painted line, so the line keeps
+    // meeting the resized cap's back edge. A change re-routes to re-place +
+    // re-inset the cap.
+    public static readonly SourceCapScaleKey = Model.RegisterProperty<number>(
+        Connector, 'SourceCapScale', 1, MetaData.None);
+    public static readonly TargetCapScaleKey = Model.RegisterProperty<number>(
+        Connector, 'TargetCapScale', 1, MetaData.None);
+
     // CapInset is an attached property on Visual — set by the cap
     // template author on the cap's template root to tell the connector
     // how far back to shorten the painted line. Registered here with
@@ -149,6 +163,10 @@ export class Connector extends Shape
     public set SourceCapTemplate(v: DataTemplate | undefined) { this.set_property_value(Connector.SourceCapTemplateKey, v); }
     public get TargetCapTemplate(): DataTemplate | undefined { return this.get_property_value(Connector.TargetCapTemplateKey); }
     public set TargetCapTemplate(v: DataTemplate | undefined) { this.set_property_value(Connector.TargetCapTemplateKey, v); }
+    public get SourceCapScale(): number { return this.get_property_value(Connector.SourceCapScaleKey); }
+    public set SourceCapScale(v: number) { this.set_property_value(Connector.SourceCapScaleKey, v); }
+    public get TargetCapScale(): number { return this.get_property_value(Connector.TargetCapScaleKey); }
+    public set TargetCapScale(v: number) { this.set_property_value(Connector.TargetCapScaleKey, v); }
 
     // Materialized cap visuals. Lifetime: created when the
     // corresponding *CapTemplate DP is set, replaced when it flips,
@@ -362,6 +380,13 @@ export class Connector extends Shape
             }
             this._resyncCapContexts();
             this._targetCapInstance = instantiateCap(this.TargetCapTemplate, this._targetCapContext);
+            this._scheduleRecompute();
+        }
+        else if (descriptor === Connector.SourceCapScaleKey.descriptor
+              || descriptor === Connector.TargetCapScaleKey.descriptor)
+        {
+            // Re-route so the cap's scale∘rotate transform and the scaled
+            // CapInset are both reapplied.
             this._scheduleRecompute();
         }
         else if (descriptor === Connector.StrokeKey.descriptor)
@@ -768,10 +793,12 @@ export class Connector extends Shape
         // Cap insets — only applied to line-polyline routes (Straight +
         // Orthogonal). Bezier output stays untouched; caps overlap the
         // cubic endpoint. § 3.6 + cap-inset.ts documented gap.
+        // CapInset scales with the cap so the painted line stops at the
+        // resized cap's back edge rather than the authored-size edge.
         const sourceInset = this._sourceCapInstance !== undefined
-            ? Connector.GetCapInset(this._sourceCapInstance) : 0;
+            ? Connector.GetCapInset(this._sourceCapInstance) * this.SourceCapScale : 0;
         const targetInset = this._targetCapInstance !== undefined
-            ? Connector.GetCapInset(this._targetCapInstance) : 0;
+            ? Connector.GetCapInset(this._targetCapInstance) * this.TargetCapScale : 0;
 
         if (sourceInset > 0 || targetInset > 0)
         {
@@ -796,8 +823,8 @@ export class Connector extends Shape
         // the per-end tangent. Cap orientation contract from
         // [routing/router.ts] tangentAt: source = first-segment direction,
         // target = last-segment-into-target direction.
-        placeCap(this._sourceCapInstance, srcAnchor, router.tangentAt(spec, ConnectorEnd.Source), ConnectorEnd.Source);
-        placeCap(this._targetCapInstance, tgtAnchor, router.tangentAt(spec, ConnectorEnd.Target), ConnectorEnd.Target);
+        placeCap(this._sourceCapInstance, srcAnchor, router.tangentAt(spec, ConnectorEnd.Source), ConnectorEnd.Source, this.SourceCapScale);
+        placeCap(this._targetCapInstance, tgtAnchor, router.tangentAt(spec, ConnectorEnd.Target), ConnectorEnd.Target, this.TargetCapScale);
 
         // Side-intersection optimization. Now that this connector's
         // Geometry is current, ask each side it's anchored to whether
@@ -870,7 +897,7 @@ function instantiateCap(
     return root;
 }
 
-function placeCap(cap: Visual | undefined, anchor: ResolvedAnchor, tangentRadians: number, end: ConnectorEnd): void
+function placeCap(cap: Visual | undefined, anchor: ResolvedAnchor, tangentRadians: number, end: ConnectorEnd, scale: number): void
 {
     if (cap === undefined) return;
     Canvas.SetLeft(cap, anchor.x);
@@ -891,14 +918,31 @@ function placeCap(cap: Visual | undefined, anchor: ResolvedAnchor, tangentRadian
     // one shared template then reads correctly at both ends.
     const flip    = end === ConnectorEnd.Source ? 180 : 0;
     const degrees = (tangentRadians * 180) / Math.PI + flip;
+    // Cap-local geometry has its hot-point at the origin (0,0), so both the
+    // scale and the rotation pivot there — order is immaterial. The render
+    // transform is a TransformGroup [Scale, Rotate]; reuse it across
+    // re-routes so a route tick doesn't churn a fresh allocation.
     const existing = cap.RenderTransform;
-    if (existing instanceof RotateTransform)
+    if (existing instanceof TransformGroup
+        && existing.Children.Count === 2
+        && existing.Children.Get(0) instanceof ScaleTransform
+        && existing.Children.Get(1) instanceof RotateTransform)
     {
-        existing.Angle = degrees;
+        const s = existing.Children.Get(0) as ScaleTransform;
+        const r = existing.Children.Get(1) as RotateTransform;
+        s.ScaleX = scale;
+        s.ScaleY = scale;
+        r.Angle  = degrees;
     }
     else
     {
-        cap.RenderTransform = new RotateTransform(degrees);
+        const s = new ScaleTransform();
+        s.ScaleX = scale;
+        s.ScaleY = scale;
+        const group = new TransformGroup();
+        group.Children.Add(s);
+        group.Children.Add(new RotateTransform(degrees));
+        cap.RenderTransform = group;
     }
 }
 

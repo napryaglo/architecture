@@ -9,6 +9,7 @@ import { Brush, Pen } from '../../visual-engine/index.js';
 import { TemplatedControl } from '../../basic/templated-control.js';
 import { StackPanel } from '../../basic/panels/stack-panel.js';
 import { TextBlock } from '../../basic/text-block.js';
+import { SliderSpinEdit } from '../../basic/slider-spin-edit.js';
 import { type DataTemplate } from '../../basic/templates/data-template.js';
 import { ComboBox } from '../list/combo-box.js';
 import { CapOption } from './cap-option.js';
@@ -68,6 +69,16 @@ export class ShapeFormatControl extends TemplatedControl
     public static readonly CapOptionsKey = Model.RegisterProperty<readonly CapOption[]>(
         ShapeFormatControl, 'CapOptions', EMPTY_CAP_OPTIONS, MetaData.None);
 
+    // Per-end cap size multipliers (Connector.SourceCapScale / TargetCapScale).
+    // Two-way like the cap templates so a consumer mirror DP round-trips the
+    // slider edit back onto the selected connector(s). 1 = authored size.
+    public static readonly SourceCapScaleKey = Model.RegisterProperty<number>(
+        ShapeFormatControl, 'SourceCapScale', 1,
+        MetaData.None | MetaData.BindsTwoWayByDefault);
+    public static readonly TargetCapScaleKey = Model.RegisterProperty<number>(
+        ShapeFormatControl, 'TargetCapScale', 1,
+        MetaData.None | MetaData.BindsTwoWayByDefault);
+
     public get Fill():   Brush | undefined  { return this.get_property_value(ShapeFormatControl.FillKey); }
     public set Fill(v:   Brush | undefined) { this.set_property_value(ShapeFormatControl.FillKey, v); }
     public get Stroke(): Pen | undefined    { return this.get_property_value(ShapeFormatControl.StrokeKey); }
@@ -80,6 +91,10 @@ export class ShapeFormatControl extends TemplatedControl
     public set ShowCaps(v:   boolean)                { this.set_property_value(ShapeFormatControl.ShowCapsKey, v); }
     public get CapOptions(): readonly CapOption[]    { return this.get_property_value(ShapeFormatControl.CapOptionsKey); }
     public set CapOptions(v: readonly CapOption[])   { this.set_property_value(ShapeFormatControl.CapOptionsKey, v); }
+    public get SourceCapScale(): number              { return this.get_property_value(ShapeFormatControl.SourceCapScaleKey); }
+    public set SourceCapScale(v: number)             { this.set_property_value(ShapeFormatControl.SourceCapScaleKey, v); }
+    public get TargetCapScale(): number              { return this.get_property_value(ShapeFormatControl.TargetCapScaleKey); }
+    public set TargetCapScale(v: number)             { this.set_property_value(ShapeFormatControl.TargetCapScaleKey, v); }
 
     static {
         Model.OverrideMetadata(ShapeFormatControl, Element.DefaultStyleKeyKey, { default_value: ShapeFormatControl });
@@ -100,6 +115,8 @@ export class ShapeFormatControl extends TemplatedControl
     private _capSection:     StackPanel | undefined;
     private _sourceCapCombo: ComboBox   | undefined;
     private _targetCapCombo: ComboBox   | undefined;
+    private _sourceCapScale: SliderSpinEdit | undefined;
+    private _targetCapScale: SliderSpinEdit | undefined;
     private _partListeners: Array<() => void> = [];
 
     constructor()
@@ -118,9 +135,12 @@ export class ShapeFormatControl extends TemplatedControl
         this._capSection     = this.GetTemplateChild('PART_CapSection')   as StackPanel | undefined;
         this._sourceCapCombo = this.GetTemplateChild('PART_SourceCap')    as ComboBox   | undefined;
         this._targetCapCombo = this.GetTemplateChild('PART_TargetCap')    as ComboBox   | undefined;
+        this._sourceCapScale = this.GetTemplateChild('PART_SourceCapScale') as SliderSpinEdit | undefined;
+        this._targetCapScale = this.GetTemplateChild('PART_TargetCapScale') as SliderSpinEdit | undefined;
         this.refreshEmptyState();
         this.refreshCapVisibility();
         this.wireCapCombos();
+        this.wireCapScales();
 
         if (this._fillEditor !== undefined)
         {
@@ -206,6 +226,12 @@ export class ShapeFormatControl extends TemplatedControl
                 case 'TargetCapTemplate':
                     this.selectCapOption(this._targetCapCombo, newValue as DataTemplate | undefined);
                     break;
+                case 'SourceCapScale':
+                    if (this._sourceCapScale !== undefined) this._sourceCapScale.Value = newValue as number;
+                    break;
+                case 'TargetCapScale':
+                    if (this._targetCapScale !== undefined) this._targetCapScale.Value = newValue as number;
+                    break;
             }
         } finally { this._syncing = false; }
     }
@@ -255,6 +281,38 @@ export class ShapeFormatControl extends TemplatedControl
         this.wireCapCombo(this._targetCapCombo,
             () => this.TargetCapTemplate,
             v  => { this.TargetCapTemplate = v; });
+    }
+
+    // Two-way wire each end's size SliderSpinEdit to the matching
+    // *CapScale DP — seed the editor from the DP, push editor edits back.
+    // Guarded by _syncing so an external DP write (the seed) doesn't echo.
+    private wireCapScales(): void
+    {
+        this.wireCapScale(this._sourceCapScale,
+            () => this.SourceCapScale,
+            v  => { this.SourceCapScale = v; });
+        this.wireCapScale(this._targetCapScale,
+            () => this.TargetCapScale,
+            v  => { this.TargetCapScale = v; });
+    }
+
+    private wireCapScale(
+        edit: SliderSpinEdit | undefined,
+        get:  () => number,
+        set:  (v: number) => void,
+    ): void
+    {
+        if (edit === undefined) return;
+        this._syncing = true;
+        try { edit.Value = get(); } finally { this._syncing = false; }
+        const handler = (): void => {
+            if (this._syncing) return;
+            this._syncing = true;
+            try { set(edit.Value); } finally { this._syncing = false; }
+        };
+        const key = resolveKey(edit, undefined, 'Value');
+        edit.AddPropertyChangedListener(key, handler);
+        this._partListeners.push(() => edit.RemovePropertyChangedListener(key, handler));
     }
 
     private populateCapCombos(): void

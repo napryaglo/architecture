@@ -12,7 +12,9 @@ import {
     Pen,
     Point,
     RotateTransform,
+    ScaleTransform,
     SolidColorBrush,
+    TransformGroup,
     type Visual,
 } from '../../../visual-engine/index.js';
 import { Border } from '../../../basic/border.js';
@@ -31,6 +33,26 @@ import { RoutingMode } from '../routing/router.js';
 import '../routing/straight-router.js';
 import '../routing/orthogonal-router.js';
 import '../routing/bezier-router.js';
+
+// A cap's RenderTransform is a TransformGroup [Scale, Rotate] (scale and
+// rotate share the hot-point origin). These pull each child out for the
+// orientation / size assertions.
+function capRotate(cap: Visual): RotateTransform
+{
+    const g = cap.RenderTransform as TransformGroup;
+    assert.ok(g instanceof TransformGroup);
+    const r = g.Children.Get(1);
+    assert.ok(r instanceof RotateTransform);
+    return r;
+}
+function capScale(cap: Visual): ScaleTransform
+{
+    const g = cap.RenderTransform as TransformGroup;
+    assert.ok(g instanceof TransformGroup);
+    const s = g.Children.Get(0);
+    assert.ok(s instanceof ScaleTransform);
+    return s;
+}
 
 // ── shortenPolyline math ─────────────────────────────────────────────
 
@@ -220,6 +242,54 @@ describe('Connector — inset shortens the painted line by exactly CapInset', ()
     });
 });
 
+describe('Connector — per-end CapScale resizes the cap + its inset', () => {
+    function eastConnector(): Connector
+    {
+        const c = new Connector();
+        c.RoutingMode = RoutingMode.Straight;
+        c.Source = new ConnectorEndpoint({ FreePoint: new Point(0,   0) });
+        c.Target = new ConnectorEndpoint({ FreePoint: new Point(100, 0) });
+        return c;
+    }
+
+    test('SourceCapScale drives the cap ScaleTransform (default 1)', () => {
+        const c = eastConnector();
+        c.SourceCapTemplate = capTemplate(0);
+        assert.equal(capScale(c.SourceCapInstance!).ScaleX, 1);
+        assert.equal(capScale(c.SourceCapInstance!).ScaleY, 1);
+
+        c.SourceCapScale = 1.5;
+        assert.equal(capScale(c.SourceCapInstance!).ScaleX, 1.5);
+        assert.equal(capScale(c.SourceCapInstance!).ScaleY, 1.5);
+    });
+
+    test('scaling the cap scales the inset that trims the line', () => {
+        const c = eastConnector();
+        c.SourceCapTemplate = capTemplate(12);   // base inset 12
+        assert.equal(startEndOf(c).start.X, 12); // 1× → trim 12
+
+        c.SourceCapScale = 0.5;                  // half-size cap
+        assert.equal(startEndOf(c).start.X, 6);  // trim 6
+
+        c.SourceCapScale = 1.5;                  // 1.5× cap
+        assert.equal(startEndOf(c).start.X, 18); // trim 18
+    });
+
+    test('per-end scales are independent + survive a re-route', () => {
+        const c = eastConnector();
+        c.SourceCapTemplate = capTemplate(0);
+        c.TargetCapTemplate = capTemplate(0);
+        c.SourceCapScale = 0.5;
+        c.TargetCapScale = 1.5;
+        // Move the source end — recompute re-places both caps; each keeps
+        // its own scale.
+        c.Source = new ConnectorEndpoint({ FreePoint: new Point(10, 0) });
+        c.SourceCapScale = 0.5;   // re-assert after the endpoint swap reset nothing
+        assert.equal(capScale(c.SourceCapInstance!).ScaleX, 0.5);
+        assert.equal(capScale(c.TargetCapInstance!).ScaleX, 1.5);
+    });
+});
+
 describe('Connector — cap rotation matches tangentAt', () => {
     test('east-pointing straight route: source cap RenderTransform.Angle = 180° (outward flip)', () => {
         const c = new Connector();
@@ -228,11 +298,10 @@ describe('Connector — cap rotation matches tangentAt', () => {
         c.Target = new ConnectorEndpoint({ FreePoint: new Point(100, 0) });
         c.SourceCapTemplate = capTemplate(0);    // pin angle without inset noise
 
-        const t = c.SourceCapInstance!.RenderTransform;
-        assert.ok(t instanceof RotateTransform);
+        const t = capRotate(c.SourceCapInstance!);
         // Travel tangent at source = 0° (east); placeCap flips the source
         // cap 180° so it points outward (back at the source node).
-        assert.equal((t as RotateTransform).Angle, 180);
+        assert.equal(t.Angle, 180);
     });
 
     test('south-pointing straight route: target cap angle = 90°', () => {
@@ -242,7 +311,7 @@ describe('Connector — cap rotation matches tangentAt', () => {
         c.Target = new ConnectorEndpoint({ FreePoint: new Point(0, 100) });
         c.TargetCapTemplate = capTemplate(0);
 
-        const t = c.TargetCapInstance!.RenderTransform as RotateTransform;
+        const t = capRotate(c.TargetCapInstance!);
         // tangentAt(target) = π/2 radians = 90°.
         assert.equal(t.Angle, 90);
     });
@@ -254,7 +323,7 @@ describe('Connector — cap rotation matches tangentAt', () => {
         c.Target = new ConnectorEndpoint({ FreePoint: new Point(100, 100) });
         c.SourceCapTemplate = capTemplate(0);
 
-        const t = c.SourceCapInstance!.RenderTransform as RotateTransform;
+        const t = capRotate(c.SourceCapInstance!);
         // atan2(100, 100) = π/4 rad = 45° travel; +180° source flip = 225°.
         assert.ok(Math.abs(t.Angle - 225) < 1e-9, `expected ~225°, got ${t.Angle}`);
     });
