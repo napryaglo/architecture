@@ -253,10 +253,15 @@ export class FillEditor extends TemplatedControl
                 try { this._opacityEdit.Value = 100 - (newValue as number); }
                 finally { this._syncing = prev; }
             }
-            const brush = this.Fill;
-            if (brush !== undefined && !this._syncing)
+            // A direct external FillOpacity write rebuilds + reassigns Fill
+            // so the TwoWay binding propagates (see the editor handler note).
+            // Skipped under _syncing — that path is decomposeFill reflecting
+            // an inbound brush, which must not echo back.
+            if (!this._syncing)
             {
-                brush.Opacity = (newValue as number) / 100;
+                this._syncing = true;
+                try { this.Fill = this.buildFillForVariant(); }
+                finally { this._syncing = false; }
             }
             return;
         }
@@ -343,8 +348,12 @@ export class FillEditor extends TemplatedControl
                 const opacity = 100 - s.Value;
                 this._syncing = true;
                 try { this.FillOpacity = opacity; } finally { this._syncing = false; }
-                const brush = this.Fill;
-                if (brush !== undefined) brush.Opacity = opacity / 100;
+                // Rebuild + reassign Fill (same as every other editor
+                // handler) so the TwoWay binding pushes a fresh brush to
+                // the consumer. An in-place `brush.Opacity =` mutates the
+                // shared instance without firing the binding, so a shape
+                // that receives Fill by value never re-renders.
+                this.Fill = this.buildFillForVariant();
             };
             const key = resolveKey(s, undefined, 'Value');
             s.AddPropertyChangedListener(key, handler);
