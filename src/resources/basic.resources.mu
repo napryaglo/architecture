@@ -405,6 +405,32 @@ resources MuralBasic {
         Template = @DefaultSlider;
     }
 
+    // ── SliderSpinEdit ──────────────────────────────────────────────
+    // Slider + numeric-readout combo (the MS-Office "Transparency" shape):
+    // a drag Slider fills the row, a fixed-width SpinEdit sits at the right
+    // edge, and an optional Unit label ("%") trails it. The control's TS
+    // owns the two-way Value sync + range forwarding; this template only
+    // lays the three parts out. DockPanel order is Unit → SpinEdit → Slider
+    // so the right edge reads "[Slider …][42][%]".
+    Template x:key="DefaultSliderSpinEdit" [TargetType = SliderSpinEdit] {
+        DockPanel [ LastChildFill = true ] {
+            TextBlock x:name="PART_Unit"
+                [ DockPanel.Dock    = Right,
+                  Foreground        = @OnSurfaceVariant,
+                  VerticalAlignment = Center,
+                  Margin            = (@Spacing1,0,0,0) ]
+            SpinEdit x:name="PART_SpinEdit"
+                [ DockPanel.Dock = Right,
+                  Width          = 72 ]
+            Slider x:name="PART_Slider"
+                [ VerticalAlignment = Center,
+                  Margin            = (0,0,@Spacing3,0) ]
+        }
+    }
+    Style [TargetType = SliderSpinEdit] {
+        Template = @DefaultSliderSpinEdit;
+    }
+
     // ── ScrollViewer ────────────────────────────────────────────────
     // Promoted to src/framework/surfaces/surfaces.template.mu
     // (folded into MuralFramework, which loads alongside MuralBasic).

@@ -88,6 +88,7 @@ export {
 } from './text-box.js';
 export { SpinEdit } from './spin-edit.js';
 export { Slider, SliderLayout } from './slider.js';
+export { SliderSpinEdit } from './slider-spin-edit.js';
 export { PageView } from './page-view.js';
 export { StackPanel, Orientation } from './panels/stack-panel.js';
 export { WrapPanel } from './panels/wrap-panel.js';

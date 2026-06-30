@@ -27,7 +27,7 @@ import { TemplatedControl } from '../../basic/templated-control.js';
 import { ControlTemplate } from '../../basic/templates/control-template.js';
 import { Border } from '../../basic/border.js';
 import { Slider } from '../../basic/slider.js';
-import { SpinEdit } from '../../basic/spin-edit.js';
+import { SliderSpinEdit } from '../../basic/slider-spin-edit.js';
 import { TextBox } from '../../basic/text-box.js';
 import { TextBlock } from '../../basic/text-block.js';
 import { ColorPicker } from './color-picker.js';
@@ -168,7 +168,7 @@ export class FillEditor extends TemplatedControl
     private _tabPicture: Border    | undefined;
     private _bodyHost:   Border    | undefined;
     private _bodyRoot:   Visual    | undefined;
-    private _opacityEdit:    SpinEdit   | undefined;
+    private _opacityEdit:    SliderSpinEdit | undefined;
     // Typed as Panel — the template renders this as a Grid for the
     // label/editor 2-column layout. We only touch Visibility from
     // here, so the narrower interface is enough.
@@ -240,17 +240,17 @@ export class FillEditor extends TemplatedControl
         }
         if (name === 'FillOpacity')
         {
-            // FillOpacity mirrors brush.Opacity (0..1). The SpinEdit
-            // reports 0..100 so the user reads percent. Push the new
-            // value into the SpinEdit regardless of _syncing so an
-            // external decomposeFill (under _syncing) still refreshes
-            // the chrome; the SpinEdit's own listener guards on _syncing
-            // so this write doesn't echo back into FillOpacity.
+            // FillOpacity mirrors brush.Opacity as a 0..100 percent. The
+            // editor shows TRANSPARENCY (MS-Office convention), the inverse:
+            // transparency = 100 − opacity. Push the inverted value into the
+            // editor regardless of _syncing so an external decomposeFill
+            // (under _syncing) still refreshes the chrome; the editor's own
+            // listener guards on _syncing so this write doesn't echo back.
             if (this._opacityEdit !== undefined)
             {
                 const prev = this._syncing;
                 this._syncing = true;
-                try { this._opacityEdit.Value = newValue as number; }
+                try { this._opacityEdit.Value = 100 - (newValue as number); }
                 finally { this._syncing = prev; }
             }
             const brush = this.Fill;
@@ -296,7 +296,7 @@ export class FillEditor extends TemplatedControl
         this._tabPattern = this.GetTemplateChild('PART_TabPattern') as Border | undefined;
         this._tabPicture = this.GetTemplateChild('PART_TabPicture') as Border | undefined;
         this._bodyHost   = this.GetTemplateChild('PART_BodyHost')   as Border | undefined;
-        this._opacityEdit    = this.GetTemplateChild('PART_OpacityEdit')    as SpinEdit   | undefined;
+        this._opacityEdit    = this.GetTemplateChild('PART_OpacityEdit')    as SliderSpinEdit | undefined;
         this._opacityRow     = this.GetTemplateChild('PART_OpacityRow')     as Panel      | undefined;
 
         const wireTab = (tab: Border | undefined, target: FillEditorVariant): void => {
@@ -335,14 +335,16 @@ export class FillEditor extends TemplatedControl
         if (this._opacityEdit !== undefined)
         {
             const s = this._opacityEdit;
+            // The editor reads TRANSPARENCY = 100 − opacity (MS-Office).
             this._syncing = true;
-            try { s.Value = this.FillOpacity; } finally { this._syncing = false; }
+            try { s.Value = 100 - this.FillOpacity; } finally { this._syncing = false; }
             const handler = (): void => {
                 if (this._syncing) return;
+                const opacity = 100 - s.Value;
                 this._syncing = true;
-                try { this.FillOpacity = s.Value; } finally { this._syncing = false; }
+                try { this.FillOpacity = opacity; } finally { this._syncing = false; }
                 const brush = this.Fill;
-                if (brush !== undefined) brush.Opacity = s.Value / 100;
+                if (brush !== undefined) brush.Opacity = opacity / 100;
             };
             const key = resolveKey(s, undefined, 'Value');
             s.AddPropertyChangedListener(key, handler);

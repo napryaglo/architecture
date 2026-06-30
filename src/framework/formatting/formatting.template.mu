@@ -1257,9 +1257,9 @@ resources Formatting {
             // FillEditor.refreshOpacityRowVisibility when Variant=None
             // (alongside PART_BodyHost — the tabs above stay visible
             // so the user can switch back to a brush).
-            // SpinEdit replaces the old slider+readout pair (request #3).
-            // Wrapped in its own 2-column Grid so the Transparency
-            // label aligns with the labels in the body grid above.
+            // SliderSpinEdit = drag slider + typeable %-field (MS-Office
+            // Transparency shape). Wrapped in its own 2-column Grid so the
+            // Transparency label aligns with the labels in the body grid above.
             Grid x:name="PART_OpacityRow" [ MaxWidth = 300 ] {
                 ColumnDefinitions {
                     ColumnDefinition [ Width = GridLength.Auto ]
@@ -1279,17 +1279,15 @@ resources Formatting {
                       Foreground        = @OnSurface,
                       VerticalAlignment = Center,
                       Margin            = (0,0,@Spacing3,0) ]
-                SpinEdit x:name="PART_OpacityEdit"
-                    [ Grid.Column         = 1,
-                      TextBlock.FontSize  = @BodySmallSize,
-                      HorizontalAlignment = Left,
-                      MaxWidth            = 120,
-                      Width               = 120,
-                      Minimum             = 0,
-                      Maximum             = 100,
-                      SmallChange         = 1,
-                      LargeChange         = 10,
-                      DecimalPlaces       = 0 ]
+                SliderSpinEdit x:name="PART_OpacityEdit"
+                    [ Grid.Column        = 1,
+                      TextBlock.FontSize = @BodySmallSize,
+                      Unit               = "%",
+                      Minimum            = 0,
+                      Maximum            = 100,
+                      SmallChange        = 1,
+                      LargeChange        = 10,
+                      DecimalPlaces      = 0 ]
             }
         }
 

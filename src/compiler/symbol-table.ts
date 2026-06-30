@@ -131,6 +131,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['TextBox',                 '@visualisation-sub/mural/basic'],
     ['SpinEdit',                '@visualisation-sub/mural/basic'],
     ['Slider',                  '@visualisation-sub/mural/basic'],
+    ['SliderSpinEdit',          '@visualisation-sub/mural/basic'],
     ['ColorPicker',             '@visualisation-sub/mural/framework'],
     ['ColorPickerVariant',      '@visualisation-sub/mural/framework'],
     ['ColorScheme',             '@visualisation-sub/mural/framework'],
