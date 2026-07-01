@@ -717,6 +717,25 @@ describe('compile — value emission', () => {
         );
     });
 
+    test('@key inside an element VALUE binds to the constructed _e, not a bare SetterFactory', () => {
+        // `Type [ Prop = @key ]` in value position constructs the object in
+        // an IIFE with `_e`. That `_e` is a concrete target, so `@key`
+        // installs a real DynamicResource(_e, …) — NOT an un-applied
+        // SetterFactory that nothing ever resolves (which would leave the
+        // property holding a factory object instead of the resolved value).
+        const js = emitted(`
+            import Tool from "./tool.mjs"
+            resources R {
+                @myTool = Tool [ Icon = @alignLeft, Command = $picked ]
+            }
+        `);
+        assert.match(js, /_e\.Icon = DynamicResource\(_e, "alignLeft"\);/);
+        // A plain $binding likewise binds against _e (DataContext), not a
+        // deferred SetterFactory.
+        assert.match(js, /_e\.Command = DataContextBinding\(_e, "picked"\);/);
+        assert.doesNotMatch(js, /_e\.\w+ = new SetterFactory/);
+    });
+
     test('PascalIdent in enum context — HorizontalAlignment=Center', () => {
         const js = emitted(`
             Application{ resources: {

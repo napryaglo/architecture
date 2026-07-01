@@ -4143,7 +4143,16 @@ export class Compiler
                     attr.span);
             }
             const propName = attr.path.parts.join('.');
-            const valExpr = this.compileValue(attr.value, { propertyName: propName });
+            // `_e` is a concrete construction target, so `@resource` /
+            // `$binding` values install directly onto it (DynamicResource(_e,…),
+            // DataContextBinding(_e,…)) rather than emitting an un-applied
+            // SetterFactory that nothing ever resolves. Without this, an
+            // element-value attr like `DiagramTool [ Icon = @alignLeft ]`
+            // assigned the raw SetterFactory to _e.Icon — the consumer then
+            // read a factory object where a Geometry was expected. `_e` being
+            // a plain Model (not a Visual) is fine: DynamicResource falls back
+            // to Application-level resolution for non-visual hosts.
+            const valExpr = this.compileValue(attr.value, { propertyName: propName, targetExpr: '_e' });
             sets.push(`_e.${propName} = ${valExpr};`);
         }
         return `((_e) => { ${sets.join(' ')} return _e; })(new ${elem.name}())`;

@@ -134,6 +134,34 @@ describe('Grid — attached properties and spans', () => {
         assert.equal(c.ArrangedRect.X, 0);
         assert.equal(c.ArrangedRect.Width, 70);
     });
+
+    test('a span-2 child over (Auto, Star) does NOT inflate the Auto column', () => {
+        // Auto label column + Star editor column. A wide element spanning
+        // both (a section title / tab row) must size the editor against the
+        // Star track, NOT dump its width into the Auto label column — else
+        // a shared label column would be blown out by the widest banner.
+        const g = new Grid();
+        g.ColumnDefinitions.Add(col(GridLength.Auto));
+        g.ColumnDefinitions.Add(col(star()));
+        g.RowDefinitions.Add(row(GridLength.Auto));
+        g.RowDefinitions.Add(row(GridLength.Auto));
+
+        const label  = leaf(60, 20); Grid.SetRow(label, 0);  Grid.SetColumn(label, 0);
+        const editor = leaf(10, 20); Grid.SetRow(editor, 0); Grid.SetColumn(editor, 1);
+        const banner = leaf(200, 20);
+        Grid.SetRow(banner, 1); Grid.SetColumn(banner, 0); Grid.SetColumnSpan(banner, 2);
+        g.AddChild(label); g.AddChild(editor); g.AddChild(banner);
+
+        g.Measure(new Size(300, 200));
+        g.Arrange(new Rect(0, 0, 300, 200));
+
+        // Auto column sized to the 60px label, not the 200px banner, so the
+        // editor starts at x=60.
+        assert.equal(editor.ArrangedRect.X, 60);
+        // The banner still occupies the full grid width.
+        assert.equal(banner.ArrangedRect.X, 0);
+        assert.equal(banner.ArrangedRect.Width, 300);
+    });
 });
 
 describe('Grid v2.1 — MinWidth / MaxWidth on definitions', () => {

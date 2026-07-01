@@ -26,6 +26,32 @@ import { Dock, DockPanel } from '../../basic/panels/dock-panel.js';
 import { ItemsControl } from '../base/items-control.js';
 import { StackPanel } from '../../basic/panels/stack-panel.js';
 
+// ItemsControl.Items normalisation. `Items` is an ObservableCollection
+// when the ToolBar is authored with declarative children, but a
+// CollectionView projection when ItemsSource is bound (data-driven) —
+// both expose Count + Get(i). A plain array (also a legal ItemsSource)
+// exposes length + [i]. These two helpers read the item count / item at
+// index across all three shapes, so the overflow math works no matter
+// how the ToolBar was populated. (The prior `instanceof
+// ObservableCollection` gate silently treated a CollectionView as an
+// array, read `.length` = undefined, and collapsed the whole strip to
+// zero width — see ToolBarPanel.MeasureOverride.)
+interface IndexedItems { readonly Count: number; Get(index: number): unknown; }
+function isIndexedItems(items: unknown): items is IndexedItems
+{
+    return typeof (items as IndexedItems | undefined)?.Count === 'number'
+        && typeof (items as { Get?: unknown } | undefined)?.Get === 'function';
+}
+function itemCountOf(items: IndexedItems | readonly unknown[] | undefined): number
+{
+    if (items === undefined) return 0;
+    return isIndexedItems(items) ? items.Count : items.length;
+}
+function itemAtOf(items: IndexedItems | readonly unknown[], i: number): unknown
+{
+    return isIndexedItems(items) ? items.Get(i) : items[i];
+}
+
 // ToolBar — horizontal command strip. Items overflow into a popup when
 // the available width can't fit them all. Hosts ToolBarButton,
 // ToolBarToggleButton, ToolBarSeparator, and arbitrary content (any
@@ -264,24 +290,42 @@ export class ToolBar extends ItemsControl
     public _syncOverflow(lastFittingIndex: number): void
     {
         const items = this.Items;
-        const itemCount = items === undefined
-            ? 0
-            : (items instanceof ObservableCollection ? items.Count : items.length);
+        const itemCount = itemCountOf(items);
 
         // Partition into target inline (Visuals only — non-Visual items
         // already flow through the standard ContentPresenter path and
         // aren't affected by the parent-collision bug) and target
         // overflow (everything past the cutoff).
+        //
+        // inlineBarVisuals is the ORDERED list of connected-bar items
+        // (ToolBarButton / ToolBarToggleButton / ToolBarSeparator) that
+        // sit inline, used below to assign each button's Position DP (the
+        // First/Middle/Last/Only rounding that gives the strip its
+        // connected pill look). For declarative items the item IS the bar
+        // visual; for data-driven items (ItemsSource + ItemTemplate) the
+        // bar button is nested inside the generated container, so unwrap
+        // it via the generator. Without this, data-driven buttons never
+        // got a Position and rendered with square corners — visibly
+        // different from a declaratively-authored ToolBar.
         const targetInlineVisuals: Visual[] = [];
+        const inlineBarVisuals:    Visual[] = [];
         const targetOverflow:      unknown[] = [];
         for (let i = 0; i < itemCount; i++)
         {
-            const item = items instanceof ObservableCollection
-                ? items.Get(i)
-                : (items as readonly unknown[])[i];
+            const item = itemAtOf(items!, i);
             if (i <= lastFittingIndex)
             {
-                if (item instanceof Visual) targetInlineVisuals.push(item);
+                if (item instanceof Visual)
+                {
+                    targetInlineVisuals.push(item);
+                    inlineBarVisuals.push(item);
+                }
+                else
+                {
+                    const container = this.Generator.ContainerFromItem(item);
+                    const bar = container !== undefined ? firstBarItemVisual(container) : undefined;
+                    if (bar !== undefined) inlineBarVisuals.push(bar);
+                }
             }
             else
             {
@@ -365,9 +409,18 @@ export class ToolBar extends ItemsControl
         // Overflowed items are reset to `None` (their default chrome —
         // they live inside the popup where the connected-bar look
         // doesn't apply).
-        assignPositions(targetInlineVisuals);
-        for (const v of targetOverflow)
+        assignPositions(inlineBarVisuals);
+        for (const item of targetOverflow)
         {
+            // Reset overflowed buttons to None (popup chrome). Resolve the
+            // bar visual the same way as inline — direct for declarative
+            // items, unwrapped from the container for data items.
+            const v = item instanceof Visual
+                ? item
+                : ((): Visual | undefined => {
+                    const c = this.Generator.ContainerFromItem(item);
+                    return c !== undefined ? firstBarItemVisual(c) : undefined;
+                })();
             if (v instanceof ToolBarButton || v instanceof ToolBarToggleButton)
             {
                 v.Position = ToolBarPosition.None;
@@ -501,22 +554,32 @@ export class ToolBarPanel extends Panel
             return new Size(Math.min(usedFb, budget), maxHFb);
         }
 
-        const itemCount = items instanceof ObservableCollection
-            ? items.Count
-            : items.length;
+        const itemCount = itemCountOf(items);
+        // Resolve the width-cache key for a master item. When items ARE
+        // their own containers (ToolBarButton declared inline) the item is
+        // the Visual keyed in _widthCache. When the ToolBar is data-driven
+        // (ItemsSource + ItemTemplate), the master item is a plain data
+        // object and its Visual is the generated container (a
+        // ContentPresenter) — resolve it through the generator so the cache
+        // lookup hits. Without this, data items always measured to 0 and
+        // the whole strip collapsed to its padding width.
+        const cacheKeyFor = (item: unknown): Visual | undefined =>
+            item instanceof Visual
+                ? item
+                : this._toolbar?.Generator.ContainerFromItem(item);
+
         let used    = 0;
         let maxH    = 0;
         let lastFit = -1;
         for (let i = 0; i < itemCount; i++)
         {
-            const item = items instanceof ObservableCollection
-                ? items.Get(i)
-                : (items as readonly unknown[])[i];
+            const item = itemAtOf(items, i);
             let w = 0;
             let h = 0;
-            if (item instanceof Visual)
+            const key = cacheKeyFor(item);
+            if (key !== undefined)
             {
-                const cached = this._toolbar?._widthCache.get(item);
+                const cached = this._toolbar?._widthCache.get(key);
                 if (cached !== undefined) { w = cached.width; h = cached.height; }
             }
             if (used + w > budget && i > 0)
@@ -532,12 +595,11 @@ export class ToolBarPanel extends Panel
         // to maxH so resize doesn't jitter the panel vertically).
         for (let i = lastFit + 1; i < itemCount; i++)
         {
-            const item = items instanceof ObservableCollection
-                ? items.Get(i)
-                : (items as readonly unknown[])[i];
-            if (item instanceof Visual)
+            const item = itemAtOf(items, i);
+            const key = cacheKeyFor(item);
+            if (key !== undefined)
             {
-                const cached = this._toolbar?._widthCache.get(item);
+                const cached = this._toolbar?._widthCache.get(key);
                 if (cached !== undefined && cached.height > maxH) maxH = cached.height;
             }
         }
@@ -692,6 +754,28 @@ export class ToolBarOverflowItemsControl extends ItemsControl
 // treated as gap fillers that DON'T receive a Position write but still
 // break a connected segment at their slot, so the visible buttons on
 // either side cap the run with rounded outer corners.
+// Unwrap a generated item container (e.g. a ContentPresenter produced by
+// ItemsSource + ItemTemplate) to the connected-bar visual inside it —
+// the first ToolBarButton / ToolBarToggleButton / ToolBarSeparator in its
+// subtree. Returns the root itself when it already IS one (declarative
+// items are their own container). Used so Position assignment reaches
+// data-driven buttons that would otherwise sit hidden inside a container.
+function firstBarItemVisual(root: Visual): Visual | undefined
+{
+    if (root instanceof ToolBarButton
+        || root instanceof ToolBarToggleButton
+        || root instanceof ToolBarSeparator)
+    {
+        return root;
+    }
+    for (const c of (root as unknown as { visualChildren: Iterable<Visual> }).visualChildren)
+    {
+        const found = firstBarItemVisual(c);
+        if (found !== undefined) return found;
+    }
+    return undefined;
+}
+
 function assignPositions(visuals: readonly Visual[]): void
 {
     // First pass — partition into groups bounded by ToolBarSeparator.

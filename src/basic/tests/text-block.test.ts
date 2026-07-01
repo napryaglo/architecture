@@ -312,6 +312,40 @@ describe('TextBlock LetterSpacing (M3 tracking)', () => {
         assert.equal(dc.texts[0]!.text.LetterSpacing, 0.5);
     });
 
+    test('LetterSpacing widens the measured single-line advance (base + spacing × glyphs)', () => {
+        const t = new TextBlock('AAAAA');   // 5 code points
+        t.FontSize = 10;                     // approx base = 5 × 10 × 0.6 = 30
+        t.LetterSpacing = 2;                 // advance = 30 + 5 × 2 = 40
+        t.Measure(new Size(500, 500));
+        assert.equal(t.DesiredSize.Width, 40,
+            'measured width folds in letter-spacing so the block sizes to what render paints');
+    });
+
+    // Regression: a wrapped line is painted `base + spacing × glyphCount`
+    // wide (the renderer adds letter-spacing after each glyph). Measure used
+    // to size the block to `base` only, so the last word before a wrap hung
+    // past the block's right edge (the "'new' outside the tooltip boundary"
+    // report). Every line's spacing-inclusive advance must fit BOTH the block
+    // and the width budget.
+    test('Wrap + LetterSpacing: no wrapped line overhangs the block or the budget', () => {
+        const t = new TextBlock('aaaa bbbb cccc dddd eeee');
+        t.TextWrapping = TextWrapping.Wrap;
+        t.FontSize = 10;          // char ≈ 6px
+        t.LetterSpacing = 2;
+        const BUDGET = 60;
+        t.Measure(new Size(BUDGET, 500));
+
+        const lines = (t as unknown as { _lines: Array<{ text: string; metrics: { Width: number } }> })._lines;
+        assert.ok(lines.length >= 2, `text wrapped to multiple lines (got ${lines.length})`);
+        for (const l of lines) {
+            const advance = l.metrics.Width + 2 * Array.from(l.text).length;
+            assert.ok(advance <= t.DesiredSize.Width + 1e-6,
+                `line "${l.text}" advance ${advance} fits the block ${t.DesiredSize.Width}`);
+            assert.ok(advance <= BUDGET + 1e-6,
+                `line "${l.text}" advance ${advance} fits the ${BUDGET}px budget`);
+        }
+    });
+
     test('LetterSpacing is MetaData.Inherits — cascades from a Border ancestor', () => {
         const inner = new TextBlock('Hi');
         const outer = new Border(inner);

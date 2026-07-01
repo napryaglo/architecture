@@ -6,6 +6,7 @@ import {
 } from '../../runtime/index.js';
 import { Control } from './control.js';
 import { findDataTemplateForType } from '../../basic/templates/data-template.js';
+import { TextBlock, TextWrapping } from '../../basic/text-block.js';
 
 // Base class for controls that present a single piece of consumer-
 // supplied content inside a ControlTemplate-defined visual structure.
@@ -100,20 +101,40 @@ export class ContentControl extends Control
     // the template resolve against the data.
     private resolveContentVisual(value: Visual | Model | undefined): Visual | undefined
     {
-        if (value === undefined) return undefined;
+        if (value === undefined || value === null) return undefined;
         if (value instanceof Visual) return value;
         // Non-Visual Model — auto-resolve a DataTemplate by class identity
         // (DataType === value.constructor).
         const template = findDataTemplateForType(value.constructor);
-        if (template === undefined) return undefined;
-        const visual = template.Apply(value);
-        visual.DataContext = value;
-        // Optional VM hook: when the data exposes an `OnViewMounted`
-        // function, hand the freshly-built visual to it so VM-driven
-        // imperative setup can run once per resolution.
-        const hook = (value as { OnViewMounted?: (v: Visual) => void }).OnViewMounted;
-        if (typeof hook === 'function') hook.call(value, visual);
-        return visual;
+        if (template !== undefined)
+        {
+            const visual = template.Apply(value);
+            visual.DataContext = value;
+            // Optional VM hook: when the data exposes an `OnViewMounted`
+            // function, hand the freshly-built visual to it so VM-driven
+            // imperative setup can run once per resolution.
+            const hook = (value as { OnViewMounted?: (v: Visual) => void }).OnViewMounted;
+            if (typeof hook === 'function') hook.call(value, visual);
+            return visual;
+        }
+        // Primitive content (string / number / boolean) — stringify into a
+        // wrapping TextBlock, mirroring ContentPresenter's own auto-stringify
+        // fallback. Without this a ContentControl handed a bare string (the
+        // ToolTipService path, `Tooltip.Content = "long text"`) slotted
+        // NOTHING — resolveContentVisual returned undefined for non-Visual,
+        // non-templated values, so the text never rendered (and, when it did
+        // via a workaround binding, didn't wrap). Wrap by default so
+        // paragraph-shaped strings reflow within the control's width (e.g.
+        // the tooltip's MaxWidth) instead of running off in one line. An
+        // object Model with no matching DataTemplate still returns undefined
+        // — stringifying it would only surface "[object Object]".
+        if (typeof value !== 'object')
+        {
+            const tb = new TextBlock(String(value));
+            tb.TextWrapping = TextWrapping.Wrap;
+            return tb;
+        }
+        return undefined;
     }
 
     // Logical child = the Visual Content (when set). A non-Visual Model

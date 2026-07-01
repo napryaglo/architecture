@@ -979,22 +979,41 @@ resources Formatting {
     // default branch carries the resting layout; the trigger zeroes
     // it out when the editor's Join isn't Miter.
     Template x:key="DefaultPenEditor" [TargetType = PenEditor] {
-        StackPanel [ Orientation = Vertical ] {
-            // Section header — kept inside the editor so the
-            // ShapeFormatControl template stays a flat pair of editors
-            // and Fill/Line read with identical chrome.
+        Grid [ MaxWidth = 300 ] {
+            // One 2-column section grid: title / rule / stroke-brush span
+            // both columns; the property rows below are label (col0) |
+            // editor (col1). The label column shares "ShapeFormatLabels"
+            // so it aligns with the Fill section and the cap section.
+            ColumnDefinitions {
+                ColumnDefinition [ Width = GridLength.Auto, SharedSizeGroup = "ShapeFormatLabels" ]
+                ColumnDefinition [ Width = GridLength.Star ]
+            }
+            RowDefinitions {
+                RowDefinition [ Height = GridLength.Auto ]
+                RowDefinition [ Height = GridLength.Auto ]
+                RowDefinition [ Height = GridLength.Auto ]
+                RowDefinition [ Height = GridLength.Auto ]
+            }
+            // Section header + rule span both columns; Fill/Line read with
+            // identical chrome.
             TextBlock
-                [ Style      = @TitleSmall,
-                  Text       = "Line",
-                  Foreground = @OnSurface,
-                  Margin     = (0,0,0,@Spacing2) ]
-            Divider [ Margin = (0,0,0,@Spacing3) ]
-            // Stroke brush — the SAME tabbed variant editor the Fill
-            // section uses (Solid / gradient / pattern / …), inline rather
-            // than a dropdown. Header="" suppresses its own "Fill" title
-            // since the "Line" header above already names the section.
-            // PenEditor.ts two-way-wires PART_BrushEditor.Fill ↔ Brush.
-            FillEditor x:name="PART_BrushEditor" [ Header = "", Margin = (0,0,0,@Spacing4) ]
+                [ Grid.Row        = 0,
+                  Grid.ColumnSpan = 2,
+                  Style           = @TitleSmall,
+                  Text            = "Line",
+                  Foreground      = @OnSurface,
+                  Margin          = (0,0,0,@Spacing2) ]
+            Divider [ Grid.Row = 1, Grid.ColumnSpan = 2, Margin = (0,0,0,@Spacing3) ]
+            // Stroke brush — the SAME tabbed variant editor the Fill section
+            // uses, inline. Spans both columns; Header="" suppresses its own
+            // title since the "Line" header names the section. Its internal
+            // label columns join the shared group, so the brush's
+            // "Colour"/"Transparency" labels align with the rows below.
+            FillEditor x:name="PART_BrushEditor"
+                [ Grid.Row        = 2,
+                  Grid.ColumnSpan = 2,
+                  Header          = "",
+                  Margin          = (0,0,0,@Spacing4) ]
             // Two-column property grid — left column Auto-sized to the
             // widest label, right column takes the rest. Each editor row
             // is its own RowDefinition. The Miter limit row's label +
@@ -1007,9 +1026,9 @@ resources Formatting {
             // (e.g., inside a ScrollViewer that measures with Infinity).
             // Without it the Star track inflates to Infinity and child
             // rects emit NaN/Infinity into the SVG output.
-            Grid [ MaxWidth = 300 ] {
+            Grid [ Grid.Row = 3, Grid.ColumnSpan = 2 ] {
                 ColumnDefinitions {
-                    ColumnDefinition [ Width = GridLength.Auto ]
+                    ColumnDefinition [ Width = GridLength.Auto, SharedSizeGroup = "ShapeFormatLabels" ]
                     ColumnDefinition [ Width = GridLength.Star ]
                 }
                 RowDefinitions {
@@ -1035,7 +1054,7 @@ resources Formatting {
                     [ Grid.Row            = 0,
                       Grid.Column         = 1,
                       TextBlock.FontSize  = @BodySmallSize,
-                      HorizontalAlignment = Left,
+                      HorizontalAlignment = Right,
                       MaxWidth            = 120,
                       Width               = 120,
                       Minimum             = 0,
@@ -1057,11 +1076,14 @@ resources Formatting {
                       VerticalAlignment = Center,
                       Margin            = (0,0,@Spacing3,@Spacing3) ]
                 ComboBox x:name="PART_Dash"
-                    [ Grid.Row           = 1,
-                      Grid.Column        = 1,
-                      TextBlock.FontSize = @BodySmallSize,
-                      DisplayMemberPath  = "Label",
-                      Margin             = (0,0,0,@Spacing3) ]
+                    [ Grid.Row            = 1,
+                      Grid.Column         = 1,
+                      TextBlock.FontSize  = @BodySmallSize,
+                      DisplayMemberPath   = "Label",
+                      HorizontalAlignment = Right,
+                      MaxWidth            = 120,
+                      Width               = 120,
+                      Margin              = (0,0,0,@Spacing3) ]
                 // Cap
                 TextBlock
                     [ Grid.Row          = 2,
@@ -1072,11 +1094,14 @@ resources Formatting {
                       VerticalAlignment = Center,
                       Margin            = (0,0,@Spacing3,@Spacing3) ]
                 ComboBox x:name="PART_Cap"
-                    [ Grid.Row           = 2,
-                      Grid.Column        = 1,
-                      TextBlock.FontSize = @BodySmallSize,
-                      DisplayMemberPath  = "Label",
-                      Margin             = (0,0,0,@Spacing3) ]
+                    [ Grid.Row            = 2,
+                      Grid.Column         = 1,
+                      TextBlock.FontSize  = @BodySmallSize,
+                      DisplayMemberPath   = "Label",
+                      HorizontalAlignment = Right,
+                      MaxWidth            = 120,
+                      Width               = 120,
+                      Margin              = (0,0,0,@Spacing3) ]
                 // Join
                 TextBlock
                     [ Grid.Row          = 3,
@@ -1087,11 +1112,14 @@ resources Formatting {
                       VerticalAlignment = Center,
                       Margin            = (0,0,@Spacing3,@Spacing3) ]
                 ComboBox x:name="PART_Join"
-                    [ Grid.Row           = 3,
-                      Grid.Column        = 1,
-                      TextBlock.FontSize = @BodySmallSize,
-                      DisplayMemberPath  = "Label",
-                      Margin             = (0,0,0,@Spacing3) ]
+                    [ Grid.Row            = 3,
+                      Grid.Column         = 1,
+                      TextBlock.FontSize  = @BodySmallSize,
+                      DisplayMemberPath   = "Label",
+                      HorizontalAlignment = Right,
+                      MaxWidth            = 120,
+                      Width               = 120,
+                      Margin              = (0,0,0,@Spacing3) ]
                 // Miter limit — only meaningful when LineJoin=Miter.
                 // PenEditor.refreshMiterRowVisibility toggles
                 // PART_MiterLabel + PART_MiterLimit in lock-step;
@@ -1109,7 +1137,7 @@ resources Formatting {
                     [ Grid.Row            = 4,
                       Grid.Column         = 1,
                       TextBlock.FontSize  = @BodySmallSize,
-                      HorizontalAlignment = Left,
+                      HorizontalAlignment = Right,
                       MaxWidth            = 120,
                       Width               = 120,
                       Minimum             = 1,
@@ -1133,30 +1161,44 @@ resources Formatting {
     // the active-tab highlight rides through Style triggers below.
 
     Template x:key="DefaultFillEditor" [TargetType = FillEditor] {
-        StackPanel x:name="PART_FillSection" [ Orientation = Vertical ] {
-            // Section header — kept inside the editor so the
-            // ShapeFormatControl template stays a flat pair of editors.
-            // The header + variant tab row are ALWAYS visible (so the
-            // user can switch back to a brush after picking No fill);
-            // only the body slot + transparency row collapse on
-            // Variant=None. Whole-section collapse for the "no shape
-            // selected" state lives on PART_Editors in
-            // ShapeFormatControl, one level up.
+        Grid x:name="PART_FillSection" [ MaxWidth = 300 ] {
+            // One 2-column section grid: header / rule / variant-tab row
+            // span both columns; the body slot and transparency row (each a
+            // nested 2-column grid) share "ShapeFormatLabels", so their
+            // labels align with the Line section and the cap section.
+            ColumnDefinitions {
+                ColumnDefinition [ Width = GridLength.Auto, SharedSizeGroup = "ShapeFormatLabels" ]
+                ColumnDefinition [ Width = GridLength.Star ]
+            }
+            RowDefinitions {
+                RowDefinition [ Height = GridLength.Auto ]
+                RowDefinition [ Height = GridLength.Auto ]
+                RowDefinition [ Height = GridLength.Auto ]
+                RowDefinition [ Height = GridLength.Auto ]
+                RowDefinition [ Height = GridLength.Auto ]
+            }
+            // Section header — ALWAYS visible (so the user can switch back
+            // to a brush after picking No fill); only the body slot +
+            // transparency row collapse on Variant=None. Whole-section
+            // collapse for the "no shape selected" state lives on
+            // PART_Editors in ShapeFormatControl, one level up.
             TextBlock x:name="PART_Header"
-                [ Style      = @TitleSmall,
-                  Text       = "Fill",
-                  Foreground = @OnSurface,
-                  Margin     = (0,0,0,@Spacing2) ]
+                [ Grid.Row        = 0,
+                  Grid.ColumnSpan = 2,
+                  Style           = @TitleSmall,
+                  Text            = "Fill",
+                  Foreground      = @OnSurface,
+                  Margin          = (0,0,0,@Spacing2) ]
             // Header divider — FillEditor.ts collapses this in lock-step
             // with PART_Header (so the embedded Header="" brush editor in
             // the Line section shows neither title nor rule).
-            Divider x:name="PART_HeaderRule" [ Margin = (0,0,0,@Spacing3) ]
+            Divider x:name="PART_HeaderRule" [ Grid.Row = 1, Grid.ColumnSpan = 2, Margin = (0,0,0,@Spacing3) ]
             // ── Variant tabs ────────────────────────────────────
             // ClickableBorder for each of the six variants. Default
             // background is @Surface; the Style triggers below flip
             // the active one to @SecondaryContainer. UniformGrid 3×2
             // lays them in two rows regardless of pane width.
-            UniformGrid [ Columns = 3, Margin = (0,0,0,@Spacing4) ] {
+            UniformGrid [ Grid.Row = 2, Grid.ColumnSpan = 2, Columns = 3, Margin = (0,0,0,@Spacing4) ] {
                 ClickableBorder x:name="PART_TabNone"
                     [ Background          = @Surface,
                       BorderBrush         = @OutlineVariant,
@@ -1250,7 +1292,7 @@ resources Formatting {
             // MaxWidth caps the slot so the per-variant 2-column Grids
             // below don't inflate their Star tracks to Infinity when
             // the editor lives inside an unbounded host (ScrollViewer).
-            Border x:name="PART_BodyHost" [ MaxWidth = 300, Margin = (0,0,0,@Spacing4) ]
+            Border x:name="PART_BodyHost" [ Grid.Row = 3, Grid.ColumnSpan = 2, Margin = (0,0,0,@Spacing4) ]
 
             // ── Opacity row ─────────────────────────────────────
             // Visible for every non-None variant; collapsed by
@@ -1260,9 +1302,9 @@ resources Formatting {
             // SliderSpinEdit = drag slider + typeable %-field (MS-Office
             // Transparency shape). Wrapped in its own 2-column Grid so the
             // Transparency label aligns with the labels in the body grid above.
-            Grid x:name="PART_OpacityRow" [ MaxWidth = 300 ] {
+            Grid x:name="PART_OpacityRow" [ Grid.Row = 4, Grid.ColumnSpan = 2 ] {
                 ColumnDefinitions {
-                    ColumnDefinition [ Width = GridLength.Auto ]
+                    ColumnDefinition [ Width = GridLength.Auto, SharedSizeGroup = "ShapeFormatLabels" ]
                     ColumnDefinition [ Width = GridLength.Star ]
                 }
                 // Explicit Auto row — without it the Grid defaults to a
@@ -1320,7 +1362,7 @@ resources Formatting {
     Template x:key="FillEditorBodySolid" [TargetType = FillEditor] {
         Grid {
             ColumnDefinitions {
-                ColumnDefinition [ Width = GridLength.Auto ]
+                ColumnDefinition [ Width = GridLength.Auto, SharedSizeGroup = "ShapeFormatLabels" ]
                 ColumnDefinition [ Width = GridLength.Star ]
             }
             // Explicit Auto row — without it the Grid defaults to a
@@ -1337,14 +1379,14 @@ resources Formatting {
                   Foreground        = @OnSurface,
                   VerticalAlignment = Center,
                   Margin            = (0,0,@Spacing3,0) ]
-            ColorPicker x:name="PART_SolidColor" [ Grid.Column = 1, Variant = RGB ]
+            ColorPicker x:name="PART_SolidColor" [ Grid.Column = 1, Variant = RGB, HorizontalAlignment = Right ]
         }
     }
 
     Template x:key="FillEditorBodyLinear" [TargetType = FillEditor] {
         Grid {
             ColumnDefinitions {
-                ColumnDefinition [ Width = GridLength.Auto ]
+                ColumnDefinition [ Width = GridLength.Auto, SharedSizeGroup = "ShapeFormatLabels" ]
                 ColumnDefinition [ Width = GridLength.Star ]
             }
             RowDefinitions {
@@ -1361,9 +1403,10 @@ resources Formatting {
                   VerticalAlignment = Center,
                   Margin            = (0,0,@Spacing3,@Spacing2) ]
             ColorPicker x:name="PART_LinearStart"
-                [ Grid.Row    = 0,
-                  Grid.Column = 1,
-                  Margin      = (0,0,0,@Spacing2) ]
+                [ Grid.Row            = 0,
+                  Grid.Column         = 1,
+                  HorizontalAlignment = Right,
+                  Margin              = (0,0,0,@Spacing2) ]
             TextBlock
                 [ Grid.Row          = 1,
                   Grid.Column       = 0,
@@ -1373,9 +1416,10 @@ resources Formatting {
                   VerticalAlignment = Center,
                   Margin            = (0,0,@Spacing3,@Spacing2) ]
             ColorPicker x:name="PART_LinearEnd"
-                [ Grid.Row    = 1,
-                  Grid.Column = 1,
-                  Margin      = (0,0,0,@Spacing2) ]
+                [ Grid.Row            = 1,
+                  Grid.Column         = 1,
+                  HorizontalAlignment = Right,
+                  Margin              = (0,0,0,@Spacing2) ]
             TextBlock
                 [ Grid.Row          = 2,
                   Grid.Column       = 0,
@@ -1397,7 +1441,7 @@ resources Formatting {
     Template x:key="FillEditorBodyRadial" [TargetType = FillEditor] {
         Grid {
             ColumnDefinitions {
-                ColumnDefinition [ Width = GridLength.Auto ]
+                ColumnDefinition [ Width = GridLength.Auto, SharedSizeGroup = "ShapeFormatLabels" ]
                 ColumnDefinition [ Width = GridLength.Star ]
             }
             RowDefinitions {
@@ -1416,9 +1460,10 @@ resources Formatting {
                   VerticalAlignment = Center,
                   Margin            = (0,0,@Spacing3,@Spacing2) ]
             ColorPicker x:name="PART_RadialInner"
-                [ Grid.Row    = 0,
-                  Grid.Column = 1,
-                  Margin      = (0,0,0,@Spacing2) ]
+                [ Grid.Row            = 0,
+                  Grid.Column         = 1,
+                  HorizontalAlignment = Right,
+                  Margin              = (0,0,0,@Spacing2) ]
             TextBlock
                 [ Grid.Row          = 1,
                   Grid.Column       = 0,
@@ -1428,9 +1473,10 @@ resources Formatting {
                   VerticalAlignment = Center,
                   Margin            = (0,0,@Spacing3,@Spacing2) ]
             ColorPicker x:name="PART_RadialOuter"
-                [ Grid.Row    = 1,
-                  Grid.Column = 1,
-                  Margin      = (0,0,0,@Spacing2) ]
+                [ Grid.Row            = 1,
+                  Grid.Column         = 1,
+                  HorizontalAlignment = Right,
+                  Margin              = (0,0,0,@Spacing2) ]
             TextBlock
                 [ Grid.Row          = 2,
                   Grid.Column       = 0,
@@ -1484,7 +1530,7 @@ resources Formatting {
     Template x:key="FillEditorBodyPattern" [TargetType = FillEditor] {
         Grid {
             ColumnDefinitions {
-                ColumnDefinition [ Width = GridLength.Auto ]
+                ColumnDefinition [ Width = GridLength.Auto, SharedSizeGroup = "ShapeFormatLabels" ]
                 ColumnDefinition [ Width = GridLength.Star ]
             }
             RowDefinitions {
@@ -1504,10 +1550,13 @@ resources Formatting {
                   VerticalAlignment = Center,
                   Margin            = (0,0,@Spacing3,@Spacing2) ]
             ComboBox x:name="PART_PatternKind"
-                [ Grid.Row           = 0,
-                  Grid.Column        = 1,
-                  TextBlock.FontSize = @BodySmallSize,
-                  Margin             = (0,0,0,@Spacing2) ]
+                [ Grid.Row            = 0,
+                  Grid.Column         = 1,
+                  TextBlock.FontSize  = @BodySmallSize,
+                  HorizontalAlignment = Right,
+                  MaxWidth            = 120,
+                  Width               = 120,
+                  Margin              = (0,0,0,@Spacing2) ]
             TextBlock
                 [ Grid.Row          = 1,
                   Grid.Column       = 0,
@@ -1517,9 +1566,10 @@ resources Formatting {
                   VerticalAlignment = Center,
                   Margin            = (0,0,@Spacing3,@Spacing2) ]
             ColorPicker x:name="PART_PatternForeground"
-                [ Grid.Row    = 1,
-                  Grid.Column = 1,
-                  Margin      = (0,0,0,@Spacing2) ]
+                [ Grid.Row            = 1,
+                  Grid.Column         = 1,
+                  HorizontalAlignment = Right,
+                  Margin              = (0,0,0,@Spacing2) ]
             TextBlock
                 [ Grid.Row          = 2,
                   Grid.Column       = 0,
@@ -1529,9 +1579,10 @@ resources Formatting {
                   VerticalAlignment = Center,
                   Margin            = (0,0,@Spacing3,@Spacing2) ]
             ColorPicker x:name="PART_PatternBackground"
-                [ Grid.Row    = 2,
-                  Grid.Column = 1,
-                  Margin      = (0,0,0,@Spacing2) ]
+                [ Grid.Row            = 2,
+                  Grid.Column         = 1,
+                  HorizontalAlignment = Right,
+                  Margin              = (0,0,0,@Spacing2) ]
             TextBlock
                 [ Grid.Row          = 3,
                   Grid.Column       = 0,
@@ -1595,7 +1646,7 @@ resources Formatting {
             // interaction.
             Grid {
                 ColumnDefinitions {
-                    ColumnDefinition [ Width = GridLength.Auto ]
+                    ColumnDefinition [ Width = GridLength.Auto, SharedSizeGroup = "ShapeFormatLabels" ]
                     ColumnDefinition [ Width = GridLength.Star ]
                 }
                 RowDefinitions {
@@ -1623,9 +1674,12 @@ resources Formatting {
                       VerticalAlignment = Center,
                       Margin            = (0,0,@Spacing3,0) ]
                 ComboBox x:name="PART_PictureStretch"
-                    [ Grid.Row           = 1,
-                      Grid.Column        = 1,
-                      TextBlock.FontSize = @BodySmallSize ]
+                    [ Grid.Row            = 1,
+                      Grid.Column         = 1,
+                      TextBlock.FontSize  = @BodySmallSize,
+                      HorizontalAlignment = Right,
+                      MaxWidth            = 120,
+                      Width               = 120 ]
             }
             TextBlock
                 [ Style        = @LabelSmall,
@@ -1699,94 +1753,96 @@ resources Formatting {
             // whole section unless ShowCaps (a connector is selected).
             // Both combos share @CapOptionTemplate for the glyph preview
             // and DisplayMemberPath="Label" for the collapsed selection box.
-            StackPanel x:name="PART_CapSection"
-                [ Orientation = Vertical,
-                  Margin      = (0,@Spacing4,0,0) ] {
-                TextBlock
-                    [ Style      = @TitleSmall,
-                      Text       = "Connector ends",
-                      Foreground = @OnSurface,
-                      Margin     = (0,0,0,@Spacing2) ]
-                Divider [ Margin = (0,0,0,@Spacing3) ]
-                Grid [ MaxWidth = 300 ] {
-                    ColumnDefinitions {
-                        ColumnDefinition [ Width = GridLength.Auto ]
-                        ColumnDefinition [ Width = GridLength.Star ]
-                    }
-                    RowDefinitions {
-                        RowDefinition [ Height = GridLength.Auto ]
-                        RowDefinition [ Height = GridLength.Auto ]
-                        RowDefinition [ Height = GridLength.Auto ]
-                        RowDefinition [ Height = GridLength.Auto ]
-                    }
-                    TextBlock
-                        [ Grid.Row          = 0,
-                          Grid.Column       = 0,
-                          Style             = @LabelSmall,
-                          Text              = "Start",
-                          Foreground        = @OnSurface,
-                          VerticalAlignment = Center,
-                          Margin            = (0,0,@Spacing3,@Spacing3) ]
-                    ComboBox x:name="PART_SourceCap"
-                        [ Grid.Row           = 0,
-                          Grid.Column        = 1,
-                          ItemTemplate       = @CapOptionTemplate,
-                          DisplayMemberPath  = "Label",
-                          TextBlock.FontSize = @BodySmallSize,
-                          Margin             = (0,0,0,@Spacing3) ]
-                    TextBlock
-                        [ Grid.Row          = 1,
-                          Grid.Column       = 0,
-                          Style             = @LabelSmall,
-                          Text              = "Start size",
-                          Foreground        = @OnSurfaceVariant,
-                          VerticalAlignment = Center,
-                          Margin            = (0,0,@Spacing3,@Spacing3) ]
-                    SliderSpinEdit x:name="PART_SourceCapScale"
-                        [ Grid.Row           = 1,
-                          Grid.Column        = 1,
-                          TextBlock.FontSize = @BodySmallSize,
-                          Minimum            = 0.5,
-                          Maximum            = 1.5,
-                          SmallChange        = 0.1,
-                          LargeChange        = 0.5,
-                          DecimalPlaces      = 1,
-                          Unit               = "×",
-                          Margin             = (0,0,0,@Spacing3) ]
-                    TextBlock
-                        [ Grid.Row          = 2,
-                          Grid.Column       = 0,
-                          Style             = @LabelSmall,
-                          Text              = "End",
-                          Foreground        = @OnSurface,
-                          VerticalAlignment = Center,
-                          Margin            = (0,0,@Spacing3,@Spacing3) ]
-                    ComboBox x:name="PART_TargetCap"
-                        [ Grid.Row           = 2,
-                          Grid.Column        = 1,
-                          ItemTemplate       = @CapOptionTemplate,
-                          DisplayMemberPath  = "Label",
-                          TextBlock.FontSize = @BodySmallSize,
-                          Margin             = (0,0,0,@Spacing3) ]
-                    TextBlock
-                        [ Grid.Row          = 3,
-                          Grid.Column       = 0,
-                          Style             = @LabelSmall,
-                          Text              = "End size",
-                          Foreground        = @OnSurfaceVariant,
-                          VerticalAlignment = Center,
-                          Margin            = (0,0,@Spacing3,0) ]
-                    SliderSpinEdit x:name="PART_TargetCapScale"
-                        [ Grid.Row           = 3,
-                          Grid.Column        = 1,
-                          TextBlock.FontSize = @BodySmallSize,
-                          Minimum            = 0.5,
-                          Maximum            = 1.5,
-                          SmallChange        = 0.1,
-                          LargeChange        = 0.5,
-                          DecimalPlaces      = 1,
-                          Unit               = "×" ]
+            Grid x:name="PART_CapSection"
+                [ Margin   = (0,@Spacing4,0,0),
+                  MaxWidth = 300 ] {
+                ColumnDefinitions {
+                    ColumnDefinition [ Width = GridLength.Auto, SharedSizeGroup = "ShapeFormatLabels" ]
+                    ColumnDefinition [ Width = GridLength.Star ]
                 }
+                RowDefinitions {
+                    RowDefinition [ Height = GridLength.Auto ]
+                    RowDefinition [ Height = GridLength.Auto ]
+                    RowDefinition [ Height = GridLength.Auto ]
+                    RowDefinition [ Height = GridLength.Auto ]
+                    RowDefinition [ Height = GridLength.Auto ]
+                    RowDefinition [ Height = GridLength.Auto ]
+                }
+                TextBlock
+                    [ Grid.Row        = 0,
+                      Grid.ColumnSpan = 2,
+                      Style           = @TitleSmall,
+                      Text            = "Connector ends",
+                      Foreground      = @OnSurface,
+                      Margin          = (0,0,0,@Spacing2) ]
+                Divider [ Grid.Row = 1, Grid.ColumnSpan = 2, Margin = (0,0,0,@Spacing3) ]
+                TextBlock
+                    [ Grid.Row          = 2,
+                      Grid.Column       = 0,
+                      Style             = @LabelSmall,
+                      Text              = "Start",
+                      Foreground        = @OnSurface,
+                      VerticalAlignment = Center,
+                      Margin            = (0,0,@Spacing3,@Spacing3) ]
+                ComboBox x:name="PART_SourceCap"
+                    [ Grid.Row           = 2,
+                      Grid.Column        = 1,
+                      ItemTemplate       = @CapOptionTemplate,
+                      DisplayMemberPath  = "Label",
+                      TextBlock.FontSize = @BodySmallSize,
+                      Margin             = (0,0,0,@Spacing3) ]
+                TextBlock
+                    [ Grid.Row          = 3,
+                      Grid.Column       = 0,
+                      Style             = @LabelSmall,
+                      Text              = "Start size",
+                      Foreground        = @OnSurfaceVariant,
+                      VerticalAlignment = Center,
+                      Margin            = (0,0,@Spacing3,@Spacing3) ]
+                SliderSpinEdit x:name="PART_SourceCapScale"
+                    [ Grid.Row           = 3,
+                      Grid.Column        = 1,
+                      TextBlock.FontSize = @BodySmallSize,
+                      Minimum            = 0.5,
+                      Maximum            = 1.5,
+                      SmallChange        = 0.1,
+                      LargeChange        = 0.5,
+                      DecimalPlaces      = 1,
+                      Unit               = "×",
+                      Margin             = (0,0,0,@Spacing3) ]
+                TextBlock
+                    [ Grid.Row          = 4,
+                      Grid.Column       = 0,
+                      Style             = @LabelSmall,
+                      Text              = "End",
+                      Foreground        = @OnSurface,
+                      VerticalAlignment = Center,
+                      Margin            = (0,0,@Spacing3,@Spacing3) ]
+                ComboBox x:name="PART_TargetCap"
+                    [ Grid.Row           = 4,
+                      Grid.Column        = 1,
+                      ItemTemplate       = @CapOptionTemplate,
+                      DisplayMemberPath  = "Label",
+                      TextBlock.FontSize = @BodySmallSize,
+                      Margin             = (0,0,0,@Spacing3) ]
+                TextBlock
+                    [ Grid.Row          = 5,
+                      Grid.Column       = 0,
+                      Style             = @LabelSmall,
+                      Text              = "End size",
+                      Foreground        = @OnSurfaceVariant,
+                      VerticalAlignment = Center,
+                      Margin            = (0,0,@Spacing3,0) ]
+                SliderSpinEdit x:name="PART_TargetCapScale"
+                    [ Grid.Row           = 5,
+                      Grid.Column        = 1,
+                      TextBlock.FontSize = @BodySmallSize,
+                      Minimum            = 0.5,
+                      Maximum            = 1.5,
+                      SmallChange        = 0.1,
+                      LargeChange        = 0.5,
+                      DecimalPlaces      = 1,
+                      Unit               = "×" ]
             }
         }
     }

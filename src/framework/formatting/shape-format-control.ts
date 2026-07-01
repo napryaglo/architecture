@@ -1,6 +1,7 @@
 import {
     MetaData,
     Model,
+    Panel,
     Visibility,
     Element, type PropertyDescriptor,
 } from '../../runtime/index.js';
@@ -112,7 +113,7 @@ export class ShapeFormatControl extends TemplatedControl
     private _emptyMessage:   TextBlock  | undefined;
     // Connector cap section. PART_CapSection collapses unless ShowCaps;
     // the two combos pick the per-end cap template from CapOptions.
-    private _capSection:     StackPanel | undefined;
+    private _capSection:     Panel      | undefined;
     private _sourceCapCombo: ComboBox   | undefined;
     private _targetCapCombo: ComboBox   | undefined;
     private _sourceCapScale: SliderSpinEdit | undefined;
@@ -132,7 +133,7 @@ export class ShapeFormatControl extends TemplatedControl
         this._penEditor  = this.GetTemplateChild('PART_PenEditor')  as PenEditor  | undefined;
         this._editors      = this.GetTemplateChild('PART_Editors')      as StackPanel | undefined;
         this._emptyMessage = this.GetTemplateChild('PART_EmptyMessage') as TextBlock  | undefined;
-        this._capSection     = this.GetTemplateChild('PART_CapSection')   as StackPanel | undefined;
+        this._capSection     = this.GetTemplateChild('PART_CapSection')   as Panel      | undefined;
         this._sourceCapCombo = this.GetTemplateChild('PART_SourceCap')    as ComboBox   | undefined;
         this._targetCapCombo = this.GetTemplateChild('PART_TargetCap')    as ComboBox   | undefined;
         this._sourceCapScale = this.GetTemplateChild('PART_SourceCapScale') as SliderSpinEdit | undefined;

@@ -5,6 +5,8 @@
 // instances; dropping a tile onto the canvas calls the Document's
 // CreateNode method through the Mutator wiring.
 
+import DiagramTool from "./diagram-tools.mjs"
+
 resources DiagramDemo {
     // ── Boolean-combine glyphs ──────────────────────────────────────
     //
@@ -80,6 +82,22 @@ resources DiagramDemo {
         }
     }
 
+    // ── Command-toolbar tile ────────────────────────────────────────
+    // One ToolBarButton per DiagramTool descriptor. The four header
+    // toolbars each bind ItemsSource to an inline DiagramTool[] array;
+    // this shared template renders every entry — the Shape paints the
+    // tool's Icon geometry and the button invokes its Command. The
+    // descriptors carry both because they're authored INSIDE this
+    // template's scope, where the @icon resources and the
+    // $nodes.<X>Command element-source bindings both resolve (the latter
+    // lowers to a lexical `_nodes` thunk, so it binds fine onto a
+    // non-visual data object).
+    DataTemplate x:key="DiagramToolTemplate" [DataType = DiagramTool] {
+        ToolBarButton [ Command = $Command ] {
+            Shape [ Geometry = $Icon, Fill = @OnSurfaceVariant, Width = 20, Height = 20 ]
+        }
+    }
+
     // ── Diagram workspace ──────────────────────────────────────────
     DataTemplate x:key="DiagramTemplate" [DataType = DiagramDocument] {
         Border x:root
@@ -112,124 +130,50 @@ resources DiagramDemo {
                     }
                 }
 
-                // Align / Distribute / Group / Combine toolbar. Each
-                // button binds to one of the framework Diagram's
-                // RelayCommands via the named `nodes` x:name forward
-                // reference (compiler 2-pass scan resolves it before
-                // the Diagram element is constructed in markup).
+                // Align / Distribute / Group / Combine — four ToolBars in
+                // a row (WPF ToolBarTray-style; no Tray control ships, so a
+                // horizontal StackPanel hosts them). Each ToolBar is
+                // data-driven: ItemsSource is an inline DiagramTool[] array
+                // pairing an @icon geometry with one of the framework
+                // Diagram's RelayCommands (via the named `nodes` x:name
+                // forward ref), rendered through @DiagramToolTemplate.
+                // Items past the strip width collapse into each ToolBar's
+                // overflow chevron popup.
                 Border
                     [ DockPanel.Dock  = Top,
-                      Height          = 48,
                       Background      = @SurfaceContainer,
                       BorderBrush     = @OutlineVariant,
                       BorderThickness = (0,0,0,1),
                       Padding         = (8,4,8,4) ] {
                     StackPanel [ Orientation = Horizontal ] {
-                        IconButton [ Variant = Standard, Command = $nodes.AlignLeftCommand ] {
-                            Shape
-                                [ Geometry = @alignLeft,
-                                  Fill     = @OnSurfaceVariant,
-                                  Width    = 20,
-                                  Height   = 20 ]
-                        }
-                        IconButton [ Variant = Standard, Command = $nodes.AlignRightCommand ] {
-                            Shape
-                                [ Geometry = @alignRight,
-                                  Fill     = @OnSurfaceVariant,
-                                  Width    = 20,
-                                  Height   = 20 ]
-                        }
-                        IconButton
-                            [ Variant = Standard,
-                              Command = $nodes.AlignTopCommand,
-                              Margin  = (8,0,0,0) ] {
-                            Shape
-                                [ Geometry = @alignTop,
-                                  Fill     = @OnSurfaceVariant,
-                                  Width    = 20,
-                                  Height   = 20 ]
-                        }
-                        IconButton [ Variant = Standard, Command = $nodes.AlignMiddleCommand ] {
-                            Shape
-                                [ Geometry = @alignMiddle,
-                                  Fill     = @OnSurfaceVariant,
-                                  Width    = 20,
-                                  Height   = 20 ]
-                        }
-                        IconButton [ Variant = Standard, Command = $nodes.AlignCenterCommand ] {
-                            Shape
-                                [ Geometry = @alignCenter,
-                                  Fill     = @OnSurfaceVariant,
-                                  Width    = 20,
-                                  Height   = 20 ]
-                        }
-                        IconButton
-                            [ Variant = Standard,
-                              Command = $nodes.DistributeHorizontalCommand,
-                              Margin  = (8,0,0,0) ] {
-                            Shape
-                                [ Geometry = @distributeHorizontal,
-                                  Fill     = @OnSurfaceVariant,
-                                  Width    = 20,
-                                  Height   = 20 ]
-                        }
-                        IconButton
-                            [ Variant = Standard,
-                              Command = $nodes.DistributeVerticalCommand ] {
-                            Shape
-                                [ Geometry = @distributeVertical,
-                                  Fill     = @OnSurfaceVariant,
-                                  Width    = 20,
-                                  Height   = 20 ]
-                        }
-                        IconButton
-                            [ Variant = Standard,
-                              Command = $nodes.GroupCommand,
-                              Margin  = (8,0,0,0) ] {
-                            Shape
-                                [ Geometry = @group,
-                                  Fill     = @OnSurfaceVariant,
-                                  Width    = 20,
-                                  Height   = 20 ]
-                        }
-                        IconButton [ Variant = Standard, Command = $nodes.UngroupCommand ] {
-                            Shape
-                                [ Geometry = @ungroup,
-                                  Fill     = @OnSurfaceVariant,
-                                  Width    = 20,
-                                  Height   = 20 ]
-                        }
-                        IconButton
-                            [ Variant = Standard,
-                              Command = $nodes.CombineUnionCommand,
-                              Margin  = (8,0,0,0) ] {
-                            Shape
-                                [ Geometry = @join,
-                                  Fill     = @OnSurfaceVariant,
-                                  Width    = 20,
-                                  Height   = 20 ]
-                        }
-                        IconButton [ Variant = Standard, Command = $nodes.CombineIntersectCommand ] {
-                            Shape
-                                [ Geometry = @join_inner,
-                                  Fill     = @OnSurfaceVariant,
-                                  Width    = 20,
-                                  Height   = 20 ]
-                        }
-                        IconButton [ Variant = Standard, Command = $nodes.CombineSubtractCommand ] {
-                            Shape
-                                [ Geometry = @join_left,
-                                  Fill     = @OnSurfaceVariant,
-                                  Width    = 20,
-                                  Height   = 20 ]
-                        }
-                        IconButton [ Variant = Standard, Command = $nodes.CombineExcludeCommand ] {
-                            Shape
-                                [ Geometry = @difference,
-                                  Fill     = @OnSurfaceVariant,
-                                  Width    = 20,
-                                  Height   = 20 ]
-                        }
+                        ToolBar
+                            [ ItemTemplate = @DiagramToolTemplate,
+                              ItemsSource  = [
+                                DiagramTool [ Icon = @alignLeft,   Command = $nodes.AlignLeftCommand ],
+                                DiagramTool [ Icon = @alignRight,  Command = $nodes.AlignRightCommand ],
+                                DiagramTool [ Icon = @alignTop,    Command = $nodes.AlignTopCommand ],
+                                DiagramTool [ Icon = @alignMiddle, Command = $nodes.AlignMiddleCommand ],
+                                DiagramTool [ Icon = @alignCenter, Command = $nodes.AlignCenterCommand ] ] ]
+                        ToolBar
+                            [ Margin       = (8,0,0,0),
+                              ItemTemplate = @DiagramToolTemplate,
+                              ItemsSource  = [
+                                DiagramTool [ Icon = @distributeHorizontal, Command = $nodes.DistributeHorizontalCommand ],
+                                DiagramTool [ Icon = @distributeVertical,   Command = $nodes.DistributeVerticalCommand ] ] ]
+                        ToolBar
+                            [ Margin       = (8,0,0,0),
+                              ItemTemplate = @DiagramToolTemplate,
+                              ItemsSource  = [
+                                DiagramTool [ Icon = @group,   Command = $nodes.GroupCommand ],
+                                DiagramTool [ Icon = @ungroup, Command = $nodes.UngroupCommand ] ] ]
+                        ToolBar
+                            [ Margin       = (8,0,0,0),
+                              ItemTemplate = @DiagramToolTemplate,
+                              ItemsSource  = [
+                                DiagramTool [ Icon = @join,       Command = $nodes.CombineUnionCommand ],
+                                DiagramTool [ Icon = @join_inner, Command = $nodes.CombineIntersectCommand ],
+                                DiagramTool [ Icon = @join_left,  Command = $nodes.CombineSubtractCommand ],
+                                DiagramTool [ Icon = @difference, Command = $nodes.CombineExcludeCommand ] ] ]
                     }
                 }
 
@@ -300,7 +244,15 @@ resources DiagramDemo {
                               FontWeight     = Bold,
                               Foreground     = @OnSurfaceVariant,
                               Margin         = (0,0,0,8) ]
-                        ScrollViewer [ IsAutoHideScrollBars = false ] {
+                        // HorizontalScrollEnabled = false so the pane is
+                        // width-constrained to the viewport (never measured
+                        // with +Infinity width for horizontal scroll). Its
+                        // content — the empty-state message and the editor
+                        // grid — then wraps / fits the pane width instead of
+                        // running off one line. A format pane only ever
+                        // scrolls vertically.
+                        ScrollViewer [ IsAutoHideScrollBars = false,
+                                       HorizontalScrollEnabled = false ] {
                             ShapeFormatControl
                                 [ Fill              = $nodes.SelectionFormatFill,
                                   Stroke            = $nodes.SelectionFormatStroke,

@@ -97,16 +97,19 @@ export class TextBlock extends Element
     public static readonly LineHeightKey    = Model.RegisterProperty<number>(       TextBlock, 'LineHeight',    Number.NaN,          MetaData.Measure | MetaData.Render | MetaData.Inherits);
     // LetterSpacing — extra space between glyphs, in DIPs. M3 typography
     // tokens spec this as `tracking` (e.g. @BodyMedium tracking = 0.25,
-    // @LabelLarge tracking = 0.1). Render-only — the value rides through
-    // FormattedText to the renderer's `letter-spacing` attribute but is
-    // NOT factored into measure. M3 tracking values stay under ±0.5 DIP
-    // so wrapping inaccuracy is sub-pixel; honouring it in measure
-    // would need a measurer-signature change and isn't worth it for
-    // this scale.
+    // @LabelLarge tracking = 0.1). The value rides through FormattedText
+    // to the renderer's `letter-spacing` attribute AND is folded into
+    // MeasureOverride's advance (base + spacing × glyphCount). Both are
+    // required: measure alone would size the block without the paint's
+    // spacing; render alone (the historic behaviour) made a wrapped line
+    // paint wider than the block was sized, so the last word before a wrap
+    // overhung the right edge — small per glyph but ~18px over a 45-char
+    // tooltip line, not the "sub-pixel" it was once assumed to be.
     //
-    // Inherits so the typography role's tracking flows down a subtree
-    // alongside FontSize / LineHeight in the same per-role setter block.
-    public static readonly LetterSpacingKey = Model.RegisterProperty<number>(       TextBlock, 'LetterSpacing', 0,                   MetaData.Render | MetaData.Inherits);
+    // Measure | Render so a tracking change re-measures (widths shift) and
+    // repaints. Inherits so the typography role's tracking flows down a
+    // subtree alongside FontSize / LineHeight in the same per-role setter block.
+    public static readonly LetterSpacingKey = Model.RegisterProperty<number>(       TextBlock, 'LetterSpacing', 0,                   MetaData.Measure | MetaData.Render | MetaData.Inherits);
 
     // Lines computed by MeasureOverride when TextWrapping = Wrap. Each
     // entry holds the substring and the measurer-reported metrics for
@@ -195,6 +198,22 @@ export class TextBlock extends Element
         // Visual being measured in isolation, common in tests).
         const measurer = this.target?.TextMeasurer ?? APPROXIMATE_TEXT_MEASURER;
 
+        // Fold LetterSpacing into the measured advance so measure agrees
+        // with render. The renderer emits `letter-spacing` on the SVG
+        // <text>, which the browser adds after every glyph — so a line's
+        // rendered width is `base + spacing × glyphCount`. The measurer
+        // reports only `base`. If measure ignored spacing (as it used to),
+        // the block sized to `base` while the paint drew `base + N×spacing`
+        // wider, so the last word before a wrap hung past the block's right
+        // edge (a tooltip line at BodySmall tracking 0.4px over ~45 chars =
+        // ~18px of overhang — well past sub-pixel). Counting all glyphs
+        // (including the trailing one) matches the renderer, and never
+        // under-provisions. Code-point count via Array.from mirrors the
+        // measurer's own glyph counting (surrogate pairs = one glyph).
+        const spacing = this.LetterSpacing;
+        const advance = (s: string, base: number): number =>
+            spacing === 0 ? base : base + spacing * Array.from(s).length;
+
         // NoWrap (or unbounded available width — typical of being placed
         // in a StackPanel etc.) preserves the historic single-line path.
         if (this.TextWrapping !== TextWrapping.Wrap
@@ -206,7 +225,7 @@ export class TextBlock extends Element
             // Effective height honours an explicit LineHeight — a 14pt
             // typography token paired with `LineHeight=20` (M3 BodyMedium)
             // should report a 20px-tall block, not a 17px-tall font hull.
-            return new Size(metrics.Width, this.effectiveLineHeight(metrics.Height));
+            return new Size(advance(text, metrics.Width), this.effectiveLineHeight(metrics.Height));
         }
 
         // Wrap: greedy word-wrap. Splits on whitespace, accumulates
@@ -235,7 +254,9 @@ export class TextBlock extends Element
         {
             const candidate = current === '' ? word : current + ' ' + word;
             const candidateMetrics = measureLine(candidate);
-            if (candidateMetrics.Width <= availableSize.Width || current === '')
+            // Compare the letter-spacing-inclusive advance against the
+            // budget so a line that fits here also fits when painted.
+            if (advance(candidate, candidateMetrics.Width) <= availableSize.Width || current === '')
             {
                 current = candidate;
                 currentMetrics = candidateMetrics;
@@ -254,7 +275,7 @@ export class TextBlock extends Element
         // metrics live on each `_lines` entry; render uses the right
         // ascent per line for baseline placement. Effective line-stride
         // honours an explicit LineHeight DP override.
-        const maxW = lines.reduce((m, l) => Math.max(m, l.metrics.Width), 0);
+        const maxW = lines.reduce((m, l) => Math.max(m, advance(l.text, l.metrics.Width)), 0);
         const lineH = this.effectiveLineHeight(lines[0]!.metrics.Height);
         const totalH = lineH * lines.length;
         return new Size(maxW, totalH);

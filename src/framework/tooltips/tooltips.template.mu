@@ -36,7 +36,14 @@ resources Tooltips {
               MaxWidth     = 320,
               Effect       = @Elevation2 ] {
             StackPanel [ Orientation = Vertical ] {
-                ContentPresenter [ Content = $Content ]
+                // Bare ContentPresenter — Tooltip (a ContentControl) slots
+                // its Content here itself: a string becomes a wrapping
+                // TextBlock, a CommandBase VM resolves the DataTemplate
+                // below. (The earlier `Content = $Content` was a DataContext
+                // binding that resolved against DataContext.Content — never
+                // the Tooltip's own Content — so plain-string tooltips didn't
+                // render through it.)
+                ContentPresenter
                 // Shortcut hint — M3 LabelSmall, 70% opacity for
                 // secondary emphasis. Foreground is set explicitly
                 // because the default TextBlock Style (basic.mu)

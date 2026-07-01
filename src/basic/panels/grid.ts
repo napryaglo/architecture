@@ -396,13 +396,26 @@ export class Grid extends Panel
         distributeStars(widths,  colKind, colStars, colMin, colMax, availableSize.Width);
         distributeStars(heights, rowKind, rowStars, rowMin, rowMax, availableSize.Height);
 
-        // Pass 4 — measure remaining children against the cell rect
-        // formed by their spanned tracks. Auto-touching children
-        // measured in Pass 2 with infinity, but those measurements are
-        // still valid; re-measuring would just give a smaller cell to
-        // child layouts that already accepted infinity.
-        for (const child of restBucket)
+        // Pass 4 — measure children against the cell rect formed by
+        // their spanned tracks, now that every track is resolved.
+        //
+        //   * restBucket (no Auto cell) — measured here for the first
+        //     time; Pass 2 deferred them so Star space was known.
+        //   * autoBucket children that ALSO span a Star track — they
+        //     were measured with infinity in Pass 2 to drive the Auto
+        //     track, but a Star cell measured with infinity resolves
+        //     the child's own inner Star tracks to Infinity (and arrange
+        //     then emits NaN). Re-measure them against the resolved
+        //     finite cell so the Star width is concrete. The Auto
+        //     contribution they made in Pass 2 still stands.
+        //
+        // Pure-Auto children keep their Pass-2 infinity measure: their
+        // cell equals the contribution they already drove, and a
+        // re-measure would only hand them a same-or-smaller box.
+        for (const child of children)
         {
+            const auto = childTouchesAuto(child, colKind, rowKind, nCols, nRows);
+            if (auto && !childTouchesStar(child, colKind, rowKind, nCols, nRows)) continue;
             const c0 = clamp(Grid.GetColumn(child), 0, nCols - 1);
             const r0 = clamp(Grid.GetRow(child),    0, nRows - 1);
             const cs = Math.max(1, Math.min(Grid.GetColumnSpan(child), nCols - c0));
@@ -411,6 +424,7 @@ export class Grid extends Panel
             let ch = 0; for (let i = 0; i < rs; i++) ch += heights[r0 + i]!;
             child.Measure(new Size(cw, ch));
         }
+        void restBucket;
 
         this._colWidths  = widths;
         this._rowHeights = heights;
@@ -540,6 +554,27 @@ function childTouchesAuto(
     return false;
 }
 
+// True when any cell the child spans lands on a Star track. Such a
+// child must be measured against the RESOLVED (finite) Star size in
+// Pass 4 — measuring it with infinity (as an Auto-spanning child gets
+// in Pass 2) inflates the child's own inner Star tracks to Infinity,
+// which arrange then turns into NaN offsets.
+function childTouchesStar(
+    child: Visual,
+    colKind: readonly GridUnitType[],
+    rowKind: readonly GridUnitType[],
+    nCols: number, nRows: number,
+): boolean
+{
+    const c0 = clamp(Grid.GetColumn(child), 0, nCols - 1);
+    const r0 = clamp(Grid.GetRow(child),    0, nRows - 1);
+    const cs = Math.max(1, Math.min(Grid.GetColumnSpan(child), nCols - c0));
+    const rs = Math.max(1, Math.min(Grid.GetRowSpan(child),    nRows - r0));
+    for (let i = 0; i < cs; i++) if (colKind[c0 + i] === GridUnitType.Star) return true;
+    for (let i = 0; i < rs; i++) if (rowKind[r0 + i] === GridUnitType.Star) return true;
+    return false;
+}
+
 // Star-keep-alive (Grid v3, § 14.2). When the Auto pass over-allocated
 // such that pixel + auto > available, shrink the Auto tracks down to
 // their declared min (or 0 if no min was set) to free room for Star
@@ -657,14 +692,29 @@ function distributeAcrossAuto(
 {
     let preResolved = 0;
     let autoCount  = 0;
+    let hasStar    = false;
     for (let i = 0; i < span; i++)
     {
         const k = kinds[start + i];
         if (k === GridUnitType.Auto)        autoCount++;
         else if (k === GridUnitType.Pixel)  preResolved += sizes[start + i]!;
+        else if (k === GridUnitType.Star)   hasStar = true;
         // Star tracks aren't yet resolved at this phase — don't subtract.
     }
     if (autoCount === 0) return;
+    // A child that spans into a Star track must NOT inflate the Auto
+    // track(s) it also spans: the Star track expands to absorb the child's
+    // width during star distribution, so the Auto track should size to its
+    // single-cell (non-spanning) children only. Without this, a full-width
+    // span-2 element (a section title, a tab row) would dump its ENTIRE
+    // width into the Auto column — and under a SharedSizeGroup that blows
+    // out every label column in the group. The spanning child still gets
+    // its full width in Pass 4, where it's measured against the summed
+    // Auto + Star track widths. (WPF defers spanned-auto contributions
+    // past star resolution; skipping the contribution outright is the
+    // same outcome for the Auto-label + Star-editor case and avoids the
+    // multi-pass bookkeeping.)
+    if (hasStar) return;
     const remainder = Math.max(0, desired - preResolved);
     const perAuto   = remainder / autoCount;
     for (let i = 0; i < span; i++)

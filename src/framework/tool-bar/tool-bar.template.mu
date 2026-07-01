@@ -125,11 +125,19 @@ resources ToolBars {
     // chrome from the basic theme). Its width is toggled between
     // Number.NaN (auto) and 0 by ToolBar.applyChevronVisibility based
     // on whether any items have overflowed.
+    // Chrome is borderless + fill-free by default: the connected-bar
+    // buttons carry their own @SurfaceContainerHigh chrome and rounded
+    // group ends (via ToolBarButton.Position), so an outlined @Surface box
+    // around the strip just reads as a redundant rectangle — especially
+    // when several ToolBars sit side by side. The bar therefore blends into
+    // whatever surface hosts it and only the button pills show. High
+    // contrast re-instates a 1px outline so the strip stays delineated for
+    // users who need the edge cue. BorderBrush stays declared so that
+    // trigger has a stroke to switch on.
     Template x:key="DefaultToolBar" [TargetType = ToolBar] {
         Border x:name="PART_Border"
-            [ Background      = @Surface,
-              BorderBrush     = @Outline,
-              BorderThickness = (1),
+            [ BorderBrush     = @Outline,
+              BorderThickness = (0),
               Padding         = (4) ] {
             DockPanel x:name="PART_Layout" [ LastChildFill = true ] {
                 Button x:name="PART_Chevron" [ DockPanel.Dock = Right ] {
@@ -138,6 +146,8 @@ resources ToolBars {
                 ItemsPresenter x:name="PART_ItemsPresenter"
             }
         }
+
+        when ( ThemeManager.PrefersContrast = More ) { PART_Border.BorderThickness = (1); }
     }
 
     // ── ToolBar: overflow popup ────────────────────────────────────
