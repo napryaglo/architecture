@@ -150,4 +150,43 @@ export class ResourceResolver
         //    one place.
         return Application.ResolveDefaultResource(key);
     }
+
+    /** Walk the resource-scope chain applying a per-dictionary MATCHER
+     *  instead of resolving a single key. Mirrors TryFindResource's ancestor
+     *  walk (logical parent, with templated-parent fallback) ending at the
+     *  Application resources — closer scopes shadow farther ones — so `match`
+     *  runs against each `ResourceDictionary` in nearest-first order and the
+     *  first non-undefined result wins.
+     *
+     *  This is the generalization for resource kinds that AREN'T a plain keyed
+     *  lookup — e.g. an implicit DataTemplate, resolved by scanning each
+     *  dictionary for an entry whose DataType matches the data's class (walking
+     *  the prototype chain). Routing those through the same walk as
+     *  TryFindResource is what lets EVERY resource kind honor local
+     *  dictionaries, not just Application.Resources. Tiers 1 (active Style's
+     *  Resources) and 3 (ambient string tokens) don't apply to matcher-based
+     *  kinds and are omitted. */
+    public FindInChain<T>(match: (rd: ResourceDictionary) => T | undefined): T | undefined
+    {
+        // Ancestor walk (tier 2) — closer ancestors shadow farther ones.
+        let cursor: Visual | undefined = this._target;
+        while (cursor !== undefined)
+        {
+            const c = cursor as unknown as VisualResourceHost;
+            const r = c._resources;
+            if (r !== undefined)
+            {
+                const hit = match(r);
+                if (hit !== undefined) return hit;
+            }
+            cursor = c._logicalParent ?? c._templatedParent;
+        }
+
+        // Application resources (tier 4) — the terminal scope. The tree walk
+        // exhausts at the topmost mounted root; the app dict isn't a Visual
+        // ancestor, so it's matched explicitly here, after every local scope.
+        const app = Application.current;
+        if (app !== null) return match(app.Resources);
+        return undefined;
+    }
 }

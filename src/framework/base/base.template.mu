@@ -17,11 +17,17 @@ resources Bases {
     // a Template too. Without one, the control has no visual children
     // and renders nothing, even when Content is set.
     //
-    // The minimal default: a single ContentPresenter that hosts the
-    // resolved Content visual. Matches WPF's bare ContentControl. Any
-    // derived class with its own Style overrides this without conflict.
+    // The default: a Border whose Background / BorderBrush / BorderThickness
+    // TemplateBind to the control (so a bare ContentControl can carry chrome —
+    // unset ⇒ transparent brush + zero thickness ⇒ invisible), wrapping the
+    // ContentPresenter that hosts the resolved Content visual. Any derived
+    // class with its own Style overrides this without conflict.
     Template x:key="DefaultContentControlTemplate" [TargetType = ContentControl] {
-        ContentPresenter
+        Border [ Background      = $$Background,
+                 BorderBrush     = $$BorderBrush,
+                 BorderThickness = $$BorderThickness ] {
+            ContentPresenter
+        }
     }
     Style [TargetType = ContentControl] {
         Template = @DefaultContentControlTemplate;

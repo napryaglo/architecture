@@ -97,11 +97,11 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['NavigationItem',          '@visualisation-sub/mural/framework/navigation/navigation-item.js'],
     ['NavigationRail',          '@visualisation-sub/mural/framework/navigation/navigation-rail.js'],
     ['NavigationBar',           '@visualisation-sub/mural/framework/navigation/navigation-bar.js'],
-    ['Shell',                   '@visualisation-sub/mural/framework/shell/shell.js'],
     ['ShellBase',               '@visualisation-sub/mural/framework/shell/shell.js'],
-    ['ShellRegion',             '@visualisation-sub/mural/framework/shell/shell.js'],
     ['EditorShell',             '@visualisation-sub/mural/framework/shell/editor-shell.js'],
     ['ViewerShell',             '@visualisation-sub/mural/framework/shell/viewer-shell.js'],
+    ['ShellModule',             '@visualisation-sub/mural/framework/shell/module.js'],
+    ['Capability',              '@visualisation-sub/mural/framework/shell/module.js'],
     ['NavigationService',       '@visualisation-sub/mural/framework/shell/services/navigation-service.js'],
     ['InspectorService',        '@visualisation-sub/mural/framework/shell/services/inspector-service.js'],
     ['StatusService',           '@visualisation-sub/mural/framework/shell/services/status-service.js'],
@@ -438,7 +438,6 @@ export const ENUM_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<st
     ['SelectionMode',         new Set(['Single', 'Multiple', 'Extended'])],
     ['MarqueeBoundsPolicy',   new Set(['Intersect', 'Contained'])],
     ['Dock',                  new Set(['Left', 'Top', 'Right', 'Bottom'])],
-    ['ShellRegion',           new Set(['Header', 'Commands', 'Navigation', 'Content', 'Inspector', 'Status'])],
     ['DrawerVariant',         new Set(['Permanent', 'Persistent', 'Temporary'])],
     ['ToolBarPosition',       new Set(['None', 'Only', 'First', 'Middle', 'Last'])],
     ['Density',               new Set(['Compact', 'Regular', 'Comfortable'])],
@@ -538,7 +537,6 @@ export const PROPERTY_TO_ENUM: ReadonlyMap<string, readonly string[]> = new Map<
     ['EffectiveVariant', ['TopAppBarVariant']],
     ['Size',     ['FabSize']],
     ['Anchor',   ['Dock']],
-    ['Region',   ['ShellRegion']],
     ['Position', ['ToolBarPosition', 'SegmentedPosition']],
     ['Pivot',    ['FanPivot']],
     ['Base',     ['PuffyBase']],
@@ -587,8 +585,15 @@ export const DEFAULT_SLOT_INFO: ReadonlyMap<string, SlotInfo> = new Map<string, 
     ['NavigationItem',          { name: 'Content',  kind: 'object' }],
     ['NavigationRail',          { name: 'Items',    kind: 'list'   }],
     ['NavigationBar',           { name: 'Items',    kind: 'list'   }],
-    ['EditorShell',             { name: 'Children', kind: 'list'   }],
-    ['ViewerShell',             { name: 'Children', kind: 'list'   }],
+    // EditorShell / ViewerShell take no body children — they are
+    // services-driven (content flows through the modules composed on the
+    // Application and the shell template's `$service(…)` bindings), so they
+    // declare no content slot. Their bodies carry only `.services:` blocks.
+    // ShellModule { Capability … } — declarative capabilities route through
+    // ShellModule.AddChild → Capabilities.Add (the `list` slot emits AddChild).
+    // A Capability takes no content child — it names its content SERVICE via the
+    // `ServiceKey` attribute (a service class ref), so it's attribute-only.
+    ['ShellModule',             { name: 'Capabilities', kind: 'list'   }],
     ['TabControl',              { name: 'Items',    kind: 'list'   }],
     ['TabItem',                 { name: 'Content',  kind: 'object' }],
     ['Chip',                    { name: 'Content',  kind: 'object' }],

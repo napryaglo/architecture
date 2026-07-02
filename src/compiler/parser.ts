@@ -23,6 +23,7 @@ import type {
     Document,
     DefForm,
     IncludeForm,
+    MergeForm,
     GlyphsForm,
     GlyphEntry,
     FontsForm,
@@ -49,6 +50,8 @@ import type {
     SizeValue,
     SlotAssign,
     MemberBlock,
+    ModuleForm,
+    ModulesBlock,
     ServicesBlock,
     ServiceEntry,
     ServiceConfigEntry,
@@ -204,6 +207,7 @@ export class Parser
                 case 'resources':    return this.parseResourcesBlock();
                 case 'theme':        return this.parseThemeBlock();
                 case 'scheme':       return this.parseSchemeBlock();
+                case 'module':       return this.parseModuleForm();
                 case 'Style':
                 case 'Template':
                 case 'DataTemplate':
@@ -254,6 +258,47 @@ export class Parser
         };
     }
 
+    // `module Identifier [attrs] { Capability … }` — a named ShellModule.
+    // After the identifier, the remainder parses exactly like a ShellModule
+    // element (implicit type): an optional `[ … ]` attribute block then an
+    // optional `{ … }` body of Capability children. Emits `export const
+    // Identifier = (() => { … })()`.
+    private parseModuleForm(): ModuleForm
+    {
+        const head       = this.expectIdent('module');
+        const start      = head.span.start;
+        const exportName = this.expect(TokenKind.Ident).value;
+
+        const attrs: Attribute[] = [];
+        if (this.peek().kind === TokenKind.LBracket)
+        {
+            this.consume();
+            attrs.push(...this.parseAttrListBody());
+            this.expect(TokenKind.RBracket);
+        }
+        let body: StructuredBody | null = null;
+        if (this.peek().kind === TokenKind.LBrace)
+        {
+            this.consume();
+            body = this.parseStructuredBody();
+            this.expect(TokenKind.RBrace);
+        }
+        const end = this.lastEnd();
+        const span = this.span(start, end);
+        // Synthesize the implicit ShellModule element the body describes, so
+        // the compiler reuses the ordinary element pipeline (attrs → property
+        // sets, children → AddChild).
+        const root: ElementNode = {
+            kind: 'element',
+            name: 'ShellModule',
+            xAttrs: [],
+            attrs,
+            body,
+            span,
+        };
+        return { kind: 'module-form', exportName, root, span };
+    }
+
     private parseResourcesImport(): ResourcesImport
     {
         const start = this.expectIdent('import').span.start;
@@ -286,6 +331,16 @@ export class Parser
         }
         const end = this.lastEnd();
         return { kind: 'include-form', path, key, span: this.span(start, end) };
+    }
+
+    // `merge <Alias>` — fold a file-level-imported dictionary's entries into
+    // the enclosing dictionary body. `Alias` names a `resources NAME` dict a
+    // top-level `import Alias from "…"` brought into scope.
+    private parseMergeForm(): MergeForm
+    {
+        const start = this.expectIdent('merge').span.start;
+        const alias = this.expect(TokenKind.Ident).value;
+        return { kind: 'merge-form', alias, span: this.span(start, this.lastEnd()) };
     }
 
     // `glyphs "<font>" { <key> | <key> = "<cp>" … }` — a resource-dictionary
@@ -1502,6 +1557,7 @@ export class Parser
                 case 'ItemsPanelTemplate': return this.parseResourceForm();
                 case 'def':          return this.parseDefForm();
                 case 'include':      return this.parseIncludeForm();
+                case 'merge':        return this.parseMergeForm();
                 case 'glyphs':       return this.parseGlyphsForm();
                 case 'fonts':        return this.parseFontsForm();
                 default:
@@ -1523,17 +1579,21 @@ export class Parser
     // surrounding element's `Member` collection by the emitter). The
     // `services` member is the one named exception: its body is a list of
     // DI registrations parsed by the service-entry grammar, not elements.
-    private parseMemberBlock(): MemberBlock | ServicesBlock
+    private parseMemberBlock(): MemberBlock | ServicesBlock | ModulesBlock
     {
         const dot  = this.expect(TokenKind.Dot);
         const name = this.expect(TokenKind.Ident).value;
         this.expect(TokenKind.Colon);
         this.expect(TokenKind.LBrace);
-        // `.services:` is the one named member with bespoke entry grammar;
-        // everything else is a generic element list.
+        // `.services:` and `.modules:` are the named members with bespoke
+        // entry grammar; everything else is a generic element list.
         if (name === 'services')
         {
             return this.parseServicesBlock(dot.span.start);
+        }
+        if (name === 'modules')
+        {
+            return this.parseModulesBlock(dot.span.start);
         }
         const body = this.parseStructuredBody();
         this.expect(TokenKind.RBrace);
@@ -1559,6 +1619,25 @@ export class Parser
         this.expect(TokenKind.RBrace);
         return {
             kind: 'services-block',
+            entries,
+            span: this.span(start, this.lastEnd()),
+        };
+    }
+
+    // `.modules: { Ident* }` body — called with the opening brace already
+    // consumed. Each entry is the identifier of an imported `module NAME`
+    // const; lowered to `app.Modules.Add(Ident)`.
+    private parseModulesBlock(start: SourceLocation): ModulesBlock
+    {
+        const entries: string[] = [];
+        while (this.peek().kind !== TokenKind.RBrace
+            && this.peek().kind !== TokenKind.EOF)
+        {
+            entries.push(this.expect(TokenKind.Ident).value);
+        }
+        this.expect(TokenKind.RBrace);
+        return {
+            kind: 'modules-block',
             entries,
             span: this.span(start, this.lastEnd()),
         };

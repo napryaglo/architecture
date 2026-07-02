@@ -166,7 +166,7 @@ export class PageView extends TemplatedControl
         const cached = this._resolvedByModel.get(model);
         if (cached !== undefined) return cached;
 
-        const tpl = findDataTemplateForType(model.constructor);
+        const tpl = findDataTemplateForType(model.constructor, this);
         if (tpl === undefined) return undefined;
 
         const v = tpl.Apply(model);

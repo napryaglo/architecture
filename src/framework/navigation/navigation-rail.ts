@@ -220,7 +220,7 @@ export class NavigationRail extends Selector
             ni.Content = item;
         }
         else if (item instanceof Model
-              && findDataTemplateForType(item.constructor) !== undefined)
+              && findDataTemplateForType(item.constructor, this) !== undefined)
         {
             ni.Content = item;
         }

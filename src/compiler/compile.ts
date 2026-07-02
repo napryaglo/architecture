@@ -30,7 +30,7 @@ export interface CompileResult
      *  `function create()`; `'resources'` exports one or more
      *  `class … extends ResourceDictionary` declarations (see
      *  `resourcesBlocks` for the typed-accessor metadata). */
-    kind: 'application' | 'fragment' | 'resources';
+    kind: 'application' | 'fragment' | 'resources' | 'module';
     /** Whether the root form was `Application{…}`. Retained for callers
      *  that still branch on this flag; `kind === 'application'` is
      *  equivalent. */
@@ -100,6 +100,15 @@ export function compile(source: string, options: CompilerOptions = {}): CompileR
         // No wrap — the body is already a complete module-scope set of
         // `export class … extends ResourceDictionary` declarations.
         exportBlock = out.body;
+    }
+    else if (out.kind === 'module')
+    {
+        // `module NAME { … }` → an eagerly-built ShellModule const, same IIFE
+        // shape as `export const app` but under the module's own name.
+        exportBlock =
+            `export const ${out.moduleName} = (() => {\n` +
+            indent(out.body, 4) +
+            `\n})();`;
     }
     else
     {

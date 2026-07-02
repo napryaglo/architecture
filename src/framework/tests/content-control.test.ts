@@ -2,8 +2,9 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { Color, MetaData, Model, Rect, Size, Thickness, Element, Visual, type DrawingContext } from '../../runtime/index.js';
 import { resolveKey } from '../../runtime/model-internals.js';
-import { SolidColorBrush } from '../../visual-engine/index.js';
-import { Border, ContentPresenter, ControlTemplate, TemplateBinding } from '../../basic/index.js';
+import { SolidColorBrush, FontWeight } from '../../visual-engine/index.js';
+import { Border, ContentPresenter, ControlTemplate, TemplateBinding, DataTemplate, TextBlock } from '../../basic/index.js';
+import { findDataTemplateForType } from '../../basic/templates/data-template.js';
 import { ContentControl } from '@visualisation-sub/mural/framework';
 
 // Test-side accessors for Visual's protected parent / templatedParent
@@ -446,5 +447,96 @@ describe('ContentControl + ControlTemplate', () => {
         // Now allocate explicitly via Resources getter, confirm it's
         // a fresh empty dict.
         assert.equal(a.Resources.Size, 0);
+    });
+});
+
+// ----------------------------------------------------------------
+// Implicit DataTemplate resolution now walks the SAME resource-scope
+// chain as every other resource — local (ancestor) dictionaries, not
+// only Application.Resources. (Consolidation of findDataTemplateForType
+// onto Element.FindInResourceChain.)
+// ----------------------------------------------------------------
+describe('implicit DataTemplate resolution walks the resource-scope chain', () => {
+    class FooVM extends Model {}
+    class DerivedFooVM extends FooVM {}
+
+    const templateFor = (dataType: Function): DataTemplate =>
+        new DataTemplate(() => new Leaf(), dataType);
+
+    test('resolves a DataTemplate placed in a LOCAL (ancestor) dictionary', () => {
+        const host = new ContentControl();
+        const tmpl = templateFor(FooVM);
+        host.Resources.Set(FooVM, tmpl);          // local — never touches app resources
+        host.Template = borderTemplate();
+        const leaf = new Leaf();
+        host.Content = leaf;                       // leaf → host logical chain
+        assert.equal(findDataTemplateForType(FooVM, leaf), tmpl);
+    });
+
+    test('a base-type template in a local dictionary applies to a subtype', () => {
+        const host = new ContentControl();
+        const baseTmpl = templateFor(FooVM);
+        host.Resources.Set(FooVM, baseTmpl);
+        host.Template = borderTemplate();
+        const leaf = new Leaf();
+        host.Content = leaf;
+        // No DerivedFooVM entry anywhere — the base FooVM template catches it.
+        assert.equal(findDataTemplateForType(DerivedFooVM, leaf), baseTmpl);
+    });
+
+    test('nearest scope wins — a closer local template shadows a farther one', () => {
+        const outer = new ContentControl();
+        outer.Resources.Set(FooVM, templateFor(FooVM));
+        outer.Template = borderTemplate();
+
+        const inner = new ContentControl();
+        const innerTmpl = templateFor(FooVM);
+        inner.Resources.Set(FooVM, innerTmpl);
+        inner.Template = borderTemplate();
+        outer.Content = inner;
+
+        const leaf = new Leaf();
+        inner.Content = leaf;                      // leaf → inner → outer
+        assert.equal(findDataTemplateForType(FooVM, leaf), innerTmpl);
+    });
+
+    test('within one scope the most-specific type wins over its base', () => {
+        const host = new ContentControl();
+        const baseTmpl    = templateFor(FooVM);
+        const derivedTmpl = templateFor(DerivedFooVM);
+        host.Resources.Set(FooVM, baseTmpl);
+        host.Resources.Set(DerivedFooVM, derivedTmpl);
+        host.Template = borderTemplate();
+        const leaf = new Leaf();
+        host.Content = leaf;
+        assert.equal(findDataTemplateForType(DerivedFooVM, leaf), derivedTmpl);
+        assert.equal(findDataTemplateForType(FooVM, leaf),        baseTmpl);
+    });
+});
+
+// ----------------------------------------------------------------
+// When Content is a non-Visual Model and NO DataTemplate resolves for
+// its type, ContentControl surfaces a loud red diagnostic instead of
+// rendering nothing (the silent-empty-presenter trap).
+// ----------------------------------------------------------------
+describe('unresolved DataTemplate surfaces a red diagnostic', () => {
+    class OrphanVM extends Model {}
+
+    test('renders a big red bold TextBlock naming the unresolved type', () => {
+        const cc = new ContentControl();
+        cc.Template = borderTemplate();
+        cc.Content = new OrphanVM();            // no DataTemplate anywhere
+
+        const border    = cc.visualChildren[0] as Border;
+        const presenter = border.visualChildren[0] as ContentPresenter;
+        const err       = presenter.visualChildren[0] as TextBlock;
+
+        assert.ok(err instanceof TextBlock, 'diagnostic is a TextBlock');
+        assert.equal(err.Text, 'can not resolve template for: OrphanVM');
+        assert.ok(err.FontSize >= 20, 'big font');
+        assert.equal(err.FontWeight, FontWeight.Bold);
+        const fg = err.Foreground as SolidColorBrush;
+        assert.ok(fg instanceof SolidColorBrush);
+        assert.deepEqual(fg.Color, Color.Red);
     });
 });

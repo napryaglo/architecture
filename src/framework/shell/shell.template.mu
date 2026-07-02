@@ -2,17 +2,16 @@
 // ViewerShell, the two application-shell variants.
 //
 // Both compose existing chrome (TopAppBar, ToolBar, NavigationRail,
-// StatusBar, …) into named region hosts; ShellBase routes each body
-// child into the host matching its `Shell.Region` attached value, so an
-// app author writes:
+// StatusBar, …) into named region hosts. The shell is services-driven: it
+// takes no body children. Each region host binds its content declaratively
+// via `$service(Token)` — the Navigation host to the NavigationService
+// (whose destinations flatten from the modules composed on the Application),
+// the Inspector / Status hosts to their services. An app composes a shell by
+// declaring modules and registering services, not by tagging children:
 //
-//     EditorShell {
-//         TopAppBar      [Shell.Region=Header, Title="Editor"]
-//         ToolBar        [Shell.Region=Commands] { … }
-//         NavigationRail [Shell.Region=Navigation] { … }
-//         Canvas         [Shell.Region=Content]      // or untagged
-//         Border         [Shell.Region=Inspector] { … }
-//         StatusBar      [Shell.Region=Status] { … }
+//     Application {
+//         .modules: { DiagramModule; LayersModule; … }
+//         resources: { EditorShell x:root { } }
 //     }
 //
 // Merged into the root MuralFramework dictionary via an `import` clause
@@ -32,6 +31,15 @@ resources Shells {
     // and PART_ContentHost is last so LastChildFill hands it the
     // remaining rectangle. The hosts ship empty and zero-size — an
     // unused region simply collapses.
+
+    DataTemplate [DataType = NavigationService] {
+        NavigationRail
+            [ ItemsSource        = $Items,
+              SelectedItem       = $SelectedItem,
+              Template           = @ActivityBarRail,
+              ItemContainerStyle = @ActivityBarItem ]
+    }
+
     Template x:key="DefaultEditorShell" [TargetType = EditorShell] {
         Border [ Background = @Surface ] {
             AdornerDecorator {
@@ -40,10 +48,29 @@ resources Shells {
                     StackPanel x:name="PART_CommandHost"
                         [ DockPanel.Dock = Top,
                           Orientation    = Vertical ]
-                    Border x:name="PART_StatusHost" [ DockPanel.Dock = Bottom ]
-                    Border x:name="PART_NavHost" [ DockPanel.Dock = Left ]
-                    Border x:name="PART_InspectorHost" [ DockPanel.Dock = Right ]
-                    Border x:name="PART_ContentHost"
+                    Border x:name="PART_StatusHost"
+                        [ DockPanel.Dock = Bottom,
+                          DataContext    = $service(StatusService) ]
+
+                    // capabilities navigation rail — the shell's activity bar.
+                    ContentControl [ DockPanel.Dock = Left, Content = $service(NavigationService) ]
+
+                    // left sided panel that helps to interact with the selected capability
+                    ContentControl
+                        [ DockPanel.Dock = Left,
+                          Width          = 300,
+                          Background     = @SurfaceContainer,
+                          Content        = $service(NavigationService).ActiveService ]
+
+                    Border x:name="PART_InspectorHost"
+                        [ DockPanel.Dock = Right,
+                          DataContext    = $service(InspectorService) ]
+                    // Content region — presents the active capability's service.
+                    // NavigationService.ActiveService tracks the selected
+                    // destination's Capability.ServiceKey (resolved from the
+                    // container), so selecting a rail item swaps the content
+                    // shown here (fill, via LastChildFill).
+                    ContentPresenter x:name="PART_ContentHost"
                 }
             }
         }
@@ -62,8 +89,11 @@ resources Shells {
         Border [ Background = @Surface ] {
             DockPanel [ LastChildFill = true ] {
                 Border x:name="PART_HeaderHost" [ DockPanel.Dock = Top ]
-                Border x:name="PART_NavHost" [ DockPanel.Dock = Left ]
-                Border x:name="PART_ContentHost"
+                Border x:name="PART_NavHost"
+                    [ DockPanel.Dock = Left,
+                      DataContext    = $service(NavigationService) ]
+                ContentPresenter x:name="PART_ContentHost"
+                    [ Content = $service(NavigationService).ActiveService ]
             }
         }
     }

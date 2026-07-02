@@ -13,12 +13,16 @@ export function formatting(doc: TextDocument): TextEdit[]
     let out: string;
     try
     {
-        out = format(src);
+        // `verify` makes format() re-parse its own output and throw if it
+        // doesn't round-trip — so a printer gap (an unhandled node kind that
+        // prints to nothing) can never silently wipe the buffer on save.
+        out = format(src, { verify: true });
     }
     catch
     {
-        // Unparseable buffer (mid-edit) — leave it untouched rather than
-        // throwing away the user's text.
+        // Unparseable buffer (mid-edit), or output failed the round-trip
+        // check — leave it untouched rather than throwing away the user's
+        // text.
         return [];
     }
     if (out === src) return [];

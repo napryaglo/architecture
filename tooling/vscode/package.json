@@ -2,7 +2,7 @@
   "name": "mural-vscode",
   "displayName": "µ-mural language support",
   "description": "Syntax highlighting and IntelliSense for the µ-mural markup language.",
-  "version": "0.2.6",
+  "version": "0.2.9",
   "publisher": "visualisation-sub",
   "private": true,
   "license": "MIT",

@@ -369,6 +369,52 @@ describe('Style — sealing', () => {
     });
 });
 
+describe('Style — deferred BasedOn resolver (BasedOn = @key)', () => {
+    test('a thunk basedOn resolves at Seal, not construction', () => {
+        const base  = new Style(Widget, [new Setter(Widget, 'Bias', 1)]);
+        // Resolver isn't consulted yet — base is unresolved before Seal.
+        let resolved = 0;
+        const child = new Style(Widget, [], () => { resolved++; return base; });
+        assert.equal(child.BasedOn, undefined);
+        assert.equal(resolved, 0);
+
+        child.Seal();
+        assert.equal(child.BasedOn, base);
+        assert.equal(resolved, 1);
+        // The resolved base is sealed as part of the chain.
+        assert.equal(base.IsSealed, true);
+    });
+
+    test('resolved base contributes its setters to the child', () => {
+        const base  = new Style(Widget, [new Setter(Widget, 'Bias', 7)]);
+        const child = new Style(Widget, [new Setter(Widget, 'Tint', 'red')],
+                                () => base);
+        const w = new Widget();
+        w.Style = child;                    // first apply → Seal → resolve
+        assert.equal(w.Bias, 7);            // inherited from the deferred base
+        assert.equal(w.Tint, 'red');       // own setter
+    });
+
+    test('a thunk returning undefined leaves BasedOn unset (no theme for Widget)', () => {
+        const child = new Style(Widget, [], () => undefined);
+        child.Seal();
+        assert.equal(child.BasedOn, undefined);
+    });
+
+    test('a thunk resolving to a non-Style is ignored', () => {
+        const child = new Style(Widget, [], () => ({} as unknown as Style));
+        child.Seal();
+        assert.equal(child.BasedOn, undefined);
+    });
+
+    test('a thunk resolving to the style itself is ignored (no self-loop)', () => {
+        let child!: Style;
+        child = new Style(Widget, [], () => child);
+        child.Seal();
+        assert.equal(child.BasedOn, undefined);
+    });
+});
+
 describe('Style — Setter.value supports Binding (via SetterFactory)', () => {
     test('Binding value pushes initial source value into StyleValue tier', () => {
         class Src extends Model {

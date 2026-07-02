@@ -24,7 +24,8 @@ import type {
     AnimationDecl, Attribute, AttrPath, BodyItem, ConverterRef,
     DataTemplateBody, DefForm, Document, ElementNode, EventTriggerGroup,
     FontEntry, FontsForm, GlyphEntry, GlyphsForm, ImportForm, IncludeForm,
-    KeyValueResource, MacroParam, MemberBlock, NamedAttr, PropertySetter,
+    KeyValueResource, MacroParam, MemberBlock, ModuleForm, ModulesBlock,
+    NamedAttr, PropertySetter,
     ResourceForm, ResourcesBlock, ResourcesImport, SchemeBlock, ServiceEntry,
     ServicesBlock, SetterItem, SetterList, SlotAssign, StringBody,
     StructuredBody, ThemeBlock, TokenCatalogEntry, TopForm, TriggerActionNode,
@@ -44,17 +45,47 @@ export interface FormatOptions
      *  superset when formatting markup that declares custom controls with
      *  string slots. */
     slots?: ReadonlyMap<string, SlotInfo>;
+    /** When true, re-parse the formatted output and throw if it doesn't
+     *  round-trip to the same AST (modulo spans) as the input. This turns
+     *  a printer gap — an unhandled node kind that prints to nothing — from
+     *  silent data-loss into a loud failure, so callers that overwrite the
+     *  source buffer (format-on-save) can refuse lossy output. Off by
+     *  default (the CLI's best-effort contract is unchanged). */
+    verify?: boolean;
 }
 
 export function format(source: string, options: FormatOptions = {}): string
 {
     const slots = options.slots ?? DEFAULT_SLOT_INFO;
-    const parser = new Parser(source, {
-        isStringBody: (name) => slots.get(name)?.kind === 'string',
-    });
+    const isStringBody = (name: string) => slots.get(name)?.kind === 'string';
+    const parser = new Parser(source, { isStringBody });
     const doc = parser.ParseDocument();
     const printer = new Printer(source, parser.comments, options);
-    return printer.printDocument(doc);
+    const out = printer.printDocument(doc);
+    if (options.verify)
+    {
+        // Re-parse our own output; its AST must match the input's (modulo
+        // spans). A mismatch means the printer dropped or mangled a node —
+        // a formatter bug. Throw rather than hand back lossy text a caller
+        // might write over the user's file.
+        const reparsed = new Parser(out, { isStringBody }).ParseDocument();
+        if (astShape(reparsed) !== astShape(doc))
+        {
+            throw new Error(
+                'formatter output does not round-trip to the same AST — ' +
+                'refusing to apply lossy output (formatter bug: an unhandled ' +
+                'node kind likely printed to nothing)');
+        }
+    }
+    return out;
+}
+
+/** Structural fingerprint of an AST with source spans stripped — two docs
+ *  parsed by the same Parser compare equal iff they're the same tree modulo
+ *  positions. Used by the `verify` round-trip self-check. */
+function astShape(doc: Document): string
+{
+    return JSON.stringify(doc, (key, value) => key === 'span' ? undefined : value);
 }
 
 // ── Printer ─────────────────────────────────────────────────────────
@@ -225,7 +256,17 @@ class Printer
             case 'resources-block': return this.printResourcesBlock(form, level);
             case 'theme-block':     return this.printThemeBlock(form, level);
             case 'scheme-block':    return this.printSchemeBlock(form, level);
+            case 'module-form':     return this.printModuleForm(form, level);
         }
+    }
+
+    // `module Name [attrs] { Capability … }` — reprinted by reusing the
+    // element printer on the synthetic ShellModule root, with the type name
+    // swapped for the `module Name` keyword head. The root's attrs/body then
+    // wrap and indent exactly like any element.
+    private printModuleForm(form: ModuleForm, level: number): void
+    {
+        this.printElement({ ...form.root, name: `module ${form.exportName}` }, level);
     }
 
     private printImport(form: ImportForm, level: number): void
@@ -433,10 +474,12 @@ class Printer
             case 'slot-assign':        return this.printSlotAssign(item, level);
             case 'member-block':       return this.printMemberBlock(item, level);
             case 'services-block':     return this.printServicesBlock(item, level);
+            case 'modules-block':      return this.printModulesBlock(item, level);
             case 'key-value-resource': return this.printKeyValueResource(item, level);
             case 'resource-form':      return this.printResourceForm(item, level);
             case 'def':                return this.printDef(item, level);
             case 'include-form':       return this.printInclude(item, level);
+            case 'merge-form':         return this.push(level, `merge ${item.alias}`);
             case 'glyphs-form':        return this.printGlyphs(item, level);
             case 'fonts-form':         return this.printFonts(item, level);
             case 'macro-hole-body-item': return this.push(level, `#${item.name}`);
@@ -498,6 +541,14 @@ class Printer
             : '';
         const tok = e.token !== undefined ? ` -> ${e.token}` : '';
         this.push(level, `${life}${e.impl}${cfg}${tok}`);
+    }
+
+    private printModulesBlock(item: ModulesBlock, level: number): void
+    {
+        if (item.entries.length === 0) { this.push(level, '.modules: { }'); return; }
+        this.push(level, '.modules: {');
+        for (const name of item.entries) this.push(level + 1, name);
+        this.push(level, '}');
     }
 
     private printKeyValueResource(item: KeyValueResource, level: number): void

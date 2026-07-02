@@ -328,6 +328,64 @@ describe('compile — Style emission', () => {
     });
 });
 
+describe('compile — Style BasedOn (BasedOn = @key)', () => {
+    test('local base (same top-level dict) is passed eagerly as the JS var', () => {
+        // A top-level `resources NAME { … }` block registers each keyed
+        // resource as a local JS var, so a same-dict `@Base` reference
+        // binds to the constructed Style directly (no runtime lookup).
+        // This is the Plexus shared-dictionary scenario.
+        const js = emitted(`
+            resources SharedDict {
+                Style x:key="Base"[TargetType=Border]{ Padding = (4); }
+                Style x:key="Derived"[TargetType=Border, BasedOn=@Base]{ Background = #fff; }
+            }
+        `);
+        const m = js.match(/const (_style\d+) = new Style\(Border, \[_setter\d+\], undefined, \[\], \[\]\);/);
+        assert.ok(m, 'expected the base Style to compile with basedOn undefined');
+        const baseVar = m![1];
+        assert.match(
+            js,
+            new RegExp(`new Style\\(Border, \\[_setter\\d+\\], ${baseVar}, \\[\\], \\[\\]\\);`),
+        );
+    });
+
+    test('cross-dict base (theme token) emits a deferred resolver thunk', () => {
+        const js = emitted(`
+            Application{
+                resources: {
+                    Style x:key="Title"[TargetType=Border, BasedOn=@TitleSmall]{ Background = #fff; }
+                }
+            }
+        `);
+        assert.match(
+            js,
+            /new Style\(Border, \[_setter\d+\], \(\) => Application\.current\?\.Resources\.Resolve\("TitleSmall"\), \[\], \[\]\);/,
+        );
+        // The thunk references Application — it must be imported from runtime.
+        assert.match(js, /import \{[^}]*\bApplication\b[^}]*\} from "@visualisation-sub\/mural\/runtime"/);
+    });
+
+    test('no BasedOn keeps basedOn undefined (legacy shape unchanged)', () => {
+        const js = emitted(`
+            Application{
+                resources: { Style[TargetType=Border]{ Padding = (4); } }
+            }
+        `);
+        assert.match(js, /new Style\(Border, \[_setter\d+\], undefined, \[\], \[\]\);/);
+    });
+
+    test('BasedOn with a non-@resource value is rejected', () => {
+        assert.throws(
+            () => emitted(`
+                Application{
+                    resources: { Style[TargetType=Border, BasedOn=Border]{ Padding = (4); } }
+                }
+            `),
+            /BasedOn must be a '@resource' reference/,
+        );
+    });
+});
+
 describe('compile — DataTemplate triggers', () => {
     test('trailing `when($Path)` inside DataTemplate emits TemplateDataTrigger', () => {
         const js = emitted(`
@@ -867,10 +925,10 @@ describe('compile — deferred & errored features', () => {
         );
     });
 
-    test('Application body slot other than resources / services is rejected', () => {
+    test('Application body slot other than resources / services / modules is rejected', () => {
         assert.throws(
             () => emitted(`Application{ Border x:root{} }`),
-            /only the 'resources:' and '\.services:' blocks are supported/,
+            /only the 'resources:', '\.services:' and '\.modules:' blocks are supported/,
         );
     });
 
@@ -886,6 +944,107 @@ describe('compile — deferred & errored features', () => {
             () => emitted(`Application{ resources: { NonexistentControl x:root{} } }`),
             EmitError,
         );
+    });
+});
+
+describe('compile — ShellModule (module declaration)', () => {
+    // A module file is a top-level ShellModule (a Model, not a Visual) — it
+    // exports the fragment `create()`. Its Capabilities are declarative
+    // children (list slot → AddChild → Capabilities.Add); each Capability is
+    // attribute-only (Name / Icon / ServiceKey — its content is a SERVICE named
+    // by ServiceKey, not a mounted child).
+    const src = `
+        ShellModule[Name="Diagram"]{
+            Capability[Name="Shapes"]
+            Capability[Name="Layers"]
+        }
+    `;
+
+    test('a top-level ShellModule exports create() and builds the module', () => {
+        const js = emitted(src);
+        assert.match(js, /export function create\(\)/);
+        assert.match(js, /const _shellModule\d+ = new ShellModule\(\);/);
+        assert.match(js, /_shellModule\d+\.set_property_value\(ShellModule\.NameKey, "Diagram"\);/);
+    });
+
+    test('Capabilities route through AddChild (the list slot)', () => {
+        const js = emitted(src);
+        // Two capabilities constructed and funneled via the list slot.
+        assert.match(js, /const _capability\d+ = new Capability\(\);/);
+        assert.match(js, /_shellModule\d+\.AddChild\(_capability\d+\);/);
+    });
+
+    test('ShellModule / Capability resolve to the shell module module', () => {
+        const js = emitted(src);
+        assert.match(
+            js,
+            /import \{ Capability, ShellModule \} from "@visualisation-sub\/mural\/framework\/shell\/module\.js";/,
+        );
+    });
+});
+
+describe('compile — module NAME form', () => {
+    const src = `module DiagramModule[Name="Diagram"]{ Capability[Name="Shapes"] }`;
+
+    test('exports `const NAME` as an IIFE building the ShellModule', () => {
+        const js = emitted(src);
+        assert.match(js, /export const DiagramModule = \(\(\) => \{/);
+        assert.match(js, /const _shellModule\d+ = new ShellModule\(\);/);
+        assert.match(js, /_shellModule\d+\.set_property_value\(ShellModule\.NameKey, "Diagram"\);/);
+        assert.match(js, /_shellModule\d+\.AddChild\(_capability\d+\);/);
+        assert.match(js, /return _shellModule\d+;/);
+    });
+
+    test('a module file cannot also contain another top-level form', () => {
+        assert.throws(() => emitted(`module M{} Border{}`), /cannot also contain/);
+    });
+
+    test('`merge Alias` in the app resources folds an imported dictionary in', () => {
+        // Closes the §27 gap: a standalone `resources NAME { … }` dict merges
+        // into Application.Resources via a `merge` directive + top-level import.
+        const js = emitted(
+            `import PlexusIcons from "./plexus-icons.mu.js"\n` +
+            `Application { resources: { merge PlexusIcons  Border x:root {} } }`);
+        assert.match(js, /import \{ PlexusIcons \} from "\.\/plexus-icons\.mu\.js";/);
+        assert.match(js, /for \(const \[_k, _v\] of PlexusIcons\.Clone\(\)\.Entries\(\)\) _rd\d+\.Set\(_k, _v\);/);
+    });
+
+    test('a `resources:` block in the module body fills ShellModule.Resources', () => {
+        // The module contributes its own dictionary — the ordinary
+        // element-resources slot lowers onto `<shellModule>.Resources`, which
+        // the Application merges app-global when the module is added.
+        const js = emitted(
+            `module DiagramModule { resources: { @ModIcon = #ff0000 } Capability[Name="Shapes"]{} }`);
+        assert.match(js, /const _rd\d+ = _shellModule\d+\.Resources;/);
+        assert.match(js, /_rd\d+\.Set\("ModIcon",/);
+    });
+
+    test('a `services:` block in the module body records registrations via AddRegistration', () => {
+        // The module has no live provider at declaration — each `.services:`
+        // entry is RECORDED (AddRegistration) with the same token / lazy-factory
+        // shape a live `.services:` block uses, replayed into the app root when
+        // the module is composed. A Capability's ServiceKey then references one
+        // of these tokens.
+        const js = emitted(
+            `module DiagramModule {
+                .services: { StatusService  scoped NavigationService }
+                Capability[Name="Shapes", ServiceKey=StatusService]
+             }`);
+        assert.match(js, /_shellModule\d+\.AddRegistration\(ServiceProvider\.tokenFor\(StatusService\), \(p\) => new StatusService\(p\), 'singleton'\);/);
+        assert.match(js, /_shellModule\d+\.AddRegistration\(ServiceProvider\.tokenFor\(NavigationService\), \(p\) => new NavigationService\(p\), 'scoped'\);/);
+    });
+});
+
+describe('compile — .modules: block on Application', () => {
+    test('adds each imported module const to Application.Modules, in order', () => {
+        const js = emitted(`
+            import DiagramModule from "./diagram.module.mu.js"
+            import LayersModule from "./layers.module.mu.js"
+            Application { .modules: { DiagramModule LayersModule } resources: {} }
+        `);
+        assert.match(js, /import \{ DiagramModule \} from "\.\/diagram\.module\.mu\.js";/);
+        assert.match(js, /_app\d+\.Modules\.Add\(DiagramModule\);/);
+        assert.match(js, /_app\d+\.Modules\.Add\(LayersModule\);/);
     });
 });
 

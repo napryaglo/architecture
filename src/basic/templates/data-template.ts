@@ -1,5 +1,4 @@
 import {
-    Application,
     DataContextBinding,
     Element,
     EventTrigger,
@@ -395,34 +394,43 @@ export class HierarchicalDataTemplate extends DataTemplate
     }
 }
 
-// Find a DataTemplate whose DataType matches `klass`, by walking the
-// current Application's resources (own entries first, then merged
-// dictionaries recursively). Returns undefined when no Application is
-// current OR when no matching template is registered. Used by
-// ContentControl + PageView + ListBox to auto-resolve a template for
-// non-Visual Content based on the data's runtime class.
+// Find the implicit DataTemplate for the data class `klass`, resolved from the
+// perspective of `start` (the presenting Element). Walks `start`'s resource-
+// scope chain — local ancestor dictionaries first, then Application.Resources —
+// exactly like every other resource, so a DataTemplate placed in ANY dictionary
+// in scope applies, not only the app-global one. Closer scopes shadow farther
+// ones (nearest-wins). Used by ContentControl / ContentPresenter / PageView /
+// ListBox / navigation rails to auto-resolve a template for non-Visual Content
+// from the data's runtime class.
 //
-// Match policy mirrors WPF: walk the prototype chain from most specific
-// to most general, returning the first hit. A `[DataType=RelayCommand]`
-// template wins over `[DataType=CommandBase]` for a RelayCommand
-// instance; a CommandBase template still catches arbitrary
-// CommandBase subclasses that don't have their own entry. Stops once
-// the chain reaches Object — DataTemplates keyed by `Object` (or root
-// Model) would be ambiguous and aren't allowed.
-export function findDataTemplateForType(klass: Function): DataTemplate | undefined
+// Within each scope the match policy mirrors WPF: walk the data class's
+// prototype chain from most specific to most general, returning the first hit.
+// A `[DataType=RelayCommand]` template wins over `[DataType=CommandBase]` for a
+// RelayCommand instance; a CommandBase template still catches arbitrary
+// CommandBase subclasses that don't have their own entry. Stops once the chain
+// reaches Object — DataTemplates keyed by `Object` (or root Model) would be
+// ambiguous and aren't allowed.
+export function findDataTemplateForType(klass: Function, start: Element): DataTemplate | undefined
 {
-    const app = Application.current;
-    if (app === null) return undefined;
+    return start.FindInResourceChain(rd => matchDataTemplateInDict(rd, klass));
+}
+
+// One scope's contribution: walk `klass`'s prototype chain most-specific-first,
+// returning the first DataTemplate registered in `rd` for a class in the chain.
+function matchDataTemplateInDict(rd: ResourceDictionary, klass: Function): DataTemplate | undefined
+{
     let cursor: Function = klass;
     while (typeof cursor === 'function' && cursor !== Object)
     {
-        const hit = walkResourcesForDataTemplate(app.Resources, cursor);
+        const hit = walkResourcesForDataTemplate(rd, cursor);
         if (hit !== undefined) return hit;
         cursor = Object.getPrototypeOf(cursor);
     }
     return undefined;
 }
 
+// Scan one dictionary (own entries first, then merged dictionaries recursively)
+// for a DataTemplate tagged with exactly `klass` as its DataType.
 function walkResourcesForDataTemplate(rd: ResourceDictionary, klass: Function): DataTemplate | undefined
 {
     for (const [, v] of rd.Entries())

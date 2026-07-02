@@ -6,7 +6,7 @@
   "main": "./out/main/index.js",
   "scripts": {
     "//": "compile:mu compiles the mural UI .mu -> .mu.js via the mural CLI (Vite then bundles it). dev runs electron-vite with HMR; build produces the packaged renderer/main/preload under out/. Rebuild the repo-root dist (npm run build there) when framework source changes — the renderer bundles mural's built dist.",
-    "compile:mu": "node ../../dist/tooling/cli.js compile src/renderer/src/app.mu",
+    "compile:mu": "node ../../dist/tooling/cli.js compile src/renderer/src/plexus-icons.mu src/renderer/src/modules/diagram.module.mu src/renderer/src/modules/architecture-repository.module.mu src/renderer/src/modules/technology-library.module.mu src/renderer/src/modules/project-explorer.module.mu src/renderer/src/modules/architecture-meta-models.module.mu src/renderer/src/app.mu",
     "dev": "npm run compile:mu && electron-vite dev",
     "build": "npm run compile:mu && electron-vite build",
     "start": "electron-vite preview",

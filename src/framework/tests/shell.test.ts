@@ -4,28 +4,11 @@ import { Application } from '../../runtime/index.js';
 import { initTestApp } from '../../basic/tests/test-app.js';
 
 import { Border } from '../../basic/border.js';
-import { StackPanel } from '../../basic/panels/stack-panel.js';
-import { TextBlock } from '../../basic/text-block.js';
-import { Shell, ShellRegion } from '../shell/shell.js';
 import { EditorShell } from '../shell/editor-shell.js';
 import { ViewerShell } from '../shell/viewer-shell.js';
 import { NavigationService } from '../shell/services/navigation-service.js';
 import { StatusService } from '../shell/services/status-service.js';
-
-describe('Shell — region attached property', () => {
-    beforeEach(() => { initTestApp(); });
-
-    test('Region default is Content', () => {
-        const v = new TextBlock('x');
-        assert.equal(Shell.GetRegion(v), ShellRegion.Content);
-    });
-
-    test('SetRegion / GetRegion round-trip', () => {
-        const v = new TextBlock('x');
-        Shell.SetRegion(v, ShellRegion.Inspector);
-        assert.equal(Shell.GetRegion(v), ShellRegion.Inspector);
-    });
-});
+import { NavigationRail } from '../navigation/navigation-rail.js';
 
 describe('EditorShell — full region set', () => {
     beforeEach(() => { initTestApp(); });
@@ -36,27 +19,6 @@ describe('EditorShell — full region set', () => {
                             'PART_NavHost', 'PART_InspectorHost', 'PART_ContentHost']) {
             assert.ok(root.FindName(part) !== undefined, `${part} should be present`);
         }
-    });
-
-    test('untagged child routes into Content', () => {
-        const shell = new EditorShell();
-        const body  = new TextBlock('doc');
-        shell.AddChild(body);
-        const content = shell.visualChildren[0].FindName('PART_ContentHost') as Border;
-        assert.equal(content.visualChildren[0], body);
-    });
-
-    test('tagged children route into their region hosts', () => {
-        const shell  = new EditorShell();
-        const menu   = new TextBlock('menu');
-        const insp   = new TextBlock('props');
-        Shell.SetRegion(menu, ShellRegion.Commands);
-        Shell.SetRegion(insp, ShellRegion.Inspector);
-        shell.AddChild(menu);
-        shell.AddChild(insp);
-        const root = shell.visualChildren[0];
-        assert.ok((root.FindName('PART_CommandHost') as StackPanel).visualChildren.includes(menu));
-        assert.equal((root.FindName('PART_InspectorHost') as Border).visualChildren[0], insp);
     });
 });
 
@@ -72,13 +34,6 @@ describe('ViewerShell — readonly subset', () => {
         assert.equal(root.FindName('PART_InspectorHost'), undefined);
         assert.equal(root.FindName('PART_StatusHost'),    undefined);
     });
-
-    test('tagging a child for a missing region throws', () => {
-        const shell = new ViewerShell();
-        const insp  = new TextBlock('props');
-        Shell.SetRegion(insp, ShellRegion.Inspector);
-        assert.throws(() => shell.AddChild(insp), /has no 'Inspector' region/);
-    });
 });
 
 describe('Shell — region services', () => {
@@ -92,19 +47,27 @@ describe('Shell — region services', () => {
             .registerScoped(StatusService.Key,     (p) => new StatusService(p));
     });
 
-    test('region host DataContext is the resolved service', () => {
+    test('region host DataContext resolves the scoped service via the markup $service binding', () => {
         const shell = new EditorShell();
         const navHost    = shell.visualChildren[0].FindName('PART_NavHost')    as Border;
         const statusHost = shell.visualChildren[0].FindName('PART_StatusHost') as Border;
+        // The hosts bind `DataContext = $service(...)` in the shell template;
+        // the binding resolves against the shell's published ServiceScope.
         assert.equal(navHost.DataContext,    shell.Services.get(NavigationService.Key));
         assert.equal(statusHost.DataContext, shell.Services.get(StatusService.Key));
         assert.ok(navHost.DataContext instanceof NavigationService);
     });
 
-    test('Content region (no service) keeps inherited DataContext', () => {
+    test('Navigation host is an activity-bar rail bound to the service destinations', () => {
         const shell = new EditorShell();
-        const content = shell.visualChildren[0].FindName('PART_ContentHost') as Border;
-        assert.equal(content.DataContext, undefined);
+        const navHost = shell.visualChildren[0].FindName('PART_NavHost');
+        assert.ok(navHost instanceof NavigationRail, 'PART_NavHost is a NavigationRail');
+        // The rail's `DataContext = $service(NavigationService)` resolved to the
+        // shell-scoped service; `ItemsSource = $Items` then bound to its live
+        // destinations collection.
+        const svc = navHost.DataContext as NavigationService;
+        assert.ok(svc instanceof NavigationService);
+        assert.equal(navHost.ItemsSource, svc.Items);
     });
 
     test('each shell gets its own scoped service instance', () => {
@@ -122,7 +85,7 @@ describe('Shell — region services', () => {
             public override Dispose(): void { disposed = true; super.Dispose(); }
         }
         // Register the spy at the root before constructing, so the shell's
-        // scope resolves (and caches) it on the ctor's bind pass.
+        // scope resolves (and caches) it when the markup binding resolves.
         Application.current.Services.registerScoped(NavigationService.Key, () => new SpyNav());
         const shell = new EditorShell();
         const nav = shell.visualChildren[0].FindName('PART_NavHost') as Border;

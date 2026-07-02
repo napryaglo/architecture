@@ -5,6 +5,8 @@ import {
     Application,
     Color,
     DynamicResource,
+    MetaData,
+    Model,
 } from '../index.js';
 import { Border } from '../../basic/border.js';
 import { SolidColorBrush, HeadlessTarget } from '../../visual-engine/index.js';
@@ -85,6 +87,31 @@ describe('§ 12.1 — DynamicResource picks up an ancestor\'s freshly-allocated 
 
         assert.equal(childA.Background, target);
         assert.equal(inner.Background,  target);
+    });
+
+    // A resource bound BEFORE any Application exists — the real module-import
+    // order: a module const (e.g. a Capability with `Icon = @X`) is built at
+    // import time, before app.mu runs `new Application()`. wireSubscriptions
+    // couldn't reach an app-level dictionary, so the binding must re-wire once
+    // an Application becomes current (then a later `merge` / Set resolves it).
+    test('binds before any Application, resolves once one appears + Set', () => {
+        class Holder extends Model {
+            public static readonly ValueKey = Model.RegisterProperty<unknown>(
+                Holder, 'Value', undefined, MetaData.None);
+            public get Value(): unknown { return this.get_property_value(Holder.ValueKey); }
+        }
+
+        assert.equal(Application.current, null, 'no Application yet (import order)');
+        const holder = new Holder();
+        holder.set_property_value(Holder.ValueKey, DynamicResource(holder, 'LateKey'));
+        assert.equal(holder.Value, undefined, 'unresolved with no app');
+
+        new Application();
+        const target = new SolidColorBrush(Color.FromHex('#ff9800'));
+        Application.current!.Resources.Set('LateKey', target);
+
+        assert.equal(holder.Value, target,
+            're-wires on Application-current, so the later Set resolves the binding');
     });
 
     test('Re-access after first allocation skips the cascade (no double-fire)', () => {

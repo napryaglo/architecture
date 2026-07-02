@@ -184,12 +184,13 @@ export class ContentPresenter extends Element
             && typeof content === 'object')
         {
             // Implicit DataTemplate resolution by Function-identity match.
-            // Lets a `DataTemplate [DataType=NodeVM]` in app or element
+            // Lets a `DataTemplate [DataType=NodeVM]` in app OR local (ancestor)
             // resources auto-apply to any NodeVM slotted here without an
-            // explicit ItemTemplate / ContentTemplate reference. Closes
-            // the gap that made an `ItemsControl[ItemsSource=$Edges]`
-            // with no explicit template fall through to text-stringify.
-            tmpl = findDataTemplateForType((content as object).constructor);
+            // explicit ItemTemplate / ContentTemplate reference. Resolved from
+            // this presenter's scope, so nearer dictionaries win. Closes the
+            // gap that made an `ItemsControl[ItemsSource=$Edges]` with no
+            // explicit template fall through to text-stringify.
+            tmpl = findDataTemplateForType((content as object).constructor, this);
         }
         if (tmpl !== undefined && content !== undefined && content !== null)
         {

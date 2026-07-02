@@ -1,0 +1,148 @@
+import { test, describe } from 'node:test';
+import assert from 'node:assert/strict';
+import { Application, ServiceKey, type IServiceProvider } from '../../../runtime/index.js';
+import { ShellModule, Capability } from '../module.js';
+import {
+    NavigationService,
+    NavigationDestination,
+} from '../services/navigation-service.js';
+import type { Geometry } from '../../../visual-engine/index.js';
+
+// A shell's NavigationService opts in to the capability-driven build; the base
+// stays type-agnostic and never calls it itself.
+class ShellNav extends NavigationService
+{
+    constructor(provider: IServiceProvider)
+    {
+        super(provider);
+        this.PopulateFromModules();
+    }
+}
+
+function capability(name: string, icon?: Geometry): Capability
+{
+    const cap = new Capability();
+    cap.Name = name;
+    if (icon !== undefined) cap.Icon = icon;
+    return cap;
+}
+
+function moduleWith(...caps: Capability[]): ShellModule
+{
+    const mod = new ShellModule();
+    for (const c of caps) mod.AddChild(c);
+    return mod;
+}
+
+describe('NavigationService.PopulateFromModules', () => {
+    test('builds a NavigationDestination per capability across every module', () => {
+        const app = new Application();
+        app.Modules.Add(moduleWith(capability('Shapes'), capability('Layers')));
+        app.Modules.Add(moduleWith(capability('Outline')));
+
+        app.Services.register(NavigationService.Key, p => new ShellNav(p));
+        const nav = app.Services.getRequired(NavigationService.Key);
+
+        const labels = [...nav.Items].map(i => (i as NavigationDestination).Label);
+        assert.deepEqual(labels, ['Shapes', 'Layers', 'Outline']);
+    });
+
+    test('a destination carries Label, Icon, and the source Capability back-ref', () => {
+        const app = new Application();
+        const icon = {} as Geometry;              // identity stand-in for a real Geometry
+        const cap = capability('Shapes', icon);
+        app.Modules.Add(moduleWith(cap));
+
+        app.Services.register(NavigationService.Key, p => new ShellNav(p));
+        const nav = app.Services.getRequired(NavigationService.Key);
+
+        const dest = nav.Items.Get(0) as NavigationDestination;
+        assert.equal(dest.Label, 'Shapes');
+        assert.equal(dest.Icon, icon);
+        assert.equal(dest.Capability, cap);        // back-ref → its ServiceKey is reachable
+    });
+
+    test('is one-shot and owns Items — a rebuild clears the prior destinations', () => {
+        const app = new Application();
+        app.Modules.Add(moduleWith(capability('Shapes')));
+        app.Services.register(NavigationService.Key, p => new ShellNav(p));
+        const nav = app.Services.getRequired(NavigationService.Key);
+        assert.equal(nav.Items.Count, 1);
+
+        // Second module added after the one-shot build — not reflected until a
+        // rebuild (the base is one-shot by design).
+        app.Modules.Add(moduleWith(capability('Layers')));
+        assert.equal(nav.Items.Count, 1);
+    });
+
+    test('base NavigationService stays type-agnostic — no auto-build', () => {
+        const app = new Application();
+        app.Modules.Add(moduleWith(capability('Shapes')));
+        // The BASE service, not a subclass that opts in.
+        app.Services.register(NavigationService.Key, p => new NavigationService(p));
+        const nav = app.Services.getRequired(NavigationService.Key);
+        assert.equal(nav.Items.Count, 0);
+    });
+});
+
+describe('NavigationService.ActiveService', () => {
+    test('selecting a destination resolves the wrapped capability\'s service', () => {
+        const app = new Application();
+        const svc = { tag: 'shapes' };
+        const key = new ServiceKey<typeof svc>('ShapesService');
+        const cap = capability('Shapes');
+        cap.ServiceKey = key;
+        app.Modules.Add(moduleWith(cap));
+        app.Services.registerInstance(key, svc);
+
+        app.Services.register(NavigationService.Key, p => new ShellNav(p));
+        const nav = app.Services.getRequired(NavigationService.Key);
+
+        // PopulateFromModules auto-selects the first destination → resolve fires.
+        assert.equal(nav.SelectedItem instanceof NavigationDestination, true);
+        assert.equal(nav.ActiveService, svc);
+    });
+
+    test('a selected item that IS a Capability resolves directly', () => {
+        const app = new Application();
+        const svc = { tag: 'layers' };
+        const key = new ServiceKey<typeof svc>('LayersService');
+        const cap = capability('Layers');
+        cap.ServiceKey = key;
+        app.Services.registerInstance(key, svc);
+
+        app.Services.register(NavigationService.Key, p => new NavigationService(p));
+        const nav = app.Services.getRequired(NavigationService.Key);
+
+        nav.SelectedItem = cap;                 // a raw Capability, not a destination
+        assert.equal(nav.ActiveService, svc);
+    });
+
+    test('clears to undefined when the capability names no service', () => {
+        const app = new Application();
+        app.Modules.Add(moduleWith(capability('Plain')));   // no ServiceKey
+        app.Services.register(NavigationService.Key, p => new ShellNav(p));
+        const nav = app.Services.getRequired(NavigationService.Key);
+        assert.equal(nav.ActiveService, undefined);
+    });
+
+    test('re-selecting swaps ActiveService to the new capability\'s service', () => {
+        const app = new Application();
+        const shapesSvc = { tag: 'shapes' };
+        const layersSvc = { tag: 'layers' };
+        const shapesKey = new ServiceKey<typeof shapesSvc>('Shapes');
+        const layersKey = new ServiceKey<typeof layersSvc>('Layers');
+        const shapes = capability('Shapes'); shapes.ServiceKey = shapesKey;
+        const layers = capability('Layers'); layers.ServiceKey = layersKey;
+        app.Modules.Add(moduleWith(shapes, layers));
+        app.Services.registerInstance(shapesKey, shapesSvc);
+        app.Services.registerInstance(layersKey, layersSvc);
+
+        app.Services.register(NavigationService.Key, p => new ShellNav(p));
+        const nav = app.Services.getRequired(NavigationService.Key);
+
+        assert.equal(nav.ActiveService, shapesSvc);   // first, auto-selected
+        nav.SelectedItem = nav.Items.Get(1);          // the Layers destination
+        assert.equal(nav.ActiveService, layersSvc);
+    });
+});

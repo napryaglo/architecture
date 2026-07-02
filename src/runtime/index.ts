@@ -85,6 +85,7 @@ export {
     ServiceLifetime,
 } from './services/service-provider.js';
 export { ServiceBase } from './services/service-base.js';
+export { ApplicationService, type IApplicationService } from './services/application-service.js';
 // InputManager moved to `@visualisation-sub/mural/framework`.
 // RoutedCommand / CommandBinding / CommandManager / InputBinding /
 // KeyBinding / MouseBinding / ICommandSource + CommandSourceHelper /
@@ -221,6 +222,7 @@ export {
     type IReadOnlyObservableCollection,
 } from './observable-collection.js';
 export { observe_array, subscribe_array, is_observed_array } from './observable-array.js';
+export { type ICapability, type IShellModule } from './shell-modules.js';
 export {
     findAlignmentGuides,
     type AlignmentGuide,

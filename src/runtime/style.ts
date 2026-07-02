@@ -283,13 +283,22 @@ export class Style
     private _basedOn: Style | undefined;
     public get BasedOn(): Style | undefined { return this._basedOn; }
 
+    // Deferred BasedOn: an explicit `BasedOn = @key` whose base lives in
+    // another dictionary (a theme token, a merged dict) can't be resolved
+    // at construction — the dictionary this Style belongs to is often built
+    // before its theme is merged into Application.Resources. So the compiler
+    // passes a THUNK instead of a Style, and Seal() resolves it (first
+    // apply), exactly when implicit-BasedOn resolves. A thunk that returns a
+    // non-Style (key absent) falls through to the implicit theme base.
+    private _basedOnResolver: (() => Style | undefined) | undefined;
+
     private _sealed: boolean = false;
     private _resources: ResourceDictionary | undefined;
 
     constructor(
         targetType: Function,
         setters: readonly Setter[] = [],
-        basedOn?: Style,
+        basedOn?: Style | (() => Style | undefined),
         triggers: readonly PropertyTrigger[] = [],
         multiTriggers: readonly MultiTrigger[] = [],
         eventTriggers: readonly EventTrigger[] = [],
@@ -299,7 +308,8 @@ export class Style
     {
         this.TargetType        = targetType;
         this.Setters           = setters;
-        this._basedOn          = basedOn;
+        if (typeof basedOn === 'function') this._basedOnResolver = basedOn;
+        else                               this._basedOn         = basedOn;
         this.Triggers          = triggers;
         this.MultiTriggers     = multiTriggers;
         this.EventTriggers     = eventTriggers;
@@ -332,6 +342,14 @@ export class Style
     {
         if (this._sealed) return;
         this._sealed = true;
+        // Explicit `BasedOn = @key` first (resolved now, not at construction).
+        if (this._basedOn === undefined && this._basedOnResolver !== undefined)
+        {
+            const base = this._basedOnResolver();
+            if (base instanceof Style && base !== this) this._basedOn = base;
+        }
+        // Implicit WPF fallback: inherit the theme's default Style for the
+        // TargetType when nothing explicit resolved.
         if (this._basedOn === undefined)
         {
             const theme = Application.ResolveDefaultResource(this.TargetType);

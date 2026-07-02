@@ -1,9 +1,11 @@
 import {
     MetaData,
     Model,
+    Thickness,
     Visual,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
+import { Color, FontWeight, SolidColorBrush, type Brush } from '../../visual-engine/index.js';
 import { Control } from './control.js';
 import { findDataTemplateForType } from '../../basic/templates/data-template.js';
 import { TextBlock, TextWrapping } from '../../basic/text-block.js';
@@ -30,6 +32,26 @@ export class ContentControl extends Control
 {
     public static readonly ContentKey = Model.RegisterProperty<Visual | Model | undefined>(
         ContentControl, 'Content', undefined, MetaData.Measure);
+
+    // Border chrome (WPF Control parity): the default template wraps its
+    // ContentPresenter in a Border whose Background / BorderBrush /
+    // BorderThickness TemplateBind to the control. `Background` already rides on
+    // Visual, so only the two border DPs are declared here — same shape as
+    // Border's own. A bare ContentControl leaves them unset (transparent brush,
+    // zero thickness → no visible chrome); a consumer sets them to give the
+    // content host a background/outline without a bespoke template.
+    public static readonly BorderBrushKey = Model.RegisterProperty<Brush | undefined>(
+        ContentControl, 'BorderBrush', undefined, MetaData.Render);
+
+    public static readonly BorderThicknessKey = Model.RegisterProperty<Thickness>(
+        ContentControl, 'BorderThickness', Thickness.Zero,
+        MetaData.Measure | MetaData.Arrange | MetaData.Render);
+
+    public get BorderBrush(): Brush | undefined  { return this.get_property_value(ContentControl.BorderBrushKey); }
+    public set BorderBrush(v: Brush | undefined) { this.set_property_value(ContentControl.BorderBrushKey, v); }
+
+    public get BorderThickness(): Thickness  { return this.get_property_value(ContentControl.BorderThicknessKey); }
+    public set BorderThickness(v: Thickness) { this.set_property_value(ContentControl.BorderThicknessKey, v); }
 
     // The Visual currently slotted into the presenter. Distinct from
     // Content because Content may be a non-Visual Model — in that case a
@@ -105,7 +127,7 @@ export class ContentControl extends Control
         if (value instanceof Visual) return value;
         // Non-Visual Model — auto-resolve a DataTemplate by class identity
         // (DataType === value.constructor).
-        const template = findDataTemplateForType(value.constructor);
+        const template = findDataTemplateForType(value.constructor, this);
         if (template !== undefined)
         {
             const visual = template.Apply(value);
@@ -125,16 +147,33 @@ export class ContentControl extends Control
         // non-templated values, so the text never rendered (and, when it did
         // via a workaround binding, didn't wrap). Wrap by default so
         // paragraph-shaped strings reflow within the control's width (e.g.
-        // the tooltip's MaxWidth) instead of running off in one line. An
-        // object Model with no matching DataTemplate still returns undefined
-        // — stringifying it would only surface "[object Object]".
+        // the tooltip's MaxWidth) instead of running off in one line.
         if (typeof value !== 'object')
         {
             const tb = new TextBlock(String(value));
             tb.TextWrapping = TextWrapping.Wrap;
             return tb;
         }
-        return undefined;
+        // An object Model with no matching DataTemplate: don't render
+        // NOTHING — a silently-empty presenter is the most confusing
+        // failure mode ("why is my content blank?"). Surface it loudly as a
+        // big red diagnostic naming the exact type whose DataTemplate is
+        // missing, so the author knows precisely what to register.
+        return this.unresolvedTemplateError(value);
+    }
+
+    // Big red diagnostic Visual for the "no DataTemplate for this type"
+    // case. Names the runtime type identifier so the author can see which
+    // DataType to add to a resource dictionary.
+    private unresolvedTemplateError(value: object): TextBlock
+    {
+        const typeName = value.constructor?.name || typeof value;
+        const tb = new TextBlock(`can not resolve template for: ${typeName}`);
+        tb.Foreground   = new SolidColorBrush(Color.Red);
+        tb.FontSize     = 20;
+        tb.FontWeight   = FontWeight.Bold;
+        tb.TextWrapping = TextWrapping.Wrap;
+        return tb;
     }
 
     // Logical child = the Visual Content (when set). A non-Visual Model

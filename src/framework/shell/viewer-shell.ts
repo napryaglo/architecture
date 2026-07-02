@@ -23,12 +23,10 @@ export class ViewerShell extends ShellBase
     {
         super();
         // applyDefaultStyle → @DefaultViewerShell materialises the region
-        // hosts → discoverRegions FindName's them so body children route.
+        // hosts; their content binds via `$service(…)` in the template.
         this.applyDefaultStyle();
-        this.discoverRegions();
-        // Bind the registered region services (Navigation is the relevant
-        // one for the viewer) as region-host DataContexts. See
-        // BindRegionServices() for the late-registration path.
-        this.bindRegionServices();
+        // The Navigation region host binds its own DataContext in the template
+        // via `$service(NavigationService)` (see @DefaultViewerShell), resolved
+        // against the ServiceScope this shell publishes — no imperative pass.
     }
 }

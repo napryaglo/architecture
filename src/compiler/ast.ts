@@ -26,7 +26,24 @@ export type TopForm =
     | ResourceForm
     | ResourcesBlock
     | ThemeBlock
-    | SchemeBlock;
+    | SchemeBlock
+    | ModuleForm;
+
+// ── `module Identifier [attrs] { Capability … }` ─────────────────────
+//
+// Top-level form defining a named ShellModule (a shell capability
+// provider). Compiles to `export const Identifier = (() => { … return
+// _shellModule; })()`. The body is a ShellModule element with an implicit
+// type — bracket attrs set ShellModule properties (e.g. Name), children are
+// its Capabilities. A module file declares exactly one; apps list the
+// imported names in a `.modules:` block on the Application.
+export interface ModuleForm
+{
+    kind:       'module-form';
+    exportName: string;       // identifier after `module` — the export const name
+    root:       ElementNode;  // synthetic ShellModule element (name === 'ShellModule')
+    span:       SourceSpan;
+}
 
 export interface ImportForm
 {
@@ -249,10 +266,12 @@ export type BodyItem =
     | SlotAssign
     | MemberBlock
     | ServicesBlock
+    | ModulesBlock
     | KeyValueResource
     | ResourceForm
     | DefForm
     | IncludeForm
+    | MergeForm
     | GlyphsForm
     | FontsForm
     | MacroHoleBodyItem;
@@ -315,6 +334,18 @@ export interface ServicesBlock
     span:    SourceSpan;
 }
 
+// `.modules: { DiagramModule … }` — the named member-block that composes
+// modules onto the Application. Each entry is the identifier of an imported
+// `module NAME { … }` const; every entry lowers to
+// `app.Modules.Add(<entry>)`. Distinct from `.services:` (which registers
+// factories) — modules are added instances.
+export interface ModulesBlock
+{
+    kind:    'modules-block';
+    entries: readonly string[];   // imported `module NAME` const identifiers
+    span:    SourceSpan;
+}
+
 // `include "<path>" [as <key>]` — compile-time inclusion of an external
 // file into the enclosing resource dictionary. The path resolves relative
 // to the .mu file. A glob (`icons/*.svg`) pulls every match in, keyed by
@@ -331,6 +362,21 @@ export interface IncludeForm
      *  key is derived from each matched file's basename. */
     key?: string;
     span: SourceSpan;
+}
+
+// `merge <Alias>` — fold every entry of a top-level-imported resource
+// dictionary into the enclosing dictionary. `Alias` is a `resources NAME`
+// dictionary pulled in by a file-level `import Alias from "…"` clause; the
+// merge copies its keyed entries (at Clone() time) into the target — the same
+// composition a named `resources` block's own `import` header performs, exposed
+// as a body directive so an Application's `resources:` block (and any dictionary
+// body) can merge a standalone dictionary. Sibling of IncludeForm / GlyphsForm.
+export interface MergeForm
+{
+    kind:  'merge-form';
+    /** Identifier of the imported dictionary to fold in. */
+    alias: string;
+    span:  SourceSpan;
 }
 
 // `glyphs "<font>" { home  bolt = "<cp>"  … }` — compile-time inclusion

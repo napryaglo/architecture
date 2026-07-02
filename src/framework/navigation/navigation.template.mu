@@ -183,4 +183,78 @@ resources Navigation {
         Template = @DefaultNavigationBar;
         ItemsPanel = @DefaultNavigationBarPanel;
     }
+
+    // ── Activity bar — a VSCode-style vertical rail variant ────────────
+    // A NavigationRail restyled as an editor "activity bar": a narrow
+    // (48dp) column of icon-only destinations with a left selection accent,
+    // driven by the shell's NavigationService (ItemsSource = $Items,
+    // SelectedItem = $SelectedItem). Applied PER-INSTANCE in the EditorShell
+    // template via Template = @ActivityBarRail + ItemContainerStyle =
+    // @ActivityBarItem (keyed, so ordinary NavigationRails keep their M3
+    // chrome). Colours are theme tokens, so the bar tracks the active scheme
+    // rather than hardcoding VSCode grey.
+
+    // Rail chrome — a 48dp column with header/footer slots; items stack
+    // vertically via the rail's default ItemsPanel (DefaultNavigationRailPanel).
+    Template x:key="ActivityBarRail" [TargetType = NavigationRail] {
+        Border x:name="PART_Border"
+            [ Background      = @SurfaceContainerHigh,
+              BorderBrush     = @OutlineVariant,
+              BorderThickness = (0,0,1,0),
+              Width           = 48 ] {
+            DockPanel [ LastChildFill = true ] {
+                ContentPresenter x:name="PART_HeaderSlot"
+                    [ DockPanel.Dock = Top, HorizontalAlignment = Center, Margin = (0,8,0,8) ]
+                ContentPresenter x:name="PART_FooterSlot"
+                    [ DockPanel.Dock = Bottom, HorizontalAlignment = Center, Margin = (0,8,0,8) ]
+                ItemsPresenter x:name="PART_ItemsPresenter" [ VerticalAlignment = Top ]
+            }
+        }
+    }
+
+    // Item chrome — a 48×48 icon cell with a 2dp left selection accent. The
+    // icon is the destination's Geometry, bound through the item's DataContext
+    // (the NavigationDestination); empty until an icon dictionary is baked, at
+    // which point glyphs appear with no template change. Rest ink
+    // @OnSurfaceVariant; selected / hovered brightens to @OnSurface; the accent
+    // lights @Primary when selected.
+    Template x:key="ActivityBarItemTemplate" [TargetType = NavigationItem] {
+        Border x:name="PART_Outer" [ Background = #00000000, Width = 48, Height = 48 ] {
+            Grid {
+                Border x:name="PART_Accent"
+                    [ Width               = 2,
+                      HorizontalAlignment = Left,
+                      VerticalAlignment   = Stretch,
+                      Background          = #00000000 ]
+                // Rest: dimmed (Opacity 0.55) so idle destinations recede,
+                // matching VSCode's shaded inactive activity-bar icons. Select
+                // / hover restore full opacity (and brighten the ink to
+                // @OnSurface) so the active/targeted icon reads as foreground.
+                Shape x:name="PART_Icon"
+                    [ Geometry            = $Icon,
+                      Fill                = @OnSurfaceVariant,
+                      Opacity             = 0.55,
+                      Width               = 24,
+                      Height              = 24,
+                      HorizontalAlignment = Center,
+                      VerticalAlignment   = Center ]
+            }
+        }
+        when ( IsSelected ) {
+            PART_Accent.Background = @Primary;
+            PART_Icon.Fill        = @OnSurface;
+            PART_Icon.Opacity     = 1;
+        }
+        when ( IsMouseOver ) {
+            PART_Icon.Fill    = @OnSurface;
+            PART_Icon.Opacity = 1;
+        }
+        when ( IsPressed )   { PART_Outer.Background = @OnSurfaceVariantHoverLayer; }
+    }
+
+    // Keyed (not implicit-by-type) so it applies only where a rail names it as
+    // its ItemContainerStyle — ordinary NavigationItems keep the M3 row.
+    Style x:key="ActivityBarItem" [TargetType = NavigationItem] {
+        Template = @ActivityBarItemTemplate;
+    }
 }

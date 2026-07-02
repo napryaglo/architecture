@@ -1,5 +1,8 @@
 import { ResourceDictionary, type ResourceKey } from './resource-dictionary.js';
 import { ServiceProvider } from './services/service-provider.js';
+import { ApplicationService } from './services/application-service.js';
+import { ObservableCollection } from './observable-collection.js';
+import type { IShellModule } from './shell-modules.js';
 import type { Visual } from '../visual-engine/visual.js';
 
 /** Theme class accepted by Application.initialize. Any subclass of
@@ -98,7 +101,37 @@ export class Application
     // explicitly by tests that need isolation.
     public static current: Application | null = null;
 
+    // Listeners fired when a new Application becomes `current`. A resource
+    // reference resolved before any Application exists — e.g. a DynamicResource
+    // on a module const built at import time, before app.mu constructs the
+    // Application — cannot subscribe to the app's Resources at creation. It
+    // registers here and re-wires when the app appears, so a later `merge` /
+    // Set resolves it. Not a general event bus: one narrow lifecycle signal.
+    private static readonly _currentListeners = new Set<() => void>();
+
+    /** INTERNAL — subscribe to "an Application became current". Returns an
+     *  unsubscribe. Used by DynamicResource to recover a binding created
+     *  before any Application existed. */
+    public static _onCurrentChanged(listener: () => void): () => void
+    {
+        Application._currentListeners.add(listener);
+        return () => { Application._currentListeners.delete(listener); };
+    }
+
     public readonly Resources: ResourceDictionary = new ResourceDictionary();
+
+    // Modules composed onto the shell via a `.modules:` block on the
+    // Application (a sibling of `resources:`). Held as the runtime
+    // IShellModule contract so runtime doesn't depend on the framework where
+    // the concrete ShellModule lives; the shell's NavigationService flattens
+    // their capabilities into the root navigation layer.
+    public readonly Modules: ObservableCollection<IShellModule> = new ObservableCollection<IShellModule>();
+
+    // The module dictionaries this Application has merged into `Resources`.
+    // Tracked so a reconcile pass can tell module-contributed merged dicts
+    // apart from the theme dictionaries `ThemeManager.activate` also merges in
+    // — we only ever add/remove the ones a module owns.
+    private readonly _mergedModuleDicts = new Set<ResourceDictionary>();
 
     // App-wide service composition root. Lazily created so apps that
     // never touch services pay nothing. The bootstrap registers
@@ -110,12 +143,82 @@ export class Application
 
     public get Services(): ServiceProvider
     {
-        return this._services ??= new ServiceProvider();
+        if (this._services === undefined)
+        {
+            this._services = new ServiceProvider();
+            // The application's self-service — a singleton every scope beneath
+            // the root can resolve to reach this Application and its modules.
+            // Registered eagerly with the container (not gated on initialize):
+            // `Modules` is live, so services that resolve it later see the fully
+            // populated set even though it's empty at this point.
+            this._services.registerInstance(ApplicationService.Key, new ApplicationService(this));
+        }
+        return this._services;
     }
 
     constructor()
     {
         Application.current = this;
+        // Wake any resource bindings that were created before an Application
+        // existed (module-const DynamicResources) so they re-wire to this
+        // app's Resources. Snapshot the set: listeners unsubscribe themselves.
+        for (const listener of [...Application._currentListeners]) listener();
+        // A module contributes its resources app-global: whenever `Modules`
+        // changes (the `.modules:` block emits `Modules.Add(...)`), reconcile
+        // the merged module dictionaries into `Resources`. Subscribing once and
+        // reconciling from scratch handles add / remove / replace / move /
+        // clear uniformly — the `cleared` event carries no items, so a
+        // diff-from-current-contents pass is the only correct shape.
+        this.Modules.Subscribe(() => {
+            this.reconcileModuleResources();
+            this.registerModuleServices();
+        });
+    }
+
+    // Modules already composed into `Services` — so a module's registrations
+    // are replayed exactly once, even though the subscription fires on every
+    // Modules change. Registration is add-only: `ServiceProvider` exposes no
+    // un-register, and the module's services are singletons on the root, so a
+    // removed module's registrations linger harmlessly (nothing resolves their
+    // tokens once its capabilities leave the navigation layer).
+    private readonly _servicedModules = new Set<IShellModule>();
+
+    // Replay each newly-added module's declared service registrations into the
+    // root `Services` provider (the module's "register services" seam). Guarded
+    // by `HasServiceRegistrations` so a module that contributes none does NOT
+    // realize the lazy provider — apps that never touch services still pay
+    // nothing.
+    private registerModuleServices(): void
+    {
+        for (const m of this.Modules)
+        {
+            if (this._servicedModules.has(m)) continue;
+            this._servicedModules.add(m);
+            if (!m.HasServiceRegistrations) continue;
+            m.RegisterServices(this.Services);
+        }
+    }
+
+    // Sync `Resources`' module-contributed merged dictionaries to the current
+    // `Modules` contents. Idempotent: only touches dicts owned by a module
+    // (tracked in `_mergedModuleDicts`), leaving theme dictionaries alone.
+    private reconcileModuleResources(): void
+    {
+        const desired = new Set<ResourceDictionary>();
+        for (const m of this.Modules) desired.add(m.Resources);
+
+        for (const dict of this._mergedModuleDicts)
+        {
+            if (desired.has(dict)) continue;
+            this.Resources.RemoveMergedDictionary(dict);
+            this._mergedModuleDicts.delete(dict);
+        }
+        for (const dict of desired)
+        {
+            if (this._mergedModuleDicts.has(dict)) continue;
+            this.Resources.AddMergedDictionary(dict);
+            this._mergedModuleDicts.add(dict);
+        }
     }
 
     // Resolve a resource (typically a default ControlTemplate) by key.

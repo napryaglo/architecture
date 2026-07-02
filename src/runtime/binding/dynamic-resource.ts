@@ -66,6 +66,9 @@ class DynamicResourceBinding extends Binding
     private readonly host: Visual | Model;
     private readonly key: string;
     private readonly unsubscribeRewire: (() => void) | undefined;
+    // One-shot: set only when this binding was created before any Application
+    // existed, so it can re-wire the app-level subscription once one appears.
+    private unsubscribeAppAppear: (() => void) | undefined;
     // In-flight scheme-transition animation driven by this binding. Held
     // so the next refresh / dispose can Stop() it cleanly; otherwise a
     // back-to-back scheme swap would leave the prior animation pinning
@@ -91,12 +94,28 @@ class DynamicResourceBinding extends Binding
         this.unsubscribeRewire = isVisualHost(host)
             ? host._subscribe_dynamic_resource(() => { this.rewire(); })
             : undefined;
+        // No Application yet? wireSubscriptions couldn't reach the app-level
+        // Resources (where theme + merged dictionaries live), so this binding
+        // resolved to undefined. Re-wire once an Application becomes current
+        // (a merge / Set afterwards then flows through). Covers resource
+        // references built at module-import time — before app.mu's
+        // `new Application()` runs — such as icons on module-const capabilities.
+        if (Application.current === null || Application.current === undefined)
+        {
+            this.unsubscribeAppAppear = Application._onCurrentChanged(() =>
+            {
+                this.unsubscribeAppAppear?.();
+                this.unsubscribeAppAppear = undefined;
+                this.rewire();
+            });
+        }
     }
 
     public override dispose(): void
     {
         super.dispose();
         this.unsubscribeRewire?.();
+        this.unsubscribeAppAppear?.();
         for (const unsub of this.subscriptions) unsub();
         this.subscriptions.length = 0;
         this.activeStoryboard?.Stop();

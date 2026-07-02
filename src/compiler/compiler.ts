@@ -13,6 +13,7 @@ import type {
     ColorValue,
     DefForm,
     IncludeForm,
+    MergeForm,
     GlyphsForm,
     FontsForm,
     Document,
@@ -21,6 +22,8 @@ import type {
     IdentValue,
     InlineExprValue,
     KeyValueResource,
+    ModuleForm,
+    ModulesBlock,
     PropertySetter,
     ResourceForm,
     ResourcesBlock,
@@ -30,6 +33,7 @@ import type {
     SlotAssign,
     MemberBlock,
     ServicesBlock,
+    ServiceEntry,
     ServiceConfigEntry,
     StringBody,
     StructuredBody,
@@ -254,8 +258,13 @@ export interface CompilerOutput
     body:             string;
     /** Module → set of symbol names that should be imported. */
     imports:          Map<string, Set<string>>;
-    /** Output shape selector — drives how `compile()` wraps the body. */
-    kind:             'application' | 'fragment' | 'resources';
+    /** Output shape selector — drives how `compile()` wraps the body. For
+     *  `'module'` the body is an IIFE body ending in `return _shellModule;`
+     *  wrapped as `export const <moduleName> = (() => { … })()`. */
+    kind:             'application' | 'fragment' | 'resources' | 'module';
+    /** For `kind === 'module'`: the `export const` name (the identifier after
+     *  the `module` keyword). Absent for other kinds. */
+    moduleName?:      string;
     /** True when `kind === 'application'`. Retained for callers that
      *  still pattern-match on this flag. */
     isApplication:    boolean;
@@ -441,6 +450,45 @@ export class Compiler
                 }
                 this.macros.set(form.name, form);
             }
+        }
+
+        // Module file: a single `module NAME { … }` form → the const export
+        // `export const NAME = (() => { … })()`. Handled before the resources
+        // / element passes so a module file is its own shape (imports / defs
+        // may sit alongside; no other root form may).
+        const moduleForms = doc.forms.filter((f): f is ModuleForm => f.kind === 'module-form');
+        if (moduleForms.length > 0)
+        {
+            if (moduleForms.length > 1)
+            {
+                throw new EmitError(
+                    'a file may declare at most one `module NAME { … }`',
+                    moduleForms[1]!.span);
+            }
+            for (const form of doc.forms)
+            {
+                if (form.kind === 'element' || form.kind === 'resources-block'
+                    || form.kind === 'theme-block' || form.kind === 'scheme-block'
+                    || form.kind === 'resource-form')
+                {
+                    throw new EmitError(
+                        'a `module NAME { … }` file cannot also contain other ' +
+                        'top-level forms (an element root, or resources / theme / ' +
+                        'scheme blocks).',
+                        form.span);
+                }
+            }
+            const mf = moduleForms[0]!;
+            const rootVar = this.compileElement(mf.root);
+            this.line(`return ${rootVar};`);
+            return {
+                body:          this.lines.join('\n'),
+                imports:       this.imports,
+                kind:          'module',
+                isApplication: false,
+                exportName:    ExportName.None,
+                moduleName:    mf.exportName,
+            };
         }
 
         // Pass 2: scan for `resources NAME { … }`, `theme NAME { … }`,
@@ -1064,9 +1112,14 @@ export class Compiler
                 this.compileServicesBlock(`${appVar}.Services`, item);
                 continue;
             }
+            if (item.kind === 'modules-block')
+            {
+                this.compileModulesBlock(appVar, item);
+                continue;
+            }
             throw new EmitError(
-                `Application: only the 'resources:' and '.services:' blocks are supported ` +
-                `(got ${item.kind === 'slot-assign' ? `'${item.name}:'` : item.kind})`,
+                `Application: only the 'resources:', '.services:' and '.modules:' blocks ` +
+                `are supported (got ${item.kind === 'slot-assign' ? `'${item.name}:'` : item.kind})`,
                 item.kind === 'slot-assign' ? item.span : elem.span);
         }
         return appVar;
@@ -1105,6 +1158,9 @@ export class Compiler
                     continue;
                 case 'include-form':
                     this.compileInclude(rdVar, item);
+                    continue;
+                case 'merge-form':
+                    this.compileMerge(rdVar, item);
                     continue;
                 case 'glyphs-form':
                     this.compileGlyphs(rdVar, item);
@@ -1159,6 +1215,19 @@ export class Compiler
         {
             this.line(`${rdVar}.Set(${JSON.stringify(entry.key)}, ${entry.valueJs});`);
         }
+    }
+
+    // `merge <Alias>` → fold a top-level-imported dictionary's entries into
+    // the target dictionary. `Alias` is a `resources NAME` dict brought in by a
+    // file-level `import Alias from "…"`; we copy its Clone()'d entries — the
+    // same composition a named `resources` block's `import` header does, exposed
+    // as a body directive so an Application's `resources:` (and any dictionary
+    // body) can merge a standalone dictionary in markup.
+    private compileMerge(rdVar: string, form: MergeForm): void
+    {
+        this.ensureImport(form.alias);
+        this.line(
+            `for (const [_k, _v] of ${form.alias}.Clone().Entries()) ${rdVar}.Set(_k, _v);`);
     }
 
     // `glyphs "<font>" { … }` → ask the injected resolver to turn each
@@ -2227,6 +2296,8 @@ export class Compiler
         const multiDataTriggersArr = `[${multiDataTriggerVars.join(', ')}]`;
         const eventTriggersArr     = `[${eventTriggerVars.join(', ')}]`;
 
+        const basedOn = this.compileStyleBasedOn(rf);
+
         const styleVar = this.fresh('style');
         // Style(targetType, setters, basedOn, triggers, multiTriggers,
         //       eventTriggers, dataTriggers, multiDataTriggers). Trailing
@@ -2234,27 +2305,61 @@ export class Compiler
         // snapshot tests of the legacy 5- / 6- / 7-arg forms keep
         // matching — a Style with no event triggers / no data triggers /
         // no multi-data triggers reproduces the historical shorter call.
+        // `basedOn` is `undefined` unless an explicit `BasedOn = @key`
+        // meta-attr is present, so the legacy shorter forms still match.
         if (eventTriggerVars.length === 0 && dataTriggerVars.length === 0 && multiDataTriggerVars.length === 0)
         {
             this.line(
-                `const ${styleVar} = new Style(${tt}, ${settersArr}, undefined, ${triggersArr}, ${multiTriggersArr});`);
+                `const ${styleVar} = new Style(${tt}, ${settersArr}, ${basedOn}, ${triggersArr}, ${multiTriggersArr});`);
         }
         else if (dataTriggerVars.length === 0 && multiDataTriggerVars.length === 0)
         {
             this.line(
-                `const ${styleVar} = new Style(${tt}, ${settersArr}, undefined, ${triggersArr}, ${multiTriggersArr}, ${eventTriggersArr});`);
+                `const ${styleVar} = new Style(${tt}, ${settersArr}, ${basedOn}, ${triggersArr}, ${multiTriggersArr}, ${eventTriggersArr});`);
         }
         else if (multiDataTriggerVars.length === 0)
         {
             this.line(
-                `const ${styleVar} = new Style(${tt}, ${settersArr}, undefined, ${triggersArr}, ${multiTriggersArr}, ${eventTriggersArr}, ${dataTriggersArr});`);
+                `const ${styleVar} = new Style(${tt}, ${settersArr}, ${basedOn}, ${triggersArr}, ${multiTriggersArr}, ${eventTriggersArr}, ${dataTriggersArr});`);
         }
         else
         {
             this.line(
-                `const ${styleVar} = new Style(${tt}, ${settersArr}, undefined, ${triggersArr}, ${multiTriggersArr}, ${eventTriggersArr}, ${dataTriggersArr}, ${multiDataTriggersArr});`);
+                `const ${styleVar} = new Style(${tt}, ${settersArr}, ${basedOn}, ${triggersArr}, ${multiTriggersArr}, ${eventTriggersArr}, ${dataTriggersArr}, ${multiDataTriggersArr});`);
         }
         return styleVar;
+    }
+
+    // `Style [ TargetType = X, BasedOn = @Key ] { … }` → the JS expression
+    // for the Style constructor's 3rd (basedOn) argument. Returns the
+    // literal `'undefined'` when no `BasedOn` meta-attr is present.
+    //
+    // Two shapes, mirroring how `@key` resolves elsewhere:
+    //   * base defined earlier in THIS same dictionary → the local JS var
+    //     (a fully-constructed Style already in scope); passed eagerly.
+    //   * base in another dictionary (a theme token like @TitleSmall, or a
+    //     merged dict) → a THUNK `() => Application.current?.Resources
+    //     .Resolve('Key')`. Resolution is deferred to Style.Seal (first
+    //     apply) because the dictionary this Style lives in is often built
+    //     before its theme is merged into Application.Resources — an eager
+    //     Resolve would miss it. Style.Seal falls back to the implicit
+    //     theme base if the thunk returns nothing.
+    private compileStyleBasedOn(rf: ResourceForm): string
+    {
+        const m = rf.metaAttrs.find(
+            a => a.path.parts.length === 1 && a.path.parts[0] === 'BasedOn');
+        if (m === undefined) return 'undefined';
+        if (m.value.kind !== 'static-resource')
+        {
+            throw new EmitError(
+                "Style BasedOn must be a '@resource' reference "
+                + '(e.g. BasedOn = @TitleSmall)', m.span);
+        }
+        const key = m.value.key;
+        const localVar = this.localResourceVars?.get(key);
+        if (localVar !== undefined) return localVar;
+        this.ensureImport('Application');
+        return `() => Application.current?.Resources.Resolve(${JSON.stringify(key)})`;
     }
 
     // ── EventTrigger emission ──────────────────────────────────────────
@@ -3195,6 +3300,18 @@ export class Compiler
             }
             if (item.kind === 'services-block')
             {
+                if (parentClass === 'ShellModule')
+                {
+                    // `.services:` inside a `module { … }` body: the module has
+                    // no live provider — it RECORDS each registration
+                    // (AddRegistration) and replays them into the app root when
+                    // it is composed onto Application.Modules
+                    // (Application.registerModuleServices). This is the module's
+                    // "register services" seam; a Capability's `ServiceKey` then
+                    // references one of these registered tokens.
+                    this.compileModuleServicesBlock(parentVar, item);
+                    continue;
+                }
                 // `.services:` on a non-Application element targets that
                 // element's own `Services` provider (e.g. a scope-owning
                 // host). Runtime-errors if the element exposes none.
@@ -3332,46 +3449,27 @@ export class Compiler
     // (impl's static `Key` ?? the class itself) rather than at compile
     // time, so app-defined service classes the compiler can't load still
     // register under the same token `addInstance` / code registration use.
+    // Lowers a `.modules: { … }` block on the Application. Each entry is the
+    // identifier of an imported `module NAME { … }` const — added, in order,
+    // to `Application.Modules`. ensureImport resolves the entry against the
+    // file's top-level `import NAME from "…"` clause.
+    private compileModulesBlock(appVar: string, block: ModulesBlock): void
+    {
+        for (const name of block.entries)
+        {
+            this.ensureImport(name);
+            this.line(`${appVar}.Modules.Add(${name});`);
+        }
+    }
+
     private compileServicesBlock(providerExpr: string, block: ServicesBlock): void
     {
-        // The factory parameter — the RESOLVING scope. Every service ctor
-        // takes the provider (the IServiceProvider contract), so
-        // construction is uniformly `new Impl(p)`: the service resolves its
-        // own collaborators from `p`. Registration is always LAZY (deferred
-        // to first resolve), so every sibling in this block is registered
-        // before any ctor runs — a service may depend on a later sibling
-        // without an ordering hazard.
-        const FP = 'p';
+        // Registration is always LAZY (deferred to first resolve), so every
+        // sibling in this block is registered before any ctor runs — a service
+        // may depend on a later sibling without an ordering hazard.
         for (const e of block.entries)
         {
-            this.ensureImport(e.impl);
-            this.ensureImport('ServiceProvider');
-
-            // Token expression — always through `tokenFor` (explicit
-            // `-> Token` or the impl itself), so registration and
-            // `$service(Token)` consumption agree: a token class with a
-            // static `Key` registers/resolves under that Key, a token
-            // constant passes through unchanged.
-            const tokenSym  = e.token ?? e.impl;
-            if (e.token !== undefined) this.ensureImport(e.token);
-            const tokenExpr = `ServiceProvider.tokenFor(${tokenSym})`;
-
-            // Bare entry → a one-liner `(p) => new Impl(p)`. An inline-config
-            // block → a constructing arrow that seeds/injects each property
-            // through its JS setter before returning the instance.
-            let factory: string;
-            if (e.config !== undefined && e.config.length > 0)
-            {
-                const assigns = e.config
-                    .map((c) => `_s.${c.name} = ${this.compileServiceConfigValue(FP, c)};`)
-                    .join(' ');
-                factory = `(${FP}) => { const _s = new ${e.impl}(${FP}); ${assigns} return _s; }`;
-            }
-            else
-            {
-                factory = `(${FP}) => new ${e.impl}(${FP})`;
-            }
-            const lifetime = e.lifetime ?? 'singleton';
+            const { tokenExpr, factory, lifetime } = this.compileServiceEntry(e);
             if (lifetime === 'scoped')
             {
                 this.line(`${providerExpr}.registerScoped(${tokenExpr}, ${factory});`);
@@ -3385,6 +3483,59 @@ export class Compiler
                 this.line(`${providerExpr}.register(${tokenExpr}, ${factory}, 'singleton');`);
             }
         }
+    }
+
+    // A `.services:` block inside a `module { … }` body. The module has no live
+    // provider at declaration time, so each entry is RECORDED on the module
+    // (`AddRegistration(token, factory, lifetime)`) and replayed into the app
+    // root when the module is added to `Application.Modules`. Same token /
+    // factory shape as a live `.services:` block — only the sink differs.
+    private compileModuleServicesBlock(moduleVar: string, block: ServicesBlock): void
+    {
+        for (const e of block.entries)
+        {
+            const { tokenExpr, factory, lifetime } = this.compileServiceEntry(e);
+            this.line(`${moduleVar}.AddRegistration(${tokenExpr}, ${factory}, '${lifetime}');`);
+        }
+    }
+
+    // Compile one `.services:` entry to its token expression, lazy factory, and
+    // lifetime string. Shared by the live-provider lowering (compileServicesBlock)
+    // and the module-record lowering (compileModuleServicesBlock).
+    //
+    // The factory parameter is the RESOLVING scope. Every service ctor takes the
+    // provider (the IServiceProvider contract), so construction is uniformly
+    // `new Impl(p)`: the service resolves its own collaborators from `p`.
+    private compileServiceEntry(e: ServiceEntry): { tokenExpr: string; factory: string; lifetime: string }
+    {
+        const FP = 'p';
+        this.ensureImport(e.impl);
+        this.ensureImport('ServiceProvider');
+
+        // Token expression — always through `tokenFor` (explicit `-> Token` or
+        // the impl itself), so registration and `$service(Token)` consumption
+        // agree: a token class with a static `Key` registers/resolves under that
+        // Key, a token constant passes through unchanged.
+        const tokenSym  = e.token ?? e.impl;
+        if (e.token !== undefined) this.ensureImport(e.token);
+        const tokenExpr = `ServiceProvider.tokenFor(${tokenSym})`;
+
+        // Bare entry → a one-liner `(p) => new Impl(p)`. An inline-config block →
+        // a constructing arrow that seeds/injects each property through its JS
+        // setter before returning the instance.
+        let factory: string;
+        if (e.config !== undefined && e.config.length > 0)
+        {
+            const assigns = e.config
+                .map((c) => `_s.${c.name} = ${this.compileServiceConfigValue(FP, c)};`)
+                .join(' ');
+            factory = `(${FP}) => { const _s = new ${e.impl}(${FP}); ${assigns} return _s; }`;
+        }
+        else
+        {
+            factory = `(${FP}) => new ${e.impl}(${FP})`;
+        }
+        return { tokenExpr, factory, lifetime: e.lifetime ?? 'singleton' };
     }
 
     // One inline-config value for a `.services:` entry. A `$service(Token)`

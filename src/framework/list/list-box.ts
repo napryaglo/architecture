@@ -165,7 +165,7 @@ export class ListBox extends Selector
     private contentForItem(item: unknown): Visual | Model {
         if (item instanceof Visual) return item;
         if (item instanceof Model
-            && findDataTemplateForType(item.constructor) !== undefined)
+            && findDataTemplateForType(item.constructor, this) !== undefined)
         {
             return item;
         }

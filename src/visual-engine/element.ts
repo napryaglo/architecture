@@ -237,6 +237,17 @@ export class Element extends Visual implements ITriggerHost
         return (this._resourceResolver ??= new ResourceResolver(this)).TryFindResource(key);
     }
 
+    // Resource-chain walk with a per-dictionary MATCHER instead of a single
+    // key — the generalization of TryFindResource for resource kinds that
+    // aren't a plain keyed lookup (implicit DataTemplates, resolved by scanning
+    // each dictionary for a matching DataType). Same ancestor walk, same
+    // nearest-wins precedence ending at Application.Resources, so every resource
+    // kind honors local dictionaries uniformly.
+    public FindInResourceChain<T>(match: (rd: ResourceDictionary) => T | undefined): T | undefined
+    {
+        return (this._resourceResolver ??= new ResourceResolver(this)).FindInChain(match);
+    }
+
     // Throws when the resource isn't found anywhere up the chain — use
     // when the caller treats absence as a programming error. For
     // optional lookups use TryFindResource.

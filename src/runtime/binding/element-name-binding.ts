@@ -46,6 +46,13 @@ class FixedSourceBinding extends Binding
     private nameSource:     Model | undefined;
     private sourceCallback: PropertyChangeCallback | undefined;
     private disposed = false;
+    // The forward-ref retry (activate) fires at most once. One microtask
+    // defers past the current synchronous factory run — the entire forward-ref
+    // window — so a second retry would only ever spin for a source that never
+    // resolves (an unregistered `$service`, a typo'd ElementName), an infinite
+    // microtask loop that starves the event loop. Genuine late arrival is
+    // handled reactively by the rebind listener (reresolve), not by retrying.
+    private forwardRefRetried = false;
     // A TwoWay writeback that arrived BEFORE the forward-ref source
     // resolved. Buffered (not dropped, not disposed) and flushed to the
     // source by activate() once it resolves. Wrapped in an object so a
@@ -131,7 +138,14 @@ class FixedSourceBinding extends Binding
         const src = this.sourceThunk();
         if (src === undefined)
         {
-            queueMicrotask(() => this.activate());
+            // Retry once (the forward-ref window is the rest of this
+            // synchronous run); then stop and let the rebind listener resolve
+            // any genuine late arrival. See forwardRefRetried.
+            if (!this.forwardRefRetried)
+            {
+                this.forwardRefRetried = true;
+                queueMicrotask(() => this.activate());
+            }
             return;
         }
         this.nameSource = src;
