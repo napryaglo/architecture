@@ -3601,7 +3601,17 @@ export class Compiler
             this.emitBehaviorAttachments(parentVar, block.body);
             return;
         }
-        const accessor = `${parentVar}.${block.name}`;
+        // `.settings:` / `.documents:` / `.commands:` are the lowercase spellings
+        // (paralleling the `.services:` / `.modules:` module-composition blocks)
+        // of a ShellModule's `Settings` / `Documents` / `Commands` collections. A
+        // generic member-block otherwise uses its name verbatim as the accessor,
+        // so remap these to the PascalCase property the module exposes → the emit
+        // is `module.Settings.Add(def)` / `.Documents.Add(def)` / `.Commands.Add(def)`.
+        const memberName = block.name === 'settings'  ? 'Settings'
+                         : block.name === 'documents' ? 'Documents'
+                         : block.name === 'commands'  ? 'Commands'
+                         : block.name;
+        const accessor = `${parentVar}.${memberName}`;
         if (this.isDictionaryMemberBody(block.body))
         {
             // Dictionary strategy — the SAME keyed surface `resources:`

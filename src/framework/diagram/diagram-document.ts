@@ -1,9 +1,12 @@
 import {
+    type ICommand,
     MetaData,
     Model,
     ObservableCollection,
+    type PropertyDescriptor,
     RelayCommand,
     ServiceKey,
+    type ServiceToken,
 } from '../../runtime/index.js';
 import { pathGeometryFromSvgD, pathGeometryToSvgD, Point } from '../../visual-engine/index.js';
 import { Figure } from './figure.js';
@@ -14,6 +17,12 @@ import { GeometryCombineMode } from './commands/combine.js';
 import type { DiagramMutator } from './behaviors/attach-standard-mutations.js';
 import { Connector } from './connector.js';
 import { ConnectorEndpoint } from './connector-endpoint.js';
+import type { IDocument } from '../shell/services/documents-content-host-service.js';
+import type { ICommandTarget } from '../shell/commands/command-target.js';
+import type { CommandDefinition } from '../shell/commands/command-definition.js';
+import { DiagramEditingContext, DiagramCommandId } from './diagram-command-contexts.js';
+import { DiagramInspector } from './diagram-inspector.js';
+import type { Diagram } from './diagram.js';
 
 // Minimal storage contract Diagram.Save / Load wire against. Subset of
 // the Web Storage API (localStorage / sessionStorage). Demos plug in
@@ -68,6 +77,38 @@ interface SerializedDiagram
 
 const STORAGE_KEY = 'mural-diagram-state-v1';
 
+// The contexts a diagram document activates — just DiagramEditingContext (the
+// toolbar shows the align/distribute/group/combine commands while a diagram is
+// the active document). Frozen: it is the live CommandContexts a ToolbarService
+// reads; a document that varied contexts by mode would return a different array.
+const DIAGRAM_COMMAND_CONTEXTS: readonly ServiceToken<unknown>[] = Object.freeze([DiagramEditingContext]);
+
+// Maps each diagram command id → the Diagram control command that performs it.
+// DiagramDocument.Execute / CanExecute resolve through this against the currently
+// published ActiveView, so the commands stay where they naturally live (the
+// control, driven by view selection) while the document is the dispatch target.
+const DIAGRAM_COMMAND_GETTERS: ReadonlyMap<string, (v: Diagram) => ICommand | undefined> = new Map<string, (v: Diagram) => ICommand | undefined>([
+    [DiagramCommandId.AlignLeft,            (v) => v.AlignLeftCommand],
+    [DiagramCommandId.AlignRight,           (v) => v.AlignRightCommand],
+    [DiagramCommandId.AlignTop,             (v) => v.AlignTopCommand],
+    [DiagramCommandId.AlignMiddle,          (v) => v.AlignMiddleCommand],
+    [DiagramCommandId.AlignCenter,          (v) => v.AlignCenterCommand],
+    [DiagramCommandId.DistributeHorizontal, (v) => v.DistributeHorizontalCommand],
+    [DiagramCommandId.DistributeVertical,   (v) => v.DistributeVerticalCommand],
+    [DiagramCommandId.Group,                (v) => v.GroupCommand],
+    [DiagramCommandId.Ungroup,              (v) => v.UngroupCommand],
+    [DiagramCommandId.CombineUnion,         (v) => v.CombineUnionCommand],
+    [DiagramCommandId.CombineIntersect,     (v) => v.CombineIntersectCommand],
+    [DiagramCommandId.CombineSubtract,      (v) => v.CombineSubtractCommand],
+    [DiagramCommandId.CombineExclude,       (v) => v.CombineExcludeCommand],
+]);
+
+// Monotonic per-session document id source. Every DiagramDocument gets a
+// stable, unique Id so DocumentsContentHostService can dedupe opens and locate
+// a document to close (IDocument.Id contract). Not persisted — ids are only
+// meaningful within a running session's open-set.
+let _diagramDocSeq = 0;
+
 // Top-level Document for a diagrammer-style workspace. Owns the flat
 // `Nodes` collection (Figures + Groups), the `ToolboxShapes` palette,
 // status feedback, Save / Load commands, and the structural mutation
@@ -84,8 +125,33 @@ const STORAGE_KEY = 'mural-diagram-state-v1';
 // shapes, override ToolboxShapes default to expose a different
 // palette, etc.) or by composing — the Document doesn't lock methods
 // down.
-export class DiagramDocument extends Model implements DiagramMutator
+export class DiagramDocument extends Model implements DiagramMutator, IDocument, ICommandTarget
 {
+    // ── IDocument surface — lets a DocumentsContentHostService host this
+    // document (open-set dedupe, tab title, dirty indicator, Save). ──
+    public static readonly IdKey            = Model.RegisterProperty<string>(
+        DiagramDocument, 'Id',            '', MetaData.None);
+    public static readonly TitleKey         = Model.RegisterProperty<string>(
+        DiagramDocument, 'Title',         'Diagram', MetaData.None);
+    public static readonly IsDirtyKey       = Model.RegisterProperty<boolean>(
+        DiagramDocument, 'IsDirty',       false, MetaData.None);
+    // The Diagram control currently presenting this document. Published by the
+    // control itself when this document becomes its DataContext (see
+    // Diagram / IDiagramViewHost). Sibling shell regions (toolbars, format
+    // pane) bind the active document's editing commands + selection-format
+    // state THROUGH this: `$service(ContentHostService).ActiveDocument.ActiveView.<X>`.
+    // undefined when no view is materialized (e.g. the document isn't active).
+    public static readonly ActiveViewKey    = Model.RegisterProperty<Diagram | undefined>(
+        DiagramDocument, 'ActiveView',    undefined, MetaData.None);
+
+    // The inspector VM the shell's inspector region presents for this document
+    // (a DataTemplate[DataType=DiagramInspector] renders the Format Shape pane).
+    // A stable per-document instance whose `View` this document keeps synced with
+    // ActiveView — so the inspector reaches the live control's selection-format
+    // state. A DP so `ActiveDocument.Inspector` resolves as a bindable path.
+    public static readonly InspectorKey     = Model.RegisterProperty<DiagramInspector>(
+        DiagramDocument, 'Inspector',     undefined as unknown as DiagramInspector, MetaData.None);
+
     public static readonly NodesKey         = Model.RegisterProperty<ObservableCollection<Figure | Group>>(
         DiagramDocument, 'Nodes',         undefined as unknown as ObservableCollection<Figure | Group>, MetaData.None);
     public static readonly ConnectorsKey    = Model.RegisterProperty<ObservableCollection<Connector>>(
@@ -106,6 +172,8 @@ export class DiagramDocument extends Model implements DiagramMutator
     constructor(storage?: DiagramStorage)
     {
         super();
+        this.set_property_value(DiagramDocument.IdKey,            'diagram-' + (++_diagramDocSeq));
+        this.set_property_value(DiagramDocument.InspectorKey,     new DiagramInspector());
         this.set_property_value(DiagramDocument.NodesKey,         new ObservableCollection<Figure | Group>());
         this.set_property_value(DiagramDocument.ConnectorsKey,    new ObservableCollection<Connector>());
         this.set_property_value(DiagramDocument.StorageKey,       storage);
@@ -123,6 +191,59 @@ export class DiagramDocument extends Model implements DiagramMutator
             new RelayCommand(() => this.Load(), canPersist,
                 { Text: 'Load',
                   Description: 'Restore the most recently saved canvas.' }));
+    }
+
+    // IDocument accessors. Id is stable; Title is settable (a tab strip binds
+    // it); IsDirty is read-only to the world — flipped internally by mutations
+    // and cleared by Save / Load.
+    public get Id():            string  { return this.get_property_value(DiagramDocument.IdKey); }
+    public get Title():         string  { return this.get_property_value(DiagramDocument.TitleKey); }
+    public set Title(v: string)         { this.set_property_value(DiagramDocument.TitleKey, v); }
+    public get IsDirty():       boolean { return this.get_property_value(DiagramDocument.IsDirtyKey); }
+    public get ActiveView():    Diagram | undefined { return this.get_property_value(DiagramDocument.ActiveViewKey); }
+    public set ActiveView(v: Diagram | undefined)   { this.set_property_value(DiagramDocument.ActiveViewKey, v); }
+    public get Inspector():     DiagramInspector { return this.get_property_value(DiagramDocument.InspectorKey); }
+
+    // Mark the document as having unsaved edits. Called from every structural
+    // mutation; cleared by Save / Load. Private — dirtiness is derived, not set
+    // from outside.
+    private _markDirty(): void { this.set_property_value(DiagramDocument.IsDirtyKey, true); }
+
+    // ── ICommandTarget surface — the diagram as a command dispatch target ──
+    // The ToolbarService reads CommandContexts to decide which commands show,
+    // and calls Execute / CanExecute to run / gate them. Each is resolved through
+    // DIAGRAM_COMMAND_GETTERS against the published ActiveView (the control that
+    // owns the selection-driven commands); an unrecognised id or a document with
+    // no live view is a no-op / disabled.
+    public get CommandContexts(): readonly ServiceToken<unknown>[] { return DIAGRAM_COMMAND_CONTEXTS; }
+
+    public Execute(definition: CommandDefinition): void
+    {
+        this._commandFor(definition.Id)?.Execute(undefined);
+    }
+
+    public CanExecute(definition: CommandDefinition): boolean
+    {
+        return this._commandFor(definition.Id)?.CanExecute(undefined) ?? false;
+    }
+
+    private _commandFor(id: string): ICommand | undefined
+    {
+        const view = this.ActiveView;
+        if (view === undefined) return undefined;
+        return DIAGRAM_COMMAND_GETTERS.get(id)?.(view);
+    }
+
+    protected override OnPropertyChanged(
+        descriptor: PropertyDescriptor, oldValue: unknown, newValue: unknown): void
+    {
+        super.OnPropertyChanged(descriptor, oldValue, newValue);
+        // Keep the inspector's View in lock-step with the published control, so
+        // the Format Shape pane reaches the live selection-format state.
+        if (descriptor.Name === 'ActiveView')
+        {
+            this.Inspector.View = newValue as Diagram | undefined;
+        }
     }
 
     public get Nodes():         ObservableCollection<Figure | Group> { return this.get_property_value(DiagramDocument.NodesKey); }
@@ -144,6 +265,7 @@ export class DiagramDocument extends Model implements DiagramMutator
         fig.Id = 'n' + this._nextId++;
         this.Nodes.Add(fig);
         this.Status = `Placed ${kind}. ${this.Nodes.Count} nodes.`;
+        this._markDirty();
         return fig;
     }
 
@@ -190,6 +312,7 @@ export class DiagramDocument extends Model implements DiagramMutator
                 : '';
             this.Status = `Deleted ${removed} node${removed === 1 ? '' : 's'}${orphanSuffix}. `
                         + `${this.Nodes.Count} remain.`;
+            this._markDirty();
         }
     }
 
@@ -205,6 +328,7 @@ export class DiagramDocument extends Model implements DiagramMutator
         c.Target = target;
         this.Connectors.Add(c);
         this.Status = `Added connector. ${this.Connectors.Count} connectors total.`;
+        this._markDirty();
         return c;
     }
 
@@ -225,6 +349,7 @@ export class DiagramDocument extends Model implements DiagramMutator
         if (removed > 0)
         {
             this.Status = `Deleted ${removed} connector${removed === 1 ? '' : 's'}. ${this.Connectors.Count} remain.`;
+            this._markDirty();
         }
     }
 
@@ -253,6 +378,7 @@ export class DiagramDocument extends Model implements DiagramMutator
         for (const leaf of grp.EnumerateLeaves()) leaf.IsSelected = false;
         for (const sub  of grp.EnumerateSubGroups()) sub.IsSelected = false;
         this.Status = `Grouped ${selection.length} items.`;
+        this._markDirty();
     }
 
     /** Dissolve every Group-shaped entry in `items`. Members lift to
@@ -281,6 +407,7 @@ export class DiagramDocument extends Model implements DiagramMutator
             if (idx >= 0) this.Nodes.RemoveAt(idx);
         }
         this.Status = `Ungrouped ${groups.length} group${groups.length === 1 ? '' : 's'}.`;
+        this._markDirty();
     }
 
     /** PowerPoint Merge-Shapes counterpart. Folds the geometric subset
@@ -325,6 +452,7 @@ export class DiagramDocument extends Model implements DiagramMutator
         this.Nodes.Add(result);
         result.IsSelected = true;
         this.Status = `Combined ${leaves.length} shapes (${combineModeName(mode)}).`;
+        this._markDirty();
     }
 
     // ── Save / Load ──────────────────────────────────────────────────
@@ -336,6 +464,7 @@ export class DiagramDocument extends Model implements DiagramMutator
         try
         {
             storage.SetItem(STORAGE_KEY, JSON.stringify(this._serialize()));
+            this.set_property_value(DiagramDocument.IsDirtyKey, false);
             this.Status = `Saved ${this.Nodes.Count} nodes.`;
         }
         catch (e)
@@ -357,6 +486,7 @@ export class DiagramDocument extends Model implements DiagramMutator
                 return;
             }
             this._deserialize(JSON.parse(json) as SerializedDiagram);
+            this.set_property_value(DiagramDocument.IsDirtyKey, false);
             this.Status = `Loaded ${this.Nodes.Count} nodes.`;
         }
         catch (e)

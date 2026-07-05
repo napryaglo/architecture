@@ -51,9 +51,26 @@ export { ShellBase } from './shell/shell.js';
 export { ShellModule, Capability } from './shell/module.js';
 export { EditorShell } from './shell/editor-shell.js';
 export { ViewerShell } from './shell/viewer-shell.js';
+export { ShellSideContentPane } from './shell/shell-side-content-pane.js';
 export { NavigationService, NavigationDestination } from './shell/services/navigation-service.js';
+export { RailAction } from './shell/rail-action.js';
 export { InspectorService } from './shell/services/inspector-service.js';
 export { StatusService } from './shell/services/status-service.js';
+export { ContentHostService } from './shell/services/content-host-service.js';
+export { DocumentsContentHostService, type IDocument } from './shell/services/documents-content-host-service.js';
+export { DocumentSelectorService } from './shell/services/document-selector-service.js';
+export type { IActivatable } from './shell/services/activatable.js';
+export { ApplicationSettings, SettingsStoreKey, type ISettingsStore } from './shell/services/application-settings-service.js';
+export { SettingDefinition, SettingKind } from './shell/settings/setting-definition.js';
+export { DocumentDefinition } from './shell/documents/document-definition.js';
+export { DocumentTypeRegistry } from './shell/documents/document-type-registry.js';
+export { CommandDefinition } from './shell/commands/command-definition.js';
+export { CommandRegistry } from './shell/commands/command-registry.js';
+export { CommandViewModel } from './shell/commands/command-view-model.js';
+export { ToolbarService } from './shell/commands/toolbar-service.js';
+export { type ICommandTarget, isCommandTarget } from './shell/commands/command-target.js';
+export { SettingsLauncherService, SettingsContributionKey, type ISettingsContribution } from './shell/settings/settings-launcher.js';
+export { Setting } from './shell/settings/setting.js';
 export { ToggleButton } from './buttons/toggle-button.js';
 export { Switch } from './toggles/switch.js';
 export { Checkbox } from './toggles/checkbox.js';
@@ -149,6 +166,7 @@ export {
     Diagram,
     attachCanvasDropBehavior,
     TOOLBOX_NODE_KIND_FORMAT,
+    type IDiagramViewHost,
     type ItemDroppedArgs,
     type ItemDroppedListener,
 } from './diagram/diagram.js';
@@ -157,6 +175,8 @@ export {
     DiagramStorageKey,
     type DiagramStorage,
 } from './diagram/diagram-document.js';
+export { DiagramEditingContext, DiagramCommandId } from './diagram/diagram-command-contexts.js';
+export { DiagramInspector } from './diagram/diagram-inspector.js';
 export { Figure } from './diagram/figure.js';
 export { Group } from './diagram/group.js';
 export { ToolboxShape, TOOLBOX_PREVIEW_SIZE } from './diagram/toolbox-shape.js';

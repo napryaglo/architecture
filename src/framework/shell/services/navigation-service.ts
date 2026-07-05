@@ -9,6 +9,8 @@ import {
     type IServiceProvider,
 } from '../../../runtime/index.js';
 import { Capability } from '../module.js';
+import type { IActivatable } from './activatable.js';
+import { RailAction } from '../rail-action.js';
 import type { Geometry } from '../../../visual-engine/index.js';
 
 // One entry in the shell's root navigation layer, built from a module's
@@ -74,12 +76,27 @@ export class NavigationService extends ServiceBase
     public static readonly ActiveServiceKey = Model.RegisterProperty<unknown>(
         NavigationService, 'ActiveService', undefined, MetaData.None);
 
+    // Command actions pinned to the rail's Header (top) and Footer (bottom)
+    // slots — the non-destination part of the activity bar (a settings gear, a
+    // help button, an account switcher…). Each a RailAction (icon + command);
+    // the framework rail template renders each as an IconButton. Apps add to
+    // these to populate the rail's chrome slots WITHOUT overriding the rail
+    // template. Empty by default — a shell shows only what's contributed.
+    public static readonly HeaderActionsKey = Model.RegisterProperty<ObservableCollection<RailAction>>(
+        NavigationService, 'HeaderActions',
+        undefined as unknown as ObservableCollection<RailAction>, MetaData.None);
+    public static readonly FooterActionsKey = Model.RegisterProperty<ObservableCollection<RailAction>>(
+        NavigationService, 'FooterActions',
+        undefined as unknown as ObservableCollection<RailAction>, MetaData.None);
+
     constructor(provider: IServiceProvider)
     {
         super(provider);
         // Per-instance collection so the strip always has a target to
         // bind, even before the app populates destinations.
         this.set_property_value(NavigationService.ItemsKey, new ObservableCollection<unknown>());
+        this.set_property_value(NavigationService.HeaderActionsKey, new ObservableCollection<RailAction>());
+        this.set_property_value(NavigationService.FooterActionsKey, new ObservableCollection<RailAction>());
         // Keep ActiveService in lock-step with the selection.
         this.AddPropertyChangedListener(
             NavigationService.SelectedItemKey, () => this.syncActiveService());
@@ -98,6 +115,16 @@ export class NavigationService extends ServiceBase
         return this.get_property_value(NavigationService.ActiveServiceKey);
     }
 
+    public get HeaderActions(): ObservableCollection<RailAction>
+    {
+        return this.get_property_value(NavigationService.HeaderActionsKey);
+    }
+
+    public get FooterActions(): ObservableCollection<RailAction>
+    {
+        return this.get_property_value(NavigationService.FooterActionsKey);
+    }
+
     // SelectedItem → ActiveService: find the Capability behind the selected item
     // and resolve the service it names (`Capability.ServiceKey`) from the
     // container. The content host presents that service (rendered by a
@@ -113,6 +140,13 @@ export class NavigationService extends ServiceBase
             ? this.Provider.get(ServiceProvider.tokenFor(key as unknown as Function))
             : undefined;
         this.set_property_value(NavigationService.ActiveServiceKey, service);
+        // Let the now-active service re-present itself. A content-backing
+        // service (DocumentSelectorService) shows through a shared content host
+        // that holds the LAST presented item; on a rail switch its own
+        // selection hasn't changed, so without this nudge the host keeps the
+        // previous capability's content. The service opts in via IActivatable —
+        // anything else is left untouched.
+        (service as Partial<IActivatable> | undefined)?.OnActivated?.();
     }
 
     // The Capability behind a navigation item: the item itself when it IS a

@@ -109,6 +109,17 @@ Start with whichever doc matches what you're trying to do.
   `.services:` composition block (with inline-config seeding / injection),
   `$service(Token)` consumption bindings, the general `.Member:` list /
   dictionary block, and shell scope integration.
+- **[shell-architecture.md](shell-architecture.md)** — the services-driven
+  application shell: `ShellBase` / `EditorShell` / `ViewerShell` and their
+  region hosts, modules & capabilities (`ShellModule` / `Capability` /
+  `ServiceKey`), the per-shell DI scope, the service catalog
+  (`NavigationService`, `ContentHostService` + `DocumentsContentHostService`,
+  `DocumentSelectorService`, `StatusService`, `InspectorService`),
+  implicit-DataTemplate rendering, conventions & gotchas, and the demo-platform
+  worked example.
+- **[theme-architecture.md](theme-architecture.md)** — the theming system:
+  theme dictionaries, scheme tokens, and how the active theme populates
+  `Application.Resources`.
 - **[marquee-selection.md](marquee-selection.md)** — Explorer-style
   rubber-band multi-select on any `Selector`. `AllowMarqueeSelection` /
   `MarqueeBoundsPolicy` DPs, modifier modes, click-on-empty-space

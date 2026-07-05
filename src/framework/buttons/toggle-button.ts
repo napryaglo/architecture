@@ -28,8 +28,12 @@ import { Button } from './button.js';
 // theme template was added.
 export class ToggleButton extends Button
 {
+    // BindsTwoWayByDefault for WPF parity: WPF's ToggleButton.IsChecked binds
+    // TwoWay by default, so a `IsChecked = $Flag` binding round-trips (click →
+    // source) without an explicit Mode. Matches TextBox.Text / Slider.Value /
+    // Selector.SelectedItem, which already declare it.
     public static readonly IsCheckedKey = Model.RegisterProperty<boolean>(
-        ToggleButton, 'IsChecked', false, MetaData.Render,
+        ToggleButton, 'IsChecked', false, MetaData.Render | MetaData.BindsTwoWayByDefault,
     );
 
     public get IsChecked():  boolean { return this.get_property_value(ToggleButton.IsCheckedKey); }

@@ -1,6 +1,9 @@
 import { app, shell, BrowserWindow } from 'electron'
 import { join } from 'node:path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { registerFileSystemHandlers } from './filesystem.js'
+import { registerEnvironmentHandlers } from './environment.js'
+import { registerSettingsHandlers } from './settings.js'
 
 // Main process — owns the window and (later) the native capabilities Plexus
 // reaches for as a desktop app: file open/save for diagram documents, the
@@ -40,6 +43,16 @@ function createWindow(): void {
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.plexus.app')
   app.on('browser-window-created', (_, window) => optimizer.watchWindowShortcuts(window))
+
+  // Native file-system capability (open/save dialogs, read/write, listing),
+  // consumed in the renderer through the injected FileSystemService.
+  registerFileSystemHandlers()
+  // Static host environment snapshot (dirs, platform, versions, flags),
+  // consumed in the renderer through the injected EnvironmentService.
+  registerEnvironmentHandlers()
+  // Settings persistence (userData/settings.json), backing the framework's
+  // ApplicationSettings via the renderer's ElectronSettingsStore.
+  registerSettingsHandlers()
 
   createWindow()
 

@@ -1,6 +1,7 @@
 import {
     Adorner,
     AdornerLayer,
+    DynamicResource,
     MetaData,
     Model,
     PropertyDescriptor,
@@ -11,6 +12,7 @@ import {
     type KeyEventArgs,
     Key,
 } from '../runtime/index.js';
+import { resolveKey } from '../runtime/model-internals.js';
 import { Brush } from '../visual-engine/index.js';
 import { Orientation } from './panels/stack-panel.js';
 import { Thumb, type DragDeltaEventArgs, type DragStartedEventArgs, type DragCompletedEventArgs } from './scroll/thumb.js';
@@ -93,6 +95,7 @@ export class Splitter extends Thumb
         this.AddDragDeltaListener(args => this.onDragDelta(args));
         this.AddDragCompletedListener(args => this.onDragCompleted(args));
         this.refreshCursor();
+        this.refreshChrome();
     }
 
     public get Orientation(): Orientation { return this.get_property_value(Splitter.OrientationKey); }
@@ -109,6 +112,14 @@ export class Splitter extends Thumb
         // so the cursor refresh has to live here to catch parser-driven
         // Orientation writes (e.g. `Splitter [Orientation=Horizontal]`).
         if (descriptor.Name === 'Orientation') this.refreshCursor();
+        // VSCode-sash chrome reacts to hover, drag, and orientation — all
+        // DPs on this instance, so route them through the one hook.
+        if (descriptor.Name === 'Orientation'
+            || descriptor.Name === 'IsMouseOver'
+            || descriptor.Name === 'IsDragging')
+        {
+            this.refreshChrome();
+        }
     }
 
     public get ShowsPreview(): boolean { return this.get_property_value(Splitter.ShowsPreviewKey); }
@@ -129,6 +140,35 @@ export class Splitter extends Thumb
     private refreshCursor(): void
     {
         this.Cursor = this.Orientation === Orientation.Vertical ? 'ew-resize' : 'ns-resize';
+    }
+
+    // Resting thickness of the visible divider line (px). The splitter's
+    // hit area is its host-assigned Width/Height; the line sits inside it.
+    private static readonly REST_THICKNESS = 1;
+
+    // VSCode-sash chrome. At rest the divider is a thin, faint line; on
+    // hover or drag it tints to the accent and thickens to fill the hit
+    // area. Driven off the inherited Thumb.Border handle because Thumb
+    // renders a hardcoded Border (visualChildren = [_border]) rather than a
+    // ControlTemplate — a markup trigger template would never apply. The
+    // thin axis follows Orientation: a Vertical splitter (ew-resize) is a
+    // narrow vertical line (constrained width); a Horizontal one a short
+    // horizontal line (constrained height). The cross axis always stretches
+    // to the full length of the bar.
+    private refreshChrome(): void
+    {
+        const border   = this.Border;
+        const active   = this.IsMouseOver || this.IsDragging;
+        const vertical = this.Orientation === Orientation.Vertical;
+        const rest     = Splitter.REST_THICKNESS;
+
+        border.MaxWidth  = (vertical  && !active) ? rest : Number.POSITIVE_INFINITY;
+        border.MaxHeight = (!vertical && !active) ? rest : Number.POSITIVE_INFINITY;
+        // DynamicResource so a theme switch re-tints live (matches how Thumb
+        // seeds the resting brush).
+        border.set_property_value(
+            resolveKey(border, undefined, 'Background'),
+            DynamicResource(border, active ? 'Primary' : 'OutlineVariant'));
     }
 
     // ── Drag lifecycle ────────────────────────────────────────────

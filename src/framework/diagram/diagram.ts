@@ -78,6 +78,20 @@ import type { RigidConnectorDragHost, RigidConnectorDragSession } from './rigid-
 // to fight the framework's drag positioning.
 export type DiagramPositionSnap = (rect: Rect) => Rect;
 
+// A DataContext that wants a back-reference to the Diagram view presenting it.
+// When a Diagram's DataContext structurally exposes a writable `ActiveView`,
+// the control publishes itself there when the DataContext is set — so shell
+// regions OUTSIDE the content template (toolbars, format pane) can bind the
+// active document's editing commands + selection-format state THROUGH the VM:
+//   `$service(ContentHostService).ActiveDocument.ActiveView.AlignLeftCommand`.
+//
+// This is the seam that lets the Diagram materialize inside a
+// `DataTemplate[DataType=DiagramDocument]` (attached in-tree, adorners live)
+// while sibling regions still reach it — replacing the older
+// "service holds one code-built control" workaround. Duck-typed like
+// DiagramMutator, so the control depends on no concrete document type.
+export interface IDiagramViewHost { ActiveView: Diagram | undefined; }
+
 // Selector flavour that materializes each item into a Figure
 // container instead of the default ContentPresenter wrap. The Selector
 // base supplies the SelectedItem / SelectedIndex / SelectedValue surface
@@ -514,6 +528,11 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     // sticky across DataContext swaps.
     private _autoWiredMutator:    DiagramMutator | undefined = undefined;
 
+    // The DataContext we published ourselves onto (its ActiveView === this).
+    // Tracked so a DataContext swap clears the stale back-reference rather than
+    // leaving a dead control pinned on a document nobody presents.
+    private _publishedViewHost:   IDiagramViewHost | undefined = undefined;
+
     // Connectors materializer collaborator. Held as a field so the
     // OnPropertyChanged handler for the Connectors / ConnectorTemplate
     // DPs can forward the change.
@@ -764,6 +783,7 @@ export class Diagram extends Selector implements RigidConnectorDragHost
         else if (descriptor.Name === 'DataContext')
         {
             this._autoWireMutatorFromDataContext(newValue);
+            this._publishViewToDataContext(newValue);
         }
         else if (descriptor === Diagram.ConnectorsKey.descriptor)
         {
@@ -808,6 +828,31 @@ export class Diagram extends Selector implements RigidConnectorDragHost
             this._autoWiredMutator = dc;
             this.Mutator           = dc;
         }
+    }
+
+    // Publish this control as the DataContext's ActiveView (see IDiagramViewHost)
+    // so sibling regions reach our commands / selection-format through the VM.
+    // Clears the previously-published host's back-reference on a DataContext
+    // swap — but only if it still points at us, so a view that re-materialized
+    // and already re-claimed the slot isn't clobbered.
+    private _publishViewToDataContext(dc: unknown): void
+    {
+        if (this._publishedViewHost !== undefined
+            && this._publishedViewHost.ActiveView === this)
+        {
+            this._publishedViewHost.ActiveView = undefined;
+        }
+        this._publishedViewHost = undefined;
+        if (Diagram._isDiagramViewHost(dc))
+        {
+            dc.ActiveView = this;
+            this._publishedViewHost = dc;
+        }
+    }
+
+    private static _isDiagramViewHost(value: unknown): value is IDiagramViewHost
+    {
+        return typeof value === 'object' && value !== null && 'ActiveView' in value;
     }
 
     private static _isDiagramMutator(value: unknown): value is DiagramMutator

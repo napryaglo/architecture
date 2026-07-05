@@ -30,6 +30,14 @@ module DemoPlatformModule [ Name = "µ-mural demos" ] {
         DemosService
         PatternsService
         StylesService
+
+        // The shared content host, registered at the app root (module services
+        // register on Application.Services). The group services are root
+        // singletons; registering the host here too means they resolve the SAME
+        // instance the shell's PART_ContentHost binds to
+        // (`$service(ContentHostService).Content`) — otherwise EditorShell would
+        // register its own shell-scoped host the root singletons can't reach.
+        ContentHostService
     }
 
     resources: {
@@ -40,9 +48,10 @@ module DemoPlatformModule [ Name = "µ-mural demos" ] {
         // concrete group service via the resource-chain prototype walk, so one
         // template serves all five. Module resources merge app-global, so it's
         // in scope for the content host. SelectedItem is TwoWay by default, so a
-        // row click writes back to DemoGroupService.SelectedDemo.
+        // row click writes back to DemoGroupService.SelectedItem (the inherited
+        // DocumentSelectorService DP), which drives OnSelectedItemChanged.
         DataTemplate [ DataType = DemoGroupService ] {
-            ListBox [ ItemsSource = $Demos, SelectedItem = $SelectedDemo ]
+            ListBox [ ItemsSource = $Items, SelectedItem = $SelectedItem ]
         }
     }
 

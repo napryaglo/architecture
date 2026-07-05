@@ -1,4 +1,5 @@
 import { Model } from '../model.js';
+import { MetaData } from '../metadata.js';
 import type { IServiceProvider } from './service-provider.js';
 
 // Base for application services that are also bindable view-models.
@@ -30,11 +31,25 @@ export abstract class ServiceBase extends Model
     // wiring, or lazily, e.g. `this.Provider.getRequired(Other.Key)`.
     protected readonly Provider: IServiceProvider;
 
+    // Optional header-action affordances the shell presents for this service
+    // when it backs a content region — the right side of a ShellSideContentPane
+    // header (a button row, a "…" menu, …). A view-facing slot a service sets to
+    // expose its actions; the pane binds it via
+    // `Commands = $service(…).ActiveService.HeaderCommands`. `unknown` (not a
+    // Visual type) so runtime stays free of a visual-engine dependency — a
+    // ContentPresenter resolves whatever's here (Visual, or Model via
+    // DataTemplate). Unset ⇒ no commands shown.
+    public static readonly HeaderCommandsKey = Model.RegisterProperty<unknown>(
+        ServiceBase, 'HeaderCommands', undefined, MetaData.None);
+
     constructor(provider: IServiceProvider)
     {
         super();
         this.Provider = provider;
     }
+
+    public get HeaderCommands(): unknown { return this.get_property_value(ServiceBase.HeaderCommandsKey); }
+    public set HeaderCommands(v: unknown) { this.set_property_value(ServiceBase.HeaderCommandsKey, v); }
 
     // Override to release resources (event subscriptions, timers, …).
     // Default no-op. Idempotent by contract — the container calls it

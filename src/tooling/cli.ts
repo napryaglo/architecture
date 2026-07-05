@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { compile, EmitError } from '../compiler/compile.js';
 import { ParseError } from '../compiler/parser.js';
 import { makeIncludeResolver } from './include-resolver.js';
+import { makeGlyphResolver } from './font-glyph-geometry.js';
 
 // Lightweight CLI:
 //
@@ -98,7 +99,14 @@ export function runCLI(argv: string[], io: CliIo = DEFAULT_IO): number
             // Resolve `include "…svg"` / `include "…/*.svg"` relative to the
             // source file, so `.mu` files compiled through the CLI can splice
             // SVG icons into a dictionary the same way the library build does.
-            const result  = compile(source, { include: makeIncludeResolver(dirname(input)) });
+            // Resolve `include "…svg"` and `glyphs "…ttf" { … }` relative to the
+            // source file, so `.mu` files compiled through the CLI can splice SVG
+            // icons and bake font-glyph outlines into a dictionary the same way
+            // the library / demo build pipeline does.
+            const result  = compile(source, {
+                include: makeIncludeResolver(dirname(input)),
+                glyphs:  makeGlyphResolver(dirname(input)),
+            });
             const outPath = outputPathFor(input, parsed);
             mkdirSync(dirname(resolve(outPath)), { recursive: true });
             writeFileSync(outPath, result.js, 'utf8');

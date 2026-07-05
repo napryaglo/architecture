@@ -100,11 +100,24 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['ShellBase',               '@visualisation-sub/mural/framework/shell/shell.js'],
     ['EditorShell',             '@visualisation-sub/mural/framework/shell/editor-shell.js'],
     ['ViewerShell',             '@visualisation-sub/mural/framework/shell/viewer-shell.js'],
+    ['ShellSideContentPane',    '@visualisation-sub/mural/framework/shell/shell-side-content-pane.js'],
     ['ShellModule',             '@visualisation-sub/mural/framework/shell/module.js'],
     ['Capability',              '@visualisation-sub/mural/framework/shell/module.js'],
+    ['RailAction',              '@visualisation-sub/mural/framework/shell/rail-action.js'],
+    ['SettingDefinition',       '@visualisation-sub/mural/framework/shell/settings/setting-definition.js'],
+    ['SettingKind',             '@visualisation-sub/mural/framework/shell/settings/setting-definition.js'],
+    ['DocumentDefinition',      '@visualisation-sub/mural/framework/shell/documents/document-definition.js'],
+    ['DocumentTypeRegistry',    '@visualisation-sub/mural/framework/shell/documents/document-type-registry.js'],
+    ['CommandDefinition',       '@visualisation-sub/mural/framework/shell/commands/command-definition.js'],
+    ['CommandRegistry',         '@visualisation-sub/mural/framework/shell/commands/command-registry.js'],
+    ['CommandViewModel',        '@visualisation-sub/mural/framework/shell/commands/command-view-model.js'],
+    ['ToolbarService',          '@visualisation-sub/mural/framework/shell/commands/toolbar-service.js'],
     ['NavigationService',       '@visualisation-sub/mural/framework/shell/services/navigation-service.js'],
     ['InspectorService',        '@visualisation-sub/mural/framework/shell/services/inspector-service.js'],
     ['StatusService',           '@visualisation-sub/mural/framework/shell/services/status-service.js'],
+    ['ContentHostService',      '@visualisation-sub/mural/framework/shell/services/content-host-service.js'],
+    ['DocumentsContentHostService', '@visualisation-sub/mural/framework/shell/services/documents-content-host-service.js'],
+    ['DocumentSelectorService', '@visualisation-sub/mural/framework/shell/services/document-selector-service.js'],
     ['ClickMode',               '@visualisation-sub/mural/framework/buttons/button.js'],
     ['ButtonVariant',           '@visualisation-sub/mural/framework/buttons/button.js'],
     ['TextBlock',               '@visualisation-sub/mural/basic'],
@@ -166,6 +179,8 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['ToolboxShape',            '@visualisation-sub/mural/framework/diagram/toolbox-shape.js'],
     ['DiagramDocument',         '@visualisation-sub/mural/framework/diagram/diagram-document.js'],
     ['DiagramStorageKey',       '@visualisation-sub/mural/framework/diagram/diagram-document.js'],
+    ['DiagramEditingContext',   '@visualisation-sub/mural/framework/diagram/diagram-command-contexts.js'],
+    ['DiagramInspector',        '@visualisation-sub/mural/framework/diagram/diagram-inspector.js'],
     ['Grid',                    '@visualisation-sub/mural/basic'],
     ['GridLength',              '@visualisation-sub/mural/basic'],
     ['ColumnDefinition',        '@visualisation-sub/mural/basic'],
@@ -475,6 +490,11 @@ export const ENUM_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<st
     ['MouseAction',           new Set(['LeftClick', 'RightClick', 'MiddleClick', 'LeftDoubleClick', 'RightDoubleClick', 'MiddleDoubleClick'])],
     ['MouseButton',           new Set(['Left', 'Middle', 'Right', 'XButton1', 'XButton2'])],
     ['KeyboardNavigationMode', new Set(['Continue', 'Once', 'Cycle', 'None', 'Contained', 'Local'])],
+    // Setting value shapes — a module's `.settings:` block authors
+    // `SettingDefinition [ Kind = Boolean … ]`. Resolved via PROPERTY_TO_ENUM
+    // under the `Kind` property (below); its members are disjoint from the other
+    // `Kind` enums (ChipVariant / PatternKind), so there's no collision.
+    ['SettingKind',           new Set(['Boolean', 'Number', 'String', 'Choice', 'Color', 'FilePath'])],
 ]);
 
 // Type → set of valid static-member names exposed for use in DOTTED
@@ -530,7 +550,7 @@ export const STATIC_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<
 // ENUM_MEMBERS.
 export const PROPERTY_TO_ENUM: ReadonlyMap<string, readonly string[]> = new Map<string, readonly string[]>([
     ['Variant',  ['ButtonVariant', 'DrawerVariant', 'CardVariant', 'TopAppBarVariant', 'TextBoxVariant', 'BadgeVariant', 'ProgressIndicatorVariant', 'ColorPickerVariant', 'BrushPickerVariant', 'FillEditorVariant']],
-    ['Kind',     ['ChipVariant', 'PatternKind']],
+    ['Kind',     ['ChipVariant', 'PatternKind', 'SettingKind']],
     ['PatternKind', ['PatternKind']],
     ['LineCap',  ['LineCap']],
     ['LineJoin', ['LineJoin']],

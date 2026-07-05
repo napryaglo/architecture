@@ -2,6 +2,7 @@ import { AnimationsService, ControlsService, DemoGroupService, DemosService, Pat
 import { DataTemplate } from "@visualisation-sub/mural/basic";
 import { ListBox } from "@visualisation-sub/mural/framework/list/list-box.js";
 import { Capability, ShellModule } from "@visualisation-sub/mural/framework/shell/module.js";
+import { ContentHostService } from "@visualisation-sub/mural/framework/shell/services/content-host-service.js";
 import { DataContextBinding, DynamicResource, ServiceProvider } from "@visualisation-sub/mural/runtime";
 
 export const DemoPlatformModule = (() => {
@@ -12,11 +13,12 @@ export const DemoPlatformModule = (() => {
     _shellModule0.AddRegistration(ServiceProvider.tokenFor(DemosService), (p) => new DemosService(p), 'singleton');
     _shellModule0.AddRegistration(ServiceProvider.tokenFor(PatternsService), (p) => new PatternsService(p), 'singleton');
     _shellModule0.AddRegistration(ServiceProvider.tokenFor(StylesService), (p) => new StylesService(p), 'singleton');
+    _shellModule0.AddRegistration(ServiceProvider.tokenFor(ContentHostService), (p) => new ContentHostService(p), 'singleton');
     const _rd1 = _shellModule0.Resources;
     const _tmpl2 = new DataTemplate((_data) => {
         const _listBox3 = new ListBox();
-        _listBox3.set_property_value(ListBox.ItemsSourceKey, DataContextBinding(_listBox3, "Demos"));
-        _listBox3.set_property_value(ListBox.SelectedItemKey, DataContextBinding(_listBox3, "SelectedDemo"));
+        _listBox3.set_property_value(ListBox.ItemsSourceKey, DataContextBinding(_listBox3, "Items"));
+        _listBox3.set_property_value(ListBox.SelectedItemKey, DataContextBinding(_listBox3, "SelectedItem"));
         return _listBox3;
     }, DemoGroupService);
     _rd1.Set(DemoGroupService, _tmpl2);

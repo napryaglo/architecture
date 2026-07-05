@@ -130,4 +130,50 @@ resources Diagrams {
     Style [TargetType = Diagram] {
         Template = @DefaultDiagram;
     }
+
+    // ── DiagramInspector: the Format Shape pane ────────────────────────
+    //
+    // The shell's inspector region presents the active document's Inspector;
+    // for a DiagramDocument that's a DiagramInspector, rendered here. It retargets
+    // its DataContext to `$View` (the live Diagram control the document publishes),
+    // so the ShapeFormatControl binds the control's `$SelectionFormat*` DPs as
+    // SINGLE path segments — the reactive form. Binding the two-segment
+    // `ActiveDocument.ActiveView.SelectionFormatFill` from the shell would react
+    // only to its first segment and go stale on selection change; the VM's `View`
+    // hop makes the format state track the live selection (and the DPs are
+    // BindsTwoWayByDefault, so edits still broadcast back through the control).
+    //
+    // The pane owns its own chrome + width; when a non-diagram document (or none)
+    // is active the shell's inspector presenter is empty and the region collapses.
+    DataTemplate [DataType = DiagramInspector] {
+        Border
+            [ Width           = 320,
+              Background      = @SurfaceContainerLow,
+              BorderBrush     = @OutlineVariant,
+              BorderThickness = (1,0,0,0),
+              Padding         = (12) ] {
+            DockPanel {
+                TextBlock
+                    [ DockPanel.Dock = Top,
+                      Text           = "Format Shape",
+                      Style          = @TitleSmall,
+                      Foreground     = @OnSurfaceVariant,
+                      Margin         = (0,0,0,8) ]
+                ScrollViewer
+                    [ IsAutoHideScrollBars    = false,
+                      HorizontalScrollEnabled = false,
+                      DataContext             = $View ] {
+                    ShapeFormatControl
+                        [ Fill              = $SelectionFormatFill,
+                          Stroke            = $SelectionFormatStroke,
+                          SourceCapTemplate = $SelectionFormatSourceCap,
+                          TargetCapTemplate = $SelectionFormatTargetCap,
+                          SourceCapScale    = $SelectionFormatSourceCapScale,
+                          TargetCapScale    = $SelectionFormatTargetCapScale,
+                          ShowCaps          = $SelectionIsConnector,
+                          CapOptions        = $ConnectorCapOptions ]
+                }
+            }
+        }
+    }
 }

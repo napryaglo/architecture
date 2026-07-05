@@ -24,11 +24,12 @@ import {
     MetaData,
     Model,
     ObservableCollection,
-    ServiceBase,
-    type PropertyDescriptor,
+    ServiceKey,
     type Visual,
     type IServiceProvider,
 } from '@visualisation-sub/mural/runtime';
+import { DocumentSelectorService } from '@visualisation-sub/mural/framework/shell/services/document-selector-service.js';
+import { ContentHostService } from '@visualisation-sub/mural/framework/shell/services/content-host-service.js';
 import { allDemos, instantiateDemo, onDemoRegistered, type DemoDefinition } from './registry.mjs';
 
 // Insert `item` into `coll` at the position that keeps it sorted by `cmp`
@@ -70,36 +71,23 @@ export class DemoVM extends Model
 }
 
 // The content a group's rail item shows: the group's demo list + active-demo
-// page state. A ServiceBase (so it is a bindable, DP-backed Model AND a service
-// the container owns and disposes). Abstract — a concrete subclass fixes the
-// group name; the class identity is its DI token.
+// page state. A DocumentSelectorService — the demos ARE the selectable items,
+// the active demo IS the selection — so the inherited `Items` / `SelectedItem`
+// DPs back the list, and OnSelectedItemChanged is where a pick derives the
+// page state. Abstract and Key-less (a base is never resolved directly); each
+// concrete subclass fixes the group name AND declares its own distinct Key
+// (see below).
 //
-//   DemoGroupService (extends ServiceBase)
-//     ├─ Demos: ObservableCollection<DemoVM>   the group's demo list
-//     ├─ SelectedDemo   TwoWay ⇆ the demo ListBox; the active demo
-//     └─ Title / Subtitle / Content   derived from SelectedDemo (Content lazy)
-export abstract class DemoGroupService extends ServiceBase
+//   DemoGroupService (extends DocumentSelectorService)
+//     ├─ Items: ObservableCollection<object>   the group's demo rows (DemoVM)
+//     ├─ SelectedItem   TwoWay ⇆ the demo ListBox; the active demo
+//     └─ Title / Subtitle / Content   derived from the selection (Content lazy)
+export abstract class DemoGroupService extends DocumentSelectorService
 {
-    // Demos MUST be a DP, not a plain field: the content template binds
-    // `ItemsSource = $Demos`, and a `$path` binding resolves its first
-    // segment through the property system (`Model.HasProperty` gate) — a
-    // plain field is invisible to it and the list silently renders empty.
-    // The collection instance is stable (set once in the ctor, never
-    // reassigned); the ListBox observes the collection's own change events,
-    // so this DP only needs to hand back that stable reference. Mirrors
-    // NavigationService.Items.
-    static readonly DemosKey = Model.RegisterProperty<ObservableCollection<DemoVM>>(
-        DemoGroupService, 'Demos',
-        undefined as unknown as ObservableCollection<DemoVM>, MetaData.None);
-
-    static readonly SelectedDemoKey = Model.RegisterProperty<DemoVM | undefined>(
-        DemoGroupService, 'SelectedDemo', undefined, MetaData.None);
-    static readonly TitleKey        = Model.RegisterProperty<string>(DemoGroupService, 'Title', '', MetaData.None);
-    static readonly SubtitleKey     = Model.RegisterProperty<string>(DemoGroupService, 'Subtitle', '', MetaData.None);
-    static readonly ContentKey      = Model.RegisterProperty<Visual | undefined>(
+    static readonly TitleKey    = Model.RegisterProperty<string>(DemoGroupService, 'Title', '', MetaData.None);
+    static readonly SubtitleKey = Model.RegisterProperty<string>(DemoGroupService, 'Subtitle', '', MetaData.None);
+    static readonly ContentKey  = Model.RegisterProperty<Visual | undefined>(
         DemoGroupService, 'Content', undefined, MetaData.None);
-
-    get Demos(): ObservableCollection<DemoVM> { return this.get_property_value(DemoGroupService.DemosKey); }
 
     // The group this service owns — the registry `group` value / capability Name.
     readonly GroupName: string;
@@ -108,10 +96,9 @@ export abstract class DemoGroupService extends ServiceBase
     private readonly _unsubscribeRegistry: () => void;
 
     constructor(provider: IServiceProvider, groupName: string) {
+        // super() creates the stable inherited Items collection.
         super(provider);
         this.GroupName = groupName;
-        // Stable per-instance collection the ItemsSource binding reads.
-        this.set_property_value(DemoGroupService.DemosKey, new ObservableCollection<DemoVM>());
         // Snapshot this group's demos from the registry; late registrations
         // arrive via the subscription below. Import-order independent.
         for (const def of allDemos()) {
@@ -122,35 +109,34 @@ export abstract class DemoGroupService extends ServiceBase
         });
     }
 
-    get SelectedDemo(): DemoVM | undefined  { return this.get_property_value(DemoGroupService.SelectedDemoKey); }
-    set SelectedDemo(v: DemoVM | undefined) { this.set_property_value(DemoGroupService.SelectedDemoKey, v); }
-    get Title():        string             { return this.get_property_value(DemoGroupService.TitleKey); }
-    get Subtitle():     string             { return this.get_property_value(DemoGroupService.SubtitleKey); }
-    get Content():      Visual | undefined  { return this.get_property_value(DemoGroupService.ContentKey); }
+    // Typed views over the inherited selector DPs (the rows are DemoVMs). The
+    // markup binds the real DPs `$Items` / `$SelectedItem`; these are TS-side
+    // conveniences only.
+    get Demos():        ObservableCollection<DemoVM> { return this.Items as unknown as ObservableCollection<DemoVM>; }
+    get SelectedDemo(): DemoVM | undefined           { return this.SelectedItem as DemoVM | undefined; }
+    get Title():        string                       { return this.get_property_value(DemoGroupService.TitleKey); }
+    get Subtitle():     string                       { return this.get_property_value(DemoGroupService.SubtitleKey); }
+    get Content():      Visual | undefined           { return this.get_property_value(DemoGroupService.ContentKey); }
 
     // Slot a demo into this group (sorted); select the first so the group never
-    // renders empty.
-    addDemo(def: DemoDefinition): void {
+    // renders empty. Private — only the ctor + registry subscription call it.
+    private addDemo(def: DemoDefinition): void {
         insertSorted(this.Demos, new DemoVM(def), (a, b) => a.Title.localeCompare(b.Title));
-        if (this.SelectedDemo === undefined) this.SelectedDemo = this.Demos.Get(0);
+        if (this.SelectedItem === undefined) this.SelectedItem = this.Demos.Get(0);
     }
 
-    protected override OnPropertyChanged(descriptor: PropertyDescriptor, oldValue: unknown, newValue: unknown): void {
-        super.OnPropertyChanged(descriptor, oldValue, newValue);
-        if (descriptor.Name === 'SelectedDemo') {
-            // The list click (TwoWay) or an auto-select changed the active demo —
-            // derive the page content (lazy-instantiated, cached by the registry).
-            const sel = newValue;
-            if (sel instanceof DemoVM) {
-                this.set_property_value(DemoGroupService.TitleKey,    sel.Title);
-                this.set_property_value(DemoGroupService.SubtitleKey, sel.Subtitle);
-                this.set_property_value(DemoGroupService.ContentKey,  instantiateDemo(sel.Id));
-            } else {
-                this.set_property_value(DemoGroupService.TitleKey,    '');
-                this.set_property_value(DemoGroupService.SubtitleKey, '');
-                this.set_property_value(DemoGroupService.ContentKey,  undefined);
-            }
-        }
+    // Selection changed (list click TwoWay or auto-select) — derive the page
+    // state and present the demo. Overrides the base default (which would View
+    // the DemoVM ROW via its label template); a group instead builds the demo's
+    // Visual (lazy, cached by the registry) and Views THAT in the content host,
+    // so PART_ContentHost (`$service(ContentHostService).Content`) shows the demo.
+    protected override OnSelectedItemChanged(item: object | undefined): void {
+        const sel = item instanceof DemoVM ? item : undefined;
+        const content = sel ? instantiateDemo(sel.Id) : undefined;
+        this.set_property_value(DemoGroupService.TitleKey,    sel?.Title ?? '');
+        this.set_property_value(DemoGroupService.SubtitleKey, sel?.Subtitle ?? '');
+        this.set_property_value(DemoGroupService.ContentKey,  content);
+        this.Provider.get(ContentHostService.Key)?.View(content);
     }
 
     public override Dispose(): void {
@@ -160,25 +146,34 @@ export abstract class DemoGroupService extends ServiceBase
 }
 
 // The five concrete group services. Each fixes its group name (matching its
-// capability's Name in demo-platform.module.mu) and is registered — and
-// resolved via the capability's ServiceKey — under its own class token.
+// capability's Name in demo-platform.module.mu) and declares its OWN distinct
+// Key — five services, five tokens. Registration and resolution both funnel
+// through `ServiceProvider.tokenFor(<class>)` → that class's own Key, so the
+// module's `.services:` block and each capability's `ServiceKey = <class>` land
+// on the same per-service token. No `override`: the abstract DocumentSelectorService
+// base carries no Key, so nothing is inherited or shared.
 
 export class AnimationsService extends DemoGroupService {
+    static readonly Key = new ServiceKey<AnimationsService>('AnimationsService');
     constructor(provider: IServiceProvider) { super(provider, 'Animation'); }
 }
 
 export class ControlsService extends DemoGroupService {
+    static readonly Key = new ServiceKey<ControlsService>('ControlsService');
     constructor(provider: IServiceProvider) { super(provider, 'Controls'); }
 }
 
 export class DemosService extends DemoGroupService {
+    static readonly Key = new ServiceKey<DemosService>('DemosService');
     constructor(provider: IServiceProvider) { super(provider, 'Demos'); }
 }
 
 export class PatternsService extends DemoGroupService {
+    static readonly Key = new ServiceKey<PatternsService>('PatternsService');
     constructor(provider: IServiceProvider) { super(provider, 'Patterns'); }
 }
 
 export class StylesService extends DemoGroupService {
+    static readonly Key = new ServiceKey<StylesService>('StylesService');
     constructor(provider: IServiceProvider) { super(provider, 'Styles & Triggers'); }
 }

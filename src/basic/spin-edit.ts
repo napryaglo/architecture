@@ -77,7 +77,10 @@ enum SpinStep
 
 export class SpinEdit extends TemplatedControl
 {
-    public static readonly ValueKey         = Model.RegisterProperty<number>( SpinEdit, 'Value',         0,                  MetaData.None);
+    // BindsTwoWayByDefault: a numeric editor's committed Value round-trips to
+    // its bound source without an explicit Mode, matching Slider.Value and the
+    // WPF convention for value editors.
+    public static readonly ValueKey         = Model.RegisterProperty<number>( SpinEdit, 'Value',         0,                  MetaData.BindsTwoWayByDefault);
     public static readonly MinimumKey       = Model.RegisterProperty<number>( SpinEdit, 'Minimum',       -Number.MAX_VALUE,  MetaData.None);
     public static readonly MaximumKey       = Model.RegisterProperty<number>( SpinEdit, 'Maximum',       Number.MAX_VALUE,   MetaData.None);
     public static readonly SmallChangeKey   = Model.RegisterProperty<number>( SpinEdit, 'SmallChange',   1,                  MetaData.None);
@@ -301,7 +304,13 @@ export class SpinEdit extends TemplatedControl
         // floor() guards against a fractional DecimalPlaces write from
         // upstream binding.
         const dp = Math.max(0, Math.floor(this.DecimalPlaces));
-        return v.toFixed(dp);
+        // A binding can transiently deliver undefined / null / NaN before its
+        // source resolves (DataContext not yet set, forward ref) — e.g. a
+        // `Value = $Setting.Value` row materialised before it is slotted into
+        // the tree. Fall back to 0 for display rather than crashing on
+        // `.toFixed`; the real value paints as soon as the binding resolves.
+        const n = typeof v === 'number' && Number.isFinite(v) ? v : 0;
+        return n.toFixed(dp);
     }
 
     private parseValue(text: string): number | undefined

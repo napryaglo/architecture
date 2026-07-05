@@ -1033,6 +1033,27 @@ describe('compile — module NAME form', () => {
         assert.match(js, /_shellModule\d+\.AddRegistration\(ServiceProvider\.tokenFor\(StatusService\), \(p\) => new StatusService\(p\), 'singleton'\);/);
         assert.match(js, /_shellModule\d+\.AddRegistration\(ServiceProvider\.tokenFor\(NavigationService\), \(p\) => new NavigationService\(p\), 'scoped'\);/);
     });
+
+    test('a `.settings:` block appends each SettingDefinition to ShellModule.Settings', () => {
+        // `.settings:` is a generic member-block: each entry constructs a
+        // SettingDefinition (DPs set) and is appended to the module's `Settings`
+        // collection. The lowercase `settings` spelling (paralleling `.services:`
+        // / `.modules:`) remaps to the PascalCase `Settings` property. `Kind =
+        // Boolean` resolves to the SettingKind enum member.
+        const js = emitted(
+            `module DiagramModule {
+                .settings: {
+                    SettingDefinition[Key="diagram.grid.snap", Label="Snap to grid", Kind=Boolean, Default=true]
+                }
+                Capability[Name="Shapes"]
+             }`);
+        assert.match(js, /import \{ SettingDefinition, SettingKind \} from "@visualisation-sub\/mural\/framework\/shell\/settings\/setting-definition\.js";/);
+        assert.match(js, /const _settingDefinition\d+ = new SettingDefinition\(\);/);
+        assert.match(js, /_settingDefinition\d+\.set_property_value\(SettingDefinition\.KeyKey, "diagram\.grid\.snap"\);/);
+        assert.match(js, /_settingDefinition\d+\.set_property_value\(SettingDefinition\.KindKey, SettingKind\.Boolean\);/);
+        assert.match(js, /_settingDefinition\d+\.set_property_value\(SettingDefinition\.DefaultKey, true\);/);
+        assert.match(js, /_shellModule\d+\.Settings\.Add\(_settingDefinition\d+\);/);
+    });
 });
 
 describe('compile — .modules: block on Application', () => {

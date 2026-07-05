@@ -8,6 +8,7 @@ import { EditorShell } from '../shell/editor-shell.js';
 import { ViewerShell } from '../shell/viewer-shell.js';
 import { NavigationService } from '../shell/services/navigation-service.js';
 import { StatusService } from '../shell/services/status-service.js';
+import { ApplicationSettings } from '../shell/services/application-settings-service.js';
 import { NavigationRail } from '../navigation/navigation-rail.js';
 
 describe('EditorShell — full region set', () => {
@@ -68,6 +69,15 @@ describe('Shell — region services', () => {
         const svc = navHost.DataContext as NavigationService;
         assert.ok(svc instanceof NavigationService);
         assert.equal(navHost.ItemsSource, svc.Items);
+    });
+
+    test('EditorShell auto-provides ApplicationSettings (aggregates module settings)', () => {
+        // No app-level registration — the shell supplies the default, like it does
+        // for NavigationService / ContentHostService. Resolving it builds the
+        // service (PopulateFromModules over Application.current.Modules).
+        const shell = new EditorShell();
+        const settings = shell.Services.get(ApplicationSettings.Key);
+        assert.ok(settings instanceof ApplicationSettings);
     });
 
     test('each shell gets its own scoped service instance', () => {

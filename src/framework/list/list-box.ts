@@ -163,7 +163,31 @@ export class ListBox extends Selector
     }
 
     private contentForItem(item: unknown): Visual | Model {
+        // A Visual item is shown directly — WPF parity: a UIElement item
+        // bypasses templating (ItemTemplate applies to DATA only).
         if (item instanceof Visual) return item;
+
+        // ItemTemplate (or the per-item Selector) wins — mirror the base
+        // ItemsControl.GetContainerForItemOverride precedence
+        // (Selector → ItemTemplate → …). ListBoxItem is a ContentControl
+        // with no ContentTemplate seam, so apply the template here and
+        // hand the produced Visual over as Content (which slots directly).
+        // Skipping this made a Model row with a registered
+        // `DataTemplate[T]` in scope IGNORE an explicit ItemTemplate and
+        // materialize T's template instead — e.g. a document tab strip
+        // (ItemTemplate = a title+close row) rendered each open
+        // DiagramDocument as a whole Diagram, double-attaching the doc's
+        // node Figures the content region already hosts (throw on attach).
+        const tmpl = this.ItemTemplateSelector?.(item) ?? this.ItemTemplate;
+        if (tmpl !== undefined)
+        {
+            const v = tmpl.Apply(item);
+            v.DataContext = item;
+            return v;
+        }
+
+        // No ItemTemplate — implicit DataType dispatch for a Model with a
+        // registered DataTemplate, else the display-string text fallback.
         if (item instanceof Model
             && findDataTemplateForType(item.constructor, this) !== undefined)
         {

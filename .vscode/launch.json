@@ -67,7 +67,7 @@
         {
             "type": "chrome",
             "request": "attach",
-            "name": "Attach to Edge (port 9222)",
+            "name": "Attach to Edge (port 8080)",
             "port": 8080,
             "webRoot": "${workspaceFolder}",
             "sourceMaps": true

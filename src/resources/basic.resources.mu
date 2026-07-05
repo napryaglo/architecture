@@ -516,8 +516,17 @@ resources MuralBasic {
 
     // ── Splitter ───────────────────────────────────────────────────
     // Standalone orientation-aware splitter for non-Grid containers.
-    // Same chrome as GridSplitter; the orientation determines the
-    // resize axis.
+    // VSCode-sash chrome: the splitter's slot (its Width/Height in the
+    // host layout) is an INVISIBLE hit area; inside it a thin divider line
+    // shows by default and — on hover — tints to the accent and thickens
+    // to fill the slot. The line is sized by MaxWidth/MaxHeight (not
+    // Width/Height) with default Stretch alignment, so the chrome is
+    // orientation-symmetric: the Orientation trigger just swaps which axis
+    // is the thin one, and the hover trigger releases both to fill.
+    // Chrome (thin-line-default → accent-fill-on-hover, VSCode sash style)
+    // is driven imperatively off the Thumb.Border handle in splitter.ts —
+    // Thumb renders a hardcoded Border (visualChildren = [_border]) rather
+    // than a ControlTemplate, so a markup trigger template wouldn't apply.
     Template x:key="DefaultSplitter" [TargetType = Splitter] {
         Border x:name="PART_Border"
             [ Background      = @OutlineVariant,

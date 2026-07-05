@@ -9,8 +9,11 @@ import { HeadlessTarget } from '../../../visual-engine/index.js';
 import { ItemsPresenter } from '../../../basic/templates/items-presenter.js';
 import { ListBox, ListBoxItem, SelectionMode } from '../list-box.js';
 import { ScrollViewer } from '../../../framework/surfaces/scroll-viewer.js';
-import { StackPanel } from '../../../basic/panels/stack-panel.js';
+import { StackPanel, Orientation } from '../../../basic/panels/stack-panel.js';
 import { TextBlock } from '../../../basic/text-block.js';
+import { Model, Rect, Size } from '../../../runtime/index.js';
+import { DataTemplate } from '../../../basic/templates/data-template.js';
+import { ItemsPanelTemplate } from '../../../basic/panels/items-panel-template.js';
 
 function pointer(mods: Partial<ModifierKeys> = {}): PointerEventInit
 {
@@ -409,5 +412,49 @@ describe('ListBox — selection change notifications', () => {
         assert.equal(lb.SelectedIndex, -1);
         // Unrelated row b is untouched.
         assert.equal(b.IsSelected, false);
+    });
+});
+
+// A Model row that ALSO has an implicit DataTemplate registered by type —
+// the shape that exposed the tab-strip double-attach bug.
+class TabDoc extends Model
+{
+    public static readonly TitleKey = Model.RegisterProperty<string>(TabDoc, 'Title', '', undefined);
+    public get Title(): string { return this.get_property_value(TabDoc.TitleKey); }
+    public set Title(v: string) { this.set_property_value(TabDoc.TitleKey, v); }
+}
+
+describe('ListBox — ItemTemplate precedence for Model rows', () => {
+    beforeEach(() => { initTestApp(); });
+
+    test('an explicit ItemTemplate wins over an implicit DataType-registered DataTemplate', () => {
+        // Register an implicit DataTemplate[TabDoc] in app resources. Before
+        // the fix, a Model row with such a template rendered through IT even
+        // when the ListBox had an explicit ItemTemplate — so a document tab
+        // strip (ItemTemplate = title+close) instead materialized each open
+        // document's heavy DataType template (a Diagram), double-attaching
+        // shared child Visuals and throwing on the second attach.
+        let implicitFired = 0;
+        Application.current.Resources.Set(
+            'TabDocImplicitTemplate',
+            new DataTemplate(() => { implicitFired++; return new TextBlock('IMPLICIT'); }, TabDoc));
+
+        const lb = new ListBox();
+        lb.ItemsPanel = new ItemsPanelTemplate(() => {
+            const sp = new StackPanel(); sp.Orientation = Orientation.Horizontal; return sp;
+        });
+        let itemTemplateFired = 0;
+        lb.ItemTemplate = new DataTemplate((d) => {
+            itemTemplateFired++;
+            const tb = new TextBlock(''); tb.Text = (d as TabDoc).Title; return tb;
+        });
+        const doc = new TabDoc(); doc.Title = 'Untitled';
+        lb.ItemsSource = [doc];
+
+        lb.Measure(new Size(400, 40));
+        lb.Arrange(new Rect(0, 0, 400, 40));
+
+        assert.equal(implicitFired, 0, 'implicit DataType template must NOT fire when ItemTemplate is set');
+        assert.ok(itemTemplateFired >= 1, 'the explicit ItemTemplate must render the row');
     });
 });

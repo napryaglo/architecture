@@ -78,6 +78,9 @@ import {
     type IShellModule,
 } from '../../runtime/index.js';
 import type { Geometry } from '../../visual-engine/index.js';
+import { SettingDefinition } from './settings/setting-definition.js';
+import { DocumentDefinition } from './documents/document-definition.js';
+import { CommandDefinition } from './commands/command-definition.js';
 
 // One service a module contributes to the app container: the token it registers
 // under (via ServiceProvider.tokenFor), the lazy factory that builds it, and the
@@ -149,6 +152,39 @@ export class ShellModule extends Model implements IShellModule
     // capabilities lazily updates the root nav layer reactively.
     public readonly Capabilities: ObservableCollection<Capability> =
         new ObservableCollection<Capability>();
+
+    // Declared setting definitions — the schemas this module contributes to the
+    // app's ApplicationSettings. Authored as a `.settings: { SettingDefinition …
+    // }` block in the module body: `.settings:` is a generic member-block, so
+    // each entry lowers to `module.Settings.Add(def)` (no bespoke compiler
+    // grammar). ApplicationSettings aggregates these across all composed modules
+    // (up-casting IShellModule → ShellModule, like NavigationService reads
+    // Capabilities). ObservableCollection for the same reactive-composition
+    // reason as Capabilities.
+    public readonly Settings: ObservableCollection<SettingDefinition> =
+        new ObservableCollection<SettingDefinition>();
+
+    // Declared document types — the schemas this module contributes to the app's
+    // DocumentTypeRegistry. Authored as a `.documents: { DocumentDefinition … }`
+    // block in the module body: `.documents:` is a generic member-block, so each
+    // entry lowers to `module.Documents.Add(def)` (the compiler remaps the
+    // lowercase section to this PascalCase collection, exactly as `.settings:` →
+    // `Settings`). DocumentTypeRegistry aggregates these across all composed
+    // modules (up-casting IShellModule → ShellModule, like ApplicationSettings
+    // reads Settings). ObservableCollection for the same reactive-composition
+    // reason as Capabilities / Settings.
+    public readonly Documents: ObservableCollection<DocumentDefinition> =
+        new ObservableCollection<DocumentDefinition>();
+
+    // Declared commands — the CommandDefinitions this module contributes to the
+    // app's CommandRegistry. Authored as a `.commands: { CommandDefinition … }`
+    // block: `.commands:` is a generic member-block, so each entry lowers to
+    // `module.Commands.Add(def)` (the compiler remaps the lowercase section to
+    // this PascalCase collection, exactly as `.settings:`/`.documents:`).
+    // CommandRegistry aggregates these across all composed modules; ToolbarService
+    // renders the ones whose Context the active document activates.
+    public readonly Commands: ObservableCollection<CommandDefinition> =
+        new ObservableCollection<CommandDefinition>();
 
     // Resources the module contributes — styles, brushes, templates, and the
     // icon geometries its capabilities paint. Authored as a `resources: { … }`

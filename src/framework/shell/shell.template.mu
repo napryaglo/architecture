@@ -37,7 +37,33 @@ resources Shells {
             [ ItemsSource        = $Items,
               SelectedItem       = $SelectedItem,
               Template           = @ActivityBarRail,
-              ItemContainerStyle = @ActivityBarItem ]
+              ItemContainerStyle = @ActivityBarItem,
+              Header             = @RailHeaderActions,
+              Footer             = @RailFooterActions ]
+    }
+
+    // Rail chrome-slot action lists — the Header (top) and Footer (bottom)
+    // slots of the activity bar present the NavigationService's HeaderActions /
+    // FooterActions (a settings gear, help, account, …). Each is a shared
+    // ItemsControl slotted into the rail's Header/Footer content DP; its
+    // DataContext is the NavigationService (inherited from the rail), so
+    // $HeaderActions / $FooterActions resolve. Empty collections render nothing,
+    // so a shell that contributes no actions shows a bare rail.
+    ItemsPanelTemplate x:key="RailActionsPanel" {
+        StackPanel [ Orientation = Vertical ]
+    }
+    ItemsControl x:key="RailHeaderActions"
+        [ ItemsSource = $HeaderActions, ItemsPanel = @RailActionsPanel ]
+    ItemsControl x:key="RailFooterActions"
+        [ ItemsSource = $FooterActions, ItemsPanel = @RailActionsPanel ]
+
+    // One rail action → an icon-only button that invokes its Command. Icon is
+    // the app-supplied Geometry the RailAction carries (the framework ships no
+    // icons); empty until the app provides one.
+    DataTemplate [DataType = RailAction] {
+        IconButton [ Variant = Standard, Command = $Command ] {
+            Shape [ Geometry = $Icon, Fill = @OnSurfaceVariant, Width = 22, Height = 22 ]
+        }
     }
 
     Template x:key="DefaultEditorShell" [TargetType = EditorShell] {
@@ -45,35 +71,133 @@ resources Shells {
             AdornerDecorator {
                 DockPanel [ LastChildFill = true ] {
                     Border x:name="PART_HeaderHost" [ DockPanel.Dock = Top ]
-                    StackPanel x:name="PART_CommandHost"
-                        [ DockPanel.Dock = Top,
-                          Orientation    = Vertical ]
-                    Border x:name="PART_StatusHost"
+
+                    // Command toolbar — data-driven. The ToolbarService filters
+                    // the app's declared CommandDefinitions by the active
+                    // document's command contexts and dispatches each to that
+                    // document; the strip is empty (and collapses) until an app
+                    // registers commands + a command-target document is active.
+                    Border x:name="PART_CommandHost"
+                        [ DockPanel.Dock  = Top,
+                          Background      = @SurfaceContainer,
+                          BorderBrush     = @OutlineVariant,
+                          BorderThickness = (0,0,0,1),
+                          Padding         = (8,4,8,4) ] {
+                        ItemsControl
+                            [ ItemsSource = $service(ToolbarService).VisibleCommands,
+                              ItemsPanel  = @CommandBarPanel ]
+                    }
+
+                    // Document tab strip — the open-document set (a
+                    // DocumentsContentHostService under ContentHostService.Key).
+                    // Empty for a plain single-object host, so it collapses.
+                    Border x:name="PART_DocumentTabHost"
+                        [ DockPanel.Dock  = Top,
+                          Background      = @SurfaceContainerLow,
+                          BorderBrush     = @OutlineVariant,
+                          BorderThickness = (0,0,0,1) ] {
+                        ListBox x:name="PART_DocumentTabs"
+                            [ DataContext  = $service(ContentHostService),
+                              ItemsSource  = $OpenDocuments,
+                              SelectedItem = $ActiveDocument,
+                              ItemTemplate = @DocumentTabTemplate,
+                              ItemsPanel   = @DocumentTabStripPanel,
+                              Background   = @SurfaceContainerLow ]
+                    }
+
+                    StatusBar x:name="PART_StatusHost"
                         [ DockPanel.Dock = Bottom,
-                          DataContext    = $service(StatusService) ]
+                          DataContext    = $service(StatusService),
+                          ItemsSource    = $Items ]
 
                     // capabilities navigation rail — the shell's activity bar.
                     ContentControl [ DockPanel.Dock = Left, Content = $service(NavigationService) ]
 
-                    // left sided panel that helps to interact with the selected capability
-                    ContentControl
+                    // Left panel for interacting with the selected capability —
+                    // a titled side pane (VSCode Explorer shape). A DEFINITE Width
+                    // + a Star content column (see DefaultShellSideContentPane) so
+                    // capability content has a bounded width to lay out against and
+                    // the drag handle below can resize it. Header = the active
+                    // capability's name; Commands = the active service's
+                    // HeaderCommands; Content = the active service, rendered by its
+                    // DataTemplate.
+                    ShellSideContentPane x:name="PART_SidePane"
                         [ DockPanel.Dock = Left,
-                          Width          = 300,
-                          Background     = @SurfaceContainer,
+                          Width          = 240,
+                          Header         = $service(NavigationService).SelectedItem.Label,
+                          Commands       = $service(NavigationService).ActiveService.HeaderCommands,
                           Content        = $service(NavigationService).ActiveService ]
 
-                    Border x:name="PART_InspectorHost"
+                    // Drag handle to resize the side pane. A Splitter resizes its
+                    // PREVIOUS sibling, so docked Left right after the pane it
+                    // rewrites the ShellSideContentPane's Width; Orientation
+                    // defaults to Vertical (ew-resize).
+                    Splitter [ DockPanel.Dock = Left, Width = 6 ]
+
+                    // Inspector region — presents the active document's Inspector
+                    // (a document exposes one when it has properties to edit; a
+                    // DiagramDocument → DiagramInspector → the Format Shape pane).
+                    // Empty (collapsed) when the active document has no inspector.
+                    // The pane owns its own width/chrome, so this presenter is bare.
+                    ContentPresenter x:name="PART_InspectorHost"
                         [ DockPanel.Dock = Right,
-                          DataContext    = $service(InspectorService) ]
-                    // Content region — presents the active capability's service.
-                    // NavigationService.ActiveService tracks the selected
-                    // destination's Capability.ServiceKey (resolved from the
-                    // container), so selecting a rail item swaps the content
-                    // shown here (fill, via LastChildFill).
+                          Content        = $service(ContentHostService).ActiveDocument.Inspector ]
+                    Splitter
+                        [ DockPanel.Dock   = Right,
+                          Width            = 6,
+                          Orientation      = Vertical,
+                          ReverseDirection = true ]
+
+                    // Content region — presents the ContentHostService's
+                    // current content (fill, via LastChildFill). Anything in
+                    // the app calls ContentHostService.View(x) to swap what's
+                    // shown; a DocumentsContentHostService (registered under the
+                    // same key) drives this from its ActiveDocument.
                     ContentPresenter x:name="PART_ContentHost"
+                        [ Content = $service(ContentHostService).Content ]
                 }
             }
         }
+    }
+
+    // Command bar: horizontal row; one button per CommandViewModel the
+    // ToolbarService surfaces (Command = the VM's RelayCommand; icon = the
+    // CommandDefinition's Icon).
+    ItemsPanelTemplate x:key="CommandBarPanel" {
+        StackPanel [ Orientation = Horizontal ]
+    }
+    DataTemplate [DataType = CommandViewModel] {
+        IconButton [ Variant = Standard, Command = $Command, Margin = (1,0,1,0) ] {
+            Shape [ Geometry = $Definition.Icon, Fill = @OnSurfaceVariant, Width = 20, Height = 20 ]
+        }
+    }
+
+    // Document tab: title + a close affordance. Applied explicitly as the tab
+    // strip's ItemTemplate (not DataType dispatch), so it renders ANY IDocument —
+    // every document carries Title / Id. Close reaches the host via `$service`
+    // (provider-scoped, resolves inside the per-item DataContext) and passes the
+    // document's Id. The close glyph is a text "✕" (the framework ships no icons).
+    // DataType is NOMINAL — a keyed DataTemplate registers by key only (never for
+    // dispatch), so RailAction here is just a parser placeholder.
+    DataTemplate x:key="DocumentTabTemplate" [DataType = RailAction] {
+        StackPanel [ Orientation = Horizontal, VerticalAlignment = Center ] {
+            TextBlock
+                [ Text              = $Title,
+                  Style             = @LabelLarge,
+                  Foreground        = @OnSurface,
+                  VerticalAlignment = Center,
+                  Margin            = (4,0,0,0) ]
+            IconButton
+                [ Variant          = Standard,
+                  Command          = $service(ContentHostService).CloseDocumentCommand,
+                  CommandParameter = $Id,
+                  Margin           = (2,0,0,0) ] {
+                TextBlock [ Text = "✕", FontSize = 11, Foreground = @OnSurfaceVariant ]
+            }
+        }
+    }
+    ItemsPanelTemplate x:key="DocumentTabStripPanel" {
+        StackPanel [ Orientation = Horizontal ]
     }
     Style [TargetType = EditorShell] {
         Template = @DefaultEditorShell;
@@ -99,5 +223,64 @@ resources Shells {
     }
     Style [TargetType = ViewerShell] {
         Template = @DefaultViewerShell;
+    }
+
+    // ── ShellSideContentPane — a titled side pane (VSCode Explorer shape) ──
+    // A header bar pairing a title (Header, left) with a Commands block (right),
+    // over the pane's Content. Header = the title STRING; Commands = a free
+    // content slot (a button row, a "…" menu); Content = the pane body.
+    //
+    // Layout is a two-row Grid — NOT a DockPanel — for one reason: ContentControl
+    // binds Content to the FIRST ContentPresenter in the template's depth-first
+    // walk. Declaring the content presenter FIRST (positioned into row 1 by
+    // Grid.Row) makes it that presenter; PART_Commands is a second, independent
+    // ContentPresenter the base ignores. In a DockPanel the fill child must be
+    // last, which would put the content presenter after Commands and mis-bind.
+    Template x:key="DefaultShellSideContentPane" [TargetType = ShellSideContentPane] {
+        Border
+            [ Background      = $$Background,
+              BorderBrush     = $$BorderBrush,
+              BorderThickness = $$BorderThickness ] {
+            Grid {
+                // Star column: the content fills the pane's definite Width (set
+                // on the pane instance in DefaultEditorShell), so capability
+                // content has a bounded width to lay out against (a WrapPanel
+                // wraps to it) and reflows live as the resize Splitter rewrites
+                // that Width. The pane is docked (not in the fill region), so
+                // Star fills the pane's own width, not the shell's content area.
+                ColumnDefinitions {
+                    ColumnDefinition [ Width = GridLength.Star ]
+                }
+                RowDefinitions {
+                    RowDefinition [ Height = GridLength.Auto ] // header bar
+                    RowDefinition [ Height = GridLength.Star ] // content body
+                }
+
+                // Content body FIRST → the ContentPresenter ContentControl uses.
+                ContentPresenter x:name="PART_ContentHost" [ Grid.Row = 1 ]
+
+                // Header bar: title fills, commands docked right. A DockPanel
+                // (not a Grid) so it sizes to content without needing row defs.
+                Border x:name="PART_Header"
+                    [ Grid.Row = 0,
+                      Padding  = (@Spacing3,@Spacing2,@Spacing2,@Spacing2) ] {
+                    DockPanel [ LastChildFill = true ] {
+                        ContentPresenter x:name="PART_Commands"
+                            [ DockPanel.Dock    = Right,
+                              Content           = $$Commands,
+                              VerticalAlignment = Center ]
+                        TextBlock x:name="PART_Title"
+                            [ Style             = @TitleSmall,
+                              Text              = $$Header,
+                              Foreground        = @OnSurfaceVariant,
+                              VerticalAlignment = Center ]
+                    }
+                }
+            }
+        }
+    }
+    Style [TargetType = ShellSideContentPane] {
+        Template = @DefaultShellSideContentPane;
+        Background = @SurfaceContainer;
     }
 }

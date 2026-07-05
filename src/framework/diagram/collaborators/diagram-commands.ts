@@ -3,6 +3,7 @@ import {
     RelayCommand,
     type CommandBase,
 } from '../../../runtime/index.js';
+import { CommandManager } from '../../commands/command-manager.js';
 import { findDescriptor } from '../../../runtime/model-internals.js';
 import type { Diagram } from '../diagram.js';
 import {
@@ -169,6 +170,12 @@ export class DiagramCommands
         {
             cmd.RaiseCanExecuteChanged();
         }
+        // Selection changed → command executability may have too. Pulse the
+        // global requery so a data-driven ToolbarService (whose CommandViewModel
+        // RelayCommands dispatch to this diagram via ICommandTarget, not to these
+        // internal commands directly) re-evaluates CanExecute. Harmless when no
+        // ToolbarService is present — the pulse just has no subscribers.
+        CommandManager.InvalidateRequerySuggested();
     }
 
     private _collectSelected(): AlignTarget[]
