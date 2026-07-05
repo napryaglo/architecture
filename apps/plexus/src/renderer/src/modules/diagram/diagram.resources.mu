@@ -48,7 +48,7 @@ resources DiagramResources {
     // reach its editing commands + selection-format state. DropReceiver = $Self
     // (the Diagram is on every canvas drop's bubble path). Mirrors the
     // Diagrammer demo's Diagram declaration (demo/demos/diagram).
-    DataTemplate [ DataType = DiagramDocument ] {
+    DataTemplate [DataType = DiagramDocument] {
         Diagram
             [ ItemsSource                  = $Nodes,
               Connectors                   = $Connectors,
@@ -60,12 +60,30 @@ resources DiagramResources {
               ConnectorInteractionsEnabled = true,
               ReflectSelectionToItems      = true,
               DropReceiver                 = $Self,
-              Focusable                    = true ]
+              Focusable                    = true,
+              ContextMenuService.ContextMenu = @DiagramContextMenu ]
     }
 
-    // ── Toolbox ItemsPanel — 2-column grid so the tiles fit a narrow pane ─
+    // ── Canvas context menu — "Format Shape" ────────────────────────────
+    // Right-click the canvas → "Format Shape" adds the document's DiagramInspector
+    // to the InspectorService, opening the Format Shape panel in the shell's
+    // Inspector region (reuse-by-key, so it re-surfaces the one panel). The menu's
+    // logical owner is the Diagram (DataContext = DiagramDocument), so `$Inspector`
+    // resolves the document's inspector and `$service(InspectorService)` the shell-
+    // scoped host. The pane then tracks the live selection through the inspector's
+    // View handle.
+    ContextMenu x:key="DiagramContextMenu" {
+        MenuItem
+            [ Header           = "Format Shape",
+              Command          = $service(InspectorService).AddInspectorCommand,
+              CommandParameter = $Inspector ]
+    }
+
+    // ── Toolbox ItemsPanel — a uniform-cell wrap grid so the tiles fit a
+    // narrow pane. IsUniformChildren sizes every cell to the largest tile, so
+    // the palette reads as an even grid regardless of per-shape label width. ─
     ItemsPanelTemplate x:key="DiagramToolboxPanel" {
-        WrapPanel
+        WrapPanel [ IsUniformChildren = true ]
     }
 
     // ── Toolbox tile — a draggable picture + label. The picture is the
@@ -103,10 +121,10 @@ resources DiagramResources {
     // the ToolBoxService subtype (exact-type match wins), rendering the live
     // $Shapes through the toolbox tile. ──
     DataTemplate [DataType = ToolBoxService] {
-        // No explicit Width — the shell's side pane now has a definite Width and
-        // a Star content column (see @PlexusSideContentPane), so this content
-        // measures against the pane width and the WrapPanel wraps to it.
         Border [ Padding = (8) ] {
+            // No explicit Width — the shell's side pane now has a definite Width and
+            // a Star content column (see @PlexusSideContentPane), so this content
+            // measures against the pane width and the WrapPanel wraps to it.
             DockPanel {
                 TextBlock
                     [ DockPanel.Dock = Top,
@@ -114,14 +132,6 @@ resources DiagramResources {
                       Style          = @LabelMedium,
                       Foreground     = @OnSurfaceVariant,
                       Margin         = (2,0,0,8) ]
-                TextBlock
-                    [ DockPanel.Dock = Bottom,
-                      Text           = "Drag a shape onto the canvas. Click to select; Ctrl-click to toggle; Shift-click to range-extend; drag-rectangle to marquee; Delete removes the selection.",
-                      TextWrapping   = Wrap,
-                      FontSize       = 10,
-                      MaxWidth       = 100,
-                      Foreground     = @OnSurfaceVariant,
-                      Margin         = (2,8,2,0) ]
                 // HorizontalScrollEnabled = false so the ScrollViewer measures
                 // its content at the viewport width instead of +Infinity —
                 // otherwise the WrapPanel gets unbounded width and never wraps

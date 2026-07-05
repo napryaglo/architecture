@@ -1,6 +1,6 @@
 import { MetaData, Model, Point, Size, type DrawingContext } from '../../runtime/index.js';
 import { LineGeometry } from '../../visual-engine/index.js';
-import { Orientation } from '../panels/stack-panel.js';
+import { Orientation } from '../panels/orientation.js';
 import { Shape } from './shape.js';
 
 // Straight-line shape. Two modes:

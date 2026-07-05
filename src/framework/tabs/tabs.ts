@@ -90,12 +90,22 @@ export class TabControl extends Selector
             ti.Content        = item;
             return;
         }
-        ti.Header         = item;
+        // Set HeaderTemplate BEFORE Header so the header slot (PART_Header)
+        // resolves through the header template, never a transient implicit
+        // fallback, the instant its Content ($$Header) is assigned.
         ti.HeaderTemplate = this.ItemTemplate;
-        // A data row's Content is the payload the content area presents via
-        // DataType dispatch (SelectedContent). Typed Model | Visual | undefined
-        // on ContentControl; a data row is a Model.
-        ti.Content        = item as Model;
+        ti.Header         = item;
+        // Do NOT set ti.Content in the data path. TabItem is a
+        // HeaderedContentControl and its default template's ONLY ContentPresenter
+        // is PART_Header — so ContentControl would present ti.Content THERE, and a
+        // data row (a document Model) would render through its implicit
+        // DataTemplate (e.g. DataTemplate[DiagramDocument] → a Diagram) INSIDE the
+        // tab header. For a document whose view hosts shared Visuals (the Diagram's
+        // node Visuals), that duplicate render collides with the content slot's
+        // view → "Visual already has a visual parent". The content area doesn't
+        // need it either: for a data row SelectedItem exposes the row itself (its
+        // Tag), so updateSelectedContent reads the row directly — ti.Content stays
+        // undefined and only the composed-markup path (author-set) uses it.
     }
 
     private updateSelectedContent(): void

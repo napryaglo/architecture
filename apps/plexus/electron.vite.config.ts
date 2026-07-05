@@ -30,6 +30,17 @@ export default defineConfig({
         },
       ],
     },
+    // mural is a `file:../..` linked package under active development. Vite's
+    // dep pre-bundler snapshots node_modules deps into .vite/deps at dev-server
+    // start and does NOT re-optimize when the linked dist changes underneath it —
+    // so a framework rebuild (new DPs, services, controls) is silently masked by
+    // a stale pre-bundle until the cache is manually cleared. Excluding mural from
+    // pre-bundling makes Vite serve the live dist on every request: rebuild the
+    // root dist and the renderer picks it up on reload, no cache dance. Safe —
+    // exclude only skips bundling, resolution is unaffected.
+    optimizeDeps: {
+      exclude: ['@visualisation-sub/mural'],
+    },
     build: {
       rollupOptions: {
         input: { index: resolve('src/renderer/index.html') },

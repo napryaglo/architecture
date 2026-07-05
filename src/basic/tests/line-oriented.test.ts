@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 import { Color, Point, Rect, Size, type DrawingContext } from '../../runtime/index.js';
 import { Brush, Pen, SolidColorBrush, LineGeometry } from '../../visual-engine/index.js';
 import type { Transform } from '../../visual-engine/drawing/transform.js';
-import { Orientation } from '../panels/stack-panel.js';
+import { Orientation } from '../panels/orientation.js';
 import { Line } from '../shapes/line.js';
 
 class CapturingContext implements DrawingContext

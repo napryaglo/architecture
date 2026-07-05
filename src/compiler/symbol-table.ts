@@ -114,6 +114,8 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['ToolbarService',          '@visualisation-sub/mural/framework/shell/commands/toolbar-service.js'],
     ['NavigationService',       '@visualisation-sub/mural/framework/shell/services/navigation-service.js'],
     ['InspectorService',        '@visualisation-sub/mural/framework/shell/services/inspector-service.js'],
+    ['InspectorPanel',          '@visualisation-sub/mural/framework/shell/inspector/inspector-panel.js'],
+    ['InspectorStack',          '@visualisation-sub/mural/framework/shell/inspector/inspector-stack.js'],
     ['StatusService',           '@visualisation-sub/mural/framework/shell/services/status-service.js'],
     ['ContentHostService',      '@visualisation-sub/mural/framework/shell/services/content-host-service.js'],
     ['DocumentsContentHostService', '@visualisation-sub/mural/framework/shell/services/documents-content-host-service.js'],

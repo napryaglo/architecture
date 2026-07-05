@@ -1,7 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { Rect, Size, Element, Visual } from '../../runtime/index.js';
-import { Orientation } from '../panels/stack-panel.js';
+import { Orientation } from '../panels/orientation.js';
 import { WrapPanel } from '../panels/wrap-panel.js';
 
 class FixedSizeLeaf extends Element

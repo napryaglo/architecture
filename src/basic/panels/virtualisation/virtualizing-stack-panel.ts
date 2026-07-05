@@ -6,7 +6,7 @@ import {
     Visual,
     type IScrollInfo,
 } from '../../../runtime/index.js';
-import { Orientation } from '../stack-panel.js';
+import { Orientation } from '../orientation.js';
 import { VirtualizingPanel } from './virtualizing-panel.js';
 
 // Stack panel that realizes containers only for items intersecting the

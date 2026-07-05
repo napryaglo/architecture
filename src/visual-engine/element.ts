@@ -1049,6 +1049,17 @@ export class Element extends Visual implements ITriggerHost
         child._refresh_dynamic_resources_subtree();
     }
 
+    /** @internal Detach this Element from its current logical parent, if any.
+     *  Logical-tree companion to Visual._release_from_visual_parent: a content
+     *  host (ContentControl) calls it to CLAIM a shared Visual that a discarded
+     *  prior view still holds as a logical child, instead of hitting the
+     *  single-parent guard in AttachLogical. No-op when already parentless. */
+    public override _release_from_logical_parent(): void
+    {
+        const parent = this.GetLogicalParent();
+        if (parent instanceof Element) parent.DetachLogical(this);
+    }
+
     // ── Overlay children (logical-owner-side wiring) ─────────────────
     //
     // Elements that THIS Element owns as overlay-mounted children —

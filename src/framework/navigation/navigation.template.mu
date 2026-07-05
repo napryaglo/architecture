@@ -194,8 +194,25 @@ resources Navigation {
     // chrome). Colours are theme tokens, so the bar tracks the active scheme
     // rather than hardcoding VSCode grey.
 
-    // Rail chrome — a 48dp column with header/footer slots; items stack
+    // A vertical-stack items panel for the header / footer action lists below.
+    ItemsPanelTemplate x:key="RailActionsPanel" {
+        StackPanel [ Orientation = Vertical ]
+    }
+
+    // Rail chrome — a 48dp column with header/footer action lists; items stack
     // vertically via the rail's default ItemsPanel (DefaultNavigationRailPanel).
+    //
+    // The header (top) and footer (bottom) present the NavigationService's
+    // HeaderActions / FooterActions (a settings gear, help, account, …) as
+    // ItemsControls INLINE in the template body — NOT via the rail's Header /
+    // Footer content DPs. Inlining is deliberate: each rail materialises its
+    // OWN action-list ItemsControls, so multiple live shells (multiple rails)
+    // each parent their own. A shared keyed Visual resource slotted through the
+    // Header / Footer DPs can't do that — a Visual has ONE parent, so the
+    // second rail throws on attach. Their DataContext is the NavigationService
+    // (inherited from the rail), so `$HeaderActions` / `$FooterActions` resolve;
+    // each action renders through DataTemplate[RailAction]. Empty collections
+    // render nothing, so a shell that contributes no actions shows a bare rail.
     Template x:key="ActivityBarRail" [TargetType = NavigationRail] {
         Border x:name="PART_Border"
             [ Background      = @SurfaceContainerHigh,
@@ -203,10 +220,18 @@ resources Navigation {
               BorderThickness = (0,0,1,0),
               Width           = 48 ] {
             DockPanel [ LastChildFill = true ] {
-                ContentPresenter x:name="PART_HeaderSlot"
-                    [ DockPanel.Dock = Top, HorizontalAlignment = Center, Margin = (0,8,0,8) ]
-                ContentPresenter x:name="PART_FooterSlot"
-                    [ DockPanel.Dock = Bottom, HorizontalAlignment = Center, Margin = (0,8,0,8) ]
+                ItemsControl x:name="PART_HeaderActions"
+                    [ DockPanel.Dock     = Top,
+                      HorizontalAlignment = Center,
+                      Margin              = (0,8,0,8),
+                      ItemsSource         = $HeaderActions,
+                      ItemsPanel          = @RailActionsPanel ]
+                ItemsControl x:name="PART_FooterActions"
+                    [ DockPanel.Dock     = Bottom,
+                      HorizontalAlignment = Center,
+                      Margin              = (0,8,0,8),
+                      ItemsSource         = $FooterActions,
+                      ItemsPanel          = @RailActionsPanel ]
                 ItemsPresenter x:name="PART_ItemsPresenter" [ VerticalAlignment = Top ]
             }
         }

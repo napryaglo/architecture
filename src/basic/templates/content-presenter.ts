@@ -75,6 +75,11 @@ export class ContentPresenter extends Element
         this._content = content;
         if (content !== undefined)
         {
+            // The slotted Visual may be SHARED and still visually parented to a
+            // now-discarded prior view (see ContentControl.applyContent). Claim it
+            // from that stale parent before attaching, so re-presenting a shared
+            // Visual doesn't trip AttachVisual's single-parent guard.
+            content._release_from_visual_parent();
             this.AttachVisual(content);
             // Pick up values inherited through the VISUAL tree (e.g. a
             // host ControlTemplate's `TextBlock.Foreground` on a

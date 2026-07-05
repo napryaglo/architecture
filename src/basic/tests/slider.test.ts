@@ -7,7 +7,7 @@ import { Application, Key, NoModifiers, PointerButton, Rect, Size, type KeyEvent
 import { InputManager } from '../../framework/index.js';;
 import { HeadlessTarget } from '../../visual-engine/index.js';
 import { Slider } from '../slider.js';
-import { Orientation } from '../panels/stack-panel.js';
+import { Orientation } from '../panels/orientation.js';
 
 function pointer(overrides: Partial<PointerEventInit> = {}): PointerEventInit
 {

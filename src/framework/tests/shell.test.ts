@@ -1,15 +1,26 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { Application } from '../../runtime/index.js';
+import { Application, type Visual } from '../../runtime/index.js';
 import { initTestApp } from '../../basic/tests/test-app.js';
 
 import { Border } from '../../basic/border.js';
+import { ContentControl } from '../base/content-control.js';
 import { EditorShell } from '../shell/editor-shell.js';
 import { ViewerShell } from '../shell/viewer-shell.js';
 import { NavigationService } from '../shell/services/navigation-service.js';
 import { StatusService } from '../shell/services/status-service.js';
 import { ApplicationSettings } from '../shell/services/application-settings-service.js';
 import { NavigationRail } from '../navigation/navigation-rail.js';
+
+// Depth-first search of a visual subtree for the first instance of a type.
+function findByType<T>(root: Visual, ctor: new (...a: never[]) => T): T | undefined {
+    if (root instanceof ctor) return root;
+    for (const c of root.visualChildren) {
+        const hit = findByType(c, ctor);
+        if (hit !== undefined) return hit;
+    }
+    return undefined;
+}
 
 describe('EditorShell — full region set', () => {
     beforeEach(() => { initTestApp(); });
@@ -48,27 +59,33 @@ describe('Shell — region services', () => {
             .registerScoped(StatusService.Key,     (p) => new StatusService(p));
     });
 
-    test('region host DataContext resolves the scoped service via the markup $service binding', () => {
+    test('region hosts resolve their scoped service via the markup $service binding', async () => {
         const shell = new EditorShell();
-        const navHost    = shell.visualChildren[0].FindName('PART_NavHost')    as Border;
+        const navHost    = shell.visualChildren[0].FindName('PART_NavHost')    as ContentControl;
         const statusHost = shell.visualChildren[0].FindName('PART_StatusHost') as Border;
-        // The hosts bind `DataContext = $service(...)` in the shell template;
-        // the binding resolves against the shell's published ServiceScope.
-        assert.equal(navHost.DataContext,    shell.Services.get(NavigationService.Key));
+        // Let the ServiceBinding forward-ref retry settle on the published scope.
+        await Promise.resolve(); await Promise.resolve();
+        // The status host binds `DataContext = $service(StatusService)`; the nav
+        // host binds `Content = $service(NavigationService)` (rendered by
+        // DataTemplate[NavigationService] as an activity-bar rail). Both resolve
+        // against the shell's published ServiceScope.
         assert.equal(statusHost.DataContext, shell.Services.get(StatusService.Key));
-        assert.ok(navHost.DataContext instanceof NavigationService);
+        assert.equal(navHost.Content,        shell.Services.get(NavigationService.Key));
+        assert.ok(navHost.Content instanceof NavigationService);
     });
 
-    test('Navigation host is an activity-bar rail bound to the service destinations', () => {
+    test('Navigation host renders an activity-bar rail bound to the service destinations', async () => {
         const shell = new EditorShell();
-        const navHost = shell.visualChildren[0].FindName('PART_NavHost');
-        assert.ok(navHost instanceof NavigationRail, 'PART_NavHost is a NavigationRail');
-        // The rail's `DataContext = $service(NavigationService)` resolved to the
-        // shell-scoped service; `ItemsSource = $Items` then bound to its live
-        // destinations collection.
-        const svc = navHost.DataContext as NavigationService;
+        const navHost = shell.visualChildren[0].FindName('PART_NavHost') as ContentControl;
+        await Promise.resolve(); await Promise.resolve();
+        // The nav host presents the NavigationService; DataTemplate[NavigationService]
+        // materialises a NavigationRail whose DataContext IS the service.
+        const rail = findByType(navHost, NavigationRail);
+        assert.ok(rail !== undefined, 'nav host materialised a NavigationRail');
+        const svc = rail!.DataContext as NavigationService;
         assert.ok(svc instanceof NavigationService);
-        assert.equal(navHost.ItemsSource, svc.Items);
+        // `ItemsSource = $Items` bound to the service's live destinations.
+        assert.equal(rail!.ItemsSource, svc.Items);
     });
 
     test('EditorShell auto-provides ApplicationSettings (aggregates module settings)', () => {
@@ -89,7 +106,7 @@ describe('Shell — region services', () => {
         assert.notEqual(navA, navB);
     });
 
-    test('Dispose tears down the scope, disposing its services', () => {
+    test('Dispose tears down the scope, disposing its services', async () => {
         let disposed = false;
         class SpyNav extends NavigationService {
             public override Dispose(): void { disposed = true; super.Dispose(); }
@@ -98,8 +115,10 @@ describe('Shell — region services', () => {
         // scope resolves (and caches) it when the markup binding resolves.
         Application.current.Services.registerScoped(NavigationService.Key, () => new SpyNav());
         const shell = new EditorShell();
-        const nav = shell.visualChildren[0].FindName('PART_NavHost') as Border;
-        assert.ok(nav.DataContext instanceof SpyNav);
+        const navHost = shell.visualChildren[0].FindName('PART_NavHost') as ContentControl;
+        await Promise.resolve(); await Promise.resolve();
+        const rail = findByType(navHost, NavigationRail);
+        assert.ok(rail?.DataContext instanceof SpyNav, 'rail resolved the shell-scoped SpyNav');
         shell.Dispose();
         assert.equal(disposed, true);
     });

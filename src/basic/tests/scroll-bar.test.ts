@@ -4,7 +4,7 @@ import { initTestApp } from './test-app.js';
 
 import { Application, NoModifiers, PointerButton, Rect, Size, Element, Visual, type PointerEventInit } from '../../runtime/index.js';
 import { InputManager } from '../../framework/index.js';;
-import { Orientation } from '../panels/stack-panel.js';
+import { Orientation } from '../panels/orientation.js';
 import { ScrollBar } from '../scroll/scroll-bar.js';
 
 function pointer(overrides: Partial<PointerEventInit> = {}): PointerEventInit

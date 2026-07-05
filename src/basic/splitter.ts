@@ -14,7 +14,7 @@ import {
 } from '../runtime/index.js';
 import { resolveKey } from '../runtime/model-internals.js';
 import { Brush } from '../visual-engine/index.js';
-import { Orientation } from './panels/stack-panel.js';
+import { Orientation } from './panels/orientation.js';
 import { Thumb, type DragDeltaEventArgs, type DragStartedEventArgs, type DragCompletedEventArgs } from './scroll/thumb.js';
 
 // Default brush for the drag-preview adorner — Material Primary so

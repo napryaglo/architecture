@@ -9,7 +9,7 @@ import {
     type PropertyDescriptor,
 } from '../../runtime/index.js';
 import type { Border } from '../border.js';
-import { Orientation } from '../panels/stack-panel.js';
+import { Orientation } from '../panels/orientation.js';
 import { TemplatedControl } from '../templated-control.js';
 
 

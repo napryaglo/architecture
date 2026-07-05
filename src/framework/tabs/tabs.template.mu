@@ -27,12 +27,15 @@ resources Tabs {
               BorderThickness = (0,0,0,1) ] {
             DockPanel [ LastChildFill = true ] {
                 ItemsPresenter x:name="PART_ItemsPresenter" [ DockPanel.Dock = Top ]
-                // The active tab's BODY. SelectedContent normalises the
-                // data-driven vs composed-markup paths (see TabControl) so a
-                // single presenter shows the right thing: a data row is
-                // dispatched through its DataTemplate; a composed TabItem's
-                // Content is slotted directly.
-                ContentPresenter x:name="PART_ContentSlot" [ Content = $SelectedContent ]
+                // The active tab's BODY. SelectedContent (a property of the
+                // templated TabControl) normalises the data-driven vs composed-
+                // markup paths (see TabControl) so a single presenter shows the
+                // right thing: a data row is dispatched through its DataTemplate;
+                // a composed TabItem's Content is slotted directly. `$$` is a
+                // TEMPLATE binding to the templated parent's SelectedContent — a
+                // plain `$SelectedContent` would bind against the TabControl's
+                // DataContext (the content-host service) and resolve to nothing.
+                ContentPresenter x:name="PART_ContentSlot" [ Content = $$SelectedContent ]
             }
         }
     }

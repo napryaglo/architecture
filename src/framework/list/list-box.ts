@@ -9,7 +9,8 @@ import { ContentControl } from '../base/content-control.js';
 import { Border } from '../../basic/border.js';
 import { findDataTemplateForType } from '../../basic/templates/data-template.js';
 import { Selector } from './selector.js';
-import { Orientation, StackPanel } from '../../basic/panels/stack-panel.js';
+import { StackPanel } from '../../basic/panels/stack-panel.js';
+import { Orientation } from '../../basic/panels/orientation.js';
 import { ScrollViewer } from '../surfaces/scroll-viewer.js';
 import { TextBlock } from '../../basic/text-block.js';
 

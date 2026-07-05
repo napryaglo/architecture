@@ -5,14 +5,7 @@ import {
     Rect,
     Size,
 } from '../../runtime/index.js';
-
-// Stack direction. Vertical (the default) lays children top-down;
-// horizontal lays them left-to-right. Matches WPF's Orientation enum.
-export enum Orientation
-{
-    Vertical   = 'Vertical',
-    Horizontal = 'Horizontal',
-}
+import { Orientation } from './orientation.js';
 
 // Lightweight vertical / horizontal stack layout. Children measure with
 // infinite space along the stack axis and the available cross-axis

@@ -1,6 +1,6 @@
 import { MetaData, Model, Element } from '../../runtime/index.js';
 import { TemplatedControl } from '../../basic/templated-control.js';
-import { Orientation } from '../../basic/panels/stack-panel.js';
+import { Orientation } from '../../basic/panels/orientation.js';
 
 // M3 Divider — 1dp rule that separates sibling content along either
 // the horizontal or vertical axis.

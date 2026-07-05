@@ -32,30 +32,19 @@ resources Shells {
     // remaining rectangle. The hosts ship empty and zero-size — an
     // unused region simply collapses.
 
+    // The activity bar's header / footer action lists live INLINE in the
+    // @ActivityBarRail template (navigation.template.mu), presenting the
+    // NavigationService's HeaderActions / FooterActions — so each rail
+    // materialises its own (a shared keyed Visual can't parent into multiple
+    // rails). This template just points the rail at that chrome + its item
+    // container style.
     DataTemplate [DataType = NavigationService] {
         NavigationRail
             [ ItemsSource        = $Items,
               SelectedItem       = $SelectedItem,
               Template           = @ActivityBarRail,
-              ItemContainerStyle = @ActivityBarItem,
-              Header             = @RailHeaderActions,
-              Footer             = @RailFooterActions ]
+              ItemContainerStyle = @ActivityBarItem ]
     }
-
-    // Rail chrome-slot action lists — the Header (top) and Footer (bottom)
-    // slots of the activity bar present the NavigationService's HeaderActions /
-    // FooterActions (a settings gear, help, account, …). Each is a shared
-    // ItemsControl slotted into the rail's Header/Footer content DP; its
-    // DataContext is the NavigationService (inherited from the rail), so
-    // $HeaderActions / $FooterActions resolve. Empty collections render nothing,
-    // so a shell that contributes no actions shows a bare rail.
-    ItemsPanelTemplate x:key="RailActionsPanel" {
-        StackPanel [ Orientation = Vertical ]
-    }
-    ItemsControl x:key="RailHeaderActions"
-        [ ItemsSource = $HeaderActions, ItemsPanel = @RailActionsPanel ]
-    ItemsControl x:key="RailFooterActions"
-        [ ItemsSource = $FooterActions, ItemsPanel = @RailActionsPanel ]
 
     // One rail action → an icon-only button that invokes its Command. Icon is
     // the app-supplied Geometry the RailAction carries (the framework ships no
@@ -94,7 +83,10 @@ resources Shells {
                           ItemsSource    = $Items ]
 
                     // capabilities navigation rail — the shell's activity bar.
-                    ContentControl [ DockPanel.Dock = Left, Content = $service(NavigationService) ]
+                    // Presents the NavigationService, rendered by
+                    // DataTemplate[NavigationService] as an @ActivityBarRail.
+                    ContentControl x:name="PART_NavHost"
+                        [ DockPanel.Dock = Left, Content = $service(NavigationService) ]
 
                     // Left panel for interacting with the selected capability —
                     // a titled side pane (VSCode Explorer shape). A DEFINITE Width
@@ -117,14 +109,16 @@ resources Shells {
                     // defaults to Vertical (ew-resize).
                     Splitter [ DockPanel.Dock = Left, Width = 6 ]
 
-                    // Inspector region — presents the active document's Inspector
-                    // (a document exposes one when it has properties to edit; a
-                    // DiagramDocument → DiagramInspector → the Format Shape pane).
-                    // Empty (collapsed) when the active document has no inspector.
-                    // The pane owns its own width/chrome, so this presenter is bare.
+                    // Inspector region — presents the InspectorService, a HOST for
+                    // multiple dynamically-added inspectors, rendered by
+                    // DataTemplate[InspectorService] as a pinned, collapsible panel
+                    // stack (VS-style property panels). Something in the app Add()s
+                    // an inspector (e.g. a diagram's "Format Shape" command adds a
+                    // DiagramInspector → the Format Shape pane). Empty ⇒ zero-width ⇒
+                    // the region collapses.
                     ContentPresenter x:name="PART_InspectorHost"
                         [ DockPanel.Dock = Right,
-                          Content        = $service(ContentHostService).ActiveDocument.Inspector ]
+                          Content        = $service(InspectorService) ]
                     Splitter
                         [ DockPanel.Dock   = Right,
                           Width            = 6,
@@ -180,6 +174,14 @@ resources Shells {
     // text "✕" (the framework ships no icons). The title leaves Foreground
     // UNSET so it inherits the TabItem's selection ink (@OnSurfaceVariant at
     // rest, @Primary when selected — see the TabItem Style).
+    //
+    // DataType is nominal here: the template is KEYED and applied explicitly as
+    // the TabControl's ItemTemplate (never type-dispatched), so a keyed template
+    // registers under its key alone — the DataType never drives resolution. The
+    // compiler nonetheless requires a DataType on every DataTemplate, and the
+    // framework ships no concrete IDocument class to name, so this carries the
+    // structurally-compatible RailAction (also a Command-bearing row) as a
+    // placeholder. See the note in the shell tests.
     DataTemplate x:key="DocumentTabHeaderTemplate" [DataType = RailAction] {
         StackPanel [ Orientation = Horizontal, VerticalAlignment = Center ] {
             TextBlock [ Text = $Title, VerticalAlignment = Center, Margin = (4,0,0,0) ]
@@ -216,6 +218,77 @@ resources Shells {
     }
     Style [TargetType = ViewerShell] {
         Template = @DefaultViewerShell;
+    }
+
+    // ── Inspector region — a pinned, collapsible inspector-panel stack ──────
+    // The InspectorService hosts a dynamic set of inspectors; the region renders
+    // it as a vertical stack of collapsible panels. Each panel's BODY is the
+    // inspector rendered through its own DataTemplate[DataType=<inspector>]; the
+    // titled, collapsible chrome comes from the InspectorPanel container. Empty ⇒
+    // the InspectorStack measures zero and the docked region collapses.
+    DataTemplate [DataType = InspectorService] {
+        ScrollViewer [ IsAutoHideScrollBars = false, HorizontalScrollEnabled = false ] {
+            InspectorStack [ ItemsSource = $Inspectors, ItemsPanel = @InspectorStackPanel ]
+        }
+    }
+
+    // Vertical panel host for the inspector stack.
+    ItemsPanelTemplate x:key="InspectorStackPanel" {
+        StackPanel [ Orientation = Vertical ]
+    }
+
+    // ── InspectorPanel — one titled, collapsible section ────────────────────
+    // Header bar: a chrome-less toggle (chevron + title) that fills the row and
+    // flips IsExpanded via ToggleExpandedCommand, plus a close affordance docked
+    // right (reaches the host via $service and passes the inspector's Id). Body:
+    // the ContentPresenter ContentControl slots the inspector into — hidden by
+    // the `when (IsExpanded = false)` trigger so the panel shrinks to its header.
+    Template x:key="DefaultInspectorPanel" [TargetType = InspectorPanel] {
+        Border x:name="PART_Border"
+            [ Width           = 300,
+              Background      = @SurfaceContainerLow,
+              BorderBrush     = @OutlineVariant,
+              BorderThickness = (0,0,0,1) ] {
+            DockPanel [ LastChildFill = true ] {
+                Border x:name="PART_HeaderBar"
+                    [ DockPanel.Dock = Top,
+                      Background     = @SurfaceContainer,
+                      Padding        = (4,2,4,2) ] {
+                    DockPanel [ LastChildFill = true ] {
+                        IconButton
+                            [ DockPanel.Dock  = Right,
+                              Variant          = Standard,
+                              Command          = $service(InspectorService).CloseInspectorCommand,
+                              CommandParameter = $Id ] {
+                            TextBlock [ Text = "✕", FontSize = 11, Foreground = @OnSurfaceVariant ]
+                        }
+                        IconButton x:name="PART_HeaderToggle"
+                            [ Variant = Standard,
+                              Command = $$ToggleExpandedCommand ] {
+                            StackPanel [ Orientation = Horizontal, VerticalAlignment = Center, HorizontalAlignment = Left ] {
+                                TextBlock x:name="PART_Chevron"
+                                    [ Text       = "▾",
+                                      FontSize   = 10,
+                                      Foreground = @OnSurfaceVariant,
+                                      Margin     = (0,0,6,0) ]
+                                TextBlock
+                                    [ Text       = $Title,
+                                      Style      = @LabelMedium,
+                                      Foreground = @OnSurfaceVariant ]
+                            }
+                        }
+                    }
+                }
+                ContentPresenter x:name="PART_Body"
+            }
+        }
+        when ( IsExpanded = false ) {
+            PART_Body.Visibility = Collapsed;
+            PART_Chevron.Text    = "▸";
+        }
+    }
+    Style [TargetType = InspectorPanel] {
+        Template = @DefaultInspectorPanel;
     }
 
     // ── ShellSideContentPane — a titled side pane (VSCode Explorer shape) ──

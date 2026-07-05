@@ -7,7 +7,8 @@ import { InputManager } from '../../../framework/index.js';;
 import { HeadlessTarget } from '../../../visual-engine/index.js';
 import { ComboBox } from '../combo-box.js';
 import { Border } from '../../../basic/border.js';
-import { Orientation, StackPanel } from '../../../basic/panels/stack-panel.js';
+import { StackPanel } from '../../../basic/panels/stack-panel.js';
+import { Orientation } from '../../../basic/panels/orientation.js';
 import { TextBlock } from '../../../basic/text-block.js';
 
 function pointer(overrides: Partial<PointerEventInit> = {}): PointerEventInit

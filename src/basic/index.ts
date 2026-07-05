@@ -90,7 +90,8 @@ export { SpinEdit } from './spin-edit.js';
 export { Slider, SliderLayout } from './slider.js';
 export { SliderSpinEdit } from './slider-spin-edit.js';
 export { PageView } from './page-view.js';
-export { StackPanel, Orientation } from './panels/stack-panel.js';
+export { Orientation } from './panels/orientation.js';
+export { StackPanel } from './panels/stack-panel.js';
 export { WrapPanel } from './panels/wrap-panel.js';
 export { UniformGrid } from './panels/uniform-grid.js';
 export {

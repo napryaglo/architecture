@@ -17,7 +17,8 @@ import type { PresentationTarget, PointerEventArgs } from '../../visual-engine/i
 import { Border } from '../../basic/border.js';
 import { ClickableBorder } from '../../basic/clickable-border.js';
 import { Canvas } from '../../basic/panels/canvas.js';
-import { StackPanel, Orientation } from '../../basic/panels/stack-panel.js';
+import { StackPanel } from '../../basic/panels/stack-panel.js';
+import { Orientation } from '../../basic/panels/orientation.js';
 import { WrapPanel } from '../../basic/panels/wrap-panel.js';
 import { ColorScheme, OFFICE_COLOR_SCHEMES } from './color-scheme.js';
 import { Slider } from '../../basic/slider.js';

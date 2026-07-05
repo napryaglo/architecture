@@ -15,7 +15,8 @@ import {
 import type { PresentationTarget } from '../../visual-engine/index.js';
 import { RotateTransform } from '../../visual-engine/index.js';
 import { ClickAwayScrim } from '../../basic/click-away-scrim.js';
-import { StackPanel, Orientation } from '../../basic/panels/stack-panel.js';
+import { StackPanel } from '../../basic/panels/stack-panel.js';
+import { Orientation } from '../../basic/panels/orientation.js';
 import { TextBlock } from '../../basic/text-block.js';
 import { FloatingActionButton } from './fab.js';
 

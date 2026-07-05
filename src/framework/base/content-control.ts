@@ -106,6 +106,13 @@ export class ContentControl extends Control
 
         if (newValue instanceof Visual)
         {
+            // A Visual bound as Content may be SHARED and still logically
+            // parented to a now-discarded prior view (e.g. a
+            // ToolboxShape.PreviewNode Figure bound into a palette tile whose view
+            // a capability switch tore down, then re-presented on switch-back).
+            // Claim it — release from the stale parent — instead of tripping the
+            // single-parent guard in AttachLogical.
+            newValue._release_from_logical_parent();
             this.AttachLogical(newValue);
         }
 

@@ -11,7 +11,8 @@ import {
 } from '../../runtime/index.js';
 import { Brush } from '../../visual-engine/index.js';
 import { Button } from '../buttons/button.js';
-import { Orientation, StackPanel } from '../../basic/panels/stack-panel.js';
+import { StackPanel } from '../../basic/panels/stack-panel.js';
+import { Orientation } from '../../basic/panels/orientation.js';
 import { TextBlock } from '../../basic/text-block.js';
 import { ToggleButton } from '../buttons/toggle-button.js';
 

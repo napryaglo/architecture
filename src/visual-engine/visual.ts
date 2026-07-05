@@ -937,6 +937,23 @@ export class Visual extends Model
         child.SetTarget(undefined);
     }
 
+    /** @internal Detach this Visual from its current visual parent, if any.
+     *  Used by content hosts (ContentPresenter) to CLAIM a Visual that a
+     *  now-discarded prior view still references — re-presenting a shared Visual
+     *  (e.g. a ToolboxShape.PreviewNode bound into a palette tile whose view a
+     *  capability switch tore down) would otherwise hit the single-parent guard
+     *  in AttachVisual. No-op when already parentless. */
+    public _release_from_visual_parent(): void
+    {
+        this._visualParent?.DetachVisual(this);
+    }
+
+    /** @internal Logical-tree companion — Visual-tier no-op (plain Visuals carry
+     *  no logical-tree state); Element overrides to detach from its logical
+     *  parent. Lets content hosts release a Visual of unknown Element-ness
+     *  without branching. */
+    public _release_from_logical_parent(): void { }
+
     // LOGICAL-tree wiring only: sets the child's logical parent and
     // refreshes property-value inheritance for the new ancestry. Use
     // directly from templating code when slotting consumer-supplied

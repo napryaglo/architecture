@@ -3,6 +3,7 @@ import { ShellBase } from './shell.js';
 import { NavigationService } from './services/navigation-service.js';
 import { ContentHostService } from './services/content-host-service.js';
 import { DocumentsContentHostService } from './services/documents-content-host-service.js';
+import { InspectorService } from './services/inspector-service.js';
 import { ApplicationSettings } from './services/application-settings-service.js';
 import { DocumentTypeRegistry } from './documents/document-type-registry.js';
 import { CommandRegistry } from './commands/command-registry.js';
@@ -60,6 +61,15 @@ export class EditorShell extends ShellBase
         if (!this.Services.has(ContentHostService.Key))
         {
             this.Services.registerScoped(ContentHostService.Key, (p) => new DocumentsContentHostService(p));
+        }
+        // Provide the Inspector region's service by default: an InspectorService
+        // (the multi-inspector host). The region presents it, rendered by
+        // `DataTemplate[InspectorService]` as a collapsible panel stack; it starts
+        // empty (region collapsed) until something Add()s an inspector. Same
+        // opt-out guard — an app that registers its own up-chain wins.
+        if (!this.Services.has(InspectorService.Key))
+        {
+            this.Services.registerScoped(InspectorService.Key, (p) => new InspectorService(p));
         }
         // Provide the ApplicationSettings service by default: aggregates every
         // composed module's declared SettingDefinitions into live, modifiable

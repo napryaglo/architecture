@@ -6,7 +6,7 @@ import {
     Size,
     Visual,
 } from '../../runtime/index.js';
-import { Orientation } from './stack-panel.js';
+import { Orientation } from './orientation.js';
 
 // Flowing layout — children pack along the primary axis until adding
 // another would exceed the available primary extent, at which point the
@@ -44,8 +44,57 @@ export class WrapPanel extends Panel
         WrapPanel, 'Orientation', Orientation.Horizontal,
         MetaData.Measure | MetaData.Arrange);
 
+    // When true, every cell is sized to the LARGEST child's desired size — a
+    // uniform grid of equal, content-sized cells (the palette-tile shape).
+    // The panel still WRAPS by how many uniform cells fit the available
+    // primary extent; contrast UniformGrid, which instead partitions the
+    // container into a fixed Rows×Columns of container-derived cells.
+    public static readonly IsUniformChildrenKey = Model.RegisterProperty<boolean>(
+        WrapPanel, 'IsUniformChildren', false,
+        MetaData.Measure | MetaData.Arrange);
+
     public get Orientation(): Orientation { return this.get_property_value(WrapPanel.OrientationKey); }
     public set Orientation(v: Orientation) { this.set_property_value(WrapPanel.OrientationKey, v); }
+
+    public get IsUniformChildren(): boolean { return this.get_property_value(WrapPanel.IsUniformChildrenKey); }
+    public set IsUniformChildren(v: boolean) { this.set_property_value(WrapPanel.IsUniformChildrenKey, v); }
+
+    // Measure helper for uniform mode. OFF → returns undefined (caller
+    // measures each child itself). ON → measures every child at
+    // `childAvailable` to find the largest desired W/H, RE-measures each child
+    // against that uniform box (so stretchy / wrapping content lays out at the
+    // shared size), and returns the uniform Size for the layout to use as
+    // every child's extent.
+    private measureUniformChildren(childAvailable: Size): Size | undefined
+    {
+        if (!this.IsUniformChildren) return undefined;
+        let w = 0;
+        let h = 0;
+        for (const child of this.visualChildren)
+        {
+            child.Measure(childAvailable);
+            if (child.DesiredSize.Width  > w) w = child.DesiredSize.Width;
+            if (child.DesiredSize.Height > h) h = child.DesiredSize.Height;
+        }
+        const uniform = new Size(w, h);
+        for (const child of this.visualChildren) child.Measure(uniform);
+        return uniform;
+    }
+
+    // Arrange-time companion: the uniform child extent (max desired across the
+    // already-measured children), or undefined when the mode is off.
+    private uniformChildSize(): Size | undefined
+    {
+        if (!this.IsUniformChildren) return undefined;
+        let w = 0;
+        let h = 0;
+        for (const child of this.visualChildren)
+        {
+            if (child.DesiredSize.Width  > w) w = child.DesiredSize.Width;
+            if (child.DesiredSize.Height > h) h = child.DesiredSize.Height;
+        }
+        return new Size(w, h);
+    }
 
     protected override MeasureOverride(availableSize: Size): Size
     {
@@ -60,10 +109,15 @@ export class WrapPanel extends Panel
         let totalPrimary = 0;
         let totalCross   = 0;
 
+        // Uniform mode measures all children and sizes them to the largest
+        // (returns that box); otherwise each child measures itself in the loop
+        // and `sz` is its own DesiredSize.
+        const uniform = this.measureUniformChildren(childAvail);
+
         for (const child of this.visualChildren)
         {
-            child.Measure(childAvail);
-            const sz = child.DesiredSize;
+            if (uniform === undefined) child.Measure(childAvail);
+            const sz = uniform ?? child.DesiredSize;
             const childPrimary = horizontal ? sz.Width  : sz.Height;
             const childCross   = horizontal ? sz.Height : sz.Width;
 
@@ -102,6 +156,7 @@ export class WrapPanel extends Panel
         // against `finalSize` rather than the (possibly infinite) input
         // availableSize. Keeps the per-line cross extent handy for the
         // arrange loop that follows.
+        const uniform = this.uniformChildSize();
         const lines: { children: Visual[]; cross: number }[] = [];
         let current: Visual[] = [];
         let linePrimary = 0;
@@ -109,7 +164,7 @@ export class WrapPanel extends Panel
 
         for (const child of this.visualChildren)
         {
-            const sz = child.DesiredSize;
+            const sz = uniform ?? child.DesiredSize;
             const childPrimary = horizontal ? sz.Width  : sz.Height;
             const childCross   = horizontal ? sz.Height : sz.Width;
 
@@ -139,7 +194,7 @@ export class WrapPanel extends Panel
             let primaryOffset = 0;
             for (const child of line.children)
             {
-                const sz = child.DesiredSize;
+                const sz = uniform ?? child.DesiredSize;
                 const childPrimary = horizontal ? sz.Width : sz.Height;
                 child.Arrange(horizontal
                     ? new Rect(primaryOffset, crossOffset, childPrimary, line.cross)

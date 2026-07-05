@@ -7,7 +7,8 @@ import { InputManager } from '../../framework/index.js';;
 import { Border } from '../border.js';
 import { DockPanel } from '../panels/dock-panel.js';
 import { Splitter } from '../splitter.js';
-import { Orientation, StackPanel } from '../panels/stack-panel.js';
+import { StackPanel } from '../panels/stack-panel.js';
+import { Orientation } from '../panels/orientation.js';
 
 function pointer(overrides: Partial<PointerEventInit> = {}): PointerEventInit
 {
