@@ -27,6 +27,32 @@ export class TabControl extends Selector
             { default_value: TabControl });
     }
 
+    // The body of the currently-selected tab — what the content area
+    // (PART_ContentSlot) presents. Normalises the two authoring paths so the
+    // content presenter binds ONE thing:
+    //   * data path (ItemsSource) — SelectedItem is the data row (its Tag),
+    //     so the body IS that row, dispatched through its DataTemplate.
+    //   * composed markup — SelectedItem is the selected TabItem, so the body
+    //     is that TabItem's Content.
+    // Read-only to consumers; the control maintains it on every selection
+    // change (see updateSelectedContent).
+    public static readonly SelectedContentKey = Model.RegisterProperty<unknown>(
+        TabControl, 'SelectedContent', undefined, MetaData.None);
+
+    constructor()
+    {
+        super();
+        // Land @DefaultTabControl (Template + ItemsPanel) so the header strip
+        // and content slot materialise the moment the ctor returns.
+        this.applyDefaultStyle();
+        // Keep the content area in sync with the selection. Fires for user
+        // clicks AND programmatic SelectedItem writes (e.g. a TwoWay
+        // `SelectedItem=$ActiveDocument` binding re-activating a tab).
+        this.AddSelectionChangedListener(() => this.updateSelectedContent());
+    }
+
+    public get SelectedContent(): unknown { return this.get_property_value(TabControl.SelectedContentKey); }
+
     public override IsItemItsOwnContainerOverride(item: unknown): boolean
     {
         return item instanceof TabItem;
@@ -35,15 +61,48 @@ export class TabControl extends Selector
     public override GetContainerForItemOverride(item: unknown): Visual
     {
         const ti = new TabItem();
+        this.bindTab(ti, item);
+        return ti;
+    }
+
+    public override RebindContainerForItemOverride(container: Visual, item: unknown): void
+    {
+        if (container instanceof TabItem) this.bindTab(container, item);
+        super.RebindContainerForItemOverride(container, item);
+    }
+
+    // Wire a data row onto its TabItem container.
+    //   * Tag = item — so Selector.exposedValueOf yields the DATA row, making
+    //     SelectedItem the row (not the container) and a TwoWay
+    //     `SelectedItem=$Active` binding round-trip against real data.
+    //   * A Visual row is slotted directly as the body (header stays empty).
+    //   * A data row renders its tab HEADER through ItemTemplate (WPF
+    //     semantics: TabControl.ItemTemplate templates the tab header) and
+    //     also carries the row as Content so SelectedContent can present the
+    //     matching body via DataType dispatch.
+    private bindTab(ti: TabItem, item: unknown): void
+    {
+        ti.Tag = item;
         if (item instanceof Visual)
         {
-            ti.Content = item;
+            ti.Header         = undefined;
+            ti.HeaderTemplate = undefined;
+            ti.Content        = item;
+            return;
         }
-        else
-        {
-            ti.Header = String(item ?? '');
-        }
-        return ti;
+        ti.Header         = item;
+        ti.HeaderTemplate = this.ItemTemplate;
+        // A data row's Content is the payload the content area presents via
+        // DataType dispatch (SelectedContent). Typed Model | Visual | undefined
+        // on ContentControl; a data row is a Model.
+        ti.Content        = item as Model;
+    }
+
+    private updateSelectedContent(): void
+    {
+        const sel = this.SelectedItem;
+        const content = sel instanceof TabItem ? sel.Content : sel;
+        this.set_property_value(TabControl.SelectedContentKey, content);
     }
 
     protected override validateDeclarativeChild(child: Visual): void
@@ -72,6 +131,13 @@ export class TabItem extends HeaderedContentControl
         Model.OverrideMetadata(
             TabItem, Element.DefaultStyleKeyKey,
             { default_value: TabItem });
+    }
+
+    constructor()
+    {
+        super();
+        // Land @DefaultTabItem (header ContentPresenter + selection chrome).
+        this.applyDefaultStyle();
     }
 
     public get IsSelected(): boolean { return Selector.GetIsSelected(this); }

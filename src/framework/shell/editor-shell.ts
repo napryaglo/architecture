@@ -2,6 +2,7 @@ import { Element, Model } from '../../runtime/index.js';
 import { ShellBase } from './shell.js';
 import { NavigationService } from './services/navigation-service.js';
 import { ContentHostService } from './services/content-host-service.js';
+import { DocumentsContentHostService } from './services/documents-content-host-service.js';
 import { ApplicationSettings } from './services/application-settings-service.js';
 import { DocumentTypeRegistry } from './documents/document-type-registry.js';
 import { CommandRegistry } from './commands/command-registry.js';
@@ -48,15 +49,17 @@ export class EditorShell extends ShellBase
                 return nav;
             });
         }
-        // Provide the Content region's service by default: a base
-        // ContentHostService the content host binds via
-        // `$service(ContentHostService).Content`. Same opt-out guard as the
-        // navigation service — an app that registers its own (e.g.
-        // DocumentsContentHostService under ContentHostService.Key, up-chain)
-        // wins, and this base is skipped.
+        // Provide the Content region's service by default: a
+        // DocumentsContentHostService (the tabbed-document / TDI host) under
+        // ContentHostService.Key. The content region presents the service
+        // itself, rendered by `DataTemplate[DocumentsContentHostService]` as a
+        // TabControl (tab headers + the active document's body) — the editor
+        // group. Same opt-out guard as the navigation service: an app that
+        // registers its own host up-chain (e.g. at the root so a bootstrap can
+        // reach the same instance) wins, and this default is skipped.
         if (!this.Services.has(ContentHostService.Key))
         {
-            this.Services.registerScoped(ContentHostService.Key, (p) => new ContentHostService(p));
+            this.Services.registerScoped(ContentHostService.Key, (p) => new DocumentsContentHostService(p));
         }
         // Provide the ApplicationSettings service by default: aggregates every
         // composed module's declared SettingDefinitions into live, modifiable

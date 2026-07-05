@@ -27,7 +27,12 @@ resources Tabs {
               BorderThickness = (0,0,0,1) ] {
             DockPanel [ LastChildFill = true ] {
                 ItemsPresenter x:name="PART_ItemsPresenter" [ DockPanel.Dock = Top ]
-                ContentPresenter x:name="PART_ContentSlot" [ Content = $SelectedItem ]
+                // The active tab's BODY. SelectedContent normalises the
+                // data-driven vs composed-markup paths (see TabControl) so a
+                // single presenter shows the right thing: a data row is
+                // dispatched through its DataTemplate; a composed TabItem's
+                // Content is slotted directly.
+                ContentPresenter x:name="PART_ContentSlot" [ Content = $SelectedContent ]
             }
         }
     }
@@ -41,6 +46,15 @@ resources Tabs {
     // line at the bottom edge that's transparent until IsSelected.
     // State-layer overlays fire on hover / focus / press over the
     // resting @Surface background.
+    // The tab HEADER routes through a ContentPresenter (Content = $$Header,
+    // ContentTemplate = $$HeaderTemplate) so it renders BOTH shapes:
+    //   * a plain string Header (composed `TabItem[Header="Files"]`) —
+    //     stringified into a TextBlock that inherits the M3 typography +
+    //     selection ink set on the Style below (TextBlock.* inherited DPs);
+    //   * a data row + HeaderTemplate (the data path — TabControl copies its
+    //     ItemTemplate onto each TabItem's HeaderTemplate) — e.g. a document
+    //     tab's title + close button. A header template that leaves its label
+    //     Foreground unset inherits the selection ink too.
     Template x:key="DefaultTabItem" [TargetType = TabItem] {
         Border x:name="PART_Tab"
             [ Background      = #00000000,
@@ -48,21 +62,13 @@ resources Tabs {
               BorderThickness = (0,0,0,2),
               Padding         = (@Spacing4,@Spacing2,@Spacing4,@Spacing2),
               Height          = 48 ] {
-            TextBlock x:name="PART_Label"
-                [ Text                = $Header,
-                  Foreground          = @OnSurfaceVariant,
-                  FontFamily          = @TitleSmallFont,
-                  FontWeight          = @TitleSmallWeight,
-                  FontSize            = @TitleSmallSize,
-                  LineHeight          = @TitleSmallLineHeight,
-                  LetterSpacing       = @TitleSmallTracking,
+            ContentPresenter x:name="PART_Header"
+                [ Content             = $$Header,
+                  ContentTemplate     = $$HeaderTemplate,
                   HorizontalAlignment = Center,
                   VerticalAlignment   = Center ]
         }
-        when ( IsSelected ) {
-            PART_Tab.BorderBrush = @Primary;
-            PART_Label.Foreground = @Primary;
-        }
+        when ( IsSelected ) { PART_Tab.BorderBrush = @Primary; }
         when ( IsMouseOver ) { PART_Tab.Background = @StateHoverOverlay; }
         when ( IsFocused ) { PART_Tab.Background = @StateFocusOverlay; }
         when ( IsPressed ) { PART_Tab.Background = @StatePressOverlay; }
@@ -70,5 +76,14 @@ resources Tabs {
     }
     Style [TargetType = TabItem] {
         Template = @DefaultTabItem;
+        // Header ink + M3 typography as INHERITED TextBlock properties — they
+        // cascade into the header ContentPresenter's stringified label (and
+        // into a HeaderTemplate's labels that don't override them). Selection
+        // flips the ink to @Primary, matching the active-indicator underline.
+        TextBlock.Foreground = @OnSurfaceVariant;
+        TextBlock.FontFamily = @TitleSmallFont;
+        TextBlock.FontWeight = @TitleSmallWeight;
+        TextBlock.FontSize   = @TitleSmallSize;
+        when ( IsSelected ) { TextBlock.Foreground = @Primary; }
     }
 }

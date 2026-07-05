@@ -88,23 +88,6 @@ resources Shells {
                               ItemsPanel  = @CommandBarPanel ]
                     }
 
-                    // Document tab strip — the open-document set (a
-                    // DocumentsContentHostService under ContentHostService.Key).
-                    // Empty for a plain single-object host, so it collapses.
-                    Border x:name="PART_DocumentTabHost"
-                        [ DockPanel.Dock  = Top,
-                          Background      = @SurfaceContainerLow,
-                          BorderBrush     = @OutlineVariant,
-                          BorderThickness = (0,0,0,1) ] {
-                        ListBox x:name="PART_DocumentTabs"
-                            [ DataContext  = $service(ContentHostService),
-                              ItemsSource  = $OpenDocuments,
-                              SelectedItem = $ActiveDocument,
-                              ItemTemplate = @DocumentTabTemplate,
-                              ItemsPanel   = @DocumentTabStripPanel,
-                              Background   = @SurfaceContainerLow ]
-                    }
-
                     StatusBar x:name="PART_StatusHost"
                         [ DockPanel.Dock = Bottom,
                           DataContext    = $service(StatusService),
@@ -148,13 +131,16 @@ resources Shells {
                           Orientation      = Vertical,
                           ReverseDirection = true ]
 
-                    // Content region — presents the ContentHostService's
-                    // current content (fill, via LastChildFill). Anything in
-                    // the app calls ContentHostService.View(x) to swap what's
-                    // shown; a DocumentsContentHostService (registered under the
-                    // same key) drives this from its ActiveDocument.
+                    // Content region — presents the ContentHostService ITSELF
+                    // (fill, via LastChildFill). The default host is a
+                    // DocumentsContentHostService, rendered by
+                    // `DataTemplate[DocumentsContentHostService]` as a TabControl
+                    // (tab headers + the active document's body — the editor
+                    // group). A plain ContentHostService (no matching template)
+                    // falls back to presenting its Content; apps swapping in
+                    // their own host supply the matching DataTemplate.
                     ContentPresenter x:name="PART_ContentHost"
-                        [ Content = $service(ContentHostService).Content ]
+                        [ Content = $service(ContentHostService) ]
                 }
             }
         }
@@ -172,21 +158,31 @@ resources Shells {
         }
     }
 
-    // Document tab: title + a close affordance. Applied explicitly as the tab
-    // strip's ItemTemplate (not DataType dispatch), so it renders ANY IDocument —
-    // every document carries Title / Id. Close reaches the host via `$service`
-    // (provider-scoped, resolves inside the per-item DataContext) and passes the
-    // document's Id. The close glyph is a text "✕" (the framework ships no icons).
-    // DataType is NOMINAL — a keyed DataTemplate registers by key only (never for
-    // dispatch), so RailAction here is just a parser placeholder.
-    DataTemplate x:key="DocumentTabTemplate" [DataType = RailAction] {
+    // ── Documents area — the editor group ──────────────────────────────
+    // The content host is a DocumentsContentHostService (the shell's default
+    // under ContentHostService.Key). It renders as a TabControl: the header
+    // strip lists the open documents, and the TabControl's content area shows
+    // the active document's body through ITS DataTemplate (e.g. a
+    // DataTemplate[DiagramDocument] painting a canvas). SelectedItem TwoWay-
+    // binds to ActiveDocument so clicking a tab activates it and an
+    // Open()/Close() re-selects. ItemTemplate is the TAB HEADER (WPF
+    // semantics) — title + close.
+    DataTemplate [DataType = DocumentsContentHostService] {
+        TabControl
+            [ ItemsSource  = $OpenDocuments,
+              SelectedItem = $ActiveDocument,
+              ItemTemplate = @DocumentTabHeaderTemplate ]
+    }
+
+    // One tab header: title + a close affordance, rendered for every IDocument
+    // (each carries Title / Id). DataContext is the document. Close reaches the
+    // host via `$service` and passes the document's Id. The close glyph is a
+    // text "✕" (the framework ships no icons). The title leaves Foreground
+    // UNSET so it inherits the TabItem's selection ink (@OnSurfaceVariant at
+    // rest, @Primary when selected — see the TabItem Style).
+    DataTemplate x:key="DocumentTabHeaderTemplate" [DataType = RailAction] {
         StackPanel [ Orientation = Horizontal, VerticalAlignment = Center ] {
-            TextBlock
-                [ Text              = $Title,
-                  Style             = @LabelLarge,
-                  Foreground        = @OnSurface,
-                  VerticalAlignment = Center,
-                  Margin            = (4,0,0,0) ]
+            TextBlock [ Text = $Title, VerticalAlignment = Center, Margin = (4,0,0,0) ]
             IconButton
                 [ Variant          = Standard,
                   Command          = $service(ContentHostService).CloseDocumentCommand,
@@ -195,9 +191,6 @@ resources Shells {
                 TextBlock [ Text = "✕", FontSize = 11, Foreground = @OnSurfaceVariant ]
             }
         }
-    }
-    ItemsPanelTemplate x:key="DocumentTabStripPanel" {
-        StackPanel [ Orientation = Horizontal ]
     }
     Style [TargetType = EditorShell] {
         Template = @DefaultEditorShell;
