@@ -116,8 +116,14 @@ resources Shells {
                     // an inspector (e.g. a diagram's "Format Shape" command adds a
                     // DiagramInspector → the Format Shape pane). Empty ⇒ zero-width ⇒
                     // the region collapses.
+                    // Definite Width lives HERE (the docked element the adjacent
+                    // Splitter resizes as its previous sibling) — NOT pinned on the
+                    // inner InspectorStack, or the drag would grow this presenter
+                    // while the visible pane stayed fixed and the content host
+                    // absorbed the change. Everything below fills this width.
                     ContentPresenter x:name="PART_InspectorHost"
                         [ DockPanel.Dock = Right,
+                          Width          = 300,
                           Content        = $service(InspectorService) ]
                     Splitter
                         [ DockPanel.Dock   = Right,
@@ -222,19 +228,55 @@ resources Shells {
 
     // ── Inspector region — a pinned, collapsible inspector-panel stack ──────
     // The InspectorService hosts a dynamic set of inspectors; the region renders
-    // it as a vertical stack of collapsible panels. Each panel's BODY is the
-    // inspector rendered through its own DataTemplate[DataType=<inspector>]; the
-    // titled, collapsible chrome comes from the InspectorPanel container. Empty ⇒
-    // the InspectorStack measures zero and the docked region collapses.
+    // it as a vertical stack of collapsible panels (@DefaultInspectorStack). Each
+    // panel's BODY is the inspector rendered through its own
+    // DataTemplate[DataType=<inspector>]; the titled, collapsible chrome comes from
+    // the InspectorPanel container. An empty host shows "(EMPTY)" (so a wired-but-
+    // empty region is legible, not a blank void).
     DataTemplate [DataType = InspectorService] {
-        ScrollViewer [ IsAutoHideScrollBars = false, HorizontalScrollEnabled = false ] {
-            InspectorStack [ ItemsSource = $Inspectors, ItemsPanel = @InspectorStackPanel ]
-        }
+        InspectorStack [ ItemsSource = $Inspectors ]
     }
 
     // Vertical panel host for the inspector stack.
     ItemsPanelTemplate x:key="InspectorStackPanel" {
         StackPanel [ Orientation = Vertical ]
+    }
+
+    // InspectorStack chrome: a bordered, definite-min-width column hosting the
+    // panel stack (scrolled), with an "(EMPTY)" placeholder shown while the host
+    // has no inspectors. MinWidth keeps the docked-Right region visible so the
+    // placeholder (and the wiring it proves) is always on screen.
+    Template x:key="DefaultInspectorStack" [TargetType = InspectorStack] {
+        // No fixed width here — the pane's width lives on PART_InspectorHost (the
+        // resizable docked presenter); this chrome fills it.
+        Border x:name="PART_Border"
+            [ Background      = @SurfaceContainerLow,
+              BorderBrush     = @OutlineVariant,
+              BorderThickness = (1,0,0,0) ] {
+            Grid {
+                // No wrapping ScrollViewer: a ScrollViewer arranges its content at
+                // the content's DESIRED width (a vertical StackPanel desires only
+                // its widest child), so panels would size to their header text
+                // instead of filling the pane. The ItemsPresenter sits directly in
+                // the Grid so the StackPanel arranges each InspectorPanel at the
+                // full pane width. Tall panel bodies scroll via their own inner
+                // ScrollViewer (e.g. the Format Shape body).
+                ItemsPresenter x:name="PART_ItemsPresenter"
+                TextBlock x:name="PART_Empty"
+                    [ Text                = "(EMPTY)",
+                      Visibility          = Collapsed,
+                      HorizontalAlignment = Center,
+                      VerticalAlignment   = Top,
+                      Margin              = (0,16,0,0),
+                      Style               = @LabelMedium,
+                      Foreground          = @OnSurfaceVariant ]
+            }
+        }
+        when ( HasItems = false ) { PART_Empty.Visibility = Visible; }
+    }
+    Style [TargetType = InspectorStack] {
+        Template   = @DefaultInspectorStack;
+        ItemsPanel = @InspectorStackPanel;
     }
 
     // ── InspectorPanel — one titled, collapsible section ────────────────────
@@ -245,8 +287,7 @@ resources Shells {
     // the `when (IsExpanded = false)` trigger so the panel shrinks to its header.
     Template x:key="DefaultInspectorPanel" [TargetType = InspectorPanel] {
         Border x:name="PART_Border"
-            [ Width           = 300,
-              Background      = @SurfaceContainerLow,
+            [ Background      = @SurfaceContainerLow,
               BorderBrush     = @OutlineVariant,
               BorderThickness = (0,0,0,1) ] {
             DockPanel [ LastChildFill = true ] {

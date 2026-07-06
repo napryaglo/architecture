@@ -1,4 +1,4 @@
-import { DataContextBinding, type Model, type Visual } from '../../../runtime/index.js';
+import { DataContextBinding, Element, Model, type Visual } from '../../../runtime/index.js';
 import { ItemsControl } from '../../base/items-control.js';
 import { InspectorPanel } from './inspector-panel.js';
 import type { IInspector } from '../services/inspector.js';
@@ -9,12 +9,29 @@ import type { IInspector } from '../services/inspector.js';
 // a vertical ItemsPanel in markup (@InspectorStackPanel); it needs no default
 // Style — ItemsControl hosts its panel directly when no ControlTemplate is set.
 //
+// Its default Style (@DefaultInspectorStack) supplies the region chrome (border +
+// background + a MinWidth so the pane stays visible) and an "(EMPTY)" placeholder
+// shown via a `when (HasItems = false)` trigger — so an empty region reads as
+// "wired but empty" rather than a blank void.
+//
 // Container contract (WPF ItemsControl overrides):
 //   * GetContainerForItemOverride  → a fresh InspectorPanel per inspector.
 //   * PrepareContainerForItemOverride → title + body + expand-state wiring.
 //   * ClearContainerForItemOverride  → releases that wiring on removal.
 export class InspectorStack extends ItemsControl
 {
+    static
+    {
+        Model.OverrideMetadata(
+            InspectorStack, Element.DefaultStyleKeyKey, { default_value: InspectorStack });
+    }
+
+    constructor()
+    {
+        super();
+        this.applyDefaultStyle();
+    }
+
     // A pre-built InspectorPanel in Items is already the right container shape.
     public override IsItemItsOwnContainerOverride(item: unknown): boolean
     {

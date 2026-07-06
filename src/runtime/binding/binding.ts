@@ -690,6 +690,16 @@ export class Binding
         }
     }
 
+    // Called by EffectiveValueDescriptor.SetInheritedValue when THIS binding
+    // is the active (masking) source on the target property AND the property's
+    // inherited value just changed. Almost every binding ignores this — its
+    // source is unrelated to the target's own inherited value. The exception
+    // is a DataContextBinding installed AS the DataContext (`DataContext =
+    // $Path`), whose source IS the inherited DataContext: it must re-resolve
+    // when the parent's context arrives/changes, which the masked
+    // SetInheritedValue would otherwise never surface. No-op by default.
+    onInheritedValueChanged(): void { }
+
     // Source → target transformation: converter, then stringFormat
     // (folded into converter), then targetNullValue / fallbackValue
     // substitution. Used by get_value and by EVD push notifications so

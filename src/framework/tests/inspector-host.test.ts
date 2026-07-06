@@ -8,6 +8,7 @@ import { EditorShell } from '../shell/editor-shell.js';
 import { InspectorService } from '../shell/services/inspector-service.js';
 import { Inspector } from '../shell/services/inspector.js';
 import { InspectorPanel } from '../shell/inspector/inspector-panel.js';
+import { InspectorStack } from '../shell/inspector/inspector-stack.js';
 
 // A concrete inspector VM rendered by a marker DataTemplate — stands in for
 // DiagramInspector (the Format Shape pane) without pulling the diagram in.
@@ -106,6 +107,22 @@ describe('InspectorService — multi-inspector host + collapsible panel stack', 
         assert.equal((panels[0]!.Content as TestInspector).Id, 'b', 'the surviving panel is Beta');
     });
 
+    test('empty host shows the (EMPTY) placeholder; adding one hides it', async () =>
+    {
+        const { root, svc } = await mount();
+        const stack = collect(root, InspectorStack)[0]!;
+        const empty = stack.GetTemplateChild('PART_Empty') as Visual | undefined;
+        assert.ok(empty !== undefined, 'stack exposes PART_Empty');
+
+        assert.equal(stack.HasItems, false, 'starts empty');
+        assert.equal(empty!.Visibility, Visibility.Visible, '(EMPTY) shown while wired-but-empty');
+
+        svc.Add(new TestInspector('a', 'Alpha'));
+        await settle();
+        assert.equal(stack.HasItems, true, 'now has an inspector');
+        assert.equal(empty!.Visibility, Visibility.Collapsed, '(EMPTY) hidden once populated');
+    });
+
     test('adding to an already-laid-out empty region invalidates + expands it', async () =>
     {
         const shell = new EditorShell();
@@ -131,6 +148,40 @@ describe('InspectorService — multi-inspector host + collapsible panel stack', 
         assert.ok(panel.DesiredSize.Width > 0, `panel width should be > 0, got ${panel.DesiredSize.Width}`);
         assert.ok(panel.RenderSize.Width >= 100,
             `panel should arrange to a real width, got ${panel.RenderSize.Width}`);
+
+        // The docked-Right pane must be a FIXED-width column, not stretch to fill
+        // the whole 1200-wide window (regression: MinWidth-only chrome + an empty
+        // ScrollViewer expanded the region to the full content area).
+        const stack = collect(root, InspectorStack)[0]!;
+        assert.ok(stack.RenderSize.Width <= 360,
+            `inspector pane should be a fixed ~300px column, got ${stack.RenderSize.Width}`);
+    });
+
+    test('resizing PART_InspectorHost (splitter target) widens the panel', async () =>
+    {
+        const shell = new EditorShell();
+        const root  = shell.visualChildren[0]!;
+        const svc   = shell.Services.get(InspectorService.Key) as InspectorService;
+        await settle();
+        svc.Add(new TestInspector('a', 'Alpha'));
+        await settle();
+        root.Measure(new Size(1200, 800));
+        root.Arrange(new Rect(0, 0, 1200, 800));
+
+        const panel = collect(root, InspectorPanel)[0]!;
+        const before = panel.RenderSize.Width;
+
+        // The Splitter resizes PART_InspectorHost (its previous sibling) by writing
+        // its Width. Simulate that drag and re-lay-out.
+        const host = shell.GetTemplateChild('PART_InspectorHost')!;
+        host.Width = 460;
+        root.Measure(new Size(1200, 800));
+        root.Arrange(new Rect(0, 0, 1200, 800));
+
+        assert.ok(panel.RenderSize.Width > before + 100,
+            `panel should widen with the pane: before ${before}, after ${panel.RenderSize.Width}`);
+        assert.ok(panel.RenderSize.Width >= 400,
+            `panel should track the 460px pane, got ${panel.RenderSize.Width}`);
     });
 
     test('IsExpanded rides the inspector VM and drives body visibility', async () =>

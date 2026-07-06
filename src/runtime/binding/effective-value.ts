@@ -217,6 +217,7 @@ export class EffectiveValueDescriptor
     SetInheritedValue(value: any): void
     {
         const old_effective_value = this.value;
+        const old_inherited_value = this.inherited_value;
         this.inherited_value = value;
         this.has_inherited_value = true;
 
@@ -226,6 +227,18 @@ export class EffectiveValueDescriptor
         if (this.source !== PropertyValueSource.InheritedValue
             && this.source !== PropertyValueSource.Default)
         {
+            // …with ONE exception: a Binding whose own source IS this
+            // inherited value (the self-referential `DataContext = $Path`)
+            // must re-resolve when the inherited context arrives/changes.
+            // The effective value (the binding) is unchanged, so the normal
+            // notification below never fires — hand the binding a direct
+            // signal instead. Ordinary bindings ignore it (no-op).
+            if (old_inherited_value !== value
+                && this.source === PropertyValueSource.Binding
+                && this.binding_value !== undefined)
+            {
+                this.binding_value.onInheritedValueChanged();
+            }
             return;
         }
         this.source = PropertyValueSource.InheritedValue;

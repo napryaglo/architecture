@@ -882,6 +882,21 @@ export class Element extends Visual implements ITriggerHost
             Model.compose_key(Element, 'DataContext'));
     }
 
+    /** @internal — the DataContext this element would INHERIT from its
+     *  logical ancestry, ignoring any value set locally on this element.
+     *
+     *  Consumed by DataContextBinding for the self-referential case
+     *  `DataContext = $Path` (WPF's `DataContext="{Binding Path}"`): the
+     *  path must resolve against the CONTEXT THE PARENT PROVIDES, not the
+     *  element's own DataContext — which, when a binding is producing it,
+     *  is the circular value the binding is itself computing. Reads the
+     *  same logical walk inheritance uses, so the binding sees exactly the
+     *  value that would have flowed in without the local override. */
+    public GetInheritedDataContext(): unknown
+    {
+        return this.walk_inherited(Element.dataContextComposedKey());
+    }
+
     /** @internal — § 1.10. Override of Visual's no-op stub. Re-
      *  resolves the inherited value for the given descriptor on this
      *  Element; the subtree cascade runs through the logical +

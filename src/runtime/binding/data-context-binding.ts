@@ -4,7 +4,16 @@ import { Model } from '../model.js';
 import type { PropertyKey } from '../model.js';
 import { resolveKey } from '../model-internals.js';
 import type { PropertyChangeCallback } from './effective-value.js';
+import type { PropertyDescriptor } from '../property-descriptor.js';
 import type { Visual } from '../../visual-engine/visual.js';
+
+// The self-DataContext resolution hook (element.ts): the value THIS element
+// would inherit from its logical ancestry, ignoring its own local value.
+// Reached through a typed cast per the cross-class-internals rule.
+interface ElementWithInheritedDataContext
+{
+    GetInheritedDataContext(): unknown;
+}
 
 // Internal Model that carries the resolved DataContext-path value as
 // its own property. DataContextBinding inherits from Binding with this
@@ -58,6 +67,12 @@ class DataContextBindingImpl extends Binding
     // Cached at construction — `'DataContext'` resolves on every Visual,
     // and the binding listens to it for its entire lifetime.
     private readonly dataContextKey: PropertyKey<unknown>;
+    // True when this binding IS the target's DataContext (`DataContext =
+    // $Path`). The source path then resolves against the INHERITED
+    // DataContext (the parent's), not the target's own — which would be the
+    // circular value this binding is producing. Set from ResolveDefaultMode
+    // (the EVD hands us the target descriptor there), which then re-refreshes.
+    private isDataContextTarget = false;
 
     constructor(target: Visual, path: string, converter?: ValueConverter)
     {
@@ -75,7 +90,15 @@ class DataContextBindingImpl extends Binding
         this.pathStr = path;
         this.dataContextKey = resolveKey(target, undefined, 'DataContext');
 
-        this.dcCallback = () => this.refresh();
+        // React to the target's DataContext changing — EXCEPT in the self-
+        // referential case (`DataContext = $Path`), where target.DataContext
+        // is this binding's OWN output. Listening to it there would form a
+        // feedback loop (write DataContext → fire → refresh → write again).
+        // The self-DC case instead reacts to the INHERITED context via
+        // onInheritedValueChanged() and to the source segment via the
+        // per-refresh source subscription — both real inputs, neither our
+        // own output.
+        this.dcCallback = () => { if (!this.isDataContextTarget) this.refresh(); };
         // `$Self` short-circuits to "the Visual where the binding is
         // authored". It's a control-self relative source, not a path
         // walk — WPF's `{Binding RelativeSource={RelativeSource Self}}`
@@ -101,6 +124,49 @@ class DataContextBindingImpl extends Binding
         this.unsubscribeSource();
     }
 
+    // The EVD calls this when the binding is installed, handing us the
+    // TARGET property's descriptor — our only signal of what we're bound to.
+    // Detect the self-referential DataContext case and re-resolve against
+    // the inherited context now that we know. Delegates mode resolution to
+    // the base (TwoWay-by-default upgrade, etc.).
+    public override ResolveDefaultMode(descriptor: PropertyDescriptor): void
+    {
+        super.ResolveDefaultMode(descriptor);
+        // `$Self` is a fixed relative source resolved once in the ctor (no
+        // path walk, no DataContext subscription) — leave it untouched.
+        if (this.pathStr === 'Self') return;
+        const isDcTarget = descriptor === this.dataContextKey.descriptor;
+        if (isDcTarget !== this.isDataContextTarget)
+        {
+            this.isDataContextTarget = isDcTarget;
+            // The ctor's refresh() ran against the target's own (circular,
+            // undefined) DataContext; re-resolve against the inherited one.
+            this.refresh();
+        }
+    }
+
+    // The inherited DataContext this binding resolves against just changed
+    // (arrived from the parent, or the parent's context swapped) while this
+    // binding masks the DataContext slot. Re-resolve — only meaningful in the
+    // self-referential `DataContext = $Path` case.
+    public override onInheritedValueChanged(): void
+    {
+        if (this.isDataContextTarget) this.refresh();
+    }
+
+    // The DataContext the source path resolves against. Normally the target's
+    // own DataContext; for the self-referential `DataContext = $Path` case
+    // it's the value the parent provides (target.DataContext is this binding).
+    private sourceDataContext(): unknown
+    {
+        if (this.isDataContextTarget)
+        {
+            return (this.target as unknown as ElementWithInheritedDataContext)
+                .GetInheritedDataContext();
+        }
+        return this.target.DataContext;
+    }
+
     // TwoWay writeback: when the target DP changes and the EVD asks
     // the binding to push the value back, send it through the
     // DataContext path so the actual VM property updates. Without
@@ -119,7 +185,7 @@ class DataContextBindingImpl extends Binding
         // waiting for the source-side listener to round-trip.
         if (!super.set_value(value)) return false;
 
-        const dc = this.target.DataContext;
+        const dc = this.sourceDataContext();
         if (dc === undefined || dc === null) return true;
         const segments = this.pathStr.split('.');
         let cur: unknown = dc;
@@ -193,7 +259,7 @@ class DataContextBindingImpl extends Binding
     private refresh(): void
     {
         this.unsubscribeSource();
-        const dc = this.target.DataContext;
+        const dc = this.sourceDataContext();
         if (dc === undefined || dc === null)
         {
             this.watcher.Value = undefined;

@@ -94,4 +94,91 @@ describe('Inspector — Format Shape context menu resolves through the overlay',
         assert.equal(svc.Inspectors.Count, 1, 'inspector added to the region-bound service');
         assert.equal(svc.Inspectors.Get(0), doc.Inspector, 'the exact document inspector');
     });
+
+    // The REAL shell condition: the host (Diagram) does NOT own a local
+    // ServiceScope — it INHERITS one from an ancestor (the shell). DataContext,
+    // by contrast, is a local value on the host (set by its DataTemplate). This
+    // reproduces the reported failure if overlay children only pick up the host's
+    // LOCAL inherited-DP values, not its effective (walked-up) ones.
+    test('resolves when ServiceScope is INHERITED by the host (not local)', async () =>
+    {
+        const scope = Application.current.Services.createScope();
+        scope.registerScoped(InspectorService.Key, (p) => new InspectorService(p));
+        const svc = scope.get(InspectorService.Key)!;
+
+        const target = new HeadlessTarget(400, 300);
+        const outer = new Root();
+        target.Content = outer;
+        // Scope lives on an ANCESTOR — the host inherits it.
+        outer.ServiceScope = scope;
+
+        const host = new Root();
+        outer.AddChild(host);
+        const doc = new FakeDoc();
+        host.DataContext = doc;   // DataContext local on the host, like the Diagram
+
+        const cm = new ContextMenu();
+        const mi = new MenuItem();
+        mi.Header = 'Format Shape';
+        mi.set_property_value(
+            MenuItem.CommandKey,
+            ServiceBinding(mi, ServiceProvider.tokenFor(InspectorService), 'AddInspectorCommand') as never);
+        mi.set_property_value(
+            MenuItem.CommandParameterKey,
+            DataContextBinding(mi, 'Inspector') as never);
+        cm.Items = [mi];
+        host.ContextMenu = cm;
+
+        const im = new InputManager();
+        im.InjectPointerDown(host, rightClick());
+        assert.equal(cm.IsOpen, true, 'menu opened');
+        await settle();
+
+        assert.equal(mi.CommandParameter, doc.Inspector, '$Inspector resolved (DataContext is local)');
+        assert.equal(mi.Command, svc.AddInspectorCommand,
+            '$service resolved through the INHERITED ServiceScope');
+    });
+
+    // The real activation path: clicking the item runs MenuItem.activate(), which
+    // CLOSES the popup (detaching the item, nulling its $service/$path bindings)
+    // and THEN invokes the command. Regression for the ordering bug where Command
+    // / CommandParameter were read AFTER the close and came back undefined — so
+    // the invocation silently dropped even though everything resolved while open.
+    test('activating the item (close-then-invoke) still runs the command', async () =>
+    {
+        const scope = Application.current.Services.createScope();
+        scope.registerScoped(InspectorService.Key, (p) => new InspectorService(p));
+        const svc = scope.get(InspectorService.Key)!;
+
+        const target = new HeadlessTarget(400, 300);
+        const outer = new Root();
+        target.Content = outer;
+        outer.ServiceScope = scope;
+        const host = new Root();
+        outer.AddChild(host);
+        const doc = new FakeDoc();
+        host.DataContext = doc;
+
+        const cm = new ContextMenu();
+        const mi = new MenuItem();
+        mi.Header = 'Format Shape';
+        mi.set_property_value(
+            MenuItem.CommandKey,
+            ServiceBinding(mi, ServiceProvider.tokenFor(InspectorService), 'AddInspectorCommand') as never);
+        mi.set_property_value(
+            MenuItem.CommandParameterKey,
+            DataContextBinding(mi, 'Inspector') as never);
+        cm.Items = [mi];
+        host.ContextMenu = cm;
+
+        new InputManager().InjectPointerDown(host, rightClick());
+        await settle();
+
+        // Activate exactly as a pointer click / Enter would (the shared path).
+        (mi as unknown as { activate(): void }).activate();
+
+        assert.equal(cm.IsOpen, false, 'menu closed on activation');
+        assert.equal(svc.Inspectors.Count, 1, 'command still fired after the close');
+        assert.equal(svc.Inspectors.Get(0), doc.Inspector, 'added the document inspector');
+    });
 });

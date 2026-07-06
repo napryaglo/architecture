@@ -522,14 +522,19 @@ export class MenuItem extends HeaderedItemsControl
             return;
         }
         if (this.IsCheckable) this.IsChecked = !this.IsChecked;
-        // Activated callback first — gives the popup chain a chance to
-        // close before Command might steal focus to a dialog.
+        // Capture Command + parameter BEFORE closing. `_onActivated` closes the
+        // popup chain, which detaches this item from the overlay — and that detach
+        // strips its inherited ServiceScope / DataContext, re-resolving any
+        // `$service(...)` Command or `$path` CommandParameter binding to undefined.
+        // Reading them after the close (as this once did) silently dropped the
+        // invocation for every context-menu item whose Command/param is data-bound
+        // (e.g. the diagram's "Format Shape" → InspectorService.AddInspectorCommand).
+        const cmd   = this.Command;
+        const param = this.CommandParameter;
+        // Activated callback still runs before Execute — the popup closes before a
+        // Command might steal focus to a dialog; we just snapshot the values first.
         this._onActivated?.();
-        const cmd = this.Command;
-        if (cmd !== undefined)
-        {
-            if (cmd.CanExecute(this.CommandParameter)) cmd.Execute(this.CommandParameter);
-        }
+        if (cmd !== undefined && cmd.CanExecute(param)) cmd.Execute(param);
     }
 
     protected override OnPointerEnter(_args: PointerEventArgs): void
