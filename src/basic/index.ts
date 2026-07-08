@@ -18,6 +18,22 @@ export {
 } from './selection-bounds-adorner.js';
 export { Border } from './border.js';
 export { TextBlock, TextAlignment, TextWrapping } from './text-block.js';
+// Inline flow-content model (WPF Inlines analog).
+export { TextElement, Inline, type ContentHost, type InlineHost, type RunProps, type LinkTarget } from './documents/text-element.js';
+export { InlineCollection } from './documents/inline-collection.js';
+export { Run, Span, Bold, Italic, Underline, LineBreak, InlineUIContainer } from './documents/inlines.js';
+export { Hyperlink } from './documents/hyperlink.js';
+// Block flow-content model (WPF FlowDocument analog) — paragraphs + lists.
+export { Block, type BlockHost, BlockCollection } from './documents/block.js';
+export { FlowDocument } from './documents/flow-document.js';
+export { Paragraph } from './documents/paragraph.js';
+export { List, ListItem, ListMarkerStyle } from './documents/list.js';
+export { RichTextBlock } from './rich-text-block.js';
+export { RichTextBox } from './rich-text-box.js';
+// Rich-text editing model — TextPointer + document navigation + edit ops,
+// for hosts / behaviours that drive a RichTextBox programmatically.
+export { TextPointer } from './documents/text-pointer.js';
+export { FormatKind } from './documents/text-editing.js';
 export { Canvas } from './panels/canvas.js';
 export { PaginatedCanvas } from './panels/paginated-canvas.js';
 export { Ellipse } from './shapes/ellipse.js';

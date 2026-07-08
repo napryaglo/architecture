@@ -12,7 +12,7 @@ import {
     Style,
 } from '../../runtime/index.js';
 import { resolveKey } from '../../runtime/model-internals.js';
-import { Border, TextBlock, ControlTemplate, DataTemplate } from '../../basic/index.js';
+import { Border, TextBlock, Run, ControlTemplate, DataTemplate } from '../../basic/index.js';
 
 const CTX: Record<string, unknown> = { ...runtime, ...controls, ...engine };
 
@@ -156,10 +156,13 @@ describe('compile — compound triggers', () => {
 });
 
 describe('compile — text-mode bodies', () => {
-    test('TextBlock{Hello mural} lexes as a single TextRun and sets Text', () => {
+    test('TextBox{Hello mural} lexes as a single TextRun and sets Text', () => {
+        // Text-mode (string) bodies now belong to string-body controls
+        // like TextBox — TextBlock became an inline flow-content host
+        // (quoted text → Run). TextBox keeps the unquoted text-body form.
         const js = emitted(`
             Application{ resources: {
-                TextBlock x:root{Hello mural}
+                TextBox x:root{Hello mural}
             } }
         `);
         assert.match(js, /\.set_property_value\(\w+\.TextKey, "Hello mural"\);/);
@@ -176,7 +179,7 @@ describe('compile — text-mode bodies', () => {
     test('Escapes inside text bodies pass through', () => {
         const js = emitted(`
             Application{ resources: {
-                TextBlock x:root{Hello \\{brace\\} world}
+                TextBox x:root{Hello \\{brace\\} world}
             } }
         `);
         assert.match(js, /\.set_property_value\(\w+\.TextKey, "Hello \{brace\} world"\)/);
@@ -223,7 +226,7 @@ describe('compile — data templates', () => {
             import PersonVM from "./person-vm.mjs"
             Application{ resources: {
                 DataTemplate x:key="PersonRow"[DataType=PersonVM]{
-                    TextBlock{row}
+                    TextBlock [Text="row"]
                 }
             } }
         `);
@@ -334,15 +337,18 @@ describe('compile — macros', () => {
 describe('instantiate — deferreds end-to-end', () => {
     beforeEach(() => { Application.current = null; });
 
-    test('TextBlock{Hello mural} sets Text via text mode', () => {
+    test('TextBlock { "…" } quoted body → a single Run in Inlines', () => {
+        // TextBlock is now an inline flow-content host: a quoted body
+        // string lowers to a Run appended to Inlines (not the Text DP).
         const app = instantiate(`
             Application{ resources: {
-                TextBlock x:root{Hello mural}
+                TextBlock x:root{ "Hello mural" }
             } }
         `, CTX) as Application;
         const tb = app.Resources.Root as TextBlock;
         assert.ok(tb instanceof TextBlock);
-        assert.equal(tb.Text, 'Hello mural');
+        assert.equal(tb.Inlines.Count, 1);
+        assert.equal((tb.Inlines.Get(0) as Run).Text, 'Hello mural');
     });
 
     test('Style with OR-trigger registers two PropertyTriggers sharing setters', () => {
@@ -382,7 +388,7 @@ describe('instantiate — deferreds end-to-end', () => {
         const app = instantiate(`
             Application{ resources: {
                 DataTemplate x:key="Row"[DataType=Border]{
-                    TextBlock{row}
+                    TextBlock [Text="row"]
                 }
             } }
         `, CTX) as Application;

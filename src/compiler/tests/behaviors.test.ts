@@ -78,7 +78,7 @@ describe('compile — Behaviors block', () => {
                     Behaviors {
                         StubBehavior [Label="b"]
                     }
-                    TextBlock x:name="inside" {Hello}
+                    TextBlock x:name="inside" [Text="Hello"]
                 }
             } }
         `);
@@ -152,7 +152,7 @@ describe('compile — .Behaviors: colon-section form', () => {
             Application{ resources: {
                 Border x:root {
                     .Behaviors: { StubBehavior [Label="b"] }
-                    TextBlock x:name="inside" {Hello}
+                    TextBlock x:name="inside" [Text="Hello"]
                 }
             } }
         `);

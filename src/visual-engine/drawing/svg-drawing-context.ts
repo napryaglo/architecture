@@ -5,7 +5,7 @@ import { DashStyle, LineCap, type Pen } from './pen.js';
 import { EllipseGeometry, GeometryGroup, LineGeometry, PathGeometry, RectangleGeometry, type Geometry } from '../geometry/geometry.js';
 import { pathGeometryToSvgD } from '../geometry/path-to-svg.js';
 import { Transform } from './transform.js';
-import { FontStyle, FontWeight, type FormattedText } from '../text/formatted-text.js';
+import { FontStyle, FontWeight, decorationsToCss, type FormattedText } from '../text/formatted-text.js';
 import { Stretch, type ImageSource } from './image-source.js';
 
 // Minimal SVG implementation of DrawingContext. Translates draw calls
@@ -190,6 +190,11 @@ export class SvgDrawingContext implements DrawingContext
         if (text.LetterSpacing !== 0)
         {
             attrs.push(`letter-spacing="${formatNumber(text.LetterSpacing)}"`);
+        }
+        const decoration = decorationsToCss(text.Decorations);
+        if (decoration !== '')
+        {
+            attrs.push(`text-decoration="${decoration}"`);
         }
         attrs.push(fillAttrForText(text.Foreground));
 

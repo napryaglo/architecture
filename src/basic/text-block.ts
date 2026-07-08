@@ -5,11 +5,25 @@ import {
     Model,
     Point,
     Size,
+    Visual,
     type DrawingContext,
+    type PointerEventArgs,
     type TextMetrics,
 } from '../runtime/index.js';
-import { Brush, FontFamily, FontStyle, FontWeight, FormattedText } from '../visual-engine/index.js';
+import { Brush, FontFamily, FontStyle, FontWeight, FormattedText, TextAlignment, TextDecorations } from '../visual-engine/index.js';
 import { DEFAULT_FONT_FAMILY, Theme } from './theme.js';
+import { Inline, type InlineHost, type LinkTarget, type RunProps } from './documents/text-element.js';
+import { InlineCollection } from './documents/inline-collection.js';
+import {
+    arrangeObjectVisuals,
+    flattenInlines,
+    layoutInlines,
+    linkAtInLayout,
+    renderLayout,
+    type LayoutResult,
+    type MeasureObject,
+    type MeasureText,
+} from './documents/text-layout.js';
 
 // Mirrors WPF's TextWrapping enum. NoWrap (default) keeps the historic
 // single-line behaviour — text overflows the host width when too long.
@@ -22,19 +36,11 @@ export enum TextWrapping
     Wrap   = 'Wrap',
 }
 
-// Per-line horizontal alignment WITHIN the block. Left (default) is the
-// historic shape — every line starts at x=0. Center and Right shift each
-// line by `(RenderSize.Width - lineWidth) * factor` so a TextBlock that
-// receives a slot wider than its natural content (HorizontalAlignment =
-// Stretch under a wide parent) centers / right-aligns its glyphs inside
-// that slot. Justify is intentionally omitted — it needs variable
-// inter-word spacing the FormattedText surface doesn't support.
-export enum TextAlignment
-{
-    Left   = 'Left',
-    Center = 'Center',
-    Right  = 'Right',
-}
+// TextAlignment moved to visual-engine (next to FontWeight / TextDecorations)
+// so the documents/ Block tier can share it without importing a Visual.
+// Re-exported here for back-compat with `import { TextAlignment } from
+// './text-block.js'` and the basic barrel.
+export { TextAlignment };
 
 // Renders a single run of text. The simplest concrete Visual that's
 // actually visible — exercises MeasureOverride (text dimensions),
@@ -53,7 +59,7 @@ export enum TextAlignment
 // them once (via the cross-class explicit-owner overload) and every
 // TextBlock in the subtree picks them up — that's the WPF
 // "TextElement.FontSize on a Window" pattern.
-export class TextBlock extends Element
+export class TextBlock extends Element implements InlineHost
 {
     static
     {
@@ -77,6 +83,12 @@ export class TextBlock extends Element
     public static readonly FontSizeKey     = Model.RegisterProperty<number>(    TextBlock, 'FontSize',   14,                  MetaData.Measure | MetaData.Render | MetaData.Inherits);
     public static readonly FontWeightKey   = Model.RegisterProperty<FontWeight>(TextBlock, 'FontWeight', FontWeight.Normal,   MetaData.Measure | MetaData.Render | MetaData.Inherits);
     public static readonly FontStyleKey    = Model.RegisterProperty<FontStyle>( TextBlock, 'FontStyle',  FontStyle.Normal,    MetaData.Measure | MetaData.Render | MetaData.Inherits);
+    // Line embellishments (underline / strikethrough / overline). A
+    // combinable flag set — inherited like the other font properties so a
+    // TextDecorations set on a container underlines its whole subtree.
+    // Render-only: decorations sit on top of the laid-out glyphs and don't
+    // change metrics.
+    public static readonly TextDecorationsKey = Model.RegisterProperty<TextDecorations>(TextBlock, 'TextDecorations', TextDecorations.None, MetaData.Render | MetaData.Inherits);
     public static readonly ForegroundKey   = Model.RegisterProperty<Brush | undefined>(TextBlock, 'Foreground',   undefined,           MetaData.Render  | MetaData.Inherits);
     public static readonly TextWrappingKey  = Model.RegisterProperty<TextWrapping>( TextBlock, 'TextWrapping',  TextWrapping.NoWrap, MetaData.Measure | MetaData.Render);
     // TextAlignment is render-only — moving the text within the block
@@ -118,6 +130,18 @@ export class TextBlock extends Element
     // the whole text, falling through to the historic single-line path.
     private _lines: Array<{ text: string; metrics: TextMetrics }> = [];
 
+    // ── Inline content model (WPF Inlines analog) ───────────────────
+    // Lazily created. When non-empty, the flatten → line-layout pipeline
+    // replaces the Text-only fast path: `Inlines` is the content (Text is
+    // ignored for layout, matching WPF). Text-only TextBlocks never touch
+    // any of this — the whole styled-run path is additive.
+    private _inlines: InlineCollection | undefined;
+    // Last inline layout, kept for RenderOverride + ArrangeOverride.
+    private _inlineLayout: LayoutResult | undefined;
+    // Embedded-visual children from InlineUIContainers, currently attached
+    // as this TextBlock's visual children so the renderer walks them.
+    private _objectChildren: Visual[] = [];
+
     constructor(text?: string)
     {
         super();
@@ -133,6 +157,34 @@ export class TextBlock extends Element
 
     public get Text(): string { return this.get_property_value(TextBlock.TextKey); }
     public set Text(value: string) { this.set_property_value(TextBlock.TextKey, value); }
+
+    // The inline content (WPF's TextBlock.Inlines). Lazily created; adding
+    // to it switches this TextBlock onto the styled-run layout path. When
+    // empty, the plain Text path is used unchanged.
+    public get Inlines(): InlineCollection
+    {
+        if (this._inlines === undefined) this._inlines = new InlineCollection(this);
+        return this._inlines;
+    }
+
+    /** True when styled inline content drives layout (vs. plain Text). */
+    private get hasInlines(): boolean { return this._inlines !== undefined && this._inlines.Count > 0; }
+
+    // InlineHost — the inline tree bubbles content/format changes here.
+    public onInlineTreeChanged(): void
+    {
+        this.InvalidateMeasure();
+        this.InvalidateVisual();
+    }
+
+    // Markup default-slot target: `TextBlock { "hi" Bold{…} }` lowers to
+    // `.Inlines.Add(child)` for inline children (text nodes → Run). A
+    // string still flows through the Text property for the plain case.
+    public AddChild(child: Inline): void { this.Inlines.Add(child); }
+
+    // Embedded InlineUIContainer visuals are this TextBlock's visual
+    // children so the renderer walks + paints them at their arranged slots.
+    public override get visualChildren(): readonly Visual[] { return this._objectChildren; }
 
     // FontFamily DP — typed FontFamily but tolerant of string-valued
     // theme tokens (`@FontFamily` / `@BodyLargeFont` resolve to CSS
@@ -150,6 +202,9 @@ export class TextBlock extends Element
 
     public get FontStyle(): FontStyle { return this.get_property_value(TextBlock.FontStyleKey); }
     public set FontStyle(value: FontStyle) { this.set_property_value(TextBlock.FontStyleKey, value); }
+
+    public get TextDecorations(): TextDecorations { return this.get_property_value(TextBlock.TextDecorationsKey); }
+    public set TextDecorations(value: TextDecorations) { this.set_property_value(TextBlock.TextDecorationsKey, value); }
 
     public get Foreground(): Brush | undefined { return this.get_property_value(TextBlock.ForegroundKey); }
     public set Foreground(value: Brush | undefined) { this.set_property_value(TextBlock.ForegroundKey, value); }
@@ -178,6 +233,16 @@ export class TextBlock extends Element
 
     protected override MeasureOverride(availableSize: Size): Size
     {
+        // Styled-inline path — flatten the content tree and run the
+        // multi-run line layout. Text-only TextBlocks fall through to the
+        // historic fast path below.
+        if (this.hasInlines) return this.measureInlines(availableSize);
+
+        // Left inline mode (Inlines emptied) — release any embedded
+        // visuals and drop the stale layout so we don't paint/host them.
+        if (this._objectChildren.length > 0) this.reconcileObjectChildren([]);
+        this._inlineLayout = undefined;
+
         // Defensive coercion of undefined → '' for the case where a
         // binding pushes undefined through (typical: ContentControl's
         // DataTemplate binds Text to a source property that's
@@ -283,6 +348,12 @@ export class TextBlock extends Element
 
     protected override RenderOverride(dc: DrawingContext): void
     {
+        if (this._inlineLayout !== undefined && this.hasInlines)
+        {
+            this.renderInlines(dc);
+            return;
+        }
+
         // Foreground rides the default `Style[TargetType=TextBlock]`
         // setter (Foreground = @OnSurface via DynamicResource) once a
         // theme is active — a theme switch re-tints live through that
@@ -310,6 +381,7 @@ export class TextBlock extends Element
                 this.FontStyle,
                 undefined,
                 this.LetterSpacing,
+                this.TextDecorations,
             );
             dc.DrawText(formatted, Point.Zero);
             return;
@@ -347,6 +419,7 @@ export class TextBlock extends Element
                 this.FontStyle,
                 line.metrics,
                 this.LetterSpacing,
+                this.TextDecorations,
             );
             // Origin is this Visual's local (offsetX, i * lineHeight) — the
             // arranged-rect offset is applied by Visual.Arrange + the
@@ -357,5 +430,133 @@ export class TextBlock extends Element
                 : Math.max(0, (slotW - line.metrics.Width) * factor);
             dc.DrawText(formatted, new Point(offsetX, i * lineH));
         }
+    }
+
+    // ── Styled-inline layout ────────────────────────────────────────
+
+    // The hosting TextBlock's own resolved format — the flatten's root
+    // context that every inline inherits from / overrides.
+    private baseRunProps(): RunProps
+    {
+        return {
+            family:      this.FontFamily.Source,
+            size:        this.FontSize,
+            weight:      this.FontWeight,
+            style:       this.FontStyle,
+            foreground:  this.Foreground,
+            decorations: this.TextDecorations,
+            link:        undefined,
+        };
+    }
+
+    private measureInlines(availableSize: Size): Size
+    {
+        const measurer = this.target?.TextMeasurer ?? APPROXIMATE_TEXT_MEASURER;
+        const items = flattenInlines(this._inlines!.ToArray(), this.baseRunProps());
+
+        // Attach embedded visuals BEFORE measuring so they carry this
+        // TextBlock's host target while they measure/render.
+        const nextObjects: Visual[] = [];
+        for (const it of items) if (it.kind === 'object') nextObjects.push(it.visual);
+        this.reconcileObjectChildren(nextObjects);
+
+        const measureText: MeasureText = (t, p) =>
+            measurer.Measure(t, p.family, p.size, p.weight, p.style);
+        const measureObject: MeasureObject = (v) =>
+        {
+            v.Measure(new Size(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY));
+            const d = v.DesiredSize;
+            return { width: d.Width, height: d.Height };
+        };
+
+        const wrap = this.TextWrapping === TextWrapping.Wrap && Number.isFinite(availableSize.Width);
+        const layout = layoutInlines(items, {
+            availableWidth: wrap ? availableSize.Width : Number.POSITIVE_INFINITY,
+            wrap,
+            letterSpacing: this.LetterSpacing,
+            lineHeight:    this.LineHeight,
+            measureText,
+            measureObject,
+        });
+        this._inlineLayout = layout;
+        this._lines = [];   // keep the Text-path cache clear
+        return new Size(layout.width, layout.height);
+    }
+
+    // Attach newly-present embedded visuals, detach removed ones, so
+    // `visualChildren` (and the renderer walk) tracks the live set.
+    private reconcileObjectChildren(next: Visual[]): void
+    {
+        for (const v of this._objectChildren) if (!next.includes(v)) this.DetachVisual(v);
+        for (const v of next) if (!this._objectChildren.includes(v)) this.AttachVisual(v);
+        this._objectChildren = next;
+    }
+
+    protected override ArrangeOverride(finalSize: Size): Size
+    {
+        if (this._inlineLayout !== undefined && this.hasInlines)
+        {
+            const align  = this.TextAlignment;
+            const factor = align === TextAlignment.Center ? 0.5
+                         : align === TextAlignment.Right  ? 1 : 0;
+            for (const line of this._inlineLayout.lines)
+                line.shift = factor === 0 ? 0 : Math.max(0, (finalSize.Width - line.width) * factor);
+            arrangeObjectVisuals(this._inlineLayout, 0, 0);
+        }
+        return finalSize;
+    }
+
+    private renderInlines(dc: DrawingContext): void
+    {
+        renderLayout(dc, this._inlineLayout!, {
+            originX: 0, originY: 0,
+            letterSpacing: this.LetterSpacing,
+            ink:  Theme.ink,
+            link: Theme.primary,
+        });
+    }
+
+    // ── Hyperlink hit-testing ───────────────────────────────────────
+    // A press that starts over a link and releases over the SAME link
+    // activates it (WPF's on-mouse-up-inside semantics). Only engaged
+    // when the content actually contains link runs, so a plain TextBlock
+    // stays inert.
+    private _pressedLink: LinkTarget | undefined;
+
+    protected override OnPointerDown(args: PointerEventArgs): void
+    {
+        super.OnPointerDown(args);
+        this._pressedLink = this.linkAt(args);
+    }
+
+    protected override OnPointerUp(args: PointerEventArgs): void
+    {
+        super.OnPointerUp(args);
+        const pressed = this._pressedLink;
+        this._pressedLink = undefined;
+        if (pressed !== undefined && this.linkAt(args) === pressed) pressed.activate();
+    }
+
+    // Resolve the link (if any) under a pointer event, in this Visual's
+    // local coordinates (host coords minus this TextBlock's absolute origin).
+    private linkAt(args: PointerEventArgs): LinkTarget | undefined
+    {
+        const layout = this._inlineLayout;
+        if (layout === undefined || !this.hasInlines) return undefined;
+        const o = this.absoluteOrigin();
+        return linkAtInLayout(layout, args.HostX - o.x, args.HostY - o.y);
+    }
+
+    private absoluteOrigin(): { x: number; y: number }
+    {
+        let x = 0, y = 0;
+        let cur: Visual | undefined = this;
+        while (cur !== undefined)
+        {
+            x += cur.ArrangedRect.X;
+            y += cur.ArrangedRect.Y;
+            cur = cur.GetVisualParent();
+        }
+        return { x, y };
     }
 }

@@ -156,17 +156,17 @@ describe('compile — inline expressions', () => {
 
     test('text body with `{{ $path }}` becomes a MultiBinding-backed Text', () => {
         const js = compile(
-            'Application{ resources: { TextBlock x:root{Hi {{ $name }}!} } }',
+            'Application{ resources: { TextBox x:root{Hi {{ $name }}!} } }',
         ).js;
         assert.match(
             js,
-            /\.set_property_value\(\w+\.TextKey, MultiBinding\(_textBlock\d+, \["name"\], \(_p0\) => \("Hi " \+ String\( ?_p0 ?\) \+ "!"\)\)\)/,
+            /\.set_property_value\(\w+\.TextKey, MultiBinding\(_textBox\d+, \["name"\], \(_p0\) => \("Hi " \+ String\( ?_p0 ?\) \+ "!"\)\)\)/,
         );
     });
 
     test('text body where every `{{ … }}` folds yields a plain string literal', () => {
         const js = compile(
-            'Application{ resources: { TextBlock x:root{The answer is {{ 6 * 7 }}} } }',
+            'Application{ resources: { TextBox x:root{The answer is {{ 6 * 7 }}} } }',
         ).js;
         assert.match(js, /\.set_property_value\(\w+\.TextKey, "The answer is 42"\)/);
         assert.doesNotMatch(js, /MultiBinding/);
@@ -247,9 +247,13 @@ describe('inline expressions — end-to-end', () => {
             public set Count(v: number){ this.set_property_value(resolveKey(this, undefined, 'Count'), v); }
         }
 
+        // Reactive interpolation is exercised through the real-world
+        // attribute form (`Text = {{ … }}`) on a lightweight TextBlock —
+        // the string-BODY form now belongs to TextBox (which needs a theme
+        // to instantiate). Same MultiBinding machinery either way.
         const app = instantiate(`
             Application{ resources: {
-                TextBlock x:root{Hi {{ $Name }}, you have {{ $Count }} messages}
+                TextBlock x:root [ Text = {{ "Hi " + String($Name) + ", you have " + String($Count) + " messages" }} ]
             } }
         `, CTX) as Application;
         const tb = app.Resources.Root as TextBlock;

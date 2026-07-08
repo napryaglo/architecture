@@ -123,6 +123,22 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['ClickMode',               '@visualisation-sub/mural/framework/buttons/button.js'],
     ['ButtonVariant',           '@visualisation-sub/mural/framework/buttons/button.js'],
     ['TextBlock',               '@visualisation-sub/mural/basic'],
+    ['Run',                     '@visualisation-sub/mural/basic'],
+    ['Span',                    '@visualisation-sub/mural/basic'],
+    ['Bold',                    '@visualisation-sub/mural/basic'],
+    ['Italic',                  '@visualisation-sub/mural/basic'],
+    ['Underline',               '@visualisation-sub/mural/basic'],
+    ['LineBreak',               '@visualisation-sub/mural/basic'],
+    ['Hyperlink',               '@visualisation-sub/mural/basic'],
+    ['InlineUIContainer',       '@visualisation-sub/mural/basic'],
+    // Block flow-content model (FlowDocument analog) + its hosts.
+    ['FlowDocument',            '@visualisation-sub/mural/basic'],
+    ['Paragraph',               '@visualisation-sub/mural/basic'],
+    ['List',                    '@visualisation-sub/mural/basic'],
+    ['ListItem',                '@visualisation-sub/mural/basic'],
+    ['ListMarkerStyle',         '@visualisation-sub/mural/basic'],
+    ['RichTextBlock',           '@visualisation-sub/mural/basic'],
+    ['RichTextBox',             '@visualisation-sub/mural/basic'],
     ['Canvas',                  '@visualisation-sub/mural/basic'],
     ['PaginatedCanvas',         '@visualisation-sub/mural/basic'],
     ['Ellipse',                 '@visualisation-sub/mural/basic'],
@@ -149,6 +165,8 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['SliderSpinEdit',          '@visualisation-sub/mural/basic'],
     ['ColorPicker',             '@visualisation-sub/mural/framework'],
     ['ColorPickerVariant',      '@visualisation-sub/mural/framework'],
+    ['FontFamilyPicker',        '@visualisation-sub/mural/framework'],
+    ['FontSizePicker',          '@visualisation-sub/mural/framework'],
     ['ColorScheme',             '@visualisation-sub/mural/framework'],
     ['BrushPicker',             '@visualisation-sub/mural/framework'],
     ['BrushPickerVariant',      '@visualisation-sub/mural/framework'],
@@ -360,6 +378,20 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['StatusBarItem',           '@visualisation-sub/mural/framework/surface.js'],
     ['StatusBarSeparator',      '@visualisation-sub/mural/framework/surface.js'],
     ['ThemeSelector',           '@visualisation-sub/mural/framework/surface.js'],
+    // ── Ribbon family (5.11.3) ──────────────────────────────────────
+    ['Ribbon',                  '@visualisation-sub/mural/framework/surface.js'],
+    ['RibbonTab',               '@visualisation-sub/mural/framework/surface.js'],
+    ['RibbonTabHeader',         '@visualisation-sub/mural/framework/surface.js'],
+    ['RibbonContextualGroup',   '@visualisation-sub/mural/framework/surface.js'],
+    ['RibbonGroup',             '@visualisation-sub/mural/framework/surface.js'],
+    ['RibbonSmallButtonColumn', '@visualisation-sub/mural/framework/surface.js'],
+    ['RibbonButton',            '@visualisation-sub/mural/framework/surface.js'],
+    ['RibbonToggleButton',      '@visualisation-sub/mural/framework/surface.js'],
+    ['RibbonButtonSize',        '@visualisation-sub/mural/framework/surface.js'],
+    ['RibbonDropDownButton',    '@visualisation-sub/mural/framework/surface.js'],
+    ['RibbonSplitButton',       '@visualisation-sub/mural/framework/surface.js'],
+    ['RibbonGallery',           '@visualisation-sub/mural/framework/surface.js'],
+    ['RibbonGalleryPopupList',  '@visualisation-sub/mural/framework/surface.js'],
 
     // ── Framework layer ─────────────────────────────────────────────
     // Templated-control base class. Sits between runtime's `Visual`
@@ -381,6 +413,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['Pen',                 '@visualisation-sub/mural/visual-engine'],
     ['FontWeight',          '@visualisation-sub/mural/visual-engine'],
     ['FontStyle',           '@visualisation-sub/mural/visual-engine'],
+    ['TextDecorations',     '@visualisation-sub/mural/visual-engine'],
     ['FontFamily',          '@visualisation-sub/mural/visual-engine'],
     ['FontManager',         '@visualisation-sub/mural/visual-engine'],
     ['FontSourceKind',      '@visualisation-sub/mural/visual-engine'],
@@ -423,6 +456,7 @@ export const ENUM_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<st
     ['PlacementMode',         new Set(['Bottom', 'Top', 'Left', 'Right', 'Center', 'Mouse'])],
     ['FontWeight',            new Set(['Normal', 'Medium', 'Bold'])],
     ['FontStyle',             new Set(['Normal', 'Italic'])],
+    ['TextDecorations',       new Set(['None', 'Underline', 'Strikethrough', 'Overline'])],
     ['Stretch',               new Set(['None', 'Fill', 'Uniform', 'UniformToFill'])],
     ['AlignmentX',            new Set(['Left', 'Center', 'Right'])],
     ['AlignmentY',            new Set(['Top', 'Center', 'Bottom'])],
@@ -438,12 +472,13 @@ export const ENUM_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<st
     ['PixelSource',           new Set(['Circle', 'Triangle'])],
     ['TextWrapping',          new Set(['NoWrap', 'Wrap'])],
     ['TextAlignment',         new Set(['Left', 'Center', 'Right'])],
+    ['ListMarkerStyle',       new Set(['None', 'Disc', 'Circle', 'Square', 'Decimal', 'LowerLatin', 'UpperLatin', 'LowerRoman', 'UpperRoman'])],
     ['ClickMode',             new Set(['Release', 'Press', 'Hover'])],
     ['ButtonVariant',         new Set(['Filled', 'Elevated', 'Tonal', 'Outlined', 'Text', 'Standard'])],
     ['ColorPickerVariant',    new Set(['HSV', 'RGB'])],
     ['BrushPickerVariant',    new Set(['Solid', 'Linear', 'Radial', 'Pattern'])],
     ['FillEditorVariant',     new Set(['None', 'Solid', 'Linear', 'Radial', 'Pattern', 'Picture'])],
-    ['TextBoxVariant',        new Set(['Filled', 'Outlined'])],
+    ['TextBoxVariant',        new Set(['Filled', 'Outlined', 'Plain'])],
     ['ChipVariant',           new Set(['Assist', 'Filter', 'Input', 'Suggestion'])],
     ['SegmentedPosition',     new Set(['Single', 'Start', 'Middle', 'End'])],
     ['BadgeVariant',          new Set(['Dot', 'Numeric'])],
@@ -457,6 +492,7 @@ export const ENUM_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<st
     ['Dock',                  new Set(['Left', 'Top', 'Right', 'Bottom'])],
     ['DrawerVariant',         new Set(['Permanent', 'Persistent', 'Temporary'])],
     ['ToolBarPosition',       new Set(['None', 'Only', 'First', 'Middle', 'Last'])],
+    ['RibbonButtonSize',      new Set(['Large', 'Small'])],
     ['Density',               new Set(['Compact', 'Regular', 'Comfortable'])],
     ['ViewportClass',         new Set(['Mobile', 'Tablet', 'Desktop'])],
     ['Pointer',               new Set(['Fine', 'Coarse'])],
@@ -557,7 +593,7 @@ export const PROPERTY_TO_ENUM: ReadonlyMap<string, readonly string[]> = new Map<
     ['LineCap',  ['LineCap']],
     ['LineJoin', ['LineJoin']],
     ['EffectiveVariant', ['TopAppBarVariant']],
-    ['Size',     ['FabSize']],
+    ['Size',     ['FabSize', 'RibbonButtonSize']],
     ['Anchor',   ['Dock']],
     ['Position', ['ToolBarPosition', 'SegmentedPosition']],
     ['Pivot',    ['FanPivot']],
@@ -569,6 +605,8 @@ export const PROPERTY_TO_ENUM: ReadonlyMap<string, readonly string[]> = new Map<
     ['Modifiers', ['ModifierKeys']],
     ['Gesture',   ['MouseAction']],
     ['TabNavigation', ['KeyboardNavigationMode']],
+    // List.MarkerStyle → ListMarkerStyle (property name ≠ enum class name).
+    ['MarkerStyle', ['ListMarkerStyle']],
 ]);
 
 // Meta-attr names whose RHS is a type reference (compiled as a bare
@@ -619,7 +657,35 @@ export const DEFAULT_SLOT_INFO: ReadonlyMap<string, SlotInfo> = new Map<string, 
     ['TabControl',              { name: 'Items',    kind: 'list'   }],
     ['TabItem',                 { name: 'Content',  kind: 'object' }],
     ['Chip',                    { name: 'Content',  kind: 'object' }],
-    ['TextBlock',               { name: 'Text',     kind: 'string' }],
+    // TextBlock is an inline flow-content host: its brace body is mixed
+    // inline content — quoted strings → Run, bare idents → inline elements
+    // (Bold / Italic / …) — lowered to `.Inlines.Add(…)`. Text must be
+    // QUOTED (mural's disambiguator in place of XAML `<>` tags). Plain
+    // `TextBlock [Text="…"]` (attribute) is unaffected and uses the
+    // Text-only fast path.
+    ['TextBlock',               { name: 'Inlines',  kind: 'list'   }],
+    // Inline flow-content hosts — mixed bodies of text chunks + nested
+    // Span/Bold/Italic/Underline/Hyperlink.
+    ['Span',                    { name: 'Inlines',  kind: 'list'   }],
+    ['Bold',                    { name: 'Inlines',  kind: 'list'   }],
+    ['Italic',                  { name: 'Inlines',  kind: 'list'   }],
+    ['Underline',               { name: 'Inlines',  kind: 'list'   }],
+    ['Hyperlink',               { name: 'Inlines',  kind: 'list'   }],
+    // Run is a text leaf; `Run { "text" }` sets Text via the string body.
+    ['Run',                     { name: 'Text',     kind: 'string' }],
+    // InlineUIContainer embeds one Visual: `InlineUIContainer { Btn[…] }`.
+    ['InlineUIContainer',       { name: 'Child',    kind: 'object' }],
+    // Block flow-content model. RichText hosts take a single FlowDocument
+    // (object slot); FlowDocument / ListItem hold Blocks (list); Paragraph
+    // is an inline host (Inlines list — text chunks allowed); List holds
+    // ListItems (list). Text directly in a block host (FlowDocument / List /
+    // ListItem) is a compile error — text must live inside a Paragraph.
+    ['RichTextBlock',           { name: 'Document',  kind: 'object' }],
+    ['RichTextBox',             { name: 'Document',  kind: 'object' }],
+    ['FlowDocument',            { name: 'Blocks',    kind: 'list'   }],
+    ['Paragraph',               { name: 'Inlines',   kind: 'list'   }],
+    ['List',                    { name: 'ListItems', kind: 'list'   }],
+    ['ListItem',                { name: 'Blocks',    kind: 'list'   }],
     ['Canvas',                  { name: 'Children', kind: 'list'   }],
     ['PaginatedCanvas',         { name: 'Children', kind: 'list'   }],
     ['StackPanel',              { name: 'Children', kind: 'list'   }],
@@ -686,4 +752,23 @@ export const DEFAULT_SLOT_INFO: ReadonlyMap<string, SlotInfo> = new Map<string, 
     ['StatusBar',               { name: 'Items',    kind: 'list'   }],
     ['StatusBarItem',           { name: 'Content',  kind: 'object' }],
     // StatusBarSeparator: no body
+
+    // ── Ribbon family (5.11.3) ──────────────────────────────────────
+    // Ribbon's default children are stable RibbonTabs (list → AddChild →
+    // Tabs); contextual groups + QAT invokers are authored via
+    // property-element `ContextualGroups { … }` / `QuickAccessItems { … }`
+    // blocks (recognised in compiler.ts). RibbonContextualGroup's default
+    // children are its contextual RibbonTabs (list → AddChild → Tabs).
+    ['Ribbon',                  { name: 'Tabs',     kind: 'list'   }],
+    ['RibbonTab',               { name: 'Items',    kind: 'list'   }],
+    ['RibbonContextualGroup',   { name: 'Tabs',     kind: 'list'   }],
+    ['RibbonGroup',             { name: 'Items',    kind: 'list'   }],
+    ['RibbonSmallButtonColumn', { name: 'Children', kind: 'list'   }],
+    ['RibbonButton',            { name: 'Content',  kind: 'object' }],
+    ['RibbonToggleButton',      { name: 'Content',  kind: 'object' }],
+    ['RibbonDropDownButton',    { name: 'Items',    kind: 'list'   }],
+    ['RibbonSplitButton',       { name: 'Items',    kind: 'list'   }],
+    ['RibbonGallery',           { name: 'Items',    kind: 'list'   }],
+    // RibbonTabHeader: Content set by the Ribbon; RibbonGalleryPopupList:
+    // populated via ItemsSource — neither takes a markup body.
 ]);

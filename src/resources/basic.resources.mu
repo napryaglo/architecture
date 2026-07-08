@@ -89,6 +89,19 @@ resources MuralBasic {
         LineHeight = 20;
     }
 
+    // Rich flow-content hosts share TextBlock's typographic defaults; the
+    // per-paragraph LineHeight lives on each Block, not the host.
+    Style [TargetType = RichTextBlock] {
+        FontFamily = @FontFamily;
+        FontSize = 14;
+        FontWeight = Normal;
+    }
+    Style [TargetType = RichTextBox] {
+        FontFamily = @FontFamily;
+        FontSize = 14;
+        FontWeight = Normal;
+    }
+
     // ── Button ──────────────────────────────────────────────────────
     // Promoted to src/framework/buttons/buttons.template.mu
     // (folded into MuralFramework, which loads alongside MuralBasic).
@@ -217,6 +230,24 @@ resources MuralBasic {
         }
     }
 
+    // ── TextBox: Plain variant (chrome-less inline editor) ─────────
+    // No border / background / padding — just the scrolled editor
+    // surface. For hosts that supply their own frame (editable
+    // ComboBox selection box, SpinEdit value field). The caret,
+    // selection highlight and text render exactly as the other
+    // variants; only the surrounding chrome is dropped.
+    Template x:key="DefaultPlainTextBox" [TargetType = TextBox] {
+        Border x:name="PART_Border"
+            [ Background      = #00000000,
+              BorderThickness = (0),
+              Padding         = (0) ] {
+            ScrollViewer x:name="PART_Scroll" {
+                TextEditorSurface x:name="PART_Editor"
+            }
+        }
+        when ( IsEnabled = false ) { PART_Border.Opacity = @DisabledContentOpacity; }
+    }
+
     Style [TargetType = TextBox] {
         // Outlined is mural's default (see TextBox.VariantKey comment
         // for why we deviate from M3's Filled default). The trigger
@@ -225,6 +256,7 @@ resources MuralBasic {
         // use to wire their variant ladders.
         Template = @DefaultOutlinedTextBox;
         when ( Variant = Filled ) { Template = @DefaultFilledTextBox; }
+        when ( Variant = Plain ) { Template = @DefaultPlainTextBox; }
         // Foreground / SelectionBrush / CaretBrush defaults flow
         // through DynamicResource so theme switches re-tint live.
         // TextEditorSurface picks them up at render time off the

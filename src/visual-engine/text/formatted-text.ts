@@ -20,6 +20,59 @@ export enum FontStyle
     Italic = 'italic',
 }
 
+// Line embellishments drawn over/under the glyph run — WPF's
+// TextDecorations, but modelled as a combinable bit-flag set rather
+// than a collection. A run can carry several at once (Underline +
+// Strikethrough), so the members are powers of two and combine with
+// bitwise OR: `TextDecorations.Underline | TextDecorations.Strikethrough`.
+//
+// This is the one enum in the family with NUMERIC values instead of the
+// usual string wire-form: decorations are a SET, and only integer flags
+// compose under `|`/`&`. `decorationsToCss` maps a flag set to the
+// space-separated CSS `text-decoration-line` value SVG/HTML emit
+// natively (`underline line-through`). `hasDecoration` tests membership.
+export enum TextDecorations
+{
+    None          = 0,
+    Underline     = 1,
+    Strikethrough = 2,
+    Overline      = 4,
+}
+
+// Per-line horizontal alignment of text WITHIN its block. Left (default)
+// starts every line at x=0; Center and Right shift each line by
+// `(slotWidth - lineWidth) * factor` so text centers / right-aligns inside
+// a slot wider than its natural content. Justify is intentionally omitted
+// (it needs variable inter-word spacing the FormattedText surface doesn't
+// support). Shared by TextBlock and the flow-document Block tier — lives
+// here, next to the other character/paragraph format enums, so the
+// documents/ content model can reference it without importing a Visual.
+export enum TextAlignment
+{
+    Left   = 'Left',
+    Center = 'Center',
+    Right  = 'Right',
+}
+
+// True when `set` contains `flag`. Single-flag test — pass one member.
+export function hasDecoration(set: TextDecorations, flag: TextDecorations): boolean
+{
+    return (set & flag) !== 0;
+}
+
+// Map a decoration flag set to a CSS `text-decoration` value
+// (space-separated line keywords), or '' for None. Order is fixed
+// (underline, overline, line-through) so output is deterministic.
+export function decorationsToCss(set: TextDecorations): string
+{
+    if (set === TextDecorations.None) return '';
+    const parts: string[] = [];
+    if (hasDecoration(set, TextDecorations.Underline))     parts.push('underline');
+    if (hasDecoration(set, TextDecorations.Overline))      parts.push('overline');
+    if (hasDecoration(set, TextDecorations.Strikethrough)) parts.push('line-through');
+    return parts.join(' ');
+}
+
 // A snapshot of laid-out text ready to be rendered. NOT a Model — it's
 // an immutable value built by a Visual's OnRender from its own
 // properties (FontFamily, FontSize, …) and handed to
@@ -50,6 +103,10 @@ export class FormattedText
     // ignores it — fine for the small M3 tracking values, would need
     // measurer integration for larger values.
     public readonly LetterSpacing: number;
+    // Line embellishments (underline / strikethrough / overline) as a
+    // combinable flag set. Defaults to None. Renderers emit the CSS
+    // `text-decoration` from decorationsToCss when non-None.
+    public readonly Decorations: TextDecorations;
 
     constructor(
         text: string,
@@ -60,6 +117,7 @@ export class FormattedText
         fontStyle: FontStyle = FontStyle.Normal,
         metrics?: TextMetrics,
         letterSpacing: number = 0,
+        decorations: TextDecorations = TextDecorations.None,
     )
     {
         this.Text = text;
@@ -70,5 +128,6 @@ export class FormattedText
         this.FontStyle = fontStyle;
         this.Metrics = metrics;
         this.LetterSpacing = letterSpacing;
+        this.Decorations = decorations;
     }
 }

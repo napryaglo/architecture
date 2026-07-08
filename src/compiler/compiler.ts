@@ -3293,6 +3293,24 @@ export class Compiler
                 this.emitSetDP(parentVar, undefined, parentClass, item.name, expr, item.span);
                 continue;
             }
+            if (item.kind === 'text-chunk-body-item')
+            {
+                // Quoted text among inline children → `new Run("…")` added
+                // to the parent's Inlines. Only inline hosts (Inlines list
+                // default slot: TextBlock / Span / Bold / … ) accept it.
+                if (slot?.kind !== 'list' || slot.name !== 'Inlines')
+                {
+                    throw new EmitError(
+                        `text content is only allowed inside an inline host `
+                        + `(TextBlock, Span, Bold, …); ${parentClass} does not accept it`,
+                        item.span);
+                }
+                this.ensureImport('Run');
+                const runVar = this.fresh('run');
+                this.line(`const ${runVar} = new Run(${JSON.stringify(item.value)});`);
+                this.assignToDefaultSlot(parentVar, parentClass, slot, runVar, item.span);
+                continue;
+            }
             if (item.kind === 'member-block')
             {
                 this.compileMemberBlock(parentVar, item);
@@ -3366,6 +3384,17 @@ export class Compiler
                 if (item.name === 'Transitions')
                 {
                     this.compilePropertyCollectionBlock(parentVar, 'Transitions', item);
+                    continue;
+                }
+                // Ribbon's secondary collections — `ContextualGroups {
+                // RibbonContextualGroup[…] }` and `QuickAccessItems {
+                // RibbonButton[…] }`. Ribbon's DEFAULT slot is Tabs (stable
+                // tabs go straight in the body), so these two live in
+                // property-element blocks appended to the matching
+                // ObservableCollection on the Ribbon.
+                if (item.name === 'ContextualGroups' || item.name === 'QuickAccessItems')
+                {
+                    this.compilePropertyCollectionBlock(parentVar, item.name, item);
                     continue;
                 }
                 const childVar = this.compileElement(item);

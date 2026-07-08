@@ -16,7 +16,7 @@ import { DashStyle, LineCap, LineJoin, type Pen } from './pen.js';
 import { EllipseGeometry, GeometryGroup, LineGeometry, PathGeometry, RectangleGeometry, type Geometry } from '../geometry/geometry.js';
 import { pathGeometryToSvgD } from '../geometry/path-to-svg.js';
 import { Transform } from './transform.js';
-import { FontStyle, FontWeight, type FormattedText } from '../text/formatted-text.js';
+import { FontStyle, FontWeight, decorationsToCss, type FormattedText } from '../text/formatted-text.js';
 import { Stretch, type ImageSource } from './image-source.js';
 
 // DOM-mode DrawingContext. Mirrors SvgDrawingContext (string builder)
@@ -490,6 +490,11 @@ export class SvgDomDrawingContext implements DrawingContext
         if (text.LetterSpacing !== 0)
         {
             t.setAttribute('letter-spacing', formatNumber(text.LetterSpacing));
+        }
+        const decoration = decorationsToCss(text.Decorations);
+        if (decoration !== '')
+        {
+            t.setAttribute('text-decoration', decoration);
         }
         applyTextFill(t, text.Foreground);
         // No textLength / lengthAdjust here — see the matching block

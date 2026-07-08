@@ -274,7 +274,22 @@ export type BodyItem =
     | MergeForm
     | GlyphsForm
     | FontsForm
-    | MacroHoleBodyItem;
+    | MacroHoleBodyItem
+    | TextChunkBodyItem;
+
+// A quoted string sitting among element children — WPF-style mixed inline
+// content: `TextBlock { "Hello " Bold { "World" } }`. The compiler lowers
+// each chunk to `new Run("…")` appended to the parent's Inlines. Only
+// inline hosts (Inlines default slot) accept it; the emitter errors
+// elsewhere. Bare identifiers in these bodies are nested inline elements —
+// text MUST be quoted, which is how mural disambiguates text from elements
+// (in place of XAML's `<>` tags).
+export interface TextChunkBodyItem
+{
+    kind:  'text-chunk-body-item';
+    value: string;
+    span:  SourceSpan;
+}
 
 // `.Member: { … }` — a dotted member-block that fills a complex aggregate
 // property of the surrounding element. The general form's body is a list

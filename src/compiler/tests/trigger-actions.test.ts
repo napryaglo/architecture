@@ -209,7 +209,7 @@ describe('compile — DataTemplate MultiDataTrigger', () => {
             Application{
                 resources: {
                     DataTemplate x:key="T" [DataType=FooVM] {
-                        TextBlock{row}
+                        TextBlock [Text="row"]
                         when ( $IsSelected and $IsHot ) {
                             TextBlock.Foreground = #ff0000;
                         }
@@ -241,7 +241,7 @@ describe('compile — DataTemplate MultiDataTrigger', () => {
             Application{
                 resources: {
                     DataTemplate x:key="T" [DataType=FooVM] {
-                        TextBlock{row}
+                        TextBlock [Text="row"]
                         when ( $IsActive ) {
                             TextBlock.Foreground = #ff0000;
                             Behaviors {

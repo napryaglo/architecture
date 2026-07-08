@@ -1,7 +1,7 @@
 // Text — FormattedText (the renderer-fed glyph description), the
 // TextMeasurer implementations (Canvas 2D, opentype font metrics, SVG
 // element fallback), and the Google Fonts loader.
-export { FormattedText, FontWeight, FontStyle } from './formatted-text.js';
+export { FormattedText, FontWeight, FontStyle, TextDecorations, TextAlignment, decorationsToCss, hasDecoration } from './formatted-text.js';
 export { FontFamily, Typeface } from './font-family.js';
 export {
     FontManager,

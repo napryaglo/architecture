@@ -1523,6 +1523,15 @@ export class Parser
     {
         const tk = this.peek();
 
+        // Quoted string among element children — WPF-style mixed inline
+        // content (`TextBlock { "Hi " Bold { "there" } }`). Lowered to
+        // `new Run("…")` by the compiler; only inline hosts accept it.
+        if (tk.kind === TokenKind.String)
+        {
+            const t = this.consume();
+            return { kind: 'text-chunk-body-item', value: t.value, span: t.span };
+        }
+
         // @key = value primitive resource entry
         if (tk.kind === TokenKind.At) return this.parseKeyValueResource();
 

@@ -59,7 +59,7 @@ describe('formatter — invariants across constructs', () =>
         'resources block + key-value': `resources D {\n@Red = #ff0000\n@Pad = (1,2,3,4)\n}\n`,
         'element inline attrs': `resources D {\nBorder [ Background = @Red, Width = 100 ] { }\n}\n`,
         'element wrapped attrs (= aligned)': `resources D {\nBorder x:name="X" [ Background = @Surface, BorderBrush = @Outline, BorderThickness = (1), CornerRadius = @ShapeExtraSmall, Width = 200 ] { }\n}\n`,
-        'string body': `resources D {\nTextBlock { Hello world }\n}\n`,
+        'string body': `resources D {\nTextBox { Hello world }\n}\n`,
         'triggers inline + block + and/or/not': `Style [TargetType=Button] {\nBackground = @P;\nwhen ( IsMouseOver ) { Background = @H; }\nwhen ( IsPressed and not IsEnabled ) { Opacity = 0.5; Background = @D; }\nwhen ( $Sel or IsFocused ) { BorderBrush = @B; }\n}\n`,
         'value forms': `resources D {\n@A = #0d47a1 << Lighten(0.5)\n@B = $path.sub << Conv\n@C = $Self.(TextBlock.Foreground)\n@D = $service(Token).x\n@E = $$TemplatedName\n@F = @@Dynamic\n@G = <100, 200>\n@H = [1, 2, 3]\n}\n`,
         'member block': `resources D {\nCanvas {\n.Children: {\nBorder { }\n}\n}\n}\n`,
