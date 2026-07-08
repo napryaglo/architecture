@@ -354,3 +354,56 @@ describe('args.Visual rewriting + Source preserved', () => {
         assert.deepEqual(wr.observed.map(o => o.strategy), ['tunnel', 'bubble']);
     });
 });
+
+describe('raw Visual on the input route', () => {
+    beforeEach(() => { initTestApp(); });
+
+    // A rendering-only node: a raw `Visual` subclass with none of the
+    // Element-tier input surface (no IsMouseOver DP, no On* virtuals).
+    // Mirrors the text-on-path demo's GeometryView, added as a direct
+    // child of a Canvas (`canvas.AddChild(geometryView)`). `Adopt`
+    // exposes the protected visual-child wiring so a test can parent an
+    // Element under a raw Visual (the ancestor case).
+    class RawVisual extends Visual {
+        public Adopt(child: Visual): void { this.AttachVisual(child); }
+    }
+
+    test('hovering a raw-Visual leaf resolves hover to its Element parent (no crash)', () => {
+        // Regression: the hover chain used to call `_setIsMouseOver` on
+        // every route node, throwing "v._setIsMouseOver is not a function"
+        // the moment the pointer crossed a raw Visual (reported on the
+        // text-on-path demo). buildRoute now drops raw Visuals from the
+        // route, so hover lands on the nearest Element ancestor instead.
+        const root = new ProbePanel('root');
+        const raw  = new RawVisual();
+        // Panel.AddChild wires the visual-parent link for a raw Visual
+        // too — the same call the demo's Canvas makes.
+        root.AddChild(raw as unknown as Element);
+
+        const im = new InputManager();
+        assert.doesNotThrow(
+            () => im.InjectPointerMove(raw as unknown as Element, syntheticInit()),
+            'a raw-Visual hit must not crash the hover pipeline');
+        assert.equal(root.IsMouseOver, true,
+            'hover resolves to the nearest Element ancestor of the raw Visual');
+    });
+
+    test('a raw Visual between two Elements is skipped in the route', () => {
+        // Ancestor case: Element leaf under a raw-Visual container under
+        // an Element root. The route must be [leaf, root] — the raw
+        // container carries no input state and no On* virtuals, so it is
+        // filtered out rather than dispatched to.
+        const root = new ProbePanel('root');
+        const mid  = new RawVisual();
+        const leaf = new Probe('leaf');
+        root.AddChild(mid as unknown as Element);
+        mid.Adopt(leaf);
+
+        const im = new InputManager();
+        assert.doesNotThrow(
+            () => im.InjectPointerMove(leaf, syntheticInit()),
+            'a raw-Visual ancestor must not crash the hover pipeline');
+        assert.equal(leaf.IsMouseOver, true, 'the Element leaf still hovers');
+        assert.equal(root.IsMouseOver, true, 'hover reaches the Element root past the raw ancestor');
+    });
+});

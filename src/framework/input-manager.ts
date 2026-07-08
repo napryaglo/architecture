@@ -748,6 +748,11 @@ export class InputManager
 // `set_property_value_with_key` path. Focusable / AllowDrop are normal
 // public accessors InputManager only reads. Thin wrappers kept for the
 // readable call sites in the dispatch body.
+//
+// Every `v` reaching these helpers is an Element: the hit-test resolves a
+// raw-Visual pick to its nearest Element (HtmlTarget.HitTest), and the
+// hover / dispatch route is built from Elements only (buildRoute skips
+// raw Visuals) — so no `instanceof` guard is needed here.
 function setIsMouseOver(v: Element, value: boolean): void
 {
     v._setIsMouseOver(value);

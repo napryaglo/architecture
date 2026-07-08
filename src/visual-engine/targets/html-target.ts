@@ -1,7 +1,7 @@
 // `Element as MuralElement` — this file uses the DOM's global `Element`
 // heavily (setAttribute, elementsFromPoint, …), so the framework's
 // Element is aliased to avoid shadowing it.
-import type { Visual, Element as MuralElement } from '../../runtime/index.js';
+import { Element as MuralElement, type Visual } from '../../runtime/index.js';
 import {
     AdornerLayer,
     AnimationManager,
@@ -33,11 +33,33 @@ import { Point } from '../primitives.js';
 // any painted node without importing the renderer.
 export { VISUAL_BACKREF };
 
-// The backref the renderer stamps on each outer <g> always references
-// an Element (every painted node is an Element), so the hit-test read
-// side recovers an Element directly — no cast at the InputManager
-// boundary.
+// The backref the renderer stamps on each outer <g> references the
+// painted Visual — USUALLY an Element, but a rendering-only leaf (a raw
+// `Visual` subclass, e.g. a DrawingVisual or a demo's GeometryView)
+// paints and gets stamped too. Input targets Elements only (WPF:
+// Mouse.DirectlyOver is always an IInputElement), so the hit-test read
+// side resolves the stamp to the nearest Element via nearestInputElement
+// before handing it to the InputManager.
 interface BackrefHost { [VISUAL_BACKREF]?: MuralElement; }
+
+// Climb from a hit Visual to the nearest Element ancestor (inclusive).
+// The renderer can stamp a raw `Visual` (a rendering-only leaf) as the
+// hit-test backref; input, however, flows only through Elements — the
+// IsMouseOver / IsPressed state DPs and the On*/OnPreview* handlers live
+// on Element. Returning the raw Visual would crash the pointer pipeline
+// on those missing surfaces, so we surface the enclosing input element
+// instead. Returns undefined only if the hit Visual has no Element
+// ancestor at all (the target root is always an Element, so this is a
+// defensive tail).
+function nearestInputElement(v: Visual): MuralElement | undefined
+{
+    let cur: Visual | undefined = v;
+    while (cur !== undefined && !(cur instanceof MuralElement))
+    {
+        cur = cur.GetVisualParent();
+    }
+    return cur as MuralElement | undefined;
+}
 
 // §19.2.7 — when the candidate Visual has a HitTestGeometry, the
 // browser-pick is double-checked against the geometry. The element
@@ -636,9 +658,14 @@ export class HtmlTarget extends PresentationTarget
                 {
                     if (acceptsPoint(back, cur as Element, clientX, clientY))
                     {
-                        return back;
+                        // Resolve a raw-Visual hit to the nearest Element
+                        // (WPF DirectlyOver semantics). A rendering-only
+                        // leaf with no Element ancestor falls through to
+                        // the next hit-stack candidate.
+                        const target = nearestInputElement(back);
+                        if (target !== undefined) return target;
                     }
-                    // Geometry rejected — keep climbing.
+                    // Geometry rejected (or no input element) — keep climbing.
                     continue;
                 }
                 if (cur === this.host) break;   // ran off the top of the host

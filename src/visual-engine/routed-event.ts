@@ -1,4 +1,5 @@
-import type { Element } from './element.js';
+import { Element } from './element.js';
+import type { Visual } from './visual.js';
 import { Key } from './input/key.js';
 import { DragDrop, DragDropEffects, type DataObject, type DragDropOptions, type DragSession } from './drag-drop.js';
 
@@ -724,23 +725,28 @@ export const DRAG_BUBBLE_HANDLERS: Readonly<Record<DragTunnelBubbleKind, keyof D
 
 // ── Dispatcher ──────────────────────────────────────────────────────
 
-// Build the visual-tree route from a leaf Element up to the root.
-// Index 0 is the leaf (Source); the last entry has no visual parent.
-// Used by the dispatcher in both directions: reversed for the tunnel
-// pass, in-order for the bubble pass.
+// Build the input route from a leaf up to the root: the chain of
+// Elements from `source` to the topmost Element, leaf-first. Index 0 is
+// the leaf; the last entry is the root. Used by the dispatcher in both
+// directions: reversed for the tunnel pass, in-order for the bubble pass.
 //
-// `GetVisualParent` is a public companion to Visual's protected
-// `visualParent` getter; it returns `Visual | undefined`, but every
-// concrete tree node is an Element (Element is the only instantiable
-// Visual subclass), so the cast to `Element` is sound.
+// `GetVisualParent` returns `Visual | undefined`. Most tree nodes are
+// Elements, but a rendering-only node (a raw `Visual` subclass such as a
+// DrawingVisual or a demo's GeometryView) can appear on the chain as a
+// leaf or a container. Input flows only through Elements — the On* /
+// OnPreview* virtuals and the IsMouseOver / IsEnabled DPs are Element-tier
+// — so pure Visuals are dropped from the route (WPF parity: routed events
+// walk the element tree, skipping non-input Visuals). The hit-test
+// already resolves a raw-Visual pick to its nearest Element, so `source`
+// is normally an Element; the filter stays defensive if it isn't.
 export function buildRoute(source: Element): Element[]
 {
-    const out: Element[] = [source];
-    let cur = source.GetVisualParent() as Element | undefined;
+    const out: Element[] = [];
+    let cur: Visual | undefined = source;
     while (cur !== undefined)
     {
-        out.push(cur);
-        cur = cur.GetVisualParent() as Element | undefined;
+        if (cur instanceof Element) out.push(cur);
+        cur = cur.GetVisualParent();
     }
     return out;
 }
