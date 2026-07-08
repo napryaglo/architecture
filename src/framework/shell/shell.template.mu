@@ -158,6 +158,28 @@ resources Shells {
         }
     }
 
+    // ── Base single-content host ────────────────────────────────────────
+    // The base ContentHostService presents ONE object at a time: whatever
+    // View() last set, dispatched to a DataTemplate by its runtime type.
+    // Without this template a base-host instance rendered through
+    // `$service(ContentHostService)` falls to ContentPresenter's stringify path
+    // and reads "[object Object]". DocumentsContentHostService (below) is a
+    // more-specific match, so the TDI TabControl still wins for the tabbed-
+    // document host; single-content consumers (e.g. the demo platform's group
+    // content) resolve THIS one.
+    //
+    // The Content is bound with a SERVICE binding (`$service(…).Content`), not a
+    // DataContext binding (`$Content`). A `$Content` here is self-defeating: the
+    // presenter's DataContext is the service, but ContentPresenter re-points its
+    // OWN DataContext to whatever it presents (the resolved content), so after
+    // the first View() the `$Content` source is clobbered and never updates.
+    // The service binding resolves through the provider instead, so it stays
+    // reactive to every View() swap. (This mirrors the proven pre-TabControl
+    // shell binding on PART_ContentHost.)
+    DataTemplate [DataType = ContentHostService] {
+        ContentPresenter [ Content = $service(ContentHostService).Content ]
+    }
+
     // ── Documents area — the editor group ──────────────────────────────
     // The content host is a DocumentsContentHostService (the shell's default
     // under ContentHostService.Key). It renders as a TabControl: the header

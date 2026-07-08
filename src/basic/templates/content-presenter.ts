@@ -212,6 +212,16 @@ export class ContentPresenter extends Element
             const v = tmpl.Apply(content);
             v.DataContext = content;
             this.SetContent(v);
+            // Optional VM hook, mirroring ContentControl: when the
+            // presented data exposes an `OnViewMounted` function, hand it
+            // the freshly-built template visual so VM-driven imperative
+            // setup (demo bootstrap behaviours, etc.) runs once per
+            // resolution. Without this, a VM presented through a bare
+            // ContentPresenter — e.g. the shell's
+            // `$service(ContentHostService).Content` demo host — never
+            // gets its behaviours attached.
+            const hook = (content as { OnViewMounted?: (view: Visual) => void }).OnViewMounted;
+            if (typeof hook === 'function') hook.call(content, v);
             return;
         }
         if (content !== undefined && content !== null)
