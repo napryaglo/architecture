@@ -400,7 +400,11 @@ export class ScrollViewer extends ContentControl
         // Arrange the SCP into the reduced slot. SCP.ArrangeOverride
         // republishes its viewport from this finalSize and installs the
         // child's clip/translate using the host's clamped offsets (which
-        // are valid now because ExtentWidth/Height are populated).
+        // are valid now because ExtentWidth/Height are populated). On a
+        // scroll-DISABLED axis the SCP also arranges its content to this
+        // slot width/height (not the pre-gutter extent), so a fit-to-
+        // width child ends up beside the cross-axis bar rather than
+        // clipped under it — see ScrollContentPresenter.ArrangeOverride.
         this._scp?.Arrange(new Rect(0, 0, contentW, contentH));
 
         // Sync scrollbar DPs to the now-final viewport sizes BEFORE

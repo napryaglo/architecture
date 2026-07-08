@@ -245,7 +245,21 @@ export class ScrollContentPresenter extends ContentPresenter
             // a translate of -(offset).
             const offX = host !== undefined ? host['effectiveHorizontalOffset']() : 0;
             const offY = host !== undefined ? host['effectiveVerticalOffset']()   : 0;
-            contentRect     = new Rect(-offX, -offY, this._extentWidth, this._extentHeight);
+            // On a scroll-DISABLED axis the content is meant to FILL the
+            // viewport, not overflow it — so arrange it to the (already
+            // gutter-reduced) finalSize on that axis rather than to the
+            // extent measured against the pre-gutter slot. Without this,
+            // a fit-to-width child stays shaped one scrollbar-gutter too
+            // wide and its trailing strip is clipped UNDER the cross-axis
+            // bar, which reads as the bar overlapping the content. The
+            // self-scrolling axis keeps the full extent (it's supposed to
+            // overflow and scroll). offX/offY are already 0 on a disabled
+            // axis (nothing to scroll), so the translate is unaffected.
+            const hEnabled = host?.HorizontalScrollEnabled ?? true;
+            const vEnabled = host?.VerticalScrollEnabled   ?? true;
+            const contentW = hEnabled ? this._extentWidth  : finalSize.Width;
+            const contentH = vEnabled ? this._extentHeight : finalSize.Height;
+            contentRect     = new Rect(-offX, -offY, contentW, contentH);
             adornerClipRect = new Rect(offX, offY, finalSize.Width, finalSize.Height);
             content.Arrange(contentRect);
             content.Clip = new RectangleGeometry(adornerClipRect);
