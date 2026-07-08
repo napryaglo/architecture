@@ -16,15 +16,9 @@ All 16 items closed — see [completed-backlog.md § 20](completed-backlog.md). 
 
 5.2. **No `Freezable` / immutability.** Useful for shareable value-type-like Models (Brushes, Geometries).
 
-5.11. **Command surface controls — Ribbon remainder.** 5.11.1 (ToolBar), 5.11.2 (Menu / MenuButton / MenuItem / ContextMenu), and the non-Ribbon part of 5.11.4 (commands demo) all shipped — see [completed-backlog.md](completed-backlog.md). What stays open:
+5.11. **Command surface controls — Ribbon.** 5.11.1 (ToolBar), 5.11.2 (Menu / MenuButton / MenuItem / ContextMenu), 5.11.3 (Ribbon family), and 5.11.4 (commands demo, incl. the Classic↔Ribbon mode toggle) have all shipped — see [completed-backlog.md § 5.11](completed-backlog.md). Nothing open here.
 
-  - **5.11.3 — Ribbon / RibbonTab / RibbonContextualGroup / RibbonGroup / RibbonButton / RibbonToggleButton / RibbonSplitButton / RibbonDropDownButton / RibbonSmallButtonColumn.** Tabbed grouped chrome. Two ItemsControls under `Ribbon`: stable `Tabs` always visible, `ContextualGroups` whose `IsActive` predicate (typically VM-bound) reveals their child contextual tabs with a non-default tab color — inline-badge style, single-row tab strip retained (no Office-style banner above). `RibbonButton.Size` ∈ { Large, Small }; small buttons stack 3 per `RibbonSmallButtonColumn`. `RibbonGroup.LaunchCommand` produces the `↘` corner icon for dialog launchers. Out-of-scope for v1: Backstage / QAT / minimize / KeyTips / galleries / touch sizing (see § 7 of the design doc).
-
-  - **5.11.4-followup — Ribbon mode in the `commands` demo.** The current `commands` demo exercises ToolBar + MenuButton + ContextMenu over a shared `ICommand` catalog with selection-gated commands. When Ribbon (5.11.3) lands, extend the demo with a title-bar toggle to swap between Classic (Menu + ToolBar) and Ribbon modes, and add a contextual Format tab that activates on selection (exercising `RibbonContextualGroup.IsActive`). Also worth migrating: reuse the existing Diagram model from the diagram demo as the demo's content surface (the current demo just uses a status-text content area).
-
-  **Recommended cut line.** 5.11.3 (Ribbon) is heavy — defer until a real demo or app explicitly demands the tabbed grouped chrome. The 5.11.4 followup lands alongside it.
-
-  Surface-control follow-ups (all shipped — see [completed-backlog.md](completed-backlog.md)).
+  Deferred Ribbon polish (not yet built): **KeyTips** (Alt-prefix letter overlay), **Backstage** (File-tab full-screen view), and **touch/pen sizing modes**. Ribbon minimize/collapse, Galleries (`RibbonGallery`), and the Quick Access Toolbar (`Ribbon.QuickAccessItems`) shipped in this pass beyond the original v1 cut line.
 
 5.13. **Hit testing for non-SVG renderers.** SVG gets hit-testing free via `elementsFromPoint`. Canvas needs a spatial index or hidden picking buffer. WebGL same. Pairs with the CanvasRenderer (9.1). From [visual-engine-design.md](src/document/visual-engine-design.md) § 11.
 
@@ -203,4 +197,24 @@ Shipped — see [completed-backlog.md § 26](completed-backlog.md). The class-ba
 **Done (proof of pattern):** `ColorScheme` is now a markup-authorable value resource — no-arg ctor + PascalCase settable `Name`/`Colors`/`Tints`/`Shades` (the `Colors` setter unwraps the `SolidColorBrush`es a colour literal lowers to), registered in the compiler `DEFAULT_SYMBOLS`. No grammar change was needed: a `ColorScheme x:key="…" [Name=…, Colors=[#a,#b,…]]` resource lowers through the existing value-object element + plain-field path + `[ … ]` list literal. The color-picker demo authors `@BrandColors` in `color-picker.mu`; the old `.mjs` `Resources.Set('BrandColors', new ColorScheme(…))` is gone.
 
 **Open — the broad migration:** every demo `.mjs` factory still merges its dictionary imperatively (`Application.current?.Resources.AddMergedDictionary(DemoDict.Clone())`, ~40 demos), and the platform composes services in `platform.html` (`app.Services.registerInstance(DiagramStorageKey, …)`). Move these into markup: merge each demo's dictionary from the demo's own `.mu` (via `dictionaries:` / `import`) rather than the factory, and author the platform's service composition in `platform.mu`'s `.services:` block. This touches the demo-loading model (factories currently merge lazily on first activation) and the platform composition root — a single cross-cutting pass, not a per-demo edit. Pairs with § 24 (`.services:` DSL) and § 25 (`.Member:` dictionary fold).
+
+---
+
+## 28. Flow-content & rich-text editing (follow-ups)
+
+**Shipped:** the WPF-analog inline model (`Run`/`Span`/`Bold`/`Italic`/`Underline`/`Hyperlink`/`InlineUIContainer` on `TextBlock.Inlines`), the block model (`FlowDocument` → `Paragraph` / `List` / `ListItem`, hosted by `RichTextBlock`), and a full `RichTextBox` tree-`TextPointer` editor — caret/selection, type/delete, Enter-split, Backspace-merge, Ctrl+B/I/U, Tab/Shift+Tab list indent/outdent, mouse click+drag, plain-text clipboard. Editor modules `src/basic/documents/{text-pointer,text-navigation,text-editing,caret-geometry}.ts`; paragraphs normalise to flat styled Runs. These are the intentional cut-lines deferred from that pass — the editor is fully usable without them, so they're concrete follow-ups, not blockers.
+
+28.1. **Visual-line Home/End.** Home/End currently jump to the paragraph's logical start/end (`ParagraphStart`/`ParagraphEnd`); on a wrapped paragraph they should stop at the *visual line* boundary. Needs `caret-geometry` to expose the line-span containing a pointer (the layout already has per-line offset ranges — surface a `lineStart/lineEnd(ptr)` and route Home/End through it, keeping Ctrl+Home/End as document extremes).
+
+28.2. **Rich clipboard.** Copy/cut/paste is plain text only (`ParagraphText` joined by `\n`; paste splits on `\n` into paragraphs, dropping run styling and list structure). A rich path would serialise the selected sub-tree (styled runs + block structure) to an internal format (and ideally HTML for cross-app) and rebuild it on paste. Pairs with a `FlowDocument`-fragment model.
+
+28.3. **Empty-selection pending format.** Ctrl+B/I/U with a collapsed caret is a no-op today (`toggle` early-returns when the selection is empty). WPF sets a *pending* character format that the next typed run inherits. Needs a "pending style" slot on `RichTextBox` applied in `InsertText` and cleared on caret move.
+
+28.4. **Undo/redo.** No undo stack. Edit ops mutate the model in place. Add a command/transaction layer (capture inverse ops, or snapshot the touched paragraphs) with Ctrl+Z / Ctrl+Y. Design choice: op-based inverse vs paragraph-snapshot — snapshot is simpler given the flat-Run normalisation.
+
+28.5. **IME / composition input.** Only `OnTextInput` committed text is handled; no composition (`OnPreviewTextInput` / dead keys / IME candidate window). Needs the runtime input layer to surface composition events first.
+
+28.6. **Hyperlink + InlineUIContainer editing.** `NormalizeParagraph` (the editor's flat-Run pass) drops `InlineUIContainer` and flattens `Hyperlink` to underlined runs, losing `NavigateUri`/`Command`. Editing docs with embedded objects / live links needs the normalise step to preserve them as atomic caret positions (length-1 in the offset space) rather than dropping/flattening.
+
+28.7. **Selection / formatting-state surface for toolbars.** No public API for a formatting toolbar to reflect/drive the caret's current format (is-bold, font family/size at caret) or to bind two-way. Expose a small observable selection-format DP set on `RichTextBox` (or a `TextSelection` facade over the anchor/caret `TextPointer`s) so a ribbon/toolbar can show active state and invoke toggles. Pairs with the text-format editors already built (`FontFamilyPicker` / `FontSizePicker`).
 
