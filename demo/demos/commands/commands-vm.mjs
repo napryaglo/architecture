@@ -101,6 +101,14 @@ export class CommandsVM extends DiagramDocument {
     // own RelayCommand instances (CommandsVM owns the proxy DPs so the
     // menu / toolbar markup can bind them through `$AlignLeftCommand`).
     static HasSelectionKey = Model.RegisterProperty(CommandsVM, 'HasSelection', false, MetaData.None);
+    // Classic (Menu + ToolBar) vs Ribbon chrome toggle. TwoWay so the
+    // header's mode Checkbox round-trips. The demo's DataTemplate triggers
+    // swap the two chrome containers off this flag.
+    static IsRibbonModeKey = Model.RegisterProperty(CommandsVM, 'IsRibbonMode', false, MetaData.BindsTwoWayByDefault);
+    // Contextual "Format" tab commands — Z-order stubs (real z-order is
+    // out of scope; the demo shows the contextual tab + selection gating).
+    static BringFrontCommandKey = Model.RegisterProperty(CommandsVM, 'BringFrontCommand', undefined, MetaData.None);
+    static SendBackCommandKey = Model.RegisterProperty(CommandsVM, 'SendBackCommand', undefined, MetaData.None);
     static CutCommandKey = Model.RegisterProperty(CommandsVM, 'CutCommand', undefined, MetaData.None);
     static CopyCommandKey = Model.RegisterProperty(CommandsVM, 'CopyCommand', undefined, MetaData.None);
     static PasteCommandKey = Model.RegisterProperty(CommandsVM, 'PasteCommand', undefined, MetaData.None);
@@ -190,6 +198,15 @@ export class CommandsVM extends DiagramDocument {
         // Middle covers the common cases; demo needed the explicit
         // bottom-edge gesture for its toolbar parity).
         this.set_property_value(CommandsVM.AlignBottomCommandKey, new RelayCommand(() => this._align('bottom'), hasSel));
+        // ── Z-order (contextual Format tab) ───────────────────────────
+        this.set_property_value(CommandsVM.BringFrontCommandKey, new RelayCommand(() => {
+            const s = selected();
+            setStatus(`Bring to front: ${s.length} node${s.length === 1 ? '' : 's'}.`);
+        }, hasSel));
+        this.set_property_value(CommandsVM.SendBackCommandKey, new RelayCommand(() => {
+            const s = selected();
+            setStatus(`Send to back: ${s.length} node${s.length === 1 ? '' : 's'}.`);
+        }, hasSel));
         // ── Stubs ────────────────────────────────────────────────────
         this.set_property_value(CommandsVM.UndoCommandKey, new RelayCommand(() => setStatus('Undo — no-op stub.')));
         this.set_property_value(CommandsVM.RedoCommandKey, new RelayCommand(() => setStatus('Redo — no-op stub.')));
@@ -213,6 +230,10 @@ export class CommandsVM extends DiagramDocument {
     }
     get HasSelection() { return this.get_property_value(CommandsVM.HasSelectionKey); }
     set HasSelection(v) { this.set_property_value(CommandsVM.HasSelectionKey, v); }
+    get IsRibbonMode() { return this.get_property_value(CommandsVM.IsRibbonModeKey); }
+    set IsRibbonMode(v) { this.set_property_value(CommandsVM.IsRibbonModeKey, v); }
+    get BringFrontCommand() { return this.get_property_value(CommandsVM.BringFrontCommandKey); }
+    get SendBackCommand() { return this.get_property_value(CommandsVM.SendBackCommandKey); }
     get CutCommand() { return this.get_property_value(CommandsVM.CutCommandKey); }
     get CopyCommand() { return this.get_property_value(CommandsVM.CopyCommandKey); }
     get PasteCommand() { return this.get_property_value(CommandsVM.PasteCommandKey); }
@@ -236,6 +257,7 @@ export class CommandsVM extends DiagramDocument {
         for (const name of [
             'CutCommand', 'CopyCommand', 'DeleteCommand',
             'DuplicateCommand', 'AlignBottomCommand',
+            'BringFrontCommand', 'SendBackCommand',
         ]) {
             // Dynamic getter access over a name list — bridge to the
             // RelayCommand-valued getters via an index signature.

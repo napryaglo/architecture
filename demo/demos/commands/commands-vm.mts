@@ -132,6 +132,14 @@ export class CommandsVM extends DiagramDocument
     // own RelayCommand instances (CommandsVM owns the proxy DPs so the
     // menu / toolbar markup can bind them through `$AlignLeftCommand`).
     static HasSelectionKey       = Model.RegisterProperty<boolean>(CommandsVM, 'HasSelection',       false,     MetaData.None);
+    // Classic (Menu + ToolBar) vs Ribbon chrome toggle. TwoWay so the
+    // header's mode Checkbox round-trips. The demo's DataTemplate triggers
+    // swap the two chrome containers off this flag.
+    static IsRibbonModeKey       = Model.RegisterProperty<boolean>(CommandsVM, 'IsRibbonMode',       false,     MetaData.BindsTwoWayByDefault);
+    // Contextual "Format" tab commands — Z-order stubs (real z-order is
+    // out of scope; the demo shows the contextual tab + selection gating).
+    static BringFrontCommandKey  = Model.RegisterProperty<RelayCommand | undefined>(CommandsVM, 'BringFrontCommand',  undefined, MetaData.None);
+    static SendBackCommandKey    = Model.RegisterProperty<RelayCommand | undefined>(CommandsVM, 'SendBackCommand',    undefined, MetaData.None);
     static CutCommandKey         = Model.RegisterProperty<RelayCommand | undefined>(CommandsVM, 'CutCommand',         undefined, MetaData.None);
     static CopyCommandKey        = Model.RegisterProperty<RelayCommand | undefined>(CommandsVM, 'CopyCommand',        undefined, MetaData.None);
     static PasteCommandKey       = Model.RegisterProperty<RelayCommand | undefined>(CommandsVM, 'PasteCommand',       undefined, MetaData.None);
@@ -224,6 +232,16 @@ export class CommandsVM extends DiagramDocument
         // bottom-edge gesture for its toolbar parity).
         this.set_property_value(CommandsVM.AlignBottomCommandKey, new RelayCommand(() => this._align('bottom'), hasSel));
 
+        // ── Z-order (contextual Format tab) ───────────────────────────
+        this.set_property_value(CommandsVM.BringFrontCommandKey, new RelayCommand(() => {
+            const s = selected();
+            setStatus(`Bring to front: ${s.length} node${s.length === 1 ? '' : 's'}.`);
+        }, hasSel));
+        this.set_property_value(CommandsVM.SendBackCommandKey, new RelayCommand(() => {
+            const s = selected();
+            setStatus(`Send to back: ${s.length} node${s.length === 1 ? '' : 's'}.`);
+        }, hasSel));
+
         // ── Stubs ────────────────────────────────────────────────────
         this.set_property_value(CommandsVM.UndoCommandKey, new RelayCommand(() => setStatus('Undo — no-op stub.')));
         this.set_property_value(CommandsVM.RedoCommandKey, new RelayCommand(() => setStatus('Redo — no-op stub.')));
@@ -249,6 +267,10 @@ export class CommandsVM extends DiagramDocument
 
     get HasSelection():      boolean { return this.get_property_value(CommandsVM.HasSelectionKey); }
     set HasSelection(v:      boolean) { this.set_property_value(CommandsVM.HasSelectionKey, v); }
+    get IsRibbonMode():      boolean { return this.get_property_value(CommandsVM.IsRibbonModeKey); }
+    set IsRibbonMode(v:      boolean) { this.set_property_value(CommandsVM.IsRibbonModeKey, v); }
+    get BringFrontCommand(): RelayCommand | undefined { return this.get_property_value(CommandsVM.BringFrontCommandKey); }
+    get SendBackCommand():   RelayCommand | undefined { return this.get_property_value(CommandsVM.SendBackCommandKey); }
     get CutCommand():        RelayCommand | undefined { return this.get_property_value(CommandsVM.CutCommandKey); }
     get CopyCommand():       RelayCommand | undefined { return this.get_property_value(CommandsVM.CopyCommandKey); }
     get PasteCommand():      RelayCommand | undefined { return this.get_property_value(CommandsVM.PasteCommandKey); }
@@ -273,6 +295,7 @@ export class CommandsVM extends DiagramDocument
         for (const name of [
             'CutCommand', 'CopyCommand', 'DeleteCommand',
             'DuplicateCommand', 'AlignBottomCommand',
+            'BringFrontCommand', 'SendBackCommand',
         ]) {
             // Dynamic getter access over a name list — bridge to the
             // RelayCommand-valued getters via an index signature.

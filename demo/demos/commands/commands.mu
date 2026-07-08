@@ -71,19 +71,29 @@ resources CommandsDemo {
     DataTemplate x:key="CommandsTemplate" [DataType = CommandsVM] {
         Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
-                // Header
+                // Header — title + Classic/Ribbon mode toggle
                 Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (16,10,16,10) ] {
-                    TextBlock
-                        [ Text       = "ToolBar + Menu + ContextMenu over a Diagram. Select nodes (click / Ctrl-click / marquee) and use the commands.",
-                          FontSize   = 14,
-                          FontWeight = Bold,
-                          Foreground = @OnPrimary ]
+                    DockPanel [ LastChildFill = true ] {
+                        Checkbox
+                            [ DockPanel.Dock = Right,
+                              Content        = "Ribbon mode",
+                              IsChecked      = $IsRibbonMode ]
+                        TextBlock
+                            [ Text              = "Menu + ToolBar + ContextMenu (Classic) or a tabbed Ribbon over one shared ICommand catalog. Select nodes to reveal the contextual Format tab.",
+                              FontSize          = 14,
+                              FontWeight        = Bold,
+                              Foreground        = @OnPrimary,
+                              VerticalAlignment = Center ]
+                    }
                 }
+
+                // ── Classic chrome — Menu strip + ToolBar. Collapsed in
+                //    Ribbon mode by the DataTemplate trigger below.
+                StackPanel x:name="ClassicChrome" [ DockPanel.Dock = Top, Orientation = Vertical ] {
 
                 // MenuButton strip (above the toolbar)
                 Border
-                    [ DockPanel.Dock  = Top,
-                      Background      = @SurfaceContainerLow,
+                    [ Background      = @SurfaceContainerLow,
                       BorderBrush     = @OutlineVariant,
                       BorderThickness = (0,0,0,1),
                       Padding         = (8,6,8,6) ] {
@@ -197,6 +207,74 @@ resources CommandsDemo {
                     }
                 }
 
+                } // ── end ClassicChrome ──────────────────────────────
+
+                // ── Ribbon chrome — tabbed grouped surface over the SAME
+                //    ICommand catalog. Hidden by default; the DataTemplate
+                //    trigger below reveals it in Ribbon mode. The contextual
+                //    "Format" group activates on selection ($HasSelection).
+                Border x:name="RibbonChrome" [ DockPanel.Dock = Top, Visibility = Collapsed ] {
+                    Ribbon {
+                        RibbonTab [ Header = "Home" ] {
+                            RibbonGroup [ Header = "Clipboard" ] {
+                                RibbonButton [ Text = "✂ Cut",   Command = $CutCommand ]
+                                RibbonButton [ Text = "📋 Copy",  Command = $CopyCommand ]
+                                RibbonButton [ Text = "📄 Paste", Command = $PasteCommand ]
+                            }
+                            RibbonGroup [ Header = "File", LaunchCommand = $SaveCommand ] {
+                                RibbonButton [ Text = "💾 Save", Command = $SaveCommand ]
+                                RibbonButton [ Text = "📂 Load", Command = $LoadCommand ]
+                            }
+                        }
+                        RibbonTab [ Header = "Insert" ] {
+                            RibbonGroup [ Header = "Nodes" ] {
+                                RibbonButton [ Text = "⎘ Duplicate",  Command = $DuplicateCommand ]
+                                RibbonButton [ Text = "Select All",   Command = $SelectAllCommand ]
+                            }
+                        }
+                        RibbonTab [ Header = "View" ] {
+                            RibbonGroup [ Header = "History" ] {
+                                RibbonButton [ Text = "↶ Undo", Command = $UndoCommand ]
+                                RibbonButton [ Text = "↷ Redo", Command = $RedoCommand ]
+                            }
+                        }
+                        ContextualGroups {
+                            RibbonContextualGroup
+                                [ Header   = "Drawing Tools",
+                                  Color    = #f97316,
+                                  IsActive = $HasSelection ] {
+                                RibbonTab [ Header = "Format" ] {
+                                    RibbonGroup [ Header = "Edit" ] {
+                                        RibbonButton [ Text = "🗑 Delete",     Command = $DeleteCommand ]
+                                        RibbonButton [ Text = "⎘ Duplicate", Command = $DuplicateCommand ]
+                                    }
+                                    RibbonGroup [ Header = "Z-order" ] {
+                                        RibbonButton [ Text = "Bring Front", Command = $BringFrontCommand ]
+                                        RibbonButton [ Text = "Send Back",   Command = $SendBackCommand ]
+                                    }
+                                    RibbonGroup [ Header = "Align", LaunchCommand = $AlignLeftCommand ] {
+                                        RibbonSmallButtonColumn {
+                                            RibbonButton [ Text = "⬅ Left",   Command = $AlignLeftCommand ]
+                                            RibbonButton [ Text = "⇔ Center", Command = $AlignCenterCommand ]
+                                            RibbonButton [ Text = "➡ Right",  Command = $AlignRightCommand ]
+                                        }
+                                        RibbonSmallButtonColumn {
+                                            RibbonButton [ Text = "⬆ Top",    Command = $AlignTopCommand ]
+                                            RibbonButton [ Text = "↕ Middle", Command = $AlignMiddleCommand ]
+                                            RibbonButton [ Text = "⬇ Bottom", Command = $AlignBottomCommand ]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        QuickAccessItems {
+                            RibbonButton [ Text = "💾", Command = $SaveCommand ]
+                            RibbonButton [ Text = "↶", Command = $UndoCommand ]
+                            RibbonButton [ Text = "↷", Command = $RedoCommand ]
+                        }
+                    }
+                }
+
                 // Canvas — the Diagram's default Template already wraps
                 // an ItemsPresenter in a ScrollViewer, so no enclosing
                 // Border / ScrollViewer is needed here. Items are
@@ -212,6 +290,13 @@ resources CommandsDemo {
                       ReflectSelectionToItems = true,
                       Focusable               = true ]
             }
+        }
+        // Classic ↔ Ribbon swap. One flag drives both containers; when
+        // false both revert to their base Visibility (Classic visible,
+        // Ribbon collapsed).
+        when ( $IsRibbonMode ) {
+            ClassicChrome.Visibility = Collapsed;
+            RibbonChrome.Visibility  = Visible;
         }
     }
 }
