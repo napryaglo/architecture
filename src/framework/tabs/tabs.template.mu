@@ -84,9 +84,14 @@ resources Tabs {
         // into a HeaderTemplate's labels that don't override them). Selection
         // flips the ink to @Primary, matching the active-indicator underline.
         TextBlock.Foreground = @OnSurfaceVariant;
+        // Full Title Small atom set (§ 18.13 — was Font/Weight/Size only, so
+        // LineHeight/Tracking fell back to ambient). Cross-class inherited
+        // writes into the header label, so not a `Style = @TitleSmall`.
         TextBlock.FontFamily = @TitleSmallFont;
         TextBlock.FontWeight = @TitleSmallWeight;
         TextBlock.FontSize   = @TitleSmallSize;
+        TextBlock.LineHeight = @TitleSmallLineHeight;
+        TextBlock.LetterSpacing = @TitleSmallTracking;
         when ( IsSelected ) { TextBlock.Foreground = @Primary; }
     }
 }

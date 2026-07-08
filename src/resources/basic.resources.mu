@@ -50,6 +50,14 @@ resources MuralBasic {
     // scale cleanly).
     include "shapes/chevron-down.svg" as ChevronDown
     include "shapes/chevron-up.svg" as ChevronUp
+    // Chevron-right (collapsed tree row / forward disclosure), close ✕, and
+    // check ✓ — the same Shape-paints-shared-Geometry model as the chevrons
+    // (§ 18.13: replaces the font-dependent "✕" / "▸" / "✓" text glyphs, which
+    // didn't tint or scale cleanly). Painted via
+    // `Shape [Geometry=@IconClose, Fill=@…, Width=.., Height=..]`.
+    include "shapes/chevron-right.svg" as ChevronRight
+    include "shapes/close.svg" as IconClose
+    include "shapes/check.svg" as IconCheck
 
     // ── TextBlock: default text contract ───────────────────────────
     // Binds FontFamily / FontSize / FontWeight / LineHeight to the M3
@@ -82,24 +90,36 @@ resources MuralBasic {
     // the instant the theme changes? Bind it: `[Foreground=@OnSurface]` —
     // a DynamicResource, reactive, and Local-tier so it also wins over any
     // template cascade.
+    // The ambient default IS the Body Medium role (§ 18.13). We inline the
+    // five @BodyMedium* atoms rather than `BasedOn @BodyMedium` on purpose:
+    // every type-scale role (@BodyMedium included) implicitly inherits THIS
+    // class-keyed default at Seal, so a `BasedOn @BodyMedium` here would make
+    // default ↔ role a cycle and ResolveSetters recurse forever. The root is
+    // the one legitimate place the atoms are inlined — it's the source the
+    // roles override from.
     Style [TargetType = TextBlock] {
-        FontFamily = @FontFamily;
-        FontSize = 14;
-        FontWeight = Normal;
-        LineHeight = 20;
+        FontFamily = @BodyMediumFont;
+        FontWeight = @BodyMediumWeight;
+        FontSize = @BodyMediumSize;
+        LineHeight = @BodyMediumLineHeight;
+        LetterSpacing = @BodyMediumTracking;
     }
 
-    // Rich flow-content hosts share TextBlock's typographic defaults; the
+    // Rich flow-content hosts share TextBlock's Body Medium baseline; the
     // per-paragraph LineHeight lives on each Block, not the host.
     Style [TargetType = RichTextBlock] {
-        FontFamily = @FontFamily;
-        FontSize = 14;
-        FontWeight = Normal;
+        FontFamily = @BodyMediumFont;
+        FontWeight = @BodyMediumWeight;
+        FontSize = @BodyMediumSize;
+        LineHeight = @BodyMediumLineHeight;
+        LetterSpacing = @BodyMediumTracking;
     }
     Style [TargetType = RichTextBox] {
-        FontFamily = @FontFamily;
-        FontSize = 14;
-        FontWeight = Normal;
+        FontFamily = @BodyMediumFont;
+        FontWeight = @BodyMediumWeight;
+        FontSize = @BodyMediumSize;
+        LineHeight = @BodyMediumLineHeight;
+        LetterSpacing = @BodyMediumTracking;
     }
 
     // ── Button ──────────────────────────────────────────────────────
@@ -265,14 +285,16 @@ resources MuralBasic {
         Foreground = @OnSurface;
         SelectionBrush = @SecondaryContainer;
         CaretBrush = @OnSurface;
-        // M3 typography — Body Large is the spec role for text-field
-        // input content. The atom set rides through inheritance so
-        // PART_Editor and any consumer-injected text picks them up.
-        FontFamily = @BodyLargeFont;
-        FontWeight = @BodyLargeWeight;
-        FontSize = @BodyLargeSize;
-        LineHeight = @BodyLargeLineHeight;
-        LetterSpacing = @BodyLargeTracking;
+        // M3 typography — Body Medium (§ 18.13: input text is unified with
+        // label/list text at 14 rather than the 16 of Body Large, so a field
+        // and a plain label read at the same size). The atom set rides
+        // through inheritance so PART_Editor and any consumer-injected text
+        // picks them up.
+        FontFamily = @BodyMediumFont;
+        FontWeight = @BodyMediumWeight;
+        FontSize = @BodyMediumSize;
+        LineHeight = @BodyMediumLineHeight;
+        LetterSpacing = @BodyMediumTracking;
     }
 
     // ── SpinEdit ────────────────────────────────────────────────────

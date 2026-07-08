@@ -31,20 +31,16 @@ resources Lists {
                 // width and baseline stay identical across the swap.
                 Grid x:name="PART_SelectionSlot" [ VerticalAlignment = Center ] {
                     TextBlock x:name="PART_SelectionText"
-                        [ Foreground    = @OnSurfaceVariant,
-                          FontFamily    = @BodyLargeFont,
-                          FontWeight    = @BodyLargeWeight,
-                          FontSize      = @BodyLargeSize,
-                          LineHeight    = @BodyLargeLineHeight,
-                          LetterSpacing = @BodyLargeTracking,
+                        [ Foreground        = @OnSurfaceVariant,
+                          Style             = @BodyMedium,
                           VerticalAlignment = Center ]
+                    // No font atoms — the Plain TextBox inherits Body Medium
+                    // from the TextBox default Style (§ 18.13), matching the
+                    // selection label above so the swap is seamless.
                     TextBox x:name="PART_EditText"
-                        [ Variant       = Plain,
-                          Visibility    = Collapsed,
-                          AcceptsReturn = false,
-                          FontFamily    = @BodyLargeFont,
-                          FontWeight    = @BodyLargeWeight,
-                          FontSize      = @BodyLargeSize,
+                        [ Variant           = Plain,
+                          Visibility        = Collapsed,
+                          AcceptsReturn     = false,
                           VerticalAlignment = Center ]
                 }
                 // Chevron wrapped in a ClickableBorder so it can toggle
@@ -234,15 +230,12 @@ resources Lists {
                         [ DockPanel.Dock  = Left,
                           Width           = 20,
                           BorderThickness = (0) ] {
-                        TextBlock x:name="PART_ChevronText"
-                            [ Foreground        = @OnSurfaceVariant,
-                              FontFamily        = @BodySmallFont,
-                              FontWeight        = @BodySmallWeight,
-                              FontSize          = @BodySmallSize,
-                              LineHeight        = @BodySmallLineHeight,
-                              LetterSpacing     = @BodySmallTracking,
-                              VerticalAlignment = Center,
-                              Text              = "▸" ]
+                        Shape x:name="PART_ChevronGlyph"
+                            [ Geometry          = @ChevronRight,
+                              Fill              = @OnSurfaceVariant,
+                              Width             = 12,
+                              Height            = 12,
+                              VerticalAlignment = Center ]
                     }
                     // Leading slot — class-managed Border (not a
                     // ContentPresenter). Empty Border has Size.Zero, so
@@ -257,19 +250,11 @@ resources Lists {
                           BorderThickness   = (0) ]
                     StackPanel [ Orientation = Vertical, VerticalAlignment = Center ] {
                         TextBlock x:name="PART_Label"
-                            [ Foreground    = @OnSurface,
-                              FontFamily    = @BodyMediumFont,
-                              FontWeight    = @BodyMediumWeight,
-                              FontSize      = @BodyMediumSize,
-                              LineHeight    = @BodyMediumLineHeight,
-                              LetterSpacing = @BodyMediumTracking ]
+                            [ Foreground = @OnSurface,
+                              Style      = @BodyMedium ]
                         TextBlock x:name="PART_SupportingText"
-                            [ Foreground    = @OnSurfaceVariant,
-                              FontFamily    = @BodySmallFont,
-                              FontWeight    = @BodySmallWeight,
-                              FontSize      = @BodySmallSize,
-                              LineHeight    = @BodySmallLineHeight,
-                              LetterSpacing = @BodySmallTracking ]
+                            [ Foreground = @OnSurfaceVariant,
+                              Style      = @BodySmall ]
                     }
                 }
             }
@@ -395,12 +380,8 @@ resources Lists {
                 StackPanel [ Orientation = Vertical, VerticalAlignment = Center ] {
                     ContentPresenter x:name="PART_HeadlineSlot" [ HorizontalAlignment = Stretch ]
                     TextBlock x:name="PART_SupportingText"
-                        [ Foreground    = @OnSurfaceVariant,
-                          FontFamily    = @BodySmallFont,
-                          FontWeight    = @BodySmallWeight,
-                          FontSize      = @BodySmallSize,
-                          LineHeight    = @BodySmallLineHeight,
-                          LetterSpacing = @BodySmallTracking ]
+                        [ Foreground = @OnSurfaceVariant,
+                          Style      = @BodySmall ]
                 }
             }
         }

@@ -22,12 +22,8 @@ resources Menus {
         Button x:name="PART_Trigger" {
             StackPanel x:name="PART_TriggerStack" [ Orientation = Horizontal ] {
                 TextBlock x:name="PART_HeaderText"
-                    [ Foreground    = @OnPrimary,
-                      FontFamily    = @LabelLargeFont,
-                      FontWeight    = @LabelLargeWeight,
-                      FontSize      = @LabelLargeSize,
-                      LineHeight    = @LabelLargeLineHeight,
-                      LetterSpacing = @LabelLargeTracking ]
+                    [ Foreground = @OnPrimary,
+                      Style      = @LabelLarge ]
             }
         }
     }
@@ -175,22 +171,14 @@ resources Menus {
                 // slot specifically (not a generic spacing token).
                 Border x:name="PART_Icon" [ Width = 24, MinWidth = 24 ]
                 TextBlock x:name="PART_Label"
-                    [ Margin        = (@Spacing2,0,@Spacing4,0),
-                      MinWidth      = 80,
-                      Foreground    = @OnSurface,
-                      FontFamily    = @LabelLargeFont,
-                      FontWeight    = @LabelLargeWeight,
-                      FontSize      = @LabelLargeSize,
-                      LineHeight    = @LabelLargeLineHeight,
-                      LetterSpacing = @LabelLargeTracking ]
+                    [ Margin     = (@Spacing2,0,@Spacing4,0),
+                      MinWidth   = 80,
+                      Foreground = @OnSurface,
+                      Style      = @LabelLarge ]
                 TextBlock x:name="PART_Gesture"
-                    [ Margin        = (0,0,@Spacing4,0),
-                      Foreground    = @OnSurfaceVariant,
-                      FontFamily    = @LabelMediumFont,
-                      FontWeight    = @LabelMediumWeight,
-                      FontSize      = @LabelMediumSize,
-                      LineHeight    = @LabelMediumLineHeight,
-                      LetterSpacing = @LabelMediumTracking ]
+                    [ Margin     = (0,0,@Spacing4,0),
+                      Foreground = @OnSurfaceVariant,
+                      Style      = @LabelMedium ]
                 TextBlock x:name="PART_Chevron" [ Width = 12, Foreground = @OnSurfaceVariant ]
             }
         }
@@ -266,13 +254,9 @@ resources Menus {
             StackPanel [ Orientation = Horizontal ] {
                 Border x:name="PART_Icon" [ Width = 0, MinWidth = 0 ]
                 TextBlock x:name="PART_Label"
-                    [ MinWidth      = 0,
-                      Foreground    = @OnSurface,
-                      FontFamily    = @LabelLargeFont,
-                      FontWeight    = @LabelLargeWeight,
-                      FontSize      = @LabelLargeSize,
-                      LineHeight    = @LabelLargeLineHeight,
-                      LetterSpacing = @LabelLargeTracking ]
+                    [ MinWidth   = 0,
+                      Foreground = @OnSurface,
+                      Style      = @LabelLarge ]
                 TextBlock x:name="PART_Gesture" [ Width = 0, Foreground = @OnSurfaceVariant ]
                 TextBlock x:name="PART_Chevron" [ Width = 0, Foreground = @OnSurfaceVariant ]
             }

@@ -49,11 +49,7 @@ resources TopAppBars {
                       HorizontalAlignment = Center ]
                 TextBlock x:name="PART_TitleText"
                     [ Grid.Column         = 1,
-                      FontFamily          = @TitleLargeFont,
-                      FontWeight          = @TitleLargeWeight,
-                      FontSize            = @TitleLargeSize,
-                      LineHeight          = @TitleLargeLineHeight,
-                      LetterSpacing       = @TitleLargeTracking,
+                      Style               = @TitleLarge,
                       Foreground          = @OnSurface,
                       VerticalAlignment   = Center,
                       HorizontalAlignment = Left,
@@ -101,11 +97,7 @@ resources TopAppBars {
                       HorizontalAlignment = Left ]
                 TextBlock x:name="PART_TitleText"
                     [ Grid.Column         = 1,
-                      FontFamily          = @TitleLargeFont,
-                      FontWeight          = @TitleLargeWeight,
-                      FontSize            = @TitleLargeSize,
-                      LineHeight          = @TitleLargeLineHeight,
-                      LetterSpacing       = @TitleLargeTracking,
+                      Style               = @TitleLarge,
                       Foreground          = @OnSurface,
                       VerticalAlignment   = Center,
                       HorizontalAlignment = Center,
@@ -145,11 +137,7 @@ resources TopAppBars {
                 }
                 Border [ Padding = (16,0,16,16) ] {
                     TextBlock x:name="PART_TitleText"
-                        [ FontFamily          = @HeadlineSmallFont,
-                          FontWeight          = @HeadlineSmallWeight,
-                          FontSize            = @HeadlineSmallSize,
-                          LineHeight          = @HeadlineSmallLineHeight,
-                          LetterSpacing       = @HeadlineSmallTracking,
+                        [ Style               = @HeadlineSmall,
                           Foreground          = @OnSurface,
                           VerticalAlignment   = Bottom,
                           HorizontalAlignment = Left ]
@@ -181,11 +169,7 @@ resources TopAppBars {
                 }
                 Border [ Padding = (16,0,16,20) ] {
                     TextBlock x:name="PART_TitleText"
-                        [ FontFamily          = @HeadlineMediumFont,
-                          FontWeight          = @HeadlineMediumWeight,
-                          FontSize            = @HeadlineMediumSize,
-                          LineHeight          = @HeadlineMediumLineHeight,
-                          LetterSpacing       = @HeadlineMediumTracking,
+                        [ Style               = @HeadlineMedium,
                           Foreground          = @OnSurface,
                           VerticalAlignment   = Bottom,
                           HorizontalAlignment = Left ]

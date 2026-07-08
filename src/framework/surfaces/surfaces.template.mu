@@ -193,11 +193,7 @@ resources Surfaces {
                     [ DockPanel.Dock = Top,
                       Text           = $Title,
                       Foreground     = @OnSurface,
-                      FontFamily     = @HeadlineSmallFont,
-                      FontWeight     = @HeadlineSmallWeight,
-                      FontSize       = @HeadlineSmallSize,
-                      LineHeight     = @HeadlineSmallLineHeight,
-                      LetterSpacing  = @HeadlineSmallTracking,
+                      Style          = @HeadlineSmall,
                       Margin         = (0,0,0,@Spacing4) ]
                 ContentPresenter
                     [ DockPanel.Dock      = Bottom,

@@ -90,12 +90,11 @@ resources Toggles {
               BorderBrush     = @OnSurfaceVariant,
               BorderThickness = (2),
               CornerRadius    = @ShapeExtraSmall ] {
-            TextBlock x:name="PART_Mark"
-                [ Text                = "✓",
-                  FontFamily          = @LabelSmallFont,
-                  FontWeight          = @TypefaceWeightBold,
-                  FontSize            = @LabelLargeSize,
-                  Foreground          = @OnPrimary,
+            Shape x:name="PART_Mark"
+                [ Geometry            = @IconCheck,
+                  Fill                = @OnPrimary,
+                  Width               = 16,
+                  Height              = 16,
                   HorizontalAlignment = Center,
                   VerticalAlignment   = Center,
                   Opacity             = 0 ]

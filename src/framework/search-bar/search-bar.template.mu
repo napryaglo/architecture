@@ -49,10 +49,11 @@ resources SearchBars {
         Foreground = @OnSurface;
         SelectionBrush = @SecondaryContainer;
         CaretBrush = @OnSurface;
-        FontFamily = @BodyLargeFont;
-        FontWeight = @BodyLargeWeight;
-        FontSize = @BodyLargeSize;
-        LineHeight = @BodyLargeLineHeight;
-        LetterSpacing = @BodyLargeTracking;
+        // Body Medium (§ 18.13 — input text unified at 14 with labels).
+        FontFamily = @BodyMediumFont;
+        FontWeight = @BodyMediumWeight;
+        FontSize = @BodyMediumSize;
+        LineHeight = @BodyMediumLineHeight;
+        LetterSpacing = @BodyMediumTracking;
     }
 }

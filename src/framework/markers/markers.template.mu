@@ -72,9 +72,15 @@ resources Markers {
     Style [TargetType = Chip] {
         Template = @DefaultChip;
         Foreground = @OnSurface;
+        // Full Label Large atom set (§ 18.13 — was Font/Weight/Size only,
+        // so LineHeight/Tracking silently fell back to the ambient default).
+        // Chip is the styled control (not a TextBlock), so these ride into
+        // the label via inheritance rather than a `Style = @LabelLarge`.
         FontFamily = @LabelLargeFont;
         FontWeight = @LabelLargeWeight;
         FontSize = @LabelLargeSize;
+        LineHeight = @LabelLargeLineHeight;
+        LetterSpacing = @LabelLargeTracking;
     }
 
     // ── Divider: M3 1dp rule, horizontal or vertical ───────────────
@@ -126,11 +132,7 @@ resources Markers {
             TextBlock
                 [ Text                = $Count,
                   Foreground          = @OnError,
-                  FontFamily          = @LabelSmallFont,
-                  FontWeight          = @LabelSmallWeight,
-                  FontSize            = @LabelSmallSize,
-                  LineHeight          = @LabelSmallLineHeight,
-                  LetterSpacing       = @LabelSmallTracking,
+                  Style               = @LabelSmall,
                   HorizontalAlignment = Center,
                   VerticalAlignment   = Center ]
         }

@@ -80,9 +80,12 @@ resources ButtonGroups {
     Style [TargetType = SegmentedItem] {
         Template = @DefaultSegmentedItem;
         Foreground = @OnSurface;
+        // Full Label Large atom set (§ 18.13 — was Font/Weight/Size only).
         FontFamily = @LabelLargeFont;
         FontWeight = @LabelLargeWeight;
         FontSize = @LabelLargeSize;
+        LineHeight = @LabelLargeLineHeight;
+        LetterSpacing = @LabelLargeTracking;
     }
 
     // ── SplitButton: primary action + chevron menu trigger ──────────
@@ -109,11 +112,11 @@ resources ButtonGroups {
                   Padding         = (@Spacing2,@Spacing2,@Spacing2,@Spacing2),
                   BorderThickness = (1,0,0,0),
                   BorderBrush     = @PrimaryContainer ] {
-                TextBlock
-                    [ Text                = "▾",
-                      FontSize            = @LabelLargeSize,
-                      FontWeight          = @TypefaceWeightBold,
-                      Foreground          = @OnPrimary,
+                Shape
+                    [ Geometry            = @ChevronDown,
+                      Fill                = @OnPrimary,
+                      Width               = 14,
+                      Height              = 14,
                       HorizontalAlignment = Center,
                       VerticalAlignment   = Center ]
             }
@@ -173,8 +176,11 @@ resources ButtonGroups {
         Template = @DefaultSplitButton;
         PopupTemplate = @DefaultSplitButtonPopup;
         Foreground = @OnPrimary;
+        // Full Label Large atom set (§ 18.13 — was Font/Weight/Size only).
         FontFamily = @LabelLargeFont;
         FontWeight = @LabelLargeWeight;
         FontSize = @LabelLargeSize;
+        LineHeight = @LabelLargeLineHeight;
+        LetterSpacing = @LabelLargeTracking;
     }
 }

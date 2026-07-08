@@ -91,7 +91,7 @@ resources Ribbons {
         Button x:name="PART_Trigger" {
             StackPanel [ Orientation = Horizontal ] {
                 StackPanel x:name="PART_ContentHost" [ Orientation = Vertical ]
-                TextBlock [ Text = "▾", Margin = (@Spacing1,0,0,0), VerticalAlignment = Center ]
+                Shape [ Geometry = @ChevronDown, Fill = @OnSurface, Width = 12, Height = 12, Margin = (@Spacing1,0,0,0), VerticalAlignment = Center ]
             }
         }
     }
@@ -127,7 +127,7 @@ resources Ribbons {
                 StackPanel x:name="PART_ContentHost" [ Orientation = Vertical ]
             }
             Button x:name="PART_Arrow" {
-                TextBlock [ Text = "▾", VerticalAlignment = Center ]
+                Shape [ Geometry = @ChevronDown, Fill = @OnSurface, Width = 12, Height = 12, VerticalAlignment = Center ]
             }
         }
     }
@@ -184,8 +184,7 @@ resources Ribbons {
                         [ Text                = $$Header,
                           HorizontalAlignment = Center,
                           Foreground          = @OnSurfaceVariant,
-                          FontFamily          = @LabelSmallFont,
-                          FontSize            = @LabelSmallSize ]
+                          Style               = @LabelSmall ]
                     Button x:name="PART_Launcher" [ HorizontalAlignment = Right, VerticalAlignment = Bottom ] {
                         TextBlock [ Text = "↘" ]
                     }
@@ -233,9 +232,14 @@ resources Ribbons {
     Style [TargetType = RibbonTabHeader] {
         Template = @DefaultRibbonTabHeader;
         TextBlock.Foreground = @OnSurfaceVariant;
+        // Full Title Small atom set (§ 18.13 — was Font/Weight/Size only).
+        // Injected into the header text via cross-class TextBlock.* inherited
+        // writes, so it can't be a `Style = @TitleSmall`.
         TextBlock.FontFamily = @TitleSmallFont;
         TextBlock.FontWeight = @TitleSmallWeight;
         TextBlock.FontSize   = @TitleSmallSize;
+        TextBlock.LineHeight = @TitleSmallLineHeight;
+        TextBlock.LetterSpacing = @TitleSmallTracking;
         when ( IsCurrent ) { TextBlock.Foreground = @Primary; }
     }
 
@@ -251,7 +255,7 @@ resources Ribbons {
               Padding         = (@Spacing1) ] {
             DockPanel [ LastChildFill = true ] {
                 Button x:name="PART_More" [ DockPanel.Dock = Right ] {
-                    TextBlock [ Text = "▾" ]
+                    Shape [ Geometry = @ChevronDown, Fill = @OnSurface, Width = 12, Height = 12 ]
                 }
                 ItemsPresenter
             }

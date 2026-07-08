@@ -218,7 +218,7 @@ resources Shells {
                   Command          = $service(ContentHostService).CloseDocumentCommand,
                   CommandParameter = $Id,
                   Margin           = (2,0,0,0) ] {
-                TextBlock [ Text = "✕", FontSize = 11, Foreground = @OnSurfaceVariant ]
+                Shape [ Geometry = @IconClose, Fill = @OnSurfaceVariant, Width = 14, Height = 14 ]
             }
         }
     }
@@ -323,16 +323,17 @@ resources Shells {
                               Variant          = Standard,
                               Command          = $service(InspectorService).CloseInspectorCommand,
                               CommandParameter = $Id ] {
-                            TextBlock [ Text = "✕", FontSize = 11, Foreground = @OnSurfaceVariant ]
+                            Shape [ Geometry = @IconClose, Fill = @OnSurfaceVariant, Width = 14, Height = 14 ]
                         }
                         IconButton x:name="PART_HeaderToggle"
                             [ Variant = Standard,
                               Command = $$ToggleExpandedCommand ] {
                             StackPanel [ Orientation = Horizontal, VerticalAlignment = Center, HorizontalAlignment = Left ] {
-                                TextBlock x:name="PART_Chevron"
-                                    [ Text       = "▾",
-                                      FontSize   = 10,
-                                      Foreground = @OnSurfaceVariant,
+                                Shape x:name="PART_Chevron"
+                                    [ Geometry   = @ChevronDown,
+                                      Fill       = @OnSurfaceVariant,
+                                      Width      = 12,
+                                      Height     = 12,
                                       Margin     = (0,0,6,0) ]
                                 TextBlock
                                     [ Text       = $Title,
@@ -347,7 +348,7 @@ resources Shells {
         }
         when ( IsExpanded = false ) {
             PART_Body.Visibility = Collapsed;
-            PART_Chevron.Text    = "▸";
+            PART_Chevron.Geometry = @ChevronRight;
         }
     }
     Style [TargetType = InspectorPanel] {

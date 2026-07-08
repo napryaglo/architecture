@@ -76,11 +76,7 @@ resources Navigation {
                     }
                 }
                 TextBlock x:name="PART_LabelText"
-                    [ FontFamily          = @LabelMediumFont,
-                      FontWeight          = @LabelMediumWeight,
-                      FontSize            = @LabelMediumSize,
-                      LineHeight          = @LabelMediumLineHeight,
-                      LetterSpacing       = @LabelMediumTracking,
+                    [ Style               = @LabelMedium,
                       Foreground          = @OnSurfaceVariant,
                       HorizontalAlignment = Stretch,
                       TextAlignment       = Center,

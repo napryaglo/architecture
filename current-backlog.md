@@ -2,7 +2,7 @@
 
 Open gaps in the property/binding/control system compared to WPF. Closed items moved to [completed-backlog.md](completed-backlog.md) — section numbers preserved across both files so cross-references survive.
 
-**Status:** Property / binding / inheritance / layout / render pipeline is feature-complete for WPF parity; the concrete-control roster covers Border, Grid (with shared-size groups), StackPanel, WrapPanel, DockPanel, Canvas, UniformGrid, VirtualizingStackPanel, VirtualizingWrapPanel, Button, ToggleButton, TextBlock, TextBox, ComboBox, ListBox, TreeView, Slider, SpinEdit, ScrollBar, ScrollViewer, ContentControl, ItemsControl, ControlTemplate, DataTemplate, Drawer, PageView, Diagram (with Selector-based multi-select + marquee), Thumb, Splitter, GridSplitter, ToolBar (+ ToolBarButton / ToolBarToggleButton / ToolBarSeparator with overflow popup), Menu / MenuButton / MenuItem / MenuSeparator (hamburger fly-out), ContextMenu (attached DP + right-click auto-open), and shapes (Ellipse, Line). Two-level Theme + Scheme architecture shipped — Material Theme with Light/Dark Schemes, six adaptive inherited DPs, opt-in `SchemeTransition` animation for Brush tokens via the DynamicResource hook. `Visual.RenderTransform` DP shipped with Rotate / Scale / Skew / Group transforms — animatable inner DPs flow through the implicit-transition engine. Selector keyboard navigation surface (arrow / Home / End / PageDown / PageUp / Shift / Ctrl / Space / Ctrl+A) shipped — TreeView adds Left / Right collapse / expand on top. Smooth scrolling DPs + marquee autoscroll + incremental items-change in virtualizing panels (§ 10.4-10.7) shipped. `Visual` → `Element` split + downstream cleanups (§ 1) shipped — UIElement / FrameworkElement seam, three independent collaborators (`StyleApplicator` / `TriggerHost` / `ResourceResolver`), compiler emits typed-key `set_property_value(Owner.PropKey, value)` directly so `Model` has zero `_xxx_by_name` accessors. 5.3 `Dispatcher` / thread affinity dropped — N/A for single-threaded JS. Test suite: **2091 tests passing.**
+**Status:** Property / binding / inheritance / layout / render pipeline is feature-complete for WPF parity; the concrete-control roster covers Border, Grid (with shared-size groups), StackPanel, WrapPanel, DockPanel, Canvas, UniformGrid, VirtualizingStackPanel, VirtualizingWrapPanel, Button, ToggleButton, TextBlock, TextBox, ComboBox, ListBox, TreeView, Slider, SpinEdit, ScrollBar, ScrollViewer, ContentControl, ItemsControl, ControlTemplate, DataTemplate, Drawer, PageView, Diagram (with Selector-based multi-select + marquee), Thumb, Splitter, GridSplitter, ToolBar (+ ToolBarButton / ToolBarToggleButton / ToolBarSeparator with overflow popup), Menu / MenuButton / MenuItem / MenuSeparator (hamburger fly-out), ContextMenu (attached DP + right-click auto-open), and shapes (Ellipse, Line). Two-level Theme + Scheme architecture shipped — Material Theme with Light/Dark Schemes, six adaptive inherited DPs, opt-in `SchemeTransition` animation for Brush tokens via the DynamicResource hook. `Visual.RenderTransform` DP shipped with Rotate / Scale / Skew / Group transforms — animatable inner DPs flow through the implicit-transition engine. Selector keyboard navigation surface (arrow / Home / End / PageDown / PageUp / Shift / Ctrl / Space / Ctrl+A) shipped — TreeView adds Left / Right collapse / expand on top. Smooth scrolling DPs + marquee autoscroll + incremental items-change in virtualizing panels ([completed-backlog.md § 10.4-10.7](completed-backlog.md)) shipped. `Visual` → `Element` split + downstream cleanups (§ 1) shipped — UIElement / FrameworkElement seam, three independent collaborators (`StyleApplicator` / `TriggerHost` / `ResourceResolver`), compiler emits typed-key `set_property_value(Owner.PropKey, value)` directly so `Model` has zero `_xxx_by_name` accessors. 5.3 `Dispatcher` / thread affinity dropped — N/A for single-threaded JS. Test suite: **2091 tests passing.**
 
 **M3 modernization (Phases 0-9 + Appendix C + Phase 2.5 + Phase 3.5):** shipped — see [m3-modernization-plan.md](m3-modernization-plan.md) (strike-through markings show shipped state) and [completed-backlog.md § 18](completed-backlog.md). Open M3 follow-ups live in § 18 below.
 
@@ -16,9 +16,7 @@ All 16 items closed — see [completed-backlog.md § 20](completed-backlog.md). 
 
 5.2. **No `Freezable` / immutability.** Useful for shareable value-type-like Models (Brushes, Geometries).
 
-5.11. **Command surface controls — Ribbon.** 5.11.1 (ToolBar), 5.11.2 (Menu / MenuButton / MenuItem / ContextMenu), 5.11.3 (Ribbon family), and 5.11.4 (commands demo, incl. the Classic↔Ribbon mode toggle) have all shipped — see [completed-backlog.md § 5.11](completed-backlog.md). Nothing open here.
-
-  Deferred Ribbon polish (not yet built): **KeyTips** (Alt-prefix letter overlay), **Backstage** (File-tab full-screen view), and **touch/pen sizing modes**. Ribbon minimize/collapse, Galleries (`RibbonGallery`), and the Quick Access Toolbar (`Ribbon.QuickAccessItems`) shipped in this pass beyond the original v1 cut line.
+5.11. **Command surface controls.** 5.11.1 (ToolBar), 5.11.2 (Menu / MenuButton / MenuItem / ContextMenu), 5.11.3 (Ribbon family), and 5.11.4 (commands demo, incl. the Classic↔Ribbon mode toggle) have all shipped — see [completed-backlog.md § 5.11](completed-backlog.md). ToolBar / Menu / ContextMenu have nothing open. **Ribbon has its own open follow-ups — moved to [§ 29](#29-ribbon) below.**
 
 5.13. **Hit testing for non-SVG renderers.** SVG gets hit-testing free via `elementsFromPoint`. Canvas needs a spatial index or hidden picking buffer. WebGL same. Pairs with the CanvasRenderer (9.1). From [visual-engine-design.md](src/document/visual-engine-design.md) § 11.
 
@@ -48,48 +46,6 @@ From [targets.md § 10](src/document/targets.md) and [visual-engine-design.md §
 
 ---
 
-## 10. Items, scrolling, virtualization
-
-All items closed — see [completed-backlog.md § 10](completed-backlog.md). The remaining v2 optimization (10.1 binary-search prefix-sum for variable heights) is documented inline in the StackPanel code as a "could speed up if profiled" follow-up.
-
----
-
-## 11. Templating
-
-All items closed — see [completed-backlog.md § 11](completed-backlog.md).
-
----
-
-## 12. Resources / bindings
-
-All items closed — see [completed-backlog.md § 12](completed-backlog.md).
-
----
-
-## 14. Grid v3
-
-All items closed — see [completed-backlog.md § 14](completed-backlog.md).
-
----
-
-## 15. Attached-properties design follow-ups
-
-All items closed — see [completed-backlog.md § 15](completed-backlog.md).
-
----
-
-## 16. Animation system
-
-Shipped — see [completed-backlog.md § 16](completed-backlog.md).
-
----
-
-## 17. Theme system follow-ups
-
-All 13 items closed — see [completed-backlog.md § 17](completed-backlog.md). Where v1 implementations stand in for the full WPF / M3 spec (HCT generator's HSL approximation, Typography without `.mu` value-position parser, Menu→Drawer pattern documented without a full drawer template), the closure record names the v2 follow-up criteria.
-
----
-
 ## 18. M3 modernization follow-ups
 
 Surfaced by the post-shipping self-review against [m3-modernization-plan.md](m3-modernization-plan.md) (Phases 0-9 + Appendix C + Phase 2.5 / Phase 3.5 Tier-1 close-out) and the architecture review of the SplitButton popup-template fix against [theme-architecture.md](theme-architecture.md). Items 18.2-18.4 are runtime / framework gaps that the Tier-1 work (SegmentedButton, ButtonGroup, SplitButton, FabMenu) exposed but couldn't fix in their own scope. 18.6-18.8 are plan-process debt. 18.9 lists the plan-explicit deferrals still awaiting demo motivation. 18.12 is the residual theme-architecture-level caveat from the SplitButton popup conformance work. Closed entries 18.1 / 18.5 / 18.10 / 18.11 moved to [completed-backlog.md § 18](completed-backlog.md).
@@ -114,6 +70,32 @@ Surfaced by the post-shipping self-review against [m3-modernization-plan.md](m3-
   - **`LoadingIndicator`** (M3 2024, distinct from `ProgressIndicator.Circular`). M3 2024 added a new explicit "still loading" indicator separate from the circular progress. Mural's `ProgressIndicator` (Linear + Circular) covers determinate + indeterminate progress; LoadingIndicator's headline difference is its variable-amplitude oscillation pattern.
 
 18.12. **`ControlTemplate` DP swap-while-active is silently ignored.** `SplitButton.OnPropertyChanged` mounts/unmounts the popup only when `IsOpen` flips ([split-button.ts](src/framework/split-button.ts)). If a consumer writes `PopupTemplate` while the popup is open, the change is ignored until the next close→open cycle. Same shape applies to `MenuButton.TriggerTemplate` (the inline trigger is captured at ctor time and not rebuilt on TriggerTemplate change), `MenuButton.Template` (popup chrome — also ctor-captured), `Drawer.Template`, and any future `Visual.RenderTransform`-style template DP. Runtime template swaps are rare enough that v1 acceptance is fine; the gap matters most under [theme-architecture.md § Slice 4](theme-architecture.md#L533)'s structural-fluid pattern (Menu→Drawer template swap on `ViewportClass=Mobile`). Fix shape: each control with a templated-part DP should rebuild its template parts in `OnPropertyChanged` when the template DP changes, with care taken not to clobber consumer-set Visual content (e.g. SplitButton's MenuContent must survive a PopupTemplate swap). Pairs with [theme-architecture.md § Slice 4](theme-architecture.md#L533) drawer-shaped Menu template — Menu can't be `ViewportClass`-trigger-driven until template swap-while-active works.
+
+18.13. **Typography is consumed three inconsistent ways across control templates.** The M3 type scale is complete and correct — [typography.mu](src/resources/material/typography.mu) defines 15 named `Style[TargetType=TextBlock]` roles (Display/Headline/Title/Body/Label × L/M/S), each wiring all five atoms (Font / Weight / Size / LineHeight / Tracking) to `@`-tokens. The infrastructure isn't the problem; ~90% of rendered sizes already land on legal scale values. The mess is **how** controls apply it — three competing idioms plus a few raw numbers:
+  - **(a) `Style = @Role`** — the clean one-liner. Used well by [formatting.template.mu](src/framework/formatting/formatting.template.mu) (~70 TextBlocks via @LabelSmall/@LabelMedium/@TitleSmall/@BodySmall), tooltips, theme-selector, shell (partly), PageView.
+  - **(b) hand-copied five-token blocks** (`FontSize=@XSize; FontWeight=@XWeight; FontFamily=@XFont; LineHeight=@XLineHeight; LetterSpacing=@XTracking`) — the dominant older pattern (list, menu, navigation, top-app-bar, surfaces/dialog, notifications, search-bar, markers/badge, ribbon, tabs, button-groups). Verbose and the source of every "partial set" bug below.
+  - **(c) set nothing, inherit the ambient default** — buttons, toolbar, status-bar item, diagram figure label.
+
+  Concrete inconsistencies to resolve:
+  - **Ambient default is raw + off-role.** [basic.resources.mu](src/resources/basic.resources.mu) sets bare `TextBlock` / `RichTextBlock` / `RichTextBox` to literal `FontSize=14; FontWeight=Normal; LineHeight=20` (not `BasedOn @BodyMedium`). Meanwhile `TextBox` / `ComboBox` = Body Large (16). So a plain label (14) is smaller than a text field (16), by hardcode.
+  - **Buttons size by inheritance accident.** The 5 Button variants never set a size — they inherit the ambient 14 and only bump `TextBlock.FontWeight=@TypefaceWeightMedium`, landing on Label Large (14/Medium) *coincidentally*. Change the ambient default and every button drifts. FAB Extended, inconsistently, *does* reference `@LabelLarge` explicitly.
+  - **Partial token sets** (the pattern-(b) rot): Chip, ColorPicker/BrushPicker closed triggers, ColorPickerMoreColors title → Size+Weight+Font, no LineHeight/Tracking; **RibbonGroup header** → Size+Font only; much of **ColorPickerPopup** → `FontSize` only, so weight/family/line-height silently fall back to ambient and no longer match the role they imitate.
+  - **Raw magic numbers** (all glyph-as-text): `10` (shell inspector chevron — the only value *below* the scale floor of 11), `11` (close ✕, doc-tab), `12` (no-color X). Checkmark and split-button chevron mix mismatched atoms (`@LabelLargeSize` + Bold + `@LabelSmallFont`).
+  - **Weight expressed three ways:** `@TypefaceWeightMedium` (buttons) vs `@<Role>Weight` (role parts) vs raw `Normal`/`Bold` (defaults, glyphs).
+
+  Fix shape (mechanical, do family-by-family with build/tests between): **(1)** convert every type-scale TextBlock to `Style = @Role`, deleting the five-token blocks — this alone kills all partial-set bugs; **(2)** make the default `TextBlock`/`RichText*` styles `BasedOn @BodyMedium` (or @BodyLarge — pick + document one) and have Button reference `@LabelLarge` explicitly instead of inheriting; **(3)** add a small icon-size token set (or real `Geometry` icons) for the ✕/chevron/X glyph cases so 10/11/12 stop being scattered literals; **(4)** reconcile the input-vs-label size split (16 vs 14) uniformly across TextBox/ComboBox/SearchBar/TreeView. Pairs with 18.6 (the per-control audit's "typography roles" check would have caught (b)/(c)).
+
+  **Progress (text-role sweep DONE; glyphs remain):**
+  - Decisions taken: ambient default = **Body Medium (14)**; inputs **unified down to 14** (TextBox/ComboBox/SearchBar, was Body Large 16); glyph-as-text → **Geometry icons** (deferred, tracked here); role+weight tweaks → composable `@Role + @Weight*` mixins.
+  - **(2) — ambient default:** `BasedOn @BodyMedium` is **impossible** — every role implicitly inherits the class-keyed TextBlock default, so a `BasedOn` back to a role makes `ResolveSetters` recurse forever (verified: RangeError). The three root defaults (`TextBlock`/`RichTextBlock`/`RichTextBox`) instead **inline the five `@BodyMedium*` atoms** — cycle-safe, token-driven, complete (was raw `14/Normal/20`, missing tracking). This is the one legitimate place atoms are inlined.
+  - **(1)/(4) DONE** across: basic (TextBox), search-bar, list (ComboBox `PART_SelectionText`→`Style=@BodyMedium`, `PART_EditText` inherits; ListBox/TreeView `PART_Label`→`@BodyMedium`, `PART_SupportingText`→`@BodySmall`), menu (×4), navigation, top-app-bar (×4), surfaces dialog title, markers Badge. Real in-template TextBlocks → `Style = @Role`.
+  - **Partial-set bugs fixed by completing the control-default block** (no TextBlock to `Style=@Role`; atoms ride inheritance): Chip, SegmentedItem, SplitButton, RibbonTabHeader, tabs header, RibbonGroup header, FAB Extended — each was Font/Weight/Size only, now full 5-atom role. Formatting's three partial TextBlocks → `Style=@Role`.
+  - **Buttons (fix 2):** all 5 variants + FAB Extended now pin the full **Label Large** atom set on `PART_Border` (was `TextBlock.FontWeight` only + inherited size — the drift-accident). Weight expression unified onto `@LabelLargeWeight` (away from bare `@TypefaceWeightMedium`).
+  - **Composition idiom (`@Role + @Weight*`) went unused:** every non-glyph site was a pure/partial *role*, not a genuine role+weight *mix*. The only role+weight mixes (`▾` split-button chevron, segmented checkmark) are **glyphs** → they become `Shape`/`Geometry`, not weight-modified text. So the planned `@Weight*` mixins were removed as dead code; `Style.Combine` stays a general framework feature, just not needed here.
+  - **(3) glyph-as-text → `Geometry` icons — DONE.** Three new shared geometries under [src/resources/shapes/](src/resources/shapes/) (`close.svg`, `check.svg`, `chevron-right.svg`), `include`d in basic.resources.mu as `@IconClose` / `@IconCheck` / `@ChevronRight` alongside the existing `@ChevronDown`/`@ChevronUp`. Every icon glyph now paints via `Shape [Geometry=@…, Fill=@…, Width, Height]` (tints + scales cleanly, font-independent): shell inspector chevron + both `✕` closes, doc-tab `✕`, no-color `X`, segmented `✓` checkmark, split-button + ribbon `▾` chevrons. The **TreeView `▸`/`▾` expander** also migrated — `PART_ChevronText` (TextBlock) → `PART_ChevronGlyph` (Shape); [tree-view.ts](src/framework/list/tree-view.ts) `refreshChevron` now swaps `Shape.Geometry` (`@ChevronDown` expanded / `@ChevronRight` collapsed / undefined for leaves) via a lazily-resolved, cached geometry lookup instead of setting `.Text`. The `10/11/12` FontSize literals are gone.
+  - **Not migrated (intentional):** the ribbon dialog-launcher `↘` (a niche corner affordance, no standard icon, not in the enumerated list) stays as text; the `×` **unit strings** in formatting (SliderSpinEdit "3×") are labels, not icons.
+
+  **18.13 is now complete** — text-role sweep + input unification + button pinning + glyph→geometry all landed; only the `↘` launcher is a deliberate carve-out.
 
 ---
 
@@ -196,7 +178,13 @@ Shipped — see [completed-backlog.md § 26](completed-backlog.md). The class-ba
 
 **Done (proof of pattern):** `ColorScheme` is now a markup-authorable value resource — no-arg ctor + PascalCase settable `Name`/`Colors`/`Tints`/`Shades` (the `Colors` setter unwraps the `SolidColorBrush`es a colour literal lowers to), registered in the compiler `DEFAULT_SYMBOLS`. No grammar change was needed: a `ColorScheme x:key="…" [Name=…, Colors=[#a,#b,…]]` resource lowers through the existing value-object element + plain-field path + `[ … ]` list literal. The color-picker demo authors `@BrandColors` in `color-picker.mu`; the old `.mjs` `Resources.Set('BrandColors', new ColorScheme(…))` is gone.
 
-**Open — the broad migration:** every demo `.mjs` factory still merges its dictionary imperatively (`Application.current?.Resources.AddMergedDictionary(DemoDict.Clone())`, ~40 demos), and the platform composes services in `platform.html` (`app.Services.registerInstance(DiagramStorageKey, …)`). Move these into markup: merge each demo's dictionary from the demo's own `.mu` (via `dictionaries:` / `import`) rather than the factory, and author the platform's service composition in `platform.mu`'s `.services:` block. This touches the demo-loading model (factories currently merge lazily on first activation) and the platform composition root — a single cross-cutting pass, not a per-demo edit. Pairs with § 24 (`.services:` DSL) and § 25 (`.Member:` dictionary fold).
+**Shipped — the broad migration.** All demo resource + service composition now lives in markup; no `.mjs` bootstrap touches `Resources.AddMergedDictionary` / `Resources.Set` / `Services.register*`. What landed:
+  - **Composition root ([demo/platform/platform.mu](demo/platform/platform.mu)).** Every demo's view dictionary is `import`ed and `merge`d in the `Application`'s `resources:` block (eager, app-global — the same shape [apps/plexus/…/app.mu](apps/plexus/src/renderer/src/app.mu) uses to merge its service dictionaries). ~40 `merge <XDemo>` lines + the shared `Icons` toolbox dict.
+  - **Persistence via `.services:`.** A tiny [demo-storage-store.mjs](demo/platform/demo-storage-store.mjs) (`GetItem`/`SetItem` over `window.localStorage`) is registered in `platform.mu`'s `.services:` block as `DemoStorageStore -> DiagramStorageKey`. The old imperative `app.Services.registerInstance(DiagramStorageKey, …)` block in [platform.html](demo/platform/platform.html) is gone; the Diagrammer / Commands demos resolve the store through DI unchanged.
+  - **Factories destripped.** All ~40 demo `.mjs` bootstraps lost their `resourcesMerged` flag + `AddMergedDictionary(...Clone())` block (and the now-unused `Application` / `.mu.js` dict imports); a factory now just constructs and returns its VM.
+  - **Behaviour change accepted:** merge is now eager at app construction rather than lazy on first activation (fine for a demo platform; no `DataType` / `x:key` collisions across demos). A lazy-merge-in-markup capability was considered and deferred — not needed here.
+
+  Verified: `build:demos` + `typecheck:demos` green, every bootstrap `node --check`s, and the generated `platform.mu.js` shows all 42 merges + the `DiagramStorageKey → new DemoStorageStore` registration. Runtime click-through not yet re-run against the dev server. Pairs with § 24 (`.services:` DSL) and § 25 (`.Member:` dictionary fold).
 
 ---
 
@@ -217,4 +205,20 @@ Shipped — see [completed-backlog.md § 26](completed-backlog.md). The class-ba
 28.6. **Hyperlink + InlineUIContainer editing.** `NormalizeParagraph` (the editor's flat-Run pass) drops `InlineUIContainer` and flattens `Hyperlink` to underlined runs, losing `NavigateUri`/`Command`. Editing docs with embedded objects / live links needs the normalise step to preserve them as atomic caret positions (length-1 in the offset space) rather than dropping/flattening.
 
 28.7. **Selection / formatting-state surface for toolbars.** No public API for a formatting toolbar to reflect/drive the caret's current format (is-bold, font family/size at caret) or to bind two-way. Expose a small observable selection-format DP set on `RichTextBox` (or a `TextSelection` facade over the anchor/caret `TextPointer`s) so a ribbon/toolbar can show active state and invoke toggles. Pairs with the text-format editors already built (`FontFamilyPicker` / `FontSizePicker`).
+
+---
+
+## 29. Ribbon
+
+Extracted from § 5.11 (command-surface controls) so the Ribbon's follow-ups track as first-class items rather than a footnote under Architectural gaps.
+
+**Shipped** (see [completed-backlog.md § 5.11.3](completed-backlog.md)): the full `Ribbon` control family under [src/framework/ribbon/](src/framework/ribbon/) — `Ribbon` (Tabs / ContextualGroups / QuickAccessItems, reference-tracked `SelectedTab`), `RibbonTab` / `RibbonContextualGroup`, `RibbonGroup` (+ `RibbonSmallButtonColumn`, `LaunchCommand` corner launcher), `RibbonButton` / `RibbonToggleButton`, `RibbonDropDownButton` / `RibbonSplitButton` (shared `RibbonPopupButton` base over `MenuPopupHost`), and `RibbonGallery`. Default Styles + `ControlTemplate` DPs in [ribbon.template.mu](src/framework/ribbon/ribbon.template.mu); the `commands` demo's Classic↔Ribbon mode toggle exercises one `ICommand` catalog across both chromes. This pass also shipped **ribbon minimize/collapse** (`IsMinimized`), **Galleries**, and the **QAT** — beyond the original v1 cut line.
+
+Open follow-ups (deferred from the v1 pass; none blocking):
+
+29.1. **KeyTips (Alt-prefix accelerator overlay).** WPF's KeyTip system: pressing `Alt` overlays letter/number badges on tabs, groups, and controls; typing the letter activates that surface and, for tabs, reveals the next KeyTip tier. Needs a per-control `KeyTip` string DP, an overlay layer that positions badges over each visible target, and a keyboard state machine (Alt-arm → tier navigation → invoke/dismiss) routed through the existing input layer. Pairs with the overlay-positioning host the ContextMenu / MenuButton popups already use.
+
+29.2. **Backstage (File-tab full-screen view).** The Office "File" tab that swaps the ribbon body for a full-window navigation view (recent / open / save / print / options). Shape: a `Ribbon.Backstage` content slot + an `IsBackstageOpen` DP whose trigger swaps `PART_Body` for a full-surface `ContentPresenter`, with its own back affordance. Overlaps conceptually with `Drawer` / `SideSheet` (§ 18.9) and the `PageView` full-window pattern — worth deciding whether Backstage is its own control or a Ribbon-hosted composition of existing surfaces.
+
+29.3. **Touch / pen sizing modes.** Office's touch mode inflates hit targets and spacing for finger/stylus input. Mural already has `ThemeManager.Pointer = Coarse` adaptive triggers (used by Button / ComboBox padding); the Ribbon templates don't yet consume them. Fix: add `Coarse`-pointer density triggers to the ribbon control templates (larger button targets, looser group spacing, bigger QAT icons), reusing the existing adaptive-DP plumbing rather than a Ribbon-specific mode flag. Pairs with 18.6 (adaptive-trigger audit coverage).
 

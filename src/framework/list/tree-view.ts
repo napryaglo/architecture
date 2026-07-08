@@ -9,8 +9,10 @@ import {
     type ModifierKeys,
     type PointerEventArgs,
     type PropertyDescriptor,
+    Application,
 } from '../../runtime/index.js';
-import { RectangleGeometry } from '../../visual-engine/index.js';
+import { RectangleGeometry, type Geometry } from '../../visual-engine/index.js';
+import { Shape } from '../../basic/shapes/shape.js';
 import { Border } from '../../basic/border.js';
 import { HierarchicalDataTemplate } from '../../basic/templates/data-template.js';
 import { HeaderedItemsControl } from '../base/headered-items-control.js';
@@ -22,8 +24,23 @@ import { TextBlock } from '../../basic/text-block.js';
 
 
 
-const CHEVRON_COLLAPSED = '▸';
-const CHEVRON_EXPANDED  = '▾';
+// Expander glyphs are shared Geometry resources (§ 18.13 —
+// basic.resources.mu's `include`d chevron shapes, the same ones ComboBox
+// and SpinEdit paint). Resolved lazily off the app resource dictionary
+// and cached: they're theme-agnostic (registered in MuralBasic, not
+// per-scheme), so one successful resolve holds for the process. A resolve
+// before the dictionary is merged returns undefined and is retried on the
+// next call.
+let _chevronDownGeom:  Geometry | undefined;
+let _chevronRightGeom: Geometry | undefined;
+function chevronGeometry(expanded: boolean): Geometry | undefined
+{
+    if (expanded)
+    {
+        return _chevronDownGeom  ??= Application.current?.Resources.Resolve('ChevronDown')  as Geometry | undefined;
+    }
+    return _chevronRightGeom ??= Application.current?.Resources.Resolve('ChevronRight') as Geometry | undefined;
+}
 
 // Click-tracking Border that surfaces the click's modifier keys to its
 // callback. Same press-here-release-here gate as ClickableBorder in
@@ -598,7 +615,7 @@ export class TreeViewItem extends HeaderedItemsControl
     // Template parts — resolved in the constructor.
     private readonly _row:         ClickableRow;
     private readonly _spacer:      Border;
-    private readonly _chevronText: TextBlock;
+    private readonly _chevronGlyph: Shape;
     private readonly _label:       TextBlock;
     private readonly _leadingSlot:  Border;
     private readonly _trailingSlot: Border;
@@ -626,7 +643,7 @@ export class TreeViewItem extends HeaderedItemsControl
         this._row          = root.FindName('PART_Row')           as ClickableRow;
         this._spacer       = root.FindName('PART_Spacer')        as Border;
         const chevron      = root.FindName('PART_Chevron')       as ChevronTarget;
-        this._chevronText  = root.FindName('PART_ChevronText')   as TextBlock;
+        this._chevronGlyph = root.FindName('PART_ChevronGlyph')  as Shape;
         this._label        = root.FindName('PART_Label')         as TextBlock;
         this._leadingSlot  = root.FindName('PART_LeadingSlot')   as Border;
         this._trailingSlot = root.FindName('PART_TrailingSlot')  as Border;
@@ -855,15 +872,10 @@ export class TreeViewItem extends HeaderedItemsControl
     // leaf items pick the glyph from IsExpanded.
     private refreshChevron(): void
     {
+        // Leaf rows paint no glyph (Geometry undefined → Shape renders
+        // nothing); the fixed-width ChevronTarget keeps the column aligned.
         const hasChildren = this.SubItems.length > 0;
-        if (!hasChildren)
-        {
-            this._chevronText.Text = '';
-        }
-        else
-        {
-            this._chevronText.Text = this.IsExpanded ? CHEVRON_EXPANDED : CHEVRON_COLLAPSED;
-        }
+        this._chevronGlyph.Geometry = hasChildren ? chevronGeometry(this.IsExpanded) : undefined;
     }
 }
 

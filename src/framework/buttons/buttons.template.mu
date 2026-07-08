@@ -40,12 +40,16 @@ resources Buttons {
               BorderThickness      = (0),
               CornerRadius         = @ShapeFull,
               TextBlock.Foreground = @OnPrimary,
-              TextBlock.FontWeight = @TypefaceWeightMedium ] {
+              TextBlock.FontFamily = @LabelLargeFont,
+              TextBlock.FontWeight = @LabelLargeWeight,
+              TextBlock.FontSize = @LabelLargeSize,
+              TextBlock.LineHeight = @LabelLargeLineHeight,
+              TextBlock.LetterSpacing = @LabelLargeTracking ] {
             Border x:name="PART_StateLayer"
                 [ Background   = #00000000,
                   CornerRadius = @ShapeFull,
                   Padding      = (24,10,24,10) ] {
-                ContentPresenter
+                ContentPresenter [ HorizontalAlignment = Center, VerticalAlignment = Center ]
             }
         }
         when ( IsMouseOver ) { PART_StateLayer.Background = @OnPrimaryHoverLayer; }
@@ -69,12 +73,16 @@ resources Buttons {
               CornerRadius         = @ShapeFull,
               Effect               = @ElevationLevel1,
               TextBlock.Foreground = @Primary,
-              TextBlock.FontWeight = @TypefaceWeightMedium ] {
+              TextBlock.FontFamily = @LabelLargeFont,
+              TextBlock.FontWeight = @LabelLargeWeight,
+              TextBlock.FontSize = @LabelLargeSize,
+              TextBlock.LineHeight = @LabelLargeLineHeight,
+              TextBlock.LetterSpacing = @LabelLargeTracking ] {
             Border x:name="PART_StateLayer"
                 [ Background   = #00000000,
                   CornerRadius = @ShapeFull,
                   Padding      = (24,10,24,10) ] {
-                ContentPresenter
+                ContentPresenter [ HorizontalAlignment = Center, VerticalAlignment = Center ]
             }
         }
         when ( IsMouseOver ) {
@@ -96,12 +104,16 @@ resources Buttons {
               BorderThickness      = (0),
               CornerRadius         = @ShapeFull,
               TextBlock.Foreground = @OnSecondaryContainer,
-              TextBlock.FontWeight = @TypefaceWeightMedium ] {
+              TextBlock.FontFamily = @LabelLargeFont,
+              TextBlock.FontWeight = @LabelLargeWeight,
+              TextBlock.FontSize = @LabelLargeSize,
+              TextBlock.LineHeight = @LabelLargeLineHeight,
+              TextBlock.LetterSpacing = @LabelLargeTracking ] {
             Border x:name="PART_StateLayer"
                 [ Background   = #00000000,
                   CornerRadius = @ShapeFull,
                   Padding      = (24,10,24,10) ] {
-                ContentPresenter
+                ContentPresenter [ HorizontalAlignment = Center, VerticalAlignment = Center ]
             }
         }
         when ( IsMouseOver ) { PART_StateLayer.Background = @OnSecondaryContainerHoverLayer; }
@@ -119,12 +131,16 @@ resources Buttons {
               BorderThickness      = (1),
               CornerRadius         = @ShapeFull,
               TextBlock.Foreground = @Primary,
-              TextBlock.FontWeight = @TypefaceWeightMedium ] {
+              TextBlock.FontFamily = @LabelLargeFont,
+              TextBlock.FontWeight = @LabelLargeWeight,
+              TextBlock.FontSize = @LabelLargeSize,
+              TextBlock.LineHeight = @LabelLargeLineHeight,
+              TextBlock.LetterSpacing = @LabelLargeTracking ] {
             Border x:name="PART_StateLayer"
                 [ Background   = #00000000,
                   CornerRadius = @ShapeFull,
                   Padding      = (23,9,23,9) ] {
-                ContentPresenter
+                ContentPresenter [ HorizontalAlignment = Center, VerticalAlignment = Center ]
             }
         }
         when ( IsMouseOver ) { PART_StateLayer.Background = @PrimaryHoverLayer; }
@@ -146,12 +162,16 @@ resources Buttons {
               BorderThickness      = (0),
               CornerRadius         = @ShapeFull,
               TextBlock.Foreground = @Primary,
-              TextBlock.FontWeight = @TypefaceWeightMedium ] {
+              TextBlock.FontFamily = @LabelLargeFont,
+              TextBlock.FontWeight = @LabelLargeWeight,
+              TextBlock.FontSize = @LabelLargeSize,
+              TextBlock.LineHeight = @LabelLargeLineHeight,
+              TextBlock.LetterSpacing = @LabelLargeTracking ] {
             Border x:name="PART_StateLayer"
                 [ Background   = #00000000,
                   CornerRadius = @ShapeFull,
                   Padding      = (12,10,12,10) ] {
-                ContentPresenter
+                ContentPresenter [ HorizontalAlignment = Center, VerticalAlignment = Center ]
             }
         }
         when ( IsMouseOver ) { PART_StateLayer.Background = @PrimaryHoverLayer; }
@@ -579,7 +599,9 @@ resources Buttons {
               TextBlock.Foreground = @OnPrimaryContainer,
               TextBlock.FontFamily = @LabelLargeFont,
               TextBlock.FontWeight = @LabelLargeWeight,
-              TextBlock.FontSize   = @LabelLargeSize ] {
+              TextBlock.FontSize   = @LabelLargeSize,
+              TextBlock.LineHeight = @LabelLargeLineHeight,
+              TextBlock.LetterSpacing = @LabelLargeTracking ] {
             Border x:name="PART_StateLayer"
                 [ Background   = #00000000,
                   CornerRadius = @ShapeLarge,
