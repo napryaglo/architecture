@@ -310,6 +310,32 @@ export class Grid extends Panel
             if (h.IsStar)  rowStars[i] = Math.max(0, h.Value);
         }
 
+        // WPF parity: a Grid measured with infinite available space in a
+        // dimension has no finite leftover to split among Star tracks —
+        // `distributeStars` would hand each Star the whole `Infinity`
+        // budget and the Grid would report an infinite desired size,
+        // which poisons every ancestor's arrange to NaN. WPF instead
+        // resolves Star tracks as Auto in an unbounded dimension (they
+        // size to their content). Demote Star → Auto (and drop the star
+        // weight) for whichever dimension is unbounded so the Grid
+        // reports its content size. A horizontal/vertical StackPanel — or
+        // any parent that measures with an infinite constraint — is the
+        // common trigger (e.g. a Ribbon group's header/launcher Grid).
+        if (!Number.isFinite(availableSize.Width))
+        {
+            for (let i = 0; i < nCols; i++)
+            {
+                if (colKind[i] === GridUnitType.Star) { colKind[i] = GridUnitType.Auto; colStars[i] = 0; }
+            }
+        }
+        if (!Number.isFinite(availableSize.Height))
+        {
+            for (let i = 0; i < nRows; i++)
+            {
+                if (rowKind[i] === GridUnitType.Star) { rowKind[i] = GridUnitType.Auto; rowStars[i] = 0; }
+            }
+        }
+
         // Pass 2 — measure children that touch any Auto track with
         // infinite available size so their desired size drives the auto
         // resolution. Children entirely on Pixel + Star tracks measure

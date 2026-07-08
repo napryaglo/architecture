@@ -4,6 +4,7 @@ import { Rect, Size, Element, Visual } from '../../runtime/index.js';
 import { HeadlessTarget } from '../../visual-engine/index.js';
 import { ColumnDefinition, Grid, GridLength, RowDefinition } from '../panels/grid.js';
 import { StackPanel } from '../panels/stack-panel.js';
+import { Orientation } from '../panels/orientation.js';
 
 // Fixed-size leaf — reports a deterministic DesiredSize regardless of
 // the parent's available size. Used to assert Grid's allocation math.
@@ -80,6 +81,35 @@ describe('Grid — track sizing modes', () => {
         assert.equal(c0.ArrangedRect.Width, 100);
         assert.equal(c1.ArrangedRect.X, 100);
         assert.equal(c1.ArrangedRect.Width, 200);
+    });
+
+    // WPF parity: with no finite leftover to distribute, a Star track
+    // resolves as Auto (content-sized) rather than expanding to the
+    // infinite available size. A definition-less Grid inside a horizontal
+    // StackPanel (measured with infinite width) is the canonical trigger —
+    // e.g. a Ribbon group's header/launcher overlay Grid. Without this the
+    // Grid returns an infinite DesiredSize and every ancestor's centering
+    // arrange collapses to NaN.
+    test('star column measured with infinite width sizes to content, not Infinity', () => {
+        const g = new Grid();
+        g.ColumnDefinitions.Add(col(star()));
+        g.RowDefinitions.Add(row(px(20)));
+        const c0 = leaf(66, 12);
+        g.AddChild(c0);
+        g.Measure(new Size(Number.POSITIVE_INFINITY, 300));
+        assert.equal(g.DesiredSize.Width, 66, 'reports content width, not Infinity');
+        assert.ok(Number.isFinite(g.DesiredSize.Width));
+    });
+
+    test('definition-less Grid in a horizontal StackPanel does not produce Infinity', () => {
+        const strip = new StackPanel();
+        strip.Orientation = Orientation.Horizontal;
+        const g = new Grid();            // implicit 1* col + 1* row
+        g.AddChild(leaf(40, 30));
+        strip.AddChild(g);
+        strip.Measure(new Size(Number.POSITIVE_INFINITY, 100));
+        assert.ok(Number.isFinite(g.DesiredSize.Width), 'grid width finite');
+        assert.equal(g.DesiredSize.Width, 40);
     });
 
     test('mixed pixel + auto + star compose correctly', () => {
