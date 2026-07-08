@@ -65,6 +65,23 @@ describe('ComboBox — editable mode', () => {
         assert.equal(editField(cb).Text, 'Roboto');
     });
 
+    test('editable field is a real, non-zero-height clickable surface', () => {
+        // Regression: the embedded Plain TextBox once measured to zero height
+        // (its editor lost its back-reference on the variant swap), so the
+        // field was invisible and un-clickable — the combo felt non-editable.
+        const cb = new ComboBox();
+        cb.IsEditable = true;
+        cb.Items = ['8', '10', '12'];
+        cb.Text = '12';
+        cb.Width = 90;
+        mount(cb);
+
+        const field = editField(cb);
+        assert.ok(field.ArrangedRect.Height > 0,
+            'the editable field has a real height (can be clicked / show a caret)');
+        assert.ok(field.ArrangedRect.Width > 0, 'the editable field has a real width');
+    });
+
     test('non-editable combo ignores Text/field and toggles on box click', () => {
         const cb = new ComboBox();
         cb.Items = ['x', 'y'];

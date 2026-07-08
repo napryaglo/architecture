@@ -7,7 +7,7 @@ import { Application, Key, NoModifiers, Panel, PointerButton, Visual, type Focus
 import { resolveKey } from '../../runtime/model-internals.js';
 import { InputManager } from '../../framework/index.js';;
 import { HeadlessTarget } from '../../visual-engine/index.js';
-import { TextBox, type ClipboardSink } from '../text-box.js';
+import { TextBox, TextBoxVariant, type ClipboardSink } from '../text-box.js';
 
 function pointer(overrides: Partial<PointerEventInit> = {}): PointerEventInit
 {
@@ -634,5 +634,28 @@ describe('TextBox — soft-wrap overflow handling', () => {
             'single-line should not show a horizontal scrollbar');
         assert.equal(scroll.VerticalScrollEnabled, false,
             'single-line should never need vertical scroll (fixed font height)');
+    });
+
+    // Regression: swapping Variant after construction re-fires the Style
+    // trigger, which swaps the Template and rebuilds the visual tree with a
+    // FRESH editor. If the TextBox doesn't re-adopt its parts on rebuild, the
+    // new editor never gets its `textBox` back-reference and measures to zero —
+    // a blank, zero-height, unclickable field (the editable-ComboBox bug).
+    test('swapping Variant re-wires the editor so it still measures its text', () => {
+        const tb = new TextBox();
+        tb.Text = '12';
+        const target = new HeadlessTarget(200, 100);
+        target.Content = tb;
+        target.Flush();
+
+        // Plain drops the chrome; the measured size is the bare text, but it
+        // MUST still be non-zero (the editor re-wired to the model).
+        tb.Variant = TextBoxVariant.Plain;
+        target.Flush();
+
+        assert.ok(tb.DesiredSize.Height > 0,
+            'Plain field measures a real line height after the variant swap');
+        assert.ok(tb.DesiredSize.Width > 0,
+            'Plain field measures its text width after the variant swap');
     });
 });

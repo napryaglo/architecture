@@ -453,7 +453,18 @@ export class ComboBox extends Selector
         // sides on IsEditable avoids a double-toggle when the chevron —
         // nested inside the box — is clicked (both ClickableBorders fire).
         this._selectionBox.onClick = (): void => {
-            if (!this.IsEditable) this.IsDropDownOpen = !this.IsDropDownOpen;
+            if (this.IsEditable)
+            {
+                // Clicking the box's padding / gaps (a direct hit on the inner
+                // field is captured by the TextBox itself) focuses the editor
+                // so the whole editable area behaves like one text field —
+                // WPF's editable ComboBox does the same.
+                this._editText?.Focus();
+            }
+            else
+            {
+                this.IsDropDownOpen = !this.IsDropDownOpen;
+            }
         };
         if (this._chevronButton !== undefined)
         {
