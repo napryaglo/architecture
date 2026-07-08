@@ -1,5 +1,7 @@
 import {
     Application,
+    Key,
+    KeyEventArgs,
     MetaData,
     Model,
     Panel,
@@ -17,6 +19,7 @@ import { ItemsControl } from '../base/items-control.js';
 import { Selector } from './selector.js';
 import { StackPanel } from '../../basic/panels/stack-panel.js';
 import { TextBlock } from '../../basic/text-block.js';
+import { TextBox } from '../../basic/text-box.js';
 import type { ControlTemplate } from '../../basic/templates/control-template.js';
 
 // Resource-dictionary keys for the two ControlTemplates the ComboBox
@@ -99,6 +102,24 @@ export class SplitRow extends Panel
 // everything else stringifies. Keeps simple `Items=["Apple","Pear"]`
 // scenarios working without forcing every consumer to wrap their items
 // in a display shape.
+// Normalize a ComboBox.Items value (a plain array OR an
+// ObservableCollection) into a flat readonly array for iteration. The
+// Selector.Items getter is a union type; casting through `unknown` and
+// duck-typing the collection avoids the readonly-array narrowing gap.
+function normalizeItems(items: unknown): readonly unknown[]
+{
+    if (items === undefined || items === null) return [];
+    if (Array.isArray(items)) return items;
+    const coll = items as { Count?: number; Get?(i: number): unknown };
+    if (typeof coll.Count === 'number' && typeof coll.Get === 'function')
+    {
+        const out: unknown[] = [];
+        for (let i = 0; i < coll.Count; i++) out.push(coll.Get(i));
+        return out;
+    }
+    return [];
+}
+
 function displayString(item: unknown): string
 {
     if (item === undefined || item === null) return '';
@@ -358,6 +379,17 @@ export class ComboBox extends Selector
 {
     public static readonly IsDropDownOpenKey = Model.RegisterProperty<boolean>(ComboBox, 'IsDropDownOpen', false,     MetaData.Measure);
     public static readonly PlaceholderKey    = Model.RegisterProperty<string>( ComboBox, 'Placeholder',    'Select…', MetaData.Measure | MetaData.Render);
+    // Editable mode. When true, the selection box hosts a Plain TextBox
+    // (PART_EditText) the user can type into, and the dropdown becomes a
+    // suggestion list rather than the sole input. The default Style's
+    // `when(IsEditable)` trigger swaps the label for the field.
+    public static readonly IsEditableKey     = Model.RegisterProperty<boolean>(ComboBox, 'IsEditable',     false,     MetaData.Measure);
+    // The editable text. Two-way by default so a consumer can bind a
+    // value and read back what the user typed. In editable mode it
+    // mirrors PART_EditText live and is set to the picked item's display
+    // string when the user chooses from the dropdown. Non-editable combos
+    // leave it untouched (SelectedItem is the value there).
+    public static readonly TextKey           = Model.RegisterProperty<string>( ComboBox, 'Text',           '',        MetaData.Measure | MetaData.BindsTwoWayByDefault);
     // Read-only "the user has picked an item, not the Placeholder" DP.
     // Flipped by refreshSelectionText whenever SelectedItem swaps;
     // the DefaultComboBoxSelection template triggers on it to switch
@@ -378,10 +410,16 @@ export class ComboBox extends Selector
     // ── Template parts ─────────────────────────────────────────────
     private readonly _selectionBox:    ClickableBorder;
     private readonly _selectionText:   TextBlock;
+    private readonly _editText:        TextBox          | undefined;
+    private readonly _chevronButton:   ClickableBorder  | undefined;
     private readonly _popup:           Border;
     private readonly _popupList:       ComboBoxItemList;
     private readonly _popupHost:       ComboBoxPopupHost;
     private readonly _scrim:           ClickAwayScrim;
+
+    /** Reentrancy guard so the Text ↔ PART_EditText.Text mirror and the
+     *  Text ↔ SelectedItem match don't loop. */
+    private _syncingText = false;
 
     /** True iff `_popupHost` is currently a child of
      *  PresentationTarget.OverlayRoot. Tracked so redundant IsOpen
@@ -407,9 +445,37 @@ export class ComboBox extends Selector
         const selectionInst = selectionTpl.Apply(this);
         this._selectionBox    = selectionInst.root as ClickableBorder;
         this._selectionText   = selectionInst.root.FindName('PART_SelectionText') as TextBlock;
+        this._editText        = selectionInst.root.FindName('PART_EditText')      as TextBox         | undefined;
+        this._chevronButton   = selectionInst.root.FindName('PART_ChevronButton') as ClickableBorder | undefined;
+        // Box click toggles the dropdown ONLY when not editable; in
+        // editable mode the click lands on the inner TextBox (caret
+        // placement) and the chevron button owns the toggle. Gating both
+        // sides on IsEditable avoids a double-toggle when the chevron —
+        // nested inside the box — is clicked (both ClickableBorders fire).
         this._selectionBox.onClick = (): void => {
-            this.IsDropDownOpen = !this.IsDropDownOpen;
+            if (!this.IsEditable) this.IsDropDownOpen = !this.IsDropDownOpen;
         };
+        if (this._chevronButton !== undefined)
+        {
+            this._chevronButton.onClick = (): void => {
+                if (this.IsEditable) this.IsDropDownOpen = !this.IsDropDownOpen;
+            };
+        }
+        // Mirror typed edits into the Text DP (guarded so the reverse
+        // push from applyText doesn't loop).
+        if (this._editText !== undefined)
+        {
+            this._editText.AddPropertyChangedListener(TextBox.TextKey, () =>
+            {
+                if (this._syncingText) return;
+                this._syncingText = true;
+                // Set Text; the 'Text' handler below runs the item match
+                // and (guarded) field echo. Matching happens there so the
+                // programmatic `combo.Text = …` path matches too.
+                try { this.Text = this._editText!.Text; }
+                finally { this._syncingText = false; }
+            });
+        }
 
         // ── Overlay popup subtree ──────────────────────────────────
         // `combo-box-popup.template.mu` registers the overlay
@@ -483,6 +549,12 @@ export class ComboBox extends Selector
 
     public get Placeholder(): string { return this.get_property_value(ComboBox.PlaceholderKey); }
     public set Placeholder(v: string) { this.set_property_value(ComboBox.PlaceholderKey, v); }
+
+    public get IsEditable(): boolean { return this.get_property_value(ComboBox.IsEditableKey); }
+    public set IsEditable(v: boolean) { this.set_property_value(ComboBox.IsEditableKey, v); }
+
+    public get Text(): string { return this.get_property_value(ComboBox.TextKey); }
+    public set Text(v: string) { this.set_property_value(ComboBox.TextKey, v); }
 
     public override get visualChildren(): readonly Visual[]
     {
@@ -573,7 +645,45 @@ export class ComboBox extends Selector
             case 'Placeholder':
                 this.refreshSelectionText();
                 break;
+            case 'Text':
+                this.applyText(newValue as string);
+                this.matchTypedText();
+                break;
         }
+    }
+
+    // Push the Text value into the editable field (guarded so the
+    // field's own change listener doesn't echo back). No-op when the
+    // template has no PART_EditText.
+    private applyText(text: string): void
+    {
+        if (this._editText === undefined) return;
+        if (this._syncingText) return;
+        // A binding can transiently push undefined before its source
+        // resolves (e.g. `$Family` before the DataContext is set). The
+        // embedded TextBox setter assumes a string — coerce to ''.
+        const s = text ?? '';
+        if (this._editText.Text === s) return;
+        this._syncingText = true;
+        try { this._editText.Text = s; }
+        finally { this._syncingText = false; }
+    }
+
+    // In editable mode, keep SelectedIndex aligned with the typed Text:
+    // an exact display-string match selects that item; anything else
+    // clears the selection WITHOUT rewriting the field (applySelectedItem
+    // only writes Text back for a concrete item — see the override).
+    private matchTypedText(): void
+    {
+        if (!this.IsEditable) return;
+        const items = normalizeItems(this.Items as unknown);
+        const text  = this.Text;
+        let found = -1;
+        for (let i = 0; i < items.length; i++)
+        {
+            if (displayString(items[i]) === text) { found = i; break; }
+        }
+        if (this.SelectedIndex !== found) this.SelectedIndex = found;
     }
 
     // ── Selector apply* overrides — refresh visuals after cross-sync.
@@ -587,6 +697,7 @@ export class ComboBox extends Selector
         super.applySelectedIndex(idx);
         this.refreshSelectionText();
         this.refreshItemHighlights();
+        this.syncEditableTextFromSelection();
     }
 
     protected override applySelectedItem(item: unknown): void
@@ -594,6 +705,38 @@ export class ComboBox extends Selector
         super.applySelectedItem(item);
         this.refreshSelectionText();
         this.refreshItemHighlights();
+        this.syncEditableTextFromSelection();
+    }
+
+    // Editable mode: a concrete selection (dropdown pick via SelectedIndex,
+    // or an exact typed match) sets the field text to the item's display.
+    // A cleared selection (no current item — e.g. a partial typed value
+    // that matches nothing) leaves the field alone so in-progress typing
+    // isn't wiped. The Text set is a no-op when it already equals what the
+    // user typed (exact-match path), so this doesn't loop. Runs from both
+    // apply* hooks because a SelectedIndex write routes through
+    // applySelectedIndex while a SelectedItem write routes through
+    // applySelectedItem.
+    private syncEditableTextFromSelection(): void
+    {
+        if (!this.IsEditable) return;
+        const item = this.SelectedItem;
+        if (item !== undefined && item !== null) this.Text = displayString(item);
+    }
+
+    // Enter in the editable field commits the value and closes the
+    // dropdown. The bubbled KeyDown reaches us from PART_EditText (a
+    // single-line TextBox leaves Return unhandled). Non-editable combos
+    // fall through to Selector's key handling unchanged.
+    protected override OnKeyDown(args: KeyEventArgs): void
+    {
+        if (this.IsEditable && args.Key === Key.Return)
+        {
+            this.IsDropDownOpen = false;
+            args.Handled = true;
+            return;
+        }
+        super.OnKeyDown(args);
     }
 
     // ── Internal plumbing ───────────────────────────────────────────

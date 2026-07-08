@@ -24,20 +24,49 @@ resources Lists {
               Padding         = (@Spacing4,@Spacing2,@Spacing4,@Spacing2),
               Height          = @ListRowHeightRegular ] {
             SplitRow {
-                TextBlock x:name="PART_SelectionText"
-                    [ Foreground    = @OnSurfaceVariant,
-                      FontFamily    = @BodyLargeFont,
-                      FontWeight    = @BodyLargeWeight,
-                      FontSize      = @BodyLargeSize,
-                      LineHeight    = @BodyLargeLineHeight,
-                      LetterSpacing = @BodyLargeTracking ]
-                Shape x:name="PART_Chevron"
-                    [ Geometry          = @ChevronDown,
-                      Fill              = @OnSurface,
-                      Width             = 12,
-                      Height            = 12,
-                      VerticalAlignment = Center ]
+                // Left cell — overlay of the read-only label and the
+                // editable field. Exactly one is Visible: the label by
+                // default, the TextBox when IsEditable (toggled by the
+                // trigger below). Both share the same cell so the box
+                // width and baseline stay identical across the swap.
+                Grid x:name="PART_SelectionSlot" [ VerticalAlignment = Center ] {
+                    TextBlock x:name="PART_SelectionText"
+                        [ Foreground    = @OnSurfaceVariant,
+                          FontFamily    = @BodyLargeFont,
+                          FontWeight    = @BodyLargeWeight,
+                          FontSize      = @BodyLargeSize,
+                          LineHeight    = @BodyLargeLineHeight,
+                          LetterSpacing = @BodyLargeTracking,
+                          VerticalAlignment = Center ]
+                    TextBox x:name="PART_EditText"
+                        [ Variant       = Plain,
+                          Visibility    = Collapsed,
+                          AcceptsReturn = false,
+                          FontFamily    = @BodyLargeFont,
+                          FontWeight    = @BodyLargeWeight,
+                          FontSize      = @BodyLargeSize,
+                          VerticalAlignment = Center ]
+                }
+                // Chevron wrapped in a ClickableBorder so it can toggle
+                // the dropdown independently of the text area — essential
+                // in editable mode, where clicking the text must place a
+                // caret rather than open the list. The ComboBox wires the
+                // click; see the IsEditable gating in combo-box.ts.
+                ClickableBorder x:name="PART_ChevronButton"
+                    [ Background        = #00000000,
+                      VerticalAlignment = Center ] {
+                    Shape x:name="PART_Chevron"
+                        [ Geometry          = @ChevronDown,
+                          Fill              = @OnSurface,
+                          Width             = 12,
+                          Height            = 12,
+                          VerticalAlignment = Center ]
+                }
             }
+        }
+        when ( IsEditable ) {
+            PART_SelectionText.Visibility = Collapsed;
+            PART_EditText.Visibility = Visible;
         }
         // HasSelection swaps PART_SelectionText.Foreground from
         // @OnSurfaceVariant (placeholder tint) to @OnSurface (selected
