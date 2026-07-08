@@ -1,4 +1,5 @@
 import {
+    Application,
     MetaData,
     Model,
     Point,
@@ -8,6 +9,7 @@ import {
 } from '../../runtime/index.js';
 import { resolveKey } from '../../runtime/model-internals.js';
 import {
+    Brush,
     Color,
     GradientStop,
     LinearGradientBrush,
@@ -210,6 +212,7 @@ export class ColorPicker extends TemplatedControl
     private _dropdownListeners: Array<() => void> = [];
     private _themeGrid:       StackPanel | undefined;  // theme-colours container, rebuilt from ColorScheme
     private _schemeNameLabel: TextBlock  | undefined;  // dropdown's scheme-button caption
+    private _schemeRow:       Visual     | undefined;  // Color-Scheme row; anchors the gallery fly-out
 
     // Scheme gallery (Office "Colors" list) state.
     private _galleryHost:    MenuPopupHost | undefined;
@@ -476,11 +479,13 @@ export class ColorPicker extends TemplatedControl
         // Office "Colors" gallery.
         const schemeButton = host.FindName('PART_SchemeButton') as ClickableBorder | undefined;
         this._schemeNameLabel = host.FindName('PART_SchemeName') as TextBlock | undefined;
+        this._schemeRow = schemeButton;
         if (this._schemeNameLabel !== undefined) this._schemeNameLabel.Text = this.ColorScheme.Name;
         if (schemeButton !== undefined)
         {
+            // Side-flyout submenu: keep the dropdown mounted so the gallery
+            // opens alongside it (anchored to this row, opening right).
             schemeButton.onClick = (): void => {
-                this.IsDropDownOpen = false;
                 this.IsSchemeGalleryOpen = true;
             };
             this._dropdownListeners.push(() => { schemeButton.onClick = undefined; });
@@ -575,6 +580,7 @@ export class ColorPicker extends TemplatedControl
         this._dropdownListeners = [];
         this._themeGrid        = undefined;
         this._schemeNameLabel  = undefined;
+        this._schemeRow        = undefined;
         this._dropdownHost     = undefined;
         this._dropdownMounted  = false;
     }
@@ -594,8 +600,19 @@ export class ColorPicker extends TemplatedControl
         const scrim = host.FindName('PART_Scrim') as ClickAwayScrim | undefined;
         if (scrim !== undefined) scrim.onClick = (): void => { this.IsSchemeGalleryOpen = false; };
 
-        host.anchor     = this._trigger ?? this;
-        host.anchorSide = MenuAnchorSide.Below;
+        // Side-flyout: anchor to the Color-Scheme row (kept alive by the
+        // still-open dropdown) and open to its right, like a nested menu.
+        // Fall back to the trigger/below when the row isn't available.
+        if (this._schemeRow !== undefined)
+        {
+            host.anchor     = this._schemeRow;
+            host.anchorSide = MenuAnchorSide.Right;
+        }
+        else
+        {
+            host.anchor     = this._trigger ?? this;
+            host.anchorSide = MenuAnchorSide.Below;
+        }
         const body = host.FindName('PART_PopupBody') as Visual | undefined;
         if (body !== undefined) host.popup = body;
 
@@ -614,6 +631,11 @@ export class ColorPicker extends TemplatedControl
     {
         for (const child of [...list.visualChildren]) list.RemoveChild(child);
         const current = this.ColorScheme;
+        // Hover state-layer — the M3 OnSurface @ 8% overlay the menu rows
+        // use. Resolved once off the active theme (stable while the gallery
+        // is open); each row tints its Background on IsMouseOver and clears
+        // it on leave, giving the same hover feedback as a MenuItem.
+        const hover = Application.current?.Resources.Resolve('StateHoverOverlay') as Brush | undefined;
         for (const scheme of OFFICE_COLOR_SCHEMES)
         {
             const row = new ClickableBorder();
@@ -622,6 +644,17 @@ export class ColorPicker extends TemplatedControl
             row.BorderBrush     = scheme === current ? ACCENT_BORDER : SWATCH_BORDER;
             row.Padding = new Thickness(4);
             row.Margin  = new Thickness(0, 0, 0, 2);
+
+            if (hover !== undefined)
+            {
+                const onHover = (): void => {
+                    row.Background = row.IsMouseOver ? hover : undefined;
+                };
+                row.AddPropertyChangedListener(Element.IsMouseOverKey, onHover);
+                this._galleryListeners.push(
+                    () => { row.RemovePropertyChangedListener(Element.IsMouseOverKey, onHover); },
+                );
+            }
 
             const rowContent = new StackPanel();
             rowContent.Orientation = Orientation.Horizontal;

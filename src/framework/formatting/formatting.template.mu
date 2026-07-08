@@ -7,8 +7,8 @@
 resources Formatting {
     // ── ColorPicker: closed chrome ─────────────────────────────────
     // A ComboBox-style trigger: rounded outlined border housing a small
-    // swatch (Background bound to the templated parent's SwatchBrush),
-    // the current hex label, and a chevron. ColorPicker.ctor wires the
+    // swatch (Background bound to the templated parent's SwatchBrush) and
+    // a chevron. ColorPicker.ctor wires the
     // PointerDown / PointerUp / PointerLeave gesture on
     // PART_SelectionTrigger; on release the picker flips IsDropDownOpen
     // and mountPopup spins up the overlay popup chrome below.
@@ -34,14 +34,6 @@ resources Formatting {
                       BorderThickness = (1),
                       Margin          = (0,0,@Spacing3,0),
                       Background      = $$SwatchBrush ]
-                TextBlock
-                    [ Text              = $$ColorHex,
-                      Foreground        = @OnSurface,
-                      FontFamily        = @BodyMediumFont,
-                      FontWeight        = @BodyMediumWeight,
-                      FontSize          = @BodyMediumSize,
-                      VerticalAlignment = Center,
-                      Margin            = (0,0,@Spacing3,0) ]
                 Shape x:name="PART_Chevron"
                     [ Geometry          = @ChevronDown,
                       Fill              = @OnSurfaceVariant,
@@ -95,71 +87,16 @@ resources Formatting {
                   BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
                   Effect          = @Elevation2,
-                  Padding         = (@Spacing3),
+                  Padding         = (0),
                   Width           = 268 ] {
                 StackPanel [ Orientation = Vertical ] {
-                    // ── No Color ───────────────────────────────────
-                    // Clears the selection to a transparent sentinel; the
-                    // none-swatch is a white chip crossed by a red glyph,
-                    // mirroring Office's "No Fill" affordance.
-                    ClickableBorder x:name="PART_NoColor"
-                        [ CornerRadius = @ShapeExtraSmall,
-                          Padding      = (@Spacing2),
-                          Margin       = (0,0,0,@Spacing2) ] {
-                        StackPanel [ Orientation = Horizontal ] {
-                            Border
-                                [ Width           = 18,
-                                  Height          = 18,
-                                  CornerRadius    = 3,
-                                  Background      = #ffffff,
-                                  BorderBrush     = @Outline,
-                                  BorderThickness = (1),
-                                  Margin          = (0,0,@Spacing2,0) ] {
-                                TextBlock
-                                    [ Text                = "✕",
-                                      Foreground          = #d32f2f,
-                                      FontSize            = 12,
-                                      HorizontalAlignment = Center,
-                                      VerticalAlignment   = Center ]
-                            }
-                            TextBlock
-                                [ Text              = "No Color",
-                                  Foreground        = @OnSurface,
-                                  FontSize          = @BodyMediumSize,
-                                  VerticalAlignment = Center ]
-                        }
-                    }
-
-                    // ── Scheme picker (Office "Colors") ────────────
-                    // Caption shows the active ColorScheme; clicking opens
-                    // the scheme gallery overlay. PART_SchemeName is updated
-                    // by ColorPicker.
-                    ClickableBorder x:name="PART_SchemeButton"
-                        [ CornerRadius = @ShapeExtraSmall,
-                          Padding      = (@Spacing2),
-                          Margin       = (0,0,0,@Spacing2) ] {
-                        StackPanel [ Orientation = Horizontal ] {
-                            TextBlock
-                                [ Text              = "Colors:",
-                                  Foreground        = @OnSurfaceVariant,
-                                  FontSize          = @BodySmallSize,
-                                  VerticalAlignment = Center,
-                                  Margin            = (0,0,@Spacing1,0) ]
-                            TextBlock x:name="PART_SchemeName"
-                                [ Text              = "Office",
-                                  Foreground        = @OnSurface,
-                                  FontSize          = @BodyMediumSize,
-                                  VerticalAlignment = Center ]
-                            Shape
-                                [ Geometry          = @ChevronDown,
-                                  Fill              = @OnSurfaceVariant,
-                                  Width             = 10,
-                                  Height            = 10,
-                                  VerticalAlignment = Center,
-                                  Margin            = (@Spacing1,0,0,0) ]
-                        }
-                    }
-
+                    // ── Swatch section ─────────────────────────────
+                    // The palette grids keep their own inset. The popup
+                    // body itself is now padding-free so the command rows
+                    // and separators below can span edge-to-edge like a
+                    // popup menu. buildThemeGrid still sees a 242dp content
+                    // width: 268 − 2 (body border) − 24 (this margin).
+                    StackPanel [ Orientation = Vertical, Margin = (@Spacing3,@Spacing3,@Spacing3,@Spacing3) ] {
                     // ── Theme Colors ───────────────────────────────
                     // One column per ColorScheme base colour: a base row
                     // plus a tint row per scheme.tints and a shade row per
@@ -277,18 +214,71 @@ resources Formatting {
                               Margin     = (0,@Spacing2,0,@Spacing1) ]
                         WrapPanel x:name="PART_RecentRow" [ Orientation = Horizontal ]
                     }
+                    }
 
-                    // ── More Colors… ───────────────────────────────
-                    // Opens the advanced editor dialog (HS box + sliders +
-                    // hex) as a secondary overlay.
+                    // ── Command menu ───────────────────────────────
+                    // Below the swatch grids sits a popup-menu-style block:
+                    // full-width rows with a hover state-layer, delimited by
+                    // thin separators. Order (top→bottom): More Colors…,
+                    // No Color, then Color Scheme ▸ (a side-flyout submenu).
+                    // Rows + separators span edge-to-edge because the body
+                    // has no padding. Built inline — deliberately NOT reusing
+                    // the MenuItem / MenuSeparator templates.
+                    Border [ Height = 1, Background = @OutlineVariant ]
+
+                    // More Colors… — opens the advanced editor dialog
+                    // (HS box + sliders + hex) as a secondary overlay.
                     ClickableBorder x:name="PART_MoreColors"
-                        [ CornerRadius = @ShapeExtraSmall,
-                          Padding      = (@Spacing2),
-                          Margin       = (0,@Spacing2,0,0) ] {
+                        [ Padding = (@Spacing3,@Spacing2,@Spacing3,@Spacing2) ] {
                         TextBlock
                             [ Text       = "More Colors…",
-                              Foreground = @Primary,
-                              FontSize   = @BodyMediumSize ]
+                              Foreground = @OnSurface,
+                              Style      = @LabelLarge ]
+                    }
+
+                    Border [ Height = 1, Background = @OutlineVariant ]
+
+                    // No Color — clears the selection to a transparent
+                    // sentinel. Plain text row, matching More Colors.
+                    ClickableBorder x:name="PART_NoColor"
+                        [ Padding = (@Spacing3,@Spacing2,@Spacing3,@Spacing2) ] {
+                        TextBlock
+                            [ Text       = "No Color",
+                              Foreground = @OnSurface,
+                              Style      = @LabelLarge ]
+                    }
+
+                    Border [ Height = 1, Background = @OutlineVariant ]
+
+                    // Color Scheme — side-flyout submenu. The chevron marks
+                    // it expandable; ColorPicker anchors the scheme gallery
+                    // to this row (MenuAnchorSide.Right) so it opens to the
+                    // right like a nested menu. PART_SchemeName shows the
+                    // active scheme; ColorPicker keeps it in sync.
+                    ClickableBorder x:name="PART_SchemeButton"
+                        [ Padding = (@Spacing3,@Spacing2,@Spacing3,@Spacing2) ] {
+                        DockPanel {
+                            Shape
+                                [ DockPanel.Dock    = Right,
+                                  Geometry          = @ChevronRight,
+                                  Fill              = @OnSurfaceVariant,
+                                  Width             = 12,
+                                  Height            = 12,
+                                  VerticalAlignment = Center ]
+                            StackPanel [ Orientation = Horizontal ] {
+                                TextBlock
+                                    [ Text              = "Color Scheme",
+                                      Foreground        = @OnSurface,
+                                      Style             = @LabelLarge,
+                                      VerticalAlignment = Center ]
+                                TextBlock x:name="PART_SchemeName"
+                                    [ Text              = "Office",
+                                      Foreground        = @OnSurfaceVariant,
+                                      Style             = @LabelMedium,
+                                      VerticalAlignment = Center,
+                                      Margin            = (@Spacing2,0,0,0) ]
+                            }
+                        }
                     }
                 }
             }
@@ -325,9 +315,7 @@ resources Formatting {
                     TextBlock
                         [ Text       = "More Colors",
                           Foreground = @OnSurface,
-                          FontFamily = @TitleSmallFont,
-                          FontWeight = @TitleSmallWeight,
-                          FontSize   = @TitleSmallSize,
+                          Style      = @TitleSmall,
                           Margin     = (0,0,0,@Spacing3) ]
 
                     StackPanel [ Orientation = Horizontal, Margin = (0,0,0,8) ] {
@@ -469,8 +457,13 @@ resources Formatting {
                   CornerRadius    = @ShapeExtraSmall,
                   Effect          = @Elevation2,
                   Padding         = (@Spacing2),
-                  Width           = 232 ] {
-                ScrollViewer [ Height = 360 ] {
+                  Width           = 288 ] {
+                // Width sized to the widest scheme row (preview strip + full
+                // name like "Office 2013 - 2022", ~247dp measured) plus the
+                // vertical-scrollbar gutter, so names fit without clipping —
+                // horizontal scroll is off (vertical only), so anything that
+                // overflows would otherwise be cut flush against the bar.
+                ScrollViewer [ Height = 360, HorizontalScrollEnabled = false ] {
                     StackPanel x:name="PART_SchemeList" [ Orientation = Vertical ]
                 }
             }
@@ -513,9 +506,7 @@ resources Formatting {
                 TextBlock x:name="PART_VariantLabel"
                     [ Text              = "Solid",
                       Foreground        = @OnSurface,
-                      FontFamily        = @BodyMediumFont,
-                      FontWeight        = @BodyMediumWeight,
-                      FontSize          = @BodyMediumSize,
+                      Style             = @BodyMedium,
                       VerticalAlignment = Center,
                       Margin            = (0,0,@Spacing3,0) ]
                 Shape x:name="PART_Chevron"
