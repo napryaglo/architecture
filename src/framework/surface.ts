@@ -36,3 +36,19 @@ export {
     StatusBarSeparator,
 } from './status-bar/status-bar.js';
 export { ThemeSelector } from './theme-selector/theme-selector.js';
+
+// ── Ribbon family (5.11.3) ──────────────────────────────────────────
+export { Ribbon, RibbonTabHeader } from './ribbon/ribbon.js';
+export { RibbonTab, RibbonContextualGroup } from './ribbon/ribbon-tab.js';
+export { RibbonGroup, RibbonSmallButtonColumn } from './ribbon/ribbon-group.js';
+export {
+    RibbonButton,
+    RibbonToggleButton,
+    RibbonButtonSize,
+} from './ribbon/ribbon-buttons.js';
+export {
+    RibbonPopupButton,
+    RibbonDropDownButton,
+    RibbonSplitButton,
+} from './ribbon/ribbon-popup-buttons.js';
+export { RibbonGallery, RibbonGalleryPopupList } from './ribbon/ribbon-gallery.js';

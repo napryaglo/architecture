@@ -22,6 +22,7 @@ resources MuralFramework {
     import Markers from "../framework/markers/markers.template.mu.js"
     import Menus from "../framework/menu/menu.template.mu.js"
     import Navigation from "../framework/navigation/navigation.template.mu.js"
+    import Ribbons from "../framework/ribbon/ribbon.template.mu.js"
     import Notifications from "../framework/notifications/notifications.template.mu.js"
     import SearchBars from "../framework/search-bar/search-bar.template.mu.js"
     import Shells from "../framework/shell/shell.template.mu.js"

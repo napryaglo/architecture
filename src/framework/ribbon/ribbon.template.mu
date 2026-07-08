@@ -1,0 +1,319 @@
+// Default theme entries for the ribbon family — Ribbon (the tabbed
+// grouped command shell), RibbonTab / RibbonTabHeader, RibbonGroup /
+// RibbonSmallButtonColumn, the invokers (RibbonButton /
+// RibbonToggleButton / RibbonDropDownButton / RibbonSplitButton), and
+// RibbonGallery.
+//
+// Merged into the root MuralFramework dictionary via an `import`
+// clause in src/resources/framework.resources.mu.
+
+resources Ribbons {
+    // ── Shared items panels ─────────────────────────────────────────
+    // Horizontal strip of groups inside a RibbonTab body.
+    ItemsPanelTemplate x:key="DefaultRibbonGroupsPanel" {
+        StackPanel [ Orientation = Horizontal ]
+    }
+    // Horizontal row of invokers inside a RibbonGroup.
+    ItemsPanelTemplate x:key="DefaultRibbonInvokersPanel" {
+        StackPanel [ Orientation = Horizontal ]
+    }
+    // Vertical stack for a dropdown / split button's popup rows.
+    ItemsPanelTemplate x:key="DefaultRibbonMenuPanel" {
+        StackPanel [ Orientation = Vertical ]
+    }
+
+    // ── RibbonButton ────────────────────────────────────────────────
+    // Two footprints driven by the Size DP: Large stacks a 32px icon over
+    // a wrapping label (the group anchor); Small is a compact icon+label
+    // row (three per RibbonSmallButtonColumn). The icon/label composition
+    // is built by the control into Content; this template only supplies
+    // the chrome (state layers + per-size sizing).
+    Template x:key="DefaultRibbonButton" [TargetType = RibbonButton] {
+        Border x:name="PART_Border"
+            [ Background   = #00000000,
+              CornerRadius = @ShapeExtraSmall,
+              Padding      = (@Spacing2,@Spacing1,@Spacing2,@Spacing1) ] {
+            ContentPresenter [ HorizontalAlignment = Center, VerticalAlignment = Center ]
+        }
+        when ( IsMouseOver ) { PART_Border.Background = @StateHoverOverlay; }
+        when ( IsPressed ) { PART_Border.Background = @StatePressOverlay; }
+        when ( IsEnabled = false ) { PART_Border.Opacity = @DisabledContentOpacity; }
+        when ( Size = Large ) { PART_Border.MinWidth = 56; PART_Border.MinHeight = 68; PART_Border.Padding = (@Spacing2,@Spacing2,@Spacing2,@Spacing2); }
+        when ( Size = Small ) { PART_Border.MinHeight = 24; }
+    }
+    Style [TargetType = RibbonButton] {
+        Template = @DefaultRibbonButton;
+        HorizontalAlignment = Left;
+        VerticalAlignment = Top;
+        TextBlock.Foreground    = @OnSurface;
+        TextBlock.FontFamily    = @LabelSmallFont;
+        TextBlock.FontWeight    = @LabelSmallWeight;
+        TextBlock.FontSize      = @LabelSmallSize;
+        TextBlock.LineHeight    = @LabelSmallLineHeight;
+        TextBlock.LetterSpacing = @LabelSmallTracking;
+    }
+
+    // ── RibbonToggleButton ──────────────────────────────────────────
+    // Same shape + an IsChecked trigger that swaps to a filled-tonal
+    // chrome so a sticky toggle stays visible in a group.
+    Template x:key="DefaultRibbonToggleButton" [TargetType = RibbonToggleButton] {
+        Border x:name="PART_Border"
+            [ Background   = #00000000,
+              CornerRadius = @ShapeExtraSmall,
+              Padding      = (@Spacing2,@Spacing1,@Spacing2,@Spacing1) ] {
+            ContentPresenter [ HorizontalAlignment = Center, VerticalAlignment = Center ]
+        }
+        when ( IsMouseOver ) { PART_Border.Background = @StateHoverOverlay; }
+        when ( IsPressed ) { PART_Border.Background = @StatePressOverlay; }
+        when ( IsChecked ) { PART_Border.Background = @SecondaryContainer; }
+        when ( IsEnabled = false ) { PART_Border.Opacity = @DisabledContentOpacity; }
+        when ( Size = Large ) { PART_Border.MinWidth = 56; PART_Border.MinHeight = 68; PART_Border.Padding = (@Spacing2,@Spacing2,@Spacing2,@Spacing2); }
+        when ( Size = Small ) { PART_Border.MinHeight = 24; }
+    }
+    Style [TargetType = RibbonToggleButton] {
+        Template = @DefaultRibbonToggleButton;
+        HorizontalAlignment = Left;
+        VerticalAlignment = Top;
+        TextBlock.Foreground    = @OnSurface;
+        TextBlock.FontFamily    = @LabelSmallFont;
+        TextBlock.FontWeight    = @LabelSmallWeight;
+        TextBlock.FontSize      = @LabelSmallSize;
+        TextBlock.LineHeight    = @LabelSmallLineHeight;
+        TextBlock.LetterSpacing = @LabelSmallTracking;
+    }
+
+    // ── RibbonDropDownButton ────────────────────────────────────────
+    // The whole trigger opens a dropdown popup of secondary commands.
+    // PART_ContentHost hosts the icon/label composition; a trailing ▾
+    // marks the dropdown. The popup chrome (primary Template) mirrors the
+    // MenuButton popup.
+    Template x:key="DefaultRibbonDropDownTrigger" [TargetType = RibbonDropDownButton] {
+        Button x:name="PART_Trigger" {
+            StackPanel [ Orientation = Horizontal ] {
+                StackPanel x:name="PART_ContentHost" [ Orientation = Vertical ]
+                TextBlock [ Text = "▾", Margin = (@Spacing1,0,0,0), VerticalAlignment = Center ]
+            }
+        }
+    }
+    Template x:key="DefaultRibbonDropDownPopup" [TargetType = RibbonDropDownButton] {
+        MenuPopupHost x:name="PART_PopupHost" {
+            ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
+            Border x:name="PART_PopupContainer"
+                [ Background      = @SurfaceContainerHigh,
+                  BorderBrush     = @OutlineVariant,
+                  BorderThickness = (1),
+                  CornerRadius    = @ShapeExtraSmall,
+                  Effect          = @Elevation2,
+                  Padding         = (0) ] {
+                ItemsPresenter
+            }
+        }
+        when ( ThemeManager.PrefersContrast = More ) { PART_PopupContainer.BorderThickness = (2); }
+    }
+    Style [TargetType = RibbonDropDownButton] {
+        Template = @DefaultRibbonDropDownPopup;
+        TriggerTemplate = @DefaultRibbonDropDownTrigger;
+        ItemsPanel = @DefaultRibbonMenuPanel;
+        HorizontalAlignment = Left;
+        VerticalAlignment = Top;
+    }
+
+    // ── RibbonSplitButton ───────────────────────────────────────────
+    // PART_Primary fires the primary Command; PART_Arrow opens the same
+    // dropdown popup. A faint divider between them cues the two halves.
+    Template x:key="DefaultRibbonSplitTrigger" [TargetType = RibbonSplitButton] {
+        StackPanel [ Orientation = Horizontal ] {
+            Button x:name="PART_Primary" {
+                StackPanel x:name="PART_ContentHost" [ Orientation = Vertical ]
+            }
+            Button x:name="PART_Arrow" {
+                TextBlock [ Text = "▾", VerticalAlignment = Center ]
+            }
+        }
+    }
+    Template x:key="DefaultRibbonSplitPopup" [TargetType = RibbonSplitButton] {
+        MenuPopupHost x:name="PART_PopupHost" {
+            ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
+            Border x:name="PART_PopupContainer"
+                [ Background      = @SurfaceContainerHigh,
+                  BorderBrush     = @OutlineVariant,
+                  BorderThickness = (1),
+                  CornerRadius    = @ShapeExtraSmall,
+                  Effect          = @Elevation2,
+                  Padding         = (0) ] {
+                ItemsPresenter
+            }
+        }
+        when ( ThemeManager.PrefersContrast = More ) { PART_PopupContainer.BorderThickness = (2); }
+    }
+    Style [TargetType = RibbonSplitButton] {
+        Template = @DefaultRibbonSplitPopup;
+        TriggerTemplate = @DefaultRibbonSplitTrigger;
+        ItemsPanel = @DefaultRibbonMenuPanel;
+        HorizontalAlignment = Left;
+        VerticalAlignment = Top;
+    }
+
+    // ── RibbonSmallButtonColumn ─────────────────────────────────────
+    // A plain vertical stack; the control coerces its children to
+    // Size=Small. No chrome of its own.
+    Style [TargetType = RibbonSmallButtonColumn] {
+        VerticalAlignment = Center;
+    }
+
+    // ── RibbonGroup ─────────────────────────────────────────────────
+    // Bordered box: invokers row on top, Header centred at the bottom
+    // with an optional `↘` launcher in the corner. PART_Launcher's width
+    // is toggled by the control based on LaunchCommand presence.
+    Template x:key="DefaultRibbonGroup" [TargetType = RibbonGroup] {
+        Border x:name="PART_Border"
+            [ BorderBrush     = @OutlineVariant,
+              BorderThickness = (0,0,1,0),
+              Padding         = (@Spacing2) ] {
+            DockPanel [ LastChildFill = true ] {
+                Grid [ DockPanel.Dock = Bottom ] {
+                    // Content-height row (the header label + corner
+                    // launcher) with a default full-width star column so the
+                    // header centres under the invokers. Without the Auto row
+                    // the implicit star row fills the whole docked height and
+                    // the group balloons to the ribbon body's height.
+                    RowDefinitions {
+                        RowDefinition [ Height = GridLength.Auto ]
+                    }
+                    TextBlock
+                        [ Text                = $$Header,
+                          HorizontalAlignment = Center,
+                          Foreground          = @OnSurfaceVariant,
+                          FontFamily          = @LabelSmallFont,
+                          FontSize            = @LabelSmallSize ]
+                    Button x:name="PART_Launcher" [ HorizontalAlignment = Right, VerticalAlignment = Bottom ] {
+                        TextBlock [ Text = "↘" ]
+                    }
+                }
+                StackPanel [ Orientation = Horizontal, VerticalAlignment = Center ] {
+                    ItemsPresenter
+                }
+            }
+        }
+    }
+    Style [TargetType = RibbonGroup] {
+        Template = @DefaultRibbonGroup;
+        ItemsPanel = @DefaultRibbonInvokersPanel;
+    }
+
+    // ── RibbonTab (body) ────────────────────────────────────────────
+    // The selected tab's body — a horizontal strip of its RibbonGroups.
+    // The tab HEADER is rendered separately by the Ribbon (RibbonTabHeader).
+    Template x:key="DefaultRibbonTab" [TargetType = RibbonTab] {
+        Border [ Padding = (@Spacing1) ] {
+            ItemsPresenter
+        }
+    }
+    Style [TargetType = RibbonTab] {
+        Template = @DefaultRibbonTab;
+        ItemsPanel = @DefaultRibbonGroupsPanel;
+    }
+
+    // ── RibbonTabHeader ─────────────────────────────────────────────
+    // One clickable tab header in the strip. AccentBrush (bound via
+    // TemplateBinding) tints a contextual tab's background — undefined =
+    // transparent (stable look). IsCurrent underlines the selected tab
+    // with @Primary; hover shows a fainter @Outline underline.
+    Template x:key="DefaultRibbonTabHeader" [TargetType = RibbonTabHeader] {
+        Border x:name="PART_Border"
+            [ Background      = $$AccentBrush,
+              BorderBrush     = #00000000,
+              BorderThickness = (0,0,0,2),
+              Padding         = (@Spacing4,@Spacing2,@Spacing4,@Spacing2) ] {
+            ContentPresenter [ VerticalAlignment = Center ]
+        }
+        when ( IsMouseOver ) { PART_Border.BorderBrush = @Outline; }
+        when ( IsCurrent ) { PART_Border.BorderBrush = @Primary; }
+    }
+    Style [TargetType = RibbonTabHeader] {
+        Template = @DefaultRibbonTabHeader;
+        TextBlock.Foreground = @OnSurfaceVariant;
+        TextBlock.FontFamily = @TitleSmallFont;
+        TextBlock.FontWeight = @TitleSmallWeight;
+        TextBlock.FontSize   = @TitleSmallSize;
+        when ( IsCurrent ) { TextBlock.Foreground = @Primary; }
+    }
+
+    // ── RibbonGallery ───────────────────────────────────────────────
+    // Inline preview strip (ItemsPresenter over a horizontal WrapPanel set
+    // by the control) with a `▾` PART_More button that opens the full set
+    // in an overlay dropdown (PopupTemplate).
+    Template x:key="DefaultRibbonGallery" [TargetType = RibbonGallery] {
+        Border
+            [ BorderBrush     = @OutlineVariant,
+              BorderThickness = (1),
+              CornerRadius    = @ShapeExtraSmall,
+              Padding         = (@Spacing1) ] {
+            DockPanel [ LastChildFill = true ] {
+                Button x:name="PART_More" [ DockPanel.Dock = Right ] {
+                    TextBlock [ Text = "▾" ]
+                }
+                ItemsPresenter
+            }
+        }
+    }
+    Template x:key="DefaultRibbonGalleryPopup" [TargetType = RibbonGallery] {
+        MenuPopupHost x:name="PART_PopupHost" {
+            ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
+            Border x:name="PART_PopupContainer"
+                [ Background      = @SurfaceContainerHigh,
+                  BorderBrush     = @OutlineVariant,
+                  BorderThickness = (1),
+                  CornerRadius    = @ShapeExtraSmall,
+                  Effect          = @Elevation2,
+                  Padding         = (@Spacing2) ] {
+                RibbonGalleryPopupList x:name="PART_PopupList" [ MaxWidth = 320 ]
+            }
+        }
+        when ( ThemeManager.PrefersContrast = More ) { PART_PopupContainer.BorderThickness = (2); }
+    }
+    Style [TargetType = RibbonGallery] {
+        Template = @DefaultRibbonGallery;
+        PopupTemplate = @DefaultRibbonGalleryPopup;
+    }
+
+    // ── Ribbon (shell) ──────────────────────────────────────────────
+    // Vertical composition: a QAT row, a tab-strip row (with the minimize
+    // chevron), and a body area. The control builds the tab-header buttons
+    // into PART_TabStrip and slots the selected tab's body into PART_Body;
+    // PART_BodyContainer collapses when IsMinimized.
+    Template x:key="DefaultRibbon" [TargetType = Ribbon] {
+        Border x:name="PART_Root"
+            [ Background      = @SurfaceContainerLow,
+              BorderBrush     = @OutlineVariant,
+              BorderThickness = (0,0,0,1) ] {
+            DockPanel [ LastChildFill = true ] {
+                StackPanel x:name="PART_Qat"
+                    [ DockPanel.Dock = Top,
+                      Orientation    = Horizontal,
+                      Background      = @SurfaceContainer ]
+                DockPanel [ DockPanel.Dock = Top, LastChildFill = true ] {
+                    Button x:name="PART_MinimizeButton" [ DockPanel.Dock = Right ] {
+                        TextBlock [ Text = "⌃" ]
+                    }
+                    StackPanel x:name="PART_TabStrip" [ Orientation = Horizontal ]
+                }
+                Border x:name="PART_BodyContainer"
+                    [ DockPanel.Dock = Top,
+                      Background      = @Surface,
+                      Padding         = (@Spacing2) ] {
+                    ContentPresenter x:name="PART_Body"
+                }
+            }
+        }
+    }
+    Style [TargetType = Ribbon] {
+        Template = @DefaultRibbon;
+        // A ribbon is a top-docked command bar — it sizes to its content
+        // height and never stretches to fill the vertical space a host
+        // hands it (otherwise the body area + group dividers run the full
+        // window height). Horizontal stretch is kept (default) so the tab
+        // strip spans the width.
+        VerticalAlignment = Top;
+    }
+}
