@@ -1,13 +1,10 @@
 // slider demo — SliderVM is empty; the .mu file declares the visual
-// structure as a DataTemplate keyed on SliderVM. On first activation
-// the demo merges its ResourceDictionary into Application resources
-// and hands the platform a VM instance.
-import { Application } from '@visualisation-sub/mural/runtime';
-import { SliderDemo } from './slider.mu.js';
+// structure as a DataTemplate keyed on SliderVM. The factory hands the
+// platform a VM instance; the demo's view dictionary is merged
+// app-global in platform.mu (§ 27).
 import { SliderVM } from './slider-vm.mjs';
 import { register } from '../../platform/registry.mjs';
 
-let resourcesMerged = false;
 let vmInstance;
 
 register({
@@ -16,10 +13,6 @@ register({
     title:    'Slider',
     subtitle: 'Single-thumb range with horizontal + vertical orientation, keyboard nudges, and track-click jump-to-point.',
     factory: () => {
-        if (!resourcesMerged) {
-            Application.current?.Resources.AddMergedDictionary(SliderDemo.Clone());
-            resourcesMerged = true;
-        }
         if (vmInstance === undefined) vmInstance = new SliderVM();
         return vmInstance;
     },

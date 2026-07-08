@@ -7,14 +7,11 @@
 // The bootstrap doesn't touch M3 tokens; the framework template owns
 // theme tracking via the same DynamicResource path the rest of the
 // framework uses.
-import { Application }                       from '@visualisation-sub/mural/runtime';
 import { StackPanel, TextBlock, Orientation } from '@visualisation-sub/mural/basic';
 import { Button, ButtonVariant }              from '@visualisation-sub/mural/framework';
-import { SplitButtonDemo } from './split-button.mu.js';
 import { SplitButtonVM } from './split-button-vm.mjs';
 import { register } from '../../platform/registry.mjs';
 
-let resourcesMerged = false;
 let vmInstance;
 
 function buildMenuItems(vm) {
@@ -42,10 +39,6 @@ register({
     title:    'SplitButton',
     subtitle: 'M3 SplitButton — primary action + chevron menu trigger.',
     factory: () => {
-        if (!resourcesMerged) {
-            Application.current?.Resources.AddMergedDictionary(SplitButtonDemo.Clone());
-            resourcesMerged = true;
-        }
         if (vmInstance === undefined) {
             vmInstance = new SplitButtonVM();
             vmInstance.MenuPopup = buildMenuItems(vmInstance);

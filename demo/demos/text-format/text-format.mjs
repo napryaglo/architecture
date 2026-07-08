@@ -8,7 +8,6 @@
 // change. A partial hex mid-typing throws inside Color.FromHex; we swallow
 // it so the colour holds at its last good value.
 
-import { Application } from '@visualisation-sub/mural/runtime';
 import { TextBlock } from '@visualisation-sub/mural/basic';
 import {
     Color,
@@ -18,7 +17,6 @@ import {
     TextDecorations,
 } from '@visualisation-sub/mural/visual-engine';
 
-import { TextFormatDemo } from './text-format.mu.js';
 import { TextFormatVM } from './text-format-vm.mjs';
 import { register } from '../../platform/registry.mjs';
 
@@ -49,7 +47,6 @@ function attachFormatBridge(view, vm) {
     };
 }
 
-let resourcesMerged = false;
 let vmInstance;
 
 register({
@@ -58,10 +55,6 @@ register({
     title:    'Text format editors',
     subtitle: 'Font family / size (editable combos), font colour, and bold / italic / underline — bound to a live sample paragraph.',
     factory: () => {
-        if (!resourcesMerged) {
-            Application.current?.Resources.AddMergedDictionary(TextFormatDemo.Clone());
-            resourcesMerged = true;
-        }
         if (vmInstance === undefined) vmInstance = new TextFormatVM();
         vmInstance.OnViewMounted = (view) => attachFormatBridge(view, vmInstance);
         return vmInstance;

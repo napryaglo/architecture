@@ -1,14 +1,10 @@
 // animation demo — AnimationVM holds per-row Storyboard references
 // and wires the imperative click handlers in OnViewMounted via
-// FindName. On first activation the demo merges its
-// ResourceDictionary into Application resources and hands the
-// platform a VM instance.
-import { Application } from '@visualisation-sub/mural/runtime';
-import { AnimationDemo } from './animation.mu.js';
+// FindName. The factory hands the platform a VM instance; the demo's
+// view dictionary is merged app-global in platform.mu (§ 27).
 import { AnimationVM } from './animation-vm.mjs';
 import { register } from '../../platform/registry.mjs';
 
-let resourcesMerged = false;
 let vmInstance;
 
 register({
@@ -17,10 +13,6 @@ register({
     title:    'Animation engine',
     subtitle: 'From/To, AutoReverse + Repeat, ThicknessAnimationUsingKeyFrames — driven by AnimationManager on RafClock.',
     factory: () => {
-        if (!resourcesMerged) {
-            Application.current?.Resources.AddMergedDictionary(AnimationDemo.Clone());
-            resourcesMerged = true;
-        }
         if (vmInstance === undefined) vmInstance = new AnimationVM();
         return vmInstance;
     },

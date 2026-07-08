@@ -11,12 +11,10 @@
 // changeable to pause-on-deactivate if needed; the current behaviour
 // makes the demo entertaining when you navigate away briefly.
 
-import { Application, AnimationManager } from '@visualisation-sub/mural/runtime';
-import { BouncingBallDemo } from './bouncing-ball.mu.js';
+import { AnimationManager } from '@visualisation-sub/mural/runtime';
 import { BouncingBallVM } from './bouncing-ball-vm.mjs';
 import { register } from '../../platform/registry.mjs';
 
-let resourcesMerged = false;
 let vmInstance;
 let clockSubscribed = false;
 
@@ -41,10 +39,6 @@ register({
     title:    'Bouncing Ball',
     subtitle: 'A circle in a box, bouncing forever.',
     factory: () => {
-        if (!resourcesMerged) {
-            Application.current?.Resources.AddMergedDictionary(BouncingBallDemo.Clone());
-            resourcesMerged = true;
-        }
         if (vmInstance === undefined) vmInstance = new BouncingBallVM();
         ensureClockSubscription(vmInstance);
         return vmInstance;

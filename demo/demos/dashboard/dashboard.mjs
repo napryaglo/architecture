@@ -1,13 +1,10 @@
 // dashboard demo — DashboardVM is empty; the .mu file declares a
 // DataTemplate keyed on DashboardVM with three styled Borders + when()
-// triggers. On first activation the demo merges its ResourceDictionary
-// into Application resources and hands the platform a VM instance.
-import { Application } from '@visualisation-sub/mural/runtime';
-import { DashboardDemo } from './dashboard.mu.js';
+// triggers. The factory hands the platform a VM instance; the demo's
+// view dictionary is merged app-global in platform.mu (§ 27).
 import { DashboardVM } from './dashboard-vm.mjs';
 import { register } from '../../platform/registry.mjs';
 
-let resourcesMerged = false;
 let vmInstance;
 
 register({
@@ -16,10 +13,6 @@ register({
     title:    'Dashboard',
     subtitle: 'Three Border cards with property triggers (IsMouseOver / IsPressed).',
     factory: () => {
-        if (!resourcesMerged) {
-            Application.current?.Resources.AddMergedDictionary(DashboardDemo.Clone());
-            resourcesMerged = true;
-        }
         if (vmInstance === undefined) vmInstance = new DashboardVM();
         return vmInstance;
     },

@@ -6,11 +6,9 @@
 // Color.FromHex — we swallow those so the preview stays at its last
 // good value until a full hex lands.
 
-import { Application } from '@visualisation-sub/mural/runtime';
 import { Border } from '@visualisation-sub/mural/basic';
 import { Color, SolidColorBrush } from '@visualisation-sub/mural/visual-engine';
 
-import { ColorPickerDemo } from './color-picker.mu.js';
 import { ColorPickerVM } from './color-picker-vm.mjs';
 import { register } from '../../platform/registry.mjs';
 
@@ -42,7 +40,6 @@ function attachBehaviors(view, vm) {
     };
 }
 
-let resourcesMerged = false;
 let vmInstance;
 
 register({
@@ -51,13 +48,6 @@ register({
     title:    'Color picker',
     subtitle: 'Office-style picker — theme colors + tints, standard colors, recents, More Colors dialog.',
     factory: () => {
-        if (!resourcesMerged) {
-            // BrandColors (the @BrandColors ColorScheme) is authored as a
-            // markup resource inside ColorPickerDemo — no JS resource
-            // registration. Merging the dictionary makes it resolvable.
-            Application.current?.Resources.AddMergedDictionary(ColorPickerDemo.Clone());
-            resourcesMerged = true;
-        }
         if (vmInstance === undefined) vmInstance = new ColorPickerVM();
         vmInstance.OnViewMounted = (view) => attachBehaviors(view, vmInstance);
         return vmInstance;

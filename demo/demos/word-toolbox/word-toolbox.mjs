@@ -14,9 +14,8 @@
 // the host's ItemsPanel — no flag needed; VirtualizingWrapPanel
 // triggers wrap mode.
 
-import { Application, DragDropEffects } from '@visualisation-sub/mural/runtime';
+import { DragDropEffects } from '@visualisation-sub/mural/runtime';
 import { DataTemplate } from '@visualisation-sub/mural/basic';
-import { WordToolboxDemo } from './word-toolbox.mu.js';
 import { WordToolboxVM, FMT_WORD_COPY } from './word-toolbox-vm.mjs';
 import { register } from '../../platform/registry.mjs';
 
@@ -24,7 +23,6 @@ import * as controlsRef from '@visualisation-sub/mural/basic';
 import * as runtimeRef from '@visualisation-sub/mural/runtime';
 import * as visualEngineRef from '@visualisation-sub/mural/visual-engine';
 
-let resourcesMerged = false;
 let vmInstance;
 
 // Insertion-line indicator factory. The behavior writes Width/Height
@@ -106,10 +104,6 @@ register({
     title:    'Word toolbox',
     subtitle: 'Drag tiles between a 100-word toolbox and a 2000-tile virtualized wrap-panel listbox.',
     factory: () => {
-        if (!resourcesMerged) {
-            Application.current?.Resources.AddMergedDictionary(WordToolboxDemo.Clone());
-            resourcesMerged = true;
-        }
         if (vmInstance === undefined) vmInstance = new WordToolboxVM();
         vmInstance.OnViewMounted = (view) => attachExtras(view, vmInstance);
         return vmInstance;

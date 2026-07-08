@@ -17,14 +17,11 @@
 // the session's OnMove itself) or 8.5 (the behavior wires the adorner
 // internally once InsertionAdornerTemplate is set).
 
-import { Application } from '@visualisation-sub/mural/runtime';
 import { DataTemplate } from '@visualisation-sub/mural/basic';
-import { DragDropExtendedDemo } from './drag-drop-extended.mu.js';
 import { DragDropExtendedVM } from './drag-drop-extended-vm.mjs';
 import { attachOsFileDrop } from './behaviors/os-file-drop-behavior.mjs';
 import { register } from '../../platform/registry.mjs';
 
-let resourcesMerged = false;
 let vmInstance;
 
 // Inline DataTemplate that produces the insertion line. Built
@@ -106,10 +103,6 @@ register({
     title:    'Drag & drop extended',
     subtitle: 'Reorder + OS file drops + auto-scroll + insertion adorner + source-side hooks.',
     factory: () => {
-        if (!resourcesMerged) {
-            Application.current?.Resources.AddMergedDictionary(DragDropExtendedDemo.Clone());
-            resourcesMerged = true;
-        }
         if (vmInstance === undefined) vmInstance = new DragDropExtendedVM();
         vmInstance.OnViewMounted = (view) => attachExtras(view, vmInstance);
         return vmInstance;

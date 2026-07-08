@@ -4,14 +4,12 @@
 // bootstrap because the VM cannot construct Visuals. Each mini-FAB
 // is wired to the VM's matching Command so clicks fire through to
 // the demo's read-out.
-import { Application, ObservableCollection } from '@visualisation-sub/mural/runtime';
+import { ObservableCollection } from '@visualisation-sub/mural/runtime';
 import { StackPanel, TextBlock, Orientation }      from '@visualisation-sub/mural/basic';
 import { FloatingActionButton, FabSize }           from '@visualisation-sub/mural/framework';
-import { FabMenuDemo } from './fab-menu.mu.js';
 import { FabMenuVM }   from './fab-menu-vm.mjs';
 import { register }    from '../../platform/registry.mjs';
 
-let resourcesMerged = false;
 let vmInstance;
 
 function buildItems(vm) {
@@ -47,10 +45,6 @@ register({
     title:    'FabMenu',
     subtitle: 'M3 2024 FAB that reveals secondary actions on tap.',
     factory: () => {
-        if (!resourcesMerged) {
-            Application.current?.Resources.AddMergedDictionary(FabMenuDemo.Clone());
-            resourcesMerged = true;
-        }
         if (vmInstance === undefined) {
             vmInstance = new FabMenuVM();
             vmInstance.Items = buildItems(vmInstance);

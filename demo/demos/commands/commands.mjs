@@ -9,11 +9,9 @@
 // to the VM.
 import { Application } from '@visualisation-sub/mural/runtime';
 import { Diagram, DiagramStorageKey } from '@visualisation-sub/mural/framework';
-import { CommandsDemo } from './commands.mu.js';
 import { CommandsVM } from './commands-vm.mjs';
 import { register } from '../../platform/registry.mjs';
 
-let resourcesMerged = false;
 let vmInstance;
 
 function attachBehaviors(view, vm) {
@@ -78,10 +76,6 @@ register({
     title:    'Commands',
     subtitle: 'ToolBar + Menu + ContextMenu over a Diagram. One ICommand instance drives every surface.',
     factory: () => {
-        if (!resourcesMerged) {
-            Application.current?.Resources.AddMergedDictionary(CommandsDemo.Clone());
-            resourcesMerged = true;
-        }
         if (vmInstance === undefined) vmInstance = new CommandsVM(Application.current?.Services.get(DiagramStorageKey));
         vmInstance.OnViewMounted = (view) => attachBehaviors(view, vmInstance);
         return vmInstance;

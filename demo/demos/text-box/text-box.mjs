@@ -1,15 +1,12 @@
 // text-box demo — TextBoxVM is intentionally empty; the .mu file
 // declares the visual structure as a DataTemplate keyed on TextBoxVM.
-// On first activation the demo merges its ResourceDictionary into
-// Application.current.Resources and hands the platform a VM instance;
-// PageView's ContentControl auto-resolves the template by data type
-// and slots the produced Visual.
-import { Application } from '@visualisation-sub/mural/runtime';
-import { TextBoxDemo } from './text-box.mu.js';
+// The factory hands the platform a VM instance; the demo's view
+// dictionary is merged app-global in platform.mu (§ 27). PageView's
+// ContentControl auto-resolves the template by data type and slots the
+// produced Visual.
 import { TextBoxVM } from './text-box-vm.mjs';
 import { register } from '../../platform/registry.mjs';
 
-let resourcesMerged = false;
 let vmInstance;
 
 register({
@@ -18,10 +15,6 @@ register({
     title:    'TextBox',
     subtitle: 'Single-line + multi-line text editing with selection, navigation, and clipboard (Ctrl+A/C/X/V).',
     factory: () => {
-        if (!resourcesMerged) {
-            Application.current?.Resources.AddMergedDictionary(TextBoxDemo.Clone());
-            resourcesMerged = true;
-        }
         if (vmInstance === undefined) vmInstance = new TextBoxVM();
         return vmInstance;
     },

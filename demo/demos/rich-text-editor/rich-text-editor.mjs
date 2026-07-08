@@ -8,10 +8,9 @@
 // (which acts on the editor's persisted selection) and then returns focus
 // to the editor so typing can continue.
 
-import { Application, RelayCommand } from '@visualisation-sub/mural/runtime';
+import { RelayCommand } from '@visualisation-sub/mural/runtime';
 import { RichTextBox } from '@visualisation-sub/mural/basic';
 
-import { RichTextEditorDemo } from './rich-text-editor.mu.js';
 import { RichTextEditorVM } from './rich-text-editor-vm.mjs';
 import { register } from '../../platform/registry.mjs';
 
@@ -35,7 +34,6 @@ function attachToolbar(view) {
     return function detach() {};
 }
 
-let resourcesMerged = false;
 let vmInstance;
 
 register({
@@ -44,10 +42,6 @@ register({
     title:    'Rich text editor',
     subtitle: 'A FlowDocument editor — caret, selection, Ctrl+B / I / U formatting, and bulleted / numbered lists with Tab indent.',
     factory: () => {
-        if (!resourcesMerged) {
-            Application.current?.Resources.AddMergedDictionary(RichTextEditorDemo.Clone());
-            resourcesMerged = true;
-        }
         if (vmInstance === undefined) vmInstance = new RichTextEditorVM();
         vmInstance.OnViewMounted = (view) => attachToolbar(view);
         return vmInstance;

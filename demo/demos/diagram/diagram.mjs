@@ -9,11 +9,8 @@
 
 import { Application } from '@visualisation-sub/mural/runtime';
 import { ConnectorEndpoint, DiagramDocument, DiagramStorageKey } from '@visualisation-sub/mural/framework';
-import { DiagramDemo } from './diagram.mu.js';
 import { register } from '../../platform/registry.mjs';
-import { Icons } from '../../assets/icons.mu.js';
 
-let resourcesMerged = false;
 let docInstance;
 
 register({
@@ -22,11 +19,6 @@ register({
     title:    'Diagrammer',
     subtitle: 'Drag shapes from the toolbox; drag a node to move; click / marquee to select; Delete to remove.',
     factory: () => {
-        if (!resourcesMerged) {
-            Application.current?.Resources.AddMergedDictionary(DiagramDemo.Clone());
-            Application.current?.Resources.AddMergedDictionary(Icons.Clone());
-            resourcesMerged = true;
-        }
         if (docInstance === undefined) {
             // Storage comes from the app's service provider (registered
             // at the platform composition root). Optional: if no backend

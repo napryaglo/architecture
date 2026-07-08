@@ -3,12 +3,9 @@
 // platform. The platform sets PageView.Content = vm; ContentControl
 // auto-resolves the template by matching the VM's constructor name
 // against the template's DataType.
-import { Application } from '@visualisation-sub/mural/runtime';
-import { CounterDemo } from './counter.mu.js';
 import { CounterVM } from './counter-vm.mjs';
 import { register } from '../../platform/registry.mjs';
 
-let resourcesMerged = false;
 let vmInstance;
 
 register({
@@ -20,10 +17,6 @@ register({
         // Merge the demo's resource dictionary into the application
         // on first activation. After this, ContentControl finds the
         // template by walking Application.current.Resources.
-        if (!resourcesMerged) {
-            Application.current?.Resources.AddMergedDictionary(CounterDemo.Clone());
-            resourcesMerged = true;
-        }
         // The "demo content" is now the VM, not a Visual. The platform
         // PageView's ContentControl resolves the matching DataTemplate
         // and slots the produced Visual.
