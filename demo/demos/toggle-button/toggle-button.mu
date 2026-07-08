@@ -24,20 +24,42 @@ resources ToggleButtonDemo {
             [ Background      = @Surface,
               BorderBrush     = @Outline,
               BorderThickness = (1),
-              CornerRadius    = @ShapeSmall,
-              Padding         = (16,8,16,8) ] {
-            ContentPresenter
+              CornerRadius    = @ShapeSmall ] {
+            // Transparent state-layer over the fill — hover / press tint
+            // it at the M3 8% / 12% opacities so the button gives pointer
+            // feedback in both states. Padding lives here (not on
+            // PART_Border) so the overlay covers the content box inside
+            // the 1dp outline. Same pattern as the framework's
+            // DefaultFilledIconButtonToggle: one OnSurface-based overlay
+            // token across checked + unchecked (the alpha is low enough
+            // that the delta over the Primary fill is negligible).
+            Border x:name="PART_StateLayer"
+                [ Background   = #00000000,
+                  CornerRadius = @ShapeSmall,
+                  Padding      = (16,8,16,8) ] {
+                ContentPresenter
+            }
         }
         when ( IsChecked ) {
             PART_Border.Background = @Primary;
             PART_Border.BorderBrush = @PrimaryPress;
         }
+        when ( IsMouseOver ) { PART_StateLayer.Background = @StateHoverOverlay; }
+        when ( IsPressed ) { PART_StateLayer.Background = @StatePressOverlay; }
     }
 
-    // The Style itself becomes a thin shell — Template setter only.
-    // Each ToggleButton picks up the chrome via Style=@StyleToggle.
+    // The Style owns the chrome Template plus the content-ink flip.
+    // Unchecked content reads @OnSurface (over the Surface fill);
+    // checked flips to @OnPrimary so the label stays legible over the
+    // Primary fill the template swaps in. Foreground rides the inherited
+    // TextBlock.Foreground attached property so the slotted B/I/U labels
+    // pick it up through the ContentPresenter — the labels MUST NOT set
+    // Foreground locally or they'd mask this cascade. Same pattern as the
+    // framework IconButtonToggle Style.
     Style x:key="StyleToggle" [TargetType = ToggleButton] {
         Template = @ToggleChromeTemplate;
+        TextBlock.Foreground = @OnSurface;
+        when ( IsChecked ) { TextBlock.Foreground = @OnPrimary; }
     }
 
     DataTemplate x:key="ToggleButtonTemplate" [DataType = ToggleButtonVM] {
@@ -61,16 +83,16 @@ resources ToggleButtonDemo {
                             [ Style     = @StyleToggle,
                               IsChecked = $IsBold,
                               Margin    = (0,0,8,0) ] {
-                            TextBlock [ Text = "B", FontWeight = Bold, Foreground = @OnSurface ]
+                            TextBlock [ Text = "B", FontWeight = Bold ]
                         }
                         ToggleButton
                             [ Style     = @StyleToggle,
                               IsChecked = $IsItalic,
                               Margin    = (0,0,8,0) ] {
-                            TextBlock [ Text = "I", FontStyle = Italic, Foreground = @OnSurface ]
+                            TextBlock [ Text = "I", FontStyle = Italic ]
                         }
                         ToggleButton [ Style = @StyleToggle, IsChecked = $IsUnderline ] {
-                            TextBlock [ Text = "U", FontWeight = Bold, Foreground = @OnSurface ]
+                            TextBlock [ Text = "U", FontWeight = Bold ]
                         }
                     }
 
