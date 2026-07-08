@@ -1790,6 +1790,27 @@ export class Parser
 
     private parseValue(): ValueNode
     {
+        const first = this.parseModifiableValue();
+        // A `+` here composes styles: `@h1 + @hypertext` → a ComposedValue
+        // the emitter lowers to `Style.Combine(…)`. `+` binds looser than
+        // the `<<` converter chain (handled inside parseModifiableValue),
+        // so `@a << conv + @b` parses as `(@a << conv) + @b`. Only style
+        // composition uses `+`; there's no general arithmetic in values.
+        if (this.peek().kind !== TokenKind.Plus) return first;
+        const parts: ValueNode[] = [first];
+        while (this.peek().kind === TokenKind.Plus)
+        {
+            this.consume();
+            parts.push(this.parseModifiableValue());
+        }
+        return { kind: 'composed', parts, span: this.span(first.span.start, this.lastEnd()) };
+    }
+
+    // A primary value with an optional trailing `<<` converter chain.
+    // Factored out of parseValue so the `+` composition operator can wrap
+    // whole modifiable operands without re-implementing the chain rule.
+    private parseModifiableValue(): ValueNode
+    {
         const base = this.parsePrimaryValue();
         // A `<<` here means a converter chain piped onto a NON-binding
         // base (e.g. `#0d47a1 << Lighten(0.5)`, `@Primary << Darken(0.2)`).

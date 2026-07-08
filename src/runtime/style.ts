@@ -263,7 +263,12 @@ export class MultiDataTrigger
 // EventTrigger all parity now).
 export class Style
 {
-    public readonly TargetType: Function;
+    // Backing field for TargetType. Exposed through a getter (not a bare
+    // readonly field) so `CompositeStyle` can compute its effective
+    // target type lazily from its resolved components at Seal time.
+    protected _targetType: Function;
+    public get TargetType(): Function { return this._targetType; }
+
     public readonly Setters: readonly Setter[];
     public readonly Triggers:          readonly PropertyTrigger[];
     public readonly MultiTriggers:     readonly MultiTrigger[];
@@ -306,7 +311,7 @@ export class Style
         multiDataTriggers: readonly MultiDataTrigger[] = [],
     )
     {
-        this.TargetType        = targetType;
+        this._targetType       = targetType;
         this.Setters           = setters;
         if (typeof basedOn === 'function') this._basedOnResolver = basedOn;
         else                               this._basedOn         = basedOn;
@@ -465,5 +470,210 @@ export class Style
         if (this.BasedOn !== undefined) list.push(...this.BasedOn.ResolveMultiDataTriggers());
         list.push(...this.MultiDataTriggers);
         return list;
+    }
+
+    // Compose two or more styles into a single CompositeStyle applied as
+    // one — `Element.Style = Style.Combine(h1, hypertext)`, the runtime
+    // form of the markup `Style = @h1 + @hypertext`. Later components win
+    // on setter conflicts (rightmost-wins); see CompositeStyle for the
+    // full merge semantics. Each component is either a Style or a THUNK
+    // `() => Style | undefined` (the cross-dictionary `@key` form, resolved
+    // at Seal — the same deferral BasedOn uses).
+    public static Combine(...components: readonly StyleComponent[]): CompositeStyle
+    {
+        return new CompositeStyle(components);
+    }
+}
+
+// A component passed to Style.Combine: a resolved Style, or a thunk that
+// resolves one at Seal time (the deferred `@key` form for a Style token
+// living in a not-yet-merged dictionary — same shape as Style's deferred
+// BasedOn resolver).
+export type StyleComponent = Style | (() => Style | undefined);
+
+// True when `sub` is `base` or a subclass of it.
+function isSubclassOf(sub: Function, base: Function): boolean
+{
+    return sub === base || sub.prototype instanceof base;
+}
+
+// CompositeStyle — several styles applied as one, the runtime behind
+// `Style = @h1 + @hypertext`. Extends Style so it drops straight into the
+// `Style` DP, the StyleApplicator diff-swap, and the implicit / theme
+// tiers with no changes to any of them: it just overrides the `Resolve*`
+// surface those collaborators call.
+//
+// MERGE SEMANTICS
+//   * Setters — MIXIN, not a flat overlay. Each component contributes
+//     only the setters it (or its EXPLICIT BasedOn chain) actually
+//     declares; values a component merely inherited from the shared theme
+//     base are subtracted by instance identity, so a later component that
+//     never touched FontSize can't clobber an earlier component's explicit
+//     FontSize with the theme default. The shared theme base is applied
+//     once underneath. Rightmost component wins on a genuine conflict.
+//   * Triggers (all five kinds) — concatenated, theme-base first then
+//     each component in order. The StyleApplicator installs triggers
+//     through a Set, so the theme base's triggers (shared instances across
+//     components) dedupe automatically; later components' setters win at
+//     the Trigger tier via last-applied-wins.
+//   * TargetType — the most-derived type shared by all components. Applying
+//     a composite whose components target incompatible types throws.
+//
+// Components resolve lazily at Seal (first apply): a thunk that returns a
+// non-Style (missing key) is dropped, mirroring BasedOn's fallback.
+export class CompositeStyle extends Style
+{
+    private readonly _components: readonly StyleComponent[];
+    private _resolved: Style[] | undefined;
+    private _effectiveTargetType: Function | undefined;
+
+    constructor(components: readonly StyleComponent[])
+    {
+        // Provisional TargetType from any already-resolved component;
+        // refined to the shared most-derived type at Seal (ensureResolved).
+        // `Object` is a harmless placeholder when every component is a thunk
+        // — the applicator only reads TargetType AFTER Seal, by which point
+        // the real type is set.
+        const provisional = components.find(
+            (c): c is Style => c instanceof Style)?.TargetType ?? Object;
+        super(provisional);
+        this._components = components;
+    }
+
+    public override get TargetType(): Function
+    {
+        return this._effectiveTargetType ?? this._targetType;
+    }
+
+    // Resolve thunk components and compute the shared target type. Runs at
+    // Seal (or first Resolve*), by which point resource dictionaries are
+    // merged — the same timing BasedOn thunks rely on.
+    private ensureResolved(): void
+    {
+        if (this._resolved !== undefined) return;
+        const resolved: Style[] = [];
+        for (const c of this._components)
+        {
+            const s = typeof c === 'function' ? c() : c;
+            if (s instanceof Style) resolved.push(s);
+            // A thunk that resolves to nothing (key absent / not merged)
+            // is dropped — same fallback as a dangling BasedOn = @key.
+        }
+        this._resolved = resolved;
+        this._effectiveTargetType = CompositeStyle.commonTargetType(resolved);
+    }
+
+    // Most-derived type all components target. Components must be on one
+    // inheritance line (each either a subclass or superclass of the pick);
+    // a genuine fork (e.g. TextBlock + Border) is a composition error.
+    private static commonTargetType(components: readonly Style[]): Function
+    {
+        let pick: Function | undefined;
+        for (const s of components)
+        {
+            const t = s.TargetType;
+            if (pick === undefined) { pick = t; continue; }
+            if (isSubclassOf(t, pick)) { pick = t; }          // t is more derived
+            else if (!isSubclassOf(pick, t))                  // neither derives the other
+            {
+                throw new Error(
+                    `Style.Combine: incompatible TargetTypes '${pick.name}' and '${t.name}'`
+                    + ' — composed styles must target the same type (or a subclass line).');
+            }
+        }
+        return pick ?? Object;
+    }
+
+    // The theme's default Style for the composite's target type — the
+    // shared base every component's own theme-splice points at, applied
+    // once underneath the merged contributions. Undefined when the target
+    // type has no theme Style.
+    private themeBase(): Style | undefined
+    {
+        const base = Application.ResolveDefaultResource(this.TargetType);
+        return base instanceof Style && base !== this ? base : undefined;
+    }
+
+    public override Seal(): void
+    {
+        if (this.IsSealed) return;
+        this.ensureResolved();
+        for (const comp of this._resolved!) comp.Seal();
+        this.themeBase()?.Seal();
+        // Seals the flag. The base's implicit-BasedOn splice runs against
+        // the now-correct TargetType but is inert here — the Resolve*
+        // overrides below don't consult `_basedOn`.
+        super.Seal();
+    }
+
+    public override ResolveSetters(): Map<string, Setter>
+    {
+        this.ensureResolved();
+        const baseSetters = this.themeBase()?.ResolveSetters() ?? new Map<string, Setter>();
+        const out = new Map(baseSetters);
+        for (const comp of this._resolved!)
+        {
+            for (const [key, setter] of comp.ResolveSetters())
+            {
+                // A setter identical (by instance) to the theme base's is
+                // pure inheritance — already in `out`. Skipping it is what
+                // stops a later component from re-asserting the theme
+                // default over an earlier component's explicit override.
+                if (baseSetters.get(key) === setter) continue;
+                out.set(key, setter);   // explicit contribution; later wins
+            }
+        }
+        return out;
+    }
+
+    public override ResolveTriggers(): PropertyTrigger[]
+    {
+        return this.mergeTriggers(s => s.ResolveTriggers());
+    }
+
+    public override ResolveMultiTriggers(): MultiTrigger[]
+    {
+        return this.mergeTriggers(s => s.ResolveMultiTriggers());
+    }
+
+    public override ResolveDataTriggers(): DataTrigger[]
+    {
+        return this.mergeTriggers(s => s.ResolveDataTriggers());
+    }
+
+    public override ResolveMultiDataTriggers(): MultiDataTrigger[]
+    {
+        return this.mergeTriggers(s => s.ResolveMultiDataTriggers());
+    }
+
+    public override ResolveEventTriggers(): EventTrigger[]
+    {
+        return this.mergeTriggers(s => s.ResolveEventTriggers());
+    }
+
+    // Shared trigger merge: theme base first, then each component in order.
+    // Duplicates (shared theme-base instances surfacing through several
+    // components) are harmless — the StyleApplicator installs through a Set.
+    private mergeTriggers<T>(pick: (s: Style) => readonly T[]): T[]
+    {
+        this.ensureResolved();
+        const out: T[] = [];
+        const base = this.themeBase();
+        if (base !== undefined) out.push(...pick(base));
+        for (const comp of this._resolved!) out.push(...pick(comp));
+        return out;
+    }
+
+    public override TryResolveResource(key: ResourceKey): unknown | undefined
+    {
+        const own = super.TryResolveResource(key);
+        if (own !== undefined) return own;
+        this.ensureResolved();
+        for (const comp of this._resolved!)
+        {
+            const r = comp.TryResolveResource(key);
+            if (r !== undefined) return r;
+        }
+        return undefined;
     }
 }

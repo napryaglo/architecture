@@ -741,6 +741,7 @@ export type ValueNode =
     | InlineExprValue
     | FlagValue
     | ModifiedValue
+    | ComposedValue
     | ElementNode;
 
 export interface NumberValue { kind: 'number';  raw: string;        span: SourceSpan; }
@@ -779,6 +780,11 @@ export interface ConverterRef          { name: string; args: ValueNode[]; span: 
 // literal, static resource, static member ref), which the emitter folds
 // to a constant by applying the chain once at instantiation.
 export interface ModifiedValue         { kind: 'modified'; base: ValueNode; converters: ConverterRef[]; span: SourceSpan; }
+// `@a + @b [+ @c …]` — style composition. Each `part` is a value (in
+// practice a `@resource` reference to a Style); the emitter lowers the
+// whole node to `Style.Combine(part0, part1, …)`. Left-to-right order is
+// preserved — the runtime resolves rightmost-wins on setter conflicts.
+export interface ComposedValue         { kind: 'composed'; parts: ValueNode[]; span: SourceSpan; }
 export interface TemplateBindingValue  { kind: 'template-binding';   name: string;     span: SourceSpan; }
 // `@Key` → key='Key', dynamic=false.  `@@Key` → dynamic=true.
 export interface StaticResourceValue   { kind: 'static-resource';    key: string;      span: SourceSpan; }

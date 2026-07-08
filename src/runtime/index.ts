@@ -195,12 +195,14 @@ export {
 } from '../visual-engine/index.js';
 export {
     Style,
+    CompositeStyle,
     Setter,
     SetterFactory,
     PropertyTrigger,
     MultiTrigger,
     DataTrigger,
     MultiDataTrigger,
+    type StyleComponent,
     type DataTriggerBindingFactory,
     type DataTriggerCondition,
     type TriggerCondition,

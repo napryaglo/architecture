@@ -101,6 +101,7 @@ export class Lexer
             case '.': return this.consumeFixed(TokenKind.Dot,      1, start);
             case '$': return this.consumeFixed(TokenKind.Dollar,   1, start);
             case '@': return this.consumeFixed(TokenKind.At,       1, start);
+            case '+': return this.consumeFixed(TokenKind.Plus,     1, start);
             case '#': return this.lexHashBody(start);
             case '"': return this.lexString(start);
         }

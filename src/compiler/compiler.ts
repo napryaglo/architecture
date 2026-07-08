@@ -6,6 +6,7 @@ import type {
     BodyItem,
     ConverterRef,
     ModifiedValue,
+    ComposedValue,
     InvokeCommandNode,
     PauseStoryboardNode,
     ResumeStoryboardNode,
@@ -3808,6 +3809,8 @@ export class Compiler
                 return this.compileColorValue(val);
             case 'modified':
                 return this.compileModifiedValue(val, ctx);
+            case 'composed':
+                return this.compileComposedValue(val);
             case 'element':
                 return this.compileElementValue(val);
             case 'tuple':
@@ -4195,6 +4198,36 @@ export class Compiler
                     `or an @resource — not a ${base.kind} value`,
                     val.span);
         }
+    }
+
+    // `@h1 + @hypertext` → `Style.Combine(<h1>, <hypertext>)`. Each operand
+    // must be an `@resource` reference to a Style; it's resolved the same
+    // way a Style's `BasedOn = @key` is (compileStyleBasedOn): the local JS
+    // var when the style is declared earlier in THIS dictionary, otherwise
+    // a deferred thunk resolved at Style.Combine's Seal — so a token in a
+    // not-yet-merged theme dictionary resolves at first apply, not now.
+    private compileComposedValue(val: ComposedValue): string
+    {
+        this.ensureImport('Style');
+        const parts = val.parts.map(p => this.compileStyleComponent(p));
+        return `Style.Combine(${parts.join(', ')})`;
+    }
+
+    private compileStyleComponent(part: ValueNode): string
+    {
+        if (part.kind !== 'static-resource' && part.kind !== 'dynamic-resource')
+        {
+            throw new EmitError(
+                "style composition (`+`) operands must be `@resource` references "
+                + `to styles — not a ${part.kind} value`,
+                part.span);
+        }
+        const localVar = part.kind === 'static-resource'
+            ? this.localResourceVars?.get(part.key)
+            : undefined;
+        if (localVar !== undefined) return localVar;
+        this.ensureImport('Application');
+        return `() => Application.current?.Resources.Resolve(${JSON.stringify(part.key)})`;
     }
 
     private compileTupleValue(tuple: TupleValue, ctx: ValueCtx): string

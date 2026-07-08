@@ -790,6 +790,7 @@ class Printer
             case 'inline-expr':       return `{{${v.raw}}}`;
             case 'flag':              return '';
             case 'modified':          return `${this.printValue(v.base)}${this.printConverters(v.converters)}`;
+            case 'composed':          return v.parts.map(p => this.printValue(p)).join(' + ');
             case 'element':           return this.printInlineElement(v);
         }
     }

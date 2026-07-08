@@ -24,6 +24,7 @@ export enum TokenKind
     LAngle      = 'LAngle',        // <
     RAngle      = 'RAngle',        // >
     LessLess    = 'LessLess',      // <<  — binding-converter operator
+    Plus        = 'Plus',          // +   — style-composition operator (@a + @b)
     Arrow       = 'Arrow',         // ->  — service token-from-impl operator
     Comma       = 'Comma',         // ,
     Equals      = 'Equals',        // =
