@@ -355,6 +355,8 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['KeyboardNavigationMode', '@visualisation-sub/mural/runtime'],
     ['ProgressIndicator',       '@visualisation-sub/mural/framework/notifications/progress-indicator.js'],
     ['ProgressIndicatorVariant','@visualisation-sub/mural/framework/notifications/progress-indicator.js'],
+    ['LoadingIndicator',        '@visualisation-sub/mural/framework/notifications/loading-indicator.js'],
+    ['LoadingIndicatorVariant', '@visualisation-sub/mural/framework/notifications/loading-indicator.js'],
     ['Banner',                  '@visualisation-sub/mural/framework/notifications/banner.js'],
     ['Snackbar',                '@visualisation-sub/mural/framework/notifications/snackbar.js'],
     ['Dialog',                  '@visualisation-sub/mural/framework/surfaces/dialog.js'],
@@ -484,6 +486,7 @@ export const ENUM_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<st
     ['SegmentedPosition',     new Set(['Single', 'Start', 'Middle', 'End'])],
     ['BadgeVariant',          new Set(['Dot', 'Numeric'])],
     ['ProgressIndicatorVariant', new Set(['Linear', 'Circular'])],
+    ['LoadingIndicatorVariant', new Set(['ActiveIndicator', 'Contained'])],
     ['FabSize',               new Set(['Small', 'Default', 'Large', 'Extended'])],
     ['CardVariant',           new Set(['Filled', 'Elevated', 'Outlined'])],
     ['TopAppBarVariant',      new Set(['Small', 'CenterAligned', 'Medium', 'Large'])],
@@ -588,7 +591,7 @@ export const STATIC_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<
 // Entries here MUST point at enum classes that are also in
 // ENUM_MEMBERS.
 export const PROPERTY_TO_ENUM: ReadonlyMap<string, readonly string[]> = new Map<string, readonly string[]>([
-    ['Variant',  ['ButtonVariant', 'DrawerVariant', 'CardVariant', 'TopAppBarVariant', 'TextBoxVariant', 'BadgeVariant', 'ProgressIndicatorVariant', 'ColorPickerVariant', 'BrushPickerVariant', 'FillEditorVariant']],
+    ['Variant',  ['ButtonVariant', 'DrawerVariant', 'CardVariant', 'TopAppBarVariant', 'TextBoxVariant', 'BadgeVariant', 'ProgressIndicatorVariant', 'LoadingIndicatorVariant', 'ColorPickerVariant', 'BrushPickerVariant', 'FillEditorVariant']],
     ['Kind',     ['ChipVariant', 'PatternKind', 'SettingKind']],
     ['PatternKind', ['PatternKind']],
     ['LineCap',  ['LineCap']],

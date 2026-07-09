@@ -105,6 +105,7 @@ export {
     TooltipPopupHost,
 } from './tooltips/tooltip-service.js';
 export { ProgressIndicator, ProgressIndicatorVariant } from './notifications/progress-indicator.js';
+export { LoadingIndicator, LoadingIndicatorVariant } from './notifications/loading-indicator.js';
 export { Banner } from './notifications/banner.js';
 export { Snackbar } from './notifications/snackbar.js';
 export { Dialog } from './surfaces/dialog.js';

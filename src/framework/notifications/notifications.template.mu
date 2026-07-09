@@ -169,4 +169,42 @@ resources Notifications {
         LineHeight = @BodyMediumLineHeight;
         LetterSpacing = @BodyMediumTracking;
     }
+
+    // ── LoadingIndicator: M3 2024 indeterminate spinner ─────────────
+    // A single @Primary arc that rotates continuously while its sweep
+    // grows / shrinks (the "variable-amplitude oscillation" that sets it
+    // apart from ProgressIndicator's constant-length ring). The rotation
+    // + sweep animation is owned by the control (loading-indicator.ts),
+    // which spins a RotateTransform onto PART_Fill and drives PART_Fill's
+    // EndAngle — the template just supplies the resting chrome. The
+    // Contained variant fills the 48dp circle behind the arc.
+    Pen x:key="LoadingActivePen" [ Brush = @Primary, Thickness = 4 ]
+
+    Template x:key="DefaultLoadingIndicator" [TargetType = LoadingIndicator] {
+        Border x:name="PART_Container"
+            [ Width               = 48,
+              Height              = 48,
+              Background          = #00000000,
+              CornerRadius        = @ShapeFull,
+              HorizontalAlignment = Center,
+              VerticalAlignment   = Center ] {
+            // 40dp arc centred in the 48dp box, leaving a 4dp ring gutter
+            // for the stroke half-width. StartAngle -90 anchors the sweep
+            // at 12 o'clock; the resting 40° tail is what shows before the
+            // control's animation (or when IsActive=false) takes over.
+            Arc x:name="PART_Fill"
+                [ StartAngle          = -90,
+                  EndAngle            = -50,
+                  Stroke              = @LoadingActivePen,
+                  Width               = 40,
+                  Height              = 40,
+                  HorizontalAlignment = Center,
+                  VerticalAlignment   = Center ]
+        }
+        when ( Variant = Contained ) { PART_Container.Background = @SurfaceContainerHighest; }
+        when ( IsEnabled = false ) { PART_Container.Opacity = @DisabledContentOpacity; }
+    }
+    Style [TargetType = LoadingIndicator] {
+        Template = @DefaultLoadingIndicator;
+    }
 }

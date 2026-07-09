@@ -24,6 +24,7 @@ import { FabDemo } from "../demos/fab/fab.mu.js";
 import { FillEditorDemo } from "../demos/fill-editor/fill-editor.mu.js";
 import { IconButtonDemo } from "../demos/icon-button/icon-button.mu.js";
 import { ListBoxDemo } from "../demos/list-box/list-box.mu.js";
+import { LoadingIndicatorDemo } from "../demos/loading-indicator/loading-indicator.mu.js";
 import { MenuDemo } from "../demos/menu/menu.mu.js";
 import { NavigationRailDemo } from "../demos/navigation-rail/navigation-rail.mu.js";
 import { PenEditorDemo } from "../demos/pen-editor/pen-editor.mu.js";
@@ -69,6 +70,7 @@ export const app = (() => {
     for (const [_k, _v] of BottomAppBarDemo.Clone().Entries()) _rd1.Set(_k, _v);
     for (const [_k, _v] of BottomSheetDemo.Clone().Entries()) _rd1.Set(_k, _v);
     for (const [_k, _v] of BouncingBallDemo.Clone().Entries()) _rd1.Set(_k, _v);
+    for (const [_k, _v] of LoadingIndicatorDemo.Clone().Entries()) _rd1.Set(_k, _v);
     for (const [_k, _v] of ButtonGroupDemo.Clone().Entries()) _rd1.Set(_k, _v);
     for (const [_k, _v] of CardDemo.Clone().Entries()) _rd1.Set(_k, _v);
     for (const [_k, _v] of ColorPickerDemo.Clone().Entries()) _rd1.Set(_k, _v);

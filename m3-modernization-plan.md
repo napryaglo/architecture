@@ -553,15 +553,15 @@ deferred (no concrete demo demand today).
 | Tooltips — Plain / Rich | [tooltips](https://m3.material.io/components/tooltips/overview) | ✅ shipped — `Tooltip` + `attachTooltip` overlay-helper | ~~9~~ |
 | Snackbar | [snackbar](https://m3.material.io/components/snackbar/overview) | ✅ shipped — `Snackbar` + `showSnackbar` overlay-helper | ~~9~~ |
 | Progress indicators — Linear / Circular | [progress-indicators](https://m3.material.io/components/progress-indicators/overview) | ✅ shipped — `ProgressIndicator` + `Linear` / `Circular` variants (Circular uses new `Arc` primitive) | ~~9~~ |
-| Loading indicator (M3 2024 — distinct from circular progress) | [loading-indicator](https://m3.material.io/components/loading-indicator/overview) | none — deferred ([backlog § 18.9](current-backlog.md)) | — |
+| Loading indicator (M3 2024 — distinct from circular progress) | [loading-indicator](https://m3.material.io/components/loading-indicator/overview) | ✅ shipped — `LoadingIndicator` + `LoadingIndicatorVariant` (ActiveIndicator / Contained); rotating variable-amplitude arc on the shared animation clock ([backlog § 18.9](current-backlog.md)) | ~~5~~ |
 | Badges | [badges](https://m3.material.io/components/badges/overview) | ✅ shipped (over-delivered) — `Badge` + `BadgeVariant.{Dot, Numeric}`; demo missing ([backlog § 18.8](current-backlog.md)) | — |
 | Divider | [divider](https://m3.material.io/components/divider/overview) | ✅ shipped — `Divider` promoted from Border-driven pattern to a first-class Control | ~~9~~ |
 
 ### ~~Catalogue totals~~ ✅ POST-SHIPPING
 
 - **36 M3 components** total, across 5 thematic groups.
-- ✅ **32 currently shipping in µ-mural**: Buttons (5 variants) + IconButton (4 chromes) + SegmentedButton + ButtonGroup + SplitButton + FAB + ExtendedFAB + FabMenu + Cards (3 variants) + Dialogs + BottomSheet + TopAppBar + BottomAppBar + Toolbars + NavigationBar + NavigationRail + Drawer + Tabs + Search + TextField (Filled+Outlined) + Switch + Checkbox + RadioButton + Chips (4 variants) + Sliders + Lists + Menus + Tooltips + Snackbar + ProgressIndicator (Linear+Circular) + Badges + Divider.
-- **5 still deferred** (build sequenced smallest-first — see [backlog § 18.9](current-backlog.md)): Loading indicator, Side sheets, DatePicker, TimePicker, Carousel. (~~Bottom app bar~~ ✅ shipped.)
+- ✅ **33 currently shipping in µ-mural**: Buttons (5 variants) + IconButton (4 chromes) + SegmentedButton + ButtonGroup + SplitButton + FAB + ExtendedFAB + FabMenu + Cards (3 variants) + Dialogs + BottomSheet + TopAppBar + BottomAppBar + Toolbars + NavigationBar + NavigationRail + Drawer + Tabs + Search + TextField (Filled+Outlined) + Switch + Checkbox + RadioButton + Chips (4 variants) + Sliders + Lists + Menus + Tooltips + Snackbar + ProgressIndicator (Linear+Circular) + LoadingIndicator + Badges + Divider.
+- **4 still deferred** (build sequenced smallest-first — see [backlog § 18.9](current-backlog.md)): Side sheets, DatePicker, TimePicker, Carousel. (~~Bottom app bar~~, ~~Loading indicator~~ ✅ shipped.)
 
 > Counted as "shipped": 31 of 36 M3 components ship as live controls today; 5 remain plan-explicit deferrals.
 
