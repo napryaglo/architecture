@@ -56,6 +56,7 @@ resources MuralBasic {
     // didn't tint or scale cleanly). Painted via
     // `Shape [Geometry=@IconClose, Fill=@…, Width=.., Height=..]`.
     include "shapes/chevron-right.svg" as ChevronRight
+    include "shapes/chevron-left.svg" as ChevronLeft
     include "shapes/close.svg" as IconClose
     include "shapes/check.svg" as IconCheck
 

@@ -359,6 +359,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['ProgressIndicatorVariant','@visualisation-sub/mural/framework/notifications/progress-indicator.js'],
     ['LoadingIndicator',        '@visualisation-sub/mural/framework/notifications/loading-indicator.js'],
     ['LoadingIndicatorVariant', '@visualisation-sub/mural/framework/notifications/loading-indicator.js'],
+    ['DatePicker',              '@visualisation-sub/mural/framework/pickers/date-picker.js'],
     ['Banner',                  '@visualisation-sub/mural/framework/notifications/banner.js'],
     ['Snackbar',                '@visualisation-sub/mural/framework/notifications/snackbar.js'],
     ['Dialog',                  '@visualisation-sub/mural/framework/surfaces/dialog.js'],
