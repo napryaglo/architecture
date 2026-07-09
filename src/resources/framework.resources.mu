@@ -34,4 +34,5 @@ resources MuralFramework {
     import ToolBars from "../framework/tool-bar/tool-bar.template.mu.js"
     import Tooltips from "../framework/tooltips/tooltips.template.mu.js"
     import TopAppBars from "../framework/top-app-bar/top-app-bar.template.mu.js"
+    import BottomAppBars from "../framework/bottom-app-bar/bottom-app-bar.template.mu.js"
 }

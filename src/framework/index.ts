@@ -50,6 +50,7 @@ export { FillEditor, FillEditorVariant } from './formatting/fill-editor.js';
 export { ShapeFormatControl } from './formatting/shape-format-control.js';
 export { CapOption } from './formatting/cap-option.js';
 export { TopAppBar, TopAppBarVariant } from './top-app-bar/top-app-bar.js';
+export { BottomAppBar } from './bottom-app-bar/bottom-app-bar.js';
 export { NavigationItem } from './navigation/navigation-item.js';
 export { NavigationRail } from './navigation/navigation-rail.js';
 export { NavigationBar }  from './navigation/navigation-bar.js';
