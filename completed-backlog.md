@@ -536,6 +536,17 @@ Mirror of [m3-modernization-plan.md](m3-modernization-plan.md)'s strike-through 
 
 **Trigger precedence relied on** (verified in [effective-value.ts](src/runtime/binding/effective-value.ts): the trigger stack is last-active-wins, and triggers install in source order): every template declares its **Density trigger before its Pointer trigger**, so a coarse pointer coinciding with a density setting lands on top of the stack and wins — the accessibility-favouring outcome. All templates recompile clean; `tsc --noEmit` clean; toggle / card / top-app-bar / radio-button suites green.
 
+~~**18.R. The six plan-explicit M3 spec deferrals — all shipped (closes [§ 18.9 in current](current-backlog.md)).**~~ ✅ Done. Built smallest-first per the locked decision, each a control + template + registration + tests + demo (37 M3 components now shipping; 0 deferred):
+
+- **BottomAppBar** — M3 bottom action strip: an Actions icon-button row (markup `list` slot) + a trailing `FloatingAction` FAB, single 80dp `@SurfaceContainer` template w/ Level2 elevation + density/coarse triggers. TemplatedControl mirroring TopAppBar. 8 tests.
+- **LoadingIndicator** — M3 2024 indeterminate spinner (distinct from ProgressIndicator by its **variable-amplitude oscillation**): a `@Primary` arc rotates (looping `RotateTransform.Angle`) while its sweep grows/shrinks (`AutoReverse` `Arc.EndAngle`), one control-owned Storyboard on the shared clock. `Variant` ActiveIndicator/Contained, `IsActive` start/stop. 6 tests. *Gotcha:* `applyDefaultStyle()`'s `OnPropertyChanged('Template')` + the ctor both adopt — a fresh `RotateTransform` per adopt orphaned the running Storyboard; create it once (`??=`).
+- **SideSheet** — M3 lateral sheet, Standard (in-flow docked, `IsOpen` toggles lateral size) + Modal (overlay + dismissable scrim, 0 in flow). Extends `ContentControl`; **proper `Template` DP + default Style (no `resolveTemplate` — advances the 18.12 Drawer pattern)**; reuses Drawer's `ScrimSurface`. `IsOpen` `BindsTwoWayByDefault`; scrim/close fires `Closed`. 8 tests.
+- **DatePicker** (Docked calendar) — header paging + Sunday-first weekday row + a 7-col day grid filled programmatically (`UniformGrid.FirstColumn` = 1st's weekday). `SelectedDate`/`DisplayMonth`/`Today`; day cells tinted per selection. New `pickers` family + `chevron-left.svg`. 7 tests. Modal dialog deferred.
+- **TimePicker** (analog dial) — digital HH:MM ring-switches + AM/PM over a 256dp dial: 12 numbers placed via `Canvas`+trig, a `Line` hand, a pivot. `Hour` stored 0-23 (dial shows 1-12, AM/PM flips the mapping) + `Minute`. 7 tests. Modal dialog deferred.
+- **Carousel** (multi-browse) — prev/next flank a clipped viewport (`Clip` = `RectangleGeometry`) paging the strip one card at a time via an eased `TranslateTransform`. Descends from `ItemsControl`; cards fixed to `ItemWidth`×`ItemHeight` in `PrepareContainerForItemOverride`; `ActiveIndex` clamped. New `carousel` family. 6 tests. Item-morph / drag-inertia deferred.
+
+Each ships a `demo/demos/<control>/` quartet registered in `platform.mu` + `platform.html`. Every control uses a proper default Style + `Template` DP (no `resolveXxx` from ctors); markup-facing enums registered in the symbol table. `tsc --noEmit` + `typecheck:demos` clean; 42 new control tests green.
+
 ---
 
 ## 19. Geometry math — boolean ops & shape queries (shipped)

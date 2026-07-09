@@ -15,6 +15,7 @@ resources MuralFramework {
     import Bases from "../framework/base/base.template.mu.js"
     import Buttons from "../framework/buttons/buttons.template.mu.js"
     import ButtonGroups from "../framework/button-groups/button-groups.template.mu.js"
+    import Carousels from "../framework/carousel/carousel.template.mu.js"
     import Diagrams from "../framework/diagram/diagram.template.mu.js"
     import Caps from "../framework/diagram/caps/caps.template.mu.js"
     import Formatting from "../framework/formatting/formatting.template.mu.js"

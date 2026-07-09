@@ -361,6 +361,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['LoadingIndicatorVariant', '@visualisation-sub/mural/framework/notifications/loading-indicator.js'],
     ['DatePicker',              '@visualisation-sub/mural/framework/pickers/date-picker.js'],
     ['TimePicker',              '@visualisation-sub/mural/framework/pickers/time-picker.js'],
+    ['Carousel',                '@visualisation-sub/mural/framework/carousel/carousel.js'],
     ['Banner',                  '@visualisation-sub/mural/framework/notifications/banner.js'],
     ['Snackbar',                '@visualisation-sub/mural/framework/notifications/snackbar.js'],
     ['Dialog',                  '@visualisation-sub/mural/framework/surfaces/dialog.js'],

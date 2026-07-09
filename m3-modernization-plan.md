@@ -514,7 +514,7 @@ deferred (no concrete demo demand today).
 | M3 component | Spec | Mural status | Phase |
 | --- | --- | --- | --- |
 | Cards — Filled / Elevated / Outlined | [cards](https://m3.material.io/components/cards/overview) | ✅ shipped — `Card` + `CardVariant` × 3 chromes | ~~4~~ |
-| Carousel | [carousel](https://m3.material.io/components/carousel/overview) | none — deferred ([backlog § 18.9](current-backlog.md)) | — |
+| Carousel | [carousel](https://m3.material.io/components/carousel/overview) | ✅ shipped — `Carousel` (multi-browse hero-card scroller, snap-to-card paging); item-morph / drag-inertia deferred ([backlog § 18.9](current-backlog.md)) | ~~Appendix A~~ |
 | Dialogs — basic / Full-screen | [dialogs](https://m3.material.io/components/dialogs/overview) | ✅ shipped — `Dialog` + `showDialog` overlay-helper | ~~9~~ |
 | Bottom sheets — Modal / Standard | [bottom-sheets](https://m3.material.io/components/bottom-sheets/overview) | ✅ shipped (over-delivered) — `BottomSheet` ContentControl; demo missing ([backlog § 18.8](current-backlog.md)) | — |
 | Side sheets — Modal / Standard | [side-sheets](https://m3.material.io/components/side-sheets/overview) | ✅ shipped — `SideSheet` + `SideSheetVariant` (Standard in-flow / Modal overlay+scrim); proper `Template` DP (no `resolveTemplate`) ([backlog § 18.9](current-backlog.md)) | ~~5~~ |
@@ -560,8 +560,8 @@ deferred (no concrete demo demand today).
 ### ~~Catalogue totals~~ ✅ POST-SHIPPING
 
 - **36 M3 components** total, across 5 thematic groups.
-- ✅ **36 currently shipping in µ-mural**: Buttons (5 variants) + IconButton (4 chromes) + SegmentedButton + ButtonGroup + SplitButton + FAB + ExtendedFAB + FabMenu + Cards (3 variants) + Dialogs + BottomSheet + SideSheet + TopAppBar + BottomAppBar + Toolbars + NavigationBar + NavigationRail + Drawer + Tabs + Search + TextField (Filled+Outlined) + Switch + Checkbox + RadioButton + Chips (4 variants) + Sliders + Lists + Menus + Tooltips + Snackbar + ProgressIndicator (Linear+Circular) + LoadingIndicator + DatePicker (Docked) + TimePicker + Badges + Divider.
-- **1 still deferred** (see [backlog § 18.9](current-backlog.md)): Carousel. (~~Bottom app bar~~, ~~Loading indicator~~, ~~Side sheets~~, ~~Date pickers~~, ~~Time pickers~~ ✅ shipped.)
+- ✅ **37 currently shipping in µ-mural**: Buttons (5 variants) + IconButton (4 chromes) + SegmentedButton + ButtonGroup + SplitButton + FAB + ExtendedFAB + FabMenu + Cards (3 variants) + Dialogs + BottomSheet + SideSheet + TopAppBar + BottomAppBar + Toolbars + NavigationBar + NavigationRail + Drawer + Tabs + Search + TextField (Filled+Outlined) + Switch + Checkbox + RadioButton + Chips (4 variants) + Sliders + Lists + Menus + Tooltips + Snackbar + ProgressIndicator (Linear+Circular) + LoadingIndicator + DatePicker (Docked) + TimePicker + Carousel + Badges + Divider.
+- **0 deferred** — the §18.9 build closed out the last plan-explicit deferrals (~~Bottom app bar~~, ~~Loading indicator~~, ~~Side sheets~~, ~~Date pickers~~, ~~Time pickers~~, ~~Carousel~~ ✅ all shipped). Remaining polish (Modal date/time dialogs, carousel item-morph) is demo-motivated follow-up, not a catalogue gap.
 
 > Counted as "shipped": 31 of 36 M3 components ship as live controls today; 5 remain plan-explicit deferrals.
 

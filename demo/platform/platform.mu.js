@@ -10,6 +10,7 @@ import { BottomSheetDemo } from "../demos/bottom-sheet/bottom-sheet.mu.js";
 import { BouncingBallDemo } from "../demos/bouncing-ball/bouncing-ball.mu.js";
 import { ButtonGroupDemo } from "../demos/button-group/button-group.mu.js";
 import { CardDemo } from "../demos/card/card.mu.js";
+import { CarouselDemo } from "../demos/carousel/carousel.mu.js";
 import { ColorPickerDemo } from "../demos/color-picker/color-picker.mu.js";
 import { CommandsDemo } from "../demos/commands/commands.mu.js";
 import { ContextMenuDemo } from "../demos/context-menu/context-menu.mu.js";
@@ -77,6 +78,7 @@ export const app = (() => {
     for (const [_k, _v] of SideSheetDemo.Clone().Entries()) _rd1.Set(_k, _v);
     for (const [_k, _v] of DatePickerDemo.Clone().Entries()) _rd1.Set(_k, _v);
     for (const [_k, _v] of TimePickerDemo.Clone().Entries()) _rd1.Set(_k, _v);
+    for (const [_k, _v] of CarouselDemo.Clone().Entries()) _rd1.Set(_k, _v);
     for (const [_k, _v] of ButtonGroupDemo.Clone().Entries()) _rd1.Set(_k, _v);
     for (const [_k, _v] of CardDemo.Clone().Entries()) _rd1.Set(_k, _v);
     for (const [_k, _v] of ColorPickerDemo.Clone().Entries()) _rd1.Set(_k, _v);
