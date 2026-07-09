@@ -112,6 +112,7 @@ export { Dialog } from './surfaces/dialog.js';
 export { BottomSheet } from './surfaces/bottom-sheet.js';
 export { attachTooltip, showSnackbar, showDialog } from './overlay-helpers.js';
 export { Drawer, DrawerVariant, ScrimSurface, TemporaryOverlayHost } from './surfaces/drawer.js';
+export { SideSheet, SideSheetVariant, SideSheetOverlayHost } from './surfaces/side-sheet.js';
 export { ScrollViewer, ScrollViewerLayout } from './surfaces/scroll-viewer.js';
 export { GroupItem } from './surfaces/group-item.js';
 

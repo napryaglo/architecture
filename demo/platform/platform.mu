@@ -53,6 +53,7 @@ import BottomAppBarDemo from "../demos/bottom-app-bar/bottom-app-bar.mu.js"
 import BottomSheetDemo from "../demos/bottom-sheet/bottom-sheet.mu.js"
 import BouncingBallDemo from "../demos/bouncing-ball/bouncing-ball.mu.js"
 import LoadingIndicatorDemo from "../demos/loading-indicator/loading-indicator.mu.js"
+import SideSheetDemo from "../demos/side-sheet/side-sheet.mu.js"
 import ButtonGroupDemo from "../demos/button-group/button-group.mu.js"
 import CardDemo from "../demos/card/card.mu.js"
 import ColorPickerDemo from "../demos/color-picker/color-picker.mu.js"
@@ -120,6 +121,7 @@ Application [ Theme = Material, Scheme = MaterialLight ] {
         merge BottomSheetDemo
         merge BouncingBallDemo
         merge LoadingIndicatorDemo
+        merge SideSheetDemo
         merge ButtonGroupDemo
         merge CardDemo
         merge ColorPickerDemo

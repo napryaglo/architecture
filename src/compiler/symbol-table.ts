@@ -154,6 +154,8 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['Dock',                    '@visualisation-sub/mural/basic'],
     ['Drawer',                  '@visualisation-sub/mural/framework/surfaces/drawer.js'],
     ['DrawerVariant',           '@visualisation-sub/mural/framework/surfaces/drawer.js'],
+    ['SideSheet',               '@visualisation-sub/mural/framework/surfaces/side-sheet.js'],
+    ['SideSheetVariant',        '@visualisation-sub/mural/framework/surfaces/side-sheet.js'],
     ['TreeView',                '@visualisation-sub/mural/framework/list/tree-view.js'],
     ['TreeViewItem',            '@visualisation-sub/mural/framework/list/tree-view.js'],
     ['ListBox',                 '@visualisation-sub/mural/framework/list/list-box.js'],
@@ -495,6 +497,7 @@ export const ENUM_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<st
     ['MarqueeBoundsPolicy',   new Set(['Intersect', 'Contained'])],
     ['Dock',                  new Set(['Left', 'Top', 'Right', 'Bottom'])],
     ['DrawerVariant',         new Set(['Permanent', 'Persistent', 'Temporary'])],
+    ['SideSheetVariant',      new Set(['Standard', 'Modal'])],
     ['ToolBarPosition',       new Set(['None', 'Only', 'First', 'Middle', 'Last'])],
     ['RibbonButtonSize',      new Set(['Large', 'Small'])],
     ['Density',               new Set(['Compact', 'Regular', 'Comfortable'])],
@@ -591,7 +594,7 @@ export const STATIC_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<
 // Entries here MUST point at enum classes that are also in
 // ENUM_MEMBERS.
 export const PROPERTY_TO_ENUM: ReadonlyMap<string, readonly string[]> = new Map<string, readonly string[]>([
-    ['Variant',  ['ButtonVariant', 'DrawerVariant', 'CardVariant', 'TopAppBarVariant', 'TextBoxVariant', 'BadgeVariant', 'ProgressIndicatorVariant', 'LoadingIndicatorVariant', 'ColorPickerVariant', 'BrushPickerVariant', 'FillEditorVariant']],
+    ['Variant',  ['ButtonVariant', 'DrawerVariant', 'SideSheetVariant', 'CardVariant', 'TopAppBarVariant', 'TextBoxVariant', 'BadgeVariant', 'ProgressIndicatorVariant', 'LoadingIndicatorVariant', 'ColorPickerVariant', 'BrushPickerVariant', 'FillEditorVariant']],
     ['Kind',     ['ChipVariant', 'PatternKind', 'SettingKind']],
     ['PatternKind', ['PatternKind']],
     ['LineCap',  ['LineCap']],
@@ -645,6 +648,7 @@ export const DEFAULT_SLOT_INFO: ReadonlyMap<string, SlotInfo> = new Map<string, 
     ['IconButtonToggle',        { name: 'Content',  kind: 'object' }],
     ['FloatingActionButton',    { name: 'Content',  kind: 'object' }],
     ['Card',                    { name: 'Content',  kind: 'object' }],
+    ['SideSheet',               { name: 'Content',  kind: 'object' }],
     ['TopAppBar',               { name: 'Actions',  kind: 'list'   }],
     ['BottomAppBar',            { name: 'Actions',  kind: 'list'   }],
     ['NavigationItem',          { name: 'Content',  kind: 'object' }],

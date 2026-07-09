@@ -249,4 +249,50 @@ resources Surfaces {
     Style [TargetType = BottomSheet] {
         Template = @DefaultBottomSheet;
     }
+
+    // ── SideSheet: M3 lateral sheet (Standard + Modal) ─────────────
+    // Trailing-edge (default) or leading-edge container: a header row
+    // (title + close affordance) over the consumer Content. The body
+    // ContentPresenter is declared FIRST so ContentControl's depth-first
+    // slot walk binds Content to it (not to the header's close button),
+    // then positioned into row 1 by Grid.Row. SideSheet reparents this
+    // whole PART_Sheet under an overlay host for the Modal variant; the
+    // Standard variant keeps it docked in-flow.
+    Template x:key="DefaultSideSheet" [TargetType = SideSheet] {
+        Border x:name="PART_Sheet"
+            [ Background      = @SurfaceContainerLow,
+              BorderBrush     = @OutlineVariant,
+              BorderThickness = (1,0,0,0) ] {
+            Grid {
+                RowDefinitions {
+                    RowDefinition [ Height = GridLength.Auto ]
+                    RowDefinition [ Height = GridLength.Star ]
+                }
+                // Body — first ContentPresenter in the walk = the Content
+                // slot; placed in row 1 (below the header).
+                ContentPresenter
+                    [ Grid.Row = 1,
+                      Margin   = (@Spacing4,@Spacing2,@Spacing4,@Spacing4) ]
+                // Header — title + close, row 0.
+                Border [ Grid.Row = 0, Padding = (@Spacing4,@Spacing3,@Spacing2,@Spacing3) ] {
+                    DockPanel [ LastChildFill = true ] {
+                        IconButton x:name="PART_CloseButton"
+                            [ Variant = Standard, DockPanel.Dock = Right ] {
+                            Shape [ Geometry = @IconClose, Fill = @OnSurfaceVariant, Width = 18, Height = 18 ]
+                        }
+                        TextBlock x:name="PART_Title"
+                            [ Text              = $$Title,
+                              Style             = @TitleSmall,
+                              Foreground        = @OnSurface,
+                              VerticalAlignment = Center ]
+                    }
+                }
+            }
+        }
+        // Leading-edge variant — flip the divider to the trailing side.
+        when ( Anchor = Left ) { PART_Sheet.BorderThickness = (0,0,1,0); }
+    }
+    Style [TargetType = SideSheet] {
+        Template = @DefaultSideSheet;
+    }
 }

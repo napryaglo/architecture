@@ -31,6 +31,7 @@ import { PenEditorDemo } from "../demos/pen-editor/pen-editor.mu.js";
 import { RichTextEditorDemo } from "../demos/rich-text-editor/rich-text-editor.mu.js";
 import { SegmentedButtonDemo } from "../demos/segmented-button/segmented-button.mu.js";
 import { ShapesDemo } from "../demos/shapes/shapes.mu.js";
+import { SideSheetDemo } from "../demos/side-sheet/side-sheet.mu.js";
 import { SliderDemo } from "../demos/slider/slider.mu.js";
 import { SpinEditDemo } from "../demos/spin-edit/spin-edit.mu.js";
 import { SplitButtonDemo } from "../demos/split-button/split-button.mu.js";
@@ -71,6 +72,7 @@ export const app = (() => {
     for (const [_k, _v] of BottomSheetDemo.Clone().Entries()) _rd1.Set(_k, _v);
     for (const [_k, _v] of BouncingBallDemo.Clone().Entries()) _rd1.Set(_k, _v);
     for (const [_k, _v] of LoadingIndicatorDemo.Clone().Entries()) _rd1.Set(_k, _v);
+    for (const [_k, _v] of SideSheetDemo.Clone().Entries()) _rd1.Set(_k, _v);
     for (const [_k, _v] of ButtonGroupDemo.Clone().Entries()) _rd1.Set(_k, _v);
     for (const [_k, _v] of CardDemo.Clone().Entries()) _rd1.Set(_k, _v);
     for (const [_k, _v] of ColorPickerDemo.Clone().Entries()) _rd1.Set(_k, _v);
