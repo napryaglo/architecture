@@ -930,6 +930,39 @@ export class MenuButton extends HeaderedItemsControl
                 'constructing the MenuButton.');
         }
         this._triggerInitialized = true;
+        // Ctor's explicit adoptPopupTemplate has run; from here on a
+        // Template (popup-chrome) swap goes through rebuildTemplate's
+        // re-adopt + remount-if-open path (§18.12).
+        this._popupInitialized = true;
+    }
+
+    // Guards the rebuildTemplate popup re-adoption against the ctor-time
+    // Template set: applyDefaultStyle sets Template = @DefaultMenuButtonPopup
+    // BEFORE the ctor's own adoptPopupTemplate runs, and we don't want that
+    // first stamp to re-adopt twice. Flipped true once the ctor has adopted.
+    private _popupInitialized = false;
+
+    // §18.12 — a runtime Template (popup-chrome) swap. The base
+    // ItemsControl.rebuildTemplate re-applies the template and carries the
+    // items panel across into the new ItemsPresenter (so the menu Items
+    // survive the swap, mirroring SplitButton's MenuContent-survives-
+    // PopupTemplate contract). We then re-adopt the fresh popup parts
+    // (host / scrim / container) and, if the popup was open, unmount the
+    // stale host and remount the new one on the OverlayLayer. Before the
+    // ctor's first adopt has run, defer entirely to the base — the ctor
+    // calls adoptPopupTemplate itself.
+    protected override rebuildTemplate(): void
+    {
+        if (!this._popupInitialized)
+        {
+            super.rebuildTemplate();
+            return;
+        }
+        const wasMounted = this._popupMounted;
+        if (wasMounted) this.unmountPopup();
+        super.rebuildTemplate();
+        this.adoptPopupTemplate();
+        if (wasMounted) this.mountPopup();
     }
 
     // Guards the OnPropertyChanged('TriggerTemplate') rebuild against the

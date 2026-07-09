@@ -547,6 +547,13 @@ Mirror of [m3-modernization-plan.md](m3-modernization-plan.md)'s strike-through 
 
 Each ships a `demo/demos/<control>/` quartet registered in `platform.mu` + `platform.html`. Every control uses a proper default Style + `Template` DP (no `resolveXxx` from ctors); markup-facing enums registered in the symbol table. `tsc --noEmit` + `typecheck:demos` clean; 42 new control tests green.
 
+~~**18.S. `ControlTemplate` DP swap-while-active — MenuButton.Template + Drawer migration (closes [§ 18.12 in current](current-backlog.md); Section 18 fully closed).**~~ ✅ Done. The two residuals after the SplitButton.PopupTemplate + MenuButton.TriggerTemplate close-out:
+
+  - **MenuButton.Template (popup chrome).** A `rebuildTemplate` override runs after the base `ItemsControl.rebuildTemplate` (which re-applies the template + carries the items panel across into the new `ItemsPresenter`, so the menu Items survive — the same MenuContent-survives-swap contract SplitButton uses), then re-adopts the fresh popup parts (`PART_PopupHost` / `PART_Scrim` / `PART_PopupContainer`) and — if the popup was open — unmounts the stale host and remounts the new one on the OverlayLayer. Gated by a `_popupInitialized` flag so the ctor's first stamp (via `applyDefaultStyle`) defers to the base while the ctor adopts explicitly. 3 tests (Items survive; open→swap remounts exactly one fresh host; closed→swap mounts nothing).
+  - **Drawer — Template DP migration + full swap-remount.** Drawer had **no `Template` DP** — it resolved its pane via `resolveTemplate('DefaultDrawerPane')` in the ctor, the CLAUDE.md "no `resolveXxx` from a control ctor" violation. Migrated to a real `Template` DP + `Style [TargetType=Drawer] { Template = @DefaultDrawerPane }` (mirroring SideSheet): the ctor calls `applyDefaultStyle()` and a `rebuildTemplate` override caches the pane + its `ContentPresenter`. The keyed `DefaultDrawerOverlay` template is **gone** — the Temporary overlay host + scrim are now built imperatively in `ensureStructure()` (same as SideSheet). A live `Template` swap carries the consumer `Content` across to the new presenter and re-hosts the new pane per the locked Variant — for an **open** Temporary drawer it swaps the pane inside the overlay host and keeps it mounted. 3 new tests (Template DP present; Content survives a swap; open Temporary swap remounts the new pane, Content intact) + all 16 existing drawer tests green.
+
+  `TemporaryOverlayHost` / `ScrimSurface` stay exported + symbol-table-registered (markup-constructible) though no longer referenced by any bundled template. `tsc` + `build:templates` + `build:demos` + `typecheck:demos` all clean.
+
 ---
 
 ## 19. Geometry math — boolean ops & shape queries (shipped)

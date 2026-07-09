@@ -28,8 +28,9 @@ import { ScrimSurface } from './drawer.js';
 //     scrim onto the PresentationTarget's OverlayLayer when IsOpen. A scrim
 //     click closes the sheet and fires Closed.
 //
-// Unlike Drawer (which resolves its pane by string key from the ctor — the
-// gap §18.12 tracks), SideSheet is a proper TemplatedControl: the sheet
+// Like Drawer (since §18.12 both resolve their chrome through a real
+// `Template` DP + default Style, not a resolveXxx-from-ctor string key),
+// SideSheet is a proper TemplatedControl: the sheet
 // chrome is a `Template` ControlTemplate DP set on the default Style. The
 // ctor calls applyDefaultStyle(), reads the materialised template root, and
 // wires the named close button. Standard keeps that root as its in-flow

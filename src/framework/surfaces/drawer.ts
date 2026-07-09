@@ -1,5 +1,4 @@
 import {
-    Application,
     Color,
     MetaData,
     Model,
@@ -16,20 +15,6 @@ import { Control } from '../base/control.js';
 import { Border } from '../../basic/border.js';
 import { ContentPresenter } from '../../basic/templates/content-presenter.js';
 import { Dock } from '../../basic/panels/dock-panel.js';
-import type { ControlTemplate } from '../../basic/templates/control-template.js';
-
-const KEY_PANE    = 'DefaultDrawerPane';
-const KEY_OVERLAY = 'DefaultDrawerOverlay';
-
-function resolveTemplate(key: string): ControlTemplate
-{
-    const tpl = Application.ResolveDefaultResource<ControlTemplate>(key);
-    if (tpl === undefined)
-    {
-        throw new Error(`Drawer: default template '${key}' is not registered.`);
-    }
-    return tpl;
-}
 
 // Three flavours that closely follow Material Design 3's drawer variants.
 // Mural's names predate the M3 v2024 nomenclature rationalisation; the
@@ -199,14 +184,17 @@ export class Drawer extends Control
 
     static {
         Model.OverrideMetadata(Drawer, Element.DefaultStyleKeyKey, { default_value: Drawer });
-        // Registers the consolidated controls theme exactly once so
-        // DefaultDrawerPane / DefaultDrawerOverlay resolve via
-        // Application.ResolveDefaultResource during construction.
+        // DefaultStyleKey = Drawer → applyDefaultStyle resolves
+        // Style[TargetType=Drawer] (surfaces.template.mu), which sets
+        // Template = @DefaultDrawerPane. No resolveXxx-from-ctor (§18.12).
     }
 
-    // ── Template parts (always built; structurally wired lazily) ────
-    private readonly _pane:             Border;
-    private readonly _contentPresenter: ContentPresenter;
+    // ── Template parts (the pane IS the control Template) ───────────
+    // Re-derived on every rebuildTemplate (ctor stamp + runtime swap),
+    // so a live Template change re-caches them. Definite-assignment: the
+    // ctor's applyDefaultStyle triggers rebuildTemplate, which assigns both.
+    private _pane!:             Border;
+    private _contentPresenter!: ContentPresenter;
     private _scrim:        ScrimSurface | undefined;
     private _overlayHost:  TemporaryOverlayHost | undefined;
 
@@ -230,18 +218,14 @@ export class Drawer extends Control
     constructor()
     {
         super();
-
-        // Pane subtree is resolved through the controls theme; the
-        // `drawer.template.mu` source registers it under
-        // DefaultDrawerPane. Same pane instance is reused across every
-        // Variant — Permanent / Persistent attach it to the Drawer
-        // directly, Temporary re-parents it under the overlay host.
-        const paneTpl  = resolveTemplate(KEY_PANE);
-        const paneInst = paneTpl.Apply(this);
-        this._pane = paneInst.root as Border;
-        // ControlTemplate.Apply's first-presenter walk finds the
-        // ContentPresenter inside the pane subtree without a name.
-        this._contentPresenter = paneInst.contentPresenter!;
+        // The pane is the control Template — the default Style sets
+        // Template = @DefaultDrawerPane. applyDefaultStyle resolves the
+        // Style, writes the Template DP, and the resulting rebuildTemplate
+        // materialises the pane + its ContentPresenter and caches them.
+        // The same pane instance is reused across every Variant: Permanent
+        // / Persistent keep it as the Drawer's in-flow visual child,
+        // Temporary re-parents it under the overlay host.
+        this.applyDefaultStyle();
     }
 
     // ── DP accessors ────────────────────────────────────────────────
@@ -320,16 +304,14 @@ export class Drawer extends Control
     // ── Tree exposure ───────────────────────────────────────────────
 
     // Visual children depend on the locked Variant:
-    //   * Permanent / Persistent → [pane] (pane is in host flow)
-    //   * Temporary or pre-lock  → [] (pane lives in overlay or nowhere)
+    //   * Temporary (locked) → [] (pane lives under the overlay host)
+    //   * otherwise           → [pane] (in host flow — Permanent /
+    //     Persistent, and the pre-lock window where Control has already
+    //     attached the pane as our template root).
     public override get visualChildren(): readonly Visual[]
     {
-        const v = this._effectiveVariant;
-        if (v === DrawerVariant.Permanent || v === DrawerVariant.Persistent)
-        {
-            return [this._pane];
-        }
-        return [];
+        if (this._effectiveVariant === DrawerVariant.Temporary) return [];
+        return this._pane !== undefined ? [this._pane] : [];
     }
 
     // Logical children always include Content when set — DataContext
@@ -404,46 +386,90 @@ export class Drawer extends Control
         if (this._effectiveVariant !== undefined) return;
         this._effectiveVariant = this.Variant;
 
-        switch (this._effectiveVariant)
-        {
-            case DrawerVariant.Permanent:
-            case DrawerVariant.Persistent:
-                this.AttachVisual(this._pane);
-                break;
+        // Permanent / Persistent keep the pane in host flow — Control
+        // already attached it as our template root, so there's nothing
+        // structural to do. Only Temporary re-hosts it under an overlay.
+        if (this._effectiveVariant !== DrawerVariant.Temporary) return;
 
-            case DrawerVariant.Temporary:
-            {
-                // Overlay host + scrim subtree is resolved from
-                // DefaultDrawerOverlay in the controls theme. The pane
-                // (already built from the pane template in the
-                // constructor) is AddVisualChild'd here so the same
-                // instance flips from "unattached" → "child of overlay
-                // host" without rebuilding the ContentPresenter's
-                // logical wiring.
-                const overlayTpl  = resolveTemplate(KEY_OVERLAY);
-                const overlayInst = overlayTpl.Apply(this);
-                this._overlayHost  = overlayInst.root as TemporaryOverlayHost;
-                this._scrim        = overlayInst.root.FindName('PART_Scrim') as ScrimSurface;
-                this._overlayHost.drawer = this;
-                this._scrim.Background = this.resolveScrim();
-                this._scrim.onClick = (): void =>
-                {
-                    // User-initiated dismissal: flip IsOpen and tell
-                    // listeners. Programmatic IsOpen=false intentionally
-                    // does NOT fire Closed — see class comment.
-                    if (this.IsOpen)
-                    {
-                        this.IsOpen = false;
-                        this.fireClosed();
-                    }
-                };
-                // Order matters — the scrim was added by the template
-                // as the first visual child so it paints behind; the
-                // pane appended here lands on top.
-                this._overlayHost.AddVisualChild(this._pane);
-                break;
-            }
+        // Temporary: pull the pane out of the control's in-flow visual
+        // slot and re-host it under an imperatively-built overlay host
+        // beside a dismissable scrim (mirrors SideSheet's overlay build —
+        // no keyed overlay template). The same pane instance flips from
+        // in-flow → overlay without rebuilding its ContentPresenter wiring.
+        if ((this._pane as unknown as { _visualParent?: Visual })._visualParent === this)
+        {
+            this.DetachVisual(this._pane);
         }
+        const host = new TemporaryOverlayHost();
+        host.drawer = this;
+        const scrim = new ScrimSurface();
+        scrim.Background = this.resolveScrim();
+        scrim.onClick = (): void =>
+        {
+            // User-initiated dismissal: flip IsOpen and tell listeners.
+            // Programmatic IsOpen=false intentionally does NOT fire Closed
+            // — see class comment.
+            if (this.IsOpen)
+            {
+                this.IsOpen = false;
+                this.fireClosed();
+            }
+        };
+        // Scrim first (paints behind), pane on top.
+        host.AddVisualChild(scrim);
+        host.AddVisualChild(this._pane);
+        this._overlayHost = host;
+        this._scrim = scrim;
+    }
+
+    // §18.12 — the pane is the control Template. On the ctor's first stamp
+    // (via applyDefaultStyle) this simply caches the fresh parts. On a
+    // runtime Template swap it also carries the consumer Content across to
+    // the new ContentPresenter and re-hosts the new pane per the locked
+    // Variant — for a Temporary drawer it swaps the pane inside the overlay
+    // host and, when the drawer is open, keeps it mounted with the new pane.
+    protected override rebuildTemplate(): void
+    {
+        // Snapshot content + old-pane hosting BEFORE the base teardown.
+        const content = this.Content;
+        const hadOverlayPane =
+            this._effectiveVariant === DrawerVariant.Temporary
+            && this._overlayHost !== undefined
+            && this._pane !== undefined
+            && (this._pane as unknown as { _visualParent?: Visual })._visualParent === this._overlayHost;
+
+        // Unslot content from the outgoing presenter so the base teardown's
+        // DetachVisual of the old root doesn't trip the foreign-parent check.
+        this._contentPresenter?.SetContent(undefined);
+        // Pull the old pane out of the overlay host (Temporary) — the base
+        // teardown only detaches roots parented to THIS control.
+        if (hadOverlayPane) this._overlayHost!.RemoveVisualChild(this._pane);
+
+        // Base rebuild: tear down the old template instance, apply the
+        // current Template, attach the new root as our visual child.
+        super.rebuildTemplate();
+
+        // Re-cache the fresh pane + presenter from the new template.
+        this._pane             = this.templateRoot as Border;
+        this._contentPresenter = this.templateContentPresenter!;
+
+        // Re-slot the consumer Content into the new presenter.
+        if (content !== undefined) this._contentPresenter.SetContent(content);
+
+        // Re-host per the locked Variant. For Temporary the new pane must
+        // live under the overlay host, not in-flow; move it and (if the
+        // overlay is mounted) it stays mounted with the new pane.
+        if (this._effectiveVariant === DrawerVariant.Temporary && this._overlayHost !== undefined)
+        {
+            if ((this._pane as unknown as { _visualParent?: Visual })._visualParent === this)
+            {
+                this.DetachVisual(this._pane);
+            }
+            this._overlayHost.AddVisualChild(this._pane);
+            this._pane['SetTarget'](this._lastKnownTarget);
+            this._overlayHost.InvalidateMeasure();
+        }
+        this.InvalidateMeasure();
     }
 
     // Effective size along the anchor axis based on locked Variant +

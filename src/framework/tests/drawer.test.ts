@@ -6,6 +6,8 @@ import { Application, NoModifiers, PointerButton, Panel, Rect, Size, Visual, typ
 import { InputManager } from '../../framework/index.js';;
 import { HeadlessTarget } from '../../visual-engine/index.js';
 import { Border } from '../../basic/border.js';
+import { ContentPresenter } from '../../basic/templates/content-presenter.js';
+import { ControlTemplate } from '../../basic/templates/control-template.js';
 import { Dock, DockPanel } from '../../basic/panels/dock-panel.js';
 import { Drawer, DrawerVariant } from '../surfaces/drawer.js';
 import { TextBlock } from '../../basic/text-block.js';
@@ -304,3 +306,108 @@ describe('Drawer — Variant is read-once at structural setup', () => {
         assert.equal(d.visualChildren.length, 1, 'still in flow');
     });
 });
+
+// A Drawer-pane control template: a Border (PART_Pane-analog) wrapping a
+// ContentPresenter, tagged so a swap is observable. Mirrors the shape of
+// @DefaultDrawerPane; the Apply first-presenter walk finds the presenter.
+function makePaneTemplate(tag: string): ControlTemplate
+{
+    return new ControlTemplate(() => {
+        const pane = new Border();
+        (pane as unknown as { __tag: string }).__tag = tag;
+        pane.SetChild(new ContentPresenter());
+        return pane;
+    });
+}
+
+describe('Drawer — Template DP migration + swap-while-active (§18.12)', () => {
+    beforeEach(() => { initTestApp(); });
+
+    function mount(d: Drawer): HeadlessTarget {
+        const root = new Root();
+        root.AddChild(d);
+        const target = new HeadlessTarget(400, 300);
+        target.Content = root;
+        target.Flush();
+        return target;
+    }
+
+    test('the default Style supplies a Template DP (no resolveXxx-from-ctor)', () => {
+        const d = new Drawer();
+        assert.notEqual(d.Template, undefined,
+            'applyDefaultStyle set Template = @DefaultDrawerPane');
+        // The pane part resolves through the standard GetTemplateChild path.
+        assert.notEqual(d.GetTemplateChild('PART_Pane'), undefined,
+            'PART_Pane materialised from the Template');
+    });
+
+    test('Content survives a Template swap (re-slotted into the new presenter)', () => {
+        const d = new Drawer();
+        d.Variant = DrawerVariant.Persistent;
+        const body = new TextBlock('Body');
+        d.Content = body;
+        mount(d);
+
+        d.Template = makePaneTemplate('pane-v2');
+
+        // Content is still the Drawer's logical child AND slotted into the
+        // NEW pane's presenter (the tagged root proves the swap happened).
+        assert.deepEqual(d.logicalChildren, [body], 'Content stays logical child');
+        const paneRoot = d.visualChildren[0] as Visual;
+        assert.equal((paneRoot as unknown as { __tag: string }).__tag, 'pane-v2',
+            'the swapped-in pane is what renders');
+        assert.ok(findDeep(paneRoot, body),
+            'Content re-slotted under the new pane');
+    });
+
+    test('swapping Template while a Temporary drawer is OPEN remounts the new pane', () => {
+        const d = new Drawer();
+        d.Variant    = DrawerVariant.Temporary;
+        d.Anchor     = Dock.Left;
+        d.DrawerSize = 200;
+        const body = new TextBlock('Body');
+        d.Content = body;
+        const target = mount(d);
+
+        d.IsOpen = true;
+        target.Flush();
+        const hostBefore = target.OverlayRoot!.visualChildren[0]!;
+        const paneBefore = hostBefore.visualChildren[1] as Visual;
+
+        // Swap the pane chrome WHILE open.
+        d.Template = makePaneTemplate('pane-v2');
+        target.Flush();
+
+        const host = target.OverlayRoot!.visualChildren[0]!;
+        assert.equal(target.OverlayRoot!.visualChildren.length, 1,
+            'still exactly one overlay host after the swap');
+        assert.equal(host.visualChildren.length, 2,
+            'host still holds [scrim, pane]');
+        const paneAfter = host.visualChildren[1] as Visual;
+        assert.notEqual(paneAfter, paneBefore, 'the mounted pane is the new instance');
+        assert.equal((paneAfter as unknown as { __tag: string }).__tag, 'pane-v2',
+            'the swapped-in pane is what mounts');
+        // Content carried across into the new pane, still positioned at the
+        // left edge with DrawerSize.
+        assert.equal(paneAfter.ArrangedRect.X, 0);
+        assert.equal(paneAfter.ArrangedRect.Width, 200);
+        assert.ok(findDeep(paneAfter, body), 'Content survives into the remounted pane');
+
+        // Closing still tears the (new) host down.
+        d.IsOpen = false;
+        target.Flush();
+        assert.equal(target.OverlayRoot!.visualChildren.length, 0,
+            'closing detaches the swapped overlay');
+    });
+});
+
+// Depth-first search for `needle` under `root` (visual subtree).
+function findDeep(root: Visual, needle: Visual): boolean
+{
+    if (root === needle) return true;
+    for (const c of root.visualChildren)
+    {
+        if (findDeep(c, needle)) return true;
+    }
+    return false;
+}

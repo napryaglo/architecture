@@ -138,12 +138,13 @@ resources Surfaces {
         Template = @DefaultScrollViewer;
     }
 
-    // ── Drawer (in-flow pane) ───────────────────────────────────────
+    // ── Drawer (pane) ───────────────────────────────────────────────
+    // The Drawer's control Template — set on the default Style below.
     // Shared by Permanent / Persistent / Temporary variants. The
-    // Temporary variant re-parents this same pane onto the overlay
-    // host (see DefaultDrawerOverlay) — no duplicate pane is built.
-    // Drawer has TWO templates (pane + overlay) — both keyed; the
-    // ctor reads them explicitly.
+    // Temporary variant re-parents this same pane onto an imperatively-
+    // built overlay host (see Drawer.ensureStructure) — no duplicate pane
+    // is built, and there is no keyed overlay template (§18.12: Drawer
+    // migrated off resolveXxx-from-ctor to a real Template DP).
     //
     // M3 spec deltas closed by this template:
     //   * Background: @SurfaceContainerLow (M3 Standard / Modal).
@@ -173,16 +174,8 @@ resources Surfaces {
         // resting + disabled at the template level.
         when ( IsEnabled = false ) { PART_Pane.Opacity = @DisabledContentOpacity; }
     }
-
-    // ── Drawer (overlay host for the Temporary variant) ─────────────
-    // Applied lazily — only when a Temporary Drawer first transitions
-    // to IsOpen=true. The pane is NOT a child of this template; Drawer
-    // AddVisualChilds it after Apply so the same pane instance can flip
-    // between in-flow and overlay hosting without being rebuilt.
-    Template x:key="DefaultDrawerOverlay" [TargetType = Drawer] {
-        TemporaryOverlayHost x:name="PART_OverlayHost" {
-            ScrimSurface x:name="PART_Scrim" [ BorderThickness = (0) ]
-        }
+    Style [TargetType = Drawer] {
+        Template = @DefaultDrawerPane;
     }
 
     // ── Dialog: M3 modal dialog ────────────────────────────────────
