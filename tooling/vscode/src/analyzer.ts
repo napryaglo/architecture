@@ -189,9 +189,20 @@ function build(text: string, version: number): DocAnalysis
     // ── Compile (semantic pass) ───────────────────────────────────
     // We only run compile() for its side effect of surfacing EmitErrors.
     // The emitted JS is discarded — providers work off the AST directly.
+    //
+    // `include`/`glyphs` splice files off disk via a host-supplied
+    // resolver the CLI wires at build time. The editor has no such
+    // resolver, so we hand compile() no-op stubs: without them every
+    // document using `include` would trip a spurious "needs a file
+    // resolver" EmitError. The real resolution (SVG/font → geometry)
+    // only happens through `compile:mu`; here we just want the rest of
+    // the semantic pass to run.
     try
     {
-        compile(text);
+        compile(text, {
+            include: () => ({ entries: [] }),
+            glyphs:  () => ({ entries: [] }),
+        });
     }
     catch (e)
     {
