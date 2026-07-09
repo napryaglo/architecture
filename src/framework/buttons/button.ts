@@ -8,6 +8,7 @@ import {
     type PointerEventArgs,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
+import { CornerRadius } from '../../visual-engine/index.js';
 import {
     CommandSourceHelper,
     type ICommandSource,
@@ -105,6 +106,15 @@ export class Button extends ContentControl implements ICommandSource
     // picker trigger chain in basic.resources.mu. MetaData.None — the
     // trigger system reacts to DP changes via OnPropertyChanged.
     public static readonly VariantKey          = Model.RegisterProperty<ButtonVariant>(       Button, 'Variant',          ButtonVariant.Filled, MetaData.None);
+    // Corner shape, TemplateBound to PART_Border (and PART_StateLayer) in
+    // every variant template via `$$CornerRadius`. Lets a consumer compose
+    // Button parts into a larger surface with per-instance corner shape
+    // (left-rounded / right-rounded segmented banks, toolbar groupings)
+    // without falling back to raw Borders — the gap SplitButton hit. The
+    // M3 pill default is applied by the default Style's `CornerRadius =
+    // @ShapeFull` setter (theme-token reactive); this default_value is the
+    // same shape as a safety net for a Button used without its Style.
+    public static readonly CornerRadiusKey     = Model.RegisterProperty<number | CornerRadius>(Button, 'CornerRadius',      CornerRadius.Full,    MetaData.None);
 
     static
     {
@@ -155,6 +165,9 @@ export class Button extends ContentControl implements ICommandSource
 
     public get Variant(): ButtonVariant { return this.get_property_value(Button.VariantKey); }
     public set Variant(v: ButtonVariant) { this.set_property_value(Button.VariantKey, v); }
+
+    public get CornerRadius(): number | CornerRadius { return this.get_property_value(Button.CornerRadiusKey); }
+    public set CornerRadius(v: number | CornerRadius) { this.set_property_value(Button.CornerRadiusKey, v); }
 
     // Register a handler invoked alongside Command on every click.
     // Returns the same handler so chaining patterns like

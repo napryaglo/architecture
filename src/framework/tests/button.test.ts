@@ -5,6 +5,7 @@ import { initTestApp } from '../../basic/tests/test-app.js';
 import { Application, NoModifiers, PointerButton, RelayCommand, type PointerEventInit } from '../../runtime/index.js';
 import { InputManager } from '../../framework/index.js';;
 import { Border } from '../../basic/border.js';
+import { CornerRadius } from '../../visual-engine/index.js';
 import { type ClickHandler } from '../buttons/button.js';
 import { Button, ButtonVariant, ClickMode } from '../buttons/button.js';
 import { ContentPresenter } from '../../basic/templates/content-presenter.js';
@@ -341,5 +342,46 @@ describe('Button — Variant DP', () => {
         // on the Elevated variant.
         assert.equal(root.Effect, undefined,
             'Filled variant should have no Effect at rest');
+    });
+});
+
+describe('Button — CornerRadius DP (18.2)', () => {
+    beforeEach(() => { initTestApp(); });
+
+    test('CornerRadius default is the M3 Full pill sentinel', () => {
+        const btn = new Button();
+        // Default Style setter (`CornerRadius = @ShapeFull`) resolves to
+        // CornerRadius.Full, matching the DP default_value safety net.
+        assert.equal(btn.CornerRadius, CornerRadius.Full);
+    });
+
+    test('default CornerRadius TemplateBinds Full onto PART_Border + PART_StateLayer', () => {
+        const btn = new Button();
+        const border = btn.visualChildren[0] as Border;
+        const stateLayer = border.child as Border;
+        assert.equal(border.CornerRadius, CornerRadius.Full,
+            'PART_Border corner should ride $$CornerRadius from the Full default');
+        assert.equal(stateLayer.CornerRadius, CornerRadius.Full,
+            'PART_StateLayer corner should match PART_Border via the same binding');
+    });
+
+    test('a per-instance CornerRadius set flows through to the template parts', () => {
+        const btn = new Button();
+        // A segmented-bank left half: rounded left, square right.
+        const shape = new CornerRadius(12, 0, 0, 12);
+        btn.CornerRadius = shape;
+        const border = btn.visualChildren[0] as Border;
+        const stateLayer = border.child as Border;
+        assert.equal(border.CornerRadius, shape,
+            'Local CornerRadius set overrides the Style setter and reaches PART_Border');
+        assert.equal(stateLayer.CornerRadius, shape,
+            'the state-layer overlay tracks the same per-instance corner');
+    });
+
+    test('a uniform numeric CornerRadius is accepted and propagates', () => {
+        const btn = new Button();
+        btn.CornerRadius = 4;
+        const border = btn.visualChildren[0] as Border;
+        assert.equal(border.CornerRadius, 4);
     });
 });

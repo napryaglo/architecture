@@ -38,7 +38,7 @@ resources Buttons {
         Border x:name="PART_Border"
             [ Background           = @Primary,
               BorderThickness      = (0),
-              CornerRadius         = @ShapeFull,
+              CornerRadius         = $$CornerRadius,
               TextBlock.Foreground = @OnPrimary,
               TextBlock.FontFamily = @LabelLargeFont,
               TextBlock.FontWeight = @LabelLargeWeight,
@@ -47,7 +47,7 @@ resources Buttons {
               TextBlock.LetterSpacing = @LabelLargeTracking ] {
             Border x:name="PART_StateLayer"
                 [ Background   = #00000000,
-                  CornerRadius = @ShapeFull,
+                  CornerRadius = $$CornerRadius,
                   Padding      = (24,10,24,10) ] {
                 ContentPresenter [ HorizontalAlignment = Center, VerticalAlignment = Center ]
             }
@@ -70,7 +70,7 @@ resources Buttons {
         Border x:name="PART_Border"
             [ Background           = @SurfaceContainerLow,
               BorderThickness      = (0),
-              CornerRadius         = @ShapeFull,
+              CornerRadius         = $$CornerRadius,
               Effect               = @ElevationLevel1,
               TextBlock.Foreground = @Primary,
               TextBlock.FontFamily = @LabelLargeFont,
@@ -80,7 +80,7 @@ resources Buttons {
               TextBlock.LetterSpacing = @LabelLargeTracking ] {
             Border x:name="PART_StateLayer"
                 [ Background   = #00000000,
-                  CornerRadius = @ShapeFull,
+                  CornerRadius = $$CornerRadius,
                   Padding      = (24,10,24,10) ] {
                 ContentPresenter [ HorizontalAlignment = Center, VerticalAlignment = Center ]
             }
@@ -102,7 +102,7 @@ resources Buttons {
         Border x:name="PART_Border"
             [ Background           = @SecondaryContainer,
               BorderThickness      = (0),
-              CornerRadius         = @ShapeFull,
+              CornerRadius         = $$CornerRadius,
               TextBlock.Foreground = @OnSecondaryContainer,
               TextBlock.FontFamily = @LabelLargeFont,
               TextBlock.FontWeight = @LabelLargeWeight,
@@ -111,7 +111,7 @@ resources Buttons {
               TextBlock.LetterSpacing = @LabelLargeTracking ] {
             Border x:name="PART_StateLayer"
                 [ Background   = #00000000,
-                  CornerRadius = @ShapeFull,
+                  CornerRadius = $$CornerRadius,
                   Padding      = (24,10,24,10) ] {
                 ContentPresenter [ HorizontalAlignment = Center, VerticalAlignment = Center ]
             }
@@ -129,7 +129,7 @@ resources Buttons {
             [ Background           = #00000000,
               BorderBrush          = @Outline,
               BorderThickness      = (1),
-              CornerRadius         = @ShapeFull,
+              CornerRadius         = $$CornerRadius,
               TextBlock.Foreground = @Primary,
               TextBlock.FontFamily = @LabelLargeFont,
               TextBlock.FontWeight = @LabelLargeWeight,
@@ -138,7 +138,7 @@ resources Buttons {
               TextBlock.LetterSpacing = @LabelLargeTracking ] {
             Border x:name="PART_StateLayer"
                 [ Background   = #00000000,
-                  CornerRadius = @ShapeFull,
+                  CornerRadius = $$CornerRadius,
                   Padding      = (23,9,23,9) ] {
                 ContentPresenter [ HorizontalAlignment = Center, VerticalAlignment = Center ]
             }
@@ -160,7 +160,7 @@ resources Buttons {
         Border x:name="PART_Border"
             [ Background           = #00000000,
               BorderThickness      = (0),
-              CornerRadius         = @ShapeFull,
+              CornerRadius         = $$CornerRadius,
               TextBlock.Foreground = @Primary,
               TextBlock.FontFamily = @LabelLargeFont,
               TextBlock.FontWeight = @LabelLargeWeight,
@@ -169,7 +169,7 @@ resources Buttons {
               TextBlock.LetterSpacing = @LabelLargeTracking ] {
             Border x:name="PART_StateLayer"
                 [ Background   = #00000000,
-                  CornerRadius = @ShapeFull,
+                  CornerRadius = $$CornerRadius,
                   Padding      = (12,10,12,10) ] {
                 ContentPresenter [ HorizontalAlignment = Center, VerticalAlignment = Center ]
             }
@@ -184,6 +184,11 @@ resources Buttons {
     // at construction time or via a later set both flow through the
     // same trigger pipeline.
     Style [TargetType = Button] {
+        // M3 pill default, theme-token driven (a theme can retune the
+        // shape family). Templates TemplateBind PART_Border.CornerRadius
+        // to this via `$$CornerRadius`; a per-instance Local set (e.g. a
+        // segmented bank's left/right-rounded halves) overrides it.
+        CornerRadius = @ShapeFull;
         Template = @DefaultFilledButton;
         when ( Variant = Elevated ) { Template = @DefaultElevatedButton; }
         when ( Variant = Tonal ) { Template = @DefaultTonalButton; }
