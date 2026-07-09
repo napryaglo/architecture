@@ -13,6 +13,7 @@ import {
     Color,
     GradientStop,
     LinearGradientBrush,
+    ScaleTransform,
     SolidColorBrush,
 } from '../../visual-engine/index.js';
 import type { PresentationTarget, PointerEventArgs } from '../../visual-engine/index.js';
@@ -118,8 +119,56 @@ function recordRecent(hex: string): void
 
 // Subtle 1px border shared by the programmatically-built recent swatches.
 const SWATCH_BORDER = new SolidColorBrush(new Color(0, 0, 0, 40));
-// Accent border marking the active scheme row in the gallery.
+// Accent border marking the active scheme row in the gallery, and the
+// fallback swatch-hover ring when no theme Primary brush is resolvable.
 const ACCENT_BORDER = new SolidColorBrush(Color.FromHex('#4472C4'));
+// How much a swatch grows on pointer-over. Small enough to read as a
+// lift without overrunning the 2dp inter-swatch gap by much.
+const SWATCH_HOVER_SCALE = 1.15;
+
+// Accent-ring + lift hover feedback for a colour swatch. Snapshots the
+// swatch's resting border, then on pointer-over swaps in a 2dp accent
+// ring (theme Primary, falling back to the Office accent) and scales the
+// swatch up around its centre so it pops forward; both revert on leave.
+// Returns a disposer that removes the listener and clears any applied
+// hover state. Shared by the theme grid, the standard row, and the
+// recents — every swatch there is a ClickableBorder whose Background IS
+// the colour it offers, so we can't tint it; the ring/lift stays clear
+// of the colour itself. `onPreview(over)` fires on every enter/leave so
+// the picker can live-preview the swatch's colour while it's hovered.
+function wireSwatchHover(
+    sw: ClickableBorder,
+    onPreview?: (over: boolean) => void,
+): () => void
+{
+    const restBrush     = sw.BorderBrush;
+    const restThickness = sw.BorderThickness;
+    const accent = (Application.current?.Resources.Resolve('Primary') as Brush | undefined)
+        ?? ACCENT_BORDER;
+
+    const clear = (): void => {
+        sw.BorderBrush     = restBrush;
+        sw.BorderThickness = restThickness;
+        sw.RenderTransform = undefined;
+    };
+    const onHover = (): void => {
+        if (sw.IsMouseOver)
+        {
+            sw.BorderBrush           = accent;
+            sw.BorderThickness       = new Thickness(2);
+            sw.RenderTransformOrigin = new Point(0.5, 0.5);
+            sw.RenderTransform       = new ScaleTransform(SWATCH_HOVER_SCALE, SWATCH_HOVER_SCALE);
+        }
+        else clear();
+        onPreview?.(sw.IsMouseOver);
+    };
+
+    sw.AddPropertyChangedListener(Element.IsMouseOverKey, onHover);
+    return () => {
+        sw.RemovePropertyChangedListener(Element.IsMouseOverKey, onHover);
+        clear();
+    };
+}
 
 // Office-style colour picker. Closed: a small swatch + the hex label
 // inside a clickable border. Open: a dropdown with a No-Color entry, a
@@ -213,6 +262,16 @@ export class ColorPicker extends TemplatedControl
     private _themeGrid:       StackPanel | undefined;  // theme-colours container, rebuilt from ColorScheme
     private _schemeNameLabel: TextBlock  | undefined;  // dropdown's scheme-button caption
     private _schemeRow:       Visual     | undefined;  // Color-Scheme row; anchors the gallery fly-out
+
+    // Swatch hover-preview state. Captured when the dropdown opens: moving
+    // the pointer over a swatch previews its colour by writing Color live
+    // (the same mechanism the More Colors dialog uses while dragging), and
+    // the snapshot restores the pre-hover colour when the pointer leaves
+    // without a click. _previewSource tracks which swatch owns the active
+    // preview so that sliding straight from one swatch to the next doesn't
+    // revert the incoming preview — order-agnostic across enter/leave.
+    private _previewSnapshot: Color           | undefined;
+    private _previewSource:   ClickableBorder | undefined;
 
     // Scheme gallery (Office "Colors" list) state.
     private _galleryHost:    MenuPopupHost | undefined;
@@ -472,6 +531,12 @@ export class ColorPicker extends TemplatedControl
 
     private wireDropdownParts(host: MenuPopupHost): void
     {
+        // Baseline for swatch hover-preview: the colour we restore to when
+        // the pointer leaves a swatch without committing. Cleared on commit
+        // (so the pick sticks) and consumed by unmountDropdown on close.
+        this._previewSnapshot = this.Color;
+        this._previewSource   = undefined;
+
         // Theme grid: built from the ColorScheme (one column per base
         // colour + its tint/shade rows). Standard row: fixed swatches
         // authored in markup. Both commit the swatch's own colour.
@@ -500,11 +565,16 @@ export class ColorPicker extends TemplatedControl
         if (standardRow !== undefined) collectSwatches(standardRow, swatches);
         for (const sw of swatches)
         {
+            const c = colorOfSwatch(sw);
             sw.onClick = (): void => {
-                const c = colorOfSwatch(sw);
                 if (c !== undefined) this.commitColor(c);
             };
             this._dropdownListeners.push(() => { sw.onClick = undefined; });
+            this._dropdownListeners.push(wireSwatchHover(sw, over => {
+                if (c === undefined) return;
+                if (over) this.previewSwatch(sw, c);
+                else      this.endPreviewSwatch(sw);
+            }));
         }
 
         // No Color — clears to a transparent sentinel.
@@ -566,6 +636,11 @@ export class ColorPicker extends TemplatedControl
                 sw.Margin = new Thickness(0, 0, col === n - 1 ? 0 : gap, 0);
                 sw.Background = new SolidColorBrush(color);
                 sw.onClick = (): void => { this.commitColor(color); };
+                // Hover ring + lift plus a live colour preview. Not
+                // disposer-tracked: buildThemeGrid clears every child (and
+                // its listeners) before a rebuild.
+                wireSwatchHover(sw, over =>
+                    over ? this.previewSwatch(sw, color) : this.endPreviewSwatch(sw));
                 rowPanel.AddChild(sw);
             }
             grid.AddChild(rowPanel);
@@ -575,6 +650,12 @@ export class ColorPicker extends TemplatedControl
     private unmountDropdown(): void
     {
         if (!this._dropdownMounted) return;
+        // Closing without a pick (Escape / click-away while a swatch is
+        // still previewing) restores the pre-hover colour. A commit already
+        // cleared the snapshot, so its pick survives this.
+        if (this._previewSnapshot !== undefined) this.Color = this._previewSnapshot;
+        this._previewSnapshot = undefined;
+        this._previewSource   = undefined;
         if (this._dropdownHost !== undefined) this.DetachOverlayChild(this._dropdownHost);
         for (const dispose of this._dropdownListeners) dispose();
         this._dropdownListeners = [];
@@ -714,8 +795,14 @@ export class ColorPicker extends TemplatedControl
             sw.BorderBrush  = SWATCH_BORDER;
             sw.BorderThickness = new Thickness(1);
             sw.Margin = new Thickness(0, 0, 2, 2);
-            sw.Background = new SolidColorBrush(Color.FromHex(hex));
-            sw.onClick = (): void => { this.commitColor(Color.FromHex(hex)); };
+            const c = Color.FromHex(hex);
+            sw.Background = new SolidColorBrush(c);
+            sw.onClick = (): void => { this.commitColor(c); };
+            // Hover ring + lift plus a live colour preview. Not
+            // disposer-tracked: populateRecents clears every child (and its
+            // listeners) before a rebuild.
+            wireSwatchHover(sw, over =>
+                over ? this.previewSwatch(sw, c) : this.endPreviewSwatch(sw));
             row.AddChild(sw);
         }
         if (section !== undefined)
@@ -726,10 +813,41 @@ export class ColorPicker extends TemplatedControl
         }
     }
 
+    // Live-preview a hovered swatch's colour by writing Color, exactly as
+    // the More Colors dialog previews while dragging. The pre-hover colour
+    // was snapshotted when the dropdown opened; endPreviewSwatch restores
+    // it. No-op until a baseline exists (dropdown closed / no snapshot).
+    private previewSwatch(sw: ClickableBorder, c: Color): void
+    {
+        if (this._previewSnapshot === undefined) return;
+        this._previewSource = sw;
+        this.Color = c;
+    }
+
+    // Pointer left a swatch: revert to the snapshot — but only if this
+    // swatch still owns the preview. When the pointer slides straight onto
+    // another swatch, that swatch's enter has already claimed _previewSource,
+    // so this stale leave must not clobber the incoming preview.
+    private endPreviewSwatch(sw: ClickableBorder): void
+    {
+        if (this._previewSource !== sw) return;
+        this._previewSource = undefined;
+        if (this._previewSnapshot !== undefined) this.Color = this._previewSnapshot;
+    }
+
+    // Drop the preview baseline so the pending close (unmountDropdown) keeps
+    // the just-committed colour instead of reverting to the snapshot.
+    private clearPreviewBaseline(): void
+    {
+        this._previewSnapshot = undefined;
+        this._previewSource   = undefined;
+    }
+
     // Commit a chosen colour: set it, record a recent, and close the
     // dropdown (Office dismisses the menu on a swatch pick).
     private commitColor(c: Color): void
     {
+        this.clearPreviewBaseline();
         this.Color = c;
         recordRecent(c.ToHex());
         this.IsDropDownOpen = false;
@@ -744,6 +862,7 @@ export class ColorPicker extends TemplatedControl
     // dialog's alpha slider (or an 8-digit hex).
     private commitNoColor(): void
     {
+        this.clearPreviewBaseline();
         this.Color = Color.Transparent;
         this._syncing = true;
         try { this.Alpha = 255; } finally { this._syncing = false; }
