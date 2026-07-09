@@ -67,6 +67,11 @@ resources TopAppBars {
         // for differentiation. ScrollSource undefined leaves the bar
         // at @Surface (IsScrolled stays false).
         when ( IsScrolled ) { PART_Border.Background = @SurfaceContainer; }
+        // Density — the bar HEIGHT is M3-spec-fixed (64dp), and the nav /
+        // actions are 48dp slots that delegate their own touch targets, so
+        // the density response is the title's horizontal inset only.
+        when ( ThemeManager.Density = Compact ) { PART_TitleText.Margin = (8,0,8,0); }
+        when ( ThemeManager.Density = Comfortable ) { PART_TitleText.Margin = (16,0,16,0); }
     }
 
     // CenterAligned — single row, absolute-centred title. The trick is
@@ -111,6 +116,9 @@ resources TopAppBars {
             }
         }
         when ( IsScrolled ) { PART_Border.Background = @SurfaceContainer; }
+        // Density — title inset only; bar height + 48dp slots stay fixed.
+        when ( ThemeManager.Density = Compact ) { PART_TitleText.Margin = (8,0,8,0); }
+        when ( ThemeManager.Density = Comfortable ) { PART_TitleText.Margin = (16,0,16,0); }
     }
 
     // Medium — two-row, 112dp tall. Row 1 (64dp) carries nav + actions;

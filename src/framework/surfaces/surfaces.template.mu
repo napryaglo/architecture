@@ -49,6 +49,12 @@ resources Surfaces {
             PART_Border.Effect = @ElevationLevel1;
         }
         when ( IsPressed ) { PART_StateLayer.Background = @StatePressOverlay; }
+        // Density — tighten / loosen the 16dp content padding on the 4dp
+        // grid. Card is a container (no own touch target), so this is a
+        // spacing response only; the interactive Content inside adapts via
+        // its own controls.
+        when ( ThemeManager.Density = Compact ) { PART_StateLayer.Padding = (12,12,12,12); }
+        when ( ThemeManager.Density = Comfortable ) { PART_StateLayer.Padding = (24,24,24,24); }
     }
 
     // Elevated — @SurfaceContainerLow, no border, resting Level1.
@@ -73,6 +79,8 @@ resources Surfaces {
             PART_StateLayer.Background = @StatePressOverlay;
             PART_Border.Effect = @ElevationLevel1;
         }
+        when ( ThemeManager.Density = Compact ) { PART_StateLayer.Padding = (12,12,12,12); }
+        when ( ThemeManager.Density = Comfortable ) { PART_StateLayer.Padding = (24,24,24,24); }
     }
 
     // Outlined — @Surface, 1-DIP @Outline border, no resting Effect.
@@ -95,6 +103,10 @@ resources Surfaces {
         }
         when ( IsPressed ) { PART_StateLayer.Background = @StatePressOverlay; }
         when ( ThemeManager.PrefersContrast = More ) { PART_Border.BorderThickness = (2); }
+        // Density — the outlined variant's resting padding is 15 (16 − 1dp
+        // border), so the ladder keeps that −1 offset: 11 / 23.
+        when ( ThemeManager.Density = Compact ) { PART_StateLayer.Padding = (11,11,11,11); }
+        when ( ThemeManager.Density = Comfortable ) { PART_StateLayer.Padding = (23,23,23,23); }
     }
 
     // Default Style — picks Template by Variant. Filled is the baseline
@@ -203,6 +215,11 @@ resources Surfaces {
                 ContentPresenter
             }
         }
+        // Density — the modal's 24dp inset tightens / loosens ±4 on the grid
+        // (@Spacing5 = 20 / @Spacing7 = 28). Container spacing only; the
+        // dialog's action buttons adapt through their own templates.
+        when ( ThemeManager.Density = Compact ) { PART_Dialog.Padding = (@Spacing5,@Spacing5,@Spacing5,@Spacing5); }
+        when ( ThemeManager.Density = Comfortable ) { PART_Dialog.Padding = (@Spacing7,@Spacing7,@Spacing7,@Spacing7); }
     }
     Style [TargetType = Dialog] {
         Template = @DefaultDialog;
@@ -224,6 +241,10 @@ resources Surfaces {
               Padding         = (@Spacing4,@Spacing4,@Spacing4,@Spacing4) ] {
             ContentPresenter
         }
+        // Density — the sheet's 16dp inset tightens / loosens ±4 on the grid
+        // (@Spacing3 = 12 / @Spacing5 = 20). Container spacing only.
+        when ( ThemeManager.Density = Compact ) { PART_Sheet.Padding = (@Spacing3,@Spacing3,@Spacing3,@Spacing3); }
+        when ( ThemeManager.Density = Comfortable ) { PART_Sheet.Padding = (@Spacing5,@Spacing5,@Spacing5,@Spacing5); }
     }
     Style [TargetType = BottomSheet] {
         Template = @DefaultBottomSheet;

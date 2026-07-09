@@ -40,6 +40,12 @@ resources Ribbons {
         when ( IsEnabled = false ) { PART_Border.Opacity = @DisabledContentOpacity; }
         when ( Size = Large ) { PART_Border.MinWidth = 56; PART_Border.MinHeight = 68; PART_Border.Padding = (@Spacing2,@Spacing2,@Spacing2,@Spacing2); }
         when ( Size = Small ) { PART_Border.MinHeight = 24; }
+        // Coarse pointer — the ribbon's density knob is its own Size DP
+        // (Large / Small), so touch-mode adaptation only ENLARGES the tap
+        // padding rather than re-running a density ladder. Padding-only
+        // (not MinHeight) so it composes with, rather than clobbers, the
+        // Size trigger's height; declared last so it wins the padding slot.
+        when ( ThemeManager.Pointer = Coarse ) { PART_Border.Padding = (@Spacing3,@Spacing3,@Spacing3,@Spacing3); }
     }
     Style [TargetType = RibbonButton] {
         Template = @DefaultRibbonButton;
@@ -69,6 +75,9 @@ resources Ribbons {
         when ( IsEnabled = false ) { PART_Border.Opacity = @DisabledContentOpacity; }
         when ( Size = Large ) { PART_Border.MinWidth = 56; PART_Border.MinHeight = 68; PART_Border.Padding = (@Spacing2,@Spacing2,@Spacing2,@Spacing2); }
         when ( Size = Small ) { PART_Border.MinHeight = 24; }
+        // Coarse pointer — enlarge tap padding only (density = Size DP). See
+        // RibbonButton.
+        when ( ThemeManager.Pointer = Coarse ) { PART_Border.Padding = (@Spacing3,@Spacing3,@Spacing3,@Spacing3); }
     }
     Style [TargetType = RibbonToggleButton] {
         Template = @DefaultRibbonToggleButton;
@@ -228,6 +237,12 @@ resources Ribbons {
         }
         when ( IsMouseOver ) { PART_Border.BorderBrush = @Outline; }
         when ( IsCurrent ) { PART_Border.BorderBrush = @Primary; }
+        // Adaptive layout — the tab strip has no Size DP (that's the invoker
+        // knob), so it carries the full density + coarse-pointer ladder on
+        // its header padding, scaled from the resting (16,8) on the 4dp grid.
+        when ( ThemeManager.Density = Compact ) { PART_Border.Padding = (@Spacing3,@Spacing1,@Spacing3,@Spacing1); }
+        when ( ThemeManager.Density = Comfortable ) { PART_Border.Padding = (@Spacing5,@Spacing3,@Spacing5,@Spacing3); }
+        when ( ThemeManager.Pointer = Coarse ) { PART_Border.Padding = (@Spacing4,@Spacing3,@Spacing4,@Spacing3); }
     }
     Style [TargetType = RibbonTabHeader] {
         Template = @DefaultRibbonTabHeader;

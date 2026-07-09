@@ -92,6 +92,19 @@ resources ThemeSelectors {
             PART_SchemeComboWrap.Width = 148;
             PART_SchemeComboWrap.Opacity = 1;
         }
+
+        // Coarse pointer — the reveal above is hover-driven, and a touch
+        // pointer has no hover, so both combos would stay collapsed (Width=0)
+        // and unreachable. On coarse input, pin both wrappers permanently
+        // open so the pickers are directly tappable. This is the control's
+        // real coarse-pointer adaptation (the closed icons don't gate a tap
+        // target — they gate a hover the device can't produce).
+        when ( ThemeManager.Pointer = Coarse ) {
+            PART_ThemeComboWrap.Width = 148;
+            PART_ThemeComboWrap.Opacity = 1;
+            PART_SchemeComboWrap.Width = 148;
+            PART_SchemeComboWrap.Opacity = 1;
+        }
     }
 
     Style [TargetType = ThemeSelector] {

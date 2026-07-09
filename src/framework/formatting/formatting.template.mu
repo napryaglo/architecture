@@ -65,6 +65,16 @@ resources Formatting {
             PART_Chevron.Width = 12;
             PART_Chevron.Height = 12;
         }
+        // Coarse pointer — enlarge the closed trigger's tap target to the
+        // Comfortable footprint regardless of density. Declared AFTER the
+        // density triggers so a coarse pointer coinciding with Compact
+        // density lands on top of the trigger stack and wins (the
+        // a11y-favouring outcome).
+        when ( ThemeManager.Pointer = Coarse ) {
+            PART_SelectionTrigger.Padding = (@Spacing3,@Spacing3,@Spacing3,@Spacing3);
+            PART_Chevron.Width = 12;
+            PART_Chevron.Height = 12;
+        }
     }
 
     // ── ColorPicker: Office-style dropdown ──────────────────────────
@@ -539,6 +549,14 @@ resources Formatting {
             PART_Chevron.Height = 6;
         }
         when ( ThemeManager.Density = Comfortable ) {
+            PART_SelectionTrigger.Padding = (@Spacing3,@Spacing3,@Spacing3,@Spacing3);
+            PART_Chevron.Width = 12;
+            PART_Chevron.Height = 12;
+        }
+        // Coarse pointer — enlarge the closed trigger to the Comfortable
+        // footprint regardless of density; declared last so it wins over a
+        // coincident Compact density trigger. Mirrors ColorPicker.
+        when ( ThemeManager.Pointer = Coarse ) {
             PART_SelectionTrigger.Padding = (@Spacing3,@Spacing3,@Spacing3,@Spacing3);
             PART_Chevron.Width = 12;
             PART_Chevron.Height = 12;

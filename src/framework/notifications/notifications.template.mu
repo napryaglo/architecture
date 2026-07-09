@@ -107,6 +107,16 @@ resources Notifications {
                 ContentPresenter [ VerticalAlignment = Center ]
             }
         }
+        // Density — tighten / loosen the strip's inset on the 4dp grid.
+        // Banner is a container; its trailing Actions row is slotted
+        // buttons that carry their own coarse-pointer targets, so this is a
+        // spacing response only.
+        when ( ThemeManager.Density = Compact ) {
+            PART_Banner.Padding = (@Spacing3,@Spacing2,@Spacing3,@Spacing2);
+        }
+        when ( ThemeManager.Density = Comfortable ) {
+            PART_Banner.Padding = (@Spacing5,@Spacing4,@Spacing5,@Spacing4);
+        }
     }
     Style [TargetType = Banner] {
         Template = @DefaultBanner;
@@ -138,6 +148,16 @@ resources Notifications {
                       Margin            = (@Spacing4,0,0,0) ]
                 ContentPresenter [ VerticalAlignment = Center ]
             }
+        }
+        // Density — tighten / loosen the transient message's inset. The
+        // trailing action is a slotted button (self-adapting), so container
+        // spacing only. The asymmetric right inset (smaller, for the action)
+        // is preserved across the ladder.
+        when ( ThemeManager.Density = Compact ) {
+            PART_Snackbar.Padding = (@Spacing3,@Spacing2,@Spacing1,@Spacing2);
+        }
+        when ( ThemeManager.Density = Comfortable ) {
+            PART_Snackbar.Padding = (@Spacing5,@Spacing4,@Spacing3,@Spacing4);
         }
     }
     Style [TargetType = Snackbar] {

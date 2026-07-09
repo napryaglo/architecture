@@ -27,26 +27,42 @@ resources Toggles {
     // Margin trick as IsChecked — folded into the IsPressed trigger
     // below.
     Template x:key="DefaultSwitch" [TargetType = Switch] {
-        Border x:name="PART_Track"
-            [ Background      = @SurfaceContainerHighest,
-              BorderBrush     = @Outline,
-              BorderThickness = (2),
-              CornerRadius    = @ShapeFull ] {
-            // Thumb is a circle (ShapeFull) inside an absolutely-sized
-            // 32dp track. Margin (Left, Top, Right, Bottom) anchors it
-            // to the left edge with a 4dp inset top/bottom — the
-            // resulting render size is 16×24 dp (24dp inner track
-            // height, 16dp Width fixed below). The IsChecked trigger
-            // shifts to right-anchored + 24dp width.
-            Border x:name="PART_Thumb"
-                [ Background          = @Outline,
+        // PART_HitTarget — transparent fill wrapper (§18.6). Stretches to
+        // fill the control's bounds; the visible 52×32 track sits centred
+        // inside. The touch target grows by enlarging the CONTROL's own
+        // Height (Style triggers below) — the Switch pins its Width/Height
+        // defaults, so THAT is what the render size clamps to; this wrapper
+        // then spans the grown bounds while the track (and its margin-
+        // anchored thumb) stay centred and unclipped.
+        Border x:name="PART_HitTarget"
+            [ Background          = #00000000,
+              HorizontalAlignment = Stretch,
+              VerticalAlignment   = Stretch ] {
+            Border x:name="PART_Track"
+                [ Background          = @SurfaceContainerHighest,
+                  BorderBrush         = @Outline,
+                  BorderThickness     = (2),
                   CornerRadius        = @ShapeFull,
-                  BorderThickness     = (0),
-                  Width               = 16,
-                  Height              = 16,
-                  VerticalAlignment   = Center,
-                  HorizontalAlignment = Left,
-                  Margin              = (8,0,0,0) ]
+                  Width               = 52,
+                  Height              = 32,
+                  HorizontalAlignment = Center,
+                  VerticalAlignment   = Center ] {
+                // Thumb is a circle (ShapeFull) inside an absolutely-sized
+                // 32dp track. Margin (Left, Top, Right, Bottom) anchors it
+                // to the left edge with a 4dp inset top/bottom — the
+                // resulting render size is 16×24 dp (24dp inner track
+                // height, 16dp Width fixed below). The IsChecked trigger
+                // shifts to right-anchored + 24dp width.
+                Border x:name="PART_Thumb"
+                    [ Background          = @Outline,
+                      CornerRadius        = @ShapeFull,
+                      BorderThickness     = (0),
+                      Width               = 16,
+                      Height              = 16,
+                      VerticalAlignment   = Center,
+                      HorizontalAlignment = Left,
+                      Margin              = (8,0,0,0) ]
+            }
         }
         // IsChecked — track + thumb both flip palette; the thumb grows
         // and re-anchors to the right edge.
@@ -71,6 +87,16 @@ resources Toggles {
     }
     Style [TargetType = Switch] {
         Template = @DefaultSwitch;
+        // Adaptive touch target — the Switch pins its own Width/Height
+        // (52×32), which the render size clamps to, so the hit target grows
+        // by enlarging the CONTROL's Height here; PART_HitTarget then fills
+        // the taller bounds and the 52×32 track stays centred (no thumb
+        // clipping). Width already ≥ 48 so only Height grows. Compact
+        // omitted: 32dp is the a11y floor — a toggle target must not shrink
+        // below rest. Coarse declared last so it wins a coincident
+        // Comfortable+Coarse (a11y-favouring).
+        when ( ThemeManager.Density = Comfortable ) { Height = 40; }
+        when ( ThemeManager.Pointer = Coarse ) { Height = 48; }
     }
 
     // ── Checkbox: M3 18 × 18 dp square toggle ──────────────────────
@@ -85,19 +111,33 @@ resources Toggles {
     // No tri-state (indeterminate) chrome — see Checkbox.ts for the
     // why-deferred rationale.
     Template x:key="DefaultCheckbox" [TargetType = Checkbox] {
-        Border x:name="PART_Box"
-            [ Background      = #00000000,
-              BorderBrush     = @OnSurfaceVariant,
-              BorderThickness = (2),
-              CornerRadius    = @ShapeExtraSmall ] {
-            Shape x:name="PART_Mark"
-                [ Geometry            = @IconCheck,
-                  Fill                = @OnPrimary,
-                  Width               = 16,
-                  Height              = 16,
+        // PART_HitTarget — transparent fill wrapper (§18.6). Stretches to
+        // fill the control; the 18×18 box centres inside. The touch target
+        // grows via the CONTROL's Width/Height (Style triggers below), not
+        // this wrapper — the Checkbox pins its 18×18 defaults, so that's what
+        // the render size clamps to. The box keeps its 2dp border unscaled.
+        Border x:name="PART_HitTarget"
+            [ Background          = #00000000,
+              HorizontalAlignment = Stretch,
+              VerticalAlignment   = Stretch ] {
+            Border x:name="PART_Box"
+                [ Background          = #00000000,
+                  BorderBrush         = @OnSurfaceVariant,
+                  BorderThickness     = (2),
+                  CornerRadius        = @ShapeExtraSmall,
+                  Width               = 18,
+                  Height              = 18,
                   HorizontalAlignment = Center,
-                  VerticalAlignment   = Center,
-                  Opacity             = 0 ]
+                  VerticalAlignment   = Center ] {
+                Shape x:name="PART_Mark"
+                    [ Geometry            = @IconCheck,
+                      Fill                = @OnPrimary,
+                      Width               = 16,
+                      Height              = 16,
+                      HorizontalAlignment = Center,
+                      VerticalAlignment   = Center,
+                      Opacity             = 0 ]
+            }
         }
         // IsChecked — fill the box and reveal the glyph.
         when ( IsChecked ) {
@@ -115,6 +155,12 @@ resources Toggles {
     }
     Style [TargetType = Checkbox] {
         Template = @DefaultCheckbox;
+        // Adaptive touch target — grow the CONTROL's Width/Height so the
+        // 18×18 box (kept centred by PART_HitTarget) sits inside a larger
+        // tappable bound. Compact omitted (18dp is the a11y floor). Coarse
+        // last so it wins a coincident Comfortable+Coarse.
+        when ( ThemeManager.Density = Comfortable ) { Width = 40; Height = 40; }
+        when ( ThemeManager.Pointer = Coarse ) { Width = 48; Height = 48; }
     }
 
     // ── RadioButton: M3 20 × 20 dp circular toggle ─────────────────
@@ -130,20 +176,33 @@ resources Toggles {
     // automatically clears when this one is checked. See radio-
     // button.ts for the walker.
     Template x:key="DefaultRadioButton" [TargetType = RadioButton] {
-        Border x:name="PART_Ring"
-            [ Background      = #00000000,
-              BorderBrush     = @OnSurfaceVariant,
-              BorderThickness = (2),
-              CornerRadius    = @ShapeFull ] {
-            Border x:name="PART_Dot"
-                [ Background          = @Primary,
+        // PART_HitTarget — transparent fill wrapper (§18.6). Stretches to
+        // fill the control; the 20×20 ring centres inside. The touch target
+        // grows via the CONTROL's Width/Height (Style triggers below), not
+        // this wrapper — the ring's 2dp stroke stays unscaled.
+        Border x:name="PART_HitTarget"
+            [ Background          = #00000000,
+              HorizontalAlignment = Stretch,
+              VerticalAlignment   = Stretch ] {
+            Border x:name="PART_Ring"
+                [ Background          = #00000000,
+                  BorderBrush         = @OnSurfaceVariant,
+                  BorderThickness     = (2),
                   CornerRadius        = @ShapeFull,
-                  BorderThickness     = (0),
-                  Width               = 10,
-                  Height              = 10,
+                  Width               = 20,
+                  Height              = 20,
                   HorizontalAlignment = Center,
-                  VerticalAlignment   = Center,
-                  Opacity             = 0 ]
+                  VerticalAlignment   = Center ] {
+                Border x:name="PART_Dot"
+                    [ Background          = @Primary,
+                      CornerRadius        = @ShapeFull,
+                      BorderThickness     = (0),
+                      Width               = 10,
+                      Height              = 10,
+                      HorizontalAlignment = Center,
+                      VerticalAlignment   = Center,
+                      Opacity             = 0 ]
+            }
         }
         when ( IsChecked ) {
             PART_Ring.BorderBrush = @Primary;
@@ -156,5 +215,11 @@ resources Toggles {
     }
     Style [TargetType = RadioButton] {
         Template = @DefaultRadioButton;
+        // Adaptive touch target — grow the CONTROL's Width/Height so the
+        // 20×20 ring (kept centred by PART_HitTarget) sits inside a larger
+        // tappable bound. Compact omitted (20dp is the a11y floor). Coarse
+        // last so it wins a coincident Comfortable+Coarse.
+        when ( ThemeManager.Density = Comfortable ) { Width = 40; Height = 40; }
+        when ( ThemeManager.Pointer = Coarse ) { Width = 48; Height = 48; }
     }
 }
