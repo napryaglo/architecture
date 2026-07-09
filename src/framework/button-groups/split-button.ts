@@ -149,10 +149,21 @@ export class SplitButton extends ContentControl
     ): void
     {
         super.OnPropertyChanged(descriptor, oldValue, newValue);
-        if (descriptor.Owner === SplitButton && descriptor.Name === 'IsOpen')
+        if (descriptor.Owner !== SplitButton) return;
+        if (descriptor.Name === 'IsOpen')
         {
             if (newValue === true) this.mountPopup();
             else                    this.unmountPopup();
+        }
+        else if (descriptor.Name === 'PopupTemplate' && this._mounted)
+        {
+            // §18.12 — a PopupTemplate swap while the popup is open takes
+            // effect immediately instead of waiting for the next
+            // close→open cycle. unmountPopup re-parents MenuContent out
+            // (SetChild(undefined)) and mountPopup reads MenuContent fresh,
+            // so the consumer's content survives the chrome rebuild.
+            this.unmountPopup();
+            this.mountPopup();
         }
     }
 

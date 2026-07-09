@@ -916,9 +916,11 @@ export class MenuButton extends HeaderedItemsControl
         // (Button(PART_Trigger) > StackPanel(PART_TriggerStack) >
         // TextBlock(PART_HeaderText)). It can't share ItemsControl's
         // Template slot because Template is the popup chrome with the
-        // ItemsPresenter that hosts Items. Click flips IsOpen.
-        const triggerTpl = this.TriggerTemplate;
-        if (triggerTpl === undefined)
+        // ItemsPresenter that hosts Items. Click flips IsOpen. Built by
+        // rebuildTrigger so a runtime TriggerTemplate swap (§18.12) reuses
+        // the same path.
+        this.rebuildTrigger();
+        if (this._button === undefined)
         {
             throw new Error(
                 'MenuButton.TriggerTemplate is undefined. The default ' +
@@ -927,12 +929,61 @@ export class MenuButton extends HeaderedItemsControl
                 "MuralFramework via its `dictionaries:` header before " +
                 'constructing the MenuButton.');
         }
+        this._triggerInitialized = true;
+    }
+
+    // Guards the OnPropertyChanged('TriggerTemplate') rebuild against the
+    // ctor-time set: applyDefaultStyle sets TriggerTemplate before the
+    // ctor's own rebuildTrigger runs, and we don't want that first write
+    // to double-build. Flipped true once the ctor has built the trigger.
+    private _triggerInitialized = false;
+
+    // Materialise (or re-materialise) the inline trigger chrome from
+    // TriggerTemplate. Called from the ctor and from OnPropertyChanged
+    // ('TriggerTemplate') so a runtime swap takes effect at once (§18.12).
+    // Header text + Icon are re-hydrated from the DPs so the consumer's
+    // content survives the chrome rebuild. Returns silently on a
+    // transient undefined (a Style swap can clear the DP between setters).
+    private rebuildTrigger(): void
+    {
+        if (this._button !== undefined)
+        {
+            this.DetachVisual(this._button);
+            this._button      = undefined;
+            this._buttonStack = undefined;
+            this._buttonText  = undefined;
+        }
+        const triggerTpl = this.TriggerTemplate;
+        if (triggerTpl === undefined) return;
         const triggerInst = triggerTpl.Apply(this);
         this._button      = triggerInst.root as Button;
         this._buttonStack = triggerInst.root.FindName('PART_TriggerStack') as StackPanel;
         this._buttonText  = triggerInst.root.FindName('PART_HeaderText')   as TextBlock;
         this._button.AddClickHandler(() => { this.IsOpen = !this.IsOpen; });
         this.AttachVisual(this._button);
+        this.refreshTriggerContent();
+        // The fresh Button needs the current target for its state triggers;
+        // propagate_target_to_visual_children only re-runs on a target
+        // change, not on a trigger rebuild.
+        (this._button as unknown as { SetTarget?: (t: PresentationTarget | undefined) => void })
+            .SetTarget?.(this._lastKnownTarget);
+        this.InvalidateMeasure();
+    }
+
+    // Re-apply Header text + Icon into the (possibly freshly rebuilt)
+    // trigger stack. Mirrors the Header / Icon branches of
+    // OnPropertyChanged so a TriggerTemplate swap doesn't drop them.
+    private refreshTriggerContent(): void
+    {
+        if (this._buttonStack === undefined || this._buttonText === undefined) return;
+        const icon = this.Icon;
+        if (icon !== undefined)
+        {
+            for (const c of [...this._buttonStack.visualChildren]) this._buttonStack.RemoveChild(c);
+            this._buttonStack.AddChild(icon);
+            this._buttonStack.AddChild(this._buttonText);
+        }
+        this._buttonText.Text = (this.Header as unknown as string | undefined) ?? '';
     }
 
     // Find the popup template parts after rebuildTemplate has run, wire
@@ -1011,6 +1062,14 @@ export class MenuButton extends HeaderedItemsControl
     {
         super.OnPropertyChanged(descriptor, oldValue, newValue);
         const name = descriptor.Name;
+        if (name === 'TriggerTemplate' && this._triggerInitialized)
+        {
+            // §18.12 — a runtime TriggerTemplate swap rebuilds the inline
+            // trigger chrome at once (Header text + Icon re-hydrated),
+            // instead of the old ctor-captured trigger sticking around.
+            this.rebuildTrigger();
+            return;
+        }
         if (name === 'IsOpen' && this._popupHost !== undefined)
         {
             if (newValue === true) this.mountPopup();
