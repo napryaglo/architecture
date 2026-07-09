@@ -98,9 +98,12 @@ const ENUM_VALUES: ReadonlyMap<string, ReadonlyArray<string>> = new Map([
 const X_EXTENSIONS: ReadonlyArray<string> = ['key', 'root', 'Name', 'DataType'];
 
 // Form keywords legal as a body item (resource form, macro def,
-// trigger group).
+// trigger group). Resource-form keywords are PascalCase — the same
+// spelling the compiler's KEYWORDS set and every .mu author use.
 const BODY_KEYWORDS: ReadonlyArray<string> = [
-    'style', 'template', 'datatemplate', 'def', 'when',
+    'Style', 'Template', 'DataTemplate',
+    'HierarchicalDataTemplate', 'ItemsPanelTemplate',
+    'def', 'when',
 ];
 
 // ── Entry point ─────────────────────────────────────────────────────
@@ -330,16 +333,16 @@ function attributeContext(element: ElementNode): CompletionItem[]
     // this attribute-position list. They surface via the `x-extension`
     // sigil path when the user types `x:` at the leading position.
 
-    // For style/template/datatemplate the meta-attrs are different.
-    if (element.name === 'style' || element.name === 'template')
+    // For Style/Template/DataTemplate the meta-attrs are different.
+    if (element.name === 'Style' || element.name === 'Template')
     {
-        out.push({ label: 'targettype', kind: CompletionItemKind.Keyword,
-                   detail: 'meta attr: target type for style/template' });
+        out.push({ label: 'TargetType', kind: CompletionItemKind.Keyword,
+                   detail: 'meta attr: target type for Style/Template' });
     }
-    if (element.name === 'datatemplate')
+    if (element.name === 'DataTemplate' || element.name === 'HierarchicalDataTemplate')
     {
-        out.push({ label: 'datatype', kind: CompletionItemKind.Keyword,
-                   detail: 'meta attr: data type for datatemplate' });
+        out.push({ label: 'DataType', kind: CompletionItemKind.Keyword,
+                   detail: 'meta attr: data type for DataTemplate' });
     }
 
     // Common DP names for regular elements.

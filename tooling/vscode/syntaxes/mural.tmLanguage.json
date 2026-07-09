@@ -95,16 +95,22 @@
         "keywords": {
             "patterns": [
                 {
+                    "comment": "Resource-form keywords. PascalCase, and each shares its spelling with a same-named DP (`Style = @Role`, `Template = @X`, `ItemTemplate = …`). Treat them as keywords only in statement-head position — directly before a `[meta]` block, a `{` body, or a leading `x:` scope extension. A `Style =` assignment falls through to property-assign.",
                     "name": "keyword.control.mural",
-                    "match": "\\b(style|template|datatemplate|def|resources|import|from|when|glyphs|include|fonts)\\b"
+                    "match": "\\b(Style|Template|DataTemplate|HierarchicalDataTemplate|ItemsPanelTemplate)\\b(?=\\s*(\\[|\\{|x:))"
+                },
+                {
+                    "name": "keyword.control.mural",
+                    "match": "\\b(def|resources|import|from|as|when|on|glyphs|include|fonts)\\b"
                 },
                 {
                     "name": "keyword.operator.logical.mural",
                     "match": "\\b(not|and|or)\\b"
                 },
                 {
+                    "comment": "Style/Template/DataTemplate meta-attrs — property-position, so PascalCase and only before `=` (avoids the `x:DataType` scope extension).",
                     "name": "storage.modifier.mural",
-                    "match": "\\b(targettype|datatype)\\b"
+                    "match": "\\b(TargetType|DataType)\\b(?=\\s*=)"
                 },
                 {
                     "name": "support.class.application.mural",

@@ -408,7 +408,7 @@ function positionAt(text: string, offset: number): { line: number; column: numbe
     return { line, column: col, offset };
 }
 
-// `targettype` for Style / Template, `datatype` for DataTemplate /
+// `TargetType` for Style / Template, `DataType` for DataTemplate /
 // HierarchicalDataTemplate, undefined for ItemsPanelTemplate (no
 // type-bearing meta) and for any form where the attribute is omitted
 // or carries a non-ident value.
@@ -416,9 +416,9 @@ function pickTargetTypeMeta(f: ResourceForm): string | undefined
 {
     const wanted =
         (f.keyword === 'DataTemplate' || f.keyword === 'HierarchicalDataTemplate')
-            ? 'datatype'
+            ? 'DataType'
             : (f.keyword === 'Style' || f.keyword === 'Template')
-                ? 'targettype'
+                ? 'TargetType'
                 : undefined;
     if (wanted === undefined) return undefined;
     const m = f.metaAttrs.find(
