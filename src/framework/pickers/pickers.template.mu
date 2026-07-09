@@ -54,4 +54,52 @@ resources Pickers {
     Style [TargetType = DatePicker] {
         Template = @DefaultDatePicker;
     }
+
+    // ── TimePicker: M3 analog clock dial ───────────────────────────
+    // Digital HH:MM readout (each half a clickable ring-switch) + AM/PM,
+    // over a 256dp clock face. The control (time-picker.ts) fills
+    // PART_ClockFace with the 12 numbers of the active ring, a hand line,
+    // and the centre pivot; the template supplies the surrounding chrome
+    // and the readout/AM-PM parts.
+    Template x:key="DefaultTimePicker" [TargetType = TimePicker] {
+        Border x:name="PART_Root"
+            [ Background      = @Surface,
+              BorderBrush     = @OutlineVariant,
+              BorderThickness = (1),
+              CornerRadius    = @ShapeMedium,
+              Padding         = (@Spacing4,@Spacing4,@Spacing4,@Spacing4) ] {
+            StackPanel [ Orientation = Vertical, HorizontalAlignment = Center ] {
+                // Digital readout — hour : minute (each a ring-switch) + AM/PM.
+                StackPanel [ Orientation = Horizontal, HorizontalAlignment = Center, Margin = (0,0,0,@Spacing4) ] {
+                    ClickableBorder x:name="PART_HourHit"
+                        [ Background = @SurfaceContainerHighest, CornerRadius = @ShapeSmall, Padding = (@Spacing3,@Spacing1,@Spacing3,@Spacing1) ] {
+                        TextBlock x:name="PART_HourLabel" [ Text = "9", FontSize = 36, Foreground = @OnSurface ]
+                    }
+                    TextBlock [ Text = ":", FontSize = 36, Foreground = @OnSurface, VerticalAlignment = Center, Margin = (@Spacing1,0,@Spacing1,0) ]
+                    ClickableBorder x:name="PART_MinuteHit"
+                        [ Background = @SurfaceContainerHighest, CornerRadius = @ShapeSmall, Padding = (@Spacing3,@Spacing1,@Spacing3,@Spacing1) ] {
+                        TextBlock x:name="PART_MinuteLabel" [ Text = "00", FontSize = 36, Foreground = @OnSurface ]
+                    }
+                    StackPanel [ Orientation = Vertical, Margin = (@Spacing3,0,0,0), VerticalAlignment = Center ] {
+                        ClickableBorder x:name="PART_AmButton"
+                            [ CornerRadius = @ShapeSmall, Padding = (@Spacing2,@Spacing1,@Spacing2,@Spacing1) ] {
+                            TextBlock [ Text = "AM", Style = @LabelLarge, Foreground = @OnSurface ]
+                        }
+                        ClickableBorder x:name="PART_PmButton"
+                            [ CornerRadius = @ShapeSmall, Padding = (@Spacing2,@Spacing1,@Spacing2,@Spacing1) ] {
+                            TextBlock [ Text = "PM", Style = @LabelLarge, Foreground = @OnSurface ]
+                        }
+                    }
+                }
+                // Clock face — a filled circle hosting the Canvas the control
+                // paints numbers / hand / pivot onto.
+                Border [ Width = 256, Height = 256, CornerRadius = @ShapeFull, Background = @SurfaceContainerHighest ] {
+                    Canvas x:name="PART_ClockFace" [ Width = 256, Height = 256 ]
+                }
+            }
+        }
+    }
+    Style [TargetType = TimePicker] {
+        Template = @DefaultTimePicker;
+    }
 }

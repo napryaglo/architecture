@@ -107,6 +107,7 @@ export {
 export { ProgressIndicator, ProgressIndicatorVariant } from './notifications/progress-indicator.js';
 export { LoadingIndicator, LoadingIndicatorVariant } from './notifications/loading-indicator.js';
 export { DatePicker } from './pickers/date-picker.js';
+export { TimePicker } from './pickers/time-picker.js';
 export { Banner } from './notifications/banner.js';
 export { Snackbar } from './notifications/snackbar.js';
 export { Dialog } from './surfaces/dialog.js';

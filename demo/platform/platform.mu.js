@@ -41,6 +41,7 @@ import { StatusBarDemo } from "../demos/status-bar/status-bar.mu.js";
 import { TextBoxDemo } from "../demos/text-box/text-box.mu.js";
 import { TextFormatDemo } from "../demos/text-format/text-format.mu.js";
 import { TextOnPathDemo } from "../demos/text-on-path/text-on-path.mu.js";
+import { TimePickerDemo } from "../demos/time-picker/time-picker.mu.js";
 import { ToggleButtonDemo } from "../demos/toggle-button/toggle-button.mu.js";
 import { ToolBarDemo } from "../demos/tool-bar/tool-bar.mu.js";
 import { TopAppBarDemo } from "../demos/top-app-bar/top-app-bar.mu.js";
@@ -75,6 +76,7 @@ export const app = (() => {
     for (const [_k, _v] of LoadingIndicatorDemo.Clone().Entries()) _rd1.Set(_k, _v);
     for (const [_k, _v] of SideSheetDemo.Clone().Entries()) _rd1.Set(_k, _v);
     for (const [_k, _v] of DatePickerDemo.Clone().Entries()) _rd1.Set(_k, _v);
+    for (const [_k, _v] of TimePickerDemo.Clone().Entries()) _rd1.Set(_k, _v);
     for (const [_k, _v] of ButtonGroupDemo.Clone().Entries()) _rd1.Set(_k, _v);
     for (const [_k, _v] of CardDemo.Clone().Entries()) _rd1.Set(_k, _v);
     for (const [_k, _v] of ColorPickerDemo.Clone().Entries()) _rd1.Set(_k, _v);
