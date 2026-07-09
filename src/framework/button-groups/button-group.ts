@@ -1,14 +1,14 @@
 import {
+    Easings,
     MetaData,
     Model,
     Panel,
     Rect,
     Size,
     Visual,
+    type EasingFunction,
     type PointerEventArgs,
 } from '../../runtime/index.js';
-
-function nowMs(): number { return Date.now(); }
 
 // M3 Button Group — horizontal row of action buttons whose widths
 // interpolate on hover. The hovered child grows to `HoverWidth`; the
@@ -20,11 +20,14 @@ function nowMs(): number { return Date.now(); }
 // on every added child so hover state flows from the children up; the
 // row itself just owns the arrange-time width allocation.
 //
-// Animation: hover state animates the per-child expansion via a polled
-// requestAnimationFrame tween (default 200ms). Each tick updates the
-// internal _lerps map and invalidates Arrange; the next layout pass
-// reads the lerped widths. Tween cancels cleanly when a new hover
-// target lands inside the duration window.
+// Animation: hover only flips the plain `_hovered` field and invalidates
+// arrange — the smooth expand/collapse is Panel's clock-driven
+// `ArrangeChild` transition (§18.3). ButtonGroup's `ArrangeOverride`
+// computes each child's TARGET rect (hovered at HoverWidth, siblings
+// shrunk to absorb) and hands it to `ArrangeChild`; the base tweens from
+// the currently-displayed rect over `DurationMs` with `Easing`, on the
+// shared animation clock. Retargeting mid-flight (hover jumping to a
+// sibling) is handled by the base. No setTimeout, no per-child lerp map.
 //
 // Vertical orientation isn't shipped — M3 spec calls for horizontal
 // rows. A vertical variant would re-direction the lerp axis; add it
@@ -35,6 +38,7 @@ export class ButtonGroup extends Panel
     public static readonly HoverWidthKey  = Model.RegisterProperty<number>(ButtonGroup, 'HoverWidth',  120, MetaData.Measure | MetaData.Arrange);
     public static readonly SpacingKey     = Model.RegisterProperty<number>(ButtonGroup, 'Spacing',       4, MetaData.Measure | MetaData.Arrange);
     public static readonly DurationMsKey  = Model.RegisterProperty<number>(ButtonGroup, 'DurationMs',  200, MetaData.None);
+    public static readonly EasingKey      = Model.RegisterProperty<EasingFunction>(ButtonGroup, 'Easing', Easings.Standard, MetaData.None);
 
     public get BaseWidth():  number { return this.get_property_value(ButtonGroup.BaseWidthKey); }
     public set BaseWidth(v:  number) { this.set_property_value(ButtonGroup.BaseWidthKey, v); }
@@ -48,21 +52,28 @@ export class ButtonGroup extends Panel
     public get DurationMs(): number { return this.get_property_value(ButtonGroup.DurationMsKey); }
     public set DurationMs(v: number) { this.set_property_value(ButtonGroup.DurationMsKey, v); }
 
-    // Per-child expansion lerp: 0 = at BaseWidth, 1 = at HoverWidth.
-    // Filled lazily — children with no entry default to 0.
-    private _lerps    = new Map<Visual, number>();
-    // Per-child target lerp. The tween polls and converges _lerps[c]
-    // toward _targets[c] over DurationMs.
-    private _targets  = new Map<Visual, number>();
-    private _tweenAt  = 0;        // wall-clock ms of the last tween start
-    private _tickerId: ReturnType<typeof setTimeout> | undefined;
+    /** Easing curve for the hover expand/collapse. Defaults to M3
+     *  `Standard`; consumers can swap in any `Easings.*` (or a custom
+     *  `(t) => number`) for a non-default cadence. Feeds Panel's
+     *  `ArrangeTransitionEasing`. */
+    public get Easing():     EasingFunction { return this.get_property_value(ButtonGroup.EasingKey); }
+    public set Easing(v:     EasingFunction) { this.set_property_value(ButtonGroup.EasingKey, v); }
+
+    // Currently-hovered child (undefined = resting). View-invisible
+    // transient — the animated geometry lives in Panel's arrange-transition
+    // state, not here.
+    private _hovered: Visual | undefined;
+
+    // Feed ButtonGroup's public knobs into Panel's arrange-transition hook.
+    protected override get ArrangeTransitionDurationMs(): number { return this.DurationMs; }
+    protected override get ArrangeTransitionEasing():     EasingFunction { return this.Easing; }
 
     public override AddChild(child: Visual): void
     {
         super.AddChild(child);
-        // PointerEnter / PointerLeave on each child set the target lerp
-        // for that child; the polled tween picks up the new target on
-        // its next tick.
+        // PointerEnter / PointerLeave on each child just record the hover
+        // target and invalidate arrange; Panel's ArrangeChild does the
+        // smooth interpolation on the next pass.
         child.AddRoutedEventListener('PointerEnter',
             (args => this.onChildEnter(child, args as PointerEventArgs)) as (a: unknown) => void);
         child.AddRoutedEventListener('PointerLeave',
@@ -71,67 +82,17 @@ export class ButtonGroup extends Panel
 
     private onChildEnter(child: Visual, _args: PointerEventArgs): void
     {
-        // Hovered child → target 1; everyone else → target 0.
-        for (const c of this.Children)
-        {
-            this._targets.set(c, c === child ? 1 : 0);
-        }
-        this.startTween();
+        this._hovered = child;
+        this.InvalidateArrange();
     }
 
     private onChildLeave(_child: Visual, _args: PointerEventArgs): void
     {
-        // Pointer left a child — return EVERY child to 0. A future
-        // PointerEnter on a sibling will flip its target back to 1
-        // before this tween completes; the polled loop handles the
-        // overlap by retargeting mid-tween.
-        for (const c of this.Children)
-        {
-            this._targets.set(c, 0);
-        }
-        this.startTween();
-    }
-
-    private startTween(): void
-    {
-        this._tweenAt = nowMs();
-        if (this._tickerId !== undefined) return;  // already ticking
-        const tick = (): void => {
-            const stillMoving = this.advanceTween();
-            this.InvalidateArrange();
-            if (stillMoving)
-            {
-                this._tickerId = setTimeout(tick, 16);
-            }
-            else
-            {
-                this._tickerId = undefined;
-            }
-        };
-        this._tickerId = setTimeout(tick, 16);
-    }
-
-    private advanceTween(): boolean
-    {
-        const elapsed = nowMs() - this._tweenAt;
-        const duration = Math.max(1, this.DurationMs);
-        // Step toward target — fixed-rate per-tick advance (16ms / duration)
-        // approximates the linear easing M3 spec uses for action surfaces.
-        const stepSize = Math.min(1, 16 / duration);
-        let moving = false;
-        for (const c of this.Children)
-        {
-            const target = this._targets.get(c) ?? 0;
-            const current = this._lerps.get(c) ?? 0;
-            if (current === target) continue;
-            const delta = target - current;
-            const step  = Math.sign(delta) * Math.min(Math.abs(delta), stepSize);
-            const next  = current + step;
-            this._lerps.set(c, next);
-            if (next !== target) moving = true;
-        }
-        if (elapsed > duration * 2) return false;  // safety: stop after 2× duration
-        return moving;
+        // Pointer left a child — return to rest. A PointerEnter on a
+        // sibling that fires next invalidation re-targets mid-tween; the
+        // base transition handles the overlap.
+        this._hovered = undefined;
+        this.InvalidateArrange();
     }
 
     protected override MeasureOverride(availableSize: Size): Size
@@ -167,19 +128,20 @@ export class ButtonGroup extends Panel
         const base    = this.BaseWidth;
         const hoverΔ  = this.HoverWidth - base;
         const spacing = this.Spacing;
+        const hovered = this._hovered;
 
-        // Sum of all lerps — at rest = 0, at full hover = 1. Used to
-        // size the shrink applied to non-hovered siblings.
-        let totalLerp = 0;
-        for (const c of children) totalLerp += this._lerps.get(c) ?? 0;
-        const shrink = n > 1 ? (totalLerp * hoverΔ) / (n - 1) : 0;
+        // TARGET layout — computed as if the hover state were already
+        // settled. The hovered child grows by hoverΔ; that gain is absorbed
+        // uniformly by the (n − 1) siblings so the row's total width stays
+        // pinned at the resting size. Panel's ArrangeChild tweens each
+        // child from its currently-displayed rect toward this target.
+        const shrink = hovered !== undefined && n > 1 ? hoverΔ / (n - 1) : 0;
 
         let x = 0;
         for (const child of children)
         {
-            const lerp = this._lerps.get(child) ?? 0;
-            const w    = base + lerp * hoverΔ - (1 - lerp) * shrink;
-            child.Arrange(new Rect(x, 0, w, finalSize.Height));
+            const w = child === hovered ? base + hoverΔ : base - shrink;
+            this.ArrangeChild(child, new Rect(x, 0, w, finalSize.Height));
             x += w + spacing;
         }
         return finalSize;

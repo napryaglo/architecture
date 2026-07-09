@@ -503,7 +503,7 @@ deferred (no concrete demo demand today).
 | Buttons (Common) — Filled / Elevated / Tonal / Outlined / Text | [buttons](https://m3.material.io/components/buttons/overview) | ✅ shipped — all 5 variant chromes | ~~2.1~~ |
 | Icon buttons — Filled / Tonal / Outlined / Standard | [icon-buttons](https://m3.material.io/components/icon-buttons/overview) | ✅ shipped — `IconButton` + `IconButtonToggle` × 4 chromes each | ~~2.2~~ |
 | Segmented buttons — Single-select / Multi-select | [segmented-buttons](https://m3.material.io/components/segmented-buttons/overview) | ✅ shipped — `SegmentedButton` + `SegmentedItem` (Tier-1 close-out) | ~~Phase 2.5~~ |
-| Button groups | [button-groups](https://m3.material.io/components/button-groups/overview) | ✅ shipped — `ButtonGroup` with hover-expand polled tween (Tier-1 close-out) | ~~Phase 2.5~~ |
+| Button groups | [button-groups](https://m3.material.io/components/button-groups/overview) | ✅ shipped — `ButtonGroup` with hover-expand on `Panel.ArrangeChild` clock-driven transition (Tier-1 close-out; §18.3) | ~~Phase 2.5~~ |
 | Split button — drives a primary action + a dropdown menu | [split-button](https://m3.material.io/components/split-button/overview) | ✅ shipped — `SplitButton` (Tier-1 close-out) | ~~Phase 2.5~~ |
 | Floating Action Button (FAB) — Small / Default / Large | [floating-action-button](https://m3.material.io/components/floating-action-button/overview) | ✅ shipped — `FloatingActionButton` + `FabSize` enum | ~~3~~ |
 | Extended FAB | [extended-fab](https://m3.material.io/components/extended-fab/overview) | ✅ shipped — `FabSize.Extended` variant | ~~3~~ |

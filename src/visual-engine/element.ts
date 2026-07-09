@@ -17,6 +17,9 @@ import type {
     ManipulationCompletedEventArgs,
 } from './input/manipulation.js';
 import { DragDrop, type DragStartCallback } from './drag-drop.js';
+import { Rect } from './primitives.js';
+import { AnimationManager } from './animation/manager.js';
+import { Easings, type EasingFunction } from './animation/easing.js';
 import { propertyValues } from '../runtime/model-internals.js';
 import { PropertyValueSource } from '../runtime/binding/effective-value.js';
 import { MetaData, inherits } from '../runtime/metadata.js';
@@ -1794,9 +1797,59 @@ export abstract class Single extends Element
 // and invalidated by a per-Panel subscription so the snapshot stays
 // fresh without per-call allocation in the common case where children
 // don't mutate between reads.
+// Per-child bookkeeping for Panel's arrange-time layout transitions
+// (§18.3). `displayed` is the rect last handed to child.Arrange() — the
+// visual anchor a retarget tweens away from. `from` / `startAt` are set
+// only while a tween is in flight; both undefined means the child rests
+// on `target`.
+interface ArrangeChildState
+{
+    displayed: Rect;
+    target:    Rect;
+    from?:     Rect;
+    startAt?:  number;
+}
+
+// Component-wise linear interpolation of two rects at progress p ∈ [0, 1].
+// X / Y / Width / Height each interpolate independently, so a single
+// tween covers both a child's position and its size.
+function lerpRect(a: Rect, b: Rect, p: number): Rect
+{
+    return new Rect(
+        a.X      + (b.X      - a.X)      * p,
+        a.Y      + (b.Y      - a.Y)      * p,
+        a.Width  + (b.Width  - a.Width)  * p,
+        a.Height + (b.Height - a.Height) * p,
+    );
+}
+
 export class Panel extends Element
 {
     private readonly _children: ObservableCollection<Visual> = new ObservableCollection<Visual>();
+
+    // ── Arrange-time layout transitions (§18.3) ──────────────────────
+    //
+    // A Panel subclass whose arrange decisions should interpolate over
+    // time — hover-expand, accordion, drawer-collapse — routes each child
+    // through `ArrangeChild(child, target)` instead of `child.Arrange(
+    // target)`. When `ArrangeTransitionDurationMs > 0`, the base tweens
+    // each child from its currently-displayed rect to the new target
+    // across the duration, sampled on the shared animation clock
+    // (deterministic ManualClock under test, RafClock in the browser) with
+    // `ArrangeTransitionEasing` applied. The whole rect interpolates —
+    // position and size in one seam.
+    //
+    // The subclass writes `ArrangeOverride` as if layout were
+    // instantaneous: compute each child's TARGET rect and hand it to
+    // `ArrangeChild`. Retargeting mid-flight (a hover redirected to a
+    // sibling), the clock subscription, and teardown are all handled here.
+    // Duration 0 (the default) makes `ArrangeChild` a pass-through with no
+    // allocation and no clock traffic, so panels that don't opt in pay
+    // nothing. This is the general replacement for per-child polled tweens
+    // (ButtonGroup's old setTimeout loop) — custom easing and frame-sync
+    // with Storyboards come for free from riding the animation clock.
+    private _arrangeState:      Map<Visual, ArrangeChildState> | undefined;
+    private _arrangeClockUnsub: (() => void) | undefined;
 
     // Lazily-materialized snapshot for visualChildren / logicalChildren.
     // Invalidated by the subscription wired in the constructor.
@@ -1896,5 +1949,135 @@ export class Panel extends Element
     protected override forEachLogicalChild(fn: (child: Visual) => void): void
     {
         for (const c of this._children) fn(c);
+    }
+
+    // ── Arrange-time layout transitions (§18.3) ──────────────────────
+
+    /** Duration, in ms, over which `ArrangeChild` interpolates a child
+     *  toward a changed target rect. 0 (the default) disables the tween —
+     *  `ArrangeChild` becomes a direct `child.Arrange`. Subclasses that
+     *  want animated arrange override this (usually surfacing a DP so
+     *  consumers can retune the cadence). */
+    protected get ArrangeTransitionDurationMs(): number { return 0; }
+
+    /** Easing applied to the 0→1 tween progress. Defaults to the M3
+     *  `Standard` curve; subclasses override to expose a consumer-settable
+     *  curve. */
+    protected get ArrangeTransitionEasing(): EasingFunction { return Easings.Standard; }
+
+    /** Arrange `child` into `target`, interpolating from its currently-
+     *  displayed rect when `ArrangeTransitionDurationMs > 0`. Panel
+     *  subclasses call this from `ArrangeOverride` in place of
+     *  `child.Arrange(target)`. The first arrange for a child always snaps
+     *  (nothing to animate from); subsequent target changes tween. */
+    protected ArrangeChild(child: Visual, target: Rect): void
+    {
+        const duration = this.ArrangeTransitionDurationMs;
+        const state    = this._arrangeState?.get(child);
+
+        // Transitions off, or first-ever arrange for this child (no anchor
+        // to slide from) — snap. When transitions are on, seed the state so
+        // the NEXT target change has a `displayed` rect to tween away from.
+        if (duration <= 0 || state === undefined)
+        {
+            child.Arrange(target);
+            if (duration > 0)
+            {
+                this.arrangeStateMap().set(child, { displayed: target, target });
+            }
+            else if (state !== undefined)
+            {
+                // Duration turned off mid-flight — drop any live tween so a
+                // later re-enable starts clean.
+                state.displayed = target;
+                state.target    = target;
+                state.from      = undefined;
+                state.startAt   = undefined;
+            }
+            return;
+        }
+
+        // Retarget: destination moved since the last pass. Anchor a fresh
+        // tween at wherever the child is currently shown so an in-flight
+        // expand redirects smoothly instead of snapping.
+        if (!state.target.Equals(target))
+        {
+            state.from    = state.displayed;
+            state.target  = target;
+            state.startAt = AnimationManager.Instance.Clock.Now();
+            this.ensureArrangeClock();
+        }
+
+        // At rest on target — no active tween.
+        if (state.from === undefined || state.startAt === undefined)
+        {
+            state.displayed = state.target;
+            child.Arrange(state.target);
+            return;
+        }
+
+        // Sample the tween at the current clock time.
+        const elapsed = AnimationManager.Instance.Clock.Now() - state.startAt;
+        if (elapsed >= duration)
+        {
+            state.displayed = state.target;
+            state.from      = undefined;
+            state.startAt   = undefined;
+            child.Arrange(state.target);
+            return;
+        }
+        const p    = this.ArrangeTransitionEasing(elapsed <= 0 ? 0 : elapsed / duration);
+        const rect = lerpRect(state.from, state.target, p);
+        state.displayed = rect;
+        child.Arrange(rect);
+    }
+
+    private arrangeStateMap(): Map<Visual, ArrangeChildState>
+    {
+        if (this._arrangeState === undefined) this._arrangeState = new Map();
+        return this._arrangeState;
+    }
+
+    private ensureArrangeClock(): void
+    {
+        if (this._arrangeClockUnsub !== undefined) return;
+        this._arrangeClockUnsub = AnimationManager.Instance.Clock.Subscribe(
+            () => this.onArrangeTick());
+    }
+
+    // Clock tick while any child tween is live: re-invalidate arrange so
+    // the next layout pass re-samples `ArrangeChild`. Drops state for
+    // children that have since left the panel (so a child removed
+    // mid-tween can't keep the clock alive), and releases the clock
+    // subscription once nothing is animating.
+    private onArrangeTick(): void
+    {
+        this.pruneArrangeState();
+        if (!this.hasActiveArrangeTween())
+        {
+            this._arrangeClockUnsub?.();
+            this._arrangeClockUnsub = undefined;
+            return;
+        }
+        this.InvalidateArrange();
+    }
+
+    private pruneArrangeState(): void
+    {
+        if (this._arrangeState === undefined) return;
+        for (const child of [...this._arrangeState.keys()])
+        {
+            if (this._children.IndexOf(child) === -1) this._arrangeState.delete(child);
+        }
+    }
+
+    private hasActiveArrangeTween(): boolean
+    {
+        if (this._arrangeState === undefined) return false;
+        for (const st of this._arrangeState.values())
+        {
+            if (st.from !== undefined) return true;
+        }
+        return false;
     }
 }

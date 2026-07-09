@@ -1,9 +1,24 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from '../../basic/tests/test-app.js';
-import { Size, Rect } from '../../runtime/index.js';
+import { Size, Rect, Easings, AnimationManager, ManualClock } from '../../runtime/index.js';
 import { Border } from '../../basic/border.js';
 import { ButtonGroup } from '../button-groups/button-group.js';
+
+// Read a child's arranged geometry through the public getter (typed via
+// cast — ArrangedRect is on Visual).
+function arranged(v: object): Rect
+{
+    return (v as unknown as { ArrangedRect: Rect }).ArrangedRect;
+}
+
+// Set the (view-invisible) hover target directly, bypassing the routed
+// PointerEnter/Leave plumbing so geometry can be pinned deterministically.
+function setHover(g: ButtonGroup, child: object | undefined): void
+{
+    (g as unknown as { _hovered: object | undefined })._hovered = child;
+    g.InvalidateArrange();
+}
 
 describe('ButtonGroup defaults', () => {
 
@@ -54,31 +69,103 @@ describe('ButtonGroup layout — resting', () => {
     });
 });
 
-describe('ButtonGroup hover expansion (snapped — bypasses the tween)', () => {
+describe('ButtonGroup hover expansion (snapped — DurationMs=0 bypasses the tween)', () => {
 
-    test('with a lerp=1 hovered child, that child is wider and siblings shrink', () => {
+    test('a hovered child is wider and siblings shrink to absorb', () => {
         initTestApp();
         const g = new ButtonGroup();
+        g.DurationMs = 0;                 // instant — ArrangeChild snaps to target
         const a = new Border();
         const b = new Border();
         const c = new Border();
         g.AddChild(a); g.AddChild(b); g.AddChild(c);
-        // Directly set _lerps for `a` to 1, bypassing the polled tween,
-        // so we can pin the arranged geometry.
-        ((g as unknown as { _lerps: Map<unknown, number> })._lerps).set(a, 1);
+        setHover(g, a);
         g.Measure(new Size(500, 40));
         g.Arrange(new Rect(0, 0, g.DesiredSize.Width, 40));
-        const wA = (a as unknown as { ArrangedRect: Rect }).ArrangedRect.Width;
-        const wB = (b as unknown as { ArrangedRect: Rect }).ArrangedRect.Width;
-        const wC = (c as unknown as { ArrangedRect: Rect }).ArrangedRect.Width;
-        // a expanded to HoverWidth=120 (+40 vs base).
-        // The shrink is distributed across siblings: shrink_total = 40,
-        // each sibling at lerp=0 absorbs shrink = totalLerp*Δ/(n-1) = 1*40/2 = 20.
-        // So b, c each → 80 - 20 = 60.
+        const wA = arranged(a).Width;
+        const wB = arranged(b).Width;
+        const wC = arranged(c).Width;
+        // a expanded to HoverWidth=120 (+40 vs base); the +40 gain is
+        // absorbed uniformly by the two siblings → each 80 − 20 = 60.
         assert.equal(wA, 120);
         assert.equal(wB, 60);
         assert.equal(wC, 60);
         // Row width pinned at resting total (3·80 + 2·spacing).
         assert.equal(wA + wB + wC, 240);
+    });
+});
+
+describe('ButtonGroup arrange transition (§18.3 — clock-driven tween)', () => {
+
+    test('hover interpolates child geometry over DurationMs on the animation clock', () => {
+        initTestApp();
+        AnimationManager.ResetForTests();
+        const clock = AnimationManager.Instance.Clock as ManualClock;
+
+        const g = new ButtonGroup();
+        g.DurationMs = 100;
+        g.Easing = Easings.Linear;        // linear → exact midpoint math
+        const a = new Border();
+        const b = new Border();
+        const c = new Border();
+        g.AddChild(a); g.AddChild(b); g.AddChild(c);
+        g.Measure(new Size(500, 40));
+
+        // Resting layout — every child at BaseWidth (snapped, no tween).
+        g.Arrange(new Rect(0, 0, g.DesiredSize.Width, 40));
+        assert.equal(arranged(a).Width, 80);
+
+        // Hover `a`. First arrange after the target change anchors the
+        // tween at the displayed rect (still 80) — p = 0.
+        setHover(g, a);
+        g.Arrange(new Rect(0, 0, g.DesiredSize.Width, 40));
+        assert.equal(arranged(a).Width, 80);
+        assert.equal(AnimationManager.Instance.Clock instanceof ManualClock, true);
+
+        // Halfway through the duration → linear midpoint.
+        clock.Tick(50);
+        g.Arrange(new Rect(0, 0, g.DesiredSize.Width, 40));
+        assert.equal(arranged(a).Width, 100);   // lerp(80, 120, 0.5)
+        assert.equal(arranged(b).Width, 70);     // lerp(80,  60, 0.5)
+        assert.equal(arranged(c).Width, 70);
+
+        // End of the duration → settled on target.
+        clock.Tick(50);
+        g.Arrange(new Rect(0, 0, g.DesiredSize.Width, 40));
+        assert.equal(arranged(a).Width, 120);
+        assert.equal(arranged(b).Width, 60);
+        assert.equal(arranged(c).Width, 60);
+    });
+
+    test('re-hovering a sibling mid-tween retargets from the current rect', () => {
+        initTestApp();
+        AnimationManager.ResetForTests();
+        const clock = AnimationManager.Instance.Clock as ManualClock;
+
+        const g = new ButtonGroup();
+        g.DurationMs = 100;
+        g.Easing = Easings.Linear;
+        const a = new Border();
+        const b = new Border();
+        g.AddChild(a); g.AddChild(b);
+        g.Measure(new Size(500, 40));
+        g.Arrange(new Rect(0, 0, g.DesiredSize.Width, 40));
+
+        // Hover a, run halfway: a is en route 80 → 120, at 100.
+        setHover(g, a);
+        g.Arrange(new Rect(0, 0, g.DesiredSize.Width, 40));
+        clock.Tick(50);
+        g.Arrange(new Rect(0, 0, g.DesiredSize.Width, 40));
+        assert.equal(arranged(a).Width, 100);
+
+        // Now hover b instead. With n=2, a non-hovered child fully
+        // absorbs the sibling's gain (shrink = 40/(2−1) = 40), so a's new
+        // target is 80 − 40 = 40. It retargets from its CURRENT 100 over a
+        // fresh 100ms window.
+        setHover(g, b);
+        g.Arrange(new Rect(0, 0, g.DesiredSize.Width, 40));
+        clock.Tick(50);
+        g.Arrange(new Rect(0, 0, g.DesiredSize.Width, 40));
+        assert.equal(arranged(a).Width, 70);    // lerp(100, 40, 0.5)
     });
 });
