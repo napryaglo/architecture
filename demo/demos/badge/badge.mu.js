@@ -1,0 +1,146 @@
+import { BadgeVM } from "./badge-vm.mjs";
+import { Border, Canvas, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@visualisation-sub/mural/basic";
+import { Button, ButtonVariant } from "@visualisation-sub/mural/framework/buttons/button.js";
+import { Badge, BadgeVariant } from "@visualisation-sub/mural/framework/markers/badge.js";
+import { DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness, VerticalAlignment } from "@visualisation-sub/mural/runtime";
+import { FontWeight } from "@visualisation-sub/mural/visual-engine";
+
+
+const _gate_BadgeDemo = Symbol("BadgeDemo.ctor");
+export class BadgeDemo extends ResourceDictionary {
+    constructor(_g) {
+        super();
+        if (_g !== _gate_BadgeDemo) {
+            throw new Error("BadgeDemo is private — use BadgeDemo.Clone()");
+        }
+    }
+    static Clone() {
+        const t = new BadgeDemo(_gate_BadgeDemo);
+        const _tmpl0 = new DataTemplate((_data) => {
+            const _border1 = new Border();
+            _border1.set_property_value(Border.BackgroundKey, DynamicResource(_border1, "Surface"));
+            _border1.set_property_value(Border.BorderBrushKey, DynamicResource(_border1, "OutlineVariant"));
+            _border1.set_property_value(Border.BorderThicknessKey, new Thickness(1));
+            const _dockPanel2 = new DockPanel();
+            const _border3 = new Border();
+            _border3.set_property_value(DockPanel.DockKey, Dock.Top);
+            _border3.set_property_value(Border.BackgroundKey, DynamicResource(_border3, "Primary"));
+            _border3.set_property_value(Border.PaddingKey, new Thickness(16, 12, 16, 12));
+            const _textBlock4 = new TextBlock();
+            _textBlock4.set_property_value(TextBlock.TextKey, "Badge — M3's small status flag. Variant picks Dot (no count) vs Numeric (Count-driven pill).");
+            _textBlock4.set_property_value(TextBlock.FontSizeKey, 15);
+            _textBlock4.set_property_value(TextBlock.FontWeightKey, FontWeight.Bold);
+            _textBlock4.set_property_value(TextBlock.ForegroundKey, DynamicResource(_textBlock4, "OnPrimary"));
+            _border3.SetChild(_textBlock4);
+            _dockPanel2.AddChild(_border3);
+            const _stackPanel5 = new StackPanel();
+            _stackPanel5.set_property_value(StackPanel.OrientationKey, Orientation.Vertical);
+            _stackPanel5.set_property_value(StackPanel.MarginKey, new Thickness(24, 24, 24, 24));
+            const _textBlock6 = new TextBlock();
+            _textBlock6.set_property_value(TextBlock.TextKey, "Badge — Variant: Dot / Numeric");
+            _textBlock6.set_property_value(TextBlock.FontWeightKey, FontWeight.Bold);
+            _textBlock6.set_property_value(TextBlock.FontSizeKey, 14);
+            _textBlock6.set_property_value(TextBlock.ForegroundKey, DynamicResource(_textBlock6, "OnSurface"));
+            _textBlock6.set_property_value(TextBlock.MarginKey, new Thickness(0, 0, 0, 16));
+            _stackPanel5.AddChild(_textBlock6);
+            const _stackPanel7 = new StackPanel();
+            _stackPanel7.set_property_value(StackPanel.OrientationKey, Orientation.Horizontal);
+            _stackPanel7.set_property_value(StackPanel.MarginKey, new Thickness(0, 0, 0, 24));
+            const _stackPanel8 = new StackPanel();
+            _stackPanel8.set_property_value(StackPanel.OrientationKey, Orientation.Vertical);
+            _stackPanel8.set_property_value(StackPanel.MarginKey, new Thickness(0, 0, 48, 0));
+            const _canvas9 = new Canvas();
+            _canvas9.set_property_value(Canvas.WidthKey, 48);
+            _canvas9.set_property_value(Canvas.HeightKey, 48);
+            _canvas9.set_property_value(Canvas.MarginKey, new Thickness(0, 0, 0, 8));
+            const _border10 = new Border();
+            _border10.set_property_value(Border.WidthKey, 40);
+            _border10.set_property_value(Border.HeightKey, 40);
+            _border10.set_property_value(Border.BackgroundKey, DynamicResource(_border10, "SurfaceContainerHighest"));
+            _border10.set_property_value(Border.CornerRadiusKey, DynamicResource(_border10, "ShapeMedium"));
+            _border10.set_property_value(Border.BorderThicknessKey, new Thickness(0));
+            _border10.set_property_value(Canvas.LeftKey, 0);
+            _border10.set_property_value(Canvas.TopKey, 8);
+            _canvas9.AddChild(_border10);
+            const _badge11 = new Badge();
+            _badge11.set_property_value(Badge.VariantKey, BadgeVariant.Dot);
+            _badge11.set_property_value(Canvas.LeftKey, 36);
+            _badge11.set_property_value(Canvas.TopKey, 4);
+            _canvas9.AddChild(_badge11);
+            _stackPanel8.AddChild(_canvas9);
+            const _textBlock12 = new TextBlock();
+            _textBlock12.set_property_value(TextBlock.TextKey, "Dot");
+            _textBlock12.set_property_value(TextBlock.FontSizeKey, 12);
+            _textBlock12.set_property_value(TextBlock.ForegroundKey, DynamicResource(_textBlock12, "OnSurfaceVariant"));
+            _textBlock12.set_property_value(TextBlock.HorizontalAlignmentKey, HorizontalAlignment.Center);
+            _stackPanel8.AddChild(_textBlock12);
+            _stackPanel7.AddChild(_stackPanel8);
+            const _stackPanel13 = new StackPanel();
+            _stackPanel13.set_property_value(StackPanel.OrientationKey, Orientation.Vertical);
+            const _canvas14 = new Canvas();
+            _canvas14.set_property_value(Canvas.WidthKey, 48);
+            _canvas14.set_property_value(Canvas.HeightKey, 48);
+            _canvas14.set_property_value(Canvas.MarginKey, new Thickness(0, 0, 0, 8));
+            const _border15 = new Border();
+            _border15.set_property_value(Border.WidthKey, 40);
+            _border15.set_property_value(Border.HeightKey, 40);
+            _border15.set_property_value(Border.BackgroundKey, DynamicResource(_border15, "SurfaceContainerHighest"));
+            _border15.set_property_value(Border.CornerRadiusKey, DynamicResource(_border15, "ShapeMedium"));
+            _border15.set_property_value(Border.BorderThicknessKey, new Thickness(0));
+            _border15.set_property_value(Canvas.LeftKey, 0);
+            _border15.set_property_value(Canvas.TopKey, 8);
+            _canvas14.AddChild(_border15);
+            const _badge16 = new Badge();
+            _badge16.set_property_value(Badge.VariantKey, BadgeVariant.Numeric);
+            _badge16.set_property_value(Badge.CountKey, DataContextBinding(_badge16, "Count"));
+            _badge16.set_property_value(Canvas.LeftKey, 30);
+            _badge16.set_property_value(Canvas.TopKey, 0);
+            _canvas14.AddChild(_badge16);
+            _stackPanel13.AddChild(_canvas14);
+            const _textBlock17 = new TextBlock();
+            _textBlock17.set_property_value(TextBlock.TextKey, "Numeric");
+            _textBlock17.set_property_value(TextBlock.FontSizeKey, 12);
+            _textBlock17.set_property_value(TextBlock.ForegroundKey, DynamicResource(_textBlock17, "OnSurfaceVariant"));
+            _textBlock17.set_property_value(TextBlock.HorizontalAlignmentKey, HorizontalAlignment.Center);
+            _stackPanel13.AddChild(_textBlock17);
+            _stackPanel7.AddChild(_stackPanel13);
+            _stackPanel5.AddChild(_stackPanel7);
+            const _stackPanel18 = new StackPanel();
+            _stackPanel18.set_property_value(StackPanel.OrientationKey, Orientation.Horizontal);
+            const _button19 = new Button();
+            _button19.set_property_value(Button.VariantKey, ButtonVariant.Filled);
+            _button19.set_property_value(Button.CommandKey, DataContextBinding(_button19, "Increment"));
+            _button19.set_property_value(Button.HorizontalAlignmentKey, HorizontalAlignment.Left);
+            _button19.set_property_value(Button.MarginKey, new Thickness(0, 0, 12, 0));
+            _button19.set_property_value(Button.ContentKey, ((_e) => { _e.Text = "Increment"; return _e; })(new TextBlock()));
+            _stackPanel18.AddChild(_button19);
+            const _button20 = new Button();
+            _button20.set_property_value(Button.VariantKey, ButtonVariant.Text);
+            _button20.set_property_value(Button.CommandKey, DataContextBinding(_button20, "Reset"));
+            _button20.set_property_value(Button.HorizontalAlignmentKey, HorizontalAlignment.Left);
+            _button20.set_property_value(Button.ContentKey, ((_e) => { _e.Text = "Reset"; return _e; })(new TextBlock()));
+            _stackPanel18.AddChild(_button20);
+            const _textBlock21 = new TextBlock();
+            _textBlock21.set_property_value(TextBlock.TextKey, "  Count: ");
+            _textBlock21.set_property_value(TextBlock.FontSizeKey, 12);
+            _textBlock21.set_property_value(TextBlock.VerticalAlignmentKey, VerticalAlignment.Center);
+            _textBlock21.set_property_value(TextBlock.ForegroundKey, DynamicResource(_textBlock21, "OnSurfaceVariant"));
+            _stackPanel18.AddChild(_textBlock21);
+            const _textBlock22 = new TextBlock();
+            _textBlock22.set_property_value(TextBlock.TextKey, DataContextBinding(_textBlock22, "Count"));
+            _textBlock22.set_property_value(TextBlock.FontSizeKey, 12);
+            _textBlock22.set_property_value(TextBlock.FontWeightKey, FontWeight.Bold);
+            _textBlock22.set_property_value(TextBlock.VerticalAlignmentKey, VerticalAlignment.Center);
+            _textBlock22.set_property_value(TextBlock.ForegroundKey, DynamicResource(_textBlock22, "OnSurface"));
+            _stackPanel18.AddChild(_textBlock22);
+            _stackPanel5.AddChild(_stackPanel18);
+            _dockPanel2.AddChild(_stackPanel5);
+            _border1.SetChild(_dockPanel2);
+            return _border1;
+        }, BadgeVM);
+        t.Set("BadgeTemplate", _tmpl0);
+        return t;
+    }
+    get BadgeTemplate() { return this.Resolve("BadgeTemplate"); }
+    set BadgeTemplate(v) { this.Set("BadgeTemplate", v); }
+}

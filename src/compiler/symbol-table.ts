@@ -718,6 +718,16 @@ export const DEFAULT_SLOT_INFO: ReadonlyMap<string, SlotInfo> = new Map<string, 
     ['VirtualizingWrapPanel',   { name: 'Children', kind: 'list'   }],
     ['ScrollViewer',            { name: 'Content',  kind: 'object' }],
 
+    // ── Surfaces / notifications ContentControls ────────────────────
+    // Each is a ContentControl whose brace body fills its Content slot
+    // (same shape as Card / Drawer / Dialog). Banner / BottomSheet /
+    // Snackbar carry their message / body payload here; the trailing
+    // Leading / Actions slots stay attribute-driven (Visual DPs).
+    ['Banner',                  { name: 'Content',  kind: 'object' }],
+    ['BottomSheet',             { name: 'Content',  kind: 'object' }],
+    ['Snackbar',                { name: 'Content',  kind: 'object' }],
+    ['Dialog',                  { name: 'Content',  kind: 'object' }],
+
     // Internal helper classes (see DEFAULT_SYMBOLS comment above).
     ['ClickableBorder',         { name: 'Child',    kind: 'single' }],
     ['ClickAwayScrim',          { name: 'Child',    kind: 'single' }],

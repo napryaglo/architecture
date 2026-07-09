@@ -47,6 +47,10 @@ import AnimationDemo from "../demos/animation/animation.mu.js"
 import AnimationDeclarativeDemo from "../demos/animation-declarative/animation-declarative.mu.js"
 import AnimationNamedDemo from "../demos/animation-named/animation-named.mu.js"
 import AnimationTriggersDemo from "../demos/animation-triggers/animation-triggers.mu.js"
+import BadgeDemo from "../demos/badge/badge.mu.js"
+import BannerDemo from "../demos/banner/banner.mu.js"
+import BottomAppBarDemo from "../demos/bottom-app-bar/bottom-app-bar.mu.js"
+import BottomSheetDemo from "../demos/bottom-sheet/bottom-sheet.mu.js"
 import BouncingBallDemo from "../demos/bouncing-ball/bouncing-ball.mu.js"
 import ButtonGroupDemo from "../demos/button-group/button-group.mu.js"
 import CardDemo from "../demos/card/card.mu.js"
@@ -109,6 +113,10 @@ Application [ Theme = Material, Scheme = MaterialLight ] {
         merge AnimationDeclarativeDemo
         merge AnimationNamedDemo
         merge AnimationTriggersDemo
+        merge BadgeDemo
+        merge BannerDemo
+        merge BottomAppBarDemo
+        merge BottomSheetDemo
         merge BouncingBallDemo
         merge ButtonGroupDemo
         merge CardDemo

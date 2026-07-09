@@ -3,6 +3,10 @@ import { AnimationDeclarativeDemo } from "../demos/animation-declarative/animati
 import { AnimationNamedDemo } from "../demos/animation-named/animation-named.mu.js";
 import { AnimationTriggersDemo } from "../demos/animation-triggers/animation-triggers.mu.js";
 import { AnimationDemo } from "../demos/animation/animation.mu.js";
+import { BadgeDemo } from "../demos/badge/badge.mu.js";
+import { BannerDemo } from "../demos/banner/banner.mu.js";
+import { BottomAppBarDemo } from "../demos/bottom-app-bar/bottom-app-bar.mu.js";
+import { BottomSheetDemo } from "../demos/bottom-sheet/bottom-sheet.mu.js";
 import { BouncingBallDemo } from "../demos/bouncing-ball/bouncing-ball.mu.js";
 import { ButtonGroupDemo } from "../demos/button-group/button-group.mu.js";
 import { CardDemo } from "../demos/card/card.mu.js";
@@ -60,6 +64,10 @@ export const app = (() => {
     for (const [_k, _v] of AnimationDeclarativeDemo.Clone().Entries()) _rd1.Set(_k, _v);
     for (const [_k, _v] of AnimationNamedDemo.Clone().Entries()) _rd1.Set(_k, _v);
     for (const [_k, _v] of AnimationTriggersDemo.Clone().Entries()) _rd1.Set(_k, _v);
+    for (const [_k, _v] of BadgeDemo.Clone().Entries()) _rd1.Set(_k, _v);
+    for (const [_k, _v] of BannerDemo.Clone().Entries()) _rd1.Set(_k, _v);
+    for (const [_k, _v] of BottomAppBarDemo.Clone().Entries()) _rd1.Set(_k, _v);
+    for (const [_k, _v] of BottomSheetDemo.Clone().Entries()) _rd1.Set(_k, _v);
     for (const [_k, _v] of BouncingBallDemo.Clone().Entries()) _rd1.Set(_k, _v);
     for (const [_k, _v] of ButtonGroupDemo.Clone().Entries()) _rd1.Set(_k, _v);
     for (const [_k, _v] of CardDemo.Clone().Entries()) _rd1.Set(_k, _v);
