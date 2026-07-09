@@ -76,6 +76,24 @@ resources ButtonGroups {
         when ( IsFocused ) { PART_Border.Background = @StateFocusOverlay; }
         when ( IsPressed ) { PART_Border.Background = @StatePressOverlay; }
         when ( IsEnabled = false ) { PART_Border.Opacity = @DisabledContentOpacity; }
+
+        // Adaptive layout (§ 18.6) — the hit target is the per-segment
+        // PART_Border (SegmentedButton itself is a chrome-less shell), so
+        // density / pointer retuning rides here. Resting is Padding
+        // (12,4,12,4) + Height 40. Compact tightens, Comfortable loosens,
+        // Coarse pointer bumps the segment height for a larger touch row.
+        when ( ThemeManager.Density = Compact ) {
+            PART_Border.Padding = (8,4,8,4);
+            PART_Border.Height = 32;
+        }
+        when ( ThemeManager.Density = Comfortable ) {
+            PART_Border.Padding = (16,6,16,6);
+            PART_Border.Height = 48;
+        }
+        when ( ThemeManager.Pointer = Coarse ) {
+            PART_Border.Padding = (16,8,16,8);
+            PART_Border.Height = 52;
+        }
     }
     Style [TargetType = SegmentedItem] {
         Template = @DefaultSegmentedItem;
@@ -141,6 +159,25 @@ resources ButtonGroups {
         when ( IsEnabled = false ) {
             PART_PrimaryButton.Opacity = @DisabledContentOpacity;
             PART_TriggerButton.Opacity = @DisabledContentOpacity;
+        }
+
+        // Adaptive layout (§ 18.6) — both click halves carry their own
+        // Padding (the capsule has no fixed height), so density / pointer
+        // retuning writes both to keep the two halves the same height.
+        // Resting: primary (16,8,16,8), trigger (8,8,8,8). Compact
+        // tightens, Comfortable loosens, Coarse bumps the vertical touch
+        // target.
+        when ( ThemeManager.Density = Compact ) {
+            PART_PrimaryButton.Padding = (12,5,12,5);
+            PART_TriggerButton.Padding = (6,5,6,5);
+        }
+        when ( ThemeManager.Density = Comfortable ) {
+            PART_PrimaryButton.Padding = (20,11,20,11);
+            PART_TriggerButton.Padding = (11,11,11,11);
+        }
+        when ( ThemeManager.Pointer = Coarse ) {
+            PART_PrimaryButton.Padding = (18,12,18,12);
+            PART_TriggerButton.Padding = (10,12,10,12);
         }
     }
     // Popup chrome — instantiated by SplitButton's mountPopup with the

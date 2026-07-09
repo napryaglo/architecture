@@ -96,6 +96,13 @@ resources Navigation {
         }
         when ( IsMouseOver ) { PART_IconStateLayer.Background = @OnSurfaceVariantHoverLayer; }
         when ( IsPressed ) { PART_IconStateLayer.Background = @OnSurfaceVariantPressLayer; }
+        // Adaptive layout — Compact tightens the item's vertical padding,
+        // Comfortable loosens it, Coarse pointer enlarges the touch target
+        // (wider AND taller than rest). Padding lives on PART_Outer, the
+        // row's interactive extent, so the hit area tracks these retunes.
+        when ( ThemeManager.Density = Compact ) { PART_Outer.Padding = (4,8,4,8); }
+        when ( ThemeManager.Density = Comfortable ) { PART_Outer.Padding = (4,16,4,16); }
+        when ( ThemeManager.Pointer = Coarse ) { PART_Outer.Padding = (8,16,8,16); }
     }
 
     // The NavigationItem Style just installs the default template.
@@ -271,6 +278,23 @@ resources Navigation {
             PART_Icon.Opacity = 1;
         }
         when ( IsPressed )   { PART_Outer.Background = @OnSurfaceVariantHoverLayer; }
+        // Adaptive layout — the activity-bar cell is a fixed square hit
+        // target (like IconButton), so density / coarse retune the cell
+        // size rather than padding. Compact tightens to a denser column,
+        // Comfortable and Coarse grow the cell (>= the 48dp rest) for
+        // touch reach. Icon glyph stays 24dp, centred, across all sizes.
+        when ( ThemeManager.Density = Compact ) {
+            PART_Outer.Width = 40;
+            PART_Outer.Height = 40;
+        }
+        when ( ThemeManager.Density = Comfortable ) {
+            PART_Outer.Width = 56;
+            PART_Outer.Height = 56;
+        }
+        when ( ThemeManager.Pointer = Coarse ) {
+            PART_Outer.Width = 56;
+            PART_Outer.Height = 56;
+        }
     }
 
     // Keyed (not implicit-by-type) so it applies only where a rail names it as

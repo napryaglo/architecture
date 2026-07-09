@@ -42,6 +42,22 @@ resources SearchBars {
         when ( IsMouseOver ) { PART_Border.Background = @SurfaceContainerHighest; }
         when ( IsFocused ) { PART_Border.Background = @SurfaceContainerHighest; }
         when ( IsEnabled = false ) { PART_Border.Opacity = @DisabledContentOpacity; }
+        // Adaptive layout — Compact tightens the field, Comfortable
+        // loosens it, Coarse pointer widens the touch target. Padding +
+        // Height both retune off the 56dp / (12,8,12,8) resting field so
+        // the stadium chrome and its hit area track density together.
+        when ( ThemeManager.Density = Compact ) {
+            PART_Border.Padding = (@Spacing2,@Spacing1,@Spacing2,@Spacing1);
+            PART_Border.Height = 48;
+        }
+        when ( ThemeManager.Density = Comfortable ) {
+            PART_Border.Padding = (@Spacing4,@Spacing3,@Spacing4,@Spacing3);
+            PART_Border.Height = 64;
+        }
+        when ( ThemeManager.Pointer = Coarse ) {
+            PART_Border.Padding = (@Spacing3,@Spacing3,@Spacing3,@Spacing3);
+            PART_Border.Height = 64;
+        }
     }
 
     Style [TargetType = SearchBar] {

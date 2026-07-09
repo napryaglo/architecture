@@ -68,6 +68,24 @@ resources Markers {
         when ( IsFocused ) { PART_Chip.Background = @StateFocusOverlay; }
         when ( IsPressed ) { PART_Chip.Background = @StatePressOverlay; }
         when ( IsEnabled = false ) { PART_Chip.Opacity = @DisabledContentOpacity; }
+
+        // Adaptive layout (§ 18.6) — PART_Chip bears the interactive
+        // pill chrome, so density / pointer retuning rides here. Resting
+        // is Padding (12,4,12,4) + Height 32. Compact tightens,
+        // Comfortable loosens, Coarse pointer bumps the pill height for a
+        // larger touch target.
+        when ( ThemeManager.Density = Compact ) {
+            PART_Chip.Padding = (8,4,8,4);
+            PART_Chip.Height = 24;
+        }
+        when ( ThemeManager.Density = Comfortable ) {
+            PART_Chip.Padding = (16,6,16,6);
+            PART_Chip.Height = 40;
+        }
+        when ( ThemeManager.Pointer = Coarse ) {
+            PART_Chip.Padding = (16,8,16,8);
+            PART_Chip.Height = 44;
+        }
     }
     Style [TargetType = Chip] {
         Template = @DefaultChip;

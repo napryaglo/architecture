@@ -76,6 +76,23 @@ resources Tabs {
         when ( IsFocused ) { PART_Tab.Background = @StateFocusOverlay; }
         when ( IsPressed ) { PART_Tab.Background = @StatePressOverlay; }
         when ( IsEnabled = false ) { PART_Tab.Opacity = @DisabledContentOpacity; }
+        // Adaptive layout — Compact tightens the header's padding + height,
+        // Comfortable loosens both, Coarse pointer enlarges the touch target
+        // (>= the 48dp rest). Padding + Height both live on PART_Tab, the
+        // tab's interactive header surface, so its hit area tracks these
+        // retunes. Mirrors the list family's @Spacing / height ladder.
+        when ( ThemeManager.Density = Compact ) {
+            PART_Tab.Padding = (@Spacing3,@Spacing1,@Spacing3,@Spacing1);
+            PART_Tab.Height = 40;
+        }
+        when ( ThemeManager.Density = Comfortable ) {
+            PART_Tab.Padding = (@Spacing5,@Spacing3,@Spacing5,@Spacing3);
+            PART_Tab.Height = 56;
+        }
+        when ( ThemeManager.Pointer = Coarse ) {
+            PART_Tab.Padding = (@Spacing4,@Spacing3,@Spacing4,@Spacing3);
+            PART_Tab.Height = 56;
+        }
     }
     Style [TargetType = TabItem] {
         Template = @DefaultTabItem;
