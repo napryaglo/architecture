@@ -523,7 +523,7 @@ deferred (no concrete demo demand today).
 
 | M3 component | Spec | Mural status | Phase |
 | --- | --- | --- | --- |
-| App bars — Top / Bottom (Center-aligned / Small / Medium / Large) | [app-bars](https://m3.material.io/components/app-bars/overview) | ✅ Top shipped — `TopAppBar` + 4 size variants; Bottom deferred ([backlog § 18.9](current-backlog.md)) | ~~5~~ |
+| App bars — Top / Bottom (Center-aligned / Small / Medium / Large) | [app-bars](https://m3.material.io/components/app-bars/overview) | ✅ Top shipped — `TopAppBar` + 4 size variants; ✅ Bottom shipped — `BottomAppBar` (Actions row + FAB slot; [backlog § 18.9](current-backlog.md)) | ~~5~~ |
 | Toolbars — docking surfaces (M3 2024 page distinct from Top App Bar) | [toolbars](https://m3.material.io/components/toolbars/overview) | ✅ shipped — `ToolBar` audit complete (coexists with `TopAppBar` via Option A) | ~~5~~ |
 | Navigation bar — bottom tab bar | [navigation-bar](https://m3.material.io/components/navigation-bar/overview) | ✅ shipped — `NavigationBar` + `NavigationItem` | ~~6~~ |
 | Navigation rail — desktop side rail | [navigation-rail](https://m3.material.io/components/navigation-rail/overview) | ✅ shipped — `NavigationRail`; platform shell migrated | ~~6~~ |
@@ -560,8 +560,8 @@ deferred (no concrete demo demand today).
 ### ~~Catalogue totals~~ ✅ POST-SHIPPING
 
 - **36 M3 components** total, across 5 thematic groups.
-- ✅ **31 currently shipping in µ-mural**: Buttons (5 variants) + IconButton (4 chromes) + SegmentedButton + ButtonGroup + SplitButton + FAB + ExtendedFAB + FabMenu + Cards (3 variants) + Dialogs + BottomSheet + TopAppBar + Toolbars + NavigationBar + NavigationRail + Drawer + Tabs + Search + TextField (Filled+Outlined) + Switch + Checkbox + RadioButton + Chips (4 variants) + Sliders + Lists + Menus + Tooltips + Snackbar + ProgressIndicator (Linear+Circular) + Badges + Divider.
-- **5 still deferred** (each gated on a concrete demo — see [backlog § 18.9](current-backlog.md)): Carousel, Side sheets, Loading indicator, DatePicker, TimePicker, Bottom app bar.
+- ✅ **32 currently shipping in µ-mural**: Buttons (5 variants) + IconButton (4 chromes) + SegmentedButton + ButtonGroup + SplitButton + FAB + ExtendedFAB + FabMenu + Cards (3 variants) + Dialogs + BottomSheet + TopAppBar + BottomAppBar + Toolbars + NavigationBar + NavigationRail + Drawer + Tabs + Search + TextField (Filled+Outlined) + Switch + Checkbox + RadioButton + Chips (4 variants) + Sliders + Lists + Menus + Tooltips + Snackbar + ProgressIndicator (Linear+Circular) + Badges + Divider.
+- **5 still deferred** (build sequenced smallest-first — see [backlog § 18.9](current-backlog.md)): Loading indicator, Side sheets, DatePicker, TimePicker, Carousel. (~~Bottom app bar~~ ✅ shipped.)
 
 > Counted as "shipped": 31 of 36 M3 components ship as live controls today; 5 remain plan-explicit deferrals.
 
