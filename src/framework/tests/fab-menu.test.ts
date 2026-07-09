@@ -1,13 +1,28 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from '../../basic/tests/test-app.js';
-import { ObservableCollection, type Visual } from '../../runtime/index.js';
+import { AnimationManager, ManualClock, ObservableCollection, type Visual } from '../../runtime/index.js';
 import { Border } from '../../basic/border.js';
 import { Canvas } from '../../basic/panels/canvas.js';
 import { ClickAwayScrim } from '../../basic/click-away-scrim.js';
 import { TextBlock } from '../../basic/text-block.js';
 import { HeadlessTarget } from '../../visual-engine/index.js';
 import { FabMenu } from '../buttons/fab-menu.js';
+
+// Advance the process-global animation clock (a ManualClock by default in
+// tests) so a Storyboard reaches completion deterministically — the §18.4
+// replacement for waiting on wall-clock setTimeout.
+function advanceAnimations(ms: number): void
+{
+    (AnimationManager.Instance.Clock as ManualClock).Tick(ms);
+}
+// Flush the microtask that Storyboard.AwaitCompleted().then(detach) queues
+// on completion. setImmediate runs after all pending microtasks, so the
+// detach has executed by the time this resolves.
+function flushMicrotasks(): Promise<void>
+{
+    return new Promise<void>(resolve => setImmediate(resolve));
+}
 
 // Reach the single positioning host the FAB attaches to the OverlayLayer,
 // then its [scrim, menu] children.
@@ -112,11 +127,14 @@ describe('FabMenu open/close lifecycle', () => {
         target.Content = fm;
         target.Flush();
 
-        // open → close → wait for teardown → open again must NOT throw
-        // (AttachVisual rejects a still-parented child).
+        // open → close → advance the clock past the close storyboard →
+        // teardown runs → open again must NOT throw (AttachVisual rejects
+        // a still-parented child). Close totals 100ms (1 item, no stagger
+        // tail); tick well past it.
         fm.IsOpen = true;
         fm.IsOpen = false;
-        await new Promise<void>(r => setTimeout(r, 300));
+        advanceAnimations(500);
+        await flushMicrotasks();
         assert.doesNotThrow(() => { fm.IsOpen = true; });
         const host = overlayHost(target);
         assert.equal(host.Children.Count, 2, 'menu re-mounted on reopen');
@@ -175,12 +193,17 @@ describe('FabMenu open/close lifecycle', () => {
         target.Flush();
 
         fm.IsOpen = true;
-        await new Promise<void>(r => setTimeout(r, 300));
         fm.IsOpen = false;
-        await new Promise<void>(r => setTimeout(r, 300));
+        // Overlay is still mounted until the close storyboard completes.
+        const midChildren = (target.OverlayRoot as unknown as { Children?: { Count: number } } | undefined)
+            ?.Children?.Count ?? 0;
+        assert.equal(midChildren, 1, 'chrome persists while the close tween runs');
+
+        advanceAnimations(500);       // past the 100ms close storyboard
+        await flushMicrotasks();      // let the AwaitCompleted→detach chain run
         const afterChildren = (target.OverlayRoot as unknown as { Children?: { Count: number } } | undefined)
             ?.Children?.Count ?? 0;
-        assert.equal(afterChildren, 0, 'scrim + menu host both detached');
+        assert.equal(afterChildren, 0, 'scrim + menu host both detached on completion');
     });
 });
 

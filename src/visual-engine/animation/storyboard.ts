@@ -199,6 +199,30 @@ export class Storyboard
         this._completedListeners.delete(callback);
     }
 
+    /** Promise that resolves the next time this storyboard completes —
+     *  the clock-source-agnostic counterpart to AddCompletedListener
+     *  (§18.4). Under a browser RafClock it settles on the frame the
+     *  storyboard ends; under the default ManualClock it settles when a
+     *  test advances the clock past the storyboard's duration. Resolves
+     *  immediately when the storyboard isn't currently Running (already
+     *  Stopped / Filling, or never Begun), so an `await` never hangs on
+     *  a finished animation. Lets callers chain teardown off the
+     *  storyboard (`await sb.AwaitCompleted(); detach()`) instead of a
+     *  wall-clock `setTimeout`. */
+    public AwaitCompleted(): Promise<void>
+    {
+        if (this._state !== StoryboardState.Running) return Promise.resolve();
+        return new Promise<void>(resolve =>
+        {
+            const listener = (): void =>
+            {
+                this.RemoveCompletedListener(listener);
+                resolve();
+            };
+            this.AddCompletedListener(listener);
+        });
+    }
+
     /** Called by AnimationManager every clock tick. Public so a host
      *  can also drive a Storyboard in isolation from outside the manager
      *  (tests, headless renders). `now` is the clock's absolute time;

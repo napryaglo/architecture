@@ -104,6 +104,10 @@ export class FabMenu extends FloatingActionButton
     private _host:        FabMenuHost | undefined;
     private _mounted = false;
     private _openStoryboard:  Storyboard | undefined;
+    // The in-flight close Storyboard. Its completion drives the chrome
+    // detach; tracked so a rapid close→open→close only lets the LATEST
+    // close tear down (a stale close's completion is ignored).
+    private _closeStoryboard: Storyboard | undefined;
     // Persistent TextBlock holding the FAB icon glyph + its
     // RotateTransform. Held across IsOpen toggles so the rotation
     // storyboard targets a stable instance (recreating it every flip
@@ -235,6 +239,7 @@ export class FabMenu extends FloatingActionButton
         // Closing Storyboard — fade each item out, top-first so the
         // menu collapses toward the FAB.
         const sb = new Storyboard();
+        let animated = 0;
         if (items !== undefined)
         {
             for (let i = 0; i < n; i++)
@@ -244,21 +249,33 @@ export class FabMenu extends FloatingActionButton
                 sb.Add(v, 'Opacity', new DoubleAnimation({
                     From: 1, To: 0, Duration: duration, BeginTime: i * stagger,
                 }));
+                animated++;
             }
         }
+        // Nothing to fade (empty menu) → the storyboard would never reach
+        // a completion tick; tear the chrome down straight away.
+        if (animated === 0)
+        {
+            this.detachMenuChrome();
+            return;
+        }
         sb.Begin();
-        // Schedule the unmount via setTimeout. The Storyboard's
-        // AddCompletedListener would be the WPF-canonical signal, but
-        // the AnimationManager driver in Node tests doesn't reliably
-        // fire it at the expected wall-clock moment; setTimeout off
-        // the same DurationMs gives a deterministic detach in both
-        // browser and headless contexts.
-        const totalMs = duration + (n - 1) * stagger;
-        setTimeout(() => this.detachMenuChrome(), totalMs);
+        this._closeStoryboard = sb;
+        // Chain the unmount off the close storyboard's completion (§18.4)
+        // rather than a wall-clock setTimeout. AwaitCompleted settles on
+        // the animation clock — a browser RafClock frame, or a test's
+        // ManualClock advance — so the detach is deterministic in both
+        // contexts. The identity guard drops a stale close's completion
+        // if the menu was reopened (or re-closed) in the meantime.
+        void sb.AwaitCompleted().then(() =>
+        {
+            if (this._closeStoryboard === sb) this.detachMenuChrome();
+        });
     }
 
     private detachMenuChrome(): void
     {
+        this._closeStoryboard = undefined;
         // Release the consumer's item Visuals from the menu stack first.
         // They're re-added to a FRESH stack on the next open, and
         // AttachVisual throws on a child that still has a visual parent —

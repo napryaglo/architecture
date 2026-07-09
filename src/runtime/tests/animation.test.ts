@@ -366,6 +366,38 @@ describe('Storyboard — single-target', () => {
         );
         sb.Stop();
     });
+
+    // §18.4 — AwaitCompleted: a clock-source-agnostic Promise so callers
+    // can chain teardown off a storyboard instead of a wall-clock timer.
+    test('AwaitCompleted resolves when the clock advances past the storyboard', async () => {
+        const clock = freshClock();
+        const v = new AnimTest();
+        const sb = new Storyboard();
+        sb.Add(v, 'Number', new DoubleAnimation({ To: 50, Duration: 100 }));
+        sb.Begin();
+
+        let resolved = false;
+        const p = sb.AwaitCompleted().then(() => { resolved = true; });
+
+        // Before the storyboard ends, the promise is still pending.
+        clock.Tick(50);
+        await Promise.resolve();
+        assert.equal(resolved, false, 'pending while the storyboard is mid-flight');
+
+        // Advancing past the duration completes it and settles the promise.
+        clock.Tick(100);
+        await p;
+        assert.equal(resolved, true, 'resolves once the storyboard completes');
+    });
+
+    test('AwaitCompleted on a non-running storyboard resolves immediately', async () => {
+        const v = new AnimTest();
+        const sb = new Storyboard();
+        sb.Add(v, 'Number', new DoubleAnimation({ To: 1, Duration: 100 }));
+        // Never Begun → not Running → resolves without any clock advance.
+        await sb.AwaitCompleted();
+        assert.ok(true, 'awaiting an un-begun storyboard does not hang');
+    });
 });
 
 describe('Storyboard — multi-target', () => {
