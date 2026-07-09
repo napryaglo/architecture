@@ -30,6 +30,11 @@ theme Material {
         @OnPrimary : Brush "Text / icon over Primary"
         @PrimaryContainer : Brush
         @OnPrimaryContainer : Brush
+        // KEEP (§18.7 audit) — pre-composed state-layer brushes, not raw M3
+        // tokens. Consumed by the Slider template (hover/focus/drag) which
+        // predates the @<Role>HoverLayer / @<Role>PressLayer overlay infra.
+        // Retained until the Slider migrates to the overlay pattern; prefer
+        // @PrimaryHoverLayer / @PrimaryPressLayer in new code.
         @PrimaryHover : Brush "Primary at hover state-layer"
         @PrimaryPress : Brush "Primary at pressed state-layer"
         @Secondary : Brush
@@ -185,6 +190,11 @@ theme Material {
         @LabelSmallSize : number "Label Small — 11dp"
         @LabelSmallLineHeight : number "Label Small — 16dp"
         @LabelSmallTracking : number "Label Small — 0.5 letter-spacing"
+        // KEEP (§18.7 audit) — non-M3 framework extension (not in the M3
+        // spec). Drives the Explorer-style marquee-selection adorner via
+        // marquee-selection-behavior.ts (dynamic TryFindResource lookup, so
+        // theme swaps re-paint live; a code-side fallback covers theme-less
+        // hosts). Intentional first-class token, not pre-M3 cruft.
         @MarqueeFill : Brush "Marquee-selection rectangle fill"
         @MarqueeStroke : Brush "Marquee-selection rectangle stroke"
         @ElevationLevel0 : Effect "M3 elevation level 0 — flat (no shadow)"
@@ -193,6 +203,12 @@ theme Material {
         @ElevationLevel3 : Effect "M3 elevation level 3 — FAB, app bars"
         @ElevationLevel4 : Effect "M3 elevation level 4 — navigation drawers"
         @ElevationLevel5 : Effect "M3 elevation level 5 — dialogs, modal sheets"
+        // KEEP (§18.7 audit) — legacy naming aliases for @ElevationLevel1-5,
+        // still referenced by 20+ call sites across framework templates
+        // (@Elevation2 dominates: formatting, menu, ribbon, list, tooltips).
+        // Migrating every site to @ElevationLevel* is a mechanical follow-up;
+        // until then these keep one-milestone back-compat. Prefer
+        // @ElevationLevel* in new code.
         @Elevation1 : Effect "Alias for @ElevationLevel1 (legacy)"
         @Elevation2 : Effect "Alias for @ElevationLevel2 (legacy)"
         @Elevation3 : Effect "Alias for @ElevationLevel3 (legacy)"
