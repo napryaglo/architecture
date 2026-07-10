@@ -50,7 +50,7 @@ export interface IPortHost
 
 // Shorthand for the typed init-object constructor — keeps the
 // authoring syntax in § 3.1 of
-// [src/document/connectors.md](../../document/connectors.md) literal:
+// [docs/connectors.md](../../../docs/connectors.md) literal:
 //     new Port({ Side: PortSide.S, X: 0.25 })
 export interface PortInit
 {
@@ -64,7 +64,7 @@ export interface PortInit
 
 // A single port on a host. Lives on the Figure as part of a Ports
 // collection. § 3.1 of
-// [src/document/connectors.md](../../document/connectors.md) covers
+// [docs/connectors.md](../../../docs/connectors.md) covers
 // the two addressing schemes (Name + (Side, Index)) and the construction
 // ergonomics.
 //
@@ -221,7 +221,7 @@ function deriveSideBbox(port: Port): ResolvedPortSide
 }
 
 // Auto-side derivation for outline-mode ports per § 3.8 of
-// [src/document/connectors.md](../../document/connectors.md): "compute
+// [docs/connectors.md](../../../docs/connectors.md): "compute
 // the outward normal at OutlineT (perpendicular to the outline tangent,
 // pointing away from centroid) and quantize to the dominant axis".
 //

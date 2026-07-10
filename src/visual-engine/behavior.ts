@@ -26,7 +26,7 @@ import type { Visual } from './visual.js';
 // behavior and calls OnAttached so the wired-up sequence ALWAYS sees a
 // behavior whose DPs are already populated.
 //
-// Version scope (see src/document/behaviors.md § 0 for the full table):
+// Version scope (see docs/behaviors.md § 0 for the full table):
 //   * Behaviors v1 — Behavior base + OnAttached + Visual.AddBehavior
 //     + markup `Behaviors { … }` block.
 //   * Behaviors v2 (this implementation extends v1) — OnDetached(visual)

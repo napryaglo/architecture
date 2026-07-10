@@ -50,7 +50,7 @@ import { registryFor } from './shared-size-group.js';
 //   sum of preceding row heights) and sized to (sum of spanned widths,
 //   sum of spanned heights).
 //
-// Version scope (see src/document/grid.md § 0 for the full table):
+// Version scope (see docs/grid.md § 0 for the full table):
 //   * Grid v1 — pixel / auto / star tracks, Row/ColumnSpan, four-pass
 //     measure, prefix-sum arrange, empty-definitions fallback to a
 //     single 1* track.

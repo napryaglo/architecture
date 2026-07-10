@@ -2,7 +2,7 @@
 
 Practical guide for writing Themes, Schemes, and the registration glue
 that ties them into the runtime. Companion to the architectural design
-in [`../../theme-architecture.md`](../../theme-architecture.md) — read
+in [`../../theme-architecture.md`](theme-architecture.md) — read
 that first for the *why*; read this for the *how*.
 
 **See also:**

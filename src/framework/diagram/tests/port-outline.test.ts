@@ -1,4 +1,4 @@
-// Step 5 / § 9 of [src/document/connectors.md](../../../document/connectors.md):
+// Step 5 / § 9 of [docs/connectors.md](../../../../docs/connectors.md):
 // pins the PortResolver's outline-mode resolution + flatten cache.
 // Test fixtures: (a) unit square — 4 LineSegments, analytic positions
 // and sides per quadrant; (b) circle — 4 cubics with the 4/3·(√2-1)

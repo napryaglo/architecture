@@ -8,7 +8,7 @@ import { Canvas } from '../../basic/panels/canvas.js';
 // Adorners (selection rings, edit handles, drag-create ghost, port-
 // discovery overlays) ride on the framework's existing AdornerLayer
 // overlay — see § 3.7 of
-// [src/document/connectors.md](../../document/connectors.md).
+// [docs/connectors.md](../../../docs/connectors.md).
 export enum DiagramLayer
 {
     Connectors = 'Connectors',

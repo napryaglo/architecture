@@ -203,7 +203,7 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     // the built-in default = `new Connector()`), parenting each into
     // the DiagramLayersPanel's connectors layer when the ItemsPanel
     // is layered. See § 3.5 of
-    // [src/document/connectors.md](../../document/connectors.md).
+    // [docs/connectors.md](../../../docs/connectors.md).
     public static readonly ConnectorsKey = Model.RegisterProperty<ObservableCollection<Model> | undefined>(
         Diagram, 'Connectors', undefined, MetaData.None);
     public static readonly ConnectorTemplateKey = Model.RegisterProperty<DataTemplate | undefined>(
@@ -556,7 +556,7 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     public _getConnectorsMaterializerForTesting(): DiagramConnectorsMaterializer { return this._connectorsMaterializer; }
 
     // Connector-selection track (§ 12 of
-    // [src/document/connectors.md](../../document/connectors.md), per
+    // [docs/connectors.md](../../../docs/connectors.md), per
     // the § 7.3 recommendation). Kept separate from the inherited
     // Selector._selectedContainers (which holds Figure containers) so
     // SelectedItem / SelectedItems stay typed as the ItemsSource

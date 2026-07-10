@@ -137,7 +137,7 @@ export class Figure extends ContentControl
     // need a non-default topology for a specific instance (a
     // workflow-style node on a generic rectangle, etc.). Leaving it
     // undefined falls through to resolveDefaultPortProvider() per § 3.8
-    // of [src/document/connectors.md](../../document/connectors.md).
+    // of [docs/connectors.md](../../../docs/connectors.md).
     public static readonly PortProviderKey = Model.RegisterProperty<IPortProvider | undefined>(
         Figure, 'PortProvider', undefined, MetaData.None);
 
@@ -395,7 +395,7 @@ export class Figure extends ContentControl
     // Unified port read surface — explicit list wins; otherwise
     // delegate to the per-Figure provider; otherwise the framework's
     // kind→provider default. § 7.13 of
-    // [src/document/connectors.md](../../document/connectors.md) tracks
+    // [docs/connectors.md](../../../docs/connectors.md) tracks
     // the open question on lifting "either-or" to a concat-with-name-collision
     // strategy; v1 ships with the simple precedence below.
     public get Ports(): readonly Port[]

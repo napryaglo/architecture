@@ -1,4 +1,4 @@
-// Step 7 / § 9 of [src/document/connectors.md](../../../document/connectors.md):
+// Step 7 / § 9 of [docs/connectors.md](../../../../docs/connectors.md):
 // pins shortenPolyline math + the CapInset attached property + the
 // Connector's cap-instantiation / inset-shortening / rotation pipeline.
 

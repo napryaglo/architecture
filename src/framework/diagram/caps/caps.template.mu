@@ -1,6 +1,6 @@
 // Default connector cap catalog — the five built-in arrow / circle /
 // diamond end-caps from § 3.6 of
-// [src/document/connectors.md](../../../document/connectors.md).
+// [docs/connectors.md](../../../../docs/connectors.md).
 //
 // Each cap is a DataTemplate keyed for `@…Cap` reference, rendering a
 // single `Path` whose geometry is authored in CAP-LOCAL coordinates with

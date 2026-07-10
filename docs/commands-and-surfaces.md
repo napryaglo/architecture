@@ -14,7 +14,7 @@ shipped — `ICommandSource` contract, `CommandTarget`, `RoutedCommand` +
 four named-command libraries (`ApplicationCommands` / `EditingCommands`
 / `NavigationCommands` / `MediaCommands`), and
 `CommandManager.RequerySuggested` all live now (see
-[completed-backlog.md](../../completed-backlog.md) §5.9). What's still
+[completed-backlog.md](../completed-backlog.md) §5.9). What's still
 pending is the **surface** controls (5.11) — ToolBar / Menu / Ribbon
 plus the `commands` demo that exercises them.
 
@@ -63,7 +63,7 @@ command-metadata layer.
 
 ## 2. `ICommand` (shipping)
 
-The existing primitive in [runtime/command.ts](../runtime/command.ts).
+The existing primitive in [runtime/command.ts](../src/runtime/command.ts).
 
 ```ts
 interface ICommand
@@ -91,7 +91,7 @@ A contract every command invoker implements. Three DPs:
 | `CommandTarget` | `Visual \| undefined` | `undefined` | RoutedCommand-only override of the routing dispatch target. Plain `ICommand` ignores this DP. When unset, RoutedCommand dispatches from the source Visual itself. |
 
 `Button` implements `ICommandSource` today through `CommandSourceHelper`
-([src/runtime/command-source.ts](../runtime/command-source.ts)). Each
+([src/runtime/command-source.ts](../src/runtime/command-source.ts)). Each
 command-source control registers its own `Command` /
 `CommandParameter` / `CommandTarget` DPs and forwards
 `OnPropertyChanged` writes to a `CommandSourceHelper` instance that

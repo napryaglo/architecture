@@ -261,7 +261,7 @@ Roughly **120–150 lines** of production code. Existing 103 tests should keep p
 
 ## 8. Open questions deferred for later (not blocking)
 
-Tracked in [current-backlog.md § 15](../../current-backlog.md):
+Tracked in [current-backlog.md § 15](../current-backlog.md):
 - **`targetType` validation on attached properties** — § 15.1.
 - **Bulk cross-class inheritance enumeration** — § 15.2.
 - **`RemoveValue` vs `ClearValue`** — § 15.3.

@@ -56,7 +56,7 @@ export interface ResolvedAnchor
 //
 // Coordinates are all in diagram-host space (the canvas the router's
 // output PathGeometry will paint into); see § 5 of
-// [src/document/connectors.md](../../../document/connectors.md) for
+// [docs/connectors.md](../../../../docs/connectors.md) for
 // the coordinate-space contract.
 export interface RouteSpec
 {
@@ -96,7 +96,7 @@ export interface IRouter
 //
 // `resolve()` throws on miss with the known names listed so consumers
 // can tell a typo from a missing registration. See § 7.10 of
-// [src/document/connectors.md](../../../document/connectors.md) on
+// [docs/connectors.md](../../../../docs/connectors.md) on
 // test-isolation teardown.
 export class RouterRegistry
 {

@@ -1,4 +1,4 @@
-// Step 1 / § 9 of [src/document/connectors.md](../../../document/connectors.md):
+// Step 1 / § 9 of [docs/connectors.md](../../../../docs/connectors.md):
 // pins the StraightRouter's compute() + tangentAt() behavior. Pure
 // geometry — no Connector, no Diagram, no Visual wiring yet.
 

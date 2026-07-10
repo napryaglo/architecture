@@ -12,7 +12,7 @@ import type { Connector } from '../connector.js';
 // as part of the removal.
 //
 // `Connectors` is the parallel snapshot from Diagram.SelectedConnectors
-// (see § 12 of [src/document/connectors.md](../../../document/connectors.md)
+// (see § 12 of [docs/connectors.md](../../../../docs/connectors.md)
 // and the § 7.3 recommendation for a two-channel selection API). When
 // a Delete fires with only connectors selected, `Items` is empty and
 // `Connectors` carries the snapshot; mixed-kind selections deliver

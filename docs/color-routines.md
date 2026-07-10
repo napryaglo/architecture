@@ -126,7 +126,7 @@ time (`compileModifiedValue` in `src/compiler/compiler.ts`):
 ```
 
 This matters for non-color converters like
-[`GlyphGeometryConverter`](../basic/converters/glyph-geometry-converter.ts): you
+[`GlyphGeometryConverter`](../src/basic/converters/glyph-geometry-converter.ts): you
 can't pipe a constant string straight into one. To run a converter over a fixed
 value, give it a reactive base instead:
 

@@ -1,4 +1,4 @@
-// Step 4 / § 9 of [src/document/connectors.md](../../../document/connectors.md):
+// Step 4 / § 9 of [docs/connectors.md](../../../../docs/connectors.md):
 // pins the Port class defaults + init-object construction + PortResolver
 // behavior in bbox mode. Outline mode lands in step 5.
 

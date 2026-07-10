@@ -10,7 +10,7 @@ standard three-mode WPF resolver, simplified to a four-pass
 measure/arrange.
 
 **Implemented in:**
-- [basic/panels/grid.ts](../basic/panels/grid.ts) — `Grid`, `GridLength`,
+- [basic/panels/grid.ts](../src/basic/panels/grid.ts) — `Grid`, `GridLength`,
   `ColumnDefinition`, `RowDefinition`, `GridUnitType`
 
 See also: [layout.md](layout.md) for the underlying measure / arrange
@@ -348,7 +348,7 @@ that Grid resolve to the final group max.
 
 ## 8. Grid v3 — debug overlay + over-request resilience
 
-Both items shipped as of Grid v3 (extends Grid v2.2). See [completed-backlog.md § 14](../../completed-backlog.md) for the full closure record.
+Both items shipped as of Grid v3 (extends Grid v2.2). See [completed-backlog.md § 14](../completed-backlog.md) for the full closure record.
 
 - **`ShowGridLines`** (§ 14.1) — Boolean DP, default `false`. When `true`, `RenderOverride` paints dashed lines along every internal column AND row boundary. Outer boundaries are not drawn (the surrounding container already implies them). Companion `GridLinesBrush: SolidColorBrush | undefined` overrides the default 50%-opaque grey stroke. No-op for single-track grids.
 

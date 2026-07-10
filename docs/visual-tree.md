@@ -9,7 +9,7 @@ a back-pointer to the host, and participates in the layout / render
 lifecycle.
 
 **Implemented in:**
-- [runtime/visual.ts](../runtime/visual.ts) — `Visual`, `Single`, `Panel`,
+- [runtime/visual.ts](../src/runtime/visual.ts) — `Visual`, `Single`, `Panel`,
   `VisualHost`, `HorizontalAlignment`, `VerticalAlignment`
 
 See also: [layout.md](layout.md) for the Measure / Arrange / Render
@@ -310,7 +310,7 @@ public get templatedParent(): Visual | undefined
 public SetTemplatedParent(p: Visual | undefined): void
 ```
 
-Set by the template-apply pipeline ([basic/templates/control-template.ts](../basic/templates/control-template.ts))
+Set by the template-apply pipeline ([basic/templates/control-template.ts](../src/basic/templates/control-template.ts))
 on every node in a `ControlTemplate`'s generated subtree. Distinct
 from both parents — visual / logical ancestry walks past it; this is
 a single-hop back-pointer to "the control whose template generated

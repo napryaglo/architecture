@@ -57,7 +57,7 @@ type DragState =
       };
 
 // State machine for edit-mode connector gestures per § 4.2 + § 4.3 of
-// [src/document/connectors.md](../../../document/connectors.md).
+// [docs/connectors.md](../../../../docs/connectors.md).
 // Visual rendering of the handles (endpoint dots + waypoint dots +
 // mid-segment ghosts) lives in a follow-up; the state machine here is
 // what the visual layer's pointer handlers call into.

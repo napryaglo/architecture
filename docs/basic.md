@@ -7,29 +7,29 @@ templating primitives that knit them together (`ControlTemplate`,
 `ContentPresenter`, `ItemsPresenter`, `DataTemplate`).
 
 **Implemented in:**
-- [basic/border.ts](../basic/border.ts) — `Border`
-- [basic/text-block.ts](../basic/text-block.ts) — `TextBlock`
-- [basic/panels/canvas.ts](../basic/panels/canvas.ts) — `Canvas` + `Left` /
+- [basic/border.ts](../src/basic/border.ts) — `Border`
+- [basic/text-block.ts](../src/basic/text-block.ts) — `TextBlock`
+- [basic/panels/canvas.ts](../src/basic/panels/canvas.ts) — `Canvas` + `Left` /
   `Top` attached properties
-- [basic/content-control.ts](../basic/content-control.ts) —
+- [basic/content-control.ts](../src/basic/content-control.ts) —
   `ContentControl`
-- [basic/templates/content-presenter.ts](../basic/templates/content-presenter.ts) —
+- [basic/templates/content-presenter.ts](../src/basic/templates/content-presenter.ts) —
   `ContentPresenter`
-- [basic/templates/control-template.ts](../basic/templates/control-template.ts) —
+- [basic/templates/control-template.ts](../src/basic/templates/control-template.ts) —
   `ControlTemplate`, `TemplateBinding`
-- [basic/templates/data-template.ts](../basic/templates/data-template.ts) —
+- [basic/templates/data-template.ts](../src/basic/templates/data-template.ts) —
   `DataTemplate`
-- [basic/items-control.ts](../basic/items-control.ts) —
+- [basic/items-control.ts](../src/basic/items-control.ts) —
   `ItemsControl`
-- [basic/templates/items-presenter.ts](../basic/templates/items-presenter.ts) —
+- [basic/templates/items-presenter.ts](../src/basic/templates/items-presenter.ts) —
   `ItemsPresenter`
-- [basic/collections/item-container-generator.ts](../basic/collections/item-container-generator.ts) —
+- [basic/collections/item-container-generator.ts](../src/basic/collections/item-container-generator.ts) —
   `ItemContainerGenerator`
-- [basic/panels/virtualisation/virtualizing-panel.ts](../basic/panels/virtualisation/virtualizing-panel.ts) —
+- [basic/panels/virtualisation/virtualizing-panel.ts](../src/basic/panels/virtualisation/virtualizing-panel.ts) —
   `VirtualizingPanel` (abstract)
-- [basic/panels/virtualisation/virtualizing-stack-panel.ts](../basic/panels/virtualisation/virtualizing-stack-panel.ts) —
+- [basic/panels/virtualisation/virtualizing-stack-panel.ts](../src/basic/panels/virtualisation/virtualizing-stack-panel.ts) —
   `VirtualizingStackPanel`
-- [basic/scroll-viewer.ts](../basic/scroll-viewer.ts) —
+- [basic/scroll-viewer.ts](../src/basic/scroll-viewer.ts) —
   `ScrollViewer`
 
 See [layout.md](layout.md) for the underlying `Visual` properties every
@@ -101,7 +101,7 @@ b.BorderThickness = new Thickness(2);
 
 ### Limitations
 
-Tracked in [current-backlog.md § 13](../../current-backlog.md):
+Tracked in [current-backlog.md § 13](../current-backlog.md):
 - **Non-uniform `BorderThickness`** rendered as uniform via `.Top` — § 13.1.
 - **`CornerRadius`** not yet honored by the drawing context — § 13.2.
 
@@ -308,7 +308,7 @@ card.Padding         = new Thickness(16);
 
 ### Limitations
 
-Tracked in [current-backlog.md § 13](../../current-backlog.md):
+Tracked in [current-backlog.md § 13](../current-backlog.md):
 - **Single line only** (no `TextWrapping`) — § 13.3.
 - **No `TextAlignment`** within the block — § 13.4.
 - **No selection or caret** — pure display today; use `TextBox` for
@@ -318,17 +318,17 @@ Tracked in [current-backlog.md § 13](../../current-backlog.md):
 
 ## Combining controls — the demos
 
-The three demo scripts under [basic/tests/](../basic/tests/) show
+The three demo scripts under [basic/tests/](../src/basic/tests/) show
 the controls in action:
 
-- **[border-render.ts](../basic/tests/border-render.ts)** (`npm run demo:border`) —
+- **[border-render.ts](../src/basic/tests/border-render.ts)** (`npm run demo:border`) —
   100×100 Border with blue background, 3px black stroke, centered in a 300×300 target.
 
-- **[text-render.ts](../basic/tests/text-render.ts)** (`npm run demo:text`) —
+- **[text-render.ts](../src/basic/tests/text-render.ts)** (`npm run demo:text`) —
   Bold "Hello, Mural!" TextBlock inside a styled Border, with approximate
   text metrics.
 
-- **[google-font-render.ts](../basic/tests/google-font-render.ts)** (`npm run demo:gfont`) —
+- **[google-font-render.ts](../src/basic/tests/google-font-render.ts)** (`npm run demo:gfont`) —
   Same scene as text-render.ts but with Inter fetched live from Google Fonts
   and a `FontMetricsMeasurer` installed, so the text width and baseline are
   the real Inter metrics.
@@ -430,7 +430,7 @@ Shipped since this list was first written: `Ellipse`, `Line`,
 `Button`, `ScrollBar`, `TextBox`, `ComboBox`, `ListBox`, `TreeView`,
 `Slider`, `SpinEdit`, `Drawer`, `PageView`, `Diagram`.
 
-Still on the [backlog](../../current-backlog.md):
+Still on the [backlog](../current-backlog.md):
 - **`Rectangle`** shape primitive — § 13.5.
 - **`Image`** control wrapping `ImageBrush` — § 13.6.
 

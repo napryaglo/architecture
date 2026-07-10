@@ -5,13 +5,13 @@ brushes (fills), pens (strokes), geometry (shapes), transforms, and the
 geometric primitives they all use.
 
 **Implemented in:**
-- [runtime/drawing-context.ts](../runtime/drawing-context.ts) — `DrawingContext` interface (marker)
-- [runtime/primitives.ts](../runtime/primitives.ts) — `Point`, `Size`, `Rect`, `Color`, `Matrix`, `Thickness`
-- [visual-engine/drawing-context.ts](../visual-engine/drawing-context.ts) — augments DrawingContext with method signatures
-- [visual-engine/brush.ts](../visual-engine/brush.ts) — `Brush` hierarchy
-- [visual-engine/pen.ts](../visual-engine/pen.ts) — `Pen`, `DashStyle`, `LineCap`, `LineJoin`
-- [visual-engine/geometry.ts](../visual-engine/geometry.ts) — `Geometry` hierarchy + `PathSegment`s
-- [visual-engine/transform.ts](../visual-engine/transform.ts) — `Transform`, `TranslateTransform`, `MatrixTransform`
+- [runtime/drawing-context.ts](../src/runtime/drawing-context.ts) — `DrawingContext` interface (marker)
+- [runtime/primitives.ts](../src/runtime/primitives.ts) — `Point`, `Size`, `Rect`, `Color`, `Matrix`, `Thickness`
+- [visual-engine/drawing-context.ts](../src/visual-engine/drawing-context.ts) — augments DrawingContext with method signatures
+- [visual-engine/brush.ts](../src/visual-engine/brush.ts) — `Brush` hierarchy
+- [visual-engine/pen.ts](../src/visual-engine/pen.ts) — `Pen`, `DashStyle`, `LineCap`, `LineJoin`
+- [visual-engine/geometry.ts](../src/visual-engine/geometry.ts) — `Geometry` hierarchy + `PathSegment`s
+- [visual-engine/transform.ts](../src/visual-engine/transform.ts) — `Transform`, `TranslateTransform`, `MatrixTransform`
 
 See also: [targets.md](targets.md) for the concrete `SvgDrawingContext` that
 turns these calls into SVG, [layout.md](layout.md) for when `RenderOverride`
@@ -19,7 +19,7 @@ is invoked.
 
 ## 1. Geometric primitives
 
-Six immutable value types live in [runtime/primitives.ts](../runtime/primitives.ts).
+Six immutable value types live in [runtime/primitives.ts](../src/runtime/primitives.ts).
 All have `readonly` fields and structural equality via `Equals()`. Construct
 new instances rather than mutating; pass them by reference freely.
 
@@ -103,10 +103,10 @@ t.Horizontal / t.Vertical / t.IsZero
 
 What `Visual.RenderOverride` paints into. The interface lives in two parts:
 
-- An empty marker interface in [runtime/drawing-context.ts](../runtime/drawing-context.ts)
+- An empty marker interface in [runtime/drawing-context.ts](../src/runtime/drawing-context.ts)
   so `Visual.Render` can reference the type without runtime importing
   visual-engine.
-- The actual method declarations in [visual-engine/drawing-context.ts](../visual-engine/drawing-context.ts),
+- The actual method declarations in [visual-engine/drawing-context.ts](../src/visual-engine/drawing-context.ts),
   added via TypeScript declaration merging.
 
 The merged surface:
@@ -433,7 +433,7 @@ border.Background = new SolidColorBrush(Color.Blue);
 ```
 
 The full sub-Model-listener story is documented as a deferred design
-question in [../../visual-engine-design.md](../../visual-engine-design.md).
+question in [../../visual-engine-design.md](visual-engine-design.md).
 
 ## 9. What's not yet implemented
 

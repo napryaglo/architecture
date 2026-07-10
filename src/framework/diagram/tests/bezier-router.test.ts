@@ -1,4 +1,4 @@
-// Step 3 / § 9 of [src/document/connectors.md](../../../document/connectors.md):
+// Step 3 / § 9 of [docs/connectors.md](../../../../docs/connectors.md):
 // pins the BezierRouter's compute() control-point math + tangentAt()
 // across the 4×4 side combinations and waypoint-spline cases.
 

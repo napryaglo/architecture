@@ -5,7 +5,7 @@ the part of `Visual` that builds custom controls: the three-phase lifecycle
 (Measure / Arrange / Render), the sizing properties, alignment, and margin.
 
 **Implemented in:**
-- [runtime/visual.ts](../runtime/visual.ts) — the Measure / Arrange / Render entry points + the alignment / margin / sizing properties
+- [runtime/visual.ts](../src/runtime/visual.ts) — the Measure / Arrange / Render entry points + the alignment / margin / sizing properties
 
 See also: [visual-tree.md](visual-tree.md) for tree structure,
 [drawing.md](drawing.md) for what `RenderOverride` actually draws,

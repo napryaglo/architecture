@@ -7,24 +7,24 @@ control templates, a themed default-style tier, and an adaptive theme
 engine.
 
 **Implemented in:**
-- [runtime/style.ts](../runtime/style.ts) — `Style`, `Setter`,
+- [runtime/style.ts](../src/runtime/style.ts) — `Style`, `Setter`,
   `SetterFactory`, the five trigger kinds (`PropertyTrigger`,
   `MultiTrigger`, `DataTrigger`, `MultiDataTrigger`, plus `EventTrigger`),
   and `CompositeStyle` / `Style.Combine` (multi-style composition).
-- [visual-engine/element.ts](../visual-engine/element.ts) —
+- [visual-engine/element.ts](../src/visual-engine/element.ts) —
   `Element.Style`, the three-source resolution (`refresh_active_style`),
   `DefaultStyleKey`, implicit / theme lookup with reactive subscription,
   `applyDefaultStyle()`.
-- [visual-engine/style-applicator.ts](../visual-engine/style-applicator.ts)
+- [visual-engine/style-applicator.ts](../src/visual-engine/style-applicator.ts)
   — the per-Element `StyleApplicator`: diff-swap of setters + triggers,
   binding install / disposal, TwoWay writeback bookkeeping.
-- [runtime/binding/effective-value.ts](../runtime/binding/effective-value.ts)
+- [runtime/binding/effective-value.ts](../src/runtime/binding/effective-value.ts)
   — the `PropertyValueSource` priority ladder (`StyleValue` +
   `TriggerValue` tiers).
-- [basic/templates/control-template.ts](../basic/templates/control-template.ts)
+- [basic/templates/control-template.ts](../src/basic/templates/control-template.ts)
   — `ControlTemplate`, `TemplateBinding`, template triggers, per-instance
   `NameScope`.
-- [visual-engine/theme/theme.ts](../visual-engine/theme/theme.ts) —
+- [visual-engine/theme/theme.ts](../src/visual-engine/theme/theme.ts) —
   `Theme`, `Scheme`, `ThemeManager` and the six inherited adaptive DPs.
 
 See also: [property-system.md](property-system.md) for the value-priority
@@ -37,21 +37,21 @@ Four layers, from *what to set* down to *where the values come from*.
 Everything is authored in `*.template.mu` and lowered to these runtime
 objects.
 
-1. **`Style` — the declarative bag** ([runtime/style.ts](../runtime/style.ts)).
+1. **`Style` — the declarative bag** ([runtime/style.ts](../src/runtime/style.ts)).
    A `TargetType`, a list of `Setter`s, five trigger kinds, an optional
    `BasedOn`, and a per-style `Resources` dictionary.
 
 2. **Value tiers — who wins**
-   ([effective-value.ts](../runtime/binding/effective-value.ts)). Every
+   ([effective-value.ts](../src/runtime/binding/effective-value.ts)). Every
    property has an `EffectiveValueDescriptor` with a source ladder.
    Setters land in the **Style** tier; triggers in the **Trigger** tier
    (above Style). See [§8](#8-value-priority).
 
 3. **Application + resolution.** `StyleApplicator`
-   ([style-applicator.ts](../visual-engine/style-applicator.ts)) owns the
+   ([style-applicator.ts](../src/visual-engine/style-applicator.ts)) owns the
    per-Element setter/trigger bookkeeping and swaps styles by *diffing*.
    `Element.refresh_active_style`
-   ([element.ts](../visual-engine/element.ts)) chooses which style is
+   ([element.ts](../src/visual-engine/element.ts)) chooses which style is
    active from three sources — explicit > implicit > theme
    ([§4](#4-applying-styles), [§10](#10-style-resolution-on-element)).
 
@@ -83,7 +83,7 @@ property is actually an *inheritable* DP registered on another class
 (e.g. `Style[TargetType=Tooltip]{ Foreground = … }`, where `Foreground`
 lives on `TextBlock`) still resolves: `StyleApplicator` takes a second
 pass through the global inheritable-DP registry on a name match
-([resolveSetterDescriptor](../visual-engine/style-applicator.ts#L24)).
+([resolveSetterDescriptor](../src/visual-engine/style-applicator.ts#L24)).
 
 ## 2. Style
 
@@ -155,7 +155,7 @@ observable in the children.
 
 When a Style declares no explicit `BasedOn`, `Seal()` splices in the
 **theme's default Style for the same `TargetType`**
-([style.ts](../runtime/style.ts#L341)). This is WPF parity for "every
+([style.ts](../src/runtime/style.ts#L341)). This is WPF parity for "every
 Style implicitly derives from the default Style for its target type."
 The practical payoff: an author-side `ItemContainerStyle` that only sets
 `IsExpanded = true` no longer blows away the control's whole chrome
@@ -294,7 +294,7 @@ Notes shared by all trigger kinds:
 - **Trigger-tier stacking.** Multiple triggers whose setters target the
   same property stack in activation order; deactivating one removes only
   its contribution, so a still-active sibling's value survives
-  ([effective-value.ts](../runtime/binding/effective-value.ts#L102)).
+  ([effective-value.ts](../src/runtime/binding/effective-value.ts#L102)).
 - **`BasedOn` triggers append** — base triggers first, child triggers
   after; last-applied-wins on conflict via the Trigger tier.
 - Trigger setters can use `SetterFactory` and reactive `Binding` values
@@ -340,7 +340,7 @@ Animated  >  Trigger  >  Binding  >  Local  >  Style  >  Inherited  >  Default
 
 > **⚠️ Mural intentionally deviates from WPF here.** WPF orders
 > `Local > Trigger`; mural orders **`Trigger > Binding > Local`**
-> ([effective-value.ts](../runtime/binding/effective-value.ts#L556)). The
+> ([effective-value.ts](../src/runtime/binding/effective-value.ts#L556)). The
 > reason: a `ControlTemplate` factory sets per-part *local* defaults
 > (`PART_Border.Background = …`), and state-driven triggers in the *same*
 > template (`when(IsPressed){ PART_Border.Background = … }`) must still
@@ -366,7 +366,7 @@ Practical implications:
 ## 9. `StyleApplicator` — apply / swap machinery
 
 One `StyleApplicator` per Element
-([style-applicator.ts](../visual-engine/style-applicator.ts)), created
+([style-applicator.ts](../src/visual-engine/style-applicator.ts)), created
 lazily on first Style touch (Elements that never opt into Style pay zero
 allocation). It owns the active Style plus all setter/trigger
 bookkeeping.
@@ -391,7 +391,7 @@ of exactly this. The diff keeps shared-value slots stable so
 ## 10. Style resolution on Element
 
 `Element.refresh_active_style`
-([element.ts](../visual-engine/element.ts#L327)) computes:
+([element.ts](../src/visual-engine/element.ts#L327)) computes:
 
 ```ts
 const desired = this.Style ?? this._implicitStyle ?? this._themeStyle;
@@ -453,7 +453,7 @@ constructor() {
 ## 11. `ControlTemplate`
 
 A `ControlTemplate`
-([control-template.ts](../basic/templates/control-template.ts)) is the
+([control-template.ts](../src/basic/templates/control-template.ts)) is the
 imperative blueprint a control builds its visual subtree from — a
 **factory**, so the same template applied to two controls yields two
 independent trees. It's carried on a control as the `Template`
@@ -482,7 +482,7 @@ templated parent — the `{TemplateBinding Property}` markup extension.
 
 ### Every control has a default Style (project rule)
 
-Per [CLAUDE.md](../../CLAUDE.md), a control's templates are
+Per [CLAUDE.md](../CLAUDE.md), a control's templates are
 `ControlTemplate` DPs (`Template`, `RowTemplate`, …) set on its default
 Style in a `*.template.mu` file. The ctor calls `applyDefaultStyle()`
 then reads the DPs — no `Application.ResolveDefaultResource(stringKey)`
@@ -491,7 +491,7 @@ surface theme wasn't registered — fix the bundle wiring, don't paper over
 with a string key.
 
 Worked example — the Button family
-([buttons.template.mu](../framework/buttons/buttons.template.mu)):
+([buttons.template.mu](../src/framework/buttons/buttons.template.mu)):
 
 ```
 // One ControlTemplate per variant, keyed for reuse:
@@ -517,12 +517,12 @@ Style [TargetType = Button] {
 Hover / press colour swaps live *inside* each template, so the Style's
 trigger graph stays one level deep. These per-family `.template.mu`
 dictionaries merge into the framework theme bundle
-([framework.resources.mu](../resources/framework.resources.mu)).
+([framework.resources.mu](../src/resources/framework.resources.mu)).
 
 ## 12. Theme / Scheme / ThemeManager
 
 The token source the setters reference
-([theme.ts](../visual-engine/theme/theme.ts)):
+([theme.ts](../src/visual-engine/theme/theme.ts)):
 
 - **`Theme`** — a token *catalog* plus a set of `Scheme`s (e.g. Material
   with `light` / `dark`). The catalog is the contract every Scheme must
@@ -545,7 +545,7 @@ The upshot for cross-control consistency: the per-control type / colour
 atoms are set through these theme Styles, so library-wide typography or
 palette inconsistencies are fixed centrally in the theme's Styles rather
 than control-by-control (see the type-scale audit,
-[current-backlog.md § 18.13](../../current-backlog.md)).
+[current-backlog.md § 18.13](../current-backlog.md)).
 
 ## 13. Composing styles — `Style.Combine` / `@a + @b`
 
@@ -562,7 +562,7 @@ TextBlock [ Style = @Heading + @Hypertext ]
 element.Style = Style.Combine(heading, hypertext);
 ```
 
-Both produce a [`CompositeStyle`](../runtime/style.ts) — a `Style`
+Both produce a [`CompositeStyle`](../src/runtime/style.ts) — a `Style`
 subclass that drops into the `Style` DP, the `StyleApplicator` diff-swap,
 and the implicit / theme tiers unchanged; it only overrides the `Resolve*`
 surface those collaborators call.

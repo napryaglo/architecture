@@ -294,7 +294,7 @@ PresentationTarget observation:
 
 ## 11. Open questions to defer
 
-Tracked in [current-backlog.md](../../current-backlog.md):
+Tracked in [current-backlog.md](../current-backlog.md):
 
 - **Sub-Model listener automation (Freezable-equivalent).** Backlog § 5.2.
 - **Hit testing for Canvas/WebGL renderers.** Backlog § 5.13. Pairs with `CanvasRenderer` (§ 9.1).

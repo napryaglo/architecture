@@ -1,4 +1,4 @@
-// Step 8 / § 9 of [src/document/connectors.md](../../../document/connectors.md):
+// Step 8 / § 9 of [docs/connectors.md](../../../../docs/connectors.md):
 // pins (a) DiagramLayersPanel layer routing + z-order, and (b)
 // Diagram.Connectors collection materialization through the
 // DiagramConnectorsMaterializer collaborator.

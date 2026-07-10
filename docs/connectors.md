@@ -6,7 +6,7 @@ framework-level addition to the existing `Diagram` control (today:
 nodes only, no edges). This doc is the consolidated design — read it
 end-to-end before touching code.
 
-**Will live in:** [src/framework/diagram/](../framework/diagram/) — the
+**Will live in:** [src/framework/diagram/](../src/framework/diagram/) — the
 same directory as `diagram.ts` and `diagram-node.ts`.
 
 See also: [adorners.md](adorners.md) for the adorner surface the edit
@@ -21,7 +21,7 @@ These were resolved through the brainstorming pass; everything else in
 the doc follows from them.
 
 1. **Anchor model** — *both* ports + auto. A connector's endpoint
-   names an item (a [Figure](../framework/diagram/figure.ts), or any
+   names an item (a [Figure](../src/framework/diagram/figure.ts), or any
    Model in the duck-typed lookup) and *optionally* a port. If the port
    name resolves against the item's `Ports` collection, use it.
    Otherwise auto-anchor.
@@ -65,17 +65,17 @@ Consequences for the design:
     `Figure`, not on a fictional NodeVM. § 3.8 sketches the additions.
   - **Source / target reactivity hooks Figure's `Left` / `Top`.** These
     DPs already exist with `MetaData.Arrange | BindsTwoWayByDefault`
-    ([figure.ts:77-80](../framework/diagram/figure.ts#L77-L80)), so
+    ([figure.ts:77-80](../src/framework/diagram/figure.ts#L77-L80)), so
     § 7.2 option (a) (subscribe on `'Left'` / `'Top'` strings) lands
     directly with no Figure changes.
   - **Default-provider lookup uses `Figure.Kind`, not a `Shape`-class
     static.** Coupling provider defaults to `Shape` subclasses would
-    drag the diagram framework into [src/basic/shapes/](../basic/shapes/) —
+    drag the diagram framework into [src/basic/shapes/](../src/basic/shapes/) —
     a layering violation. A framework-owned `Map<string, IPortProvider>`
     keyed on `Kind` keeps the catalog diagram-agnostic.
   - **Demo VM is now framework-owned.** The diagram demo's old
     `diagram-vm.mjs` was migrated into
-    [DiagramDocument](../framework/diagram/diagram-document.ts) (commit
+    [DiagramDocument](../src/framework/diagram/diagram-document.ts) (commit
     1751e65). Step 13 of § 9 extends `DiagramDocument`, not a demo file.
 
 ## 2. Module layout
@@ -127,8 +127,8 @@ src/resources/framework.resources.mu
 ### 3.0 Enum types
 
 Named string-valued TS enums per the codebase convention (cf.
-[`SegmentedPosition`](../framework/segmented-button.ts),
-[`DrawerVariant`](../framework/drawer.ts)). Each enum lives in the
+[`SegmentedPosition`](../src/framework/segmented-button.ts),
+[`DrawerVariant`](../src/framework/drawer.ts)). Each enum lives in the
 file of its primary consumer; an `index.ts` barrel re-exports.
 
 ```ts
@@ -292,7 +292,7 @@ new Port({ Name: 'in', CoordSpace: PortCoordSpace.Outline, OutlineT: 0.10, Side:
 ### 3.2 `ConnectorEndpoint`
 
 One end of a connector. Either bound to an item Model (in the framework
-Diagram this is a [Figure](../framework/diagram/figure.ts), but the DP
+Diagram this is a [Figure](../src/framework/diagram/figure.ts), but the DP
 types as `Model` so non-Figure items work as long as they expose
 position + geometry) with an optional port reference, or free-floating
 (used during a drag-create / re-anchor drag, and for un-attached
@@ -449,7 +449,7 @@ hooks" below):
 5. Write the shortened geometry to the inherited `Shape.Geometry` DP.
 6. Compute `HitTestGeometry` by widening the route by ~6 px via the
    `widen()` helper at
-   [src/visual-engine/geometry/widen.ts](../visual-engine/geometry/widen.ts)
+   [src/visual-engine/geometry/widen.ts](../src/visual-engine/geometry/widen.ts)
    (hit zone larger than the visible stroke so thin lines stay
    clickable).
 
@@ -459,7 +459,7 @@ router.tangentAt(spec, end))`. Re-instantiated when the cap template
 DP changes; re-positioned every re-route.
 
 **Why not `MeasureOverride`.** `Shape.MeasureOverride` returns
-`Size.Zero` ([shape.ts:47](../basic/shapes/shape.ts#L47)) — Shape has no
+`Size.Zero` ([shape.ts:47](../src/basic/shapes/shape.ts#L47)) — Shape has no
 intrinsic size; the route compute can't ride the measure pass because
 the measure pass doesn't run on a position-only invalidation. Instead,
 the connector overrides `OnPropertyChanged` for `Source` / `Target` /
@@ -479,13 +479,13 @@ fire reschedules a route recompute. Subscription is per-endpoint and
 re-wires when the endpoint's `Node` DP changes. Hardcoded `'Left'` /
 `'Top'` strings work because Figure defines those DPs with
 `MetaData.Arrange | BindsTwoWayByDefault`
-([figure.ts:77-80](../framework/diagram/figure.ts#L77-L80)). See open
+([figure.ts:77-80](../src/framework/diagram/figure.ts#L77-L80)). See open
 question § 7.2 for the future-proofing path if non-Figure "items"
 surface.
 
 ### 3.5 `Diagram` changes
 
-Two structural changes to today's [diagram.ts](../framework/diagram/diagram.ts):
+Two structural changes to today's [diagram.ts](../src/framework/diagram/diagram.ts):
 
 ```ts
 class Diagram extends Selector {
@@ -510,7 +510,7 @@ Selection is unified — both Figures and Connectors live in the
 Selector's `_selectedContainers`. Marquee selects whichever
 containers fall inside the rect. `Delete` / `Backspace` fires the
 existing `Diagram.DeleteRequested` event
-([diagram.ts:286-322](../framework/diagram/diagram.ts#L286-L322)),
+([diagram.ts:286-322](../src/framework/diagram/diagram.ts#L286-L322)),
 leaving it to the consumer's listener to update the underlying VM
 collections. See open question § 7.3.
 
@@ -539,7 +539,7 @@ instantiated and measured. The router-emitted polyline is shortened
 by that amount at the cap end before being written to `Geometry`.
 
 Default cap catalog ships as DynamicResource keys in
-[framework.resources.mu](../resources/framework.resources.mu):
+[framework.resources.mu](../src/resources/framework.resources.mu):
 
 | Key                  | Shape                                       | `CapInset` |
 |----------------------|---------------------------------------------|------------|
@@ -570,7 +570,7 @@ Each layer is itself a `Canvas` so children honor `Canvas.Left` /
 Adorners (selection rings, edit handles, alignment guides, drag-create
 ghost, port-discovery overlays) ride on the framework's existing
 `AdornerLayer` overlay
-([diagram.ts:497-560](../framework/diagram/diagram.ts#L497-L560) shows
+([diagram.ts:497-560](../src/framework/diagram/diagram.ts#L497-L560) shows
 how alignment-guides + selection-resize mount today). The AdornerLayer
 renders above the ItemsPanel by construction, so a 2-layer panel
 gives the same z-order as the original 3-layer sketch with one less
@@ -690,7 +690,7 @@ authoring callback assigns them.
 **Kind → provider mapping.** Defaults live in a framework-owned
 `Map<Figure.Kind, IPortProvider>`; consumers override per-instance
 through `Figure.PortProvider`. Keeping the table out of
-[src/basic/shapes/](../basic/shapes/) keeps the catalog
+[src/basic/shapes/](../src/basic/shapes/) keeps the catalog
 diagram-agnostic (the catalog otherwise has zero connector-aware code).
 
 ```ts
@@ -771,7 +771,7 @@ PointerUp over target Figure (or port)
   → fires Diagram.ConnectorCreated event so the consumer can push
     the connector into their VM-side collection (same event-based
     contract as the existing Group / Combine / Delete events on
-    Diagram — [diagram.ts:265-289](../framework/diagram/diagram.ts#L265-L289))
+    Diagram — [diagram.ts:265-289](../src/framework/diagram/diagram.ts#L265-L289))
   → the transient connector is removed; the consumer's add triggers
     a fresh non-transient one through the Connectors collection
 
@@ -822,7 +822,7 @@ they're polyline vertices. For Bezier, they're spline knots.
 
 `Diagram.OnKeyDown` already handles `Delete` / `Backspace` and fires the
 `DeleteRequested` event with a `SelectedItems` snapshot
-([diagram.ts:618-622](../framework/diagram/diagram.ts#L618-L622)).
+([diagram.ts:618-622](../src/framework/diagram/diagram.ts#L618-L622)).
 Once connectors land in the same selection (per § 7.3), the snapshot
 covers them too without further changes. The existing consumer
 listener owns the collection mutation across both `ItemsSource` and
@@ -832,7 +832,7 @@ listener owns the collection mutation across both `ItemsSource` and
 
 - **Diagram-host coords.** What `Canvas.Left` / `Canvas.Top` on a
   Figure are. What `Figure.Left` / `Top` mirror to
-  ([figure.ts:308-315](../framework/diagram/figure.ts#L308-L315) is the
+  ([figure.ts:308-315](../src/framework/diagram/figure.ts#L308-L315) is the
   current mirror). What `ConnectorEndpoint.FreePoint` is in. What the
   router consumes and produces.
 - **Shape-local bbox coords.** What `Port.X` / `Y` are in (bbox mode),
@@ -908,9 +908,9 @@ exist on whatever Model the endpoint references). Three options:
   - **(a) Direct subscription on `'Left'` / `'Top'` strings.** Simplest.
     Connector hardcodes those names; any item Model that uses different
     coords doesn't trigger re-routes. Works directly because
-    [Figure](../framework/diagram/figure.ts) defines `LeftKey` / `TopKey`
+    [Figure](../src/framework/diagram/figure.ts) defines `LeftKey` / `TopKey`
     with `MetaData.Arrange | BindsTwoWayByDefault`
-    ([figure.ts:77-80](../framework/diagram/figure.ts#L77-L80)).
+    ([figure.ts:77-80](../src/framework/diagram/figure.ts#L77-L80)).
   - **(b) `IPositionedItem` interface.** Connector duck-types on a
     `Bounds: Rect` getter + `OnBoundsChanged` event. Items that don't
     implement it don't get re-routes. Cleaner contract, more boilerplate.
@@ -1132,7 +1132,7 @@ because today's read path already returns `ExplicitPorts` when set.
 
 ## 9. Implementation sequence
 
-Not a plan file (per [CLAUDE.md](../../CLAUDE.md)), just the natural
+Not a plan file (per [CLAUDE.md](../CLAUDE.md)), just the natural
 dependency order. Each row produces something useful + testable.
 
 | Step | What lands | Verification |
@@ -1150,7 +1150,7 @@ dependency order. Each row produces something useful + testable.
 | 10 | `connector-create-behavior.ts` — drag-create gesture | `connector-create.test.ts` passes |
 | 11 | `connector-edit-adorner.ts` — endpoint + waypoint editing | `connector-edit.test.ts` passes |
 | 12 | Unified selection on Diagram (per § 7.3 recommendation) — connectors join Selector's `_selectedContainers` so the existing `DeleteRequested` event covers them | demo-side smoke: marquee + Delete clears mixed selection |
-| 13 | [DiagramDocument](../framework/diagram/diagram-document.ts) (now framework-owned per § 1a — no demo-side VM file): add a `Connectors` collection + serialize/deserialize hooks; the diagram demo picks it up automatically through its DataContext | demo build green + manual exercise |
+| 13 | [DiagramDocument](../src/framework/diagram/diagram-document.ts) (now framework-owned per § 1a — no demo-side VM file): add a `Connectors` collection + serialize/deserialize hooks; the diagram demo picks it up automatically through its DataContext | demo build green + manual exercise |
 
 ## 10. Routing ground rules
 
@@ -1274,8 +1274,8 @@ route compute and emits them as `PathGeometry` segments; they never
 land in any DP. The drag gesture writes `Target.FreePoint` (or
 `Source.FreePoint`) per pointer move and lets the router recompute —
 nothing mutates `Waypoints`. Matches today's
-[ConnectorCreateBehavior.UpdateCursor](../framework/diagram/behaviors/connector-create-behavior.ts)
-+ [OrthogonalRouter.computePoints](../framework/diagram/routing/orthogonal-router.ts).
+[ConnectorCreateBehavior.UpdateCursor](../src/framework/diagram/behaviors/connector-create-behavior.ts)
++ [OrthogonalRouter.computePoints](../src/framework/diagram/routing/orthogonal-router.ts).
 
 Consequence: `ConnectorEditAdorner` (§ 4.3) renders handles only for
 points in `Connector.Waypoints` — i.e. only for user-added bends. The

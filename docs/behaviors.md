@@ -12,13 +12,13 @@ with DPs for per-instance configuration and an `OnAttached(visual)` hook
 that runs once at materialization.
 
 **Implemented in:**
-- [runtime/behavior.ts](../runtime/behavior.ts) — `Behavior` abstract
+- [runtime/behavior.ts](../src/runtime/behavior.ts) — `Behavior` abstract
   base
-- [runtime/visual.ts](../runtime/visual.ts) — `Visual.AddBehavior`,
+- [runtime/visual.ts](../src/runtime/visual.ts) — `Visual.AddBehavior`,
   `Visual.Behaviors`
-- [compiler/compiler.ts](../compiler/compiler.ts) —
+- [compiler/compiler.ts](../src/compiler/compiler.ts) —
   `compileBehaviorsBlock` (the `Behaviors { … }` markup lowering)
-- [basic/behaviors/list-reorder-behavior.ts](../basic/behaviors/list-reorder-behavior.ts) —
+- [basic/behaviors/list-reorder-behavior.ts](../src/basic/behaviors/list-reorder-behavior.ts) —
   first concrete behavior (drag-to-reorder for `ItemsControl`)
 
 See also: [property-system.md](property-system.md) for the DP system
@@ -359,8 +359,8 @@ Style[TargetType=Button] {
 ```
 
 The compiler lowers each entry to a paired
-[`AttachBehaviorAction`](../runtime/trigger-actions.ts) +
-[`DetachBehaviorAction`](../runtime/trigger-actions.ts) in the
+[`AttachBehaviorAction`](../src/runtime/trigger-actions.ts) +
+[`DetachBehaviorAction`](../src/runtime/trigger-actions.ts) in the
 trigger's `enterActions` / `exitActions` arrays. The Attach action is
 factory-based — each enter invokes the factory to construct a fresh
 `Behavior` for the firing Visual. Two Visuals sharing the same Style

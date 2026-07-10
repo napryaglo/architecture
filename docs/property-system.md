@@ -6,11 +6,11 @@ default values, change notification, coercion, bindings, value priority,
 read-only properties, attached/cross-class properties, and inheritance.
 
 **Implemented in:**
-- [runtime/model.ts](../runtime/model.ts) — `Model`, `PropertyKey`
-- [runtime/property-descriptor.ts](../runtime/property-descriptor.ts) — `PropertyDescriptor`
-- [runtime/effective-value.ts](../runtime/effective-value.ts) — `EffectiveValueDescriptor`, `PropertyValueSource`
-- [runtime/metadata.ts](../runtime/metadata.ts) — `MetaData` flags
-- [runtime/binding.ts](../runtime/binding.ts) — `Binding`, `BindingMode`, `ValueConverter`, `BindingOptions`
+- [runtime/model.ts](../src/runtime/model.ts) — `Model`, `PropertyKey`
+- [runtime/property-descriptor.ts](../src/runtime/property-descriptor.ts) — `PropertyDescriptor`
+- [runtime/effective-value.ts](../src/runtime/effective-value.ts) — `EffectiveValueDescriptor`, `PropertyValueSource`
+- [runtime/metadata.ts](../src/runtime/metadata.ts) — `MetaData` flags
+- [runtime/binding.ts](../src/runtime/binding.ts) — `Binding`, `BindingMode`, `ValueConverter`, `BindingOptions`
 
 ## 1. Models and properties
 

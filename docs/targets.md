@@ -5,15 +5,15 @@ file, an in-memory buffer). Targets host the Visual tree, drive the
 layout/render pipeline, and pick the rendering backend.
 
 **Implemented in:**
-- [visual-engine/presentation-target.ts](../visual-engine/presentation-target.ts) — `PresentationTarget` abstract base
-- [visual-engine/targets/html-target.ts](../visual-engine/targets/html-target.ts) — `HtmlTarget`
-- [visual-engine/targets/headless-target.ts](../visual-engine/targets/headless-target.ts) — `HeadlessTarget`
-- [visual-engine/targets/file-target.ts](../visual-engine/targets/file-target.ts) — `FileTarget`
-- [visual-engine/svg-drawing-context.ts](../visual-engine/svg-drawing-context.ts) — `SvgDrawingContext` (the SVG implementation of DrawingContext)
+- [visual-engine/presentation-target.ts](../src/visual-engine/presentation-target.ts) — `PresentationTarget` abstract base
+- [visual-engine/targets/html-target.ts](../src/visual-engine/targets/html-target.ts) — `HtmlTarget`
+- [visual-engine/targets/headless-target.ts](../src/visual-engine/targets/headless-target.ts) — `HeadlessTarget`
+- [visual-engine/targets/file-target.ts](../src/visual-engine/targets/file-target.ts) — `FileTarget`
+- [visual-engine/svg-drawing-context.ts](../src/visual-engine/svg-drawing-context.ts) — `SvgDrawingContext` (the SVG implementation of DrawingContext)
 
 The model follows WPF's `PresentationSource` pattern — one class per host
 environment, sharing a common scene description on the Model layer. See
-the design rationale in [../../visual-engine-design.md](../../visual-engine-design.md) §3.
+the design rationale in [../../visual-engine-design.md](visual-engine-design.md) §3.
 
 ## 1. The hierarchy
 
@@ -323,7 +323,7 @@ target.AddPropertyChangedListener('Width', (_, _p, _old, w) => {
 
 `SvgRenderer` is shipped and powers `HtmlTarget`'s real-time scene; event
 routing through the visual tree is live. The remaining renderer / target
-gaps are tracked in [current-backlog.md § 9](../../current-backlog.md):
+gaps are tracked in [current-backlog.md § 9](../current-backlog.md):
 
 - **`CanvasRenderer`** (§ 9.1) — Canvas2D backend for the same Visual
   tree. Pairs with non-SVG hit-testing (§ 5.13).

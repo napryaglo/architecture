@@ -5,7 +5,7 @@ import type { IPortHost, Port } from '../port.js';
 // host and emits a fresh array of Ports, with no per-call mutation
 // or hidden state. Caching of the result lives on the consumer side
 // (see § 3.8 / § 7.12 of
-// [src/document/connectors.md](../../../document/connectors.md) —
+// [docs/connectors.md](../../../../docs/connectors.md) —
 // Figure caches `Ports` keyed on `(provider, ArrangedRect, Geometry)`).
 export interface IPortProvider
 {

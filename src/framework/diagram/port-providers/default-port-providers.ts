@@ -19,7 +19,7 @@ import type { IPortProvider } from './port-provider.js';
 // each Shape subclass — that would couple the diagram framework to
 // [src/basic/shapes/](../../../basic/shapes/), which today owns the
 // shape catalog without knowing connectors exist. See § 1a + § 3.8 of
-// [src/document/connectors.md](../../../document/connectors.md).
+// [docs/connectors.md](../../../../docs/connectors.md).
 const DEFAULT_PORT_PROVIDERS: ReadonlyMap<string, IPortProvider> = new Map<string, IPortProvider>([
     ['rectangle', new BoundingBoxPorts({ portsPerSide: 1 })],
     ['ellipse',   new RadialPorts({ count: 4 })],

@@ -15,7 +15,7 @@ export interface ConnectorEndpointInit
 
 // One end of a Connector. The 5 DPs describe a single endpoint via
 // FIVE different addressing schemes covered by § 3.2 of
-// [src/document/connectors.md](../../document/connectors.md); the
+// [docs/connectors.md](../../../docs/connectors.md); the
 // resolver (in [connector.ts](./connector.ts)) picks the most-specific
 // path that applies on every re-route:
 //

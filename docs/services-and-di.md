@@ -14,26 +14,26 @@ from the provider it's handed. This keeps wiring greppable and keeps the
 real objects, never strings.
 
 **Implemented in:**
-- [runtime/services/service-provider.ts](../runtime/services/service-provider.ts) —
+- [runtime/services/service-provider.ts](../src/runtime/services/service-provider.ts) —
   `ServiceProvider`, `IServiceProvider`, `IServiceContainer`, `ServiceKey`,
   token / factory / lifetime types.
-- [runtime/services/service-base.ts](../runtime/services/service-base.ts) —
+- [runtime/services/service-base.ts](../src/runtime/services/service-base.ts) —
   `ServiceBase` (a service that is also a bindable `Model`).
-- [runtime/binding/element-name-binding.ts](../runtime/binding/element-name-binding.ts) —
+- [runtime/binding/element-name-binding.ts](../src/runtime/binding/element-name-binding.ts) —
   `ServiceBinding`, the `$service(Token)` consumption binding.
-- [visual-engine/element.ts](../visual-engine/element.ts) — the inherited
+- [visual-engine/element.ts](../src/visual-engine/element.ts) — the inherited
   `ServiceScope` DP that publishes a provider down a subtree.
-- [compiler/compiler.ts](../compiler/compiler.ts) — `compileServicesBlock`
+- [compiler/compiler.ts](../src/compiler/compiler.ts) — `compileServicesBlock`
   (the `.services:` markup), `compileMemberBlock` (the general `.Member:`
   block), and the `$service(...)` binding emit.
-- [framework/shell/shell.ts](../framework/shell/shell.ts) — the application
+- [framework/shell/shell.ts](../src/framework/shell/shell.ts) — the application
   shell that owns a per-instance scope and publishes it as `ServiceScope`.
 
 See also: [property-system.md](property-system.md) for the DP/binding system
 services build on, [mural-language-design.md](mural-language-design.md) for the
 `.mu` DSL, [resources.md](resources.md) for the `ResourceDictionary` the
 `.Member:` dictionary form mirrors. The design log lives in
-[backlog § 24](../../current-backlog.md).
+[backlog § 24](../current-backlog.md).
 
 ---
 
@@ -392,14 +392,14 @@ entry must be keyed (mixing keyed and unkeyed is a compile error). The target
 member must be a dictionary-shaped object exposing `.Set(key, value)`.
 
 > The bigger ambition — folding `resources:` itself onto `.Member:` — is
-> tracked in [backlog § 25](../../current-backlog.md); for now the generic
+> tracked in [backlog § 25](../current-backlog.md); for now the generic
 > dictionary `.Member:` and the bespoke `resources:` block coexist.
 
 ---
 
 ## 6. Shell integration
 
-The application shell ([framework/shell/shell.ts](../framework/shell/shell.ts))
+The application shell ([framework/shell/shell.ts](../src/framework/shell/shell.ts))
 is the primary place `.services:` and `$service` meet a scope that isn't the
 app root:
 
@@ -423,7 +423,7 @@ registers a concrete subclass against those tokens.
 
 ## 7. Worked example — the demo platform
 
-[demo/platform/demo-navigation-service.mjs](../../demo/platform/demo-navigation-service.mjs)
+[demo/platform/demo-navigation-service.mjs](../demo/platform/demo-navigation-service.mjs)
 is the end-to-end dogfood. `DemoNavigationService` extends the framework
 `NavigationService` (so it registers/resolves under `NavigationService.Key`),
 self-populates from the demo registry, and owns the whole navigation + page

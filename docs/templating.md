@@ -7,16 +7,16 @@ controls without touching the consumer-facing API. Mirrors WPF's
 `TemplatedParent` pattern.
 
 **Implemented in:**
-- [basic/templates/control-template.ts](../basic/templates/control-template.ts) —
+- [basic/templates/control-template.ts](../src/basic/templates/control-template.ts) —
   `ControlTemplate`, `TemplateFactory`, `TemplateInstance`,
   `TemplateBinding`
-- [basic/templates/content-presenter.ts](../basic/templates/content-presenter.ts) —
+- [basic/templates/content-presenter.ts](../src/basic/templates/content-presenter.ts) —
   `ContentPresenter`
-- [basic/content-control.ts](../basic/content-control.ts) —
+- [basic/content-control.ts](../src/basic/content-control.ts) —
   `ContentControl`
-- [runtime/visual.ts](../runtime/visual.ts) — `TemplatedParent` accessor,
+- [runtime/visual.ts](../src/runtime/visual.ts) — `TemplatedParent` accessor,
   `Name` + `FindName` + `NameScope`
-- [runtime/namescope.ts](../runtime/namescope.ts) — `NameScope`
+- [runtime/namescope.ts](../src/runtime/namescope.ts) — `NameScope`
 
 See also: [visual-tree.md](visual-tree.md) for the visual/logical tree
 split that templating motivates, [items-and-scrolling.md](items-and-scrolling.md)
@@ -277,7 +277,7 @@ visible to user content. Correct WPF semantics.
 
 Roadmap items (`MultiBinding` for `TemplateBinding`, `Style.TargetType=TemplateType`,
 `EventTrigger` inside templates) are tracked in
-[current-backlog.md § 11](../../current-backlog.md) and § 7.
+[current-backlog.md § 11](../current-backlog.md) and § 7.
 
 - **Markup is `.mu`, not XAML.** Templates can be authored declaratively
   in `.mu` or imperatively as TypeScript factory functions. No XAML

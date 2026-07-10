@@ -5,12 +5,12 @@ glyph geometry — one registry feeding every consumer, with WPF-style value
 classes at the API/markup boundary.
 
 **Implemented in:**
-- [visual-engine/text/font-family.ts](../visual-engine/text/font-family.ts) — `FontFamily`, `Typeface` value classes
-- [visual-engine/text/font-manager.ts](../visual-engine/text/font-manager.ts) — `FontManager` registry, `RegisteredFont`, `FontSource`, `FontSourceKind`, `FontConsumer`
-- [visual-engine/targets/presentation-target.ts](../visual-engine/targets/presentation-target.ts) — base `FontConsumer` wiring (load into measurer + embed hook)
-- [visual-engine/targets/html-target.ts](../visual-engine/targets/html-target.ts) — render-side `@font-face` / FontFace embedding
-- [basic/text-block.ts](../basic/text-block.ts) / [basic/text-box.ts](../basic/text-box.ts) — `FontFamily` DP (coercing)
-- [compiler/parser.ts](../compiler/parser.ts) / [compiler/compiler.ts](../compiler/compiler.ts) — the `fonts { … }` markup block + `glyphs @Family`
+- [visual-engine/text/font-family.ts](../src/visual-engine/text/font-family.ts) — `FontFamily`, `Typeface` value classes
+- [visual-engine/text/font-manager.ts](../src/visual-engine/text/font-manager.ts) — `FontManager` registry, `RegisteredFont`, `FontSource`, `FontSourceKind`, `FontConsumer`
+- [visual-engine/targets/presentation-target.ts](../src/visual-engine/targets/presentation-target.ts) — base `FontConsumer` wiring (load into measurer + embed hook)
+- [visual-engine/targets/html-target.ts](../src/visual-engine/targets/html-target.ts) — render-side `@font-face` / FontFace embedding
+- [basic/text-block.ts](../src/basic/text-block.ts) / [basic/text-box.ts](../src/basic/text-box.ts) — `FontFamily` DP (coercing)
+- [compiler/parser.ts](../src/compiler/parser.ts) / [compiler/compiler.ts](../src/compiler/compiler.ts) — the `fonts { … }` markup block + `glyphs @Family`
 
 Closely related: **text *measurement*** (the `TextMeasurer` abstraction the
 font system feeds) is documented in [text-measurement.md](./text-measurement.md);

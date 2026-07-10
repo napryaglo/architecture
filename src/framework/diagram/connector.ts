@@ -85,7 +85,7 @@ export enum AnchorClip
 // reactively computed via OnPropertyChanged on the input DPs and on
 // the source / target nodes' position changes, not from the measure
 // pass. See "Why not MeasureOverride" in § 3.4 of
-// [src/document/connectors.md](../../document/connectors.md).
+// [docs/connectors.md](../../../docs/connectors.md).
 // Default width of the invisible pointer hit band around a connector
 // route (see Shape.HitTestStrokeWidth). ~14px gives a ±7px tolerance —
 // comfortable for mouse and forgiving enough for coarse pointers without
@@ -126,7 +126,7 @@ export class Connector extends Shape
     // CapInset off the materialized root, shortens the route polyline
     // by that amount, and rotates the cap by tangentAt(end). Default
     // undefined = no cap at that end. § 3.4 + § 3.6 of
-    // [src/document/connectors.md](../../document/connectors.md).
+    // [docs/connectors.md](../../../docs/connectors.md).
     public static readonly SourceCapTemplateKey = Model.RegisterProperty<DataTemplate | undefined>(
         Connector, 'SourceCapTemplate', undefined, MetaData.None);
     public static readonly TargetCapTemplateKey = Model.RegisterProperty<DataTemplate | undefined>(
@@ -632,7 +632,7 @@ export class Connector extends Shape
     // Node-move reactivity per § 7.2 option (a): hardcoded
     // subscription on 'Left' / 'Top'. Skip silently for nodes without
     // those DPs — the duck-typed contract from
-    // [src/document/connectors.md](../../document/connectors.md) treats
+    // [docs/connectors.md](../../../docs/connectors.md) treats
     // non-Figure item Models as "supplies position somehow" but does
     // not require Left / Top by name.
     private _reattachSourceNodeListener(): void
@@ -1051,7 +1051,7 @@ function instantiateCap(
     // set DataContext (the factory's DataContextBindings read the
     // inherited value), so we set it on the materialized root here. Caps
     // with no bindings simply ignore it. § 3.6 of
-    // [src/document/connectors.md](../../document/connectors.md).
+    // [docs/connectors.md](../../../docs/connectors.md).
     const root = template.Apply(undefined);
     if (context !== undefined) root.DataContext = context;
     return root;
@@ -1480,7 +1480,7 @@ function geometricClip(
 // Node IS a Model; we read its bbox + ports through narrow duck-typed
 // interfaces so non-Figure item Models still work as endpoint targets.
 // See § 3.5 / § 7.2 of
-// [src/document/connectors.md](../../document/connectors.md).
+// [docs/connectors.md](../../../docs/connectors.md).
 
 function nodeRect(node: Model | undefined): Rect | undefined
 {

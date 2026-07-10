@@ -5,13 +5,13 @@ the two implementations (approximation vs real font metrics), and the
 Google Fonts convenience loader.
 
 **Implemented in:**
-- [runtime/text-measurer.ts](../runtime/text-measurer.ts) — `TextMeasurer` interface, `TextMetrics`, `ApproximateTextMeasurer`, `APPROXIMATE_TEXT_MEASURER` singleton
-- [visual-engine/font-metrics-measurer.ts](../visual-engine/font-metrics-measurer.ts) — `FontMetricsMeasurer` (opentype.js-backed)
-- [visual-engine/google-font-loader.ts](../visual-engine/google-font-loader.ts) — `loadGoogleFont`, `loadGoogleFontInto`, `parseFontFaces`
-- [visual-engine/formatted-text.ts](../visual-engine/formatted-text.ts) — `FormattedText` carries `TextMetrics`
+- [runtime/text-measurer.ts](../src/runtime/text-measurer.ts) — `TextMeasurer` interface, `TextMetrics`, `ApproximateTextMeasurer`, `APPROXIMATE_TEXT_MEASURER` singleton
+- [visual-engine/font-metrics-measurer.ts](../src/visual-engine/font-metrics-measurer.ts) — `FontMetricsMeasurer` (opentype.js-backed)
+- [visual-engine/google-font-loader.ts](../src/visual-engine/google-font-loader.ts) — `loadGoogleFont`, `loadGoogleFontInto`, `parseFontFaces`
+- [visual-engine/formatted-text.ts](../src/visual-engine/formatted-text.ts) — `FormattedText` carries `TextMetrics`
 
 The design discussion (why an abstraction, why opentype.js, what's
-deferred) is in [../../visual-engine-design.md](../../visual-engine-design.md) §11.
+deferred) is in [../../visual-engine-design.md](visual-engine-design.md) §11.
 
 ## 1. Why an abstraction
 

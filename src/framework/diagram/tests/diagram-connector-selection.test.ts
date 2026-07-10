@@ -1,5 +1,5 @@
 import { ModifierKeys, toModifierKeys } from '../../../runtime/index.js';
-// Step 12 / § 9 of [src/document/connectors.md](../../../document/connectors.md):
+// Step 12 / § 9 of [docs/connectors.md](../../../../docs/connectors.md):
 // pins the two-channel selection API per § 7.3 — SelectConnector /
 // DeselectConnector / IsConnectorSelected / SelectedConnectors live
 // on Diagram alongside the inherited Selector's SelectedItems channel,

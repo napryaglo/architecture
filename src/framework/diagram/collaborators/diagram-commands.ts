@@ -32,7 +32,7 @@ import {
 // instances installed onto Diagram's Command DPs at construction time.
 // Consumers can override any command by writing their own RelayCommand
 // to the corresponding Diagram DP — last-writer-wins per § 7.1 of
-// [src/document/diagram-control.md](../../document/diagram-control.md).
+// [docs/diagram-control.md](../../../docs/diagram-control.md).
 // Default impls run after the constructor; consumer writes happen later
 // and naturally shadow.
 //

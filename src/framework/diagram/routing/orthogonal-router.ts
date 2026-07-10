@@ -14,7 +14,7 @@ import {
 } from './router.js';
 
 // Perpendicularity-preserving 90°-only polyline router. Implements
-// [src/document/connectors.md](../../../document/connectors.md) § 10.2:
+// [docs/connectors.md](../../../../docs/connectors.md) § 10.2:
 // the first segment is collinear with the source-port outward ray and
 // the last segment is collinear with the target-port outward ray, in
 // every (sourceSide × targetSide) combination.

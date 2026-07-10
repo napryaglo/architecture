@@ -13,7 +13,7 @@ import {
 // control point is within this distance of the segment's chord —
 // gives ~0.5 px max chord-deviation error on typical catalog shapes.
 // V1 ships this as a single fixed value (no caller override): § 3.1
-// of [src/document/connectors.md](../../document/connectors.md) keys
+// of [docs/connectors.md](../../../docs/connectors.md) keys
 // the flatten cache by (Geometry identity, flattenTolerance), so
 // exposing a per-call tolerance would require a two-tier cache; the
 // uniform value is cheaper and matches every diagram-catalog

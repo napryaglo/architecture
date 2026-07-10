@@ -1,4 +1,4 @@
-// Step 5.5 / § 9 of [src/document/connectors.md](../../../document/connectors.md):
+// Step 5.5 / § 9 of [docs/connectors.md](../../../../docs/connectors.md):
 // pins the 5 built-in providers + the kind→provider default table +
 // Figure.PortProvider / Figure.ExplicitPorts precedence.
 

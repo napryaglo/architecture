@@ -1,4 +1,4 @@
-// Step 6 / § 9 of [src/document/connectors.md](../../../document/connectors.md):
+// Step 6 / § 9 of [docs/connectors.md](../../../../docs/connectors.md):
 // pins the Connector skeleton — DPs, the 5 endpoint-resolution paths
 // from § 3.2, source/target reactivity, and routing-mode dispatch.
 // Caps, hit-test widen, and edit interaction land in later steps.

@@ -7,12 +7,12 @@ click on the background clears it. Modifier keys switch between
 replace / add / extend semantics.
 
 **Implemented in:**
-- [basic/selector.ts](../basic/selector.ts) —
+- [basic/selector.ts](../src/basic/selector.ts) —
   `AllowMarqueeSelection` and `MarqueeBoundsPolicy` DPs, the auto-attach
   hook, and the multi-select machinery the behavior writes into
   (`BeginUpdate` / `EndUpdate`, `ClearSelection`, `setSelectedContainers`,
   `_selectedContainers`)
-- [basic/behaviors/marquee-selection-behavior.ts](../basic/behaviors/marquee-selection-behavior.ts) —
+- [basic/behaviors/marquee-selection-behavior.ts](../src/basic/behaviors/marquee-selection-behavior.ts) —
   `MarqueeAdorner` + `attachMarqueeSelection(selector)` factory
 
 See also: [behaviors.md](behaviors.md) for the `Behavior` framework,
@@ -264,7 +264,7 @@ each entry point keeps them disjoint.
 ## 11. Working in tests
 
 The behavior's tests live in
-[basic/tests/marquee-selection-behavior.test.ts](../basic/tests/marquee-selection-behavior.test.ts).
+[basic/tests/marquee-selection-behavior.test.ts](../src/basic/tests/marquee-selection-behavior.test.ts).
 The fixture pattern:
 
 ```ts
@@ -303,7 +303,7 @@ clears the prior selection" will look like they pass while the prior
 
 ## 12. Limitations and non-goals
 
-Tracked in [current-backlog.md § 10](../../current-backlog.md):
+Tracked in [current-backlog.md § 10](../current-backlog.md):
 - **Marquee autoscroll** — § 10.7.
 - **Marquee keyboard equivalent** — § 10.8.
 

@@ -1,4 +1,4 @@
-// Step 11 / § 9 of [src/document/connectors.md](../../../document/connectors.md):
+// Step 11 / § 9 of [docs/connectors.md](../../../../docs/connectors.md):
 // pins the ConnectorEditAdorner state machine — endpoint re-anchor
 // (§ 4.2) + waypoint add/move/remove (§ 4.3). Visual rendering of the
 // drag handles lives in a follow-up step; the state machine drives

@@ -23,7 +23,7 @@ export interface ConnectorCreatedArgs
 export type ConnectorCreatedListener = (args: ConnectorCreatedArgs) => void;
 
 // State machine for the drag-create gesture per § 4.1 of
-// [src/document/connectors.md](../../../document/connectors.md).
+// [docs/connectors.md](../../../../docs/connectors.md).
 // Imperative begin/update/end/abort API: pointer wiring (Figure-level
 // PointerDown trigger + cursor coordinate translation through any
 // enclosing ScrollViewer) lives one layer up and calls into the

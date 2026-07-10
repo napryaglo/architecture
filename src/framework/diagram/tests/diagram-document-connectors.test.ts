@@ -1,4 +1,4 @@
-// Step 13 / § 9 of [src/document/connectors.md](../../../document/connectors.md):
+// Step 13 / § 9 of [docs/connectors.md](../../../../docs/connectors.md):
 // pins DiagramDocument's Connectors collection + CreateConnector /
 // DeleteConnectors / cascade-on-Figure-delete + Save/Load round-trip,
 // plus the attach-standard-mutations wiring of the ConnectorCreated

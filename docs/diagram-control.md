@@ -144,7 +144,7 @@ interface, not on any specific class.
 
 ### 3.2 `Figure` control — promoted from `DiagramNode`
 
-Today's [diagram-node.ts](../framework/diagram/diagram-node.ts) is
+Today's [diagram-node.ts](../src/framework/diagram/diagram-node.ts) is
 already 95% of the desired shape: ContentControl with X / Y DPs,
 drag-to-move with click-vs-drag distinction, group-drag partners,
 scroll-aware drag compensation, position snap callback integration.
@@ -411,7 +411,7 @@ grouping don't pay for the Parent walk).
 ### 3.9 Toolbox + drop receiver
 
 Promotes the `attachCanvasDropBehavior` from
-[demo/.../behaviors/canvas-drop-behavior.mjs](../../demo/demos/diagram/behaviors/canvas-drop-behavior.mjs):
+[demo/.../behaviors/canvas-drop-behavior.mjs](../demo/demos/diagram/behaviors/canvas-drop-behavior.mjs):
 
 ```ts
 class Toolbox extends ItemsControl {

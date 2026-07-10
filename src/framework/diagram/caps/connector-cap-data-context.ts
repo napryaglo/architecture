@@ -20,7 +20,7 @@ import {
 // inherit its thickness / dash too.
 //
 // This is the v1 shape of the deferred `ConnectorCapDataContext` from
-// § 3.6 of [src/document/connectors.md](../../../document/connectors.md):
+// § 3.6 of [docs/connectors.md](../../../../docs/connectors.md):
 // just the paint surface, no per-instance geometry data yet.
 export class ConnectorCapDataContext extends Model
 {

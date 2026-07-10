@@ -1,4 +1,4 @@
-// Step 2 / § 9 of [src/document/connectors.md](../../../document/connectors.md):
+// Step 2 / § 9 of [docs/connectors.md](../../../../docs/connectors.md):
 // pins the OrthogonalRouter's compute() + tangentAt() across all
 // 16 (sourceSide × targetSide) combinations + waypoints + reverse +
 // same-side same-axis detour.

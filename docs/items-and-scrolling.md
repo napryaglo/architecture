@@ -6,24 +6,24 @@ Scrolling and virtualization layer on top so large collections render
 without paying for every off-screen item.
 
 **Implemented in:**
-- [runtime/observable-collection.ts](../runtime/observable-collection.ts) —
+- [runtime/observable-collection.ts](../src/runtime/observable-collection.ts) —
   `ObservableCollection<T>`, `CollectionChange<T>`,
   `IReadOnlyObservableCollection<T>`
-- [runtime/scroll-info.ts](../runtime/scroll-info.ts) — `IScrollInfo` +
+- [runtime/scroll-info.ts](../src/runtime/scroll-info.ts) — `IScrollInfo` +
   `isScrollInfo`
-- [basic/templates/data-template.ts](../basic/templates/data-template.ts) —
+- [basic/templates/data-template.ts](../src/basic/templates/data-template.ts) —
   `DataTemplate`
-- [basic/collections/item-container-generator.ts](../basic/collections/item-container-generator.ts) —
+- [basic/collections/item-container-generator.ts](../src/basic/collections/item-container-generator.ts) —
   `ItemContainerGenerator`
-- [basic/items-control.ts](../basic/items-control.ts) —
+- [basic/items-control.ts](../src/basic/items-control.ts) —
   `ItemsControl`
-- [basic/templates/items-presenter.ts](../basic/templates/items-presenter.ts) —
+- [basic/templates/items-presenter.ts](../src/basic/templates/items-presenter.ts) —
   `ItemsPresenter`
-- [basic/panels/virtualisation/virtualizing-panel.ts](../basic/panels/virtualisation/virtualizing-panel.ts) —
+- [basic/panels/virtualisation/virtualizing-panel.ts](../src/basic/panels/virtualisation/virtualizing-panel.ts) —
   `VirtualizingPanel` (abstract)
-- [basic/panels/virtualisation/virtualizing-stack-panel.ts](../basic/panels/virtualisation/virtualizing-stack-panel.ts) —
+- [basic/panels/virtualisation/virtualizing-stack-panel.ts](../src/basic/panels/virtualisation/virtualizing-stack-panel.ts) —
   `VirtualizingStackPanel`
-- [basic/scroll-viewer.ts](../basic/scroll-viewer.ts) —
+- [basic/scroll-viewer.ts](../src/basic/scroll-viewer.ts) —
   `ScrollViewer`
 
 See also: [templating.md](templating.md) for `ContentControl` /
@@ -396,7 +396,7 @@ target.Render(dc);
 ## 12. Limitations
 
 Most roadmap items here are tracked in
-[current-backlog.md § 10](../../current-backlog.md):
+[current-backlog.md § 10](../current-backlog.md):
 - Variable item heights in VirtualizingStackPanel — § 10.1.
 - Horizontal-orientation virtualization — § 10.2.
 - `ItemTemplateSelector` / `DataTemplateSelector` — § 10.3.
@@ -420,7 +420,7 @@ Built since this doc was first written:
   the default `ScrollViewer` template.
 
 Still gaps (tracked in
-[current-backlog.md § 10](../../current-backlog.md)):
+[current-backlog.md § 10](../current-backlog.md)):
 - **Smooth scrolling / animation** — § 10.5 (waiting on animation
   system § 16.1).
 - **`ScrollViewer` descendant walk for `IScrollInfo`** — § 10.6.

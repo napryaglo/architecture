@@ -6,11 +6,11 @@ references. Mirrors WPF's `ResourceDictionary` + `FindResource` +
 `DynamicResource`, scaled to what we need without XAML.
 
 **Implemented in:**
-- [runtime/resource-dictionary.ts](../runtime/resource-dictionary.ts) —
+- [runtime/resource-dictionary.ts](../src/runtime/resource-dictionary.ts) —
   `ResourceDictionary`, `ResourceKey`, `ResourceChangeListener`
-- [runtime/dynamic-resource.ts](../runtime/dynamic-resource.ts) —
+- [runtime/dynamic-resource.ts](../src/runtime/dynamic-resource.ts) —
   `DynamicResource(host, key)`
-- [runtime/visual.ts](../runtime/visual.ts) — `Visual.Resources`,
+- [runtime/visual.ts](../src/runtime/visual.ts) — `Visual.Resources`,
   `TryFindResource`, `FindResource`
 
 See also: [styles.md](styles.md) for how `Style` uses
@@ -163,7 +163,7 @@ property does the same.
 
 Roadmap items (`DynamicResource` re-wiring, `MergedDictionaries.Source`,
 coarse-grained notifications, keyed sealing) are tracked in
-[current-backlog.md § 12](../../current-backlog.md).
+[current-backlog.md § 12](../current-backlog.md).
 
 - **Markup is `.mu`, not XAML.** Resources can be authored declaratively
   in `.mu`'s `resources:` slot or imperatively via `Set(...)` calls.
