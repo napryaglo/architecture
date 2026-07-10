@@ -11,7 +11,7 @@ import {
     Thickness,
     Visual,
 } from '../../runtime/index.js';
-import { Brush, FontStyle, FontWeight, RotateTransform, ScaleTransform, TextAlignment, TransformGroup, VerticalAlignment } from '../../visual-engine/index.js';
+import { Brush, Color, FontStyle, FontWeight, RotateTransform, ScaleTransform, SolidColorBrush, TextAlignment, TransformGroup, VerticalAlignment } from '../../visual-engine/index.js';
 import { TextWrapping } from '../../basic/text-block.js';
 import { RichTextBox } from '../../basic/rich-text-box.js';
 import { FlowDocument } from '../../basic/documents/flow-document.js';
@@ -54,6 +54,11 @@ import {
 // NOT template bindings — ShapeText positions + rotates the template root
 // itself in MeasureOverride / ArrangeOverride so an off-centre or rotated
 // block needs no extra markup.
+
+// Default label ink — black (Visio/drawio convention). Shared module const
+// used as the Foreground DP default, mirroring Figure's shared DEFAULT_FILL;
+// never mutated in place (no text-foreground editor), so sharing is safe.
+const DEFAULT_INK = new SolidColorBrush(Color.Black);
 
 // Where the text block sits relative to the shape footprint (the Visio
 // "text block position" presets). The nine INSIDE anchors pin the block —
@@ -161,8 +166,8 @@ export class ShapeText extends Control
 
     // ── Character formatting ────────────────────────────────────────
     // Defaults tuned for a diagram label (12dp, normal weight). Foreground
-    // undefined → the hosted TextBlock inherits the ambient ink (@OnSurface
-    // via the theme) so labels track the scheme without an explicit brush.
+    // defaults to black ink (Visio/drawio convention) so labels read the same
+    // regardless of the ambient theme; assign a Brush to override per label.
     public static readonly FontSizeKey = Model.RegisterProperty<number>(
         ShapeText, 'FontSize', 12, MetaData.Measure | MetaData.Render);
     public static readonly FontWeightKey = Model.RegisterProperty<FontWeight>(
@@ -170,7 +175,7 @@ export class ShapeText extends Control
     public static readonly FontStyleKey = Model.RegisterProperty<FontStyle>(
         ShapeText, 'FontStyle', FontStyle.Normal, MetaData.Measure | MetaData.Render);
     public static readonly ForegroundKey = Model.RegisterProperty<Brush | undefined>(
-        ShapeText, 'Foreground', undefined, MetaData.Render);
+        ShapeText, 'Foreground', DEFAULT_INK, MetaData.Render);
 
     // ── Paragraph / block formatting ────────────────────────────────
     // M3/Visio default: centred, wrapping within the block.
