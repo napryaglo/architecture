@@ -1,6 +1,4 @@
-import { Element, MetaData, Model, Size, type DrawingContext, type PropertyDescriptor } from '../../runtime/index.js';
-import type { PropertyKey } from '../../runtime/index.js';
-import { resolveKey } from '../../runtime/model-internals.js';
+import { Element, MetaData, Model, Size, type DrawingContext } from '../../runtime/index.js';
 import { Brush, Color, Geometry, LineCap, LineJoin, Pen, SolidColorBrush } from '../../visual-engine/index.js';
 import { MatrixTransform } from '../../visual-engine/drawing/transform.js';
 import { Matrix } from '../../visual-engine/primitives.js';
@@ -76,42 +74,13 @@ export class Shape extends Element
         return finalSize;
     }
 
-    // Subscriptions on the current Pen / Brush instances. The Shape's
-    // Stroke and Fill DPs are MetaData.Render, so reference swaps
-    // re-paint automatically — but in-place mutations (PenEditor
-    // shifting Pen.Thickness, a Storyboard animating
-    // SolidColorBrush.Color) don't trip the descendant Visual's
-    // invalidation pipeline unless we listen here. Pen.ts's own
-    // comment promises propagation "caveat: the holding Visual still
-    // needs to listen on its Pen's properties" — this is that listen.
-    private _strokeListener:    (() => void) | undefined;
-    private _fillListener:      (() => void) | undefined;
-    private _geometryListener:  (() => void) | undefined;
-
-    protected override OnPropertyChanged(
-        descriptor: PropertyDescriptor,
-        oldValue:   unknown,
-        newValue:   unknown,
-    ): void
-    {
-        super.OnPropertyChanged(descriptor, oldValue, newValue);
-        if (descriptor.Owner !== Shape) return;
-        switch (descriptor.Name)
-        {
-            case 'Stroke':
-                this._strokeListener?.();
-                this._strokeListener = subscribeAny(newValue as Pen | undefined, () => this.InvalidateVisual());
-                break;
-            case 'Fill':
-                this._fillListener?.();
-                this._fillListener = subscribeAny(newValue as Brush | undefined, () => this.InvalidateVisual());
-                break;
-            case 'Geometry':
-                this._geometryListener?.();
-                this._geometryListener = subscribeAny(newValue as Geometry | undefined, () => this.InvalidateVisual());
-                break;
-        }
-    }
+    // In-place mutations of the current Fill / Stroke / Geometry (PenEditor
+    // shifting Pen.Thickness, a Storyboard animating SolidColorBrush.Color)
+    // re-paint automatically: Fill / Stroke / Geometry are all MetaData.Render
+    // Freezable-valued DPs, so Visual.rewireFreezableOwner (§5.2) registers
+    // this Shape as an owner and any inner change — including nested ones like
+    // Pen.Brush.Color or Brush.Transform.Angle — fires our InvalidateVisual.
+    // No per-property listener plumbing needed here any more.
 
     protected override RenderOverride(dc: DrawingContext): void
     {
@@ -216,48 +185,3 @@ function hitBandPen(width: number): Pen
     return p;
 }
 
-// Subscribe `cb` to every relevant property on `target`. Returns a
-// thunk that detaches all subscriptions. No-ops on undefined — the
-// holder stores the thunk verbatim so the next swap calls it
-// unconditionally.
-//
-// Pen / Brush / Geometry have known property surfaces; we enumerate
-// the relevant ones here rather than relying on a catch-all (which
-// the Model surface doesn't currently expose). Render coalesces
-// repeat InvalidateVisual calls so this is cheap even if multiple
-// properties fire in a single user gesture.
-const PEN_PROPS:      readonly string[] = ['Brush', 'Thickness', 'DashStyle', 'LineCap', 'LineJoin', 'MiterLimit'];
-const BRUSH_PROPS:    readonly string[] = ['Opacity', 'Transform', 'Color', 'GradientStops', 'StartPoint', 'EndPoint', 'Center', 'RadiusX', 'RadiusY', 'SpreadMethod', 'ImageSource', 'Stretch', 'AlignmentX', 'AlignmentY', 'Kind', 'Foreground', 'Background', 'Size', 'Angle', 'StrokeThickness'];
-const GEOMETRY_PROPS: readonly string[] = ['Rect', 'RadiusX', 'RadiusY', 'Start', 'End', 'Center', 'Width', 'Height', 'StartAngle', 'EndAngle', 'Figures'];
-
-function subscribeAny(target: Model | undefined, cb: () => void): (() => void) | undefined
-{
-    if (target === undefined) return undefined;
-    const props = selectPropSet(target);
-    const installed: Array<{ key: PropertyKey<unknown>; cb: () => void }> = [];
-    for (const prop of props)
-    {
-        // Some props only exist on a subset of subclasses — skip the
-        // ones the runtime doesn't know about rather than throw on the
-        // mismatch. Cheap: Model.HasProperty walks the prototype chain
-        // exactly the way the binding system already does.
-        if (!Model.HasProperty(target.constructor, prop)) continue;
-        const key = resolveKey(target, undefined, prop);
-        target.AddPropertyChangedListener(key, cb);
-        installed.push({ key, cb });
-    }
-    return () => {
-        for (const { key, cb: c } of installed)
-        {
-            target.RemovePropertyChangedListener(key, c);
-        }
-    };
-}
-
-function selectPropSet(target: Model): readonly string[]
-{
-    if (target instanceof Pen)      return PEN_PROPS;
-    if (target instanceof Brush)    return BRUSH_PROPS;
-    if (target instanceof Geometry) return GEOMETRY_PROPS;
-    return [];
-}

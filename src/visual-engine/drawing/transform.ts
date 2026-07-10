@@ -2,8 +2,8 @@ import {
     MetaData,
     Model,
     ObservableCollection,
-    type PropertyDescriptor,
 } from '../../runtime/index.js';
+import { Freezable } from '../../runtime/freezable.js';
 import { Matrix } from '../primitives.js';
 
 // Renderer-agnostic transform node. Drops into Visual.RenderTransform —
@@ -21,50 +21,25 @@ import { Matrix } from '../primitives.js';
 //   * MatrixTransform     — arbitrary 2D affine matrix (escape hatch)
 //   * TransformGroup      — composition of an ordered Children list
 //
-// Per-frame inner-DP changes (Angle tweening from 0 → 45,
-// ScaleX bound to a slider, Children.Add on a TransformGroup) reach
-// the owning Visual through the ITransform `_setRenderInvalidator`
-// hook, installed by Visual when the DP is set and cleared on swap-
-// out. Single-consumer: assigning the same Transform instance to
-// two Visuals' RenderTransform clobbers the first owner's
-// invalidator. Match WPF Freezable: clone before sharing.
+// Transform is a Freezable (§ 5.2): per-frame inner-DP changes (Angle
+// tweening 0 → 45, ScaleX bound to a slider, Children.Add on a
+// TransformGroup) reach EVERY owning Visual through Freezable's owner /
+// Changed mechanism — a Visual registers as an owner when the Transform is
+// assigned to Visual.RenderTransform (and unregisters on swap-out). Unlike
+// the old single-consumer `_setRenderInvalidator` hook this replaced,
+// sharing one Transform across two Visuals now notifies both. Callers that
+// want share-by-value can `Clone()`; `Freeze()` makes a Transform immutable
+// and share-safe with zero tracking.
 //
 // Identity's Matrix is precomputed once (`Matrix.Identity`), so the
 // renderer's `if (transform === Transform.Identity) skip` short-circuit
-// is a single reference compare on the hot path.
-export abstract class Transform extends Model
+// is a single reference compare on the hot path. Identity is frozen — it's
+// the shared immutable no-op transform.
+export abstract class Transform extends Freezable
 {
     public abstract get Matrix(): Matrix;
 
     public static readonly Identity: Transform;
-
-    // Bound to the owning Visual's render-invalidator when this
-    // Transform is assigned to Visual.RenderTransform. Inner-DP
-    // changes fire it via the OnPropertyChanged override below.
-    // Undefined when this Transform isn't currently driving any
-    // Visual (a fresh instance, a value held in a setter pipeline,
-    // or one detached by RenderTransform = undefined).
-    private _invalidator: (() => void) | undefined;
-
-    public _setRenderInvalidator(fn: (() => void) | undefined): void
-    {
-        this._invalidator = fn;
-    }
-
-    protected override OnPropertyChanged(
-        descriptor: PropertyDescriptor,
-        old_value:  any,
-        new_value:  any,
-    ): void
-    {
-        super.OnPropertyChanged(descriptor, old_value, new_value);
-        // Any property change on this Transform — Angle, ScaleX, X,
-        // CenterY, Matrix — pushes a render invalidation up to the
-        // owning Visual when one is attached. The invalidator
-        // identity comparison in the install path keeps this from
-        // double-firing on the same Visual.
-        this._invalidator?.();
-    }
 }
 
 class IdentityTransform extends Transform
@@ -73,8 +48,14 @@ class IdentityTransform extends Transform
 }
 
 // Initialized after IdentityTransform is defined to avoid a forward-ref
-// error in the static initializer.
-(Transform as { Identity: Transform }).Identity = new IdentityTransform();
+// error in the static initializer. Frozen — the shared singleton must never
+// mutate, and freezing makes RegisterOwner a no-op so it accumulates no
+// listeners when held as a default value.
+{
+    const identity = new IdentityTransform();
+    identity.Freeze();
+    (Transform as { Identity: Transform }).Identity = identity;
+}
 
 // Pure translation by (X, Y). X and Y are bindable Model properties
 // flagged Render — animating either fires the consumer Visual's render
@@ -278,76 +259,52 @@ export class MatrixTransform extends Transform
 // negligible for the typical 2–4 children case.
 //
 // Inner-property changes on child Transforms (a nested RotateTransform.
-// Angle tweening from 0 → 45) reach the owning Visual's render-
-// invalidator through the group's _setRenderInvalidator forwarding:
-// when a group is set on a Visual, the invalidator is fanned out to
-// every child. Children added later (Children.Add after the group is
-// installed) also inherit the same invalidator. Removed children get
-// their invalidator cleared so a popped Transform stops keeping its
-// former host alive.
+// Angle tweening from 0 → 45) reach every owning Visual through Freezable's
+// owner bubbling: the group registers itself as an owner on each child, so a
+// child's change fires the group's Changed, which fires the group's owners.
+// Structural changes (Children.Add / Remove / Clear) re-sync those child
+// registrations and fire Changed too. Because Children is a plain-field
+// ObservableCollection (not a DP), the group manages this wiring itself
+// rather than relying on Freezable's DP-driven child tracking, and overrides
+// collectFreezableChildren / cloneExtra so Freeze and Clone reach the list.
 export class TransformGroup extends Transform
 {
     private readonly _children: ObservableCollection<Transform>;
-    // Captured invalidator forwarded to every child. Mirrors the base
-    // _invalidator slot so reads stay synchronous (no super-call into
-    // a getter); the override _setRenderInvalidator below keeps the
-    // two in lockstep.
-    private _ownInvalidator: (() => void) | undefined;
-    // Children we've called _setRenderInvalidator on. Tracked here so
-    // a 'cleared' or 'removed' collection event can clear the
-    // invalidator on departing children without having to reason about
-    // the post-mutation collection state.
-    private readonly _attachedChildren: Set<Transform> = new Set();
+    // Children we've registered our bubble on. Source of truth for
+    // reconciling owner registrations across arbitrary collection mutations.
+    private readonly _subscribed: Set<Transform> = new Set();
+    // Stable bubble: a child's inner change → this group's Changed.
+    private readonly _childBubble = (): void => { this.fireChanged(); };
 
     constructor()
     {
         super();
         this._children = new ObservableCollection<Transform>();
-        // Per-mutation reconciliation: each kind clears or installs the
-        // invalidator on exactly the affected children. Runs synchronously
-        // inside the mutating call, then flags the owning Visual render-
-        // dirty so the structural change re-paints. Tracking attached
-        // children in _attachedChildren lets 'cleared' fire without
-        // re-walking the post-mutation (empty) collection.
-        this._children.Subscribe((change) =>
+        // Any structural change re-syncs child owner registrations, then
+        // fires Changed so the structural edit re-paints the owning Visual.
+        this._children.Subscribe(() => { this.resyncChildren(); this.fireChanged(); });
+    }
+
+    // Reconcile our owner registration against the current children set:
+    // unregister from departed children, register on newcomers. Handles
+    // every collection mutation kind (insert / remove / replace / clear /
+    // move) uniformly by diffing against _subscribed.
+    private resyncChildren(): void
+    {
+        const current = new Set<Transform>();
+        for (let i = 0; i < this._children.Count; i++)
         {
-            const fn = this._ownInvalidator;
-            switch (change.kind)
-            {
-                case 'inserted':
-                    for (const c of change.items)
-                    {
-                        c._setRenderInvalidator(fn);
-                        this._attachedChildren.add(c);
-                    }
-                    break;
-                case 'removed':
-                    for (const c of change.items)
-                    {
-                        c._setRenderInvalidator(undefined);
-                        this._attachedChildren.delete(c);
-                    }
-                    break;
-                case 'replaced':
-                    change.oldItem._setRenderInvalidator(undefined);
-                    this._attachedChildren.delete(change.oldItem);
-                    change.newItem._setRenderInvalidator(fn);
-                    this._attachedChildren.add(change.newItem);
-                    break;
-                case 'cleared':
-                    for (const c of this._attachedChildren)
-                    {
-                        c._setRenderInvalidator(undefined);
-                    }
-                    this._attachedChildren.clear();
-                    break;
-                case 'moved':
-                    // Identity preserved; invalidator state already
-                    // correct for this child.
-                    break;
-            }
-            fn?.();
-        });
+            const c = this._children.Get(i);
+            if (c !== undefined) current.add(c);
+        }
+        for (const c of this._subscribed)
+        {
+            if (!current.has(c)) { c.UnregisterOwner(this._childBubble); this._subscribed.delete(c); }
+        }
+        for (const c of current)
+        {
+            if (!this._subscribed.has(c)) { c.RegisterOwner(this._childBubble); this._subscribed.add(c); }
+        }
     }
 
     /** Ordered list of child transforms. Children[0] applies FIRST
@@ -371,23 +328,25 @@ export class TransformGroup extends Transform
         return m;
     }
 
-    public override _setRenderInvalidator(fn: (() => void) | undefined): void
+    // Freeze / CanFreeze must reach the non-DP Children list.
+    protected override collectFreezableChildren(): Freezable[]
     {
-        super._setRenderInvalidator(fn);
-        this._ownInvalidator = fn;
-        // Mirror the new invalidator out to every currently-attached
-        // child. _attachedChildren is the source of truth for which
-        // children currently have an installed invalidator; iterating
-        // it (rather than the collection) keeps the two in sync even
-        // when a child was added before this group was set on a Visual.
+        const out = super.collectFreezableChildren();
         for (let i = 0; i < this._children.Count; i++)
         {
-            const child = this._children.Get(i);
-            if (child !== undefined)
-            {
-                child._setRenderInvalidator(fn);
-                this._attachedChildren.add(child);
-            }
+            const c = this._children.Get(i);
+            if (c !== undefined) out.push(c);
+        }
+        return out;
+    }
+
+    // Clone deep-copies the (non-DP) children.
+    protected override cloneExtra(source: this): void
+    {
+        for (let i = 0; i < source._children.Count; i++)
+        {
+            const c = source._children.Get(i);
+            if (c !== undefined) this._children.Add(c.Clone());
         }
     }
 }

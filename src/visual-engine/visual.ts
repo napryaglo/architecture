@@ -1,5 +1,6 @@
 import type { Brush } from './drawing/brush.js';
 import { Model } from '../runtime/model.js';
+import { Freezable } from '../runtime/freezable.js';
 import { peekPropertyBag, propertyValues } from '../runtime/model-internals.js';
 import type { PropertyDescriptor } from '../runtime/property-descriptor.js';
 import { MetaData, affectsArrange, affectsMeasure, affectsRender, inherits } from '../runtime/metadata.js';
@@ -247,8 +248,9 @@ export class Visual extends Model
     // RotateTransform(45)`) invalidates the Visual. Inner-property
     // changes on the Transform itself (a RotateTransform's Angle
     // tweening, a ScaleTransform's ScaleX bound to a slider) reach the
-    // renderer through the Transform `_setRenderInvalidator` hook,
-    // wired below in OnPropertyChanged when the DP is set / cleared.
+    // renderer through Freezable's owner mechanism — this Visual registers
+    // as an owner of the assigned Transform (§5.2, rewireFreezableOwner in
+    // OnPropertyChanged), so a shared Transform notifies every holder.
     //
     // Hit-testing: the SVG renderer applies the transform via the
     // outer <g>, so `elementsFromPoint` automatically projects the
@@ -563,12 +565,11 @@ export class Visual extends Model
     // (§ Phase B / input) — see the AddRoutedEventListener /
     // FireRoutedListeners stubs below.
 
-    // Bound closure installed on a RenderTransform's _setRenderInvalidator
-    // hook (see Transform). Captured once per Visual so install / clear
-    // can identity-compare without allocating per call. Inner Transform
-    // property changes (RotateTransform.Angle, ScaleTransform.ScaleX, …)
-    // fire this and flag the Visual render-dirty.
-    private readonly _renderTransformInvalidator = (): void => this.InvalidateVisual();
+    // Inner-property changes on a Freezable-valued DP (RotateTransform.
+    // Angle, SolidColorBrush.Color, …) now flag this Visual dirty through
+    // Freezable's owner mechanism — see rewireFreezableOwner in
+    // OnPropertyChanged. No per-Visual invalidator closure is captured here
+    // any more (§5.2 removed the RenderTransform-only `_setRenderInvalidator`).
 
     // The declarative drag-source latch (IsDraggable / OnDragStart +
     // _onDragLatch* listeners) moved to `Element` (§ Phase B / input).
@@ -1468,7 +1469,7 @@ export class Visual extends Model
 
     protected override OnPropertyChanged(
         descriptor: PropertyDescriptor,
-        _old_value: any,
+        old_value: any,
         new_value: any,
     ): void
     {
@@ -1482,28 +1483,54 @@ export class Visual extends Model
         // Visual itself has neither Style nor a logical tree to
         // cascade through.
 
-        // RenderTransform DP changed — rebind the inner-property
-        // invalidator so an Angle / ScaleX / TransformGroup.Children
-        // change on the new Transform value flags THIS Visual render-
-        // dirty. The MetaData.Render flag above already invalidated for
-        // the whole-DP swap; this hook covers subsequent inner writes.
-        // Cleared on swap-out so a Transform detached from its host
-        // doesn't keep an extinct Visual alive.
-        if (descriptor.Name === 'RenderTransform' && descriptor.Owner === Visual)
-        {
-            const oldT = _old_value as Transform | undefined;
-            const newT = new_value as Transform | undefined;
-            if (oldT !== undefined && typeof oldT._setRenderInvalidator === 'function')
-            {
-                oldT._setRenderInvalidator(undefined);
-            }
-            if (newT !== undefined && typeof newT._setRenderInvalidator === 'function')
-            {
-                newT._setRenderInvalidator(this._renderTransformInvalidator);
-            }
-        }
+        // §5.2 — Freezable owner wiring. When a DP value is (or was) a
+        // Freezable, register / unregister THIS Visual as an owner so a
+        // later IN-PLACE mutation of a shared Brush / Pen / Geometry /
+        // Transform (or any nested Freezable it holds — Pen.Brush,
+        // Brush.Transform, a TransformGroup's Children) re-invalidates us
+        // per the DP's MetaData. The MetaData dispatch above already
+        // handled the whole-DP swap; this covers subsequent inner writes.
+        // Subsumes the old RenderTransform-only `_setRenderInvalidator`
+        // hook (single-consumer — clobbered on sharing) and Shape's
+        // hand-rolled subscribeAny property-list listener.
+        this.rewireFreezableOwner(descriptor, old_value, new_value);
         // The declarative drag-source latch (IsDraggable flips) is wired
         // in Element.OnPropertyChanged (§ Phase B / input).
+    }
+
+    // Per-DP Freezable owner registrations, keyed by composite DP key, so
+    // a value swap can unregister the old owner before registering the new.
+    // Lazily allocated — most Visuals hold no Freezable-valued DP.
+    private _freezableOwners: Map<string, { freezable: Freezable; cb: () => void }> | undefined;
+
+    private rewireFreezableOwner(descriptor: PropertyDescriptor, oldValue: unknown, newValue: unknown): void
+    {
+        const newIsFreezable = newValue instanceof Freezable;
+        // Fast path: nothing Freezable inbound and nothing tracked for this
+        // DP — the overwhelmingly common case (numbers, strings, enums).
+        if (!newIsFreezable && !(oldValue instanceof Freezable) && this._freezableOwners === undefined) return;
+
+        const key = Model.compose_key(descriptor.RootOwner, descriptor.Name);
+        const prev = this._freezableOwners?.get(key);
+        if (prev !== undefined)
+        {
+            prev.freezable.UnregisterOwner(prev.cb);
+            this._freezableOwners!.delete(key);
+        }
+        if (newIsFreezable)
+        {
+            // Re-invalidate per the holding DP's MetaData when the shared
+            // Freezable changes — same dispatch a whole-DP write would run.
+            const meta = descriptor.MetaData;
+            const cb = (): void =>
+            {
+                if (affectsMeasure(meta)) this.InvalidateMeasure();
+                if (affectsArrange(meta)) this.InvalidateArrange();
+                if (affectsRender(meta))  this.InvalidateVisual();
+            };
+            (newValue as Freezable).RegisterOwner(cb);
+            (this._freezableOwners ??= new Map()).set(key, { freezable: newValue as Freezable, cb });
+        }
     }
 
     // ------------------------------------------------------------------

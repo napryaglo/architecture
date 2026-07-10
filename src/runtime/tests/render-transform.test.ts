@@ -26,6 +26,20 @@ import {
 // § 18.1 — Visual.RenderTransform DP, supporting Transform subclasses,
 // renderer wiring, inner-DP invalidation.
 
+// Counts InvalidateVisual calls so tests can assert the OBSERVABLE effect
+// of the §5.2 Freezable-owner wiring (an inner-DP change on a held / nested
+// Transform re-invalidates the owning Visual) instead of poking at internal
+// invalidator fields.
+class CountingBorder extends Border
+{
+    public invalidateVisualCount = 0;
+    public override InvalidateVisual(): void
+    {
+        this.invalidateVisualCount++;
+        super.InvalidateVisual();
+    }
+}
+
 function makeDom(): { document: Document; surface: SVGSVGElement }
 {
     const dom = new JSDOM('<!doctype html><html><body></body></html>');
@@ -46,25 +60,29 @@ describe('§ 18.1 — Visual.RenderTransform / RenderTransformOrigin DPs', () =>
         assert.equal(b.RenderTransformOrigin.Y, 0);
     });
 
-    test('setting a Transform installs the inner-property invalidator', () => {
-        const b = new Border();
+    test('an inner-DP change on a held Transform invalidates the owning Visual', () => {
+        const b = new CountingBorder();
         const r = new RotateTransform();
         b.RenderTransform = r;
-        const inv = (r as unknown as { _invalidator?: () => void })._invalidator;
-        assert.ok(typeof inv === 'function',
-            'expected RotateTransform to receive an invalidator after assignment');
+        b.invalidateVisualCount = 0;   // ignore the assignment's own invalidation
+        r.Angle = 45;
+        assert.ok(b.invalidateVisualCount > 0,
+            'a RotateTransform.Angle change re-invalidates the Visual that holds it');
     });
 
-    test('swapping RenderTransform releases the old Transform invalidator', () => {
-        const b = new Border();
+    test('swapping RenderTransform releases the old Transform (owner unregistered)', () => {
+        const b = new CountingBorder();
         const a = new RotateTransform(10);
         const c = new RotateTransform(20);
         b.RenderTransform = a;
         b.RenderTransform = c;
-        assert.equal((a as unknown as { _invalidator?: () => void })._invalidator, undefined,
-            'detached transform should have its invalidator cleared');
-        assert.ok((c as unknown as { _invalidator?: () => void })._invalidator !== undefined,
-            'newly attached transform should have an invalidator');
+        b.invalidateVisualCount = 0;
+        a.Angle = 99;                  // detached — must NOT invalidate
+        assert.equal(b.invalidateVisualCount, 0,
+            'the swapped-out transform no longer invalidates the Visual');
+        c.Angle = 99;                  // attached — must invalidate
+        assert.ok(b.invalidateVisualCount > 0,
+            'the current transform still invalidates the Visual');
     });
 
     test('RenderTransformOrigin accepts arbitrary Point values', () => {
@@ -147,26 +165,29 @@ describe('§ 18.1 — Transform subclass matrices', () => {
         assert.ok(g.Matrix.IsIdentity);
     });
 
-    test('TransformGroup forwards the invalidator to children added after attach', () => {
-        const b = new Border();
+    test('TransformGroup bubbles inner changes of a child added after attach', () => {
+        const b = new CountingBorder();
         const g = new TransformGroup();
         b.RenderTransform = g;
         const r = new RotateTransform();
         g.Children.Add(r);
-        assert.ok((r as unknown as { _invalidator?: () => void })._invalidator !== undefined,
-            'newly added child should inherit the group\'s invalidator');
+        b.invalidateVisualCount = 0;
+        r.Angle = 45;
+        assert.ok(b.invalidateVisualCount > 0,
+            'a child added after the group was attached still bubbles to the Visual');
     });
 
-    test('TransformGroup clears the invalidator on a removed child', () => {
-        const b = new Border();
+    test('TransformGroup stops bubbling for a removed child', () => {
+        const b = new CountingBorder();
         const g = new TransformGroup();
         const r = new RotateTransform();
         g.Children.Add(r);
         b.RenderTransform = g;
-        assert.ok((r as unknown as { _invalidator?: () => void })._invalidator !== undefined);
         g.Children.Clear();
-        assert.equal((r as unknown as { _invalidator?: () => void })._invalidator, undefined,
-            'detached child should have its invalidator cleared');
+        b.invalidateVisualCount = 0;
+        r.Angle = 45;
+        assert.equal(b.invalidateVisualCount, 0,
+            'a removed child no longer invalidates the owning Visual');
     });
 
     test('Transform.Identity is a shared no-op singleton', () => {

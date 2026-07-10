@@ -1,4 +1,5 @@
 import { MetaData, Model } from '../../runtime/index.js';
+import { Freezable } from '../../runtime/freezable.js';
 import { Color, Point } from '../primitives.js';
 import { Transform } from './transform.js';
 
@@ -69,7 +70,7 @@ import { ImageSource } from './image-source.js';
 // SolidColorBrush.Color.A or per-stop alpha in gradients). Transform is
 // applied to the brush's coordinate space — typical use is to rotate or
 // skew a gradient without changing the brush's logical stops.
-export abstract class Brush extends Model
+export abstract class Brush extends Freezable
 {
     public static readonly OpacityKey   = Model.RegisterProperty<number>(   Brush, 'Opacity',   1,                  MetaData.Render);
     public static readonly TransformKey = Model.RegisterProperty<Transform>(Brush, 'Transform', Transform.Identity, MetaData.Render);

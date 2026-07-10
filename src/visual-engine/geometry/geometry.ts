@@ -1,4 +1,5 @@
 import { MetaData, Model } from '../../runtime/index.js';
+import { Freezable } from '../../runtime/freezable.js';
 import { Point, Rect, Size } from '../primitives.js';
 import { Transform } from '../drawing/transform.js';
 import { Cubic } from './pathops/cubic.js';
@@ -103,7 +104,7 @@ export class PathFigure
 //   * Intersects(g)    — bbox-only in v1. Phase 7 (§19.7) upgrades this
 //                        to call `combine(this, g, Intersect)` and check
 //                        the result for non-emptiness.
-export abstract class Geometry extends Model
+export abstract class Geometry extends Freezable
 {
     public static readonly TransformKey = Model.RegisterProperty<Transform>(
         Geometry, 'Transform', Transform.Identity, MetaData.Render);

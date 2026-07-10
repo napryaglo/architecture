@@ -1,4 +1,5 @@
 import { MetaData, Model } from '../../runtime/index.js';
+import { Freezable } from '../../runtime/freezable.js';
 import type { Brush } from './brush.js';
 
 // SVG / Canvas line-cap values. The string values are the actual SVG
@@ -62,7 +63,7 @@ export class DashStyle
 // Defaults match WPF Pen: Brush=undefined (no stroke painted),
 // Thickness=1, DashStyle=Solid, LineCap=Flat, LineJoin=Miter,
 // MiterLimit=10.
-export class Pen extends Model
+export class Pen extends Freezable
 {
     public static readonly BrushKey      = Model.RegisterProperty<Brush | undefined>(Pen, 'Brush',      undefined,       MetaData.Render);
     public static readonly ThicknessKey  = Model.RegisterProperty<number>(           Pen, 'Thickness',  1,               MetaData.Render);

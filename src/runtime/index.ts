@@ -49,6 +49,7 @@ export {
     type ValueConverter,
 } from './binding/index.js';
 export { Model, PropertyKey } from './model.js';
+export { Freezable, cloneFreezableValue } from './freezable.js';
 export { Behavior } from '../visual-engine/behavior.js';
 export {
     Visual,
