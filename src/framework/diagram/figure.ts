@@ -3,6 +3,7 @@ import {
     MetaData,
     Model,
     Rect,
+    Size,
     Visual,
     type PointerEventArgs,
     type PropertyDescriptor,
@@ -10,6 +11,9 @@ import {
 import { Brush, type Geometry, type PathGeometry, type Point, Pen, SolidColorBrush } from '../../visual-engine/index.js';
 import { Color } from '../../runtime/index.js';
 import { Canvas } from '../../basic/panels/canvas.js';
+import { Border } from '../../basic/border.js';
+import { ShapeText, TextAutoFit } from './shape-text.js';
+import { FieldKind, resolveFields } from './shape-text-field.js';
 import { ContentControl } from '../base/content-control.js';
 import { ScrollViewer } from '../surfaces/scroll-viewer.js';
 import { Selector } from '../list/selector.js';
@@ -53,6 +57,12 @@ import type { RigidConnectorDragHost, RigidConnectorDragSession } from './rigid-
 // 80×80 dp the demo used. Overridable on a per-instance basis via the
 // fromKind / fromSource factories.
 export const FIGURE_DEFAULT_SIZE = 80;
+
+// Figure DP names whose change should re-resolve the label's {field} tokens.
+const FIELD_SOURCE_NAMES: ReadonlySet<string> = new Set(['Left', 'Top', 'Width', 'Height', 'Kind', 'Id']);
+
+// Slack around the label when a Figure grows to fit it (TextAutoFit.GrowShape).
+const FIGURE_LABEL_MARGIN = 8;
 
 // Default brushes for a fresh Figure. Tuned to read on @Surface in both
 // Material light / dark schemes. Consumers replace by assignment.
@@ -103,10 +113,13 @@ export class Figure extends ContentControl
     public static readonly StrokeKey = Model.RegisterProperty<Pen | undefined>(
         Figure, 'Stroke', undefined, MetaData.None);
 
-    // Optional caption painted on top of the shape via the default
-    // template. Empty by default.
-    public static readonly LabelTextKey = Model.RegisterProperty<string>(
-        Figure, 'LabelText', '', MetaData.None);
+    // The shape's text block (the Visio "text block") — a first-class
+    // ShapeText sub-control created per-instance in the ctor and hosted in
+    // the default template's PART_LabelHost. It renders itself reactively;
+    // `LabelText` below is sugar over `Text.Content`. Measure-affecting so a
+    // whole-block swap relays out (Content edits invalidate via ShapeText).
+    public static readonly TextKey = Model.RegisterProperty<ShapeText | undefined>(
+        Figure, 'Text', undefined, MetaData.Measure);
 
     // Stable identifier — used by serialize / deserialize and by external
     // consumers that need to refer back to a specific figure after Load.
@@ -284,12 +297,70 @@ export class Figure extends ContentControl
         // attached-property defaults happen to be on the parent path.
         Canvas.SetLeft(this, 0);
         Canvas.SetTop (this, 0);
+        // The shape's text block — one per Figure so edits (and the coming
+        // in-place editor) don't leak across instances. Set on the Text DP
+        // before applyDefaultStyle so anything reading it during style
+        // resolution sees the instance.
+        this.set_property_value(Figure.TextKey, new ShapeText());
         // Default Template flows from the bundled diagram theme entry
         // under TargetType=Figure (see diagram.template.mu): a Canvas
         // hosting a Shape primitive template-bound to this Figure's
-        // Geometry / Fill / Stroke / Width / Height, plus a TextBlock
-        // template-bound to LabelText.
+        // Geometry / Fill / Stroke / Width / Height, plus a PART_LabelHost
+        // into which the ShapeText is slotted below.
         this.applyDefaultStyle();
+        // Host the text block in the template's PART_LabelHost (a Border
+        // sized to the shape footprint). The block renders itself; a
+        // re-template that omits PART_LabelHost simply drops the label.
+        const labelHost = this.GetTemplateChild('PART_LabelHost') as Border | undefined;
+        labelHost?.SetChild(this.Text);
+        // Keep live {field} tokens resolved (§ Slice 6) and honour GrowShape
+        // auto-fit (§ Slice 7) when the label's text / document / mode change;
+        // geometry-driven field refresh rides OnPropertyChanged below.
+        this.Text.AddPropertyChangedListener(ShapeText.DocumentKey, this._onLabelChanged);
+        this.Text.AddPropertyChangedListener(ShapeText.ContentKey,  this._onLabelChanged);
+        this.Text.AddPropertyChangedListener(ShapeText.AutoFitKey,  this._onLabelChanged);
+        this._refreshLabelFields();
+        this._applyAutoFit();
+    }
+
+    private readonly _onLabelChanged = (): void => { this._refreshLabelFields(); this._applyAutoFit(); };
+
+    // TextAutoFit.GrowShape: grow this figure so the label's natural size
+    // fits (plus a margin). Grow-only — never shrinks the shape below its
+    // current size. No-op for the other modes. Growing Width/Height rebuilds
+    // the geometry and reroutes connectors through the usual DP path; the
+    // label re-measures to the same natural size, so the fit converges.
+    private _applyAutoFit(): void
+    {
+        const label = this.Text;
+        if (label === undefined || label.AutoFit !== TextAutoFit.GrowShape) return;
+        label.Measure(new Size(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY));
+        const d = label.DesiredSize;
+        const needW = d.Width  + FIGURE_LABEL_MARGIN * 2;
+        const needH = d.Height + FIGURE_LABEL_MARGIN * 2;
+        if (needW > this.Width)  this.Width  = needW;
+        if (needH > this.Height) this.Height = needH;
+    }
+
+    // Resolve every {field} in the label against this figure's live values.
+    private _refreshLabelFields(): void
+    {
+        const doc = this.Text?.Document;
+        if (doc !== undefined) resolveFields(doc, (k) => this._resolveField(k));
+    }
+
+    private _resolveField(key: FieldKind): string | undefined
+    {
+        switch (key)
+        {
+            case FieldKind.Width:  return String(Math.round(this.Width));
+            case FieldKind.Height: return String(Math.round(this.Height));
+            case FieldKind.Left:   return String(Math.round(this.Left));
+            case FieldKind.Top:    return String(Math.round(this.Top));
+            case FieldKind.Kind:   return this.Kind;
+            case FieldKind.Id:     return this.Id ?? '';
+            default:               return undefined;
+        }
     }
 
     public get Left(): number       { return this.get_property_value(Figure.LeftKey); }
@@ -305,8 +376,12 @@ export class Figure extends ContentControl
     public set Fill(value: Brush | undefined)  { this.set_property_value(Figure.FillKey, value); }
     public get Stroke(): Pen | undefined       { return this.get_property_value(Figure.StrokeKey); }
     public set Stroke(value: Pen | undefined)  { this.set_property_value(Figure.StrokeKey, value); }
-    public get LabelText(): string             { return this.get_property_value(Figure.LabelTextKey); }
-    public set LabelText(value: string)        { this.set_property_value(Figure.LabelTextKey, value); }
+    // The text block itself. Always present (seeded in the ctor).
+    public get Text(): ShapeText               { return this.get_property_value(Figure.TextKey)!; }
+    // LabelText — sugar over Text.Content for the common "just set a caption"
+    // path (and back-compat with the old flat string DP).
+    public get LabelText(): string             { return this.Text?.Content ?? ''; }
+    public set LabelText(value: string)        { if (this.Text !== undefined) this.Text.Content = value; }
     public get Id(): string | undefined        { return this.get_property_value(Figure.IdKey); }
     public set Id(value: string | undefined)   { this.set_property_value(Figure.IdKey, value); }
     public get IsSelected(): boolean           { return this.get_property_value(Figure.IsSelectedKey); }
@@ -599,11 +674,22 @@ export class Figure extends ContentControl
         {
             this._rebuildGeometry();
         }
+        // Slice 6: re-resolve live {field} tokens when a source value changes.
+        if (FIELD_SOURCE_NAMES.has(descriptor.Name)) this._refreshLabelFields();
     }
 
     protected override OnPointerDown(args: PointerEventArgs): void
     {
         if (args.Handled) return;
+        // Double-click begins in-place label editing (Visio). Skip the
+        // drag / click-select machinery entirely for this gesture — the
+        // editor takes the pointer from here.
+        if (args.IsDoubleClick)
+        {
+            this.Text?.BeginEdit();
+            args.Handled = true;
+            return;
+        }
         // Press offset = where inside the node the cursor landed. Stored
         // in host (canvas) coordinates against the node's current Left /
         // Top — moving the node is then "wherever the cursor goes,

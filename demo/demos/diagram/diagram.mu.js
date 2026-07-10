@@ -260,6 +260,7 @@ export class DiagramDemo extends ResourceDictionary {
             _diagram13.set_property_value(Diagram.AllowMarqueeSelectionKey, true);
             _diagram13.set_property_value(Diagram.AlignmentGuidesEnabledKey, true);
             _diagram13.set_property_value(Diagram.SelectionResizeEnabledKey, true);
+            _diagram13.set_property_value(Diagram.TextBlockAdornerEnabledKey, true);
             _diagram13.set_property_value(Diagram.ConnectorInteractionsEnabledKey, true);
             _diagram13.set_property_value(Diagram.ReflectSelectionToItemsKey, true);
             _diagram13.set_property_value(Diagram.DropReceiverKey, DataContextBinding(_diagram13, "Self"));

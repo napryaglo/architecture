@@ -3,6 +3,8 @@ import {
     MetaData,
     Model,
     Rect,
+    Size,
+    type PointerEventArgs,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
 import { resolveKey } from '../../runtime/model-internals.js';
@@ -20,6 +22,9 @@ import {
 import { Shape } from '../../basic/shapes/shape.js';
 import { Canvas } from '../../basic/panels/canvas.js';
 import { DataTemplate } from '../../basic/templates/data-template.js';
+import { ShapeText } from './shape-text.js';
+import { FieldKind, resolveFields } from './shape-text-field.js';
+import { nearestTOnPolyline, pointAlongPolyline, polylineLength } from './connector-route.js';
 import { ConnectorEndpoint } from './connector-endpoint.js';
 import { ConnectorCapDataContext } from './caps/connector-cap-data-context.js';
 import { Figure } from './figure.js';
@@ -139,6 +144,16 @@ export class Connector extends Shape
     public static readonly TargetCapScaleKey = Model.RegisterProperty<number>(
         Connector, 'TargetCapScale', 1, MetaData.None);
 
+    // Connector label (§ diagram-text Slice 5). The connector owns a
+    // first-class ShapeText created in the ctor; LabelPosition is the
+    // arc-length fraction along the rendered route where the label centres
+    // (0.5 = midpoint). Both MetaData.None — a change repositions the label
+    // imperatively (Canvas.Left/Top), not through a measure/arrange input.
+    public static readonly TextKey = Model.RegisterProperty<ShapeText | undefined>(
+        Connector, 'Text', undefined, MetaData.None);
+    public static readonly LabelPositionKey = Model.RegisterProperty<number>(
+        Connector, 'LabelPosition', 0.5, MetaData.None);
+
     // CapInset is an attached property on Visual — set by the cap
     // template author on the cap's template root to tell the connector
     // how far back to shorten the painted line. Registered here with
@@ -167,6 +182,17 @@ export class Connector extends Shape
     public set SourceCapScale(v: number) { this.set_property_value(Connector.SourceCapScaleKey, v); }
     public get TargetCapScale(): number { return this.get_property_value(Connector.TargetCapScaleKey); }
     public set TargetCapScale(v: number) { this.set_property_value(Connector.TargetCapScaleKey, v); }
+
+    // The label text block — always present (seeded in the ctor). LabelText
+    // is sugar over Text.Content for the common "just caption it" path.
+    public get Text(): ShapeText               { return this.get_property_value(Connector.TextKey)!; }
+    public get LabelText(): string             { return this.Text?.Content ?? ''; }
+    public set LabelText(v: string)            { if (this.Text !== undefined) this.Text.Content = v; }
+    public get LabelPosition(): number         { return this.get_property_value(Connector.LabelPositionKey); }
+    public set LabelPosition(v: number)        { this.set_property_value(Connector.LabelPositionKey, v); }
+    // The mounted label visual — the connectors materializer mounts this as a
+    // connectors-layer sibling (like caps); _placeLabel positions it.
+    public get LabelInstance(): ShapeText      { return this.Text; }
 
     // Materialized cap visuals. Lifetime: created when the
     // corresponding *CapTemplate DP is set, replaced when it flips,
@@ -259,6 +285,16 @@ export class Connector extends Shape
     // recompute coherent.
     private _recomputing: boolean = false;
 
+    // Label drag state (§ Slice 5). _labelDragging spans the label's
+    // PointerDown → PointerUp; the offset converts host → canvas coords
+    // (translation-only canvas) so nearest-t projects the cursor onto the
+    // route. _onLabelContentChanged re-syncs hit-testing + re-centres when
+    // the label's text (hence size) changes.
+    private _labelDragging = false;
+    private _labelOffsetX = 0;
+    private _labelOffsetY = 0;
+    private readonly _onLabelContentChanged = (): void => { this._syncLabelHitTest(); this._placeLabel(); this._refreshLabelFields(); };
+
     // Bound callbacks — required for symmetric Add/Remove on the
     // Model PropertyChangedListener API.
     private readonly _onSourceEndpointInputChanged = (): void => {
@@ -324,6 +360,102 @@ export class Connector extends Shape
         // `new Connector()`), so test connectors stay cap-less until a
         // template is set explicitly.
         this.applyDefaultStyle();
+
+        // Label (§ Slice 5): a first-class ShapeText that rides the route.
+        // Created after applyDefaultStyle so it resolves the theme; the
+        // connectors materializer mounts it as a connectors-layer sibling and
+        // _placeLabel positions it. Empty by default (invisible + non-hit).
+        const label = new ShapeText();
+        this.set_property_value(Connector.TextKey, label);
+        this._wireLabel(label);
+        this._syncLabelHitTest();
+    }
+
+    // Wire the label's own gestures — a connector label has no owning Figure,
+    // so it handles its own double-click-to-edit and slide-along-route drag —
+    // plus the content/edit listeners that keep hit-testing + centring honest.
+    private _wireLabel(label: ShapeText): void
+    {
+        label.AddPropertyChangedListener(ShapeText.ContentKey,   this._onLabelContentChanged);
+        label.AddPropertyChangedListener(ShapeText.DocumentKey,  this._onLabelContentChanged);
+        label.AddPropertyChangedListener(ShapeText.IsEditingKey, this._onLabelContentChanged);
+
+        label.AddRoutedEventListener('PointerDown', ((args: PointerEventArgs) => {
+            if (args.IsDoubleClick) { label.BeginEdit(); args.Handled = true; return; }
+            if (label.IsEditing) return;                    // editor owns the pointer
+            const pts = this._currentRoutePoints;
+            if (pts === undefined || pts.length < 2) return;
+            // Host → canvas offset from the label's known route point at press.
+            const rp = pointAlongPolyline(pts, this.LabelPosition).point;
+            this._labelOffsetX = rp.X - args.HostX;
+            this._labelOffsetY = rp.Y - args.HostY;
+            this._labelDragging = true;
+            args.CapturePointer(label, 'grab');
+            args.Handled = true;
+        }) as (a: unknown) => void);
+
+        label.AddRoutedEventListener('PointerMove', ((args: PointerEventArgs) => {
+            if (!this._labelDragging) return;
+            const pts = this._currentRoutePoints;
+            if (pts === undefined || pts.length < 2) return;
+            const cursor = new Point(args.HostX + this._labelOffsetX, args.HostY + this._labelOffsetY);
+            this.LabelPosition = nearestTOnPolyline(pts, cursor);   // slides along the route
+            args.Handled = true;
+        }) as (a: unknown) => void);
+
+        label.AddRoutedEventListener('PointerUp', ((args: PointerEventArgs) => {
+            if (!this._labelDragging) return;
+            this._labelDragging = false;
+            args.ReleasePointerCapture();
+            args.Handled = true;
+        }) as (a: unknown) => void);
+    }
+
+    // Hit-test the label only when it carries content (or is being edited) —
+    // an empty label must not swallow clicks on the route beneath it.
+    private _syncLabelHitTest(): void
+    {
+        const label = this.Text;
+        if (label !== undefined) label.IsHitTestVisible = !label.IsEmpty || label.IsEditing;
+    }
+
+    // Centre the label on its route point (arc-length t = LabelPosition).
+    // Falls back to the anchor midpoint for a Bezier / degenerate route
+    // (no polyline). Measures the label to size it before centring.
+    private _placeLabel(): void
+    {
+        const label = this.Text;
+        if (label === undefined) return;
+        let cx: number, cy: number;
+        const pts = this._currentRoutePoints;
+        if (pts !== undefined && pts.length >= 2)
+        {
+            const rp = pointAlongPolyline(pts, this.LabelPosition);
+            cx = rp.point.X; cy = rp.point.Y;
+        }
+        else
+        {
+            const s = this._currentSrcAnchor, t = this._currentTgtAnchor;
+            if (s === undefined || t === undefined) return;
+            cx = (s.x + t.x) / 2; cy = (s.y + t.y) / 2;
+        }
+        label.Measure(new Size(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY));
+        const d = label.DesiredSize;
+        Canvas.SetLeft(label, cx - d.Width / 2);
+        Canvas.SetTop(label,  cy - d.Height / 2);
+    }
+
+    // Double-clicking the route (not the label) captions a bare connector —
+    // begins editing the midpoint label, matching Visio.
+    protected override OnPointerDown(args: PointerEventArgs): void
+    {
+        if (args.IsDoubleClick && this.Text !== undefined)
+        {
+            this.Text.BeginEdit();
+            args.Handled = true;
+            return;
+        }
+        super.OnPointerDown(args);
     }
 
     protected override OnPropertyChanged(
@@ -397,6 +529,11 @@ export class Connector extends Shape
             // re-subscribed Stroke for the connector's OWN repaint.)
             this._reattachCapStrokeBrushListener();
             this._resyncCapContexts();
+        }
+        else if (descriptor === Connector.LabelPositionKey.descriptor)
+        {
+            // Slide the label to its new arc-length fraction without a reroute.
+            this._placeLabel();
         }
     }
 
@@ -845,6 +982,29 @@ export class Connector extends Shape
         {
             this._trackedTargetFigure._optimizeSideIntersections(this._trackedTargetSide);
         }
+
+        // Re-place the label on the freshly-computed route (§ Slice 5) and
+        // refresh its {Length}/{SourceId}/… fields (§ Slice 6).
+        this._placeLabel();
+        this._refreshLabelFields();
+    }
+
+    // Resolve every {field} in the label against this connector's live route.
+    private _refreshLabelFields(): void
+    {
+        const doc = this.Text?.Document;
+        if (doc !== undefined) resolveFields(doc, (k) => this._resolveField(k));
+    }
+
+    private _resolveField(key: FieldKind): string | undefined
+    {
+        switch (key)
+        {
+            case FieldKind.Length:   return String(Math.round(polylineLength(this._currentRoutePoints ?? [])));
+            case FieldKind.SourceId: return connectorEndpointId(this.Source);
+            case FieldKind.TargetId: return connectorEndpointId(this.Target);
+            default:                 return undefined;
+        }
     }
 
     // Two-pass anchor resolve. The pass with the Node-pinned endpoint
@@ -944,6 +1104,13 @@ function placeCap(cap: Visual | undefined, anchor: ResolvedAnchor, tangentRadian
         group.Children.Add(new RotateTransform(degrees));
         cap.RenderTransform = group;
     }
+}
+
+// A connector endpoint's node id for the {SourceId}/{TargetId} fields —
+// empty when the end is free-floating or the node carries no id.
+function connectorEndpointId(ep: ConnectorEndpoint | undefined): string
+{
+    return ep?.Node instanceof Figure ? (ep.Node.Id ?? '') : '';
 }
 
 const EMPTY_WAYPOINTS: readonly Point[] = Object.freeze([]) as readonly Point[];

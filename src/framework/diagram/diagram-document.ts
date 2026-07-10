@@ -8,8 +8,15 @@ import {
     ServiceKey,
     type ServiceToken,
 } from '../../runtime/index.js';
-import { pathGeometryFromSvgD, pathGeometryToSvgD, Point } from '../../visual-engine/index.js';
+import { FontStyle, FontWeight, pathGeometryFromSvgD, pathGeometryToSvgD, Point, TextAlignment, VerticalAlignment } from '../../visual-engine/index.js';
 import { Figure } from './figure.js';
+import { Callout, TextShape } from './text-shape.js';
+import { TextAutoFit, TextPlacement, type ShapeText } from './shape-text.js';
+import {
+    deserializeFlowDocument,
+    serializeFlowDocument,
+    type SerializedDoc,
+} from './shape-text-document.js';
 import { Group } from './group.js';
 import { ToolboxShape } from './toolbox-shape.js';
 import { SHAPE_CATALOG, SHAPE_CATALOG_MAP, mergeShapes } from './shape-catalog.js';
@@ -41,6 +48,32 @@ export interface DiagramStorage
 // a string.
 export const DiagramStorageKey = new ServiceKey<DiagramStorage>('DiagramStorage');
 
+// A node's text block (Visio-style), persisted alongside its geometry.
+// Only `content` is required; formatting fields are written only when they
+// differ from the ShapeText defaults, so an unformatted label stays compact.
+interface SerializedText
+{
+    readonly content:     string;
+    readonly fontSize?:   number;
+    readonly fontWeight?: FontWeight;
+    readonly fontStyle?:  FontStyle;
+    readonly align?:      TextAlignment;
+    // Text-block transform (Slice 3). Written only when non-default so an
+    // ordinary centred label stays compact.
+    readonly offsetX?:    number;
+    readonly offsetY?:    number;
+    readonly angle?:      number;
+    readonly placement?:  TextPlacement;
+    readonly blockW?:     number;
+    readonly blockH?:     number;
+    readonly vAlign?:     VerticalAlignment;
+    // Auto-fit mode (Slice 7). Omitted when None (the default).
+    readonly autofit?:    TextAutoFit;
+    // Rich content (Slice 4). Present only when the block carries a
+    // FlowDocument; `content` above stays as its plain-text projection.
+    readonly doc?:        SerializedDoc;
+}
+
 interface SerializedNode
 {
     readonly id:   string;
@@ -50,6 +83,72 @@ interface SerializedNode
     readonly w:    number;
     readonly h:    number;
     readonly d:    string;
+    // The node's text block. Absent when the label is empty.
+    readonly text?: SerializedText;
+    // Callout leader target (Slice 8) — the id of the Figure the leader
+    // points at. Present only for a Callout with a target.
+    readonly leaderTargetId?: string;
+}
+
+// Snapshot a Figure's text block, or undefined when there's nothing worth
+// persisting (empty label). Formatting fields ride only when non-default.
+function serializeShapeText(st: ShapeText): SerializedText | undefined
+{
+    if (st.Content.length === 0 && st.Document === undefined) return undefined;
+    const out: {
+        content: string; fontSize?: number;
+        fontWeight?: FontWeight; fontStyle?: FontStyle; align?: TextAlignment;
+        offsetX?: number; offsetY?: number; angle?: number; placement?: TextPlacement;
+        blockW?: number; blockH?: number; vAlign?: VerticalAlignment;
+        autofit?: TextAutoFit; doc?: SerializedDoc;
+    } = { content: st.Content };
+    if (st.Document !== undefined) out.doc = serializeFlowDocument(st.Document);
+    if (st.AutoFit !== TextAutoFit.None) out.autofit = st.AutoFit;
+    if (st.FontSize      !== 12)                   out.fontSize   = st.FontSize;
+    if (st.FontWeight    !== FontWeight.Normal)    out.fontWeight = st.FontWeight;
+    if (st.FontStyle     !== FontStyle.Normal)     out.fontStyle  = st.FontStyle;
+    if (st.TextAlignment !== TextAlignment.Center) out.align      = st.TextAlignment;
+    // Text-block transform.
+    if (st.Offset.X !== 0)                            out.offsetX   = st.Offset.X;
+    if (st.Offset.Y !== 0)                            out.offsetY   = st.Offset.Y;
+    if (st.Angle !== 0)                              out.angle     = st.Angle;
+    if (st.Placement !== TextPlacement.Center)       out.placement = st.Placement;
+    if (!Number.isNaN(st.BlockWidth))                out.blockW    = st.BlockWidth;
+    if (!Number.isNaN(st.BlockHeight))               out.blockH    = st.BlockHeight;
+    if (st.VerticalTextAlignment !== VerticalAlignment.Center) out.vAlign = st.VerticalTextAlignment;
+    return out;
+}
+
+// Hydrate a Figure's text block from its snapshot.
+function applySerializedText(st: ShapeText, data: SerializedText): void
+{
+    st.Content = data.content;
+    if (data.fontSize   !== undefined) st.FontSize      = data.fontSize;
+    if (data.fontWeight !== undefined) st.FontWeight    = data.fontWeight;
+    if (data.fontStyle  !== undefined) st.FontStyle     = data.fontStyle;
+    if (data.align      !== undefined) st.TextAlignment = data.align;
+    // Text-block transform. Offset restores from either axis independently.
+    if (data.offsetX !== undefined || data.offsetY !== undefined)
+    {
+        st.Offset = new Point(data.offsetX ?? 0, data.offsetY ?? 0);
+    }
+    if (data.angle      !== undefined) st.Angle                 = data.angle;
+    if (data.placement  !== undefined) st.Placement             = data.placement;
+    if (data.blockW     !== undefined) st.BlockWidth            = data.blockW;
+    if (data.blockH     !== undefined) st.BlockHeight           = data.blockH;
+    if (data.vAlign     !== undefined) st.VerticalTextAlignment = data.vAlign;
+    if (data.autofit    !== undefined) st.AutoFit               = data.autofit;
+    // Rich content wins for display; Content above stays the plain fallback.
+    if (data.doc        !== undefined) st.Document              = deserializeFlowDocument(data.doc);
+}
+
+// Restore a reconstructed text-shape node's position + size on load.
+function placeNode(fig: Figure, n: SerializedNode): void
+{
+    fig.Left   = n.left;
+    fig.Top    = n.top;
+    fig.Width  = n.w;
+    fig.Height = n.h;
 }
 
 interface SerializedConnectorEndpoint
@@ -66,6 +165,10 @@ interface SerializedConnector
     readonly target:      SerializedConnectorEndpoint;
     readonly waypoints?:  ReadonlyArray<{ readonly x: number; readonly y: number }>;
     readonly routingMode?: string;
+    // Connector label (Slice 5). `text` reuses the node text block form;
+    // `labelPos` is the arc-length fraction, omitted when the default 0.5.
+    readonly text?:       SerializedText;
+    readonly labelPos?:   number;
 }
 
 interface SerializedDiagram
@@ -512,6 +615,8 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
                 w:    v.Width,
                 h:    v.Height,
                 d,
+                text: serializeShapeText(v.Text),
+                leaderTargetId: v instanceof Callout ? (v.LeaderTargetNode?.Id ?? undefined) : undefined,
             });
         }
         const connectors: SerializedConnector[] = [];
@@ -527,6 +632,8 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
                     ? c.Waypoints.map(p => ({ x: p.X, y: p.Y }))
                     : undefined,
                 routingMode: c.RoutingMode,
+                text:        serializeShapeText(c.Text),
+                labelPos:    c.LabelPosition !== 0.5 ? c.LabelPosition : undefined,
             });
         }
         return { nodes, connectors, nextId: this._nextId };
@@ -540,11 +647,28 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
         // Round-trip nodes first so connectors can resolve their
         // endpoint nodeIds against the freshly-rehydrated Nodes set.
         const byId = new Map<string, Figure>();
+        // Callout leader targets resolve in a second pass (the target node may
+        // be deserialized after the callout).
+        const pendingLeaders: { callout: Callout; targetId: string }[] = [];
         for (const n of payload.nodes ?? [])
         {
             const id = n.id !== '' ? n.id : 'n' + this._nextId++;
             let fig: Figure;
-            if (n.kind !== '' && SHAPE_CATALOG_MAP.has(n.kind))
+            // Text shapes (Slice 8) reconstruct their class from the kind; the
+            // class re-derives its own box geometry, so the d-string is unused.
+            if (n.kind === 'text')
+            {
+                fig = new TextShape();
+                placeNode(fig, n);
+            }
+            else if (n.kind === 'callout')
+            {
+                const callout = new Callout();
+                fig = callout;
+                placeNode(fig, n);
+                if (n.leaderTargetId !== undefined) pendingLeaders.push({ callout, targetId: n.leaderTargetId });
+            }
+            else if (n.kind !== '' && SHAPE_CATALOG_MAP.has(n.kind))
             {
                 fig = Figure.fromKind(n.kind, n.left, n.top, { width: n.w, height: n.h });
             }
@@ -561,8 +685,15 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
                 continue;
             }
             fig.Id = id;
+            if (n.text !== undefined) applySerializedText(fig.Text, n.text);
             this.Nodes.Add(fig);
             byId.set(id, fig);
+        }
+        // Wire callout leaders now that every node id resolves.
+        for (const { callout, targetId } of pendingLeaders)
+        {
+            const target = byId.get(targetId);
+            if (target !== undefined) callout.LeaderTargetNode = target;
         }
         for (const sc of payload.connectors ?? [])
         {
@@ -574,6 +705,8 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
             {
                 c.Waypoints = sc.waypoints.map(p => new Point(p.x, p.y));
             }
+            if (sc.text !== undefined) applySerializedText(c.Text, sc.text);
+            if (typeof sc.labelPos === 'number') c.LabelPosition = sc.labelPos;
             this.Connectors.Add(c);
         }
         if (typeof payload.nextId === 'number') this._nextId = Math.max(this._nextId, payload.nextId);

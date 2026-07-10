@@ -302,6 +302,7 @@ resources DiagramDemo {
                       AllowMarqueeSelection        = true,
                       AlignmentGuidesEnabled       = true,
                       SelectionResizeEnabled       = true,
+                      TextBlockAdornerEnabled      = true,
                       ConnectorInteractionsEnabled = true,
                       ReflectSelectionToItems      = true,
                       DropReceiver                 = $Self,

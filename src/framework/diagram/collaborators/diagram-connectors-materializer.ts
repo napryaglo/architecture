@@ -30,6 +30,11 @@ export class DiagramConnectorsMaterializer
     private readonly _mountedCaps: Map<Model, Visual[]> = new Map();
     private readonly _capUnsubs:   Map<Model, () => void> = new Map();
 
+    // Per-connector label visual (§ Slice 5). The connector's ShapeText is
+    // mounted as a connectors-layer sibling, just like a cap; the connector
+    // positions it (Canvas.Left/Top) on each route recompute.
+    private readonly _mountedLabels: Map<Model, Visual> = new Map();
+
     constructor(diagram: Diagram)
     {
         this._diagram = diagram;
@@ -77,8 +82,12 @@ export class DiagramConnectorsMaterializer
         for (const [item, visual] of this._visuals)
         {
             this._mount(visual);
-            // Caps couldn't mount while the panel was absent; sync now.
-            if (visual instanceof Connector) this._syncCaps(item, visual);
+            // Caps + label couldn't mount while the panel was absent; sync now.
+            if (visual instanceof Connector)
+            {
+                this._syncCaps(item, visual);
+                this._mountLabel(item, visual);
+            }
         }
     }
 
@@ -112,6 +121,31 @@ export class DiagramConnectorsMaterializer
         this._visuals.set(item, visual);
         this._mount(visual);
         this._wireCaps(item, visual);
+        this._mountLabel(item, visual);
+    }
+
+    // Mount the connector's label ShapeText as a connectors-layer sibling.
+    // Idempotent (_mountCap no-ops when already present), so _mountPending
+    // can re-run it once the panel materializes. The connector positions the
+    // label via Canvas.Left/Top in _placeLabel — the same absolute-canvas
+    // coordinate space caps and the route line use.
+    private _mountLabel(item: Model, visual: Visual): void
+    {
+        if (!(visual instanceof Connector)) return;
+        const label = visual.LabelInstance;
+        DiagramLayersPanel.SetLayer(label, DiagramLayer.Connectors);
+        this._mountCap(label);
+        this._mountedLabels.set(item, label);
+    }
+
+    private _teardownLabel(item: Model): void
+    {
+        const label = this._mountedLabels.get(item);
+        if (label !== undefined)
+        {
+            this._unmountCap(label);
+            this._mountedLabels.delete(item);
+        }
     }
 
     // Mount the connector's cap visuals as siblings in the connectors
@@ -240,6 +274,7 @@ export class DiagramConnectorsMaterializer
         const visual = this._visuals.get(item);
         if (visual === undefined) return;
         this._teardownCaps(item);
+        this._teardownLabel(item);
         this._unmount(visual);
         this._visuals.delete(item);
     }
@@ -272,7 +307,11 @@ export class DiagramConnectorsMaterializer
 
     private _clearAll(): void
     {
-        for (const item of this._visuals.keys()) this._teardownCaps(item);
+        for (const item of this._visuals.keys())
+        {
+            this._teardownCaps(item);
+            this._teardownLabel(item);
+        }
         for (const visual of this._visuals.values()) this._unmount(visual);
         this._visuals.clear();
     }

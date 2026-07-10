@@ -192,6 +192,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['ContentControl',          '@visualisation-sub/mural/framework/base/content-control.js'],
     ['ContentPresenter',        '@visualisation-sub/mural/basic'],
     ['Figure',                  '@visualisation-sub/mural/framework/diagram/figure.js'],
+    ['ShapeText',               '@visualisation-sub/mural/framework/diagram/shape-text.js'],
     ['Group',                   '@visualisation-sub/mural/framework/diagram/group.js'],
     ['Diagram',                 '@visualisation-sub/mural/framework/diagram/diagram.js'],
     // Connector — markup references it for the `Connector.CapInset`

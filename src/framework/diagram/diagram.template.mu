@@ -11,14 +11,14 @@
 resources Diagrams {
     // ── Figure: per-item shape host ────────────────────────────────
     //
-    // Template = Canvas { Shape + TextBlock }. The Shape primitive
-    // paints the Figure's Geometry / Fill / Stroke; the TextBlock
-    // overlays LabelText centred on the same footprint. Width / Height
-    // template-bind to the Figure's measured size so a resize re-paints
-    // both children at the new dimensions (Figure._rebuildGeometry
-    // re-scales the unit-1 source into Geometry whenever Width / Height
-    // change, so the Shape's Geometry binding fires in lock-step with
-    // the dimensional bindings).
+    // Template = Canvas { Shape + PART_LabelHost }. The Shape primitive
+    // paints the Figure's Geometry / Fill / Stroke; PART_LabelHost hosts the
+    // Figure's ShapeText block (Figure.Text), slotted after applyDefaultStyle.
+    // Width / Height template-bind to the Figure's measured size so a resize
+    // re-paints both at the new dimensions (Figure._rebuildGeometry re-scales
+    // the unit-1 source into Geometry whenever Width / Height change, so the
+    // Shape's Geometry binding fires in lock-step with the dimensional
+    // bindings).
     //
     // No ContentPresenter — the framework's intended use is items-are-
     // Figures (data and visual fused). The fallback wrap-non-Figure
@@ -34,11 +34,79 @@ resources Diagrams {
                   Stroke   = $$Stroke,
                   Width    = $$Width,
                   Height   = $$Height ]
-            TextBlock x:name="PART_Label" [ Text = $$LabelText, Width = $$Width, Height = $$Height ]
+            // Text-block host. Figure slots its own ShapeText instance
+            // (Figure.Text) here after applyDefaultStyle — the block renders
+            // itself reactively from its DPs, so a label edit repaints without
+            // a per-Figure subscription. Sized to the shape footprint; the
+            // independent text-block transform (offset / rotation) lands in
+            // the diagram-text Slice 3.
+            Border x:name="PART_LabelHost" [ Width = $$Width, Height = $$Height ]
         }
     }
     Style [TargetType = Figure] {
         Template = @DefaultFigure;
+    }
+
+    // ── ShapeText: a shape's text block (the Visio "text block") ────
+    // A Border (PART_Bg) carries the optional text-background fill + inner
+    // margins (Padding) and is placed / sized / rotated within the shape by
+    // ShapeText's own layout (Placement / Offset / Angle / Block* DPs — §
+    // Slice 3). Inside it, three co-located parts render the content:
+    // PART_Text (plain string), PART_RichText (FlowDocument), PART_Edit (the
+    // RichTextBox editor) — §Slice 4. Content / font / alignment ride
+    // TemplateBindings so a ShapeText DP write repaints immediately.
+    Template x:key="DefaultShapeText" [TargetType = ShapeText] {
+        Border x:name="PART_Bg" [ Background = $$Background, Padding = $$Padding ] {
+            // Three co-located parts share one cell (§ Slice 4): PART_Text is
+            // the plain-string display, PART_RichText the FlowDocument display
+            // (shown when Document is set), and PART_Edit the RichTextBox
+            // in-place editor. The HasRichContent / IsEditing triggers below
+            // reveal exactly one at a time.
+            Grid {
+                TextBlock x:name="PART_Text"
+                    [ Text                = $$Content,
+                      TextAlignment       = $$TextAlignment,
+                      TextWrapping        = $$TextWrapping,
+                      FontSize            = $$FontSize,
+                      FontWeight          = $$FontWeight,
+                      FontStyle           = $$FontStyle,
+                      Foreground          = $$Foreground,
+                      HorizontalAlignment = Stretch,
+                      VerticalAlignment   = $$VerticalTextAlignment ]
+                RichTextBlock x:name="PART_RichText"
+                    [ Document            = $$Document,
+                      FontSize            = $$FontSize,
+                      FontWeight          = $$FontWeight,
+                      FontStyle           = $$FontStyle,
+                      Foreground          = $$Foreground,
+                      Visibility          = Collapsed,
+                      HorizontalAlignment = Stretch,
+                      VerticalAlignment   = $$VerticalTextAlignment ]
+                RichTextBox x:name="PART_Edit"
+                    [ FontSize            = $$FontSize,
+                      FontWeight          = $$FontWeight,
+                      FontStyle           = $$FontStyle,
+                      Foreground          = $$Foreground,
+                      Visibility          = Collapsed,
+                      HorizontalAlignment = Stretch,
+                      VerticalAlignment   = $$VerticalTextAlignment ]
+            }
+        }
+        // Rich display: swap the plain label for the FlowDocument host.
+        when ( HasRichContent ) {
+            PART_Text.Visibility     = Collapsed;
+            PART_RichText.Visibility = Visible;
+        }
+        // In-place edit (declared last so it wins over the rich-display swap
+        // when both are active): reveal the editor, hide both displays.
+        when ( IsEditing ) {
+            PART_Text.Visibility     = Collapsed;
+            PART_RichText.Visibility = Collapsed;
+            PART_Edit.Visibility     = Visible;
+        }
+    }
+    Style [TargetType = ShapeText] {
+        Template = @DefaultShapeText;
     }
 
     // ── Group: bbox-chrome overlay ─────────────────────────────────

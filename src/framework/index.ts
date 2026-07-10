@@ -193,6 +193,18 @@ export {
 export { DiagramEditingContext, DiagramCommandId } from './diagram/diagram-command-contexts.js';
 export { DiagramInspector } from './diagram/diagram-inspector.js';
 export { Figure } from './diagram/figure.js';
+export { ShapeText, TextPlacement, TextAutoFit, isOutsideTextPlacement, computeTextBlockAnchor } from './diagram/shape-text.js';
+export {
+    serializeFlowDocument, deserializeFlowDocument, cloneFlowDocument,
+    flowDocumentToPlainText, flowDocumentFromPlainText, isEffectivelyPlainDocument,
+    type SerializedDoc, type SerializedParagraph, type SerializedRun,
+} from './diagram/shape-text-document.js';
+export { TextBlockAdorner } from './diagram/behaviors/text-block-adorner.js';
+export { TextShape, Callout } from './diagram/text-shape.js';
+export { pointAlongPolyline, nearestTOnPolyline, polylineLength, type RoutePoint } from './diagram/connector-route.js';
+export {
+    Field, FieldKind, isFieldKind, resolveFields, documentWithFields, type FieldResolver,
+} from './diagram/shape-text-field.js';
 export { Group } from './diagram/group.js';
 export { ToolboxShape, TOOLBOX_PREVIEW_SIZE } from './diagram/toolbox-shape.js';
 export {

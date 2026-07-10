@@ -64,16 +64,16 @@ const BG_NOTE    = brush('#fde68a');
 export class RectFigure extends Figure {
     static DemoKind = 'rect';
     static {
-        Model.OverrideMetadata(RectFigure, Figure.FillKey,      { default_value: BG_RECT });
-        Model.OverrideMetadata(RectFigure, Figure.LabelTextKey, { default_value: 'Rectangle' });
+        Model.OverrideMetadata(RectFigure, Figure.FillKey, { default_value: BG_RECT });
     }
     constructor(id: string, left: number, top: number) {
         super();
-        this.Id     = id;
-        this.Left   = left;
-        this.Top    = top;
-        this.Width  = NODE_W;
-        this.Height = NODE_H;
+        this.Id        = id;
+        this.Left      = left;
+        this.Top       = top;
+        this.Width     = NODE_W;
+        this.Height    = NODE_H;
+        this.LabelText = 'Rectangle';
         this.ApplyCatalogKind('rectangle');
     }
 }
@@ -81,16 +81,16 @@ export class RectFigure extends Figure {
 export class EllipseFigure extends Figure {
     static DemoKind = 'ellipse';
     static {
-        Model.OverrideMetadata(EllipseFigure, Figure.FillKey,      { default_value: BG_ELLIPSE });
-        Model.OverrideMetadata(EllipseFigure, Figure.LabelTextKey, { default_value: 'Ellipse' });
+        Model.OverrideMetadata(EllipseFigure, Figure.FillKey, { default_value: BG_ELLIPSE });
     }
     constructor(id: string, left: number, top: number) {
         super();
-        this.Id     = id;
-        this.Left   = left;
-        this.Top    = top;
-        this.Width  = NODE_W;
-        this.Height = NODE_H;
+        this.Id        = id;
+        this.Left      = left;
+        this.Top       = top;
+        this.Width     = NODE_W;
+        this.Height    = NODE_H;
+        this.LabelText = 'Ellipse';
         this.ApplyCatalogKind('ellipse');
     }
 }
@@ -98,16 +98,16 @@ export class EllipseFigure extends Figure {
 export class NoteFigure extends Figure {
     static DemoKind = 'note';
     static {
-        Model.OverrideMetadata(NoteFigure, Figure.FillKey,      { default_value: BG_NOTE });
-        Model.OverrideMetadata(NoteFigure, Figure.LabelTextKey, { default_value: 'Note' });
+        Model.OverrideMetadata(NoteFigure, Figure.FillKey, { default_value: BG_NOTE });
     }
     constructor(id: string, left: number, top: number) {
         super();
-        this.Id     = id;
-        this.Left   = left;
-        this.Top    = top;
-        this.Width  = NODE_W;
-        this.Height = NODE_H;
+        this.Id        = id;
+        this.Left      = left;
+        this.Top       = top;
+        this.Width     = NODE_W;
+        this.Height    = NODE_H;
+        this.LabelText = 'Note';
         // Notes reuse the rectangle path — flat sticky-note silhouette,
         // distinguished by Fill + Label rather than geometry.
         this.ApplyCatalogKind('rectangle');

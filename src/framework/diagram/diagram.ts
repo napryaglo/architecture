@@ -47,6 +47,7 @@ import {
     type AlignmentGuide,
 } from './behaviors/alignment-guides-behavior.js';
 import { AlignmentGuidesAdorner } from './behaviors/alignment-guides-adorner.js';
+import { TextBlockAdorner } from './behaviors/text-block-adorner.js';
 import { SelectionBoundsAdorner } from '../../basic/index.js';
 import { DiagramSelectionSource } from './behaviors/diagram-selection-source.js';
 import { Brush, Pen, Point } from '../../visual-engine/index.js';
@@ -225,6 +226,13 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     public static readonly SelectionResizeEnabledKey = Model.RegisterProperty<boolean>(
         Diagram, 'SelectionResizeEnabled', false, MetaData.None);
 
+    // Text-block adorner opt-in (§ diagram-text Slice 3). Default off. When
+    // true, a TextBlockAdorner mounts in the ItemsPanel's AdornerLayer and
+    // shows move / rotate handles over the single selected Figure's text
+    // block, writing back to its ShapeText.Offset / Angle.
+    public static readonly TextBlockAdornerEnabledKey = Model.RegisterProperty<boolean>(
+        Diagram, 'TextBlockAdornerEnabled', false, MetaData.None);
+
     // Connector-interactions opt-in. Default off. When flipped true, the
     // framework mounts a PortHandlesAdorner (port dots on Figure hover)
     // and an EditHandlesAdorner (endpoint + waypoint dots on selected
@@ -370,6 +378,8 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     public set AlignmentGuidesEnabled(v: boolean) { this.set_property_value(Diagram.AlignmentGuidesEnabledKey, v); }
     public get SelectionResizeEnabled():  boolean { return this.get_property_value(Diagram.SelectionResizeEnabledKey); }
     public set SelectionResizeEnabled(v: boolean) { this.set_property_value(Diagram.SelectionResizeEnabledKey, v); }
+    public get TextBlockAdornerEnabled():  boolean { return this.get_property_value(Diagram.TextBlockAdornerEnabledKey); }
+    public set TextBlockAdornerEnabled(v: boolean) { this.set_property_value(Diagram.TextBlockAdornerEnabledKey, v); }
     public get ConnectorInteractionsEnabled():  boolean { return this.get_property_value(Diagram.ConnectorInteractionsEnabledKey); }
     public set ConnectorInteractionsEnabled(v: boolean) { this.set_property_value(Diagram.ConnectorInteractionsEnabledKey, v); }
     public get ReflectSelectionToItems():  boolean { return this.get_property_value(Diagram.ReflectSelectionToItemsKey); }
@@ -495,6 +505,10 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     // the DP flips before ItemsPanel materializes.
     private _selectionResizeAdorner: SelectionBoundsAdorner | undefined = undefined;
     private _selectionResizeSource:  DiagramSelectionSource | undefined = undefined;
+
+    // Text-block adorner state — instance when mounted; queueMicrotask-
+    // deferred mount handles the DP flipping before ItemsPanel materializes.
+    private _textBlockAdorner: TextBlockAdorner | undefined = undefined;
 
     // Connector-interactions detach thunk — set when the behavior is
     // attached, called + cleared on detach. The behavior owns its own
@@ -758,6 +772,11 @@ export class Diagram extends Selector implements RigidConnectorDragHost
             if (newValue === true) this._attachSelectionResize();
             else                   this._detachSelectionResize();
         }
+        else if (descriptor.Name === 'TextBlockAdornerEnabled')
+        {
+            if (newValue === true) this._attachTextBlockAdorner();
+            else                   this._detachTextBlockAdorner();
+        }
         else if (descriptor.Name === 'ConnectorInteractionsEnabled')
         {
             if (newValue === true) this._attachConnectorInteractions();
@@ -977,6 +996,36 @@ export class Diagram extends Selector implements RigidConnectorDragHost
         this._selectionResizeAdorner = adorner;
     }
 
+    private _attachTextBlockAdorner(): void
+    {
+        if (this._textBlockAdorner !== undefined) return;
+        queueMicrotask(() => this._mountTextBlockAdorner());
+    }
+
+    private _detachTextBlockAdorner(): void
+    {
+        if (this._textBlockAdorner !== undefined)
+        {
+            const layer = AdornerLayer.GetAdornerLayer(this._textBlockAdorner.AdornedElement);
+            layer?.Remove(this._textBlockAdorner);
+            this._textBlockAdorner.Dispose();
+            this._textBlockAdorner = undefined;
+        }
+    }
+
+    private _mountTextBlockAdorner(): void
+    {
+        if (this._textBlockAdorner !== undefined) return;
+        if (!this.TextBlockAdornerEnabled) return;   // flipped back off before mount
+        const panel = this.ItemsPanelInstance;
+        if (panel === undefined) return;
+        const layer = AdornerLayer.GetAdornerLayer(panel);
+        if (layer === undefined) return;
+        const adorner = new TextBlockAdorner(panel, this);
+        layer.Add(adorner);
+        this._textBlockAdorner = adorner;
+    }
+
     public override GetContainerForItemOverride(item: unknown): Visual
     {
         // Items in the framework Diagram ARE Figures / Groups — the data
@@ -1053,6 +1102,17 @@ export class Diagram extends Selector implements RigidConnectorDragHost
         {
             const cmd = hasModifier(args.Modifiers, ModifierKeys.Shift) ? this.UngroupCommand : this.GroupCommand;
             if (cmd !== undefined && cmd.CanExecute(undefined)) cmd.Execute(undefined);
+            args.Handled = true;
+            return;
+        }
+        // F2 — begin in-place editing of the first selected figure's label
+        // (Visio). Double-click is the pointer equivalent (Figure.OnPointerDown).
+        if (key === Key.F2 && this._selectedContainers.size > 0)
+        {
+            for (const container of this._selectedContainers)
+            {
+                if (container instanceof Figure) { container.Text?.BeginEdit(); break; }
+            }
             args.Handled = true;
             return;
         }

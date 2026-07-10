@@ -39,7 +39,6 @@ export class RectFigure extends Figure {
     static DemoKind = 'rect';
     static {
         Model.OverrideMetadata(RectFigure, Figure.FillKey, { default_value: BG_RECT });
-        Model.OverrideMetadata(RectFigure, Figure.LabelTextKey, { default_value: 'Rectangle' });
     }
     constructor(id, left, top) {
         super();
@@ -48,6 +47,7 @@ export class RectFigure extends Figure {
         this.Top = top;
         this.Width = NODE_W;
         this.Height = NODE_H;
+        this.LabelText = 'Rectangle';
         this.ApplyCatalogKind('rectangle');
     }
 }
@@ -55,7 +55,6 @@ export class EllipseFigure extends Figure {
     static DemoKind = 'ellipse';
     static {
         Model.OverrideMetadata(EllipseFigure, Figure.FillKey, { default_value: BG_ELLIPSE });
-        Model.OverrideMetadata(EllipseFigure, Figure.LabelTextKey, { default_value: 'Ellipse' });
     }
     constructor(id, left, top) {
         super();
@@ -64,6 +63,7 @@ export class EllipseFigure extends Figure {
         this.Top = top;
         this.Width = NODE_W;
         this.Height = NODE_H;
+        this.LabelText = 'Ellipse';
         this.ApplyCatalogKind('ellipse');
     }
 }
@@ -71,7 +71,6 @@ export class NoteFigure extends Figure {
     static DemoKind = 'note';
     static {
         Model.OverrideMetadata(NoteFigure, Figure.FillKey, { default_value: BG_NOTE });
-        Model.OverrideMetadata(NoteFigure, Figure.LabelTextKey, { default_value: 'Note' });
     }
     constructor(id, left, top) {
         super();
@@ -80,6 +79,7 @@ export class NoteFigure extends Figure {
         this.Top = top;
         this.Width = NODE_W;
         this.Height = NODE_H;
+        this.LabelText = 'Note';
         // Notes reuse the rectangle path — flat sticky-note silhouette,
         // distinguished by Fill + Label rather than geometry.
         this.ApplyCatalogKind('rectangle');
