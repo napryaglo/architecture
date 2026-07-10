@@ -1135,11 +1135,25 @@ export function attachConnectorInteractions(diagram: Diagram): () => void
 
     queueMicrotask(mountAdornersIfReady);
 
+    // Connectors mode gates whether the connector adorners react to the pointer:
+    // active when the mode is pinned (the scrollbar toggle) OR the user holds
+    // Ctrl (momentary). When inactive, hover + gesture-start are suppressed so
+    // figures aren't cluttered with port handles at all times. An in-flight
+    // gesture is NOT gated (state.activeGesture guards run first), so releasing
+    // Ctrl mid-drag still completes the drag.
+    const connectorsModeActive = (args: PointerEventArgs): boolean =>
+        diagram.ConnectorsModePinned
+        || hasModifier(args.Modifiers, ModifierKeys.Control)
+        || hasModifier(args.Modifiers, ModifierKeys.Windows);
+
     const onPointerDown = (raw: unknown): void => {
         const args = raw as PointerEventArgs;
         mountAdornersIfReady();
 
         if (state.activeGesture !== undefined) return;
+        // Mode gate — outside Connectors mode, connector selection / gesture
+        // start is suppressed; the event falls through to normal figure interaction.
+        if (!connectorsModeActive(args)) return;
 
         // Handle clicks land via wireHandle's per-Border listener above,
         // not this Diagram-level path. Anything reaching here is a click
@@ -1272,6 +1286,15 @@ export function attachConnectorInteractions(diagram: Diagram): () => void
             editAdornerVisual?.InvalidateArrange();
         }
 
+        // Mode gate — when idle and NOT in Connectors mode, the adorners don't
+        // react to movement: drop any hover and bail before recomputing it, so
+        // moving over figures never lights up port handles outside the mode.
+        if (state.activeGesture === undefined && !connectorsModeActive(args))
+        {
+            clearHover();
+            return;
+        }
+
         // Hover update runs ALSO during an active gesture — without it,
         // target figures' port handles would never appear while the user
         // is dragging a new connector or re-anchoring an endpoint, and
@@ -1389,8 +1412,10 @@ export function attachConnectorInteractions(diagram: Diagram): () => void
         args.Handled = true;
     };
 
-    const onPointerLeave = (_raw: unknown): void => {
-        if (state.activeGesture !== undefined) return;
+    // Drop any figure / connector hover and repaint the adorners that showed it.
+    // Shared by pointer-leave and the input-mode gate (leaving Connectors mode
+    // must clear lingering port dots / halos).
+    const clearHover = (): void => {
         if (state.hoveredFigure !== undefined)
         {
             state.hoveredFigure = undefined;
@@ -1405,6 +1430,11 @@ export function attachConnectorInteractions(diagram: Diagram): () => void
             haloAdornerVisual?.InvalidateArrange();
             editAdornerVisual?.InvalidateArrange();   // hide the hover segment pads
         }
+    };
+
+    const onPointerLeave = (_raw: unknown): void => {
+        if (state.activeGesture !== undefined) return;
+        clearHover();
     };
 
     // Preview-phase delivery is non-negotiable: Figure.OnPointerDown /

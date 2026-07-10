@@ -1,11 +1,15 @@
 import { Model, type PropertyKey } from '../../../runtime/index.js';
 import {
     Brush,
+    Color,
     Pen,
+    SolidColorBrush,
+    type TextAlignment,
 } from '../../../visual-engine/index.js';
 import { type DataTemplate } from '../../../basic/templates/data-template.js';
 import type { Diagram } from '../diagram.js';
 import type { Connector } from '../connector.js';
+import type { ShapeText, TextPlacement } from '../shape-text.js';
 import { flattenToLeaves } from '../commands/group-ops.js';
 
 // Internal collaborator owned by Diagram. Mirrors a single editor-owned
@@ -39,6 +43,12 @@ import { flattenToLeaves } from '../commands/group-ops.js';
 
 interface IFillableItem { Fill:   Brush | undefined; }
 interface IStrokableItem { Stroke: Pen   | undefined; }
+// A shape whose label carries paragraph alignment + block placement — the
+// figure leaves (each owns a ShapeText via `.Text`). Groups flatten away, so
+// the mirror only ever sees leaves. Alignment routes through ShapeText's
+// ApplyParagraphAlignment / CurrentParagraphAlignment so edit mode targets the
+// caret paragraph; placement is a whole-shape DP.
+interface ITextualItem { Text?: ShapeText; }
 
 // Heterogeneous-typed array of Pen DP keys. Each entry is a
 // `PropertyKey<T>` for a different `T`; the broadcast loops treat them
@@ -71,6 +81,10 @@ export class FormatMirror
 
     private _seedingFormat = false;
 
+    // Edit-selection subscriptions on the current selection's ShapeTexts, so
+    // a caret move inside an editing shape re-reflects the alignment toolbar.
+    private _editSelSubs: Array<{ text: ShapeText; handler: () => void }> = [];
+
     constructor(diagram: Diagram)
     {
         this._diagram = diagram;
@@ -93,6 +107,20 @@ export class FormatMirror
         // templates, targeting each selected connector's Source/TargetCapScale.
         diagram.AddPropertyChangedListener(Diagram.SelectionFormatSourceCapScaleKey, () => this._broadcastCapScale(ConnectorEnd.Source));
         diagram.AddPropertyChangedListener(Diagram.SelectionFormatTargetCapScaleKey, () => this._broadcastCapScale(ConnectorEnd.Target));
+        // Text-format channel — paragraph alignment + label placement,
+        // seeded from the first selected shape and broadcast onto every
+        // selected shape's Text.
+        diagram.AddPropertyChangedListener(Diagram.SelectionTextAlignmentKey, () => this._broadcastTextAlignment());
+        diagram.AddPropertyChangedListener(Diagram.SelectionTextPlacementKey, () => this._broadcastTextPlacement());
+        // Character-style channel — font family / size / colour + the four
+        // decoration booleans, broadcast onto every selected shape's label.
+        diagram.AddPropertyChangedListener(Diagram.SelectionFontFamilyKey,   () => this._broadcast((t, d) => t.ApplyFontFamily(d.SelectionFontFamily)));
+        diagram.AddPropertyChangedListener(Diagram.SelectionFontSizeKey,     () => this._broadcast((t, d) => t.ApplyFontSize(d.SelectionFontSize)));
+        diagram.AddPropertyChangedListener(Diagram.SelectionFontColorHexKey, () => this._broadcast((t, d) => t.ApplyForeground(hexToBrush(d.SelectionFontColorHex))));
+        diagram.AddPropertyChangedListener(Diagram.SelectionBoldKey,          () => this._broadcast((t, d) => t.ApplyBold(d.SelectionBold)));
+        diagram.AddPropertyChangedListener(Diagram.SelectionItalicKey,        () => this._broadcast((t, d) => t.ApplyItalic(d.SelectionItalic)));
+        diagram.AddPropertyChangedListener(Diagram.SelectionUnderlineKey,     () => this._broadcast((t, d) => t.ApplyUnderline(d.SelectionUnderline)));
+        diagram.AddPropertyChangedListener(Diagram.SelectionStrikethroughKey, () => this._broadcast((t, d) => t.ApplyStrikethrough(d.SelectionStrikethrough)));
     }
 
     private _leaves(): Model[]
@@ -114,6 +142,9 @@ export class FormatMirror
         const Diagram = this._diagram.constructor as typeof import('../diagram.js').Diagram;
         const leaves = this._leaves();
         const connectors = this._strokeTargetsFromConnectors();
+        // Re-point the caret-move subscriptions at the new selection so an
+        // editing shape's caret move re-reflects the alignment toolbar.
+        this._rewireEditListeners(leaves);
         this._seedingFormat = true;
         try
         {
@@ -134,6 +165,16 @@ export class FormatMirror
                 firstConn !== undefined ? firstConn.SourceCapScale : 1);
             this._diagram.set_property_value(Diagram.SelectionFormatTargetCapScaleKey,
                 firstConn !== undefined ? firstConn.TargetCapScale : 1);
+
+            // Text channel — seed from the first selected shape's label (both
+            // undefined when the selection has no shape leaves, so the
+            // toolbars show nothing active). Alignment reads the caret
+            // paragraph when the shape is being edited (Part 2). Done alongside
+            // the cap channel, before the early return, so these stay coherent.
+            const firstText = (leaves[0] as ITextualItem | undefined)?.Text;
+            this._diagram.set_property_value(Diagram.SelectionTextAlignmentKey, firstText?.CurrentParagraphAlignment());
+            this._diagram.set_property_value(Diagram.SelectionTextPlacementKey, firstText?.Placement);
+            this._seedCharFormat(firstText);
 
             if (leaves.length === 0 && connectors.length === 0)
             {
@@ -180,6 +221,173 @@ export class FormatMirror
         {
             if (end === ConnectorEnd.Source) conn.SourceCapTemplate = tpl;
             else                  conn.TargetCapTemplate = tpl;
+        }
+    }
+
+    // Broadcast the chosen paragraph alignment onto every selected shape's
+    // label. Gated by _seedingFormat so a fresh selection's seed doesn't
+    // replay the first shape's alignment onto the others. undefined (no
+    // shape selected) is a no-op.
+    private _broadcastTextAlignment(): void
+    {
+        if (this._seedingFormat) return;
+        const align = this._diagram.SelectionTextAlignment;
+        if (align === undefined) return;
+        for (const leaf of this._leaves())
+        {
+            // Routes per mode inside ShapeText: caret paragraph while editing,
+            // every paragraph for rich content, the block default for plain.
+            (leaf as ITextualItem).Text?.ApplyParagraphAlignment(align);
+        }
+    }
+
+    // (Re)subscribe to every selected shape's edit-selection-changed signal.
+    // Fires on caret moves inside an editing shape (and on edit begin/end);
+    // we re-seed just the alignment DP from the caret paragraph.
+    private _rewireEditListeners(leaves: Model[]): void
+    {
+        for (const s of this._editSelSubs) s.text.RemoveEditSelectionChangedListener(s.handler);
+        this._editSelSubs = [];
+        for (const leaf of leaves)
+        {
+            const text = (leaf as ITextualItem).Text;
+            if (text === undefined) continue;
+            const handler = (): void => this._reseedTextFormat();
+            text.AddEditSelectionChangedListener(handler);
+            this._editSelSubs.push({ text, handler });
+        }
+    }
+
+    // Re-seed the caret-scoped text DPs (alignment + character style) from the
+    // first selected shape's current caret paragraph / run — used when the
+    // editor caret moves so the toolbars track the caret's formatting.
+    private _reseedTextFormat(): void
+    {
+        const firstText = (this._leaves()[0] as ITextualItem | undefined)?.Text;
+        this._seedingFormat = true;
+        try
+        {
+            this._diagram.SelectionTextAlignment = firstText?.CurrentParagraphAlignment();
+            this._seedCharFormat(firstText);
+        }
+        finally { this._seedingFormat = false; }
+    }
+
+    // Seed the character-style DPs from a shape's label (the caret run while
+    // editing). Caller owns the _seedingFormat gate. undefined shape → defaults.
+    private _seedCharFormat(text: import('../shape-text.js').ShapeText | undefined): void
+    {
+        const D = this._diagram.constructor as typeof import('../diagram.js').Diagram;
+        this._diagram.set_property_value(D.SelectionFontFamilyKey,   text?.CurrentFontFamily() ?? '');
+        this._diagram.set_property_value(D.SelectionFontSizeKey,     text?.CurrentFontSize() ?? 12);
+        this._diagram.set_property_value(D.SelectionFontColorHexKey, brushToHex(text?.CurrentForeground()));
+        this._diagram.set_property_value(D.SelectionBoldKey,          text?.CurrentBold() ?? false);
+        this._diagram.set_property_value(D.SelectionItalicKey,        text?.CurrentItalic() ?? false);
+        this._diagram.set_property_value(D.SelectionUnderlineKey,     text?.CurrentUnderline() ?? false);
+        this._diagram.set_property_value(D.SelectionStrikethroughKey, text?.CurrentStrikethrough() ?? false);
+    }
+
+    // Broadcast a character-style edit onto every selected shape's label. Gated
+    // by _seedingFormat so a fresh selection's seed doesn't replay the first
+    // shape's style onto the others.
+    private _broadcast(apply: (text: ShapeText, diagram: Diagram) => void): void
+    {
+        if (this._seedingFormat) return;
+        for (const leaf of this._leaves())
+        {
+            const text = (leaf as ITextualItem).Text;
+            if (text !== undefined) apply(text, this._diagram);
+        }
+    }
+
+    // ── Command-driven character-style force-apply ─────────────────────
+    // Reflect on the Selection* DP (suppressed) then apply to every leaf,
+    // unconditionally — so a decoration toggle command re-applies even when the
+    // reflected DP already equals the value. Mirrors ApplyTextAlignment.
+    public ApplyBold(on: boolean): void { this._forceApplyChar((D) => D.SelectionBoldKey, on, (t) => t.ApplyBold(on)); }
+    public ApplyItalic(on: boolean): void { this._forceApplyChar((D) => D.SelectionItalicKey, on, (t) => t.ApplyItalic(on)); }
+    public ApplyUnderline(on: boolean): void { this._forceApplyChar((D) => D.SelectionUnderlineKey, on, (t) => t.ApplyUnderline(on)); }
+    public ApplyStrikethrough(on: boolean): void { this._forceApplyChar((D) => D.SelectionStrikethroughKey, on, (t) => t.ApplyStrikethrough(on)); }
+    public ApplyFontFamily(family: string): void { this._forceApplyChar((D) => D.SelectionFontFamilyKey, family, (t) => t.ApplyFontFamily(family)); }
+    public ApplyFontSize(size: number): void { this._forceApplyChar((D) => D.SelectionFontSizeKey, size, (t) => t.ApplyFontSize(size)); }
+    public ApplyFontColorHex(hex: string): void { this._forceApplyChar((D) => D.SelectionFontColorHexKey, hex, (t) => t.ApplyForeground(hexToBrush(hex))); }
+
+    // Step each selected label's OWN size by delta (the caret run while editing),
+    // preserving relative sizing across a mixed selection, then reflect the first
+    // shape's new size on the DP (suppressed so it doesn't re-broadcast).
+    public BumpFontSize(delta: number): void
+    {
+        for (const leaf of this._leaves())
+        {
+            const text = (leaf as ITextualItem).Text;
+            if (text !== undefined) text.ApplyFontSize(clampFontSize(text.CurrentFontSize() + delta));
+        }
+        const firstText = (this._leaves()[0] as ITextualItem | undefined)?.Text;
+        const D = this._diagram.constructor as typeof import('../diagram.js').Diagram;
+        this._seedingFormat = true;
+        try { this._diagram.set_property_value(D.SelectionFontSizeKey, firstText?.CurrentFontSize() ?? 12); }
+        finally { this._seedingFormat = false; }
+    }
+
+    private _forceApplyChar<T>(
+        key: (D: typeof import('../diagram.js').Diagram) => PropertyKey<T>,
+        value: T,
+        apply: (text: ShapeText) => void,
+    ): void
+    {
+        const D = this._diagram.constructor as typeof import('../diagram.js').Diagram;
+        this._seedingFormat = true;
+        try { this._diagram.set_property_value(key(D), value); }
+        finally { this._seedingFormat = false; }
+        for (const leaf of this._leaves())
+        {
+            const text = (leaf as ITextualItem).Text;
+            if (text !== undefined) apply(text);
+        }
+    }
+
+    // Broadcast the chosen label placement onto every selected shape.
+    private _broadcastTextPlacement(): void
+    {
+        if (this._seedingFormat) return;
+        const placement = this._diagram.SelectionTextPlacement;
+        if (placement === undefined) return;
+        for (const leaf of this._leaves())
+        {
+            const text = (leaf as ITextualItem).Text;
+            if (text !== undefined) text.Placement = placement;
+        }
+    }
+
+    // ── Command-driven force-apply ──────────────────────────────────────
+    // Reflect the value on the Selection* DP (for the active-state toggles) AND
+    // apply it to every selected leaf — unconditionally, unlike the DP-change
+    // broadcast above which no-ops when the reflected DP already equals the
+    // value. The reflect write is done under _seedingFormat so it doesn't also
+    // fire the _broadcast* listener (that would double-apply). Used by the
+    // Diagram's text-format commands (and any programmatic ApplySelectionText*).
+    public ApplyTextAlignment(align: TextAlignment): void
+    {
+        const Diagram = this._diagram.constructor as typeof import('../diagram.js').Diagram;
+        this._seedingFormat = true;
+        try { this._diagram.set_property_value(Diagram.SelectionTextAlignmentKey, align); }
+        finally { this._seedingFormat = false; }
+        for (const leaf of this._leaves())
+        {
+            (leaf as ITextualItem).Text?.ApplyParagraphAlignment(align);
+        }
+    }
+
+    public ApplyTextPlacement(placement: TextPlacement): void
+    {
+        const Diagram = this._diagram.constructor as typeof import('../diagram.js').Diagram;
+        this._seedingFormat = true;
+        try { this._diagram.set_property_value(Diagram.SelectionTextPlacementKey, placement); }
+        finally { this._seedingFormat = false; }
+        for (const leaf of this._leaves())
+        {
+            const text = (leaf as ITextualItem).Text;
+            if (text !== undefined) text.Placement = placement;
         }
     }
 
@@ -287,6 +495,19 @@ export class FormatMirror
         }
         return out;
     }
+}
+
+// Font-colour rides the character-style channel as a hex string (so a
+// ColorPicker.ColorHex binds it directly); ShapeText works in Brush terms, so
+// convert at this boundary. A non-solid brush seeds as black (the picker has no
+// gradient representation).
+function hexToBrush(hex: string): SolidColorBrush { return new SolidColorBrush(Color.FromHex(hex)); }
+
+// Keep a bumped font size in a sane, whole-point range.
+function clampFontSize(n: number): number { return Math.max(1, Math.min(999, Math.round(n))); }
+function brushToHex(brush: Brush | undefined): string
+{
+    return brush instanceof SolidColorBrush ? brush.Color.ToHex() : '#000000';
 }
 
 // Per-property copy into a fresh Pen instance — preserves the editor's

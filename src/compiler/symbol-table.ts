@@ -49,6 +49,11 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['Saturate',            '@visualisation-sub/mural/runtime'],
     ['Desaturate',          '@visualisation-sub/mural/runtime'],
     ['Alpha',               '@visualisation-sub/mural/runtime'],
+    // General value-reflection converter factory for `$path << Is(x)`:
+    // convert → `value === x`, convertBack → `x`. Drives a ToggleButton's
+    // IsChecked from an enum-valued binding (radio-style selection where
+    // clicking always selects x, so clicking the active one is a no-op).
+    ['Is',                  '@visualisation-sub/mural/runtime'],
     ['MultiBinding',        '@visualisation-sub/mural/runtime'],
     ['TemplateBinding',     '@visualisation-sub/mural/runtime'],
     ['MultiTrigger',        '@visualisation-sub/mural/runtime'],
@@ -237,6 +242,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['VirtualizingWrapPanel',   '@visualisation-sub/mural/basic'],
     ['TextWrapping',            '@visualisation-sub/mural/basic'],
     ['TextAlignment',           '@visualisation-sub/mural/basic'],
+    ['TextPlacement',           '@visualisation-sub/mural/framework'],
     ['TextBoxVariant',          '@visualisation-sub/mural/basic'],
     ['Arc',                     '@visualisation-sub/mural/basic'],
     ['Squircle',                '@visualisation-sub/mural/basic'],
@@ -480,7 +486,7 @@ export const ENUM_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<st
     ['PuffyBase',             new Set(['Square', 'Diamond'])],
     ['PixelSource',           new Set(['Circle', 'Triangle'])],
     ['TextWrapping',          new Set(['NoWrap', 'Wrap'])],
-    ['TextAlignment',         new Set(['Left', 'Center', 'Right'])],
+    ['TextAlignment',         new Set(['Left', 'Center', 'Right', 'Justify'])],
     ['ListMarkerStyle',       new Set(['None', 'Disc', 'Circle', 'Square', 'Decimal', 'LowerLatin', 'UpperLatin', 'LowerRoman', 'UpperRoman'])],
     ['ClickMode',             new Set(['Release', 'Press', 'Hover'])],
     ['ButtonVariant',         new Set(['Filled', 'Elevated', 'Tonal', 'Outlined', 'Text', 'Standard'])],
@@ -574,6 +580,16 @@ export const STATIC_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<
     // scheme value position, where there's no LHS property to drive
     // the enum-member resolution.
     ['FontWeight', new Set(['Normal', 'Medium', 'Bold'])],
+    // Exposed for the dotted form `TextAlignment.Justify` / `TextPlacement.Center`
+    // as `Is(...)` converter-factory arguments in the diagram alignment
+    // toolbars (also in ENUM_MEMBERS for TextAlignment so `TextAlignment=Left`
+    // property assignment keeps working).
+    ['TextAlignment', new Set(['Left', 'Center', 'Right', 'Justify'])],
+    ['TextPlacement', new Set([
+        'Center', 'Top', 'Bottom', 'Left', 'Right',
+        'TopLeft', 'TopRight', 'BottomLeft', 'BottomRight',
+        'Above', 'Below', 'LeftOf', 'RightOf',
+    ])],
 ]);
 
 // Property-name → enum class candidates. Used when the markup

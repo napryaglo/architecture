@@ -296,7 +296,7 @@ export function SplitParagraph(doc: FlowDocument, ptr: TextPointer): TextPointer
 }
 
 // ── Formatting toggles (Ctrl+B / I / U) ───────────────────────────────
-export enum FormatKind { Bold = 'bold', Italic = 'italic', Underline = 'underline' }
+export enum FormatKind { Bold = 'bold', Italic = 'italic', Underline = 'underline', Strikethrough = 'strikethrough' }
 
 // Split the run straddling `offset` so a run boundary lands exactly there.
 function splitRunAt(p: Paragraph, offset: number): void
@@ -320,15 +320,16 @@ function runHasFormat(r: Run, kind: FormatKind): boolean
 {
     if (kind === FormatKind.Bold)      return r.FontWeight === FontWeight.Bold;
     if (kind === FormatKind.Italic)    return r.FontStyle === FontStyle.Italic;
-    return (r.TextDecorations & TextDecorations.Underline) !== 0;
+    const flag = kind === FormatKind.Strikethrough ? TextDecorations.Strikethrough : TextDecorations.Underline;
+    return (r.TextDecorations & flag) !== 0;
 }
 
 function setRunFormat(r: Run, kind: FormatKind, on: boolean): void
 {
     if (kind === FormatKind.Bold)   { r.FontWeight = on ? FontWeight.Bold : FontWeight.Normal; return; }
     if (kind === FormatKind.Italic) { r.FontStyle  = on ? FontStyle.Italic : FontStyle.Normal; return; }
-    r.TextDecorations = on ? (r.TextDecorations | TextDecorations.Underline)
-                           : (r.TextDecorations & ~TextDecorations.Underline);
+    const flag = kind === FormatKind.Strikethrough ? TextDecorations.Strikethrough : TextDecorations.Underline;
+    r.TextDecorations = on ? (r.TextDecorations | flag) : (r.TextDecorations & ~flag);
 }
 
 // The runs of paragraph `p` fully inside [start, end).
@@ -343,18 +344,18 @@ function runsInRange(p: Paragraph, start: number, end: number): Run[]
     return out;
 }
 
-/** Toggle a character format over a selection. If every covered run already
- *  carries the format it is removed, else it is applied (WPF toggle). */
-export function ToggleFormat(doc: FlowDocument, a: TextPointer, b: TextPointer, kind: FormatKind): void
+// Split at the selection endpoints so run boundaries align to [a,b), then
+// return the runs fully inside the selection. Shared by every selection-scoped
+// character-format op (toggle, set, query) so they all split + gather identically.
+function coveredRuns(doc: FlowDocument, a: TextPointer, b: TextPointer): Run[]
 {
     const [lo, hi] = OrderPointers(doc, a, b);
-    if (lo.Equals(hi)) return;
+    if (lo.Equals(hi)) return [];
 
     const all = DocumentParagraphs(doc);
     const loI = all.indexOf(lo.Paragraph);
     const hiI = all.indexOf(hi.Paragraph);
 
-    // Split at range endpoints so covered runs align to the selection.
     for (let i = loI; i <= hiI; i++)
     {
         const p = all[i]!;
@@ -365,7 +366,6 @@ export function ToggleFormat(doc: FlowDocument, a: TextPointer, b: TextPointer, 
         splitRunAt(p, end);
     }
 
-    // Gather covered runs, decide toggle direction, apply.
     const covered: Run[] = [];
     for (let i = loI; i <= hiI; i++)
     {
@@ -374,9 +374,81 @@ export function ToggleFormat(doc: FlowDocument, a: TextPointer, b: TextPointer, 
         const end   = i === hiI ? hi.Offset : ParagraphLength(p);
         covered.push(...runsInRange(p, start, end));
     }
+    return covered;
+}
+
+/** Toggle a character format over a selection. If every covered run already
+ *  carries the format it is removed, else it is applied (WPF toggle). */
+export function ToggleFormat(doc: FlowDocument, a: TextPointer, b: TextPointer, kind: FormatKind): void
+{
+    const covered = coveredRuns(doc, a, b);
     if (covered.length === 0) return;
     const allSet = covered.every((r) => runHasFormat(r, kind));
     for (const r of covered) setRunFormat(r, kind, !allSet);
+}
+
+/** Set (not toggle) a character format on every run in the selection. */
+export function SetFormat(doc: FlowDocument, a: TextPointer, b: TextPointer, kind: FormatKind, on: boolean): void
+{
+    for (const r of coveredRuns(doc, a, b)) setRunFormat(r, kind, on);
+}
+
+/** Apply an arbitrary run mutation (font family / size / colour) to every run
+ *  in the selection, splitting at the endpoints first. */
+export function SetRunStyle(doc: FlowDocument, a: TextPointer, b: TextPointer, apply: (r: Run) => void): void
+{
+    for (const r of coveredRuns(doc, a, b)) apply(r);
+}
+
+// Runs whose extent intersects [a,b) — WITHOUT splitting. Read-only queries use
+// this so reflecting the toolbar never mutates the document (splitting on every
+// caret move would churn the run structure needlessly). A run straddling an
+// endpoint counts: it covers part of the selection, so its format is relevant.
+function overlappingRuns(doc: FlowDocument, a: TextPointer, b: TextPointer): Run[]
+{
+    const [lo, hi] = OrderPointers(doc, a, b);
+    if (lo.Equals(hi)) return [];
+    const all = DocumentParagraphs(doc);
+    const loI = all.indexOf(lo.Paragraph);
+    const hiI = all.indexOf(hi.Paragraph);
+    if (loI < 0 || hiI < 0) return [];
+    const out: Run[] = [];
+    for (let i = loI; i <= hiI; i++)
+    {
+        const p = all[i]!;
+        const start = i === loI ? lo.Offset : 0;
+        const end   = i === hiI ? hi.Offset : ParagraphLength(p);
+        for (const slot of ParagraphRuns(p))
+        {
+            const rEnd = slot.start + slot.run.Text.length;
+            if (slot.start < end && rEnd > start) out.push(slot.run);
+        }
+    }
+    return out;
+}
+
+/** True when the format `kind` covers a run — read-only. `strict` (default)
+ *  requires EVERY overlapping run to carry it (the "is the whole selection
+ *  bold?" toolbar question). */
+export function QueryFormatActive(doc: FlowDocument, a: TextPointer, b: TextPointer, kind: FormatKind): boolean
+{
+    const runs = overlappingRuns(doc, a, b);
+    return runs.length > 0 && runs.every((r) => runHasFormat(r, kind));
+}
+
+/** True when a single run carries `kind` — for reflecting a collapsed caret. */
+export function RunHasFormat(r: Run, kind: FormatKind): boolean { return runHasFormat(r, kind); }
+
+/** Read a value common to every run overlapping the selection, or `undefined`
+ *  when the selection is empty OR the runs disagree (mixed → no single toolbar
+ *  value). Read-only. `read` should return a primitive so equality is by value. */
+export function QueryRunValue<T>(doc: FlowDocument, a: TextPointer, b: TextPointer, read: (r: Run) => T): T | undefined
+{
+    const runs = overlappingRuns(doc, a, b);
+    if (runs.length === 0) return undefined;
+    const first = read(runs[0]!);
+    for (const r of runs) if (read(r) !== first) return undefined;
+    return first;
 }
 
 // ── List indent / outdent (Tab / Shift+Tab) ───────────────────────────

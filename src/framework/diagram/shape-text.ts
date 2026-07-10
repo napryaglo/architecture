@@ -11,10 +11,22 @@ import {
     Thickness,
     Visual,
 } from '../../runtime/index.js';
-import { Brush, Color, FontStyle, FontWeight, RotateTransform, ScaleTransform, SolidColorBrush, TextAlignment, TransformGroup, VerticalAlignment } from '../../visual-engine/index.js';
+import { Brush, Color, FontFamily, FontStyle, FontWeight, RotateTransform, ScaleTransform, SolidColorBrush, TextAlignment, TextDecorations, TransformGroup, VerticalAlignment } from '../../visual-engine/index.js';
 import { TextWrapping } from '../../basic/text-block.js';
 import { RichTextBox } from '../../basic/rich-text-box.js';
 import { FlowDocument } from '../../basic/documents/flow-document.js';
+import { DocumentParagraphs } from '../../basic/documents/text-navigation.js';
+import { ParagraphRuns } from '../../basic/documents/text-pointer.js';
+import { type Run } from '../../basic/documents/inlines.js';
+
+// Normalise FontFamily (string | FontFamily | undefined) to a family-name
+// string so a toolbar picker's `Text` DP reflects it and a `<< Is(...)`-free
+// binding round-trips. Shared shape with rich-text-box's helper of the same name.
+function familyName(v: FontFamily | string | undefined): string | undefined
+{
+    if (v === undefined) return undefined;
+    return typeof v === 'string' ? v : v.Source;
+}
 import { Control } from '../base/control.js';
 import {
     cloneFlowDocument,
@@ -94,6 +106,24 @@ export function isOutsideTextPlacement(p: TextPlacement): boolean
 {
     return p === TextPlacement.Above || p === TextPlacement.Below
         || p === TextPlacement.LeftOf || p === TextPlacement.RightOf;
+}
+
+// For an auto-sized INSIDE placement, whether the block fills the footprint
+// along an axis (so the anchor is centred and TextAlignment /
+// VerticalTextAlignment still position the text within the FULL footprint) vs.
+// hugs its content and pins to an edge (so the 9-grid visibly moves the label).
+// A horizontally-centred placement (Center / Top / Bottom) fills the WIDTH; a
+// vertically-centred one (Center / Left / Right) fills the HEIGHT. Edge / corner
+// placements hug content on the pinned axis. Center fills both → identical to a
+// footprint-filling block (no regression for the default). Only consulted when
+// BlockWidth / BlockHeight are auto (NaN); an explicit block size always wins.
+function fillsFootprintWidth(p: TextPlacement): boolean
+{
+    return p === TextPlacement.Center || p === TextPlacement.Top || p === TextPlacement.Bottom;
+}
+function fillsFootprintHeight(p: TextPlacement): boolean
+{
+    return p === TextPlacement.Center || p === TextPlacement.Left || p === TextPlacement.Right;
 }
 
 // Top-left of a `bw × bh` block placed at `placement` within an `fw × fh`
@@ -176,6 +206,16 @@ export class ShapeText extends Control
         ShapeText, 'FontStyle', FontStyle.Normal, MetaData.Measure | MetaData.Render);
     public static readonly ForegroundKey = Model.RegisterProperty<Brush | undefined>(
         ShapeText, 'Foreground', DEFAULT_INK, MetaData.Render);
+    // Font family (a CSS-style stack, tolerant of a raw string like TextBlock).
+    // undefined → the template TextBlock's own default. Measure — a family swap
+    // re-metrics the text.
+    public static readonly FontFamilyKey = Model.RegisterProperty<FontFamily | string | undefined>(
+        ShapeText, 'FontFamily', undefined, MetaData.Measure | MetaData.Render);
+    // Block-level text decorations (underline / strikethrough) for a PLAIN label.
+    // Rich content carries decorations per-Run instead; this drives the plain
+    // PART_Text display via a TemplateBinding.
+    public static readonly TextDecorationsKey = Model.RegisterProperty<TextDecorations>(
+        ShapeText, 'TextDecorations', TextDecorations.None, MetaData.Render);
 
     // ── Paragraph / block formatting ────────────────────────────────
     // M3/Visio default: centred, wrapping within the block.
@@ -265,6 +305,9 @@ export class ShapeText extends Control
         {
             if (this.IsEditing) this.CommitEdit();
         });
+        // Forward the editor's caret/selection changes so a diagram alignment
+        // toolbar can re-reflect the caret paragraph's alignment live.
+        this._editor?.AddSelectionChangedListener(() => this._fireEditSelectionChanged());
         // Pin the scale∘rotate group to the template root, pivoting about the
         // block centre. Both stay identity until Angle / ShrinkText drive them.
         const root = this.templateRoot;
@@ -338,6 +381,176 @@ export class ShapeText extends Control
         this.IsEditing = false;
     }
 
+    // ── Paragraph-alignment routing (§ diagram-text Part 2) ─────────────
+    // The alignment toolbar targets the right thing per mode:
+    //   * editing → the caret paragraph(s) in the live editor
+    //   * rich    → every paragraph of the Document (+ the block default)
+    //   * plain   → the block-level TextAlignment (Part 1)
+    public ApplyParagraphAlignment(align: TextAlignment): void
+    {
+        if (this.IsEditing && this._editor !== undefined)
+        {
+            this._editor.SetSelectionAlignment(align);
+            return;
+        }
+        const doc = this.Document;
+        if (doc !== undefined)
+        {
+            for (const p of DocumentParagraphs(doc)) p.TextAlignment = align;
+        }
+        // Keep the block default in sync so plain content aligns and a
+        // rich→plain collapse on the next edit preserves the choice.
+        this.TextAlignment = align;
+    }
+
+    // The alignment the toolbar should show as active for THIS shape.
+    public CurrentParagraphAlignment(): TextAlignment
+    {
+        if (this.IsEditing && this._editor !== undefined)
+        {
+            return this._editor.SelectionAlignment ?? this.TextAlignment;
+        }
+        const doc = this.Document;
+        if (doc !== undefined)
+        {
+            const paras = DocumentParagraphs(doc);
+            if (paras.length > 0) return paras[0]!.TextAlignment;
+        }
+        return this.TextAlignment;
+    }
+
+    // ── Character-format routing (§ diagram-text text style) ────────────
+    // Mirrors the paragraph-alignment routing: while editing → the selected text
+    // runs in the live editor; rich content (not editing) → every run of the
+    // Document; plain → the block-level character DPs. FormatMirror seeds via
+    // Current*/broadcasts via Apply* so a shape's text-style toolbar reflects +
+    // edits the right scope (whole label when selected, sub-run when editing).
+
+    // Every run of the rich Document, flattened across paragraphs.
+    private _allRuns(doc: FlowDocument): Run[]
+    {
+        const out: Run[] = [];
+        for (const p of DocumentParagraphs(doc))
+            for (const slot of ParagraphRuns(p)) out.push(slot.run);
+        return out;
+    }
+
+    public ApplyBold(on: boolean): void { this._applyWeight(on ? FontWeight.Bold : FontWeight.Normal, on); }
+    public ApplyItalic(on: boolean): void { this._applyStyle(on ? FontStyle.Italic : FontStyle.Normal, on); }
+    public ApplyUnderline(on: boolean): void { this._applyDecoration(TextDecorations.Underline, on); }
+    public ApplyStrikethrough(on: boolean): void { this._applyDecoration(TextDecorations.Strikethrough, on); }
+
+    private _applyWeight(w: FontWeight, on: boolean): void
+    {
+        if (this.IsEditing && this._editor !== undefined) { this._editor.SetSelectionBold(on); return; }
+        const doc = this.Document;
+        if (doc !== undefined) for (const r of this._allRuns(doc)) r.FontWeight = w;
+        this.FontWeight = w;
+    }
+    private _applyStyle(s: FontStyle, on: boolean): void
+    {
+        if (this.IsEditing && this._editor !== undefined) { this._editor.SetSelectionItalic(on); return; }
+        const doc = this.Document;
+        if (doc !== undefined) for (const r of this._allRuns(doc)) r.FontStyle = s;
+        this.FontStyle = s;
+    }
+    private _applyDecoration(flag: TextDecorations, on: boolean): void
+    {
+        if (this.IsEditing && this._editor !== undefined)
+        {
+            if (flag === TextDecorations.Strikethrough) this._editor.SetSelectionStrikethrough(on);
+            else this._editor.SetSelectionUnderline(on);
+            return;
+        }
+        const set = (cur: TextDecorations): TextDecorations => on ? (cur | flag) : (cur & ~flag);
+        const doc = this.Document;
+        if (doc !== undefined) for (const r of this._allRuns(doc)) r.TextDecorations = set(r.TextDecorations);
+        this.TextDecorations = set(this.TextDecorations);
+    }
+
+    public ApplyFontFamily(family: FontFamily | string): void
+    {
+        if (this.IsEditing && this._editor !== undefined) { this._editor.SetSelectionFontFamily(family); return; }
+        const doc = this.Document;
+        if (doc !== undefined) for (const r of this._allRuns(doc)) r.FontFamily = family;
+        this.FontFamily = family;
+    }
+    public ApplyFontSize(size: number): void
+    {
+        if (this.IsEditing && this._editor !== undefined) { this._editor.SetSelectionFontSize(size); return; }
+        const doc = this.Document;
+        if (doc !== undefined) for (const r of this._allRuns(doc)) r.FontSize = size;
+        this.FontSize = size;
+    }
+    public ApplyForeground(brush: Brush): void
+    {
+        if (this.IsEditing && this._editor !== undefined) { this._editor.SetSelectionForeground(brush); return; }
+        const doc = this.Document;
+        if (doc !== undefined) for (const r of this._allRuns(doc)) r.Foreground = brush;
+        this.Foreground = brush;
+    }
+
+    public CurrentBold(): boolean
+    {
+        if (this.IsEditing && this._editor !== undefined) return this._editor.SelectionBold;
+        const doc = this.Document;
+        if (doc !== undefined) { const rs = this._allRuns(doc); return rs.length > 0 && rs.every((r) => r.FontWeight === FontWeight.Bold); }
+        return this.FontWeight === FontWeight.Bold;
+    }
+    public CurrentItalic(): boolean
+    {
+        if (this.IsEditing && this._editor !== undefined) return this._editor.SelectionItalic;
+        const doc = this.Document;
+        if (doc !== undefined) { const rs = this._allRuns(doc); return rs.length > 0 && rs.every((r) => r.FontStyle === FontStyle.Italic); }
+        return this.FontStyle === FontStyle.Italic;
+    }
+    public CurrentUnderline(): boolean { return this._currentDecoration(TextDecorations.Underline, () => this._editor!.SelectionUnderline); }
+    public CurrentStrikethrough(): boolean { return this._currentDecoration(TextDecorations.Strikethrough, () => this._editor!.SelectionStrikethrough); }
+
+    private _currentDecoration(flag: TextDecorations, editorRead: () => boolean): boolean
+    {
+        if (this.IsEditing && this._editor !== undefined) return editorRead();
+        const doc = this.Document;
+        if (doc !== undefined) { const rs = this._allRuns(doc); return rs.length > 0 && rs.every((r) => (r.TextDecorations & flag) !== 0); }
+        return (this.TextDecorations & flag) !== 0;
+    }
+
+    public CurrentFontFamily(): string
+    {
+        if (this.IsEditing && this._editor !== undefined) return this._editor.SelectionFontFamily ?? familyName(this.FontFamily) ?? '';
+        const doc = this.Document;
+        if (doc !== undefined) { const rs = this._allRuns(doc); if (rs.length > 0) { const f = familyName(rs[0]!.FontFamily); if (f !== undefined) return f; } }
+        return familyName(this.FontFamily) ?? '';
+    }
+    public CurrentFontSize(): number
+    {
+        if (this.IsEditing && this._editor !== undefined) return this._editor.SelectionFontSize ?? this.FontSize;
+        const doc = this.Document;
+        if (doc !== undefined) { const rs = this._allRuns(doc); if (rs.length > 0 && rs[0]!.FontSize !== undefined) return rs[0]!.FontSize; }
+        return this.FontSize;
+    }
+    public CurrentForeground(): Brush | undefined
+    {
+        if (this.IsEditing && this._editor !== undefined) return this._editor.SelectionForeground ?? this.Foreground;
+        const doc = this.Document;
+        if (doc !== undefined) { const rs = this._allRuns(doc); if (rs.length > 0 && rs[0]!.Foreground !== undefined) return rs[0]!.Foreground; }
+        return this.Foreground;
+    }
+
+    // Fires when the editor's caret / selection moves (while editing) or when
+    // edit mode toggles — the signal a diagram alignment toolbar re-seeds on.
+    private readonly _editSelListeners: Array<() => void> = [];
+    public AddEditSelectionChangedListener(l: () => void): void { this._editSelListeners.push(l); }
+    public RemoveEditSelectionChangedListener(l: () => void): void
+    {
+        const i = this._editSelListeners.indexOf(l);
+        if (i >= 0) this._editSelListeners.splice(i, 1);
+    }
+    private _fireEditSelectionChanged(): void
+    {
+        for (const l of [...this._editSelListeners]) l();
+    }
+
     // Escape cancels while editing (bubbles up from the focused editor).
     // Enter is NOT a commit — the RichTextBox treats it as a paragraph break;
     // commit is via click-away (LostFocus) or Escape-then-nothing. A cancel
@@ -387,25 +600,38 @@ export class ShapeText extends Control
         {
             this.set_property_value(ShapeText.HasRichContentKey, newValue !== undefined);
         }
+        // Entering / leaving edit mode changes what the alignment toolbar
+        // reflects (caret paragraph vs. block), so re-seed it.
+        else if (descriptor === ShapeText.IsEditingKey.descriptor)
+        {
+            this._fireEditSelectionChanged();
+        }
     }
 
     protected override MeasureOverride(availableSize: Size): Size
     {
         const root = this.templateRoot;
         if (root === undefined) return Size.Zero;
-        const outside = isOutsideTextPlacement(this.Placement);
+        const p = this.Placement;
         // ShrinkText measures the natural (unclamped) height so Arrange can
         // tell the content overflows the footprint and scale it to fit.
         const shrink = this.AutoFit === TextAutoFit.ShrinkText;
         const bw = this.BlockWidth, bh = this.BlockHeight;
-        // Constrain the block measure: an explicit block size wins; else fill
-        // the footprint (inside) or leave unconstrained so it shrinks to
-        // content (outside). Wrapping still works inside because the width
-        // constraint = footprint width.
+        // Constrain the block measure PER AXIS: an explicit block size wins; else
+        // constrain to the footprint ONLY on axes the block fills (so wrapping /
+        // vertical fill happen against the footprint and TextAlignment / vertical
+        // alignment position within it). On a hug axis (an edge/corner placement,
+        // or any outside placement) measure unconstrained so root.DesiredSize is
+        // the NATURAL content size — computeBlockRect then hugs + pins to it,
+        // which is what makes the placement grid visibly move the label. The
+        // inner display parts are Stretch, so a constrained axis would otherwise
+        // report the constraint (not the content) and every anchor would collapse.
+        const fillW = fillsFootprintWidth(p);
+        const fillH = fillsFootprintHeight(p) && !shrink;
         const mw = !Number.isNaN(bw) ? bw
-            : (outside || !Number.isFinite(availableSize.Width)  ? Number.POSITIVE_INFINITY : availableSize.Width);
+            : (fillW && Number.isFinite(availableSize.Width)  ? availableSize.Width  : Number.POSITIVE_INFINITY);
         const mh = !Number.isNaN(bh) ? bh
-            : (outside || shrink || !Number.isFinite(availableSize.Height) ? Number.POSITIVE_INFINITY : availableSize.Height);
+            : (fillH && Number.isFinite(availableSize.Height) ? availableSize.Height : Number.POSITIVE_INFINITY);
         root.Measure(new Size(mw, mh));
         // Occupy the footprint slot when finite (fill the host); else shrink
         // to the block's own desired size.
@@ -440,12 +666,27 @@ export class ShapeText extends Control
 
     // The block's rect within the footprint (this control's own frame),
     // resolving auto size against `desired` and applying Placement + Offset.
+    //
+    // Auto (NaN) block size resolves per-axis: an explicit BlockWidth/Height
+    // always wins; else an OUTSIDE placement hugs content; else an inside
+    // placement fills the footprint on axes it centres on (Center / edge-centre)
+    // and hugs content (clamped to the footprint) on axes it pins to an edge.
+    // Without the per-axis hug an auto block fills the whole footprint, so every
+    // inside anchor collapses to (0,0) and Placement has NO visible effect —
+    // that was the "label-placement toolbar does nothing" bug.
     private computeBlockRect(fw: number, fh: number, desired: Size): Rect
     {
-        const outside = isOutsideTextPlacement(this.Placement);
-        const bw = !Number.isNaN(this.BlockWidth)  ? this.BlockWidth  : (outside ? desired.Width  : fw);
-        const bh = !Number.isNaN(this.BlockHeight) ? this.BlockHeight : (outside ? desired.Height : fh);
-        const anchor = computeTextBlockAnchor(this.Placement, fw, fh, bw, bh);
+        const p = this.Placement;
+        const outside = isOutsideTextPlacement(p);
+        const bw = !Number.isNaN(this.BlockWidth)  ? this.BlockWidth
+            : outside                ? desired.Width
+            : fillsFootprintWidth(p) ? fw
+            :                          Math.min(desired.Width, fw);
+        const bh = !Number.isNaN(this.BlockHeight) ? this.BlockHeight
+            : outside                 ? desired.Height
+            : fillsFootprintHeight(p) ? fh
+            :                           Math.min(desired.Height, fh);
+        const anchor = computeTextBlockAnchor(p, fw, fh, bw, bh);
         const off = this.Offset;
         return new Rect(anchor.x + off.X, anchor.y + off.Y, bw, bh);
     }
@@ -483,6 +724,12 @@ export class ShapeText extends Control
 
     public get Foreground(): Brush | undefined { return this.get_property_value(ShapeText.ForegroundKey); }
     public set Foreground(v: Brush | undefined) { this.set_property_value(ShapeText.ForegroundKey, v); }
+
+    public get FontFamily(): FontFamily | string | undefined { return this.get_property_value(ShapeText.FontFamilyKey); }
+    public set FontFamily(v: FontFamily | string | undefined) { this.set_property_value(ShapeText.FontFamilyKey, v); }
+
+    public get TextDecorations(): TextDecorations { return this.get_property_value(ShapeText.TextDecorationsKey); }
+    public set TextDecorations(v: TextDecorations) { this.set_property_value(ShapeText.TextDecorationsKey, v); }
 
     public get TextAlignment(): TextAlignment { return this.get_property_value(ShapeText.TextAlignmentKey); }
     public set TextAlignment(v: TextAlignment) { this.set_property_value(ShapeText.TextAlignmentKey, v); }

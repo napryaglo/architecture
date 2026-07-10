@@ -302,6 +302,34 @@ describe('ShapeText — block layout + rotation', () => {
         assert.deepEqual([r.X, r.Y, r.Width, r.Height], [0, 0, 80, 80]);
     });
 
+    // Auto (NaN) block size: an inside EDGE/CORNER placement hugs its content on
+    // the pinned axis and anchors there — so the 9-grid label-placement toolbar
+    // visibly moves the label. (Regression guard for "placement does nothing".)
+    test('auto block + TopLeft placement hugs content and pins to the corner', () => {
+        const st = new ShapeText();
+        st.Content = 'x';
+        st.Placement = TextPlacement.TopLeft;
+        layout(st);
+        const r = st.GetBlockRect();
+        assert.equal(r.X, 0, 'pinned to the left');
+        assert.equal(r.Y, 0, 'pinned to the top');
+        assert.ok(r.Width  < 80, 'hugs content width, not the footprint');
+        assert.ok(r.Height < 80, 'hugs content height, not the footprint');
+    });
+
+    // A vertically-centred placement (Right) fills the HEIGHT (so vertical
+    // alignment still works) but hugs the WIDTH and pins to the right edge.
+    test('auto block + Right placement fills height, hugs width, pins right', () => {
+        const st = new ShapeText();
+        st.Content = 'x';
+        st.Placement = TextPlacement.Right;
+        layout(st);
+        const r = st.GetBlockRect();
+        assert.equal(r.Height, 80, 'fills the footprint height');
+        assert.ok(r.Width < 80, 'hugs content width');
+        assert.equal(r.X + r.Width, 80, 'right edge pinned to the footprint');
+    });
+
     test('explicit block size + Bottom placement anchors to the bottom edge', () => {
         const st = new ShapeText();
         st.Content = 'x';

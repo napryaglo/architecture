@@ -50,7 +50,8 @@ import { AlignmentGuidesAdorner } from './behaviors/alignment-guides-adorner.js'
 import { TextBlockAdorner } from './behaviors/text-block-adorner.js';
 import { SelectionBoundsAdorner } from '../../basic/index.js';
 import { DiagramSelectionSource } from './behaviors/diagram-selection-source.js';
-import { Brush, Pen, Point } from '../../visual-engine/index.js';
+import { Brush, Pen, Point, TextAlignment } from '../../visual-engine/index.js';
+import { TextPlacement } from './shape-text.js';
 import { FormatMirror } from './collaborators/format-mirror.js';
 import {
     attachCanvasDropBehavior,
@@ -193,6 +194,65 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     public static readonly CombineExcludeCommandKey   = Model.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'CombineExcludeCommand',   undefined, MetaData.None);
 
+    // Text-format commands — the command surface behind the two label toolbars
+    // (paragraph alignment WITHIN the label; label placement WITHIN the shape).
+    // Same RelayCommand-DP shape as the align/combine commands, so a data-driven
+    // toolbar / ICommandTarget consumer (e.g. Plexus) binds them exactly the same
+    // way. DiagramCommands installs the defaults; each Execute force-applies its
+    // value to every selected shape's label (via ApplySelectionText*), and each
+    // CanExecute requires ≥ 1 selected shape that carries a label. The demo's
+    // active-state toggles bind BOTH Command (the write) and IsChecked (the
+    // reflection through `<< Is(...)`).
+    public static readonly SetTextAlignLeftCommandKey    = Model.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'SetTextAlignLeftCommand',    undefined, MetaData.None);
+    public static readonly SetTextAlignCenterCommandKey  = Model.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'SetTextAlignCenterCommand',  undefined, MetaData.None);
+    public static readonly SetTextAlignRightCommandKey   = Model.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'SetTextAlignRightCommand',   undefined, MetaData.None);
+    public static readonly SetTextAlignJustifyCommandKey = Model.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'SetTextAlignJustifyCommand', undefined, MetaData.None);
+
+    public static readonly SetTextPlacementCenterCommandKey      = Model.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'SetTextPlacementCenterCommand',      undefined, MetaData.None);
+    public static readonly SetTextPlacementTopCommandKey         = Model.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'SetTextPlacementTopCommand',         undefined, MetaData.None);
+    public static readonly SetTextPlacementBottomCommandKey      = Model.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'SetTextPlacementBottomCommand',      undefined, MetaData.None);
+    public static readonly SetTextPlacementLeftCommandKey        = Model.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'SetTextPlacementLeftCommand',        undefined, MetaData.None);
+    public static readonly SetTextPlacementRightCommandKey       = Model.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'SetTextPlacementRightCommand',       undefined, MetaData.None);
+    public static readonly SetTextPlacementTopLeftCommandKey     = Model.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'SetTextPlacementTopLeftCommand',     undefined, MetaData.None);
+    public static readonly SetTextPlacementTopRightCommandKey    = Model.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'SetTextPlacementTopRightCommand',    undefined, MetaData.None);
+    public static readonly SetTextPlacementBottomLeftCommandKey  = Model.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'SetTextPlacementBottomLeftCommand',  undefined, MetaData.None);
+    public static readonly SetTextPlacementBottomRightCommandKey = Model.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'SetTextPlacementBottomRightCommand', undefined, MetaData.None);
+
+    // Character-decoration toggle commands — flip bold / italic / underline /
+    // strikethrough on the selection (the selected text run(s) while editing,
+    // else the whole label). Toggle semantics: Execute applies the opposite of
+    // the current reflected state. Same DP shape so Plexus binds them by id.
+    public static readonly SetTextBoldCommandKey          = Model.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'SetTextBoldCommand',          undefined, MetaData.None);
+    public static readonly SetTextItalicCommandKey        = Model.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'SetTextItalicCommand',        undefined, MetaData.None);
+    public static readonly SetTextUnderlineCommandKey     = Model.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'SetTextUnderlineCommand',     undefined, MetaData.None);
+    public static readonly SetTextStrikethroughCommandKey = Model.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'SetTextStrikethroughCommand', undefined, MetaData.None);
+
+    // Grow / shrink the label font one point. Unlike the family/size/colour
+    // pickers (which set one shared value), these step EACH selected label's own
+    // size (the caret run while editing), so a mixed selection keeps its
+    // relative sizing. Same RelayCommand-DP shape for Plexus binding by id.
+    public static readonly IncreaseFontSizeCommandKey = Model.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'IncreaseFontSizeCommand', undefined, MetaData.None);
+    public static readonly DecreaseFontSizeCommandKey = Model.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'DecreaseFontSizeCommand', undefined, MetaData.None);
+
     // ── Connectors collection + template ──────────────────────────
     //
     // `Connectors` is a parallel collection to ItemsSource. Items in
@@ -242,6 +302,19 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     // line of plumbing inside.
     public static readonly ConnectorInteractionsEnabledKey = Model.RegisterProperty<boolean>(
         Diagram, 'ConnectorInteractionsEnabled', false, MetaData.None);
+
+    // ── Input modes (§ diagram input modes) ─────────────────────────
+    // Connectors mode gates the connector-interaction adorners: when it is NOT
+    // active they don't react to the pointer (no port handles on figure hover,
+    // no edit-handle drags), so figures aren't cluttered with every adorner at
+    // once. The mode is ACTIVE when this DP is pinned true (a mode toggle button
+    // — the consumer binds a ToolBarToggleButton's IsChecked to it) OR while the
+    // user holds Ctrl (momentary). Default false — the connector layer is opt-in
+    // per interaction, not always-on. The ConnectorInteractionsEnabled DP above
+    // still gates whether the behavior is mounted at all; this gates its
+    // reactivity within a mounted behavior.
+    public static readonly ConnectorsModePinnedKey = Model.RegisterProperty<boolean>(
+        Diagram, 'ConnectorsModePinned', false, MetaData.None);
 
     // Drop receiver — when set, Diagram attaches its canvas-drop
     // behavior to this Visual (typically the surrounding Border or
@@ -303,6 +376,42 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     public static readonly SelectionFormatTargetCapScaleKey = Model.RegisterProperty<number>(
         Diagram, 'SelectionFormatTargetCapScale', 1, MetaData.None);
 
+    // Text-format channel. FormatMirror seeds these from the first selected
+    // shape's Text and broadcasts edits onto every selected shape's Text:
+    // TextAlignment is the paragraph alignment WITHIN the label block (the
+    // "align text" toolbar), Placement is where the whole label sits WITHIN
+    // the shape footprint (the "place label" toolbar). undefined = no shape
+    // selected. The toolbars bind a ToolBarToggleButton's IsChecked through
+    // `<< Is(TextAlignment.X)` / `<< Is(TextPlacement.X)` so exactly one
+    // option shows active and clicking one writes it back here.
+    public static readonly SelectionTextAlignmentKey = Model.RegisterProperty<TextAlignment | undefined>(
+        Diagram, 'SelectionTextAlignment', undefined, MetaData.None);
+    public static readonly SelectionTextPlacementKey = Model.RegisterProperty<TextPlacement | undefined>(
+        Diagram, 'SelectionTextPlacement', undefined, MetaData.None);
+
+    // Character-style channel — the text-style toolbar (font family / size /
+    // colour + bold / italic / underline / strikethrough). FormatMirror seeds
+    // these from the first selected shape's label (querying the caret run while
+    // editing) and broadcasts edits onto every selected shape's label. The
+    // family/size/colour DPs are plain primitives so the FontFamilyPicker.Text /
+    // FontSizePicker.Value / ColorPicker.ColorHex bind directly; colour rides a
+    // hex string (converted to/from a Brush at the ShapeText boundary). The four
+    // decoration booleans drive ToolBarToggleButton.IsChecked.
+    public static readonly SelectionFontFamilyKey   = Model.RegisterProperty<string>(
+        Diagram, 'SelectionFontFamily',   '', MetaData.None);
+    public static readonly SelectionFontSizeKey     = Model.RegisterProperty<number>(
+        Diagram, 'SelectionFontSize',     12, MetaData.None);
+    public static readonly SelectionFontColorHexKey = Model.RegisterProperty<string>(
+        Diagram, 'SelectionFontColorHex', '#000000', MetaData.None);
+    public static readonly SelectionBoldKey          = Model.RegisterProperty<boolean>(
+        Diagram, 'SelectionBold',          false, MetaData.None);
+    public static readonly SelectionItalicKey        = Model.RegisterProperty<boolean>(
+        Diagram, 'SelectionItalic',        false, MetaData.None);
+    public static readonly SelectionUnderlineKey     = Model.RegisterProperty<boolean>(
+        Diagram, 'SelectionUnderline',     false, MetaData.None);
+    public static readonly SelectionStrikethroughKey = Model.RegisterProperty<boolean>(
+        Diagram, 'SelectionStrikethrough', false, MetaData.None);
+
     public get PositionSnap():  DiagramPositionSnap | undefined { return this.get_property_value(Diagram.PositionSnapKey); }
     public set PositionSnap(v: DiagramPositionSnap | undefined) { this.set_property_value(Diagram.PositionSnapKey, v); }
 
@@ -328,6 +437,28 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     public get CombineIntersectCommand(): RelayCommand | undefined { return this.get_property_value(Diagram.CombineIntersectCommandKey); }
     public get CombineSubtractCommand():  RelayCommand | undefined { return this.get_property_value(Diagram.CombineSubtractCommandKey); }
     public get CombineExcludeCommand():   RelayCommand | undefined { return this.get_property_value(Diagram.CombineExcludeCommandKey); }
+
+    public get SetTextAlignLeftCommand():    RelayCommand | undefined { return this.get_property_value(Diagram.SetTextAlignLeftCommandKey); }
+    public get SetTextAlignCenterCommand():  RelayCommand | undefined { return this.get_property_value(Diagram.SetTextAlignCenterCommandKey); }
+    public get SetTextAlignRightCommand():   RelayCommand | undefined { return this.get_property_value(Diagram.SetTextAlignRightCommandKey); }
+    public get SetTextAlignJustifyCommand(): RelayCommand | undefined { return this.get_property_value(Diagram.SetTextAlignJustifyCommandKey); }
+
+    public get SetTextPlacementCenterCommand():      RelayCommand | undefined { return this.get_property_value(Diagram.SetTextPlacementCenterCommandKey); }
+    public get SetTextPlacementTopCommand():         RelayCommand | undefined { return this.get_property_value(Diagram.SetTextPlacementTopCommandKey); }
+    public get SetTextPlacementBottomCommand():      RelayCommand | undefined { return this.get_property_value(Diagram.SetTextPlacementBottomCommandKey); }
+    public get SetTextPlacementLeftCommand():        RelayCommand | undefined { return this.get_property_value(Diagram.SetTextPlacementLeftCommandKey); }
+    public get SetTextPlacementRightCommand():       RelayCommand | undefined { return this.get_property_value(Diagram.SetTextPlacementRightCommandKey); }
+    public get SetTextPlacementTopLeftCommand():     RelayCommand | undefined { return this.get_property_value(Diagram.SetTextPlacementTopLeftCommandKey); }
+    public get SetTextPlacementTopRightCommand():    RelayCommand | undefined { return this.get_property_value(Diagram.SetTextPlacementTopRightCommandKey); }
+    public get SetTextPlacementBottomLeftCommand():  RelayCommand | undefined { return this.get_property_value(Diagram.SetTextPlacementBottomLeftCommandKey); }
+    public get SetTextPlacementBottomRightCommand(): RelayCommand | undefined { return this.get_property_value(Diagram.SetTextPlacementBottomRightCommandKey); }
+
+    public get SetTextBoldCommand():          RelayCommand | undefined { return this.get_property_value(Diagram.SetTextBoldCommandKey); }
+    public get SetTextItalicCommand():        RelayCommand | undefined { return this.get_property_value(Diagram.SetTextItalicCommandKey); }
+    public get SetTextUnderlineCommand():     RelayCommand | undefined { return this.get_property_value(Diagram.SetTextUnderlineCommandKey); }
+    public get SetTextStrikethroughCommand(): RelayCommand | undefined { return this.get_property_value(Diagram.SetTextStrikethroughCommandKey); }
+    public get IncreaseFontSizeCommand(): RelayCommand | undefined { return this.get_property_value(Diagram.IncreaseFontSizeCommandKey); }
+    public get DecreaseFontSizeCommand(): RelayCommand | undefined { return this.get_property_value(Diagram.DecreaseFontSizeCommandKey); }
 
     public get Connectors(): ObservableCollection<Model> | undefined { return this.get_property_value(Diagram.ConnectorsKey); }
     public set Connectors(v: ObservableCollection<Model> | undefined) { this.set_property_value(Diagram.ConnectorsKey, v); }
@@ -382,6 +513,8 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     public set TextBlockAdornerEnabled(v: boolean) { this.set_property_value(Diagram.TextBlockAdornerEnabledKey, v); }
     public get ConnectorInteractionsEnabled():  boolean { return this.get_property_value(Diagram.ConnectorInteractionsEnabledKey); }
     public set ConnectorInteractionsEnabled(v: boolean) { this.set_property_value(Diagram.ConnectorInteractionsEnabledKey, v); }
+    public get ConnectorsModePinned():  boolean { return this.get_property_value(Diagram.ConnectorsModePinnedKey); }
+    public set ConnectorsModePinned(v: boolean) { this.set_property_value(Diagram.ConnectorsModePinnedKey, v); }
     public get ReflectSelectionToItems():  boolean { return this.get_property_value(Diagram.ReflectSelectionToItemsKey); }
     public set ReflectSelectionToItems(v: boolean) { this.set_property_value(Diagram.ReflectSelectionToItemsKey, v); }
     public get DropReceiver():  Visual | undefined { return this.get_property_value(Diagram.DropReceiverKey); }
@@ -402,6 +535,52 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     public set SelectionFormatSourceCapScale(v: number) { this.set_property_value(Diagram.SelectionFormatSourceCapScaleKey, v); }
     public get SelectionFormatTargetCapScale(): number { return this.get_property_value(Diagram.SelectionFormatTargetCapScaleKey); }
     public set SelectionFormatTargetCapScale(v: number) { this.set_property_value(Diagram.SelectionFormatTargetCapScaleKey, v); }
+    public get SelectionTextAlignment(): TextAlignment | undefined { return this.get_property_value(Diagram.SelectionTextAlignmentKey); }
+    public set SelectionTextAlignment(v: TextAlignment | undefined) { this.set_property_value(Diagram.SelectionTextAlignmentKey, v); }
+    public get SelectionTextPlacement(): TextPlacement | undefined { return this.get_property_value(Diagram.SelectionTextPlacementKey); }
+    public set SelectionTextPlacement(v: TextPlacement | undefined) { this.set_property_value(Diagram.SelectionTextPlacementKey, v); }
+
+    // Force-apply a paragraph alignment / label placement to every selected
+    // shape's label, and reflect it on the Selection* DP. The text-format
+    // commands route through here (rather than a bare DP write) so the value is
+    // re-applied even when the reflected DP already equals it — a plain
+    // SelectionText* set would no-op-broadcast in that case. Public so a
+    // consumer can drive the text toolbars programmatically without owning a
+    // command; the framework's own commands call the same path.
+    public ApplySelectionTextAlignment(align: TextAlignment): void { this._formatMirror.ApplyTextAlignment(align); }
+    public ApplySelectionTextPlacement(placement: TextPlacement): void { this._formatMirror.ApplyTextPlacement(placement); }
+
+    public get SelectionFontFamily():   string  { return this.get_property_value(Diagram.SelectionFontFamilyKey); }
+    public set SelectionFontFamily(v:   string) { this.set_property_value(Diagram.SelectionFontFamilyKey, v); }
+    public get SelectionFontSize():     number  { return this.get_property_value(Diagram.SelectionFontSizeKey); }
+    public set SelectionFontSize(v:     number) { this.set_property_value(Diagram.SelectionFontSizeKey, v); }
+    public get SelectionFontColorHex(): string  { return this.get_property_value(Diagram.SelectionFontColorHexKey); }
+    public set SelectionFontColorHex(v: string) { this.set_property_value(Diagram.SelectionFontColorHexKey, v); }
+    public get SelectionBold():          boolean { return this.get_property_value(Diagram.SelectionBoldKey); }
+    public set SelectionBold(v:          boolean) { this.set_property_value(Diagram.SelectionBoldKey, v); }
+    public get SelectionItalic():        boolean { return this.get_property_value(Diagram.SelectionItalicKey); }
+    public set SelectionItalic(v:        boolean) { this.set_property_value(Diagram.SelectionItalicKey, v); }
+    public get SelectionUnderline():     boolean { return this.get_property_value(Diagram.SelectionUnderlineKey); }
+    public set SelectionUnderline(v:     boolean) { this.set_property_value(Diagram.SelectionUnderlineKey, v); }
+    public get SelectionStrikethrough(): boolean { return this.get_property_value(Diagram.SelectionStrikethroughKey); }
+    public set SelectionStrikethrough(v: boolean) { this.set_property_value(Diagram.SelectionStrikethroughKey, v); }
+
+    // Force-apply a character format to every selected label (edit mode targets
+    // the selected text run(s)), and reflect it on the Selection* DP. The
+    // decoration toggle commands route through here. Booleans always change the
+    // DP on toggle, but font/size/colour may not — so these bypass the
+    // DP-change gate like the alignment/placement force-apply.
+    public ApplySelectionBold(on: boolean): void { this._formatMirror.ApplyBold(on); }
+    public ApplySelectionItalic(on: boolean): void { this._formatMirror.ApplyItalic(on); }
+    public ApplySelectionUnderline(on: boolean): void { this._formatMirror.ApplyUnderline(on); }
+    public ApplySelectionStrikethrough(on: boolean): void { this._formatMirror.ApplyStrikethrough(on); }
+    public ApplySelectionFontFamily(family: string): void { this._formatMirror.ApplyFontFamily(family); }
+    public ApplySelectionFontSize(size: number): void { this._formatMirror.ApplyFontSize(size); }
+    public ApplySelectionFontColorHex(hex: string): void { this._formatMirror.ApplyFontColorHex(hex); }
+
+    // Step every selected label's own font size by `delta` points (the caret run
+    // while editing), then reflect the first shape's new size on the DP.
+    public BumpSelectionFontSize(delta: number): void { this._formatMirror.BumpFontSize(delta); }
 
     // Standard connector-cap dropdown list for a ShapeFormatControl's
     // CapOptions DP. A real DP (not a plain getter) so a markup binding
@@ -551,6 +730,12 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     // OnPropertyChanged handler for the Connectors / ConnectorTemplate
     // DPs can forward the change.
     private readonly _connectorsMaterializer: DiagramConnectorsMaterializer;
+
+    // Text-format mirror collaborator. Held so the text-format commands can
+    // force-apply their value to the whole selection (bypassing the DP-change
+    // gate, so a command re-applies even when the reflected DP already equals
+    // the target — e.g. a mixed multi-selection, or a standalone Plexus button).
+    private readonly _formatMirror: FormatMirror;
 
     /** @internal — testing hook for the materialized item → Visual map. */
     public _getConnectorsMaterializerForTesting(): DiagramConnectorsMaterializer { return this._connectorsMaterializer; }
@@ -709,7 +894,7 @@ export class Diagram extends Selector implements RigidConnectorDragHost
         // the constructor returns.
         new DiagramCommands(this);
         new SelectionBoundsTracker(this);
-        new FormatMirror(this);
+        this._formatMirror = new FormatMirror(this);
         new SelectionReflector(this);
         this._connectorsMaterializer = new DiagramConnectorsMaterializer(this);
         // Seed the cap dropdown catalog. Safe here despite the cap

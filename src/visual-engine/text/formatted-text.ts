@@ -42,16 +42,19 @@ export enum TextDecorations
 // Per-line horizontal alignment of text WITHIN its block. Left (default)
 // starts every line at x=0; Center and Right shift each line by
 // `(slotWidth - lineWidth) * factor` so text centers / right-aligns inside
-// a slot wider than its natural content. Justify is intentionally omitted
-// (it needs variable inter-word spacing the FormattedText surface doesn't
-// support). Shared by TextBlock and the flow-document Block tier — lives
-// here, next to the other character/paragraph format enums, so the
-// documents/ content model can reference it without importing a Visual.
+// a slot wider than its natural content. Justify distributes the leftover
+// slack across the inter-word gaps of every line EXCEPT the last (and lines
+// ended by a hard break), so both edges align — the layout engine widens
+// the spaces per line rather than shifting the whole line by one offset.
+// Shared by TextBlock and the flow-document Block tier — lives here, next to
+// the other character/paragraph format enums, so the documents/ content
+// model can reference it without importing a Visual.
 export enum TextAlignment
 {
-    Left   = 'Left',
-    Center = 'Center',
-    Right  = 'Right',
+    Left    = 'Left',
+    Center  = 'Center',
+    Right   = 'Right',
+    Justify = 'Justify',
 }
 
 // True when `set` contains `flag`. Single-flag test — pass one member.

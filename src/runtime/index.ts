@@ -30,6 +30,7 @@ export {
     Saturate,
     Desaturate,
     Alpha,
+    Is,
     DataContextBinding,
     DynamicResource,
     EffectiveValueDescriptor,

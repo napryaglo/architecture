@@ -27,6 +27,31 @@ resources DiagramResources {
         join_inner
         join_left
         difference
+        // Input-mode toolbar: Connectors mode.
+        polyline
+        // Text-format toolbars: paragraph alignment within the label …
+        format_align_left
+        format_align_center
+        format_align_right
+        format_align_justify
+        // … and the 3×3 label-placement grid (where the label sits in the shape).
+        north_west
+        north
+        north_east
+        west
+        filter_center_focus
+        east
+        south_west
+        south
+        south_east
+        // Character decorations (text-style toolbar).
+        format_bold
+        format_italic
+        format_underlined
+        format_strikethrough
+        // Grow / shrink font.
+        text_increase
+        text_decrease
     }
 
     // ── Canvas ItemsPanel — a paginated canvas whose measured extent grows
@@ -49,19 +74,57 @@ resources DiagramResources {
     // (the Diagram is on every canvas drop's bubble path). Mirrors the
     // Diagrammer demo's Diagram declaration (demo/demos/diagram).
     DataTemplate [DataType = DiagramDocument] {
-        Diagram
-            [ ItemsSource                  = $Nodes,
-              Connectors                   = $Connectors,
-              ItemsPanel                   = @DiagramCanvasPanel,
-              SelectionMode                = Extended,
-              AllowMarqueeSelection        = true,
-              AlignmentGuidesEnabled       = true,
-              SelectionResizeEnabled       = true,
-              ConnectorInteractionsEnabled = true,
-              ReflectSelectionToItems      = true,
-              DropReceiver                 = $Self,
-              Focusable                    = true,
-              ContextMenuService.ContextMenu = @DiagramContextMenu ]
+        DockPanel {
+            // Text-style pickers row — font family / size / colour, bound to the
+            // canvas's Selection* character DPs by ElementName (forward ref to
+            // `canvas` below). These are value inputs that don't fit the
+            // CommandDefinition toolbar, so they ride here just above the canvas;
+            // the four decorations (bold / italic / underline / strikethrough)
+            // live in the Commands region as CommandDefinitions instead. Both
+            // apply to the whole label when a shape is selected, and to the
+            // selected text run(s) while a shape is being edited.
+            Border
+                [ DockPanel.Dock  = Top,
+                  Background      = @SurfaceContainerLow,
+                  BorderBrush     = @OutlineVariant,
+                  BorderThickness = (0,0,0,1),
+                  Padding         = (8,4,8,4) ] {
+                StackPanel [ Orientation = Horizontal ] {
+                    // Input modes — a separate toolbar of mode toggles. Connectors
+                    // mode: pin it (or hold Ctrl) to make the connector adorners
+                    // react; IsChecked binds the canvas's ConnectorsModePinned DP.
+                    ToolBar [ Margin = (0,0,8,0) ] {
+                        ToolBarToggleButton [ IsChecked = $canvas.ConnectorsModePinned ] {
+                            Shape [ Geometry = @polyline, Width = 16, Height = 16, Margin = (2) ]
+                        }
+                    }
+                    FontFamilyPicker [ Text = $canvas.SelectionFontFamily, Width = 170, VerticalAlignment = Center ]
+                    FontSizePicker   [ Value = $canvas.SelectionFontSize, IsEditable = true, Width = 80, Margin = (8,0,0,0), VerticalAlignment = Center ]
+                    ToolBar [ Margin = (8,0,0,0) ] {
+                        ToolBarButton [ Command = $canvas.IncreaseFontSizeCommand ] {
+                            Shape [ Geometry = @text_increase, Fill = @OnSurfaceVariant, Width = 16, Height = 16, Margin = (2) ]
+                        }
+                        ToolBarButton [ Command = $canvas.DecreaseFontSizeCommand ] {
+                            Shape [ Geometry = @text_decrease, Fill = @OnSurfaceVariant, Width = 16, Height = 16, Margin = (2) ]
+                        }
+                    }
+                    ColorPicker      [ ColorHex = $canvas.SelectionFontColorHex, Margin = (8,0,0,0), VerticalAlignment = Center ]
+                }
+            }
+            Diagram x:name="canvas"
+                [ ItemsSource                  = $Nodes,
+                  Connectors                   = $Connectors,
+                  ItemsPanel                   = @DiagramCanvasPanel,
+                  SelectionMode                = Extended,
+                  AllowMarqueeSelection        = true,
+                  AlignmentGuidesEnabled       = true,
+                  SelectionResizeEnabled       = true,
+                  ConnectorInteractionsEnabled = true,
+                  ReflectSelectionToItems      = true,
+                  DropReceiver                 = $Self,
+                  Focusable                    = true,
+                  ContextMenuService.ContextMenu = @DiagramContextMenu ]
+        }
     }
 
     // ── Canvas context menu — "Format Shape" ────────────────────────────

@@ -34,31 +34,32 @@ resources ToolBars {
         Border x:name="PART_Border"
             [ Background      = @SurfaceContainerHigh,
               BorderThickness = (0),
-              CornerRadius    = 0,
-              Padding         = (12,8,12,8) ] {
-            ContentPresenter
+              CornerRadius    = 0 ] {
+            // Transparent inner state layer (M3 state-layer model): the
+            // resting @SurfaceContainerHigh base stays put and hover / press
+            // paint a translucent OnSurfaceVariant tint ON TOP of it here,
+            // rather than swapping the base to a darker container step — which
+            // read as an abrupt "goes dark" flash. The layer carries the
+            // button padding so the tint covers the whole button; Border does
+            // NOT clip its child to CornerRadius, so the Position triggers
+            // round this layer in lock-step with PART_Border.
+            Border x:name="PART_StateLayer"
+                [ Background   = #00000000,
+                  CornerRadius = 0,
+                  Padding      = (12,8,12,8) ] {
+                ContentPresenter
+            }
         }
-        // Opaque steps on the M3 SurfaceContainer ladder — going UP
-        // for hover gives the button visibly more emphasis vs. the
-        // surrounding @Surface toolbar, going DOWN for press signals
-        // the "depressed" tap feedback. Using @StateHoverOverlay /
-        // @StatePressOverlay here would be barely visible because
-        // those tokens are translucent OnSurface tints; REPLACING the
-        // resting @SurfaceContainerHigh with a translucent overlay
-        // shows the toolbar's @Surface bleeding through, making hover
-        // look LESS opaque than rest. MenuItem rows can use the
-        // overlays because they're transparent at rest — see the
-        // comment on DefaultMenuItemRow.
-        when ( IsMouseOver ) { PART_Border.Background = @SurfaceContainerHighest; }
-        when ( IsPressed ) { PART_Border.Background = @SurfaceContainer; }
-        when ( Position = Only ) { PART_Border.CornerRadius = CornerRadius.Full; }
-        when ( Position = First ) { PART_Border.CornerRadius = CornerRadius.LeftRounded; }
-        when ( Position = Last ) { PART_Border.CornerRadius = CornerRadius.RightRounded; }
+        when ( IsMouseOver ) { PART_StateLayer.Background = @OnSurfaceVariantHoverLayer; }
+        when ( IsPressed ) { PART_StateLayer.Background = @OnSurfaceVariantPressLayer; }
+        when ( Position = Only ) { PART_Border.CornerRadius = CornerRadius.Full; PART_StateLayer.CornerRadius = CornerRadius.Full; }
+        when ( Position = First ) { PART_Border.CornerRadius = CornerRadius.LeftRounded; PART_StateLayer.CornerRadius = CornerRadius.LeftRounded; }
+        when ( Position = Last ) { PART_Border.CornerRadius = CornerRadius.RightRounded; PART_StateLayer.CornerRadius = CornerRadius.RightRounded; }
         // Adaptive layout — tighter in Compact, larger touch target
         // on coarse-pointer devices.
-        when ( ThemeManager.Density = Compact ) { PART_Border.Padding = (8,4,8,4); }
-        when ( ThemeManager.Density = Comfortable ) { PART_Border.Padding = (16,10,16,10); }
-        when ( ThemeManager.Pointer = Coarse ) { PART_Border.Padding = (16,14,16,14); }
+        when ( ThemeManager.Density = Compact ) { PART_StateLayer.Padding = (8,4,8,4); }
+        when ( ThemeManager.Density = Comfortable ) { PART_StateLayer.Padding = (16,10,16,10); }
+        when ( ThemeManager.Pointer = Coarse ) { PART_StateLayer.Padding = (16,14,16,14); }
     }
 
     Style [TargetType = ToolBarButton] {
@@ -67,40 +68,61 @@ resources ToolBars {
 
     // ── ToolBarToggleButton: connected-bar chrome ──────────────────
     // Same shape as ToolBarButton but with an IsChecked trigger on top —
-    // the chrome reads as "Filled Tonal" while checked so a sticky
-    // toggle (Bold, Italic, …) stays visible against the surrounding
+    // the chrome reads as "Filled" (@Primary) while checked so a sticky
+    // toggle (Bold, Italic, …) reads unmistakably against the surrounding
     // square buttons. The position triggers ride on top of IsChecked
     // because they target a different DP (CornerRadius vs Background).
+    //
+    // Checked ink: the Style below flips the inherited TextBlock.Foreground
+    // to @OnPrimary while checked, so a bare icon Shape (Fill unset) painted
+    // through effectiveFill's Foreground fallback stays legible on the
+    // @Primary fill. The flip lives in the Style (a 2-segment attached-on-
+    // self setter) because a ControlTemplate trigger can't target the
+    // 3-segment PART_Border.TextBlock.Foreground path — same reason the
+    // IconButtonToggle Style carries its checked foregrounds.
     Template x:key="DefaultToolBarToggleButton" [TargetType = ToolBarToggleButton] {
         Border x:name="PART_Border"
             [ Background      = @SurfaceContainerHigh,
               BorderThickness = (0),
-              CornerRadius    = 0,
-              Padding         = (12,8,12,8) ] {
-            ContentPresenter
+              CornerRadius    = 0 ] {
+            // Same transparent state layer as DefaultToolBarButton — hover /
+            // press ride a translucent OnSurfaceVariant tint ON TOP of the
+            // base, matching the Filled IconButtonToggle. IsChecked swaps the
+            // base fill (PART_Border.Background) to @Primary; the state layer
+            // overlays either base without touching it, so checked + hover
+            // composes as Primary + tint instead of one darkening the other.
+            Border x:name="PART_StateLayer"
+                [ Background   = #00000000,
+                  CornerRadius = 0,
+                  Padding      = (12,8,12,8) ] {
+                ContentPresenter
+            }
         }
-        // Same SurfaceContainer-ladder pattern as DefaultToolBarButton
-        // (see the comment there for why opaque steps beat overlays
-        // for this template). IsChecked is declared LAST so its
-        // @SecondaryContainer setter outranks hover / press when the
-        // toggle is checked — matches the "checked beats hover" intent
-        // the previous template carried.
-        when ( IsMouseOver ) { PART_Border.Background = @SurfaceContainerHighest; }
-        when ( IsPressed ) { PART_Border.Background = @SurfaceContainer; }
-        when ( IsChecked ) { PART_Border.Background = @SecondaryContainer; }
-        when ( Position = Only ) { PART_Border.CornerRadius = CornerRadius.Full; }
-        when ( Position = First ) { PART_Border.CornerRadius = CornerRadius.LeftRounded; }
-        when ( Position = Last ) { PART_Border.CornerRadius = CornerRadius.RightRounded; }
+        when ( IsMouseOver ) { PART_StateLayer.Background = @OnSurfaceVariantHoverLayer; }
+        when ( IsPressed ) { PART_StateLayer.Background = @OnSurfaceVariantPressLayer; }
+        when ( IsChecked ) { PART_Border.Background = @Primary; }
+        when ( Position = Only ) { PART_Border.CornerRadius = CornerRadius.Full; PART_StateLayer.CornerRadius = CornerRadius.Full; }
+        when ( Position = First ) { PART_Border.CornerRadius = CornerRadius.LeftRounded; PART_StateLayer.CornerRadius = CornerRadius.LeftRounded; }
+        when ( Position = Last ) { PART_Border.CornerRadius = CornerRadius.RightRounded; PART_StateLayer.CornerRadius = CornerRadius.RightRounded; }
         // Adaptive layout (§ 17.7) — match DefaultToolBarButton's
         // density / pointer triggers so the connected-bar group stays
         // visually consistent when one button is a toggle.
-        when ( ThemeManager.Density = Compact ) { PART_Border.Padding = (8,4,8,4); }
-        when ( ThemeManager.Density = Comfortable ) { PART_Border.Padding = (16,10,16,10); }
-        when ( ThemeManager.Pointer = Coarse ) { PART_Border.Padding = (16,14,16,14); }
+        when ( ThemeManager.Density = Compact ) { PART_StateLayer.Padding = (8,4,8,4); }
+        when ( ThemeManager.Density = Comfortable ) { PART_StateLayer.Padding = (16,10,16,10); }
+        when ( ThemeManager.Pointer = Coarse ) { PART_StateLayer.Padding = (16,14,16,14); }
     }
 
     Style [TargetType = ToolBarToggleButton] {
         Template = @DefaultToolBarToggleButton;
+        // Icon ink. Resting = @OnSurfaceVariant (matches the peer
+        // ToolBarButtons); checked = @OnPrimary so a bare icon Shape stays
+        // legible on the @Primary checked fill. Set as the control's own
+        // inherited TextBlock.Foreground so it cascades into the slotted
+        // icon (Shape.effectiveFill falls back to the inherited Foreground
+        // when Fill is unset). A checked-state trigger can't live in the
+        // ControlTemplate (3-segment part path), so it rides here.
+        TextBlock.Foreground = @OnSurfaceVariant;
+        when ( IsChecked ) { TextBlock.Foreground = @OnPrimary; }
     }
 
     // ── ToolBarSeparator (vertical divider) ────────────────────────

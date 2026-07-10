@@ -201,9 +201,12 @@ function layoutParagraph(
         lineHeight: para.LineHeight,
         measureText: env.measureText,
         measureObject: env.measureObject,
+        align: para.TextAlignment,
     });
 
     // Per-line horizontal alignment against the block's content width.
+    // Justify is handled inside layoutInlines (frag gaps widened); Center /
+    // Right shift the whole line here. Left / Justify → factor 0 (no shift).
     const factor = para.TextAlignment === TextAlignment.Center ? 0.5
                  : para.TextAlignment === TextAlignment.Right  ? 1 : 0;
     const slotW = wrap ? bw : layout.width;

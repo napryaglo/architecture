@@ -74,6 +74,29 @@ module DiagramModule [ Name = "Diagram" ] {
         CommandDefinition [ Id = "diagram.combine.intersect", Title = "Combine — Intersect", Icon = @join_inner, Context = DiagramEditingContext, Group = "combine", Order = 110 ]
         CommandDefinition [ Id = "diagram.combine.subtract",  Title = "Combine — Subtract",  Icon = @join_left,  Context = DiagramEditingContext, Group = "combine", Order = 120 ]
         CommandDefinition [ Id = "diagram.combine.exclude",   Title = "Combine — Exclude",   Icon = @difference, Context = DiagramEditingContext, Group = "combine", Order = 130 ]
+        // Paragraph alignment WITHIN the label block.
+        CommandDefinition [ Id = "diagram.text.align.left",    Title = "Align Text Left",    Icon = @format_align_left,    Context = DiagramEditingContext, Group = "text-align", Order = 140 ]
+        CommandDefinition [ Id = "diagram.text.align.center",  Title = "Align Text Center",  Icon = @format_align_center,  Context = DiagramEditingContext, Group = "text-align", Order = 150 ]
+        CommandDefinition [ Id = "diagram.text.align.right",   Title = "Align Text Right",   Icon = @format_align_right,   Context = DiagramEditingContext, Group = "text-align", Order = 160 ]
+        CommandDefinition [ Id = "diagram.text.align.justify", Title = "Justify Text",       Icon = @format_align_justify, Context = DiagramEditingContext, Group = "text-align", Order = 170 ]
+        // Label placement WITHIN the shape footprint — 3×3 anchor grid.
+        CommandDefinition [ Id = "diagram.text.place.top-left",     Title = "Place Label Top-Left",     Icon = @north_west,           Context = DiagramEditingContext, Group = "text-place", Order = 180 ]
+        CommandDefinition [ Id = "diagram.text.place.top",          Title = "Place Label Top",          Icon = @north,                Context = DiagramEditingContext, Group = "text-place", Order = 190 ]
+        CommandDefinition [ Id = "diagram.text.place.top-right",    Title = "Place Label Top-Right",    Icon = @north_east,           Context = DiagramEditingContext, Group = "text-place", Order = 200 ]
+        CommandDefinition [ Id = "diagram.text.place.left",         Title = "Place Label Left",         Icon = @west,                 Context = DiagramEditingContext, Group = "text-place", Order = 210 ]
+        CommandDefinition [ Id = "diagram.text.place.center",       Title = "Place Label Center",       Icon = @filter_center_focus,  Context = DiagramEditingContext, Group = "text-place", Order = 220 ]
+        CommandDefinition [ Id = "diagram.text.place.right",        Title = "Place Label Right",        Icon = @east,                 Context = DiagramEditingContext, Group = "text-place", Order = 230 ]
+        CommandDefinition [ Id = "diagram.text.place.bottom-left",  Title = "Place Label Bottom-Left",  Icon = @south_west,           Context = DiagramEditingContext, Group = "text-place", Order = 240 ]
+        CommandDefinition [ Id = "diagram.text.place.bottom",       Title = "Place Label Bottom",       Icon = @south,                Context = DiagramEditingContext, Group = "text-place", Order = 250 ]
+        CommandDefinition [ Id = "diagram.text.place.bottom-right", Title = "Place Label Bottom-Right", Icon = @south_east,           Context = DiagramEditingContext, Group = "text-place", Order = 260 ]
+        // Character decorations — bold / italic / underline / strikethrough.
+        CommandDefinition [ Id = "diagram.text.bold",          Title = "Bold",          Icon = @format_bold,          Context = DiagramEditingContext, Group = "text-style", Order = 270 ]
+        CommandDefinition [ Id = "diagram.text.italic",        Title = "Italic",        Icon = @format_italic,        Context = DiagramEditingContext, Group = "text-style", Order = 280 ]
+        CommandDefinition [ Id = "diagram.text.underline",     Title = "Underline",     Icon = @format_underlined,    Context = DiagramEditingContext, Group = "text-style", Order = 290 ]
+        CommandDefinition [ Id = "diagram.text.strikethrough", Title = "Strikethrough", Icon = @format_strikethrough, Context = DiagramEditingContext, Group = "text-style", Order = 300 ]
+        // Grow / shrink font one point.
+        CommandDefinition [ Id = "diagram.text.size.increase", Title = "Increase Font Size", Icon = @text_increase, Context = DiagramEditingContext, Group = "text-size", Order = 310 ]
+        CommandDefinition [ Id = "diagram.text.size.decrease", Title = "Decrease Font Size", Icon = @text_decrease, Context = DiagramEditingContext, Group = "text-size", Order = 320 ]
     }
 
     // Shapes â€” the toolbox of shapes to drop onto the canvas.

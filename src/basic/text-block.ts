@@ -403,10 +403,18 @@ export class TextBlock extends Element implements InlineHost
         // narrower than the line) clamps to 0 — the line still starts at
         // x=0 and is allowed to overflow the slot, matching WPF.
         const align = this.TextAlignment;
+        const slotW = this.RenderSize.Width;
+        // Justify draws each line's words individually with widened gaps —
+        // handled in its own path since it can't be expressed as a single
+        // per-line offset.
+        if (align === TextAlignment.Justify && Number.isFinite(slotW))
+        {
+            this.renderJustifiedLines(dc, fg, slotW, lineH);
+            return;
+        }
         const factor = align === TextAlignment.Center ? 0.5
                      : align === TextAlignment.Right  ? 1
                      : 0;
-        const slotW = this.RenderSize.Width;
         for (let i = 0; i < this._lines.length; i++)
         {
             const line = this._lines[i]!;
@@ -429,6 +437,58 @@ export class TextBlock extends Element implements InlineHost
                 ? 0
                 : Math.max(0, (slotW - line.metrics.Width) * factor);
             dc.DrawText(formatted, new Point(offsetX, i * lineH));
+        }
+    }
+
+    // Justify the plain Text path: every line except the last has its
+    // inter-word gaps widened so both edges meet the slot. A single-word
+    // line, the last line, or a line already at/over the slot draws left.
+    private renderJustifiedLines(dc: DrawingContext, fg: Brush, slotW: number, lineH: number): void
+    {
+        const measurer = this.target?.TextMeasurer ?? APPROXIMATE_TEXT_MEASURER;
+        const ls = this.LetterSpacing;
+        const measure = (s: string): { m: TextMetrics; w: number } =>
+        {
+            const m = measurer.Measure(s, this.FontFamily.Source, this.FontSize, this.FontWeight, this.FontStyle);
+            return { m, w: ls === 0 ? m.Width : m.Width + ls * [...s].length };
+        };
+        const spaceW = measure(' ').w;
+        for (let i = 0; i < this._lines.length; i++)
+        {
+            const line   = this._lines[i]!;
+            const y      = i * lineH;
+            const isLast = i === this._lines.length - 1;
+            const words  = line.text.split(' ').filter(w => w.length > 0);
+            if (!isLast && words.length >= 2)
+            {
+                const measured  = words.map(measure);
+                const wordsW    = measured.reduce((s, x) => s + x.w, 0);
+                const gaps      = words.length - 1;
+                const naturalW  = wordsW + gaps * spaceW;
+                const extra     = slotW - naturalW;
+                if (extra > 0)
+                {
+                    const perGap = spaceW + extra / gaps;
+                    let x = 0;
+                    for (let wi = 0; wi < words.length; wi++)
+                    {
+                        const { m, w } = measured[wi]!;
+                        const formatted = new FormattedText(
+                            words[wi]!, this.FontFamily.Source, this.FontSize, fg,
+                            this.FontWeight, this.FontStyle, m, ls, this.TextDecorations,
+                        );
+                        dc.DrawText(formatted, new Point(x, y));
+                        x += w + perGap;
+                    }
+                    continue;
+                }
+            }
+            // Last line / single word / no slack → draw the whole line left.
+            const formatted = new FormattedText(
+                line.text, this.FontFamily.Source, this.FontSize, fg,
+                this.FontWeight, this.FontStyle, line.metrics, ls, this.TextDecorations,
+            );
+            dc.DrawText(formatted, new Point(0, y));
         }
     }
 
@@ -477,6 +537,7 @@ export class TextBlock extends Element implements InlineHost
             lineHeight:    this.LineHeight,
             measureText,
             measureObject,
+            align:         this.TextAlignment,
         });
         this._inlineLayout = layout;
         this._lines = [];   // keep the Text-path cache clear

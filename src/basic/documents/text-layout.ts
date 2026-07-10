@@ -1,4 +1,4 @@
-import { Brush, FontFamily, FormattedText, type TextMetrics } from '../../visual-engine/index.js';
+import { Brush, FontFamily, FormattedText, TextAlignment, type TextMetrics } from '../../visual-engine/index.js';
 import { Point, Rect, Visual, type DrawingContext } from '../../runtime/index.js';
 import { Inline, type LinkTarget, type RunProps } from './text-element.js';
 import { Run, Span, LineBreak, InlineUIContainer } from './inlines.js';
@@ -136,6 +136,11 @@ export interface LayoutOptions
     lineHeight: number;       // explicit; NaN or <= 0 → natural
     measureText: MeasureText;
     measureObject: MeasureObject;
+    // When Justify, wrapped lines have their inter-word gaps widened to fill
+    // `availableWidth`; the last line (and hard-break-terminated lines) stay
+    // natural. Omitted / Left / Center / Right → fragments stay left-packed
+    // and the host applies a single per-line `shift`.
+    align?: TextAlignment;
 }
 
 // A single styled non-whitespace piece within a word (a word can span
@@ -207,9 +212,16 @@ export function layoutInlines(items: FlowItem[], opt: LayoutOptions): LayoutResu
     let top = 0;
     let maxLineWidth = 0;
 
-    const commit = (): void =>
+    // Per-line justify bookkeeping (parallel to `lines`): `gaps` holds the
+    // frag indices that begin a word/object preceded by an inter-word space,
+    // and `soft` marks a line ended by wrap (justify-eligible) vs. by a hard
+    // break or end-of-content (the last line — never justified).
+    const lineMeta: { gaps: number[]; soft: boolean }[] = [];
+    let lineGaps: number[] = [];
+
+    const commit = (soft: boolean): void =>
     {
-        if (frags.length === 0) { pendingSpace = undefined; return; }
+        if (frags.length === 0) { pendingSpace = undefined; lineGaps = []; return; }
         const natural = maxAscent + maxDescent;
         const height = (Number.isFinite(opt.lineHeight) && opt.lineHeight > 0)
             ? Math.max(opt.lineHeight, natural) : natural;
@@ -217,9 +229,10 @@ export function layoutInlines(items: FlowItem[], opt: LayoutOptions): LayoutResu
         for (const f of frags) f.y = top + baseline - f.ascent;
         const width = curX;
         lines.push({ frags, top, baseline, height, width, shift: 0 });
+        lineMeta.push({ gaps: lineGaps, soft });
         maxLineWidth = Math.max(maxLineWidth, width);
         top += height;
-        frags = []; curX = 0; maxAscent = 0; maxDescent = 0; pendingSpace = undefined;
+        frags = []; curX = 0; maxAscent = 0; maxDescent = 0; pendingSpace = undefined; lineGaps = [];
     };
 
     const placePieces = (pieces: Piece[]): void =>
@@ -239,17 +252,20 @@ export function layoutInlines(items: FlowItem[], opt: LayoutOptions): LayoutResu
 
     for (const tok of tokens)
     {
-        if (tok.kind === 'break') { commit(); continue; }
+        if (tok.kind === 'break') { commit(false); continue; }
         if (tok.kind === 'space') { pendingSpace = tok.width; continue; }
 
         const atomWidth = tok.width;
         const spaceBefore = (frags.length > 0 && pendingSpace !== undefined) ? pendingSpace : 0;
         if (opt.wrap && frags.length > 0 && curX + spaceBefore + atomWidth > opt.availableWidth)
         {
-            commit();   // wrap — the pending space is dropped at the break
+            commit(true);   // wrap — the pending space is dropped at the break
         }
         else if (spaceBefore > 0)
         {
+            // A real inter-word gap: the frag about to be pushed starts a new
+            // word — record its index so Justify can widen the gaps.
+            lineGaps.push(frags.length);
             curX += spaceBefore;
         }
         pendingSpace = undefined;
@@ -265,10 +281,39 @@ export function layoutInlines(items: FlowItem[], opt: LayoutOptions): LayoutResu
             maxAscent = Math.max(maxAscent, tok.height);
         }
     }
-    commit();
+    commit(false);
 
-    // Fragments are left-aligned; the host applies per-line `shift` at
-    // arrange/render against the real slot width (matching the Text path).
+    // Justify: widen the inter-word gaps of every wrapped line so both edges
+    // meet `availableWidth`. The last line (and hard-break-terminated lines)
+    // stay natural — that's `soft === false`. Only meaningful with a bounded
+    // width and at least one gap to absorb the slack.
+    if (opt.align === TextAlignment.Justify && Number.isFinite(opt.availableWidth))
+    {
+        const slotW = opt.availableWidth;
+        for (let li = 0; li < lines.length; li++)
+        {
+            const meta = lineMeta[li]!;
+            if (!meta.soft || meta.gaps.length === 0) continue;
+            const line  = lines[li]!;
+            const extra = slotW - line.width;
+            if (extra <= 0) continue;
+            const perGap = extra / meta.gaps.length;
+            // Walk the fragments left→right, pushing each one right by the
+            // cumulative widening of every gap that precedes it.
+            let passed = 0, gi = 0;
+            for (let fi = 0; fi < line.frags.length; fi++)
+            {
+                while (gi < meta.gaps.length && meta.gaps[gi] === fi) { passed++; gi++; }
+                line.frags[fi]!.x += passed * perGap;
+            }
+            line.width = slotW;
+        }
+        maxLineWidth = Math.max(maxLineWidth, slotW);
+    }
+
+    // Fragments are left-aligned (except Justify, applied above); the host
+    // applies a per-line `shift` at arrange/render against the real slot
+    // width for Center/Right (matching the Text path).
     return { lines, width: maxLineWidth, height: top };
 }
 

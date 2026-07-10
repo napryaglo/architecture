@@ -27,6 +27,34 @@ resources DiagramDemo {
         join_inner
         join_left
         difference
+        // Input-mode toolbar: Connectors mode (a multi-segment connector line).
+        polyline
+        // Text-format toolbars (§ diagram-text): paragraph alignment within
+        // the label block …
+        format_align_left
+        format_align_center
+        format_align_right
+        format_align_justify
+        // … and where the label sits within the shape (3×3 placement grid).
+        north_west
+        north
+        north_east
+        west
+        filter_center_focus
+        east
+        south_west
+        south
+        south_east
+        // Character decorations (text-style toolbar): bold / italic / underline
+        // / strikethrough. Font family / size / colour use the picker controls,
+        // not glyphs.
+        format_bold
+        format_italic
+        format_underlined
+        format_strikethrough
+        // Grow / shrink font (big-A / small-A glyphs).
+        text_increase
+        text_decrease
     }
 
     // ── Shared Canvas ItemsPanel ────────────────────────────────────
@@ -94,7 +122,7 @@ resources DiagramDemo {
     // non-visual data object).
     DataTemplate x:key="DiagramToolTemplate" [DataType = DiagramTool] {
         ToolBarButton [ Command = $Command ] {
-            Shape [ Geometry = $Icon, Fill = @OnSurfaceVariant, Width = 20, Height = 20 ]
+            Shape [ Geometry = $Icon, Fill = @OnSurfaceVariant, Width = 16, Height = 16, Margin = (2) ]
         }
     }
 
@@ -146,8 +174,20 @@ resources DiagramDemo {
                       BorderThickness = (0,0,0,1),
                       Padding         = (8,4,8,4) ] {
                     StackPanel [ Orientation = Horizontal ] {
+                        // Input modes — a separate toolbar of mode toggles. The
+                        // first is Connectors: pin it to make the connector
+                        // adorners (port handles, endpoint / waypoint drags)
+                        // react to the pointer; holding Ctrl activates it
+                        // momentarily. IsChecked two-way binds the framework
+                        // Diagram's ConnectorsModePinned DP (the mode's state).
+                        ToolBar {
+                            ToolBarToggleButton [ IsChecked = $nodes.ConnectorsModePinned ] {
+                                Shape [ Geometry = @polyline, Width = 16, Height = 16, Margin = (2) ]
+                            }
+                        }
                         ToolBar
-                            [ ItemTemplate = @DiagramToolTemplate,
+                            [ Margin       = (8,0,0,0),
+                              ItemTemplate = @DiagramToolTemplate,
                               ItemsSource  = [
                                 DiagramTool [ Icon = @alignLeft,   Command = $nodes.AlignLeftCommand ],
                                 DiagramTool [ Icon = @alignRight,  Command = $nodes.AlignRightCommand ],
@@ -174,6 +214,127 @@ resources DiagramDemo {
                                 DiagramTool [ Icon = @join_inner, Command = $nodes.CombineIntersectCommand ],
                                 DiagramTool [ Icon = @join_left,  Command = $nodes.CombineSubtractCommand ],
                                 DiagramTool [ Icon = @difference, Command = $nodes.CombineExcludeCommand ] ] ]
+                    }
+                }
+
+                // Text-format toolbars (§ diagram-text) — active-state
+                // toggles reflecting the SELECTED shape's label. The left
+                // group sets the paragraph alignment WITHIN the label block
+                // (left / center / right / justify) — for a selected shape it
+                // aligns the whole label, and while a shape is being EDITED it
+                // targets the caret paragraph in the editor (Part 2). The
+                // right 3×3 grid sets where the label sits WITHIN the shape
+                // (edges + corners + centre). Each ToolBarToggleButton's
+                // IsChecked binds through
+                // `<< Is(TextAlignment.X)` / `<< Is(TextPlacement.X)`:
+                // FormatMirror seeds SelectionTextAlignment / SelectionText-
+                // Placement from the first selected shape (so exactly one
+                // option lights up), and clicking one writes it back onto
+                // every selected shape.
+                Border
+                    [ DockPanel.Dock  = Top,
+                      Background      = @SurfaceContainer,
+                      BorderBrush     = @OutlineVariant,
+                      BorderThickness = (0,0,0,1),
+                      Padding         = (8,4,8,4) ] {
+                    StackPanel [ Orientation = Horizontal ] {
+                        // Paragraph alignment within the label block. Each toggle
+                        // shows the selected shape's current alignment (IsChecked
+                        // reflects through `<< Is(...)`) AND invokes the framework
+                        // Diagram's matching command — the same command surface
+                        // Plexus binds by id (see diagram-command-contexts.ts).
+                        ToolBar {
+                            ToolBarToggleButton [ Command = $nodes.SetTextAlignLeftCommand, IsChecked = $nodes.SelectionTextAlignment << Is(TextAlignment.Left) ] {
+                                Shape [ Geometry = @format_align_left, Width = 16, Height = 16, Margin = (2) ]
+                            }
+                            ToolBarToggleButton [ Command = $nodes.SetTextAlignCenterCommand, IsChecked = $nodes.SelectionTextAlignment << Is(TextAlignment.Center) ] {
+                                Shape [ Geometry = @format_align_center, Width = 16, Height = 16, Margin = (2) ]
+                            }
+                            ToolBarToggleButton [ Command = $nodes.SetTextAlignRightCommand, IsChecked = $nodes.SelectionTextAlignment << Is(TextAlignment.Right) ] {
+                                Shape [ Geometry = @format_align_right, Width = 16, Height = 16, Margin = (2) ]
+                            }
+                            ToolBarToggleButton [ Command = $nodes.SetTextAlignJustifyCommand, IsChecked = $nodes.SelectionTextAlignment << Is(TextAlignment.Justify) ] {
+                                Shape [ Geometry = @format_align_justify, Width = 16, Height = 16, Margin = (2) ]
+                            }
+                        }
+                        // Label placement within the shape — 3×3 grid. Same
+                        // command-backed active-state toggle pattern.
+                        ToolBar [ Margin = (8,0,0,0) ] {
+                            ToolBarToggleButton [ Command = $nodes.SetTextPlacementTopLeftCommand, IsChecked = $nodes.SelectionTextPlacement << Is(TextPlacement.TopLeft) ] {
+                                Shape [ Geometry = @north_west, Width = 16, Height = 16, Margin = (2) ]
+                            }
+                            ToolBarToggleButton [ Command = $nodes.SetTextPlacementTopCommand, IsChecked = $nodes.SelectionTextPlacement << Is(TextPlacement.Top) ] {
+                                Shape [ Geometry = @north, Width = 16, Height = 16, Margin = (2) ]
+                            }
+                            ToolBarToggleButton [ Command = $nodes.SetTextPlacementTopRightCommand, IsChecked = $nodes.SelectionTextPlacement << Is(TextPlacement.TopRight) ] {
+                                Shape [ Geometry = @north_east, Width = 16, Height = 16, Margin = (2) ]
+                            }
+                            ToolBarToggleButton [ Command = $nodes.SetTextPlacementLeftCommand, IsChecked = $nodes.SelectionTextPlacement << Is(TextPlacement.Left) ] {
+                                Shape [ Geometry = @west, Width = 16, Height = 16, Margin = (2) ]
+                            }
+                            ToolBarToggleButton [ Command = $nodes.SetTextPlacementCenterCommand, IsChecked = $nodes.SelectionTextPlacement << Is(TextPlacement.Center) ] {
+                                Shape [ Geometry = @filter_center_focus, Width = 16, Height = 16, Margin = (2) ]
+                            }
+                            ToolBarToggleButton [ Command = $nodes.SetTextPlacementRightCommand, IsChecked = $nodes.SelectionTextPlacement << Is(TextPlacement.Right) ] {
+                                Shape [ Geometry = @east, Width = 16, Height = 16, Margin = (2) ]
+                            }
+                            ToolBarToggleButton [ Command = $nodes.SetTextPlacementBottomLeftCommand, IsChecked = $nodes.SelectionTextPlacement << Is(TextPlacement.BottomLeft) ] {
+                                Shape [ Geometry = @south_west, Width = 16, Height = 16, Margin = (2) ]
+                            }
+                            ToolBarToggleButton [ Command = $nodes.SetTextPlacementBottomCommand, IsChecked = $nodes.SelectionTextPlacement << Is(TextPlacement.Bottom) ] {
+                                Shape [ Geometry = @south, Width = 16, Height = 16, Margin = (2) ]
+                            }
+                            ToolBarToggleButton [ Command = $nodes.SetTextPlacementBottomRightCommand, IsChecked = $nodes.SelectionTextPlacement << Is(TextPlacement.BottomRight) ] {
+                                Shape [ Geometry = @south_east, Width = 16, Height = 16, Margin = (2) ]
+                            }
+                        }
+                    }
+                }
+
+                // Text character-style toolbar (§ diagram-text text style) —
+                // font family / size / colour pickers + bold / italic / underline
+                // / strikethrough toggles. The pickers two-way bind the Selection*
+                // character DPs; the toggles bind IsChecked to the reflection
+                // booleans (a direct bool, so no command is needed — clicking
+                // writes back through the same channel FormatMirror broadcasts on).
+                // The framework Diagram ALSO exposes the four decorations as
+                // commands (SetTextBold / …) for keyboard + Plexus, dispatched by
+                // id. Character style targets the whole label when a shape is
+                // selected, and the selected text run(s) while editing.
+                Border
+                    [ DockPanel.Dock  = Top,
+                      Background      = @SurfaceContainer,
+                      BorderBrush     = @OutlineVariant,
+                      BorderThickness = (0,0,0,1),
+                      Padding         = (8,4,8,4) ] {
+                    StackPanel [ Orientation = Horizontal ] {
+                        FontFamilyPicker [ Text = $nodes.SelectionFontFamily, Width = 170, VerticalAlignment = Center ]
+                        FontSizePicker   [ Value = $nodes.SelectionFontSize, IsEditable = true, Width = 80, Margin = (8,0,0,0), VerticalAlignment = Center ]
+                        // Grow / shrink font one point — command buttons between
+                        // the size field and the colour picker.
+                        ToolBar [ Margin = (8,0,0,0) ] {
+                            ToolBarButton [ Command = $nodes.IncreaseFontSizeCommand ] {
+                                Shape [ Geometry = @text_increase, Fill = @OnSurfaceVariant, Width = 16, Height = 16, Margin = (2) ]
+                            }
+                            ToolBarButton [ Command = $nodes.DecreaseFontSizeCommand ] {
+                                Shape [ Geometry = @text_decrease, Fill = @OnSurfaceVariant, Width = 16, Height = 16, Margin = (2) ]
+                            }
+                        }
+                        ColorPicker      [ ColorHex = $nodes.SelectionFontColorHex, Margin = (8,0,0,0), VerticalAlignment = Center ]
+                        ToolBar [ Margin = (8,0,0,0) ] {
+                            ToolBarToggleButton [ IsChecked = $nodes.SelectionBold ] {
+                                Shape [ Geometry = @format_bold, Width = 16, Height = 16, Margin = (2) ]
+                            }
+                            ToolBarToggleButton [ IsChecked = $nodes.SelectionItalic ] {
+                                Shape [ Geometry = @format_italic, Width = 16, Height = 16, Margin = (2) ]
+                            }
+                            ToolBarToggleButton [ IsChecked = $nodes.SelectionUnderline ] {
+                                Shape [ Geometry = @format_underlined, Width = 16, Height = 16, Margin = (2) ]
+                            }
+                            ToolBarToggleButton [ IsChecked = $nodes.SelectionStrikethrough ] {
+                                Shape [ Geometry = @format_strikethrough, Width = 16, Height = 16, Margin = (2) ]
+                            }
+                        }
                     }
                 }
 

@@ -13,11 +13,12 @@ import {
     type PointerEventArgs,
     type TextInputEventArgs,
 } from '../runtime/index.js';
-import { Brush, SolidColorBrush } from '../visual-engine/index.js';
+import { Brush, FontFamily, SolidColorBrush, TextAlignment } from '../visual-engine/index.js';
 import { Theme } from './theme.js';
 import { RichTextBlock } from './rich-text-block.js';
 import { FlowDocument } from './documents/flow-document.js';
-import { TextPointer } from './documents/text-pointer.js';
+import { TextPointer, ParagraphRuns } from './documents/text-pointer.js';
+import { type Run } from './documents/inlines.js';
 import { type ClipboardSink } from './text-box.js';
 import { type MeasureText } from './documents/text-layout.js';
 import {
@@ -27,7 +28,16 @@ import {
 import {
     NormalizeParagraph, InsertText, DeleteRange, DeleteBack, DeleteForward,
     SplitParagraph, ToggleFormat, FormatKind, IndentParagraph, OutdentParagraph,
+    SetFormat, SetRunStyle, QueryFormatActive, QueryRunValue, RunHasFormat,
 } from './documents/text-editing.js';
+
+// Normalise a run's FontFamily (string | FontFamily | undefined) to a plain
+// family-name string so a toolbar picker's `Text` DP reflects it directly.
+function familyName(v: FontFamily | string | undefined): string | undefined
+{
+    if (v === undefined) return undefined;
+    return typeof v === 'string' ? v : v.Source;
+}
 import { CaretRectFor, PointerAtPoint, SelectionRects } from './documents/caret-geometry.js';
 
 // Selection-highlight opacity, on Color's 0–255 alpha scale (≈ 30%).
@@ -136,11 +146,141 @@ export class RichTextBox extends RichTextBlock
         this._preferredX = undefined;
         this.InvalidateMeasure();
         this.InvalidateVisual();
+        this._fireSelectionChanged();
     }
     private afterMove(): void
     {
         this.CaretVisible = true;
         this.InvalidateVisual();
+        this._fireSelectionChanged();
+    }
+
+    // ── Selection-changed notification ──────────────────────────────
+    // Fires after every caret move / edit so a host (a diagram alignment
+    // toolbar) can re-reflect the caret paragraph's format.
+    private readonly _selectionListeners: Array<() => void> = [];
+    public AddSelectionChangedListener(l: () => void): void { this._selectionListeners.push(l); }
+    public RemoveSelectionChangedListener(l: () => void): void
+    {
+        const i = this._selectionListeners.indexOf(l);
+        if (i >= 0) this._selectionListeners.splice(i, 1);
+    }
+    private _fireSelectionChanged(): void
+    {
+        for (const l of [...this._selectionListeners]) l();
+    }
+
+    // ── Paragraph alignment ─────────────────────────────────────────
+    // Set the TextAlignment of every paragraph the current selection touches
+    // (the caret's paragraph when the selection is collapsed).
+    public SetSelectionAlignment(align: TextAlignment): void
+    {
+        const doc = this.Document;
+        if (doc === undefined || this._caret === undefined || this._anchor === undefined) return;
+        const [lo, hi] = OrderPointers(doc, this._anchor, this._caret);
+        const paras = DocumentParagraphs(doc);
+        const loI = paras.indexOf(lo.Paragraph);
+        const hiI = paras.indexOf(hi.Paragraph);
+        if (loI < 0 || hiI < 0) return;
+        for (let i = loI; i <= hiI; i++) paras[i]!.TextAlignment = align;
+        this.afterEdit();
+    }
+
+    // The alignment at the caret (the lower end of the selection). undefined
+    // when there's no document to read.
+    public get SelectionAlignment(): TextAlignment | undefined
+    {
+        const doc = this.Document;
+        if (doc === undefined || this._caret === undefined) return undefined;
+        const at = this._anchor !== undefined ? OrderPointers(doc, this._anchor, this._caret)[0] : this._caret;
+        return at.Paragraph.TextAlignment;
+    }
+
+    // ── Character formatting (font family / size / colour / decorations) ──
+    // Every setter acts on the current selection (no-op when collapsed),
+    // splitting runs at the endpoints so only the covered text is restyled;
+    // afterEdit() relays out + fires selection-changed so a toolbar re-reflects.
+    // The getters reflect the selection (mixed → false / undefined) or, when the
+    // selection is collapsed, the run at the caret.
+    public SetSelectionBold(on: boolean): void { this._setFormatFlag(FormatKind.Bold, on); }
+    public SetSelectionItalic(on: boolean): void { this._setFormatFlag(FormatKind.Italic, on); }
+    public SetSelectionUnderline(on: boolean): void { this._setFormatFlag(FormatKind.Underline, on); }
+    public SetSelectionStrikethrough(on: boolean): void { this._setFormatFlag(FormatKind.Strikethrough, on); }
+    public ToggleStrikethrough(): void { this.toggle(FormatKind.Strikethrough); }
+
+    private _setFormatFlag(kind: FormatKind, on: boolean): void
+    {
+        const doc = this.Document;
+        if (doc === undefined || this._caret === undefined || this._anchor === undefined) return;
+        SetFormat(doc, this._anchor, this._caret, kind, on);
+        this.afterEdit();
+    }
+
+    public SetSelectionFontFamily(family: FontFamily | string): void { this._setRunStyle((r) => { r.FontFamily = family; }); }
+    public SetSelectionFontSize(size: number): void { this._setRunStyle((r) => { r.FontSize = size; }); }
+    public SetSelectionForeground(brush: Brush): void { this._setRunStyle((r) => { r.Foreground = brush; }); }
+
+    private _setRunStyle(apply: (r: Run) => void): void
+    {
+        const doc = this.Document;
+        if (doc === undefined || this._caret === undefined || this._anchor === undefined) return;
+        SetRunStyle(doc, this._anchor, this._caret, apply);
+        this.afterEdit();
+    }
+
+    public get SelectionBold():          boolean { return this._queryFlag(FormatKind.Bold); }
+    public get SelectionItalic():        boolean { return this._queryFlag(FormatKind.Italic); }
+    public get SelectionUnderline():     boolean { return this._queryFlag(FormatKind.Underline); }
+    public get SelectionStrikethrough(): boolean { return this._queryFlag(FormatKind.Strikethrough); }
+
+    private _queryFlag(kind: FormatKind): boolean
+    {
+        const doc = this.Document;
+        if (doc === undefined || this._caret === undefined) return false;
+        if (this._anchor !== undefined && !this._anchor.Equals(this._caret))
+        {
+            return QueryFormatActive(doc, this._anchor, this._caret, kind);
+        }
+        const r = this._runAtCaret();
+        return r !== undefined && RunHasFormat(r, kind);
+    }
+
+    public get SelectionFontFamily(): string | undefined { return this._queryValue((r) => familyName(r.FontFamily)); }
+    public get SelectionFontSize():   number | undefined { return this._queryValue((r) => r.FontSize); }
+
+    // Brushes compare by identity, so a value-equality query would report mixed
+    // for two same-colour runs — return the caret run's brush to seed a swatch.
+    public get SelectionForeground(): Brush | undefined
+    {
+        return this._runAtCaret()?.Foreground;
+    }
+
+    private _queryValue<T>(read: (r: Run) => T): T | undefined
+    {
+        const doc = this.Document;
+        if (doc === undefined || this._caret === undefined) return undefined;
+        if (this._anchor !== undefined && !this._anchor.Equals(this._caret))
+        {
+            return QueryRunValue(doc, this._anchor, this._caret, read);
+        }
+        const r = this._runAtCaret();
+        return r !== undefined ? read(r) : undefined;
+    }
+
+    // The run the caret sits in (or the last run when the caret is at the
+    // paragraph end). undefined when there's no caret.
+    private _runAtCaret(): Run | undefined
+    {
+        if (this._caret === undefined) return undefined;
+        const off = this._caret.Offset;
+        let last: Run | undefined;
+        for (const slot of ParagraphRuns(this._caret.Paragraph))
+        {
+            const rEnd = slot.start + slot.run.Text.length;
+            last = slot.run;
+            if (off >= slot.start && off < rEnd) return slot.run;
+        }
+        return last;
     }
 
     // ── Painting (selection behind text, caret in front) ────────────

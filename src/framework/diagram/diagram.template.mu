@@ -67,14 +67,17 @@ resources Diagrams {
                     [ Text                = $$Content,
                       TextAlignment       = $$TextAlignment,
                       TextWrapping        = $$TextWrapping,
+                      FontFamily          = $$FontFamily,
                       FontSize            = $$FontSize,
                       FontWeight          = $$FontWeight,
                       FontStyle           = $$FontStyle,
+                      TextDecorations     = $$TextDecorations,
                       Foreground          = $$Foreground,
                       HorizontalAlignment = Stretch,
                       VerticalAlignment   = $$VerticalTextAlignment ]
                 RichTextBlock x:name="PART_RichText"
                     [ Document            = $$Document,
+                      FontFamily          = $$FontFamily,
                       FontSize            = $$FontSize,
                       FontWeight          = $$FontWeight,
                       FontStyle           = $$FontStyle,
@@ -83,7 +86,8 @@ resources Diagrams {
                       HorizontalAlignment = Stretch,
                       VerticalAlignment   = $$VerticalTextAlignment ]
                 RichTextBox x:name="PART_Edit"
-                    [ FontSize            = $$FontSize,
+                    [ FontFamily          = $$FontFamily,
+                      FontSize            = $$FontSize,
                       FontWeight          = $$FontWeight,
                       FontStyle           = $$FontStyle,
                       Foreground          = $$Foreground,

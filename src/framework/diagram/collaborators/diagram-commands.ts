@@ -21,12 +21,15 @@ import {
 import {
     selectedTopLevel,
     selectedTopLevelGroups,
+    flattenToLeaves,
 } from '../commands/group-ops.js';
 import {
     GeometryCombineMode,
     isGeometricItem,
     type IGeometricItem,
 } from '../commands/combine.js';
+import { TextAlignment } from '../../../visual-engine/index.js';
+import { TextPlacement } from '../shape-text.js';
 
 // Internal collaborator owned by Diagram. Owns the default RelayCommand
 // instances installed onto Diagram's Command DPs at construction time.
@@ -59,6 +62,7 @@ export class DiagramCommands
         this._installDistributeCommands();
         this._installGroupCommands();
         this._installCombineCommands();
+        this._installTextFormatCommands();
         diagram.AddSelectionChangedListener(() => this._raiseCanExecuteAll());
     }
 
@@ -143,6 +147,90 @@ export class DiagramCommands
         this._install(Diagram.CombineExcludeCommandKey, 'CombineExclude',
             new RelayCommand(fireCombine(GeometryCombineMode.Xor), canCombine,
                 { Text: 'Combine — Exclude',   Description: 'Keep only the non-overlapping areas (XOR).' }));
+    }
+
+    private _installTextFormatCommands(): void
+    {
+        const Diagram = this._diagram.constructor as typeof import('../diagram.js').Diagram;
+        // Enabled whenever the selection carries at least one label-bearing shape.
+        const canText = (): boolean => this._collectTextLeaves().length >= 1;
+
+        // Paragraph alignment WITHIN the label block. Execute force-applies to
+        // every selected label (edit mode targets the caret paragraph, rich
+        // targets every paragraph, plain the block default — routed in ShapeText).
+        this._install(Diagram.SetTextAlignLeftCommandKey, 'SetTextAlignLeft',
+            new RelayCommand(() => this._diagram.ApplySelectionTextAlignment(TextAlignment.Left), canText,
+                { Text: 'Align Text Left',    Description: 'Left-align the text within the selected shape(s).' }));
+        this._install(Diagram.SetTextAlignCenterCommandKey, 'SetTextAlignCenter',
+            new RelayCommand(() => this._diagram.ApplySelectionTextAlignment(TextAlignment.Center), canText,
+                { Text: 'Align Text Center',  Description: 'Center the text within the selected shape(s).' }));
+        this._install(Diagram.SetTextAlignRightCommandKey, 'SetTextAlignRight',
+            new RelayCommand(() => this._diagram.ApplySelectionTextAlignment(TextAlignment.Right), canText,
+                { Text: 'Align Text Right',   Description: 'Right-align the text within the selected shape(s).' }));
+        this._install(Diagram.SetTextAlignJustifyCommandKey, 'SetTextAlignJustify',
+            new RelayCommand(() => this._diagram.ApplySelectionTextAlignment(TextAlignment.Justify), canText,
+                { Text: 'Justify Text',       Description: 'Justify the text within the selected shape(s).' }));
+
+        // Label placement WITHIN the shape footprint — the 3×3 anchor grid.
+        const place = (p: TextPlacement): (() => void) => () => this._diagram.ApplySelectionTextPlacement(p);
+        this._install(Diagram.SetTextPlacementTopLeftCommandKey, 'SetTextPlacementTopLeft',
+            new RelayCommand(place(TextPlacement.TopLeft), canText,
+                { Text: 'Place Label Top-Left',     Description: 'Anchor the label to the top-left of the selected shape(s).' }));
+        this._install(Diagram.SetTextPlacementTopCommandKey, 'SetTextPlacementTop',
+            new RelayCommand(place(TextPlacement.Top), canText,
+                { Text: 'Place Label Top',          Description: 'Anchor the label to the top edge of the selected shape(s).' }));
+        this._install(Diagram.SetTextPlacementTopRightCommandKey, 'SetTextPlacementTopRight',
+            new RelayCommand(place(TextPlacement.TopRight), canText,
+                { Text: 'Place Label Top-Right',    Description: 'Anchor the label to the top-right of the selected shape(s).' }));
+        this._install(Diagram.SetTextPlacementLeftCommandKey, 'SetTextPlacementLeft',
+            new RelayCommand(place(TextPlacement.Left), canText,
+                { Text: 'Place Label Left',         Description: 'Anchor the label to the left edge of the selected shape(s).' }));
+        this._install(Diagram.SetTextPlacementCenterCommandKey, 'SetTextPlacementCenter',
+            new RelayCommand(place(TextPlacement.Center), canText,
+                { Text: 'Place Label Center',       Description: 'Center the label within the selected shape(s).' }));
+        this._install(Diagram.SetTextPlacementRightCommandKey, 'SetTextPlacementRight',
+            new RelayCommand(place(TextPlacement.Right), canText,
+                { Text: 'Place Label Right',        Description: 'Anchor the label to the right edge of the selected shape(s).' }));
+        this._install(Diagram.SetTextPlacementBottomLeftCommandKey, 'SetTextPlacementBottomLeft',
+            new RelayCommand(place(TextPlacement.BottomLeft), canText,
+                { Text: 'Place Label Bottom-Left',  Description: 'Anchor the label to the bottom-left of the selected shape(s).' }));
+        this._install(Diagram.SetTextPlacementBottomCommandKey, 'SetTextPlacementBottom',
+            new RelayCommand(place(TextPlacement.Bottom), canText,
+                { Text: 'Place Label Bottom',       Description: 'Anchor the label to the bottom edge of the selected shape(s).' }));
+        this._install(Diagram.SetTextPlacementBottomRightCommandKey, 'SetTextPlacementBottomRight',
+            new RelayCommand(place(TextPlacement.BottomRight), canText,
+                { Text: 'Place Label Bottom-Right', Description: 'Anchor the label to the bottom-right of the selected shape(s).' }));
+
+        // Decoration toggles — Execute flips the current reflected state onto
+        // every selected label (the selected text run(s) while editing).
+        this._install(Diagram.SetTextBoldCommandKey, 'SetTextBold',
+            new RelayCommand(() => this._diagram.ApplySelectionBold(!this._diagram.SelectionBold), canText,
+                { Text: 'Bold',          Description: 'Toggle bold on the selected shape(s) — the selected text while editing.' }));
+        this._install(Diagram.SetTextItalicCommandKey, 'SetTextItalic',
+            new RelayCommand(() => this._diagram.ApplySelectionItalic(!this._diagram.SelectionItalic), canText,
+                { Text: 'Italic',        Description: 'Toggle italic on the selected shape(s) — the selected text while editing.' }));
+        this._install(Diagram.SetTextUnderlineCommandKey, 'SetTextUnderline',
+            new RelayCommand(() => this._diagram.ApplySelectionUnderline(!this._diagram.SelectionUnderline), canText,
+                { Text: 'Underline',     Description: 'Toggle underline on the selected shape(s) — the selected text while editing.' }));
+        this._install(Diagram.SetTextStrikethroughCommandKey, 'SetTextStrikethrough',
+            new RelayCommand(() => this._diagram.ApplySelectionStrikethrough(!this._diagram.SelectionStrikethrough), canText,
+                { Text: 'Strikethrough', Description: 'Toggle strikethrough on the selected shape(s) — the selected text while editing.' }));
+
+        // Grow / shrink font one point — steps each selected label's own size.
+        this._install(Diagram.IncreaseFontSizeCommandKey, 'IncreaseFontSize',
+            new RelayCommand(() => this._diagram.BumpSelectionFontSize(1), canText,
+                { Text: 'Increase Font Size', Description: 'Grow the selected shape(s) text one point — the selected text while editing.' }));
+        this._install(Diagram.DecreaseFontSizeCommandKey, 'DecreaseFontSize',
+            new RelayCommand(() => this._diagram.BumpSelectionFontSize(-1), canText,
+                { Text: 'Decrease Font Size', Description: 'Shrink the selected shape(s) text one point — the selected text while editing.' }));
+    }
+
+    // Selected leaves that carry a label (duck-typed on `.Text`). Groups
+    // flatten to their leaf shapes; connectors / label-less items are skipped.
+    private _collectTextLeaves(): Model[]
+    {
+        return flattenToLeaves(this._diagram.SelectedItems)
+            .filter((leaf) => (leaf as { Text?: unknown }).Text !== undefined);
     }
 
     private _collectCombinable(): (import('../../../runtime/index.js').Model & IGeometricItem)[]

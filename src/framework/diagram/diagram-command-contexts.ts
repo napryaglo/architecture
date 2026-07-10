@@ -29,4 +29,27 @@ export enum DiagramCommandId
     CombineIntersect = 'diagram.combine.intersect',
     CombineSubtract  = 'diagram.combine.subtract',
     CombineExclude   = 'diagram.combine.exclude',
+    // Text-format — paragraph alignment WITHIN the label, and label placement
+    // WITHIN the shape footprint (the two label toolbars).
+    TextAlignLeft    = 'diagram.text.align.left',
+    TextAlignCenter  = 'diagram.text.align.center',
+    TextAlignRight   = 'diagram.text.align.right',
+    TextAlignJustify = 'diagram.text.align.justify',
+    TextPlaceTopLeft     = 'diagram.text.place.top-left',
+    TextPlaceTop         = 'diagram.text.place.top',
+    TextPlaceTopRight    = 'diagram.text.place.top-right',
+    TextPlaceLeft        = 'diagram.text.place.left',
+    TextPlaceCenter      = 'diagram.text.place.center',
+    TextPlaceRight       = 'diagram.text.place.right',
+    TextPlaceBottomLeft  = 'diagram.text.place.bottom-left',
+    TextPlaceBottom      = 'diagram.text.place.bottom',
+    TextPlaceBottomRight = 'diagram.text.place.bottom-right',
+    // Character decorations — bold / italic / underline / strikethrough.
+    TextBold          = 'diagram.text.bold',
+    TextItalic        = 'diagram.text.italic',
+    TextUnderline     = 'diagram.text.underline',
+    TextStrikethrough = 'diagram.text.strikethrough',
+    // Grow / shrink font one point.
+    TextSizeIncrease  = 'diagram.text.size.increase',
+    TextSizeDecrease  = 'diagram.text.size.decrease',
 }
