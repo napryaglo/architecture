@@ -1,3 +1,4 @@
+import { TriggerPresence } from './ast.js';
 import type {
     AnimationDecl,
     Attribute,
@@ -84,6 +85,7 @@ interface TriggerTermLite
     sourceName: string | undefined;
     path:       string | undefined;
     value:      ValueNode | null;
+    presence:   TriggerPresence | undefined;
     negated:    boolean;
     span:       SourceSpan;
 }
@@ -2787,6 +2789,21 @@ export class Compiler
 
     private evaluateTermValue(term: TriggerTermLite): string
     {
+        if (term.presence !== undefined)
+        {
+            // `P is unset` / `P is set` — emit the runtime sentinel; the
+            // trigger match routes nullish / non-nullish through
+            // triggerConditionMet instead of strict equality.
+            if (term.negated)
+            {
+                throw new EmitError(
+                    "'not' can't combine with 'is set' / 'is unset' — use the opposite predicate",
+                    term.span);
+            }
+            const sym = term.presence === TriggerPresence.Unset ? 'TriggerUnset' : 'TriggerSet';
+            this.ensureImport(sym);
+            return sym;
+        }
         if (term.value === null)
         {
             // Bare property — bool trigger. `not P` matches when P is false.
@@ -2813,6 +2830,7 @@ export class Compiler
                        sourceName: expr.sourceName,
                        path:       expr.path,
                        value:      expr.value,
+                       presence:   expr.presence,
                        negated:    expr.negated,
                        span:       expr.span }]];
         }

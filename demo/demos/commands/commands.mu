@@ -30,6 +30,57 @@ import NoteFigure from "./commands-vm.mjs"
 // CanExecuteChanged on every gated command.
 
 resources CommandsDemo {
+    // Toolbar icons baked from the shared Material Symbols font at compile
+    // time (one PathGeometry per name); a bare Shape paints each with the
+    // toolbar's inherited ink (@OnSurfaceVariant).
+    glyphs "../../assets/material-symbols-outlined.ttf" {
+        save
+        content_cut
+        content_copy
+        content_paste
+        delete
+        copy_all
+        format_align_left
+        format_align_center
+        format_align_right
+        vertical_align_top
+        vertical_align_center
+        vertical_align_bottom
+        horizontal_distribute
+        vertical_distribute
+        undo
+        redo
+        // Text-placement 3x3 gallery — compass points + centre.
+        north_west
+        north
+        north_east
+        west
+        filter_center_focus
+        east
+        south_west
+        south
+        south_east
+    }
+
+    // Split-button primary label — glyph + text. Inline attribute values
+    // can't host a child block, so the composed label rides a keyed
+    // resource referenced once by the ToolBarSplitButton's Content.
+    StackPanel x:key="AlignSplitLabel" [ Orientation = Horizontal, VerticalAlignment = Center ] {
+        Shape [ Geometry = @format_align_left, Width = 16, Height = 16, VerticalAlignment = Center ]
+        TextBlock [ Text = "Align", Margin = (6,0,0,0), VerticalAlignment = Center ]
+    }
+
+    // Text-placement split button: the primary label + the 3x3 gallery layout.
+    // The gallery IS the split button's popup — swapping its ItemsPanel to a
+    // UniformGrid is what turns the default vertical menu into an icon grid.
+    StackPanel x:key="PlacementSplitLabel" [ Orientation = Horizontal, VerticalAlignment = Center ] {
+        Shape [ Geometry = @filter_center_focus, Width = 16, Height = 16, VerticalAlignment = Center ]
+        TextBlock [ Text = "Placement", Margin = (6,0,0,0), VerticalAlignment = Center ]
+    }
+    ItemsPanelTemplate x:key="PlacementGrid" {
+        UniformGrid [ Columns = 3 ]
+    }
+
     // ── Shared Canvas ItemsPanel ────────────────────────────────────
     ItemsPanelTemplate x:key="CommandsCanvasPanel" {
         Canvas
@@ -159,50 +210,89 @@ resources CommandsDemo {
                       BorderThickness = (0,0,0,1) ] {
                     ToolBar {
                         ToolBarButton [ Command = $SaveCommand ] {
-                            TextBlock [ Text = "💾" ]
+                            Shape [ Geometry = @save, Width = 16, Height = 16, VerticalAlignment = Center ]
                         }
                         ToolBarSeparator
                         ToolBarButton [ Command = $CutCommand ] {
-                            TextBlock [ Text = "✂" ]
+                            Shape [ Geometry = @content_cut, Width = 16, Height = 16, VerticalAlignment = Center ]
                         }
                         ToolBarButton [ Command = $CopyCommand ] {
-                            TextBlock [ Text = "📋" ]
+                            Shape [ Geometry = @content_copy, Width = 16, Height = 16, VerticalAlignment = Center ]
                         }
                         ToolBarButton [ Command = $PasteCommand ] {
-                            TextBlock [ Text = "📄" ]
+                            Shape [ Geometry = @content_paste, Width = 16, Height = 16, VerticalAlignment = Center ]
                         }
                         ToolBarButton [ Command = $DeleteCommand ] {
-                            TextBlock [ Text = "🗑" ]
+                            Shape [ Geometry = @delete, Width = 16, Height = 16, VerticalAlignment = Center ]
                         }
                         ToolBarButton [ Command = $DuplicateCommand ] {
-                            TextBlock [ Text = "⎘" ]
+                            Shape [ Geometry = @copy_all, Width = 16, Height = 16, VerticalAlignment = Center ]
                         }
                         ToolBarSeparator
                         ToolBarButton [ Command = $AlignLeftCommand ] {
-                            TextBlock [ Text = "⬅" ]
+                            Shape [ Geometry = @format_align_left, Width = 16, Height = 16, VerticalAlignment = Center ]
                         }
                         ToolBarButton [ Command = $AlignCenterCommand ] {
-                            TextBlock [ Text = "⇔" ]
+                            Shape [ Geometry = @format_align_center, Width = 16, Height = 16, VerticalAlignment = Center ]
                         }
                         ToolBarButton [ Command = $AlignRightCommand ] {
-                            TextBlock [ Text = "➡" ]
+                            Shape [ Geometry = @format_align_right, Width = 16, Height = 16, VerticalAlignment = Center ]
                         }
                         ToolBarSeparator
                         ToolBarButton [ Command = $AlignTopCommand ] {
-                            TextBlock [ Text = "⬆" ]
+                            Shape [ Geometry = @vertical_align_top, Width = 16, Height = 16, VerticalAlignment = Center ]
                         }
                         ToolBarButton [ Command = $AlignMiddleCommand ] {
-                            TextBlock [ Text = "↕" ]
+                            Shape [ Geometry = @vertical_align_center, Width = 16, Height = 16, VerticalAlignment = Center ]
                         }
                         ToolBarButton [ Command = $AlignBottomCommand ] {
-                            TextBlock [ Text = "⬇" ]
+                            Shape [ Geometry = @vertical_align_bottom, Width = 16, Height = 16, VerticalAlignment = Center ]
                         }
                         ToolBarSeparator
                         ToolBarButton [ Command = $UndoCommand ] {
-                            TextBlock [ Text = "⤺" ]
+                            Shape [ Geometry = @undo, Width = 16, Height = 16, VerticalAlignment = Center ]
                         }
                         ToolBarButton [ Command = $RedoCommand ] {
-                            TextBlock [ Text = "⤻" ]
+                            Shape [ Geometry = @redo, Width = 16, Height = 16, VerticalAlignment = Center ]
+                        }
+                        // Split button — the primary half runs the default
+                        // action (Align Left); the chevron opens a menu of the
+                        // other arrange commands. Children are the dropdown
+                        // MenuItems (they auto-close on click); the primary
+                        // label rides the Content DP.
+                        ToolBarSeparator
+                        ToolBarSplitButton
+                            [ Command = $AlignLeftCommand,
+                              Content = @AlignSplitLabel ] {
+                            MenuItem [ Header = "Align Left",   Command = $AlignLeftCommand,   Icon = Shape [ Geometry = @format_align_left,   Width = 16, Height = 16, HorizontalAlignment = Center, VerticalAlignment = Center ] ]
+                            MenuItem [ Header = "Align Center", Command = $AlignCenterCommand, Icon = Shape [ Geometry = @format_align_center, Width = 16, Height = 16, HorizontalAlignment = Center, VerticalAlignment = Center ] ]
+                            MenuItem [ Header = "Align Right",  Command = $AlignRightCommand,  Icon = Shape [ Geometry = @format_align_right,  Width = 16, Height = 16, HorizontalAlignment = Center, VerticalAlignment = Center ] ]
+                            MenuItem [ Header = "Align Top",    Command = $AlignTopCommand,    Icon = Shape [ Geometry = @vertical_align_top,   Width = 16, Height = 16, HorizontalAlignment = Center, VerticalAlignment = Center ] ]
+                            MenuItem [ Header = "Align Middle", Command = $AlignMiddleCommand, Icon = Shape [ Geometry = @vertical_align_center, Width = 16, Height = 16, HorizontalAlignment = Center, VerticalAlignment = Center ] ]
+                            MenuSeparator
+                            MenuItem [ Header = "Distribute Horizontally", Command = $DistributeHorizontalCommand, Icon = Shape [ Geometry = @horizontal_distribute, Width = 16, Height = 16, HorizontalAlignment = Center, VerticalAlignment = Center ] ]
+                            MenuItem [ Header = "Distribute Vertically",   Command = $DistributeVerticalCommand,   Icon = Shape [ Geometry = @vertical_distribute,   Width = 16, Height = 16, HorizontalAlignment = Center, VerticalAlignment = Center ] ]
+                        }
+                        // Gallery split button — same control, ICON-GRID variant.
+                        // Setting ItemsPanel to a 3x3 UniformGrid swaps the popup
+                        // from the default vertical menu to a matrix of icon-only
+                        // ToolBarButtons (text placement: 4 sides, 4 corners,
+                        // centre). Each button runs a $nodes.SetTextPlacement*
+                        // command and, being a Button, closes the popup on click —
+                        // the Gallery base wires that for any container kind.
+                        ToolBarSeparator
+                        ToolBarSplitButton
+                            [ Content    = @PlacementSplitLabel,
+                              ItemsPanel = @PlacementGrid ] {
+                            ToolBarButton [ Command = $nodes.SetTextPlacementTopLeftCommand ]     { Shape [ Geometry = @north_west,           Width = 16, Height = 16, VerticalAlignment = Center ] }
+                            ToolBarButton [ Command = $nodes.SetTextPlacementTopCommand ]         { Shape [ Geometry = @north,                Width = 16, Height = 16, VerticalAlignment = Center ] }
+                            ToolBarButton [ Command = $nodes.SetTextPlacementTopRightCommand ]    { Shape [ Geometry = @north_east,           Width = 16, Height = 16, VerticalAlignment = Center ] }
+                            ToolBarButton [ Command = $nodes.SetTextPlacementLeftCommand ]        { Shape [ Geometry = @west,                 Width = 16, Height = 16, VerticalAlignment = Center ] }
+                            ToolBarButton [ Command = $nodes.SetTextPlacementCenterCommand ]      { Shape [ Geometry = @filter_center_focus,  Width = 16, Height = 16, VerticalAlignment = Center ] }
+                            ToolBarButton [ Command = $nodes.SetTextPlacementRightCommand ]       { Shape [ Geometry = @east,                 Width = 16, Height = 16, VerticalAlignment = Center ] }
+                            ToolBarButton [ Command = $nodes.SetTextPlacementBottomLeftCommand ]  { Shape [ Geometry = @south_west,           Width = 16, Height = 16, VerticalAlignment = Center ] }
+                            ToolBarButton [ Command = $nodes.SetTextPlacementBottomCommand ]      { Shape [ Geometry = @south,                Width = 16, Height = 16, VerticalAlignment = Center ] }
+                            ToolBarButton [ Command = $nodes.SetTextPlacementBottomRightCommand ] { Shape [ Geometry = @south_east,           Width = 16, Height = 16, VerticalAlignment = Center ] }
                         }
                     }
                 }

@@ -94,12 +94,12 @@ export class RibbonGroup extends HeaderedItemsControl
     }
 }
 
-// RibbonSmallButtonColumn — a vertical stack of up to three small
-// invokers (the standard Office layout). Any RibbonButton /
-// RibbonToggleButton added is coerced to Size=Small so authors don't have
-// to set it on each child. A plain vertical StackPanel underneath — the
-// count cap is advisory (not enforced) since Office lays out exactly three
-// but a shorter column is legal.
+// RibbonSmallButtonColumn — a vertical stack of up to three invokers (the
+// standard Office layout). Any RibbonButton / RibbonToggleButton added is
+// coerced to Size=Medium — the icon+label row that three-stacks to roughly
+// a Large button's height — so authors don't have to set it on each child.
+// A plain vertical StackPanel underneath; the count cap is advisory (not
+// enforced) since Office lays out exactly three but a shorter column is legal.
 export class RibbonSmallButtonColumn extends StackPanel
 {
     constructor()
@@ -112,7 +112,7 @@ export class RibbonSmallButtonColumn extends StackPanel
     {
         if (child instanceof RibbonButton || child instanceof RibbonToggleButton)
         {
-            child.Size = RibbonButtonSize.Small;
+            child.Size = RibbonButtonSize.Medium;
         }
         super.AddChild(child);
     }

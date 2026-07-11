@@ -135,6 +135,22 @@ describe('instantiate — happy path', () => {
         assert.equal(trig.setters.length, 1);
     });
 
+    test('`when ( P is unset )` / `is set` lower to presence sentinels', () => {
+        const app = buildApp(`
+            Application{ resources: {
+                Style[TargetType=Border]{
+                    when( Tag is unset ){ Background = #111111; }
+                    when( Tag is set ){ Background = #222222; }
+                }
+            } }
+        `);
+        const s = app.Resources.Resolve(Border) as Style;
+        assert.equal(s.Triggers.length, 2);
+        assert.equal(s.Triggers[0]!.propertyName, 'Tag');
+        assert.equal(s.Triggers[0]!.value, runtime.TriggerUnset);
+        assert.equal(s.Triggers[1]!.value, runtime.TriggerSet);
+    });
+
     test('Application.current points at the freshly-built app', () => {
         const app = buildApp(`Application{ resources: {} }`);
         assert.equal(Application.current, app);

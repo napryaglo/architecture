@@ -24,7 +24,14 @@ import { TextBlock, TextWrapping } from '../../basic/text-block.js';
 // stack) AND the default Style's per-size chrome (min width / padding).
 export enum RibbonButtonSize
 {
+    // Large — the group anchor: a big icon stacked over a wrapping label
+    // (vertical), spanning the group body height.
     Large = 'Large',
+    // Medium — an icon beside a label (horizontal); three stack per
+    // RibbonSmallButtonColumn, the standard Office mid-tier button.
+    Medium = 'Medium',
+    // Small — icon only, no label (horizontal): the most compact tier,
+    // for dense command clusters where the glyph carries the meaning.
     Small = 'Small',
 }
 
@@ -40,21 +47,51 @@ export enum RibbonButtonSize
 // parented to the previous stack and trip the single-parent guard.
 function rebuildRibbonContent(btn: RibbonButton | RibbonToggleButton): void
 {
-    const size  = btn.Size;
-    const large  = size === RibbonButtonSize.Large;
-    // Fall back to whichever icon is set when the size-specific one is
-    // absent — authors commonly set a single icon for both layouts.
-    const icon  = (large ? btn.LargeIcon : btn.SmallIcon) ?? btn.SmallIcon ?? btn.LargeIcon;
-    const text  = btn.Text;
-
+    // Reuse ONE StackPanel per button (held in a side-channel slot) so a
+    // consumer-owned icon Visual keeps a single stable parent across
+    // rebuilds — a fresh stack each time would leave the icon parented to
+    // the previous stack and trip the single-parent guard.
     const slot = btn as unknown as { _ribbonStack?: StackPanel };
-    let stack = slot._ribbonStack;
-    if (stack === undefined)
+    if (slot._ribbonStack === undefined)
     {
-        stack = new StackPanel();
-        slot._ribbonStack = stack;
-        btn.Content = stack;
+        slot._ribbonStack = new StackPanel();
+        btn.Content = slot._ribbonStack;
     }
+    fillRibbonStack(btn, slot._ribbonStack);
+}
+
+// Shared icon/label composition contract — the invoker families
+// (RibbonButton, RibbonToggleButton, and the RibbonPopupButton trigger)
+// all lay out the same way, differing only in where the host stack lives.
+// They expose the same DPs (Size / LargeIcon / SmallIcon / Text).
+export interface RibbonContentSource
+{
+    readonly Size: RibbonButtonSize;
+    readonly LargeIcon: Visual | undefined;
+    readonly SmallIcon: Visual | undefined;
+    readonly Text: string | undefined;
+}
+
+// Fill a host stack from a ribbon invoker's live Size / icon / Text DPs.
+// Three tiers:
+//   * Large  — vertical: big icon over a wrapping label (the group anchor).
+//   * Medium — horizontal: icon beside a label.
+//   * Small  — horizontal: icon only (no label). A label-only Small (no
+//              icon set) still shows its text so the button isn't empty.
+// The caller owns the stack's lifecycle (RibbonButton reuses its Content
+// stack; the popup trigger reuses its PART_ContentHost).
+export function fillRibbonStack(src: RibbonContentSource, stack: StackPanel): void
+{
+    const size  = src.Size;
+    const large = size === RibbonButtonSize.Large;
+    // Fall back to whichever icon is set when the size-specific one is
+    // absent — authors commonly set a single icon for all layouts.
+    const icon  = (large ? src.LargeIcon : src.SmallIcon) ?? src.SmallIcon ?? src.LargeIcon;
+    const text  = src.Text;
+    // Small is icon-only — unless there's no icon, in which case fall back
+    // to the label so the button still reads.
+    const showLabel = size !== RibbonButtonSize.Small || icon === undefined;
+
     stack.Orientation = large ? Orientation.Vertical : Orientation.Horizontal;
 
     // Clear without disturbing visuals we're about to re-add. Snapshot
@@ -62,7 +99,7 @@ function rebuildRibbonContent(btn: RibbonButton | RibbonToggleButton): void
     for (const c of [...stack.visualChildren]) stack.RemoveChild(c);
 
     if (icon !== undefined) stack.AddChild(icon);
-    if (text !== undefined)
+    if (text !== undefined && showLabel)
     {
         const label = new TextBlock(text);
         if (large)

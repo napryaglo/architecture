@@ -64,6 +64,13 @@ resources ToolBars {
 
     Style [TargetType = ToolBarButton] {
         Template = @DefaultToolBarButton;
+        // Establish the toolbar ink on the button so it cascades into the
+        // slotted content: a bare icon Shape (Fill unset) paints through
+        // effectiveFill's inherited-Foreground fallback. Text labels and
+        // colour emoji ignore it; only geometry icons depend on it. A
+        // 2-segment attached-on-self setter (a ControlTemplate trigger
+        // can't reach the 3-segment PART_Border.TextBlock.Foreground path).
+        TextBlock.Foreground = @OnSurfaceVariant;
     }
 
     // ── ToolBarToggleButton: connected-bar chrome ──────────────────
@@ -123,6 +130,107 @@ resources ToolBars {
         // ControlTemplate (3-segment part path), so it rides here.
         TextBlock.Foreground = @OnSurfaceVariant;
         when ( IsChecked ) { TextBlock.Foreground = @OnPrimary; }
+    }
+
+    // ── ToolBarSplitButton ─────────────────────────────────────────
+    // A connected-pair split button: PART_Primary fires the primary Command,
+    // PART_Arrow opens the dropdown of MenuItem children (auto-closing on
+    // click). Two flat halves share the toolbar's @SurfaceContainerHigh base
+    // with the same translucent state-layer hover/press the peer buttons use
+    // (per-half so each highlights independently); a faint divider between
+    // them cues the two targets, and the outer corners round into one pill.
+    //
+    // Vertical stack for the dropdown rows.
+    ItemsPanelTemplate x:key="DefaultToolBarMenuPanel" {
+        StackPanel [ Orientation = Vertical ]
+    }
+    // Trigger chrome (visible split button) — set as TriggerTemplate; the
+    // control's primary Template slot hosts the popup below.
+    Template x:key="DefaultToolBarSplitTrigger" [TargetType = ToolBarSplitButton] {
+        StackPanel [ Orientation = Horizontal ] {
+            Border x:name="PART_Primary"
+                [ Background      = @SurfaceContainerHigh,
+                  CornerRadius    = (@ShapeFull,0,0,@ShapeFull),
+                  BorderThickness = (0) ] {
+                Border x:name="PART_PrimaryState"
+                    [ Background   = #00000000,
+                      CornerRadius = (@ShapeFull,0,0,@ShapeFull),
+                      Padding      = (12,8,10,8) ] {
+                    Border x:name="PART_Content" [ HorizontalAlignment = Center, VerticalAlignment = Center ]
+                }
+            }
+            Border x:name="PART_Arrow"
+                [ Background      = @SurfaceContainerHigh,
+                  CornerRadius    = (0,@ShapeFull,@ShapeFull,0),
+                  BorderThickness = (1,0,0,0),
+                  BorderBrush     = @OutlineVariant ] {
+                Border x:name="PART_ArrowState"
+                    [ Background   = #00000000,
+                      CornerRadius = (0,@ShapeFull,@ShapeFull,0),
+                      Padding      = (6,8,8,8) ] {
+                    Shape [ Geometry = @ChevronDown, Fill = @OnSurfaceVariant, Width = 12, Height = 12, VerticalAlignment = Center ]
+                }
+            }
+        }
+        when ( PART_Primary.IsMouseOver ) { PART_PrimaryState.Background = @OnSurfaceVariantHoverLayer; }
+        when ( PART_Primary.IsPressed ) { PART_PrimaryState.Background = @OnSurfaceVariantPressLayer; }
+        when ( PART_Arrow.IsMouseOver ) { PART_ArrowState.Background = @OnSurfaceVariantHoverLayer; }
+        when ( PART_Arrow.IsPressed ) { PART_ArrowState.Background = @OnSurfaceVariantPressLayer; }
+        when ( IsEnabled = false ) { PART_Primary.Opacity = @DisabledContentOpacity; PART_Arrow.Opacity = @DisabledContentOpacity; }
+    }
+    // Dropdown chrome (single-part) — adopted when the split button has NO
+    // Command, so the whole button is one hit region that opens the popup.
+    // One rounded Border (no primary/arrow divide), content + chevron inline;
+    // PART_Primary is the whole surface (the control wires it; there's no
+    // PART_Arrow in this variant).
+    Template x:key="DefaultToolBarDropdownTrigger" [TargetType = ToolBarSplitButton] {
+        Border x:name="PART_Primary"
+            [ Background      = @SurfaceContainerHigh,
+              CornerRadius    = @ShapeFull,
+              BorderThickness = (0) ] {
+            Border x:name="PART_PrimaryState"
+                [ Background   = #00000000,
+                  CornerRadius = @ShapeFull,
+                  Padding      = (12,8,10,8) ] {
+                StackPanel [ Orientation = Horizontal, VerticalAlignment = Center ] {
+                    Border x:name="PART_Content" [ HorizontalAlignment = Center, VerticalAlignment = Center ]
+                    Shape [ Geometry = @ChevronDown, Fill = @OnSurfaceVariant, Width = 12, Height = 12, VerticalAlignment = Center, Margin = (6,0,0,0) ]
+                }
+            }
+        }
+        when ( PART_Primary.IsMouseOver ) { PART_PrimaryState.Background = @OnSurfaceVariantHoverLayer; }
+        when ( PART_Primary.IsPressed ) { PART_PrimaryState.Background = @OnSurfaceVariantPressLayer; }
+        when ( IsEnabled = false ) { PART_Primary.Opacity = @DisabledContentOpacity; }
+    }
+    // Popup chrome — MenuPopupHost positions PART_PopupContainer below the
+    // primary half; ItemsPresenter renders the MenuItem children.
+    Template x:key="DefaultToolBarSplitPopup" [TargetType = ToolBarSplitButton] {
+        MenuPopupHost x:name="PART_PopupHost" {
+            ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
+            Border x:name="PART_PopupContainer"
+                [ Background      = @SurfaceContainerHigh,
+                  BorderBrush     = @OutlineVariant,
+                  BorderThickness = (1),
+                  CornerRadius    = @ShapeExtraSmall,
+                  Effect          = @Elevation2,
+                  Padding         = (4) ] {
+                ItemsPresenter
+            }
+        }
+        when ( ThemeManager.PrefersContrast = More ) { PART_PopupContainer.BorderThickness = (2); }
+    }
+    Style [TargetType = ToolBarSplitButton] {
+        Template = @DefaultToolBarSplitPopup;
+        TriggerTemplate = @DefaultToolBarSplitTrigger;
+        // No Command → degenerate to a single-chrome dropdown (one hit region,
+        // whole button opens the popup). The control re-adopts on the swap.
+        when ( Command is unset ) { TriggerTemplate = @DefaultToolBarDropdownTrigger; }
+        ItemsPanel = @DefaultToolBarMenuPanel;
+        VerticalAlignment = Center;
+        // Toolbar ink for slotted content — a bare icon Shape in the
+        // primary Content paints through effectiveFill's inherited-
+        // Foreground fallback (same as ToolBarButton).
+        TextBlock.Foreground = @OnSurfaceVariant;
     }
 
     // ── ToolBarSeparator (vertical divider) ────────────────────────

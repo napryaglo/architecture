@@ -158,21 +158,25 @@ resources DiagramDemo {
                     }
                 }
 
-                // Align / Distribute / Group / Combine — four ToolBars in
-                // a row (WPF ToolBarTray-style; no Tray control ships, so a
-                // horizontal StackPanel hosts them). Each ToolBar is
-                // data-driven: ItemsSource is an inline DiagramTool[] array
-                // pairing an @icon geometry with one of the framework
-                // Diagram's RelayCommands (via the named `nodes` x:name
-                // forward ref), rendered through @DiagramToolTemplate.
-                // Items past the strip width collapse into each ToolBar's
-                // overflow chevron popup.
+                // Consolidated toolbar — every command / format surface on ONE
+                // horizontal line: input modes, shape align / distribute / group
+                // / combine, paragraph alignment + label placement, then the
+                // character-style pickers + decorations. Each ToolBar is still
+                // data-driven where it was (inline DiagramTool[] arrays pairing an
+                // @icon with a framework Diagram RelayCommand via the `nodes`
+                // x:name). The whole strip rides a horizontal-only ScrollViewer so
+                // it scrolls sideways instead of clipping on a narrow window.
+                // (Was three stacked Dock=Top rows.)
                 Border
                     [ DockPanel.Dock  = Top,
                       Background      = @SurfaceContainer,
                       BorderBrush     = @OutlineVariant,
                       BorderThickness = (0,0,0,1),
                       Padding         = (8,4,8,4) ] {
+                    ScrollViewer
+                        [ HorizontalScrollEnabled = true,
+                          VerticalScrollEnabled   = false,
+                          IsAutoHideScrollBars     = true ] {
                     StackPanel [ Orientation = Horizontal ] {
                         // Input modes — a separate toolbar of mode toggles. The
                         // first is Connectors: pin it to make the connector
@@ -214,31 +218,12 @@ resources DiagramDemo {
                                 DiagramTool [ Icon = @join_inner, Command = $nodes.CombineIntersectCommand ],
                                 DiagramTool [ Icon = @join_left,  Command = $nodes.CombineSubtractCommand ],
                                 DiagramTool [ Icon = @difference, Command = $nodes.CombineExcludeCommand ] ] ]
-                    }
-                }
-
-                // Text-format toolbars (§ diagram-text) — active-state
-                // toggles reflecting the SELECTED shape's label. The left
-                // group sets the paragraph alignment WITHIN the label block
-                // (left / center / right / justify) — for a selected shape it
-                // aligns the whole label, and while a shape is being EDITED it
-                // targets the caret paragraph in the editor (Part 2). The
-                // right 3×3 grid sets where the label sits WITHIN the shape
-                // (edges + corners + centre). Each ToolBarToggleButton's
-                // IsChecked binds through
-                // `<< Is(TextAlignment.X)` / `<< Is(TextPlacement.X)`:
-                // FormatMirror seeds SelectionTextAlignment / SelectionText-
-                // Placement from the first selected shape (so exactly one
-                // option lights up), and clicking one writes it back onto
-                // every selected shape.
-                Border
-                    [ DockPanel.Dock  = Top,
-                      Background      = @SurfaceContainer,
-                      BorderBrush     = @OutlineVariant,
-                      BorderThickness = (0,0,0,1),
-                      Padding         = (8,4,8,4) ] {
-                    StackPanel [ Orientation = Horizontal ] {
-                        // Paragraph alignment within the label block. Each toggle
+                        // Paragraph alignment within the label block (§ diagram-
+                        // text) — active-state toggles reflecting the SELECTED
+                        // shape's label. IsChecked binds through
+                        // `<< Is(TextAlignment.X)` (FormatMirror seeds the
+                        // SelectionTextAlignment DP so exactly one lights up);
+                        // clicking also invokes the matching command. Each toggle
                         // shows the selected shape's current alignment (IsChecked
                         // reflects through `<< Is(...)`) AND invokes the framework
                         // Diagram's matching command — the same command surface
@@ -288,27 +273,12 @@ resources DiagramDemo {
                                 Shape [ Geometry = @south_east, Width = 16, Height = 16, Margin = (2) ]
                             }
                         }
-                    }
-                }
-
-                // Text character-style toolbar (§ diagram-text text style) —
-                // font family / size / colour pickers + bold / italic / underline
-                // / strikethrough toggles. The pickers two-way bind the Selection*
-                // character DPs; the toggles bind IsChecked to the reflection
-                // booleans (a direct bool, so no command is needed — clicking
-                // writes back through the same channel FormatMirror broadcasts on).
-                // The framework Diagram ALSO exposes the four decorations as
-                // commands (SetTextBold / …) for keyboard + Plexus, dispatched by
-                // id. Character style targets the whole label when a shape is
-                // selected, and the selected text run(s) while editing.
-                Border
-                    [ DockPanel.Dock  = Top,
-                      Background      = @SurfaceContainer,
-                      BorderBrush     = @OutlineVariant,
-                      BorderThickness = (0,0,0,1),
-                      Padding         = (8,4,8,4) ] {
-                    StackPanel [ Orientation = Horizontal ] {
-                        FontFamilyPicker [ Text = $nodes.SelectionFontFamily, Width = 170, VerticalAlignment = Center ]
+                        // Character style (§ diagram-text) — font family / size /
+                        // colour pickers (two-way bound to the Selection* char DPs)
+                        // + bold / italic / underline / strikethrough toggles
+                        // (IsChecked bound to the reflection booleans; clicking
+                        // writes back through the same FormatMirror channel).
+                        FontFamilyPicker [ Text = $nodes.SelectionFontFamily, Width = 170, Margin = (8,0,0,0), VerticalAlignment = Center ]
                         FontSizePicker   [ Value = $nodes.SelectionFontSize, IsEditable = true, Width = 80, Margin = (8,0,0,0), VerticalAlignment = Center ]
                         // Grow / shrink font one point — command buttons between
                         // the size field and the colour picker.
@@ -335,6 +305,7 @@ resources DiagramDemo {
                                 Shape [ Geometry = @format_strikethrough, Width = 16, Height = 16, Margin = (2) ]
                             }
                         }
+                    }
                     }
                 }
 

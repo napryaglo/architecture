@@ -169,7 +169,11 @@ resources Menus {
                 // icon. Width / MinWidth stay inline as a column-grid
                 // constant — the M3 menu spec calls for a 24dp icon
                 // slot specifically (not a generic spacing token).
-                Border x:name="PART_Icon" [ Width = 24, MinWidth = 24 ]
+                // TextBlock.Foreground establishes the leading-icon ink so a
+                // bare Shape icon (Fill unset) paints through effectiveFill's
+                // inherited-Foreground fallback — same contract the toolbar
+                // buttons use. A consumer Icon with its own Fill overrides it.
+                Border x:name="PART_Icon" [ Width = 24, MinWidth = 24, TextBlock.Foreground = @OnSurfaceVariant ]
                 TextBlock x:name="PART_Label"
                     [ Margin     = (@Spacing2,0,@Spacing4,0),
                       MinWidth   = 80,

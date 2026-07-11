@@ -5,6 +5,7 @@ import {
     NameScope,
     ResourceDictionary,
     Setter,
+    triggerConditionMet,
     type TriggerAction,
     type Visual,
 } from '../../runtime/index.js';
@@ -196,7 +197,7 @@ export class TemplatePropertyTrigger
         const key = resolveKey(source, this.propertyOwner, this.propertyName);
         const evaluate = (): void => {
             const current = source.get_property_value(key);
-            const matched = current === this.value;
+            const matched = triggerConditionMet(current, this.value);
             if (matched && !active)
             {
                 for (const r of resolved) r.target.ApplyTriggerSetter(r.setter);
@@ -252,7 +253,7 @@ export class TemplateDataTrigger
         const exitActions  = this.exitActions;
         const evaluate = (): void => {
             const current = binding.get_value();
-            const matched = current === this.value;
+            const matched = triggerConditionMet(current, this.value);
             if (matched && !active)
             {
                 for (const r of resolved) r.target.ApplyTriggerSetter(r.setter);
@@ -322,7 +323,7 @@ export class TemplateMultiDataTrigger
         const enterActions = this.enterActions;
         const exitActions  = this.exitActions;
         const evaluate = (): void => {
-            const allMatch = this.conditions.every((c, i) => bindings[i]!.get_value() === c.value);
+            const allMatch = this.conditions.every((c, i) => triggerConditionMet(bindings[i]!.get_value(), c.value));
             if (allMatch && !active)
             {
                 for (const r of resolved) r.target.ApplyTriggerSetter(r.setter);

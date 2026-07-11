@@ -661,6 +661,14 @@ export type TriggerExpr =
     | TriggerAnd
     | TriggerOr;
 
+// Presence predicate for a trigger term — `when ( P is unset )` /
+// `when ( P is set )`. Mutually exclusive with `value` (the `= v` form).
+export enum TriggerPresence
+{
+    Unset = 'unset',
+    Set   = 'set',
+}
+
 export interface TriggerTerm
 {
     kind:     'trigger-term';
@@ -683,6 +691,10 @@ export interface TriggerTerm
     // with `property`.
     path:     string | undefined;
     value:    ValueNode | null;     // null means implicit `= true`
+    // `is unset` / `is set` predicate. When set, `value` is null and the
+    // term matches on the property being nullish / non-nullish instead of
+    // by equality.
+    presence: TriggerPresence | undefined;
     span:     SourceSpan;
 }
 

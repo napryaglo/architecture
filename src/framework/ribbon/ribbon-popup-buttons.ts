@@ -4,7 +4,6 @@ import {
     Model,
     Rect,
     Size,
-    Thickness,
     Visual,
     type ICommand,
     type PropertyDescriptor,
@@ -15,15 +14,13 @@ import { Button } from '../buttons/button.js';
 import { ControlTemplate } from '../../basic/templates/control-template.js';
 import { ItemsControl } from '../base/items-control.js';
 import { StackPanel } from '../../basic/panels/stack-panel.js';
-import { Orientation } from '../../basic/panels/orientation.js';
-import { TextBlock, TextWrapping } from '../../basic/text-block.js';
 import { MenuItem, MenuPopupHost, MenuAnchorSide } from '../menu/menu-strip.js';
 import { ClickAwayScrim } from '../tool-bar/tool-bar.js';
 import {
     CommandSourceHelper,
     type ICommandSource,
 } from '../commands/command-source.js';
-import { RibbonButtonSize } from './ribbon-buttons.js';
+import { RibbonButtonSize, fillRibbonStack } from './ribbon-buttons.js';
 
 // ─────────────────────────────────────────────────────────────────────
 // RibbonPopupButton — shared base for the two ribbon dropdown invokers:
@@ -139,28 +136,16 @@ export abstract class RibbonPopupButton extends ItemsControl
      *  wiring on the arrow / whole-trigger region. */
     protected toggleOpen(): void { this.IsOpen = !this.IsOpen; }
 
-    // (Re-)compose the trigger's content host from Size / icons / Text.
-    // Large → vertical (icon over label); Small → horizontal (icon then
-    // label). A trailing ▾ arrow glyph is part of the trigger TEMPLATE
-    // (not composed here) so subclasses can position it per their layout.
+    // (Re-)compose the trigger's content host from Size / icons / Text via
+    // the shared three-tier layout (Large vertical icon+label, Medium
+    // horizontal icon+label, Small icon-only). A trailing ▾ arrow glyph is
+    // part of the trigger TEMPLATE (not composed here) so subclasses can
+    // position it per their layout.
     protected updateTriggerContent(): void
     {
         const host = this._contentHost;
         if (host === undefined) return;
-        const large = this.Size === RibbonButtonSize.Large;
-        const icon  = (large ? this.LargeIcon : this.SmallIcon) ?? this.SmallIcon ?? this.LargeIcon;
-        const text  = this.Text;
-
-        host.Orientation = large ? Orientation.Vertical : Orientation.Horizontal;
-        for (const c of [...host.visualChildren]) host.RemoveChild(c);
-        if (icon !== undefined) host.AddChild(icon);
-        if (text !== undefined)
-        {
-            const label = new TextBlock(text);
-            if (large) { label.TextWrapping = TextWrapping.Wrap; if (icon !== undefined) label.Margin = new Thickness(0, 4, 0, 0); }
-            else if (icon !== undefined) label.Margin = new Thickness(6, 0, 0, 0);
-            host.AddChild(label);
-        }
+        fillRibbonStack(this, host);
     }
 
     public override get visualChildren(): readonly Visual[]

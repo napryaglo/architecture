@@ -12,6 +12,27 @@ import type { Visual } from '../visual-engine/visual.js';
 // can't accidentally cross-wire two styled visuals.
 export type DataTriggerBindingFactory = (target: Visual) => Binding;
 
+// ── Presence sentinels for `is unset` / `is set` triggers ───────────
+// A trigger whose expected `value` is one of these matches on the
+// property being nullish / non-nullish, rather than by strict `===`.
+// The compiler lowers `when ( P is unset )` to a trigger value of
+// `TriggerUnset` (and `is set` → `TriggerSet`). Unique symbols so no
+// real property value can ever collide with the sentinel.
+export const TriggerUnset: unique symbol = Symbol('TriggerUnset');
+export const TriggerSet:   unique symbol = Symbol('TriggerSet');
+
+// Single source of truth for evaluating a trigger condition. Every
+// trigger-match site (Style triggers in trigger-host, template triggers
+// in data-template) routes through here so the presence sentinels behave
+// identically across all trigger kinds. "unset" is nullish — undefined
+// (the DP default / never assigned) OR an explicit null.
+export function triggerConditionMet(actual: unknown, expected: unknown): boolean
+{
+    if (expected === TriggerUnset) return actual === undefined || actual === null;
+    if (expected === TriggerSet)   return actual !== undefined && actual !== null;
+    return actual === expected;
+}
+
 // Wrapper that defers Setter / Trigger value creation until the style
 // is applied to a specific target. Use when the value needs the
 // target instance (e.g. `DynamicResource(target, 'Accent')`) or when

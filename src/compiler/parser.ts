@@ -6,6 +6,7 @@ import {
     type SourceSpan,
     type Token,
 } from './tokens.js';
+import { TriggerPresence } from './ast.js';
 import type {
     AnimationDecl,
     Attribute,
@@ -1236,7 +1237,18 @@ export class Parser
             }
         }
         let value: ValueNode | null = null;
-        if (this.peek().kind === TokenKind.Equals)
+        let presence: TriggerPresence | undefined;
+        // `P is unset` / `P is set` — presence predicate. Matches on the
+        // property being nullish / non-nullish rather than by equality.
+        if (this.peek().kind === TokenKind.Ident && this.peek().value === 'is')
+        {
+            this.consume();
+            const kw = this.expect(TokenKind.Ident);
+            if (kw.value === 'unset')    presence = TriggerPresence.Unset;
+            else if (kw.value === 'set') presence = TriggerPresence.Set;
+            else throw new ParseError(`expected 'set' or 'unset' after 'is', got '${kw.value}'`, kw.span);
+        }
+        else if (this.peek().kind === TokenKind.Equals)
         {
             this.consume();
             value = this.parseValue();
@@ -1249,6 +1261,7 @@ export class Parser
             sourceName,
             path,
             value,
+            presence,
             span: this.span(startTk.span.start, end),
         };
     }

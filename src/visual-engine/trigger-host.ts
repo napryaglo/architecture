@@ -6,6 +6,7 @@ import {
     MultiTrigger,
     DataTrigger,
     MultiDataTrigger,
+    triggerConditionMet,
 } from '../runtime/style.js';
 import type { EventTrigger } from '../runtime/event-trigger.js';
 import { KNOWN_ROUTED_EVENTS } from './visual.js';
@@ -89,7 +90,7 @@ export class TriggerHost implements ITriggerHost
         const target = this._target;
         const key = resolveKey(target, trigger.propertyOwner, trigger.propertyName);
         const evaluate = (isInitial: boolean): void => {
-            const matched = target.get_property_value(key) === trigger.value;
+            const matched = triggerConditionMet(target.get_property_value(key), trigger.value);
             this.applyTransition(trigger, matched, isInitial);
         };
         const onChange = (): void => { evaluate(false); };
@@ -112,7 +113,7 @@ export class TriggerHost implements ITriggerHost
             resolveKey(target, cond.propertyOwner, cond.propertyName));
         const evaluate = (isInitial: boolean): void => {
             const matched = trigger.conditions.every((cond, i) =>
-                target.get_property_value(keys[i]!) === cond.value);
+                triggerConditionMet(target.get_property_value(keys[i]!), cond.value));
             this.applyTransition(trigger, matched, isInitial);
         };
         const onChange = (): void => { evaluate(false); };
@@ -138,7 +139,7 @@ export class TriggerHost implements ITriggerHost
             ? DataContextBinding(target, trigger.path)
             : trigger.bindingFactory!(target);
         const evaluate = (isInitial: boolean): void => {
-            const matched = binding.get_value() === trigger.value;
+            const matched = triggerConditionMet(binding.get_value(), trigger.value);
             this.applyTransition(trigger, matched, isInitial);
         };
         binding.setOnValueChanged(() => { evaluate(false); });
@@ -159,7 +160,7 @@ export class TriggerHost implements ITriggerHost
                 : cond.bindingFactory!(target));
         const evaluate = (isInitial: boolean): void => {
             const matched = trigger.conditions.every(
-                (cond, i) => bindings[i]!.get_value() === cond.value,
+                (cond, i) => triggerConditionMet(bindings[i]!.get_value(), cond.value),
             );
             this.applyTransition(trigger, matched, isInitial);
         };

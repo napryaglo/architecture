@@ -19,6 +19,10 @@ export {
     ToolBarPosition,
     type ToolBarButtonOptions,
 } from './tool-bar/tool-bar-items.js';
+// Gallery — base concept for a popup-hosted collection; ToolBarSplitButton
+// (and future popup hosts) extend it. Menu = its default vertical variant.
+export { Gallery } from './gallery/gallery.js';
+export { ToolBarSplitButton } from './tool-bar/tool-bar-split-button.js';
 export {
     MenuStrip,
     MenuButton,

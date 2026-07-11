@@ -704,7 +704,9 @@ class Printer
                 if (e.path !== undefined) lhs = `$${e.path}`;
                 else if (e.sourceName !== undefined) lhs = `${e.sourceName}.${e.property}`;
                 else lhs = e.property!;
-                const rhs = e.value !== null ? ` = ${this.printValue(e.value)}` : '';
+                const rhs = e.presence !== undefined
+                    ? ` is ${e.presence}`
+                    : (e.value !== null ? ` = ${this.printValue(e.value)}` : '');
                 return `${neg}${lhs}${rhs}`;
             }
         }

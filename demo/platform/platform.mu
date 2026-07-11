@@ -77,6 +77,7 @@ import ListBoxDemo from "../demos/list-box/list-box.mu.js"
 import MenuDemo from "../demos/menu/menu.mu.js"
 import NavigationRailDemo from "../demos/navigation-rail/navigation-rail.mu.js"
 import PenEditorDemo from "../demos/pen-editor/pen-editor.mu.js"
+import RibbonDemo from "../demos/ribbon/ribbon.mu.js"
 import RichTextEditorDemo from "../demos/rich-text-editor/rich-text-editor.mu.js"
 import SegmentedButtonDemo from "../demos/segmented-button/segmented-button.mu.js"
 import ShapesDemo from "../demos/shapes/shapes.mu.js"
@@ -148,6 +149,7 @@ Application [ Theme = Material, Scheme = MaterialLight ] {
         merge MenuDemo
         merge NavigationRailDemo
         merge PenEditorDemo
+        merge RibbonDemo
         merge RichTextEditorDemo
         merge SegmentedButtonDemo
         merge ShapesDemo

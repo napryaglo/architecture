@@ -2,9 +2,12 @@ import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from '../../../basic/tests/test-app.js';
 
-import { Application, RelayCommand, Size, Visual } from '../../../runtime/index.js';
+import { Application, RelayCommand, Size, Visual, NoModifiers, PointerButton, type PointerEventInit } from '../../../runtime/index.js';
 import { ToolBar, ToolBarPanel } from '../tool-bar.js';
 import { ToolBarButton, ToolBarSeparator, ToolBarPosition } from '../tool-bar-items.js';
+import { ToolBarSplitButton } from '../tool-bar-split-button.js';
+import { MenuItem } from '../../menu/menu-strip.js';
+import { InputManager } from '../../index.js';
 import { DataTemplate } from '../../../basic/templates/data-template.js';
 import { Border } from '../../../basic/border.js';
 import { HeadlessTarget } from '../../../visual-engine/index.js';
@@ -75,6 +78,181 @@ describe('ToolBar — items + overflow', () => {
         const ds = sep.DesiredSize;
         assert.equal(ds.Width, 9);
         assert.equal(ds.Height, 24);
+    });
+});
+
+describe('ToolBarSplitButton — primary + dropdown', () => {
+    beforeEach(() => { initTestApp(); });
+
+    function pointer(overrides: Partial<PointerEventInit> = {}): PointerEventInit {
+        return {
+            HostX: 0, HostY: 0, Button: PointerButton.Primary, Buttons: 1,
+            Modifiers: NoModifiers, PointerId: 0, Pressure: 0, PointerType: 'mouse',
+            ...overrides,
+        };
+    }
+    // Press-here-release-here on a plain Border half (the trigger halves are
+    // Borders, not Buttons, so InjectPointerDown/Up drive wireClickable).
+    function pressRelease(v: Visual): void {
+        const im = new InputManager();
+        im.InjectPointerDown(v, pointer());
+        im.InjectPointerUp(v, pointer());
+    }
+    function findNamed(root: Visual, name: string): Visual | undefined {
+        const stack: Visual[] = [root];
+        while (stack.length > 0) {
+            const cur = stack.pop()!;
+            if ((cur as unknown as { Name?: string }).Name === name) return cur;
+            for (const c of (cur as unknown as { visualChildren: Iterable<Visual> }).visualChildren) stack.push(c);
+        }
+        return undefined;
+    }
+    function findType<T extends Visual>(root: Visual, ctor: new (...a: never[]) => T): T | undefined {
+        const stack: Visual[] = [root];
+        while (stack.length > 0) {
+            const cur = stack.pop()!;
+            if (cur instanceof ctor) return cur;
+            for (const c of (cur as unknown as { visualChildren: Iterable<Visual> }).visualChildren) stack.push(c);
+        }
+        return undefined;
+    }
+
+    test('split mode (with Command): materialises primary / arrow / content parts and hosts MenuItem children', () => {
+        const sb = new ToolBarSplitButton();
+        sb.Command = new RelayCommand(() => {});   // Command present → split chrome
+        sb.Content = new Border();
+        const mi = new MenuItem(); mi.Header = 'Align Left';
+        sb.AddChild(mi);
+        const target = new HeadlessTarget(600, 200, sb);
+        target.Flush();
+
+        assert.ok(findNamed(sb, 'PART_Primary') !== undefined, 'has a primary half');
+        assert.ok(findNamed(sb, 'PART_Arrow') !== undefined, 'has an arrow half');
+        assert.ok(findNamed(sb, 'PART_Content') !== undefined, 'has a primary content host');
+        assert.equal(sb.IsOpen, false, 'closed by default');
+    });
+
+    test('primary half runs Command; arrow half toggles IsOpen', () => {
+        const sb = new ToolBarSplitButton();
+        let fired = 0;
+        sb.Command = new RelayCommand(() => { fired++; });
+        const target = new HeadlessTarget(600, 200, sb);
+        target.Flush();
+
+        pressRelease(findNamed(sb, 'PART_Primary')!);
+        assert.equal(fired, 1, 'primary click ran the command');
+
+        pressRelease(findNamed(sb, 'PART_Arrow')!);
+        assert.equal(sb.IsOpen, true, 'arrow opened the dropdown');
+    });
+
+    // With no Command the split button is a single-chrome dropdown: one hit
+    // region (PART_Primary, no PART_Arrow), and a click anywhere on it opens
+    // the popup.
+    test('no Command: single-chrome dropdown — one hit region opens the popup', () => {
+        const sb = new ToolBarSplitButton();               // Command left unset
+        const target = new HeadlessTarget(600, 200, sb);
+        target.Flush();
+
+        assert.ok(findNamed(sb, 'PART_Primary') !== undefined, 'has the single chrome');
+        assert.ok(findNamed(sb, 'PART_Content') !== undefined, 'has a content host');
+        assert.equal(findNamed(sb, 'PART_Arrow'), undefined, 'no separate arrow half in dropdown mode');
+        assert.equal(sb.IsOpen, false, 'closed by default');
+        pressRelease(findNamed(sb, 'PART_Primary')!);
+        assert.equal(sb.IsOpen, true, 'clicking the single chrome opened the dropdown');
+    });
+
+    // Assigning a Command later flips the chrome from dropdown to split.
+    test('setting Command flips single-chrome dropdown → split (arrow appears)', () => {
+        const sb = new ToolBarSplitButton();
+        const target = new HeadlessTarget(600, 200, sb);
+        target.Flush();
+        assert.equal(findNamed(sb, 'PART_Arrow'), undefined, 'dropdown chrome to start');
+
+        sb.Command = new RelayCommand(() => {});
+        target.Flush();
+        assert.ok(findNamed(sb, 'PART_Arrow') !== undefined, 're-adopted the split chrome with an arrow');
+    });
+
+    // Regression: the chrome swap must survive Content being set BEFORE the
+    // Command resolves (the real order for a `$bound` Command that resolves
+    // via DataContext after construction). The re-adopt must unparent Content
+    // from the old dropdown host first — otherwise slotContent throws
+    // "already has a visual parent" mid-swap and leaves a broken chrome.
+    test('re-adopt survives Content-set-before-Command (no double-parent throw)', () => {
+        const sb = new ToolBarSplitButton();
+        const label = new Border();
+        sb.Content = label;                    // Content first → hosted by dropdown chrome
+        const target = new HeadlessTarget(600, 60, sb);
+        target.Flush();
+        assert.equal(findNamed(sb, 'PART_Arrow'), undefined, 'dropdown to start');
+
+        assert.doesNotThrow(() => {
+            sb.Command = new RelayCommand(() => {});   // flips to split → re-adopt
+            target.Flush();
+        }, 're-adopt must not throw when Content precedes the Command');
+
+        const arrow = findNamed(sb, 'PART_Arrow');
+        const content = findNamed(sb, 'PART_Content');
+        assert.ok(arrow !== undefined, 'split chrome materialised its arrow');
+        // Both halves span the full chrome height (no dead region).
+        assert.equal(arrow!.ArrangedRect.Height, findNamed(sb, 'PART_Primary')!.ArrangedRect.Height,
+            'arrow and primary are the same (full) height');
+        // Content survived the swap, re-hosted in the split chrome.
+        assert.ok(content !== undefined
+            && [...(content as unknown as { visualChildren: Iterable<Visual> }).visualChildren].includes(label),
+            'the Content label is re-parented into the split chrome');
+    });
+
+    // Gallery contract: the icon-grid variant hosts Buttons (not MenuItems)
+    // in the popup. Clicking a Button runs its Command AND closes the popup —
+    // the Gallery base wires close-on-activation for Button children via Click,
+    // the same way it wires MenuItem children via _onActivated.
+    test('icon-grid variant: a ToolBarButton child runs its Command and closes the popup', () => {
+        const sb = new ToolBarSplitButton();
+        let ran = 0;
+        const btn = new ToolBarButton();
+        btn.Command = new RelayCommand(() => { ran++; });
+        sb.AddChild(btn);
+        const target = new HeadlessTarget(600, 200, sb);
+        target.Flush();
+
+        // Open the popup so its ItemsPresenter generates the Button container.
+        sb.IsOpen = true;
+        target.Flush();
+
+        // The popup is re-parented onto the overlay, so walk it from the
+        // split button's own popup host rather than from sb's inline subtree.
+        const popupHost = (sb as unknown as { _popupHost: Visual })._popupHost;
+        const hosted = findType(popupHost, ToolBarButton);
+        assert.ok(hosted !== undefined, 'the popup generated a ToolBarButton container');
+
+        pressRelease(hosted!);
+        assert.equal(ran, 1, 'the gallery button ran its command');
+        assert.equal(sb.IsOpen, false, 'activating a gallery button closed the popup');
+    });
+
+    // Regression: a selection-gated (disabled-command) gallery button must
+    // still dismiss the popup. Button.fireClick bails on !CanExecute, so an
+    // AddClickHandler close would never fire — the popup would stick open.
+    // Gallery closes such buttons on PointerUp instead.
+    test('icon-grid variant: a disabled-command button still closes the popup', () => {
+        const sb = new ToolBarSplitButton();
+        let ran = 0;
+        const btn = new ToolBarButton();
+        btn.Command = new RelayCommand(() => { ran++; }, () => false); // never executable
+        sb.AddChild(btn);
+        const target = new HeadlessTarget(600, 200, sb);
+        target.Flush();
+
+        sb.IsOpen = true;
+        target.Flush();
+
+        const popupHost = (sb as unknown as { _popupHost: Visual })._popupHost;
+        const hosted = findType(popupHost, ToolBarButton)!;
+        pressRelease(hosted);
+        assert.equal(ran, 0, 'the disabled command did not run');
+        assert.equal(sb.IsOpen, false, 'the popup still closed despite the disabled command');
     });
 });
 

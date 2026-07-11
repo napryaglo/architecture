@@ -180,21 +180,47 @@ describe('Ribbon — QAT + minimize', () => {
 describe('RibbonButton — content composition by Size', () => {
     beforeEach(() => { initTestApp(); });
 
-    test('Large stacks vertically, Small horizontally', () => {
+    test('Large stacks vertically, Medium/Small horizontally', () => {
         const b = new RibbonButton();
         b.Text = 'Delete';
         b.Size = RibbonButtonSize.Large;
         assert.ok(b.Content instanceof StackPanel);
         assert.equal((b.Content as StackPanel).Orientation, Orientation.Vertical);
 
+        b.Size = RibbonButtonSize.Medium;
+        assert.equal((b.Content as StackPanel).Orientation, Orientation.Horizontal);
+
         b.Size = RibbonButtonSize.Small;
         assert.equal((b.Content as StackPanel).Orientation, Orientation.Horizontal);
+    });
+
+    test('Small is icon-only; Medium keeps the label', () => {
+        const icon = () => new Border();
+        // Medium: icon + label → two children.
+        const m = new RibbonButton();
+        m.Text = 'Cut';
+        m.SmallIcon = icon();
+        m.Size = RibbonButtonSize.Medium;
+        assert.equal((m.Content as StackPanel).visualChildren.length, 2);
+
+        // Small with an icon: icon only → one child (label dropped).
+        const s = new RibbonButton();
+        s.Text = 'Cut';
+        s.SmallIcon = icon();
+        s.Size = RibbonButtonSize.Small;
+        assert.equal((s.Content as StackPanel).visualChildren.length, 1);
+
+        // Small with NO icon falls back to the label so it isn't empty.
+        const t = new RibbonButton();
+        t.Text = 'Cut';
+        t.Size = RibbonButtonSize.Small;
+        assert.equal((t.Content as StackPanel).visualChildren.length, 1);
     });
 
     test('RibbonToggleButton carries the same composition + IsChecked', () => {
         const t = new RibbonToggleButton();
         t.Text = 'Bold';
-        t.Size = RibbonButtonSize.Small;
+        t.Size = RibbonButtonSize.Medium;
         assert.equal((t.Content as StackPanel).Orientation, Orientation.Horizontal);
         assert.equal(t.IsChecked, false);
         t.IsChecked = true;
@@ -202,17 +228,17 @@ describe('RibbonButton — content composition by Size', () => {
     });
 });
 
-describe('RibbonSmallButtonColumn — coerces children to Small', () => {
+describe('RibbonSmallButtonColumn — coerces children to Medium', () => {
     beforeEach(() => { initTestApp(); });
 
-    test('added ribbon buttons become Size=Small', () => {
+    test('added ribbon buttons become Size=Medium', () => {
         const col = new RibbonSmallButtonColumn();
         const a = new RibbonButton(); a.Size = RibbonButtonSize.Large;
         const b = new RibbonToggleButton(); b.Size = RibbonButtonSize.Large;
         col.AddChild(a);
         col.AddChild(b);
-        assert.equal(a.Size, RibbonButtonSize.Small);
-        assert.equal(b.Size, RibbonButtonSize.Small);
+        assert.equal(a.Size, RibbonButtonSize.Medium);
+        assert.equal(b.Size, RibbonButtonSize.Medium);
         assert.equal(col.Orientation, Orientation.Vertical);
     });
 });

@@ -39,9 +39,12 @@ resources Ribbons {
         when ( IsPressed ) { PART_Border.Background = @StatePressOverlay; }
         when ( IsEnabled = false ) { PART_Border.Opacity = @DisabledContentOpacity; }
         when ( Size = Large ) { PART_Border.MinWidth = 56; PART_Border.MinHeight = 68; PART_Border.Padding = (@Spacing2,@Spacing2,@Spacing2,@Spacing2); }
+        // Medium — one icon+label row; three stack to roughly a Large's
+        // height inside a RibbonSmallButtonColumn.
+        when ( Size = Medium ) { PART_Border.MinHeight = 24; }
         when ( Size = Small ) { PART_Border.MinHeight = 24; }
         // Coarse pointer — the ribbon's density knob is its own Size DP
-        // (Large / Small), so touch-mode adaptation only ENLARGES the tap
+        // (Large / Medium / Small), so touch-mode adaptation only ENLARGES the tap
         // padding rather than re-running a density ladder. Padding-only
         // (not MinHeight) so it composes with, rather than clobbers, the
         // Size trigger's height; declared last so it wins the padding slot.
@@ -74,6 +77,7 @@ resources Ribbons {
         when ( IsChecked ) { PART_Border.Background = @SecondaryContainer; }
         when ( IsEnabled = false ) { PART_Border.Opacity = @DisabledContentOpacity; }
         when ( Size = Large ) { PART_Border.MinWidth = 56; PART_Border.MinHeight = 68; PART_Border.Padding = (@Spacing2,@Spacing2,@Spacing2,@Spacing2); }
+        when ( Size = Medium ) { PART_Border.MinHeight = 24; }
         when ( Size = Small ) { PART_Border.MinHeight = 24; }
         // Coarse pointer — enlarge tap padding only (density = Size DP). See
         // RibbonButton.
