@@ -19,7 +19,7 @@ import AnimationTriggersVM from "./animation-triggers-vm.mjs"
 // scopes to this demo only.
 
 resources AnimationTriggersDemo {
-    DataTemplate x:key="AnimationTriggersTemplate" [DataType = AnimationTriggersVM] {
+    DataTemplate [DataType = AnimationTriggersVM] {
         Border x:root
             [ Background      = @Surface,
               BorderBrush     = @OutlineVariant,

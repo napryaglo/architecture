@@ -69,11 +69,9 @@ export class CarouselDemo extends ResourceDictionary {
             _border6.SetChild(_stackPanel7);
             return _border6;
         }, CarouselVM);
-        t.Set("CarouselTemplate", _tmpl5);
+        t.Set(CarouselVM, _tmpl5);
         return t;
     }
     get CarouselCardTemplate() { return this.Resolve("CarouselCardTemplate"); }
     set CarouselCardTemplate(v) { this.Set("CarouselCardTemplate", v); }
-    get CarouselTemplate() { return this.Resolve("CarouselTemplate"); }
-    set CarouselTemplate(v) { this.Set("CarouselTemplate", v); }
 }

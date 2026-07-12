@@ -102,9 +102,7 @@ export class BottomSheetDemo extends ResourceDictionary {
             _border1.SetChild(_dockPanel2);
             return _border1;
         }, BottomSheetVM);
-        t.Set("BottomSheetTemplate", _tmpl0);
+        t.Set(BottomSheetVM, _tmpl0);
         return t;
     }
-    get BottomSheetTemplate() { return this.Resolve("BottomSheetTemplate"); }
-    set BottomSheetTemplate(v) { this.Set("BottomSheetTemplate", v); }
 }

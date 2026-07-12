@@ -12,7 +12,7 @@ import SplitButtonVM from "./split-button-vm.mjs"
 // chrome) while SplitButton's class still owns the mount lifecycle.
 
 resources SplitButtonDemo {
-    DataTemplate x:key="SplitButtonTemplate" [DataType = SplitButtonVM] {
+    DataTemplate [DataType = SplitButtonVM] {
         Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
                 Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (16,12,16,12) ] {

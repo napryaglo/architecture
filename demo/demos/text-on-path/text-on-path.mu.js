@@ -204,9 +204,7 @@ export class TextOnPathDemo extends ResourceDictionary {
             _border2.SetChild(_dockPanel3);
             return _border2;
         }, TextOnPathVM);
-        t.Set("TextOnPathTemplate", _tmpl0);
+        t.Set(TextOnPathVM, _tmpl0);
         return t;
     }
-    get TextOnPathTemplate() { return this.Resolve("TextOnPathTemplate"); }
-    set TextOnPathTemplate(v) { this.Set("TextOnPathTemplate", v); }
 }

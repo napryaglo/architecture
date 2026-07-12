@@ -135,9 +135,7 @@ export class SpinEditDemo extends ResourceDictionary {
             _border1.SetChild(_dockPanel2);
             return _border1;
         }, SpinEditVM);
-        t.Set("SpinEditTemplate", _tmpl0);
+        t.Set(SpinEditVM, _tmpl0);
         return t;
     }
-    get SpinEditTemplate() { return this.Resolve("SpinEditTemplate"); }
-    set SpinEditTemplate(v) { this.Set("SpinEditTemplate", v); }
 }

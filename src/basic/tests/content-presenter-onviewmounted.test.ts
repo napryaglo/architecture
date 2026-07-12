@@ -26,7 +26,9 @@ describe('ContentPresenter — OnViewMounted hook', () => {
     beforeEach(() => { initTestApp(); });
 
     test('calls OnViewMounted with the materialized template visual', () => {
-        Application.current?.Resources.Set('HookTpl', new DataTemplate(
+        // Register under the TYPE key (keyless implicit template) — an x:key'd /
+        // string-keyed template is not used for implicit type resolution.
+        Application.current?.Resources.Set(HookVM, new DataTemplate(
             (_d) => new TextBlock('x'), HookVM));
 
         const vm = new HookVM();

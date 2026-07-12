@@ -8,11 +8,16 @@ import {
     DiagnosticSeverity,
 } from 'vscode-languageserver/node.js';
 
-import type { SourceSpan } from '@visualisation-sub/mural/compiler';
+import type { EmitError, SourceSpan } from '@visualisation-sub/mural/compiler';
 
 import type { DocAnalysis } from '../analyzer.js';
 
-export function diagnosticsFor(analysis: DocAnalysis): Diagnostic[]
+// `emitError` is supplied by the caller rather than read off the analysis:
+// the parse-side analysis is cheap and cached per keystroke, but the emit
+// pass that produces `emitError` runs on a debounce (see server.ts), so it
+// arrives separately. Pass null when the emit pass hasn't run (or a parse
+// error suppressed it).
+export function diagnosticsFor(analysis: DocAnalysis, emitError: EmitError | null): Diagnostic[]
 {
     const out: Diagnostic[] = [];
     if (analysis.parseError !== null)
@@ -24,12 +29,12 @@ export function diagnosticsFor(analysis: DocAnalysis): Diagnostic[]
             source:   'mural-parser',
         });
     }
-    if (analysis.emitError !== null)
+    if (emitError !== null)
     {
         out.push({
             severity: DiagnosticSeverity.Error,
-            range:    rangeOf(analysis.emitError.span ?? fallbackSpan()),
-            message:  analysis.emitError.message,
+            range:    rangeOf(emitError.span ?? fallbackSpan()),
+            message:  emitError.message,
             source:   'mural-compiler',
         });
     }

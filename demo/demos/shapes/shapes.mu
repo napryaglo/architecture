@@ -7,7 +7,7 @@ import ShapesVM from "./shapes-vm.mjs"
 // cell has the shape rendered in @Primary fill and a label below.
 
 resources ShapesDemo {
-    DataTemplate x:key="ShapesTemplate" [DataType = ShapesVM] {
+    DataTemplate [DataType = ShapesVM] {
         Border [ Background = @Surface ] {
             ScrollViewer {
                 Border [ Padding = (24,24,24,24), Background = @Surface ] {

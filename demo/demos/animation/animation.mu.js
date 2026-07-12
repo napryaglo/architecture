@@ -227,9 +227,7 @@ export class AnimationDemo extends ResourceDictionary {
             _border12.SetChild(_dockPanel13);
             return _border12;
         }, AnimationVM);
-        t.Set("AnimationTemplate", _tmpl0);
+        t.Set(AnimationVM, _tmpl0);
         return t;
     }
-    get AnimationTemplate() { return this.Resolve("AnimationTemplate"); }
-    set AnimationTemplate(v) { this.Set("AnimationTemplate", v); }
 }

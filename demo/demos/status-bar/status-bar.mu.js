@@ -116,9 +116,7 @@ export class StatusBarDemo extends ResourceDictionary {
             _border1.SetChild(_dockPanel2);
             return _border1;
         }, StatusBarVM);
-        t.Set("StatusBarTemplate", _tmpl0);
+        t.Set(StatusBarVM, _tmpl0);
         return t;
     }
-    get StatusBarTemplate() { return this.Resolve("StatusBarTemplate"); }
-    set StatusBarTemplate(v) { this.Set("StatusBarTemplate", v); }
 }

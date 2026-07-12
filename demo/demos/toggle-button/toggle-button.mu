@@ -62,7 +62,7 @@ resources ToggleButtonDemo {
         when ( IsChecked ) { TextBlock.Foreground = @OnPrimary; }
     }
 
-    DataTemplate x:key="ToggleButtonTemplate" [DataType = ToggleButtonVM] {
+    DataTemplate [DataType = ToggleButtonVM] {
         Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
                 // Header strip

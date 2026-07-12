@@ -115,9 +115,7 @@ export class BottomAppBarDemo extends ResourceDictionary {
             _border1.SetChild(_dockPanel2);
             return _border1;
         }, BottomAppBarVM);
-        t.Set("BottomAppBarTemplate", _tmpl0);
+        t.Set(BottomAppBarVM, _tmpl0);
         return t;
     }
-    get BottomAppBarTemplate() { return this.Resolve("BottomAppBarTemplate"); }
-    set BottomAppBarTemplate(v) { this.Set("BottomAppBarTemplate", v); }
 }

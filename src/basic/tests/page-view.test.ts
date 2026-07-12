@@ -152,7 +152,9 @@ describe('PageView — Model content memoisation (nav-away-and-back)', () => {
             cc.Content = (data as PersistentOwner).node;   // mimics Content=$PreviewNode
             return cc;
         }, PersistentOwner);
-        Application.current!.Resources.Set('PersistentOwnerTemplate', tpl);
+        // Type key (keyless implicit template) — a string/x:key'd template is not
+        // resolved implicitly by type.
+        Application.current!.Resources.Set(PersistentOwner, tpl);
     });
 
     test('navigating away from a Model demo and back reuses the view — no re-attach throw', () => {

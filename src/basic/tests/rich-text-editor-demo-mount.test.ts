@@ -18,6 +18,18 @@ async function loadDemo(): Promise<{ dict: any; VM: any }>
     return { dict: (mu as never)['RichTextEditorDemo'], VM: (vm as never)['RichTextEditorVM'] };
 }
 
+// The demo's single (now keyless, type-keyed) DataTemplate. Fetched by iteration
+// rather than Get(VM): under `node --test`+tsx the demo's `.mjs` VM module loads
+// twice (native for the compiled .mu.js, tsx for the test), so the VM Function the
+// template is keyed under isn't identical to the test's imported VM — a test-only
+// artifact. Production resolves by the single live VM class, so this is harness-
+// local; iterating for the lone DataTemplate sidesteps the duplication.
+function demoTemplate(dict: { Entries(): Iterable<[unknown, unknown]> }): DataTemplate
+{
+    for (const [, v] of dict.Entries()) if (v instanceof DataTemplate) return v;
+    throw new Error('demo dictionary has no DataTemplate');
+}
+
 describe('rich-text-editor demo — mounts + edits', () => {
     beforeEach(() => { initTestApp(); });
 
@@ -25,7 +37,7 @@ describe('rich-text-editor demo — mounts + edits', () => {
         const { dict, VM } = await loadDemo();
         const instance = dict.Clone();
         Application.current?.Resources.AddMergedDictionary(instance);
-        const tpl = instance.Get('RichTextEditorTemplate') as DataTemplate;
+        const tpl = demoTemplate(instance);
         const vm = new VM();
         const root = tpl.Apply(vm) as Visual & { FindName(n: string): Visual | undefined };
         (root as unknown as { DataContext: unknown }).DataContext = vm;
@@ -51,7 +63,7 @@ describe('rich-text-editor demo — mounts + edits', () => {
         const { dict, VM } = await loadDemo();
         const instance = dict.Clone();
         Application.current?.Resources.AddMergedDictionary(instance);
-        const tpl = instance.Get('RichTextEditorTemplate') as DataTemplate;
+        const tpl = demoTemplate(instance);
         const vm = new VM();
         const root = tpl.Apply(vm) as Visual & { FindName(n: string): Visual | undefined };
         (root as unknown as { DataContext: unknown }).DataContext = vm;

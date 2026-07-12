@@ -16,7 +16,7 @@ import ToolBarVM from "./tool-bar-vm.mjs"
 // overflow" mechanism before this demo can showcase that path safely.
 
 resources ToolBarDemo {
-    DataTemplate x:key="ToolBarTemplate" [DataType = ToolBarVM] {
+    DataTemplate [DataType = ToolBarVM] {
         Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
                 // Header

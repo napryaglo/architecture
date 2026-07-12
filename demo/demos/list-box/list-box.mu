@@ -11,7 +11,7 @@ import ListBoxVM from "./list-box-vm.mjs"
 // Packaged as a DataTemplate keyed off ListBoxVM.
 
 resources ListBoxDemo {
-    DataTemplate x:key="ListBoxTemplate" [DataType = ListBoxVM] {
+    DataTemplate [DataType = ListBoxVM] {
         Border x:root
             [ Background      = @Surface,
               BorderBrush     = @OutlineVariant,

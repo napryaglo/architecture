@@ -199,9 +199,7 @@ export class FabDemo extends ResourceDictionary {
             _border1.SetChild(_dockPanel2);
             return _border1;
         }, FabVM);
-        t.Set("FabTemplate", _tmpl0);
+        t.Set(FabVM, _tmpl0);
         return t;
     }
-    get FabTemplate() { return this.Resolve("FabTemplate"); }
-    set FabTemplate(v) { this.Set("FabTemplate", v); }
 }

@@ -81,9 +81,7 @@ export class CounterDemo extends ResourceDictionary {
             _border1.SetChild(_canvas2);
             return _border1;
         }, CounterVM);
-        t.Set("CounterTemplate", _tmpl0);
+        t.Set(CounterVM, _tmpl0);
         return t;
     }
-    get CounterTemplate() { return this.Resolve("CounterTemplate"); }
-    set CounterTemplate(v) { this.Set("CounterTemplate", v); }
 }

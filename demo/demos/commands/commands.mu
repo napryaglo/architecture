@@ -119,7 +119,7 @@ resources CommandsDemo {
     }
 
     // ── Demo shell ──────────────────────────────────────────────────
-    DataTemplate x:key="CommandsTemplate" [DataType = CommandsVM] {
+    DataTemplate [DataType = CommandsVM] {
         Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
                 // Header — title + Classic/Ribbon mode toggle

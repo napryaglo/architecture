@@ -172,9 +172,7 @@ export class RichTextEditorDemo extends ResourceDictionary {
             _border7.SetChild(_dockPanel8);
             return _border7;
         }, RichTextEditorVM);
-        t.Set("RichTextEditorTemplate", _tmpl0);
+        t.Set(RichTextEditorVM, _tmpl0);
         return t;
     }
-    get RichTextEditorTemplate() { return this.Resolve("RichTextEditorTemplate"); }
-    set RichTextEditorTemplate(v) { this.Set("RichTextEditorTemplate", v); }
 }

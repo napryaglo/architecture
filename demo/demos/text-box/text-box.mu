@@ -19,7 +19,7 @@ import TextBoxVM from "./text-box-vm.mjs"
 // TextBoxVM instance.
 
 resources TextBoxDemo {
-    DataTemplate x:key="TextBoxTemplate" [DataType = TextBoxVM] {
+    DataTemplate [DataType = TextBoxVM] {
         Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             // Header + body via a vertical DockPanel so the header gets
             // its natural height and the editor area fills the rest.

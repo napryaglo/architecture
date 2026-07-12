@@ -13,7 +13,7 @@ import BadgeVM from "./badge-vm.mjs"
 //   * Theme swap — @Error / @OnError / @Surface all ride DynamicResource.
 
 resources BadgeDemo {
-    DataTemplate x:key="BadgeTemplate" [DataType = BadgeVM] {
+    DataTemplate [DataType = BadgeVM] {
         Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
                 // Header strip

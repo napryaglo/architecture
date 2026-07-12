@@ -106,9 +106,7 @@ export class TextBoxDemo extends ResourceDictionary {
             _border1.SetChild(_dockPanel2);
             return _border1;
         }, TextBoxVM);
-        t.Set("TextBoxTemplate", _tmpl0);
+        t.Set(TextBoxVM, _tmpl0);
         return t;
     }
-    get TextBoxTemplate() { return this.Resolve("TextBoxTemplate"); }
-    set TextBoxTemplate(v) { this.Set("TextBoxTemplate", v); }
 }

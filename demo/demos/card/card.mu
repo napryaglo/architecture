@@ -16,7 +16,7 @@ import CardVM from "./card-vm.mjs"
 //     just a single TextBlock.
 
 resources CardDemo {
-    DataTemplate x:key="CardTemplate" [DataType = CardVM] {
+    DataTemplate [DataType = CardVM] {
         Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
                 // Header strip

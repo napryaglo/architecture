@@ -9,7 +9,7 @@ import DatePickerVM from "./date-picker-vm.mjs"
 // the active scheme.
 
 resources DatePickerDemo {
-    DataTemplate x:key="DatePickerTemplate" [DataType = DatePickerVM] {
+    DataTemplate [DataType = DatePickerVM] {
         Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             StackPanel [ Orientation = Vertical, Margin = (32,32,32,32) ] {
                 TextBlock

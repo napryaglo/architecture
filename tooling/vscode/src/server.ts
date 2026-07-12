@@ -38,6 +38,7 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
     analyze,
     invalidate,
+    runEmitPass,
 } from './analyzer.js';
 import { WorkspaceIndex } from './workspace-index.js';
 import { diagnosticsFor } from './providers/diagnostics.js';
@@ -47,6 +48,11 @@ import { definition }     from './providers/definition.js';
 import { documentSymbols } from './providers/document-symbols.js';
 import { workspaceSymbols } from './providers/workspace-symbols.js';
 import { formatting }       from './providers/formatting.js';
+import {
+    semanticTokens,
+    TOKEN_TYPES,
+    TOKEN_MODIFIERS,
+} from './providers/semantic-tokens.js';
 
 const connection = createConnection(ProposedFeatures.all);
 const documents  = new TextDocuments(TextDocument);
@@ -87,6 +93,14 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
             documentSymbolProvider:   true,
             workspaceSymbolProvider:  true,
             documentFormattingProvider: true,
+            semanticTokensProvider: {
+                legend: {
+                    tokenTypes:     [...TOKEN_TYPES],
+                    tokenModifiers: [...TOKEN_MODIFIERS],
+                },
+                full:  true,
+                range: false,
+            },
         },
     };
 });
@@ -110,7 +124,7 @@ function uriToPath(uri: string): string | null
 // ── Sync ────────────────────────────────────────────────────────────
 
 documents.onDidChangeContent(event => {
-    publishDiagnostics(event.document);
+    scheduleDiagnostics(event.document);
     // Reflect unsaved edits in the cross-file index so go-to-definition
     // and workspace symbols track the live buffer, not the last save.
     workspaceIndex.indexText(event.document.uri, event.document.getText());
@@ -118,6 +132,8 @@ documents.onDidChangeContent(event => {
 
 documents.onDidClose(event => {
     invalidate(event.document.uri);
+    const pending = diagTimers.get(event.document.uri);
+    if (pending !== undefined) { clearTimeout(pending); diagTimers.delete(event.document.uri); }
     connection.sendDiagnostics({ uri: event.document.uri, diagnostics: [] });
 });
 
@@ -152,12 +168,36 @@ async function readAndIndex(uri: string, fsPath: string): Promise<void>
     catch { /* unreadable — leave prior index entry as-is */ }
 }
 
+// Emit-diagnostics debounce. The parse pass (analyze) is cheap and runs
+// eagerly when providers query; the emit pass (runEmitPass) is the whole
+// compiler and used only for diagnostics, so we defer it until typing
+// settles. One timer per open document; the latest edit wins.
+const diagTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const DIAGNOSTIC_DEBOUNCE_MS = 300;
+
+function scheduleDiagnostics(doc: TextDocument): void
+{
+    const uri  = doc.uri;
+    const prev = diagTimers.get(uri);
+    if (prev !== undefined) clearTimeout(prev);
+    diagTimers.set(uri, setTimeout(() => {
+        diagTimers.delete(uri);
+        // The buffer may have closed or advanced while we waited — re-fetch
+        // and skip if it's gone.
+        const current = documents.get(uri);
+        if (current !== undefined) publishDiagnostics(current);
+    }, DIAGNOSTIC_DEBOUNCE_MS));
+}
+
 function publishDiagnostics(doc: TextDocument): void
 {
     const analysis = analyze(doc);
+    // Only run the emit pass on a clean parse — a parse error already has a
+    // diagnostic and the emitter can't run without an AST anyway.
+    const emitError = analysis.parseError === null ? runEmitPass(analysis.text) : null;
     connection.sendDiagnostics({
         uri: doc.uri,
-        diagnostics: diagnosticsFor(analysis),
+        diagnostics: diagnosticsFor(analysis, emitError),
     });
 }
 
@@ -195,6 +235,12 @@ connection.onDocumentFormatting(params => {
     const doc = documents.get(params.textDocument.uri);
     if (doc === undefined) return [];
     return formatting(doc);
+});
+
+connection.languages.semanticTokens.on(params => {
+    const doc = documents.get(params.textDocument.uri);
+    if (doc === undefined) return { data: [] };
+    return semanticTokens(doc);
 });
 
 // ── Boot ────────────────────────────────────────────────────────────

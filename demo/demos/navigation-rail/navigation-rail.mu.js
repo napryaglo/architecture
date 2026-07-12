@@ -94,9 +94,7 @@ export class NavigationRailDemo extends ResourceDictionary {
             _border1.SetChild(_dockPanel2);
             return _border1;
         }, NavigationRailVM);
-        t.Set("NavigationRailTemplate", _tmpl0);
+        t.Set(NavigationRailVM, _tmpl0);
         return t;
     }
-    get NavigationRailTemplate() { return this.Resolve("NavigationRailTemplate"); }
-    set NavigationRailTemplate(v) { this.Set("NavigationRailTemplate", v); }
 }

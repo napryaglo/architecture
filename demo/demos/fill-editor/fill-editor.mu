@@ -7,7 +7,7 @@ import FillEditorDemoVM from "./fill-editor-vm.mjs"
 // Variant=None clears the fill.
 
 resources FillEditorDemo {
-    DataTemplate x:key="FillEditorTemplate" [DataType = FillEditorDemoVM] {
+    DataTemplate [DataType = FillEditorDemoVM] {
         Border x:root [ Background = @Surface ] {
             DockPanel {
                 // ── Header ────────────────────────────────────────

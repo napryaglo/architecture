@@ -38,7 +38,7 @@ resources IconButtonDemo {
         dark_mode
     }
 
-    DataTemplate x:key="IconButtonTemplate" [DataType = IconButtonVM] {
+    DataTemplate [DataType = IconButtonVM] {
         Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
                 // Header strip

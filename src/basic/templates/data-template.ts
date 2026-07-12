@@ -430,14 +430,20 @@ function matchDataTemplateInDict(rd: ResourceDictionary, klass: Function): DataT
     return undefined;
 }
 
-// Scan one dictionary (own entries first, then merged dictionaries recursively)
-// for a DataTemplate tagged with exactly `klass` as its DataType.
+// Look up the IMPLICIT DataTemplate for `klass` in one dictionary (own entry
+// first, then merged dictionaries recursively).
+//
+// Only a template registered under the data-type KEY itself counts — the
+// `Set(Klass, tmpl)` a keyless `DataTemplate [DataType=Klass]` emits. A template
+// given an `x:key` is stored under that STRING key and is reachable ONLY by
+// explicit reference (`ItemTemplate=@K` / `ContentTemplate=@K`), exactly like
+// WPF: an x:Key'd template is NOT implicit. Matching by `.DataType` instead would
+// also return keyed templates, letting a `DataTemplate x:key="…" [DataType=X]`
+// shadow the implicit `[DataType=X]` one purely by declaration order.
 function walkResourcesForDataTemplate(rd: ResourceDictionary, klass: Function): DataTemplate | undefined
 {
-    for (const [, v] of rd.Entries())
-    {
-        if (v instanceof DataTemplate && v.DataType === klass) return v;
-    }
+    const own = rd.Get(klass);
+    if (own instanceof DataTemplate) return own;
     for (const merged of rd.MergedDictionaries)
     {
         const r = walkResourcesForDataTemplate(merged, klass);

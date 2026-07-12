@@ -21,7 +21,7 @@ import DrawerVM from "./drawer-vm.mjs"
 // via LastChildFill.
 
 resources DrawerDemo {
-    DataTemplate x:key="DrawerTemplate" [DataType = DrawerVM] {
+    DataTemplate [DataType = DrawerVM] {
         Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
                 // ── Header bar (Top) ───────────────────────────

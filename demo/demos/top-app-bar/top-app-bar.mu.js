@@ -187,9 +187,7 @@ export class TopAppBarDemo extends ResourceDictionary {
             _border1.SetChild(_dockPanel2);
             return _border1;
         }, TopAppBarVM);
-        t.Set("TopAppBarTemplate", _tmpl0);
+        t.Set(TopAppBarVM, _tmpl0);
         return t;
     }
-    get TopAppBarTemplate() { return this.Resolve("TopAppBarTemplate"); }
-    set TopAppBarTemplate(v) { this.Set("TopAppBarTemplate", v); }
 }

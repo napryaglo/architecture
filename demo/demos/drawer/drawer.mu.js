@@ -141,9 +141,7 @@ export class DrawerDemo extends ResourceDictionary {
             _border1.SetChild(_dockPanel2);
             return _border1;
         }, DrawerVM);
-        t.Set("DrawerTemplate", _tmpl0);
+        t.Set(DrawerVM, _tmpl0);
         return t;
     }
-    get DrawerTemplate() { return this.Resolve("DrawerTemplate"); }
-    set DrawerTemplate(v) { this.Set("DrawerTemplate", v); }
 }

@@ -18,7 +18,7 @@ import BottomSheetVM from "./bottom-sheet-vm.mjs"
 //     top corners come from the default Style.
 
 resources BottomSheetDemo {
-    DataTemplate x:key="BottomSheetTemplate" [DataType = BottomSheetVM] {
+    DataTemplate [DataType = BottomSheetVM] {
         Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
                 // Header strip

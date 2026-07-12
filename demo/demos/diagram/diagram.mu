@@ -84,7 +84,7 @@ resources DiagramDemo {
     // ToolboxShape's PreviewNode (a per-Kind Figure sized 48×48).
     // ContentControl's Visual-content path slots the Figure directly
     // (no DataTemplate dispatch) and the Figure renders itself.
-    DataTemplate x:key="DiagramTileTemplate" [DataType = ToolboxShape] {
+    DataTemplate [DataType = ToolboxShape] {
         Border x:root
             [ IsDraggable     = true,
               OnDragStart     = $BeginKindDragData,
@@ -126,8 +126,25 @@ resources DiagramDemo {
         }
     }
 
+    // ── Split-button label + gallery layout ─────────────────────────
+    //
+    // The Align / Placement groups collapse into ToolBarSplitButtons.
+    // Align is icon-only (its Content is an inline Shape). Placement
+    // shows a glyph + caption; inline attribute values can't host a child
+    // block, so that composed label rides a keyed StackPanel referenced
+    // once by the button's Content. The Placement popup swaps its
+    // ItemsPanel to a 3×3 UniformGrid — that override is what turns the
+    // Gallery's default vertical menu into an icon matrix.
+    StackPanel x:key="DiagramPlacementSplitLabel" [ Orientation = Horizontal, VerticalAlignment = Center ] {
+        Shape [ Geometry = @filter_center_focus, Fill = @OnSurfaceVariant, Width = 16, Height = 16, VerticalAlignment = Center ]
+        TextBlock [ Text = "Placement", Margin = (6,0,0,0), VerticalAlignment = Center ]
+    }
+    ItemsPanelTemplate x:key="DiagramPlacementGrid" {
+        UniformGrid [ Columns = 3 ]
+    }
+
     // ── Diagram workspace ──────────────────────────────────────────
-    DataTemplate x:key="DiagramTemplate" [DataType = DiagramDocument] {
+    DataTemplate [DataType = DiagramDocument] {
         Border x:root
             [ Background      = @Surface,
               BorderBrush     = @OutlineVariant,
@@ -189,21 +206,26 @@ resources DiagramDemo {
                                 Shape [ Geometry = @polyline, Width = 16, Height = 16, Margin = (2) ]
                             }
                         }
-                        ToolBar
-                            [ Margin       = (8,0,0,0),
-                              ItemTemplate = @DiagramToolTemplate,
-                              ItemsSource  = [
-                                DiagramTool [ Icon = @alignLeft,   Command = $nodes.AlignLeftCommand ],
-                                DiagramTool [ Icon = @alignRight,  Command = $nodes.AlignRightCommand ],
-                                DiagramTool [ Icon = @alignTop,    Command = $nodes.AlignTopCommand ],
-                                DiagramTool [ Icon = @alignMiddle, Command = $nodes.AlignMiddleCommand ],
-                                DiagramTool [ Icon = @alignCenter, Command = $nodes.AlignCenterCommand ] ] ]
-                        ToolBar
-                            [ Margin       = (8,0,0,0),
-                              ItemTemplate = @DiagramToolTemplate,
-                              ItemsSource  = [
-                                DiagramTool [ Icon = @distributeHorizontal, Command = $nodes.DistributeHorizontalCommand ],
-                                DiagramTool [ Icon = @distributeVertical,   Command = $nodes.DistributeVerticalCommand ] ] ]
+                        // Align + Distribute — one icon-only dropdown split button
+                        // (no primary Command → single-chrome; Content is just the
+                        // align glyph). Clicking anywhere opens a vertical menu of
+                        // every shape-align command plus the two distribute commands
+                        // (below a separator). MenuItem children auto-close the popup
+                        // on click. Each command is the framework Diagram's own
+                        // RelayCommand, bound through the `nodes` x:name.
+                        ToolBar [ Margin = (8,0,0,0) ] {
+                            ToolBarSplitButton
+                                [ Content = Shape [ Geometry = @alignLeft, Fill = @OnSurfaceVariant, Width = 16, Height = 16, VerticalAlignment = Center ] ] {
+                                MenuItem [ Header = "Align Left",   Command = $nodes.AlignLeftCommand,   Icon = Shape [ Geometry = @alignLeft,   Width = 16, Height = 16, HorizontalAlignment = Center, VerticalAlignment = Center ] ]
+                                MenuItem [ Header = "Align Center", Command = $nodes.AlignCenterCommand, Icon = Shape [ Geometry = @alignCenter, Width = 16, Height = 16, HorizontalAlignment = Center, VerticalAlignment = Center ] ]
+                                MenuItem [ Header = "Align Right",  Command = $nodes.AlignRightCommand,  Icon = Shape [ Geometry = @alignRight,  Width = 16, Height = 16, HorizontalAlignment = Center, VerticalAlignment = Center ] ]
+                                MenuItem [ Header = "Align Top",    Command = $nodes.AlignTopCommand,    Icon = Shape [ Geometry = @alignTop,    Width = 16, Height = 16, HorizontalAlignment = Center, VerticalAlignment = Center ] ]
+                                MenuItem [ Header = "Align Middle", Command = $nodes.AlignMiddleCommand, Icon = Shape [ Geometry = @alignMiddle, Width = 16, Height = 16, HorizontalAlignment = Center, VerticalAlignment = Center ] ]
+                                MenuSeparator
+                                MenuItem [ Header = "Distribute Horizontally", Command = $nodes.DistributeHorizontalCommand, Icon = Shape [ Geometry = @distributeHorizontal, Width = 16, Height = 16, HorizontalAlignment = Center, VerticalAlignment = Center ] ]
+                                MenuItem [ Header = "Distribute Vertically",   Command = $nodes.DistributeVerticalCommand,   Icon = Shape [ Geometry = @distributeVertical,   Width = 16, Height = 16, HorizontalAlignment = Center, VerticalAlignment = Center ] ]
+                            }
+                        }
                         ToolBar
                             [ Margin       = (8,0,0,0),
                               ItemTemplate = @DiagramToolTemplate,
@@ -242,35 +264,46 @@ resources DiagramDemo {
                                 Shape [ Geometry = @format_align_justify, Width = 16, Height = 16, Margin = (2) ]
                             }
                         }
-                        // Label placement within the shape — 3×3 grid. Same
-                        // command-backed active-state toggle pattern.
+                        // Label placement within the shape — a pure-dropdown split
+                        // button (no primary Command → single-chrome) whose popup is
+                        // the 3×3 icon matrix (ItemsPanel = UniformGrid Columns=3).
+                        // The cells stay ToolBarToggleButtons so each still reflects
+                        // the SELECTED shape's current placement (IsChecked through
+                        // `<< Is(TextPlacement.X)`) AND invokes its command; being
+                        // Buttons, they close the popup on release (Gallery wires the
+                        // click-to-close, firing after the command so the placement
+                        // applies before teardown).
                         ToolBar [ Margin = (8,0,0,0) ] {
-                            ToolBarToggleButton [ Command = $nodes.SetTextPlacementTopLeftCommand, IsChecked = $nodes.SelectionTextPlacement << Is(TextPlacement.TopLeft) ] {
-                                Shape [ Geometry = @north_west, Width = 16, Height = 16, Margin = (2) ]
-                            }
-                            ToolBarToggleButton [ Command = $nodes.SetTextPlacementTopCommand, IsChecked = $nodes.SelectionTextPlacement << Is(TextPlacement.Top) ] {
-                                Shape [ Geometry = @north, Width = 16, Height = 16, Margin = (2) ]
-                            }
-                            ToolBarToggleButton [ Command = $nodes.SetTextPlacementTopRightCommand, IsChecked = $nodes.SelectionTextPlacement << Is(TextPlacement.TopRight) ] {
-                                Shape [ Geometry = @north_east, Width = 16, Height = 16, Margin = (2) ]
-                            }
-                            ToolBarToggleButton [ Command = $nodes.SetTextPlacementLeftCommand, IsChecked = $nodes.SelectionTextPlacement << Is(TextPlacement.Left) ] {
-                                Shape [ Geometry = @west, Width = 16, Height = 16, Margin = (2) ]
-                            }
-                            ToolBarToggleButton [ Command = $nodes.SetTextPlacementCenterCommand, IsChecked = $nodes.SelectionTextPlacement << Is(TextPlacement.Center) ] {
-                                Shape [ Geometry = @filter_center_focus, Width = 16, Height = 16, Margin = (2) ]
-                            }
-                            ToolBarToggleButton [ Command = $nodes.SetTextPlacementRightCommand, IsChecked = $nodes.SelectionTextPlacement << Is(TextPlacement.Right) ] {
-                                Shape [ Geometry = @east, Width = 16, Height = 16, Margin = (2) ]
-                            }
-                            ToolBarToggleButton [ Command = $nodes.SetTextPlacementBottomLeftCommand, IsChecked = $nodes.SelectionTextPlacement << Is(TextPlacement.BottomLeft) ] {
-                                Shape [ Geometry = @south_west, Width = 16, Height = 16, Margin = (2) ]
-                            }
-                            ToolBarToggleButton [ Command = $nodes.SetTextPlacementBottomCommand, IsChecked = $nodes.SelectionTextPlacement << Is(TextPlacement.Bottom) ] {
-                                Shape [ Geometry = @south, Width = 16, Height = 16, Margin = (2) ]
-                            }
-                            ToolBarToggleButton [ Command = $nodes.SetTextPlacementBottomRightCommand, IsChecked = $nodes.SelectionTextPlacement << Is(TextPlacement.BottomRight) ] {
-                                Shape [ Geometry = @south_east, Width = 16, Height = 16, Margin = (2) ]
+                            ToolBarSplitButton
+                                [ Content    = @DiagramPlacementSplitLabel,
+                                  ItemsPanel = @DiagramPlacementGrid ] {
+                                ToolBarToggleButton [ Command = $nodes.SetTextPlacementTopLeftCommand, IsChecked = $nodes.SelectionTextPlacement << Is(TextPlacement.TopLeft) ] {
+                                    Shape [ Geometry = @north_west, Width = 16, Height = 16, Margin = (2) ]
+                                }
+                                ToolBarToggleButton [ Command = $nodes.SetTextPlacementTopCommand, IsChecked = $nodes.SelectionTextPlacement << Is(TextPlacement.Top) ] {
+                                    Shape [ Geometry = @north, Width = 16, Height = 16, Margin = (2) ]
+                                }
+                                ToolBarToggleButton [ Command = $nodes.SetTextPlacementTopRightCommand, IsChecked = $nodes.SelectionTextPlacement << Is(TextPlacement.TopRight) ] {
+                                    Shape [ Geometry = @north_east, Width = 16, Height = 16, Margin = (2) ]
+                                }
+                                ToolBarToggleButton [ Command = $nodes.SetTextPlacementLeftCommand, IsChecked = $nodes.SelectionTextPlacement << Is(TextPlacement.Left) ] {
+                                    Shape [ Geometry = @west, Width = 16, Height = 16, Margin = (2) ]
+                                }
+                                ToolBarToggleButton [ Command = $nodes.SetTextPlacementCenterCommand, IsChecked = $nodes.SelectionTextPlacement << Is(TextPlacement.Center) ] {
+                                    Shape [ Geometry = @filter_center_focus, Width = 16, Height = 16, Margin = (2) ]
+                                }
+                                ToolBarToggleButton [ Command = $nodes.SetTextPlacementRightCommand, IsChecked = $nodes.SelectionTextPlacement << Is(TextPlacement.Right) ] {
+                                    Shape [ Geometry = @east, Width = 16, Height = 16, Margin = (2) ]
+                                }
+                                ToolBarToggleButton [ Command = $nodes.SetTextPlacementBottomLeftCommand, IsChecked = $nodes.SelectionTextPlacement << Is(TextPlacement.BottomLeft) ] {
+                                    Shape [ Geometry = @south_west, Width = 16, Height = 16, Margin = (2) ]
+                                }
+                                ToolBarToggleButton [ Command = $nodes.SetTextPlacementBottomCommand, IsChecked = $nodes.SelectionTextPlacement << Is(TextPlacement.Bottom) ] {
+                                    Shape [ Geometry = @south, Width = 16, Height = 16, Margin = (2) ]
+                                }
+                                ToolBarToggleButton [ Command = $nodes.SetTextPlacementBottomRightCommand, IsChecked = $nodes.SelectionTextPlacement << Is(TextPlacement.BottomRight) ] {
+                                    Shape [ Geometry = @south_east, Width = 16, Height = 16, Margin = (2) ]
+                                }
                             }
                         }
                         // Character style (§ diagram-text) — font family / size /

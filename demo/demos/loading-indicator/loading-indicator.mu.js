@@ -82,9 +82,7 @@ export class LoadingIndicatorDemo extends ResourceDictionary {
             _border1.SetChild(_stackPanel2);
             return _border1;
         }, LoadingIndicatorVM);
-        t.Set("LoadingIndicatorTemplate", _tmpl0);
+        t.Set(LoadingIndicatorVM, _tmpl0);
         return t;
     }
-    get LoadingIndicatorTemplate() { return this.Resolve("LoadingIndicatorTemplate"); }
-    set LoadingIndicatorTemplate(v) { this.Set("LoadingIndicatorTemplate", v); }
 }

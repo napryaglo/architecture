@@ -12,7 +12,7 @@ import PenEditorDemoVM from "./pen-editor-vm.mjs"
 //     mirror DPs.
 
 resources PenEditorDemo {
-    DataTemplate x:key="PenEditorTemplate" [DataType = PenEditorDemoVM] {
+    DataTemplate [DataType = PenEditorDemoVM] {
         Border x:root [ Background = @Surface ] {
             DockPanel {
                 // ── Header ────────────────────────────────────────

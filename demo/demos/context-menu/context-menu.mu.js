@@ -149,7 +149,7 @@ export class ContextMenuDemo extends ResourceDictionary {
             _border16.SetChild(_dockPanel17);
             return _border16;
         }, ContextMenuVM);
-        t.Set("ContextMenuTemplate", _tmpl15);
+        t.Set(ContextMenuVM, _tmpl15);
         return t;
     }
     get RedMenu() { return this.Resolve("RedMenu"); }
@@ -158,6 +158,4 @@ export class ContextMenuDemo extends ResourceDictionary {
     set GreenMenu(v) { this.Set("GreenMenu", v); }
     get BlueMenu() { return this.Resolve("BlueMenu"); }
     set BlueMenu(v) { this.Set("BlueMenu", v); }
-    get ContextMenuTemplate() { return this.Resolve("ContextMenuTemplate"); }
-    set ContextMenuTemplate(v) { this.Set("ContextMenuTemplate", v); }
 }

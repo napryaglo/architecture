@@ -40,11 +40,9 @@ export class BouncingBallDemo extends ResourceDictionary {
             _border3.SetChild(_canvas2);
             return _border3;
         }, BouncingBallVM);
-        t.Set("BouncingBallTemplate", _tmpl1);
+        t.Set(BouncingBallVM, _tmpl1);
         return t;
     }
     get BallPen() { return this.Resolve("BallPen"); }
     set BallPen(v) { this.Set("BallPen", v); }
-    get BouncingBallTemplate() { return this.Resolve("BouncingBallTemplate"); }
-    set BouncingBallTemplate(v) { this.Set("BouncingBallTemplate", v); }
 }

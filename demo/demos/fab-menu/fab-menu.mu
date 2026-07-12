@@ -13,7 +13,7 @@ import FabMenuVM from "./fab-menu-vm.mjs"
 // the menu reads as growing toward the FAB.
 
 resources FabMenuDemo {
-    DataTemplate x:key="FabMenuTemplate" [DataType = FabMenuVM] {
+    DataTemplate [DataType = FabMenuVM] {
         Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
                 Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (16,12,16,12) ] {

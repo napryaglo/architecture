@@ -124,13 +124,11 @@ export class ToggleButtonDemo extends ResourceDictionary {
             _border17.SetChild(_dockPanel18);
             return _border17;
         }, ToggleButtonVM);
-        t.Set("ToggleButtonTemplate", _tmpl16);
+        t.Set(ToggleButtonVM, _tmpl16);
         return t;
     }
     get ToggleChromeTemplate() { return this.Resolve("ToggleChromeTemplate"); }
     set ToggleChromeTemplate(v) { this.Set("ToggleChromeTemplate", v); }
     get StyleToggle() { return this.Resolve("StyleToggle"); }
     set StyleToggle(v) { this.Set("StyleToggle", v); }
-    get ToggleButtonTemplate() { return this.Resolve("ToggleButtonTemplate"); }
-    set ToggleButtonTemplate(v) { this.Set("ToggleButtonTemplate", v); }
 }

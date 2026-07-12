@@ -4,6 +4,7 @@ import { NavigationService } from './services/navigation-service.js';
 import { ContentHostService } from './services/content-host-service.js';
 import { DocumentsContentHostService } from './services/documents-content-host-service.js';
 import { InspectorService } from './services/inspector-service.js';
+import { StatusService } from './services/status-service.js';
 import { ApplicationSettings } from './services/application-settings-service.js';
 import { DocumentTypeRegistry } from './documents/document-type-registry.js';
 import { CommandRegistry } from './commands/command-registry.js';
@@ -70,6 +71,17 @@ export class EditorShell extends ShellBase
         if (!this.Services.has(InspectorService.Key))
         {
             this.Services.registerScoped(InspectorService.Key, (p) => new InspectorService(p));
+        }
+        // Provide the Status region's service by default: a StatusService whose
+        // Items back the bottom StatusBar. The default template binds
+        // `PART_StatusHost` to `$service(StatusService)` unconditionally, and the
+        // ToolbarService syncs StatusBar-region shell controls (e.g. a diagram's
+        // connector-mode cell) into its Items — both silently no-op if it's
+        // absent, leaving an empty strip. Same opt-out guard: an app registering
+        // its own up-chain wins.
+        if (!this.Services.has(StatusService.Key))
+        {
+            this.Services.registerScoped(StatusService.Key, (p) => new StatusService(p));
         }
         // Provide the ApplicationSettings service by default: aggregates every
         // composed module's declared SettingDefinitions into live, modifiable

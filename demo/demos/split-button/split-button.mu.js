@@ -100,9 +100,7 @@ export class SplitButtonDemo extends ResourceDictionary {
             _border1.SetChild(_dockPanel2);
             return _border1;
         }, SplitButtonVM);
-        t.Set("SplitButtonTemplate", _tmpl0);
+        t.Set(SplitButtonVM, _tmpl0);
         return t;
     }
-    get SplitButtonTemplate() { return this.Resolve("SplitButtonTemplate"); }
-    set SplitButtonTemplate(v) { this.Set("SplitButtonTemplate", v); }
 }

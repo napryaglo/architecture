@@ -135,9 +135,7 @@ export class AnimationTriggersDemo extends ResourceDictionary {
             _border3.SetChild(_dockPanel20);
             return _border3;
         }, AnimationTriggersVM);
-        t.Set("AnimationTriggersTemplate", _tmpl0);
+        t.Set(AnimationTriggersVM, _tmpl0);
         return t;
     }
-    get AnimationTriggersTemplate() { return this.Resolve("AnimationTriggersTemplate"); }
-    set AnimationTriggersTemplate(v) { this.Set("AnimationTriggersTemplate", v); }
 }

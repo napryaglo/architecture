@@ -92,9 +92,7 @@ export class AnimationNamedDemo extends ResourceDictionary {
             _border1.SetChild(_dockPanel15);
             return _border1;
         }, AnimationNamedVM);
-        t.Set("AnimationNamedTemplate", _tmpl0);
+        t.Set(AnimationNamedVM, _tmpl0);
         return t;
     }
-    get AnimationNamedTemplate() { return this.Resolve("AnimationNamedTemplate"); }
-    set AnimationNamedTemplate(v) { this.Set("AnimationNamedTemplate", v); }
 }

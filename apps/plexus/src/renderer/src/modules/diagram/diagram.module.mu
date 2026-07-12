@@ -61,26 +61,35 @@ module DiagramModule [ Name = "Diagram" ] {
     // ↔ code-constant contract as setting keys. Order is global (keeps groups
     // contiguous); Group tags future separators.
     .commands: {
-        CommandDefinition [ Id = "diagram.align.left",   Title = "Align Left",   Icon = @alignLeft,   Context = DiagramEditingContext, Group = "align",      Order = 10 ]
+        // Align + Distribute — one SplitMenu group. align.left is the leader: it
+        // declares the group's presentation, dropdown face icon + tooltip. The
+        // Distribute pair rides in the SAME group (Group = "align") below a divider
+        // (SeparatorBefore on the first).
+        CommandDefinition [ Id = "diagram.align.left",   Title = "Align Left",   Icon = @alignLeft,   Context = DiagramEditingContext, Group = "align",      Order = 10,
+                            Presentation = SplitMenu, GroupIcon = @alignLeft, GroupTitle = "Align" ]
         CommandDefinition [ Id = "diagram.align.right",  Title = "Align Right",  Icon = @alignRight,  Context = DiagramEditingContext, Group = "align",      Order = 20 ]
         CommandDefinition [ Id = "diagram.align.top",    Title = "Align Top",    Icon = @alignTop,    Context = DiagramEditingContext, Group = "align",      Order = 30 ]
         CommandDefinition [ Id = "diagram.align.middle", Title = "Align Middle", Icon = @alignMiddle, Context = DiagramEditingContext, Group = "align",      Order = 40 ]
         CommandDefinition [ Id = "diagram.align.center", Title = "Align Center", Icon = @alignCenter, Context = DiagramEditingContext, Group = "align",      Order = 50 ]
-        CommandDefinition [ Id = "diagram.distribute.horizontal", Title = "Distribute Horizontally", Icon = @distributeHorizontal, Context = DiagramEditingContext, Group = "distribute", Order = 60 ]
-        CommandDefinition [ Id = "diagram.distribute.vertical",   Title = "Distribute Vertically",   Icon = @distributeVertical,   Context = DiagramEditingContext, Group = "distribute", Order = 70 ]
+        CommandDefinition [ Id = "diagram.distribute.horizontal", Title = "Distribute Horizontally", Icon = @distributeHorizontal, Context = DiagramEditingContext, Group = "align", Order = 60, SeparatorBefore = true ]
+        CommandDefinition [ Id = "diagram.distribute.vertical",   Title = "Distribute Vertically",   Icon = @distributeVertical,   Context = DiagramEditingContext, Group = "align", Order = 70 ]
         CommandDefinition [ Id = "diagram.group",   Title = "Group",   Icon = @group,   Context = DiagramEditingContext, Group = "arrange", Order = 80 ]
         CommandDefinition [ Id = "diagram.ungroup", Title = "Ungroup", Icon = @ungroup, Context = DiagramEditingContext, Group = "arrange", Order = 90 ]
         CommandDefinition [ Id = "diagram.combine.union",     Title = "Combine — Union",     Icon = @join,       Context = DiagramEditingContext, Group = "combine", Order = 100 ]
         CommandDefinition [ Id = "diagram.combine.intersect", Title = "Combine — Intersect", Icon = @join_inner, Context = DiagramEditingContext, Group = "combine", Order = 110 ]
         CommandDefinition [ Id = "diagram.combine.subtract",  Title = "Combine — Subtract",  Icon = @join_left,  Context = DiagramEditingContext, Group = "combine", Order = 120 ]
         CommandDefinition [ Id = "diagram.combine.exclude",   Title = "Combine — Exclude",   Icon = @difference, Context = DiagramEditingContext, Group = "combine", Order = 130 ]
-        // Paragraph alignment WITHIN the label block.
-        CommandDefinition [ Id = "diagram.text.align.left",    Title = "Align Text Left",    Icon = @format_align_left,    Context = DiagramEditingContext, Group = "text-align", Order = 140 ]
+        // Paragraph alignment WITHIN the label block — a Toggles group (each
+        // reflects the selection's current alignment; leader declares presentation).
+        CommandDefinition [ Id = "diagram.text.align.left",    Title = "Align Text Left",    Icon = @format_align_left,    Context = DiagramEditingContext, Group = "text-align", Order = 140, Presentation = Toggles ]
         CommandDefinition [ Id = "diagram.text.align.center",  Title = "Align Text Center",  Icon = @format_align_center,  Context = DiagramEditingContext, Group = "text-align", Order = 150 ]
         CommandDefinition [ Id = "diagram.text.align.right",   Title = "Align Text Right",   Icon = @format_align_right,   Context = DiagramEditingContext, Group = "text-align", Order = 160 ]
         CommandDefinition [ Id = "diagram.text.align.justify", Title = "Justify Text",       Icon = @format_align_justify, Context = DiagramEditingContext, Group = "text-align", Order = 170 ]
-        // Label placement WITHIN the shape footprint — 3×3 anchor grid.
-        CommandDefinition [ Id = "diagram.text.place.top-left",     Title = "Place Label Top-Left",     Icon = @north_west,           Context = DiagramEditingContext, Group = "text-place", Order = 180 ]
+        // Label placement WITHIN the shape footprint — a SplitGrid group (3×3 icon
+        // matrix in the dropdown; leader declares presentation + the centre-glyph
+        // face).
+        CommandDefinition [ Id = "diagram.text.place.top-left",     Title = "Place Label Top-Left",     Icon = @north_west,           Context = DiagramEditingContext, Group = "text-place", Order = 180,
+                            Presentation = SplitGrid, GroupIcon = @filter_center_focus, GroupTitle = "Placement", Columns = 3 ]
         CommandDefinition [ Id = "diagram.text.place.top",          Title = "Place Label Top",          Icon = @north,                Context = DiagramEditingContext, Group = "text-place", Order = 190 ]
         CommandDefinition [ Id = "diagram.text.place.top-right",    Title = "Place Label Top-Right",    Icon = @north_east,           Context = DiagramEditingContext, Group = "text-place", Order = 200 ]
         CommandDefinition [ Id = "diagram.text.place.left",         Title = "Place Label Left",         Icon = @west,                 Context = DiagramEditingContext, Group = "text-place", Order = 210 ]
@@ -89,14 +98,28 @@ module DiagramModule [ Name = "Diagram" ] {
         CommandDefinition [ Id = "diagram.text.place.bottom-left",  Title = "Place Label Bottom-Left",  Icon = @south_west,           Context = DiagramEditingContext, Group = "text-place", Order = 240 ]
         CommandDefinition [ Id = "diagram.text.place.bottom",       Title = "Place Label Bottom",       Icon = @south,                Context = DiagramEditingContext, Group = "text-place", Order = 250 ]
         CommandDefinition [ Id = "diagram.text.place.bottom-right", Title = "Place Label Bottom-Right", Icon = @south_east,           Context = DiagramEditingContext, Group = "text-place", Order = 260 ]
-        // Character decorations — bold / italic / underline / strikethrough.
-        CommandDefinition [ Id = "diagram.text.bold",          Title = "Bold",          Icon = @format_bold,          Context = DiagramEditingContext, Group = "text-style", Order = 270 ]
+        // Character decorations — bold / italic / underline / strikethrough. A
+        // Toggles group (each reflects the selection's current run state).
+        CommandDefinition [ Id = "diagram.text.bold",          Title = "Bold",          Icon = @format_bold,          Context = DiagramEditingContext, Group = "text-style", Order = 270, Presentation = Toggles ]
         CommandDefinition [ Id = "diagram.text.italic",        Title = "Italic",        Icon = @format_italic,        Context = DiagramEditingContext, Group = "text-style", Order = 280 ]
         CommandDefinition [ Id = "diagram.text.underline",     Title = "Underline",     Icon = @format_underlined,    Context = DiagramEditingContext, Group = "text-style", Order = 290 ]
         CommandDefinition [ Id = "diagram.text.strikethrough", Title = "Strikethrough", Icon = @format_strikethrough, Context = DiagramEditingContext, Group = "text-style", Order = 300 ]
-        // Grow / shrink font one point.
-        CommandDefinition [ Id = "diagram.text.size.increase", Title = "Increase Font Size", Icon = @text_increase, Context = DiagramEditingContext, Group = "text-size", Order = 310 ]
-        CommandDefinition [ Id = "diagram.text.size.decrease", Title = "Decrease Font Size", Icon = @text_decrease, Context = DiagramEditingContext, Group = "text-size", Order = 320 ]
+        // Font family / size (+ steppers) / colour are NOT commands — they read &
+        // write live selection state. They ride in a toolbar CONTROL instead (see
+        // .ShellControls: below), bound to the document's IFontFormatSink.
+    }
+
+    // Non-command shell contributions — value editors the shell hosts in a region.
+    // The font-format editor (Toolbar region) binds the active document's
+    // IFontFormatSink surface (FontFamily / FontSize / FontColorHex + the two size
+    // step commands); Order = 330 places it after the text-style toggles. The
+    // connectors indicator rides the status bar (StatusBar region).
+    .ShellControls: {
+        ShellControlDefinition [ Template = @FontFormatEditor, Context = DiagramEditingContext, Order = 330 ]
+        // Connectors-mode indicator — a StatusBar-region control (a status cell, not
+        // a command-bar button). Binds the document's ConnectorsModePinned; the
+        // circle goes green + opaque when the mode is pinned.
+        ShellControlDefinition [ Template = @ConnectorModeIndicator, Context = DiagramEditingContext, Region = StatusBar ]
     }
 
     // Shapes â€” the toolbox of shapes to drop onto the canvas.

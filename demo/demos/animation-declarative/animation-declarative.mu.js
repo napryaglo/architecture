@@ -84,9 +84,7 @@ export class AnimationDeclarativeDemo extends ResourceDictionary {
             _border1.SetChild(_dockPanel7);
             return _border1;
         }, AnimationDeclarativeVM);
-        t.Set("AnimationDeclarativeTemplate", _tmpl0);
+        t.Set(AnimationDeclarativeVM, _tmpl0);
         return t;
     }
-    get AnimationDeclarativeTemplate() { return this.Resolve("AnimationDeclarativeTemplate"); }
-    set AnimationDeclarativeTemplate(v) { this.Set("AnimationDeclarativeTemplate", v); }
 }

@@ -27,7 +27,7 @@ resources TextOnPathDemo {
         Roboto from "https://cdn.jsdelivr.net/gh/opentypejs/opentype.js@master/test/fonts/Roboto-Black.ttf"
     }
 
-    DataTemplate x:key="TextOnPathTemplate" [DataType = TextOnPathVM] {
+    DataTemplate [DataType = TextOnPathVM] {
         Border x:root [ Background = @Surface ] {
             DockPanel {
                 // ── Header ────────────────────────────────────────

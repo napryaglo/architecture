@@ -73,44 +73,12 @@ resources DiagramResources {
     // reach its editing commands + selection-format state. DropReceiver = $Self
     // (the Diagram is on every canvas drop's bubble path). Mirrors the
     // Diagrammer demo's Diagram declaration (demo/demos/diagram).
+    // The content area is now JUST the canvas — the input-mode strip that used to
+    // ride above it is gone: the Connectors-mode toggle moved to the shell status
+    // bar (see @ConnectorModeIndicator + the module's StatusBar-region .ShellControls:
+    // entry), and the font editors moved to the command bar (@FontFormatEditor).
     DataTemplate [DataType = DiagramDocument] {
         DockPanel {
-            // Text-style pickers row — font family / size / colour, bound to the
-            // canvas's Selection* character DPs by ElementName (forward ref to
-            // `canvas` below). These are value inputs that don't fit the
-            // CommandDefinition toolbar, so they ride here just above the canvas;
-            // the four decorations (bold / italic / underline / strikethrough)
-            // live in the Commands region as CommandDefinitions instead. Both
-            // apply to the whole label when a shape is selected, and to the
-            // selected text run(s) while a shape is being edited.
-            Border
-                [ DockPanel.Dock  = Top,
-                  Background      = @SurfaceContainerLow,
-                  BorderBrush     = @OutlineVariant,
-                  BorderThickness = (0,0,0,1),
-                  Padding         = (8,4,8,4) ] {
-                StackPanel [ Orientation = Horizontal ] {
-                    // Input modes — a separate toolbar of mode toggles. Connectors
-                    // mode: pin it (or hold Ctrl) to make the connector adorners
-                    // react; IsChecked binds the canvas's ConnectorsModePinned DP.
-                    ToolBar [ Margin = (0,0,8,0) ] {
-                        ToolBarToggleButton [ IsChecked = $canvas.ConnectorsModePinned ] {
-                            Shape [ Geometry = @polyline, Width = 16, Height = 16, Margin = (2) ]
-                        }
-                    }
-                    FontFamilyPicker [ Text = $canvas.SelectionFontFamily, Width = 170, VerticalAlignment = Center ]
-                    FontSizePicker   [ Value = $canvas.SelectionFontSize, IsEditable = true, Width = 80, Margin = (8,0,0,0), VerticalAlignment = Center ]
-                    ToolBar [ Margin = (8,0,0,0) ] {
-                        ToolBarButton [ Command = $canvas.IncreaseFontSizeCommand ] {
-                            Shape [ Geometry = @text_increase, Fill = @OnSurfaceVariant, Width = 16, Height = 16, Margin = (2) ]
-                        }
-                        ToolBarButton [ Command = $canvas.DecreaseFontSizeCommand ] {
-                            Shape [ Geometry = @text_decrease, Fill = @OnSurfaceVariant, Width = 16, Height = 16, Margin = (2) ]
-                        }
-                    }
-                    ColorPicker      [ ColorHex = $canvas.SelectionFontColorHex, Margin = (8,0,0,0), VerticalAlignment = Center ]
-                }
-            }
             Diagram x:name="canvas"
                 [ ItemsSource                  = $Nodes,
                   Connectors                   = $Connectors,
@@ -124,6 +92,80 @@ resources DiagramResources {
                   DropReceiver                 = $Self,
                   Focusable                    = true,
                   ContextMenuService.ContextMenu = @DiagramContextMenu ]
+        }
+    }
+
+    // ── Font-format editor — a toolbar CONTROL (not a command) ──────────
+    // Hosted in the shell command bar by the module's .ShellControls: entry.
+    // The shell applies this template with the active document as DataContext, so
+    // the pickers two-way bind the document's IFontFormatSink surface
+    // (FontFamily / FontSize / FontColorHex), which the DiagramDocument mirrors
+    // onto the live canvas selection. The size steppers bind the sink's step
+    // commands. (Was the canvas-local picker row; now shared shell chrome.)
+    //
+    // Reached ONLY explicitly, by its key (the module's Template = @FontFormatEditor).
+    // An x:key'd DataTemplate is never used for implicit type resolution
+    // (findDataTemplateForType looks up the type KEY, not by DataType), so it can't
+    // shadow the keyless canvas template above even though both are
+    // [DataType = DiagramDocument].
+    DataTemplate x:key="FontFormatEditor" [DataType = DiagramDocument] {
+        StackPanel [ Orientation = Horizontal, VerticalAlignment = Center ] {
+            FontFamilyPicker [ Text = $FontFamily, Width = 170, VerticalAlignment = Center ]
+            FontSizePicker   [ Value = $FontSize, IsEditable = true, Width = 80, Margin = (8,0,0,0), VerticalAlignment = Center ]
+            ToolBar [ Margin = (8,0,0,0) ] {
+                ToolBarButton [ Command = $IncreaseFontSizeCommand ] {
+                    Shape [ Geometry = @text_increase, Fill = @OnSurfaceVariant, Width = 16, Height = 16, Margin = (2) ]
+                }
+                ToolBarButton [ Command = $DecreaseFontSizeCommand ] {
+                    Shape [ Geometry = @text_decrease, Fill = @OnSurfaceVariant, Width = 16, Height = 16, Margin = (2) ]
+                }
+            }
+            ColorPicker [ ColorHex = $FontColorHex, Margin = (8,0,0,0), VerticalAlignment = Center ]
+        }
+    }
+
+    // ── Connector-mode indicator — a StatusBar-region toolbar CONTROL ────
+    // Hosted in the shell STATUS BAR by the module's .ShellControls: entry
+    // (Region = StatusBar). A tiny dot + "Connector" label that two-way binds the
+    // document's ConnectorsModePinned (mirrored onto the live canvas): click to
+    // pin/unpin the connectors interaction mode. Inactive → monochrome +
+    // semitransparent; active → the dot turns green and the whole cell goes opaque.
+    //
+    // Like @FontFormatEditor: an x:key'd template reached only explicitly by key,
+    // never implicitly — so it doesn't shadow the keyless canvas template.
+    //
+    // Chromeless ToggleButton chrome — strips the default pill so the cell reads as
+    // plain status text; a transparent (#00000000) Border keeps it hit-testable.
+    Template x:key="ConnectorModeToggleChrome" [TargetType = ToggleButton] {
+        Border [ Background = #00000000, Padding = (6,1,6,1), CornerRadius = (4) ] {
+            ContentPresenter [ VerticalAlignment = Center ]
+        }
+    }
+    DataTemplate x:key="ConnectorModeIndicator" [DataType = DiagramDocument] {
+        ToggleButton x:name="Root"
+            [ Template          = @ConnectorModeToggleChrome,
+              IsChecked         = $ConnectorsModePinned,
+              Opacity           = 0.55,
+              VerticalAlignment = Center ] {
+            StackPanel [ Orientation = Horizontal, VerticalAlignment = Center ] {
+                Border x:name="Dot"
+                    [ Width             = 8,
+                      Height            = 8,
+                      CornerRadius      = (4),
+                      Background        = @OnSurfaceVariant,
+                      VerticalAlignment = Center,
+                      Margin            = (0,0,6,0) ]
+                TextBlock
+                    [ Text              = "Connector",
+                      FontSize          = 11,
+                      Foreground        = @OnSurfaceVariant,
+                      VerticalAlignment = Center ]
+            }
+        }
+        // Pinned → opaque cell + green dot; reverts to the base 0.55 / mono otherwise.
+        when ( $ConnectorsModePinned ) {
+            Root.Opacity   = 1;
+            Dot.Background = #4caf50;
         }
     }
 
@@ -153,7 +195,7 @@ resources DiagramResources {
     // ToolboxShape's PreviewNode (a per-Kind Figure sized 48×48) slotted into a
     // ContentControl. Dragging emits the `mural/node-kind` payload; dropping on
     // the canvas fires the Diagram's ItemDropped → Document.CreateNode. ──
-    DataTemplate x:key="DiagramTileTemplate" [DataType = ToolboxShape] {
+    DataTemplate [DataType = ToolboxShape] {
         Border x:root
             [ IsDraggable     = true,
               OnDragStart     = $BeginKindDragData,

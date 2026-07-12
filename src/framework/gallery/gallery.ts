@@ -62,8 +62,11 @@ export class Gallery extends ItemsControl
     // Every generated container closes the gallery on activation — the one
     // behavior all variants share. The activation signal differs by container
     // kind: a MenuItem reports through its _onActivated hook (it is not a
-    // Button), a Button (e.g. an icon-grid ToolBarButton) through Click, and
-    // anything else through a raw PointerDown.
+    // Button), a Button (e.g. an icon-grid ToolBarButton) through PointerUp, and
+    // anything else — e.g. a data-bound ContentPresenter wrapping a templated
+    // MenuItem / Button — also through PointerUp, which bubbles up from the inner
+    // control AFTER its own click has run, so the item's command executes before
+    // the popup dismisses.
     public override PrepareContainerForItemOverride(container: Visual, item: unknown, index: number): void
     {
         super.PrepareContainerForItemOverride(container, item, index);
@@ -94,7 +97,7 @@ export class Gallery extends ItemsControl
         else
         {
             container.AddRoutedEventListener(
-                'PointerDown', ((): void => { this.RequestClose(); }) as (a: unknown) => void);
+                'PointerUp', ((): void => { this.RequestClose(); }) as (a: unknown) => void);
         }
     }
 

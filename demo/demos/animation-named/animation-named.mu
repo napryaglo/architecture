@@ -28,7 +28,7 @@ import AnimationNamedVM from "./animation-named-vm.mjs"
 // scopes to this demo only.
 
 resources AnimationNamedDemo {
-    DataTemplate x:key="AnimationNamedTemplate" [DataType = AnimationNamedVM] {
+    DataTemplate [DataType = AnimationNamedVM] {
         Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             resources: {
                 Style [TargetType = Button] {

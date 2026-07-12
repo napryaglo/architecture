@@ -6,14 +6,18 @@
 // Strategy:
 //   1. Try Parser.ParseDocument() — if it throws ParseError, we keep
 //      ast=null but still record the error for diagnostics.
-//   2. If parse succeeded, run compile() to surface emit-level errors
-//      (e.g. unknown control, missing x:key) without losing the AST.
-//      The AST stays usable for hover / completion / definition even
-//      when emit fails.
-//   3. Walk the AST once to build the index of resource definitions
+//   2. Walk the AST once to build the index of resource definitions
 //      (`@key = …` and styles/templates carrying `x:key="…"`) and the
 //      flat list of element nodes by source position. Providers query
 //      these indices directly.
+//
+// The expensive `compile()` semantic pass does NOT run here. `analyze()`
+// is on the hot path — every hover / completion / semantic-tokens
+// request, and every keystroke that bumps the document version, lands
+// on it. Parsing a UI-markup file is cheap; running the whole emitter
+// each keystroke (only to discard the emitted JS and keep its errors)
+// was not. Emit-level diagnostics now come from `runEmitPass()`, which
+// the server calls on a debounce once typing settles.
 
 import { TextDocument } from 'vscode-languageserver-textdocument';
 
@@ -85,8 +89,6 @@ export interface DocAnalysis
     ast:     Document | null;
     /** Set when the lex / parse pass failed. */
     parseError: ParseError | null;
-    /** Set when parse succeeded but emit failed. */
-    emitError:  EmitError  | null;
     /** Resource index — all `@key` definitions and keyed style/template forms. */
     resources:  Map<string, ResourceDef>;
     /** Flat list of every ElementNode with its source span — used by
@@ -141,7 +143,6 @@ export function collectResources(text: string): ResourceDef[]
         text,
         ast,
         parseError: null,
-        emitError:  null,
         resources:  new Map(),
         elements:   [],
         resourceForms: [],
@@ -162,7 +163,6 @@ function build(text: string, version: number): DocAnalysis
         text,
         ast:        null,
         parseError: null,
-        emitError:  null,
         resources:  new Map(),
         elements:   [],
         resourceForms: [],
@@ -186,34 +186,40 @@ function build(text: string, version: number): DocAnalysis
     }
     result.ast = ast;
 
-    // ── Compile (semantic pass) ───────────────────────────────────
-    // We only run compile() for its side effect of surfacing EmitErrors.
-    // The emitted JS is discarded — providers work off the AST directly.
-    //
-    // `include`/`glyphs` splice files off disk via a host-supplied
-    // resolver the CLI wires at build time. The editor has no such
-    // resolver, so we hand compile() no-op stubs: without them every
-    // document using `include` would trip a spurious "needs a file
-    // resolver" EmitError. The real resolution (SVG/font → geometry)
-    // only happens through `compile:mu`; here we just want the rest of
-    // the semantic pass to run.
+    // ── Index ──────────────────────────────────────────────────────
+    walk(ast, result);
+    return result;
+}
+
+// Emit-level semantic pass, run purely to surface EmitErrors (unknown
+// control, missing x:key, duplicate keys, …). Kept OFF the `analyze()`
+// hot path — the server calls this on a debounce once typing settles,
+// so the whole emitter no longer runs on every keystroke. The emitted
+// JS is discarded; only the error (if any) is returned.
+//
+// `include`/`glyphs` splice files off disk via a host-supplied resolver
+// the CLI wires at build time. The editor has no such resolver, so we
+// hand compile() no-op stubs: without them every document using
+// `include` would trip a spurious "needs a file resolver" EmitError.
+// The real resolution (SVG/font → geometry) only happens through
+// `compile:mu`; here we just want the rest of the semantic pass to run.
+export function runEmitPass(text: string): EmitError | null
+{
     try
     {
         compile(text, {
             include: () => ({ entries: [] }),
             glyphs:  () => ({ entries: [] }),
         });
+        return null;
     }
     catch (e)
     {
-        if (e instanceof EmitError) result.emitError = e;
-        // ParseError shouldn't fire here (parse already succeeded), but
-        // if it does we swallow — we already have a good AST.
+        if (e instanceof EmitError) return e;
+        // ParseError shouldn't fire here (callers gate on a clean parse);
+        // if it does we swallow — the parse-side diagnostic already covers it.
+        return null;
     }
-
-    // ── Index ──────────────────────────────────────────────────────
-    walk(ast, result);
-    return result;
 }
 
 // Recursive AST walk. Collects resource definitions and the flat list

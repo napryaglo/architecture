@@ -13,7 +13,7 @@ import SideSheetVM from "./side-sheet-vm.mjs"
 // ink, and the scrim all ride DynamicResource, so light ↔ dark re-tint live.
 
 resources SideSheetDemo {
-    DataTemplate x:key="SideSheetTemplate" [DataType = SideSheetVM] {
+    DataTemplate [DataType = SideSheetVM] {
         Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             Grid {
                 // Page body.

@@ -15,7 +15,7 @@ import TreeViewVM from "./tree-view-vm.mjs"
 // Packaged as a DataTemplate keyed off TreeViewVM.
 
 resources TreeViewDemo {
-    DataTemplate x:key="TreeViewTemplate" [DataType = TreeViewVM] {
+    DataTemplate [DataType = TreeViewVM] {
         Border x:root
             [ Background      = @Surface,
               BorderBrush     = @OutlineVariant,

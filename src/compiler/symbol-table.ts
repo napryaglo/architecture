@@ -117,8 +117,16 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['DocumentDefinition',      '@visualisation-sub/mural/framework/shell/documents/document-definition.js'],
     ['DocumentTypeRegistry',    '@visualisation-sub/mural/framework/shell/documents/document-type-registry.js'],
     ['CommandDefinition',       '@visualisation-sub/mural/framework/shell/commands/command-definition.js'],
+    ['CommandGroupPresentation', '@visualisation-sub/mural/framework/shell/commands/command-definition.js'],
     ['CommandRegistry',         '@visualisation-sub/mural/framework/shell/commands/command-registry.js'],
     ['CommandViewModel',        '@visualisation-sub/mural/framework/shell/commands/command-view-model.js'],
+    ['ShellControlDefinition',  '@visualisation-sub/mural/framework/shell/commands/shell-control-definition.js'],
+    ['ShellRegion',             '@visualisation-sub/mural/framework/shell/commands/shell-control-definition.js'],
+    ['ToolbarFlatGroup',        '@visualisation-sub/mural/framework/shell/commands/toolbar-group-view-model.js'],
+    ['ToolbarSplitMenuGroup',   '@visualisation-sub/mural/framework/shell/commands/toolbar-group-view-model.js'],
+    ['ToolbarSplitGridGroup',   '@visualisation-sub/mural/framework/shell/commands/toolbar-group-view-model.js'],
+    ['ToolbarToggleGroup',      '@visualisation-sub/mural/framework/shell/commands/toolbar-group-view-model.js'],
+    ['ShellControlViewModel',   '@visualisation-sub/mural/framework/shell/commands/toolbar-group-view-model.js'],
     ['ToolbarService',          '@visualisation-sub/mural/framework/shell/commands/toolbar-service.js'],
     ['NavigationService',       '@visualisation-sub/mural/framework/shell/services/navigation-service.js'],
     ['InspectorService',        '@visualisation-sub/mural/framework/shell/services/inspector-service.js'],
@@ -553,6 +561,12 @@ export const ENUM_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<st
     // under the `Kind` property (below); its members are disjoint from the other
     // `Kind` enums (ChipVariant / PatternKind), so there's no collision.
     ['SettingKind',           new Set(['Boolean', 'Number', 'String', 'Choice', 'Color', 'FilePath'])],
+    // Command-group presentation — a module's `.commands:` block authors
+    // `CommandDefinition [ Presentation = SplitMenu … ]` on a group's leader.
+    // Resolved via PROPERTY_TO_ENUM under the `Presentation` property.
+    ['CommandGroupPresentation', new Set(['Flat', 'SplitMenu', 'SplitGrid', 'Toggles'])],
+    // Shell-control host region — `ShellControlDefinition [ Region = StatusBar ]`.
+    ['ShellRegion', new Set(['Toolbar', 'StatusBar'])],
 ]);
 
 // Type → set of valid static-member names exposed for use in DOTTED
@@ -637,6 +651,10 @@ export const PROPERTY_TO_ENUM: ReadonlyMap<string, readonly string[]> = new Map<
     ['TabNavigation', ['KeyboardNavigationMode']],
     // List.MarkerStyle → ListMarkerStyle (property name ≠ enum class name).
     ['MarkerStyle', ['ListMarkerStyle']],
+    // CommandDefinition.Presentation → CommandGroupPresentation.
+    ['Presentation', ['CommandGroupPresentation']],
+    // ShellControlDefinition.Region → ShellRegion.
+    ['Region', ['ShellRegion']],
 ]);
 
 // Meta-attr names whose RHS is a type reference (compiled as a bare

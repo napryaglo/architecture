@@ -29,6 +29,16 @@ async function loadDemo(): Promise<{ TextFormatDemo: any; TextFormatVM: any }>
     return { TextFormatDemo: (mu as never)['TextFormatDemo'], TextFormatVM: (vm as never)['TextFormatVM'] };
 }
 
+// The demo's single (keyless, type-keyed) DataTemplate. Fetched by iteration, not
+// Get(TextFormatVM): under `node --test`+tsx the demo `.mjs` VM loads twice, so
+// the VM Function keying the template isn't identical to the test's import — a
+// harness-only artifact. Iterating for the lone DataTemplate sidesteps it.
+function demoTemplate(dict: { Entries(): Iterable<[unknown, unknown]> }): DataTemplate
+{
+    for (const [, v] of dict.Entries()) if (v instanceof DataTemplate) return v;
+    throw new Error('demo dictionary has no DataTemplate');
+}
+
 describe('text-format demo — markup bindings', () => {
     beforeEach(() => { initTestApp(); });
 
@@ -38,10 +48,10 @@ describe('text-format demo — markup bindings', () => {
         Application.current?.Resources.AddMergedDictionary(dict);
 
         const vm = new TextFormatVM();
-        // Materialize the demo's DataTemplate directly with the VM as data
-        // (the platform content host resolves it implicitly by DataType;
-        // a bare presenter here doesn't, so apply it by key).
-        const tpl = dict.Get('TextFormatTemplate') as DataTemplate;
+        // Materialize the demo's DataTemplate directly with the VM as data (the
+        // platform content host resolves it implicitly by DataType; a bare presenter
+        // here doesn't, so fetch the demo's lone implicit template directly).
+        const tpl = demoTemplate(dict);
         const root = tpl.Apply(vm) as Visual;
         // The platform content host sets DataContext on the presented
         // template output; replicate that so the $-bindings resolve.

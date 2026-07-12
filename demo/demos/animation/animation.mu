@@ -19,7 +19,7 @@ import AnimationVM from "./animation-vm.mjs"
 // Packaged as a DataTemplate keyed off AnimationVM.
 
 resources AnimationDemo {
-    DataTemplate x:key="AnimationTemplate" [DataType = AnimationVM] {
+    DataTemplate [DataType = AnimationVM] {
         Border x:root
             [ Background      = @Surface,
               BorderBrush     = @OutlineVariant,

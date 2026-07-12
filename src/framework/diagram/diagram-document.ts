@@ -29,7 +29,8 @@ import type { ICommandTarget } from '../shell/commands/command-target.js';
 import type { CommandDefinition } from '../shell/commands/command-definition.js';
 import { DiagramEditingContext, DiagramCommandId } from './diagram-command-contexts.js';
 import { DiagramInspector } from './diagram-inspector.js';
-import type { Diagram } from './diagram.js';
+import type { IFontFormatSink } from './font-format-sink.js';
+import { Diagram } from './diagram.js';
 
 // Minimal storage contract Diagram.Save / Load wire against. Subset of
 // the Web Storage API (localStorage / sessionStorage). Demos plug in
@@ -225,6 +226,22 @@ const DIAGRAM_COMMAND_GETTERS: ReadonlyMap<string, (v: Diagram) => ICommand | un
     [DiagramCommandId.TextSizeDecrease,     (v) => v.DecreaseFontSizeCommand],
 ]);
 
+// Active-state predicates for the Toggles-presentation commands — the paragraph
+// alignment and character-decoration toggles. DiagramDocument.IsActive resolves
+// through this against the published ActiveView so a toolbar toggle's IsChecked
+// reflects the current selection's text state (the same Selection* DPs the
+// diagram demo binds directly). Commands absent here are never "active".
+const DIAGRAM_COMMAND_ACTIVE: ReadonlyMap<string, (v: Diagram) => boolean> = new Map<string, (v: Diagram) => boolean>([
+    [DiagramCommandId.TextAlignLeft,     (v) => v.SelectionTextAlignment === TextAlignment.Left],
+    [DiagramCommandId.TextAlignCenter,   (v) => v.SelectionTextAlignment === TextAlignment.Center],
+    [DiagramCommandId.TextAlignRight,    (v) => v.SelectionTextAlignment === TextAlignment.Right],
+    [DiagramCommandId.TextAlignJustify,  (v) => v.SelectionTextAlignment === TextAlignment.Justify],
+    [DiagramCommandId.TextBold,          (v) => v.SelectionBold],
+    [DiagramCommandId.TextItalic,        (v) => v.SelectionItalic],
+    [DiagramCommandId.TextUnderline,     (v) => v.SelectionUnderline],
+    [DiagramCommandId.TextStrikethrough, (v) => v.SelectionStrikethrough],
+]);
+
 // Monotonic per-session document id source. Every DiagramDocument gets a
 // stable, unique Id so DocumentsContentHostService can dedupe opens and locate
 // a document to close (IDocument.Id contract). Not persisted — ids are only
@@ -247,7 +264,7 @@ let _diagramDocSeq = 0;
 // shapes, override ToolboxShapes default to expose a different
 // palette, etc.) or by composing — the Document doesn't lock methods
 // down.
-export class DiagramDocument extends Model implements DiagramMutator, IDocument, ICommandTarget
+export class DiagramDocument extends Model implements DiagramMutator, IDocument, ICommandTarget, IFontFormatSink
 {
     // ── IDocument surface — lets a DocumentsContentHostService host this
     // document (open-set dedupe, tab title, dirty indicator, Save). ──
@@ -289,7 +306,37 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
     public static readonly LoadCommandKey   = Model.RegisterProperty<RelayCommand | undefined>(
         DiagramDocument, 'LoadCommand',   undefined, MetaData.None);
 
+    // ── IFontFormatSink surface — the font-format editor the shell toolbar hosts
+    // binds these two-way. They MIRROR the published ActiveView's Selection* DPs:
+    // a picker write flows out to the control (→ FormatMirror → selection), and a
+    // selection change flows back here. Defaults match the Diagram control's.
+    public static readonly FontFamilyKey   = Model.RegisterProperty<string>(
+        DiagramDocument, 'FontFamily',   '', MetaData.None);
+    public static readonly FontSizeKey     = Model.RegisterProperty<number>(
+        DiagramDocument, 'FontSize',     12, MetaData.None);
+    public static readonly FontColorHexKey = Model.RegisterProperty<string>(
+        DiagramDocument, 'FontColorHex', '#000000', MetaData.None);
+    // The size steppers bind these; sourced from the live view (undefined with no
+    // view). Read-only to the world — set only from the mirrored ActiveView.
+    public static readonly IncreaseFontSizeCommandKey = Model.RegisterProperty<ICommand | undefined>(
+        DiagramDocument, 'IncreaseFontSizeCommand', undefined, MetaData.None);
+    public static readonly DecreaseFontSizeCommandKey = Model.RegisterProperty<ICommand | undefined>(
+        DiagramDocument, 'DecreaseFontSizeCommand', undefined, MetaData.None);
+
+    // Connectors-mode pin — mirrors the live view's ConnectorsModePinned two-way.
+    // The shell status bar's connector indicator binds this: writing it toggles
+    // the mode on the control, and the control's changes flow back here.
+    public static readonly ConnectorsModePinnedKey = Model.RegisterProperty<boolean>(
+        DiagramDocument, 'ConnectorsModePinned', false, MetaData.None);
+
     private _nextId = 1;
+
+    // Guards the view→document mirror so a pulled value isn't written straight
+    // back out to the view (which would loop).
+    private _syncingFromView = false;
+    // The view we're currently mirroring state from — kept so we can detach.
+    private _mirrorView: Diagram | undefined;
+    private readonly _onViewMirrorChanged = (): void => this._pullFromView();
 
     constructor(storage?: DiagramStorage)
     {
@@ -349,11 +396,77 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
         return this._commandFor(definition.Id)?.CanExecute(undefined) ?? false;
     }
 
+    // Toggle state for the Toggles-presentation commands (text-align / text-style)
+    // — read off the live view's Selection* DPs. Non-toggle or unknown ids, or no
+    // active view, are never active.
+    public IsActive(definition: CommandDefinition): boolean
+    {
+        const view = this.ActiveView;
+        if (view === undefined) return false;
+        return DIAGRAM_COMMAND_ACTIVE.get(definition.Id)?.(view) ?? false;
+    }
+
     private _commandFor(id: string): ICommand | undefined
     {
         const view = this.ActiveView;
         if (view === undefined) return undefined;
         return DIAGRAM_COMMAND_GETTERS.get(id)?.(view);
+    }
+
+    // ── IFontFormatSink accessors ──────────────────────────────────────────
+    public get FontFamily(): string  { return this.get_property_value(DiagramDocument.FontFamilyKey); }
+    public set FontFamily(v: string) { this.set_property_value(DiagramDocument.FontFamilyKey, v); }
+    public get FontSize(): number  { return this.get_property_value(DiagramDocument.FontSizeKey); }
+    public set FontSize(v: number) { this.set_property_value(DiagramDocument.FontSizeKey, v); }
+    public get FontColorHex(): string  { return this.get_property_value(DiagramDocument.FontColorHexKey); }
+    public set FontColorHex(v: string) { this.set_property_value(DiagramDocument.FontColorHexKey, v); }
+    public get IncreaseFontSizeCommand(): ICommand | undefined { return this.get_property_value(DiagramDocument.IncreaseFontSizeCommandKey); }
+    public get DecreaseFontSizeCommand(): ICommand | undefined { return this.get_property_value(DiagramDocument.DecreaseFontSizeCommandKey); }
+
+    public get ConnectorsModePinned(): boolean  { return this.get_property_value(DiagramDocument.ConnectorsModePinnedKey); }
+    public set ConnectorsModePinned(v: boolean) { this.set_property_value(DiagramDocument.ConnectorsModePinnedKey, v); }
+
+    // Re-point the view mirror at a new ActiveView: detach the old view's mirrored
+    // listeners (font selection + connectors mode), attach the new one's, refresh
+    // the step commands, and pull the initial values. With no view the step
+    // commands clear.
+    private _rebindViewMirror(view: Diagram | undefined): void
+    {
+        if (this._mirrorView !== undefined)
+        {
+            this._mirrorView.RemovePropertyChangedListener(Diagram.SelectionFontFamilyKey,   this._onViewMirrorChanged);
+            this._mirrorView.RemovePropertyChangedListener(Diagram.SelectionFontSizeKey,     this._onViewMirrorChanged);
+            this._mirrorView.RemovePropertyChangedListener(Diagram.SelectionFontColorHexKey, this._onViewMirrorChanged);
+            this._mirrorView.RemovePropertyChangedListener(Diagram.ConnectorsModePinnedKey,  this._onViewMirrorChanged);
+        }
+        this._mirrorView = view;
+        this.set_property_value(DiagramDocument.IncreaseFontSizeCommandKey, view?.IncreaseFontSizeCommand);
+        this.set_property_value(DiagramDocument.DecreaseFontSizeCommandKey, view?.DecreaseFontSizeCommand);
+        if (view !== undefined)
+        {
+            view.AddPropertyChangedListener(Diagram.SelectionFontFamilyKey,   this._onViewMirrorChanged);
+            view.AddPropertyChangedListener(Diagram.SelectionFontSizeKey,     this._onViewMirrorChanged);
+            view.AddPropertyChangedListener(Diagram.SelectionFontColorHexKey, this._onViewMirrorChanged);
+            view.AddPropertyChangedListener(Diagram.ConnectorsModePinnedKey,  this._onViewMirrorChanged);
+            this._pullFromView();
+        }
+    }
+
+    // Mirror the live view's editable state onto our DPs (guarded so the write-
+    // through in OnPropertyChanged doesn't echo it straight back).
+    private _pullFromView(): void
+    {
+        const view = this._mirrorView;
+        if (view === undefined) return;
+        this._syncingFromView = true;
+        try
+        {
+            this.FontFamily           = view.SelectionFontFamily;
+            this.FontSize             = view.SelectionFontSize;
+            this.FontColorHex         = view.SelectionFontColorHex;
+            this.ConnectorsModePinned = view.ConnectorsModePinned;
+        }
+        finally { this._syncingFromView = false; }
     }
 
     protected override OnPropertyChanged(
@@ -365,6 +478,15 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
         if (descriptor.Name === 'ActiveView')
         {
             this.Inspector.View = newValue as Diagram | undefined;
+            this._rebindViewMirror(newValue as Diagram | undefined);
+        }
+        // An editor write flows OUT to the view (unless it's the mirror pulling IN).
+        else if (!this._syncingFromView && this._mirrorView !== undefined)
+        {
+            if      (descriptor.Name === 'FontFamily')           this._mirrorView.SelectionFontFamily   = newValue as string;
+            else if (descriptor.Name === 'FontSize')             this._mirrorView.SelectionFontSize     = newValue as number;
+            else if (descriptor.Name === 'FontColorHex')         this._mirrorView.SelectionFontColorHex = newValue as string;
+            else if (descriptor.Name === 'ConnectorsModePinned') this._mirrorView.ConnectorsModePinned  = newValue as boolean;
         }
     }
 

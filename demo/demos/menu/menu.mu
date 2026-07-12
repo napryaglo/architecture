@@ -14,7 +14,7 @@ import MenuVM from "./menu-vm.mjs"
 //   * MenuSeparator    — horizontal divider between groups.
 
 resources MenuDemo {
-    DataTemplate x:key="MenuTemplate" [DataType = MenuVM] {
+    DataTemplate [DataType = MenuVM] {
         Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
                 // Header

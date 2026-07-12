@@ -10,7 +10,7 @@ import BouncingBallVM from "./bouncing-ball-vm.mjs"
 resources BouncingBallDemo {
     Pen x:key="BallPen" [ Brush = #f59e0b, Thickness = 1.5 ]
 
-    DataTemplate x:key="BouncingBallTemplate" [DataType = BouncingBallVM] {
+    DataTemplate [DataType = BouncingBallVM] {
         Border x:root
             [ Background      = @InverseSurface,
               BorderBrush     = @Outline,

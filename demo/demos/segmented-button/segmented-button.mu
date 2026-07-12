@@ -17,7 +17,7 @@ import SegmentedButtonVM from "./segmented-button-vm.mjs"
 // (Position = …)` triggers handle the rest.
 
 resources SegmentedButtonDemo {
-    DataTemplate x:key="SegmentedButtonTemplate" [DataType = SegmentedButtonVM] {
+    DataTemplate [DataType = SegmentedButtonVM] {
         Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
                 Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (16,12,16,12) ] {

@@ -71,7 +71,7 @@ resources DashboardDemo {
         }
     }
 
-    DataTemplate x:key="DashboardTemplate" [DataType = DashboardVM] {
+    DataTemplate [DataType = DashboardVM] {
         Canvas {
             // Top-left card — primary palette + triggers via DashboardPrimaryCard.
             Border

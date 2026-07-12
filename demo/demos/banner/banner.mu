@@ -16,7 +16,7 @@ import BannerVM from "./banner-vm.mjs"
 //     DynamicResource.
 
 resources BannerDemo {
-    DataTemplate x:key="BannerTemplate" [DataType = BannerVM] {
+    DataTemplate [DataType = BannerVM] {
         Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
                 // Header strip

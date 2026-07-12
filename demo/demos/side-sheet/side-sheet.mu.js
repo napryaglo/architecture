@@ -71,9 +71,7 @@ export class SideSheetDemo extends ResourceDictionary {
             _border1.SetChild(_grid2);
             return _border1;
         }, SideSheetVM);
-        t.Set("SideSheetTemplate", _tmpl0);
+        t.Set(SideSheetVM, _tmpl0);
         return t;
     }
-    get SideSheetTemplate() { return this.Resolve("SideSheetTemplate"); }
-    set SideSheetTemplate(v) { this.Set("SideSheetTemplate", v); }
 }

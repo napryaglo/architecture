@@ -9,7 +9,7 @@ import TimePickerVM from "./time-picker-vm.mjs"
 // track the active scheme.
 
 resources TimePickerDemo {
-    DataTemplate x:key="TimePickerTemplate" [DataType = TimePickerVM] {
+    DataTemplate [DataType = TimePickerVM] {
         Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             StackPanel [ Orientation = Vertical, Margin = (32,32,32,32) ] {
                 TextBlock

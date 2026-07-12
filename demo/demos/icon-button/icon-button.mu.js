@@ -237,9 +237,7 @@ export class IconButtonDemo extends ResourceDictionary {
             _border1.SetChild(_dockPanel2);
             return _border1;
         }, IconButtonVM);
-        t.Set("IconButtonTemplate", _tmpl0);
+        t.Set(IconButtonVM, _tmpl0);
         return t;
     }
-    get IconButtonTemplate() { return this.Resolve("IconButtonTemplate"); }
-    set IconButtonTemplate(v) { this.Set("IconButtonTemplate", v); }
 }

@@ -105,9 +105,7 @@ export class SliderDemo extends ResourceDictionary {
             _border1.SetChild(_dockPanel2);
             return _border1;
         }, SliderVM);
-        t.Set("SliderTemplate", _tmpl0);
+        t.Set(SliderVM, _tmpl0);
         return t;
     }
-    get SliderTemplate() { return this.Resolve("SliderTemplate"); }
-    set SliderTemplate(v) { this.Set("SliderTemplate", v); }
 }

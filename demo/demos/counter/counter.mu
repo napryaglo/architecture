@@ -8,7 +8,7 @@ import CounterVM from "./counter-vm.mjs"
 // to the CounterVM so the $-bindings inside the template resolve.
 
 resources CounterDemo {
-    DataTemplate x:key="CounterTemplate" [DataType = CounterVM] {
+    DataTemplate [DataType = CounterVM] {
         Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             Canvas {
                 TextBlock

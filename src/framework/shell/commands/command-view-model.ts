@@ -25,6 +25,13 @@ export class CommandViewModel extends Model
         CommandViewModel, 'Command',
         undefined as unknown as ICommand, MetaData.None);
 
+    // The command's active / checked state — a Toggles-presentation button binds
+    // `IsChecked = $IsActive`. Kept in sync by the ToolbarService, which reads the
+    // active document's IsActive(definition) on every requery pulse. A plain DP
+    // (default false) so it's bindable; irrelevant for non-toggle presentations.
+    public static readonly IsActiveKey = Model.RegisterProperty<boolean>(
+        CommandViewModel, 'IsActive', false, MetaData.None);
+
     constructor(definition: CommandDefinition, command: ICommand)
     {
         super();
@@ -34,4 +41,7 @@ export class CommandViewModel extends Model
 
     public get Definition(): CommandDefinition { return this.get_property_value(CommandViewModel.DefinitionKey); }
     public get Command(): ICommand { return this.get_property_value(CommandViewModel.CommandKey); }
+
+    public get IsActive(): boolean { return this.get_property_value(CommandViewModel.IsActiveKey); }
+    public set IsActive(v: boolean) { this.set_property_value(CommandViewModel.IsActiveKey, v); }
 }

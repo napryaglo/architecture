@@ -107,9 +107,7 @@ export class TextFormatDemo extends ResourceDictionary {
             _border2.SetChild(_dockPanel3);
             return _border2;
         }, TextFormatVM);
-        t.Set("TextFormatTemplate", _tmpl0);
+        t.Set(TextFormatVM, _tmpl0);
         return t;
     }
-    get TextFormatTemplate() { return this.Resolve("TextFormatTemplate"); }
-    set TextFormatTemplate(v) { this.Set("TextFormatTemplate", v); }
 }

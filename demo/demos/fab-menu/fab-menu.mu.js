@@ -105,9 +105,7 @@ export class FabMenuDemo extends ResourceDictionary {
             _border1.SetChild(_dockPanel2);
             return _border1;
         }, FabMenuVM);
-        t.Set("FabMenuTemplate", _tmpl0);
+        t.Set(FabMenuVM, _tmpl0);
         return t;
     }
-    get FabMenuTemplate() { return this.Resolve("FabMenuTemplate"); }
-    set FabMenuTemplate(v) { this.Set("FabMenuTemplate", v); }
 }

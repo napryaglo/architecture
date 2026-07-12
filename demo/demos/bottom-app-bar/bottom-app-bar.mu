@@ -16,7 +16,7 @@ import BottomAppBarVM from "./bottom-app-bar-vm.mjs"
 // from the default Style.
 
 resources BottomAppBarDemo {
-    DataTemplate x:key="BottomAppBarTemplate" [DataType = BottomAppBarVM] {
+    DataTemplate [DataType = BottomAppBarVM] {
         Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
                 // Header strip

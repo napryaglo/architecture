@@ -96,9 +96,7 @@ export class SegmentedButtonDemo extends ResourceDictionary {
             _border1.SetChild(_dockPanel2);
             return _border1;
         }, SegmentedButtonVM);
-        t.Set("SegmentedButtonTemplate", _tmpl0);
+        t.Set(SegmentedButtonVM, _tmpl0);
         return t;
     }
-    get SegmentedButtonTemplate() { return this.Resolve("SegmentedButtonTemplate"); }
-    set SegmentedButtonTemplate(v) { this.Set("SegmentedButtonTemplate", v); }
 }

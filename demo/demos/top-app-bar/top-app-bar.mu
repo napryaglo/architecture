@@ -16,7 +16,7 @@ import TopAppBarVM from "./top-app-bar-vm.mjs"
 //   * Title DP — single string drives PART_TitleText.Text on every variant.
 
 resources TopAppBarDemo {
-    DataTemplate x:key="TopAppBarTemplate" [DataType = TopAppBarVM] {
+    DataTemplate [DataType = TopAppBarVM] {
         Border
             [ Background      = @SurfaceContainerLow,
               BorderBrush     = @OutlineVariant,

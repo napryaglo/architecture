@@ -8,7 +8,7 @@ import ButtonGroupVM from "./button-group-vm.mjs"
 // Override DurationMs on the ButtonGroup to dial it.
 
 resources ButtonGroupDemo {
-    DataTemplate x:key="ButtonGroupTemplate" [DataType = ButtonGroupVM] {
+    DataTemplate [DataType = ButtonGroupVM] {
         Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
                 Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (16,12,16,12) ] {

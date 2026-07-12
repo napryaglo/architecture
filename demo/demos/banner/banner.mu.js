@@ -70,9 +70,7 @@ export class BannerDemo extends ResourceDictionary {
             const _tplDataTrig11 = new TemplateDataTrigger("Dismissed", true, _tplSet10);
             return new DataTemplate(_factory, BannerVM, [], [_tplDataTrig11]);
         })();
-        t.Set("BannerTemplate", _tmpl0);
+        t.Set(BannerVM, _tmpl0);
         return t;
     }
-    get BannerTemplate() { return this.Resolve("BannerTemplate"); }
-    set BannerTemplate(v) { this.Set("BannerTemplate", v); }
 }

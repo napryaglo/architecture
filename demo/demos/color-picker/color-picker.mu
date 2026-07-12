@@ -16,7 +16,7 @@ resources ColorPickerDemo {
         [ Name   = "Brand",
           Colors = [#0F172A, #2563EB, #7C3AED, #DB2777, #059669, #EA580C] ]
 
-    DataTemplate x:key="ColorPickerTemplate" [DataType = ColorPickerVM] {
+    DataTemplate [DataType = ColorPickerVM] {
         Border x:root [ Background = @Surface ] {
             DockPanel {
                 // ── Header ────────────────────────────────────────

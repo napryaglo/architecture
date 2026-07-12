@@ -131,9 +131,7 @@ export class PenEditorDemo extends ResourceDictionary {
             _border1.SetChild(_dockPanel2);
             return _border1;
         }, PenEditorDemoVM);
-        t.Set("PenEditorTemplate", _tmpl0);
+        t.Set(PenEditorDemoVM, _tmpl0);
         return t;
     }
-    get PenEditorTemplate() { return this.Resolve("PenEditorTemplate"); }
-    set PenEditorTemplate(v) { this.Set("PenEditorTemplate", v); }
 }

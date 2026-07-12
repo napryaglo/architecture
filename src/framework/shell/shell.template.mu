@@ -73,7 +73,7 @@ resources Shells {
                           BorderThickness = (0,0,0,1),
                           Padding         = (8,4,8,4) ] {
                         ItemsControl
-                            [ ItemsSource = $service(ToolbarService).VisibleCommands,
+                            [ ItemsSource = $service(ToolbarService).VisibleEntries,
                               ItemsPanel  = @CommandBarPanel ]
                     }
 
@@ -146,16 +146,91 @@ resources Shells {
         }
     }
 
-    // Command bar: horizontal row; one button per CommandViewModel the
-    // ToolbarService surfaces (Command = the VM's RelayCommand; icon = the
-    // CommandDefinition's Icon).
+    // Command bar: a horizontal row of GROUPS. The ToolbarService clusters the
+    // active document's commands by CommandDefinition.Group and surfaces one
+    // ToolbarGroupViewModel subclass per group; each renders by its type below.
     ItemsPanelTemplate x:key="CommandBarPanel" {
         StackPanel [ Orientation = Horizontal ]
     }
+    // Grid layout for a SplitGrid group's popup (label placement, etc.). Fixed
+    // 3-wide; the VM's Columns is plumbed for a future per-group override.
+    ItemsPanelTemplate x:key="CommandGridPanel" {
+        UniformGrid [ Columns = 3 ]
+    }
+
+    // ── Per-command item templates ──────────────────────────────────────
+    // The default: a CommandViewModel is one Standard IconButton (the Flat
+    // presentation and any un-grouped command bind this by type).
     DataTemplate [DataType = CommandViewModel] {
         IconButton [ Variant = Standard, Command = $Command, Margin = (1,0,1,0) ] {
             Shape [ Geometry = $Definition.Icon, Fill = @OnSurfaceVariant, Width = 20, Height = 20 ]
         }
+    }
+    // Toggle presentation — IsChecked reflects the active document's IsActive.
+    DataTemplate x:key="CommandToggleTemplate" [DataType = CommandViewModel] {
+        ToolBarToggleButton [ Command = $Command, IsChecked = $IsActive ] {
+            Shape [ Geometry = $Definition.Icon, Fill = @OnSurfaceVariant, Width = 20, Height = 20, Margin = (2) ]
+        }
+    }
+    // SplitMenu dropdown row — a full menu item, with an optional leading divider
+    // (a group that folds a second sub-group in, e.g. Distribute under Align, sets
+    // SeparatorBefore on its first member; the trigger keeps it hidden otherwise).
+    DataTemplate x:key="CommandMenuRowTemplate" [DataType = CommandViewModel] {
+        StackPanel [ Orientation = Vertical ] {
+            MenuSeparator x:name="Sep"
+            MenuItem
+                [ Header  = $Definition.Title,
+                  Command = $Command,
+                  Icon    = Shape [ Geometry = $Definition.Icon, Width = 16, Height = 16, HorizontalAlignment = Center, VerticalAlignment = Center ] ]
+        }
+        when ( $Definition.SeparatorBefore = false ) { Sep.Visibility = Collapsed; }
+    }
+    // SplitGrid dropdown cell — an icon-only button.
+    DataTemplate x:key="CommandGridButtonTemplate" [DataType = CommandViewModel] {
+        ToolBarButton [ Command = $Command ] {
+            Shape [ Geometry = $Definition.Icon, Fill = @OnSurfaceVariant, Width = 16, Height = 16, Margin = (2) ]
+        }
+    }
+
+    // ── Per-group presentation templates ────────────────────────────────
+    // Flat — inline icon buttons (members bind the default CommandViewModel
+    // template above).
+    DataTemplate [DataType = ToolbarFlatGroup] {
+        ItemsControl [ ItemsSource = $Items, ItemsPanel = @CommandBarPanel ]
+    }
+    // Toggles — inline row of toggle buttons.
+    DataTemplate [DataType = ToolbarToggleGroup] {
+        ItemsControl [ ItemsSource = $Items, ItemsPanel = @CommandBarPanel, ItemTemplate = @CommandToggleTemplate ]
+    }
+    // SplitMenu — an icon-only dropdown (no primary Command → single chrome) whose
+    // popup lists the members as menu rows.
+    DataTemplate [DataType = ToolbarSplitMenuGroup] {
+        ToolBarSplitButton
+            [ Content      = Shape [ Geometry = $Icon, Fill = @OnSurfaceVariant, Width = 20, Height = 20 ],
+              ItemsSource  = $Items,
+              ItemTemplate = @CommandMenuRowTemplate,
+              Margin       = (1,0,1,0) ]
+    }
+    // SplitGrid — an icon-only dropdown whose popup tiles the members in a grid.
+    DataTemplate [DataType = ToolbarSplitGridGroup] {
+        ToolBarSplitButton
+            [ Content      = Shape [ Geometry = $Icon, Fill = @OnSurfaceVariant, Width = 20, Height = 20 ],
+              ItemsSource  = $Items,
+              ItemsPanel   = @CommandGridPanel,
+              ItemTemplate = @CommandGridButtonTemplate,
+              Margin       = (1,0,1,0) ]
+    }
+    // Editor control — a module's arbitrary editor template applied against the
+    // active document. The VM applies the template ONCE (View = Template.Apply(
+    // Target) with Target as DataContext), so we present that Visual directly.
+    // Presenting $View (a Visual) — NOT `Content=$Target, ContentTemplate=$Template`
+    // — is deliberate: the latter makes the presenter re-point its DataContext to
+    // the document, clobbering the $Template binding and dropping to the document's
+    // IMPLICIT DataTemplate (e.g. a DiagramDocument's canvas, whose shared node
+    // Visuals then collide → "Visual already has a visual parent"). See
+    // ShellControlViewModel.
+    DataTemplate [DataType = ShellControlViewModel] {
+        ContentPresenter [ Content = $View, Margin = (4,0,4,0) ]
     }
 
     // ── Base single-content host ────────────────────────────────────────

@@ -103,9 +103,7 @@ export class ToolBarDemo extends ResourceDictionary {
             _border1.SetChild(_dockPanel2);
             return _border1;
         }, ToolBarVM);
-        t.Set("ToolBarTemplate", _tmpl0);
+        t.Set(ToolBarVM, _tmpl0);
         return t;
     }
-    get ToolBarTemplate() { return this.Resolve("ToolBarTemplate"); }
-    set ToolBarTemplate(v) { this.Set("ToolBarTemplate", v); }
 }

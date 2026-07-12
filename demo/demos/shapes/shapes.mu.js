@@ -727,9 +727,7 @@ export class ShapesDemo extends ResourceDictionary {
             _border1.SetChild(_scrollViewer2);
             return _border1;
         }, ShapesVM);
-        t.Set("ShapesTemplate", _tmpl0);
+        t.Set(ShapesVM, _tmpl0);
         return t;
     }
-    get ShapesTemplate() { return this.Resolve("ShapesTemplate"); }
-    set ShapesTemplate(v) { this.Set("ShapesTemplate", v); }
 }

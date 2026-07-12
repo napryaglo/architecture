@@ -9,7 +9,7 @@ import TextFormatVM from "./text-format-vm.mjs"
 // TextDecorations / Foreground (visual-engine types the VM can't hold).
 
 resources TextFormatDemo {
-    DataTemplate x:key="TextFormatTemplate" [DataType = TextFormatVM] {
+    DataTemplate [DataType = TextFormatVM] {
         Border x:root [ Background = @Surface ] {
             DockPanel {
                 // ── Header ─────────────────────────────────────────

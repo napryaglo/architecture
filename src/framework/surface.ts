@@ -19,6 +19,13 @@ export {
     ToolBarPosition,
     type ToolBarButtonOptions,
 } from './tool-bar/tool-bar-items.js';
+// Shell contribution declared by a module's `.ShellControls:` block — an
+// arbitrary editor control the shell hosts in a region (command bar or status
+// bar), a value editor bound to the active document (font pickers, a mode
+// indicator). Exported so the compiler's class registry resolves it for the
+// member-block and consumers can author it.
+export { ShellControlDefinition } from './shell/commands/shell-control-definition.js';
+
 // Gallery — base concept for a popup-hosted collection; ToolBarSplitButton
 // (and future popup hosts) extend it. Menu = its default vertical variant.
 export { Gallery } from './gallery/gallery.js';

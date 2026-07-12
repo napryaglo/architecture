@@ -54,9 +54,7 @@ export class TimePickerDemo extends ResourceDictionary {
             _border1.SetChild(_stackPanel2);
             return _border1;
         }, TimePickerVM);
-        t.Set("TimePickerTemplate", _tmpl0);
+        t.Set(TimePickerVM, _tmpl0);
         return t;
     }
-    get TimePickerTemplate() { return this.Resolve("TimePickerTemplate"); }
-    set TimePickerTemplate(v) { this.Set("TimePickerTemplate", v); }
 }

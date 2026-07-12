@@ -177,9 +177,7 @@ export class ListBoxDemo extends ResourceDictionary {
             _border5.SetChild(_dockPanel6);
             return _border5;
         }, ListBoxVM);
-        t.Set("ListBoxTemplate", _tmpl0);
+        t.Set(ListBoxVM, _tmpl0);
         return t;
     }
-    get ListBoxTemplate() { return this.Resolve("ListBoxTemplate"); }
-    set ListBoxTemplate(v) { this.Set("ListBoxTemplate", v); }
 }

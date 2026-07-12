@@ -130,9 +130,7 @@ export class TreeViewDemo extends ResourceDictionary {
             _border2.SetChild(_dockPanel3);
             return _border2;
         }, TreeViewVM);
-        t.Set("TreeViewTemplate", _tmpl0);
+        t.Set(TreeViewVM, _tmpl0);
         return t;
     }
-    get TreeViewTemplate() { return this.Resolve("TreeViewTemplate"); }
-    set TreeViewTemplate(v) { this.Set("TreeViewTemplate", v); }
 }

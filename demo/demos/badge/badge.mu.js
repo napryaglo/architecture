@@ -138,9 +138,7 @@ export class BadgeDemo extends ResourceDictionary {
             _border1.SetChild(_dockPanel2);
             return _border1;
         }, BadgeVM);
-        t.Set("BadgeTemplate", _tmpl0);
+        t.Set(BadgeVM, _tmpl0);
         return t;
     }
-    get BadgeTemplate() { return this.Resolve("BadgeTemplate"); }
-    set BadgeTemplate(v) { this.Set("BadgeTemplate", v); }
 }

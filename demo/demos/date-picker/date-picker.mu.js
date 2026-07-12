@@ -53,9 +53,7 @@ export class DatePickerDemo extends ResourceDictionary {
             _border1.SetChild(_stackPanel2);
             return _border1;
         }, DatePickerVM);
-        t.Set("DatePickerTemplate", _tmpl0);
+        t.Set(DatePickerVM, _tmpl0);
         return t;
     }
-    get DatePickerTemplate() { return this.Resolve("DatePickerTemplate"); }
-    set DatePickerTemplate(v) { this.Set("DatePickerTemplate", v); }
 }

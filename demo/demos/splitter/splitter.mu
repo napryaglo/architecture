@@ -17,7 +17,7 @@ import SplitterVM from "./splitter-vm.mjs"
 // grid-splitter.test.ts suite.
 
 resources SplitterDemo {
-    DataTemplate x:key="SplitterTemplate" [DataType = SplitterVM] {
+    DataTemplate [DataType = SplitterVM] {
         Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
                 // Header strip.

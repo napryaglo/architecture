@@ -100,7 +100,7 @@ export class DashboardDemo extends ResourceDictionary {
             _canvas43.AddChild(_border48);
             return _canvas43;
         }, DashboardVM);
-        t.Set("DashboardTemplate", _tmpl42);
+        t.Set(DashboardVM, _tmpl42);
         return t;
     }
     get DashboardPrimaryCard() { return this.Resolve("DashboardPrimaryCard"); }
@@ -109,6 +109,4 @@ export class DashboardDemo extends ResourceDictionary {
     set DashboardDangerCard(v) { this.Set("DashboardDangerCard", v); }
     get DashboardPaperCard() { return this.Resolve("DashboardPaperCard"); }
     set DashboardPaperCard(v) { this.Set("DashboardPaperCard", v); }
-    get DashboardTemplate() { return this.Resolve("DashboardTemplate"); }
-    set DashboardTemplate(v) { this.Set("DashboardTemplate", v); }
 }

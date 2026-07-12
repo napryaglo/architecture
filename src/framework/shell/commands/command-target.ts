@@ -32,6 +32,12 @@ export interface ICommandTarget
     // queried on the CommandManager.RequerySuggested pulse and on active-document
     // change. Return false for an unrecognised or currently-invalid definition.
     CanExecute(definition: CommandDefinition): boolean;
+
+    // Whether the command is in its ACTIVE / checked state (drives a Toggles-
+    // presentation button's IsChecked). Optional — a target that has no toggle
+    // commands need not implement it. Re-queried on the same signals as
+    // CanExecute. Return false for a non-toggle or unrecognised definition.
+    IsActive?(definition: CommandDefinition): boolean;
 }
 
 // Duck-type guard — an active document is a command target when it exposes the

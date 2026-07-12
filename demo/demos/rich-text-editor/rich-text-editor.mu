@@ -7,7 +7,7 @@ import RichTextEditorVM from "./rich-text-editor-vm.mjs"
 // editor's public editing commands by the bootstrap behaviour on mount.
 
 resources RichTextEditorDemo {
-    DataTemplate x:key="RichTextEditorTemplate" [DataType = RichTextEditorVM] {
+    DataTemplate [DataType = RichTextEditorVM] {
         Border x:root [ Background = @Surface ] {
             DockPanel {
                 // ── Header ─────────────────────────────────────────

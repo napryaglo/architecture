@@ -12,7 +12,7 @@ import AnimationDeclarativeVM from "./animation-declarative-vm.mjs"
 // Packaged as a DataTemplate keyed off AnimationDeclarativeVM.
 
 resources AnimationDeclarativeDemo {
-    DataTemplate x:key="AnimationDeclarativeTemplate" [DataType = AnimationDeclarativeVM] {
+    DataTemplate [DataType = AnimationDeclarativeVM] {
         Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             resources: {
                 // Implicit style on Button — every Button inside this

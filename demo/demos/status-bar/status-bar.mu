@@ -17,7 +17,7 @@ import StatusBarVM from "./status-bar-vm.mjs"
 //     count is zero.
 
 resources StatusBarDemo {
-    DataTemplate x:key="StatusBarTemplate" [DataType = StatusBarVM] {
+    DataTemplate [DataType = StatusBarVM] {
         Border
             [ Background        = @Surface,
               BorderBrush       = @OutlineVariant,

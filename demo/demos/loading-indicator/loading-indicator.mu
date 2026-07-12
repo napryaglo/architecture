@@ -14,7 +14,7 @@ import LoadingIndicatorVM from "./loading-indicator-vm.mjs"
 // the shared animation clock), not the template.
 
 resources LoadingIndicatorDemo {
-    DataTemplate x:key="LoadingIndicatorTemplate" [DataType = LoadingIndicatorVM] {
+    DataTemplate [DataType = LoadingIndicatorVM] {
         Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             StackPanel [ Orientation = Vertical, Margin = (32,32,32,32) ] {
                 TextBlock

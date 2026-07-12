@@ -81,6 +81,7 @@ import type { Geometry } from '../../visual-engine/index.js';
 import { SettingDefinition } from './settings/setting-definition.js';
 import { DocumentDefinition } from './documents/document-definition.js';
 import { CommandDefinition } from './commands/command-definition.js';
+import { ShellControlDefinition } from './commands/shell-control-definition.js';
 
 // One service a module contributes to the app container: the token it registers
 // under (via ServiceProvider.tokenFor), the lazy factory that builds it, and the
@@ -185,6 +186,17 @@ export class ShellModule extends Model implements IShellModule
     // renders the ones whose Context the active document activates.
     public readonly Commands: ObservableCollection<CommandDefinition> =
         new ObservableCollection<CommandDefinition>();
+
+    // Declared shell CONTROLS — non-command editor contributions (font pickers, a
+    // status-bar mode indicator, …) the shell hosts in a region (command bar or
+    // status bar). Authored as a `.ShellControls: { ShellControlDefinition … }`
+    // block: a generic member-block, so each entry lowers to
+    // `module.ShellControls.Add(def)` (the PascalCase section maps to this
+    // collection verbatim, like `.Children:`). The ToolbarService interleaves the
+    // Toolbar-region ones with command groups by Order and syncs the StatusBar-
+    // region ones into the StatusService.
+    public readonly ShellControls: ObservableCollection<ShellControlDefinition> =
+        new ObservableCollection<ShellControlDefinition>();
 
     // Resources the module contributes — styles, brushes, templates, and the
     // icon geometries its capabilities paint. Authored as a `resources: { … }`

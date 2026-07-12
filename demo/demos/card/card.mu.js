@@ -188,9 +188,7 @@ export class CardDemo extends ResourceDictionary {
             _border1.SetChild(_dockPanel2);
             return _border1;
         }, CardVM);
-        t.Set("CardTemplate", _tmpl0);
+        t.Set(CardVM, _tmpl0);
         return t;
     }
-    get CardTemplate() { return this.Resolve("CardTemplate"); }
-    set CardTemplate(v) { this.Set("CardTemplate", v); }
 }

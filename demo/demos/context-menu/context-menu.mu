@@ -43,7 +43,7 @@ resources ContextMenuDemo {
         MenuItem [ Header = "Blue — Share", Command = $BlueCommand, CommandParameter = "Share" ]
     }
 
-    DataTemplate x:key="ContextMenuTemplate" [DataType = ContextMenuVM] {
+    DataTemplate [DataType = ContextMenuVM] {
         Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
                 // Header

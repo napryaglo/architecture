@@ -20,7 +20,7 @@ import SliderVM from "./slider-vm.mjs"
 // Packaged as a DataTemplate keyed off SliderVM.
 
 resources SliderDemo {
-    DataTemplate x:key="SliderTemplate" [DataType = SliderVM] {
+    DataTemplate [DataType = SliderVM] {
         Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
                 // Header strip

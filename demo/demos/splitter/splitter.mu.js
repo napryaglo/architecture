@@ -133,9 +133,7 @@ export class SplitterDemo extends ResourceDictionary {
             _border1.SetChild(_dockPanel2);
             return _border1;
         }, SplitterVM);
-        t.Set("SplitterTemplate", _tmpl0);
+        t.Set(SplitterVM, _tmpl0);
         return t;
     }
-    get SplitterTemplate() { return this.Resolve("SplitterTemplate"); }
-    set SplitterTemplate(v) { this.Set("SplitterTemplate", v); }
 }

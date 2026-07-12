@@ -665,7 +665,7 @@ export class CommandsDemo extends ResourceDictionary {
             const _tplDataTrig161 = new TemplateDataTrigger("IsRibbonMode", true, _tplSet160);
             return new DataTemplate(_factory, CommandsVM, [], [_tplDataTrig161]);
         })();
-        t.Set("CommandsTemplate", _tmpl32);
+        t.Set(CommandsVM, _tmpl32);
         return t;
     }
     get AlignSplitLabel() { return this.Resolve("AlignSplitLabel"); }
@@ -680,6 +680,4 @@ export class CommandsDemo extends ResourceDictionary {
     set CommandsSelectedPen(v) { this.Set("CommandsSelectedPen", v); }
     get NodeContextMenu() { return this.Resolve("NodeContextMenu"); }
     set NodeContextMenu(v) { this.Set("NodeContextMenu", v); }
-    get CommandsTemplate() { return this.Resolve("CommandsTemplate"); }
-    set CommandsTemplate(v) { this.Set("CommandsTemplate", v); }
 }

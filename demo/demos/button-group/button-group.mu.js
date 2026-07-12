@@ -192,9 +192,7 @@ export class ButtonGroupDemo extends ResourceDictionary {
             _border1.SetChild(_dockPanel2);
             return _border1;
         }, ButtonGroupVM);
-        t.Set("ButtonGroupTemplate", _tmpl0);
+        t.Set(ButtonGroupVM, _tmpl0);
         return t;
     }
-    get ButtonGroupTemplate() { return this.Resolve("ButtonGroupTemplate"); }
-    set ButtonGroupTemplate(v) { this.Set("ButtonGroupTemplate", v); }
 }

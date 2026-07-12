@@ -5,6 +5,27 @@ import {
 } from '../../../runtime/index.js';
 import type { Geometry } from '../../../visual-engine/index.js';
 
+// How a command GROUP is presented on the toolbar. A group's presentation is
+// declared on its LEADER command (the lowest-Order member that sets a non-Flat
+// value); the remaining members ride inside that presentation. Markup-facing:
+// authored as `Presentation = SplitMenu` in a module's `.commands:` block, so it
+// is registered in the compiler's ENUM_MEMBERS / DEFAULT_SYMBOLS. Explicit string
+// values keep the wire form stable.
+export enum CommandGroupPresentation
+{
+    // Each command is its own inline toolbar button (today's default).
+    Flat      = 'flat',
+    // The group collapses to a single icon-only dropdown; members list as menu
+    // rows in a vertical popup.
+    SplitMenu = 'split-menu',
+    // The group collapses to a single icon-only dropdown; members tile as an
+    // icon grid (Columns wide) in the popup.
+    SplitGrid = 'split-grid',
+    // The group renders inline as a row of toggle buttons whose checked state
+    // reflects the active document's IsActive(definition).
+    Toggles   = 'toggles',
+}
+
 // A COMMAND's schema — what a module declares in its `.commands:` block. It is
 // pure chrome + context + identity: what the command looks like (Title, Icon),
 // where it sits on a toolbar (Group, Order), which command context it belongs to
@@ -67,6 +88,35 @@ export class CommandDefinition extends Model
     public static readonly OrderKey = Model.RegisterProperty<number>(
         CommandDefinition, 'Order', 0, MetaData.None);
 
+    // ── Group presentation (leader command) ────────────────────────────────
+    // These four are read off the group's LEADER — the lowest-Order member whose
+    // Presentation is non-Flat. They describe how the whole Group renders; the
+    // other members supply only their per-command Icon/Title/Command.
+
+    // The group's presentation. Default Flat (inline buttons — today's behaviour,
+    // so a module that declares no Presentation is unchanged).
+    public static readonly PresentationKey = Model.RegisterProperty<CommandGroupPresentation>(
+        CommandDefinition, 'Presentation', CommandGroupPresentation.Flat, MetaData.None);
+
+    // The dropdown FACE icon for SplitMenu / SplitGrid groups. Falls back to the
+    // leader command's own Icon when unset (e.g. a centre glyph makes a better
+    // placement face than the top-left member's icon).
+    public static readonly GroupIconKey = Model.RegisterProperty<Geometry | undefined>(
+        CommandDefinition, 'GroupIcon', undefined, MetaData.None);
+
+    // The dropdown FACE tooltip for SplitMenu / SplitGrid. Falls back to Title.
+    public static readonly GroupTitleKey = Model.RegisterProperty<string>(
+        CommandDefinition, 'GroupTitle', '', MetaData.None);
+
+    // Column count for a SplitGrid popup. 0 ⇒ the presentation's default (3).
+    public static readonly ColumnsKey = Model.RegisterProperty<number>(
+        CommandDefinition, 'Columns', 0, MetaData.None);
+
+    // Render a divider before this command inside a SplitMenu dropdown (e.g. the
+    // first Distribute item, when Distribute rides in the Align group).
+    public static readonly SeparatorBeforeKey = Model.RegisterProperty<boolean>(
+        CommandDefinition, 'SeparatorBefore', false, MetaData.None);
+
     public get Id(): string  { return this.get_property_value(CommandDefinition.IdKey); }
     public set Id(v: string) { this.set_property_value(CommandDefinition.IdKey, v); }
 
@@ -84,4 +134,19 @@ export class CommandDefinition extends Model
 
     public get Order(): number  { return this.get_property_value(CommandDefinition.OrderKey); }
     public set Order(v: number) { this.set_property_value(CommandDefinition.OrderKey, v); }
+
+    public get Presentation(): CommandGroupPresentation  { return this.get_property_value(CommandDefinition.PresentationKey); }
+    public set Presentation(v: CommandGroupPresentation) { this.set_property_value(CommandDefinition.PresentationKey, v); }
+
+    public get GroupIcon(): Geometry | undefined  { return this.get_property_value(CommandDefinition.GroupIconKey); }
+    public set GroupIcon(v: Geometry | undefined) { this.set_property_value(CommandDefinition.GroupIconKey, v); }
+
+    public get GroupTitle(): string  { return this.get_property_value(CommandDefinition.GroupTitleKey); }
+    public set GroupTitle(v: string) { this.set_property_value(CommandDefinition.GroupTitleKey, v); }
+
+    public get Columns(): number  { return this.get_property_value(CommandDefinition.ColumnsKey); }
+    public set Columns(v: number) { this.set_property_value(CommandDefinition.ColumnsKey, v); }
+
+    public get SeparatorBefore(): boolean  { return this.get_property_value(CommandDefinition.SeparatorBeforeKey); }
+    public set SeparatorBefore(v: boolean) { this.set_property_value(CommandDefinition.SeparatorBeforeKey, v); }
 }

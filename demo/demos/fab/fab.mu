@@ -19,7 +19,7 @@ import FabVM from "./fab-vm.mjs"
 //     the inherited TextBlock.FontFamily / FontWeight / FontSize.
 
 resources FabDemo {
-    DataTemplate x:key="FabTemplate" [DataType = FabVM] {
+    DataTemplate [DataType = FabVM] {
         Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
                 // Header strip

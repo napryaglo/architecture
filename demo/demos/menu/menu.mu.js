@@ -109,9 +109,7 @@ export class MenuDemo extends ResourceDictionary {
             _border1.SetChild(_dockPanel2);
             return _border1;
         }, MenuVM);
-        t.Set("MenuTemplate", _tmpl0);
+        t.Set(MenuVM, _tmpl0);
         return t;
     }
-    get MenuTemplate() { return this.Resolve("MenuTemplate"); }
-    set MenuTemplate(v) { this.Set("MenuTemplate", v); }
 }

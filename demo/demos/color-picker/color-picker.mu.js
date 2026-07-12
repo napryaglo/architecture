@@ -171,11 +171,9 @@ export class ColorPickerDemo extends ResourceDictionary {
             _border6.SetChild(_dockPanel7);
             return _border6;
         }, ColorPickerVM);
-        t.Set("ColorPickerTemplate", _tmpl1);
+        t.Set(ColorPickerVM, _tmpl1);
         return t;
     }
     get BrandColors() { return this.Resolve("BrandColors"); }
     set BrandColors(v) { this.Set("BrandColors", v); }
-    get ColorPickerTemplate() { return this.Resolve("ColorPickerTemplate"); }
-    set ColorPickerTemplate(v) { this.Set("ColorPickerTemplate", v); }
 }

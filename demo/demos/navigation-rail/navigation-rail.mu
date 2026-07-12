@@ -11,7 +11,7 @@ import NavigationRailVM from "./navigation-rail-vm.mjs"
 // to avoid this demo paying double for the same coverage.
 
 resources NavigationRailDemo {
-    DataTemplate x:key="NavigationRailTemplate" [DataType = NavigationRailVM] {
+    DataTemplate [DataType = NavigationRailVM] {
         Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
                 // Header strip
