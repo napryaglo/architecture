@@ -178,6 +178,40 @@ resources DiagramResources {
     // scoped host. The pane then tracks the live selection through the inspector's
     // View handle.
     ContextMenu x:key="DiagramContextMenu" {
+        // Align + distribute — bound to the live canvas's commands via the
+        // document's published ActiveView. Each self-disables when fewer than two
+        // shapes are selected (the Diagram command's own CanExecute), so no extra
+        // gating is needed. Icons reuse the toolbar geometries baked from SVG.
+        MenuItem
+            [ Header  = "Align Left",
+              Command = $ActiveView.AlignLeftCommand,
+              Icon    = Shape [ Geometry = @alignLeft, Width = 16, Height = 16, HorizontalAlignment = Center, VerticalAlignment = Center ] ]
+        MenuItem
+            [ Header  = "Align Center",
+              Command = $ActiveView.AlignCenterCommand,
+              Icon    = Shape [ Geometry = @alignCenter, Width = 16, Height = 16, HorizontalAlignment = Center, VerticalAlignment = Center ] ]
+        MenuItem
+            [ Header  = "Align Right",
+              Command = $ActiveView.AlignRightCommand,
+              Icon    = Shape [ Geometry = @alignRight, Width = 16, Height = 16, HorizontalAlignment = Center, VerticalAlignment = Center ] ]
+        MenuItem
+            [ Header  = "Align Top",
+              Command = $ActiveView.AlignTopCommand,
+              Icon    = Shape [ Geometry = @alignTop, Width = 16, Height = 16, HorizontalAlignment = Center, VerticalAlignment = Center ] ]
+        MenuItem
+            [ Header  = "Align Middle",
+              Command = $ActiveView.AlignMiddleCommand,
+              Icon    = Shape [ Geometry = @alignMiddle, Width = 16, Height = 16, HorizontalAlignment = Center, VerticalAlignment = Center ] ]
+        MenuSeparator
+        MenuItem
+            [ Header  = "Distribute Horizontally",
+              Command = $ActiveView.DistributeHorizontalCommand,
+              Icon    = Shape [ Geometry = @distributeHorizontal, Width = 16, Height = 16, HorizontalAlignment = Center, VerticalAlignment = Center ] ]
+        MenuItem
+            [ Header  = "Distribute Vertically",
+              Command = $ActiveView.DistributeVerticalCommand,
+              Icon    = Shape [ Geometry = @distributeVertical, Width = 16, Height = 16, HorizontalAlignment = Center, VerticalAlignment = Center ] ]
+        MenuSeparator
         MenuItem
             [ Header           = "Format Shape",
               Command          = $service(InspectorService).AddInspectorCommand,

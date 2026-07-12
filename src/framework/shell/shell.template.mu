@@ -72,9 +72,21 @@ resources Shells {
                           BorderBrush     = @OutlineVariant,
                           BorderThickness = (0,0,0,1),
                           Padding         = (8,4,8,4) ] {
-                        ItemsControl
-                            [ ItemsSource = $service(ToolbarService).VisibleEntries,
-                              ItemsPanel  = @CommandBarPanel ]
+                        // Command groups fill the bar as ONE ToolBar (each group's
+                        // buttons connect into a pill via ToolBar.Position, divided
+                        // by ToolbarSeparatorItems; overflow collapses into the
+                        // chevron when narrow). Editor CONTROLS (font pickers, …)
+                        // ride a FIXED region docked right — kept OUT of the ToolBar
+                        // so an interactive editor never lands in the overflow popup
+                        // or gets re-parented by the overflow sync.
+                        DockPanel [ LastChildFill = true ] {
+                            ItemsControl
+                                [ DockPanel.Dock   = Right,
+                                  ItemsSource       = $service(ToolbarService).ToolbarControls,
+                                  ItemsPanel        = @CommandControlsPanel,
+                                  VerticalAlignment = Center ]
+                            ToolBar [ ItemsSource = $service(ToolbarService).ToolbarItems ]
+                        }
                     }
 
                     StatusBar x:name="PART_StatusHost"
@@ -114,8 +126,10 @@ resources Shells {
                     // DataTemplate[InspectorService] as a pinned, collapsible panel
                     // stack (VS-style property panels). Something in the app Add()s
                     // an inspector (e.g. a diagram's "Format Shape" command adds a
-                    // DiagramInspector → the Format Shape pane). Empty ⇒ zero-width ⇒
-                    // the region collapses.
+                    // DiagramInspector → the Format Shape pane).
+                    // Empty ⇒ the region + its resize Splitter collapse out of layout
+                    // (Visibility off HasInspectors), so the content host reclaims the
+                    // full width until an inspector is added.
                     // Definite Width lives HERE (the docked element the adjacent
                     // Splitter resizes as its previous sibling) — NOT pinned on the
                     // inner InspectorStack, or the drag would grow this presenter
@@ -124,12 +138,14 @@ resources Shells {
                     ContentPresenter x:name="PART_InspectorHost"
                         [ DockPanel.Dock = Right,
                           Width          = 300,
+                          Visibility     = $service(InspectorService).HasInspectors << ToVisibility,
                           Content        = $service(InspectorService) ]
                     Splitter
                         [ DockPanel.Dock   = Right,
                           Width            = 6,
                           Orientation      = Vertical,
-                          ReverseDirection = true ]
+                          ReverseDirection = true,
+                          Visibility       = $service(InspectorService).HasInspectors << ToVisibility ]
 
                     // Content region — presents the ContentHostService ITSELF
                     // (fill, via LastChildFill). The default host is a
@@ -146,10 +162,16 @@ resources Shells {
         }
     }
 
-    // Command bar: a horizontal row of GROUPS. The ToolbarService clusters the
-    // active document's commands by CommandDefinition.Group and surfaces one
-    // ToolbarGroupViewModel subclass per group; each renders by its type below.
-    ItemsPanelTemplate x:key="CommandBarPanel" {
+    // Command bar: ONE ToolBar over the ToolbarService's flat ToolbarItems stream.
+    // The service clusters the active document's commands by CommandDefinition.Group
+    // and expands Flat / Toggles groups into their command VMs (rendered by type
+    // below), with a ToolbarSeparatorItem between groups; split groups + editor
+    // controls ride as single items. The ToolBar connects each group's buttons into
+    // a pill and the separators divide the groups.
+    // Horizontal row for the fixed editor-control region (docked right of the
+    // command ToolBar). ItemsControl defaults to a vertical StackPanel, so the
+    // controls need this to sit side by side.
+    ItemsPanelTemplate x:key="CommandControlsPanel" {
         StackPanel [ Orientation = Horizontal ]
     }
     // Grid layout for a SplitGrid group's popup (label placement, etc.). Fixed
@@ -159,18 +181,33 @@ resources Shells {
     }
 
     // ── Per-command item templates ──────────────────────────────────────
-    // The default: a CommandViewModel is one Standard IconButton (the Flat
-    // presentation and any un-grouped command bind this by type).
+    // The default: a CommandViewModel is one ToolBarButton — so it connects into
+    // its group's pill inside the command bar's ToolBar (which assigns the
+    // button's Position after layout). Fill is LEFT UNSET: the ToolBarButton Style
+    // drives the icon ink through its inherited TextBlock.Foreground
+    // (@OnSurfaceVariant), and a bare Shape falls back to that. No horizontal
+    // margin — adjacent buttons must sit flush for the connected-pill look.
     DataTemplate [DataType = CommandViewModel] {
-        IconButton [ Variant = Standard, Command = $Command, Margin = (1,0,1,0) ] {
-            Shape [ Geometry = $Definition.Icon, Fill = @OnSurfaceVariant, Width = 20, Height = 20 ]
+        ToolBarButton [ Command = $Command ] {
+            Shape [ Geometry = $Definition.Icon, Width = 16, Height = 16 ]
         }
     }
-    // Toggle presentation — IsChecked reflects the active document's IsActive.
-    DataTemplate x:key="CommandToggleTemplate" [DataType = CommandViewModel] {
+    // Toggle presentation — a distinct VM TYPE (CommandToggleViewModel) so the
+    // flat ToolbarItems stream resolves THIS template by type instead of the
+    // button one above. IsChecked reflects the active document's IsActive. Fill is
+    // LEFT UNSET: the ToolBarToggleButton Style flips the inherited
+    // TextBlock.Foreground (@OnSurfaceVariant at rest, @OnPrimary while checked)
+    // and a bare Shape follows it — hardcoding Fill would pin the icon dark on the
+    // @Primary checked fill.
+    DataTemplate [DataType = CommandToggleViewModel] {
         ToolBarToggleButton [ Command = $Command, IsChecked = $IsActive ] {
-            Shape [ Geometry = $Definition.Icon, Fill = @OnSurfaceVariant, Width = 20, Height = 20, Margin = (2) ]
+            Shape [ Geometry = $Definition.Icon, Width = 16, Height = 16 ]
         }
+    }
+    // Group divider in the flat stream — a ToolBarSeparator between adjacent
+    // groups (also the ToolBar's connected-run boundary; see ToolbarSeparatorItem).
+    DataTemplate [DataType = ToolbarSeparatorItem] {
+        ToolBarSeparator
     }
     // SplitMenu dropdown row — a full menu item, with an optional leading divider
     // (a group that folds a second sub-group in, e.g. Distribute under Align, sets
@@ -193,20 +230,15 @@ resources Shells {
     }
 
     // ── Per-group presentation templates ────────────────────────────────
-    // Flat — inline icon buttons (members bind the default CommandViewModel
-    // template above).
-    DataTemplate [DataType = ToolbarFlatGroup] {
-        ItemsControl [ ItemsSource = $Items, ItemsPanel = @CommandBarPanel ]
-    }
-    // Toggles — inline row of toggle buttons.
-    DataTemplate [DataType = ToolbarToggleGroup] {
-        ItemsControl [ ItemsSource = $Items, ItemsPanel = @CommandBarPanel, ItemTemplate = @CommandToggleTemplate ]
-    }
+    // Flat / Toggles groups are EXPANDED into their individual command VMs in the
+    // flat ToolbarItems stream (each rendered by DataTemplate[CommandViewModel] /
+    // [CommandToggleViewModel] above), so those two presentations have no group-
+    // level template here. Only the split presentations render as a single VM.
     // SplitMenu — an icon-only dropdown (no primary Command → single chrome) whose
     // popup lists the members as menu rows.
     DataTemplate [DataType = ToolbarSplitMenuGroup] {
         ToolBarSplitButton
-            [ Content      = Shape [ Geometry = $Icon, Fill = @OnSurfaceVariant, Width = 20, Height = 20 ],
+            [ Content      = Shape [ Geometry = $Icon, Fill = @OnSurfaceVariant, Width = 16, Height = 16 ],
               ItemsSource  = $Items,
               ItemTemplate = @CommandMenuRowTemplate,
               Margin       = (1,0,1,0) ]
@@ -214,7 +246,7 @@ resources Shells {
     // SplitGrid — an icon-only dropdown whose popup tiles the members in a grid.
     DataTemplate [DataType = ToolbarSplitGridGroup] {
         ToolBarSplitButton
-            [ Content      = Shape [ Geometry = $Icon, Fill = @OnSurfaceVariant, Width = 20, Height = 20 ],
+            [ Content      = Shape [ Geometry = $Icon, Fill = @OnSurfaceVariant, Width = 16, Height = 16 ],
               ItemsSource  = $Items,
               ItemsPanel   = @CommandGridPanel,
               ItemTemplate = @CommandGridButtonTemplate,

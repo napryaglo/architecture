@@ -34,6 +34,15 @@ export class InspectorService extends ServiceBase
         InspectorService, 'Inspectors',
         undefined as unknown as ObservableCollection<IInspector>, MetaData.None);
 
+    // True while at least one inspector is hosted — kept in sync with the
+    // Inspectors collection. The shell binds the whole inspector region's
+    // Visibility to this (`$service(InspectorService).HasInspectors <<
+    // ToVisibility()`) so an empty host collapses out of layout (pane + resize
+    // splitter) instead of reserving a blank column. Read-only to the world.
+    private static readonly _HasInspectorsPriv = Model.RegisterReadOnlyProperty<boolean>(
+        InspectorService, 'HasInspectors', false, MetaData.None);
+    public static readonly HasInspectorsKey = InspectorService._HasInspectorsPriv;
+
     // Add an inspector (dedupe by Id) — the command a "Format Shape"-style menu
     // item binds (`Command = $service(InspectorService).AddInspectorCommand,
     // CommandParameter = $Inspector`). Non-IInspector parameters no-op.
@@ -53,8 +62,10 @@ export class InspectorService extends ServiceBase
     constructor(provider: IServiceProvider)
     {
         super(provider);
-        this.set_property_value(
-            InspectorService.InspectorsKey, new ObservableCollection<IInspector>());
+        const inspectors = new ObservableCollection<IInspector>();
+        this.set_property_value(InspectorService.InspectorsKey, inspectors);
+        // Mirror emptiness onto HasInspectors on every collection mutation.
+        inspectors.Subscribe(() => this.refreshHasInspectors());
         this.set_property_value(
             InspectorService.AddInspectorCommandKey,
             new RelayCommand((i) => { if (isInspector(i)) this.Add(i); }, undefined,
@@ -68,6 +79,17 @@ export class InspectorService extends ServiceBase
     public get Inspectors(): ObservableCollection<IInspector>
     {
         return this.get_property_value(InspectorService.InspectorsKey);
+    }
+
+    public get HasInspectors(): boolean
+    {
+        return this.get_property_value(InspectorService.HasInspectorsKey);
+    }
+
+    private refreshHasInspectors(): void
+    {
+        this.set_property_value_with_key(
+            InspectorService._HasInspectorsPriv, this.Inspectors.Count > 0);
     }
 
     public get AddInspectorCommand(): ICommand

@@ -64,6 +64,15 @@ export abstract class ToolbarGroupViewModel extends ToolbarEntryViewModel
     public get Columns(): number { return this.get_property_value(ToolbarGroupViewModel.ColumnsKey); }
 }
 
+// A group divider in the command bar's FLAT item stream (ToolbarService.
+// ToolbarItems). Rendered as a ToolBarSeparator between adjacent top-level
+// entries. It does double duty: the visible vertical divider between groups AND
+// the run boundary the owning ToolBar splits its connected-pill assignment at —
+// without a separator (or other non-button visual) between two Flat groups, the
+// ToolBar would treat their buttons as one continuous run and round the group
+// boundary into a single merged pill.
+export class ToolbarSeparatorItem extends ToolbarEntryViewModel { }
+
 // Inline row of icon buttons — the default. A Flat group with a single member is
 // visually identical to today's per-command button.
 export class ToolbarFlatGroup extends ToolbarGroupViewModel { }

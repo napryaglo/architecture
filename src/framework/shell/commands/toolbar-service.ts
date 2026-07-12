@@ -17,10 +17,11 @@ import { CommandRegistry } from './command-registry.js';
 import { CommandDefinition, CommandGroupPresentation } from './command-definition.js';
 import { ShellRegion } from './shell-control-definition.js';
 import { StatusService } from '../services/status-service.js';
-import { CommandViewModel } from './command-view-model.js';
+import { CommandToggleViewModel, CommandViewModel } from './command-view-model.js';
 import {
     ShellControlViewModel,
     ToolbarFlatGroup,
+    ToolbarSeparatorItem,
     ToolbarSplitGridGroup,
     ToolbarSplitMenuGroup,
     ToolbarToggleGroup,
@@ -72,6 +73,29 @@ export class ToolbarService extends ServiceBase
         ToolbarService, 'VisibleEntries',
         undefined as unknown as ObservableCollection<ToolbarEntryViewModel>, MetaData.None);
 
+    // The FLAT render list the shell command bar's single ToolBar binds. Same
+    // entries as VisibleEntries, but Flat / Toggles groups are EXPANDED into their
+    // individual command VMs (CommandViewModel / CommandToggleViewModel) and a
+    // ToolbarSeparatorItem is inserted between adjacent top-level entries. The one
+    // ToolBar then draws each group's buttons as a connected pill (its Position
+    // assignment) with the separators marking group boundaries — the WPF
+    // ToolBar-with-groups look. Split groups and editor controls ride as single
+    // items (their own DataTemplate). VisibleEntries stays the GROUPED projection
+    // for callers that want one VM per group.
+    public static readonly ToolbarItemsKey = Model.RegisterProperty<ObservableCollection<Model>>(
+        ToolbarService, 'ToolbarItems',
+        undefined as unknown as ObservableCollection<Model>, MetaData.None);
+
+    // The Toolbar-region editor CONTROLS (font pickers, …), Order-sorted. Rendered
+    // in a FIXED region beside the command ToolBar — NOT inside it. A ToolBar
+    // overflows its trailing items into a popup and re-parents items across layout
+    // passes; a wide interactive editor doesn't survive that (it would vanish into
+    // the overflow chevron and its hit-testing breaks). So controls live here and
+    // the command groups live in ToolbarItems.
+    public static readonly ToolbarControlsKey = Model.RegisterProperty<ObservableCollection<ShellControlViewModel>>(
+        ToolbarService, 'ToolbarControls',
+        undefined as unknown as ObservableCollection<ShellControlViewModel>, MetaData.None);
+
     // Cache one VM per definition — rebuilt filtering swaps which are in
     // VisibleCommands, but the VM (and its RelayCommand the button binds) is
     // stable, so a tab switch doesn't churn command instances.
@@ -86,6 +110,8 @@ export class ToolbarService extends ServiceBase
         super(provider);
         this.set_property_value(ToolbarService.VisibleCommandsKey, new ObservableCollection<CommandViewModel>());
         this.set_property_value(ToolbarService.VisibleEntriesKey, new ObservableCollection<ToolbarEntryViewModel>());
+        this.set_property_value(ToolbarService.ToolbarItemsKey, new ObservableCollection<Model>());
+        this.set_property_value(ToolbarService.ToolbarControlsKey, new ObservableCollection<ShellControlViewModel>());
 
         // Track the active document. The host is registered under
         // ContentHostService.Key; only a DocumentsContentHostService carries an
@@ -114,6 +140,16 @@ export class ToolbarService extends ServiceBase
         return this.get_property_value(ToolbarService.VisibleEntriesKey);
     }
 
+    public get ToolbarItems(): ObservableCollection<Model>
+    {
+        return this.get_property_value(ToolbarService.ToolbarItemsKey);
+    }
+
+    public get ToolbarControls(): ObservableCollection<ShellControlViewModel>
+    {
+        return this.get_property_value(ToolbarService.ToolbarControlsKey);
+    }
+
     // Detach the global-pulse subscription when this scoped service is torn down.
     public override Dispose(): void
     {
@@ -139,10 +175,14 @@ export class ToolbarService extends ServiceBase
     // contexts, ordered by Group then Order, mapped to cached VMs.
     private Rebuild(): void
     {
-        const visible = this.VisibleCommands;
-        const entries = this.VisibleEntries;
+        const visible  = this.VisibleCommands;
+        const entries  = this.VisibleEntries;
+        const items    = this.ToolbarItems;
+        const controls = this.ToolbarControls;
         visible.Clear();
         entries.Clear();
+        items.Clear();
+        controls.Clear();
 
         const target = this.ActiveTarget();
         this.SyncStatusItems(target);
@@ -161,17 +201,54 @@ export class ToolbarService extends ServiceBase
         // groups contiguous); Group is a secondary tiebreak so a group's members
         // stay together and in order.
         matched.sort((a, b) => a.Order - b.Order || a.Group.localeCompare(b.Group));
+
+        // Cluster into presentation groups ONCE. Both the grouped VisibleEntries
+        // projection and the flat ToolbarItems render list derive from these.
+        const clusters = this.ClusterGroups(matched);
+
+        // VisibleCommands — the flat, ungrouped projection (cached VMs, Order
+        // sorted). Every matched def now has a VM (ClusterGroups made them).
         for (const def of matched) visible.Add(this.VmFor(def));
 
         // Interleave command GROUPS and editor CONTROLS in one Order-sorted list.
         // A group's Order is its first (lowest-Order) member's; a control's is its
         // own. A stable sort keeps groups/controls sharing an Order in declaration
         // order.
-        const ordered: { order: number; vm: ToolbarEntryViewModel }[] = [];
-        for (const g of this.BuildGroups(matched)) ordered.push(g);
-        for (const c of this.BuildControls(contexts)) ordered.push(c);
+        const ordered: OrderedEntry[] = [];
+        for (const c of clusters) ordered.push({ order: c.order, kind: 'group', cluster: c });
+        for (const ctl of this.BuildControls(contexts)) ordered.push({ order: ctl.order, kind: 'control', control: ctl.vm });
         ordered.sort((a, b) => a.order - b.order);
-        for (const e of ordered) entries.Add(e.vm);
+
+        // Grouped projection: one VM per group + each control (interleaved by
+        // Order — unchanged; the shell's old command host and callers rely on it).
+        for (const e of ordered) entries.Add(e.kind === 'group' ? e.cluster.group : e.control);
+
+        // Flat command projection (the command ToolBar) — command GROUPS only:
+        // Flat / Toggles groups expand into their command VMs, split groups ride as
+        // one item, and a separator sits between adjacent groups (the visible
+        // divider AND the ToolBar's connected-run boundary — see
+        // ToolbarSeparatorItem). Editor CONTROLS are NOT here; they go to
+        // ToolbarControls (rendered outside the overflow ToolBar).
+        let first = true;
+        for (const e of ordered)
+        {
+            if (e.kind !== 'group') continue;
+            if (!first) items.Add(new ToolbarSeparatorItem());
+            first = false;
+
+            if (e.cluster.presentation === CommandGroupPresentation.Flat
+             || e.cluster.presentation === CommandGroupPresentation.Toggles)
+            {
+                for (const vm of e.cluster.commandVms) items.Add(vm);
+            }
+            else
+            {
+                items.Add(e.cluster.group);
+            }
+        }
+
+        // Editor controls, in the same Order sequence, for the fixed control region.
+        for (const e of ordered) if (e.kind === 'control') controls.Add(e.control);
 
         this.RefreshActiveStates();
     }
@@ -179,8 +256,12 @@ export class ToolbarService extends ServiceBase
     // Cluster the (already Order-sorted) definitions into presentation groups.
     // A group's presentation + dropdown face come from its LEADER — the first
     // member whose Presentation is non-Flat; a group with no such member stays
-    // Flat. Encounter order follows the global Order sort.
-    private BuildGroups(matched: readonly CommandDefinition[]): { order: number; vm: ToolbarGroupViewModel }[]
+    // Flat. Encounter order follows the global Order sort. Returns the built group
+    // VM AND its member command VMs + presentation, so callers can render either
+    // the grouped face (VisibleEntries) or the expanded buttons (ToolbarItems)
+    // without re-clustering. Toggles-group members are built as
+    // CommandToggleViewModels so the flat stream resolves the toggle template.
+    private ClusterGroups(matched: readonly CommandDefinition[]): GroupCluster[]
     {
         const order: string[] = [];
         const members = new Map<string, CommandDefinition[]>();
@@ -191,21 +272,28 @@ export class ToolbarService extends ServiceBase
             bucket.push(def);
         }
 
-        const out: { order: number; vm: ToolbarGroupViewModel }[] = [];
+        const out: GroupCluster[] = [];
         for (const group of order)
         {
             const defs = members.get(group)!;
             const leader = defs.find(d => d.Presentation !== CommandGroupPresentation.Flat);
             const presentation = leader?.Presentation ?? CommandGroupPresentation.Flat;
+            const isToggle = presentation === CommandGroupPresentation.Toggles;
 
+            const commandVms = defs.map(def => this.VmFor(def, isToggle));
             const items = new ObservableCollection<CommandViewModel>();
-            for (const def of defs) items.Add(this.VmFor(def));
+            for (const vm of commandVms) items.Add(vm);
 
             const icon    = leader?.GroupIcon ?? leader?.Icon;
             const title   = (leader?.GroupTitle ?? '') !== '' ? leader!.GroupTitle : (leader?.Title ?? '');
             const columns = leader?.Columns ?? 0;
 
-            out.push({ order: defs[0]!.Order, vm: this.MakeGroup(presentation, items, icon, title, columns) });
+            out.push({
+                order: defs[0]!.Order,
+                presentation,
+                group: this.MakeGroup(presentation, items, icon, title, columns),
+                commandVms,
+            });
         }
         return out;
     }
@@ -297,7 +385,11 @@ export class ToolbarService extends ServiceBase
         }
     }
 
-    private VmFor(def: CommandDefinition): CommandViewModel
+    // Get (or build + cache) the VM for a definition. `isToggle` picks the flavor
+    // on FIRST build — a command lives in exactly one group whose presentation is
+    // static, so the cached instance's type is stable across rebuilds; the flag is
+    // ignored on a cache hit.
+    private VmFor(def: CommandDefinition, isToggle = false): CommandViewModel
     {
         let vm = this._vmById.get(def.Id);
         if (vm === undefined)
@@ -306,7 +398,9 @@ export class ToolbarService extends ServiceBase
                 () => this.Invoke(def),
                 () => this.CanInvoke(def),
                 { Text: def.Title });
-            vm = new CommandViewModel(def, command);
+            vm = isToggle
+                ? new CommandToggleViewModel(def, command)
+                : new CommandViewModel(def, command);
             this._vmById.set(def.Id, vm);
         }
         return vm;
@@ -335,3 +429,21 @@ export class ToolbarService extends ServiceBase
         this.RefreshActiveStates();
     }
 }
+
+// One clustered command group — the built group VM (for VisibleEntries), the
+// member command VMs (for the flat ToolbarItems expansion), and the presentation
+// (decides whether the flat stream expands the members or keeps the group face).
+interface GroupCluster
+{
+    readonly order: number;
+    readonly presentation: CommandGroupPresentation;
+    readonly group: ToolbarGroupViewModel;
+    readonly commandVms: CommandViewModel[];
+}
+
+// A top-level command-bar entry in Order space: either a clustered command group
+// or a single editor control. Both projections (grouped VisibleEntries / flat
+// ToolbarItems) walk the same Order-sorted list of these.
+type OrderedEntry =
+    | { readonly order: number; readonly kind: 'group';   readonly cluster: GroupCluster }
+    | { readonly order: number; readonly kind: 'control'; readonly control: ShellControlViewModel };

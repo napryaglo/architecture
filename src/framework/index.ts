@@ -62,6 +62,7 @@ export { ShellSideContentPane } from './shell/shell-side-content-pane.js';
 export { NavigationService, NavigationDestination } from './shell/services/navigation-service.js';
 export { RailAction } from './shell/rail-action.js';
 export { InspectorService } from './shell/services/inspector-service.js';
+export { DialogService, type DialogOptions } from './shell/services/dialog-service.js';
 export { Inspector, type IInspector } from './shell/services/inspector.js';
 export { InspectorPanel } from './shell/inspector/inspector-panel.js';
 export { InspectorStack } from './shell/inspector/inspector-stack.js';

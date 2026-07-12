@@ -7,8 +7,8 @@ import {
     ServiceBase,
     ServiceKey,
 } from '../../../runtime/index.js';
-import { ContentHostService } from '../services/content-host-service.js';
-import { DocumentsContentHostService, type IDocument } from '../services/documents-content-host-service.js';
+import { DialogService } from '../services/dialog-service.js';
+import type { IDocument } from '../services/documents-content-host-service.js';
 import type { Geometry } from '../../../visual-engine/index.js';
 
 // ISettingsContribution — the app-supplied half of the settings feature.
@@ -20,13 +20,15 @@ import type { Geometry } from '../../../visual-engine/index.js';
 // ISettingsContribution under SettingsContributionKey, providing:
 //   * Icon    — the rail glyph for the footer gear (from the app's icon dict).
 //   * Tooltip — optional hover label.
-//   * CreateView() — builds the settings document the launcher opens in the
-//     content host (a page VM grouping ApplicationSettings.Settings, modeled as
-//     an IDocument so it lives in the editor's document set like any other tab).
+//   * CreateView() — builds the settings view VM (a page grouping
+//     ApplicationSettings.Settings). The launcher shows it in a modal dialog, so
+//     its rendered body comes from its `DataTemplate`. It stays typed as IDocument
+//     (a Model at runtime) for back-compat with hosts that still tab it.
 //
 // EditorShell detects the contribution and wires a footer RailAction; this
-// launcher's OpenCommand opens CreateView()'s result. No contribution ⇒ no
-// gear (the demo platform, which registers none, stays gear-free).
+// launcher's OpenCommand opens CreateView()'s result in a modal DialogService
+// dialog. No contribution ⇒ no gear (the demo platform, which registers none,
+// stays gear-free).
 export interface ISettingsContribution
 {
     readonly Icon: Geometry | undefined;
@@ -36,9 +38,8 @@ export interface ISettingsContribution
 
 export const SettingsContributionKey = new ServiceKey<ISettingsContribution>('SettingsContribution');
 
-// Backs the activity-bar settings gear: OpenCommand presents the app's settings
-// view (from the registered ISettingsContribution) in the shell's content
-// region — the same way a capability's service or a document is presented.
+// Backs the activity-bar settings gear: OpenCommand shows the app's settings view
+// (from the registered ISettingsContribution) in a modal DialogService dialog.
 // Auto-registered by EditorShell when a contribution is present.
 export class SettingsLauncherService extends ServiceBase
 {
@@ -47,9 +48,9 @@ export class SettingsLauncherService extends ServiceBase
     public static readonly OpenCommandKey = Model.RegisterProperty<ICommand>(
         SettingsLauncherService, 'OpenCommand', undefined as unknown as ICommand, MetaData.None);
 
-    // Built once — the view's editors bind live to the same Setting DPs, so it
-    // stays current across reopens without a rebuild, and re-opening dedupes to
-    // the same document instance (DocumentsContentHostService keys on Id).
+    // Built once — the view's editors bind live to the same Setting DPs, so the
+    // one VM stays current across reopens (each open re-renders it from its
+    // DataTemplate into a fresh dialog body).
     private _view: IDocument | undefined;
 
     constructor(provider: IServiceProvider)
@@ -60,17 +61,21 @@ export class SettingsLauncherService extends ServiceBase
 
     public get OpenCommand(): ICommand { return this.get_property_value(SettingsLauncherService.OpenCommandKey); }
 
-    // Open the settings document in the shell's content host. When the host is a
-    // DocumentsContentHostService, Open() adds it to the open-document set (a
-    // closeable tab) and activates it; on a plain ContentHostService it falls
-    // back to a transient View(). Re-invoking re-activates the same document.
+    // Show the settings view in a modal dialog. The DialogService renders the view
+    // VM through its DataTemplate as the dialog body; Escape / scrim-click closes
+    // it. A fixed width + max height keep a large settings page bounded (its own
+    // ScrollViewer scrolls within). No dialog service ⇒ no-op.
     public Open(): void
     {
-        const host = this.Provider.get(ContentHostService.Key);
+        const dialogs      = this.Provider.get(DialogService.Key);
         const contribution = this.Provider.get(SettingsContributionKey);
-        if (host === undefined || contribution === undefined) return;
+        if (dialogs === undefined || contribution === undefined) return;
         this._view ??= contribution.CreateView();
-        if (host instanceof DocumentsContentHostService) host.Open(this._view);
-        else                                             host.View(this._view);
+        void dialogs.Show({
+            Title:     this._view.Title,
+            Content:   this._view as unknown as Model,
+            Width:     720,
+            MaxHeight: 640,
+        });
     }
 }

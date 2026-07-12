@@ -10,7 +10,7 @@ import {
     type PointerEventArgs,
     type TextMetrics,
 } from '../runtime/index.js';
-import { Brush, FontFamily, FontStyle, FontWeight, FormattedText, TextAlignment, TextDecorations } from '../visual-engine/index.js';
+import { Brush, FontFamily, FontStyle, FontWeight, FormattedText, TextAlignment, TextDecorations, VerticalAlignment } from '../visual-engine/index.js';
 import { DEFAULT_FONT_FAMILY, Theme } from './theme.js';
 import { Inline, type InlineHost, type LinkTarget, type RunProps } from './documents/text-element.js';
 import { InlineCollection } from './documents/inline-collection.js';
@@ -415,6 +415,9 @@ export class TextBlock extends Element implements InlineHost
         const factor = align === TextAlignment.Center ? 0.5
                      : align === TextAlignment.Right  ? 1
                      : 0;
+        // Optical vertical centring: nudge the baseline so the painted INK sits
+        // at the box centre (see inkCenterOffsetY).
+        const inkY = this.inkCenterOffsetY();
         for (let i = 0; i < this._lines.length; i++)
         {
             const line = this._lines[i]!;
@@ -436,8 +439,33 @@ export class TextBlock extends Element implements InlineHost
             const offsetX = factor === 0
                 ? 0
                 : Math.max(0, (slotW - line.metrics.Width) * factor);
-            dc.DrawText(formatted, new Point(offsetX, i * lineH));
+            dc.DrawText(formatted, new Point(offsetX, i * lineH + inkY));
         }
+    }
+
+    // Vertical nudge (DIPs) that seats the painted INK at the render box's
+    // centre, instead of the font LINE box. The line box (Ascent + Descent) is
+    // per-font and deliberately content-stable for line stacking, but it's
+    // vertically asymmetric relative to the glyphs actually drawn — so a plain
+    // box-centred single-line label (e.g. next to a status dot) rides above or
+    // below the icon's centre. Using the measurer's tight ink bounds, this
+    // re-centres the ink when the block is explicitly VerticalAlignment=Center.
+    //
+    // Scoped narrowly on purpose: only single-line, only when centred, only when
+    // the measurer supplies ink bounds (the browser canvas does; the approximate
+    // measurer doesn't → returns 0). Line stacking and non-centred text are never
+    // touched, so this can't shift existing multi-line or top-aligned layouts.
+    private inkCenterOffsetY(): number
+    {
+        if (this.VerticalAlignment !== VerticalAlignment.Center) return 0;
+        if (this._lines.length !== 1) return 0;
+        const m = this._lines[0]!.metrics;
+        if (m.InkAscent === undefined || m.InkDescent === undefined) return 0;
+        // Baseline sits at m.Ascent from the box top; ink spans
+        // [Ascent - InkAscent, Ascent + InkDescent]. Shift so its centre lands on
+        // the render box's vertical centre.
+        const inkCenter = m.Ascent + (m.InkDescent - m.InkAscent) / 2;
+        return this.RenderSize.Height / 2 - inkCenter;
     }
 
     // Justify the plain Text path: every line except the last has its

@@ -96,11 +96,19 @@ export class CanvasTextMeasurer implements TextMeasurer
                       ?? mb.actualBoundingBoxDescent
                       ?? fontSize * 0.35;
 
+        // Actual INK bounds (tight to the painted glyphs) — kept SEPARATE from
+        // the font line box above. Undefined on engines that don't expose them,
+        // so ink-based optical centring silently falls back to box centring.
+        const inkAscent  = mb.actualBoundingBoxAscent;
+        const inkDescent = mb.actualBoundingBoxDescent;
+
         return {
             Width:   m.width,
             Height:  ascent + descent,
             Ascent:  ascent,
             Descent: descent,
+            InkAscent:  inkAscent,
+            InkDescent: inkDescent,
         };
     }
 

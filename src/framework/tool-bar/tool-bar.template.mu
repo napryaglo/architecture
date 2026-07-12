@@ -64,6 +64,12 @@ resources ToolBars {
 
     Style [TargetType = ToolBarButton] {
         Template = @DefaultToolBarButton;
+        // Center vertically so the button sizes to its content, not the bar
+        // height. ToolBarPanel arranges every inline child at the full panel
+        // height; without this a button STRETCHES to whatever the tallest item is
+        // (e.g. an editor control the shell hosts in the same bar), reading as a
+        // giant pill next to the naturally-sized split buttons (which center).
+        VerticalAlignment = Center;
         // Establish the toolbar ink on the button so it cascades into the
         // slotted content: a bare icon Shape (Fill unset) paints through
         // effectiveFill's inherited-Foreground fallback. Text labels and
@@ -121,6 +127,9 @@ resources ToolBars {
 
     Style [TargetType = ToolBarToggleButton] {
         Template = @DefaultToolBarToggleButton;
+        // Center vertically (see ToolBarButton) so a toggle sizes to its content
+        // instead of stretching to the full bar height.
+        VerticalAlignment = Center;
         // Icon ink. Resting = @OnSurfaceVariant (matches the peer
         // ToolBarButtons); checked = @OnPrimary so a bare icon Shape stays
         // legible on the @Primary checked fill. Set as the control's own

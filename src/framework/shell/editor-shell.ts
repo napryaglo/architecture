@@ -4,6 +4,7 @@ import { NavigationService } from './services/navigation-service.js';
 import { ContentHostService } from './services/content-host-service.js';
 import { DocumentsContentHostService } from './services/documents-content-host-service.js';
 import { InspectorService } from './services/inspector-service.js';
+import { DialogService } from './services/dialog-service.js';
 import { StatusService } from './services/status-service.js';
 import { ApplicationSettings } from './services/application-settings-service.js';
 import { DocumentTypeRegistry } from './documents/document-type-registry.js';
@@ -72,6 +73,16 @@ export class EditorShell extends ShellBase
         {
             this.Services.registerScoped(InspectorService.Key, (p) => new InspectorService(p));
         }
+        // Provide the modal-dialog service by default: opens a Dialog + scrim on
+        // this shell's overlay layer (settings, confirms, …). It owns no Visual, so
+        // it needs an anchor to reach the overlay — hand it THIS shell. Same opt-out
+        // guard; an app registering its own up-chain wins (then we just SetHost on
+        // whichever instance resolves).
+        if (!this.Services.has(DialogService.Key))
+        {
+            this.Services.registerScoped(DialogService.Key, (p) => new DialogService(p));
+        }
+        this.Services.get(DialogService.Key)?.SetHost(this);
         // Provide the Status region's service by default: a StatusService whose
         // Items back the bottom StatusBar. The default template binds
         // `PART_StatusHost` to `$service(StatusService)` unconditionally, and the

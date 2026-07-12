@@ -31,6 +31,7 @@ export {
     Desaturate,
     Alpha,
     Is,
+    ToVisibility,
     DataContextBinding,
     DynamicResource,
     EffectiveValueDescriptor,

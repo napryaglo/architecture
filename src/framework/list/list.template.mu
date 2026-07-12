@@ -21,7 +21,17 @@ resources Lists {
               BorderBrush     = @Outline,
               BorderThickness = (1),
               CornerRadius    = @ShapeExtraSmall,
-              Padding         = (@Spacing4,@Spacing2,@Spacing4,@Spacing2),
+              // Vertical padding is @Spacing1 (4), NOT @Spacing2 (8): a 32-DIP box
+              // holding a ~20-DIP Body-Medium line box only has room for 6 DIP of
+              // padding per side before the editable PART_EditText clips (its
+              // ScrollViewer crops the overflow). @Spacing2 left just 16 DIP inner
+              // < 20 → the classic middle-band clip. @Spacing1 → 24 inner, clears
+              // the line. (Compact already uses @Spacing1 for the same reason.)
+              // Height (fixed, NOT MinHeight): the box must read as a stable row and
+              // must NOT grow to fill a tall slot — a MinHeight lets it stretch to
+              // the full height of a bar that hosts it (command bar), since the
+              // control's vertical alignment through the host chain doesn't pin it.
+              Padding         = (@Spacing4,@Spacing1,@Spacing4,@Spacing1),
               Height          = @ListRowHeightRegular ] {
             SplitRow {
                 // Left cell — overlay of the read-only label and the
@@ -97,13 +107,16 @@ resources Lists {
             PART_Chevron.Height = 7.2;
         }
         when ( ThemeManager.Density = Comfortable ) {
-            PART_SelectionBox.Padding = (@Spacing4,@Spacing3,@Spacing4,@Spacing3);
+            // @Spacing2 (8) vertical, not @Spacing3 (12): a 40-DIP box holds a
+            // 20-DIP line + 24 padding = clip; @Spacing2 → 24 inner, clears it.
+            PART_SelectionBox.Padding = (@Spacing4,@Spacing2,@Spacing4,@Spacing2);
             PART_SelectionBox.Height = @ListRowHeightComfortable;
             PART_Chevron.Width = 14.4;
             PART_Chevron.Height = 14.4;
         }
 
-        // Coarse pointer (touch) — widen vertically for touch.
+        // Coarse pointer (touch) — widen vertically for touch. 48-DIP box with
+        // @Spacing3 (12) vertical leaves 24 inner, which clears the line.
         when ( ThemeManager.Pointer = Coarse ) {
             PART_SelectionBox.Padding = (@Spacing4,@Spacing3,@Spacing4,@Spacing3);
             PART_SelectionBox.Height = @ListRowHeightTouch;

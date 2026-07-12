@@ -163,8 +163,9 @@ export function showDialog<T = unknown>(
         closed = true;
         anchor.DetachOverlayChild(dialog);
         anchor.DetachOverlayChild(scrim);
-        dialog.RemoveRoutedEventListener('KeyDown',  onKeyDown  as (a: unknown) => void);
+        dialog.RemoveRoutedEventListener('KeyDown',   onKeyDown   as (a: unknown) => void);
         dialog.RemoveRoutedEventListener('LostFocus', onLostFocus as (a: unknown) => void);
+        dialog.RemoveRoutedEventListener('GotFocus',  onGotFocus  as (a: unknown) => void);
         resolveClosed?.(value);
     }
 
@@ -177,17 +178,28 @@ export function showDialog<T = unknown>(
         }
     }
 
+    // Focus trap. GotFocus / LostFocus BUBBLE, so both fire on the dialog for any
+    // descendant — a naive "refocus the dialog on every LostFocus" would steal
+    // focus while tabbing BETWEEN fields inside the dialog (breaking a form like
+    // settings). Instead use the focusout-then-check pattern: a LostFocus arms a
+    // deferred refocus; a GotFocus landing back inside the dialog (fires
+    // synchronously, before the microtask) disarms it. So focus is only pulled
+    // back when it genuinely left the dialog subtree.
+    let leaving = false;
     function onLostFocus(_args: FocusEventArgs): void
     {
-        // Focus trap — re-focus the dialog if focus drifted outside.
-        // The check is "is the new focus inside the dialog subtree?".
-        // Easier path: just refocus the dialog. A future refinement
-        // could walk the focus chain and find the next tabbable child.
-        if (!closed) dialog.Focus();
+        if (closed) return;
+        leaving = true;
+        queueMicrotask(() => { if (!closed && leaving) dialog.Focus(); });
+    }
+    function onGotFocus(_args: FocusEventArgs): void
+    {
+        leaving = false;   // focus landed on a dialog descendant — stay put
     }
 
-    dialog.AddRoutedEventListener('KeyDown',  onKeyDown  as (a: unknown) => void);
+    dialog.AddRoutedEventListener('KeyDown',   onKeyDown   as (a: unknown) => void);
     dialog.AddRoutedEventListener('LostFocus', onLostFocus as (a: unknown) => void);
+    dialog.AddRoutedEventListener('GotFocus',  onGotFocus  as (a: unknown) => void);
     dialog.Focus();
 
     return { closed: closedPromise, close };

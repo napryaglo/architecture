@@ -56,6 +56,10 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     // IsChecked from an enum-valued binding (radio-style selection where
     // clicking always selects x, so clicking the active one is a no-op).
     ['Is',                  '@visualisation-sub/mural/runtime'],
+    // Boolean → Visibility converter factory for `Visibility = $path <<
+    // ToVisibility()`: truthy → Visible, falsy → Collapsed (or the passed
+    // Visibility). Collapses a region reactively off a bool DP.
+    ['ToVisibility',        '@visualisation-sub/mural/runtime'],
     ['MultiBinding',        '@visualisation-sub/mural/runtime'],
     ['TemplateBinding',     '@visualisation-sub/mural/runtime'],
     ['MultiTrigger',        '@visualisation-sub/mural/runtime'],
@@ -120,9 +124,11 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['CommandGroupPresentation', '@visualisation-sub/mural/framework/shell/commands/command-definition.js'],
     ['CommandRegistry',         '@visualisation-sub/mural/framework/shell/commands/command-registry.js'],
     ['CommandViewModel',        '@visualisation-sub/mural/framework/shell/commands/command-view-model.js'],
+    ['CommandToggleViewModel',  '@visualisation-sub/mural/framework/shell/commands/command-view-model.js'],
     ['ShellControlDefinition',  '@visualisation-sub/mural/framework/shell/commands/shell-control-definition.js'],
     ['ShellRegion',             '@visualisation-sub/mural/framework/shell/commands/shell-control-definition.js'],
     ['ToolbarFlatGroup',        '@visualisation-sub/mural/framework/shell/commands/toolbar-group-view-model.js'],
+    ['ToolbarSeparatorItem',    '@visualisation-sub/mural/framework/shell/commands/toolbar-group-view-model.js'],
     ['ToolbarSplitMenuGroup',   '@visualisation-sub/mural/framework/shell/commands/toolbar-group-view-model.js'],
     ['ToolbarSplitGridGroup',   '@visualisation-sub/mural/framework/shell/commands/toolbar-group-view-model.js'],
     ['ToolbarToggleGroup',      '@visualisation-sub/mural/framework/shell/commands/toolbar-group-view-model.js'],
@@ -130,6 +136,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['ToolbarService',          '@visualisation-sub/mural/framework/shell/commands/toolbar-service.js'],
     ['NavigationService',       '@visualisation-sub/mural/framework/shell/services/navigation-service.js'],
     ['InspectorService',        '@visualisation-sub/mural/framework/shell/services/inspector-service.js'],
+    ['DialogService',           '@visualisation-sub/mural/framework/shell/services/dialog-service.js'],
     ['InspectorPanel',          '@visualisation-sub/mural/framework/shell/inspector/inspector-panel.js'],
     ['InspectorStack',          '@visualisation-sub/mural/framework/shell/inspector/inspector-stack.js'],
     ['StatusService',           '@visualisation-sub/mural/framework/shell/services/status-service.js'],

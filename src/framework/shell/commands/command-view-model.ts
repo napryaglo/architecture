@@ -45,3 +45,15 @@ export class CommandViewModel extends Model
     public get IsActive(): boolean { return this.get_property_value(CommandViewModel.IsActiveKey); }
     public set IsActive(v: boolean) { this.set_property_value(CommandViewModel.IsActiveKey, v); }
 }
+
+// A toggle-presentation command VM — identical data to CommandViewModel, a
+// distinct TYPE only. The command bar renders its FLAT item stream by implicit
+// DataTemplate-by-type (no ItemTemplate → one ContentPresenter per item), so a
+// Toggles-group member needs its own class to resolve
+// `DataTemplate[CommandToggleViewModel]` (a ToolBarToggleButton, IsChecked =
+// $IsActive) instead of the plain `DataTemplate[CommandViewModel]` button. This
+// mirrors the "a type per presentation" rule the group VMs use. Because
+// findDataTemplateForType walks the prototype chain, a CommandToggleViewModel
+// with no own template would fall back to CommandViewModel's button template —
+// so the shell registers a template for it explicitly.
+export class CommandToggleViewModel extends CommandViewModel { }

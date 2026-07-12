@@ -21,12 +21,15 @@ resources SettingsResources {
     // ── Settings page (center content region) ───────────────────────────
     // Rendered when the gear Views a SettingsPage: a titled column of category
     // sections.
+    // Shown as the body of the modal settings dialog (DialogService). The dialog
+    // surface supplies the @Surface background, padding, and the "Settings"
+    // headline, so the body is just the scrollable category list — the
+    // ScrollViewer keeps a long settings list bounded within the dialog's
+    // MaxHeight (HorizontalScrollEnabled = false so rows measure to the dialog
+    // width and wrap/scroll only vertically).
     DataTemplate [ DataType = SettingsPage ] {
-        Border [ Background = @SurfaceContainer, Padding = (28,24,28,24) ] {
-            StackPanel [ Orientation = Vertical ] {
-                TextBlock [ Text = "Settings", Style = @HeadlineSmall, Foreground = @OnSurface, Margin = (0,0,0,16) ]
-                ItemsControl [ ItemsSource = $Categories, ItemsPanel = @VerticalStackPanel ]
-            }
+        ScrollViewer [ HorizontalScrollEnabled = false ] {
+            ItemsControl [ ItemsSource = $Categories, ItemsPanel = @VerticalStackPanel ]
         }
     }
 

@@ -44,4 +44,4 @@ export {
     Desaturate,
     Alpha,
 } from './color-modifiers.js';
-export { Is } from './value-converters.js';
+export { Is, ToVisibility } from './value-converters.js';

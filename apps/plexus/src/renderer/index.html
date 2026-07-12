@@ -3,15 +3,11 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <!-- Tight CSP for the renderer: no remote code; the icon font stylesheet
-         is the one allowed external origin. -->
+    <!-- Tight CSP for the renderer: no remote code, no remote origins. The icon
+         font (Material Symbols Outlined) is now self-hosted — a local @font-face
+         in src/fonts.css imported by the bootstrap, resolving from disk before
+         the shell mounts (no Google-CDN round-trips gating first paint). -->
     <title>Plexus</title>
-
-    <!-- Material Symbols Outlined — M3 icon font, referenced by TextBlock
-         FontFamily / Shape-from-glyph resources. Same CDN pin as the mural
-         demos so icon metrics match. -->
-    <link rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
 
     <style>
         html, body { height: 100%; margin: 0; overflow: hidden;

@@ -15,6 +15,18 @@ export interface TextMetrics
     readonly Height:  number;
     readonly Ascent:  number;
     readonly Descent: number;
+
+    // Actual INK extent of this text, measured from the baseline: InkAscent is
+    // the distance up to the top of the tallest painted glyph, InkDescent the
+    // distance down to the bottom of the lowest. Unlike Ascent / Descent (the
+    // per-font LINE box, deliberately content-stable for line stacking), these
+    // are the tight bounds of the glyphs actually drawn — so "Connector" (no
+    // descenders) reports InkDescent ≈ 0. Optional: a measurer without glyph
+    // bounds (ApproximateTextMeasurer) leaves them undefined. Consumers use them
+    // to optically centre a single line by its ink rather than its line box (see
+    // TextBlock vertical centring); they must NOT drive line stacking.
+    readonly InkAscent?:  number;
+    readonly InkDescent?: number;
 }
 
 // Renderer / environment-supplied text measurement service. Lives on

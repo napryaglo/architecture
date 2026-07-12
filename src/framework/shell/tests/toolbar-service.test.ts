@@ -14,10 +14,12 @@ import {
     ShellControlViewModel,
     ToolbarFlatGroup,
     ToolbarGroupViewModel,
+    ToolbarSeparatorItem,
     ToolbarSplitGridGroup,
     ToolbarSplitMenuGroup,
     ToolbarToggleGroup,
 } from '../commands/toolbar-group-view-model.js';
+import { CommandToggleViewModel, CommandViewModel } from '../commands/command-view-model.js';
 import { type ICommandTarget } from '../commands/command-target.js';
 
 // Two shared contexts the fake documents activate.
@@ -198,6 +200,40 @@ describe('ToolbarService grouping', () => {
         assert.deepEqual([...groups[2]!.Items].map(vm => vm.Definition.Id), ['bold', 'italic']);
 
         assert.ok(groups[3] instanceof ToolbarFlatGroup);
+    });
+
+    test('ToolbarItems is the flat render stream: groups expanded, separators between them', () => {
+        const app = appWith(
+            grouped('align.l', 'align', 10, { presentation: CommandGroupPresentation.SplitMenu, groupTitle: 'Align' }),
+            grouped('align.r', 'align', 20),
+            grouped('grp',     'arrange', 30),   // Flat, single member
+            grouped('ungrp',   'arrange', 40),
+            grouped('bold',   'style', 50, { presentation: CommandGroupPresentation.Toggles }),
+            grouped('italic', 'style', 60),
+        );
+        const host = app.Services.getRequired(ContentHostService.Key) as DocumentsContentHostService;
+        const toolbar = app.Services.getRequired(ToolbarService.Key);
+        host.Open(new FakeDoc('a', [CTX_A]));
+
+        const items = [...toolbar.ToolbarItems];
+        // align (1 split VM) | sep | arrange (grp, ungrp) | sep | style (bold, italic)
+        assert.ok(items[0] instanceof ToolbarSplitMenuGroup, 'split group rides as ONE item');
+        assert.ok(items[1] instanceof ToolbarSeparatorItem, 'separator after the split group');
+        // Flat group members expand to plain CommandViewModels (not the toggle subclass).
+        assert.ok(items[2] instanceof CommandViewModel && !(items[2] instanceof CommandToggleViewModel));
+        assert.equal((items[2] as CommandViewModel).Definition.Id, 'grp');
+        assert.equal((items[3] as CommandViewModel).Definition.Id, 'ungrp');
+        assert.ok(items[4] instanceof ToolbarSeparatorItem, 'separator before the toggle group');
+        // Toggles group members expand to CommandToggleViewModels (toggle template).
+        assert.ok(items[5] instanceof CommandToggleViewModel, 'bold is a toggle-flavored VM');
+        assert.equal((items[5] as CommandViewModel).Definition.Id, 'bold');
+        assert.ok(items[6] instanceof CommandToggleViewModel);
+        assert.equal(items.length, 7, 'exactly: split | sep | grp | ungrp | sep | bold | italic');
+
+        // The SAME cached VM instance backs both projections (liveness of
+        // CanExecute / IsActive), so ToolbarItems' command VMs are the group's.
+        const arrange = [...toolbar.VisibleEntries].find(e => e instanceof ToolbarFlatGroup) as ToolbarFlatGroup;
+        assert.equal(items[2], arrange.Items.Get(0), 'flat member VM is shared with VisibleEntries');
     });
 
     test('a toolbar CONTROL interleaves with command groups by Order', () => {
