@@ -408,12 +408,33 @@ resources Shells {
         ItemsPanel = @InspectorStackPanel;
     }
 
+    // Compact 12×12 chrome-less icon button — for the inspector header's
+    // collapse (chevron) and close affordances. The M3 IconButton variants
+    // hardcode a 40×40 PART_Border, too large for a dense header row; this
+    // template sizes to a tight 12×12 with a transparent hover/press layer.
+    Template x:key="CompactHeaderIconButton" [TargetType = IconButton] {
+        Border x:name="PART_Border"
+            [ Background           = #00000000,
+              CornerRadius         = (2),
+              Width                = 12,
+              Height               = 12,
+              TextBlock.Foreground = @OnSurfaceVariant ] {
+            Border x:name="PART_StateLayer"
+                [ Background = #00000000, CornerRadius = (2) ] {
+                ContentPresenter [ HorizontalAlignment = Center, VerticalAlignment = Center ]
+            }
+        }
+        when ( IsMouseOver ) { PART_StateLayer.Background = @OnSurfaceVariantHoverLayer; }
+        when ( IsPressed ) { PART_StateLayer.Background = @OnSurfaceVariantPressLayer; }
+    }
+
     // ── InspectorPanel — one titled, collapsible section ────────────────────
-    // Header bar: a chrome-less toggle (chevron + title) that fills the row and
-    // flips IsExpanded via ToggleExpandedCommand, plus a close affordance docked
-    // right (reaches the host via $service and passes the inspector's Id). Body:
-    // the ContentPresenter ContentControl slots the inspector into — hidden by
-    // the `when (IsExpanded = false)` trigger so the panel shrinks to its header.
+    // Header bar: a 12×12 chevron collapse button (flips IsExpanded via
+    // ToggleExpandedCommand), the title caption flush LEFT filling the row, and
+    // a 12×12 close affordance docked right (reaches the host via $service and
+    // passes the inspector's Id). Body: the ContentPresenter ContentControl
+    // slots the inspector into — hidden by the `when (IsExpanded = false)`
+    // trigger so the panel shrinks to its header.
     Template x:key="DefaultInspectorPanel" [TargetType = InspectorPanel] {
         Border x:name="PART_Border"
             [ Background      = @SurfaceContainerLow,
@@ -427,27 +448,27 @@ resources Shells {
                     DockPanel [ LastChildFill = true ] {
                         IconButton
                             [ DockPanel.Dock  = Right,
-                              Variant          = Standard,
+                              Template         = @CompactHeaderIconButton,
+                              VerticalAlignment = Center,
                               Command          = $service(InspectorService).CloseInspectorCommand,
                               CommandParameter = $Id ] {
-                            Shape [ Geometry = @IconClose, Fill = @OnSurfaceVariant, Width = 14, Height = 14 ]
+                            Shape [ Geometry = @IconClose, Fill = @OnSurfaceVariant, Width = 12, Height = 12 ]
                         }
                         IconButton x:name="PART_HeaderToggle"
-                            [ Variant = Standard,
-                              Command = $$ToggleExpandedCommand ] {
-                            StackPanel [ Orientation = Horizontal, VerticalAlignment = Center, HorizontalAlignment = Left ] {
-                                Shape x:name="PART_Chevron"
-                                    [ Geometry   = @ChevronDown,
-                                      Fill       = @OnSurfaceVariant,
-                                      Width      = 12,
-                                      Height     = 12,
-                                      Margin     = (0,0,6,0) ]
-                                TextBlock
-                                    [ Text       = $Title,
-                                      Style      = @LabelMedium,
-                                      Foreground = @OnSurfaceVariant ]
-                            }
+                            [ DockPanel.Dock  = Left,
+                              Template         = @CompactHeaderIconButton,
+                              VerticalAlignment = Center,
+                              Command          = $$ToggleExpandedCommand ] {
+                            Shape x:name="PART_Chevron"
+                                [ Geometry = @ChevronDown, Fill = @OnSurfaceVariant, Width = 12, Height = 12 ]
                         }
+                        TextBlock
+                            [ Text                = $Title,
+                              Style               = @LabelMedium,
+                              Foreground          = @OnSurfaceVariant,
+                              VerticalAlignment   = Center,
+                              HorizontalAlignment = Left,
+                              Margin              = (6,0,0,0) ]
                     }
                 }
                 ContentPresenter x:name="PART_Body"
