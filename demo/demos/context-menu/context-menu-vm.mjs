@@ -2,7 +2,7 @@
 // Right-click any panel to open its menu; the route-walker finds the
 // nearest ancestor with an attached ContextMenu and opens it at the
 // cursor position.
-import { MetaData, Model, RelayCommand, } from 'mural/runtime';
+import { MetaData, Model, RelayCommand, } from '@pragmatic-lab/mural/runtime';
 export class ContextMenuVM extends Model {
     static StatusKey = Model.RegisterProperty(ContextMenuVM, 'Status', 'Right-click any panel.', MetaData.None);
     // Per-panel commands exposed as plain fields the ContextMenu markup

@@ -1,8 +1,8 @@
 import WordToolboxVM from "./word-toolbox-vm.mjs"
 import WordVM from "./word-toolbox-vm.mjs"
-import ListReorderBehavior from "mural/basic"
-import VirtualizingWrapPanel from "mural/basic"
-import VirtualizingStackPanel from "mural/basic"
+import ListReorderBehavior from "@pragmatic-lab/mural/basic"
+import VirtualizingWrapPanel from "@pragmatic-lab/mural/basic"
+import VirtualizingStackPanel from "@pragmatic-lab/mural/basic"
 
 // word-toolbox.mu — toolbox of 100 dictionary words on the left, a
 // 2000-tile virtualized wrap-panel listbox on the right. Tiles are
@@ -206,7 +206,7 @@ resources WordToolboxDemo {
                                   AllowMarqueeSelection = true ] {
                                 .Behaviors: {
                                     ListReorderBehavior x:name="reorder"
-                                        [ FromIndexFormat = "mural/reorder/from-index" ]
+                                        [ FromIndexFormat = "@pragmatic-lab/mural/reorder/from-index" ]
                                 }
                             }
                         }

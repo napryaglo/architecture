@@ -13,8 +13,8 @@
 // shapes, the Text tab needs a labelled shape selected, so most buttons open
 // disabled and light up as you select on the canvas.
 
-import { Application } from 'mural/runtime';
-import { DiagramStorageKey } from 'mural/framework';
+import { Application } from '@pragmatic-lab/mural/runtime';
+import { DiagramStorageKey } from '@pragmatic-lab/mural/framework';
 import { RibbonDemoDoc } from './ribbon-vm.mjs';
 import { register } from '../../platform/registry.mjs';
 

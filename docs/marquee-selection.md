@@ -247,7 +247,7 @@ ListBox x:name="listBox"
          AllowMarqueeSelection=true] {
     Behaviors {
         ListReorderBehavior x:name="reorder"
-            [FromIndexFormat="mural/reorder/from-index"]
+            [FromIndexFormat="@pragmatic-lab/mural/reorder/from-index"]
     }
 }
 ```

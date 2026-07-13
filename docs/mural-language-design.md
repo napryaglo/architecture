@@ -15,7 +15,7 @@ A single file exercising every clause type. Each section is referenced from the 
 ```
 // dashboard.mu — exercises every clause type.
 
-import basic from "mural"
+import basic from "@pragmatic-lab/mural"
 
 def card[#bg, #title, #1]{
   Border[Background=#bg, CornerRadius=(8), Padding=(16)]{
@@ -487,9 +487,9 @@ Application{
 `dashboard.mu.js` (emitted):
 
 ```js
-import { Application, Style, Setter, DynamicResource } from 'mural/runtime';
-import { Border, TextBlock, Button, Window } from 'mural/basic';
-import { SolidColorBrush, Color, Thickness } from 'mural/visual-engine';
+import { Application, Style, Setter, DynamicResource } from '@pragmatic-lab/mural/runtime';
+import { Border, TextBlock, Button, Window } from '@pragmatic-lab/mural/basic';
+import { SolidColorBrush, Color, Thickness } from '@pragmatic-lab/mural/visual-engine';
 
 export const app = (() => {
     const _app = new Application();
@@ -601,7 +601,7 @@ For the dynamic-compile path (when source is fetched or user-supplied):
 
 ```html
 <script type="module">
-  import { instantiate } from 'mural/compiler';
+  import { instantiate } from '@pragmatic-lab/mural/compiler';
   const src = await fetch('/templates/admin-panel.mu').then(r => r.text());
   const app = instantiate(src);
   app.Mount(document.getElementById('app'));

@@ -26,10 +26,10 @@ import {
     Model,
     Color,
     RelayCommand,
-} from 'mural/runtime';
-import { SolidColorBrush } from 'mural/visual-engine';
-import { Figure } from 'mural/framework';
-import { DiagramDocument, type DiagramStorage } from 'mural/framework';
+} from '@pragmatic-lab/mural/runtime';
+import { SolidColorBrush } from '@pragmatic-lab/mural/visual-engine';
+import { Figure } from '@pragmatic-lab/mural/framework';
+import { DiagramDocument, type DiagramStorage } from '@pragmatic-lab/mural/framework';
 
 // A Figure subclass constructor carrying the demo's per-kind marker.
 type FigureCtor = (new (id: string, left: number, top: number) => Figure) & { DemoKind: string };

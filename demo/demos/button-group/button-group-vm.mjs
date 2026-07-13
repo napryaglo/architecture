@@ -1,7 +1,7 @@
 // ButtonGroupVM — backs the button-group demo. Tracks click counts
 // for each action button so the hover-expand interaction can be
 // verified end-to-end (hover widens, click increments).
-import { Model, MetaData, RelayCommand } from 'mural/runtime';
+import { Model, MetaData, RelayCommand } from '@pragmatic-lab/mural/runtime';
 export class ButtonGroupVM extends Model {
     static UndoClicksKey = Model.RegisterProperty(ButtonGroupVM, 'UndoClicks', 0, MetaData.None);
     static RedoClicksKey = Model.RegisterProperty(ButtonGroupVM, 'RedoClicks', 0, MetaData.None);

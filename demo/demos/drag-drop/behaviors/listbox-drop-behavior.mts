@@ -6,7 +6,7 @@
 // `side` is 'left' or 'right' — matches which collection on the VM
 // receives the dropped item.
 
-import { DragDropEffects, type DragEventArgs, type Visual } from 'mural/runtime';
+import { DragDropEffects, type DragEventArgs, type Visual } from '@pragmatic-lab/mural/runtime';
 import { FMT_ITEM, type DragDropVM } from '../drag-drop-vm.mjs';
 
 export function attachListBoxDrop(listBox: Visual, vm: DragDropVM, side: 'left' | 'right'): () => void

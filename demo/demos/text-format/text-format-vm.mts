@@ -6,8 +6,8 @@
 // behaviour maps these primitives onto the sample paragraph. The editors
 // bind two-way to these DPs; the paragraph binds Family / FontSize
 // directly and gets weight / style / underline / colour from the bridge.
-import { MetaData, Model } from 'mural/runtime';
-import type { Visual } from 'mural/runtime';
+import { MetaData, Model } from '@pragmatic-lab/mural/runtime';
+import type { Visual } from '@pragmatic-lab/mural/runtime';
 
 export class TextFormatVM extends Model {
     static FamilyKey    = Model.RegisterProperty<string>( TextFormatVM, 'Family',    'Georgia',      MetaData.None);

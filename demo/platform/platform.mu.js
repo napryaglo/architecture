@@ -53,11 +53,11 @@ import { DemoVM } from "./demo-group-services.mjs";
 import { DemoPlatformIcons } from "./demo-platform-icons.mu.js";
 import { DemoPlatformModule } from "./demo-platform.module.mu.js";
 import { DemoStorageStore } from "./demo-storage-store.mjs";
-import { DataTemplate, TextBlock } from "mural/basic";
-import { DiagramStorageKey } from "mural/framework/diagram/diagram-document.js";
-import { EditorShell } from "mural/framework/shell/editor-shell.js";
-import { Material, MaterialLight } from "mural/resources/material";
-import { Application, DataContextBinding, NameScope, ServiceProvider, Thickness } from "mural/runtime";
+import { DataTemplate, TextBlock } from "@pragmatic-lab/mural/basic";
+import { DiagramStorageKey } from "@pragmatic-lab/mural/framework/diagram/diagram-document.js";
+import { EditorShell } from "@pragmatic-lab/mural/framework/shell/editor-shell.js";
+import { Material, MaterialLight } from "@pragmatic-lab/mural/resources/material";
+import { Application, DataContextBinding, NameScope, ServiceProvider, Thickness } from "@pragmatic-lab/mural/runtime";
 
 export const app = (() => {
     const _app0 = new Application();

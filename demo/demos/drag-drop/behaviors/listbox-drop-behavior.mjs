@@ -5,7 +5,7 @@
 //
 // `side` is 'left' or 'right' — matches which collection on the VM
 // receives the dropped item.
-import { DragDropEffects } from 'mural/runtime';
+import { DragDropEffects } from '@pragmatic-lab/mural/runtime';
 import { FMT_ITEM } from '../drag-drop-vm.mjs';
 export function attachListBoxDrop(listBox, vm, side) {
     listBox.AllowDrop = true;

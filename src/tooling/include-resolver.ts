@@ -19,7 +19,7 @@ import { basename, dirname, extname, join } from 'node:path';
 import type { IncludeResolver, IncludeResolution } from '../compiler/compiler.js';
 import { svgToGeometryJs } from './svg-geometry.js';
 
-const VISUAL_ENGINE = 'mural/visual-engine';
+const VISUAL_ENGINE = '@pragmatic-lab/mural/visual-engine';
 
 export function makeIncludeResolver(baseDir: string): IncludeResolver
 {

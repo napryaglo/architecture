@@ -3,7 +3,7 @@
 // RelayCommand every action button invokes with its own label, so the
 // BottomAppBar's Actions row + FloatingAction slot are visibly live
 // without a command-per-button.
-import { Model, MetaData, RelayCommand } from 'mural/runtime';
+import { Model, MetaData, RelayCommand } from '@pragmatic-lab/mural/runtime';
 
 export class BottomAppBarVM extends Model
 {

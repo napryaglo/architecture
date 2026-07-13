@@ -26,7 +26,7 @@ describe('color modifier `<<`', () => {
         const js = emitted(wrap('Background=#0d47a1 << Lighten(0.5)'));
         assert.match(js, /Lighten\(0\.5\)\.convert\(new SolidColorBrush\(Color\.FromHex\('#0d47a1'\)\)\)/);
         // The modifier is auto-imported from the runtime barrel.
-        assert.match(js, /import \{[^}]*\bLighten\b[^}]*\} from "mural\/runtime"/);
+        assert.match(js, /import \{[^}]*\bLighten\b[^}]*\} from "@pragmatic-lab/mural\/runtime"/);
     });
 
     test('a chain composes left-to-right, then folds', () => {

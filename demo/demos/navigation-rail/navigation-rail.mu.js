@@ -1,9 +1,9 @@
 import { NavigationRailVM } from "./navigation-rail-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "mural/basic";
-import { NavigationItem } from "mural/framework/navigation/navigation-item.js";
-import { NavigationRail } from "mural/framework/navigation/navigation-rail.js";
-import { DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness, VerticalAlignment } from "mural/runtime";
-import { FontWeight } from "mural/visual-engine";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@pragmatic-lab/mural/basic";
+import { NavigationItem } from "@pragmatic-lab/mural/framework/navigation/navigation-item.js";
+import { NavigationRail } from "@pragmatic-lab/mural/framework/navigation/navigation-rail.js";
+import { DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness, VerticalAlignment } from "@pragmatic-lab/mural/runtime";
+import { FontWeight } from "@pragmatic-lab/mural/visual-engine";
 
 
 const _gate_NavigationRailDemo = Symbol("NavigationRailDemo.ctor");

@@ -14,14 +14,14 @@
 // the host's ItemsPanel — no flag needed; VirtualizingWrapPanel
 // triggers wrap mode.
 
-import { DragDropEffects } from 'mural/runtime';
-import { DataTemplate } from 'mural/basic';
+import { DragDropEffects } from '@pragmatic-lab/mural/runtime';
+import { DataTemplate } from '@pragmatic-lab/mural/basic';
 import { WordToolboxVM, FMT_WORD_COPY } from './word-toolbox-vm.mjs';
 import { register } from '../../platform/registry.mjs';
 
-import * as controlsRef from 'mural/basic';
-import * as runtimeRef from 'mural/runtime';
-import * as visualEngineRef from 'mural/visual-engine';
+import * as controlsRef from '@pragmatic-lab/mural/basic';
+import * as runtimeRef from '@pragmatic-lab/mural/runtime';
+import * as visualEngineRef from '@pragmatic-lab/mural/visual-engine';
 
 let vmInstance;
 

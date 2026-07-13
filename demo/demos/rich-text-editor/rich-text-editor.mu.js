@@ -1,8 +1,8 @@
 import { RichTextEditorVM } from "./rich-text-editor-vm.mjs";
-import { Bold, Border, DataTemplate, Dock, DockPanel, FlowDocument, Italic, List, ListItem, ListMarkerStyle, Orientation, Paragraph, RichTextBox, Run, StackPanel, TextBlock, TextWrapping, Underline } from "mural/basic";
-import { Button, ButtonVariant } from "mural/framework/buttons/button.js";
-import { DynamicResource, NameScope, ResourceDictionary, Thickness, VerticalAlignment } from "mural/runtime";
-import { FontStyle, FontWeight, TextDecorations } from "mural/visual-engine";
+import { Bold, Border, DataTemplate, Dock, DockPanel, FlowDocument, Italic, List, ListItem, ListMarkerStyle, Orientation, Paragraph, RichTextBox, Run, StackPanel, TextBlock, TextWrapping, Underline } from "@pragmatic-lab/mural/basic";
+import { Button, ButtonVariant } from "@pragmatic-lab/mural/framework/buttons/button.js";
+import { DynamicResource, NameScope, ResourceDictionary, Thickness, VerticalAlignment } from "@pragmatic-lab/mural/runtime";
+import { FontStyle, FontWeight, TextDecorations } from "@pragmatic-lab/mural/visual-engine";
 
 
 const _gate_RichTextEditorDemo = Symbol("RichTextEditorDemo.ctor");
@@ -108,7 +108,7 @@ export class RichTextEditorDemo extends ResourceDictionary {
             const _run23 = new Run("Rich text editing in ");
             _paragraph22.AddChild(_run23);
             const _bold24 = new Bold();
-            const _run25 = new Run("mural");
+            const _run25 = new Run("@pragmatic-lab/mural");
             _bold24.AddChild(_run25);
             _paragraph22.AddChild(_bold24);
             const _run26 = new Run(".");

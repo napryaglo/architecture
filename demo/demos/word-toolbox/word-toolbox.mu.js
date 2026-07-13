@@ -1,11 +1,11 @@
 import { WordToolboxVM, WordVM } from "./word-toolbox-vm.mjs";
-import { Border, ContentPresenter, ControlTemplate, DataTemplate, Dock, DockPanel, ItemsPanelTemplate, ListReorderBehavior, Orientation, StackPanel, TargetedSetter, TemplatePropertyTrigger, TextBlock, TextWrapping, VirtualizingStackPanel, VirtualizingWrapPanel } from "mural/basic";
-import { ItemsControl } from "mural/framework/base/items-control.js";
-import { ListBox, ListBoxItem, SelectionMode } from "mural/framework/list/list-box.js";
-import { MarqueeBoundsPolicy } from "mural/framework/list/selector.js";
-import { ScrollViewer } from "mural/framework/surfaces/scroll-viewer.js";
-import { Color, DataContextBinding, DynamicResource, HorizontalAlignment, NameScope, ResourceDictionary, Setter, SetterFactory, Style, Thickness, VerticalAlignment } from "mural/runtime";
-import { FontWeight, SolidColorBrush } from "mural/visual-engine";
+import { Border, ContentPresenter, ControlTemplate, DataTemplate, Dock, DockPanel, ItemsPanelTemplate, ListReorderBehavior, Orientation, StackPanel, TargetedSetter, TemplatePropertyTrigger, TextBlock, TextWrapping, VirtualizingStackPanel, VirtualizingWrapPanel } from "@pragmatic-lab/mural/basic";
+import { ItemsControl } from "@pragmatic-lab/mural/framework/base/items-control.js";
+import { ListBox, ListBoxItem, SelectionMode } from "@pragmatic-lab/mural/framework/list/list-box.js";
+import { MarqueeBoundsPolicy } from "@pragmatic-lab/mural/framework/list/selector.js";
+import { ScrollViewer } from "@pragmatic-lab/mural/framework/surfaces/scroll-viewer.js";
+import { Color, DataContextBinding, DynamicResource, HorizontalAlignment, NameScope, ResourceDictionary, Setter, SetterFactory, Style, Thickness, VerticalAlignment } from "@pragmatic-lab/mural/runtime";
+import { FontWeight, SolidColorBrush } from "@pragmatic-lab/mural/visual-engine";
 
 
 const _gate_WordToolboxDemo = Symbol("WordToolboxDemo.ctor");
@@ -159,7 +159,7 @@ export class WordToolboxDemo extends ResourceDictionary {
             _listBox18.set_property_value(ListBox.AllowMarqueeSelectionKey, true);
             const _listReorderBehavior40 = new ListReorderBehavior();
             _listReorderBehavior40.Name = "reorder";
-            _listReorderBehavior40.set_property_value(ListReorderBehavior.FromIndexFormatKey, "mural/reorder/from-index");
+            _listReorderBehavior40.set_property_value(ListReorderBehavior.FromIndexFormatKey, "@pragmatic-lab/mural/reorder/from-index");
             _listBox18.AddBehavior(_listReorderBehavior40);
             _dockPanel37.AddChild(_listBox18);
             _border36.SetChild(_dockPanel37);

@@ -2,7 +2,7 @@
 // counts so the user can verify each mini-FAB in the popup fires
 // through to a command target, and the FAB-toggle state for the
 // read-out.
-import { Model, MetaData, RelayCommand, } from 'mural/runtime';
+import { Model, MetaData, RelayCommand, } from '@pragmatic-lab/mural/runtime';
 export class FabMenuVM extends Model {
     static IsOpenKey = Model.RegisterProperty(FabMenuVM, 'IsOpen', false, MetaData.None);
     static ItemsKey = Model.RegisterProperty(FabMenuVM, 'Items', null, MetaData.None);

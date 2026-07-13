@@ -5,9 +5,9 @@
 // expressed in `.mu` markup yet, so OnViewMounted resolves the bound
 // TreeView via FindName and wires its ItemTemplate / ItemsSource
 // post-build.
-import { type Visual, Model } from 'mural/runtime';
-import { HierarchicalDataTemplate } from 'mural/basic';
-import { TreeView, TreeViewItem } from 'mural/framework';
+import { type Visual, Model } from '@pragmatic-lab/mural/runtime';
+import { HierarchicalDataTemplate } from '@pragmatic-lab/mural/basic';
+import { TreeView, TreeViewItem } from '@pragmatic-lab/mural/framework';
 
 // A small file-tree-shaped data set. Each node has Name (consumed by
 // TreeViewItem.Header via the displayString Label/Name/Text

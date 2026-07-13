@@ -2,7 +2,7 @@
 // Extended slot so the dynamic-binding chain is visible end-to-end. No
 // IsChecked story because FAB is monomorphic on container colour and
 // doesn't ship a toggle variant.
-import { Model, MetaData, RelayCommand } from 'mural/runtime';
+import { Model, MetaData, RelayCommand } from '@pragmatic-lab/mural/runtime';
 export class FabVM extends Model {
     static SmallClicksKey = Model.RegisterProperty(FabVM, 'SmallClicks', 0, MetaData.None);
     static DefaultClicksKey = Model.RegisterProperty(FabVM, 'DefaultClicks', 0, MetaData.None);

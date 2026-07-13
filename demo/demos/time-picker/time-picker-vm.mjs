@@ -2,7 +2,7 @@
 // TwoWay to the dial; TimeLabel echoes the picked time in 12h form,
 // refreshed from OnPropertyChanged so both direct and binding-driven
 // writes update it.
-import { Model, MetaData } from 'mural/runtime';
+import { Model, MetaData } from '@pragmatic-lab/mural/runtime';
 export class TimePickerVM extends Model {
     static HourKey = Model.RegisterProperty(TimePickerVM, 'Hour', 9, MetaData.None);
     static MinuteKey = Model.RegisterProperty(TimePickerVM, 'Minute', 30, MetaData.None);

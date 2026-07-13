@@ -14,7 +14,7 @@ import {
 } from '../../runtime/index.js';
 import { resolveKey } from '../../runtime/model-internals.js';
 import { DataTemplate, HierarchicalDataTemplate, type ItemTemplateSelector } from '../../basic/index.js';
-import { ItemsControl } from 'mural/framework';
+import { ItemsControl } from '@pragmatic-lab/mural/framework';
 
 // Tiny container — registered DP `Tag` lets ItemContainerStyle drive a
 // visible value the test can assert on.

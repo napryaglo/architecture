@@ -13,7 +13,7 @@ import {
     MetaData,
     Model,
     RelayCommand,
-} from 'mural/runtime';
+} from '@pragmatic-lab/mural/runtime';
 
 export class ToolBarVM extends Model
 {

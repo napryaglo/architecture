@@ -49,10 +49,10 @@ the right layer.
 ### 2.1 Minimal bootstrap (imperative)
 
 ```ts
-import { Application } from 'mural/runtime';
+import { Application } from '@pragmatic-lab/mural/runtime';
 import {
     DiagramDocument, DiagramStorageKey, ConnectorEndpoint,
-} from 'mural/framework';
+} from '@pragmatic-lab/mural/framework';
 
 // Storage is optional — omit it to run without persistence.
 const doc = new DiagramDocument(Application.current?.Services.get(DiagramStorageKey));
@@ -617,7 +617,7 @@ The `Diagram` never edits data; it raises events and a `DiagramMutator`
 mutates. Wire the two together once:
 
 ```ts
-import { attachStandardDiagramMutations } from 'mural/framework';
+import { attachStandardDiagramMutations } from '@pragmatic-lab/mural/framework';
 const detach = attachStandardDiagramMutations(diagram, doc);   // doc is a DiagramMutator
 ```
 
@@ -652,7 +652,7 @@ offset by `NodeDropOffset` (default `(40, 40)` — half the default node size �
 so the cursor maps to the node centre).
 
 ```ts
-const TOOLBOX_NODE_KIND_FORMAT = 'mural/node-kind';   // drag-data format key
+const TOOLBOX_NODE_KIND_FORMAT = '@pragmatic-lab/mural/node-kind';   // drag-data format key
 interface ItemDroppedArgs { Data: DataObject; Position: Point }  // Position is canvas-local
 ```
 

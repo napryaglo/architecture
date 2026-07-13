@@ -1,7 +1,7 @@
 // CarouselVM — backs the carousel demo. A small list of hero cards plus an
 // ActiveIndex the prev/next chevrons page through (bound TwoWay), echoed as
 // a "card N of M" caption.
-import { Model, MetaData, ObservableCollection, type PropertyDescriptor } from 'mural/runtime';
+import { Model, MetaData, ObservableCollection, type PropertyDescriptor } from '@pragmatic-lab/mural/runtime';
 
 // One hero card. The DataTemplate in carousel.mu renders it by this type.
 export class CarouselCard extends Model

@@ -1,11 +1,11 @@
 import { BottomAppBarVM } from "./bottom-app-bar-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, Shape, StackPanel, TextBlock } from "mural/basic";
-import { BottomAppBar } from "mural/framework/bottom-app-bar/bottom-app-bar.js";
-import { ButtonVariant } from "mural/framework/buttons/button.js";
-import { FloatingActionButton } from "mural/framework/buttons/fab.js";
-import { IconButton } from "mural/framework/buttons/icon-button.js";
-import { DataContextBinding, DynamicResource, ResourceDictionary, Thickness, VerticalAlignment } from "mural/runtime";
-import { FontWeight } from "mural/visual-engine";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, Shape, StackPanel, TextBlock } from "@pragmatic-lab/mural/basic";
+import { BottomAppBar } from "@pragmatic-lab/mural/framework/bottom-app-bar/bottom-app-bar.js";
+import { ButtonVariant } from "@pragmatic-lab/mural/framework/buttons/button.js";
+import { FloatingActionButton } from "@pragmatic-lab/mural/framework/buttons/fab.js";
+import { IconButton } from "@pragmatic-lab/mural/framework/buttons/icon-button.js";
+import { DataContextBinding, DynamicResource, ResourceDictionary, Thickness, VerticalAlignment } from "@pragmatic-lab/mural/runtime";
+import { FontWeight } from "@pragmatic-lab/mural/visual-engine";
 
 
 const _gate_BottomAppBarDemo = Symbol("BottomAppBarDemo.ctor");

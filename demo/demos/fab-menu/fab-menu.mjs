@@ -4,9 +4,9 @@
 // bootstrap because the VM cannot construct Visuals. Each mini-FAB
 // is wired to the VM's matching Command so clicks fire through to
 // the demo's read-out.
-import { ObservableCollection } from 'mural/runtime';
-import { StackPanel, TextBlock, Orientation }      from 'mural/basic';
-import { FloatingActionButton, FabSize }           from 'mural/framework';
+import { ObservableCollection } from '@pragmatic-lab/mural/runtime';
+import { StackPanel, TextBlock, Orientation }      from '@pragmatic-lab/mural/basic';
+import { FloatingActionButton, FabSize }           from '@pragmatic-lab/mural/framework';
 import { FabMenuVM }   from './fab-menu-vm.mjs';
 import { register }    from '../../platform/registry.mjs';
 

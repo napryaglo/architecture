@@ -2,6 +2,6 @@
 // its own; the .mu file declares a DataTemplate keyed on this type so
 // the platform's ContentControl can auto-resolve the template by data
 // type.
-import { Model } from 'mural/runtime';
+import { Model } from '@pragmatic-lab/mural/runtime';
 export class SpinEditVM extends Model {
 }

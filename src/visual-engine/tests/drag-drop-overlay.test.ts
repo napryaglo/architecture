@@ -83,7 +83,7 @@ describe('HtmlTarget — drag ghost overlay (mode A)', () => {
         root.SetChild(source);
         target.Flush();
 
-        DragDrop.DoDragDrop(source, new DataObject().Set('mural/node-kind', 'rect'),
+        DragDrop.DoDragDrop(source, new DataObject().Set('@pragmatic-lab/mural/node-kind', 'rect'),
             DragDropEffects.Copy);          // opts.preview undefined → mode A
         target.InputManager.PickUpPendingDragSession();
         target.OnDragSessionStarted();
@@ -188,7 +188,7 @@ describe('HtmlTarget — drag preview mode C (DataTemplate)', () => {
         // <rect>; the test checks the rect makes it into the overlay
         // subtree.
         const template = { Apply: (_data: unknown): Visual => new TestSquare() };
-        const data = new DataObject().Set('mural/node-kind', 'rect');
+        const data = new DataObject().Set('@pragmatic-lab/mural/node-kind', 'rect');
 
         DragDrop.DoDragDrop(source, data, DragDropEffects.Copy, { preview: template });
         target.InputManager.PickUpPendingDragSession();

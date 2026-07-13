@@ -10,8 +10,8 @@
 // initiative) reflects back into the VM's OptionsOpen flag. Without
 // this round-trip the next OpenOptions invocation would do nothing —
 // IsOpen would still bind to `true` from the VM's perspective.
-import { MetaData, Model, RelayCommand } from 'mural/runtime';
-import { Drawer, DrawerVariant } from 'mural/framework';
+import { MetaData, Model, RelayCommand } from '@pragmatic-lab/mural/runtime';
+import { Drawer, DrawerVariant } from '@pragmatic-lab/mural/framework';
 export class DrawerVM extends Model {
     static NavOpenKey = Model.RegisterProperty(DrawerVM, 'NavOpen', false, MetaData.None);
     static OptionsOpenKey = Model.RegisterProperty(DrawerVM, 'OptionsOpen', false, MetaData.None);

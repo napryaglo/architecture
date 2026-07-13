@@ -12,7 +12,7 @@
 // it legitimately holds a Geometry. The MVVM import rules that forbid
 // visual-engine types apply to `*-vm.mts` files; this descriptor is the
 // inline-markup data the ToolBars iterate.
-import { MetaData, Model } from 'mural/runtime';
+import { MetaData, Model } from '@pragmatic-lab/mural/runtime';
 export class DiagramTool extends Model {
     static IconKey = Model.RegisterProperty(DiagramTool, 'Icon', undefined, MetaData.None);
     static CommandKey = Model.RegisterProperty(DiagramTool, 'Command', undefined, MetaData.None);

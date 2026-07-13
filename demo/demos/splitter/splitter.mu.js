@@ -1,7 +1,7 @@
 import { SplitterVM } from "./splitter-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, Splitter, StackPanel, TextBlock, TextWrapping } from "mural/basic";
-import { Color, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness, VerticalAlignment } from "mural/runtime";
-import { FontWeight, SolidColorBrush } from "mural/visual-engine";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, Splitter, StackPanel, TextBlock, TextWrapping } from "@pragmatic-lab/mural/basic";
+import { Color, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness, VerticalAlignment } from "@pragmatic-lab/mural/runtime";
+import { FontWeight, SolidColorBrush } from "@pragmatic-lab/mural/visual-engine";
 
 
 const _gate_SplitterDemo = Symbol("SplitterDemo.ctor");

@@ -252,7 +252,7 @@ Border [IsDraggable=true, OnDragStart=$buildDragData, …]
 // On the bound VM:
 buildDragData(source) {
     return {
-        data:    new DataObject().Set('mural/node-kind', this.Kind),
+        data:    new DataObject().Set('@pragmatic-lab/mural/node-kind', this.Kind),
         effects: DragDropEffects.Copy,
     };
 }
@@ -266,12 +266,12 @@ ItemsControl x:name="canvas" [AllowDrop=true, …]
 
 ```js
 canvas.AddRoutedEventListener('DragOver', (a) => {
-    a.Effect = a.Data.Has('mural/node-kind')
+    a.Effect = a.Data.Has('@pragmatic-lab/mural/node-kind')
         ? DragDropEffects.Copy
         : DragDropEffects.None;
 });
 canvas.AddRoutedEventListener('Drop', (a) => {
-    const kind = a.Data.Get('mural/node-kind');
+    const kind = a.Data.Get('@pragmatic-lab/mural/node-kind');
     const p = canvasLocal(a);
     this.addNode(kind, p.x - NODE_W/2, p.y - NODE_H/2);
 });
@@ -282,7 +282,7 @@ canvas.AddRoutedEventListener('Drop', (a) => {
 ```js
 port.AddRoutedEventListener('PointerDown', (args) => {
     const session = args.BeginDragDrop(
-        new DataObject().Set('mural/port', { nodeId: node.Id, side: i }),
+        new DataObject().Set('@pragmatic-lab/mural/port', { nodeId: node.Id, side: i }),
         DragDropEffects.Link,
         { preview: null },
     );

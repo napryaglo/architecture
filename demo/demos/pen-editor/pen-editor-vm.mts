@@ -8,14 +8,14 @@
 // listener installed on the Pen rebuilds these mirror DPs on every
 // mutation.
 
-import { MetaData, Model } from 'mural/runtime';
+import { MetaData, Model } from '@pragmatic-lab/mural/runtime';
 import {
     Color,
     Pen,
     SolidColorBrush,
     type Brush,
     type DashStyle,
-} from 'mural/visual-engine';
+} from '@pragmatic-lab/mural/visual-engine';
 
 export class PenEditorDemoVM extends Model
 {

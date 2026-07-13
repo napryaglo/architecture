@@ -7,8 +7,8 @@
 // model. The demo just creates a Document, plugs in localStorage,
 // seeds a few Figures, and returns it for the platform to mount.
 
-import { Application } from 'mural/runtime';
-import { ConnectorEndpoint, DiagramDocument, DiagramStorageKey, TextPlacement, TextAutoFit, TextShape, Callout, deserializeFlowDocument, documentWithFields } from 'mural/framework';
+import { Application } from '@pragmatic-lab/mural/runtime';
+import { ConnectorEndpoint, DiagramDocument, DiagramStorageKey, TextPlacement, TextAutoFit, TextShape, Callout, deserializeFlowDocument, documentWithFields } from '@pragmatic-lab/mural/framework';
 import { register } from '../../platform/registry.mjs';
 
 let docInstance;

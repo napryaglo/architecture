@@ -13,7 +13,7 @@ import {
 } from '../../index.js';;
 import { Application, Visual } from '../../../runtime/index.js';
 import { Control, InputManager } from '../../../framework/index.js';;;
-import { Button } from 'mural/framework';
+import { Button } from '@pragmatic-lab/mural/framework';
 
 class Root extends Control
 {

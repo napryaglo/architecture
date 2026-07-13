@@ -1,7 +1,7 @@
 import { TextBoxVM } from "./text-box-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock, TextBox, TextWrapping } from "mural/basic";
-import { DynamicResource, ResourceDictionary, Thickness } from "mural/runtime";
-import { FontWeight } from "mural/visual-engine";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock, TextBox, TextWrapping } from "@pragmatic-lab/mural/basic";
+import { DynamicResource, ResourceDictionary, Thickness } from "@pragmatic-lab/mural/runtime";
+import { FontWeight } from "@pragmatic-lab/mural/visual-engine";
 
 
 const _gate_TextBoxDemo = Symbol("TextBoxDemo.ctor");

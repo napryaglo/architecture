@@ -1,7 +1,7 @@
 // CardVM — backs the card demo. One RelayCommand per variant button so
 // the dynamic-binding chain is visible end-to-end and the cards' action
 // row has a real handler attached.
-import { Model, MetaData, RelayCommand } from 'mural/runtime';
+import { Model, MetaData, RelayCommand } from '@pragmatic-lab/mural/runtime';
 
 export class CardVM extends Model
 {

@@ -1,10 +1,10 @@
 import { TextOnPathVM } from "./text-on-path-vm.mjs";
-import { Border, Canvas, DataTemplate, Dock, DockPanel, Orientation, Slider, StackPanel, TextBlock, TextBox, TextWrapping } from "mural/basic";
-import { ColorPicker } from "mural/framework";
-import { Button } from "mural/framework/buttons/button.js";
-import { ComboBox } from "mural/framework/list/combo-box.js";
-import { DataContextBinding, DynamicResource, NameScope, ResourceDictionary, Thickness } from "mural/runtime";
-import { FontFamily, FontManager, FontSourceKind, FontWeight } from "mural/visual-engine";
+import { Border, Canvas, DataTemplate, Dock, DockPanel, Orientation, Slider, StackPanel, TextBlock, TextBox, TextWrapping } from "@pragmatic-lab/mural/basic";
+import { ColorPicker } from "@pragmatic-lab/mural/framework";
+import { Button } from "@pragmatic-lab/mural/framework/buttons/button.js";
+import { ComboBox } from "@pragmatic-lab/mural/framework/list/combo-box.js";
+import { DataContextBinding, DynamicResource, NameScope, ResourceDictionary, Thickness } from "@pragmatic-lab/mural/runtime";
+import { FontFamily, FontManager, FontSourceKind, FontWeight } from "@pragmatic-lab/mural/visual-engine";
 
 
 const _gate_TextOnPathDemo = Symbol("TextOnPathDemo.ctor");

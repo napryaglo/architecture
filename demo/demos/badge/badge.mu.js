@@ -1,9 +1,9 @@
 import { BadgeVM } from "./badge-vm.mjs";
-import { Border, Canvas, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "mural/basic";
-import { Button, ButtonVariant } from "mural/framework/buttons/button.js";
-import { Badge, BadgeVariant } from "mural/framework/markers/badge.js";
-import { DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness, VerticalAlignment } from "mural/runtime";
-import { FontWeight } from "mural/visual-engine";
+import { Border, Canvas, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@pragmatic-lab/mural/basic";
+import { Button, ButtonVariant } from "@pragmatic-lab/mural/framework/buttons/button.js";
+import { Badge, BadgeVariant } from "@pragmatic-lab/mural/framework/markers/badge.js";
+import { DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness, VerticalAlignment } from "@pragmatic-lab/mural/runtime";
+import { FontWeight } from "@pragmatic-lab/mural/visual-engine";
 
 
 const _gate_BadgeDemo = Symbol("BadgeDemo.ctor");

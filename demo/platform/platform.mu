@@ -29,9 +29,9 @@
 import DemoVM from "./demo-group-services.mjs"
 import DemoPlatformModule from "./demo-platform.module.mu.js"
 import DemoPlatformIcons from "./demo-platform-icons.mu.js"
-import EditorShell from "mural/framework/shell/editor-shell.js"
-import Material from "mural/resources/material"
-import MaterialLight from "mural/resources/material"
+import EditorShell from "@pragmatic-lab/mural/framework/shell/editor-shell.js"
+import Material from "@pragmatic-lab/mural/resources/material"
+import MaterialLight from "@pragmatic-lab/mural/resources/material"
 
 // Persistence backend for the framework's DiagramStorageKey — resolved by the
 // Diagrammer / Commands demos through DI. Composed here in markup, not in the

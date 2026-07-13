@@ -1,17 +1,17 @@
 import { DiagramTool } from "./diagram-tools.mjs";
-import { Border, DataTemplate, Dock, DockPanel, ItemsPanelTemplate, Orientation, PaginatedCanvas, Shape, Splitter, StackPanel, TextAlignment, TextBlock, TextWrapping, UniformGrid } from "mural/basic";
-import { ColorPicker, FontFamilyPicker, FontSizePicker, ShapeFormatControl, TextPlacement } from "mural/framework";
-import { ContentControl } from "mural/framework/base/content-control.js";
-import { ItemsControl } from "mural/framework/base/items-control.js";
-import { Button } from "mural/framework/buttons/button.js";
-import { DiagramDocument } from "mural/framework/diagram/diagram-document.js";
-import { Diagram } from "mural/framework/diagram/diagram.js";
-import { ToolboxShape } from "mural/framework/diagram/toolbox-shape.js";
-import { SelectionMode } from "mural/framework/list/list-box.js";
-import { MenuItem, MenuSeparator, ToolBar, ToolBarButton, ToolBarSplitButton, ToolBarToggleButton } from "mural/framework/surface.js";
-import { ScrollViewer } from "mural/framework/surfaces/scroll-viewer.js";
-import { DataContextBinding, DynamicResource, ElementNameBinding, HorizontalAlignment, Is, NameScope, ResourceDictionary, Thickness, VerticalAlignment } from "mural/runtime";
-import { FontWeight, LineSegment, PathFigure, PathGeometry, Point, QuadraticBezierSegment } from "mural/visual-engine";
+import { Border, DataTemplate, Dock, DockPanel, ItemsPanelTemplate, Orientation, PaginatedCanvas, Shape, Splitter, StackPanel, TextAlignment, TextBlock, TextWrapping, UniformGrid } from "@pragmatic-lab/mural/basic";
+import { ColorPicker, FontFamilyPicker, FontSizePicker, ShapeFormatControl, TextPlacement } from "@pragmatic-lab/mural/framework";
+import { ContentControl } from "@pragmatic-lab/mural/framework/base/content-control.js";
+import { ItemsControl } from "@pragmatic-lab/mural/framework/base/items-control.js";
+import { Button } from "@pragmatic-lab/mural/framework/buttons/button.js";
+import { DiagramDocument } from "@pragmatic-lab/mural/framework/diagram/diagram-document.js";
+import { Diagram } from "@pragmatic-lab/mural/framework/diagram/diagram.js";
+import { ToolboxShape } from "@pragmatic-lab/mural/framework/diagram/toolbox-shape.js";
+import { SelectionMode } from "@pragmatic-lab/mural/framework/list/list-box.js";
+import { MenuItem, MenuSeparator, ToolBar, ToolBarButton, ToolBarSplitButton, ToolBarToggleButton } from "@pragmatic-lab/mural/framework/surface.js";
+import { ScrollViewer } from "@pragmatic-lab/mural/framework/surfaces/scroll-viewer.js";
+import { DataContextBinding, DynamicResource, ElementNameBinding, HorizontalAlignment, Is, NameScope, ResourceDictionary, Thickness, VerticalAlignment } from "@pragmatic-lab/mural/runtime";
+import { FontWeight, LineSegment, PathFigure, PathGeometry, Point, QuadraticBezierSegment } from "@pragmatic-lab/mural/visual-engine";
 
 
 const _gate_DiagramDemo = Symbol("DiagramDemo.ctor");

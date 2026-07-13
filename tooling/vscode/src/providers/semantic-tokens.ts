@@ -25,7 +25,7 @@ import {
 } from 'vscode-languageserver/node.js';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 
-import type { SourceSpan } from 'mural/compiler';
+import type { SourceSpan } from '@pragmatic-lab/mural/compiler';
 
 import { analyze } from '../analyzer.js';
 

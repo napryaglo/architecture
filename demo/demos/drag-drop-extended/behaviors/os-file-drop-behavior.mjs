@@ -8,7 +8,7 @@
 // method, accepting Copy effect during DragOver so the OS cursor
 // renders the right glyph. Optionally accepts text/plain and
 // text/uri-list drops too — useful for cross-window text/url drags.
-import { DragDropEffects } from 'mural/runtime';
+import { DragDropEffects } from '@pragmatic-lab/mural/runtime';
 export function attachOsFileDrop(visual, vm) {
     visual.AllowDrop = true;
     const onDragOver = (raw) => {

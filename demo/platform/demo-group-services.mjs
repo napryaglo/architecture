@@ -19,9 +19,9 @@
 // Supersedes the GroupVM-as-destination model in demo-navigation-service.mts:
 // the content is now a resolved service, not a NavigationDestination subclass,
 // so the base NavigationService (no createDestination override) is enough.
-import { MetaData, Model, ServiceKey, } from 'mural/runtime';
-import { DocumentSelectorService } from 'mural/framework/shell/services/document-selector-service.js';
-import { ContentHostService } from 'mural/framework/shell/services/content-host-service.js';
+import { MetaData, Model, ServiceKey, } from '@pragmatic-lab/mural/runtime';
+import { DocumentSelectorService } from '@pragmatic-lab/mural/framework/shell/services/document-selector-service.js';
+import { ContentHostService } from '@pragmatic-lab/mural/framework/shell/services/content-host-service.js';
 import { allDemos, instantiateDemo, onDemoRegistered } from './registry.mjs';
 // Insert `item` into `coll` at the position that keeps it sorted by `cmp`
 // (stable: ties land after existing equal entries), so demos land alphabetically

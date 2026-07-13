@@ -2,7 +2,7 @@
 // icon variant has been clicked and the checked state of the four
 // IconButtonToggle variants so the UI can show a live tally + reflect
 // the toggle state back into the chrome.
-import { Model, MetaData, RelayCommand } from 'mural/runtime';
+import { Model, MetaData, RelayCommand } from '@pragmatic-lab/mural/runtime';
 
 export class IconButtonVM extends Model
 {

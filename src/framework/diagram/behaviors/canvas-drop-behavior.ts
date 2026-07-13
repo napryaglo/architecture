@@ -36,7 +36,7 @@ import type { Diagram } from '../diagram.js';
 // time. Without this, a drop inside the visible viewport AFTER the
 // user has scrolled lands at the wrong canvas coordinate.
 
-const NODE_KIND_FORMAT = 'mural/node-kind';
+const NODE_KIND_FORMAT = '@pragmatic-lab/mural/node-kind';
 
 /** @internal */
 export function attachCanvasDropBehavior(receiver: Visual, diagram: Diagram): () => void
@@ -101,7 +101,7 @@ export interface ItemDroppedArgs
 export type ItemDroppedListener = (args: ItemDroppedArgs) => void;
 
 // Drag-data format key consumers should put their toolbox tile's kind
-// under: `dataObject.Set('mural/node-kind', kindString)`. The behavior
+// under: `dataObject.Set('@pragmatic-lab/mural/node-kind', kindString)`. The behavior
 // gates DragOver/Drop on the presence of this key; payloads without it
 // are ignored.
 export const TOOLBOX_NODE_KIND_FORMAT = NODE_KIND_FORMAT;

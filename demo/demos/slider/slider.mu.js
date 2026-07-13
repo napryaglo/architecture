@@ -1,7 +1,7 @@
 import { SliderVM } from "./slider-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, Slider, StackPanel, TextBlock } from "mural/basic";
-import { DynamicResource, ResourceDictionary, Thickness } from "mural/runtime";
-import { FontWeight } from "mural/visual-engine";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, Slider, StackPanel, TextBlock } from "@pragmatic-lab/mural/basic";
+import { DynamicResource, ResourceDictionary, Thickness } from "@pragmatic-lab/mural/runtime";
+import { FontWeight } from "@pragmatic-lab/mural/visual-engine";
 
 
 const _gate_SliderDemo = Symbol("SliderDemo.ctor");

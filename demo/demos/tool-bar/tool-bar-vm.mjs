@@ -8,7 +8,7 @@
 //
 // The toggle on the toolbar's right end flips `HasSelection` and pulses
 // RaiseCanExecuteChanged so Delete's chrome dims / undims live.
-import { MetaData, Model, RelayCommand, } from 'mural/runtime';
+import { MetaData, Model, RelayCommand, } from '@pragmatic-lab/mural/runtime';
 export class ToolBarVM extends Model {
     static StatusKey = Model.RegisterProperty(ToolBarVM, 'Status', 'Ready.', MetaData.None);
     static HasSelectionKey = Model.RegisterProperty(ToolBarVM, 'HasSelection', false, MetaData.None);

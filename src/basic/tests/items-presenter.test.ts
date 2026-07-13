@@ -16,7 +16,7 @@ import {
     DataTemplate,
     ItemsPresenter,
 } from '../index.js';
-import { ItemsControl } from 'mural/framework';
+import { ItemsControl } from '@pragmatic-lab/mural/framework';
 
 class Leaf extends Element
 {

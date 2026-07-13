@@ -34,7 +34,7 @@ import type {
     BodyItem,
     SlotAssign,
     ValueNode,
-} from 'mural/compiler';
+} from '@pragmatic-lab/mural/compiler';
 
 import { analyze } from '../analyzer.js';
 

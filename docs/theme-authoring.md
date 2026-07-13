@@ -407,8 +407,8 @@ with `ThemeManager`) and activates:
 
 ```ts
 // app/bootstrap.ts
-import 'mural/framework/material';     // side-effect: registers Material
-import { ThemeManager } from 'mural/runtime';
+import '@pragmatic-lab/mural/framework/material';     // side-effect: registers Material
+import { ThemeManager } from '@pragmatic-lab/mural/runtime';
 
 ThemeManager.ActivateTheme('material');           // → light (defaultScheme)
 

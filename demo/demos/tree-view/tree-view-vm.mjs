@@ -5,9 +5,9 @@
 // expressed in `.mu` markup yet, so OnViewMounted resolves the bound
 // TreeView via FindName and wires its ItemTemplate / ItemsSource
 // post-build.
-import { Model } from 'mural/runtime';
-import { HierarchicalDataTemplate } from 'mural/basic';
-import { TreeView, TreeViewItem } from 'mural/framework';
+import { Model } from '@pragmatic-lab/mural/runtime';
+import { HierarchicalDataTemplate } from '@pragmatic-lab/mural/basic';
+import { TreeView, TreeViewItem } from '@pragmatic-lab/mural/framework';
 const FS = {
     Name: 'project',
     children: [

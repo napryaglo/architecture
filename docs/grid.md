@@ -40,7 +40,7 @@ with a separate agreement.
 The value type describing one track's sizing rule.
 
 ```ts
-import { GridLength } from 'mural/basic';
+import { GridLength } from '@pragmatic-lab/mural/basic';
 
 new GridLength(120)              // pixel: exact size in pixels
 new GridLength(120, 'pixel')     // same — explicit unit type
@@ -65,7 +65,7 @@ appear in the Grid's `ColumnDefinitions` / `RowDefinitions`
 ObservableCollections.
 
 ```ts
-import { Grid, ColumnDefinition, RowDefinition, GridLength } from 'mural/basic';
+import { Grid, ColumnDefinition, RowDefinition, GridLength } from '@pragmatic-lab/mural/basic';
 
 const grid = new Grid();
 const c0 = new ColumnDefinition(); c0.Width = new GridLength(200);
@@ -97,7 +97,7 @@ spread a child across its parent's bounds.
 | `Grid.ColumnSpan` | `1` | Number of columns this child spans. |
 
 ```ts
-import { Grid } from 'mural/basic';
+import { Grid } from '@pragmatic-lab/mural/basic';
 
 Grid.SetRow(child, 1);
 Grid.SetColumn(child, 2);

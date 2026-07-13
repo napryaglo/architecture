@@ -7,8 +7,8 @@
 // on the Diagram does the IsSelected mirroring the old bridge used to do
 // in JS. This bootstrap just publishes the aggregate HasSelection state
 // to the VM.
-import { Application } from 'mural/runtime';
-import { Diagram, DiagramStorageKey } from 'mural/framework';
+import { Application } from '@pragmatic-lab/mural/runtime';
+import { Diagram, DiagramStorageKey } from '@pragmatic-lab/mural/framework';
 import { CommandsVM } from './commands-vm.mjs';
 import { register } from '../../platform/registry.mjs';
 

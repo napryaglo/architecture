@@ -25,4 +25,4 @@ export { widen }                from './widen.js';
 //   geometry.ts → runtime/index.ts → visual-engine/index.ts
 //     → geometry/index.ts → combine.ts → geometry.ts (partial)
 // Consumers of CombinedGeometry / combine / intersectsExact import the
-// path directly: `from 'mural/visual-engine/geometry/combine.js'`.
+// path directly: `from '@pragmatic-lab/mural/visual-engine/geometry/combine.js'`.

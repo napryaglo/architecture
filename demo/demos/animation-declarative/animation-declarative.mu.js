@@ -1,8 +1,8 @@
 import { AnimationDeclarativeVM } from "./animation-declarative-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "mural/basic";
-import { Button } from "mural/framework/buttons/button.js";
-import { BeginStoryboardAction, DoubleAnimation, DynamicResource, EventTrigger, ResourceDictionary, Storyboard, Style, Thickness } from "mural/runtime";
-import { FontWeight } from "mural/visual-engine";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@pragmatic-lab/mural/basic";
+import { Button } from "@pragmatic-lab/mural/framework/buttons/button.js";
+import { BeginStoryboardAction, DoubleAnimation, DynamicResource, EventTrigger, ResourceDictionary, Storyboard, Style, Thickness } from "@pragmatic-lab/mural/runtime";
+import { FontWeight } from "@pragmatic-lab/mural/visual-engine";
 
 
 const _gate_AnimationDeclarativeDemo = Symbol("AnimationDeclarativeDemo.ctor");

@@ -1,9 +1,9 @@
 import { ButtonGroupVM } from "./button-group-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "mural/basic";
-import { ButtonGroup } from "mural/framework/button-groups/button-group.js";
-import { Button, ButtonVariant } from "mural/framework/buttons/button.js";
-import { DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness } from "mural/runtime";
-import { FontWeight } from "mural/visual-engine";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@pragmatic-lab/mural/basic";
+import { ButtonGroup } from "@pragmatic-lab/mural/framework/button-groups/button-group.js";
+import { Button, ButtonVariant } from "@pragmatic-lab/mural/framework/buttons/button.js";
+import { DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness } from "@pragmatic-lab/mural/runtime";
+import { FontWeight } from "@pragmatic-lab/mural/visual-engine";
 
 
 const _gate_ButtonGroupDemo = Symbol("ButtonGroupDemo.ctor");

@@ -1,8 +1,8 @@
 import { ContextMenuVM } from "./context-menu-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "mural/basic";
-import { ContextMenu, ContextMenuService, MenuItem, MenuSeparator } from "mural/framework/surface.js";
-import { Color, DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness, VerticalAlignment } from "mural/runtime";
-import { FontWeight, SolidColorBrush } from "mural/visual-engine";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@pragmatic-lab/mural/basic";
+import { ContextMenu, ContextMenuService, MenuItem, MenuSeparator } from "@pragmatic-lab/mural/framework/surface.js";
+import { Color, DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness, VerticalAlignment } from "@pragmatic-lab/mural/runtime";
+import { FontWeight, SolidColorBrush } from "@pragmatic-lab/mural/visual-engine";
 
 
 const _gate_ContextMenuDemo = Symbol("ContextMenuDemo.ctor");

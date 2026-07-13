@@ -22,7 +22,7 @@ const PREVIEW_FILL = new SolidColorBrush(Color.FromHex('#1976d2'));
 // `BeginKindDragData` callback the tile template wires to the drag-
 // initiation behavior. The framework Diagram + canvas-drop-behavior
 // consume the `mural/node-kind` format the callback emits — drop the
-// tile onto the canvas and ItemDropped fires with `Data.Get('mural/node-kind')`
+// tile onto the canvas and ItemDropped fires with `Data.Get('@pragmatic-lab/mural/node-kind')`
 // set to this tile's Kind.
 //
 // `PreviewNode` is a fresh Figure constructed via Figure.fromKind so the

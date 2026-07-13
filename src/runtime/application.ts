@@ -315,7 +315,7 @@ export class Application
     // theme bundle so its module-load side effect performs the
     // registration:
     //
-    //   import 'mural/resources/material'; // registers Material
+    //   import '@pragmatic-lab/mural/resources/material'; // registers Material
     //   const app = new Application();
     //   app.initialize({ theme: 'material', scheme: 'light' });
     //   // …construct the visual tree…

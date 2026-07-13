@@ -68,7 +68,7 @@ own configuration it's already populated.
 ## 2. Authoring a Behavior
 
 ```ts
-import { Behavior, MetaData, Model, type Visual } from 'mural/runtime';
+import { Behavior, MetaData, Model, type Visual } from '@pragmatic-lab/mural/runtime';
 
 export class TooltipBehavior extends Behavior
 {
@@ -109,7 +109,7 @@ constructs the behavior, applies its DP setters, and emits a single
 ListBox x:name="left" [ItemsSource=$LeftItems] {
     Behaviors {
         TooltipBehavior [Text="left column"]
-        ListReorderBehavior [FromIndexFormat="mural/reorder/idx"]
+        ListReorderBehavior [FromIndexFormat="@pragmatic-lab/mural/reorder/idx"]
     }
 }
 ```
@@ -125,7 +125,7 @@ _tooltipBehavior.set_property_value(TooltipBehavior.TextKey, "left column");
 _listBox.AddBehavior(_tooltipBehavior);
 
 const _listReorderBehavior = new ListReorderBehavior();
-_listReorderBehavior.set_property_value(ListReorderBehavior.FromIndexFormatKey, "mural/reorder/idx");
+_listReorderBehavior.set_property_value(ListReorderBehavior.FromIndexFormatKey, "@pragmatic-lab/mural/reorder/idx");
 _listBox.AddBehavior(_listReorderBehavior);
 ```
 
@@ -139,7 +139,7 @@ body:
 ```mu
 StackPanel {
     Behaviors {
-        DragSourceBehavior [DataFormat="mural/node-kind"]
+        DragSourceBehavior [DataFormat="@pragmatic-lab/mural/node-kind"]
     }
     Border [Background=#ffffff]
     Border [Background=#f0f0f0]
@@ -238,12 +238,12 @@ mutates the bound items collection on drop.
 
 ```ts
 public static readonly FromIndexFormatKey = Model.RegisterProperty<string>(
-    ListReorderBehavior, 'FromIndexFormat', 'mural/reorder/from-index', MetaData.None);
+    ListReorderBehavior, 'FromIndexFormat', '@pragmatic-lab/mural/reorder/from-index', MetaData.None);
 ```
 
 | DP | Default | Meaning |
 |---|---|---|
-| `FromIndexFormat` | `'mural/reorder/from-index'` | DataObject key the behavior reads to find the source row's index. |
+| `FromIndexFormat` | `'@pragmatic-lab/mural/reorder/from-index'` | DataObject key the behavior reads to find the source row's index. |
 
 ### What the behavior owns
 
@@ -280,7 +280,7 @@ public static readonly FromIndexFormatKey = Model.RegisterProperty<string>(
   ```
 
   with the VM's `StartReorder` returning
-  `{ data: new DataObject().Set('mural/reorder/from-index', index), effects: DragDropEffects.Move }`.
+  `{ data: new DataObject().Set('@pragmatic-lab/mural/reorder/from-index', index), effects: DragDropEffects.Move }`.
 
 - **Insertion-line visual indicator.** The behavior performs no
   rendering. Consumers that want an insertion line can layer a

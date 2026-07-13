@@ -3,7 +3,7 @@
 // The view binds each toggle's IsChecked TwoWay onto the corresponding
 // DP; per-DP style triggers on the preview Border style its TextBlock
 // (font weight, italics, underline) based on the bound DP values.
-import { Model, MetaData } from 'mural/runtime';
+import { Model, MetaData } from '@pragmatic-lab/mural/runtime';
 export class ToggleButtonVM extends Model {
     static IsBoldKey = Model.RegisterProperty(ToggleButtonVM, 'IsBold', false, MetaData.None);
     static IsItalicKey = Model.RegisterProperty(ToggleButtonVM, 'IsItalic', false, MetaData.None);

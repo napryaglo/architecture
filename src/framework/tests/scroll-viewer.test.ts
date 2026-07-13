@@ -17,7 +17,7 @@ import {
 } from '../../runtime/index.js';
 import { RectangleGeometry, SolidColorBrush } from '../../visual-engine/index.js';
 import { DataTemplate, VirtualizingStackPanel } from '../../basic/index.js';
-import { ItemsControl, ScrollViewer } from 'mural/framework';
+import { ItemsControl, ScrollViewer } from '@pragmatic-lab/mural/framework';
 
 // Fixed-size leaf that paints a colored rect — useful as ScrollViewer
 // content for measuring extent.

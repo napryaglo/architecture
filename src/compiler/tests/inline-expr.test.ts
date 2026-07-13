@@ -147,7 +147,7 @@ describe('compile — inline expressions', () => {
         const js = compile(
             'Application{ resources: { Border x:root[Width = {{ $a + $b * 2 }}]{} } }',
         ).js;
-        assert.match(js, /import \{[^}]*MultiBinding[^}]*\} from "mural\/runtime";/);
+        assert.match(js, /import \{[^}]*MultiBinding[^}]*\} from "@pragmatic-lab/mural\/runtime";/);
         assert.match(
             js,
             /MultiBinding\(_border\d+, \["a","b"\], \(_p0, _p1\) => \( ?_p0 \+ _p1 \* 2 ?\)\)/,

@@ -9,7 +9,7 @@ import {
     MetaData,
     Model,
     RelayCommand,
-} from 'mural/runtime';
+} from '@pragmatic-lab/mural/runtime';
 
 export class MenuVM extends Model
 {

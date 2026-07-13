@@ -9,7 +9,7 @@ import {
     MetaData,
     RelayCommand,
     type Visual,
-} from 'mural/runtime';
+} from '@pragmatic-lab/mural/runtime';
 
 export class SplitButtonVM extends Model
 {

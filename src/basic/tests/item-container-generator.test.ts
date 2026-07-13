@@ -2,7 +2,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { Panel, Size, Element, Visual, type DrawingContext } from '../../runtime/index.js';
 import { DataTemplate } from '../index.js';
-import { ItemsControl } from 'mural/framework';
+import { ItemsControl } from '@pragmatic-lab/mural/framework';
 
 class Leaf extends Element
 {

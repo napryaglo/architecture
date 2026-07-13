@@ -3,7 +3,7 @@
 // the platform shell expects every demo to materialise through a
 // DataTemplate keyed on a DataType, and DataType matching needs an
 // instance of *something*.
-import { Model } from 'mural/runtime';
+import { Model } from '@pragmatic-lab/mural/runtime';
 
 export class ShapesVM extends Model
 {

@@ -16,7 +16,7 @@ import {
     ObservableCollection,
     RelayCommand,
     type ICommand,
-} from 'mural/runtime';
+} from '@pragmatic-lab/mural/runtime';
 
 import { PATHS } from './paths.mjs';
 

@@ -1,5 +1,5 @@
-import { ResourceDictionary } from "mural/runtime";
-import { ArcSegment, GeometryGroup, LineSegment, PathFigure, PathGeometry, Point, Rect, RectangleGeometry, Size, SweepDirection } from "mural/visual-engine";
+import { ResourceDictionary } from "@pragmatic-lab/mural/runtime";
+import { ArcSegment, GeometryGroup, LineSegment, PathFigure, PathGeometry, Point, Rect, RectangleGeometry, Size, SweepDirection } from "@pragmatic-lab/mural/visual-engine";
 
 
 const _gate_DemoPlatformIcons = Symbol("DemoPlatformIcons.ctor");
