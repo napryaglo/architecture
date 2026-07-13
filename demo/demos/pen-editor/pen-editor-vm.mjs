@@ -7,8 +7,8 @@
 // without binding to a Pen-typed property tree. A property-change
 // listener installed on the Pen rebuilds these mirror DPs on every
 // mutation.
-import { MetaData, Model } from '@visualisation-sub/mural/runtime';
-import { Color, Pen, SolidColorBrush, } from '@visualisation-sub/mural/visual-engine';
+import { MetaData, Model } from 'mural/runtime';
+import { Color, Pen, SolidColorBrush, } from 'mural/visual-engine';
 export class PenEditorDemoVM extends Model {
     static PenKey = Model.RegisterProperty(PenEditorDemoVM, 'Pen', undefined, MetaData.None);
     static BrushSummaryKey = Model.RegisterProperty(PenEditorDemoVM, 'BrushSummary', '', MetaData.None);

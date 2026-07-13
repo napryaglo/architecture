@@ -18,7 +18,7 @@
 //                                    is the dragged Word string.
 // The reorder behavior keys off the first format; a sibling drop
 // receiver attached in the bootstrap handles the second.
-import { DataObject, DragDropEffects, MetaData, Model, ObservableCollection, } from '@visualisation-sub/mural/runtime';
+import { DataObject, DragDropEffects, MetaData, Model, ObservableCollection, } from 'mural/runtime';
 import { TOOLBOX_WORDS, buildListBoxSeed } from './word-list.mjs';
 export const FMT_FROM_INDEX = 'mural/reorder/from-index';
 export const FMT_WORD_COPY = 'mural/word/copy';

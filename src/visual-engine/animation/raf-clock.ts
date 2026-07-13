@@ -13,7 +13,7 @@ import type { IClock } from './clock.js';
 // HtmlTarget swaps this in on AnimationManager.Instance at first
 // construction:
 //
-//   import { AnimationManager, RafClock } from '@visualisation-sub/mural/runtime';
+//   import { AnimationManager, RafClock } from 'mural/runtime';
 //   AnimationManager.Instance.Clock = new RafClock();
 //
 // A consumer can opt out for non-browser hosts (server-render, tests

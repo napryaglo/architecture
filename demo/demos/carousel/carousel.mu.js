@@ -1,9 +1,9 @@
 import { CarouselCard, CarouselVM } from "./carousel-vm.mjs";
-import { Border, DataTemplate, Orientation, StackPanel, TextBlock, TextWrapping } from "@visualisation-sub/mural/basic";
-import { ButtonVariant } from "@visualisation-sub/mural/framework/buttons/button.js";
-import { Carousel } from "@visualisation-sub/mural/framework/carousel/carousel.js";
-import { Card } from "@visualisation-sub/mural/framework/surfaces/card.js";
-import { DataContextBinding, DynamicResource, ResourceDictionary, Thickness, VerticalAlignment } from "@visualisation-sub/mural/runtime";
+import { Border, DataTemplate, Orientation, StackPanel, TextBlock, TextWrapping } from "mural/basic";
+import { ButtonVariant } from "mural/framework/buttons/button.js";
+import { Carousel } from "mural/framework/carousel/carousel.js";
+import { Card } from "mural/framework/surfaces/card.js";
+import { DataContextBinding, DynamicResource, ResourceDictionary, Thickness, VerticalAlignment } from "mural/runtime";
 
 
 const _gate_CarouselDemo = Symbol("CarouselDemo.ctor");

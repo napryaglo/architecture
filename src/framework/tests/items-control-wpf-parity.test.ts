@@ -13,7 +13,7 @@ import {
 } from '../../runtime/index.js';
 import { resolveKey } from '../../runtime/model-internals.js';
 import { AlternationConverter, ContentPresenter, DataTemplate, StackPanel } from '../../basic/index.js';
-import { ItemsControl } from '@visualisation-sub/mural/framework';
+import { ItemsControl } from 'mural/framework';
 
 // Tiny container with a registered DP so the per-item style picker
 // has somewhere visible to land.

@@ -9,7 +9,7 @@ import {
     MetaData,
     RelayCommand,
     type Visual,
-} from '@visualisation-sub/mural/runtime';
+} from 'mural/runtime';
 
 export class SplitButtonVM extends Model
 {

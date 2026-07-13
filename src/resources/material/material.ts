@@ -4,7 +4,7 @@
 // material.mu / light.mu / dark.mu. This file only:
 //   1. Re-exports the compiler-emitted classes (Material,
 //      MaterialLight, MaterialDark) so consumers import from a stable
-//      `@visualisation-sub/mural/resources/material` path.
+//      `mural/resources/material` path.
 //   2. Re-exports Typography (still a hand-authored .mu resource dict
 //      consumed at TextBlock Style apply time, not as @-tokens).
 //   3. Ships backward-compatibility helpers (SetTheme / CurrentTheme /

@@ -315,7 +315,7 @@ attached properties; on writeback, the source write is blocked so the
 source keeps its previous value.
 
 ```ts
-import { Binding, BindingMode, Validation, type ValidationRule } from '@visualisation-sub/mural/runtime';
+import { Binding, BindingMode, Validation, type ValidationRule } from 'mural/runtime';
 
 const notEmpty: ValidationRule = {
     validate(v) {
@@ -347,7 +347,7 @@ values in array order. Converter exceptions surface as `undefined` so
 the outer Binding's `fallbackValue` can apply.
 
 ```ts
-import { MultiBinding, PriorityBinding, Binding } from '@visualisation-sub/mural/runtime';
+import { MultiBinding, PriorityBinding, Binding } from 'mural/runtime';
 
 target.set_property_value_by_name('sum',
     MultiBinding(
@@ -378,7 +378,7 @@ Useful inside templates that need to reach the outer `ListBox`,
 `ItemsControl`, or similar.
 
 ```ts
-import { AncestorBinding } from '@visualisation-sub/mural/runtime';
+import { AncestorBinding } from 'mural/runtime';
 
 container.set_property_value_by_name(
     'IsSelected',
@@ -410,7 +410,7 @@ the EVD knows how to install. The difference is what they bind
 | `ElementNameBinding(source, path)` | A FIXED Visual passed in at construction. | Each Model in the path on that Visual. No DataContext listener. | `{Binding ElementName=foo, Path=…}` |
 
 ```ts
-import { DataContextBinding, ElementNameBinding } from '@visualisation-sub/mural/runtime';
+import { DataContextBinding, ElementNameBinding } from 'mural/runtime';
 
 // Track the active VM's Title — source resolves through DataContext
 // inheritance; rebinds if DataContext is later reassigned.

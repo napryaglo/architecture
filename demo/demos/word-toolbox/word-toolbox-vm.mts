@@ -23,7 +23,7 @@ import {
     DataObject, DragDropEffects,
     MetaData, Model, ObservableCollection,
     type DragStartSpec,
-} from '@visualisation-sub/mural/runtime';
+} from 'mural/runtime';
 import { TOOLBOX_WORDS, buildListBoxSeed } from './word-list.mjs';
 
 export const FMT_FROM_INDEX = 'mural/reorder/from-index';

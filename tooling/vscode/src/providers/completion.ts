@@ -32,9 +32,9 @@ import {
     ENUM_MEMBERS,
     DEFAULT_SLOT_INFO,
     type ElementNode,
-} from '@visualisation-sub/mural/compiler';
+} from 'mural/compiler';
 
-import { Model } from '@visualisation-sub/mural/runtime';
+import { Model } from 'mural/runtime';
 
 import {
     analyze,
@@ -539,5 +539,5 @@ function keyword(label: string, detail?: string): CompletionItem
 
 function shortModule(mod: string): string
 {
-    return mod.replace('@visualisation-sub/mural/', '');
+    return mod.replace('mural/', '');
 }

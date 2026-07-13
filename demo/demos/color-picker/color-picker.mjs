@@ -6,8 +6,8 @@
 // Color.FromHex — we swallow those so the preview stays at its last
 // good value until a full hex lands.
 
-import { Border } from '@visualisation-sub/mural/basic';
-import { Color, SolidColorBrush } from '@visualisation-sub/mural/visual-engine';
+import { Border } from 'mural/basic';
+import { Color, SolidColorBrush } from 'mural/visual-engine';
 
 import { ColorPickerVM } from './color-picker-vm.mjs';
 import { register } from '../../platform/registry.mjs';

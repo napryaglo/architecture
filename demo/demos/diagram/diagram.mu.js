@@ -1,17 +1,17 @@
 import { DiagramTool } from "./diagram-tools.mjs";
-import { Border, DataTemplate, Dock, DockPanel, ItemsPanelTemplate, Orientation, PaginatedCanvas, Shape, Splitter, StackPanel, TextAlignment, TextBlock, TextWrapping, UniformGrid } from "@visualisation-sub/mural/basic";
-import { ColorPicker, FontFamilyPicker, FontSizePicker, ShapeFormatControl, TextPlacement } from "@visualisation-sub/mural/framework";
-import { ContentControl } from "@visualisation-sub/mural/framework/base/content-control.js";
-import { ItemsControl } from "@visualisation-sub/mural/framework/base/items-control.js";
-import { Button } from "@visualisation-sub/mural/framework/buttons/button.js";
-import { DiagramDocument } from "@visualisation-sub/mural/framework/diagram/diagram-document.js";
-import { Diagram } from "@visualisation-sub/mural/framework/diagram/diagram.js";
-import { ToolboxShape } from "@visualisation-sub/mural/framework/diagram/toolbox-shape.js";
-import { SelectionMode } from "@visualisation-sub/mural/framework/list/list-box.js";
-import { MenuItem, MenuSeparator, ToolBar, ToolBarButton, ToolBarSplitButton, ToolBarToggleButton } from "@visualisation-sub/mural/framework/surface.js";
-import { ScrollViewer } from "@visualisation-sub/mural/framework/surfaces/scroll-viewer.js";
-import { DataContextBinding, DynamicResource, ElementNameBinding, HorizontalAlignment, Is, NameScope, ResourceDictionary, Thickness, VerticalAlignment } from "@visualisation-sub/mural/runtime";
-import { FontWeight, LineSegment, PathFigure, PathGeometry, Point, QuadraticBezierSegment } from "@visualisation-sub/mural/visual-engine";
+import { Border, DataTemplate, Dock, DockPanel, ItemsPanelTemplate, Orientation, PaginatedCanvas, Shape, Splitter, StackPanel, TextAlignment, TextBlock, TextWrapping, UniformGrid } from "mural/basic";
+import { ColorPicker, FontFamilyPicker, FontSizePicker, ShapeFormatControl, TextPlacement } from "mural/framework";
+import { ContentControl } from "mural/framework/base/content-control.js";
+import { ItemsControl } from "mural/framework/base/items-control.js";
+import { Button } from "mural/framework/buttons/button.js";
+import { DiagramDocument } from "mural/framework/diagram/diagram-document.js";
+import { Diagram } from "mural/framework/diagram/diagram.js";
+import { ToolboxShape } from "mural/framework/diagram/toolbox-shape.js";
+import { SelectionMode } from "mural/framework/list/list-box.js";
+import { MenuItem, MenuSeparator, ToolBar, ToolBarButton, ToolBarSplitButton, ToolBarToggleButton } from "mural/framework/surface.js";
+import { ScrollViewer } from "mural/framework/surfaces/scroll-viewer.js";
+import { DataContextBinding, DynamicResource, ElementNameBinding, HorizontalAlignment, Is, NameScope, ResourceDictionary, Thickness, VerticalAlignment } from "mural/runtime";
+import { FontWeight, LineSegment, PathFigure, PathGeometry, Point, QuadraticBezierSegment } from "mural/visual-engine";
 
 
 const _gate_DiagramDemo = Symbol("DiagramDemo.ctor");

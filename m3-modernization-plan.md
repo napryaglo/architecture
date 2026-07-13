@@ -842,7 +842,7 @@ parameterized by the underlying source shape + a grid resolution.
   parametric class's file.
 - Symbol-table entries: bulk-add to
   [src/compiler/symbol-table.ts](src/compiler/symbol-table.ts) under
-  the `@visualisation-sub/mural/basic` path so `.mu` consumers can
+  the `mural/basic` path so `.mu` consumers can
   drop them straight in.
 - Demo: one consolidated `demo/demos/shapes/` page rendering the
   whole catalogue in the 5×7 grid layout from the M3 reference image.

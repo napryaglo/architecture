@@ -38,7 +38,7 @@ import {
     type Attribute,
     type BodyItem,
     type StructuredBody,
-} from '@visualisation-sub/mural/compiler';
+} from 'mural/compiler';
 
 export interface ResourceDef
 {

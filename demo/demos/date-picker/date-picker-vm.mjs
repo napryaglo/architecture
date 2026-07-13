@@ -3,7 +3,7 @@
 // writes SelectedDate through the binding (bypassing the JS setter), the
 // label is refreshed from OnPropertyChanged, which fires on every write —
 // direct or binding-driven.
-import { Model, MetaData } from '@visualisation-sub/mural/runtime';
+import { Model, MetaData } from 'mural/runtime';
 export class DatePickerVM extends Model {
     static SelectedDateKey = Model.RegisterProperty(DatePickerVM, 'SelectedDate', undefined, MetaData.None);
     static SelectedLabelKey = Model.RegisterProperty(DatePickerVM, 'SelectedLabel', 'No date selected', MetaData.None);

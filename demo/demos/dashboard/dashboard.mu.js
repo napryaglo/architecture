@@ -1,7 +1,7 @@
 import { DashboardVM } from "./dashboard-vm.mjs";
-import { Border, Canvas, DataTemplate, TextBlock, TextWrapping } from "@visualisation-sub/mural/basic";
-import { Color, CornerRadius, DynamicResource, PropertyTrigger, ResourceDictionary, Setter, SetterFactory, Style, Thickness } from "@visualisation-sub/mural/runtime";
-import { SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
+import { Border, Canvas, DataTemplate, TextBlock, TextWrapping } from "mural/basic";
+import { Color, CornerRadius, DynamicResource, PropertyTrigger, ResourceDictionary, Setter, SetterFactory, Style, Thickness } from "mural/runtime";
+import { SolidColorBrush } from "mural/visual-engine";
 
 
 const _gate_DashboardDemo = Symbol("DashboardDemo.ctor");

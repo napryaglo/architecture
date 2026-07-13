@@ -68,7 +68,7 @@ own configuration it's already populated.
 ## 2. Authoring a Behavior
 
 ```ts
-import { Behavior, MetaData, Model, type Visual } from '@visualisation-sub/mural/runtime';
+import { Behavior, MetaData, Model, type Visual } from 'mural/runtime';
 
 export class TooltipBehavior extends Behavior
 {

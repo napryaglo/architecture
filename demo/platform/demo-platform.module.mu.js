@@ -1,9 +1,9 @@
 import { AnimationsService, ControlsService, DemoGroupService, DemosService, PatternsService, StylesService } from "./demo-group-services.mjs";
-import { DataTemplate } from "@visualisation-sub/mural/basic";
-import { ListBox } from "@visualisation-sub/mural/framework/list/list-box.js";
-import { Capability, ShellModule } from "@visualisation-sub/mural/framework/shell/module.js";
-import { ContentHostService } from "@visualisation-sub/mural/framework/shell/services/content-host-service.js";
-import { DataContextBinding, DynamicResource, ServiceProvider } from "@visualisation-sub/mural/runtime";
+import { DataTemplate } from "mural/basic";
+import { ListBox } from "mural/framework/list/list-box.js";
+import { Capability, ShellModule } from "mural/framework/shell/module.js";
+import { ContentHostService } from "mural/framework/shell/services/content-host-service.js";
+import { DataContextBinding, DynamicResource, ServiceProvider } from "mural/runtime";
 
 export const DemoPlatformModule = (() => {
     const _shellModule0 = new ShellModule();

@@ -18,12 +18,12 @@ const stubResolver: IncludeResolver = (path, ctx) => {
                 { key: 'home',   valueJs: 'new PathGeometry([])' },
                 { key: 'search', valueJs: 'new GeometryGroup([])' },
             ],
-            imports: [{ module: '@visualisation-sub/mural/visual-engine', names: ['PathGeometry', 'GeometryGroup'] }],
+            imports: [{ module: 'mural/visual-engine', names: ['PathGeometry', 'GeometryGroup'] }],
         };
     }
     return {
         entries: [{ key: ctx.key ?? 'home', valueJs: 'new PathGeometry([])' }],
-        imports: [{ module: '@visualisation-sub/mural/visual-engine', names: ['PathGeometry'] }],
+        imports: [{ module: 'mural/visual-engine', names: ['PathGeometry'] }],
     };
 };
 
@@ -37,7 +37,7 @@ describe('include — emit', () => {
     test('single file → one Set keyed by the resolver, plus its imports', () => {
         const js = emitted(`resources Icons { include "icons/home.svg" }`);
         assert.match(js, /\.Set\("home", new PathGeometry\(\[\]\)\)/);
-        assert.match(js, /import \{ PathGeometry \} from "@visualisation-sub\/mural\/visual-engine"/);
+        assert.match(js, /import \{ PathGeometry \} from "mural\/visual-engine"/);
     });
 
     test('`as <key>` overrides the resource key', () => {
@@ -50,7 +50,7 @@ describe('include — emit', () => {
         assert.match(js, /\.Set\("home", /);
         assert.match(js, /\.Set\("search", /);
         // Both imported names land in one merged import line.
-        assert.match(js, /import \{ GeometryGroup, PathGeometry \} from "@visualisation-sub\/mural\/visual-engine"/);
+        assert.match(js, /import \{ GeometryGroup, PathGeometry \} from "mural\/visual-engine"/);
     });
 
     test('include coexists with hand-authored entries in the same block', () => {

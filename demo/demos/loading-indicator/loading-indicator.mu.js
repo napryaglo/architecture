@@ -1,8 +1,8 @@
 import { LoadingIndicatorVM } from "./loading-indicator-vm.mjs";
-import { Border, DataTemplate, Orientation, StackPanel, TextBlock, TextWrapping } from "@visualisation-sub/mural/basic";
-import { Button, ButtonVariant } from "@visualisation-sub/mural/framework/buttons/button.js";
-import { LoadingIndicator, LoadingIndicatorVariant } from "@visualisation-sub/mural/framework/notifications/loading-indicator.js";
-import { DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
+import { Border, DataTemplate, Orientation, StackPanel, TextBlock, TextWrapping } from "mural/basic";
+import { Button, ButtonVariant } from "mural/framework/buttons/button.js";
+import { LoadingIndicator, LoadingIndicatorVariant } from "mural/framework/notifications/loading-indicator.js";
+import { DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness } from "mural/runtime";
 
 
 const _gate_LoadingIndicatorDemo = Symbol("LoadingIndicatorDemo.ctor");

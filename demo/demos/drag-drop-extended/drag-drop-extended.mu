@@ -1,7 +1,7 @@
 import DragDropExtendedVM from "./drag-drop-extended-vm.mjs"
 import RowVM from "./drag-drop-extended-vm.mjs"
 import DroppedFileVM from "./drag-drop-extended-vm.mjs"
-import ListReorderBehavior from "@visualisation-sub/mural/basic"
+import ListReorderBehavior from "mural/basic"
 
 // drag-drop-extended.mu — single-screen demo that exercises every §8
 // follow-up shipped in this branch:

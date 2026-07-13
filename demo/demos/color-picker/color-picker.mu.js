@@ -1,8 +1,8 @@
 import { ColorPickerVM } from "./color-picker-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock, TextWrapping } from "@visualisation-sub/mural/basic";
-import { ColorPicker, ColorScheme } from "@visualisation-sub/mural/framework";
-import { Color, DataContextBinding, DynamicResource, NameScope, ResourceDictionary, Thickness, VerticalAlignment } from "@visualisation-sub/mural/runtime";
-import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock, TextWrapping } from "mural/basic";
+import { ColorPicker, ColorScheme } from "mural/framework";
+import { Color, DataContextBinding, DynamicResource, NameScope, ResourceDictionary, Thickness, VerticalAlignment } from "mural/runtime";
+import { FontWeight, SolidColorBrush } from "mural/visual-engine";
 
 
 const _gate_ColorPickerDemo = Symbol("ColorPickerDemo.ctor");

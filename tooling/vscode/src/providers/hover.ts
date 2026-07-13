@@ -19,7 +19,7 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
     DEFAULT_SYMBOLS,
     KEYWORDS,
-} from '@visualisation-sub/mural/compiler';
+} from 'mural/compiler';
 
 import {
     analyze,
@@ -211,7 +211,7 @@ function formatResource(label: string, dynamic: boolean, def: ResourceDef): stri
 
 function shortModule(mod: string): string
 {
-    return mod.replace('@visualisation-sub/mural/', '');
+    return mod.replace('mural/', '');
 }
 
 function mdHover(value: string, range: Range): Hover

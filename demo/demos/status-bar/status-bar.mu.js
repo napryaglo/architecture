@@ -1,9 +1,9 @@
 import { StatusBarVM } from "./status-bar-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@visualisation-sub/mural/basic";
-import { Button } from "@visualisation-sub/mural/framework/buttons/button.js";
-import { StatusBar, StatusBarItem, StatusBarSeparator } from "@visualisation-sub/mural/framework/surface.js";
-import { DataContextBinding, DynamicResource, MultiBinding, ResourceDictionary, Thickness, VerticalAlignment } from "@visualisation-sub/mural/runtime";
-import { FontWeight } from "@visualisation-sub/mural/visual-engine";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "mural/basic";
+import { Button } from "mural/framework/buttons/button.js";
+import { StatusBar, StatusBarItem, StatusBarSeparator } from "mural/framework/surface.js";
+import { DataContextBinding, DynamicResource, MultiBinding, ResourceDictionary, Thickness, VerticalAlignment } from "mural/runtime";
+import { FontWeight } from "mural/visual-engine";
 
 
 const _gate_StatusBarDemo = Symbol("StatusBarDemo.ctor");

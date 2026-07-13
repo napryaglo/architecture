@@ -3,7 +3,7 @@
 // controls extend `Button` and would trigger an ES-module TDZ when
 // loaded as a side effect of Button's default-style cascade.
 // Consumers wanting these types import explicitly from
-// `@visualisation-sub/mural/framework/surface.js`.
+// `mural/framework/surface.js`.
 
 export { ToggleButton } from './buttons/toggle-button.js';
 export {

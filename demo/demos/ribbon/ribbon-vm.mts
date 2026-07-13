@@ -12,6 +12,6 @@
 // ElementName (`$canvas.AlignLeftCommand`, …), so the VM only has to supply
 // the Nodes collection it inherits from DiagramDocument.
 
-import { DiagramDocument } from '@visualisation-sub/mural/framework';
+import { DiagramDocument } from 'mural/framework';
 
 export class RibbonDemoDoc extends DiagramDocument {}

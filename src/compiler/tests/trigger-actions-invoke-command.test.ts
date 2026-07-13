@@ -22,7 +22,7 @@ describe('compile — InvokeCommand trigger action', () => {
             }
         `);
 
-        assert.match(js, /import .*InvokeCommandAction.* from "@visualisation-sub\/mural\/runtime"/);
+        assert.match(js, /import .*InvokeCommandAction.* from "mural\/runtime"/);
         assert.match(
             js,
             /new InvokeCommandAction\(\(_target\) => _target\.DataContext\?\.SaveCommand\);/,

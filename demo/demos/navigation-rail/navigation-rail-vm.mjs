@@ -1,7 +1,7 @@
 // NavigationRailVM — backs the navigation-rail demo. Holds a list of
 // destination labels + a SelectedItem that the rail two-way binds. The
 // active demo body switches based on SelectedItem.
-import { Model, MetaData, ObservableCollection } from '@visualisation-sub/mural/runtime';
+import { Model, MetaData, ObservableCollection } from 'mural/runtime';
 export class NavigationRailVM extends Model {
     static DestinationsKey = Model.RegisterProperty(NavigationRailVM, 'Destinations', null, MetaData.None);
     static SelectedItemKey = Model.RegisterProperty(NavigationRailVM, 'SelectedItem', 'Home', MetaData.None);

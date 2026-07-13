@@ -11,7 +11,7 @@ import {
     Storyboard,
     StoryboardState,
 } from '../index.js';
-import { Button } from '@visualisation-sub/mural/framework';
+import { Button } from 'mural/framework';
 
 function freshClock(): ManualClock
 {

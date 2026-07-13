@@ -1,8 +1,8 @@
 import { DragDropVM, ItemVM } from "./drag-drop-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock, TextWrapping } from "@visualisation-sub/mural/basic";
-import { ListBox, ListBoxItem } from "@visualisation-sub/mural/framework/list/list-box.js";
-import { DataContextBinding, DynamicResource, NameScope, ResourceDictionary, Setter, SetterFactory, Style, Thickness, VerticalAlignment } from "@visualisation-sub/mural/runtime";
-import { FontWeight } from "@visualisation-sub/mural/visual-engine";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock, TextWrapping } from "mural/basic";
+import { ListBox, ListBoxItem } from "mural/framework/list/list-box.js";
+import { DataContextBinding, DynamicResource, NameScope, ResourceDictionary, Setter, SetterFactory, Style, Thickness, VerticalAlignment } from "mural/runtime";
+import { FontWeight } from "mural/visual-engine";
 
 
 const _gate_DragDropDemo = Symbol("DragDropDemo.ctor");

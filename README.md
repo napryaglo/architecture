@@ -31,5 +31,5 @@ See [docs/](docs/README.md) for guides, including the
 [Diagram User Manual](docs/diagram-user-manual.md).
 
 
-To uninstall later: code --uninstall-extension visualisation-sub.mural-vscode.
+To uninstall later: code --uninstall-extension mural-vscode.
 To rebuild after edits: npm run build && npx @vscode/vsce package && code --install-extension mural-vscode-0.1.0.vsix --force.

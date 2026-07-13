@@ -11,7 +11,7 @@ import {
     Range,
 } from 'vscode-languageserver/node.js';
 
-import type { SourceSpan } from '@visualisation-sub/mural/compiler';
+import type { SourceSpan } from 'mural/compiler';
 
 import type { ResourceDef } from '../analyzer.js';
 import { WorkspaceIndex, type IndexedResource } from '../workspace-index.js';

@@ -2,7 +2,7 @@
 // Extended slot so the dynamic-binding chain is visible end-to-end. No
 // IsChecked story because FAB is monomorphic on container colour and
 // doesn't ship a toggle variant.
-import { Model, MetaData, RelayCommand } from '@visualisation-sub/mural/runtime';
+import { Model, MetaData, RelayCommand } from 'mural/runtime';
 
 export class FabVM extends Model
 {

@@ -1,9 +1,9 @@
 import { CounterVM } from "./counter-vm.mjs";
-import { Border, Canvas, DataTemplate, TextBlock, TextWrapping } from "@visualisation-sub/mural/basic";
-import { Button } from "@visualisation-sub/mural/framework/buttons/button.js";
-import { ComboBox } from "@visualisation-sub/mural/framework/list/combo-box.js";
-import { DataContextBinding, DynamicResource, MultiBinding, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
-import { FontWeight } from "@visualisation-sub/mural/visual-engine";
+import { Border, Canvas, DataTemplate, TextBlock, TextWrapping } from "mural/basic";
+import { Button } from "mural/framework/buttons/button.js";
+import { ComboBox } from "mural/framework/list/combo-box.js";
+import { DataContextBinding, DynamicResource, MultiBinding, ResourceDictionary, Thickness } from "mural/runtime";
+import { FontWeight } from "mural/visual-engine";
 
 
 const _gate_CounterDemo = Symbol("CounterDemo.ctor");

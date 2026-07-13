@@ -3,8 +3,8 @@
 // interface, the Visual tree).
 //
 // `visual-engine` and `basic` are accessible via subpath imports
-// (`@visualisation-sub/mural/visual-engine`,
-// `@visualisation-sub/mural/basic`) — kept out of the root barrel so
+// (`mural/visual-engine`,
+// `mural/basic`) — kept out of the root barrel so
 // the `DrawingContext` re-export from `visual-engine` does not collide
 // with the one from `runtime` (visual-engine augments the runtime
 // interface via TS declaration merging).

@@ -1,7 +1,7 @@
 import { BouncingBallVM } from "./bouncing-ball-vm.mjs";
-import { Border, Canvas, DataTemplate, Ellipse } from "@visualisation-sub/mural/basic";
-import { Color, DataContextBinding, DynamicResource, NameScope, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
-import { Pen, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
+import { Border, Canvas, DataTemplate, Ellipse } from "mural/basic";
+import { Color, DataContextBinding, DynamicResource, NameScope, ResourceDictionary, Thickness } from "mural/runtime";
+import { Pen, SolidColorBrush } from "mural/visual-engine";
 
 
 const _gate_BouncingBallDemo = Symbol("BouncingBallDemo.ctor");

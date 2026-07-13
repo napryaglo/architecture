@@ -4,7 +4,7 @@
 //   * MenuActionCommand + MenuActionTaken — fired by each menu-item
 //     click in the dropdown
 //   * IsOpen — bound to SplitButton.IsOpen for the readout
-import { Model, MetaData, RelayCommand, } from '@visualisation-sub/mural/runtime';
+import { Model, MetaData, RelayCommand, } from 'mural/runtime';
 export class SplitButtonVM extends Model {
     static SendCountKey = Model.RegisterProperty(SplitButtonVM, 'SendCount', 0, MetaData.None);
     static MenuActionTakenKey = Model.RegisterProperty(SplitButtonVM, 'MenuActionTaken', '—', MetaData.None);

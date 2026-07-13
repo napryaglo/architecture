@@ -20,10 +20,10 @@
 // label). The framework's auto-BasedOn machinery splices the Figure
 // theme Style underneath the demo's subclass styles, so Template flows
 // from the framework while the demo's setters / triggers add chrome.
-import { MetaData, Model, Color, RelayCommand, } from '@visualisation-sub/mural/runtime';
-import { SolidColorBrush } from '@visualisation-sub/mural/visual-engine';
-import { Figure } from '@visualisation-sub/mural/framework';
-import { DiagramDocument } from '@visualisation-sub/mural/framework';
+import { MetaData, Model, Color, RelayCommand, } from 'mural/runtime';
+import { SolidColorBrush } from 'mural/visual-engine';
+import { Figure } from 'mural/framework';
+import { DiagramDocument } from 'mural/framework';
 const NODE_W = 130;
 const NODE_H = 60;
 const brush = (hex) => new SolidColorBrush(Color.FromHex(hex));

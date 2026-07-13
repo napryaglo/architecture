@@ -3,6 +3,6 @@
 // purely visual (no state, no commands), so the VM exists only so the
 // platform's ContentControl auto-resolves the template by matching
 // TextBoxVM.constructor.name against the template's DataType.
-import { Model } from '@visualisation-sub/mural/runtime';
+import { Model } from 'mural/runtime';
 
 export class TextBoxVM extends Model { }

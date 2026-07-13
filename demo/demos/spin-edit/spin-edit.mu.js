@@ -1,7 +1,7 @@
 import { SpinEditVM } from "./spin-edit-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, SpinEdit, StackPanel, TextBlock } from "@visualisation-sub/mural/basic";
-import { DynamicResource, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
-import { FontWeight } from "@visualisation-sub/mural/visual-engine";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, SpinEdit, StackPanel, TextBlock } from "mural/basic";
+import { DynamicResource, ResourceDictionary, Thickness } from "mural/runtime";
+import { FontWeight } from "mural/visual-engine";
 
 
 const _gate_SpinEditDemo = Symbol("SpinEditDemo.ctor");

@@ -15,7 +15,7 @@ import {
     MetaData,
     Model,
     RelayCommand,
-} from '@visualisation-sub/mural/runtime';
+} from 'mural/runtime';
 
 export class StatusBarVM extends Model
 {

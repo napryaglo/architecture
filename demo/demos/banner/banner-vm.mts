@@ -2,7 +2,7 @@
 // template binds to (collapsing the Banner when the action fires); the
 // Dismiss / Restore RelayCommands the markup wires to the trailing action
 // Button and a Restore button so the in-flow Banner can be shown again.
-import { Model, MetaData, RelayCommand } from '@visualisation-sub/mural/runtime';
+import { Model, MetaData, RelayCommand } from 'mural/runtime';
 
 export class BannerVM extends Model
 {

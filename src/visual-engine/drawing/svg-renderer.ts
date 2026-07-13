@@ -55,7 +55,7 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 // `Symbol.for` keeps the stamp the same across module boundaries —
 // extensions or other packages that grab the same registry symbol
 // see the same key.
-export const VISUAL_BACKREF: unique symbol = Symbol.for('@visualisation-sub/mural:visual-backref');
+export const VISUAL_BACKREF: unique symbol = Symbol.for('mural:visual-backref');
 
 interface BackrefHost { [VISUAL_BACKREF]?: Visual; }
 

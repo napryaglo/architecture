@@ -89,11 +89,11 @@ export {
 } from './services/service-provider.js';
 export { ServiceBase } from './services/service-base.js';
 export { ApplicationService, type IApplicationService } from './services/application-service.js';
-// InputManager moved to `@visualisation-sub/mural/framework`.
+// InputManager moved to `mural/framework`.
 // RoutedCommand / CommandBinding / CommandManager / InputBinding /
 // KeyBinding / MouseBinding / ICommandSource + CommandSourceHelper /
 // ApplicationCommands etc. moved to
-// `@visualisation-sub/mural/framework/commands`. The runtime barrel
+// `mural/framework/commands`. The runtime barrel
 // keeps only the foundational `ICommand` + `RelayCommand` from
 // `./input/command.js`.
 export {
@@ -184,7 +184,7 @@ export {
     // Font subsystem — value classes + central registry. Re-exported here
     // (riding the existing visual-engine barrel edge to avoid a new import
     // cycle) so markup-emitted code and MVVM consumers reach them through
-    // `@visualisation-sub/mural/runtime`.
+    // `mural/runtime`.
     FontFamily,
     Typeface,
     FontWeight,

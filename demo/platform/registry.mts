@@ -15,7 +15,7 @@
 //               subsequent activations (so state persists during the
 //               session — counter values, drawer open state, etc).
 
-import type { Visual } from '@visualisation-sub/mural/runtime';
+import type { Visual } from 'mural/runtime';
 
 // The shape a demo module hands to `register`. The thin bootstrap `.mjs`
 // entry files are still plain JS, so the runtime guards in `register`

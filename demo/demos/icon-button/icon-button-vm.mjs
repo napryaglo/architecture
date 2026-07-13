@@ -2,7 +2,7 @@
 // icon variant has been clicked and the checked state of the four
 // IconButtonToggle variants so the UI can show a live tally + reflect
 // the toggle state back into the chrome.
-import { Model, MetaData, RelayCommand } from '@visualisation-sub/mural/runtime';
+import { Model, MetaData, RelayCommand } from 'mural/runtime';
 export class IconButtonVM extends Model {
     static FilledClicksKey = Model.RegisterProperty(IconButtonVM, 'FilledClicks', 0, MetaData.None);
     static TonalClicksKey = Model.RegisterProperty(IconButtonVM, 'TonalClicks', 0, MetaData.None);

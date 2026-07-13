@@ -1,8 +1,8 @@
 import { FillEditorDemoVM } from "./fill-editor-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, Rectangle, StackPanel, TextBlock } from "@visualisation-sub/mural/basic";
-import { FillEditor } from "@visualisation-sub/mural/framework";
-import { DataContextBinding, DynamicResource, NameScope, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
-import { FontWeight } from "@visualisation-sub/mural/visual-engine";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, Rectangle, StackPanel, TextBlock } from "mural/basic";
+import { FillEditor } from "mural/framework";
+import { DataContextBinding, DynamicResource, NameScope, ResourceDictionary, Thickness } from "mural/runtime";
+import { FontWeight } from "mural/visual-engine";
 
 
 const _gate_FillEditorDemo = Symbol("FillEditorDemo.ctor");

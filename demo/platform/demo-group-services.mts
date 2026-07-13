@@ -27,9 +27,9 @@ import {
     ServiceKey,
     type Visual,
     type IServiceProvider,
-} from '@visualisation-sub/mural/runtime';
-import { DocumentSelectorService } from '@visualisation-sub/mural/framework/shell/services/document-selector-service.js';
-import { ContentHostService } from '@visualisation-sub/mural/framework/shell/services/content-host-service.js';
+} from 'mural/runtime';
+import { DocumentSelectorService } from 'mural/framework/shell/services/document-selector-service.js';
+import { ContentHostService } from 'mural/framework/shell/services/content-host-service.js';
 import { allDemos, instantiateDemo, onDemoRegistered, type DemoDefinition } from './registry.mjs';
 
 // Insert `item` into `coll` at the position that keeps it sorted by `cmp`

@@ -5,7 +5,7 @@
 // VS Code's extension host across versions.
 //
 // Only `vscode` is marked external — VS Code provides it at runtime;
-// everything else (LSP libs + the @visualisation-sub/mural compiler)
+// everything else (LSP libs + the mural compiler)
 // is inlined.
 
 import { build, context } from 'esbuild';

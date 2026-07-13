@@ -251,7 +251,7 @@ See [build-targets.md](build-targets.md) for the full npm-script catalog.
   `ComboBox`, `ListBox`, `TreeView`, `Slider`, `SpinEdit`, `Drawer`,
   `PageView`, `Diagram`, shapes (`Ellipse`, `Line`), `Thumb`,
   `Splitter`, `GridSplitter`.
-- Command-surface controls (in `@visualisation-sub/mural/framework/surface.js`):
+- Command-surface controls (in `mural/framework/surface.js`):
   `ToolBar` + `ToolBarButton` + `ToolBarToggleButton` + `ToolBarSeparator`
   with overflow popup; `Menu` + `MenuButton` + `MenuItem` +
   `MenuSeparator` (hamburger fly-out); `ContextMenu` with the attached

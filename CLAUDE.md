@@ -95,7 +95,7 @@ plain JS. Run `npm run typecheck:demos` to check demos without a full build.
   `Generator.ContainerFromItem`, `templatedParent`. View publishes state
   via bindings / routed events the VM subscribes to from outside the
   tree.
-- **No view-layer imports.** Permitted: `@visualisation-sub/mural/runtime`
+- **No view-layer imports.** Permitted: `mural/runtime`
   (DPs, bindings, ICommand, ObservableCollection, primitives, routed
   event TYPES). Forbidden: `Basic`, `visual-engine`, any host target. No
   `Border`, `Canvas`, `Line`, `SolidColorBrush`, `Color` in VM code.

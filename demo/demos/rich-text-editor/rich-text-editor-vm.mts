@@ -4,8 +4,8 @@
 // no document state. It exists only as the DataTemplate's DataType and to
 // receive OnViewMounted, where the bootstrap wires the formatting toolbar
 // to the editor's public editing commands.
-import { Model } from '@visualisation-sub/mural/runtime';
-import type { Visual } from '@visualisation-sub/mural/runtime';
+import { Model } from 'mural/runtime';
+import type { Visual } from 'mural/runtime';
 
 export class RichTextEditorVM extends Model {
     /** Set by the bootstrap; the platform calls it after the view

@@ -5,9 +5,9 @@
 //
 // Pure markup-trigger forms live in the sibling demos
 // (animation-declarative, animation-named, animation-triggers).
-import { Model } from '@visualisation-sub/mural/runtime';
-import { Color, DoubleAnimation, Easings, LinearThicknessKeyFrame, StoryboardState, Storyboard, Thickness, ThicknessAnimationUsingKeyFrames, cubicBezier, } from '@visualisation-sub/mural/runtime';
-import { SolidColorBrushAnimation } from '@visualisation-sub/mural/visual-engine';
+import { Model } from 'mural/runtime';
+import { Color, DoubleAnimation, Easings, LinearThicknessKeyFrame, StoryboardState, Storyboard, Thickness, ThicknessAnimationUsingKeyFrames, cubicBezier, } from 'mural/runtime';
+import { SolidColorBrushAnimation } from 'mural/visual-engine';
 export class AnimationVM extends Model {
     OnViewMounted(view) {
         // ── Row 1: slide ─────────────────────────────────────────────

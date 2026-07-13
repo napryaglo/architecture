@@ -1,8 +1,8 @@
 import { ShapesVM } from "./shapes-vm.mjs";
-import { Arch, Arrow, Boom, Border, Bun, Burst, Clamshell, DataTemplate, Diamond, EightLeafClover, Ellipse, Fan, Flower, FourLeafClover, FourSidedCookie, Gem, Ghostish, Heart, NineSidedCookie, Orientation, Pentagon, Pill, PixelCircle, PixelTriangle, Puffy, PuffyDiamond, Semicircle, SevenSidedCookie, SixSidedCookie, Slanted, SoftBoom, SoftBurst, Squircle, StackPanel, Sunny, TextBlock, TextWrapping, Triangle, TwelveSidedCookie, UniformGrid, VerySunny } from "@visualisation-sub/mural/basic";
-import { ScrollViewer } from "@visualisation-sub/mural/framework/surfaces/scroll-viewer.js";
-import { DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
-import { FontWeight } from "@visualisation-sub/mural/visual-engine";
+import { Arch, Arrow, Boom, Border, Bun, Burst, Clamshell, DataTemplate, Diamond, EightLeafClover, Ellipse, Fan, Flower, FourLeafClover, FourSidedCookie, Gem, Ghostish, Heart, NineSidedCookie, Orientation, Pentagon, Pill, PixelCircle, PixelTriangle, Puffy, PuffyDiamond, Semicircle, SevenSidedCookie, SixSidedCookie, Slanted, SoftBoom, SoftBurst, Squircle, StackPanel, Sunny, TextBlock, TextWrapping, Triangle, TwelveSidedCookie, UniformGrid, VerySunny } from "mural/basic";
+import { ScrollViewer } from "mural/framework/surfaces/scroll-viewer.js";
+import { DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness } from "mural/runtime";
+import { FontWeight } from "mural/visual-engine";
 
 
 const _gate_ShapesDemo = Symbol("ShapesDemo.ctor");

@@ -6,7 +6,7 @@
   // bootstrap `.mjs` entry files and generated `.mu.js` stay plain JS and
   // are NOT part of this program (only `**/*.mts` is included).
   //
-  // The library (`@visualisation-sub/mural/*`) resolves through the
+  // The library (`mural/*`) resolves through the
   // package `exports` map to its published `dist/**/*.d.ts` — i.e. demos
   // type-check against the SAME surface an external consumer sees. Run
   // `npm run build` (which builds dist) before/with the demo TS build.

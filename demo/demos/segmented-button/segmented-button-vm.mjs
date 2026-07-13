@@ -7,7 +7,7 @@
 //
 // Each readout below the row shows the live VM state so the bind chain
 // is visible.
-import { Model, MetaData, ObservableCollection } from '@visualisation-sub/mural/runtime';
+import { Model, MetaData, ObservableCollection } from 'mural/runtime';
 export class SegmentedButtonVM extends Model {
     static TimeframesKey = Model.RegisterProperty(SegmentedButtonVM, 'Timeframes', undefined, MetaData.None);
     static SelectedTimeframeKey = Model.RegisterProperty(SegmentedButtonVM, 'SelectedTimeframe', undefined, MetaData.None);

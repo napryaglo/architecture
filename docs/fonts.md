@@ -276,8 +276,8 @@ is a compile error.
 
 ## 10. Public API surface
 
-Exported from `@visualisation-sub/mural/runtime` (and
-`@visualisation-sub/mural/visual-engine`):
+Exported from `mural/runtime` (and
+`mural/visual-engine`):
 
 `FontFamily`, `Typeface`, `FontWeight`, `FontStyle`, `FontManager`,
 `RegisteredFont`, `FontSourceKind`, and the `FontSource` / `FontRegistration`

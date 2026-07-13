@@ -9,7 +9,7 @@ import type { Storyboard } from './storyboard.js';
 // One singleton instance lives at AnimationManager.Instance. Host shells
 // replace the default ManualClock with a RafClock at startup:
 //
-//   import { AnimationManager, RafClock } from '@visualisation-sub/mural/runtime';
+//   import { AnimationManager, RafClock } from 'mural/runtime';
 //   AnimationManager.Instance.Clock = new RafClock();
 //
 // Replacing Clock when storyboards are active rewires the subscription

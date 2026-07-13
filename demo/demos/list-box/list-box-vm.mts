@@ -8,12 +8,12 @@
 // x:name attributes from the freshly-rendered view inside
 // OnViewMounted. CollectionView subscription + toggle state live on
 // the VM so the demo data and behavior travel with the model.
-import { type Visual, Model } from '@visualisation-sub/mural/runtime';
-import { SortDescription, SortDirection, TextBlock } from '@visualisation-sub/mural/basic';
-import { Button } from '@visualisation-sub/mural/framework';
+import { type Visual, Model } from 'mural/runtime';
+import { SortDescription, SortDirection, TextBlock } from 'mural/basic';
+import { Button } from 'mural/framework';
 import {
     ListBox, ListBoxItem,
-} from '@visualisation-sub/mural/framework';
+} from 'mural/framework';
 
 interface Person { name: string; role: string; }
 interface LabelledPerson extends Person { Label: string; }

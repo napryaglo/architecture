@@ -750,7 +750,7 @@ export class Visual extends Model
     // (§ Phase B).
 
     // CommandBindings / InputBindings live on Control (the templated-
-    // control base in `@visualisation-sub/mural/framework`). Routed
+    // control base in `mural/framework`). Routed
     // commands + InputBindings dispatch only reach Control-shaped
     // visuals — Border / Canvas / plain panels participate in routing
     // but don't carry per-instance binding tables. CommandManager and

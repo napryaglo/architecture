@@ -1,8 +1,8 @@
 import { RichTextEditorVM } from "./rich-text-editor-vm.mjs";
-import { Bold, Border, DataTemplate, Dock, DockPanel, FlowDocument, Italic, List, ListItem, ListMarkerStyle, Orientation, Paragraph, RichTextBox, Run, StackPanel, TextBlock, TextWrapping, Underline } from "@visualisation-sub/mural/basic";
-import { Button, ButtonVariant } from "@visualisation-sub/mural/framework/buttons/button.js";
-import { DynamicResource, NameScope, ResourceDictionary, Thickness, VerticalAlignment } from "@visualisation-sub/mural/runtime";
-import { FontStyle, FontWeight, TextDecorations } from "@visualisation-sub/mural/visual-engine";
+import { Bold, Border, DataTemplate, Dock, DockPanel, FlowDocument, Italic, List, ListItem, ListMarkerStyle, Orientation, Paragraph, RichTextBox, Run, StackPanel, TextBlock, TextWrapping, Underline } from "mural/basic";
+import { Button, ButtonVariant } from "mural/framework/buttons/button.js";
+import { DynamicResource, NameScope, ResourceDictionary, Thickness, VerticalAlignment } from "mural/runtime";
+import { FontStyle, FontWeight, TextDecorations } from "mural/visual-engine";
 
 
 const _gate_RichTextEditorDemo = Symbol("RichTextEditorDemo.ctor");

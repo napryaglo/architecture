@@ -2,7 +2,7 @@
 // (counter.mu) declares a DataTemplate parameterized by this type;
 // ContentControl auto-resolves the template by matching
 // CounterVM.constructor.name against the template's DataType.
-import { MetaData, Model, RelayCommand, type ICommand } from '@visualisation-sub/mural/runtime';
+import { MetaData, Model, RelayCommand, type ICommand } from 'mural/runtime';
 
 export class CounterVM extends Model
 {

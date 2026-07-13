@@ -11,8 +11,8 @@
 // can paint a fill-only, stroke-only, or both surface in a single
 // Visual.
 
-import { MetaData, Model, Size, Visual } from '@visualisation-sub/mural/runtime';
-import { Pen } from '@visualisation-sub/mural/visual-engine';
+import { MetaData, Model, Size, Visual } from 'mural/runtime';
+import { Pen } from 'mural/visual-engine';
 
 export class GeometryView extends Visual {
     static GeometryKey    = Model.RegisterProperty(GeometryView, 'Geometry',    undefined, MetaData.Render);

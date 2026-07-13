@@ -50,7 +50,7 @@ needs:
 
 ```ts
 import { ServiceProvider, type IServiceProvider, type IServiceContainer }
-    from '@visualisation-sub/mural/runtime';
+    from 'mural/runtime';
 
 const provider = new ServiceProvider();
 const compose: IServiceContainer = provider;   // can register, can't resolve through this view
@@ -64,7 +64,7 @@ forms, both real object identities (never strings):
 
 ```ts
 // 1. A typed key — for interface-shaped contracts with no runtime class.
-import { ServiceKey } from '@visualisation-sub/mural/runtime';
+import { ServiceKey } from 'mural/runtime';
 const ClockKey = new ServiceKey<Clock>('Clock');   // the generic threads the type through
 
 // 2. A class reference — the class is both key and resolved type.
@@ -152,7 +152,7 @@ Every `Application` exposes a lazy root `ServiceProvider` at `Services`. This
 is the composition root for app-wide services:
 
 ```ts
-import { Application } from '@visualisation-sub/mural/runtime';
+import { Application } from 'mural/runtime';
 Application.current.Services.registerInstance(StorageKey, localStorageAdapter);
 ```
 
@@ -184,7 +184,7 @@ Two contracts every `ServiceBase` follows:
 
 ```ts
 import { Model, MetaData, ServiceBase, ServiceKey, type IServiceProvider }
-    from '@visualisation-sub/mural/runtime';
+    from 'mural/runtime';
 
 export class StatusService extends ServiceBase
 {
@@ -486,7 +486,7 @@ TwoWay `$service` bindings, and the service self-populates from the registry.
 
 ## 9. API reference
 
-### Runtime (`@visualisation-sub/mural/runtime`)
+### Runtime (`mural/runtime`)
 
 | Export | Kind | Summary |
 |---|---|---|

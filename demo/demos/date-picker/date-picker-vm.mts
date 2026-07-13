@@ -3,7 +3,7 @@
 // writes SelectedDate through the binding (bypassing the JS setter), the
 // label is refreshed from OnPropertyChanged, which fires on every write —
 // direct or binding-driven.
-import { Model, MetaData, type PropertyDescriptor } from '@visualisation-sub/mural/runtime';
+import { Model, MetaData, type PropertyDescriptor } from 'mural/runtime';
 
 export class DatePickerVM extends Model
 {

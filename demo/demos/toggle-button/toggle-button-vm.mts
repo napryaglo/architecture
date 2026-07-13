@@ -3,7 +3,7 @@
 // The view binds each toggle's IsChecked TwoWay onto the corresponding
 // DP; per-DP style triggers on the preview Border style its TextBlock
 // (font weight, italics, underline) based on the bound DP values.
-import { Model, MetaData } from '@visualisation-sub/mural/runtime';
+import { Model, MetaData } from 'mural/runtime';
 
 export class ToggleButtonVM extends Model
 {

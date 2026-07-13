@@ -11,7 +11,7 @@ import {
     Style,
     type ICommand,
 } from '../index.js';
-import { Button } from '@visualisation-sub/mural/framework';
+import { Button } from 'mural/framework';
 
 describe('InvokeCommandAction', () => {
     beforeEach(() => { Application.current = null; });

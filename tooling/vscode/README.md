@@ -2,7 +2,7 @@
 
 VS Code extension for the [µ-mural](../../mural-language-design.md) markup
 language. Provides syntax highlighting plus a Language Server that
-reuses `@visualisation-sub/mural/compiler` for:
+reuses `mural/compiler` for:
 
 - diagnostics (lex/parse/emit errors mapped to source ranges)
 - completion (resource keys, control names, properties, keywords, enum
@@ -15,7 +15,7 @@ reuses `@visualisation-sub/mural/compiler` for:
 
 ```sh
 cd tooling/vscode
-npm install           # installs @visualisation-sub/mural via the parent file: dep
+npm install           # installs mural via the parent file: dep
 npm run build         # tsc → out/
 ```
 

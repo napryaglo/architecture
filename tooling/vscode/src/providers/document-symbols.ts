@@ -34,7 +34,7 @@ import type {
     BodyItem,
     SlotAssign,
     ValueNode,
-} from '@visualisation-sub/mural/compiler';
+} from 'mural/compiler';
 
 import { analyze } from '../analyzer.js';
 

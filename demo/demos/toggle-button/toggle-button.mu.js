@@ -1,8 +1,8 @@
 import { ToggleButtonVM } from "./toggle-button-vm.mjs";
-import { Border, ContentPresenter, ControlTemplate, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TargetedSetter, TemplatePropertyTrigger, TextBlock } from "@visualisation-sub/mural/basic";
-import { ToggleButton } from "@visualisation-sub/mural/framework/buttons/toggle-button.js";
-import { Color, DataContextBinding, DynamicResource, PropertyTrigger, ResourceDictionary, Setter, SetterFactory, Style, Thickness } from "@visualisation-sub/mural/runtime";
-import { FontStyle, FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
+import { Border, ContentPresenter, ControlTemplate, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TargetedSetter, TemplatePropertyTrigger, TextBlock } from "mural/basic";
+import { ToggleButton } from "mural/framework/buttons/toggle-button.js";
+import { Color, DataContextBinding, DynamicResource, PropertyTrigger, ResourceDictionary, Setter, SetterFactory, Style, Thickness } from "mural/runtime";
+import { FontStyle, FontWeight, SolidColorBrush } from "mural/visual-engine";
 
 
 const _gate_ToggleButtonDemo = Symbol("ToggleButtonDemo.ctor");

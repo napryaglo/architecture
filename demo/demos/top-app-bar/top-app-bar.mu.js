@@ -1,10 +1,10 @@
 import { TopAppBarVM } from "./top-app-bar-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@visualisation-sub/mural/basic";
-import { ButtonVariant } from "@visualisation-sub/mural/framework/buttons/button.js";
-import { IconButton } from "@visualisation-sub/mural/framework/buttons/icon-button.js";
-import { TopAppBar } from "@visualisation-sub/mural/framework/top-app-bar/top-app-bar.js";
-import { DataContextBinding, DynamicResource, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
-import { FontWeight } from "@visualisation-sub/mural/visual-engine";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "mural/basic";
+import { ButtonVariant } from "mural/framework/buttons/button.js";
+import { IconButton } from "mural/framework/buttons/icon-button.js";
+import { TopAppBar } from "mural/framework/top-app-bar/top-app-bar.js";
+import { DataContextBinding, DynamicResource, ResourceDictionary, Thickness } from "mural/runtime";
+import { FontWeight } from "mural/visual-engine";
 
 
 const _gate_TopAppBarDemo = Symbol("TopAppBarDemo.ctor");

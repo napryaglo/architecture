@@ -8,14 +8,14 @@
 // change. A partial hex mid-typing throws inside Color.FromHex; we swallow
 // it so the colour holds at its last good value.
 
-import { TextBlock } from '@visualisation-sub/mural/basic';
+import { TextBlock } from 'mural/basic';
 import {
     Color,
     SolidColorBrush,
     FontWeight,
     FontStyle,
     TextDecorations,
-} from '@visualisation-sub/mural/visual-engine';
+} from 'mural/visual-engine';
 
 import { TextFormatVM } from './text-format-vm.mjs';
 import { register } from '../../platform/registry.mjs';

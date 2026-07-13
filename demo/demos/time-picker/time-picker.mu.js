@@ -1,8 +1,8 @@
 import { TimePickerVM } from "./time-picker-vm.mjs";
-import { Border, DataTemplate, Orientation, StackPanel, TextBlock } from "@visualisation-sub/mural/basic";
-import { TimePicker } from "@visualisation-sub/mural/framework/pickers/time-picker.js";
-import { DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness, VerticalAlignment } from "@visualisation-sub/mural/runtime";
-import { FontWeight } from "@visualisation-sub/mural/visual-engine";
+import { Border, DataTemplate, Orientation, StackPanel, TextBlock } from "mural/basic";
+import { TimePicker } from "mural/framework/pickers/time-picker.js";
+import { DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness, VerticalAlignment } from "mural/runtime";
+import { FontWeight } from "mural/visual-engine";
 
 
 const _gate_TimePickerDemo = Symbol("TimePickerDemo.ctor");

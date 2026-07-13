@@ -8,7 +8,7 @@ enums, and helper functions you wire together. For the end-user gesture
 reference, see [diagram-user-manual.md](diagram-user-manual.md).
 
 Everything documented here is exported from
-`@visualisation-sub/mural/framework`.
+`mural/framework`.
 
 ---
 
@@ -49,10 +49,10 @@ the right layer.
 ### 2.1 Minimal bootstrap (imperative)
 
 ```ts
-import { Application } from '@visualisation-sub/mural/runtime';
+import { Application } from 'mural/runtime';
 import {
     DiagramDocument, DiagramStorageKey, ConnectorEndpoint,
-} from '@visualisation-sub/mural/framework';
+} from 'mural/framework';
 
 // Storage is optional — omit it to run without persistence.
 const doc = new DiagramDocument(Application.current?.Services.get(DiagramStorageKey));
@@ -617,7 +617,7 @@ The `Diagram` never edits data; it raises events and a `DiagramMutator`
 mutates. Wire the two together once:
 
 ```ts
-import { attachStandardDiagramMutations } from '@visualisation-sub/mural/framework';
+import { attachStandardDiagramMutations } from 'mural/framework';
 const detach = attachStandardDiagramMutations(diagram, doc);   // doc is a DiagramMutator
 ```
 

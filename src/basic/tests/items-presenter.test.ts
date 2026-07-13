@@ -16,7 +16,7 @@ import {
     DataTemplate,
     ItemsPresenter,
 } from '../index.js';
-import { ItemsControl } from '@visualisation-sub/mural/framework';
+import { ItemsControl } from 'mural/framework';
 
 class Leaf extends Element
 {

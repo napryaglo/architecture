@@ -1,8 +1,8 @@
 import { FabVM } from "./fab-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@visualisation-sub/mural/basic";
-import { FabSize, FloatingActionButton } from "@visualisation-sub/mural/framework/buttons/fab.js";
-import { DataContextBinding, DynamicResource, ResourceDictionary, Thickness, VerticalAlignment } from "@visualisation-sub/mural/runtime";
-import { FontWeight } from "@visualisation-sub/mural/visual-engine";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "mural/basic";
+import { FabSize, FloatingActionButton } from "mural/framework/buttons/fab.js";
+import { DataContextBinding, DynamicResource, ResourceDictionary, Thickness, VerticalAlignment } from "mural/runtime";
+import { FontWeight } from "mural/visual-engine";
 
 
 const _gate_FabDemo = Symbol("FabDemo.ctor");

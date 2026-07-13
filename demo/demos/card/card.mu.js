@@ -1,9 +1,9 @@
 import { CardVM } from "./card-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock, TextWrapping } from "@visualisation-sub/mural/basic";
-import { Button, ButtonVariant } from "@visualisation-sub/mural/framework/buttons/button.js";
-import { Card } from "@visualisation-sub/mural/framework/surfaces/card.js";
-import { DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
-import { FontWeight } from "@visualisation-sub/mural/visual-engine";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock, TextWrapping } from "mural/basic";
+import { Button, ButtonVariant } from "mural/framework/buttons/button.js";
+import { Card } from "mural/framework/surfaces/card.js";
+import { DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness } from "mural/runtime";
+import { FontWeight } from "mural/visual-engine";
 
 
 const _gate_CardDemo = Symbol("CardDemo.ctor");

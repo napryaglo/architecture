@@ -16,7 +16,7 @@ import {
     ObservableCollection,
     RelayCommand,
     type ICommand,
-} from '@visualisation-sub/mural/runtime';
+} from 'mural/runtime';
 
 import { PATHS } from './paths.mjs';
 

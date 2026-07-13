@@ -15,7 +15,7 @@ A single file exercising every clause type. Each section is referenced from the 
 ```
 // dashboard.mu — exercises every clause type.
 
-import basic from "@visualisation-sub/mural"
+import basic from "mural"
 
 def card[#bg, #title, #1]{
   Border[Background=#bg, CornerRadius=(8), Padding=(16)]{
@@ -487,9 +487,9 @@ Application{
 `dashboard.mu.js` (emitted):
 
 ```js
-import { Application, Style, Setter, DynamicResource } from '@visualisation-sub/mural/runtime';
-import { Border, TextBlock, Button, Window } from '@visualisation-sub/mural/basic';
-import { SolidColorBrush, Color, Thickness } from '@visualisation-sub/mural/visual-engine';
+import { Application, Style, Setter, DynamicResource } from 'mural/runtime';
+import { Border, TextBlock, Button, Window } from 'mural/basic';
+import { SolidColorBrush, Color, Thickness } from 'mural/visual-engine';
 
 export const app = (() => {
     const _app = new Application();
@@ -535,7 +535,7 @@ If §15.1 is resolved "yes," a file whose outermost form is a SlotAssign (`resou
 ### 12.4 Compiler API
 
 ```ts
-// @visualisation-sub/mural/compiler
+// mural/compiler
 
 /** Pure source-to-source. Returns the JS module body as a string. Used
  *  by build-time tooling (Vite plugin, CLI, etc.) to emit .js files. */
@@ -601,7 +601,7 @@ For the dynamic-compile path (when source is fetched or user-supplied):
 
 ```html
 <script type="module">
-  import { instantiate } from '@visualisation-sub/mural/compiler';
+  import { instantiate } from 'mural/compiler';
   const src = await fetch('/templates/admin-panel.mu').then(r => r.text());
   const app = instantiate(src);
   app.Mount(document.getElementById('app'));

@@ -1,11 +1,11 @@
 import { RibbonDemoDoc } from "./ribbon-vm.mjs";
-import { Border, Canvas, DataTemplate, Dock, DockPanel, ItemsPanelTemplate, Shape, TextBlock } from "@visualisation-sub/mural/basic";
-import { FabSize } from "@visualisation-sub/mural/framework/buttons/fab.js";
-import { Diagram } from "@visualisation-sub/mural/framework/diagram/diagram.js";
-import { SelectionMode } from "@visualisation-sub/mural/framework/list/list-box.js";
-import { MenuItem, MenuSeparator, Ribbon, RibbonButton, RibbonDropDownButton, RibbonGroup, RibbonSmallButtonColumn, RibbonSplitButton, RibbonTab, RibbonToggleButton } from "@visualisation-sub/mural/framework/surface.js";
-import { DataContextBinding, DynamicResource, ElementNameBinding, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
-import { LineSegment, PathFigure, PathGeometry, Point, QuadraticBezierSegment } from "@visualisation-sub/mural/visual-engine";
+import { Border, Canvas, DataTemplate, Dock, DockPanel, ItemsPanelTemplate, Shape, TextBlock } from "mural/basic";
+import { FabSize } from "mural/framework/buttons/fab.js";
+import { Diagram } from "mural/framework/diagram/diagram.js";
+import { SelectionMode } from "mural/framework/list/list-box.js";
+import { MenuItem, MenuSeparator, Ribbon, RibbonButton, RibbonDropDownButton, RibbonGroup, RibbonSmallButtonColumn, RibbonSplitButton, RibbonTab, RibbonToggleButton } from "mural/framework/surface.js";
+import { DataContextBinding, DynamicResource, ElementNameBinding, ResourceDictionary, Thickness } from "mural/runtime";
+import { LineSegment, PathFigure, PathGeometry, Point, QuadraticBezierSegment } from "mural/visual-engine";
 
 
 const _gate_RibbonDemo = Symbol("RibbonDemo.ctor");

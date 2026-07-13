@@ -19,14 +19,14 @@
 // the scales the demo operates on and recomputing fits the
 // "everything else is bound, watch what happens" feel of the demo.
 
-import { FontManager } from '@visualisation-sub/mural/runtime';
-import { Canvas } from '@visualisation-sub/mural/basic';
+import { FontManager } from 'mural/runtime';
+import { Canvas } from 'mural/basic';
 import {
     Color,
     FontMetricsMeasurer,
     SolidColorBrush,
     textOnPath,
-} from '@visualisation-sub/mural/visual-engine';
+} from 'mural/visual-engine';
 
 import { TextOnPathVM } from './text-on-path-vm.mjs';
 import { GeometryView } from './geometry-view.mjs';

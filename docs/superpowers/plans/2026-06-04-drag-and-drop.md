@@ -2574,8 +2574,8 @@ The `DragDrop` / `DragSession` / `DragDropEffects` / `DragDropOptions` types are
 In `src/compiler/symbol-table.ts`, find `DEFAULT_SYMBOLS` (around line 80) and add entries so .mu authors get them in scope:
 
 ```ts
-['DataObject',          '@visualisation-sub/mural/runtime'],
-['DragDropEffects',     '@visualisation-sub/mural/runtime'],
+['DataObject',          'mural/runtime'],
+['DragDropEffects',     'mural/runtime'],
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
@@ -2664,7 +2664,7 @@ tileDragData(source) {
 Add `DataObject` and `DragDropEffects` to the imports at the top of `diagram-vm.mjs`:
 
 ```js
-import { DataObject, DragDropEffects, /* existing */ } from '@visualisation-sub/mural/runtime';
+import { DataObject, DragDropEffects, /* existing */ } from 'mural/runtime';
 ```
 
 Add to `NodeVM`:

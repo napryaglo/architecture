@@ -3,7 +3,7 @@
   "displayName": "µ-mural language support",
   "description": "Syntax highlighting and IntelliSense for the µ-mural markup language.",
   "version": "0.2.14",
-  "publisher": "visualisation-sub",
+  "publisher": "mural",
   "private": true,
   "license": "MIT",
   "repository": {
@@ -74,7 +74,7 @@
   "devDependencies": {
     "@types/node": "^22.10.0",
     "@types/vscode": "^1.85.0",
-    "@visualisation-sub/mural": "file:../..",
+    "mural": "file:../..",
     "esbuild": "^0.24.0",
     "typescript": "^5.7.0",
     "vscode-languageclient": "^9.0.1",

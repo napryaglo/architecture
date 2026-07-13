@@ -5,7 +5,7 @@
 // Two checkable items (ShowGrid / SnapToGrid) demonstrate IsCheckable
 // + IsChecked. Their Command callbacks read IsChecked through the
 // MenuItem's CommandParameter (the markup passes `$self.IsChecked`).
-import { MetaData, Model, RelayCommand, } from '@visualisation-sub/mural/runtime';
+import { MetaData, Model, RelayCommand, } from 'mural/runtime';
 export class MenuVM extends Model {
     static StatusKey = Model.RegisterProperty(MenuVM, 'Status', 'Ready.', MetaData.None);
     static ShowGridKey = Model.RegisterProperty(MenuVM, 'ShowGrid', true, MetaData.None);

@@ -7,7 +7,7 @@
 //     framework's IsDraggable latch reads via OnDragStart=$BeginDragData.
 //   * Domain operations (MoveToLeft / MoveToRight) are plain methods —
 //     called by the drop behavior, not via routed events directly.
-import { DataObject, DragDropEffects, MetaData, Model, ObservableCollection, } from '@visualisation-sub/mural/runtime';
+import { DataObject, DragDropEffects, MetaData, Model, ObservableCollection, } from 'mural/runtime';
 // Format key the drag-data payload uses. Receivers query
 // `args.Data.Has(FMT_ITEM)` and `args.Data.Get(FMT_ITEM)` to read
 // the item id back out. Exported so the drop behavior reads the

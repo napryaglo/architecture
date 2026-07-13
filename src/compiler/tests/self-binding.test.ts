@@ -23,7 +23,7 @@ describe('self binding `$Self.(Owner.Prop)` — emit', () => {
             }
         `);
         assert.match(js, /SelfBinding\(_\w+, TextBlock, "Foreground"\)/);
-        assert.match(js, /import \{[^}]*\bSelfBinding\b[^}]*\} from "@visualisation-sub\/mural\/runtime"/);
+        assert.match(js, /import \{[^}]*\bSelfBinding\b[^}]*\} from "mural\/runtime"/);
         // Owner type comes in as a real class reference, not a string proxy.
         assert.match(js, /import \{[^}]*\bTextBlock\b/);
     });

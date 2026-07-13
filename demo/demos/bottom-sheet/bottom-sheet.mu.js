@@ -1,9 +1,9 @@
 import { BottomSheetVM } from "./bottom-sheet-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock, TextWrapping } from "@visualisation-sub/mural/basic";
-import { Button, ButtonVariant } from "@visualisation-sub/mural/framework/buttons/button.js";
-import { BottomSheet } from "@visualisation-sub/mural/framework/surfaces/bottom-sheet.js";
-import { DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness, VerticalAlignment } from "@visualisation-sub/mural/runtime";
-import { FontWeight } from "@visualisation-sub/mural/visual-engine";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock, TextWrapping } from "mural/basic";
+import { Button, ButtonVariant } from "mural/framework/buttons/button.js";
+import { BottomSheet } from "mural/framework/surfaces/bottom-sheet.js";
+import { DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness, VerticalAlignment } from "mural/runtime";
+import { FontWeight } from "mural/visual-engine";
 
 
 const _gate_BottomSheetDemo = Symbol("BottomSheetDemo.ctor");

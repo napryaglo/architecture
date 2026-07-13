@@ -315,7 +315,7 @@ export class Application
     // theme bundle so its module-load side effect performs the
     // registration:
     //
-    //   import '@visualisation-sub/mural/resources/material'; // registers Material
+    //   import 'mural/resources/material'; // registers Material
     //   const app = new Application();
     //   app.initialize({ theme: 'material', scheme: 'light' });
     //   // …construct the visual tree…
@@ -328,7 +328,7 @@ export class Application
     // Theme bundles register themselves as default candidates at
     // module-load time. The FIRST class to call this wins; subsequent
     // registrations are ignored. Importing
-    // `@visualisation-sub/mural/resources/material` enrols `Material`
+    // `mural/resources/material` enrols `Material`
     // as the default — every demo that loads the Material bundle gets
     // it for free.
     //

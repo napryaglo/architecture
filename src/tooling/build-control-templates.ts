@@ -16,7 +16,7 @@ import { makeGlyphResolver } from './font-glyph-geometry.js';
 //
 // Why the public symbol table works as-is now: each control file's
 // internal helpers (`ClickableBorder`, `ComboBoxPopupHost`, …) are
-// re-exported from the `@visualisation-sub/mural/basic` barrel, so
+// re-exported from the `mural/basic` barrel, so
 // the package's `DEFAULT_SYMBOLS` already resolves them. The build
 // script uses the DEFAULT map straight through and lets the compiled
 // `.mu.js` emit imports against the package self-reference — exactly
@@ -128,15 +128,15 @@ function formatDts(out: CompileResult): string
             if (s === undefined) { s = new Set(); importsByModule.set(mod, s); }
             s.add(sym);
         };
-        ensureType('ResourceDictionary', '@visualisation-sub/mural/runtime');
+        ensureType('ResourceDictionary', 'mural/runtime');
         if (themeNames.size > 0)
         {
-            ensureType('TokenCatalog', '@visualisation-sub/mural/runtime');
-            ensureType('Theme', '@visualisation-sub/mural/runtime');
+            ensureType('TokenCatalog', 'mural/runtime');
+            ensureType('Theme', 'mural/runtime');
         }
         if (schemeNames.length > 0)
         {
-            ensureType('Scheme', '@visualisation-sub/mural/runtime');
+            ensureType('Scheme', 'mural/runtime');
         }
         for (const t of accessorTypes)
         {
@@ -223,13 +223,13 @@ function formatDts(out: CompileResult): string
     if (out.kind === 'application')
     {
         return (
-            `import type { Application } from '@visualisation-sub/mural/runtime';\n` +
+            `import type { Application } from 'mural/runtime';\n` +
             `export declare const app: Application;\n`
         );
     }
     // Fragment / legacy ResourceDictionary root.
     return (
-        `import type { ResourceDictionary } from '@visualisation-sub/mural/runtime';\n` +
+        `import type { ResourceDictionary } from 'mural/runtime';\n` +
         `export function create(): ResourceDictionary;\n`
     );
 }
@@ -253,7 +253,7 @@ export function buildControlTemplates(opts: BuildOptions): number
         const source = readFileSync(input, 'utf8');
         // No custom symbols map — the default symbol table already
         // points every basic class (including internal helpers) at
-        // `@visualisation-sub/mural/basic`. The emitted `.mu.js`
+        // `mural/basic`. The emitted `.mu.js`
         // resolves that self-reference via the package's `exports`
         // field at load time, the same as any consumer template would.
         // `include` (SVG → Geometry) and `glyphs` (font outline →

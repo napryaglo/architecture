@@ -7,7 +7,7 @@
 // view materializes ScrollViewer, ListReorderBehavior, an OS-drop
 // receiver, and the small insertion-line template; the VM holds the
 // items, the dropped-files list, and the status / feedback strings.
-import { DataObject, DragDropEffects, MetaData, Model, ObservableCollection, } from '@visualisation-sub/mural/runtime';
+import { DataObject, DragDropEffects, MetaData, Model, ObservableCollection, } from 'mural/runtime';
 // Format key for the reorderable row drag payload. The
 // ListReorderBehavior queries this on DragOver / Drop to recognise its
 // own drag source. Exported so the behavior-attachment glue uses the

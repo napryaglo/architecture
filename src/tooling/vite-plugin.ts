@@ -33,7 +33,7 @@ export interface MuralPluginOptions extends CompilerOptions
 // Vite plugin that compiles `.mu` source into an ES module at build
 // time. Drop into `vite.config.ts`:
 //
-//   import { vitePluginMural } from '@visualisation-sub/mural/tooling';
+//   import { vitePluginMural } from 'mural/tooling';
 //   export default { plugins: [vitePluginMural()] };
 //
 // Then in app code:

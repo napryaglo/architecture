@@ -1,8 +1,8 @@
 import { AnimationTriggersVM } from "./animation-triggers-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@visualisation-sub/mural/basic";
-import { Button } from "@visualisation-sub/mural/framework/buttons/button.js";
-import { BeginStoryboardAction, Color, DoubleAnimation, DynamicResource, EventTrigger, NameScope, PropertyTrigger, ResourceDictionary, Storyboard, Style, Thickness } from "@visualisation-sub/mural/runtime";
-import { FontWeight, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "mural/basic";
+import { Button } from "mural/framework/buttons/button.js";
+import { BeginStoryboardAction, Color, DoubleAnimation, DynamicResource, EventTrigger, NameScope, PropertyTrigger, ResourceDictionary, Storyboard, Style, Thickness } from "mural/runtime";
+import { FontWeight, SolidColorBrush } from "mural/visual-engine";
 
 
 const _gate_AnimationTriggersDemo = Symbol("AnimationTriggersDemo.ctor");

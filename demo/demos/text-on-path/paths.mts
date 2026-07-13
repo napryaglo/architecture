@@ -6,7 +6,7 @@
 // top-left, +Y down) so the surface renderer can paint them in
 // place. Builders return a fresh PathGeometry — callers cache.
 
-import { Point, Size } from '@visualisation-sub/mural/runtime';
+import { Point, Size } from 'mural/runtime';
 import {
     ArcSegment,
     LineSegment,
@@ -14,7 +14,7 @@ import {
     PathFigure,
     PathGeometry,
     SweepDirection,
-} from '@visualisation-sub/mural/visual-engine';
+} from 'mural/visual-engine';
 
 // ── 1. Sine wave (three peaks) ───────────────────────────────────────
 //

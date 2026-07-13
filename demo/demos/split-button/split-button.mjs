@@ -7,8 +7,8 @@
 // The bootstrap doesn't touch M3 tokens; the framework template owns
 // theme tracking via the same DynamicResource path the rest of the
 // framework uses.
-import { StackPanel, TextBlock, Orientation } from '@visualisation-sub/mural/basic';
-import { Button, ButtonVariant }              from '@visualisation-sub/mural/framework';
+import { StackPanel, TextBlock, Orientation } from 'mural/basic';
+import { Button, ButtonVariant }              from 'mural/framework';
 import { SplitButtonVM } from './split-button-vm.mjs';
 import { register } from '../../platform/registry.mjs';
 

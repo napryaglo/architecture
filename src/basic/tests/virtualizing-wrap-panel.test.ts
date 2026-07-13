@@ -8,7 +8,7 @@ import {
     type DrawingContext,
 } from '../../runtime/index.js';
 import { DataTemplate, VirtualizingWrapPanel } from '../index.js';
-import { ItemsControl } from '@visualisation-sub/mural/framework';
+import { ItemsControl } from 'mural/framework';
 
 // Leaf container that just consumes its slot — gives the panel something
 // concrete to Measure/Arrange so RealizedIndices and ArrangedRects mean

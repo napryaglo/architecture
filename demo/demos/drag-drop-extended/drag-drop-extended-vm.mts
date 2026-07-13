@@ -12,7 +12,7 @@ import {
     DataObject, DragDropEffects,
     MetaData, Model, ObservableCollection,
     type DragStartSpec,
-} from '@visualisation-sub/mural/runtime';
+} from 'mural/runtime';
 
 // Format key for the reorderable row drag payload. The
 // ListReorderBehavior queries this on DragOver / Drop to recognise its

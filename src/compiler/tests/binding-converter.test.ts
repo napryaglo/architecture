@@ -38,7 +38,7 @@ describe('binding converter operator `<<`', () => {
             }
         `);
         assert.match(js, /DataContextBinding\([^,]+, "Name", composeConverters\(\[normalize, to_geometry\]\)\)/);
-        assert.match(js, /import \{[^}]*\bcomposeConverters\b[^}]*\} from "@visualisation-sub\/mural\/runtime"/);
+        assert.match(js, /import \{[^}]*\bcomposeConverters\b[^}]*\} from "mural\/runtime"/);
     });
 
     test('ElementName binding carries the converter too', () => {

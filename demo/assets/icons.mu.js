@@ -1,5 +1,5 @@
-import { ResourceDictionary } from "@visualisation-sub/mural/runtime";
-import { EllipseGeometry, GeometryGroup, LineGeometry, LineSegment, PathFigure, PathGeometry, Point, Rect, RectangleGeometry } from "@visualisation-sub/mural/visual-engine";
+import { ResourceDictionary } from "mural/runtime";
+import { EllipseGeometry, GeometryGroup, LineGeometry, LineSegment, PathFigure, PathGeometry, Point, Rect, RectangleGeometry } from "mural/visual-engine";
 
 
 const _gate_Icons = Symbol("Icons.ctor");

@@ -12,7 +12,7 @@ import {
     DataObject, DragDropEffects,
     MetaData, Model, ObservableCollection,
     type DragStartSpec,
-} from '@visualisation-sub/mural/runtime';
+} from 'mural/runtime';
 
 // Format key the drag-data payload uses. Receivers query
 // `args.Data.Has(FMT_ITEM)` and `args.Data.Get(FMT_ITEM)` to read

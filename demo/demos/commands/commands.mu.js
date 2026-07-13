@@ -1,11 +1,11 @@
 import { CommandsVM, EllipseFigure, NoteFigure, RectFigure } from "./commands-vm.mjs";
-import { Border, Canvas, DataTemplate, Dock, DockPanel, ItemsPanelTemplate, Orientation, Shape, StackPanel, TargetedSetter, TemplateDataTrigger, TextBlock, UniformGrid } from "@visualisation-sub/mural/basic";
-import { Diagram } from "@visualisation-sub/mural/framework/diagram/diagram.js";
-import { SelectionMode } from "@visualisation-sub/mural/framework/list/list-box.js";
-import { ContextMenu, ContextMenuService, MenuButton, MenuItem, MenuSeparator, Ribbon, RibbonButton, RibbonContextualGroup, RibbonGroup, RibbonSmallButtonColumn, RibbonTab, ToolBar, ToolBarButton, ToolBarSeparator, ToolBarSplitButton } from "@visualisation-sub/mural/framework/surface.js";
-import { Checkbox } from "@visualisation-sub/mural/framework/toggles/checkbox.js";
-import { Color, DataContextBinding, DynamicResource, ElementNameBinding, HorizontalAlignment, PropertyTrigger, ResourceDictionary, Setter, SetterFactory, Style, Thickness, VerticalAlignment, Visibility } from "@visualisation-sub/mural/runtime";
-import { FontWeight, LineSegment, PathFigure, PathGeometry, Pen, Point, QuadraticBezierSegment, SolidColorBrush } from "@visualisation-sub/mural/visual-engine";
+import { Border, Canvas, DataTemplate, Dock, DockPanel, ItemsPanelTemplate, Orientation, Shape, StackPanel, TargetedSetter, TemplateDataTrigger, TextBlock, UniformGrid } from "mural/basic";
+import { Diagram } from "mural/framework/diagram/diagram.js";
+import { SelectionMode } from "mural/framework/list/list-box.js";
+import { ContextMenu, ContextMenuService, MenuButton, MenuItem, MenuSeparator, Ribbon, RibbonButton, RibbonContextualGroup, RibbonGroup, RibbonSmallButtonColumn, RibbonTab, ToolBar, ToolBarButton, ToolBarSeparator, ToolBarSplitButton } from "mural/framework/surface.js";
+import { Checkbox } from "mural/framework/toggles/checkbox.js";
+import { Color, DataContextBinding, DynamicResource, ElementNameBinding, HorizontalAlignment, PropertyTrigger, ResourceDictionary, Setter, SetterFactory, Style, Thickness, VerticalAlignment, Visibility } from "mural/runtime";
+import { FontWeight, LineSegment, PathFigure, PathGeometry, Pen, Point, QuadraticBezierSegment, SolidColorBrush } from "mural/visual-engine";
 
 
 const _gate_CommandsDemo = Symbol("CommandsDemo.ctor");

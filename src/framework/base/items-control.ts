@@ -1703,7 +1703,7 @@ function createCollectionView(src: unknown): CollectionView
         // semantics enough for the non-Tier-3 cases.
         throw new Error(
             'ItemsControl.ItemsSource: CollectionView not registered. ' +
-            'Import @visualisation-sub/mural/basic (the barrel) before assigning ItemsSource — ' +
+            'Import mural/basic (the barrel) before assigning ItemsSource — ' +
             'collection-view.ts registers itself with ItemsControl on load.',
         );
     }

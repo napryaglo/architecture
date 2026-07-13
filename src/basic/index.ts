@@ -6,7 +6,7 @@
 // Templated controls (ContentControl, ItemsControl, Button, ToggleButton,
 // ScrollViewer, Drawer, GroupItem, ListBox, TreeView, ComboBox, Menu /
 // ContextMenu / MenuButton, ToolBar, Diagram, Selector base) live in
-// `@visualisation-sub/mural/framework`.
+// `mural/framework`.
 
 export { Adorner, AdornerLayer, AdornerDecorator } from '../runtime/index.js';
 export { ValidationErrorAdorner } from './validation-error-adorner.js';
@@ -195,4 +195,4 @@ export { ClickAwayScrim } from './click-away-scrim.js';
 
 // Drawer / Menu / ContextMenu / Surface-control helpers (ScrimSurface,
 // TemporaryOverlayHost, …) live in
-// `@visualisation-sub/mural/framework` alongside their owning controls.
+// `mural/framework` alongside their owning controls.

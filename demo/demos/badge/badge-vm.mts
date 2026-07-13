@@ -1,7 +1,7 @@
 // BadgeVM — backs the badge demo. Count is a reactive number the Numeric
 // badge binds to; Increment / Reset are RelayCommands the markup wires to
 // its Buttons so the Count DP visibly drives the pill's label live.
-import { Model, MetaData, RelayCommand } from '@visualisation-sub/mural/runtime';
+import { Model, MetaData, RelayCommand } from 'mural/runtime';
 
 export class BadgeVM extends Model
 {

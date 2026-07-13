@@ -1,9 +1,9 @@
 import { DrawerVM } from "./drawer-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock, TextWrapping } from "@visualisation-sub/mural/basic";
-import { Button } from "@visualisation-sub/mural/framework/buttons/button.js";
-import { Drawer, DrawerVariant } from "@visualisation-sub/mural/framework/surfaces/drawer.js";
-import { DataContextBinding, DynamicResource, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
-import { FontWeight } from "@visualisation-sub/mural/visual-engine";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock, TextWrapping } from "mural/basic";
+import { Button } from "mural/framework/buttons/button.js";
+import { Drawer, DrawerVariant } from "mural/framework/surfaces/drawer.js";
+import { DataContextBinding, DynamicResource, ResourceDictionary, Thickness } from "mural/runtime";
+import { FontWeight } from "mural/visual-engine";
 
 
 const _gate_DrawerDemo = Symbol("DrawerDemo.ctor");

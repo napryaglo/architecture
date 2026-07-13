@@ -1,9 +1,9 @@
 import { BannerVM } from "./banner-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TargetedSetter, TemplateDataTrigger, TextBlock, TextWrapping } from "@visualisation-sub/mural/basic";
-import { Button, ButtonVariant } from "@visualisation-sub/mural/framework/buttons/button.js";
-import { Banner } from "@visualisation-sub/mural/framework/notifications/banner.js";
-import { DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness, Visibility } from "@visualisation-sub/mural/runtime";
-import { FontWeight } from "@visualisation-sub/mural/visual-engine";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TargetedSetter, TemplateDataTrigger, TextBlock, TextWrapping } from "mural/basic";
+import { Button, ButtonVariant } from "mural/framework/buttons/button.js";
+import { Banner } from "mural/framework/notifications/banner.js";
+import { DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness, Visibility } from "mural/runtime";
+import { FontWeight } from "mural/visual-engine";
 
 
 const _gate_BannerDemo = Symbol("BannerDemo.ctor");

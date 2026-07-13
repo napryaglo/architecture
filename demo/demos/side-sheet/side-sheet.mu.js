@@ -1,8 +1,8 @@
 import { SideSheetVM } from "./side-sheet-vm.mjs";
-import { Border, DataTemplate, Dock, Grid, Orientation, StackPanel, TextBlock, TextWrapping } from "@visualisation-sub/mural/basic";
-import { Button, ButtonVariant } from "@visualisation-sub/mural/framework/buttons/button.js";
-import { SideSheet, SideSheetVariant } from "@visualisation-sub/mural/framework/surfaces/side-sheet.js";
-import { DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness } from "@visualisation-sub/mural/runtime";
+import { Border, DataTemplate, Dock, Grid, Orientation, StackPanel, TextBlock, TextWrapping } from "mural/basic";
+import { Button, ButtonVariant } from "mural/framework/buttons/button.js";
+import { SideSheet, SideSheetVariant } from "mural/framework/surfaces/side-sheet.js";
+import { DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness } from "mural/runtime";
 
 
 const _gate_SideSheetDemo = Symbol("SideSheetDemo.ctor");
