@@ -11,3 +11,8 @@ build/
 
 # Claude Code per-project IDE state.
 .claude/
+
+# Vendored Emscripten SDK (multi-GB toolchain; install locally, don't commit).
+# No trailing slash — it's an embedded git repo, so git treats the path as a
+# gitlink-like entry that a directory pattern wouldn't match.
+third_party/externals/emsdk
