@@ -283,6 +283,39 @@ describe('ThemeManager — activation', () => {
         reset();
     });
 
+    test('ApplyScheme activates an arbitrary (unregistered) Scheme object + fires Activated', () => {
+        reset();
+        const app = freshApp();
+
+        const light = defineScheme({
+            name: 'light', theme: 'tiny',
+            tokens: { Primary: 'p-light', Surface: 's-light', ShapeFull: 999 },
+        });
+        const theme = defineTheme({
+            name: 'tiny', dictionaries: [],
+            catalog: tinyCatalog(), schemes: [light], defaultScheme: 'light',
+        });
+        ThemeManager.RegisterTheme(theme);
+        ThemeManager.ActivateTheme('tiny');
+
+        // A scheme built at runtime — NOT in theme.schemes.
+        const dynamic = defineScheme({
+            name: 'custom', theme: 'tiny',
+            tokens: { Primary: 'p-custom', Surface: 's-custom', ShapeFull: 777 },
+        });
+        let fired: Scheme | undefined;
+        const listener = (_t: Theme, s: Scheme): void => { fired = s; };
+        ThemeManager.AddActivatedListener(listener);
+
+        ThemeManager.ApplyScheme(dynamic);
+
+        assert.equal(app.Resources.Resolve('Primary'), 'p-custom', 'tokens merged live');
+        assert.equal(ThemeManager.ActiveScheme, dynamic, 'active scheme is the applied object');
+        assert.equal(fired, dynamic, 'Activated fired with the applied scheme');
+        ThemeManager.RemoveActivatedListener(listener);
+        reset();
+    });
+
     test('Idempotent — re-activating the same (theme, scheme) is a no-op', () => {
         reset();
         const app = freshApp();

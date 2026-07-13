@@ -6,6 +6,7 @@ import {
 import { findDescriptor, resolveKey } from '../../../runtime/model-internals.js';
 import { HorizontalAnchor, VerticalAnchor, type SelectionSource } from '../../../basic/index.js';
 import type { Diagram } from '../diagram.js';
+import { DiagramSettings } from '../diagram-settings.js';
 
 // Adapter from Diagram's selection-bounds DPs (Phase C) + selected
 // IFigure items into the SelectionSource contract that
@@ -26,8 +27,6 @@ import type { Diagram } from '../diagram.js';
 // entity with a warning. A later phase can add per-group leaf-scaling
 // math (the demo's DiagramVM.ApplySelectionResize does this) but it
 // requires a `Members`-walk contract beyond plain IFigure.
-
-const MIN_DIMENSION = 8;
 
 interface FigureSnapshot {
     item:    Model;
@@ -127,8 +126,9 @@ export class DiagramSelectionSource implements SelectionSource
             // and apply custom resize semantics if needed.
             if (s.isReadOnly) continue;
 
-            const newW    = Math.max(MIN_DIMENSION, s.w + dw);
-            const newH    = Math.max(MIN_DIMENSION, s.h + dh);
+            const minDim  = DiagramSettings.ShapeMinResize();
+            const newW    = Math.max(minDim, s.w + dw);
+            const newH    = Math.max(minDim, s.h + dh);
             const newLeft = (xAnchor === HorizontalAnchor.Right)  ? s.left + s.w - newW : s.left;
             const newTop  = (yAnchor === VerticalAnchor.Bottom) ? s.top  + s.h - newH : s.top;
 

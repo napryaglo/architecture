@@ -30,6 +30,7 @@ import { Figure } from '../figure.js';
 import { PortSide, type ResolvedPortSide } from '../port.js';
 import { ConnectorEnd } from '../routing/router.js';
 import type { Diagram } from '../diagram.js';
+import { DiagramSettings } from '../diagram-settings.js';
 
 // Demo-grade interactive layer that turns the connector primitives into
 // a working drag-create + edit experience. Mounts two adorners in the
@@ -56,21 +57,24 @@ import type { Diagram } from '../diagram.js';
 //      hover; Up commits / aborts / clears selection.
 
 // ── Visual constants ─────────────────────────────────────────────
-const SIDE_BAR_THICKNESS = 3;
+// Interactive-chrome sizes read live from settings (defaults 3 / 11 / 9 / 9 /
+// 7) so an edit re-sizes the handles the next time an adorner rebuilds. Small
+// functions so each call resolves the current value.
+const sideBarThickness = (): number => DiagramSettings.SideBarThickness();
 // Inset each end of a side bar by this fraction of the side length, so
 // the bar visually occupies 90% of the side, centered.
 const SIDE_BAR_INSET_RATIO = 0.05;
-const EP_HANDLE_SIZE     = 11;
-const WP_HANDLE_SIZE     = 9;
+const epHandleSize     = (): number => DiagramSettings.EndpointHandleSize();
+const wpHandleSize     = (): number => DiagramSettings.WaypointHandleSize();
 // Mid-segment drag handle — square pad centered on a waypoint-to-waypoint
 // segment. Slightly smaller than a waypoint dot so it reads as secondary
 // to the corner waypoints it sits between.
-const SEG_HANDLE_SIZE    = 9;
+const segHandleSize    = (): number => DiagramSettings.SegmentHandleSize();
 // Port marker — small circle drawn at each dynamic-slot position on a
 // hovered figure's side. Pure visual indicator (not hit-testable); the
 // side bar behind it owns the click. Sized small enough to read as
 // "this is where this connector attaches" without crowding the side.
-const PORT_MARKER_SIZE = 7;
+const portMarkerSize = (): number => DiagramSettings.PortMarkerSize();
 // 4 sides per hovered figure (N, S, E, W) — pool sized to one figure
 // at a time; on hover transitions the pool re-binds to the new figure.
 const POOL_SIDES = 4;
@@ -94,7 +98,7 @@ const HIDE_OFFSCREEN = -10000;
 // feedback and commit semantics stay in lockstep — what lights up is what
 // gets connected. Tight (8 DIPs) so the side adorners only react when the
 // cursor is genuinely close to an edge, not from across the gap.
-const FIGURE_PROXIMITY = 8;
+const figureProximity = (): number => DiagramSettings.FigureProximity();
 
 const SIDE_FILL = new SolidColorBrush(Color.FromHex('#ff9800'));
 const EP_FILL   = new SolidColorBrush(Color.FromHex('#ff5722'));
@@ -126,11 +130,12 @@ const HOVER_HALO_BRUSH     = (() => {
     b.Opacity = 0.45;
     return b;
 })();
-// Minimum effective halo stroke thickness. Per the design ask:
-// "minimum stroke width as 5px". Per-connector thickness can grow
-// past this — the halo always sits at least 5 DIPs wide so the hit
-// surface is reliable even on hair-thin connectors.
-const HOVER_HALO_MIN_THICK = 5;
+// Minimum effective halo stroke thickness (default 5 DIPs), read live from
+// settings. Per-connector thickness can grow past this — the halo always sits
+// at least this wide so the hit surface is reliable even on hair-thin
+// connectors. The halo brush's opacity is likewise refreshed from settings at
+// paint time (see the hover-halo pen build).
+const hoverHaloMinThick = (): number => DiagramSettings.HoverHaloMinThickness();
 
 // Custom Visio-style "connect" cursor: a black crosshair (white-haloed
 // for contrast on any background) with a small connector-line glyph in
@@ -287,7 +292,7 @@ class SideBarsAdorner extends Adorner
             this._hideAll();
             return finalSize;
         }
-        const t      = SIDE_BAR_THICKNESS;
+        const t      = sideBarThickness();
         const half   = t / 2;
         // Bars span 90% of the side, centered — 5% inset on each end
         // keeps them visually distinct from the corners and clarifies
@@ -329,7 +334,7 @@ class SideBarsAdorner extends Adorner
         // side — the same formula Path 3a uses in
         // [connector.ts](../connector.ts), kept in lockstep so the
         // markers always match where connectors actually land.
-        const m = PORT_MARKER_SIZE;
+        const m = portMarkerSize();
         const mHalf = m / 2;
         let portIdx = 0;
         const count = Math.min(fig.GetSideEndpointCount(activeSide), POOL_PORTS_PER_SIDE);
@@ -387,14 +392,14 @@ class EditHandlesAdorner extends Adorner
         this.IsHitTestVisible = false;
         for (let i = 0; i < POOL_EPS; i++)
         {
-            const v = makeDot(EP_HANDLE_SIZE, EP_FILL, ENDPOINT_CURSOR);
+            const v = makeDot(epHandleSize(), EP_FILL, ENDPOINT_CURSOR);
             wireHandle(v, onHandleDown);
             this.AttachVisual(v);
             this._epPool.push(v);
         }
         for (let i = 0; i < POOL_WPS; i++)
         {
-            const v = makeDot(WP_HANDLE_SIZE, WP_FILL, WAYPOINT_CURSOR);
+            const v = makeDot(wpHandleSize(), WP_FILL, WAYPOINT_CURSOR);
             wireHandle(v, onHandleDown);
             this.AttachVisual(v);
             this._wpPool.push(v);
@@ -405,8 +410,8 @@ class EditHandlesAdorner extends Adorner
         for (let i = 0; i < POOL_SEGS; i++)
         {
             const v = makeBar(SEG_FILL, SEG_CURSOR_H);
-            v.Width  = SEG_HANDLE_SIZE;
-            v.Height = SEG_HANDLE_SIZE;
+            v.Width  = segHandleSize();
+            v.Height = segHandleSize();
             wireHandle(v, onHandleDown);
             this.AttachVisual(v);
             this._segPool.push(v);
@@ -444,18 +449,18 @@ class EditHandlesAdorner extends Adorner
                 const v = this._epPool[epUsed++]!;
                 HANDLE_TAGS.set(v, { kind: 'endpoint', connector: conn, end: ConnectorEnd.Source });
                 v.Arrange(new Rect(
-                    src.x - EP_HANDLE_SIZE / 2,
-                    src.y - EP_HANDLE_SIZE / 2,
-                    EP_HANDLE_SIZE, EP_HANDLE_SIZE));
+                    src.x - epHandleSize() / 2,
+                    src.y - epHandleSize() / 2,
+                    epHandleSize(), epHandleSize()));
             }
             if (epUsed < this._epPool.length)
             {
                 const v = this._epPool[epUsed++]!;
                 HANDLE_TAGS.set(v, { kind: 'endpoint', connector: conn, end: ConnectorEnd.Target });
                 v.Arrange(new Rect(
-                    tgt.x - EP_HANDLE_SIZE / 2,
-                    tgt.y - EP_HANDLE_SIZE / 2,
-                    EP_HANDLE_SIZE, EP_HANDLE_SIZE));
+                    tgt.x - epHandleSize() / 2,
+                    tgt.y - epHandleSize() / 2,
+                    epHandleSize(), epHandleSize()));
             }
             const wps = conn.Waypoints ?? [];
             for (let i = 0; i < wps.length && wpUsed < this._wpPool.length; i++)
@@ -464,9 +469,9 @@ class EditHandlesAdorner extends Adorner
                 HANDLE_TAGS.set(v, { kind: 'waypoint', connector: conn, index: i });
                 const p = wps[i]!;
                 v.Arrange(new Rect(
-                    p.X - WP_HANDLE_SIZE / 2,
-                    p.Y - WP_HANDLE_SIZE / 2,
-                    WP_HANDLE_SIZE, WP_HANDLE_SIZE));
+                    p.X - wpHandleSize() / 2,
+                    p.Y - wpHandleSize() / 2,
+                    wpHandleSize(), wpHandleSize()));
             }
 
             segUsed = this._placeSegmentPads(conn, segUsed);
@@ -530,9 +535,9 @@ class EditHandlesAdorner extends Adorner
             HANDLE_TAGS.set(v, { kind: 'segment', connector: conn, index: i });
             v.Cursor = segmentIsHorizontal(a, b) ? SEG_CURSOR_H : SEG_CURSOR_V;
             v.Arrange(new Rect(
-                (a.X + b.X) / 2 - SEG_HANDLE_SIZE / 2,
-                (a.Y + b.Y) / 2 - SEG_HANDLE_SIZE / 2,
-                SEG_HANDLE_SIZE, SEG_HANDLE_SIZE));
+                (a.X + b.X) / 2 - segHandleSize() / 2,
+                (a.Y + b.Y) / 2 - segHandleSize() / 2,
+                segHandleSize(), segHandleSize()));
         }
         return segUsed;
     }
@@ -563,7 +568,7 @@ export class HaloShape extends Shape
 // ── HoverHaloAdorner ─────────────────────────────────────────────
 // Single Shape that mirrors the geometry of the currently-hovered
 // (and not-yet-selected) connector. Painted with the @Primary accent
-// at HOVER_HALO_OPACITY, stroke thickness clamped to ≥ HOVER_HALO_MIN_THICK
+// at HOVER_HALO_OPACITY, stroke thickness clamped to ≥ hoverHaloMinThick()
 // so the halo reads as a clear affordance on hair-thin connectors.
 //
 // Halo is NOT hit-test visible — the mural-hit pad would otherwise
@@ -647,8 +652,11 @@ class HoverHaloAdorner extends Adorner
 function makeHaloPen(conn: Connector): Pen
 {
     const p = new Pen();
+    // Refresh the shared halo brush's opacity from settings at paint time so an
+    // edit takes effect on the next hover without rebuilding the brush.
+    HOVER_HALO_BRUSH.Opacity = DiagramSettings.HoverHaloOpacity();
     p.Brush      = HOVER_HALO_BRUSH;
-    p.Thickness  = Math.max(conn.Stroke?.Thickness ?? 0, HOVER_HALO_MIN_THICK);
+    p.Thickness  = Math.max(conn.Stroke?.Thickness ?? 0, hoverHaloMinThick());
     p.LineCap    = LineCap.Round;
     p.LineJoin   = LineJoin.Round;
     return p;
@@ -689,9 +697,9 @@ function makeBar(fill: SolidColorBrush, cursor: string): Border
 function makePortMarker(): Border
 {
     const v = new Border();
-    v.Width  = PORT_MARKER_SIZE;
-    v.Height = PORT_MARKER_SIZE;
-    const r = PORT_MARKER_SIZE / 2;
+    v.Width  = portMarkerSize();
+    v.Height = portMarkerSize();
+    const r = portMarkerSize() / 2;
     v.CornerRadius     = new CornerRadius(r, r, r, r);
     v.Background       = PORT_MARKER_FILL;
     v.IsHitTestVisible = false;
@@ -768,14 +776,14 @@ function findFigureAtCanvasPoint(diagram: Diagram, p: Point): Figure | undefined
     const items = diagram.ItemsSource;
     if (items === undefined) return undefined;
     // Prefer figures whose true bbox contains the cursor (z-order
-    // wins). Fall back to the nearest figure within FIGURE_PROXIMITY
+    // wins). Fall back to the nearest figure within the proximity tolerance
     // when the cursor is outside every bbox — that's the "near"
     // pick used during a drag so target port handles appear without
     // the user having to land precisely on the figure body.
     let bestInside: Figure | undefined = undefined;
     let bestInsideZ = -1;
     let bestNear: Figure | undefined = undefined;
-    let bestNearDist = FIGURE_PROXIMITY;
+    let bestNearDist = figureProximity();
     let z = 0;
     for (const item of items as Iterable<unknown>)
     {

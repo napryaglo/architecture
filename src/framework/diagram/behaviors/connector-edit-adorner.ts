@@ -4,6 +4,7 @@ import { ConnectorEndpoint } from '../connector-endpoint.js';
 import type { Figure } from '../figure.js';
 import { type PortSide, type ResolvedPortSide } from '../port.js';
 import { ConnectorEnd } from '../routing/router.js';
+import { DiagramSettings } from '../diagram-settings.js';
 
 // Snapshot of a ConnectorEndpoint's 5 DPs taken at the start of a
 // drag, so an aborted gesture (PointerUp over empty space) can
@@ -192,7 +193,8 @@ export class ConnectorEditAdorner
         // segment so the anchor stays inside it (short segments get a
         // proportionally smaller, still-valid jog).
         const segLen = horizontal ? Math.abs(far.X - near.X) : Math.abs(far.Y - near.Y);
-        const jog = segLen > 2 * SEG_JOG_STUB ? SEG_JOG_STUB + JOG_MARGIN : segLen / 2;
+        const stub = segJogStub();
+        const jog = segLen > 2 * stub ? stub + jogMargin() : segLen / 2;
 
         // Interior corners strictly outside the grabbed segment carry over
         // unchanged (route[1..i-1] on the left, route[i+2..n-1] on the right).
@@ -389,13 +391,13 @@ export function segmentIsHorizontal(a: Point, b: Point): boolean
     return Math.abs(b.X - a.X) >= Math.abs(b.Y - a.Y);
 }
 
-// Mirrors the Orthogonal router's port stub (20). A jog anchor inserted
-// at a pinned port must sit at least this far out so the port→anchor leg
-// stays collinear with the router's own stub and collapses cleanly
-// instead of provoking an extra bend.
-const SEG_JOG_STUB = 20;
-// Small margin past the router stub for the same reason.
-const JOG_MARGIN = 6;
+// Mirrors the Orthogonal router's port stub. A jog anchor inserted at a pinned
+// port must sit at least this far out so the port→anchor leg stays collinear
+// with the router's own stub and collapses cleanly instead of provoking an
+// extra bend. Plus a small margin past the stub for the same reason. Both read
+// live from settings (defaults 20 / 6).
+const segJogStub = (): number => DiagramSettings.ConnectorSegmentJogStub();
+const jogMargin  = (): number => DiagramSettings.ConnectorJogMargin();
 
 // A point `dist` from `from` toward `to` along their shared axis. The
 // segment is axis-aligned, so only the dominant (segment) axis advances;

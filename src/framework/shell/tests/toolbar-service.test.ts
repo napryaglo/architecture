@@ -7,8 +7,12 @@ import { DocumentsContentHostService, type IDocument } from '../services/documen
 import { CommandManager } from '../../commands/command-manager.js';
 import { CommandDefinition, CommandGroupPresentation } from '../commands/command-definition.js';
 import { CommandRegistry } from '../commands/command-registry.js';
-import { ShellControlDefinition, ShellRegion } from '../commands/shell-control-definition.js';
+import { ShellControlAlignment, ShellControlDefinition, ShellRegion } from '../commands/shell-control-definition.js';
 import { StatusService } from '../services/status-service.js';
+import { StatusBarItem } from '../../status-bar/status-bar.js';
+import { DockPanel, Dock } from '../../../basic/panels/dock-panel.js';
+import { DataTemplate } from '../../../basic/templates/data-template.js';
+import { Border } from '../../../basic/border.js';
 import { ToolbarService } from '../commands/toolbar-service.js';
 import {
     ShellControlViewModel,
@@ -291,6 +295,64 @@ describe('ToolbarService grouping', () => {
         // Switching to a doc that doesn't activate the context removes the cell.
         host.Open(new FakeDoc('b', [CTX_B]));
         assert.equal(status.Items.Count, 0);
+    });
+
+    test('a service-bound StatusBar control is app-global and right-docks (Alignment=End)', () => {
+        const SVC = new ServiceKey<object>('svc.theme');
+        const svcInstance = { tag: 'theme' };
+
+        const mod = new ShellModule();
+        const ctrl = new ShellControlDefinition();
+        ctrl.Region      = ShellRegion.StatusBar;
+        ctrl.Alignment   = ShellControlAlignment.End;
+        ctrl.DataContext = SVC;                              // service-bound → app-global
+        ctrl.Template    = new DataTemplate(() => new Border());
+        mod.ShellControls.Add(ctrl);
+
+        const app = new Application();
+        app.Modules.Add(mod);
+        app.Services.registerInstance(SVC, svcInstance);
+        app.Services.register(CommandRegistry.Key, p => new CommandRegistry(p));
+        app.Services.register(ContentHostService.Key, p => new DocumentsContentHostService(p));
+        app.Services.register(StatusService.Key, p => new StatusService(p));
+        app.Services.register(ToolbarService.Key, p => new ToolbarService(p));
+        app.Services.getRequired(ToolbarService.Key);       // ctor Rebuild — NO active document
+        const status = app.Services.getRequired(StatusService.Key);
+
+        // Shows with no active document (app-global): a right-docked cell + a
+        // trailing fill spacer so LastChildFill claims the middle.
+        assert.equal(status.Items.Count, 2, 'right cell + fill spacer');
+        const cell = status.Items.Get(0);
+        assert.ok(cell instanceof StatusBarItem, 'right cell wrapped in a StatusBarItem');
+        assert.equal(DockPanel.GetDock(cell as StatusBarItem), Dock.Right, 'docked right');
+    });
+
+    test('a StatusBar control with NO DataContext and NO Context is app-global (shown, DataContext undefined)', () => {
+        // A control that drives global state itself (e.g. a ThemeSelector talking
+        // to ThemeManager) sets neither axis — it must still show, with no
+        // DataContext, rather than being filtered out as "no context to bind".
+        const mod = new ShellModule();
+        const ctrl = new ShellControlDefinition();
+        ctrl.Region    = ShellRegion.StatusBar;
+        ctrl.Alignment = ShellControlAlignment.End;
+        ctrl.Template  = new DataTemplate(() => new Border());
+        // No DataContext, no Context.
+        mod.ShellControls.Add(ctrl);
+
+        const app = new Application();
+        app.Modules.Add(mod);
+        app.Services.register(CommandRegistry.Key, p => new CommandRegistry(p));
+        app.Services.register(ContentHostService.Key, p => new DocumentsContentHostService(p));
+        app.Services.register(StatusService.Key, p => new StatusService(p));
+        app.Services.register(ToolbarService.Key, p => new ToolbarService(p));
+        app.Services.getRequired(ToolbarService.Key);       // ctor Rebuild — NO active document
+        const status = app.Services.getRequired(StatusService.Key);
+
+        // Shown unconditionally: a right-docked cell + trailing fill spacer.
+        assert.equal(status.Items.Count, 2, 'app-global cell + fill spacer');
+        const cell = status.Items.Get(0);
+        assert.ok(cell instanceof StatusBarItem, 'right cell wrapped in a StatusBarItem');
+        assert.equal(DockPanel.GetDock(cell as StatusBarItem), Dock.Right, 'docked right');
     });
 
     test('IsActive reflects the active document per command, refreshed on requery', () => {

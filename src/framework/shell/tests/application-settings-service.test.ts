@@ -1,6 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { Application } from '../../../runtime/index.js';
+import { Application, Color } from '../../../runtime/index.js';
+import { SolidColorBrush } from '../../../visual-engine/index.js';
 import { ShellModule } from '../module.js';
 import { SettingDefinition, SettingKind } from '../settings/setting-definition.js';
 import { Setting } from '../settings/setting.js';
@@ -135,6 +136,40 @@ describe('ApplicationSettings persistence (ISettingsStore)', () => {
         settings.Set('a.num', 16);
         assert.equal(saved.length, 1);
         assert.deepEqual(saved[0], { 'a.bool': true, 'a.num': 16 });
+    });
+
+    test('a Color setting persists as a clone-safe hex string and round-trips to a brush', () => {
+        // A Color setting's live Value is a SolidColorBrush — a live object that a
+        // structured-clone / JSON store (Electron IPC) cannot carry. persist() must
+        // lower it to a hex primitive; load must raise it back to a brush.
+        let saved: Record<string, unknown> = {};
+        const store: ISettingsStore = {
+            Load: () => ({}),
+            Save: (values) => { structuredClone(values); saved = values; },  // clone = IPC guarantee
+        };
+        const app = new Application();
+        app.Modules.Add(moduleWith(
+            definition('grid.color', SettingKind.Color, new SolidColorBrush(Color.FromHex('#E0E0E0'))),
+            definition('t.str', SettingKind.String, ''),
+        ));
+        app.Services.registerInstance(SettingsStoreKey, store);
+        app.Services.register(ApplicationSettings.Key, p => new ApplicationSettings(p));
+        const settings = app.Services.getRequired(ApplicationSettings.Key);
+
+        settings.Set('t.str', 'x');                        // triggers a full-set persist
+        assert.equal(saved['grid.color'], '#e0e0e0');       // lowered to hex, not the brush
+
+        // Reload from the saved snapshot: the Color comes back as a SolidColorBrush.
+        const store2: ISettingsStore = { Load: () => saved, Save: () => {} };
+        const app2 = new Application();
+        app2.Modules.Add(moduleWith(
+            definition('grid.color', SettingKind.Color, new SolidColorBrush(Color.FromHex('#E0E0E0'))),
+        ));
+        app2.Services.registerInstance(SettingsStoreKey, store2);
+        app2.Services.register(ApplicationSettings.Key, p => new ApplicationSettings(p));
+        const restored = app2.Services.getRequired(ApplicationSettings.Key).Get('grid.color');
+        assert.ok(restored instanceof SolidColorBrush);
+        assert.equal((restored as SolidColorBrush).Color.ToHex(), '#e0e0e0');
     });
 
     test('no store registered → in-memory (Set works, nothing persisted)', () => {

@@ -47,6 +47,7 @@ import {
     polylineToPathGeometry,
     shortenPolyline,
 } from './caps/cap-inset.js';
+import { DiagramSettings } from './diagram-settings.js';
 
 // Self-register the three default routers so a consumer that imports a
 // Connector — or anything that transitively imports Connector — gets
@@ -59,10 +60,10 @@ import './routing/straight-router.js';
 import './routing/orthogonal-router.js';
 import './routing/bezier-router.js';
 
-// Per-instance Stroke seed. Cloned in the ctor so PenEditor's in-place
-// mutation can't leak across instances — same convention as
-// [figure.ts:58](./figure.ts#L58)'s DEFAULT_STROKE.
-const DEFAULT_STROKE = new Pen(new SolidColorBrush(Color.FromHex('#475569')), 1.5);
+// Per-instance Stroke colour seed. Cloned in the ctor (with the width from
+// DiagramSettings.ConnectorStrokeWidth()) so PenEditor's in-place mutation
+// can't leak across instances — same convention as figure.ts's stroke seed.
+const DEFAULT_STROKE_BRUSH = new SolidColorBrush(Color.FromHex('#475569'));
 
 // How the geometric-clip fallback (resolution path 5 of § 3.2) treats
 // the host's footprint. Bbox is fast — clip against ArrangedRect.
@@ -86,12 +87,11 @@ export enum AnchorClip
 // the source / target nodes' position changes, not from the measure
 // pass. See "Why not MeasureOverride" in § 3.4 of
 // [docs/connectors.md](../../../docs/connectors.md).
-// Default width of the invisible pointer hit band around a connector
-// route (see Shape.HitTestStrokeWidth). ~14px gives a ±7px tolerance —
-// comfortable for mouse and forgiving enough for coarse pointers without
-// swallowing clicks meant for nearby figures (figures paint on top, so
-// they win the elementsFromPoint pick where they overlap).
-const CONNECTOR_HIT_WIDTH = 14;
+//
+// The invisible pointer hit band around a route (see Shape.HitTestStrokeWidth)
+// is seeded per-instance in the ctor from DiagramSettings.ConnectorHitWidth()
+// (default 14 → ±7px tolerance) so a settings override takes effect for new
+// connectors without a class-static default.
 
 export class Connector extends Shape
 {
@@ -102,12 +102,6 @@ export class Connector extends Shape
     // cap. Same pattern as Figure ([figure.ts:77-79](./figure.ts#L77)).
     static {
         Model.OverrideMetadata(Connector, Element.DefaultStyleKeyKey, { default_value: Connector });
-        // A connector route paints as a ~1-2px line but is far easier to
-        // hover / click with a forgiving target. Default the inherited
-        // Shape hit band to a comfortable width so pointer hits land
-        // within ~CONNECTOR_HIT_WIDTH/2 px of the route; consumers can
-        // override per-connector via HitTestStrokeWidth.
-        Model.OverrideMetadata(Connector, Shape.HitTestStrokeWidthKey, { default_value: CONNECTOR_HIT_WIDTH });
     }
 
     public static readonly SourceKey      = Model.RegisterProperty<ConnectorEndpoint | undefined>(
@@ -342,7 +336,12 @@ export class Connector extends Shape
         // PenEditor's in-place mutation can't leak across connectors.
         this.set_property_value(
             Connector.StrokeKey,
-            new Pen(DEFAULT_STROKE.Brush, DEFAULT_STROKE.Thickness));
+            new Pen(DEFAULT_STROKE_BRUSH, DiagramSettings.ConnectorStrokeWidth()));
+        // Seed the pointer hit band from settings (default 14 → ±7px). A
+        // per-instance write rather than a class-static default so a settings
+        // override applies to freshly-drawn connectors; consumers can still
+        // override per-connector via HitTestStrokeWidth.
+        this.set_property_value(Shape.HitTestStrokeWidthKey, DiagramSettings.ConnectorHitWidth());
 
         // Default Style lands TargetCapTemplate=@ArrowCap (and any future
         // Connector chrome). Called AFTER the per-instance Stroke so the
@@ -844,6 +843,16 @@ export class Connector extends Shape
         }
         if (this._trackedTargetFigure !== undefined && this._trackedTargetSide !== undefined && this._trackedTarget !== undefined)
             this._trackedTargetFigure.MoveSideEndpoint(this._trackedTargetSide, this._trackedTarget, index);
+    }
+
+    // Force a route recompute. Public seam for a host that changed a global
+    // routing input the connector doesn't observe per-instance — e.g. the
+    // Diagram re-routing every connector when a routing setting (orthogonal
+    // stub, lane gap, bezier offset) is edited. Idempotent and cheap; routes
+    // synchronously like any input-driven recompute.
+    public RecomputeRoute(): void
+    {
+        this._scheduleRecompute();
     }
 
     // Synchronous recompute — § 7.4 ("throttle?") is a separate

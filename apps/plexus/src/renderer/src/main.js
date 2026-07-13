@@ -15,6 +15,7 @@ import { HtmlTarget } from '@visualisation-sub/mural/visual-engine'
 import { ContentHostService, InspectorService } from '@visualisation-sub/mural/framework'
 import { DiagramWorkspaceService } from './modules/diagram/services/diagram-workspace-service.js'
 import { attachAutoOpenInspector } from './modules/diagram/behaviors/auto-open-inspector-behavior.js'
+import { registerThemeSchemePicker } from './theme/register-scheme-picker.js'
 
 // Surface any uncaught error prominently (a swallowed mount throw shows as a
 // blank white window otherwise).
@@ -26,6 +27,10 @@ window.addEventListener('unhandledrejection', (e) => console.error('[plexus] unh
 await document.fonts.load('24px "Material Symbols Outlined"')
 try {
     app.initialize(new HtmlTarget(document.getElementById('app')))
+    // Contribute the right-aligned status-bar colour-scheme picker (a service-
+    // bound shell control) before opening the first document, so the toolbar
+    // service surfaces it on the document-open rebuild.
+    registerThemeSchemePicker(app)
     // Open the seeded diagram as the initial document. The content region is
     // document-driven (DocumentsContentHostService under ContentHostService.Key),
     // so opening the workspace's document activates it → the canvas renders via

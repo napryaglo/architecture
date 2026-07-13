@@ -24,6 +24,7 @@ import type { IPortProvider } from './port-providers/port-provider.js';
 import { resolveDefaultPortProvider } from './port-providers/default-port-providers.js';
 import type { ConnectorEndpoint } from './connector-endpoint.js';
 import type { RigidConnectorDragHost, RigidConnectorDragSession } from './rigid-connector-drag.js';
+import { DiagramSettings } from './diagram-settings.js';
 
 // A movable, content-hosting control intended as the container shape
 // inside the diagrammer's ItemsControl (see Diagram). Figure owns
@@ -53,21 +54,18 @@ import type { RigidConnectorDragHost, RigidConnectorDragSession } from './rigid-
 // [DataType=…] DataTemplate via Application resources and slots the
 // produced Visual into the presenter. Consumers who want chrome around
 // the content (selection rings, drop shadows, …) can replace Template.
-// Default size for a freshly-constructed Figure — matches the historical
-// 80×80 dp the demo used. Overridable on a per-instance basis via the
-// fromKind / fromSource factories.
-export const FIGURE_DEFAULT_SIZE = 80;
+// Default size for a freshly-constructed Figure sourced from
+// DiagramSettings.ShapeDefaultSize() — historically 80×80 dp. Overridable on a
+// per-instance basis via the fromKind / fromSource factories.
 
 // Figure DP names whose change should re-resolve the label's {field} tokens.
 const FIELD_SOURCE_NAMES: ReadonlySet<string> = new Set(['Left', 'Top', 'Width', 'Height', 'Kind', 'Id']);
 
-// Slack around the label when a Figure grows to fit it (TextAutoFit.GrowShape).
-const FIGURE_LABEL_MARGIN = 8;
-
-// Default brushes for a fresh Figure. Tuned to read on @Surface in both
-// Material light / dark schemes. Consumers replace by assignment.
-const DEFAULT_FILL   = new SolidColorBrush(Color.FromHex('#bfdbfe'));
-const DEFAULT_STROKE = new Pen(new SolidColorBrush(Color.FromHex('#1976d2')), 1.5);
+// Default fill for a fresh Figure. Tuned to read on @Surface in both Material
+// light / dark schemes. Consumers replace by assignment. Stroke width comes
+// from DiagramSettings.ShapeStrokeWidth(); the default stroke colour is fixed.
+const DEFAULT_FILL         = new SolidColorBrush(Color.FromHex('#bfdbfe'));
+const DEFAULT_STROKE_BRUSH = new SolidColorBrush(Color.FromHex('#1976d2'));
 
 export interface FigureFromKindOptions
 {
@@ -189,8 +187,8 @@ export class Figure extends ContentControl
         const f = new Figure();
         f.Left = left;
         f.Top  = top;
-        f.Width  = options?.width  ?? FIGURE_DEFAULT_SIZE;
-        f.Height = options?.height ?? FIGURE_DEFAULT_SIZE;
+        f.Width  = options?.width  ?? DiagramSettings.ShapeDefaultSize();
+        f.Height = options?.height ?? DiagramSettings.ShapeDefaultSize();
         f._setKindFromCatalog(kind, entry.unit());
         return f;
     }
@@ -200,8 +198,8 @@ export class Figure extends ContentControl
         const f = new Figure();
         f.Left = left;
         f.Top  = top;
-        f.Width  = options?.width  ?? FIGURE_DEFAULT_SIZE;
-        f.Height = options?.height ?? FIGURE_DEFAULT_SIZE;
+        f.Width  = options?.width  ?? DiagramSettings.ShapeDefaultSize();
+        f.Height = options?.height ?? DiagramSettings.ShapeDefaultSize();
         f._source = source;
         if (options?.kind !== undefined) f.set_property_value(Figure.KindKey, options.kind);
         f._rebuildGeometry();
@@ -284,13 +282,13 @@ export class Figure extends ContentControl
         super();
         // Per-instance Stroke. The default DP value can't be shared
         // because PenEditor mutates Pens in place — each Figure needs
-        // its own. Cloning the DEFAULT_STROKE here keeps the visual
-        // default consistent without leaking edits across instances.
-        this.set_property_value(Figure.StrokeKey, new Pen(DEFAULT_STROKE.Brush, DEFAULT_STROKE.Thickness));
+        // its own. Cloning keeps the visual default consistent without
+        // leaking edits across instances; width comes from settings.
+        this.set_property_value(Figure.StrokeKey, new Pen(DEFAULT_STROKE_BRUSH, DiagramSettings.ShapeStrokeWidth()));
         // Default size — gives a freshly-constructed Figure a visible
         // footprint even before fromKind / fromSource has run.
-        if (Number.isNaN(this.Width))  this.Width  = FIGURE_DEFAULT_SIZE;
-        if (Number.isNaN(this.Height)) this.Height = FIGURE_DEFAULT_SIZE;
+        if (Number.isNaN(this.Width))  this.Width  = DiagramSettings.ShapeDefaultSize();
+        if (Number.isNaN(this.Height)) this.Height = DiagramSettings.ShapeDefaultSize();
         // Seed Canvas.Left / Canvas.Top from the registered defaults so
         // a freshly-constructed Figure placed into a Canvas without
         // any binding lands at (0,0) instead of inheriting whatever the
@@ -336,8 +334,9 @@ export class Figure extends ContentControl
         if (label === undefined || label.AutoFit !== TextAutoFit.GrowShape) return;
         label.Measure(new Size(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY));
         const d = label.DesiredSize;
-        const needW = d.Width  + FIGURE_LABEL_MARGIN * 2;
-        const needH = d.Height + FIGURE_LABEL_MARGIN * 2;
+        const margin = DiagramSettings.ShapeLabelMargin();
+        const needW = d.Width  + margin * 2;
+        const needH = d.Height + margin * 2;
         if (needW > this.Width)  this.Width  = needW;
         if (needH > this.Height) this.Height = needH;
     }

@@ -284,6 +284,11 @@ export class ColorPicker extends TemplatedControl
     private _moreMounted = false;
     private _moreSnapshot: Color | undefined;
     private _moreListeners: Array<() => void> = [];
+    // Modal state — set by OpenMoreColorsModal so the More Colors editor
+    // opens centred (a stand-alone dialog) and a caller can await the picked
+    // colour. _moreResolve settles that promise on OK (hex) / Cancel (undefined).
+    private _moreCentered = false;
+    private _moreResolve: ((hex: string | undefined) => void) | undefined;
 
     // Dialog edit parts — only present while the More Colors dialog is
     // mounted. Wired by adoptDialogEditParts; cleared in unmountMoreColors.
@@ -890,6 +895,9 @@ export class ColorPicker extends TemplatedControl
 
         host.anchor     = this._trigger ?? this;
         host.anchorSide = MenuAnchorSide.Below;
+        // Modal invocation (OpenMoreColorsModal): centre the editor in the
+        // surface instead of anchoring it below the picker.
+        host.centered   = this._moreCentered;
         const body = host.FindName('PART_PopupBody') as Visual | undefined;
         if (body !== undefined) host.popup = body;
 
@@ -897,6 +905,31 @@ export class ColorPicker extends TemplatedControl
         this._moreMounted = true;
         this.adoptDialogEditParts(host);
         this.AttachOverlayChild(host);
+    }
+
+    // Open the extended "More Colors" editor as a stand-alone CENTRED modal and
+    // resolve with the committed hex (OK) or undefined (Cancel / click-away). The
+    // picker must already be mounted (in the tree / on an overlay) so the editor
+    // can reach a presentation target. Lets a caller use the full HS / RGB / hex
+    // editor as a one-surface colour dialog without wrapping the picker in another
+    // dialog.
+    public OpenMoreColorsModal(initialHex?: string): Promise<string | undefined>
+    {
+        if (initialHex !== undefined && initialHex !== '') this.ColorHex = initialHex;
+        this._moreCentered = true;
+        return new Promise<string | undefined>(resolve =>
+        {
+            this._moreResolve = resolve;
+            this.IsMoreColorsOpen = true;
+        });
+    }
+
+    // Settle a pending OpenMoreColorsModal promise exactly once.
+    private resolveMore(hex: string | undefined): void
+    {
+        const resolve = this._moreResolve;
+        this._moreResolve = undefined;
+        resolve?.(hex);
     }
 
     // Bind the dialog's edit parts in both directions. _moreMounted is set
@@ -964,13 +997,18 @@ export class ColorPicker extends TemplatedControl
 
     private commitMoreColors(): void
     {
-        recordRecent(this.Color.ToHex());
+        const hex = this.ColorHex;
+        recordRecent(hex);
+        // Settle BEFORE closing — IsMoreColorsOpen=false runs unmountMoreColors,
+        // whose safety-net resolve would otherwise win with undefined.
+        this.resolveMore(hex);
         this.IsMoreColorsOpen = false;
     }
 
     private cancelMoreColors(): void
     {
         if (this._moreSnapshot !== undefined) this.Color = this._moreSnapshot;
+        this.resolveMore(undefined);
         this.IsMoreColorsOpen = false;
     }
 
@@ -1131,6 +1169,10 @@ export class ColorPicker extends TemplatedControl
         this._moreHost      = undefined;
         this._moreMounted   = false;
         this._moreSnapshot  = undefined;
+        this._moreCentered  = false;
+        // Safety net: if the editor closed without a commit/cancel path (e.g.
+        // IsMoreColorsOpen cleared externally), settle any pending modal promise.
+        this.resolveMore(undefined);
     }
 }
 

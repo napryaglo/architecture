@@ -67,6 +67,7 @@ export { Inspector, type IInspector } from './shell/services/inspector.js';
 export { InspectorPanel } from './shell/inspector/inspector-panel.js';
 export { InspectorStack } from './shell/inspector/inspector-stack.js';
 export { StatusService } from './shell/services/status-service.js';
+export { type IThemeService, ThemeServiceKey, ThemeServiceInstance } from './shell/services/theme-service.js';
 export { ContentHostService } from './shell/services/content-host-service.js';
 export { DocumentsContentHostService, type IDocument } from './shell/services/documents-content-host-service.js';
 export { DocumentSelectorService } from './shell/services/document-selector-service.js';
@@ -76,6 +77,7 @@ export { SettingDefinition, SettingKind } from './shell/settings/setting-definit
 export { DocumentDefinition } from './shell/documents/document-definition.js';
 export { DocumentTypeRegistry } from './shell/documents/document-type-registry.js';
 export { CommandDefinition } from './shell/commands/command-definition.js';
+export { ShellControlDefinition, ShellRegion, ShellControlAlignment } from './shell/commands/shell-control-definition.js';
 export { CommandRegistry } from './shell/commands/command-registry.js';
 export { CommandViewModel } from './shell/commands/command-view-model.js';
 export { ToolbarService } from './shell/commands/toolbar-service.js';
@@ -119,6 +121,7 @@ export { Drawer, DrawerVariant, ScrimSurface, TemporaryOverlayHost } from './sur
 export { SideSheet, SideSheetVariant, SideSheetOverlayHost } from './surfaces/side-sheet.js';
 export { ScrollViewer, ScrollViewerLayout } from './surfaces/scroll-viewer.js';
 export { GroupItem } from './surfaces/group-item.js';
+export { ThemeSelector } from './theme-selector/theme-selector.js';
 
 // ── Input management ────────────────────────────────────────────────
 export { InputManager } from './input-manager.js';
@@ -194,6 +197,7 @@ export {
 export { DiagramEditingContext, DiagramCommandId } from './diagram/diagram-command-contexts.js';
 export { DiagramInspector } from './diagram/diagram-inspector.js';
 export { Figure } from './diagram/figure.js';
+export { DiagramSettings, DiagramSettingKey } from './diagram/diagram-settings.js';
 export { ShapeText, TextPlacement, TextAutoFit, isOutsideTextPlacement, computeTextBlockAnchor } from './diagram/shape-text.js';
 export {
     serializeFlowDocument, deserializeFlowDocument, cloneFlowDocument,

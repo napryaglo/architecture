@@ -1,5 +1,6 @@
 import {
     ApplicationService,
+    Color,
     MetaData,
     Model,
     ObservableCollection,
@@ -7,8 +8,9 @@ import {
     ServiceKey,
     type IServiceProvider,
 } from '../../../runtime/index.js';
+import { SolidColorBrush } from '../../../visual-engine/index.js';
 import { ShellModule } from '../module.js';
-import { SettingDefinition } from '../settings/setting-definition.js';
+import { SettingDefinition, SettingKind } from '../settings/setting-definition.js';
 import { Setting } from '../settings/setting.js';
 
 // Persistence seam for ApplicationSettings — the host supplies HOW values are
@@ -117,13 +119,25 @@ export class ApplicationSettings extends ServiceBase
         return this._byKey.get(key);
     }
 
+    // Contribute definitions from a NON-module source — a framework component
+    // that owns its own tunable constants (e.g. DiagramSettings) and publishes
+    // them wherever it finds a settings host, rather than routing every default
+    // through a module's `.settings:` markup. Idempotent per key (addSetting
+    // skips a key already present), so a repeat call after a late resolve only
+    // adds the new ones. Persisted overrides apply exactly as for module
+    // settings (the same `_persisted` overlay).
+    public Contribute(definitions: Iterable<SettingDefinition>): void
+    {
+        for (const definition of definitions) this.addSetting(definition);
+    }
+
     // Build a live Setting from a definition, overlaying any persisted value onto
     // the default. Wires a Value listener so a later modification write-throughs.
     private addSetting(definition: SettingDefinition): void
     {
         if (this._byKey.has(definition.Key)) return;
         const initial = Object.prototype.hasOwnProperty.call(this._persisted, definition.Key)
-            ? this._persisted[definition.Key]
+            ? ApplicationSettings.fromStorable(definition, this._persisted[definition.Key])
             : definition.Default;
         const setting = new Setting(definition, initial);
         setting.AddPropertyChangedListener(Setting.ValueKey, () => this.persist());
@@ -132,12 +146,46 @@ export class ApplicationSettings extends ServiceBase
     }
 
     // Write the full current value set through the store (no-op without one).
-    // The store owns any debouncing / async write.
+    // The store owns any debouncing / async write. Values are lowered to
+    // storable PRIMITIVES first (see toStorable) — a store may write JSON or
+    // ship the snapshot over an IPC channel (Electron structured clone), neither
+    // of which can carry a live object like a SolidColorBrush.
     private persist(): void
     {
         if (this._store === undefined) return;
         const values: Record<string, unknown> = {};
-        for (const [key, setting] of this._byKey) values[key] = setting.Value;
+        for (const [key, setting] of this._byKey)
+        {
+            values[key] = ApplicationSettings.toStorable(setting);
+        }
         this._store.Save(values);
+    }
+
+    // Lower a live setting Value to a store-safe primitive. Only Color settings
+    // carry a non-primitive Value (a SolidColorBrush); everything else
+    // (Boolean/Number/String/Choice/FilePath) is already a primitive and passes
+    // through. A Color is stored as its hex string.
+    private static toStorable(setting: Setting): unknown
+    {
+        const value = setting.Value;
+        if (setting.Definition.Kind === SettingKind.Color)
+        {
+            if (value instanceof SolidColorBrush) return value.Color.ToHex();
+            if (value instanceof Color)            return value.ToHex();
+        }
+        return value;
+    }
+
+    // Raise a persisted primitive back to a live Value for the definition's Kind —
+    // the inverse of toStorable. A Color's hex string becomes a SolidColorBrush
+    // again (falling back to the default on a malformed hex).
+    private static fromStorable(definition: SettingDefinition, stored: unknown): unknown
+    {
+        if (definition.Kind === SettingKind.Color && typeof stored === 'string')
+        {
+            try { return new SolidColorBrush(Color.FromHex(stored)); }
+            catch { return definition.Default; }
+        }
+        return stored;
     }
 }

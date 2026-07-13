@@ -18,6 +18,7 @@ import { FlowDocument } from '../../basic/documents/flow-document.js';
 import { DocumentParagraphs } from '../../basic/documents/text-navigation.js';
 import { ParagraphRuns } from '../../basic/documents/text-pointer.js';
 import { type Run } from '../../basic/documents/inlines.js';
+import { DiagramSettings } from './diagram-settings.js';
 
 // Normalise FontFamily (string | FontFamily | undefined) to a family-name
 // string so a toolbar picker's `Text` DP reflects it and a `<< Is(...)`-free
@@ -299,6 +300,11 @@ export class ShapeText extends Control
     {
         super();
         this.applyDefaultStyle();
+        // Seed the label's default font size from settings (default 12). A ctor
+        // write, not the DP's class-static default, so a user's "Default label
+        // font size" applies to freshly-created labels; an author / deserialize
+        // FontSize write later overrides it.
+        this.set_property_value(ShapeText.FontSizeKey, DiagramSettings.TextDefaultFontSize());
         this._editor = this.GetTemplateChild('PART_Edit') as RichTextBox | undefined;
         // Click-away (the editor losing focus) commits, matching Visio.
         this._editor?.AddRoutedEventListener('LostFocus', () =>

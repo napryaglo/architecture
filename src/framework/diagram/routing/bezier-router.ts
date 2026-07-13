@@ -13,6 +13,7 @@ import {
     RouterRegistry,
     RoutingMode,
 } from './router.js';
+import { DiagramSettings } from '../diagram-settings.js';
 
 // Smooth cubic-Bezier router. One cubic per knot-pair across
 // [source, ...waypoints, target]:
@@ -33,7 +34,9 @@ import {
 // For a no-waypoint degenerate (source = target), the offset clamp
 // keeps the source-side direction encoded in the tangent — distinct
 // from the StraightRouter's "always 0" degenerate convention.
-const BEZIER_MIN_CONTROL_OFFSET = 20;
+// Minimum control-point pull, read live from settings (default 20) so an edit
+// re-curves existing connectors on the next route.
+const bezierMinControlOffset = (): number => DiagramSettings.ConnectorBezierMinOffset();
 
 class BezierRouter implements IRouter
 {
@@ -130,7 +133,7 @@ function controlOffset(anchor: ResolvedAnchor, near: Point): number
     const delta   = onXAxis
         ? Math.abs(near.X - anchor.x)
         : Math.abs(near.Y - anchor.y);
-    return Math.max(0.5 * delta, BEZIER_MIN_CONTROL_OFFSET);
+    return Math.max(0.5 * delta, bezierMinControlOffset());
 }
 
 function sideOutwardDir(side: ResolvedPortSide): { x: number; y: number }

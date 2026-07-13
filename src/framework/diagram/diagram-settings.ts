@@ -1,0 +1,257 @@
+import { Application } from '../../runtime/index.js';
+import { ApplicationSettings } from '../shell/services/application-settings-service.js';
+import { SettingDefinition, SettingKind } from '../shell/settings/setting-definition.js';
+import { Setting } from '../shell/settings/setting.js';
+
+// Stable keys for every tunable Diagram constant. A fixed set of named string
+// values → an enum (per the no-string-literal-unions rule). Internal only:
+// authors never write these in markup — the helper self-publishes its
+// definitions to ApplicationSettings — so no symbol-table registration is
+// needed. Values are namespaced by concern (shape / connector / chrome) and
+// are the persistence + lookup keys.
+export enum DiagramSettingKey
+{
+    ShapeDefaultSize            = 'diagram.shape.defaultSize',
+    ShapeLabelMargin            = 'diagram.shape.labelMargin',
+    ShapeStrokeWidth            = 'diagram.shape.strokeWidth',
+    ShapeMinResize              = 'diagram.shape.minResize',
+    TextDefaultFontSize         = 'diagram.text.defaultFontSize',
+
+    ConnectorStrokeWidth        = 'diagram.connector.strokeWidth',
+    ConnectorHitWidth           = 'diagram.connector.hitWidth',
+    ConnectorOrthogonalStub     = 'diagram.connector.orthogonalStub',
+    ConnectorLaneGap            = 'diagram.connector.laneGap',
+    ConnectorBezierMinOffset    = 'diagram.connector.bezierMinOffset',
+    ConnectorSegmentJogStub     = 'diagram.connector.segmentJogStub',
+    ConnectorJogMargin          = 'diagram.connector.jogMargin',
+
+    ChromeEndpointHandleSize    = 'diagram.chrome.endpointHandleSize',
+    ChromeWaypointHandleSize    = 'diagram.chrome.waypointHandleSize',
+    ChromeSegmentHandleSize     = 'diagram.chrome.segmentHandleSize',
+    ChromePortMarkerSize        = 'diagram.chrome.portMarkerSize',
+    ChromeSideBarThickness      = 'diagram.chrome.sideBarThickness',
+    ChromeFigureProximity       = 'diagram.chrome.figureProximity',
+    ChromeHoverHaloMinThickness = 'diagram.chrome.hoverHaloMinThickness',
+    ChromeHoverHaloOpacity      = 'diagram.chrome.hoverHaloOpacity',
+    ChromeTextHandleSize        = 'diagram.chrome.textHandleSize',
+    ChromeTextRotateGap         = 'diagram.chrome.textRotateGap',
+    ChromeTextStemWidth         = 'diagram.chrome.textStemWidth',
+    ChromeGuideThickness        = 'diagram.chrome.guideThickness',
+}
+
+// One catalogue row: the schema for a tunable constant. The `default` is the
+// compiled-in constant value — the fallback the helper returns when no
+// ApplicationSettings is reachable (tests, non-shell hosts) or the key is
+// unset. `min`/`max` bound the Number editor in a settings pane.
+interface DiagramSettingSpec
+{
+    readonly key:         DiagramSettingKey;
+    readonly label:       string;
+    readonly description: string;
+    readonly category:    string;
+    readonly default:     number;
+    readonly min:         number;
+    readonly max:         number;
+}
+
+const CAT_SHAPES     = 'Diagram · Shapes';
+const CAT_CONNECTORS = 'Diagram · Connectors';
+const CAT_CHROME     = 'Diagram · Editing chrome';
+
+// The single source of truth for every tunable Diagram constant. Each row's
+// `default` is the historical hard-coded value; the diagram reads through the
+// helper so a user override in ApplicationSettings takes over live.
+const SPECS: readonly DiagramSettingSpec[] =
+[
+    { key: DiagramSettingKey.ShapeDefaultSize, label: 'Default shape size',
+      description: 'Width & height of a newly-placed shape, in pixels.',
+      category: CAT_SHAPES, default: 80, min: 8, max: 400 },
+    { key: DiagramSettingKey.ShapeLabelMargin, label: 'Shape label margin',
+      description: 'Slack around a label when a shape grows to fit its text.',
+      category: CAT_SHAPES, default: 8, min: 0, max: 64 },
+    { key: DiagramSettingKey.ShapeStrokeWidth, label: 'Shape stroke width',
+      description: 'Outline thickness of a newly-placed shape, in pixels.',
+      category: CAT_SHAPES, default: 1.5, min: 0, max: 16 },
+    { key: DiagramSettingKey.ShapeMinResize, label: 'Minimum shape size',
+      description: 'Smallest width or height a shape can be resized to.',
+      category: CAT_SHAPES, default: 8, min: 1, max: 64 },
+    { key: DiagramSettingKey.TextDefaultFontSize, label: 'Default label font size',
+      description: 'Font size used for a new shape label, in points.',
+      category: CAT_SHAPES, default: 12, min: 4, max: 96 },
+
+    { key: DiagramSettingKey.ConnectorStrokeWidth, label: 'Connector stroke width',
+      description: 'Line thickness of a newly-drawn connector, in pixels.',
+      category: CAT_CONNECTORS, default: 1.5, min: 0, max: 16 },
+    { key: DiagramSettingKey.ConnectorHitWidth, label: 'Connector hit width',
+      description: 'Width of the invisible click/hover band around a connector.',
+      category: CAT_CONNECTORS, default: 14, min: 2, max: 48 },
+    { key: DiagramSettingKey.ConnectorOrthogonalStub, label: 'Orthogonal stub length',
+      description: 'How far an orthogonal route extends straight out of a port.',
+      category: CAT_CONNECTORS, default: 20, min: 0, max: 120 },
+    { key: DiagramSettingKey.ConnectorLaneGap, label: 'Connector lane gap',
+      description: 'Lateral spacing between connectors sharing a side.',
+      category: CAT_CONNECTORS, default: 10, min: 0, max: 60 },
+    { key: DiagramSettingKey.ConnectorBezierMinOffset, label: 'Bezier minimum offset',
+      description: 'Minimum control-point pull for a curved connector.',
+      category: CAT_CONNECTORS, default: 20, min: 0, max: 120 },
+    { key: DiagramSettingKey.ConnectorSegmentJogStub, label: 'Segment jog stub',
+      description: 'Jog offset from a pinned port when dragging a segment.',
+      category: CAT_CONNECTORS, default: 20, min: 0, max: 120 },
+    { key: DiagramSettingKey.ConnectorJogMargin, label: 'Segment jog margin',
+      description: 'Extra margin past the router stub for a jog anchor.',
+      category: CAT_CONNECTORS, default: 6, min: 0, max: 60 },
+
+    { key: DiagramSettingKey.ChromeEndpointHandleSize, label: 'Endpoint handle size',
+      description: 'Size of a connector endpoint drag dot, in pixels.',
+      category: CAT_CHROME, default: 11, min: 4, max: 32 },
+    { key: DiagramSettingKey.ChromeWaypointHandleSize, label: 'Waypoint handle size',
+      description: 'Size of a connector waypoint (corner) drag dot, in pixels.',
+      category: CAT_CHROME, default: 9, min: 4, max: 32 },
+    { key: DiagramSettingKey.ChromeSegmentHandleSize, label: 'Segment handle size',
+      description: 'Size of a mid-segment drag pad, in pixels.',
+      category: CAT_CHROME, default: 9, min: 4, max: 32 },
+    { key: DiagramSettingKey.ChromePortMarkerSize, label: 'Port marker size',
+      description: 'Size of a port-slot indicator on a hovered shape, in pixels.',
+      category: CAT_CHROME, default: 7, min: 3, max: 24 },
+    { key: DiagramSettingKey.ChromeSideBarThickness, label: 'Side-bar thickness',
+      description: 'Thickness of a hovered shape’s side-attach bars, in pixels.',
+      category: CAT_CHROME, default: 3, min: 1, max: 16 },
+    { key: DiagramSettingKey.ChromeFigureProximity, label: 'Shape proximity tolerance',
+      description: 'Cursor distance at which a shape’s attach chrome appears.',
+      category: CAT_CHROME, default: 8, min: 0, max: 48 },
+    { key: DiagramSettingKey.ChromeHoverHaloMinThickness, label: 'Hover halo min thickness',
+      description: 'Minimum stroke width of the connector hover halo, in pixels.',
+      category: CAT_CHROME, default: 5, min: 1, max: 24 },
+    { key: DiagramSettingKey.ChromeHoverHaloOpacity, label: 'Hover halo opacity',
+      description: 'Opacity of the connector hover halo (0–1).',
+      category: CAT_CHROME, default: 0.45, min: 0, max: 1 },
+    { key: DiagramSettingKey.ChromeTextHandleSize, label: 'Text handle size',
+      description: 'Size of a text-block move/rotate grip, in pixels.',
+      category: CAT_CHROME, default: 9, min: 4, max: 32 },
+    { key: DiagramSettingKey.ChromeTextRotateGap, label: 'Text rotate-grip gap',
+      description: 'Distance from a text block’s top edge to its rotate grip.',
+      category: CAT_CHROME, default: 18, min: 0, max: 64 },
+    { key: DiagramSettingKey.ChromeTextStemWidth, label: 'Text rotate-stem width',
+      description: 'Line width of a text block’s rotate stem, in pixels.',
+      category: CAT_CHROME, default: 1, min: 1, max: 8 },
+    { key: DiagramSettingKey.ChromeGuideThickness, label: 'Alignment guide thickness',
+      description: 'Line thickness of a snap alignment guide, in pixels.',
+      category: CAT_CHROME, default: 1, min: 1, max: 8 },
+];
+
+const DEFAULTS: ReadonlyMap<DiagramSettingKey, number> =
+    new Map(SPECS.map(s => [s.key, s.default]));
+
+// Static resolver for every tunable Diagram constant. Each accessor returns the
+// live value from the app's ApplicationSettings when one is reachable (and the
+// key has a value), else the compiled-in default — so the diagram works
+// unchanged with no settings host (tests, embeds) yet honours a user override
+// live when a shell provides one.
+//
+// The helper is the single source of truth: it OWNS the definitions and, the
+// first time it reaches an ApplicationSettings, contributes them (idempotently)
+// so they surface in a settings pane with zero markup. Change notification lets
+// the Diagram re-layout when a value is edited (see Subscribe).
+export class DiagramSettings
+{
+    private constructor() { /* static-only */ }
+
+    // The ApplicationSettings the helper is currently bound to (definitions
+    // contributed, change listeners wired). Re-resolved on every read so a new
+    // Application (tests reset Application.current) re-binds transparently.
+    private static _service: ApplicationSettings | undefined = undefined;
+
+    // Subscribers notified when any Diagram setting's value changes.
+    private static readonly _listeners = new Set<() => void>();
+
+    // Resolve the app's ApplicationSettings (root-registered — see EditorShell /
+    // Plexus app.mu). On first bind to a given service instance, publish the
+    // definitions and wire per-setting change → _emit. Returns undefined when no
+    // settings host exists (callers fall back to the compiled-in default).
+    private static resolve(): ApplicationSettings | undefined
+    {
+        const svc = Application.current?.Services.get(ApplicationSettings.Key);
+        if (svc === DiagramSettings._service) return svc;
+        DiagramSettings._service = svc;
+        if (svc !== undefined)
+        {
+            svc.Contribute(DiagramSettings.Definitions());
+            for (const spec of SPECS)
+            {
+                svc.GetSetting(spec.key)?.AddPropertyChangedListener(
+                    Setting.ValueKey, DiagramSettings._emit);
+            }
+        }
+        return svc;
+    }
+
+    private static readonly _emit = (): void =>
+    {
+        for (const listener of [...DiagramSettings._listeners]) listener();
+    };
+
+    // Subscribe to "a Diagram setting changed". Returns an unsubscribe thunk.
+    // Resolving here also binds/publishes to the settings host if one now exists.
+    public static Subscribe(listener: () => void): () => void
+    {
+        DiagramSettings._listeners.add(listener);
+        DiagramSettings.resolve();
+        return () => { DiagramSettings._listeners.delete(listener); };
+    }
+
+    // The schema for every tunable Diagram constant, freshly built. Consumed
+    // internally (self-publish) and available for a host that prefers to
+    // register them explicitly.
+    public static Definitions(): SettingDefinition[]
+    {
+        return SPECS.map(spec =>
+        {
+            const d = new SettingDefinition();
+            d.Key         = spec.key;
+            d.Label       = spec.label;
+            d.Description = spec.description;
+            d.Category    = spec.category;
+            d.Kind        = SettingKind.Number;
+            d.Default     = spec.default;
+            d.Min         = spec.min;
+            d.Max         = spec.max;
+            return d;
+        });
+    }
+
+    private static num(key: DiagramSettingKey): number
+    {
+        const value = DiagramSettings.resolve()?.Get(key);
+        return typeof value === 'number' ? value : DEFAULTS.get(key)!;
+    }
+
+    // ── Shapes ───────────────────────────────────────────────────────────
+    public static ShapeDefaultSize():    number { return DiagramSettings.num(DiagramSettingKey.ShapeDefaultSize); }
+    public static ShapeLabelMargin():    number { return DiagramSettings.num(DiagramSettingKey.ShapeLabelMargin); }
+    public static ShapeStrokeWidth():    number { return DiagramSettings.num(DiagramSettingKey.ShapeStrokeWidth); }
+    public static ShapeMinResize():      number { return DiagramSettings.num(DiagramSettingKey.ShapeMinResize); }
+    public static TextDefaultFontSize(): number { return DiagramSettings.num(DiagramSettingKey.TextDefaultFontSize); }
+
+    // ── Connectors ───────────────────────────────────────────────────────
+    public static ConnectorStrokeWidth():     number { return DiagramSettings.num(DiagramSettingKey.ConnectorStrokeWidth); }
+    public static ConnectorHitWidth():        number { return DiagramSettings.num(DiagramSettingKey.ConnectorHitWidth); }
+    public static ConnectorOrthogonalStub():  number { return DiagramSettings.num(DiagramSettingKey.ConnectorOrthogonalStub); }
+    public static ConnectorLaneGap():         number { return DiagramSettings.num(DiagramSettingKey.ConnectorLaneGap); }
+    public static ConnectorBezierMinOffset(): number { return DiagramSettings.num(DiagramSettingKey.ConnectorBezierMinOffset); }
+    public static ConnectorSegmentJogStub():  number { return DiagramSettings.num(DiagramSettingKey.ConnectorSegmentJogStub); }
+    public static ConnectorJogMargin():       number { return DiagramSettings.num(DiagramSettingKey.ConnectorJogMargin); }
+
+    // ── Editing chrome ───────────────────────────────────────────────────
+    public static EndpointHandleSize():    number { return DiagramSettings.num(DiagramSettingKey.ChromeEndpointHandleSize); }
+    public static WaypointHandleSize():    number { return DiagramSettings.num(DiagramSettingKey.ChromeWaypointHandleSize); }
+    public static SegmentHandleSize():     number { return DiagramSettings.num(DiagramSettingKey.ChromeSegmentHandleSize); }
+    public static PortMarkerSize():        number { return DiagramSettings.num(DiagramSettingKey.ChromePortMarkerSize); }
+    public static SideBarThickness():      number { return DiagramSettings.num(DiagramSettingKey.ChromeSideBarThickness); }
+    public static FigureProximity():       number { return DiagramSettings.num(DiagramSettingKey.ChromeFigureProximity); }
+    public static HoverHaloMinThickness(): number { return DiagramSettings.num(DiagramSettingKey.ChromeHoverHaloMinThickness); }
+    public static HoverHaloOpacity():      number { return DiagramSettings.num(DiagramSettingKey.ChromeHoverHaloOpacity); }
+    public static TextHandleSize():        number { return DiagramSettings.num(DiagramSettingKey.ChromeTextHandleSize); }
+    public static TextRotateGap():         number { return DiagramSettings.num(DiagramSettingKey.ChromeTextRotateGap); }
+    public static TextStemWidth():         number { return DiagramSettings.num(DiagramSettingKey.ChromeTextStemWidth); }
+    public static GuideThickness():        number { return DiagramSettings.num(DiagramSettingKey.ChromeGuideThickness); }
+}

@@ -8,6 +8,7 @@ import { Adorner, SolidColorBrush } from '../../../visual-engine/index.js';
 import { Border } from '../../../basic/index.js';
 import { Diagram } from '../diagram.js';
 import type { AlignmentGuide } from './alignment-guides-behavior.js';
+import { DiagramSettings } from '../diagram-settings.js';
 
 // Promoted from the demo's alignment-guides-adorner.mjs. Read-only
 // overlay that paints dashed vertical / horizontal lines through the
@@ -24,7 +25,6 @@ import type { AlignmentGuide } from './alignment-guides-behavior.js';
 // scene without per-frame allocations.
 
 const GUIDE_STROKE = new SolidColorBrush(Color.FromHex('#1976d2'));
-const GUIDE_THICKNESS = 1;
 const POOL_SIZE = 32;
 const HIDE_OFFSCREEN = -10000;
 
@@ -71,6 +71,7 @@ export class AlignmentGuidesAdorner extends Adorner
         const guides: readonly AlignmentGuide[] = this._diagram.AlignmentGuides;
         const W = finalSize.Width;
         const H = finalSize.Height;
+        const thickness = DiagramSettings.GuideThickness();
         const used = Math.min(guides.length, this._pool.length);
         for (let i = 0; i < used; i++)
         {
@@ -79,12 +80,12 @@ export class AlignmentGuidesAdorner extends Adorner
             if (g.axis === 'x')
             {
                 // Vertical line at x = position
-                v.Arrange(new Rect(g.position - GUIDE_THICKNESS / 2, 0, GUIDE_THICKNESS, H));
+                v.Arrange(new Rect(g.position - thickness / 2, 0, thickness, H));
             }
             else
             {
                 // Horizontal line at y = position
-                v.Arrange(new Rect(0, g.position - GUIDE_THICKNESS / 2, W, GUIDE_THICKNESS));
+                v.Arrange(new Rect(0, g.position - thickness / 2, W, thickness));
             }
         }
         // Park unused pool slots off-screen so they don't get hit-tested

@@ -9,14 +9,16 @@ import {
     type IServiceProvider,
     type ServiceToken,
 } from '../../../runtime/index.js';
-import type { Geometry } from '../../../visual-engine/index.js';
+import type { Geometry, Visual } from '../../../visual-engine/index.js';
 import { CommandManager } from '../../commands/command-manager.js';
 import { ContentHostService } from '../services/content-host-service.js';
 import { DocumentsContentHostService } from '../services/documents-content-host-service.js';
 import { CommandRegistry } from './command-registry.js';
 import { CommandDefinition, CommandGroupPresentation } from './command-definition.js';
-import { ShellRegion } from './shell-control-definition.js';
+import { ShellControlAlignment, ShellRegion, type ShellControlDefinition } from './shell-control-definition.js';
 import { StatusService } from '../services/status-service.js';
+import { StatusBarItem } from '../../status-bar/status-bar.js';
+import { DockPanel, Dock } from '../../../basic/panels/dock-panel.js';
 import { CommandToggleViewModel, CommandViewModel } from './command-view-model.js';
 import {
     ShellControlViewModel,
@@ -102,8 +104,10 @@ export class ToolbarService extends ServiceBase
     private readonly _vmById = new Map<string, CommandViewModel>();
     private readonly _host: DocumentsContentHostService | undefined;
     private readonly _requery = (): void => this.RaiseAll();
-    // The status-bar cells this service currently owns in StatusService.Items.
-    private _statusVMs: ShellControlViewModel[] = [];
+    // The status-bar cells this service currently owns in StatusService.Items
+    // (ShellControlViewModels for left cells, wrapper StatusBarItems for right-
+    // docked cells, plus a fill spacer) — removed on the next rebuild.
+    private _statusCells: unknown[] = [];
 
     constructor(provider: IServiceProvider)
     {
@@ -186,12 +190,23 @@ export class ToolbarService extends ServiceBase
 
         const target = this.ActiveTarget();
         this.SyncStatusItems(target);
-        if (target === undefined) return;
+
+        // App-global (service-bound) toolbar controls surface even when no
+        // command target is active; document-bound controls need one. Build the
+        // toolbar controls up front so the no-target branch can still show the
+        // app-global ones.
+        const contexts = target?.CommandContexts ?? [];
+        const toolbarControls = this.BuildControls(target, contexts);
+
+        if (target === undefined)
+        {
+            toolbarControls.sort((a, b) => a.order - b.order);
+            for (const c of toolbarControls) { entries.Add(c.vm); controls.Add(c.vm); }
+            return;
+        }
 
         const registry = this.Provider.get(CommandRegistry.Key);
         if (registry === undefined) return;
-
-        const contexts = target.CommandContexts;
         const matched: CommandDefinition[] = [];
         for (const def of registry.Commands)
         {
@@ -216,7 +231,7 @@ export class ToolbarService extends ServiceBase
         // order.
         const ordered: OrderedEntry[] = [];
         for (const c of clusters) ordered.push({ order: c.order, kind: 'group', cluster: c });
-        for (const ctl of this.BuildControls(contexts)) ordered.push({ order: ctl.order, kind: 'control', control: ctl.vm });
+        for (const ctl of toolbarControls) ordered.push({ order: ctl.order, kind: 'control', control: ctl.vm });
         ordered.sort((a, b) => a.order - b.order);
 
         // Grouped projection: one VM per group + each control (interleaved by
@@ -298,61 +313,124 @@ export class ToolbarService extends ServiceBase
         return out;
     }
 
-    // Gather the modules' toolbar CONTROLS visible for the active document (Context
-    // in the active contexts), each bound to the active document as its DataContext.
-    private BuildControls(contexts: readonly ServiceToken<unknown>[]): { order: number; vm: ShellControlViewModel }[]
+    // Decide whether a shell control shows, and WHAT its DataContext is. Three
+    // kinds, distinguished by which of the definition's axes is set:
+    //   • SERVICE-bound (DataContext token set): app-global, shown whenever its
+    //     service resolves, bound to that service — no document / Context gate.
+    //   • DOCUMENT-bound (Context set, no DataContext): shown only when the active
+    //     target activates its Context, bound to the active document.
+    //   • APP-GLOBAL, no DataContext (neither set): shown unconditionally with NO
+    //     DataContext — the control drives global state itself (e.g. a
+    //     ThemeSelector talking to ThemeManager directly).
+    // Returns undefined to SKIP; otherwise a wrapper whose `dataContext` may itself
+    // be undefined (the third kind) — a plain undefined can't distinguish "skip"
+    // from "show with no context", hence the box.
+    private ResolveControlContext(
+        def:      ShellControlDefinition,
+        target:   ICommandTarget | undefined,
+        contexts: readonly ServiceToken<unknown>[],
+    ): { dataContext: unknown } | undefined
+    {
+        if (def.DataContext !== undefined)
+        {
+            const service = this.Provider.get(def.DataContext);
+            return service === undefined ? undefined : { dataContext: service };
+        }
+        if (def.Context !== undefined)
+        {
+            if (target !== undefined && contexts.includes(def.Context))
+            {
+                return { dataContext: this._host?.ActiveDocument };
+            }
+            return undefined;
+        }
+        // Neither axis set — app-global control with no DataContext.
+        return { dataContext: undefined };
+    }
+
+    // Gather the modules' TOOLBAR-region controls that should show — app-global
+    // service-bound ones plus document-bound ones matching the active contexts —
+    // each bound to its resolved DataContext (a service or the active document).
+    private BuildControls(
+        target:   ICommandTarget | undefined,
+        contexts: readonly ServiceToken<unknown>[],
+    ): { order: number; vm: ShellControlViewModel }[]
     {
         const out: { order: number; vm: ShellControlViewModel }[] = [];
         const app = this.Provider.get(ApplicationService.Key);
         if (app === undefined) return out;
-        const doc = this._host?.ActiveDocument;
         for (const module of app.Modules)
         {
             for (const def of (module as ShellModule).ShellControls)
             {
-                if (def.Region === ShellRegion.Toolbar
-                 && def.Context !== undefined && contexts.includes(def.Context))
-                {
-                    out.push({ order: def.Order, vm: new ShellControlViewModel(def.Template, doc) });
-                }
+                if (def.Region !== ShellRegion.Toolbar) continue;
+                const resolved = this.ResolveControlContext(def, target, contexts);
+                if (resolved === undefined) continue;
+                out.push({ order: def.Order, vm: new ShellControlViewModel(def.Template, resolved.dataContext) });
             }
         }
         return out;
     }
 
-    // StatusBar-region toolbar controls go into the StatusService's Items so the
-    // shell status bar renders them (bound to the active document, like the toolbar
-    // controls). We own only the cells WE add — tracked in `_statusVMs` and removed
-    // on the next rebuild — so app-posted status cells are left untouched.
+    // StatusBar-region controls go into the StatusService's Items so the shell
+    // status bar renders them. App-global service-bound controls (e.g. a theme
+    // picker) show unconditionally; document-bound ones follow the active
+    // document. Alignment = End docks a cell to the RIGHT: its view is wrapped in
+    // a StatusBarItem with DockPanel.Dock=Right, and a trailing fill spacer is
+    // added so the DockPanel's LastChildFill takes the middle rather than
+    // stretching the right cell. We own only the cells WE add (tracked in
+    // `_statusCells`), so app-posted status cells are left untouched.
     private SyncStatusItems(target: ICommandTarget | undefined): void
     {
         const status = this.Provider.get(StatusService.Key);
         if (status === undefined) return;
 
-        for (const vm of this._statusVMs)
+        for (const cell of this._statusCells)
         {
-            const i = status.Items.IndexOf(vm);
+            const i = status.Items.IndexOf(cell);
             if (i >= 0) status.Items.RemoveAt(i);
         }
-        this._statusVMs = [];
+        this._statusCells = [];
 
-        if (target === undefined) return;
         const app = this.Provider.get(ApplicationService.Key);
         if (app === undefined) return;
-        const contexts = target.CommandContexts;
-        const doc = this._host?.ActiveDocument;
+        const contexts = target?.CommandContexts ?? [];
+
+        const left:  ShellControlViewModel[] = [];
+        const right: ShellControlViewModel[] = [];
         for (const module of app.Modules)
         {
             for (const def of (module as ShellModule).ShellControls)
             {
-                if (def.Region === ShellRegion.StatusBar
-                 && def.Context !== undefined && contexts.includes(def.Context))
-                {
-                    const vm = new ShellControlViewModel(def.Template, doc);
-                    status.Items.Add(vm);
-                    this._statusVMs.push(vm);
-                }
+                if (def.Region !== ShellRegion.StatusBar) continue;
+                const resolved = this.ResolveControlContext(def, target, contexts);
+                if (resolved === undefined) continue;
+                const vm = new ShellControlViewModel(def.Template, resolved.dataContext);
+                (def.Alignment === ShellControlAlignment.End ? right : left).push(vm);
             }
+        }
+
+        // Order in the DockPanel: left cells (default dock = Left), then right
+        // cells (Dock = Right), then a fill spacer LAST so LastChildFill claims
+        // the middle gap instead of stretching a real cell.
+        for (const vm of left)
+        {
+            status.Items.Add(vm);
+            this._statusCells.push(vm);
+        }
+        for (const vm of right)
+        {
+            const item = new StatusBarItem();
+            (item as unknown as { Content: Visual | undefined }).Content = vm.View;
+            DockPanel.SetDock(item, Dock.Right);
+            status.Items.Add(item);
+            this._statusCells.push(item);
+        }
+        if (right.length > 0)
+        {
+            const spacer = new StatusBarItem();
+            status.Items.Add(spacer);
+            this._statusCells.push(spacer);
         }
     }
 

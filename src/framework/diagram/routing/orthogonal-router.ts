@@ -12,6 +12,7 @@ import {
     RouterRegistry,
     RoutingMode,
 } from './router.js';
+import { DiagramSettings } from '../diagram-settings.js';
 
 // Perpendicularity-preserving 90°-only polyline router. Implements
 // [docs/connectors.md](../../../../docs/connectors.md) § 10.2:
@@ -45,14 +46,17 @@ import {
 // Adorner), not by the router; off-ray waypoints still render but the
 // adjacent legs will look weird.
 
-const ORTHOGONAL_STUB = 20;
+// Port stub length + per-lane spacing, read live from settings (default 20 / 10)
+// so a routing-setting edit re-routes existing connectors. Small functions so
+// every call site resolves the current value on each route.
+const orthogonalStub = (): number => DiagramSettings.ConnectorOrthogonalStub();
 
 // Per-slot stub extension. A side-anchored endpoint at slot index i pushes
 // its perpendicular stub out by i × LANE_GAP beyond the base stub, so two
 // connectors sharing a side (or a source/target column) settle their
 // parallel runs onto distinct lanes instead of painting over each other.
 // Small enough to stay visually tidy, large enough to separate strokes.
-const LANE_GAP = 10;
+const laneGap = (): number => DiagramSettings.ConnectorLaneGap();
 
 class OrthogonalRouter implements IRouter
 {
@@ -289,7 +293,7 @@ function zNaturalOrPerpendicular(
         // doesn't help. Use a perpendicular Y-axis bridge between the
         // stubs at midY.
         let midY = (from.Y + to.Y) / 2;
-        if (midY === from.Y) midY = from.Y + ORTHOGONAL_STUB;
+        if (midY === from.Y) midY = from.Y + orthogonalStub();
         return [new Point(from.X, midY), new Point(to.X, midY)];
     }
     // Vertical sides (N↔S). fromVec.y = ±1, toVec.y = ∓1.
@@ -299,7 +303,7 @@ function zNaturalOrPerpendicular(
         return [new Point(from.X, midY), new Point(to.X, midY)];
     }
     let midX = (from.X + to.X) / 2;
-    if (midX === from.X) midX = from.X + ORTHOGONAL_STUB;
+    if (midX === from.X) midX = from.X + orthogonalStub();
     return [new Point(midX, from.Y), new Point(midX, to.Y)];
 }
 
@@ -313,14 +317,14 @@ function zNaturalOrPerpendicular(
 function verticalBridge(from: Point, to: Point): Point[]
 {
     let midX = (from.X + to.X) / 2;
-    if (midX === from.X) midX = from.X + ORTHOGONAL_STUB;
+    if (midX === from.X) midX = from.X + orthogonalStub();
     return [new Point(midX, from.Y), new Point(midX, to.Y)];
 }
 
 function horizontalBridge(from: Point, to: Point): Point[]
 {
     let midY = (from.Y + to.Y) / 2;
-    if (midY === from.Y) midY = from.Y + ORTHOGONAL_STUB;
+    if (midY === from.Y) midY = from.Y + orthogonalStub();
     return [new Point(from.X, midY), new Point(to.X, midY)];
 }
 
@@ -368,7 +372,7 @@ function sideVector(side: ResolvedPortSide): { x: number; y: number }
 function stubPoint(p: Point, side: ResolvedPortSide, laneOffset: number): Point
 {
     const v = sideVector(side);
-    const reach = ORTHOGONAL_STUB + laneOffset * LANE_GAP;
+    const reach = orthogonalStub() + laneOffset * laneGap();
     return new Point(p.X + v.x * reach, p.Y + v.y * reach);
 }
 

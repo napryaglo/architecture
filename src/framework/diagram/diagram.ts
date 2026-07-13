@@ -70,6 +70,7 @@ import {
 } from './behaviors/connector-interactions-behavior.js';
 import { Connector } from './connector.js';
 import type { RigidConnectorDragHost, RigidConnectorDragSession } from './rigid-connector-drag.js';
+import { DiagramSettings } from './diagram-settings.js';
 
 // §19.3 follow-up — position snap callback. Consumers (e.g., the
 // diagram demo's align-edges behavior) set this DP to a pure function
@@ -901,6 +902,27 @@ export class Diagram extends Selector implements RigidConnectorDragHost
         // resources not being registered yet — each option resolves its
         // template lazily on read (see connectorCapOptions / CapOption).
         this.set_property_value(Diagram.ConnectorCapOptionsKey, connectorCapOptions());
+        // Live-update on a Diagram-settings edit: re-measure (label margin,
+        // shape-fit) and re-route every connector (orthogonal stub, lane gap,
+        // bezier offset) so a value change in the settings pane is reflected
+        // without reopening the document. Chrome sizes (handles, halo) re-read
+        // on the next adorner rebuild. Not torn down — same no-teardown
+        // convention as the Diagram's collaborators (it lives for the doc).
+        DiagramSettings.Subscribe(() => this._onDiagramSettingsChanged());
+    }
+
+    // A Diagram-settings value changed — re-layout and re-route so the new value
+    // takes effect on already-placed content.
+    private _onDiagramSettingsChanged(): void
+    {
+        this.InvalidateMeasure();
+        const connectors = this.Connectors;
+        if (connectors === undefined) return;
+        for (let i = 0; i < connectors.Count; i++)
+        {
+            const c = connectors.Get(i);
+            if (c instanceof Connector) c.RecomputeRoute();
+        }
     }
 
     // PointerDown anywhere on the Diagram surface takes keyboard focus

@@ -1,4 +1,4 @@
-import { Element, Model } from '../../runtime/index.js';
+import { Application, Element, Model } from '../../runtime/index.js';
 import { ShellBase } from './shell.js';
 import { NavigationService } from './services/navigation-service.js';
 import { ContentHostService } from './services/content-host-service.js';
@@ -7,6 +7,7 @@ import { InspectorService } from './services/inspector-service.js';
 import { DialogService } from './services/dialog-service.js';
 import { StatusService } from './services/status-service.js';
 import { ApplicationSettings } from './services/application-settings-service.js';
+import { ThemeServiceKey, ThemeServiceInstance } from './services/theme-service.js';
 import { DocumentTypeRegistry } from './documents/document-type-registry.js';
 import { CommandRegistry } from './commands/command-registry.js';
 import { ToolbarService } from './commands/toolbar-service.js';
@@ -75,12 +76,17 @@ export class EditorShell extends ShellBase
         }
         // Provide the modal-dialog service by default: opens a Dialog + scrim on
         // this shell's overlay layer (settings, confirms, …). It owns no Visual, so
-        // it needs an anchor to reach the overlay — hand it THIS shell. Same opt-out
-        // guard; an app registering its own up-chain wins (then we just SetHost on
-        // whichever instance resolves).
+        // it needs an anchor to reach the overlay — hand it THIS shell. Registered
+        // at the app ROOT (like ApplicationSettings / ThemeService) so a scope-less
+        // consumer — e.g. a status-bar control resolving via
+        // `Application.current.Services` — can open dialogs too; a shell-scoped
+        // registration is unreachable from the root. Same opt-out guard; an app
+        // registering its own up-chain wins (then we just SetHost on whichever
+        // instance resolves).
         if (!this.Services.has(DialogService.Key))
         {
-            this.Services.registerScoped(DialogService.Key, (p) => new DialogService(p));
+            const root = Application.current?.Services ?? this.Services;
+            root.register(DialogService.Key, (p) => new DialogService(p));
         }
         this.Services.get(DialogService.Key)?.SetHost(this);
         // Provide the Status region's service by default: a StatusService whose
@@ -101,9 +107,30 @@ export class EditorShell extends ShellBase
         // skipped. The service resolves its optional ISettingsStore from the
         // container itself, so an app enables persistence just by registering a
         // store under SettingsStoreKey — no need to replace this registration.
+        //
+        // Registered at the APPLICATION ROOT as a singleton (not this shell's
+        // scope): settings are app-global, and a scope-less consumer — the
+        // static DiagramSettings helper — resolves them via
+        // `Application.current.Services`. A singleton at the root is shared by
+        // the whole subtree (the shell's region hosts resolve the same
+        // instance the helper does); a scoped registration would hand the
+        // root-resolving helper and the shell-resolving panel two different
+        // instances, breaking live change propagation.
         if (!this.Services.has(ApplicationSettings.Key))
         {
-            this.Services.registerScoped(ApplicationSettings.Key, (p) => new ApplicationSettings(p));
+            const root = Application.current?.Services ?? this.Services;
+            root.register(ApplicationSettings.Key, (p) => new ApplicationSettings(p));
+        }
+        // Provide the theme service by default: the global ThemeManager registered
+        // AS the IThemeService contract (a singleton instance — ThemeManager is a
+        // static class, so the same object serves every scope). Lets chrome bind a
+        // control's DataContext to ThemeServiceKey (e.g. a status-bar scheme
+        // picker) and drive theme/scheme changes without reaching the static
+        // singleton directly. Registered at the app root — theming is app-global.
+        if (!this.Services.has(ThemeServiceKey))
+        {
+            const root = Application.current?.Services ?? this.Services;
+            root.registerInstance(ThemeServiceKey, ThemeServiceInstance);
         }
         // Provide the DocumentTypeRegistry by default: aggregates every composed
         // module's declared DocumentDefinitions (the `.documents:` blocks) into

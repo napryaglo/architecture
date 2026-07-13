@@ -1199,6 +1199,9 @@ export class MenuPopupHost extends Panel
     /** Fixed-point anchor for ContextMenu (host-coordinates). When set
      *  AND `anchor` is unset, the popup top-left lands at this point. */
     public fixedPoint: { x: number; y: number } | undefined;
+    /** Centre the popup in the surface (a modal dialog rather than a
+     *  positioned fly-out). Takes precedence over anchor / fixedPoint. */
+    public centered = false;
     public popup: Visual | undefined;
 
     protected override MeasureOverride(availableSize: Size): Size
@@ -1221,7 +1224,13 @@ export class MenuPopupHost extends Panel
 
         let px: number;
         let py: number;
-        if (this.anchor !== undefined)
+        if (this.centered)
+        {
+            // Modal: centre the body in the surface.
+            px = Math.max(0, (finalSize.Width  - pw) / 2);
+            py = Math.max(0, (finalSize.Height - ph) / 2);
+        }
+        else if (this.anchor !== undefined)
         {
             const origin = absoluteOriginOf(this.anchor);
             const ar     = this.anchor.ArrangedRect;

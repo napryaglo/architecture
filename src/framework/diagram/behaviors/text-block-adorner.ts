@@ -13,6 +13,7 @@ import type { PointerEventArgs } from '../../../visual-engine/routed-event.js';
 import { Diagram } from '../diagram.js';
 import { Figure } from '../figure.js';
 import { ShapeText } from '../shape-text.js';
+import { DiagramSettings } from '../diagram-settings.js';
 
 // TextBlockAdorner — the on-canvas move / rotate chrome for a shape's text
 // block (§ diagram-text Slice 3). Mirrors the Visio text-block handles: a
@@ -36,10 +37,13 @@ import { ShapeText } from '../shape-text.js';
 
 const ACCENT      = new SolidColorBrush(Color.FromHex('#1976d2'));
 const GRIP_FILL   = new SolidColorBrush(Color.FromHex('#ffffff'));
-const HANDLE_SIZE = 9;    // move / rotate grip square, DIPs
-const STEM_WIDTH  = 1;
-const ROTATE_GAP  = 18;   // distance from block top edge to the rotate grip
 const HIDE_OFF    = -10000;
+
+// Grip / stem sizing, read live from settings (defaults 9 / 1 / 18) so a
+// change re-sizes the chrome the next time the adorner arranges.
+const handleSize = (): number => DiagramSettings.TextHandleSize();   // move / rotate grip square, DIPs
+const stemWidth  = (): number => DiagramSettings.TextStemWidth();
+const rotateGap  = (): number => DiagramSettings.TextRotateGap();    // block top edge → rotate grip
 
 enum DragMode { None = 'none', Move = 'move', Rotate = 'rotate' }
 
@@ -130,8 +134,8 @@ export class TextBlockAdorner extends Adorner
         b.Background      = fill;
         b.BorderBrush     = ACCENT;
         b.BorderThickness = new Thickness(1);
-        b.Width           = HANDLE_SIZE;
-        b.Height          = HANDLE_SIZE;
+        b.Width           = handleSize();
+        b.Height          = handleSize();
         b.Cursor          = cursor;
         return b;
     }
@@ -171,15 +175,15 @@ export class TextBlockAdorner extends Adorner
         this._outline.Arrange(new Rect(ox, oy, br.Width, br.Height));
         this._outlineRotate.Angle = st.Angle;
 
-        // Rotate grip: ROTATE_GAP above the block top edge (block frame),
+        // Rotate grip: rotateGap() above the block top edge (block frame),
         // rotated into canvas coords. The connecting stem is a thin bar
         // spanning that gap, centred on its midpoint and rotated to match.
-        const grip = rotVec(0, -(br.Height / 2 + ROTATE_GAP), rad);
+        const grip = rotVec(0, -(br.Height / 2 + rotateGap()), rad);
         this.arrangeGrip(this._rotateHandle, cx + grip.x, cy + grip.y);
         this.arrangeGrip(this._moveHandle, cx, cy);
-        const mid = rotVec(0, -(br.Height / 2 + ROTATE_GAP / 2), rad);
+        const mid = rotVec(0, -(br.Height / 2 + rotateGap() / 2), rad);
         const smx = cx + mid.x, smy = cy + mid.y;
-        this._stem.Arrange(new Rect(smx - STEM_WIDTH / 2, smy - ROTATE_GAP / 2, STEM_WIDTH, ROTATE_GAP));
+        this._stem.Arrange(new Rect(smx - stemWidth() / 2, smy - rotateGap() / 2, stemWidth(), rotateGap()));
         this._stemRotate.Angle = st.Angle;
 
         return finalSize;
@@ -187,16 +191,16 @@ export class TextBlockAdorner extends Adorner
 
     private arrangeGrip(grip: Border, cx: number, cy: number): void
     {
-        const half = HANDLE_SIZE / 2;
-        grip.Arrange(new Rect(cx - half, cy - half, HANDLE_SIZE, HANDLE_SIZE));
+        const half = handleSize() / 2;
+        grip.Arrange(new Rect(cx - half, cy - half, handleSize(), handleSize()));
     }
 
     private hideAll(): void
     {
         this._outline.Arrange(new Rect(HIDE_OFF, HIDE_OFF, 0, 0));
         this._stem.Arrange(new Rect(HIDE_OFF, HIDE_OFF, 0, 0));
-        this._moveHandle.Arrange(new Rect(HIDE_OFF, HIDE_OFF, HANDLE_SIZE, HANDLE_SIZE));
-        this._rotateHandle.Arrange(new Rect(HIDE_OFF, HIDE_OFF, HANDLE_SIZE, HANDLE_SIZE));
+        this._moveHandle.Arrange(new Rect(HIDE_OFF, HIDE_OFF, handleSize(), handleSize()));
+        this._rotateHandle.Arrange(new Rect(HIDE_OFF, HIDE_OFF, handleSize(), handleSize()));
     }
 
     // Re-point at the single selected Figure (or none), re-arming the
@@ -277,7 +281,7 @@ export class TextBlockAdorner extends Adorner
             // survive the canvas→host translation unchanged.
             const st = t.Text;
             const br = st.GetBlockRect();
-            const g = rotVec(0, -(br.Height / 2 + ROTATE_GAP), st.Angle * Math.PI / 180);
+            const g = rotVec(0, -(br.Height / 2 + rotateGap()), st.Angle * Math.PI / 180);
             this._rotCenterHostX = args.HostX - g.x;
             this._rotCenterHostY = args.HostY - g.y;
             args.CapturePointer(this._rotateHandle, 'grabbing');

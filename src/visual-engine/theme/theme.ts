@@ -960,6 +960,26 @@ export class ThemeManager
         ThemeManager.activate(ThemeManager._activeTheme, scheme);
     }
 
+    /** Activate an arbitrary Scheme OBJECT globally — the seam for a scheme
+     *  built at runtime (e.g. a dynamic Material scheme generated from a
+     *  user-picked seed) that isn't one of a Theme's pre-registered, named
+     *  schemes. Resolves the owning Theme from the scheme's `theme` name (or the
+     *  active theme as a fallback), merges the scheme's tokens into
+     *  Application.Resources exactly like ActivateScheme, and fires Activated so
+     *  bound `@Token` resources re-resolve live. Throws if no owning theme is
+     *  resolvable / no Application is current. */
+    public static ApplyScheme(scheme: Scheme): void
+    {
+        const theme = ThemeManager._themes.get(scheme.theme) ?? ThemeManager._activeTheme;
+        if (theme === undefined)
+        {
+            throw new Error(
+                `ThemeManager.ApplyScheme: scheme '${scheme.name}' targets theme `
+                + `'${scheme.theme}', which is not registered, and no theme is active.`);
+        }
+        ThemeManager.activate(theme, scheme);
+    }
+
     /** Track OS color-scheme preference (`prefers-color-scheme`) and
      *  activate the matching scheme. `listen: true` attaches a
      *  matchMedia listener so future OS changes re-activate; `listen:
