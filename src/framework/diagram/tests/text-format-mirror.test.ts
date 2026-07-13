@@ -7,6 +7,7 @@ import { RichTextBox } from '../../../basic/rich-text-box.js';
 import { TextPointer } from '../../../basic/documents/text-pointer.js';
 import { DocumentParagraphs } from '../../../basic/documents/text-navigation.js';
 import { TextAlignment } from '../../../visual-engine/index.js';
+import { CommandManager } from '../../commands/command-manager.js';
 import { Diagram } from '../diagram.js';
 import { Figure } from '../figure.js';
 import { TextPlacement } from '../shape-text.js';
@@ -94,6 +95,29 @@ describe('FormatMirror — text channel', () => {
         select(d, a);
         select(d, b);
         assert.equal(d.SelectionTextAlignment, TextAlignment.Center);
+    });
+
+    test('a text-format DP change pulses RequerySuggested (keeps toolbar toggles a radio group)', () => {
+        // The toolbar's align/decoration toggles are `IsChecked = $IsActive`, re-read
+        // only on a requery PULSE. A command-driven alignment change mutates the DP
+        // without a selection change, so the DP itself must pulse — otherwise the
+        // previously-active button stays lit (Center stays toggled after Left).
+        const d = setup([new Figure()]);
+        let pulses = 0;
+        const listener = (): void => { pulses += 1; };
+        CommandManager.SubscribeRequerySuggested(listener);
+        try {
+            d.SelectionTextAlignment = TextAlignment.Left;
+            assert.ok(pulses >= 1, 'alignment change should pulse RequerySuggested');
+            const afterFirst = pulses;
+            d.SelectionTextAlignment = TextAlignment.Center;
+            assert.ok(pulses > afterFirst, 'a subsequent alignment change should pulse again');
+            const afterAlign = pulses;
+            d.SelectionBold = true;
+            assert.ok(pulses > afterAlign, 'a decoration toggle change should pulse too');
+        } finally {
+            CommandManager.UnsubscribeRequerySuggested(listener);
+        }
     });
 
     // Part 2: while a shape is being edited, the alignment DP reflects the

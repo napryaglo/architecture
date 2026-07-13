@@ -7,6 +7,7 @@ import {
     type TextAlignment,
 } from '../../../visual-engine/index.js';
 import { type DataTemplate } from '../../../basic/templates/data-template.js';
+import { CommandManager } from '../../commands/command-manager.js';
 import type { Diagram } from '../diagram.js';
 import type { Connector } from '../connector.js';
 import type { ShapeText, TextPlacement } from '../shape-text.js';
@@ -121,6 +122,23 @@ export class FormatMirror
         diagram.AddPropertyChangedListener(Diagram.SelectionItalicKey,        () => this._broadcast((t, d) => t.ApplyItalic(d.SelectionItalic)));
         diagram.AddPropertyChangedListener(Diagram.SelectionUnderlineKey,     () => this._broadcast((t, d) => t.ApplyUnderline(d.SelectionUnderline)));
         diagram.AddPropertyChangedListener(Diagram.SelectionStrikethroughKey, () => this._broadcast((t, d) => t.ApplyStrikethrough(d.SelectionStrikethrough)));
+
+        // Keep the toolbar's Toggles-presentation buttons in sync with the
+        // selection's text state. Their IsChecked is `= $IsActive`, which the
+        // ToolbarService only re-reads (via DiagramDocument.IsActive → these DPs)
+        // on a global requery PULSE. Selection CHANGES already pulse (the command
+        // collaborator's _raiseCanExecuteAll), but a command-driven format change
+        // (clicking an align/decoration button) mutates the DP WITHOUT changing
+        // the selection — so without this the previously-active button stays lit
+        // (e.g. Center stays toggled after clicking Left, breaking the alignment
+        // radio group). Pulse on every toggle-backing DP change so RefreshActive
+        // States re-reads all of them.
+        const pulseRequery = (): void => CommandManager.InvalidateRequerySuggested();
+        diagram.AddPropertyChangedListener(Diagram.SelectionTextAlignmentKey, pulseRequery);
+        diagram.AddPropertyChangedListener(Diagram.SelectionBoldKey,          pulseRequery);
+        diagram.AddPropertyChangedListener(Diagram.SelectionItalicKey,        pulseRequery);
+        diagram.AddPropertyChangedListener(Diagram.SelectionUnderlineKey,     pulseRequery);
+        diagram.AddPropertyChangedListener(Diagram.SelectionStrikethroughKey, pulseRequery);
     }
 
     private _leaves(): Model[]

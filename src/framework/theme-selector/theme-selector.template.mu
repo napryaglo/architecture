@@ -27,13 +27,15 @@ resources ThemeSelectors {
     Template x:key="DefaultThemeSelector" [TargetType = ThemeSelector] {
         StackPanel x:name="PART_Layout" [ Orientation = Horizontal ] {
             // Always-visible icon affordances. TextBlock Foreground is
-            // tinted to @OnPrimary so the icons stay legible on the top
-            // app bar; hosts hanging the ThemeSelector on a different
-            // surface should re-template and pick their own Foreground.
+            // tinted to @OnSurfaceVariant — the on-Surface content tone
+            // shared by the top app bar (@Surface) and the status bar
+            // (@SurfaceContainerLow), both surfaces this control rides.
+            // (@OnPrimary here was near-invisible dark-on-dark once the
+            // app bar moved to a Surface background.)
             TextBlock
                 [ Style             = @LabelLarge,
                   Text              = "Aa",
-                  Foreground        = @OnPrimary,
+                  Foreground        = @OnSurfaceVariant,
                   VerticalAlignment = Center,
                   Margin            = (4,0,4,0) ]
             Border x:name="PART_ThemeComboWrap"
@@ -47,7 +49,7 @@ resources ThemeSelectors {
             TextBlock
                 [ Style             = @LabelLarge,
                   Text              = "◐",
-                  Foreground        = @OnPrimary,
+                  Foreground        = @OnSurfaceVariant,
                   VerticalAlignment = Center,
                   Margin            = (4,0,4,0) ]
             Border x:name="PART_SchemeComboWrap"
