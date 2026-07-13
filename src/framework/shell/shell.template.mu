@@ -443,8 +443,8 @@ resources Shells {
             DockPanel [ LastChildFill = true ] {
                 Border x:name="PART_HeaderBar"
                     [ DockPanel.Dock = Top,
-                      Background     = @SurfaceContainer,
-                      Padding        = (4,2,4,2) ] {
+                      Background     = @SurfaceContainerHigh,
+                      Padding        = (8,8,8,8) ] {
                     DockPanel [ LastChildFill = true ] {
                         IconButton
                             [ DockPanel.Dock  = Right,
