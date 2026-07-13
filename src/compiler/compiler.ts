@@ -121,7 +121,7 @@ import * as BasicNS    from '../basic/index.js';
 import * as EngineNS   from '../visual-engine/index.js';
 import * as FrameNS    from '../framework/index.js';
 import * as SurfaceNS  from '../framework/surface.js';
-import * as MaterialNS from '../resources/material/index.js';
+import { createRequire } from 'node:module';
 
 const FRAMEWORK_BUNDLES: readonly Record<string, unknown>[] = [
     RuntimeNS as Record<string, unknown>,
@@ -129,13 +129,36 @@ const FRAMEWORK_BUNDLES: readonly Record<string, unknown>[] = [
     EngineNS   as Record<string, unknown>,
     FrameNS    as Record<string, unknown>,
     SurfaceNS  as Record<string, unknown>,
-    MaterialNS as Record<string, unknown>,
 ];
+
+// The Material theme is COMPILED (from `.mu` into `build/resources/`) by
+// this very compiler, so importing it statically here made the compiler
+// un-bootstrappable: a clean tree has no `build/`, the static import
+// fails, and `build:templates` can't run to create it. Load it lazily and
+// tolerate absence — once built, class-name lookups see the real Material*
+// classes; during a clean/bootstrap build the load fails and we fall back
+// to Model.find_class. No `.mu` references a Material class by name, so the
+// fallback path isn't exercised in practice.
+let materialBundleCache: Record<string, unknown> | undefined;
+function materialBundle(): Record<string, unknown>
+{
+    if (materialBundleCache === undefined)
+    {
+        try
+        {
+            materialBundleCache = createRequire(import.meta.url)(
+                '../resources/material/index.js') as Record<string, unknown>;
+        }
+        catch { materialBundleCache = {}; }
+    }
+    return materialBundleCache;
+}
 
 // Resolve a class name to its Function value. Searches the framework
 // bundles first (so subclasses without own DPs — e.g. Ellipse extends
-// Shape — are reachable); falls back to Model.find_class which knows
-// every class that ever registered a DP (the test-defined-inline path).
+// Shape — are reachable), then the lazily-loaded Material bundle; falls
+// back to Model.find_class which knows every class that ever registered a
+// DP (the test-defined-inline path).
 function resolveClassByName(name: string): Function | undefined
 {
     for (const bundle of FRAMEWORK_BUNDLES)
@@ -143,6 +166,8 @@ function resolveClassByName(name: string): Function | undefined
         const v = bundle[name];
         if (typeof v === 'function') return v;
     }
+    const m = materialBundle()[name];
+    if (typeof m === 'function') return m;
     return Model.find_class(name);
 }
 
