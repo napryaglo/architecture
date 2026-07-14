@@ -322,10 +322,11 @@ resources Shells {
             TextBlock [ Text = $Title, VerticalAlignment = Center, Margin = (4,0,0,0) ]
             IconButton
                 [ Variant          = Standard,
+                  ThemeManager.Density = Compact,
                   Command          = $service(ContentHostService).CloseDocumentCommand,
                   CommandParameter = $Id,
                   Margin           = (2,0,0,0) ] {
-                Shape [ Geometry = @IconClose, Fill = @OnSurfaceVariant, Width = 14, Height = 14 ]
+                Shape [ Geometry = @IconClose, Fill = @OnSurfaceVariant, Width = 8, Height = 8 ]
             }
         }
     }
