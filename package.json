@@ -1,6 +1,6 @@
 {
   "name": "@pragmatic-lab/mural",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "WPF-style visual tree, property system, and 2D drawing primitives for TypeScript",
   "type": "module",
   "main": "dist/index.js",
