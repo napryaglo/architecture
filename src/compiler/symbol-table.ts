@@ -120,6 +120,8 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['SettingKind',             '@pragmatic-lab/mural/framework/shell/settings/setting-definition.js'],
     ['DocumentDefinition',      '@pragmatic-lab/mural/framework/shell/documents/document-definition.js'],
     ['DocumentTypeRegistry',    '@pragmatic-lab/mural/framework/shell/documents/document-type-registry.js'],
+    ['ProjectFactoryDefinition', '@pragmatic-lab/mural/framework/shell/projects/project-factory-definition.js'],
+    ['ProjectFactoryRegistry',  '@pragmatic-lab/mural/framework/shell/projects/project-factory-registry.js'],
     ['CommandDefinition',       '@pragmatic-lab/mural/framework/shell/commands/command-definition.js'],
     ['CommandGroupPresentation', '@pragmatic-lab/mural/framework/shell/commands/command-definition.js'],
     ['CommandRegistry',         '@pragmatic-lab/mural/framework/shell/commands/command-registry.js'],
