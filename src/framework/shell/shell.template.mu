@@ -325,6 +325,8 @@ resources Shells {
                   ThemeManager.Density = Compact,
                   Command          = $service(ContentHostService).CloseDocumentCommand,
                   CommandParameter = $Id,
+                  Width            = 12,
+                  Height           = 12,
                   Margin           = (2,0,0,0) ] {
                 Shape [ Geometry = @IconClose, Fill = @OnSurfaceVariant, Width = 8, Height = 8 ]
             }
