@@ -321,11 +321,12 @@ resources Shells {
         StackPanel [ Orientation = Horizontal, VerticalAlignment = Center ] {
             TextBlock [ Text = $Title, VerticalAlignment = Center, Margin = (4,0,0,0) ]
             IconButton
-                [ Variant          = Standard,
-                  Command          = $service(ContentHostService).CloseDocumentCommand,
-                  CommandParameter = $Id,
-                  Margin           = (2,0,0,0) ] {
-                Shape [ Geometry = @IconClose, Fill = @OnSurfaceVariant, Width = 8, Height = 8 ]
+                [ Variant           = Standard,
+                  Command           = $service(ContentHostService).CloseDocumentCommand,
+                  CommandParameter  = $Id,
+                  VerticalAlignment = Center,
+                  Margin            = (2,0,0,0) ] {
+                Shape [ Geometry = @IconClose, Fill = @OnSurfaceVariant, Width = 4, Height = 4 ]
             }
         }
     }
