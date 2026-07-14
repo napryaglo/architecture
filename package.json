@@ -1,6 +1,6 @@
 {
   "name": "@pragmatic-lab/mural",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "description": "WPF-style visual tree, property system, and 2D drawing primitives for TypeScript",
   "type": "module",
   "main": "dist/index.js",
@@ -10,84 +10,84 @@
       "types": "./dist/index.d.ts",
       "import": {
         "development": "./src/index.ts",
-        "default":     "./dist/index.js"
+        "default": "./dist/index.js"
       }
     },
     "./runtime": {
       "types": "./dist/runtime/index.d.ts",
       "import": {
         "development": "./src/runtime/index.ts",
-        "default":     "./dist/runtime/index.js"
+        "default": "./dist/runtime/index.js"
       }
     },
     "./visual-engine": {
       "types": "./dist/visual-engine/index.d.ts",
       "import": {
         "development": "./src/visual-engine/index.ts",
-        "default":     "./dist/visual-engine/index.js"
+        "default": "./dist/visual-engine/index.js"
       }
     },
     "./framework": {
       "types": "./dist/framework/index.d.ts",
       "import": {
         "development": "./src/framework/index.ts",
-        "default":     "./dist/framework/index.js"
+        "default": "./dist/framework/index.js"
       }
     },
     "./framework/surface.js": {
       "types": "./dist/framework/surface.d.ts",
       "import": {
         "development": "./src/framework/surface.ts",
-        "default":     "./dist/framework/surface.js"
+        "default": "./dist/framework/surface.js"
       }
     },
     "./resources/material": {
       "types": "./dist/resources/material/index.d.ts",
       "import": {
         "development": "./src/resources/material/index.ts",
-        "default":     "./dist/resources/material/index.js"
+        "default": "./dist/resources/material/index.js"
       }
     },
     "./framework/*.js": {
       "types": "./dist/framework/*.d.ts",
       "import": {
         "development": "./src/framework/*.ts",
-        "default":     "./dist/framework/*.js"
+        "default": "./dist/framework/*.js"
       }
     },
     "./basic": {
       "types": "./dist/basic/index.d.ts",
       "import": {
         "development": "./src/basic/index.ts",
-        "default":     "./dist/basic/index.js"
+        "default": "./dist/basic/index.js"
       }
     },
     "./basic/surface.js": {
       "types": "./dist/basic/surface.d.ts",
       "import": {
         "development": "./src/basic/surface.ts",
-        "default":     "./dist/basic/surface.js"
+        "default": "./dist/basic/surface.js"
       }
     },
     "./basic/*.js": {
       "types": "./dist/basic/*.d.ts",
       "import": {
         "development": "./src/basic/*.ts",
-        "default":     "./dist/basic/*.js"
+        "default": "./dist/basic/*.js"
       }
     },
     "./compiler": {
       "types": "./dist/compiler/index.d.ts",
       "import": {
         "development": "./src/compiler/index.ts",
-        "default":     "./dist/compiler/index.js"
+        "default": "./dist/compiler/index.js"
       }
     },
     "./tooling": {
       "types": "./dist/tooling/index.d.ts",
       "import": {
         "development": "./src/tooling/index.ts",
-        "default":     "./dist/tooling/index.js"
+        "default": "./dist/tooling/index.js"
       }
     }
   },

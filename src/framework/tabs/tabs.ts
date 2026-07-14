@@ -1,4 +1,4 @@
-import { MetaData, Model, Element, Visual } from '../../runtime/index.js';
+import { MetaData, Model, Element, Visual, type PointerEventArgs } from '../../runtime/index.js';
 import { HeaderedContentControl } from '../base/headered-content-control.js';
 import { Selector } from '../list/selector.js';
 
@@ -143,15 +143,60 @@ export class TabItem extends HeaderedContentControl
             { default_value: TabItem });
     }
 
+    // Press-here-release-here gate for click-to-select (see OnPointerUp).
+    private _pressOriginatedHere = false;
+
     constructor()
     {
         super();
         // Land @DefaultTabItem (header ContentPresenter + selection chrome).
         this.applyDefaultStyle();
+        // Focusable so a clicked tab can take keyboard focus (the IsFocused
+        // chrome + arrow navigation), matching ListBoxItem.
+        this.Focusable = true;
     }
 
     public get IsSelected(): boolean { return Selector.GetIsSelected(this); }
     public set IsSelected(v: boolean) { Selector.SetIsSelected(this, v); }
+
+    // Click-to-select. A TabItem mirrors ListBoxItem's IsSelected DP but
+    // previously did NOT wire clicks to selection — so a tab showed selected
+    // chrome yet clicking it never changed the TabControl's SelectedItem. That
+    // left `SelectedItem=$ActiveDocument`-style tab strips switchable only
+    // programmatically (the document tab strip couldn't switch documents on
+    // click). These handlers replicate ListBoxItem: a press-here-release-here
+    // gate whose pointer-up walks to the owning Selector (the TabControl) and
+    // routes HandleContainerClick, which updates SelectedItem and — through a
+    // TwoWay binding — the bound field. IsPressed is maintained for the
+    // template's press/hover state-layer triggers, cleared before the click so
+    // a handler reading it sees the post-release state (Button convention).
+    protected override OnPointerDown(_args: PointerEventArgs): void
+    {
+        this._pressOriginatedHere = true;
+        this._setIsPressed(true);
+    }
+
+    protected override OnPointerUp(args: PointerEventArgs): void
+    {
+        const fire = this._pressOriginatedHere && this.IsMouseOver;
+        this._pressOriginatedHere = false;
+        this._setIsPressed(false);
+        if (!fire) return;
+        args.SetFocus(this);
+        const owner = Selector.FromContainer<Selector>(
+            this, (v: Visual): v is Selector => v instanceof Selector);
+        if (owner !== undefined) owner.HandleContainerClick(this, args.Modifiers);
+    }
+
+    protected override OnPointerLeave(_args: PointerEventArgs): void
+    {
+        this._setIsPressed(false);
+    }
+
+    protected override OnPointerEnter(_args: PointerEventArgs): void
+    {
+        if (this._pressOriginatedHere) this._setIsPressed(true);
+    }
 }
 
 // MetaData re-export silencer for future-additions stability.
