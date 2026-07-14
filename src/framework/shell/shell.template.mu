@@ -409,16 +409,17 @@ resources Shells {
         ItemsPanel = @InspectorStackPanel;
     }
 
-    // Compact 12×12 chrome-less icon button — for the inspector header's
-    // collapse (chevron) and close affordances. The M3 IconButton variants
-    // hardcode a 40×40 PART_Border, too large for a dense header row; this
-    // template sizes to a tight 12×12 with a transparent hover/press layer.
+    // Compact 16×16 chrome-less icon button — for the inspector header's
+    // collapse (chevron) and close affordances, and the document tab close
+    // button. The M3 IconButton variants hardcode a 40×40 PART_Border, too
+    // large for a dense header row; this template sizes to a tight 16×16 with
+    // a transparent hover/press layer.
     Template x:key="CompactHeaderIconButton" [TargetType = IconButton] {
         Border x:name="PART_Border"
             [ Background           = #00000000,
               CornerRadius         = (2),
-              Width                = 12,
-              Height               = 12,
+              Width                = 16,
+              Height               = 16,
               TextBlock.Foreground = @OnSurfaceVariant ] {
             Border x:name="PART_StateLayer"
                 [ Background = #00000000, CornerRadius = (2) ] {
