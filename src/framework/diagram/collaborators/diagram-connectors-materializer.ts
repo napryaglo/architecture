@@ -207,10 +207,12 @@ export class DiagramConnectorsMaterializer
         if (panel instanceof DiagramLayersPanel)
         {
             if (panel.ConnectorsLayer.Children.IndexOf(cap) !== -1) return;
+            this._reclaim(cap);
             panel.AddChild(cap);
             return;
         }
         if ((panel as { Children?: { IndexOf?(v: Visual): number } }).Children?.IndexOf?.(cap) !== -1) return;
+        this._reclaim(cap);
         (panel as { AddChild?(v: Visual): void }).AddChild?.(cap);
     }
 
@@ -259,6 +261,7 @@ export class DiagramConnectorsMaterializer
         {
             // Don't double-add. Already-mounted visuals are no-ops.
             if (panel.ConnectorsLayer.Children.IndexOf(visual) !== -1) return;
+            this._reclaim(visual);
             panel.AddChild(visual);
             return;
         }
@@ -266,7 +269,22 @@ export class DiagramConnectorsMaterializer
         // Connectors end up co-mingled with figure containers; the
         // consumer wanting layered z-order opts into DiagramLayersPanel.
         if ((panel as { Children?: { IndexOf?(v: Visual): number } }).Children?.IndexOf?.(visual) !== -1) return;
+        this._reclaim(visual);
         (panel as { AddChild?(v: Visual): void }).AddChild?.(visual);
+    }
+
+    // Reclaim a shared connector / cap / label Visual from a now-discarded prior
+    // Diagram's layer before mounting it here. A Connector item IS its Visual
+    // (items-are-Connectors, § _instantiate) and its caps + label hang off it —
+    // all owned by the document, not the view. A tab swap discards the outgoing
+    // Diagram without unmounting them, so they stay parented to its (dead)
+    // connectors layer; re-showing the document trips AddChild's single-parent
+    // guard ("Visual already has a visual parent"). Same reclaim as
+    // ItemsControl.rebuildContainers does for the node Figures.
+    private _reclaim(visual: Visual): void
+    {
+        visual._release_from_visual_parent();
+        visual._release_from_logical_parent();
     }
 
     private _unmaterialize(item: Model): void

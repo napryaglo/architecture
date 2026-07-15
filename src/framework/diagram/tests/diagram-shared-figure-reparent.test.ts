@@ -6,6 +6,8 @@ import { ItemsPanelTemplate } from '../../../basic/panels/items-panel-template.j
 import { Canvas } from '../../../basic/panels/canvas.js';
 import { Diagram } from '../diagram.js';
 import { DiagramDocument } from '../diagram-document.js';
+import { DiagramLayersPanel } from '../diagram-layers-panel.js';
+import { ConnectorEndpoint } from '../connector-endpoint.js';
 
 // The node Figures ARE the Diagram's containers (Diagram.GetContainerForItemOverride
 // returns the item itself). So a document's Nodes are shared Visuals. If a Diagram
@@ -18,6 +20,15 @@ import { DiagramDocument } from '../diagram-document.js';
 function layout(d: Diagram): void
 {
     d.ItemsPanel = new ItemsPanelTemplate(() => new Canvas());
+    d.Measure(new Size(400, 400));
+    d.Arrange(new Rect(0, 0, 400, 400));
+}
+
+// Connectors mount into a DiagramLayersPanel's connectors layer (the real
+// canvas panel), so the connector-reparent case needs one.
+function layoutLayered(d: Diagram): void
+{
+    d.ItemsPanel = new ItemsPanelTemplate(() => new DiagramLayersPanel());
     d.Measure(new Size(400, 400));
     d.Arrange(new Rect(0, 0, 400, 400));
 }
@@ -45,5 +56,40 @@ describe('Diagram — a document shown in a second Diagram after the first is di
             (second as unknown as { ItemsSource: unknown }).ItemsSource = doc.Nodes;
             layout(second);
         }, 're-showing a document\'s nodes in a new Diagram must reclaim the shared Figures');
+    });
+
+    // Connectors take a SEPARATE mount path (DiagramConnectorsMaterializer), so
+    // the same shared-Visual pinning bites there too: a Connector item IS its
+    // Visual, owned by the document, and a discarded Diagram leaves it (plus its
+    // caps/label) pinned to the old connectors layer.
+    test('re-showing a document with a connector does not throw on the connector mount', () => {
+        const doc = new DiagramDocument();
+        const a = doc.CreateNode('rectangle', 40, 40);
+        const b = doc.CreateNode('ellipse', 160, 80);
+        assert.ok(a !== null && b !== null);
+        doc.CreateConnector(new ConnectorEndpoint({ Node: a! }), new ConnectorEndpoint({ Node: b! }));
+
+        // Connectors mount only once ItemsPanelInstance exists (the materializer
+        // bails while the panel is absent, and nothing re-drives it), so the
+        // faithful order is: set ItemsSource, lay out to materialize the panel,
+        // THEN bind Connectors — matching how the template's `Connectors=$Connectors`
+        // resolves after the canvas panel is up.
+        const show = (d: Diagram): void =>
+        {
+            (d as unknown as { ItemsSource: unknown }).ItemsSource = doc.Nodes;
+            layoutLayered(d);
+            (d as unknown as { Connectors: unknown }).Connectors = doc.Connectors;
+            d.Measure(new Size(400, 400));
+            d.Arrange(new Rect(0, 0, 400, 400));
+        };
+
+        const first = new Diagram();
+        show(first);   // mounts the connector into first's connectors layer
+
+        // Discard `first` without teardown (the tab-swap scenario).
+
+        const second = new Diagram();
+        assert.doesNotThrow(() => show(second),
+            're-showing a document\'s connectors in a new Diagram must reclaim the shared connector Visuals');
     });
 });
