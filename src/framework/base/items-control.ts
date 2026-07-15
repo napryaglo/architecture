@@ -1409,6 +1409,18 @@ export class ItemsControl extends Control
                 if (container === undefined) break;
                 if (isNewlyRealized)
                 {
+                    // The container may be a SHARED / own-container Visual (a
+                    // Diagram's items ARE their Figures) still parented to a
+                    // now-discarded prior view — e.g. the same document's canvas
+                    // presented in an earlier tab whose Diagram the content host
+                    // detached wholesale without a container teardown. Claim it
+                    // from that stale parent in BOTH trees before re-homing, or the
+                    // single-parent guards throw ("Visual already has a visual
+                    // parent" on AddVisualChild, then "Element already has a logical
+                    // parent" on AttachContainer→AttachLogical). Mirrors
+                    // ContentPresenter.SetContent's shared-Visual reclaim.
+                    container._release_from_visual_parent();
+                    container._release_from_logical_parent();
                     this._itemsPanel.AddVisualChild(container);
                     this.AttachContainer(container);
                 }
