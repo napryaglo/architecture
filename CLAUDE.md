@@ -5,6 +5,13 @@
 - Do not use the `superpowers` skills. No spec docs, no plan files, no
   design-approval gates.
 
+## Testing
+
+- **Every test file lives in a `tests/` subfolder next to the code it
+  exercises** — `src/basic/tests/text-box.test.ts`, never
+  `src/basic/text-box.test.ts`. The runner globs `src/**/*.test.ts` either way,
+  so this is organizational: keep source directories free of test files.
+
 ## Architecture
 
 - **List-based controls descend from `ItemsControl`.** Use its overrides
