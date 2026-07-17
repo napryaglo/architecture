@@ -108,6 +108,15 @@ export class ToolbarService extends ServiceBase
     // (ShellControlViewModels for left cells, wrapper StatusBarItems for right-
     // docked cells, plus a fill spacer) — removed on the next rebuild.
     private _statusCells: unknown[] = [];
+    // Signature of the command set behind the last-built command ToolBar. Lets
+    // Rebuild skip the expensive ToolbarItems teardown when a document switch
+    // lands on the SAME command set (the common case — same-type documents).
+    private _lastCommandSig: string | undefined = undefined;
+    // The clusters behind the last-built command ToolBar. Reused verbatim on a
+    // same-command switch so the grouped projection (VisibleEntries) and the flat
+    // ToolBar (ToolbarItems) keep pointing at the SAME group VM instances — the
+    // shared-instance invariant callers/tests rely on.
+    private _lastClusters: GroupCluster[] = [];
 
     constructor(provider: IServiceProvider)
     {
@@ -163,6 +172,18 @@ export class ToolbarService extends ServiceBase
 
     private OnActiveDocumentChanged(): void
     {
+        // A tab switch writes ActiveDocument more than once: the Selector
+        // transiently clears the selection (ActiveDocument = undefined) before
+        // setting the newly-clicked document. Ignore that mid-switch undefined
+        // while documents remain open — rebuilding the toolbar to "empty" and
+        // straight back is the teardown we're trying to avoid. A genuine
+        // no-active-document state only arises when the open set is empty (the
+        // last document closed), which is NOT skipped here.
+        if (this._host?.ActiveDocument === undefined
+            && (this._host?.OpenDocuments.Count ?? 0) > 0)
+        {
+            return;
+        }
         this.Rebuild();
         this.RaiseAll();
     }
@@ -183,10 +204,6 @@ export class ToolbarService extends ServiceBase
         const entries  = this.VisibleEntries;
         const items    = this.ToolbarItems;
         const controls = this.ToolbarControls;
-        visible.Clear();
-        entries.Clear();
-        items.Clear();
-        controls.Clear();
 
         const target = this.ActiveTarget();
         this.SyncStatusItems(target);
@@ -200,6 +217,12 @@ export class ToolbarService extends ServiceBase
 
         if (target === undefined)
         {
+            visible.Clear();
+            entries.Clear();
+            items.Clear();
+            controls.Clear();
+            this._lastCommandSig = '';
+            this._lastClusters = [];
             toolbarControls.sort((a, b) => a.order - b.order);
             for (const c of toolbarControls) { entries.Add(c.vm); controls.Add(c.vm); }
             return;
@@ -217,12 +240,27 @@ export class ToolbarService extends ServiceBase
         // stay together and in order.
         matched.sort((a, b) => a.Order - b.Order || a.Group.localeCompare(b.Group));
 
-        // Cluster into presentation groups ONCE. Both the grouped VisibleEntries
+        // Signature of the command set this activation would show. When it equals
+        // the last-built one — switching between documents that expose the SAME
+        // commands (the common case, e.g. two diagrams) — the command ToolBar's
+        // realized buttons and split-menu dropdowns are already correct: each
+        // cached command VM dispatches to the LIVE active document, so tearing
+        // down and re-materializing ~500 controls reproduces exactly what's
+        // there. `items.Count > 0` guards the first build (empty ToolbarItems).
+        const sig = matched.map(d => d.Id).join('|');
+        const commandsUnchanged = sig === this._lastCommandSig && items.Count > 0;
+
+        // Cluster into presentation groups. Both the grouped VisibleEntries
         // projection and the flat ToolbarItems render list derive from these.
-        const clusters = this.ClusterGroups(matched);
+        // On an unchanged command set, REUSE the last clusters so both projections
+        // (and the still-realized ToolBar) keep the same group VM instances.
+        const clusters = commandsUnchanged ? this._lastClusters : this.ClusterGroups(matched);
 
         // VisibleCommands — the flat, ungrouped projection (cached VMs, Order
-        // sorted). Every matched def now has a VM (ClusterGroups made them).
+        // sorted). Unbound to any view, so cheap to refresh every time; callers
+        // and tests read the current set here. Every matched def now has a VM
+        // (ClusterGroups made them).
+        visible.Clear();
         for (const def of matched) visible.Add(this.VmFor(def));
 
         // Interleave command GROUPS and editor CONTROLS in one Order-sorted list.
@@ -236,34 +274,44 @@ export class ToolbarService extends ServiceBase
 
         // Grouped projection: one VM per group + each control (interleaved by
         // Order — unchanged; the shell's old command host and callers rely on it).
+        // Also unbound, so refreshed every time.
+        entries.Clear();
         for (const e of ordered) entries.Add(e.kind === 'group' ? e.cluster.group : e.control);
 
-        // Flat command projection (the command ToolBar) — command GROUPS only:
-        // Flat / Toggles groups expand into their command VMs, split groups ride as
-        // one item, and a separator sits between adjacent groups (the visible
-        // divider AND the ToolBar's connected-run boundary — see
-        // ToolbarSeparatorItem). Editor CONTROLS are NOT here; they go to
-        // ToolbarControls (rendered outside the overflow ToolBar).
-        let first = true;
-        for (const e of ordered)
-        {
-            if (e.kind !== 'group') continue;
-            if (!first) items.Add(new ToolbarSeparatorItem());
-            first = false;
-
-            if (e.cluster.presentation === CommandGroupPresentation.Flat
-             || e.cluster.presentation === CommandGroupPresentation.Toggles)
-            {
-                for (const vm of e.cluster.commandVms) items.Add(vm);
-            }
-            else
-            {
-                items.Add(e.cluster.group);
-            }
-        }
-
-        // Editor controls, in the same Order sequence, for the fixed control region.
+        // Editor controls (fixed region beside the command ToolBar) — bound, but
+        // document-dependent (their DataContext is the active document), so they
+        // MUST refresh on every switch. Few in number, so cheap.
+        controls.Clear();
         for (const e of ordered) if (e.kind === 'control') controls.Add(e.control);
+
+        // Flat command projection (the command ToolBar) — the EXPENSIVE, bound
+        // list. Command GROUPS only: Flat / Toggles groups expand into their
+        // command VMs, split groups ride as one item, and a separator sits between
+        // adjacent groups. Gated on `commandsUnchanged`: skipped when the command
+        // set is identical to the last build, leaving the realized ToolBar intact.
+        if (!commandsUnchanged)
+        {
+            items.Clear();
+            let first = true;
+            for (const e of ordered)
+            {
+                if (e.kind !== 'group') continue;
+                if (!first) items.Add(new ToolbarSeparatorItem());
+                first = false;
+
+                if (e.cluster.presentation === CommandGroupPresentation.Flat
+                 || e.cluster.presentation === CommandGroupPresentation.Toggles)
+                {
+                    for (const vm of e.cluster.commandVms) items.Add(vm);
+                }
+                else
+                {
+                    items.Add(e.cluster.group);
+                }
+            }
+            this._lastCommandSig = sig;
+            this._lastClusters = clusters;
+        }
 
         this.RefreshActiveStates();
     }

@@ -132,6 +132,37 @@ describe('ToolBarSplitButton — primary + dropdown', () => {
         assert.equal(sb.IsOpen, false, 'closed by default');
     });
 
+    // Optimization: a command bar can carry dozens of split buttons, each with
+    // a dropdown of many items. Realizing every dropdown's containers up front
+    // (hundreds of MenuItems that are never opened) dominated toolbar build /
+    // document-switch cost. The dropdown items must be built LAZILY — not until
+    // the popup is first opened.
+    test('dropdown items are realized lazily — not until the popup first opens', () => {
+        const sb = new ToolBarSplitButton();
+        sb.Command = new RelayCommand(() => {});
+        const mi = new MenuItem(); mi.Header = 'Align Left';
+        sb.AddChild(mi);
+        const target = new HeadlessTarget(600, 200, sb);
+        target.Flush();
+
+        const popupHost = (sb as unknown as { _popupHost: Visual })._popupHost;
+        assert.equal(findType(popupHost, MenuItem), undefined,
+            'the MenuItem is NOT realized while the dropdown has never been opened');
+
+        // First open builds the deferred containers.
+        sb.IsOpen = true;
+        target.Flush();
+        assert.ok(findType(popupHost, MenuItem) !== undefined,
+            'opening the dropdown realizes the deferred MenuItem');
+
+        // And it stays realized across a close/re-open (no re-defer).
+        sb.IsOpen = false;
+        sb.IsOpen = true;
+        target.Flush();
+        assert.ok(findType(popupHost, MenuItem) !== undefined,
+            'the MenuItem remains realized after a close/re-open');
+    });
+
     test('primary half runs Command; arrow half toggles IsOpen', () => {
         const sb = new ToolBarSplitButton();
         let fired = 0;

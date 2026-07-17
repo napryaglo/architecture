@@ -2,7 +2,7 @@ import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import {
     Model, MetaData, PointerButton, NoModifiers,
-    DataContextBinding,
+    DataContextBinding, ObservableCollection,
     type PointerEventInit,
 } from '../../../runtime/index.js';
 import { HeadlessTarget, SvgDrawingContext } from '../../../visual-engine/index.js';
@@ -33,8 +33,15 @@ class Shell extends Model
 {
     public static readonly ActiveDocumentKey = Model.RegisterProperty<Doc | undefined>(
         Shell, 'ActiveDocument', undefined, MetaData.None);
+    // A stable open-document collection the tab strip binds ItemsSource to
+    // (mirrors DocumentsContentHostService.OpenDocuments — the reference never
+    // changes; only its contents mutate on Open/Close).
+    public static readonly OpenDocsKey = Model.RegisterProperty<ObservableCollection<Doc>>(
+        Shell, 'OpenDocs', undefined as unknown as ObservableCollection<Doc>, MetaData.None);
+    constructor() { super(); this.set_property_value(Shell.OpenDocsKey, new ObservableCollection<Doc>()); }
     public get ActiveDocument(): Doc | undefined { return this.get_property_value(Shell.ActiveDocumentKey); }
     public set ActiveDocument(v: Doc | undefined) { this.set_property_value(Shell.ActiveDocumentKey, v); }
+    public get OpenDocs(): ObservableCollection<Doc> { return this.get_property_value(Shell.OpenDocsKey); }
 }
 
 function pointer(o: Partial<PointerEventInit> = {}): PointerEventInit
@@ -82,6 +89,45 @@ describe('TabItem — click writes back through a TwoWay SelectedItem binding', 
         // The write-back: target → source.
         assert.equal(tc.SelectedItem, b, 'clicking tab B moves SelectedItem');
         assert.equal(shell.ActiveDocument, b, 'clicking tab B writes back to the bound ActiveDocument');
+    });
+
+    test('opening a document (adding to a BOUND collection) does not blip ActiveDocument to undefined', () => {
+        const shell = new Shell();
+        const a = new Doc(); a.Title = 'A';
+        const b = new Doc(); b.Title = 'B';
+        shell.OpenDocs.Add(a);
+        shell.ActiveDocument = a;
+
+        const tc = new TabControl();
+        tc.ItemTemplate = new DataTemplate((d) => new TextBlock((d as Doc).Title), Doc);
+        // The exact Plexus shape: BOTH ItemsSource and SelectedItem are bound,
+        // the source being a stable ObservableCollection the shell mutates on Open.
+        tc.set_property_value(TabControl.ItemsSourceKey, DataContextBinding(tc, 'OpenDocs'));
+        tc.set_property_value(TabControl.SelectedItemKey, DataContextBinding(tc, 'ActiveDocument'));
+        tc.DataContext = shell;
+
+        const target = new HeadlessTarget(600, 400);
+        target.Content = tc;
+        target.Flush();
+        assert.equal(tc.SelectedItem, a, 'seeded from ActiveDocument');
+
+        // Record every value the bound ActiveDocument takes on from here.
+        const seen: (Doc | undefined)[] = [];
+        shell.AddPropertyChangedListener(Shell.ActiveDocumentKey, () => seen.push(shell.ActiveDocument));
+
+        // Mimic host.Open(b): add to the bound collection, then activate it. The
+        // Add re-pushes the SAME collection instance through the ItemsSource
+        // binding — which must NOT full-rebuild the tab strip and transiently
+        // clear the selection (the ActiveDocument=undefined blip that made the
+        // toolbar/content thrash on every open).
+        shell.OpenDocs.Add(b);
+        shell.ActiveDocument = b;
+        target.Flush();
+
+        assert.ok(!seen.includes(undefined),
+            `ActiveDocument must never blip to undefined during Open (saw: ${seen.map(d => d?.Title ?? '<none>').join(', ')})`);
+        assert.equal(shell.ActiveDocument, b, 'active document ends on the newly-opened B');
+        assert.equal(tc.logicalChildren.length, 2, 'both tabs realized via incremental insert');
     });
 
     test('clicking a tab swaps the rendered content slot (SelectedContent)', () => {

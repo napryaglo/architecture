@@ -777,6 +777,19 @@ export class ItemsControl extends Control
                 }
                 return;
             case 'ItemsSource':
+                // A collection binding (`ItemsSource=$Coll`) re-pushes the SAME
+                // collection instance on every content mutation — the binding
+                // observes the collection and pulses the target on each notify.
+                // Without this identity guard, every Add/Remove re-ran a full
+                // refreshItemsFromSource → new CollectionView → rebuildContainers,
+                // tearing down and rebuilding EVERY container (and, for a Selector
+                // like a TabControl, transiently clearing SelectedItem → an
+                // ActiveDocument=undefined blip through a TwoWay binding). The live
+                // CollectionView subscription set up on the first assignment already
+                // delivers the mutation incrementally via handleItemsChange, so a
+                // same-instance re-push must be a no-op here. Mirrors the ItemsPanel
+                // guard below.
+                if (oldValue === newValue) return;
                 this.refreshItemsFromSource();
                 return;
             case 'DisplayMemberPath':
@@ -1351,8 +1364,35 @@ export class ItemsControl extends Control
     // ItemsPanel / ItemsSource setters as the bulk initial-load path.
     // Per-mutation updates from an ObservableCollection go through
     // handleItemsChange instead, which only touches affected slots.
+    // ── Realization gate (popup-hosted subclasses) ──────────────────────
+    // Whether item containers should be built now. Default: always (ordinary
+    // ItemsControls are unaffected). A subclass whose items live in a CLOSED
+    // popup (e.g. ToolBarSplitButton) overrides this to return false while
+    // closed, then calls flushDeferredRealization() when it opens — so a
+    // toolbar of split buttons doesn't eagerly build hundreds of dropdown
+    // MenuItems that are never seen. When it returns false, rebuildContainers /
+    // handleItemsChange skip work and remember it as pending.
+    private _realizationDeferred = false;
+
+    protected shouldRealizeContainers(): boolean { return true; }
+
+    // Replay a deferred realization: build the containers now against the
+    // CURRENT items. Called by a subclass once its items become visible.
+    protected flushDeferredRealization(): void
+    {
+        if (!this._realizationDeferred) return;
+        this._realizationDeferred = false;
+        this.rebuildContainers();
+    }
+
     private rebuildContainers(): void
     {
+        // Popup subclass hasn't opened yet — remember the pending build and bail.
+        if (!this.shouldRealizeContainers())
+        {
+            this._realizationDeferred = true;
+            return;
+        }
         if (this._itemsPanel !== undefined && !(this._itemsPanel instanceof VirtualizingPanel))
         {
             // Snapshot first — DetachContainer mutates _containers.
@@ -1445,6 +1485,13 @@ export class ItemsControl extends Control
     // and for InsertVisualChild on the items panel.
     private handleItemsChange(change: CollectionChange<unknown>): void
     {
+        // Popup subclass still closed — remember the mutation; the eventual
+        // flushDeferredRealization() rebuilds against the current collection.
+        if (!this.shouldRealizeContainers())
+        {
+            this._realizationDeferred = true;
+            return;
+        }
         if (this._itemsPanel === undefined)
         {
             // No panel — nothing to mirror. _containers stays empty;

@@ -107,6 +107,11 @@ export class ToolBarSplitButton extends Gallery implements ICommandSource
 
     private _popupMounted = false;
     private _lastKnownTarget: PresentationTarget | undefined;
+    // The dropdown's item containers (MenuItems / grid buttons) are built
+    // lazily on first open — a command bar with dozens of split buttons would
+    // otherwise realize hundreds of menu items that are never opened. Flipped
+    // true (and never back) the first time IsOpen goes true.
+    private _everOpened = false;
 
     constructor()
     {
@@ -229,6 +234,11 @@ export class ToolBarSplitButton extends Gallery implements ICommandSource
     // Item-container wiring (MenuItem / Button / PointerDown) lives in the base.
     protected override RequestClose(): void { this.IsOpen = false; }
 
+    // Defer building the dropdown's item containers until the popup is first
+    // opened (see _everOpened). Until then the split button shows only its
+    // trigger chrome; its MenuItems / grid buttons aren't realized.
+    protected override shouldRealizeContainers(): boolean { return this._everOpened; }
+
     protected override MeasureOverride(availableSize: Size): Size
     {
         if (this._trigger === undefined) return Size.Zero;
@@ -253,8 +263,18 @@ export class ToolBarSplitButton extends Gallery implements ICommandSource
         const name = descriptor.Name;
         if (name === 'IsOpen' && this._popupHost !== undefined)
         {
-            if (newValue === true) this.mountPopup();
-            else                   this.unmountPopup();
+            if (newValue === true)
+            {
+                // First open: build the dropdown's items now (they were deferred
+                // while closed), then mount so the popup measures with content.
+                if (!this._everOpened)
+                {
+                    this._everOpened = true;
+                    this.flushDeferredRealization();
+                }
+                this.mountPopup();
+            }
+            else this.unmountPopup();
         }
         else if (name === 'Content')
         {

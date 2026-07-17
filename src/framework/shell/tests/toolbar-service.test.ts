@@ -393,3 +393,86 @@ describe('ToolbarService requery', () => {
         assert.ok(fired >= 1, 'CanExecuteChanged should fire on the requery pulse');
     });
 });
+
+// The command ToolBar (ToolbarItems) is the expensive, view-bound projection:
+// re-materializing it on every ActiveDocument change (buttons + all split-menu
+// dropdowns) was the ~800ms tab-switch cost. Rebuild gates that teardown on the
+// command SET, not the document identity — a switch between documents exposing
+// the same commands leaves the realized ToolBar intact; only the requery /
+// document-bound controls update. These lock in that behavior.
+describe('ToolbarService — document-switch rebuild gating', () => {
+    test('a switch between same-command documents keeps the realized command ToolBar (no teardown)', () => {
+        const app = appWith(
+            grouped('align.l', 'align', 10, { presentation: CommandGroupPresentation.SplitMenu, groupTitle: 'Align' }),
+            grouped('align.r', 'align', 20),
+            grouped('grp',     'arrange', 30),   // Flat group → a separator precedes it
+        );
+        const host = app.Services.getRequired(ContentHostService.Key) as DocumentsContentHostService;
+        const toolbar = app.Services.getRequired(ToolbarService.Key);
+
+        host.Open(new FakeDoc('a', [CTX_A]));
+        const before = [...toolbar.ToolbarItems];
+        assert.ok(before.length > 0, 'toolbar built for the first document');
+        assert.ok(before[0] instanceof ToolbarSplitMenuGroup, 'sanity: a split group leads');
+
+        host.Open(new FakeDoc('a2', [CTX_A]));    // different document, IDENTICAL commands
+        const after = [...toolbar.ToolbarItems];
+
+        assert.equal(after.length, before.length, 'same item count after a same-command switch');
+        // Identity across the WHOLE stream — the split group VM and the
+        // separators are freshly allocated on a real rebuild, so identity here
+        // proves the ToolBar was NOT torn down and rebuilt.
+        for (let i = 0; i < before.length; i++)
+        {
+            assert.equal(after[i], before[i], `ToolbarItems[${i}] is the same instance (not rebuilt)`);
+        }
+    });
+
+    test('a switch to a document with different commands DOES rebuild the command ToolBar', () => {
+        const app = appWith(
+            grouped('align.l', 'align', 10, { presentation: CommandGroupPresentation.SplitMenu }),
+            grouped('align.r', 'align', 20),
+            command('c.b1', CTX_B, 10),
+        );
+        const host = app.Services.getRequired(ContentHostService.Key) as DocumentsContentHostService;
+        const toolbar = app.Services.getRequired(ToolbarService.Key);
+
+        host.Open(new FakeDoc('a', [CTX_A]));
+        const splitBefore = [...toolbar.ToolbarItems][0];
+        assert.ok(splitBefore instanceof ToolbarSplitMenuGroup);
+
+        host.Open(new FakeDoc('b', [CTX_B]));     // different command set
+        assert.deepEqual(ids(toolbar), ['c.b1'], 'toolbar reflows to the B command');
+
+        host.Open(new FakeDoc('a2', [CTX_A]));     // back to A commands — must rebuild
+        const splitAfter = [...toolbar.ToolbarItems][0];
+        assert.ok(splitAfter instanceof ToolbarSplitMenuGroup);
+        assert.notEqual(splitAfter, splitBefore, 'a genuine command-set change rebuilds the group');
+    });
+
+    test('the transient ActiveDocument=undefined during a switch does not tear down the toolbar', () => {
+        const app = appWith(
+            grouped('align.l', 'align', 10, { presentation: CommandGroupPresentation.SplitMenu }),
+            grouped('align.r', 'align', 20),
+        );
+        const host = app.Services.getRequired(ContentHostService.Key) as DocumentsContentHostService;
+        const toolbar = app.Services.getRequired(ToolbarService.Key);
+
+        host.Open(new FakeDoc('a', [CTX_A]));
+        const before = [...toolbar.ToolbarItems];
+        assert.ok(before.length > 0);
+
+        // The Selector clears the selection mid-switch (ActiveDocument = undefined)
+        // before setting the newly-clicked document. With the document still open,
+        // that transient must be ignored — not a toolbar teardown.
+        host.ActiveDocument = undefined;
+        assert.equal(host.OpenDocuments.Count, 1, 'document is still open during the transient');
+
+        const during = [...toolbar.ToolbarItems];
+        assert.equal(during.length, before.length, 'toolbar untouched by the transient undefined');
+        for (let i = 0; i < before.length; i++)
+        {
+            assert.equal(during[i], before[i], `ToolbarItems[${i}] survives the transient undefined`);
+        }
+    });
+});
