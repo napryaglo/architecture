@@ -430,6 +430,21 @@ resources Shells {
         when ( IsPressed ) { PART_StateLayer.Background = @OnSurfaceVariantPressLayer; }
     }
 
+    // ── PanelButton — rounded-rectangle icon button for panel headers ───────
+    // The shell-panel affordance (pop-out / collapse / add): an IconButton
+    // subclass whose default Style keeps the Standard (chrome-less) fill but
+    // trades IconButton's @ShapeFull circle for a small @ShapeSmall (8dp)
+    // corner — the rounded-square look. Reuses the Standard IconButton
+    // template verbatim: PanelButton IS an IconButton, so the
+    // [TargetType=IconButton] template applies, and its PART_Border /
+    // PART_StateLayer `$$CornerRadius` TemplateBinding picks up the radius
+    // set here.
+    Style [TargetType = PanelButton] {
+        Variant      = Standard;
+        Template     = @DefaultStandardIconButton;
+        CornerRadius = @ShapeSmall;
+    }
+
     // ── InspectorPanel — one titled, collapsible section ────────────────────
     // Header bar: a 12×12 chevron collapse button (flips IsExpanded via
     // ToggleExpandedCommand), the title caption flush LEFT filling the row, and

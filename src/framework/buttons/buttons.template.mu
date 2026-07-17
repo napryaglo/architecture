@@ -214,13 +214,13 @@ resources Buttons {
         Border x:name="PART_Border"
             [ Background           = @Primary,
               BorderThickness      = (0),
-              CornerRadius         = @ShapeFull,
+              CornerRadius         = $$CornerRadius,
               Width                = 40,
               Height               = 40,
               TextBlock.Foreground = @OnPrimary ] {
             Border x:name="PART_StateLayer"
                 [ Background   = #00000000,
-                  CornerRadius = @ShapeFull,
+                  CornerRadius = $$CornerRadius,
                   Padding      = (8,8,8,8) ] {
                 ContentPresenter
             }
@@ -238,13 +238,13 @@ resources Buttons {
         Border x:name="PART_Border"
             [ Background           = @SecondaryContainer,
               BorderThickness      = (0),
-              CornerRadius         = @ShapeFull,
+              CornerRadius         = $$CornerRadius,
               Width                = 40,
               Height               = 40,
               TextBlock.Foreground = @OnSecondaryContainer ] {
             Border x:name="PART_StateLayer"
                 [ Background   = #00000000,
-                  CornerRadius = @ShapeFull,
+                  CornerRadius = $$CornerRadius,
                   Padding      = (8,8,8,8) ] {
                 ContentPresenter
             }
@@ -263,13 +263,13 @@ resources Buttons {
             [ Background           = #00000000,
               BorderBrush          = @Outline,
               BorderThickness      = (1),
-              CornerRadius         = @ShapeFull,
+              CornerRadius         = $$CornerRadius,
               Width                = 40,
               Height               = 40,
               TextBlock.Foreground = @OnSurfaceVariant ] {
             Border x:name="PART_StateLayer"
                 [ Background   = #00000000,
-                  CornerRadius = @ShapeFull,
+                  CornerRadius = $$CornerRadius,
                   Padding      = (8,8,8,8) ] {
                 ContentPresenter
             }
@@ -289,13 +289,13 @@ resources Buttons {
         Border x:name="PART_Border"
             [ Background           = #00000000,
               BorderThickness      = (0),
-              CornerRadius         = @ShapeFull,
+              CornerRadius         = $$CornerRadius,
               Width                = 40,
               Height               = 40,
               TextBlock.Foreground = @OnSurfaceVariant ] {
             Border x:name="PART_StateLayer"
                 [ Background   = #00000000,
-                  CornerRadius = @ShapeFull,
+                  CornerRadius = $$CornerRadius,
                   Padding      = (8,8,8,8) ] {
                 ContentPresenter
             }
@@ -313,6 +313,14 @@ resources Buttons {
     // their own triggers. Mirrors the Button Style structure in
     // basic.resources.mu (with Standard added for the chrome-less case).
     Style [TargetType = IconButton] {
+        // M3 pill default — @ShapeFull clamps to min(W,H)/2 = 20dp on the
+        // 40×40 chrome, so every variant reads as a circle at rest. The
+        // four templates TemplateBind PART_Border / PART_StateLayer
+        // CornerRadius to this via `$$CornerRadius`, so a per-instance
+        // Local set reshapes the chrome without a new template — e.g.
+        // `IconButton [CornerRadius = @ShapeMedium]` for a rounded
+        // rectangle. Mirrors the Button Style's CornerRadius contract.
+        CornerRadius = @ShapeFull;
         Template = @DefaultFilledIconButton;
         when ( Variant = Tonal ) { Template = @DefaultTonalIconButton; }
         when ( Variant = Outlined ) { Template = @DefaultOutlinedIconButton; }

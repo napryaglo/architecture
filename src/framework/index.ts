@@ -59,6 +59,7 @@ export { ShellModule, Capability } from './shell/module.js';
 export { EditorShell } from './shell/editor-shell.js';
 export { ViewerShell } from './shell/viewer-shell.js';
 export { ShellSideContentPane } from './shell/shell-side-content-pane.js';
+export { PanelButton } from './shell/panel-button.js';
 export { NavigationService, NavigationDestination } from './shell/services/navigation-service.js';
 export { RailAction } from './shell/rail-action.js';
 export { InspectorService } from './shell/services/inspector-service.js';
