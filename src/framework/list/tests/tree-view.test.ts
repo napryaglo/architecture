@@ -10,6 +10,8 @@ import { ItemsPresenter } from '../../../basic/templates/items-presenter.js';
 import { ScrollViewer } from '../../../framework/surfaces/scroll-viewer.js';
 import { StackPanel } from '../../../basic/panels/stack-panel.js';
 import { CollapsibleStack, TreeView, TreeViewItem } from '../tree-view.js';
+import { DataTemplate, HierarchicalDataTemplate } from '../../../basic/templates/data-template.js';
+import { TextBlock } from '../../../basic/text-block.js';
 
 function pointer(mods: Partial<ModifierKeys> = {}): PointerEventInit
 {
@@ -401,5 +403,73 @@ describe('TreeView — selection (multi-select via Ctrl / Shift)', () => {
         assert.equal(tree.SelectedItems.length, 0);
         assert.equal(b1.IsSelected, false);
         assert.equal(b2.IsSelected, false);
+    });
+});
+
+// Plain data records — the data-driven tree binds these through
+// ItemTemplate / ItemTemplateSelector / HierarchicalDataTemplate.
+interface Node { Name: string; children?: Node[]; }
+
+describe('TreeView — data-bound templates (ItemTemplate + selector + factory)', () => {
+    beforeEach(() => { initTestApp(); });
+
+    test('ItemTemplate factory becomes the row header Visual (not just displayString)', () => {
+        const tree = new TreeView();
+        tree.ItemTemplate = new DataTemplate((d) => new TextBlock((d as Node).Name));
+        tree.ItemsSource = [{ Name: 'root' }] as Node[];
+
+        const header = tree.RootItems[0]!.Header;
+        assert.ok(header instanceof TextBlock, 'header should be the template Visual');
+        assert.equal((header as TextBlock).Text, 'root');
+    });
+
+    test('no template → falls back to the Name/Label/Text display-string convention', () => {
+        const tree = new TreeView();
+        tree.ItemsSource = [{ Name: 'plain' }] as Node[];
+        assert.equal(tree.RootItems[0]!.Header, 'plain');
+    });
+
+    test('ItemTemplateSelector is consulted per item and wins over ItemTemplate', () => {
+        const tree = new TreeView();
+        tree.ItemTemplate = new DataTemplate((d) => new TextBlock(`fallback:${(d as Node).Name}`));
+        tree.ItemTemplateSelector = (item) =>
+            (item as Node).Name === 'special'
+                ? new DataTemplate((d) => new TextBlock(`picked:${(d as Node).Name}`))
+                : undefined;
+        tree.ItemsSource = [{ Name: 'special' }, { Name: 'other' }] as Node[];
+
+        assert.equal((tree.RootItems[0]!.Header as TextBlock).Text, 'picked:special');
+        assert.equal((tree.RootItems[1]!.Header as TextBlock).Text, 'fallback:other');
+    });
+
+    test('HierarchicalDataTemplate applies its factory as the header AND recurses to children', () => {
+        const tree = new TreeView();
+        tree.ItemTemplate = new HierarchicalDataTemplate(
+            (d) => new TextBlock((d as Node).Name),
+            (d) => (d as Node).children,
+        );
+        tree.ItemsSource = [{ Name: 'root', children: [{ Name: 'child' }] }] as Node[];
+
+        const root = tree.RootItems[0]!;
+        assert.equal((root.Header as TextBlock).Text, 'root');
+        // The child container is realized from the parent's projected Items;
+        // its header comes from the same recursive template's factory.
+        assert.equal((root.SubItems[0]!.Header as TextBlock).Text, 'child');
+    });
+
+    test('ItemTemplateSelector propagates down the tree so it applies at every level', () => {
+        const tree = new TreeView();
+        // A selector (no plain ItemTemplate) that returns a hierarchical
+        // template for every node — the selector must be re-consulted for
+        // the nested child, not just the roots.
+        tree.ItemTemplateSelector = () => new HierarchicalDataTemplate(
+            (d) => new TextBlock(`n:${(d as Node).Name}`),
+            (d) => (d as Node).children,
+        );
+        tree.ItemsSource = [{ Name: 'root', children: [{ Name: 'child' }] }] as Node[];
+
+        const root = tree.RootItems[0]!;
+        assert.equal((root.Header as TextBlock).Text, 'n:root');
+        assert.equal((root.SubItems[0]!.Header as TextBlock).Text, 'n:child');
     });
 });

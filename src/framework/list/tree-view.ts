@@ -14,7 +14,7 @@ import {
 import { RectangleGeometry, type Geometry } from '../../visual-engine/index.js';
 import { Shape } from '../../basic/shapes/shape.js';
 import { Border } from '../../basic/border.js';
-import { HierarchicalDataTemplate } from '../../basic/templates/data-template.js';
+import { DataTemplate, HierarchicalDataTemplate } from '../../basic/templates/data-template.js';
 import { HeaderedItemsControl } from '../base/headered-items-control.js';
 import { ItemsControl } from '../base/items-control.js';
 import { ScrollViewer } from '../surfaces/scroll-viewer.js';
@@ -350,17 +350,19 @@ export class TreeView extends Selector
 
     public override GetContainerForItemOverride(item: unknown): Visual
     {
-        return wrapTreeItem(item, this.ItemTemplate);
+        return wrapTreeItem(item, this);
     }
 
     public override RebindContainerForItemOverride(container: Visual, item: unknown): void
     {
-        // Reused TreeViewItem — refresh Header from the new data.
-        // Items/ItemTemplate stay carried by HierarchicalDataTemplate
-        // logic in wrapTreeItem; on recycle the row's children stay,
-        // only the header label flips.
+        // Reused TreeViewItem — refresh the header from the new data,
+        // re-resolving the template (selector ?? ItemTemplate) so a
+        // recycled row picks up the right per-item content. Items /
+        // ItemTemplate stay carried by the HierarchicalDataTemplate logic
+        // in wrapTreeItem; on recycle the row's children stay, only the
+        // header flips.
         if (!(container instanceof TreeViewItem)) return;
-        container.Header = displayTreeHeader(item);
+        container.Header = headerFor(item, resolveItemTemplate(this, item));
     }
 
     public override ClearContainerForItemOverride(container: Visual, item: unknown): void
@@ -617,6 +619,10 @@ export class TreeViewItem extends HeaderedItemsControl
     private readonly _spacer:      Border;
     private readonly _chevronGlyph: Shape;
     private readonly _label:       TextBlock;
+    // Hosts a Visual Header (from a data template) in place of the string
+    // label. Empty (Size.Zero) for the string-header path, where _label
+    // carries the text.
+    private readonly _headerHost:  Border;
     private readonly _leadingSlot:  Border;
     private readonly _trailingSlot: Border;
     private readonly _supportText:  TextBlock;
@@ -645,6 +651,7 @@ export class TreeViewItem extends HeaderedItemsControl
         const chevron      = root.FindName('PART_Chevron')       as ChevronTarget;
         this._chevronGlyph = root.FindName('PART_ChevronGlyph')  as Shape;
         this._label        = root.FindName('PART_Label')         as TextBlock;
+        this._headerHost   = root.FindName('PART_HeaderHost')    as Border;
         this._leadingSlot  = root.FindName('PART_LeadingSlot')   as Border;
         this._trailingSlot = root.FindName('PART_TrailingSlot')  as Border;
         this._supportText  = root.FindName('PART_SupportingText') as TextBlock;
@@ -708,7 +715,7 @@ export class TreeViewItem extends HeaderedItemsControl
 
     public override GetContainerForItemOverride(item: unknown): Visual
     {
-        return wrapTreeItem(item, this.ItemTemplate);
+        return wrapTreeItem(item, this);
     }
 
     public override ClearContainerForItemOverride(container: Visual, item: unknown): void
@@ -794,7 +801,7 @@ export class TreeViewItem extends HeaderedItemsControl
                 this.InvalidateMeasure();
                 return;
             case 'Header':
-                this._label.Text = String(newValue ?? '');
+                this.applyHeaderContent(newValue);
                 return;
         }
         // M3 anatomy slot syncs — Leading / Trailing flow into the
@@ -868,6 +875,24 @@ export class TreeViewItem extends HeaderedItemsControl
         return super.MeasureOverride(availableSize);
     }
 
+    // Route the Header into the row: a Visual (from a data template)
+    // slots into PART_HeaderHost and the string label clears; anything
+    // else stringifies into PART_Label and the host clears. Exactly one
+    // of the two carries content, so the other collapses to Size.Zero.
+    private applyHeaderContent(value: unknown): void
+    {
+        if (value instanceof Visual)
+        {
+            this._headerHost.SetChild(value);
+            this._label.Text = '';
+        }
+        else
+        {
+            this._headerHost.SetChild(undefined);
+            this._label.Text = String(value ?? '');
+        }
+    }
+
     // Leaf items render a blank chevron cell so columns line up; non-
     // leaf items pick the glyph from IsExpanded.
     private refreshChevron(): void
@@ -879,36 +904,65 @@ export class TreeViewItem extends HeaderedItemsControl
     }
 }
 
-// Shared container construction for TreeView and TreeViewItem. Routes
-// the data item through a HierarchicalDataTemplate when one is in
-// place so child-items propagate down the tree as their parent rows
-// are realized. Behavior matrix:
+// Shared container construction for TreeView and TreeViewItem. Resolves
+// the item's DataTemplate (ItemTemplateSelector wins over ItemTemplate,
+// mirroring ListBox), applies it to produce the row's header content,
+// and — for a HierarchicalDataTemplate — projects the children so they
+// propagate down the tree as parent rows are realized. Behavior matrix:
 //
 //   * item IS already a TreeViewItem (composed-markup path) → return
 //     it unchanged.
-//   * template is a HierarchicalDataTemplate → wrap the data in a
-//     fresh TreeViewItem with Header = `displayString(item)` (Label /
-//     Name / Text convention), set the sub-Items to the children the
-//     template's itemsSelector pulls off the data, and recur the
-//     same template down the tree (or `template.itemTemplate` when
-//     it's set, for "different template for children" scenarios).
-//   * template is a plain DataTemplate or undefined → just stringify
-//     the data into the Header. The user's ItemTemplate (if any) is
-//     ignored at this level — TreeView doesn't currently host the
-//     factory's Visual as a Header (the row template owns the
-//     PART_Label slot).
-function wrapTreeItem(item: unknown, template: unknown): Visual
+//   * a template resolves (selector or ItemTemplate) → apply its factory
+//     and host the produced Visual as the Header (per-item chrome:
+//     icons, multi-part rows, bindings against the data). A
+//     HierarchicalDataTemplate additionally sets the sub-Items from its
+//     itemsSelector and recurs the template (and the selector) down the
+//     tree — or `template.itemTemplate` when set, for a distinct
+//     child template.
+//   * a Visual item bypasses templating (WPF parity: ItemTemplate
+//     applies to DATA, not to a UIElement item) → hosted directly.
+//   * no template → Header = `displayTreeHeader(item)` (Label / Name /
+//     Text convention), the plain-string fallback.
+function wrapTreeItem(item: unknown, owner: ItemsControl): Visual
 {
     if (item instanceof TreeViewItem) return item;
     const tvi = new TreeViewItem();
-    tvi.Header = displayTreeHeader(item);
-    if (template instanceof HierarchicalDataTemplate)
+    const tmpl = resolveItemTemplate(owner, item);
+    tvi.Header = headerFor(item, tmpl);
+    if (tmpl instanceof HierarchicalDataTemplate)
     {
-        const childTpl = template.itemTemplate ?? template;
-        tvi.ItemTemplate = childTpl as never;
-        tvi.Items = [...template.ItemsOf(item)];
+        tvi.ItemTemplate = (tmpl.itemTemplate ?? tmpl) as never;
+        // Propagate the selector so it's re-consulted at every depth,
+        // not just the roots. Undefined when the consumer only set a
+        // plain ItemTemplate — harmless.
+        tvi.ItemTemplateSelector = owner.ItemTemplateSelector;
+        tvi.Items = [...tmpl.ItemsOf(item)];
     }
     return tvi;
+}
+
+// The template that governs `item` under `owner`: ItemTemplateSelector
+// takes precedence over ItemTemplate (ListBox parity). A Visual item is
+// shown as-is, so it never resolves a template.
+function resolveItemTemplate(owner: ItemsControl, item: unknown): DataTemplate | undefined
+{
+    if (item instanceof Visual) return undefined;
+    return owner.ItemTemplateSelector?.(item) ?? owner.ItemTemplate;
+}
+
+// The header content for a row: the applied template's Visual (with its
+// DataContext pinned to the item so header bindings resolve), the item
+// itself when it's a Visual, or the display-string fallback.
+function headerFor(item: unknown, tmpl: DataTemplate | undefined): Visual | string
+{
+    if (item instanceof Visual) return item;
+    if (tmpl !== undefined)
+    {
+        const v = tmpl.Apply(item);
+        v.DataContext = item;
+        return v;
+    }
+    return displayTreeHeader(item);
 }
 
 // Read the data item stamped on a container by

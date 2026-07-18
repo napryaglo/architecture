@@ -262,6 +262,12 @@ resources Lists {
                           VerticalAlignment = Center,
                           BorderThickness   = (0) ]
                     StackPanel [ Orientation = Vertical, VerticalAlignment = Center ] {
+                        // Header host — class-managed Border (like the
+                        // leading slot). A data template's produced Visual
+                        // lands here via SetChild; empty (Size.Zero) on the
+                        // string-header path, where PART_Label carries the
+                        // text. Exactly one of the two is ever non-empty.
+                        Border x:name="PART_HeaderHost" [ BorderThickness = (0) ]
                         TextBlock x:name="PART_Label"
                             [ Foreground = @OnSurface,
                               Style      = @BodyMedium ]
@@ -318,6 +324,14 @@ resources Lists {
     }
     Style [TargetType = TreeViewItem] {
         Template = @DefaultTreeViewItem;
+        // Reactive header ink for a data-template header that hosts a bare
+        // TextBlock with no Foreground of its own (mirrors ListBoxItem): it
+        // would otherwise freeze on the scheme active at first paint. The
+        // string-path PART_Label sets its own @OnSurface (Local tier), so
+        // this only reaches author-supplied header TextBlocks. Selected
+        // rows flip to the M3 ink on the @SecondaryContainer pill.
+        TextBlock.Foreground = @OnSurface;
+        when ( IsSelected ) { TextBlock.Foreground = @OnSecondaryContainer; }
     }
 
     // ── ListBox (chrome) ────────────────────────────────────────────

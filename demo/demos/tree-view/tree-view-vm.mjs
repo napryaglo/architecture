@@ -6,8 +6,8 @@
 // TreeView via FindName and wires its ItemTemplate / ItemsSource
 // post-build.
 import { Model } from '@pragmatic-lab/mural/runtime';
-import { HierarchicalDataTemplate } from '@pragmatic-lab/mural/basic';
-import { TreeView, TreeViewItem } from '@pragmatic-lab/mural/framework';
+import { HierarchicalDataTemplate, TextBlock } from '@pragmatic-lab/mural/basic';
+import { TreeView } from '@pragmatic-lab/mural/framework';
 const FS = {
     Name: 'project',
     children: [
@@ -48,12 +48,11 @@ export class TreeViewVM extends Model {
         const tv = view.FindName('bound');
         if (!(tv instanceof TreeView))
             throw new Error('tree-view.mu missing x:name="bound" TreeView');
-        // The template's `factory` argument is required by DataTemplate
-        // but currently unused for TreeView containers — Header is set
-        // from the data via the Label/Name/Text convention, and the row
-        // chrome comes from DefaultTreeViewItem. Pass a placeholder TVI
-        // so HierarchicalDataTemplate construction stays valid.
-        const tpl = new HierarchicalDataTemplate((_data) => new TreeViewItem(), 
+        // The template's `factory` produces each row's header content —
+        // TreeView applies it and hosts the Visual in the row. Here that's
+        // a simple Name label; a real app would compose an icon + label
+        // (that's exactly what per-item chrome now enables).
+        const tpl = new HierarchicalDataTemplate((data) => new TextBlock(data.Name), 
         // The selector receives untyped item data from the DataTemplate
         // pipeline; narrow it to the local FsNode shape to read children.
         (data) => (data && typeof data === 'object' ? data.children : undefined));
