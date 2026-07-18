@@ -96,6 +96,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
 
     // ── basic controls ──────────────────────────────────────────────
     ['Border',                  '@pragmatic-lab/mural/basic'],
+    ['DomHost',                 '@pragmatic-lab/mural/basic'],
     ['Button',                  '@pragmatic-lab/mural/framework/buttons/button.js'],
     ['IconButton',              '@pragmatic-lab/mural/framework/buttons/icon-button.js'],
     ['IconButtonToggle',        '@pragmatic-lab/mural/framework/buttons/icon-button-toggle.js'],

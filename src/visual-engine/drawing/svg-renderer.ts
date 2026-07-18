@@ -69,6 +69,11 @@ interface VisualNodes
     // silently fall through instead of dispatching to the row.
     hit:   SVGRectElement;
     own:   SVGGElement;
+    // Persistent <foreignObject> for a DomHost — created once, parked in the
+    // outer group, sized on arrange, and NEVER touched by repaintOwn, so the
+    // hosted DOM (a Monaco editor, a webview) survives render invalidations
+    // instead of being torn down. Absent for ordinary painted visuals.
+    foreign?: SVGForeignObjectElement;
     // Last (X, Y, W, H) the renderer wrote into the outer's transform
     // and the hit pad's dimensions. Used to detect arrange changes
     // that happened during a layout cascade without an explicit
@@ -118,6 +123,10 @@ interface RenderableVisual extends BackrefHost
     // Visual.RenderTransformOrigin — fraction of RenderSize used as the
     // pivot for RenderTransform. (0, 0) = top-left; (0.5, 0.5) = center.
     readonly RenderTransformOrigin: { X: number; Y: number };
+    // Optional live DOM element (DomHost) to host inside a <foreignObject>.
+    // Present only on DOM-hosting visuals; undefined for every ordinary
+    // painted visual, so the renderer skips the foreignObject path for them.
+    readonly ForeignElement?: HTMLElement;
     readonly visualChildren: Iterable<RenderableVisual>;
     Render(dc: SvgDomDrawingContext): void;
 }
@@ -317,6 +326,36 @@ export class SvgRenderer
         // on a missing attribute is a cheap no-op.
         info.outer.removeAttribute('display');
 
+        // DOM host (DomHost): wrap the visual's `ForeignElement` in a
+        // persistent <foreignObject> parked in the OUTER group. Created once
+        // and never touched by repaintOwn, so a stateful embed — a Monaco
+        // editor, a webview — survives every render-only invalidation instead
+        // of being torn down. Lazy: the host element materialises when a
+        // consumer first mounts into it, which may be after the first paint,
+        // so this reconciles on every walk (not just the isNew branch).
+        const foreignEl = visual.ForeignElement;
+        if (foreignEl !== undefined && info.foreign === undefined)
+        {
+            const fo = this.doc.createElementNS(SVG_NS, 'foreignObject') as SVGForeignObjectElement;
+            fo.setAttribute('x', '0');
+            fo.setAttribute('y', '0');
+            // The host element is created in the ambient document; adopt it
+            // into the surface's document when they differ (off-screen / multi-
+            // document hosts) so appendChild won't throw a WrongDocument error.
+            const owned = foreignEl.ownerDocument === this.doc
+                ? foreignEl
+                : (this.doc.adoptNode(foreignEl) as HTMLElement);
+            fo.appendChild(owned);
+            // Appended AFTER the hit pad (later in document order → painted on
+            // top), so the embedded DOM wins native pointer events over the
+            // mural hit rect sitting behind it.
+            info.outer.appendChild(fo);
+            info.foreign = fo;
+            // Force the transform/size block below to run this pass even if the
+            // rect looks unchanged, so a late-materialised host is sized at once.
+            info.lastW = Number.NaN;
+        }
+
         // Detect rect changes from the previous render so the cascade
         // logic below can refresh transform, hit-pad, AND own primitives
         // even when the dirty Sets miss them (an Arrange-cascade past
@@ -341,6 +380,7 @@ export class SvgRenderer
         {
             this.applyTransform(info.outer, visual);
             this.applyHitPad(info.hit, visual);
+            if (info.foreign !== undefined) this.applyForeignSize(info.foreign, visual);
             info.lastX = rect.X;
             info.lastY = rect.Y;
             info.lastW = rect.Width;
@@ -469,6 +509,17 @@ export class SvgRenderer
         const rect = visual.ArrangedRect;
         hit.setAttribute('width',  formatNumber(Math.max(0, rect.Width)));
         hit.setAttribute('height', formatNumber(Math.max(0, rect.Height)));
+    }
+
+    // Size a DomHost's <foreignObject> to the visual's arranged box. x / y
+    // stay 0 — the outer <g> already carries the ArrangedRect translate — so
+    // only width / height track the layout. A <foreignObject> needs explicit
+    // dimensions or its HTML content won't lay out or paint at all.
+    private applyForeignSize(fo: SVGForeignObjectElement, visual: RenderableVisual): void
+    {
+        const rect = visual.ArrangedRect;
+        fo.setAttribute('width',  formatNumber(Math.max(0, rect.Width)));
+        fo.setAttribute('height', formatNumber(Math.max(0, rect.Height)));
     }
 
     // Clip handling: when Visual.Clip is set, emit a `<clipPath>` in

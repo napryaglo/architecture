@@ -17,6 +17,7 @@ export {
     VerticalAnchor,
 } from './selection-bounds-adorner.js';
 export { Border } from './border.js';
+export { DomHost } from './dom-host.js';
 export { TextBlock, TextAlignment, TextWrapping } from './text-block.js';
 // Inline flow-content model (WPF Inlines analog).
 export { TextElement, Inline, type ContentHost, type InlineHost, type RunProps, type LinkTarget } from './documents/text-element.js';
