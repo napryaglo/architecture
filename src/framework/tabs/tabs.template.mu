@@ -35,7 +35,12 @@ resources Tabs {
                 // TEMPLATE binding to the templated parent's SelectedContent — a
                 // plain `$SelectedContent` would bind against the TabControl's
                 // DataContext (the content-host service) and resolve to nothing.
-                ContentPresenter x:name="PART_ContentSlot" [ Content = $$SelectedContent ]
+                // ReuseContentViews: re-selecting a tab returns that document's
+                // existing view rather than rebuilding it — essential when the
+                // body owns shared Visuals (a Diagram's items ARE the document's
+                // Figures; a rebuilt Diagram would re-parent them and crash).
+                ContentPresenter x:name="PART_ContentSlot"
+                    [ Content = $$SelectedContent, ReuseContentViews = true ]
             }
         }
     }

@@ -45,7 +45,24 @@ export class ContentPresenter extends Element
     public static readonly ContentKey         = Model.RegisterProperty<unknown>(              ContentPresenter, 'Content',         undefined, MetaData.Measure);
     public static readonly ContentTemplateKey = Model.RegisterProperty<DataTemplate | undefined>(ContentPresenter, 'ContentTemplate', undefined, MetaData.Measure);
 
+    // Opt-in: reuse one template-built view per content object instead of
+    // rebuilding it every time that object is presented. OFF by default — the
+    // default rebuild-per-presentation matches WPF and keeps ItemsControl item
+    // containers (which recycle a presenter across many rows) from accumulating
+    // per-row views. A host that re-presents a SMALL, FIXED set of objects and
+    // needs the SAME view back each time turns it on — notably a TabControl's
+    // content slot: re-selecting a tab must return that document's existing view,
+    // never a second one over the document's shared Visuals (a Diagram whose items
+    // ARE the document's Figures — a rebuilt Diagram would try to re-parent
+    // already-parented Figures and trip the single-parent guard, the classic
+    // tab-switch "Visual already has a visual parent" crash).
+    public static readonly ReuseContentViewsKey = Model.RegisterProperty<boolean>(
+        ContentPresenter, 'ReuseContentViews', false, MetaData.None);
+
     private _content: Visual | undefined;
+    // Per-content view cache, populated only when ReuseContentViews is on.
+    // WeakMap so a dropped content object's view is collected with it.
+    private readonly _viewCache = new WeakMap<object, Visual>();
 
     // Visual child = the slotted content, if any. logicalChildren
     // intentionally returns [] — the presenter is just a slot; the
@@ -149,6 +166,9 @@ export class ContentPresenter extends Element
         this.set_property_value(ContentPresenter.ContentTemplateKey, v);
     }
 
+    public get ReuseContentViews(): boolean { return this.get_property_value(ContentPresenter.ReuseContentViewsKey); }
+    public set ReuseContentViews(v: boolean) { this.set_property_value(ContentPresenter.ReuseContentViewsKey, v); }
+
     protected override OnPropertyChanged(
         descriptor: PropertyDescriptor,
         oldValue: unknown,
@@ -209,15 +229,31 @@ export class ContentPresenter extends Element
             // that was constructed with bindings already resolved
             // before reparenting.
             this.DataContext = content;
+            // Reuse this content's existing view when opted in (see
+            // ReuseContentViews) and the content is an object we can weak-key —
+            // re-presenting the same object (a tab re-activation) returns its one
+            // view instead of rebuilding it over its shared Visuals.
+            const cacheable = this.ReuseContentViews && typeof content === 'object';
+            if (cacheable)
+            {
+                const cached = this._viewCache.get(content as object);
+                if (cached !== undefined)
+                {
+                    this.SetContent(cached);
+                    return;
+                }
+            }
             const v = tmpl.Apply(content);
             v.DataContext = content;
+            if (cacheable) this._viewCache.set(content as object, v);
             this.SetContent(v);
             // Optional VM hook, mirroring ContentControl: when the
             // presented data exposes an `OnViewMounted` function, hand it
             // the freshly-built template visual so VM-driven imperative
-            // setup (demo bootstrap behaviours, etc.) runs once per
-            // resolution. Without this, a VM presented through a bare
-            // ContentPresenter — e.g. the shell's
+            // setup (demo bootstrap behaviours, etc.) runs once — on first
+            // build, not on every re-presentation (the cache short-circuits
+            // before reaching here). Without this, a VM presented through a
+            // bare ContentPresenter — e.g. the shell's
             // `$service(ContentHostService).Content` demo host — never
             // gets its behaviours attached.
             const hook = (content as { OnViewMounted?: (view: Visual) => void }).OnViewMounted;
