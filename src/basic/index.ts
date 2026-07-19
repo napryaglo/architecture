@@ -138,6 +138,7 @@ export {
 } from './templates/data-template.js';
 export { ListReorderBehavior } from './behaviors/list-reorder-behavior.js';
 export { LogBehavior } from './behaviors/log-behavior.js';
+export { FocusOnVisibleBehavior } from './behaviors/focus-on-visible-behavior.js';
 export { attachMarqueeSelection } from './behaviors/marquee-selection-behavior.js';
 export { AlternationConverter } from './converters/index.js';
 export {

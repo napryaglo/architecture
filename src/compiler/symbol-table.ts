@@ -244,6 +244,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['ItemsControl',            '@pragmatic-lab/mural/framework/base/items-control.js'],
     ['ListReorderBehavior',     '@pragmatic-lab/mural/basic'],
     ['LogBehavior',             '@pragmatic-lab/mural/basic'],
+    ['FocusOnVisibleBehavior',  '@pragmatic-lab/mural/basic'],
     ['Selector',                '@pragmatic-lab/mural/framework/list/selector.js'],
     ['ItemContainerGenerator',  '@pragmatic-lab/mural/basic'],
     ['ItemsPresenter',          '@pragmatic-lab/mural/basic'],
