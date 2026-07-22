@@ -189,9 +189,13 @@ resources ToolBars {
     }
     // Dropdown chrome (single-part) — adopted when the split button has NO
     // Command, so the whole button is one hit region that opens the popup.
-    // One rounded Border (no primary/arrow divide), content + chevron inline;
-    // PART_Primary is the whole surface (the control wires it; there's no
-    // PART_Arrow in this variant).
+    // One rounded Border (no primary/arrow divide); PART_Primary is the whole
+    // surface (the control wires it; there's no PART_Arrow in this variant).
+    // The affordance is the "more" (three-dots) glyph. The content + glyph
+    // group is centred (StackPanel HorizontalAlignment = Center + symmetric
+    // padding), and the glyph carries NO leading margin, so an empty
+    // PART_Content (the common no-icon dropdown) leaves the glyph perfectly
+    // centred rather than nudged right.
     Template x:key="DefaultToolBarDropdownTrigger" [TargetType = ToolBarSplitButton] {
         Border x:name="PART_Primary"
             [ Background      = @SurfaceContainerHigh,
@@ -200,10 +204,10 @@ resources ToolBars {
             Border x:name="PART_PrimaryState"
                 [ Background   = #00000000,
                   CornerRadius = @ShapeFull,
-                  Padding      = (12,8,10,8) ] {
-                StackPanel [ Orientation = Horizontal, VerticalAlignment = Center ] {
+                  Padding      = (8,8,8,8) ] {
+                StackPanel [ Orientation = Horizontal, HorizontalAlignment = Center, VerticalAlignment = Center ] {
                     Border x:name="PART_Content" [ HorizontalAlignment = Center, VerticalAlignment = Center ]
-                    Shape [ Geometry = @ChevronDown, Fill = @OnSurfaceVariant, Width = 12, Height = 12, VerticalAlignment = Center, Margin = (6,0,0,0) ]
+                    Shape [ Geometry = @MoreHoriz, Fill = @OnSurfaceVariant, Width = 18, Height = 18, VerticalAlignment = Center ]
                 }
             }
         }

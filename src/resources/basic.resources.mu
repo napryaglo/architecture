@@ -59,6 +59,11 @@ resources MuralBasic {
     include "shapes/chevron-left.svg" as ChevronLeft
     include "shapes/close.svg" as IconClose
     include "shapes/check.svg" as IconCheck
+    // Three horizontal dots (Material more_horiz) — the "overflow / more
+    // actions" affordance. Three centred <circle>s → a GeometryGroup, so it
+    // paints centred in its slot with no per-glyph offset. Used by the
+    // no-command dropdown split-button trigger (tool-bar.template.mu).
+    include "shapes/more-horiz.svg" as MoreHoriz
 
     // ── TextBlock: default text contract ───────────────────────────
     // Binds FontFamily / FontSize / FontWeight / LineHeight to the M3

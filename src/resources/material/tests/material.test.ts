@@ -13,7 +13,7 @@ import {
     Size,
 } from '../../../runtime/index.js';
 import { resolveKey } from '../../../runtime/model-internals.js';
-import { PathGeometry, SolidColorBrush } from '../../../visual-engine/index.js';
+import { GeometryGroup, PathGeometry, SolidColorBrush } from '../../../visual-engine/index.js';
 import { SetTheme, CurrentTheme, ToggleTheme } from '../index.js';
 
 // Plain Visual subclass with a writable Brush DP — Material tokens are
@@ -97,6 +97,14 @@ describe('Material — palette registration', () => {
         assert.ok(up   instanceof PathGeometry, 'ChevronUp resolves to a PathGeometry');
         // Filled closed thick-V (Material expand_more/less) — painted via Fill.
         assert.equal(down.Figures[0]!.IsClosed, true, 'chevron is a closed filled shape');
+    });
+
+    test('MoreHoriz (three-dots) geometry resolves to a GeometryGroup from the root dictionary', () => {
+        SetTheme('light');
+        const more = Application.current!.Resources.Resolve('MoreHoriz');
+        // Three <circle> shapes → a GeometryGroup (one Shape paints all dots).
+        assert.ok(more instanceof GeometryGroup, 'MoreHoriz resolves to a GeometryGroup');
+        assert.equal(more.Children.length, 3, 'three dots');
     });
 
     test('CurrentTheme reports the active palette name after SetTheme', () => {
