@@ -150,6 +150,27 @@ describe('DocumentsContentHostService', () => {
         assert.equal(host.ActiveDocument, undefined);
     });
 
+    test('ActivateById / ActivateDocumentCommand makes a document active', () => {
+        const host = new DocumentsContentHostService(provider());
+        const a = new FakeDoc('a'); const b = new FakeDoc('b');
+        host.Open(a); host.Open(b);                  // active = b
+
+        host.ActivateById('a');
+        assert.equal(host.ActiveDocument, a);
+        assert.equal(host.Content, a);
+
+        host.ActivateDocumentCommand.Execute('b');
+        assert.equal(host.ActiveDocument, b);
+    });
+
+    test('ActivateById on an unknown id is a no-op', () => {
+        const host = new DocumentsContentHostService(provider());
+        const a = new FakeDoc('a');
+        host.Open(a);
+        host.ActivateById('nope');
+        assert.equal(host.ActiveDocument, a, 'active unchanged');
+    });
+
     test('is substitutable for the base — resolves under ContentHostService.Key', () => {
         const app = new Application();
         app.Services.registerScoped(ContentHostService.Key, (p) => new DocumentsContentHostService(p));

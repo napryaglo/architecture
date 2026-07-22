@@ -68,6 +68,15 @@ export class DocumentsContentHostService extends ContentHostService
         DocumentsContentHostService, 'CloseAllCommand',
         undefined as unknown as ICommand, MetaData.None);
 
+    // Activate (make current) a document by its Id — the command an open-tabs
+    // menu binds (`Command = $service(ContentHostService).ActivateDocumentCommand`,
+    // `CommandParameter = $Id`) so clicking a tab entry switches to it. Takes the
+    // Id string for the same reason as CloseDocumentCommand (a per-item template
+    // binds a path segment, not the whole object). Unknown / non-string ids no-op.
+    public static readonly ActivateDocumentCommandKey = Model.RegisterProperty<ICommand>(
+        DocumentsContentHostService, 'ActivateDocumentCommand',
+        undefined as unknown as ICommand, MetaData.None);
+
     constructor(provider: IServiceProvider)
     {
         super(provider);
@@ -81,6 +90,10 @@ export class DocumentsContentHostService extends ContentHostService
             DocumentsContentHostService.CloseAllCommandKey,
             new RelayCommand(() => this.CloseAll(), undefined,
                 { Text: 'Close All', Description: 'Close all open documents.' }));
+        this.set_property_value(
+            DocumentsContentHostService.ActivateDocumentCommandKey,
+            new RelayCommand((id) => this.ActivateById(id as string), undefined,
+                { Text: 'Activate', Description: 'Switch to this document.' }));
     }
 
     public get CloseDocumentCommand(): ICommand
@@ -91,6 +104,11 @@ export class DocumentsContentHostService extends ContentHostService
     public get CloseAllCommand(): ICommand
     {
         return this.get_property_value(DocumentsContentHostService.CloseAllCommandKey);
+    }
+
+    public get ActivateDocumentCommand(): ICommand
+    {
+        return this.get_property_value(DocumentsContentHostService.ActivateDocumentCommandKey);
     }
 
     public get OpenDocuments(): ObservableCollection<IDocument>
@@ -152,6 +170,16 @@ export class DocumentsContentHostService extends ContentHostService
     public CloseAll(): void
     {
         for (const doc of [...this.OpenDocuments]) this.Close(doc);
+    }
+
+    // Activate the document with the given Id (the ActivateDocumentCommand
+    // target) — makes it the ActiveDocument, which routes View(). No-op on an
+    // unknown or non-string id.
+    public ActivateById(id: string): void
+    {
+        if (typeof id !== 'string') return;
+        const doc = this.find(id);
+        if (doc !== undefined) this.ActiveDocument = doc;
     }
 
     // Close the document with the given Id (the CloseDocumentCommand target).
