@@ -71,6 +71,7 @@ export { StatusService } from './shell/services/status-service.js';
 export { type IThemeService, ThemeServiceKey, ThemeServiceInstance } from './shell/services/theme-service.js';
 export { ContentHostService } from './shell/services/content-host-service.js';
 export { DocumentsContentHostService, type IDocument } from './shell/services/documents-content-host-service.js';
+export { TabMenuAction, TabMenuSeparator, TabMenuDocument } from './shell/services/tab-menu-item.js';
 export { DocumentSelectorService } from './shell/services/document-selector-service.js';
 export type { IActivatable } from './shell/services/activatable.js';
 export { ApplicationSettings, SettingsStoreKey, type ISettingsStore } from './shell/services/application-settings-service.js';

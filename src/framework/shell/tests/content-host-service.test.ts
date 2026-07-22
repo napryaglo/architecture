@@ -236,6 +236,30 @@ describe('DocumentsContentHostService', () => {
         assert.equal(host.ExtendedCommands.Count, 0);
     });
 
+    // ── TabMenu (⋯ overflow menu rows) ──────────────────────────────────────
+    test('TabMenu is empty with no open documents', () => {
+        const host = new DocumentsContentHostService(provider());
+        assert.equal(host.TabMenu.Count, 0);
+    });
+
+    test('TabMenu is [Close All action, separator, ...one row per document]', () => {
+        const host = new DocumentsContentHostService(provider());
+        host.Open(new FakeDoc('a')); host.Open(new FakeDoc('b'));
+        const kinds = [];
+        for (const item of host.TabMenu) kinds.push(item.constructor.name);
+        assert.deepEqual(kinds, ['TabMenuAction', 'TabMenuSeparator', 'TabMenuDocument', 'TabMenuDocument']);
+    });
+
+    test('TabMenu re-synthesises on open / close', () => {
+        const host = new DocumentsContentHostService(provider());
+        host.Open(new FakeDoc('a'));
+        assert.equal(host.TabMenu.Count, 3);          // action + sep + 1 doc
+        host.Open(new FakeDoc('b'));
+        assert.equal(host.TabMenu.Count, 4);          // + 1 doc
+        host.CloseAll();
+        assert.equal(host.TabMenu.Count, 0);
+    });
+
     test('is substitutable for the base — resolves under ContentHostService.Key', () => {
         const app = new Application();
         app.Services.registerScoped(ContentHostService.Key, (p) => new DocumentsContentHostService(p));

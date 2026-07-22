@@ -13,6 +13,7 @@ import { CommandViewModel } from '../commands/command-view-model.js';
 import type { CommandDefinition } from '../commands/command-definition.js';
 import { ShellRegion } from '../commands/shell-control-definition.js';
 import { isCommandTarget } from '../commands/command-target.js';
+import { TabMenuAction, TabMenuSeparator, TabMenuDocument } from './tab-menu-item.js';
 
 // A document the DocumentsContentHostService manages. The host owns the
 // open-set + active-document lifecycle; the document owns its own identity,
@@ -92,6 +93,14 @@ export class DocumentsContentHostService extends ContentHostService
         DocumentsContentHostService, 'ExtendedCommands',
         undefined as unknown as ObservableCollection<CommandViewModel>, MetaData.None);
 
+    // The editor tab-strip overflow-menu rows (the ⋯ dropdown's ItemsSource): a
+    // "Close All" action, a separator, then one TabMenuDocument per open document.
+    // Re-synthesised whenever the open set changes. A stable per-instance
+    // collection (the tab control binds it once).
+    public static readonly TabMenuKey = Model.RegisterProperty<ObservableCollection<Model>>(
+        DocumentsContentHostService, 'TabMenu',
+        undefined as unknown as ObservableCollection<Model>, MetaData.None);
+
     constructor(provider: IServiceProvider)
     {
         super(provider);
@@ -111,7 +120,24 @@ export class DocumentsContentHostService extends ContentHostService
                 { Text: 'Activate', Description: 'Switch to this document.' }));
         this.set_property_value(
             DocumentsContentHostService.ExtendedCommandsKey, new ObservableCollection<CommandViewModel>());
+        this.set_property_value(
+            DocumentsContentHostService.TabMenuKey, new ObservableCollection<Model>());
         this.wireExtendedCommands();
+        this.rebuildTabMenu();
+        this.OpenDocuments.Subscribe(() => this.rebuildTabMenu());
+    }
+
+    // Re-synthesise the overflow menu: [Close All action] + [separator] + one
+    // TabMenuDocument per open document (in tab order). Called on every open-set
+    // change; the separator/action are dropped when nothing is open.
+    private rebuildTabMenu(): void
+    {
+        const menu = this.TabMenu;
+        menu.Clear();
+        if (this.OpenDocuments.Count === 0) return;
+        menu.Add(new TabMenuAction('Close All', this.CloseAllCommand));
+        menu.Add(new TabMenuSeparator());
+        for (const doc of this.OpenDocuments) menu.Add(new TabMenuDocument(doc));
     }
 
     // Resolve the CommandRegistry (optional — a bare host has none) and build the
@@ -171,6 +197,11 @@ export class DocumentsContentHostService extends ContentHostService
     public get ExtendedCommands(): ObservableCollection<CommandViewModel>
     {
         return this.get_property_value(DocumentsContentHostService.ExtendedCommandsKey);
+    }
+
+    public get TabMenu(): ObservableCollection<Model>
+    {
+        return this.get_property_value(DocumentsContentHostService.TabMenuKey);
     }
 
     public get OpenDocuments(): ObservableCollection<IDocument>
