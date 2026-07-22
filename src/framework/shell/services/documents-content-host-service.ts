@@ -60,6 +60,14 @@ export class DocumentsContentHostService extends ContentHostService
         DocumentsContentHostService, 'CloseDocumentCommand',
         undefined as unknown as ICommand, MetaData.None);
 
+    // Close EVERY open document (the "Close All" tab-strip action). Parameterless
+    // — a menu item binds `Command = $service(ContentHostService).CloseAllCommand`
+    // with no CommandParameter. Ends with an empty open-set and no active
+    // document, so the content region clears.
+    public static readonly CloseAllCommandKey = Model.RegisterProperty<ICommand>(
+        DocumentsContentHostService, 'CloseAllCommand',
+        undefined as unknown as ICommand, MetaData.None);
+
     constructor(provider: IServiceProvider)
     {
         super(provider);
@@ -69,11 +77,20 @@ export class DocumentsContentHostService extends ContentHostService
             DocumentsContentHostService.CloseDocumentCommandKey,
             new RelayCommand((id) => this.CloseById(id as string), undefined,
                 { Text: 'Close', Description: 'Close this document.' }));
+        this.set_property_value(
+            DocumentsContentHostService.CloseAllCommandKey,
+            new RelayCommand(() => this.CloseAll(), undefined,
+                { Text: 'Close All', Description: 'Close all open documents.' }));
     }
 
     public get CloseDocumentCommand(): ICommand
     {
         return this.get_property_value(DocumentsContentHostService.CloseDocumentCommandKey);
+    }
+
+    public get CloseAllCommand(): ICommand
+    {
+        return this.get_property_value(DocumentsContentHostService.CloseAllCommandKey);
     }
 
     public get OpenDocuments(): ObservableCollection<IDocument>
@@ -126,6 +143,15 @@ export class DocumentsContentHostService extends ContentHostService
     {
         const target = document ?? this.ActiveDocument;
         return target?.Save();
+    }
+
+    // Close every open document. Iterates a snapshot so each removal goes
+    // through Close() (keeping the neighbour-reactivation invariant per step);
+    // the set ends empty and ActiveDocument settles to undefined. No-op when
+    // nothing is open.
+    public CloseAll(): void
+    {
+        for (const doc of [...this.OpenDocuments]) this.Close(doc);
     }
 
     // Close the document with the given Id (the CloseDocumentCommand target).

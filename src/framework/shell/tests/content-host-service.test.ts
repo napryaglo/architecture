@@ -125,6 +125,31 @@ describe('DocumentsContentHostService', () => {
         assert.doesNotThrow(() => host.Save());
     });
 
+    test('CloseAll() empties the open-set and clears the region', () => {
+        const host = new DocumentsContentHostService(provider());
+        host.Open(new FakeDoc('a')); host.Open(new FakeDoc('b')); host.Open(new FakeDoc('c'));
+
+        host.CloseAll();
+        assert.equal(host.OpenDocuments.Count, 0);
+        assert.equal(host.ActiveDocument, undefined);
+        assert.equal(host.Content, undefined);
+    });
+
+    test('CloseAll() on an empty host is a no-op', () => {
+        const host = new DocumentsContentHostService(provider());
+        assert.doesNotThrow(() => host.CloseAll());
+        assert.equal(host.OpenDocuments.Count, 0);
+    });
+
+    test('CloseAllCommand runs CloseAll()', () => {
+        const host = new DocumentsContentHostService(provider());
+        host.Open(new FakeDoc('a')); host.Open(new FakeDoc('b'));
+
+        host.CloseAllCommand.Execute(undefined);
+        assert.equal(host.OpenDocuments.Count, 0);
+        assert.equal(host.ActiveDocument, undefined);
+    });
+
     test('is substitutable for the base — resolves under ContentHostService.Key', () => {
         const app = new Application();
         app.Services.registerScoped(ContentHostService.Key, (p) => new DocumentsContentHostService(p));
