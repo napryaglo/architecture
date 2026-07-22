@@ -12,12 +12,27 @@ class Root extends Panel {}
 
 function rightClick(): PointerEventInit
 {
+    return rightClickAt(50, 30);
+}
+
+function rightClickAt(x: number, y: number): PointerEventInit
+{
     return {
-        HostX: 50, HostY: 30,
+        HostX: x, HostY: y,
         Button: PointerButton.Secondary, Buttons: 2,
         Modifiers: NoModifiers, PointerId: 0, Pressure: 0,
         PointerType: 'mouse',
     };
+}
+
+// The popup's top-left in overlay coordinates — MenuPopupHost arranges the
+// popup container at (fixedPoint.x, fixedPoint.y), so its ArrangedRect origin
+// is where the menu actually renders.
+interface CmInternals { _popupContainer: { ArrangedRect: { X: number; Y: number } } }
+function popupOrigin(cm: ContextMenu): { x: number; y: number }
+{
+    const rect = (cm as unknown as CmInternals)._popupContainer.ArrangedRect;
+    return { x: rect.X, y: rect.Y };
 }
 
 describe('ContextMenu — attached DP + auto-open', () => {
@@ -84,6 +99,33 @@ describe('ContextMenu — attached DP + auto-open', () => {
         im.InjectPointerDown(inner, rightClick());
         assert.equal(cmInner.IsOpen, true);
         assert.equal(cmOuter.IsOpen, false, 'inner cm should win');
+    });
+
+    test('Re-opening the menu repositions the popup to the new cursor point', () => {
+        const target = new HeadlessTarget(400, 300);
+        const root = new Root();
+        target.Content = root;
+
+        const cm = new ContextMenu();
+        const mi = new MenuItem();
+        mi.Header = 'Delete';
+        mi.Command = new RelayCommand(() => {});
+        cm.Items = [mi];
+        root.ContextMenu = cm;
+
+        const im = new InputManager();
+
+        // First open at (50, 30).
+        im.InjectPointerDown(root, rightClickAt(50, 30));
+        target.Flush();
+        assert.deepEqual(popupOrigin(cm), { x: 50, y: 30 });
+
+        // Close, then open again at a different point — the popup must follow.
+        cm.IsOpen = false;
+        target.Flush();
+        im.InjectPointerDown(root, rightClickAt(120, 90));
+        target.Flush();
+        assert.deepEqual(popupOrigin(cm), { x: 120, y: 90 });
     });
 
     test('Right-click on a Visual WITHOUT an attached ContextMenu is a pass-through', () => {

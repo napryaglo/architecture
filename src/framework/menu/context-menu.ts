@@ -153,6 +153,14 @@ export class ContextMenu extends ItemsControl
             host.AttachOverlayChild(this);
             this._popupMounted = true;
         }
+        // The popup's position is computed in MenuPopupHost.ArrangeOverride from
+        // `fixedPoint` — a plain field whose write doesn't invalidate layout. Its
+        // arrange stays cached-valid from a previous open (the overlay root is
+        // always arranged at the same surface rect, so the re-mount alone won't
+        // re-run ArrangeOverride), which would leave the menu pinned to wherever
+        // it first appeared. Invalidate here — after the re-mount wires the
+        // target — so it re-arranges at the new cursor point on every open.
+        this._popupHost.InvalidateArrange();
         this.IsOpen = true;
     }
 
