@@ -6,6 +6,10 @@ import {
     DocumentsContentHostService,
     type IDocument,
 } from '../services/documents-content-host-service.js';
+import { CommandRegistry } from '../commands/command-registry.js';
+import { CommandDefinition } from '../commands/command-definition.js';
+import { ShellRegion } from '../commands/shell-control-definition.js';
+import type { ICommandTarget } from '../commands/command-target.js';
 
 // A test document that records Save() calls and can be marked dirty.
 class FakeDoc implements IDocument
@@ -18,6 +22,28 @@ class FakeDoc implements IDocument
 function id2title(id: string): string { return id.toUpperCase(); }
 
 function provider(): IServiceProvider { return new Application().Services; }
+
+// A document that also handles commands — so ExtendedCommands dispatch can be
+// observed.
+class CommandDoc implements IDocument, ICommandTarget
+{
+    public readonly Title = 'doc';
+    public readonly IsDirty = false;
+    public readonly CommandContexts: readonly never[] = [];   // no contexts; still a target
+    public readonly executed: CommandDefinition[] = [];
+    public canRun = true;
+    constructor(public readonly Id: string) {}
+    public Save(): void { /* no-op */ }
+    public Execute(def: CommandDefinition): void { this.executed.push(def); }
+    public CanExecute(_def: CommandDefinition): boolean { return this.canRun; }
+}
+
+function cmd(id: string, region: ShellRegion = ShellRegion.Toolbar): CommandDefinition
+{
+    const c = new CommandDefinition();
+    c.Id = id; c.Title = id; c.Region = region;
+    return c;
+}
 
 describe('ContentHostService', () => {
     test('View(obj) sets Content; View(undefined) clears', () => {
@@ -169,6 +195,45 @@ describe('DocumentsContentHostService', () => {
         host.Open(a);
         host.ActivateById('nope');
         assert.equal(host.ActiveDocument, a, 'active unchanged');
+    });
+
+    // ── ExtendedCommands (editor-region command strip) ──────────────────────
+    function hostWithCommands(...defs: CommandDefinition[]): { host: DocumentsContentHostService; registry: CommandRegistry } {
+        const app = new Application();
+        app.Services.register(CommandRegistry.Key, (p) => new CommandRegistry(p));
+        const registry = app.Services.getRequired(CommandRegistry.Key);
+        for (const d of defs) registry.Commands.Add(d);
+        const host = new DocumentsContentHostService(app.Services);
+        return { host, registry };
+    }
+
+    test('ExtendedCommands collects only EditorActions-region commands', () => {
+        const { host } = hostWithCommands(
+            cmd('e1', ShellRegion.EditorActions), cmd('t1'), cmd('e2', ShellRegion.EditorActions));
+        assert.equal(host.ExtendedCommands.Count, 2);
+        assert.deepEqual(
+            [host.ExtendedCommands.Get(0)!.Definition.Id, host.ExtendedCommands.Get(1)!.Definition.Id],
+            ['e1', 'e2']);
+    });
+
+    test('ExtendedCommands updates when a command is registered later', () => {
+        const { host, registry } = hostWithCommands(cmd('e1', ShellRegion.EditorActions));
+        assert.equal(host.ExtendedCommands.Count, 1);
+        registry.Commands.Add(cmd('e2', ShellRegion.EditorActions));
+        assert.equal(host.ExtendedCommands.Count, 2);
+    });
+
+    test('an ExtendedCommands VM dispatches to the active document', () => {
+        const { host } = hostWithCommands(cmd('e1', ShellRegion.EditorActions));
+        const doc = new CommandDoc('d');
+        host.Open(doc);
+        host.ExtendedCommands.Get(0)!.Command.Execute(undefined);
+        assert.deepEqual(doc.executed.map((d) => d.Id), ['e1']);
+    });
+
+    test('ExtendedCommands is empty when no CommandRegistry is registered', () => {
+        const host = new DocumentsContentHostService(provider());
+        assert.equal(host.ExtendedCommands.Count, 0);
     });
 
     test('is substitutable for the base — resolves under ContentHostService.Key', () => {

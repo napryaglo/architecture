@@ -13,6 +13,11 @@ export enum ShellRegion
     Toolbar   = 'toolbar',
     // The bottom status bar — a status cell (e.g. a mode indicator).
     StatusBar = 'status-bar',
+    // The editor content host's tab-strip action area — a compact strip of
+    // command buttons pinned to the top-right corner of the document tabs.
+    // DocumentsContentHostService collects the CommandDefinitions tagged with
+    // this region into its ExtendedCommands, dispatched to the active document.
+    EditorActions = 'editor-actions',
 }
 
 // Which edge of a region a control pins to. Markup-facing (`Alignment = End`),

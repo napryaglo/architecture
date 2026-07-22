@@ -4,6 +4,7 @@ import {
     type ServiceToken,
 } from '../../../runtime/index.js';
 import type { Geometry } from '../../../visual-engine/index.js';
+import { ShellRegion } from './shell-control-definition.js';
 
 // How a command GROUP is presented on the toolbar. A group's presentation is
 // declared on its LEADER command (the lowest-Order member that sets a non-Flat
@@ -88,6 +89,14 @@ export class CommandDefinition extends Model
     public static readonly OrderKey = Model.RegisterProperty<number>(
         CommandDefinition, 'Order', 0, MetaData.None);
 
+    // Which shell region hosts this command. Default Toolbar (the command bar).
+    // `Region = EditorActions` routes it into the editor content host's tab-strip
+    // action strip instead — DocumentsContentHostService collects those into its
+    // ExtendedCommands. Markup-facing (registered in the compiler's ENUM_MEMBERS
+    // + the `Region` → ShellRegion property map, shared with ShellControlDefinition).
+    public static readonly RegionKey = Model.RegisterProperty<ShellRegion>(
+        CommandDefinition, 'Region', ShellRegion.Toolbar, MetaData.None);
+
     // ── Group presentation (leader command) ────────────────────────────────
     // These four are read off the group's LEADER — the lowest-Order member whose
     // Presentation is non-Flat. They describe how the whole Group renders; the
@@ -133,7 +142,11 @@ export class CommandDefinition extends Model
     public set Group(v: string) { this.set_property_value(CommandDefinition.GroupKey, v); }
 
     public get Order(): number  { return this.get_property_value(CommandDefinition.OrderKey); }
+
+    public get Region(): ShellRegion  { return this.get_property_value(CommandDefinition.RegionKey); }
     public set Order(v: number) { this.set_property_value(CommandDefinition.OrderKey, v); }
+
+    public set Region(v: ShellRegion) { this.set_property_value(CommandDefinition.RegionKey, v); }
 
     public get Presentation(): CommandGroupPresentation  { return this.get_property_value(CommandDefinition.PresentationKey); }
     public set Presentation(v: CommandGroupPresentation) { this.set_property_value(CommandDefinition.PresentationKey, v); }

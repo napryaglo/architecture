@@ -8,6 +8,11 @@ import {
     type PropertyDescriptor,
 } from '../../../runtime/index.js';
 import { ContentHostService } from './content-host-service.js';
+import { CommandRegistry } from '../commands/command-registry.js';
+import { CommandViewModel } from '../commands/command-view-model.js';
+import type { CommandDefinition } from '../commands/command-definition.js';
+import { ShellRegion } from '../commands/shell-control-definition.js';
+import { isCommandTarget } from '../commands/command-target.js';
 
 // A document the DocumentsContentHostService manages. The host owns the
 // open-set + active-document lifecycle; the document owns its own identity,
@@ -77,6 +82,16 @@ export class DocumentsContentHostService extends ContentHostService
         DocumentsContentHostService, 'ActivateDocumentCommand',
         undefined as unknown as ICommand, MetaData.None);
 
+    // Module-contributed action buttons for the editor tab-strip (the ExtendedTabControl
+    // renders these beside the tabs). Collected from the CommandRegistry: every
+    // CommandDefinition whose Region is ShellRegion.EditorActions, adapted into a
+    // button-bindable CommandViewModel whose command dispatches to the ACTIVE
+    // document (an ICommandTarget), exactly like the toolbar. Empty when no
+    // CommandRegistry is registered (a bare host). A stable per-instance collection.
+    public static readonly ExtendedCommandsKey = Model.RegisterProperty<ObservableCollection<CommandViewModel>>(
+        DocumentsContentHostService, 'ExtendedCommands',
+        undefined as unknown as ObservableCollection<CommandViewModel>, MetaData.None);
+
     constructor(provider: IServiceProvider)
     {
         super(provider);
@@ -94,6 +109,48 @@ export class DocumentsContentHostService extends ContentHostService
             DocumentsContentHostService.ActivateDocumentCommandKey,
             new RelayCommand((id) => this.ActivateById(id as string), undefined,
                 { Text: 'Activate', Description: 'Switch to this document.' }));
+        this.set_property_value(
+            DocumentsContentHostService.ExtendedCommandsKey, new ObservableCollection<CommandViewModel>());
+        this.wireExtendedCommands();
+    }
+
+    // Resolve the CommandRegistry (optional — a bare host has none) and build the
+    // editor-region command VMs, rebuilding whenever the registry's command set
+    // changes (modules populate it after this host is constructed).
+    private extendedCommandsUnsub: (() => void) | undefined;
+    private wireExtendedCommands(): void
+    {
+        const registry = this.Provider.get(CommandRegistry.Key);
+        if (registry === undefined) return;
+        this.rebuildExtendedCommands(registry);
+        this.extendedCommandsUnsub = registry.Commands.Subscribe(() => this.rebuildExtendedCommands(registry));
+    }
+
+    // (Re)project the EditorActions-region CommandDefinitions into ExtendedCommands.
+    // Each VM's command dispatches to the ACTIVE document when it is an
+    // ICommandTarget (read live at invoke time, so no rebuild is needed on a tab
+    // switch — only a CanExecute requery, see OnPropertyChanged).
+    private rebuildExtendedCommands(registry: CommandRegistry): void
+    {
+        const list = this.ExtendedCommands;
+        list.Clear();
+        for (const def of registry.Commands)
+        {
+            if (def.Region !== ShellRegion.EditorActions) continue;
+            const command = new RelayCommand(
+                () => this.commandTarget()?.Execute(def),
+                () => this.commandTarget()?.CanExecute(def) ?? false,
+                { Text: def.Title });
+            list.Add(new CommandViewModel(def, command));
+        }
+    }
+
+    // The active document as a command target, or undefined when nothing is active
+    // (or the active document doesn't handle commands).
+    private commandTarget(): { Execute(d: CommandDefinition): void; CanExecute(d: CommandDefinition): boolean } | undefined
+    {
+        const doc = this.ActiveDocument;
+        return doc !== undefined && isCommandTarget(doc) ? doc : undefined;
     }
 
     public get CloseDocumentCommand(): ICommand
@@ -109,6 +166,11 @@ export class DocumentsContentHostService extends ContentHostService
     public get ActivateDocumentCommand(): ICommand
     {
         return this.get_property_value(DocumentsContentHostService.ActivateDocumentCommandKey);
+    }
+
+    public get ExtendedCommands(): ObservableCollection<CommandViewModel>
+    {
+        return this.get_property_value(DocumentsContentHostService.ExtendedCommandsKey);
     }
 
     public get OpenDocuments(): ObservableCollection<IDocument>
@@ -210,6 +272,20 @@ export class DocumentsContentHostService extends ContentHostService
         if (descriptor.Name === 'ActiveDocument')
         {
             this.View(newValue as IDocument | undefined);
+            // The extended-command VMs dispatch to the LIVE active document, so
+            // they don't rebuild on a switch — but their CanExecute must requery
+            // so the buttons enable/disable for the new document.
+            for (const vm of this.ExtendedCommands)
+            {
+                (vm.Command as RelayCommand).RaiseCanExecuteChanged();
+            }
         }
+    }
+
+    public override Dispose(): void
+    {
+        this.extendedCommandsUnsub?.();
+        this.extendedCommandsUnsub = undefined;
+        super.Dispose();
     }
 }
