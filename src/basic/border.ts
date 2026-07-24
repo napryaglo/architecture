@@ -8,6 +8,7 @@ import {
     Size,
     Thickness,
     type DrawingContext,
+    type PropertyDescriptor,
 } from '../runtime/index.js';
 import type { Visual } from '../runtime/index.js';
 import {
@@ -17,6 +18,7 @@ import {
     PathFigure,
     PathGeometry,
     Pen,
+    RectangleGeometry,
     SweepDirection,
 } from '../visual-engine/index.js';
 
@@ -123,6 +125,20 @@ export class Border extends Single
         Border, 'BorderPen', undefined,
         MetaData.Render);
 
+    // When true, clip the child (and this Border's own paint) to the border's
+    // rounded bounds — content that overflows a fixed-size Border is cut off at
+    // the rounded edge instead of spilling past the corners. Off by default
+    // (WPF parity: a plain Border does NOT clip its child).
+    //
+    // The clip follows a UNIFORM CornerRadius: the renderer's clip shapes are a
+    // single-radius rounded rectangle or an ellipse, so a rounded clip needs one
+    // radius. An asymmetric per-corner CornerRadius (the connected-bar shape)
+    // clips to a plain rectangle — no per-corner clip path exists. Managed on
+    // the base Visual.Clip DP; ClipToBounds owns it (don't also set Clip by hand).
+    public static readonly ClipToBoundsKey = Model.RegisterProperty<boolean>(
+        Border, 'ClipToBounds', false,
+        MetaData.Arrange);
+
     constructor(child?: Visual)
     {
         super();
@@ -143,6 +159,9 @@ export class Border extends Single
 
     public get BorderPen(): Pen | undefined { return this.get_property_value(Border.BorderPenKey); }
     public set BorderPen(value: Pen | undefined) { this.set_property_value(Border.BorderPenKey, value); }
+
+    public get ClipToBounds(): boolean { return this.get_property_value(Border.ClipToBoundsKey); }
+    public set ClipToBounds(value: boolean) { this.set_property_value(Border.ClipToBoundsKey, value); }
 
     protected override MeasureOverride(availableSize: Size): Size
     {
@@ -181,7 +200,61 @@ export class Border extends Single
             );
             this.child.Arrange(childRect);
         }
+        this.applyClipToBounds(finalSize);
         return finalSize;
+    }
+
+    protected override OnPropertyChanged(descriptor: PropertyDescriptor, oldValue: unknown, newValue: unknown): void
+    {
+        super.OnPropertyChanged(descriptor, oldValue, newValue);
+        // CornerRadius is Render-metadata (it doesn't re-arrange), so refresh the
+        // clip here when the corners change while ClipToBounds is on. A
+        // ClipToBounds change re-arranges (Arrange metadata) and is handled there.
+        if (descriptor.Name === 'CornerRadius' && this.ClipToBounds)
+        {
+            this.applyClipToBounds(this.RenderSize);
+        }
+    }
+
+    // Sync Visual.Clip with ClipToBounds. Owns the Clip DP only while the flag
+    // is on (the `_clipToBoundsApplied` latch) so we never clobber a Clip a
+    // consumer set by hand on a Border that doesn't use ClipToBounds.
+    private _clipToBoundsApplied = false;
+
+    private applyClipToBounds(size: Size): void
+    {
+        if (this.ClipToBounds)
+        {
+            if (size.Width <= 0 || size.Height <= 0) return;   // wait for a real arranged size
+            const { tl, tr, br, bl } = this.resolveCorners(size);
+            const rect = new Rect(0, 0, size.Width, size.Height);
+            const uniform = tl === tr && tr === br && br === bl;
+            this.Clip = uniform
+                ? new RectangleGeometry(rect, tl, tl)   // rounded (square when tl === 0)
+                : new RectangleGeometry(rect);          // asymmetric corners → rectangular clip
+            this._clipToBoundsApplied = true;
+        }
+        else if (this._clipToBoundsApplied)
+        {
+            this.Clip = undefined;
+            this._clipToBoundsApplied = false;
+        }
+    }
+
+    // Resolve the four corner radii for `size`, folding the M3 "Full" sentinel
+    // (a non-finite radius) to half the shorter side. Shared by the paint path
+    // and the ClipToBounds geometry so the clip tracks the painted outline.
+    private resolveCorners(size: Size): { tl: number; tr: number; br: number; bl: number }
+    {
+        const raw = this.CornerRadius;
+        const rawCorners = raw instanceof CornerRadius ? raw : new CornerRadius(raw, raw, raw, raw);
+        const fold = Math.min(size.Width, size.Height) / 2;
+        return {
+            tl: Number.isFinite(rawCorners.TopLeft)     ? rawCorners.TopLeft     : fold,
+            tr: Number.isFinite(rawCorners.TopRight)    ? rawCorners.TopRight    : fold,
+            br: Number.isFinite(rawCorners.BottomRight) ? rawCorners.BottomRight : fold,
+            bl: Number.isFinite(rawCorners.BottomLeft)  ? rawCorners.BottomLeft  : fold,
+        };
     }
 
     protected override RenderOverride(dc: DrawingContext): void
@@ -195,15 +268,7 @@ export class Border extends Single
         // as a circle. Each corner is clamped independently so an
         // asymmetric CornerRadius mixing Full + 0 (the connected-bar
         // shape) produces sharp inner corners and rounded outer caps.
-        const raw = this.CornerRadius;
-        const rawCorners = raw instanceof CornerRadius
-            ? raw
-            : new CornerRadius(raw, raw, raw, raw);
-        const fold = Math.min(size.Width, size.Height) / 2;
-        const tl = Number.isFinite(rawCorners.TopLeft)     ? rawCorners.TopLeft     : fold;
-        const tr = Number.isFinite(rawCorners.TopRight)    ? rawCorners.TopRight    : fold;
-        const br = Number.isFinite(rawCorners.BottomRight) ? rawCorners.BottomRight : fold;
-        const bl = Number.isFinite(rawCorners.BottomLeft)  ? rawCorners.BottomLeft  : fold;
+        const { tl, tr, br, bl } = this.resolveCorners(size);
         const isUniformRadius = tl === tr && tr === br && br === bl;
         const radius = tl;  // only meaningful when isUniformRadius
 

@@ -10,7 +10,7 @@ import {
     Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
-import { Brush, Pen, SolidColorBrush, type Geometry } from '../../visual-engine/index.js';
+import { Brush, Pen, RectangleGeometry, SolidColorBrush, type Geometry } from '../../visual-engine/index.js';
 import { Border } from '../index.js';
 
 // Tiny Visual stand-in for Border's child slot — reports a configurable
@@ -99,6 +99,63 @@ describe('Border defaults', () => {
         const child = new FixedSize(new Size(50, 30));
         const b = new Border(child);
         assert.equal(b.child, child);
+    });
+});
+
+describe('Border ClipToBounds', () => {
+    const arranged = (b: Border, w: number, h: number): void => {
+        b.Measure(new Size(500, 500));
+        b.Arrange(new Rect(0, 0, w, h));
+    };
+
+    test('off by default → Border sets no clip', () => {
+        const b = new Border(new FixedSize(new Size(40, 20)));
+        arranged(b, 40, 20);
+        assert.equal(b.Clip, undefined);
+    });
+
+    test('on → a rounded RectangleGeometry matching the render size + uniform radius', () => {
+        const b = new Border(new FixedSize(new Size(40, 20)));
+        b.CornerRadius = 6;
+        b.ClipToBounds = true;
+        arranged(b, 40, 20);
+        const clip = b.Clip as RectangleGeometry;
+        assert.ok(clip instanceof RectangleGeometry);
+        assert.equal(clip.Rect.Width, 40);
+        assert.equal(clip.Rect.Height, 20);
+        assert.equal(clip.RadiusX, 6);
+        assert.equal(clip.RadiusY, 6);
+    });
+
+    test('asymmetric CornerRadius clips to a plain rectangle (no per-corner clip path)', () => {
+        const b = new Border(new FixedSize(new Size(40, 20)));
+        b.CornerRadius = new CornerRadius(8, 0, 0, 8);
+        b.ClipToBounds = true;
+        arranged(b, 40, 20);
+        const clip = b.Clip as RectangleGeometry;
+        assert.ok(clip instanceof RectangleGeometry);
+        assert.equal(clip.RadiusX, 0);
+        assert.equal(clip.RadiusY, 0);
+    });
+
+    test('toggling ClipToBounds off clears the clip it applied', () => {
+        const b = new Border(new FixedSize(new Size(40, 20)));
+        b.CornerRadius = 6;
+        b.ClipToBounds = true;
+        arranged(b, 40, 20);
+        assert.ok(b.Clip !== undefined);
+        b.ClipToBounds = false;
+        b.Arrange(new Rect(0, 0, 40, 20));   // ClipToBounds is Arrange-metadata → re-arranges
+        assert.equal(b.Clip, undefined);
+    });
+
+    test('a CornerRadius change refreshes the clip radius without a re-arrange', () => {
+        const b = new Border(new FixedSize(new Size(40, 20)));
+        b.CornerRadius = 6;
+        b.ClipToBounds = true;
+        arranged(b, 40, 20);
+        b.CornerRadius = 10;
+        assert.equal((b.Clip as RectangleGeometry).RadiusX, 10);
     });
 });
 
