@@ -92,6 +92,7 @@ export { ToggleButton } from './buttons/toggle-button.js';
 export { Switch } from './toggles/switch.js';
 export { Checkbox } from './toggles/checkbox.js';
 export { RadioButton } from './toggles/radio-button.js';
+export { RadioButtonGroup, RadioButtonItem } from './toggles/radio-button-group.js';
 export { Chip, ChipVariant } from './markers/chip.js';
 export {
     SegmentedButton,

@@ -222,4 +222,95 @@ resources Toggles {
         when ( ThemeManager.Density = Comfortable ) { Width = 40; Height = 40; }
         when ( ThemeManager.Pointer = Coarse ) { Width = 48; Height = 48; }
     }
+
+    // ── RadioButtonGroup: single-select column of labelled radio rows ──
+    // A Selector shell (like SegmentedButton) — the per-row chrome lives
+    // on DefaultRadioButtonItem; the group just stacks its item containers
+    // vertically. Selection / exclusion is owned by the Selector, so the
+    // group needs no chrome of its own beyond the ItemsPresenter.
+    Template x:key="DefaultRadioButtonGroup" [TargetType = RadioButtonGroup] {
+        ItemsPresenter
+    }
+    ItemsPanelTemplate x:key="DefaultRadioButtonGroupPanel" {
+        StackPanel [ Orientation = Vertical ]
+    }
+    Style [TargetType = RadioButtonGroup] {
+        Template = @DefaultRadioButtonGroup;
+        ItemsPanel = @DefaultRadioButtonGroupPanel;
+    }
+
+    // ── RadioButtonItem: one "circle + label" row ──────────────────────
+    // Ring + dot on the left, label (ContentPresenter) on the right. The
+    // indicator is drawn here rather than by embedding a RadioButton —
+    // same self-drawn-chrome pattern as SegmentedItem — and tracks the
+    // row's IsSelected (which the owning Selector flips on click). The dot
+    // is always present at Opacity 0 so the implicit-transition engine
+    // fades it in / out on select without a Storyboard. The whole row is
+    // the hit target (PART_Row); its Background carries the state-layer
+    // ladder so hover / focus / press read across the full row, not just
+    // the 20dp circle.
+    Template x:key="DefaultRadioButtonItem" [TargetType = RadioButtonItem] {
+        Border x:name="PART_Row"
+            [ Background      = #00000000,
+              CornerRadius    = @ShapeFull,
+              Padding         = (@Spacing2,@Spacing1,@Spacing3,@Spacing1) ] {
+            StackPanel [ Orientation = Horizontal, VerticalAlignment = Center ] {
+                Border x:name="PART_Ring"
+                    [ Background          = #00000000,
+                      BorderBrush         = @OnSurfaceVariant,
+                      BorderThickness     = (2),
+                      CornerRadius        = @ShapeFull,
+                      Width               = 20,
+                      Height              = 20,
+                      VerticalAlignment   = Center ] {
+                    Border x:name="PART_Dot"
+                        [ Background          = @Primary,
+                          CornerRadius        = @ShapeFull,
+                          BorderThickness     = (0),
+                          Width               = 10,
+                          Height              = 10,
+                          HorizontalAlignment = Center,
+                          VerticalAlignment   = Center,
+                          Opacity             = 0 ]
+                }
+                ContentPresenter
+                    [ VerticalAlignment = Center,
+                      Margin            = (@Spacing3,0,0,0) ]
+            }
+        }
+        // Selection — light the ring + dot at @Primary.
+        when ( IsSelected ) {
+            PART_Ring.BorderBrush = @Primary;
+            PART_Dot.Opacity = 1;
+        }
+        // State-layer ladder — overlay the full row (ordered after Selected
+        // so the pressed/hover tint sits on top of the resting fill).
+        when ( IsMouseOver ) { PART_Row.Background = @StateHoverOverlay; }
+        when ( IsFocused ) { PART_Row.Background = @StateFocusOverlay; }
+        when ( IsPressed ) { PART_Row.Background = @StatePressOverlay; }
+        when ( IsEnabled = false ) { PART_Row.Opacity = @DisabledContentOpacity; }
+
+        // Adaptive layout (§ 18.6) — the row is the hit target, so density /
+        // pointer retuning writes its Padding. Resting (8,4,12,4). Compact
+        // tightens, Comfortable / Coarse loosen the vertical touch band.
+        when ( ThemeManager.Density = Compact ) {
+            PART_Row.Padding = (@Spacing1,@Spacing1,@Spacing2,@Spacing1);
+        }
+        when ( ThemeManager.Density = Comfortable ) {
+            PART_Row.Padding = (@Spacing2,@Spacing2,@Spacing3,@Spacing2);
+        }
+        when ( ThemeManager.Pointer = Coarse ) {
+            PART_Row.Padding = (@Spacing2,@Spacing3,@Spacing3,@Spacing3);
+        }
+    }
+    Style [TargetType = RadioButtonItem] {
+        Template = @DefaultRadioButtonItem;
+        Foreground = @OnSurface;
+        // Full Label Large atom set (matches SegmentedItem — § 18.13).
+        FontFamily = @LabelLargeFont;
+        FontWeight = @LabelLargeWeight;
+        FontSize = @LabelLargeSize;
+        LineHeight = @LabelLargeLineHeight;
+        LetterSpacing = @LabelLargeTracking;
+    }
 }
