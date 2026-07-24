@@ -32,19 +32,16 @@ resources Markers {
               BorderBrush     = @OutlineVariant,
               BorderThickness = (1),
               CornerRadius    = @ShapeSmall,
-              Padding         = (@Spacing3,@Spacing1,@Spacing3,@Spacing1),
-              Height          = 32 ] {
+              Padding         = (5,2,5,2) ] {
             DockPanel [ LastChildFill = true ] {
                 Border x:name="PART_LeadingSlot"
                     [ DockPanel.Dock    = Left,
                       VerticalAlignment = Center,
-                      BorderThickness   = (0),
-                      Margin            = (0,0,@Spacing1,0) ]
+                      BorderThickness   = (0) ]
                 Border x:name="PART_TrailingSlot"
                     [ DockPanel.Dock    = Right,
                       VerticalAlignment = Center,
-                      BorderThickness   = (0),
-                      Margin            = (@Spacing1,0,0,0) ]
+                      BorderThickness   = (0) ]
                 ContentPresenter [ VerticalAlignment = Center ]
             }
         }
@@ -71,9 +68,9 @@ resources Markers {
 
         // Adaptive layout (§ 18.6) — PART_Chip bears the interactive
         // pill chrome, so density / pointer retuning rides here. Resting
-        // is Padding (12,4,12,4) + Height 32. Compact tightens,
-        // Comfortable loosens, Coarse pointer bumps the pill height for a
-        // larger touch target.
+        // is Padding (5,2,5,2) with no explicit Height (the label drives
+        // it). Compact and Comfortable pin an explicit padding + height;
+        // Coarse pointer bumps the pill height for a larger touch target.
         when ( ThemeManager.Density = Compact ) {
             PART_Chip.Padding = (8,4,8,4);
             PART_Chip.Height = 24;

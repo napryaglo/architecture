@@ -129,6 +129,74 @@ describe('FontMetricsMeasurer — family stack fallback', () => {
     });
 });
 
+describe('FontMetricsMeasurer — ink bounds from glyph outlines', () => {
+    // A font whose glyphs carry real outlines so getBoundingBox reports
+    // non-zero ink: '5' is a cap-height box [y 0..700] (no descender, like a
+    // digit); 'g' dips below the baseline [y -200..500]. unitsPerEm 1000,
+    // so at fontSize 100 the scale is 0.1.
+    function makeOutlinedFont(): ArrayBuffer
+    {
+        const notdef = new opentype.Glyph({ name: '.notdef', advanceWidth: 1000, path: new opentype.Path() });
+        const space  = new opentype.Glyph({ name: 'space', unicode: 32, advanceWidth: 250, path: new opentype.Path() });
+
+        const five = new opentype.Path();
+        five.moveTo(50, 0); five.lineTo(450, 0); five.lineTo(450, 700); five.lineTo(50, 700); five.close();
+        const digit5 = new opentype.Glyph({ name: 'five', unicode: 53, advanceWidth: 500, path: five });
+
+        const gp = new opentype.Path();
+        gp.moveTo(50, -200); gp.lineTo(450, -200); gp.lineTo(450, 500); gp.lineTo(50, 500); gp.close();
+        const lowerG = new opentype.Glyph({ name: 'g', unicode: 103, advanceWidth: 500, path: gp });
+
+        const font = new opentype.Font({
+            familyName: 'Outlined', styleName: 'Regular',
+            unitsPerEm: 1000, ascender: 800, descender: -200,
+            glyphs: [notdef, space, digit5, lowerG],
+        });
+        return font.toArrayBuffer();
+    }
+
+    const m = new FontMetricsMeasurer();
+    m.LoadFont('Outlined', makeOutlinedFont());
+
+    test('a digit reports cap-height InkAscent and zero InkDescent', () => {
+        // '5' spans y 0..700; scale 0.1 → InkAscent 70, InkDescent 0. The
+        // font line box stays ascent 80 / descent 20 (from the font header),
+        // so ink (70/0) and line box (80/20) genuinely differ — the mismatch
+        // ink-centring corrects.
+        const r = m.Measure('5', 'Outlined', 100, 'normal', 'normal');
+        assert.equal(r.InkAscent, 70);
+        assert.equal(r.InkDescent, 0);
+        assert.equal(r.Ascent, 80);
+        assert.equal(r.Descent, 20);
+    });
+
+    test('a descender glyph reports InkDescent below the baseline', () => {
+        // 'g' spans y -200..500; scale 0.1 → InkAscent 50, InkDescent 20.
+        const r = m.Measure('g', 'Outlined', 100, 'normal', 'normal');
+        assert.equal(r.InkAscent, 50);
+        assert.equal(r.InkDescent, 20);
+    });
+
+    test('ink bounds aggregate the tallest / deepest glyph across the run', () => {
+        // '5g' → top from '5' (700), bottom from 'g' (-200): InkAscent 70, InkDescent 20.
+        const r = m.Measure('5g', 'Outlined', 100, 'normal', 'normal');
+        assert.equal(r.InkAscent, 70);
+        assert.equal(r.InkDescent, 20);
+    });
+
+    test('whitespace-only text reports zero ink (no outline to bound)', () => {
+        const r = m.Measure(' ', 'Outlined', 100, 'normal', 'normal');
+        assert.equal(r.InkAscent, 0);
+        assert.equal(r.InkDescent, 0);
+    });
+
+    test('ink bounds scale with fontSize', () => {
+        const r = m.Measure('5', 'Outlined', 50, 'normal', 'normal');
+        // scale 0.05 → InkAscent 700 × 0.05 = 35.
+        assert.equal(r.InkAscent, 35);
+    });
+});
+
 describe('FontMetricsMeasurer — weight / style detection', () => {
     test('OS/2 usWeightClass ≥ 600 is detected as bold; < 600 is normal', () => {
         const m = new FontMetricsMeasurer();

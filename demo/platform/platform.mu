@@ -79,6 +79,7 @@ import NavigationRailDemo from "../demos/navigation-rail/navigation-rail.mu.js"
 import PenEditorDemo from "../demos/pen-editor/pen-editor.mu.js"
 import RibbonDemo from "../demos/ribbon/ribbon.mu.js"
 import RichTextEditorDemo from "../demos/rich-text-editor/rich-text-editor.mu.js"
+import RichTextBlockDemo from "../demos/rich-text-block/rich-text-block.mu.js"
 import SegmentedButtonDemo from "../demos/segmented-button/segmented-button.mu.js"
 import ShapesDemo from "../demos/shapes/shapes.mu.js"
 import SliderDemo from "../demos/slider/slider.mu.js"
@@ -151,6 +152,7 @@ Application [ Theme = Material, Scheme = MaterialLight ] {
         merge PenEditorDemo
         merge RibbonDemo
         merge RichTextEditorDemo
+        merge RichTextBlockDemo
         merge SegmentedButtonDemo
         merge ShapesDemo
         merge SliderDemo

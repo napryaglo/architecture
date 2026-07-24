@@ -79,12 +79,51 @@ export class FontMetricsMeasurer implements TextMeasurer
         const width   = FontMetricsMeasurer.measureWidth(font, text, scale);
         const ascent  =  font.ascender  * scale;
         const descent = -font.descender * scale;
+        // Tight INK bounds from the glyphs' outlines — the opentype analog of
+        // Canvas 2D's actualBoundingBox*. Kept SEPARATE from the font line box
+        // (ascent / descent) above, which stays content-stable for line
+        // stacking. Consumers use these to optically centre a single line by
+        // its ink rather than its asymmetric line box (see TextBlock vertical
+        // centring); without them a Node / PDF / Electron target — every
+        // FontMetricsMeasurer host — has no way to know where the ink sits and
+        // falls back to line-box placement, which rides visibly low for a
+        // digit-only label in a tight pill (the M3 Badge).
+        const ink = FontMetricsMeasurer.measureInk(font, text, scale);
         return {
             Width:   width,
             Height:  ascent + descent,
             Ascent:  ascent,
             Descent: descent,
+            InkAscent:  ink.ascent,
+            InkDescent: ink.descent,
         };
+    }
+
+    // Aggregate ink extent (above / below the baseline, in DIPs) across every
+    // glyph in the run, from each glyph's outline bounding box. y is up in font
+    // units with the baseline at 0, so y2 is the top and y1 the bottom of a
+    // glyph's ink; InkAscent is the highest y2 above the baseline and InkDescent
+    // the deepest y1 below it (both non-negative, matching the TextMetrics
+    // contract). Zero-contour glyphs (space) report an all-zero box and don't
+    // move the bounds. Mirrors measureWidth's per-glyph walk (charToGlyph, no
+    // GSUB) for the same reason: opentype.js's full layout throws on common
+    // modern fonts.
+    private static measureInk(font: opentype.Font, text: string, scale: number): { ascent: number; descent: number }
+    {
+        let top = 0;    // highest y2 (above baseline)
+        let bottom = 0; // lowest  y1 (below baseline, negative)
+        for (const ch of Array.from(text))
+        {
+            const glyph = font.charToGlyph(ch);
+            const bb = glyph.getBoundingBox();
+            // Empty outlines (space, control chars) come back as all-zero; the
+            // max/min below simply leave the running bounds untouched.
+            if (bb.y2 > top)    top    = bb.y2;
+            if (bb.y1 < bottom) bottom = bb.y1;
+        }
+        // bottom is 0 or negative (starts at 0, only deepens); guard the
+        // zero case so a no-descender run reports +0, not -0.
+        return { ascent: top * scale, descent: bottom < 0 ? -bottom * scale : 0 };
     }
 
     // §19-deferred #4. Convert a text run to a filled PathGeometry by

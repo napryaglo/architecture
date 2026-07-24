@@ -31,6 +31,7 @@ import { MenuDemo } from "../demos/menu/menu.mu.js";
 import { NavigationRailDemo } from "../demos/navigation-rail/navigation-rail.mu.js";
 import { PenEditorDemo } from "../demos/pen-editor/pen-editor.mu.js";
 import { RibbonDemo } from "../demos/ribbon/ribbon.mu.js";
+import { RichTextBlockDemo } from "../demos/rich-text-block/rich-text-block.mu.js";
 import { RichTextEditorDemo } from "../demos/rich-text-editor/rich-text-editor.mu.js";
 import { SegmentedButtonDemo } from "../demos/segmented-button/segmented-button.mu.js";
 import { ShapesDemo } from "../demos/shapes/shapes.mu.js";
@@ -102,6 +103,7 @@ export const app = (() => {
     for (const [_k, _v] of PenEditorDemo.Clone().Entries()) _rd1.Set(_k, _v);
     for (const [_k, _v] of RibbonDemo.Clone().Entries()) _rd1.Set(_k, _v);
     for (const [_k, _v] of RichTextEditorDemo.Clone().Entries()) _rd1.Set(_k, _v);
+    for (const [_k, _v] of RichTextBlockDemo.Clone().Entries()) _rd1.Set(_k, _v);
     for (const [_k, _v] of SegmentedButtonDemo.Clone().Entries()) _rd1.Set(_k, _v);
     for (const [_k, _v] of ShapesDemo.Clone().Entries()) _rd1.Set(_k, _v);
     for (const [_k, _v] of SliderDemo.Clone().Entries()) _rd1.Set(_k, _v);
