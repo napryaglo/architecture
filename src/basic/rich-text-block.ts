@@ -184,7 +184,21 @@ export class RichTextBlock extends Element implements BlockHost
     private reconcileObjectChildren(next: Visual[]): void
     {
         for (const v of this._objectChildren) if (!next.includes(v)) this.DetachVisual(v);
-        for (const v of next) if (!this._objectChildren.includes(v)) this.AttachVisual(v);
+        for (const v of next)
+        {
+            if (this._objectChildren.includes(v)) continue;
+            // The embedded visual may still be parented to a PRIOR host — a
+            // RichTextBlock from a torn-down view that never detached it (a
+            // tab switch or a recycled ItemsControl container re-presenting
+            // the same document), or a shared document hosted in two places.
+            // Claim it from that stale parent before attaching, mirroring the
+            // ContentPresenter re-present pattern. Without this the single-
+            // parent guard in AttachVisual throws mid-Measure and, because the
+            // failed pass leaves the tree measure-dirty, the layout loop
+            // retries and rethrows every frame.
+            v._release_from_visual_parent();
+            this.AttachVisual(v);
+        }
         this._objectChildren = next;
     }
 

@@ -182,4 +182,27 @@ describe('RichTextBlock — embedded visuals + hyperlinks', () =>
         target.Flush();
         assert.ok(!rtb.visualChildren.includes(box), 'detached after document cleared');
     });
+
+    test('re-hosting an embedded visual still parented to a torn-down RichTextBlock does not throw', () =>
+    {
+        const box = new Border(); box.Width = 12; box.Height = 12;
+
+        // First host measures the box → its visual parent is rtb1.
+        const rtb1 = new RichTextBlock();
+        const doc1 = new FlowDocument();
+        doc1.AddChild(para(new InlineUIContainer(box)));
+        rtb1.Document = doc1;
+        rtb1.Measure(new Size(200, 60));
+        assert.ok(rtb1.visualChildren.includes(box), 'box hosted by the first RichTextBlock');
+
+        // rtb1's view is discarded but never detached the box (a tab switch /
+        // recycled container). A second RichTextBlock re-presents the same
+        // embedded visual — it must claim it, not hit the single-parent guard.
+        const rtb2 = new RichTextBlock();
+        const doc2 = new FlowDocument();
+        doc2.AddChild(para(new InlineUIContainer(box)));
+        rtb2.Document = doc2;
+        assert.doesNotThrow(() => rtb2.Measure(new Size(200, 60)));
+        assert.ok(rtb2.visualChildren.includes(box), 'box re-hosted by the second RichTextBlock');
+    });
 });
