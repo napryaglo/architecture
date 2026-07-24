@@ -93,7 +93,7 @@ resources Markers {
         // the label via inheritance rather than a `Style = @LabelLarge`.
         FontFamily = @LabelLargeFont;
         FontWeight = @LabelLargeWeight;
-        FontSize = @LabelLargeSize;
+        FontSize = @LabelMediumSize;
         LineHeight = @LabelLargeLineHeight;
         LetterSpacing = @LabelLargeTracking;
     }
