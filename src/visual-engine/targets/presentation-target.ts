@@ -454,6 +454,13 @@ export abstract class PresentationTarget extends Model implements VisualHost, Fo
     // assignable — `target.TextMeasurer = new FontMetricsMeasurer()`.
     public TextMeasurer: TextMeasurer = APPROXIMATE_TEXT_MEASURER;
 
+    // Optional paint-engine-accurate measurer (VisualHost.ExactTextMeasurer).
+    // undefined on the base target; HtmlTarget installs an SvgTextMeasurer so
+    // MeasurementFidelity.Exact controls measure their label width with the
+    // same engine that paints it. Assignable for the same reason TextMeasurer
+    // is — concrete targets swap it in post-construction.
+    public ExactTextMeasurer: TextMeasurer | undefined = undefined;
+
     // Owned InputManager — single source of truth for pointer state
     // (hover chain, IsMouseOver, IsPressed, pointer capture) AND
     // keyboard focus (current focused Visual, IsFocused DP). Concrete

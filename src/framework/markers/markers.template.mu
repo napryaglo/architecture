@@ -96,6 +96,12 @@ resources Markers {
         FontSize = @LabelMediumSize;
         LineHeight = @LabelLargeLineHeight;
         LetterSpacing = @LabelLargeTracking;
+        // Size the pill to the label with the paint engine's own text layout,
+        // so the chip fits its label identically in a standalone browser and
+        // in Electron's Chromium (Canvas measureText and SVG <text> disagree
+        // by a sub-pixel that differs across builds). Inherits into the label
+        // TextBlock the consumer nests as content — see TextBlock.MeasurementFidelity.
+        MeasurementFidelity = Exact;
     }
 
     // ── Divider: M3 1dp rule, horizontal or vertical ───────────────

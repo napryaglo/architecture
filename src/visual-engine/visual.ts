@@ -137,6 +137,15 @@ export interface VisualHost
     // CanvasTextMeasurer in HtmlTarget, etc.).
     readonly TextMeasurer: TextMeasurer;
 
+    // Optional exact (paint-engine) text measurer. Where TextMeasurer is the
+    // fast primary (Canvas 2D on HtmlTarget), this is the measurer whose
+    // widths match the RENDERER's own text layout (offscreen SVG <text> on
+    // HtmlTarget). undefined unless a concrete target installs one. A Visual
+    // sizing itself to text at MeasurementFidelity.Exact (a Chip label) reads
+    // it so its measured width equals the painted width — see TextBlock's
+    // MeasurementFidelity. Absent → the Visual falls back to TextMeasurer.
+    readonly ExactTextMeasurer?: TextMeasurer;
+
     // Optional focus surface — populated on PresentationTarget by
     // delegating to its InputManager. Visual.Focus() / Blur() use this
     // back-channel; tests that mock VisualHost without focus support

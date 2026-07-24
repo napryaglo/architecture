@@ -7,6 +7,8 @@ import {
     Rect,
     Size,
     type DrawingContext,
+    type TextMeasurer,
+    type TextMetrics,
 } from '../../runtime/index.js';
 import {
     Brush,
@@ -19,7 +21,7 @@ import {
     SvgDrawingContext,
 } from '../../visual-engine/index.js';
 import { resolveKey } from '../../runtime/model-internals.js';
-import { Border, TextAlignment, TextBlock, TextWrapping } from '../index.js';
+import { Border, MeasurementFidelity, TextAlignment, TextBlock, TextWrapping } from '../index.js';
 
 // Captures DrawText calls so tests can assert exactly what TextBlock's
 // RenderOverride emitted (the FormattedText payload and the origin).
@@ -375,5 +377,96 @@ describe('TextBlock LetterSpacing (M3 tracking)', () => {
         target.Render(dc);
 
         assert.doesNotMatch(dc.ToFragment(), /letter-spacing=/);
+    });
+});
+
+// Two measurers with deliberately different per-glyph widths so a test can
+// tell which one a TextBlock's measure pass consulted. Ascent/Descent are
+// identical so only the WIDTH distinguishes them.
+class FixedMeasurer implements TextMeasurer
+{
+    constructor(private readonly perGlyph: number) {}
+    LoadFont(): void { /* no-op */ }
+    Measure(text: string): TextMetrics
+    {
+        return {
+            Width:   Array.from(text).length * this.perGlyph,
+            Height:  10,
+            Ascent:  8,
+            Descent: 2,
+        };
+    }
+}
+
+describe('TextBlock MeasurementFidelity', () => {
+    test('defaults to Fast', () => {
+        assert.equal(new TextBlock().MeasurementFidelity, MeasurementFidelity.Fast);
+    });
+
+    test('Fast measures width with the primary TextMeasurer (ignores ExactTextMeasurer)', () => {
+        const t = new TextBlock('Hello');
+        const target = new HeadlessTarget(500, 100, t);
+        target.TextMeasurer      = new FixedMeasurer(10); // 5 × 10 = 50
+        target.ExactTextMeasurer = new FixedMeasurer(7);  // 5 ×  7 = 35
+        t.MeasurementFidelity = MeasurementFidelity.Fast;
+        t.Measure(new Size(500, 100));
+        assert.equal(t.DesiredSize.Width, 50);
+    });
+
+    test('Exact measures width with the paint-engine ExactTextMeasurer', () => {
+        const t = new TextBlock('Hello');
+        const target = new HeadlessTarget(500, 100, t);
+        target.TextMeasurer      = new FixedMeasurer(10);
+        target.ExactTextMeasurer = new FixedMeasurer(7); // 5 × 7 = 35
+        t.MeasurementFidelity = MeasurementFidelity.Exact;
+        t.Measure(new Size(500, 100));
+        assert.equal(t.DesiredSize.Width, 35);
+    });
+
+    test('Exact folds LetterSpacing onto the exact width (spacing × glyphCount)', () => {
+        const t = new TextBlock('Hello');
+        t.LetterSpacing = 2;
+        const target = new HeadlessTarget(500, 100, t);
+        target.TextMeasurer      = new FixedMeasurer(10);
+        target.ExactTextMeasurer = new FixedMeasurer(7);
+        t.MeasurementFidelity = MeasurementFidelity.Exact;
+        t.Measure(new Size(500, 100));
+        // exact base 35 + spacing 2 × 5 glyphs = 45.
+        assert.equal(t.DesiredSize.Width, 45);
+    });
+
+    test('Exact keeps vertical metrics on the primary measurer (only width switches)', () => {
+        const t = new TextBlock('Hello');
+        const target = new HeadlessTarget(500, 100, t);
+        target.TextMeasurer      = new FixedMeasurer(10);
+        target.ExactTextMeasurer = new FixedMeasurer(7);
+        t.MeasurementFidelity = MeasurementFidelity.Exact;
+        t.Measure(new Size(500, 100));
+        // Height comes from the primary measurer (10), unaffected by the swap.
+        assert.equal(t.DesiredSize.Height, 10);
+    });
+
+    test('Exact with no ExactTextMeasurer falls back to the primary measurer', () => {
+        const t = new TextBlock('Hello');
+        const target = new HeadlessTarget(500, 100, t);
+        target.TextMeasurer = new FixedMeasurer(10);
+        // ExactTextMeasurer left undefined (base HeadlessTarget has none).
+        t.MeasurementFidelity = MeasurementFidelity.Exact;
+        t.Measure(new Size(500, 100));
+        assert.equal(t.DesiredSize.Width, 50);
+    });
+
+    test('MeasurementFidelity inherits from an ancestor (how the Chip Style reaches its label)', () => {
+        const inner = new TextBlock('Hi');
+        const outer = new Border(inner);
+        // Same cross-class explicit-owner cascade FontSize uses — the Chip
+        // (a non-TextBlock ancestor) sets it and it flows into the label.
+        outer.set_property_value(
+            resolveKey(outer, TextBlock, 'MeasurementFidelity'),
+            MeasurementFidelity.Exact);
+        assert.equal(inner.MeasurementFidelity, MeasurementFidelity.Exact);
+        assert.equal(
+            inner.GetValueSource(resolveKey(inner, undefined, 'MeasurementFidelity')),
+            PropertyValueSource.InheritedValue);
     });
 });

@@ -22,6 +22,7 @@ import {
     keyFromDom,
 } from '../../runtime/index.js';
 import { CanvasTextMeasurer } from '../text/canvas-text-measurer.js';
+import { SvgTextMeasurer } from '../text/svg-text-measurer.js';
 import { FontManager, FontSourceKind, type RegisteredFont } from '../text/index.js';
 import { PresentationTarget } from './presentation-target.js';
 import { SvgRenderer, VISUAL_BACKREF } from '../drawing/svg-renderer.js';
@@ -523,6 +524,13 @@ export class HtmlTarget extends PresentationTarget
             // the ApproximateTextMeasurer (a no-op there). Re-push them so
             // the freshly-installed CanvasTextMeasurer also has them.
             this.ReloadFontsIntoMeasurer();
+            // Paint-engine-accurate measurer for MeasurementFidelity.Exact
+            // (size-to-text chrome — Chip labels). Uses the same offscreen
+            // SVG <text> layout the renderer paints with, so a chip's measured
+            // label width equals its painted width in every Chromium build.
+            // No font reload needed: SvgTextMeasurer.LoadFont is a no-op (the
+            // browser owns @font-face / FontFace registration).
+            this.ExactTextMeasurer = new SvgTextMeasurer(this.host.ownerDocument ?? document);
         }
         catch
         {

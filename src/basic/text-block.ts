@@ -59,6 +59,34 @@ export { TextAlignment };
 // them once (via the cross-class explicit-owner overload) and every
 // TextBlock in the subtree picks them up — that's the WPF
 // "TextElement.FontSize on a Window" pattern.
+
+// How a TextBlock measures its glyph advance widths.
+//
+// Fast (default) uses the host's primary TextMeasurer — a Canvas 2D
+// `measureText` on HtmlTarget — which is synchronous and side-effect-free,
+// so a TextBox can re-measure every keystroke cheaply.
+//
+// Exact routes the WIDTH through the host's ExactTextMeasurer — an offscreen
+// SVG `<text>` on HtmlTarget — which is the same engine the renderer paints
+// with, so a size-to-content control (a Chip pill, a Button) fits its label
+// with no sub-pixel gap between the measured width and the painted glyphs.
+// Canvas measureText and SVG <text> disagree by a fraction of a pixel per
+// glyph, and by different amounts across Chromium builds (a standalone
+// browser vs Electron's bundled Chromium) — Exact closes that gap so chip
+// chrome adjusts identically in both. It costs a hidden SVG layout pass per
+// measure, so it's opt-in and reserved for static, size-to-text chrome —
+// never live-edited text. Vertical metrics (ascent / descent / ink) stay on
+// the Fast measurer either way; only the horizontal advance switches.
+//
+// Inherited (like FontSize / LetterSpacing) so a styled control — e.g. the
+// Chip Style — can set it once and have it flow into the label TextBlock the
+// consumer nests as content.
+export enum MeasurementFidelity
+{
+    Fast  = 'Fast',
+    Exact = 'Exact',
+}
+
 export class TextBlock extends Element implements InlineHost
 {
     static
@@ -122,6 +150,12 @@ export class TextBlock extends Element implements InlineHost
     // repaints. Inherits so the typography role's tracking flows down a
     // subtree alongside FontSize / LineHeight in the same per-role setter block.
     public static readonly LetterSpacingKey = Model.RegisterProperty<number>(       TextBlock, 'LetterSpacing', 0,                   MetaData.Measure | MetaData.Render | MetaData.Inherits);
+    // MeasurementFidelity — Fast (Canvas) vs Exact (paint-engine SVG) width
+    // measurement. Measure-only (fidelity changes the measured width, not the
+    // painted pixels — render already uses the SVG path). Inherits so a styled
+    // control sets it once and it flows into nested label content, exactly
+    // like FontSize / LetterSpacing above.
+    public static readonly MeasurementFidelityKey = Model.RegisterProperty<MeasurementFidelity>(TextBlock, 'MeasurementFidelity', MeasurementFidelity.Fast, MetaData.Measure | MetaData.Inherits);
 
     // Lines computed by MeasureOverride when TextWrapping = Wrap. Each
     // entry holds the substring and the measurer-reported metrics for
@@ -234,6 +268,9 @@ export class TextBlock extends Element implements InlineHost
     public get LetterSpacing(): number { return this.get_property_value(TextBlock.LetterSpacingKey); }
     public set LetterSpacing(value: number) { this.set_property_value(TextBlock.LetterSpacingKey, value); }
 
+    public get MeasurementFidelity(): MeasurementFidelity { return this.get_property_value(TextBlock.MeasurementFidelityKey); }
+    public set MeasurementFidelity(value: MeasurementFidelity) { this.set_property_value(TextBlock.MeasurementFidelityKey, value); }
+
     // Effective line-stride in DIPs. Explicit LineHeight wins; falls
     // back to the measurer's per-line height (font ascent + descent).
     // Used by both Measure (to size the block when wrapping pushes
@@ -292,13 +329,30 @@ export class TextBlock extends Element implements InlineHost
         const advance = (s: string, base: number): number =>
             spacing === 0 ? base : base + spacing * Array.from(s).length;
 
+        // When MeasurementFidelity = Exact and the host offers a paint-engine
+        // measurer (HtmlTarget's offscreen SVG), take the WIDTH from it so the
+        // measured advance matches what the SVG renderer paints — see the
+        // MeasurementFidelity docblock. Vertical metrics (ascent / descent /
+        // ink) stay on the primary measurer, so ink-centring and line stacking
+        // are byte-identical; only the horizontal base width is reconciled.
+        const exactMeasurer = this.MeasurementFidelity === MeasurementFidelity.Exact
+            ? this.target?.ExactTextMeasurer
+            : undefined;
+        const measureText = (s: string): TextMetrics =>
+        {
+            const m = measurer.Measure(s, this.FontFamily.Source, this.FontSize, this.FontWeight, this.FontStyle);
+            if (exactMeasurer === undefined) return m;
+            const exactWidth = exactMeasurer.Measure(
+                s, this.FontFamily.Source, this.FontSize, this.FontWeight, this.FontStyle).Width;
+            return { ...m, Width: exactWidth };
+        };
+
         // NoWrap (or unbounded available width — typical of being placed
         // in a StackPanel etc.) preserves the historic single-line path.
         if (this.TextWrapping !== TextWrapping.Wrap
             || !Number.isFinite(availableSize.Width))
         {
-            const metrics = measurer.Measure(
-                text, this.FontFamily.Source, this.FontSize, this.FontWeight, this.FontStyle);
+            const metrics = measureText(text);
             this._lines = [{ text, metrics }];
             // Effective height honours an explicit LineHeight — a 14pt
             // typography token paired with `LineHeight=20` (M3 BodyMedium)
@@ -313,8 +367,7 @@ export class TextBlock extends Element implements InlineHost
         // (intentionally overflowing — partial-word breaking / hyphen
         // splitting is out of scope for v0).
         const lines: Array<{ text: string; metrics: TextMetrics }> = [];
-        const measureLine = (s: string): TextMetrics => measurer.Measure(
-            s, this.FontFamily.Source, this.FontSize, this.FontWeight, this.FontStyle);
+        const measureLine = (s: string): TextMetrics => measureText(s);
         let current = '';
         let currentMetrics: TextMetrics | undefined;
         const flush = (): void => {
