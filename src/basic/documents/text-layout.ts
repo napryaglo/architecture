@@ -102,8 +102,11 @@ export interface ObjectFragment
     x: number; y: number;
     readonly width: number;
     readonly height: number;
-    readonly ascent: number;
-    readonly descent: number;
+    // Distance above / below the line baseline. Set at commit time so the
+    // object is middle-aligned on the surrounding text (ascent + descent still
+    // sum to `height`, so hit-testing keeps the full box).
+    ascent: number;
+    descent: number;
     readonly source: Inline;
 }
 
@@ -222,10 +225,27 @@ export function layoutInlines(items: FlowItem[], opt: LayoutOptions): LayoutResu
     const commit = (soft: boolean): void =>
     {
         if (frags.length === 0) { pendingSpace = undefined; lineGaps = []; return; }
-        const natural = maxAscent + maxDescent;
+        // maxAscent / maxDescent are the line's TEXT metrics (objects don't feed
+        // them during fill). Embedded objects are MIDDLE-aligned: each object's
+        // box is centred on the text's vertical middle (baseline − (asc−desc)/2),
+        // so a padded inline chip sits centred on the line instead of riding above
+        // the baseline. An object-only line centres the object on its own baseline.
+        let lineAscent = maxAscent;
+        let lineDescent = maxDescent;
+        const hasText = maxAscent > 0 || maxDescent > 0;
+        const centreAbove = hasText ? (maxAscent - maxDescent) / 2 : 0;
+        for (const f of frags)
+        {
+            if (f.kind !== 'object') continue;
+            f.ascent  = centreAbove + f.height / 2;   // above baseline
+            f.descent = f.height / 2 - centreAbove;   // below (may be < 0 → sits fully above)
+            lineAscent  = Math.max(lineAscent,  f.ascent);
+            lineDescent = Math.max(lineDescent, f.descent);
+        }
+        const natural = lineAscent + lineDescent;
         const height = (Number.isFinite(opt.lineHeight) && opt.lineHeight > 0)
             ? Math.max(opt.lineHeight, natural) : natural;
-        const baseline = maxAscent + Math.max(0, (height - natural) / 2);
+        const baseline = lineAscent + Math.max(0, (height - natural) / 2);
         for (const f of frags) f.y = top + baseline - f.ascent;
         const width = curX;
         lines.push({ frags, top, baseline, height, width, shift: 0 });
@@ -273,12 +293,13 @@ export function layoutInlines(items: FlowItem[], opt: LayoutOptions): LayoutResu
         if (tok.kind === 'word') { placePieces(tok.pieces); }
         else /* object */
         {
+            // ascent/descent are finalised in commit() (middle alignment); objects
+            // don't inflate the line's text metrics during fill.
             frags.push({
                 kind: 'object', visual: tok.visual, x: curX, y: 0,
-                width: tok.width, height: tok.height, ascent: tok.height, descent: 0, source: tok.source,
+                width: tok.width, height: tok.height, ascent: 0, descent: 0, source: tok.source,
             });
             curX += tok.width;
-            maxAscent = Math.max(maxAscent, tok.height);
         }
     }
     commit(false);
