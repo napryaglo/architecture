@@ -29,6 +29,7 @@ export { Block, type BlockHost, BlockCollection } from './documents/block.js';
 export { FlowDocument } from './documents/flow-document.js';
 export { Paragraph } from './documents/paragraph.js';
 export { List, ListItem, ListMarkerStyle } from './documents/list.js';
+export { Table, TableRow, TableCell } from './documents/table.js';
 export { RichTextBlock } from './rich-text-block.js';
 export { RichTextBox } from './rich-text-box.js';
 // Rich-text editing model — TextPointer + document navigation + edit ops,

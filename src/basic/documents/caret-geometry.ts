@@ -24,7 +24,8 @@ function findParagraphBox(boxes: readonly BlockBox[], p: Paragraph): ParagraphBo
     for (const b of boxes)
     {
         if (b.kind === 'para') { if (b.source === p) return b; }
-        else for (const it of b.items) { const f = findParagraphBox(it.boxes, p); if (f !== undefined) return f; }
+        else if (b.kind === 'list') for (const it of b.items) { const f = findParagraphBox(it.boxes, p); if (f !== undefined) return f; }
+        else for (const row of b.rows) for (const cell of row.cells) { const f = findParagraphBox(cell.boxes, p); if (f !== undefined) return f; }
     }
     return undefined;
 }
@@ -90,7 +91,8 @@ export function PointerAtPoint(result: BlockLayoutResult, x: number, y: number, 
         for (const b of bs)
         {
             if (b.kind === 'para') boxes.push(b);
-            else for (const it of b.items) gather(it.boxes);
+            else if (b.kind === 'list') for (const it of b.items) gather(it.boxes);
+            else for (const row of b.rows) for (const cell of row.cells) gather(cell.boxes);
         }
     };
     gather(result.boxes);

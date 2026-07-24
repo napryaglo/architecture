@@ -1,9 +1,10 @@
 import { Brush, FontFamily, FormattedText, TextAlignment, type TextMetrics } from '../../visual-engine/index.js';
-import { Point, Visual, type DrawingContext } from '../../runtime/index.js';
+import { Point, Rect, Visual, type DrawingContext } from '../../runtime/index.js';
 import { type Inline, type LinkTarget, type RunProps, type TextElement } from './text-element.js';
 import { Block } from './block.js';
 import { Paragraph } from './paragraph.js';
 import { List, ListMarkerStyle } from './list.js';
+import { Table, type TableRow } from './table.js';
 import { Span, InlineUIContainer } from './inlines.js';
 import {
     arrangeObjectVisuals,
@@ -121,7 +122,43 @@ export interface ListBox extends BoxCommon
     readonly source: List;
 }
 
-export type BlockBox = ParagraphBox | ListBox;
+// One grid cell's laid-out content. x/top/right/bottom are the cell's OUTER
+// box (padding + content, between gridlines) in absolute document coords;
+// `boxes` are the cell's blocks, already laid out at the padded content slot.
+export interface CellBox
+{
+    readonly x: number;
+    readonly top: number;
+    readonly right: number;
+    readonly bottom: number;
+    readonly boxes: BlockBox[];
+}
+
+export interface RowBox
+{
+    readonly top: number;
+    readonly bottom: number;
+    readonly cells: CellBox[];
+    readonly isHeader: boolean;
+    readonly source: TableRow;
+}
+
+export interface TableBox extends BoxCommon
+{
+    readonly kind: 'table';
+    readonly rows: RowBox[];
+    readonly source: Table;
+    // Gridline geometry, resolved once at layout so render is a pure walk.
+    readonly borderThickness: number;
+    readonly borderBrush: Brush | undefined;
+    readonly headerBackground: Brush | undefined;
+    // X of each vertical gridline (left edge of the line rect) and Y of each
+    // horizontal gridline — document-absolute, origin added at render.
+    readonly gridX: number[];
+    readonly gridY: number[];
+}
+
+export type BlockBox = ParagraphBox | ListBox | TableBox;
 
 export interface BlockLayoutResult
 {
@@ -184,8 +221,13 @@ function layoutOneBlock(
 {
     if (block instanceof Paragraph) return layoutParagraph(block, bx, y, bw, base, env);
     if (block instanceof List)      return layoutList(block, bx, y, bw, base, env);
-    return undefined;   // Section / Table / … not yet supported
+    if (block instanceof Table)     return layoutTable(block, bx, y, bw, base, env);
+    return undefined;   // Section / BlockUIContainer / … not yet supported
 }
+
+// Minimum content width a column keeps when a table is shrunk to fit — below
+// this, cell text has no room to lay out at all.
+const MIN_COL_CONTENT = 12;
 
 function layoutParagraph(
     para: Paragraph, bx: number, y: number, bw: number, base: RunProps, env: BlockLayoutEnv,
@@ -279,6 +321,107 @@ function layoutList(
     return { kind: 'list', x: bx, top: y, bottom: iy, right, items: itemBoxes, source: list };
 }
 
+// ── Table ─────────────────────────────────────────────────────────────
+// Two-pass grid layout. Pass 1 measures each column's natural (unbounded)
+// content width; if the natural table overflows a finite width the columns
+// shrink proportionally (content then wraps). Pass 2 lays every cell out at
+// its final column width, sizes each row to its tallest cell, and records
+// the gridline positions so render is a pure walk.
+function layoutTable(
+    table: Table, bx: number, y: number, bw: number, base: RunProps, env: BlockLayoutEnv,
+): TableBox
+{
+    const tableCtx = resolveContext(table, base);
+    const pad      = table.CellPadding;
+    const border   = table.BorderThickness;
+    const rows     = table.Rows.ToArray();
+    const numCols  = rows.reduce((mx, r) => Math.max(mx, r.Cells.Count), 0);
+
+    // An empty table (no columns) collapses to a zero-height band.
+    if (numCols === 0)
+        return { kind: 'table', x: bx, top: y, bottom: y, right: bx, rows: [], source: table,
+                 borderThickness: border, borderBrush: table.BorderBrush,
+                 headerBackground: table.HeaderBackground, gridX: [], gridY: [] };
+
+    const padX = pad.Left + pad.Right;
+
+    // Pass 1 — natural content width per column, measured unbounded.
+    const natural = new Array<number>(numCols).fill(0);
+    for (const row of rows)
+    {
+        const cells = row.Cells.ToArray();
+        for (let ci = 0; ci < cells.length; ci++)
+        {
+            const cellCtx = resolveContext(cells[ci]!, tableCtx);
+            const r = layoutBlockList(cells[ci]!.Blocks.ToArray(), 0, 0, Number.POSITIVE_INFINITY, cellCtx, env);
+            natural[ci] = Math.max(natural[ci]!, r.right);
+        }
+    }
+
+    // Column OUTER widths (content + horizontal padding). Shrink to fit a
+    // finite width; keep natural widths when the table fits or width is free.
+    const naturalOuter = natural.map((w) => w + padX);
+    const bordersTotal = border * (numCols + 1);
+    const naturalTableW = naturalOuter.reduce((a, b) => a + b, 0) + bordersTotal;
+
+    let outer: number[];
+    if (!Number.isFinite(bw) || naturalTableW <= bw)
+        outer = naturalOuter;
+    else
+    {
+        const avail = Math.max(0, bw - bordersTotal);
+        const sum   = naturalOuter.reduce((a, b) => a + b, 0) || 1;
+        const scale = avail / sum;
+        outer = naturalOuter.map((w) => Math.max(padX + MIN_COL_CONTENT, w * scale));
+    }
+    const contentW = outer.map((w) => Math.max(0, w - padX));
+
+    // Column OUTER left edges (the cell box starts just right of a gridline).
+    const colX: number[] = [];
+    let cx = bx + border;
+    for (let ci = 0; ci < numCols; ci++) { colX.push(cx); cx += outer[ci]! + border; }
+    const tableRight = cx;
+
+    // Pass 2 — lay each cell at its column content width; size rows to tallest.
+    const rowBoxes: RowBox[] = [];
+    let ry = y + border;
+    for (const row of rows)
+    {
+        const cells = row.Cells.ToArray();
+        const laid: BlockBox[][] = [];
+        let contentH = 0;
+        for (let ci = 0; ci < numCols; ci++)
+        {
+            const cell = cells[ci];
+            const contentX   = colX[ci]! + pad.Left;
+            const contentTop = ry + pad.Top;
+            const sub = cell !== undefined
+                ? layoutBlockList(cell.Blocks.ToArray(), contentX, contentTop, contentW[ci]!, resolveContext(cell, tableCtx), env)
+                : { boxes: [] as BlockBox[], bottom: contentTop, right: contentX };
+            laid.push(sub.boxes);
+            contentH = Math.max(contentH, sub.bottom - contentTop);
+        }
+        const rowH = contentH + pad.Top + pad.Bottom;
+        const cellBoxes: CellBox[] = colX.map((x, ci) => ({
+            x, top: ry, right: x + outer[ci]!, bottom: ry + rowH, boxes: laid[ci]!,
+        }));
+        rowBoxes.push({ top: ry, bottom: ry + rowH, cells: cellBoxes, isHeader: row.IsHeader, source: row });
+        ry += rowH + border;
+    }
+    const tableBottom = ry;
+
+    // Gridlines: a vertical line at every column boundary (left of col 0 … right
+    // of the last), a horizontal line at every row boundary (top … bottom).
+    const gridX = [bx, ...colX.map((x, ci) => x + outer[ci]!)];
+    const gridY = [y, ...rowBoxes.map((r) => r.bottom)];
+
+    return {
+        kind: 'table', x: bx, top: y, bottom: tableBottom, right: tableRight, rows: rowBoxes, source: table,
+        borderThickness: border, borderBrush: table.BorderBrush, headerBackground: table.HeaderBackground,
+        gridX, gridY,
+    };
+}
+
 // Absolute y of the first text line's baseline anywhere under `boxes`, used
 // to baseline-align a list marker with its item's first line.
 function firstBaseline(boxes: readonly BlockBox[]): number | undefined
@@ -290,11 +433,19 @@ function firstBaseline(boxes: readonly BlockBox[]): number | undefined
             const line = b.layout.lines[0];
             if (line !== undefined) return b.top + line.top + line.baseline;
         }
-        else
+        else if (b.kind === 'list')
         {
             for (const it of b.items)
             {
                 const inner = firstBaseline(it.boxes);
+                if (inner !== undefined) return inner;
+            }
+        }
+        else
+        {
+            for (const row of b.rows) for (const cell of row.cells)
+            {
+                const inner = firstBaseline(cell.boxes);
                 if (inner !== undefined) return inner;
             }
         }
@@ -319,6 +470,7 @@ function collectBlocksEmbedded(blocks: readonly Block[], out: Visual[]): void
     {
         if (b instanceof Paragraph) collectInlinesEmbedded(b.Inlines.ToArray(), out);
         else if (b instanceof List) for (const it of b.ListItems.ToArray()) collectBlocksEmbedded(it.Blocks.ToArray(), out);
+        else if (b instanceof Table) for (const row of b.Rows.ToArray()) for (const cell of row.Cells.ToArray()) collectBlocksEmbedded(cell.Blocks.ToArray(), out);
     }
 }
 
@@ -338,6 +490,7 @@ function walkBoxes(boxes: readonly BlockBox[], fn: (b: BlockBox) => void): void
     {
         fn(b);
         if (b.kind === 'list') for (const it of b.items) walkBoxes(it.boxes, fn);
+        else if (b.kind === 'table') for (const row of b.rows) for (const cell of row.cells) walkBoxes(cell.boxes, fn);
     }
 }
 
@@ -360,6 +513,7 @@ export function renderBlocks(
             });
             return;
         }
+        if (box.kind === 'table') { renderTableChrome(dc, box, originX, originY); return; }
         for (const item of box.items)
         {
             const m = item.marker;
@@ -373,6 +527,28 @@ export function renderBlocks(
             dc.DrawText(ft, new Point(originX + m.x, originY + m.y));
         }
     });
+}
+
+/** Paint a table's header fills and gridlines. Called on the table box before
+ *  the walk descends into its cells, so text lands on top. */
+function renderTableChrome(dc: DrawingContext, box: TableBox, originX: number, originY: number): void
+{
+    const b = box.borderThickness;
+
+    // Header row fills first — behind gridlines and cell text.
+    if (box.headerBackground !== undefined)
+        for (const row of box.rows)
+            if (row.isHeader)
+                dc.DrawRectangle(box.headerBackground, undefined,
+                    new Rect(originX + box.x, originY + row.top, box.right - box.x, row.bottom - row.top));
+
+    const brush = box.borderBrush;
+    if (brush === undefined || b <= 0) return;
+
+    const top = originY + box.top, height = box.bottom - box.top;
+    const left = originX + box.x, width = box.right - box.x;
+    for (const gx of box.gridX) dc.DrawRectangle(brush, undefined, new Rect(originX + gx, top, b, height));
+    for (const gy of box.gridY) dc.DrawRectangle(brush, undefined, new Rect(left, originY + gy, width, b));
 }
 
 /** Every embedded Visual across all paragraphs, in document order. */
