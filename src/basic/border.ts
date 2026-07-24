@@ -163,6 +163,12 @@ export class Border extends Single
     public get ClipToBounds(): boolean { return this.get_property_value(Border.ClipToBoundsKey); }
     public set ClipToBounds(value: boolean) { this.set_property_value(Border.ClipToBoundsKey, value); }
 
+    // For inline-baseline probing by a text host (RichTextBlock): the single
+    // child plus the inset above it, so a chip's (Border → TextBlock) internal
+    // text baseline composes as `TopContentInset + child.FirstBaseline`.
+    public get ContentChild(): Visual | undefined { return this.child; }
+    public get TopContentInset(): number { return this.BorderThickness.Top + this.Padding.Top; }
+
     protected override MeasureOverride(availableSize: Size): Size
     {
         const insetH = this.BorderThickness.Horizontal + this.Padding.Horizontal;

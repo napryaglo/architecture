@@ -57,3 +57,41 @@ describe('layoutInlines — inline object middle alignment', () => {
         assert.equal(objCentre, textCentre);
     });
 });
+
+// Baseline alignment: when the object reports its own text baseline, that
+// baseline sits on the LINE baseline (level with the surrounding text), so a
+// padded chip's box hangs below. This is the fix for inline code chips.
+function layoutTextThenObjectBaselined(objectHeight: number, baseline: number)
+{
+    const items: FlowItem[] = [
+        { kind: 'text', text: 'ab', props: PROPS, source: new Run('ab') },
+        { kind: 'object', visual: null as unknown as Visual, source: new Run('') },
+    ];
+    const measureObject: MeasureObject = () => ({ width: 20, height: objectHeight, baseline });
+    const r = layoutInlines(items, {
+        availableWidth: Number.POSITIVE_INFINITY, wrap: false, letterSpacing: 0,
+        lineHeight: Number.NaN, measureText: measure, measureObject,
+    });
+    const line = r.lines[0]!;
+    const textFrag = line.frags.find((f) => f.kind === 'text') as TextFragment;
+    const objFrag  = line.frags.find((f) => f.kind === 'object') as ObjectFragment;
+    return { line, textFrag, objFrag };
+}
+
+describe('layoutInlines — inline object baseline alignment', () => {
+    test("the object's reported baseline lands on the line baseline; the box hangs below", () => {
+        // Object 20 tall with its own text baseline 12 from top → 8 sits below baseline.
+        const { line, textFrag, objFrag } = layoutTextThenObjectBaselined(20, 12);
+        const lineBaseline = line.top + line.baseline;
+        // Both the text baseline and the object's own baseline meet the line baseline.
+        assert.equal(textFrag.y + textFrag.ascent, lineBaseline);
+        assert.equal(objFrag.y + objFrag.baseline!, lineBaseline);
+        // ascent = baseline, descent = the below-baseline remainder; box preserved.
+        assert.equal(objFrag.ascent, 12);
+        assert.equal(objFrag.descent, 8);
+        assert.equal(objFrag.ascent + objFrag.descent, objFrag.height);
+        // The chip's 8px below-baseline part exceeds the text descent (2), so the
+        // line grew to keep it from overlapping the next line.
+        assert.ok(line.height >= 20);
+    });
+});

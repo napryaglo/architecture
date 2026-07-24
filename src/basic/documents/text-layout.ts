@@ -76,7 +76,10 @@ function walk(inlines: readonly Inline[], ctx: RunProps, out: FlowItem[]): void
 // ── Line layout ──────────────────────────────────────────────────────
 
 export type MeasureText   = (text: string, props: RunProps) => TextMetrics;
-export type MeasureObject = (v: Visual) => { width: number; height: number };
+// `baseline` (optional) is the object's OWN text baseline measured from its top
+// — when present, the object is baseline-aligned (its text baseline sits on the
+// line baseline, so a padded chip extends BELOW the text). Absent → middle-align.
+export type MeasureObject = (v: Visual) => { width: number; height: number; baseline?: number };
 
 export interface TextFragment
 {
@@ -102,11 +105,14 @@ export interface ObjectFragment
     x: number; y: number;
     readonly width: number;
     readonly height: number;
-    // Distance above / below the line baseline. Set at commit time so the
-    // object is middle-aligned on the surrounding text (ascent + descent still
-    // sum to `height`, so hit-testing keeps the full box).
+    // Distance above / below the line baseline. Set at commit time — baseline-
+    // aligned when `baseline` is set (the object's own text baseline lands on the
+    // line baseline), else middle-aligned. ascent + descent still sum to `height`
+    // so hit-testing keeps the full box.
     ascent: number;
     descent: number;
+    // The object's own text baseline from its top, when it reported one.
+    readonly baseline?: number;
     readonly source: Inline;
 }
 
@@ -153,7 +159,7 @@ interface Piece { text: string; props: RunProps; metrics: TextMetrics; width: nu
 type Token =
     | { kind: 'word';   pieces: Piece[]; width: number }
     | { kind: 'space';  width: number }
-    | { kind: 'object'; visual: Visual; width: number; height: number; source: Inline }
+    | { kind: 'object'; visual: Visual; width: number; height: number; baseline?: number; source: Inline }
     | { kind: 'break' };
 
 export function layoutInlines(items: FlowItem[], opt: LayoutOptions): LayoutResult
@@ -177,7 +183,7 @@ export function layoutInlines(items: FlowItem[], opt: LayoutOptions): LayoutResu
         {
             flushWord();
             const size = opt.measureObject(item.visual);
-            tokens.push({ kind: 'object', visual: item.visual, width: size.width, height: size.height, source: item.source });
+            tokens.push({ kind: 'object', visual: item.visual, width: size.width, height: size.height, baseline: size.baseline, source: item.source });
             continue;
         }
         // text — split into alternating non-ws / ws segments, tracking the
@@ -226,10 +232,15 @@ export function layoutInlines(items: FlowItem[], opt: LayoutOptions): LayoutResu
     {
         if (frags.length === 0) { pendingSpace = undefined; lineGaps = []; return; }
         // maxAscent / maxDescent are the line's TEXT metrics (objects don't feed
-        // them during fill). Embedded objects are MIDDLE-aligned: each object's
-        // box is centred on the text's vertical middle (baseline − (asc−desc)/2),
-        // so a padded inline chip sits centred on the line instead of riding above
-        // the baseline. An object-only line centres the object on its own baseline.
+        // them during fill). Each embedded object is aligned one of two ways:
+        //   * BASELINE-aligned when it reported a `baseline` — its own text
+        //     baseline lands on the line baseline, so a padded chip's label reads
+        //     level with the surrounding text and the chip box extends BELOW by
+        //     its descent + bottom padding. This is the chip case.
+        //   * MIDDLE-aligned otherwise — the box is centred on the text's vertical
+        //     middle (baseline − (asc−desc)/2). An object-only line centres on its
+        //     own middle.
+        // Either way ascent + descent === height, so hit-testing keeps the box.
         let lineAscent = maxAscent;
         let lineDescent = maxDescent;
         const hasText = maxAscent > 0 || maxDescent > 0;
@@ -237,8 +248,16 @@ export function layoutInlines(items: FlowItem[], opt: LayoutOptions): LayoutResu
         for (const f of frags)
         {
             if (f.kind !== 'object') continue;
-            f.ascent  = centreAbove + f.height / 2;   // above baseline
-            f.descent = f.height / 2 - centreAbove;   // below (may be < 0 → sits fully above)
+            if (f.baseline !== undefined && Number.isFinite(f.baseline))
+            {
+                f.ascent  = f.baseline;
+                f.descent = f.height - f.baseline;
+            }
+            else
+            {
+                f.ascent  = centreAbove + f.height / 2;   // above baseline
+                f.descent = f.height / 2 - centreAbove;   // below (may be < 0 → sits fully above)
+            }
             lineAscent  = Math.max(lineAscent,  f.ascent);
             lineDescent = Math.max(lineDescent, f.descent);
         }
@@ -293,11 +312,12 @@ export function layoutInlines(items: FlowItem[], opt: LayoutOptions): LayoutResu
         if (tok.kind === 'word') { placePieces(tok.pieces); }
         else /* object */
         {
-            // ascent/descent are finalised in commit() (middle alignment); objects
-            // don't inflate the line's text metrics during fill.
+            // ascent/descent are finalised in commit() (baseline- or middle-
+            // align); objects don't inflate the line's text metrics during fill.
             frags.push({
                 kind: 'object', visual: tok.visual, x: curX, y: 0,
-                width: tok.width, height: tok.height, ascent: 0, descent: 0, source: tok.source,
+                width: tok.width, height: tok.height, ascent: 0, descent: 0,
+                baseline: tok.baseline, source: tok.source,
             });
             curX += tok.width;
         }

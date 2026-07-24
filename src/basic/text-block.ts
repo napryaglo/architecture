@@ -130,6 +130,19 @@ export class TextBlock extends Element implements InlineHost
     // the whole text, falling through to the historic single-line path.
     private _lines: Array<{ text: string; metrics: TextMetrics }> = [];
 
+    // First laid-out line's baseline, measured from the block's TOP: the y an
+    // adjacent inline (an embedded code chip) should sit its OWN text baseline on
+    // so the two read on one line. 0 before measure / when empty. Accounts for
+    // the half-leading an explicit LineHeight adds above the first line. Read by
+    // a text host (RichTextBlock) to baseline-align embedded objects.
+    public get FirstBaseline(): number
+    {
+        const m = this._lines[0]?.metrics;
+        if (m === undefined) return 0;
+        const halfLeading = Math.max(0, (this.effectiveLineHeight(m.Height) - m.Height) / 2);
+        return halfLeading + m.Ascent;
+    }
+
     // ── Inline content model (WPF Inlines analog) ───────────────────
     // Lazily created. When non-empty, the flatten → line-layout pipeline
     // replaces the Text-only fast path: `Inlines` is the content (Text is

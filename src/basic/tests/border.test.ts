@@ -102,6 +102,17 @@ describe('Border defaults', () => {
     });
 });
 
+describe('Border baseline probe (ContentChild / TopContentInset)', () => {
+    test('exposes the single child and the inset above it for baseline composition', () => {
+        const child = new FixedSize(new Size(30, 12));
+        const b = new Border(child);
+        b.BorderThickness = new Thickness(1, 2, 1, 2);   // top 2
+        b.Padding = new Thickness(5, 3, 5, 4);           // top 3
+        assert.equal(b.ContentChild, child);
+        assert.equal(b.TopContentInset, 5);              // 2 + 3
+    });
+});
+
 describe('Border ClipToBounds', () => {
     const arranged = (b: Border, w: number, h: number): void => {
         b.Measure(new Size(500, 500));

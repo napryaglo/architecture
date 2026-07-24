@@ -24,6 +24,25 @@ import {
     type BlockLayoutResult,
 } from './documents/block-layout.js';
 
+// The first-text baseline of an embedded inline object, from its top — so
+// text-layout can sit that baseline on the line baseline. Structural (no hard
+// import of TextBlock / Border): a TextBlock reports `FirstBaseline`; a single-
+// child container (Border) reports `TopContentInset` + `ContentChild`, so a chip
+// (Border → TextBlock) composes as inset + label baseline. Undefined for an
+// object with no discoverable text → the object middle-aligns.
+function firstTextBaseline(v: unknown): number | undefined
+{
+    const leaf = v as { FirstBaseline?: unknown };
+    if (typeof leaf.FirstBaseline === 'number') return leaf.FirstBaseline;
+    const box = v as { TopContentInset?: unknown; ContentChild?: unknown };
+    if (typeof box.TopContentInset === 'number' && box.ContentChild != null)
+    {
+        const inner = firstTextBaseline(box.ContentChild);
+        return inner === undefined ? undefined : box.TopContentInset + inner;
+    }
+    return undefined;
+}
+
 // ─────────────────────────────────────────────────────────────────────
 // RichTextBlock — the read-only host for a FlowDocument, the block-tier
 // analog of TextBlock. Like TextBlock it is a self-drawing Element (not a
@@ -143,7 +162,10 @@ export class RichTextBlock extends Element implements BlockHost
         {
             v.Measure(new Size(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY));
             const d = v.DesiredSize;
-            return { width: d.Width, height: d.Height };
+            // Probe the object's own first-text baseline so text-layout can sit it
+            // on the line baseline (a chip's label reads level with the text, the
+            // box hangs below). Undefined for objects with no text → middle-align.
+            return { width: d.Width, height: d.Height, baseline: firstTextBaseline(v) };
         };
 
         // Attach embedded visuals BEFORE layout measures them.
