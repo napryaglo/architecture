@@ -2,7 +2,8 @@ import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from '../../../basic/tests/test-app.js';
 
-import { Application, RelayCommand, Size, Visual, NoModifiers, PointerButton, type PointerEventInit } from '../../../runtime/index.js';
+import { Application, RelayCommand, Size, Style, Setter, PropertyTrigger, TriggerUnset, Visual, NoModifiers, PointerButton, type PointerEventInit } from '../../../runtime/index.js';
+import { ControlTemplate } from '../../../basic/templates/control-template.js';
 import { ToolBar, ToolBarPanel } from '../tool-bar.js';
 import { ToolBarButton, ToolBarSeparator, ToolBarPosition } from '../tool-bar-items.js';
 import { ToolBarSplitButton } from '../tool-bar-split-button.js';
@@ -203,6 +204,40 @@ describe('ToolBarSplitButton — primary + dropdown', () => {
         sb.Command = new RelayCommand(() => {});
         target.Flush();
         assert.ok(findNamed(sb, 'PART_Arrow') !== undefined, 're-adopted the split chrome with an arrow');
+    });
+
+    // An explicit keyed Style on a no-command split button does NOT wholesale
+    // replace the theme style: Seal() splices the theme in as the style's
+    // implicit BasedOn base (so Template / ItemsPanel resolve). The catch is
+    // that the theme's `when (Command is unset)` trigger is inherited too, and
+    // — since Trigger outranks a plain Style/Local setter — it would pin
+    // TriggerTemplate back to the theme's default dropdown chrome. The fix a
+    // consumer needs (and the Plexus tab ⋯ button uses) is to RE-DECLARE that
+    // trigger: own triggers resolve after BasedOn ones, so the last
+    // Trigger-tier setter — the consumer's — wins. This also proves the
+    // consumer need NOT re-supply Template / ItemsPanel (inherited from the
+    // spliced base), which keeps the override minimal.
+    test('explicit Style re-declaring the no-command trigger adopts its custom chrome', () => {
+        const custom = new ControlTemplate((_tp) => {
+            const primary = new Border();
+            (primary as unknown as { Name: string }).Name = 'PART_Primary';
+            return primary;
+        });
+        // Minimal style: no Template / ItemsPanel setters — only the trigger.
+        const style = new Style(ToolBarSplitButton, [], undefined, [
+            new PropertyTrigger(ToolBarSplitButton, 'Command', TriggerUnset, [
+                new Setter(ToolBarSplitButton, 'TriggerTemplate', custom),
+            ]),
+        ]);
+        const sb = new ToolBarSplitButton();   // no Command
+        sb.Style = style;
+        const target = new HeadlessTarget(600, 200, sb);
+        target.Flush();
+
+        assert.equal(sb.TriggerTemplate, custom, 'the re-declared trigger wins over the inherited theme trigger');
+        // Template inherited from the spliced theme base → the popup still built.
+        assert.ok((sb as unknown as { _popupHost?: unknown })._popupHost !== undefined,
+            'popup Template inherited from the BasedOn theme base');
     });
 
     // Regression: the chrome swap must survive Content being set BEFORE the
