@@ -37,6 +37,24 @@ import type { ItemsControl } from '../../../framework/base/items-control.js';
 // nothing — the IScrollInfo getters still report ExtentWidth/Height
 // from itemCount × cell size so the host can pick a sensible scroll
 // extent on first pass.
+// A realized container that hosts its OWN virtualizing child panel (an
+// expanded TreeViewItem is the case). During arrange the parent panel calls
+// SetOuterViewport on each realized container implementing this, handing it the
+// shared scroll viewport (absolute, in the scroll-extent's coordinate space)
+// and this container's absolute offset within that space. The host forwards a
+// correctly-shifted viewport + origin to its nested panel so per-level
+// virtualization composes down the tree. Kept as a duck-typed interface so the
+// panel stays decoupled from TreeViewItem.
+export interface INestedViewportHost
+{
+    SetOuterViewport(viewport: Rect, containerOffset: number): void;
+}
+
+export function isNestedViewportHost(v: unknown): v is INestedViewportHost
+{
+    return typeof (v as Partial<INestedViewportHost>)?.SetOuterViewport === 'function';
+}
+
 export abstract class VirtualizingPanel extends Panel
 {
     public static readonly ViewportKey = Model.RegisterProperty<Rect>(

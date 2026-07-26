@@ -9,6 +9,7 @@ import { HeadlessTarget } from '../../../visual-engine/index.js';
 import { ItemsPresenter } from '../../../basic/templates/items-presenter.js';
 import { ScrollViewer } from '../../../framework/surfaces/scroll-viewer.js';
 import { StackPanel } from '../../../basic/panels/stack-panel.js';
+import { VirtualizingStackPanel } from '../../../basic/panels/virtualisation/virtualizing-stack-panel.js';
 import { CollapsibleStack, TreeView, TreeViewItem } from '../tree-view.js';
 import { DataTemplate, HierarchicalDataTemplate } from '../../../basic/templates/data-template.js';
 import { TextBlock } from '../../../basic/text-block.js';
@@ -410,6 +411,86 @@ describe('TreeView — selection (multi-select via Ctrl / Shift)', () => {
 // ItemTemplate / ItemTemplateSelector / HierarchicalDataTemplate.
 interface Node { Name: string; children?: Node[]; }
 
+// ── Root-level UI virtualization (IsVirtualizing) ───────────────────────
+// M1: opting a TreeView into virtualization swaps its ROOT ItemsPanel for a
+// VirtualizingStackPanel, so only the root rows whose vertical band meets the
+// viewport realize as TreeViewItems. (Nested-level virtualization — each
+// expanded TreeViewItem's children — is a separate increment.)
+describe('TreeView — root-level virtualization (IsVirtualizing)', () =>
+{
+    beforeEach(() => { initTestApp(); });
+
+    function bigTree(n: number): TreeView
+    {
+        const tree = new TreeView();
+        tree.IsVirtualizing = true;
+        tree.ItemTemplate = new HierarchicalDataTemplate(
+            (d) => new TextBlock((d as Node).Name),
+            (d) => (d as Node).children,
+        );
+        tree.ItemsSource = Array.from({ length: n }, (_, i) => ({ Name: `n${i}` })) as Node[];
+        return tree;
+    }
+
+    test('opting in swaps the root ItemsPanel to a VirtualizingStackPanel', () =>
+    {
+        const plain = new TreeView();
+        assert.ok(plain.ItemsPanelInstance instanceof StackPanel, 'default is a plain StackPanel');
+        assert.ok(!(plain.ItemsPanelInstance instanceof VirtualizingStackPanel));
+
+        const virt = bigTree(5);
+        assert.ok(virt.ItemsPanelInstance instanceof VirtualizingStackPanel, 'opt-in swaps to VSP');
+    });
+
+    test('only the root rows intersecting the viewport realize as TreeViewItems', () =>
+    {
+        const tree = bigTree(40);
+        const vsp = tree.ItemsPanelInstance as VirtualizingStackPanel;
+        // Viewport y = 30..90 over the 20px per-row estimate → root indices 1..4.
+        vsp.Viewport = new Rect(0, 30, 100, 60);
+        vsp.Measure(new Size(100, 60));
+
+        assert.deepEqual(vsp.RealizedIndices, [1, 2, 3, 4]);
+        // Only those 4 rows exist as containers (not all 40), and each is a
+        // TreeViewItem logically parented to the tree — virtualization elided
+        // the rest.
+        assert.equal(tree.logicalChildren.length, 4);
+        for (const c of tree.logicalChildren) assert.ok(c instanceof TreeViewItem);
+    });
+
+    test('scrolling the viewport recycles offscreen rows and realizes a later band', () =>
+    {
+        const tree = bigTree(40);
+        const vsp = tree.ItemsPanelInstance as VirtualizingStackPanel;
+        vsp.Viewport = new Rect(0, 0, 100, 40);      // near the top
+        vsp.Measure(new Size(100, 40));
+        const near = vsp.RealizedIndices;
+        assert.ok(near.includes(0), 'row 0 realizes near the top');
+        assert.ok(near.length <= 4, `only a small band realizes, got ${near.length}`);
+
+        // Scroll far down. Independent of the exact per-row height (real
+        // TreeViewItems don't measure to the 20px estimate), the top rows must
+        // recycle and a strictly-lower contiguous band must realize.
+        vsp.Viewport = new Rect(0, 400, 100, 40);
+        vsp.Measure(new Size(100, 40));
+        const far = vsp.RealizedIndices;
+        assert.ok(!far.includes(0) && !far.includes(1), 'top rows recycled after scrolling down');
+        assert.ok(far.length > 0 && far.length <= 4, 'a small band realizes after scrolling');
+        assert.ok(Math.min(...far) > Math.max(...near), 'the scrolled band sits below the initial band');
+        for (let i = 1; i < far.length; i++) assert.equal(far[i], far[i - 1]! + 1, 'realized band is contiguous');
+    });
+
+    test('turning virtualization back off restores the plain StackPanel', () =>
+    {
+        const tree = bigTree(12);
+        tree.IsVirtualizing = false;
+        assert.ok(tree.ItemsPanelInstance instanceof StackPanel);
+        assert.ok(!(tree.ItemsPanelInstance instanceof VirtualizingStackPanel));
+        // Non-virtual → every root row materialized.
+        assert.equal(tree.RootItems.length, 12);
+    });
+});
+
 describe('TreeView — data-bound templates (ItemTemplate + selector + factory)', () => {
     beforeEach(() => { initTestApp(); });
 
@@ -471,5 +552,51 @@ describe('TreeView — data-bound templates (ItemTemplate + selector + factory)'
         const root = tree.RootItems[0]!;
         assert.equal((root.Header as TextBlock).Text, 'n:root');
         assert.equal((root.SubItems[0]!.Header as TextBlock).Text, 'n:child');
+    });
+});
+
+// ── Nested-level virtualization (M2) ────────────────────────────────────
+// An expanded row's children realize through a nested VirtualizingStackPanel
+// that shares the outer viewport: only the child rows whose absolute band meets
+// the window materialize, and collapsing recycles them.
+describe('TreeView — nested-level virtualization', () =>
+{
+    beforeEach(() => { initTestApp(); });
+
+    test('an expanded row virtualizes its children through a nested VSP; collapse clears them', () =>
+    {
+        const tree = new TreeView();
+        tree.IsVirtualizing = true;
+        tree.ItemTemplate = new HierarchicalDataTemplate(
+            (d) => new TextBlock((d as Node).Name),
+            (d) => (d as Node).children,
+        );
+        const children = Array.from({ length: 40 }, (_, i) => ({ Name: `c${i}` }));
+        tree.ItemsSource = [{ Name: 'root', children }] as Node[];
+
+        const rootVsp = tree.ItemsPanelInstance as VirtualizingStackPanel;
+        const box = new Rect(0, 0, 100, 100);
+        const pump = (): void =>
+        {
+            rootVsp.Viewport = box;
+            rootVsp.Measure(new Size(100, 100));
+            rootVsp.Arrange(box);
+        };
+
+        pump();     // realize the root row + EnableVirtualization on it
+        const rootItem = tree.RootItems[0]!;
+        rootItem.IsExpanded = true;
+        pump(); pump(); pump();   // converge viewport propagation → nested realization
+
+        const nested = rootItem.ItemsPanelInstance as VirtualizingStackPanel;
+        assert.ok(nested instanceof VirtualizingStackPanel, 'expanded row hosts a nested VSP');
+        const realized = nested.RealizedIndices;
+        assert.ok(realized.length > 0, 'some children realize');
+        assert.ok(realized.length < 40, `only a viewport slice realizes, got ${realized.length}`);
+        assert.ok(realized.includes(0), 'the top child realizes (root sits at the top)');
+
+        rootItem.IsExpanded = false;
+        pump();
+        assert.deepEqual(nested.RealizedIndices, [], 'collapse recycles the nested children');
     });
 });

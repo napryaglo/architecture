@@ -7,7 +7,7 @@ import {
     type IScrollInfo,
 } from '../../../runtime/index.js';
 import { Orientation } from '../orientation.js';
-import { VirtualizingPanel } from './virtualizing-panel.js';
+import { VirtualizingPanel, isNestedViewportHost } from './virtualizing-panel.js';
 
 // Stack panel that realizes containers only for items intersecting the
 // Viewport rect. Items are assumed to have uniform extent along the
@@ -65,6 +65,45 @@ export class VirtualizingStackPanel extends VirtualizingPanel implements IScroll
     // the host) collapses to its tile width instead of stretching to
     // fill the parent slot.
     private measuredCross: number = 0;
+
+    // ── Nested (per-level) virtualization state ─────────────────────────
+    // A NESTED panel (an expanded TreeViewItem's child panel) shares the
+    // outer ScrollViewer's viewport rather than owning it. `_originOffset` is
+    // this panel's item[0] absolute position in the shared scroll-extent
+    // space; the viewport hit-test subtracts it so the panel realizes the
+    // children whose ABSOLUTE band meets the shared window. `_nested` also
+    // suppresses the scroll translation in ArrangeOverride — the root panel
+    // (plus ScrollViewer) already applied it, so a nested panel arranges its
+    // children at true local offsets. `_collapsed` short-circuits a
+    // collapsed TreeViewItem: measure to zero, realize nothing.
+    private _originOffset = 0;
+    private _nested = false;
+    private _collapsed = false;
+
+    public get OriginOffset(): number { return this._originOffset; }
+    public get IsCollapsed(): boolean { return this._collapsed; }
+
+    // Called by an INestedViewportHost (TreeViewItem) to configure this panel
+    // as a nested level sharing the outer viewport. Idempotent; invalidates
+    // measure only when something actually changed.
+    public SetNestedViewport(originOffset: number, viewport: Rect): void
+    {
+        let dirty = !this._nested;
+        this._nested = true;
+        if (this._originOffset !== originOffset) { this._originOffset = originOffset; dirty = true; }
+        if (!this.Viewport.Equals(viewport)) { this.Viewport = viewport; dirty = true; }  // Viewport DP is Measure-dirty on its own
+        if (dirty) this.InvalidateMeasure();
+    }
+
+    // Collapse gate — set by a TreeViewItem from its IsExpanded state. A
+    // collapsed panel recycles its realized containers and measures to zero.
+    public SetCollapsed(collapsed: boolean): void
+    {
+        if (this._collapsed === collapsed) return;
+        this._collapsed = collapsed;
+        if (collapsed) this.RecycleAll();
+        this.InvalidateMeasure();
+    }
 
     public get ItemHeight(): number { return this.get_property_value(VirtualizingStackPanel.ItemHeightKey); }
     public set ItemHeight(v: number) { this.set_property_value(VirtualizingStackPanel.ItemHeightKey, v); }
@@ -134,6 +173,10 @@ export class VirtualizingStackPanel extends VirtualizingPanel implements IScroll
     {
         const owner = this.itemsOwner;
         if (owner === undefined) return Size.Zero;
+        // Collapsed nested panel (an unexpanded TreeViewItem): realize nothing,
+        // occupy no space. RecycleAll already ran in SetCollapsed; guard here
+        // covers a collapse set before the panel had an owner.
+        if (this._collapsed) { this.RecycleAll(); return Size.Zero; }
         const count = this.itemCount();
         const horizontal = this.isHorizontal;
         const vp  = this.Viewport;
@@ -148,7 +191,11 @@ export class VirtualizingStackPanel extends VirtualizingPanel implements IScroll
         // Variable-size viewport hit-test: walk cumulative offsets
         // (cached size for measured items, ItemHeight/ItemWidth estimate
         // for un-measured ones) until the band crosses the viewport.
-        const vpStart = horizontal ? vp.X      : vp.Y;
+        // Shift the shared viewport into this panel's LOCAL item space by
+        // subtracting the panel's absolute origin (0 for the root panel, the
+        // parent-row's absolute bottom-of-header for a nested panel). Item
+        // offsets below are all local (0-based), so the comparison is uniform.
+        const vpStart = (horizontal ? vp.X : vp.Y) - this._originOffset;
         const vpEnd   = vpStart + (horizontal ? vp.Width : vp.Height);
         const vpLen   = horizontal ? vp.Width : vp.Height;
         let first = 0;
@@ -209,6 +256,7 @@ export class VirtualizingStackPanel extends VirtualizingPanel implements IScroll
 
     protected override ArrangeOverride(finalSize: Size): Size
     {
+        if (this._collapsed) return Size.Zero;
         const horizontal = this.isHorizontal;
         // Pre-compute prefix sums so each container arranges at the
         // right offset given variable sizes. Cheap O(maxIndex) work.
@@ -220,14 +268,15 @@ export class VirtualizingStackPanel extends VirtualizingPanel implements IScroll
             offsets.push(cursor);
             cursor += this.sizeOf(i);
         }
-        // Viewport-local arrange. In delegate-mode the SCP arranges
-        // this panel into a viewport-sized slot starting at (0, 0);
-        // items at full-extent offsets (1000+ px down) would land
-        // outside the slot and never paint. Subtract the viewport's
-        // primary-axis offset so the first visible item lands at
-        // panel-local 0.
+        // Viewport-local arrange. In delegate-mode the SCP arranges the ROOT
+        // panel into a viewport-sized slot at (0, 0); items at full-extent
+        // offsets (1000+ px down) would land outside the slot and never paint,
+        // so the root subtracts the scroll offset to bring the first visible
+        // item to panel-local 0. A NESTED panel is already inside a container
+        // the root translated, so it arranges children at true local offsets
+        // (scrollOff = 0) — subtracting again would double-translate.
         const vp = this.Viewport;
-        const scrollOff = horizontal ? vp.X : vp.Y;
+        const scrollOff = this._nested ? 0 : (horizontal ? vp.X : vp.Y);
         for (const [index, container] of this.realized)
         {
             const off  = offsets[index]! - scrollOff;
@@ -236,6 +285,16 @@ export class VirtualizingStackPanel extends VirtualizingPanel implements IScroll
                 ? new Rect(off, 0, size, finalSize.Height)
                 : new Rect(0, off, finalSize.Width, size);
             container.Arrange(rect);
+            // Per-level composition: a realized container that hosts its own
+            // virtualizing panel (an expanded TreeViewItem) gets the SHARED
+            // viewport plus its own absolute offset, so its nested panel
+            // realizes the right slice. absoluteOffset = this panel's origin +
+            // the container's local offset. Changing the child's viewport marks
+            // it Measure-dirty; the tree converges over the next layout pass.
+            if (isNestedViewportHost(container))
+            {
+                container.SetOuterViewport(vp, this._originOffset + offsets[index]!);
+            }
         }
         return finalSize;
     }

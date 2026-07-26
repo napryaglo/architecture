@@ -1605,13 +1605,49 @@ export class Visual extends Model
      *  from the property registry, not from per-instance state. */
     public static _collect_inheritable_descriptors(klass: Function): PropertyDescriptor[]
     {
+        return Visual.inheritableMemo(klass).list;
+    }
+
+    /** @internal — the same inheritable descriptors as
+     *  `_collect_inheritable_descriptors`, but each paired with its
+     *  precomputed composite key (`${RootOwner.name}.${Name}`). Element's
+     *  `refresh_inherited_batch` iterates this so it never recomputes
+     *  `compose_key` per descriptor per node — the composite is a pure
+     *  function of the class and is cached here alongside the list. */
+    public static _collect_inheritable_keyed(klass: Function): readonly InheritableEntry[]
+    {
+        return Visual.inheritableMemo(klass).keyed;
+    }
+
+    // Per-class memo. The result is a pure function of (klass's
+    // prototype-chain bags) + (the global inheritable registry); both only
+    // ever grow, and only a NEW inheritable registration changes the output
+    // — captured by Model's inheritable-generation counter. A subtree
+    // refresh calls this once PER ELEMENT, so without the cache a click that
+    // stamps a large template re-walked every prototype chain + re-allocated
+    // per node (≈1s of a multi-second stall in the profiled trace).
+    private static inheritableMemo(klass: Function): { gen: number; list: PropertyDescriptor[]; keyed: InheritableEntry[] }
+    {
+        const gen = Model._inheritableGeneration();
+        const hit = Visual._inheritableCache.get(klass);
+        if (hit !== undefined && hit.gen === gen) return hit;
+
         // The dedup key is `${RootOwner.name}.${Name}` — same composite
         // key the per-instance value store uses, so cross-class
         // properties on different owners stay distinct even when their
         // simple Name collides. (Without the RootOwner prefix, a
         // Border.Tag and a TextBlock.Tag would dedupe as one entry.)
         const seen = new Set<string>();
-        const result: PropertyDescriptor[] = [];
+        const list: PropertyDescriptor[] = [];
+        const keyed: InheritableEntry[] = [];
+        const add = (desc: PropertyDescriptor): void =>
+        {
+            const key = `${desc.RootOwner.name}.${desc.Name}`;
+            if (seen.has(key)) return;
+            seen.add(key);
+            list.push(desc);
+            keyed.push({ key, descriptor: desc });
+        };
         let current: Function | null = klass;
         while (current !== null && current !== Function.prototype)
         {
@@ -1620,11 +1656,7 @@ export class Visual extends Model
             {
                 for (const desc of bag.values())
                 {
-                    if (!inherits(desc.MetaData)) continue;
-                    const key = `${desc.RootOwner.name}.${desc.Name}`;
-                    if (seen.has(key)) continue;
-                    seen.add(key);
-                    result.push(desc);
+                    if (inherits(desc.MetaData)) add(desc);
                 }
             }
             current = Object.getPrototypeOf(current);
@@ -1632,17 +1664,29 @@ export class Visual extends Model
         // Global cross-class inheritable registry (§ 15.2). Any
         // inheritable property registered on a class NOT in the target
         // Visual's prototype chain still cascades through the logical
-        // tree — the registry exposes those descriptors so the
-        // per-property _refresh_inherited walk picks them up.
-        for (const desc of Model._getInheritableDescriptors())
-        {
-            const key = `${desc.RootOwner.name}.${desc.Name}`;
-            if (seen.has(key)) continue;
-            seen.add(key);
-            result.push(desc);
-        }
-        return result;
+        // tree — the registry exposes those descriptors so the refresh
+        // picks them up.
+        for (const desc of Model._getInheritableDescriptors()) add(desc);
+
+        const entry = { gen, list, keyed };
+        Visual._inheritableCache.set(klass, entry);
+        return entry;
     }
+
+    // Memo for the inheritable-descriptor collection, keyed by class and
+    // validated against Model's inheritable-generation counter. WeakMap so
+    // an unreachable class lets its cached lists be GC'd.
+    private static _inheritableCache =
+        new WeakMap<Function, { gen: number; list: PropertyDescriptor[]; keyed: InheritableEntry[] }>();
+}
+
+/** @internal — an inheritable descriptor paired with its precomputed
+ *  composite storage key. Shared between Visual's memo and Element's
+ *  subtree-refresh; not part of mural's published surface. */
+export interface InheritableEntry
+{
+    key: string;
+    descriptor: PropertyDescriptor;
 }
 
 // `Single` and `Panel` — child-collection helpers that used to live

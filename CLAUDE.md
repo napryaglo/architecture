@@ -2,8 +2,8 @@
 
 ## Workflow
 
-- Do not use the `superpowers` skills. No spec docs, no plan files, no
-  design-approval gates.
+- The `superpowers` skills are enabled here. Use brainstorming,
+  writing-plans, executing-plans, systematic-debugging, etc. as they apply.
 
 ## Testing
 

@@ -1,4 +1,19 @@
-import { Visual, safeFire, KNOWN_ROUTED_EVENTS } from './visual.js';
+import { Visual, safeFire, KNOWN_ROUTED_EVENTS, type InheritableEntry } from './visual.js';
+
+// Sentinel for "this node provides no value for a key" — distinct from any
+// real value (including undefined) so change-detection never confuses a
+// genuinely-undefined inherited value with the absence of one.
+const NOT_PROVIDED: unique symbol = Symbol('not-provided');
+
+// The value a DESCENDANT's inheritance walk would read from a node's EVD for
+// one key: the winning value when the source isn't Default, else NOT_PROVIDED
+// (the descendant looks past this node). Mirrors the `Source !== Default`
+// predicate `walk_inherited` / `refresh_inherited_batch` use on the read side,
+// so the change-gated cascade stays consistent with resolution.
+function providedValue(evd: EffectiveValueDescriptor | undefined): unknown
+{
+    return evd !== undefined && evd.Source !== PropertyValueSource.Default ? evd.value : NOT_PROVIDED;
+}
 import { Model } from '../runtime/model.js';
 import type {
     PointerEventArgs,
@@ -21,7 +36,7 @@ import { Rect } from './primitives.js';
 import { AnimationManager } from './animation/manager.js';
 import { Easings, type EasingFunction } from './animation/easing.js';
 import { propertyValues } from '../runtime/model-internals.js';
-import { PropertyValueSource } from '../runtime/binding/effective-value.js';
+import { PropertyValueSource, type EffectiveValueDescriptor } from '../runtime/binding/effective-value.js';
 import { MetaData, inherits } from '../runtime/metadata.js';
 import { NameScope } from './namescope.js';
 import { ObservableCollection, type IReadOnlyObservableCollection } from '../runtime/observable-collection.js';
@@ -925,14 +940,125 @@ export class Element extends Visual implements ITriggerHost
      *  restructures. */
     public override _refresh_inheritance_subtree(): void
     {
-        for (const descriptor of Visual._collect_inheritable_descriptors(this.constructor))
-        {
-            this._refresh_inherited(descriptor);
-        }
+        // Resolve ALL inheritable descriptors for this node in ONE ancestor
+        // climb (refresh_inherited_batch) rather than a per-descriptor
+        // `_refresh_inherited` call that each re-walks the whole ancestor
+        // chain. A subtree refresh (attach / reparent) touches every node ×
+        // every inheritable DP, so this per-node fold from K climbs to one
+        // is the single biggest lever on the refresh cost — the profiled
+        // `walk_inherited` hot path.
+        // CHANGE-GATED CASCADE. Only recurse into the subtree when refreshing
+        // THIS node actually changed one of its descendant-visible ("provided")
+        // inherited values. If none changed, every descendant is provably
+        // unchanged too — a descendant resolves each key from its nearest
+        // providing ancestor, and if this node's provided values held steady
+        // then either it shadows the key (a local value, unaffected) or its own
+        // inherited value didn't move (so nothing above it moved either). This
+        // is what collapses bottom-up assembly from O(N²) to O(N): attaching a
+        // bare container node (which provides no inherited values) no longer
+        // re-walks the subtree it already carries.
+        if (!this.refresh_inherited_batch(Visual._collect_inheritable_keyed(this.constructor))) return;
         this.propagate_inheritance_to_children();
         // Overlay children participate alongside logical children —
         // they're the same logical tree from the popup's perspective.
         this.forEachOverlayChild(c => c._refresh_inheritance_subtree());
+    }
+
+    /** @internal — resolve every inheritable descriptor in a SINGLE ancestor
+     *  traversal and apply the results, reproducing `walk_inherited`'s exact
+     *  per-key priority (nearest logical/templatedParent ancestor with a
+     *  non-default value wins; the visual-parent chain is the fallback, with
+     *  DataContext excluded from it) but paying the climb once instead of
+     *  once per descriptor. Used only by the all-descriptors subtree refresh;
+     *  the single-descriptor cascade still routes through `_refresh_inherited`. */
+    private refresh_inherited_batch(entries: readonly InheritableEntry[]): boolean
+    {
+        const n = entries.length;
+        if (n === 0) return false;
+
+        // Parallel per-index state (no Map / no compose_key per call — the
+        // composite keys are precomputed + cached on `entries`). `found[i]`
+        // marks a key already resolved so later ancestors skip it; `remaining`
+        // lets the climb stop the instant every key has a value.
+        const values: unknown[] = new Array(n);
+        const found: boolean[] = new Array(n).fill(false);
+        let remaining = n;
+
+        // Phase 1 — logical / templatedParent chain (walk_inherited's primary
+        // path). Each key resolves at the first ancestor carrying a
+        // non-default value for it; different keys may stop at different depths.
+        let cursor: Element = this;
+        while (remaining > 0)
+        {
+            const next = cursor._logicalParent ?? cursor._templatedParent;
+            if (next === undefined) break;
+            const bag = propertyValues(next);
+            for (let i = 0; i < n; i++)
+            {
+                if (found[i]) continue;
+                const evd = bag.get(entries[i]!.key);
+                if (evd !== undefined && evd.Source !== PropertyValueSource.Default)
+                {
+                    values[i] = evd.value; found[i] = true; remaining--;
+                }
+            }
+            // A plain Visual parent (no logical-tree state) terminates the
+            // walk — its bag was still inspected above, matching walk_inherited.
+            if (!(next instanceof Element)) break;
+            cursor = next;
+        }
+
+        // Phase 2 — visual-parent fallback for keys the logical chain left
+        // unresolved (styling set inside a ControlTemplate reaching slotted
+        // content). DataContext is NEVER resolved through the visual tree.
+        if (remaining > 0)
+        {
+            const dck = Element.dataContextComposedKey();
+            let v: Visual | undefined = this.GetVisualParent();
+            while (v !== undefined && remaining > 0)
+            {
+                if (v instanceof Element)
+                {
+                    const bag = propertyValues(v);
+                    for (let i = 0; i < n; i++)
+                    {
+                        if (found[i] || entries[i]!.key === dck) continue;
+                        const evd = bag.get(entries[i]!.key);
+                        if (evd !== undefined && evd.Source !== PropertyValueSource.Default)
+                        {
+                            values[i] = evd.value; found[i] = true; remaining--;
+                        }
+                    }
+                }
+                v = v.GetVisualParent();
+            }
+        }
+
+        // Apply — resolved keys take their inherited value; the rest clear any
+        // stale inherited value (mirrors _refresh_inherited's two branches).
+        // While applying, track whether any DESCENDANT-VISIBLE value moved: the
+        // value a child's walk reads from this node for a key is its EVD value
+        // when the winning source isn't Default, else "not provided" (the child
+        // looks past this node). Comparing that before vs. after per key tells
+        // the caller whether the subtree needs cascading — see the gate in
+        // `_refresh_inheritance_subtree`.
+        const pv = propertyValues(this);
+        let changed = false;
+        for (let i = 0; i < n; i++)
+        {
+            const key = entries[i]!.key;
+            const before = providedValue(pv.get(key));
+            if (found[i])
+            {
+                this['ensure_effective_value_for'](entries[i]!.descriptor).SetInheritedValue(values[i]);
+            }
+            else
+            {
+                pv.get(key)?.ClearInherited();
+            }
+            if (!changed && before !== providedValue(pv.get(key))) changed = true;
+        }
+        return changed;
     }
 
     // Children that participate in property-value inheritance from this

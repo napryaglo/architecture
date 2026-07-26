@@ -76,6 +76,28 @@ export class Model
     // — there is no per-Application registry of inheritable properties.
     private static inheritable_descriptors: Set<PropertyDescriptor> = new Set();
 
+    // Monotonic counter bumped every time a NEW inheritable descriptor
+    // joins the registry (RegisterProperty / RegisterReadOnlyProperty with
+    // MetaData.Inherits). Consumers that memoize a derived view of the
+    // inheritable-property universe — `Visual._collect_inheritable_descriptors`
+    // caches its per-class result — key their cache on this generation so a
+    // late inheritable registration invalidates every stale entry. In
+    // practice all registration happens at module-load time, before any
+    // tree exists, so the generation settles once and caches never miss;
+    // the counter exists only to keep the memo correct if that ever changes.
+    private static inheritable_generation: number = 0;
+
+    // Single funnel for both add-sites (RegisterProperty +
+    // RegisterReadOnlyProperty) so the generation bump can't be forgotten.
+    // Only a genuinely new descriptor bumps the generation — re-adding an
+    // existing one (Set no-op) leaves memo caches valid.
+    private static register_inheritable(descriptor: PropertyDescriptor): void
+    {
+        const before = Model.inheritable_descriptors.size;
+        Model.inheritable_descriptors.add(descriptor);
+        if (Model.inheritable_descriptors.size !== before) Model.inheritable_generation++;
+    }
+
     /** @internal — Visual.collect_inheritable_descriptors reads this
      *  to union the global cross-class inheritable property set with
      *  the target's class-chain walk. Consumers outside `Visual` should
@@ -83,6 +105,14 @@ export class Model
     public static _getInheritableDescriptors(): ReadonlySet<PropertyDescriptor>
     {
         return Model.inheritable_descriptors;
+    }
+
+    /** @internal — memoization key for `_collect_inheritable_descriptors`.
+     *  Changes iff the set of inheritable descriptors changed, so a cached
+     *  per-class descriptor list is valid exactly while this is unchanged. */
+    public static _inheritableGeneration(): number
+    {
+        return Model.inheritable_generation;
     }
 
     // Per-instance value store keyed by composite `${RootOwner.name}.${name}`.
@@ -267,7 +297,7 @@ export class Model
             // descendant's prototype chain. See § 15.2.
             if (inherits(meta_data))
             {
-                Model.inheritable_descriptors.add(descriptor);
+                Model.register_inheritable(descriptor);
             }
         }
         return new PropertyKey<T>(descriptor);
@@ -346,7 +376,7 @@ export class Model
         // § 15.2. Same shape as RegisterProperty above.
         if (inherits(meta_data))
         {
-            Model.inheritable_descriptors.add(descriptor);
+            Model.register_inheritable(descriptor);
         }
         return new PropertyKey<T>(descriptor);
     }

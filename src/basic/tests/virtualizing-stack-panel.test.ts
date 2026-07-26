@@ -375,3 +375,49 @@ describe('VirtualizingStackPanel — § 10.4 incremental items-change', () => {
         assert.deepEqual(panel.RealizedIndices, []);
     });
 });
+
+// ── Nested (per-level) virtualization primitives ────────────────────────
+// The building blocks TreeViewItem uses for hierarchical virtualization:
+// OriginOffset shifts the shared viewport into a panel's local item space, and
+// Collapsed short-circuits an unexpanded level to zero size / no realization.
+describe('VirtualizingStackPanel — nested-level primitives', () => {
+    test('OriginOffset shifts realization into local item space', () => {
+        // 40 rows @ 20px. A nested panel whose item[0] sits at absolute 100,
+        // sharing a viewport window of absolute 120..160, should realize the
+        // LOCAL rows whose band meets 20..60 → rows 1, 2.
+        const items = Array.from({ length: 40 }, (_, i) => `item-${i}`);
+        const { ic, panel } = makeVirtualizingIC(items, { itemHeight: 20 });
+        panel.SetNestedViewport(100, new Rect(0, 120, 100, 40));
+        panel.Measure(new Size(100, 40));
+        assert.deepEqual(panel.RealizedIndices, [1, 2]);
+    });
+
+    test('OriginOffset past the window realizes nothing local', () => {
+        // Shared window 0..40 but this panel's origin is 200 → its rows are all
+        // far below the window → nothing realizes.
+        const items = Array.from({ length: 40 }, (_, i) => `item-${i}`);
+        const { ic, panel } = makeVirtualizingIC(items, { itemHeight: 20 });
+        panel.SetNestedViewport(200, new Rect(0, 0, 100, 40));
+        panel.Measure(new Size(100, 40));
+        assert.deepEqual(panel.RealizedIndices, []);
+    });
+
+    test('Collapsed realizes nothing and measures to zero; un-collapse restores', () => {
+        const items = Array.from({ length: 40 }, (_, i) => `item-${i}`);
+        const { ic, panel } = makeVirtualizingIC(items, {
+            viewport: new Rect(0, 0, 100, 60), itemHeight: 20,
+        });
+        ic.Measure(new Size(100, 60));
+        assert.deepEqual(panel.RealizedIndices, [0, 1, 2]);
+
+        panel.SetCollapsed(true);
+        const size = panel.Measure(new Size(100, 60)), zero = panel.DesiredSize;
+        void size;
+        assert.equal(zero.Height, 0, 'collapsed panel measures to zero height');
+        assert.deepEqual(panel.RealizedIndices, [], 'collapsed panel realizes nothing');
+
+        panel.SetCollapsed(false);
+        panel.Measure(new Size(100, 60));
+        assert.deepEqual(panel.RealizedIndices, [0, 1, 2], 'un-collapse re-realizes the viewport rows');
+    });
+});

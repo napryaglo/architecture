@@ -20,6 +20,8 @@ import { ItemsControl } from '../base/items-control.js';
 import { ScrollViewer } from '../surfaces/scroll-viewer.js';
 import { Selector, SelectionMode } from './selector.js';
 import { StackPanel } from '../../basic/panels/stack-panel.js';
+import { VirtualizingStackPanel } from '../../basic/panels/virtualisation/virtualizing-stack-panel.js';
+import type { Panel } from '../../runtime/index.js';
 import { TextBlock } from '../../basic/text-block.js';
 
 
@@ -215,6 +217,16 @@ export class TreeView extends Selector
 {
     public static readonly IndentKey = Model.RegisterProperty<number>(
         TreeView, 'Indent', 16, MetaData.Measure | MetaData.Arrange);
+    // Opt-in UI virtualization. Default false keeps the classic non-
+    // virtualized StackPanel (every expanded row materialized) so existing
+    // consumers are unchanged. When true, the ROOT level's ItemsPanel becomes
+    // a VirtualizingStackPanel driven by the tree's own ScrollViewer viewport,
+    // and each TreeViewItem virtualizes its expanded children (see the panel
+    // factory + TreeViewItem.ItemsPanel). Degrades to full realization when the
+    // tree is measured unbounded (no clipping viewport) — correct, just not
+    // saving work — so it's safe to leave on.
+    public static readonly IsVirtualizingKey = Model.RegisterProperty<boolean>(
+        TreeView, 'IsVirtualizing', false, MetaData.None);
     // TwoWay by default — the standard binding pattern is a VM
     // round-trip: user clicks a row → DP updates → push to VM;
     // VM sets the property → DP updates → tree selects the matching
@@ -246,7 +258,14 @@ export class TreeView extends Selector
         // from the default Style — applied here via applyDefaultStyle()
         // so the rest of the ctor / first measure sees a populated
         // template tree.
-        this.ItemsPanel = () => new StackPanel();
+        this.ItemsPanel = () => this.createRootPanel();
+        // Flipping IsVirtualizing after construction (the markup path sets DPs
+        // post-ctor) must re-materialize the root panel. Re-assigning a FRESH
+        // factory forces ItemsControl to tear down the old panel and build the
+        // new (virtualizing ⇄ plain) kind.
+        this.AddPropertyChangedListener(TreeView.IsVirtualizingKey, () => {
+            this.ItemsPanel = () => this.createRootPanel();
+        });
         // Hierarchical trees use Extended-mode semantics by default
         // (Shift / Ctrl modifier handling). Override via the
         // SelectionMode DP if a consumer wants Single / Multiple.
@@ -254,6 +273,17 @@ export class TreeView extends Selector
         // Base ItemsControl constructor seeded Items = _declarativeItems.
         this.applyDefaultStyle();
     }
+
+    // Root-level ItemsPanel: a VirtualizingStackPanel when virtualization is
+    // opted in, else the classic StackPanel. TreeViewItem consults its owning
+    // TreeView's IsVirtualizing to make the same choice for its children.
+    private createRootPanel(): Panel
+    {
+        return this.IsVirtualizing ? new VirtualizingStackPanel() : new StackPanel();
+    }
+
+    public get IsVirtualizing(): boolean { return this.get_property_value(TreeView.IsVirtualizingKey); }
+    public set IsVirtualizing(v: boolean) { this.set_property_value(TreeView.IsVirtualizingKey, v); }
 
     public get Indent(): number { return this.get_property_value(TreeView.IndentKey); }
     public set Indent(v: number) { this.set_property_value(TreeView.IndentKey, v); }
@@ -353,6 +383,14 @@ export class TreeView extends Selector
         return wrapTreeItem(item, this);
     }
 
+    public override PrepareContainerForItemOverride(container: Visual, item: unknown, index: number): void
+    {
+        super.PrepareContainerForItemOverride(container, item, index);
+        // Root rows opt into nested virtualization when the tree does — this is
+        // the earliest point a freshly-realized container knows its owner.
+        if (this.IsVirtualizing && container instanceof TreeViewItem) container.EnableVirtualization();
+    }
+
     public override RebindContainerForItemOverride(container: Visual, item: unknown): void
     {
         // Reused TreeViewItem — refresh the header from the new data,
@@ -362,6 +400,7 @@ export class TreeView extends Selector
         // in wrapTreeItem; on recycle the row's children stay, only the
         // header flips.
         if (!(container instanceof TreeViewItem)) return;
+        if (this.IsVirtualizing) container.EnableVirtualization();
         container.Header = headerFor(item, resolveItemTemplate(this, item));
     }
 
@@ -611,8 +650,14 @@ export class TreeViewItem extends HeaderedItemsControl
 
     // Captured by the ItemsPanel factory on first invocation. The
     // IsExpanded handler reaches into it to drive collapse without
-    // depending on a named PART_ lookup.
+    // depending on a named PART_ lookup. Exactly one of the two is set,
+    // per the panel kind chosen by _virtualizing.
     private _childWrap: CollapsibleStack | undefined;
+    private _childVsp: VirtualizingStackPanel | undefined;
+    // Set by EnableVirtualization() (from the owning TreeView / parent item at
+    // prepare time) so this item's children realize through a nested
+    // VirtualizingStackPanel that shares the outer scroll viewport.
+    private _virtualizing = false;
 
     // Template parts — resolved in the constructor.
     private readonly _row:         ClickableRow;
@@ -669,19 +714,59 @@ export class TreeViewItem extends HeaderedItemsControl
         // triggers — both write PART_Row.Background via DynamicResource
         // so theme switches re-tint live. No imperative refresh hook.
 
-        // Items panel = CollapsibleStack. The factory caches the
-        // single instance so IsExpanded toggles can flip its
-        // collapsed state directly. Initialised collapsed because
-        // IsExpanded defaults to false.
-        this.ItemsPanel = (): CollapsibleStack => {
-            const cs = new CollapsibleStack();
-            this._childWrap = cs;
-            cs.SetCollapsed(!this.IsExpanded);
-            return cs;
-        };
+        // Items panel — a CollapsibleStack by default, a nested
+        // VirtualizingStackPanel once EnableVirtualization() flips the mode.
+        // The factory caches the instance so IsExpanded toggles + viewport
+        // propagation reach it without a named PART_ lookup. Initialised
+        // collapsed because IsExpanded defaults to false.
+        this.ItemsPanel = (): Panel => this.createChildPanel();
         // Base ItemsControl seeded Items = _declarativeItems.
 
         this.refreshChevron();
+    }
+
+    // Build the children panel for the current mode. Records the instance in
+    // the matching field (and clears the other) so collapse + viewport hooks
+    // target the live panel.
+    private createChildPanel(): Panel
+    {
+        if (this._virtualizing)
+        {
+            const vsp = new VirtualizingStackPanel();
+            this._childVsp  = vsp;
+            this._childWrap = undefined;
+            vsp.SetCollapsed(!this.IsExpanded);
+            return vsp;
+        }
+        const cs = new CollapsibleStack();
+        this._childWrap = cs;
+        this._childVsp  = undefined;
+        cs.SetCollapsed(!this.IsExpanded);
+        return cs;
+    }
+
+    // Opt this item's children into UI virtualization. Called by the owning
+    // TreeView (root rows) or the parent TreeViewItem (nested rows) at prepare
+    // time — the earliest point the item knows its tree's IsVirtualizing. Idem-
+    // potent; re-materializes the child panel as a nested VSP on first call.
+    public EnableVirtualization(): void
+    {
+        if (this._virtualizing) return;
+        this._virtualizing = true;
+        // Fresh factory forces ItemsControl to tear down the CollapsibleStack
+        // and build the nested VSP.
+        this.ItemsPanel = (): Panel => this.createChildPanel();
+    }
+
+    // INestedViewportHost — the parent VSP calls this during arrange with the
+    // shared scroll viewport and this row's absolute offset. Forward a shifted
+    // origin (children start below this row's header) to the nested VSP.
+    public SetOuterViewport(viewport: Rect, containerOffset: number): void
+    {
+        const vsp = this._childVsp;
+        if (vsp === undefined) return;
+        const headerHeight = this._row.DesiredSize.Height;
+        vsp.SetNestedViewport(containerOffset + headerHeight, viewport);
     }
 
     public get IsExpanded(): boolean { return this.get_property_value(TreeViewItem.IsExpandedKey); }
@@ -733,6 +818,9 @@ export class TreeViewItem extends HeaderedItemsControl
     public override PrepareContainerForItemOverride(container: Visual, item: unknown, index: number): void
     {
         super.PrepareContainerForItemOverride(container, item, index);
+        // Cascade virtualization down: a virtualizing item's children realize
+        // through nested VSPs too.
+        if (this._virtualizing && container instanceof TreeViewItem) container.EnableVirtualization();
         // Refresh after attach — the chevron's "leaf vs branch" state
         // is a function of whether we have any sub-rows.
         this.refreshChevron();
@@ -798,6 +886,7 @@ export class TreeViewItem extends HeaderedItemsControl
             case 'IsExpanded':
                 this.refreshChevron();
                 this._childWrap?.SetCollapsed(!(newValue as boolean));
+                this._childVsp?.SetCollapsed(!(newValue as boolean));
                 this.InvalidateMeasure();
                 return;
             case 'Header':
