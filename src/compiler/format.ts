@@ -559,8 +559,9 @@ class Printer
 
     private printInclude(item: IncludeForm, level: number): void
     {
-        const as = item.key !== undefined ? ` as ${item.key}` : '';
-        this.push(level, `include ${q(item.path)}${as}`);
+        const mod = item.colored ? 'colored ' : '';
+        const as  = item.key !== undefined ? ` as ${item.key}` : '';
+        this.push(level, `include ${mod}${q(item.path)}${as}`);
     }
 
     private printGlyphs(item: GlyphsForm, level: number): void

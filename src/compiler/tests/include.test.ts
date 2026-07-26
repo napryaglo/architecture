@@ -37,7 +37,7 @@ describe('include — emit', () => {
     test('single file → one Set keyed by the resolver, plus its imports', () => {
         const js = emitted(`resources Icons { include "icons/home.svg" }`);
         assert.match(js, /\.Set\("home", new PathGeometry\(\[\]\)\)/);
-        assert.match(js, /import \{ PathGeometry \} from "@pragmatic-lab/mural\/visual-engine"/);
+        assert.match(js, /import \{ PathGeometry \} from "@pragmatic-lab\/mural\/visual-engine"/);
     });
 
     test('`as <key>` overrides the resource key', () => {
@@ -50,7 +50,7 @@ describe('include — emit', () => {
         assert.match(js, /\.Set\("home", /);
         assert.match(js, /\.Set\("search", /);
         // Both imported names land in one merged import line.
-        assert.match(js, /import \{ GeometryGroup, PathGeometry \} from "@pragmatic-lab/mural\/visual-engine"/);
+        assert.match(js, /import \{ GeometryGroup, PathGeometry \} from "@pragmatic-lab\/mural\/visual-engine"/);
     });
 
     test('include coexists with hand-authored entries in the same block', () => {
@@ -60,6 +60,20 @@ describe('include — emit', () => {
         }`);
         assert.match(js, /\.Set\("home", /);
         assert.match(js, /\.Set\("accent", /);
+    });
+});
+
+describe('include — colored flag threading', () => {
+
+    test('bare include passes colored=false; `include colored` passes true', () => {
+        const seen: boolean[] = [];
+        const capturing: IncludeResolver = (_path, ctx) => {
+            seen.push(ctx.colored);
+            return { entries: [{ key: 'x', valueJs: 'new PathGeometry([])' }], imports: [] };
+        };
+        compile(`resources I { include "a.svg" }`,          { include: capturing });
+        compile(`resources I { include colored "b.svg" }`,  { include: capturing });
+        assert.deepEqual(seen, [false, true]);
     });
 });
 

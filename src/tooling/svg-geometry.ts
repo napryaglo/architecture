@@ -28,6 +28,10 @@ import {
     type PathSegment,
 } from '../visual-engine/index.js';
 import { parseSvgIcon } from '../basic/svg-icon-parser.js';
+import { CURRENT_COLOR, type IconPaint } from '../basic/icon.js';
+
+const BASIC         = '@pragmatic-lab/mural/basic';
+const VISUAL_ENGINE = '@pragmatic-lab/mural/visual-engine';
 
 export interface GeometryResourceJs
 {
@@ -35,6 +39,14 @@ export interface GeometryResourceJs
     valueJs: string;
     /** visual-engine type names the expression references. */
     names:   readonly string[];
+}
+
+export interface DrawingResourceJs
+{
+    /** JS expression constructing the IconDefinition (bare type names). */
+    valueJs: string;
+    /** Named imports the expression references, grouped by module. */
+    imports: ReadonlyArray<{ module: string; names: readonly string[] }>;
 }
 
 // Serialize an SVG document to a geometry-construction expression plus the
@@ -68,6 +80,40 @@ export function geometryToJs(g: Geometry): GeometryResourceJs
     const used = new Set<string>();
     const valueJs = emitGeometry(g, used);
     return { valueJs, names: [...used].sort() };
+}
+
+// Serialize an SVG to an IconDefinition-construction expression that KEEPS
+// each shape's concrete paint (the colored counterpart of svgToGeometryJs).
+// currentColor / unspecified fills resolve to black — the SVG default —
+// so the art paints without any theme wiring.
+export function svgToIconJs(svgText: string): DrawingResourceJs
+{
+    const ve  = new Set<string>();   // visual-engine names (geometry + Color)
+    const def = parseSvgIcon(svgText);
+    const shapes = def.Shapes.map(s =>
+    {
+        const geom   = emitGeometry(s.Geometry, ve);
+        const fill   = emitPaint(s.Fill,   ve);
+        const stroke = emitPaint(s.Stroke, ve);
+        return `{ Geometry: ${geom}, Fill: ${fill}, Stroke: ${stroke}, StrokeWidth: ${n(s.StrokeWidth)} }`;
+    });
+    const valueJs = `new IconDefinition(${n(def.ViewBoxWidth)}, ${n(def.ViewBoxHeight)}, [${shapes.join(', ')}])`;
+
+    const imports: Array<{ module: string; names: readonly string[] }> = [
+        { module: BASIC, names: ['IconDefinition'] },
+    ];
+    if (ve.size > 0) imports.push({ module: VISUAL_ENGINE, names: [...ve].sort() });
+    return { valueJs, imports };
+}
+
+// IconPaint → JS expression. Color → literal new Color(...); the
+// currentColor sentinel → black; none / undefined → the literal `undefined`.
+function emitPaint(p: IconPaint, used: Set<string>): string
+{
+    if (p === undefined)      return 'undefined';
+    used.add('Color');
+    if (p === CURRENT_COLOR)  return 'new Color(0, 0, 0, 255)';
+    return `new Color(${p.R}, ${p.G}, ${p.B}, ${p.A})`;
 }
 
 function emitGeometry(g: Geometry, used: Set<string>): string

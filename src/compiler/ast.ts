@@ -376,6 +376,9 @@ export interface IncludeForm
     /** Explicit resource key from `as <key>` (single-file only); else the
      *  key is derived from each matched file's basename. */
     key?: string;
+    /** `include colored "…"` → true: import as a colored IconDefinition
+     *  rather than a monochrome Geometry. */
+    colored: boolean;
     span: SourceSpan;
 }
 

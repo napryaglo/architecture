@@ -17,13 +17,13 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { basename, dirname, extname, join } from 'node:path';
 import type { IncludeResolver, IncludeResolution } from '../compiler/compiler.js';
-import { svgToGeometryJs } from './svg-geometry.js';
+import { svgToGeometryJs, svgToIconJs } from './svg-geometry.js';
 
 const VISUAL_ENGINE = '@pragmatic-lab/mural/visual-engine';
 
 export function makeIncludeResolver(baseDir: string): IncludeResolver
 {
-    return (spec: string, ctx: { key: string | undefined }): IncludeResolution =>
+    return (spec: string, ctx: { key: string | undefined; colored: boolean }): IncludeResolution =>
     {
         const matches = resolveMatches(baseDir, spec);
         if (matches.length === 0)
@@ -31,7 +31,14 @@ export function makeIncludeResolver(baseDir: string): IncludeResolver
             throw new Error(`no files matched "${spec}" (relative to ${baseDir})`);
         }
         const entries: Array<{ key: string; valueJs: string }> = [];
-        const names = new Set<string>();
+        const byModule = new Map<string, Set<string>>();
+        const addNames = (module: string, names: readonly string[]): void =>
+        {
+            let set = byModule.get(module);
+            if (set === undefined) { set = new Set<string>(); byModule.set(module, set); }
+            for (const nm of names) set.add(nm);
+        };
+
         for (const m of matches)
         {
             const ext = extname(m.abs).toLowerCase();
@@ -40,16 +47,26 @@ export function makeIncludeResolver(baseDir: string): IncludeResolver
                 throw new Error(
                     `unsupported include type '${ext}' for ${m.abs} — only .svg is handled today`);
             }
-            const { valueJs, names: used } = svgToGeometryJs(readFileSync(m.abs, 'utf8'));
-            for (const u of used) names.add(u);
-            entries.push({ key: ctx.key ?? m.key, valueJs });
+            const text = readFileSync(m.abs, 'utf8');
+            if (ctx.colored)
+            {
+                const { valueJs, imports } = svgToIconJs(text);
+                for (const imp of imports) addNames(imp.module, imp.names);
+                entries.push({ key: ctx.key ?? m.key, valueJs });
+            }
+            else
+            {
+                const { valueJs, names } = svgToGeometryJs(text);
+                addNames(VISUAL_ENGINE, names);
+                entries.push({ key: ctx.key ?? m.key, valueJs });
+            }
         }
-        return {
-            entries,
-            imports: names.size > 0
-                ? [{ module: VISUAL_ENGINE, names: [...names].sort() }]
-                : [],
-        };
+
+        const imports = [...byModule.entries()]
+            .filter(([, set]) => set.size > 0)
+            .sort((a, b) => a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)
+            .map(([module, set]) => ({ module, names: [...set].sort() }));
+        return { entries, imports };
     };
 }
 

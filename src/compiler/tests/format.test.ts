@@ -175,3 +175,39 @@ describe('formatter — corpus sweep (repo .mu files)', () =>
         });
     }
 });
+
+// Walk the parsed document to the first include-form node.
+function findIncludeForm(src: string): { colored: boolean; key?: string; path: string } {
+    const doc = new Parser(src, { isStringBody }).ParseDocument();
+    const stack: unknown[] = [doc];
+    while (stack.length) {
+        const n = stack.pop();
+        if (n && typeof n === 'object') {
+            if ((n as { kind?: string }).kind === 'include-form') {
+                return n as { colored: boolean; key?: string; path: string };
+            }
+            for (const k of Object.keys(n)) stack.push((n as Record<string, unknown>)[k]);
+        }
+    }
+    throw new Error('no include-form found');
+}
+
+describe('include colored', () => {
+
+    test('parser records colored=true for the leading keyword', () => {
+        const form = findIncludeForm(`resources Icons { include colored "art/logo.svg" as logo }`);
+        assert.equal(form.colored, true);
+        assert.equal(form.key, 'logo');
+        assert.equal(form.path, 'art/logo.svg');
+    });
+
+    test('bare include is colored=false', () => {
+        const form = findIncludeForm(`resources Icons { include "icons/home.svg" }`);
+        assert.equal(form.colored, false);
+    });
+
+    test('formatter round-trips the colored keyword', () => {
+        const src = `resources Icons {\n    include colored "art/logo.svg" as logo\n}\n`;
+        assert.match(format(src), /include colored "art\/logo\.svg" as logo/);
+    });
+});

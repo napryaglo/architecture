@@ -241,7 +241,7 @@ export interface IncludeResolution
 
 export type IncludeResolver = (
     path: string,
-    ctx: { key: string | undefined },
+    ctx: { key: string | undefined; colored: boolean },
 ) => IncludeResolution;
 
 // Resolves a `glyphs "<font>" { … }` block. Given the font path and the
@@ -1221,7 +1221,7 @@ export class Compiler
         let res: IncludeResolution;
         try
         {
-            res = this.include(form.path, { key: form.key });
+            res = this.include(form.path, { key: form.key, colored: form.colored });
         }
         catch (e)
         {

@@ -8,14 +8,32 @@ import {
     parseSvgIcon,
 } from '../index.js';
 import {
+    Brush,
     CubicBezierSegment,
     EllipseGeometry,
     LineSegment,
     PathGeometry,
     PathFigure,
+    Pen,
+    Rect,
     RectangleGeometry,
     Size,
+    SolidColorBrush,
 } from '../../visual-engine/index.js';
+import type { DrawingContext } from '../../runtime/index.js';
+
+// Captures the Fill brush handed to each DrawGeometry call.
+class FillCapture implements DrawingContext
+{
+    public fills: Array<Brush | undefined> = [];
+    DrawGeometry(b: Brush | undefined, _p: Pen | undefined, _g: unknown): void { this.fills.push(b); }
+    DrawRectangle(): void { throw new Error('not used'); }
+    DrawText():      void { throw new Error('not used'); }
+    DrawImage():     void { throw new Error('not used'); }
+    PushTransform(): void { /* no-op */ }
+    PushClip():      void { /* no-op */ }
+    Pop():           void { /* no-op */ }
+}
 
 // ── Path-data parser ─────────────────────────────────────────────────
 
@@ -220,5 +238,29 @@ describe('Icon control', () =>
     test('Recolor default is true', () =>
     {
         assert.equal(new Icon().Recolor, true);
+    });
+
+    test('Recolor=false paints each shape with its authored color', () =>
+    {
+        const svg = `<svg viewBox="0 0 24 24">
+            <rect x="0" y="0" width="12" height="12" fill="#ff0000"/>
+            <rect x="12" y="12" width="12" height="12" fill="#0000ff"/>
+        </svg>`;
+        const icon = new Icon();
+        icon.Source  = parseSvgIcon(svg);
+        icon.Recolor = false;
+        icon.Width = icon.Height = 24;
+        icon.Measure(new Size(24, 24));
+        icon.Arrange(new Rect(0, 0, 24, 24));
+
+        const dc = new FillCapture();
+        icon.Render(dc);
+
+        const solids = dc.fills.filter((b): b is SolidColorBrush => b instanceof SolidColorBrush);
+        assert.equal(solids.length, 2, 'two colored shapes painted');
+        assert.equal(solids[0]!.Color.R, 255);
+        assert.equal(solids[0]!.Color.B, 0);
+        assert.equal(solids[1]!.Color.B, 255);
+        assert.equal(solids[1]!.Color.R, 0);
     });
 });
