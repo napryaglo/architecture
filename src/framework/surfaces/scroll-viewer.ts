@@ -125,6 +125,14 @@ export class ScrollViewer extends ContentControl
     public static readonly IsAutoHideScrollBarsKey = Model.RegisterProperty<boolean>(
         ScrollViewer, 'IsAutoHideScrollBars', false, MetaData.None);
 
+    // Opt-in "keep the latest content visible". When true, an arrange pass whose
+    // content grew snaps VerticalOffset to the bottom — but only while the
+    // viewport was already parked at the bottom (sticky). Scrolling up releases
+    // it; scrolling back to the bottom resumes it. Default false → no effect on
+    // existing ScrollViewers. MetaData.Arrange so toggling it re-arranges.
+    public static readonly AutoScrollToEndKey = Model.RegisterProperty<boolean>(
+        ScrollViewer, 'AutoScrollToEnd', false, MetaData.Arrange);
+
     // Edge-gutter width (in viewport-local px) that triggers auto-scroll
     // while a drag is hovering over the ScrollViewer (8.4). Setting `0`
     // disables auto-scroll. Default 24 — matches the Visio / Figma / drawio
@@ -252,6 +260,14 @@ export class ScrollViewer extends ContentControl
 
     public get VerticalOffset(): number { return this.get_property_value(ScrollViewer.VerticalOffsetKey); }
     public set VerticalOffset(value: number) { this.set_property_value(ScrollViewer.VerticalOffsetKey, value); }
+
+    public get AutoScrollToEnd(): boolean { return this.get_property_value(ScrollViewer.AutoScrollToEndKey); }
+    public set AutoScrollToEnd(v: boolean) { this.set_property_value(ScrollViewer.AutoScrollToEndKey, v); }
+
+    // Sticky auto-scroll state (only read/written when AutoScrollToEnd is true).
+    // _wasAtEnd starts true so the first content load lands at the bottom.
+    private _lastAutoScrollExtent = 0;
+    private _wasAtEnd            = true;
 
     public get IsScrolled(): boolean { return this.get_property_value(ScrollViewer.IsScrolledKey); }
 
@@ -406,6 +422,25 @@ export class ScrollViewer extends ContentControl
         // width child ends up beside the cross-axis bar rather than
         // clipped under it — see ScrollContentPresenter.ArrangeOverride.
         this._scp?.Arrange(new Rect(0, 0, contentW, contentH));
+
+        // Sticky auto-scroll: after the SCP arrange, ExtentHeight /
+        // ScrollableHeight are current. Snap to the bottom only when the content
+        // grew and the viewport was already at the end; re-arrange the SCP so the
+        // offset lands this frame. Then remember whether we're at the end for the
+        // next pass — a user scroll-up re-runs this with no growth and clears the
+        // flag, releasing the stickiness until they scroll back down.
+        if (this.AutoScrollToEnd)
+        {
+            const AUTO_SCROLL_EPS = 1;
+            const extent = this.ExtentHeight;
+            if (extent > this._lastAutoScrollExtent && this._wasAtEnd)
+            {
+                this.VerticalOffset = this.ScrollableHeight;
+                this._scp?.Arrange(new Rect(0, 0, contentW, contentH));
+            }
+            this._lastAutoScrollExtent = extent;
+            this._wasAtEnd = this.VerticalOffset >= this.ScrollableHeight - AUTO_SCROLL_EPS;
+        }
 
         // Sync scrollbar DPs to the now-final viewport sizes BEFORE
         // arranging the bars so each thumb lands at the correct length /

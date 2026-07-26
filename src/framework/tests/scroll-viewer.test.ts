@@ -523,3 +523,78 @@ describe('ScrollViewer — § 10.7 EvaluateEdgeAutoScroll public API', () => {
         assert.doesNotThrow(() => sv.StopEdgeAutoScroll());
     });
 });
+
+// A content element whose height can grow between arranges, to exercise
+// AutoScrollToEnd's content-growth trigger.
+class Growable extends Element
+{
+    public h: number;
+    constructor(h: number) { super(); this.h = h; }
+    protected override MeasureOverride(_a: Size): Size { return new Size(50, this.h); }
+    public grow(dh: number): void { this.h += dh; this.InvalidateMeasure(); }
+}
+
+describe('ScrollViewer — AutoScrollToEnd (sticky)', () => {
+    beforeEach(() => { initTestApp(); });
+
+    function layout(sv: ScrollViewer): void {
+        sv.Measure(new Size(100, 100));
+        sv.Arrange(new Rect(0, 0, 100, 100));
+    }
+
+    test('snaps to the bottom when content grows and the viewport is at the end', () => {
+        const sv = new ScrollViewer();
+        sv.AutoScrollToEnd = true;
+        const c = new Growable(300);
+        sv.Content = c;
+        layout(sv);
+        // First content lands at the bottom (initial _wasAtEnd = true).
+        assert.ok(sv.ScrollableHeight > 0);
+        assert.equal(sv.VerticalOffset, sv.ScrollableHeight);
+
+        c.grow(200);
+        layout(sv);
+        assert.equal(sv.VerticalOffset, sv.ScrollableHeight);
+    });
+
+    test('does NOT snap after the user scrolls up (sticky released)', () => {
+        const sv = new ScrollViewer();
+        sv.AutoScrollToEnd = true;
+        const c = new Growable(300);
+        sv.Content = c;
+        layout(sv);
+
+        sv.VerticalOffset = 0;   // user scrolls up
+        layout(sv);              // recomputes _wasAtEnd = false
+        c.grow(200);
+        layout(sv);
+        assert.equal(sv.VerticalOffset, 0, 'stayed put — no yank');
+    });
+
+    test('resumes snapping once the user scrolls back to the bottom', () => {
+        const sv = new ScrollViewer();
+        sv.AutoScrollToEnd = true;
+        const c = new Growable(300);
+        sv.Content = c;
+        layout(sv);
+
+        sv.VerticalOffset = 0;
+        layout(sv);
+        sv.ScrollToBottom();     // back to the end
+        layout(sv);
+        c.grow(200);
+        layout(sv);
+        assert.equal(sv.VerticalOffset, sv.ScrollableHeight);
+    });
+
+    test('default (AutoScrollToEnd=false) never auto-scrolls', () => {
+        const sv = new ScrollViewer();
+        const c = new Growable(300);
+        sv.Content = c;
+        layout(sv);
+        assert.equal(sv.VerticalOffset, 0);
+        c.grow(200);
+        layout(sv);
+        assert.equal(sv.VerticalOffset, 0);
+    });
+});
