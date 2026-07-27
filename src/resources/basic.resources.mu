@@ -58,6 +58,9 @@ resources MuralBasic {
     include "shapes/chevron-right.svg" as ChevronRight
     include "shapes/chevron-left.svg" as ChevronLeft
     include "shapes/close.svg" as IconClose
+    // Small filled dot — the unsaved-changes indicator on a document tab
+    // (Shape[Geometry=@IconDirtyDot]).
+    include "shapes/dot.svg" as IconDirtyDot
     include "shapes/check.svg" as IconCheck
     // Three horizontal dots (Material more_horiz) — the "overflow / more
     // actions" affordance. Three centred <circle>s → a GeometryGroup, so it

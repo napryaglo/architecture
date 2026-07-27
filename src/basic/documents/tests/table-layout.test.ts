@@ -96,6 +96,20 @@ describe('layoutTable — grid geometry', () => {
         assert.ok(Math.abs(table.right - 100) < 0.1, `table right ${table.right} ≈ 100`);
     });
 
+    test('LastColumnFills: non-last columns stay natural; the last absorbs the remaining width', () => {
+        const t = sampleTable();
+        t.LastColumnFills = true;
+        // 300 is wider than the natural table (175), so the last column grows.
+        const r = layoutBlocks([t], { availableWidth: 300, base: BASE, env: ENV });
+        const table = r.boxes[0] as TableBox;
+        const c0 = table.rows[0]!.cells[0]!;
+        const c1 = table.rows[0]!.cells[1]!;
+        // Col 0 keeps its natural 76; col 1 fills the rest (300 − borders(3) − 76).
+        assert.equal(c0.right - c0.x, 76, 'first column stays natural');
+        assert.equal(c1.right - c1.x, 221, 'last column fills remaining width');
+        assert.ok(Math.abs(table.right - 300) < 0.1, `table spans the box (${table.right} ≈ 300)`);
+    });
+
     test('a cell aligns its own content within the column via Paragraph.TextAlignment', () => {
         // Body col 1 ("app"=30) is right-aligned inside col 1 whose width is driven
         // by the header ("Taxonomy"). Content width 80, content 30 → shift 50.

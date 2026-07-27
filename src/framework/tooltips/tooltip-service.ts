@@ -114,12 +114,15 @@ export class TooltipPopupHost extends Panel
             origin.x, origin.y, aRect.Width, aRect.Height,
             w, h, this.pointerX, this.pointerY);
 
-        // Flip-on-edge — if the chosen rect would sit past the surface,
-        // swap to the opposite cardinal placement. Keeps tooltips
-        // on-screen for anchors near the surface edge without per-call
-        // collision math.
-        if (x + w > finalSize.Width || x < 0
-            || y + h > finalSize.Height || y < 0)
+        // Flip-on-edge — if the chosen rect would spill past the surface
+        // ALONG THE PLACEMENT'S OWN AXIS, swap to the opposite cardinal
+        // placement. The flip must be axis-aware: a Bottom/Top tooltip only
+        // flips on VERTICAL overflow, a Left/Right one only on HORIZONTAL.
+        // Otherwise a wide tooltip on a small anchor (its centered x spills
+        // sideways) would wrongly flip the vertical axis and — for a top-edge
+        // toolbar button — send y negative too, so the final clamp pinned it
+        // to (0,0). Cross-axis spill is handled by the clamp below.
+        if (overflowsPrimaryAxis(this.placement, x, y, w, h, finalSize))
         {
             const flipped = pickPlacement(flip(this.placement),
                 origin.x, origin.y, aRect.Width, aRect.Height,
@@ -156,6 +159,31 @@ function pickPlacement(
         case PlacementMode.Right:  return { x: ax + aW + ANCHOR_GAP, y: ay + (aH - h) / 2 };
         case PlacementMode.Center: return { x: ax + (aW - w) / 2,   y: ay + (aH - h) / 2 };
         case PlacementMode.Mouse:  return { x: px + POINTER_OFFSET_X, y: py + POINTER_OFFSET_Y };
+    }
+}
+
+// Does the placed rect spill past the surface ALONG the placement's own
+// axis — the only overflow a flip can meaningfully correct? For Bottom/Top
+// that's the vertical axis; for Left/Right the horizontal one. Center/Mouse
+// have no cardinal axis, so any spill counts (they fall back to Bottom on
+// flip). Cross-axis spill is left to the caller's clamp.
+function overflowsPrimaryAxis(
+    mode: PlacementMode,
+    x: number, y: number, w: number, h: number,
+    size: Size,
+): boolean
+{
+    switch (mode)
+    {
+        case PlacementMode.Bottom:
+        case PlacementMode.Top:
+            return y < 0 || y + h > size.Height;
+        case PlacementMode.Left:
+        case PlacementMode.Right:
+            return x < 0 || x + w > size.Width;
+        case PlacementMode.Center:
+        case PlacementMode.Mouse:
+            return x < 0 || x + w > size.Width || y < 0 || y + h > size.Height;
     }
 }
 

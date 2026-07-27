@@ -1,6 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { Application, type IServiceProvider } from '../../../runtime/index.js';
+import { Application, MetaData, Model, type IServiceProvider } from '../../../runtime/index.js';
+import { resolveKey } from '../../../runtime/model-internals.js';
 import { ContentHostService } from '../services/content-host-service.js';
 import {
     DocumentsContentHostService,
@@ -20,6 +21,29 @@ class FakeDoc implements IDocument
     public Save(): void { this.saveCount++; this.IsDirty = false; }
 }
 function id2title(id: string): string { return id.toUpperCase(); }
+
+// A Model document whose IsDirty is a reactive DP (so the host's aggregation
+// sees changes), recording Save() calls.
+class DirtyDoc extends Model implements IDocument
+{
+    static { Model.RegisterProperty(DirtyDoc, 'IsDirty', false, MetaData.None); }
+    public saveCount = 0;
+    constructor(public readonly Id: string, public readonly Title: string = Id) { super(); }
+    public get IsDirty(): boolean { return this.get_property_value(resolveKey(this, undefined, 'IsDirty')); }
+    public markDirty(): void { this.set_property_value(resolveKey(this, undefined, 'IsDirty'), true); }
+    public Save(): void { this.saveCount++; this.set_property_value(resolveKey(this, undefined, 'IsDirty'), false); }
+}
+
+// A Model document that exposes IsDirty as a PLAIN FIELD (no registered DP) —
+// the host must tolerate it (contribute its static IsDirty, no live
+// subscription) rather than throw when resolving a non-existent DP.
+class PlainFieldDoc extends Model implements IDocument
+{
+    public IsDirty = false;
+    public saveCount = 0;
+    constructor(public readonly Id: string, public readonly Title: string = Id) { super(); }
+    public Save(): void { this.saveCount++; this.IsDirty = false; }
+}
 
 function provider(): IServiceProvider { return new Application().Services; }
 
@@ -269,5 +293,63 @@ describe('DocumentsContentHostService', () => {
         // commands resolve the same key and cast to call Open/Close/Save.
         (resolved as DocumentsContentHostService).Open(new FakeDoc('a'));
         assert.equal(resolved.Content instanceof FakeDoc, true);
+    });
+});
+
+describe('DocumentsContentHostService — dirty tracking + save commands', () => {
+    test('AnyDirty aggregates open documents reactively', () => {
+        const host = new DocumentsContentHostService(provider());
+        const a = new DirtyDoc('a'); const b = new DirtyDoc('b');
+        host.Open(a); host.Open(b);
+        assert.equal(host.AnyDirty, false, 'clean set → false');
+        a.markDirty();
+        assert.equal(host.AnyDirty, true, 'a dirty → true');
+        a.Save();
+        assert.equal(host.AnyDirty, false, 'a saved → false');
+    });
+
+    test('removing the only dirty doc recomputes AnyDirty', () => {
+        const host = new DocumentsContentHostService(provider());
+        const a = new DirtyDoc('a'); host.Open(a); a.markDirty();
+        assert.equal(host.AnyDirty, true);
+        host.Close(a);
+        assert.equal(host.AnyDirty, false, 'closing the dirty doc clears AnyDirty');
+    });
+
+    test('SaveActiveCommand: enabled iff active doc is dirty; saves the active doc', () => {
+        const host = new DocumentsContentHostService(provider());
+        const a = new DirtyDoc('a'); host.Open(a);
+        assert.equal(host.SaveActiveCommand.CanExecute(undefined), false, 'clean → disabled');
+        a.markDirty();
+        assert.equal(host.SaveActiveCommand.CanExecute(undefined), true, 'dirty → enabled');
+        host.SaveActiveCommand.Execute(undefined);
+        assert.equal(a.saveCount, 1);
+        assert.equal(host.SaveActiveCommand.CanExecute(undefined), false, 'saved → disabled');
+    });
+
+    test('a Model document without an IsDirty DP is tolerated (static, no throw)', () => {
+        const host = new DocumentsContentHostService(provider());
+        const a = new PlainFieldDoc('a');
+        assert.doesNotThrow(() => host.Open(a), 'opening a plain-field Model doc must not throw');
+        assert.equal(host.AnyDirty, false, 'clean static field → not dirty');
+        a.IsDirty = true;                       // plain field flip — no notification
+        // No DP, so no reactive update; but any open-set change re-reads the
+        // static flag through recomputeDirty().
+        host.Open(new PlainFieldDoc('b'));
+        assert.equal(host.AnyDirty, true, 'recompute on open-set change reflects the static flag');
+    });
+
+    test('SaveAllCommand: enabled iff any dirty; saves only the dirty docs', async () => {
+        const host = new DocumentsContentHostService(provider());
+        const a = new DirtyDoc('a'); const b = new DirtyDoc('b'); const c = new DirtyDoc('c');
+        host.Open(a); host.Open(b); host.Open(c);
+        assert.equal(host.SaveAllCommand.CanExecute(undefined), false);
+        a.markDirty(); c.markDirty();
+        assert.equal(host.SaveAllCommand.CanExecute(undefined), true);
+        host.SaveAllCommand.Execute(undefined);
+        // SaveAll() is async (awaits each doc.Save()); drain the task queue.
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        assert.equal(a.saveCount, 1); assert.equal(b.saveCount, 0); assert.equal(c.saveCount, 1);
+        assert.equal(host.SaveAllCommand.CanExecute(undefined), false, 'all clean → disabled');
     });
 });

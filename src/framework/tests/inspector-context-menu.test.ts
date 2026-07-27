@@ -17,7 +17,7 @@ import { InputManager } from '../index.js';
 import { HeadlessTarget } from '../../visual-engine/index.js';
 import { ContextMenu } from '../menu/context-menu.js';
 import { MenuItem } from '../menu/menu-strip.js';
-import { InspectorService } from '../shell/services/inspector-service.js';
+import { PanelDockService } from '../shell/services/panel-dock-service.js';
 import { DiagramInspector } from '../diagram/diagram-inspector.js';
 
 // A stand-in for DiagramDocument: carries an `Inspector` DP the menu's
@@ -45,19 +45,19 @@ const settle = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
 
 // Reproduces the Plexus wiring: a host (the Diagram) with an inherited
 // ServiceScope + a DiagramDocument DataContext, an attached ContextMenu whose
-// "Format Shape" item binds Command=$service(InspectorService).AddInspectorCommand
+// "Format Shape" item binds Command=$service(PanelDockService).AddPanelCommand
 // and CommandParameter=$Inspector. Verifies both bindings resolve THROUGH the
 // overlay-mounted menu to the shell-scoped service + the document's inspector.
 describe('Inspector — Format Shape context menu resolves through the overlay', () =>
 {
     beforeEach(() => { initTestApp(); });
 
-    test('the menu item adds the document inspector to the SCOPED InspectorService', async () =>
+    test('the menu item adds the document inspector to the SCOPED PanelDockService', async () =>
     {
-        // A child scope registering InspectorService scoped — the shell shape.
+        // A child scope registering PanelDockService scoped — the shell shape.
         const scope = Application.current.Services.createScope();
-        scope.registerScoped(InspectorService.Key, (p) => new InspectorService(p));
-        const svc = scope.get(InspectorService.Key)!;
+        scope.registerScoped(PanelDockService.Key, (p) => new PanelDockService(p));
+        const svc = scope.get(PanelDockService.Key)!;
 
         const target = new HeadlessTarget(400, 300);
         const root = new Root();
@@ -73,7 +73,7 @@ describe('Inspector — Format Shape context menu resolves through the overlay',
         mi.Header = 'Format Shape';
         mi.set_property_value(
             MenuItem.CommandKey,
-            ServiceBinding(mi, ServiceProvider.tokenFor(InspectorService), 'AddInspectorCommand') as never);
+            ServiceBinding(mi, ServiceProvider.tokenFor(PanelDockService), 'AddPanelCommand') as never);
         mi.set_property_value(
             MenuItem.CommandParameterKey,
             DataContextBinding(mi, 'Inspector') as never);
@@ -87,12 +87,12 @@ describe('Inspector — Format Shape context menu resolves through the overlay',
 
         // Diagnosis: did the bindings resolve through the overlay?
         assert.equal(mi.CommandParameter, doc.Inspector, '$Inspector resolved to the document inspector');
-        assert.equal(mi.Command, svc.AddInspectorCommand, '$service resolved to the scoped InspectorService');
+        assert.equal(mi.Command, svc.AddPanelCommand, '$service resolved to the scoped PanelDockService');
 
         // Fire it as MenuItem activation would.
         mi.Command!.Execute(mi.CommandParameter);
-        assert.equal(svc.Inspectors.Count, 1, 'inspector added to the region-bound service');
-        assert.equal(svc.Inspectors.Get(0), doc.Inspector, 'the exact document inspector');
+        assert.equal(svc.Panels.Count, 1, 'inspector added to the region-bound service');
+        assert.equal(svc.Panels.Get(0), doc.Inspector, 'the exact document inspector');
     });
 
     // The REAL shell condition: the host (Diagram) does NOT own a local
@@ -103,8 +103,8 @@ describe('Inspector — Format Shape context menu resolves through the overlay',
     test('resolves when ServiceScope is INHERITED by the host (not local)', async () =>
     {
         const scope = Application.current.Services.createScope();
-        scope.registerScoped(InspectorService.Key, (p) => new InspectorService(p));
-        const svc = scope.get(InspectorService.Key)!;
+        scope.registerScoped(PanelDockService.Key, (p) => new PanelDockService(p));
+        const svc = scope.get(PanelDockService.Key)!;
 
         const target = new HeadlessTarget(400, 300);
         const outer = new Root();
@@ -122,7 +122,7 @@ describe('Inspector — Format Shape context menu resolves through the overlay',
         mi.Header = 'Format Shape';
         mi.set_property_value(
             MenuItem.CommandKey,
-            ServiceBinding(mi, ServiceProvider.tokenFor(InspectorService), 'AddInspectorCommand') as never);
+            ServiceBinding(mi, ServiceProvider.tokenFor(PanelDockService), 'AddPanelCommand') as never);
         mi.set_property_value(
             MenuItem.CommandParameterKey,
             DataContextBinding(mi, 'Inspector') as never);
@@ -135,7 +135,7 @@ describe('Inspector — Format Shape context menu resolves through the overlay',
         await settle();
 
         assert.equal(mi.CommandParameter, doc.Inspector, '$Inspector resolved (DataContext is local)');
-        assert.equal(mi.Command, svc.AddInspectorCommand,
+        assert.equal(mi.Command, svc.AddPanelCommand,
             '$service resolved through the INHERITED ServiceScope');
     });
 
@@ -147,8 +147,8 @@ describe('Inspector — Format Shape context menu resolves through the overlay',
     test('activating the item (close-then-invoke) still runs the command', async () =>
     {
         const scope = Application.current.Services.createScope();
-        scope.registerScoped(InspectorService.Key, (p) => new InspectorService(p));
-        const svc = scope.get(InspectorService.Key)!;
+        scope.registerScoped(PanelDockService.Key, (p) => new PanelDockService(p));
+        const svc = scope.get(PanelDockService.Key)!;
 
         const target = new HeadlessTarget(400, 300);
         const outer = new Root();
@@ -164,7 +164,7 @@ describe('Inspector — Format Shape context menu resolves through the overlay',
         mi.Header = 'Format Shape';
         mi.set_property_value(
             MenuItem.CommandKey,
-            ServiceBinding(mi, ServiceProvider.tokenFor(InspectorService), 'AddInspectorCommand') as never);
+            ServiceBinding(mi, ServiceProvider.tokenFor(PanelDockService), 'AddPanelCommand') as never);
         mi.set_property_value(
             MenuItem.CommandParameterKey,
             DataContextBinding(mi, 'Inspector') as never);
@@ -178,7 +178,7 @@ describe('Inspector — Format Shape context menu resolves through the overlay',
         (mi as unknown as { activate(): void }).activate();
 
         assert.equal(cm.IsOpen, false, 'menu closed on activation');
-        assert.equal(svc.Inspectors.Count, 1, 'command still fired after the close');
-        assert.equal(svc.Inspectors.Get(0), doc.Inspector, 'added the document inspector');
+        assert.equal(svc.Panels.Count, 1, 'command still fired after the close');
+        assert.equal(svc.Panels.Get(0), doc.Inspector, 'added the document inspector');
     });
 });

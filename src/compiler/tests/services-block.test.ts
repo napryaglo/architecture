@@ -8,7 +8,7 @@ import * as engine from '../../visual-engine/index.js';
 import { Application, ServiceKey } from '../../runtime/index.js';
 
 // Compiles a `.services:` block on an Application and returns the emitted
-// JS. NavigationService / InspectorService / StatusService resolve via
+// JS. NavigationService / PanelDockService / StatusService resolve via
 // DEFAULT_SYMBOLS; DiagramStorageKey is a real ServiceKey token.
 function svc(body: string): string {
     return compile(`
@@ -32,9 +32,9 @@ describe('compile — .services: DI block', () => {
     });
 
     test('lifetime prefix → scoped / transient factory registration', () => {
-        const js = svc('scoped NavigationService\ntransient InspectorService');
+        const js = svc('scoped NavigationService\ntransient PanelDockService');
         assert.match(js, /\.Services\.registerScoped\(ServiceProvider\.tokenFor\(NavigationService\), \(p\) => new NavigationService\(p\)\)/);
-        assert.match(js, /\.Services\.registerTransient\(ServiceProvider\.tokenFor\(InspectorService\), \(p\) => new InspectorService\(p\)\)/);
+        assert.match(js, /\.Services\.registerTransient\(ServiceProvider\.tokenFor\(PanelDockService\), \(p\) => new PanelDockService\(p\)\)/);
     });
 
     test('explicit singleton keyword reads the same as bare', () => {
@@ -43,14 +43,14 @@ describe('compile — .services: DI block', () => {
     });
 
     test('-> token registers the impl under a different token', () => {
-        const js = svc('StatusService -> InspectorService');
-        assert.match(js, /\.Services\.register\(ServiceProvider\.tokenFor\(InspectorService\), \(p\) => new StatusService\(p\), 'singleton'\)/);
-        assert.match(js, /import \{[^}]*InspectorService/);
+        const js = svc('StatusService -> PanelDockService');
+        assert.match(js, /\.Services\.register\(ServiceProvider\.tokenFor\(PanelDockService\), \(p\) => new StatusService\(p\), 'singleton'\)/);
+        assert.match(js, /import \{[^}]*PanelDockService/);
     });
 
     test('full form: scoped Impl -> Token', () => {
-        const js = svc('scoped StatusService -> InspectorService');
-        assert.match(js, /\.Services\.registerScoped\(ServiceProvider\.tokenFor\(InspectorService\), \(p\) => new StatusService\(p\)\)/);
+        const js = svc('scoped StatusService -> PanelDockService');
+        assert.match(js, /\.Services\.registerScoped\(ServiceProvider\.tokenFor\(PanelDockService\), \(p\) => new StatusService\(p\)\)/);
     });
 
     test('the impl class is imported', () => {
@@ -60,7 +60,7 @@ describe('compile — .services: DI block', () => {
 
     test('removed ctor-dependency syntax `Impl(Dep)` is a pointed parse error', () => {
         assert.throws(
-            () => svc('InspectorService(DiagramStorageKey)'),
+            () => svc('PanelDockService(DiagramStorageKey)'),
             /constructor-dependency syntax 'Impl\(\.\.\.\)' was removed/);
     });
 
@@ -72,15 +72,15 @@ describe('compile — .services: DI block', () => {
     });
 
     test('inline config injects a service via $service(Token) resolved eagerly from the provider', () => {
-        const js = svc('InspectorService { Target: $service(StatusService) }');
+        const js = svc('PanelDockService { Target: $service(StatusService) }');
         assert.match(js, /_s\.Target = p\.getRequired\(ServiceProvider\.tokenFor\(StatusService\)\);/);
         // Eager resolution, NOT a reactive ServiceBinding.
         assert.doesNotMatch(js, /ServiceBinding/);
     });
 
     test('config composes with lifetime + explicit token', () => {
-        const js = svc('scoped StatusService { Text: "x" } -> InspectorService');
-        assert.match(js, /\.Services\.registerScoped\(ServiceProvider\.tokenFor\(InspectorService\), \(p\) => \{ const _s = new StatusService\(p\); _s\.Text = "x"; return _s; \}\)/);
+        const js = svc('scoped StatusService { Text: "x" } -> PanelDockService');
+        assert.match(js, /\.Services\.registerScoped\(ServiceProvider\.tokenFor\(PanelDockService\), \(p\) => \{ const _s = new StatusService\(p\); _s\.Text = "x"; return _s; \}\)/);
     });
 
     test('a DataContext binding in config is rejected (no target at factory time)', () => {

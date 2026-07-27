@@ -363,16 +363,28 @@ function layoutTable(
     const naturalOuter = natural.map((w) => w + padX);
     const bordersTotal = border * (numCols + 1);
     const naturalTableW = naturalOuter.reduce((a, b) => a + b, 0) + bordersTotal;
+    const minOuter = padX + MIN_COL_CONTENT;
 
     let outer: number[];
-    if (!Number.isFinite(bw) || naturalTableW <= bw)
+    if (table.LastColumnFills && Number.isFinite(bw))
+    {
+        // Auto columns + star last: non-last columns keep their natural width;
+        // the last column absorbs the remaining width (grows to fill, or shrinks
+        // + wraps when tight — never below its min, so it can't vanish; if the
+        // others already overflow, the table overflows rather than squashing).
+        const nonLast      = naturalOuter.slice(0, numCols - 1);
+        const usedByOthers = nonLast.reduce((a, b) => a + b, 0);
+        const lastOuter    = Math.max(minOuter, bw - bordersTotal - usedByOthers);
+        outer = [...nonLast, lastOuter];
+    }
+    else if (!Number.isFinite(bw) || naturalTableW <= bw)
         outer = naturalOuter;
     else
     {
         const avail = Math.max(0, bw - bordersTotal);
         const sum   = naturalOuter.reduce((a, b) => a + b, 0) || 1;
         const scale = avail / sum;
-        outer = naturalOuter.map((w) => Math.max(padX + MIN_COL_CONTENT, w * scale));
+        outer = naturalOuter.map((w) => Math.max(minOuter, w * scale));
     }
     const contentW = outer.map((w) => Math.max(0, w - padX));
 

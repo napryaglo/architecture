@@ -3,7 +3,7 @@ import { ShellBase } from './shell.js';
 import { NavigationService } from './services/navigation-service.js';
 import { ContentHostService } from './services/content-host-service.js';
 import { DocumentsContentHostService } from './services/documents-content-host-service.js';
-import { InspectorService } from './services/inspector-service.js';
+import { PanelDockService } from './services/panel-dock-service.js';
 import { DialogService } from './services/dialog-service.js';
 import { StatusService } from './services/status-service.js';
 import { ApplicationSettings } from './services/application-settings-service.js';
@@ -66,14 +66,14 @@ export class EditorShell extends ShellBase
         {
             this.Services.registerScoped(ContentHostService.Key, (p) => new DocumentsContentHostService(p));
         }
-        // Provide the Inspector region's service by default: an InspectorService
-        // (the multi-inspector host). The region presents it, rendered by
-        // `DataTemplate[InspectorService]` as a collapsible panel stack; it starts
-        // empty (region collapsed) until something Add()s an inspector. Same
-        // opt-out guard — an app that registers its own up-chain wins.
-        if (!this.Services.has(InspectorService.Key))
+        // Provide the right-dock region's service by default: a PanelDockService
+        // (the tabbed panel host). The region presents it, rendered by
+        // `DataTemplate[PanelDockService]` as a TabControl; it starts empty
+        // (region collapsed) until something Add()s a panel. Same opt-out guard —
+        // an app that registers its own up-chain wins.
+        if (!this.Services.has(PanelDockService.Key))
         {
-            this.Services.registerScoped(InspectorService.Key, (p) => new InspectorService(p));
+            this.Services.registerScoped(PanelDockService.Key, (p) => new PanelDockService(p));
         }
         // Provide the modal-dialog service by default: opens a Dialog + scrim on
         // this shell's overlay layer (settings, confirms, …). It owns no Visual, so

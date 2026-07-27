@@ -4,7 +4,7 @@ import { Application, Color, Rect, Size, Visibility, type Visual } from '../../r
 import { SolidColorBrush } from '../../visual-engine/index.js';
 import { initTestApp } from '../../basic/tests/test-app.js';
 import { EditorShell } from '../shell/editor-shell.js';
-import { InspectorService } from '../shell/services/inspector-service.js';
+import { PanelDockService } from '../shell/services/panel-dock-service.js';
 import { Diagram } from '../diagram/diagram.js';
 import { DiagramInspector } from '../diagram/diagram-inspector.js';
 import { ShapeFormatControl } from '../formatting/shape-format-control.js';
@@ -30,11 +30,11 @@ describe('DiagramInspector — Format Shape pane tracks the View selection forma
 {
     beforeEach(() => { initTestApp(); });
 
-    async function mount(): Promise<{ root: Visual; svc: InspectorService }>
+    async function mount(): Promise<{ root: Visual; svc: PanelDockService }>
     {
         const shell = new EditorShell();
         const root  = shell.visualChildren[0]!;
-        const svc   = shell.Services.get(InspectorService.Key) as InspectorService;
+        const svc   = shell.Services.get(PanelDockService.Key) as PanelDockService;
         await settle();
         root.Measure(new Size(1200, 800));
         root.Arrange(new Rect(0, 0, 1200, 800));

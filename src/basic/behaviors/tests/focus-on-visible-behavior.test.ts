@@ -80,6 +80,24 @@ describe('FocusOnVisibleBehavior', () => {
         assert.equal(editor.selectCount, 1, 'and selected');
     });
 
+    test('stamped-on-demand: focuses on the mount edge when the child arrives after the behavior', () => {
+        // Mirrors the compiler's emit order for a stamped editor
+        // (`Border { Behaviors {..}; TextBox }`): AddBehavior runs BEFORE the
+        // child is attached and before the host mounts, so the immediate focus
+        // attempt finds nothing (regression: the editor appeared unfocused).
+        // Focus must land on the attach edge, once the subtree exists + is live.
+        const wrapper = new Panel();          // not focusable, Visible
+        wrapper.AddBehavior(new FocusOnVisibleBehavior());
+        const editor = new SpyHost();         // focusable child added AFTER
+        wrapper.AddChild(editor);
+        assert.equal(editor.focusCount, 0, 'not focused before mount');
+
+        // Simulate mounting into a live tree (fires the attach edge).
+        (wrapper as unknown as { SetTarget: (t: unknown) => void }).SetTarget({});
+        assert.equal(editor.focusCount, 1, 'focused on the mount edge');
+        assert.equal(editor.selectCount, 1, 'and selected');
+    });
+
     test('OnDetached stops focusing on later visibility changes', () => {
         const host = new SpyHost();
         host.Visibility = Visibility.Collapsed;

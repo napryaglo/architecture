@@ -7,7 +7,9 @@ import {
     type PointerEventInit,
 } from '../../runtime/index.js';
 import { HeadlessTarget } from '../../visual-engine/index.js';
+import { Rect, Size } from '../../visual-engine/primitives.js';
 import { Border } from '../../basic/border.js';
+import { Canvas } from '../../basic/panels/canvas.js';
 import { TextBlock } from '../../basic/text-block.js';
 import { InputManager } from '../input-manager.js';
 import { Tooltip } from '../tooltips/tooltip.js';
@@ -184,6 +186,47 @@ describe('ToolTipService — declarative anchoring', () => {
             ? (after as unknown as { Children: { Count: number } }).Children.Count
             : 0;
         assert.equal(count, 0, 'press on anchor dismisses the tooltip');
+    });
+});
+
+describe('TooltipPopupHost — placement geometry', () => {
+
+    // A wide tooltip on a small anchor at the window's top-left. Bottom
+    // placement centers horizontally (x = ax + (aW - w)/2), which goes
+    // NEGATIVE because the tooltip is far wider than the anchor. A horizontal
+    // spill must NOT flip the vertical axis (Bottom→Top) — that used to send y
+    // negative too, and the final clamp then pinned the tooltip to (0,0).
+    // Regression: the flip is axis-aware; a Bottom tooltip stays below the
+    // anchor and only its x is clamped on-screen.
+    test('a wide tooltip on a top-left anchor sits below it, not pinned to (0,0)', () => {
+        initTestApp();
+        resetService();
+        const target = new HeadlessTarget(300, 200);
+        const canvas = new Canvas();
+        const anchor = new Border();
+        anchor.Width = 36; anchor.Height = 30;
+        Canvas.SetLeft(anchor, 0);
+        Canvas.SetTop(anchor, 0);
+        canvas.AddChild(anchor);
+        target.Content = canvas;
+        target.Flush();
+
+        // The host positions its single child against the anchor's frame.
+        const host = new TooltipPopupHost();
+        const wide = new Border();
+        wide.Width = 250; wide.Height = 24;   // wider than the 36px anchor
+        host.AddChild(wide);
+        host.anchor    = anchor;
+        host.placement = PlacementMode.Bottom;
+
+        host.Measure(new Size(300, 200));
+        host.Arrange(new Rect(0, 0, 300, 200));
+
+        const rect = wide.ArrangedRect;
+        // Bottom placement: y = anchorY(0) + anchorH(30) + ANCHOR_GAP(8) = 38.
+        assert.equal(rect.Y, 38, 'stays below the anchor (no spurious vertical flip)');
+        // x centered = (36 - 250)/2 = -107 → clamped onto the surface at 0.
+        assert.equal(rect.X, 0, 'horizontal spill is clamped on-screen, not flipped');
     });
 });
 

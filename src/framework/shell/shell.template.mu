@@ -80,6 +80,24 @@ resources Shells {
                         // so an interactive editor never lands in the overflow popup
                         // or gets re-parented by the overflow sync.
                         DockPanel [ LastChildFill = true ] {
+                            // Document save cluster — host-owned Save / Save All,
+                            // shown whenever a document is active (VS-style). Icons
+                            // are app-supplied (@Save/@SaveAll via DynamicResource);
+                            // absent → empty glyph. Enablement is command-driven
+                            // (Save: active dirty; Save All: any dirty).
+                            StackPanel
+                                [ DockPanel.Dock    = Left,
+                                  Orientation       = Horizontal,
+                                  VerticalAlignment = Center,
+                                  Margin            = (0,0,8,0),
+                                  Visibility        = $service(ContentHostService).ActiveDocument << ToVisibility ] {
+                                IconButton [ Variant = Standard, Command = $service(ContentHostService).SaveActiveCommand ] {
+                                    Shape [ Geometry = @Save, Fill = @OnSurfaceVariant, Width = 18, Height = 18 ]
+                                }
+                                IconButton [ Variant = Standard, Command = $service(ContentHostService).SaveAllCommand ] {
+                                    Shape [ Geometry = @SaveAll, Fill = @OnSurfaceVariant, Width = 18, Height = 18 ]
+                                }
+                            }
                             ItemsControl
                                 [ DockPanel.Dock   = Right,
                                   ItemsSource       = $service(ToolbarService).ToolbarControls,
@@ -121,31 +139,25 @@ resources Shells {
                     // defaults to Vertical (ew-resize).
                     Splitter [ DockPanel.Dock = Left, Width = 6 ]
 
-                    // Inspector region — presents the InspectorService, a HOST for
-                    // multiple dynamically-added inspectors, rendered by
-                    // DataTemplate[InspectorService] as a pinned, collapsible panel
-                    // stack (VS-style property panels). Something in the app Add()s
-                    // an inspector (e.g. a diagram's "Format Shape" command adds a
-                    // DiagramInspector → the Format Shape pane).
-                    // Empty ⇒ the region + its resize Splitter collapse out of layout
-                    // (Visibility off HasInspectors), so the content host reclaims the
-                    // full width until an inspector is added.
+                    // Right dock region — presents the PanelDockService, rendered
+                    // by DataTemplate[PanelDockService] as a TabControl (agent chat,
+                    // inspectors, … as tabs). Empty ⇒ the region + its resize
+                    // Splitter collapse out of layout (Visibility off HasPanels), so
+                    // the content host reclaims the full width until a panel is added.
                     // Definite Width lives HERE (the docked element the adjacent
-                    // Splitter resizes as its previous sibling) — NOT pinned on the
-                    // inner InspectorStack, or the drag would grow this presenter
-                    // while the visible pane stayed fixed and the content host
-                    // absorbed the change. Everything below fills this width.
-                    ContentPresenter x:name="PART_InspectorHost"
+                    // Splitter resizes as its previous sibling). Everything below
+                    // fills this width.
+                    ContentPresenter x:name="PART_RightDockHost"
                         [ DockPanel.Dock = Right,
-                          Width          = 300,
-                          Visibility     = $service(InspectorService).HasInspectors << ToVisibility,
-                          Content        = $service(InspectorService) ]
+                          Width          = 320,
+                          Visibility     = $service(PanelDockService).HasPanels << ToVisibility,
+                          Content        = $service(PanelDockService) ]
                     Splitter
                         [ DockPanel.Dock   = Right,
                           Width            = 6,
                           Orientation      = Vertical,
                           ReverseDirection = true,
-                          Visibility       = $service(InspectorService).HasInspectors << ToVisibility ]
+                          Visibility       = $service(PanelDockService).HasPanels << ToVisibility ]
 
                     // Content region — presents the ContentHostService ITSELF
                     // (fill, via LastChildFill). The default host is a
@@ -319,6 +331,16 @@ resources Shells {
     // placeholder. See the note in the shell tests.
     DataTemplate x:key="DocumentTabHeaderTemplate" [DataType = RailAction] {
         StackPanel [ Orientation = Horizontal, VerticalAlignment = Center ] {
+            // Unsaved-changes dot — visible only while the document is dirty
+            // ($IsDirty binds against the document Model, reactive).
+            Shape
+                [ Geometry          = @IconDirtyDot,
+                  Fill              = @OnSurfaceVariant,
+                  Width             = 6,
+                  Height            = 6,
+                  VerticalAlignment = Center,
+                  Margin            = (0,0,4,0),
+                  Visibility        = $IsDirty << ToVisibility ]
             TextBlock [ Text = $Title, VerticalAlignment = Center, Margin = (4,0,0,0) ]
             IconButton
                 [ Template          = @CompactHeaderIconButton,
@@ -356,57 +378,35 @@ resources Shells {
         Template = @DefaultViewerShell;
     }
 
-    // ── Inspector region — a pinned, collapsible inspector-panel stack ──────
-    // The InspectorService hosts a dynamic set of inspectors; the region renders
-    // it as a vertical stack of collapsible panels (@DefaultInspectorStack). Each
-    // panel's BODY is the inspector rendered through its own
-    // DataTemplate[DataType=<inspector>]; the titled, collapsible chrome comes from
-    // the InspectorPanel container. An empty host shows "(EMPTY)" (so a wired-but-
-    // empty region is legible, not a blank void).
-    DataTemplate [DataType = InspectorService] {
-        InspectorStack [ ItemsSource = $Inspectors ]
+    // ── Right dock region — a tabbed panel host ─────────────────────────────
+    // The PanelDockService hosts a dynamic set of panels (agent chat, inspectors,
+    // …); the region renders it as a TabControl. The header strip lists the hosted
+    // panels; the body shows SelectedPanel through ITS own DataTemplate (type
+    // dispatch, like the documents TabControl). ItemTemplate is the TAB HEADER
+    // (title + close).
+    DataTemplate [DataType = PanelDockService] {
+        TabControl
+            [ ItemsSource  = $Panels,
+              SelectedItem = $SelectedPanel,
+              ItemTemplate = @DockTabHeader ]
     }
 
-    // Vertical panel host for the inspector stack.
-    ItemsPanelTemplate x:key="InspectorStackPanel" {
-        StackPanel [ Orientation = Vertical ]
-    }
-
-    // InspectorStack chrome: a bordered, definite-min-width column hosting the
-    // panel stack (scrolled), with an "(EMPTY)" placeholder shown while the host
-    // has no inspectors. MinWidth keeps the docked-Right region visible so the
-    // placeholder (and the wiring it proves) is always on screen.
-    Template x:key="DefaultInspectorStack" [TargetType = InspectorStack] {
-        // No fixed width here — the pane's width lives on PART_InspectorHost (the
-        // resizable docked presenter); this chrome fills it.
-        Border x:name="PART_Border"
-            [ Background      = @SurfaceContainerLow,
-              BorderBrush     = @OutlineVariant,
-              BorderThickness = (1,0,0,0) ] {
-            Grid {
-                // No wrapping ScrollViewer: a ScrollViewer arranges its content at
-                // the content's DESIRED width (a vertical StackPanel desires only
-                // its widest child), so panels would size to their header text
-                // instead of filling the pane. The ItemsPresenter sits directly in
-                // the Grid so the StackPanel arranges each InspectorPanel at the
-                // full pane width. Tall panel bodies scroll via their own inner
-                // ScrollViewer (e.g. the Format Shape body).
-                ItemsPresenter x:name="PART_ItemsPresenter"
-                TextBlock x:name="PART_Empty"
-                    [ Text                = "(EMPTY)",
-                      Visibility          = Collapsed,
-                      HorizontalAlignment = Center,
-                      VerticalAlignment   = Top,
-                      Margin              = (0,16,0,0),
-                      Style               = @LabelMedium,
-                      Foreground          = @OnSurfaceVariant ]
+    // One dock tab header: title + a close affordance. Reaches the host via
+    // `$service` and passes the panel's Id. Keyed + applied as the TabControl's
+    // ItemTemplate, so its DataType is nominal (mirrors @DocumentTabHeaderTemplate,
+    // which carries RailAction as the structurally-compatible Title/Id placeholder).
+    DataTemplate x:key="DockTabHeader" [DataType = RailAction] {
+        StackPanel [ Orientation = Horizontal, VerticalAlignment = Center ] {
+            TextBlock [ Text = $Title, VerticalAlignment = Center, Margin = (4,0,0,0) ]
+            IconButton
+                [ Template          = @CompactHeaderIconButton,
+                  Command           = $service(PanelDockService).ClosePanelCommand,
+                  CommandParameter  = $Id,
+                  VerticalAlignment = Center,
+                  Margin            = (2,0,0,0) ] {
+                Shape [ Geometry = @IconClose, Fill = @OnSurfaceVariant, Width = 8, Height = 8 ]
             }
         }
-        when ( HasItems = false ) { PART_Empty.Visibility = Visible; }
-    }
-    Style [TargetType = InspectorStack] {
-        Template   = @DefaultInspectorStack;
-        ItemsPanel = @InspectorStackPanel;
     }
 
     // Compact 16×16 chrome-less icon button — for the inspector header's
@@ -443,61 +443,6 @@ resources Shells {
         Variant      = Standard;
         Template     = @DefaultStandardIconButton;
         CornerRadius = @ShapeSmall;
-    }
-
-    // ── InspectorPanel — one titled, collapsible section ────────────────────
-    // Header bar: a 12×12 chevron collapse button (flips IsExpanded via
-    // ToggleExpandedCommand), the title caption flush LEFT filling the row, and
-    // a 12×12 close affordance docked right (reaches the host via $service and
-    // passes the inspector's Id). Body: the ContentPresenter ContentControl
-    // slots the inspector into — hidden by the `when (IsExpanded = false)`
-    // trigger so the panel shrinks to its header.
-    Template x:key="DefaultInspectorPanel" [TargetType = InspectorPanel] {
-        Border x:name="PART_Border"
-            [ Background      = @SurfaceContainerLow,
-              BorderBrush     = @OutlineVariant,
-              BorderThickness = (0,0,0,1) ] {
-            DockPanel [ LastChildFill = true ] {
-                Border x:name="PART_HeaderBar"
-                    [ DockPanel.Dock = Top,
-                      Background     = @SurfaceContainerHigh,
-                      Padding        = (8,8,8,8) ] {
-                    DockPanel [ LastChildFill = true ] {
-                        IconButton
-                            [ DockPanel.Dock  = Right,
-                              Template         = @CompactHeaderIconButton,
-                              VerticalAlignment = Center,
-                              Command          = $service(InspectorService).CloseInspectorCommand,
-                              CommandParameter = $Id ] {
-                            Shape [ Geometry = @IconClose, Fill = @OnSurfaceVariant, Width = 12, Height = 12 ]
-                        }
-                        IconButton x:name="PART_HeaderToggle"
-                            [ DockPanel.Dock  = Left,
-                              Template         = @CompactHeaderIconButton,
-                              VerticalAlignment = Center,
-                              Command          = $$ToggleExpandedCommand ] {
-                            Shape x:name="PART_Chevron"
-                                [ Geometry = @ChevronDown, Fill = @OnSurfaceVariant, Width = 12, Height = 12 ]
-                        }
-                        TextBlock
-                            [ Text                = $Title,
-                              Style               = @LabelMedium,
-                              Foreground          = @OnSurfaceVariant,
-                              VerticalAlignment   = Center,
-                              HorizontalAlignment = Left,
-                              Margin              = (6,0,0,0) ]
-                    }
-                }
-                ContentPresenter x:name="PART_Body"
-            }
-        }
-        when ( IsExpanded = false ) {
-            PART_Body.Visibility = Collapsed;
-            PART_Chevron.Geometry = @ChevronRight;
-        }
-    }
-    Style [TargetType = InspectorPanel] {
-        Template = @DefaultInspectorPanel;
     }
 
     // ── ShellSideContentPane — a titled side pane (VSCode Explorer shape) ──

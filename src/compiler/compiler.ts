@@ -2143,15 +2143,16 @@ export class Compiler
     {
         // Parser wraps both DataTemplate and HierarchicalDataTemplate
         // bodies in `data-template-body` since both can carry trailing
-        // triggers. Trailing triggers aren't wired up here yet — we
-        // accept the wrap but only consume the root element.
+        // `when()` triggers.
         if (rf.body.kind !== 'element' && rf.body.kind !== 'data-template-body')
         {
             throw new EmitError(
-                'HierarchicalDataTemplate body must be a single element',
+                'HierarchicalDataTemplate body must be a single element (optionally followed by `when()` triggers)',
                 rf.span);
         }
-        const rootElement = rf.body.kind === 'element' ? rf.body : rf.body.root;
+        const rootElement   = rf.body.kind === 'element' ? rf.body : rf.body.root;
+        const triggers      = rf.body.kind === 'data-template-body' ? rf.body.triggers      : [];
+        const eventTriggers = rf.body.kind === 'data-template-body' ? rf.body.eventTriggers : [];
         const dataType = this.requireTargetType(rf);
         this.ensureImport(dataType);
         const selector = this.findIdentMetaAttr(rf, 'itemsselector');
@@ -2161,20 +2162,74 @@ export class Compiler
                 'HierarchicalDataTemplate requires `itemsselector=<PropertyName>` — names the children property on the data',
                 rf.span);
         }
+        // Selector reads `data?.<selector>`. Optional chain → returns
+        // undefined when the data has no children property (leaf row),
+        // which HierarchicalDataTemplate.ItemsOf treats as an empty iterable.
+        const childSel = `(data) => data?.${selector}`;
 
         this.ensureImport('HierarchicalDataTemplate');
         const tmplVar = this.fresh('tmpl');
-        this.line(`const ${tmplVar} = new HierarchicalDataTemplate((_data) => {`);
+
+        if (triggers.length === 0 && eventTriggers.length === 0)
+        {
+            // Trigger-free path — preserve the historical 5-arg construction
+            // shape (keeps existing snapshot output stable).
+            this.line(`const ${tmplVar} = new HierarchicalDataTemplate((_data) => {`);
+            this.indent += 4;
+            const rootVar = this.compileElement(rootElement);
+            this.line(`return ${rootVar};`);
+            this.indent -= 4;
+            this.line(`}, ${childSel}, undefined, undefined, ${dataType});`);
+            return tmplVar;
+        }
+
+        // Trigger-bearing path — mirrors compileDataTemplateForm: open a fresh
+        // template-local name scope, walk the factory inside an IIFE, then
+        // compile the `when()` / `on` triggers (which reference x:named parts
+        // by targetName, resolved at Apply time) and forward them into the
+        // HierarchicalDataTemplate's trailing trigger slots.
+        const savedTNS         = this.templateNameScope;
+        const savedTNO         = this.templateNameOwners;
+        const savedTNV         = this.templateNameVars;
+        const savedInTemplate  = this.inTemplateBody;
+        const savedScopeOwner  = this.nameScopeOwnerVar;
+        this.templateNameScope  = new Set<string>();
+        this.templateNameOwners = new Map<string, string>();
+        this.templateNameVars   = new Map<string, string>();
+        this.inTemplateBody    = true;
+        this.nameScopeOwnerVar = undefined;
+        this.collectTemplateXNames(rootElement);
+
+        this.line(`const ${tmplVar} = (() => {`);
         this.indent += 4;
+        this.line(`const _factory = (_data) => {`);
+        this.indent += 4;
+        this.emitPreallocatedXNameLets();
         const rootVar = this.compileElement(rootElement);
         this.line(`return ${rootVar};`);
         this.indent -= 4;
-        // Selector reads `data?.<selector>`. Optional chain → returns
-        // undefined when the data has no children property (leaf row),
-        // which HierarchicalDataTemplate.ItemsOf treats as an empty
-        // iterable.
+        this.line(`};`);
+        const { propertyTriggers, dataTriggers, multiDataTriggers } =
+            this.compileDataTemplateTriggers(triggers);
+        const eventTriggerVars: string[] = [];
+        for (const et of eventTriggers)
+        {
+            eventTriggerVars.push(this.compileEventTriggerGroup('', et));
+        }
+        const propsArr     = `[${propertyTriggers.join(', ')}]`;
+        const dataArr      = `[${dataTriggers.join(', ')}]`;
+        const eventsArr    = `[${eventTriggerVars.join(', ')}]`;
+        const multiDataArr = `[${multiDataTriggers.join(', ')}]`;
         this.line(
-            `}, (data) => data?.${selector}, undefined, undefined, ${dataType});`);
+            `return new HierarchicalDataTemplate(_factory, ${childSel}, undefined, undefined, ${dataType}, ${propsArr}, ${dataArr}, ${eventsArr}, ${multiDataArr});`);
+        this.indent -= 4;
+        this.line(`})();`);
+
+        this.templateNameScope  = savedTNS;
+        this.templateNameOwners = savedTNO;
+        this.templateNameVars   = savedTNV;
+        this.inTemplateBody     = savedInTemplate;
+        this.nameScopeOwnerVar  = savedScopeOwner;
         return tmplVar;
     }
 

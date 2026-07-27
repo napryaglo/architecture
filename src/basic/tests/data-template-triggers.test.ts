@@ -13,6 +13,7 @@ import { TriggerAction } from '../../runtime/index.js';
 import { resolveKey } from '../../runtime/model-internals.js';
 import {
     DataTemplate,
+    HierarchicalDataTemplate,
     TargetedSetter,
     TemplateDataTrigger,
     TemplateMultiDataTrigger,
@@ -52,6 +53,37 @@ class ItemVM extends Model
     public get IsSelected(): boolean { return this.get_property_value(resolveKey(this, undefined, 'IsSelected')); }
     public set IsSelected(v: boolean) { this.set_property_value(resolveKey(this, undefined, 'IsSelected'), v); }
 }
+
+describe('HierarchicalDataTemplate.Triggers — forwarded to base, wired by Apply', () => {
+    // Regression: the hierarchical form used to drop body `when()` triggers
+    // (compiler passed none; ctor accepted none), so a TreeView row template's
+    // rename-swap trigger silently no-op'd. The ctor now forwards triggers to
+    // the DataTemplate base, so Apply() attaches them like any row.
+    test('fires a TemplateDataTrigger on a hierarchical row', () => {
+        const tmpl = new HierarchicalDataTemplate(
+            (data) => {
+                const t = new Tile();
+                t.DataContext = data;
+                return t;
+            },
+            () => undefined,   // itemsSelector — leaf row (no children)
+            undefined,         // itemTemplate
+            undefined,         // itemContainerStyle
+            undefined,         // dataType
+            [],                // property triggers
+            [new TemplateDataTrigger('IsSelected', true, [
+                new TargetedSetter(Tile, 'Tint', 'orange'),
+            ])],
+        );
+        const vm = new ItemVM();
+        const root = tmpl.Apply(vm) as Tile;
+        assert.equal(root.Tint, 'plain');
+        vm.IsSelected = true;
+        assert.equal(root.Tint, 'orange');
+        vm.IsSelected = false;
+        assert.equal(root.Tint, 'plain');
+    });
+});
 
 describe('DataTemplate.Triggers — TemplateDataTrigger on template root', () => {
     test('fires the trigger when the bound data path matches', () => {

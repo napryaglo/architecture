@@ -117,6 +117,15 @@ export class Table extends Block implements BlockHost
     public static readonly HeaderBackgroundKey = Model.RegisterProperty<Brush | undefined>(
         Table, 'HeaderBackground', undefined, MetaData.None);
 
+    // Column-sizing mode. False (default): every column takes its natural
+    // content width, shrinking proportionally only if the table overflows a
+    // finite width. True: non-last columns stay natural (auto) and the LAST
+    // column absorbs the remaining width (star) so the table fills its box —
+    // the last column shrinks + wraps first when space is tight. Used by the
+    // agent chat's markdown tables.
+    public static readonly LastColumnFillsKey = Model.RegisterProperty<boolean>(
+        Table, 'LastColumnFills', false, MetaData.None);
+
     private readonly _rows: ObservableCollection<TableRow>;
 
     constructor()
@@ -145,6 +154,8 @@ export class Table extends Block implements BlockHost
     public set CellPadding(v: Thickness) { this.set_property_value(Table.CellPaddingKey, v); }
     public get HeaderBackground(): Brush | undefined  { return this.get_property_value(Table.HeaderBackgroundKey); }
     public set HeaderBackground(v: Brush | undefined) { this.set_property_value(Table.HeaderBackgroundKey, v); }
+    public get LastColumnFills(): boolean  { return this.get_property_value(Table.LastColumnFillsKey); }
+    public set LastColumnFills(v: boolean) { this.set_property_value(Table.LastColumnFillsKey, v); }
 
     public get Rows(): ObservableCollection<TableRow> { return this._rows; }
 

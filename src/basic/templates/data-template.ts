@@ -379,9 +379,18 @@ export class HierarchicalDataTemplate extends DataTemplate
         public readonly itemTemplate: DataTemplate | undefined = undefined,
         public readonly itemContainerStyle: unknown | undefined = undefined,
         dataType?: Function,
+        // Body `when()` triggers — forwarded to the DataTemplate base so
+        // Apply() wires them against the freshly-built row subtree, exactly
+        // like a plain DataTemplate. (Historically dropped: the compiler's
+        // hierarchical form passed no triggers and this ctor didn't accept
+        // any, so a `when()` on a TreeView row template silently no-op'd.)
+        triggers:          readonly TemplatePropertyTrigger[]  = [],
+        dataTriggers:      readonly TemplateDataTrigger[]      = [],
+        eventTriggers:     readonly EventTrigger[]             = [],
+        multiDataTriggers: readonly TemplateMultiDataTrigger[] = [],
     )
     {
-        super(factory, dataType);
+        super(factory, dataType, triggers, dataTriggers, eventTriggers, multiDataTriggers);
     }
 
     // Walk the child-items pulled from `data` via itemsSelector.

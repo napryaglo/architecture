@@ -7,6 +7,7 @@ import {
     type IServiceProvider,
     type PropertyDescriptor,
 } from '../../../runtime/index.js';
+import { findDescriptor, resolveKey } from '../../../runtime/model-internals.js';
 import { ContentHostService } from './content-host-service.js';
 import { CommandRegistry } from '../commands/command-registry.js';
 import { CommandViewModel } from '../commands/command-view-model.js';
@@ -101,6 +102,26 @@ export class DocumentsContentHostService extends ContentHostService
         DocumentsContentHostService, 'TabMenu',
         undefined as unknown as ObservableCollection<Model>, MetaData.None);
 
+    // True while at least one open document has unsaved changes. Read-only —
+    // recomputed from the open set + each document's IsDirty. Drives SaveAll
+    // enablement and any dirty affordance.
+    private static readonly _AnyDirtyPriv = Model.RegisterReadOnlyProperty<boolean>(
+        DocumentsContentHostService, 'AnyDirty', false, MetaData.None);
+    public static readonly AnyDirtyKey = DocumentsContentHostService._AnyDirtyPriv;
+
+    // Save the ACTIVE document. Enabled iff the active doc is dirty. A toolbar
+    // button binds `$service(ContentHostService).SaveActiveCommand`.
+    public static readonly SaveActiveCommandKey = Model.RegisterProperty<ICommand>(
+        DocumentsContentHostService, 'SaveActiveCommand', undefined as unknown as ICommand, MetaData.None);
+
+    // Save EVERY dirty open document. Enabled iff AnyDirty.
+    public static readonly SaveAllCommandKey = Model.RegisterProperty<ICommand>(
+        DocumentsContentHostService, 'SaveAllCommand', undefined as unknown as ICommand, MetaData.None);
+
+    // Per-open-document IsDirty unsubscribe thunks, keyed by document, so the
+    // aggregation reconciles as the open set changes.
+    private readonly dirtySubs = new Map<IDocument, () => void>();
+
     constructor(provider: IServiceProvider)
     {
         super(provider);
@@ -122,9 +143,24 @@ export class DocumentsContentHostService extends ContentHostService
             DocumentsContentHostService.ExtendedCommandsKey, new ObservableCollection<CommandViewModel>());
         this.set_property_value(
             DocumentsContentHostService.TabMenuKey, new ObservableCollection<Model>());
+        this.set_property_value(
+            DocumentsContentHostService.SaveActiveCommandKey,
+            new RelayCommand(
+                () => { void this.Save(); },
+                () => this.ActiveDocument?.IsDirty === true,
+                { Text: 'Save', Description: 'Save the active document.' }));
+        this.set_property_value(
+            DocumentsContentHostService.SaveAllCommandKey,
+            new RelayCommand(
+                () => { void this.SaveAll(); },
+                () => this.AnyDirty,
+                { Text: 'Save All', Description: 'Save all documents with unsaved changes.' }));
         this.wireExtendedCommands();
         this.rebuildTabMenu();
         this.OpenDocuments.Subscribe(() => this.rebuildTabMenu());
+        // Keep dirty subscriptions in sync with the open set, then seed.
+        this.OpenDocuments.Subscribe(() => this.reconcileDirtySubscriptions());
+        this.reconcileDirtySubscriptions();
     }
 
     // Re-synthesise the overflow menu: [Close All action] + [separator] + one
@@ -204,6 +240,21 @@ export class DocumentsContentHostService extends ContentHostService
         return this.get_property_value(DocumentsContentHostService.TabMenuKey);
     }
 
+    public get AnyDirty(): boolean
+    {
+        return this.get_property_value(DocumentsContentHostService.AnyDirtyKey);
+    }
+
+    public get SaveActiveCommand(): ICommand
+    {
+        return this.get_property_value(DocumentsContentHostService.SaveActiveCommandKey);
+    }
+
+    public get SaveAllCommand(): ICommand
+    {
+        return this.get_property_value(DocumentsContentHostService.SaveAllCommandKey);
+    }
+
     public get OpenDocuments(): ObservableCollection<IDocument>
     {
         return this.get_property_value(DocumentsContentHostService.OpenDocumentsKey);
@@ -254,6 +305,53 @@ export class DocumentsContentHostService extends ContentHostService
     {
         const target = document ?? this.ActiveDocument;
         return target?.Save();
+    }
+
+    // Subscribe to each open document's IsDirty (dropping subscriptions for docs
+    // that left the set), then recompute AnyDirty. A document that isn't a Model
+    // (no reactive IsDirty) contributes its static IsDirty with no live updates.
+    private reconcileDirtySubscriptions(): void
+    {
+        const open = new Set(this.OpenDocuments);
+        for (const [doc, unsub] of this.dirtySubs)
+        {
+            if (!open.has(doc)) { unsub(); this.dirtySubs.delete(doc); }
+        }
+        for (const doc of open)
+        {
+            if (this.dirtySubs.has(doc)) continue;
+            // Live subscription requires a REGISTERED IsDirty DP. A Model that
+            // exposes IsDirty as a plain field (or a non-Model document)
+            // contributes its static IsDirty with no live updates — never throw
+            // (findDescriptor returns undefined where resolveKey would throw).
+            if (doc instanceof Model && findDescriptor(doc.constructor, 'IsDirty') !== undefined)
+            {
+                const key = resolveKey(doc, undefined, 'IsDirty');
+                const cb = (): void => this.recomputeDirty();
+                doc.AddPropertyChangedListener(key, cb);
+                this.dirtySubs.set(doc, () => doc.RemovePropertyChangedListener(key, cb));
+            }
+        }
+        this.recomputeDirty();
+    }
+
+    // Recompute AnyDirty and requery the save commands' enablement.
+    private recomputeDirty(): void
+    {
+        let any = false;
+        for (const doc of this.OpenDocuments) { if (doc.IsDirty) { any = true; break; } }
+        this.set_property_value_with_key(DocumentsContentHostService._AnyDirtyPriv, any);
+        (this.SaveActiveCommand as RelayCommand | undefined)?.RaiseCanExecuteChanged();
+        (this.SaveAllCommand as RelayCommand | undefined)?.RaiseCanExecuteChanged();
+    }
+
+    // Save every open document that has unsaved changes, in tab order.
+    public async SaveAll(): Promise<void>
+    {
+        for (const doc of [...this.OpenDocuments])
+        {
+            if (doc.IsDirty) await doc.Save();
+        }
     }
 
     // Close every open document. Iterates a snapshot so each removal goes
@@ -310,6 +408,8 @@ export class DocumentsContentHostService extends ContentHostService
             {
                 (vm.Command as RelayCommand).RaiseCanExecuteChanged();
             }
+            // The active doc changed, so its dirtiness may differ — requery Save.
+            (this.SaveActiveCommand as RelayCommand | undefined)?.RaiseCanExecuteChanged();
         }
     }
 
@@ -317,6 +417,8 @@ export class DocumentsContentHostService extends ContentHostService
     {
         this.extendedCommandsUnsub?.();
         this.extendedCommandsUnsub = undefined;
+        for (const unsub of this.dirtySubs.values()) unsub();
+        this.dirtySubs.clear();
         super.Dispose();
     }
 }

@@ -33,18 +33,18 @@ describe('compile — application skeleton', () => {
         // sorted too.
         assert.match(
             js,
-            /import \{ Border \} from "@pragmatic-lab/mural\/basic";/,
+            /import \{ Border \} from "@pragmatic-lab\/mural\/basic";/,
         );
         // x:root materialises a NameScope on the root visual so x:name
         // descendants resolve there; the emitter pulls NameScope into
         // the runtime imports automatically.
         assert.match(
             js,
-            /import \{ Application, Color, NameScope, Thickness \} from "@pragmatic-lab/mural\/runtime";/,
+            /import \{ Application, Color, NameScope, Thickness \} from "@pragmatic-lab\/mural\/runtime";/,
         );
         assert.match(
             js,
-            /import \{ SolidColorBrush \} from "@pragmatic-lab/mural\/visual-engine";/,
+            /import \{ SolidColorBrush \} from "@pragmatic-lab\/mural\/visual-engine";/,
         );
     });
 });
@@ -362,7 +362,7 @@ describe('compile — Style BasedOn (BasedOn = @key)', () => {
             /new Style\(Border, \[_setter\d+\], \(\) => Application\.current\?\.Resources\.Resolve\("TitleSmall"\), \[\], \[\]\);/,
         );
         // The thunk references Application — it must be imported from runtime.
-        assert.match(js, /import \{[^}]*\bApplication\b[^}]*\} from "@pragmatic-lab/mural\/runtime"/);
+        assert.match(js, /import \{[^}]*\bApplication\b[^}]*\} from "@pragmatic-lab\/mural\/runtime"/);
     });
 
     test('no BasedOn keeps basedOn undefined (legacy shape unchanged)', () => {
@@ -423,6 +423,47 @@ describe('compile — DataTemplate triggers', () => {
         assert.match(js, /import \{ FooVM \} from "\.\/foo-vm\.mjs";/);
     });
 
+    test('trailing `when($Path)` inside HierarchicalDataTemplate emits + forwards a TemplateDataTrigger', () => {
+        const js = emitted(`
+            import FooVM from "./foo-vm.mjs"
+            resources Test {
+                HierarchicalDataTemplate x:key="T" [DataType=FooVM, itemsselector=Children] {
+                    Border x:root {
+                        TextBlock x:name="label"
+                    }
+                    when( $IsEditing ) {
+                        Border.Background = #ffaa00;
+                    }
+                }
+            }
+        `);
+        // The data trigger is emitted (previously dropped for the
+        // hierarchical form — the compiler passed no triggers).
+        assert.match(js, /new TemplateDataTrigger\("IsEditing", true, _tplSet\d+\)/);
+        // …and forwarded into HierarchicalDataTemplate's trailing trigger
+        // slots (after factory, child-selector, itemTemplate,
+        // itemContainerStyle, dataType), via the same IIFE + _factory shape.
+        assert.match(
+            js,
+            /new HierarchicalDataTemplate\(_factory, \(data\) => data\?\.Children, undefined, undefined, FooVM, \[\], \[_tplDataTrig\d+\]/,
+        );
+    });
+
+    test('trigger-free HierarchicalDataTemplate keeps the historical 5-arg shape', () => {
+        const js = emitted(`
+            import FooVM from "./foo-vm.mjs"
+            resources Test {
+                HierarchicalDataTemplate x:key="T" [DataType=FooVM, itemsselector=Children] {
+                    Border x:root
+                }
+            }
+        `);
+        assert.match(
+            js,
+            /new HierarchicalDataTemplate\(\(_data\) => \{[\s\S]*\}, \(data\) => data\?\.Children, undefined, undefined, FooVM\);/,
+        );
+    });
+
     test('`$name.Property` resolves to ElementNameBinding when name is an x:name in scope', () => {
         const js = emitted(`
             import FooVM from "./foo-vm.mjs"
@@ -450,7 +491,7 @@ describe('compile — DataTemplate triggers', () => {
         // The import header pulls ElementNameBinding from the runtime.
         assert.match(
             js,
-            /import \{[^}]*ElementNameBinding[^}]*\} from "@pragmatic-lab/mural\/runtime";/,
+            /import \{[^}]*ElementNameBinding[^}]*\} from "@pragmatic-lab\/mural\/runtime";/,
         );
     });
 
@@ -807,7 +848,7 @@ describe('compile — value emission', () => {
         // The enum class also lands in the import header.
         assert.match(
             js,
-            /import \{[^}]*HorizontalAlignment[^}]*\} from "@pragmatic-lab/mural\/runtime";/,
+            /import \{[^}]*HorizontalAlignment[^}]*\} from "@pragmatic-lab\/mural\/runtime";/,
         );
     });
 
@@ -866,7 +907,7 @@ describe('compile — value emission', () => {
         assert.match(js, /\.Set\("ShapeFull", CornerRadius\.Full\)/);
         assert.match(
             js,
-            /import \{[^}]*CornerRadius[^}]*\} from "@pragmatic-lab/mural\/runtime";/,
+            /import \{[^}]*CornerRadius[^}]*\} from "@pragmatic-lab\/mural\/runtime";/,
         );
     });
 
@@ -978,7 +1019,7 @@ describe('compile — ShellModule (module declaration)', () => {
         const js = emitted(src);
         assert.match(
             js,
-            /import \{ Capability, ShellModule \} from "@pragmatic-lab/mural\/framework\/shell\/module\.js";/,
+            /import \{ Capability, ShellModule \} from "@pragmatic-lab\/mural\/framework\/shell\/module\.js";/,
         );
     });
 });
@@ -1047,7 +1088,7 @@ describe('compile — module NAME form', () => {
                 }
                 Capability[Name="Shapes"]
              }`);
-        assert.match(js, /import \{ SettingDefinition, SettingKind \} from "@pragmatic-lab/mural\/framework\/shell\/settings\/setting-definition\.js";/);
+        assert.match(js, /import \{ SettingDefinition, SettingKind \} from "@pragmatic-lab\/mural\/framework\/shell\/settings\/setting-definition\.js";/);
         assert.match(js, /const _settingDefinition\d+ = new SettingDefinition\(\);/);
         assert.match(js, /_settingDefinition\d+\.set_property_value\(SettingDefinition\.KeyKey, "diagram\.grid\.snap"\);/);
         assert.match(js, /_settingDefinition\d+\.set_property_value\(SettingDefinition\.KindKey, SettingKind\.Boolean\);/);
@@ -1274,7 +1315,7 @@ describe('compile — `theme NAME { schemes: [...] defaultScheme: ... tokens { .
         assert.match(js, /ThemeManager\.RegisterTheme\(Material\.instance\)/);
         assert.match(js, /Application\.RegisterDefaultTheme\(Material\)/);
         // Theme + Application imported from runtime.
-        assert.match(js, /import \{[^}]*Theme[^}]*\} from "@pragmatic-lab/mural\/runtime"/);
+        assert.match(js, /import \{[^}]*Theme[^}]*\} from "@pragmatic-lab\/mural\/runtime"/);
     });
 
     test('theme block without tokens is rejected', () => {
@@ -1328,7 +1369,7 @@ describe('compile — `scheme NAME against THEME { … }` block', () => {
         assert.match(js, /tokens:\s*new Map\(\[/);
         assert.match(js, /\["Primary",/);
         // Scheme imported from the runtime.
-        assert.match(js, /import \{[^}]*Scheme[^}]*\} from "@pragmatic-lab/mural\/runtime"/);
+        assert.match(js, /import \{[^}]*Scheme[^}]*\} from "@pragmatic-lab\/mural\/runtime"/);
     });
 
     test('`basedOn theme.scheme` emits as a string field', () => {
@@ -1361,7 +1402,7 @@ describe('compile — element-node value form `Ident [Prop = val]`', () => {
         `);
         assert.match(js, /\["Elev",\s*\(\(_e\) => \{\s*_e\.Level = 1;\s*return _e;\s*\}\)\(new MaterialElevationEffect\(\)\)\]/);
         // The class name is registered as an import.
-        assert.match(js, /import \{[^}]*MaterialElevationEffect[^}]*\} from "@pragmatic-lab/mural\/visual-engine"/);
+        assert.match(js, /import \{[^}]*MaterialElevationEffect[^}]*\} from "@pragmatic-lab\/mural\/visual-engine"/);
     });
 
     test('element value with no attrs emits a bare `new Ident()`', () => {

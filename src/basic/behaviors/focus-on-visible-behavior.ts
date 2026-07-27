@@ -24,12 +24,27 @@ import {
 //   }
 //
 // It watches the host's Visibility DP; every transition to Visible re-focuses
-// (and re-selects), so re-entering edit mode on the same row works too. The
-// initial OnAttached also focuses when the host is already visible at attach.
+// (and re-selects), so re-entering edit mode on the same row works too. It also
+// re-focuses on every MOUNT edge (AddAttachedListener) — the crucial case for
+// an editor STAMPED on demand (e.g. swapped in by a ContentTemplate trigger
+// rather than toggled in place): at AddBehavior time the host has no children
+// yet and isn't in the live tree, so the immediate focus attempt below finds
+// nothing; the attach edge fires once the subtree is built and mounted, when
+// the editor is present and the input manager is reachable.
 //
 // SelectAll (default true) selects the whole text on focus so the first
 // keystroke replaces it — the standard rename-field behaviour. It is a no-op
 // on targets that expose no SelectAll() method.
+// The Element mount-edge surface the behavior needs — duck-typed so a
+// FocusOnVisibleBehavior can attach to any Visual without a hard Element import.
+// A plain Visual that isn't an Element simply lacks these methods and the
+// behavior falls back to the Visibility-listener + immediate-focus paths.
+interface ElementAttachSurface
+{
+    AddAttachedListener?:    (listener: () => void) => void;
+    RemoveAttachedListener?: (listener: () => void) => void;
+}
+
 export class FocusOnVisibleBehavior extends Behavior
 {
     public static readonly SelectAllKey = Model.RegisterProperty<boolean>(
@@ -40,6 +55,7 @@ export class FocusOnVisibleBehavior extends Behavior
 
     private _visual:   Visual | undefined;
     private _listener: PropertyChangeCallback | undefined;
+    private _attached: (() => void) | undefined;
 
     public override OnAttached(visual: Visual): void
     {
@@ -47,6 +63,18 @@ export class FocusOnVisibleBehavior extends Behavior
         const listener: PropertyChangeCallback = () => this.focusIfVisible();
         this._listener = listener;
         visual.AddPropertyChangedListener(Visual.VisibilityKey, listener);
+        // Focus on every MOUNT edge — covers the stamped-on-demand editor,
+        // whose host has no children and no live target at AddBehavior time.
+        // Duck-typed (like SelectAll below) so the behavior stays decoupled from
+        // Element; AddAttachedListener fires synchronously when already attached,
+        // so the already-mounted case is covered here too.
+        const el = visual as unknown as ElementAttachSurface;
+        if (typeof el.AddAttachedListener === 'function')
+        {
+            const attached = (): void => this.focusIfVisible();
+            this._attached = attached;
+            el.AddAttachedListener(attached);
+        }
         // Cover the case where the host is already visible at attach time.
         this.focusIfVisible();
     }
@@ -57,7 +85,13 @@ export class FocusOnVisibleBehavior extends Behavior
         {
             visual.RemovePropertyChangedListener(Visual.VisibilityKey, this._listener);
         }
+        const el = visual as unknown as ElementAttachSurface;
+        if (this._attached !== undefined && typeof el.RemoveAttachedListener === 'function')
+        {
+            el.RemoveAttachedListener(this._attached);
+        }
         this._listener = undefined;
+        this._attached = undefined;
         this._visual   = undefined;
     }
 
