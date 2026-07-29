@@ -233,6 +233,10 @@ scheme MaterialDark against Material {
     // dark-specific accent for marquee tooling.
     @MarqueeFill = #3699cc33
     @MarqueeStroke = #3699cc
+    // Text-input selection highlight — same cyan accent, stronger alpha in
+    // dark mode so light foreground text stays legible over the fill.
+    // Consumed via `SelectionBrush = @TextSelectionBrush`.
+    @TextSelectionBrush = #3699cc99
 
     // ── Elevation (M3 dual-shadow ramp) ─────────────────────────────
     // Mirror light.mu — M3 elevation ramps don't vary by scheme.

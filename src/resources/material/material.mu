@@ -197,6 +197,7 @@ theme Material {
         // hosts). Intentional first-class token, not pre-M3 cruft.
         @MarqueeFill : Brush "Marquee-selection rectangle fill"
         @MarqueeStroke : Brush "Marquee-selection rectangle stroke"
+        @TextSelectionBrush : Brush "Text-input selection highlight fill (TextBox / code-editor selected-run background)"
         @ElevationLevel0 : Effect "M3 elevation level 0 — flat (no shadow)"
         @ElevationLevel1 : Effect "M3 elevation level 1 — text buttons, search bars"
         @ElevationLevel2 : Effect "M3 elevation level 2 — cards, raised popups"

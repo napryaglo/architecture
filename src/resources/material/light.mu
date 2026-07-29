@@ -265,6 +265,11 @@ scheme MaterialLight against Material {
     // as the historical hardcoded constants.
     @MarqueeFill = #3699cc33
     @MarqueeStroke = #3699cc
+    // Text-input selection highlight — the same M3 cyan accent as the
+    // marquee, at a stronger alpha so a selected run reads clearly under
+    // dark-mode-independent foreground text (default TextBox selection was
+    // near-invisible). Consumed via `SelectionBrush = @TextSelectionBrush`.
+    @TextSelectionBrush = #3699cc66
 
     // ── Elevation (M3 dual-shadow ramp) ─────────────────────────────
     // Each token is a MaterialElevationEffect at the named level. The
