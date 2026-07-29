@@ -1025,7 +1025,14 @@ function wrapTreeItem(item: unknown, owner: ItemsControl): Visual
         // not just the roots. Undefined when the consumer only set a
         // plain ItemTemplate — harmless.
         tvi.ItemTemplateSelector = owner.ItemTemplateSelector;
-        tvi.Items = [...tmpl.ItemsOf(item)];
+        // Bind the LIVE children collection as ItemsSource rather than snapshotting
+        // it into Items with `[...]`. A plain array fires no change events, so
+        // incremental mutations on a nested node (e.g. deleting a file under a
+        // folder) never reached the row — the collection changed but the tree
+        // didn't. Setting ItemsSource wraps the source in a CollectionView that
+        // subscribes to its ObservableCollection, so nested add/remove now update
+        // the tree in place (matching how the root binds ItemsSource = Root.Children).
+        tvi.ItemsSource = tmpl.itemsSelector(item);
     }
     return tvi;
 }

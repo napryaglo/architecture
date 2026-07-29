@@ -3,7 +3,7 @@ import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from '../../../basic/tests/test-app.js';
 
-import { Application, NoModifiers, PointerButton, Rect, Size, type PointerEventInit, type ModifierKeys } from '../../../runtime/index.js';
+import { Application, NoModifiers, ObservableCollection, PointerButton, Rect, Size, type PointerEventInit, type ModifierKeys } from '../../../runtime/index.js';
 import { InputManager } from '../../../framework/index.js';;
 import { HeadlessTarget } from '../../../visual-engine/index.js';
 import { ItemsPresenter } from '../../../basic/templates/items-presenter.js';
@@ -552,6 +552,27 @@ describe('TreeView — data-bound templates (ItemTemplate + selector + factory)'
         const root = tree.RootItems[0]!;
         assert.equal((root.Header as TextBlock).Text, 'n:root');
         assert.equal((root.SubItems[0]!.Header as TextBlock).Text, 'n:child');
+    });
+
+    test('a nested item removed from a live ObservableCollection disappears from the tree', () => {
+        const tree = new TreeView();
+        tree.ItemTemplate = new HierarchicalDataTemplate(
+            (d) => new TextBlock((d as Node).Name),
+            (d) => (d as Node).children,
+        );
+        // Children is a LIVE ObservableCollection (as real consumers use) — not a
+        // static array — so removing an item must fire a change the row reflects.
+        const kids = new ObservableCollection<Node>();
+        for (const n of [{ Name: 'a' }, { Name: 'b' }, { Name: 'c' }]) kids.Add(n);
+        tree.ItemsSource = [{ Name: 'root', children: kids as unknown as Node[] }] as Node[];
+
+        const root = tree.RootItems[0]!;
+        assert.deepEqual(root.SubItems.map((s) => (s.Header as TextBlock).Text), ['a', 'b', 'c']);
+
+        kids.RemoveAt(1);   // remove 'b'
+        assert.deepEqual(
+            root.SubItems.map((s) => (s.Header as TextBlock).Text), ['a', 'c'],
+            'the removed nested row should be gone (live-collection reactivity)');
     });
 });
 
