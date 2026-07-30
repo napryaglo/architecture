@@ -748,3 +748,28 @@ describe('TreeViewItem — OnExpand data hook', () => {
         assert.doesNotThrow(() => { item.IsExpanded = true; });
     });
 });
+
+describe('TreeViewItem — OnActivate data hook (double-click)', () => {
+    beforeEach(() => { initTestApp(); });
+
+    test('double-clicking a data-bound row invokes the data item OnActivate()', () => {
+        const tree = new TreeView();
+        let fired = 0;
+        const data = { Name: 'root', children: [], OnActivate() { fired++; } };
+        tree.ItemTemplate = new HierarchicalDataTemplate(
+            (d) => new TextBlock((d as { Name: string }).Name),
+            (d) => (d as { children?: unknown[] }).children,
+        );
+        tree.ItemsSource = [data];
+        const target = new HeadlessTarget(250, 400);
+        target.Content = tree;
+        target.Flush();
+
+        const im = new InputManager();
+        const row = rowOf(tree.RootItems[0]!);
+        im.InjectPointerDown(row, pointer());                          // single → no activate
+        assert.equal(fired, 0);
+        im.InjectPointerDown(row, { ...pointer(), IsDoubleClick: true }); // double → activate
+        assert.equal(fired, 1, 'OnActivate fires on a double-click press');
+    });
+});

@@ -58,6 +58,9 @@ export class ClickableRow extends Border
     // after a pointer click). Plain `modifiers` retained as a second
     // arg for back-compat in callers that don't care about the args.
     public onClick: ((modifiers: ModifierKeys, args: PointerEventArgs) => void) | undefined;
+    // Fired on the second press of a double-click (args.IsDoubleClick, set only
+    // on pointer-down) — distinct from onClick, which fires on release.
+    public onActivate: (() => void) | undefined;
     private _pressOriginatedHere = false;
 
     // IsPressed lifecycle (Button / ListBoxItem parity): Down sets
@@ -67,8 +70,9 @@ export class ClickableRow extends Border
     // re-enter restores IsPressed; OnPointerEnter handles the
     // re-arm. Up always clears IsPressed BEFORE the click fires so
     // handlers reading IsPressed see the post-release state.
-    protected override OnPointerDown(_args: PointerEventArgs): void
+    protected override OnPointerDown(args: PointerEventArgs): void
     {
+        if (args.IsDoubleClick) this.onActivate?.();
         this._pressOriginatedHere = true;
         this._setIsPressed(true);
     }
@@ -707,6 +711,10 @@ export class TreeViewItem extends HeaderedItemsControl
             const tree = this.findTree();
             if (tree !== undefined) tree.HandleContainerClick(this, modifiers);
         };
+        this._row.onActivate = (): void => {
+            const data = dataOf(this) as ExpandableTreeData | undefined;
+            data?.OnActivate?.();
+        };
         // Hover + selection chrome ride through the DefaultTreeViewItem
         // template's `when(PART_Row.IsMouseOver)` / `when(IsSelected)`
         // triggers — both write PART_Row.Background via DynamicResource
@@ -1120,10 +1128,10 @@ function headerFor(item: unknown, tmpl: DataTemplate | undefined): Visual | stri
     return displayTreeHeader(item);
 }
 
-// A data item that wants to be told when its tree row is expanded — the
-// framework calls OnExpand() on each transition to expanded (lazy-load hook).
-// Idempotency is the data item's responsibility.
-interface ExpandableTreeData { OnExpand?(): void }
+// A data item that wants tree-row lifecycle callbacks — the framework calls
+// OnExpand() on each transition to expanded (lazy-load hook) and OnActivate()
+// on a row double-click. Idempotency is the data item's responsibility.
+interface ExpandableTreeData { OnExpand?(): void; OnActivate?(): void }
 
 // Read the data item stamped on a container by
 // ItemsControl.PrepareContainerForItemOverride. Type-erased because
