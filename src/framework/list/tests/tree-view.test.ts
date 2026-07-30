@@ -621,3 +621,41 @@ describe('TreeView — nested-level virtualization', () =>
         assert.deepEqual(nested.RealizedIndices, [], 'collapse recycles the nested children');
     });
 });
+
+describe('TreeViewItem — OnExpand data hook', () => {
+    beforeEach(() => { initTestApp(); });
+
+    test('expanding a data-bound row invokes the data item OnExpand()', () => {
+        const tree = new TreeView();
+        let fired = 0;
+        const data = { Name: 'root', children: [{ Name: 'child' }], OnExpand() { fired++; } };
+        tree.ItemTemplate = new HierarchicalDataTemplate(
+            (d) => new TextBlock((d as { Name: string }).Name),
+            (d) => (d as { children?: unknown[] }).children,
+        );
+        tree.ItemsSource = [data];
+
+        const root = tree.RootItems[0]!;
+        assert.equal(fired, 0);
+        root.IsExpanded = true;
+        assert.equal(fired, 1, 'OnExpand fires when the row expands');
+    });
+
+    test('a data item without OnExpand expands without throwing', () => {
+        const tree = new TreeView();
+        tree.ItemTemplate = new HierarchicalDataTemplate(
+            (d) => new TextBlock((d as { Name: string }).Name),
+            (d) => (d as { children?: unknown[] }).children,
+        );
+        tree.ItemsSource = [{ Name: 'root', children: [{ Name: 'c' }] }];
+
+        const root = tree.RootItems[0]!;
+        assert.doesNotThrow(() => { root.IsExpanded = true; });
+    });
+
+    test('composed-markup rows (no bound data) expand without throwing', () => {
+        const item = new TreeViewItem();
+        item.AddChild(new TreeViewItem());
+        assert.doesNotThrow(() => { item.IsExpanded = true; });
+    });
+});
