@@ -20,10 +20,13 @@ import { VirtualizingPanel, isNestedViewportHost } from './virtualizing-panel.js
 //   * Horizontal         — items stack left-to-right, scroll horizontally.
 //
 // Sizing:
-//   * Primary axis     — total extent = itemCount × per-item size. The
-//                        Viewport is presumed to be a sub-rect of that
-//                        extent (consumer sets it explicitly; no
-//                        built-in scrolling yet, just the manual API).
+//   * Primary axis     — total extent = Σ per-item size, where a realized
+//                        (measured) item contributes its cached size and an
+//                        un-measured item the ItemHeight/ItemWidth estimate
+//                        (totalPrimaryExtent). This is what both the panel's
+//                        DesiredSize AND its IScrollInfo Extent report, so an
+//                        expanded child (a tall realized row) grows the scroll
+//                        extent and the host ScrollViewer's scrollbar with it.
 //   * Cross axis       — taken from availableSize (filled). Containers
 //                        measure against the available cross-axis size.
 //
@@ -138,7 +141,7 @@ export class VirtualizingStackPanel extends VirtualizingPanel implements IScroll
     public get ExtentWidth(): number
     {
         return this.isHorizontal
-            ? this.itemCount() * this.ItemWidth
+            ? this.totalPrimaryExtent(this.itemCount())
             : this.measuredCross;
     }
 
@@ -146,7 +149,7 @@ export class VirtualizingStackPanel extends VirtualizingPanel implements IScroll
     {
         return this.isHorizontal
             ? this.measuredCross
-            : this.itemCount() * this.ItemHeight;
+            : this.totalPrimaryExtent(this.itemCount());
     }
 
     public get ViewportWidth(): number  { return this.Viewport.Width; }

@@ -421,3 +421,35 @@ describe('VirtualizingStackPanel — nested-level primitives', () => {
         assert.deepEqual(panel.RealizedIndices, [0, 1, 2], 'un-collapse re-realizes the viewport rows');
     });
 });
+
+describe('VirtualizingStackPanel — IScrollInfo Extent reflects measured (variable) sizes', () => {
+    // An item whose container measures taller than the ItemHeight estimate —
+    // e.g. an expanded TreeViewItem whose nested panel reports its full subtree
+    // height. The scroll Extent must include that measured height, not
+    // count × ItemHeight, or a host ScrollViewer sees no overflow and shows no
+    // scrollbar (the meta-model tree bug).
+    class VarLeaf extends Element
+    {
+        constructor(public readonly source: unknown) { super(); }
+        protected override MeasureOverride(_a: Size): Size
+        {
+            return new Size(10, this.source === 'big' ? 500 : 20);
+        }
+        protected override RenderOverride(_dc: DrawingContext): void { }
+    }
+
+    test('ExtentHeight sums cached measured sizes, not itemCount × ItemHeight', () => {
+        const panel = new VirtualizingStackPanel();
+        // Viewport tall enough that all three rows realize (and thus measure).
+        panel.Viewport = new Rect(0, 0, 100, 600);
+        const ic = new ItemsControl();
+        ic.ItemsPanel   = () => panel;
+        ic.ItemTemplate = new DataTemplate((d) => new VarLeaf(d));
+        ic.Items        = ['big', 'b', 'c'];
+
+        ic.Measure(new Size(100, 600));
+
+        // 500 (measured 'big') + 20 + 20 = 540 — NOT 3 × 20 = 60.
+        assert.equal(panel.ExtentHeight, 540);
+    });
+});
