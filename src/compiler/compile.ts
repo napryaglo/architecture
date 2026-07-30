@@ -165,6 +165,28 @@ export function instantiate(
                 `instantiate: ctx is missing symbol '${sym}'`);
         }
     }
+    // Resources dicts compile to `export class NAME extends ResourceDictionary`
+    // whose populated instance comes from `static Clone()`. new Function() can't
+    // hold `export`, so strip it and return the built dict directly. (Single
+    // block is the runtime case; multiple blocks aren't a runtime need.)
+    if (out.kind === 'resources')
+    {
+        const blocks = out.resourcesBlocks ?? [];
+        if (blocks.length !== 1)
+        {
+            throw new EmitError(
+                `instantiate: a resources doc must have exactly one block, got ${blocks.length}`);
+        }
+        const className = blocks[0]!.name;
+        const destructureR = (sortedSyms.length > 0)
+            ? `const { ${sortedSyms.join(', ')} } = _ctx;\n`
+            : '';
+        const bodyR = out.body.replace(/^export class /gm, 'class ');
+        const fnR = new Function('_ctx', destructureR + bodyR + `\nreturn ${className}.Clone();`) as
+            (c: Record<string, unknown>) => unknown;
+        return fnR(ctx);
+    }
+
     const destructure = (sortedSyms.length > 0)
         ? `const { ${sortedSyms.join(', ')} } = _ctx;\n`
         : '';
