@@ -393,15 +393,13 @@ export class TreeView extends Selector
 
     public override RebindContainerForItemOverride(container: Visual, item: unknown): void
     {
-        // Reused TreeViewItem — refresh the header from the new data,
-        // re-resolving the template (selector ?? ItemTemplate) so a
-        // recycled row picks up the right per-item content. Items /
-        // ItemTemplate stay carried by the HierarchicalDataTemplate logic
-        // in wrapTreeItem; on recycle the row's children stay, only the
-        // header flips.
+        // Reused TreeViewItem — re-apply the full binding (header AND, for a
+        // HierarchicalDataTemplate, the child ItemsSource) so a recycled row
+        // flips completely to the new data. Header-only rebinding left a
+        // recycled row showing the previous item's content.
         if (!(container instanceof TreeViewItem)) return;
         if (this.IsVirtualizing) container.EnableVirtualization();
-        container.Header = headerFor(item, resolveItemTemplate(this, item));
+        bindTreeItem(container, item, this);
     }
 
     public override ClearContainerForItemOverride(container: Visual, item: unknown): void
@@ -803,6 +801,18 @@ export class TreeViewItem extends HeaderedItemsControl
         return wrapTreeItem(item, this);
     }
 
+    // Nested rebind — the counterpart to TreeView's override, for a recycled
+    // container in an EXPANDED item's own (nested) items panel. Without this a
+    // recycled nested row keeps the base ItemsControl's no-op rebind and shows
+    // the previous item (the visible symptom: a lazy "Loading…" child that never
+    // flips to the loaded content after the nested collection cleared+refilled).
+    public override RebindContainerForItemOverride(container: Visual, item: unknown): void
+    {
+        if (!(container instanceof TreeViewItem)) return;
+        if (this._virtualizing) container.EnableVirtualization();
+        bindTreeItem(container, item, this);
+    }
+
     public override ClearContainerForItemOverride(container: Visual, item: unknown): void
     {
         super.ClearContainerForItemOverride(container, item);
@@ -1021,6 +1031,20 @@ function wrapTreeItem(item: unknown, owner: ItemsControl): Visual
 {
     if (item instanceof TreeViewItem) return item;
     const tvi = new TreeViewItem();
+    bindTreeItem(tvi, item, owner);
+    return tvi;
+}
+
+// (Re)apply an item's binding to a TreeViewItem container: the header from the
+// resolved template, and — for a HierarchicalDataTemplate — the child
+// ItemTemplate / selector / ItemsSource. Shared by wrapTreeItem (fresh
+// container) and RebindContainerForItemOverride (recycled container reused for a
+// DIFFERENT item), so a recycled row flips BOTH its header AND its sub-items to
+// the new data. Rebinding only the header (the previous behavior) left a
+// recycled row showing the old item — visible after a nested collection cleared
+// and refilled (e.g. a lazy "Loading…" sentinel replaced by real children).
+function bindTreeItem(tvi: TreeViewItem, item: unknown, owner: ItemsControl): void
+{
     const tmpl = resolveItemTemplate(owner, item);
     tvi.Header = headerFor(item, tmpl);
     if (tmpl instanceof HierarchicalDataTemplate)
@@ -1039,7 +1063,6 @@ function wrapTreeItem(item: unknown, owner: ItemsControl): Visual
         // the tree in place (matching how the root binds ItemsSource = Root.Children).
         tvi.ItemsSource = tmpl.itemsSelector(item);
     }
-    return tvi;
 }
 
 // The template that governs `item` under `owner`: ItemTemplateSelector

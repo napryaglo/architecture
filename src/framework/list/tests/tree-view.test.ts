@@ -622,6 +622,46 @@ describe('TreeView — nested-level virtualization', () =>
     });
 });
 
+describe('TreeView — nested collection mutation rebinds recycled rows', () => {
+    beforeEach(() => { initTestApp(); });
+
+    interface Mut { Name: string; children: ObservableCollection<Mut>; }
+    function mnode(name: string, kids: Mut[] = []): Mut {
+        const c = new ObservableCollection<Mut>();
+        for (const k of kids) c.Add(k);
+        return { Name: name, children: c };
+    }
+
+    test('a virtualizing nested row cleared + refilled shows the new items, not the stale one', () => {
+        const tree = new TreeView();
+        tree.IsVirtualizing = true;
+        tree.ItemTemplate = new HierarchicalDataTemplate(
+            (d) => new TextBlock((d as Mut).Name),
+            (d) => (d as Mut).children,
+        );
+        // Root row seeded with one "Loading…" sentinel child (the lazy-load shape).
+        const version = mnode('0.1.0', [mnode('Loading…')]);
+        tree.ItemsSource = [version] as Mut[];
+        const target = new HeadlessTarget(250, 400);
+        target.Content = tree;
+        target.Flush();
+
+        tree.RootItems[0]!.IsExpanded = true;
+        target.Flush(); target.Flush(); target.Flush();
+
+        // Lazy-load completes: clear the sentinel, add the real children.
+        version.children.Clear();
+        version.children.Add(mnode('Concepts'));
+        version.children.Add(mnode('Relationships'));
+        target.Flush(); target.Flush(); target.Flush();
+
+        const texts = tree.RootItems[0]!.SubItems.map(
+            (s) => (s.Header instanceof TextBlock ? (s.Header as TextBlock).Text : String(s.Header)));
+        assert.ok(!texts.includes('Loading…'), `stale sentinel left behind: ${JSON.stringify(texts)}`);
+        assert.deepEqual(texts, ['Concepts', 'Relationships']);
+    });
+});
+
 describe('TreeViewItem — OnExpand data hook', () => {
     beforeEach(() => { initTestApp(); });
 
