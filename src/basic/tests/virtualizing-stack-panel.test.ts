@@ -452,4 +452,38 @@ describe('VirtualizingStackPanel — IScrollInfo Extent reflects measured (varia
         // 500 (measured 'big') + 20 + 20 = 540 — NOT 3 × 20 = 60.
         assert.equal(panel.ExtentHeight, 540);
     });
+
+    // A vertical panel whose rows are wider than the viewport must pan on the
+    // CROSS axis when the viewport's X offset changes — in delegate mode the SCP
+    // applies no translate, so the panel itself has to. Rows also arrange at
+    // their full cross extent (measuredCross), not the viewport width, or there's
+    // nothing to reveal.
+    class WideLeaf extends Element
+    {
+        constructor(public readonly source: unknown) { super(); }
+        protected override MeasureOverride(_a: Size): Size { return new Size(200, 20); }
+        protected override RenderOverride(_dc: DrawingContext): void { }
+    }
+
+    test('horizontal (cross-axis) offset pans a vertical panel and rows keep full width', () => {
+        const panel = new VirtualizingStackPanel();
+        panel.Viewport = new Rect(0, 0, 100, 100);   // 100-wide viewport, rows are 200 wide
+        const ic = new ItemsControl();
+        ic.ItemsPanel   = () => panel;
+        ic.ItemTemplate = new DataTemplate((d) => new WideLeaf(d));
+        ic.Items        = ['a', 'b', 'c'];
+
+        ic.Measure(new Size(100, 100));
+        ic.Arrange(new Rect(0, 0, 100, 100));
+        const c0 = ic.Generator.ContainerFromItem('a')!;
+        // No horizontal scroll yet: row at x = 0, arranged at its 200 width.
+        assert.equal(c0.ArrangedRect.X, 0);
+        assert.equal(c0.ArrangedRect.Width, 200);
+
+        // Scroll right by 60 → rows pan left by 60 so later content shows.
+        panel.Viewport = new Rect(60, 0, 100, 100);
+        ic.Measure(new Size(100, 100));
+        ic.Arrange(new Rect(0, 0, 100, 100));
+        assert.equal(ic.Generator.ContainerFromItem('a')!.ArrangedRect.X, -60);
+    });
 });

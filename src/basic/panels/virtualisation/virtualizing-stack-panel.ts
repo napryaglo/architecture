@@ -280,13 +280,24 @@ export class VirtualizingStackPanel extends VirtualizingPanel implements IScroll
         // (scrollOff = 0) — subtracting again would double-translate.
         const vp = this.Viewport;
         const scrollOff = this._nested ? 0 : (horizontal ? vp.X : vp.Y);
+        // Cross-axis (perpendicular to stacking) scroll. In delegate mode the SCP
+        // applies NO translation — the panel owns both axes — so the primary axis
+        // alone isn't enough: a row wider than the viewport (a long label, deep
+        // indent) must arrange at its full cross extent and shift by the cross
+        // offset, or the horizontal scrollbar moves but nothing pans. Nested
+        // panels inherit the root's cross translate through their ancestor
+        // container, so they use 0 (same rule as scrollOff).
+        const crossOff = this._nested ? 0 : (horizontal ? vp.Y : vp.X);
+        const crossExtent = horizontal
+            ? Math.max(finalSize.Height, this.measuredCross)
+            : Math.max(finalSize.Width,  this.measuredCross);
         for (const [index, container] of this.realized)
         {
             const off  = offsets[index]! - scrollOff;
             const size = this.sizeOf(index);
             const rect = horizontal
-                ? new Rect(off, 0, size, finalSize.Height)
-                : new Rect(0, off, finalSize.Width, size);
+                ? new Rect(off, -crossOff, size, crossExtent)
+                : new Rect(-crossOff, off, crossExtent, size);
             container.Arrange(rect);
             // Per-level composition: a realized container that hosts its own
             // virtualizing panel (an expanded TreeViewItem) gets the SHARED
