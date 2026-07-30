@@ -997,14 +997,41 @@ export class TreeViewItem extends HeaderedItemsControl
         }
     }
 
+    // Re-evaluate the chevron after this row's item binding changes. A recycled
+    // virtualizing row is rebound (new Header + ItemsSource) without realizing
+    // any child container — so no Prepare/Clear fires and the chevron would keep
+    // the PREVIOUS item's leaf/branch state (a Loading… leaf recycled for a
+    // populated group kept no chevron). bindTreeItem calls this after (re)binding.
+    public RefreshBranchAffordance(): void
+    {
+        this.refreshChevron();
+    }
+
     // Leaf items render a blank chevron cell so columns line up; non-
     // leaf items pick the glyph from IsExpanded.
     private refreshChevron(): void
     {
         // Leaf rows paint no glyph (Geometry undefined → Shape renders
         // nothing); the fixed-width ChevronTarget keeps the column aligned.
-        const hasChildren = this.SubItems.length > 0;
+        const hasChildren = this.hasChildItems();
         this._chevronGlyph.Geometry = hasChildren ? chevronGeometry(this.IsExpanded) : undefined;
+    }
+
+    // Branch-vs-leaf is a property of the BOUND ITEMS, not of how many
+    // containers happen to be realized. A collapsed virtualizing row realizes
+    // none of its children (SubItems.length === 0) yet is still a branch — so
+    // reading SubItems here dropped the chevron for nested virtualizing groups
+    // and they read as empty leaves. Items reflects the data (ItemsSource /
+    // declarative Items) regardless of realization, mirroring TreeView's own
+    // hasTreeViewChildren for keyboard nav.
+    private hasChildItems(): boolean
+    {
+        if (this.SubItems.length > 0) return true;   // composed-markup / non-virtualizing
+        const items = this.Items as unknown as { Count?: number; length?: number } | undefined;
+        if (items === undefined) return false;
+        if (typeof items.Count   === 'number') return items.Count   > 0;
+        if (typeof items.length  === 'number') return items.length  > 0;
+        return false;
     }
 }
 
@@ -1063,6 +1090,10 @@ function bindTreeItem(tvi: TreeViewItem, item: unknown, owner: ItemsControl): vo
         // the tree in place (matching how the root binds ItemsSource = Root.Children).
         tvi.ItemsSource = tmpl.itemsSelector(item);
     }
+    // The item's branch/leaf identity may have changed (recycled row, or a
+    // collapsed virtualizing row that realizes no container to trigger a
+    // refresh). Re-evaluate the chevron from the freshly-bound item count.
+    tvi.RefreshBranchAffordance();
 }
 
 // The template that governs `item` under `owner`: ItemTemplateSelector

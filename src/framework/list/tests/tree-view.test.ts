@@ -660,6 +660,55 @@ describe('TreeView — nested collection mutation rebinds recycled rows', () => 
         assert.ok(!texts.includes('Loading…'), `stale sentinel left behind: ${JSON.stringify(texts)}`);
         assert.deepEqual(texts, ['Concepts', 'Relationships']);
     });
+
+    // A branch row realized INSIDE an already-virtualizing parent must still
+    // present a chevron even though — being collapsed and virtualizing — none
+    // of its children are realized yet. Regression: refreshChevron read the
+    // realized-container count (SubItems.length, 0 when collapsed+virtualizing)
+    // instead of the bound item count, so a nested group with children looked
+    // like an empty leaf and couldn't be expanded (the "Concepts folder is
+    // empty" symptom). The panel-swap teardown in EnableVirtualization is what
+    // exposed the asymmetry: it recycles the transiently-realized children and
+    // re-runs refreshChevron with SubItems back to 0.
+    test('a nested virtualizing branch with children still shows an expand chevron', () => {
+        const tree = new TreeView();
+        tree.IsVirtualizing = true;
+        tree.ItemTemplate = new HierarchicalDataTemplate(
+            (d) => new TextBlock((d as Mut).Name),
+            (d) => (d as Mut).children,
+        );
+        // Model → lazy Version (seeded Loading…). The Version's children carry
+        // a Group ('Concepts') that itself has entity children pre-populated.
+        const version = mnode('0.1.0', [mnode('Loading…')]);
+        const model = mnode('tech-architecture', [version]);
+        tree.ItemsSource = [model] as Mut[];
+        const target = new HeadlessTarget(250, 400);
+        target.Content = tree;
+        target.Flush();
+
+        tree.RootItems[0]!.IsExpanded = true;
+        target.Flush(); target.Flush(); target.Flush();
+        const versionItem = tree.RootItems[0]!.SubItems[0]!;
+
+        versionItem.IsExpanded = true;
+        target.Flush();
+        version.children.Clear();
+        const concepts = mnode('Concepts', Array.from({ length: 28 }, (_, i) => mnode(`concept-${i}`)));
+        version.children.Add(concepts);
+        target.Flush(); target.Flush(); target.Flush();
+
+        const conceptsItem = versionItem.SubItems.find(
+            (s) => (s.Header instanceof TextBlock ? (s.Header as TextBlock).Text : '') === 'Concepts')!;
+        assert.ok(conceptsItem !== undefined, 'the Concepts group row realized');
+        const glyph = (conceptsItem as unknown as { _chevronGlyph: { Geometry: unknown } })._chevronGlyph;
+        assert.ok(glyph.Geometry !== undefined,
+            'a nested branch with 28 children must present a chevron (else it reads as an empty leaf)');
+
+        // And it actually expands to reveal the entities.
+        conceptsItem.IsExpanded = true;
+        target.Flush(); target.Flush(); target.Flush();
+        assert.ok(conceptsItem.SubItems.length > 0, 'expanding the group realizes its entity rows');
+    });
 });
 
 describe('TreeViewItem — OnExpand data hook', () => {
