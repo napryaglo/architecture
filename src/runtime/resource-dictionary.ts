@@ -119,7 +119,11 @@ export class ResourceDictionary
     // step with `merged` so cleanup is straightforward.
     private readonly mergedSubscriptions: (() => void)[] = [];
 
-    private readonly listeners: ResourceChangeListener[] = [];
+    // A Set (not an array) so Subscribe/unsubscribe are O(1): tearing down a
+    // large visual subtree unsubscribes thousands of DynamicResource bindings,
+    // and an array's indexOf+splice made that O(n²) (a top CPU hotspot). Set
+    // preserves insertion order, so notification order is unchanged.
+    private readonly listeners = new Set<ResourceChangeListener>();
 
     // Sealed dictionaries reject every mutation (Set / Delete / Clear /
     // AddMergedDictionary / RemoveMergedDictionary). Set at Seal()
@@ -347,11 +351,10 @@ export class ResourceDictionary
     // (forwarded through the per-merge subscription).
     public Subscribe(listener: ResourceChangeListener): () => void
     {
-        this.listeners.push(listener);
+        this.listeners.add(listener);
         return () =>
         {
-            const i = this.listeners.indexOf(listener);
-            if (i >= 0) this.listeners.splice(i, 1);
+            this.listeners.delete(listener);
         };
     }
 
