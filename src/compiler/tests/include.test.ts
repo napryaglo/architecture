@@ -34,15 +34,34 @@ function emitted(src: string): string
 
 describe('include — emit', () => {
 
-    test('single file → one Set keyed by the resolver, plus its imports', () => {
+    test('single file → a local const + one Set keyed by the resolver, plus its imports', () => {
         const js = emitted(`resources Icons { include "icons/home.svg" }`);
-        assert.match(js, /\.Set\("home", new PathGeometry\(\[\]\)\)/);
+        // The value is bound to a local const (so `@home` can inline it) then Set.
+        assert.match(js, /const (\w+) = new PathGeometry\(\[\]\);/);
+        assert.match(js, /\.Set\("home", \w+\)/);
         assert.match(js, /import \{ PathGeometry \} from "@pragmatic-lab\/mural\/visual-engine"/);
     });
 
     test('`as <key>` overrides the resource key', () => {
         const js = emitted(`resources Icons { include "brand/logo.svg" as logo }`);
-        assert.match(js, /\.Set\("logo", new PathGeometry\(\[\]\)\)/);
+        assert.match(js, /const \w+ = new PathGeometry\(\[\]\);/);
+        assert.match(js, /\.Set\("logo", \w+\)/);
+    });
+
+    test('`@key` referencing an included resource INLINES it (no DynamicResource)', () => {
+        const js = emitted(`resources Icons {
+            include "icons/home.svg" as glyph
+            Shape x:key="row" [ Geometry = @glyph ]
+        }`);
+        // The include binds `glyph` to a local var…
+        const m = js.match(/\.Set\("glyph", (\w+)\)/);
+        assert.ok(m, 'include binds glyph to a local var');
+        const v = m![1];
+        // …and `@glyph` resolves to that same var, baked in — NOT a runtime
+        // DynamicResource that would fail to resolve outside this dictionary
+        // (e.g. once an entity template using it renders in a drawer).
+        assert.match(js, new RegExp(`GeometryKey, ${v}\\)`));
+        assert.doesNotMatch(js, /DynamicResource\(\w+, "glyph"\)/);
     });
 
     test('glob → one Set per matched file, keyed by basename', () => {

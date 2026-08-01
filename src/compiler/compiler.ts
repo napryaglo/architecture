@@ -1241,7 +1241,19 @@ export class Compiler
         }
         for (const entry of res.entries)
         {
-            this.line(`${rdVar}.Set(${JSON.stringify(entry.key)}, ${entry.valueJs});`);
+            // Bind each included resource to a local const and register it so a
+            // `@key` static-resource elsewhere in the SAME dictionary takes the
+            // local-inline fast path (see compileValue's static-resource case)
+            // instead of degrading to a DynamicResource. A DynamicResource walks
+            // the visual's ancestor resource chain at runtime — which does NOT
+            // include this dictionary once a template using the resource is
+            // applied outside it (e.g. an entity template rendered in a drawer),
+            // so the reference would silently never resolve. Inlining bakes the
+            // resource (a geometry — immutable, safe to share) directly in.
+            const entryVar = this.fresh('inc');
+            this.line(`const ${entryVar} = ${entry.valueJs};`);
+            this.line(`${rdVar}.Set(${JSON.stringify(entry.key)}, ${entryVar});`);
+            this.localResourceVars?.set(entry.key, entryVar);
         }
     }
 
