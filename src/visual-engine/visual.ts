@@ -947,6 +947,20 @@ export class Visual extends Model
         child.SetTarget(undefined);
     }
 
+    /** Detach `child` only if it is still our visual child; a no-op otherwise.
+     *  A Visual is single-parent, so a SHARED or re-presented content Visual can
+     *  legitimately leave a host (another host CLAIMS it via
+     *  `_release_from_visual_parent`). A content host clearing a possibly-stale
+     *  slot must tolerate that, rather than assume it still owns the child — the
+     *  symmetric partner to AttachVisual's release-then-attach. */
+    protected DetachVisualIfChild(child: Visual): void
+    {
+        if (child._visualParent === this)
+        {
+            this.DetachVisual(child);
+        }
+    }
+
     /** @internal Detach this Visual from its current visual parent, if any.
      *  Used by content hosts (ContentPresenter) to CLAIM a Visual that a
      *  now-discarded prior view still references — re-presenting a shared Visual

@@ -87,7 +87,10 @@ export class ContentPresenter extends Element
         if (content === this._content) return;
         if (this._content !== undefined)
         {
-            this.DetachVisual(this._content);
+            // The old content may have been CLAIMED by another host (a Visual is
+            // single-parent; see the release-then-attach below). Only detach it if
+            // it is still ours — never assume we still own a possibly-shared slot.
+            this.DetachVisualIfChild(this._content);
         }
         this._content = content;
         if (content !== undefined)
