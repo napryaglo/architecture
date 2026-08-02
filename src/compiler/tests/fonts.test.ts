@@ -22,7 +22,7 @@ describe('fonts — emit', () => {
             /FontManager\.Current\.Register\("Inter", \{ kind: FontSourceKind\.Url, url: new URL\("\.\.\/assets\/Inter\.ttf", import\.meta\.url\)\.href \}\);/);
         assert.match(js, /\.Set\("Inter", new FontFamily\("Inter"\)\)/);
         assert.match(js,
-            /import \{[^}]*\bFontManager\b[^}]*\bFontSourceKind\b[^}]*\} from "@pragmatic-lab/mural\/visual-engine"/);
+            /import \{[^}]*\bFontManager\b[^}]*\bFontSourceKind\b[^}]*\} from "@pragmatic-lab\/mural\/visual-engine"/);
     });
 
     test('Weight / Style attributes lower to enum members in the options', () => {

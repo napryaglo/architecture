@@ -40,7 +40,7 @@ describe('glyphs — emit', () => {
         ]);
         assert.match(js, /\.Set\("home", new PathGeometry\(\[\]\)\)/);
         assert.match(js, /\.Set\("search", new PathGeometry\(\[\]\)\)/);
-        assert.match(js, /import \{ PathGeometry \} from "@pragmatic-lab/mural\/visual-engine"/);
+        assert.match(js, /import \{ PathGeometry \} from "@pragmatic-lab\/mural\/visual-engine"/);
     });
 
     test('`key = "<cp>"` → resolver entry with codepoint (no name); \\u decoded', () => {
