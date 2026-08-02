@@ -21,9 +21,7 @@ resources Menus {
     Template x:key="DefaultMenuButtonTrigger" [TargetType = MenuButton] {
         Button x:name="PART_Trigger" {
             StackPanel x:name="PART_TriggerStack" [ Orientation = Horizontal ] {
-                TextBlock x:name="PART_HeaderText"
-                    [ Foreground = @OnPrimary,
-                      Style      = @LabelLarge ]
+                TextBlock x:name="PART_HeaderText" [ Foreground = @OnPrimary, Style = @LabelLarge ]
             }
         }
     }
@@ -164,7 +162,14 @@ resources Menus {
     // ItemsControl wires) is the submenu popup chrome below.
     Template x:key="DefaultMenuItemRow" [TargetType = MenuItem] {
         Border x:name="PART_Row" [ Padding = (@Spacing2,@Spacing1,@Spacing2,@Spacing1) ] {
-            StackPanel [ Orientation = Horizontal ] {
+            // A DockPanel (not a horizontal StackPanel) so the chevron and
+            // gesture pin to the row's RIGHT edge while the header fills the
+            // middle — the M3 / platform convention. In a left-packed stack
+            // the submenu ▶ sits immediately after a short header, floating
+            // mid-row once the popup widens to a longer sibling. LastChildFill
+            // gives PART_Label the slack; dock order is icon(left) then
+            // chevron/gesture(right) then the label fills.
+            DockPanel [ LastChildFill = true ] {
                 // Icon column reserves 24dp for an M3-spec leading
                 // icon. Width / MinWidth stay inline as a column-grid
                 // constant — the M3 menu spec calls for a 24dp icon
@@ -173,17 +178,28 @@ resources Menus {
                 // bare Shape icon (Fill unset) paints through effectiveFill's
                 // inherited-Foreground fallback — same contract the toolbar
                 // buttons use. A consumer Icon with its own Fill overrides it.
-                Border x:name="PART_Icon" [ Width = 24, MinWidth = 24, TextBlock.Foreground = @OnSurfaceVariant ]
+                Border x:name="PART_Icon"
+                    [ DockPanel.Dock       = Left,
+                      Width                = 24,
+                      MinWidth             = 24,
+                      TextBlock.Foreground = @OnSurfaceVariant ]
+                // The submenu ▶ (empty when there's no submenu) pinned right.
+                TextBlock x:name="PART_Chevron"
+                    [ DockPanel.Dock = Right,
+                      Width          = 12,
+                      Foreground     = @OnSurfaceVariant ]
+                // Keyboard-gesture text sits just left of the chevron, also right-docked.
+                TextBlock x:name="PART_Gesture"
+                    [ DockPanel.Dock = Right,
+                      Margin         = (@Spacing4,0,@Spacing4,0),
+                      Foreground     = @OnSurfaceVariant,
+                      Style          = @LabelMedium ]
+                // Fills the middle so the right-docked columns pin to the edge.
                 TextBlock x:name="PART_Label"
                     [ Margin     = (@Spacing2,0,@Spacing4,0),
                       MinWidth   = 80,
                       Foreground = @OnSurface,
                       Style      = @LabelLarge ]
-                TextBlock x:name="PART_Gesture"
-                    [ Margin     = (0,0,@Spacing4,0),
-                      Foreground = @OnSurfaceVariant,
-                      Style      = @LabelMedium ]
-                TextBlock x:name="PART_Chevron" [ Width = 12, Foreground = @OnSurfaceVariant ]
             }
         }
         // M3 state-layer tokens — semi-transparent OnSurface tints over
