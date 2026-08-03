@@ -10,10 +10,11 @@ is a separate spec, built after this ships.
 Let mural author icons backed by **raster images (PNG/JPEG/…)**, not just SVG,
 by extending the build-time `include` pipeline to emit an `ImageBrush` resource
 from an image file. Binary payloads are **singletons** (one shared instance
-across every `ResourceDictionary.Clone()`), carried in a **companion module** so
-the base64 stays out of the dictionary code. Add a general `x:single` markup
-directive so an author can mark *any* self-contained resource as a shared
-singleton — the mechanism binaries use implicitly.
+across every `ResourceDictionary.Clone()`), emitted once as a module-level
+`const` **packed into the single compiled `.mu.js`** — never a separate file —
+so the base64 is evaluated once and stays out of `Clone()`. Add a general
+`x:single` markup directive so an author can mark *any* self-contained resource
+as a shared singleton — the mechanism binaries use implicitly.
 
 Consuming the new resource (rendering a PNG icon on a node, a panel, etc.) is
 **out of scope** here — that is SP2 in Plexus. This spec delivers only the
@@ -65,9 +66,9 @@ Extend `include-resolver.ts` to accept raster extensions:
 No size guard — any size embeds. The SVG branch is unchanged. A genuinely
 unsupported extension (e.g. `.txt`) still throws the existing clear error.
 
-A raster entry is flagged **binary** so downstream codegen routes it to the
-companion module as a singleton (see §3). `colored` is meaningless for raster
-and is ignored (or a warning) when combined.
+A raster entry is flagged **binary** so downstream codegen emits it as a
+module-level singleton (see §3). `colored` is meaningless for raster and is
+ignored (or a warning) when combined.
 
 ### 2. `x:single` — a general singleton directive
 
@@ -94,45 +95,63 @@ knows when it produces a context/`DynamicResource` reference; surface that as a
 **AST.** `IncludeForm` gains `single: boolean`; resource-form nodes gain a
 `single: boolean` derived from the parsed `x:` directives.
 
-### 3. Companion module for binary singletons; module-scope const for `x:single`
+### 3. Singletons are module-level consts, packed into the single module
 
-Both mechanisms produce a **singleton referenced by `Clone()`**, differing only
-in *where* the `const` lives:
+Both binary and `x:single` resources produce a **singleton referenced by
+`Clone()`** — a top-level `const` in the dictionary's compiled `.mu.js` module,
+constructed once and referenced (never rebuilt) on every clone. **No separate
+companion file is emitted.** The compiler already produces one JS module per
+`.mu`; singletons live at its top, and the app's bundler packs the whole import
+graph into the final single JS anyway.
 
-- **Binary (raster) resources — always singleton, always in a companion
-  module.** For a `.mu` named `NAME` that has ≥1 raster include, the compiler
-  emits a sibling module `NAME.assets.mu.js`:
-  ```js
-  import { ImageBrush, BitmapImage } from "@pragmatic-lab/mural/visual-engine";
-  export const Logo = new ImageBrush(new BitmapImage("data:image/png;base64,…"));
-  ```
-  one `export const <Key>` per raster resource (ES-module-evaluated once). The
-  main `NAME.mu.js` imports it (`import * as _assets from "./NAME.assets.mu.js";`)
-  and `Clone()` sets the shared reference: `t.Set("Logo", _assets.Logo);` — no
-  `new`. Binaries are singletons **without** the author writing `x:single`.
-- **`x:single`-marked non-binary resources** hoist to a **top-level `const` in
-  the main module** (the base64-blob-isolation the companion file provides is
-  only needed for binaries):
-  ```js
-  const _single_Accent = new SolidColorBrush(Color.FromHex('#ff0000'));
-  // …in Clone(): t.Set("Accent", _single_Accent);
-  ```
+```js
+// top of NAME.mu.js — one const per singleton, evaluated once
+import { ImageBrush, BitmapImage } from "@pragmatic-lab/mural/visual-engine";
+const _single_Logo   = new ImageBrush(new BitmapImage("data:image/png;base64,…")); // binary ⇒ implicit
+const _single_Accent = new SolidColorBrush(Color.FromHex('#ff0000'));              // x:single
 
-**Codegen changes (`compileResourcesBlock` + CLI).**
-- `IncludeResolution` (and the internal resource-entry representation) gains a
-  way to declare, per entry: (a) a **companion-module asset** (module + export
-  name + `valueJs`) and (b) a **`Clone()` reference expression** (`_assets.Key`
-  or `_single_Key`) distinct from today's inline `valueJs`.
-- `compileResourcesBlock` emits, in order: top-level `const _single_*` for
-  `x:single` block resources; the companion-module import for binaries; then a
-  `Clone()` body that uses the reference expression for singleton entries and
-  the existing inline `const _incN = …` for normal entries.
-- The **CLI** (`src/tooling/cli.js` compile path) writes `NAME.assets.mu.js`
-  next to `NAME.mu.js` whenever the block produced companion assets, and a
-  matching `.d.ts` if the SVG path emits one today.
+export class NAME extends ResourceDictionary {
+    // …
+    static Clone() {
+        const t = new NAME(_gate_NAME);
+        // …merges + normal (copy-per-Clone) entries…
+        t.Set("Logo",   _single_Logo);    // reference, not `new`
+        t.Set("Accent", _single_Accent);  // reference, not `new`
+        return t;
+    }
+}
+```
 
-Emission stays **deterministic** (stable key order, stable import order) so
-builds are reproducible.
+Binaries are singletons **without** the author writing `x:single`; `x:single` is
+the explicit marker for everything else. The two are identical at the emit
+level — a module-top `const` plus a `Clone()` reference — differing only in that
+binary is implicit and its value is a base64 `ImageBrush`.
+
+**Organising assets into their own dictionary = the existing `merge`.** If an
+author wants binary assets grouped separately, they declare a normal
+`resources Assets { include x:single "…png" as Logo }` and `import`/`merge` it
+into the consuming dictionary — no new machinery. `merge` folds entries via
+`Assets.Clone().Entries()`; because `Assets`' binaries are module-level
+singletons, its `Clone()` hands back **references**, so the merge copies the
+shared instances, not fresh copies. The singleton survives the merge, and the
+bundler packs `Assets`' module into the same final JS. So "companion
+dictionaries" are just ordinary merged dictionaries — never separate files in
+the final compilation.
+
+**Codegen changes (`compileResourcesBlock`).**
+- The internal resource-entry representation (and `IncludeResolution`) gains,
+  per singleton entry, a **module-level declaration** (`const _single_Key = …`)
+  and a **`Clone()` reference expression** (`_single_Key`) distinct from today's
+  inline `valueJs`.
+- `compileResourcesBlock` emits the `const _single_*` declarations at module
+  scope (before the class), and a `Clone()` body that uses the reference for
+  singleton entries and the existing inline `const _incN = …; t.Set(…)` for
+  normal (copy-per-clone) entries.
+- No CLI change — output is still one `.mu.js` per `.mu` (plus its existing
+  `.d.ts`).
+
+Emission stays **deterministic** (stable key + declaration order) so builds are
+reproducible.
 
 ### 4. Consumer contract (bridge to SP2)
 
@@ -154,9 +173,11 @@ rendered `<image>` by `href`, so this only tightens the JS/memory side to match.
 ```
 include "logo.png"  ─▶ include-resolver: bytes → base64 data-URI
                      ─▶ ImageBrush(BitmapImage(dataURI))  [binary ⇒ singleton]
-compiler codegen    ─▶ NAME.assets.mu.js: export const Logo = <brush>
-                     ─▶ NAME.mu.js Clone(): t.Set("Logo", _assets.Logo)   // reference
+compiler codegen    ─▶ NAME.mu.js: top-level const _single_Logo = <brush>
+                     ─▶ Clone(): t.Set("Logo", _single_Logo)   // reference, not new
 x:single (block)    ─▶ top-level const _single_Key ; Clone(): t.Set(...) reference
+merge Assets        ─▶ Assets.Clone().Entries() copies the shared singletons (refs)
+bundler             ─▶ every dictionary module packed into one final JS
 runtime             ─▶ @Logo == shared ImageBrush ; Border[Background=@Logo] paints PNG
 ```
 
@@ -178,12 +199,16 @@ Mural compiler/tooling tests (files in `tests/` subfolders):
   value with the correct mime + base64, and the `ImageBrush`/`BitmapImage`
   imports; a `.txt` include still throws; extension→mime mapping for each
   accepted type.
-- **Companion module emit:** a `resources` block with a raster include emits a
-  `NAME.assets.mu.js` exporting one const per raster key, and the main module's
-  `Clone()` references `_assets.<Key>` (no inline `new` for that key).
+- **Single-module emit:** a `resources` block with a raster include emits a
+  module-level `const _single_<Key> = new ImageBrush(new BitmapImage(…))` and a
+  `Clone()` that references it (no inline `new` for that key); output is one
+  `.mu.js`, no separate asset file.
 - **Singleton identity:** two `Clone()`s of the same dictionary return the
   **same** `ImageBrush` instance for a binary key (referential equality); a
   vector key still returns **distinct** instances per clone.
+- **Singleton survives `merge`:** a dictionary that `merge`s another whose
+  binary key is a singleton yields the **same** instance as the source
+  dictionary's clone (the merge copies the reference, not a new object).
 - **`x:single` parse:** parses on a block resource (leading, with `x:key`) and
   on an `include` (leading, composable with `colored`); `IncludeForm.single` /
   resource `single` flags set.
@@ -191,8 +216,8 @@ Mural compiler/tooling tests (files in `tests/` subfolders):
   top-level `const` and `Clone()` references it; two clones share the instance.
 - **`x:single` guard:** a marked resource whose value references
   `DynamicResource`/context → compile error; `x:single` without a key → error.
-- **Determinism:** compiling the same input twice yields byte-identical main +
-  companion modules.
+- **Determinism:** compiling the same input twice yields a byte-identical
+  output module.
 
 ## Ship
 
@@ -215,8 +240,12 @@ compiles + tests green. Merge to mural `main`.
 - Raster vs vector chosen **by file extension**.
 - Deliver via **extending mural's `include`** (not runtime-only, not a Plexus
   workaround).
-- Binary bytes embedded as **base64 in a companion module**; **no size guard**.
+- Binary bytes embedded as **base64**; **no size guard**.
 - **Any binary/base64 resource is implicitly a singleton** (`Clone()` returns a
   shared reference).
 - Add a general **`x:single`** markup directive to mark any self-contained
   resource as a singleton; binaries get it automatically.
+- **No separate companion files** in the final compilation — singletons are
+  module-level consts packed into the single compiled `.mu.js`; grouping assets
+  into their own dictionary uses the existing `import`/`merge`, and the bundler
+  packs every module into one final JS.
