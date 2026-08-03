@@ -57,8 +57,9 @@ describe('makeIncludeResolver — raster', () => {
         const dir = fixtureDir();
         const js = compile(`resources I { include "dot.png" as Dot }`,
             { include: makeIncludeResolver(dir) }).js;
-        assert.match(js, /const _inc\d+ = new ImageBrush\(new BitmapImage\("data:image\/png;base64,/);
-        assert.match(js, /\.Set\("Dot", _inc\d+\)/);
+        // A raster include is a singleton: hoisted to a module-scope const.
+        assert.match(js, /const _single\d+ = new ImageBrush\(new BitmapImage\("data:image\/png;base64,/);
+        assert.match(js, /\.Set\("Dot", _single\d+\)/);
         assert.match(js, /import \{[^}]*\} from "@pragmatic-lab\/mural\/visual-engine"/);
         assert.ok(js.includes('BitmapImage') && js.includes('ImageBrush'));
     });

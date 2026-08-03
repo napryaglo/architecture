@@ -96,6 +96,39 @@ describe('include — colored flag threading', () => {
     });
 });
 
+// A resolver that returns a singleton entry (mimics the raster branch) and a
+// normal one (mimics the geometry branch).
+const singletonResolver: IncludeResolver = (path) => {
+    if (path.endsWith('.png'))
+        return { entries: [{ key: 'Dot', valueJs: 'new ImageBrush(0)', singleton: true }],
+                 imports: [{ module: '@pragmatic-lab/mural/visual-engine', names: ['ImageBrush'] }] };
+    return { entries: [{ key: 'home', valueJs: 'new RectangleGeometry(0)' }],
+             imports: [{ module: '@pragmatic-lab/mural/visual-engine', names: ['RectangleGeometry'] }] };
+};
+
+describe('include — singleton hoist', () => {
+
+    test('a singleton include hoists to a module-scope const referenced by Clone', () => {
+        const js = compile(`resources I { include "dot.png" as Dot }`, { include: singletonResolver }).js;
+        // Constructed once, at module scope (before the class), not inside Clone.
+        const ctorCount = (js.match(/new ImageBrush\(0\)/g) ?? []).length;
+        assert.equal(ctorCount, 1);
+        assert.match(js, /^const _single\d+ = new ImageBrush\(0\);$/m);
+        const classAt = js.indexOf('export class I');
+        const constAt = js.search(/const _single\d+ = new ImageBrush\(0\);/);
+        assert.ok(constAt >= 0 && constAt < classAt, 'singleton const precedes the class');
+        // Clone references the const, does not reconstruct.
+        assert.match(js, /\.Set\("Dot", _single\d+\)/);
+    });
+
+    test('a non-singleton include still builds a fresh copy inside Clone', () => {
+        const js = compile(`resources I { include "home.svg" }`, { include: singletonResolver }).js;
+        assert.match(js, /const _inc\d+ = new RectangleGeometry\(0\);/);
+        assert.match(js, /\.Set\("home", _inc\d+\)/);
+        assert.doesNotMatch(js, /const _single\d+ = new RectangleGeometry/);
+    });
+});
+
 describe('include — errors', () => {
 
     test('without a resolver, include is a compile error', () => {

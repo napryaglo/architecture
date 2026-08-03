@@ -233,8 +233,11 @@ export class EmitError extends Error
 // overrode a one-file include.
 export interface IncludeResolution
 {
-    /** Resource entries to `Set` into the dictionary, in order. */
-    entries:  ReadonlyArray<{ key: string; valueJs: string }>;
+    /** Resource entries to `Set` into the dictionary, in order. A `singleton`
+     *  entry is hoisted to a module-scope const (shared across every Clone())
+     *  instead of reconstructed per clone — used for immutable binary payloads
+     *  (raster images). */
+    entries:  ReadonlyArray<{ key: string; valueJs: string; singleton?: boolean }>;
     /** Named imports the entries' `valueJs` reference, grouped by module. */
     imports?: ReadonlyArray<{ module: string; names: readonly string[] }>;
 }
@@ -412,6 +415,12 @@ export class Compiler
     // SAME dict being constructed (the merged dict isn't visible to
     // Application.current.Resources until create() returns).
     private localResourceVars:  Map<string, string>   | undefined;
+    // While emitting a `resources` block, singleton entries push their
+    // `const _singleN = …;` declaration here; compileResourcesBlock splices them
+    // into `this.lines` at module scope (before the class) after the block is
+    // emitted. null when not inside a singleton-collecting block — a singleton
+    // entry then falls back to the inline copy-per-Clone path.
+    private singletonConsts:    string[]              | null = null;
     // Current indent prefix (multiples of 4 spaces) — incremented when
     // we open a nested scope (template factory body, future macro
     // expansions, etc.), decremented at close. Cosmetic for the emitted
@@ -718,6 +727,13 @@ export class Compiler
         const name = block.name;
         const gateVar = `_gate_${name}`;
 
+        // Singleton entries push their `const _singleN = …;` here; we splice them
+        // into `this.lines` at module scope (this index, before the class) after
+        // the block emits.
+        const singleAt = this.lines.length;
+        const savedSingletonConsts = this.singletonConsts;
+        this.singletonConsts = [];
+
         this.line('');
         this.line(`const ${gateVar} = Symbol(${JSON.stringify(`${name}.ctor`)});`);
         this.line(`export class ${name} extends ResourceDictionary {`);
@@ -768,6 +784,14 @@ export class Compiler
 
         this.indent -= 4;
         this.line(`}`);
+
+        // Hoist collected singleton consts to module scope, before the class.
+        const consts = this.singletonConsts;
+        this.singletonConsts = savedSingletonConsts;
+        if (consts !== null && consts.length > 0)
+        {
+            this.lines.splice(singleAt, 0, ...consts);
+        }
 
         return {
             name,
@@ -1250,10 +1274,28 @@ export class Compiler
             // applied outside it (e.g. an entity template rendered in a drawer),
             // so the reference would silently never resolve. Inlining bakes the
             // resource (a geometry — immutable, safe to share) directly in.
-            const entryVar = this.fresh('inc');
-            this.line(`const ${entryVar} = ${entry.valueJs};`);
-            this.line(`${rdVar}.Set(${JSON.stringify(entry.key)}, ${entryVar});`);
-            this.localResourceVars?.set(entry.key, entryVar);
+            // A singleton entry (a binary payload, or `x:single`) is hoisted to a
+            // module-scope const so every Clone() shares one instance; a normal
+            // entry binds a fresh local const inside Clone (copy-per-clone).
+            // NOTE: `form.single` (the `x:single` modifier) lands in Task 3 as an
+            // IncludeForm AST field; cast until then.
+            const isSingle = (entry.singleton === true
+                    || (form as { single?: boolean }).single === true)
+                && this.singletonConsts !== null;
+            if (isSingle)
+            {
+                const singleVar = this.fresh('single');
+                this.singletonConsts!.push(`const ${singleVar} = ${entry.valueJs};`);
+                this.line(`${rdVar}.Set(${JSON.stringify(entry.key)}, ${singleVar});`);
+                this.localResourceVars?.set(entry.key, singleVar);
+            }
+            else
+            {
+                const entryVar = this.fresh('inc');
+                this.line(`const ${entryVar} = ${entry.valueJs};`);
+                this.line(`${rdVar}.Set(${JSON.stringify(entry.key)}, ${entryVar});`);
+                this.localResourceVars?.set(entry.key, entryVar);
+            }
         }
     }
 
