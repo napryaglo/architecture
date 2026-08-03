@@ -1277,10 +1277,7 @@ export class Compiler
             // A singleton entry (a binary payload, or `x:single`) is hoisted to a
             // module-scope const so every Clone() shares one instance; a normal
             // entry binds a fresh local const inside Clone (copy-per-clone).
-            // NOTE: `form.single` (the `x:single` modifier) lands in Task 3 as an
-            // IncludeForm AST field; cast until then.
-            const isSingle = (entry.singleton === true
-                    || (form as { single?: boolean }).single === true)
+            const isSingle = (entry.singleton === true || form.single === true)
                 && this.singletonConsts !== null;
             if (isSingle)
             {

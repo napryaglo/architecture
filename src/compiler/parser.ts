@@ -323,12 +323,15 @@ export class Parser
     private parseIncludeForm(): IncludeForm
     {
         const start = this.expectIdent('include').span.start;
-        // Optional leading `colored` modifier: `include colored "…"`.
+        // Optional leading modifiers, any order: `colored`, `x:single`.
         let colored = false;
-        if (this.peek().kind === TokenKind.Ident && this.peek().value === 'colored')
+        let single  = false;
+        for (;;)
         {
-            this.consume();
-            colored = true;
+            const t = this.peek();
+            if (t.kind === TokenKind.Ident && t.value === 'colored') { this.consume(); colored = true; continue; }
+            if (t.kind === TokenKind.ScopeExt && t.value === 'single') { this.consume(); single = true; continue; }
+            break;
         }
         const path  = this.expect(TokenKind.String).value;
         let key: string | undefined;
@@ -338,7 +341,7 @@ export class Parser
             key = this.expect(TokenKind.Ident).value;
         }
         const end = this.lastEnd();
-        return { kind: 'include-form', path, key, colored, span: this.span(start, end) };
+        return { kind: 'include-form', path, key, colored, single, span: this.span(start, end) };
     }
 
     // `merge <Alias>` — fold a file-level-imported dictionary's entries into

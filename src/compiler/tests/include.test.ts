@@ -127,6 +127,13 @@ describe('include — singleton hoist', () => {
         assert.match(js, /\.Set\("home", _inc\d+\)/);
         assert.doesNotMatch(js, /const _single\d+ = new RectangleGeometry/);
     });
+
+    test('x:single forces a hoist even for an otherwise-copied (vector) include', () => {
+        const js = compile(`resources I { include x:single "home.svg" }`, { include: singletonResolver }).js;
+        assert.match(js, /^const _single\d+ = new RectangleGeometry\(0\);$/m);
+        assert.match(js, /\.Set\("home", _single\d+\)/);
+        assert.doesNotMatch(js, /const _inc\d+ = new RectangleGeometry/);
+    });
 });
 
 describe('include — errors', () => {
