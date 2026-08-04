@@ -483,6 +483,10 @@ class Printer
             case 'glyphs-form':        return this.printGlyphs(item, level);
             case 'fonts-form':         return this.printFonts(item, level);
             case 'macro-hole-body-item': return this.push(level, `#${item.name}`);
+            // A quoted string used as a body item (e.g. `Span [...] { "text" }`
+            // in rich-text markup) — a text-chunk in a STRUCTURED body. Emit it
+            // re-quoted; dropping it silently corrupts the markup.
+            case 'text-chunk-body-item': return this.push(level, q(item.value));
         }
     }
 

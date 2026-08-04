@@ -6,7 +6,7 @@ import {
     PointerEventArgs, type KeyEventInit, type ModifierKeys, type PointerEventInit,
 } from '../../runtime/index.js';
 import { InputManager } from '../../framework/index.js';
-import { HeadlessTarget, SvgDrawingContext, FontWeight } from '../../visual-engine/index.js';
+import { HeadlessTarget, SvgDrawingContext, FontWeight, Size } from '../../visual-engine/index.js';
 import { RichTextBox, FlowDocument, Paragraph, Run, List, ListItem } from '../index.js';
 import { TextPointer, ParagraphRuns } from '../documents/text-pointer.js';
 import { DocumentParagraphs, ParagraphText } from '../documents/text-navigation.js';
@@ -102,7 +102,7 @@ describe('RichTextBox editor — formatting + clipboard + lists', () =>
         const { rtb, im } = fixture(textDoc('hello'));
         im.InjectKeyDown(key(Key.A, { Control: true }));
         im.InjectKeyDown(key(Key.B, { Control: true }));
-        rtb.Measure({ Width: 200, Height: 60 } as never);
+        rtb.Measure(new Size(200, 60));
         const dc = new SvgDrawingContext();
         rtb.Render(dc);
         // The bolded run must render with font-weight="bold" — the model

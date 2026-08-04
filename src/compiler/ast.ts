@@ -379,6 +379,10 @@ export interface IncludeForm
     /** `include colored "…"` → true: import as a colored IconDefinition
      *  rather than a monochrome Geometry. */
     colored: boolean;
+    /** `include x:single "…"` → true: force this include's resource(s) to be
+     *  module-scope singletons (shared across every Clone()). Raster images are
+     *  singletons implicitly; this opts a vector/geometry include in too. */
+    single: boolean;
     span: SourceSpan;
 }
 

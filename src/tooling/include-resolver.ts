@@ -21,6 +21,16 @@ import { svgToGeometryJs, svgToIconJs } from './svg-geometry.js';
 
 const VISUAL_ENGINE = '@pragmatic-lab/mural/visual-engine';
 
+// Raster image extensions → MIME type. A raster include base64-embeds the file
+// into an ImageBrush(BitmapImage(dataURI)) resource (a singleton — see the emit).
+const RASTER_MIME: Readonly<Record<string, string>> = {
+    '.png':  'image/png',
+    '.jpg':  'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.webp': 'image/webp',
+    '.gif':  'image/gif',
+};
+
 export function makeIncludeResolver(baseDir: string): IncludeResolver
 {
     return (spec: string, ctx: { key: string | undefined; colored: boolean }): IncludeResolution =>
@@ -30,7 +40,7 @@ export function makeIncludeResolver(baseDir: string): IncludeResolver
         {
             throw new Error(`no files matched "${spec}" (relative to ${baseDir})`);
         }
-        const entries: Array<{ key: string; valueJs: string }> = [];
+        const entries: Array<{ key: string; valueJs: string; singleton?: boolean }> = [];
         const byModule = new Map<string, Set<string>>();
         const addNames = (module: string, names: readonly string[]): void =>
         {
@@ -42,24 +52,42 @@ export function makeIncludeResolver(baseDir: string): IncludeResolver
         for (const m of matches)
         {
             const ext = extname(m.abs).toLowerCase();
-            if (ext !== '.svg')
+            if (ext === '.svg')
             {
-                throw new Error(
-                    `unsupported include type '${ext}' for ${m.abs} — only .svg is handled today`);
+                const text = readFileSync(m.abs, 'utf8');
+                if (ctx.colored)
+                {
+                    const { valueJs, imports } = svgToIconJs(text);
+                    for (const imp of imports) addNames(imp.module, imp.names);
+                    entries.push({ key: ctx.key ?? m.key, valueJs });
+                }
+                else
+                {
+                    const { valueJs, names } = svgToGeometryJs(text);
+                    addNames(VISUAL_ENGINE, names);
+                    entries.push({ key: ctx.key ?? m.key, valueJs });
+                }
+                continue;
             }
-            const text = readFileSync(m.abs, 'utf8');
-            if (ctx.colored)
+            const mime = RASTER_MIME[ext];
+            if (mime !== undefined)
             {
-                const { valueJs, imports } = svgToIconJs(text);
-                for (const imp of imports) addNames(imp.module, imp.names);
-                entries.push({ key: ctx.key ?? m.key, valueJs });
+                // Base64-embed the image into an ImageBrush(BitmapImage(dataURI)).
+                // Flagged `singleton` so the compiler hoists it to a module-scope
+                // const shared across every ResourceDictionary.Clone().
+                const bytes   = readFileSync(m.abs);
+                const dataUri = `data:${mime};base64,${bytes.toString('base64')}`;
+                addNames(VISUAL_ENGINE, ['BitmapImage', 'ImageBrush']);
+                entries.push({
+                    key:       ctx.key ?? m.key,
+                    valueJs:   `new ImageBrush(new BitmapImage(${JSON.stringify(dataUri)}))`,
+                    singleton: true,
+                });
+                continue;
             }
-            else
-            {
-                const { valueJs, names } = svgToGeometryJs(text);
-                addNames(VISUAL_ENGINE, names);
-                entries.push({ key: ctx.key ?? m.key, valueJs });
-            }
+            throw new Error(
+                `unsupported include type '${ext}' for ${m.abs} — only .svg and raster `
+                + `images (${Object.keys(RASTER_MIME).join(', ')}) are handled`);
         }
 
         const imports = [...byModule.entries()]
