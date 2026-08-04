@@ -27,8 +27,11 @@ describe('EditorShell — full region set', () => {
 
     test('template exposes every region host', () => {
         const root = new EditorShell().visualChildren[0];
+        // The right-side inspector region was restructured into the nav-driven
+        // PART_SidePane and the dockable PART_RightDockHost (which hosts inspectors
+        // and other panels as tabs) — replacing the old single PART_InspectorHost.
         for (const part of ['PART_HeaderHost', 'PART_CommandHost', 'PART_StatusHost',
-                            'PART_NavHost', 'PART_InspectorHost', 'PART_ContentHost']) {
+                            'PART_NavHost', 'PART_SidePane', 'PART_RightDockHost', 'PART_ContentHost']) {
             assert.ok(root.FindName(part) !== undefined, `${part} should be present`);
         }
     });
@@ -42,9 +45,9 @@ describe('ViewerShell — readonly subset', () => {
         assert.ok(root.FindName('PART_HeaderHost')  !== undefined);
         assert.ok(root.FindName('PART_NavHost')     !== undefined);
         assert.ok(root.FindName('PART_ContentHost') !== undefined);
-        assert.equal(root.FindName('PART_CommandHost'),   undefined);
-        assert.equal(root.FindName('PART_InspectorHost'), undefined);
-        assert.equal(root.FindName('PART_StatusHost'),    undefined);
+        assert.equal(root.FindName('PART_CommandHost'),    undefined);
+        assert.equal(root.FindName('PART_RightDockHost'),  undefined);
+        assert.equal(root.FindName('PART_StatusHost'),     undefined);
     });
 });
 
