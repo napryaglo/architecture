@@ -12,7 +12,7 @@ import { DocumentsContentHostService } from '../../shell/services/documents-cont
 import { CommandRegistry } from '../../shell/commands/command-registry.js';
 import { CommandDefinition } from '../../shell/commands/command-definition.js';
 import { ToolbarService } from '../../shell/commands/toolbar-service.js';
-import { IconButton } from '../../buttons/icon-button.js';
+import { ToolBarButton } from '../../tool-bar/tool-bar-items.js';
 import { Diagram } from '../diagram.js';
 import { Figure } from '../figure.js';
 import { DiagramDocument } from '../diagram-document.js';
@@ -113,18 +113,18 @@ describe('Diagram toolbar command — end to end through the shell', () => {
             'align RE-ENABLED after selection (requery pulse reached the toolbar)');
 
         // The RENDERED button in the command bar must carry that same command
-        // (the last mile: DataTemplate[CommandViewModel] → IconButton[Command=$Command]).
+        // (the last mile: DataTemplate[CommandViewModel] → ToolBarButton[Command=$Command]).
         const commandHost = shell.visualChildren[0]!.FindName('PART_CommandHost') as Visual;
         const buttons: { Command?: unknown }[] = [];
         const collect = (r: Visual): void =>
         {
-            if (r instanceof IconButton) buttons.push(r as unknown as { Command?: unknown });
+            if (r instanceof ToolBarButton) buttons.push(r as unknown as { Command?: unknown });
             for (const c of r.visualChildren) collect(c);
         };
         collect(commandHost);
         const wired = buttons.find(b => b.Command === vm!.Command);
         assert.ok(wired !== undefined,
-            `a rendered command-bar button is bound to the align command (found ${buttons.length} IconButtons)`);
+            `a rendered command-bar button is bound to the align command (found ${buttons.length} ToolBarButtons)`);
 
         // ...and invoking it (what the button Click does) must move the shapes.
         vm!.Command.Execute(undefined);
