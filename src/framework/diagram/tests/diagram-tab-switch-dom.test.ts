@@ -45,6 +45,19 @@ function findFirst<T extends Visual>(root: Visual, ctor: new (...a: never[]) => 
     return undefined;
 }
 
+// The DOCUMENTS TabControl specifically — the shell also has a panel-dock
+// TabControl (which comes first in the tree), so select by DataContext.
+function findDocsTab(root: Visual): TabControl | undefined
+{
+    if (root instanceof TabControl && root.DataContext instanceof DocumentsContentHostService) return root;
+    for (const c of root.visualChildren)
+    {
+        const hit = findDocsTab(c);
+        if (hit !== undefined) return hit;
+    }
+    return undefined;
+}
+
 // Every Diagram outer <g> currently in the DOM, resolved back to its Visual.
 function diagramOutersInDom(surface: SVGSVGElement): Diagram[]
 {
@@ -113,7 +126,7 @@ describe('Plexus diagram — the DOM canvas swaps on tab click (incremental rend
             'DOM canvas shows docB before the click');
 
         // Click docA's tab.
-        const tabs = findFirst(shellRoot, TabControl)!;
+        const tabs = findDocsTab(shellRoot)!;
         const tabA = tabs.logicalChildren[0] as TabItem;
         const im = new InputManager();
         im.InjectPointerMove(tabA, pointer());
