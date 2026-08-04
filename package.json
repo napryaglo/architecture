@@ -113,7 +113,7 @@
     "typecheck": "tsc --noEmit",
     "typecheck:demos": "tsc -p demo/tsconfig.json --noEmit",
     "pretest": "npm run build:templates",
-    "test": "tsx --conditions=development --test \"src/**/*.test.ts\"",
+    "test": "tsx --conditions=development --test --test-force-exit \"src/**/*.test.ts\"",
     "demo:border": "tsx src/Controls/tests/border-render.ts",
     "demo:text": "tsx src/Controls/tests/text-render.ts",
     "demo:gfont": "tsx src/Controls/tests/google-font-render.ts",
