@@ -125,6 +125,29 @@ export class ResourceDictionary
     // preserves insertion order, so notification order is unchanged.
     private readonly listeners = new Set<ResourceChangeListener>();
 
+    // The STYLE channel — a second, opt-in listener set for consumers that
+    // only care about changes which can affect implicit/theme style
+    // resolution (Element.subscribe_styles). Kept separate from the general
+    // `listeners` so a StyleParticipating=false dictionary can fire the
+    // general channel (DynamicResource, canvas-by-key lookups still need it)
+    // without waking every element's style re-resolution. See the
+    // notification-primitives design doc.
+    private readonly styleListeners = new Set<ResourceChangeListener>();
+
+    // When false, this dictionary never fires its style channel — neither on
+    // its own mutations nor, when merged, through the parent's style channel.
+    // Default true (a normal dictionary participates in styling). Read live
+    // by the merge forwarder, so toggling after a merge takes effect on the
+    // next change with no re-subscribe.
+    private _styleParticipating = true;
+
+    // Batch coalescing state. While _batchDepth > 0, signal() records which
+    // channels were touched instead of firing; Batch() replays exactly those
+    // on exit. See Batch().
+    private _batchDepth = 0;
+    private _pendingGeneral = false;
+    private _pendingStyle = false;
+
     // Sealed dictionaries reject every mutation (Set / Delete / Clear /
     // AddMergedDictionary / RemoveMergedDictionary). Set at Seal()
     // time; cannot be unsealed. WHY: theme bundles want to lock their
@@ -146,7 +169,7 @@ export class ResourceDictionary
         // WPF behavior of ResourceDictionary being a write-through
         // dictionary; consumers that want dedupe can layer it.
         this.entries.set(key, value);
-        this.notify();
+        this.signal(true);
     }
 
     // Returns the value for `key` from THIS dictionary only, ignoring
@@ -167,7 +190,7 @@ export class ResourceDictionary
     {
         this.checkUnsealedForMutation('Delete');
         const removed = this.entries.delete(key);
-        if (removed) this.notify();
+        if (removed) this.signal(true);
         return removed;
     }
 
@@ -176,7 +199,7 @@ export class ResourceDictionary
         if (this.entries.size === 0) return;
         this.checkUnsealedForMutation('Clear');
         this.entries.clear();
-        this.notify();
+        this.signal(true);
     }
 
     public get Size(): number
@@ -273,8 +296,13 @@ export class ResourceDictionary
         // Forward the inner dict's changes so subscribers on the outer
         // see every mutation that could affect resolutions through
         // here. Captured in lock-step with merged[] for cleanup.
-        this.mergedSubscriptions.push(dict.Subscribe(() => this.notify()));
-        this.notify();
+        // Forward the child's changes to our subscribers. Registered on the
+        // child's GENERAL channel (always fires), and passes the child's
+        // StyleParticipating flag as OUR style-relevance — so a
+        // non-participating child's changes reach our general channel
+        // (DynamicResource) but never our style channel.
+        this.mergedSubscriptions.push(dict.Subscribe(() => this.signal(dict.StyleParticipating)));
+        this.signal(true);
     }
 
     public RemoveMergedDictionary(dict: ResourceDictionary): boolean
@@ -285,7 +313,7 @@ export class ResourceDictionary
         this.merged.splice(i, 1);
         const unsub = this.mergedSubscriptions.splice(i, 1)[0];
         unsub?.();
-        this.notify();
+        this.signal(true);
         return true;
     }
 
@@ -397,14 +425,126 @@ export class ResourceDictionary
         });
     }
 
-    private notify(): void
+    // Subscribe to the STYLE channel: fires only for changes that could
+    // affect implicit/theme style resolution. On a StyleParticipating=false
+    // dictionary (or one reached through a non-participating merge) it never
+    // fires — that is the whole point of the flag. Returns an unsubscribe.
+    public SubscribeStyle(listener: ResourceChangeListener): () => void
     {
-        // Snapshot so an unsubscribe-during-notify (common when a
-        // subscriber decides to detach after seeing a change) doesn't
-        // mutate the array under iteration.
-        for (const l of [...this.listeners])
+        this.styleListeners.add(listener);
+        return () =>
         {
-            l();
+            this.styleListeners.delete(listener);
+        };
+    }
+
+    // Per-key style subscription: SubscribeKey semantics (fire only when the
+    // resolved value for `key` changes) on the STYLE channel. Element uses
+    // this to react to its implicit-style (this.constructor) and theme-style
+    // (DefaultStyleKey) keys without re-resolving on unrelated string-key
+    // churn through the same dictionary.
+    public SubscribeStyleKey(key: ResourceKey, listener: ResourceChangeListener): () => void
+    {
+        let last = this.Resolve(key);
+        return this.SubscribeStyle(() =>
+        {
+            const next = this.Resolve(key);
+            if (next === last) return;
+            last = next;
+            listener();
+        });
+    }
+
+    // True (default) when this dictionary participates in style resolution —
+    // its style channel fires and, when merged, forwards to the parent's
+    // style channel. Set false for keyed-only dictionaries (e.g. a
+    // presentation/template dict) whose entries can never change a
+    // Function-keyed style lookup, so populating them does no per-element
+    // style work while DynamicResource/by-key lookups stay correct.
+    public get StyleParticipating(): boolean
+    {
+        return this._styleParticipating;
+    }
+
+    public set StyleParticipating(value: boolean)
+    {
+        this._styleParticipating = value;
+    }
+
+    // Run `fn`, coalescing every mutation inside it into a single trailing
+    // notification. Depth-counted (nested Batch calls collapse to one
+    // fan-out at the outermost exit) and exception-safe (the trailing
+    // fan-out runs in `finally`, so a throwing `fn` still notifies once and
+    // then re-throws). The trailing fan-out replays exactly the channels
+    // touched: a batch of only non-participating-child forwards fires
+    // general-only; a batch containing any style-relevant mutation fires
+    // both. A batch with no mutation fires nothing.
+    public Batch(fn: () => void): void
+    {
+        this._batchDepth++;
+        try
+        {
+            fn();
+        }
+        finally
+        {
+            this._batchDepth--;
+            if (this._batchDepth === 0 && (this._pendingGeneral || this._pendingStyle))
+            {
+                const g = this._pendingGeneral;
+                const s = this._pendingStyle;
+                this._pendingGeneral = false;
+                this._pendingStyle = false;
+                this.fanOut(g, s);
+            }
+        }
+    }
+
+    // Atomically swap a merged sub-dictionary: remove `old` (when present)
+    // and add `next`, inside one Batch so the two mutations collapse to a
+    // single parent notification. The intended pattern for panels that
+    // REBUILD their resource set — build `next` detached (its Set()s notify
+    // nobody, having no subscribers), then swap it in here. `old` may be
+    // undefined for the first population.
+    public ReplaceMergedDictionary(old: ResourceDictionary | undefined, next: ResourceDictionary): void
+    {
+        this.Batch(() =>
+        {
+            if (old !== undefined) this.RemoveMergedDictionary(old);
+            this.AddMergedDictionary(next);
+        });
+    }
+
+    // Record a change and fan out — the single entry point every mutation
+    // and every forwarded merged-child change routes through. `styleRelevant`
+    // is true for local mutations and, for a forwarded child change, the
+    // child's StyleParticipating flag. While batching, records the touched
+    // channels instead of firing (Batch replays them on exit).
+    private signal(styleRelevant: boolean): void
+    {
+        if (this._batchDepth > 0)
+        {
+            this._pendingGeneral = true;
+            if (styleRelevant) this._pendingStyle = true;
+            return;
+        }
+        this.fanOut(true, styleRelevant);
+    }
+
+    // The actual fan-out. General listeners fire whenever `general`; style
+    // listeners fire only when the change was style-relevant AND this
+    // dictionary itself participates in styling. Arrays are snapshotted so a
+    // listener that unsubscribes during notify doesn't mutate the set under
+    // iteration.
+    private fanOut(general: boolean, styleRelevant: boolean): void
+    {
+        if (general)
+        {
+            for (const l of [...this.listeners]) l();
+        }
+        if (styleRelevant && this._styleParticipating)
+        {
+            for (const l of [...this.styleListeners]) l();
         }
     }
 
