@@ -43,6 +43,19 @@ function findFirst<T extends Visual>(root: Visual, ctor: new (...a: never[]) => 
     return undefined;
 }
 
+// The DOCUMENTS TabControl specifically — the shell also has a panel-dock
+// TabControl (which comes first in the tree), so select by DataContext.
+function findDocsTab(root: Visual): TabControl | undefined
+{
+    if (root instanceof TabControl && root.DataContext instanceof DocumentsContentHostService) return root;
+    for (const c of root.visualChildren)
+    {
+        const hit = findDocsTab(c);
+        if (hit !== undefined) return hit;
+    }
+    return undefined;
+}
+
 function pointer(o: Partial<PointerEventInit> = {}): PointerEventInit
 {
     return {
@@ -139,7 +152,7 @@ describe('Plexus diagram — switching document tabs swaps the canvas', () => {
         await Promise.resolve(); target.Flush();
 
         const shellRoot = shell.visualChildren[0]!;
-        const tabs = findFirst(shellRoot, TabControl)!;
+        const tabs = findDocsTab(shellRoot)!;
         assert.ok(tabs !== undefined, 'the content host materialized a TabControl');
 
         // docA's tab is the first container; docB is active. Click docA's tab.
@@ -176,7 +189,7 @@ describe('Plexus diagram — switching document tabs swaps the canvas', () => {
         await Promise.resolve(); target.Flush();
 
         const shellRoot = shell.visualChildren[0]!;
-        const tabs = findFirst(shellRoot, TabControl)!;
+        const tabs = findDocsTab(shellRoot)!;
         const tabA = tabs.logicalChildren[0] as TabItem;
 
         assert.doesNotThrow(() =>
