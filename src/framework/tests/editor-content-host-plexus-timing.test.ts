@@ -62,8 +62,13 @@ describe('EditorShell content host — Plexus launch timing', () => {
         const root  = shell.visualChildren[0]!;
         await settle();
 
-        const tab = findByType(root, TabControl);
-        assert.ok(tab !== undefined, 'TabControl materialised in the content region');
+        // The shell has more than one TabControl (the panel-dock region is also a
+        // TabControl and comes first in the tree), so select the DOCUMENTS one by
+        // its DataContext — the host presented in PART_ContentHost — rather than
+        // the first TabControl found.
+        const tab = findWhere(root, (v) => v instanceof TabControl
+            && v.DataContext instanceof DocumentsContentHostService) as TabControl | undefined;
+        assert.ok(tab !== undefined, 'documents TabControl materialised in the content region');
 
         // Open the seeded document, as main.js does post-initialize.
         const host = Application.current.Services.get(ContentHostService.Key) as DocumentsContentHostService;
