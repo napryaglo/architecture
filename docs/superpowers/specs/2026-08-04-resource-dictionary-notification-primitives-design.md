@@ -213,11 +213,14 @@ public SubscribeStyleKey(key: ResourceKey, listener: ResourceChangeListener): ()
 }
 ```
 
-`DefaultStyleKey` is a DP; when it changes, styles are already refreshed via
-the existing `_refresh_styles_subtree` path, which calls `subscribe_styles`
-again after `unsubscribe_styles` — so the re-wire is automatic. This spec
-adds no new DefaultStyleKey-change plumbing beyond confirming that path runs
-(covered by a test).
+Both keys are stable for the element's lifetime by the time
+`subscribe_styles` runs: `this.constructor` is fixed, and `DefaultStyleKey`
+is a metadata-set **read-only** DP resolved before `AttachLogical` (the old
+coarse code likewise never reacted to a bare `DefaultStyleKey` change — only
+to a resource-dict change that happened to coincide). Capturing both keys at
+subscribe time is therefore sound; `_refresh_styles_subtree` re-runs
+`subscribe_styles` on tree moves. This spec adds no `DefaultStyleKey`-change
+plumbing.
 
 Element's **own `Resources`** subscription
 ([element.ts:238](../../../src/visual-engine/element.ts#L238)) is left on
@@ -268,9 +271,8 @@ that counts fan-outs), all under `tests/` subfolders:
   a merged `Set` that newly exposes/hides the key flips it.
 - **Element 3a integration:** a string-keyed `Application.Resources` change
   does not trigger `resolve_implicit_style` / `resolve_theme_style`
-  (spy/counter on a test Element); a real implicit-style (`this.constructor`
-  key) or theme-style (`DefaultStyleKey`) change still does; a
-  `DefaultStyleKey` DP change re-wires the theme subscription.
+  (spy/counter on a test Element); a real implicit-style change (a `Style`
+  Set under the element's `this.constructor` key) still re-resolves.
 
 ## Out of scope
 

@@ -452,10 +452,30 @@ export class Element extends Visual implements ITriggerHost
     private subscribe_styles(): void
     {
         this.unsubscribe_styles();
-        const onChange = (): void =>
+        // Per-key style subscriptions (§ 3a, notification-primitives design).
+        // Implicit style is keyed by this Element's own constructor, theme
+        // style by its DefaultStyleKey. Subscribing PER KEY on each dict's
+        // STYLE channel means a resource change only re-resolves when it
+        // actually alters one of THESE keys' resolved value — string-key
+        // churn (e.g. a library populating class templates into
+        // Application.Resources) no longer wakes every element's style
+        // resolution, which was an O(sets × elements) storm. resolve_*_style
+        // does the authoritative full-chain TryFindResource; the per-dict key
+        // subscription is only the wake-up trigger. Both keys are stable for
+        // the element's lifetime by the time this runs (constructor fixed;
+        // DefaultStyleKey a metadata-set read-only DP), and
+        // _refresh_styles_subtree re-runs this on tree moves.
+        const typeKey = this.constructor;
+        const themeKey = this.DefaultStyleKey;
+        const subscribeOn = (r: ResourceDictionary): void =>
         {
-            this.resolve_implicit_style();
-            this.resolve_theme_style();
+            (this._styleSubscriptions ??= []).push(
+                r.SubscribeStyleKey(typeKey, () => this.resolve_implicit_style()));
+            if (themeKey !== undefined)
+            {
+                (this._styleSubscriptions ??= []).push(
+                    r.SubscribeStyleKey(themeKey, () => this.resolve_theme_style()));
+            }
         };
         // The cursor walks the Visual ancestor chain, but the
         // `_resources` field we read lives on Element. Plain Visual
@@ -470,7 +490,7 @@ export class Element extends Visual implements ITriggerHost
                 const r = cursor._resources;
                 if (r !== undefined)
                 {
-                    (this._styleSubscriptions ??= []).push(r.Subscribe(onChange));
+                    subscribeOn(r);
                 }
             }
             cursor = back._logicalParent ?? back._templatedParent;
@@ -481,7 +501,7 @@ export class Element extends Visual implements ITriggerHost
         const appRd = Application.current?.Resources;
         if (appRd !== undefined)
         {
-            (this._styleSubscriptions ??= []).push(appRd.Subscribe(onChange));
+            subscribeOn(appRd);
         }
     }
 
