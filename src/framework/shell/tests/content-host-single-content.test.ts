@@ -40,12 +40,17 @@ describe('ContentHostService — single-content reactivity', () => {
 
     test('View() swaps the presented content reactively (service-binding, not $Content)', () => {
         const app = initTestApp();
-        // Render any DemoContent as its Label text.
-        app.Resources.Set('DemoContentTpl', new DataTemplate(
+        // Render any DemoContent as its Label text. Implicit-by-DataType
+        // resolution keys the template under its data CLASS (Set(DemoContent, …)),
+        // not a string x:key — a string-keyed template is reachable only by
+        // explicit reference, never implicitly (WPF parity; see
+        // findDataTemplateForType / walkResourcesForDataTemplate).
+        app.Resources.Set(DemoContent, new DataTemplate(
             (_d) => { const t = new TextBlock(''); t.set_property_value(TextBlock.TextKey, DataContextBinding(t, 'Label')); return t; },
             DemoContent));
-        // The base-host template, mirroring shell.template.mu.
-        app.Resources.Set('ChsTpl', new DataTemplate(
+        // The base-host template, mirroring shell.template.mu — keyed by the
+        // service CLASS so the outer presenter resolves it implicitly.
+        app.Resources.Set(ContentHostService, new DataTemplate(
             (_d) => { const cp = new ContentPresenter(); cp.set_property_value(ContentPresenter.ContentKey, ServiceBinding(cp, ServiceProvider.tokenFor(ContentHostService), 'Content')); return cp; },
             ContentHostService));
 
