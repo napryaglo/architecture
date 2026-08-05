@@ -169,19 +169,13 @@ export class TabControl extends Selector
             (v as { Title?: string; Id?: string } | undefined)?.Title
             ?? (v as { Id?: string } | undefined)?.Id ?? String(v);
         const found = this.containerForItem(item);
+        const tags = this.logicalChildren.map((c) => label(c.Tag)).join(' | ');
         // eslint-disable-next-line no-console
-        console.log('[mural-diag] applySelectedItem', {
-            item: label(item),
-            containerFound: found !== undefined,
-            logicalTabs: this.logicalChildren.length,
-            tabTags: this.logicalChildren.map((c) => label(c.Tag)),
-        });
+        console.log(`[mural-diag] applySelectedItem item="${label(item)}" containerFound=${found !== undefined} logicalTabs=${this.logicalChildren.length} tags=[${tags}]`);
         super.applySelectedItem(item);
+        const isSel = found !== undefined ? Selector.GetIsSelected(found) : 'n/a';
         // eslint-disable-next-line no-console
-        console.log('[mural-diag] after applySelectedItem', {
-            selectedContainers: this.SelectedContainers.length,
-            isSelectedOnFound: found !== undefined ? Selector.GetIsSelected(found) : 'n/a',
-        });
+        console.log(`[mural-diag] after applySelectedItem selectedContainers=${this.SelectedContainers.length} isSelectedOnFound=${isSel}`);
     }
 
     protected override validateDeclarativeChild(child: Visual): void
