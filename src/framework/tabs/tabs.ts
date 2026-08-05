@@ -1,4 +1,4 @@
-import { MetaData, Model, Element, Visual, type PointerEventArgs } from '../../runtime/index.js';
+import { MetaData, Model, Element, Visual, type PointerEventArgs, type PropertyDescriptor } from '../../runtime/index.js';
 import { HeaderedContentControl } from '../base/headered-content-control.js';
 import { Selector } from '../list/selector.js';
 
@@ -159,25 +159,6 @@ export class TabControl extends Selector
         return undefined;
     }
 
-    // TEMP DIAGNOSTIC (remove after tab-highlight investigation): logs the
-    // programmatic selection path so we can see, in the live app, whether the
-    // SelectedItem binding fires, whether the tab container resolves, and
-    // whether IsSelected actually flips.
-    protected override applySelectedItem(item: unknown): void
-    {
-        const label = (v: unknown): string =>
-            (v as { Title?: string; Id?: string } | undefined)?.Title
-            ?? (v as { Id?: string } | undefined)?.Id ?? String(v);
-        const found = this.containerForItem(item);
-        const tags = this.logicalChildren.map((c) => label(c.Tag)).join(' | ');
-        // eslint-disable-next-line no-console
-        console.log(`[mural-diag] applySelectedItem item="${label(item)}" containerFound=${found !== undefined} logicalTabs=${this.logicalChildren.length} tags=[${tags}]`);
-        super.applySelectedItem(item);
-        const isSel = found !== undefined ? Selector.GetIsSelected(found) : 'n/a';
-        // eslint-disable-next-line no-console
-        console.log(`[mural-diag] after applySelectedItem selectedContainers=${this.SelectedContainers.length} isSelectedOnFound=${isSel}`);
-    }
-
     protected override validateDeclarativeChild(child: Visual): void
     {
         if (!(child instanceof TabItem))
@@ -208,6 +189,8 @@ export class TabItem extends HeaderedContentControl
 
     // Press-here-release-here gate for click-to-select (see OnPointerUp).
     private _pressOriginatedHere = false;
+    // Re-entrancy guard for the IsSelected attached⇄instance mirror.
+    private _syncingIsSelected = false;
 
     constructor()
     {
@@ -217,6 +200,39 @@ export class TabItem extends HeaderedContentControl
         // Focusable so a clicked tab can take keyboard focus (the IsFocused
         // chrome + arrow navigation), matching ListBoxItem.
         this.Focusable = true;
+    }
+
+    // IsSelected attached⇄instance mirror. Selection is driven through the
+    // attached `Selector.IsSelected` DP (setSelectedContainers →
+    // Selector.SetIsSelected), but the tab's `when (IsSelected)` chrome
+    // (@DefaultTabItem) watches the INSTANCE DP registered on TabItem. Without
+    // this mirror the two never meet: a programmatic activation
+    // (SelectedItem=$ActiveDocument) flips the attached DP but the instance DP
+    // stays false, so the selected-tab underline/ink never paints — only a
+    // click appeared to highlight, because a click also takes focus and lights
+    // the separate `when (IsFocused)` overlay. Mirrors ListBoxItem exactly,
+    // re-entrancy-guarded; the Owner check disambiguates the two same-named DPs.
+    protected override OnPropertyChanged(
+        descriptor: PropertyDescriptor,
+        oldValue: unknown,
+        newValue: unknown,
+    ): void
+    {
+        super.OnPropertyChanged(descriptor, oldValue, newValue);
+        if (this._syncingIsSelected || descriptor.Name !== 'IsSelected') return;
+        const fromAttached = descriptor.Owner === Selector;
+        const fromInstance = descriptor.Owner === TabItem;
+        if (!fromAttached && !fromInstance) return;
+        this._syncingIsSelected = true;
+        try
+        {
+            if (fromAttached) this.set_property_value(TabItem.IsSelectedKey, newValue as boolean);
+            else Selector.SetIsSelected(this, newValue as boolean);
+        }
+        finally
+        {
+            this._syncingIsSelected = false;
+        }
     }
 
     public get IsSelected(): boolean { return Selector.GetIsSelected(this); }
