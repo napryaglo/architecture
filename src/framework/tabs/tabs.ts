@@ -159,6 +159,31 @@ export class TabControl extends Selector
         return undefined;
     }
 
+    // TEMP DIAGNOSTIC (remove after tab-highlight investigation): logs the
+    // programmatic selection path so we can see, in the live app, whether the
+    // SelectedItem binding fires, whether the tab container resolves, and
+    // whether IsSelected actually flips.
+    protected override applySelectedItem(item: unknown): void
+    {
+        const label = (v: unknown): string =>
+            (v as { Title?: string; Id?: string } | undefined)?.Title
+            ?? (v as { Id?: string } | undefined)?.Id ?? String(v);
+        const found = this.containerForItem(item);
+        // eslint-disable-next-line no-console
+        console.log('[mural-diag] applySelectedItem', {
+            item: label(item),
+            containerFound: found !== undefined,
+            logicalTabs: this.logicalChildren.length,
+            tabTags: this.logicalChildren.map((c) => label(c.Tag)),
+        });
+        super.applySelectedItem(item);
+        // eslint-disable-next-line no-console
+        console.log('[mural-diag] after applySelectedItem', {
+            selectedContainers: this.SelectedContainers.length,
+            isSelectedOnFound: found !== undefined ? Selector.GetIsSelected(found) : 'n/a',
+        });
+    }
+
     protected override validateDeclarativeChild(child: Visual): void
     {
         if (!(child instanceof TabItem))
