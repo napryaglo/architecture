@@ -115,6 +115,50 @@ export class TabControl extends Selector
         this.set_property_value(TabControl.SelectedContentKey, content);
     }
 
+    // ── Selector override seams (Tag-based, ListBox parity) ────────────
+    //
+    // The data path sets Tag = the row on each TabItem (see bindTab), so a
+    // tab's identity is its Tag — exactly like ListBox. Resolve selection
+    // through the REALIZED containers (logicalChildren) matched by Tag,
+    // NOT through the generator's item→container map.
+    //
+    // Why: a programmatic `SelectedItem = <row>` write (e.g. a TwoWay
+    // `SelectedItem=$ActiveDocument` tab strip re-selecting when the host
+    // activates a document) runs applySelectedItem → containerForItem. The
+    // base uses Generator.ContainerFromItem, whose reverse map can miss a
+    // realized container under a retemplated presenter (the reason clicks —
+    // which act on the container directly — highlighted while programmatic
+    // activation did not). A Tag scan of the live containers is the same
+    // basis HandleContainerClick uses, so both selection paths agree.
+    protected override resolveItemAt(index: number): unknown
+    {
+        const containers = this.logicalChildren;
+        if (index < 0 || index >= containers.length) return undefined;
+        return this.exposedValueOf(containers[index]!);
+    }
+
+    protected override resolveIndexOf(item: unknown): number
+    {
+        if (item === undefined) return -1;
+        const containers = this.logicalChildren;
+        for (let i = 0; i < containers.length; i++)
+        {
+            const c = containers[i]!;
+            if (c.Tag === item || c === item) return i;
+        }
+        return -1;
+    }
+
+    protected override containerForItem(item: unknown): Visual | undefined
+    {
+        if (item === undefined) return undefined;
+        for (const c of this.logicalChildren)
+        {
+            if (c.Tag === item || c === item) return c;
+        }
+        return undefined;
+    }
+
     protected override validateDeclarativeChild(child: Visual): void
     {
         if (!(child instanceof TabItem))
