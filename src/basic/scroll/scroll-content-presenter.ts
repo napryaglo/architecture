@@ -279,21 +279,6 @@ export class ScrollContentPresenter extends ContentPresenter
         // intercepts clicks meant for buttons in that toolbar.
         this._adornerLayer.Arrange(contentRect);
         this._adornerLayer.Clip = new RectangleGeometry(adornerClipRect);
-
-        // TEMP DIAGNOSTIC (remove after toolbox-overflow investigation): log the
-        // scroll geometry so we can see, in the live app, whether the viewport /
-        // extent / clip are correct when the toolbox spills. Gated to scrollable,
-        // non-empty, clip-and-translate content to cut noise.
-        if (scrollInfo === undefined && this._extentHeight > finalSize.Height + 1
-            && content.visualChildren.length > 0)
-        {
-            // eslint-disable-next-line no-console
-            console.log(`[mural-diag-scroll] content=${content.constructor.name} children=${content.visualChildren.length}`
-                + ` viewport=${finalSize.Width.toFixed(0)}x${finalSize.Height.toFixed(0)}`
-                + ` extent=${this._extentWidth.toFixed(0)}x${this._extentHeight.toFixed(0)}`
-                + ` clip=${adornerClipRect.Width.toFixed(0)}x${adornerClipRect.Height.toFixed(0)}`
-                + ` contentDesired=${content.DesiredSize.Width.toFixed(0)}x${content.DesiredSize.Height.toFixed(0)}`);
-        }
         return finalSize;
     }
 }
