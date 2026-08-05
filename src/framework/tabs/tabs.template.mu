@@ -68,8 +68,8 @@ resources Tabs {
             [ Background      = #00000000,
               BorderBrush     = #00000000,
               BorderThickness = (0,0,0,2),
-              Padding         = (@Spacing4,@Spacing2,@Spacing4,@Spacing2),
-              Height          = 48 ] {
+              Padding         = (@Spacing4,@Spacing1,@Spacing4,@Spacing1),
+              Height          = 40 ] {
             ContentPresenter x:name="PART_Header"
                 [ Content             = $$Header,
                   ContentTemplate     = $$HeaderTemplate,
