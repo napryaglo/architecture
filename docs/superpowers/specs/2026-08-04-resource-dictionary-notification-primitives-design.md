@@ -1,7 +1,7 @@
 # ResourceDictionary Notification Primitives — Design
 
 **Date:** 2026-08-04
-**Status:** Approved (design), pending implementation plan
+**Status:** ✅ Finished (Approved design; implementation merged)
 **Package:** Mural (`@pragmatic-lab/mural`), consumed by Plexus via Verdaccio
 
 ## Problem

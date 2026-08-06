@@ -1,7 +1,7 @@
 # Global Dirty-Tracking + Save / Save All — Design
 
 **Date:** 2026-07-27
-**Status:** Approved (pending spec review)
+**Status:** ✅ Finished (Approved; pending spec review)
 **Spans:** `@pragmatic-lab/mural` (framework core) + Plexus (app wiring)
 
 ## Goal

@@ -5,7 +5,7 @@
 contributions as tabs (agent chat, inspectors, and future panels), attached to
 the right edge of the workspace.
 
-**Status:** Design approved 2026-07-27.
+**Status:** ✅ Finished (Design approved 2026-07-27)
 
 ## Background
 

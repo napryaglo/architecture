@@ -5,7 +5,7 @@
 user is already parked at the bottom (sticky), so scrolling up to read history
 is never interrupted.
 
-**Status:** Design approved 2026-07-27.
+**Status:** ✅ Finished (Design approved 2026-07-27)
 
 ## Background
 

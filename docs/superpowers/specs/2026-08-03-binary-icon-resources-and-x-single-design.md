@@ -1,7 +1,7 @@
 # Binary (PNG) Icon Resources + `x:single` Directive (Design)
 
 **Date:** 2026-08-03
-**Status:** Approved (pending spec review)
+**Status:** ✅ Finished (Approved; pending spec review)
 **Repo:** Mural (this is SP1 — the framework foundation). SP2 (Plexus consumers)
 is a separate spec, built after this ships.
 

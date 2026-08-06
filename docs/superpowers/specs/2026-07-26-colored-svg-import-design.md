@@ -4,7 +4,7 @@
 multi-color art (each shape keeps its own fill/stroke), in addition to the
 existing monochrome geometry import.
 
-**Status:** Design approved 2026-07-26.
+**Status:** ✅ Finished (Design approved 2026-07-26)
 
 ## Background
 

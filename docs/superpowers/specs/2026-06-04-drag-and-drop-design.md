@@ -1,7 +1,7 @@
 # Drag & Drop — design
 
 **Date:** 2026-06-04
-**Status:** Approved for implementation planning
+**Status:** ✅ Finished (Approved for implementation planning)
 **Backlog deferral:** see `current-backlog.md` § 8 for v2 follow-ups
 
 ## 1. Motivation
