@@ -60,7 +60,7 @@ import {
     type ItemDroppedArgs,
     type ItemDroppedListener,
 } from './behaviors/canvas-drop-behavior.js';
-export { attachCanvasDropBehavior, TOOLBOX_NODE_KIND_FORMAT } from './behaviors/canvas-drop-behavior.js';
+export { attachCanvasDropBehavior, TOOLBOX_ITEM_FORMAT } from './behaviors/canvas-drop-behavior.js';
 export type { ItemDroppedArgs, ItemDroppedListener } from './behaviors/canvas-drop-behavior.js';
 import type {
     ConnectorCreatedArgs,

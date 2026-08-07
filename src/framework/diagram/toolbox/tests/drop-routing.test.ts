@@ -1,0 +1,64 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { Application, DataObject, Point, ServiceKey } from '../../../../runtime/index.js';
+import { Diagram } from '../../diagram.js';
+import { attachStandardDiagramMutations } from '../../behaviors/attach-standard-mutations.js';
+import { TOOLBOX_ITEM_FORMAT } from '../../behaviors/canvas-drop-behavior.js';
+import { ToolboxRepository } from '../toolbox-repository.js';
+import { ToolboxItem } from '../toolbox-item.js';
+import { ToolboxVisualDescriptor } from '../toolbox-visual-descriptor.js';
+import { ShapeVisualResolverKey } from '../shape-visual-resolver.js';
+import type { IToolboxDropFactory, ToolboxDropContext } from '../toolbox-drop-factory.js';
+
+const mutator = { Group(){}, Ungroup(){}, CombineSelection(){}, DeleteNodes(){}, CreateNode(){ return null; } };
+
+test('dropping an item id routes through the repo to its factory', () => {
+    const prior = Application.current;
+    Application.current = null;
+    new Application();
+    try {
+        // The Diagram ctor first-inits the repo + shape services.
+        const diagram = new Diagram();
+        const repo = Application.current!.Services.getRequired(ToolboxRepository.Key);
+
+        const dropped: ToolboxDropContext[] = [];
+        const sentinel = {};
+        const spyKey = new ServiceKey<IToolboxDropFactory>('SpyFactory');
+        const factory: IToolboxDropFactory = { CreateDropped(ctx) { dropped.push(ctx); return sentinel; } };
+        Application.current!.Services.registerInstance(spyKey, factory);
+
+        const item = new ToolboxItem('test:item', 'Test',
+            new ToolboxVisualDescriptor(ShapeVisualResolverKey, 'rectangle'), spyKey);
+        repo.EnsurePage('test', 'Test').Items.Add(item);
+
+        const detach = attachStandardDiagramMutations(diagram, mutator as never);
+        const data = new DataObject().Set(TOOLBOX_ITEM_FORMAT, item.Id);
+        diagram._fireItemDropped({ Data: data, Position: new Point(100, 100) });
+
+        assert.equal(dropped.length, 1);
+        assert.equal(dropped[0]!.Item, item);
+        // NodeDropOffset (40,40) is applied by the router → top-left (60,60).
+        assert.equal(dropped[0]!.Position.X, 60);
+        assert.equal(dropped[0]!.Position.Y, 60);
+        // (Selecting the returned node is a Selector concern — it only accepts
+        // real diagram items — so it is asserted in the mutations tests, not here.)
+        detach();
+    } finally {
+        Application.current = prior;
+    }
+});
+
+test('dropping an unknown item id is a no-op (no throw, no selection)', () => {
+    const prior = Application.current;
+    Application.current = null;
+    new Application();
+    try {
+        const diagram = new Diagram();
+        const detach = attachStandardDiagramMutations(diagram, mutator as never);
+        const data = new DataObject().Set(TOOLBOX_ITEM_FORMAT, 'shape:does-not-exist');
+        assert.doesNotThrow(() => diagram._fireItemDropped({ Data: data, Position: new Point(10, 10) }));
+        detach();
+    } finally {
+        Application.current = prior;
+    }
+});

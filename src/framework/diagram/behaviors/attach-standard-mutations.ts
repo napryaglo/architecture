@@ -2,8 +2,10 @@ import type { Diagram } from '../diagram.js';
 import type { CombineRequestedArgs } from '../commands/combine.js';
 import type { DeleteRequestedArgs } from '../commands/delete-ops.js';
 import type { GroupRequestedArgs, UngroupRequestedArgs } from '../commands/group-ops.js';
+import { Application, Point } from '../../../runtime/index.js';
 import type { ItemDroppedArgs } from './canvas-drop-behavior.js';
-import { TOOLBOX_NODE_KIND_FORMAT } from './canvas-drop-behavior.js';
+import { TOOLBOX_ITEM_FORMAT } from './canvas-drop-behavior.js';
+import { ToolboxRepository } from '../toolbox/toolbox-repository.js';
 import type { GeometryCombineMode } from '../commands/combine.js';
 import type { Connector } from '../connector.js';
 import type { ConnectorEndpoint } from '../connector-endpoint.js';
@@ -80,9 +82,25 @@ export function attachStandardDiagramMutations(diagram: Diagram, mutator: Diagra
         }
     };
     const onDropped  = (args: ItemDroppedArgs):      void => {
-        const kind = args.Data.Get(TOOLBOX_NODE_KIND_FORMAT);
-        if (typeof kind !== 'string') return;
-        const node = mutator.CreateNode(kind, args.Position.X - offset.dx, args.Position.Y - offset.dy);
+        // The payload carries the dropped item's id. Look it up in the
+        // repository, resolve its factory, and let the factory materialize
+        // the node (shapes → mutator.CreateNode; picture-backed kinds →
+        // their own figure). The NodeDropOffset maps the cursor onto the
+        // new node's top-left.
+        const id = args.Data.Get(TOOLBOX_ITEM_FORMAT);
+        if (typeof id !== 'string') return;
+        const services = Application.current?.Services;
+        const item = services?.get(ToolboxRepository.Key)?.ItemById(id);
+        if (item === undefined || item.Descriptor === undefined) return;
+        const factory = services?.get(item.FactoryKey);
+        if (factory === undefined) return;
+        const node = factory.CreateDropped({
+            Item:       item,
+            Descriptor: item.Descriptor,
+            Position:   new Point(args.Position.X - offset.dx, args.Position.Y - offset.dy),
+            Diagram:    diagram,
+            Mutator:    mutator,
+        });
         if (node !== null && node !== undefined)
         {
             diagram.SelectedItem = node;

@@ -18,8 +18,7 @@ import {
     type SerializedDoc,
 } from './shape-text-document.js';
 import { Group } from './group.js';
-import { ToolboxShape } from './toolbox-shape.js';
-import { SHAPE_CATALOG, SHAPE_CATALOG_MAP, mergeShapes } from './shape-catalog.js';
+import { SHAPE_CATALOG_MAP, mergeShapes } from './shape-catalog.js';
 import { GeometryCombineMode } from './commands/combine.js';
 import type { DiagramMutator } from './behaviors/attach-standard-mutations.js';
 import { Connector } from './connector.js';
@@ -249,7 +248,7 @@ const DIAGRAM_COMMAND_ACTIVE: ReadonlyMap<string, (v: Diagram) => boolean> = new
 let _diagramDocSeq = 0;
 
 // Top-level Document for a diagrammer-style workspace. Owns the flat
-// `Nodes` collection (Figures + Groups), the `ToolboxShapes` palette,
+// `Nodes` collection (Figures + Groups),
 // status feedback, Save / Load commands, and the structural mutation
 // methods (Group / Ungroup / Combine / Delete / Place) the framework
 // Diagram routes its gesture events to.
@@ -261,8 +260,7 @@ let _diagramDocSeq = 0;
 // then route directly here.
 //
 // Customise by subclassing (override CreateNode for custom Figure
-// shapes, override ToolboxShapes default to expose a different
-// palette, etc.) or by composing — the Document doesn't lock methods
+// shapes, etc.) or by composing — the Document doesn't lock methods
 // down.
 export class DiagramDocument extends Model implements DiagramMutator, IDocument, ICommandTarget, IFontFormatSink
 {
@@ -295,8 +293,6 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
         DiagramDocument, 'Nodes',         undefined as unknown as ObservableCollection<Figure | Group>, MetaData.None);
     public static readonly ConnectorsKey    = Model.RegisterProperty<ObservableCollection<Connector>>(
         DiagramDocument, 'Connectors',    undefined as unknown as ObservableCollection<Connector>, MetaData.None);
-    public static readonly ToolboxShapesKey = Model.RegisterProperty<ObservableCollection<ToolboxShape>>(
-        DiagramDocument, 'ToolboxShapes', undefined as unknown as ObservableCollection<ToolboxShape>, MetaData.None);
     public static readonly StatusKey        = Model.RegisterProperty<string>(
         DiagramDocument, 'Status',        '', MetaData.None);
     public static readonly StorageKey       = Model.RegisterProperty<DiagramStorage | undefined>(
@@ -346,9 +342,9 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
         this.set_property_value(DiagramDocument.NodesKey,         new ObservableCollection<Figure | Group>());
         this.set_property_value(DiagramDocument.ConnectorsKey,    new ObservableCollection<Connector>());
         this.set_property_value(DiagramDocument.StorageKey,       storage);
-        const toolbox = new ObservableCollection<ToolboxShape>();
-        for (const e of SHAPE_CATALOG) toolbox.Add(new ToolboxShape(e.kind, e.label));
-        this.set_property_value(DiagramDocument.ToolboxShapesKey, toolbox);
+        // The palette lives in the framework ToolboxRepository (a Services
+        // singleton the Diagram first-inits with a built-in Shapes page); the
+        // document no longer owns a ToolboxShapes collection.
 
         // Save / Load RelayCommands — gated on Storage presence.
         const canPersist = (): boolean => this.Storage !== undefined;
@@ -492,7 +488,6 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
 
     public get Nodes():         ObservableCollection<Figure | Group> { return this.get_property_value(DiagramDocument.NodesKey); }
     public get Connectors():    ObservableCollection<Connector>      { return this.get_property_value(DiagramDocument.ConnectorsKey); }
-    public get ToolboxShapes(): ObservableCollection<ToolboxShape>   { return this.get_property_value(DiagramDocument.ToolboxShapesKey); }
     public get Status():        string                               { return this.get_property_value(DiagramDocument.StatusKey); }
     public set Status(v: string)                                     { this.set_property_value(DiagramDocument.StatusKey, v); }
     public get Storage():       DiagramStorage | undefined           { return this.get_property_value(DiagramDocument.StorageKey); }

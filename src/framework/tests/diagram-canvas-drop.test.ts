@@ -19,7 +19,7 @@ import { Border, Canvas, ItemsPanelTemplate } from '../../basic/index.js';
 import { Diagram } from '../diagram/diagram.js';
 import {
     attachCanvasDropBehavior,
-    TOOLBOX_NODE_KIND_FORMAT,
+    TOOLBOX_ITEM_FORMAT,
     type ItemDroppedArgs,
 } from '../diagram/behaviors/canvas-drop-behavior.js';
 import { SelectionMode } from '../list/list-box.js';
@@ -85,7 +85,7 @@ describe('Diagram — canvas drop behavior', () => {
         const { diagram, surface } = setup();
         attachCanvasDropBehavior(surface, diagram);
         const data = new DataObject();
-        data.Set(TOOLBOX_NODE_KIND_FORMAT, 'rectangle');
+        data.Set(TOOLBOX_ITEM_FORMAT, 'rectangle');
         const args = new DragEventArgs('DragOver', surface, dragInit({ Data: data }));
         dispatchDrag(args);
         assert.equal(args.Effect, DragDropEffects.Copy);
@@ -105,7 +105,7 @@ describe('Diagram — canvas drop behavior', () => {
         const { diagram, surface } = setup();
         attachCanvasDropBehavior(surface, diagram);
         const data = new DataObject();
-        data.Set(TOOLBOX_NODE_KIND_FORMAT, 'ellipse');
+        data.Set(TOOLBOX_ITEM_FORMAT, 'ellipse');
 
         const events: ItemDroppedArgs[] = [];
         diagram.AddItemDroppedListener(e => events.push(e));

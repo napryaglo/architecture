@@ -131,7 +131,7 @@ describe('PageView — Content swap', () => {
 });
 
 // A demo VM that OWNS a persistent Visual (mirrors DiagramDocument
-// holding ToolboxShape.PreviewNode Figures / fused canvas Figures). The
+// holding the shared toolbox preview Visual Figures / fused canvas Figures). The
 // matching DataTemplate slots that very Visual as Content — so naively
 // re-applying the template on nav-back would re-attach an
 // already-parented Visual and throw "already has a logical parent".
@@ -149,7 +149,7 @@ describe('PageView — Model content memoisation (nav-away-and-back)', () => {
         const tpl = new DataTemplate((data) => {
             applies++;
             const cc = new ContentControl();
-            cc.Content = (data as PersistentOwner).node;   // mimics Content=$PreviewNode
+            cc.Content = (data as PersistentOwner).node;   // mimics a shared Visual as Content
             return cc;
         }, PersistentOwner);
         // Type key (keyless implicit template) — a string/x:key'd template is not
